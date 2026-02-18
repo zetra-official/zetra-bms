@@ -1,0 +1,396 @@
+import { supabase } from "@/src/supabase/supabaseClient";
+import { Card } from "@/src/ui/Card";
+import { Screen } from "@/src/ui/Screen";
+import { theme } from "@/src/ui/theme";
+import { Ionicons } from "@expo/vector-icons";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useCallback, useMemo, useState } from "react";
+import { Alert, Pressable, Text, TextInput, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+type DraftItem = {
+  key: string;
+  product_id?: string | null;
+  product_name: string;
+  unit_price: string; // string input
+  qty: string; // string input
+};
+
+function clean(x: any) {
+  return String(x ?? "").trim();
+}
+
+function asQty(x: string) {
+  const n = Number(clean(x));
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, Math.floor(n));
+}
+
+function asMoney(x: string) {
+  const n = Number(clean(x));
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, n);
+}
+
+function fmtTZS(n: number) {
+  try {
+    return new Intl.NumberFormat("en-TZ", {
+      style: "currency",
+      currency: "TZS",
+      maximumFractionDigits: 0,
+    }).format(n);
+  } catch {
+    return String(n);
+  }
+}
+
+export default function CreateClubOrderScreen() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const params = useLocalSearchParams<{ storeId?: string; storeName?: string }>();
+  const storeId = clean(params?.storeId);
+  const storeName = clean(params?.storeName) || "";
+
+  const topPad = Math.max(insets.top, 10) + 8;
+
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const [items, setItems] = useState<DraftItem[]>([
+    { key: "1", product_name: "", unit_price: "", qty: "1", product_id: null },
+  ]);
+
+  const subtotal = useMemo(() => {
+    let s = 0;
+    for (const it of items) {
+      const q = asQty(it.qty);
+      const p = asMoney(it.unit_price);
+      if (!clean(it.product_name).length) continue;
+      if (q < 1) continue;
+      s += p * q;
+    }
+    return s;
+  }, [items]);
+
+  const totalQty = useMemo(() => {
+    let q = 0;
+    for (const it of items) {
+      if (!clean(it.product_name).length) continue;
+      q += asQty(it.qty);
+    }
+    return q;
+  }, [items]);
+
+  const canSubmit = useMemo(() => {
+    if (!storeId) return false;
+    const valid = items.some((it) => clean(it.product_name).length && asQty(it.qty) >= 1);
+    return valid && !busy;
+  }, [busy, items, storeId]);
+
+  const addLine = useCallback(() => {
+    setItems((prev) => {
+      const nextKey = String(prev.length + 1);
+      return [...prev, { key: nextKey, product_name: "", unit_price: "", qty: "1", product_id: null }];
+    });
+  }, []);
+
+  const removeLine = useCallback((key: string) => {
+    setItems((prev) => {
+      const next = prev.filter((x) => x.key !== key);
+      return next.length ? next : [{ key: "1", product_name: "", unit_price: "", qty: "1", product_id: null }];
+    });
+  }, []);
+
+  const updateLine = useCallback((key: string, patch: Partial<DraftItem>) => {
+    setItems((prev) => prev.map((x) => (x.key === key ? { ...x, ...patch } : x)));
+  }, []);
+
+  const submit = useCallback(async () => {
+    if (!storeId) return;
+    if (!canSubmit) return;
+
+    const payloadItems = items
+      .map((it) => ({
+        product_id: clean(it.product_id),
+        product_name: clean(it.product_name),
+        unit_price: String(asMoney(it.unit_price)),
+        qty: String(asQty(it.qty) || 1),
+      }))
+      .filter((x) => x.product_name.length && Number(x.qty) >= 1);
+
+    if (!payloadItems.length) {
+      Alert.alert("Order", "Weka angalau item 1 (jina + qty).");
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const { data, error } = await supabase.rpc("create_club_order_with_items", {
+        p_store_id: storeId,
+        p_note: clean(note),
+        p_items: payloadItems,
+        p_customer_name: null,
+        p_customer_phone: null,
+      });
+
+      if (error) throw error;
+
+      const orderId = clean(data);
+
+      Alert.alert("Order", "Order imetumwa ✅", [
+        {
+          text: "OPEN",
+          onPress: () => {
+            if (!orderId) {
+              router.back();
+              return;
+            }
+
+            // ✅ FIX: Open CUSTOMER detail inside Tabs (so it never falls into staff screen)
+            router.replace({
+              pathname: "/(tabs)/club/orders/customer/[orderId]" as any,
+              params: { orderId, storeId, storeName },
+            } as any);
+          },
+        },
+      ]);
+    } catch (e: any) {
+      Alert.alert("Order", e?.message ?? "Failed to create order");
+    } finally {
+      setBusy(false);
+    }
+  }, [canSubmit, items, note, router, storeId, storeName]);
+
+  return (
+    <Screen scroll contentStyle={{ paddingTop: topPad }}>
+      <View style={{ gap: 12 }}>
+        <Card>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <View
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: theme.colors.emeraldBorder,
+                  backgroundColor: theme.colors.emeraldSoft,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Ionicons name="bag-handle-outline" size={18} color={theme.colors.emerald} />
+              </View>
+
+              <View>
+                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>Create Order</Text>
+                <Text style={{ color: theme.colors.faint, fontWeight: "900", fontSize: 12 }}>
+                  Store: {storeName ? storeName : storeId ? storeId.slice(0, 8) + "…" : "—"}
+                </Text>
+              </View>
+            </View>
+
+            <Pressable
+              onPress={() => router.back()}
+              hitSlop={10}
+              style={({ pressed }) => [
+                {
+                  paddingHorizontal: 12,
+                  paddingVertical: 10,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: "rgba(255,255,255,0.12)",
+                  backgroundColor: "rgba(255,255,255,0.06)",
+                  opacity: pressed ? 0.92 : 1,
+                },
+              ]}
+            >
+              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Back</Text>
+            </Pressable>
+          </View>
+        </Card>
+
+        <Card style={{ padding: 14, gap: 12 }}>
+          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14 }}>Items</Text>
+
+          {items.map((it) => (
+            <Card
+              key={it.key}
+              style={{ padding: 12, backgroundColor: theme.colors.surface2, borderColor: theme.colors.borderSoft, gap: 10 }}
+            >
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>Item #{it.key}</Text>
+
+                <Pressable
+                  onPress={() => removeLine(it.key)}
+                  hitSlop={10}
+                  style={({ pressed }) => [
+                    {
+                      paddingHorizontal: 10,
+                      paddingVertical: 6,
+                      borderRadius: 999,
+                      borderWidth: 1,
+                      borderColor: theme.colors.dangerBorder,
+                      backgroundColor: theme.colors.dangerSoft,
+                      opacity: pressed ? 0.92 : 1,
+                    },
+                  ]}
+                >
+                  <Text style={{ color: theme.colors.dangerText, fontWeight: "900" }}>Remove</Text>
+                </Pressable>
+              </View>
+
+              <TextInput
+                value={it.product_name}
+                onChangeText={(v) => updateLine(it.key, { product_name: v })}
+                placeholder="Product name"
+                placeholderTextColor={theme.colors.muted}
+                style={{
+                  height: 44,
+                  paddingHorizontal: 12,
+                  borderRadius: 14,
+                  borderWidth: 1,
+                  borderColor: "rgba(255,255,255,0.12)",
+                  backgroundColor: "rgba(255,255,255,0.06)",
+                  color: theme.colors.text,
+                  fontWeight: "800",
+                }}
+              />
+
+              <View style={{ flexDirection: "row", gap: 10 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: theme.colors.faint, fontWeight: "900", marginBottom: 6 }}>Qty</Text>
+                  <TextInput
+                    value={it.qty}
+                    onChangeText={(v) => updateLine(it.key, { qty: v })}
+                    keyboardType="numeric"
+                    placeholder="1"
+                    placeholderTextColor={theme.colors.muted}
+                    style={{
+                      height: 44,
+                      paddingHorizontal: 12,
+                      borderRadius: 14,
+                      borderWidth: 1,
+                      borderColor: "rgba(255,255,255,0.12)",
+                      backgroundColor: "rgba(255,255,255,0.06)",
+                      color: theme.colors.text,
+                      fontWeight: "800",
+                    }}
+                  />
+                </View>
+
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: theme.colors.faint, fontWeight: "900", marginBottom: 6 }}>Price (TZS)</Text>
+                  <TextInput
+                    value={it.unit_price}
+                    onChangeText={(v) => updateLine(it.key, { unit_price: v })}
+                    keyboardType="numeric"
+                    placeholder="0"
+                    placeholderTextColor={theme.colors.muted}
+                    style={{
+                      height: 44,
+                      paddingHorizontal: 12,
+                      borderRadius: 14,
+                      borderWidth: 1,
+                      borderColor: "rgba(255,255,255,0.12)",
+                      backgroundColor: "rgba(255,255,255,0.06)",
+                      color: theme.colors.text,
+                      fontWeight: "800",
+                    }}
+                  />
+                </View>
+              </View>
+
+              <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                Line total: {fmtTZS(asMoney(it.unit_price) * asQty(it.qty))}
+              </Text>
+            </Card>
+          ))}
+
+          <Pressable
+            onPress={addLine}
+            hitSlop={10}
+            style={({ pressed }) => [
+              {
+                height: 44,
+                borderRadius: theme.radius.pill,
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,0.12)",
+                backgroundColor: "rgba(255,255,255,0.06)",
+                alignItems: "center",
+                justifyContent: "center",
+                flexDirection: "row",
+                gap: 10,
+                opacity: pressed ? 0.92 : 1,
+              },
+            ]}
+          >
+            <Ionicons name="add-circle-outline" size={18} color={theme.colors.text} />
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Add item</Text>
+          </Pressable>
+
+          <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 6 }}>Note</Text>
+          <TextInput
+            value={note}
+            onChangeText={setNote}
+            placeholder="Optional note..."
+            placeholderTextColor={theme.colors.muted}
+            multiline
+            style={{
+              minHeight: 70,
+              paddingHorizontal: 12,
+              paddingVertical: 10,
+              borderRadius: 16,
+              borderWidth: 1,
+              borderColor: "rgba(255,255,255,0.12)",
+              backgroundColor: "rgba(255,255,255,0.06)",
+              color: theme.colors.text,
+              fontWeight: "800",
+            }}
+          />
+
+          <Card style={{ padding: 12, backgroundColor: theme.colors.surface2, borderColor: theme.colors.borderSoft }}>
+            <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>Summary</Text>
+            <View style={{ marginTop: 8, gap: 6 }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Total qty</Text>
+                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{String(totalQty)}</Text>
+              </View>
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Subtotal</Text>
+                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{fmtTZS(subtotal)}</Text>
+              </View>
+            </View>
+          </Card>
+
+          <Pressable
+            onPress={submit}
+            disabled={!canSubmit}
+            hitSlop={10}
+            style={({ pressed }) => [
+              {
+                height: 48,
+                borderRadius: theme.radius.pill,
+                borderWidth: 1,
+                borderColor: theme.colors.emeraldBorder,
+                backgroundColor: theme.colors.emeraldSoft,
+                alignItems: "center",
+                justifyContent: "center",
+                flexDirection: "row",
+                gap: 10,
+                opacity: !canSubmit ? 0.6 : pressed ? 0.92 : 1,
+              },
+            ]}
+          >
+            <Ionicons name="send-outline" size={18} color={theme.colors.emerald} />
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{busy ? "Sending..." : "Submit Order"}</Text>
+          </Pressable>
+
+          <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 12, lineHeight: 16 }}>
+            NOTE: Totals zinahesabiwa DB (trigger + function). Hii inalinda usahihi.
+          </Text>
+        </Card>
+      </View>
+    </Screen>
+  );
+}

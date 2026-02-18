@@ -1,0 +1,15 @@
+// app/(tabs)/sales/_layout.tsx
+import { Stack } from "expo-router";
+import React from "react";
+
+export default function SalesStackLayout() {
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      {/* index.tsx */}
+      <Stack.Screen name="index" />
+      <Stack.Screen name="checkout" />
+      <Stack.Screen name="history" />
+      <Stack.Screen name="receipt" />
+    </Stack>
+  );
+}
