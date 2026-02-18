@@ -1,50 +1,106 @@
-# Welcome to your Expo app 👋
+# 🚀 ZETRA BMS  
+### ZETRA Business Management System  
+**Official Core Repository**
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+---
 
-## Get started
+## 🌍 Vision
 
-1. Install dependencies
+ZETRA BMS is a next-generation African-built Business Management Platform designed to empower entrepreneurs, retailers, and multi-store organizations with:
 
-   ```bash
-   npm install
-   ```
+- Intelligent inventory management  
+- Secure role-based access control  
+- Real-time sales & profit analytics  
+- Multi-store architecture  
+- Offline-first resilience  
+- Scalable SaaS-ready infrastructure  
 
-2. Start the app
+ZETRA is not just an app.  
+It is a business operating system.
 
-   ```bash
-   npx expo start
-   ```
+---
 
-In the output, you'll find options to open the app in a
+## 🏗 Architecture Philosophy (DORA v1)
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+ZETRA BMS follows a strict architectural doctrine:
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+- Database is the single source of truth  
+- Business logic lives in PostgreSQL (RPC-driven design)  
+- Row Level Security (RLS) enforced at DB level  
+- No duplicated logic in frontend  
+- Security-first profit handling (owner-only visibility)  
+- Canonical schema enforcement  
+- Clean, version-controlled workflow  
 
-## Get a fresh project
+This ensures:
 
-When you're ready, run:
+- Stability  
+- Security  
+- Scalability  
+- Production-grade integrity  
 
-```bash
-npm run reset-project
-```
+---
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## ⚙️ Tech Stack
 
-## Learn more
+### Frontend
+- React Native
+- Expo Router
+- TypeScript
+- File-based routing
+- Dark premium design system
 
-To learn more about developing your project with Expo, look at the following resources:
+### Backend
+- Supabase (PostgreSQL)
+- RPC-based business logic
+- Row Level Security (RLS)
+- Secure profit computation inside DB
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+### Infrastructure
+- GitHub (Version Control)
+- Clean branch discipline
+- Offline-first readiness
+- Migration-ready schema design
 
-## Join the community
+---
 
-Join our community of developers creating universal apps.
+## 🔐 Core Principles
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- Owner / Admin / Staff role isolation  
+- Organization-based multi-tenant architecture  
+- Store-scoped permissions  
+- Profit visibility restricted to owner only  
+- No client-side trust assumptions  
+- Additive migrations only (no destructive resets in production)
+
+---
+
+## 📦 Project Structure  
+---
+
+## 🧠 Long-Term Direction
+
+ZETRA BMS is the foundation of:
+
+- ZETRA Business Clubs  
+- ZETRA Marketplace  
+- ZETRA AI (Business Co-Pilot)  
+- Multi-app ecosystem under ZETRA  
+
+This repository represents the core business engine powering the entire ZETRA ecosystem.
+
+ZETRA is being built as a scalable, multi-application African technology platform with global ambitions.
+
+---
+
+## 👑 Founder
+
+Founder wa ZETRA / JOFU QUALITY  
+Vision-Driven African Tech Builder  
+
+---
+
+## 📜 License
+
+Private Repository — All Rights Reserved.  
+Unauthorized distribution, replication, or modification is strictly prohibited without written authorization from the founder.
