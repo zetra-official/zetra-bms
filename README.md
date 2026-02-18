@@ -4,90 +4,113 @@
 
 ---
 
+## 🌍 Overview
+
+ZETRA BMS (ZETRA Business Management System) is an offline-first, multi-store business management and POS platform built for modern entrepreneurs in Africa and globally.
+
+It empowers retailers, founders, and multi-branch organizations with secure infrastructure, intelligent inventory control, real-time analytics, and scalable SaaS-ready architecture.
+
+ZETRA is not just an app.  
+It is a Business Operating System.
+
+---
+
 ## 🌍 Vision
 
-ZETRA BMS is a next-generation African-built Business Management Platform designed to empower entrepreneurs, retailers, and multi-store organizations with:
+To build a world-class African technology platform that enables entrepreneurs to manage, scale, and optimize their businesses with intelligence, clarity, and control.
+
+ZETRA BMS is designed to deliver:
 
 - Intelligent inventory management  
 - Secure role-based access control  
 - Real-time sales & profit analytics  
-- Multi-store architecture  
-- Offline-first resilience  
+- Multi-store organizational architecture  
+- Offline-first operational resilience  
 - Scalable SaaS-ready infrastructure  
-
-ZETRA is not just an app.  
-It is a business operating system.
+- Enterprise-grade security foundations  
 
 ---
 
 ## 🏗 Architecture Philosophy (DORA v1)
 
-ZETRA BMS follows a strict architectural doctrine:
+ZETRA BMS follows a strict architectural doctrine known internally as **DORA v1**.
+
+Core principles:
 
 - Database is the single source of truth  
-- Business logic lives in PostgreSQL (RPC-driven design)  
-- Row Level Security (RLS) enforced at DB level  
+- Business logic lives inside PostgreSQL (RPC-driven design)  
+- Row Level Security (RLS) enforced at database level  
 - No duplicated logic in frontend  
-- Security-first profit handling (owner-only visibility)  
+- Profit is computed securely inside DB  
+- Owner-only profit visibility  
 - Canonical schema enforcement  
-- Clean, version-controlled workflow  
+- Additive migrations only (no destructive resets in production)  
+- Security-first, complexity-inside simplicity-outside design  
 
-This ensures:
+This architecture guarantees:
 
 - Stability  
-- Security  
-- Scalability  
-- Production-grade integrity  
+- Predictability  
+- Data integrity  
+- Horizontal scalability  
+- Production-grade robustness  
 
 ---
 
 ## ⚙️ Tech Stack
 
 ### Frontend
-- React Native
-- Expo Router
-- TypeScript
-- File-based routing
-- Dark premium design system
+- React Native  
+- Expo Router  
+- TypeScript  
+- File-based routing  
+- Modular screen architecture  
+- Dark premium global design system  
 
 ### Backend
-- Supabase (PostgreSQL)
-- RPC-based business logic
-- Row Level Security (RLS)
-- Secure profit computation inside DB
+- Supabase (PostgreSQL)  
+- RPC-based business logic  
+- Row Level Security (RLS)  
+- Secure database-level profit computation  
+- Canonical organization/store membership schema  
 
 ### Infrastructure
-- GitHub (Version Control)
-- Clean branch discipline
-- Offline-first readiness
-- Migration-ready schema design
+- GitHub (Version Control & CI foundation)  
+- Structured branch discipline  
+- Offline-first synchronization design  
+- Migration-ready schema architecture  
 
 ---
 
-## 🔐 Core Principles
+## 🔐 Core Security Principles
 
-- Owner / Admin / Staff role isolation  
+ZETRA BMS enforces enterprise-grade access discipline:
+
+- Owner / Admin / Staff isolation  
 - Organization-based multi-tenant architecture  
-- Store-scoped permissions  
-- Profit visibility restricted to owner only  
+- Store-scoped permission enforcement  
 - No client-side trust assumptions  
-- Additive migrations only (no destructive resets in production)
+- Database-level profit protection  
+- Strict RLS-first policy enforcement  
+- Controlled onboarding via secure RPC  
 
----
+Security is not an add-on.  
+It is foundational.
 
-## 📦 Project Structure  
 ---
 
 ## 🧠 Long-Term Direction
 
-ZETRA BMS is the foundation of:
+ZETRA BMS is the foundational engine of a larger ecosystem:
 
 - ZETRA Business Clubs  
 - ZETRA Marketplace  
 - ZETRA AI (Business Co-Pilot)  
-- Multi-app ecosystem under ZETRA  
+- Multi-application ZETRA Platform  
+- SaaS subscription infrastructure  
+- Enterprise-grade African-built technology suite  
 
-This repository represents the core business engine powering the entire ZETRA ecosystem.
+This repository represents the core operational backbone powering the entire ZETRA ecosystem.
 
 ZETRA is being built as a scalable, multi-application African technology platform with global ambitions.
 
@@ -95,12 +118,26 @@ ZETRA is being built as a scalable, multi-application African technology platfor
 
 ## 👑 Founder
 
-Founder wa ZETRA / JOFU QUALITY  
-Vision-Driven African Tech Builder  
+Founder of ZETRA / JOFU QUALITY  
+Vision-Driven African Technology Builder  
+Architect of the ZETRA Business Platform  
 
 ---
 
 ## 📜 License
 
-Private Repository — All Rights Reserved.  
-Unauthorized distribution, replication, or modification is strictly prohibited without written authorization from the founder.
+© ZETRA. All Rights Reserved.
+
+This repository contains proprietary source code.  
+Unauthorized distribution, replication, reverse-engineering, or modification is strictly prohibited without written authorization from the founder.
+
+---
+
+## 🌐 Status
+
+Active Development  
+Architecture: Stable Core  
+Security Model: Enforced  
+Vision: Long-Term Global Scale  
+
+ZETRA is being built deliberately, structurally, and permanently.
