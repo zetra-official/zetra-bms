@@ -53,7 +53,6 @@ type DashRow = {
 function fmtMoney(n: number, currency?: string | null) {
   const c = String(currency || "TZS").trim() || "TZS";
   try {
-    // NOTE: Intl wakati mwingine huweka space ya ajabu; tuta-normalize chini
     return new Intl.NumberFormat("en-TZ", {
       style: "currency",
       currency: c,
@@ -102,31 +101,17 @@ function normalizeBreak(obj: any): JsonBreak | null {
   return out;
 }
 
-/**
- * ✅ SUPER SAFE NORMALIZER:
- * DB function versions sometimes return different column names.
- * This maps v2/v3/v4 shapes into the UI shape we already use.
- */
-function normalizeDash(
-  raw: any,
-  fallbackFrom: string,
-  fallbackTo: string,
-  storeId: string
-): DashRow {
+function normalizeDash(raw: any, fallbackFrom: string, fallbackTo: string, storeId: string): DashRow {
   const store_id = String(raw?.store_id ?? raw?.p_store_id ?? storeId ?? "").trim();
 
-  const from_ts = String(
-    raw?.from_ts ?? raw?.date_from ?? raw?.p_from ?? fallbackFrom ?? ""
-  ).trim();
+  const from_ts = String(raw?.from_ts ?? raw?.date_from ?? raw?.p_from ?? fallbackFrom ?? "").trim();
   const to_ts = String(raw?.to_ts ?? raw?.date_to ?? raw?.p_to ?? fallbackTo ?? "").trim();
 
   const currency = String(raw?.currency ?? "TZS").trim() || "TZS";
 
-  // Revenue/orders: v4 uses revenue_amount + revenue_orders
   const revenue = toNum(raw?.revenue ?? raw?.revenue_amount ?? 0);
   const delivered_orders = toInt(raw?.delivered_orders ?? raw?.revenue_orders ?? 0);
 
-  // Counts: v4 uses pending/confirmed/ready/cancelled (no suffix)
   const total_orders = toInt(raw?.total_orders ?? raw?.total ?? 0);
   const pending_orders = toInt(raw?.pending_orders ?? raw?.pending ?? 0);
   const confirmed_orders = toInt(raw?.confirmed_orders ?? raw?.confirmed ?? 0);
@@ -165,38 +150,17 @@ function normalizeDash(
   };
 }
 
-function MiniStat({
-  label,
-  value,
-  hint,
-}: {
-  label: string;
-  value: string;
-  hint?: string;
-}) {
+function MiniStat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    // ✅ FIX: minWidth:0 + numberOfLines => pesa hazivunjiki mstari
     <View style={{ flex: 1, gap: 4, minWidth: 0 }}>
-      <Text
-        style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}
-        numberOfLines={1}
-        ellipsizeMode="tail"
-      >
+      <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }} numberOfLines={1} ellipsizeMode="tail">
         {label}
       </Text>
-      <Text
-        style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}
-        numberOfLines={1}
-        ellipsizeMode="tail"
-      >
+      <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }} numberOfLines={1} ellipsizeMode="tail">
         {value}
       </Text>
       {!!hint && (
-        <Text
-          style={{ color: UI.faint, fontWeight: "800", fontSize: 12 }}
-          numberOfLines={1}
-          ellipsizeMode="tail"
-        >
+        <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 12 }} numberOfLines={1} ellipsizeMode="tail">
           {hint}
         </Text>
       )}
@@ -208,16 +172,11 @@ function CompactClubRevenueCard({ onOpen }: { onOpen: () => void }) {
   const orgAny = useOrg() as any;
 
   const storeId: string = String(
-    orgAny?.activeStoreId ??
-      orgAny?.activeStore?.id ??
-      orgAny?.selectedStoreId ??
-      orgAny?.selectedStore?.id ??
-      ""
+    orgAny?.activeStoreId ?? orgAny?.activeStore?.id ?? orgAny?.selectedStoreId ?? orgAny?.selectedStore?.id ?? ""
   ).trim();
 
   const storeName: string =
-    String(orgAny?.activeStoreName ?? orgAny?.activeStore?.name ?? "Store").trim() ||
-    "Store";
+    String(orgAny?.activeStoreName ?? orgAny?.activeStore?.name ?? "Store").trim() || "Store";
 
   const [range, setRange] = useState<RangeKey>("today");
   const [loading, setLoading] = useState(false);
@@ -258,8 +217,6 @@ function CompactClubRevenueCard({ onOpen }: { onOpen: () => void }) {
   }, [load]);
 
   const currency = row?.currency || "TZS";
-
-  // ✅ Normalize spaces to reduce weird wrapping
   const revenue = fmtMoney(toNum(row?.revenue), currency).replace(/\s+/g, " ");
   const paid = fmtMoney(toNum(row?.paid_revenue), currency).replace(/\s+/g, " ");
 
@@ -298,13 +255,8 @@ function CompactClubRevenueCard({ onOpen }: { onOpen: () => void }) {
         <Card style={{ gap: 10 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-                Club Revenue
-              </Text>
-              <Text
-                style={{ color: UI.muted, fontWeight: "700", marginTop: 2 }}
-                numberOfLines={1}
-              >
+              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>Club Revenue</Text>
+              <Text style={{ color: UI.muted, fontWeight: "700", marginTop: 2 }} numberOfLines={1}>
                 Store: {storeName}
               </Text>
             </View>
@@ -325,9 +277,7 @@ function CompactClubRevenueCard({ onOpen }: { onOpen: () => void }) {
                 opacity: pressed ? 0.92 : 1,
               })}
             >
-              <Text style={{ color: UI.text, fontWeight: "900" }}>
-                {loading ? "..." : "Reload"}
-              </Text>
+              <Text style={{ color: UI.text, fontWeight: "900" }}>{loading ? "..." : "Reload"}</Text>
             </Pressable>
           </View>
 
@@ -353,32 +303,74 @@ function CompactClubRevenueCard({ onOpen }: { onOpen: () => void }) {
           <View style={{ flexDirection: "row", gap: 12, paddingTop: 2 }}>
             <MiniStat label="Revenue" value={revenue} />
             <MiniStat label="Paid" value={paid} />
-            <MiniStat
-              label="Orders"
-              value={String(row?.delivered_orders ?? 0)}
-              hint="delivered"
-            />
+            <MiniStat label="Orders" value={String(row?.delivered_orders ?? 0)} hint="delivered" />
           </View>
 
-          <View
-            style={{
-              height: 1,
-              backgroundColor: "rgba(255,255,255,0.08)",
-              marginTop: 4,
-            }}
-          />
+          <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)", marginTop: 4 }} />
 
           <View style={{ flexDirection: "row", alignItems: "center" }}>
-            <Text style={{ color: UI.muted, fontWeight: "800" }}>
-              Tap to view full dashboard
-            </Text>
+            <Text style={{ color: UI.muted, fontWeight: "800" }}>Tap to view full dashboard</Text>
             <View style={{ flex: 1 }} />
-            {loading ? (
-              <ActivityIndicator />
-            ) : (
-              <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 18 }}>›</Text>
-            )}
+            {loading ? <ActivityIndicator /> : <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 18 }}>›</Text>}
           </View>
+        </Card>
+      </Pressable>
+    </View>
+  );
+}
+
+/** ✅ ZETRA AI Card (Premium, additive only) */
+function ZetraAiCard({ onOpen }: { onOpen: () => void }) {
+  return (
+    <View style={{ paddingTop: 12 }}>
+      <Pressable
+        onPress={onOpen}
+        hitSlop={10}
+        style={({ pressed }) => ({
+          opacity: pressed ? 0.96 : 1,
+          transform: pressed ? [{ scale: 0.997 }] : [{ scale: 1 }],
+        })}
+      >
+        <Card
+          style={{
+            borderColor: "rgba(16,185,129,0.22)",
+            backgroundColor: "rgba(23,27,33,0.92)",
+            gap: 10,
+          }}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <View
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 999,
+                borderWidth: 1,
+                borderColor: UI.colors.emeraldBorder,
+                backgroundColor: UI.colors.emeraldSoft,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Text style={{ color: UI.colors.emerald, fontWeight: "900", fontSize: 16 }}>AI</Text>
+            </View>
+
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }} numberOfLines={1}>
+                ZETRA AI Assistant
+              </Text>
+              <Text style={{ color: UI.muted, fontWeight: "700", marginTop: 2 }} numberOfLines={2}>
+                Uliza maswali ya biashara + pata mwongozo wa kutumia ZETRA BMS (SW/EN auto).
+              </Text>
+            </View>
+
+            <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 18 }}>›</Text>
+          </View>
+
+          <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
+
+          <Text style={{ color: UI.faint, fontWeight: "800" }}>
+            Tip: “Nifanyeje kuongeza bidhaa?” • “How do I manage staff?” • “Nipe wazo la biashara.”
+          </Text>
         </Card>
       </Pressable>
     </View>
@@ -416,9 +408,12 @@ export default function HomeScreen() {
     router.push("/club-revenue");
   }, [router]);
 
-  const bottomPad = useMemo(() => Math.max(insets.bottom, 8) + 12, [insets.bottom]);
+  /** ✅ open AI chat (OUTSIDE tabs) */
+  const goAI = useCallback(() => {
+    router.push("/ai");
+  }, [router]);
 
-  // ✅ Permanent rule: push header down to keep status icons visible
+  const bottomPad = useMemo(() => Math.max(insets.bottom, 8) + 12, [insets.bottom]);
   const topPad = useMemo(() => Math.max(insets.top, 10) + 8, [insets.top]);
 
   const onPullRefresh = useCallback(async () => {
@@ -450,10 +445,11 @@ export default function HomeScreen() {
         }}
       >
         <Text style={{ fontSize: 28, fontWeight: "900", color: UI.text }}>ZETRA BMS</Text>
-
         <Text style={{ color: UI.muted, fontWeight: "700", marginTop: 2 }}>Dashboard</Text>
 
-        {/* ✅ CLUB: compact preview card. Tap => full page */}
+        {/* ✅ AI card on Home only */}
+        <ZetraAiCard onOpen={goAI} />
+
         <StoreGuard>
           <CompactClubRevenueCard key={`club-mini-${dashTick}`} onOpen={goClubRevenue} />
         </StoreGuard>
@@ -551,7 +547,6 @@ export default function HomeScreen() {
                     Add staff and assign stores
                   </Text>
                 </View>
-
                 <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 18 }}>›</Text>
               </View>
             </Card>

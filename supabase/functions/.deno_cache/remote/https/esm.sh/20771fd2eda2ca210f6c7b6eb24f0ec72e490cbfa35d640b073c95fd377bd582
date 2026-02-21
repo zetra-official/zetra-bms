@@ -1,0 +1,5 @@
+/* esm.sh - node-gyp-build@4.8.4 */
+export * from "/node-gyp-build@4.8.4/denonext/node-gyp-build.mjs";
+export { default } from "/node-gyp-build@4.8.4/denonext/node-gyp-build.mjs";
+
+// denoCacheMetadata={"headers":{"last-modified":"Fri, 31 Oct 2025 11:49:20 GMT","age":"9586985","x-esm-path":"/node-gyp-build@4.8.4/denonext/node-gyp-build.mjs","date":"Thu, 19 Feb 2026 10:52:25 GMT","access-control-allow-origin":"*","cache-control":"public, max-age=31536000, immutable","cf-cache-status":"HIT","content-type":"application/javascript; charset=utf-8","server":"cloudflare","cf-ray":"9d0536f59bcaa10f-LIS","access-control-expose-headers":"X-ESM-Path"},"url":"https://esm.sh/node-gyp-build@4.8.4?target=denonext","time":1771498346}

@@ -1,0 +1,4 @@
+/* esm.sh - iceberg-js@0.8.1 */
+export * from "/iceberg-js@0.8.1/denonext/iceberg-js.mjs";
+
+// denoCacheMetadata={"headers":{"x-esm-path":"/iceberg-js@0.8.1/denonext/iceberg-js.mjs","cf-cache-status":"HIT","last-modified":"Fri, 05 Dec 2025 13:10:12 GMT","content-type":"application/javascript; charset=utf-8","access-control-allow-origin":"*","cf-ray":"9d085793cd7d1636-JNB","cache-control":"public, max-age=31536000, immutable","access-control-expose-headers":"X-ESM-Path, X-TypeScript-Types","x-typescript-types":"https://esm.sh/iceberg-js@0.8.1/dist/index.d.ts","date":"Thu, 19 Feb 2026 19:58:59 GMT","server":"cloudflare","age":"6590926"},"url":"https://esm.sh/iceberg-js@0.8.1?target=denonext","time":1771531140}

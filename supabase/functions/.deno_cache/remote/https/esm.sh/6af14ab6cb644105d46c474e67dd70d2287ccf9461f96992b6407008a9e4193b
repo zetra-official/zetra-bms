@@ -1,0 +1,17 @@
+import StorageFileApi from './packages/StorageFileApi.d.ts';
+import StorageBucketApi from './packages/StorageBucketApi.d.ts';
+import { Fetch } from './lib/fetch.d.ts';
+export declare class StorageClient extends StorageBucketApi {
+    constructor(url: string, headers?: {
+        [key: string]: string;
+    }, fetch?: Fetch);
+    /**
+     * Perform file operation in a bucket.
+     *
+     * @param id The bucket id to operate on.
+     */
+    from(id: string): StorageFileApi;
+}
+//# sourceMappingURL=StorageClient.d.ts.map
+
+// denoCacheMetadata={"headers":{"access-control-allow-origin":"*","server":"cloudflare","last-modified":"Thu, 17 Jul 2025 19:06:08 GMT","cache-control":"public, max-age=31536000, immutable","date":"Thu, 19 Feb 2026 10:52:22 GMT","cf-cache-status":"HIT","cf-ray":"9d0536e12eada10f-LIS","content-type":"application/typescript; charset=utf-8","accept-ranges":"bytes","content-length":"521","age":"504999"},"url":"https://esm.sh/@supabase/storage-js@2.7.1/dist/module/StorageClient.d.ts","time":1771498343}

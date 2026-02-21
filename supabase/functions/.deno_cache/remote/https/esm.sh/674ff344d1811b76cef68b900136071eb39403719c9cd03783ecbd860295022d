@@ -1,0 +1,26 @@
+import { Fetch, FunctionsResponse, FunctionInvokeOptions, FunctionRegion } from './types.d.ts';
+export declare class FunctionsClient {
+    protected url: string;
+    protected headers: Record<string, string>;
+    protected region: FunctionRegion;
+    protected fetch: Fetch;
+    constructor(url: string, { headers, customFetch, region, }?: {
+        headers?: Record<string, string>;
+        customFetch?: Fetch;
+        region?: FunctionRegion;
+    });
+    /**
+     * Updates the authorization header
+     * @param token - the new jwt token sent in the authorisation header
+     */
+    setAuth(token: string): void;
+    /**
+     * Invokes a function
+     * @param functionName - The name of the Function to invoke.
+     * @param options - Options for invoking the Function.
+     */
+    invoke<T = any>(functionName: string, options?: FunctionInvokeOptions): Promise<FunctionsResponse<T>>;
+}
+//# sourceMappingURL=FunctionsClient.d.ts.map
+
+// denoCacheMetadata={"headers":{"age":"334762","cache-control":"public, max-age=31536000, immutable","cf-ray":"9d0536df683ea10f-LIS","content-length":"938","access-control-allow-origin":"*","server":"cloudflare","last-modified":"Thu, 17 Jul 2025 19:06:08 GMT","accept-ranges":"bytes","date":"Thu, 19 Feb 2026 10:52:22 GMT","cf-cache-status":"HIT","content-type":"application/typescript; charset=utf-8"},"url":"https://esm.sh/@supabase/functions-js@2.4.4/dist/module/FunctionsClient.d.ts","time":1771498343}

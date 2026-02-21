@@ -1,7 +1,11 @@
 {
-  "editor.codeActionsOnSave": {
-    "source.fixAll": "explicit",
-    "source.organizeImports": "explicit",
-    "source.sortMembers": "explicit"
+  "deno.enable": true,
+  "deno.unstable": [],
+  "deno.lint": true,
+  "deno.importMap": "supabase/functions/import_map.json",
+  "deno.enablePaths": ["supabase/functions"],
+  "deno.cache": "supabase/functions/.deno_cache",
+  "files.watcherExclude": {
+    "**/supabase/functions/.deno_cache/**": true
   }
 }

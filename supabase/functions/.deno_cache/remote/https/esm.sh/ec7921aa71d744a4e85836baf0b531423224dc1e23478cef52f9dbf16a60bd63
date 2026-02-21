@@ -1,0 +1,52 @@
+import { Fetch, FunctionInvokeOptions, FunctionRegion, FunctionsResponse } from './types.d.ts';
+/**
+ * Client for invoking Supabase Edge Functions.
+ */
+export declare class FunctionsClient {
+    protected url: string;
+    protected headers: Record<string, string>;
+    protected region: FunctionRegion;
+    protected fetch: Fetch;
+    /**
+     * Creates a new Functions client bound to an Edge Functions URL.
+     *
+     * @example
+     * ```ts
+     * import { FunctionsClient, FunctionRegion } from '@supabase/functions-js'
+     *
+     * const functions = new FunctionsClient('https://xyzcompany.supabase.co/functions/v1', {
+     *   headers: { apikey: 'public-anon-key' },
+     *   region: FunctionRegion.UsEast1,
+     * })
+     * ```
+     */
+    constructor(url: string, { headers, customFetch, region, }?: {
+        headers?: Record<string, string>;
+        customFetch?: Fetch;
+        region?: FunctionRegion;
+    });
+    /**
+     * Updates the authorization header
+     * @param token - the new jwt token sent in the authorisation header
+     * @example
+     * ```ts
+     * functions.setAuth(session.access_token)
+     * ```
+     */
+    setAuth(token: string): void;
+    /**
+     * Invokes a function
+     * @param functionName - The name of the Function to invoke.
+     * @param options - Options for invoking the Function.
+     * @example
+     * ```ts
+     * const { data, error } = await functions.invoke('hello-world', {
+     *   body: { name: 'Ada' },
+     * })
+     * ```
+     */
+    invoke<T = any>(functionName: string, options?: FunctionInvokeOptions): Promise<FunctionsResponse<T>>;
+}
+//# sourceMappingURL=FunctionsClient.d.ts.map
+
+// denoCacheMetadata={"headers":{"cf-cache-status":"HIT","access-control-allow-origin":"*","cf-ray":"9d085793cd831636-JNB","content-length":"1648","content-type":"application/typescript; charset=utf-8","date":"Thu, 19 Feb 2026 19:58:59 GMT","cache-control":"public, max-age=31536000, immutable","last-modified":"Wed, 18 Feb 2026 14:09:37 GMT","server":"cloudflare","accept-ranges":"bytes","age":"107361"},"url":"https://esm.sh/@supabase/functions-js@2.97.0/dist/module/FunctionsClient.d.ts","time":1771531140}
