@@ -4,6 +4,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   Dimensions,
   FlatList,
@@ -17,13 +18,20 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import * as ImagePicker from "expo-image-picker";
+import { Audio } from "expo-av";
+
 import { useOrg } from "@/src/context/OrgContext";
 import { Card } from "@/src/ui/Card";
 import { Screen } from "@/src/ui/Screen";
 import { UI } from "@/src/ui/theme";
 
 import { isProActiveForOrg } from "@/src/ai/subscription";
-import { askZetraAIWithMeta, clearConversationMemoryForOrg } from "@/src/services/ai";
+import {
+  askZetraAIStreamWithMeta,
+  askZetraAIWithMeta,
+  clearConversationMemoryForOrg,
+} from "@/src/services/ai";
 import { AiMessageBubble } from "@/src/components/AiMessageBubble";
 import { supabase } from "@/src/supabaseClient";
 
@@ -57,6 +65,8 @@ function uid() {
 }
 
 const INPUT_MAX = 12_000;
+
+const AI_WORKER_URL = clean(process.env.EXPO_PUBLIC_AI_WORKER_URL ?? "");
 
 /**
  * ✅ ChatGPT-like Typing Engine (UI side)
@@ -184,6 +194,12 @@ async function createTasksFromAiActions(args: {
   return { created, failed, errors };
 }
 
+type AttachedImage = {
+  id: string;
+  uri: string;
+  dataUrl: string; // "data:image/jpeg;base64,..."
+};
+
 export default function AiChatScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -210,7 +226,7 @@ export default function AiChatScreen() {
   const SHEET_MIN_H = 300;
 
   const sheetHeight = useMemo(() => {
-    if (toolKey === "IMAGE") return Math.max(SHEET_MIN_H + 80, Math.min(SHEET_MAX_H, 520));
+    if (toolKey === "IMAGE") return Math.max(SHEET_MIN_H + 120, Math.min(SHEET_MAX_H, 560));
     if (toolKey === "RESEARCH") return Math.max(SHEET_MIN_H + 60, Math.min(SHEET_MAX_H, 560));
     if (toolKey === "AGENT") return Math.max(SHEET_MIN_H + 40, Math.min(SHEET_MAX_H, 520));
     if (toolKey === "ANALYZE") return Math.max(SHEET_MIN_H + 40, Math.min(SHEET_MAX_H, 520));
@@ -218,7 +234,12 @@ export default function AiChatScreen() {
   }, [toolKey, SHEET_MAX_H]);
 
   const [imagePrompt, setImagePrompt] = useState("");
-  const [imageAttachedUris, setImageAttachedUris] = useState<string[]>([]);
+  const [attachedImages, setAttachedImages] = useState<AttachedImage[]>([]);
+
+  // 🎙️ Voice
+  const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const [recordingOn, setRecordingOn] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
 
   const openTool = useCallback(
     (k: Exclude<ToolKey, null>) => {
@@ -296,13 +317,84 @@ export default function AiChatScreen() {
     };
   }, [scrollToEndSoon]);
 
+  /**
+   * ✅ STREAM PERF: buffer partials, flush UI on throttle
+   * - avoids setState on every token (fixes keyboard lag)
+   */
+  const streamActiveRef = useRef(false);
+  const streamBotIdRef = useRef<string | null>(null);
+  const streamTextBufferRef = useRef<string>("");
+  const streamLastFlushedRef = useRef<string>("");
+  const streamFlushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const streamLastScrollAtRef = useRef<number>(0);
+
+  const stopStreamFlush = useCallback(() => {
+    streamActiveRef.current = false;
+    streamBotIdRef.current = null;
+    if (streamFlushTimerRef.current) clearTimeout(streamFlushTimerRef.current);
+    streamFlushTimerRef.current = null;
+  }, []);
+
+  const patchMessageText = useCallback((id: string, nextText: string) => {
+    setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, text: nextText } : m)));
+  }, []);
+
+  const throttledScroll = useCallback(() => {
+    const now = Date.now();
+    // scroll at most ~3x per second while streaming
+    if (now - streamLastScrollAtRef.current < 320) return;
+    streamLastScrollAtRef.current = now;
+    scrollToEndSoon();
+  }, [scrollToEndSoon]);
+
+  const startStreamFlush = useCallback(
+    (botId: string) => {
+      stopStreamFlush();
+      streamActiveRef.current = true;
+      streamBotIdRef.current = botId;
+      streamTextBufferRef.current = "";
+      streamLastFlushedRef.current = "";
+      streamLastScrollAtRef.current = 0;
+
+      const tick = () => {
+        if (!streamActiveRef.current) return;
+
+        const id = streamBotIdRef.current;
+        if (!id) return;
+
+        const buf = streamTextBufferRef.current || "";
+        const last = streamLastFlushedRef.current || "";
+
+        // Adaptive: if message is long, flush slower & require more delta.
+        const L = buf.length;
+        const flushEvery = L > 2600 ? 110 : L > 1400 ? 90 : 70;
+        const minDelta = L > 2600 ? 16 : L > 1400 ? 10 : 6;
+
+        const delta = Math.abs(buf.length - last.length);
+
+        if (buf && (delta >= minDelta || buf.endsWith("\n") || buf.endsWith(".") || buf.endsWith("!") || buf.endsWith("?"))) {
+          streamLastFlushedRef.current = buf;
+          patchMessageText(id, buf);
+          throttledScroll();
+        }
+
+        streamFlushTimerRef.current = setTimeout(tick, flushEvery);
+      };
+
+      streamFlushTimerRef.current = setTimeout(tick, 70);
+    },
+    [patchMessageText, stopStreamFlush, throttledScroll]
+  );
+
   useEffect(() => {
     return () => {
       if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
       typingTimerRef.current = null;
       typingAbortRef.current.aborted = true;
+
+      stopStreamFlush();
     };
-  }, []);
+  }, [stopStreamFlush]);
 
   useFocusEffect(
     useCallback(() => {
@@ -336,10 +428,6 @@ export default function AiChatScreen() {
     const last = withoutWelcome.slice(Math.max(0, withoutWelcome.length - 12));
     return last.map((m) => ({ role: m.role, text: m.text }));
   }, [messages]);
-
-  const patchMessageText = useCallback((id: string, nextText: string) => {
-    setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, text: nextText } : m)));
-  }, []);
 
   const stopTyping = useCallback(() => {
     typingAbortRef.current.aborted = true;
@@ -394,6 +482,226 @@ export default function AiChatScreen() {
     [patchMessageText, scrollToEndSoon, stopTyping]
   );
 
+  const requireWorkerUrlOrAlert = useCallback(() => {
+    if (!AI_WORKER_URL) {
+      Alert.alert(
+        "AI Worker URL missing",
+        "Weka EXPO_PUBLIC_AI_WORKER_URL kwenye .env (base URL ya Cloudflare Worker), kisha restart Metro."
+      );
+      return false;
+    }
+    return true;
+  }, []);
+
+  const pickAndAttachImage = useCallback(async () => {
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert("Permission required", "Ruhusu Photos/Media ili ku-attach picha.");
+        return;
+      }
+
+      const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.85,
+        base64: true,
+        allowsMultipleSelection: false,
+      });
+
+      if (res.canceled) return;
+
+      const asset = res.assets?.[0];
+      if (!asset?.uri || !asset?.base64) {
+        Alert.alert("Failed", "Imeshindikana kupata image base64. Jaribu tena.");
+        return;
+      }
+
+      const mime = asset.mimeType || "image/jpeg";
+      const dataUrl = `data:${mime};base64,${asset.base64}`;
+
+      setAttachedImages((prev) => [
+        ...prev,
+        {
+          id: uid(),
+          uri: asset.uri,
+          dataUrl,
+        },
+      ]);
+
+      requestAnimationFrame(() => inputRef.current?.focus());
+    } catch (e: any) {
+      Alert.alert("Error", clean(e?.message) || "Image pick error");
+    }
+  }, []);
+
+  const removeAttachedImage = useCallback((id: string) => {
+    setAttachedImages((prev) => prev.filter((x) => x.id !== id));
+  }, []);
+
+  const startRecording = useCallback(async () => {
+    try {
+      if (!requireWorkerUrlOrAlert()) return;
+
+      const perm = await Audio.requestPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert("Permission required", "Ruhusu Microphone ili AI isikie sauti.");
+        return;
+      }
+
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+
+      const rec = new Audio.Recording();
+      await rec.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+      await rec.startAsync();
+
+      setRecording(rec);
+      setRecordingOn(true);
+    } catch (e: any) {
+      Alert.alert("Mic error", clean(e?.message) || "Failed to start recording");
+      setRecording(null);
+      setRecordingOn(false);
+    }
+  }, [requireWorkerUrlOrAlert]);
+
+  const stopRecordingAndTranscribe = useCallback(async () => {
+    try {
+      if (!recording) return;
+
+      setTranscribing(true);
+      setRecordingOn(false);
+
+      await recording.stopAndUnloadAsync();
+      const uri = recording.getURI();
+      setRecording(null);
+
+      if (!uri) {
+        Alert.alert("Error", "Recording URI missing.");
+        setTranscribing(false);
+        return;
+      }
+
+      // Build FormData -> Worker /transcribe
+      const form = new FormData();
+      form.append("file", {
+        uri,
+        name: "voice.m4a",
+        type: Platform.OS === "ios" ? "audio/m4a" : "audio/mp4",
+      } as any);
+
+      const res = await fetch(`${AI_WORKER_URL}/transcribe`, {
+        method: "POST",
+        body: form,
+      });
+
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        const msg = clean(data?.error) || "Transcription failed";
+        Alert.alert("Transcribe failed", msg);
+        setTranscribing(false);
+        return;
+      }
+
+      const text = clean(data?.text);
+      if (!text) {
+        Alert.alert("No text", "AI haikupata maneno. Jaribu tena ukikaribia mic.");
+        setTranscribing(false);
+        return;
+      }
+
+      // Put transcribed text into input (ChatGPT-like)
+      setInput((prev) => (clean(prev) ? `${clean(prev)}\n${text}` : text));
+      requestAnimationFrame(() => inputRef.current?.focus());
+    } catch (e: any) {
+      Alert.alert("Transcribe error", clean(e?.message) || "Unknown transcribe error");
+    } finally {
+      setTranscribing(false);
+    }
+  }, [AI_WORKER_URL, recording]);
+
+  const toggleMic = useCallback(() => {
+    if (recordingOn) {
+      void stopRecordingAndTranscribe();
+      return;
+    }
+    void startRecording();
+  }, [recordingOn, startRecording, stopRecordingAndTranscribe]);
+
+  const callWorkerVision = useCallback(
+    async (text: string, images: AttachedImage[], history: ReqMsg[]) => {
+      if (!requireWorkerUrlOrAlert()) throw new Error("Worker URL missing");
+      const payload = {
+        message: text,
+        images: images.map((x) => x.dataUrl),
+        meta: {
+          mode,
+          history,
+          context: {
+            orgId: org.activeOrgId,
+            activeOrgId: org.activeOrgId,
+            activeOrgName: org.activeOrgName,
+            activeStoreId: org.activeStoreId,
+            activeStoreName: org.activeStoreName,
+            activeRole: org.activeRole,
+          },
+        },
+      };
+
+      const res = await fetch(`${AI_WORKER_URL}/vision`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        const msg = clean(data?.error) || "Vision request failed";
+        throw new Error(msg);
+      }
+
+      return {
+        text: clean(data?.reply) || "No response",
+        meta: data?.meta ?? null,
+      };
+    },
+    [
+      AI_WORKER_URL,
+      mode,
+      org.activeOrgId,
+      org.activeOrgName,
+      org.activeRole,
+      org.activeStoreId,
+      org.activeStoreName,
+      requireWorkerUrlOrAlert,
+    ]
+  );
+
+  const callWorkerImageGenerate = useCallback(
+    async (prompt: string) => {
+      if (!requireWorkerUrlOrAlert()) throw new Error("Worker URL missing");
+
+      const res = await fetch(`${AI_WORKER_URL}/image`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
+      });
+
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        const msg = clean(data?.error) || "Image generation failed";
+        throw new Error(msg);
+      }
+
+      const url = clean(data?.url);
+      if (!url) throw new Error("No image URL returned");
+      return url;
+    },
+    [requireWorkerUrlOrAlert]
+  );
+
   const send = useCallback(async () => {
     const text = clean(input);
     if (!text || thinking) return;
@@ -416,29 +724,66 @@ export default function AiChatScreen() {
 
     setInput("");
     setThinking(true);
+
+    // stop other engines (typing) + streaming flush
     stopTyping();
+    stopStreamFlush();
 
     const userMsg: ChatMsg = { id: uid(), role: "user", text, ts: Date.now() };
     const botId = uid();
     const botPlaceholder: ChatMsg = { id: botId, role: "assistant", ts: Date.now(), text: "…" };
 
+    const imagesToSend = attachedImages;
+    setAttachedImages([]);
+
     setMessages((prev) => [botPlaceholder, userMsg, ...prev]);
     scrollToEndSoon();
 
     try {
-      const meta = await askZetraAIWithMeta(text, {
-        mode,
-        history,
-        context: {
-          orgId: org.activeOrgId,
-          activeOrgId: org.activeOrgId,
-          activeOrgName: org.activeOrgName,
-          activeStoreId: org.activeStoreId,
-          activeStoreName: org.activeStoreName,
-          activeRole: org.activeRole,
-        },
-      });
+      // ✅ If images attached => use Worker vision endpoint
+      if (imagesToSend.length > 0) {
+        const res = await callWorkerVision(text, imagesToSend, history);
 
+        const packed = packAssistantText({
+          text: res.text,
+          actions: res?.meta?.actions ?? [],
+          nextMove: res?.meta?.nextMove ?? "",
+          footerNote: "",
+        });
+
+        await typeOutChatGPTLike(botId, packed || res.text);
+        return;
+      }
+
+      // ✅ LIVE STREAMING for normal text flow (PERF FIXED)
+      startStreamFlush(botId);
+
+      const meta = await askZetraAIStreamWithMeta(
+        text,
+        {
+          mode,
+          history,
+          context: {
+            orgId: org.activeOrgId,
+            activeOrgId: org.activeOrgId,
+            activeOrgName: org.activeOrgName,
+            activeStoreId: org.activeStoreId,
+            activeStoreName: org.activeStoreName,
+            activeRole: org.activeRole,
+          },
+          // IMPORTANT: keep autosave controlled here (avoid duplicates)
+          taskAutosave: false,
+        },
+        (partial) => {
+          // ✅ PERF: do NOT setState here (buffer only)
+          streamTextBufferRef.current = partial || "…";
+        }
+      );
+
+      // stop flush before final packing
+      stopStreamFlush();
+
+      // ✅ PRO: Save actions to tasks (your existing logic)
       let footerNote = "";
       if (proActive && clean(org.activeOrgId) && Array.isArray(meta.actions) && meta.actions.length) {
         const result = await createTasksFromAiActions({
@@ -457,15 +802,18 @@ export default function AiChatScreen() {
         }
       }
 
-      const packed = packAssistantText({
+      const finalPacked = packAssistantText({
         text: meta.text,
         actions: meta.actions ?? [],
         nextMove: meta.nextMove,
         footerNote,
       });
 
-      await typeOutChatGPTLike(botId, packed || meta.text || "Samahani — AI imerudisha jibu tupu. Jaribu tena.");
+      // ✅ final replace (single update)
+      patchMessageText(botId, finalPacked || meta.text || "Samahani — AI imerudisha jibu tupu. Jaribu tena.");
+      scrollToEndSoon();
     } catch (e: any) {
+      stopStreamFlush();
       patchMessageText(
         botId,
         "Samahani — kuna hitilafu kidogo.\n" +
@@ -477,19 +825,23 @@ export default function AiChatScreen() {
       scrollToEndSoon();
     }
   }, [
-    input,
-    thinking,
-    mode,
+    attachedImages,
     buildHistory,
+    callWorkerVision,
+    input,
+    mode,
     org.activeOrgId,
     org.activeOrgName,
     org.activeRole,
     org.activeStoreId,
     org.activeStoreName,
-    proActive,
     patchMessageText,
+    proActive,
     scrollToEndSoon,
+    startStreamFlush,
+    stopStreamFlush,
     stopTyping,
+    thinking,
     typeOutChatGPTLike,
   ]);
 
@@ -630,6 +982,7 @@ export default function AiChatScreen() {
         <Pressable
           onPress={() => {
             stopTyping();
+            stopStreamFlush();
             void clearConversationMemoryForOrg(org.activeOrgId);
 
             setMessages([
@@ -644,6 +997,7 @@ export default function AiChatScreen() {
                   "Tip: Andika Kiswahili au English — nita-adapt automatically.",
               },
             ]);
+            setAttachedImages([]);
             requestAnimationFrame(() => inputRef.current?.focus());
           }}
           hitSlop={10}
@@ -770,7 +1124,7 @@ export default function AiChatScreen() {
   }, [toolKey]);
 
   const SheetSubtitle = useMemo(() => {
-    if (toolKey === "IMAGE") return "Tengeneza picha kwa prompt (UI-ready).";
+    if (toolKey === "IMAGE") return "Tengeneza picha kwa prompt (OpenAI Image).";
     if (toolKey === "RESEARCH") return "Muulize swali, nitatoa uchambuzi wa kina.";
     if (toolKey === "AGENT") return "Nitaandaa plan + actions (PRO saves to Tasks).";
     if (toolKey === "ANALYZE") return "Sales/stock/strategy suggestions (general).";
@@ -807,7 +1161,11 @@ export default function AiChatScreen() {
           <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
             <Pressable
               onPress={() => {
-                setImageAttachedUris((prev) => prev);
+                const p = clean(imagePrompt);
+                if (!p) return;
+                setInput(p);
+                closeTool();
+                requestAnimationFrame(() => inputRef.current?.focus());
               }}
               hitSlop={10}
               style={({ pressed }) => ({
@@ -824,19 +1182,32 @@ export default function AiChatScreen() {
               })}
             >
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                <Ionicons name="image" size={18} color={UI.text} />
-                <Text style={{ color: UI.text, fontWeight: "900" }}>Attach</Text>
+                <Ionicons name="text" size={18} color={UI.text} />
+                <Text style={{ color: UI.text, fontWeight: "900" }}>Use as Text</Text>
               </View>
             </Pressable>
 
             <Pressable
-              onPress={() => {
-                const p = clean(imagePrompt);
-                if (!p) return;
+              onPress={async () => {
+                try {
+                  const p = clean(imagePrompt);
+                  if (!p) return;
 
-                setInput(p);
-                closeTool();
-                requestAnimationFrame(() => inputRef.current?.focus());
+                  const userMsg: ChatMsg = { id: uid(), role: "user", text: `[Create Image] ${p}`, ts: Date.now() };
+                  const botId = uid();
+                  const botPlaceholder: ChatMsg = { id: botId, role: "assistant", ts: Date.now(), text: "…" };
+
+                  setMessages((prev) => [botPlaceholder, userMsg, ...prev]);
+                  closeTool();
+                  scrollToEndSoon();
+
+                  const url = await callWorkerImageGenerate(p);
+
+                  const reply = `✅ Image generated\n\n![ZETRA Image](${url})\n\nLink: ${url}`;
+                  await typeOutChatGPTLike(botId, reply);
+                } catch (e: any) {
+                  Alert.alert("Image error", clean(e?.message) || "Failed to generate image");
+                }
               }}
               hitSlop={10}
               style={({ pressed }) => ({
@@ -854,13 +1225,13 @@ export default function AiChatScreen() {
             >
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                 <Ionicons name="sparkles" size={18} color={UI.text} />
-                <Text style={{ color: UI.text, fontWeight: "900" }}>Use Prompt</Text>
+                <Text style={{ color: UI.text, fontWeight: "900" }}>Generate</Text>
               </View>
             </Pressable>
           </View>
 
           <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 11, marginTop: 10 }}>
-            Note: Hii ni UI layer. Wiring ya “image generation” tutaiunganisha hatua inayofuata bila kugusa chat core.
+            Note: “Generate” inaenda Cloudflare Worker → OpenAI Image.
           </Text>
         </View>
       ) : (
@@ -938,6 +1309,8 @@ export default function AiChatScreen() {
     return keyboardOpen ? 10 : safeBottomWhenClosed;
   }, [keyboardOpen, safeBottomWhenClosed]);
 
+  const micActive = recordingOn || transcribing;
+
   return (
     <Screen scroll={false} contentStyle={{ paddingTop: 0, paddingHorizontal: 0, paddingBottom: 0 }}>
       <KeyboardAvoidingView
@@ -956,7 +1329,6 @@ export default function AiChatScreen() {
             inverted
             keyboardShouldPersistTaps="handled"
             renderItem={({ item }) => <AiMessageBubble msg={item} />}
-            // ✅ FIX: inverted list => pad TOP to protect from absolute composer overlap
             contentContainerStyle={{ paddingTop: listTopPad, paddingBottom: listBottomPad }}
             showsVerticalScrollIndicator={false}
             ListFooterComponent={
@@ -991,6 +1363,36 @@ export default function AiChatScreen() {
               zIndex: 50,
             }}
           >
+            {/* Attachments preview */}
+            {attachedImages.length > 0 ? (
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
+                {attachedImages.map((img) => (
+                  <View
+                    key={img.id}
+                    style={{
+                      borderWidth: 1,
+                      borderColor: "rgba(255,255,255,0.14)",
+                      backgroundColor: "rgba(255,255,255,0.06)",
+                      borderRadius: 14,
+                      paddingHorizontal: 10,
+                      paddingVertical: 8,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
+                  >
+                    <Ionicons name="image" size={16} color={UI.text} />
+                    <Text style={{ color: UI.text, fontWeight: "900", maxWidth: 140 }} numberOfLines={1}>
+                      Image attached
+                    </Text>
+                    <Pressable onPress={() => removeAttachedImage(img.id)} hitSlop={10}>
+                      <Ionicons name="close-circle" size={18} color={UI.faint} />
+                    </Pressable>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+
             <View
               style={{
                 borderWidth: 1,
@@ -1009,6 +1411,54 @@ export default function AiChatScreen() {
                 elevation: 6,
               }}
             >
+              {/* Image attach */}
+              <Pressable
+                onPress={pickAndAttachImage}
+                hitSlop={10}
+                style={({ pressed }) => ({
+                  width: 42,
+                  height: 42,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: "rgba(255,255,255,0.12)",
+                  backgroundColor: pressed ? "rgba(255,255,255,0.09)" : "rgba(255,255,255,0.05)",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  opacity: pressed ? 0.92 : 1,
+                  transform: [{ scale: pressed ? 0.985 : 1 }],
+                })}
+              >
+                <Ionicons name="image-outline" size={18} color={UI.text} />
+              </Pressable>
+
+              {/* Mic */}
+              <Pressable
+                onPress={toggleMic}
+                hitSlop={10}
+                style={({ pressed }) => ({
+                  width: 42,
+                  height: 42,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: micActive ? UI.colors.emeraldBorder : "rgba(255,255,255,0.12)",
+                  backgroundColor: micActive
+                    ? "rgba(16,185,129,0.18)"
+                    : pressed
+                    ? "rgba(255,255,255,0.09)"
+                    : "rgba(255,255,255,0.05)",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  opacity: pressed ? 0.92 : 1,
+                  transform: [{ scale: pressed ? 0.985 : 1 }],
+                })}
+              >
+                <Ionicons
+                  name={recordingOn ? "mic" : transcribing ? "hourglass" : "mic-outline"}
+                  size={18}
+                  color={UI.text}
+                />
+              </Pressable>
+
               <TextInput
                 ref={inputRef}
                 value={input}
@@ -1084,10 +1534,7 @@ export default function AiChatScreen() {
                 }}
               />
 
-              <Pressable
-                onPress={closeTool}
-                style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }}
-              />
+              <Pressable onPress={closeTool} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }} />
 
               <Animated.View
                 style={{

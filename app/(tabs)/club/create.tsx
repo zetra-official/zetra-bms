@@ -25,6 +25,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
 
 /* ---------------- utils ---------------- */
 
@@ -413,151 +414,82 @@ export default function ClubCreatePostScreen() {
   const MODAL_MAX_HEIGHT = Math.max(320, Math.min(560, winH - modalPadTop - modalPadBottom - 20));
 
   return (
-    <Screen scroll contentStyle={{ paddingTop: topPad }}>
-      <View style={{ gap: 12 }}>
-        {!!err && (
-          <Card style={{ backgroundColor: theme.colors.dangerSoft, borderColor: theme.colors.dangerBorder }}>
-            <Text style={{ color: theme.colors.dangerText, fontWeight: "900" }}>{err}</Text>
-          </Card>
-        )}
+    <>
+      {/* ✅ HARD FIX: force dark status bar background on this screen too */}
+      <StatusBar style="light" backgroundColor={theme.colors.background} />
 
-        <Card>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-            <View
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 999,
-                borderWidth: 1,
-                borderColor: theme.colors.emeraldBorder,
-                backgroundColor: theme.colors.emeraldSoft,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Ionicons name="storefront-outline" size={18} color={theme.colors.emerald} />
-            </View>
-
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Active Store</Text>
-              <Text style={{ color: theme.colors.muted, fontWeight: "900", marginTop: 2 }}>
-                {activeStoreName ?? "—"}
-              </Text>
-            </View>
-
-            <Pressable onPress={() => void loadProducts()} hitSlop={10} style={{ padding: 8 }}>
-              <Ionicons name="refresh" size={18} color={theme.colors.faint} />
-            </Pressable>
-          </View>
-
-          {!activeStoreId ? (
-            <Text style={{ color: theme.colors.dangerText, fontWeight: "900", marginTop: 10 }}>
-              Hakuna store iliyochaguliwa. Rudi uchague/activate store kwanza.
-            </Text>
-          ) : null}
-        </Card>
-
-        {/* Product block */}
-        <Card>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Bidhaa (Product)</Text>
-
-            {!!selectedProductId && (
-              <Pressable
-                onPress={() => {
-                  setSelectedProductId("");
-                  setSelectedName("");
-                  setSelectedSku("");
-                  setSelectedPrice(0);
-                }}
-                hitSlop={10}
-              >
-                <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Clear</Text>
-              </Pressable>
-            )}
-          </View>
-
-          {!!prodErr ? (
-            <Text style={{ marginTop: 8, color: theme.colors.dangerText, fontWeight: "900" }}>{prodErr}</Text>
-          ) : null}
-
-          <Pressable
-            onPress={openPicker}
-            disabled={!activeStoreId || prodLoading}
-            style={{
-              marginTop: 10,
-              height: 46,
-              borderRadius: theme.radius.pill,
-              borderWidth: 1,
-              borderColor: theme.colors.emeraldBorder,
-              backgroundColor: theme.colors.emeraldSoft,
-              alignItems: "center",
-              justifyContent: "center",
-              flexDirection: "row",
-              gap: 10,
-              opacity: !activeStoreId || prodLoading ? 0.6 : 1,
-            }}
-          >
-            <Ionicons name="pricetag-outline" size={18} color={theme.colors.emerald} />
-            <Text style={{ fontWeight: "900", color: theme.colors.text }}>
-              {prodLoading ? "Loading products..." : selectedName ? "Change Product" : "Chagua Bidhaa"}
-            </Text>
-          </Pressable>
-
-          {!!selectedName && (
-            <View style={{ marginTop: 10, gap: 4 }}>
-              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>{selectedName}</Text>
-              {!!selectedSku && <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>SKU: {selectedSku}</Text>}
-              <Text style={{ color: theme.colors.emerald, fontWeight: "900", fontSize: 16 }}>
-                {fmtMoneyTZS(selectedPrice, currency)}
-              </Text>
-              <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                Bei hii inatoka DB (products.selling_price) na inasnap-shot kwenye post.
-              </Text>
-            </View>
+      {/* ✅ ensure root stays dark */}
+      <Screen scroll contentStyle={{ paddingTop: topPad }}>
+        <View style={{ gap: 12 }}>
+          {!!err && (
+            <Card style={{ backgroundColor: theme.colors.dangerSoft, borderColor: theme.colors.dangerBorder }}>
+              <Text style={{ color: theme.colors.dangerText, fontWeight: "900" }}>{err}</Text>
+            </Card>
           )}
 
-          {!selectedName ? (
-            <Text style={{ marginTop: 10, color: theme.colors.faint, fontWeight: "900" }}>
-              ⚠️ Product ni required kwa post.
-            </Text>
-          ) : null}
-        </Card>
+          <Card>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <View
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: theme.colors.emeraldBorder,
+                  backgroundColor: theme.colors.emeraldSoft,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Ionicons name="storefront-outline" size={18} color={theme.colors.emerald} />
+              </View>
 
-        <Card>
-          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Ujumbe (Caption)</Text>
-          <TextInput
-            value={caption}
-            onChangeText={setCaption}
-            placeholder="Andika tangazo la biashara yako..."
-            placeholderTextColor={theme.colors.faint}
-            multiline
-            style={{
-              minHeight: 120,
-              marginTop: 8,
-              borderRadius: theme.radius.xl,
-              borderWidth: 1,
-              borderColor: "rgba(255,255,255,0.12)",
-              padding: 12,
-              color: theme.colors.text,
-            }}
-          />
-        </Card>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Active Store</Text>
+                <Text style={{ color: theme.colors.muted, fontWeight: "900", marginTop: 2 }}>
+                  {activeStoreName ?? "—"}
+                </Text>
+              </View>
 
-        <Card>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Picha (Feed + HQ) — hiari</Text>
-
-            {!!localUri && (
-              <Pressable onPress={removeImage} hitSlop={10}>
-                <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Remove</Text>
+              <Pressable onPress={() => void loadProducts()} hitSlop={10} style={{ padding: 8 }}>
+                <Ionicons name="refresh" size={18} color={theme.colors.faint} />
               </Pressable>
-            )}
-          </View>
+            </View>
 
-          {!localUri ? (
+            {!activeStoreId ? (
+              <Text style={{ color: theme.colors.dangerText, fontWeight: "900", marginTop: 10 }}>
+                Hakuna store iliyochaguliwa. Rudi uchague/activate store kwanza.
+              </Text>
+            ) : null}
+          </Card>
+
+          {/* Product block */}
+          <Card>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Bidhaa (Product)</Text>
+
+              {!!selectedProductId && (
+                <Pressable
+                  onPress={() => {
+                    setSelectedProductId("");
+                    setSelectedName("");
+                    setSelectedSku("");
+                    setSelectedPrice(0);
+                  }}
+                  hitSlop={10}
+                >
+                  <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Clear</Text>
+                </Pressable>
+              )}
+            </View>
+
+            {!!prodErr ? (
+              <Text style={{ marginTop: 8, color: theme.colors.dangerText, fontWeight: "900" }}>{prodErr}</Text>
+            ) : null}
+
             <Pressable
-              onPress={pickImage}
+              onPress={openPicker}
+              disabled={!activeStoreId || prodLoading}
               style={{
                 marginTop: 10,
                 height: 46,
@@ -568,152 +500,245 @@ export default function ClubCreatePostScreen() {
                 alignItems: "center",
                 justifyContent: "center",
                 flexDirection: "row",
-                gap: 8,
+                gap: 10,
+                opacity: !activeStoreId || prodLoading ? 0.6 : 1,
               }}
             >
-              <Ionicons name="image-outline" size={18} color={theme.colors.emerald} />
-              <Text style={{ fontWeight: "900", color: theme.colors.text }}>Chagua Picha</Text>
+              <Ionicons name="pricetag-outline" size={18} color={theme.colors.emerald} />
+              <Text style={{ fontWeight: "900", color: theme.colors.text }}>
+                {prodLoading ? "Loading products..." : selectedName ? "Change Product" : "Chagua Bidhaa"}
+              </Text>
             </Pressable>
-          ) : (
-            <View style={{ marginTop: 10, gap: 8 }}>
-              <View
+
+            {!!selectedName && (
+              <View style={{ marginTop: 10, gap: 4 }}>
+                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>{selectedName}</Text>
+                {!!selectedSku && <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>SKU: {selectedSku}</Text>}
+                <Text style={{ color: theme.colors.emerald, fontWeight: "900", fontSize: 16 }}>
+                  {fmtMoneyTZS(selectedPrice, currency)}
+                </Text>
+                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                  Bei hii inatoka DB (products.selling_price) na inasnap-shot kwenye post.
+                </Text>
+              </View>
+            )}
+
+            {!selectedName ? (
+              <Text style={{ marginTop: 10, color: theme.colors.faint, fontWeight: "900" }}>
+                ⚠️ Product ni required kwa post.
+              </Text>
+            ) : null}
+          </Card>
+
+          <Card>
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Ujumbe (Caption)</Text>
+            <TextInput
+              value={caption}
+              onChangeText={setCaption}
+              placeholder="Andika tangazo la biashara yako..."
+              placeholderTextColor={theme.colors.faint}
+              multiline
+              style={{
+                minHeight: 120,
+                marginTop: 8,
+                borderRadius: theme.radius.xl,
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,0.12)",
+                padding: 12,
+                color: theme.colors.text,
+              }}
+            />
+          </Card>
+
+          <Card>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Picha (Feed + HQ) — hiari</Text>
+
+              {!!localUri && (
+                <Pressable onPress={removeImage} hitSlop={10}>
+                  <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Remove</Text>
+                </Pressable>
+              )}
+            </View>
+
+            {!localUri ? (
+              <Pressable
+                onPress={pickImage}
                 style={{
-                  width: "100%",
-                  aspectRatio: 16 / 9,
-                  borderRadius: theme.radius.xl,
-                  overflow: "hidden",
+                  marginTop: 10,
+                  height: 46,
+                  borderRadius: theme.radius.pill,
                   borderWidth: 1,
-                  borderColor: "rgba(255,255,255,0.12)",
+                  borderColor: theme.colors.emeraldBorder,
+                  backgroundColor: theme.colors.emeraldSoft,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexDirection: "row",
+                  gap: 8,
                 }}
               >
-                <Image source={{ uri: shownPreviewUri }} style={{ width: "100%", height: "100%" }} />
+                <Ionicons name="image-outline" size={18} color={theme.colors.emerald} />
+                <Text style={{ fontWeight: "900", color: theme.colors.text }}>Chagua Picha</Text>
+              </Pressable>
+            ) : (
+              <View style={{ marginTop: 10, gap: 8 }}>
+                <View
+                  style={{
+                    width: "100%",
+                    aspectRatio: 16 / 9,
+                    borderRadius: theme.radius.xl,
+                    overflow: "hidden",
+                    borderWidth: 1,
+                    borderColor: "rgba(255,255,255,0.12)",
+                  }}
+                >
+                  <Image source={{ uri: shownPreviewUri }} style={{ width: "100%", height: "100%" }} />
+                </View>
+
+                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                  {uploading
+                    ? "Kuandaa sizes + Uploading picha..."
+                    : "Perf Standard: FEED (1080px, ~<=0.45MB) + HQ (1600px, <=2MB). Feed itakuwa smooth hata uki-scroll chini sana."}
+                </Text>
               </View>
+            )}
+          </Card>
 
-              <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                {uploading
-                  ? "Kuandaa sizes + Uploading picha..."
-                  : "Perf Standard: FEED (1080px, ~<=0.45MB) + HQ (1600px, <=2MB). Feed itakuwa smooth hata uki-scroll chini sana."}
-              </Text>
-            </View>
-          )}
-        </Card>
+          <Button
+            title={uploading ? "Uploading..." : saving ? "Posting..." : "Post Now"}
+            onPress={submit}
+            disabled={!canSubmit}
+          />
+        </View>
 
-        <Button title={uploading ? "Uploading..." : saving ? "Posting..." : "Post Now"} onPress={submit} disabled={!canSubmit} />
-      </View>
-
-      {/* Product Picker Modal */}
-      <Modal
-        visible={productOpen}
-        transparent
-        animationType="fade"
-        statusBarTranslucent
-        onRequestClose={() => setProductOpen(false)}
-      >
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
-          <Pressable
-            onPress={() => setProductOpen(false)}
+        {/* Product Picker Modal */}
+        <Modal
+          visible={productOpen}
+          transparent
+          animationType="fade"
+          // ✅ HARD FIX: statusBarTranslucent can reveal white window behind on Android
+          statusBarTranslucent={false}
+          // ✅ reduces flashes on some Android devices
+          hardwareAccelerated
+          // @ts-ignore (RN supports on iOS)
+          presentationStyle="overFullScreen"
+          onRequestClose={() => setProductOpen(false)}
+        >
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
             style={{
               flex: 1,
-              backgroundColor: "rgba(0,0,0,0.75)",
-              paddingTop: modalPadTop,
-              paddingBottom: modalPadBottom,
-              paddingHorizontal: 14,
-              justifyContent: "center",
+              // ✅ ensure even the modal root is dark (no white behind)
+              backgroundColor: theme.colors.background,
             }}
           >
             <Pressable
-              onPress={() => {}}
+              onPress={() => setProductOpen(false)}
               style={{
-                borderRadius: theme.radius.xl,
-                borderWidth: 1,
-                borderColor: theme.colors.borderSoft,
-                backgroundColor: theme.colors.card,
-                overflow: "hidden",
-                maxHeight: MODAL_MAX_HEIGHT,
+                flex: 1,
+                backgroundColor: "rgba(0,0,0,0.75)",
+                paddingTop: modalPadTop,
+                paddingBottom: modalPadBottom,
+                paddingHorizontal: 14,
+                justifyContent: "center",
               }}
             >
-              <View style={{ padding: 12, borderBottomWidth: 1, borderBottomColor: theme.colors.borderSoft }}>
-                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>Chagua Bidhaa</Text>
-
-                <View
-                  style={{
-                    marginTop: 10,
-                    borderWidth: 1,
-                    borderColor: "rgba(255,255,255,0.12)",
-                    borderRadius: theme.radius.xl,
-                    paddingHorizontal: 12,
-                    height: 46,
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 10,
-                  }}
-                >
-                  <Ionicons name="search" size={16} color={theme.colors.faint} />
-                  <TextInput
-                    value={q}
-                    onChangeText={setQ}
-                    placeholder="Search name or SKU..."
-                    placeholderTextColor={theme.colors.faint}
-                    style={{ flex: 1, color: theme.colors.text, fontWeight: "800" }}
-                  />
-                  {!!q && (
-                    <Pressable onPress={() => setQ("")} hitSlop={10} style={{ padding: 6 }}>
-                      <Ionicons name="close" size={16} color={theme.colors.faint} />
-                    </Pressable>
-                  )}
-                </View>
-              </View>
-
-              <FlatList
-                data={filteredProducts}
-                keyExtractor={(x) => String(x.product_id)}
-                style={{ flexGrow: 0 }}
-                contentContainerStyle={{ paddingVertical: 6 }}
-                keyboardShouldPersistTaps="handled"
-                renderItem={({ item }) => {
-                  const price = Number(item.selling_price) || 0;
-                  const isActive = String(item.product_id) === selectedProductId;
-
-                  return (
-                    <Pressable
-                      onPress={() => selectProduct(item)}
-                      style={({ pressed }) => [
-                        {
-                          paddingHorizontal: 12,
-                          paddingVertical: 12,
-                          opacity: pressed ? 0.92 : 1,
-                          backgroundColor: isActive ? theme.colors.emeraldSoft : "transparent",
-                          borderTopWidth: 1,
-                          borderTopColor: "rgba(255,255,255,0.06)",
-                        },
-                      ]}
-                    >
-                      <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14 }}>{item.name}</Text>
-                      <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 4 }}>
-                        <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>
-                          {clean(item.sku) ? `SKU: ${item.sku}` : "—"}
-                        </Text>
-                        <Text style={{ color: theme.colors.emerald, fontWeight: "900" }}>{fmtMoneyTZS(price, "TZS")}</Text>
-                      </View>
-                    </Pressable>
-                  );
+              <Pressable
+                onPress={() => {}}
+                style={{
+                  borderRadius: theme.radius.xl,
+                  borderWidth: 1,
+                  borderColor: theme.colors.borderSoft,
+                  backgroundColor: theme.colors.card,
+                  overflow: "hidden",
+                  maxHeight: MODAL_MAX_HEIGHT,
                 }}
-                ListEmptyComponent={
-                  <View style={{ padding: 14 }}>
-                    <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>
-                      {prodLoading ? "Loading..." : "No products found."}
-                    </Text>
-                  </View>
-                }
-              />
+              >
+                <View style={{ padding: 12, borderBottomWidth: 1, borderBottomColor: theme.colors.borderSoft }}>
+                  <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>Chagua Bidhaa</Text>
 
-              <View style={{ padding: 12, borderTopWidth: 1, borderTopColor: theme.colors.borderSoft }}>
-                <Button title="Close" variant="secondary" onPress={() => setProductOpen(false)} />
-              </View>
+                  <View
+                    style={{
+                      marginTop: 10,
+                      borderWidth: 1,
+                      borderColor: "rgba(255,255,255,0.12)",
+                      borderRadius: theme.radius.xl,
+                      paddingHorizontal: 12,
+                      height: 46,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 10,
+                    }}
+                  >
+                    <Ionicons name="search" size={16} color={theme.colors.faint} />
+                    <TextInput
+                      value={q}
+                      onChangeText={setQ}
+                      placeholder="Search name or SKU..."
+                      placeholderTextColor={theme.colors.faint}
+                      style={{ flex: 1, color: theme.colors.text, fontWeight: "800" }}
+                    />
+                    {!!q && (
+                      <Pressable onPress={() => setQ("")} hitSlop={10} style={{ padding: 6 }}>
+                        <Ionicons name="close" size={16} color={theme.colors.faint} />
+                      </Pressable>
+                    )}
+                  </View>
+                </View>
+
+                <FlatList
+                  data={filteredProducts}
+                  keyExtractor={(x) => String(x.product_id)}
+                  style={{ flexGrow: 0 }}
+                  contentContainerStyle={{ paddingVertical: 6 }}
+                  keyboardShouldPersistTaps="handled"
+                  renderItem={({ item }) => {
+                    const price = Number(item.selling_price) || 0;
+                    const isActive = String(item.product_id) === selectedProductId;
+
+                    return (
+                      <Pressable
+                        onPress={() => selectProduct(item)}
+                        style={({ pressed }) => [
+                          {
+                            paddingHorizontal: 12,
+                            paddingVertical: 12,
+                            opacity: pressed ? 0.92 : 1,
+                            backgroundColor: isActive ? theme.colors.emeraldSoft : "transparent",
+                            borderTopWidth: 1,
+                            borderTopColor: "rgba(255,255,255,0.06)",
+                          },
+                        ]}
+                      >
+                        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14 }}>{item.name}</Text>
+                        <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 4 }}>
+                          <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>
+                            {clean(item.sku) ? `SKU: ${item.sku}` : "—"}
+                          </Text>
+                          <Text style={{ color: theme.colors.emerald, fontWeight: "900" }}>
+                            {fmtMoneyTZS(price, "TZS")}
+                          </Text>
+                        </View>
+                      </Pressable>
+                    );
+                  }}
+                  ListEmptyComponent={
+                    <View style={{ padding: 14 }}>
+                      <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>
+                        {prodLoading ? "Loading..." : "No products found."}
+                      </Text>
+                    </View>
+                  }
+                />
+
+                <View style={{ padding: 12, borderTopWidth: 1, borderTopColor: theme.colors.borderSoft }}>
+                  <Button title="Close" variant="secondary" onPress={() => setProductOpen(false)} />
+                </View>
+              </Pressable>
             </Pressable>
-          </Pressable>
-        </KeyboardAvoidingView>
-      </Modal>
-    </Screen>
+          </KeyboardAvoidingView>
+        </Modal>
+      </Screen>
+    </>
   );
 }

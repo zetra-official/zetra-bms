@@ -1,8 +1,10 @@
-﻿// app/_layout.tsx
-import { OrgProvider } from "@/src/context/OrgContext";
+﻿import { OrgProvider } from "@/src/context/OrgContext";
 import { supabase } from "@/src/supabase/supabaseClient";
+import { theme } from "@/src/ui/theme";
 import { Stack, useRouter, useSegments } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
+import { Platform } from "react-native";
+import { StatusBar } from "expo-status-bar";
 
 function AuthGate() {
   const router = useRouter();
@@ -27,9 +29,8 @@ function AuthGate() {
       } = await supabase.auth.getSession();
 
       if (!alive) return;
+
       if (error) {
-        // if session check fails, we still allow auth screens to show
-        // and avoid infinite redirects
         setReady(true);
         return;
       }
@@ -51,13 +52,13 @@ function AuthGate() {
       setReady(true);
     };
 
-    boot();
+    void boot();
 
     const { data } = supabase.auth.onAuthStateChange((_event, session) => {
       const inAuth = isInAuth(segmentsRef.current);
 
       if (!session) {
-        // ✅ Critical fix: DO NOT override auth routes (register/login) when session is null
+        // ✅ DO NOT override auth routes (register/login) when session is null
         if (!inAuth) router.replace("/(auth)/login");
         return;
       }
@@ -73,7 +74,25 @@ function AuthGate() {
   }, [router]);
 
   if (!ready) return null;
-  return <Stack screenOptions={{ headerShown: false }} />;
+
+  return (
+    <>
+      {/* ✅ Prevent white flash: force dark status bar + dark background */}
+      <StatusBar style="light" backgroundColor={theme.colors.background} />
+
+      <Stack
+        screenOptions={{
+          headerShown: false,
+
+          // ✅ KEY FIX: stack scenes background is DARK (no more white flash)
+          contentStyle: { backgroundColor: theme.colors.background },
+
+          // ✅ Optional: smoother transition (reduces "flash feel")
+          animation: Platform.OS === "android" ? "fade" : "default",
+        }}
+      />
+    </>
+  );
 }
 
 export default function RootLayout() {
