@@ -1,0 +1,24 @@
+/**
+ * Creates a timer that accepts a `timerCalc` function to perform calculated timeout retries, such as exponential backoff.
+ *
+ * @example
+ *    let reconnectTimer = new Timer(() => this.connect(), function(tries){
+ *      return [1000, 5000, 10000][tries - 1] || 10000
+ *    })
+ *    reconnectTimer.scheduleTimeout() // fires after 1000
+ *    reconnectTimer.scheduleTimeout() // fires after 5000
+ *    reconnectTimer.reset()
+ *    reconnectTimer.scheduleTimeout() // fires after 1000
+ */
+export default class Timer {
+    callback: Function;
+    timerCalc: Function;
+    timer: number | undefined;
+    tries: number;
+    constructor(callback: Function, timerCalc: Function);
+    reset(): void;
+    scheduleTimeout(): void;
+}
+//# sourceMappingURL=timer.d.ts.map
+
+// denoCacheMetadata={"headers":{"content-type":"application/typescript; charset=utf-8","accept-ranges":"bytes","content-length":"764","cf-cache-status":"HIT","date":"Thu, 19 Feb 2026 10:52:23 GMT","age":"1112811","access-control-allow-origin":"*","last-modified":"Wed, 23 Jul 2025 00:07:11 GMT","cache-control":"public, max-age=31536000, immutable","server":"cloudflare","cf-ray":"9d0536e66af6a10f-LIS"},"url":"https://esm.sh/@supabase/realtime-js@2.11.2/dist/module/lib/timer.d.ts","time":1771498343}

@@ -64,11 +64,6 @@ export default function AdjustStockScreen() {
   const [reason, setReason] = useState<string>("");
   const [saving, setSaving] = useState(false);
 
-  // ✅ threshold state
-  const [threshold, setThreshold] = useState<string>(""); // empty => no alert
-  const [thresholdLoading, setThresholdLoading] = useState(false);
-  const [thresholdSaving, setThresholdSaving] = useState(false);
-
   const [kbHeight, setKbHeight] = useState(0);
 
   useEffect(() => {
@@ -84,7 +79,7 @@ export default function AdjustStockScreen() {
     };
   }, []);
 
-  // hydrate product name/sku if missing
+  // ✅ hydrate product name/sku if missing
   useEffect(() => {
     let cancelled = false;
 
@@ -134,42 +129,9 @@ export default function AdjustStockScreen() {
     };
   }, [productId, passedName, passedSku, activeStoreId]);
 
-  // ✅ load existing threshold (best-effort)
-  const loadThreshold = useCallback(async () => {
-    if (!activeStoreId || !productId) return;
-    setThresholdLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from("inventory")
-        .select("low_stock_threshold")
-        .eq("store_id", activeStoreId)
-        .eq("product_id", productId)
-        .maybeSingle();
-
-      if (!error) {
-        const v = (data as any)?.low_stock_threshold;
-        if (v === null || v === undefined) setThreshold("");
-        else setThreshold(String(v));
-      }
-    } catch {
-      // ignore
-    } finally {
-      setThresholdLoading(false);
-    }
-  }, [activeStoreId, productId]);
-
-  useEffect(() => {
-    void loadThreshold();
-  }, [loadThreshold]);
-
   const onAmountChange = useCallback((txt: string) => {
     const cleaned = txt.replace(/[^\d]/g, "");
     setAmount(cleaned);
-  }, []);
-
-  const onThresholdChange = useCallback((txt: string) => {
-    const cleaned = txt.replace(/[^\d]/g, "");
-    setThreshold(cleaned);
   }, []);
 
   // ✅ UI guard: block if day locked
@@ -198,47 +160,6 @@ export default function AdjustStockScreen() {
     return true;
   }, [activeStoreId]);
 
-  // ✅ save threshold via RPC
-  const saveThreshold = useCallback(async () => {
-    if (thresholdSaving) return;
-
-    if (!activeStoreId) return Alert.alert("Missing", "No active store selected.");
-    if (!productId) return Alert.alert("Missing", "Product not found.");
-    if (!canAdjust) return Alert.alert("No Access", "Owner/Admin only.");
-
-    const raw = (threshold ?? "").trim();
-    const value = raw === "" ? null : asInt(Number(raw));
-
-    if (raw !== "" && (!Number.isFinite(Number(raw)) || value === null || value < 0)) {
-      return Alert.alert(
-        "Invalid",
-        "Threshold lazima iwe namba >= 0, au uache tupu kuondoa alert."
-      );
-    }
-
-    setThresholdSaving(true);
-    try {
-      const res = await supabase.rpc("set_low_stock_threshold", {
-        p_store_id: activeStoreId,
-        p_product_id: productId,
-        p_threshold: value,
-      } as any);
-
-      if (res.error) throw res.error;
-
-      Alert.alert(
-        "Saved ✅",
-        value === null ? "Alert level removed." : `Alert itatoka qty ikifika ${value} au chini.`
-      );
-
-      void loadThreshold();
-    } catch (err: any) {
-      Alert.alert("Failed", err?.message ?? "Failed to save alert level");
-    } finally {
-      setThresholdSaving(false);
-    }
-  }, [thresholdSaving, activeStoreId, productId, canAdjust, threshold, loadThreshold]);
-
   const submit = useCallback(async () => {
     if (saving) return;
 
@@ -253,7 +174,8 @@ export default function AdjustStockScreen() {
     if (!trimmed) return Alert.alert("Invalid", "Amount lazima iandikwe.");
 
     const n = Number(trimmed);
-    if (!Number.isFinite(n) || n <= 0) return Alert.alert("Invalid", "Amount lazima iwe namba > 0");
+    if (!Number.isFinite(n) || n <= 0)
+      return Alert.alert("Invalid", "Amount lazima iwe namba > 0");
 
     const intAmount = asInt(n);
     if (intAmount <= 0) return Alert.alert("Invalid", "Amount lazima iwe namba halali (> 0).");
@@ -265,7 +187,7 @@ export default function AdjustStockScreen() {
       });
       if (access.error) throw access.error;
 
-      // ✅ FIX: use canonical adjust_stock (updates public.inventory)
+      // ✅ use canonical adjust_stock (updates public.inventory)
       const { data, error } = await supabase.rpc("adjust_stock", {
         p_store_id: activeStoreId,
         p_product_id: productId,
@@ -280,10 +202,7 @@ export default function AdjustStockScreen() {
       const newQty =
         Array.isArray(data) && data.length > 0 ? (data[0] as any)?.new_qty : null;
 
-      Alert.alert(
-        "Success ✅",
-        newQty === null ? "Stock updated" : `New Qty: ${newQty}`
-      );
+      Alert.alert("Success ✅", newQty === null ? "Stock updated" : `New Qty: ${newQty}`);
 
       router.back();
     } catch (err: any) {
@@ -333,73 +252,6 @@ export default function AdjustStockScreen() {
             <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{currentQty}</Text>
           </Card>
 
-          {/* Alert Threshold */}
-          <Card style={{ gap: 10 }}>
-            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-              Low Stock Alert Level
-            </Text>
-
-            <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-              Ikitokea QTY ikawa ≤ kiwango ulichoweka, mfumo uta-log alert (once per day).
-            </Text>
-
-            <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>
-              Alert when qty ≤ (optional)
-            </Text>
-
-            <TextInput
-              value={threshold}
-              onChangeText={onThresholdChange}
-              keyboardType="numeric"
-              returnKeyType="done"
-              onSubmitEditing={Keyboard.dismiss}
-              placeholder={thresholdLoading ? "Loading..." : "e.g 10 (leave empty to disable)"}
-              placeholderTextColor="rgba(255,255,255,0.35)"
-              style={{
-                borderWidth: 1,
-                borderColor: theme.colors.border,
-                borderRadius: theme.radius.lg,
-                backgroundColor: "rgba(255,255,255,0.05)",
-                paddingHorizontal: 14,
-                paddingVertical: 12,
-                color: theme.colors.text,
-                fontWeight: "800",
-              }}
-            />
-
-            <View style={{ flexDirection: "row", gap: 10 }}>
-              <View style={{ flex: 1 }}>
-                <Button
-                  title={thresholdSaving ? "Saving..." : "Save Alert Level"}
-                  onPress={() => {
-                    Keyboard.dismiss();
-                    saveThreshold();
-                  }}
-                  disabled={thresholdSaving || !canAdjust}
-                  variant="secondary"
-                />
-              </View>
-
-              <View style={{ flex: 1 }}>
-                <Button
-                  title="Reload"
-                  onPress={() => {
-                    Keyboard.dismiss();
-                    loadThreshold();
-                  }}
-                  disabled={thresholdLoading}
-                  variant="secondary"
-                />
-              </View>
-            </View>
-
-            {!canAdjust && (
-              <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                (Read-only) Muombe Owner/Admin kuweka alert level.
-              </Text>
-            )}
-          </Card>
-
           {/* Stock Adjustment */}
           <Card style={{ gap: 10 }}>
             <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
@@ -413,7 +265,8 @@ export default function AdjustStockScreen() {
                 onPress={() => setMode("ADD")}
                 style={{
                   flex: 1,
-                  borderColor: mode === "ADD" ? "rgba(52,211,153,0.55)" : theme.colors.border,
+                  borderColor:
+                    mode === "ADD" ? "rgba(52,211,153,0.55)" : theme.colors.border,
                 }}
               />
 
@@ -423,7 +276,8 @@ export default function AdjustStockScreen() {
                 onPress={() => setMode("REDUCE")}
                 style={{
                   flex: 1,
-                  borderColor: mode === "REDUCE" ? theme.colors.dangerBorder : theme.colors.border,
+                  borderColor:
+                    mode === "REDUCE" ? theme.colors.dangerBorder : theme.colors.border,
                 }}
               />
             </View>
@@ -479,7 +333,7 @@ export default function AdjustStockScreen() {
                 title={saving ? "Saving..." : "Submit"}
                 onPress={() => {
                   Keyboard.dismiss();
-                  submit();
+                  void submit();
                 }}
                 disabled={saving}
                 variant="primary"

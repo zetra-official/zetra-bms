@@ -1,0 +1,21 @@
+export declare class StorageError extends Error {
+    protected __isStorageError: boolean;
+    constructor(message: string);
+}
+export declare function isStorageError(error: unknown): error is StorageError;
+export declare class StorageApiError extends StorageError {
+    status: number;
+    constructor(message: string, status: number);
+    toJSON(): {
+        name: string;
+        message: string;
+        status: number;
+    };
+}
+export declare class StorageUnknownError extends StorageError {
+    originalError: unknown;
+    constructor(message: string, originalError: unknown);
+}
+//# sourceMappingURL=errors.d.ts.map
+
+// denoCacheMetadata={"headers":{"age":"4692911","content-type":"application/typescript; charset=utf-8","cache-control":"public, max-age=31536000, immutable","server":"cloudflare","accept-ranges":"bytes","content-length":"621","cf-cache-status":"HIT","cf-ray":"9d0536e12eb5a10f-LIS","date":"Thu, 19 Feb 2026 10:52:22 GMT","access-control-allow-origin":"*","last-modified":"Thu, 17 Jul 2025 19:06:08 GMT"},"url":"https://esm.sh/@supabase/storage-js@2.7.1/dist/module/lib/errors.d.ts","time":1771498343}

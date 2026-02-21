@@ -1,7 +1,7 @@
 ﻿// app/(tabs)/stores/inventory.tsx
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNetInfo } from "@react-native-community/netinfo";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Keyboard, Pressable, Text, TextInput, View } from "react-native";
 
@@ -260,6 +260,56 @@ export default function StoreInventoryScreen() {
     })();
   }, [activeStoreId, loadFromCache, loadLive]);
 
+  // ✅ AUTO REFRESH: when screen is focused + polling
+  const AUTO_REFRESH_MS = 25_000;
+  const lastAutoRefreshAtRef = useRef<number>(0);
+
+  useFocusEffect(
+    useCallback(() => {
+      let alive = true;
+      let intervalId: any = null;
+
+      const runOnce = async () => {
+        if (!alive) return;
+        if (!activeStoreId) return;
+        if (storeOrgMismatch) return;
+
+        // Throttle to avoid duplicate double-calls on quick nav
+        const now = Date.now();
+        if (now - lastAutoRefreshAtRef.current < 1500) return;
+        lastAutoRefreshAtRef.current = now;
+
+        // Skip if already loading
+        if (loading) return;
+
+        if (isOffline) {
+          await loadFromCache();
+          return;
+        }
+
+        await loadLive();
+      };
+
+      // Immediate refresh on focus (most important)
+      void runOnce();
+
+      // Polling while focused (only meaningful when ONLINE)
+      intervalId = setInterval(() => {
+        if (!alive) return;
+        if (!activeStoreId) return;
+        if (storeOrgMismatch) return;
+        if (isOffline) return;
+        if (loading) return;
+        void loadLive();
+      }, AUTO_REFRESH_MS);
+
+      return () => {
+        alive = false;
+        if (intervalId) clearInterval(intervalId);
+      };
+    }, [activeStoreId, storeOrgMismatch, isOffline, loading, loadFromCache, loadLive])
+  );
+
   // ✅ When rows change, refresh thresholds (ONLINE only)
   useEffect(() => {
     void loadThresholds();
@@ -285,7 +335,10 @@ export default function StoreInventoryScreen() {
       }
 
       if (isOffline) {
-        Alert.alert("Offline", "Huwezi kufanya Adjust Stock bila mtandao. Washa data/Wi-Fi kisha jaribu tena.");
+        Alert.alert(
+          "Offline",
+          "Huwezi kufanya Adjust Stock bila mtandao. Washa data/Wi-Fi kisha jaribu tena."
+        );
         return;
       }
 
@@ -296,6 +349,7 @@ export default function StoreInventoryScreen() {
           storeName: activeStoreName ?? "",
           productId: r.product_id,
           productName: r.product_name,
+          sku: r.sku ?? "", // ✅ FIX: pass SKU to Adjust screen
           currentQty: String(r.qty),
         },
       } as any);
@@ -328,7 +382,10 @@ export default function StoreInventoryScreen() {
       return;
     }
     if (isOffline) {
-      Alert.alert("Offline", "Low Stock list inahitaji mtandao kwa sasa. Washa data/Wi-Fi kisha jaribu tena.");
+      Alert.alert(
+        "Offline",
+        "Low Stock list inahitaji mtandao kwa sasa. Washa data/Wi-Fi kisha jaribu tena."
+      );
       return;
     }
     router.push({
@@ -344,14 +401,13 @@ export default function StoreInventoryScreen() {
     const effectiveSource: SourceMode =
       source === "NONE" && (rows ?? []).length > 0 ? "CACHED" : source;
 
-    const src =
-      isOffline
-        ? "CACHED"
-        : (effectiveSource === "LIVE"
-            ? "LIVE"
-            : effectiveSource === "CACHED"
-              ? "CACHED"
-              : "—");
+    const src = isOffline
+      ? "CACHED"
+      : effectiveSource === "LIVE"
+        ? "LIVE"
+        : effectiveSource === "CACHED"
+          ? "CACHED"
+          : "—";
 
     return `${mode} • Source: ${src} • Last sync: ${fmtLocal(lastSyncedAt)}`;
   }, [isOffline, source, lastSyncedAt, rows]);

@@ -1,0 +1,7 @@
+/* esm.sh - ws@8.19.0 */
+import "/bufferutil@^4.0.1?target=denonext";
+import "/utf-8-validate@>=5.0.2?target=denonext";
+export * from "/ws@8.19.0/denonext/ws.mjs";
+export { default } from "/ws@8.19.0/denonext/ws.mjs";
+
+// denoCacheMetadata={"headers":{"access-control-allow-origin":"*","age":"3852707","cf-ray":"9d0536ed0c0da10f-LIS","access-control-expose-headers":"X-ESM-Path, X-TypeScript-Types","cf-cache-status":"HIT","content-type":"application/javascript; charset=utf-8","cache-control":"public, max-age=31536000, immutable","date":"Thu, 19 Feb 2026 10:52:24 GMT","x-esm-path":"/ws@8.19.0/denonext/ws.mjs","server":"cloudflare","x-typescript-types":"https://esm.sh/@types/ws@~8.18.1/index.d.mts","last-modified":"Mon, 05 Jan 2026 20:40:36 GMT"},"url":"https://esm.sh/ws@8.19.0?target=denonext","time":1771498344}

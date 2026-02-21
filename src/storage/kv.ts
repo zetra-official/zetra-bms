@@ -34,14 +34,43 @@ async function safeRemove(key: string): Promise<void> {
   }
 }
 
+function safeJsonParse<T>(raw: string | null): T | null {
+  try {
+    if (!raw) return null;
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+}
+
 export const kv = {
+  // ===== string =====
   getString: safeGet,
   setString: safeSet,
   remove: safeRemove,
+
+  // ===== json =====
+  getJson: async <T>(key: string): Promise<T | null> => {
+    const raw = await safeGet(key);
+    return safeJsonParse<T>(raw);
+  },
+
+  setJson: async (key: string, value: unknown | null): Promise<void> => {
+    try {
+      if (value === null) {
+        await safeRemove(key);
+        return;
+      }
+      await AsyncStorage.setItem(key, JSON.stringify(value));
+    } catch {
+      // ignore
+    }
+  },
+
+  // ===== AI memory key builder =====
+  aiMemoryKey: (orgKey: string) => `zetra_ai_memory__${String(orgKey || "global")}`,
+
   clearActiveSelection: async () => {
-    await Promise.all([
-      safeRemove(KV_KEYS.activeOrgId),
-      safeRemove(KV_KEYS.activeStoreId),
-    ]);
+    await Promise.all([safeRemove(KV_KEYS.activeOrgId), safeRemove(KV_KEYS.activeStoreId)]);
   },
 };
