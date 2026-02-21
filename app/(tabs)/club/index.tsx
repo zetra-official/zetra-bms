@@ -5,8 +5,16 @@ import { Screen } from "@/src/ui/Screen";
 import { theme } from "@/src/ui/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Alert, FlatList, Pressable, Text, View } from "react-native";
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Pressable,
+  Text,
+  View,
+  LayoutChangeEvent,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // ✅ Option B: expo-image (fast caching + decode)
@@ -68,6 +76,223 @@ const LIKE_TOGGLE_RPC_CANDIDATES = [
 
 const COMMENTS_TABLE = "club_post_comments";
 
+/* ---------------- Memoized item (KEY PERF FIX) ---------------- */
+
+type FeedItemProps = {
+  item: FeedPost;
+  saved: boolean;
+
+  onOpenPost: (p: FeedPost) => void;
+  onOpenStore: (storeId: string) => void;
+  onOpenMenu: (p: FeedPost) => void;
+  onToggleLike: (p: FeedPost) => void;
+  onOpenComments: (p: FeedPost) => void;
+  onToggleSave: (p: FeedPost) => void;
+};
+
+const FeedPostItem = memo(function FeedPostItem({
+  item,
+  saved,
+  onOpenPost,
+  onOpenStore,
+  onOpenMenu,
+  onToggleLike,
+  onOpenComments,
+  onToggleSave,
+}: FeedItemProps) {
+  // ✅ compute minimal derived values here (cheap)
+  const img = clean(item.image_url) || clean(item.image_hq_url) || "";
+  const caption = clean(item.caption);
+  const storeName = safeStr(item.store_display_name ?? item.store_name, "Store");
+
+  const likes = Number(item.likes_count) || 0;
+  const comments = Number(item.comments_count) || 0;
+  const liked = !!item.i_liked;
+
+  const when = fmtWhen(item.created_at);
+
+  return (
+    <Pressable
+      onPress={() => onOpenPost(item)}
+      hitSlop={10}
+      style={({ pressed }) => [{ opacity: pressed ? 0.98 : 1 }]}
+    >
+      <Card
+        style={{
+          padding: 0,
+          borderRadius: 0,
+          borderWidth: 0,
+          backgroundColor: theme.colors.background,
+          borderBottomWidth: 1,
+          borderBottomColor: theme.colors.borderSoft,
+        }}
+      >
+        {/* HEADER */}
+        <View style={{ paddingHorizontal: theme.spacing.page, paddingTop: 12, paddingBottom: 10 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <Pressable
+              onPress={() => onOpenStore(String(item.store_id ?? ""))}
+              hitSlop={10}
+              style={{ flexDirection: "row", alignItems: "center", gap: 10 }}
+            >
+              <View
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: theme.colors.emeraldBorder,
+                  backgroundColor: theme.colors.emeraldSoft,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Ionicons name="storefront-outline" size={18} color={theme.colors.emerald} />
+              </View>
+
+              <View>
+                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{storeName}</Text>
+                <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 12 }}>Tap kuona post</Text>
+              </View>
+            </Pressable>
+
+            <Pressable onPress={() => onOpenMenu(item)} hitSlop={10} style={{ padding: 6 }}>
+              <Ionicons name="ellipsis-horizontal" size={18} color={theme.colors.faint} />
+            </Pressable>
+          </View>
+        </View>
+
+        {/* IMAGE */}
+        {img ? (
+          <View style={{ width: "100%", aspectRatio: 0.8, backgroundColor: "rgba(255,255,255,0.05)" }}>
+            <ExpoImage
+              source={{ uri: img }}
+              style={{ width: "100%", height: "100%" }}
+              contentFit="cover"
+              cachePolicy="disk"
+              placeholder={null}
+              transition={120}
+            />
+          </View>
+        ) : null}
+
+        {/* ACTIONS */}
+        <View style={{ paddingHorizontal: theme.spacing.page, paddingTop: 6 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <View style={{ flexDirection: "row", alignItems: "center", marginLeft: -6 }}>
+              <Pressable
+                onPress={() => onToggleLike(item)}
+                hitSlop={14}
+                pressRetentionOffset={14}
+                style={({ pressed }) => [
+                  {
+                    width: 44,
+                    height: 40,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    opacity: pressed ? 0.8 : 1,
+                  },
+                ]}
+              >
+                <Ionicons
+                  name={liked ? "heart" : "heart-outline"}
+                  size={24}
+                  color={liked ? theme.colors.emerald : theme.colors.text}
+                />
+              </Pressable>
+
+              <Pressable
+                onPress={() => onOpenComments(item)}
+                hitSlop={14}
+                pressRetentionOffset={14}
+                style={({ pressed }) => [
+                  {
+                    width: 44,
+                    height: 40,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    opacity: pressed ? 0.8 : 1,
+                  },
+                ]}
+              >
+                <Ionicons name="chatbubble-outline" size={24} color={theme.colors.text} />
+              </Pressable>
+
+              <Pressable
+                onPress={() => onOpenMenu(item)}
+                hitSlop={14}
+                pressRetentionOffset={14}
+                style={({ pressed }) => [
+                  {
+                    width: 44,
+                    height: 40,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    opacity: pressed ? 0.8 : 1,
+                  },
+                ]}
+              >
+                <Ionicons name="paper-plane-outline" size={24} color={theme.colors.text} />
+              </Pressable>
+            </View>
+
+            <Pressable
+              onPress={() => onToggleSave(item)}
+              hitSlop={14}
+              pressRetentionOffset={14}
+              style={({ pressed }) => [
+                {
+                  width: 44,
+                  height: 40,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  opacity: pressed ? 0.8 : 1,
+                },
+              ]}
+            >
+              <Ionicons
+                name={saved ? "bookmark" : "bookmark-outline"}
+                size={24}
+                color={saved ? theme.colors.emerald : theme.colors.text}
+              />
+            </Pressable>
+          </View>
+
+          <View style={{ marginTop: 2, flexDirection: "row", alignItems: "center", gap: 14 }}>
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{likes} likes</Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{comments} comments</Text>
+          </View>
+
+          {!!caption && (
+            <View style={{ marginTop: 4 }}>
+              <Text style={{ color: theme.colors.text, lineHeight: 22 }}>
+                <Text style={{ fontWeight: "900" }}>{storeName} </Text>
+                <Text style={{ fontWeight: "800" }}>{caption}</Text>
+              </Text>
+            </View>
+          )}
+
+          <Pressable onPress={() => onOpenComments(item)} hitSlop={10} style={{ marginTop: 6 }}>
+            <Text style={{ color: comments > 0 ? theme.colors.muted : theme.colors.faint, fontWeight: "900" }}>
+              {comments > 0 ? `View all ${comments} comments` : "No comments yet"}
+            </Text>
+          </Pressable>
+
+          {!!when ? (
+            <Text style={{ marginTop: 6, marginBottom: 14, color: theme.colors.faint, fontWeight: "900", fontSize: 11 }}>
+              {when}
+            </Text>
+          ) : (
+            <View style={{ height: 14 }} />
+          )}
+        </View>
+      </Card>
+    </Pressable>
+  );
+});
+
+/* ---------------- Screen ---------------- */
+
 export default function ClubFeedScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -95,11 +320,15 @@ export default function ClubFeedScreen() {
   // remember last post opened for comments
   const lastCommentsPostIdRef = useRef<string | null>(null);
 
-  // ✅ performance: stable refs
-  const postsCountRef = useRef(0);
-  useEffect(() => {
-    postsCountRef.current = posts.length;
-  }, [posts.length]);
+  // ✅ TopBar height (for perfect paddingTop)
+  const [topBarH, setTopBarH] = useState<number>(0);
+  const onTopBarLayout = useCallback(
+    (e: LayoutChangeEvent) => {
+      const h = Math.ceil(e?.nativeEvent?.layout?.height ?? 0);
+      if (h > 0 && h !== topBarH) setTopBarH(h);
+    },
+    [topBarH]
+  );
 
   const warmSavedFlags = useCallback(async (list: FeedPost[]) => {
     try {
@@ -305,14 +534,13 @@ export default function ClubFeedScreen() {
       const postId = clean(p?.post_id);
       if (!postId) return;
 
-      // ✅ pass both image urls if exist
       router.push({
         pathname: "/(tabs)/club/[postId]" as any,
         params: {
           postId,
           caption: String(p.caption ?? ""),
-          imageUrl: String(p.image_url ?? ""), // feed
-          imageHqUrl: String(p.image_hq_url ?? ""), // optional
+          imageUrl: String(p.image_url ?? ""),
+          imageHqUrl: String(p.image_hq_url ?? ""),
           createdAt: String(p.created_at ?? ""),
           storeId: String(p.store_id ?? ""),
           storeName: String(p.store_display_name ?? p.store_name ?? ""),
@@ -424,7 +652,7 @@ export default function ClubFeedScreen() {
       color?: string;
       hitSlopSize?: number;
     }) => {
-      const hs = hitSlopSize ?? 18;
+      const hs = hitSlopSize ?? 26; // ✅ bigger touch
       return (
         <Pressable
           onPress={onPress}
@@ -433,8 +661,8 @@ export default function ClubFeedScreen() {
           android_disableSound
           style={({ pressed }) => [
             {
-              width: 46,
-              height: 46,
+              width: 48,
+              height: 48,
               alignItems: "center",
               justifyContent: "center",
               opacity: pressed ? 0.65 : 1,
@@ -453,6 +681,7 @@ export default function ClubFeedScreen() {
     return (
       <View
         pointerEvents="box-none"
+        onLayout={onTopBarLayout}
         style={{
           paddingTop: topPad,
           paddingBottom: 8,
@@ -498,184 +727,63 @@ export default function ClubFeedScreen() {
 
           <View style={{ flexDirection: "row", alignItems: "center" }}>
             <IgTopIcon icon="bookmark-outline" onPress={openSaved} />
-            <IgTopIcon icon="person-circle-outline" onPress={openProfile} size={30} hitSlopSize={28} />
+            <IgTopIcon icon="person-circle-outline" onPress={openProfile} size={30} hitSlopSize={32} />
           </View>
         </View>
       </View>
     );
-  }, [openCreate, openProfile, openSaved, rpcUsed, topPad]);
-
-  const IgIcon = useCallback(
-    ({ icon, active, onPress }: { icon: any; active?: boolean; onPress?: () => void }) => {
-      return (
-        <Pressable
-          onPress={onPress}
-          hitSlop={10}
-          style={({ pressed }) => [
-            {
-              width: 44,
-              height: 40,
-              alignItems: "center",
-              justifyContent: "center",
-              opacity: pressed ? 0.8 : 1,
-            },
-          ]}
-        >
-          <Ionicons name={icon} size={24} color={active ? theme.colors.emerald : theme.colors.text} />
-        </Pressable>
-      );
-    },
-    []
-  );
-
-  // ✅ pick correct URL for feed image (prefer image_url; fallback to hq if needed)
-  const feedImageUrl = useCallback((p: FeedPost) => {
-    const a = clean(p.image_url);
-    if (a) return a;
-    const b = clean(p.image_hq_url);
-    return b || "";
-  }, []);
-
-  const renderItem = useCallback(
-    ({ item }: { item: FeedPost }) => {
-      const img = feedImageUrl(item);
-      const caption = clean(item.caption);
-      const storeName = safeStr(item.store_display_name ?? item.store_name, "Store");
-
-      const likes = Number(item.likes_count) || 0;
-      const comments = Number(item.comments_count) || 0;
-      const liked = !!item.i_liked;
-
-      const pid = clean(item.post_id);
-      const saved = !!savedMap[pid];
-
-      const when = fmtWhen(item.created_at);
-
-      return (
-        <Pressable onPress={() => openPost(item)} hitSlop={10} style={({ pressed }) => [{ opacity: pressed ? 0.98 : 1 }]}>
-          <Card
-            style={{
-              padding: 0,
-              borderRadius: 0,
-              borderWidth: 0,
-              backgroundColor: theme.colors.background,
-              borderBottomWidth: 1,
-              borderBottomColor: theme.colors.borderSoft,
-            }}
-          >
-            {/* HEADER */}
-            <View style={{ paddingHorizontal: theme.spacing.page, paddingTop: 12, paddingBottom: 10 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                <Pressable
-                  onPress={() => openStore(String(item.store_id ?? ""))}
-                  hitSlop={10}
-                  style={{ flexDirection: "row", alignItems: "center", gap: 10 }}
-                >
-                  <View
-                    style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: 999,
-                      borderWidth: 1,
-                      borderColor: theme.colors.emeraldBorder,
-                      backgroundColor: theme.colors.emeraldSoft,
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <Ionicons name="storefront-outline" size={18} color={theme.colors.emerald} />
-                  </View>
-
-                  <View>
-                    <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{storeName}</Text>
-                    <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 12 }}>Tap kuona post</Text>
-                  </View>
-                </Pressable>
-
-                <Pressable onPress={() => openMenu(item)} hitSlop={10} style={{ padding: 6 }}>
-                  <Ionicons name="ellipsis-horizontal" size={18} color={theme.colors.faint} />
-                </Pressable>
-              </View>
-            </View>
-
-            {/* IMAGE */}
-            {img ? (
-              <View style={{ width: "100%", aspectRatio: 0.8, backgroundColor: "rgba(255,255,255,0.05)" }}>
-                <ExpoImage
-                  source={{ uri: img }}
-                  style={{ width: "100%", height: "100%" }}
-                  contentFit="cover"
-                  // ✅ caching improves scroll
-                  cachePolicy="disk"
-                  // ✅ small blur placeholder
-                  placeholder={null}
-                  transition={120}
-                />
-              </View>
-            ) : null}
-
-            {/* ACTIONS */}
-            <View style={{ paddingHorizontal: theme.spacing.page, paddingTop: 6 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                <View style={{ flexDirection: "row", alignItems: "center", marginLeft: -6 }}>
-                  <IgIcon icon={liked ? "heart" : "heart-outline"} active={liked} onPress={() => void toggleLike(item)} />
-                  <IgIcon icon="chatbubble-outline" onPress={() => openComments(item)} />
-                  <IgIcon icon="paper-plane-outline" onPress={() => openMenu(item)} />
-                </View>
-
-                <IgIcon
-                  icon={saved ? "bookmark" : "bookmark-outline"}
-                  active={saved}
-                  onPress={() => void onToggleSave(item)}
-                />
-              </View>
-
-              <View style={{ marginTop: 2, flexDirection: "row", alignItems: "center", gap: 14 }}>
-                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{likes} likes</Text>
-                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{comments} comments</Text>
-              </View>
-
-              {!!caption && (
-                <View style={{ marginTop: 4 }}>
-                  <Text style={{ color: theme.colors.text, lineHeight: 22 }}>
-                    <Text style={{ fontWeight: "900" }}>{storeName} </Text>
-                    <Text style={{ fontWeight: "800" }}>{caption}</Text>
-                  </Text>
-                </View>
-              )}
-
-              <Pressable onPress={() => openComments(item)} hitSlop={10} style={{ marginTop: 6 }}>
-                <Text style={{ color: comments > 0 ? theme.colors.muted : theme.colors.faint, fontWeight: "900" }}>
-                  {comments > 0 ? `View all ${comments} comments` : "No comments yet"}
-                </Text>
-              </Pressable>
-
-              {!!when ? (
-                <Text style={{ marginTop: 6, marginBottom: 14, color: theme.colors.faint, fontWeight: "900", fontSize: 11 }}>
-                  {when}
-                </Text>
-              ) : (
-                <View style={{ height: 14 }} />
-              )}
-            </View>
-          </Card>
-        </Pressable>
-      );
-    },
-    [IgIcon, feedImageUrl, onToggleSave, openComments, openMenu, openPost, openStore, savedMap, toggleLike]
-  );
+  }, [openCreate, openProfile, openSaved, rpcUsed, topPad, onTopBarLayout]);
 
   const keyExtractor = useCallback((x: FeedPost) => String(x.post_id), []);
 
+  // ✅ renderItem now tiny (just renders memo component)
+  const renderItem = useCallback(
+    ({ item }: { item: FeedPost }) => {
+      const pid = clean(item.post_id);
+      const saved = !!savedMap[pid];
+
+      return (
+        <FeedPostItem
+          item={item}
+          saved={saved}
+          onOpenPost={openPost}
+          onOpenStore={openStore}
+          onOpenMenu={openMenu}
+          onToggleLike={toggleLike}
+          onOpenComments={openComments}
+          onToggleSave={onToggleSave}
+        />
+      );
+    },
+    [savedMap, openPost, openStore, openMenu, toggleLike, openComments, onToggleSave]
+  );
+
+  // ✅ header padding fallback (in case layout not measured yet)
+  const headerPad = Math.max(topBarH, topPad + 56);
+
   return (
     <Screen scroll={false} contentStyle={{ paddingTop: 0, paddingHorizontal: 0, paddingBottom: 0 }}>
+      {/* ✅ ABSOLUTE TOP BAR (always clickable, not part of FlatList) */}
+      <View
+        pointerEvents="box-none"
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          top: 0,
+          zIndex: 9999,
+          elevation: 9999,
+        }}
+      >
+        {TopBar}
+      </View>
+
       <FlatList
         data={posts}
         keyExtractor={keyExtractor}
         renderItem={renderItem}
-        ListHeaderComponent={TopBar}
-        stickyHeaderIndices={[0]}
         contentContainerStyle={{
+          paddingTop: headerPad, // ✅ list starts under TopBar
           paddingHorizontal: 0,
           paddingBottom: Math.max(insets.bottom, 10) + 110,
         }}
@@ -715,11 +823,13 @@ export default function ClubFeedScreen() {
         }
         showsVerticalScrollIndicator={false}
         // ✅✅✅ PERF TUNING (safe)
-        removeClippedSubviews
+        removeClippedSubviews={false}
         initialNumToRender={6}
         maxToRenderPerBatch={6}
         updateCellsBatchingPeriod={50}
         windowSize={7}
+        // ✅ extra: helps lists avoid random relayout cost
+        keyboardShouldPersistTaps="handled"
       />
     </Screen>
   );

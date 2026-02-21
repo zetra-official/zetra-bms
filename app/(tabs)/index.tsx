@@ -1,9 +1,10 @@
 ﻿// app/(tabs)/index.tsx
 import { useRouter } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -263,7 +264,8 @@ function CompactClubRevenueCard({ onOpen }: { onOpen: () => void }) {
 
             <Pressable
               onPress={(e) => {
-                e.stopPropagation();
+                // @ts-ignore
+                e?.stopPropagation?.();
                 load();
               }}
               hitSlop={10}
@@ -319,58 +321,254 @@ function CompactClubRevenueCard({ onOpen }: { onOpen: () => void }) {
   );
 }
 
-/** ✅ ZETRA AI Card (Premium, additive only) */
+/** ✅ ZETRA AI Card v4 (Premium polish: smooth glass, real CTA, badge, fade insight) */
 function ZetraAiCard({ onOpen }: { onOpen: () => void }) {
+  const tips = useMemo(
+    () => [
+      "Stock alert: cheki bidhaa zilizo chini ya kiwango.",
+      "Sales insight: kuongeza bei kidogo kwa bidhaa hot inaweza kuongeza faida.",
+      "Staff ops: weka staff kwenye store husika kwa urahisi.",
+      "Club: boresha post zako + response kwa customers kwa haraka.",
+    ],
+    []
+  );
+
+  const [i, setI] = useState(0);
+  const fade = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const t = setInterval(() => setI((x) => (x + 1) % tips.length), 4500);
+    return () => clearInterval(t);
+  }, [tips.length]);
+
+  // smooth fade transition on text change (no libs)
+  useEffect(() => {
+    fade.setValue(0);
+    Animated.timing(fade, {
+      toValue: 1,
+      duration: 260,
+      useNativeDriver: true,
+    }).start();
+  }, [i, fade]);
+
+  const preview = tips[i];
+
+  const PillBadge = ({ text }: { text: string }) => (
+    <View
+      style={{
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 999,
+        borderWidth: 1,
+        borderColor: "rgba(16,185,129,0.22)",
+        backgroundColor: "rgba(16,185,129,0.10)",
+      }}
+    >
+      <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11, letterSpacing: 0.3 }}>{text}</Text>
+    </View>
+  );
+
+  const CtaButton = ({
+    title,
+    kind,
+    onPress,
+  }: {
+    title: string;
+    kind: "primary" | "ghost";
+    onPress: () => void;
+  }) => {
+    const primary = kind === "primary";
+    return (
+      <Pressable
+        onPress={onPress}
+        hitSlop={10}
+        style={({ pressed }) => ({
+          flex: 1,
+          height: 42,
+          borderRadius: 999,
+          borderWidth: 1,
+          borderColor: primary ? "rgba(16,185,129,0.30)" : "rgba(255,255,255,0.12)",
+          backgroundColor: primary ? "rgba(16,185,129,0.14)" : "rgba(255,255,255,0.06)",
+          alignItems: "center",
+          justifyContent: "center",
+          opacity: pressed ? 0.92 : 1,
+          transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
+        })}
+      >
+        <Text style={{ color: UI.text, fontWeight: "900" }}>{title}</Text>
+      </Pressable>
+    );
+  };
+
   return (
     <View style={{ paddingTop: 12 }}>
       <Pressable
         onPress={onOpen}
         hitSlop={10}
         style={({ pressed }) => ({
-          opacity: pressed ? 0.96 : 1,
+          opacity: pressed ? 0.97 : 1,
           transform: pressed ? [{ scale: 0.997 }] : [{ scale: 1 }],
         })}
       >
         <Card
           style={{
-            borderColor: "rgba(16,185,129,0.22)",
-            backgroundColor: "rgba(23,27,33,0.92)",
-            gap: 10,
+            padding: 0,
+            overflow: "hidden",
+            borderRadius: 22,
+            borderColor: "rgba(16,185,129,0.28)",
+            backgroundColor: "rgba(15,18,24,0.98)",
           }}
         >
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          {/* Smooth glass depth (no “X” pattern) */}
+          <View style={{ position: "relative" }}>
+            {/* soft emerald glow */}
             <View
+              pointerEvents="none"
               style={{
-                width: 44,
-                height: 44,
+                position: "absolute",
+                left: -80,
+                top: -90,
+                width: 260,
+                height: 260,
                 borderRadius: 999,
-                borderWidth: 1,
-                borderColor: UI.colors.emeraldBorder,
-                backgroundColor: UI.colors.emeraldSoft,
-                alignItems: "center",
-                justifyContent: "center",
+                backgroundColor: "rgba(16,185,129,0.10)",
               }}
-            >
-              <Text style={{ color: UI.colors.emerald, fontWeight: "900", fontSize: 16 }}>AI</Text>
-            </View>
+            />
+            {/* cyan hint */}
+            <View
+              pointerEvents="none"
+              style={{
+                position: "absolute",
+                right: -120,
+                top: -110,
+                width: 320,
+                height: 320,
+                borderRadius: 999,
+                backgroundColor: "rgba(34,211,238,0.05)",
+              }}
+            />
+            {/* bottom vignette */}
+            <View
+              pointerEvents="none"
+              style={{
+                position: "absolute",
+                left: -60,
+                bottom: -180,
+                width: 360,
+                height: 360,
+                borderRadius: 999,
+                backgroundColor: "rgba(0,0,0,0.42)",
+              }}
+            />
+            {/* subtle top highlight strip */}
+            <View
+              pointerEvents="none"
+              style={{
+                position: "absolute",
+                left: 0,
+                right: 0,
+                top: 0,
+                height: 1,
+                backgroundColor: "rgba(255,255,255,0.10)",
+              }}
+            />
 
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }} numberOfLines={1}>
-                ZETRA AI Assistant
-              </Text>
-              <Text style={{ color: UI.muted, fontWeight: "700", marginTop: 2 }} numberOfLines={2}>
-                Uliza maswali ya biashara + pata mwongozo wa kutumia ZETRA BMS (SW/EN auto).
+            <View style={{ padding: 16, gap: 12 }}>
+              {/* Header */}
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                {/* AI Orb */}
+                <View style={{ position: "relative" }}>
+                  <View
+                    pointerEvents="none"
+                    style={{
+                      position: "absolute",
+                      left: -12,
+                      top: -12,
+                      width: 74,
+                      height: 74,
+                      borderRadius: 999,
+                      backgroundColor: "rgba(16,185,129,0.08)",
+                      borderWidth: 1,
+                      borderColor: "rgba(16,185,129,0.16)",
+                    }}
+                  />
+                  <View
+                    style={{
+                      width: 50,
+                      height: 50,
+                      borderRadius: 999,
+                      borderWidth: 1,
+                      borderColor: "rgba(16,185,129,0.36)",
+                      backgroundColor: "rgba(16,185,129,0.14)",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Text style={{ color: UI.colors?.emerald ?? UI.text, fontWeight: "900", fontSize: 16 }}>AI</Text>
+                  </View>
+                  <View
+                    pointerEvents="none"
+                    style={{
+                      position: "absolute",
+                      left: 10,
+                      top: 10,
+                      width: 10,
+                      height: 10,
+                      borderRadius: 999,
+                      backgroundColor: "rgba(255,255,255,0.18)",
+                    }}
+                  />
+                </View>
+
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 17 }} numberOfLines={1}>
+                    ZETRA AI
+                  </Text>
+                  <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 3 }} numberOfLines={1}>
+                    Business Intelligence Engine
+                  </Text>
+                </View>
+
+                <PillBadge text="LIVE • COPILOT" />
+              </View>
+
+              <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
+
+              {/* Insight */}
+              <View style={{ gap: 6 }}>
+                <Text style={{ color: UI.faint, fontWeight: "900", fontSize: 12, letterSpacing: 0.4 }}>
+                  SMART INSIGHT
+                </Text>
+
+                <Animated.Text
+                  style={{
+                    opacity: fade,
+                    color: UI.text,
+                    fontWeight: "900",
+                    fontSize: 14,
+                    lineHeight: 20,
+                  }}
+                  numberOfLines={2}
+                >
+                  {preview}
+                </Animated.Text>
+
+                <Text style={{ color: UI.muted, fontWeight: "800" }} numberOfLines={1}>
+                  SW/EN auto • mwongozo wa kutumia ZETRA BMS • maamuzi ya biashara
+                </Text>
+              </View>
+
+              {/* CTA buttons (real Pressables) */}
+              <View style={{ flexDirection: "row", gap: 10, paddingTop: 2 }}>
+                <CtaButton title="Ask AI" kind="primary" onPress={onOpen} />
+                <CtaButton title="View Insights" kind="ghost" onPress={onOpen} />
+              </View>
+
+              <Text style={{ color: UI.faint, fontWeight: "800" }} numberOfLines={2}>
+                Tip: “Nifanyeje kuongeza bidhaa?” • “How do I manage staff?” • “Nipe wazo la biashara.”
               </Text>
             </View>
-
-            <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 18 }}>›</Text>
           </View>
-
-          <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
-
-          <Text style={{ color: UI.faint, fontWeight: "800" }}>
-            Tip: “Nifanyeje kuongeza bidhaa?” • “How do I manage staff?” • “Nipe wazo la biashara.”
-          </Text>
         </Card>
       </Pressable>
     </View>
@@ -381,8 +579,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const { loading, refreshing, error, refresh, activeOrgName, activeRole, activeStoreName } =
-    useOrg();
+  const { loading, refreshing, error, refresh, activeOrgName, activeRole, activeStoreName } = useOrg();
 
   const [dashTick, setDashTick] = useState(0);
   const [pulling, setPulling] = useState(false);
@@ -432,11 +629,7 @@ export default function HomeScreen() {
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl
-            refreshing={pulling || refreshing}
-            onRefresh={onPullRefresh}
-            tintColor={UI.text}
-          />
+          <RefreshControl refreshing={pulling || refreshing} onRefresh={onPullRefresh} tintColor={UI.text} />
         }
         contentContainerStyle={{
           paddingTop: topPad,
@@ -447,7 +640,7 @@ export default function HomeScreen() {
         <Text style={{ fontSize: 28, fontWeight: "900", color: UI.text }}>ZETRA BMS</Text>
         <Text style={{ color: UI.muted, fontWeight: "700", marginTop: 2 }}>Dashboard</Text>
 
-        {/* ✅ AI card on Home only */}
+        {/* ✅ AI card stays exactly here */}
         <ZetraAiCard onOpen={goAI} />
 
         <StoreGuard>
@@ -483,24 +676,17 @@ export default function HomeScreen() {
               })}
             >
               <Text style={{ color: UI.faint, fontWeight: "800" }}>
-                Org:{" "}
-                <Text style={{ color: UI.text, fontWeight: "900" }}>
-                  {activeOrgName ?? "—"}
-                </Text>
+                Org: <Text style={{ color: UI.text, fontWeight: "900" }}>{activeOrgName ?? "—"}</Text>
                 <Text style={{ color: UI.muted, fontWeight: "900" }}>  ›</Text>
               </Text>
             </Pressable>
 
             <Text style={{ color: UI.faint, fontWeight: "800" }}>
-              Role:{" "}
-              <Text style={{ color: UI.text, fontWeight: "900" }}>{activeRole ?? "—"}</Text>
+              Role: <Text style={{ color: UI.text, fontWeight: "900" }}>{activeRole ?? "—"}</Text>
             </Text>
 
             <Text style={{ color: UI.faint, fontWeight: "800" }}>
-              Store:{" "}
-              <Text style={{ color: UI.text, fontWeight: "900" }}>
-                {activeStoreName ?? "—"}
-              </Text>
+              Store: <Text style={{ color: UI.text, fontWeight: "900" }}>{activeStoreName ?? "—"}</Text>
             </Text>
           </Card>
 
@@ -540,12 +726,8 @@ export default function HomeScreen() {
             >
               <View style={{ flexDirection: "row", alignItems: "center" }}>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-                    Staff Management
-                  </Text>
-                  <Text style={{ color: UI.muted, fontWeight: "700", marginTop: 2 }}>
-                    Add staff and assign stores
-                  </Text>
+                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>Staff Management</Text>
+                  <Text style={{ color: UI.muted, fontWeight: "700", marginTop: 2 }}>Add staff and assign stores</Text>
                 </View>
                 <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 18 }}>›</Text>
               </View>
