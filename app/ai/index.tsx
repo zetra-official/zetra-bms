@@ -69,6 +69,25 @@ const INPUT_MAX = 12_000;
 const AI_WORKER_URL = clean(process.env.EXPO_PUBLIC_AI_WORKER_URL ?? "");
 
 /**
+ * ✅ FIX: normalize image URLs coming from Worker
+ * - If Worker returns data:image/...;base64, it MUST be one continuous string (no spaces/newlines)
+ * - Otherwise markdown image parsing breaks and user sees huge base64 text.
+ */
+function isDataImageUrl(u: string) {
+  const t = clean(u).toLowerCase();
+  return t.startsWith("data:image/");
+}
+function normalizeImageUrl(raw: string) {
+  const u = clean(raw);
+  if (!u) return "";
+  if (isDataImageUrl(u)) {
+    // remove ALL whitespace/newlines inside data URL
+    return u.replace(/\s+/g, "");
+  }
+  return u;
+}
+
+/**
  * ✅ ChatGPT-like Typing Engine (UI side)
  */
 function isPunct(ch: string) {
@@ -200,6 +219,60 @@ type AttachedImage = {
   dataUrl: string; // "data:image/jpeg;base64,..."
 };
 
+/**
+ * ✅ NEW: detect when user wants image generation via normal Send()
+ * Supported prefixes:
+ * - [Create Image] prompt
+ * - Create image: prompt
+ * - Create an image: prompt
+ * - Generate image: prompt
+ * - Image: prompt
+ * - Draw: prompt
+ */
+function detectImageIntent(rawText: string): { isImage: boolean; prompt: string } {
+  const t = clean(rawText);
+  if (!t) return { isImage: false, prompt: "" };
+
+  // strict prefixes first (most reliable)
+  const patterns: Array<{ re: RegExp; strip: (m: RegExpMatchArray) => string }> = [
+    {
+      re: /^\s*\[\s*create\s*image\s*\]\s*(.+)$/i,
+      strip: (m) => clean(m[1]),
+    },
+    {
+      re: /^\s*create\s+image\s*:\s*(.+)$/i,
+      strip: (m) => clean(m[1]),
+    },
+    {
+      re: /^\s*create\s+an\s+image\s*:\s*(.+)$/i,
+      strip: (m) => clean(m[1]),
+    },
+    {
+      re: /^\s*generate\s+image\s*:\s*(.+)$/i,
+      strip: (m) => clean(m[1]),
+    },
+    {
+      re: /^\s*image\s*:\s*(.+)$/i,
+      strip: (m) => clean(m[1]),
+    },
+    {
+      re: /^\s*draw\s*:\s*(.+)$/i,
+      strip: (m) => clean(m[1]),
+    },
+  ];
+
+  for (const p of patterns) {
+    const m = t.match(p.re);
+    if (m) {
+      const prompt = p.strip(m);
+      if (prompt) return { isImage: true, prompt };
+      return { isImage: true, prompt: t }; // fallback
+    }
+  }
+
+  return { isImage: false, prompt: "" };
+}
+
 export default function AiChatScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -218,6 +291,9 @@ export default function AiChatScreen() {
   // ✅ ChatGPT-style Tools + Bottom Sheet
   const [toolOpen, setToolOpen] = useState(false);
   const [toolKey, setToolKey] = useState<ToolKey>(null);
+
+  // ✅ NEW: In-screen Tasks panel (no navigation)
+  const [tasksOpen, setTasksOpen] = useState(false);
 
   const anim = useRef(new Animated.Value(0)).current; // 0 closed, 1 open
   const { height: screenH } = Dimensions.get("window");
@@ -372,7 +448,14 @@ export default function AiChatScreen() {
 
         const delta = Math.abs(buf.length - last.length);
 
-        if (buf && (delta >= minDelta || buf.endsWith("\n") || buf.endsWith(".") || buf.endsWith("!") || buf.endsWith("?"))) {
+        if (
+          buf &&
+          (delta >= minDelta ||
+            buf.endsWith("\n") ||
+            buf.endsWith(".") ||
+            buf.endsWith("!") ||
+            buf.endsWith("?"))
+        ) {
           streamLastFlushedRef.current = buf;
           patchMessageText(id, buf);
           throttledScroll();
@@ -695,7 +778,8 @@ export default function AiChatScreen() {
         throw new Error(msg);
       }
 
-      const url = clean(data?.url);
+      const urlRaw = clean(data?.url);
+      const url = normalizeImageUrl(urlRaw);
       if (!url) throw new Error("No image URL returned");
       return url;
     },
@@ -752,6 +836,21 @@ export default function AiChatScreen() {
         });
 
         await typeOutChatGPTLike(botId, packed || res.text);
+        return;
+      }
+
+      // ✅ NEW: If user intent is image generation via Send()
+      const imgIntent = detectImageIntent(text);
+      if (imgIntent.isImage) {
+        const p = clean(imgIntent.prompt) || text;
+        const url = await callWorkerImageGenerate(p);
+
+        // ✅ If url is a data:image..., DO NOT print it as "Link:" (it bloats UI)
+        const reply = isDataImageUrl(url)
+          ? `✅ Image generated\n\n![ZETRA Image](${url})`
+          : `✅ Image generated\n\n![ZETRA Image](${url})\n\nLink: ${url}`;
+
+        await typeOutChatGPTLike(botId, reply);
         return;
       }
 
@@ -827,6 +926,7 @@ export default function AiChatScreen() {
   }, [
     attachedImages,
     buildHistory,
+    callWorkerImageGenerate,
     callWorkerVision,
     input,
     mode,
@@ -869,10 +969,13 @@ export default function AiChatScreen() {
     );
   };
 
-  // ✅ Tasks pill (goes to /ai/tasks)
+  // ✅ Tasks pill (IN-SCREEN, no route)
   const TasksPill = (
     <Pressable
-      onPress={() => router.push("/ai/tasks")}
+      onPress={() => {
+        Keyboard.dismiss();
+        setTasksOpen(true);
+      }}
       hitSlop={10}
       style={({ pressed }) => ({
         paddingHorizontal: 12,
@@ -1203,7 +1306,10 @@ export default function AiChatScreen() {
 
                   const url = await callWorkerImageGenerate(p);
 
-                  const reply = `✅ Image generated\n\n![ZETRA Image](${url})\n\nLink: ${url}`;
+                  const reply = isDataImageUrl(url)
+                    ? `✅ Image generated\n\n![ZETRA Image](${url})`
+                    : `✅ Image generated\n\n![ZETRA Image](${url})\n\nLink: ${url}`;
+
                   await typeOutChatGPTLike(botId, reply);
                 } catch (e: any) {
                   Alert.alert("Image error", clean(e?.message) || "Failed to generate image");
@@ -1611,6 +1717,57 @@ export default function AiChatScreen() {
               </Animated.View>
             </View>
           ) : null}
+
+          {/* ✅ In-screen Tasks Panel (no navigation) */}
+          {tasksOpen && (
+            <View
+              style={{
+                position: "absolute",
+                left: 0,
+                right: 0,
+                top: 0,
+                bottom: 0,
+                backgroundColor: "rgba(0,0,0,0.85)",
+                zIndex: 1000,
+              }}
+            >
+              <Pressable
+                style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }}
+                onPress={() => setTasksOpen(false)}
+              />
+
+              <View
+                style={{
+                  position: "absolute",
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: UI.colors.background,
+                  borderTopLeftRadius: 24,
+                  borderTopRightRadius: 24,
+                  borderWidth: 1,
+                  borderColor: "rgba(255,255,255,0.12)",
+                  paddingTop: 16,
+                  paddingHorizontal: 16,
+                  paddingBottom: Math.max(insets.bottom, 16),
+                }}
+              >
+                <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 12 }}>
+                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18, flex: 1 }}>🧠 AI Tasks</Text>
+
+                  <Pressable onPress={() => setTasksOpen(false)} hitSlop={10}>
+                    <Ionicons name="close" size={22} color={UI.text} />
+                  </Pressable>
+                </View>
+
+                <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22 }}>
+                  Hapa utaona tasks zote zilizo-save na AI (PRO only).
+                  {"\n\n"}
+                  Tip: Tasks zina-save automatically kama una PRO active.
+                </Text>
+              </View>
+            </View>
+          )}
         </View>
       </KeyboardAvoidingView>
     </Screen>
