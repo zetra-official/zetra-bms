@@ -1,6 +1,6 @@
 // src/components/AiMessageBubble.tsx
 import React, { useMemo } from "react";
-import { Text, View } from "react-native";
+import { Image, Text, View } from "react-native";
 import Markdown from "react-native-markdown-display";
 import { UI } from "@/src/ui/theme";
 
@@ -86,7 +86,6 @@ function splitNextMove(text: string) {
   const afterRaw = src.slice(foundIndex);
 
   // Remove ONLY the first NEXT MOVE heading line at the start of afterRaw
-  // (using a non-global regex on purpose for safety)
   const oneNextMoveLine =
     /^([>\s]*)(#{1,6}\s*)?(\*\*)?\s*🎯?\s*NEXT\s+MOVE\s*:?\s*(\*\*)?\s*$/im;
 
@@ -96,29 +95,19 @@ function splitNextMove(text: string) {
     return { main: before || src, nextMoveBody: "" };
   }
 
-  // ✅ Detect ACTIONS heading inside the remaining text
-  // Covers:
-  // "### ✅ ACTIONS"
-  // "✅ ACTIONS"
-  // "ACTIONS"
-  // Also tolerant with markdown heading markers and spacing.
+  // Detect ACTIONS heading inside the remaining text
   const actionsRe =
     /^([>\s]*)(#{1,6}\s*)?(\*\*)?\s*✅?\s*ACTIONS\s*:?\s*(\*\*)?\s*$/im;
 
   const mActions = actionsRe.exec(afterNoHeading);
 
   if (!mActions || mActions.index < 0) {
-    // No actions found; everything after heading belongs to NEXT MOVE
     return { main: before, nextMoveBody: afterNoHeading };
   }
 
-  // Split: NEXT MOVE body is before ACTIONS heading
   const nmBody = clean(afterNoHeading.slice(0, mActions.index));
-
-  // ACTIONS + the rest should remain in main (outside NEXT MOVE card)
   const actionsAndRest = clean(afterNoHeading.slice(mActions.index));
 
-  // If next-move body is empty, don't show NEXT MOVE card; keep all in main
   if (!clean(nmBody)) {
     const merged = clean([before, afterNoHeading].filter(Boolean).join("\n\n"));
     return { main: merged, nextMoveBody: "" };
@@ -128,6 +117,37 @@ function splitNextMove(text: string) {
   return { main: mainMerged, nextMoveBody: nmBody };
 }
 
+/**
+ * ✅ Extract FIRST markdown image from text:
+ * - Supports: ![alt](url)
+ * - Works with http(s) or data:image/...base64,...
+ * - Returns { body, imageUri }
+ *
+ * IMPORTANT:
+ * If found, we remove that image markdown line/segment from body
+ * so base64 never shows as text.
+ */
+function extractFirstMarkdownImage(fullText: string): { body: string; imageUri: string } {
+  const t = clean(fullText);
+  if (!t) return { body: "", imageUri: "" };
+
+  // Capture the URL inside (...) until the first ')'
+  // This is safe for http(s) and data: URLs (including base64).
+  // NOTE: markdown image syntax is usually one line, but we handle extra spaces.
+  const re = /!\[[^\]]*?\]\(\s*([^)]+?)\s*\)/m;
+
+  const m = re.exec(t);
+  if (!m?.[1]) return { body: fullText, imageUri: "" };
+
+  const uri = clean(m[1]);
+  if (!uri) return { body: fullText, imageUri: "" };
+
+  // Remove only the matched markdown image segment
+  const body = clean(t.replace(m[0], "").trim());
+
+  return { body, imageUri: uri };
+}
+
 export function AiMessageBubble({ msg }: { msg: ChatMsg }) {
   const isUser = msg.role === "user";
 
@@ -135,16 +155,33 @@ export function AiMessageBubble({ msg }: { msg: ChatMsg }) {
   const bg = isUser ? "rgba(16,185,129,0.16)" : "rgba(255,255,255,0.05)";
   const align: "flex-start" | "flex-end" = isUser ? "flex-end" : "flex-start";
 
-  const { main, nextMoveBody, savedBadge } = useMemo(() => {
-    if (isUser) return { main: msg.text, nextMoveBody: "", savedBadge: "" };
+  const { main, nextMoveBody, savedBadge, imageUriMain, imageUriNext } = useMemo(() => {
+    if (isUser)
+      return {
+        main: msg.text,
+        nextMoveBody: "",
+        savedBadge: "",
+        imageUriMain: "",
+        imageUriNext: "",
+      };
 
     // 1) Extract trailing saved badge line (if present)
     const a = splitFooterBadge(msg.text);
 
-    // 2) Split NEXT MOVE from remaining content (with ACTIONS-safe splitting)
+    // 2) Split NEXT MOVE from remaining content
     const b = splitNextMove(a.text);
 
-    return { main: b.main, nextMoveBody: b.nextMoveBody, savedBadge: a.savedBadge };
+    // 3) Extract images separately (so base64 never appears as text)
+    const mainImg = extractFirstMarkdownImage(b.main);
+    const nextImg = extractFirstMarkdownImage(b.nextMoveBody);
+
+    return {
+      main: mainImg.body,
+      nextMoveBody: nextImg.body,
+      savedBadge: a.savedBadge,
+      imageUriMain: mainImg.imageUri,
+      imageUriNext: nextImg.imageUri,
+    };
   }, [isUser, msg.text]);
 
   const markdownStyle = useMemo(
@@ -227,8 +264,24 @@ export function AiMessageBubble({ msg }: { msg: ChatMsg }) {
           </Text>
         ) : (
           <>
+            {/* ✅ Main Image (if any) */}
+            {!!clean(imageUriMain) && (
+              <Image
+                source={{ uri: imageUriMain }}
+                style={{
+                  width: 260,
+                  height: 260,
+                  borderRadius: 14,
+                  marginBottom: 10,
+                }}
+                resizeMode="cover"
+              />
+            )}
+
+            {/* ✅ Main Markdown */}
             <Markdown style={markdownStyle as any}>{main || ""}</Markdown>
 
+            {/* ✅ NEXT MOVE */}
             {!!clean(nextMoveBody) && (
               <View
                 style={{
@@ -241,14 +294,27 @@ export function AiMessageBubble({ msg }: { msg: ChatMsg }) {
                   paddingVertical: 10,
                 }}
               >
-                <Text style={{ color: UI.text, fontWeight: "900", marginBottom: 4 }}>
-                  🎯 NEXT MOVE
-                </Text>
+                <Text style={{ color: UI.text, fontWeight: "900", marginBottom: 6 }}>🎯 NEXT MOVE</Text>
+
+                {/* ✅ Next Move Image (if any) */}
+                {!!clean(imageUriNext) && (
+                  <Image
+                    source={{ uri: imageUriNext }}
+                    style={{
+                      width: 240,
+                      height: 240,
+                      borderRadius: 14,
+                      marginBottom: 10,
+                    }}
+                    resizeMode="cover"
+                  />
+                )}
 
                 <Markdown style={markdownStyle as any}>{nextMoveBody}</Markdown>
               </View>
             )}
 
+            {/* ✅ Saved Badge */}
             {!!clean(savedBadge) && (
               <View
                 style={{
@@ -262,9 +328,7 @@ export function AiMessageBubble({ msg }: { msg: ChatMsg }) {
                   paddingVertical: 8,
                 }}
               >
-                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12.5 }}>
-                  {savedBadge}
-                </Text>
+                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12.5 }}>{savedBadge}</Text>
               </View>
             )}
           </>

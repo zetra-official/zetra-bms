@@ -47,6 +47,11 @@ function getOutputText(data: any): string | null {
   return null;
 }
 
+/** Normalize base64 by removing ALL whitespace/newlines */
+function normalizeBase64(b64: string) {
+  return clean(b64).replace(/\s+/g, "");
+}
+
 /** Extract first URL from Images API response */
 function getImageUrlFromImagesApi(data: any): string | null {
   const url = data?.data?.[0]?.url;
@@ -55,7 +60,9 @@ function getImageUrlFromImagesApi(data: any): string | null {
   // If API returns base64 instead (b64_json), convert to data URL
   const b64 = data?.data?.[0]?.b64_json;
   if (typeof b64 === "string" && b64.trim()) {
-    return `data:image/png;base64,${b64.trim()}`;
+    const b64Clean = normalizeBase64(b64);
+    // default png (safe)
+    return `data:image/png;base64,${b64Clean}`;
   }
 
   return null;
@@ -246,7 +253,6 @@ export default {
         const formOut = new FormData();
         formOut.append("file", file, file.name || "voice.m4a");
         formOut.append("model", model);
-        // json is best for client parsing
         formOut.append("response_format", "json");
 
         const openaiRes = await fetch("https://api.openai.com/v1/audio/transcriptions", {
@@ -375,7 +381,6 @@ export default {
         const model = env.OPENAI_MODEL ?? "gpt-4o-mini";
         const instructions = buildWorkerInstructions();
 
-        // Responses API vision input: input_text + input_image
         const content: any[] = [{ type: "input_text", text: message }];
         for (const img of images.slice(0, 4)) {
           content.push({ type: "input_image", image_url: img });
