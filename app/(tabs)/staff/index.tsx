@@ -1,7 +1,15 @@
 ﻿// app/(tabs)/staff/index.tsx
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
-import { Alert, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import {
+  Alert,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useOrg } from "../../../src/context/OrgContext";
 import { supabase } from "../../../src/supabase/supabaseClient";
@@ -59,6 +67,7 @@ export default function StaffTabScreen() {
   const { activeOrgId, activeOrgName, activeRole } = useOrg();
 
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [q, setQ] = useState("");
@@ -66,27 +75,52 @@ export default function StaffTabScreen() {
 
   const canManage = activeRole === "owner" || activeRole === "admin";
 
-  const fetchStaff = useCallback(async () => {
-    setError(null);
-    if (!activeOrgId) {
-      setRows([]);
-      return;
-    }
+  const fetchStaff = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      const silent = !!opts?.silent;
 
-    setLoading(true);
+      if (!silent) setError(null);
+
+      if (!activeOrgId) {
+        setRows([]);
+        return;
+      }
+
+      if (!silent) setLoading(true);
+
+      try {
+        const { data, error: e } = await supabase.rpc("get_org_staff_with_stores", {
+          p_org_id: activeOrgId,
+        });
+
+        if (e) throw e;
+
+        setRows((data ?? []) as StaffRow[]);
+      } catch (err: any) {
+        if (!silent) setError(err?.message ?? "Failed to load staff");
+      } finally {
+        if (!silent) setLoading(false);
+      }
+    },
+    [activeOrgId]
+  );
+
+  // ✅ Auto-refresh on screen focus (enter / return from Add/Assign)
+  useFocusEffect(
+    useCallback(() => {
+      // silent: true => usisumbue na "Loading..." kila unaporudi
+      void fetchStaff({ silent: true });
+    }, [fetchStaff])
+  );
+
+  const onPullRefresh = useCallback(async () => {
+    setRefreshing(true);
     try {
-      const { data, error: e } = await supabase.rpc("get_org_staff_with_stores", {
-        p_org_id: activeOrgId,
-      });
-      if (e) throw e;
-
-      setRows((data ?? []) as StaffRow[]);
-    } catch (err: any) {
-      setError(err?.message ?? "Failed to load staff");
+      await fetchStaff();
     } finally {
-      setLoading(false);
+      setRefreshing(false);
     }
-  }, [activeOrgId]);
+  }, [fetchStaff]);
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -134,6 +168,9 @@ export default function StaffTabScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: UI.bg0 }} edges={["top"]}>
       <ScrollView
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onPullRefresh} />
+        }
         contentContainerStyle={{
           padding: 16,
           paddingBottom: 120, // ✅ nafasi juu ya tab bar + buttons za simu
@@ -177,6 +214,11 @@ export default function StaffTabScreen() {
               </Text>
             </View>
           </View>
+
+          {/* ✅ subtle hint: auto refresh */}
+          <Text style={{ color: UI.faint, fontWeight: "800" }}>
+            Tip: List inajirefresh yenyewe ukifungua/ukirudi. Unaweza pia kudrag juu (pull-to-refresh).
+          </Text>
         </View>
 
         {!!error && (
@@ -212,13 +254,14 @@ export default function StaffTabScreen() {
           </Text>
         </Pressable>
 
+        {/* ✅ Manual refresh remains as backup (secondary) */}
         <Pressable
-          onPress={fetchStaff}
+          onPress={() => void fetchStaff()}
           disabled={loading}
           style={{
-            backgroundColor: "rgba(255,255,255,0.08)",
+            backgroundColor: "rgba(255,255,255,0.05)", // slightly more subtle
             borderWidth: 1,
-            borderColor: "rgba(52,211,153,0.30)",
+            borderColor: UI.border,
             paddingVertical: 14,
             borderRadius: 18,
             alignItems: "center",
@@ -265,7 +308,7 @@ export default function StaffTabScreen() {
               No staff found
             </Text>
             <Text style={{ marginTop: 6, color: UI.muted, fontWeight: "700" }}>
-              Bonyeza “Refresh Staff List”.
+              List inajirefresh yenyewe ukifungua. Unaweza pia kudrag juu (pull-to-refresh).
             </Text>
           </View>
         ) : (

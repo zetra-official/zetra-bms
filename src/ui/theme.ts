@@ -1,4 +1,3 @@
-// src/ui/theme.tsx
 export type ThemeColors = {
   background: string;
   surface: string;
@@ -99,6 +98,7 @@ export const theme: Theme = {
   },
 };
 
+// ✅ single source for UI tokens
 export const UI = {
   ...theme.colors,
   colors: theme.colors,

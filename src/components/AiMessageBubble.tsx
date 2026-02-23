@@ -11,6 +11,14 @@ function clean(s: any) {
   return String(s ?? "").trim();
 }
 
+function normalizeImageUri(uri: string) {
+  const u = clean(uri);
+  if (!u) return "";
+  // IMPORTANT: data:image base64 sometimes has whitespace/newlines -> remove them
+  if (u.startsWith("data:image/")) return u.replace(/\s+/g, "");
+  return u;
+}
+
 /**
  * Footer badge extraction:
  * - Pulls ONLY a trailing "✅ Saved to Tasks: N" line (last non-empty line)
@@ -118,33 +126,60 @@ function splitNextMove(text: string) {
 }
 
 /**
+ * ✅ Remove "Link: data:image..." lines so base64 never floods UI.
+ * - Also removes any standalone data:image line.
+ */
+function stripDataImageLinkLines(fullText: string) {
+  const src = clean(fullText).replace(/\r\n/g, "\n");
+  if (!src) return "";
+
+  const outLines: string[] = [];
+  for (const line of src.split("\n")) {
+    const L = clean(line);
+    if (!L) {
+      outLines.push(line);
+      continue;
+    }
+
+    const lower = L.toLowerCase();
+
+    // Remove lines like: "Link: data:image/png;base64,..."
+    if (lower.startsWith("link:") && lower.includes("data:image/")) continue;
+
+    // Remove if the line itself is a data:image url (rare)
+    if (lower.startsWith("data:image/")) continue;
+
+    outLines.push(line);
+  }
+
+  return clean(outLines.join("\n"));
+}
+
+/**
  * ✅ Extract FIRST markdown image from text:
  * - Supports: ![alt](url)
  * - Works with http(s) or data:image/...base64,...
  * - Returns { body, imageUri }
  *
  * IMPORTANT:
- * If found, we remove that image markdown line/segment from body
+ * If found, we remove that image markdown segment from body
  * so base64 never shows as text.
  */
 function extractFirstMarkdownImage(fullText: string): { body: string; imageUri: string } {
   const t = clean(fullText);
   if (!t) return { body: "", imageUri: "" };
 
-  // Capture the URL inside (...) until the first ')'
-  // This is safe for http(s) and data: URLs (including base64).
-  // NOTE: markdown image syntax is usually one line, but we handle extra spaces.
+  // Capture URL inside (...) until first ')'
   const re = /!\[[^\]]*?\]\(\s*([^)]+?)\s*\)/m;
 
   const m = re.exec(t);
   if (!m?.[1]) return { body: fullText, imageUri: "" };
 
-  const uri = clean(m[1]);
+  const uri = normalizeImageUri(m[1]);
   if (!uri) return { body: fullText, imageUri: "" };
 
   // Remove only the matched markdown image segment
   const body = clean(t.replace(m[0], "").trim());
-
   return { body, imageUri: uri };
 }
 
@@ -165,8 +200,11 @@ export function AiMessageBubble({ msg }: { msg: ChatMsg }) {
         imageUriNext: "",
       };
 
+    // 0) Strip base64 "Link:" lines early (prevents UI flood)
+    const stripped = stripDataImageLinkLines(msg.text);
+
     // 1) Extract trailing saved badge line (if present)
-    const a = splitFooterBadge(msg.text);
+    const a = splitFooterBadge(stripped);
 
     // 2) Split NEXT MOVE from remaining content
     const b = splitNextMove(a.text);

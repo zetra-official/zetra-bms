@@ -33,7 +33,7 @@ import {
   clearConversationMemoryForOrg,
 } from "@/src/services/ai";
 import { AiMessageBubble } from "@/src/components/AiMessageBubble";
-import { supabase } from "@/src/supabaseClient";
+import { supabase } from "@/src/supabase/supabaseClient";
 
 type AiMode = "AUTO" | "SW" | "EN";
 type ChatRole = "user" | "assistant";

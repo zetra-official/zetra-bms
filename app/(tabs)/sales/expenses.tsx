@@ -49,6 +49,13 @@ function isoDateOnly(d: Date) {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+function addDays(d: Date, days: number) {
+  const x = new Date(d);
+  x.setDate(x.getDate() + days);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+
 function startOfWeekMonday(d: Date) {
   const x = new Date(d);
   const day = x.getDay(); // 0 Sun ... 6 Sat
@@ -63,6 +70,40 @@ function startOfMonth(d: Date) {
   x.setDate(1);
   x.setHours(0, 0, 0, 0);
   return x;
+}
+
+/**
+ * Accepts PromiseLike to support supabase.rpc() typings (thenable).
+ */
+function withTimeout<T>(p: PromiseLike<T>, ms: number, label: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error(`${label} timed out (${ms}ms)`)), ms);
+
+    Promise.resolve(p).then(
+      (v) => {
+        clearTimeout(t);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(t);
+        reject(e);
+      }
+    );
+  });
+}
+
+function prettyRpcError(err: any): string {
+  const msg = String(err?.message ?? err ?? "").trim();
+
+  // Common DORA-style messages
+  if (!msg) return "Something went wrong.";
+  if (/not authenticated/i.test(msg)) return "Not authenticated. Tafadhali login tena.";
+  if (/no access/i.test(msg) || /owner\/admin/i.test(msg))
+    return "No access. Hii kazi ni ya Owner/Admin tu.";
+
+  // Postgrest / pg hints
+  if (/timed out/i.test(msg)) return msg;
+  return msg;
 }
 
 export default function ExpensesScreen() {
@@ -90,16 +131,27 @@ export default function ExpensesScreen() {
   const [paymentMethod, setPaymentMethod] = useState<string>("CASH");
   const paymentMethodLabel = useMemo(() => paymentMethod.trim() || "CASH", [paymentMethod]);
 
+  /**
+   * ✅ FIX-EXP-1:
+   * Backend RPCs use date ranges like [from, to) (to = exclusive).
+   * So "Today" must be: from=today, to=tomorrow.
+   * Same for Week/Month: to=tomorrow so that "includes today".
+   */
   const ranges = useMemo(() => {
     const now = new Date();
-    const tFrom = isoDateOnly(now);
-    const tTo = isoDateOnly(now);
+    const todayDate = new Date(now);
+    todayDate.setHours(0, 0, 0, 0);
 
-    const wFrom = isoDateOnly(startOfWeekMonday(now));
-    const wTo = isoDateOnly(now);
+    const tomorrow = addDays(todayDate, 1);
 
-    const mFrom = isoDateOnly(startOfMonth(now));
-    const mTo = isoDateOnly(now);
+    const tFrom = isoDateOnly(todayDate);
+    const tTo = isoDateOnly(tomorrow);
+
+    const wFrom = isoDateOnly(startOfWeekMonday(todayDate));
+    const wTo = isoDateOnly(tomorrow);
+
+    const mFrom = isoDateOnly(startOfMonth(todayDate));
+    const mTo = isoDateOnly(tomorrow);
 
     return {
       today: { from: tFrom, to: tTo },
@@ -117,17 +169,24 @@ export default function ExpensesScreen() {
     }
 
     const call = async (from: string, to: string): Promise<Summary> => {
-      const { data, error: e } = await supabase.rpc("get_expense_summary", {
-        p_store_id: activeStoreId,
-        p_from: from,
-        p_to: to,
-      });
+      const res = await withTimeout(
+        supabase.rpc("get_expense_summary", {
+          p_store_id: activeStoreId,
+          p_from: from,
+          p_to: to,
+        }),
+        12_000,
+        "get_expense_summary"
+      );
+
+      const data = (res as any)?.data;
+      const e = (res as any)?.error;
       if (e) throw e;
 
       const row = Array.isArray(data) ? data[0] : data;
       return {
-        total: Number(row?.total ?? 0),
-        count: Number(row?.count ?? 0),
+        total: Number((row as any)?.total ?? 0),
+        count: Number((row as any)?.count ?? 0),
       };
     };
 
@@ -148,14 +207,21 @@ export default function ExpensesScreen() {
       return;
     }
 
-    const { data, error: e } = await supabase.rpc("get_expenses", {
-      p_store_id: activeStoreId,
-      p_from: ranges.month.from,
-      p_to: ranges.month.to,
-    });
+    const res = await withTimeout(
+      supabase.rpc("get_expenses", {
+        p_store_id: activeStoreId,
+        p_from: ranges.month.from,
+        p_to: ranges.month.to,
+      }),
+      12_000,
+      "get_expenses"
+    );
+
+    const data = (res as any)?.data;
+    const e = (res as any)?.error;
     if (e) throw e;
 
-    setRows((data ?? []) as ExpenseRow[]);
+    setRows(((data ?? []) as any[]) as ExpenseRow[]);
   }, [activeStoreId, ranges.month.from, ranges.month.to]);
 
   const loadAll = useCallback(async () => {
@@ -167,10 +233,18 @@ export default function ExpensesScreen() {
 
     setLoading(true);
     setError(null);
+
     try {
-      await Promise.all([loadSummary(), loadList()]);
+      // ✅ Fail-soft: summary iwepo hata kama list ikikwama
+      await loadSummary();
+      try {
+        await loadList();
+      } catch (e: any) {
+        setRows([]);
+        setError(prettyRpcError(e));
+      }
     } catch (err: any) {
-      setError(err?.message ?? "Failed to load expenses");
+      setError(prettyRpcError(err));
       setRows([]);
       setToday({ total: 0, count: 0 });
       setWeek({ total: 0, count: 0 });
@@ -190,9 +264,11 @@ export default function ExpensesScreen() {
       return;
     }
     if (!canCreate) return;
+    if (loading) return; // ✅ prevent double tap
 
     const raw = amount.trim();
     const n = Number(raw);
+
     if (!raw || Number.isNaN(n) || n <= 0) {
       Alert.alert("Invalid Amount", "Weka kiasi sahihi (namba > 0).");
       return;
@@ -206,15 +282,22 @@ export default function ExpensesScreen() {
 
     setLoading(true);
     setError(null);
+
     try {
-      const { error: e } = await supabase.rpc("create_expense", {
-        p_store_id: activeStoreId,
-        p_amount: n,
-        p_category: cat,
-        p_note: note.trim() || null,
-        p_payment_method: paymentMethodLabel,
-        p_expense_date: ranges.today.from,
-      });
+      const res = await withTimeout(
+        supabase.rpc("create_expense", {
+          p_store_id: activeStoreId,
+          p_amount: n,
+          p_category: cat,
+          p_note: note.trim() || null,
+          p_payment_method: paymentMethodLabel,
+          p_expense_date: ranges.today.from,
+        }),
+        12_000,
+        "create_expense"
+      );
+
+      const e = (res as any)?.error;
       if (e) throw e;
 
       setAmount("");
@@ -225,13 +308,16 @@ export default function ExpensesScreen() {
       await loadAll();
       Alert.alert("Saved", "Expense imeongezwa.");
     } catch (err: any) {
-      setError(err?.message ?? "Failed to create expense");
+      const msg = prettyRpcError(err);
+      setError(msg);
+      Alert.alert("Failed", msg);
     } finally {
       setLoading(false);
     }
   }, [
     activeStoreId,
     canCreate,
+    loading,
     amount,
     category,
     note,
@@ -479,10 +565,7 @@ export default function ExpensesScreen() {
             <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
               Date: <Text style={{ color: theme.colors.text }}>{r.expense_date}</Text>
               {"   "}•{"   "}
-              Pay:{" "}
-              <Text style={{ color: theme.colors.text }}>
-                {r.payment_method ?? "—"}
-              </Text>
+              Pay: <Text style={{ color: theme.colors.text }}>{r.payment_method ?? "—"}</Text>
             </Text>
 
             {canManage && (

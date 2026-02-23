@@ -1,6 +1,16 @@
+// app/org-switcher.tsx
 import { useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
-import { Alert, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { useOrg } from "../src/context/OrgContext";
 import { Button } from "../src/ui/Button";
 import { Card } from "../src/ui/Card";
@@ -17,31 +27,75 @@ function normName(s: string) {
   return String(s ?? "").trim().toUpperCase();
 }
 
+function isNonEmpty(s: string) {
+  return String(s ?? "").trim().length > 0;
+}
+
+function roleLabel(role: OrgItem["role"]) {
+  if (role === "owner") return "owner";
+  if (role === "admin") return "admin";
+  return "staff";
+}
+
+function Badge({
+  text,
+  variant,
+}: {
+  text: string;
+  variant: "active" | "muted";
+}) {
+  const bg =
+    variant === "active" ? "rgba(52,211,153,0.16)" : "rgba(148,163,184,0.10)";
+  const border =
+    variant === "active" ? "rgba(52,211,153,0.45)" : "rgba(148,163,184,0.22)";
+  const color = variant === "active" ? "rgb(52,211,153)" : UI.muted;
+
+  return (
+    <View
+      style={{
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 999,
+        backgroundColor: bg,
+        borderWidth: 1,
+        borderColor: border,
+      }}
+    >
+      <Text style={{ color, fontWeight: "900", fontSize: 12 }}>{text}</Text>
+    </View>
+  );
+}
+
 export default function OrgSwitcherScreen() {
   const router = useRouter();
 
-  const {
-    orgs,
-    activeOrgId,
-    setActiveOrgId,
-    refresh,
-    createOrgWithStore,
-    loading,
-    refreshing,
-  } = useOrg();
+  const { orgs, activeOrgId, setActiveOrgId, refresh, createOrgWithStore, loading, refreshing } =
+    useOrg();
 
   const [orgName, setOrgName] = useState("");
   const [storeName, setStoreName] = useState("");
   const [creating, setCreating] = useState(false);
 
   const [showAll, setShowAll] = useState(false);
+  const [q, setQ] = useState("");
 
   const typedOrgs = (orgs ?? []) as OrgItem[];
+
+  const filteredOrgs = useMemo(() => {
+    const query = String(q ?? "").trim().toLowerCase();
+    if (!query) return typedOrgs;
+
+    return typedOrgs.filter((o) => {
+      const name = String(o.organization_name ?? "").toLowerCase();
+      const role = String(o.role ?? "").toLowerCase();
+      return name.includes(query) || role.includes(query);
+    });
+  }, [typedOrgs, q]);
 
   const grouped = useMemo(() => {
     const map = new Map<string, OrgItem[]>();
 
-    for (const o of typedOrgs) {
+    for (const o of filteredOrgs) {
       const key = `${normName(o.organization_name)}::${o.role}`;
       const list = map.get(key) ?? [];
       list.push(o);
@@ -62,7 +116,12 @@ export default function OrgSwitcherScreen() {
     });
 
     return entries;
-  }, [typedOrgs, activeOrgId]);
+  }, [filteredOrgs, activeOrgId]);
+
+  const canCreate = useMemo(() => {
+    if (creating) return false;
+    return isNonEmpty(orgName) && isNonEmpty(storeName);
+  }, [orgName, storeName, creating]);
 
   const onSwitch = (orgId: string) => {
     setActiveOrgId(orgId);
@@ -70,8 +129,7 @@ export default function OrgSwitcherScreen() {
   };
 
   const onPressGroup = (list: OrgItem[]) => {
-    const pick =
-      list.find((x) => x.organization_id === activeOrgId) ?? list[0] ?? null;
+    const pick = list.find((x) => x.organization_id === activeOrgId) ?? list[0] ?? null;
     if (!pick) return;
     onSwitch(pick.organization_id);
   };
@@ -80,32 +138,23 @@ export default function OrgSwitcherScreen() {
     const nameRaw = orgName.trim();
     const storeRaw = storeName.trim();
 
-    if (!nameRaw || !storeRaw) {
-      Alert.alert("Missing", "Jaza jina la organization na store ya kwanza.");
-      return;
-    }
+    if (!nameRaw || !storeRaw) return;
 
     const desired = normName(nameRaw);
-    const existingSameName = typedOrgs.filter(
-      (o) => normName(o.organization_name) === desired
-    );
+    const existingSameName = typedOrgs.filter((o) => normName(o.organization_name) === desired);
 
     if (existingSameName.length > 0) {
       const pick =
-        existingSameName.find((x) => x.organization_id === activeOrgId) ??
-        existingSameName[0];
+        existingSameName.find((x) => x.organization_id === activeOrgId) ?? existingSameName[0];
 
       Alert.alert(
-        "Already exists",
-        `Organization "${desired}" tayari ipo (${existingSameName.length}). Unataka ku-switch badala ya ku-create nyingine?`,
+        "Organization already exists",
+        `Organization "${desired}" tayari ipo. Unataka ku-switch badala ya ku-create nyingine?`,
         [
           { text: "Cancel", style: "cancel" },
+          { text: "Switch", onPress: () => onSwitch(pick.organization_id) },
           {
-            text: "Switch",
-            onPress: () => onSwitch(pick.organization_id),
-          },
-          {
-            text: "Create Anyway",
+            text: "Create anyway",
             style: "destructive",
             onPress: async () => {
               setCreating(true);
@@ -116,6 +165,7 @@ export default function OrgSwitcherScreen() {
                 });
                 setOrgName("");
                 setStoreName("");
+                setQ("");
                 Alert.alert("Success ✅", "Organization imeundwa");
               } catch (e: any) {
                 Alert.alert("Failed", e?.message ?? "Failed to create organization");
@@ -137,6 +187,7 @@ export default function OrgSwitcherScreen() {
       });
       setOrgName("");
       setStoreName("");
+      setQ("");
       Alert.alert("Success ✅", "Organization imeundwa");
     } catch (e: any) {
       Alert.alert("Failed", e?.message ?? "Failed to create organization");
@@ -145,9 +196,10 @@ export default function OrgSwitcherScreen() {
     }
   };
 
+  const topRightBusy = loading || refreshing || creating;
+
   return (
     <Screen>
-      {/* ✅ Outer container makes only bottom list scroll */}
       <View style={{ flex: 1 }}>
         {/* ===== TOP (NOT SCROLL) ===== */}
         <View>
@@ -157,12 +209,45 @@ export default function OrgSwitcherScreen() {
               Organizations
             </Text>
 
-            <Pressable onPress={() => router.back()}>
-              <Text style={{ fontSize: 22, color: UI.muted }}>✕</Text>
+            {/* Refresh icon */}
+            <Pressable
+              onPress={() => refresh()}
+              disabled={loading || refreshing}
+              hitSlop={12}
+              style={{
+                paddingHorizontal: 10,
+                paddingVertical: 8,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: UI.border,
+                marginRight: 10,
+                opacity: loading || refreshing ? 0.6 : 1,
+              }}
+            >
+              {loading || refreshing ? (
+                <ActivityIndicator />
+              ) : (
+                <Text style={{ fontSize: 16, color: UI.muted, fontWeight: "900" }}>↻</Text>
+              )}
+            </Pressable>
+
+            {/* Close */}
+            <Pressable
+              onPress={() => router.back()}
+              hitSlop={12}
+              style={{
+                paddingHorizontal: 10,
+                paddingVertical: 8,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: UI.border,
+              }}
+            >
+              <Text style={{ fontSize: 16, color: UI.muted, fontWeight: "900" }}>✕</Text>
             </Pressable>
           </View>
 
-          <Text style={{ color: UI.muted, fontWeight: "700", marginTop: 4 }}>
+          <Text style={{ color: UI.muted, fontWeight: "700", marginTop: 6 }}>
             Switch or create another organization
           </Text>
 
@@ -185,6 +270,8 @@ export default function OrgSwitcherScreen() {
                 color: UI.text,
                 fontWeight: "800",
               }}
+              autoCapitalize="words"
+              returnKeyType="next"
             />
 
             <TextInput
@@ -200,22 +287,19 @@ export default function OrgSwitcherScreen() {
                 color: UI.text,
                 fontWeight: "800",
               }}
+              autoCapitalize="words"
+              returnKeyType="done"
             />
+
+            <Text style={{ color: UI.muted, fontWeight: "700", marginTop: 2 }}>
+              Tip: Jaza majina yote mawili ndipo “Create & Switch” iwe active.
+            </Text>
 
             <Button
               title={creating ? "Creating..." : "Create & Switch"}
               onPress={onCreate}
-              disabled={creating}
+              disabled={!canCreate}
               variant="primary"
-            />
-
-            <View style={{ height: 2 }} />
-
-            <Button
-              title={loading ? "Loading..." : refreshing ? "Refreshing..." : "Refresh"}
-              onPress={refresh}
-              disabled={loading || refreshing}
-              variant="secondary"
             />
           </Card>
 
@@ -226,17 +310,49 @@ export default function OrgSwitcherScreen() {
               marginBottom: 8,
               flexDirection: "row",
               alignItems: "center",
+              gap: 10,
             }}
           >
             <Text style={{ color: UI.muted, fontWeight: "800", flex: 1 }}>
               Your Organizations
             </Text>
 
-            <Pressable onPress={() => setShowAll((v) => !v)}>
+            <Pressable
+              onPress={() => setShowAll((v) => !v)}
+              hitSlop={10}
+              style={{
+                paddingHorizontal: 12,
+                paddingVertical: 8,
+                borderRadius: 999,
+                borderWidth: 1,
+                borderColor: UI.border,
+              }}
+            >
               <Text style={{ color: UI.muted, fontWeight: "900" }}>
-                {showAll ? "Hide duplicates" : "Show all"}
+                {showAll ? "Grouped view" : "Show individual"}
               </Text>
             </Pressable>
+          </View>
+
+          {/* SEARCH */}
+          <View style={{ marginBottom: 10 }}>
+            <TextInput
+              value={q}
+              onChangeText={setQ}
+              placeholder="Search organizations (name or role)..."
+              placeholderTextColor={UI.faint}
+              style={{
+                borderWidth: 1,
+                borderColor: UI.border,
+                borderRadius: 14,
+                padding: 14,
+                color: UI.text,
+                fontWeight: "800",
+              }}
+              autoCapitalize="none"
+              autoCorrect={false}
+              clearButtonMode="while-editing"
+            />
           </View>
         </View>
 
@@ -246,7 +362,39 @@ export default function OrgSwitcherScreen() {
           contentContainerStyle={{ paddingBottom: 18 }}
           showsVerticalScrollIndicator={false}
           nestedScrollEnabled
+          refreshControl={
+            <RefreshControl
+              refreshing={!!refreshing}
+              onRefresh={refresh}
+              tintColor={UI.muted}
+            />
+          }
         >
+          {/* Loading state */}
+          {loading ? (
+            <Card style={{ marginTop: 6 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <ActivityIndicator />
+                <Text style={{ color: UI.muted, fontWeight: "800" }}>Loading organizations…</Text>
+              </View>
+            </Card>
+          ) : null}
+
+          {/* Empty state */}
+          {!loading && filteredOrgs.length === 0 ? (
+            <Card style={{ marginTop: 6 }}>
+              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
+                No organizations found
+              </Text>
+              <Text style={{ color: UI.muted, fontWeight: "700", marginTop: 6 }}>
+                {isNonEmpty(q)
+                  ? "Hakuna kilicholingana na search yako. Jaribu maneno mengine."
+                  : "Bado hujaunda organization. Tumia form ya juu ku-create."
+                }
+              </Text>
+            </Card>
+          ) : null}
+
           {!showAll ? (
             grouped.map((g) => {
               const list = g.list;
@@ -254,81 +402,77 @@ export default function OrgSwitcherScreen() {
               const count = list.length;
 
               return (
-                <Pressable key={g.key} onPress={() => onPressGroup(list)}>
+                <Pressable key={g.key} onPress={() => onPressGroup(list)} disabled={topRightBusy}>
                   <Card
                     style={{
                       marginBottom: 10,
-                      borderColor: activeInGroup
-                        ? "rgba(52,211,153,0.55)"
-                        : UI.border,
+                      borderColor: activeInGroup ? "rgba(52,211,153,0.55)" : UI.border,
                     }}
                   >
-                    <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 10 }}>
                       <View style={{ flex: 1 }}>
                         <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
                           {g.displayName}
                         </Text>
-                        <Text style={{ color: UI.muted, fontWeight: "700", marginTop: 2 }}>
-                          Role: {g.role}
-                          {count > 1 ? `  •  (${count} same-name orgs)` : ""}
-                        </Text>
 
-                        {activeInGroup && (
-                          <Text
-                            style={{
-                              marginTop: 6,
-                              color: "rgb(52,211,153)",
-                              fontWeight: "900",
-                            }}
-                          >
-                            Active ✓
-                          </Text>
-                        )}
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 }}>
+                          <Badge text={`ROLE: ${roleLabel(g.role).toUpperCase()}`} variant="muted" />
+                          {count > 1 ? (
+                            <Badge text={`${count} ITEMS`} variant="muted" />
+                          ) : null}
+                          {activeInGroup ? <Badge text="ACTIVE" variant="active" /> : null}
+                        </View>
                       </View>
 
-                      <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 18 }}>
-                        ›
-                      </Text>
+                      <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 18 }}>›</Text>
                     </View>
                   </Card>
                 </Pressable>
               );
             })
           ) : (
-            typedOrgs.map((o) => {
-              const active = o.organization_id === activeOrgId;
+            filteredOrgs
+              .slice()
+              .sort((a, b) => {
+                const aActive = a.organization_id === activeOrgId;
+                const bActive = b.organization_id === activeOrgId;
+                if (aActive && !bActive) return -1;
+                if (!aActive && bActive) return 1;
+                return normName(a.organization_name).localeCompare(normName(b.organization_name));
+              })
+              .map((o) => {
+                const active = o.organization_id === activeOrgId;
 
-              return (
-                <Pressable key={o.organization_id} onPress={() => onSwitch(o.organization_id)}>
-                  <Card
-                    style={{
-                      marginBottom: 10,
-                      borderColor: active ? "rgba(52,211,153,0.55)" : UI.border,
-                    }}
+                return (
+                  <Pressable
+                    key={o.organization_id}
+                    onPress={() => onSwitch(o.organization_id)}
+                    disabled={topRightBusy}
                   >
-                    <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-                      {o.organization_name}
-                    </Text>
+                    <Card
+                      style={{
+                        marginBottom: 10,
+                        borderColor: active ? "rgba(52,211,153,0.55)" : UI.border,
+                      }}
+                    >
+                      <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 10 }}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
+                            {o.organization_name}
+                          </Text>
 
-                    <Text style={{ color: UI.muted, fontWeight: "700", marginTop: 2 }}>
-                      Role: {o.role}
-                    </Text>
+                          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 }}>
+                            <Badge text={`ROLE: ${roleLabel(o.role).toUpperCase()}`} variant="muted" />
+                            {active ? <Badge text="ACTIVE" variant="active" /> : null}
+                          </View>
+                        </View>
 
-                    {active && (
-                      <Text
-                        style={{
-                          marginTop: 6,
-                          color: "rgb(52,211,153)",
-                          fontWeight: "900",
-                        }}
-                      >
-                        Active ✓
-                      </Text>
-                    )}
-                  </Card>
-                </Pressable>
-              );
-            })
+                        <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 18 }}>›</Text>
+                      </View>
+                    </Card>
+                  </Pressable>
+                );
+              })
           )}
         </ScrollView>
       </View>
