@@ -5,7 +5,9 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FlatList,
   Keyboard,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   Text,
   TextInput,
@@ -185,9 +187,7 @@ export default function SalesHomeScreen() {
     // ✅ ASARA WARNING (only works if cost_price exists; staff will see no warning because cost is null)
     const cp = Number(selected.cost_price ?? NaN);
     if (Number.isFinite(cp) && unitPrice < cp) {
-      setModalErr(
-        `ASARA: Bei uliyoweka (${fmtTZS(unitPrice)}) iko chini ya Cost (${fmtTZS(cp)}).`
-      );
+      setModalErr(`ASARA: Bei uliyoweka (${fmtTZS(unitPrice)}) iko chini ya Cost (${fmtTZS(cp)}).`);
       return;
     }
 
@@ -560,9 +560,7 @@ export default function SalesHomeScreen() {
     return (
       <View style={{ gap: 6 }}>
         <View style={{ flexDirection: "row", alignItems: "flex-end" }}>
-          <Text style={{ fontSize: 26, fontWeight: "900", color: theme.colors.text }}>
-            Sales
-          </Text>
+          <Text style={{ fontSize: 26, fontWeight: "900", color: theme.colors.text }}>Sales</Text>
         </View>
 
         <View
@@ -658,41 +656,43 @@ export default function SalesHomeScreen() {
           </Text>
         </View>
 
-        {!!err && (
-          <Text style={{ color: theme.colors.dangerText, fontWeight: "900" }}>{err}</Text>
-        )}
+        {!!err && <Text style={{ color: theme.colors.dangerText, fontWeight: "900" }}>{err}</Text>}
 
         {!!headerBlockedReason && (
-          <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-            {headerBlockedReason}
-          </Text>
+          <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{headerBlockedReason}</Text>
         )}
 
         <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
+          {/* ✅ Primary action: Complete Sale */}
           <Pressable
             onPress={goCheckout}
             disabled={checkoutDisabled}
             style={({ pressed }) => [
               {
-                paddingVertical: 10,
-                paddingHorizontal: 14,
+                paddingVertical: 11,
+                paddingHorizontal: 16,
                 borderRadius: theme.radius.pill,
                 borderWidth: 1,
-                borderColor: checkoutDisabled
-                  ? "rgba(255,255,255,0.10)"
-                  : theme.colors.emeraldBorder,
-                backgroundColor: checkoutDisabled
-                  ? "rgba(255,255,255,0.05)"
-                  : theme.colors.emeraldSoft,
+                borderColor: checkoutDisabled ? "rgba(255,255,255,0.10)" : theme.colors.emeraldBorder,
+                backgroundColor: checkoutDisabled ? "rgba(255,255,255,0.05)" : theme.colors.emeraldSoft,
                 alignItems: "center",
                 justifyContent: "center",
                 opacity: checkoutDisabled ? 0.55 : pressed ? 0.92 : 1,
                 transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
+                // subtle elevation (dominant action)
+                shadowColor: "#000",
+                shadowOpacity: checkoutDisabled ? 0 : 0.25,
+                shadowRadius: 10,
+                shadowOffset: { width: 0, height: 6 },
+                elevation: checkoutDisabled ? 0 : 8,
+                flexDirection: "row",
+                gap: 8,
               },
             ]}
           >
+            <Ionicons name="shield-checkmark-outline" size={16} color={theme.colors.text} />
             <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14 }}>
-              Checkout
+              Complete Sale
             </Text>
           </Pressable>
 
@@ -706,8 +706,7 @@ export default function SalesHomeScreen() {
                 borderRadius: theme.radius.pill,
                 borderWidth: 1,
                 borderColor: theme.colors.border,
-                backgroundColor:
-                  cart.length === 0 ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.06)",
+                backgroundColor: cart.length === 0 ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.06)",
                 opacity: cart.length === 0 ? 0.5 : pressed ? 0.92 : 1,
                 transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
                 alignItems: "center",
@@ -715,17 +714,11 @@ export default function SalesHomeScreen() {
               },
             ]}
           >
-            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14 }}>
-              Clear
-            </Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14 }}>Clear</Text>
           </Pressable>
 
           <View style={{ flex: 1 }}>
-            <Input
-              value={query}
-              onChangeText={setQuery}
-              placeholder="Search name / SKU / category..."
-            />
+            <Input value={query} onChangeText={setQuery} placeholder="Search name / SKU / category..." />
           </View>
         </View>
 
@@ -756,16 +749,12 @@ export default function SalesHomeScreen() {
       const qty = inCart?.qty ?? 0;
 
       const stockQty = getStockQty(item);
-      const stockLabel =
-        stockQty === null ? null : stockQty <= 0 ? "Out of stock" : `Stock: ${stockQty}`;
+      const stockLabel = stockQty === null ? null : stockQty <= 0 ? "Out of stock" : `Stock: ${stockQty}`;
 
       return (
         <Card style={{ marginBottom: 10, gap: 8, padding: 14 }}>
           <View style={{ gap: 4 }}>
-            <Text
-              style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}
-              numberOfLines={1}
-            >
+            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }} numberOfLines={1}>
               {item.name}
             </Text>
 
@@ -787,14 +776,8 @@ export default function SalesHomeScreen() {
 
             {qty > 0 && (
               <Text style={{ color: theme.colors.muted, fontWeight: "900" }} numberOfLines={1}>
-                Price:{" "}
-                <Text style={{ color: theme.colors.text }}>
-                  {fmtTZS(Number(inCart?.unit_price ?? 0))}
-                </Text>{" "}
-                • Line:{" "}
-                <Text style={{ color: theme.colors.text }}>
-                  {fmtTZS(Number(inCart?.line_total ?? 0))}
-                </Text>
+                Price: <Text style={{ color: theme.colors.text }}>{fmtTZS(Number(inCart?.unit_price ?? 0))}</Text> •
+                Line: <Text style={{ color: theme.colors.text }}>{fmtTZS(Number(inCart?.line_total ?? 0))}</Text>
               </Text>
             )}
           </View>
@@ -911,10 +894,7 @@ export default function SalesHomeScreen() {
   );
 
   return (
-    <Screen
-      scroll={false}
-      contentStyle={{ paddingHorizontal: 0, paddingTop: 0, paddingBottom: 0 }}
-    >
+    <Screen scroll={false} contentStyle={{ paddingHorizontal: 0, paddingTop: 0, paddingBottom: 0 }}>
       <View style={{ padding: theme.spacing.page, paddingBottom: 8, gap: 10 }}>
         {TopBar}
         {QuickBar}
@@ -934,9 +914,7 @@ export default function SalesHomeScreen() {
         ListEmptyComponent={
           !loading ? (
             <View style={{ paddingTop: 10, alignItems: "center" }}>
-              <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                No products found.
-              </Text>
+              <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>No products found.</Text>
             </View>
           ) : null
         }
@@ -960,6 +938,7 @@ export default function SalesHomeScreen() {
         onConfirm={confirmAddWithPrice}
       />
 
+      {/* ✅ FIX: Keyboard should not cover modal input (Android + iOS) */}
       <Modal
         visible={qtyEditorOpen}
         transparent
@@ -975,70 +954,103 @@ export default function SalesHomeScreen() {
             flex: 1,
             backgroundColor: "rgba(0,0,0,0.78)",
             padding: 18,
-            justifyContent: "flex-end",
           }}
         >
-          <Pressable
-            onPress={() => {}}
-            style={{ width: "100%", maxWidth: 520, alignSelf: "center" }}
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={{ flex: 1, justifyContent: "flex-end" }}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0}
           >
-            <Card
-              style={{
-                gap: 12,
-                backgroundColor: "rgba(16,18,24,0.98)",
-                borderColor: "rgba(255,255,255,0.10)",
-                padding: 18,
-              }}
-            >
-              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
-                Set Quantity
-              </Text>
-
-              <Text style={{ color: theme.colors.muted, fontWeight: "800" }} numberOfLines={1}>
-                Product:{" "}
-                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                  {qtyEditorName}
-                </Text>
-              </Text>
-
-              <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Qty</Text>
-
-              <TextInput
-                value={qtyEditorDraft}
-                onChangeText={(t) => {
-                  setQtyEditorErr(null);
-                  setQtyEditorDraft(t);
-                }}
-                placeholder="mf: 15"
-                placeholderTextColor="rgba(255,255,255,0.35)"
-                keyboardType="numeric"
-                returnKeyType="done"
-                onSubmitEditing={confirmQtyEditor}
+            <Pressable onPress={() => {}} style={{ width: "100%", maxWidth: 520, alignSelf: "center" }}>
+              <Card
                 style={{
-                  borderWidth: 1,
-                  borderColor: theme.colors.border,
-                  borderRadius: theme.radius.lg,
-                  backgroundColor: "rgba(255,255,255,0.05)",
-                  paddingHorizontal: 14,
-                  paddingVertical: 12,
-                  color: theme.colors.text,
-                  fontWeight: "900",
-                  fontSize: 16,
+                  gap: 12,
+                  backgroundColor: "rgba(16,18,24,0.98)",
+                  borderColor: "rgba(255,255,255,0.10)",
+                  padding: 18,
                 }}
-              />
+              >
+                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>Set Quantity</Text>
 
-              {!!qtyEditorErr && (
-                <Text style={{ color: theme.colors.dangerText, fontWeight: "900" }}>
-                  {qtyEditorErr}
+                <Text style={{ color: theme.colors.muted, fontWeight: "800" }} numberOfLines={1}>
+                  Product: <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{qtyEditorName}</Text>
                 </Text>
-              )}
 
-              <View style={{ flexDirection: "row", gap: 10, marginTop: 4 }}>
+                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Qty</Text>
+
+                <TextInput
+                  value={qtyEditorDraft}
+                  onChangeText={(t) => {
+                    setQtyEditorErr(null);
+                    setQtyEditorDraft(t);
+                  }}
+                  placeholder="mf: 15"
+                  placeholderTextColor="rgba(255,255,255,0.35)"
+                  keyboardType="numeric"
+                  returnKeyType="done"
+                  blurOnSubmit
+                  onSubmitEditing={confirmQtyEditor}
+                  style={{
+                    borderWidth: 1,
+                    borderColor: theme.colors.border,
+                    borderRadius: theme.radius.lg,
+                    backgroundColor: "rgba(255,255,255,0.05)",
+                    paddingHorizontal: 14,
+                    paddingVertical: 12,
+                    color: theme.colors.text,
+                    fontWeight: "900",
+                    fontSize: 16,
+                  }}
+                />
+
+                {!!qtyEditorErr && (
+                  <Text style={{ color: theme.colors.dangerText, fontWeight: "900" }}>{qtyEditorErr}</Text>
+                )}
+
+                <View style={{ flexDirection: "row", gap: 10, marginTop: 4 }}>
+                  <Pressable
+                    onPress={closeQtyEditor}
+                    style={({ pressed }) => [
+                      {
+                        flex: 1,
+                        paddingVertical: 12,
+                        borderRadius: theme.radius.pill,
+                        borderWidth: 1,
+                        borderColor: theme.colors.border,
+                        backgroundColor: "rgba(255,255,255,0.06)",
+                        alignItems: "center",
+                        opacity: pressed ? 0.92 : 1,
+                        transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
+                      },
+                    ]}
+                  >
+                    <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Cancel</Text>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={confirmQtyEditor}
+                    style={({ pressed }) => [
+                      {
+                        flex: 1,
+                        paddingVertical: 12,
+                        borderRadius: theme.radius.pill,
+                        borderWidth: 1,
+                        borderColor: theme.colors.emeraldBorder,
+                        backgroundColor: theme.colors.emeraldSoft,
+                        alignItems: "center",
+                        opacity: pressed ? 0.92 : 1,
+                        transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
+                      },
+                    ]}
+                  >
+                    <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Update</Text>
+                  </Pressable>
+                </View>
+
                 <Pressable
-                  onPress={closeQtyEditor}
+                  onPress={removeFromQtyEditor}
                   style={({ pressed }) => [
                     {
-                      flex: 1,
                       paddingVertical: 12,
                       borderRadius: theme.radius.pill,
                       borderWidth: 1,
@@ -1047,52 +1059,18 @@ export default function SalesHomeScreen() {
                       alignItems: "center",
                       opacity: pressed ? 0.92 : 1,
                       transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
+                      marginTop: 2,
                     },
                   ]}
                 >
-                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Cancel</Text>
+                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Remove</Text>
                 </Pressable>
 
-                <Pressable
-                  onPress={confirmQtyEditor}
-                  style={({ pressed }) => [
-                    {
-                      flex: 1,
-                      paddingVertical: 12,
-                      borderRadius: theme.radius.pill,
-                      borderWidth: 1,
-                      borderColor: theme.colors.emeraldBorder,
-                      backgroundColor: theme.colors.emeraldSoft,
-                      alignItems: "center",
-                      opacity: pressed ? 0.92 : 1,
-                      transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
-                    },
-                  ]}
-                >
-                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Update</Text>
-                </Pressable>
-              </View>
-
-              <Pressable
-                onPress={removeFromQtyEditor}
-                style={({ pressed }) => [
-                  {
-                    paddingVertical: 12,
-                    borderRadius: theme.radius.pill,
-                    borderWidth: 1,
-                    borderColor: theme.colors.border,
-                    backgroundColor: "rgba(255,255,255,0.06)",
-                    alignItems: "center",
-                    opacity: pressed ? 0.92 : 1,
-                    transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
-                    marginTop: 2,
-                  },
-                ]}
-              >
-                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Remove</Text>
-              </Pressable>
-            </Card>
-          </Pressable>
+                {/* small bottom safety space for very short screens */}
+                <View style={{ height: 6 }} />
+              </Card>
+            </Pressable>
+          </KeyboardAvoidingView>
         </Pressable>
       </Modal>
     </Screen>
