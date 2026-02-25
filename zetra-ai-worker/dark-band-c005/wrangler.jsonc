@@ -1,8 +1,9 @@
-{
-  "$schema": "node_modules/wrangler/config-schema.json",
+﻿{
   "name": "zetra-ai-worker",
   "main": "src/index.ts",
-  "compatibility_date": "2026-02-19",
-  "compatibility_flags": ["nodejs_compat"],
-  "observability": { "enabled": true }
+  "compatibility_date": "2026-02-25",
+
+  "vars": {
+    "OPENAI_MODEL": "gpt-4o-mini"
+  }
 }

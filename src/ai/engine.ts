@@ -1,6 +1,4 @@
 // src/ai/engine.ts
-import { supabase } from "@/src/supabaseClient";
-
 export type AiMode = "AUTO" | "SW" | "EN";
 
 export type ChatHistoryItem = {
@@ -19,141 +17,147 @@ function clean(s: any) {
   return String(s ?? "").trim();
 }
 
-function safeJsonParse(s: any): any | null {
+function safeClip(s: string, max = 900) {
+  const t = clean(s);
+  if (!t) return "";
+  return t.length > max ? t.slice(0, max) + "…" : t;
+}
+
+const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
+const DEFAULT_TIMEOUT_MS = 25_000;
+const DEFAULT_RETRIES = 2;
+
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+async function readJsonOrText(res: Response): Promise<{ json: any | null; text: string }> {
   try {
-    if (typeof s !== "string") return null;
-    return JSON.parse(s);
-  } catch {
-    return null;
-  }
+    const ct = (res.headers.get("content-type") || "").toLowerCase();
+    if (ct.includes("application/json")) {
+      const j = await res.json().catch(() => null);
+      return { json: j, text: clean(j) ? JSON.stringify(j) : "" };
+    }
+  } catch {}
+  const txt = await res.text().catch(() => "");
+  return { json: null, text: txt };
 }
 
-function getStatus(err: any): number | undefined {
-  // Supabase FunctionsHttpError usually stores status here:
-  const ctxStatus = err?.context?.status;
-  if (typeof ctxStatus === "number") return ctxStatus;
+async function fetchJsonWithRetry(
+  url: string,
+  init: RequestInit,
+  opts?: { timeoutMs?: number; retries?: number; tag?: string }
+): Promise<{ status: number; ok: boolean; data: any | null; textBody: string }> {
+  const timeoutMs = Math.max(2_000, Number(opts?.timeoutMs ?? DEFAULT_TIMEOUT_MS));
+  const retries = Math.max(0, Math.min(5, Number(opts?.retries ?? DEFAULT_RETRIES)));
+  const tag = clean(opts?.tag) || "request";
 
-  // Some versions might expose status directly (rare)
-  const direct = err?.status;
-  if (typeof direct === "number") return direct;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), timeoutMs);
 
-  return undefined;
+    try {
+      const res = await fetch(url, { ...init, signal: controller.signal });
+      clearTimeout(t);
+
+      const { json, text } = await readJsonOrText(res);
+
+      if (res.ok) {
+        return { status: res.status, ok: true, data: json ?? (clean(text) ? { raw: text } : null), textBody: text };
+      }
+
+      const bodyStr = clean(json?.error) || clean(json?.message) || safeClip(text);
+      const shouldRetry = RETRYABLE_STATUS.has(res.status);
+
+      if (!shouldRetry || attempt >= retries) {
+        return { status: res.status, ok: false, data: json, textBody: bodyStr || text };
+      }
+
+      await sleep(350 * (attempt + 1));
+      continue;
+    } catch (e: any) {
+      clearTimeout(t);
+
+      const isAbort =
+        e?.name === "AbortError" ||
+        clean(e?.message).toLowerCase().includes("aborted") ||
+        clean(e?.message).toLowerCase().includes("abort");
+      const isNetwork =
+        clean(e?.message).toLowerCase().includes("network request failed") ||
+        clean(e?.message).toLowerCase().includes("failed to fetch");
+
+      const shouldRetry = isAbort || isNetwork;
+
+      if (!shouldRetry || attempt >= retries) {
+        const msg = isAbort
+          ? `${tag} timeout after ${Math.round(timeoutMs / 1000)}s`
+          : clean(e?.message) || `${tag} failed`;
+        return { status: 0, ok: false, data: null, textBody: msg };
+      }
+
+      await sleep(350 * (attempt + 1));
+      continue;
+    }
+  }
+
+  return { status: 0, ok: false, data: null, textBody: "request failed" };
 }
 
-function getErrorBody(err: any): any {
-  const body = err?.context?.body;
-
-  // body can be object, string, or undefined
-  if (!body) return null;
-  if (typeof body === "object") return body;
-
-  const parsed = safeJsonParse(body);
-  return parsed ?? body;
-}
-
-function pickBestMessage(err: any): string {
-  // 1) direct message
-  const direct =
-    err?.message ||
-    err?.error_description ||
-    err?.error ||
-    (typeof err === "string" ? err : "");
-
-  // 2) message from body (Supabase function returned json)
-  const body = getErrorBody(err);
-  const fromBody =
-    (body && typeof body === "object" && (body.message || body.error || body.msg)) ||
-    (typeof body === "string" ? body : "");
-
-  const msg = clean(fromBody) || clean(direct);
-  return msg || "Edge Function returned a non-2xx status code";
-}
-
-function buildHint(status?: number) {
-  if (status === 401) {
-    return (
-      "Tip (401):\n" +
-      "• User hajalogin, au token haijapita.\n" +
-      "• Pia hakikisha kwenye Supabase Edge Function: 'Verify JWT with legacy secret' = OFF (recommended).\n" +
-      "• Kisha test tena ukiwa ume-login ndani ya app."
-    );
-  }
-  if (status === 403) {
-    return (
-      "Tip (403):\n" +
-      "• Access imekataliwa. Mara nyingi JWT/role/policy ndani ya function.\n" +
-      "• Angalia function logs (Supabase → Edge Functions → Logs)."
-    );
-  }
-  if (status === 429) {
-    return (
-      "Tip (429):\n" +
-      "• Rate limit / quota upande wa OpenAI.\n" +
-      "• Jaribu tena baada ya muda au punguza request size."
-    );
-  }
-  if (status === 500) {
-    return (
-      "Tip (500):\n" +
-      "• Kawaida ni OPENAI_API_KEY haipo kwenye Supabase function secrets, au model/endpoint ndani ya function imekosewa.\n" +
-      "• Fungua Supabase → Edge Functions → ai_reply_v1 → Logs uone error halisi."
-    );
-  }
-  return "";
+function getWorkerBaseUrl() {
+  // Must match app/ai/index.tsx usage:
+  return clean(process.env.EXPO_PUBLIC_AI_WORKER_URL ?? "");
 }
 
 /**
- * Calls Supabase Edge Function: ai_reply_v1
- * - Requires user to be logged in (supabase-js attaches Authorization token automatically)
- * - Edge function should have "Verify JWT with legacy secret" = OFF (recommended)
+ * Calls Cloudflare Worker: POST {BASE}/v1/chat
+ * Expected response: { ok: true, reply: string, meta?: any } OR { ok:false, error:string }
  */
 export async function generateReply(args: GenerateReplyArgs): Promise<string> {
+  const base = getWorkerBaseUrl();
+  if (!base) {
+    throw new Error("AI Worker URL missing: set EXPO_PUBLIC_AI_WORKER_URL then restart Metro.");
+  }
+
   const text = clean(args.text);
   const mode = args.mode ?? "AUTO";
+  const history = Array.isArray(args.history) ? args.history : [];
+  const context = args.context ?? {};
 
   if (!text) return "Tafadhali andika swali.";
 
-  const body = {
+  const payload = {
     text,
     mode,
-    history: Array.isArray(args.history) ? args.history : [],
-    context: args.context ?? {},
+    history,
+    context,
   };
 
-  const { data, error } = await supabase.functions.invoke("ai_reply_v1", { body });
+  const url = `${base}/v1/chat`;
 
-  if (error) {
-    const status = getStatus(error);
-    const msg = pickBestMessage(error);
-    const hint = buildHint(status);
+  const out = await fetchJsonWithRetry(
+    url,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    { timeoutMs: DEFAULT_TIMEOUT_MS, retries: DEFAULT_RETRIES, tag: "chat" }
+  );
 
-    // show status + best message + hint (if any)
-    const header = status ? `Error ${status}` : "Error";
-    throw new Error(`${header}: ${msg}${hint ? `\n\n${hint}` : ""}`);
+  const data = out.data;
+
+  if (!out.ok) {
+    const body = clean(data?.error) || clean(data?.message) || clean(out.textBody);
+    throw new Error(body ? `Chat request failed (${out.status})\n${safeClip(body)}` : `Chat request failed (${out.status})`);
   }
 
-  if (!data) throw new Error("No response from AI function.");
-
-  // Support multiple response shapes:
-  // A) { reply: "..." }
-  // B) { text: "..." }
-  // C) { message: "..." }
-  // D) { ok: true, reply: "..." }
-  // E) { ok: false, error: "...", hint?: "...", status?: number }
-  if ("ok" in data && (data as any).ok === false) {
-    const errMsg = clean((data as any).error) || "AI error";
-    const hint = clean((data as any).hint);
-    const st = typeof (data as any).status === "number" ? (data as any).status : undefined;
-    throw new Error(`${errMsg}${st ? ` (OpenAI ${st})` : ""}${hint ? `\n${hint}` : ""}`);
+  if (!data?.ok) {
+    const errMsg = clean(data?.error) || "Chat failed";
+    throw new Error(errMsg);
   }
 
-  const reply =
-    clean((data as any).reply) ||
-    clean((data as any).text) ||
-    clean((data as any).message) ||
-    "";
-
-  if (!reply) throw new Error(`Unexpected AI response: ${JSON.stringify(data)}`);
+  const reply = clean(data?.reply);
+  if (!reply) throw new Error(`Unexpected AI response: ${safeClip(JSON.stringify(data))}`);
 
   return reply;
 }

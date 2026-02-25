@@ -1,4 +1,3 @@
-// app/ai/index.tsx
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -9,7 +8,6 @@ import {
   Dimensions,
   FlatList,
   Keyboard,
-  KeyboardAvoidingView,
   Platform,
   Pressable,
   Text,
@@ -27,11 +25,6 @@ import { Screen } from "@/src/ui/Screen";
 import { UI } from "@/src/ui/theme";
 
 import { isProActiveForOrg } from "@/src/ai/subscription";
-import {
-  askZetraAIStreamWithMeta,
-  askZetraAIWithMeta,
-  clearConversationMemoryForOrg,
-} from "@/src/services/ai";
 import { AiMessageBubble } from "@/src/components/AiMessageBubble";
 import { supabase } from "@/src/supabase/supabaseClient";
 
@@ -66,12 +59,30 @@ function uid() {
 
 const INPUT_MAX = 12_000;
 
-const AI_WORKER_URL = clean(process.env.EXPO_PUBLIC_AI_WORKER_URL ?? "");
+/**
+ * ✅ Normalize Worker BASE URL
+ */
+function normalizeWorkerBaseUrl(raw: any) {
+  let u = clean(raw);
+  if (!u) return "";
+  u = u.replace(/\s+/g, "");
+  u = u.replace(/\/+$/g, "");
+
+  // Remove common suffix routes if user pasted full endpoint
+  u = u.replace(/\/v1\/chat$/i, "");
+  u = u.replace(/\/health$/i, "");
+  u = u.replace(/\/vision$/i, "");
+  u = u.replace(/\/image$/i, "");
+  u = u.replace(/\/transcribe$/i, "");
+
+  u = u.replace(/\/+$/g, "");
+  return u;
+}
+
+const AI_WORKER_URL = normalizeWorkerBaseUrl(process.env.EXPO_PUBLIC_AI_WORKER_URL ?? "");
 
 /**
- * ✅ FIX: normalize image URLs coming from Worker
- * - If Worker returns data:image/...;base64, it MUST be one continuous string (no spaces/newlines)
- * - Otherwise markdown image parsing breaks and user sees huge base64 text.
+ * ✅ Image URL normalization
  */
 function isDataImageUrl(u: string) {
   const t = clean(u).toLowerCase();
@@ -80,11 +91,105 @@ function isDataImageUrl(u: string) {
 function normalizeImageUrl(raw: string) {
   const u = clean(raw);
   if (!u) return "";
-  if (isDataImageUrl(u)) {
-    // remove ALL whitespace/newlines inside data URL
-    return u.replace(/\s+/g, "");
-  }
+  if (isDataImageUrl(u)) return u.replace(/\s+/g, "");
   return u;
+}
+
+/**
+ * ✅ Robust fetch (Timeout + Retry + Better Error Body)
+ */
+const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
+const DEFAULT_TIMEOUT_MS = 25_000;
+const DEFAULT_RETRIES = 2;
+
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+function safeClip(s: string, max = 900) {
+  const t = clean(s);
+  if (!t) return "";
+  return t.length > max ? t.slice(0, max) + "…" : t;
+}
+
+async function readJsonOrText(res: Response): Promise<{ json: any | null; text: string }> {
+  try {
+    const ct = (res.headers.get("content-type") || "").toLowerCase();
+    if (ct.includes("application/json")) {
+      const j = await res.json().catch(() => null);
+      return { json: j, text: clean(j) ? JSON.stringify(j) : "" };
+    }
+  } catch {}
+  const txt = await res.text().catch(() => "");
+  return { json: null, text: txt };
+}
+
+async function fetchJsonWithRetry(
+  url: string,
+  init: RequestInit,
+  opts?: { timeoutMs?: number; retries?: number; tag?: string }
+): Promise<{ status: number; ok: boolean; data: any | null; textBody: string }> {
+  const timeoutMs = Math.max(2_000, Number(opts?.timeoutMs ?? DEFAULT_TIMEOUT_MS));
+  const retries = Math.max(0, Math.min(5, Number(opts?.retries ?? DEFAULT_RETRIES)));
+  const tag = clean(opts?.tag) || "request";
+
+  let lastErr: any = null;
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      const res = await fetch(url, { ...init, signal: controller.signal });
+      clearTimeout(t);
+
+      const { json, text } = await readJsonOrText(res);
+
+      if (res.ok) {
+        return {
+          status: res.status,
+          ok: true,
+          data: json ?? (clean(text) ? { raw: text } : null),
+          textBody: text,
+        };
+      }
+
+      const bodyStr = clean(json?.error) || clean(json?.message) || safeClip(text);
+      const shouldRetry = RETRYABLE_STATUS.has(res.status);
+
+      if (!shouldRetry || attempt >= retries) {
+        return { status: res.status, ok: false, data: json, textBody: bodyStr || text };
+      }
+
+      const backoff = 350 * (attempt + 1);
+      await sleep(backoff);
+      continue;
+    } catch (e: any) {
+      clearTimeout(t);
+      lastErr = e;
+
+      const msgLower = clean(e?.message).toLowerCase();
+      const isAbort =
+        e?.name === "AbortError" || msgLower.includes("aborted") || msgLower.includes("abort");
+      const isNetwork = msgLower.includes("network request failed") || msgLower.includes("failed to fetch");
+
+      const shouldRetry = isAbort || isNetwork;
+
+      if (!shouldRetry || attempt >= retries) {
+        const msg = isAbort
+          ? `${tag} timeout after ${Math.round(timeoutMs / 1000)}s`
+          : clean(e?.message) || `${tag} failed`;
+        return { status: 0, ok: false, data: null, textBody: msg };
+      }
+
+      const backoff = 350 * (attempt + 1);
+      await sleep(backoff);
+      continue;
+    }
+  }
+
+  const fallback = clean(lastErr?.message) || `${clean(opts?.tag) || "request"} failed`;
+  return { status: 0, ok: false, data: null, textBody: fallback };
 }
 
 /**
@@ -93,19 +198,6 @@ function normalizeImageUrl(raw: string) {
 function isPunct(ch: string) {
   return ch === "." || ch === "!" || ch === "?" || ch === "," || ch === ";" || ch === ":";
 }
-
-function isHardPause(ch: string) {
-  return ch === "\n" || ch === "." || ch === "!" || ch === "?";
-}
-
-const BASE_MS = 28;
-const JITTER_MS = 18;
-const SOFT_PAUSE_MS = 80;
-const HARD_PAUSE_MS = 160;
-
-const MIN_CHUNK = 1;
-const MAX_CHUNK = 3;
-
 function hasNextMoveHeading(text: string) {
   const t = clean(text).toUpperCase();
   return t.includes("NEXT MOVE");
@@ -133,7 +225,6 @@ function formatActions(actions: Array<{ title: string; steps?: string[]; priorit
       }
     }
   }
-
   const out = lines.join("\n");
   return clean(out) ? out : "";
 }
@@ -220,45 +311,19 @@ type AttachedImage = {
 };
 
 /**
- * ✅ NEW: detect when user wants image generation via normal Send()
- * Supported prefixes:
- * - [Create Image] prompt
- * - Create image: prompt
- * - Create an image: prompt
- * - Generate image: prompt
- * - Image: prompt
- * - Draw: prompt
+ * ✅ detect image intent via normal Send()
  */
 function detectImageIntent(rawText: string): { isImage: boolean; prompt: string } {
   const t = clean(rawText);
   if (!t) return { isImage: false, prompt: "" };
 
-  // strict prefixes first (most reliable)
   const patterns: Array<{ re: RegExp; strip: (m: RegExpMatchArray) => string }> = [
-    {
-      re: /^\s*\[\s*create\s*image\s*\]\s*(.+)$/i,
-      strip: (m) => clean(m[1]),
-    },
-    {
-      re: /^\s*create\s+image\s*:\s*(.+)$/i,
-      strip: (m) => clean(m[1]),
-    },
-    {
-      re: /^\s*create\s+an\s+image\s*:\s*(.+)$/i,
-      strip: (m) => clean(m[1]),
-    },
-    {
-      re: /^\s*generate\s+image\s*:\s*(.+)$/i,
-      strip: (m) => clean(m[1]),
-    },
-    {
-      re: /^\s*image\s*:\s*(.+)$/i,
-      strip: (m) => clean(m[1]),
-    },
-    {
-      re: /^\s*draw\s*:\s*(.+)$/i,
-      strip: (m) => clean(m[1]),
-    },
+    { re: /^\s*\s*create\s*image\s*\s*(.+)$/i, strip: (m) => clean(m[1]) },
+    { re: /^\s*create\s+image\s*:\s*(.+)$/i, strip: (m) => clean(m[1]) },
+    { re: /^\s*create\s+an\s+image\s*:\s*(.+)$/i, strip: (m) => clean(m[1]) },
+    { re: /^\s*generate\s+image\s*:\s*(.+)$/i, strip: (m) => clean(m[1]) },
+    { re: /^\s*image\s*:\s*(.+)$/i, strip: (m) => clean(m[1]) },
+    { re: /^\s*draw\s*:\s*(.+)$/i, strip: (m) => clean(m[1]) },
   ];
 
   for (const p of patterns) {
@@ -266,12 +331,28 @@ function detectImageIntent(rawText: string): { isImage: boolean; prompt: string 
     if (m) {
       const prompt = p.strip(m);
       if (prompt) return { isImage: true, prompt };
-      return { isImage: true, prompt: t }; // fallback
+      return { isImage: true, prompt: t };
     }
   }
 
   return { isImage: false, prompt: "" };
 }
+
+/**
+ * ✅ NEW: typing dots loop for placeholder message
+ */
+function nextTypingText(step: number) {
+  const dots = step % 4; // 0..3
+  return `AI inaandika${".".repeat(dots)}`;
+}
+
+/**
+ * ✅ Retry payload (DISCRIMINATED UNION)
+ */
+type RetryPayload =
+  | { kind: "chat"; text: string; history: ReqMsg[] }
+  | { kind: "vision"; text: string; history: ReqMsg[]; images: AttachedImage[] }
+  | { kind: "image"; prompt: string };
 
 export default function AiChatScreen() {
   const router = useRouter();
@@ -279,20 +360,21 @@ export default function AiChatScreen() {
   const org = useOrg();
 
   const topPad = Math.max(insets.top, 10) + 8;
-  const safeBottomWhenClosed = Math.max(insets.bottom, 10) + 10;
 
   const [mode, setMode] = useState<AiMode>("AUTO");
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
+
   const [keyboardOpen, setKeyboardOpen] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   const [proActive, setProActive] = useState(false);
 
-  // ✅ ChatGPT-style Tools + Bottom Sheet
+  // ✅ Tools bottom sheet
   const [toolOpen, setToolOpen] = useState(false);
   const [toolKey, setToolKey] = useState<ToolKey>(null);
 
-  // ✅ NEW: In-screen Tasks panel (no navigation)
+  // ✅ In-screen Tasks panel
   const [tasksOpen, setTasksOpen] = useState(false);
 
   const anim = useRef(new Animated.Value(0)).current; // 0 closed, 1 open
@@ -316,6 +398,60 @@ export default function AiChatScreen() {
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [recordingOn, setRecordingOn] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
+
+  // ✅ Messages
+  const [messages, setMessages] = useState<ChatMsg[]>(() => [
+    {
+      id: uid(),
+      role: "assistant",
+      ts: Date.now(),
+      text:
+        "Karibu ZETRA AI.\n\n" +
+        "• Uliza maswali ya biashara (general)\n" +
+        "• Au niambie unataka kufanya nini ndani ya ZETRA BMS, nitakuongoza hatua kwa hatua.\n\n" +
+        "Tip: Andika Kiswahili au English — nita-adapt automatically.",
+    },
+  ]);
+
+  // ✅ Retry card state + stable last payload ref
+  const lastPayloadRef = useRef<RetryPayload | null>(null);
+  const [retryCard, setRetryCard] = useState<{
+    visible: boolean;
+    label: string;
+    payload: RetryPayload | null;
+  }>({ visible: false, label: "", payload: null });
+
+  const listRef = useRef<FlatList<ChatMsg>>(null);
+  const inputRef = useRef<TextInput>(null);
+
+  const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const typingAbortRef = useRef<{ aborted: boolean }>({ aborted: false });
+
+  // ✅ typing dots loop for placeholder message
+  const typingDotsTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const typingDotsStepRef = useRef(0);
+
+  const stopTypingDots = useCallback(() => {
+    if (typingDotsTimerRef.current) clearInterval(typingDotsTimerRef.current);
+    typingDotsTimerRef.current = null;
+  }, []);
+
+  const startTypingDots = useCallback(
+    (botId: string) => {
+      stopTypingDots();
+      typingDotsStepRef.current = 0;
+
+      // instant set
+      setMessages((prev) => prev.map((m) => (m.id === botId ? { ...m, text: nextTypingText(0) } : m)));
+
+      typingDotsTimerRef.current = setInterval(() => {
+        typingDotsStepRef.current += 1;
+        const t = nextTypingText(typingDotsStepRef.current);
+        setMessages((prev) => prev.map((m) => (m.id === botId ? { ...m, text: t } : m)));
+      }, 380);
+    },
+    [stopTypingDots]
+  );
 
   const openTool = useCallback(
     (k: Exclude<ToolKey, null>) => {
@@ -342,25 +478,6 @@ export default function AiChatScreen() {
   });
   const sheetScale = anim.interpolate({ inputRange: [0, 1], outputRange: [0.985, 1] });
 
-  const [messages, setMessages] = useState<ChatMsg[]>(() => [
-    {
-      id: uid(),
-      role: "assistant",
-      ts: Date.now(),
-      text:
-        "Karibu ZETRA AI.\n\n" +
-        "• Uliza maswali ya biashara (general)\n" +
-        "• Au niambie unataka kufanya nini ndani ya ZETRA BMS, nitakuongoza hatua kwa hatua.\n\n" +
-        "Tip: Andika Kiswahili au English — nita-adapt automatically.",
-    },
-  ]);
-
-  const listRef = useRef<FlatList<ChatMsg>>(null);
-  const inputRef = useRef<TextInput>(null);
-
-  const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const typingAbortRef = useRef<{ aborted: boolean }>({ aborted: false });
-
   const headerSubtitle = useMemo(() => {
     const orgName = org.activeOrgName ?? "—";
     const storeName = org.activeStoreName ?? "—";
@@ -371,19 +488,22 @@ export default function AiChatScreen() {
   const scrollToEndSoon = useCallback(() => {
     requestAnimationFrame(() => {
       try {
-        // NOTE: inverted list => offset 0 is the “bottom” (near composer)
         listRef.current?.scrollToOffset({ offset: 0, animated: true });
       } catch {}
     });
   }, []);
 
+  // ✅ Keyboard listeners (WE USE keyboardHeight on Android to lift composer smoothly)
   useEffect(() => {
-    const subShow = Keyboard.addListener("keyboardDidShow", () => {
+    const subShow = Keyboard.addListener("keyboardDidShow", (e: any) => {
       setKeyboardOpen(true);
+      const h = Number(e?.endCoordinates?.height ?? 0);
+      setKeyboardHeight(h > 0 ? h : 0);
       scrollToEndSoon();
     });
     const subHide = Keyboard.addListener("keyboardDidHide", () => {
       setKeyboardOpen(false);
+      setKeyboardHeight(0);
       scrollToEndSoon();
     });
 
@@ -393,80 +513,62 @@ export default function AiChatScreen() {
     };
   }, [scrollToEndSoon]);
 
-  /**
-   * ✅ STREAM PERF: buffer partials, flush UI on throttle
-   * - avoids setState on every token (fixes keyboard lag)
-   */
-  const streamActiveRef = useRef(false);
-  const streamBotIdRef = useRef<string | null>(null);
-  const streamTextBufferRef = useRef<string>("");
-  const streamLastFlushedRef = useRef<string>("");
-  const streamFlushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const streamLastScrollAtRef = useRef<number>(0);
-
-  const stopStreamFlush = useCallback(() => {
-    streamActiveRef.current = false;
-    streamBotIdRef.current = null;
-    if (streamFlushTimerRef.current) clearTimeout(streamFlushTimerRef.current);
-    streamFlushTimerRef.current = null;
+  const stopTyping = useCallback(() => {
+    typingAbortRef.current.aborted = true;
+    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+    typingTimerRef.current = null;
   }, []);
 
   const patchMessageText = useCallback((id: string, nextText: string) => {
     setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, text: nextText } : m)));
   }, []);
 
-  const throttledScroll = useCallback(() => {
-    const now = Date.now();
-    // scroll at most ~3x per second while streaming
-    if (now - streamLastScrollAtRef.current < 320) return;
-    streamLastScrollAtRef.current = now;
-    scrollToEndSoon();
-  }, [scrollToEndSoon]);
+  const typeOutChatGPTLike = useCallback(
+    async (msgId: string, fullText: string) => {
+      stopTyping();
+      stopTypingDots();
+      typingAbortRef.current = { aborted: false };
 
-  const startStreamFlush = useCallback(
-    (botId: string) => {
-      stopStreamFlush();
-      streamActiveRef.current = true;
-      streamBotIdRef.current = botId;
-      streamTextBufferRef.current = "";
-      streamLastFlushedRef.current = "";
-      streamLastScrollAtRef.current = 0;
+      const txt = String(fullText ?? "");
+      if (!txt.trim()) {
+        patchMessageText(msgId, "Samahani — AI imerudisha jibu tupu. Jaribu tena.");
+        return;
+      }
+
+      patchMessageText(msgId, "");
+
+      const L = txt.length;
+      const speedFactor = L > 1800 ? 0.72 : L > 1000 ? 0.82 : L > 600 ? 0.9 : 1.0;
+
+      let i = 0;
 
       const tick = () => {
-        if (!streamActiveRef.current) return;
+        if (typingAbortRef.current.aborted) return;
 
-        const id = streamBotIdRef.current;
-        if (!id) return;
+        const r = Math.random();
+        const chunk = r < 0.78 ? 1 : r < 0.95 ? 2 : 3;
 
-        const buf = streamTextBufferRef.current || "";
-        const last = streamLastFlushedRef.current || "";
+        const nextI = Math.min(txt.length, i + chunk);
+        const next = txt.slice(0, nextI);
+        const lastChar = next.charAt(next.length - 1);
 
-        // Adaptive: if message is long, flush slower & require more delta.
-        const L = buf.length;
-        const flushEvery = L > 2600 ? 110 : L > 1400 ? 90 : 70;
-        const minDelta = L > 2600 ? 16 : L > 1400 ? 10 : 6;
+        i = nextI;
+        patchMessageText(msgId, next);
+        scrollToEndSoon();
 
-        const delta = Math.abs(buf.length - last.length);
+        if (i >= txt.length) return;
 
-        if (
-          buf &&
-          (delta >= minDelta ||
-            buf.endsWith("\n") ||
-            buf.endsWith(".") ||
-            buf.endsWith("!") ||
-            buf.endsWith("?"))
-        ) {
-          streamLastFlushedRef.current = buf;
-          patchMessageText(id, buf);
-          throttledScroll();
-        }
+        let delay = (28 + Math.floor(Math.random() * 18)) * speedFactor;
 
-        streamFlushTimerRef.current = setTimeout(tick, flushEvery);
+        if (lastChar === "\n" || lastChar === "." || lastChar === "!" || lastChar === "?") delay += 160;
+        else if (isPunct(lastChar)) delay += 80;
+
+        typingTimerRef.current = setTimeout(tick, Math.max(12, Math.floor(delay)));
       };
 
-      streamFlushTimerRef.current = setTimeout(tick, 70);
+      typingTimerRef.current = setTimeout(tick, Math.floor(28 * speedFactor));
     },
-    [patchMessageText, stopStreamFlush, throttledScroll]
+    [patchMessageText, scrollToEndSoon, stopTyping, stopTypingDots]
   );
 
   useEffect(() => {
@@ -474,10 +576,9 @@ export default function AiChatScreen() {
       if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
       typingTimerRef.current = null;
       typingAbortRef.current.aborted = true;
-
-      stopStreamFlush();
+      stopTypingDots();
     };
-  }, [stopStreamFlush]);
+  }, [stopTypingDots]);
 
   useFocusEffect(
     useCallback(() => {
@@ -512,64 +613,12 @@ export default function AiChatScreen() {
     return last.map((m) => ({ role: m.role, text: m.text }));
   }, [messages]);
 
-  const stopTyping = useCallback(() => {
-    typingAbortRef.current.aborted = true;
-    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
-    typingTimerRef.current = null;
-  }, []);
-
-  const typeOutChatGPTLike = useCallback(
-    async (msgId: string, fullText: string) => {
-      stopTyping();
-      typingAbortRef.current = { aborted: false };
-
-      const txt = String(fullText ?? "");
-      if (!txt.trim()) {
-        patchMessageText(msgId, "Samahani — AI imerudisha jibu tupu. Jaribu tena.");
-        return;
-      }
-
-      patchMessageText(msgId, "");
-
-      const L = txt.length;
-      const speedFactor = L > 1800 ? 0.72 : L > 1000 ? 0.82 : L > 600 ? 0.9 : 1.0;
-
-      let i = 0;
-
-      const tick = () => {
-        if (typingAbortRef.current.aborted) return;
-
-        const r = Math.random();
-        const chunk = r < 0.78 ? MIN_CHUNK : r < 0.95 ? 2 : MAX_CHUNK;
-
-        const nextI = Math.min(txt.length, i + chunk);
-        const next = txt.slice(0, nextI);
-        const lastChar = next.charAt(next.length - 1);
-
-        i = nextI;
-        patchMessageText(msgId, next);
-        scrollToEndSoon();
-
-        if (i >= txt.length) return;
-
-        let delay = (BASE_MS + Math.floor(Math.random() * JITTER_MS)) * speedFactor;
-
-        if (isHardPause(lastChar)) delay += HARD_PAUSE_MS;
-        else if (isPunct(lastChar)) delay += SOFT_PAUSE_MS;
-
-        typingTimerRef.current = setTimeout(tick, Math.max(12, Math.floor(delay)));
-      };
-
-      typingTimerRef.current = setTimeout(tick, Math.floor(BASE_MS * speedFactor));
-    },
-    [patchMessageText, scrollToEndSoon, stopTyping]
-  );
-
   const requireWorkerUrlOrAlert = useCallback(() => {
     if (!AI_WORKER_URL) {
       Alert.alert(
         "AI Worker URL missing",
-        "Weka EXPO_PUBLIC_AI_WORKER_URL kwenye .env (base URL ya Cloudflare Worker), kisha restart Metro."
+        "Weka EXPO_PUBLIC_AI_WORKER_URL kwenye .env (base URL ya Cloudflare Worker), kisha restart Metro.\n\n" +
+          "Mfano:\nhttps://zetra-ai-worker.jofreyjofreysanga.workers.dev"
       );
       return false;
     }
@@ -666,7 +715,6 @@ export default function AiChatScreen() {
         return;
       }
 
-      // Build FormData -> Worker /transcribe
       const form = new FormData();
       form.append("file", {
         uri,
@@ -674,15 +722,25 @@ export default function AiChatScreen() {
         type: Platform.OS === "ios" ? "audio/m4a" : "audio/mp4",
       } as any);
 
-      const res = await fetch(`${AI_WORKER_URL}/transcribe`, {
-        method: "POST",
-        body: form,
-      });
+      const url = `${AI_WORKER_URL}/transcribe`;
 
-      const data = await res.json().catch(() => null);
+      const out = await fetchJsonWithRetry(
+        url,
+        {
+          method: "POST",
+          body: form,
+        },
+        { timeoutMs: 45_000, retries: 2, tag: "transcribe" }
+      );
 
-      if (!res.ok) {
-        const msg = clean(data?.error) || "Transcription failed";
+      const data = out.data;
+
+      if (!out.ok) {
+        const msg =
+          clean(data?.error) ||
+          clean(data?.message) ||
+          clean(out.textBody) ||
+          `Transcription failed (${out.status})`;
         Alert.alert("Transcribe failed", msg);
         setTranscribing(false);
         return;
@@ -695,7 +753,6 @@ export default function AiChatScreen() {
         return;
       }
 
-      // Put transcribed text into input (ChatGPT-like)
       setInput((prev) => (clean(prev) ? `${clean(prev)}\n${text}` : text));
       requestAnimationFrame(() => inputRef.current?.focus());
     } catch (e: any) {
@@ -703,7 +760,7 @@ export default function AiChatScreen() {
     } finally {
       setTranscribing(false);
     }
-  }, [AI_WORKER_URL, recording]);
+  }, [recording]);
 
   const toggleMic = useCallback(() => {
     if (recordingOn) {
@@ -713,9 +770,74 @@ export default function AiChatScreen() {
     void startRecording();
   }, [recordingOn, startRecording, stopRecordingAndTranscribe]);
 
+  /**
+   * ✅ Worker: /v1/chat
+   */
+  const callWorkerChat = useCallback(
+    async (text: string, history: ReqMsg[]) => {
+      if (!requireWorkerUrlOrAlert()) throw new Error("Worker URL missing");
+
+      const payload = {
+        text,
+        mode,
+        history,
+        context: {
+          orgId: org.activeOrgId,
+          activeOrgId: org.activeOrgId,
+          activeOrgName: org.activeOrgName,
+          activeStoreId: org.activeStoreId,
+          activeStoreName: org.activeStoreName,
+          activeRole: org.activeRole,
+        },
+      };
+
+      const url = `${AI_WORKER_URL}/v1/chat`;
+      const out = await fetchJsonWithRetry(
+        url,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify(payload),
+        },
+        { timeoutMs: DEFAULT_TIMEOUT_MS, retries: DEFAULT_RETRIES, tag: "chat" }
+      );
+
+      const data = out.data;
+
+      if (!out.ok) {
+        const body = clean(data?.error) || clean(data?.message) || clean(out.textBody);
+        const msg = body
+          ? `Chat request failed (${out.status})\n${safeClip(body)}\n\n[debug] url=${url}`
+          : `Chat request failed (${out.status})\n\n[debug] url=${url}`;
+        throw new Error(msg);
+      }
+
+      if (!data?.ok) {
+        const body = clean(data?.error) || clean(data?.message) || clean(out.textBody);
+        const msg = body ? `Chat failed\n${safeClip(body)}\n\n[debug] url=${url}` : `Chat failed\n\n[debug] url=${url}`;
+        throw new Error(msg);
+      }
+
+      return {
+        text: clean(data?.reply) || "No response",
+        meta: data?.meta ?? null,
+      };
+    },
+    [
+      mode,
+      org.activeOrgId,
+      org.activeOrgName,
+      org.activeRole,
+      org.activeStoreId,
+      org.activeStoreName,
+      requireWorkerUrlOrAlert,
+    ]
+  );
+
   const callWorkerVision = useCallback(
     async (text: string, images: AttachedImage[], history: ReqMsg[]) => {
       if (!requireWorkerUrlOrAlert()) throw new Error("Worker URL missing");
+
       const payload = {
         message: text,
         images: images.map((x) => x.dataUrl),
@@ -733,15 +855,24 @@ export default function AiChatScreen() {
         },
       };
 
-      const res = await fetch(`${AI_WORKER_URL}/vision`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const url = `${AI_WORKER_URL}/vision`;
+      const out = await fetchJsonWithRetry(
+        url,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify(payload),
+        },
+        { timeoutMs: 40_000, retries: 2, tag: "vision" }
+      );
 
-      const data = await res.json().catch(() => null);
-      if (!res.ok) {
-        const msg = clean(data?.error) || "Vision request failed";
+      const data = out.data;
+
+      if (!out.ok) {
+        const body = clean(data?.error) || clean(data?.message) || clean(out.textBody);
+        const msg = body
+          ? `Vision request failed (${out.status})\n${safeClip(body)}\n\n[debug] url=${url}`
+          : `Vision request failed (${out.status})\n\n[debug] url=${url}`;
         throw new Error(msg);
       }
 
@@ -751,7 +882,6 @@ export default function AiChatScreen() {
       };
     },
     [
-      AI_WORKER_URL,
       mode,
       org.activeOrgId,
       org.activeOrgName,
@@ -766,29 +896,44 @@ export default function AiChatScreen() {
     async (prompt: string) => {
       if (!requireWorkerUrlOrAlert()) throw new Error("Worker URL missing");
 
-      const res = await fetch(`${AI_WORKER_URL}/image`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
-      });
+      const url = `${AI_WORKER_URL}/image`;
+      const out = await fetchJsonWithRetry(
+        url,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify({ prompt }),
+        },
+        { timeoutMs: 60_000, retries: 2, tag: "image" }
+      );
 
-      const data = await res.json().catch(() => null);
-      if (!res.ok) {
-        const msg = clean(data?.error) || "Image generation failed";
+      const data = out.data;
+
+      if (!out.ok) {
+        const body = clean(data?.error) || clean(data?.message) || clean(out.textBody);
+        const msg = body
+          ? `Image generation failed (${out.status})\n${safeClip(body)}\n\n[debug] url=${url}`
+          : `Image generation failed (${out.status})\n\n[debug] url=${url}`;
         throw new Error(msg);
       }
 
       const urlRaw = clean(data?.url);
-      const url = normalizeImageUrl(urlRaw);
-      if (!url) throw new Error("No image URL returned");
-      return url;
+      const imgUrl = normalizeImageUrl(urlRaw);
+      if (!imgUrl) throw new Error("No image URL returned");
+      return imgUrl;
     },
     [requireWorkerUrlOrAlert]
   );
 
+  /**
+   * ✅ MAIN SEND
+   */
   const send = useCallback(async () => {
     const text = clean(input);
     if (!text || thinking) return;
+
+    setRetryCard({ visible: false, label: "", payload: null });
+    lastPayloadRef.current = null;
 
     if (text.length > INPUT_MAX) {
       const botMsg: ChatMsg = {
@@ -809,13 +954,13 @@ export default function AiChatScreen() {
     setInput("");
     setThinking(true);
 
-    // stop other engines (typing) + streaming flush
     stopTyping();
-    stopStreamFlush();
+    stopTypingDots();
 
     const userMsg: ChatMsg = { id: uid(), role: "user", text, ts: Date.now() };
     const botId = uid();
-    const botPlaceholder: ChatMsg = { id: botId, role: "assistant", ts: Date.now(), text: "…" };
+
+    const botPlaceholder: ChatMsg = { id: botId, role: "assistant", ts: Date.now(), text: "AI inaandika" };
 
     const imagesToSend = attachedImages;
     setAttachedImages([]);
@@ -823,9 +968,14 @@ export default function AiChatScreen() {
     setMessages((prev) => [botPlaceholder, userMsg, ...prev]);
     scrollToEndSoon();
 
+    startTypingDots(botId);
+
     try {
-      // ✅ If images attached => use Worker vision endpoint
       if (imagesToSend.length > 0) {
+        const payload: RetryPayload = { kind: "vision", text, history, images: imagesToSend };
+        lastPayloadRef.current = payload;
+        setRetryCard({ visible: false, label: "", payload });
+
         const res = await callWorkerVision(text, imagesToSend, history);
 
         const packed = packAssistantText({
@@ -839,13 +989,16 @@ export default function AiChatScreen() {
         return;
       }
 
-      // ✅ NEW: If user intent is image generation via Send()
       const imgIntent = detectImageIntent(text);
       if (imgIntent.isImage) {
         const p = clean(imgIntent.prompt) || text;
+
+        const payload: RetryPayload = { kind: "image", prompt: p };
+        lastPayloadRef.current = payload;
+        setRetryCard({ visible: false, label: "", payload });
+
         const url = await callWorkerImageGenerate(p);
 
-        // ✅ If url is a data:image..., DO NOT print it as "Link:" (it bloats UI)
         const reply = isDataImageUrl(url)
           ? `✅ Image generated\n\n![ZETRA Image](${url})`
           : `✅ Image generated\n\n![ZETRA Image](${url})\n\nLink: ${url}`;
@@ -854,41 +1007,19 @@ export default function AiChatScreen() {
         return;
       }
 
-      // ✅ LIVE STREAMING for normal text flow (PERF FIXED)
-      startStreamFlush(botId);
+      // chat
+      const payload: RetryPayload = { kind: "chat", text, history };
+      lastPayloadRef.current = payload;
+      setRetryCard({ visible: false, label: "", payload });
 
-      const meta = await askZetraAIStreamWithMeta(
-        text,
-        {
-          mode,
-          history,
-          context: {
-            orgId: org.activeOrgId,
-            activeOrgId: org.activeOrgId,
-            activeOrgName: org.activeOrgName,
-            activeStoreId: org.activeStoreId,
-            activeStoreName: org.activeStoreName,
-            activeRole: org.activeRole,
-          },
-          // IMPORTANT: keep autosave controlled here (avoid duplicates)
-          taskAutosave: false,
-        },
-        (partial) => {
-          // ✅ PERF: do NOT setState here (buffer only)
-          streamTextBufferRef.current = partial || "…";
-        }
-      );
+      const res = await callWorkerChat(text, history);
 
-      // stop flush before final packing
-      stopStreamFlush();
-
-      // ✅ PRO: Save actions to tasks (your existing logic)
       let footerNote = "";
-      if (proActive && clean(org.activeOrgId) && Array.isArray(meta.actions) && meta.actions.length) {
+      if (proActive && clean(org.activeOrgId) && Array.isArray(res?.meta?.actions) && res.meta.actions.length) {
         const result = await createTasksFromAiActions({
           orgId: org.activeOrgId!,
           storeId: org.activeStoreId ?? null,
-          actions: meta.actions as ActionItem[],
+          actions: res.meta.actions as ActionItem[],
         });
 
         if (result.created > 0) {
@@ -901,24 +1032,32 @@ export default function AiChatScreen() {
         }
       }
 
-      const finalPacked = packAssistantText({
-        text: meta.text,
-        actions: meta.actions ?? [],
-        nextMove: meta.nextMove,
+      const packed = packAssistantText({
+        text: res.text,
+        actions: res?.meta?.actions ?? [],
+        nextMove: res?.meta?.nextMove ?? "",
         footerNote,
       });
 
-      // ✅ final replace (single update)
-      patchMessageText(botId, finalPacked || meta.text || "Samahani — AI imerudisha jibu tupu. Jaribu tena.");
-      scrollToEndSoon();
+      await typeOutChatGPTLike(botId, packed || res.text);
     } catch (e: any) {
-      stopStreamFlush();
+      stopTypingDots();
+
       patchMessageText(
         botId,
         "Samahani — kuna hitilafu kidogo.\n" +
           (e?.message ? `\nError: ${String(e.message)}` : "") +
-          "\n\nTip: Kama ni timeout, jaribu tena.\nKama ni 500, angalia Worker logs (OpenAI key/model)."
+          `\n\n[debug] EXPO_PUBLIC_AI_WORKER_URL(base) = ${AI_WORKER_URL || "EMPTY"}`
       );
+
+      const last = lastPayloadRef.current;
+      if (last) {
+        setRetryCard({
+          visible: true,
+          label: "Network issue — Retry",
+          payload: last,
+        });
+      }
     } finally {
       setThinking(false);
       scrollToEndSoon();
@@ -926,21 +1065,125 @@ export default function AiChatScreen() {
   }, [
     attachedImages,
     buildHistory,
+    callWorkerChat,
     callWorkerImageGenerate,
     callWorkerVision,
     input,
-    mode,
     org.activeOrgId,
-    org.activeOrgName,
-    org.activeRole,
     org.activeStoreId,
-    org.activeStoreName,
     patchMessageText,
     proActive,
     scrollToEndSoon,
-    startStreamFlush,
-    stopStreamFlush,
+    startTypingDots,
     stopTyping,
+    stopTypingDots,
+    thinking,
+    typeOutChatGPTLike,
+  ]);
+
+  /**
+   * ✅ Retry handler
+   */
+  const retryLast = useCallback(async () => {
+    const p = retryCard.payload;
+    if (!p || thinking) return;
+
+    setRetryCard({ visible: false, label: "", payload: p });
+    lastPayloadRef.current = p;
+
+    const userMsg: ChatMsg = {
+      id: uid(),
+      role: "user",
+      ts: Date.now(),
+      text: p.kind === "image" ? `[Retry Image] ${p.prompt}` : `[Retry] ${p.kind.toUpperCase()}`,
+    };
+
+    const botId = uid();
+    const botPlaceholder: ChatMsg = { id: botId, role: "assistant", ts: Date.now(), text: "AI inaandika" };
+
+    setThinking(true);
+    stopTyping();
+    stopTypingDots();
+
+    setMessages((prev) => [botPlaceholder, userMsg, ...prev]);
+    scrollToEndSoon();
+    startTypingDots(botId);
+
+    try {
+      if (p.kind === "image") {
+        const url = await callWorkerImageGenerate(p.prompt);
+        const reply = isDataImageUrl(url)
+          ? `✅ Image generated\n\n![ZETRA Image](${url})`
+          : `✅ Image generated\n\n![ZETRA Image](${url})\n\nLink: ${url}`;
+        await typeOutChatGPTLike(botId, reply);
+        return;
+      }
+
+      if (p.kind === "vision") {
+        const res = await callWorkerVision(p.text, p.images, p.history);
+        const packed = packAssistantText({
+          text: res.text,
+          actions: res?.meta?.actions ?? [],
+          nextMove: res?.meta?.nextMove ?? "",
+          footerNote: "",
+        });
+        await typeOutChatGPTLike(botId, packed || res.text);
+        return;
+      }
+
+      const res = await callWorkerChat(p.text, p.history);
+
+      let footerNote = "";
+      if (proActive && clean(org.activeOrgId) && Array.isArray(res?.meta?.actions) && res.meta.actions.length) {
+        const result = await createTasksFromAiActions({
+          orgId: org.activeOrgId!,
+          storeId: org.activeStoreId ?? null,
+          actions: res.meta.actions as ActionItem[],
+        });
+
+        if (result.created > 0) {
+          footerNote = `✅ Saved to Tasks: ${result.created}`;
+          if (result.failed > 0) footerNote += ` • Failed: ${result.failed}`;
+        } else if (result.failed > 0) {
+          footerNote =
+            "⚠️ Actions zimeshindwa ku-save kwenye Tasks.\n" +
+            "Tip: Hakikisha RPC `create_task_from_ai` ipo na una role ya owner/admin.";
+        }
+      }
+
+      const packed = packAssistantText({
+        text: res.text,
+        actions: res?.meta?.actions ?? [],
+        nextMove: res?.meta?.nextMove ?? "",
+        footerNote,
+      });
+
+      await typeOutChatGPTLike(botId, packed || res.text);
+    } catch (e: any) {
+      stopTypingDots();
+      patchMessageText(
+        botId,
+        "Samahani — retry imegoma.\n" + (e?.message ? `\nError: ${String(e.message)}` : "") + "\n\nJaribu tena."
+      );
+      setRetryCard({ visible: true, label: "Retry failed — Try again", payload: p });
+      lastPayloadRef.current = p;
+    } finally {
+      setThinking(false);
+      scrollToEndSoon();
+    }
+  }, [
+    callWorkerChat,
+    callWorkerImageGenerate,
+    callWorkerVision,
+    org.activeOrgId,
+    org.activeStoreId,
+    patchMessageText,
+    proActive,
+    retryCard.payload,
+    scrollToEndSoon,
+    startTypingDots,
+    stopTyping,
+    stopTypingDots,
     thinking,
     typeOutChatGPTLike,
   ]);
@@ -969,7 +1212,6 @@ export default function AiChatScreen() {
     );
   };
 
-  // ✅ Tasks pill (IN-SCREEN, no route)
   const TasksPill = (
     <Pressable
       onPress={() => {
@@ -1085,9 +1327,7 @@ export default function AiChatScreen() {
         <Pressable
           onPress={() => {
             stopTyping();
-            stopStreamFlush();
-            void clearConversationMemoryForOrg(org.activeOrgId);
-
+            stopTypingDots();
             setMessages([
               {
                 id: uid(),
@@ -1101,6 +1341,8 @@ export default function AiChatScreen() {
               },
             ]);
             setAttachedImages([]);
+            setRetryCard({ visible: false, label: "", payload: null });
+            lastPayloadRef.current = null;
             requestAnimationFrame(() => inputRef.current?.focus());
           }}
           hitSlop={10}
@@ -1130,7 +1372,6 @@ export default function AiChatScreen() {
     </View>
   );
 
-  // ✅ Tool card: tighter + more “ChatGPT-like”
   const ToolCard = ({
     icon,
     title,
@@ -1298,11 +1539,16 @@ export default function AiChatScreen() {
 
                   const userMsg: ChatMsg = { id: uid(), role: "user", text: `[Create Image] ${p}`, ts: Date.now() };
                   const botId = uid();
-                  const botPlaceholder: ChatMsg = { id: botId, role: "assistant", ts: Date.now(), text: "…" };
+                  const botPlaceholder: ChatMsg = { id: botId, role: "assistant", ts: Date.now(), text: "AI inaandika" };
 
                   setMessages((prev) => [botPlaceholder, userMsg, ...prev]);
                   closeTool();
                   scrollToEndSoon();
+                  startTypingDots(botId);
+
+                  const payload: RetryPayload = { kind: "image", prompt: p };
+                  lastPayloadRef.current = payload;
+                  setRetryCard({ visible: false, label: "", payload });
 
                   const url = await callWorkerImageGenerate(p);
 
@@ -1312,7 +1558,15 @@ export default function AiChatScreen() {
 
                   await typeOutChatGPTLike(botId, reply);
                 } catch (e: any) {
+                  stopTypingDots();
                   Alert.alert("Image error", clean(e?.message) || "Failed to generate image");
+                  const payload: RetryPayload = { kind: "image", prompt: clean(imagePrompt) };
+                  lastPayloadRef.current = payload;
+                  setRetryCard({
+                    visible: true,
+                    label: "Image failed — Retry",
+                    payload,
+                  });
                 }
               }}
               hitSlop={10}
@@ -1393,7 +1647,7 @@ export default function AiChatScreen() {
             </Pressable>
 
             <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 11, marginTop: 10 }}>
-              Tip: Ukibonyeza “Use Starter Prompt”, itaweka prompt kwenye input bila kutuma—utabonyeza Send ukiwa tayari.
+              Tip: “Use Starter Prompt” itaweka prompt kwenye input bila kutuma—utabonyeza Send ukiwa tayari.
             </Text>
           </View>
         </View>
@@ -1401,375 +1655,423 @@ export default function AiChatScreen() {
     </View>
   );
 
-  // ✅ IMPORTANT: FlatList is inverted, so "space near composer" must be in paddingTop (not paddingBottom).
+  // ✅ list padding: composer always exists
   const listTopPad = useMemo(() => {
-    const composerApprox = keyboardOpen ? 116 : 150;
-    const safe = keyboardOpen ? 10 : safeBottomWhenClosed;
+    const composerApprox = keyboardOpen ? 104 : 112;
+    const safe = keyboardOpen ? 10 : Math.max(insets.bottom, 10) + 10;
     return safe + composerApprox;
-  }, [keyboardOpen, safeBottomWhenClosed]);
+  }, [insets.bottom, keyboardOpen]);
 
-  const listBottomPad = 12; // small breathing room on the other end
+  const listBottomPad = 12;
 
-  // ✅ Floating composer bottom inset (ChatGPT-like)
-  const composerBottom = useMemo(() => {
-    return keyboardOpen ? 10 : safeBottomWhenClosed;
-  }, [keyboardOpen, safeBottomWhenClosed]);
+  // ✅ Composer: stays at bottom, but lifts above Android keyboard by bottom offset
+  const composerLift = Platform.OS === "android" ? keyboardHeight : 0;
+  const composerBottomPadding = Platform.OS === "android" ? 10 : Math.max(insets.bottom, 10) + 10;
 
   const micActive = recordingOn || transcribing;
 
   return (
     <Screen scroll={false} contentStyle={{ paddingTop: 0, paddingHorizontal: 0, paddingBottom: 0 }}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={0}
-      >
-        <View style={{ flex: 1 }}>
-          {TopBar}
+      <View style={{ flex: 1 }}>
+        {TopBar}
 
-          <FlatList
-            ref={listRef}
-            style={{ flex: 1 }}
-            data={messages}
-            keyExtractor={(m) => m.id}
-            inverted
-            keyboardShouldPersistTaps="handled"
-            renderItem={({ item }) => <AiMessageBubble msg={item} />}
-            contentContainerStyle={{ paddingTop: listTopPad, paddingBottom: listBottomPad }}
-            showsVerticalScrollIndicator={false}
-            ListFooterComponent={
-              <View>
-                {ToolsGrid}
+        <FlatList
+          ref={listRef}
+          style={{ flex: 1 }}
+          data={messages}
+          keyExtractor={(m) => m.id}
+          inverted
+          keyboardShouldPersistTaps="handled"
+          renderItem={({ item }) => <AiMessageBubble msg={item} />}
+          contentContainerStyle={{ paddingTop: listTopPad, paddingBottom: listBottomPad }}
+          showsVerticalScrollIndicator={false}
+          ListFooterComponent={
+            <View>
+              {ToolsGrid}
 
-                {thinking ? (
-                  <View style={{ paddingHorizontal: 16, paddingTop: 8, alignItems: "flex-start" }}>
-                    <Card style={{ paddingVertical: 10, paddingHorizontal: 12, borderRadius: 16 }}>
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                        <ActivityIndicator />
-                        <Text style={{ color: UI.muted, fontWeight: "900" }}>AI inaandika...</Text>
-                      </View>
-                    </Card>
+              {thinking ? (
+                <View style={{ paddingHorizontal: 16, paddingTop: 8, alignItems: "flex-start" }}>
+                  <Card style={{ paddingVertical: 10, paddingHorizontal: 12, borderRadius: 16 }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                      <ActivityIndicator />
+                      <Text style={{ color: UI.muted, fontWeight: "900" }}>AI inaandika...</Text>
+                    </View>
+                  </Card>
+                </View>
+              ) : null}
+            </View>
+          }
+        />
+
+        {/* ✅ Retry card (lifts with keyboard on Android) */}
+        {retryCard.visible ? (
+          <View
+            pointerEvents="box-none"
+            style={{
+              position: "absolute",
+              left: 16,
+              right: 16,
+              bottom: composerLift + composerBottomPadding + 78,
+              zIndex: 80,
+            }}
+          >
+            <Card style={{ padding: 12, borderRadius: 18 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <View
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 14,
+                    borderWidth: 1,
+                    borderColor: "rgba(255,255,255,0.14)",
+                    backgroundColor: "rgba(255,255,255,0.06)",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Ionicons name="warning-outline" size={18} color={UI.text} />
+                </View>
+
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={{ color: UI.text, fontWeight: "900" }} numberOfLines={1}>
+                    {clean(retryCard.label) || "Network issue"}
+                  </Text>
+                  <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 2 }} numberOfLines={1}>
+                    Tap Retry kuendelea bila kupoteza swali.
+                  </Text>
+                </View>
+
+                <Pressable
+                  onPress={() => void retryLast()}
+                  hitSlop={10}
+                  style={({ pressed }) => ({
+                    paddingHorizontal: 14,
+                    height: 38,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    borderColor: UI.colors.emeraldBorder,
+                    backgroundColor: UI.colors.emeraldSoft,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    opacity: pressed ? 0.92 : 1,
+                    transform: [{ scale: pressed ? 0.985 : 1 }],
+                  })}
+                >
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                    <Ionicons name="refresh" size={16} color={UI.text} />
+                    <Text style={{ color: UI.text, fontWeight: "900" }}>Retry</Text>
                   </View>
-                ) : null}
+                </Pressable>
               </View>
-            }
-          />
+            </Card>
+          </View>
+        ) : null}
 
-          {/* ✅ ChatGPT-like floating composer */}
+        {/* ✅ Composer (ALWAYS bottom; lifts above Android keyboard) */}
+        <View
+          pointerEvents="box-none"
+          style={{
+            position: "absolute",
+            left: 0,
+            right: 0,
+            bottom: composerLift,
+            paddingHorizontal: 16,
+            paddingBottom: composerBottomPadding,
+            paddingTop: 10,
+            zIndex: 50,
+          }}
+        >
+          {attachedImages.length > 0 ? (
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
+              {attachedImages.map((img) => (
+                <View
+                  key={img.id}
+                  style={{
+                    borderWidth: 1,
+                    borderColor: "rgba(255,255,255,0.14)",
+                    backgroundColor: "rgba(255,255,255,0.06)",
+                    borderRadius: 14,
+                    paddingHorizontal: 10,
+                    paddingVertical: 8,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 8,
+                  }}
+                >
+                  <Ionicons name="image" size={16} color={UI.text} />
+                  <Text style={{ color: UI.text, fontWeight: "900", maxWidth: 140 }} numberOfLines={1}>
+                    Image attached
+                  </Text>
+                  <Pressable onPress={() => removeAttachedImage(img.id)} hitSlop={10}>
+                    <Ionicons name="close-circle" size={18} color={UI.faint} />
+                  </Pressable>
+                </View>
+              ))}
+            </View>
+          ) : null}
+
+          <View
+            style={{
+              borderWidth: 1,
+              borderColor: "rgba(255,255,255,0.14)",
+              backgroundColor: "rgba(255,255,255,0.07)",
+              borderRadius: 20,
+              paddingHorizontal: 12,
+              paddingVertical: 10,
+              flexDirection: "row",
+              alignItems: "flex-end",
+              gap: 10,
+              shadowColor: "#000",
+              shadowOpacity: 0.18,
+              shadowRadius: 14,
+              shadowOffset: { width: 0, height: 8 },
+              elevation: 6,
+            }}
+          >
+            <Pressable
+              onPress={pickAndAttachImage}
+              hitSlop={10}
+              style={({ pressed }) => ({
+                width: 42,
+                height: 42,
+                borderRadius: 999,
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,0.12)",
+                backgroundColor: pressed ? "rgba(255,255,255,0.09)" : "rgba(255,255,255,0.05)",
+                alignItems: "center",
+                justifyContent: "center",
+                opacity: pressed ? 0.92 : 1,
+                transform: [{ scale: pressed ? 0.985 : 1 }],
+              })}
+            >
+              <Ionicons name="image-outline" size={18} color={UI.text} />
+            </Pressable>
+
+            <Pressable
+              onPress={toggleMic}
+              hitSlop={10}
+              style={({ pressed }) => ({
+                width: 42,
+                height: 42,
+                borderRadius: 999,
+                borderWidth: 1,
+                borderColor: micActive ? UI.colors.emeraldBorder : "rgba(255,255,255,0.12)",
+                backgroundColor: micActive
+                  ? "rgba(16,185,129,0.18)"
+                  : pressed
+                  ? "rgba(255,255,255,0.09)"
+                  : "rgba(255,255,255,0.05)",
+                alignItems: "center",
+                justifyContent: "center",
+                opacity: pressed ? 0.92 : 1,
+                transform: [{ scale: pressed ? 0.985 : 1 }],
+              })}
+            >
+              <Ionicons name={recordingOn ? "mic" : transcribing ? "hourglass" : "mic-outline"} size={18} color={UI.text} />
+            </Pressable>
+
+            <TextInput
+              ref={inputRef}
+              value={input}
+              onChangeText={setInput}
+              placeholder="Andika swali lako… / Type your question…"
+              placeholderTextColor={UI.faint}
+              style={{
+                flex: 1,
+                color: UI.text,
+                fontWeight: "800",
+                minHeight: 22,
+                maxHeight: 120,
+              }}
+              multiline
+              keyboardAppearance="dark"
+              returnKeyType="send"
+              blurOnSubmit={false}
+              onSubmitEditing={() => void send()}
+            />
+
+            <Pressable
+              onPress={() => void send()}
+              disabled={!clean(input) || thinking}
+              hitSlop={10}
+              style={({ pressed }) => {
+                const active = clean(input) && !thinking;
+                return {
+                  width: 46,
+                  height: 46,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: active ? UI.colors.emeraldBorder : "rgba(255,255,255,0.12)",
+                  backgroundColor: active ? "rgba(16,185,129,0.20)" : "rgba(255,255,255,0.05)",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  opacity: !active ? 0.6 : pressed ? 0.92 : 1,
+                  transform: [{ scale: pressed && active ? 0.985 : 1 }],
+                  shadowColor: "#000",
+                  shadowOpacity: active ? 0.18 : 0,
+                  shadowRadius: 10,
+                  shadowOffset: { width: 0, height: 6 },
+                  elevation: active ? 6 : 0,
+                };
+              }}
+            >
+              <Ionicons name="send" size={18} color={UI.text} />
+            </Pressable>
+          </View>
+        </View>
+
+        {/* Tool sheet */}
+        {toolOpen ? (
           <View
             pointerEvents="box-none"
             style={{
               position: "absolute",
               left: 0,
               right: 0,
+              top: 0,
               bottom: 0,
-              paddingHorizontal: 16,
-              paddingBottom: composerBottom,
-              paddingTop: 10,
-              zIndex: 50,
+              zIndex: 999,
             }}
           >
-            {/* Attachments preview */}
-            {attachedImages.length > 0 ? (
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
-                {attachedImages.map((img) => (
-                  <View
-                    key={img.id}
-                    style={{
-                      borderWidth: 1,
-                      borderColor: "rgba(255,255,255,0.14)",
-                      backgroundColor: "rgba(255,255,255,0.06)",
-                      borderRadius: 14,
-                      paddingHorizontal: 10,
-                      paddingVertical: 8,
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 8,
-                    }}
-                  >
-                    <Ionicons name="image" size={16} color={UI.text} />
-                    <Text style={{ color: UI.text, fontWeight: "900", maxWidth: 140 }} numberOfLines={1}>
-                      Image attached
-                    </Text>
-                    <Pressable onPress={() => removeAttachedImage(img.id)} hitSlop={10}>
-                      <Ionicons name="close-circle" size={18} color={UI.faint} />
-                    </Pressable>
-                  </View>
-                ))}
-              </View>
-            ) : null}
-
-            <View
-              style={{
-                borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.14)",
-                backgroundColor: "rgba(255,255,255,0.07)",
-                borderRadius: 20,
-                paddingHorizontal: 12,
-                paddingVertical: 10,
-                flexDirection: "row",
-                alignItems: "flex-end",
-                gap: 10,
-                shadowColor: "#000",
-                shadowOpacity: 0.18,
-                shadowRadius: 14,
-                shadowOffset: { width: 0, height: 8 },
-                elevation: 6,
-              }}
-            >
-              {/* Image attach */}
-              <Pressable
-                onPress={pickAndAttachImage}
-                hitSlop={10}
-                style={({ pressed }) => ({
-                  width: 42,
-                  height: 42,
-                  borderRadius: 999,
-                  borderWidth: 1,
-                  borderColor: "rgba(255,255,255,0.12)",
-                  backgroundColor: pressed ? "rgba(255,255,255,0.09)" : "rgba(255,255,255,0.05)",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  opacity: pressed ? 0.92 : 1,
-                  transform: [{ scale: pressed ? 0.985 : 1 }],
-                })}
-              >
-                <Ionicons name="image-outline" size={18} color={UI.text} />
-              </Pressable>
-
-              {/* Mic */}
-              <Pressable
-                onPress={toggleMic}
-                hitSlop={10}
-                style={({ pressed }) => ({
-                  width: 42,
-                  height: 42,
-                  borderRadius: 999,
-                  borderWidth: 1,
-                  borderColor: micActive ? UI.colors.emeraldBorder : "rgba(255,255,255,0.12)",
-                  backgroundColor: micActive
-                    ? "rgba(16,185,129,0.18)"
-                    : pressed
-                    ? "rgba(255,255,255,0.09)"
-                    : "rgba(255,255,255,0.05)",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  opacity: pressed ? 0.92 : 1,
-                  transform: [{ scale: pressed ? 0.985 : 1 }],
-                })}
-              >
-                <Ionicons
-                  name={recordingOn ? "mic" : transcribing ? "hourglass" : "mic-outline"}
-                  size={18}
-                  color={UI.text}
-                />
-              </Pressable>
-
-              <TextInput
-                ref={inputRef}
-                value={input}
-                onChangeText={setInput}
-                placeholder="Andika swali lako… / Type your question…"
-                placeholderTextColor={UI.faint}
-                style={{
-                  flex: 1,
-                  color: UI.text,
-                  fontWeight: "800",
-                  minHeight: 22,
-                  maxHeight: 120,
-                }}
-                multiline
-                keyboardAppearance="dark"
-                returnKeyType="send"
-                blurOnSubmit={false}
-                onSubmitEditing={() => void send()}
-              />
-
-              <Pressable
-                onPress={() => void send()}
-                disabled={!clean(input) || thinking}
-                hitSlop={10}
-                style={({ pressed }) => {
-                  const active = clean(input) && !thinking;
-                  return {
-                    width: 46,
-                    height: 46,
-                    borderRadius: 999,
-                    borderWidth: 1,
-                    borderColor: active ? UI.colors.emeraldBorder : "rgba(255,255,255,0.12)",
-                    backgroundColor: active ? "rgba(16,185,129,0.20)" : "rgba(255,255,255,0.05)",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    opacity: !active ? 0.6 : pressed ? 0.92 : 1,
-                    transform: [{ scale: pressed && active ? 0.985 : 1 }],
-                    shadowColor: "#000",
-                    shadowOpacity: active ? 0.18 : 0,
-                    shadowRadius: 10,
-                    shadowOffset: { width: 0, height: 6 },
-                    elevation: active ? 6 : 0,
-                  };
-                }}
-              >
-                <Ionicons name="send" size={18} color={UI.text} />
-              </Pressable>
-            </View>
-          </View>
-
-          {toolOpen ? (
-            <View
-              pointerEvents="box-none"
+            <Animated.View
+              pointerEvents="auto"
               style={{
                 position: "absolute",
                 left: 0,
                 right: 0,
                 top: 0,
                 bottom: 0,
-                zIndex: 999,
+                backgroundColor: "rgba(0,0,0,0.9)",
+                opacity: overlayOpacity,
               }}
-            >
-              <Animated.View
-                pointerEvents="auto"
-                style={{
-                  position: "absolute",
-                  left: 0,
-                  right: 0,
-                  top: 0,
-                  bottom: 0,
-                  backgroundColor: "rgba(0,0,0,0.9)",
-                  opacity: overlayOpacity,
-                }}
-              />
+            />
 
-              <Pressable onPress={closeTool} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }} />
+            <Pressable onPress={closeTool} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }} />
 
-              <Animated.View
-                style={{
-                  position: "absolute",
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  transform: [{ translateY: sheetTranslateY }, { scale: sheetScale }],
-                }}
-              >
-                <View
-                  style={{
-                    borderTopLeftRadius: 24,
-                    borderTopRightRadius: 24,
-                    borderWidth: 1,
-                    borderColor: "rgba(255,255,255,0.12)",
-                    backgroundColor: UI.colors.background,
-                    overflow: "hidden",
-                  }}
-                >
-                  <View style={{ alignItems: "center", paddingTop: 10, paddingBottom: 6 }}>
-                    <View
-                      style={{
-                        width: 44,
-                        height: 5,
-                        borderRadius: 999,
-                        backgroundColor: "rgba(255,255,255,0.18)",
-                      }}
-                    />
-                  </View>
-
-                  <View
-                    style={{
-                      paddingHorizontal: 16,
-                      paddingBottom: 12,
-                      borderBottomWidth: 1,
-                      borderBottomColor: "rgba(255,255,255,0.08)",
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 10,
-                    }}
-                  >
-                    <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }} numberOfLines={1}>
-                        {SheetTitle}
-                      </Text>
-                      <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 2 }} numberOfLines={1}>
-                        {SheetSubtitle}
-                      </Text>
-                    </View>
-
-                    <Pressable
-                      onPress={closeTool}
-                      hitSlop={10}
-                      style={({ pressed }) => ({
-                        width: 40,
-                        height: 40,
-                        borderRadius: 999,
-                        borderWidth: 1,
-                        borderColor: "rgba(255,255,255,0.12)",
-                        backgroundColor: "rgba(255,255,255,0.06)",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        opacity: pressed ? 0.92 : 1,
-                        transform: [{ scale: pressed ? 0.985 : 1 }],
-                      })}
-                    >
-                      <Ionicons name="close" size={18} color={UI.text} />
-                    </Pressable>
-                  </View>
-
-                  <View style={{ height: sheetHeight }}>{SheetBody}</View>
-                </View>
-              </Animated.View>
-            </View>
-          ) : null}
-
-          {/* ✅ In-screen Tasks Panel (no navigation) */}
-          {tasksOpen && (
-            <View
+            <Animated.View
               style={{
                 position: "absolute",
                 left: 0,
                 right: 0,
-                top: 0,
                 bottom: 0,
-                backgroundColor: "rgba(0,0,0,0.85)",
-                zIndex: 1000,
+                transform: [{ translateY: sheetTranslateY }, { scale: sheetScale }],
               }}
             >
-              <Pressable
-                style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }}
-                onPress={() => setTasksOpen(false)}
-              />
-
               <View
                 style={{
-                  position: "absolute",
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  backgroundColor: UI.colors.background,
                   borderTopLeftRadius: 24,
                   borderTopRightRadius: 24,
                   borderWidth: 1,
                   borderColor: "rgba(255,255,255,0.12)",
-                  paddingTop: 16,
-                  paddingHorizontal: 16,
-                  paddingBottom: Math.max(insets.bottom, 16),
+                  backgroundColor: UI.colors.background,
+                  overflow: "hidden",
                 }}
               >
-                <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 12 }}>
-                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18, flex: 1 }}>🧠 AI Tasks</Text>
+                <View style={{ alignItems: "center", paddingTop: 10, paddingBottom: 6 }}>
+                  <View
+                    style={{
+                      width: 44,
+                      height: 5,
+                      borderRadius: 999,
+                      backgroundColor: "rgba(255,255,255,0.18)",
+                    }}
+                  />
+                </View>
 
-                  <Pressable onPress={() => setTasksOpen(false)} hitSlop={10}>
-                    <Ionicons name="close" size={22} color={UI.text} />
+                <View
+                  style={{
+                    paddingHorizontal: 16,
+                    paddingBottom: 12,
+                    borderBottomWidth: 1,
+                    borderBottomColor: "rgba(255,255,255,0.08)",
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 10,
+                  }}
+                >
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }} numberOfLines={1}>
+                      {SheetTitle}
+                    </Text>
+                    <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 2 }} numberOfLines={1}>
+                      {SheetSubtitle}
+                    </Text>
+                  </View>
+
+                  <Pressable
+                    onPress={closeTool}
+                    hitSlop={10}
+                    style={({ pressed }) => ({
+                      width: 40,
+                      height: 40,
+                      borderRadius: 999,
+                      borderWidth: 1,
+                      borderColor: "rgba(255,255,255,0.12)",
+                      backgroundColor: "rgba(255,255,255,0.06)",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      opacity: pressed ? 0.92 : 1,
+                      transform: [{ scale: pressed ? 0.985 : 1 }],
+                    })}
+                  >
+                    <Ionicons name="close" size={18} color={UI.text} />
                   </Pressable>
                 </View>
 
-                <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22 }}>
-                  Hapa utaona tasks zote zilizo-save na AI (PRO only).
-                  {"\n\n"}
-                  Tip: Tasks zina-save automatically kama una PRO active.
-                </Text>
+                <View style={{ height: sheetHeight }}>{SheetBody}</View>
               </View>
+            </Animated.View>
+          </View>
+        ) : null}
+
+        {/* Tasks panel */}
+        {tasksOpen && (
+          <View
+            style={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              top: 0,
+              bottom: 0,
+              backgroundColor: "rgba(0,0,0,0.85)",
+              zIndex: 1000,
+            }}
+          >
+            <Pressable style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }} onPress={() => setTasksOpen(false)} />
+
+            <View
+              style={{
+                position: "absolute",
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: UI.colors.background,
+                borderTopLeftRadius: 24,
+                borderTopRightRadius: 24,
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,0.12)",
+                paddingTop: 16,
+                paddingHorizontal: 16,
+                paddingBottom: Math.max(insets.bottom, 16),
+              }}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 12 }}>
+                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18, flex: 1 }}>🧠 AI Tasks</Text>
+
+                <Pressable onPress={() => setTasksOpen(false)} hitSlop={10}>
+                  <Ionicons name="close" size={22} color={UI.text} />
+                </Pressable>
+              </View>
+
+              <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22 }}>
+                Hapa utaona tasks zote zilizo-save na AI (PRO only).
+                {"\n\n"}
+                Tip: Tasks zina-save automatically kama una PRO active.
+              </Text>
             </View>
-          )}
-        </View>
-      </KeyboardAvoidingView>
+          </View>
+        )}
+      </View>
     </Screen>
   );
 }
