@@ -98,6 +98,14 @@ export default function TabsLayout() {
           ),
         }}
       />
+
+      {/* ✅ HARD HIDE (if tabs/notifications still exists) */}
+      <Tabs.Screen
+        name="notifications"
+        options={{
+          href: null, // hide from tab bar completely
+        }}
+      />
     </Tabs>
   );
 }

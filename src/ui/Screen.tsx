@@ -2,7 +2,6 @@
 import {
   FlatList,
   Keyboard,
-  KeyboardAvoidingView,
   Platform,
   ScrollView,
   SectionList,
@@ -13,6 +12,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { theme } from "./theme";
+import { NotificationBell } from "@/src/ui/NotificationBell";
 
 // ✅ Optional NetInfo (safe: does NOT crash if package missing)
 let NetInfo: any = null;
@@ -56,13 +56,23 @@ export function Screen({
   const TAB_BAR_EXTRA_GAP = 12;
 
   const [keyboardOpen, setKeyboardOpen] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   // ✅ Global offline indicator (does NOT affect routing / DB)
   const [isOffline, setIsOffline] = useState(false);
 
   useEffect(() => {
-    const showSub = Keyboard.addListener("keyboardDidShow", () => setKeyboardOpen(true));
-    const hideSub = Keyboard.addListener("keyboardDidHide", () => setKeyboardOpen(false));
+    const showSub = Keyboard.addListener("keyboardDidShow", (e: any) => {
+      setKeyboardOpen(true);
+      const h = Number(e?.endCoordinates?.height ?? 0);
+      setKeyboardHeight(h > 0 ? h : 0);
+    });
+
+    const hideSub = Keyboard.addListener("keyboardDidHide", () => {
+      setKeyboardOpen(false);
+      setKeyboardHeight(0);
+    });
+
     return () => {
       showSub.remove();
       hideSub.remove();
@@ -70,12 +80,9 @@ export function Screen({
   }, []);
 
   useEffect(() => {
-    // If NetInfo not available, keep banner off (do nothing)
     if (!NetInfo?.addEventListener) return;
 
     const unsub = NetInfo.addEventListener((state: any) => {
-      // state.isConnected: device connected to a network
-      // state.isInternetReachable: internet reachable (can be null on some devices)
       const connected = !!state?.isConnected;
 
       const reachable =
@@ -83,7 +90,6 @@ export function Screen({
           ? true
           : !!state?.isInternetReachable;
 
-      // Offline if not connected OR internet not reachable
       const offlineNow = !connected || !reachable;
       setIsOffline(offlineNow);
     });
@@ -97,16 +103,21 @@ export function Screen({
 
   const effectiveBottomPad = useMemo(() => {
     if (typeof bottomPad === "number") return bottomPad;
-    if (keyboardOpen) return 12;
+
+    // ✅ KEYBOARD FIX:
+    // When keyboard is open, add enough bottom padding so user can SCROLL
+    if (keyboardOpen) {
+      if (Platform.OS === "android") return Math.max(16, keyboardHeight) + 16;
+      return 24;
+    }
+
+    // normal state: pad for tab bar
     return TAB_BAR_BASE_HEIGHT + TAB_BAR_EXTRA_GAP;
-  }, [bottomPad, keyboardOpen]);
+  }, [bottomPad, keyboardOpen, keyboardHeight]);
 
   const paddingTop = Math.max(insets.top, 10);
   const paddingBottom = Math.max(insets.bottom, 10) + effectiveBottomPad;
 
-  // ✅ IMPORTANT:
-  // If a screen passes its OWN ScrollView/FlatList/SectionList inside <Screen>,
-  // do NOT apply paddings here (otherwise you get double bottom space / “overlay” look).
   const childCount = React.Children.count(children);
   const onlyChild =
     childCount === 1 && React.isValidElement(children) ? (children as any) : null;
@@ -117,7 +128,6 @@ export function Screen({
     onlyChild &&
     (childType === ScrollView || childType === FlatList || childType === SectionList);
 
-  // ✅ Offline banner overlay (non-blocking touches)
   const OfflineBanner = useMemo(() => {
     if (!isOffline) return null;
 
@@ -146,9 +156,13 @@ export function Screen({
     );
   }, [isOffline, paddingTop]);
 
+  // Bell position: below offline banner area if offline, otherwise normal.
+  const bellTop = useMemo(() => {
+    return paddingTop + (isOffline ? 44 : 0);
+  }, [paddingTop, isOffline]);
+
   const Root = (
     <View style={[{ flex: 1, backgroundColor: baseBg }, style]}>
-      {/* Background overlay MUST NOT block touches */}
       <View
         pointerEvents="none"
         style={{
@@ -157,15 +171,16 @@ export function Screen({
         }}
       />
 
-      {/* ✅ Global offline banner */}
       {OfflineBanner}
+
+      {/* ✅ Global Notification Bell */}
+      <NotificationBell top={bellTop} />
 
       {scroll ? (
         <ScrollView
           style={{ flex: 1, backgroundColor: baseBg }}
           contentContainerStyle={[
             {
-              // ✅ push content down a bit when banner is shown, so it doesn't overlap header
               paddingTop: paddingTop + (isOffline ? 44 : 0),
               paddingHorizontal: 16,
               paddingBottom,
@@ -180,8 +195,6 @@ export function Screen({
           {children}
         </ScrollView>
       ) : childIsScrollableRoot ? (
-        // ✅ Child already scrolls; don’t add extra padding wrappers.
-        // ✅ Still protect header overlap by adding top spacer if offline banner is shown.
         <View style={[{ flex: 1, backgroundColor: baseBg }, contentStyle]}>
           {isOffline ? <View style={{ height: paddingTop + 44 }} /> : null}
           {children}
@@ -191,7 +204,6 @@ export function Screen({
           style={[
             {
               flex: 1,
-              // ✅ push content down a bit when banner is shown
               paddingTop: paddingTop + (isOffline ? 44 : 0),
               paddingHorizontal: 16,
               paddingBottom,
@@ -206,13 +218,8 @@ export function Screen({
     </View>
   );
 
-  // Android: no KeyboardAvoidingView
-  if (Platform.OS === "android") return Root;
-
-  // iOS: keep KeyboardAvoidingView
-  return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding" keyboardVerticalOffset={0}>
-      {Root}
-    </KeyboardAvoidingView>
-  );
+  // ✅ No KeyboardAvoidingView here.
+  // Android is handled by our keyboard-height padding.
+  // iOS screens can handle their own KAV where needed.
+  return Root;
 }

@@ -34,9 +34,5 @@ export function Card({ children, style, elevated = true }: Props) {
         }) || {}
       : {};
 
-  return (
-    <View style={[base, shadow, style as any]}>
-      {children}
-    </View>
-  );
+  return <View style={[base, shadow, style as any]}>{children}</View>;
 }

@@ -63,7 +63,10 @@ export default function StoresTabScreen() {
   // Manager overlay (A20)
   // =========================
   const [mgrByStoreId, setMgrByStoreId] = useState<
-    Record<string, { membershipId: string | null; email: string | null; role: string | null }>
+    Record<
+      string,
+      { membershipId: string | null; email: string | null; role: string | null }
+    >
   >({});
   const [mgrLoading, setMgrLoading] = useState(false);
 
@@ -76,7 +79,10 @@ export default function StoresTabScreen() {
     setMgrLoading(true);
 
     const applyMap = (
-      map: Record<string, { membershipId: string | null; email: string | null; role: string | null }>
+      map: Record<
+        string,
+        { membershipId: string | null; email: string | null; role: string | null }
+      >
     ) => setMgrByStoreId(map);
 
     try {
@@ -141,21 +147,12 @@ export default function StoresTabScreen() {
 
   // =========================
   // ✅ CREDIT SWITCH (FINAL)
-  // Rule:
-  // - ON  => staff can record payments (store yake tu)
-  // - OFF => staff can view only (no payments)
-  //
-  // NOTE: DB inaweza kuwa na column:
-  //   - staff_can_manage_credit (preferred)
-  //   - allow_staff_credit      (legacy)
-  // Hii code ina-handle zote (fallback).
   // =========================
   const [creditFlagByStoreId, setCreditFlagByStoreId] = useState<Record<string, boolean>>({});
   const [creditFlagLoading, setCreditFlagLoading] = useState(false);
   const [creditFlagSaving, setCreditFlagSaving] = useState<Record<string, boolean>>({});
 
   const loadCreditFlags = useCallback(async () => {
-    // Only owner/admin needs to load these flags
     if (!canManage || !activeOrgId) {
       setCreditFlagByStoreId({});
       return;
@@ -169,7 +166,6 @@ export default function StoresTabScreen() {
 
     setCreditFlagLoading(true);
 
-    // helper to set map safely
     const apply = (rows: any[], key: "staff_can_manage_credit" | "allow_staff_credit") => {
       const map: Record<string, boolean> = {};
       for (const r of rows ?? []) {
@@ -179,25 +175,21 @@ export default function StoresTabScreen() {
     };
 
     try {
-      // ✅ Preferred column
       const { data, error: e } = await supabase
         .from("stores")
         .select("id, staff_can_manage_credit")
         .in("id", ids);
 
       if (e) throw e;
-
       apply(data ?? [], "staff_can_manage_credit");
     } catch {
       try {
-        // ✅ Legacy fallback
         const { data: d2, error: e2 } = await supabase
           .from("stores")
           .select("id, allow_staff_credit")
           .in("id", ids);
 
         if (e2) throw e2;
-
         apply(d2 ?? [], "allow_staff_credit");
       } catch {
         // keep last known
@@ -219,11 +211,9 @@ export default function StoresTabScreen() {
       }
 
       setCreditFlagSaving((p) => ({ ...p, [storeId]: true }));
-      // optimistic
       setCreditFlagByStoreId((p) => ({ ...p, [storeId]: next }));
 
       try {
-        // ✅ Preferred update
         const { error: e } = await supabase
           .from("stores")
           .update({ staff_can_manage_credit: next } as any)
@@ -231,13 +221,10 @@ export default function StoresTabScreen() {
 
         if (e) throw e;
 
-        // refresh org/stores state (safe)
         await refresh();
-        // reload flags to confirm truth
         await loadCreditFlags();
       } catch (err1: any) {
         try {
-          // ✅ Legacy fallback update
           const { error: e2 } = await supabase
             .from("stores")
             .update({ allow_staff_credit: next } as any)
@@ -248,12 +235,8 @@ export default function StoresTabScreen() {
           await refresh();
           await loadCreditFlags();
         } catch (err2: any) {
-          // rollback
           setCreditFlagByStoreId((p) => ({ ...p, [storeId]: !next }));
-          Alert.alert(
-            "Failed",
-            err2?.message ?? err1?.message ?? "Imeshindikana kubadili setting."
-          );
+          Alert.alert("Failed", err2?.message ?? err1?.message ?? "Imeshindikana kubadili setting.");
         }
       } finally {
         setCreditFlagSaving((p) => ({ ...p, [storeId]: false }));
@@ -263,7 +246,110 @@ export default function StoresTabScreen() {
   );
 
   // =========================
-  // Staff choices (kept, even if not used in UI yet)
+  // ✅ MOVEMENT SWITCH (POLISH)
+  // =========================
+  const [movementFlagByStoreId, setMovementFlagByStoreId] = useState<Record<string, boolean>>({});
+  const [movementFlagLoading, setMovementFlagLoading] = useState(false);
+  const [movementFlagSaving, setMovementFlagSaving] = useState<Record<string, boolean>>({});
+
+  const loadMovementFlags = useCallback(async () => {
+    if (!canManage || !activeOrgId) {
+      setMovementFlagByStoreId({});
+      return;
+    }
+
+    const ids = (list ?? []).map((s: any) => s.store_id).filter(Boolean);
+    if (ids.length === 0) {
+      setMovementFlagByStoreId({});
+      return;
+    }
+
+    setMovementFlagLoading(true);
+
+    const apply = (rows: any[], key: "staff_can_manage_movement" | "allow_staff_movement") => {
+      const map: Record<string, boolean> = {};
+      for (const r of rows ?? []) {
+        map[String(r.id)] = !!r?.[key];
+      }
+      setMovementFlagByStoreId(map);
+    };
+
+    try {
+      const { data, error: e } = await supabase
+        .from("stores")
+        .select("id, staff_can_manage_movement")
+        .in("id", ids);
+
+      if (e) throw e;
+      apply(data ?? [], "staff_can_manage_movement");
+    } catch {
+      try {
+        const { data: d2, error: e2 } = await supabase
+          .from("stores")
+          .select("id, allow_staff_movement")
+          .in("id", ids);
+
+        if (e2) throw e2;
+        apply(d2 ?? [], "allow_staff_movement");
+      } catch {
+        // keep last known
+      }
+    } finally {
+      setMovementFlagLoading(false);
+    }
+  }, [activeOrgId, canManage, list]);
+
+  useEffect(() => {
+    void loadMovementFlags();
+  }, [loadMovementFlags]);
+
+  const toggleStoreMovement = useCallback(
+    async (storeId: string, next: boolean) => {
+      if (!canManage) {
+        Alert.alert("No Access", "Owner/Admin only.");
+        return;
+      }
+
+      setMovementFlagSaving((p) => ({ ...p, [storeId]: true }));
+      setMovementFlagByStoreId((p) => ({ ...p, [storeId]: next }));
+
+      try {
+        const { error: e } = await supabase
+          .from("stores")
+          .update({ staff_can_manage_movement: next } as any)
+          .eq("id", storeId);
+
+        if (e) throw e;
+
+        await refresh();
+        await loadMovementFlags();
+      } catch (err1: any) {
+        try {
+          const { error: e2 } = await supabase
+            .from("stores")
+            .update({ allow_staff_movement: next } as any)
+            .eq("id", storeId);
+
+          if (e2) throw e2;
+
+          await refresh();
+          await loadMovementFlags();
+        } catch (err2: any) {
+          setMovementFlagByStoreId((p) => ({ ...p, [storeId]: !next }));
+          Alert.alert(
+            "Failed",
+            err2?.message ?? err1?.message ?? "Imeshindikana kubadili movement setting."
+          );
+        }
+      } finally {
+        setMovementFlagSaving((p) => ({ ...p, [storeId]: false }));
+      }
+    },
+    [canManage, loadMovementFlags, refresh]
+  );
+
+  // =========================
+  // Staff choices (kept)
   // =========================
   const [choices, setChoices] = useState<StaffChoiceRow[]>([]);
   const [choicesLoading, setChoicesLoading] = useState(false);
@@ -365,11 +451,24 @@ export default function StoresTabScreen() {
     await refresh();
     await loadManagers();
     await loadCreditFlags();
+    await loadMovementFlags();
   };
 
-  // =========================
-  // FlatList Header (NO ScrollView issues)
-  // =========================
+  const openMovement = useCallback(() => {
+    if (!activeStoreId) {
+      Alert.alert("Select store", "Chagua store kwanza (Active Store).");
+      return;
+    }
+    // @ts-ignore
+    router.push({
+      pathname: "/(tabs)/stores/movement",
+      params: {
+        fromStoreId: activeStoreId,
+        fromStoreName: activeStoreName ?? "",
+      },
+    });
+  }, [activeStoreId, activeStoreName, router]);
+
   const Header = useMemo(() => {
     return (
       <View style={{ gap: 14 }}>
@@ -406,12 +505,18 @@ export default function StoresTabScreen() {
 
           <Button
             title={
-              loading || refreshing || mgrLoading || creditFlagLoading
+              loading ||
+              refreshing ||
+              mgrLoading ||
+              creditFlagLoading ||
+              movementFlagLoading
                 ? "Refreshing..."
                 : "Refresh"
             }
             onPress={onRefreshAll}
-            disabled={loading || refreshing || mgrLoading || creditFlagLoading}
+            disabled={
+              loading || refreshing || mgrLoading || creditFlagLoading || movementFlagLoading
+            }
             variant="primary"
           />
         </Card>
@@ -427,6 +532,7 @@ export default function StoresTabScreen() {
           />
         )}
 
+        {/* Store Actions */}
         <Button
           title="Open Inventory"
           variant="secondary"
@@ -435,6 +541,8 @@ export default function StoresTabScreen() {
             router.push("/(tabs)/stores/inventory");
           }}
         />
+
+        <Button title="Stock Movement" variant="secondary" onPress={openMovement} />
 
         <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>
           Available Stores
@@ -450,9 +558,11 @@ export default function StoresTabScreen() {
     loading,
     mgrLoading,
     creditFlagLoading,
+    movementFlagLoading,
     onRefreshAll,
     refreshing,
     router,
+    openMovement,
   ]);
 
   return (
@@ -465,7 +575,7 @@ export default function StoresTabScreen() {
         data={list}
         keyExtractor={(item: any) => item.store_id}
         onRefresh={onRefreshAll}
-        refreshing={!!(refreshing || mgrLoading || creditFlagLoading)}
+        refreshing={!!(refreshing || mgrLoading || creditFlagLoading || movementFlagLoading)}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           <View style={{ paddingHorizontal: theme.spacing.page, paddingTop: theme.spacing.page }}>
@@ -483,7 +593,10 @@ export default function StoresTabScreen() {
           const managedBy = (mgr?.email ?? "").trim() || "UNASSIGNED";
 
           const staffCreditEnabled = !!creditFlagByStoreId?.[storeId];
-          const saving = !!creditFlagSaving?.[storeId];
+          const creditSaving = !!creditFlagSaving?.[storeId];
+
+          const staffMovementEnabled = !!movementFlagByStoreId?.[storeId];
+          const movementSaving = !!movementFlagSaving?.[storeId];
 
           return (
             <Pressable
@@ -530,9 +643,9 @@ export default function StoresTabScreen() {
                 ) : null}
               </View>
 
-              {/* ✅ Switch: Owner/Admin only */}
               {canManage ? (
-                <View style={{ marginTop: 12 }}>
+                <View style={{ marginTop: 12, gap: 12 }}>
+                  {/* Credit switch */}
                   <View
                     style={{
                       borderWidth: 1,
@@ -552,21 +665,59 @@ export default function StoresTabScreen() {
                         Staff can manage credit
                       </Text>
                       <Text style={{ color: theme.colors.muted, marginTop: 4, lineHeight: 18 }}>
-                        Ikiwashwa, staff wa store hii ataona/kurekodi malipo ya madeni ya store yake tu.
-                        Ikizimwa, ataona tu (read-only).
+                        Ikiwashwa, staff wa store hii ataona/kurekodi malipo ya madeni ya store yake
+                        tu. Ikizimwa, ataona tu (read-only).
                       </Text>
                     </View>
 
                     <Switch
                       value={staffCreditEnabled}
                       onValueChange={(v) => toggleStoreCredit(storeId, v)}
-                      disabled={saving}
+                      disabled={creditSaving}
                     />
                   </View>
 
-                  {saving ? (
-                    <Text style={{ color: theme.colors.faint, marginTop: 8, fontWeight: "800" }}>
-                      Saving...
+                  {creditSaving ? (
+                    <Text style={{ color: theme.colors.faint, marginTop: -4, fontWeight: "800" }}>
+                      Saving credit setting...
+                    </Text>
+                  ) : null}
+
+                  {/* Movement switch */}
+                  <View
+                    style={{
+                      borderWidth: 1,
+                      borderColor: theme.colors.borderSoft,
+                      backgroundColor: theme.colors.surface2,
+                      borderRadius: theme.radius.xl,
+                      paddingVertical: 10,
+                      paddingHorizontal: 12,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 10,
+                    }}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>
+                        Allow staff stock movement
+                      </Text>
+                      <Text style={{ color: theme.colors.muted, marginTop: 4, lineHeight: 18 }}>
+                        Ikiwashwa, staff wa store hii ataruhusiwa kuhamisha stock (FROM store yake).
+                        Ikizimwa, movement itakuwa Owner/Admin tu. (Admin/Owner wana ruhusa muda wote.)
+                      </Text>
+                    </View>
+
+                    <Switch
+                      value={staffMovementEnabled}
+                      onValueChange={(v) => toggleStoreMovement(storeId, v)}
+                      disabled={movementSaving}
+                    />
+                  </View>
+
+                  {movementSaving ? (
+                    <Text style={{ color: theme.colors.faint, marginTop: -4, fontWeight: "800" }}>
+                      Saving movement setting...
                     </Text>
                   ) : null}
                 </View>
