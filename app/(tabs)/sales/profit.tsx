@@ -19,6 +19,7 @@ import { Button } from "../../../src/ui/Button";
 import { Card } from "../../../src/ui/Card";
 import { Screen } from "../../../src/ui/Screen";
 import { theme } from "../../../src/ui/theme";
+import { useOrgMoneyPrefs } from "../../../src/ui/money";
 
 type ProfitRowAny = Record<string, any>;
 
@@ -32,18 +33,6 @@ type Summary = {
 type RangeKey = "today" | "week" | "month";
 
 type ArchivePresetKey = "THIS_YEAR" | "LAST_YEAR" | "LAST_6_MONTHS" | "CUSTOM";
-
-function fmtTZS(n: number) {
-  try {
-    return new Intl.NumberFormat("en-TZ", {
-      style: "currency",
-      currency: "TZS",
-      maximumFractionDigits: 0,
-    }).format(n);
-  } catch {
-    return `TZS ${Math.round(n).toLocaleString()}`;
-  }
-}
 
 function startOfDayLocal(d: Date) {
   const x = new Date(d);
@@ -111,21 +100,9 @@ function pctChange(current: number, prev: number): number | null {
 }
 
 /** ✅ A) Money text that NEVER cuts with "..." — it auto-fits */
-function MoneyText({
-  children,
-  style,
-}: {
-  children: React.ReactNode;
-  style?: any;
-}) {
+function MoneyText({ children, style }: { children: React.ReactNode; style?: any }) {
   return (
-    <Text
-      style={style}
-      numberOfLines={1}
-      ellipsizeMode="clip"
-      adjustsFontSizeToFit
-      minimumFontScale={0.75}
-    >
+    <Text style={style} numberOfLines={1} ellipsizeMode="clip" adjustsFontSizeToFit minimumFontScale={0.75}>
       {children}
     </Text>
   );
@@ -172,7 +149,12 @@ function endOfDayFromYmdLocal(ymd: string) {
 export default function ProfitScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { activeOrgName, activeRole, activeStoreId, activeStoreName } = useOrg();
+
+  const { activeOrgId, activeOrgName, activeRole, activeStoreId, activeStoreName } = useOrg();
+
+  // ✅ Global money formatter (org-level prefs)
+  const money = useOrgMoneyPrefs(String(activeOrgId || ""));
+  const fmt = useCallback((n: number) => money.fmt(n), [money]);
 
   const isOwner = useMemo(() => (activeRole ?? "staff") === "owner", [activeRole]);
 
@@ -392,22 +374,23 @@ export default function ProfitScreen() {
     [view]
   );
 
-  const MiniCard = useCallback(({ title, value, icon }: { title: string; value: string; icon: any }) => {
-    return (
-      <Card style={{ flex: 1, gap: 6, padding: 14 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <Ionicons name={icon} size={16} color="rgba(255,255,255,0.75)" />
-          <Text style={{ color: theme.colors.muted, fontWeight: "800" }} numberOfLines={1}>
-            {title}
-          </Text>
-        </View>
+  const MiniCard = useCallback(
+    ({ title, value, icon }: { title: string; value: string; icon: any }) => {
+      return (
+        <Card style={{ flex: 1, gap: 6, padding: 14 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <Ionicons name={icon} size={16} color="rgba(255,255,255,0.75)" />
+            <Text style={{ color: theme.colors.muted, fontWeight: "800" }} numberOfLines={1}>
+              {title}
+            </Text>
+          </View>
 
-        <MoneyText style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-          {value}
-        </MoneyText>
-      </Card>
-    );
-  }, []);
+          <MoneyText style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>{value}</MoneyText>
+        </Card>
+      );
+    },
+    []
+  );
 
   const TrendHint = useMemo(() => {
     if (!isOwner) return null;
@@ -419,7 +402,7 @@ export default function ProfitScreen() {
     const label = view === "today" ? "vs yesterday" : view === "week" ? "vs previous week" : "vs previous period";
 
     const pctText = trend.pct === null ? "—" : `${trend.pct >= 0 ? "+" : ""}${trend.pct.toFixed(1)}%`;
-    const deltaText = fmtTZS(Math.abs(trend.delta));
+    const deltaText = fmt(Math.abs(trend.delta));
 
     return (
       <Card
@@ -464,12 +447,11 @@ export default function ProfitScreen() {
         </View>
 
         <Text style={{ color: theme.colors.muted, fontWeight: "800" }} numberOfLines={1}>
-          Previous net:{" "}
-          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{fmtTZS(trend.prevNet)}</Text>
+          Previous net: <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{fmt(trend.prevNet)}</Text>
         </Text>
       </Card>
     );
-  }, [isOwner, trend, view]);
+  }, [isOwner, trend, view, fmt]);
 
   const headerSubtitle = useMemo(() => {
     const org = activeOrgName ?? "—";
@@ -767,14 +749,14 @@ export default function ProfitScreen() {
                     </View>
                   </View>
 
-                  <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 24 }}>{fmtTZS(current.net)}</Text>
+                  <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 24 }}>{fmt(current.net)}</Text>
 
                   <View style={{ flexDirection: "row", gap: 10, marginTop: 2 }}>
-                    <MiniCard title="Sales" value={current.sales === null ? "—" : fmtTZS(current.sales)} icon="cash-outline" />
-                    <MiniCard title="COGS" value={current.cogs === null ? "—" : fmtTZS(current.cogs)} icon="pricetag-outline" />
+                    <MiniCard title="Sales" value={current.sales === null ? "—" : fmt(current.sales)} icon="cash-outline" />
+                    <MiniCard title="COGS" value={current.cogs === null ? "—" : fmt(current.cogs)} icon="pricetag-outline" />
                     <MiniCard
                       title="Expenses"
-                      value={current.expenses === null ? "—" : fmtTZS(current.expenses)}
+                      value={current.expenses === null ? "—" : fmt(current.expenses)}
                       icon="remove-circle-outline"
                     />
                   </View>
@@ -787,21 +769,27 @@ export default function ProfitScreen() {
                     <Text style={{ color: theme.colors.muted, fontWeight: "800" }} numberOfLines={1}>
                       Today
                     </Text>
-                    <MoneyText style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>{fmtTZS(today.net)}</MoneyText>
+                    <MoneyText style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+                      {fmt(today.net)}
+                    </MoneyText>
                   </Card>
 
                   <Card style={{ flex: 1, gap: 6, padding: 14 }}>
                     <Text style={{ color: theme.colors.muted, fontWeight: "800" }} numberOfLines={1}>
                       This Week
                     </Text>
-                    <MoneyText style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>{fmtTZS(week.net)}</MoneyText>
+                    <MoneyText style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+                      {fmt(week.net)}
+                    </MoneyText>
                   </Card>
 
                   <Card style={{ flex: 1, gap: 6, padding: 14 }}>
                     <Text style={{ color: theme.colors.muted, fontWeight: "800" }} numberOfLines={1}>
                       This Month
                     </Text>
-                    <MoneyText style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>{fmtTZS(month.net)}</MoneyText>
+                    <MoneyText style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+                      {fmt(month.net)}
+                    </MoneyText>
                   </Card>
                 </View>
               </Animated.View>
@@ -1009,25 +997,23 @@ export default function ProfitScreen() {
                             </View>
 
                             <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 24 }}>
-                              {fmtTZS(archiveResult.summary.net)}
+                              {fmt(archiveResult.summary.net)}
                             </Text>
 
                             <View style={{ flexDirection: "row", gap: 10, marginTop: 2 }}>
                               <MiniCard
                                 title="Sales"
-                                value={archiveResult.summary.sales === null ? "—" : fmtTZS(archiveResult.summary.sales)}
+                                value={archiveResult.summary.sales === null ? "—" : fmt(archiveResult.summary.sales)}
                                 icon="cash-outline"
                               />
                               <MiniCard
                                 title="COGS"
-                                value={archiveResult.summary.cogs === null ? "—" : fmtTZS(archiveResult.summary.cogs)}
+                                value={archiveResult.summary.cogs === null ? "—" : fmt(archiveResult.summary.cogs)}
                                 icon="pricetag-outline"
                               />
                               <MiniCard
                                 title="Expenses"
-                                value={
-                                  archiveResult.summary.expenses === null ? "—" : fmtTZS(archiveResult.summary.expenses)
-                                }
+                                value={archiveResult.summary.expenses === null ? "—" : fmt(archiveResult.summary.expenses)}
                                 icon="remove-circle-outline"
                               />
                             </View>

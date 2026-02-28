@@ -2,6 +2,7 @@
 import {
   FlatList,
   Keyboard,
+  KeyboardAvoidingView,
   Platform,
   ScrollView,
   SectionList,
@@ -104,16 +105,16 @@ export function Screen({
   const effectiveBottomPad = useMemo(() => {
     if (typeof bottomPad === "number") return bottomPad;
 
-    // ✅ KEYBOARD FIX:
-    // When keyboard is open, add enough bottom padding so user can SCROLL
+    // ✅ IMPORTANT:
+    // Screen paddingBottom is for scroll comfort (NOT for absolute composers).
+    // We keep it safe, but not aggressively huge on Android to avoid “jump”.
     if (keyboardOpen) {
-      if (Platform.OS === "android") return Math.max(16, keyboardHeight) + 16;
+      if (Platform.OS === "android") return 16; // keep stable (AI screen handles its own composer)
       return 24;
     }
 
-    // normal state: pad for tab bar
     return TAB_BAR_BASE_HEIGHT + TAB_BAR_EXTRA_GAP;
-  }, [bottomPad, keyboardOpen, keyboardHeight]);
+  }, [bottomPad, keyboardOpen]);
 
   const paddingTop = Math.max(insets.top, 10);
   const paddingBottom = Math.max(insets.bottom, 10) + effectiveBottomPad;
@@ -156,7 +157,6 @@ export function Screen({
     );
   }, [isOffline, paddingTop]);
 
-  // Bell position: below offline banner area if offline, otherwise normal.
   const bellTop = useMemo(() => {
     return paddingTop + (isOffline ? 44 : 0);
   }, [paddingTop, isOffline]);
@@ -218,8 +218,12 @@ export function Screen({
     </View>
   );
 
-  // ✅ No KeyboardAvoidingView here.
-  // Android is handled by our keyboard-height padding.
-  // iOS screens can handle their own KAV where needed.
-  return Root;
+  // ✅ iOS only KAV (Android: avoid jumpy behavior)
+  if (Platform.OS !== "ios") return Root;
+
+  return (
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding" keyboardVerticalOffset={0}>
+      {Root}
+    </KeyboardAvoidingView>
+  );
 }

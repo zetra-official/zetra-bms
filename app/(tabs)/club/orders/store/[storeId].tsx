@@ -1,9 +1,8 @@
-// app/(tabs)/club/orders/store/[storeId].tsx
-
 import { supabase } from "@/src/supabase/supabaseClient";
 import { Card } from "@/src/ui/Card";
 import { Screen } from "@/src/ui/Screen";
 import { theme } from "@/src/ui/theme";
+import { formatMoney } from "@/src/ui/money";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -17,20 +16,6 @@ function clean(x: any) {
 function isUuid(v: string) {
   const s = clean(v);
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s);
-}
-
-function fmtMoney(n: number, currency?: string | null) {
-  const c = clean(currency) || "TZS";
-  const v = Math.max(0, Number(n) || 0);
-  try {
-    return new Intl.NumberFormat("en-TZ", {
-      style: "currency",
-      currency: c,
-      maximumFractionDigits: 0,
-    }).format(v);
-  } catch {
-    return `${c} ${String(Math.round(v))}`;
-  }
 }
 
 type OrderRowAny = Record<string, any>;
@@ -57,7 +42,10 @@ type OrderRow = {
 function normalizeOrderRow(r: OrderRowAny): OrderRow {
   const id = String(r.id ?? r.order_id ?? r.orderId ?? "");
   const store_id = String(r.store_id ?? r.storeId ?? "");
-  const created_at = (r.created_at ?? r.inserted_at ?? r.createdAt ?? null) != null ? String(r.created_at ?? r.inserted_at ?? r.createdAt) : null;
+  const created_at =
+    (r.created_at ?? r.inserted_at ?? r.createdAt ?? null) != null
+      ? String(r.created_at ?? r.inserted_at ?? r.createdAt)
+      : null;
 
   const status = r.status != null ? String(r.status) : null;
   const currency = r.currency != null ? String(r.currency) : null;
@@ -76,8 +64,14 @@ function normalizeOrderRow(r: OrderRowAny): OrderRow {
   const paid_amount = r.paid_amount ?? r.paid ?? null;
 
   const sale_id = (r.sale_id ?? r.saleId ?? null) != null ? String(r.sale_id ?? r.saleId) : null;
-  const payment_status = (r.payment_status ?? r.pay_status ?? null) != null ? String(r.payment_status ?? r.pay_status) : null;
-  const payment_method = (r.payment_method ?? r.pay_method ?? null) != null ? String(r.payment_method ?? r.pay_method) : null;
+  const payment_status =
+    (r.payment_status ?? r.pay_status ?? null) != null
+      ? String(r.payment_status ?? r.pay_status)
+      : null;
+  const payment_method =
+    (r.payment_method ?? r.pay_method ?? null) != null
+      ? String(r.payment_method ?? r.pay_method)
+      : null;
 
   return {
     id,
@@ -333,6 +327,9 @@ export default function ClubOrdersByStoreScreen() {
 
       const hasSale = !!clean(item.sale_id);
 
+      // ✅ showCurrency:false => numbers only
+      const fmt = (n: number) => formatMoney(n, { currency, showCurrency: false });
+
       return (
         <Pressable onPress={() => openOrder(item)} hitSlop={10} style={({ pressed }) => [{ opacity: pressed ? 0.92 : 1 }]}>
           <Card style={{ marginBottom: 12, gap: 10 }}>
@@ -368,11 +365,11 @@ export default function ClubOrdersByStoreScreen() {
 
             <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
               <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                Total: <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{fmtMoney(total, currency)}</Text>
+                Total: <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{fmt(total)}</Text>
               </Text>
 
               <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                Paid: <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{fmtMoney(paid, currency)}</Text>
+                Paid: <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{fmt(paid)}</Text>
               </Text>
             </View>
 

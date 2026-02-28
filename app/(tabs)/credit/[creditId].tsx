@@ -1,5 +1,5 @@
-// app/(tabs)/credit/[creditId].tsx
 import { useOrg } from "@/src/context/OrgContext";
+import { useOrgMoneyPrefs } from "@/src/ui/money";
 import { supabase } from "@/src/supabase/supabaseClient";
 import { Button } from "@/src/ui/Button";
 import { Card } from "@/src/ui/Card";
@@ -35,18 +35,6 @@ type TxnWithRunning = Txn & {
   signed_delta: number;
 };
 
-function fmtTZS(n: number) {
-  try {
-    return new Intl.NumberFormat("en-TZ", {
-      style: "currency",
-      currency: "TZS",
-      maximumFractionDigits: 0,
-    }).format(n);
-  } catch {
-    return `TZS ${n}`;
-  }
-}
-
 function looksLikeUuid(s: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
     s
@@ -75,7 +63,10 @@ export default function CreditDetailScreen() {
   const params = useLocalSearchParams<{ creditId: string }>();
   const accountId = String(params.creditId || "");
 
-  const { activeRole, activeStoreId } = useOrg();
+  const { activeRole, activeStoreId, activeOrgId } = useOrg();
+
+  // ✅ single source of truth for money formatting
+  const money = useOrgMoneyPrefs(String(activeOrgId ?? ""));
 
   const isOwnerAdmin = useMemo(
     () => activeRole === "owner" || activeRole === "admin",
@@ -352,7 +343,7 @@ export default function CreditDetailScreen() {
           >
             <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Balance</Text>
             <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
-              {fmtTZS(balance)}
+              {money.fmt(balance)}
             </Text>
           </View>
 
@@ -411,7 +402,7 @@ export default function CreditDetailScreen() {
               const isSale = kind === "SALE";
 
               const amountColor = isPayment ? theme.colors.text : theme.colors.emerald;
-              const deltaLabel = isPayment ? `-${fmtTZS(amtAbs)}` : `+${fmtTZS(amtAbs)}`;
+              const deltaLabel = isPayment ? `-${money.fmt(amtAbs)}` : `+${money.fmt(amtAbs)}`;
               const when = t.created_at ? new Date(t.created_at).toLocaleString() : "—";
 
               const saleIdForReceipt = isSale ? extractSaleId(t) : null;
@@ -433,7 +424,7 @@ export default function CreditDetailScreen() {
 
                   <Text style={{ color: theme.colors.muted, marginTop: 4, fontWeight: "900" }}>
                     Running:{" "}
-                    <Text style={{ color: theme.colors.text }}>{fmtTZS(t.running_after)}</Text>
+                    <Text style={{ color: theme.colors.text }}>{money.fmt(t.running_after)}</Text>
                   </Text>
 
                   {!!t.method && isPayment ? (

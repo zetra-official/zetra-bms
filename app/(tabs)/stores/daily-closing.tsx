@@ -1,3 +1,4 @@
+// app/(tabs)/stores/daily-closing.tsx
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -78,7 +79,7 @@ export default function DailyClosingScreen() {
   const [snapBoundary, setSnapBoundary] = useState<{ hasStart?: boolean; hasEnd?: boolean }>({});
   const [snapGenLoading, setSnapGenLoading] = useState(false);
 
-  // ✅ LOCK state (THIS is the "pad" you said disappeared)
+  // ✅ LOCK state
   const [lockChecking, setLockChecking] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const [lockBusy, setLockBusy] = useState(false);
@@ -147,10 +148,7 @@ export default function DailyClosingScreen() {
           setSnapState("unknown");
           setSnapBoundary({});
         } else {
-          const [hasStart, hasEnd] = await Promise.all([
-            snapshotExists(start),
-            snapshotExists(end),
-          ]);
+          const [hasStart, hasEnd] = await Promise.all([snapshotExists(start), snapshotExists(end)]);
           setSnapBoundary({ hasStart, hasEnd });
           setSnapState(hasStart && hasEnd ? "ok" : "missing");
         }
@@ -193,7 +191,6 @@ export default function DailyClosingScreen() {
     checkLock();
   }, [checkLock]);
 
-  // ✅ refresh lock/snapshot when you come back
   useFocusEffect(
     useCallback(() => {
       checkSnapshot();
@@ -243,7 +240,8 @@ export default function DailyClosingScreen() {
     setError(null);
 
     try {
-      const { data, error: e } = await supabase.rpc("get_daily_closing_summary", {
+      // ✅ TZ history-aware daily summary (v3)
+      const { data, error: e } = await supabase.rpc("get_daily_closing_summary_v3", {
         p_store_id: activeStoreId,
         p_date: dateStr,
       });
@@ -282,7 +280,8 @@ export default function DailyClosingScreen() {
     setError(null);
 
     try {
-      const { data, error: e } = await supabase.rpc("get_period_closing_summary", {
+      // ✅ TZ history-aware period summary (v3)
+      const { data, error: e } = await supabase.rpc("get_period_closing_summary_v3", {
         p_store_id: activeStoreId,
         p_start_date: start,
         p_end_date: end,
@@ -340,7 +339,7 @@ export default function DailyClosingScreen() {
           ? {
               tone: "muted" as const,
               title: `Snapshot status: WAITING (${dateStr})`,
-              subtitle: "Hii date bado haijafika. Auto snapshot hu-run usiku (TZ).",
+              subtitle: "Hii date bado haijafika. Auto snapshot hu-run usiku (TZ ya org).",
             }
           : {
               tone: "danger" as const,
@@ -391,7 +390,7 @@ export default function DailyClosingScreen() {
         ? {
             tone: "muted" as const,
             title: `Snapshot status: WAITING (end ${end})`,
-            subtitle: "End-date bado haijafika. Auto snapshot hu-run usiku (TZ) kwenye end-date.",
+            subtitle: "End-date bado haijafika. Auto snapshot hu-run usiku (TZ ya org) kwenye end-date.",
           }
         : {
             tone: "danger" as const,
@@ -433,36 +432,32 @@ export default function DailyClosingScreen() {
       return;
     }
 
-    Alert.alert(
-      "Lock Day",
-      `Ukifunga siku, inventory movements kwa ${dateStr} zitasitishwa.\n\nUna uhakika?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Lock Now",
-          style: "default",
-          onPress: async () => {
-            setLockBusy(true);
-            try {
-              const { error: e } = await supabase.rpc("lock_closing_day", {
-                p_store_id: activeStoreId,
-                p_date: dateStr,
-                p_note: "Locked via Daily Closing screen",
-              });
-              if (e) throw e;
+    Alert.alert("Lock Day", `Ukifunga siku, inventory movements kwa ${dateStr} zitasitishwa.\n\nUna uhakika?`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Lock Now",
+        style: "default",
+        onPress: async () => {
+          setLockBusy(true);
+          try {
+            const { error: e } = await supabase.rpc("lock_closing_day", {
+              p_store_id: activeStoreId,
+              p_date: dateStr,
+              p_note: "Locked via Daily Closing screen",
+            });
+            if (e) throw e;
 
-              setIsLocked(true);
-              Alert.alert("Locked ✅", `Siku ${dateStr} imefungwa.`);
-              await checkLock();
-            } catch (err: any) {
-              Alert.alert("Lock Failed", err?.message ?? "Unknown error");
-            } finally {
-              setLockBusy(false);
-            }
-          },
+            setIsLocked(true);
+            Alert.alert("Locked ✅", `Siku ${dateStr} imefungwa.`);
+            await checkLock();
+          } catch (err: any) {
+            Alert.alert("Lock Failed", err?.message ?? "Unknown error");
+          } finally {
+            setLockBusy(false);
+          }
         },
-      ]
-    );
+      },
+    ]);
   }, [activeStoreId, isOwnerOrAdmin, mode, isLocked, lockBusy, dateStr, snapState, checkLock]);
 
   const unlockDay = useCallback(() => {
@@ -472,35 +467,31 @@ export default function DailyClosingScreen() {
     if (!isLocked) return Alert.alert("Not Locked", "Siku hii haijafungwa.");
     if (lockBusy) return;
 
-    Alert.alert(
-      "Unlock Day",
-      `Hii ni rescue.\n\nUnataka kufungua lock ya ${dateStr}?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Unlock",
-          style: "destructive",
-          onPress: async () => {
-            setLockBusy(true);
-            try {
-              const { error: e } = await supabase.rpc("unlock_closing_day", {
-                p_store_id: activeStoreId,
-                p_date: dateStr,
-              });
-              if (e) throw e;
+    Alert.alert("Unlock Day", `Hii ni rescue.\n\nUnataka kufungua lock ya ${dateStr}?`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Unlock",
+        style: "destructive",
+        onPress: async () => {
+          setLockBusy(true);
+          try {
+            const { error: e } = await supabase.rpc("unlock_closing_day", {
+              p_store_id: activeStoreId,
+              p_date: dateStr,
+            });
+            if (e) throw e;
 
-              setIsLocked(false);
-              Alert.alert("Unlocked ✅", `Lock ya ${dateStr} imeondolewa.`);
-              await checkLock();
-            } catch (err: any) {
-              Alert.alert("Unlock Failed", err?.message ?? "Unknown error");
-            } finally {
-              setLockBusy(false);
-            }
-          },
+            setIsLocked(false);
+            Alert.alert("Unlocked ✅", `Lock ya ${dateStr} imeondolewa.`);
+            await checkLock();
+          } catch (err: any) {
+            Alert.alert("Unlock Failed", err?.message ?? "Unknown error");
+          } finally {
+            setLockBusy(false);
+          }
         },
-      ]
-    );
+      },
+    ]);
   }, [activeStoreId, isOwnerOrAdmin, mode, isLocked, lockBusy, dateStr, checkLock]);
 
   const opening = summary?.opening_qty_total ?? 0;
@@ -547,11 +538,8 @@ export default function DailyClosingScreen() {
 
   return (
     <Screen scroll>
-      {/* ✅ HEADER with HISTORY + BACK (restored) */}
       <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
-        <Text style={{ fontSize: 24, fontWeight: "900", color: theme.colors.text }}>
-          {titleLabel}
-        </Text>
+        <Text style={{ fontSize: 24, fontWeight: "900", color: theme.colors.text }}>{titleLabel}</Text>
 
         <View style={{ flexDirection: "row", gap: 10 }}>
           <Pressable
@@ -586,21 +574,15 @@ export default function DailyClosingScreen() {
 
       <Card style={{ gap: 10 }}>
         <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Organization</Text>
-        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
-          {activeOrgName ?? "—"}
-        </Text>
+        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>{activeOrgName ?? "—"}</Text>
 
         <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Store</Text>
-        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-          {activeStoreName ?? "—"}
-        </Text>
+        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{activeStoreName ?? "—"}</Text>
 
         <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Role</Text>
         <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{roleLabel}</Text>
 
-        <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-          Range
-        </Text>
+        <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>Range</Text>
 
         <View style={{ flexDirection: "row", gap: 10 }}>
           <Pressable onPress={pickDay} style={rangeBtnStyle(mode === "day")}>
@@ -616,9 +598,7 @@ export default function DailyClosingScreen() {
           </Pressable>
         </View>
 
-        <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-          {mode === "day" ? "Date" : "Period"}
-        </Text>
+        <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>{mode === "day" ? "Date" : "Period"}</Text>
 
         <View style={{ flexDirection: "row", gap: 10 }}>
           <View
@@ -666,13 +646,7 @@ export default function DailyClosingScreen() {
           </Pressable>
         </View>
 
-        <Button
-          title={loading ? "Loading..." : "Load Report"}
-          onPress={load}
-          disabled={loading}
-          variant="primary"
-          style={{ marginTop: 6 }}
-        />
+        <Button title={loading ? "Loading..." : "Load Report"} onPress={load} disabled={loading} variant="primary" style={{ marginTop: 6 }} />
 
         <View
           style={{
@@ -708,11 +682,7 @@ export default function DailyClosingScreen() {
             {snapStatusMeta.title}
           </Text>
 
-          {!!snapStatusMeta.subtitle && (
-            <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-              {snapStatusMeta.subtitle}
-            </Text>
-          )}
+          {!!snapStatusMeta.subtitle && <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>{snapStatusMeta.subtitle}</Text>}
 
           {mode === "day" && isOwnerOrAdmin && (
             <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
@@ -721,7 +691,6 @@ export default function DailyClosingScreen() {
           )}
         </View>
 
-        {/* ✅ THIS IS THE PAD YOU SAID DISAPPEARED */}
         {showLockControls && (
           <View style={{ flexDirection: "row", gap: 10, marginTop: 10 }}>
             <View style={{ flex: 1 }}>
@@ -744,7 +713,6 @@ export default function DailyClosingScreen() {
           </View>
         )}
 
-        {/* (Optional) leave this button off if you want — but it won't break anything */}
         {!showLockControls && isOwnerOrAdmin && (
           <Button
             title={snapGenLoading ? "Generating..." : "Emergency Snapshot (Admin)"}
@@ -757,19 +725,12 @@ export default function DailyClosingScreen() {
       </Card>
 
       {!!error && (
-        <Card
-          style={{
-            borderColor: theme.colors.dangerBorder,
-            backgroundColor: theme.colors.dangerSoft,
-          }}
-        >
+        <Card style={{ borderColor: theme.colors.dangerBorder, backgroundColor: theme.colors.dangerSoft }}>
           <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{error}</Text>
         </Card>
       )}
 
-      <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>
-        Summary
-      </Text>
+      <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>Summary</Text>
 
       <Card style={{ gap: 10 }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>

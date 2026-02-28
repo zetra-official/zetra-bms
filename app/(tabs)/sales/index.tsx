@@ -1,6 +1,6 @@
 // app/(tabs)/sales/index.tsx
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FlatList,
@@ -12,6 +12,7 @@ import {
   Text,
   TextInput,
   View,
+  Vibration,
 } from "react-native";
 
 import { useNetInfo } from "@react-native-community/netinfo";
@@ -19,7 +20,10 @@ import { useNetInfo } from "@react-native-community/netinfo";
 import { useOrg } from "../../../src/context/OrgContext";
 import { supabase } from "../../../src/supabase/supabaseClient";
 
-import { loadSalesProductsCache, saveSalesProductsCache } from "../../../src/offline/salesProductsCache";
+import {
+  loadSalesProductsCache,
+  saveSalesProductsCache,
+} from "../../../src/offline/salesProductsCache";
 import { countPending } from "../../../src/offline/salesQueue";
 import { syncSalesQueueOnce } from "../../../src/offline/salesSync";
 
@@ -28,6 +32,9 @@ import { Input } from "../../../src/ui/Input";
 import { PriceModal } from "../../../src/ui/PriceModal";
 import { Screen } from "../../../src/ui/Screen";
 import { theme } from "../../../src/ui/theme";
+
+import { formatMoney, useOrgMoneyPrefs } from "@/src/ui/money";
+import { subscribeScanBarcode } from "@/src/utils/scanBus";
 
 /* =========================
    Types
@@ -39,14 +46,11 @@ type ProductRow = {
   unit: string | null;
   category: string | null;
 
-  // selling price used by addAuto()
   selling_price?: number | null;
-
-  // OPTIONAL: cost price (owner/admin gets it; staff will be null)
   cost_price?: number | null;
-
-  // stock qty displayed if present
   stock_qty?: number | null;
+
+  barcode?: string | null;
 };
 
 type CartItem = {
@@ -79,18 +83,6 @@ function parsePositiveInt(raw: string): number | null {
   return Math.trunc(x);
 }
 
-function fmtTZS(n: number) {
-  try {
-    return new Intl.NumberFormat("en-TZ", {
-      style: "currency",
-      currency: "TZS",
-      maximumFractionDigits: 0,
-    }).format(n);
-  } catch {
-    return `TZS ${Math.round(n).toLocaleString()}`;
-  }
-}
-
 function fmtDateShort(d = new Date()) {
   try {
     return new Intl.DateTimeFormat("en-GB", {
@@ -104,12 +96,20 @@ function fmtDateShort(d = new Date()) {
   }
 }
 
+function cleanBarcode(raw: any) {
+  const s = String(raw ?? "").trim();
+  if (!s) return "";
+  return s.replace(/\s+/g, "");
+}
+
 /* =========================
    Screen
 ========================= */
 export default function SalesHomeScreen() {
   const router = useRouter();
-  const { activeOrgName, activeStoreId, activeStoreName, activeRole } = useOrg();
+  const params = useLocalSearchParams<{ barcode?: string; _ts?: string }>();
+
+  const { activeOrgId, activeOrgName, activeStoreId, activeStoreName, activeRole } = useOrg();
 
   const netInfo = useNetInfo();
   const isOnline = !!(netInfo.isConnected && netInfo.isInternetReachable !== false);
@@ -117,7 +117,6 @@ export default function SalesHomeScreen() {
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-
   const [err, setErr] = useState<string | null>(null);
 
   const [query, setQuery] = useState("");
@@ -128,6 +127,41 @@ export default function SalesHomeScreen() {
   const [source, setSource] = useState<"LIVE" | "CACHED" | "NONE">("NONE");
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [pendingCount, setPendingCount] = useState<number>(0);
+
+  // ✅ param de-dupe (only for deep links / old behavior)
+  const [lastHandledParamScan, setLastHandledParamScan] = useState<string>("");
+
+  // ✅ NEW: recent scanned priority (product ids)
+  const [recentScannedIds, setRecentScannedIds] = useState<string[]>([]);
+
+  // ✅ org-level currency prefs (display only)
+  const orgId = String(activeOrgId ?? "").trim();
+  const money = useOrgMoneyPrefs(orgId);
+  const displayCurrency = money.currency || "TZS";
+  const displayLocale = money.locale || "en-TZ";
+
+  const fmt = useCallback(
+    (n: number) =>
+      formatMoney(n, { currency: displayCurrency, locale: displayLocale }).replace(/\s+/g, " "),
+    [displayCurrency, displayLocale]
+  );
+
+  const bumpRecent = useCallback((productId: string) => {
+    if (!productId) return;
+    setRecentScannedIds((prev) => {
+      const next = [productId, ...prev.filter((x) => x !== productId)];
+      return next.slice(0, 25);
+    });
+  }, []);
+
+  // ✅ A: vibrate helper (tiny)
+  const vibrateScan = useCallback(() => {
+    try {
+      Vibration.vibrate(12);
+    } catch {
+      // ignore
+    }
+  }, []);
 
   const canSell = useMemo(() => {
     const r = (activeRole ?? "staff") as "owner" | "admin" | "staff";
@@ -184,10 +218,9 @@ export default function SalesHomeScreen() {
       return;
     }
 
-    // ✅ ASARA WARNING (only works if cost_price exists; staff will see no warning because cost is null)
     const cp = Number(selected.cost_price ?? NaN);
     if (Number.isFinite(cp) && unitPrice < cp) {
-      setModalErr(`ASARA: Bei uliyoweka (${fmtTZS(unitPrice)}) iko chini ya Cost (${fmtTZS(cp)}).`);
+      setModalErr(`ASARA: Bei uliyoweka (${fmt(unitPrice)}) iko chini ya Cost (${fmt(cp)}).`);
       return;
     }
 
@@ -227,8 +260,9 @@ export default function SalesHomeScreen() {
       ];
     });
 
+    bumpRecent(selected.id);
     closePriceModal();
-  }, [closePriceModal, priceDraft, qtyDraft, selected]);
+  }, [bumpRecent, closePriceModal, fmt, priceDraft, qtyDraft, selected]);
 
   /* =========================
      Cart Helpers
@@ -270,19 +304,25 @@ export default function SalesHomeScreen() {
           },
         ];
       });
+
+      bumpRecent(p.id);
     },
-    [openPriceModal]
+    [bumpRecent, openPriceModal]
   );
 
-  const inc = useCallback((productId: string) => {
-    setCart((prev) =>
-      prev.map((x) => {
-        if (x.product_id !== productId) return x;
-        const nextQty = clampQty(x.qty + 1);
-        return { ...x, qty: nextQty, line_total: Number(x.unit_price) * nextQty };
-      })
-    );
-  }, []);
+  const inc = useCallback(
+    (productId: string) => {
+      setCart((prev) =>
+        prev.map((x) => {
+          if (x.product_id !== productId) return x;
+          const nextQty = clampQty(x.qty + 1);
+          return { ...x, qty: nextQty, line_total: Number(x.unit_price) * nextQty };
+        })
+      );
+      bumpRecent(productId);
+    },
+    [bumpRecent]
+  );
 
   const dec = useCallback((productId: string) => {
     setCart((prev) =>
@@ -301,7 +341,6 @@ export default function SalesHomeScreen() {
   }, []);
 
   const clearCart = useCallback(() => setCart([]), []);
-
   const removeItem = useCallback((productId: string) => {
     setCart((prev) => prev.filter((x) => x.product_id !== productId));
   }, []);
@@ -315,13 +354,17 @@ export default function SalesHomeScreen() {
   const [qtyEditorDraft, setQtyEditorDraft] = useState<string>("");
   const [qtyEditorErr, setQtyEditorErr] = useState<string | null>(null);
 
-  const openQtyEditor = useCallback((item: CartItem) => {
-    setQtyEditorErr(null);
-    setQtyEditorProductId(item.product_id);
-    setQtyEditorName(item.name ?? "Product");
-    setQtyEditorDraft(String(Math.trunc(Number(item.qty ?? 1))));
-    setQtyEditorOpen(true);
-  }, []);
+  const openQtyEditor = useCallback(
+    (item: CartItem) => {
+      setQtyEditorErr(null);
+      setQtyEditorProductId(item.product_id);
+      setQtyEditorName(item.name ?? "Product");
+      setQtyEditorDraft(String(Math.trunc(Number(item.qty ?? 1))));
+      setQtyEditorOpen(true);
+      bumpRecent(item.product_id);
+    },
+    [bumpRecent]
+  );
 
   const closeQtyEditor = useCallback(() => {
     Keyboard.dismiss();
@@ -354,8 +397,9 @@ export default function SalesHomeScreen() {
       })
     );
 
+    bumpRecent(qtyEditorProductId);
     closeQtyEditor();
-  }, [closeQtyEditor, qtyEditorDraft, qtyEditorProductId]);
+  }, [bumpRecent, closeQtyEditor, qtyEditorDraft, qtyEditorProductId]);
 
   const removeFromQtyEditor = useCallback(() => {
     if (!qtyEditorProductId) return;
@@ -365,7 +409,7 @@ export default function SalesHomeScreen() {
 
   /* =========================
      Load STORE-SCOPED sale items
-========================= */
+  ========================= */
   const loadProducts = useCallback(
     async (mode: "boot" | "refresh") => {
       setErr(null);
@@ -381,7 +425,7 @@ export default function SalesHomeScreen() {
           return;
         }
 
-        // ✅ 1) Load cache first (fast + works offline)
+        // 1) cache first
         try {
           const cached = await loadSalesProductsCache(activeStoreId);
           if (cached.rows.length > 0) {
@@ -389,11 +433,8 @@ export default function SalesHomeScreen() {
             setSource("CACHED");
             setLastSync(cached.lastSync);
           }
-        } catch {
-          // ignore cache errors
-        }
+        } catch {}
 
-        // ✅ 2) If offline, stop here
         if (isOffline) return;
 
         const { data, error } = await supabase.rpc("get_store_sale_items", {
@@ -410,6 +451,7 @@ export default function SalesHomeScreen() {
           selling_price: number | null;
           cost_price: number | null;
           qty: number | null;
+          barcode?: string | null;
         }>;
 
         const list: ProductRow[] = rows.map((r) => ({
@@ -421,12 +463,12 @@ export default function SalesHomeScreen() {
           selling_price: r.selling_price ?? null,
           cost_price: r.cost_price ?? null,
           stock_qty: r.qty ?? null,
+          barcode: (r as any).barcode ?? null,
         }));
 
         list.sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""));
         setProducts(list);
 
-        // ✅ 3) Save cache after live load
         try {
           const syncIso = await saveSalesProductsCache(activeStoreId, list as any);
           setSource("LIVE");
@@ -435,7 +477,6 @@ export default function SalesHomeScreen() {
           setSource("LIVE");
         }
       } catch (e: any) {
-        // If live load fails but cache exists, keep cache and show error
         setErr(e?.message ?? "Failed to load products");
         if (products.length === 0) {
           setProducts([]);
@@ -452,10 +493,11 @@ export default function SalesHomeScreen() {
   useEffect(() => {
     setCart([]);
     setQuery("");
+    setRecentScannedIds([]);
     void loadProducts("boot");
   }, [activeStoreId, loadProducts]);
 
-  // ✅ sync pending queue when online
+  // sync pending queue when online
   useEffect(() => {
     if (!activeStoreId) return;
     if (isOffline) return;
@@ -464,7 +506,6 @@ export default function SalesHomeScreen() {
       try {
         await syncSalesQueueOnce(activeStoreId);
       } catch {
-        // ignore
       } finally {
         const n = await countPending(activeStoreId);
         setPendingCount(n);
@@ -472,7 +513,6 @@ export default function SalesHomeScreen() {
     })();
   }, [activeStoreId, isOffline]);
 
-  // ✅ update pending count on store/online changes
   useEffect(() => {
     if (!activeStoreId) return;
     void (async () => {
@@ -483,14 +523,133 @@ export default function SalesHomeScreen() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return products;
-    return products.filter((p) => {
-      const name = (p.name ?? "").toLowerCase();
-      const sku = (p.sku ?? "").toLowerCase();
-      const cat = (p.category ?? "").toLowerCase();
-      return name.includes(q) || sku.includes(q) || cat.includes(q);
+
+    const base = !q
+      ? products
+      : products.filter((p) => {
+          const name = (p.name ?? "").toLowerCase();
+          const sku = (p.sku ?? "").toLowerCase();
+          const cat = (p.category ?? "").toLowerCase();
+          const bc = (p.barcode ?? "").toLowerCase();
+          return name.includes(q) || sku.includes(q) || cat.includes(q) || bc.includes(q);
+        });
+
+    if (!recentScannedIds.length) return base;
+
+    const rank = new Map<string, number>();
+    recentScannedIds.forEach((id, idx) => rank.set(id, idx));
+
+    const copy = [...base];
+    copy.sort((a, b) => {
+      const ra = rank.has(a.id) ? (rank.get(a.id) as number) : 999999;
+      const rb = rank.has(b.id) ? (rank.get(b.id) as number) : 999999;
+      if (ra !== rb) return ra - rb;
+      return (a.name ?? "").localeCompare(b.name ?? "");
     });
-  }, [products, query]);
+
+    return copy;
+  }, [products, query, recentScannedIds]);
+
+  /* =========================
+     Barcode handler (ScanBus + params fallback)
+  ========================= */
+  const handleBarcode = useCallback(
+    (rawInput: any) => {
+      const raw = cleanBarcode(rawInput);
+      if (!raw) return;
+
+      if (!activeStoreId) {
+        setErr("No active store selected.");
+        return;
+      }
+
+      // 1) local match
+      const localTarget =
+        products.find((p) => cleanBarcode(p.barcode) === raw) ||
+        products.find((p) => cleanBarcode(p.sku) === raw);
+
+      if (localTarget) {
+        setErr(null);
+        bumpRecent(localTarget.id);
+        addAuto(localTarget);
+
+        // ✅ A: vibrate only on successful add
+        vibrateScan();
+        return;
+      }
+
+      if (isOffline) {
+        setErr(`OFFLINE: Barcode haipo kwenye cache: ${raw}`);
+        return;
+      }
+
+      // 3) online RPC
+      void (async () => {
+        try {
+          const { data, error } = await supabase.rpc("get_store_sale_item_by_barcode", {
+            p_store_id: activeStoreId,
+            p_barcode: raw,
+          });
+          if (error) throw error;
+
+          const row = Array.isArray(data) ? data[0] : null;
+          if (!row) {
+            setErr(`Barcode haijapatikana: ${raw}`);
+            return;
+          }
+
+          const p: ProductRow = {
+            id: row.product_id,
+            name: String(row.name ?? "Product").trim() || "Product",
+            sku: row.sku ?? null,
+            category: row.category ?? null,
+            unit: row.unit ?? null,
+            selling_price: row.selling_price ?? null,
+            cost_price: row.cost_price ?? null,
+            stock_qty: row.qty ?? null,
+            barcode: raw,
+          };
+
+          setProducts((prev) => {
+            if (prev.some((x) => x.id === p.id)) return prev;
+            const next = [...prev, p];
+            next.sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""));
+            return next;
+          });
+
+          setErr(null);
+          bumpRecent(p.id);
+          addAuto(p);
+
+          // ✅ A: vibrate only on successful add
+          vibrateScan();
+        } catch (e: any) {
+          setErr(e?.message ?? `Failed to fetch barcode item: ${raw}`);
+        }
+      })();
+    },
+    [activeStoreId, addAuto, bumpRecent, isOffline, products, vibrateScan]
+  );
+
+  // Listen to ScanBus
+  useEffect(() => {
+    const unsub = subscribeScanBarcode((barcode) => {
+      handleBarcode(barcode);
+    });
+    return unsub;
+  }, [handleBarcode]);
+
+  // Params fallback
+  useEffect(() => {
+    const raw = cleanBarcode(params?.barcode);
+    if (!raw) return;
+
+    const key = `${activeStoreId ?? "no-store"}::${raw}::${String(params?._ts ?? "")}`;
+    if (key === lastHandledParamScan) return;
+    setLastHandledParamScan(key);
+
+    handleBarcode(raw);
+  }, [activeStoreId, handleBarcode, lastHandledParamScan, params?._ts, params?.barcode]);
 
   /* =========================
      Navigation
@@ -518,6 +677,13 @@ export default function SalesHomeScreen() {
 
     setCart([]);
   }, [activeStoreId, activeStoreName, canSell, cart, router]);
+
+  const goScan = useCallback(() => {
+    setErr(null);
+    if (!activeStoreId) return setErr("No active store selected.");
+    if (!canSell) return setErr("Huna ruhusa ya kuuza.");
+    router.push("/(tabs)/sales/scan");
+  }, [activeStoreId, canSell, router]);
 
   /* =========================
      Derived display helpers
@@ -652,7 +818,7 @@ export default function SalesHomeScreen() {
           </Text>
 
           <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 15 }}>
-            {fmtTZS(cartTotalAmount)}
+            {fmt(cartTotalAmount)}
           </Text>
         </View>
 
@@ -662,14 +828,14 @@ export default function SalesHomeScreen() {
           <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{headerBlockedReason}</Text>
         )}
 
+        {/* ✅ B: Row 1 (buttons) */}
         <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
-          {/* ✅ Primary action: Complete Sale */}
           <Pressable
             onPress={goCheckout}
             disabled={checkoutDisabled}
             style={({ pressed }) => [
               {
-                paddingVertical: 11,
+                paddingVertical: 12,
                 paddingHorizontal: 16,
                 borderRadius: theme.radius.pill,
                 borderWidth: 1,
@@ -679,7 +845,6 @@ export default function SalesHomeScreen() {
                 justifyContent: "center",
                 opacity: checkoutDisabled ? 0.55 : pressed ? 0.92 : 1,
                 transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
-                // subtle elevation (dominant action)
                 shadowColor: "#000",
                 shadowOpacity: checkoutDisabled ? 0 : 0.25,
                 shadowRadius: 10,
@@ -687,6 +852,7 @@ export default function SalesHomeScreen() {
                 elevation: checkoutDisabled ? 0 : 8,
                 flexDirection: "row",
                 gap: 8,
+                flex: 1,
               },
             ]}
           >
@@ -696,13 +862,41 @@ export default function SalesHomeScreen() {
             </Text>
           </Pressable>
 
+          {/* ✅ B: Bigger Scan button */}
+          <Pressable
+            onPress={goScan}
+            disabled={!activeStoreId || !canSell}
+            style={({ pressed }) => [
+              {
+                width: 58,
+                height: 58,
+                borderRadius: 999,
+                alignItems: "center",
+                justifyContent: "center",
+                borderWidth: 1,
+                borderColor: theme.colors.emeraldBorder,
+                backgroundColor: theme.colors.emeraldSoft,
+                opacity: !activeStoreId || !canSell ? 0.5 : pressed ? 0.92 : 1,
+                transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
+                shadowColor: "#000",
+                shadowOpacity: !activeStoreId || !canSell ? 0 : 0.25,
+                shadowRadius: 10,
+                shadowOffset: { width: 0, height: 6 },
+                elevation: !activeStoreId || !canSell ? 0 : 8,
+              },
+            ]}
+            hitSlop={10}
+          >
+            <Ionicons name="barcode-outline" size={26} color={theme.colors.text} />
+          </Pressable>
+
           <Pressable
             onPress={clearCart}
             disabled={cart.length === 0}
             style={({ pressed }) => [
               {
-                paddingVertical: 10,
-                paddingHorizontal: 12,
+                paddingVertical: 12,
+                paddingHorizontal: 14,
                 borderRadius: theme.radius.pill,
                 borderWidth: 1,
                 borderColor: theme.colors.border,
@@ -716,10 +910,15 @@ export default function SalesHomeScreen() {
           >
             <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14 }}>Clear</Text>
           </Pressable>
+        </View>
 
-          <View style={{ flex: 1 }}>
-            <Input value={query} onChangeText={setQuery} placeholder="Search name / SKU / category..." />
-          </View>
+        {/* ✅ B: Row 2 (search full width, no hiding) */}
+        <View style={{ width: "100%" }}>
+          <Input
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Search name / SKU / category / barcode..."
+          />
         </View>
 
         {loading && (
@@ -730,6 +929,8 @@ export default function SalesHomeScreen() {
       </Card>
     );
   }, [
+    activeStoreId,
+    canSell,
     cart.length,
     cartCount,
     cartTotalAmount,
@@ -737,7 +938,9 @@ export default function SalesHomeScreen() {
     checkoutDisabled,
     clearCart,
     err,
+    fmt,
     goCheckout,
+    goScan,
     headerBlockedReason,
     loading,
     query,
@@ -761,6 +964,7 @@ export default function SalesHomeScreen() {
             <Text style={{ color: theme.colors.muted, fontWeight: "800" }} numberOfLines={1}>
               SKU: {item.sku ?? "—"}
               {item.category ? `  •  ${item.category}` : ""}
+              {item.barcode ? `  •  ${item.barcode}` : ""}
             </Text>
 
             {!!stockLabel && (
@@ -776,8 +980,8 @@ export default function SalesHomeScreen() {
 
             {qty > 0 && (
               <Text style={{ color: theme.colors.muted, fontWeight: "900" }} numberOfLines={1}>
-                Price: <Text style={{ color: theme.colors.text }}>{fmtTZS(Number(inCart?.unit_price ?? 0))}</Text> •
-                Line: <Text style={{ color: theme.colors.text }}>{fmtTZS(Number(inCart?.line_total ?? 0))}</Text>
+                Price: <Text style={{ color: theme.colors.text }}>{fmt(Number(inCart?.unit_price ?? 0))}</Text> •
+                Line: <Text style={{ color: theme.colors.text }}>{fmt(Number(inCart?.line_total ?? 0))}</Text>
               </Text>
             )}
           </View>
@@ -890,7 +1094,7 @@ export default function SalesHomeScreen() {
         </Card>
       );
     },
-    [addAuto, cart, dec, getStockQty, inc, openPriceModal, openQtyEditor, removeItem]
+    [addAuto, cart, dec, fmt, getStockQty, inc, openPriceModal, openQtyEditor, removeItem]
   );
 
   return (
@@ -925,6 +1129,9 @@ export default function SalesHomeScreen() {
         productName={selected?.name ?? "—"}
         price={priceDraft}
         qty={qtyDraft}
+        costPrice={selected?.cost_price ?? null}
+        currency={displayCurrency}
+        locale={displayLocale}
         error={modalErr}
         onChangePrice={(t: string) => {
           setModalErr(null);
@@ -938,7 +1145,6 @@ export default function SalesHomeScreen() {
         onConfirm={confirmAddWithPrice}
       />
 
-      {/* ✅ FIX: Keyboard should not cover modal input (Android + iOS) */}
       <Modal
         visible={qtyEditorOpen}
         transparent
@@ -1066,7 +1272,6 @@ export default function SalesHomeScreen() {
                   <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Remove</Text>
                 </Pressable>
 
-                {/* small bottom safety space for very short screens */}
                 <View style={{ height: 6 }} />
               </Card>
             </Pressable>

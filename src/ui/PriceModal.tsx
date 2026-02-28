@@ -14,6 +14,7 @@ import { Button } from "./Button";
 import { Card } from "./Card";
 import { Input } from "./Input";
 import { theme } from "./theme";
+import { formatMoney } from "./money";
 
 type Props = {
   visible: boolean;
@@ -26,6 +27,10 @@ type Props = {
 
   // ✅ NEW (optional): used for "ASARA" warning
   costPrice?: number | null;
+
+  // ✅ NEW (optional): currency/locale for display formatting (backward compatible)
+  currency?: string | null;
+  locale?: string | null;
 
   error?: string | null;
 
@@ -43,6 +48,8 @@ function PriceModalImpl({
   price,
   qty,
   costPrice = null,
+  currency = null,
+  locale = null,
   error,
   onChangePrice,
   onChangeQty,
@@ -67,6 +74,11 @@ function PriceModalImpl({
     return Number.isFinite(n) ? n : null;
   }, [price]);
 
+  const fmt = useCallbackLike(
+    (n: number) => formatMoney(n, { currency: currency ?? undefined, locale: locale ?? undefined }).replace(/\s+/g, " "),
+    [currency, locale]
+  );
+
   const isLoss = useMemo(() => {
     if (costPrice == null) return false;
     if (priceNumber == null) return false;
@@ -75,9 +87,13 @@ function PriceModalImpl({
 
   const lossText = useMemo(() => {
     if (!isLoss) return null;
-    const cp = Math.trunc(Number(costPrice ?? 0));
-    return `⚠ ASARA: Bei uliyoweka iko chini ya Cost (${cp.toLocaleString()} TZS).`;
-  }, [costPrice, isLoss]);
+    return `⚠ ASARA: Bei uliyoweka iko chini ya Cost (${fmt(Number(costPrice ?? 0))}).`;
+  }, [costPrice, fmt, isLoss]);
+
+  const unitLabel = useMemo(() => {
+    const c = String(currency ?? "").trim().toUpperCase();
+    return c ? `Unit price (${c})` : "Unit price";
+  }, [currency]);
 
   return (
     <Modal
@@ -138,13 +154,13 @@ function PriceModalImpl({
                 {/* ✅ Show cost if available */}
                 {costPrice != null && (
                   <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>
-                    Cost: {Math.trunc(Number(costPrice)).toLocaleString()} TZS
+                    Cost: {fmt(Math.trunc(Number(costPrice)))}
                   </Text>
                 )}
 
                 <View style={{ gap: 10 }}>
                   <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                    Unit price (TZS)
+                    {unitLabel}
                   </Text>
                   <Input
                     value={price}
@@ -215,6 +231,18 @@ function PriceModalImpl({
       </KeyboardAvoidingView>
     </Modal>
   );
+}
+
+/**
+ * Tiny hook helper (keeps file self-contained, avoids adding new deps).
+ * Behaves like useCallback but we only need stable identity + deps.
+ */
+function useCallbackLike<T extends (...args: any[]) => any>(fn: T, deps: any[]): T {
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const ref = React.useRef(fn);
+  ref.current = fn;
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  return React.useMemo(() => ((...args: any[]) => ref.current(...args)) as T, deps);
 }
 
 export const PriceModal = PriceModalImpl;

@@ -8,6 +8,7 @@ import { Button } from "../../../src/ui/Button";
 import { Card } from "../../../src/ui/Card";
 import { Screen } from "../../../src/ui/Screen";
 import { theme } from "../../../src/ui/theme";
+import { useOrgMoneyPrefs } from "../../../src/ui/money";
 
 type ExpenseRow = {
   id: string;
@@ -29,18 +30,6 @@ type Summary = {
   total: number;
   count: number;
 };
-
-function fmtTZS(n: number) {
-  try {
-    return new Intl.NumberFormat("en-TZ", {
-      style: "currency",
-      currency: "TZS",
-      maximumFractionDigits: 0,
-    }).format(n);
-  } catch {
-    return `TZS ${Math.round(n).toLocaleString()}`;
-  }
-}
 
 function isoDateOnly(d: Date) {
   const yyyy = d.getFullYear();
@@ -108,7 +97,11 @@ function prettyRpcError(err: any): string {
 
 export default function ExpensesScreen() {
   const router = useRouter();
-  const { activeOrgName, activeRole, activeStoreId, activeStoreName } = useOrg();
+  const { activeOrgId, activeOrgName, activeRole, activeStoreId, activeStoreName } = useOrg();
+
+  // ✅ Global money formatter (org-level prefs)
+  const money = useOrgMoneyPrefs(String(activeOrgId || ""));
+  const fmt = useCallback((n: number) => money.fmt(n), [money]);
 
   const canCreate = useMemo(() => !!activeStoreId, [activeStoreId]);
   const canManage = useMemo(() => {
@@ -329,9 +322,7 @@ export default function ExpensesScreen() {
   return (
     <Screen scroll bottomPad={220}>
       <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
-        <Text style={{ fontSize: 26, fontWeight: "900", color: theme.colors.text }}>
-          Expenses
-        </Text>
+        <Text style={{ fontSize: 26, fontWeight: "900", color: theme.colors.text }}>Expenses</Text>
 
         <Pressable
           onPress={() => router.back()}
@@ -350,19 +341,13 @@ export default function ExpensesScreen() {
 
       <Card style={{ gap: 10 }}>
         <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Organization</Text>
-        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
-          {activeOrgName ?? "—"}
-        </Text>
+        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>{activeOrgName ?? "—"}</Text>
 
         <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Active Store</Text>
-        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-          {activeStoreName ?? "—"}
-        </Text>
+        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{activeStoreName ?? "—"}</Text>
 
         <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Role</Text>
-        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-          {activeRole ?? "—"}
-        </Text>
+        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{activeRole ?? "—"}</Text>
 
         <Button
           title={loading ? "Loading..." : "Refresh"}
@@ -385,16 +370,12 @@ export default function ExpensesScreen() {
       )}
 
       {/* Summary */}
-      <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>
-        Summary
-      </Text>
+      <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>Summary</Text>
 
       <View style={{ flexDirection: "row", gap: 10 }}>
         <Card style={{ flex: 1, gap: 6 }}>
           <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Today</Text>
-          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-            {fmtTZS(today.total)}
-          </Text>
+          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>{fmt(today.total)}</Text>
           <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
             Count: <Text style={{ color: theme.colors.text }}>{today.count}</Text>
           </Text>
@@ -402,9 +383,7 @@ export default function ExpensesScreen() {
 
         <Card style={{ flex: 1, gap: 6 }}>
           <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Week</Text>
-          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-            {fmtTZS(week.total)}
-          </Text>
+          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>{fmt(week.total)}</Text>
           <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
             Count: <Text style={{ color: theme.colors.text }}>{week.count}</Text>
           </Text>
@@ -413,21 +392,17 @@ export default function ExpensesScreen() {
 
       <Card style={{ gap: 6 }}>
         <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Month</Text>
-        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
-          {fmtTZS(month.total)}
-        </Text>
+        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>{fmt(month.total)}</Text>
         <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
           Count: <Text style={{ color: theme.colors.text }}>{month.count}</Text>
         </Text>
       </Card>
 
       {/* Create Expense */}
-      <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>
-        Add Expense
-      </Text>
+      <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>Add Expense</Text>
 
       <Card style={{ gap: 10 }}>
-        <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Amount (TZS)</Text>
+        <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Amount</Text>
         <TextInput
           value={amount}
           onChangeText={setAmount}
@@ -514,9 +489,7 @@ export default function ExpensesScreen() {
         />
 
         {!activeStoreId && (
-          <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-            Chagua Active Store kwanza.
-          </Text>
+          <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Chagua Active Store kwanza.</Text>
         )}
       </Card>
 
@@ -550,9 +523,7 @@ export default function ExpensesScreen() {
                   backgroundColor: theme.colors.dangerSoft,
                 }}
               >
-                <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>
-                  {fmtTZS(Number(r.amount ?? 0))}
-                </Text>
+                <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{fmt(Number(r.amount ?? 0))}</Text>
               </View>
             </View>
 

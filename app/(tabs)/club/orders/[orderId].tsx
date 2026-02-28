@@ -2,6 +2,7 @@ import { supabase } from "@/src/supabase/supabaseClient";
 import { Card } from "@/src/ui/Card";
 import { Screen } from "@/src/ui/Screen";
 import { theme } from "@/src/ui/theme";
+import { formatMoney } from "@/src/ui/money";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -46,19 +47,6 @@ function isUuid(v: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
     s
   );
-}
-
-function fmtMoney(n: number, currency?: string | null) {
-  const c = clean(currency) || "TZS";
-  try {
-    return new Intl.NumberFormat("en-TZ", {
-      style: "currency",
-      currency: c,
-      maximumFractionDigits: 0,
-    }).format(n);
-  } catch {
-    return `${c} ${String(Math.round(Number(n) || 0))}`;
-  }
 }
 
 function toNum(v: any): number {
@@ -109,6 +97,12 @@ export default function CustomerOrderDetailScreen() {
   const currency = meta.currency || "TZS";
   const status = clean(meta.status).toUpperCase() || "PENDING";
   const isLocked = FINAL_STATUSES.has(status);
+
+  // ✅ showCurrency:false => no "TSh" / no "TZS"
+  const fmt = useCallback(
+    (amount: number) => formatMoney(amount, { currency, showCurrency: false }),
+    [currency]
+  );
 
   const subtotal = useMemo(
     () => items.reduce((s, it) => s + (Number(it.line_total) || 0), 0),
@@ -279,15 +273,15 @@ export default function CustomerOrderDetailScreen() {
         </Text>
 
         <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-          Qty: {String(item.qty)} • Price: {fmtMoney(Number(item.unit_price) || 0, currency)}
+          Qty: {String(item.qty)} • Price: {fmt(Number(item.unit_price) || 0)}
         </Text>
 
         <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 8 }}>
-          Line total: {fmtMoney(Number(item.line_total) || 0, currency)}
+          Line total: {fmt(Number(item.line_total) || 0)}
         </Text>
       </Card>
     ),
-    [currency]
+    [fmt]
   );
 
   const saleIdFromMeta = clean(meta.sale_id);
@@ -332,8 +326,9 @@ export default function CustomerOrderDetailScreen() {
                       {storeId ? ` • ${storeId.slice(0, 8)}…` : ""}
                     </Text>
 
+                    {/* ✅ removed "Currency: ..." */}
                     <Text style={{ color: theme.colors.faint, fontWeight: "900", fontSize: 12, marginTop: 4 }}>
-                      Status: {status} • Currency: {currency}
+                      Status: {status}
                       {isLocked ? " • LOCKED" : ""}
                       {saleIdFromMeta ? " • SALE ✅" : ""}
                     </Text>
@@ -377,7 +372,7 @@ export default function CustomerOrderDetailScreen() {
                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                   <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Subtotal</Text>
                   <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                    {fmtMoney(subtotal, currency)}
+                    {fmt(subtotal)}
                   </Text>
                 </View>
               </View>
@@ -500,7 +495,7 @@ export default function CustomerOrderDetailScreen() {
                       Alert.alert(
                         "Confirm Order",
                         `Confirm hii order ianze kuhesabiwa kama SALE?\n\nMethod: ${payMethod}\nPaid: ${
-                          clean(paidAmount) ? fmtMoney(toNum(paidAmount), currency) : "(default = total)"
+                          clean(paidAmount) ? fmt(toNum(paidAmount)) : "(default = total)"
                         }\nRef: ${clean(payRef) || "—"}`,
                         [
                           { text: "Cancel", style: "cancel" },

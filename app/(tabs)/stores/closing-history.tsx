@@ -4,12 +4,12 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    Pressable,
-    Text,
-    View,
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Pressable,
+  Text,
+  View,
 } from "react-native";
 import { useOrg } from "../../../src/context/OrgContext";
 import { supabase } from "../../../src/supabase/supabaseClient";
@@ -31,9 +31,7 @@ function fromYMD(s: string) {
 }
 function fmtInt(n: number) {
   try {
-    return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(
-      n
-    );
+    return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(n);
   } catch {
     return String(n);
   }
@@ -70,9 +68,15 @@ type HistoryItem = {
 
 export default function ClosingHistoryScreen() {
   const router = useRouter();
-  const tabBarHeight = useBottomTabBarHeight(); // ✅ dynamic bottom tabs height
+  const tabBarHeight = useBottomTabBarHeight();
 
   const { activeOrgName, activeRole, activeStoreId, activeStoreName } = useOrg();
+
+  // ✅ Safe theme fallbacks (fix TS errors: dangerBorder/dangerSoft/emeraldBorder may not exist in your theme typing)
+  const C = (theme as any)?.colors ?? {};
+  const dangerBorder = C.dangerBorder ?? "rgba(239,68,68,0.40)";
+  const dangerSoft = C.dangerSoft ?? "rgba(239,68,68,0.12)";
+  const emeraldBorder = C.emeraldBorder ?? "rgba(52,211,153,0.55)";
 
   const [filter, setFilter] = useState<FilterMode>("7d");
   const [loading, setLoading] = useState(false);
@@ -90,7 +94,6 @@ export default function ClosingHistoryScreen() {
     const today = localYMD();
     if (filter === "7d") return { start: addDaysYMD(today, -6), end: today };
     if (filter === "month") return monthRangeFromDateStr(today);
-    // all: keep it reasonable in UI (last 90 days)
     return { start: addDaysYMD(today, -89), end: today };
   }, [filter]);
 
@@ -98,7 +101,7 @@ export default function ClosingHistoryScreen() {
     (active: boolean) => ({
       flex: 1,
       borderWidth: 1,
-      borderColor: active ? theme.colors.emeraldBorder : theme.colors.border,
+      borderColor: active ? emeraldBorder : theme.colors.border,
       borderRadius: theme.radius.pill,
       paddingHorizontal: 12,
       paddingVertical: 12,
@@ -106,7 +109,7 @@ export default function ClosingHistoryScreen() {
       alignItems: "center" as const,
       justifyContent: "center" as const,
     }),
-    []
+    [emeraldBorder]
   );
 
   const chipTextStyle = useCallback(
@@ -131,7 +134,6 @@ export default function ClosingHistoryScreen() {
     try {
       const { start, end } = dateRange;
 
-      // STEP 1: candidate dates from snapshots
       const { data: snapRows, error: snapErr } = await supabase
         .from("inventory_daily_snapshots")
         .select("snapshot_date")
@@ -153,33 +155,28 @@ export default function ClosingHistoryScreen() {
         return;
       }
 
-      // STEP 2: lock dates (best-effort)
       const { data: lockRows, error: lockErr } = await supabase
         .from("closing_locks")
         .select("lock_date, lock_type")
         .eq("store_id", activeStoreId)
         .in("lock_date", uniqDates);
 
-      // if lockErr -> ignore (table may be protected)
       const lockedSet = new Set(
         (lockRows ?? [])
           .filter((r: any) => !r.lock_type || String(r.lock_type) === "daily")
           .map((r: any) => String(r.lock_date))
       );
 
-      // STEP 3: summaries via RPC (cap)
       const capDates = uniqDates.slice(0, 45);
 
       const results: HistoryItem[] = [];
       for (const d of capDates) {
         try {
-          const { data, error: e } = await supabase.rpc(
-            "get_daily_closing_summary",
-            {
-              p_store_id: activeStoreId,
-              p_date: d,
-            }
-          );
+          // ✅ TZ history-aware daily summary (v3)
+          const { data, error: e } = await supabase.rpc("get_daily_closing_summary_v3", {
+            p_store_id: activeStoreId,
+            p_date: d,
+          });
           if (e) throw e;
 
           const row = Array.isArray(data) ? data[0] : data;
@@ -195,23 +192,13 @@ export default function ClosingHistoryScreen() {
               }
             : null;
 
-          results.push({
-            date: d,
-            locked: lockedSet.has(d),
-            summary,
-          });
+          results.push({ date: d, locked: lockedSet.has(d), summary });
         } catch {
-          results.push({
-            date: d,
-            locked: lockedSet.has(d),
-            summary: null,
-          });
+          results.push({ date: d, locked: lockedSet.has(d), summary: null });
         }
       }
 
       setItems(results);
-
-      // if lockErr happened, we still showed list; optionally keep silent
       void lockErr;
     } catch (e: any) {
       const msg = e?.message ?? "Failed to load closing history";
@@ -232,7 +219,6 @@ export default function ClosingHistoryScreen() {
     }
   }, [activeStoreId, dateRange]);
 
-  // refresh when screen opens / returns
   useFocusEffect(
     useCallback(() => {
       loadHistory();
@@ -248,46 +234,28 @@ export default function ClosingHistoryScreen() {
       <Pressable
         onPress={() => {
           const msg = s
-            ? `Date: ${item.date}\nLocked: ${
-                item.locked ? "YES" : "NO"
-              }\nOpening: ${fmtInt(s.opening_qty_total)}\nIN: ${fmtInt(
-                s.in_qty_total
-              )}\nOUT: ${fmtInt(s.out_qty_total)}\nClosing: ${fmtInt(
-                s.closing_qty_total
-              )}\nNet: ${netPositive ? "+" : ""}${fmtInt(net)}`
-            : `Date: ${item.date}\nLocked: ${
-                item.locked ? "YES" : "NO"
-              }\n\nSummary haikupatikana (RPC error au data haipo).`;
+            ? `Date: ${item.date}\nLocked: ${item.locked ? "YES" : "NO"}\nOpening: ${fmtInt(
+                s.opening_qty_total
+              )}\nIN: ${fmtInt(s.in_qty_total)}\nOUT: ${fmtInt(
+                s.out_qty_total
+              )}\nClosing: ${fmtInt(s.closing_qty_total)}\nNet: ${
+                netPositive ? "+" : ""
+              }${fmtInt(net)}`
+            : `Date: ${item.date}\nLocked: ${item.locked ? "YES" : "NO"}\n\nSummary haikupatikana (RPC error au data haipo).`;
           Alert.alert("Closing Summary", msg);
         }}
       >
         <Card style={{ gap: 10 }}>
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              gap: 10,
-            }}
-          >
-            <Text
-              style={{
-                color: theme.colors.text,
-                fontWeight: "900",
-                fontSize: 16,
-              }}
-            >
+          <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
+            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
               {item.date}
             </Text>
 
             <View
               style={{
                 borderWidth: 1,
-                borderColor: item.locked
-                  ? "rgba(52,211,153,0.35)"
-                  : theme.colors.border,
-                backgroundColor: item.locked
-                  ? "rgba(52,211,153,0.10)"
-                  : theme.colors.card,
+                borderColor: item.locked ? "rgba(52,211,153,0.35)" : theme.colors.border,
+                backgroundColor: item.locked ? "rgba(52,211,153,0.10)" : theme.colors.card,
                 borderRadius: theme.radius.pill,
                 paddingHorizontal: 10,
                 paddingVertical: 6,
@@ -310,45 +278,29 @@ export default function ClosingHistoryScreen() {
             </Text>
           ) : (
             <>
-              <View
-                style={{ flexDirection: "row", justifyContent: "space-between" }}
-              >
-                <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>
-                  Opening
-                </Text>
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Opening</Text>
                 <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
                   {fmtInt(s.opening_qty_total)}
                 </Text>
               </View>
 
-              <View
-                style={{ flexDirection: "row", justifyContent: "space-between" }}
-              >
-                <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>
-                  IN
-                </Text>
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>IN</Text>
                 <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
                   {fmtInt(s.in_qty_total)}
                 </Text>
               </View>
 
-              <View
-                style={{ flexDirection: "row", justifyContent: "space-between" }}
-              >
-                <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>
-                  OUT
-                </Text>
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>OUT</Text>
                 <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
                   {fmtInt(s.out_qty_total)}
                 </Text>
               </View>
 
-              <View
-                style={{ flexDirection: "row", justifyContent: "space-between" }}
-              >
-                <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>
-                  Closing
-                </Text>
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Closing</Text>
                 <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
                   {fmtInt(s.closing_qty_total)}
                 </Text>
@@ -357,15 +309,11 @@ export default function ClosingHistoryScreen() {
               <View
                 style={{
                   borderWidth: 1,
-                  borderColor: netPositive
-                    ? "rgba(52,211,153,0.35)"
-                    : theme.colors.dangerBorder,
+                  borderColor: netPositive ? "rgba(52,211,153,0.35)" : dangerBorder,
                   borderRadius: theme.radius.pill,
                   paddingVertical: 10,
                   paddingHorizontal: 14,
-                  backgroundColor: netPositive
-                    ? "rgba(52,211,153,0.10)"
-                    : theme.colors.dangerSoft,
+                  backgroundColor: netPositive ? "rgba(52,211,153,0.10)" : dangerSoft,
                 }}
               >
                 <Text
@@ -384,18 +332,13 @@ export default function ClosingHistoryScreen() {
         </Card>
       </Pressable>
     );
-  }, []);
+  }, [dangerBorder, dangerSoft]);
 
-  // ✅ Dynamic bottom padding so tabs NEVER cover content
-  const bottomPad = useMemo(() => {
-    // add a little extra breathing room
-    return Math.max(24, tabBarHeight + 24);
-  }, [tabBarHeight]);
+  const bottomPad = useMemo(() => Math.max(24, tabBarHeight + 24), [tabBarHeight]);
 
   const ListHeader = useMemo(() => {
     return (
       <View style={{ gap: 12 }}>
-        {/* Header */}
         <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
           <Text style={{ fontSize: 24, fontWeight: "900", color: theme.colors.text }}>
             Closing History
@@ -416,7 +359,6 @@ export default function ClosingHistoryScreen() {
           </Pressable>
         </View>
 
-        {/* Context Card */}
         <Card style={{ gap: 10 }}>
           <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Organization</Text>
           <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
@@ -424,16 +366,12 @@ export default function ClosingHistoryScreen() {
           </Text>
 
           <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Store</Text>
-          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-            {activeStoreName ?? "—"}
-          </Text>
+          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{activeStoreName ?? "—"}</Text>
 
           <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Role</Text>
           <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{roleLabel}</Text>
 
-          <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-            Range
-          </Text>
+          <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>Range</Text>
 
           <View style={{ flexDirection: "row", gap: 10 }}>
             <Pressable onPress={() => setFilter("7d")} style={chipStyle(filter === "7d")}>
@@ -480,12 +418,7 @@ export default function ClosingHistoryScreen() {
         </Card>
 
         {!!error && (
-          <Card
-            style={{
-              borderColor: theme.colors.dangerBorder,
-              backgroundColor: theme.colors.dangerSoft,
-            }}
-          >
+          <Card style={{ borderColor: dangerBorder, backgroundColor: dangerSoft }}>
             <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{error}</Text>
           </Card>
         )}
@@ -524,6 +457,8 @@ export default function ClosingHistoryScreen() {
     loading,
     items.length,
     error,
+    dangerBorder,
+    dangerSoft,
   ]);
 
   return (
@@ -535,10 +470,7 @@ export default function ClosingHistoryScreen() {
         renderItem={renderItem}
         ListHeaderComponent={ListHeader}
         ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
-        contentContainerStyle={{
-          paddingTop: 0,
-          paddingBottom: bottomPad, // ✅ GUARANTEED: tabs can't cover content
-        }}
+        contentContainerStyle={{ paddingTop: 0, paddingBottom: bottomPad }}
         ListFooterComponent={<View style={{ height: bottomPad }} />}
         showsVerticalScrollIndicator={false}
       />
