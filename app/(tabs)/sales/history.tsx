@@ -1,5 +1,4 @@
-﻿// app/(tabs)/sales/history.tsx
-import { Ionicons } from "@expo/vector-icons";
+﻿import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Alert, FlatList, Pressable, Text, View } from "react-native";
@@ -7,6 +6,7 @@ import { ActivityIndicator, Alert, FlatList, Pressable, Text, View } from "react
 import { useNetInfo } from "@react-native-community/netinfo";
 
 import { useOrg } from "../../../src/context/OrgContext";
+import { useOrgMoneyPrefs } from "@/src/ui/money";
 import { supabase } from "../../../src/supabase/supabaseClient";
 import { Button } from "../../../src/ui/Button";
 import { Card } from "../../../src/ui/Card";
@@ -28,18 +28,6 @@ type SaleRow = {
 type AnyRow = Record<string, any>;
 
 type RangeKey = "today" | "week" | "month";
-
-function fmtTZS(n: number) {
-  try {
-    return new Intl.NumberFormat("en-TZ", {
-      style: "currency",
-      currency: "TZS",
-      maximumFractionDigits: 0,
-    }).format(n);
-  } catch {
-    return `TZS ${Math.round(n).toLocaleString()}`;
-  }
-}
 
 function startOfDayLocal(d: Date) {
   const x = new Date(d);
@@ -160,7 +148,11 @@ function sumPendingFromPayload(payload: any): { qty: number; amount: number } {
 
 export default function SalesHistoryScreen() {
   const router = useRouter();
-  const { activeOrgName, activeStoreId, activeStoreName, activeRole } = useOrg();
+  const { activeOrgId, activeOrgName, activeStoreId, activeStoreName, activeRole } = useOrg() as any;
+
+  const money = useOrgMoneyPrefs(activeOrgId);
+  // ✅ FIX: hook returns money.fmt (NOT money.formatMoney)
+  const fmtMoney = useCallback((n: number) => money.fmt(Number(n || 0)), [money]);
 
   const netInfo = useNetInfo();
   const isOnline = !!(netInfo.isConnected && netInfo.isInternetReachable !== false);
@@ -215,8 +207,7 @@ export default function SalesHistoryScreen() {
       const list = await listPending(activeStoreId);
 
       const normalized: SaleRow[] = (list ?? []).map((x: any) => {
-        const cid =
-          String(x?.client_sale_id ?? x?.clientSaleId ?? x?.id ?? "").trim() || "UNKNOWN";
+        const cid = String(x?.client_sale_id ?? x?.clientSaleId ?? x?.id ?? "").trim() || "UNKNOWN";
         const created =
           String(x?.created_at ?? x?.createdAt ?? x?.queued_at ?? x?.queuedAt ?? "").trim() ||
           undefined;
@@ -276,10 +267,7 @@ export default function SalesHistoryScreen() {
 
         const { from, to } = ranges[range];
 
-        const res = await supabase.rpc(
-          "get_sales",
-          { p_store_id: activeStoreId, p_from: from, p_to: to } as any
-        );
+        const res = await supabase.rpc("get_sales", { p_store_id: activeStoreId, p_from: from, p_to: to } as any);
         if (res.error) throw res.error;
 
         const raw = (res.data ?? []) as AnyRow[];
@@ -313,10 +301,9 @@ export default function SalesHistoryScreen() {
     void load("boot");
   }, [load]);
 
-  // ✅ IMPORTANT: auto refresh whenever this screen gets focus (fix "haijirefresh ukirudi")
+  // ✅ IMPORTANT: auto refresh whenever this screen gets focus
   useFocusEffect(
     useCallback(() => {
-      // Avoid spamming while still booting
       void load("refresh");
       return () => {};
     }, [load])
@@ -350,7 +337,6 @@ export default function SalesHistoryScreen() {
     try {
       await syncSalesQueueOnce(activeStoreId);
       await loadPending();
-      // also refresh remote list so synced sales appear
       await load("refresh");
       Alert.alert("Sync ✅", "Pending sales zimejaribiwa kusync.");
     } catch (e: any) {
@@ -451,10 +437,7 @@ export default function SalesHistoryScreen() {
         <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
           Qty: <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{pendingTotalQty}</Text>
           {"   "}•{"   "}
-          Amount:{" "}
-          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-            {fmtTZS(pendingTotalAmt)}
-          </Text>
+          Amount: <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{fmtMoney(pendingTotalAmt)}</Text>
         </Text>
 
         <Button
@@ -471,7 +454,7 @@ export default function SalesHistoryScreen() {
         </Text>
       </Card>
     );
-  }, [activeStoreId, isOffline, isOnline, pendingCountState, pendingRows, syncNow, syncing]);
+  }, [activeStoreId, isOffline, isOnline, pendingCountState, pendingRows, syncNow, syncing, fmtMoney]);
 
   const ListHeader = useMemo(() => {
     return (
@@ -495,9 +478,7 @@ export default function SalesHistoryScreen() {
           </Pressable>
 
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 26, fontWeight: "900", color: theme.colors.text }}>
-              History
-            </Text>
+            <Text style={{ fontSize: 26, fontWeight: "900", color: theme.colors.text }}>History</Text>
             <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
               {activeOrgName ?? "—"} • {activeStoreName ?? "No store"} • {activeRole ?? "—"}
             </Text>
@@ -528,9 +509,7 @@ export default function SalesHistoryScreen() {
             variant="primary"
           />
 
-          {!!err && (
-            <Text style={{ color: theme.colors.dangerText, fontWeight: "800" }}>{err}</Text>
-          )}
+          {!!err && <Text style={{ color: theme.colors.dangerText, fontWeight: "800" }}>{err}</Text>}
         </Card>
 
         {/* Summary */}
@@ -541,23 +520,19 @@ export default function SalesHistoryScreen() {
         <View style={{ flexDirection: "row", gap: 10 }}>
           <Card style={{ flex: 1, gap: 6 }}>
             <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Sales Count</Text>
-            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
-              {summary.count}
-            </Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>{summary.count}</Text>
           </Card>
 
           <Card style={{ flex: 1, gap: 6 }}>
             <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Total Qty</Text>
-            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
-              {summary.totalQty}
-            </Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>{summary.totalQty}</Text>
           </Card>
         </View>
 
         <Card style={{ gap: 6 }}>
-          <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Total Amount</Text>
+          <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>TOTAL MONEY IN</Text>
           <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 22 }}>
-            {fmtTZS(summary.totalAmount)}
+            {fmtMoney(summary.totalAmount)}
           </Text>
         </Card>
 
@@ -594,6 +569,7 @@ export default function SalesHistoryScreen() {
     summary.count,
     summary.totalAmount,
     summary.totalQty,
+    fmtMoney,
   ]);
 
   const combined = useMemo(() => {
@@ -626,29 +602,15 @@ export default function SalesHistoryScreen() {
           const chipText = theme.colors.text;
 
           const title = isPending
-            ? `Queued ${
-                saleId.startsWith("PENDING:") ? saleId.replace("PENDING:", "").slice(0, 8) : "—"
-              }`
+            ? `Queued ${saleId.startsWith("PENDING:") ? saleId.replace("PENDING:", "").slice(0, 8) : "—"}`
             : `Sale ${saleId ? saleId.slice(0, 8) : "—"}`;
 
           return (
             <Pressable onPress={() => openReceipt(item)}>
               <Card style={{ marginBottom: 12, gap: 10 }}>
-                <View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: 10,
-                  }}
-                >
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
                   <Text
-                    style={{
-                      color: theme.colors.text,
-                      fontWeight: "900",
-                      fontSize: 16,
-                      flex: 1,
-                    }}
+                    style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16, flex: 1 }}
                     numberOfLines={1}
                   >
                     {title}
@@ -677,16 +639,10 @@ export default function SalesHistoryScreen() {
                 <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
                   Qty: <Text style={{ color: theme.colors.text }}>{qty}</Text>
                   {"   "}•{"   "}
-                  Amount: <Text style={{ color: theme.colors.text }}>{fmtTZS(amount)}</Text>
+                  Amount: <Text style={{ color: theme.colors.text }}>{fmtMoney(amount)}</Text>
                 </Text>
 
-                <Text
-                  style={{
-                    color: theme.colors.muted,
-                    fontWeight: "800",
-                    textDecorationLine: "underline",
-                  }}
-                >
+                <Text style={{ color: theme.colors.muted, fontWeight: "800", textDecorationLine: "underline" }}>
                   {isPending ? "Open Offline Receipt" : "Open Receipt"}
                 </Text>
               </Card>

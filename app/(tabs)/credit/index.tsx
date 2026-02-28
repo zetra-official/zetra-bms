@@ -1,5 +1,5 @@
-// app/(tabs)/credit/index.tsx
 import { useOrg } from "@/src/context/OrgContext";
+import { useOrgMoneyPrefs } from "@/src/ui/money";
 import { supabase } from "@/src/supabase/supabaseClient";
 import { Card } from "@/src/ui/Card";
 import { Screen } from "@/src/ui/Screen";
@@ -40,18 +40,6 @@ type BorrowRow = {
 
 type RangeKey = "TODAY" | "D7" | "D30" | "ALL";
 
-function fmtTZS(n: number) {
-  try {
-    return new Intl.NumberFormat("en-TZ", {
-      style: "currency",
-      currency: "TZS",
-      maximumFractionDigits: 0,
-    }).format(n);
-  } catch {
-    return `TZS ${n}`;
-  }
-}
-
 function norm(s: any) {
   return String(s ?? "").toLowerCase().trim();
 }
@@ -79,7 +67,10 @@ function isClearedBalance(n: number) {
 export default function CreditHomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { activeRole, activeStoreId, activeStoreName } = useOrg();
+  const { activeRole, activeStoreId, activeStoreName, activeOrgId } = useOrg();
+
+  // ✅ single source of truth for money formatting
+  const money = useOrgMoneyPrefs(String(activeOrgId ?? ""));
 
   const isOwnerAdmin = useMemo(
     () => activeRole === "owner" || activeRole === "admin",
@@ -479,7 +470,7 @@ export default function CreditHomeScreen() {
                   <View style={{ alignItems: "flex-end" }}>
                     <Text style={{ color: theme.colors.muted, fontSize: 12 }}>Borrowed</Text>
                     <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                      {fmtTZS(Math.max(0, borrowed))}
+                      {money.fmt(Math.max(0, borrowed))}
                     </Text>
 
                     <View style={{ height: 8 }} />
@@ -490,7 +481,7 @@ export default function CreditHomeScreen() {
                         fontWeight: "900",
                       }}
                     >
-                      {fmtTZS(Math.max(0, bal))}
+                      {money.fmt(Math.max(0, bal))}
                     </Text>
                   </View>
                 </View>
@@ -503,7 +494,7 @@ export default function CreditHomeScreen() {
         </View>
       );
     },
-    [openAccount]
+    [openAccount, money]
   );
 
   const ClearedArchive = useCallback(() => {
@@ -638,13 +629,13 @@ export default function CreditHomeScreen() {
                       <View style={{ alignItems: "flex-end" }}>
                         <Text style={{ color: theme.colors.muted, fontSize: 12 }}>Borrowed</Text>
                         <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                          {fmtTZS(Math.max(0, borrowed))}
+                          {money.fmt(Math.max(0, borrowed))}
                         </Text>
 
                         <View style={{ height: 8 }} />
                         <Text style={{ color: theme.colors.muted, fontSize: 12 }}>Balance</Text>
                         <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>
-                          {fmtTZS(Math.max(0, bal))}
+                          {money.fmt(Math.max(0, bal))}
                         </Text>
                       </View>
                     </View>
@@ -659,7 +650,7 @@ export default function CreditHomeScreen() {
         ) : null}
       </View>
     );
-  }, [clearedTimelineRows, clearedOpen, openAccount]);
+  }, [clearedTimelineRows, clearedOpen, openAccount, money]);
 
   return (
     <Screen scroll bottomPad={160}>
@@ -858,7 +849,7 @@ export default function CreditHomeScreen() {
                     <View style={{ alignItems: "flex-end" }}>
                       <Text style={{ color: theme.colors.muted, fontSize: 12 }}>Balance</Text>
                       <Text style={{ color: theme.colors.emerald, fontWeight: "900" }}>
-                        {fmtTZS(Math.max(0, bal))}
+                        {money.fmt(Math.max(0, bal))}
                       </Text>
                     </View>
                   </View>

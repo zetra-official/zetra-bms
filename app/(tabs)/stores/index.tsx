@@ -53,6 +53,34 @@ export default function StoresTabScreen() {
     (activeRole ?? "staff") as any
   );
 
+  // ✅ SAFE spacing (prevents: Cannot read property 'page' of undefined)
+  const PAGE = (theme as any)?.spacing?.page ?? 16;
+
+  // ✅ SAFE theme colors (prevents TS errors + runtime crashes if keys missing)
+  const C: any = (theme as any)?.colors ?? {};
+  const col = (key: string, fallback: string) => {
+    const v = C?.[key];
+    return typeof v === "string" && v.trim() ? v : fallback;
+  };
+
+  // Core fallbacks (dark premium)
+  const TEXT = col("text", "#EAF2FF");
+  const MUTED = col("muted", "rgba(234,242,255,0.70)");
+  const FAINT = col("faint", MUTED);
+  const BORDER = col("border", "rgba(255,255,255,0.14)");
+  const BORDER_SOFT = col("borderSoft", "rgba(255,255,255,0.10)");
+  const CARD = col("card", "rgba(255,255,255,0.06)");
+  const SURFACE2 = col("surface2", CARD);
+  const EMERALD = col("emerald", "#34D399");
+
+  const DANGER = col("danger", "#EF4444");
+  const DANGER_BORDER = col("dangerBorder", "rgba(239,68,68,0.45)");
+  const DANGER_SOFT = col("dangerSoft", "rgba(239,68,68,0.10)");
+
+  const R: any = (theme as any)?.radius ?? {};
+  const radiusXL = R?.xl ?? 18;
+  const radiusPill = R?.pill ?? 999;
+
   // canonical store list
   const list = useMemo(() => {
     if (!activeOrgId) return stores ?? [];
@@ -146,7 +174,7 @@ export default function StoresTabScreen() {
   }, [loadManagers]);
 
   // =========================
-  // ✅ CREDIT SWITCH (FINAL)
+  // ✅ CREDIT SWITCH
   // =========================
   const [creditFlagByStoreId, setCreditFlagByStoreId] = useState<Record<string, boolean>>({});
   const [creditFlagLoading, setCreditFlagLoading] = useState(false);
@@ -246,7 +274,7 @@ export default function StoresTabScreen() {
   );
 
   // =========================
-  // ✅ MOVEMENT SWITCH (POLISH)
+  // ✅ MOVEMENT SWITCH
   // =========================
   const [movementFlagByStoreId, setMovementFlagByStoreId] = useState<Record<string, boolean>>({});
   const [movementFlagLoading, setMovementFlagLoading] = useState(false);
@@ -472,34 +500,34 @@ export default function StoresTabScreen() {
   const Header = useMemo(() => {
     return (
       <View style={{ gap: 14 }}>
-        <Text style={{ fontSize: 26, fontWeight: "900", color: theme.colors.text }}>
+        <Text style={{ fontSize: 26, fontWeight: "900", color: TEXT }}>
           Stores
         </Text>
 
         {!!error && (
           <Card
             style={{
-              borderColor: theme.colors.dangerBorder,
-              backgroundColor: theme.colors.dangerSoft,
+              borderColor: DANGER_BORDER,
+              backgroundColor: DANGER_SOFT,
             }}
           >
-            <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{error}</Text>
+            <Text style={{ color: DANGER, fontWeight: "900" }}>{error}</Text>
           </Card>
         )}
 
         <Card style={{ gap: 10 }}>
-          <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Organization</Text>
-          <Text style={{ fontSize: 20, fontWeight: "900", color: theme.colors.text }}>
+          <Text style={{ color: MUTED, fontWeight: "800" }}>Organization</Text>
+          <Text style={{ fontSize: 20, fontWeight: "900", color: TEXT }}>
             {activeOrgName ?? "—"}
           </Text>
 
-          <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Role</Text>
-          <Text style={{ fontWeight: "900", color: theme.colors.text }}>
+          <Text style={{ color: MUTED, fontWeight: "800" }}>Role</Text>
+          <Text style={{ fontWeight: "900", color: TEXT }}>
             {activeRole ?? "—"}
           </Text>
 
-          <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Active Store</Text>
-          <Text style={{ fontWeight: "900", color: theme.colors.text }}>
+          <Text style={{ color: MUTED, fontWeight: "800" }}>Active Store</Text>
+          <Text style={{ fontWeight: "900", color: TEXT }}>
             {activeStoreName ?? "—"}
           </Text>
 
@@ -514,9 +542,7 @@ export default function StoresTabScreen() {
                 : "Refresh"
             }
             onPress={onRefreshAll}
-            disabled={
-              loading || refreshing || mgrLoading || creditFlagLoading || movementFlagLoading
-            }
+            disabled={loading || refreshing || mgrLoading || creditFlagLoading || movementFlagLoading}
             variant="primary"
           />
         </Card>
@@ -544,12 +570,17 @@ export default function StoresTabScreen() {
 
         <Button title="Stock Movement" variant="secondary" onPress={openMovement} />
 
-        <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>
+        <Text style={{ fontWeight: "900", fontSize: 16, color: TEXT }}>
           Available Stores
         </Text>
       </View>
     );
   }, [
+    TEXT,
+    MUTED,
+    DANGER,
+    DANGER_BORDER,
+    DANGER_SOFT,
     activeOrgName,
     activeRole,
     activeStoreName,
@@ -578,12 +609,12 @@ export default function StoresTabScreen() {
         refreshing={!!(refreshing || mgrLoading || creditFlagLoading || movementFlagLoading)}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
-          <View style={{ paddingHorizontal: theme.spacing.page, paddingTop: theme.spacing.page }}>
+          <View style={{ paddingHorizontal: PAGE, paddingTop: PAGE }}>
             {Header}
           </View>
         }
         contentContainerStyle={{
-          paddingHorizontal: theme.spacing.page,
+          paddingHorizontal: PAGE,
           paddingBottom: 140,
         }}
         renderItem={({ item }: { item: any }) => {
@@ -603,22 +634,22 @@ export default function StoresTabScreen() {
               onPress={() => pick(storeId, item.store_name)}
               style={{
                 borderWidth: 1,
-                borderColor: isActive ? "rgba(52,211,153,0.55)" : theme.colors.border,
-                borderRadius: theme.radius.xl,
-                backgroundColor: theme.colors.card,
+                borderColor: isActive ? "rgba(52,211,153,0.55)" : BORDER,
+                borderRadius: radiusXL,
+                backgroundColor: CARD,
                 padding: 16,
                 marginBottom: 12,
               }}
             >
               <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontWeight: "900", color: theme.colors.text, fontSize: 16 }}>
+                  <Text style={{ fontWeight: "900", color: TEXT, fontSize: 16 }}>
                     {item.store_name}
                   </Text>
 
-                  <Text style={{ marginTop: 6, color: theme.colors.muted, fontWeight: "800" }}>
+                  <Text style={{ marginTop: 6, color: MUTED, fontWeight: "800" }}>
                     Managed by:{" "}
-                    <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+                    <Text style={{ color: TEXT, fontWeight: "900" }}>
                       {managedBy}
                     </Text>
                   </Text>
@@ -629,14 +660,14 @@ export default function StoresTabScreen() {
                     style={{
                       paddingHorizontal: 10,
                       paddingVertical: 6,
-                      borderRadius: theme.radius.pill,
+                      borderRadius: radiusPill,
                       borderWidth: 1,
                       borderColor: "rgba(52,211,153,0.45)",
                       backgroundColor: "rgba(16,185,129,0.12)",
                       alignSelf: "flex-start",
                     }}
                   >
-                    <Text style={{ color: theme.colors.emerald, fontWeight: "900", fontSize: 12 }}>
+                    <Text style={{ color: EMERALD, fontWeight: "900", fontSize: 12 }}>
                       ACTIVE
                     </Text>
                   </View>
@@ -649,9 +680,9 @@ export default function StoresTabScreen() {
                   <View
                     style={{
                       borderWidth: 1,
-                      borderColor: theme.colors.borderSoft,
-                      backgroundColor: theme.colors.surface2,
-                      borderRadius: theme.radius.xl,
+                      borderColor: BORDER_SOFT,
+                      backgroundColor: SURFACE2,
+                      borderRadius: radiusXL,
                       paddingVertical: 10,
                       paddingHorizontal: 12,
                       flexDirection: "row",
@@ -661,10 +692,10 @@ export default function StoresTabScreen() {
                     }}
                   >
                     <View style={{ flex: 1 }}>
-                      <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>
+                      <Text style={{ color: FAINT, fontWeight: "900" }}>
                         Staff can manage credit
                       </Text>
-                      <Text style={{ color: theme.colors.muted, marginTop: 4, lineHeight: 18 }}>
+                      <Text style={{ color: MUTED, marginTop: 4, lineHeight: 18 }}>
                         Ikiwashwa, staff wa store hii ataona/kurekodi malipo ya madeni ya store yake
                         tu. Ikizimwa, ataona tu (read-only).
                       </Text>
@@ -678,7 +709,7 @@ export default function StoresTabScreen() {
                   </View>
 
                   {creditSaving ? (
-                    <Text style={{ color: theme.colors.faint, marginTop: -4, fontWeight: "800" }}>
+                    <Text style={{ color: FAINT, marginTop: -4, fontWeight: "800" }}>
                       Saving credit setting...
                     </Text>
                   ) : null}
@@ -687,9 +718,9 @@ export default function StoresTabScreen() {
                   <View
                     style={{
                       borderWidth: 1,
-                      borderColor: theme.colors.borderSoft,
-                      backgroundColor: theme.colors.surface2,
-                      borderRadius: theme.radius.xl,
+                      borderColor: BORDER_SOFT,
+                      backgroundColor: SURFACE2,
+                      borderRadius: radiusXL,
                       paddingVertical: 10,
                       paddingHorizontal: 12,
                       flexDirection: "row",
@@ -699,10 +730,10 @@ export default function StoresTabScreen() {
                     }}
                   >
                     <View style={{ flex: 1 }}>
-                      <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>
+                      <Text style={{ color: FAINT, fontWeight: "900" }}>
                         Allow staff stock movement
                       </Text>
-                      <Text style={{ color: theme.colors.muted, marginTop: 4, lineHeight: 18 }}>
+                      <Text style={{ color: MUTED, marginTop: 4, lineHeight: 18 }}>
                         Ikiwashwa, staff wa store hii ataruhusiwa kuhamisha stock (FROM store yake).
                         Ikizimwa, movement itakuwa Owner/Admin tu. (Admin/Owner wana ruhusa muda wote.)
                       </Text>
@@ -716,7 +747,7 @@ export default function StoresTabScreen() {
                   </View>
 
                   {movementSaving ? (
-                    <Text style={{ color: theme.colors.faint, marginTop: -4, fontWeight: "800" }}>
+                    <Text style={{ color: FAINT, marginTop: -4, fontWeight: "800" }}>
                       Saving movement setting...
                     </Text>
                   ) : null}
@@ -728,7 +759,7 @@ export default function StoresTabScreen() {
         ListEmptyComponent={
           <View style={{ paddingTop: 10 }}>
             <Card>
-              <Text style={{ fontWeight: "900", color: theme.colors.text }}>No stores found</Text>
+              <Text style={{ fontWeight: "900", color: TEXT }}>No stores found</Text>
             </Card>
           </View>
         }

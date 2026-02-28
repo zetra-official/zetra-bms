@@ -1,12 +1,16 @@
 // app/(tabs)/products.tsx
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert, Pressable, Text, TextInput, View } from "react-native";
+import { Alert, Modal, Pressable, Text, TextInput, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { CameraView, useCameraPermissions } from "expo-camera";
+
 import { useOrg } from "../../src/context/OrgContext";
 import { supabase } from "../../src/supabase/supabaseClient";
 import { Button } from "../../src/ui/Button";
 import { Card } from "../../src/ui/Card";
 import { Screen } from "../../src/ui/Screen";
 import { theme } from "../../src/ui/theme";
+import { useOrgMoneyPrefs } from "../../src/ui/money";
 
 type ProductRow = {
   id: string;
@@ -20,6 +24,8 @@ type ProductRow = {
 
   // manage-only RPC may return it; staff-safe might omit/return null
   cost_price?: number | null;
+
+  barcode?: string | null;
 
   is_active: boolean;
   created_at: string;
@@ -42,20 +48,17 @@ function parseZeroOrPositiveNumberOrNull(raw: string): number | null {
   return Math.trunc(n);
 }
 
-function fmtTZS(n: number) {
-  try {
-    return new Intl.NumberFormat("en-TZ", {
-      style: "currency",
-      currency: "TZS",
-      maximumFractionDigits: 0,
-    }).format(n);
-  } catch {
-    return `TZS ${Math.round(n).toLocaleString()}`;
-  }
+function cleanBarcode(raw: string) {
+  const s = String(raw ?? "").trim();
+  if (!s) return "";
+  return s.replace(/\s+/g, "");
 }
 
 export default function ProductsTabScreen() {
   const { activeOrgId, activeOrgName, activeRole } = useOrg();
+
+  // ✅ Single source of truth for money display (org currency from KV)
+  const money = useOrgMoneyPrefs(activeOrgId ?? "");
 
   const canManage = useMemo(
     () => (["owner", "admin"] as const).includes((activeRole ?? "staff") as any),
@@ -81,6 +84,61 @@ export default function ProductsTabScreen() {
 
   // ✅ Cost OPTIONAL
   const [costPrice, setCostPrice] = useState("");
+
+  // ✅ Barcode OPTIONAL
+  const [barcode, setBarcode] = useState("");
+
+  /* =========================
+     Barcode Scanner (Modal)
+  ========================= */
+  const [permission, requestPermission] = useCameraPermissions();
+  const [scanOpen, setScanOpen] = useState(false);
+  const [scanBusy, setScanBusy] = useState(false);
+
+  const openScan = useCallback(async () => {
+    if (!canManage) {
+      Alert.alert("No Access", "Owner/Admin only.");
+      return;
+    }
+
+    try {
+      if (!permission?.granted) {
+        const res = await requestPermission();
+        if (!res.granted) {
+          Alert.alert("Camera Permission", "Ruhusa ya camera inahitajika ili kuscan barcode.");
+          return;
+        }
+      }
+
+      setScanBusy(false);
+      setScanOpen(true);
+    } catch {
+      Alert.alert("Camera", "Imeshindikana kuomba ruhusa ya camera.");
+    }
+  }, [canManage, permission?.granted, requestPermission]);
+
+  const closeScan = useCallback(() => {
+    setScanOpen(false);
+    setScanBusy(false);
+  }, []);
+
+  const onBarcodeScanned = useCallback(
+    (result: any) => {
+      if (!scanOpen) return;
+      if (scanBusy) return;
+
+      const raw = String(result?.data ?? "").trim();
+      const v = cleanBarcode(raw);
+      if (!v) return;
+
+      setScanBusy(true);
+      setBarcode(v);
+      setTimeout(() => {
+        closeScan();
+      }, 180);
+    },
+    [closeScan, scanBusy, scanOpen]
+  );
 
   const load = useCallback(async () => {
     if (!activeOrgId) {
@@ -131,23 +189,26 @@ export default function ProductsTabScreen() {
       return;
     }
 
-    // ✅ Selling OPTIONAL
     const sp = parsePositiveNumberOrNull(sellingPrice);
     if (sellingPrice.trim() && sp === null) {
       Alert.alert("Invalid", "Selling Price iwe namba (> 0) au uiache wazi.");
       return;
     }
 
-    // ✅ Cost OPTIONAL
     const cp = parseZeroOrPositiveNumberOrNull(costPrice);
     if (costPrice.trim() && cp === null) {
       Alert.alert("Invalid", "Cost Price iwe namba (>= 0) au uiache wazi.");
       return;
     }
 
-    // ✅ must have at least one of them
     if (sp === null && cp === null) {
       Alert.alert("Missing", "Weka angalau Cost Price au Selling Price (hata moja).");
+      return;
+    }
+
+    const bc = cleanBarcode(barcode);
+    if (bc && bc.length < 6) {
+      Alert.alert("Invalid", "Barcode inaonekana fupi sana. Hakikisha ume-scan sahihi.");
       return;
     }
 
@@ -165,6 +226,7 @@ export default function ProductsTabScreen() {
         p_is_active: true,
         p_selling_price: sp,
         p_cost_price: cp,
+        p_barcode: bc || null,
       });
 
       if (e) throw e;
@@ -175,15 +237,16 @@ export default function ProductsTabScreen() {
       setCategory("");
       setSellingPrice("");
       setCostPrice("");
+      setBarcode("");
 
       await load();
-      Alert.alert("Success ✅", "Product added");
+      Alert.alert("Success ✅", bc ? "Product added (barcode saved)" : "Product added");
     } catch (err: any) {
       Alert.alert("Failed", err?.message ?? "Unknown error");
     } finally {
       setLoading(false);
     }
-  }, [activeOrgId, canManage, name, sku, unit, category, sellingPrice, costPrice, load]);
+  }, [activeOrgId, canManage, name, sku, unit, category, sellingPrice, costPrice, barcode, load]);
 
   const remove = useCallback(
     async (productId: string, productName: string) => {
@@ -227,9 +290,7 @@ export default function ProductsTabScreen() {
 
   return (
     <Screen scroll>
-      <Text style={{ fontSize: 26, fontWeight: "900", color: theme.colors.text }}>
-        Products
-      </Text>
+      <Text style={{ fontSize: 26, fontWeight: "900", color: theme.colors.text }}>Products</Text>
 
       <Card style={{ gap: 8 }}>
         <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Organization</Text>
@@ -237,9 +298,7 @@ export default function ProductsTabScreen() {
           {activeOrgName ?? "—"}
         </Text>
 
-        <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-          Role
-        </Text>
+        <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>Role</Text>
         <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{activeRole ?? "—"}</Text>
 
         <Button
@@ -264,9 +323,7 @@ export default function ProductsTabScreen() {
 
       {canManage && (
         <Card style={{ gap: 10 }}>
-          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-            Add Product
-          </Text>
+          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>Add Product</Text>
 
           <TextInput
             value={name}
@@ -341,11 +398,84 @@ export default function ProductsTabScreen() {
             }}
           />
 
-          {/* Selling Price OPTIONAL */}
+          {/* ✅ Barcode (optional) + Scan */}
+          <View style={{ gap: 8 }}>
+            <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Barcode (optional)</Text>
+
+            <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
+              <View style={{ flex: 1 }}>
+                <TextInput
+                  value={barcode}
+                  onChangeText={(t) => setBarcode(cleanBarcode(t))}
+                  placeholder="Scan or type barcode"
+                  placeholderTextColor="rgba(255,255,255,0.35)"
+                  style={{
+                    borderWidth: 1,
+                    borderColor: theme.colors.border,
+                    borderRadius: theme.radius.lg,
+                    backgroundColor: "rgba(255,255,255,0.05)",
+                    paddingHorizontal: 14,
+                    paddingVertical: 12,
+                    color: theme.colors.text,
+                    fontWeight: "900",
+                  }}
+                />
+              </View>
+
+              <Pressable
+                onPress={openScan}
+                disabled={loading}
+                style={({ pressed }) => [
+                  {
+                    width: 48,
+                    height: 48,
+                    borderRadius: 999,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderWidth: 1,
+                    borderColor: theme.colors.emeraldBorder,
+                    backgroundColor: theme.colors.emeraldSoft,
+                    opacity: loading ? 0.55 : pressed ? 0.92 : 1,
+                    transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
+                  },
+                ]}
+              >
+                <Ionicons name="barcode-outline" size={20} color={theme.colors.text} />
+              </Pressable>
+
+              {!!barcode && (
+                <Pressable
+                  onPress={() => setBarcode("")}
+                  disabled={loading}
+                  style={({ pressed }) => [
+                    {
+                      width: 48,
+                      height: 48,
+                      borderRadius: 999,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderWidth: 1,
+                      borderColor: theme.colors.border,
+                      backgroundColor: "rgba(255,255,255,0.06)",
+                      opacity: loading ? 0.55 : pressed ? 0.92 : 1,
+                      transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
+                    },
+                  ]}
+                >
+                  <Ionicons name="close" size={20} color={theme.colors.text} />
+                </Pressable>
+              )}
+            </View>
+
+            <Text style={{ color: theme.colors.faint, fontWeight: "800" }}>
+              Tip: Scan barcode ili iwe fast kama supermarket.
+            </Text>
+          </View>
+
           <TextInput
             value={sellingPrice}
             onChangeText={(t) => setSellingPrice(t.replace(/[^0-9]/g, ""))}
-            placeholder="Selling Price (TZS) (optional)"
+            placeholder="Selling Price (optional)"
             keyboardType="numeric"
             placeholderTextColor="rgba(255,255,255,0.35)"
             style={{
@@ -360,12 +490,11 @@ export default function ProductsTabScreen() {
             }}
           />
 
-          {/* Cost Price (Owner/Admin only) */}
           {canSeeCost && (
             <TextInput
               value={costPrice}
               onChangeText={(t) => setCostPrice(t.replace(/[^0-9]/g, ""))}
-              placeholder="Cost Price (TZS) (optional)"
+              placeholder="Cost Price (optional)"
               keyboardType="numeric"
               placeholderTextColor="rgba(255,255,255,0.35)"
               style={{
@@ -381,18 +510,111 @@ export default function ProductsTabScreen() {
             />
           )}
 
-          <Button
-            title={loading ? "Saving..." : "Add Product"}
-            onPress={add}
-            disabled={loading}
-            variant="primary"
-          />
+          <Button title={loading ? "Saving..." : "Add Product"} onPress={add} disabled={loading} variant="primary" />
+
+          {/* Scanner modal */}
+          <Modal
+            visible={scanOpen}
+            animationType="fade"
+            transparent
+            presentationStyle="overFullScreen"
+            statusBarTranslucent
+            onRequestClose={closeScan}
+          >
+            <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.82)" }}>
+              <View style={{ padding: 16, paddingTop: 18, gap: 10 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                  <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>Scan Barcode</Text>
+
+                  <Pressable
+                    onPress={closeScan}
+                    hitSlop={10}
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 999,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderWidth: 1,
+                      borderColor: "rgba(255,255,255,0.12)",
+                      backgroundColor: "rgba(255,255,255,0.06)",
+                    }}
+                  >
+                    <Ionicons name="close" size={22} color={theme.colors.text} />
+                  </Pressable>
+                </View>
+
+                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                  Elekeza camera kwenye barcode. Itajaza moja kwa moja.
+                </Text>
+              </View>
+
+              <View style={{ flex: 1, paddingHorizontal: 16, paddingBottom: 18 }}>
+                <View
+                  style={{
+                    flex: 1,
+                    borderRadius: 18,
+                    overflow: "hidden",
+                    borderWidth: 1,
+                    borderColor: "rgba(255,255,255,0.12)",
+                    backgroundColor: "rgba(255,255,255,0.04)",
+                  }}
+                >
+                  <CameraView
+                    style={{ flex: 1 }}
+                    facing="back"
+                    onBarcodeScanned={onBarcodeScanned}
+                    barcodeScannerSettings={{
+                      barcodeTypes: [
+                        "ean13",
+                        "ean8",
+                        "upc_a",
+                        "upc_e",
+                        "code128",
+                        "code39",
+                        "itf14",
+                        "qr",
+                        "pdf417",
+                        "aztec",
+                        "datamatrix",
+                      ],
+                    }}
+                  />
+
+                  <View
+                    pointerEvents="none"
+                    style={{
+                      position: "absolute",
+                      left: 18,
+                      right: 18,
+                      top: "32%",
+                      height: 140,
+                      borderRadius: 16,
+                      borderWidth: 2,
+                      borderColor: "rgba(52,211,153,0.55)",
+                      backgroundColor: "rgba(0,0,0,0.05)",
+                    }}
+                  />
+                </View>
+
+                <View style={{ marginTop: 12, gap: 10 }}>
+                  <Card style={{ gap: 6 }}>
+                    <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Last scanned</Text>
+                    <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{barcode ? barcode : "—"}</Text>
+                    <Text style={{ color: theme.colors.faint, fontWeight: "800" }}>
+                      Ukiscan, modal itajifunga na barcode itaingia kwenye form.
+                    </Text>
+                  </Card>
+
+                  <Button title="Close" onPress={closeScan} variant="secondary" />
+                </View>
+              </View>
+            </View>
+          </Modal>
         </Card>
       )}
 
-      <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>
-        Product List
-      </Text>
+      <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>Product List</Text>
 
       {rows.length === 0 ? (
         <Card>
@@ -405,6 +627,7 @@ export default function ProductsTabScreen() {
         rows.map((p) => {
           const sp = Number(p.selling_price ?? 0);
           const cp = Number(p.cost_price ?? NaN);
+          const bc = String((p as any).barcode ?? "").trim();
 
           return (
             <Pressable
@@ -418,9 +641,7 @@ export default function ProductsTabScreen() {
                 marginBottom: 12,
               }}
             >
-              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-                {p.name}
-              </Text>
+              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>{p.name}</Text>
 
               <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
                 SKU: <Text style={{ color: theme.colors.text }}>{p.sku ?? "—"}</Text>
@@ -433,29 +654,25 @@ export default function ProductsTabScreen() {
               </Text>
 
               <Text style={{ color: theme.colors.muted, fontWeight: "900", marginTop: 8 }}>
-                Selling Price:{" "}
-                <Text style={{ color: theme.colors.text }}>
-                  {sp > 0 ? fmtTZS(sp) : "—"}
-                </Text>
+                Barcode: <Text style={{ color: theme.colors.text }}>{bc ? bc : "—"}</Text>
+              </Text>
+
+              <Text style={{ color: theme.colors.muted, fontWeight: "900", marginTop: 8 }}>
+                Selling Price: <Text style={{ color: theme.colors.text }}>{sp > 0 ? money.fmt(sp) : "—"}</Text>
               </Text>
 
               {canSeeCost && (
                 <Text style={{ color: theme.colors.muted, fontWeight: "900", marginTop: 6 }}>
                   Cost Price:{" "}
                   <Text style={{ color: theme.colors.text }}>
-                    {Number.isFinite(cp) ? fmtTZS(cp) : "—"}
+                    {Number.isFinite(cp) ? money.fmt(cp) : "—"}
                   </Text>
                 </Text>
               )}
 
               {canManage && (
                 <View style={{ marginTop: 12 }}>
-                  <Button
-                    title="Delete"
-                    variant="secondary"
-                    onPress={() => remove(p.id, p.name)}
-                    disabled={loading}
-                  />
+                  <Button title="Delete" variant="secondary" onPress={() => remove(p.id, p.name)} disabled={loading} />
                 </View>
               )}
             </Pressable>

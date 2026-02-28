@@ -1,7 +1,9 @@
+// app/(tabs)/club/orders/customer/[orderId].tsx
 import { supabase } from "@/src/supabase/supabaseClient";
 import { Card } from "@/src/ui/Card";
 import { Screen } from "@/src/ui/Screen";
 import { theme } from "@/src/ui/theme";
+import { formatMoney } from "@/src/ui/money";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -32,19 +34,6 @@ function clean(x: any) {
 function isUuid(v: string) {
   const s = clean(v);
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s);
-}
-
-function fmtMoney(n: number, currency?: string | null) {
-  const c = clean(currency) || "TZS";
-  try {
-    return new Intl.NumberFormat("en-TZ", {
-      style: "currency",
-      currency: c,
-      maximumFractionDigits: 0,
-    }).format(n);
-  } catch {
-    return `${c} ${String(Math.round(Number(n) || 0))}`;
-  }
 }
 
 export default function CustomerOrderDetailScreenLite() {
@@ -78,6 +67,12 @@ export default function CustomerOrderDetailScreenLite() {
   const currency = meta.currency || "TZS";
   const status = clean(meta.status).toUpperCase() || "NEW";
   const saleId = clean(meta.sale_id);
+
+  // ✅ showCurrency:false => no "TSh" / no "TZS"
+  const fmt = useCallback(
+    (amount: number) => formatMoney(amount, { currency: clean(currency) || "TZS", showCurrency: false }),
+    [currency]
+  );
 
   const subtotal = useMemo(
     () => items.reduce((s, it) => s + (Number(it.line_total) || 0), 0),
@@ -141,15 +136,15 @@ export default function CustomerOrderDetailScreenLite() {
         </Text>
 
         <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-          Qty: {String(item.qty)} • Price: {fmtMoney(Number(item.unit_price) || 0, currency)}
+          Qty: {String(item.qty)} • Price: {fmt(Number(item.unit_price) || 0)}
         </Text>
 
         <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 8 }}>
-          Line total: {fmtMoney(Number(item.line_total) || 0, currency)}
+          Line total: {fmt(Number(item.line_total) || 0)}
         </Text>
       </Card>
     ),
-    [currency]
+    [fmt]
   );
 
   return (
@@ -192,8 +187,9 @@ export default function CustomerOrderDetailScreenLite() {
                       {storeId ? ` • ${storeId.slice(0, 8)}…` : ""}
                     </Text>
 
+                    {/* ✅ removed "Currency: ..." */}
                     <Text style={{ color: theme.colors.faint, fontWeight: "900", fontSize: 12, marginTop: 4 }}>
-                      Status: {status} • Currency: {currency}
+                      Status: {status}
                       {saleId ? " • SALE ✅" : ""}
                     </Text>
                   </View>
@@ -235,9 +231,7 @@ export default function CustomerOrderDetailScreenLite() {
 
                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                   <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Subtotal</Text>
-                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                    {fmtMoney(subtotal, currency)}
-                  </Text>
+                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{fmt(subtotal)}</Text>
                 </View>
               </View>
             </Card>

@@ -1,108 +1,91 @@
-export type ThemeColors = {
-  background: string;
-  surface: string;
-  card: string;
-  border: string;
+// src/ui/theme.ts
+// ZETRA Premium Dark Theme (DORA UI Standard)
+// Exports:
+// - theme: legacy-friendly tokens (theme.colors.*, theme.radius.*, theme.spacing.*)
+// - UI: newer direct tokens (UI.text, UI.muted, UI.emeraldSoft, etc.)
 
-  surface2: string;
-  borderSoft: string;
-  shadowSoft: string;
+export const UI = {
+  // Core
+  background: "#0B0F14",
+  card: "rgba(255,255,255,0.06)",
+  cardStrong: "rgba(255,255,255,0.08)",
 
-  text: string;
-  muted: string;
-  faint: string;
+  // Text
+  text: "rgba(255,255,255,0.92)",
+  muted: "rgba(255,255,255,0.68)",
+  faint: "rgba(255,255,255,0.45)",
 
-  primary: string;
-  primaryText: string;
+  // Borders
+  border: "rgba(255,255,255,0.12)",
+  borderSoft: "rgba(255,255,255,0.08)",
 
-  tabBarBg: string;
-  emerald: string;
+  // Brand (Emerald)
+  emerald: "rgba(16,185,129,1)",
+  emeraldSoft: "rgba(16,185,129,0.16)",
+  emeraldBorder: "rgba(16,185,129,0.45)",
 
-  emeraldSoft: string;
-  emeraldBorder: string;
+  // Status
+  danger: "rgba(239,68,68,1)",
+  dangerSoft: "rgba(239,68,68,0.14)",
+  dangerBorder: "rgba(239,68,68,0.45)",
 
-  danger: string;
-  dangerSoft: string;
-  dangerBorder: string;
-  dangerText: string;
-};
+  warning: "rgba(245,158,11,1)",
+  warningSoft: "rgba(245,158,11,0.12)",
 
-export type ThemeRadius = {
-  sm: number;
-  md: number;
-  lg: number;
-  xl: number;
-  pill: number;
-};
+  // Extra surfaces
+  surface2: "rgba(255,255,255,0.04)",
 
-export type ThemeSpacing = {
-  page: number;
-  xs: number;
-  sm: number;
-  md: number;
-  lg: number;
-  xl: number;
-};
+  // Tab bar
+  tabBarBg: "#070A0E",
+} as const;
 
-export type Theme = {
-  colors: ThemeColors;
-  radius: ThemeRadius;
-  spacing: ThemeSpacing;
-};
-
-export const theme: Theme = {
+export const theme = {
   colors: {
-    background: "#0B0F14",
-    surface: "rgba(255,255,255,0.04)",
-    card: "rgba(255,255,255,0.06)",
-    border: "rgba(255,255,255,0.12)",
+    // App backgrounds
+    background: UI.background,
+    tabBarBg: UI.tabBarBg,
 
-    surface2: "rgba(255,255,255,0.03)",
-    borderSoft: "rgba(255,255,255,0.08)",
-    shadowSoft: "rgba(0,0,0,0.45)",
+    // Surfaces
+    card: UI.card,
+    cardStrong: UI.cardStrong,
+    surface2: UI.surface2,
 
-    text: "#FFFFFF",
-    muted: "#9AA4B2",
-    faint: "rgba(255,255,255,0.70)",
+    // Text
+    text: UI.text,
+    muted: UI.muted,
+    faint: UI.faint,
 
-    primary: "#10B981",
-    primaryText: "#06140F",
+    // Borders
+    border: UI.border,
+    borderSoft: UI.borderSoft,
 
-    tabBarBg: "rgba(0,0,0,0.45)",
-    emerald: "#10B981",
+    // Brand
+    emerald: UI.emerald,
+    emeraldSoft: UI.emeraldSoft,
+    emeraldBorder: UI.emeraldBorder,
 
-    emeraldSoft: "rgba(16,185,129,0.16)",
-    emeraldBorder: "rgba(16,185,129,0.35)",
+    // Status
+    danger: UI.danger,
+    dangerSoft: UI.dangerSoft,
+    dangerBorder: UI.dangerBorder,
+    warning: UI.warning,
+    warningSoft: UI.warningSoft,
+  },
 
-    danger: "#EF4444",
-    dangerSoft: "rgba(239,68,68,0.18)",
-    dangerBorder: "rgba(239,68,68,0.35)",
-    dangerText: "#FF6B6B",
+  // ✅ This fixes: theme.spacing.page undefined (caused "Cannot read property 'page' of undefined")
+  spacing: {
+    page: 16,
+    card: 14,
+    row: 12,
+    input: 12,
+    gap: 12,
   },
 
   radius: {
-    sm: 12,
-    md: 16,
-    lg: 20,
-    xl: 24,
-    pill: 999,
-  },
-
-  spacing: {
-    page: 16,
-    xs: 6,
     sm: 10,
     md: 14,
     lg: 18,
-    xl: 24,
+    xl: 22,
+    pill: 999,
   },
-};
-
-// ✅ single source for UI tokens
-export const UI = {
-  ...theme.colors,
-  colors: theme.colors,
-  radius: theme.radius,
-  spacing: theme.spacing,
-  theme,
 } as const;

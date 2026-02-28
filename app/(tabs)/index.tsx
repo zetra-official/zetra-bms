@@ -1,5 +1,5 @@
 ﻿// app/(tabs)/index.tsx
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -13,6 +13,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
 import { useOrg } from "../../src/context/OrgContext";
 import { supabase } from "../../src/supabase/supabaseClient";
 import { Button } from "../../src/ui/Button";
@@ -20,6 +21,7 @@ import { Card } from "../../src/ui/Card";
 import { Screen } from "../../src/ui/Screen";
 import { StoreGuard } from "../../src/ui/StoreGuard";
 import { UI } from "../../src/ui/theme";
+import { formatMoney, useOrgMoneyPrefs } from "../../src/ui/money";
 
 type RangeKey = "today" | "7d" | "30d";
 
@@ -54,7 +56,7 @@ type DashRow = {
 
 type FinRow = {
   org_id: string;
-  store_id: string | null; // null when ALL aggregate
+  store_id: string | null;
   date_from: string; // YYYY-MM-DD
   date_to: string; // YYYY-MM-DD
   stock_on_hand_value: number;
@@ -73,33 +75,36 @@ type ExpenseSummary = {
 };
 
 type ProfitSummary = {
-  net: number; // ✅ TRUE net profit (Sales - COGS - Expenses) from get_store_net_profit_v2
-  sales: number | null; // ✅ sales_total from get_store_net_profit_v2
-  expenses: number | null; // ✅ expenses_total from get_store_net_profit_v2
+  net: number; // TRUE net profit
+  sales: number | null;
+  expenses: number | null;
 };
 
-const AUTO_REFRESH_MS = 30_000; // ✅ 30s silent auto refresh
+type PayBreakdown = {
+  cash: number;
+  bank: number;
+  mobile: number;
+  credit: number; // outstanding balance (NOT money in)
+  other: number; // kept for backward compatibility (should be 0 in STRICT mode)
+  orders: number;
+};
 
-function fmtMoney(n: number, currency?: string | null) {
-  const c = String(currency || "TZS").trim() || "TZS";
-  try {
-    return new Intl.NumberFormat("en-TZ", {
-      style: "currency",
-      currency: c,
-      maximumFractionDigits: 0,
-    }).format(Number(n) || 0);
-  } catch {
-    return `${c} ${String(Math.round(Number(n) || 0))}`;
-  }
-}
+type CollectionBreakdown = {
+  cash: number;
+  bank: number;
+  mobile: number;
+  other: number; // kept for backward compatibility (should be 0 in STRICT mode)
+  total: number;
+  payments: number;
+};
+
+const AUTO_REFRESH_MS = 30_000;
 
 function pad2(n: number) {
   return String(n).padStart(2, "0");
 }
 
-/**
- * ✅ FIX: local-safe YYYY-MM-DD (NO toISOString() / NO UTC shift)
- */
+// local-safe YYYY-MM-DD (NO UTC shift)
 function toIsoDateLocal(d: Date) {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
@@ -112,17 +117,8 @@ function endOfLocalDay(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
 }
 
-/**
- * ✅ FIX: stable inclusive ranges
- * - today: [00:00:00.000 → 23:59:59.999]
- * - 7d: last 7 days including today (from = today-6)
- * - 30d: last 30 days including today (from = today-29)
- *
- * We still pass ISO (UTC instant), but based on LOCAL boundaries.
- */
 function rangeToFromTo(k: RangeKey) {
   const now = new Date();
-
   const to = endOfLocalDay(now);
   const from = startOfLocalDay(now);
 
@@ -137,10 +133,6 @@ function rangeToFromTo(k: RangeKey) {
   return { from: from.toISOString(), to: to.toISOString() };
 }
 
-/**
- * ✅ FIX: date ranges for date-based RPCs (expenses/stock-in)
- * Uses local YYYY-MM-DD and same inclusive logic as above.
- */
 function rangeToDates(k: RangeKey) {
   const now = new Date();
   const to = new Date(now);
@@ -155,6 +147,41 @@ function rangeToDates(k: RangeKey) {
   }
 
   return { from: toIsoDateLocal(from), to: toIsoDateLocal(to) };
+}
+
+/**
+ * ✅ PROFIT date range helper (END-EXCLUSIVE)
+ * Many profit RPCs validate p_to > p_from.
+ * If we send today->today, DB returns "Invalid range".
+ * Fix: keep UI dates intact, but for PROFIT only send to = tomorrow (exclusive end).
+ */
+function rangeToProfitDatesExclusive(k: RangeKey) {
+  const now = new Date();
+  const from = new Date(now);
+  const toExclusive = new Date(now);
+
+  if (k === "today") {
+    // from stays today
+  } else if (k === "7d") {
+    from.setDate(from.getDate() - 6);
+  } else {
+    from.setDate(from.getDate() - 29);
+  }
+
+  // end-exclusive => tomorrow
+  toExclusive.setDate(toExclusive.getDate() + 1);
+
+  const fromYMD = toIsoDateLocal(from);
+  const toYMD = toIsoDateLocal(toExclusive);
+
+  // extra safety: ensure to > from
+  if (toYMD <= fromYMD) {
+    const bump = new Date(from);
+    bump.setDate(bump.getDate() + 1);
+    return { from: fromYMD, to: toIsoDateLocal(bump) };
+  }
+
+  return { from: fromYMD, to: toYMD };
 }
 
 function toNum(x: any) {
@@ -228,29 +255,6 @@ function normalizeDash(raw: any, fallbackFrom: string, fallbackTo: string, store
   };
 }
 
-function normalizeFin(raw: any, orgId: string, storeId: string | null, dateFrom: string, dateTo: string): FinRow {
-  return {
-    org_id: String(raw?.org_id ?? raw?.p_org_id ?? orgId ?? "").trim(),
-    store_id: (raw?.store_id ?? raw?.p_store_id ?? storeId ?? null)
-      ? String(raw?.store_id ?? raw?.p_store_id ?? storeId)
-      : null,
-    date_from: String(raw?.date_from ?? raw?.p_date_from ?? dateFrom ?? "").trim(),
-    date_to: String(raw?.date_to ?? raw?.p_date_to ?? dateTo ?? "").trim(),
-    stock_on_hand_value: toNum(
-      raw?.stock_on_hand_value ??
-        raw?.on_hand_value ??
-        raw?.onhand_value ??
-        raw?.on_hand ??
-        raw?.stock_value ??
-        raw?.value ??
-        0
-    ),
-    stock_in_value: toNum(
-      raw?.stock_in_value ?? raw?.stock_in ?? raw?.in_value ?? raw?.received_value ?? raw?.value ?? 0
-    ),
-  };
-}
-
 function extractScalarValue(x: any): number {
   if (x == null) return 0;
   if (typeof x === "number" || typeof x === "string") return toNum(x);
@@ -284,9 +288,7 @@ function extractScalarValue(x: any): number {
   return 0;
 }
 
-/**
- * ✅ FIX: numbers should NOT be ellipsized; autoshrink instead.
- */
+// numbers should NOT be ellipsized; autoshrink instead.
 function MiniStat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <View style={{ flex: 1, gap: 4, minWidth: 0 }}>
@@ -356,6 +358,7 @@ function useAutoRefresh(cb: () => void, enabled: boolean, ms: number) {
 
 /** ---------- ✅ Finance Card (SALES / EXPENSES / PROFIT) ---------- */
 function CompactFinanceCard() {
+  const router = useRouter();
   const org = useOrg();
 
   const orgId = String(org.activeOrgId ?? "").trim();
@@ -371,6 +374,19 @@ function CompactFinanceCard() {
   // katiba: admin can ALL stores, but never profit
   const canAll = isOwner || isAdmin;
 
+  // ✅ org-level currency prefs
+  const money = useOrgMoneyPrefs(orgId);
+
+  // ✅ FIX-CURRENCY-A: refresh prefs on focus so Home reflects latest currency immediately
+  useFocusEffect(
+    useCallback(() => {
+      void money.refresh();
+    }, [money])
+  );
+
+  const displayCurrency = money.currency || "TZS";
+  const displayLocale = money.locale || "en-TZ";
+
   type Mode = "SALES" | "EXPENSES" | "PROFIT";
 
   const [mode, setMode] = useState<Mode>("SALES");
@@ -384,7 +400,29 @@ function CompactFinanceCard() {
   const [expRow, setExpRow] = useState<ExpenseSummary>({ total: 0, count: 0 });
   const [profitRow, setProfitRow] = useState<ProfitSummary>({ net: 0, sales: null, expenses: null });
 
-  const reqIdRef = useRef(0); // ✅ latest-wins (no overlap bug)
+  // payment breakdown:
+  // - CASH/BANK/MOBILE = paid money from sales in date range
+  // - CREDIT = outstanding balance in date range (NOT money-in)
+  const [pay, setPay] = useState<PayBreakdown>({
+    cash: 0,
+    bank: 0,
+    mobile: 0,
+    credit: 0,
+    other: 0,
+    orders: 0,
+  });
+
+  // credit collections (payments received)
+  const [collections, setCollections] = useState<CollectionBreakdown>({
+    cash: 0,
+    bank: 0,
+    mobile: 0,
+    other: 0,
+    total: 0,
+    payments: 0,
+  });
+
+  const reqIdRef = useRef(0);
 
   useEffect(() => {
     if (!canAll) setScope("STORE");
@@ -394,7 +432,6 @@ function CompactFinanceCard() {
     if (scope === "STORE" && !storeId && canAll) setScope("ALL");
   }, [scope, storeId, canAll]);
 
-  // ✅ HARD RULE: profit view is owner-only (and we will not call profit RPC for non-owner)
   useEffect(() => {
     if (mode === "PROFIT" && !isOwner) {
       setMode("SALES");
@@ -409,33 +446,14 @@ function CompactFinanceCard() {
     return Array.from(new Set(ids));
   }, [org.stores, orgId]);
 
-  // ✅ SALES: use real RPC get_sales(...) and aggregate total+orders in app
   const callSalesForStore = useCallback(async (sid: string, fromISO: string, toISO: string): Promise<SalesSummary> => {
-    const { data, error } = await supabase.rpc(
-      "get_sales",
-      {
-        p_store_id: sid,
-        p_from: fromISO,
-        p_to: toISO,
-      } as any
-    );
-
+    const { data, error } = await supabase.rpc("get_sales", { p_store_id: sid, p_from: fromISO, p_to: toISO } as any);
     if (error) throw error;
 
     const rows = (Array.isArray(data) ? data : []) as any[];
 
     const pickAmount = (r: any) => {
-      const candidates = [
-        r?.total,
-        r?.total_amount,
-        r?.amount,
-        r?.grand_total,
-        r?.paid_amount,
-        r?.revenue,
-        r?.sales_total,
-        r?.order_total,
-        r?.subtotal,
-      ];
+      const candidates = [r?.total_amount, r?.total, r?.amount, r?.grand_total, r?.paid_amount, r?.revenue];
       for (const c of candidates) {
         const n = Number(c);
         if (Number.isFinite(n)) return n;
@@ -455,62 +473,118 @@ function CompactFinanceCard() {
     return { total, orders, currency };
   }, []);
 
-  // ✅ EXPENSES: real RPC get_expense_summary(store_id, from date, to date)
+  const callPaymentBreakdown = useCallback(
+    async (fromISO: string, toISO: string, sidOrNull: string | null): Promise<PayBreakdown> => {
+      if (!orgId) return { cash: 0, bank: 0, mobile: 0, credit: 0, other: 0, orders: 0 };
+
+      const { data, error } = await supabase.rpc(
+        "get_sales_channel_summary_v3",
+        { p_org_id: orgId, p_from: fromISO, p_to: toISO, p_store_id: sidOrNull } as any
+      );
+      if (error) throw error;
+
+      const rows = (Array.isArray(data) ? data : []) as any[];
+      const out: PayBreakdown = { cash: 0, bank: 0, mobile: 0, credit: 0, other: 0, orders: 0 };
+
+      for (const r of rows) {
+        const ch = String(r?.channel ?? r?.payment_method ?? "").trim().toUpperCase();
+        const rev = toNum(r?.revenue ?? r?.total ?? 0);
+        const ord = toInt(r?.orders ?? 0);
+
+        out.orders += ord;
+
+        if (ch === "CASH") out.cash += rev;
+        else if (ch === "BANK") out.bank += rev;
+        else if (ch === "MOBILE") out.mobile += rev;
+        else if (ch === "CREDIT") out.credit += rev; // outstanding
+        else out.other += rev; // should remain 0 in STRICT mode
+      }
+
+      return out;
+    },
+    [orgId]
+  );
+
+  // ✅ Credit Collections summary (money received)
+  const callCreditCollections = useCallback(
+    async (fromISO: string, toISO: string, sidOrNull: string | null): Promise<CollectionBreakdown> => {
+      if (!orgId) return { cash: 0, bank: 0, mobile: 0, other: 0, total: 0, payments: 0 };
+
+      const fnCandidates = [
+        "get_credit_collections_summary_v2",
+        "get_credit_collections_channel_summary_v2",
+        "get_credit_collections_channel_summary_v1",
+        "get_credit_collections_channel_summary",
+        "get_credit_payments_channel_summary_v1",
+        "get_credit_payments_channel_summary",
+      ];
+
+      let lastErr: any = null;
+
+      for (const fn of fnCandidates) {
+        const { data, error } = await supabase.rpc(
+          fn,
+          { p_org_id: orgId, p_from: fromISO, p_to: toISO, p_store_id: sidOrNull } as any
+        );
+
+        if (error) {
+          lastErr = error;
+          continue;
+        }
+
+        const rows = (Array.isArray(data) ? data : []) as any[];
+        const out: CollectionBreakdown = { cash: 0, bank: 0, mobile: 0, other: 0, total: 0, payments: 0 };
+
+        for (const r of rows) {
+          const ch = String(r?.channel ?? r?.payment_method ?? r?.method ?? "").trim().toUpperCase();
+          const amt = toNum(r?.amount ?? r?.revenue ?? r?.total ?? 0);
+          const cnt = toInt(r?.payments ?? r?.count ?? 0);
+
+          out.payments += cnt;
+
+          if (ch === "CASH") out.cash += amt;
+          else if (ch === "BANK") out.bank += amt;
+          else if (ch === "MOBILE") out.mobile += amt;
+          else out.other += amt; // should remain 0 in STRICT mode
+        }
+
+        // STRICT total (ignore other if any)
+        out.total = out.cash + out.bank + out.mobile;
+        return out;
+      }
+
+      const _ = lastErr;
+      return { cash: 0, bank: 0, mobile: 0, other: 0, total: 0, payments: 0 };
+    },
+    [orgId]
+  );
+
   const callExpenseForStore = useCallback(async (sid: string, dateFrom: string, dateTo: string): Promise<ExpenseSummary> => {
     const { data, error } = await supabase.rpc(
       "get_expense_summary",
-      {
-        p_store_id: sid,
-        p_from: dateFrom,
-        p_to: dateTo,
-      } as any
+      { p_store_id: sid, p_from: dateFrom, p_to: dateTo } as any
     );
-
     if (error) throw error;
     const row = (Array.isArray(data) ? data[0] : data) as any;
 
-    return {
-      total: toNum(row?.total ?? row?.amount ?? row?.sum ?? 0),
-      count: toInt(row?.count ?? row?.items ?? 0),
-    };
+    return { total: toNum(row?.total ?? row?.amount ?? row?.sum ?? 0), count: toInt(row?.count ?? row?.items ?? 0) };
   }, []);
 
-  /**
-   * ✅ PROFIT (Owner-only) — MUST MATCH Profit Screen
-   * Use: get_store_net_profit_v2
-   * Returns: sales_total, cogs_total, expenses_total, net_profit
-   *
-   * This fixes the "rakimbili" mismatch (Home vs Profit Screen).
-   */
   const callProfitForStoreOwnerOnly = useCallback(
-    async (sid: string, fromISO: string, toISO: string): Promise<ProfitSummary> => {
-      if (!isOwner) {
-        // never call profit RPC
-        return { net: 0, sales: null, expenses: null };
-      }
+    async (sid: string, fromYMD: string, toYMD: string): Promise<ProfitSummary> => {
+      if (!isOwner) return { net: 0, sales: null, expenses: null };
 
       const { data, error } = await supabase.rpc(
         "get_store_net_profit_v2",
-        {
-          p_store_id: sid,
-          p_from: fromISO,
-          p_to: toISO,
-        } as any
+        { p_store_id: sid, p_from: fromYMD, p_to: toYMD } as any
       );
-
       if (error) throw error;
 
       const row = (Array.isArray(data) ? data[0] : data) as any;
-
       const net = toNum(row?.net_profit ?? row?.net ?? 0);
 
       const sales =
-        row?.sales_total != null
-          ? toNum(row?.sales_total)
-          : row?.revenue != null
-          ? toNum(row?.revenue)
-          : null;
-
+        row?.sales_total != null ? toNum(row?.sales_total) : row?.revenue != null ? toNum(row?.revenue) : null;
       const expenses =
         row?.expenses_total != null
           ? toNum(row?.expenses_total)
@@ -546,8 +620,9 @@ function CompactFinanceCard() {
     setErr(null);
 
     try {
-      const { from, to } = rangeToFromTo(range);
-      const dates = rangeToDates(range);
+      const { from, to } = rangeToFromTo(range); // ISO for SALES + channel summaries
+      const dates = rangeToDates(range); // YYYY-MM-DD for EXPENSES + UI/history
+      const profitDates = rangeToProfitDatesExclusive(range); // ✅ PROFIT only (end-exclusive)
 
       const targets =
         scope === "STORE"
@@ -570,8 +645,15 @@ function CompactFinanceCard() {
         const sumOrders = rows.reduce((a, r) => a + toInt(r.orders), 0);
         const currency = rows[0]?.currency ?? "TZS";
 
+        const sidOrNull = scope === "STORE" ? storeId : null;
+
+        const pb = await callPaymentBreakdown(from, to, sidOrNull);
+        const cc = await callCreditCollections(from, to, sidOrNull);
+
         if (rid !== reqIdRef.current) return;
         setSalesRow({ total: sumTotal, orders: sumOrders, currency });
+        setPay(pb);
+        setCollections(cc);
         return;
       }
 
@@ -585,8 +667,9 @@ function CompactFinanceCard() {
         return;
       }
 
-      // ✅ PROFIT (owner-only, TRUE net via get_store_net_profit_v2)
-      const rows = await Promise.all(targets.map((sid) => callProfitForStoreOwnerOnly(sid, from, to)));
+      const rows = await Promise.all(
+        targets.map((sid) => callProfitForStoreOwnerOnly(sid, profitDates.from, profitDates.to))
+      );
       const sumNet = rows.reduce((a, r) => a + toNum(r.net), 0);
 
       const sumSalesRaw = rows.reduce((a, r) => a + (r.sales == null ? 0 : toNum(r.sales)), 0);
@@ -614,6 +697,8 @@ function CompactFinanceCard() {
     callSalesForStore,
     callExpenseForStore,
     callProfitForStoreOwnerOnly,
+    callPaymentBreakdown,
+    callCreditCollections,
   ]);
 
   useEffect(() => {
@@ -629,6 +714,14 @@ function CompactFinanceCard() {
     !!orgId,
     AUTO_REFRESH_MS
   );
+
+  const openHistory = useCallback(() => {
+    const dates = rangeToDates(range);
+    router.push({
+      pathname: "/finance/history",
+      params: { mode, scope, range, from: dates.from, to: dates.to } as any,
+    } as any);
+  }, [router, mode, scope, range]);
 
   const Pill = ({ k, label }: { k: RangeKey; label: string }) => {
     const active = range === k;
@@ -727,26 +820,83 @@ function CompactFinanceCard() {
   const subtitle = scope === "STORE" ? `Store: ${storeName}` : `Org: ${orgName} (ALL)`;
 
   const body = useMemo(() => {
+    const fmt = (n: number) => formatMoney(n, { currency: displayCurrency, locale: displayLocale }).replace(/\s+/g, " ");
+
     if (mode === "SALES") {
-      const total = fmtMoney(salesRow.total, salesRow.currency ?? "TZS").replace(/\s+/g, " ");
+      const totalSales = fmt(salesRow.total);
       const orders = String(salesRow.orders ?? 0);
-      const avg =
-        salesRow.orders > 0
-          ? fmtMoney(salesRow.total / Math.max(1, salesRow.orders), salesRow.currency ?? "TZS")
-          : "—";
+      const avg = salesRow.orders > 0 ? fmt(salesRow.total / Math.max(1, salesRow.orders)) : "—";
+
+      const paidCash = fmt(pay.cash);
+      const paidBank = fmt(pay.bank);
+      const paidMobile = fmt(pay.mobile);
+      const creditBal = fmt(pay.credit);
+
+      // ✅ Paid Total (money-in from sales)
+      const paidTotalNum = pay.cash + pay.bank + pay.mobile; // ignore other in strict mode
+
+      // ✅ TOTAL MONEY IN (money received) = paid sales + credit collections received
+      const totalMoneyInNum = paidTotalNum + toNum(collections.total);
+      const totalMoneyIn = fmt(totalMoneyInNum);
+
+      // Collections (money received)
+      const colCash = fmt(collections.cash);
+      const colBank = fmt(collections.bank);
+      const colMobile = fmt(collections.mobile);
+      const colTotal = fmt(collections.total);
+      const colCountHint = collections.payments > 0 ? `${collections.payments} payments` : "0 payments";
+
       return (
-        <View style={{ flexDirection: "row", gap: 12, paddingTop: 2 }}>
-          <MiniStat label="Sales" value={total} />
-          <MiniStat label="Orders" value={orders} />
-          <MiniStat label="Avg/Order" value={avg.toString().replace(/\s+/g, " ")} />
+        <View style={{ gap: 10, paddingTop: 2 }}>
+          <View style={{ flexDirection: "row", gap: 12 }}>
+            <MiniStat label="Sales" value={totalSales} />
+            <MiniStat label="Orders" value={orders} />
+            <MiniStat label="Avg/Order" value={avg.toString().replace(/\s+/g, " ")} />
+          </View>
+
+          <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
+
+          <Text style={{ color: UI.faint, fontWeight: "900", fontSize: 12, letterSpacing: 0.3 }}>
+            PAYMENT BREAKDOWN (PAID + CREDIT BALANCE)
+          </Text>
+
+          <View style={{ flexDirection: "row", gap: 12 }}>
+            <MiniStat label="Cash" value={paidCash} />
+            <MiniStat label="Mobile" value={paidMobile} />
+            <MiniStat label="TOTAL MONEY IN" value={totalMoneyIn} hint="money received" />
+          </View>
+
+          <View style={{ flexDirection: "row", gap: 12 }}>
+            <MiniStat label="Bank" value={paidBank} />
+            <MiniStat label="Credit (Balance)" value={creditBal} hint="not money-in" />
+            <View style={{ flex: 1 }} />
+          </View>
+
+          <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
+
+          <Text style={{ color: UI.faint, fontWeight: "900", fontSize: 12, letterSpacing: 0.3 }}>
+            CREDIT COLLECTIONS (PAYMENTS RECEIVED)
+          </Text>
+
+          <View style={{ flexDirection: "row", gap: 12 }}>
+            <MiniStat label="Cash" value={colCash} />
+            <MiniStat label="Mobile" value={colMobile} />
+            <MiniStat label="Total" value={colTotal} hint={colCountHint} />
+          </View>
+
+          <View style={{ flexDirection: "row", gap: 12 }}>
+            <MiniStat label="Bank" value={colBank} />
+            <View style={{ flex: 1 }} />
+            <View style={{ flex: 1 }} />
+          </View>
         </View>
       );
     }
 
     if (mode === "EXPENSES") {
-      const total = fmtMoney(expRow.total, "TZS").replace(/\s+/g, " ");
+      const total = fmt(expRow.total);
       const count = String(expRow.count ?? 0);
-      const avg = expRow.count > 0 ? fmtMoney(expRow.total / Math.max(1, expRow.count), "TZS") : "—";
+      const avg = expRow.count > 0 ? fmt(expRow.total / Math.max(1, expRow.count)) : "—";
       return (
         <View style={{ flexDirection: "row", gap: 12, paddingTop: 2 }}>
           <MiniStat label="Expenses" value={total} />
@@ -756,10 +906,10 @@ function CompactFinanceCard() {
       );
     }
 
-    // ✅ PROFIT (owner-only, TRUE profit) — now matches Profit screen
-    const net = fmtMoney(profitRow.net, "TZS").replace(/\s+/g, " ");
-    const sales = profitRow.sales == null ? "—" : fmtMoney(profitRow.sales, "TZS").replace(/\s+/g, " ");
-    const exp = profitRow.expenses == null ? "—" : fmtMoney(profitRow.expenses, "TZS").replace(/\s+/g, " ");
+    const net = fmt(profitRow.net);
+    const sales = profitRow.sales == null ? "—" : fmt(profitRow.sales);
+    const exp = profitRow.expenses == null ? "—" : fmt(profitRow.expenses);
+
     return (
       <View style={{ flexDirection: "row", gap: 12, paddingTop: 2 }}>
         <MiniStat label="Profit" value={net} hint="owner-only" />
@@ -767,7 +917,7 @@ function CompactFinanceCard() {
         <MiniStat label="Expenses" value={exp} />
       </View>
     );
-  }, [mode, salesRow, expRow, profitRow]);
+  }, [mode, salesRow, expRow, profitRow, pay, collections, displayCurrency, displayLocale]);
 
   return (
     <View style={{ paddingTop: 12 }}>
@@ -838,14 +988,28 @@ function CompactFinanceCard() {
 
         <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)", marginTop: 4 }} />
 
-        {/* ✅ silent footer: no "Auto refresh" text */}
-        <View style={{ flexDirection: "row", alignItems: "center" }}>
+        {/* ✅ CTA -> Finance Search */}
+        <Pressable
+          onPress={() => {
+            const dates = rangeToDates(range);
+            router.push({
+              pathname: "/finance/history",
+              params: { mode, scope, range, from: dates.from, to: dates.to } as any,
+            } as any);
+          }}
+          hitSlop={10}
+          style={({ pressed }) => ({
+            flexDirection: "row",
+            alignItems: "center",
+            opacity: pressed ? 0.92 : 1,
+          })}
+        >
           <Text style={{ color: UI.muted, fontWeight: "800" }}>
             {scope === "ALL" ? `${storeIdsInOrg.length || 0} stores` : "1 store"}
           </Text>
           <View style={{ flex: 1 }} />
           {loading ? <ActivityIndicator /> : <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 18 }}>›</Text>}
-        </View>
+        </Pressable>
       </Card>
     </View>
   );
@@ -854,6 +1018,20 @@ function CompactFinanceCard() {
 /** ---------- Existing: Club Revenue (silent footer) ---------- */
 function CompactClubRevenueCard({ onOpen }: { onOpen: () => void }) {
   const orgAny = useOrg() as any;
+
+  const orgId: string = String(
+    orgAny?.activeOrgId ??
+      orgAny?.activeOrganizationId ??
+      orgAny?.organizationId ??
+      orgAny?.orgId ??
+      orgAny?.activeOrg?.id ??
+      orgAny?.activeOrg?.org_id ??
+      ""
+  ).trim();
+
+  const money = useOrgMoneyPrefs(orgId);
+  const displayCurrency = money.currency || "TZS";
+  const displayLocale = money.locale || "en-TZ";
 
   const storeId: string = String(
     orgAny?.activeStoreId ?? orgAny?.activeStore?.id ?? orgAny?.selectedStoreId ?? orgAny?.selectedStore?.id ?? ""
@@ -866,7 +1044,7 @@ function CompactClubRevenueCard({ onOpen }: { onOpen: () => void }) {
   const [err, setErr] = useState<string | null>(null);
   const [row, setRow] = useState<DashRow | null>(null);
 
-  const reqIdRef = useRef(0); // ✅ latest-wins
+  const reqIdRef = useRef(0);
 
   const load = useCallback(async () => {
     const rid = ++reqIdRef.current;
@@ -916,9 +1094,8 @@ function CompactClubRevenueCard({ onOpen }: { onOpen: () => void }) {
     AUTO_REFRESH_MS
   );
 
-  const currency = row?.currency || "TZS";
-  const revenue = fmtMoney(toNum(row?.revenue), currency).replace(/\s+/g, " ");
-  const paid = fmtMoney(toNum(row?.paid_revenue), currency).replace(/\s+/g, " ");
+  const revenue = formatMoney(toNum(row?.revenue), { currency: displayCurrency, locale: displayLocale }).replace(/\s+/g, " ");
+  const paid = formatMoney(toNum(row?.paid_revenue), { currency: displayCurrency, locale: displayLocale }).replace(/\s+/g, " ");
 
   const Pill = ({ k, label }: { k: RangeKey; label: string }) => {
     const active = range === k;
@@ -1009,7 +1186,6 @@ function CompactClubRevenueCard({ onOpen }: { onOpen: () => void }) {
 
           <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)", marginTop: 4 }} />
 
-          {/* ✅ silent footer */}
           <View style={{ flexDirection: "row", alignItems: "center" }}>
             <Text style={{ color: UI.muted, fontWeight: "800" }} numberOfLines={1}>
               {row ? "Live dashboard" : "—"}
@@ -1025,6 +1201,7 @@ function CompactClubRevenueCard({ onOpen }: { onOpen: () => void }) {
 
 /** ---------- Existing: Stock Value (silent footer) ---------- */
 function CompactStockValueCard() {
+  const router = useRouter();
   const orgAny = useOrg() as any;
 
   const orgId: string = String(
@@ -1036,6 +1213,10 @@ function CompactStockValueCard() {
       orgAny?.activeOrg?.org_id ??
       ""
   ).trim();
+
+  const money = useOrgMoneyPrefs(orgId);
+  const displayCurrency = money.currency || "TZS";
+  const displayLocale = money.locale || "en-TZ";
 
   const orgName: string = String(orgAny?.activeOrgName ?? orgAny?.activeOrg?.name ?? "Org").trim() || "Org";
 
@@ -1061,7 +1242,7 @@ function CompactStockValueCard() {
     return storeId ? "STORE" : "ALL";
   });
 
-  const reqIdRef = useRef(0); // ✅ latest-wins
+  const reqIdRef = useRef(0);
 
   useEffect(() => {
     if (!canAll) setScope("STORE");
@@ -1075,7 +1256,7 @@ function CompactStockValueCard() {
 
   const extractStoreIds = useCallback((): string[] => {
     const candidates: any[] = [
-      orgAny?.stores, // ✅ OrgContext canonical
+      orgAny?.stores,
       orgAny?.myStores,
       orgAny?.activeStores,
       orgAny?.storesInOrg,
@@ -1171,7 +1352,14 @@ function CompactStockValueCard() {
 
         const r = await loadForStore(storeId, from, to);
         if (rid !== reqIdRef.current) return;
-        setRow(normalizeFin(r, orgId, storeId, from, to));
+        setRow({
+          org_id: orgId,
+          store_id: storeId,
+          date_from: from,
+          date_to: to,
+          stock_on_hand_value: toNum(r.stock_on_hand_value),
+          stock_in_value: toNum(r.stock_in_value),
+        });
         return;
       }
 
@@ -1181,7 +1369,14 @@ function CompactStockValueCard() {
         if (storeId) {
           const r = await loadForStore(storeId, from, to);
           if (rid !== reqIdRef.current) return;
-          setRow(normalizeFin({ ...r, store_id: null }, orgId, null, from, to));
+          setRow({
+            org_id: orgId,
+            store_id: null,
+            date_from: from,
+            date_to: to,
+            stock_on_hand_value: toNum(r.stock_on_hand_value),
+            stock_in_value: toNum(r.stock_in_value),
+          });
           return;
         }
         if (rid !== reqIdRef.current) return;
@@ -1195,17 +1390,15 @@ function CompactStockValueCard() {
       const sumOn = results.reduce((acc, r) => acc + toNum(r.stock_on_hand_value), 0);
       const sumIn = results.reduce((acc, r) => acc + toNum(r.stock_in_value), 0);
 
-      const agg: FinRow = {
+      if (rid !== reqIdRef.current) return;
+      setRow({
         org_id: orgId,
         store_id: null,
         date_from: from,
         date_to: to,
         stock_on_hand_value: sumOn,
         stock_in_value: sumIn,
-      };
-
-      if (rid !== reqIdRef.current) return;
-      setRow(normalizeFin(agg, orgId, null, from, to));
+      });
     } catch (e: any) {
       if (rid !== reqIdRef.current) return;
       setErr(e?.message ?? "Failed to load stock values");
@@ -1228,6 +1421,10 @@ function CompactStockValueCard() {
     !!orgId,
     AUTO_REFRESH_MS
   );
+
+  const openHistory = useCallback(() => {
+    router.push("/stocks/history");
+  }, [router]);
 
   const Pill = ({ k, label }: { k: RangeKey; label: string }) => {
     const active = range === k;
@@ -1254,7 +1451,7 @@ function CompactStockValueCard() {
 
   const ScopeChip = ({ k, label }: { k: "STORE" | "ALL"; label: string }) => {
     const active = scope === k;
-    const disabled = isStaff && k === "ALL"; // ✅ extra safety
+    const disabled = isStaff && k === "ALL";
     return (
       <Pressable
         onPress={() => {
@@ -1279,15 +1476,15 @@ function CompactStockValueCard() {
     );
   };
 
-  const onHand = fmtMoney(toNum(row?.stock_on_hand_value), "TZS").replace(/\s+/g, " ");
-  const stockIn = fmtMoney(toNum(row?.stock_in_value), "TZS").replace(/\s+/g, " ");
+  const onHand = formatMoney(toNum(row?.stock_on_hand_value), { currency: displayCurrency, locale: displayLocale }).replace(/\s+/g, " ");
+  const stockIn = formatMoney(toNum(row?.stock_in_value), { currency: displayCurrency, locale: displayLocale }).replace(/\s+/g, " ");
 
   const subtitle = isStaff
     ? `Store: ${storeName}`
     : scope === "STORE"
     ? storeId
       ? `Store: ${storeName}`
-      : `Select store`
+      : "Select store"
     : `Org: ${orgName} (ALL)`;
 
   return (
@@ -1354,14 +1551,25 @@ function CompactStockValueCard() {
 
         <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)", marginTop: 4 }} />
 
-        {/* ✅ silent footer */}
-        <View style={{ flexDirection: "row", alignItems: "center" }}>
+        <Pressable
+          onPress={openHistory}
+          hitSlop={10}
+          style={({ pressed }) => ({
+            flexDirection: "row",
+            alignItems: "center",
+            opacity: pressed ? 0.92 : 1,
+          })}
+        >
           <Text style={{ color: UI.muted, fontWeight: "800" }}>
             {row ? `Range: ${row.date_from} → ${row.date_to}` : "—"}
           </Text>
           <View style={{ flex: 1 }} />
-          {loading ? <ActivityIndicator /> : <Text style={{ color: UI.faint, fontWeight: "900" }}>{STOCK_IN_VERSION_BADGE}</Text>}
-        </View>
+          {loading ? (
+            <ActivityIndicator />
+          ) : (
+            <Text style={{ color: UI.faint, fontWeight: "900" }}>{STOCK_IN_VERSION_BADGE}</Text>
+          )}
+        </Pressable>
       </Card>
     </View>
   );
@@ -1389,11 +1597,7 @@ function ZetraAiCard({ onOpen }: { onOpen: () => void }) {
 
   useEffect(() => {
     fade.setValue(0);
-    Animated.timing(fade, {
-      toValue: 1,
-      duration: 260,
-      useNativeDriver: true,
-    }).start();
+    Animated.timing(fade, { toValue: 1, duration: 260, useNativeDriver: true }).start();
   }, [i, fade]);
 
   const preview = tips[i];

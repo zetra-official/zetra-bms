@@ -1,7 +1,9 @@
-﻿import { supabase } from "@/src/supabase/supabaseClient";
+﻿// app/(tabs)/club/orders/create/index.tsx
+import { supabase } from "@/src/supabase/supabaseClient";
 import { Card } from "@/src/ui/Card";
 import { Screen } from "@/src/ui/Screen";
 import { theme } from "@/src/ui/theme";
+import { formatMoney } from "@/src/ui/money";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -46,18 +48,6 @@ function asMoney(x: string) {
   return Math.max(0, n);
 }
 
-function fmtMoney(n: number, currency = "TZS") {
-  try {
-    return new Intl.NumberFormat("en-TZ", {
-      style: "currency",
-      currency: currency || "TZS",
-      maximumFractionDigits: 0,
-    }).format(n);
-  } catch {
-    return `${currency || "TZS"} ${Math.round(n)}`;
-  }
-}
-
 export default function CreateClubOrderScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -96,6 +86,11 @@ export default function CreateClubOrderScreen() {
   const [items, setItems] = useState<DraftItem[]>([
     { key: "1", product_name: "", unit_price: "", qty: "1", product_id: null },
   ]);
+
+  const fmt = useCallback(
+    (amount: number) => formatMoney(amount, { currency: upper(currency) || "TZS" }),
+    [currency]
+  );
 
   // ✅ Load order preview from post (auto product + price)
   const loadPreview = useCallback(async () => {
@@ -533,7 +528,7 @@ export default function CreateClubOrderScreen() {
 
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: theme.colors.faint, fontWeight: "900", marginBottom: 6 }}>
-                      Price ({upper(currency) || "TZS"})
+                      Price
                     </Text>
                     <TextInput
                       value={it.unit_price}
@@ -558,7 +553,7 @@ export default function CreateClubOrderScreen() {
                 </View>
 
                 <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                  Line total: {fmtMoney(asMoney(it.unit_price) * asQty(it.qty), upper(currency) || "TZS")}
+                  Line total: {fmt(asMoney(it.unit_price) * asQty(it.qty))}
                 </Text>
 
                 {lockItem ? (
@@ -623,9 +618,7 @@ export default function CreateClubOrderScreen() {
               </View>
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                 <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Subtotal</Text>
-                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                  {fmtMoney(subtotal, upper(currency) || "TZS")}
-                </Text>
+                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{fmt(subtotal)}</Text>
               </View>
             </View>
           </Card>

@@ -52,7 +52,13 @@
           }
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow ZETRA BMS to access your camera to scan barcodes."
+        }
+      ]
     ],
 
     "experiments": {

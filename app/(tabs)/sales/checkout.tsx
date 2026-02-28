@@ -2,7 +2,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert, Pressable, Text, TextInput, View } from "react-native";
+import { Alert, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 
 import { useNetInfo } from "@react-native-community/netinfo";
 
@@ -14,6 +14,7 @@ import { Screen } from "../../../src/ui/Screen";
 import { theme } from "../../../src/ui/theme";
 
 import { enqueueSale, makeId } from "../../../src/offline/salesQueue";
+import { formatMoney, useOrgMoneyPrefs } from "@/src/ui/money";
 
 type CartItem = {
   product_id: string;
@@ -34,18 +35,6 @@ function one(v: string | string[] | undefined) {
   return Array.isArray(v) ? v[0] : v;
 }
 
-function fmtTZS(n: number) {
-  try {
-    return new Intl.NumberFormat("en-TZ", {
-      style: "currency",
-      currency: "TZS",
-      maximumFractionDigits: 0,
-    }).format(n);
-  } catch {
-    return `TZS ${Math.round(n).toLocaleString()}`;
-  }
-}
-
 function parseMoney(s: string) {
   const cleaned = String(s ?? "").replace(/[, ]+/g, "").trim();
   if (!cleaned) return NaN;
@@ -54,7 +43,12 @@ function parseMoney(s: string) {
 }
 
 /**
- * ✅ A3 Robust Discount Parser
+ * ✅ Robust Discount Parser
+ * Supports:
+ * - "10%"  => percent
+ * - "5000" => fixed
+ * - "5k"   => 5000
+ * - "1m"   => 1,000,000
  */
 function parseDiscountInput(input: string, total: number): DiscountResult {
   const t = String(input ?? "").toLowerCase().trim();
@@ -119,7 +113,8 @@ function MethodChip({
   return (
     <Pressable
       onPress={onPress}
-      style={{
+      hitSlop={8}
+      style={({ pressed }) => ({
         flex: 1,
         paddingVertical: 10,
         borderRadius: theme.radius.pill,
@@ -128,7 +123,8 @@ function MethodChip({
         backgroundColor: active ? "rgba(52,211,153,0.12)" : "rgba(255,255,255,0.06)",
         alignItems: "center",
         justifyContent: "center",
-      }}
+        opacity: pressed ? 0.92 : 1,
+      })}
     >
       <Text style={{ color: active ? theme.colors.emerald : theme.colors.text, fontWeight: "900" }}>
         {label}
@@ -145,6 +141,45 @@ function normalizeMoneyInput(raw: string) {
   return stripped;
 }
 
+// ✅ strict guard (future proof)
+function isStrictPayMethod(x: any): x is PayMethod {
+  return x === "CASH" || x === "BANK" || x === "MOBILE" || x === "CREDIT";
+}
+
+function FieldLabel({ children }: { children: any }) {
+  return <Text style={{ color: theme.colors.muted, fontWeight: "900", marginBottom: 6 }}>{children}</Text>;
+}
+
+function InputBox(props: {
+  value: string;
+  onChangeText: (v: string) => void;
+  placeholder?: string;
+  keyboardType?: any;
+  multiline?: boolean;
+}) {
+  return (
+    <TextInput
+      value={props.value}
+      onChangeText={props.onChangeText}
+      placeholder={props.placeholder}
+      placeholderTextColor="rgba(255,255,255,0.35)"
+      keyboardType={props.keyboardType}
+      multiline={props.multiline}
+      style={{
+        color: theme.colors.text,
+        fontWeight: "800",
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+        backgroundColor: "rgba(255,255,255,0.06)",
+        borderRadius: 16,
+        paddingHorizontal: 12,
+        paddingVertical: props.multiline ? 12 : 10,
+        minHeight: props.multiline ? 90 : undefined,
+      }}
+    />
+  );
+}
+
 export default function CheckoutScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{
@@ -158,7 +193,19 @@ export default function CheckoutScreen() {
   const isOffline = !isOnline;
 
   const orgCtx: any = useOrg();
-  const { activeStoreId, activeStoreName, activeRole } = orgCtx;
+  const { activeOrgId, activeStoreId, activeStoreName, activeRole } = orgCtx;
+
+  // ✅ org-level currency prefs (display only)
+  const orgId = String(activeOrgId ?? "").trim();
+  const money = useOrgMoneyPrefs(orgId);
+  const displayCurrency = money.currency || "TZS";
+  const displayLocale = money.locale || "en-TZ";
+
+  const fmt = useCallback(
+    (n: number) =>
+      formatMoney(n, { currency: displayCurrency, locale: displayLocale }).replace(/\s+/g, " "),
+    [displayCurrency, displayLocale]
+  );
 
   const storeId = (one(params.storeId) ?? "").trim();
   const storeNameParam = (one(params.storeName) ?? "").trim();
@@ -176,10 +223,7 @@ export default function CheckoutScreen() {
           const qty = Math.trunc(Number(x.qty ?? 0));
           const unit_price = Number(x.unit_price ?? 0);
           const line_total =
-            Number.isFinite(unit_price) &&
-            unit_price > 0 &&
-            Number.isFinite(qty) &&
-            qty > 0
+            Number.isFinite(unit_price) && unit_price > 0 && Number.isFinite(qty) && qty > 0
               ? unit_price * qty
               : Number(x.line_total ?? 0);
 
@@ -206,20 +250,15 @@ export default function CheckoutScreen() {
 
   const totalQty = useMemo(() => cart.reduce((a, c) => a + (c.qty || 0), 0), [cart]);
 
-  const subtotalAmount = useMemo(
-    () => cart.reduce((a, c) => a + Number(c.line_total || 0), 0),
-    [cart]
-  );
+  const subtotalAmount = useMemo(() => cart.reduce((a, c) => a + Number(c.line_total || 0), 0), [cart]);
 
   const [discountText, setDiscountText] = useState<string>("");
-  const discount = useMemo(
-    () => parseDiscountInput(discountText, subtotalAmount),
-    [discountText, subtotalAmount]
-  );
+  const discount = useMemo(() => parseDiscountInput(discountText, subtotalAmount), [discountText, subtotalAmount]);
 
-  const grandTotal = useMemo(() => {
-    return Math.max(0, subtotalAmount - (discount.amount || 0));
-  }, [subtotalAmount, discount.amount]);
+  const grandTotal = useMemo(
+    () => Math.max(0, subtotalAmount - (discount.amount || 0)),
+    [subtotalAmount, discount.amount]
+  );
 
   const headerStoreName = storeNameParam || activeStoreName || "—";
 
@@ -227,9 +266,11 @@ export default function CheckoutScreen() {
   const mismatch = !!(activeStoreId && storeId && activeStoreId !== storeId);
 
   const [method, setMethod] = useState<PayMethod>("CASH");
-  const [paidStr, setPaidStr] = useState<string>(() =>
-    String(Math.round(grandTotal || subtotalAmount))
-  );
+
+  // ✅ for CREDIT partial payments, select where paid goes
+  const [paidVia, setPaidVia] = useState<Exclude<PayMethod, "CREDIT">>("CASH");
+
+  const [paidStr, setPaidStr] = useState<string>(() => String(Math.round(grandTotal || subtotalAmount)));
   const [channel, setChannel] = useState<string>("");
   const [reference, setReference] = useState<string>("");
 
@@ -245,15 +286,21 @@ export default function CheckoutScreen() {
 
   const onSetMethod = useCallback(
     (m: PayMethod) => {
+      if (!isStrictPayMethod(m)) return;
       setMethod(m);
 
       if (m === "CREDIT") {
         setPaidStr("0");
-      } else {
-        setPaidStr(String(Math.round(grandTotal)));
+        setPaidVia("CASH");
+        setChannel("");
+        setReference("");
+        return;
       }
 
-      if (m === "CASH" || m === "CREDIT") {
+      setPaidStr(String(Math.round(grandTotal)));
+      setPaidVia("CASH");
+
+      if (m === "CASH") {
         setChannel("");
         setReference("");
       }
@@ -272,7 +319,33 @@ export default function CheckoutScreen() {
     return Math.max(0, grandTotal - Math.max(0, p));
   }, [paidAmount, grandTotal]);
 
+  // ✅ credit mode if method is CREDIT OR paid < total
   const isCredit = useMemo(() => method === "CREDIT" || balance > 0, [method, balance]);
+
+  // ✅ show Paid Via only when CREDIT selected AND paid > 0
+  const showPaidVia = useMemo(
+    () => method === "CREDIT" && (Number.isFinite(paidAmount) ? paidAmount : 0) > 0,
+    [method, paidAmount]
+  );
+
+  // ✅ actual method sent to DB:
+  const rpcPaymentMethod: PayMethod = useMemo(() => {
+    if (method !== "CREDIT") return method;
+    const p = Number.isFinite(paidAmount) ? paidAmount : 0;
+    if (p > 0) return paidVia;
+    return "CREDIT";
+  }, [method, paidAmount, paidVia]);
+
+  const rpcChannel = useMemo(() => {
+    if (rpcPaymentMethod === "MOBILE") return channel.trim() || "M-PESA";
+    if (rpcPaymentMethod === "BANK") return channel.trim();
+    return "";
+  }, [rpcPaymentMethod, channel]);
+
+  const rpcReference = useMemo(() => {
+    if (rpcPaymentMethod === "MOBILE" || rpcPaymentMethod === "BANK") return reference.trim();
+    return "";
+  }, [rpcPaymentMethod, reference]);
 
   useEffect(() => {
     const gt = Math.round(grandTotal);
@@ -297,25 +370,32 @@ export default function CheckoutScreen() {
     if (!storeId) return "Missing storeId.";
     if (mismatch) return "Store mismatch: rudi nyuma, chagua store sahihi kisha uende Checkout upya.";
     if (cart.length === 0) return "Cart is empty.";
-    if (cart.some((c) => !Number.isFinite(c.unit_price) || c.unit_price <= 0))
-      return "Some items are missing price.";
+    if (cart.some((c) => !Number.isFinite(c.unit_price) || c.unit_price <= 0)) return "Some items are missing price.";
 
     if (!Number.isFinite(paidAmount)) return "Enter a valid paid amount.";
     if (paidAmount < 0) return "Paid amount cannot be negative.";
     if (paidAmount > grandTotal) return "Paid amount cannot exceed total.";
 
+    // ✅ if NOT credit: must fully pay
     if (!isCredit && Math.round(paidAmount) !== Math.round(grandTotal)) {
       return "Non-credit sale must be fully paid.";
     }
 
-    // ✅ offline mode: we allow missing ref/channel (user can write note)
-    if (!isOffline && method === "MOBILE") {
-      if (!channel.trim()) return "Select mobile channel (e.g. M-PESA).";
-      if (!reference.trim()) return "Enter mobile reference/transaction id.";
+    // ✅ if CREDIT selected AND paid>0, user must choose Paid Via
+    if (showPaidVia) {
+      if (!paidVia) return "Chagua Paid Via (Cash/Mobile/Bank).";
     }
-    if (!isOffline && method === "BANK") {
-      if (!channel.trim()) return "Enter bank name/channel (e.g. NMB/CRDB).";
-      if (!reference.trim()) return "Enter bank reference/slip no.";
+
+    // ✅ online mode validation for MOBILE/BANK of the paid portion
+    if (!isOffline && (rpcPaymentMethod === "MOBILE" || rpcPaymentMethod === "BANK")) {
+      if (!rpcChannel.trim()) {
+        return rpcPaymentMethod === "MOBILE"
+          ? "Select mobile channel (e.g. M-PESA)."
+          : "Enter bank name/channel (e.g. NMB/CRDB).";
+      }
+      if (!rpcReference.trim()) {
+        return "Enter reference/transaction id.";
+      }
     }
 
     if (isCredit && !customerName.trim()) {
@@ -331,14 +411,16 @@ export default function CheckoutScreen() {
     paidAmount,
     grandTotal,
     isCredit,
-    method,
-    channel,
-    reference,
-    customerName,
+    showPaidVia,
+    paidVia,
     isOffline,
+    rpcPaymentMethod,
+    rpcChannel,
+    rpcReference,
+    customerName,
   ]);
 
-  // ✅ Preflight stock check (diagnostic + prevents confusing DB error)
+  // ✅ Preflight stock check
   const preflightCheckStock = useCallback(async () => {
     const productIds = Array.from(new Set(cart.map((c) => c.product_id).filter(Boolean)));
     if (!storeId || productIds.length === 0) return;
@@ -367,13 +449,11 @@ export default function CheckoutScreen() {
         .map((x) => `• ${x.name}: have ${x.have}, need ${x.need}`)
         .join("\n");
 
-      throw new Error(
-        `Stock haitoshi kwa store hii.\n\n${lines}\n\nNenda Inventory → Adjust Stock (ADD) kisha jaribu tena.`
-      );
+      throw new Error(`Stock haitoshi kwa store hii.\n\n${lines}\n\nNenda Inventory → Adjust Stock (ADD) kisha jaribu tena.`);
     }
   }, [cart, storeId]);
 
-  // CREDIT V2 helpers (unchanged)
+  // CREDIT V2 helpers
   const ensureCreditAccountV2 = useCallback(
     async (args: { storeId: string; customerName: string; customerPhone: string | null }) => {
       const payload = {
@@ -399,13 +479,7 @@ export default function CheckoutScreen() {
   );
 
   const recordCreditSaleV2 = useCallback(
-    async (args: {
-      storeId: string;
-      creditAccountId: string;
-      amount: number;
-      note?: string | null;
-      reference?: string | null;
-    }) => {
+    async (args: { storeId: string; creditAccountId: string; amount: number; note?: string | null; reference?: string | null }) => {
       const payload = {
         p_store_id: args.storeId,
         p_credit_account_id: args.creditAccountId,
@@ -428,12 +502,11 @@ export default function CheckoutScreen() {
       return;
     }
 
-    // ✅ OFFLINE BRANCH: queue sale & exit
+    // ✅ OFFLINE BRANCH
     if (isOffline) {
       try {
         const clientSaleId = makeId();
 
-        // ✅ RICH ITEMS for offline receipt (names, sku, unit)
         const items = cart.map((c) => ({
           product_id: c.product_id,
           qty: Math.trunc(Number(c.qty)),
@@ -445,15 +518,15 @@ export default function CheckoutScreen() {
         }));
 
         const p_paid_amount = Number.isFinite(paidAmount) ? Number(paidAmount) : 0;
-        const p_payment_method = method;
-        const p_payment_channel =
-          method === "CASH" || method === "CREDIT" ? null : channel.trim() || null;
-        const p_reference =
-          method === "CASH" || method === "CREDIT" ? null : reference.trim() || null;
 
-        const customerLines = isCredit
-          ? `CUSTOMER: ${customerName.trim()}\nPHONE: ${customerPhone.trim() || "-"}\n`
-          : "";
+        const p_payment_method = rpcPaymentMethod;
+
+        const p_payment_channel =
+          p_payment_method === "MOBILE" || p_payment_method === "BANK" ? (rpcChannel.trim() || null) : null;
+        const p_reference =
+          p_payment_method === "MOBILE" || p_payment_method === "BANK" ? (rpcReference.trim() || null) : null;
+
+        const customerLines = isCredit ? `CUSTOMER: ${customerName.trim()}\nPHONE: ${customerPhone.trim() || "-"}\n` : "";
 
         const finalNote = buildNoteWithDiscount({
           note: `${customerLines}${note || ""}`,
@@ -462,10 +535,8 @@ export default function CheckoutScreen() {
           subtotal: subtotalAmount,
         });
 
-        const rpcDiscountType =
-          discount.type === "percent" ? "PERCENT" : discount.type === "fixed" ? "FIXED" : null;
+        const rpcDiscountType = discount.type === "percent" ? "PERCENT" : discount.type === "fixed" ? "FIXED" : null;
 
-        // For FIXED we send amount; for PERCENT we send percent
         const rpcDiscountValue =
           discount.type === "percent"
             ? Number(discount.value || 0)
@@ -512,7 +583,6 @@ export default function CheckoutScreen() {
       const access = await supabase.rpc("ensure_my_store_access", { p_store_id: storeId });
       if (access.error) throw access.error;
 
-      // ✅ SAFE ITEMS for DB
       const items = cart.map((c) => ({
         product_id: c.product_id,
         qty: Math.trunc(Number(c.qty)),
@@ -520,15 +590,8 @@ export default function CheckoutScreen() {
       }));
 
       const p_paid_amount = Number(paidAmount);
-      const p_payment_method = method;
-      const p_payment_channel =
-        method === "CASH" || method === "CREDIT" ? null : channel.trim() || null;
-      const p_reference =
-        method === "CASH" || method === "CREDIT" ? null : reference.trim() || null;
 
-      const customerLines = isCredit
-        ? `CUSTOMER: ${customerName.trim()}\nPHONE: ${customerPhone.trim() || "-"}\n`
-        : "";
+      const customerLines = isCredit ? `CUSTOMER: ${customerName.trim()}\nPHONE: ${customerPhone.trim() || "-"}\n` : "";
 
       const finalNote = buildNoteWithDiscount({
         note: `${customerLines}${note || ""}`,
@@ -537,8 +600,7 @@ export default function CheckoutScreen() {
         subtotal: subtotalAmount,
       });
 
-      const rpcDiscountType =
-        discount.type === "percent" ? "PERCENT" : discount.type === "fixed" ? "FIXED" : null;
+      const rpcDiscountType = discount.type === "percent" ? "PERCENT" : discount.type === "fixed" ? "FIXED" : null;
 
       const rpcDiscountValue =
         discount.type === "percent"
@@ -554,10 +616,11 @@ export default function CheckoutScreen() {
         p_items: items,
         p_note: finalNote,
 
-        p_payment_method,
-        p_paid_amount,
-        p_payment_channel,
-        p_reference,
+        p_payment_method: rpcPaymentMethod,
+        p_paid_amount: p_paid_amount,
+        p_payment_channel:
+          rpcPaymentMethod === "MOBILE" || rpcPaymentMethod === "BANK" ? (rpcChannel.trim() || null) : null,
+        p_reference: rpcPaymentMethod === "MOBILE" || rpcPaymentMethod === "BANK" ? (rpcReference.trim() || null) : null,
 
         p_customer_id: null,
         p_customer_phone: null,
@@ -613,10 +676,10 @@ export default function CheckoutScreen() {
     storeId,
     cart,
     note,
-    method,
     paidAmount,
-    channel,
-    reference,
+    rpcPaymentMethod,
+    rpcChannel,
+    rpcReference,
     isCredit,
     balance,
     router,
@@ -630,9 +693,26 @@ export default function CheckoutScreen() {
     preflightCheckStock,
   ]);
 
+  const cartTotalLabel = useMemo(() => {
+    const itemsCount = cart.length;
+    return `${itemsCount} item${itemsCount === 1 ? "" : "s"} • ${totalQty} qty`;
+  }, [cart.length, totalQty]);
+
+  const prettySubtotal = useMemo(() => fmt(subtotalAmount), [fmt, subtotalAmount]);
+  const prettyDiscount = useMemo(() => fmt(discount.amount), [fmt, discount.amount]);
+  const prettyTotal = useMemo(() => fmt(grandTotal), [fmt, grandTotal]);
+  const prettyPaid = useMemo(() => fmt(Number.isFinite(paidAmount) ? paidAmount : 0), [fmt, paidAmount]);
+  const prettyBal = useMemo(() => fmt(balance), [fmt, balance]);
+
+  const showChannelRef = useMemo(() => {
+    if (isOffline) return false;
+    return rpcPaymentMethod === "MOBILE" || rpcPaymentMethod === "BANK";
+  }, [isOffline, rpcPaymentMethod]);
+
   return (
-    <Screen scroll bottomPad={220}>
+    <Screen scroll bottomPad={240}>
       <View style={{ flex: 1, gap: 14 }}>
+        {/* Header */}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
           <Pressable
             onPress={() => router.back()}
@@ -651,12 +731,10 @@ export default function CheckoutScreen() {
           </Pressable>
 
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 26, fontWeight: "900", color: theme.colors.text }}>
-              Checkout
-            </Text>
+            <Text style={{ fontSize: 26, fontWeight: "900", color: theme.colors.text }}>Checkout</Text>
             <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
               Store: {headerStoreName}
-              {isOffline ? "  •  OFFLINE" : ""}
+              {isOffline ? "  •  OFFLINE" : "  •  ONLINE"}
             </Text>
           </View>
         </View>
@@ -670,277 +748,232 @@ export default function CheckoutScreen() {
           </Card>
         )}
 
+        {/* Cart Summary */}
         <Card style={{ gap: 10 }}>
-          <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Summary</Text>
-          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
-            {cart.length} items • {totalQty} qty
-          </Text>
-
-          <View
-            style={{
-              marginTop: 4,
-              paddingVertical: 10,
-              paddingHorizontal: 12,
-              borderRadius: theme.radius.lg,
-              borderWidth: 1,
-              borderColor: "rgba(52,211,153,0.35)",
-              backgroundColor: "rgba(52,211,153,0.10)",
-            }}
-          >
-            <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Subtotal</Text>
-            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
-              {fmtTZS(subtotalAmount)}
-            </Text>
-          </View>
-
-          <View style={{ gap: 8, marginTop: 6 }}>
-            <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>
-              Discount (andika tu) — mf: 10k / 10% / 5000
-            </Text>
-            <TextInput
-              value={discountText}
-              onChangeText={setDiscountText}
-              placeholder="mf: amempunguzia 10k / 10%"
-              placeholderTextColor="rgba(255,255,255,0.35)"
-              style={{
-                borderWidth: 1,
-                borderColor: theme.colors.border,
-                borderRadius: theme.radius.lg,
-                backgroundColor: "rgba(255,255,255,0.05)",
-                paddingHorizontal: 14,
-                paddingVertical: 12,
-                color: theme.colors.text,
-                fontWeight: "800",
-              }}
-            />
-
-            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-              <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Discount Amount</Text>
-              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                -{fmtTZS(discount.amount || 0)}
-              </Text>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>Order Summary</Text>
+              <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 2 }}>{cartTotalLabel}</Text>
             </View>
-
-            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-              <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Grand Total</Text>
-              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                {fmtTZS(grandTotal)}
-              </Text>
-            </View>
-          </View>
-
-          {cart.slice(0, 10).map((c) => (
             <View
-              key={c.product_id}
               style={{
-                flexDirection: "row",
-                justifyContent: "space-between",
-                gap: 10,
-                paddingTop: 8,
-                borderTopWidth: 1,
-                borderTopColor: "rgba(255,255,255,0.06)",
+                paddingHorizontal: 12,
+                paddingVertical: 8,
+                borderRadius: 999,
+                borderWidth: 1,
+                borderColor: "rgba(52,211,153,0.22)",
+                backgroundColor: "rgba(52,211,153,0.10)",
               }}
             >
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: theme.colors.text, fontWeight: "900" }} numberOfLines={1}>
-                  {c.name}
-                </Text>
-                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                  x{c.qty} • {fmtTZS(Number(c.unit_price || 0))}
-                </Text>
-              </View>
-              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                {fmtTZS(Number(c.line_total || 0))}
-              </Text>
+              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{prettyTotal}</Text>
             </View>
-          ))}
+          </View>
 
-          {cart.length > 10 && (
-            <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-              +{cart.length - 10} more...
-            </Text>
-          )}
+          <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
+
+          <View style={{ gap: 10 }}>
+            {cart.map((c) => {
+              const line = fmt(Number(c.line_total || 0));
+              const up = fmt(Number(c.unit_price || 0));
+              return (
+                <View
+                  key={`${c.product_id}-${c.sku ?? ""}`}
+                  style={{
+                    padding: 12,
+                    borderRadius: 16,
+                    borderWidth: 1,
+                    borderColor: "rgba(255,255,255,0.10)",
+                    backgroundColor: "rgba(255,255,255,0.05)",
+                    gap: 4,
+                  }}
+                >
+                  <Text style={{ color: theme.colors.text, fontWeight: "900" }} numberOfLines={1}>
+                    {c.name}
+                  </Text>
+                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }} numberOfLines={1}>
+                    SKU: {c.sku ?? "—"} • Qty: {c.qty} • Unit: {c.unit ?? "—"}
+                  </Text>
+                  <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>
+                    Unit: {up} • Line: {line}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+
+          <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
+
+          {/* Totals */}
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Subtotal</Text>
+              <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>{prettySubtotal}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Discount</Text>
+              <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>{prettyDiscount}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Total</Text>
+              <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>{prettyTotal}</Text>
+            </View>
+          </View>
         </Card>
 
+        {/* Discount + Note */}
+        <Card style={{ gap: 10 }}>
+          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>Discount & Note</Text>
+
+          <View>
+            <FieldLabel>Discount (e.g. 10% • 5000 • 5k • 1m)</FieldLabel>
+            <InputBox value={discountText} onChangeText={setDiscountText} placeholder="mf: 10% au 5000 au 5k" keyboardType="default" />
+            <Text style={{ color: theme.colors.faint, fontWeight: "800", marginTop: 8 }}>
+              Tip: Ukiweka discount, total itashuka moja kwa moja.
+            </Text>
+          </View>
+
+          <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
+
+          <View>
+            <FieldLabel>Note (optional)</FieldLabel>
+            <InputBox value={note} onChangeText={setNote} placeholder="andika maelezo ya mauzo..." keyboardType="default" multiline />
+          </View>
+        </Card>
+
+        {/* Payment */}
         <Card style={{ gap: 12 }}>
-          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-            Payment
-          </Text>
+          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>Payment</Text>
 
           <View style={{ flexDirection: "row", gap: 10 }}>
             <MethodChip label="Cash" active={method === "CASH"} onPress={() => onSetMethod("CASH")} />
-            <MethodChip
-              label="Mobile"
-              active={method === "MOBILE"}
-              onPress={() => onSetMethod("MOBILE")}
-            />
+            <MethodChip label="Mobile" active={method === "MOBILE"} onPress={() => onSetMethod("MOBILE")} />
+            <MethodChip label="Bank" active={method === "BANK"} onPress={() => onSetMethod("BANK")} />
+            <MethodChip label="Credit" active={method === "CREDIT"} onPress={() => onSetMethod("CREDIT")} />
+          </View>
+
+          <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
+
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <View style={{ flex: 1 }}>
+              <FieldLabel>Paid ({displayCurrency})</FieldLabel>
+              <InputBox value={paidStr} onChangeText={onPaidChange} placeholder="mf: 120000" keyboardType="numeric" />
+              <Text style={{ color: theme.colors.faint, fontWeight: "800", marginTop: 8 }}>
+                {method === "CREDIT" ? "Unaweza kuweka 0 hadi total (partial payment)." : "Kwa non-credit, lazima ulipe full total."}
+              </Text>
+            </View>
+            <View style={{ width: 10 }} />
           </View>
 
           <View style={{ flexDirection: "row", gap: 10 }}>
-            <MethodChip label="Bank" active={method === "BANK"} onPress={() => onSetMethod("BANK")} />
-            <MethodChip
-              label="Credit"
-              active={method === "CREDIT"}
-              onPress={() => onSetMethod("CREDIT")}
-            />
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Total</Text>
+              <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>{prettyTotal}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Paid</Text>
+              <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>{prettyPaid}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Balance</Text>
+              <Text style={{ color: isCredit ? theme.colors.emerald : theme.colors.text, fontWeight: "900", marginTop: 4 }}>
+                {prettyBal}
+              </Text>
+            </View>
           </View>
 
-          <View style={{ gap: 8 }}>
-            <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>
-              Paid Amount {isCredit ? "(0..Total)" : "(must equal Total)"}
+          {/* CREDIT: Paid Via */}
+          {method === "CREDIT" && (
+            <>
+              <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
+
+              <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>
+                CREDIT MODE: ukiweka Paid &gt; 0, chagua Paid Via (mali uliyopokea leo).
+              </Text>
+
+              <View style={{ flexDirection: "row", gap: 10, opacity: showPaidVia ? 1 : 0.55 }}>
+                <MethodChip
+                  label="Cash"
+                  active={paidVia === "CASH"}
+                  onPress={() => {
+                    if (!showPaidVia) return;
+                    setPaidVia("CASH");
+                  }}
+                />
+                <MethodChip
+                  label="Mobile"
+                  active={paidVia === "MOBILE"}
+                  onPress={() => {
+                    if (!showPaidVia) return;
+                    setPaidVia("MOBILE");
+                    if (!channel) setChannel("M-PESA");
+                  }}
+                />
+                <MethodChip
+                  label="Bank"
+                  active={paidVia === "BANK"}
+                  onPress={() => {
+                    if (!showPaidVia) return;
+                    setPaidVia("BANK");
+                  }}
+                />
+              </View>
+            </>
+          )}
+
+          {/* Channel + Reference (ONLINE only) */}
+          {showChannelRef && (
+            <>
+              <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
+              <View style={{ gap: 10 }}>
+                <View>
+                  <FieldLabel>
+                    {rpcPaymentMethod === "MOBILE" ? "Mobile Channel (e.g. M-PESA / TIGO-PESA)" : "Bank Channel (e.g. NMB / CRDB)"}
+                  </FieldLabel>
+                  <InputBox
+                    value={channel}
+                    onChangeText={setChannel}
+                    placeholder={rpcPaymentMethod === "MOBILE" ? "M-PESA" : "NMB"}
+                    keyboardType="default"
+                  />
+                </View>
+
+                <View>
+                  <FieldLabel>Reference / Transaction ID</FieldLabel>
+                  <InputBox value={reference} onChangeText={setReference} placeholder="mf: TXN12345" keyboardType="default" />
+                </View>
+              </View>
+            </>
+          )}
+
+          {isOffline && (
+            <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+              OFFLINE: mobile/bank reference haitahitajika sasa; sale itasave offline na itasync.
             </Text>
-            <TextInput
-              value={paidStr}
-              onChangeText={onPaidChange}
-              keyboardType="numeric"
-              placeholder="mf: 230000"
-              placeholderTextColor="rgba(255,255,255,0.35)"
-              editable={isCredit}
-              style={{
-                borderWidth: 1,
-                borderColor: theme.colors.border,
-                borderRadius: theme.radius.lg,
-                backgroundColor: isCredit ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.03)",
-                paddingHorizontal: 14,
-                paddingVertical: 12,
-                color: theme.colors.text,
-                fontWeight: "900",
-              }}
-            />
-
-            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-              <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Balance (Credit)</Text>
-              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{fmtTZS(balance)}</Text>
-            </View>
-          </View>
-
-          {(method === "MOBILE" || method === "BANK") && (
-            <View style={{ gap: 10 }}>
-              <View style={{ gap: 8 }}>
-                <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>
-                  {method === "MOBILE" ? "Mobile Channel" : "Bank"}
-                </Text>
-                <TextInput
-                  value={channel}
-                  onChangeText={setChannel}
-                  placeholder={method === "MOBILE" ? "mf: M-PESA" : "mf: NMB"}
-                  placeholderTextColor="rgba(255,255,255,0.35)"
-                  style={{
-                    borderWidth: 1,
-                    borderColor: theme.colors.border,
-                    borderRadius: theme.radius.lg,
-                    backgroundColor: "rgba(255,255,255,0.05)",
-                    paddingHorizontal: 14,
-                    paddingVertical: 12,
-                    color: theme.colors.text,
-                    fontWeight: "900",
-                  }}
-                />
-              </View>
-
-              <View style={{ gap: 8 }}>
-                <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>
-                  Reference / Transaction ID
-                </Text>
-                <TextInput
-                  value={reference}
-                  onChangeText={setReference}
-                  placeholder="mf: TXN123456"
-                  placeholderTextColor="rgba(255,255,255,0.35)"
-                  style={{
-                    borderWidth: 1,
-                    borderColor: theme.colors.border,
-                    borderRadius: theme.radius.lg,
-                    backgroundColor: "rgba(255,255,255,0.05)",
-                    paddingHorizontal: 14,
-                    paddingVertical: 12,
-                    color: theme.colors.text,
-                    fontWeight: "900",
-                  }}
-                />
-              </View>
-
-              {isOffline && (
-                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                  OFFLINE: Unaweza kuacha Reference wazi (andika kwenye Note). Itasync baadaye.
-                </Text>
-              )}
-            </View>
-          )}
-
-          {isCredit && (
-            <View style={{ gap: 10 }}>
-              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                Customer (for Credit / Partial)
-              </Text>
-
-              <TextInput
-                value={customerName}
-                onChangeText={setCustomerName}
-                placeholder="Customer full name"
-                placeholderTextColor="rgba(255,255,255,0.35)"
-                style={{
-                  borderWidth: 1,
-                  borderColor: "rgba(52,211,153,0.35)",
-                  borderRadius: theme.radius.lg,
-                  backgroundColor: "rgba(52,211,153,0.08)",
-                  paddingHorizontal: 14,
-                  paddingVertical: 12,
-                  color: theme.colors.text,
-                  fontWeight: "900",
-                }}
-              />
-
-              <TextInput
-                value={customerPhone}
-                onChangeText={setCustomerPhone}
-                placeholder="Phone (optional) e.g. 0712xxxxxx"
-                placeholderTextColor="rgba(255,255,255,0.35)"
-                keyboardType="phone-pad"
-                style={{
-                  borderWidth: 1,
-                  borderColor: theme.colors.border,
-                  borderRadius: theme.radius.lg,
-                  backgroundColor: "rgba(255,255,255,0.05)",
-                  paddingHorizontal: 14,
-                  paddingVertical: 12,
-                  color: theme.colors.text,
-                  fontWeight: "900",
-                }}
-              />
-
-              <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                Hapa ndipo tunajua “amekopesha nani” + “deni limebaki kiasi gani”.
-              </Text>
-            </View>
           )}
         </Card>
 
-        <Card style={{ gap: 10 }}>
-          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-            Note (optional)
-          </Text>
-          <TextInput
-            value={note}
-            onChangeText={setNote}
-            placeholder="mf: Customer info, maelezo ya mauzo..."
-            placeholderTextColor="rgba(255,255,255,0.35)"
-            multiline
-            textAlignVertical="top"
-            style={{
-              minHeight: 90,
-              borderWidth: 1,
-              borderColor: theme.colors.border,
-              borderRadius: theme.radius.lg,
-              backgroundColor: "rgba(255,255,255,0.05)",
-              paddingHorizontal: 14,
-              paddingVertical: 12,
-              color: theme.colors.text,
-              fontWeight: "800",
-            }}
-          />
-        </Card>
+        {/* Credit Customer Info */}
+        {isCredit && (
+          <Card style={{ gap: 10 }}>
+            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>Customer (for Credit/Partial)</Text>
 
+            <View>
+              <FieldLabel>Customer Name *</FieldLabel>
+              <InputBox value={customerName} onChangeText={setCustomerName} placeholder="mf: Juma Ali" keyboardType="default" />
+            </View>
+
+            <View>
+              <FieldLabel>Customer Phone (optional)</FieldLabel>
+              <InputBox value={customerPhone} onChangeText={setCustomerPhone} placeholder="mf: 0712xxxxxx" keyboardType="phone-pad" />
+            </View>
+
+            <Text style={{ color: theme.colors.faint, fontWeight: "800" }}>
+              Tip: Credit itarekodiwa v2 na balance itaingia kwenye Credit account.
+            </Text>
+          </Card>
+        )}
+
+        {/* Actions */}
         <Card style={{ gap: 10 }}>
           <Button
             title={saving ? "Creating..." : isOffline ? "Save Offline" : "Confirm Sale"}
@@ -948,13 +981,16 @@ export default function CheckoutScreen() {
             disabled={saving || !!invalidReason}
             variant="primary"
           />
-
           <Button title="Back" onPress={() => router.back()} disabled={saving} variant="secondary" />
 
           {!!invalidReason && (
-            <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{invalidReason}</Text>
+            <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>
+              ⚠ {invalidReason}
+            </Text>
           )}
         </Card>
+
+        <View style={{ height: 24 }} />
       </View>
     </Screen>
   );

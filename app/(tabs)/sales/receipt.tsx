@@ -1,4 +1,5 @@
 ﻿import { useOrg } from "@/src/context/OrgContext";
+import { useOrgMoneyPrefs } from "@/src/ui/money";
 import { supabase } from "@/src/supabase/supabaseClient";
 import { Button } from "@/src/ui/Button";
 import { Card } from "@/src/ui/Card";
@@ -11,18 +12,6 @@ import { ActivityIndicator, Pressable, Share, Text, View } from "react-native";
 
 function one(v: string | string[] | undefined) {
   return Array.isArray(v) ? v[0] : v;
-}
-
-function fmtTZS(n: number) {
-  try {
-    return new Intl.NumberFormat("en-TZ", {
-      style: "currency",
-      currency: "TZS",
-      maximumFractionDigits: 0,
-    }).format(n);
-  } catch {
-    return `TZS ${Math.round(n).toLocaleString()}`;
-  }
 }
 
 function shortId(id: string) {
@@ -127,7 +116,11 @@ export default function ReceiptScreen() {
   const params = useLocalSearchParams<{ saleId?: string | string[] }>();
   const saleId = (one(params.saleId) ?? "").trim();
 
-  const { activeOrgName, activeStoreName, activeRole } = useOrg();
+  const { activeOrgId, activeOrgName, activeStoreName, activeRole } = useOrg() as any;
+
+  const money = useOrgMoneyPrefs(activeOrgId);
+  // ✅ FIX: hook returns money.fmt (NOT money.formatMoney)
+  const fmtMoney = useCallback((n: number) => money.fmt(Number(n || 0)), [money]);
 
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -140,11 +133,7 @@ export default function ReceiptScreen() {
     try {
       if (!saleId) throw new Error("Missing saleId");
 
-      const res = await supabase.rpc(
-        "get_sale_detail",
-        { p_sale_id: saleId } as any
-      );
-
+      const res = await supabase.rpc("get_sale_detail", { p_sale_id: saleId } as any);
       if (res.error) throw res.error;
 
       const d = Array.isArray(res.data) ? (res.data[0] ?? null) : res.data;
@@ -265,7 +254,7 @@ export default function ReceiptScreen() {
               const lineTotal = Number(it.line_total ?? unitPrice * Number(it.qty ?? 0));
               const name = it.product_name ?? "Product";
               const sku = it.sku ? ` (SKU: ${it.sku})` : "";
-              return `- ${name}${sku} | ${it.qty} × ${fmtTZS(unitPrice)} = ${fmtTZS(lineTotal)}`;
+              return `- ${name}${sku} | ${it.qty} × ${fmtMoney(unitPrice)} = ${fmtMoney(lineTotal)}`;
             }),
             "",
           ];
@@ -274,23 +263,23 @@ export default function ReceiptScreen() {
 
     if (discountMeta) {
       const subtotal = discountMeta.subtotal;
-      if (typeof subtotal === "number") moneyBlock.push(`SUBTOTAL: ${fmtTZS(subtotal)}`);
-      moneyBlock.push(`DISCOUNT: -${fmtTZS(discountMeta.discountAmount)} (${discountMeta.discountText})`);
-      moneyBlock.push(`TOTAL (AFTER DISCOUNT): ${fmtTZS(computedTotal)}`);
+      if (typeof subtotal === "number") moneyBlock.push(`SUBTOTAL: ${fmtMoney(subtotal)}`);
+      moneyBlock.push(`DISCOUNT: -${fmtMoney(discountMeta.discountAmount)} (${discountMeta.discountText})`);
+      moneyBlock.push(`TOTAL (AFTER DISCOUNT): ${fmtMoney(computedTotal)}`);
       moneyBlock.push("");
     }
 
     if (isCredit) {
-      if (!discountMeta) moneyBlock.push(`TOTAL: ${fmtTZS(computedTotal)}`);
+      if (!discountMeta) moneyBlock.push(`TOTAL: ${fmtMoney(computedTotal)}`);
       moneyBlock.push("");
-      moneyBlock.push(`PAID: ${fmtTZS(paidAmount)}`);
-      moneyBlock.push(`DUE (CREDIT): ${fmtTZS(dueAmount)}`);
+      moneyBlock.push(`PAID: ${fmtMoney(paidAmount)}`);
+      moneyBlock.push(`DUE (CREDIT): ${fmtMoney(dueAmount)}`);
       moneyBlock.push(`STATUS: ${dueAmount > 0 ? "OUTSTANDING" : "CLEARED"}`);
       moneyBlock.push("");
     }
 
     const footer = [
-      !discountMeta && !isCredit ? `TOTAL: ${fmtTZS(computedTotal)}` : null,
+      !discountMeta && !isCredit ? `TOTAL MONEY IN: ${fmtMoney(computedTotal)}` : null,
       cleanNote ? "" : null,
       cleanNote ? `NOTE: ${cleanNote}` : null,
       "",
@@ -324,6 +313,7 @@ export default function ReceiptScreen() {
     cleanNote,
     paidAmount,
     dueAmount,
+    fmtMoney,
   ]);
 
   return (
@@ -486,12 +476,12 @@ export default function ReceiptScreen() {
                         <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>SKU: {it.sku ?? "—"}</Text>
 
                         <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>
-                          {Number(it.qty ?? 0)} × {fmtTZS(unitPrice)}
+                          {Number(it.qty ?? 0)} × {fmtMoney(unitPrice)}
                         </Text>
                       </View>
 
                       <View style={{ alignItems: "flex-end", justifyContent: "center" }}>
-                        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{fmtTZS(lineTotal)}</Text>
+                        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{fmtMoney(lineTotal)}</Text>
                       </View>
                     </View>
                   );
@@ -510,9 +500,9 @@ export default function ReceiptScreen() {
                   backgroundColor: "rgba(52,211,153,0.10)",
                 }}
               >
-                <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Total Amount</Text>
+                <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>TOTAL MONEY IN</Text>
                 <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 20 }}>
-                  {fmtTZS(computedTotal)}
+                  {fmtMoney(computedTotal)}
                 </Text>
               </View>
 

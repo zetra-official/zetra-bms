@@ -60,15 +60,14 @@ function uid() {
 const INPUT_MAX = 12_000;
 
 /**
- * ✅ Normalize Worker BASE URL
- */
+✅ Normalize Worker BASE URL
+*/
 function normalizeWorkerBaseUrl(raw: any) {
   let u = clean(raw);
   if (!u) return "";
   u = u.replace(/\s+/g, "");
   u = u.replace(/\/+$/g, "");
 
-  // Remove common suffix routes if user pasted full endpoint
   u = u.replace(/\/v1\/chat$/i, "");
   u = u.replace(/\/health$/i, "");
   u = u.replace(/\/vision$/i, "");
@@ -82,8 +81,8 @@ function normalizeWorkerBaseUrl(raw: any) {
 const AI_WORKER_URL = normalizeWorkerBaseUrl(process.env.EXPO_PUBLIC_AI_WORKER_URL ?? "");
 
 /**
- * ✅ Image URL normalization
- */
+✅ Image URL normalization
+*/
 function isDataImageUrl(u: string) {
   const t = clean(u).toLowerCase();
   return t.startsWith("data:image/");
@@ -96,8 +95,8 @@ function normalizeImageUrl(raw: string) {
 }
 
 /**
- * ✅ Robust fetch (Timeout + Retry + Better Error Body)
- */
+✅ Robust fetch (Timeout + Retry + Better Error Body)
+*/
 const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
 const DEFAULT_TIMEOUT_MS = 25_000;
 const DEFAULT_RETRIES = 2;
@@ -168,10 +167,13 @@ async function fetchJsonWithRetry(
       clearTimeout(t);
       lastErr = e;
 
-      const msgLower = clean(e?.message).toLowerCase();
       const isAbort =
-        e?.name === "AbortError" || msgLower.includes("aborted") || msgLower.includes("abort");
-      const isNetwork = msgLower.includes("network request failed") || msgLower.includes("failed to fetch");
+        e?.name === "AbortError" ||
+        clean(e?.message).toLowerCase().includes("aborted") ||
+        clean(e?.message).toLowerCase().includes("abort");
+      const isNetwork =
+        clean(e?.message).toLowerCase().includes("network request failed") ||
+        clean(e?.message).toLowerCase().includes("failed to fetch");
 
       const shouldRetry = isAbort || isNetwork;
 
@@ -188,13 +190,13 @@ async function fetchJsonWithRetry(
     }
   }
 
-  const fallback = clean(lastErr?.message) || `${clean(opts?.tag) || "request"} failed`;
+  const fallback = clean(lastErr?.message) || `${opts?.tag || "request"} failed`;
   return { status: 0, ok: false, data: null, textBody: fallback };
 }
 
 /**
- * ✅ ChatGPT-like Typing Engine (UI side)
- */
+✅ ChatGPT-like Typing Engine (UI side)
+*/
 function isPunct(ch: string) {
   return ch === "." || ch === "!" || ch === "?" || ch === "," || ch === ";" || ch === ":";
 }
@@ -258,8 +260,8 @@ function packAssistantText(meta: { text: string; actions: any[]; nextMove?: stri
 }
 
 /**
- * ✅ A (DB Action Bridge)
- */
+✅ A (DB Action Bridge) - remains (BMS feature)
+*/
 async function createTasksFromAiActions(args: {
   orgId: string;
   storeId?: string | null;
@@ -311,14 +313,14 @@ type AttachedImage = {
 };
 
 /**
- * ✅ detect image intent via normal Send()
- */
+✅ detect image intent via normal Send()
+*/
 function detectImageIntent(rawText: string): { isImage: boolean; prompt: string } {
   const t = clean(rawText);
   if (!t) return { isImage: false, prompt: "" };
 
   const patterns: Array<{ re: RegExp; strip: (m: RegExpMatchArray) => string }> = [
-    { re: /^\s*\s*create\s*image\s*\s*(.+)$/i, strip: (m) => clean(m[1]) },
+    { re: /^\s*\[\s*create\s+image\s*\]\s*(.+)$/i, strip: (m) => clean(m[1]) },
     { re: /^\s*create\s+image\s*:\s*(.+)$/i, strip: (m) => clean(m[1]) },
     { re: /^\s*create\s+an\s+image\s*:\s*(.+)$/i, strip: (m) => clean(m[1]) },
     { re: /^\s*generate\s+image\s*:\s*(.+)$/i, strip: (m) => clean(m[1]) },
@@ -339,16 +341,16 @@ function detectImageIntent(rawText: string): { isImage: boolean; prompt: string 
 }
 
 /**
- * ✅ NEW: typing dots loop for placeholder message
- */
+✅ Typing dots loop for placeholder message (premium feel)
+*/
 function nextTypingText(step: number) {
   const dots = step % 4; // 0..3
   return `AI inaandika${".".repeat(dots)}`;
 }
 
 /**
- * ✅ Retry payload (DISCRIMINATED UNION)
- */
+✅ Retry payload (DISCRIMINATED UNION)
+*/
 type RetryPayload =
   | { kind: "chat"; text: string; history: ReqMsg[] }
   | { kind: "vision"; text: string; history: ReqMsg[]; images: AttachedImage[] }
@@ -361,12 +363,39 @@ export default function AiChatScreen() {
 
   const topPad = Math.max(insets.top, 10) + 8;
 
+  // ✅ KEYBOARD: real height so composer moves above keyboard (Android + iOS)
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    const subShow = Keyboard.addListener("keyboardDidShow", (e: any) => {
+      setKeyboardOpen(true);
+      const h = Number(e?.endCoordinates?.height ?? 0);
+      setKeyboardHeight(h > 0 ? h : 0);
+    });
+    const subHide = Keyboard.addListener("keyboardDidHide", () => {
+      setKeyboardOpen(false);
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      subShow.remove();
+      subHide.remove();
+    };
+  }, []);
+
+  const safeBottomClosed = Math.max(insets.bottom, 10) + 10;
+
+  // ✅ This is the magic: composer moves UP exactly above keyboard
+  const composerBottom = useMemo(() => {
+    if (!keyboardOpen) return safeBottomClosed;
+    const kb = Math.max(0, keyboardHeight);
+    return kb + Math.max(insets.bottom, 10) + 6;
+  }, [keyboardOpen, keyboardHeight, insets.bottom, safeBottomClosed]);
+
   const [mode, setMode] = useState<AiMode>("AUTO");
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
-
-  const [keyboardOpen, setKeyboardOpen] = useState(false);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   const [proActive, setProActive] = useState(false);
 
@@ -399,7 +428,6 @@ export default function AiChatScreen() {
   const [recordingOn, setRecordingOn] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
 
-  // ✅ Messages
   const [messages, setMessages] = useState<ChatMsg[]>(() => [
     {
       id: uid(),
@@ -413,7 +441,6 @@ export default function AiChatScreen() {
     },
   ]);
 
-  // ✅ Retry card state + stable last payload ref
   const lastPayloadRef = useRef<RetryPayload | null>(null);
   const [retryCard, setRetryCard] = useState<{
     visible: boolean;
@@ -427,7 +454,6 @@ export default function AiChatScreen() {
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const typingAbortRef = useRef<{ aborted: boolean }>({ aborted: false });
 
-  // ✅ typing dots loop for placeholder message
   const typingDotsTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const typingDotsStepRef = useRef(0);
 
@@ -441,7 +467,6 @@ export default function AiChatScreen() {
       stopTypingDots();
       typingDotsStepRef.current = 0;
 
-      // instant set
       setMessages((prev) => prev.map((m) => (m.id === botId ? { ...m, text: nextTypingText(0) } : m)));
 
       typingDotsTimerRef.current = setInterval(() => {
@@ -492,26 +517,6 @@ export default function AiChatScreen() {
       } catch {}
     });
   }, []);
-
-  // ✅ Keyboard listeners (WE USE keyboardHeight on Android to lift composer smoothly)
-  useEffect(() => {
-    const subShow = Keyboard.addListener("keyboardDidShow", (e: any) => {
-      setKeyboardOpen(true);
-      const h = Number(e?.endCoordinates?.height ?? 0);
-      setKeyboardHeight(h > 0 ? h : 0);
-      scrollToEndSoon();
-    });
-    const subHide = Keyboard.addListener("keyboardDidHide", () => {
-      setKeyboardOpen(false);
-      setKeyboardHeight(0);
-      scrollToEndSoon();
-    });
-
-    return () => {
-      subShow.remove();
-      subHide.remove();
-    };
-  }, [scrollToEndSoon]);
 
   const stopTyping = useCallback(() => {
     typingAbortRef.current.aborted = true;
@@ -716,11 +721,14 @@ export default function AiChatScreen() {
       }
 
       const form = new FormData();
-      form.append("file", {
-        uri,
-        name: "voice.m4a",
-        type: Platform.OS === "ios" ? "audio/m4a" : "audio/mp4",
-      } as any);
+      form.append(
+        "file",
+        {
+          uri,
+          name: "voice.m4a",
+          type: Platform.OS === "ios" ? "audio/m4a" : "audio/mp4",
+        } as any
+      );
 
       const url = `${AI_WORKER_URL}/transcribe`;
 
@@ -737,10 +745,7 @@ export default function AiChatScreen() {
 
       if (!out.ok) {
         const msg =
-          clean(data?.error) ||
-          clean(data?.message) ||
-          clean(out.textBody) ||
-          `Transcription failed (${out.status})`;
+          clean(data?.error) || clean(data?.message) || clean(out.textBody) || `Transcription failed (${out.status})`;
         Alert.alert("Transcribe failed", msg);
         setTranscribing(false);
         return;
@@ -771,7 +776,7 @@ export default function AiChatScreen() {
   }, [recordingOn, startRecording, stopRecordingAndTranscribe]);
 
   /**
-   * ✅ Worker: /v1/chat
+   ✅ Worker: /v1/chat
    */
   const callWorkerChat = useCallback(
     async (text: string, history: ReqMsg[]) => {
@@ -837,7 +842,6 @@ export default function AiChatScreen() {
   const callWorkerVision = useCallback(
     async (text: string, images: AttachedImage[], history: ReqMsg[]) => {
       if (!requireWorkerUrlOrAlert()) throw new Error("Worker URL missing");
-
       const payload = {
         message: text,
         images: images.map((x) => x.dataUrl),
@@ -926,8 +930,43 @@ export default function AiChatScreen() {
   );
 
   /**
-   * ✅ MAIN SEND
-   */
+✅ Quick chips (Copilot feel)
+*/
+  const quickChips = useMemo(
+    () => [
+      { k: "sales", label: "Sales", icon: "trending-up", prompt: "Nipe mikakati 10 ya kuongeza mauzo wiki hii." },
+      { k: "stock", label: "Stock", icon: "cube", prompt: "Nisaidie kupunguza dead stock na kuongeza turnover." },
+      { k: "pricing", label: "Pricing", icon: "pricetag", prompt: "Nipe strategy ya bei (pricing) ya bidhaa zangu." },
+      { k: "marketing", label: "Marketing", icon: "megaphone", prompt: "Nipe plan ya marketing ya siku 7 kwa store yangu." },
+      { k: "staff", label: "Staff", icon: "people", prompt: "Nipe mfumo wa kusimamia wafanyakazi na KPI za kila wiki." },
+      { k: "reports", label: "Reports", icon: "bar-chart", prompt: "Ni report gani 5 za lazima kwa biashara ya retail?" },
+    ],
+    []
+  );
+
+  const applyChipPrompt = useCallback((p: string) => {
+    const t = clean(p);
+    if (!t) return;
+    setRetryCard({ visible: false, label: "", payload: null });
+    lastPayloadRef.current = null;
+    setInput(t);
+    requestAnimationFrame(() => inputRef.current?.focus());
+  }, []);
+
+  /**
+✅ Chips visibility (NOW: hides while keyboard open / typing)
+*/
+  const showChips = useMemo(() => {
+    if (thinking) return false;
+    if (keyboardOpen) return false;
+    if (clean(input)) return false;
+    if (toolOpen || tasksOpen) return false;
+    return true;
+  }, [input, keyboardOpen, thinking, toolOpen, tasksOpen]);
+
+  /**
+✅ MAIN SEND
+*/
   const send = useCallback(async () => {
     const text = clean(input);
     if (!text || thinking) return;
@@ -1007,7 +1046,6 @@ export default function AiChatScreen() {
         return;
       }
 
-      // chat
       const payload: RetryPayload = { kind: "chat", text, history };
       lastPayloadRef.current = payload;
       setRetryCard({ visible: false, label: "", payload });
@@ -1082,8 +1120,8 @@ export default function AiChatScreen() {
   ]);
 
   /**
-   * ✅ Retry handler
-   */
+✅ Retry handler
+*/
   const retryLast = useCallback(async () => {
     const p = retryCard.payload;
     if (!p || thinking) return;
@@ -1647,7 +1685,7 @@ export default function AiChatScreen() {
             </Pressable>
 
             <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 11, marginTop: 10 }}>
-              Tip: “Use Starter Prompt” itaweka prompt kwenye input bila kutuma—utabonyeza Send ukiwa tayari.
+              Tip: Ukibonyeza “Use Starter Prompt”, itaweka prompt kwenye input bila kutuma—utabonyeza Send ukiwa tayari.
             </Text>
           </View>
         </View>
@@ -1655,19 +1693,13 @@ export default function AiChatScreen() {
     </View>
   );
 
-  // ✅ list padding: composer always exists
+  // ✅ List padding now respects composerBottom (so messages never hide under keyboard/composer)
   const listTopPad = useMemo(() => {
-    const composerApprox = keyboardOpen ? 104 : 112;
-    const safe = keyboardOpen ? 10 : Math.max(insets.bottom, 10) + 10;
-    return safe + composerApprox;
-  }, [insets.bottom, keyboardOpen]);
+    const composerApprox = keyboardOpen ? 98 : showChips ? 150 : 108;
+    return composerBottom + composerApprox;
+  }, [composerBottom, keyboardOpen, showChips]);
 
   const listBottomPad = 12;
-
-  // ✅ Composer: stays at bottom, but lifts above Android keyboard by bottom offset
-  const composerLift = Platform.OS === "android" ? keyboardHeight : 0;
-  const composerBottomPadding = Platform.OS === "android" ? 10 : Math.max(insets.bottom, 10) + 10;
-
   const micActive = recordingOn || transcribing;
 
   return (
@@ -1703,7 +1735,7 @@ export default function AiChatScreen() {
           }
         />
 
-        {/* ✅ Retry card (lifts with keyboard on Android) */}
+        {/* ✅ Retry card (follows composerBottom) */}
         {retryCard.visible ? (
           <View
             pointerEvents="box-none"
@@ -1711,7 +1743,7 @@ export default function AiChatScreen() {
               position: "absolute",
               left: 16,
               right: 16,
-              bottom: composerLift + composerBottomPadding + 78,
+              bottom: composerBottom + 78,
               zIndex: 80,
             }}
           >
@@ -1767,20 +1799,49 @@ export default function AiChatScreen() {
           </View>
         ) : null}
 
-        {/* ✅ Composer (ALWAYS bottom; lifts above Android keyboard) */}
+        {/* ✅ Composer (moves above keyboard 100%) */}
         <View
           pointerEvents="box-none"
           style={{
             position: "absolute",
             left: 0,
             right: 0,
-            bottom: composerLift,
+            bottom: 0,
             paddingHorizontal: 16,
-            paddingBottom: composerBottomPadding,
+            paddingBottom: composerBottom,
             paddingTop: 10,
             zIndex: 50,
           }}
         >
+          {showChips ? (
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
+              {quickChips.map((c) => (
+                <Pressable
+                  key={c.k}
+                  onPress={() => applyChipPrompt(c.prompt)}
+                  hitSlop={10}
+                  style={({ pressed }) => ({
+                    paddingHorizontal: 12,
+                    height: 34,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    borderColor: "rgba(255,255,255,0.12)",
+                    backgroundColor: pressed ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.06)",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    opacity: pressed ? 0.92 : 1,
+                    transform: [{ scale: pressed ? 0.985 : 1 }],
+                  })}
+                >
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                    <Ionicons name={c.icon as any} size={14} color={UI.text} />
+                    <Text style={{ color: UI.text, fontWeight: "900" }}>{c.label}</Text>
+                  </View>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
+
           {attachedImages.length > 0 ? (
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
               {attachedImages.map((img) => (

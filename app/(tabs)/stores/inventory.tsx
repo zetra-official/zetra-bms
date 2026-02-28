@@ -3,7 +3,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNetInfo } from "@react-native-community/netinfo";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Keyboard, Pressable, Text, TextInput, View } from "react-native";
+import { Alert, Keyboard, Pressable, Text, TextInput, View, Vibration } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 import { useOrg } from "../../../src/context/OrgContext";
 import { supabase } from "../../../src/supabase/supabaseClient";
@@ -12,12 +13,15 @@ import { Card } from "../../../src/ui/Card";
 import { Screen } from "../../../src/ui/Screen";
 import { theme } from "../../../src/ui/theme";
 
+import { subscribeScanBarcode } from "@/src/utils/scanBus";
+
 type InventoryRow = {
   product_id: string;
   product_name: string;
   sku: string | null;
   unit: string | null;
   category: string | null;
+  barcode: string | null; // ✅ v2
   qty: number;
 };
 
@@ -32,6 +36,12 @@ function fmtLocal(iso: string | null) {
   } catch {
     return String(d);
   }
+}
+
+function cleanBarcode(raw: any) {
+  const s = String(raw ?? "").trim();
+  if (!s) return "";
+  return s.replace(/\s+/g, "");
 }
 
 export default function StoreInventoryScreen() {
@@ -52,10 +62,6 @@ export default function StoreInventoryScreen() {
     [activeRole]
   );
 
-  /**
-   * ✅ IMPORTANT: NetInfo can “flutter” (kimulimuli) when isInternetReachable changes.
-   * We debounce into a STABLE online/offline signal to avoid flashing + loops.
-   */
   const rawIsOnline = !!(netInfo.isConnected && netInfo.isInternetReachable !== false);
 
   const [stableIsOnline, setStableIsOnline] = useState<boolean>(rawIsOnline);
@@ -65,7 +71,7 @@ export default function StoreInventoryScreen() {
     if (netDebounceRef.current) clearTimeout(netDebounceRef.current);
     netDebounceRef.current = setTimeout(() => {
       setStableIsOnline(rawIsOnline);
-    }, 700); // 0.7s debounce = no flashing
+    }, 700);
     return () => {
       if (netDebounceRef.current) clearTimeout(netDebounceRef.current);
     };
@@ -73,7 +79,6 @@ export default function StoreInventoryScreen() {
 
   const isOffline = !stableIsOnline;
 
-  // ✅ Guard: ensure activeStore belongs to activeOrg (prevents cross-org bleed)
   const storeOrgMismatch = useMemo(() => {
     if (!activeStoreId || !activeOrgId) return false;
     const s = (stores ?? []).find((x: any) => String(x.store_id) === String(activeStoreId));
@@ -87,11 +92,26 @@ export default function StoreInventoryScreen() {
 
   const [q, setQ] = useState("");
 
-  // ✅ Threshold cache: product_id -> threshold (LIVE only for now)
+  // ✅ NEW: recent scanned priority
+  const [recentScannedIds, setRecentScannedIds] = useState<string[]>([]);
+  const bumpRecent = useCallback((productId: string) => {
+    if (!productId) return;
+    setRecentScannedIds((prev) => {
+      const next = [productId, ...prev.filter((x) => x !== productId)];
+      return next.slice(0, 25);
+    });
+  }, []);
+
+  const vibrateScan = useCallback(() => {
+    try {
+      Vibration.vibrate(12);
+    } catch {}
+  }, []);
+
+  // Threshold cache
   const [thrByProductId, setThrByProductId] = useState<Record<string, number>>({});
   const [thrLoading, setThrLoading] = useState(false);
 
-  // ✅ Offline-first status
   const [source, setSource] = useState<SourceMode>("NONE");
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
 
@@ -119,7 +139,6 @@ export default function StoreInventoryScreen() {
       const parsed: InventoryRow[] = rawRows ? JSON.parse(rawRows) : [];
       const syncIso = rawSync ? String(rawSync) : null;
 
-      // ✅ Always set lastSyncedAt if we have it (even when rows empty)
       if (syncIso) setLastSyncedAt(syncIso);
 
       if (Array.isArray(parsed) && parsed.length > 0) {
@@ -127,7 +146,6 @@ export default function StoreInventoryScreen() {
         setSource("CACHED");
         setError(null);
       } else {
-        // no cache found: keep existing rows if any (do NOT wipe)
         if ((rows ?? []).length === 0) setSource("NONE");
       }
     } catch {
@@ -143,9 +161,7 @@ export default function StoreInventoryScreen() {
           AsyncStorage.setItem(CACHE_KEY, JSON.stringify(nextRows ?? [])),
           AsyncStorage.setItem(SYNC_KEY, syncIso),
         ]);
-      } catch {
-        // best-effort only
-      }
+      } catch {}
     },
     [CACHE_KEY, SYNC_KEY]
   );
@@ -164,7 +180,6 @@ export default function StoreInventoryScreen() {
     }
 
     if (isOffline) {
-      // ✅ Offline: never fetch, show cache only (no flashing)
       setError(null);
       await loadFromCache();
       return;
@@ -174,7 +189,8 @@ export default function StoreInventoryScreen() {
     setError(null);
 
     try {
-      const { data, error: e } = await supabase.rpc("get_store_inventory", {
+      // ✅ D1: use v2 (includes barcode)
+      const { data, error: e } = await supabase.rpc("get_store_inventory_v2", {
         p_store_id: activeStoreId,
       });
       if (e) throw e;
@@ -188,7 +204,6 @@ export default function StoreInventoryScreen() {
 
       void saveCache(nextRows, nowIso);
     } catch (err: any) {
-      // Live failed -> fallback to cache (if any)
       setError(err?.message ?? "Failed to load inventory");
       await loadFromCache();
     } finally {
@@ -197,13 +212,9 @@ export default function StoreInventoryScreen() {
   }, [activeStoreId, storeOrgMismatch, isOffline, loadFromCache, saveCache, rows]);
 
   const loadThresholds = useCallback(async () => {
-    // ✅ Only when ONLINE + have rows
     if (!activeStoreId) return;
     if (storeOrgMismatch) return;
-    if (isOffline) {
-      // keep previous thresholds (do NOT spam setState to new {})
-      return;
-    }
+    if (isOffline) return;
 
     const ids = (rows ?? []).map((r) => r.product_id).filter(Boolean);
     if (ids.length === 0) {
@@ -238,29 +249,25 @@ export default function StoreInventoryScreen() {
     }
   }, [activeStoreId, rows, storeOrgMismatch, isOffline]);
 
-  // ✅ INIT: load cache once when store changes, then attempt live if online
   useEffect(() => {
     didInitRef.current = false;
-    // Also reset status safely
     setError(null);
     setThrByProductId({});
     setThrLoading(false);
+    setRecentScannedIds([]);
   }, [activeStoreId]);
 
   useEffect(() => {
     if (!activeStoreId) return;
-
-    // Run only once per store selection
     if (didInitRef.current) return;
     didInitRef.current = true;
 
     void (async () => {
-      await loadFromCache(); // always show last known fast
-      await loadLive(); // if online, upgrade to live; if offline, stays cached
+      await loadFromCache();
+      await loadLive();
     })();
   }, [activeStoreId, loadFromCache, loadLive]);
 
-  // ✅ AUTO REFRESH: when screen is focused + polling
   const AUTO_REFRESH_MS = 25_000;
   const lastAutoRefreshAtRef = useRef<number>(0);
 
@@ -274,12 +281,10 @@ export default function StoreInventoryScreen() {
         if (!activeStoreId) return;
         if (storeOrgMismatch) return;
 
-        // Throttle to avoid duplicate double-calls on quick nav
         const now = Date.now();
         if (now - lastAutoRefreshAtRef.current < 1500) return;
         lastAutoRefreshAtRef.current = now;
 
-        // Skip if already loading
         if (loading) return;
 
         if (isOffline) {
@@ -290,10 +295,8 @@ export default function StoreInventoryScreen() {
         await loadLive();
       };
 
-      // Immediate refresh on focus (most important)
       void runOnce();
 
-      // Polling while focused (only meaningful when ONLINE)
       intervalId = setInterval(() => {
         if (!alive) return;
         if (!activeStoreId) return;
@@ -310,20 +313,66 @@ export default function StoreInventoryScreen() {
     }, [activeStoreId, storeOrgMismatch, isOffline, loading, loadFromCache, loadLive])
   );
 
-  // ✅ When rows change, refresh thresholds (ONLINE only)
   useEffect(() => {
     void loadThresholds();
   }, [loadThresholds]);
 
+  // ✅ C: Listen to ScanBus for Inventory
+  const handleInventoryScan = useCallback(
+    (rawInput: any) => {
+      const code = cleanBarcode(rawInput);
+      if (!code) return;
+
+      setQ(code);
+
+      // try match for bump + vibrate
+      const target =
+        rows.find((r) => cleanBarcode(r.barcode) === code) ||
+        rows.find((r) => cleanBarcode(r.sku) === code);
+
+      if (target) {
+        bumpRecent(target.product_id);
+        vibrateScan();
+      } else {
+        // no match yet -> user can press Refresh if needed
+        // keep silent (no error spam)
+      }
+    },
+    [bumpRecent, rows, vibrateScan]
+  );
+
+  useEffect(() => {
+    const unsub = subscribeScanBarcode((barcode) => {
+      handleInventoryScan(barcode);
+    });
+    return unsub;
+  }, [handleInventoryScan]);
+
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
-    if (!needle) return rows;
 
-    return rows.filter((r) => {
-      const hay = `${r.product_name ?? ""} ${r.sku ?? ""} ${r.unit ?? ""} ${r.category ?? ""}`.toLowerCase();
-      return hay.includes(needle);
+    const base = !needle
+      ? rows
+      : rows.filter((r) => {
+          const hay = `${r.product_name ?? ""} ${r.sku ?? ""} ${r.unit ?? ""} ${r.category ?? ""} ${r.barcode ?? ""}`.toLowerCase();
+          return hay.includes(needle);
+        });
+
+    if (!recentScannedIds.length) return base;
+
+    const rank = new Map<string, number>();
+    recentScannedIds.forEach((id, idx) => rank.set(id, idx));
+
+    const copy = [...base];
+    copy.sort((a, b) => {
+      const ra = rank.has(a.product_id) ? (rank.get(a.product_id) as number) : 999999;
+      const rb = rank.has(b.product_id) ? (rank.get(b.product_id) as number) : 999999;
+      if (ra !== rb) return ra - rb;
+      return (a.product_name ?? "").localeCompare(b.product_name ?? "");
     });
-  }, [rows, q]);
+
+    return copy;
+  }, [rows, q, recentScannedIds]);
 
   const openAdjust = useCallback(
     (r: InventoryRow) => {
@@ -349,7 +398,7 @@ export default function StoreInventoryScreen() {
           storeName: activeStoreName ?? "",
           productId: r.product_id,
           productName: r.product_name,
-          sku: r.sku ?? "", // ✅ FIX: pass SKU to Adjust screen
+          sku: r.sku ?? "",
           currentQty: String(r.qty),
         },
       } as any);
@@ -394,10 +443,22 @@ export default function StoreInventoryScreen() {
     } as any);
   }, [activeStoreId, activeStoreName, router, storeOrgMismatch, isOffline]);
 
+  // ✅ C: go scan
+  const goScan = useCallback(() => {
+    if (!activeStoreId) {
+      Alert.alert("Missing", "No active store selected.");
+      return;
+    }
+    if (storeOrgMismatch) {
+      Alert.alert("Mismatch", "Active store haifanani na Organization. Chagua store tena.");
+      return;
+    }
+    router.push("/(tabs)/stores/scan");
+  }, [activeStoreId, router, storeOrgMismatch]);
+
   const StatusLine = useMemo(() => {
     const mode = isOffline ? "OFFLINE" : "ONLINE";
 
-    // ✅ If we have rows but source is NONE, treat as CACHED to avoid weird “—”
     const effectiveSource: SourceMode =
       source === "NONE" && (rows ?? []).length > 0 ? "CACHED" : source;
 
@@ -414,7 +475,6 @@ export default function StoreInventoryScreen() {
 
   return (
     <Screen scroll>
-      {/* ✅ Top offline banner (stable, no blinking) */}
       {isOffline ? (
         <View
           style={{
@@ -457,7 +517,6 @@ export default function StoreInventoryScreen() {
           {activeRole ?? "—"}
         </Text>
 
-        {/* ✅ Status card */}
         <View
           style={{
             marginTop: 6,
@@ -480,7 +539,8 @@ export default function StoreInventoryScreen() {
           ) : null}
         </View>
 
-        <View style={{ flexDirection: "row", gap: 10, marginTop: 6 }}>
+        {/* ✅ C: action row with Scan icon (no big card) */}
+        <View style={{ flexDirection: "row", gap: 10, marginTop: 6, alignItems: "center" }}>
           <View style={{ flex: 1 }}>
             <Button
               title={loading ? "Loading..." : "Refresh"}
@@ -498,6 +558,32 @@ export default function StoreInventoryScreen() {
               variant="secondary"
             />
           </View>
+
+          <Pressable
+            onPress={goScan}
+            hitSlop={10}
+            style={({ pressed }) => [
+              {
+                width: 52,
+                height: 52,
+                borderRadius: 999,
+                alignItems: "center",
+                justifyContent: "center",
+                borderWidth: 1,
+                borderColor: theme.colors.emeraldBorder,
+                backgroundColor: theme.colors.emeraldSoft,
+                opacity: !activeStoreId ? 0.5 : pressed ? 0.92 : 1,
+                transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
+                shadowColor: "#000",
+                shadowOpacity: !activeStoreId ? 0 : 0.25,
+                shadowRadius: 10,
+                shadowOffset: { width: 0, height: 6 },
+                elevation: !activeStoreId ? 0 : 8,
+              },
+            ]}
+          >
+            <Ionicons name="barcode-outline" size={24} color={theme.colors.text} />
+          </Pressable>
         </View>
 
         <View style={{ marginTop: 10 }}>
@@ -508,6 +594,10 @@ export default function StoreInventoryScreen() {
             variant="secondary"
           />
         </View>
+
+        <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>
+          Tip: Scan → search inawekwa auto → item inapanda juu ili u-Adjust haraka.
+        </Text>
       </Card>
 
       {!!error && (
@@ -535,7 +625,7 @@ export default function StoreInventoryScreen() {
         <TextInput
           value={q}
           onChangeText={setQ}
-          placeholder="Tafuta kwa jina / SKU / category..."
+          placeholder="Tafuta kwa jina / SKU / category / barcode..."
           placeholderTextColor="rgba(255,255,255,0.35)"
           returnKeyType="search"
           onSubmitEditing={Keyboard.dismiss}
@@ -613,6 +703,12 @@ export default function StoreInventoryScreen() {
                   <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
                     Category:{" "}
                     <Text style={{ color: theme.colors.text }}>{r.category ?? "—"}</Text>
+                    {r.barcode ? (
+                      <>
+                        {"   "}•{"   "}
+                        <Text style={{ color: theme.colors.text }}>{r.barcode}</Text>
+                      </>
+                    ) : null}
                   </Text>
                 </View>
 
@@ -636,7 +732,6 @@ export default function StoreInventoryScreen() {
               </View>
 
               <View style={{ marginTop: 10, flexDirection: "row", gap: 10 }}>
-                {/* Qty circle */}
                 <View
                   style={{
                     borderWidth: 1,
@@ -673,7 +768,6 @@ export default function StoreInventoryScreen() {
                   </Text>
                 </View>
 
-                {/* Buttons column */}
                 <View style={{ flex: 1, gap: 10 }}>
                   <Button
                     title="Alert Level"

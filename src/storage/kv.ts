@@ -6,6 +6,24 @@ export const KV_KEYS = {
   activeStoreId: "zetra_active_store_id",
 } as const;
 
+/** ✅ Canonical per-org currency key (org-level accounting consistency) */
+export function orgCurrencyKey(orgId: string) {
+  const id = String(orgId || "").trim() || "global";
+  return `zetra_org_currency_v1_${id}`;
+}
+
+/** ✅ Canonical per-org timezone key (org-level reporting cutoffs) */
+export function orgTimezoneKey(orgId: string) {
+  const id = String(orgId || "").trim() || "global";
+  return `zetra_org_timezone_v1_${id}`;
+}
+
+/** (optional future) locale key */
+export function orgLocaleKey(orgId: string) {
+  const id = String(orgId || "").trim() || "global";
+  return `zetra_org_locale_v1_${id}`;
+}
+
 async function safeGet(key: string): Promise<string | null> {
   try {
     return await AsyncStorage.getItem(key);
@@ -69,6 +87,36 @@ export const kv = {
 
   // ===== AI memory key builder =====
   aiMemoryKey: (orgKey: string) => `zetra_ai_memory__${String(orgKey || "global")}`,
+
+  // ===== Currency helpers (org-level) =====
+  getOrgCurrency: async (orgId: string): Promise<string | null> => {
+    return safeGet(orgCurrencyKey(orgId));
+  },
+
+  setOrgCurrency: async (orgId: string, currencyCode: string | null): Promise<void> => {
+    const code = String(currencyCode ?? "").trim().toUpperCase();
+    await safeSet(orgCurrencyKey(orgId), code ? code : null);
+  },
+
+  // ===== Timezone helpers (org-level) =====
+  getOrgTimezone: async (orgId: string): Promise<string | null> => {
+    return safeGet(orgTimezoneKey(orgId));
+  },
+
+  setOrgTimezone: async (orgId: string, tz: string | null): Promise<void> => {
+    const v = String(tz ?? "").trim();
+    await safeSet(orgTimezoneKey(orgId), v ? v : null);
+  },
+
+  // (optional future)
+  getOrgLocale: async (orgId: string): Promise<string | null> => {
+    return safeGet(orgLocaleKey(orgId));
+  },
+
+  setOrgLocale: async (orgId: string, locale: string | null): Promise<void> => {
+    const v = String(locale ?? "").trim();
+    await safeSet(orgLocaleKey(orgId), v ? v : null);
+  },
 
   clearActiveSelection: async () => {
     await Promise.all([safeRemove(KV_KEYS.activeOrgId), safeRemove(KV_KEYS.activeStoreId)]);
