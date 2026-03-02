@@ -1,7 +1,6 @@
 // src/components/TimezonePicker.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   FlatList,
   Modal,
   Platform,
@@ -109,6 +108,13 @@ export function TimezonePicker({
 
   const openOnceRef = useRef(false);
 
+  // ✅ HARDEN: if component unmounts (route replace), ensure modal is CLOSED
+  useEffect(() => {
+    return () => {
+      setOpen(false);
+    };
+  }, []);
+
   useEffect(() => {
     if (!open) return;
 
@@ -151,8 +157,12 @@ export function TimezonePicker({
             paddingHorizontal: 14,
             borderRadius: 18,
             borderWidth: 1,
-            borderColor: disabled ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.12)",
-            backgroundColor: disabled ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.06)",
+            borderColor: disabled
+              ? "rgba(255,255,255,0.08)"
+              : "rgba(255,255,255,0.12)",
+            backgroundColor: disabled
+              ? "rgba(255,255,255,0.04)"
+              : "rgba(255,255,255,0.06)",
             opacity: disabled ? 0.55 : pressed ? 0.92 : 1,
           },
         ]}
@@ -173,16 +183,27 @@ export function TimezonePicker({
         </View>
 
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>{title}</Text>
+          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
+            {title}
+          </Text>
           <Text
-            style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 2 }}
+            style={{
+              color: UI.muted,
+              fontWeight: "800",
+              fontSize: 12,
+              marginTop: 2,
+            }}
             numberOfLines={1}
           >
             {displayValue}
           </Text>
         </View>
 
-        <Ionicons name="chevron-down" size={18} color="rgba(255,255,255,0.65)" />
+        <Ionicons
+          name="chevron-down"
+          size={18}
+          color="rgba(255,255,255,0.65)"
+        />
       </Pressable>
 
       {/* Optional confirm checkbox */}
@@ -224,10 +245,14 @@ export function TimezonePicker({
               alignItems: "center",
               justifyContent: "center",
               borderColor: "rgba(255,255,255,0.35)",
-              backgroundColor: confirmed ? "rgba(16,185,129,0.95)" : "transparent",
+              backgroundColor: confirmed
+                ? "rgba(16,185,129,0.95)"
+                : "transparent",
             }}
           >
-            {confirmed ? <Text style={{ color: "#0B0F14", fontWeight: "900" }}>✓</Text> : null}
+            {confirmed ? (
+              <Text style={{ color: "#0B0F14", fontWeight: "900" }}>✓</Text>
+            ) : null}
           </View>
 
           <Text style={{ color: UI.text, fontWeight: "900", flex: 1 }}>
@@ -237,13 +262,30 @@ export function TimezonePicker({
       ) : null}
 
       {note ? (
-        <Text style={{ marginTop: 10, color: "rgba(255,255,255,0.65)", fontWeight: "800", fontSize: 12 }}>
+        <Text
+          style={{
+            marginTop: 10,
+            color: "rgba(255,255,255,0.65)",
+            fontWeight: "800",
+            fontSize: 12,
+          }}
+        >
           {note}
         </Text>
       ) : null}
 
       {/* Modal */}
-      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+      <Modal
+        visible={open}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setOpen(false)}
+        // ✅ Android hardening: avoid weird layering/touch residue
+        statusBarTranslucent={Platform.OS === "android"}
+        // ✅ iOS: modal always over full screen
+        presentationStyle="overFullScreen"
+        onDismiss={() => setOpen(false)}
+      >
         <Pressable
           onPress={() => setOpen(false)}
           style={{
@@ -292,7 +334,14 @@ export function TimezonePicker({
                   <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
                     Select Timezone
                   </Text>
-                  <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 2 }}>
+                  <Text
+                    style={{
+                      color: UI.muted,
+                      fontWeight: "800",
+                      fontSize: 12,
+                      marginTop: 2,
+                    }}
+                  >
                     Tap a quick pick or type manual (IANA)
                   </Text>
                 </View>
@@ -419,9 +468,24 @@ export function TimezonePicker({
                     },
                   ]}
                 >
-                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>SET</Text>
+                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
+                    SET
+                  </Text>
                 </Pressable>
               </View>
+
+              {/* Subtitle (kept) */}
+              <Text
+                style={{
+                  marginTop: 10,
+                  color: UI.muted,
+                  fontWeight: "800",
+                  fontSize: 12,
+                }}
+                numberOfLines={2}
+              >
+                {subtitle}
+              </Text>
             </View>
 
             {/* List */}
@@ -460,18 +524,33 @@ export function TimezonePicker({
                           alignItems: "center",
                           justifyContent: "center",
                           borderWidth: 1,
-                          borderColor: active ? "rgba(16,185,129,0.45)" : "rgba(255,255,255,0.10)",
-                          backgroundColor: active ? "rgba(16,185,129,0.16)" : "rgba(255,255,255,0.04)",
+                          borderColor: active
+                            ? "rgba(16,185,129,0.45)"
+                            : "rgba(255,255,255,0.10)",
+                          backgroundColor: active
+                            ? "rgba(16,185,129,0.16)"
+                            : "rgba(255,255,255,0.04)",
                         }}
                       >
-                        <Ionicons name="globe-outline" size={16} color={active ? UI.emerald : UI.text} />
+                        <Ionicons
+                          name="globe-outline"
+                          size={16}
+                          color={active ? UI.emerald : UI.text}
+                        />
                       </View>
 
                       <View style={{ flex: 1 }}>
                         <Text style={{ color: UI.text, fontWeight: "900", fontSize: 13 }}>
                           {item}
                         </Text>
-                        <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 2 }}>
+                        <Text
+                          style={{
+                            color: UI.muted,
+                            fontWeight: "800",
+                            fontSize: 12,
+                            marginTop: 2,
+                          }}
+                        >
                           {active ? "Selected ✅" : "Tap to select"}
                         </Text>
                       </View>
@@ -479,7 +558,11 @@ export function TimezonePicker({
                       {active ? (
                         <Ionicons name="checkmark-circle" size={18} color={UI.emerald} />
                       ) : (
-                        <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.35)" />
+                        <Ionicons
+                          name="chevron-forward"
+                          size={18}
+                          color="rgba(255,255,255,0.35)"
+                        />
                       )}
                     </View>
                   </Pressable>

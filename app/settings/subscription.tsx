@@ -14,6 +14,13 @@ import { getProUntilForOrg, isProActiveForOrg, setProForOrg } from "@/src/ai/sub
 
 type PlanMonths = 1 | 3 | 6 | 12;
 
+/**
+ * ✅ THEME BRIDGE (FIX)
+ * Some builds export UI as flat tokens (UI.background, UI.emeraldBorder, ...)
+ * but code uses UI.colors.*. This bridge supports BOTH without changing theme.ts.
+ */
+const C: any = (UI as any)?.colors ?? UI;
+
 function Pill({ label }: { label: string }) {
   return (
     <View
@@ -44,8 +51,8 @@ function PrimaryButton({
   danger?: boolean;
   disabled?: boolean;
 }) {
-  const border = danger ? "rgba(239,68,68,0.35)" : UI.colors.emeraldBorder;
-  const bg = danger ? "rgba(239,68,68,0.12)" : UI.colors.emeraldSoft;
+  const border = danger ? "rgba(239,68,68,0.35)" : C.emeraldBorder;
+  const bg = danger ? "rgba(239,68,68,0.12)" : C.emeraldSoft;
 
   return (
     <Pressable
@@ -79,7 +86,7 @@ function SmallPlanBtn({
   disabled?: boolean;
   selected?: boolean;
 }) {
-  const borderColor = selected ? UI.colors.emeraldBorder : "rgba(255,255,255,0.12)";
+  const borderColor = selected ? C.emeraldBorder : "rgba(255,255,255,0.12)";
   const bgColor = selected ? "rgba(16,185,129,0.18)" : "rgba(255,255,255,0.06)";
 
   return (
@@ -96,7 +103,6 @@ function SmallPlanBtn({
         backgroundColor: disabled ? "rgba(255,255,255,0.06)" : bgColor,
         alignItems: "center",
         justifyContent: "center",
-        // ✅ hii inazuia “stuka-stuka” ya mwanga (flicker) sana
         opacity: disabled ? 0.55 : pressed ? 0.98 : 1,
       })}
     >
@@ -122,26 +128,21 @@ function fmtUntil(ts: number) {
   }
 }
 
-// ✅ Infer plan kutoka PRO until (ili hata ukirudi screen, plan ionekane)
-// Tunachukua tofauti ya miezi “karibu” kati ya sasa na until, kisha tunaichagua 1/3/6/12 iliyo karibu.
+// ✅ Infer plan from until timestamp
 function inferPlanFromUntil(untilTs: number): PlanMonths | null {
   if (!untilTs || untilTs <= 0) return null;
 
   const now = new Date();
   const end = new Date(untilTs);
 
-  // if already expired, no plan
   if (end.getTime() <= now.getTime()) return null;
 
   const startY = now.getFullYear();
-  const startM = now.getMonth(); // 0-11
+  const startM = now.getMonth();
   const endY = end.getFullYear();
   const endM = end.getMonth();
 
-  // rough month diff
   let diff = (endY - startY) * 12 + (endM - startM);
-
-  // since until is month-end, treat it as inclusive => +1 month
   diff = Math.max(1, diff + 1);
 
   const candidates: PlanMonths[] = [1, 3, 6, 12];
@@ -155,7 +156,6 @@ function inferPlanFromUntil(untilTs: number): PlanMonths | null {
       best = c;
     }
   }
-
   return best;
 }
 
@@ -182,7 +182,6 @@ export default function SubscriptionDevScreen() {
   const [proActiveOrgIds, setProActiveOrgIds] = useState<Record<string, boolean>>({});
   const [proUntilOrgIds, setProUntilOrgIds] = useState<Record<string, number>>({});
 
-  // ✅ selected plan (UI)
   const [selectedPlan, setSelectedPlan] = useState<PlanMonths | null>(null);
 
   const canToggle = useMemo(() => {
@@ -210,8 +209,6 @@ export default function SubscriptionDevScreen() {
       setProActiveOrgIds(proMap);
       setProUntilOrgIds(untilMap);
 
-      // ✅ IMPORTANT: usi-reset selectedPlan hapa.
-      // Instead, infer from current active org until:
       if (activeOrgId) {
         const u = Number(untilMap[activeOrgId] ?? 0);
         const inferred = inferPlanFromUntil(u);
@@ -226,7 +223,6 @@ export default function SubscriptionDevScreen() {
     void loadStatus();
   }, [loadStatus]);
 
-  // ✅ when active org changes, recompute selection from its until
   useEffect(() => {
     if (!activeOrgId) {
       setSelectedPlan(null);
@@ -250,8 +246,6 @@ export default function SubscriptionDevScreen() {
   const enablePlan = useCallback(
     async (months: PlanMonths) => {
       if (!activeOrgId) return;
-
-      // ✅ highlight immediately (before network)
       setSelectedPlan(months);
 
       setSaving(true);
@@ -287,7 +281,7 @@ export default function SubscriptionDevScreen() {
           paddingHorizontal: 16,
           borderBottomWidth: 1,
           borderBottomColor: "rgba(255,255,255,0.08)",
-          backgroundColor: UI.colors.background,
+          backgroundColor: C.background,
         }}
       >
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
@@ -343,20 +337,15 @@ export default function SubscriptionDevScreen() {
             </Text>
 
             <Text style={{ color: UI.muted, fontWeight: "800" }}>
-              PRO:{" "}
-              <Text style={{ color: UI.text }}>
-                {loading ? "…" : activeIsPro ? "ACTIVE" : "NOT ACTIVE"}
-              </Text>
+              PRO: <Text style={{ color: UI.text }}>{loading ? "…" : activeIsPro ? "ACTIVE" : "NOT ACTIVE"}</Text>
             </Text>
 
             <Text style={{ color: UI.muted, fontWeight: "800" }}>
               PRO until: <Text style={{ color: UI.text }}>{loading ? "…" : fmtUntil(activeUntil)}</Text>
             </Text>
 
-            {/* ✅ show selected plan clearly */}
             <Text style={{ color: UI.muted, fontWeight: "900" }}>
-              Selected plan:{" "}
-              <Text style={{ color: UI.text }}>{loading ? "…" : planLabel(selectedPlan)}</Text>
+              Selected plan: <Text style={{ color: UI.text }}>{loading ? "…" : planLabel(selectedPlan)}</Text>
             </Text>
 
             <Text style={{ color: UI.faint, fontWeight: "800", marginTop: 6 }}>
@@ -436,7 +425,7 @@ export default function SubscriptionDevScreen() {
                     padding: 12,
                     borderRadius: 14,
                     borderWidth: 1,
-                    borderColor: isActive ? UI.colors.emeraldBorder : "rgba(255,255,255,0.10)",
+                    borderColor: isActive ? C.emeraldBorder : "rgba(255,255,255,0.10)",
                     backgroundColor: isActive ? "rgba(16,185,129,0.10)" : "rgba(255,255,255,0.04)",
                   }}
                 >

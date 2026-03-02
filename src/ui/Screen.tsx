@@ -1,5 +1,7 @@
-﻿import React, { useEffect, useMemo, useState } from "react";
+﻿// src/ui/Screen.tsx
+import React, { useEffect, useMemo, useState } from "react";
 import {
+  AppState,
   FlatList,
   Keyboard,
   KeyboardAvoidingView,
@@ -24,14 +26,12 @@ try {
   NetInfo = null;
 }
 
-const AbsoluteFill = {
-  absoluteFillObject: {
-    position: "absolute" as const,
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-  },
+const AbsoluteFillObject = {
+  position: "absolute" as const,
+  left: 0,
+  right: 0,
+  top: 0,
+  bottom: 0,
 };
 
 type Props = {
@@ -57,26 +57,40 @@ export function Screen({
   const TAB_BAR_EXTRA_GAP = 12;
 
   const [keyboardOpen, setKeyboardOpen] = useState(false);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
-  // ✅ Global offline indicator (does NOT affect routing / DB)
+  // ✅ Global offline indicator
   const [isOffline, setIsOffline] = useState(false);
 
+  // ✅ Remount overlays on resume (fix "touch dead until reload")
+  const [resumeTick, setResumeTick] = useState(0);
+
   useEffect(() => {
-    const showSub = Keyboard.addListener("keyboardDidShow", (e: any) => {
+    const showSub = Keyboard.addListener("keyboardDidShow", () => {
       setKeyboardOpen(true);
-      const h = Number(e?.endCoordinates?.height ?? 0);
-      setKeyboardHeight(h > 0 ? h : 0);
     });
 
     const hideSub = Keyboard.addListener("keyboardDidHide", () => {
       setKeyboardOpen(false);
-      setKeyboardHeight(0);
     });
 
     return () => {
       showSub.remove();
       hideSub.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        setResumeTick((x) => x + 1);
+      }
+    });
+
+    return () => {
+      try {
+        // @ts-ignore
+        sub?.remove?.();
+      } catch {}
     };
   }, []);
 
@@ -87,12 +101,12 @@ export function Screen({
       const connected = !!state?.isConnected;
 
       const reachable =
-        state?.isInternetReachable === null || state?.isInternetReachable === undefined
+        state?.isInternetReachable === null ||
+        state?.isInternetReachable === undefined
           ? true
           : !!state?.isInternetReachable;
 
-      const offlineNow = !connected || !reachable;
-      setIsOffline(offlineNow);
+      setIsOffline(!connected || !reachable);
     });
 
     return () => {
@@ -105,11 +119,9 @@ export function Screen({
   const effectiveBottomPad = useMemo(() => {
     if (typeof bottomPad === "number") return bottomPad;
 
-    // ✅ IMPORTANT:
-    // Screen paddingBottom is for scroll comfort (NOT for absolute composers).
-    // We keep it safe, but not aggressively huge on Android to avoid “jump”.
     if (keyboardOpen) {
-      if (Platform.OS === "android") return 16; // keep stable (AI screen handles its own composer)
+      // keep stable on Android (avoid jump)
+      if (Platform.OS === "android") return 16;
       return 24;
     }
 
@@ -127,7 +139,9 @@ export function Screen({
   const childIsScrollableRoot =
     !scroll &&
     onlyChild &&
-    (childType === ScrollView || childType === FlatList || childType === SectionList);
+    (childType === ScrollView ||
+      childType === FlatList ||
+      childType === SectionList);
 
   const OfflineBanner = useMemo(() => {
     if (!isOffline) return null;
@@ -140,7 +154,7 @@ export function Screen({
           left: 16,
           right: 16,
           top: paddingTop,
-          zIndex: 50,
+          zIndex: 40,
           borderWidth: 1,
           borderColor: "rgba(245,158,11,0.45)",
           backgroundColor: "rgba(245,158,11,0.12)",
@@ -150,7 +164,13 @@ export function Screen({
           alignItems: "center",
         }}
       >
-        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>
+        <Text
+          style={{
+            color: theme.colors.text,
+            fontWeight: "900",
+            fontSize: 12,
+          }}
+        >
           OFFLINE • Mtandao haupatikani (data ya mwisho inaweza kuonekana)
         </Text>
       </View>
@@ -163,18 +183,37 @@ export function Screen({
 
   const Root = (
     <View style={[{ flex: 1, backgroundColor: baseBg }, style]}>
+      {/* ✅ Background layer MUST NOT block touches */}
       <View
         pointerEvents="none"
         style={{
-          ...AbsoluteFill.absoluteFillObject,
+          ...AbsoluteFillObject,
           backgroundColor: "transparent",
         }}
       />
 
       {OfflineBanner}
 
-      {/* ✅ Global Notification Bell */}
-      <NotificationBell top={bellTop} />
+      {/* ✅ HARDEN: constrain the overlay touch footprint (avoid accidental mid-screen blocking) */}
+      <View
+        pointerEvents="box-none"
+        style={{
+          position: "absolute",
+          top: 0,
+          right: 0,
+          zIndex: 60,
+          ...(Platform.OS === "android" ? { elevation: 60 } : null),
+
+          // ✅ Critical: limit container size so even if child layout glitches,
+          // it won't cover the middle of the screen.
+          width: 96,
+          height: 96,
+          alignItems: "flex-end",
+          justifyContent: "flex-start",
+        }}
+      >
+        <NotificationBell key={`bell-${resumeTick}`} top={bellTop} right={16} />
+      </View>
 
       {scroll ? (
         <ScrollView
@@ -188,7 +227,7 @@ export function Screen({
             },
             contentStyle,
           ]}
-          keyboardShouldPersistTaps="always"
+          keyboardShouldPersistTaps="handled"
           keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "none"}
           showsVerticalScrollIndicator={false}
         >

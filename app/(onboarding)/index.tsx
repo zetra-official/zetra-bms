@@ -12,6 +12,15 @@ function clean(s: any) {
   return String(s ?? "").trim();
 }
 
+function safeEncode(s: any) {
+  const v = clean(s);
+  try {
+    return encodeURIComponent(v);
+  } catch {
+    return v;
+  }
+}
+
 export default function OnboardingBusinessScreen() {
   const router = useRouter();
 
@@ -55,16 +64,15 @@ export default function OnboardingBusinessScreen() {
 
     setBusy(true);
     try {
-      router.push(
-        {
-          pathname: "/(onboarding)/store",
-          params: {
-            businessName,
-            businessType,
-            timezone: nextTz,
-          },
-        } as any
-      );
+      router.push({
+        pathname: "/(onboarding)/store",
+        params: {
+          // ✅ ENCODE (timezone has "/" so this is critical)
+          businessName: safeEncode(businessName),
+          businessType: safeEncode(businessType),
+          timezone: safeEncode(nextTz),
+        },
+      } as any);
     } finally {
       setBusy(false);
     }
@@ -178,8 +186,17 @@ export default function OnboardingBusinessScreen() {
             />
           </View>
 
-          <Text style={{ color: "rgba(255,255,255,0.65)", fontWeight: "800", fontSize: 12, marginTop: 10, lineHeight: 16 }}>
-            Note: Unaweza kubadilisha timezone baadaye kupitia More → Regional Settings (Owner/Admin only).
+          <Text
+            style={{
+              color: "rgba(255,255,255,0.65)",
+              fontWeight: "800",
+              fontSize: 12,
+              marginTop: 10,
+              lineHeight: 16,
+            }}
+          >
+            Note: Unaweza kubadilisha timezone baadaye kupitia More → Regional Settings
+            (Owner/Admin only).
           </Text>
         </Card>
       </View>
@@ -195,7 +212,14 @@ export default function OnboardingBusinessScreen() {
 
       {/* Small helper */}
       {!clean(name) ? (
-        <Text style={{ color: "rgba(255,255,255,0.55)", fontWeight: "800", fontSize: 12, marginTop: 10 }}>
+        <Text
+          style={{
+            color: "rgba(255,255,255,0.55)",
+            fontWeight: "800",
+            fontSize: 12,
+            marginTop: 10,
+          }}
+        >
           Tip: Andika jina la biashara kwanza, kisha chagua timezone na uthibitishe.
         </Text>
       ) : null}

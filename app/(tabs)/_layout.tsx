@@ -99,12 +99,7 @@ export default function TabsLayout() {
         }}
       />
 
-      /**
-       * ✅ MORE tab (REAL route is settings/index.tsx)
-       * - This removes the "No route named settings" warning
-       * - Forces the bottom label to be exactly "More"
-       * - Premium icon: ellipsis circle (matches global apps)
-       */
+      {/* ✅ MORE tab (REAL route is settings/index.tsx) */}
       <Tabs.Screen
         name="settings/index"
         options={{
@@ -126,9 +121,6 @@ export default function TabsLayout() {
       {/* ✅ Hide nested settings pages from tab bar */}
       <Tabs.Screen name="settings/organization" options={{ href: null }} />
       <Tabs.Screen name="settings/regional" options={{ href: null }} />
-
-      {/* ✅ Hide notifications (if exists) */}
-      <Tabs.Screen name="notifications" options={{ href: null }} />
     </Tabs>
   );
 }

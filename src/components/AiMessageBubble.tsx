@@ -7,6 +7,14 @@ import { UI } from "@/src/ui/theme";
 type ChatRole = "user" | "assistant";
 type ChatMsg = { id: string; role: ChatRole; text: string; ts: number };
 
+/**
+ * ✅ THEME BRIDGE
+ * theme.ts exports UI as flat tokens (UI.background, UI.emeraldBorder, ...)
+ * but some older code may use UI.colors.*.
+ * This supports BOTH without changing theme.ts.
+ */
+const C: any = (UI as any)?.colors ?? UI;
+
 function clean(s: any) {
   return String(s ?? "").trim();
 }
@@ -183,12 +191,50 @@ function extractFirstMarkdownImage(fullText: string): { body: string; imageUri: 
   return { body, imageUri: uri };
 }
 
-export function AiMessageBubble({ msg }: { msg: ChatMsg }) {
+/**
+ * ✅ Props supports BOTH calling styles:
+ * 1) <AiMessageBubble msg={item} />
+ * 2) <AiMessageBubble role="user" text="hello" />
+ */
+type Props =
+  | { msg: ChatMsg; role?: never; text?: never }
+  | { msg?: undefined; role: ChatRole; text: string };
+
+function safeMsgFromProps(p: Props): ChatMsg {
+  const now = Date.now();
+
+  // style 1: msg provided
+  if ((p as any)?.msg) {
+    const m = (p as any).msg as ChatMsg;
+    return {
+      id: String(m?.id ?? `m_${now}`),
+      role: (m?.role === "user" || m?.role === "assistant" ? m.role : "assistant") as ChatRole,
+      text: String(m?.text ?? ""),
+      ts: Number(m?.ts ?? now),
+    };
+  }
+
+  // style 2: role/text provided
+  const role = (p as any)?.role;
+  const text = (p as any)?.text;
+
+  return {
+    id: `m_${now}`,
+    role: role === "user" ? "user" : "assistant",
+    text: String(text ?? ""),
+    ts: now,
+  };
+}
+
+export function AiMessageBubble(props: Props) {
+  // ✅ NEVER crash: normalize props into a safe msg
+  const msg = useMemo(() => safeMsgFromProps(props), [props]);
+
   const isUser = msg.role === "user";
 
-  const border = isUser ? "rgba(16,185,129,0.30)" : "rgba(255,255,255,0.12)";
-  const bg = isUser ? "rgba(16,185,129,0.16)" : "rgba(255,255,255,0.05)";
-  const align: "flex-start" | "flex-end" = isUser ? "flex-end" : "flex-start";
+  // ✅ IMMERSIVE MODE:
+  // - Assistant message: FULL WIDTH (no card/bubble)
+  // - User message: keep compact bubble on the right (premium chat feel)
 
   const { main, nextMoveBody, savedBadge, imageUriMain, imageUriNext } = useMemo(() => {
     if (isUser)
@@ -226,8 +272,8 @@ export function AiMessageBubble({ msg }: { msg: ChatMsg }) {
     () => ({
       body: {
         color: UI.text,
-        fontSize: 16,
-        lineHeight: 26,
+        fontSize: 16.5,
+        lineHeight: 28,
         fontWeight: "600",
       },
 
@@ -243,8 +289,9 @@ export function AiMessageBubble({ msg }: { msg: ChatMsg }) {
       bullet_list: { marginTop: 8, marginBottom: 8 },
       ordered_list: { marginTop: 8, marginBottom: 8 },
       list_item: { marginTop: 6, marginBottom: 6 },
-      bullet_list_icon: { color: UI.colors.emeraldBorder, marginRight: 10 },
-      ordered_list_icon: { color: UI.colors.emeraldBorder, marginRight: 10, fontWeight: "900" },
+
+      bullet_list_icon: { color: C.emeraldBorder, marginRight: 10 },
+      ordered_list_icon: { color: C.emeraldBorder, marginRight: 10, fontWeight: "900" },
 
       code_inline: {
         backgroundColor: "rgba(255,255,255,0.08)",
@@ -267,7 +314,7 @@ export function AiMessageBubble({ msg }: { msg: ChatMsg }) {
       },
 
       blockquote: {
-        borderLeftColor: UI.colors.emeraldBorder,
+        borderLeftColor: C.emeraldBorder,
         borderLeftWidth: 4,
         paddingLeft: 14,
         marginVertical: 10,
@@ -277,101 +324,112 @@ export function AiMessageBubble({ msg }: { msg: ChatMsg }) {
     []
   );
 
+  // ✅ USER bubble styles (keep)
+  const userBorder = "rgba(16,185,129,0.30)";
+  const userBg = "rgba(16,185,129,0.16)";
+
   return (
-    <View style={{ paddingHorizontal: 16, paddingVertical: 6, alignItems: align }}>
-      <View
-        style={{
-          maxWidth: "92%",
-          borderWidth: 1,
-          borderColor: border,
-          backgroundColor: bg,
-          borderRadius: 18,
-          paddingHorizontal: 14,
-          paddingVertical: 12,
+    <View style={{ width: "100%" }}>
+      {isUser ? (
+        // ✅ USER: compact bubble right
+        <View style={{ alignItems: "flex-end", paddingVertical: 6 }}>
+          <View
+            style={{
+              maxWidth: "88%",
+              borderWidth: 1,
+              borderColor: userBorder,
+              backgroundColor: userBg,
+              borderRadius: 18,
+              paddingHorizontal: 14,
+              paddingVertical: 12,
+              shadowColor: "#000",
+              shadowOpacity: 0.18,
+              shadowRadius: 10,
+              shadowOffset: { width: 0, height: 6 },
+              elevation: 4,
+            }}
+          >
+            <Text style={{ color: UI.text, fontWeight: "900", lineHeight: 22, fontSize: 15.5 }}>
+              {msg.text}
+            </Text>
+          </View>
+        </View>
+      ) : (
+        // ✅ ASSISTANT: immersive full width (no card)
+        <View style={{ alignItems: "flex-start", paddingVertical: 6 }}>
+          {/* ✅ Main Image (if any) */}
+          {!!clean(imageUriMain) && (
+            <Image
+              source={{ uri: imageUriMain }}
+              style={{
+                width: "100%",
+                height: 280,
+                borderRadius: 16,
+                marginBottom: 12,
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,0.10)",
+              }}
+              resizeMode="cover"
+            />
+          )}
 
-          shadowColor: "#000",
-          shadowOpacity: 0.25,
-          shadowRadius: 12,
-          shadowOffset: { width: 0, height: 6 },
-          elevation: 6,
-        }}
-      >
-        {isUser ? (
-          <Text style={{ color: UI.text, fontWeight: "900", lineHeight: 22, fontSize: 15.5 }}>
-            {msg.text}
-          </Text>
-        ) : (
-          <>
-            {/* ✅ Main Image (if any) */}
-            {!!clean(imageUriMain) && (
-              <Image
-                source={{ uri: imageUriMain }}
-                style={{
-                  width: 260,
-                  height: 260,
-                  borderRadius: 14,
-                  marginBottom: 10,
-                }}
-                resizeMode="cover"
-              />
-            )}
+          {/* ✅ Main Markdown (full width) */}
+          <Markdown style={markdownStyle as any}>{main || ""}</Markdown>
 
-            {/* ✅ Main Markdown */}
-            <Markdown style={markdownStyle as any}>{main || ""}</Markdown>
+          {/* ✅ NEXT MOVE (still shown, but not inside a big "card" that narrows text) */}
+          {!!clean(nextMoveBody) && (
+            <View
+              style={{
+                marginTop: 12,
+                width: "100%",
+                borderWidth: 1,
+                borderColor: C.emeraldBorder,
+                backgroundColor: "rgba(16,185,129,0.08)",
+                borderRadius: 16,
+                paddingHorizontal: 12,
+                paddingVertical: 12,
+              }}
+            >
+              <Text style={{ color: UI.text, fontWeight: "900", marginBottom: 8 }}>🎯 NEXT MOVE</Text>
 
-            {/* ✅ NEXT MOVE */}
-            {!!clean(nextMoveBody) && (
-              <View
-                style={{
-                  marginTop: 10,
-                  borderWidth: 1,
-                  borderColor: UI.colors.emeraldBorder,
-                  backgroundColor: "rgba(16,185,129,0.10)",
-                  borderRadius: 14,
-                  paddingHorizontal: 12,
-                  paddingVertical: 10,
-                }}
-              >
-                <Text style={{ color: UI.text, fontWeight: "900", marginBottom: 6 }}>🎯 NEXT MOVE</Text>
+              {!!clean(imageUriNext) && (
+                <Image
+                  source={{ uri: imageUriNext }}
+                  style={{
+                    width: "100%",
+                    height: 260,
+                    borderRadius: 16,
+                    marginBottom: 10,
+                    borderWidth: 1,
+                    borderColor: "rgba(255,255,255,0.10)",
+                  }}
+                  resizeMode="cover"
+                />
+              )}
 
-                {/* ✅ Next Move Image (if any) */}
-                {!!clean(imageUriNext) && (
-                  <Image
-                    source={{ uri: imageUriNext }}
-                    style={{
-                      width: 240,
-                      height: 240,
-                      borderRadius: 14,
-                      marginBottom: 10,
-                    }}
-                    resizeMode="cover"
-                  />
-                )}
+              <Markdown style={markdownStyle as any}>{nextMoveBody}</Markdown>
+            </View>
+          )}
 
-                <Markdown style={markdownStyle as any}>{nextMoveBody}</Markdown>
-              </View>
-            )}
-
-            {/* ✅ Saved Badge */}
-            {!!clean(savedBadge) && (
-              <View
-                style={{
-                  marginTop: 10,
-                  alignSelf: "flex-start",
-                  borderWidth: 1,
-                  borderColor: "rgba(16,185,129,0.35)",
-                  backgroundColor: "rgba(16,185,129,0.12)",
-                  borderRadius: 999,
-                  paddingHorizontal: 12,
-                  paddingVertical: 8,
-                }}
-              >
-                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12.5 }}>{savedBadge}</Text>
-              </View>
-            )}
-          </>
-        )}
-      </View>
+          {/* ✅ Saved Badge */}
+          {!!clean(savedBadge) && (
+            <View
+              style={{
+                marginTop: 10,
+                alignSelf: "flex-start",
+                borderWidth: 1,
+                borderColor: "rgba(16,185,129,0.35)",
+                backgroundColor: "rgba(16,185,129,0.12)",
+                borderRadius: 999,
+                paddingHorizontal: 12,
+                paddingVertical: 8,
+              }}
+            >
+              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12.5 }}>{savedBadge}</Text>
+            </View>
+          )}
+        </View>
+      )}
     </View>
   );
 }

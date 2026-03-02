@@ -1,14 +1,21 @@
 // src/ui/theme.ts
 // ZETRA Premium Dark Theme (DORA UI Standard)
+//
 // Exports:
+// - UI: direct tokens (UI.text, UI.emeraldBorder, etc.)
 // - theme: legacy-friendly tokens (theme.colors.*, theme.radius.*, theme.spacing.*)
-// - UI: newer direct tokens (UI.text, UI.muted, UI.emeraldSoft, etc.)
+// - colors/radius/spacing: convenient named exports
+// - default export: theme (helps avoid wrong import patterns)
 
 export const UI = {
   // Core
   background: "#0B0F14",
+  tabBarBg: "#070A0E",
+
+  // Surfaces
   card: "rgba(255,255,255,0.06)",
   cardStrong: "rgba(255,255,255,0.08)",
+  surface2: "rgba(255,255,255,0.04)",
 
   // Text
   text: "rgba(255,255,255,0.92)",
@@ -31,12 +38,6 @@ export const UI = {
 
   warning: "rgba(245,158,11,1)",
   warningSoft: "rgba(245,158,11,0.12)",
-
-  // Extra surfaces
-  surface2: "rgba(255,255,255,0.04)",
-
-  // Tab bar
-  tabBarBg: "#070A0E",
 } as const;
 
 export const theme = {
@@ -72,7 +73,6 @@ export const theme = {
     warningSoft: UI.warningSoft,
   },
 
-  // ✅ This fixes: theme.spacing.page undefined (caused "Cannot read property 'page' of undefined")
   spacing: {
     page: 16,
     card: 14,
@@ -89,3 +89,11 @@ export const theme = {
     pill: 999,
   },
 } as const;
+
+// Convenience named exports (helps avoid "undefined" from wrong destructuring)
+export const colors = theme.colors;
+export const spacing = theme.spacing;
+export const radius = theme.radius;
+
+// Default export for safer imports: import theme from "@/src/ui/theme"
+export default theme;
