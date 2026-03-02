@@ -200,7 +200,7 @@ export default function MoreHome() {
       </Card>
 
       {/* Footer */}
-      <View style={{ height: theme.spacing.xl }} />
+      <View style={{ height: theme.spacing.x1 }} />
       <Text
         style={{
           color: "rgba(255,255,255,0.48)",
