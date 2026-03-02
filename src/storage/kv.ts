@@ -18,10 +18,22 @@ export function orgTimezoneKey(orgId: string) {
   return `zetra_org_timezone_v1_${id}`;
 }
 
-/** (optional future) locale key */
+/** ✅ Canonical per-org locale key (drives number formatting rules) */
 export function orgLocaleKey(orgId: string) {
   const id = String(orgId || "").trim() || "global";
   return `zetra_org_locale_v1_${id}`;
+}
+
+/** ✅ Canonical per-org date format key (display-only) */
+export function orgDateFormatKey(orgId: string) {
+  const id = String(orgId || "").trim() || "global";
+  return `zetra_org_date_format_v1_${id}`;
+}
+
+/** ✅ Canonical per-org number format key (display-only) */
+export function orgNumberFormatKey(orgId: string) {
+  const id = String(orgId || "").trim() || "global";
+  return `zetra_org_number_format_v1_${id}`;
 }
 
 async function safeGet(key: string): Promise<string | null> {
@@ -108,7 +120,7 @@ export const kv = {
     await safeSet(orgTimezoneKey(orgId), v ? v : null);
   },
 
-  // (optional future)
+  // ===== Locale helpers (org-level) =====
   getOrgLocale: async (orgId: string): Promise<string | null> => {
     return safeGet(orgLocaleKey(orgId));
   },
@@ -116,6 +128,26 @@ export const kv = {
   setOrgLocale: async (orgId: string, locale: string | null): Promise<void> => {
     const v = String(locale ?? "").trim();
     await safeSet(orgLocaleKey(orgId), v ? v : null);
+  },
+
+  // ===== Date format helpers (org-level) =====
+  getOrgDateFormat: async (orgId: string): Promise<string | null> => {
+    return safeGet(orgDateFormatKey(orgId));
+  },
+
+  setOrgDateFormat: async (orgId: string, fmt: string | null): Promise<void> => {
+    const v = String(fmt ?? "").trim();
+    await safeSet(orgDateFormatKey(orgId), v ? v : null);
+  },
+
+  // ===== Number format helpers (org-level) =====
+  getOrgNumberFormat: async (orgId: string): Promise<string | null> => {
+    return safeGet(orgNumberFormatKey(orgId));
+  },
+
+  setOrgNumberFormat: async (orgId: string, fmt: string | null): Promise<void> => {
+    const v = String(fmt ?? "").trim();
+    await safeSet(orgNumberFormatKey(orgId), v ? v : null);
   },
 
   clearActiveSelection: async () => {

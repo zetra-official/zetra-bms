@@ -9,11 +9,13 @@ import {
   Animated,
   Dimensions,
   FlatList,
+  Image,
   Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
+  RefreshControl,
   ScrollView,
   Text,
   TextInput,
@@ -36,11 +38,19 @@ import { supabase } from "@/src/supabase/supabaseClient";
 type AiMode = "AUTO" | "SW" | "EN";
 type ChatRole = "user" | "assistant";
 
+type AttachedImage = {
+  id: string;
+  uri: string;
+  dataUrl: string; // "data:image/jpeg;base64,..."
+};
+
 type ChatMsg = {
   id: string;
   role: ChatRole;
   text: string;
   ts: number;
+  // ✅ A-4: keep lightweight refs for thumbnails + preview
+  images?: Array<{ id: string; uri: string }> | null;
 };
 
 type ReqMsg = { role: "user" | "assistant"; text: string };
@@ -105,7 +115,7 @@ function normalizeImageUrl(raw: string) {
 }
 
 /**
-✅ Robust fetch (Timeout + Retry + Better Error Body)
+✅ Robust fetch (Timeout + Retry + Better Error Body) + ✅ A-3 Abort
 */
 const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
 const DEFAULT_TIMEOUT_MS = 25_000;
@@ -132,6 +142,10 @@ async function readJsonOrText(res: Response): Promise<{ json: any | null; text: 
   return { json: null, text: txt };
 }
 
+/**
+ * ✅ A-3 Abort support:
+ * - If init.signal is provided, we mirror it into our internal timeout controller.
+ */
 async function fetchJsonWithRetry(
   url: string,
   init: RequestInit,
@@ -147,9 +161,23 @@ async function fetchJsonWithRetry(
     const controller = new AbortController();
     const t = setTimeout(() => controller.abort(), timeoutMs);
 
+    // Mirror external abort -> internal controller.abort()
+    const ext = init?.signal;
+    const onExtAbort = () => controller.abort();
+    try {
+      if (ext) {
+        if ((ext as any).aborted) controller.abort();
+        else (ext as any).addEventListener?.("abort", onExtAbort);
+      }
+    } catch {}
+
     try {
       const res = await fetch(url, { ...init, signal: controller.signal });
       clearTimeout(t);
+
+      try {
+        if (ext) (ext as any).removeEventListener?.("abort", onExtAbort);
+      } catch {}
 
       const { json, text } = await readJsonOrText(res);
 
@@ -174,6 +202,11 @@ async function fetchJsonWithRetry(
       continue;
     } catch (e: any) {
       clearTimeout(t);
+
+      try {
+        if (ext) (ext as any).removeEventListener?.("abort", onExtAbort);
+      } catch {}
+
       lastErr = e;
 
       const isAbort =
@@ -188,7 +221,7 @@ async function fetchJsonWithRetry(
 
       if (!shouldRetry || attempt >= retries) {
         const msg = isAbort
-          ? `${tag} timeout after ${Math.round(timeoutMs / 1000)}s`
+          ? `${tag} aborted/timeout after ${Math.round(timeoutMs / 1000)}s`
           : clean(e?.message) || `${tag} failed`;
         return { status: 0, ok: false, data: null, textBody: msg };
       }
@@ -315,12 +348,6 @@ async function createTasksFromAiActions(args: {
   return { created, failed, errors };
 }
 
-type AttachedImage = {
-  id: string;
-  uri: string;
-  dataUrl: string; // "data:image/jpeg;base64,..."
-};
-
 /**
 ✅ detect image intent via normal Send()
 */
@@ -365,6 +392,21 @@ type RetryPayload =
   | { kind: "vision"; text: string; history: ReqMsg[]; images: AttachedImage[] }
   | { kind: "image"; prompt: string };
 
+/**
+✅ A-1 Tasks list row (DB)
+*/
+type TaskRow = {
+  id: string;
+  organization_id: string;
+  store_id: string | null;
+  title: string;
+  steps: string[] | null;
+  priority: "LOW" | "MEDIUM" | "HIGH" | null;
+  eta: string | null;
+  status: string | null;
+  created_at: string;
+};
+
 export default function AiChatScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -396,6 +438,14 @@ export default function AiChatScreen() {
 
   // ✅ In-screen Tasks panel (Modal)
   const [tasksOpen, setTasksOpen] = useState(false);
+
+  // ✅ A-1 Tasks data
+  const [tasksLoading, setTasksLoading] = useState(false);
+  const [tasksError, setTasksError] = useState("");
+  const [tasks, setTasks] = useState<TaskRow[]>([]);
+
+  // ✅ A-4 image preview modal (fullscreen)
+  const [imgPreview, setImgPreview] = useState<{ open: boolean; uri: string }>({ open: false, uri: "" });
 
   const anim = useRef(new Animated.Value(0)).current; // 0 closed, 1 open
   const { height: screenH } = Dimensions.get("window");
@@ -447,6 +497,13 @@ export default function AiChatScreen() {
 
   const typingDotsTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const typingDotsStepRef = useRef(0);
+
+  // ✅ A-2: request token to prevent stale responses from overwriting UI
+  const activeReqTokenRef = useRef<string>("");
+  const makeReqToken = () => uid();
+
+  // ✅ A-3: abort in-flight network
+  const netAbortRef = useRef<AbortController | null>(null);
 
   const stopTypingDots = useCallback(() => {
     if (typingDotsTimerRef.current) clearInterval(typingDotsTimerRef.current);
@@ -521,16 +578,22 @@ export default function AiChatScreen() {
   }, []);
 
   const typeOutChatGPTLike = useCallback(
-    async (msgId: string, fullText: string) => {
+    async (msgId: string, fullText: string, reqToken?: string) => {
       stopTyping();
       stopTypingDots();
       typingAbortRef.current = { aborted: false };
 
+      const myToken = clean(reqToken || "");
       const txt = String(fullText ?? "");
       if (!txt.trim()) {
+        // ✅ A-2: ignore stale
+        if (myToken && activeReqTokenRef.current && myToken !== activeReqTokenRef.current) return;
         patchMessageText(msgId, "Samahani — AI imerudisha jibu tupu. Jaribu tena.");
         return;
       }
+
+      // ✅ A-2: ignore stale
+      if (myToken && activeReqTokenRef.current && myToken !== activeReqTokenRef.current) return;
 
       patchMessageText(msgId, "");
 
@@ -541,6 +604,9 @@ export default function AiChatScreen() {
 
       const tick = () => {
         if (typingAbortRef.current.aborted) return;
+
+        // ✅ A-2: ignore stale
+        if (myToken && activeReqTokenRef.current && myToken !== activeReqTokenRef.current) return;
 
         const r = Math.random();
         const chunk = r < 0.78 ? 1 : r < 0.95 ? 2 : 3;
@@ -574,6 +640,12 @@ export default function AiChatScreen() {
       typingTimerRef.current = null;
       typingAbortRef.current.aborted = true;
       stopTypingDots();
+
+      // ✅ A-3 abort on unmount
+      try {
+        netAbortRef.current?.abort();
+      } catch {}
+      netAbortRef.current = null;
     };
   }, [stopTypingDots]);
 
@@ -726,11 +798,16 @@ export default function AiChatScreen() {
 
       const url = `${AI_WORKER_URL}/transcribe`;
 
+      // ✅ A-3 abort
+      const abort = new AbortController();
+      netAbortRef.current = abort;
+
       const out = await fetchJsonWithRetry(
         url,
         {
           method: "POST",
           body: form,
+          signal: abort.signal,
         },
         { timeoutMs: 45_000, retries: 2, tag: "transcribe" }
       );
@@ -758,6 +835,7 @@ export default function AiChatScreen() {
       Alert.alert("Transcribe error", clean(e?.message) || "Unknown transcribe error");
     } finally {
       setTranscribing(false);
+      netAbortRef.current = null;
     }
   }, [recording]);
 
@@ -773,7 +851,7 @@ export default function AiChatScreen() {
    ✅ Worker: /v1/chat
    */
   const callWorkerChat = useCallback(
-    async (text: string, history: ReqMsg[]) => {
+    async (text: string, history: ReqMsg[], signal?: AbortSignal) => {
       if (!requireWorkerUrlOrAlert()) throw new Error("Worker URL missing");
 
       const payload = {
@@ -797,6 +875,7 @@ export default function AiChatScreen() {
           method: "POST",
           headers: { "Content-Type": "application/json", Accept: "application/json" },
           body: JSON.stringify(payload),
+          signal,
         },
         { timeoutMs: DEFAULT_TIMEOUT_MS, retries: DEFAULT_RETRIES, tag: "chat" }
       );
@@ -834,7 +913,7 @@ export default function AiChatScreen() {
   );
 
   const callWorkerVision = useCallback(
-    async (text: string, images: AttachedImage[], history: ReqMsg[]) => {
+    async (text: string, images: AttachedImage[], history: ReqMsg[], signal?: AbortSignal) => {
       if (!requireWorkerUrlOrAlert()) throw new Error("Worker URL missing");
       const payload = {
         message: text,
@@ -860,6 +939,7 @@ export default function AiChatScreen() {
           method: "POST",
           headers: { "Content-Type": "application/json", Accept: "application/json" },
           body: JSON.stringify(payload),
+          signal,
         },
         { timeoutMs: 40_000, retries: 2, tag: "vision" }
       );
@@ -891,7 +971,7 @@ export default function AiChatScreen() {
   );
 
   const callWorkerImageGenerate = useCallback(
-    async (prompt: string) => {
+    async (prompt: string, signal?: AbortSignal) => {
       if (!requireWorkerUrlOrAlert()) throw new Error("Worker URL missing");
 
       const url = `${AI_WORKER_URL}/image`;
@@ -901,6 +981,7 @@ export default function AiChatScreen() {
           method: "POST",
           headers: { "Content-Type": "application/json", Accept: "application/json" },
           body: JSON.stringify({ prompt }),
+          signal,
         },
         { timeoutMs: 60_000, retries: 2, tag: "image" }
       );
@@ -959,6 +1040,76 @@ export default function AiChatScreen() {
   }, [input, keyboardOpen, thinking, toolOpen, tasksOpen]);
 
   /**
+✅ A-1: Load tasks from DB (org-level)
+*/
+  const loadTasks = useCallback(async () => {
+    const orgId = clean(org.activeOrgId);
+    if (!orgId) {
+      setTasks([]);
+      setTasksError("No org selected.");
+      return;
+    }
+
+    setTasksLoading(true);
+    setTasksError("");
+
+    try {
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("id,organization_id,store_id,title,steps,priority,eta,status,created_at")
+        .eq("organization_id", orgId)
+        .order("created_at", { ascending: false })
+        .limit(80);
+
+      if (error) {
+        setTasks([]);
+        setTasksError(clean(error.message) || "Failed to load tasks");
+        return;
+      }
+
+      const rows = (data as any[] | null) ?? [];
+      setTasks(
+        rows.map((r) => ({
+          id: String(r.id),
+          organization_id: String(r.organization_id),
+          store_id: r.store_id ? String(r.store_id) : null,
+          title: clean(r.title),
+          steps: Array.isArray(r.steps) ? (r.steps as string[]) : null,
+          priority: r.priority ?? null,
+          eta: r.eta ?? null,
+          status: r.status ?? null,
+          created_at: String(r.created_at || ""),
+        }))
+      );
+    } catch (e: any) {
+      setTasks([]);
+      setTasksError(clean(e?.message) || "Failed to load tasks");
+    } finally {
+      setTasksLoading(false);
+    }
+  }, [org.activeOrgId]);
+
+  /**
+✅ A-3: Stop generating (network + typing)
+*/
+  const stopGenerating = useCallback(() => {
+    // invalidate token so stale responses don't patch UI
+    activeReqTokenRef.current = `STOP_${uid()}`;
+
+    // abort typing animation + dots
+    stopTyping();
+    stopTypingDots();
+
+    // abort network
+    try {
+      netAbortRef.current?.abort();
+    } catch {}
+    netAbortRef.current = null;
+
+    setThinking(false);
+  }, [stopTyping, stopTypingDots]);
+
+  /**
 ✅ MAIN SEND
 */
   const send = useCallback(async () => {
@@ -990,24 +1141,46 @@ export default function AiChatScreen() {
     stopTyping();
     stopTypingDots();
 
-    const userMsg: ChatMsg = { id: uid(), role: "user", text, ts: Date.now() };
-    const botId = uid();
-    const botPlaceholder: ChatMsg = { id: botId, role: "assistant", ts: Date.now(), text: "AI inaandika" };
+    // ✅ A-2 token for this request
+    const reqToken = makeReqToken();
+    activeReqTokenRef.current = reqToken;
+
+    // ✅ A-3 abort controller for this request
+    const abort = new AbortController();
+    netAbortRef.current = abort;
 
     const imagesToSend = attachedImages;
     setAttachedImages([]);
+
+    // ✅ A-4: include thumbnails on user message
+    const userMsg: ChatMsg = {
+      id: uid(),
+      role: "user",
+      text,
+      ts: Date.now(),
+      images: imagesToSend.length ? imagesToSend.map((x) => ({ id: x.id, uri: x.uri })) : null,
+    };
+
+    const botId = uid();
+    const botPlaceholder: ChatMsg = { id: botId, role: "assistant", ts: Date.now(), text: "AI inaandika" };
 
     setMessages((prev) => [botPlaceholder, userMsg, ...prev]);
     scrollToEndSoon();
     startTypingDots(botId);
 
     try {
+      // ✅ A-2: if stopped, ignore
+      if (reqToken !== activeReqTokenRef.current) return;
+
       if (imagesToSend.length > 0) {
         const payload: RetryPayload = { kind: "vision", text, history, images: imagesToSend };
         lastPayloadRef.current = payload;
         setRetryCard({ visible: false, label: "", payload });
 
-        const res = await callWorkerVision(text, imagesToSend, history);
+        const res = await callWorkerVision(text, imagesToSend, history, abort.signal);
+
+        // ✅ A-2: stale ignore
+        if (reqToken !== activeReqTokenRef.current) return;
 
         const packed = packAssistantText({
           text: res.text,
@@ -1016,7 +1189,7 @@ export default function AiChatScreen() {
           footerNote: "",
         });
 
-        await typeOutChatGPTLike(botId, packed || res.text);
+        await typeOutChatGPTLike(botId, packed || res.text, reqToken);
         return;
       }
 
@@ -1028,13 +1201,16 @@ export default function AiChatScreen() {
         lastPayloadRef.current = payload;
         setRetryCard({ visible: false, label: "", payload });
 
-        const url = await callWorkerImageGenerate(p);
+        const url = await callWorkerImageGenerate(p, abort.signal);
+
+        // ✅ A-2: stale ignore
+        if (reqToken !== activeReqTokenRef.current) return;
 
         const reply = isDataImageUrl(url)
           ? `✅ Image generated\n\n![ZETRA Image](${url})`
           : `✅ Image generated\n\n![ZETRA Image](${url})\n\nLink: ${url}`;
 
-        await typeOutChatGPTLike(botId, reply);
+        await typeOutChatGPTLike(botId, reply, reqToken);
         return;
       }
 
@@ -1042,7 +1218,10 @@ export default function AiChatScreen() {
       lastPayloadRef.current = payload;
       setRetryCard({ visible: false, label: "", payload });
 
-      const res = await callWorkerChat(text, history);
+      const res = await callWorkerChat(text, history, abort.signal);
+
+      // ✅ A-2: stale ignore
+      if (reqToken !== activeReqTokenRef.current) return;
 
       let footerNote = "";
       const resMeta: any = (res as any)?.meta ?? null;
@@ -1071,19 +1250,32 @@ export default function AiChatScreen() {
         footerNote,
       });
 
-      await typeOutChatGPTLike(botId, packed || res.text);
+      await typeOutChatGPTLike(botId, packed || res.text, reqToken);
     } catch (e: any) {
       stopTypingDots();
 
+      const msg = clean(e?.message);
+
+      // ✅ A-3: if aborted, show clean stopped message (not scary errors)
+      const isAbort =
+        msg.toLowerCase().includes("aborted") ||
+        msg.toLowerCase().includes("abort") ||
+        msg.toLowerCase().includes("canceled") ||
+        msg.toLowerCase().includes("cancelled");
+
+      if (reqToken !== activeReqTokenRef.current) return;
+
       patchMessageText(
         botId,
-        "Samahani — kuna hitilafu kidogo.\n" +
-          (e?.message ? `\nError: ${String(e.message)}` : "") +
-          `\n\n[debug] EXPO_PUBLIC_AI_WORKER_URL(base) = ${AI_WORKER_URL || "EMPTY"}`
+        isAbort
+          ? "⛔ Umesimamisha AI.\n\nUkihitaji, tuma tena ujumbe."
+          : "Samahani — kuna hitilafu kidogo.\n" +
+              (e?.message ? `\nError: ${String(e.message)}` : "") +
+              `\n\n[debug] EXPO_PUBLIC_AI_WORKER_URL(base) = ${AI_WORKER_URL || "EMPTY"}`
       );
 
       const last = lastPayloadRef.current;
-      if (last) {
+      if (last && !isAbort) {
         setRetryCard({
           visible: true,
           label: "Network issue — Retry",
@@ -1091,6 +1283,7 @@ export default function AiChatScreen() {
         });
       }
     } finally {
+      netAbortRef.current = null;
       setThinking(false);
       scrollToEndSoon();
     }
@@ -1123,6 +1316,14 @@ export default function AiChatScreen() {
     setRetryCard({ visible: false, label: "", payload: p });
     lastPayloadRef.current = p;
 
+    // ✅ A-2 token for retry
+    const reqToken = makeReqToken();
+    activeReqTokenRef.current = reqToken;
+
+    // ✅ A-3 abort controller for retry
+    const abort = new AbortController();
+    netAbortRef.current = abort;
+
     const userMsg: ChatMsg = {
       id: uid(),
       role: "user",
@@ -1143,27 +1344,35 @@ export default function AiChatScreen() {
 
     try {
       if (p.kind === "image") {
-        const url = await callWorkerImageGenerate(p.prompt);
+        const url = await callWorkerImageGenerate(p.prompt, abort.signal);
+
+        if (reqToken !== activeReqTokenRef.current) return;
+
         const reply = isDataImageUrl(url)
           ? `✅ Image generated\n\n![ZETRA Image](${url})`
           : `✅ Image generated\n\n![ZETRA Image](${url})\n\nLink: ${url}`;
-        await typeOutChatGPTLike(botId, reply);
+        await typeOutChatGPTLike(botId, reply, reqToken);
         return;
       }
 
       if (p.kind === "vision") {
-        const res = await callWorkerVision(p.text, p.images, p.history);
+        const res = await callWorkerVision(p.text, p.images, p.history, abort.signal);
+
+        if (reqToken !== activeReqTokenRef.current) return;
+
         const packed = packAssistantText({
           text: res.text,
           actions: (res as any)?.meta?.actions ?? [],
           nextMove: (res as any)?.meta?.nextMove ?? "",
           footerNote: "",
         });
-        await typeOutChatGPTLike(botId, packed || res.text);
+        await typeOutChatGPTLike(botId, packed || res.text, reqToken);
         return;
       }
 
-      const res = await callWorkerChat(p.text, p.history);
+      const res = await callWorkerChat(p.text, p.history, abort.signal);
+
+      if (reqToken !== activeReqTokenRef.current) return;
 
       let footerNote = "";
       const resMeta: any = (res as any)?.meta ?? null;
@@ -1192,16 +1401,32 @@ export default function AiChatScreen() {
         footerNote,
       });
 
-      await typeOutChatGPTLike(botId, packed || res.text);
+      await typeOutChatGPTLike(botId, packed || res.text, reqToken);
     } catch (e: any) {
       stopTypingDots();
+
+      const msg = clean(e?.message);
+      const isAbort =
+        msg.toLowerCase().includes("aborted") ||
+        msg.toLowerCase().includes("abort") ||
+        msg.toLowerCase().includes("canceled") ||
+        msg.toLowerCase().includes("cancelled");
+
+      if (reqToken !== activeReqTokenRef.current) return;
+
       patchMessageText(
         botId,
-        "Samahani — retry imegoma.\n" + (e?.message ? `\nError: ${String(e.message)}` : "") + "\n\nJaribu tena."
+        isAbort
+          ? "⛔ Retry imesimamishwa.\n\nUkihitaji, bonyeza Retry tena."
+          : "Samahani — retry imegoma.\n" + (e?.message ? `\nError: ${String(e.message)}` : "") + "\n\nJaribu tena."
       );
-      setRetryCard({ visible: true, label: "Retry failed — Try again", payload: p });
+
+      if (!isAbort) {
+        setRetryCard({ visible: true, label: "Retry failed — Try again", payload: p });
+      }
       lastPayloadRef.current = p;
     } finally {
+      netAbortRef.current = null;
       setThinking(false);
       scrollToEndSoon();
     }
@@ -1251,6 +1476,7 @@ export default function AiChatScreen() {
       onPress={() => {
         Keyboard.dismiss();
         setTasksOpen(true);
+        void loadTasks();
       }}
       hitSlop={10}
       style={({ pressed }) => ({
@@ -1295,6 +1521,28 @@ export default function AiChatScreen() {
       <Ionicons name="sparkles" size={14} color={UI.text} />
       <Text style={{ color: UI.text, fontWeight: "900" }}>PRO</Text>
     </View>
+  );
+
+  const StopPill = (
+    <Pressable
+      onPress={stopGenerating}
+      hitSlop={10}
+      style={({ pressed }) => ({
+        paddingHorizontal: 12,
+        height: 34,
+        borderRadius: 999,
+        borderWidth: 1,
+        borderColor: "rgba(239,68,68,0.35)",
+        backgroundColor: pressed ? "rgba(239,68,68,0.18)" : "rgba(239,68,68,0.12)",
+        alignItems: "center",
+        justifyContent: "center",
+      })}
+    >
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+        <Ionicons name="stop-circle-outline" size={16} color={UI.text} />
+        <Text style={{ color: UI.text, fontWeight: "900" }}>Stop</Text>
+      </View>
+    </Pressable>
   );
 
   const TopBar = (
@@ -1360,8 +1608,7 @@ export default function AiChatScreen() {
 
         <Pressable
           onPress={() => {
-            stopTyping();
-            stopTypingDots();
+            stopGenerating();
             setMessages([
               {
                 id: uid(),
@@ -1402,18 +1649,42 @@ export default function AiChatScreen() {
         <ModePill k="SW" label="Swahili" />
         <ModePill k="EN" label="English" />
         {TasksPill}
+        {thinking ? StopPill : null}
       </View>
     </View>
   );
 
   /**
    * ✅ Renderer (IMMERSIVE WIDTH)
-   * - No extra card wrapper here; bubble handles padding rules.
+   * - Shows A-4 thumbnails for user messages (no AiMessageBubble changes)
    */
   const renderMsg = useCallback(({ item }: { item: ChatMsg }) => {
     const isUser = item.role === "user";
+    const imgs = Array.isArray(item.images) ? item.images : [];
     return (
       <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
+        {isUser && imgs.length ? (
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
+            {imgs.map((x) => (
+              <Pressable
+                key={x.id}
+                onPress={() => setImgPreview({ open: true, uri: x.uri })}
+                style={({ pressed }) => ({
+                  width: 64,
+                  height: 64,
+                  borderRadius: 14,
+                  overflow: "hidden",
+                  borderWidth: 1,
+                  borderColor: "rgba(255,255,255,0.12)",
+                  opacity: pressed ? 0.92 : 1,
+                })}
+              >
+                <Image source={{ uri: x.uri }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
+
         <AiMessageBubble role={isUser ? "user" : "assistant"} text={item.text} />
       </View>
     );
@@ -1463,11 +1734,7 @@ export default function AiChatScreen() {
     if (!showChips) return null;
     return (
       <View style={{ paddingTop: 10 }}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}
-        >
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}>
           {quickChips.map((c) => (
             <Pressable
               key={c.k}
@@ -1497,7 +1764,7 @@ export default function AiChatScreen() {
   }, [applyChipPrompt, quickChips, showChips]);
 
   /**
-   * ✅ Attached images row
+   * ✅ Attached images row (composer)
    */
   const AttachRow = useMemo(() => {
     if (!attachedImages.length) return null;
@@ -1553,22 +1820,14 @@ export default function AiChatScreen() {
 
   /**
    * ✅ Composer spacing (KEY FIX)
-   * Goal:
-   * - Keyboard OPEN  -> composer sits close to keyboard (no big gap)
-   * - Keyboard CLOSED -> composer drops to absolute bottom (uses safe-area only)
    */
   const composerBottomPad = useMemo(() => {
-    // When keyboard is open, KAV already lifts the composer.
-    // Extra paddingBottom creates the "composer went too high" effect.
     if (keyboardOpen) return 6;
-    // When keyboard is closed, we want it down at the bottom (safe area only, small breathing room)
     return Math.max(insets.bottom, 10);
   }, [insets.bottom, keyboardOpen]);
 
   /**
-   * ✅ Composer (FIXED)
-   * - NO absolute positioning
-   * - KeyboardAvoidingView (below) will move this composer above keyboard cleanly
+   * ✅ Composer
    */
   const Composer = (
     <View
@@ -1700,12 +1959,35 @@ export default function AiChatScreen() {
             <Ionicons name="send" size={18} color={UI.text} />
           </Pressable>
         </View>
+
+        {/* ✅ A-3 Stop button near composer too (optional second access) */}
+        {thinking ? (
+          <View style={{ marginTop: 10 }}>
+            <Pressable
+              onPress={stopGenerating}
+              style={({ pressed }) => ({
+                height: 44,
+                borderRadius: 999,
+                borderWidth: 1,
+                borderColor: "rgba(239,68,68,0.35)",
+                backgroundColor: pressed ? "rgba(239,68,68,0.18)" : "rgba(239,68,68,0.12)",
+                alignItems: "center",
+                justifyContent: "center",
+                flexDirection: "row",
+                gap: 10,
+              })}
+            >
+              <Ionicons name="stop-circle-outline" size={18} color={UI.text} />
+              <Text style={{ color: UI.text, fontWeight: "900" }}>STOP GENERATING</Text>
+            </Pressable>
+          </View>
+        ) : null}
       </View>
     </View>
   );
 
   /**
-   * ✅ Tasks Panel (modal, lightweight)
+   * ✅ Tasks Panel (modal) — A-1 Real list
    */
   const TasksModal = (
     <Modal visible={tasksOpen} transparent animationType="fade" onRequestClose={() => setTasksOpen(false)}>
@@ -1727,42 +2009,201 @@ export default function AiChatScreen() {
             borderColor: "rgba(255,255,255,0.10)",
             padding: 14,
             paddingBottom: Math.max(insets.bottom, 12) + 14,
+            maxHeight: "86%",
           }}
         >
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>Tasks</Text>
-            <Pressable
-              onPress={() => setTasksOpen(false)}
-              hitSlop={10}
-              style={({ pressed }) => ({
-                width: 40,
-                height: 40,
-                borderRadius: 14,
-                borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.12)",
-                backgroundColor: pressed ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.06)",
-                alignItems: "center",
-                justifyContent: "center",
-              })}
-            >
-              <Ionicons name="close" size={18} color={UI.text} />
-            </Pressable>
+
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <Pressable
+                onPress={() => void loadTasks()}
+                hitSlop={10}
+                style={({ pressed }) => ({
+                  width: 40,
+                  height: 40,
+                  borderRadius: 14,
+                  borderWidth: 1,
+                  borderColor: "rgba(255,255,255,0.12)",
+                  backgroundColor: pressed ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.06)",
+                  alignItems: "center",
+                  justifyContent: "center",
+                })}
+              >
+                <Ionicons name="refresh" size={18} color={UI.text} />
+              </Pressable>
+
+              <Pressable
+                onPress={() => setTasksOpen(false)}
+                hitSlop={10}
+                style={({ pressed }) => ({
+                  width: 40,
+                  height: 40,
+                  borderRadius: 14,
+                  borderWidth: 1,
+                  borderColor: "rgba(255,255,255,0.12)",
+                  backgroundColor: pressed ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.06)",
+                  alignItems: "center",
+                  justifyContent: "center",
+                })}
+              >
+                <Ionicons name="close" size={18} color={UI.text} />
+              </Pressable>
+            </View>
           </View>
 
           <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 6 }}>
-            Hapa tunaziweka actions za AI (PRO). Kwa sasa ni panel — task list halisi iko kwenye DB/RPC.
+            Org: {org.activeOrgName ?? "—"} • Showing latest tasks saved by AI (PRO) & manual.
           </Text>
 
-          <Card style={{ marginTop: 12, padding: 14, borderRadius: 18 }}>
-            <Text style={{ color: UI.text, fontWeight: "900" }}>Quick Notes</Text>
-            <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 6 }}>
-              • Ukiona “✅ Saved to Tasks: N” chini ya jibu la AI, tayari imeshaseve kwenye `public.tasks`.
-            </Text>
-            <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 6 }}>
-              • Next step (tutafanya baadae): kuonyesha list ya tasks hapa ndani.
-            </Text>
-          </Card>
+          {tasksLoading ? (
+            <View style={{ paddingTop: 16, alignItems: "center" }}>
+              <ActivityIndicator />
+              <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 10 }}>Loading tasks...</Text>
+            </View>
+          ) : tasksError ? (
+            <Card style={{ marginTop: 12, padding: 14, borderRadius: 18 }}>
+              <Text style={{ color: UI.text, fontWeight: "900" }}>Could not load tasks</Text>
+              <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 6 }}>{tasksError}</Text>
+              <Pressable
+                onPress={() => void loadTasks()}
+                style={({ pressed }) => ({
+                  marginTop: 12,
+                  height: 44,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: "rgba(16,185,129,0.45)",
+                  backgroundColor: pressed ? "rgba(16,185,129,0.20)" : "rgba(16,185,129,0.14)",
+                  alignItems: "center",
+                  justifyContent: "center",
+                })}
+              >
+                <Text style={{ color: UI.text, fontWeight: "900" }}>Retry</Text>
+              </Pressable>
+            </Card>
+          ) : tasks.length === 0 ? (
+            <Card style={{ marginTop: 12, padding: 14, borderRadius: 18 }}>
+              <Text style={{ color: UI.text, fontWeight: "900" }}>No tasks yet</Text>
+              <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 6 }}>
+                Ukiona “✅ Saved to Tasks: N” chini ya jibu la AI — itatokea hapa.
+              </Text>
+            </Card>
+          ) : (
+            <FlatList
+              data={tasks}
+              keyExtractor={(t) => t.id}
+              style={{ marginTop: 12 }}
+              refreshControl={<RefreshControl refreshing={tasksLoading} onRefresh={() => void loadTasks()} />}
+              renderItem={({ item }) => {
+                const pr = item.priority ? String(item.priority) : "—";
+                const st = item.status ? String(item.status) : "—";
+                const eta = item.eta ? String(item.eta) : "";
+                const steps = Array.isArray(item.steps) ? item.steps : [];
+                return (
+                  <Card style={{ padding: 14, borderRadius: 18, marginBottom: 10 }}>
+                    <Text style={{ color: UI.text, fontWeight: "900" }}>{item.title || "Untitled"}</Text>
+
+                    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+                      <View
+                        style={{
+                          paddingHorizontal: 10,
+                          height: 28,
+                          borderRadius: 999,
+                          borderWidth: 1,
+                          borderColor: "rgba(255,255,255,0.12)",
+                          backgroundColor: "rgba(255,255,255,0.06)",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 12 }}>status: {st}</Text>
+                      </View>
+
+                      <View
+                        style={{
+                          paddingHorizontal: 10,
+                          height: 28,
+                          borderRadius: 999,
+                          borderWidth: 1,
+                          borderColor: "rgba(255,255,255,0.12)",
+                          backgroundColor: "rgba(255,255,255,0.06)",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 12 }}>priority: {pr}</Text>
+                      </View>
+
+                      {eta ? (
+                        <View
+                          style={{
+                            paddingHorizontal: 10,
+                            height: 28,
+                            borderRadius: 999,
+                            borderWidth: 1,
+                            borderColor: "rgba(16,185,129,0.25)",
+                            backgroundColor: "rgba(16,185,129,0.10)",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 12 }}>eta: {eta}</Text>
+                        </View>
+                      ) : null}
+                    </View>
+
+                    {steps.length ? (
+                      <View style={{ marginTop: 10 }}>
+                        <Text style={{ color: UI.text, fontWeight: "900", marginBottom: 6 }}>Steps</Text>
+                        {steps.slice(0, 6).map((s, idx) => (
+                          <Text key={`${item.id}_s_${idx}`} style={{ color: UI.muted, fontWeight: "800", marginTop: 4 }}>
+                            • {clean(s)}
+                          </Text>
+                        ))}
+                        {steps.length > 6 ? (
+                          <Text style={{ color: UI.faint, fontWeight: "800", marginTop: 6 }}>
+                            +{steps.length - 6} more...
+                          </Text>
+                        ) : null}
+                      </View>
+                    ) : null}
+                  </Card>
+                );
+              }}
+            />
+          )}
         </Pressable>
+      </Pressable>
+    </Modal>
+  );
+
+  // ✅ A-4 fullscreen image preview
+  const ImagePreviewModal = (
+    <Modal visible={imgPreview.open} transparent animationType="fade" onRequestClose={() => setImgPreview({ open: false, uri: "" })}>
+      <Pressable
+        onPress={() => setImgPreview({ open: false, uri: "" })}
+        style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.85)", alignItems: "center", justifyContent: "center" }}
+      >
+        <Pressable onPress={() => {}} style={{ width: "92%", aspectRatio: 1, borderRadius: 18, overflow: "hidden" }}>
+          <Image source={{ uri: imgPreview.uri }} style={{ width: "100%", height: "100%" }} resizeMode="contain" />
+        </Pressable>
+        <View style={{ position: "absolute", top: Math.max(insets.top, 12) + 12, right: 16 }}>
+          <Pressable
+            onPress={() => setImgPreview({ open: false, uri: "" })}
+            style={({ pressed }) => ({
+              width: 44,
+              height: 44,
+              borderRadius: 16,
+              borderWidth: 1,
+              borderColor: "rgba(255,255,255,0.18)",
+              backgroundColor: pressed ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.06)",
+              alignItems: "center",
+              justifyContent: "center",
+            })}
+          >
+            <Ionicons name="close" size={22} color={UI.text} />
+          </Pressable>
+        </View>
       </Pressable>
     </Modal>
   );
@@ -1802,6 +2243,7 @@ export default function AiChatScreen() {
         </KeyboardAvoidingView>
 
         {TasksModal}
+        {ImagePreviewModal}
 
         {/* ✅ Tool sheet kept for future expansion (not used yet) */}
         {toolOpen ? (

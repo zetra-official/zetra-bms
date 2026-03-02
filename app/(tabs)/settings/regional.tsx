@@ -18,7 +18,8 @@ import { Card } from "@/src/ui/Card";
 import { UI } from "@/src/ui/theme";
 import { useOrg } from "@/src/context/OrgContext";
 import { CurrencyPickerAll } from "@/src/components/CurrencyPickerAll";
-import { kv, orgCurrencyKey, orgTimezoneKey } from "@/src/storage/kv";
+import { LanguagePickerAll } from "@/src/components/LanguagePickerAll";
+import { kv } from "@/src/storage/kv";
 import { supabase } from "@/src/supabase/supabaseClient";
 
 type ItemProps = {
@@ -97,6 +98,9 @@ function clean(s: any) {
 function upper(s: any) {
   return clean(s).toUpperCase();
 }
+function lower(s: any) {
+  return clean(s).toLowerCase();
+}
 
 function isValidTimeZone(tz: string) {
   const v = clean(tz);
@@ -107,6 +111,56 @@ function isValidTimeZone(tz: string) {
     return true;
   } catch {
     return false;
+  }
+}
+
+// =========================
+// Date + Number formats (simple)
+// =========================
+type DateFmtKey = "DMY" | "MDY" | "ISO";
+type NumFmtKey = "US" | "EU_DOT" | "EU_SPACE";
+
+const DATE_FORMATS: Array<{ key: DateFmtKey; label: string; example: string }> =
+  [
+    { key: "DMY", label: "DD/MM/YYYY", example: "17/03/2026" },
+    { key: "MDY", label: "MM/DD/YYYY", example: "03/17/2026" },
+    { key: "ISO", label: "YYYY-MM-DD", example: "2026-03-17" },
+  ];
+
+const NUMBER_FORMATS: Array<{
+  key: NumFmtKey;
+  label: string;
+  example: string;
+  locale: string;
+}> = [
+  { key: "US", label: "1,234.56", example: "1,234.56", locale: "en-US" },
+  { key: "EU_DOT", label: "1.234,56", example: "1.234,56", locale: "de-DE" },
+  // fr-FR uses space grouping + comma decimals (close to "1 234,56")
+  { key: "EU_SPACE", label: "1 234,56", example: "1 234,56", locale: "fr-FR" },
+];
+
+function pad2(n: number) {
+  return n < 10 ? `0${n}` : String(n);
+}
+
+function formatDatePreview(d: Date, fmt: DateFmtKey) {
+  const yyyy = d.getFullYear();
+  const mm = pad2(d.getMonth() + 1);
+  const dd = pad2(d.getDate());
+
+  if (fmt === "ISO") return `${yyyy}-${mm}-${dd}`;
+  if (fmt === "MDY") return `${mm}/${dd}/${yyyy}`;
+  return `${dd}/${mm}/${yyyy}`; // DMY
+}
+
+function formatNumberPreview(n: number, locale: string) {
+  try {
+    return new Intl.NumberFormat(locale, {
+      style: "decimal",
+      maximumFractionDigits: 2,
+    }).format(n);
+  } catch {
+    return String(n);
   }
 }
 
@@ -141,6 +195,29 @@ const TZ_QUICK = [
   "Pacific/Auckland",
 ];
 
+function guessLangLabelFromLocale(locale: string) {
+  const l = lower(locale);
+  if (!l) return "—";
+  if (l.startsWith("sw")) return "Swahili";
+  if (l.startsWith("en")) return "English";
+  if (l.startsWith("ar")) return "Arabic";
+  if (l.startsWith("fr")) return "French";
+  if (l.startsWith("de")) return "German";
+  if (l.startsWith("es")) return "Spanish";
+  if (l.startsWith("pt")) return "Portuguese";
+  if (l.startsWith("tr")) return "Turkish";
+  if (l.startsWith("ru")) return "Russian";
+  if (l.startsWith("hi")) return "Hindi";
+  if (l.startsWith("ur")) return "Urdu";
+  if (l.startsWith("zh")) return "Chinese";
+  if (l.startsWith("ja")) return "Japanese";
+  if (l.startsWith("ko")) return "Korean";
+  if (l.startsWith("it")) return "Italian";
+  if (l.startsWith("nl")) return "Dutch";
+  if (l.startsWith("sv")) return "Swedish";
+  return "Language";
+}
+
 export default function RegionalSettings() {
   const router = useRouter();
   const org = useOrg();
@@ -163,23 +240,55 @@ export default function RegionalSettings() {
   };
 
   // =========================
-  // Currency (KV)
+  // Language (KV) — org locale drives AI + UI
   // =========================
-  const currencyKey = useMemo(() => {
-    return orgId ? orgCurrencyKey(orgId) : "zetra_org_currency_v1_no_org";
+  const [orgLocale, setOrgLocale] = useState<string>("en-US");
+
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      if (!orgId) {
+        if (alive) setOrgLocale("en-US");
+        return;
+      }
+      try {
+        const saved = await kv.getOrgLocale(orgId);
+        const v = clean(saved);
+        if (!alive) return;
+        setOrgLocale(v || "en-US");
+      } catch {
+        if (!alive) return;
+        setOrgLocale("en-US");
+      }
+    })();
+    return () => {
+      alive = false;
+    };
   }, [orgId]);
 
+  const languageSubtitle = useMemo(() => {
+    const loc = clean(orgLocale) || "en-US";
+    const label = guessLangLabelFromLocale(loc);
+    return `${label} • Locale: ${loc}`;
+  }, [orgLocale]);
+
+  // =========================
+  // Currency (KV) — CANONICAL HELPERS ONLY
+  // =========================
   const [currencyCode, setCurrencyCode] = useState<string>("TZS");
 
   React.useEffect(() => {
     let alive = true;
     (async () => {
+      if (!orgId) {
+        if (alive) setCurrencyCode("TZS");
+        return;
+      }
       try {
-        const saved = await kv.getString(currencyKey);
+        const saved = await kv.getOrgCurrency(orgId);
         const v = upper(saved || "");
         if (!alive) return;
-        if (v) setCurrencyCode(v);
-        else setCurrencyCode("TZS");
+        setCurrencyCode(v || "TZS");
       } catch {
         if (!alive) return;
         setCurrencyCode("TZS");
@@ -188,21 +297,17 @@ export default function RegionalSettings() {
     return () => {
       alive = false;
     };
-  }, [currencyKey]);
-
-  // =========================
-  // Timezone (DB source of truth + KV cache)
-  // ✅ NOT LOCKED: user can change anytime (with confirmation)
-  // =========================
-  const tzKey = useMemo(() => {
-    return orgId ? orgTimezoneKey(orgId) : "zetra_org_timezone_v1_no_org";
   }, [orgId]);
 
+  // =========================
+  // Timezone (DB source of truth + KV cache) — Option 1 (RPC only)
+  // =========================
   const [tz, setTz] = useState<string>("Africa/Dar_es_Salaam");
   const [tzLoading, setTzLoading] = useState(false);
 
   const loadTimezone = useCallback(async () => {
     if (!orgId) return;
+
     setTzLoading(true);
     try {
       // 1) DB first
@@ -217,20 +322,20 @@ export default function RegionalSettings() {
         if (dbTz) {
           setTz(dbTz);
           try {
-            await kv.setString(tzKey, dbTz);
+            await kv.setOrgTimezone(orgId, dbTz);
           } catch {}
           return;
         }
       }
 
       // 2) KV fallback
-      const saved = await kv.getString(tzKey);
+      const saved = await kv.getOrgTimezone(orgId);
       const v = clean(saved);
       if (v) setTz(v);
       else setTz("Africa/Dar_es_Salaam");
     } catch {
       try {
-        const saved = await kv.getString(tzKey);
+        const saved = await kv.getOrgTimezone(orgId);
         const v = clean(saved);
         if (v) setTz(v);
         else setTz("Africa/Dar_es_Salaam");
@@ -240,13 +345,12 @@ export default function RegionalSettings() {
     } finally {
       setTzLoading(false);
     }
-  }, [orgId, tzKey]);
+  }, [orgId]);
 
   React.useEffect(() => {
     void loadTimezone();
   }, [loadTimezone]);
 
-  // ✅ Save timezone (anytime) — CONFIRM first
   const saveTimezone = useCallback(
     async (nextTzRaw: string) => {
       const nextTz = clean(nextTzRaw);
@@ -274,7 +378,6 @@ export default function RegionalSettings() {
         return;
       }
 
-      // Nothing to do
       if (clean(nextTz) === clean(tz)) {
         Alert.alert("No changes", "Timezone ipo tayari kwenye value hiyo.");
         return;
@@ -282,29 +385,24 @@ export default function RegionalSettings() {
 
       setTzLoading(true);
       try {
-        // 1) Try RPC first (if your DB has it)
-        // NOTE: if RPC doesn't exist, we fallback to direct update.
-        const { data: rpcOk, error: rpcErr } = await supabase.rpc("set_org_timezone", {
+        // ✅ Option 1: RPC only (RLS-first). No direct table update fallback.
+        const { error: rpcErr } = await supabase.rpc("set_org_timezone", {
           p_org_id: orgId,
           p_timezone: nextTz,
         });
 
         if (rpcErr) {
-          // 2) Fallback: direct update (requires RLS allowing owner/admin)
-          const { error: upErr } = await supabase
-            .from("organizations")
-            .update({ timezone: nextTz } as any)
-            .eq("id", orgId);
-
-          if (upErr) throw upErr;
-        } else {
-          void rpcOk;
+          Alert.alert(
+            "Timezone blocked",
+            "Timezone haikuweza ku-save kwa sababu RPC `set_org_timezone` haipo au haina permission.\n\nTunahitaji kuweka/kuruhusu RPC hiyo kwenye DB (RLS-first)."
+          );
+          return;
         }
 
         setTz(nextTz);
 
         try {
-          await kv.setString(tzKey, nextTz);
+          await kv.setOrgTimezone(orgId, nextTz);
         } catch {}
 
         Alert.alert(
@@ -317,7 +415,7 @@ export default function RegionalSettings() {
         setTzLoading(false);
       }
     },
-    [orgId, tzKey, canEdit, tz]
+    [orgId, canEdit, tz]
   );
 
   // =========================
@@ -371,6 +469,158 @@ export default function RegionalSettings() {
     [saveTimezone]
   );
 
+  // =========================
+  // Date Format (KV) — CANONICAL HELPERS ONLY
+  // =========================
+  const [dateFmt, setDateFmt] = useState<DateFmtKey>("ISO");
+  const [dateOpen, setDateOpen] = useState(false);
+
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      if (!orgId) {
+        if (alive) setDateFmt("ISO");
+        return;
+      }
+      try {
+        const saved = await kv.getOrgDateFormat(orgId);
+        const v = upper(saved || "") as DateFmtKey;
+        if (!alive) return;
+        if (v === "DMY" || v === "MDY" || v === "ISO") setDateFmt(v);
+        else setDateFmt("ISO");
+      } catch {
+        if (!alive) return;
+        setDateFmt("ISO");
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [orgId]);
+
+  const openDatePicker = useCallback(() => {
+    guard("Date Format", () => setDateOpen(true));
+  }, [guard]);
+
+  const closeDatePicker = useCallback(() => setDateOpen(false), []);
+
+  const saveDateFormat = useCallback(
+    async (next: DateFmtKey) => {
+      if (!orgId) {
+        Alert.alert("No org", "Organization haijapatikana.");
+        return;
+      }
+      if (!canEdit) {
+        Alert.alert("Not allowed", "Only Owner/Admin can change date format.");
+        return;
+      }
+
+      setDateFmt(next);
+
+      try {
+        await kv.setOrgDateFormat(orgId, next);
+      } catch {}
+
+      Alert.alert(
+        "Date format saved ✅",
+        `Selected: ${DATE_FORMATS.find((x) => x.key === next)?.label}`
+      );
+    },
+    [orgId, canEdit]
+  );
+
+  const datePreview = useMemo(() => {
+    const d = new Date();
+    return formatDatePreview(d, dateFmt);
+  }, [dateFmt]);
+
+  // =========================
+  // Number Format (KV) + Locale driving — CANONICAL HELPERS ONLY
+  // =========================
+  const [numFmt, setNumFmt] = useState<NumFmtKey>("US");
+  const [numOpen, setNumOpen] = useState(false);
+
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      if (!orgId) {
+        if (alive) setNumFmt("US");
+        return;
+      }
+      try {
+        const saved = await kv.getOrgNumberFormat(orgId);
+        const v = upper(saved || "") as NumFmtKey;
+        if (!alive) return;
+        if (v === "US" || v === "EU_DOT" || v === "EU_SPACE") setNumFmt(v);
+        else setNumFmt("US");
+      } catch {
+        if (!alive) return;
+        setNumFmt("US");
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [orgId]);
+
+  const openNumPicker = useCallback(() => {
+    guard("Number Format", () => setNumOpen(true));
+  }, [guard]);
+
+  const closeNumPicker = useCallback(() => setNumOpen(false), []);
+
+  const saveNumberFormat = useCallback(
+    async (next: NumFmtKey) => {
+      if (!orgId) {
+        Alert.alert("No org", "Organization haijapatikana.");
+        return;
+      }
+      if (!canEdit) {
+        Alert.alert("Not allowed", "Only Owner/Admin can change number format.");
+        return;
+      }
+
+      const cfg = NUMBER_FORMATS.find((x) => x.key === next) || NUMBER_FORMATS[0];
+
+      setNumFmt(next);
+
+      try {
+        // 1) Save enum (for display/settings)
+        await kv.setOrgNumberFormat(orgId, next);
+
+        // 2) Drive locale used by money formatting across the app
+        //    (money.ts reads kv.getOrgLocale(orgId))
+        await kv.setOrgLocale(orgId, cfg.locale);
+        setOrgLocale(cfg.locale); // keep UI state synced immediately
+      } catch {}
+
+      Alert.alert(
+        "Number format saved ✅",
+        `Selected: ${cfg.label}\n\nThis will affect how money & numbers display in the app.`
+      );
+    },
+    [orgId, canEdit]
+  );
+
+  const numLocale = useMemo(() => {
+    const cfg = NUMBER_FORMATS.find((x) => x.key === numFmt) || NUMBER_FORMATS[0];
+    return cfg.locale;
+  }, [numFmt]);
+
+  const numPreview = useMemo(() => {
+    return formatNumberPreview(1234.56, numLocale);
+  }, [numLocale]);
+
+  const dateSubtitle = useMemo(() => {
+    const cfg = DATE_FORMATS.find((x) => x.key === dateFmt) || DATE_FORMATS[2];
+    return `${cfg.label} • Example: ${datePreview}`;
+  }, [dateFmt, datePreview]);
+
+  const numSubtitle = useMemo(() => {
+    const cfg = NUMBER_FORMATS.find((x) => x.key === numFmt) || NUMBER_FORMATS[0];
+    return `${cfg.label} • Example: ${numPreview}`;
+  }, [numFmt, numPreview]);
+
   return (
     <Screen scroll>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginTop: 2 }}>
@@ -415,17 +665,62 @@ export default function RegionalSettings() {
           <Divider />
 
           {/* 🌍 Language */}
-          <Item
-            emoji="🌍"
-            title="Language"
-            subtitle="AI + UI language (select any language)"
-            icon="chevron-forward"
-            onPress={() =>
-              guard("Language", () => {
-                Alert.alert("Next step", "Tutaongeza language picker + AI language rules.");
-              })
-            }
-          />
+          <View style={{ marginTop: 2 }}>
+            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14, marginBottom: 6 }}>
+              🌍 Language
+            </Text>
+
+            <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginBottom: 10 }}>
+              Drives AI + UI language using org locale. (Owner/Admin only)
+            </Text>
+
+            <LanguagePickerAll
+              value={orgLocale}
+              disabled={!canEdit}
+              onChange={(locale) => {
+                guard("Language", async () => {
+                  if (!orgId) {
+                    Alert.alert("No org", "Organization haijapatikana.");
+                    return;
+                  }
+
+                  const next = clean(locale) || "en-US";
+
+                  try {
+                    await kv.setOrgLocale(orgId, next);
+                  } catch {}
+
+                  setOrgLocale(next);
+
+                  Alert.alert(
+                    "Language saved ✅",
+                    `Selected: ${guessLangLabelFromLocale(next)}\nLocale: ${next}\n\nAI + UI will follow this.`
+                  );
+                });
+              }}
+              title="Language (Global)"
+              hint="Select any language (global)"
+            />
+
+            <View style={{ marginTop: 10 }}>
+              <Text style={{ color: "rgba(255,255,255,0.60)", fontWeight: "800", fontSize: 12 }}>
+                Current: {languageSubtitle}
+              </Text>
+            </View>
+
+            {!canEdit ? (
+              <Text
+                style={{
+                  color: "rgba(255,255,255,0.55)",
+                  fontWeight: "800",
+                  fontSize: 12,
+                  marginTop: 10,
+                }}
+              >
+                Staff cannot change language. Owner/Admin only.
+              </Text>
+            ) : null}
+          </View>
 
           <Divider />
 
@@ -444,11 +739,16 @@ export default function RegionalSettings() {
               disabled={!canEdit}
               onChange={(code) => {
                 guard("Currency", async () => {
+                  if (!orgId) {
+                    Alert.alert("No org", "Organization haijapatikana.");
+                    return;
+                  }
+
                   const v = upper(code);
-                  setCurrencyCode(v);
+                  setCurrencyCode(v || "TZS");
 
                   try {
-                    await kv.setString(currencyKey, v);
+                    await kv.setOrgCurrency(orgId, v || null);
                   } catch {}
 
                   Alert.alert("Currency selected", `Selected: ${v}`);
@@ -473,7 +773,7 @@ export default function RegionalSettings() {
 
           <Divider />
 
-          {/* 🌐 Timezone (CHANGEABLE with confirmation) */}
+          {/* 🌐 Timezone */}
           <View style={{ marginTop: 2 }}>
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14, marginBottom: 6 }}>
               🌐 Timezone
@@ -566,13 +866,9 @@ export default function RegionalSettings() {
           <Item
             emoji="📅"
             title="Date Format"
-            subtitle="DD/MM/YYYY • MM/DD/YYYY • YYYY-MM-DD"
+            subtitle={dateSubtitle}
             icon="chevron-forward"
-            onPress={() =>
-              guard("Date Format", () => {
-                Alert.alert("Next step", "Tutaongeza date format picker.");
-              })
-            }
+            onPress={openDatePicker}
           />
 
           <Divider />
@@ -581,13 +877,9 @@ export default function RegionalSettings() {
           <Item
             emoji="🔢"
             title="Number Format"
-            subtitle="1,234.56 • 1.234,56 • 1 234,56"
+            subtitle={numSubtitle}
             icon="chevron-forward"
-            onPress={() =>
-              guard("Number Format", () => {
-                Alert.alert("Next step", "Tutaongeza number format rules (locale).");
-              })
-            }
+            onPress={openNumPicker}
           />
 
           <View style={{ marginTop: 12 }}>
@@ -770,6 +1062,156 @@ export default function RegionalSettings() {
                 </Text>
               </View>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ===== Date Format Modal ===== */}
+      <Modal visible={dateOpen} transparent animationType="fade" onRequestClose={closeDatePicker}>
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.55)",
+            padding: 16,
+            justifyContent: "center",
+          }}
+        >
+          <View
+            style={{
+              borderRadius: 20,
+              borderWidth: 1,
+              borderColor: "rgba(255,255,255,0.12)",
+              backgroundColor: "rgba(20,22,26,0.98)",
+              padding: 14,
+              maxHeight: "75%",
+            }}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
+                Date Format
+              </Text>
+              <Pressable onPress={closeDatePicker} hitSlop={10}>
+                <Ionicons name="close" size={22} color={UI.text} />
+              </Pressable>
+            </View>
+
+            <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 6 }}>
+              Hii ni display-only (haitabadilisha DB). Inaathiri jinsi tarehe zinavyoonekana kwenye UI.
+            </Text>
+
+            <View style={{ marginTop: 12 }}>
+              {DATE_FORMATS.map((x) => {
+                const active = x.key === dateFmt;
+                const preview = formatDatePreview(new Date(), x.key);
+                return (
+                  <Pressable
+                    key={x.key}
+                    onPress={() => saveDateFormat(x.key)}
+                    style={({ pressed }) => [
+                      {
+                        paddingVertical: 12,
+                        paddingHorizontal: 12,
+                        borderRadius: 16,
+                        borderWidth: 1,
+                        borderColor: active
+                          ? "rgba(16,185,129,0.45)"
+                          : "rgba(255,255,255,0.10)",
+                        backgroundColor: active
+                          ? "rgba(16,185,129,0.14)"
+                          : pressed
+                          ? "rgba(255,255,255,0.06)"
+                          : "rgba(255,255,255,0.03)",
+                        marginBottom: 10,
+                      },
+                    ]}
+                  >
+                    <Text style={{ color: UI.text, fontWeight: "900" }}>
+                      {x.label} {active ? "✅" : ""}
+                    </Text>
+                    <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 6 }}>
+                      Example: {preview}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ===== Number Format Modal ===== */}
+      <Modal visible={numOpen} transparent animationType="fade" onRequestClose={closeNumPicker}>
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.55)",
+            padding: 16,
+            justifyContent: "center",
+          }}
+        >
+          <View
+            style={{
+              borderRadius: 20,
+              borderWidth: 1,
+              borderColor: "rgba(255,255,255,0.12)",
+              backgroundColor: "rgba(20,22,26,0.98)",
+              padding: 14,
+              maxHeight: "75%",
+            }}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
+                Number Format
+              </Text>
+              <Pressable onPress={closeNumPicker} hitSlop={10}>
+                <Ionicons name="close" size={22} color={UI.text} />
+              </Pressable>
+            </View>
+
+            <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 6 }}>
+              Hii ina-control separators (comma/dot/space). Pia ita-drive money formatting kupitia locale.
+            </Text>
+
+            <View style={{ marginTop: 12 }}>
+              {NUMBER_FORMATS.map((x) => {
+                const active = x.key === numFmt;
+                const preview = formatNumberPreview(1234.56, x.locale);
+                return (
+                  <Pressable
+                    key={x.key}
+                    onPress={() => saveNumberFormat(x.key)}
+                    style={({ pressed }) => [
+                      {
+                        paddingVertical: 12,
+                        paddingHorizontal: 12,
+                        borderRadius: 16,
+                        borderWidth: 1,
+                        borderColor: active
+                          ? "rgba(16,185,129,0.45)"
+                          : "rgba(255,255,255,0.10)",
+                        backgroundColor: active
+                          ? "rgba(16,185,129,0.14)"
+                          : pressed
+                          ? "rgba(255,255,255,0.06)"
+                          : "rgba(255,255,255,0.03)",
+                        marginBottom: 10,
+                      },
+                    ]}
+                  >
+                    <Text style={{ color: UI.text, fontWeight: "900" }}>
+                      {x.label} {active ? "✅" : ""}
+                    </Text>
+                    <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 6 }}>
+                      Example: {preview}  •  Locale: {x.locale}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 8 }}>
+              NOTE: “1 234,56” kwenye baadhi ya simu inaweza kuonekana kama space special. Ni normal.
+            </Text>
           </View>
         </View>
       </Modal>
