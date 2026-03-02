@@ -18,6 +18,16 @@ function upper(s: any) {
   return clean(s).toUpperCase();
 }
 
+function safeDecode(s: any) {
+  const v = clean(s);
+  if (!v) return "";
+  try {
+    return decodeURIComponent(v);
+  } catch {
+    return v;
+  }
+}
+
 async function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
@@ -42,11 +52,15 @@ export default function FirstStoreOnboardingScreen() {
     timezone?: string;
   }>();
 
-  const businessName = useMemo(() => clean(params.businessName), [params.businessName]);
-  const timezone = useMemo(
-    () => clean(params.timezone) || "Africa/Dar_es_Salaam",
-    [params.timezone]
+  const businessName = useMemo(
+    () => clean(safeDecode(params.businessName)),
+    [params.businessName]
   );
+
+  const timezone = useMemo(() => {
+    const decoded = clean(safeDecode(params.timezone));
+    return decoded || "Africa/Dar_es_Salaam";
+  }, [params.timezone]);
 
   const [storeName, setStoreName] = useState("");
   const [loading, setLoading] = useState(false);
@@ -95,7 +109,7 @@ export default function FirstStoreOnboardingScreen() {
       // 4) Set timezone using RPC (ONBOARDING-ONLY) + KV cache
       if (orgId) {
         try {
-          const { data: ok, error: tzErr } = await supabase.rpc("set_org_timezone_once", {
+          const { error: tzErr } = await supabase.rpc("set_org_timezone_once", {
             p_org_id: orgId,
             p_timezone: tz,
           });
@@ -103,13 +117,10 @@ export default function FirstStoreOnboardingScreen() {
           if (tzErr) {
             console.log("set_org_timezone_once error:", tzErr);
           } else {
-            // ok can be true/false (false => already set)
             try {
-              // keep your existing helper (if exists)
               await (kv as any)?.setOrgTimezone?.(orgId, tz);
             } catch {
               try {
-                // fallback generic
                 await (kv as any)?.setString?.(`zetra_org_timezone_v1_${orgId}`, tz);
               } catch {}
             }
@@ -159,7 +170,15 @@ export default function FirstStoreOnboardingScreen() {
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14, marginTop: 4 }}>
               {timezone || "Africa/Dar_es_Salaam"}
             </Text>
-            <Text style={{ color: "rgba(255,255,255,0.60)", fontWeight: "800", fontSize: 12, marginTop: 6, lineHeight: 16 }}>
+            <Text
+              style={{
+                color: "rgba(255,255,255,0.60)",
+                fontWeight: "800",
+                fontSize: 12,
+                marginTop: 6,
+                lineHeight: 16,
+              }}
+            >
               Timezone itawekwa kwenye DB mara moja tu (onboarding-only). Baadaye itakuwa locked.
             </Text>
           </View>
@@ -199,7 +218,15 @@ export default function FirstStoreOnboardingScreen() {
             />
           </View>
 
-          <Text style={{ color: "rgba(255,255,255,0.65)", fontWeight: "800", fontSize: 12, marginTop: 10, lineHeight: 16 }}>
+          <Text
+            style={{
+              color: "rgba(255,255,255,0.65)",
+              fontWeight: "800",
+              fontSize: 12,
+              marginTop: 10,
+              lineHeight: 16,
+            }}
+          >
             Tip: Tumia jina fupi na rahisi (mfano: SMART MEN, JOFU SIDO, SOWETO BRANCH).
           </Text>
         </Card>

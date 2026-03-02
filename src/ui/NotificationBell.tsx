@@ -30,7 +30,7 @@ export function NotificationBell({ top = 12, right = 16 }: Props) {
   const isInAuth = useMemo(() => segments?.[0] === "(auth)", [segments]);
 
   const loadCount = useCallback(async () => {
-    if (isInAuth) return; // do not query while in auth group
+    if (isInAuth) return;
     setLoading(true);
     try {
       const { data: userRes } = await supabase.auth.getUser();
@@ -61,7 +61,7 @@ export function NotificationBell({ top = 12, right = 16 }: Props) {
     };
   }, []);
 
-  // initial + poll (lightweight)
+  // initial + poll
   useEffect(() => {
     if (isInAuth) return;
 
@@ -70,7 +70,7 @@ export function NotificationBell({ top = 12, right = 16 }: Props) {
     if (pollRef.current) clearInterval(pollRef.current);
     pollRef.current = setInterval(() => {
       void loadCount();
-    }, 30000); // 30s poll (safe)
+    }, 30000);
 
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
@@ -99,8 +99,6 @@ export function NotificationBell({ top = 12, right = 16 }: Props) {
 
   const openNotifications = useCallback(() => {
     if (isInAuth) return;
-
-    // ✅ IMPORTANT: go to non-tab route
     router.push("/notifications");
   }, [router, isInAuth]);
 
@@ -113,7 +111,9 @@ export function NotificationBell({ top = 12, right = 16 }: Props) {
   if (isInAuth) return null;
 
   return (
+    // ✅ CRITICAL: do NOT let this absolute layer block touches under it
     <View
+      pointerEvents="box-none"
       style={{
         position: "absolute",
         top,
@@ -122,7 +122,9 @@ export function NotificationBell({ top = 12, right = 16 }: Props) {
       }}
     >
       <Pressable
+        pointerEvents="auto"
         onPress={openNotifications}
+        hitSlop={10}
         style={({ pressed }) => [
           {
             width: 46,
@@ -137,10 +139,15 @@ export function NotificationBell({ top = 12, right = 16 }: Props) {
           },
         ]}
       >
-        <Ionicons name="notifications-outline" size={22} color={theme.colors.text} />
+        <Ionicons
+          name="notifications-outline"
+          size={22}
+          color={theme.colors.text}
+        />
 
         {badgeText ? (
           <View
+            pointerEvents="none"
             style={{
               position: "absolute",
               top: -4,
@@ -164,6 +171,7 @@ export function NotificationBell({ top = 12, right = 16 }: Props) {
 
         {loading && count <= 0 ? (
           <View
+            pointerEvents="none"
             style={{
               position: "absolute",
               bottom: -3,

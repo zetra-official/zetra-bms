@@ -1,3 +1,5 @@
+// app/ai/index.tsx
+
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -8,8 +10,11 @@ import {
   Dimensions,
   FlatList,
   Keyboard,
+  KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
+  ScrollView,
   Text,
   TextInput,
   View,
@@ -52,12 +57,18 @@ type ToolKey = "ANALYZE" | "IMAGE" | "RESEARCH" | "AGENT" | null;
 function clean(s: any) {
   return String(s ?? "").trim();
 }
-
 function uid() {
   return `${Date.now()}_${Math.random().toString(36).slice(2)}`;
 }
 
 const INPUT_MAX = 12_000;
+
+/**
+ * ✅ THEME BRIDGE (FIX)
+ * Some builds export UI as flat tokens (UI.background, UI.emeraldBorder, ...)
+ * but code uses UI.colors.*. This bridge supports BOTH without changing theme.ts.
+ */
+const C: any = (UI as any)?.colors ?? UI;
 
 /**
 ✅ Normalize Worker BASE URL
@@ -77,7 +88,6 @@ function normalizeWorkerBaseUrl(raw: any) {
   u = u.replace(/\/+$/g, "");
   return u;
 }
-
 const AI_WORKER_URL = normalizeWorkerBaseUrl(process.env.EXPO_PUBLIC_AI_WORKER_URL ?? "");
 
 /**
@@ -104,7 +114,6 @@ const DEFAULT_RETRIES = 2;
 function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
-
 function safeClip(s: string, max = 900) {
   const t = clean(s);
   if (!t) return "";
@@ -153,7 +162,7 @@ async function fetchJsonWithRetry(
         };
       }
 
-      const bodyStr = clean(json?.error) || clean(json?.message) || safeClip(text);
+      const bodyStr = clean((json as any)?.error) || clean((json as any)?.message) || safeClip(text);
       const shouldRetry = RETRYABLE_STATUS.has(res.status);
 
       if (!shouldRetry || attempt >= retries) {
@@ -363,35 +372,17 @@ export default function AiChatScreen() {
 
   const topPad = Math.max(insets.top, 10) + 8;
 
-  // ✅ KEYBOARD: real height so composer moves above keyboard (Android + iOS)
+  // ✅ Keyboard state (used for chips + composer spacing)
   const [keyboardOpen, setKeyboardOpen] = useState(false);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {
-    const subShow = Keyboard.addListener("keyboardDidShow", (e: any) => {
-      setKeyboardOpen(true);
-      const h = Number(e?.endCoordinates?.height ?? 0);
-      setKeyboardHeight(h > 0 ? h : 0);
-    });
-    const subHide = Keyboard.addListener("keyboardDidHide", () => {
-      setKeyboardOpen(false);
-      setKeyboardHeight(0);
-    });
-
+    const subShow = Keyboard.addListener("keyboardDidShow", () => setKeyboardOpen(true));
+    const subHide = Keyboard.addListener("keyboardDidHide", () => setKeyboardOpen(false));
     return () => {
       subShow.remove();
       subHide.remove();
     };
   }, []);
-
-  const safeBottomClosed = Math.max(insets.bottom, 10) + 10;
-
-  // ✅ This is the magic: composer moves UP exactly above keyboard
-  const composerBottom = useMemo(() => {
-    if (!keyboardOpen) return safeBottomClosed;
-    const kb = Math.max(0, keyboardHeight);
-    return kb + Math.max(insets.bottom, 10) + 6;
-  }, [keyboardOpen, keyboardHeight, insets.bottom, safeBottomClosed]);
 
   const [mode, setMode] = useState<AiMode>("AUTO");
   const [input, setInput] = useState("");
@@ -399,11 +390,11 @@ export default function AiChatScreen() {
 
   const [proActive, setProActive] = useState(false);
 
-  // ✅ Tools bottom sheet
+  // ✅ Tools bottom sheet (kept for future)
   const [toolOpen, setToolOpen] = useState(false);
   const [toolKey, setToolKey] = useState<ToolKey>(null);
 
-  // ✅ In-screen Tasks panel
+  // ✅ In-screen Tasks panel (Modal)
   const [tasksOpen, setTasksOpen] = useState(false);
 
   const anim = useRef(new Animated.Value(0)).current; // 0 closed, 1 open
@@ -513,6 +504,7 @@ export default function AiChatScreen() {
   const scrollToEndSoon = useCallback(() => {
     requestAnimationFrame(() => {
       try {
+        // FlatList is inverted, offset 0 is bottom
         listRef.current?.scrollToOffset({ offset: 0, animated: true });
       } catch {}
     });
@@ -611,8 +603,10 @@ export default function AiChatScreen() {
   );
 
   const buildHistory = useCallback((): ReqMsg[] => {
+    // messages are stored newest-first (we unshift), so reverse to chronological
     const chronological = [...messages].reverse();
     const cleanedMsgs = chronological.filter((m) => m.role === "user" || m.role === "assistant");
+    // remove very first welcome assistant msg to avoid over-conditioning
     const withoutWelcome = cleanedMsgs.filter((m, idx) => !(idx === 0 && m.role === "assistant"));
     const last = withoutWelcome.slice(Math.max(0, withoutWelcome.length - 12));
     return last.map((m) => ({ role: m.role, text: m.text }));
@@ -653,7 +647,7 @@ export default function AiChatScreen() {
         return;
       }
 
-      const mime = asset.mimeType || "image/jpeg";
+      const mime = (asset as any).mimeType || "image/jpeg";
       const dataUrl = `data:${mime};base64,${asset.base64}`;
 
       setAttachedImages((prev) => [
@@ -741,7 +735,7 @@ export default function AiChatScreen() {
         { timeoutMs: 45_000, retries: 2, tag: "transcribe" }
       );
 
-      const data = out.data;
+      const data: any = out.data;
 
       if (!out.ok) {
         const msg =
@@ -807,7 +801,7 @@ export default function AiChatScreen() {
         { timeoutMs: DEFAULT_TIMEOUT_MS, retries: DEFAULT_RETRIES, tag: "chat" }
       );
 
-      const data = out.data;
+      const data: any = out.data;
 
       if (!out.ok) {
         const body = clean(data?.error) || clean(data?.message) || clean(out.textBody);
@@ -870,7 +864,7 @@ export default function AiChatScreen() {
         { timeoutMs: 40_000, retries: 2, tag: "vision" }
       );
 
-      const data = out.data;
+      const data: any = out.data;
 
       if (!out.ok) {
         const body = clean(data?.error) || clean(data?.message) || clean(out.textBody);
@@ -911,7 +905,7 @@ export default function AiChatScreen() {
         { timeoutMs: 60_000, retries: 2, tag: "image" }
       );
 
-      const data = out.data;
+      const data: any = out.data;
 
       if (!out.ok) {
         const body = clean(data?.error) || clean(data?.message) || clean(out.textBody);
@@ -954,7 +948,7 @@ export default function AiChatScreen() {
   }, []);
 
   /**
-✅ Chips visibility (NOW: hides while keyboard open / typing)
+✅ Chips visibility (hides while keyboard open / typing)
 */
   const showChips = useMemo(() => {
     if (thinking) return false;
@@ -998,7 +992,6 @@ export default function AiChatScreen() {
 
     const userMsg: ChatMsg = { id: uid(), role: "user", text, ts: Date.now() };
     const botId = uid();
-
     const botPlaceholder: ChatMsg = { id: botId, role: "assistant", ts: Date.now(), text: "AI inaandika" };
 
     const imagesToSend = attachedImages;
@@ -1006,7 +999,6 @@ export default function AiChatScreen() {
 
     setMessages((prev) => [botPlaceholder, userMsg, ...prev]);
     scrollToEndSoon();
-
     startTypingDots(botId);
 
     try {
@@ -1019,8 +1011,8 @@ export default function AiChatScreen() {
 
         const packed = packAssistantText({
           text: res.text,
-          actions: res?.meta?.actions ?? [],
-          nextMove: res?.meta?.nextMove ?? "",
+          actions: (res as any)?.meta?.actions ?? [],
+          nextMove: (res as any)?.meta?.nextMove ?? "",
           footerNote: "",
         });
 
@@ -1053,11 +1045,13 @@ export default function AiChatScreen() {
       const res = await callWorkerChat(text, history);
 
       let footerNote = "";
-      if (proActive && clean(org.activeOrgId) && Array.isArray(res?.meta?.actions) && res.meta.actions.length) {
+      const resMeta: any = (res as any)?.meta ?? null;
+
+      if (proActive && clean(org.activeOrgId) && Array.isArray(resMeta?.actions) && resMeta.actions.length) {
         const result = await createTasksFromAiActions({
           orgId: org.activeOrgId!,
           storeId: org.activeStoreId ?? null,
-          actions: res.meta.actions as ActionItem[],
+          actions: resMeta.actions as ActionItem[],
         });
 
         if (result.created > 0) {
@@ -1072,8 +1066,8 @@ export default function AiChatScreen() {
 
       const packed = packAssistantText({
         text: res.text,
-        actions: res?.meta?.actions ?? [],
-        nextMove: res?.meta?.nextMove ?? "",
+        actions: resMeta?.actions ?? [],
+        nextMove: resMeta?.nextMove ?? "",
         footerNote,
       });
 
@@ -1161,8 +1155,8 @@ export default function AiChatScreen() {
         const res = await callWorkerVision(p.text, p.images, p.history);
         const packed = packAssistantText({
           text: res.text,
-          actions: res?.meta?.actions ?? [],
-          nextMove: res?.meta?.nextMove ?? "",
+          actions: (res as any)?.meta?.actions ?? [],
+          nextMove: (res as any)?.meta?.nextMove ?? "",
           footerNote: "",
         });
         await typeOutChatGPTLike(botId, packed || res.text);
@@ -1172,11 +1166,13 @@ export default function AiChatScreen() {
       const res = await callWorkerChat(p.text, p.history);
 
       let footerNote = "";
-      if (proActive && clean(org.activeOrgId) && Array.isArray(res?.meta?.actions) && res.meta.actions.length) {
+      const resMeta: any = (res as any)?.meta ?? null;
+
+      if (proActive && clean(org.activeOrgId) && Array.isArray(resMeta?.actions) && resMeta.actions.length) {
         const result = await createTasksFromAiActions({
           orgId: org.activeOrgId!,
           storeId: org.activeStoreId ?? null,
-          actions: res.meta.actions as ActionItem[],
+          actions: resMeta.actions as ActionItem[],
         });
 
         if (result.created > 0) {
@@ -1191,8 +1187,8 @@ export default function AiChatScreen() {
 
       const packed = packAssistantText({
         text: res.text,
-        actions: res?.meta?.actions ?? [],
-        nextMove: res?.meta?.nextMove ?? "",
+        actions: resMeta?.actions ?? [],
+        nextMove: resMeta?.nextMove ?? "",
         footerNote,
       });
 
@@ -1237,8 +1233,8 @@ export default function AiChatScreen() {
           height: 34,
           borderRadius: 999,
           borderWidth: 1,
-          borderColor: active ? UI.colors.emeraldBorder : "rgba(255,255,255,0.12)",
-          backgroundColor: active ? UI.colors.emeraldSoft : "rgba(255,255,255,0.06)",
+          borderColor: active ? C.emeraldBorder : "rgba(255,255,255,0.12)",
+          backgroundColor: active ? C.emeraldSoft : "rgba(255,255,255,0.06)",
           alignItems: "center",
           justifyContent: "center",
           opacity: pressed ? 0.92 : 1,
@@ -1287,7 +1283,7 @@ export default function AiChatScreen() {
         height: 34,
         borderRadius: 999,
         borderWidth: 1,
-        borderColor: UI.colors.emeraldBorder,
+        borderColor: C.emeraldBorder,
         backgroundColor: "rgba(16,185,129,0.12)",
         shadowColor: "#000",
         shadowOpacity: 0.18,
@@ -1309,7 +1305,7 @@ export default function AiChatScreen() {
         paddingHorizontal: 16,
         borderBottomWidth: 1,
         borderBottomColor: "rgba(255,255,255,0.08)",
-        backgroundColor: UI.colors.background,
+        backgroundColor: C.background,
       }}
     >
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
@@ -1410,499 +1406,210 @@ export default function AiChatScreen() {
     </View>
   );
 
-  const ToolCard = ({
-    icon,
-    title,
-    subtitle,
-    k,
-  }: {
-    icon: keyof typeof Ionicons.glyphMap;
-    title: string;
-    subtitle: string;
-    k: Exclude<ToolKey, null>;
-  }) => {
+  /**
+   * ✅ Renderer (IMMERSIVE WIDTH)
+   * - No extra card wrapper here; bubble handles padding rules.
+   */
+  const renderMsg = useCallback(({ item }: { item: ChatMsg }) => {
+    const isUser = item.role === "user";
     return (
-      <Pressable
-        onPress={() => openTool(k)}
-        hitSlop={10}
-        style={({ pressed }) => ({
-          flex: 1,
-          borderRadius: 18,
-          borderWidth: 1,
-          borderColor: pressed ? "rgba(16,185,129,0.26)" : "rgba(255,255,255,0.12)",
-          backgroundColor: pressed ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.06)",
-          padding: 12,
-          opacity: pressed ? 0.95 : 1,
-          transform: [{ scale: pressed ? 0.985 : 1 }],
-          shadowColor: "#000",
-          shadowOpacity: 0.12,
-          shadowRadius: 10,
-          shadowOffset: { width: 0, height: 6 },
-          elevation: 4,
-        })}
-      >
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-          <View
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 14,
-              borderWidth: 1,
-              borderColor: UI.colors.emeraldBorder,
-              backgroundColor: "rgba(16,185,129,0.13)",
-              alignItems: "center",
-              justifyContent: "center",
-              shadowColor: "#000",
-              shadowOpacity: 0.1,
-              shadowRadius: 10,
-              shadowOffset: { width: 0, height: 6 },
-              elevation: 3,
-            }}
-          >
-            <Ionicons name={icon} size={19} color={UI.text} />
-          </View>
-
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14.5 }} numberOfLines={1}>
-              {title}
-            </Text>
-            <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 2, fontSize: 12.5 }} numberOfLines={1}>
-              {subtitle}
-            </Text>
-          </View>
-
-          <Ionicons name="chevron-forward" size={18} color={UI.faint} />
-        </View>
-      </Pressable>
+      <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
+        <AiMessageBubble role={isUser ? "user" : "assistant"} text={item.text} />
+      </View>
     );
-  };
+  }, []);
 
-  const ToolsGrid = (
-    <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 8 }}>
-      <View style={{ flexDirection: "row", gap: 10 }}>
-        <ToolCard icon="analytics" title="Analyze" subtitle="Business insights" k="ANALYZE" />
-        <ToolCard icon="color-wand" title="Create" subtitle="Image generator" k="IMAGE" />
-      </View>
-
-      <View style={{ flexDirection: "row", gap: 10, marginTop: 10 }}>
-        <ToolCard icon="search" title="Research" subtitle="Deep research mode" k="RESEARCH" />
-        <ToolCard icon="sparkles" title="Agent" subtitle="Auto tasks & plans" k="AGENT" />
-      </View>
-
-      <View style={{ marginTop: 10 }}>
-        <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 11 }}>
-          Tip: Chagua tool, kisha tuma prompt. Chat bado ipo chini kwa maswali ya kawaida.
-        </Text>
-      </View>
-    </View>
-  );
-
-  const SheetTitle = useMemo(() => {
-    if (toolKey === "IMAGE") return "🎨 Create Image";
-    if (toolKey === "RESEARCH") return "🔎 Deep Research";
-    if (toolKey === "AGENT") return "🤖 Agent Mode";
-    if (toolKey === "ANALYZE") return "📊 Analyze Business";
-    return "Tool";
-  }, [toolKey]);
-
-  const SheetSubtitle = useMemo(() => {
-    if (toolKey === "IMAGE") return "Tengeneza picha kwa prompt (OpenAI Image).";
-    if (toolKey === "RESEARCH") return "Muulize swali, nitatoa uchambuzi wa kina.";
-    if (toolKey === "AGENT") return "Nitaandaa plan + actions (PRO saves to Tasks).";
-    if (toolKey === "ANALYZE") return "Sales/stock/strategy suggestions (general).";
-    return "";
-  }, [toolKey]);
-
-  const SheetBody = (
-    <View style={{ paddingHorizontal: 16, paddingBottom: 16 }}>
-      {toolKey === "IMAGE" ? (
-        <View>
-          <Text style={{ color: UI.text, fontWeight: "900", marginBottom: 8 }}>Prompt</Text>
-
-          <View
-            style={{
-              borderWidth: 1,
-              borderColor: "rgba(255,255,255,0.12)",
-              backgroundColor: "rgba(255,255,255,0.06)",
-              borderRadius: 16,
-              paddingHorizontal: 12,
-              paddingVertical: 10,
-            }}
-          >
-            <TextInput
-              value={imagePrompt}
-              onChangeText={setImagePrompt}
-              placeholder="Mfano: Poster ya bidhaa, neon dark style, ZETRA…"
-              placeholderTextColor={UI.faint}
-              style={{ color: UI.text, fontWeight: "800", minHeight: 24, maxHeight: 140 }}
-              multiline
-              keyboardAppearance="dark"
-            />
+  /**
+   * ✅ Retry card
+   */
+  const RetryBanner = useMemo(() => {
+    if (!retryCard.visible || !retryCard.payload) return null;
+    return (
+      <View style={{ paddingHorizontal: 16, paddingTop: 10 }}>
+        <Pressable
+          onPress={() => void retryLast()}
+          hitSlop={10}
+          style={({ pressed }) => ({
+            borderWidth: 1,
+            borderColor: "rgba(245,158,11,0.45)",
+            backgroundColor: pressed ? "rgba(245,158,11,0.14)" : "rgba(245,158,11,0.10)",
+            borderRadius: 18,
+            padding: 12,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            opacity: pressed ? 0.95 : 1,
+          })}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
+            <Ionicons name="refresh" size={18} color={UI.text} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: UI.text, fontWeight: "900" }}>{retryCard.label || "Retry"}</Text>
+              <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 2 }} numberOfLines={1}>
+                Bonyeza kuretry request ya mwisho.
+              </Text>
+            </View>
           </View>
+          <Ionicons name="chevron-forward" size={18} color={UI.muted} />
+        </Pressable>
+      </View>
+    );
+  }, [retryCard.label, retryCard.payload, retryCard.visible, retryLast]);
 
-          <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
+  /**
+   * ✅ Chips row (IMMERSIVE: horizontal, not big wrap)
+   */
+  const ChipsRow = useMemo(() => {
+    if (!showChips) return null;
+    return (
+      <View style={{ paddingTop: 10 }}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}
+        >
+          {quickChips.map((c) => (
             <Pressable
-              onPress={() => {
-                const p = clean(imagePrompt);
-                if (!p) return;
-                setInput(p);
-                closeTool();
-                requestAnimationFrame(() => inputRef.current?.focus());
-              }}
+              key={c.k}
+              onPress={() => applyChipPrompt(c.prompt)}
               hitSlop={10}
               style={({ pressed }) => ({
-                flex: 1,
-                height: 46,
+                paddingHorizontal: 12,
+                height: 34,
                 borderRadius: 999,
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,0.12)",
+                backgroundColor: pressed ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.06)",
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 8,
+                opacity: pressed ? 0.92 : 1,
+                transform: [{ scale: pressed ? 0.99 : 1 }],
+              })}
+            >
+              <Ionicons name={c.icon as any} size={14} color={UI.text} />
+              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>{c.label}</Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      </View>
+    );
+  }, [applyChipPrompt, quickChips, showChips]);
+
+  /**
+   * ✅ Attached images row
+   */
+  const AttachRow = useMemo(() => {
+    if (!attachedImages.length) return null;
+
+    return (
+      <View style={{ paddingHorizontal: 14, paddingBottom: 10 }}>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+          {attachedImages.map((x) => (
+            <View
+              key={x.id}
+              style={{
                 borderWidth: 1,
                 borderColor: "rgba(255,255,255,0.12)",
                 backgroundColor: "rgba(255,255,255,0.06)",
+                borderRadius: 999,
+                paddingVertical: 8,
+                paddingHorizontal: 10,
+                flexDirection: "row",
                 alignItems: "center",
-                justifyContent: "center",
-                opacity: pressed ? 0.92 : 1,
-                transform: [{ scale: pressed ? 0.985 : 1 }],
-              })}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                <Ionicons name="text" size={18} color={UI.text} />
-                <Text style={{ color: UI.text, fontWeight: "900" }}>Use as Text</Text>
-              </View>
-            </Pressable>
-
-            <Pressable
-              onPress={async () => {
-                try {
-                  const p = clean(imagePrompt);
-                  if (!p) return;
-
-                  const userMsg: ChatMsg = { id: uid(), role: "user", text: `[Create Image] ${p}`, ts: Date.now() };
-                  const botId = uid();
-                  const botPlaceholder: ChatMsg = { id: botId, role: "assistant", ts: Date.now(), text: "AI inaandika" };
-
-                  setMessages((prev) => [botPlaceholder, userMsg, ...prev]);
-                  closeTool();
-                  scrollToEndSoon();
-                  startTypingDots(botId);
-
-                  const payload: RetryPayload = { kind: "image", prompt: p };
-                  lastPayloadRef.current = payload;
-                  setRetryCard({ visible: false, label: "", payload });
-
-                  const url = await callWorkerImageGenerate(p);
-
-                  const reply = isDataImageUrl(url)
-                    ? `✅ Image generated\n\n![ZETRA Image](${url})`
-                    : `✅ Image generated\n\n![ZETRA Image](${url})\n\nLink: ${url}`;
-
-                  await typeOutChatGPTLike(botId, reply);
-                } catch (e: any) {
-                  stopTypingDots();
-                  Alert.alert("Image error", clean(e?.message) || "Failed to generate image");
-                  const payload: RetryPayload = { kind: "image", prompt: clean(imagePrompt) };
-                  lastPayloadRef.current = payload;
-                  setRetryCard({
-                    visible: true,
-                    label: "Image failed — Retry",
-                    payload,
-                  });
-                }
+                gap: 8,
               }}
-              hitSlop={10}
-              style={({ pressed }) => ({
-                flex: 1,
-                height: 46,
-                borderRadius: 999,
-                borderWidth: 1,
-                borderColor: UI.colors.emeraldBorder,
-                backgroundColor: UI.colors.emeraldSoft,
-                alignItems: "center",
-                justifyContent: "center",
-                opacity: pressed ? 0.92 : 1,
-                transform: [{ scale: pressed ? 0.985 : 1 }],
-              })}
             >
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                <Ionicons name="sparkles" size={18} color={UI.text} />
-                <Text style={{ color: UI.text, fontWeight: "900" }}>Generate</Text>
-              </View>
-            </Pressable>
-          </View>
-
-          <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 11, marginTop: 10 }}>
-            Note: “Generate” inaenda Cloudflare Worker → OpenAI Image.
-          </Text>
+              <Ionicons name="image" size={16} color={UI.text} />
+              <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 12 }}>Attached</Text>
+              <Pressable
+                onPress={() => removeAttachedImage(x.id)}
+                hitSlop={10}
+                style={({ pressed }) => ({
+                  width: 26,
+                  height: 26,
+                  borderRadius: 999,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: pressed ? "rgba(239,68,68,0.18)" : "rgba(239,68,68,0.12)",
+                  borderWidth: 1,
+                  borderColor: "rgba(239,68,68,0.30)",
+                })}
+              >
+                <Ionicons name="close" size={14} color={UI.text} />
+              </Pressable>
+            </View>
+          ))}
         </View>
-      ) : (
-        <View>
-          <Text style={{ color: UI.text, fontWeight: "900", marginBottom: 8 }}>How to use</Text>
+      </View>
+    );
+  }, [attachedImages, removeAttachedImage]);
 
-          <Card style={{ padding: 14, borderRadius: 16 }}>
-            <Text style={{ color: UI.text, fontWeight: "800", lineHeight: 22 }}>
-              {toolKey === "RESEARCH"
-                ? "Andika swali la kina (mfano: ‘Ni strategy gani ya pricing kwa bidhaa X?’). Nitaandaa uchambuzi wa kina."
-                : toolKey === "AGENT"
-                ? "Nipe lengo. Nitatoa plan + actions. Kama una PRO, actions zitahifadhiwa kwenye Tasks kwa RPC create_task_from_ai."
-                : toolKey === "ANALYZE"
-                ? "Nipe context ya biashara yako (mauzo, stock, changamoto). Nitakupa insights + next move."
-                : "Chagua tool kisha andika prompt."}
-            </Text>
-          </Card>
+  const canSend = useMemo(() => {
+    if (thinking) return false;
+    if (!clean(input)) return false;
+    return true;
+  }, [input, thinking]);
 
-          <View style={{ marginTop: 12 }}>
+  /**
+   * ✅ Composer spacing (KEY FIX)
+   * Goal:
+   * - Keyboard OPEN  -> composer sits close to keyboard (no big gap)
+   * - Keyboard CLOSED -> composer drops to absolute bottom (uses safe-area only)
+   */
+  const composerBottomPad = useMemo(() => {
+    // When keyboard is open, KAV already lifts the composer.
+    // Extra paddingBottom creates the "composer went too high" effect.
+    if (keyboardOpen) return 6;
+    // When keyboard is closed, we want it down at the bottom (safe area only, small breathing room)
+    return Math.max(insets.bottom, 10);
+  }, [insets.bottom, keyboardOpen]);
+
+  /**
+   * ✅ Composer (FIXED)
+   * - NO absolute positioning
+   * - KeyboardAvoidingView (below) will move this composer above keyboard cleanly
+   */
+  const Composer = (
+    <View
+      style={{
+        paddingHorizontal: 14,
+        paddingBottom: composerBottomPad,
+        paddingTop: 10,
+        backgroundColor: "transparent",
+      }}
+    >
+      {AttachRow}
+
+      <View
+        style={{
+          borderWidth: 1,
+          borderColor: "rgba(255,255,255,0.12)",
+          backgroundColor: "rgba(12,16,22,0.92)",
+          borderRadius: 18,
+          padding: 10,
+          shadowColor: "#000",
+          shadowOpacity: 0.25,
+          shadowRadius: 18,
+          shadowOffset: { width: 0, height: 10 },
+          elevation: 10,
+        }}
+      >
+        <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 10 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
             <Pressable
-              onPress={() => {
-                const starter =
-                  toolKey === "RESEARCH"
-                    ? "Fanya deep research: ni mambo gani 10 yanayoongeza mauzo ya store ya bidhaa mchanganyiko Tanzania?"
-                    : toolKey === "AGENT"
-                    ? "Nisaidie kuandaa plan ya wiki 2: kuongeza mauzo na kupunguza stock dead — toa actions."
-                    : toolKey === "ANALYZE"
-                    ? "Nipe analysis: nina stores 3, stock inakaa muda mrefu. Nifanye nini kuongeza turnover?"
-                    : "";
-
-                if (!starter) return;
-                setInput(starter);
-                closeTool();
-                requestAnimationFrame(() => inputRef.current?.focus());
-              }}
+              onPress={() => void pickAndAttachImage()}
               hitSlop={10}
               style={({ pressed }) => ({
-                height: 46,
-                borderRadius: 999,
-                borderWidth: 1,
-                borderColor: UI.colors.emeraldBorder,
-                backgroundColor: UI.colors.emeraldSoft,
-                alignItems: "center",
-                justifyContent: "center",
-                opacity: pressed ? 0.92 : 1,
-                transform: [{ scale: pressed ? 0.985 : 1 }],
-              })}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                <Ionicons name="flash" size={18} color={UI.text} />
-                <Text style={{ color: UI.text, fontWeight: "900" }}>Use Starter Prompt</Text>
-              </View>
-            </Pressable>
-
-            <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 11, marginTop: 10 }}>
-              Tip: Ukibonyeza “Use Starter Prompt”, itaweka prompt kwenye input bila kutuma—utabonyeza Send ukiwa tayari.
-            </Text>
-          </View>
-        </View>
-      )}
-    </View>
-  );
-
-  // ✅ List padding now respects composerBottom (so messages never hide under keyboard/composer)
-  const listTopPad = useMemo(() => {
-    const composerApprox = keyboardOpen ? 98 : showChips ? 150 : 108;
-    return composerBottom + composerApprox;
-  }, [composerBottom, keyboardOpen, showChips]);
-
-  const listBottomPad = 12;
-  const micActive = recordingOn || transcribing;
-
-  return (
-    <Screen scroll={false} contentStyle={{ paddingTop: 0, paddingHorizontal: 0, paddingBottom: 0 }}>
-      <View style={{ flex: 1 }}>
-        {TopBar}
-
-        <FlatList
-          ref={listRef}
-          style={{ flex: 1 }}
-          data={messages}
-          keyExtractor={(m) => m.id}
-          inverted
-          keyboardShouldPersistTaps="handled"
-          renderItem={({ item }) => <AiMessageBubble msg={item} />}
-          contentContainerStyle={{ paddingTop: listTopPad, paddingBottom: listBottomPad }}
-          showsVerticalScrollIndicator={false}
-          ListFooterComponent={
-            <View>
-              {ToolsGrid}
-
-              {thinking ? (
-                <View style={{ paddingHorizontal: 16, paddingTop: 8, alignItems: "flex-start" }}>
-                  <Card style={{ paddingVertical: 10, paddingHorizontal: 12, borderRadius: 16 }}>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                      <ActivityIndicator />
-                      <Text style={{ color: UI.muted, fontWeight: "900" }}>AI inaandika...</Text>
-                    </View>
-                  </Card>
-                </View>
-              ) : null}
-            </View>
-          }
-        />
-
-        {/* ✅ Retry card (follows composerBottom) */}
-        {retryCard.visible ? (
-          <View
-            pointerEvents="box-none"
-            style={{
-              position: "absolute",
-              left: 16,
-              right: 16,
-              bottom: composerBottom + 78,
-              zIndex: 80,
-            }}
-          >
-            <Card style={{ padding: 12, borderRadius: 18 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                <View
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 14,
-                    borderWidth: 1,
-                    borderColor: "rgba(255,255,255,0.14)",
-                    backgroundColor: "rgba(255,255,255,0.06)",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Ionicons name="warning-outline" size={18} color={UI.text} />
-                </View>
-
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={{ color: UI.text, fontWeight: "900" }} numberOfLines={1}>
-                    {clean(retryCard.label) || "Network issue"}
-                  </Text>
-                  <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 2 }} numberOfLines={1}>
-                    Tap Retry kuendelea bila kupoteza swali.
-                  </Text>
-                </View>
-
-                <Pressable
-                  onPress={() => void retryLast()}
-                  hitSlop={10}
-                  style={({ pressed }) => ({
-                    paddingHorizontal: 14,
-                    height: 38,
-                    borderRadius: 999,
-                    borderWidth: 1,
-                    borderColor: UI.colors.emeraldBorder,
-                    backgroundColor: UI.colors.emeraldSoft,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    opacity: pressed ? 0.92 : 1,
-                    transform: [{ scale: pressed ? 0.985 : 1 }],
-                  })}
-                >
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                    <Ionicons name="refresh" size={16} color={UI.text} />
-                    <Text style={{ color: UI.text, fontWeight: "900" }}>Retry</Text>
-                  </View>
-                </Pressable>
-              </View>
-            </Card>
-          </View>
-        ) : null}
-
-        {/* ✅ Composer (moves above keyboard 100%) */}
-        <View
-          pointerEvents="box-none"
-          style={{
-            position: "absolute",
-            left: 0,
-            right: 0,
-            bottom: 0,
-            paddingHorizontal: 16,
-            paddingBottom: composerBottom,
-            paddingTop: 10,
-            zIndex: 50,
-          }}
-        >
-          {showChips ? (
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
-              {quickChips.map((c) => (
-                <Pressable
-                  key={c.k}
-                  onPress={() => applyChipPrompt(c.prompt)}
-                  hitSlop={10}
-                  style={({ pressed }) => ({
-                    paddingHorizontal: 12,
-                    height: 34,
-                    borderRadius: 999,
-                    borderWidth: 1,
-                    borderColor: "rgba(255,255,255,0.12)",
-                    backgroundColor: pressed ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.06)",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    opacity: pressed ? 0.92 : 1,
-                    transform: [{ scale: pressed ? 0.985 : 1 }],
-                  })}
-                >
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                    <Ionicons name={c.icon as any} size={14} color={UI.text} />
-                    <Text style={{ color: UI.text, fontWeight: "900" }}>{c.label}</Text>
-                  </View>
-                </Pressable>
-              ))}
-            </View>
-          ) : null}
-
-          {attachedImages.length > 0 ? (
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
-              {attachedImages.map((img) => (
-                <View
-                  key={img.id}
-                  style={{
-                    borderWidth: 1,
-                    borderColor: "rgba(255,255,255,0.14)",
-                    backgroundColor: "rgba(255,255,255,0.06)",
-                    borderRadius: 14,
-                    paddingHorizontal: 10,
-                    paddingVertical: 8,
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 8,
-                  }}
-                >
-                  <Ionicons name="image" size={16} color={UI.text} />
-                  <Text style={{ color: UI.text, fontWeight: "900", maxWidth: 140 }} numberOfLines={1}>
-                    Image attached
-                  </Text>
-                  <Pressable onPress={() => removeAttachedImage(img.id)} hitSlop={10}>
-                    <Ionicons name="close-circle" size={18} color={UI.faint} />
-                  </Pressable>
-                </View>
-              ))}
-            </View>
-          ) : null}
-
-          <View
-            style={{
-              borderWidth: 1,
-              borderColor: "rgba(255,255,255,0.14)",
-              backgroundColor: "rgba(255,255,255,0.07)",
-              borderRadius: 20,
-              paddingHorizontal: 12,
-              paddingVertical: 10,
-              flexDirection: "row",
-              alignItems: "flex-end",
-              gap: 10,
-              shadowColor: "#000",
-              shadowOpacity: 0.18,
-              shadowRadius: 14,
-              shadowOffset: { width: 0, height: 8 },
-              elevation: 6,
-            }}
-          >
-            <Pressable
-              onPress={pickAndAttachImage}
-              hitSlop={10}
-              style={({ pressed }) => ({
-                width: 42,
-                height: 42,
-                borderRadius: 999,
+                width: 40,
+                height: 40,
+                borderRadius: 14,
                 borderWidth: 1,
                 borderColor: "rgba(255,255,255,0.12)",
-                backgroundColor: pressed ? "rgba(255,255,255,0.09)" : "rgba(255,255,255,0.05)",
+                backgroundColor: pressed ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.06)",
                 alignItems: "center",
                 justifyContent: "center",
                 opacity: pressed ? 0.92 : 1,
-                transform: [{ scale: pressed ? 0.985 : 1 }],
               })}
             >
               <Ionicons name="image-outline" size={18} color={UI.text} />
@@ -1912,226 +1619,271 @@ export default function AiChatScreen() {
               onPress={toggleMic}
               hitSlop={10}
               style={({ pressed }) => ({
-                width: 42,
-                height: 42,
-                borderRadius: 999,
+                width: 40,
+                height: 40,
+                borderRadius: 14,
                 borderWidth: 1,
-                borderColor: micActive ? UI.colors.emeraldBorder : "rgba(255,255,255,0.12)",
-                backgroundColor: micActive
-                  ? "rgba(16,185,129,0.18)"
+                borderColor: recordingOn ? C.emeraldBorder : "rgba(255,255,255,0.12)",
+                backgroundColor: recordingOn
+                  ? "rgba(16,185,129,0.16)"
                   : pressed
-                  ? "rgba(255,255,255,0.09)"
-                  : "rgba(255,255,255,0.05)",
+                  ? "rgba(255,255,255,0.08)"
+                  : "rgba(255,255,255,0.06)",
                 alignItems: "center",
                 justifyContent: "center",
                 opacity: pressed ? 0.92 : 1,
-                transform: [{ scale: pressed ? 0.985 : 1 }],
               })}
             >
-              <Ionicons name={recordingOn ? "mic" : transcribing ? "hourglass" : "mic-outline"} size={18} color={UI.text} />
+              <Ionicons name={recordingOn ? "mic" : "mic-outline"} size={18} color={UI.text} />
             </Pressable>
+          </View>
 
+          <View style={{ flex: 1 }}>
             <TextInput
               ref={inputRef}
               value={input}
               onChangeText={setInput}
-              placeholder="Andika swali lako… / Type your question…"
+              placeholder={transcribing ? "Transcribing..." : "Andika ujumbe..."}
               placeholderTextColor={UI.faint}
+              multiline
+              maxLength={INPUT_MAX}
               style={{
-                flex: 1,
+                minHeight: 40,
+                maxHeight: 130,
                 color: UI.text,
                 fontWeight: "800",
-                minHeight: 22,
-                maxHeight: 120,
+                paddingHorizontal: 12,
+                paddingTop: 10,
+                paddingBottom: 10,
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,0.10)",
+                backgroundColor: "rgba(255,255,255,0.04)",
               }}
-              multiline
               keyboardAppearance="dark"
+              autoCorrect
+              autoCapitalize="sentences"
               returnKeyType="send"
               blurOnSubmit={false}
-              onSubmitEditing={() => void send()}
+              onSubmitEditing={() => {}}
             />
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 6 }}>
+              <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 11 }}>
+                {clean(input).length}/{INPUT_MAX.toLocaleString()}
+              </Text>
+              {thinking ? (
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <ActivityIndicator />
+                  <Text style={{ color: UI.muted, fontWeight: "900" }}>AI...</Text>
+                </View>
+              ) : null}
+            </View>
+          </View>
 
+          <Pressable
+            onPress={() => void send()}
+            disabled={!canSend}
+            hitSlop={10}
+            style={({ pressed }) => ({
+              width: 44,
+              height: 44,
+              borderRadius: 16,
+              borderWidth: 1,
+              borderColor: canSend ? C.emeraldBorder : "rgba(255,255,255,0.12)",
+              backgroundColor: canSend ? C.emeraldSoft : "rgba(255,255,255,0.06)",
+              alignItems: "center",
+              justifyContent: "center",
+              opacity: !canSend ? 0.55 : pressed ? 0.92 : 1,
+              transform: [{ scale: pressed ? 0.985 : 1 }],
+            })}
+          >
+            <Ionicons name="send" size={18} color={UI.text} />
+          </Pressable>
+        </View>
+      </View>
+    </View>
+  );
+
+  /**
+   * ✅ Tasks Panel (modal, lightweight)
+   */
+  const TasksModal = (
+    <Modal visible={tasksOpen} transparent animationType="fade" onRequestClose={() => setTasksOpen(false)}>
+      <Pressable
+        onPress={() => setTasksOpen(false)}
+        style={{
+          flex: 1,
+          backgroundColor: "rgba(0,0,0,0.60)",
+          justifyContent: "flex-end",
+        }}
+      >
+        <Pressable
+          onPress={() => {}}
+          style={{
+            backgroundColor: C.background,
+            borderTopLeftRadius: 22,
+            borderTopRightRadius: 22,
+            borderWidth: 1,
+            borderColor: "rgba(255,255,255,0.10)",
+            padding: 14,
+            paddingBottom: Math.max(insets.bottom, 12) + 14,
+          }}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>Tasks</Text>
             <Pressable
-              onPress={() => void send()}
-              disabled={!clean(input) || thinking}
+              onPress={() => setTasksOpen(false)}
               hitSlop={10}
-              style={({ pressed }) => {
-                const active = clean(input) && !thinking;
-                return {
-                  width: 46,
-                  height: 46,
-                  borderRadius: 999,
-                  borderWidth: 1,
-                  borderColor: active ? UI.colors.emeraldBorder : "rgba(255,255,255,0.12)",
-                  backgroundColor: active ? "rgba(16,185,129,0.20)" : "rgba(255,255,255,0.05)",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  opacity: !active ? 0.6 : pressed ? 0.92 : 1,
-                  transform: [{ scale: pressed && active ? 0.985 : 1 }],
-                  shadowColor: "#000",
-                  shadowOpacity: active ? 0.18 : 0,
-                  shadowRadius: 10,
-                  shadowOffset: { width: 0, height: 6 },
-                  elevation: active ? 6 : 0,
-                };
-              }}
+              style={({ pressed }) => ({
+                width: 40,
+                height: 40,
+                borderRadius: 14,
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,0.12)",
+                backgroundColor: pressed ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.06)",
+                alignItems: "center",
+                justifyContent: "center",
+              })}
             >
-              <Ionicons name="send" size={18} color={UI.text} />
+              <Ionicons name="close" size={18} color={UI.text} />
             </Pressable>
           </View>
-        </View>
 
-        {/* Tool sheet */}
+          <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 6 }}>
+            Hapa tunaziweka actions za AI (PRO). Kwa sasa ni panel — task list halisi iko kwenye DB/RPC.
+          </Text>
+
+          <Card style={{ marginTop: 12, padding: 14, borderRadius: 18 }}>
+            <Text style={{ color: UI.text, fontWeight: "900" }}>Quick Notes</Text>
+            <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 6 }}>
+              • Ukiona “✅ Saved to Tasks: N” chini ya jibu la AI, tayari imeshaseve kwenye `public.tasks`.
+            </Text>
+            <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 6 }}>
+              • Next step (tutafanya baadae): kuonyesha list ya tasks hapa ndani.
+            </Text>
+          </Card>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+
+  return (
+    <Screen scroll={false} contentStyle={{ paddingTop: 0, paddingHorizontal: 0, paddingBottom: 0 }}>
+      <View style={{ flex: 1, backgroundColor: C.background }}>
+        {TopBar}
+
+        {/* ✅ KEYBOARD FIX ZONE: Chat area + Composer move together */}
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={0}
+        >
+          <View style={{ flex: 1 }}>
+            {RetryBanner}
+            {ChipsRow}
+
+            <FlatList
+              ref={listRef}
+              data={messages}
+              keyExtractor={(m) => m.id}
+              renderItem={renderMsg}
+              inverted
+              keyboardShouldPersistTaps="always"
+              showsVerticalScrollIndicator={false}
+              style={{ flex: 1 }}
+              contentContainerStyle={{
+                paddingTop: 10, // (inverted) space near composer
+                paddingBottom: 10,
+              }}
+            />
+
+            {Composer}
+          </View>
+        </KeyboardAvoidingView>
+
+        {TasksModal}
+
+        {/* ✅ Tool sheet kept for future expansion (not used yet) */}
         {toolOpen ? (
-          <View
-            pointerEvents="box-none"
-            style={{
-              position: "absolute",
-              left: 0,
-              right: 0,
-              top: 0,
-              bottom: 0,
-              zIndex: 999,
-            }}
-          >
+          <View style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }}>
             <Animated.View
-              pointerEvents="auto"
               style={{
                 position: "absolute",
                 left: 0,
                 right: 0,
                 top: 0,
                 bottom: 0,
-                backgroundColor: "rgba(0,0,0,0.9)",
                 opacity: overlayOpacity,
+                backgroundColor: "#000",
               }}
             />
-
-            <Pressable onPress={closeTool} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }} />
-
+            <Pressable style={{ flex: 1 }} onPress={closeTool} />
             <Animated.View
               style={{
                 position: "absolute",
                 left: 0,
                 right: 0,
                 bottom: 0,
+                height: sheetHeight,
                 transform: [{ translateY: sheetTranslateY }, { scale: sheetScale }],
-              }}
-            >
-              <View
-                style={{
-                  borderTopLeftRadius: 24,
-                  borderTopRightRadius: 24,
-                  borderWidth: 1,
-                  borderColor: "rgba(255,255,255,0.12)",
-                  backgroundColor: UI.colors.background,
-                  overflow: "hidden",
-                }}
-              >
-                <View style={{ alignItems: "center", paddingTop: 10, paddingBottom: 6 }}>
-                  <View
-                    style={{
-                      width: 44,
-                      height: 5,
-                      borderRadius: 999,
-                      backgroundColor: "rgba(255,255,255,0.18)",
-                    }}
-                  />
-                </View>
-
-                <View
-                  style={{
-                    paddingHorizontal: 16,
-                    paddingBottom: 12,
-                    borderBottomWidth: 1,
-                    borderBottomColor: "rgba(255,255,255,0.08)",
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 10,
-                  }}
-                >
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }} numberOfLines={1}>
-                      {SheetTitle}
-                    </Text>
-                    <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 2 }} numberOfLines={1}>
-                      {SheetSubtitle}
-                    </Text>
-                  </View>
-
-                  <Pressable
-                    onPress={closeTool}
-                    hitSlop={10}
-                    style={({ pressed }) => ({
-                      width: 40,
-                      height: 40,
-                      borderRadius: 999,
-                      borderWidth: 1,
-                      borderColor: "rgba(255,255,255,0.12)",
-                      backgroundColor: "rgba(255,255,255,0.06)",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      opacity: pressed ? 0.92 : 1,
-                      transform: [{ scale: pressed ? 0.985 : 1 }],
-                    })}
-                  >
-                    <Ionicons name="close" size={18} color={UI.text} />
-                  </Pressable>
-                </View>
-
-                <View style={{ height: sheetHeight }}>{SheetBody}</View>
-              </View>
-            </Animated.View>
-          </View>
-        ) : null}
-
-        {/* Tasks panel */}
-        {tasksOpen && (
-          <View
-            style={{
-              position: "absolute",
-              left: 0,
-              right: 0,
-              top: 0,
-              bottom: 0,
-              backgroundColor: "rgba(0,0,0,0.85)",
-              zIndex: 1000,
-            }}
-          >
-            <Pressable style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }} onPress={() => setTasksOpen(false)} />
-
-            <View
-              style={{
-                position: "absolute",
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: UI.colors.background,
-                borderTopLeftRadius: 24,
-                borderTopRightRadius: 24,
+                backgroundColor: C.background,
+                borderTopLeftRadius: 22,
+                borderTopRightRadius: 22,
                 borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.12)",
-                paddingTop: 16,
-                paddingHorizontal: 16,
-                paddingBottom: Math.max(insets.bottom, 16),
+                borderColor: "rgba(255,255,255,0.10)",
+                padding: 14,
               }}
             >
-              <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 12 }}>
-                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18, flex: 1 }}>🧠 AI Tasks</Text>
-
-                <Pressable onPress={() => setTasksOpen(false)} hitSlop={10}>
-                  <Ionicons name="close" size={22} color={UI.text} />
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                <Text style={{ color: UI.text, fontWeight: "900" }}>{toolKey || "Tool"}</Text>
+                <Pressable
+                  onPress={closeTool}
+                  hitSlop={10}
+                  style={({ pressed }) => ({
+                    width: 38,
+                    height: 38,
+                    borderRadius: 14,
+                    borderWidth: 1,
+                    borderColor: "rgba(255,255,255,0.12)",
+                    backgroundColor: pressed ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.06)",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  })}
+                >
+                  <Ionicons name="close" size={18} color={UI.text} />
                 </Pressable>
               </View>
 
-              <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22 }}>
-                Hapa utaona tasks zote zilizo-save na AI (PRO only).
-                {"\n\n"}
-                Tip: Tasks zina-save automatically kama una PRO active.
+              <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 10 }}>
+                Tool sheet placeholder — tutaijaza baadae (Analyze/Research/Image/Agent).
               </Text>
-            </View>
+
+              {toolKey === "IMAGE" ? (
+                <View style={{ marginTop: 12 }}>
+                  <Text style={{ color: UI.text, fontWeight: "900" }}>Image Prompt</Text>
+                  <TextInput
+                    value={imagePrompt}
+                    onChangeText={setImagePrompt}
+                    placeholder="Write an image prompt..."
+                    placeholderTextColor={UI.faint}
+                    style={{
+                      marginTop: 10,
+                      color: UI.text,
+                      fontWeight: "800",
+                      borderWidth: 1,
+                      borderColor: "rgba(255,255,255,0.10)",
+                      backgroundColor: "rgba(255,255,255,0.04)",
+                      borderRadius: 16,
+                      paddingHorizontal: 12,
+                      paddingVertical: 10,
+                      minHeight: 44,
+                    }}
+                  />
+                </View>
+              ) : null}
+            </Animated.View>
           </View>
-        )}
+        ) : null}
       </View>
     </Screen>
   );
