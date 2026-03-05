@@ -4,6 +4,22 @@
   "compatibility_date": "2026-02-25",
 
   "vars": {
-    "OPENAI_MODEL": "gpt-4o-mini"
+    // Chat model (default)
+    "OPENAI_MODEL": "gpt-4o-mini",
+
+    // Optional but recommended:
+    "OPENAI_CLASSIFIER_MODEL": "gpt-4o-mini",
+
+    // Vision model (if different, else falls back to OPENAI_MODEL)
+    "OPENAI_VISION_MODEL": "gpt-4o-mini",
+
+    // Image generation model (configure if your OpenAI account supports it)
+    "OPENAI_IMAGE_MODEL": "gpt-image-1",
+
+    // Audio transcription model
+    "OPENAI_TRANSCRIBE_MODEL": "whisper-1",
+
+    // Image output size
+    "OPENAI_IMAGE_SIZE": "1024x1024"
   }
 }

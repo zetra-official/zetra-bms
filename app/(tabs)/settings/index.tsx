@@ -118,6 +118,7 @@ export default function MoreHome() {
   }, [org.activeOrgName, org.activeRole, org.activeStoreName]);
 
   const canManageStaff = org.activeRole === "owner" || org.activeRole === "admin";
+  const canManageBilling = org.activeRole === "owner"; // ✅ Billing is OWNER-only (safe)
 
   return (
     <Screen scroll>
@@ -155,6 +156,21 @@ export default function MoreHome() {
           title="Organization"
           subtitle={orgSummary}
           onPress={() => router.push("/(tabs)/settings/organization")}
+        />
+
+        <Divider />
+
+        {/* ✅ NEW: Subscription & Billing */}
+        <Row
+          icon="card-outline"
+          title="Subscription & Billing"
+          subtitle={
+            canManageBilling
+              ? "Manage plan, duration, and activation"
+              : "Owner only (view managed by owner)"
+          }
+          disabled={!canManageBilling}
+          onPress={() => router.push("/(tabs)/settings/subscription")}
         />
       </Card>
 
@@ -200,7 +216,7 @@ export default function MoreHome() {
       </Card>
 
       {/* Footer */}
-      <View style={{ height: theme.spacing.x1 }} />
+      <View style={{ height: theme.spacing.gap }} />
       <Text
         style={{
           color: "rgba(255,255,255,0.48)",

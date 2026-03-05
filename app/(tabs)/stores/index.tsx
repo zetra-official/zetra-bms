@@ -1,7 +1,15 @@
 // app/(tabs)/stores/index.tsx
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert, FlatList, Pressable, Switch, Text, View } from "react-native";
+import {
+  Alert,
+  FlatList,
+  Modal,
+  Pressable,
+  Switch,
+  Text,
+  View,
+} from "react-native";
 import { useOrg } from "../../../src/context/OrgContext";
 import { supabase } from "../../../src/supabase/supabaseClient";
 import { Button } from "../../../src/ui/Button";
@@ -80,6 +88,17 @@ export default function StoresTabScreen() {
   const R: any = (theme as any)?.radius ?? {};
   const radiusXL = R?.xl ?? 18;
   const radiusPill = R?.pill ?? 999;
+
+  // ===========
+  // ✅ Upgrade Modal (for LOCKED stores)
+  // ===========
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [upgradeMsg, setUpgradeMsg] = useState("");
+
+  const openUpgrade = (msg: string) => {
+    setUpgradeMsg(msg);
+    setUpgradeOpen(true);
+  };
 
   // canonical store list
   const list = useMemo(() => {
@@ -470,7 +489,15 @@ export default function StoresTabScreen() {
     }
   };
 
-  const pick = (storeId: string, storeName: string) => {
+  // ✅ Activate gating (LOCKED stores)
+  const pick = (storeId: string, storeName: string, isAllowed: boolean, reason?: string | null) => {
+    if (!isAllowed) {
+      openUpgrade(
+        (reason ?? "").trim() ||
+          "LOCKED: Store hii inahitaji plan ya kulipia. Free plan inaruhusu store 1 tu. Upgrade ili u-activate store hii."
+      );
+      return;
+    }
     setActiveStoreId(storeId);
     Alert.alert("Selected ✅", `Active store: ${storeName}`);
   };
@@ -573,6 +600,10 @@ export default function StoresTabScreen() {
         <Text style={{ fontWeight: "900", fontSize: 16, color: TEXT }}>
           Available Stores
         </Text>
+
+        <Text style={{ color: MUTED, fontWeight: "800", lineHeight: 18 }}>
+          Stores zilizofungwa (LOCKED) zitaonekana hapa, lakini haziwezi kuwa ACTIVE mpaka u-upgrade plan.
+        </Text>
       </View>
     );
   }, [
@@ -620,6 +651,12 @@ export default function StoresTabScreen() {
         renderItem={({ item }: { item: any }) => {
           const storeId = String(item.store_id);
           const isActive = storeId === activeStoreId;
+
+          // ✅ lock flags from v2 (default allowed if missing)
+          const isAllowed =
+            typeof item?.is_allowed === "boolean" ? item.is_allowed : true;
+          const lockReason = (item?.lock_reason ?? "").toString();
+
           const mgr = mgrByStoreId?.[storeId];
           const managedBy = (mgr?.email ?? "").trim() || "UNASSIGNED";
 
@@ -629,16 +666,25 @@ export default function StoresTabScreen() {
           const staffMovementEnabled = !!movementFlagByStoreId?.[storeId];
           const movementSaving = !!movementFlagSaving?.[storeId];
 
+          const borderColor = isActive
+            ? "rgba(52,211,153,0.55)"
+            : !isAllowed
+            ? "rgba(255,255,255,0.10)"
+            : BORDER;
+
+          const opacity = !isAllowed ? 0.72 : 1;
+
           return (
             <Pressable
-              onPress={() => pick(storeId, item.store_name)}
+              onPress={() => pick(storeId, item.store_name, isAllowed, lockReason)}
               style={{
                 borderWidth: 1,
-                borderColor: isActive ? "rgba(52,211,153,0.55)" : BORDER,
+                borderColor,
                 borderRadius: radiusXL,
                 backgroundColor: CARD,
                 padding: 16,
                 marginBottom: 12,
+                opacity,
               }}
             >
               <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
@@ -653,28 +699,55 @@ export default function StoresTabScreen() {
                       {managedBy}
                     </Text>
                   </Text>
+
+                  {!isAllowed ? (
+                    <Text style={{ marginTop: 8, color: FAINT, fontWeight: "900", lineHeight: 18 }}>
+                      🔒 LOCKED — upgrade plan ili u-activate.
+                    </Text>
+                  ) : null}
                 </View>
 
-                {isActive ? (
-                  <View
-                    style={{
-                      paddingHorizontal: 10,
-                      paddingVertical: 6,
-                      borderRadius: radiusPill,
-                      borderWidth: 1,
-                      borderColor: "rgba(52,211,153,0.45)",
-                      backgroundColor: "rgba(16,185,129,0.12)",
-                      alignSelf: "flex-start",
-                    }}
-                  >
-                    <Text style={{ color: EMERALD, fontWeight: "900", fontSize: 12 }}>
-                      ACTIVE
-                    </Text>
-                  </View>
-                ) : null}
+                {/* Badges */}
+                <View style={{ gap: 8, alignItems: "flex-end" }}>
+                  {isActive ? (
+                    <View
+                      style={{
+                        paddingHorizontal: 10,
+                        paddingVertical: 6,
+                        borderRadius: radiusPill,
+                        borderWidth: 1,
+                        borderColor: "rgba(52,211,153,0.45)",
+                        backgroundColor: "rgba(16,185,129,0.12)",
+                        alignSelf: "flex-start",
+                      }}
+                    >
+                      <Text style={{ color: EMERALD, fontWeight: "900", fontSize: 12 }}>
+                        ACTIVE
+                      </Text>
+                    </View>
+                  ) : null}
+
+                  {!isAllowed ? (
+                    <View
+                      style={{
+                        paddingHorizontal: 10,
+                        paddingVertical: 6,
+                        borderRadius: radiusPill,
+                        borderWidth: 1,
+                        borderColor: "rgba(255,255,255,0.14)",
+                        backgroundColor: "rgba(255,255,255,0.06)",
+                        alignSelf: "flex-start",
+                      }}
+                    >
+                      <Text style={{ color: FAINT, fontWeight: "900", fontSize: 12 }}>
+                        LOCKED
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
               </View>
 
-              {canManage ? (
+              {canManage && isAllowed ? (
                 <View style={{ marginTop: 12, gap: 12 }}>
                   {/* Credit switch */}
                   <View
@@ -764,6 +837,58 @@ export default function StoresTabScreen() {
           </View>
         }
       />
+
+      {/* ✅ Upgrade Modal */}
+      <Modal
+        visible={upgradeOpen}
+        transparent
+        animationType="fade"
+        statusBarTranslucent={false}
+        hardwareAccelerated
+        // @ts-ignore
+        presentationStyle="overFullScreen"
+        onRequestClose={() => setUpgradeOpen(false)}
+      >
+        <Pressable
+          onPress={() => setUpgradeOpen(false)}
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.75)",
+            paddingHorizontal: 14,
+            justifyContent: "center",
+          }}
+        >
+          <Pressable
+            onPress={() => {}}
+            style={{
+              borderRadius: radiusXL,
+              borderWidth: 1,
+              borderColor: BORDER_SOFT,
+              backgroundColor: CARD,
+              overflow: "hidden",
+            }}
+          >
+            <View style={{ padding: 14, borderBottomWidth: 1, borderBottomColor: BORDER_SOFT }}>
+              <Text style={{ color: TEXT, fontWeight: "900", fontSize: 18 }}>
+                Upgrade Required
+              </Text>
+              <Text style={{ color: MUTED, fontWeight: "800", marginTop: 6, lineHeight: 20 }}>
+                Store hii imefungwa kwenye FREE plan.
+              </Text>
+            </View>
+
+            <View style={{ padding: 14, gap: 12 }}>
+              <Card style={{ borderColor: BORDER_SOFT, backgroundColor: SURFACE2 }}>
+                <Text style={{ color: TEXT, fontWeight: "900", lineHeight: 20 }}>
+                  {upgradeMsg || "LOCKED: Upgrade plan ili u-activate store hii."}
+                </Text>
+              </Card>
+
+              <Button title="OK, Sawa" onPress={() => setUpgradeOpen(false)} />
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {/* kept state variables so future manager UI won't break lint/TS logic */}
       {/* manageStoreId: {String(!!manageStoreId)} */}

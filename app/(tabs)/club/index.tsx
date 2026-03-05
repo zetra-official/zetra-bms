@@ -17,6 +17,9 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+// ✅ Org / Active store (for usage counter)
+import { useOrg } from "@/src/context/OrgContext";
+
 // ✅ Option B: expo-image (fast caching + decode)
 import { Image as ExpoImage } from "expo-image";
 
@@ -43,6 +46,16 @@ type FeedPost = {
   likes_count?: number | null;
   comments_count?: number | null;
   i_liked?: boolean | null;
+};
+
+type ClubUsageRow = {
+  store_id: string;
+  plan_code: string | null;
+  used_this_month: number | null;
+  limit_per_month: number | null;
+  remaining: number | null;
+  month_start: string | null;
+  month_end: string | null;
 };
 
 function clean(x: any) {
@@ -75,6 +88,7 @@ const LIKE_TOGGLE_RPC_CANDIDATES = [
 ] as const;
 
 const COMMENTS_TABLE = "club_post_comments";
+const POSTS_TABLE = "club_posts";
 
 /* ---------------- Memoized item (KEY PERF FIX) ---------------- */
 
@@ -100,7 +114,6 @@ const FeedPostItem = memo(function FeedPostItem({
   onOpenComments,
   onToggleSave,
 }: FeedItemProps) {
-  // ✅ compute minimal derived values here (cheap)
   const img = clean(item.image_url) || clean(item.image_hq_url) || "";
   const caption = clean(item.caption);
   const storeName = safeStr(item.store_display_name ?? item.store_name, "Store");
@@ -112,11 +125,7 @@ const FeedPostItem = memo(function FeedPostItem({
   const when = fmtWhen(item.created_at);
 
   return (
-    <Pressable
-      onPress={() => onOpenPost(item)}
-      hitSlop={10}
-      style={({ pressed }) => [{ opacity: pressed ? 0.98 : 1 }]}
-    >
+    <Pressable onPress={() => onOpenPost(item)} hitSlop={10} style={({ pressed }) => [{ opacity: pressed ? 0.98 : 1 }]}>
       <Card
         style={{
           padding: 0,
@@ -298,6 +307,9 @@ export default function ClubFeedScreen() {
   const insets = useSafeAreaInsets();
   const topPad = Math.max(insets.top, 10) + 8;
 
+  // ✅ Active store for Usage Counter (per store)
+  const { activeStoreId, activeStoreName } = useOrg();
+
   const PAGE = 24;
 
   const [loading, setLoading] = useState(true);
@@ -329,6 +341,95 @@ export default function ClubFeedScreen() {
     },
     [topBarH]
   );
+
+  /* ---------------- Usage Counter ---------------- */
+
+  const [usageLoading, setUsageLoading] = useState(false);
+  const [usageErr, setUsageErr] = useState<string | null>(null);
+  const [usage, setUsage] = useState<ClubUsageRow | null>(null);
+
+  const fetchUsage = useCallback(
+    async (mode: "silent" | "loud" = "silent") => {
+      const storeId = clean(activeStoreId);
+      if (!storeId) {
+        setUsage(null);
+        setUsageErr(null);
+        return;
+      }
+
+      if (mode === "loud") setUsageLoading(true);
+      setUsageErr(null);
+
+      try {
+        const { data, error } = await supabase.rpc("get_club_post_usage_v1", { p_store_id: storeId } as any);
+        if (error) throw error;
+
+        const row = (Array.isArray(data) ? (data?.[0] as any) : (data as any)) as ClubUsageRow | null;
+        if (!row) {
+          setUsage(null);
+          return;
+        }
+
+        setUsage({
+          store_id: clean((row as any)?.store_id ?? storeId),
+          plan_code: clean((row as any)?.plan_code ?? "") || null,
+          used_this_month: Number((row as any)?.used_this_month ?? 0),
+          limit_per_month: Number((row as any)?.limit_per_month ?? 0),
+          remaining: Number((row as any)?.remaining ?? 0),
+          month_start: (row as any)?.month_start ? String((row as any).month_start) : null,
+          month_end: (row as any)?.month_end ? String((row as any).month_end) : null,
+        });
+      } catch (e: any) {
+        // keep feed stable even if usage RPC is missing
+        const msg = String(e?.message ?? "");
+        const low = msg.toLowerCase();
+        const missing = low.includes("does not exist") || low.includes("function") || low.includes("rpc");
+        if (!missing) setUsageErr(msg || "Failed to load usage");
+        setUsage(null);
+      } finally {
+        if (mode === "loud") setUsageLoading(false);
+      }
+    },
+    [activeStoreId]
+  );
+
+  // load usage on boot (silent)
+  useEffect(() => {
+    void fetchUsage("silent");
+  }, [fetchUsage]);
+
+  // refresh usage when screen focused (silent)
+  useFocusEffect(
+    useCallback(() => {
+      if (!bootedRef.current) return;
+      void fetchUsage("silent");
+    }, [fetchUsage])
+  );
+
+  // ✅ AUTO-REFRESH usage when someone posts (realtime on club_posts for active store)
+  useEffect(() => {
+    const storeId = clean(activeStoreId);
+    if (!storeId) return;
+
+    const channelName = `club_usage_posts_${storeId}`;
+    const ch = supabase
+      .channel(channelName)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: POSTS_TABLE, filter: `store_id=eq.${storeId}` },
+        () => {
+          // don't spam loud loading; keep it silent and fast
+          void fetchUsage("silent");
+        }
+      )
+      .subscribe();
+
+    return () => {
+      try {
+        supabase.removeChannel(ch);
+      } catch {}
+    };
+  }, [activeStoreId, fetchUsage]);
 
   const warmSavedFlags = useCallback(async (list: FeedPost[]) => {
     try {
@@ -427,18 +528,11 @@ export default function ClubFeedScreen() {
     if (!postId) return;
 
     try {
-      const { count, error } = await supabase
-        .from(COMMENTS_TABLE as any)
-        .select("id", { count: "exact", head: true })
-        .eq("post_id", postId);
-
+      const { count, error } = await supabase.from(COMMENTS_TABLE as any).select("id", { count: "exact", head: true }).eq("post_id", postId);
       if (error) return;
 
       const nextCount = Number(count) || 0;
-
-      setPosts((prev) =>
-        prev.map((p) => (clean(p.post_id) !== postId ? p : { ...p, comments_count: nextCount }))
-      );
+      setPosts((prev) => prev.map((p) => (clean(p.post_id) !== postId ? p : { ...p, comments_count: nextCount })));
     } finally {
       lastCommentsPostIdRef.current = null;
     }
@@ -636,6 +730,8 @@ export default function ClubFeedScreen() {
     }
   }, []);
 
+  /* ---------------- Top Bar (Compact Usage Pill) ---------------- */
+
   const TopBar = useMemo(() => {
     const IgTopIcon = ({
       icon,
@@ -652,7 +748,7 @@ export default function ClubFeedScreen() {
       color?: string;
       hitSlopSize?: number;
     }) => {
-      const hs = hitSlopSize ?? 26; // ✅ bigger touch
+      const hs = hitSlopSize ?? 26;
       return (
         <Pressable
           onPress={onPress}
@@ -678,6 +774,16 @@ export default function ClubFeedScreen() {
       );
     };
 
+    const used = Math.max(0, Number(usage?.used_this_month) || 0);
+    const limit = Math.max(0, Number(usage?.limit_per_month) || 0);
+    const rem = Math.max(0, Number(usage?.remaining) || Math.max(0, limit - used));
+
+    // ✅ Per your rule: DO NOT show store name inside the pill
+    const showBadge = !!clean(activeStoreId) && (limit > 0 || used > 0 || !!usage);
+
+    // ✅ English, simple, clear
+    const remainingText = ` ${rem} posts remaining this month`;
+
     return (
       <View
         pointerEvents="box-none"
@@ -702,6 +808,7 @@ export default function ClubFeedScreen() {
           <IgTopIcon icon="add" onPress={openCreate} size={30} color={theme.colors.emerald} />
 
           <View style={{ flex: 1, alignItems: "center" }}>
+            {/* Title row */}
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6, maxWidth: "100%" }}>
               <Text
                 numberOfLines={1}
@@ -718,8 +825,91 @@ export default function ClubFeedScreen() {
               <Ionicons name="chevron-down" size={14} color={theme.colors.faint} />
             </View>
 
+            {/* ✅ Compact pill (same vibe, fixed content) */}
+            {showBadge ? (
+              <View
+                style={{
+                  marginTop: 6,
+                  alignSelf: "center",
+                  maxWidth: "92%",
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 8,
+
+                  paddingHorizontal: 10,
+                  paddingVertical: 5,
+                  borderRadius: 14,
+                  borderWidth: 1,
+                  borderColor: theme.colors.emeraldBorder,
+                  backgroundColor: "rgba(16,185,129,0.10)",
+                }}
+              >
+                <View
+                  style={{
+                    width: 20,
+                    height: 20,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    borderColor: theme.colors.emeraldBorder,
+                    backgroundColor: theme.colors.emeraldSoft,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Ionicons name="speedometer-outline" size={12} color={theme.colors.emerald} />
+                </View>
+
+                <Text
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                  style={{
+                    flex: 1,
+                    color: theme.colors.text,
+                    fontWeight: "900",
+                    fontSize: 11,
+                  }}
+                >
+                  {remainingText}
+                </Text>
+
+                <Pressable
+                  onPress={() => void fetchUsage("loud")}
+                  hitSlop={10}
+                  style={({ pressed }) => [
+                    {
+                      opacity: pressed ? 0.75 : 1,
+                      width: 22,
+                      height: 22,
+                      borderRadius: 999,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      backgroundColor: "rgba(255,255,255,0.04)",
+                      borderWidth: 1,
+                      borderColor: "rgba(255,255,255,0.08)",
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name={usageLoading ? "hourglass-outline" : "refresh"}
+                    size={12}
+                    color={theme.colors.faint}
+                  />
+                </Pressable>
+              </View>
+            ) : (
+              <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 11, marginTop: 6 }}>
+                Activate store kuona usage counter.
+              </Text>
+            )}
+
+            {!!usageErr ? (
+              <Text style={{ color: theme.colors.danger, fontWeight: "900", fontSize: 10, marginTop: 4 }}>
+                {usageErr}
+              </Text>
+            ) : null}
+
             {!!rpcUsed ? (
-              <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 10, marginTop: 2 }}>
+              <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 10, marginTop: 4 }}>
                 feed: {rpcUsed}
               </Text>
             ) : null}
@@ -732,11 +922,22 @@ export default function ClubFeedScreen() {
         </View>
       </View>
     );
-  }, [openCreate, openProfile, openSaved, rpcUsed, topPad, onTopBarLayout]);
+  }, [
+    activeStoreId,
+    fetchUsage,
+    onTopBarLayout,
+    openCreate,
+    openProfile,
+    openSaved,
+    rpcUsed,
+    topPad,
+    usage,
+    usageErr,
+    usageLoading,
+  ]);
 
   const keyExtractor = useCallback((x: FeedPost) => String(x.post_id), []);
 
-  // ✅ renderItem now tiny (just renders memo component)
   const renderItem = useCallback(
     ({ item }: { item: FeedPost }) => {
       const pid = clean(item.post_id);
@@ -783,12 +984,15 @@ export default function ClubFeedScreen() {
         keyExtractor={keyExtractor}
         renderItem={renderItem}
         contentContainerStyle={{
-          paddingTop: headerPad, // ✅ list starts under TopBar
+          paddingTop: headerPad,
           paddingHorizontal: 0,
           paddingBottom: Math.max(insets.bottom, 10) + 110,
         }}
         refreshing={refreshing}
-        onRefresh={() => void fetchFeed("refresh")}
+        onRefresh={() => {
+          void fetchFeed("refresh");
+          void fetchUsage("silent");
+        }}
         onEndReachedThreshold={0.4}
         onEndReached={() => {
           if (loading || refreshing || loadingMore) return;
@@ -822,13 +1026,11 @@ export default function ClubFeedScreen() {
           ) : null
         }
         showsVerticalScrollIndicator={false}
-        // ✅✅✅ PERF TUNING (safe)
         removeClippedSubviews={false}
         initialNumToRender={6}
         maxToRenderPerBatch={6}
         updateCellsBatchingPeriod={50}
         windowSize={7}
-        // ✅ extra: helps lists avoid random relayout cost
         keyboardShouldPersistTaps="handled"
       />
     </Screen>

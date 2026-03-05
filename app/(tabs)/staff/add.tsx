@@ -14,8 +14,81 @@ type Role = "admin" | "staff";
 
 function isValidEmail(v: string) {
   const s = v.trim().toLowerCase();
-  // simple, safe validator (enough for UI)
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
+}
+
+function clean(s: any) {
+  return String(s ?? "").trim();
+}
+function upper(s: any) {
+  return clean(s).toUpperCase();
+}
+function num(v: any): number | null {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return null;
+  return n;
+}
+
+type MySubRow = {
+  plan_code?: string;
+  status?: string;
+  [k: string]: any;
+};
+
+type PlanRow = {
+  code?: string;
+  staff_per_org?: number;
+  max_staff?: number;
+  maxStaff?: number;
+  [k: string]: any;
+};
+
+/**
+ * ✅ Plan Guard message mapper
+ * DB should raise something like:
+ * - "UPGRADE_PLAN: Staff limit reached. Plan LITE allows 3 staff(s) per organization."
+ * - "UPGRADE_PLAN: Staff is not allowed on FREE plan"
+ */
+function mapAddStaffErrorMessage(e: any): { title: string; body: string } {
+  const msg = clean(e?.message ?? e?.error_description ?? e?.details ?? e);
+  const m = msg.toLowerCase();
+
+  if (m.includes("upgrade_plan") && m.includes("staff limit")) {
+    const plan = msg.match(/Plan\s+([A-Z0-9_]+)/i)?.[1] || "CURRENT";
+    const lim = msg.match(/allows\s+(\d+)/i)?.[1] || "—";
+    return {
+      title: "Limit Reached",
+      body:
+        `Umefika limit ya staff.\n\n` +
+        `Plan: ${plan}\nStaff/Org allowed: ${lim}\n\n` +
+        `Ili kuongeza staff zaidi, tafadhali upgrade plan.`,
+    };
+  }
+
+  if (m.includes("upgrade_plan") && (m.includes("staff is not allowed") || m.includes("free plan"))) {
+    return {
+      title: "Upgrade Required",
+      body:
+        "Plan yako haijaruhusu kuongeza mfanyakazi (staff).\n\n" +
+        "✅ FREE plan = Organization 1 + Store 1 + User 1 (Owner tu).\n\n" +
+        "Ili kuongeza mfanyakazi, tafadhali upgrade kwenda LITE / STARTER / PRO.",
+    };
+  }
+
+  // common: user not found (email not registered)
+  if (m.includes("not found") && (m.includes("register") || m.includes("sign up"))) {
+    return {
+      title: "User Not Found",
+      body:
+        "Huyu email bado hajaji-register kwenye app.\n\n" +
+        "Mwambie afanye Sign Up kwanza, kisha urudie kuongeza kwa email.",
+    };
+  }
+
+  return {
+    title: "Add staff failed",
+    body: msg || "Unknown error",
+  };
 }
 
 export default function AddStaffScreen() {
@@ -57,21 +130,65 @@ export default function AddStaffScreen() {
     return true;
   };
 
+  const guardPlanStaffLimit = async (): Promise<void> => {
+    // 1) subscription
+    const { data: subData, error: subErr } = await supabase.rpc("get_my_subscription", {
+      p_org_id: orgId,
+    });
+    if (subErr) return;
+
+    const subRow = (Array.isArray(subData) ? subData?.[0] : subData) as MySubRow | null;
+    const planCode = upper(subRow?.plan_code || "FREE");
+
+    // 2) plan limits
+    const { data: plansData, error: plansErr } = await supabase.rpc("get_public_plans");
+    if (plansErr) return;
+
+    const plans = (plansData ?? []) as PlanRow[];
+    const plan = plans.find((p) => upper(p?.code) === planCode) || null;
+
+    const staffLimit =
+      num((plan as any)?.staff_per_org) ??
+      num((plan as any)?.max_staff) ??
+      num((plan as any)?.maxStaff) ??
+      null;
+
+    // If plan doesn't define limit, do not block.
+    if (staffLimit === null) return;
+
+    // 3) count staff (membership rows) via RPC
+    const { data: staffData, error: staffErr } = await supabase.rpc("get_org_staff_with_stores", {
+      p_org_id: orgId,
+    });
+    if (staffErr) return;
+
+    const rows = Array.isArray(staffData) ? (staffData as any[]) : [];
+    const currentCount = rows.length;
+
+    if (currentCount >= staffLimit) {
+      throw new Error(
+        `UPGRADE_PLAN: Staff limit reached. Plan ${planCode} allows ${staffLimit} staff(s) per organization.`
+      );
+    }
+  };
+
   const onSave = async () => {
     if (!validate()) return;
 
     setSaving(true);
     try {
+      // ✅ Client-side guard (DB should ALSO enforce)
+      await guardPlanStaffLimit();
+
       const payload = {
         p_org_id: orgId,
         p_email: email.trim().toLowerCase(),
         p_role: role,
       };
 
-      const { data, error } = await supabase.rpc("add_staff_to_org_by_email", payload);
+      const { error } = await supabase.rpc("add_staff_to_org_by_email", payload);
       if (error) throw error;
 
-      // data could be membership_id (uuid) depending on your function
       Alert.alert(
         "Success ✅",
         `Mfanyakazi ameongezwa.\nEmail: ${payload.p_email}\nRole: ${role.toUpperCase()}`
@@ -80,18 +197,8 @@ export default function AddStaffScreen() {
       await refresh();
       router.back();
     } catch (e: any) {
-      const msg = e?.message ?? "Unknown error";
-
-      // nice hint for the common case
-      if (msg.toLowerCase().includes("not found")) {
-        Alert.alert(
-          "User Not Found",
-          "Huyu email bado hajaji-register kwenye app.\n\nMwambie afanye Sign Up kwanza, kisha urudie kuongeza kwa email."
-        );
-        return;
-      }
-
-      Alert.alert("Add staff failed", msg);
+      const mapped = mapAddStaffErrorMessage(e);
+      Alert.alert(mapped.title, mapped.body);
     } finally {
       setSaving(false);
     }
