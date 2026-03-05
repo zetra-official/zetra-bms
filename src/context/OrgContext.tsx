@@ -32,6 +32,10 @@ export type MyStoreRow = {
   store_id: string;
   store_name: string;
   organization_id: string;
+
+  // ✅ PLAN LOCK (V2)
+  is_allowed?: boolean; // default true if missing
+  lock_reason?: string | null;
 };
 
 export type OrgState = {
@@ -66,6 +70,45 @@ export type OrgState = {
 };
 
 const OrgContext = createContext<OrgState | undefined>(undefined);
+
+function clean(s: any) {
+  return String(s ?? "").trim();
+}
+
+// ✅ prefer v2 then fallback
+const GET_MY_STORES_CANDIDATES = ["get_my_stores_v2", "get_my_stores"] as const;
+
+async function rpcFirstWorkingStores(): Promise<MyStoreRow[]> {
+  let lastErr: any = null;
+
+  for (const fn of GET_MY_STORES_CANDIDATES) {
+    const { data, error } = await supabase.rpc(fn as any);
+    if (!error) {
+      const rows = (data ?? []) as any[];
+      // normalize (ensure new fields exist as defaults)
+      return rows.map((r) => ({
+        store_id: clean(r?.store_id ?? r?.id),
+        store_name: clean(r?.store_name ?? r?.name),
+        organization_id: clean(r?.organization_id),
+        is_allowed:
+          typeof r?.is_allowed === "boolean" ? r.is_allowed : true,
+        lock_reason: clean(r?.lock_reason) ? String(r.lock_reason) : null,
+      })) as MyStoreRow[];
+    }
+
+    lastErr = error;
+
+    const msg = String(error.message ?? "").toLowerCase();
+    const missing =
+      msg.includes("does not exist") ||
+      msg.includes("function") ||
+      msg.includes("rpc");
+    // if missing -> try next; else stop
+    if (!missing) break;
+  }
+
+  throw lastErr ?? new Error("get_my_stores RPC missing");
+}
 
 export function OrgProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
@@ -131,17 +174,26 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deriveActive.orgId, loading, refreshing]);
 
-  // derive active store from selected store OR first store in active org
+  // ✅ derive active store:
+  // - prefer selected store IF it is allowed
+  // - else first allowed store in active org
+  // - else fallback to first store
   const deriveActiveStore = useMemo(() => {
     const withinOrg = deriveActive.orgId
       ? (stores ?? []).filter((s) => s.organization_id === deriveActive.orgId)
       : (stores ?? []);
 
-    const store =
-      withinOrg.find((s) => s.store_id === activeStoreId) ??
-      withinOrg[0] ??
-      (stores ?? [])[0] ??
-      null;
+    const isAllowed = (s: any) => (typeof s?.is_allowed === "boolean" ? s.is_allowed : true);
+
+    const selected =
+      withinOrg.find((s) => s.store_id === activeStoreId && isAllowed(s)) ?? null;
+
+    const firstAllowed =
+      withinOrg.find((s) => isAllowed(s)) ?? null;
+
+    const fallback = withinOrg[0] ?? (stores ?? [])[0] ?? null;
+
+    const store = selected ?? firstAllowed ?? fallback;
 
     return {
       storeId: store?.store_id ?? null,
@@ -216,11 +268,8 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
         const typedOrgs = (orgData ?? []) as MyOrgRow[];
         setOrgs(typedOrgs);
 
-        // 2) canonical store list
-        const { data: storeData, error: storeErr } = await supabase.rpc("get_my_stores");
-        if (storeErr) throw storeErr;
-
-        const typedStores = (storeData ?? []) as MyStoreRow[];
+        // 2) stores (prefer v2; fallback to legacy)
+        const typedStores = await rpcFirstWorkingStores();
         setStores(typedStores);
       } catch (e: any) {
         setError(e?.message ?? "Failed to load org/store data");

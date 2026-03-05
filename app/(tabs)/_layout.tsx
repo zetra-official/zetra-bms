@@ -76,6 +76,18 @@ export default function TabsLayout() {
         }}
       />
 
+      {/* ✅ RESTORED: Credit tab back to bottom bar */}
+      <Tabs.Screen
+        name="credit"
+        options={{
+          title: "Credit",
+          tabBarLabel: ({ color }) => <TabLabel text="Credit" color={color} />,
+          tabBarIcon: ({ size, color }) => (
+            <Ionicons name="card-outline" size={size} color={color} />
+          ),
+        }}
+      />
+
       <Tabs.Screen
         name="club"
         options={{
@@ -83,18 +95,6 @@ export default function TabsLayout() {
           tabBarLabel: ({ color }) => <TabLabel text="Club" color={color} />,
           tabBarIcon: ({ size, color }) => (
             <Ionicons name="people-circle-outline" size={size} color={color} />
-          ),
-        }}
-      />
-
-      {/* ✅ KEEP Credit ON TAB BAR */}
-      <Tabs.Screen
-        name="credit"
-        options={{
-          title: "Credit",
-          tabBarLabel: ({ color }) => <TabLabel text="Credit" color={color} />,
-          tabBarIcon: ({ size, color }) => (
-            <Ionicons name="wallet-outline" size={size} color={color} />
           ),
         }}
       />
@@ -121,6 +121,9 @@ export default function TabsLayout() {
       {/* ✅ Hide nested settings pages from tab bar */}
       <Tabs.Screen name="settings/organization" options={{ href: null }} />
       <Tabs.Screen name="settings/regional" options={{ href: null }} />
+
+      {/* ✅ Subscription page should NEVER appear as a tab */}
+      <Tabs.Screen name="settings/subscription" options={{ href: null }} />
     </Tabs>
   );
 }

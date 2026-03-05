@@ -415,7 +415,7 @@ export default function CreditHomeScreen() {
               >
                 <Text
                   style={{
-                    color: isOlder ? theme.colors.dangerText : theme.colors.muted,
+                    color: isOlder ? theme.colors.danger : theme.colors.muted,
                     fontWeight: "900",
                     fontSize: 12,
                   }}
@@ -426,7 +426,7 @@ export default function CreditHomeScreen() {
             </View>
 
             {isOlder ? (
-              <Text style={{ color: theme.colors.dangerText, fontWeight: "900", fontSize: 12 }}>
+              <Text style={{ color: theme.colors.danger, fontWeight: "900", fontSize: 12 }}>
                 Risk
               </Text>
             ) : null}
@@ -477,7 +477,7 @@ export default function CreditHomeScreen() {
                     <Text style={{ color: theme.colors.muted, fontSize: 12 }}>Balance</Text>
                     <Text
                       style={{
-                        color: isOlder ? theme.colors.dangerText : theme.colors.emerald,
+                        color: isOlder ? theme.colors.danger : theme.colors.emerald,
                         fontWeight: "900",
                       }}
                     >
@@ -797,7 +797,7 @@ export default function CreditHomeScreen() {
               borderRadius: theme.radius.xl,
             }}
           >
-            <Text style={{ color: theme.colors.dangerText, fontWeight: "900" }}>{errMsg}</Text>
+            <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{errMsg}</Text>
           </View>
         ) : null}
 
@@ -1000,7 +1000,7 @@ export default function CreditHomeScreen() {
                     borderRadius: theme.radius.xl,
                   }}
                 >
-                  <Text style={{ color: theme.colors.dangerText, fontWeight: "900" }}>{timelineErr}</Text>
+                  <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{timelineErr}</Text>
                 </View>
               ) : null}
 

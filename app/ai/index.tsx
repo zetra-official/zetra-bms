@@ -242,11 +242,10 @@ async function fetchJsonWithRetry(
 function isPunct(ch: string) {
   return ch === "." || ch === "!" || ch === "?" || ch === "," || ch === ";" || ch === ":";
 }
-function hasNextMoveHeading(text: string) {
-  const t = clean(text).toUpperCase();
-  return t.includes("NEXT MOVE");
-}
 
+/**
+ * ✅ ACTIONS formatting (kept)
+ */
 function formatActions(actions: Array<{ title: string; steps?: string[]; priority?: string; eta?: string }>) {
   if (!Array.isArray(actions) || actions.length === 0) return "";
   const lines: string[] = [];
@@ -273,10 +272,51 @@ function formatActions(actions: Array<{ title: string; steps?: string[]; priorit
   return clean(out) ? out : "";
 }
 
-function packAssistantText(meta: { text: string; actions: any[]; nextMove?: string; footerNote?: string }) {
-  const main = clean(meta?.text);
+/**
+ * ✅ HARD STOP FOR "NEXT ACTION" / "NEXT MOVE"
+ * Sometimes model/worker may include these lines. We remove them client-side
+ * to guarantee they never appear in UI.
+ */
+function stripNextActionLines(raw: string) {
+  const t = String(raw ?? "");
+  if (!t.trim()) return "";
+  const lines = t.split(/\r?\n/);
+
+  const out: string[] = [];
+  for (const line of lines) {
+    const l = line ?? "";
+    const tl = l.trim().toLowerCase();
+
+    const isNextAction =
+      tl.startsWith("next action:") ||
+      tl.startsWith("next move:") ||
+      tl.startsWith("next_action:") ||
+      tl.startsWith("next_move:") ||
+      tl.startsWith("next action :") ||
+      tl.startsWith("next move :");
+
+    if (isNextAction) continue;
+
+    out.push(l);
+  }
+
+  // remove extra trailing blank lines
+  while (out.length && !out[out.length - 1].trim()) out.pop();
+  return out.join("\n").trim();
+}
+
+function sanitizeAssistantText(raw: string) {
+  // Add more sanitizers here if needed, but keep minimal.
+  return stripNextActionLines(raw);
+}
+
+/**
+ * ✅ IMPORTANT CHANGE:
+ * - NEXT ACTION / NEXT MOVE removed completely (as per request)
+ */
+function packAssistantText(meta: { text: string; actions: any[]; footerNote?: string }) {
+  const main = sanitizeAssistantText(clean(meta?.text));
   const actionsBlock = formatActions(meta?.actions ?? []);
-  const nextMove = clean(meta?.nextMove);
   const footerNote = clean(meta?.footerNote);
 
   const parts: string[] = [];
@@ -285,12 +325,6 @@ function packAssistantText(meta: { text: string; actions: any[]; nextMove?: stri
   if (actionsBlock) {
     parts.push("");
     parts.push(actionsBlock);
-  }
-
-  if (nextMove && !hasNextMoveHeading(main)) {
-    parts.push("");
-    parts.push("🎯 NEXT MOVE");
-    parts.push(nextMove);
   }
 
   if (footerNote) {
@@ -414,7 +448,7 @@ export default function AiChatScreen() {
 
   const topPad = Math.max(insets.top, 10) + 8;
 
-  // ✅ Keyboard state (used for chips + composer spacing)
+  // ✅ Keyboard state (used for composer spacing)
   const [keyboardOpen, setKeyboardOpen] = useState(false);
 
   useEffect(() => {
@@ -432,12 +466,38 @@ export default function AiChatScreen() {
 
   const [proActive, setProActive] = useState(false);
 
+  // ✅ AI Gate (LITE/FREE => AI disabled)
+  const [aiGateOpen, setAiGateOpen] = useState(false);
+  const [aiGateReason, setAiGateReason] = useState("");
+
+  const aiEnabled = !!proActive;
+
+  const openAiGate = useCallback(
+    (reason?: string) => {
+      setAiGateReason(clean(reason) || "");
+      setAiGateOpen(true);
+    },
+    [setAiGateOpen]
+  );
+
+  const requireAi = useCallback(
+    (reason?: string) => {
+      if (aiEnabled) return true;
+      openAiGate(reason || "AI haipatikani kwenye kifurushi chako (LITE/FREE).");
+      return false;
+    },
+    [aiEnabled, openAiGate]
+  );
+
   // ✅ Tools bottom sheet (kept for future)
   const [toolOpen, setToolOpen] = useState(false);
   const [toolKey, setToolKey] = useState<ToolKey>(null);
 
   // ✅ In-screen Tasks panel (Modal)
   const [tasksOpen, setTasksOpen] = useState(false);
+
+  // ✅ NEW: Plus menu (ChatGPT-like)
+  const [plusOpen, setPlusOpen] = useState(false);
 
   // ✅ A-1 Tasks data
   const [tasksLoading, setTasksLoading] = useState(false);
@@ -697,6 +757,8 @@ export default function AiChatScreen() {
   }, []);
 
   const pickAndAttachImage = useCallback(async () => {
+    if (!requireAi("AI imezimwa kwenye LITE. Upgrade ili kutumia image/vision tools.")) return;
+
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) {
@@ -735,13 +797,15 @@ export default function AiChatScreen() {
     } catch (e: any) {
       Alert.alert("Error", clean(e?.message) || "Image pick error");
     }
-  }, []);
+  }, [requireAi]);
 
   const removeAttachedImage = useCallback((id: string) => {
     setAttachedImages((prev) => prev.filter((x) => x.id !== id));
   }, []);
 
   const startRecording = useCallback(async () => {
+    if (!requireAi("AI imezimwa kwenye LITE. Upgrade ili kutumia mic/voice.")) return;
+
     try {
       if (!requireWorkerUrlOrAlert()) return;
 
@@ -767,7 +831,7 @@ export default function AiChatScreen() {
       setRecording(null);
       setRecordingOn(false);
     }
-  }, [requireWorkerUrlOrAlert]);
+  }, [requireAi, requireWorkerUrlOrAlert]);
 
   const stopRecordingAndTranscribe = useCallback(async () => {
     try {
@@ -840,12 +904,16 @@ export default function AiChatScreen() {
   }, [recording]);
 
   const toggleMic = useCallback(() => {
+    if (!aiEnabled) {
+      openAiGate("AI imezimwa kwenye LITE. Upgrade ili kutumia mic/voice.");
+      return;
+    }
     if (recordingOn) {
       void stopRecordingAndTranscribe();
       return;
     }
     void startRecording();
-  }, [recordingOn, startRecording, stopRecordingAndTranscribe]);
+  }, [aiEnabled, openAiGate, recordingOn, startRecording, stopRecordingAndTranscribe]);
 
   /**
    ✅ Worker: /v1/chat
@@ -1005,7 +1073,7 @@ export default function AiChatScreen() {
   );
 
   /**
-✅ Quick chips (Copilot feel)
+✅ Quick chips (will live inside + menu now)
 */
   const quickChips = useMemo(
     () => [
@@ -1019,25 +1087,20 @@ export default function AiChatScreen() {
     []
   );
 
-  const applyChipPrompt = useCallback((p: string) => {
-    const t = clean(p);
-    if (!t) return;
-    setRetryCard({ visible: false, label: "", payload: null });
-    lastPayloadRef.current = null;
-    setInput(t);
-    requestAnimationFrame(() => inputRef.current?.focus());
-  }, []);
+  const applyChipPrompt = useCallback(
+    (p: string) => {
+      if (!requireAi("AI imezimwa kwenye LITE. Upgrade ili kutumia AI prompts.")) return;
 
-  /**
-✅ Chips visibility (hides while keyboard open / typing)
-*/
-  const showChips = useMemo(() => {
-    if (thinking) return false;
-    if (keyboardOpen) return false;
-    if (clean(input)) return false;
-    if (toolOpen || tasksOpen) return false;
-    return true;
-  }, [input, keyboardOpen, thinking, toolOpen, tasksOpen]);
+      const t = clean(p);
+      if (!t) return;
+      setRetryCard({ visible: false, label: "", payload: null });
+      lastPayloadRef.current = null;
+      setPlusOpen(false);
+      setInput(t);
+      requestAnimationFrame(() => inputRef.current?.focus());
+    },
+    [requireAi]
+  );
 
   /**
 ✅ A-1: Load tasks from DB (org-level)
@@ -1113,6 +1176,8 @@ export default function AiChatScreen() {
 ✅ MAIN SEND
 */
   const send = useCallback(async () => {
+    if (!requireAi("AI imezimwa kwenye LITE. Upgrade ili kuendelea.")) return;
+
     const text = clean(input);
     if (!text || thinking) return;
 
@@ -1185,11 +1250,10 @@ export default function AiChatScreen() {
         const packed = packAssistantText({
           text: res.text,
           actions: (res as any)?.meta?.actions ?? [],
-          nextMove: (res as any)?.meta?.nextMove ?? "",
           footerNote: "",
         });
 
-        await typeOutChatGPTLike(botId, packed || res.text, reqToken);
+        await typeOutChatGPTLike(botId, packed || sanitizeAssistantText(res.text), reqToken);
         return;
       }
 
@@ -1226,6 +1290,7 @@ export default function AiChatScreen() {
       let footerNote = "";
       const resMeta: any = (res as any)?.meta ?? null;
 
+      // Tasks saving is still gated by proActive (your current “AI enabled” flag).
       if (proActive && clean(org.activeOrgId) && Array.isArray(resMeta?.actions) && resMeta.actions.length) {
         const result = await createTasksFromAiActions({
           orgId: org.activeOrgId!,
@@ -1246,11 +1311,10 @@ export default function AiChatScreen() {
       const packed = packAssistantText({
         text: res.text,
         actions: resMeta?.actions ?? [],
-        nextMove: resMeta?.nextMove ?? "",
         footerNote,
       });
 
-      await typeOutChatGPTLike(botId, packed || res.text, reqToken);
+      await typeOutChatGPTLike(botId, packed || sanitizeAssistantText(res.text), reqToken);
     } catch (e: any) {
       stopTypingDots();
 
@@ -1298,6 +1362,7 @@ export default function AiChatScreen() {
     org.activeStoreId,
     patchMessageText,
     proActive,
+    requireAi,
     scrollToEndSoon,
     startTypingDots,
     stopTyping,
@@ -1310,6 +1375,8 @@ export default function AiChatScreen() {
 ✅ Retry handler
 */
   const retryLast = useCallback(async () => {
+    if (!requireAi("AI imezimwa kwenye LITE. Upgrade ili kuendelea.")) return;
+
     const p = retryCard.payload;
     if (!p || thinking) return;
 
@@ -1363,10 +1430,9 @@ export default function AiChatScreen() {
         const packed = packAssistantText({
           text: res.text,
           actions: (res as any)?.meta?.actions ?? [],
-          nextMove: (res as any)?.meta?.nextMove ?? "",
           footerNote: "",
         });
-        await typeOutChatGPTLike(botId, packed || res.text, reqToken);
+        await typeOutChatGPTLike(botId, packed || sanitizeAssistantText(res.text), reqToken);
         return;
       }
 
@@ -1397,11 +1463,10 @@ export default function AiChatScreen() {
       const packed = packAssistantText({
         text: res.text,
         actions: resMeta?.actions ?? [],
-        nextMove: resMeta?.nextMove ?? "",
         footerNote,
       });
 
-      await typeOutChatGPTLike(botId, packed || res.text, reqToken);
+      await typeOutChatGPTLike(botId, packed || sanitizeAssistantText(res.text), reqToken);
     } catch (e: any) {
       stopTypingDots();
 
@@ -1438,6 +1503,7 @@ export default function AiChatScreen() {
     org.activeStoreId,
     patchMessageText,
     proActive,
+    requireAi,
     retryCard.payload,
     scrollToEndSoon,
     startTypingDots,
@@ -1471,80 +1537,9 @@ export default function AiChatScreen() {
     );
   };
 
-  const TasksPill = (
-    <Pressable
-      onPress={() => {
-        Keyboard.dismiss();
-        setTasksOpen(true);
-        void loadTasks();
-      }}
-      hitSlop={10}
-      style={({ pressed }) => ({
-        paddingHorizontal: 12,
-        height: 34,
-        borderRadius: 999,
-        borderWidth: 1,
-        borderColor: "rgba(255,255,255,0.12)",
-        backgroundColor: pressed ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.06)",
-        alignItems: "center",
-        justifyContent: "center",
-        opacity: pressed ? 0.92 : 1,
-        transform: [{ scale: pressed ? 0.985 : 1 }],
-      })}
-    >
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-        <Ionicons name="checkbox-outline" size={16} color={UI.text} />
-        <Text style={{ color: UI.text, fontWeight: "900" }}>Tasks</Text>
-      </View>
-    </Pressable>
-  );
-
-  const ProPill = (
-    <View
-      style={{
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 6,
-        paddingHorizontal: 10,
-        height: 34,
-        borderRadius: 999,
-        borderWidth: 1,
-        borderColor: C.emeraldBorder,
-        backgroundColor: "rgba(16,185,129,0.12)",
-        shadowColor: "#000",
-        shadowOpacity: 0.18,
-        shadowRadius: 10,
-        shadowOffset: { width: 0, height: 6 },
-        elevation: 5,
-      }}
-    >
-      <Ionicons name="sparkles" size={14} color={UI.text} />
-      <Text style={{ color: UI.text, fontWeight: "900" }}>PRO</Text>
-    </View>
-  );
-
-  const StopPill = (
-    <Pressable
-      onPress={stopGenerating}
-      hitSlop={10}
-      style={({ pressed }) => ({
-        paddingHorizontal: 12,
-        height: 34,
-        borderRadius: 999,
-        borderWidth: 1,
-        borderColor: "rgba(239,68,68,0.35)",
-        backgroundColor: pressed ? "rgba(239,68,68,0.18)" : "rgba(239,68,68,0.12)",
-        alignItems: "center",
-        justifyContent: "center",
-      })}
-    >
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-        <Ionicons name="stop-circle-outline" size={16} color={UI.text} />
-        <Text style={{ color: UI.text, fontWeight: "900" }}>Stop</Text>
-      </View>
-    </Pressable>
-  );
-
+  /**
+   * ✅ TopBar simplified (chips moved into + menu)
+   */
   const TopBar = (
     <View
       style={{
@@ -1585,7 +1580,48 @@ export default function AiChatScreen() {
           </Text>
         </View>
 
-        {proActive ? ProPill : null}
+        {proActive ? (
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 6,
+              paddingHorizontal: 10,
+              height: 34,
+              borderRadius: 999,
+              borderWidth: 1,
+              borderColor: C.emeraldBorder,
+              backgroundColor: "rgba(16,185,129,0.12)",
+              shadowColor: "#000",
+              shadowOpacity: 0.18,
+              shadowRadius: 10,
+              shadowOffset: { width: 0, height: 6 },
+              elevation: 5,
+            }}
+          >
+            <Ionicons name="sparkles" size={14} color={UI.text} />
+            <Text style={{ color: UI.text, fontWeight: "900" }}>PRO</Text>
+          </View>
+        ) : (
+          <Pressable
+            onPress={() => openAiGate("AI imezimwa kwenye LITE. Upgrade ili kuifungua.")}
+            hitSlop={10}
+            style={({ pressed }) => ({
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 6,
+              paddingHorizontal: 10,
+              height: 34,
+              borderRadius: 999,
+              borderWidth: 1,
+              borderColor: "rgba(255,255,255,0.12)",
+              backgroundColor: pressed ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.06)",
+            })}
+          >
+            <Ionicons name="lock-closed-outline" size={14} color={UI.text} />
+            <Text style={{ color: UI.text, fontWeight: "900" }}>LOCKED</Text>
+          </Pressable>
+        )}
 
         <Pressable
           onPress={() => router.push("/settings/subscription")}
@@ -1644,13 +1680,33 @@ export default function AiChatScreen() {
         </Pressable>
       </View>
 
-      <View style={{ flexDirection: "row", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
-        <ModePill k="AUTO" label="Auto" />
-        <ModePill k="SW" label="Swahili" />
-        <ModePill k="EN" label="English" />
-        {TasksPill}
-        {thinking ? StopPill : null}
-      </View>
+      {/* ✅ Inline banner when AI is locked */}
+      {!aiEnabled ? (
+        <Pressable
+          onPress={() => openAiGate("AI imezimwa kwenye LITE. Upgrade ili kuifungua.")}
+          style={({ pressed }) => ({
+            marginTop: 10,
+            borderWidth: 1,
+            borderColor: "rgba(245,158,11,0.30)",
+            backgroundColor: pressed ? "rgba(245,158,11,0.14)" : "rgba(245,158,11,0.10)",
+            borderRadius: 18,
+            paddingVertical: 10,
+            paddingHorizontal: 12,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 10,
+          })}
+        >
+          <Ionicons name="lock-closed-outline" size={16} color={UI.text} />
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: UI.text, fontWeight: "900" }}>AI Locked (LITE)</Text>
+            <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 2 }} numberOfLines={1}>
+              AI haipatikani kwenye kifurushi cha LITE — bonyeza ku-upgrade.
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={UI.muted} />
+        </Pressable>
+      ) : null}
     </View>
   );
 
@@ -1728,42 +1784,6 @@ export default function AiChatScreen() {
   }, [retryCard.label, retryCard.payload, retryCard.visible, retryLast]);
 
   /**
-   * ✅ Chips row (IMMERSIVE: horizontal, not big wrap)
-   */
-  const ChipsRow = useMemo(() => {
-    if (!showChips) return null;
-    return (
-      <View style={{ paddingTop: 10 }}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}>
-          {quickChips.map((c) => (
-            <Pressable
-              key={c.k}
-              onPress={() => applyChipPrompt(c.prompt)}
-              hitSlop={10}
-              style={({ pressed }) => ({
-                paddingHorizontal: 12,
-                height: 34,
-                borderRadius: 999,
-                borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.12)",
-                backgroundColor: pressed ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.06)",
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 8,
-                opacity: pressed ? 0.92 : 1,
-                transform: [{ scale: pressed ? 0.99 : 1 }],
-              })}
-            >
-              <Ionicons name={c.icon as any} size={14} color={UI.text} />
-              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>{c.label}</Text>
-            </Pressable>
-          ))}
-        </ScrollView>
-      </View>
-    );
-  }, [applyChipPrompt, quickChips, showChips]);
-
-  /**
    * ✅ Attached images row (composer)
    */
   const AttachRow = useMemo(() => {
@@ -1813,18 +1833,271 @@ export default function AiChatScreen() {
   }, [attachedImages, removeAttachedImage]);
 
   const canSend = useMemo(() => {
+    if (!aiEnabled) return false;
     if (thinking) return false;
     if (!clean(input)) return false;
     return true;
-  }, [input, thinking]);
+  }, [aiEnabled, input, thinking]);
 
   /**
    * ✅ Composer spacing (KEY FIX)
+   * - Composer now goes DOWN to the bottom when keyboard is dismissed.
+   * - Removed forced 10px that was pushing composer up unnecessarily.
    */
   const composerBottomPad = useMemo(() => {
-    if (keyboardOpen) return 6;
-    return Math.max(insets.bottom, 10);
-  }, [insets.bottom, keyboardOpen]);
+    // keep safe-area only
+    return Math.max(insets.bottom, 0);
+  }, [insets.bottom]);
+
+  /**
+   * ✅ AI Locked Modal (LITE gate)
+   */
+  const AiLockedModal = (
+    <Modal visible={aiGateOpen} transparent animationType="fade" onRequestClose={() => setAiGateOpen(false)}>
+      <Pressable
+        onPress={() => setAiGateOpen(false)}
+        style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.65)", justifyContent: "center", padding: 18 }}
+      >
+        <Pressable
+          onPress={() => {}}
+          style={{
+            backgroundColor: C.background,
+            borderRadius: 22,
+            borderWidth: 1,
+            borderColor: "rgba(255,255,255,0.12)",
+            padding: 16,
+          }}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <View
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 16,
+                  borderWidth: 1,
+                  borderColor: "rgba(245,158,11,0.35)",
+                  backgroundColor: "rgba(245,158,11,0.12)",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Ionicons name="lock-closed-outline" size={20} color={UI.text} />
+              </View>
+              <View>
+                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>Upgrade Required</Text>
+                <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 2 }}>AI imezimwa (LITE)</Text>
+              </View>
+            </View>
+
+            <Pressable
+              onPress={() => setAiGateOpen(false)}
+              hitSlop={10}
+              style={({ pressed }) => ({
+                width: 40,
+                height: 40,
+                borderRadius: 14,
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,0.12)",
+                backgroundColor: pressed ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.06)",
+                alignItems: "center",
+                justifyContent: "center",
+              })}
+            >
+              <Ionicons name="close" size={18} color={UI.text} />
+            </Pressable>
+          </View>
+
+          <View style={{ marginTop: 12 }}>
+            <Text style={{ color: UI.text, fontWeight: "900" }}>AI haipatikani kwenye kifurushi cha LITE.</Text>
+            <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 8, lineHeight: 20 }}>
+              {aiGateReason ||
+                "Kwenye LITE: Organization 1 • Store 1 • Staff 3 • Club posts 50 • AI Disabled.\n\nIli kutumia ZETRA AI, tafadhali upgrade plan."}
+            </Text>
+          </View>
+
+          <View style={{ flexDirection: "row", gap: 10, marginTop: 14 }}>
+            <Pressable
+              onPress={() => {
+                setAiGateOpen(false);
+                router.push("/settings/subscription");
+              }}
+              style={({ pressed }) => ({
+                flex: 1,
+                height: 46,
+                borderRadius: 999,
+                borderWidth: 1,
+                borderColor: "rgba(16,185,129,0.45)",
+                backgroundColor: pressed ? "rgba(16,185,129,0.20)" : "rgba(16,185,129,0.14)",
+                alignItems: "center",
+                justifyContent: "center",
+                flexDirection: "row",
+                gap: 10,
+              })}
+            >
+              <Ionicons name="sparkles" size={18} color={UI.text} />
+              <Text style={{ color: UI.text, fontWeight: "900" }}>Upgrade Plan</Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => setAiGateOpen(false)}
+              style={({ pressed }) => ({
+                width: 110,
+                height: 46,
+                borderRadius: 999,
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,0.12)",
+                backgroundColor: pressed ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.06)",
+                alignItems: "center",
+                justifyContent: "center",
+              })}
+            >
+              <Text style={{ color: UI.text, fontWeight: "900" }}>Close</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+
+  /**
+   * ✅ + Menu (ChatGPT-like)
+   */
+  const PlusMenu = (
+    <Modal visible={plusOpen} transparent animationType="fade" onRequestClose={() => setPlusOpen(false)}>
+      <Pressable
+        onPress={() => setPlusOpen(false)}
+        style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.60)", justifyContent: "flex-end" }}
+      >
+        <Pressable
+          onPress={() => {}}
+          style={{
+            backgroundColor: C.background,
+            borderTopLeftRadius: 22,
+            borderTopRightRadius: 22,
+            borderWidth: 1,
+            borderColor: "rgba(255,255,255,0.10)",
+            padding: 14,
+            paddingBottom: Math.max(insets.bottom, 10) + 14,
+            maxHeight: "86%",
+          }}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>Menu</Text>
+            <Pressable
+              onPress={() => setPlusOpen(false)}
+              hitSlop={10}
+              style={({ pressed }) => ({
+                width: 40,
+                height: 40,
+                borderRadius: 14,
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,0.12)",
+                backgroundColor: pressed ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.06)",
+                alignItems: "center",
+                justifyContent: "center",
+              })}
+            >
+              <Ionicons name="close" size={18} color={UI.text} />
+            </Pressable>
+          </View>
+
+          {/* Language */}
+          <View style={{ marginTop: 12 }}>
+            <Text style={{ color: UI.muted, fontWeight: "900", marginBottom: 8 }}>AI Language</Text>
+            <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+              <ModePill k="AUTO" label="Auto" />
+              <ModePill k="SW" label="Swahili" />
+              <ModePill k="EN" label="English" />
+            </View>
+          </View>
+
+          {/* Quick prompts */}
+          <View style={{ marginTop: 16, opacity: aiEnabled ? 1 : 0.55 }}>
+            <Text style={{ color: UI.muted, fontWeight: "900", marginBottom: 8 }}>Quick prompts</Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+              {quickChips.map((c) => (
+                <Pressable
+                  key={c.k}
+                  onPress={() => applyChipPrompt(c.prompt)}
+                  disabled={!aiEnabled}
+                  hitSlop={10}
+                  style={({ pressed }) => ({
+                    paddingHorizontal: 12,
+                    height: 36,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    borderColor: "rgba(255,255,255,0.12)",
+                    backgroundColor: pressed ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.06)",
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 8,
+                    opacity: pressed ? 0.92 : 1,
+                  })}
+                >
+                  <Ionicons name={c.icon as any} size={14} color={UI.text} />
+                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>{c.label}</Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+
+          {/* Tasks */}
+          <View style={{ marginTop: 16, opacity: aiEnabled ? 1 : 0.55 }}>
+            <Pressable
+              onPress={() => {
+                if (!requireAi("AI imezimwa kwenye LITE. Upgrade ili kufungua Tasks panel.")) return;
+                setPlusOpen(false);
+                Keyboard.dismiss();
+                setTasksOpen(true);
+                void loadTasks();
+              }}
+              disabled={!aiEnabled}
+              hitSlop={10}
+              style={({ pressed }) => ({
+                height: 48,
+                borderRadius: 999,
+                borderWidth: 1,
+                borderColor: "rgba(16,185,129,0.45)",
+                backgroundColor: pressed ? "rgba(16,185,129,0.20)" : "rgba(16,185,129,0.14)",
+                alignItems: "center",
+                justifyContent: "center",
+                flexDirection: "row",
+                gap: 10,
+              })}
+            >
+              <Ionicons name="checkbox-outline" size={18} color={UI.text} />
+              <Text style={{ color: UI.text, fontWeight: "900" }}>Open Tasks</Text>
+            </Pressable>
+          </View>
+
+          {!aiEnabled ? (
+            <Pressable
+              onPress={() => {
+                setPlusOpen(false);
+                openAiGate("AI imezimwa kwenye LITE. Upgrade ili kuifungua.");
+              }}
+              style={({ pressed }) => ({
+                marginTop: 14,
+                height: 48,
+                borderRadius: 999,
+                borderWidth: 1,
+                borderColor: "rgba(245,158,11,0.35)",
+                backgroundColor: pressed ? "rgba(245,158,11,0.16)" : "rgba(245,158,11,0.10)",
+                alignItems: "center",
+                justifyContent: "center",
+                flexDirection: "row",
+                gap: 10,
+              })}
+            >
+              <Ionicons name="lock-closed-outline" size={18} color={UI.text} />
+              <Text style={{ color: UI.text, fontWeight: "900" }}>AI Locked — Upgrade</Text>
+            </Pressable>
+          ) : null}
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
 
   /**
    * ✅ Composer
@@ -1836,6 +2109,7 @@ export default function AiChatScreen() {
         paddingBottom: composerBottomPad,
         paddingTop: 10,
         backgroundColor: "transparent",
+        opacity: aiEnabled ? 1 : 0.72,
       }}
     >
       {AttachRow}
@@ -1856,8 +2130,17 @@ export default function AiChatScreen() {
       >
         <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 10 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            {/* ✅ NEW: + menu (ChatGPT-like) */}
             <Pressable
-              onPress={() => void pickAndAttachImage()}
+              onPress={() => {
+                if (!aiEnabled) {
+                  openAiGate("AI imezimwa kwenye LITE. Upgrade ili kuendelea.");
+                  return;
+                }
+                Keyboard.dismiss();
+                setPlusOpen(true);
+              }}
+              disabled={!aiEnabled}
               hitSlop={10}
               style={({ pressed }) => ({
                 width: 40,
@@ -1868,7 +2151,26 @@ export default function AiChatScreen() {
                 backgroundColor: pressed ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.06)",
                 alignItems: "center",
                 justifyContent: "center",
-                opacity: pressed ? 0.92 : 1,
+                opacity: !aiEnabled ? 0.55 : pressed ? 0.92 : 1,
+              })}
+            >
+              <Ionicons name="add" size={20} color={UI.text} />
+            </Pressable>
+
+            <Pressable
+              onPress={() => void pickAndAttachImage()}
+              disabled={!aiEnabled}
+              hitSlop={10}
+              style={({ pressed }) => ({
+                width: 40,
+                height: 40,
+                borderRadius: 14,
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,0.12)",
+                backgroundColor: pressed ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.06)",
+                alignItems: "center",
+                justifyContent: "center",
+                opacity: !aiEnabled ? 0.55 : pressed ? 0.92 : 1,
               })}
             >
               <Ionicons name="image-outline" size={18} color={UI.text} />
@@ -1876,6 +2178,7 @@ export default function AiChatScreen() {
 
             <Pressable
               onPress={toggleMic}
+              disabled={!aiEnabled}
               hitSlop={10}
               style={({ pressed }) => ({
                 width: 40,
@@ -1890,7 +2193,7 @@ export default function AiChatScreen() {
                   : "rgba(255,255,255,0.06)",
                 alignItems: "center",
                 justifyContent: "center",
-                opacity: pressed ? 0.92 : 1,
+                opacity: !aiEnabled ? 0.55 : pressed ? 0.92 : 1,
               })}
             >
               <Ionicons name={recordingOn ? "mic" : "mic-outline"} size={18} color={UI.text} />
@@ -1902,10 +2205,11 @@ export default function AiChatScreen() {
               ref={inputRef}
               value={input}
               onChangeText={setInput}
-              placeholder={transcribing ? "Transcribing..." : "Andika ujumbe..."}
+              placeholder={aiEnabled ? (transcribing ? "Transcribing..." : "Andika ujumbe...") : "AI imezimwa (LITE) — upgrade ili kutumia"}
               placeholderTextColor={UI.faint}
               multiline
               maxLength={INPUT_MAX}
+              editable={aiEnabled}
               style={{
                 minHeight: 40,
                 maxHeight: 130,
@@ -1960,7 +2264,7 @@ export default function AiChatScreen() {
           </Pressable>
         </View>
 
-        {/* ✅ A-3 Stop button near composer too (optional second access) */}
+        {/* ✅ Stop button near composer */}
         {thinking ? (
           <View style={{ marginTop: 10 }}>
             <Pressable
@@ -1979,6 +2283,26 @@ export default function AiChatScreen() {
             >
               <Ionicons name="stop-circle-outline" size={18} color={UI.text} />
               <Text style={{ color: UI.text, fontWeight: "900" }}>STOP GENERATING</Text>
+            </Pressable>
+          </View>
+        ) : !aiEnabled ? (
+          <View style={{ marginTop: 10 }}>
+            <Pressable
+              onPress={() => openAiGate("AI imezimwa kwenye LITE. Upgrade ili kuifungua.")}
+              style={({ pressed }) => ({
+                height: 44,
+                borderRadius: 999,
+                borderWidth: 1,
+                borderColor: "rgba(245,158,11,0.35)",
+                backgroundColor: pressed ? "rgba(245,158,11,0.18)" : "rgba(245,158,11,0.12)",
+                alignItems: "center",
+                justifyContent: "center",
+                flexDirection: "row",
+                gap: 10,
+              })}
+            >
+              <Ionicons name="lock-closed-outline" size={18} color={UI.text} />
+              <Text style={{ color: UI.text, fontWeight: "900" }}>UPGRADE TO USE AI</Text>
             </Pressable>
           </View>
         ) : null}
@@ -2179,7 +2503,12 @@ export default function AiChatScreen() {
 
   // ✅ A-4 fullscreen image preview
   const ImagePreviewModal = (
-    <Modal visible={imgPreview.open} transparent animationType="fade" onRequestClose={() => setImgPreview({ open: false, uri: "" })}>
+    <Modal
+      visible={imgPreview.open}
+      transparent
+      animationType="fade"
+      onRequestClose={() => setImgPreview({ open: false, uri: "" })}
+    >
       <Pressable
         onPress={() => setImgPreview({ open: false, uri: "" })}
         style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.85)", alignItems: "center", justifyContent: "center" }}
@@ -2221,7 +2550,6 @@ export default function AiChatScreen() {
         >
           <View style={{ flex: 1 }}>
             {RetryBanner}
-            {ChipsRow}
 
             <FlatList
               ref={listRef}
@@ -2233,7 +2561,7 @@ export default function AiChatScreen() {
               showsVerticalScrollIndicator={false}
               style={{ flex: 1 }}
               contentContainerStyle={{
-                paddingTop: 10, // (inverted) space near composer
+                paddingTop: 10,
                 paddingBottom: 10,
               }}
             />
@@ -2244,6 +2572,8 @@ export default function AiChatScreen() {
 
         {TasksModal}
         {ImagePreviewModal}
+        {PlusMenu}
+        {AiLockedModal}
 
         {/* ✅ Tool sheet kept for future expansion (not used yet) */}
         {toolOpen ? (

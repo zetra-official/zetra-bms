@@ -10,6 +10,32 @@ import { Input } from "../../../src/ui/Input";
 import { Screen } from "../../../src/ui/Screen";
 import { UI } from "../../../src/ui/theme";
 
+function clean(s: any) {
+  return String(s ?? "").trim();
+}
+function upper(s: any) {
+  return clean(s).toUpperCase();
+}
+function num(v: any): number | null {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return null;
+  return n;
+}
+
+type MySubRow = {
+  plan_code?: string;
+  status?: string;
+  [k: string]: any;
+};
+
+type PlanRow = {
+  code?: string;
+  stores_per_org?: number;
+  max_stores?: number;
+  maxStores?: number;
+  [k: string]: any;
+};
+
 export default function AddStoreScreen() {
   const router = useRouter();
   const { activeOrgId, activeOrgName, activeRole, refresh } = useOrg();
@@ -19,6 +45,51 @@ export default function AddStoreScreen() {
 
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
+
+  const guardPlanStoreLimit = async (): Promise<void> => {
+    // 1) get subscription
+    const { data: subData, error: subErr } = await supabase.rpc("get_my_subscription", {
+      p_org_id: orgId,
+    });
+    if (subErr) {
+      // If subscription RPC fails, we do NOT block (avoid accidental lockout),
+      // but we still proceed to DB which should enforce.
+      return;
+    }
+
+    const subRow = (Array.isArray(subData) ? subData?.[0] : subData) as MySubRow | null;
+    const planCode = upper(subRow?.plan_code || "FREE");
+
+    // 2) get plans (limits)
+    const { data: plansData, error: plansErr } = await supabase.rpc("get_public_plans");
+    if (plansErr) return;
+
+    const plans = (plansData ?? []) as PlanRow[];
+    const plan = plans.find((p) => upper(p?.code) === planCode) || null;
+
+    const storeLimit =
+      num((plan as any)?.stores_per_org) ??
+      num((plan as any)?.max_stores) ??
+      num((plan as any)?.maxStores) ??
+      null;
+
+    // If no limit in DB, do not block.
+    if (storeLimit === null) return;
+
+    // 3) count current stores for this org (from canonical get_my_stores)
+    const { data: storesData, error: storesErr } = await supabase.rpc("get_my_stores");
+    if (storesErr) return;
+
+    const stores = Array.isArray(storesData) ? (storesData as any[]) : [];
+    const orgStores = stores.filter((s) => clean(s?.organization_id) === orgId);
+    const currentCount = orgStores.length;
+
+    if (currentCount >= storeLimit) {
+      throw new Error(
+        `UPGRADE_PLAN: Store limit reached. Plan ${planCode} allows ${storeLimit} store(s) per organization.`
+      );
+    }
+  };
 
   const onSave = async () => {
     if (!canCreate) {
@@ -39,6 +110,9 @@ export default function AddStoreScreen() {
 
     setSaving(true);
     try {
+      // ✅ Client-side guard (DB should ALSO enforce)
+      await guardPlanStoreLimit();
+
       // ✅ Create store ONLY (no staff assignment here)
       const { error } = await supabase.rpc("create_store", {
         p_org_id: orgId,
@@ -51,7 +125,18 @@ export default function AddStoreScreen() {
       await refresh(); // refresh OrgContext (stores list)
       router.back();
     } catch (e: any) {
-      Alert.alert("Add store failed", e?.message ?? "Unknown error");
+      const msg = clean(e?.message ?? e);
+      if (msg.toLowerCase().includes("upgrade_plan") && msg.toLowerCase().includes("store limit")) {
+        const plan = msg.match(/Plan\s+([A-Z0-9_]+)/i)?.[1] || "CURRENT";
+        const lim = msg.match(/allows\s+(\d+)/i)?.[1] || "—";
+        Alert.alert(
+          "Upgrade Required",
+          `Umefika limit ya stores.\n\nPlan: ${plan}\nStores/Org allowed: ${lim}\n\nIli kuongeza store nyingine, tafadhali upgrade plan.`
+        );
+        return;
+      }
+
+      Alert.alert("Add store failed", msg || "Unknown error");
     } finally {
       setSaving(false);
     }

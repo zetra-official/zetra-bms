@@ -11,7 +11,10 @@ import {
   TextInput,
   View,
 } from "react-native";
+
 import { useOrg } from "../src/context/OrgContext";
+import { supabase } from "../src/supabase/supabaseClient";
+
 import { Button } from "../src/ui/Button";
 import { Card } from "../src/ui/Card";
 import { Screen } from "../src/ui/Screen";
@@ -21,6 +24,12 @@ type OrgItem = {
   organization_id: string;
   organization_name: string;
   role: "owner" | "admin" | "staff";
+};
+
+type PlanInfo = {
+  code?: string; // e.g. "LITE"
+  name?: string; // e.g. "Lite"
+  max_organizations?: number; // e.g. 1
 };
 
 function normName(s: string) {
@@ -66,11 +75,77 @@ function Badge({
   );
 }
 
+function clean(s: any) {
+  return String(s ?? "").trim();
+}
+
+/**
+ * Parse DB exception:
+ * ORG_LIMIT_REACHED: plan=FREE | orgs_allowed=1 | owned=1
+ */
+function parseOrgLimitError(
+  msgRaw: string
+): { plan?: string; allowed?: string; owned?: string } | null {
+  const msg = clean(msgRaw);
+  if (!msg) return null;
+  if (!msg.toUpperCase().includes("ORG_LIMIT_REACHED")) return null;
+
+  const plan = (msg.match(/plan\s*=\s*([A-Z0-9_]+)/i)?.[1] || "").toUpperCase();
+  const allowed = msg.match(/orgs_allowed\s*=\s*([0-9]+)/i)?.[1] || "";
+  const owned = msg.match(/owned\s*=\s*([0-9]+)/i)?.[1] || "";
+  return { plan, allowed, owned };
+}
+
+function prettyPlanLabel(p: PlanInfo) {
+  const code = clean(p.code).toUpperCase();
+  const name = clean(p.name);
+  if (name) return name;
+  if (code) return code;
+  return "—";
+}
+
+function safeInt(x: any, fallback = 0) {
+  const n = Number(x);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+async function fetchActiveOrgPlanInfo(activeOrgId: string | null | undefined): Promise<PlanInfo | null> {
+  const orgId = clean(activeOrgId);
+  if (!orgId) return null;
+
+  // Uses your existing DB RPC:
+  // get_org_subscription(p_org_id uuid) => returns (organization_id, code, name, ..., max_organizations, ...)
+  const { data, error } = await supabase.rpc("get_org_subscription", { p_org_id: orgId });
+
+  if (error) return null;
+
+  // data can be array (TABLE) or single row depending on your RPC definition
+  const row = Array.isArray(data) ? data?.[0] : data;
+
+  if (!row) return null;
+
+  const code = clean((row as any)?.code);
+  const name = clean((row as any)?.name);
+  const max_organizations = safeInt((row as any)?.max_organizations, 0);
+
+  // If no meaningful info, treat as null
+  if (!code && !name && !max_organizations) return null;
+
+  return { code: code ? code.toUpperCase() : undefined, name: name || undefined, max_organizations };
+}
+
 export default function OrgSwitcherScreen() {
   const router = useRouter();
 
-  const { orgs, activeOrgId, setActiveOrgId, refresh, createOrgWithStore, loading, refreshing } =
-    useOrg();
+  const {
+    orgs,
+    activeOrgId,
+    setActiveOrgId,
+    refresh,
+    createOrgWithStore,
+    loading,
+    refreshing,
+  } = useOrg();
 
   const [orgName, setOrgName] = useState("");
   const [storeName, setStoreName] = useState("");
@@ -134,6 +209,45 @@ export default function OrgSwitcherScreen() {
     onSwitch(pick.organization_id);
   };
 
+  const showUpgradeRequired = (info: { planLabel: string; allowed: number }) => {
+    const planLabel = clean(info.planLabel) || "—";
+    const allowed = safeInt(info.allowed, 1);
+
+    // Mpole, mfupi, premium
+    const body =
+      `Umefika limit ya kuongeza organizations kwenye kifurushi chako.\n\n` +
+      `Kifurushi: ${planLabel}\n` +
+      `Organizations zinazoruhusiwa: ${allowed}\n\n` +
+      `Ili kuongeza organization nyingine, tafadhali fanya upgrade.`;
+
+    Alert.alert("Upgrade Required", body, [{ text: "Sawa" }]);
+  };
+
+  const handleLimitPopup = async (errMsg: string) => {
+    // 1) Try DB plan for ACTIVE ORG (most accurate)
+    const plan = await fetchActiveOrgPlanInfo(activeOrgId);
+
+    if (plan) {
+      showUpgradeRequired({
+        planLabel: prettyPlanLabel(plan),
+        allowed: plan.max_organizations && plan.max_organizations > 0 ? plan.max_organizations : 1,
+      });
+      return;
+    }
+
+    // 2) Fallback: parse from DB exception
+    const lim = parseOrgLimitError(errMsg);
+    if (lim) {
+      const planLabel = lim.plan ? lim.plan.toUpperCase() : "—";
+      const allowed = safeInt(lim.allowed, 1);
+      showUpgradeRequired({ planLabel, allowed });
+      return;
+    }
+
+    // 3) Last fallback: generic
+    showUpgradeRequired({ planLabel: "—", allowed: 1 });
+  };
+
   const onCreate = async () => {
     const nameRaw = orgName.trim();
     const storeRaw = storeName.trim();
@@ -168,7 +282,13 @@ export default function OrgSwitcherScreen() {
                 setQ("");
                 Alert.alert("Success ✅", "Organization imeundwa");
               } catch (e: any) {
-                Alert.alert("Failed", e?.message ?? "Failed to create organization");
+                const msg = clean(e?.message);
+                const lim = parseOrgLimitError(msg);
+                if (lim) {
+                  await handleLimitPopup(msg);
+                } else {
+                  Alert.alert("Failed", msg || "Failed to create organization");
+                }
               } finally {
                 setCreating(false);
               }
@@ -190,7 +310,13 @@ export default function OrgSwitcherScreen() {
       setQ("");
       Alert.alert("Success ✅", "Organization imeundwa");
     } catch (e: any) {
-      Alert.alert("Failed", e?.message ?? "Failed to create organization");
+      const msg = clean(e?.message);
+      const lim = parseOrgLimitError(msg);
+      if (lim) {
+        await handleLimitPopup(msg);
+      } else {
+        Alert.alert("Failed", msg || "Failed to create organization");
+      }
     } finally {
       setCreating(false);
     }
@@ -363,11 +489,7 @@ export default function OrgSwitcherScreen() {
           showsVerticalScrollIndicator={false}
           nestedScrollEnabled
           refreshControl={
-            <RefreshControl
-              refreshing={!!refreshing}
-              onRefresh={refresh}
-              tintColor={UI.muted}
-            />
+            <RefreshControl refreshing={!!refreshing} onRefresh={refresh} tintColor={UI.muted} />
           }
         >
           {/* Loading state */}
@@ -389,81 +511,42 @@ export default function OrgSwitcherScreen() {
               <Text style={{ color: UI.muted, fontWeight: "700", marginTop: 6 }}>
                 {isNonEmpty(q)
                   ? "Hakuna kilicholingana na search yako. Jaribu maneno mengine."
-                  : "Bado hujaunda organization. Tumia form ya juu ku-create."
-                }
+                  : "Bado hujaunda organization. Tumia form ya juu ku-create."}
               </Text>
             </Card>
           ) : null}
 
-          {!showAll ? (
-            grouped.map((g) => {
-              const list = g.list;
-              const activeInGroup = list.some((x) => x.organization_id === activeOrgId);
-              const count = list.length;
-
-              return (
-                <Pressable key={g.key} onPress={() => onPressGroup(list)} disabled={topRightBusy}>
-                  <Card
-                    style={{
-                      marginBottom: 10,
-                      borderColor: activeInGroup ? "rgba(52,211,153,0.55)" : UI.border,
-                    }}
-                  >
-                    <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 10 }}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-                          {g.displayName}
-                        </Text>
-
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 }}>
-                          <Badge text={`ROLE: ${roleLabel(g.role).toUpperCase()}`} variant="muted" />
-                          {count > 1 ? (
-                            <Badge text={`${count} ITEMS`} variant="muted" />
-                          ) : null}
-                          {activeInGroup ? <Badge text="ACTIVE" variant="active" /> : null}
-                        </View>
-                      </View>
-
-                      <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 18 }}>›</Text>
-                    </View>
-                  </Card>
-                </Pressable>
-              );
-            })
-          ) : (
-            filteredOrgs
-              .slice()
-              .sort((a, b) => {
-                const aActive = a.organization_id === activeOrgId;
-                const bActive = b.organization_id === activeOrgId;
-                if (aActive && !bActive) return -1;
-                if (!aActive && bActive) return 1;
-                return normName(a.organization_name).localeCompare(normName(b.organization_name));
-              })
-              .map((o) => {
-                const active = o.organization_id === activeOrgId;
+          {!showAll
+            ? grouped.map((g) => {
+                const list = g.list;
+                const activeInGroup = list.some((x) => x.organization_id === activeOrgId);
+                const count = list.length;
 
                 return (
-                  <Pressable
-                    key={o.organization_id}
-                    onPress={() => onSwitch(o.organization_id)}
-                    disabled={topRightBusy}
-                  >
+                  <Pressable key={g.key} onPress={() => onPressGroup(list)} disabled={topRightBusy}>
                     <Card
                       style={{
                         marginBottom: 10,
-                        borderColor: active ? "rgba(52,211,153,0.55)" : UI.border,
+                        borderColor: activeInGroup ? "rgba(52,211,153,0.55)" : UI.border,
                       }}
                     >
                       <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 10 }}>
                         <View style={{ flex: 1 }}>
                           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-                            {o.organization_name}
+                            {g.displayName}
                           </Text>
 
-                          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 }}>
-                            <Badge text={`ROLE: ${roleLabel(o.role).toUpperCase()}`} variant="muted" />
-                            {active ? <Badge text="ACTIVE" variant="active" /> : null}
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
+                              gap: 8,
+                              marginTop: 8,
+                            }}
+                          >
+                            <Badge text={`ROLE: ${roleLabel(g.role).toUpperCase()}`} variant="muted" />
+                            {count > 1 ? <Badge text={`${count} ITEMS`} variant="muted" /> : null}
+                            {activeInGroup ? <Badge text="ACTIVE" variant="active" /> : null}
                           </View>
                         </View>
 
@@ -473,7 +556,55 @@ export default function OrgSwitcherScreen() {
                   </Pressable>
                 );
               })
-          )}
+            : filteredOrgs
+                .slice()
+                .sort((a, b) => {
+                  const aActive = a.organization_id === activeOrgId;
+                  const bActive = b.organization_id === activeOrgId;
+                  if (aActive && !bActive) return -1;
+                  if (!aActive && bActive) return 1;
+                  return normName(a.organization_name).localeCompare(normName(b.organization_name));
+                })
+                .map((o) => {
+                  const active = o.organization_id === activeOrgId;
+
+                  return (
+                    <Pressable
+                      key={o.organization_id}
+                      onPress={() => onSwitch(o.organization_id)}
+                      disabled={topRightBusy}
+                    >
+                      <Card
+                        style={{
+                          marginBottom: 10,
+                          borderColor: active ? "rgba(52,211,153,0.55)" : UI.border,
+                        }}
+                      >
+                        <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 10 }}>
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
+                              {o.organization_name}
+                            </Text>
+
+                            <View
+                              style={{
+                                flexDirection: "row",
+                                alignItems: "center",
+                                gap: 8,
+                                marginTop: 8,
+                              }}
+                            >
+                              <Badge text={`ROLE: ${roleLabel(o.role).toUpperCase()}`} variant="muted" />
+                              {active ? <Badge text="ACTIVE" variant="active" /> : null}
+                            </View>
+                          </View>
+
+                          <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 18 }}>›</Text>
+                        </View>
+                      </Card>
+                    </Pressable>
+                  );
+                })}
         </ScrollView>
       </View>
     </Screen>

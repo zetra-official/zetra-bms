@@ -1,6 +1,6 @@
 ﻿// src/services/ai.ts
 import { kv } from "@/src/storage/kv";
-import { supabase } from "@/src/supabaseClient";
+import { supabase } from "@/src/supabase/supabaseClient";
 
 type AiMode = "AUTO" | "SW" | "EN";
 
@@ -15,9 +15,25 @@ export type ModelHint =
 
 export type ReasoningTier = "FAST" | "BALANCED" | "DEEP";
 
+export type AiRoleKey =
+  | "AUTO"
+  | "ZETRA_BMS"
+  | "ENGINEERING"
+  | "MATH"
+  | "HEALTH"
+  | "LEGAL"
+  | "FINANCE"
+  | "MARKETING"
+  | "GENERAL";
+
 export type AskOpts = {
-  mode?: AiMode;
+  mode?: AiMode; // kept for backward compatibility; screen will use AUTO
   history?: ChatHistoryMsg[];
+  locale?: string; // NEW (non-breaking): org locale eg "en-US", "sw-TZ"
+
+  // ✅ NEW (non-breaking): optional role hint override
+  roleHint?: AiRoleKey;
+
   context?: {
     orgId?: string | null;
     activeOrgId?: string | null;
@@ -265,34 +281,184 @@ async function saveAiActionsToTasks(opts: AskOpts | undefined, actions: ActionIt
   }
 }
 
+/* =========================
+   Canonical Worker Client
+========================= */
+
+const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
+const DEFAULT_TIMEOUT_MS = 25_000;
+const DEFAULT_RETRIES = 2;
+
+function normalizeWorkerBaseUrl(raw: any) {
+  let u = clean(raw);
+  if (!u) return "";
+  u = u.replace(/\s+/g, "");
+  u = u.replace(/\/+$/g, "");
+
+  // strip known endpoint suffixes if user pasted full endpoint
+  u = u.replace(/\/v1\/chat$/i, "");
+  u = u.replace(/\/health$/i, "");
+  u = u.replace(/\/vision$/i, "");
+  u = u.replace(/\/image$/i, "");
+  u = u.replace(/\/transcribe$/i, "");
+
+  u = u.replace(/\/+$/g, "");
+  return u;
+}
+
 function joinUrl(base: string, path: string) {
   const b = clean(base).replace(/\/+$/, "");
   const p = clean(path).startsWith("/") ? clean(path) : `/${clean(path)}`;
   return `${b}${p}`;
 }
 
-async function safeReadJson(res: Response): Promise<any | null> {
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+async function readJsonOrText(res: Response): Promise<{ json: any | null; text: string }> {
   try {
-    return await res.json();
-  } catch {
-    return null;
+    const ct = (res.headers.get("content-type") || "").toLowerCase();
+    if (ct.includes("application/json")) {
+      const j = await res.json().catch(() => null);
+      return { json: j, text: clean(j) ? JSON.stringify(j) : "" };
+    }
+  } catch {}
+  const txt = await res.text().catch(() => "");
+  return { json: null, text: txt };
+}
+
+function safeClip(s: string, max = 900) {
+  const t = clean(s);
+  if (!t) return "";
+  return t.length > max ? t.slice(0, max) + "…" : t;
+}
+
+export type AiHttpResult = {
+  status: number;
+  ok: boolean;
+  data: any | null;
+  textBody: string;
+};
+
+export async function fetchJsonWithRetry(
+  url: string,
+  init: RequestInit,
+  opts?: { timeoutMs?: number; retries?: number; tag?: string }
+): Promise<AiHttpResult> {
+  const timeoutMs = Math.max(2_000, Number(opts?.timeoutMs ?? DEFAULT_TIMEOUT_MS));
+  const retries = Math.max(0, Math.min(5, Number(opts?.retries ?? DEFAULT_RETRIES)));
+  const tag = clean(opts?.tag) || "request";
+
+  let lastErr: any = null;
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), timeoutMs);
+
+    // Mirror external abort -> internal controller.abort()
+    const ext = init?.signal;
+    const onExtAbort = () => controller.abort();
+    try {
+      if (ext) {
+        if ((ext as any).aborted) controller.abort();
+        else (ext as any).addEventListener?.("abort", onExtAbort);
+      }
+    } catch {}
+
+    try {
+      const res = await fetch(url, { ...init, signal: controller.signal });
+      clearTimeout(t);
+
+      try {
+        if (ext) (ext as any).removeEventListener?.("abort", onExtAbort);
+      } catch {}
+
+      const { json, text } = await readJsonOrText(res);
+
+      if (res.ok) {
+        return {
+          status: res.status,
+          ok: true,
+          data: json ?? (clean(text) ? { raw: text } : null),
+          textBody: text,
+        };
+      }
+
+      const bodyStr =
+        clean((json as any)?.error) ||
+        clean((json as any)?.message) ||
+        safeClip(text);
+
+      const shouldRetry = RETRYABLE_STATUS.has(res.status);
+
+      if (!shouldRetry || attempt >= retries) {
+        return { status: res.status, ok: false, data: json, textBody: bodyStr || text };
+      }
+
+      const backoff = 350 * (attempt + 1);
+      await sleep(backoff);
+      continue;
+    } catch (e: any) {
+      clearTimeout(t);
+
+      try {
+        if (ext) (ext as any).removeEventListener?.("abort", onExtAbort);
+      } catch {}
+
+      lastErr = e;
+
+      const msg = clean(e?.message).toLowerCase();
+      const isAbort =
+        e?.name === "AbortError" || msg.includes("aborted") || msg.includes("abort");
+      const isNetwork = msg.includes("network request failed") || msg.includes("failed to fetch");
+
+      const shouldRetry = isAbort || isNetwork;
+
+      if (!shouldRetry || attempt >= retries) {
+        const outMsg = isAbort
+          ? `${tag} aborted/timeout after ${Math.round(timeoutMs / 1000)}s`
+          : clean(e?.message) || `${tag} failed`;
+        return { status: 0, ok: false, data: null, textBody: outMsg };
+      }
+
+      const backoff = 350 * (attempt + 1);
+      await sleep(backoff);
+      continue;
+    }
   }
+
+  const fallback = clean(lastErr?.message) || `${clean(opts?.tag) || "request"} failed`;
+  return { status: 0, ok: false, data: null, textBody: fallback };
 }
 
-async function safeReadText(res: Response): Promise<string> {
-  try {
-    return await res.text();
-  } catch {
-    return "";
-  }
+function getBaseUrl() {
+  const raw = (process.env.EXPO_PUBLIC_AI_WORKER_URL as string | undefined) || DEFAULT_AI_URL;
+  return normalizeWorkerBaseUrl(raw);
 }
 
-export async function askZetraAI(message: string, opts?: AskOpts): Promise<string> {
-  const meta = await askZetraAIWithMeta(message, opts);
-  return meta.text;
+export type VisionImage = { id: string; dataUrl: string }; // data:image/jpeg;base64,...
+
+function isDataImageUrl(u: string) {
+  const t = clean(u).toLowerCase();
+  return t.startsWith("data:image/");
 }
 
-export async function askZetraAIWithMeta(message: string, opts?: AskOpts): Promise<AiMeta> {
+function normalizeImageUrl(raw: string) {
+  const u = clean(raw);
+  if (!u) return "";
+  if (isDataImageUrl(u)) return u.replace(/\s+/g, "");
+  return u;
+}
+
+/**
+ * Canonical: Chat (AUTO language, follow user)
+ */
+export async function askZetraAIWithMeta(
+  message: string,
+  opts?: AskOpts,
+  signal?: AbortSignal
+): Promise<AiMeta> {
   const text = clean(message);
   if (!text) throw new Error("Empty message");
   if (text.length > MAX_CHARS) throw new Error(`Message too long (limit ${MAX_CHARS.toLocaleString()} chars)`);
@@ -300,57 +466,263 @@ export async function askZetraAIWithMeta(message: string, opts?: AskOpts): Promi
   const key = getConversationKey(opts);
   await ensureHydrated(key);
 
-  const baseUrl = (process.env.EXPO_PUBLIC_AI_WORKER_URL as string | undefined) || DEFAULT_AI_URL;
+  const baseUrl = getBaseUrl();
+  if (!baseUrl) throw new Error("AI Worker URL missing");
+
   const url = joinUrl(baseUrl, "/v1/chat");
 
-  const controller = new AbortController();
-  const timeoutMs = 45_000;
-  const t = setTimeout(() => controller.abort(), timeoutMs);
+  const locale = clean(opts?.locale || "") || "en-US";
+  const mode: AiMode = opts?.mode ?? "AUTO";
 
-  try {
-    const res = await fetch(url, {
+  // Language policy: follow user message (supports any language + mixing)
+  const language = {
+    policy: "FOLLOW_USER", // worker can ignore if not implemented; non-breaking
+    reply: "AUTO", // never force SW/EN here
+    mix: true,
+  };
+
+  const roleHint =
+    opts?.roleHint && opts.roleHint !== "AUTO" ? opts.roleHint : undefined;
+
+  const payload = {
+    text,
+    mode,
+    locale,
+    language,
+    roleHint,
+    context: opts?.context ?? null,
+    history: Array.isArray(opts?.history) ? opts!.history! : [],
+    modelHint: opts?.modelHint,
+    reasoningTier: opts?.reasoningTier,
+  };
+
+  const out = await fetchJsonWithRetry(
+    url,
+    {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({
-        text,
-        mode: opts?.mode ?? "AUTO",
-        context: opts?.context ?? null,
-        history: Array.isArray(opts?.history) ? opts!.history! : [],
-        modelHint: opts?.modelHint,
-        reasoningTier: opts?.reasoningTier,
-      }),
-      signal: controller.signal,
-    });
+      body: JSON.stringify(payload),
+      signal,
+    },
+    { timeoutMs: 45_000, retries: 2, tag: "chat" }
+  );
 
-    const data = await safeReadJson(res);
+  const data: any = out.data;
 
-    if (!res.ok) {
-      const fallbackText = data ? "" : safeSlice(await safeReadText(res), 700);
-      const errMsg =
-        clean(data?.error) ||
-        clean(data?.message) ||
-        clean(data?.details) ||
-        (fallbackText ? fallbackText : `AI request failed (${res.status})`);
-      throw new Error(`${errMsg}${res.status ? ` [${res.status}]` : ""}`);
-    }
-
-    const raw = clean(data?.reply) || clean(data?.text);
-    if (!raw) throw new Error("AI returned empty reply");
-
-    const meta = parseZetraOutput(raw);
-
-    updateMemoryAfterReply(opts, meta);
-    void saveAiActionsToTasks(opts, meta.actions ?? []);
-
-    return meta;
-  } catch (e: any) {
-    if (e?.name === "AbortError") {
-      throw new Error("AI timeout — jaribu tena (mtandao au server inachelewa).");
-    }
-    throw e;
-  } finally {
-    clearTimeout(t);
+  if (!out.ok) {
+    const errMsg =
+      clean(data?.error) ||
+      clean(data?.message) ||
+      clean(data?.details) ||
+      clean(out.textBody) ||
+      `AI request failed (${out.status})`;
+    throw new Error(`${errMsg}${out.status ? ` [${out.status}]` : ""}`);
   }
+
+  if (data && data.ok === false) {
+    const errMsg = clean(data?.error) || clean(data?.message) || "AI failed";
+    throw new Error(errMsg);
+  }
+
+  const raw = clean(data?.reply) || clean(data?.text);
+  if (!raw) throw new Error("AI returned empty reply");
+
+  const meta = parseZetraOutput(raw);
+
+  updateMemoryAfterReply(opts, meta);
+  void saveAiActionsToTasks(opts, meta.actions ?? []);
+
+  return meta;
+}
+
+export async function askZetraAI(
+  message: string,
+  opts?: AskOpts,
+  signal?: AbortSignal
+): Promise<string> {
+  const meta = await askZetraAIWithMeta(message, opts, signal);
+  return meta.text;
+}
+
+/**
+ * Vision: analyze message + images (dataUrls)
+ */
+export async function askZetraAIVision(
+  message: string,
+  images: VisionImage[],
+  opts?: AskOpts,
+  signal?: AbortSignal
+): Promise<AiMeta> {
+  const text = clean(message);
+  if (!text) throw new Error("Empty message");
+  if (text.length > MAX_CHARS) throw new Error(`Message too long (limit ${MAX_CHARS.toLocaleString()} chars)`);
+
+  const baseUrl = getBaseUrl();
+  if (!baseUrl) throw new Error("AI Worker URL missing");
+
+  const url = joinUrl(baseUrl, "/vision");
+
+  const locale = clean(opts?.locale || "") || "en-US";
+  const mode: AiMode = opts?.mode ?? "AUTO";
+
+  const language = { policy: "FOLLOW_USER", reply: "AUTO", mix: true };
+
+  const roleHint =
+    opts?.roleHint && opts.roleHint !== "AUTO" ? opts.roleHint : undefined;
+
+  const payload = {
+    message: text,
+    images: (Array.isArray(images) ? images : []).map((x) => clean(x.dataUrl)).filter(Boolean),
+    meta: {
+      mode,
+      locale,
+      language,
+      roleHint,
+      history: Array.isArray(opts?.history) ? opts!.history! : [],
+      context: opts?.context ?? null,
+    },
+  };
+
+  const out = await fetchJsonWithRetry(
+    url,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(payload),
+      signal,
+    },
+    { timeoutMs: 45_000, retries: 2, tag: "vision" }
+  );
+
+  const data: any = out.data;
+
+  if (!out.ok) {
+    const errMsg =
+      clean(data?.error) ||
+      clean(data?.message) ||
+      clean(out.textBody) ||
+      `Vision failed (${out.status})`;
+    throw new Error(errMsg);
+  }
+
+  const reply = clean(data?.reply) || clean(data?.text);
+  if (!reply) throw new Error("Vision returned empty reply");
+
+  // Vision worker may return meta/actions in plain object
+  // Try parseZetraOutput first, else wrap.
+  const parsed = parseZetraOutput(reply);
+
+  // If worker already returns meta/actions separately, merge.
+  const actionsRaw = Array.isArray(data?.meta?.actions) ? data.meta.actions : [];
+  const nextMove = clean(data?.meta?.nextMove) || parsed.nextMove;
+
+  const merged: AiMeta = {
+    text: parsed.text,
+    actions: parsed.actions.length ? parsed.actions : actionsRaw,
+    nextMove,
+    lang: parsed.lang ?? "auto",
+    memory: parsed.memory,
+  };
+
+  updateMemoryAfterReply(opts, merged);
+  void saveAiActionsToTasks(opts, merged.actions ?? []);
+
+  return merged;
+}
+
+/**
+ * Image generation: returns a URL or data:image/...
+ */
+export async function generateZetraImage(
+  prompt: string,
+  signal?: AbortSignal
+): Promise<string> {
+  const p = clean(prompt);
+  if (!p) throw new Error("Empty prompt");
+
+  const baseUrl = getBaseUrl();
+  if (!baseUrl) throw new Error("AI Worker URL missing");
+
+  const url = joinUrl(baseUrl, "/image");
+
+  const out = await fetchJsonWithRetry(
+    url,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ prompt: p }),
+      signal,
+    },
+    { timeoutMs: 60_000, retries: 2, tag: "image" }
+  );
+
+  const data: any = out.data;
+
+  if (!out.ok) {
+    const errMsg =
+      clean(data?.error) ||
+      clean(data?.message) ||
+      clean(out.textBody) ||
+      `Image generation failed (${out.status})`;
+    throw new Error(errMsg);
+  }
+
+  const urlRaw = clean(data?.url);
+  const imgUrl = normalizeImageUrl(urlRaw);
+  if (!imgUrl) throw new Error("No image URL returned");
+  return imgUrl;
+}
+
+/**
+ * Transcribe: RN FormData upload
+ */
+export async function transcribeZetraAudio(
+  uri: string,
+  mimeType?: string,
+  signal?: AbortSignal
+): Promise<string> {
+  const u = clean(uri);
+  if (!u) throw new Error("Missing audio uri");
+
+  const baseUrl = getBaseUrl();
+  if (!baseUrl) throw new Error("AI Worker URL missing");
+
+  const url = joinUrl(baseUrl, "/transcribe");
+
+  const form = new FormData();
+  form.append(
+    "file",
+    {
+      uri: u,
+      name: "voice.m4a",
+      type: clean(mimeType) || "audio/mp4",
+    } as any
+  );
+
+  const out = await fetchJsonWithRetry(
+    url,
+    {
+      method: "POST",
+      body: form,
+      signal,
+    },
+    { timeoutMs: 60_000, retries: 2, tag: "transcribe" }
+  );
+
+  const data: any = out.data;
+
+  if (!out.ok) {
+    const errMsg =
+      clean(data?.error) ||
+      clean(data?.message) ||
+      clean(out.textBody) ||
+      `Transcription failed (${out.status})`;
+    throw new Error(errMsg);
+  }
+
+  const text = clean(data?.text);
+  if (!text) throw new Error("No text returned");
+  return text;
 }
 
 export async function clearConversationMemoryForOrg(orgId?: string | null) {

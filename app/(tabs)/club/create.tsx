@@ -156,10 +156,100 @@ async function uploadJpegToClubMedia(uid: string, localUri: string, tag: "feed" 
   return clean(data?.publicUrl ?? "");
 }
 
+/* ---------------- PATCH A helpers ---------------- */
+
+function isUpgradePlanError(msg: string) {
+  const m = clean(msg).toLowerCase();
+  if (!m) return false;
+
+  if (m.includes("upgrade_plan")) return true;
+  if (m.includes("posting is not allowed")) return true;
+  if (m.includes("not allowed on current plan")) return true;
+
+  if (m.includes("plan") && m.includes("not allowed") && m.includes("post")) return true;
+
+  return false;
+}
+
+const POST_WITH_PRODUCT_RPC_CANDIDATES = [
+  "create_club_post_with_product_v2", // ✅ PATCH A target
+  "create_club_post_with_product", // fallback (legacy)
+] as const;
+
+async function callFirstWorkingPostRpc(payload: any) {
+  let lastErr: any = null;
+
+  for (const fn of POST_WITH_PRODUCT_RPC_CANDIDATES) {
+    const { data, error } = await supabase.rpc(fn as any, payload as any);
+    if (!error) return { fn: String(fn), data };
+
+    lastErr = error;
+
+    const msg = String(error.message ?? "").toLowerCase();
+    const missing = msg.includes("does not exist") || msg.includes("function") || msg.includes("rpc");
+    if (!missing) break;
+  }
+
+  throw lastErr ?? new Error("Post RPC missing");
+}
+
+/**
+ * PATCH C1:
+ * Supabase RPC may return:
+ * - scalar uuid string
+ * - object { post_id } or { id }
+ * - array of rows [{ post_id }] or [{ id }]
+ * This helper normalizes to a single postId string.
+ */
+function extractPostIdFromRpcData(data: any): string | null {
+  if (data == null) return null;
+
+  // scalar uuid string
+  if (typeof data === "string") {
+    const v = clean(data);
+    return v ? v : null;
+  }
+
+  // array return (rows)
+  if (Array.isArray(data)) {
+    const first = data?.[0];
+    if (first == null) return null;
+
+    if (typeof first === "string") {
+      const v = clean(first);
+      return v ? v : null;
+    }
+
+    if (typeof first === "object") {
+      const v =
+        clean((first as any)?.post_id) ||
+        clean((first as any)?.id) ||
+        clean((first as any)?.postId) ||
+        clean((first as any)?.postID);
+      return v ? v : null;
+    }
+
+    return null;
+  }
+
+  // object return
+  if (typeof data === "object") {
+    const v =
+      clean((data as any)?.post_id) ||
+      clean((data as any)?.id) ||
+      clean((data as any)?.postId) ||
+      clean((data as any)?.postID);
+    return v ? v : null;
+  }
+
+  return null;
+}
+
 export default function ClubCreatePostScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { activeStoreId, activeStoreName } = useOrg();
+
+  const { activeOrgId, activeStoreId, activeStoreName } = useOrg();
 
   const [caption, setCaption] = useState("");
 
@@ -169,6 +259,10 @@ export default function ClubCreatePostScreen() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  // Upgrade modal
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [upgradeMsg, setUpgradeMsg] = useState<string>("");
 
   // Product picker
   const [products, setProducts] = useState<CatalogProduct[]>([]);
@@ -183,8 +277,15 @@ export default function ClubCreatePostScreen() {
   const [currency, setCurrency] = useState<"TZS">("TZS");
 
   const canSubmit = useMemo(() => {
-    return clean(caption).length > 0 && !!activeStoreId && !!clean(selectedProductId) && !saving && !uploading;
-  }, [caption, activeStoreId, saving, uploading, selectedProductId]);
+    return (
+      clean(caption).length > 0 &&
+      !!clean(activeOrgId) &&
+      !!activeStoreId &&
+      !!clean(selectedProductId) &&
+      !saving &&
+      !uploading
+    );
+  }, [caption, activeOrgId, activeStoreId, saving, uploading, selectedProductId]);
 
   const pickImage = useCallback(async () => {
     setErr(null);
@@ -225,14 +326,11 @@ export default function ClubCreatePostScreen() {
       const uid = u?.user?.id;
       if (!uid) throw new Error("Not authenticated");
 
-      // Prepare images
       const feedPrepared = await prepareFeedImage(localUri);
       const hqPrepared = await prepareHqImage(localUri);
 
-      // show preview as HQ (looks better)
       setPreviewUri(hqPrepared.uri);
 
-      // Upload (feed first, then hq)
       const feedUrl = await uploadJpegToClubMedia(uid, feedPrepared.uri, "feed");
       const hqUrl = await uploadJpegToClubMedia(uid, hqPrepared.uri, "hq");
 
@@ -306,10 +404,32 @@ export default function ClubCreatePostScreen() {
     setProductOpen(false);
   }, []);
 
+  const checkPostingAllowed = useCallback(async () => {
+    const orgId = clean(activeOrgId);
+    const storeId = clean(activeStoreId);
+
+    if (!orgId) throw new Error("Org Required");
+    if (!storeId) throw new Error("Store Required");
+
+    const { data, error } = await supabase.rpc("is_club_posting_allowed", {
+      p_org_id: orgId,
+      p_store_id: storeId,
+    } as any);
+
+    if (error) throw error;
+
+    return !!data;
+  }, [activeOrgId, activeStoreId]);
+
   const submit = useCallback(async () => {
+    const orgId = clean(activeOrgId);
     const storeId = clean(activeStoreId);
     const productId = clean(selectedProductId);
 
+    if (!orgId) {
+      Alert.alert("Org Required", "Tafadhali chagua org kwanza.");
+      return;
+    }
     if (!storeId) {
       Alert.alert("Store Required", "Tafadhali chagua/activate store kwanza kabla ya kupost.");
       return;
@@ -325,6 +445,23 @@ export default function ClubCreatePostScreen() {
     if (!canSubmit) return;
 
     setErr(null);
+
+    // gate before upload/post
+    try {
+      const allowed = await checkPostingAllowed();
+      if (!allowed) {
+        setUpgradeMsg(
+          "UPGRADE_PLAN: Posting is not allowed on your current plan.\n\n" +
+            "✅ Unaweza bado ku-view posts, ku-like, ku-comment, na ku-order.\n" +
+            "🔒 Ili kupost, unahitaji plan ya kulipia (LITE/STARTER/PRO...)."
+        );
+        setUpgradeOpen(true);
+        return;
+      }
+    } catch (e: any) {
+      console.log("[club.create] is_club_posting_allowed check failed:", e?.message);
+    }
+
     setSaving(true);
 
     try {
@@ -337,47 +474,20 @@ export default function ClubCreatePostScreen() {
         hqUrl = clean(up.hqUrl ?? "") || null;
       }
 
-      // payload base (old)
-      const basePayload: any = {
+      const payload: any = {
         p_store_id: storeId,
         p_product_id: productId,
         p_caption: clean(caption),
         p_price: Number.isFinite(Number(selectedPrice)) ? Number(selectedPrice) : 0,
         p_currency: currency,
-        p_image_url: feedUrl, // ✅ FEED url
+        p_image_url: feedUrl,
+        p_image_hq_url: hqUrl,
       };
 
-      // try V2 payload (additive)
-      const payloadV2: any = { ...basePayload, p_image_hq_url: hqUrl };
+      const res = await callFirstWorkingPostRpc(payload);
 
-      console.log("[club.create] payloadV2:", payloadV2);
-
-      let data: any = null;
-
-      // ✅ SAFE: attempt to call RPC with HQ param; if DB rejects param, fallback to old payload
-      const res1 = await supabase.rpc("create_club_post_with_product", payloadV2 as any);
-      if (res1.error) {
-        const msg = String(res1.error.message ?? "").toLowerCase();
-
-        // fallback only if looks like "unknown parameter/record" mismatch
-        const looksLikeParamMismatch =
-          msg.includes("invalid input syntax") === false &&
-          (msg.includes("parameter") || msg.includes("record") || msg.includes("field") || msg.includes("unknown"));
-
-        if (looksLikeParamMismatch) {
-          console.log("[club.create] fallback to basePayload (no hq param).");
-          const res2 = await supabase.rpc("create_club_post_with_product", basePayload as any);
-          if (res2.error) throw res2.error;
-          data = res2.data;
-        } else {
-          throw res1.error;
-        }
-      } else {
-        data = res1.data;
-      }
-
-      const postId =
-        (Array.isArray(data) ? (data as any)?.[0]?.post_id : (data as any)?.post_id) ?? null;
+      // PATCH C1: normalize post id regardless of scalar/object/rows return
+      const postId = extractPostIdFromRpcData(res?.data);
 
       Alert.alert("Success", "Post imewekwa kwenye ZETRA Business Club ✅");
 
@@ -386,14 +496,21 @@ export default function ClubCreatePostScreen() {
         params: { r: String(Date.now()), createdPostId: String(postId ?? "") },
       } as any);
     } catch (e: any) {
-      const msg = e?.message ?? "Post failed";
-      console.log("[club.create] post error:", e);
+      const msg = String(e?.message ?? "Post failed");
+
+      if (isUpgradePlanError(msg)) {
+        setUpgradeMsg(msg);
+        setUpgradeOpen(true);
+        return;
+      }
+
       setErr(msg);
       Alert.alert("Post Failed", msg);
     } finally {
       setSaving(false);
     }
   }, [
+    activeOrgId,
     activeStoreId,
     canSubmit,
     caption,
@@ -403,6 +520,7 @@ export default function ClubCreatePostScreen() {
     selectedProductId,
     uploadTwoSizes,
     selectedPrice,
+    checkPostingAllowed,
   ]);
 
   const topPad = Math.max(insets.top, 10) + 8;
@@ -411,19 +529,28 @@ export default function ClubCreatePostScreen() {
   const winH = Dimensions.get("window").height;
   const modalPadTop = Math.max(insets.top, 10) + 12;
   const modalPadBottom = Math.max(insets.bottom, 10) + 12;
-  const MODAL_MAX_HEIGHT = Math.max(320, Math.min(560, winH - modalPadTop - modalPadBottom - 20));
+  const MODAL_MAX_HEIGHT = Math.max(320, Math.min(580, winH - modalPadTop - modalPadBottom - 20));
+
+  // ---- Upgrade modal helpers (make content readable + premium) ----
+  const friendlyUpgradeLines = useMemo(() => {
+    // Always show clean summary; keep technical msg in a small box below.
+    return [
+      "Posting kwenye Business Club inahitaji plan ya kulipia.",
+      "Bado unaweza ku-view posts, ku-like, ku-comment, na ku-order.",
+      "Ili kupost, upgrade kwenda LITE / STARTER / PRO.",
+    ];
+  }, []);
 
   return (
     <>
-      {/* ✅ HARD FIX: force dark status bar background on this screen too */}
       <StatusBar style="light" backgroundColor={theme.colors.background} />
 
-      {/* ✅ ensure root stays dark */}
       <Screen scroll contentStyle={{ paddingTop: topPad }}>
         <View style={{ gap: 12 }}>
           {!!err && (
             <Card style={{ backgroundColor: theme.colors.dangerSoft, borderColor: theme.colors.dangerBorder }}>
-              <Text style={{ color: theme.colors.dangerText, fontWeight: "900" }}>{err}</Text>
+              {/* FIX: use theme.colors.danger (not dangerText) */}
+              <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{err}</Text>
             </Card>
           )}
 
@@ -457,7 +584,8 @@ export default function ClubCreatePostScreen() {
             </View>
 
             {!activeStoreId ? (
-              <Text style={{ color: theme.colors.dangerText, fontWeight: "900", marginTop: 10 }}>
+              // FIX: use theme.colors.danger (not dangerText)
+              <Text style={{ color: theme.colors.danger, fontWeight: "900", marginTop: 10 }}>
                 Hakuna store iliyochaguliwa. Rudi uchague/activate store kwanza.
               </Text>
             ) : null}
@@ -484,7 +612,8 @@ export default function ClubCreatePostScreen() {
             </View>
 
             {!!prodErr ? (
-              <Text style={{ marginTop: 8, color: theme.colors.dangerText, fontWeight: "900" }}>{prodErr}</Text>
+              // FIX: use theme.colors.danger (not dangerText)
+              <Text style={{ marginTop: 8, color: theme.colors.danger, fontWeight: "900" }}>{prodErr}</Text>
             ) : null}
 
             <Pressable
@@ -513,7 +642,9 @@ export default function ClubCreatePostScreen() {
             {!!selectedName && (
               <View style={{ marginTop: 10, gap: 4 }}>
                 <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>{selectedName}</Text>
-                {!!selectedSku && <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>SKU: {selectedSku}</Text>}
+                {!!selectedSku && (
+                  <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>SKU: {selectedSku}</Text>
+                )}
                 <Text style={{ color: theme.colors.emerald, fontWeight: "900", fontSize: 16 }}>
                   {fmtMoneyTZS(selectedPrice, currency)}
                 </Text>
@@ -611,16 +742,160 @@ export default function ClubCreatePostScreen() {
           />
         </View>
 
+        {/* ✅ Upgrade Modal (HEAVY + READABLE) */}
+        <Modal
+          visible={upgradeOpen}
+          transparent
+          animationType="fade"
+          statusBarTranslucent={false}
+          hardwareAccelerated
+          // @ts-ignore
+          presentationStyle="overFullScreen"
+          onRequestClose={() => setUpgradeOpen(false)}
+        >
+          <Pressable
+            onPress={() => setUpgradeOpen(false)}
+            style={{
+              flex: 1,
+              // heavier overlay to improve contrast
+              backgroundColor: "rgba(0,0,0,0.86)",
+              paddingTop: modalPadTop,
+              paddingBottom: modalPadBottom,
+              paddingHorizontal: 14,
+              justifyContent: "center",
+            }}
+          >
+            <Pressable
+              onPress={() => {}}
+              style={{
+                borderRadius: theme.radius.xl,
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,0.14)",
+                // make card heavier (solid)
+                backgroundColor: theme.colors.background,
+                overflow: "hidden",
+                maxHeight: MODAL_MAX_HEIGHT,
+
+                // premium shadow/elevation
+                shadowColor: "#000",
+                shadowOpacity: 0.55,
+                shadowRadius: 18,
+                shadowOffset: { width: 0, height: 10 },
+                elevation: 14,
+              }}
+            >
+              {/* Header */}
+              <View
+                style={{
+                  padding: 16,
+                  borderBottomWidth: 1,
+                  borderBottomColor: "rgba(255,255,255,0.10)",
+                  backgroundColor: "rgba(255,255,255,0.03)",
+                }}
+              >
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                  <View
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 999,
+                      borderWidth: 1,
+                      borderColor: theme.colors.emeraldBorder,
+                      backgroundColor: theme.colors.emeraldSoft,
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Ionicons name="lock-closed-outline" size={20} color={theme.colors.emerald} />
+                  </View>
+
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
+                      Upgrade Required
+                    </Text>
+                    <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 4, lineHeight: 20 }}>
+                      Posting kwenye Business Club inahitaji plan ya kulipia.
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Body */}
+              <View style={{ padding: 16 }}>
+                {/* Info box (readable) */}
+                <View
+                  style={{
+                    borderRadius: theme.radius.xl,
+                    borderWidth: 1,
+                    borderColor: "rgba(255,255,255,0.12)",
+                    backgroundColor: "rgba(255,255,255,0.04)",
+                    padding: 12,
+                  }}
+                >
+                  {friendlyUpgradeLines.map((t, idx) => (
+                    <View
+                      key={`${idx}-${t}`}
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "flex-start",
+                        gap: 10,
+                        marginTop: idx === 0 ? 0 : 10,
+                      }}
+                    >
+                      <Ionicons
+                        name={idx === 0 ? "warning-outline" : idx === 1 ? "checkmark-circle-outline" : "sparkles-outline"}
+                        size={18}
+                        color={idx === 0 ? theme.colors.emerald : theme.colors.text}
+                      />
+                      <Text style={{ flex: 1, color: theme.colors.text, fontWeight: "900", lineHeight: 22 }}>
+                        {t}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+
+                {/* Technical message (optional but readable) */}
+                {!!clean(upgradeMsg) ? (
+                  <View
+                    style={{
+                      marginTop: 12,
+                      borderRadius: theme.radius.xl,
+                      borderWidth: 1,
+                      borderColor: "rgba(255,255,255,0.10)",
+                      backgroundColor: "rgba(0,0,0,0.35)",
+                      padding: 12,
+                    }}
+                  >
+                    <Text style={{ color: theme.colors.faint, fontWeight: "900", fontSize: 12, lineHeight: 18 }}>
+                      {upgradeMsg}
+                    </Text>
+                  </View>
+                ) : null}
+
+                <View style={{ marginTop: 14, gap: 10 }}>
+                  <Button title="OK, Sawa" onPress={() => setUpgradeOpen(false)} />
+                  <Button
+                    title="Back to Feed"
+                    variant="secondary"
+                    onPress={() => {
+                      setUpgradeOpen(false);
+                      router.replace("/(tabs)/club" as any);
+                    }}
+                  />
+                </View>
+              </View>
+            </Pressable>
+          </Pressable>
+        </Modal>
+
         {/* Product Picker Modal */}
         <Modal
           visible={productOpen}
           transparent
           animationType="fade"
-          // ✅ HARD FIX: statusBarTranslucent can reveal white window behind on Android
           statusBarTranslucent={false}
-          // ✅ reduces flashes on some Android devices
           hardwareAccelerated
-          // @ts-ignore (RN supports on iOS)
+          // @ts-ignore
           presentationStyle="overFullScreen"
           onRequestClose={() => setProductOpen(false)}
         >
@@ -628,7 +903,6 @@ export default function ClubCreatePostScreen() {
             behavior={Platform.OS === "ios" ? "padding" : "height"}
             style={{
               flex: 1,
-              // ✅ ensure even the modal root is dark (no white behind)
               backgroundColor: theme.colors.background,
             }}
           >
