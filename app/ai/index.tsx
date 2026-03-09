@@ -16,7 +16,6 @@ import {
   Platform,
   Pressable,
   RefreshControl,
-  ScrollView,
   Text,
   TextInput,
   View,
@@ -31,7 +30,10 @@ import { Card } from "@/src/ui/Card";
 import { Screen } from "@/src/ui/Screen";
 import { UI } from "@/src/ui/theme";
 
-import { isProActiveForOrg } from "@/src/ai/subscription";
+import {
+  getAiSubscriptionSnapshotForOrg,
+  isProActiveForOrg,
+} from "@/src/ai/subscription";
 import { AiMessageBubble } from "@/src/components/AiMessageBubble";
 import { supabase } from "@/src/supabase/supabaseClient";
 
@@ -41,7 +43,7 @@ type ChatRole = "user" | "assistant";
 type AttachedImage = {
   id: string;
   uri: string;
-  dataUrl: string; // "data:image/jpeg;base64,..."
+  dataUrl: string;
 };
 
 type ChatMsg = {
@@ -49,7 +51,6 @@ type ChatMsg = {
   role: ChatRole;
   text: string;
   ts: number;
-  // ✅ A-4: keep lightweight refs for thumbnails + preview
   images?: Array<{ id: string; uri: string }> | null;
 };
 
@@ -64,25 +65,51 @@ type ActionItem = {
 
 type ToolKey = "ANALYZE" | "IMAGE" | "RESEARCH" | "AGENT" | null;
 
+type RetryPayload =
+  | { kind: "chat"; text: string; history: ReqMsg[] }
+  | { kind: "vision"; text: string; history: ReqMsg[]; images: AttachedImage[] }
+  | { kind: "image"; prompt: string };
+
+type TaskRow = {
+  id: string;
+  organization_id: string;
+  store_id: string | null;
+  title: string;
+  steps: string[] | null;
+  priority: "LOW" | "MEDIUM" | "HIGH" | null;
+  eta: string | null;
+  status: string | null;
+  created_at: string;
+};
+
+type AiBalanceRow = {
+  plan_code?: string | null;
+  ai_enabled?: boolean | null;
+  credits_monthly?: number | null;
+  credits_used?: number | null;
+  credits_remaining?: number | null;
+  period_start?: string | null;
+  [k: string]: any;
+};
+
 function clean(s: any) {
   return String(s ?? "").trim();
+}
+function upper(s: any) {
+  return clean(s).toUpperCase();
 }
 function uid() {
   return `${Date.now()}_${Math.random().toString(36).slice(2)}`;
 }
+function fmtNum(v: any) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return "0";
+  return Math.round(n).toString();
+}
 
 const INPUT_MAX = 12_000;
-
-/**
- * ✅ THEME BRIDGE (FIX)
- * Some builds export UI as flat tokens (UI.background, UI.emeraldBorder, ...)
- * but code uses UI.colors.*. This bridge supports BOTH without changing theme.ts.
- */
 const C: any = (UI as any)?.colors ?? UI;
 
-/**
-✅ Normalize Worker BASE URL
-*/
 function normalizeWorkerBaseUrl(raw: any) {
   let u = clean(raw);
   if (!u) return "";
@@ -100,9 +127,6 @@ function normalizeWorkerBaseUrl(raw: any) {
 }
 const AI_WORKER_URL = normalizeWorkerBaseUrl(process.env.EXPO_PUBLIC_AI_WORKER_URL ?? "");
 
-/**
-✅ Image URL normalization
-*/
 function isDataImageUrl(u: string) {
   const t = clean(u).toLowerCase();
   return t.startsWith("data:image/");
@@ -114,9 +138,6 @@ function normalizeImageUrl(raw: string) {
   return u;
 }
 
-/**
-✅ Robust fetch (Timeout + Retry + Better Error Body) + ✅ A-3 Abort
-*/
 const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
 const DEFAULT_TIMEOUT_MS = 25_000;
 const DEFAULT_RETRIES = 2;
@@ -128,6 +149,9 @@ function safeClip(s: string, max = 900) {
   const t = clean(s);
   if (!t) return "";
   return t.length > max ? t.slice(0, max) + "…" : t;
+}
+function isPunct(ch: string) {
+  return ch === "." || ch === "!" || ch === "?" || ch === "," || ch === ";" || ch === ":";
 }
 
 async function readJsonOrText(res: Response): Promise<{ json: any | null; text: string }> {
@@ -142,10 +166,6 @@ async function readJsonOrText(res: Response): Promise<{ json: any | null; text: 
   return { json: null, text: txt };
 }
 
-/**
- * ✅ A-3 Abort support:
- * - If init.signal is provided, we mirror it into our internal timeout controller.
- */
 async function fetchJsonWithRetry(
   url: string,
   init: RequestInit,
@@ -161,7 +181,6 @@ async function fetchJsonWithRetry(
     const controller = new AbortController();
     const t = setTimeout(() => controller.abort(), timeoutMs);
 
-    // Mirror external abort -> internal controller.abort()
     const ext = init?.signal;
     const onExtAbort = () => controller.abort();
     try {
@@ -236,16 +255,6 @@ async function fetchJsonWithRetry(
   return { status: 0, ok: false, data: null, textBody: fallback };
 }
 
-/**
-✅ ChatGPT-like Typing Engine (UI side)
-*/
-function isPunct(ch: string) {
-  return ch === "." || ch === "!" || ch === "?" || ch === "," || ch === ";" || ch === ":";
-}
-
-/**
- * ✅ ACTIONS formatting (kept)
- */
 function formatActions(actions: Array<{ title: string; steps?: string[]; priority?: string; eta?: string }>) {
   if (!Array.isArray(actions) || actions.length === 0) return "";
   const lines: string[] = [];
@@ -272,11 +281,6 @@ function formatActions(actions: Array<{ title: string; steps?: string[]; priorit
   return clean(out) ? out : "";
 }
 
-/**
- * ✅ HARD STOP FOR "NEXT ACTION" / "NEXT MOVE"
- * Sometimes model/worker may include these lines. We remove them client-side
- * to guarantee they never appear in UI.
- */
 function stripNextActionLines(raw: string) {
   const t = String(raw ?? "");
   if (!t.trim()) return "";
@@ -296,24 +300,17 @@ function stripNextActionLines(raw: string) {
       tl.startsWith("next move :");
 
     if (isNextAction) continue;
-
     out.push(l);
   }
 
-  // remove extra trailing blank lines
   while (out.length && !out[out.length - 1].trim()) out.pop();
   return out.join("\n").trim();
 }
 
 function sanitizeAssistantText(raw: string) {
-  // Add more sanitizers here if needed, but keep minimal.
   return stripNextActionLines(raw);
 }
 
-/**
- * ✅ IMPORTANT CHANGE:
- * - NEXT ACTION / NEXT MOVE removed completely (as per request)
- */
 function packAssistantText(meta: { text: string; actions: any[]; footerNote?: string }) {
   const main = sanitizeAssistantText(clean(meta?.text));
   const actionsBlock = formatActions(meta?.actions ?? []);
@@ -335,9 +332,6 @@ function packAssistantText(meta: { text: string; actions: any[]; footerNote?: st
   return clean(parts.join("\n"));
 }
 
-/**
-✅ A (DB Action Bridge) - remains (BMS feature)
-*/
 async function createTasksFromAiActions(args: {
   orgId: string;
   storeId?: string | null;
@@ -382,9 +376,6 @@ async function createTasksFromAiActions(args: {
   return { created, failed, errors };
 }
 
-/**
-✅ detect image intent via normal Send()
-*/
 function detectImageIntent(rawText: string): { isImage: boolean; prompt: string } {
   const t = clean(rawText);
   if (!t) return { isImage: false, prompt: "" };
@@ -410,36 +401,10 @@ function detectImageIntent(rawText: string): { isImage: boolean; prompt: string 
   return { isImage: false, prompt: "" };
 }
 
-/**
-✅ Typing dots loop for placeholder message (premium feel)
-*/
 function nextTypingText(step: number) {
-  const dots = step % 4; // 0..3
+  const dots = step % 4;
   return `AI inaandika${".".repeat(dots)}`;
 }
-
-/**
-✅ Retry payload (DISCRIMINATED UNION)
-*/
-type RetryPayload =
-  | { kind: "chat"; text: string; history: ReqMsg[] }
-  | { kind: "vision"; text: string; history: ReqMsg[]; images: AttachedImage[] }
-  | { kind: "image"; prompt: string };
-
-/**
-✅ A-1 Tasks list row (DB)
-*/
-type TaskRow = {
-  id: string;
-  organization_id: string;
-  store_id: string | null;
-  title: string;
-  steps: string[] | null;
-  priority: "LOW" | "MEDIUM" | "HIGH" | null;
-  eta: string | null;
-  status: string | null;
-  created_at: string;
-};
 
 export default function AiChatScreen() {
   const router = useRouter();
@@ -448,66 +413,54 @@ export default function AiChatScreen() {
 
   const topPad = Math.max(insets.top, 10) + 8;
 
-  // ✅ Keyboard state (used for composer spacing)
-  const [keyboardOpen, setKeyboardOpen] = useState(false);
-
-  useEffect(() => {
-    const subShow = Keyboard.addListener("keyboardDidShow", () => setKeyboardOpen(true));
-    const subHide = Keyboard.addListener("keyboardDidHide", () => setKeyboardOpen(false));
-    return () => {
-      subShow.remove();
-      subHide.remove();
-    };
-  }, []);
-
   const [mode, setMode] = useState<AiMode>("AUTO");
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
 
   const [proActive, setProActive] = useState(false);
 
-  // ✅ AI Gate (LITE/FREE => AI disabled)
+  const [planCode, setPlanCode] = useState("FREE");
+  const [planName, setPlanName] = useState("FREE");
+  const [aiCreditsMonthly, setAiCreditsMonthly] = useState(0);
+  const [aiCreditsRemaining, setAiCreditsRemaining] = useState(0);
+  const [aiCreditsUsed, setAiCreditsUsed] = useState(0);
+
   const [aiGateOpen, setAiGateOpen] = useState(false);
   const [aiGateReason, setAiGateReason] = useState("");
 
-  const aiEnabled = !!proActive;
+  const isOwner = org.activeRole === "owner";
+  const planAllowsAi = !!proActive;
+  const aiEnabled = planAllowsAi && isOwner;
+  const currentPlanLabel = upper(planCode || planName || "FREE");
 
-  const openAiGate = useCallback(
-    (reason?: string) => {
-      setAiGateReason(clean(reason) || "");
-      setAiGateOpen(true);
-    },
-    [setAiGateOpen]
-  );
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
 
-  const requireAi = useCallback(
-    (reason?: string) => {
-      if (aiEnabled) return true;
-      openAiGate(reason || "AI haipatikani kwenye kifurushi chako (LITE/FREE).");
-      return false;
-    },
-    [aiEnabled, openAiGate]
-  );
+  const ownerOnlyReason = useMemo(() => {
+    if (planAllowsAi && !isOwner) {
+      return "AI ya ZETRA inaruhusiwa kwa OWNER pekee. Admin na Staff hawaruhusiwi kutumia AI.";
+    }
+    return "";
+  }, [isOwner, planAllowsAi]);
 
-  // ✅ Tools bottom sheet (kept for future)
+  const defaultAiLockReason = useMemo(() => {
+    if (ownerOnlyReason) return ownerOnlyReason;
+    return `AI haipatikani kwenye kifurushi cha ${currentPlanLabel}.`;
+  }, [currentPlanLabel, ownerOnlyReason]);
+
   const [toolOpen, setToolOpen] = useState(false);
   const [toolKey, setToolKey] = useState<ToolKey>(null);
 
-  // ✅ In-screen Tasks panel (Modal)
   const [tasksOpen, setTasksOpen] = useState(false);
-
-  // ✅ NEW: Plus menu (ChatGPT-like)
   const [plusOpen, setPlusOpen] = useState(false);
 
-  // ✅ A-1 Tasks data
   const [tasksLoading, setTasksLoading] = useState(false);
   const [tasksError, setTasksError] = useState("");
   const [tasks, setTasks] = useState<TaskRow[]>([]);
 
-  // ✅ A-4 image preview modal (fullscreen)
   const [imgPreview, setImgPreview] = useState<{ open: boolean; uri: string }>({ open: false, uri: "" });
 
-  const anim = useRef(new Animated.Value(0)).current; // 0 closed, 1 open
+  const anim = useRef(new Animated.Value(0)).current;
   const { height: screenH } = Dimensions.get("window");
 
   const SHEET_MAX_H = Math.min(Math.round(screenH * 0.72), 640);
@@ -524,7 +477,6 @@ export default function AiChatScreen() {
   const [imagePrompt, setImagePrompt] = useState("");
   const [attachedImages, setAttachedImages] = useState<AttachedImage[]>([]);
 
-  // 🎙️ Voice
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [recordingOn, setRecordingOn] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
@@ -558,12 +510,32 @@ export default function AiChatScreen() {
   const typingDotsTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const typingDotsStepRef = useRef(0);
 
-  // ✅ A-2: request token to prevent stale responses from overwriting UI
   const activeReqTokenRef = useRef<string>("");
   const makeReqToken = () => uid();
 
-  // ✅ A-3: abort in-flight network
   const netAbortRef = useRef<AbortController | null>(null);
+  const scrollRafRef = useRef<number | null>(null);
+
+  const androidExtraLift = 50;
+
+  const androidComposerLift = useMemo(() => {
+    if (Platform.OS !== "android" || !keyboardVisible) return 0;
+    return Math.max(0, keyboardHeight - Math.max(insets.bottom, 0) + androidExtraLift);
+  }, [insets.bottom, keyboardHeight, keyboardVisible]);
+
+  const openAiGate = useCallback((reason?: string) => {
+    setAiGateReason(clean(reason) || "");
+    setAiGateOpen(true);
+  }, []);
+
+  const requireAi = useCallback(
+    (reason?: string) => {
+      if (aiEnabled) return true;
+      openAiGate(reason || defaultAiLockReason);
+      return false;
+    },
+    [aiEnabled, defaultAiLockReason, openAiGate]
+  );
 
   const stopTypingDots = useCallback(() => {
     if (typingDotsTimerRef.current) clearInterval(typingDotsTimerRef.current);
@@ -618,12 +590,17 @@ export default function AiChatScreen() {
     return `${orgName} • ${storeName} • ${role}`;
   }, [org.activeOrgName, org.activeRole, org.activeStoreName]);
 
-  const scrollToEndSoon = useCallback(() => {
-    requestAnimationFrame(() => {
+  const scrollToLatest = useCallback((animated = false) => {
+    if (scrollRafRef.current != null) {
+      cancelAnimationFrame(scrollRafRef.current);
+      scrollRafRef.current = null;
+    }
+
+    scrollRafRef.current = requestAnimationFrame(() => {
       try {
-        // FlatList is inverted, offset 0 is bottom
-        listRef.current?.scrollToOffset({ offset: 0, animated: true });
+        listRef.current?.scrollToOffset({ offset: 0, animated });
       } catch {}
+      scrollRafRef.current = null;
     });
   }, []);
 
@@ -646,13 +623,11 @@ export default function AiChatScreen() {
       const myToken = clean(reqToken || "");
       const txt = String(fullText ?? "");
       if (!txt.trim()) {
-        // ✅ A-2: ignore stale
         if (myToken && activeReqTokenRef.current && myToken !== activeReqTokenRef.current) return;
         patchMessageText(msgId, "Samahani — AI imerudisha jibu tupu. Jaribu tena.");
         return;
       }
 
-      // ✅ A-2: ignore stale
       if (myToken && activeReqTokenRef.current && myToken !== activeReqTokenRef.current) return;
 
       patchMessageText(msgId, "");
@@ -664,8 +639,6 @@ export default function AiChatScreen() {
 
       const tick = () => {
         if (typingAbortRef.current.aborted) return;
-
-        // ✅ A-2: ignore stale
         if (myToken && activeReqTokenRef.current && myToken !== activeReqTokenRef.current) return;
 
         const r = Math.random();
@@ -677,12 +650,13 @@ export default function AiChatScreen() {
 
         i = nextI;
         patchMessageText(msgId, next);
-        scrollToEndSoon();
 
-        if (i >= txt.length) return;
+        if (i >= txt.length) {
+          scrollToLatest(false);
+          return;
+        }
 
         let delay = (28 + Math.floor(Math.random() * 18)) * speedFactor;
-
         if (lastChar === "\n" || lastChar === "." || lastChar === "!" || lastChar === "?") delay += 160;
         else if (isPunct(lastChar)) delay += 80;
 
@@ -691,8 +665,30 @@ export default function AiChatScreen() {
 
       typingTimerRef.current = setTimeout(tick, Math.floor(28 * speedFactor));
     },
-    [patchMessageText, scrollToEndSoon, stopTyping, stopTypingDots]
+    [patchMessageText, scrollToLatest, stopTyping, stopTypingDots]
   );
+
+  useEffect(() => {
+    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+    const onShow = Keyboard.addListener(showEvent, (e: any) => {
+      const h = Number(e?.endCoordinates?.height ?? 0);
+      setKeyboardVisible(true);
+      setKeyboardHeight(h);
+      scrollToLatest(false);
+    });
+
+    const onHide = Keyboard.addListener(hideEvent, () => {
+      setKeyboardVisible(false);
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      onShow.remove();
+      onHide.remove();
+    };
+  }, [scrollToLatest]);
 
   useEffect(() => {
     return () => {
@@ -701,13 +697,80 @@ export default function AiChatScreen() {
       typingAbortRef.current.aborted = true;
       stopTypingDots();
 
-      // ✅ A-3 abort on unmount
       try {
         netAbortRef.current?.abort();
       } catch {}
       netAbortRef.current = null;
+
+      if (scrollRafRef.current != null) {
+        cancelAnimationFrame(scrollRafRef.current);
+        scrollRafRef.current = null;
+      }
     };
   }, [stopTypingDots]);
+
+  const loadAiBalance = useCallback(async (): Promise<{
+    ok: boolean;
+    remaining: number;
+    used: number;
+    monthly: number;
+    error: string;
+  }> => {
+    const orgId = clean(org.activeOrgId);
+    if (!orgId) {
+      setAiCreditsRemaining(0);
+      setAiCreditsUsed(0);
+      return {
+        ok: false,
+        remaining: 0,
+        used: 0,
+        monthly: 0,
+        error: "Missing orgId",
+      };
+    }
+
+    try {
+      const { data, error } = await supabase.rpc("ai_get_balance", {
+        p_org_id: orgId,
+      });
+
+      if (error) {
+        return {
+          ok: false,
+          remaining: 0,
+          used: 0,
+          monthly: 0,
+          error: clean(error.message) || "Failed to load AI balance",
+        };
+      }
+
+      const row = (Array.isArray(data) ? data?.[0] : data) as AiBalanceRow | null;
+
+      const monthly = Math.max(0, Number(row?.credits_monthly ?? 0) || 0);
+      const used = Math.max(0, Number(row?.credits_used ?? 0) || 0);
+      const remaining = Math.max(0, Number(row?.credits_remaining ?? 0) || 0);
+
+      setAiCreditsMonthly(monthly);
+      setAiCreditsUsed(used);
+      setAiCreditsRemaining(remaining);
+
+      return {
+        ok: true,
+        remaining,
+        used,
+        monthly,
+        error: "",
+      };
+    } catch (e: any) {
+      return {
+        ok: false,
+        remaining: 0,
+        used: 0,
+        monthly: 0,
+        error: clean(e?.message) || "Failed to load AI balance",
+      };
+    }
+  }, [org.activeOrgId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -717,13 +780,39 @@ export default function AiChatScreen() {
         try {
           const orgId = org.activeOrgId ?? "";
           if (!orgId) {
-            if (!cancelled) setProActive(false);
+            if (!cancelled) {
+              setProActive(false);
+              setPlanCode("FREE");
+              setPlanName("FREE");
+              setAiCreditsMonthly(0);
+              setAiCreditsRemaining(0);
+              setAiCreditsUsed(0);
+            }
             return;
           }
-          const ok = await isProActiveForOrg(orgId);
-          if (!cancelled) setProActive(!!ok);
+
+          const [ok, snap] = await Promise.all([
+            isProActiveForOrg(orgId),
+            getAiSubscriptionSnapshotForOrg(orgId, { forceRefresh: true }),
+          ]);
+
+          if (cancelled) return;
+
+          setProActive(!!ok);
+          setPlanCode(upper(snap?.planCode || "FREE"));
+          setPlanName(clean(snap?.planName || snap?.planCode || "FREE"));
+          setAiCreditsMonthly(Number(snap?.aiCreditsMonthly ?? 0) || 0);
+
+          await loadAiBalance();
         } catch {
-          if (!cancelled) setProActive(false);
+          if (!cancelled) {
+            setProActive(false);
+            setPlanCode("FREE");
+            setPlanName("FREE");
+            setAiCreditsMonthly(0);
+            setAiCreditsRemaining(0);
+            setAiCreditsUsed(0);
+          }
         }
       }
 
@@ -731,14 +820,12 @@ export default function AiChatScreen() {
       return () => {
         cancelled = true;
       };
-    }, [org.activeOrgId])
+    }, [loadAiBalance, org.activeOrgId])
   );
 
   const buildHistory = useCallback((): ReqMsg[] => {
-    // messages are stored newest-first (we unshift), so reverse to chronological
     const chronological = [...messages].reverse();
     const cleanedMsgs = chronological.filter((m) => m.role === "user" || m.role === "assistant");
-    // remove very first welcome assistant msg to avoid over-conditioning
     const withoutWelcome = cleanedMsgs.filter((m, idx) => !(idx === 0 && m.role === "assistant"));
     const last = withoutWelcome.slice(Math.max(0, withoutWelcome.length - 12));
     return last.map((m) => ({ role: m.role, text: m.text }));
@@ -757,7 +844,9 @@ export default function AiChatScreen() {
   }, []);
 
   const pickAndAttachImage = useCallback(async () => {
-    if (!requireAi("AI imezimwa kwenye LITE. Upgrade ili kutumia image/vision tools.")) return;
+    if (!requireAi(ownerOnlyReason || `AI haipatikani kwenye ${currentPlanLabel}. Upgrade ili kutumia image/vision tools.`)) {
+      return;
+    }
 
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -797,14 +886,16 @@ export default function AiChatScreen() {
     } catch (e: any) {
       Alert.alert("Error", clean(e?.message) || "Image pick error");
     }
-  }, [requireAi]);
+  }, [currentPlanLabel, ownerOnlyReason, requireAi]);
 
   const removeAttachedImage = useCallback((id: string) => {
     setAttachedImages((prev) => prev.filter((x) => x.id !== id));
   }, []);
 
   const startRecording = useCallback(async () => {
-    if (!requireAi("AI imezimwa kwenye LITE. Upgrade ili kutumia mic/voice.")) return;
+    if (!requireAi(ownerOnlyReason || `AI haipatikani kwenye ${currentPlanLabel}. Upgrade ili kutumia mic/voice.`)) {
+      return;
+    }
 
     try {
       if (!requireWorkerUrlOrAlert()) return;
@@ -831,7 +922,7 @@ export default function AiChatScreen() {
       setRecording(null);
       setRecordingOn(false);
     }
-  }, [requireAi, requireWorkerUrlOrAlert]);
+  }, [currentPlanLabel, ownerOnlyReason, requireAi, requireWorkerUrlOrAlert]);
 
   const stopRecordingAndTranscribe = useCallback(async () => {
     try {
@@ -862,7 +953,6 @@ export default function AiChatScreen() {
 
       const url = `${AI_WORKER_URL}/transcribe`;
 
-      // ✅ A-3 abort
       const abort = new AbortController();
       netAbortRef.current = abort;
 
@@ -870,6 +960,9 @@ export default function AiChatScreen() {
         url,
         {
           method: "POST",
+          headers: {
+            "x-zetra-role": clean(org.activeRole),
+          },
           body: form,
           signal: abort.signal,
         },
@@ -901,11 +994,11 @@ export default function AiChatScreen() {
       setTranscribing(false);
       netAbortRef.current = null;
     }
-  }, [recording]);
+  }, [org.activeRole, recording]);
 
   const toggleMic = useCallback(() => {
     if (!aiEnabled) {
-      openAiGate("AI imezimwa kwenye LITE. Upgrade ili kutumia mic/voice.");
+      openAiGate(ownerOnlyReason || `AI haipatikani kwenye ${currentPlanLabel}. Upgrade ili kutumia mic/voice.`);
       return;
     }
     if (recordingOn) {
@@ -913,11 +1006,8 @@ export default function AiChatScreen() {
       return;
     }
     void startRecording();
-  }, [aiEnabled, openAiGate, recordingOn, startRecording, stopRecordingAndTranscribe]);
+  }, [aiEnabled, currentPlanLabel, openAiGate, ownerOnlyReason, recordingOn, startRecording, stopRecordingAndTranscribe]);
 
-  /**
-   ✅ Worker: /v1/chat
-   */
   const callWorkerChat = useCallback(
     async (text: string, history: ReqMsg[], signal?: AbortSignal) => {
       if (!requireWorkerUrlOrAlert()) throw new Error("Worker URL missing");
@@ -983,6 +1073,7 @@ export default function AiChatScreen() {
   const callWorkerVision = useCallback(
     async (text: string, images: AttachedImage[], history: ReqMsg[], signal?: AbortSignal) => {
       if (!requireWorkerUrlOrAlert()) throw new Error("Worker URL missing");
+
       const payload = {
         message: text,
         images: images.map((x) => x.dataUrl),
@@ -1047,8 +1138,21 @@ export default function AiChatScreen() {
         url,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json", Accept: "application/json" },
-          body: JSON.stringify({ prompt }),
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({
+            prompt,
+            context: {
+              orgId: org.activeOrgId,
+              activeOrgId: org.activeOrgId,
+              activeOrgName: org.activeOrgName,
+              activeStoreId: org.activeStoreId,
+              activeStoreName: org.activeStoreName,
+              activeRole: org.activeRole,
+            },
+          }),
           signal,
         },
         { timeoutMs: 60_000, retries: 2, tag: "image" }
@@ -1069,12 +1173,16 @@ export default function AiChatScreen() {
       if (!imgUrl) throw new Error("No image URL returned");
       return imgUrl;
     },
-    [requireWorkerUrlOrAlert]
+    [
+      org.activeOrgId,
+      org.activeOrgName,
+      org.activeRole,
+      org.activeStoreId,
+      org.activeStoreName,
+      requireWorkerUrlOrAlert,
+    ]
   );
 
-  /**
-✅ Quick chips (will live inside + menu now)
-*/
   const quickChips = useMemo(
     () => [
       { k: "sales", label: "Sales", icon: "trending-up", prompt: "Nipe mikakati 10 ya kuongeza mauzo wiki hii." },
@@ -1089,7 +1197,9 @@ export default function AiChatScreen() {
 
   const applyChipPrompt = useCallback(
     (p: string) => {
-      if (!requireAi("AI imezimwa kwenye LITE. Upgrade ili kutumia AI prompts.")) return;
+      if (!requireAi(ownerOnlyReason || `AI haipatikani kwenye ${currentPlanLabel}. Upgrade ili kutumia AI prompts.`)) {
+        return;
+      }
 
       const t = clean(p);
       if (!t) return;
@@ -1099,12 +1209,9 @@ export default function AiChatScreen() {
       setInput(t);
       requestAnimationFrame(() => inputRef.current?.focus());
     },
-    [requireAi]
+    [currentPlanLabel, ownerOnlyReason, requireAi]
   );
 
-  /**
-✅ A-1: Load tasks from DB (org-level)
-*/
   const loadTasks = useCallback(async () => {
     const orgId = clean(org.activeOrgId);
     if (!orgId) {
@@ -1152,18 +1259,47 @@ export default function AiChatScreen() {
     }
   }, [org.activeOrgId]);
 
-  /**
-✅ A-3: Stop generating (network + typing)
-*/
-  const stopGenerating = useCallback(() => {
-    // invalidate token so stale responses don't patch UI
-    activeReqTokenRef.current = `STOP_${uid()}`;
+  const consumeAiCredits = useCallback(
+    async (credits: number): Promise<{ ok: boolean; error: string }> => {
+      const orgId = clean(org.activeOrgId);
+      if (!orgId) return { ok: false, error: "Missing orgId" };
 
-    // abort typing animation + dots
+      const n = Number(credits);
+      if (!Number.isFinite(n) || n <= 0) {
+        return { ok: false, error: "Invalid credits amount" };
+      }
+
+      try {
+        const { error } = await supabase.rpc("ai_consume_credits", {
+          p_org_id: orgId,
+          p_credits: n,
+        });
+
+        if (error) {
+          return {
+            ok: false,
+            error: clean(error.message) || "Failed to consume AI credits",
+          };
+        }
+
+        await loadAiBalance();
+
+        return { ok: true, error: "" };
+      } catch (e: any) {
+        return {
+          ok: false,
+          error: clean(e?.message) || "Failed to consume AI credits",
+        };
+      }
+    },
+    [loadAiBalance, org.activeOrgId]
+  );
+
+  const stopGenerating = useCallback(() => {
+    activeReqTokenRef.current = `STOP_${uid()}`;
     stopTyping();
     stopTypingDots();
 
-    // abort network
     try {
       netAbortRef.current?.abort();
     } catch {}
@@ -1172,11 +1308,8 @@ export default function AiChatScreen() {
     setThinking(false);
   }, [stopTyping, stopTypingDots]);
 
-  /**
-✅ MAIN SEND
-*/
   const send = useCallback(async () => {
-    if (!requireAi("AI imezimwa kwenye LITE. Upgrade ili kuendelea.")) return;
+    if (!requireAi(ownerOnlyReason || `AI haipatikani kwenye ${currentPlanLabel}. Upgrade ili kuendelea.`)) return;
 
     const text = clean(input);
     if (!text || thinking) return;
@@ -1206,18 +1339,15 @@ export default function AiChatScreen() {
     stopTyping();
     stopTypingDots();
 
-    // ✅ A-2 token for this request
     const reqToken = makeReqToken();
     activeReqTokenRef.current = reqToken;
 
-    // ✅ A-3 abort controller for this request
     const abort = new AbortController();
     netAbortRef.current = abort;
 
     const imagesToSend = attachedImages;
     setAttachedImages([]);
 
-    // ✅ A-4: include thumbnails on user message
     const userMsg: ChatMsg = {
       id: uid(),
       role: "user",
@@ -1230,11 +1360,10 @@ export default function AiChatScreen() {
     const botPlaceholder: ChatMsg = { id: botId, role: "assistant", ts: Date.now(), text: "AI inaandika" };
 
     setMessages((prev) => [botPlaceholder, userMsg, ...prev]);
-    scrollToEndSoon();
+    scrollToLatest(false);
     startTypingDots(botId);
 
     try {
-      // ✅ A-2: if stopped, ignore
       if (reqToken !== activeReqTokenRef.current) return;
 
       if (imagesToSend.length > 0) {
@@ -1244,13 +1373,14 @@ export default function AiChatScreen() {
 
         const res = await callWorkerVision(text, imagesToSend, history, abort.signal);
 
-        // ✅ A-2: stale ignore
         if (reqToken !== activeReqTokenRef.current) return;
+
+        const creditResult = await consumeAiCredits(1);
 
         const packed = packAssistantText({
           text: res.text,
           actions: (res as any)?.meta?.actions ?? [],
-          footerNote: "",
+          footerNote: creditResult.ok ? "" : "⚠️ AI response imefanikiwa lakini credit deduction imeshindikana.",
         });
 
         await typeOutChatGPTLike(botId, packed || sanitizeAssistantText(res.text), reqToken);
@@ -1267,12 +1397,17 @@ export default function AiChatScreen() {
 
         const url = await callWorkerImageGenerate(p, abort.signal);
 
-        // ✅ A-2: stale ignore
         if (reqToken !== activeReqTokenRef.current) return;
 
-        const reply = isDataImageUrl(url)
+        const creditResult = await consumeAiCredits(1);
+
+        const replyBase = isDataImageUrl(url)
           ? `✅ Image generated\n\n![ZETRA Image](${url})`
           : `✅ Image generated\n\n![ZETRA Image](${url})\n\nLink: ${url}`;
+
+        const reply = creditResult.ok
+          ? replyBase
+          : `${replyBase}\n\n⚠️ AI image imetoka lakini credit deduction imeshindikana.`;
 
         await typeOutChatGPTLike(botId, reply, reqToken);
         return;
@@ -1284,14 +1419,14 @@ export default function AiChatScreen() {
 
       const res = await callWorkerChat(text, history, abort.signal);
 
-      // ✅ A-2: stale ignore
       if (reqToken !== activeReqTokenRef.current) return;
 
-      let footerNote = "";
+      const creditResult = await consumeAiCredits(1);
+
+      let footerNote = creditResult.ok ? "" : "⚠️ AI response imefanikiwa lakini credit deduction imeshindikana.";
       const resMeta: any = (res as any)?.meta ?? null;
 
-      // Tasks saving is still gated by proActive (your current “AI enabled” flag).
-      if (proActive && clean(org.activeOrgId) && Array.isArray(resMeta?.actions) && resMeta.actions.length) {
+      if (aiEnabled && clean(org.activeOrgId) && Array.isArray(resMeta?.actions) && resMeta.actions.length) {
         const result = await createTasksFromAiActions({
           orgId: org.activeOrgId!,
           storeId: org.activeStoreId ?? null,
@@ -1299,12 +1434,15 @@ export default function AiChatScreen() {
         });
 
         if (result.created > 0) {
-          footerNote = `✅ Saved to Tasks: ${result.created}`;
-          if (result.failed > 0) footerNote += ` • Failed: ${result.failed}`;
+          footerNote = footerNote
+            ? `${footerNote}\n\n✅ Saved to Tasks: ${result.created}${result.failed > 0 ? ` • Failed: ${result.failed}` : ""}`
+            : `✅ Saved to Tasks: ${result.created}${result.failed > 0 ? ` • Failed: ${result.failed}` : ""}`;
         } else if (result.failed > 0) {
-          footerNote =
+          const taskWarn =
             "⚠️ Actions zimeshindwa ku-save kwenye Tasks.\n" +
             "Tip: Hakikisha RPC `create_task_from_ai` ipo na una role ya owner/admin.";
+
+          footerNote = footerNote ? `${footerNote}\n\n${taskWarn}` : taskWarn;
         }
       }
 
@@ -1319,8 +1457,6 @@ export default function AiChatScreen() {
       stopTypingDots();
 
       const msg = clean(e?.message);
-
-      // ✅ A-3: if aborted, show clean stopped message (not scary errors)
       const isAbort =
         msg.toLowerCase().includes("aborted") ||
         msg.toLowerCase().includes("abort") ||
@@ -1349,21 +1485,24 @@ export default function AiChatScreen() {
     } finally {
       netAbortRef.current = null;
       setThinking(false);
-      scrollToEndSoon();
+      scrollToLatest(false);
     }
   }, [
+    aiEnabled,
     attachedImages,
     buildHistory,
     callWorkerChat,
     callWorkerImageGenerate,
     callWorkerVision,
+    consumeAiCredits,
+    currentPlanLabel,
     input,
     org.activeOrgId,
     org.activeStoreId,
+    ownerOnlyReason,
     patchMessageText,
-    proActive,
     requireAi,
-    scrollToEndSoon,
+    scrollToLatest,
     startTypingDots,
     stopTyping,
     stopTypingDots,
@@ -1371,11 +1510,8 @@ export default function AiChatScreen() {
     typeOutChatGPTLike,
   ]);
 
-  /**
-✅ Retry handler
-*/
   const retryLast = useCallback(async () => {
-    if (!requireAi("AI imezimwa kwenye LITE. Upgrade ili kuendelea.")) return;
+    if (!requireAi(ownerOnlyReason || `AI haipatikani kwenye ${currentPlanLabel}. Upgrade ili kuendelea.`)) return;
 
     const p = retryCard.payload;
     if (!p || thinking) return;
@@ -1383,11 +1519,9 @@ export default function AiChatScreen() {
     setRetryCard({ visible: false, label: "", payload: p });
     lastPayloadRef.current = p;
 
-    // ✅ A-2 token for retry
     const reqToken = makeReqToken();
     activeReqTokenRef.current = reqToken;
 
-    // ✅ A-3 abort controller for retry
     const abort = new AbortController();
     netAbortRef.current = abort;
 
@@ -1406,7 +1540,7 @@ export default function AiChatScreen() {
     stopTypingDots();
 
     setMessages((prev) => [botPlaceholder, userMsg, ...prev]);
-    scrollToEndSoon();
+    scrollToLatest(false);
     startTypingDots(botId);
 
     try {
@@ -1415,9 +1549,16 @@ export default function AiChatScreen() {
 
         if (reqToken !== activeReqTokenRef.current) return;
 
-        const reply = isDataImageUrl(url)
+        const creditResult = await consumeAiCredits(1);
+
+        const replyBase = isDataImageUrl(url)
           ? `✅ Image generated\n\n![ZETRA Image](${url})`
           : `✅ Image generated\n\n![ZETRA Image](${url})\n\nLink: ${url}`;
+
+        const reply = creditResult.ok
+          ? replyBase
+          : `${replyBase}\n\n⚠️ Retry image imetoka lakini credit deduction imeshindikana.`;
+
         await typeOutChatGPTLike(botId, reply, reqToken);
         return;
       }
@@ -1427,10 +1568,12 @@ export default function AiChatScreen() {
 
         if (reqToken !== activeReqTokenRef.current) return;
 
+        const creditResult = await consumeAiCredits(1);
+
         const packed = packAssistantText({
           text: res.text,
           actions: (res as any)?.meta?.actions ?? [],
-          footerNote: "",
+          footerNote: creditResult.ok ? "" : "⚠️ Retry vision imefanikiwa lakini credit deduction imeshindikana.",
         });
         await typeOutChatGPTLike(botId, packed || sanitizeAssistantText(res.text), reqToken);
         return;
@@ -1440,10 +1583,12 @@ export default function AiChatScreen() {
 
       if (reqToken !== activeReqTokenRef.current) return;
 
-      let footerNote = "";
+      const creditResult = await consumeAiCredits(1);
+
+      let footerNote = creditResult.ok ? "" : "⚠️ Retry chat imefanikiwa lakini credit deduction imeshindikana.";
       const resMeta: any = (res as any)?.meta ?? null;
 
-      if (proActive && clean(org.activeOrgId) && Array.isArray(resMeta?.actions) && resMeta.actions.length) {
+      if (aiEnabled && clean(org.activeOrgId) && Array.isArray(resMeta?.actions) && resMeta.actions.length) {
         const result = await createTasksFromAiActions({
           orgId: org.activeOrgId!,
           storeId: org.activeStoreId ?? null,
@@ -1451,12 +1596,15 @@ export default function AiChatScreen() {
         });
 
         if (result.created > 0) {
-          footerNote = `✅ Saved to Tasks: ${result.created}`;
-          if (result.failed > 0) footerNote += ` • Failed: ${result.failed}`;
+          footerNote = footerNote
+            ? `${footerNote}\n\n✅ Saved to Tasks: ${result.created}${result.failed > 0 ? ` • Failed: ${result.failed}` : ""}`
+            : `✅ Saved to Tasks: ${result.created}${result.failed > 0 ? ` • Failed: ${result.failed}` : ""}`;
         } else if (result.failed > 0) {
-          footerNote =
+          const taskWarn =
             "⚠️ Actions zimeshindwa ku-save kwenye Tasks.\n" +
             "Tip: Hakikisha RPC `create_task_from_ai` ipo na una role ya owner/admin.";
+
+          footerNote = footerNote ? `${footerNote}\n\n${taskWarn}` : taskWarn;
         }
       }
 
@@ -1493,19 +1641,22 @@ export default function AiChatScreen() {
     } finally {
       netAbortRef.current = null;
       setThinking(false);
-      scrollToEndSoon();
+      scrollToLatest(false);
     }
   }, [
+    aiEnabled,
     callWorkerChat,
     callWorkerImageGenerate,
     callWorkerVision,
+    consumeAiCredits,
+    currentPlanLabel,
     org.activeOrgId,
     org.activeStoreId,
+    ownerOnlyReason,
     patchMessageText,
-    proActive,
     requireAi,
     retryCard.payload,
-    scrollToEndSoon,
+    scrollToLatest,
     startTypingDots,
     stopTyping,
     stopTypingDots,
@@ -1537,9 +1688,6 @@ export default function AiChatScreen() {
     );
   };
 
-  /**
-   * ✅ TopBar simplified (chips moved into + menu)
-   */
   const TopBar = (
     <View
       style={{
@@ -1580,7 +1728,7 @@ export default function AiChatScreen() {
           </Text>
         </View>
 
-        {proActive ? (
+        {aiEnabled ? (
           <View
             style={{
               flexDirection: "row",
@@ -1600,11 +1748,11 @@ export default function AiChatScreen() {
             }}
           >
             <Ionicons name="sparkles" size={14} color={UI.text} />
-            <Text style={{ color: UI.text, fontWeight: "900" }}>PRO</Text>
+            <Text style={{ color: UI.text, fontWeight: "900" }}>AI ON</Text>
           </View>
         ) : (
           <Pressable
-            onPress={() => openAiGate("AI imezimwa kwenye LITE. Upgrade ili kuifungua.")}
+            onPress={() => openAiGate(defaultAiLockReason)}
             hitSlop={10}
             style={({ pressed }) => ({
               flexDirection: "row",
@@ -1680,10 +1828,60 @@ export default function AiChatScreen() {
         </Pressable>
       </View>
 
-      {/* ✅ Inline banner when AI is locked */}
+      <View style={{ marginTop: 10, flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+        <View
+          style={{
+            paddingHorizontal: 10,
+            paddingVertical: 7,
+            borderRadius: 999,
+            borderWidth: 1,
+            borderColor: aiEnabled ? "rgba(16,185,129,0.35)" : "rgba(255,255,255,0.12)",
+            backgroundColor: aiEnabled ? "rgba(16,185,129,0.10)" : "rgba(255,255,255,0.06)",
+          }}
+        >
+          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
+            Plan: {currentPlanLabel}
+          </Text>
+        </View>
+
+        {planAllowsAi ? (
+          <View
+            style={{
+              paddingHorizontal: 10,
+              paddingVertical: 7,
+              borderRadius: 999,
+              borderWidth: 1,
+              borderColor: isOwner ? "rgba(16,185,129,0.35)" : "rgba(245,158,11,0.35)",
+              backgroundColor: isOwner ? "rgba(16,185,129,0.10)" : "rgba(245,158,11,0.10)",
+            }}
+          >
+            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
+              AI: {isOwner ? "OWNER ONLY" : "NO ACCESS"}
+            </Text>
+          </View>
+        ) : null}
+
+        {aiEnabled ? (
+          <View
+            style={{
+              paddingHorizontal: 10,
+              paddingVertical: 7,
+              borderRadius: 999,
+              borderWidth: 1,
+              borderColor: "rgba(16,185,129,0.35)",
+              backgroundColor: "rgba(16,185,129,0.10)",
+            }}
+          >
+            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
+              Credits left: {fmtNum(aiCreditsRemaining)} / {fmtNum(aiCreditsMonthly)}
+            </Text>
+          </View>
+        ) : null}
+      </View>
+
       {!aiEnabled ? (
         <Pressable
-          onPress={() => openAiGate("AI imezimwa kwenye LITE. Upgrade ili kuifungua.")}
+          onPress={() => openAiGate(defaultAiLockReason)}
           style={({ pressed }) => ({
             marginTop: 10,
             borderWidth: 1,
@@ -1699,9 +1897,11 @@ export default function AiChatScreen() {
         >
           <Ionicons name="lock-closed-outline" size={16} color={UI.text} />
           <View style={{ flex: 1 }}>
-            <Text style={{ color: UI.text, fontWeight: "900" }}>AI Locked (LITE)</Text>
-            <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 2 }} numberOfLines={1}>
-              AI haipatikani kwenye kifurushi cha LITE — bonyeza ku-upgrade.
+            <Text style={{ color: UI.text, fontWeight: "900" }}>
+              {ownerOnlyReason ? "AI Owner Only" : `AI Locked (${currentPlanLabel})`}
+            </Text>
+            <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 2 }} numberOfLines={2}>
+              {ownerOnlyReason || "AI haipatikani kwenye kifurushi hiki — bonyeza kuona maelezo."}
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={UI.muted} />
@@ -1710,10 +1910,6 @@ export default function AiChatScreen() {
     </View>
   );
 
-  /**
-   * ✅ Renderer (IMMERSIVE WIDTH)
-   * - Shows A-4 thumbnails for user messages (no AiMessageBubble changes)
-   */
   const renderMsg = useCallback(({ item }: { item: ChatMsg }) => {
     const isUser = item.role === "user";
     const imgs = Array.isArray(item.images) ? item.images : [];
@@ -1746,9 +1942,6 @@ export default function AiChatScreen() {
     );
   }, []);
 
-  /**
-   * ✅ Retry card
-   */
   const RetryBanner = useMemo(() => {
     if (!retryCard.visible || !retryCard.payload) return null;
     return (
@@ -1783,9 +1976,6 @@ export default function AiChatScreen() {
     );
   }, [retryCard.label, retryCard.payload, retryCard.visible, retryLast]);
 
-  /**
-   * ✅ Attached images row (composer)
-   */
   const AttachRow = useMemo(() => {
     if (!attachedImages.length) return null;
 
@@ -1839,19 +2029,6 @@ export default function AiChatScreen() {
     return true;
   }, [aiEnabled, input, thinking]);
 
-  /**
-   * ✅ Composer spacing (KEY FIX)
-   * - Composer now goes DOWN to the bottom when keyboard is dismissed.
-   * - Removed forced 10px that was pushing composer up unnecessarily.
-   */
-  const composerBottomPad = useMemo(() => {
-    // keep safe-area only
-    return Math.max(insets.bottom, 0);
-  }, [insets.bottom]);
-
-  /**
-   * ✅ AI Locked Modal (LITE gate)
-   */
   const AiLockedModal = (
     <Modal visible={aiGateOpen} transparent animationType="fade" onRequestClose={() => setAiGateOpen(false)}>
       <Pressable
@@ -1885,8 +2062,12 @@ export default function AiChatScreen() {
                 <Ionicons name="lock-closed-outline" size={20} color={UI.text} />
               </View>
               <View>
-                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>Upgrade Required</Text>
-                <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 2 }}>AI imezimwa (LITE)</Text>
+                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
+                  {ownerOnlyReason ? "Owner Only" : "Upgrade Required"}
+                </Text>
+                <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 2 }}>
+                  {ownerOnlyReason ? "AI access restricted" : `AI locked (${currentPlanLabel})`}
+                </Text>
               </View>
             </View>
 
@@ -1909,40 +2090,45 @@ export default function AiChatScreen() {
           </View>
 
           <View style={{ marginTop: 12 }}>
-            <Text style={{ color: UI.text, fontWeight: "900" }}>AI haipatikani kwenye kifurushi cha LITE.</Text>
+            <Text style={{ color: UI.text, fontWeight: "900" }}>
+              {ownerOnlyReason
+                ? "AI ya ZETRA ni ya OWNER pekee."
+                : `AI haipatikani kwenye kifurushi cha ${currentPlanLabel}.`}
+            </Text>
             <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 8, lineHeight: 20 }}>
-              {aiGateReason ||
-                "Kwenye LITE: Organization 1 • Store 1 • Staff 3 • Club posts 50 • AI Disabled.\n\nIli kutumia ZETRA AI, tafadhali upgrade plan."}
+              {aiGateReason || defaultAiLockReason}
             </Text>
           </View>
 
           <View style={{ flexDirection: "row", gap: 10, marginTop: 14 }}>
-            <Pressable
-              onPress={() => {
-                setAiGateOpen(false);
-                router.push("/settings/subscription");
-              }}
-              style={({ pressed }) => ({
-                flex: 1,
-                height: 46,
-                borderRadius: 999,
-                borderWidth: 1,
-                borderColor: "rgba(16,185,129,0.45)",
-                backgroundColor: pressed ? "rgba(16,185,129,0.20)" : "rgba(16,185,129,0.14)",
-                alignItems: "center",
-                justifyContent: "center",
-                flexDirection: "row",
-                gap: 10,
-              })}
-            >
-              <Ionicons name="sparkles" size={18} color={UI.text} />
-              <Text style={{ color: UI.text, fontWeight: "900" }}>Upgrade Plan</Text>
-            </Pressable>
+            {!ownerOnlyReason ? (
+              <Pressable
+                onPress={() => {
+                  setAiGateOpen(false);
+                  router.push("/settings/subscription");
+                }}
+                style={({ pressed }) => ({
+                  flex: 1,
+                  height: 46,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: "rgba(16,185,129,0.45)",
+                  backgroundColor: pressed ? "rgba(16,185,129,0.20)" : "rgba(16,185,129,0.14)",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexDirection: "row",
+                  gap: 10,
+                })}
+              >
+                <Ionicons name="sparkles" size={18} color={UI.text} />
+                <Text style={{ color: UI.text, fontWeight: "900" }}>Upgrade Plan</Text>
+              </Pressable>
+            ) : null}
 
             <Pressable
               onPress={() => setAiGateOpen(false)}
               style={({ pressed }) => ({
-                width: 110,
+                width: ownerOnlyReason ? "100%" : 110,
                 height: 46,
                 borderRadius: 999,
                 borderWidth: 1,
@@ -1960,9 +2146,6 @@ export default function AiChatScreen() {
     </Modal>
   );
 
-  /**
-   * ✅ + Menu (ChatGPT-like)
-   */
   const PlusMenu = (
     <Modal visible={plusOpen} transparent animationType="fade" onRequestClose={() => setPlusOpen(false)}>
       <Pressable
@@ -2002,7 +2185,6 @@ export default function AiChatScreen() {
             </Pressable>
           </View>
 
-          {/* Language */}
           <View style={{ marginTop: 12 }}>
             <Text style={{ color: UI.muted, fontWeight: "900", marginBottom: 8 }}>AI Language</Text>
             <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
@@ -2012,7 +2194,66 @@ export default function AiChatScreen() {
             </View>
           </View>
 
-          {/* Quick prompts */}
+          <View style={{ marginTop: 12 }}>
+            <Text style={{ color: UI.muted, fontWeight: "900", marginBottom: 8 }}>Current AI Plan</Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              <View
+                style={{
+                  paddingHorizontal: 12,
+                  height: 36,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: aiEnabled ? "rgba(16,185,129,0.35)" : "rgba(255,255,255,0.12)",
+                  backgroundColor: aiEnabled ? "rgba(16,185,129,0.10)" : "rgba(255,255,255,0.06)",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
+                  {currentPlanLabel}
+                </Text>
+              </View>
+
+              {planAllowsAi ? (
+                <View
+                  style={{
+                    paddingHorizontal: 12,
+                    height: 36,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    borderColor: isOwner ? "rgba(16,185,129,0.35)" : "rgba(245,158,11,0.35)",
+                    backgroundColor: isOwner ? "rgba(16,185,129,0.10)" : "rgba(245,158,11,0.10)",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
+                    {isOwner ? "OWNER ONLY" : "NO ACCESS"}
+                  </Text>
+                </View>
+              ) : null}
+
+              {aiEnabled ? (
+                <View
+                  style={{
+                    paddingHorizontal: 12,
+                    height: 36,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    borderColor: "rgba(16,185,129,0.35)",
+                    backgroundColor: "rgba(16,185,129,0.10)",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
+                    {fmtNum(aiCreditsRemaining)} left • used {fmtNum(aiCreditsUsed)}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+          </View>
+
           <View style={{ marginTop: 16, opacity: aiEnabled ? 1 : 0.55 }}>
             <Text style={{ color: UI.muted, fontWeight: "900", marginBottom: 8 }}>Quick prompts</Text>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
@@ -2042,11 +2283,12 @@ export default function AiChatScreen() {
             </View>
           </View>
 
-          {/* Tasks */}
           <View style={{ marginTop: 16, opacity: aiEnabled ? 1 : 0.55 }}>
             <Pressable
               onPress={() => {
-                if (!requireAi("AI imezimwa kwenye LITE. Upgrade ili kufungua Tasks panel.")) return;
+                if (!requireAi(ownerOnlyReason || `AI haipatikani kwenye ${currentPlanLabel}. Upgrade ili kufungua Tasks panel.`)) {
+                  return;
+                }
                 setPlusOpen(false);
                 Keyboard.dismiss();
                 setTasksOpen(true);
@@ -2075,7 +2317,7 @@ export default function AiChatScreen() {
             <Pressable
               onPress={() => {
                 setPlusOpen(false);
-                openAiGate("AI imezimwa kwenye LITE. Upgrade ili kuifungua.");
+                openAiGate(defaultAiLockReason);
               }}
               style={({ pressed }) => ({
                 marginTop: 14,
@@ -2091,7 +2333,9 @@ export default function AiChatScreen() {
               })}
             >
               <Ionicons name="lock-closed-outline" size={18} color={UI.text} />
-              <Text style={{ color: UI.text, fontWeight: "900" }}>AI Locked — Upgrade</Text>
+              <Text style={{ color: UI.text, fontWeight: "900" }}>
+                {ownerOnlyReason ? "AI Owner Only" : "AI Locked — Upgrade"}
+              </Text>
             </Pressable>
           ) : null}
         </Pressable>
@@ -2099,15 +2343,12 @@ export default function AiChatScreen() {
     </Modal>
   );
 
-  /**
-   * ✅ Composer
-   */
   const Composer = (
     <View
       style={{
         paddingHorizontal: 14,
-        paddingBottom: composerBottomPad,
         paddingTop: 10,
+        paddingBottom: Math.max(insets.bottom, 0) + androidComposerLift,
         backgroundColor: "transparent",
         opacity: aiEnabled ? 1 : 0.72,
       }}
@@ -2130,11 +2371,10 @@ export default function AiChatScreen() {
       >
         <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 10 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            {/* ✅ NEW: + menu (ChatGPT-like) */}
             <Pressable
               onPress={() => {
                 if (!aiEnabled) {
-                  openAiGate("AI imezimwa kwenye LITE. Upgrade ili kuendelea.");
+                  openAiGate(defaultAiLockReason);
                   return;
                 }
                 Keyboard.dismiss();
@@ -2205,7 +2445,15 @@ export default function AiChatScreen() {
               ref={inputRef}
               value={input}
               onChangeText={setInput}
-              placeholder={aiEnabled ? (transcribing ? "Transcribing..." : "Andika ujumbe...") : "AI imezimwa (LITE) — upgrade ili kutumia"}
+              placeholder={
+                aiEnabled
+                  ? transcribing
+                    ? "Transcribing..."
+                    : "Andika ujumbe..."
+                  : ownerOnlyReason
+                  ? "AI ni ya OWNER pekee"
+                  : `AI imezimwa (${currentPlanLabel}) — upgrade ili kutumia`
+              }
               placeholderTextColor={UI.faint}
               multiline
               maxLength={INPUT_MAX}
@@ -2228,6 +2476,11 @@ export default function AiChatScreen() {
               autoCapitalize="sentences"
               returnKeyType="send"
               blurOnSubmit={false}
+              onFocus={() => {
+                if (Platform.OS === "android") {
+                  scrollToLatest(false);
+                }
+              }}
               onSubmitEditing={() => {}}
             />
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 6 }}>
@@ -2264,7 +2517,6 @@ export default function AiChatScreen() {
           </Pressable>
         </View>
 
-        {/* ✅ Stop button near composer */}
         {thinking ? (
           <View style={{ marginTop: 10 }}>
             <Pressable
@@ -2288,7 +2540,7 @@ export default function AiChatScreen() {
         ) : !aiEnabled ? (
           <View style={{ marginTop: 10 }}>
             <Pressable
-              onPress={() => openAiGate("AI imezimwa kwenye LITE. Upgrade ili kuifungua.")}
+              onPress={() => openAiGate(defaultAiLockReason)}
               style={({ pressed }) => ({
                 height: 44,
                 borderRadius: 999,
@@ -2302,7 +2554,9 @@ export default function AiChatScreen() {
               })}
             >
               <Ionicons name="lock-closed-outline" size={18} color={UI.text} />
-              <Text style={{ color: UI.text, fontWeight: "900" }}>UPGRADE TO USE AI</Text>
+              <Text style={{ color: UI.text, fontWeight: "900" }}>
+                {ownerOnlyReason ? "OWNER ONLY AI" : "UPGRADE TO USE AI"}
+              </Text>
             </Pressable>
           </View>
         ) : null}
@@ -2310,9 +2564,6 @@ export default function AiChatScreen() {
     </View>
   );
 
-  /**
-   * ✅ Tasks Panel (modal) — A-1 Real list
-   */
   const TasksModal = (
     <Modal visible={tasksOpen} transparent animationType="fade" onRequestClose={() => setTasksOpen(false)}>
       <Pressable
@@ -2377,7 +2628,7 @@ export default function AiChatScreen() {
           </View>
 
           <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 6 }}>
-            Org: {org.activeOrgName ?? "—"} • Showing latest tasks saved by AI (PRO) & manual.
+            Org: {org.activeOrgName ?? "—"} • Showing latest tasks saved by AI & manual.
           </Text>
 
           {tasksLoading ? (
@@ -2501,7 +2752,6 @@ export default function AiChatScreen() {
     </Modal>
   );
 
-  // ✅ A-4 fullscreen image preview
   const ImagePreviewModal = (
     <Modal
       visible={imgPreview.open}
@@ -2537,45 +2787,47 @@ export default function AiChatScreen() {
     </Modal>
   );
 
+  const Content = (
+    <View style={{ flex: 1 }}>
+      {RetryBanner}
+
+      <FlatList
+        ref={listRef}
+        data={messages}
+        keyExtractor={(m) => m.id}
+        renderItem={renderMsg}
+        inverted
+        keyboardShouldPersistTaps="always"
+        showsVerticalScrollIndicator={false}
+        style={{ flex: 1 }}
+        contentContainerStyle={{
+          paddingTop: 10,
+          paddingBottom: 10 + (Platform.OS === "android" ? androidComposerLift : 0),
+        }}
+      />
+
+      {Composer}
+    </View>
+  );
+
   return (
     <Screen scroll={false} contentStyle={{ paddingTop: 0, paddingHorizontal: 0, paddingBottom: 0 }}>
       <View style={{ flex: 1, backgroundColor: C.background }}>
         {TopBar}
 
-        {/* ✅ KEYBOARD FIX ZONE: Chat area + Composer move together */}
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={0}
-        >
-          <View style={{ flex: 1 }}>
-            {RetryBanner}
-
-            <FlatList
-              ref={listRef}
-              data={messages}
-              keyExtractor={(m) => m.id}
-              renderItem={renderMsg}
-              inverted
-              keyboardShouldPersistTaps="always"
-              showsVerticalScrollIndicator={false}
-              style={{ flex: 1 }}
-              contentContainerStyle={{
-                paddingTop: 10,
-                paddingBottom: 10,
-              }}
-            />
-
-            {Composer}
-          </View>
-        </KeyboardAvoidingView>
+        {Platform.OS === "ios" ? (
+          <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding" keyboardVerticalOffset={0}>
+            {Content}
+          </KeyboardAvoidingView>
+        ) : (
+          <View style={{ flex: 1 }}>{Content}</View>
+        )}
 
         {TasksModal}
         {ImagePreviewModal}
         {PlusMenu}
         {AiLockedModal}
 
-        {/* ✅ Tool sheet kept for future expansion (not used yet) */}
         {toolOpen ? (
           <View style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }}>
             <Animated.View

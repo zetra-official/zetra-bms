@@ -1,5 +1,4 @@
-﻿// app/(tabs)/sales/checkout.tsx
-import { Ionicons } from "@expo/vector-icons";
+﻿import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, ScrollView, Text, TextInput, View } from "react-native";
@@ -42,14 +41,6 @@ function parseMoney(s: string) {
   return Number.isFinite(n) ? n : NaN;
 }
 
-/**
- * ✅ Robust Discount Parser
- * Supports:
- * - "10%"  => percent
- * - "5000" => fixed
- * - "5k"   => 5000
- * - "1m"   => 1,000,000
- */
 function parseDiscountInput(input: string, total: number): DiscountResult {
   const t = String(input ?? "").toLowerCase().trim();
   if (!t || total <= 0) return { type: null, value: 0, amount: 0 };
@@ -133,7 +124,6 @@ function MethodChip({
   );
 }
 
-// ✅ removes leading zeros e.g. "0200000" -> "200000"
 function normalizeMoneyInput(raw: string) {
   const digitsOnly = String(raw ?? "").replace(/[^\d]/g, "");
   if (!digitsOnly) return "";
@@ -141,7 +131,6 @@ function normalizeMoneyInput(raw: string) {
   return stripped;
 }
 
-// ✅ strict guard (future proof)
 function isStrictPayMethod(x: any): x is PayMethod {
   return x === "CASH" || x === "BANK" || x === "MOBILE" || x === "CREDIT";
 }
@@ -186,6 +175,7 @@ export default function CheckoutScreen() {
     storeId?: string | string[];
     storeName?: string | string[];
     cart?: string | string[];
+    cashierMode?: string | string[];
   }>();
 
   const netInfo = useNetInfo();
@@ -195,7 +185,6 @@ export default function CheckoutScreen() {
   const orgCtx: any = useOrg();
   const { activeOrgId, activeStoreId, activeStoreName, activeRole } = orgCtx;
 
-  // ✅ org-level currency prefs (display only)
   const orgId = String(activeOrgId ?? "").trim();
   const money = useOrgMoneyPrefs(orgId);
   const displayCurrency = money.currency || "TZS";
@@ -209,6 +198,7 @@ export default function CheckoutScreen() {
 
   const storeId = (one(params.storeId) ?? "").trim();
   const storeNameParam = (one(params.storeName) ?? "").trim();
+  const cashierMode = one(params.cashierMode) === "1";
 
   const cart: CartItem[] = useMemo(() => {
     try {
@@ -244,12 +234,11 @@ export default function CheckoutScreen() {
   }, [params.cart]);
 
   const canSell = useMemo(() => {
-    const r = (activeRole ?? "staff") as "owner" | "admin" | "staff";
+    const r = (activeRole ?? "staff") as "owner" | "admin" | "staff" | "cashier";
     return r === "owner" || r === "admin" || r === "staff";
   }, [activeRole]);
 
   const totalQty = useMemo(() => cart.reduce((a, c) => a + (c.qty || 0), 0), [cart]);
-
   const subtotalAmount = useMemo(() => cart.reduce((a, c) => a + Number(c.line_total || 0), 0), [cart]);
 
   const [discountText, setDiscountText] = useState<string>("");
@@ -262,12 +251,9 @@ export default function CheckoutScreen() {
 
   const headerStoreName = storeNameParam || activeStoreName || "—";
 
-  // ✅ ROOT FIX: if active store differs from param storeId, BLOCK sale.
   const mismatch = !!(activeStoreId && storeId && activeStoreId !== storeId);
 
   const [method, setMethod] = useState<PayMethod>("CASH");
-
-  // ✅ for CREDIT partial payments, select where paid goes
   const [paidVia, setPaidVia] = useState<Exclude<PayMethod, "CREDIT">>("CASH");
 
   const [paidStr, setPaidStr] = useState<string>(() => String(Math.round(grandTotal || subtotalAmount)));
@@ -319,16 +305,13 @@ export default function CheckoutScreen() {
     return Math.max(0, grandTotal - Math.max(0, p));
   }, [paidAmount, grandTotal]);
 
-  // ✅ credit mode if method is CREDIT OR paid < total
   const isCredit = useMemo(() => method === "CREDIT" || balance > 0, [method, balance]);
 
-  // ✅ show Paid Via only when CREDIT selected AND paid > 0
   const showPaidVia = useMemo(
     () => method === "CREDIT" && (Number.isFinite(paidAmount) ? paidAmount : 0) > 0,
     [method, paidAmount]
   );
 
-  // ✅ actual method sent to DB:
   const rpcPaymentMethod: PayMethod = useMemo(() => {
     if (method !== "CREDIT") return method;
     const p = Number.isFinite(paidAmount) ? paidAmount : 0;
@@ -348,6 +331,8 @@ export default function CheckoutScreen() {
   }, [rpcPaymentMethod, reference]);
 
   useEffect(() => {
+    if (cashierMode) return;
+
     const gt = Math.round(grandTotal);
     const current = parseMoney(paidStr);
 
@@ -363,7 +348,7 @@ export default function CheckoutScreen() {
 
     if (current < 0) setPaidStr("0");
     if (current > gt) setPaidStr(String(gt));
-  }, [grandTotal, paidStr, isCredit]);
+  }, [cashierMode, grandTotal, paidStr, isCredit]);
 
   const invalidReason = useMemo(() => {
     if (!canSell) return "No permission to sell.";
@@ -372,21 +357,23 @@ export default function CheckoutScreen() {
     if (cart.length === 0) return "Cart is empty.";
     if (cart.some((c) => !Number.isFinite(c.unit_price) || c.unit_price <= 0)) return "Some items are missing price.";
 
+    if (cashierMode) {
+      if (isOffline) return "Cashier handoff requires online connection.";
+      return null;
+    }
+
     if (!Number.isFinite(paidAmount)) return "Enter a valid paid amount.";
     if (paidAmount < 0) return "Paid amount cannot be negative.";
     if (paidAmount > grandTotal) return "Paid amount cannot exceed total.";
 
-    // ✅ if NOT credit: must fully pay
     if (!isCredit && Math.round(paidAmount) !== Math.round(grandTotal)) {
       return "Non-credit sale must be fully paid.";
     }
 
-    // ✅ if CREDIT selected AND paid>0, user must choose Paid Via
     if (showPaidVia) {
       if (!paidVia) return "Chagua Paid Via (Cash/Mobile/Bank).";
     }
 
-    // ✅ online mode validation for MOBILE/BANK of the paid portion
     if (!isOffline && (rpcPaymentMethod === "MOBILE" || rpcPaymentMethod === "BANK")) {
       if (!rpcChannel.trim()) {
         return rpcPaymentMethod === "MOBILE"
@@ -408,19 +395,19 @@ export default function CheckoutScreen() {
     storeId,
     mismatch,
     cart,
+    cashierMode,
+    isOffline,
     paidAmount,
     grandTotal,
     isCredit,
     showPaidVia,
     paidVia,
-    isOffline,
     rpcPaymentMethod,
     rpcChannel,
     rpcReference,
     customerName,
   ]);
 
-  // ✅ Preflight stock check
   const preflightCheckStock = useCallback(async () => {
     const productIds = Array.from(new Set(cart.map((c) => c.product_id).filter(Boolean)));
     if (!storeId || productIds.length === 0) return;
@@ -453,7 +440,6 @@ export default function CheckoutScreen() {
     }
   }, [cart, storeId]);
 
-  // CREDIT V2 helpers
   const ensureCreditAccountV2 = useCallback(
     async (args: { storeId: string; customerName: string; customerPhone: string | null }) => {
       const payload = {
@@ -502,7 +488,51 @@ export default function CheckoutScreen() {
       return;
     }
 
-    // ✅ OFFLINE BRANCH
+    if (cashierMode) {
+      setSaving(true);
+      try {
+        const finalNote = buildNoteWithDiscount({
+          note: `${note || ""}`,
+          discountText,
+          discountAmount: discount.amount,
+          subtotal: subtotalAmount,
+        });
+
+        const items = cart.map((c) => ({
+          product_id: c.product_id,
+          qty: Math.trunc(Number(c.qty)),
+          unit_price: Number(c.unit_price),
+          name: c.name ?? "Product",
+          sku: c.sku ?? null,
+          unit: c.unit ?? null,
+          line_total: Number(c.line_total ?? 0),
+        }));
+
+        const { data, error } = await supabase.rpc("create_cashier_handoff_v2", {
+          p_store_id: storeId,
+          p_items: items,
+          p_subtotal: subtotalAmount,
+          p_discount_amount: discount.amount,
+          p_total: grandTotal,
+          p_note: finalNote,
+        });
+
+        if (error) throw error;
+
+        Alert.alert(
+          "Sent to Cashiers ✅",
+          `Order imetumwa kwa cashier queue ya store hii.\n\nHandoff ID: ${String(data ?? "").slice(0, 8)}...`
+        );
+
+        router.replace("/(tabs)/sales" as any);
+      } catch (e: any) {
+        Alert.alert("Failed", e?.message ?? "Failed to send order to cashier queue");
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
+
     if (isOffline) {
       try {
         const clientSaleId = makeId();
@@ -511,14 +541,12 @@ export default function CheckoutScreen() {
           product_id: c.product_id,
           qty: Math.trunc(Number(c.qty)),
           unit_price: Number(c.unit_price),
-
           name: c.name ?? "Product",
           sku: c.sku ?? null,
           unit: c.unit ?? null,
         }));
 
         const p_paid_amount = Number.isFinite(paidAmount) ? Number(paidAmount) : 0;
-
         const p_payment_method = rpcPaymentMethod;
 
         const p_payment_channel =
@@ -550,16 +578,13 @@ export default function CheckoutScreen() {
           payload: {
             items,
             note: finalNote,
-
             payment_method: p_payment_method,
             paid_amount: p_paid_amount,
             payment_channel: p_payment_channel,
             reference: p_reference,
-
             discount_type: rpcDiscountType as any,
             discount_value: rpcDiscountValue,
             discount_note: discountText.trim() || null,
-
             is_credit: isCredit,
             customer_name: isCredit ? customerName.trim() : null,
             customer_phone: isCredit ? (customerPhone.trim() || null) : null,
@@ -575,7 +600,6 @@ export default function CheckoutScreen() {
       return;
     }
 
-    // ✅ ONLINE BRANCH
     setSaving(true);
     try {
       await preflightCheckStock();
@@ -615,21 +639,17 @@ export default function CheckoutScreen() {
         p_store_id: storeId,
         p_items: items,
         p_note: finalNote,
-
         p_payment_method: rpcPaymentMethod,
         p_paid_amount: p_paid_amount,
         p_payment_channel:
           rpcPaymentMethod === "MOBILE" || rpcPaymentMethod === "BANK" ? (rpcChannel.trim() || null) : null,
         p_reference: rpcPaymentMethod === "MOBILE" || rpcPaymentMethod === "BANK" ? (rpcReference.trim() || null) : null,
-
         p_customer_id: null,
         p_customer_phone: null,
         p_customer_full_name: null,
-
         p_discount_type: rpcDiscountType,
         p_discount_value: rpcDiscountValue,
         p_discount_note: discountText.trim() || null,
-
         p_client_sale_id: clientSaleId,
       } as any);
 
@@ -672,25 +692,28 @@ export default function CheckoutScreen() {
   }, [
     saving,
     invalidReason,
-    isOffline,
-    storeId,
-    cart,
+    cashierMode,
     note,
+    discountText,
+    discount.amount,
+    subtotalAmount,
+    cart,
+    storeId,
+    grandTotal,
+    router,
+    isOffline,
     paidAmount,
     rpcPaymentMethod,
     rpcChannel,
     rpcReference,
     isCredit,
+    customerName,
+    customerPhone,
     balance,
-    router,
+    preflightCheckStock,
     ensureCreditAccountV2,
     recordCreditSaleV2,
     discount,
-    discountText,
-    subtotalAmount,
-    customerName,
-    customerPhone,
-    preflightCheckStock,
   ]);
 
   const cartTotalLabel = useMemo(() => {
@@ -705,14 +728,14 @@ export default function CheckoutScreen() {
   const prettyBal = useMemo(() => fmt(balance), [fmt, balance]);
 
   const showChannelRef = useMemo(() => {
+    if (cashierMode) return false;
     if (isOffline) return false;
     return rpcPaymentMethod === "MOBILE" || rpcPaymentMethod === "BANK";
-  }, [isOffline, rpcPaymentMethod]);
+  }, [cashierMode, isOffline, rpcPaymentMethod]);
 
   return (
     <Screen scroll bottomPad={240}>
       <View style={{ flex: 1, gap: 14 }}>
-        {/* Header */}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
           <Pressable
             onPress={() => router.back()}
@@ -731,7 +754,9 @@ export default function CheckoutScreen() {
           </Pressable>
 
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 26, fontWeight: "900", color: theme.colors.text }}>Checkout</Text>
+            <Text style={{ fontSize: 26, fontWeight: "900", color: theme.colors.text }}>
+              {cashierMode ? "Cashier Handoff" : "Checkout"}
+            </Text>
             <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
               Store: {headerStoreName}
               {isOffline ? "  •  OFFLINE" : "  •  ONLINE"}
@@ -748,7 +773,23 @@ export default function CheckoutScreen() {
           </Card>
         )}
 
-        {/* Cart Summary */}
+        {cashierMode ? (
+          <Card style={{ gap: 8 }}>
+            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+              Cashier Flow
+            </Text>
+            <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+              Hapa order itatumwa kwenye cashier queue ya store hii. Cashier yeyote aliye-assigniwa store hii anaweza kuipokea na kukamilisha malipo.
+            </Text>
+            <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+              • Hii mode inahitaji ONLINE
+            </Text>
+            <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+              • Store lazima iwe na cashier angalau mmoja aliye-assigniwa
+            </Text>
+          </Card>
+        ) : null}
+
         <Card style={{ gap: 10 }}>
           <View style={{ flexDirection: "row", alignItems: "center" }}>
             <View style={{ flex: 1 }}>
@@ -803,7 +844,6 @@ export default function CheckoutScreen() {
 
           <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
 
-          {/* Totals */}
           <View style={{ flexDirection: "row", gap: 10 }}>
             <View style={{ flex: 1 }}>
               <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Subtotal</Text>
@@ -820,13 +860,17 @@ export default function CheckoutScreen() {
           </View>
         </Card>
 
-        {/* Discount + Note */}
         <Card style={{ gap: 10 }}>
           <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>Discount & Note</Text>
 
           <View>
             <FieldLabel>Discount (e.g. 10% • 5000 • 5k • 1m)</FieldLabel>
-            <InputBox value={discountText} onChangeText={setDiscountText} placeholder="mf: 10% au 5000 au 5k" keyboardType="default" />
+            <InputBox
+              value={discountText}
+              onChangeText={setDiscountText}
+              placeholder="mf: 10% au 5000 au 5k"
+              keyboardType="default"
+            />
             <Text style={{ color: theme.colors.faint, fontWeight: "800", marginTop: 8 }}>
               Tip: Ukiweka discount, total itashuka moja kwa moja.
             </Text>
@@ -836,147 +880,162 @@ export default function CheckoutScreen() {
 
           <View>
             <FieldLabel>Note (optional)</FieldLabel>
-            <InputBox value={note} onChangeText={setNote} placeholder="andika maelezo ya mauzo..." keyboardType="default" multiline />
+            <InputBox
+              value={note}
+              onChangeText={setNote}
+              placeholder={cashierMode ? "andika maelezo ya order kwa cashiers..." : "andika maelezo ya mauzo..."}
+              keyboardType="default"
+              multiline
+            />
           </View>
         </Card>
 
-        {/* Payment */}
-        <Card style={{ gap: 12 }}>
-          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>Payment</Text>
+        {!cashierMode ? (
+          <>
+            <Card style={{ gap: 12 }}>
+              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>Payment</Text>
 
-          <View style={{ flexDirection: "row", gap: 10 }}>
-            <MethodChip label="Cash" active={method === "CASH"} onPress={() => onSetMethod("CASH")} />
-            <MethodChip label="Mobile" active={method === "MOBILE"} onPress={() => onSetMethod("MOBILE")} />
-            <MethodChip label="Bank" active={method === "BANK"} onPress={() => onSetMethod("BANK")} />
-            <MethodChip label="Credit" active={method === "CREDIT"} onPress={() => onSetMethod("CREDIT")} />
-          </View>
-
-          <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
-
-          <View style={{ flexDirection: "row", gap: 10 }}>
-            <View style={{ flex: 1 }}>
-              <FieldLabel>Paid ({displayCurrency})</FieldLabel>
-              <InputBox value={paidStr} onChangeText={onPaidChange} placeholder="mf: 120000" keyboardType="numeric" />
-              <Text style={{ color: theme.colors.faint, fontWeight: "800", marginTop: 8 }}>
-                {method === "CREDIT" ? "Unaweza kuweka 0 hadi total (partial payment)." : "Kwa non-credit, lazima ulipe full total."}
-              </Text>
-            </View>
-            <View style={{ width: 10 }} />
-          </View>
-
-          <View style={{ flexDirection: "row", gap: 10 }}>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Total</Text>
-              <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>{prettyTotal}</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Paid</Text>
-              <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>{prettyPaid}</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Balance</Text>
-              <Text style={{ color: isCredit ? theme.colors.emerald : theme.colors.text, fontWeight: "900", marginTop: 4 }}>
-                {prettyBal}
-              </Text>
-            </View>
-          </View>
-
-          {/* CREDIT: Paid Via */}
-          {method === "CREDIT" && (
-            <>
-              <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
-
-              <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>
-                CREDIT MODE: ukiweka Paid &gt; 0, chagua Paid Via (mali uliyopokea leo).
-              </Text>
-
-              <View style={{ flexDirection: "row", gap: 10, opacity: showPaidVia ? 1 : 0.55 }}>
-                <MethodChip
-                  label="Cash"
-                  active={paidVia === "CASH"}
-                  onPress={() => {
-                    if (!showPaidVia) return;
-                    setPaidVia("CASH");
-                  }}
-                />
-                <MethodChip
-                  label="Mobile"
-                  active={paidVia === "MOBILE"}
-                  onPress={() => {
-                    if (!showPaidVia) return;
-                    setPaidVia("MOBILE");
-                    if (!channel) setChannel("M-PESA");
-                  }}
-                />
-                <MethodChip
-                  label="Bank"
-                  active={paidVia === "BANK"}
-                  onPress={() => {
-                    if (!showPaidVia) return;
-                    setPaidVia("BANK");
-                  }}
-                />
+              <View style={{ flexDirection: "row", gap: 10 }}>
+                <MethodChip label="Cash" active={method === "CASH"} onPress={() => onSetMethod("CASH")} />
+                <MethodChip label="Mobile" active={method === "MOBILE"} onPress={() => onSetMethod("MOBILE")} />
+                <MethodChip label="Bank" active={method === "BANK"} onPress={() => onSetMethod("BANK")} />
+                <MethodChip label="Credit" active={method === "CREDIT"} onPress={() => onSetMethod("CREDIT")} />
               </View>
-            </>
-          )}
 
-          {/* Channel + Reference (ONLINE only) */}
-          {showChannelRef && (
-            <>
               <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
-              <View style={{ gap: 10 }}>
+
+              <View style={{ flexDirection: "row", gap: 10 }}>
+                <View style={{ flex: 1 }}>
+                  <FieldLabel>Paid ({displayCurrency})</FieldLabel>
+                  <InputBox value={paidStr} onChangeText={onPaidChange} placeholder="mf: 120000" keyboardType="numeric" />
+                  <Text style={{ color: theme.colors.faint, fontWeight: "800", marginTop: 8 }}>
+                    {method === "CREDIT" ? "Unaweza kuweka 0 hadi total (partial payment)." : "Kwa non-credit, lazima ulipe full total."}
+                  </Text>
+                </View>
+                <View style={{ width: 10 }} />
+              </View>
+
+              <View style={{ flexDirection: "row", gap: 10 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Total</Text>
+                  <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>{prettyTotal}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Paid</Text>
+                  <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>{prettyPaid}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Balance</Text>
+                  <Text style={{ color: isCredit ? theme.colors.emerald : theme.colors.text, fontWeight: "900", marginTop: 4 }}>
+                    {prettyBal}
+                  </Text>
+                </View>
+              </View>
+
+              {method === "CREDIT" && (
+                <>
+                  <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
+
+                  <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>
+                    CREDIT MODE: ukiweka Paid &gt; 0, chagua Paid Via (mali uliyopokea leo).
+                  </Text>
+
+                  <View style={{ flexDirection: "row", gap: 10, opacity: showPaidVia ? 1 : 0.55 }}>
+                    <MethodChip
+                      label="Cash"
+                      active={paidVia === "CASH"}
+                      onPress={() => {
+                        if (!showPaidVia) return;
+                        setPaidVia("CASH");
+                      }}
+                    />
+                    <MethodChip
+                      label="Mobile"
+                      active={paidVia === "MOBILE"}
+                      onPress={() => {
+                        if (!showPaidVia) return;
+                        setPaidVia("MOBILE");
+                        if (!channel) setChannel("M-PESA");
+                      }}
+                    />
+                    <MethodChip
+                      label="Bank"
+                      active={paidVia === "BANK"}
+                      onPress={() => {
+                        if (!showPaidVia) return;
+                        setPaidVia("BANK");
+                      }}
+                    />
+                  </View>
+                </>
+              )}
+
+              {showChannelRef && (
+                <>
+                  <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
+                  <View style={{ gap: 10 }}>
+                    <View>
+                      <FieldLabel>
+                        {rpcPaymentMethod === "MOBILE" ? "Mobile Channel (e.g. M-PESA / TIGO-PESA)" : "Bank Channel (e.g. NMB / CRDB)"}
+                      </FieldLabel>
+                      <InputBox
+                        value={channel}
+                        onChangeText={setChannel}
+                        placeholder={rpcPaymentMethod === "MOBILE" ? "M-PESA" : "NMB"}
+                        keyboardType="default"
+                      />
+                    </View>
+
+                    <View>
+                      <FieldLabel>Reference / Transaction ID</FieldLabel>
+                      <InputBox value={reference} onChangeText={setReference} placeholder="mf: TXN12345" keyboardType="default" />
+                    </View>
+                  </View>
+                </>
+              )}
+
+              {isOffline && (
+                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                  OFFLINE: mobile/bank reference haitahitajika sasa; sale itasave offline na itasync.
+                </Text>
+              )}
+            </Card>
+
+            {isCredit && (
+              <Card style={{ gap: 10 }}>
+                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>Customer (for Credit/Partial)</Text>
+
                 <View>
-                  <FieldLabel>
-                    {rpcPaymentMethod === "MOBILE" ? "Mobile Channel (e.g. M-PESA / TIGO-PESA)" : "Bank Channel (e.g. NMB / CRDB)"}
-                  </FieldLabel>
-                  <InputBox
-                    value={channel}
-                    onChangeText={setChannel}
-                    placeholder={rpcPaymentMethod === "MOBILE" ? "M-PESA" : "NMB"}
-                    keyboardType="default"
-                  />
+                  <FieldLabel>Customer Name *</FieldLabel>
+                  <InputBox value={customerName} onChangeText={setCustomerName} placeholder="mf: Juma Ali" keyboardType="default" />
                 </View>
 
                 <View>
-                  <FieldLabel>Reference / Transaction ID</FieldLabel>
-                  <InputBox value={reference} onChangeText={setReference} placeholder="mf: TXN12345" keyboardType="default" />
+                  <FieldLabel>Customer Phone (optional)</FieldLabel>
+                  <InputBox value={customerPhone} onChangeText={setCustomerPhone} placeholder="mf: 0712xxxxxx" keyboardType="phone-pad" />
                 </View>
-              </View>
-            </>
-          )}
 
-          {isOffline && (
-            <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-              OFFLINE: mobile/bank reference haitahitajika sasa; sale itasave offline na itasync.
-            </Text>
-          )}
-        </Card>
+                <Text style={{ color: theme.colors.faint, fontWeight: "800" }}>
+                  Tip: Credit itarekodiwa v2 na balance itaingia kwenye Credit account.
+                </Text>
+              </Card>
+            )}
+          </>
+        ) : null}
 
-        {/* Credit Customer Info */}
-        {isCredit && (
-          <Card style={{ gap: 10 }}>
-            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>Customer (for Credit/Partial)</Text>
-
-            <View>
-              <FieldLabel>Customer Name *</FieldLabel>
-              <InputBox value={customerName} onChangeText={setCustomerName} placeholder="mf: Juma Ali" keyboardType="default" />
-            </View>
-
-            <View>
-              <FieldLabel>Customer Phone (optional)</FieldLabel>
-              <InputBox value={customerPhone} onChangeText={setCustomerPhone} placeholder="mf: 0712xxxxxx" keyboardType="phone-pad" />
-            </View>
-
-            <Text style={{ color: theme.colors.faint, fontWeight: "800" }}>
-              Tip: Credit itarekodiwa v2 na balance itaingia kwenye Credit account.
-            </Text>
-          </Card>
-        )}
-
-        {/* Actions */}
         <Card style={{ gap: 10 }}>
           <Button
-            title={saving ? "Creating..." : isOffline ? "Save Offline" : "Confirm Sale"}
+            title={
+              saving
+                ? cashierMode
+                  ? "Sending..."
+                  : "Creating..."
+                : cashierMode
+                ? "Send to Cashiers"
+                : isOffline
+                ? "Save Offline"
+                : "Confirm Sale"
+            }
             onPress={confirm}
             disabled={saving || !!invalidReason}
             variant="primary"

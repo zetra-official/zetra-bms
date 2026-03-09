@@ -1,7 +1,8 @@
-﻿// app/(tabs)/staff/add.tsx
-import { useLocalSearchParams, useRouter } from "expo-router";
+﻿import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
-import { Alert, Text, View } from "react-native";
+import { Alert, ScrollView, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
 import { useOrg } from "../../../src/context/OrgContext";
 import { supabase } from "../../../src/supabase/supabaseClient";
 import { Button } from "../../../src/ui/Button";
@@ -10,7 +11,7 @@ import { Input } from "../../../src/ui/Input";
 import { Screen } from "../../../src/ui/Screen";
 import { UI } from "../../../src/ui/theme";
 
-type Role = "admin" | "staff";
+type Role = "admin" | "staff" | "cashier";
 
 function isValidEmail(v: string) {
   const s = v.trim().toLowerCase();
@@ -20,9 +21,11 @@ function isValidEmail(v: string) {
 function clean(s: any) {
   return String(s ?? "").trim();
 }
+
 function upper(s: any) {
   return clean(s).toUpperCase();
 }
+
 function num(v: any): number | null {
   const n = Number(v);
   if (!Number.isFinite(n)) return null;
@@ -43,25 +46,39 @@ type PlanRow = {
   [k: string]: any;
 };
 
-/**
- * ✅ Plan Guard message mapper
- * DB should raise something like:
- * - "UPGRADE_PLAN: Staff limit reached. Plan LITE allows 3 staff(s) per organization."
- * - "UPGRADE_PLAN: Staff is not allowed on FREE plan"
- */
+type StaffWithStoresRow = {
+  membership_id?: string;
+  user_id?: string;
+  email?: string | null;
+  role?: string | null;
+  store_ids?: string[] | null;
+  store_names?: string[] | null;
+  [k: string]: any;
+};
+
 function mapAddStaffErrorMessage(e: any): { title: string; body: string } {
   const msg = clean(e?.message ?? e?.error_description ?? e?.details ?? e);
   const m = msg.toLowerCase();
 
   if (m.includes("upgrade_plan") && m.includes("staff limit")) {
-    const plan = msg.match(/Plan\s+([A-Z0-9_]+)/i)?.[1] || "CURRENT";
-    const lim = msg.match(/allows\s+(\d+)/i)?.[1] || "—";
+    const plan =
+      msg.match(/\bPlan:\s*([A-Z0-9_]+)/i)?.[1] ||
+      msg.match(/\bPlan\s+([A-Z0-9_]+)\s+allows\b/i)?.[1] ||
+      msg.match(/\bplan_code[:=]\s*([A-Z0-9_]+)/i)?.[1] ||
+      "CURRENT";
+
+    const lim =
+      msg.match(/allows\s+(\d+)\s+staff/i)?.[1] ||
+      msg.match(/\((\d+)\s+allowed\)/i)?.[1] ||
+      msg.match(/limit\s*[:=]?\s*(\d+)/i)?.[1] ||
+      "—";
+
     return {
       title: "Limit Reached",
       body:
-        `Umefika limit ya staff.\n\n` +
-        `Plan: ${plan}\nStaff/Org allowed: ${lim}\n\n` +
-        `Ili kuongeza staff zaidi, tafadhali upgrade plan.`,
+        `Umefika limit ya users/staff.\n\n` +
+        `Plan: ${plan}\nUsers/Staff per Org allowed: ${lim}\n\n` +
+        `Ili kuongeza zaidi, tafadhali upgrade plan.`,
     };
   }
 
@@ -69,13 +86,12 @@ function mapAddStaffErrorMessage(e: any): { title: string; body: string } {
     return {
       title: "Upgrade Required",
       body:
-        "Plan yako haijaruhusu kuongeza mfanyakazi (staff).\n\n" +
+        "Plan yako haijaruhusu kuongeza mfanyakazi.\n\n" +
         "✅ FREE plan = Organization 1 + Store 1 + User 1 (Owner tu).\n\n" +
-        "Ili kuongeza mfanyakazi, tafadhali upgrade kwenda LITE / STARTER / PRO.",
+        "Ili kuongeza mfanyakazi/cashier, tafadhali upgrade kwenda LITE / STARTER / PRO.",
     };
   }
 
-  // common: user not found (email not registered)
   if (m.includes("not found") && (m.includes("register") || m.includes("sign up"))) {
     return {
       title: "User Not Found",
@@ -85,25 +101,32 @@ function mapAddStaffErrorMessage(e: any): { title: string; body: string } {
     };
   }
 
+  if (m.includes("already belongs to this organization")) {
+    return {
+      title: "Already Added",
+      body: "User huyu tayari yupo kwenye organization hii.",
+    };
+  }
+
   return {
-    title: "Add staff failed",
+    title: "Add member failed",
     body: msg || "Unknown error",
   };
 }
 
 export default function AddStaffScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ orgId?: string }>();
 
   const { activeOrgId, activeOrgName, activeRole, refresh } = useOrg();
-  const orgId = (params.orgId?.toString() || activeOrgId || "").trim();
+  const orgId = clean(params.orgId?.toString() || activeOrgId || "");
 
   const canManage = activeRole === "owner" || activeRole === "admin";
 
   const allowedRoles: Role[] = useMemo(() => {
-    // owner can add admin or staff; admin can only add staff
-    if (activeRole === "owner") return ["admin", "staff"];
-    return ["staff"];
+    if (activeRole === "owner") return ["admin", "staff", "cashier"];
+    return ["staff", "cashier"];
   }, [activeRole]);
 
   const [email, setEmail] = useState("");
@@ -131,7 +154,6 @@ export default function AddStaffScreen() {
   };
 
   const guardPlanStaffLimit = async (): Promise<void> => {
-    // 1) subscription
     const { data: subData, error: subErr } = await supabase.rpc("get_my_subscription", {
       p_org_id: orgId,
     });
@@ -140,7 +162,6 @@ export default function AddStaffScreen() {
     const subRow = (Array.isArray(subData) ? subData?.[0] : subData) as MySubRow | null;
     const planCode = upper(subRow?.plan_code || "FREE");
 
-    // 2) plan limits
     const { data: plansData, error: plansErr } = await supabase.rpc("get_public_plans");
     if (plansErr) return;
 
@@ -153,17 +174,24 @@ export default function AddStaffScreen() {
       num((plan as any)?.maxStaff) ??
       null;
 
-    // If plan doesn't define limit, do not block.
     if (staffLimit === null) return;
 
-    // 3) count staff (membership rows) via RPC
     const { data: staffData, error: staffErr } = await supabase.rpc("get_org_staff_with_stores", {
       p_org_id: orgId,
     });
     if (staffErr) return;
 
-    const rows = Array.isArray(staffData) ? (staffData as any[]) : [];
-    const currentCount = rows.length;
+    const rows = Array.isArray(staffData) ? (staffData as StaffWithStoresRow[]) : [];
+
+    const uniqueKeys = new Set<string>();
+    for (const row of rows) {
+      const membershipId = clean((row as any)?.membership_id);
+      const userId = clean((row as any)?.user_id);
+      const key = membershipId || userId;
+      if (key) uniqueKeys.add(key);
+    }
+
+    const currentCount = uniqueKeys.size;
 
     if (currentCount >= staffLimit) {
       throw new Error(
@@ -177,21 +205,30 @@ export default function AddStaffScreen() {
 
     setSaving(true);
     try {
-      // ✅ Client-side guard (DB should ALSO enforce)
       await guardPlanStaffLimit();
 
-      const payload = {
-        p_org_id: orgId,
-        p_email: email.trim().toLowerCase(),
-        p_role: role,
-      };
+      const safeEmail = email.trim().toLowerCase();
 
-      const { error } = await supabase.rpc("add_staff_to_org_by_email", payload);
-      if (error) throw error;
+      if (role === "cashier") {
+        const { error } = await supabase.rpc("add_cashier_to_org_by_email_v1", {
+          p_org_id: orgId,
+          p_email: safeEmail,
+        });
+        if (error) throw error;
+      } else {
+        const payload = {
+          p_org_id: orgId,
+          p_email: safeEmail,
+          p_role: role,
+        };
+
+        const { error } = await supabase.rpc("add_staff_to_org_by_email", payload);
+        if (error) throw error;
+      }
 
       Alert.alert(
         "Success ✅",
-        `Mfanyakazi ameongezwa.\nEmail: ${payload.p_email}\nRole: ${role.toUpperCase()}`
+        `Member ameongezwa.\nEmail: ${safeEmail}\nRole: ${role.toUpperCase()}`
       );
 
       await refresh();
@@ -205,80 +242,134 @@ export default function AddStaffScreen() {
   };
 
   return (
-    <Screen>
-      {/* TITLE */}
-      <Text style={{ fontSize: 22, fontWeight: "900", color: UI.text }}>
-        Ongeza Mfanyakazi
-      </Text>
-
-      <Text style={{ color: UI.muted, fontWeight: "700" }}>
-        Org:{" "}
-        <Text style={{ color: UI.text, fontWeight: "900" }}>
-          {activeOrgName ?? "—"}
+    <Screen scroll={false} contentStyle={{ paddingBottom: 0 }}>
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingTop: Math.max(insets.top, 12) + 8,
+          paddingBottom: Math.max(insets.bottom, 16) + 96,
+          gap: 14,
+        }}
+      >
+        <Text style={{ fontSize: 22, fontWeight: "900", color: UI.text }}>
+          Ongeza Mfanyakazi
         </Text>
-      </Text>
-
-      {!canManage && (
-        <Card
-          style={{
-            borderColor: UI.dangerBorder,
-            backgroundColor: UI.dangerSoft,
-          }}
-        >
-          <Text style={{ color: UI.danger, fontWeight: "900" }}>
-            No Access (Owner/Admin only)
-          </Text>
-        </Card>
-      )}
-
-      <Card style={{ gap: 12 }}>
-        <Text style={{ color: UI.muted, fontWeight: "800" }}>Email ya Mfanyakazi</Text>
-
-        <Input
-          value={email}
-          onChangeText={setEmail}
-          placeholder="mfano: staff@jofuquality.com"
-          autoCapitalize="none"
-          autoCorrect={false}
-          keyboardType="email-address"
-        />
 
         <Text style={{ color: UI.muted, fontWeight: "700" }}>
-          * Muhimu: Mfanyakazi lazima awe amesha-Register (Sign Up) kwanza.
+          Org:{" "}
+          <Text style={{ color: UI.text, fontWeight: "900" }}>
+            {activeOrgName ?? "—"}
+          </Text>
         </Text>
 
-        <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 4 }}>Role</Text>
+        {!canManage && (
+          <Card
+            style={{
+              borderColor: UI.dangerBorder,
+              backgroundColor: UI.dangerSoft,
+            }}
+          >
+            <Text style={{ color: UI.danger, fontWeight: "900" }}>
+              No Access (Owner/Admin only)
+            </Text>
+          </Card>
+        )}
 
-        <View style={{ flexDirection: "row", gap: 10 }}>
-          {allowedRoles.map((r) => {
-            const active = role === r;
-            return (
+        <Card style={{ gap: 14 }}>
+          <Text style={{ color: UI.muted, fontWeight: "800" }}>Email ya Mfanyakazi</Text>
+
+          <Input
+            value={email}
+            onChangeText={setEmail}
+            placeholder="mfano: staff@jofuquality.com"
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="email-address"
+          />
+
+          <Text style={{ color: UI.muted, fontWeight: "700" }}>
+            * Muhimu: Mfanyakazi/Cashier lazima awe amesha-Register (Sign Up) kwanza.
+          </Text>
+
+          <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 2 }}>Role</Text>
+
+          <View style={{ gap: 10 }}>
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              {allowedRoles.includes("admin") ? (
+                <Button
+                  title="ADMIN"
+                  variant={role === "admin" ? "primary" : "secondary"}
+                  onPress={() => setRole("admin")}
+                  disabled={!canManage || saving}
+                  style={{ flex: 1, minHeight: 56 }}
+                />
+              ) : null}
+
+              {allowedRoles.includes("staff") ? (
+                <Button
+                  title="STAFF"
+                  variant={role === "staff" ? "primary" : "secondary"}
+                  onPress={() => setRole("staff")}
+                  disabled={!canManage || saving}
+                  style={{ flex: 1, minHeight: 56 }}
+                />
+              ) : null}
+            </View>
+
+            {allowedRoles.includes("cashier") ? (
               <Button
-                key={r}
-                title={r.toUpperCase()}
-                variant={active ? "primary" : "secondary"}
-                onPress={() => setRole(r)}
+                title="CASHIER"
+                variant={role === "cashier" ? "primary" : "secondary"}
+                onPress={() => setRole("cashier")}
                 disabled={!canManage || saving}
-                style={{ flex: 1 }}
+                style={{ width: "100%", minHeight: 56 }}
               />
-            );
-          })}
+            ) : null}
+          </View>
+
+          {role === "cashier" ? (
+            <Card
+              style={{
+                gap: 8,
+                backgroundColor: UI.emeraldSoft,
+                borderColor: UI.emeraldBorder,
+              }}
+            >
+              <Text style={{ color: UI.text, fontWeight: "900" }}>
+                CASHIER RULES
+              </Text>
+              <Text style={{ color: UI.muted, fontWeight: "800" }}>
+                • Cashier ata-assigniwa store moja tu.
+              </Text>
+              <Text style={{ color: UI.muted, fontWeight: "800" }}>
+                • Store moja itakuwa na cashier mmoja tu.
+              </Text>
+              <Text style={{ color: UI.muted, fontWeight: "800" }}>
+                • Kazi kuu ya cashier ni kupokea malipo na kukamilisha mauzo.
+              </Text>
+            </Card>
+          ) : null}
+        </Card>
+
+        <View style={{ gap: 12 }}>
+          <Button
+            title={saving ? "Saving..." : "Save Staff"}
+            variant="primary"
+            onPress={onSave}
+            disabled={!canManage || saving}
+            style={{ minHeight: 56 }}
+          />
+
+          <Button
+            title="Cancel"
+            variant="secondary"
+            onPress={() => router.back()}
+            disabled={saving}
+            style={{ minHeight: 56 }}
+          />
         </View>
-      </Card>
-
-      <Button
-        title={saving ? "Saving..." : "Save Staff"}
-        variant="primary"
-        onPress={onSave}
-        disabled={!canManage || saving}
-      />
-
-      <Button
-        title="Cancel"
-        variant="secondary"
-        onPress={() => router.back()}
-        disabled={saving}
-      />
+      </ScrollView>
     </Screen>
   );
 }

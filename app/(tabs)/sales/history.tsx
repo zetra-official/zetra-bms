@@ -1,7 +1,15 @@
 ﻿import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Alert, FlatList, Pressable, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Pressable,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 
 import { useNetInfo } from "@react-native-community/netinfo";
 
@@ -22,23 +30,38 @@ type SaleRow = {
   status?: string | null;
   total_qty?: number | null;
   total_amount?: number | null;
+  payment_method?: string | null;
+  payment_channel?: string | null;
+  paid_amount?: number | null;
+  balance_amount?: number | null;
 };
 
-// Raw row from RPC may vary (id vs sale_id, qty vs total_qty, etc.)
+type PaymentSummary = {
+  cash_total: number;
+  mobile_total: number;
+  bank_total: number;
+  credit_collected_total: number;
+  grand_paid_total: number;
+  total_sales: number;
+  total_balance: number;
+};
+
 type AnyRow = Record<string, any>;
 
-type RangeKey = "today" | "week" | "month";
+type RangeKey = "today" | "week" | "month" | "custom";
 
 function startOfDayLocal(d: Date) {
   const x = new Date(d);
   x.setHours(0, 0, 0, 0);
   return x;
 }
+
 function endOfDayLocal(d: Date) {
   const x = new Date(d);
   x.setHours(23, 59, 59, 999);
   return x;
 }
+
 function startOfWeekMondayLocal(d: Date) {
   const x = startOfDayLocal(d);
   const day = x.getDay();
@@ -46,15 +69,18 @@ function startOfWeekMondayLocal(d: Date) {
   x.setDate(x.getDate() + diff);
   return x;
 }
+
 function startOfMonthLocal(d: Date) {
   const x = startOfDayLocal(d);
   x.setDate(1);
   return x;
 }
+
 function labelForRange(r: RangeKey) {
   if (r === "today") return "Today";
   if (r === "week") return "This Week";
-  return "This Month";
+  if (r === "month") return "This Month";
+  return "Custom Range";
 }
 
 function toNum(v: any): number {
@@ -62,14 +88,6 @@ function toNum(v: any): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-/**
- * ✅ Normalizer:
- * get_sales inaweza kurudisha tofauti za naming:
- *  - sale_id vs id
- *  - sold_at vs created_at
- *  - total_qty vs qty vs sum_qty
- *  - total_amount vs amount vs sum_amount
- */
 function normalizeSaleRow(r: AnyRow): SaleRow {
   const saleId =
     (r.sale_id ?? r.id ?? r.saleId ?? r.saleID ?? r.sale) != null
@@ -103,6 +121,14 @@ function normalizeSaleRow(r: AnyRow): SaleRow {
     status,
     total_qty: qty == null ? null : toNum(qty),
     total_amount: amount == null ? null : toNum(amount),
+    payment_method:
+      r.payment_method != null ? String(r.payment_method) : null,
+    payment_channel:
+      r.payment_channel != null ? String(r.payment_channel) : null,
+    paid_amount:
+      r.paid_amount == null ? null : toNum(r.paid_amount),
+    balance_amount:
+      r.balance_amount == null ? null : toNum(r.balance_amount),
   };
 }
 
@@ -129,7 +155,6 @@ function sumPendingFromPayload(payload: any): { qty: number; amount: number } {
     if (Number.isFinite(q) && q > 0 && Number.isFinite(p) && p > 0) amount += q * p;
   }
 
-  // apply discount if present (payload already has discount info)
   const dType = String(payload?.discount_type ?? "").toUpperCase();
   const dVal = Number(payload?.discount_value ?? 0);
 
@@ -146,12 +171,99 @@ function sumPendingFromPayload(payload: any): { qty: number; amount: number } {
   return { qty, amount: Math.round(amount) };
 }
 
+function toDateInputValue(d: Date) {
+  const year = d.getFullYear();
+  const month = `${d.getMonth() + 1}`.padStart(2, "0");
+  const day = `${d.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function parseDateInputStart(input: string) {
+  const s = String(input ?? "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+
+  const [y, m, d] = s.split("-").map(Number);
+  if (!y || !m || !d) return null;
+
+  const out = new Date(y, m - 1, d, 0, 0, 0, 0);
+  return Number.isFinite(out.getTime()) ? out : null;
+}
+
+function parseDateInputEnd(input: string) {
+  const s = String(input ?? "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+
+  const [y, m, d] = s.split("-").map(Number);
+  if (!y || !m || !d) return null;
+
+  const out = new Date(y, m - 1, d, 23, 59, 59, 999);
+  return Number.isFinite(out.getTime()) ? out : null;
+}
+
+function InputLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <Text style={{ color: theme.colors.muted, fontWeight: "900", marginBottom: 6 }}>
+      {children}
+    </Text>
+  );
+}
+
+function InputBox(props: {
+  value: string;
+  onChangeText: (v: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <TextInput
+      value={props.value}
+      onChangeText={props.onChangeText}
+      placeholder={props.placeholder}
+      placeholderTextColor="rgba(255,255,255,0.35)"
+      autoCapitalize="none"
+      autoCorrect={false}
+      style={{
+        color: theme.colors.text,
+        fontWeight: "800",
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+        backgroundColor: "rgba(255,255,255,0.06)",
+        borderRadius: 16,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+      }}
+    />
+  );
+}
+
+function PaymentChip({
+  title,
+  amount,
+  subtitle,
+}: {
+  title: string;
+  amount: string;
+  subtitle?: string;
+}) {
+  return (
+    <Card style={{ flex: 1, gap: 6 }}>
+      <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{title}</Text>
+      <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
+        {amount}
+      </Text>
+      {!!subtitle && (
+        <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 12 }}>
+          {subtitle}
+        </Text>
+      )}
+    </Card>
+  );
+}
+
 export default function SalesHistoryScreen() {
   const router = useRouter();
   const { activeOrgId, activeOrgName, activeStoreId, activeStoreName, activeRole } = useOrg() as any;
 
   const money = useOrgMoneyPrefs(activeOrgId);
-  // ✅ FIX: hook returns money.fmt (NOT money.formatMoney)
   const fmtMoney = useCallback((n: number) => money.fmt(Number(n || 0)), [money]);
 
   const netInfo = useNetInfo();
@@ -160,31 +272,48 @@ export default function SalesHistoryScreen() {
 
   const [range, setRange] = useState<RangeKey>("month");
 
+  const now = useMemo(() => new Date(), []);
+  const [customFrom, setCustomFrom] = useState<string>(() =>
+    toDateInputValue(startOfMonthLocal(now))
+  );
+  const [customTo, setCustomTo] = useState<string>(() =>
+    toDateInputValue(endOfDayLocal(now))
+  );
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [rows, setRows] = useState<SaleRow[]>([]);
 
-  // ✅ Pending offline sales
+  const [paymentSummary, setPaymentSummary] = useState<PaymentSummary>({
+    cash_total: 0,
+    mobile_total: 0,
+    bank_total: 0,
+    credit_collected_total: 0,
+    grand_paid_total: 0,
+    total_sales: 0,
+    total_balance: 0,
+  });
+
   const [pendingRows, setPendingRows] = useState<SaleRow[]>([]);
   const [pendingCountState, setPendingCountState] = useState<number>(0);
   const [syncing, setSyncing] = useState(false);
 
   const canView = useMemo(() => {
-    const r = (activeRole ?? "staff") as "owner" | "admin" | "staff";
-    return r === "owner" || r === "admin" || r === "staff";
+    const r = String(activeRole ?? "").toLowerCase();
+    return r === "owner" || r === "admin" || r === "staff" || r === "cashier";
   }, [activeRole]);
 
   const ranges = useMemo(() => {
-    const now = new Date();
-    const tFrom = startOfDayLocal(now).toISOString();
-    const tTo = endOfDayLocal(now).toISOString();
+    const n = new Date();
+    const tFrom = startOfDayLocal(n).toISOString();
+    const tTo = endOfDayLocal(n).toISOString();
 
-    const wFrom = startOfWeekMondayLocal(now).toISOString();
-    const wTo = endOfDayLocal(now).toISOString();
+    const wFrom = startOfWeekMondayLocal(n).toISOString();
+    const wTo = endOfDayLocal(n).toISOString();
 
-    const mFrom = startOfMonthLocal(now).toISOString();
-    const mTo = endOfDayLocal(now).toISOString();
+    const mFrom = startOfMonthLocal(n).toISOString();
+    const mTo = endOfDayLocal(n).toISOString();
 
     return {
       today: { from: tFrom, to: tTo },
@@ -192,6 +321,21 @@ export default function SalesHistoryScreen() {
       month: { from: mFrom, to: mTo },
     };
   }, []);
+
+  const resolvedRange = useMemo(() => {
+    if (range !== "custom") return ranges[range];
+
+    const fromDate = parseDateInputStart(customFrom);
+    const toDate = parseDateInputEnd(customTo);
+
+    if (!fromDate || !toDate) return null;
+    if (fromDate.getTime() > toDate.getTime()) return null;
+
+    return {
+      from: fromDate.toISOString(),
+      to: toDate.toISOString(),
+    };
+  }, [customFrom, customTo, range, ranges]);
 
   const loadPending = useCallback(async () => {
     try {
@@ -216,15 +360,14 @@ export default function SalesHistoryScreen() {
         const sums = sumPendingFromPayload(payload);
 
         return {
-          sale_id: `PENDING:${cid}`, // unique key for list
-          sold_at: created, // show queued time
+          sale_id: `PENDING:${cid}`,
+          sold_at: created,
           status: "PENDING_OFFLINE",
           total_qty: sums.qty,
           total_amount: sums.amount,
         };
       });
 
-      // newest first
       normalized.sort((a, b) => {
         const ta = a.sold_at ? Date.parse(a.sold_at) : 0;
         const tb = b.sold_at ? Date.parse(b.sold_at) : 0;
@@ -238,7 +381,6 @@ export default function SalesHistoryScreen() {
     }
   }, [activeStoreId]);
 
-  // ✅ Summary: hesabu only COMPLETED (kuepuka drafts/void)
   const summary = useMemo(() => {
     const completed = rows.filter((r) => String(r.status ?? "").toUpperCase() === "COMPLETED");
     const count = completed.length;
@@ -257,7 +399,6 @@ export default function SalesHistoryScreen() {
         if (!activeStoreId) throw new Error("No active store selected.");
         if (!canView) throw new Error("No permission.");
 
-        // always load pending (works offline)
         await loadPending();
 
         const access = await supabase.rpc("ensure_my_store_access", {
@@ -265,26 +406,59 @@ export default function SalesHistoryScreen() {
         });
         if (access.error) throw access.error;
 
-        const { from, to } = ranges[range];
+        if (!resolvedRange) {
+          throw new Error("Invalid custom date range.");
+        }
 
-        const res = await supabase.rpc("get_sales", { p_store_id: activeStoreId, p_from: from, p_to: to } as any);
-        if (res.error) throw res.error;
+        const [salesRes, payRes] = await Promise.all([
+          supabase.rpc("get_sales_v2", {
+            p_store_id: activeStoreId,
+            p_from: resolvedRange.from,
+            p_to: resolvedRange.to,
+          } as any),
+          supabase.rpc("get_sales_payment_summary_v1", {
+            p_store_id: activeStoreId,
+            p_from: resolvedRange.from,
+            p_to: resolvedRange.to,
+          } as any),
+        ]);
 
-        const raw = (res.data ?? []) as AnyRow[];
+        if (salesRes.error) throw salesRes.error;
+        if (payRes.error) throw payRes.error;
+
+        const raw = (salesRes.data ?? []) as AnyRow[];
         const list = raw.map(normalizeSaleRow);
 
-        // sort desc by sold_at
         list.sort((a, b) => {
           const ta = a.sold_at ? Date.parse(a.sold_at) : 0;
           const tb = b.sold_at ? Date.parse(b.sold_at) : 0;
           return tb - ta;
         });
 
+        const payRow = Array.isArray(payRes.data) ? (payRes.data[0] ?? null) : payRes.data;
+
         setRows(list);
+        setPaymentSummary({
+          cash_total: toNum(payRow?.cash_total ?? 0),
+          mobile_total: toNum(payRow?.mobile_total ?? 0),
+          bank_total: toNum(payRow?.bank_total ?? 0),
+          credit_collected_total: toNum(payRow?.credit_collected_total ?? 0),
+          grand_paid_total: toNum(payRow?.grand_paid_total ?? 0),
+          total_sales: toNum(payRow?.total_sales ?? 0),
+          total_balance: toNum(payRow?.total_balance ?? 0),
+        });
       } catch (e: any) {
         setErr(e?.message ?? "Failed to load sales");
         setRows([]);
-        // still try pending even if online fetch fails
+        setPaymentSummary({
+          cash_total: 0,
+          mobile_total: 0,
+          bank_total: 0,
+          credit_collected_total: 0,
+          grand_paid_total: 0,
+          total_sales: 0,
+          total_balance: 0,
+        });
         try {
           await loadPending();
         } catch {}
@@ -293,15 +467,13 @@ export default function SalesHistoryScreen() {
         if (mode === "refresh") setRefreshing(false);
       }
     },
-    [activeStoreId, canView, range, ranges, loadPending]
+    [activeStoreId, canView, loadPending, resolvedRange]
   );
 
-  // boot
   useEffect(() => {
     void load("boot");
   }, [load]);
 
-  // ✅ IMPORTANT: auto refresh whenever this screen gets focus
   useFocusEffect(
     useCallback(() => {
       void load("refresh");
@@ -309,7 +481,6 @@ export default function SalesHistoryScreen() {
     }, [load])
   );
 
-  // ✅ when network comes back, attempt sync and refresh pending count
   useEffect(() => {
     if (!activeStoreId) return;
     if (!isOnline) return;
@@ -318,7 +489,6 @@ export default function SalesHistoryScreen() {
       try {
         await syncSalesQueueOnce(activeStoreId);
       } catch {
-        // ignore
       } finally {
         await loadPending();
       }
@@ -346,14 +516,18 @@ export default function SalesHistoryScreen() {
     }
   }, [activeStoreId, isOnline, load, loadPending, syncing]);
 
+  const applyCustomRange = useCallback(() => {
+    setRange("custom");
+    void load("refresh");
+  }, [load]);
+
   const openReceipt = useCallback(
     (row: SaleRow) => {
       const status = String(row.status ?? "").toUpperCase();
 
-      // ✅ Offline receipt route
       if (status === "PENDING_OFFLINE") {
         const sid = String(activeStoreId ?? "").trim();
-        const saleKey = String(row.sale_id ?? "").trim(); // "PENDING:<clientSaleId>"
+        const saleKey = String(row.sale_id ?? "").trim();
         const cid = saleKey.startsWith("PENDING:") ? saleKey.replace("PENDING:", "").trim() : "";
 
         if (!sid || !cid) {
@@ -456,10 +630,20 @@ export default function SalesHistoryScreen() {
     );
   }, [activeStoreId, isOffline, isOnline, pendingCountState, pendingRows, syncNow, syncing, fmtMoney]);
 
+  const customRangeError = useMemo(() => {
+    if (range !== "custom") return null;
+
+    const fromDate = parseDateInputStart(customFrom);
+    const toDate = parseDateInputEnd(customTo);
+
+    if (!fromDate || !toDate) return "Tumia format ya tarehe: YYYY-MM-DD";
+    if (fromDate.getTime() > toDate.getTime()) return "From Date haiwezi kuwa kubwa kuliko To Date";
+    return null;
+  }, [customFrom, customTo, range]);
+
   const ListHeader = useMemo(() => {
     return (
       <View style={{ gap: 14, paddingBottom: 10 }}>
-        {/* Header */}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
           <Pressable
             onPress={() => router.back()}
@@ -478,7 +662,9 @@ export default function SalesHistoryScreen() {
           </Pressable>
 
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 26, fontWeight: "900", color: theme.colors.text }}>History</Text>
+            <Text style={{ fontSize: 26, fontWeight: "900", color: theme.colors.text }}>
+              History
+            </Text>
             <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
               {activeOrgName ?? "—"} • {activeStoreName ?? "No store"} • {activeRole ?? "—"}
             </Text>
@@ -490,29 +676,63 @@ export default function SalesHistoryScreen() {
           </View>
         </View>
 
-        {/* Pending Queue Summary */}
         {PendingHeader}
 
-        {/* Filters */}
         <Card style={{ gap: 10 }}>
           <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Range</Text>
+
           <View style={{ flexDirection: "row", gap: 10 }}>
             <SegButton k="today" label="Today" />
             <SegButton k="week" label="Week" />
             <SegButton k="month" label="Month" />
+            <SegButton k="custom" label="Custom" />
           </View>
+
+          {range === "custom" && (
+            <View style={{ gap: 10 }}>
+              <View>
+                <InputLabel>From Date</InputLabel>
+                <InputBox
+                  value={customFrom}
+                  onChangeText={setCustomFrom}
+                  placeholder="YYYY-MM-DD"
+                />
+              </View>
+
+              <View>
+                <InputLabel>To Date</InputLabel>
+                <InputBox
+                  value={customTo}
+                  onChangeText={setCustomTo}
+                  placeholder="YYYY-MM-DD"
+                />
+              </View>
+
+              {!!customRangeError && (
+                <Text style={{ color: theme.colors.danger, fontWeight: "800" }}>
+                  {customRangeError}
+                </Text>
+              )}
+
+              <Button
+                title="Apply Custom Range"
+                onPress={applyCustomRange}
+                disabled={!!customRangeError}
+                variant="secondary"
+              />
+            </View>
+          )}
 
           <Button
             title={refreshing ? "Refreshing..." : "Refresh"}
             onPress={() => load("refresh")}
-            disabled={refreshing}
+            disabled={refreshing || (range === "custom" && !!customRangeError)}
             variant="primary"
           />
 
-          {!!err && <Text style={{ color: theme.colors.dangerText, fontWeight: "800" }}>{err}</Text>}
+          {!!err && <Text style={{ color: theme.colors.danger, fontWeight: "800" }}>{err}</Text>}
         </Card>
 
-        {/* Summary */}
         <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>
           Summary ({labelForRange(range)})
         </Text>
@@ -520,30 +740,65 @@ export default function SalesHistoryScreen() {
         <View style={{ flexDirection: "row", gap: 10 }}>
           <Card style={{ flex: 1, gap: 6 }}>
             <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Sales Count</Text>
-            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>{summary.count}</Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
+              {summary.count}
+            </Text>
           </Card>
 
           <Card style={{ flex: 1, gap: 6 }}>
             <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Total Qty</Text>
-            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>{summary.totalQty}</Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
+              {summary.totalQty}
+            </Text>
           </Card>
         </View>
 
         <Card style={{ gap: 6 }}>
-          <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>TOTAL MONEY IN</Text>
+          <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>TOTAL SALES</Text>
           <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 22 }}>
-            {fmtMoney(summary.totalAmount)}
+            {fmtMoney(paymentSummary.total_sales)}
           </Text>
         </Card>
+
+        <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>
+          Payment Breakdown
+        </Text>
+
+        <View style={{ flexDirection: "row", gap: 10 }}>
+          <PaymentChip title="Cash" amount={fmtMoney(paymentSummary.cash_total)} />
+          <PaymentChip title="Mobile" amount={fmtMoney(paymentSummary.mobile_total)} />
+        </View>
+
+        <View style={{ flexDirection: "row", gap: 10 }}>
+          <PaymentChip title="Bank" amount={fmtMoney(paymentSummary.bank_total)} />
+          <PaymentChip
+            title="Credit Collected"
+            amount={fmtMoney(paymentSummary.credit_collected_total)}
+          />
+        </View>
+
+        <View style={{ flexDirection: "row", gap: 10 }}>
+          <PaymentChip
+            title="Grand Paid In"
+            amount={fmtMoney(paymentSummary.grand_paid_total)}
+            subtitle="Pesa iliyoingia kweli"
+          />
+          <PaymentChip
+            title="Outstanding"
+            amount={fmtMoney(paymentSummary.total_balance)}
+            subtitle="Mikopo / balance"
+          />
+        </View>
 
         {loading && (
           <View style={{ paddingTop: 10, alignItems: "center" }}>
             <ActivityIndicator />
-            <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Loading sales...</Text>
+            <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+              Loading sales...
+            </Text>
           </View>
         )}
 
-        {/* Pending List Title */}
         {pendingRows.length > 0 && (
           <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>
             Pending (Offline Queue)
@@ -553,27 +808,35 @@ export default function SalesHistoryScreen() {
     );
   }, [
     PendingHeader,
+    SegButton,
     activeOrgName,
     activeRole,
     activeStoreName,
+    applyCustomRange,
+    customFrom,
+    customRangeError,
+    customTo,
     err,
+    fmtMoney,
     isOffline,
     load,
     loading,
+    paymentSummary.bank_total,
+    paymentSummary.cash_total,
+    paymentSummary.credit_collected_total,
+    paymentSummary.grand_paid_total,
+    paymentSummary.total_balance,
+    paymentSummary.total_sales,
     pendingCountState,
     pendingRows.length,
     range,
     refreshing,
     router,
-    SegButton,
     summary.count,
-    summary.totalAmount,
     summary.totalQty,
-    fmtMoney,
   ]);
 
   const combined = useMemo(() => {
-    // Show pending first, then remote rows
     return [...pendingRows, ...rows];
   }, [pendingRows, rows]);
 
@@ -587,7 +850,7 @@ export default function SalesHistoryScreen() {
         onRefresh={() => load("refresh")}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={ListHeader}
-        contentContainerStyle={{ paddingBottom: 0 }}
+        contentContainerStyle={{ paddingBottom: 20 }}
         renderItem={({ item }) => {
           const saleId = (item.sale_id ?? "").trim();
           const when = safeWhenLabel(item.sold_at);
@@ -596,6 +859,10 @@ export default function SalesHistoryScreen() {
           const status = String(item.status ?? "OK").toUpperCase();
 
           const isPending = status === "PENDING_OFFLINE";
+          const method = String(item.payment_method ?? "").toUpperCase().trim();
+          const channel = String(item.payment_channel ?? "").trim();
+          const paidAmount = toNum(item.paid_amount ?? 0);
+          const balanceAmount = toNum(item.balance_amount ?? 0);
 
           const chipBorder = isPending ? "rgba(245,158,11,0.35)" : theme.colors.emeraldBorder;
           const chipBg = isPending ? "rgba(245,158,11,0.12)" : theme.colors.emeraldSoft;
@@ -608,7 +875,14 @@ export default function SalesHistoryScreen() {
           return (
             <Pressable onPress={() => openReceipt(item)}>
               <Card style={{ marginBottom: 12, gap: 10 }}>
-                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 10,
+                  }}
+                >
                   <Text
                     style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16, flex: 1 }}
                     numberOfLines={1}
@@ -642,7 +916,30 @@ export default function SalesHistoryScreen() {
                   Amount: <Text style={{ color: theme.colors.text }}>{fmtMoney(amount)}</Text>
                 </Text>
 
-                <Text style={{ color: theme.colors.muted, fontWeight: "800", textDecorationLine: "underline" }}>
+                {!isPending && (
+                  <>
+                    <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                      Method: <Text style={{ color: theme.colors.text }}>{method || "—"}</Text>
+                      {channel ? (
+                        <Text style={{ color: theme.colors.text }}> • {channel}</Text>
+                      ) : null}
+                    </Text>
+
+                    <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                      Paid In: <Text style={{ color: theme.colors.text }}>{fmtMoney(paidAmount)}</Text>
+                      {"   "}•{"   "}
+                      Balance: <Text style={{ color: theme.colors.text }}>{fmtMoney(balanceAmount)}</Text>
+                    </Text>
+                  </>
+                )}
+
+                <Text
+                  style={{
+                    color: theme.colors.muted,
+                    fontWeight: "800",
+                    textDecorationLine: "underline",
+                  }}
+                >
                   {isPending ? "Open Offline Receipt" : "Open Receipt"}
                 </Text>
               </Card>
