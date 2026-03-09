@@ -43,7 +43,6 @@ function Row({ icon, title, subtitle, onPress, disabled }: RowProps) {
         },
       ]}
     >
-      {/* Icon tile (premium) */}
       <View
         style={{
           width: 44,
@@ -59,7 +58,6 @@ function Row({ icon, title, subtitle, onPress, disabled }: RowProps) {
         <Ionicons name={icon} size={22} color={UI.emerald} />
       </View>
 
-      {/* Text */}
       <View style={{ flex: 1 }}>
         <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
           {title}
@@ -79,7 +77,6 @@ function Row({ icon, title, subtitle, onPress, disabled }: RowProps) {
         ) : null}
       </View>
 
-      {/* Chevron */}
       <Ionicons
         name="chevron-forward"
         size={18}
@@ -118,7 +115,8 @@ export default function MoreHome() {
   }, [org.activeOrgName, org.activeRole, org.activeStoreName]);
 
   const canManageStaff = org.activeRole === "owner" || org.activeRole === "admin";
-  const canManageBilling = org.activeRole === "owner"; // ✅ Billing is OWNER-only (safe)
+  const canManageBilling = org.activeRole === "owner";
+  const isCashier = org.activeRole === "cashier";
 
   return (
     <Screen scroll>
@@ -146,6 +144,20 @@ export default function MoreHome() {
           disabled={!canManageStaff}
           onPress={() => router.push("/(tabs)/staff")}
         />
+
+        <Divider />
+
+        <Row
+          icon="cash-outline"
+          title="Cashier Closing"
+          subtitle={
+            isCashier
+              ? "Close your shift and review cashier totals"
+              : "Cashier only"
+          }
+          disabled={!isCashier}
+          onPress={() => router.push("/(tabs)/settings/cashier-closing")}
+        />
       </Card>
 
       {/* ORGANIZATION */}
@@ -160,7 +172,6 @@ export default function MoreHome() {
 
         <Divider />
 
-        {/* ✅ NEW: Subscription & Billing */}
         <Row
           icon="card-outline"
           title="Subscription & Billing"
@@ -185,7 +196,7 @@ export default function MoreHome() {
         />
       </Card>
 
-      {/* AI + SECURITY (grouped) */}
+      {/* AI + SECURITY */}
       <SectionTitle label="Preferences" />
       <Card>
         <Row

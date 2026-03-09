@@ -15,6 +15,9 @@ export default function SalesStackLayout() {
       <Stack.Screen name="checkout" />
       <Stack.Screen name="history" />
 
+      {/* Cashier flow */}
+      <Stack.Screen name="cashier/index" />
+
       {/* Top icons screens */}
       <Stack.Screen name="profit" />
       <Stack.Screen name="expenses" />

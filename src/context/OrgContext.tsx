@@ -20,7 +20,7 @@ import { supabase } from "../supabase/supabaseClient";
  * - No fallback tables
  */
 
-export type OrgRole = "owner" | "admin" | "staff";
+export type OrgRole = "owner" | "admin" | "staff" | "cashier";
 
 export type MyOrgRow = {
   organization_id: string;

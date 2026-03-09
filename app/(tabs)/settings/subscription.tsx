@@ -36,32 +36,34 @@ type PlanRow = {
   id?: string;
   code?: string;
   name?: string;
+  description?: string;
 
-  // prices (any of these could exist depending on schema)
+  // prices
+  monthly_price_tzs?: number;
   price_tzs?: number;
   price_monthly?: number;
   price?: number;
   amount?: number;
 
-  // legacy fields (some DBs used max_*)
+  // limits
   max_organizations?: number;
   max_orgs?: number;
 
   max_stores?: number;
   maxStores?: number;
+  stores_per_org?: number;
 
   max_staff?: number;
   maxStaff?: number;
-
-  // ✅ NEW canonical limits (your plans table columns)
-  stores_per_org?: number;
   staff_per_org?: number;
+
   business_club_posts_per_store_month?: number;
   ai_enabled?: boolean;
-
-  // optional extras
   ai_credits_monthly?: number;
   advanced_reports_enabled?: boolean;
+
+  is_public?: boolean;
+  is_active?: boolean;
 
   [k: string]: any;
 };
@@ -80,10 +82,7 @@ type MySubRow = {
   status?: string;
   expires_at?: string;
   started_at?: string;
-
-  // OPTIONAL if your RPC returns it (good to have)
   duration_months?: number;
-
   [k: string]: any;
 };
 
@@ -122,28 +121,28 @@ function fmtISODate(v: any) {
 }
 
 /**
- * ✅ Canonical fallback prices (TZS / month)
- * If DB returns price_tzs, we use it.
- * If DB doesn't, we fallback to this map by plan code.
+ * Canonical fallback prices (TZS / month)
+ * Used only if DB does not return monthly price.
  */
 const FALLBACK_PRICE_TZS: Record<string, number> = {
   FREE: 0,
   LITE: 10000,
-  STARTER: 15000,
+  STARTER: 20000,
   PRO: 45000,
   BUSINESS: 100000,
   EXECUTIVE: 150000,
-  // ELITE is "Contact Sales"
+  // ELITE => Contact Sales
 };
 
 function getPlanCode(p: any) {
-  // IMPORTANT: always normalize to UPPER for stable matching
   return upper(p?.code) || upper(p?.id) || upper(p?.name) || "";
 }
 
 function getPlanPriceMonthlyTZS(p: any): number | null {
   const code = getPlanCode(p);
+
   const db =
+    num(p?.monthly_price_tzs) ??
     num(p?.price_tzs) ??
     num(p?.price_monthly) ??
     num(p?.price) ??
@@ -152,7 +151,10 @@ function getPlanPriceMonthlyTZS(p: any): number | null {
 
   if (db !== null) return db;
 
-  if (code && FALLBACK_PRICE_TZS[code] !== undefined) return FALLBACK_PRICE_TZS[code];
+  if (code && FALLBACK_PRICE_TZS[code] !== undefined) {
+    return FALLBACK_PRICE_TZS[code];
+  }
+
   return null;
 }
 
@@ -171,21 +173,10 @@ function computeTotalTZS(monthly: number, months: number, discountPercent: numbe
   return total;
 }
 
-/**
- * ✅ Temporary manual Mobile Money receiver (Vodacom ONLY)
- * NOTE: Later we replace with Selcom/webhook.
- */
 const PAY_TO_NAME = "JOFREY JOHN SANGA";
 const PAY_TO_NETWORK = "VODACOM (M-PESA)";
 const PAY_TO_PHONE = "0758014675";
 
-/**
- * ✅ Normalize transaction reference:
- * - trim
- * - uppercase
- * - remove extra spaces
- * - keep readable: allow letters/numbers/-/_
- */
 function normalizeTxRef(input: any) {
   const t = upper(input);
   const collapsed = t.replace(/\s+/g, " ").trim();
@@ -193,22 +184,27 @@ function normalizeTxRef(input: any) {
   return safe;
 }
 
-/**
- * ✅ Plan-driven limit mapping (NEW plans table columns + legacy fallback)
- */
 function getPlanLimits(p: any) {
   const plan = p ?? {};
+
   const maxOrgs = plan.max_organizations ?? plan.max_orgs ?? null;
 
-  // ✅ NEW canonical
-  const storesPerOrg = plan.stores_per_org ?? plan.max_stores ?? plan.maxStores ?? null;
-  const staffPerOrg = plan.staff_per_org ?? plan.max_staff ?? plan.maxStaff ?? null;
+  const storesPerOrg =
+    plan.stores_per_org ??
+    plan.max_stores ??
+    plan.maxStores ??
+    null;
 
-  // ✅ NEW canonical (Club)
+  const staffPerOrg =
+    plan.staff_per_org ??
+    plan.max_staff ??
+    plan.maxStaff ??
+    null;
+
   const postsPerStoreMonth = plan.business_club_posts_per_store_month ?? null;
 
-  // ✅ NEW canonical (AI)
-  const aiEnabled = typeof plan.ai_enabled === "boolean" ? plan.ai_enabled : !!plan.ai_enabled;
+  const aiEnabled =
+    typeof plan.ai_enabled === "boolean" ? plan.ai_enabled : !!plan.ai_enabled;
 
   const credits = plan.ai_credits_monthly ?? null;
   const adv = !!plan.advanced_reports_enabled;
@@ -230,7 +226,7 @@ export default function SubscriptionScreen() {
   const insets = useSafeAreaInsets();
 
   const orgId = clean(org.activeOrgId);
-  const canManage = org.activeRole === "owner"; // ✅ billing owner-only
+  const canManage = org.activeRole === "owner";
 
   const headerSubtitle = useMemo(() => {
     const name = org.activeOrgName ?? "No organization";
@@ -250,27 +246,24 @@ export default function SubscriptionScreen() {
     { months: 12, label: "12 months", discount_percent: 20 },
   ]);
 
-  // selection (store UPPER plan code for stability)
   const [selectedPlanCode, setSelectedPlanCode] = useState<string>("");
   const selectedPlanCodeRef = useRef<string>("");
+
   React.useEffect(() => {
     selectedPlanCodeRef.current = upper(selectedPlanCode);
   }, [selectedPlanCode]);
 
   const [selectedMonths, setSelectedMonths] = useState<number>(1);
 
-  // payment flow
   const [payOpen, setPayOpen] = useState(false);
   const [paymentId, setPaymentId] = useState<string>("");
   const [payAmount, setPayAmount] = useState<string>("");
   const [payNote, setPayNote] = useState<string>("");
   const [txRef, setTxRef] = useState<string>("");
 
-  // ✅ keyboard-aware modal
   const [kbVisible, setKbVisible] = useState(false);
   const scrollRef = useRef<ScrollView | null>(null);
 
-  // ✅ prevent overwriting user selection when user is browsing plans
   const userTouchedPlanRef = useRef(false);
 
   React.useEffect(() => {
@@ -294,19 +287,18 @@ export default function SubscriptionScreen() {
 
     setLoading(true);
     try {
-      // 1) current subscription
       const { data: subData, error: subErr } = await supabase.rpc("get_my_subscription", {
         p_org_id: orgId,
       });
 
       let currentCode = "";
+
       if (!subErr) {
         const row = Array.isArray(subData) ? (subData?.[0] as any) : (subData as any);
         const normalized = (row ?? null) as any;
         setMySub(normalized);
 
         currentCode = upper(normalized?.plan_code);
-        // ✅ AUTO-HIGHLIGHT current plan (unless user already browsing)
         if (currentCode && !userTouchedPlanRef.current) {
           setSelectedPlanCode(currentCode);
         }
@@ -314,24 +306,19 @@ export default function SubscriptionScreen() {
         setMySub(null);
       }
 
-      // 2) plans list
       const { data: planData, error: planErr } = await supabase.rpc("get_public_plans");
       if (planErr) throw planErr;
 
       const planRows = (planData ?? []) as PlanRow[];
-
-      // ✅ Keep stable: remove ELITE from DB list (contact sales card is manual)
       const filtered = planRows.filter((p) => getPlanCode(p) !== "ELITE");
       setPlans(filtered);
 
-      // ✅ If still no selection, choose: current plan else first returned
       const sel = selectedPlanCodeRef.current;
       if (!sel) {
         const pick = currentCode || getPlanCode(filtered?.[0]);
         if (pick) setSelectedPlanCode(upper(pick));
       }
 
-      // 3) durations list (optional RPC)
       const { data: durData, error: durErr } = await supabase.rpc("get_plan_durations");
 
       if (!durErr && Array.isArray(durData) && durData.length > 0) {
@@ -362,7 +349,6 @@ export default function SubscriptionScreen() {
     void loadAll();
   }, [loadAll]);
 
-  // ✅ When mySub changes (e.g. after activation), re-highlight automatically (unless user browsing)
   React.useEffect(() => {
     const code = upper(mySub?.plan_code);
     if (code && !userTouchedPlanRef.current) {
@@ -387,8 +373,7 @@ export default function SubscriptionScreen() {
   }, [plans, selectedPlanCode]);
 
   const selectedDuration = useMemo(() => {
-    const d = durations.find((x) => Number(x.months) === Number(selectedMonths)) || null;
-    return d;
+    return durations.find((x) => Number(x.months) === Number(selectedMonths)) || null;
   }, [durations, selectedMonths]);
 
   const planFeatures = useMemo(() => {
@@ -401,13 +386,12 @@ export default function SubscriptionScreen() {
     out.push(`Organizations: ${fmtLimit(lim.maxOrgs)}`);
     out.push(`Stores per Organization: ${fmtLimit(lim.storesPerOrg)}`);
     out.push(`Staff per Organization: ${fmtLimit(lim.staffPerOrg)}`);
-
     out.push(`AI: ${lim.aiEnabled ? "Enabled" : "Disabled"}`);
     if (lim.aiEnabled) out.push(`AI Credits/Month: ${fmtLimit(lim.credits)}`);
-
     if (lim.adv) out.push("Advanced Reports: Enabled");
-    if (lim.postsPerStoreMonth != null)
+    if (lim.postsPerStoreMonth != null) {
       out.push(`Business Club Posts/Store/Month: ${fmtLimit(lim.postsPerStoreMonth)}`);
+    }
 
     return out;
   }, [selectedPlan]);
@@ -433,6 +417,7 @@ export default function SubscriptionScreen() {
           (selectedPlan as any)?.plan_code ||
           getPlanCode(selectedPlan)
       );
+
       if (!planCode) throw new Error("Missing plan code");
 
       const payload: any = {
@@ -484,6 +469,7 @@ export default function SubscriptionScreen() {
       safeAlert("Transaction ref", "Weka Transaction Reference (receipt code).");
       return;
     }
+
     if (ref.length < 6) {
       safeAlert(
         "Transaction ref",
@@ -506,7 +492,6 @@ export default function SubscriptionScreen() {
       setPayOpen(false);
       safeAlert("Activated ✅", "Subscription ime-activate kikamilifu.");
 
-      // ✅ Critical: refresh + auto highlight paid plan
       userTouchedPlanRef.current = false;
       await loadAll();
     } catch (e: any) {
@@ -553,7 +538,7 @@ export default function SubscriptionScreen() {
   };
 
   const PlanCard = ({ item }: { item: PlanRow }) => {
-    const code = getPlanCode(item); // UPPER
+    const code = getPlanCode(item);
     const active = upper(selectedPlanCode) === code;
 
     const currentPaidCode = upper(mySub?.plan_code);
@@ -564,7 +549,9 @@ export default function SubscriptionScreen() {
     const priceMonthly = getPlanPriceMonthlyTZS(item);
     const discountPercent = getDurationDiscountPercent(selectedDuration);
     const total =
-      priceMonthly !== null ? computeTotalTZS(priceMonthly, selectedMonths, discountPercent) : null;
+      priceMonthly !== null
+        ? computeTotalTZS(priceMonthly, selectedMonths, discountPercent)
+        : null;
 
     const lim = getPlanLimits(item);
 
@@ -612,7 +599,9 @@ export default function SubscriptionScreen() {
                     backgroundColor: "rgba(16,185,129,0.12)",
                   }}
                 >
-                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }}>Current</Text>
+                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }}>
+                    Current
+                  </Text>
                 </View>
               ) : null}
 
@@ -627,7 +616,9 @@ export default function SubscriptionScreen() {
                     backgroundColor: "rgba(255,255,255,0.06)",
                   }}
                 >
-                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }}>Selected</Text>
+                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }}>
+                    Selected
+                  </Text>
                 </View>
               ) : null}
             </View>
@@ -777,7 +768,6 @@ export default function SubscriptionScreen() {
 
   return (
     <Screen scroll>
-      {/* Header */}
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginTop: 2 }}>
         <Pressable
           onPress={() => router.back()}
@@ -802,13 +792,14 @@ export default function SubscriptionScreen() {
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 20 }}>
             Subscription & Billing
           </Text>
-          <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 4 }}>{headerSubtitle}</Text>
+          <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 4 }}>
+            {headerSubtitle}
+          </Text>
         </View>
 
-        {/* ✅ Move refresh left a bit to avoid bell overlap */}
         <Pressable
           onPress={() => {
-            userTouchedPlanRef.current = false; // allow auto-highlight after refresh
+            userTouchedPlanRef.current = false;
             void loadAll();
           }}
           style={({ pressed }) => [
@@ -822,7 +813,7 @@ export default function SubscriptionScreen() {
               borderColor: "rgba(255,255,255,0.10)",
               backgroundColor: "rgba(255,255,255,0.04)",
               opacity: pressed ? 0.9 : 1,
-              marginRight: 52, // ✅ reserve space for notification bell button
+              marginRight: 52,
             },
           ]}
         >
@@ -830,7 +821,6 @@ export default function SubscriptionScreen() {
         </Pressable>
       </View>
 
-      {/* Guard */}
       {!canManage ? (
         <View style={{ marginTop: 12 }}>
           <Card>
@@ -843,7 +833,6 @@ export default function SubscriptionScreen() {
         </View>
       ) : null}
 
-      {/* Current plan */}
       <View style={{ marginTop: 12 }}>
         <Card>
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
@@ -894,7 +883,6 @@ export default function SubscriptionScreen() {
         </Card>
       </View>
 
-      {/* Choose duration */}
       <View style={{ marginTop: 12 }}>
         <Card>
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
@@ -927,7 +915,6 @@ export default function SubscriptionScreen() {
         </Card>
       </View>
 
-      {/* Plans */}
       <View style={{ marginTop: 12 }}>
         <Card>
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
@@ -954,7 +941,6 @@ export default function SubscriptionScreen() {
 
           <EliteCard />
 
-          {/* Selected plan details */}
           <View style={{ marginTop: 12 }}>
             <View
               style={{
@@ -1031,7 +1017,6 @@ export default function SubscriptionScreen() {
         </Card>
       </View>
 
-      {/* ✅ FULL SCREEN Payment modal (100% height + ScrollView) */}
       <Modal
         visible={payOpen}
         transparent
@@ -1044,7 +1029,6 @@ export default function SubscriptionScreen() {
           keyboardVerticalOffset={0}
         >
           <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.70)" }}>
-            {/* FULL SCREEN PANEL */}
             <View
               style={{
                 flex: 1,
@@ -1056,7 +1040,6 @@ export default function SubscriptionScreen() {
                 paddingBottom: Math.max(insets.bottom, 10) + 10,
               }}
             >
-              {/* Header (fixed) */}
               <View
                 style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
               >
@@ -1068,7 +1051,6 @@ export default function SubscriptionScreen() {
                 </Pressable>
               </View>
 
-              {/* Body (scrollable) */}
               <ScrollView
                 ref={(r) => {
                   scrollRef.current = r;
@@ -1093,7 +1075,6 @@ export default function SubscriptionScreen() {
                 </Text>
 
                 <View style={{ marginTop: 12, gap: 12 }}>
-                  {/* Pay To */}
                   <View
                     style={{
                       borderWidth: 1,
@@ -1131,7 +1112,6 @@ export default function SubscriptionScreen() {
                     </Text>
                   </View>
 
-                  {/* Payment details */}
                   <View
                     style={{
                       borderWidth: 1,
@@ -1154,7 +1134,6 @@ export default function SubscriptionScreen() {
                     </Text>
                   </View>
 
-                  {/* Input */}
                   <TextInput
                     value={txRef}
                     onChangeText={(t) => setTxRef(normalizeTxRef(t))}
@@ -1212,7 +1191,6 @@ export default function SubscriptionScreen() {
               </ScrollView>
             </View>
 
-            {/* Tap outside to dismiss keyboard only (optional) */}
             <Pressable
               onPress={() => Keyboard.dismiss()}
               style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }}

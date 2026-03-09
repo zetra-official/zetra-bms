@@ -6,7 +6,6 @@ import {
   Alert,
   Animated,
   AppState,
-  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -58,8 +57,8 @@ type DashRow = {
 type FinRow = {
   org_id: string;
   store_id: string | null;
-  date_from: string; // YYYY-MM-DD
-  date_to: string; // YYYY-MM-DD
+  date_from: string;
+  date_to: string;
   stock_on_hand_value: number;
   stock_in_value: number;
 };
@@ -74,8 +73,8 @@ type PayBreakdown = {
   cash: number;
   bank: number;
   mobile: number;
-  credit: number; // outstanding balance (NOT money in)
-  other: number; // kept for backward compatibility (should be 0 in STRICT mode)
+  credit: number;
+  other: number;
   orders: number;
 };
 
@@ -83,7 +82,7 @@ type CollectionBreakdown = {
   cash: number;
   bank: number;
   mobile: number;
-  other: number; // kept for backward compatibility (should be 0 in STRICT mode)
+  other: number;
   total: number;
   payments: number;
 };
@@ -94,7 +93,6 @@ function pad2(n: number) {
   return String(n).padStart(2, "0");
 }
 
-// local-safe YYYY-MM-DD (NO UTC shift)
 function toIsoDateLocal(d: Date) {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
@@ -113,7 +111,6 @@ function rangeToFromTo(k: RangeKey) {
   const from = startOfLocalDay(now);
 
   if (k === "today") {
-    // already set
   } else if (k === "7d") {
     from.setDate(from.getDate() - 6);
   } else {
@@ -129,7 +126,6 @@ function rangeToDates(k: RangeKey) {
   const from = new Date(now);
 
   if (k === "today") {
-    // today
   } else if (k === "7d") {
     from.setDate(from.getDate() - 6);
   } else {
@@ -252,7 +248,6 @@ function extractScalarValue(x: any): number {
   return 0;
 }
 
-// numbers should NOT be ellipsized; autoshrink instead.
 function MiniStat({
   label,
   value,
@@ -336,24 +331,14 @@ function useAutoRefresh(cb: () => void, enabled: boolean, ms: number) {
   }, [enabled, ms]);
 }
 
-/**
- * ✅ HOME PREVIEW RULE (stability-first)
- * Home cards are preview-only (no chips/pills) to avoid Android touch conflicts.
- * Full filters live inside the dedicated screens (history/full dashboards).
- */
-
-/** ---------- ✅ Finance Card (HOME PREVIEW ONLY) ---------- */
 function CompactFinanceCardHomePreview() {
   const router = useRouter();
   const org = useOrg();
 
   const orgId = String(org.activeOrgId ?? "").trim();
-  const orgName = String(org.activeOrgName ?? "Org").trim() || "Org";
-
   const storeId = String(org.activeStoreId ?? "").trim();
   const storeName = String(org.activeStoreName ?? "Store").trim() || "Store";
 
-  // ✅ org-level currency prefs
   const money = useOrgMoneyPrefs(orgId);
 
   useFocusEffect(
@@ -365,9 +350,7 @@ function CompactFinanceCardHomePreview() {
   const displayCurrency = money.currency || "TZS";
   const displayLocale = money.locale || "en-TZ";
 
-  const range: RangeKey = "today"; // fixed for Home
-  const scope: "STORE" | "ALL" = "STORE"; // fixed for Home
-  const mode: "SALES" = "SALES"; // fixed for Home
+  const range: RangeKey = "today";
 
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -464,7 +447,7 @@ function CompactFinanceCardHomePreview() {
         if (ch === "CASH") out.cash += rev;
         else if (ch === "BANK") out.bank += rev;
         else if (ch === "MOBILE") out.mobile += rev;
-        else if (ch === "CREDIT") out.credit += rev; // outstanding
+        else if (ch === "CREDIT") out.credit += rev;
         else out.other += rev;
       }
 
@@ -563,8 +546,7 @@ function CompactFinanceCardHomePreview() {
 
   useEffect(() => {
     void load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orgId, storeId]);
+  }, [orgId, storeId, load]);
 
   useAutoRefresh(() => {
     if (!orgId || !storeId) return;
@@ -692,13 +674,12 @@ function CompactFinanceCardHomePreview() {
 
         <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)", marginTop: 4 }} />
 
-        {/* ✅ Switch row ONLY (opens full filter screen) */}
         <Pressable
           onPress={() => {
             const dates = rangeToDates("today");
             router.push({
               pathname: "/finance/history",
-              params: { mode, scope, range: "today", from: dates.from, to: dates.to } as any,
+              params: { mode: "SALES", scope: "STORE", range: "today", from: dates.from, to: dates.to } as any,
             } as any);
           }}
           hitSlop={10}
@@ -721,7 +702,6 @@ function CompactFinanceCardHomePreview() {
   );
 }
 
-/** ---------- ✅ Club Revenue (HOME PREVIEW ONLY) ---------- */
 function CompactClubRevenueCardHomePreview({ onOpen }: { onOpen: () => void }) {
   const orgAny = useOrg() as any;
 
@@ -757,7 +737,7 @@ function CompactClubRevenueCardHomePreview({ onOpen }: { onOpen: () => void }) {
   const storeName: string =
     String(orgAny?.activeStoreName ?? orgAny?.activeStore?.name ?? "Store").trim() || "Store";
 
-  const range: RangeKey = "today"; // fixed for Home
+  const range: RangeKey = "today";
 
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -802,8 +782,7 @@ function CompactClubRevenueCardHomePreview({ onOpen }: { onOpen: () => void }) {
 
   useEffect(() => {
     void load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [storeId]);
+  }, [storeId, load]);
 
   useAutoRefresh(() => {
     if (!storeId) return;
@@ -874,7 +853,6 @@ function CompactClubRevenueCardHomePreview({ onOpen }: { onOpen: () => void }) {
 
         <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)", marginTop: 4 }} />
 
-        {/* ✅ Switch row ONLY */}
         <Pressable
           onPress={onOpen}
           hitSlop={10}
@@ -899,7 +877,6 @@ function CompactClubRevenueCardHomePreview({ onOpen }: { onOpen: () => void }) {
   );
 }
 
-/** ---------- ✅ Stock Value (HOME PREVIEW ONLY) ---------- */
 function CompactStockValueCardHomePreview() {
   const router = useRouter();
   const orgAny = useOrg() as any;
@@ -936,7 +913,7 @@ function CompactStockValueCardHomePreview() {
   const storeName: string =
     String(orgAny?.activeStoreName ?? orgAny?.activeStore?.name ?? "Store").trim() || "Store";
 
-  const range: RangeKey = "today"; // fixed for Home
+  const range: RangeKey = "today";
 
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -1030,8 +1007,7 @@ function CompactStockValueCardHomePreview() {
 
   useEffect(() => {
     void load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orgId, storeId]);
+  }, [orgId, storeId, load]);
 
   useAutoRefresh(() => {
     if (!orgId || !storeId) return;
@@ -1106,7 +1082,6 @@ function CompactStockValueCardHomePreview() {
 
         <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)", marginTop: 4 }} />
 
-        {/* ✅ Switch row ONLY */}
         <Pressable
           onPress={openHistory}
           hitSlop={10}
@@ -1131,7 +1106,6 @@ function CompactStockValueCardHomePreview() {
   );
 }
 
-/** ✅ ZETRA AI Card v4 */
 function ZetraAiCard({ onOpen }: { onOpen: () => void }) {
   const tips = useMemo(
     () => [
@@ -1394,11 +1368,141 @@ function ZetraAiCard({ onOpen }: { onOpen: () => void }) {
   );
 }
 
+function CashierQuickHome() {
+  const router = useRouter();
+  const {
+    loading,
+    refreshing,
+    refresh,
+    activeOrgName,
+    activeRole,
+    activeStoreName,
+    activeStoreId,
+  } = useOrg();
+
+  const [handoffCount, setHandoffCount] = useState<number>(0);
+  const [handoffLoading, setHandoffLoading] = useState(false);
+  const [handoffError, setHandoffError] = useState<string | null>(null);
+
+  const loadCashierQueue = useCallback(async () => {
+    setHandoffLoading(true);
+    setHandoffError(null);
+
+    try {
+      const { data, error } = await supabase.rpc("get_my_cashier_handoffs_v2", {
+        p_status: "PENDING",
+      } as any);
+
+      if (error) throw error;
+
+      const rows = Array.isArray(data) ? data : [];
+      setHandoffCount(rows.length);
+    } catch (e: any) {
+      setHandoffCount(0);
+      setHandoffError(e?.message ?? "Failed to load cashier queue");
+    } finally {
+      setHandoffLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadCashierQueue();
+  }, [loadCashierQueue]);
+
+  useAutoRefresh(() => {
+    void loadCashierQueue();
+  }, true, AUTO_REFRESH_MS);
+
+  const onRefreshAll = useCallback(async () => {
+    await refresh();
+    await loadCashierQueue();
+  }, [refresh, loadCashierQueue]);
+
+  return (
+    <Card style={{ gap: 12, marginTop: 14 }}>
+      <Text style={{ color: UI.muted, fontWeight: "800" }}>Cashier Workspace</Text>
+
+      <Text style={{ color: UI.faint, fontWeight: "800" }}>
+        Org: <Text style={{ color: UI.text, fontWeight: "900" }}>{activeOrgName ?? "—"}</Text>
+      </Text>
+
+      <Text style={{ color: UI.faint, fontWeight: "800" }}>
+        Role: <Text style={{ color: UI.text, fontWeight: "900" }}>{activeRole ?? "—"}</Text>
+      </Text>
+
+      <Text style={{ color: UI.faint, fontWeight: "800" }}>
+        Store: <Text style={{ color: UI.text, fontWeight: "900" }}>{activeStoreName ?? "—"}</Text>
+      </Text>
+
+      {!!handoffError && (
+        <Card
+          style={{
+            borderColor: "rgba(201,74,74,0.35)",
+            backgroundColor: "rgba(201,74,74,0.10)",
+            borderRadius: 18,
+            padding: 12,
+          }}
+        >
+          <Text style={{ color: UI.danger, fontWeight: "900" }}>{handoffError}</Text>
+        </Card>
+      )}
+
+      <Card
+        style={{
+          borderColor: UI.emeraldBorder,
+          backgroundColor: UI.emeraldSoft,
+          gap: 8,
+        }}
+      >
+        <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
+          Pending Cashier Orders
+        </Text>
+
+        <Text style={{ color: UI.text, fontWeight: "900", fontSize: 28 }}>
+          {handoffLoading ? "..." : String(handoffCount)}
+        </Text>
+
+        <Text style={{ color: UI.muted, fontWeight: "800" }}>
+          Hizi ni order zilizotumwa kwa cashier queue yako.
+        </Text>
+      </Card>
+
+      <Button
+        title={loading || refreshing || handoffLoading ? "Refreshing..." : "Refresh"}
+        onPress={onRefreshAll}
+        disabled={loading || refreshing || handoffLoading}
+        variant="primary"
+      />
+
+      <Button
+        title="Open Sales"
+        onPress={() => router.push("/(tabs)/sales")}
+        variant="primary"
+      />
+
+      <Button
+        title="Open Stores"
+        onPress={() => router.push("/(tabs)/stores")}
+        variant="secondary"
+      />
+    </Card>
+  );
+}
+
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const { loading, refreshing, error, refresh, activeOrgName, activeRole, activeStoreName } = useOrg();
+  const {
+    loading,
+    refreshing,
+    error,
+    refresh,
+    activeOrgName,
+    activeRole,
+    activeStoreName,
+    activeStoreId,
+  } = useOrg();
 
   const [dashTick, setDashTick] = useState(0);
   const [pulling, setPulling] = useState(false);
@@ -1428,6 +1532,10 @@ export default function HomeScreen() {
     router.push("/ai");
   }, [router]);
 
+  const goStores = useCallback(() => {
+    router.push("/(tabs)/stores");
+  }, [router]);
+
   const bottomPad = useMemo(() => Math.max(insets.bottom, 8) + 12, [insets.bottom]);
   const topPad = useMemo(() => Math.max(insets.top, 10) + 8, [insets.top]);
 
@@ -1440,6 +1548,9 @@ export default function HomeScreen() {
       setPulling(false);
     }
   }, [refresh]);
+
+  const canManageStaff = activeRole === "owner" || activeRole === "admin";
+  const isCashier = activeRole === "cashier";
 
   return (
     <Screen>
@@ -1461,21 +1572,11 @@ export default function HomeScreen() {
         }}
       >
         <Text style={{ fontSize: 28, fontWeight: "900", color: UI.text }}>ZETRA BMS</Text>
-        <Text style={{ color: UI.muted, fontWeight: "700", marginTop: 2 }}>Dashboard</Text>
+        <Text style={{ color: UI.muted, fontWeight: "700", marginTop: 2 }}>
+          {isCashier ? "Cashier Dashboard" : "Dashboard"}
+        </Text>
 
-        <ZetraAiCard onOpen={goAI} />
-
-        <StoreGuard>
-          <CompactClubRevenueCardHomePreview key={`club-mini-${dashTick}`} onOpen={goClubRevenue} />
-        </StoreGuard>
-
-        <StoreGuard>
-          <CompactFinanceCardHomePreview />
-        </StoreGuard>
-
-        <StoreGuard>
-          <CompactStockValueCardHomePreview />
-        </StoreGuard>
+        {!isCashier ? <ZetraAiCard onOpen={goAI} /> : null}
 
         {!!error && (
           <Card
@@ -1491,38 +1592,38 @@ export default function HomeScreen() {
           </Card>
         )}
 
-        <StoreGuard>
-          <View style={{ height: 14 }} />
+        <View style={{ height: 14 }} />
 
-          <Card style={{ gap: 10 }}>
-            <Text style={{ color: UI.muted, fontWeight: "800" }}>Active</Text>
+        <Card style={{ gap: 10 }}>
+          <Text style={{ color: UI.muted, fontWeight: "800" }}>Account</Text>
 
-            <Pressable
-              onPress={goOrgSwitcher}
-              hitSlop={10}
-              style={({ pressed }) => ({
-                opacity: pressed ? 0.92 : 1,
-                transform: pressed ? [{ scale: 0.998 }] : [{ scale: 1 }],
-              })}
-            >
-              <Text style={{ color: UI.faint, fontWeight: "800" }}>
-                Org: <Text style={{ color: UI.text, fontWeight: "900" }}>{activeOrgName ?? "—"}</Text>
-                <Text style={{ color: UI.muted, fontWeight: "900" }}>  ›</Text>
-              </Text>
-            </Pressable>
-
+          <Pressable
+            onPress={goOrgSwitcher}
+            hitSlop={10}
+            style={({ pressed }) => ({
+              opacity: pressed ? 0.92 : 1,
+              transform: pressed ? [{ scale: 0.998 }] : [{ scale: 1 }],
+            })}
+          >
             <Text style={{ color: UI.faint, fontWeight: "800" }}>
-              Role: <Text style={{ color: UI.text, fontWeight: "900" }}>{activeRole ?? "—"}</Text>
+              Org: <Text style={{ color: UI.text, fontWeight: "900" }}>{activeOrgName ?? "—"}</Text>
+              <Text style={{ color: UI.muted, fontWeight: "900" }}>  ›</Text>
             </Text>
+          </Pressable>
 
-            <Text style={{ color: UI.faint, fontWeight: "800" }}>
-              Store: <Text style={{ color: UI.text, fontWeight: "900" }}>{activeStoreName ?? "—"}</Text>
+          <Text style={{ color: UI.faint, fontWeight: "800" }}>
+            Role: <Text style={{ color: UI.text, fontWeight: "900" }}>{activeRole ?? "—"}</Text>
+          </Text>
+
+          <Text style={{ color: UI.faint, fontWeight: "800" }}>
+            Store: <Text style={{ color: UI.text, fontWeight: "900" }}>{activeStoreName ?? "—"}</Text>
+          </Text>
+
+          {!activeStoreId && (
+            <Text style={{ color: UI.muted, fontWeight: "800" }}>
+              Hujachagua active store bado. Fungua Stores u-select store yako.
             </Text>
-          </Card>
-
-          <View style={{ height: 14 }} />
-
-          <Text style={{ color: UI.muted, fontWeight: "800", marginBottom: 8 }}>Actions</Text>
+          )}
 
           <Button
             title={loading ? "Loading..." : refreshing ? "Refreshing..." : "Refresh"}
@@ -1534,41 +1635,11 @@ export default function HomeScreen() {
             variant="primary"
           />
 
-          <View style={{ height: 10 }} />
+          <Button title="Open Stores" onPress={goStores} variant="secondary" />
 
-          <Pressable
-            onPress={goStaff}
-            style={({ pressed }) => [
-              {
-                opacity: pressed ? 0.92 : 1,
-                transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
-              },
-            ]}
-          >
-            <Card
-              style={{
-                paddingVertical: 14,
-                paddingHorizontal: 16,
-                borderRadius: 18,
-                borderColor: "rgba(42,168,118,0.22)",
-                backgroundColor: "rgba(23,27,33,0.92)",
-              }}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center" }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-                    Staff Management
-                  </Text>
-                  <Text style={{ color: UI.muted, fontWeight: "700", marginTop: 2 }}>
-                    Add staff and assign stores
-                  </Text>
-                </View>
-                <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 18 }}>›</Text>
-              </View>
-            </Card>
-          </Pressable>
-
-          <View style={{ height: 14 }} />
+          {canManageStaff ? (
+            <Button title="Staff Management" onPress={goStaff} variant="secondary" />
+          ) : null}
 
           <Button
             title="Logout"
@@ -1579,7 +1650,17 @@ export default function HomeScreen() {
               backgroundColor: "rgba(201,74,74,0.06)",
             }}
           />
-        </StoreGuard>
+        </Card>
+
+        {isCashier ? (
+          <CashierQuickHome />
+        ) : (
+          <StoreGuard>
+            <CompactClubRevenueCardHomePreview key={`club-mini-${dashTick}`} onOpen={goClubRevenue} />
+            <CompactFinanceCardHomePreview />
+            <CompactStockValueCardHomePreview />
+          </StoreGuard>
+        )}
       </ScrollView>
     </Screen>
   );

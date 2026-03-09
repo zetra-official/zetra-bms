@@ -19,12 +19,14 @@ type StaffStoreRow = {
   store_name: string;
 };
 
+type StaffRole = "owner" | "admin" | "staff" | "cashier";
+
 type StaffRow = {
   user_id: string;
-  role: "owner" | "admin" | "staff";
+  role: StaffRole;
   membership_id: string;
 
-  // ✅ NEW (safe): RPC inaweza kurudisha email (au user_email)
+  // ✅ RPC inaweza kurudisha email (au user_email)
   email?: string | null;
   user_email?: string | null;
 
@@ -60,6 +62,18 @@ function initialsFromEmail(email: string | null, fallback = "UD") {
   if (letters.length >= 2) return letters.slice(0, 2).toUpperCase();
   if (letters.length === 1) return (letters + "D").toUpperCase();
   return fallback;
+}
+
+function roleBorderColor(role: StaffRole) {
+  if (role === "owner") return "rgba(52,211,153,0.35)";
+  if (role === "admin") return "rgba(255,255,255,0.20)";
+  if (role === "cashier") return "rgba(52,211,153,0.28)";
+  return "rgba(255,255,255,0.14)";
+}
+
+function roleBadgeBg(role: StaffRole) {
+  if (role === "cashier") return "rgba(52,211,153,0.10)";
+  return "rgba(255,255,255,0.06)";
 }
 
 export default function StaffTabScreen() {
@@ -105,10 +119,8 @@ export default function StaffTabScreen() {
     [activeOrgId]
   );
 
-  // ✅ Auto-refresh on screen focus (enter / return from Add/Assign)
   useFocusEffect(
     useCallback(() => {
-      // silent: true => usisumbue na "Loading..." kila unaporudi
       void fetchStaff({ silent: true });
     }, [fetchStaff])
   );
@@ -138,6 +150,7 @@ export default function StaffTabScreen() {
       Alert.alert("No Access", "Owner/Admin only.");
       return;
     }
+
     router.push({
       pathname: "/(tabs)/staff/assign",
       params: { membershipId },
@@ -149,6 +162,7 @@ export default function StaffTabScreen() {
       Alert.alert("No Access", "Owner/Admin only.");
       return;
     }
+
     router.push({
       pathname: "/(tabs)/staff/add",
       params: { orgId: activeOrgId ?? "" },
@@ -173,7 +187,7 @@ export default function StaffTabScreen() {
         }
         contentContainerStyle={{
           padding: 16,
-          paddingBottom: 120, // ✅ nafasi juu ya tab bar + buttons za simu
+          paddingBottom: 120,
           gap: 12,
         }}
       >
@@ -181,7 +195,6 @@ export default function StaffTabScreen() {
           Staff Management
         </Text>
 
-        {/* Org card */}
         <View
           style={{
             borderWidth: 1,
@@ -215,7 +228,6 @@ export default function StaffTabScreen() {
             </View>
           </View>
 
-          {/* ✅ subtle hint: auto refresh */}
           <Text style={{ color: UI.faint, fontWeight: "800" }}>
             Tip: List inajirefresh yenyewe ukifungua/ukirudi. Unaweza pia kudrag juu (pull-to-refresh).
           </Text>
@@ -235,7 +247,6 @@ export default function StaffTabScreen() {
           </View>
         )}
 
-        {/* Actions */}
         <Pressable
           onPress={openAdd}
           disabled={!canManage}
@@ -254,12 +265,11 @@ export default function StaffTabScreen() {
           </Text>
         </Pressable>
 
-        {/* ✅ Manual refresh remains as backup (secondary) */}
         <Pressable
           onPress={() => void fetchStaff()}
           disabled={loading}
           style={{
-            backgroundColor: "rgba(255,255,255,0.05)", // slightly more subtle
+            backgroundColor: "rgba(255,255,255,0.05)",
             borderWidth: 1,
             borderColor: UI.border,
             paddingVertical: 14,
@@ -316,13 +326,6 @@ export default function StaffTabScreen() {
             const storesText =
               (r.stores ?? []).map((s) => s.store_name).join(", ") || "—";
 
-            const roleBorder =
-              r.role === "owner"
-                ? "rgba(52,211,153,0.35)"
-                : r.role === "admin"
-                ? "rgba(255,255,255,0.20)"
-                : "rgba(255,255,255,0.14)";
-
             const email = pickEmail(r);
             const displayTop = email ? email : `User: ${shortId(r.user_id)}`;
             const badge = initialsFromEmail(email, "UD");
@@ -364,7 +367,6 @@ export default function StaffTabScreen() {
                       Membership: {shortId(r.membership_id)}
                     </Text>
 
-                    {/* ✅ Show user_id only as secondary detail (small) */}
                     {email ? (
                       <Text style={{ color: UI.faint, fontWeight: "800", marginTop: 4 }}>
                         User: {shortId(r.user_id)}
@@ -375,14 +377,19 @@ export default function StaffTabScreen() {
                   <View
                     style={{
                       borderWidth: 1,
-                      borderColor: roleBorder,
-                      backgroundColor: "rgba(255,255,255,0.06)",
+                      borderColor: roleBorderColor(r.role),
+                      backgroundColor: roleBadgeBg(r.role),
                       paddingHorizontal: 12,
                       paddingVertical: 7,
                       borderRadius: 999,
                     }}
                   >
-                    <Text style={{ color: UI.text, fontWeight: "900" }}>
+                    <Text
+                      style={{
+                        color: r.role === "cashier" ? UI.emerald : UI.text,
+                        fontWeight: "900",
+                      }}
+                    >
                       {r.role.toUpperCase()}
                     </Text>
                   </View>
@@ -432,7 +439,7 @@ export default function StaffTabScreen() {
                 </View>
 
                 <Text style={{ color: UI.muted, fontWeight: "700", marginTop: 2 }}>
-                  Tip: Bonyeza “Assign Store” kwenye staff card ili uende ku-assign /
+                  Tip: Bonyeza “Assign Store” kwenye {r.role === "cashier" ? "cashier" : "staff"} card ili uende ku-assign /
                   ku-unassign (membershipId tayari ✅)
                 </Text>
               </View>

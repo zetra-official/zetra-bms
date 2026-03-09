@@ -1,4 +1,3 @@
-// app/(tabs)/sales/index.tsx
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -45,11 +44,9 @@ type ProductRow = {
   sku: string | null;
   unit: string | null;
   category: string | null;
-
   selling_price?: number | null;
   cost_price?: number | null;
   stock_qty?: number | null;
-
   barcode?: string | null;
 };
 
@@ -61,6 +58,32 @@ type CartItem = {
   unit: string | null;
   unit_price: number;
   line_total: number;
+};
+
+type SalesRole = "owner" | "admin" | "staff" | "cashier";
+
+type CashierHandoffStatus = "PENDING" | "ACCEPTED" | "COMPLETED" | string;
+
+type CashierHandoffRow = {
+  id: string;
+  organization_id: string;
+  store_id: string;
+  store_name?: string | null;
+  cashier_membership_id?: string | null;
+  source_membership_id?: string | null;
+  source_user_id?: string | null;
+  items: any[] | null;
+  subtotal: number | null;
+  discount_amount: number | null;
+  total: number | null;
+  note: string | null;
+  status: CashierHandoffStatus | null;
+  sale_id?: string | null;
+  accepted_at?: string | null;
+  completed_at?: string | null;
+  created_at: string | null;
+  updated_at?: string | null;
+  item_count?: number | null;
 };
 
 /* =========================
@@ -102,6 +125,52 @@ function cleanBarcode(raw: any) {
   return s.replace(/\s+/g, "");
 }
 
+function normalizeRole(role: unknown): SalesRole | "" {
+  const r = String(role ?? "").trim().toLowerCase();
+  if (r === "owner" || r === "admin" || r === "staff" || r === "cashier") return r;
+  return "";
+}
+
+function normalizeHandoffs(rows: any[]): CashierHandoffRow[] {
+  return (rows ?? []).map((r) => ({
+    id: String(r?.id ?? "").trim(),
+    organization_id: String(r?.organization_id ?? "").trim(),
+    store_id: String(r?.store_id ?? "").trim(),
+    store_name: r?.store_name ?? null,
+    cashier_membership_id: r?.cashier_membership_id ?? null,
+    source_membership_id: r?.source_membership_id ?? null,
+    source_user_id: r?.source_user_id ?? null,
+    items: Array.isArray(r?.items) ? r.items : [],
+    subtotal: Number(r?.subtotal ?? 0),
+    discount_amount: Number(r?.discount_amount ?? 0),
+    total: Number(r?.total ?? 0),
+    note: r?.note ?? null,
+    status: String(r?.status ?? "").trim().toUpperCase() || null,
+    sale_id: r?.sale_id ?? null,
+    accepted_at: r?.accepted_at ?? null,
+    completed_at: r?.completed_at ?? null,
+    created_at: r?.created_at ?? null,
+    updated_at: r?.updated_at ?? null,
+    item_count: Number(r?.item_count ?? (Array.isArray(r?.items) ? r.items.length : 0)),
+  }));
+}
+
+function fmtDateTimeLocal(input?: string | null) {
+  if (!input) return "—";
+  try {
+    const d = new Date(input);
+    return new Intl.DateTimeFormat("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(d);
+  } catch {
+    return String(input);
+  }
+}
+
 /* =========================
    Screen
 ========================= */
@@ -123,18 +192,22 @@ export default function SalesHomeScreen() {
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
 
-  // Offline/cache status
   const [source, setSource] = useState<"LIVE" | "CACHED" | "NONE">("NONE");
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [pendingCount, setPendingCount] = useState<number>(0);
 
-  // ✅ param de-dupe (only for deep links / old behavior)
   const [lastHandledParamScan, setLastHandledParamScan] = useState<string>("");
 
-  // ✅ NEW: recent scanned priority (product ids)
   const [recentScannedIds, setRecentScannedIds] = useState<string[]>([]);
 
-  // ✅ org-level currency prefs (display only)
+  const [cashierFilter, setCashierFilter] = useState<
+    "PENDING" | "ACCEPTED" | "COMPLETED" | "ALL"
+  >("PENDING");
+  const [cashierLoading, setCashierLoading] = useState(false);
+  const [cashierRefreshing, setCashierRefreshing] = useState(false);
+  const [cashierErr, setCashierErr] = useState<string | null>(null);
+  const [cashierRows, setCashierRows] = useState<CashierHandoffRow[]>([]);
+
   const orgId = String(activeOrgId ?? "").trim();
   const money = useOrgMoneyPrefs(orgId);
   const displayCurrency = money.currency || "TZS";
@@ -154,21 +227,25 @@ export default function SalesHomeScreen() {
     });
   }, []);
 
-  // ✅ A: vibrate helper (tiny)
   const vibrateScan = useCallback(() => {
     try {
       Vibration.vibrate(12);
-    } catch {
-      // ignore
-    }
+    } catch {}
   }, []);
 
-  const canSell = useMemo(() => {
-    const r = (activeRole ?? "staff") as "owner" | "admin" | "staff";
-    return r === "owner" || r === "admin" || r === "staff";
-  }, [activeRole]);
+  const currentRole = useMemo(() => normalizeRole(activeRole), [activeRole]);
 
-  const isOwner = useMemo(() => (activeRole ?? "staff") === "owner", [activeRole]);
+  const isCashier = useMemo(() => currentRole === "cashier", [currentRole]);
+
+  const canSellDirect = useMemo(() => {
+    return currentRole === "owner" || currentRole === "admin" || currentRole === "staff";
+  }, [currentRole]);
+
+  const canUseCashierHandoff = useMemo(() => {
+    return currentRole === "owner" || currentRole === "admin" || currentRole === "staff";
+  }, [currentRole]);
+
+  const isOwner = useMemo(() => currentRole === "owner", [currentRole]);
 
   /* =========================
      Cart summary
@@ -417,6 +494,13 @@ export default function SalesHomeScreen() {
       if (mode === "refresh") setRefreshing(true);
 
       try {
+        if (isCashier) {
+          setProducts([]);
+          setSource("NONE");
+          setLastSync(null);
+          return;
+        }
+
         if (!activeStoreId) {
           setProducts([]);
           setErr("No active store selected.");
@@ -425,7 +509,6 @@ export default function SalesHomeScreen() {
           return;
         }
 
-        // 1) cache first
         try {
           const cached = await loadSalesProductsCache(activeStoreId);
           if (cached.rows.length > 0) {
@@ -487,39 +570,82 @@ export default function SalesHomeScreen() {
         if (mode === "refresh") setRefreshing(false);
       }
     },
-    [activeStoreId, isOffline, products.length]
+    [activeStoreId, isCashier, isOffline, products.length]
+  );
+
+  const loadCashierHandoffs = useCallback(
+    async (mode: "boot" | "refresh" = "boot") => {
+      if (!isCashier) return;
+
+      setCashierErr(null);
+      if (mode === "boot") setCashierLoading(true);
+      if (mode === "refresh") setCashierRefreshing(true);
+
+      try {
+        const statusParam = cashierFilter === "ALL" ? null : cashierFilter;
+
+        const { data, error } = await supabase.rpc("get_my_cashier_handoffs_v2", {
+          p_status: statusParam,
+        });
+
+        if (error) throw error;
+
+        setCashierRows(normalizeHandoffs((data ?? []) as any[]));
+      } catch (e: any) {
+        setCashierErr(e?.message ?? "Failed to load cashier queue");
+        setCashierRows([]);
+      } finally {
+        if (mode === "boot") setCashierLoading(false);
+        if (mode === "refresh") setCashierRefreshing(false);
+      }
+    },
+    [cashierFilter, isCashier]
   );
 
   useEffect(() => {
     setCart([]);
     setQuery("");
     setRecentScannedIds([]);
-    void loadProducts("boot");
-  }, [activeStoreId, loadProducts]);
 
-  // sync pending queue when online
+    if (isCashier) {
+      void loadCashierHandoffs("boot");
+      return;
+    }
+
+    void loadProducts("boot");
+  }, [activeStoreId, isCashier, loadProducts, loadCashierHandoffs]);
+
   useEffect(() => {
     if (!activeStoreId) return;
     if (isOffline) return;
+    if (isCashier) return;
 
     void (async () => {
       try {
         await syncSalesQueueOnce(activeStoreId);
       } catch {
+        // no-op
       } finally {
         const n = await countPending(activeStoreId);
         setPendingCount(n);
       }
     })();
-  }, [activeStoreId, isOffline]);
+  }, [activeStoreId, isCashier, isOffline]);
 
   useEffect(() => {
     if (!activeStoreId) return;
+    if (isCashier) return;
+
     void (async () => {
       const n = await countPending(activeStoreId);
       setPendingCount(n);
     })();
-  }, [activeStoreId, isOnline]);
+  }, [activeStoreId, isCashier, isOnline]);
+
+  useEffect(() => {
+    if (!isCashier) return;
+    void loadCashierHandoffs("boot");
+  }, [isCashier, cashierFilter, loadCashierHandoffs]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -551,10 +677,15 @@ export default function SalesHomeScreen() {
   }, [products, query, recentScannedIds]);
 
   /* =========================
-     Barcode handler (ScanBus + params fallback)
+     Barcode handler
   ========================= */
   const handleBarcode = useCallback(
     (rawInput: any) => {
+      if (isCashier) {
+        setErr("Cashier role haitumii product-picking screen.");
+        return;
+      }
+
       const raw = cleanBarcode(rawInput);
       if (!raw) return;
 
@@ -563,7 +694,6 @@ export default function SalesHomeScreen() {
         return;
       }
 
-      // 1) local match
       const localTarget =
         products.find((p) => cleanBarcode(p.barcode) === raw) ||
         products.find((p) => cleanBarcode(p.sku) === raw);
@@ -572,8 +702,6 @@ export default function SalesHomeScreen() {
         setErr(null);
         bumpRecent(localTarget.id);
         addAuto(localTarget);
-
-        // ✅ A: vibrate only on successful add
         vibrateScan();
         return;
       }
@@ -583,7 +711,6 @@ export default function SalesHomeScreen() {
         return;
       }
 
-      // 3) online RPC
       void (async () => {
         try {
           const { data, error } = await supabase.rpc("get_store_sale_item_by_barcode", {
@@ -620,18 +747,15 @@ export default function SalesHomeScreen() {
           setErr(null);
           bumpRecent(p.id);
           addAuto(p);
-
-          // ✅ A: vibrate only on successful add
           vibrateScan();
         } catch (e: any) {
           setErr(e?.message ?? `Failed to fetch barcode item: ${raw}`);
         }
       })();
     },
-    [activeStoreId, addAuto, bumpRecent, isOffline, products, vibrateScan]
+    [activeStoreId, addAuto, bumpRecent, isCashier, isOffline, products, vibrateScan]
   );
 
-  // Listen to ScanBus
   useEffect(() => {
     const unsub = subscribeScanBarcode((barcode) => {
       handleBarcode(barcode);
@@ -639,7 +763,6 @@ export default function SalesHomeScreen() {
     return unsub;
   }, [handleBarcode]);
 
-  // Params fallback
   useEffect(() => {
     const raw = cleanBarcode(params?.barcode);
     if (!raw) return;
@@ -658,7 +781,7 @@ export default function SalesHomeScreen() {
     setErr(null);
 
     if (!activeStoreId) return setErr("No active store selected.");
-    if (!canSell) return setErr("No permission to sell.");
+    if (!canSellDirect) return setErr("No permission to sell directly.");
     if (cart.length === 0) return setErr("Cart is empty.");
 
     if (cart.some((c) => !Number.isFinite(c.unit_price) || c.unit_price <= 0)) {
@@ -676,14 +799,53 @@ export default function SalesHomeScreen() {
     });
 
     setCart([]);
-  }, [activeStoreId, activeStoreName, canSell, cart, router]);
+  }, [activeStoreId, activeStoreName, canSellDirect, cart, router]);
+
+  const goCashierCheckout = useCallback(() => {
+    setErr(null);
+
+    if (!activeStoreId) return setErr("No active store selected.");
+    if (!canUseCashierHandoff) return setErr("No permission to send order to cashiers.");
+    if (cart.length === 0) return setErr("Cart is empty.");
+
+    if (cart.some((c) => !Number.isFinite(c.unit_price) || c.unit_price <= 0)) {
+      return setErr("Kuna bidhaa kwenye cart haina bei sahihi.");
+    }
+
+    const payload = encodeURIComponent(JSON.stringify(cart));
+    router.push({
+      pathname: "/(tabs)/sales/checkout",
+      params: {
+        storeId: activeStoreId,
+        storeName: activeStoreName ?? "",
+        cart: payload,
+        cashierMode: "1",
+      },
+    });
+
+    setCart([]);
+  }, [activeStoreId, activeStoreName, canUseCashierHandoff, cart, router]);
 
   const goScan = useCallback(() => {
     setErr(null);
     if (!activeStoreId) return setErr("No active store selected.");
-    if (!canSell) return setErr("Huna ruhusa ya kuuza.");
+    if (!canSellDirect) return setErr("Huna ruhusa ya kuuza.");
+    if (isCashier) return setErr("Cashier role haitumii scan ya product-picking.");
     router.push("/(tabs)/sales/scan");
-  }, [activeStoreId, canSell, router]);
+  }, [activeStoreId, canSellDirect, isCashier, router]);
+
+  const goHandoffDetail = useCallback(
+    (handoffId: string) => {
+      const id = String(handoffId ?? "").trim();
+      if (!id) return;
+
+      router.push({
+        pathname: "/(tabs)/sales/[handoffId]",
+        params: { handoffId: id },
+      } as any);
+    },
+    [router]
+  );
 
   /* =========================
      Derived display helpers
@@ -698,13 +860,20 @@ export default function SalesHomeScreen() {
   }, [activeOrgName, activeStoreName, activeRole]);
 
   const headerBlockedReason = useMemo(() => {
-    if (!canSell) return "Huna ruhusa ya kuuza. (Owner/Admin/Staff only)";
+    if (isCashier) {
+      return "Cashier role hupokea handoff na kukamilisha malipo tu. Product picking haipo kwenye screen hii.";
+    }
+    if (!canSellDirect) return "Huna ruhusa ya kuuza. (Owner/Admin/Staff only)";
     return null;
-  }, [canSell]);
+  }, [canSellDirect, isCashier]);
 
   const checkoutDisabled = useMemo(() => {
-    return !activeStoreId || cart.length === 0 || !canSell;
-  }, [activeStoreId, cart.length, canSell]);
+    return !activeStoreId || cart.length === 0 || !canSellDirect || isCashier;
+  }, [activeStoreId, cart.length, canSellDirect, isCashier]);
+
+  const cashierDisabled = useMemo(() => {
+    return !activeStoreId || cart.length === 0 || !canUseCashierHandoff || isCashier;
+  }, [activeStoreId, cart.length, canUseCashierHandoff, isCashier]);
 
   const getStockQty = useCallback((p: ProductRow): number | null => {
     const n = Number(p.stock_qty);
@@ -718,6 +887,53 @@ export default function SalesHomeScreen() {
     const sync = ` • Last sync: ${lastSync ?? "—"}`;
     return `${net} • Source: ${src}${sync}${pend}`;
   }, [isOffline, lastSync, pendingCount, source]);
+
+  const cashierCounts = useMemo(() => {
+    const out = { pending: 0, accepted: 0, completed: 0, all: cashierRows.length };
+
+    for (const r of cashierRows) {
+      const s = String(r.status ?? "").toUpperCase();
+      if (s === "PENDING") out.pending += 1;
+      else if (s === "ACCEPTED") out.accepted += 1;
+      else if (s === "COMPLETED") out.completed += 1;
+    }
+
+    return out;
+  }, [cashierRows]);
+
+  const cashierTotalAmount = useMemo(
+    () => cashierRows.reduce((a, r) => a + Number(r.total ?? 0), 0),
+    [cashierRows]
+  );
+
+  const CashierFilterChip = ({
+    label,
+    value,
+  }: {
+    label: string;
+    value: "PENDING" | "ACCEPTED" | "COMPLETED" | "ALL";
+  }) => {
+    const active = cashierFilter === value;
+
+    return (
+      <Pressable
+        onPress={() => setCashierFilter(value)}
+        style={({ pressed }) => ({
+          paddingVertical: 10,
+          paddingHorizontal: 14,
+          borderRadius: theme.radius.pill,
+          borderWidth: 1,
+          borderColor: active ? theme.colors.emeraldBorder : theme.colors.border,
+          backgroundColor: active ? theme.colors.emeraldSoft : "rgba(255,255,255,0.06)",
+          opacity: pressed ? 0.92 : 1,
+        })}
+      >
+        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}>
+          {label}
+        </Text>
+      </Pressable>
+    );
+  };
 
   /* =========================
      UI Sections
@@ -822,13 +1038,12 @@ export default function SalesHomeScreen() {
           </Text>
         </View>
 
-        {!!err && <Text style={{ color: theme.colors.dangerText, fontWeight: "900" }}>{err}</Text>}
+        {!!err && <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{err}</Text>}
 
         {!!headerBlockedReason && (
           <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{headerBlockedReason}</Text>
         )}
 
-        {/* ✅ B: Row 1 (buttons) */}
         <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
           <Pressable
             onPress={goCheckout}
@@ -839,8 +1054,12 @@ export default function SalesHomeScreen() {
                 paddingHorizontal: 16,
                 borderRadius: theme.radius.pill,
                 borderWidth: 1,
-                borderColor: checkoutDisabled ? "rgba(255,255,255,0.10)" : theme.colors.emeraldBorder,
-                backgroundColor: checkoutDisabled ? "rgba(255,255,255,0.05)" : theme.colors.emeraldSoft,
+                borderColor: checkoutDisabled
+                  ? "rgba(255,255,255,0.10)"
+                  : theme.colors.emeraldBorder,
+                backgroundColor: checkoutDisabled
+                  ? "rgba(255,255,255,0.05)"
+                  : theme.colors.emeraldSoft,
                 alignItems: "center",
                 justifyContent: "center",
                 opacity: checkoutDisabled ? 0.55 : pressed ? 0.92 : 1,
@@ -862,10 +1081,42 @@ export default function SalesHomeScreen() {
             </Text>
           </Pressable>
 
-          {/* ✅ B: Bigger Scan button */}
+          {!isCashier ? (
+            <Pressable
+              onPress={goCashierCheckout}
+              disabled={cashierDisabled}
+              style={({ pressed }) => [
+                {
+                  paddingVertical: 12,
+                  paddingHorizontal: 16,
+                  borderRadius: theme.radius.pill,
+                  borderWidth: 1,
+                  borderColor: cashierDisabled
+                    ? "rgba(255,255,255,0.10)"
+                    : theme.colors.emeraldBorder,
+                  backgroundColor: cashierDisabled
+                    ? "rgba(255,255,255,0.05)"
+                    : "rgba(16,185,129,0.10)",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  opacity: cashierDisabled ? 0.55 : pressed ? 0.92 : 1,
+                  transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
+                  flexDirection: "row",
+                  gap: 8,
+                  flex: 1,
+                },
+              ]}
+            >
+              <Ionicons name="wallet-outline" size={16} color={theme.colors.text} />
+              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14 }}>
+                Cashiers
+              </Text>
+            </Pressable>
+          ) : null}
+
           <Pressable
             onPress={goScan}
-            disabled={!activeStoreId || !canSell}
+            disabled={!activeStoreId || !canSellDirect || isCashier}
             style={({ pressed }) => [
               {
                 width: 58,
@@ -876,13 +1127,13 @@ export default function SalesHomeScreen() {
                 borderWidth: 1,
                 borderColor: theme.colors.emeraldBorder,
                 backgroundColor: theme.colors.emeraldSoft,
-                opacity: !activeStoreId || !canSell ? 0.5 : pressed ? 0.92 : 1,
+                opacity: !activeStoreId || !canSellDirect || isCashier ? 0.5 : pressed ? 0.92 : 1,
                 transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
                 shadowColor: "#000",
-                shadowOpacity: !activeStoreId || !canSell ? 0 : 0.25,
+                shadowOpacity: !activeStoreId || !canSellDirect || isCashier ? 0 : 0.25,
                 shadowRadius: 10,
                 shadowOffset: { width: 0, height: 6 },
-                elevation: !activeStoreId || !canSell ? 0 : 8,
+                elevation: !activeStoreId || !canSellDirect || isCashier ? 0 : 8,
               },
             ]}
             hitSlop={10}
@@ -900,7 +1151,8 @@ export default function SalesHomeScreen() {
                 borderRadius: theme.radius.pill,
                 borderWidth: 1,
                 borderColor: theme.colors.border,
-                backgroundColor: cart.length === 0 ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.06)",
+                backgroundColor:
+                  cart.length === 0 ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.06)",
                 opacity: cart.length === 0 ? 0.5 : pressed ? 0.92 : 1,
                 transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
                 alignItems: "center",
@@ -912,16 +1164,17 @@ export default function SalesHomeScreen() {
           </Pressable>
         </View>
 
-        {/* ✅ B: Row 2 (search full width, no hiding) */}
-        <View style={{ width: "100%" }}>
-          <Input
-            value={query}
-            onChangeText={setQuery}
-            placeholder="Search name / SKU / category / barcode..."
-          />
-        </View>
+        {!isCashier ? (
+          <View style={{ width: "100%" }}>
+            <Input
+              value={query}
+              onChangeText={setQuery}
+              placeholder="Search name / SKU / category / barcode..."
+            />
+          </View>
+        ) : null}
 
-        {loading && (
+        {loading && !isCashier && (
           <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 2 }}>
             Loading products...
           </Text>
@@ -930,20 +1183,111 @@ export default function SalesHomeScreen() {
     );
   }, [
     activeStoreId,
-    canSell,
+    canSellDirect,
     cart.length,
     cartCount,
     cartTotalAmount,
     cartTotalLines,
+    cashierDisabled,
     checkoutDisabled,
     clearCart,
     err,
     fmt,
+    goCashierCheckout,
     goCheckout,
     goScan,
     headerBlockedReason,
+    isCashier,
     loading,
     query,
+  ]);
+
+  const CashierBar = useMemo(() => {
+    if (!isCashier) return null;
+
+    return (
+      <Card style={{ gap: 12, padding: 12 }}>
+        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+          Cashier Queue
+        </Text>
+
+        <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+          Hapa cashier anaona orders zilizotumwa kwenye cashier queue ya stores alizoassigniwa.
+        </Text>
+
+        {!!cashierErr && (
+          <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{cashierErr}</Text>
+        )}
+
+        <View style={{ flexDirection: "row", gap: 10 }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Pending</Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>
+              {cashierCounts.pending}
+            </Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Accepted</Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>
+              {cashierCounts.accepted}
+            </Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Completed</Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>
+              {cashierCounts.completed}
+            </Text>
+          </View>
+        </View>
+
+        <View
+          style={{
+            borderWidth: 1,
+            borderColor: theme.colors.emeraldBorder,
+            backgroundColor: theme.colors.emeraldSoft,
+            borderRadius: 16,
+            padding: 12,
+          }}
+        >
+          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+            Queue Total: {fmt(cashierTotalAmount)}
+          </Text>
+        </View>
+
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+          <CashierFilterChip label={`Pending (${cashierCounts.pending})`} value="PENDING" />
+          <CashierFilterChip label={`Accepted (${cashierCounts.accepted})`} value="ACCEPTED" />
+          <CashierFilterChip label={`Completed (${cashierCounts.completed})`} value="COMPLETED" />
+          <CashierFilterChip label={`All (${cashierCounts.all})`} value="ALL" />
+        </View>
+
+        <Pressable
+          onPress={() => void loadCashierHandoffs("refresh")}
+          style={({ pressed }) => ({
+            paddingVertical: 12,
+            borderRadius: theme.radius.pill,
+            borderWidth: 1,
+            borderColor: theme.colors.border,
+            backgroundColor: "rgba(255,255,255,0.06)",
+            alignItems: "center",
+            opacity: pressed ? 0.92 : 1,
+          })}
+        >
+          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+            {cashierLoading || cashierRefreshing ? "Refreshing..." : "Refresh Queue"}
+          </Text>
+        </Pressable>
+      </Card>
+    );
+  }, [
+    isCashier,
+    cashierErr,
+    cashierCounts,
+    cashierTotalAmount,
+    fmt,
+    cashierLoading,
+    cashierRefreshing,
+    loadCashierHandoffs,
   ]);
 
   const renderItem = useCallback(
@@ -952,12 +1296,16 @@ export default function SalesHomeScreen() {
       const qty = inCart?.qty ?? 0;
 
       const stockQty = getStockQty(item);
-      const stockLabel = stockQty === null ? null : stockQty <= 0 ? "Out of stock" : `Stock: ${stockQty}`;
+      const stockLabel =
+        stockQty === null ? null : stockQty <= 0 ? "Out of stock" : `Stock: ${stockQty}`;
 
       return (
         <Card style={{ marginBottom: 10, gap: 8, padding: 14 }}>
           <View style={{ gap: 4 }}>
-            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }} numberOfLines={1}>
+            <Text
+              style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}
+              numberOfLines={1}
+            >
               {item.name}
             </Text>
 
@@ -980,8 +1328,11 @@ export default function SalesHomeScreen() {
 
             {qty > 0 && (
               <Text style={{ color: theme.colors.muted, fontWeight: "900" }} numberOfLines={1}>
-                Price: <Text style={{ color: theme.colors.text }}>{fmt(Number(inCart?.unit_price ?? 0))}</Text> •
-                Line: <Text style={{ color: theme.colors.text }}>{fmt(Number(inCart?.line_total ?? 0))}</Text>
+                Price:{" "}
+                <Text style={{ color: theme.colors.text }}>{fmt(Number(inCart?.unit_price ?? 0))}</Text>
+                {" • "}
+                Line:{" "}
+                <Text style={{ color: theme.colors.text }}>{fmt(Number(inCart?.line_total ?? 0))}</Text>
               </Text>
             )}
           </View>
@@ -1097,32 +1448,198 @@ export default function SalesHomeScreen() {
     [addAuto, cart, dec, fmt, getStockQty, inc, openPriceModal, openQtyEditor, removeItem]
   );
 
+  const renderCashierItem = useCallback(
+    ({ item }: { item: CashierHandoffRow }) => {
+      const itemsCount = Number(
+        item.item_count ?? (Array.isArray(item.items) ? item.items.length : 0)
+      );
+      const status = String(item.status ?? "—").toUpperCase();
+      const createdAt = fmtDateTimeLocal(item.created_at);
+      const acceptedAt = fmtDateTimeLocal(item.accepted_at);
+      const completedAt = fmtDateTimeLocal(item.completed_at);
+
+      return (
+        <Pressable
+          onPress={() => goHandoffDetail(item.id)}
+          style={({ pressed }) => ({
+            opacity: pressed ? 0.96 : 1,
+            transform: pressed ? [{ scale: 0.997 }] : [{ scale: 1 }],
+          })}
+        >
+          <Card style={{ marginBottom: 10, gap: 10, padding: 14 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+                  {item.store_name || activeStoreName || "Store"}
+                </Text>
+                <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 4 }}>
+                  Handoff: {String(item.id).slice(0, 8)}...
+                </Text>
+              </View>
+
+              <View
+                style={{
+                  paddingHorizontal: 12,
+                  paddingVertical: 7,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor:
+                    status === "PENDING"
+                      ? theme.colors.emeraldBorder
+                      : status === "ACCEPTED"
+                      ? "rgba(255,255,255,0.18)"
+                      : "rgba(255,255,255,0.12)",
+                  backgroundColor:
+                    status === "PENDING" ? theme.colors.emeraldSoft : "rgba(255,255,255,0.06)",
+                }}
+              >
+                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{status}</Text>
+              </View>
+            </View>
+
+            <View style={{ flexDirection: "row", gap: 12 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Items</Text>
+                <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>
+                  {itemsCount}
+                </Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Subtotal</Text>
+                <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>
+                  {fmt(Number(item.subtotal ?? 0))}
+                </Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Total</Text>
+                <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>
+                  {fmt(Number(item.total ?? 0))}
+                </Text>
+              </View>
+            </View>
+
+            {!!Number(item.discount_amount ?? 0) && (
+              <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                Discount: {fmt(Number(item.discount_amount ?? 0))}
+              </Text>
+            )}
+
+            {!!String(item.note ?? "").trim() && (
+              <View
+                style={{
+                  borderWidth: 1,
+                  borderColor: theme.colors.border,
+                  backgroundColor: "rgba(255,255,255,0.04)",
+                  borderRadius: 14,
+                  padding: 12,
+                }}
+              >
+                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Note</Text>
+                <Text style={{ color: theme.colors.text, fontWeight: "800", marginTop: 6 }}>
+                  {String(item.note ?? "").trim()}
+                </Text>
+              </View>
+            )}
+
+            <View style={{ gap: 4 }}>
+              <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                Created: {createdAt}
+              </Text>
+
+              {status === "ACCEPTED" ? (
+                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                  Accepted: {acceptedAt}
+                </Text>
+              ) : null}
+
+              {status === "COMPLETED" ? (
+                <>
+                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                    Accepted: {acceptedAt}
+                  </Text>
+                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                    Completed: {completedAt}
+                  </Text>
+                </>
+              ) : null}
+            </View>
+
+            <Text
+              style={{
+                color: theme.colors.muted,
+                fontWeight: "900",
+                textDecorationLine: "underline",
+              }}
+            >
+              Open details
+            </Text>
+          </Card>
+        </Pressable>
+      );
+    },
+    [activeStoreName, fmt, goHandoffDetail]
+  );
+
   return (
-    <Screen scroll={false} contentStyle={{ paddingHorizontal: 0, paddingTop: 0, paddingBottom: 0 }}>
+    <Screen
+      scroll={false}
+      contentStyle={{ paddingHorizontal: 0, paddingTop: 0, paddingBottom: 0 }}
+    >
       <View style={{ padding: theme.spacing.page, paddingBottom: 8, gap: 10 }}>
         {TopBar}
-        {QuickBar}
+        {!isCashier ? QuickBar : null}
       </View>
 
-      <FlatList
-        data={loading ? [] : filtered}
-        keyExtractor={(item) => item.id}
-        refreshing={refreshing}
-        onRefresh={() => loadProducts("refresh")}
-        showsVerticalScrollIndicator={false}
-        renderItem={renderItem}
-        contentContainerStyle={{
-          paddingHorizontal: theme.spacing.page,
-          paddingBottom: 140,
-        }}
-        ListEmptyComponent={
-          !loading ? (
-            <View style={{ paddingTop: 10, alignItems: "center" }}>
-              <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>No products found.</Text>
-            </View>
-          ) : null
-        }
-      />
+      {isCashier ? (
+        <FlatList<CashierHandoffRow>
+          data={cashierLoading && cashierRows.length === 0 ? [] : cashierRows}
+          keyExtractor={(item) => item.id}
+          refreshing={cashierRefreshing}
+          onRefresh={() => {
+            void loadCashierHandoffs("refresh");
+          }}
+          showsVerticalScrollIndicator={false}
+          renderItem={renderCashierItem}
+          contentContainerStyle={{
+            paddingHorizontal: theme.spacing.page,
+            paddingBottom: 140,
+          }}
+          ListHeaderComponent={<View style={{ paddingBottom: 10 }}>{CashierBar}</View>}
+          ListEmptyComponent={
+            !cashierLoading ? (
+              <View style={{ paddingTop: 10, alignItems: "center" }}>
+                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                  No cashier handoffs found.
+                </Text>
+              </View>
+            ) : null
+          }
+        />
+      ) : (
+        <FlatList<ProductRow>
+          data={loading ? [] : filtered}
+          keyExtractor={(item) => item.id}
+          refreshing={refreshing}
+          onRefresh={() => {
+            void loadProducts("refresh");
+          }}
+          showsVerticalScrollIndicator={false}
+          renderItem={renderItem}
+          contentContainerStyle={{
+            paddingHorizontal: theme.spacing.page,
+            paddingBottom: 140,
+          }}
+          ListEmptyComponent={
+            !loading ? (
+              <View style={{ paddingTop: 10, alignItems: "center" }}>
+                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                  No products found.
+                </Text>
+              </View>
+            ) : null
+          }
+        />
+      )}
 
       <PriceModal
         visible={priceModalOpen}
@@ -1167,7 +1684,10 @@ export default function SalesHomeScreen() {
             style={{ flex: 1, justifyContent: "flex-end" }}
             keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0}
           >
-            <Pressable onPress={() => {}} style={{ width: "100%", maxWidth: 520, alignSelf: "center" }}>
+            <Pressable
+              onPress={() => {}}
+              style={{ width: "100%", maxWidth: 520, alignSelf: "center" }}
+            >
               <Card
                 style={{
                   gap: 12,
@@ -1176,10 +1696,18 @@ export default function SalesHomeScreen() {
                   padding: 18,
                 }}
               >
-                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>Set Quantity</Text>
+                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
+                  Set Quantity
+                </Text>
 
-                <Text style={{ color: theme.colors.muted, fontWeight: "800" }} numberOfLines={1}>
-                  Product: <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{qtyEditorName}</Text>
+                <Text
+                  style={{ color: theme.colors.muted, fontWeight: "800" }}
+                  numberOfLines={1}
+                >
+                  Product:{" "}
+                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+                    {qtyEditorName}
+                  </Text>
                 </Text>
 
                 <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Qty</Text>
@@ -1210,7 +1738,9 @@ export default function SalesHomeScreen() {
                 />
 
                 {!!qtyEditorErr && (
-                  <Text style={{ color: theme.colors.dangerText, fontWeight: "900" }}>{qtyEditorErr}</Text>
+                  <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>
+                    {qtyEditorErr}
+                  </Text>
                 )}
 
                 <View style={{ flexDirection: "row", gap: 10, marginTop: 4 }}>

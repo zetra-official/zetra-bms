@@ -1,4 +1,5 @@
 ﻿// app/(tabs)/_layout.tsx
+import { useOrg } from "@/src/context/OrgContext";
 import { theme } from "@/src/ui/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
@@ -12,6 +13,9 @@ function TabLabel({ text, color }: { text: string; color: string }) {
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
+  const { activeRole } = useOrg();
+
+  const isCashier = activeRole === "cashier";
 
   return (
     <Tabs
@@ -32,6 +36,7 @@ export default function TabsLayout() {
         tabBarInactiveTintColor: "rgba(255,255,255,0.55)",
       }}
     >
+      {/* HOME */}
       <Tabs.Screen
         name="index"
         options={{
@@ -43,10 +48,12 @@ export default function TabsLayout() {
         }}
       />
 
+      {/* STORES */}
       <Tabs.Screen
         name="stores"
         options={{
           title: "Stores",
+          href: isCashier ? null : undefined,
           tabBarLabel: ({ color }) => <TabLabel text="Stores" color={color} />,
           tabBarIcon: ({ size, color }) => (
             <Ionicons name="storefront-outline" size={size} color={color} />
@@ -54,10 +61,12 @@ export default function TabsLayout() {
         }}
       />
 
+      {/* PRODUCTS */}
       <Tabs.Screen
         name="products"
         options={{
           title: "Products",
+          href: isCashier ? null : undefined,
           tabBarLabel: ({ color }) => <TabLabel text="Products" color={color} />,
           tabBarIcon: ({ size, color }) => (
             <Ionicons name="pricetags-outline" size={size} color={color} />
@@ -65,6 +74,7 @@ export default function TabsLayout() {
         }}
       />
 
+      {/* SALES */}
       <Tabs.Screen
         name="sales"
         options={{
@@ -76,11 +86,12 @@ export default function TabsLayout() {
         }}
       />
 
-      {/* ✅ RESTORED: Credit tab back to bottom bar */}
+      {/* CREDIT */}
       <Tabs.Screen
         name="credit"
         options={{
           title: "Credit",
+          href: isCashier ? null : undefined,
           tabBarLabel: ({ color }) => <TabLabel text="Credit" color={color} />,
           tabBarIcon: ({ size, color }) => (
             <Ionicons name="card-outline" size={size} color={color} />
@@ -88,10 +99,12 @@ export default function TabsLayout() {
         }}
       />
 
+      {/* CLUB */}
       <Tabs.Screen
         name="club"
         options={{
           title: "Club",
+          href: isCashier ? null : undefined,
           tabBarLabel: ({ color }) => <TabLabel text="Club" color={color} />,
           tabBarIcon: ({ size, color }) => (
             <Ionicons name="people-circle-outline" size={size} color={color} />
@@ -99,7 +112,7 @@ export default function TabsLayout() {
         }}
       />
 
-      {/* ✅ MORE tab (REAL route is settings/index.tsx) */}
+      {/* MORE */}
       <Tabs.Screen
         name="settings/index"
         options={{
@@ -115,15 +128,12 @@ export default function TabsLayout() {
         }}
       />
 
-      {/* ✅ Staff is NOT a tab; it lives inside More */}
+      {/* hidden routes */}
       <Tabs.Screen name="staff" options={{ href: null }} />
-
-      {/* ✅ Hide nested settings pages from tab bar */}
       <Tabs.Screen name="settings/organization" options={{ href: null }} />
       <Tabs.Screen name="settings/regional" options={{ href: null }} />
-
-      {/* ✅ Subscription page should NEVER appear as a tab */}
       <Tabs.Screen name="settings/subscription" options={{ href: null }} />
+      <Tabs.Screen name="settings/cashier-closing" options={{ href: null }} />
     </Tabs>
   );
 }

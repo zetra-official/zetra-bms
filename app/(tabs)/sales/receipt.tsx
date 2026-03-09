@@ -371,7 +371,7 @@ export default function ReceiptScreen() {
           </View>
         ) : err ? (
           <Card style={{ gap: 10 }}>
-            <Text style={{ color: theme.colors.dangerText, fontWeight: "900" }}>{err}</Text>
+            <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{err}</Text>
             <Button title="Retry" onPress={load} variant="primary" />
           </Card>
         ) : (

@@ -1,5 +1,4 @@
-﻿// src/ui/Screen.tsx
-import React, { useEffect, useMemo, useState } from "react";
+﻿import React, { useEffect, useMemo, useState } from "react";
 import {
   AppState,
   FlatList,
@@ -120,7 +119,6 @@ export function Screen({
     if (typeof bottomPad === "number") return bottomPad;
 
     if (keyboardOpen) {
-      // keep stable on Android (avoid jump)
       if (Platform.OS === "android") return 16;
       return 24;
     }
@@ -128,7 +126,12 @@ export function Screen({
     return TAB_BAR_BASE_HEIGHT + TAB_BAR_EXTRA_GAP;
   }, [bottomPad, keyboardOpen]);
 
-  const paddingTop = Math.max(insets.top, 10);
+  // ✅ Stronger safe-area spacing for top headers
+  const topInset = Math.max(insets.top, 10);
+  const topContentPad = topInset + 8;
+  const offlineExtra = isOffline ? 44 : 0;
+  const scrollableTopSpacer = topContentPad + offlineExtra;
+
   const paddingBottom = Math.max(insets.bottom, 10) + effectiveBottomPad;
 
   const childCount = React.Children.count(children);
@@ -153,7 +156,7 @@ export function Screen({
           position: "absolute",
           left: 16,
           right: 16,
-          top: paddingTop,
+          top: topContentPad,
           zIndex: 40,
           borderWidth: 1,
           borderColor: "rgba(245,158,11,0.45)",
@@ -175,15 +178,14 @@ export function Screen({
         </Text>
       </View>
     );
-  }, [isOffline, paddingTop]);
+  }, [isOffline, topContentPad]);
 
   const bellTop = useMemo(() => {
-    return paddingTop + (isOffline ? 44 : 0);
-  }, [paddingTop, isOffline]);
+    return topContentPad + (isOffline ? 44 : 0);
+  }, [topContentPad, isOffline]);
 
   const Root = (
     <View style={[{ flex: 1, backgroundColor: baseBg }, style]}>
-      {/* ✅ Background layer MUST NOT block touches */}
       <View
         pointerEvents="none"
         style={{
@@ -194,7 +196,6 @@ export function Screen({
 
       {OfflineBanner}
 
-      {/* ✅ HARDEN: constrain the overlay touch footprint (avoid accidental mid-screen blocking) */}
       <View
         pointerEvents="box-none"
         style={{
@@ -203,9 +204,6 @@ export function Screen({
           right: 0,
           zIndex: 60,
           ...(Platform.OS === "android" ? { elevation: 60 } : null),
-
-          // ✅ Critical: limit container size so even if child layout glitches,
-          // it won't cover the middle of the screen.
           width: 96,
           height: 96,
           alignItems: "flex-end",
@@ -220,7 +218,7 @@ export function Screen({
           style={{ flex: 1, backgroundColor: baseBg }}
           contentContainerStyle={[
             {
-              paddingTop: paddingTop + (isOffline ? 44 : 0),
+              paddingTop: scrollableTopSpacer,
               paddingHorizontal: 16,
               paddingBottom,
               backgroundColor: baseBg,
@@ -235,7 +233,10 @@ export function Screen({
         </ScrollView>
       ) : childIsScrollableRoot ? (
         <View style={[{ flex: 1, backgroundColor: baseBg }, contentStyle]}>
-          {isOffline ? <View style={{ height: paddingTop + 44 }} /> : null}
+          {/* ✅ Critical fix:
+              Every root FlatList/ScrollView/SectionList screen now starts BELOW safe area.
+              This fixes History / Closing History jumping into the top status area. */}
+          <View style={{ height: scrollableTopSpacer }} />
           {children}
         </View>
       ) : (
@@ -243,7 +244,7 @@ export function Screen({
           style={[
             {
               flex: 1,
-              paddingTop: paddingTop + (isOffline ? 44 : 0),
+              paddingTop: scrollableTopSpacer,
               paddingHorizontal: 16,
               paddingBottom,
               backgroundColor: baseBg,
@@ -257,7 +258,6 @@ export function Screen({
     </View>
   );
 
-  // ✅ iOS only KAV (Android: avoid jumpy behavior)
   if (Platform.OS !== "ios") return Root;
 
   return (

@@ -116,6 +116,28 @@ function normalizeRoleHint(x: any): AiRoleKey | null {
   return ok[v] ?? null;
 }
 
+function normalizeUserRole(x: any) {
+  return clean(x).toLowerCase();
+}
+
+function ownerOnlyError(origin: string | null) {
+  return withCors(
+    json(
+      {
+        ok: false,
+        error: "AI is available only for organization owner.",
+        code: "OWNER_ONLY_AI",
+      },
+      { status: 403 }
+    ),
+    origin
+  );
+}
+
+function ensureOwnerRole(roleRaw: any) {
+  return normalizeUserRole(roleRaw) === "owner";
+}
+
 function buildRoleInstructions(role: AiRoleKey) {
   if (role === "ENGINEERING") {
     return `
@@ -210,7 +232,6 @@ SAFETY (CRITICAL):
 - Never reveal secrets, API keys, or private data.
 `.trim();
 
-  // ✅ FIX: Stop asking follow-up questions when user is closing the conversation
   const stopConversationPolicy = `
 STOP / CLOSING BEHAVIOR (CRITICAL):
 - If the user indicates they are done / have no question / don't need help now (e.g. "hapana sina swali", "kwa leo sitaki kitu", "sawa mkuu", "nipo sawa", "bye", "no thanks"):
@@ -328,9 +349,6 @@ function heuristicRole(text: string, ctx: ReqBody["context"]): AiRoleKey {
   const engHit =
     /\b(error|bug|crash|expo|router|supabase|sql|typescript|react|api|deploy|build|logs|worker|wrangler)\b/.test(t);
 
-  // ✅ ROUTING FIX A:
-  // Only choose ZETRA_BMS when the user is actually asking about ZETRA/BMS workflows/screens,
-  // not just because org context exists.
   const bmsHit =
     /\b(zetra|bms|dashboard|home|screen|skrini|module|moduli|tab|sales|mauzo|stock|inventory|bidhaa|product|products|store|duka|stores|pricing|bei|reports|report|transfer|movement|closing|lock|tasks|staff|admin|owner|org|organization|settings|profile)\b/.test(
       t
@@ -347,23 +365,16 @@ function heuristicRole(text: string, ctx: ReqBody["context"]): AiRoleKey {
   return "GENERAL";
 }
 
-/**
- * ✅ HARD STOP (deterministic):
- * If user clearly closes conversation, return 1-line reply and stop.
- * This prevents the “labda unahitaji…” loop 100%.
- */
 function isClosingMessage(raw: string) {
   const t = clean(raw).toLowerCase();
   if (!t) return false;
 
-  // common SW / EN closings
   if (
     /^(sawa|poa|ok(ay)?|asante|thank(s)?)(\s+(mkuu|boss|bro|dad|sir))?[\s.!]*$/.test(t) ||
     /^(bye|goodbye|see you|ttyl|later)[\s.!]*$/.test(t)
   )
     return true;
 
-  // explicit “no question / no help”
   if (
     /\b(hapana\s+sina\s+swali|sina\s+swali|sihitaji\s+kitu|kwa\s+leo\s+sihitaji|kwa\s+leo\s+sitaki\s+kitu|siitaji\s+msaada|sipo\s+tayari|nipo\s+sawa|ni\s+sawa)\b/.test(
       t
@@ -379,7 +390,6 @@ function isClosingMessage(raw: string) {
 
 function closingReply(lang: "sw" | "en" | "auto") {
   if (lang === "en") return "All good. I’m here whenever you need me.";
-  // AUTO defaults to SW-friendly tone since your app is SW-first
   return "Sawa mkuu. Nipo hapa ukihitaji.";
 }
 
@@ -534,10 +544,6 @@ function buildMessages(
   return msgs;
 }
 
-/**
- * Vision messages builder:
- * - user content includes text + image_url parts
- */
 function buildVisionMessages(
   sys: string,
   ctxLines: string[],
@@ -560,7 +566,6 @@ function buildVisionMessages(
   for (const img of images) {
     const u = clean(img);
     if (!u) continue;
-    // Works for both http(s) and data:image/...;base64,...
     content.push({ type: "image_url", image_url: { url: u } });
   }
 
@@ -568,11 +573,6 @@ function buildVisionMessages(
   return msgs;
 }
 
-/**
- * OpenAI Image generation:
- * Uses /v1/images/generations
- * Returns base64 in data URL (stable for app)
- */
 async function openaiImageGenerate(env: Env, prompt: string, timeoutMs = 60_000) {
   const OPENAI_API_KEY = clean(env.OPENAI_API_KEY);
   if (!OPENAI_API_KEY) return { ok: false as const, status: 500, url: "", error: "Missing OPENAI_API_KEY" };
@@ -584,7 +584,6 @@ async function openaiImageGenerate(env: Env, prompt: string, timeoutMs = 60_000)
     model,
     prompt,
     size,
-    // Prefer base64 so we can return data URL reliably
     response_format: "b64_json",
   };
 
@@ -608,7 +607,6 @@ async function openaiImageGenerate(env: Env, prompt: string, timeoutMs = 60_000)
     return { ok: false as const, status: res.status, url: "", error: msg };
   }
 
-  // Accept either b64_json or url
   const b64 = clean(parsed?.data?.[0]?.b64_json);
   if (b64) {
     const dataUrl = `data:image/png;base64,${b64}`;
@@ -621,10 +619,6 @@ async function openaiImageGenerate(env: Env, prompt: string, timeoutMs = 60_000)
   return { ok: false as const, status: 500, url: "", error: "No image returned" };
 }
 
-/**
- * OpenAI Transcribe:
- * Uses /v1/audio/transcriptions (whisper-1 default)
- */
 async function openaiTranscribe(env: Env, file: File, timeoutMs = 55_000) {
   const OPENAI_API_KEY = clean(env.OPENAI_API_KEY);
   if (!OPENAI_API_KEY) return { ok: false as const, status: 500, text: "", error: "Missing OPENAI_API_KEY" };
@@ -642,7 +636,6 @@ async function openaiTranscribe(env: Env, file: File, timeoutMs = 55_000) {
       method: "POST",
       headers: {
         Authorization: `Bearer ${OPENAI_API_KEY}`,
-        // NOTE: do not set content-type; fetch will set multipart boundary
       },
       body: form as any,
     },
@@ -660,12 +653,6 @@ async function openaiTranscribe(env: Env, file: File, timeoutMs = 55_000) {
   return { ok: true as const, status: 200, text, error: "" };
 }
 
-/**
- * Role routing:
- * 1) roleHint
- * 2) classifier
- * 3) heuristic
- */
 async function resolveRole(
   env: Env,
   text: string,
@@ -703,9 +690,6 @@ async function resolveRole(
   }
 }
 
-/**
- * ROUTER
- */
 function getPath(request: Request) {
   try {
     const u = new URL(request.url);
@@ -720,12 +704,10 @@ export default {
     const origin = request.headers.get("Origin");
     const path = getPath(request);
 
-    // Preflight
     if (request.method === "OPTIONS") {
       return withCors(new Response(null, { status: 204, headers: corsHeaders(origin) }), origin);
     }
 
-    // Health endpoints
     if (request.method === "GET") {
       if (path === "/" || path === "/health") {
         return withCors(
@@ -757,13 +739,16 @@ export default {
         return withCors(json({ ok: false, error: "Invalid JSON body" }, { status: 400 }), origin);
       }
 
+      if (!ensureOwnerRole(body?.context?.activeRole)) {
+        return ownerOnlyError(origin);
+      }
+
       const text = clean(body?.text);
       if (!text) return withCors(json({ ok: false, error: "Missing text" }, { status: 400 }), origin);
 
       const mode = body?.mode ?? "AUTO";
       const lang = pickLang(mode);
 
-      // ✅ HARD STOP: prevent follow-up loops
       if (isClosingMessage(text)) {
         return withCors(
           json({
@@ -809,7 +794,6 @@ export default {
         );
       }
 
-      // ✅ RESPONSE SHAPE MATCHES APP: { ok, reply, meta }
       return withCors(
         json({
           ok: true,
@@ -837,6 +821,10 @@ export default {
         return withCors(json({ ok: false, error: "Invalid JSON body" }, { status: 400 }), origin);
       }
 
+      if (!ensureOwnerRole(body?.meta?.context?.activeRole)) {
+        return ownerOnlyError(origin);
+      }
+
       const message = clean(body?.message);
       const images = Array.isArray(body?.images) ? body!.images!.map((x) => clean(x)).filter(Boolean) : [];
       const meta = body?.meta ?? {};
@@ -847,7 +835,6 @@ export default {
         return withCors(json({ ok: false, error: "Missing message/images" }, { status: 400 }), origin);
       }
 
-      // ✅ HARD STOP (vision) only when it's text-only closing
       if (message && images.length === 0 && isClosingMessage(message)) {
         return withCors(
           json({
@@ -878,7 +865,6 @@ export default {
 
       const messages = buildVisionMessages(sys, ctxLines, history, message, images);
 
-      // Use chat completions for vision (model supports images)
       const OPENAI_API_KEY = clean(env.OPENAI_API_KEY);
       if (!OPENAI_API_KEY) {
         return withCors(json({ ok: false, error: "Missing OPENAI_API_KEY" }, { status: 500 }), origin);
@@ -942,6 +928,10 @@ export default {
         return withCors(json({ ok: false, error: "Invalid JSON body" }, { status: 400 }), origin);
       }
 
+      if (!ensureOwnerRole(body?.context?.activeRole ?? body?.activeRole)) {
+        return ownerOnlyError(origin);
+      }
+
       const prompt = clean(body?.prompt);
       if (!prompt) return withCors(json({ ok: false, error: "Missing prompt" }, { status: 400 }), origin);
 
@@ -957,6 +947,11 @@ export default {
     // (4) TRANSCRIBE: /transcribe
     // ----------------------------
     if (path === "/transcribe") {
+      const roleHeader = request.headers.get("x-zetra-role");
+      if (!ensureOwnerRole(roleHeader)) {
+        return ownerOnlyError(origin);
+      }
+
       let form: FormData | null = null;
       try {
         form = await request.formData();
@@ -969,8 +964,6 @@ export default {
         return withCors(json({ ok: false, error: "Missing file" }, { status: 400 }), origin);
       }
 
-      // Basic size guard (avoid extreme uploads)
-      // NOTE: File.size is available in Workers
       const maxBytes = 16 * 1024 * 1024; // 16MB
       if ((f as File).size > maxBytes) {
         return withCors(json({ ok: false, error: "Audio too large (max 16MB)" }, { status: 413 }), origin);
@@ -984,7 +977,6 @@ export default {
       return withCors(json({ ok: true, text: out.text }), origin);
     }
 
-    // Unknown route
     return withCors(json({ ok: false, error: "Not found" }, { status: 404 }), origin);
   },
 };
