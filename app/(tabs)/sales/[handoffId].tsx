@@ -1,3 +1,4 @@
+// app/(tabs)/sales/[handoffId].tsx
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -119,7 +120,12 @@ function MethodChip({
         opacity: pressed ? 0.92 : 1,
       })}
     >
-      <Text style={{ color: active ? theme.colors.emerald : theme.colors.text, fontWeight: "900" }}>
+      <Text
+        style={{
+          color: active ? theme.colors.emerald : theme.colors.text,
+          fontWeight: "900",
+        }}
+      >
         {label}
       </Text>
     </Pressable>
@@ -159,6 +165,7 @@ function InputBox(props: {
         paddingHorizontal: 12,
         paddingVertical: props.multiline ? 12 : 10,
         minHeight: props.multiline ? 90 : undefined,
+        textAlignVertical: props.multiline ? "top" : "center",
       }}
     />
   );
@@ -311,6 +318,49 @@ export default function CashierHandoffDetailScreen() {
     } as any);
   }, [router, row?.sale_id]);
 
+  const goShiftOpening = useCallback(() => {
+    const storeId = String(row?.store_id ?? "").trim();
+    const storeName = String(row?.store_name ?? "").trim();
+
+    if (!storeId) {
+      Alert.alert("Missing", "Store ya handoff haijapatikana.");
+      return;
+    }
+
+    router.push({
+      pathname: "/(tabs)/sales/shift-opening",
+      params: {
+        storeId,
+        storeName,
+      },
+    } as any);
+  }, [router, row?.store_id, row?.store_name]);
+
+  const goCashierClosing = useCallback(() => {
+    router.push("/(tabs)/settings/cashier-closing" as any);
+  }, [router]);
+
+  const pendingTone = useMemo(() => {
+    if (status === "PENDING") {
+      return {
+        border: theme.colors.emeraldBorder,
+        bg: theme.colors.emeraldSoft,
+      };
+    }
+
+    if (status === "ACCEPTED") {
+      return {
+        border: "rgba(255,255,255,0.18)",
+        bg: "rgba(255,255,255,0.06)",
+      };
+    }
+
+    return {
+      border: "rgba(255,255,255,0.12)",
+      bg: "rgba(255,255,255,0.06)",
+    };
+  }, [status]);
+
   return (
     <Screen scroll bottomPad={180}>
       <View style={{ flex: 1, gap: 14 }}>
@@ -376,16 +426,8 @@ export default function CashierHandoffDetailScreen() {
                     paddingVertical: 8,
                     borderRadius: theme.radius.pill,
                     borderWidth: 1,
-                    borderColor:
-                      status === "PENDING"
-                        ? theme.colors.emeraldBorder
-                        : status === "ACCEPTED"
-                        ? "rgba(255,255,255,0.18)"
-                        : "rgba(255,255,255,0.12)",
-                    backgroundColor:
-                      status === "PENDING"
-                        ? theme.colors.emeraldSoft
-                        : "rgba(255,255,255,0.06)",
+                    borderColor: pendingTone.border,
+                    backgroundColor: pendingTone.bg,
                   }}
                 >
                   <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{status}</Text>
@@ -453,6 +495,44 @@ export default function CashierHandoffDetailScreen() {
               )}
             </Card>
 
+            <Card
+              style={{
+                gap: 10,
+                borderColor: "rgba(245,158,11,0.28)",
+                backgroundColor: "rgba(245,158,11,0.08)",
+              }}
+            >
+              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+                Shift Discipline
+              </Text>
+
+              <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                Utaratibu sahihi wa kazi:
+              </Text>
+
+              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+                1. Fungua Shift Opening
+              </Text>
+              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+                2. Kubali handoff
+              </Text>
+              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+                3. Kamilisha sale kwa cashier huyu
+              </Text>
+              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+                4. Funga kupitia Cashier Closing / PDF
+              </Text>
+
+              <View style={{ flexDirection: "row", gap: 10, marginTop: 4 }}>
+                <View style={{ flex: 1 }}>
+                  <Button title="Shift Opening" onPress={goShiftOpening} variant="secondary" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Button title="Cashier Closing" onPress={goCashierClosing} variant="secondary" />
+                </View>
+              </View>
+            </Card>
+
             <Card style={{ gap: 10 }}>
               <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
                 Items
@@ -464,8 +544,7 @@ export default function CashierHandoffDetailScreen() {
                 items.map((it: any, idx: number) => {
                   const qty = Math.trunc(Number(it?.qty ?? 0));
                   const unitPrice = Number(it?.unit_price ?? 0);
-                  const lineTotal =
-                    Number(it?.line_total ?? qty * unitPrice);
+                  const lineTotal = Number(it?.line_total ?? qty * unitPrice);
 
                   return (
                     <View
@@ -502,6 +581,10 @@ export default function CashierHandoffDetailScreen() {
 
                 <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
                   Ukibonyeza Accept, handoff hii itawekwa chini yako kisha utaendelea kukamilisha mauzo.
+                </Text>
+
+                <Text style={{ color: theme.colors.faint, fontWeight: "800" }}>
+                  Hakikisha umefungua shift yako kwanza ili ripoti za cashier closing ziwe safi na za mtu husika.
                 </Text>
 
                 <Button
@@ -602,12 +685,20 @@ export default function CashierHandoffDetailScreen() {
                   Handoff hii ilikamilishwa tayari. Unaweza kufungua risiti yake hapa chini.
                 </Text>
 
-                <Button
-                  title="Open Receipt"
-                  onPress={openReceipt}
-                  disabled={!String(row.sale_id ?? "").trim()}
-                  variant="primary"
-                />
+                <View style={{ flexDirection: "row", gap: 10 }}>
+                  <View style={{ flex: 1 }}>
+                    <Button
+                      title="Open Receipt"
+                      onPress={openReceipt}
+                      disabled={!String(row.sale_id ?? "").trim()}
+                      variant="primary"
+                    />
+                  </View>
+
+                  <View style={{ flex: 1 }}>
+                    <Button title="Cashier Closing" onPress={goCashierClosing} variant="secondary" />
+                  </View>
+                </View>
               </Card>
             ) : null}
           </>

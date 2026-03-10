@@ -1,7 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  Alert,
+  AppState,
   FlatList,
   Keyboard,
   KeyboardAvoidingView,
@@ -26,6 +28,7 @@ import {
 import { countPending } from "../../../src/offline/salesQueue";
 import { syncSalesQueueOnce } from "../../../src/offline/salesSync";
 
+import { Button } from "@/src/ui/Button";
 import { Card } from "../../../src/ui/Card";
 import { Input } from "../../../src/ui/Input";
 import { PriceModal } from "../../../src/ui/PriceModal";
@@ -84,6 +87,17 @@ type CashierHandoffRow = {
   created_at: string | null;
   updated_at?: string | null;
   item_count?: number | null;
+};
+
+type OpenCashierShiftRow = {
+  shift_id: string;
+  organization_id: string;
+  store_id: string;
+  membership_id: string;
+  opening_cash: number;
+  status: string;
+  opened_at: string;
+  closed_at?: string | null;
 };
 
 /* =========================
@@ -171,6 +185,12 @@ function fmtDateTimeLocal(input?: string | null) {
   }
 }
 
+function normalizeMoneyInput(raw: string) {
+  const digitsOnly = String(raw ?? "").replace(/[^\d]/g, "");
+  if (!digitsOnly) return "";
+  return digitsOnly.replace(/^0+(?=\d)/, "");
+}
+
 /* =========================
    Screen
 ========================= */
@@ -208,6 +228,14 @@ export default function SalesHomeScreen() {
   const [cashierErr, setCashierErr] = useState<string | null>(null);
   const [cashierRows, setCashierRows] = useState<CashierHandoffRow[]>([]);
 
+  const [shiftLoading, setShiftLoading] = useState(false);
+  const [shiftBusy, setShiftBusy] = useState(false);
+  const [shiftErr, setShiftErr] = useState<string | null>(null);
+
+  const [openShift, setOpenShift] = useState<OpenCashierShiftRow | null>(null);
+  const [shiftModalOpen, setShiftModalOpen] = useState(false);
+  const [openingCashDraft, setOpeningCashDraft] = useState("0");
+
   const orgId = String(activeOrgId ?? "").trim();
   const money = useOrgMoneyPrefs(orgId);
   const displayCurrency = money.currency || "TZS";
@@ -234,7 +262,6 @@ export default function SalesHomeScreen() {
   }, []);
 
   const currentRole = useMemo(() => normalizeRole(activeRole), [activeRole]);
-
   const isCashier = useMemo(() => currentRole === "cashier", [currentRole]);
 
   const canSellDirect = useMemo(() => {
@@ -247,12 +274,144 @@ export default function SalesHomeScreen() {
 
   const isOwner = useMemo(() => currentRole === "owner", [currentRole]);
 
+  const loadOpenShift = useCallback(async () => {
+    if (!isCashier || !activeStoreId) {
+      setOpenShift(null);
+      setShiftModalOpen(false);
+      return;
+    }
+
+    setShiftErr(null);
+    setShiftLoading(true);
+
+    try {
+      const { data, error } = await supabase.rpc("get_my_open_cashier_shift_v1", {
+        p_store_id: activeStoreId,
+      });
+
+      if (error) throw error;
+
+      const row = Array.isArray(data) ? data[0] : null;
+
+      if (row?.shift_id) {
+        setOpenShift({
+          shift_id: String(row.shift_id),
+          organization_id: String(row.organization_id ?? ""),
+          store_id: String(row.store_id ?? ""),
+          membership_id: String(row.membership_id ?? ""),
+          opening_cash: Number(row.opening_cash ?? 0),
+          status: String(row.status ?? "OPEN"),
+          opened_at: String(row.opened_at ?? ""),
+          closed_at: row.closed_at ?? null,
+        });
+        setShiftModalOpen(false);
+      } else {
+        setOpenShift(null);
+        setShiftModalOpen(false);
+      }
+    } catch (e: any) {
+      setOpenShift(null);
+      setShiftModalOpen(false);
+      setShiftErr(e?.message ?? "Failed to load open shift");
+    } finally {
+      setShiftLoading(false);
+    }
+  }, [isCashier, activeStoreId]);
+
+  const loadCashierHandoffs = useCallback(
+    async (mode: "boot" | "refresh" = "boot") => {
+      if (!isCashier) return;
+
+      setCashierErr(null);
+      if (mode === "boot") setCashierLoading(true);
+      if (mode === "refresh") setCashierRefreshing(true);
+
+      try {
+        const statusParam = cashierFilter === "ALL" ? null : cashierFilter;
+
+        const { data, error } = await supabase.rpc("get_my_cashier_handoffs_v2", {
+          p_status: statusParam,
+        });
+
+        if (error) throw error;
+
+        setCashierRows(normalizeHandoffs((data ?? []) as any[]));
+      } catch (e: any) {
+        setCashierErr(e?.message ?? "Failed to load cashier queue");
+        setCashierRows([]);
+      } finally {
+        if (mode === "boot") setCashierLoading(false);
+        if (mode === "refresh") setCashierRefreshing(false);
+      }
+    },
+    [cashierFilter, isCashier]
+  );
+
+  const refreshCashierSurface = useCallback(async () => {
+    if (!isCashier) return;
+    await Promise.allSettled([loadOpenShift(), loadCashierHandoffs("refresh")]);
+  }, [isCashier, loadCashierHandoffs, loadOpenShift]);
+
+  const startCashierShift = useCallback(async () => {
+    if (!activeStoreId) {
+      Alert.alert("Missing", "No active store selected.");
+      return;
+    }
+
+    const raw = normalizeMoneyInput(openingCashDraft);
+    const openingCash = raw ? Number(raw) : 0;
+
+    if (!Number.isFinite(openingCash) || openingCash < 0) {
+      Alert.alert("Opening Cash", "Weka opening cash sahihi. Unaweza kuweka 0.");
+      return;
+    }
+
+    setShiftBusy(true);
+    setShiftErr(null);
+
+    try {
+      const { data, error } = await supabase.rpc("open_cashier_shift_v1", {
+        p_store_id: activeStoreId,
+        p_opening_cash: openingCash,
+      });
+
+      if (error) throw error;
+
+      const row = Array.isArray(data) ? data[0] : null;
+      if (!row?.shift_id) {
+        throw new Error("Shift opened but no shift_id returned");
+      }
+
+      setOpenShift({
+        shift_id: String(row.shift_id),
+        organization_id: String(row.organization_id ?? ""),
+        store_id: String(row.store_id ?? ""),
+        membership_id: String(row.membership_id ?? ""),
+        opening_cash: Number(row.opening_cash ?? 0),
+        status: String(row.status ?? "OPEN"),
+        opened_at: String(row.opened_at ?? ""),
+        closed_at: null,
+      });
+
+      setOpeningCashDraft("0");
+      setShiftModalOpen(false);
+
+      await refreshCashierSurface();
+
+      Alert.alert("Shift Opened ✅", "Cashier shift imefunguliwa vizuri.");
+    } catch (e: any) {
+      setShiftErr(e?.message ?? "Failed to open shift");
+      Alert.alert("Shift Opening Failed", e?.message ?? "Failed to open shift");
+    } finally {
+      setShiftBusy(false);
+    }
+  }, [activeStoreId, openingCashDraft, refreshCashierSurface]);
+
   /* =========================
      Cart summary
   ========================= */
   const cartCount = useMemo(() => cart.reduce((a, c) => a + (c.qty || 0), 0), [cart]);
   const cartTotalLines = useMemo(() => cart.length, [cart]);
-
   const cartTotalAmount = useMemo(
     () => cart.reduce((a, c) => a + Number(c.line_total || 0), 0),
     [cart]
@@ -273,7 +432,6 @@ export default function SalesHomeScreen() {
 
     const sp = Number(p.selling_price ?? 0);
     setPriceDraft(sp > 0 ? String(Math.trunc(sp)) : "");
-
     setQtyDraft("1");
     setPriceModalOpen(true);
   }, []);
@@ -313,7 +471,6 @@ export default function SalesHomeScreen() {
       if (idx >= 0) {
         const existing = prev[idx];
         const nextQty = clampQty(existing.qty + qn);
-
         const next = [...prev];
         next[idx] = {
           ...existing,
@@ -377,7 +534,7 @@ export default function SalesHomeScreen() {
             qty: 1,
             unit: p.unit ?? null,
             unit_price: sp,
-            line_total: sp * 1,
+            line_total: sp,
           },
         ];
       });
@@ -485,7 +642,7 @@ export default function SalesHomeScreen() {
   }, [closeQtyEditor, qtyEditorProductId, removeItem]);
 
   /* =========================
-     Load STORE-SCOPED sale items
+     Load products
   ========================= */
   const loadProducts = useCallback(
     async (mode: "boot" | "refresh") => {
@@ -573,35 +730,6 @@ export default function SalesHomeScreen() {
     [activeStoreId, isCashier, isOffline, products.length]
   );
 
-  const loadCashierHandoffs = useCallback(
-    async (mode: "boot" | "refresh" = "boot") => {
-      if (!isCashier) return;
-
-      setCashierErr(null);
-      if (mode === "boot") setCashierLoading(true);
-      if (mode === "refresh") setCashierRefreshing(true);
-
-      try {
-        const statusParam = cashierFilter === "ALL" ? null : cashierFilter;
-
-        const { data, error } = await supabase.rpc("get_my_cashier_handoffs_v2", {
-          p_status: statusParam,
-        });
-
-        if (error) throw error;
-
-        setCashierRows(normalizeHandoffs((data ?? []) as any[]));
-      } catch (e: any) {
-        setCashierErr(e?.message ?? "Failed to load cashier queue");
-        setCashierRows([]);
-      } finally {
-        if (mode === "boot") setCashierLoading(false);
-        if (mode === "refresh") setCashierRefreshing(false);
-      }
-    },
-    [cashierFilter, isCashier]
-  );
-
   useEffect(() => {
     setCart([]);
     setQuery("");
@@ -609,11 +737,12 @@ export default function SalesHomeScreen() {
 
     if (isCashier) {
       void loadCashierHandoffs("boot");
+      void loadOpenShift();
       return;
     }
 
     void loadProducts("boot");
-  }, [activeStoreId, isCashier, loadProducts, loadCashierHandoffs]);
+  }, [activeStoreId, isCashier, loadCashierHandoffs, loadOpenShift, loadProducts]);
 
   useEffect(() => {
     if (!activeStoreId) return;
@@ -624,7 +753,6 @@ export default function SalesHomeScreen() {
       try {
         await syncSalesQueueOnce(activeStoreId);
       } catch {
-        // no-op
       } finally {
         const n = await countPending(activeStoreId);
         setPendingCount(n);
@@ -646,6 +774,50 @@ export default function SalesHomeScreen() {
     if (!isCashier) return;
     void loadCashierHandoffs("boot");
   }, [isCashier, cashierFilter, loadCashierHandoffs]);
+
+  useEffect(() => {
+    if (!isCashier) {
+      setOpenShift(null);
+      setShiftModalOpen(false);
+      return;
+    }
+    void loadOpenShift();
+  }, [isCashier, activeStoreId, loadOpenShift]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (isCashier) {
+        void refreshCashierSurface();
+      } else {
+        void loadProducts("refresh");
+      }
+      return () => {};
+    }, [isCashier, loadProducts, refreshCashierSurface])
+  );
+
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state !== "active") return;
+
+      if (isCashier) {
+        void refreshCashierSurface();
+      } else {
+        void loadProducts("refresh");
+      }
+    });
+
+    return () => sub.remove();
+  }, [isCashier, loadProducts, refreshCashierSurface]);
+
+  useEffect(() => {
+    if (!isCashier) return;
+
+    const timer = setInterval(() => {
+      void refreshCashierSurface();
+    }, 12000);
+
+    return () => clearInterval(timer);
+  }, [isCashier, refreshCashierSurface]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -847,8 +1019,16 @@ export default function SalesHomeScreen() {
     [router]
   );
 
+  const goShiftOpening = useCallback(() => {
+    router.push("/(tabs)/sales/shift-opening" as any);
+  }, [router]);
+
+  const goCashierClosing = useCallback(() => {
+    router.push("/(tabs)/settings/cashier-closing" as any);
+  }, [router]);
+
   /* =========================
-     Derived display helpers
+     Derived helpers
   ========================= */
   const todayLabel = useMemo(() => fmtDateShort(new Date()), []);
 
@@ -942,7 +1122,9 @@ export default function SalesHomeScreen() {
     return (
       <View style={{ gap: 6 }}>
         <View style={{ flexDirection: "row", alignItems: "flex-end" }}>
-          <Text style={{ fontSize: 26, fontWeight: "900", color: theme.colors.text }}>Sales</Text>
+          <Text style={{ fontSize: 26, fontWeight: "900", color: theme.colors.text }}>
+            Sales
+          </Text>
         </View>
 
         <View
@@ -960,31 +1142,32 @@ export default function SalesHomeScreen() {
             <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 12 }}>
               {todayLabel}
             </Text>
-
             <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
               {statusLine}
             </Text>
           </View>
 
           <View style={{ flexDirection: "row", gap: 8 }}>
-            <Pressable
-              onPress={() => router.push("/(tabs)/sales/expenses")}
-              hitSlop={10}
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 999,
-                alignItems: "center",
-                justifyContent: "center",
-                borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.10)",
-                backgroundColor: "rgba(255,255,255,0.06)",
-              }}
-            >
-              <Ionicons name="cash-outline" size={19} color={theme.colors.text} />
-            </Pressable>
+            {!isCashier ? (
+              <Pressable
+                onPress={() => router.push("/(tabs)/sales/expenses")}
+                hitSlop={10}
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 999,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderWidth: 1,
+                  borderColor: "rgba(255,255,255,0.10)",
+                  backgroundColor: "rgba(255,255,255,0.06)",
+                }}
+              >
+                <Ionicons name="cash-outline" size={19} color={theme.colors.text} />
+              </Pressable>
+            ) : null}
 
-            {isOwner && (
+            {isOwner && !isCashier ? (
               <Pressable
                 onPress={() => router.push("/(tabs)/sales/profit")}
                 hitSlop={10}
@@ -1001,7 +1184,7 @@ export default function SalesHomeScreen() {
               >
                 <Ionicons name="stats-chart" size={19} color={theme.colors.text} />
               </Pressable>
-            )}
+            ) : null}
 
             <Pressable
               onPress={() => router.push("/(tabs)/sales/history")}
@@ -1023,7 +1206,7 @@ export default function SalesHomeScreen() {
         </View>
       </View>
     );
-  }, [headerSubtitle, isOwner, router, statusLine, todayLabel]);
+  }, [headerSubtitle, isCashier, isOwner, router, statusLine, todayLabel]);
 
   const QuickBar = useMemo(() => {
     return (
@@ -1041,7 +1224,9 @@ export default function SalesHomeScreen() {
         {!!err && <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{err}</Text>}
 
         {!!headerBlockedReason && (
-          <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{headerBlockedReason}</Text>
+          <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+            {headerBlockedReason}
+          </Text>
         )}
 
         <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
@@ -1064,11 +1249,6 @@ export default function SalesHomeScreen() {
                 justifyContent: "center",
                 opacity: checkoutDisabled ? 0.55 : pressed ? 0.92 : 1,
                 transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
-                shadowColor: "#000",
-                shadowOpacity: checkoutDisabled ? 0 : 0.25,
-                shadowRadius: 10,
-                shadowOffset: { width: 0, height: 6 },
-                elevation: checkoutDisabled ? 0 : 8,
                 flexDirection: "row",
                 gap: 8,
                 flex: 1,
@@ -1129,11 +1309,6 @@ export default function SalesHomeScreen() {
                 backgroundColor: theme.colors.emeraldSoft,
                 opacity: !activeStoreId || !canSellDirect || isCashier ? 0.5 : pressed ? 0.92 : 1,
                 transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
-                shadowColor: "#000",
-                shadowOpacity: !activeStoreId || !canSellDirect || isCashier ? 0 : 0.25,
-                shadowRadius: 10,
-                shadowOffset: { width: 0, height: 6 },
-                elevation: !activeStoreId || !canSellDirect || isCashier ? 0 : 8,
               },
             ]}
             hitSlop={10}
@@ -1160,7 +1335,9 @@ export default function SalesHomeScreen() {
               },
             ]}
           >
-            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14 }}>Clear</Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14 }}>
+              Clear
+            </Text>
           </Pressable>
         </View>
 
@@ -1182,24 +1359,24 @@ export default function SalesHomeScreen() {
       </Card>
     );
   }, [
+    cartTotalLines,
+    cartCount,
+    fmt,
+    cartTotalAmount,
+    err,
+    headerBlockedReason,
+    goCheckout,
+    checkoutDisabled,
+    isCashier,
+    goCashierCheckout,
+    cashierDisabled,
+    goScan,
     activeStoreId,
     canSellDirect,
-    cart.length,
-    cartCount,
-    cartTotalAmount,
-    cartTotalLines,
-    cashierDisabled,
-    checkoutDisabled,
     clearCart,
-    err,
-    fmt,
-    goCashierCheckout,
-    goCheckout,
-    goScan,
-    headerBlockedReason,
-    isCashier,
-    loading,
+    cart.length,
     query,
+    loading,
   ]);
 
   const CashierBar = useMemo(() => {
@@ -1218,6 +1395,8 @@ export default function SalesHomeScreen() {
         {!!cashierErr && (
           <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{cashierErr}</Text>
         )}
+
+        {!!shiftErr && <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{shiftErr}</Text>}
 
         <View style={{ flexDirection: "row", gap: 10 }}>
           <View style={{ flex: 1 }}>
@@ -1254,6 +1433,102 @@ export default function SalesHomeScreen() {
           </Text>
         </View>
 
+        {openShift ? (
+          <View
+            style={{
+              borderWidth: 1,
+              borderColor: theme.colors.emeraldBorder,
+              backgroundColor: "rgba(16,185,129,0.10)",
+              borderRadius: 16,
+              padding: 12,
+              gap: 6,
+            }}
+          >
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+              Shift Status: OPEN ✅
+            </Text>
+            <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+              Opened: {fmtDateTimeLocal(openShift.opened_at)}
+            </Text>
+            <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+              Opening Cash: {fmt(openShift.opening_cash)}
+            </Text>
+          </View>
+        ) : shiftLoading ? (
+          <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+            Loading shift status...
+          </Text>
+        ) : (
+          <View
+            style={{
+              borderWidth: 1,
+              borderColor: theme.colors.border,
+              backgroundColor: "rgba(255,255,255,0.04)",
+              borderRadius: 16,
+              padding: 12,
+              gap: 6,
+            }}
+          >
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+              Hakuna shift wazi kwa cashier huyu.
+            </Text>
+            <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+              Sasa unaweza kufungua shift mpya.
+            </Text>
+          </View>
+        )}
+
+        <View style={{ flexDirection: "row", gap: 10 }}>
+          <Pressable
+            onPress={() => {
+              if (openShift) {
+                goShiftOpening();
+              } else {
+                setShiftModalOpen(true);
+              }
+            }}
+            style={({ pressed }) => ({
+              flex: 1,
+              paddingVertical: 14,
+              borderRadius: theme.radius.pill,
+              borderWidth: 1,
+              borderColor: theme.colors.emeraldBorder,
+              backgroundColor: theme.colors.emeraldSoft,
+              alignItems: "center",
+              justifyContent: "center",
+              opacity: pressed ? 0.92 : 1,
+            })}
+          >
+            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14 }}>
+              {openShift ? "Shift Opening" : "Open New Shift"}
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={goCashierClosing}
+            style={({ pressed }) => ({
+              flex: 1,
+              paddingVertical: 14,
+              borderRadius: theme.radius.pill,
+              borderWidth: 1,
+              borderColor: theme.colors.border,
+              backgroundColor: "rgba(255,255,255,0.06)",
+              alignItems: "center",
+              justifyContent: "center",
+              opacity: pressed ? 0.92 : 1,
+            })}
+          >
+            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14 }}>
+              Cashier Closing
+            </Text>
+          </Pressable>
+        </View>
+
+        <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+          Mpangilio salama: cashier afungue shift yake kwanza, afanye malipo kwa akaunti yake,
+          kisha afunge ripoti yake kupitia Cashier Closing.
+        </Text>
+
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
           <CashierFilterChip label={`Pending (${cashierCounts.pending})`} value="PENDING" />
           <CashierFilterChip label={`Accepted (${cashierCounts.accepted})`} value="ACCEPTED" />
@@ -1262,7 +1537,7 @@ export default function SalesHomeScreen() {
         </View>
 
         <Pressable
-          onPress={() => void loadCashierHandoffs("refresh")}
+          onPress={() => void refreshCashierSurface()}
           style={({ pressed }) => ({
             paddingVertical: 12,
             borderRadius: theme.radius.pill,
@@ -1274,7 +1549,7 @@ export default function SalesHomeScreen() {
           })}
         >
           <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-            {cashierLoading || cashierRefreshing ? "Refreshing..." : "Refresh Queue"}
+            {cashierLoading || cashierRefreshing || shiftLoading ? "Refreshing..." : "Refresh Queue"}
           </Text>
         </Pressable>
       </Card>
@@ -1282,12 +1557,17 @@ export default function SalesHomeScreen() {
   }, [
     isCashier,
     cashierErr,
+    shiftErr,
     cashierCounts,
-    cashierTotalAmount,
     fmt,
+    cashierTotalAmount,
+    openShift,
+    shiftLoading,
+    goShiftOpening,
+    goCashierClosing,
     cashierLoading,
     cashierRefreshing,
-    loadCashierHandoffs,
+    refreshCashierSurface,
   ]);
 
   const renderItem = useCallback(
@@ -1329,10 +1609,14 @@ export default function SalesHomeScreen() {
             {qty > 0 && (
               <Text style={{ color: theme.colors.muted, fontWeight: "900" }} numberOfLines={1}>
                 Price:{" "}
-                <Text style={{ color: theme.colors.text }}>{fmt(Number(inCart?.unit_price ?? 0))}</Text>
+                <Text style={{ color: theme.colors.text }}>
+                  {fmt(Number(inCart?.unit_price ?? 0))}
+                </Text>
                 {" • "}
                 Line:{" "}
-                <Text style={{ color: theme.colors.text }}>{fmt(Number(inCart?.line_total ?? 0))}</Text>
+                <Text style={{ color: theme.colors.text }}>
+                  {fmt(Number(inCart?.line_total ?? 0))}
+                </Text>
               </Text>
             )}
           </View>
@@ -1585,7 +1869,7 @@ export default function SalesHomeScreen() {
       scroll={false}
       contentStyle={{ paddingHorizontal: 0, paddingTop: 0, paddingBottom: 0 }}
     >
-      <View style={{ padding: theme.spacing.page, paddingBottom: 8, gap: 10 }}>
+      <View style={{ padding: 16, paddingBottom: 8, gap: 10 }}>
         {TopBar}
         {!isCashier ? QuickBar : null}
       </View>
@@ -1596,12 +1880,12 @@ export default function SalesHomeScreen() {
           keyExtractor={(item) => item.id}
           refreshing={cashierRefreshing}
           onRefresh={() => {
-            void loadCashierHandoffs("refresh");
+            void refreshCashierSurface();
           }}
           showsVerticalScrollIndicator={false}
           renderItem={renderCashierItem}
           contentContainerStyle={{
-            paddingHorizontal: theme.spacing.page,
+            paddingHorizontal: 16,
             paddingBottom: 140,
           }}
           ListHeaderComponent={<View style={{ paddingBottom: 10 }}>{CashierBar}</View>}
@@ -1626,7 +1910,7 @@ export default function SalesHomeScreen() {
           showsVerticalScrollIndicator={false}
           renderItem={renderItem}
           contentContainerStyle={{
-            paddingHorizontal: theme.spacing.page,
+            paddingHorizontal: 16,
             paddingBottom: 140,
           }}
           ListEmptyComponent={
@@ -1684,10 +1968,7 @@ export default function SalesHomeScreen() {
             style={{ flex: 1, justifyContent: "flex-end" }}
             keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0}
           >
-            <Pressable
-              onPress={() => {}}
-              style={{ width: "100%", maxWidth: 520, alignSelf: "center" }}
-            >
+            <Pressable onPress={() => {}} style={{ width: "100%", maxWidth: 520, alignSelf: "center" }}>
               <Card
                 style={{
                   gap: 12,
@@ -1700,10 +1981,7 @@ export default function SalesHomeScreen() {
                   Set Quantity
                 </Text>
 
-                <Text
-                  style={{ color: theme.colors.muted, fontWeight: "800" }}
-                  numberOfLines={1}
-                >
+                <Text style={{ color: theme.colors.muted, fontWeight: "800" }} numberOfLines={1}>
                   Product:{" "}
                   <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
                     {qtyEditorName}
@@ -1807,6 +2085,100 @@ export default function SalesHomeScreen() {
             </Pressable>
           </KeyboardAvoidingView>
         </Pressable>
+      </Modal>
+
+      <Modal
+        visible={shiftModalOpen}
+        transparent
+        animationType="fade"
+        presentationStyle="overFullScreen"
+        statusBarTranslucent
+        hardwareAccelerated
+        onRequestClose={() => {
+          if (!shiftBusy) setShiftModalOpen(false);
+        }}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.78)",
+            padding: 18,
+            justifyContent: "center",
+          }}
+        >
+          <View style={{ width: "100%", maxWidth: 520, alignSelf: "center" }}>
+            <Card
+              style={{
+                gap: 12,
+                backgroundColor: "rgba(16,18,24,0.98)",
+                borderColor: "rgba(255,255,255,0.10)",
+                padding: 18,
+              }}
+            >
+              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 20 }}>
+                Open New Shift
+              </Text>
+
+              <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                Kabla cashier hajaanza kupokea malipo, afungue shift yake kwanza.
+              </Text>
+
+              <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                Store:{" "}
+                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+                  {activeStoreName ?? "—"}
+                </Text>
+              </Text>
+
+              <View>
+                <Text style={{ color: theme.colors.muted, fontWeight: "900", marginBottom: 6 }}>
+                  Opening Cash
+                </Text>
+
+                <TextInput
+                  value={openingCashDraft}
+                  onChangeText={(t) => setOpeningCashDraft(normalizeMoneyInput(t))}
+                  placeholder="0"
+                  placeholderTextColor="rgba(255,255,255,0.35)"
+                  keyboardType="numeric"
+                  style={{
+                    borderWidth: 1,
+                    borderColor: theme.colors.border,
+                    borderRadius: theme.radius.lg,
+                    backgroundColor: "rgba(255,255,255,0.05)",
+                    paddingHorizontal: 14,
+                    paddingVertical: 12,
+                    color: theme.colors.text,
+                    fontWeight: "900",
+                    fontSize: 16,
+                  }}
+                />
+              </View>
+
+              {!!shiftErr && (
+                <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{shiftErr}</Text>
+              )}
+
+              <Text style={{ color: theme.colors.faint, fontWeight: "800" }}>
+                Unaweza kuweka 0 kama hakuna cash ya kuanzia kwenye drawer.
+              </Text>
+
+              <Button
+                title={shiftBusy ? "Opening..." : "Open Shift"}
+                onPress={startCashierShift}
+                disabled={shiftBusy}
+                variant="primary"
+              />
+
+              <Button
+                title="Cancel"
+                onPress={() => setShiftModalOpen(false)}
+                disabled={shiftBusy}
+                variant="secondary"
+              />
+            </Card>
+          </View>
+        </View>
       </Modal>
     </Screen>
   );

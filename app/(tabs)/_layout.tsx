@@ -1,5 +1,4 @@
-﻿// app/(tabs)/_layout.tsx
-import { useOrg } from "@/src/context/OrgContext";
+﻿import { useOrg } from "@/src/context/OrgContext";
 import { theme } from "@/src/ui/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
@@ -36,7 +35,6 @@ export default function TabsLayout() {
         tabBarInactiveTintColor: "rgba(255,255,255,0.55)",
       }}
     >
-      {/* HOME */}
       <Tabs.Screen
         name="index"
         options={{
@@ -48,7 +46,6 @@ export default function TabsLayout() {
         }}
       />
 
-      {/* STORES */}
       <Tabs.Screen
         name="stores"
         options={{
@@ -61,7 +58,6 @@ export default function TabsLayout() {
         }}
       />
 
-      {/* PRODUCTS */}
       <Tabs.Screen
         name="products"
         options={{
@@ -74,7 +70,6 @@ export default function TabsLayout() {
         }}
       />
 
-      {/* SALES */}
       <Tabs.Screen
         name="sales"
         options={{
@@ -86,7 +81,6 @@ export default function TabsLayout() {
         }}
       />
 
-      {/* CREDIT */}
       <Tabs.Screen
         name="credit"
         options={{
@@ -99,7 +93,6 @@ export default function TabsLayout() {
         }}
       />
 
-      {/* CLUB */}
       <Tabs.Screen
         name="club"
         options={{
@@ -112,7 +105,6 @@ export default function TabsLayout() {
         }}
       />
 
-      {/* MORE */}
       <Tabs.Screen
         name="settings/index"
         options={{
@@ -134,6 +126,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="settings/regional" options={{ href: null }} />
       <Tabs.Screen name="settings/subscription" options={{ href: null }} />
       <Tabs.Screen name="settings/cashier-closing" options={{ href: null }} />
+      <Tabs.Screen name="settings/business-statement" options={{ href: null }} />
     </Tabs>
   );
 }

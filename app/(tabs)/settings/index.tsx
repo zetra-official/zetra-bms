@@ -1,4 +1,3 @@
-// app/(tabs)/settings/index.tsx
 import React, { useMemo } from "react";
 import { Alert, Pressable, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -62,6 +61,7 @@ function Row({ icon, title, subtitle, onPress, disabled }: RowProps) {
         <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
           {title}
         </Text>
+
         {subtitle ? (
           <Text
             style={{
@@ -114,25 +114,44 @@ export default function MoreHome() {
     return `${name} • ${role} • ${store}`;
   }, [org.activeOrgName, org.activeRole, org.activeStoreName]);
 
-  const canManageStaff = org.activeRole === "owner" || org.activeRole === "admin";
+  const canManageStaff =
+    org.activeRole === "owner" || org.activeRole === "admin";
+
   const canManageBilling = org.activeRole === "owner";
+
+  const canViewStatement =
+    org.activeRole === "owner" || org.activeRole === "admin";
+
   const isCashier = org.activeRole === "cashier";
 
   return (
     <Screen scroll>
-      {/* Header */}
       <View style={{ paddingTop: 6 }}>
         <Text style={{ color: UI.text, fontWeight: "900", fontSize: 26 }}>
           More
         </Text>
+
         <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 6 }}>
-          Quick shortcuts for organization, staff, and preferences.
+          Quick shortcuts for organization, reports, staff, and preferences.
         </Text>
       </View>
 
-      {/* OPERATIONS */}
       <SectionTitle label="Operations" />
       <Card>
+        <Row
+          icon="document-text-outline"
+          title="Business Statement"
+          subtitle={
+            canViewStatement
+              ? "Generate date-range statement: sales, expenses, profit, balances"
+              : "Owner/Admin only"
+          }
+          disabled={!canViewStatement}
+          onPress={() => router.push("/(tabs)/settings/business-statement")}
+        />
+
+        <Divider />
+
         <Row
           icon="people-outline"
           title="Staff Management"
@@ -160,7 +179,6 @@ export default function MoreHome() {
         />
       </Card>
 
-      {/* ORGANIZATION */}
       <SectionTitle label="Organization" />
       <Card>
         <Row
@@ -185,7 +203,6 @@ export default function MoreHome() {
         />
       </Card>
 
-      {/* REGIONAL */}
       <SectionTitle label="Regional & Localization" />
       <Card>
         <Row
@@ -196,7 +213,6 @@ export default function MoreHome() {
         />
       </Card>
 
-      {/* AI + SECURITY */}
       <SectionTitle label="Preferences" />
       <Card>
         <Row
@@ -206,7 +222,7 @@ export default function MoreHome() {
           onPress={() =>
             Alert.alert(
               "Coming next",
-              "AI Preferences itaingia kwenye hatua inayofuata (tunajenga Regional Settings kwanza)."
+              "AI Preferences itaingia kwenye hatua inayofuata."
             )
           }
         />
@@ -220,14 +236,14 @@ export default function MoreHome() {
           onPress={() =>
             Alert.alert(
               "Coming next",
-              "Security & Privacy settings tutaongeza baada ya Regional Settings kuanza kufanya kazi."
+              "Security & Privacy settings tutaongeza baada ya Reports flow kuwa stable."
             )
           }
         />
       </Card>
 
-      {/* Footer */}
       <View style={{ height: theme.spacing.gap }} />
+
       <Text
         style={{
           color: "rgba(255,255,255,0.48)",
