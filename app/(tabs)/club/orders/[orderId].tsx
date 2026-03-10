@@ -354,10 +354,10 @@ export default function CustomerOrderDetailScreen() {
                 </Pressable>
               </View>
             </Card>
-
+S
             {!!err && (
               <Card style={{ backgroundColor: theme.colors.dangerSoft, borderColor: theme.colors.dangerBorder }}>
-                <Text style={{ color: theme.colors.dangerText, fontWeight: "900" }}>{err}</Text>
+                <Text style={{ color: theme.colors, fontWeight: "900" }}>{err}</Text>
               </Card>
             )}
 

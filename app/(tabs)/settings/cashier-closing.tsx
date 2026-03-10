@@ -1,4 +1,3 @@
-// app/(tabs)/settings/cashier-closing.tsx
 import { Ionicons } from "@expo/vector-icons";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
@@ -17,12 +16,14 @@ import {
 import { useNetInfo } from "@react-native-community/netinfo";
 
 import { useOrg } from "@/src/context/OrgContext";
-import { useOrgMoneyPrefs } from "@/src/ui/money";
 import { supabase } from "@/src/supabase/supabaseClient";
 import { Button } from "@/src/ui/Button";
 import { Card } from "@/src/ui/Card";
 import { Screen } from "@/src/ui/Screen";
+import { useOrgMoneyPrefs } from "@/src/ui/money";
 import { theme, UI } from "@/src/ui/theme";
+
+const CLOSE_SHIFT_RPC = "close_cashier_shift_v1";
 
 type ClosingSaleRow = {
   sale_id?: string;
@@ -44,6 +45,17 @@ type PaymentSummary = {
   grand_paid_total: number;
   total_sales: number;
   total_balance: number;
+};
+
+type OpenShiftRow = {
+  shift_id: string;
+  organization_id: string;
+  store_id: string;
+  membership_id: string;
+  opening_cash: number;
+  status: string;
+  opened_at: string;
+  closed_at?: string | null;
 };
 
 type AnyRow = Record<string, any>;
@@ -104,7 +116,7 @@ function parseDateInputEnd(input: string) {
   return Number.isFinite(out.getTime()) ? out : null;
 }
 
-function safeWhenLabel(iso?: string) {
+function safeWhenLabel(iso?: string | null) {
   if (!iso) return "—";
   const t = Date.parse(iso);
   if (!Number.isFinite(t)) return "—";
@@ -118,6 +130,25 @@ function safeWhenLabel(iso?: string) {
 function toNum(v: any): number {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
+}
+
+function normalizeMoneyInput(raw: string) {
+  return String(raw ?? "").replace(/[^\d.-]/g, "");
+}
+
+function isShiftOverdue(openedAt?: string | null) {
+  if (!openedAt) return false;
+  const opened = new Date(openedAt);
+  if (!Number.isFinite(opened.getTime())) return false;
+  return opened.getTime() < startOfDayLocal(new Date()).getTime();
+}
+
+function buildShiftDayRange(openedAt: string) {
+  const d = new Date(openedAt);
+  return {
+    from: startOfDayLocal(d).toISOString(),
+    to: endOfDayLocal(d).toISOString(),
+  };
 }
 
 function normalizeSaleRow(r: AnyRow): ClosingSaleRow {
@@ -160,6 +191,21 @@ function normalizeSaleRow(r: AnyRow): ClosingSaleRow {
   };
 }
 
+function normalizeOpenShiftRow(row: any): OpenShiftRow | null {
+  if (!row?.shift_id) return null;
+
+  return {
+    shift_id: String(row.shift_id),
+    organization_id: String(row.organization_id ?? ""),
+    store_id: String(row.store_id ?? ""),
+    membership_id: String(row.membership_id ?? ""),
+    opening_cash: toNum(row.opening_cash ?? 0),
+    status: String(row.status ?? "OPEN"),
+    opened_at: String(row.opened_at ?? ""),
+    closed_at: row.closed_at ?? null,
+  };
+}
+
 function labelForRange(r: RangeKey) {
   if (r === "today") return "Today";
   if (r === "week") return "This Week";
@@ -180,6 +226,8 @@ function InputBox(props: {
   onChangeText: (v: string) => void;
   placeholder?: string;
   multiline?: boolean;
+  editable?: boolean;
+  keyboardType?: "default" | "numeric";
 }) {
   return (
     <TextInput
@@ -190,17 +238,21 @@ function InputBox(props: {
       autoCapitalize="none"
       autoCorrect={false}
       multiline={props.multiline}
+      editable={props.editable}
+      keyboardType={props.keyboardType}
       style={{
         color: theme.colors.text,
         fontWeight: "800",
         borderWidth: 1,
         borderColor: theme.colors.border,
-        backgroundColor: "rgba(255,255,255,0.06)",
+        backgroundColor:
+          props.editable === false ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.06)",
         borderRadius: 16,
         paddingHorizontal: 12,
         paddingVertical: props.multiline ? 12 : 10,
         minHeight: props.multiline ? 96 : undefined,
         textAlignVertical: props.multiline ? "top" : "center",
+        opacity: props.editable === false ? 0.7 : 1,
       }}
     />
   );
@@ -241,13 +293,8 @@ function escapeHtml(input: any) {
 
 export default function CashierClosingScreen() {
   const router = useRouter();
-  const {
-    activeOrgId,
-    activeOrgName,
-    activeStoreId,
-    activeStoreName,
-    activeRole,
-  } = useOrg() as any;
+  const { activeOrgId, activeOrgName, activeStoreId, activeStoreName, activeRole } =
+    useOrg() as any;
 
   const money = useOrgMoneyPrefs(activeOrgId);
   const fmtMoney = useCallback((n: number) => money.fmt(Number(n || 0)), [money]);
@@ -262,13 +309,12 @@ export default function CashierClosingScreen() {
   const [customFrom, setCustomFrom] = useState<string>(() =>
     toDateInputValue(startOfMonthLocal(now))
   );
-  const [customTo, setCustomTo] = useState<string>(() =>
-    toDateInputValue(endOfDayLocal(now))
-  );
+  const [customTo, setCustomTo] = useState<string>(() => toDateInputValue(endOfDayLocal(now)));
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [sharingBusy, setSharingBusy] = useState(false);
+  const [submitBusy, setSubmitBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   const [rows, setRows] = useState<ClosingSaleRow[]>([]);
@@ -282,8 +328,16 @@ export default function CashierClosingScreen() {
     total_balance: 0,
   });
 
+  const [openShift, setOpenShift] = useState<OpenShiftRow | null>(null);
+
   const [closingNote, setClosingNote] = useState("");
   const [reviewed, setReviewed] = useState(false);
+
+  const [drawerCountDraft, setDrawerCountDraft] = useState("");
+  const [closingSubmitted, setClosingSubmitted] = useState(false);
+  const [submittedAt, setSubmittedAt] = useState<string | null>(null);
+
+  const [cashierEmail, setCashierEmail] = useState<string>("—");
 
   const isCashier = String(activeRole ?? "").toLowerCase() === "cashier";
   const canView = useMemo(() => {
@@ -331,9 +385,43 @@ export default function CashierClosingScreen() {
     const toDate = parseDateInputEnd(customTo);
 
     if (!fromDate || !toDate) return "Tumia format ya tarehe: YYYY-MM-DD";
-    if (fromDate.getTime() > toDate.getTime()) return "From Date haiwezi kuwa kubwa kuliko To Date";
+    if (fromDate.getTime() > toDate.getTime()) {
+      return "From Date haiwezi kuwa kubwa kuliko To Date";
+    }
     return null;
   }, [customFrom, customTo, range]);
+
+  const overdueShift = useMemo(() => {
+    if (!openShift?.shift_id) return null;
+    return isShiftOverdue(openShift.opened_at) ? openShift : null;
+  }, [openShift]);
+
+  const effectiveRange = useMemo(() => {
+    if (overdueShift?.opened_at) {
+      return buildShiftDayRange(overdueShift.opened_at);
+    }
+    return resolvedRange;
+  }, [overdueShift?.opened_at, resolvedRange]);
+
+  const effectiveRangeLabel = useMemo(() => {
+    if (overdueShift?.opened_at) {
+      const d = new Date(overdueShift.opened_at);
+      return `Overdue Shift Day (${toDateInputValue(d)})`;
+    }
+    return labelForRange(range);
+  }, [overdueShift?.opened_at, range]);
+
+  const loadCurrentUserEmail = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.auth.getUser();
+      if (error) throw error;
+
+      const email = String(data?.user?.email ?? "").trim();
+      setCashierEmail(email || "—");
+    } catch {
+      setCashierEmail("—");
+    }
+  }, []);
 
   const load = useCallback(
     async (mode: "boot" | "refresh") => {
@@ -344,27 +432,47 @@ export default function CashierClosingScreen() {
       try {
         if (!activeStoreId) throw new Error("No active store selected.");
         if (!canView) throw new Error("No permission.");
-        if (!resolvedRange) throw new Error("Invalid custom date range.");
 
         const access = await supabase.rpc("ensure_my_store_access", {
           p_store_id: activeStoreId,
         });
         if (access.error) throw access.error;
 
-        const [salesRes, payRes] = await Promise.all([
-          supabase.rpc("get_sales_v2", {
-            p_store_id: activeStoreId,
-            p_from: resolvedRange.from,
-            p_to: resolvedRange.to,
-          } as any),
-          supabase.rpc("get_sales_payment_summary_v1", {
-            p_store_id: activeStoreId,
-            p_from: resolvedRange.from,
-            p_to: resolvedRange.to,
-          } as any),
-        ]);
+        let shiftRowNormalized: OpenShiftRow | null = null;
 
+        if (isCashier) {
+          const shiftRes = await supabase.rpc("get_my_open_cashier_shift_v1", {
+            p_store_id: activeStoreId,
+          } as any);
+
+          if (shiftRes.error) throw shiftRes.error;
+
+          const shiftRow = Array.isArray(shiftRes.data) ? shiftRes.data[0] : shiftRes.data;
+          shiftRowNormalized = normalizeOpenShiftRow(shiftRow);
+          setOpenShift(shiftRowNormalized);
+        } else {
+          setOpenShift(null);
+        }
+
+        const finalRange =
+          shiftRowNormalized?.opened_at && isShiftOverdue(shiftRowNormalized.opened_at)
+            ? buildShiftDayRange(shiftRowNormalized.opened_at)
+            : resolvedRange;
+
+        if (!finalRange) throw new Error("Invalid custom date range.");
+
+        const salesRes = await supabase.rpc("get_sales_v2", {
+          p_store_id: activeStoreId,
+          p_from: finalRange.from,
+          p_to: finalRange.to,
+        } as any);
         if (salesRes.error) throw salesRes.error;
+
+        const payRes = await supabase.rpc("get_sales_payment_summary_v1", {
+          p_store_id: activeStoreId,
+          p_from: finalRange.from,
+          p_to: finalRange.to,
+        } as any);
         if (payRes.error) throw payRes.error;
 
         const raw = (salesRes.data ?? []) as AnyRow[];
@@ -392,6 +500,7 @@ export default function CashierClosingScreen() {
         });
       } catch (e: any) {
         setRows([]);
+        setOpenShift(null);
         setPaymentSummary({
           cash_total: 0,
           mobile_total: 0,
@@ -407,8 +516,12 @@ export default function CashierClosingScreen() {
         if (mode === "refresh") setRefreshing(false);
       }
     },
-    [activeStoreId, canView, resolvedRange]
+    [activeStoreId, canView, isCashier, resolvedRange]
   );
+
+  useEffect(() => {
+    void loadCurrentUserEmail();
+  }, [loadCurrentUserEmail]);
 
   useEffect(() => {
     void load("boot");
@@ -416,15 +529,17 @@ export default function CashierClosingScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      void loadCurrentUserEmail();
       void load("refresh");
       return () => {};
-    }, [load])
+    }, [load, loadCurrentUserEmail])
   );
 
   const applyCustomRange = useCallback(() => {
+    if (overdueShift?.shift_id) return;
     setRange("custom");
     void load("refresh");
-  }, [load]);
+  }, [load, overdueShift?.shift_id]);
 
   const openReceipt = useCallback(
     (row: ClosingSaleRow) => {
@@ -441,38 +556,70 @@ export default function CashierClosingScreen() {
 
   const saleCount = rows.length;
 
-  const totalQty = useMemo(() => {
-    return rows.reduce((a, r) => a + toNum(r.total_qty ?? 0), 0);
-  }, [rows]);
+  const totalQty = useMemo(() => rows.reduce((a, r) => a + toNum(r.total_qty ?? 0), 0), [rows]);
 
   const avgSale = useMemo(() => {
     if (saleCount <= 0) return 0;
     return paymentSummary.total_sales / saleCount;
   }, [paymentSummary.total_sales, saleCount]);
 
+  const openingCash = useMemo(() => toNum(openShift?.opening_cash ?? 0), [openShift?.opening_cash]);
+
   const expectedDrawer = useMemo(() => {
-    return paymentSummary.cash_total;
-  }, [paymentSummary.cash_total]);
+    return openingCash + paymentSummary.cash_total;
+  }, [openingCash, paymentSummary.cash_total]);
 
   const collectedNonCash = useMemo(() => {
     return paymentSummary.mobile_total + paymentSummary.bank_total;
   }, [paymentSummary.mobile_total, paymentSummary.bank_total]);
 
+  const drawerCount = useMemo(() => {
+    const raw = String(drawerCountDraft ?? "").trim();
+    if (!raw) return 0;
+    return toNum(raw);
+  }, [drawerCountDraft]);
+
+  const drawerDifference = useMemo(() => {
+    return drawerCount - expectedDrawer;
+  }, [drawerCount, expectedDrawer]);
+
+  const drawerDifferenceLabel = useMemo(() => {
+    if (drawerDifference === 0) return "BALANCED";
+    if (drawerDifference > 0) return "OVER";
+    return "SHORT";
+  }, [drawerDifference]);
+
   const closingStatusLabel = useMemo(() => {
-    if (!reviewed) return "OPEN";
-    return "REVIEWED";
-  }, [reviewed]);
+    if (closingSubmitted) return "SUBMITTED";
+    if (reviewed) return "REVIEWED";
+    if (overdueShift?.shift_id) return "OVERDUE";
+    return "OPEN";
+  }, [closingSubmitted, overdueShift?.shift_id, reviewed]);
+
+  const canSubmitClosing = useMemo(() => {
+    if (loading || submitBusy) return false;
+    if (!isCashier) return false;
+    if (!openShift?.shift_id) return false;
+    if (closingSubmitted) return false;
+    if (drawerCountDraft.trim() === "") return false;
+    return true;
+  }, [closingSubmitted, drawerCountDraft, isCashier, loading, openShift?.shift_id, submitBusy]);
 
   const rangeTextForPdf = useMemo(() => {
+    if (overdueShift?.opened_at) {
+      const r = buildShiftDayRange(overdueShift.opened_at);
+      return `Overdue Shift Day (${safeWhenLabel(r.from)} → ${safeWhenLabel(r.to)})`;
+    }
+
     if (range === "custom") {
       return `${customFrom || "—"} → ${customTo || "—"}`;
     }
 
     const label = labelForRange(range);
-    const resolved = resolvedRange;
+    const resolved = effectiveRange;
     if (!resolved) return label;
     return `${label} (${safeWhenLabel(resolved.from)} → ${safeWhenLabel(resolved.to)})`;
-  }, [customFrom, customTo, range, resolvedRange]);
+  }, [customFrom, customTo, effectiveRange, overdueShift?.opened_at, range]);
 
   const buildClosingHtml = useCallback(() => {
     const salesRowsHtml = rows
@@ -616,12 +763,40 @@ export default function CashierClosingScreen() {
               <td>${escapeHtml(activeRole ?? "—")}</td>
             </tr>
             <tr>
+              <th>Cashier Email</th>
+              <td>${escapeHtml(cashierEmail)}</td>
+            </tr>
+            <tr>
+              <th>Report Generated By</th>
+              <td>${escapeHtml(cashierEmail)}</td>
+            </tr>
+            <tr>
               <th>Status</th>
               <td><span class="pill">${escapeHtml(closingStatusLabel)}</span></td>
             </tr>
             <tr>
               <th>Range</th>
               <td>${escapeHtml(rangeTextForPdf)}</td>
+            </tr>
+            <tr>
+              <th>Shift Opened At</th>
+              <td>${escapeHtml(openShift?.opened_at ? safeWhenLabel(openShift.opened_at) : "—")}</td>
+            </tr>
+            <tr>
+              <th>Opening Cash</th>
+              <td>${escapeHtml(fmtMoney(openingCash))}</td>
+            </tr>
+            <tr>
+              <th>Drawer Count</th>
+              <td>${escapeHtml(fmtMoney(drawerCount))}</td>
+            </tr>
+            <tr>
+              <th>Difference</th>
+              <td>${escapeHtml(fmtMoney(drawerDifference))} (${escapeHtml(drawerDifferenceLabel)})</td>
+            </tr>
+            <tr>
+              <th>Submitted At</th>
+              <td>${escapeHtml(submittedAt ? safeWhenLabel(submittedAt) : "—")}</td>
             </tr>
             <tr>
               <th>Generated At</th>
@@ -659,7 +834,7 @@ export default function CashierClosingScreen() {
           <table class="two-col">
             <tr>
               <td class="metric">
-                <div class="metric-title">Cash</div>
+                <div class="metric-title">Cash Sales</div>
                 <div class="metric-value">${escapeHtml(fmtMoney(paymentSummary.cash_total))}</div>
               </td>
               <td class="metric">
@@ -697,9 +872,33 @@ export default function CashierClosingScreen() {
           <table class="two-col">
             <tr>
               <td class="metric">
+                <div class="metric-title">Opening Cash</div>
+                <div class="metric-value">${escapeHtml(fmtMoney(openingCash))}</div>
+                <div class="metric-sub">Cash ya kuanzia shift</div>
+              </td>
+              <td class="metric">
                 <div class="metric-title">Expected Cash Drawer</div>
                 <div class="metric-value">${escapeHtml(fmtMoney(expectedDrawer))}</div>
-                <div class="metric-sub">Cash inayotakiwa kuwepo</div>
+                <div class="metric-sub">Opening Cash + Cash Sales</div>
+              </td>
+            </tr>
+            <tr>
+              <td class="metric">
+                <div class="metric-title">Drawer Count</div>
+                <div class="metric-value">${escapeHtml(fmtMoney(drawerCount))}</div>
+                <div class="metric-sub">Cash halisi iliyohesabiwa</div>
+              </td>
+              <td class="metric">
+                <div class="metric-title">Difference</div>
+                <div class="metric-value">${escapeHtml(fmtMoney(drawerDifference))}</div>
+                <div class="metric-sub">${escapeHtml(drawerDifferenceLabel)}</div>
+              </td>
+            </tr>
+            <tr>
+              <td class="metric">
+                <div class="metric-title">Cash Sales Only</div>
+                <div class="metric-value">${escapeHtml(fmtMoney(paymentSummary.cash_total))}</div>
+                <div class="metric-sub">Fedha ya cash kutoka mauzo tu</div>
               </td>
               <td class="metric">
                 <div class="metric-title">Non-Cash Collected</div>
@@ -733,7 +932,9 @@ export default function CashierClosingScreen() {
           </table>
 
           <div class="footer">
-            ZETRA Cashier Closing • Generated from app closing summary
+            ZETRA Cashier Closing • Drawer Count + Difference + Submit Closing • Cashier: ${escapeHtml(
+              cashierEmail
+            )}
           </div>
         </body>
       </html>
@@ -743,21 +944,28 @@ export default function CashierClosingScreen() {
     activeRole,
     activeStoreName,
     avgSale,
+    cashierEmail,
     closingNote,
     closingStatusLabel,
     collectedNonCash,
+    drawerCount,
+    drawerDifference,
+    drawerDifferenceLabel,
     expectedDrawer,
     fmtMoney,
-    paymentSummary.bank_total,
+    openingCash,
+    openShift?.opened_at,
     paymentSummary.cash_total,
+    paymentSummary.mobile_total,
+    paymentSummary.bank_total,
     paymentSummary.credit_collected_total,
     paymentSummary.grand_paid_total,
-    paymentSummary.mobile_total,
     paymentSummary.total_balance,
     paymentSummary.total_sales,
     rangeTextForPdf,
     rows,
     saleCount,
+    submittedAt,
     totalQty,
   ]);
 
@@ -796,12 +1004,97 @@ export default function CashierClosingScreen() {
     }
   }, [buildClosingHtml, sharingBusy]);
 
+  const closeShiftInDb = useCallback(async () => {
+    if (!openShift?.shift_id) {
+      throw new Error("No open shift found.");
+    }
+
+    const payload = {
+      p_shift_id: openShift.shift_id,
+      p_drawer_count: drawerCount,
+      p_closing_note: String(closingNote ?? "").trim() || null,
+    };
+
+    const { error } = await supabase.rpc(CLOSE_SHIFT_RPC, payload as any);
+    if (error) throw error;
+  }, [closingNote, drawerCount, openShift?.shift_id]);
+
+  const handleSubmitClosing = useCallback(() => {
+    if (!canSubmitClosing) return;
+
+    const diff = drawerDifference;
+    const diffAbs = Math.abs(diff);
+    const diffLabel = diff === 0 ? "BALANCED" : diff > 0 ? "OVER" : "SHORT";
+
+    Alert.alert(
+      "Submit Closing",
+      `Expected Drawer: ${fmtMoney(expectedDrawer)}\nDrawer Count: ${fmtMoney(
+        drawerCount
+      )}\nDifference: ${fmtMoney(diff)} (${diffLabel})\n\nUna uhakika unataka kufunga closing hii?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Submit",
+          onPress: async () => {
+            try {
+              setSubmitBusy(true);
+
+              await closeShiftInDb();
+
+              const nowIso = new Date().toISOString();
+              setClosingSubmitted(true);
+              setReviewed(true);
+              setSubmittedAt(nowIso);
+
+              setOpenShift(null);
+              setDrawerCountDraft("");
+              setClosingNote("");
+
+              await load("refresh");
+
+              if (diffAbs > 0) {
+                Alert.alert(
+                  "Closing Submitted ✅",
+                  `Closing imefungwa vizuri.\n\nDifference: ${fmtMoney(diff)} (${diffLabel})`
+                );
+              } else {
+                Alert.alert(
+                  "Closing Submitted ✅",
+                  "Closing imefungwa vizuri na shift iliyofungwa imeondolewa kwenye open state."
+                );
+              }
+            } catch (e: any) {
+              Alert.alert(
+                "Closing Failed",
+                e?.message ??
+                  `Imeshindikana kufunga shift. Hakikisha RPC "${CLOSE_SHIFT_RPC}" ipo sahihi kwenye DB.`
+              );
+            } finally {
+              setSubmitBusy(false);
+            }
+          },
+        },
+      ]
+    );
+  }, [
+    canSubmitClosing,
+    closeShiftInDb,
+    drawerCount,
+    drawerDifference,
+    expectedDrawer,
+    fmtMoney,
+    load,
+  ]);
+
   const SegButton = useCallback(
     ({ k, label }: { k: RangeKey; label: string }) => {
       const active = range === k;
+      const disabled = closingSubmitted || !!overdueShift?.shift_id;
+
       return (
         <Pressable
           onPress={() => setRange(k)}
+          disabled={disabled}
           style={{
             flex: 1,
             paddingVertical: 10,
@@ -811,13 +1104,14 @@ export default function CashierClosingScreen() {
             borderWidth: 1,
             borderColor: active ? theme.colors.emeraldBorder : theme.colors.border,
             backgroundColor: active ? theme.colors.emeraldSoft : "rgba(255,255,255,0.06)",
+            opacity: disabled ? 0.65 : 1,
           }}
         >
           <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{label}</Text>
         </Pressable>
       );
     },
-    [range]
+    [closingSubmitted, overdueShift?.shift_id, range]
   );
 
   const Header = useMemo(() => {
@@ -848,6 +1142,9 @@ export default function CashierClosingScreen() {
               {activeOrgName ?? "—"} • {activeStoreName ?? "No store"} • {activeRole ?? "—"}
             </Text>
             <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
+              {cashierEmail !== "—" ? `Cashier Email: ${cashierEmail}` : "Cashier Email: —"}
+            </Text>
+            <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
               {isOffline ? "OFFLINE" : "ONLINE"}
             </Text>
           </View>
@@ -858,8 +1155,14 @@ export default function CashierClosingScreen() {
               paddingVertical: 6,
               borderRadius: 999,
               borderWidth: 1,
-              borderColor: reviewed ? theme.colors.emeraldBorder : theme.colors.border,
-              backgroundColor: reviewed ? theme.colors.emeraldSoft : "rgba(255,255,255,0.06)",
+              borderColor:
+                closingSubmitted || reviewed || overdueShift?.shift_id
+                  ? theme.colors.emeraldBorder
+                  : theme.colors.border,
+              backgroundColor:
+                closingSubmitted || reviewed || overdueShift?.shift_id
+                  ? theme.colors.emeraldSoft
+                  : "rgba(255,255,255,0.06)",
             }}
           >
             <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
@@ -867,6 +1170,27 @@ export default function CashierClosingScreen() {
             </Text>
           </View>
         </View>
+
+        {!!overdueShift?.shift_id && (
+          <Card
+            style={{
+              gap: 8,
+              borderColor: "rgba(245,158,11,0.35)",
+              backgroundColor: "rgba(245,158,11,0.08)",
+            }}
+          >
+            <Text style={{ color: "#f59e0b", fontWeight: "900", fontSize: 16 }}>
+              OVERDUE SHIFT ENFORCEMENT
+            </Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "800" }}>
+              Shift ya zamani bado OPEN, kwa hiyo mfumo ume-lock range na unasoma mauzo ya siku ile
+              shift ilipoanza.
+            </Text>
+            <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+              Shift Opened At: {safeWhenLabel(overdueShift.opened_at)}
+            </Text>
+          </Card>
+        )}
 
         <Card style={{ gap: 10 }}>
           <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Range</Text>
@@ -878,7 +1202,13 @@ export default function CashierClosingScreen() {
             <SegButton k="custom" label="Custom" />
           </View>
 
-          {range === "custom" && (
+          {!!overdueShift?.shift_id && (
+            <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+              Range imefungwa kwa siku ya overdue shift mpaka shift hiyo ifungiwe closing.
+            </Text>
+          )}
+
+          {range === "custom" && !overdueShift?.shift_id && (
             <View style={{ gap: 10 }}>
               <View>
                 <InputLabel>From Date</InputLabel>
@@ -886,6 +1216,7 @@ export default function CashierClosingScreen() {
                   value={customFrom}
                   onChangeText={setCustomFrom}
                   placeholder="YYYY-MM-DD"
+                  editable={!closingSubmitted}
                 />
               </View>
 
@@ -895,6 +1226,7 @@ export default function CashierClosingScreen() {
                   value={customTo}
                   onChangeText={setCustomTo}
                   placeholder="YYYY-MM-DD"
+                  editable={!closingSubmitted}
                 />
               </View>
 
@@ -907,7 +1239,7 @@ export default function CashierClosingScreen() {
               <Button
                 title="Apply Custom Range"
                 onPress={applyCustomRange}
-                disabled={!!customRangeError}
+                disabled={!!customRangeError || closingSubmitted}
                 variant="secondary"
               />
             </View>
@@ -920,13 +1252,11 @@ export default function CashierClosingScreen() {
             variant="primary"
           />
 
-          {!!err && (
-            <Text style={{ color: theme.colors.danger, fontWeight: "800" }}>{err}</Text>
-          )}
+          {!!err && <Text style={{ color: theme.colors.danger, fontWeight: "800" }}>{err}</Text>}
         </Card>
 
         <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>
-          Closing Summary ({labelForRange(range)})
+          Closing Summary ({effectiveRangeLabel})
         </Text>
 
         <View style={{ flexDirection: "row", gap: 10 }}>
@@ -940,11 +1270,7 @@ export default function CashierClosingScreen() {
             amount={fmtMoney(paymentSummary.total_sales)}
             subtitle="Mauzo yote ya range hii"
           />
-          <MetricCard
-            title="AVG SALE"
-            amount={fmtMoney(avgSale)}
-            subtitle="Wastani kwa sale"
-          />
+          <MetricCard title="AVG SALE" amount={fmtMoney(avgSale)} subtitle="Wastani kwa sale" />
         </View>
 
         <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>
@@ -952,7 +1278,7 @@ export default function CashierClosingScreen() {
         </Text>
 
         <View style={{ flexDirection: "row", gap: 10 }}>
-          <MetricCard title="Cash" amount={fmtMoney(paymentSummary.cash_total)} />
+          <MetricCard title="Cash Sales" amount={fmtMoney(paymentSummary.cash_total)} />
           <MetricCard title="Mobile" amount={fmtMoney(paymentSummary.mobile_total)} />
         </View>
 
@@ -983,9 +1309,22 @@ export default function CashierClosingScreen() {
 
         <View style={{ flexDirection: "row", gap: 10 }}>
           <MetricCard
+            title="Opening Cash"
+            amount={fmtMoney(openingCash)}
+            subtitle="Cash ya kuanzia shift"
+          />
+          <MetricCard
             title="Expected Cash Drawer"
             amount={fmtMoney(expectedDrawer)}
-            subtitle="Cash inayotakiwa kuwepo"
+            subtitle="Opening Cash + Cash Sales"
+          />
+        </View>
+
+        <View style={{ flexDirection: "row", gap: 10 }}>
+          <MetricCard
+            title="Cash Sales Only"
+            amount={fmtMoney(paymentSummary.cash_total)}
+            subtitle="Fedha ya cash kutoka mauzo tu"
           />
           <MetricCard
             title="Non-Cash Collected"
@@ -994,16 +1333,79 @@ export default function CashierClosingScreen() {
           />
         </View>
 
+        {!!openShift?.opened_at && (
+          <Card style={{ gap: 8 }}>
+            <Text style={{ color: UI.text, fontWeight: "900" }}>Active Shift</Text>
+            <Text style={{ color: UI.muted, fontWeight: "800" }}>
+              Shift Opened At: {safeWhenLabel(openShift.opened_at)}
+            </Text>
+            <Text style={{ color: UI.muted, fontWeight: "800" }}>
+              Opening Cash iliyotumika kwenye hesabu hii: {fmtMoney(openingCash)}
+            </Text>
+            <Text style={{ color: UI.muted, fontWeight: "800" }}>
+              Cashier Email: {cashierEmail}
+            </Text>
+          </Card>
+        )}
+
         <Card style={{ gap: 10 }}>
           <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-            Closing Note
+            Drawer Count & Difference
           </Text>
+
+          <View>
+            <InputLabel>Drawer Count (cash halisi uliyohesabu)</InputLabel>
+            <InputBox
+              value={drawerCountDraft}
+              onChangeText={(t) => setDrawerCountDraft(normalizeMoneyInput(t))}
+              placeholder="mf: 125000"
+              editable={!closingSubmitted}
+              keyboardType="numeric"
+            />
+          </View>
+
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <MetricCard
+              title="DRAWER COUNT"
+              amount={fmtMoney(drawerCount)}
+              subtitle="Cash halisi kwenye drawer"
+            />
+            <MetricCard
+              title="DIFFERENCE"
+              amount={fmtMoney(drawerDifference)}
+              subtitle={drawerDifferenceLabel}
+            />
+          </View>
+
+          <Text
+            style={{
+              color:
+                drawerDifference === 0
+                  ? UI.emerald
+                  : drawerDifference > 0
+                    ? "#f59e0b"
+                    : "#ef4444",
+              fontWeight: "900",
+              fontSize: 12,
+            }}
+          >
+            {drawerDifference === 0
+              ? "Drawer ime-balance vizuri."
+              : drawerDifference > 0
+                ? "Drawer ina excess cash kuliko ilivyotarajiwa."
+                : "Drawer ina upungufu wa cash kuliko ilivyotarajiwa."}
+          </Text>
+        </Card>
+
+        <Card style={{ gap: 10 }}>
+          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Closing Note</Text>
 
           <InputBox
             value={closingNote}
             onChangeText={setClosingNote}
             placeholder="andika maelezo ya closing hapa..."
             multiline
+            editable={!closingSubmitted}
           />
 
           <View style={{ flexDirection: "row", gap: 10 }}>
@@ -1016,12 +1418,9 @@ export default function CashierClosingScreen() {
                     return;
                   }
                   setReviewed(true);
-                  Alert.alert(
-                    "Reviewed ✅",
-                    "Cashier Closing imewekwa reviewed kwa UI ya sasa."
-                  );
+                  Alert.alert("Reviewed ✅", "Cashier Closing imewekwa reviewed kwa UI ya sasa.");
                 }}
-                disabled={reviewed}
+                disabled={reviewed || closingSubmitted}
                 variant="primary"
               />
             </View>
@@ -1038,9 +1437,34 @@ export default function CashierClosingScreen() {
             </View>
           </View>
 
+          <Button
+            title={
+              submitBusy
+                ? "Submitting..."
+                : closingSubmitted
+                  ? "Closing Submitted ✅"
+                  : overdueShift?.shift_id
+                    ? "Submit Overdue Closing"
+                    : "Submit Closing"
+            }
+            onPress={handleSubmitClosing}
+            disabled={!canSubmitClosing}
+            variant="primary"
+          />
+
+          {!!submittedAt && (
+            <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
+              Submitted At: {safeWhenLabel(submittedAt)}
+            </Text>
+          )}
+
+          <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
+            Cashier Email: {cashierEmail}
+          </Text>
+
           <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 12 }}>
-            Hii screen ni ya cashier kufunga hesabu. History ni ya kuangalia rekodi; Closing ni ya
-            ku-review summary ya pesa na mauzo kwa period husika.
+            Hii hatua imefunga enterprise control ya UI: Drawer Count + Difference + Submit
+            Closing.
           </Text>
         </Card>
 
@@ -1048,8 +1472,9 @@ export default function CashierClosingScreen() {
           <Card style={{ gap: 8, borderColor: "rgba(245,158,11,0.30)" }}>
             <Text style={{ color: UI.text, fontWeight: "900" }}>Note</Text>
             <Text style={{ color: UI.muted, fontWeight: "800" }}>
-              Hii screen imewekwa ndani ya Cashier Closing, lakini kwa sasa inasoma data ya store
-              iliyochaguliwa kwenye range husika.
+              Hii screen imewekwa ndani ya Cashier Closing, lakini kwa sasa opening cash
+              itapatikana kwa cashier aliyefungua shift kwenye store hii. Kwa owner/admin ambaye si
+              cashier, metric ya opening cash inaweza kuwa 0 kama hakuna shift yake mwenyewe wazi.
             </Text>
           </Card>
         )}
@@ -1079,20 +1504,31 @@ export default function CashierClosingScreen() {
     activeStoreName,
     applyCustomRange,
     avgSale,
+    canSubmitClosing,
+    cashierEmail,
     closingNote,
     closingStatusLabel,
+    closingSubmitted,
     collectedNonCash,
     customFrom,
     customRangeError,
     customTo,
+    drawerCount,
+    drawerDifference,
+    drawerDifferenceLabel,
+    effectiveRangeLabel,
     err,
     expectedDrawer,
     fmtMoney,
     handleShareClosingPdf,
+    handleSubmitClosing,
     isCashier,
     isOffline,
     load,
     loading,
+    openingCash,
+    openShift?.opened_at,
+    overdueShift?.shift_id,
     paymentSummary.bank_total,
     paymentSummary.cash_total,
     paymentSummary.credit_collected_total,
@@ -1106,6 +1542,8 @@ export default function CashierClosingScreen() {
     router,
     saleCount,
     sharingBusy,
+    submitBusy,
+    submittedAt,
     totalQty,
   ]);
 
@@ -1159,9 +1597,7 @@ export default function CashierClosingScreen() {
                       backgroundColor: theme.colors.emeraldSoft,
                     }}
                   >
-                    <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                      {status}
-                    </Text>
+                    <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{status}</Text>
                   </View>
                 </View>
 
@@ -1187,6 +1623,10 @@ export default function CashierClosingScreen() {
                   <Text style={{ color: theme.colors.text }}>{fmtMoney(balanceAmount)}</Text>
                 </Text>
 
+                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                  Cashier Email: <Text style={{ color: theme.colors.text }}>{cashierEmail}</Text>
+                </Text>
+
                 <Text
                   style={{
                     color: theme.colors.muted,
@@ -1204,7 +1644,7 @@ export default function CashierClosingScreen() {
           !loading ? (
             <View style={{ paddingTop: 16, alignItems: "center" }}>
               <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                No sales ({labelForRange(range)}).
+                No sales ({effectiveRangeLabel}).
               </Text>
             </View>
           ) : null
