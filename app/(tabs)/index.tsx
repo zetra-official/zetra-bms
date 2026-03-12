@@ -69,6 +69,17 @@ type SalesSummary = {
   currency?: string | null;
 };
 
+type ExpenseSummary = {
+  total: number;
+  count: number;
+};
+
+type ProfitSummary = {
+  net: number;
+  sales: number | null;
+  expenses: number | null;
+};
+
 type PayBreakdown = {
   cash: number;
   bank: number;
@@ -111,6 +122,7 @@ function rangeToFromTo(k: RangeKey) {
   const from = startOfLocalDay(now);
 
   if (k === "today") {
+    // no change
   } else if (k === "7d") {
     from.setDate(from.getDate() - 6);
   } else {
@@ -126,6 +138,7 @@ function rangeToDates(k: RangeKey) {
   const from = new Date(now);
 
   if (k === "today") {
+    // no change
   } else if (k === "7d") {
     from.setDate(from.getDate() - 6);
   } else {
@@ -165,12 +178,8 @@ function normalizeDash(
 ): DashRow {
   const store_id = String(raw?.store_id ?? raw?.p_store_id ?? storeId ?? "").trim();
 
-  const from_ts = String(
-    raw?.from_ts ?? raw?.date_from ?? raw?.p_from ?? fallbackFrom ?? ""
-  ).trim();
-  const to_ts = String(
-    raw?.to_ts ?? raw?.date_to ?? raw?.p_to ?? fallbackTo ?? ""
-  ).trim();
+  const from_ts = String(raw?.from_ts ?? raw?.date_from ?? raw?.p_from ?? fallbackFrom ?? "").trim();
+  const to_ts = String(raw?.to_ts ?? raw?.date_to ?? raw?.p_to ?? fallbackTo ?? "").trim();
 
   const currency = String(raw?.currency ?? "TZS").trim() || "TZS";
 
@@ -338,6 +347,8 @@ function CompactFinanceCardHomePreview() {
   const orgId = String(org.activeOrgId ?? "").trim();
   const storeId = String(org.activeStoreId ?? "").trim();
   const storeName = String(org.activeStoreName ?? "Store").trim() || "Store";
+  const roleLower = String(org.activeRole ?? "").trim().toLowerCase();
+  const isOwner = roleLower === "owner";
 
   const money = useOrgMoneyPrefs(orgId);
 
@@ -359,6 +370,17 @@ function CompactFinanceCardHomePreview() {
     total: 0,
     orders: 0,
     currency: "TZS",
+  });
+
+  const [expRow, setExpRow] = useState<ExpenseSummary>({
+    total: 0,
+    count: 0,
+  });
+
+  const [profitRow, setProfitRow] = useState<ProfitSummary>({
+    net: 0,
+    sales: null,
+    expenses: null,
   });
 
   const [pay, setPay] = useState<PayBreakdown>({
@@ -420,6 +442,47 @@ function CompactFinanceCardHomePreview() {
       return { total, orders, currency };
     },
     []
+  );
+
+  const callExpenseForStore = useCallback(
+    async (sid: string, fromYMD: string, toYMD: string): Promise<ExpenseSummary> => {
+      const { data, error } = await supabase.rpc("get_expense_summary", {
+        p_store_id: sid,
+        p_from: fromYMD,
+        p_to: toYMD,
+      } as any);
+      if (error) throw error;
+
+      const row = (Array.isArray(data) ? data[0] : data) as any;
+      return {
+        total: toNum(row?.total ?? row?.amount ?? row?.sum ?? 0),
+        count: toInt(row?.count ?? row?.items ?? 0),
+      };
+    },
+    []
+  );
+
+  const callProfitOwnerOnly = useCallback(
+    async (sid: string, fromISO: string, toISO: string): Promise<ProfitSummary> => {
+      if (!isOwner) {
+        return { net: 0, sales: null, expenses: null };
+      }
+
+      const { data, error } = await supabase.rpc("get_store_net_profit_v2", {
+        p_store_id: sid,
+        p_from: fromISO,
+        p_to: toISO,
+      } as any);
+      if (error) throw error;
+
+      const row = (Array.isArray(data) ? data[0] : data) as any;
+      return {
+        net: toNum(row?.net_profit ?? row?.net ?? 0),
+        sales: row?.sales_total != null ? toNum(row?.sales_total) : null,
+        expenses: row?.expenses_total != null ? toNum(row?.expenses_total) : null,
+      };
+    },
+    [isOwner]
   );
 
   const callPaymentBreakdown = useCallback(
@@ -485,7 +548,14 @@ function CompactFinanceCardHomePreview() {
         }
 
         const rows = (Array.isArray(data) ? data : []) as any[];
-        const out: CollectionBreakdown = { cash: 0, bank: 0, mobile: 0, other: 0, total: 0, payments: 0 };
+        const out: CollectionBreakdown = {
+          cash: 0,
+          bank: 0,
+          mobile: 0,
+          other: 0,
+          total: 0,
+          payments: 0,
+        };
 
         for (const r of rows) {
           const ch = String(r?.channel ?? r?.payment_method ?? r?.method ?? "").trim().toUpperCase();
@@ -527,13 +597,19 @@ function CompactFinanceCardHomePreview() {
 
     try {
       const { from, to } = rangeToFromTo(range);
+      const { from: fromYMD, to: toYMD } = rangeToDates(range);
 
-      const row = await callSalesForStore(storeId, from, to);
+      const sales = await callSalesForStore(storeId, from, to);
+      const expenses = await callExpenseForStore(storeId, fromYMD, toYMD);
+      const profit = await callProfitOwnerOnly(storeId, from, to);
       const pb = await callPaymentBreakdown(from, to, storeId);
       const cc = await callCreditCollections(from, to, storeId);
 
       if (rid !== reqIdRef.current) return;
-      setSalesRow(row);
+
+      setSalesRow(sales);
+      setExpRow(expenses);
+      setProfitRow(profit);
       setPay(pb);
       setCollections(cc);
     } catch (e: any) {
@@ -542,7 +618,16 @@ function CompactFinanceCardHomePreview() {
     } finally {
       if (rid === reqIdRef.current) setLoading(false);
     }
-  }, [orgId, storeId, range, callSalesForStore, callPaymentBreakdown, callCreditCollections]);
+  }, [
+    orgId,
+    storeId,
+    range,
+    callSalesForStore,
+    callExpenseForStore,
+    callProfitOwnerOnly,
+    callPaymentBreakdown,
+    callCreditCollections,
+  ]);
 
   useEffect(() => {
     void load();
@@ -560,6 +645,9 @@ function CompactFinanceCardHomePreview() {
       formatMoney(n, { currency: displayCurrency, locale: displayLocale }).replace(/\s+/g, " ");
 
     const totalSales = fmtMoney(salesRow.total);
+    const totalExpenses = fmtMoney(expRow.total);
+    const netProfit = isOwner ? fmtMoney(profitRow.net) : "—";
+
     const orders = String(salesRow.orders ?? 0);
     const avg =
       salesRow.orders > 0 ? fmtMoney(salesRow.total / Math.max(1, salesRow.orders)) : "—";
@@ -577,15 +665,20 @@ function CompactFinanceCardHomePreview() {
     const colBank = fmtMoney(collections.bank);
     const colMobile = fmtMoney(collections.mobile);
     const colTotal = fmtMoney(collections.total);
-    const colCountHint =
-      collections.payments > 0 ? `${collections.payments} payments` : "0 payments";
+    const colCountHint = collections.payments > 0 ? `${collections.payments} payments` : "0 payments";
 
     return (
       <View style={{ gap: 10, paddingTop: 2 }}>
         <View style={{ flexDirection: "row", gap: 12 }}>
-          <MiniStat label="Sales" value={totalSales} />
+          <MiniStat label="Sales" value={totalSales} hint="today" />
+          <MiniStat label="Expenses" value={totalExpenses} hint="today" />
+          <MiniStat label="Profit" value={netProfit} hint={isOwner ? "today" : "owner-only"} />
+        </View>
+
+        <View style={{ flexDirection: "row", gap: 12 }}>
           <MiniStat label="Orders" value={orders} />
           <MiniStat label="Avg/Order" value={avg.toString().replace(/\s+/g, " ")} />
+          <MiniStat label="Money In" value={totalMoneyIn} hint="received" />
         </View>
 
         <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
@@ -597,7 +690,7 @@ function CompactFinanceCardHomePreview() {
         <View style={{ flexDirection: "row", gap: 12 }}>
           <MiniStat label="Cash" value={paidCash} />
           <MiniStat label="Mobile" value={paidMobile} />
-          <MiniStat label="TOTAL MONEY IN" value={totalMoneyIn} hint="money received" />
+          <MiniStat label="Total Money In" value={totalMoneyIn} hint="money received" />
         </View>
 
         <View style={{ flexDirection: "row", gap: 12 }}>
@@ -625,7 +718,7 @@ function CompactFinanceCardHomePreview() {
         </View>
       </View>
     );
-  }, [salesRow, pay, collections, displayCurrency, displayLocale]);
+  }, [salesRow, expRow, profitRow, pay, collections, displayCurrency, displayLocale, isOwner]);
 
   return (
     <View style={{ paddingTop: 12 }}>
@@ -679,7 +772,13 @@ function CompactFinanceCardHomePreview() {
             const dates = rangeToDates("today");
             router.push({
               pathname: "/finance/history",
-              params: { mode: "SALES", scope: "STORE", range: "today", from: dates.from, to: dates.to } as any,
+              params: {
+                mode: "SALES",
+                scope: "STORE",
+                range: "today",
+                from: dates.from,
+                to: dates.to,
+              } as any,
             } as any);
           }}
           hitSlop={10}
@@ -689,7 +788,7 @@ function CompactFinanceCardHomePreview() {
             opacity: pressed ? 0.92 : 1,
           })}
         >
-          <Text style={{ color: UI.muted, fontWeight: "800" }}>1 store</Text>
+          <Text style={{ color: UI.muted, fontWeight: "800" }}>Today details</Text>
           <View style={{ flex: 1 }} />
           {loading ? (
             <ActivityIndicator />
@@ -844,11 +943,7 @@ function CompactClubRevenueCardHomePreview({ onOpen }: { onOpen: () => void }) {
         <View style={{ flexDirection: "row", gap: 12, paddingTop: 2 }}>
           <MiniStat label="Revenue" value={revenue} />
           <MiniStat label="Paid" value={paid} />
-          <MiniStat
-            label="Orders"
-            value={String(row?.delivered_orders ?? 0)}
-            hint="delivered"
-          />
+          <MiniStat label="Orders" value={String(row?.delivered_orders ?? 0)} hint="delivered" />
         </View>
 
         <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)", marginTop: 4 }} />
@@ -1377,7 +1472,6 @@ function CashierQuickHome() {
     activeOrgName,
     activeRole,
     activeStoreName,
-    activeStoreId,
   } = useOrg();
 
   const [handoffCount, setHandoffCount] = useState<number>(0);
@@ -1474,17 +1568,9 @@ function CashierQuickHome() {
         variant="primary"
       />
 
-      <Button
-        title="Open Sales"
-        onPress={() => router.push("/(tabs)/sales")}
-        variant="primary"
-      />
+      <Button title="Open Sales" onPress={() => router.push("/(tabs)/sales")} variant="primary" />
 
-      <Button
-        title="Open Stores"
-        onPress={() => router.push("/(tabs)/stores")}
-        variant="secondary"
-      />
+      <Button title="Open Stores" onPress={() => router.push("/(tabs)/stores")} variant="secondary" />
     </Card>
   );
 }
@@ -1637,9 +1723,7 @@ export default function HomeScreen() {
 
           <Button title="Open Stores" onPress={goStores} variant="secondary" />
 
-          {canManageStaff ? (
-            <Button title="Staff Management" onPress={goStaff} variant="secondary" />
-          ) : null}
+          {canManageStaff ? <Button title="Staff Management" onPress={goStaff} variant="secondary" /> : null}
 
           <Button
             title="Logout"
