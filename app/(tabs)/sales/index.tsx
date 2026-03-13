@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   AppState,
@@ -17,6 +17,7 @@ import {
 } from "react-native";
 
 import { useNetInfo } from "@react-native-community/netinfo";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 
 import { useOrg } from "../../../src/context/OrgContext";
 import { supabase } from "../../../src/supabase/supabaseClient";
@@ -211,6 +212,15 @@ export default function SalesHomeScreen() {
   const [query, setQuery] = useState("");
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
+
+  const realtimeChannelRef = useRef<RealtimeChannel | null>(null);
+  const refreshTimerRef = useRef<any>(null);
+  const lastRealtimeRefreshAtRef = useRef<number>(0);
+  const latestStoreIdRef = useRef<string>("");
+
+  useEffect(() => {
+    latestStoreIdRef.current = String(activeStoreId ?? "").trim();
+  }, [activeStoreId]);
 
   const [source, setSource] = useState<"LIVE" | "CACHED" | "NONE">("NONE");
   const [lastSync, setLastSync] = useState<string | null>(null);
@@ -494,9 +504,8 @@ export default function SalesHomeScreen() {
       ];
     });
 
-    bumpRecent(selected.id);
     closePriceModal();
-  }, [bumpRecent, closePriceModal, fmt, priceDraft, qtyDraft, selected]);
+  }, [closePriceModal, fmt, priceDraft, qtyDraft, selected]);
 
   /* =========================
      Cart Helpers
@@ -538,25 +547,19 @@ export default function SalesHomeScreen() {
           },
         ];
       });
-
-      bumpRecent(p.id);
     },
-    [bumpRecent, openPriceModal]
+    [openPriceModal]
   );
 
-  const inc = useCallback(
-    (productId: string) => {
-      setCart((prev) =>
-        prev.map((x) => {
-          if (x.product_id !== productId) return x;
-          const nextQty = clampQty(x.qty + 1);
-          return { ...x, qty: nextQty, line_total: Number(x.unit_price) * nextQty };
-        })
-      );
-      bumpRecent(productId);
-    },
-    [bumpRecent]
-  );
+  const inc = useCallback((productId: string) => {
+    setCart((prev) =>
+      prev.map((x) => {
+        if (x.product_id !== productId) return x;
+        const nextQty = clampQty(x.qty + 1);
+        return { ...x, qty: nextQty, line_total: Number(x.unit_price) * nextQty };
+      })
+    );
+  }, []);
 
   const dec = useCallback((productId: string) => {
     setCart((prev) =>
@@ -588,17 +591,13 @@ export default function SalesHomeScreen() {
   const [qtyEditorDraft, setQtyEditorDraft] = useState<string>("");
   const [qtyEditorErr, setQtyEditorErr] = useState<string | null>(null);
 
-  const openQtyEditor = useCallback(
-    (item: CartItem) => {
-      setQtyEditorErr(null);
-      setQtyEditorProductId(item.product_id);
-      setQtyEditorName(item.name ?? "Product");
-      setQtyEditorDraft(String(Math.trunc(Number(item.qty ?? 1))));
-      setQtyEditorOpen(true);
-      bumpRecent(item.product_id);
-    },
-    [bumpRecent]
-  );
+  const openQtyEditor = useCallback((item: CartItem) => {
+    setQtyEditorErr(null);
+    setQtyEditorProductId(item.product_id);
+    setQtyEditorName(item.name ?? "Product");
+    setQtyEditorDraft(String(Math.trunc(Number(item.qty ?? 1))));
+    setQtyEditorOpen(true);
+  }, []);
 
   const closeQtyEditor = useCallback(() => {
     Keyboard.dismiss();
@@ -631,9 +630,8 @@ export default function SalesHomeScreen() {
       })
     );
 
-    bumpRecent(qtyEditorProductId);
     closeQtyEditor();
-  }, [bumpRecent, closeQtyEditor, qtyEditorDraft, qtyEditorProductId]);
+  }, [closeQtyEditor, qtyEditorDraft, qtyEditorProductId]);
 
   const removeFromQtyEditor = useCallback(() => {
     if (!qtyEditorProductId) return;
@@ -694,17 +692,19 @@ export default function SalesHomeScreen() {
           barcode?: string | null;
         }>;
 
-        const list: ProductRow[] = rows.map((r) => ({
-          id: r.product_id,
-          name: (r.name ?? "").trim() || "Product",
-          sku: r.sku ?? null,
-          category: r.category ?? null,
-          unit: r.unit ?? null,
-          selling_price: r.selling_price ?? null,
-          cost_price: r.cost_price ?? null,
-          stock_qty: r.qty ?? null,
-          barcode: (r as any).barcode ?? null,
-        }));
+        const list: ProductRow[] = rows
+          .filter((r) => Number(r.qty ?? 0) > 0)
+          .map((r) => ({
+            id: r.product_id,
+            name: (r.name ?? "").trim() || "Product",
+            sku: r.sku ?? null,
+            category: r.category ?? null,
+            unit: r.unit ?? null,
+            selling_price: r.selling_price ?? null,
+            cost_price: r.cost_price ?? null,
+            stock_qty: r.qty ?? null,
+            barcode: (r as any).barcode ?? null,
+          }));
 
         list.sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""));
         setProducts(list);
@@ -729,6 +729,25 @@ export default function SalesHomeScreen() {
     },
     [activeStoreId, isCashier, isOffline, products.length]
   );
+
+  const triggerRealtimeRefresh = useCallback(() => {
+    if (isCashier) return;
+
+    const storeIdNow = String(latestStoreIdRef.current ?? "").trim();
+    if (!storeIdNow) return;
+
+    const now = Date.now();
+    if (now - lastRealtimeRefreshAtRef.current < 1200) return;
+    lastRealtimeRefreshAtRef.current = now;
+
+    if (refreshTimerRef.current) {
+      clearTimeout(refreshTimerRef.current);
+    }
+
+    refreshTimerRef.current = setTimeout(() => {
+      void loadProducts("refresh");
+    }, 250);
+  }, [isCashier, loadProducts]);
 
   useEffect(() => {
     setCart([]);
@@ -796,6 +815,65 @@ export default function SalesHomeScreen() {
   );
 
   useEffect(() => {
+    if (realtimeChannelRef.current) {
+      supabase.removeChannel(realtimeChannelRef.current);
+      realtimeChannelRef.current = null;
+    }
+
+    if (isCashier) return;
+    if (!activeStoreId) return;
+    if (!activeOrgId) return;
+
+    const storeIdNow = String(activeStoreId).trim();
+    const orgIdNow = String(activeOrgId).trim();
+
+    if (!storeIdNow || !orgIdNow) return;
+
+    const channel = supabase.channel(`sales-live:${orgIdNow}:${storeIdNow}`);
+
+    channel.on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "inventory",
+        filter: `store_id=eq.${storeIdNow}`,
+      },
+      () => {
+        triggerRealtimeRefresh();
+      }
+    );
+
+    channel.on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "sales",
+      },
+      () => {
+        triggerRealtimeRefresh();
+      }
+    );
+
+    channel.subscribe();
+
+    realtimeChannelRef.current = channel;
+
+    return () => {
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
+        refreshTimerRef.current = null;
+      }
+
+      if (realtimeChannelRef.current) {
+        supabase.removeChannel(realtimeChannelRef.current);
+        realtimeChannelRef.current = null;
+      }
+    };
+  }, [activeOrgId, activeStoreId, isCashier, triggerRealtimeRefresh]);
+
+  useEffect(() => {
     const sub = AppState.addEventListener("change", (state) => {
       if (state !== "active") return;
 
@@ -808,6 +886,15 @@ export default function SalesHomeScreen() {
 
     return () => sub.remove();
   }, [isCashier, loadProducts, refreshCashierSurface]);
+
+  useEffect(() => {
+    return () => {
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
+        refreshTimerRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!isCashier) return;
@@ -894,6 +981,11 @@ export default function SalesHomeScreen() {
           const row = Array.isArray(data) ? data[0] : null;
           if (!row) {
             setErr(`Barcode haijapatikana: ${raw}`);
+            return;
+          }
+
+          if (Number(row.qty ?? 0) <= 0) {
+            setErr(`Barcode ipo lakini haina stock kwenye store hii: ${raw}`);
             return;
           }
 
@@ -1396,7 +1488,9 @@ export default function SalesHomeScreen() {
           <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{cashierErr}</Text>
         )}
 
-        {!!shiftErr && <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{shiftErr}</Text>}
+        {!!shiftErr && (
+          <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{shiftErr}</Text>
+        )}
 
         <View style={{ flexDirection: "row", gap: 10 }}>
           <View style={{ flex: 1 }}>
@@ -1549,7 +1643,9 @@ export default function SalesHomeScreen() {
           })}
         >
           <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-            {cashierLoading || cashierRefreshing || shiftLoading ? "Refreshing..." : "Refresh Queue"}
+            {cashierLoading || cashierRefreshing || shiftLoading
+              ? "Refreshing..."
+              : "Refresh Queue"}
           </Text>
         </Pressable>
       </Card>

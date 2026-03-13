@@ -29,7 +29,10 @@ function includesText(value: unknown, q: string) {
   return clean(value).toLowerCase().includes(q);
 }
 
-function isVerified(row: { verified?: boolean | null; verification_level?: string | null }) {
+function isVerified(row: {
+  verified?: boolean | null;
+  verification_level?: string | null;
+}) {
   if (row.verified === true) return true;
   const lvl = clean(row.verification_level).toLowerCase();
   return lvl === "verified" || lvl === "premium" || lvl === "official";
@@ -57,8 +60,8 @@ export default function MarketplacePage() {
         setLoading(true);
 
         const [{ data: sto }, { data: pos }] = await Promise.all([
-          supabase.from("public_marketplace_stores_v1").select("*").limit(16),
-          supabase.from("public_marketplace_posts_v1").select("*").limit(24),
+          supabase.from("public_marketplace_stores_v1").select("*").limit(24),
+          supabase.from("public_marketplace_posts_v1").select("*").limit(32),
         ]);
 
         if (!mounted) return;
@@ -81,7 +84,9 @@ export default function MarketplacePage() {
 
   const filteredStores = useMemo(() => {
     if (!q) return stores;
-    return stores.filter((s) => includesText(s.name, q) || includesText(s.slug, q));
+    return stores.filter(
+      (s) => includesText(s.name, q) || includesText(s.slug, q)
+    );
   }, [stores, q]);
 
   const filteredPosts = useMemo(() => {
@@ -95,24 +100,25 @@ export default function MarketplacePage() {
     });
   }, [posts, q]);
 
-  const featuredPosts = useMemo(() => filteredPosts.slice(0, 3), [filteredPosts]);
-  const feedPosts = useMemo(() => filteredPosts.slice(3), [filteredPosts]);
+  const featuredPosts = useMemo(() => filteredPosts.slice(0, 4), [filteredPosts]);
+  const feedPosts = useMemo(() => filteredPosts.slice(4), [filteredPosts]);
 
   const totalResults = filteredStores.length + filteredPosts.length;
+  const visibleFeedPosts = tab === "posts" ? filteredPosts : feedPosts;
 
   if (loading) {
     return (
       <main style={styles.main}>
         <div style={styles.container}>
-          <div style={styles.hero}>
+          <section style={styles.hero}>
             <div style={styles.heroGlow} />
             <div style={styles.heroGlow2} />
             <div style={styles.heroContent}>
               <p style={styles.eyebrow}>ZETRA GLOBAL MARKETPLACE</p>
               <h1 style={styles.heroTitle}>Loading marketplace...</h1>
-              <p style={styles.heroText}>Tunavuta stores na latest posts.</p>
+              <p style={styles.heroText}>Tunavuta stores na live posts.</p>
             </div>
-          </div>
+          </section>
 
           <div style={styles.loadingCard}>
             <div style={styles.loadingLineLg} />
@@ -136,8 +142,9 @@ export default function MarketplacePage() {
             <h1 style={styles.heroTitle}>Discover stores and live business posts</h1>
 
             <p style={styles.heroText}>
-              Marketplace ya ZETRA ime-focus kwenye stores na live posts za biashara
-              ili kuonyesha content halisi yenye mvuto zaidi.
+              Marketplace ya ZETRA ime-focus kwenye stores na live posts za
+              biashara ili kuonyesha content halisi yenye mvuto, usafi, na
+              quality ya kimataifa.
             </p>
 
             <div style={styles.searchWrap}>
@@ -215,9 +222,7 @@ export default function MarketplacePage() {
                 <h2 style={styles.sectionTitle}>Featured Posts</h2>
               </div>
 
-              <div style={styles.sectionBadge}>
-                {featuredPosts.length} featured
-              </div>
+              <div style={styles.sectionBadge}>{featuredPosts.length} featured</div>
             </div>
 
             <div style={styles.featuredGrid}>
@@ -241,9 +246,7 @@ export default function MarketplacePage() {
                       <div style={styles.featuredShade} />
 
                       <div style={styles.featuredBadge}>
-                        <span style={styles.featuredBadgeText}>
-                          #{index + 1} Featured
-                        </span>
+                        <span style={styles.featuredBadgeText}>#{index + 1} Featured</span>
                       </div>
 
                       <div style={styles.featuredContent}>
@@ -255,8 +258,10 @@ export default function MarketplacePage() {
                         </div>
 
                         <p style={styles.featuredCaption}>
-                          {shortText(p.caption, 120) || "Open store to view this business post."}
+                          {shortText(p.caption, 68) || "Open store to view this post."}
                         </p>
+
+                        <span style={styles.featuredAction}>Open store →</span>
                       </div>
                     </div>
                   </a>
@@ -282,9 +287,7 @@ export default function MarketplacePage() {
             {!filteredStores.length ? (
               <div style={styles.emptyCard}>
                 <h3 style={styles.emptyTitle}>No stores found</h3>
-                <p style={styles.emptyText}>
-                  Search nyingine inaweza kuonyesha stores zaidi.
-                </p>
+                <p style={styles.emptyText}>Search nyingine inaweza kuonyesha stores zaidi.</p>
               </div>
             ) : (
               <div style={styles.storesGrid}>
@@ -330,20 +333,18 @@ export default function MarketplacePage() {
               </div>
 
               <div style={styles.sectionBadge}>
-                {filteredPosts.length} post{filteredPosts.length === 1 ? "" : "s"}
+                {visibleFeedPosts.length} post{visibleFeedPosts.length === 1 ? "" : "s"}
               </div>
             </div>
 
             {!filteredPosts.length ? (
               <div style={styles.emptyCard}>
                 <h3 style={styles.emptyTitle}>No posts found</h3>
-                <p style={styles.emptyText}>
-                  Hakuna post inayolingana na search yako kwa sasa.
-                </p>
+                <p style={styles.emptyText}>Hakuna post inayolingana na search yako kwa sasa.</p>
               </div>
             ) : (
               <div style={styles.postsGrid}>
-                {(tab === "posts" ? filteredPosts : feedPosts).map((p) => {
+                {visibleFeedPosts.map((p) => {
                   const verified = isVerified(p);
 
                   return (
@@ -375,7 +376,7 @@ export default function MarketplacePage() {
                         </div>
 
                         <p style={styles.postCaption}>
-                          {shortText(p.caption, 92) || "No caption"}
+                          {shortText(p.caption, 64) || "No caption"}
                         </p>
 
                         <div style={styles.postActionRow}>
@@ -401,7 +402,7 @@ const styles: any = {
     background:
       "radial-gradient(circle at top, rgba(16,185,129,0.08) 0%, rgba(11,15,20,1) 32%), #0b0f14",
     color: "#ffffff",
-    padding: "28px 18px 80px",
+    padding: "22px 18px 64px",
     fontFamily:
       'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
@@ -418,8 +419,8 @@ const styles: any = {
     border: "1px solid rgba(255,255,255,0.08)",
     background:
       "linear-gradient(135deg, rgba(17,22,29,0.96) 0%, rgba(10,14,19,0.98) 100%)",
-    padding: "36px 24px 28px",
-    marginBottom: 28,
+    padding: "28px 24px 24px",
+    marginBottom: 24,
     boxShadow: "0 20px 60px rgba(0,0,0,0.30)",
   },
 
@@ -454,7 +455,7 @@ const styles: any = {
 
   eyebrow: {
     margin: 0,
-    marginBottom: 12,
+    marginBottom: 10,
     color: "#34d399",
     fontSize: 12,
     fontWeight: 900,
@@ -463,25 +464,25 @@ const styles: any = {
 
   heroTitle: {
     margin: 0,
-    fontSize: "clamp(34px, 6vw, 64px)",
+    fontSize: "clamp(32px, 5.2vw, 58px)",
     lineHeight: 1.02,
     fontWeight: 900,
-    maxWidth: 920,
-    letterSpacing: -1.4,
+    maxWidth: 840,
+    letterSpacing: -1.2,
   },
 
   heroText: {
-    marginTop: 14,
+    marginTop: 12,
     marginBottom: 0,
-    maxWidth: 760,
+    maxWidth: 700,
     color: "rgba(255,255,255,0.78)",
-    fontSize: 16,
-    lineHeight: 1.7,
+    fontSize: 15,
+    lineHeight: 1.65,
     fontWeight: 500,
   },
 
   searchWrap: {
-    marginTop: 22,
+    marginTop: 18,
     display: "flex",
     gap: 12,
     flexWrap: "wrap",
@@ -491,7 +492,7 @@ const styles: any = {
   searchInput: {
     flex: 1,
     minWidth: 260,
-    height: 54,
+    height: 50,
     borderRadius: 14,
     border: "1px solid rgba(255,255,255,0.10)",
     background: "rgba(255,255,255,0.04)",
@@ -504,7 +505,7 @@ const styles: any = {
   },
 
   clearBtn: {
-    height: 54,
+    height: 50,
     border: "1px solid rgba(255,255,255,0.10)",
     background: "#161c24",
     color: "#ffffff",
@@ -515,16 +516,16 @@ const styles: any = {
 
   statsRow: {
     display: "flex",
-    gap: 12,
+    gap: 10,
     flexWrap: "wrap",
-    marginTop: 18,
+    marginTop: 16,
   },
 
   statPill: {
     display: "flex",
     alignItems: "center",
     gap: 10,
-    padding: "10px 14px",
+    padding: "9px 13px",
     borderRadius: 999,
     border: "1px solid rgba(255,255,255,0.08)",
     background: "rgba(255,255,255,0.03)",
@@ -568,7 +569,7 @@ const styles: any = {
   },
 
   section: {
-    marginTop: 30,
+    marginTop: 26,
   },
 
   sectionHead: {
@@ -577,7 +578,7 @@ const styles: any = {
     justifyContent: "space-between",
     gap: 16,
     flexWrap: "wrap",
-    marginBottom: 18,
+    marginBottom: 16,
   },
 
   sectionKicker: {
@@ -607,15 +608,15 @@ const styles: any = {
 
   featuredGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fill,minmax(320px,1fr))",
-    gap: 18,
+    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+    gap: 16,
   },
 
   featuredCard: {
     display: "block",
     textDecoration: "none",
     color: "inherit",
-    borderRadius: 24,
+    borderRadius: 22,
     overflow: "hidden",
     border: "1px solid rgba(255,255,255,0.08)",
     background: "linear-gradient(180deg, #131922 0%, #0f141b 100%)",
@@ -625,7 +626,7 @@ const styles: any = {
   featuredImageWrap: {
     position: "relative",
     width: "100%",
-    aspectRatio: "1 / 1.08",
+    aspectRatio: "4 / 5",
     background: "#0b0f14",
     overflow: "hidden",
   },
@@ -641,16 +642,16 @@ const styles: any = {
     position: "absolute",
     inset: 0,
     background:
-      "linear-gradient(180deg, rgba(0,0,0,0.10) 0%, rgba(0,0,0,0.12) 40%, rgba(0,0,0,0.70) 100%)",
+      "linear-gradient(180deg, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.14) 40%, rgba(0,0,0,0.78) 100%)",
     pointerEvents: "none",
   },
 
   featuredBadge: {
     position: "absolute",
-    left: 14,
-    top: 14,
+    left: 12,
+    top: 12,
     zIndex: 2,
-    padding: "8px 12px",
+    padding: "7px 11px",
     borderRadius: 999,
     background: "rgba(11,15,20,0.72)",
     border: "1px solid rgba(255,255,255,0.08)",
@@ -666,9 +667,9 @@ const styles: any = {
 
   featuredContent: {
     position: "absolute",
-    left: 18,
-    right: 18,
-    bottom: 18,
+    left: 16,
+    right: 16,
+    bottom: 16,
     zIndex: 2,
   },
 
@@ -704,8 +705,17 @@ const styles: any = {
     margin: 0,
     color: "rgba(255,255,255,0.92)",
     fontSize: 14,
-    lineHeight: 1.55,
+    lineHeight: 1.42,
     fontWeight: 600,
+    minHeight: 40,
+  },
+
+  featuredAction: {
+    display: "inline-block",
+    marginTop: 10,
+    color: "#34d399",
+    fontWeight: 900,
+    fontSize: 13,
   },
 
   storesGrid: {
@@ -790,7 +800,7 @@ const styles: any = {
 
   postsGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))",
+    gridTemplateColumns: "repeat(auto-fill,minmax(250px,1fr))",
     gap: 18,
   },
 
@@ -808,7 +818,7 @@ const styles: any = {
   postImageWrap: {
     position: "relative",
     width: "100%",
-    aspectRatio: "1 / 1",
+    aspectRatio: "4 / 4",
     background: "#0b0f14",
     overflow: "hidden",
   },
@@ -860,7 +870,7 @@ const styles: any = {
   postCaption: {
     margin: 0,
     color: "#ffffff",
-    lineHeight: 1.55,
+    lineHeight: 1.5,
     fontSize: 14,
     fontWeight: 600,
     minHeight: 44,

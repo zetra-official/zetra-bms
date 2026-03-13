@@ -19,8 +19,6 @@ type StoreRow = {
   slug: string | null;
   organization_id: string;
   is_active: boolean | null;
-  verified?: boolean | null;
-  verification_level?: string | null;
 };
 
 type PublicStoreHeroRow = {
@@ -37,7 +35,6 @@ type StoreProductCardRow = {
   store_slug: string | null;
   store_name: string | null;
   store_id: string | null;
-
   id: string;
   name: string | null;
   sku: string | null;
@@ -46,7 +43,6 @@ type StoreProductCardRow = {
   barcode: string | null;
   qty_on_hand: number | null;
   reserved_qty: number | null;
-
   post_image_url: string | null;
   post_image_hq_url: string | null;
   post_caption: string | null;
@@ -82,19 +78,11 @@ function firstNonEmpty(...values: unknown[]) {
   return "";
 }
 
-function shortText(value: unknown, max = 120) {
+function shortText(value: unknown, max = 88) {
   const s = clean(value);
   if (!s) return "";
   if (s.length <= max) return s;
   return `${s.slice(0, max).trim()}...`;
-}
-
-function isVerified(store: StoreRow | null) {
-  if (!store) return false;
-  if (store.verified === true) return true;
-
-  const level = clean(store.verification_level).toLowerCase();
-  return level === "verified" || level === "premium" || level === "official";
 }
 
 export const dynamic = "force-dynamic";
@@ -129,7 +117,7 @@ export default function StorePage({ params }: Props) {
 
         const { data: foundStore, error: storeError } = await supabase
           .from("stores")
-          .select("id, name, slug, organization_id, is_active, verified, verification_level")
+          .select("id, name, slug, organization_id, is_active")
           .eq("slug", slug)
           .eq("is_active", true)
           .maybeSingle();
@@ -217,7 +205,6 @@ export default function StorePage({ params }: Props) {
 
       if (exists) {
         if (exists.qty >= stock) return prev;
-
         return prev.map((x) =>
           x.product_id === id ? { ...x, qty: x.qty + 1 } : x
         );
@@ -257,32 +244,23 @@ export default function StorePage({ params }: Props) {
   };
 
   const cartItems = useMemo(() => cart.reduce((a, x) => a + x.qty, 0), [cart]);
-  const cartTotal = useMemo(() => cart.reduce((a, x) => a + x.qty * x.price, 0), [cart]);
+  const cartTotal = useMemo(
+    () => cart.reduce((a, x) => a + x.qty * x.price, 0),
+    [cart]
+  );
 
   const title = clean(store?.name) || "Store";
   const heroImage = clean(heroPost?.image_url);
   const heroCaption = clean(heroPost?.caption);
-  const verified = isVerified(store);
-
-  const featuredPosts = useMemo(() => {
-    return [...products]
-      .filter((p) => !!firstNonEmpty(p.post_image_hq_url, p.post_image_url))
-      .sort((a, b) => {
-        const at = new Date(clean(a.post_created_at) || 0).getTime();
-        const bt = new Date(clean(b.post_created_at) || 0).getTime();
-        return bt - at;
-      })
-      .slice(0, 6);
-  }, [products]);
 
   if (loading) {
     return (
       <main style={styles.main}>
         <div style={styles.container}>
-          <div style={styles.loadingHero}>
-            <div style={styles.loadingGlow} />
-            <h1 style={styles.title}>Loading...</h1>
-            <p style={styles.text}>Tunavuta taarifa za store na bidhaa zake.</p>
+          <div style={styles.loadingCard}>
+            <div style={styles.loadingLineLg} />
+            <div style={styles.loadingLineMd} />
+            <div style={styles.loadingLineSm} />
           </div>
         </div>
       </main>
@@ -293,8 +271,10 @@ export default function StorePage({ params }: Props) {
     return (
       <main style={styles.main}>
         <div style={styles.container}>
-          <h1 style={styles.title}>Store not found</h1>
-          <p style={styles.text}>Invalid store slug.</p>
+          <div style={styles.emptyCard}>
+            <h1 style={styles.title}>Store not found</h1>
+            <p style={styles.text}>Invalid store slug.</p>
+          </div>
         </div>
       </main>
     );
@@ -304,10 +284,12 @@ export default function StorePage({ params }: Props) {
     return (
       <main style={styles.main}>
         <div style={styles.container}>
-          <h1 style={styles.title}>Store not found</h1>
-          <p style={styles.text}>
-            Hatukupata store ya slug: <b>{storeSlug}</b>
-          </p>
+          <div style={styles.emptyCard}>
+            <h1 style={styles.title}>Store not found</h1>
+            <p style={styles.text}>
+              Hatukupata store ya slug: <b>{storeSlug}</b>
+            </p>
+          </div>
         </div>
       </main>
     );
@@ -317,171 +299,126 @@ export default function StorePage({ params }: Props) {
     <main style={styles.main}>
       <div style={styles.container}>
         {heroImage ? (
-          <div style={styles.heroWrap}>
+          <section style={styles.heroWrap}>
             <img src={heroImage} alt={title} style={styles.heroImage} />
             <div style={styles.heroOverlay} />
-
-            <div style={styles.heroTopBadge}>ZETRA STORE</div>
-
             <div style={styles.heroContent}>
-              <div style={styles.heroTitleRow}>
-                <h1 style={styles.heroTitle}>{title}</h1>
-                {verified ? <span style={styles.verifiedBadge}>✓ Verified</span> : null}
-              </div>
-
+              <div style={styles.heroBadge}>ZETRA STORE</div>
+              <h1 style={styles.heroTitle}>{title}</h1>
               <p style={styles.heroText}>
-                {heroCaption || "Welcome to the ZETRA marketplace store page."}
+                {shortText(
+                  heroCaption || "Welcome to the ZETRA marketplace store page.",
+                  120
+                )}
               </p>
             </div>
-          </div>
+          </section>
         ) : (
-          <>
-            <div style={styles.titleRow}>
-              <h1 style={styles.title}>{title}</h1>
-              {verified ? <span style={styles.verifiedBadge}>✓ Verified</span> : null}
-            </div>
+          <section style={styles.plainHero}>
+            <div style={styles.heroBadge}>ZETRA STORE</div>
+            <h1 style={styles.title}>{title}</h1>
             <p style={styles.text}>Welcome to the ZETRA marketplace store page.</p>
-          </>
-        )}
-
-        <div style={styles.storeMetaCard}>
-          <div style={styles.metaHead}>
-            <div>
-              <p style={styles.metaKicker}>STORE PROFILE</p>
-              <h3 style={styles.cardTitle}>Store Details</h3>
-            </div>
-
-            <div style={styles.metaPill}>ACTIVE</div>
-          </div>
-
-          <div style={styles.metaGrid}>
-            <div style={styles.metaItem}>
-              <span style={styles.metaLabel}>Name</span>
-              <span style={styles.metaValue}>{store.name}</span>
-            </div>
-
-            <div style={styles.metaItem}>
-              <span style={styles.metaLabel}>Slug</span>
-              <span style={styles.metaValue}>/{storeSlug}</span>
-            </div>
-
-            <div style={styles.metaItem}>
-              <span style={styles.metaLabel}>Verification</span>
-              <span style={styles.metaValue}>{verified ? "VERIFIED" : "STANDARD"}</span>
-            </div>
-          </div>
-        </div>
-
-        {!!featuredPosts.length && (
-          <section style={styles.section}>
-            <div style={styles.sectionHead}>
-              <div>
-                <p style={styles.sectionKicker}>LATEST FROM THIS STORE</p>
-                <h2 style={styles.sectionTitle}>Featured Posts</h2>
-              </div>
-
-              <div style={styles.sectionBadge}>
-                {featuredPosts.length} visual post{featuredPosts.length === 1 ? "" : "s"}
-              </div>
-            </div>
-
-            <div style={styles.featuredGrid}>
-              {featuredPosts.map((p) => {
-                const imageUrl = firstNonEmpty(p.post_image_hq_url, p.post_image_url);
-                const displayPrice =
-                  toNumber(p.post_price) > 0 ? toNumber(p.post_price) : toNumber(p.selling_price);
-
-                return (
-                  <div key={`featured-${p.id}`} style={styles.featuredCard}>
-                    <div style={styles.featuredImageWrap}>
-                      <img
-                        src={imageUrl}
-                        alt={clean(p.name) || "Post"}
-                        style={styles.featuredImage}
-                      />
-                      <div style={styles.featuredShade} />
-                      <div style={styles.featuredInfo}>
-                        <h3 style={styles.featuredName}>{p.name ?? "Product"}</h3>
-                        {!!clean(p.post_caption) && (
-                          <p style={styles.featuredCaption}>
-                            {shortText(p.post_caption, 88)}
-                          </p>
-                        )}
-                        <p style={styles.featuredPrice}>{money(displayPrice)}</p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
           </section>
         )}
 
-        <div style={styles.cartCard}>
-          <div style={styles.cartTopRow}>
-            <div>
-              <p style={styles.metaKicker}>SHOPPING</p>
-              <h3 style={{ ...styles.cardTitle, marginBottom: 8 }}>Cart Summary</h3>
-              <p style={styles.text}>
-                <b>Items:</b> {cartItems}
-              </p>
-              <p style={styles.text}>
-                <b>Total:</b> {money(cartTotal)}
-              </p>
+        <section style={styles.infoGrid}>
+          <div style={styles.infoCard}>
+            <div style={styles.infoCardTop}>
+              <div>
+                <p style={styles.sectionKicker}>STORE INFO</p>
+                <h3 style={styles.cardTitle}>Store Details</h3>
+              </div>
             </div>
 
-            <button
-              onClick={clearCart}
-              style={{
-                ...styles.secondaryButton,
-                opacity: cart.length === 0 ? 0.5 : 1,
-                cursor: cart.length === 0 ? "not-allowed" : "pointer",
-              }}
-              disabled={cart.length === 0}
-            >
-              Clear Cart
-            </button>
+            <div style={styles.metaGrid}>
+              <div style={styles.metaItem}>
+                <span style={styles.metaLabel}>Name</span>
+                <span style={styles.metaValue}>{store.name || "—"}</span>
+              </div>
+
+              <div style={styles.metaItem}>
+                <span style={styles.metaLabel}>Slug</span>
+                <span style={styles.metaValue}>{storeSlug}</span>
+              </div>
+
+              <div style={styles.metaItem}>
+                <span style={styles.metaLabel}>Status</span>
+                <span style={styles.statusPill}>ACTIVE</span>
+              </div>
+            </div>
           </div>
 
-          {cart.length === 0 ? (
-            <p style={{ ...styles.text, marginBottom: 0 }}>
-              Hakuna bidhaa kwenye cart bado.
-            </p>
-          ) : (
-            <div style={{ display: "grid", gap: 10 }}>
-              {cart.map((item) => (
-                <div key={item.product_id} style={styles.cartItem}>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ ...styles.textStrong, marginBottom: 6 }}>{item.name}</p>
-                    <p style={{ ...styles.small, marginBottom: 0 }}>
-                      {money(item.price)} × {item.qty} = {money(item.price * item.qty)}
-                    </p>
-                  </div>
+          <div style={styles.cartCard}>
+            <div style={styles.cartTopRow}>
+              <div>
+                <p style={styles.sectionKicker}>ORDER PREVIEW</p>
+                <h3 style={{ ...styles.cardTitle, marginBottom: 8 }}>Cart Summary</h3>
+                <p style={styles.text}>
+                  <b>Items:</b> {cartItems}
+                </p>
+                <p style={styles.text}>
+                  <b>Total:</b> {money(cartTotal)}
+                </p>
+              </div>
 
-                  <div style={styles.qtyWrap}>
-                    <button onClick={() => decQty(item.product_id)} style={styles.qtyButton}>
-                      −
-                    </button>
-
-                    <div style={styles.qtyValue}>{item.qty}</div>
-
-                    <button onClick={() => incQty(item.product_id)} style={styles.qtyButton}>
-                      +
-                    </button>
-                  </div>
-                </div>
-              ))}
+              <button
+                onClick={clearCart}
+                style={{
+                  ...styles.secondaryButton,
+                  opacity: cart.length === 0 ? 0.5 : 1,
+                  cursor: cart.length === 0 ? "not-allowed" : "pointer",
+                }}
+                disabled={cart.length === 0}
+              >
+                Clear Cart
+              </button>
             </div>
-          )}
-        </div>
 
-        <section style={styles.section}>
+            {cart.length === 0 ? (
+              <p style={{ ...styles.text, marginBottom: 0 }}>
+                Hakuna bidhaa kwenye cart bado.
+              </p>
+            ) : (
+              <div style={{ display: "grid", gap: 10 }}>
+                {cart.map((item) => (
+                  <div key={item.product_id} style={styles.cartItem}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ ...styles.textStrong, marginBottom: 6 }}>{item.name}</p>
+                      <p style={{ ...styles.small, marginBottom: 0 }}>
+                        {money(item.price)} × {item.qty} = {money(item.price * item.qty)}
+                      </p>
+                    </div>
+
+                    <div style={styles.qtyWrap}>
+                      <button
+                        onClick={() => decQty(item.product_id)}
+                        style={styles.qtyButton}
+                      >
+                        −
+                      </button>
+
+                      <div style={styles.qtyValue}>{item.qty}</div>
+
+                      <button
+                        onClick={() => incQty(item.product_id)}
+                        style={styles.qtyButton}
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+
+        <section style={styles.catalogCard}>
           <div style={styles.sectionHead}>
             <div>
               <p style={styles.sectionKicker}>STORE CATALOG</p>
-              <h2 style={styles.sectionTitle}>Products</h2>
+              <h3 style={styles.sectionTitle}>Products</h3>
             </div>
-
             <div style={styles.sectionBadge}>
               {products.length} item{products.length === 1 ? "" : "s"}
             </div>
@@ -490,9 +427,7 @@ export default function StorePage({ params }: Props) {
           {!products.length ? (
             <div style={styles.emptyCard}>
               <h3 style={styles.emptyTitle}>No products found</h3>
-              <p style={styles.emptyText}>
-                Hakuna bidhaa zilizopatikana kwa store hii kwa sasa.
-              </p>
+              <p style={styles.emptyText}>Hakuna bidhaa kwenye store hii kwa sasa.</p>
             </div>
           ) : (
             <div style={styles.grid}>
@@ -501,7 +436,9 @@ export default function StorePage({ params }: Props) {
                 const qty = cart.find((x) => x.product_id === p.id)?.qty ?? 0;
                 const imageUrl = firstNonEmpty(p.post_image_hq_url, p.post_image_url);
                 const displayPrice =
-                  toNumber(p.post_price) > 0 ? toNumber(p.post_price) : toNumber(p.selling_price);
+                  toNumber(p.post_price) > 0
+                    ? toNumber(p.post_price)
+                    : toNumber(p.selling_price);
                 const caption = clean(p.post_caption);
 
                 return (
@@ -513,7 +450,6 @@ export default function StorePage({ params }: Props) {
                           alt={clean(p.name) || "Product"}
                           style={styles.productImage}
                         />
-                        <div style={styles.productImageOverlay} />
                       </div>
                     ) : (
                       <div style={styles.productImageFallback}>
@@ -524,22 +460,28 @@ export default function StorePage({ params }: Props) {
                     <div style={styles.productBody}>
                       <h4 style={styles.productTitle}>{p.name ?? "Product"}</h4>
 
-                      {!!caption && <p style={styles.captionText}>{shortText(caption, 90)}</p>}
-
-                      <p style={styles.small}>SKU: {p.sku ?? "—"}</p>
-                      <p style={styles.small}>Category: {p.category ?? "—"}</p>
-                      <p style={styles.price}>{money(displayPrice)}</p>
-
-                      <p
-                        style={{
-                          ...styles.small,
-                          color: stock > 0 ? "#9ca3af" : "#ef4444",
-                        }}
-                      >
-                        Stock: {stock}
+                      <p style={styles.captionText}>
+                        {caption ? shortText(caption, 72) : "No product caption."}
                       </p>
 
-                      <p style={styles.small}>Barcode: {p.barcode ?? "—"}</p>
+                      <div style={styles.metaLines}>
+                        <p style={styles.small}>SKU: {p.sku ?? "—"}</p>
+                        <p style={styles.small}>Category: {p.category ?? "—"}</p>
+                        <p style={styles.small}>Barcode: {p.barcode ?? "—"}</p>
+                      </div>
+
+                      <div style={styles.priceBlock}>
+                        <p style={styles.price}>{money(displayPrice)}</p>
+
+                        <p
+                          style={{
+                            ...styles.stockText,
+                            color: stock > 0 ? "#9ca3af" : "#ef4444",
+                          }}
+                        >
+                          Stock: {stock}
+                        </p>
+                      </div>
 
                       {qty > 0 ? (
                         <div style={styles.qtySection}>
@@ -565,7 +507,7 @@ export default function StorePage({ params }: Props) {
                           style={{
                             ...styles.button,
                             width: "100%",
-                            marginTop: 12,
+                            marginTop: 14,
                             opacity: stock > 0 ? 1 : 0.55,
                             cursor: stock > 0 ? "pointer" : "not-allowed",
                           }}
@@ -582,14 +524,12 @@ export default function StorePage({ params }: Props) {
           )}
         </section>
 
-        <div style={{ height: 30 }} />
-
         <div style={styles.actionRow}>
-          <button style={styles.button}>Contact Store</button>
+          <button style={styles.secondaryButtonLarge}>Contact Store</button>
 
           <button
             style={{
-              ...styles.button,
+              ...styles.buttonLarge,
               background: cart.length === 0 ? "#3a3f46" : "#00d084",
               opacity: cart.length === 0 ? 0.55 : 1,
               cursor: cart.length === 0 ? "not-allowed" : "pointer",
@@ -610,47 +550,34 @@ const styles: any = {
     background:
       "radial-gradient(circle at top, rgba(16,185,129,0.06) 0%, rgba(11,15,20,1) 34%), #0b0f14",
     color: "white",
-    padding: "32px 20px 60px",
+    padding: "28px 20px 56px",
     fontFamily:
       'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
 
   container: {
-    maxWidth: 1160,
+    maxWidth: 1180,
     margin: "0 auto",
-  },
-
-  loadingHero: {
-    position: "relative",
-    overflow: "hidden",
-    padding: 28,
-    borderRadius: 24,
-    border: "1px solid rgba(255,255,255,0.08)",
-    background: "linear-gradient(180deg, #11161d 0%, #0f141b 100%)",
-  },
-
-  loadingGlow: {
-    position: "absolute",
-    width: 340,
-    height: 340,
-    right: -90,
-    top: -120,
-    borderRadius: 999,
-    background:
-      "radial-gradient(circle, rgba(0,208,132,0.14) 0%, rgba(0,208,132,0) 72%)",
-    pointerEvents: "none",
   },
 
   heroWrap: {
     position: "relative",
     width: "100%",
-    height: 460,
+    height: 300,
     borderRadius: 24,
     overflow: "hidden",
-    marginBottom: 22,
+    marginBottom: 20,
     border: "1px solid rgba(255,255,255,0.08)",
     background: "#11161d",
-    boxShadow: "0 18px 44px rgba(0,0,0,0.24)",
+    boxShadow: "0 18px 40px rgba(0,0,0,0.22)",
+  },
+
+  plainHero: {
+    padding: 22,
+    borderRadius: 24,
+    background: "linear-gradient(180deg, #131922 0%, #0f141b 100%)",
+    border: "1px solid rgba(255,255,255,0.06)",
+    marginBottom: 20,
   },
 
   heroImage: {
@@ -664,89 +591,59 @@ const styles: any = {
     position: "absolute",
     inset: 0,
     background:
-      "linear-gradient(180deg, rgba(0,0,0,0.10) 0%, rgba(0,0,0,0.24) 36%, rgba(0,0,0,0.74) 100%)",
-  },
-
-  heroTopBadge: {
-    position: "absolute",
-    left: 24,
-    top: 24,
-    zIndex: 2,
-    padding: "9px 14px",
-    borderRadius: 999,
-    background: "rgba(11,15,20,0.72)",
-    border: "1px solid rgba(255,255,255,0.08)",
-    color: "#ffffff",
-    fontSize: 11,
-    fontWeight: 900,
-    letterSpacing: 0.9,
-    textTransform: "uppercase",
-    backdropFilter: "blur(8px)",
+      "linear-gradient(180deg, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.20) 45%, rgba(0,0,0,0.74) 100%)",
   },
 
   heroContent: {
     position: "absolute",
     left: 24,
     right: 24,
-    bottom: 24,
-    zIndex: 2,
+    bottom: 22,
   },
 
-  heroTitleRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-    flexWrap: "wrap",
+  heroBadge: {
+    display: "inline-block",
     marginBottom: 10,
+    padding: "7px 12px",
+    borderRadius: 999,
+    background: "rgba(0,0,0,0.36)",
+    border: "1px solid rgba(255,255,255,0.10)",
+    color: "#34d399",
+    fontSize: 11,
+    fontWeight: 900,
+    letterSpacing: 1,
   },
 
   heroTitle: {
-    fontSize: 46,
+    fontSize: 40,
     fontWeight: 900,
     margin: 0,
+    marginBottom: 10,
     color: "white",
     textShadow: "0 4px 18px rgba(0,0,0,0.35)",
-    letterSpacing: -0.8,
+    lineHeight: 1.02,
   },
 
   heroText: {
     margin: 0,
     color: "rgba(255,255,255,0.92)",
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 700,
     maxWidth: 760,
-    lineHeight: 1.6,
-  },
-
-  verifiedBadge: {
-    padding: "7px 12px",
-    borderRadius: 999,
-    background: "#34d399",
-    color: "#000",
-    fontWeight: 900,
-    fontSize: 12,
-    boxShadow: "0 10px 24px rgba(52,211,153,0.22)",
-  },
-
-  titleRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-    flexWrap: "wrap",
-    marginBottom: 10,
+    lineHeight: 1.55,
   },
 
   title: {
     fontSize: 38,
     fontWeight: 900,
     margin: 0,
-    letterSpacing: -0.6,
+    marginBottom: 10,
   },
 
   text: {
     opacity: 0.82,
     marginBottom: 10,
-    lineHeight: 1.6,
+    lineHeight: 1.55,
   },
 
   textStrong: {
@@ -756,183 +653,65 @@ const styles: any = {
     color: "white",
   },
 
-  storeMetaCard: {
-    padding: 22,
+  infoGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))",
+    gap: 18,
+    marginBottom: 20,
+  },
+
+  infoCard: {
+    padding: 20,
     borderRadius: 18,
-    background: "linear-gradient(180deg, #11161d 0%, #0f141b 100%)",
+    background: "linear-gradient(180deg, #131922 0%, #0f141b 100%)",
     border: "1px solid rgba(255,255,255,0.08)",
-    marginBottom: 22,
+    boxShadow: "0 12px 28px rgba(0,0,0,0.16)",
   },
 
-  metaHead: {
-    display: "flex",
-    justifyContent: "space-between",
-    gap: 12,
-    alignItems: "flex-start",
-    flexWrap: "wrap",
-    marginBottom: 18,
-  },
-
-  metaKicker: {
-    margin: 0,
-    color: "#34d399",
-    fontSize: 11,
-    fontWeight: 900,
-    letterSpacing: 1.2,
-  },
-
-  metaPill: {
-    padding: "8px 12px",
-    borderRadius: 999,
-    background: "rgba(0,208,132,0.10)",
-    border: "1px solid rgba(0,208,132,0.22)",
-    color: "#ffffff",
-    fontWeight: 800,
-    fontSize: 12,
+  infoCardTop: {
+    marginBottom: 14,
   },
 
   metaGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
-    gap: 14,
+    gap: 12,
   },
 
   metaItem: {
-    padding: 14,
-    borderRadius: 14,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    padding: "12px 14px",
+    borderRadius: 12,
     background: "rgba(255,255,255,0.03)",
     border: "1px solid rgba(255,255,255,0.05)",
+    flexWrap: "wrap",
   },
 
   metaLabel: {
-    display: "block",
-    color: "rgba(255,255,255,0.62)",
-    fontSize: 12,
+    color: "rgba(255,255,255,0.65)",
+    fontSize: 13,
     fontWeight: 700,
-    marginBottom: 6,
   },
 
   metaValue: {
-    display: "block",
     color: "#ffffff",
-    fontSize: 15,
-    fontWeight: 900,
+    fontSize: 14,
+    fontWeight: 800,
+    textAlign: "right",
     wordBreak: "break-word",
   },
 
-  section: {
-    marginBottom: 22,
-  },
-
-  sectionHead: {
-    display: "flex",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
-    gap: 16,
-    flexWrap: "wrap",
-    marginBottom: 18,
-  },
-
-  sectionKicker: {
-    margin: 0,
-    color: "#34d399",
-    fontSize: 11,
-    fontWeight: 900,
-    letterSpacing: 1.2,
-  },
-
-  sectionTitle: {
-    margin: "6px 0 0",
-    fontSize: 30,
-    fontWeight: 900,
-    letterSpacing: -0.6,
-  },
-
-  sectionBadge: {
-    padding: "10px 14px",
+  statusPill: {
+    padding: "7px 12px",
     borderRadius: 999,
-    background: "rgba(255,255,255,0.04)",
-    border: "1px solid rgba(255,255,255,0.08)",
-    color: "#ffffff",
-    fontWeight: 800,
-    fontSize: 13,
-  },
-
-  featuredGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill,minmax(300px,1fr))",
-    gap: 18,
-  },
-
-  featuredCard: {
-    borderRadius: 18,
-    overflow: "hidden",
-    background: "linear-gradient(180deg, #11161d 0%, #0f141b 100%)",
-    border: "1px solid rgba(255,255,255,0.06)",
-    boxShadow: "0 14px 30px rgba(0,0,0,0.18)",
-  },
-
-  featuredImageWrap: {
-    position: "relative",
-    width: "100%",
-    aspectRatio: "1 / 1.05",
-    overflow: "hidden",
-    background: "#0b0f14",
-  },
-
-  featuredImage: {
-    width: "100%",
-    height: "100%",
-    objectFit: "cover",
-    display: "block",
-  },
-
-  featuredShade: {
-    position: "absolute",
-    inset: 0,
-    background:
-      "linear-gradient(180deg, rgba(0,0,0,0.08) 10%, rgba(0,0,0,0.14) 44%, rgba(0,0,0,0.76) 100%)",
-  },
-
-  featuredInfo: {
-    position: "absolute",
-    left: 16,
-    right: 16,
-    bottom: 16,
-    zIndex: 2,
-  },
-
-  featuredName: {
-    margin: 0,
-    color: "#ffffff",
-    fontSize: 19,
+    background: "rgba(52,211,153,0.12)",
+    border: "1px solid rgba(52,211,153,0.24)",
+    color: "#34d399",
+    fontSize: 12,
     fontWeight: 900,
-    lineHeight: 1.25,
-    marginBottom: 8,
-  },
-
-  featuredCaption: {
-    margin: 0,
-    color: "rgba(255,255,255,0.88)",
-    fontSize: 13,
-    lineHeight: 1.5,
-    marginBottom: 10,
-    fontWeight: 600,
-  },
-
-  featuredPrice: {
-    margin: 0,
-    color: "#ffffff",
-    fontSize: 18,
-    fontWeight: 900,
-  },
-
-  cardTitle: {
-    marginTop: 0,
-    marginBottom: 14,
-    fontSize: 24,
-    fontWeight: 900,
-    letterSpacing: -0.4,
+    letterSpacing: 0.4,
   },
 
   cartCard: {
@@ -940,7 +719,7 @@ const styles: any = {
     borderRadius: 18,
     background: "rgba(0,208,132,0.08)",
     border: "1px solid rgba(0,208,132,0.22)",
-    marginBottom: 22,
+    boxShadow: "0 12px 28px rgba(0,0,0,0.16)",
   },
 
   cartTopRow: {
@@ -964,43 +743,72 @@ const styles: any = {
     flexWrap: "wrap",
   },
 
-  emptyCard: {
-    borderRadius: 20,
-    border: "1px solid rgba(255,255,255,0.06)",
-    background: "linear-gradient(180deg, #131922 0%, #0f141b 100%)",
-    padding: 22,
-  },
-
-  emptyTitle: {
-    margin: 0,
-    fontSize: 18,
+  cardTitle: {
+    marginTop: 0,
+    marginBottom: 0,
+    fontSize: 20,
     fontWeight: 900,
   },
 
-  emptyText: {
-    margin: "8px 0 0",
-    color: "rgba(255,255,255,0.70)",
-    lineHeight: 1.6,
+  catalogCard: {
+    padding: 20,
+    borderRadius: 20,
+    background: "linear-gradient(180deg, #131922 0%, #0f141b 100%)",
+    border: "1px solid rgba(255,255,255,0.08)",
+    boxShadow: "0 12px 30px rgba(0,0,0,0.16)",
+    marginBottom: 22,
+  },
+
+  sectionHead: {
+    display: "flex",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    gap: 16,
+    flexWrap: "wrap",
+    marginBottom: 18,
+  },
+
+  sectionKicker: {
+    margin: 0,
+    color: "#34d399",
+    fontSize: 11,
+    fontWeight: 900,
+    letterSpacing: 1.2,
+  },
+
+  sectionTitle: {
+    margin: "6px 0 0",
+    fontSize: 28,
+    fontWeight: 900,
+  },
+
+  sectionBadge: {
+    padding: "10px 14px",
+    borderRadius: 999,
+    background: "rgba(255,255,255,0.04)",
+    border: "1px solid rgba(255,255,255,0.08)",
+    color: "#ffffff",
+    fontWeight: 800,
+    fontSize: 13,
   },
 
   grid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))",
+    gridTemplateColumns: "repeat(auto-fill,minmax(240px,1fr))",
     gap: 18,
   },
 
   productCard: {
-    borderRadius: 16,
+    borderRadius: 18,
     background: "#0f141b",
     border: "1px solid rgba(255,255,255,0.06)",
     overflow: "hidden",
-    boxShadow: "0 10px 24px rgba(0,0,0,0.14)",
+    boxShadow: "0 10px 26px rgba(0,0,0,0.14)",
   },
 
   productImageWrap: {
-    position: "relative",
     width: "100%",
-    aspectRatio: "1 / 1",
+    aspectRatio: "4 / 4",
     background: "#0b0f14",
     overflow: "hidden",
   },
@@ -1012,16 +820,9 @@ const styles: any = {
     display: "block",
   },
 
-  productImageOverlay: {
-    position: "absolute",
-    inset: 0,
-    background:
-      "linear-gradient(180deg, rgba(0,0,0,0.02) 54%, rgba(0,0,0,0.26) 100%)",
-  },
-
   productImageFallback: {
     width: "100%",
-    aspectRatio: "1 / 1",
+    aspectRatio: "4 / 4",
     background: "linear-gradient(180deg, #151b23 0%, #0f141b 100%)",
     display: "flex",
     alignItems: "center",
@@ -1045,6 +846,7 @@ const styles: any = {
     fontWeight: 800,
     lineHeight: 1.3,
     marginBottom: 8,
+    minHeight: 46,
   },
 
   captionText: {
@@ -1053,18 +855,35 @@ const styles: any = {
     color: "rgba(255,255,255,0.78)",
     fontSize: 13,
     lineHeight: 1.45,
+    minHeight: 38,
+  },
+
+  metaLines: {
+    display: "grid",
+    gap: 2,
+  },
+
+  priceBlock: {
+    marginTop: 10,
   },
 
   price: {
     fontWeight: 900,
-    fontSize: 18,
-    marginTop: 10,
+    fontSize: 20,
+    marginTop: 0,
     marginBottom: 8,
     color: "#ffffff",
   },
 
+  stockText: {
+    fontSize: 13,
+    fontWeight: 700,
+    margin: 0,
+    lineHeight: 1.45,
+  },
+
   small: {
-    opacity: 0.72,
+    opacity: 0.74,
     fontSize: 13,
     marginTop: 4,
     marginBottom: 0,
@@ -1120,7 +939,16 @@ const styles: any = {
     color: "black",
     fontWeight: 800,
     cursor: "pointer",
-    boxShadow: "0 10px 22px rgba(0,208,132,0.18)",
+  },
+
+  buttonLarge: {
+    padding: "14px 22px",
+    background: "#00d084",
+    border: "none",
+    borderRadius: 12,
+    color: "black",
+    fontWeight: 900,
+    cursor: "pointer",
   },
 
   secondaryButton: {
@@ -1130,5 +958,65 @@ const styles: any = {
     borderRadius: 10,
     color: "white",
     fontWeight: 700,
+  },
+
+  secondaryButtonLarge: {
+    padding: "14px 22px",
+    background: "#1a2028",
+    border: "1px solid rgba(255,255,255,0.10)",
+    borderRadius: 12,
+    color: "white",
+    fontWeight: 800,
+    cursor: "pointer",
+  },
+
+  emptyCard: {
+    borderRadius: 20,
+    border: "1px solid rgba(255,255,255,0.06)",
+    background: "linear-gradient(180deg, #131922 0%, #0f141b 100%)",
+    padding: 22,
+  },
+
+  emptyTitle: {
+    margin: 0,
+    fontSize: 18,
+    fontWeight: 900,
+  },
+
+  emptyText: {
+    margin: "8px 0 0",
+    color: "rgba(255,255,255,0.70)",
+    lineHeight: 1.6,
+  },
+
+  loadingCard: {
+    marginTop: 22,
+    padding: 22,
+    borderRadius: 22,
+    border: "1px solid rgba(255,255,255,0.06)",
+    background: "linear-gradient(180deg, #131922 0%, #0f141b 100%)",
+  },
+
+  loadingLineLg: {
+    height: 18,
+    width: "42%",
+    borderRadius: 999,
+    background: "rgba(255,255,255,0.08)",
+    marginBottom: 14,
+  },
+
+  loadingLineMd: {
+    height: 14,
+    width: "64%",
+    borderRadius: 999,
+    background: "rgba(255,255,255,0.06)",
+    marginBottom: 10,
+  },
+
+  loadingLineSm: {
+    height: 14,
+    width: "30%",
+    borderRadius: 999,
+    background: "rgba(255,255,255,0.05)",
   },
 };
