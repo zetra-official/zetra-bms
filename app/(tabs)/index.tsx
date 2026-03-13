@@ -98,7 +98,7 @@ type CollectionBreakdown = {
   payments: number;
 };
 
-const AUTO_REFRESH_MS = 30_000;
+const AUTO_REFRESH_MS = 20_000;
 
 function pad2(n: number) {
   return String(n).padStart(2, "0");
@@ -402,6 +402,11 @@ function CompactFinanceCardHomePreview() {
   });
 
   const reqIdRef = useRef(0);
+  const loadingRef = useRef(false);
+
+  useEffect(() => {
+    loadingRef.current = loading;
+  }, [loading]);
 
   const callSalesForStore = useCallback(
     async (sid: string, fromISO: string, toISO: string): Promise<SalesSummary> => {
@@ -580,62 +585,88 @@ function CompactFinanceCardHomePreview() {
     [orgId]
   );
 
-  const load = useCallback(async () => {
-    const rid = ++reqIdRef.current;
+  const load = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      const silent = !!opts?.silent;
+      const rid = ++reqIdRef.current;
 
-    if (!orgId) {
-      setErr("No active organization selected");
-      return;
-    }
-    if (!storeId) {
-      setErr("No active store selected");
-      return;
-    }
+      if (!orgId) {
+        setErr("No active organization selected");
+        return;
+      }
+      if (!storeId) {
+        setErr("No active store selected");
+        return;
+      }
+      if (!silent && loadingRef.current) return;
 
-    setLoading(true);
-    setErr(null);
+      if (!silent) setLoading(true);
+      setErr(null);
 
-    try {
-      const { from, to } = rangeToFromTo(range);
-      const { from: fromYMD, to: toYMD } = rangeToDates(range);
+      try {
+        const { from, to } = rangeToFromTo(range);
+        const { from: fromYMD, to: toYMD } = rangeToDates(range);
 
-      const sales = await callSalesForStore(storeId, from, to);
-      const expenses = await callExpenseForStore(storeId, fromYMD, toYMD);
-      const profit = await callProfitOwnerOnly(storeId, from, to);
-      const pb = await callPaymentBreakdown(from, to, storeId);
-      const cc = await callCreditCollections(from, to, storeId);
+        const [salesRes, expenseRes, profitRes, payRes, collectionsRes] = await Promise.allSettled([
+          callSalesForStore(storeId, from, to),
+          callExpenseForStore(storeId, fromYMD, toYMD),
+          callProfitOwnerOnly(storeId, from, to),
+          callPaymentBreakdown(from, to, storeId),
+          callCreditCollections(from, to, storeId),
+        ]);
 
-      if (rid !== reqIdRef.current) return;
+        if (rid !== reqIdRef.current) return;
 
-      setSalesRow(sales);
-      setExpRow(expenses);
-      setProfitRow(profit);
-      setPay(pb);
-      setCollections(cc);
-    } catch (e: any) {
-      if (rid !== reqIdRef.current) return;
-      setErr(e?.message ?? "Failed to load finance");
-    } finally {
-      if (rid === reqIdRef.current) setLoading(false);
-    }
-  }, [
-    orgId,
-    storeId,
-    range,
-    callSalesForStore,
-    callExpenseForStore,
-    callProfitOwnerOnly,
-    callPaymentBreakdown,
-    callCreditCollections,
-  ]);
+        if (salesRes.status === "fulfilled") setSalesRow(salesRes.value);
+        if (expenseRes.status === "fulfilled") setExpRow(expenseRes.value);
+        if (profitRes.status === "fulfilled") setProfitRow(profitRes.value);
+        if (payRes.status === "fulfilled") setPay(payRes.value);
+        if (collectionsRes.status === "fulfilled") setCollections(collectionsRes.value);
+
+        const firstErr =
+          (salesRes.status === "rejected" && salesRes.reason) ||
+          (expenseRes.status === "rejected" && expenseRes.reason) ||
+          (profitRes.status === "rejected" && profitRes.reason) ||
+          (payRes.status === "rejected" && payRes.reason) ||
+          (collectionsRes.status === "rejected" && collectionsRes.reason) ||
+          null;
+
+        if (firstErr) {
+          setErr(firstErr?.message ?? "Failed to load some finance data");
+        }
+      } catch (e: any) {
+        if (rid !== reqIdRef.current) return;
+        setErr(e?.message ?? "Failed to load finance");
+      } finally {
+        if (!silent && rid === reqIdRef.current) setLoading(false);
+      }
+    },
+    [
+      orgId,
+      storeId,
+      range,
+      callSalesForStore,
+      callExpenseForStore,
+      callProfitOwnerOnly,
+      callPaymentBreakdown,
+      callCreditCollections,
+    ]
+  );
 
   useEffect(() => {
     void load();
   }, [orgId, storeId, load]);
 
+  useFocusEffect(
+    useCallback(() => {
+      if (!orgId || !storeId) return;
+      void load({ silent: true });
+    }, [orgId, storeId, load])
+  );
+
   useAutoRefresh(() => {
     if (!orgId || !storeId) return;
-    void load();
+    void load({ silent: true });
   }, !!orgId && !!storeId, AUTO_REFRESH_MS);
 
   const subtitle = `Store: ${storeName}`;
@@ -1465,14 +1496,7 @@ function ZetraAiCard({ onOpen }: { onOpen: () => void }) {
 
 function CashierQuickHome() {
   const router = useRouter();
-  const {
-    loading,
-    refreshing,
-    refresh,
-    activeOrgName,
-    activeRole,
-    activeStoreName,
-  } = useOrg();
+  const { loading, refreshing, refresh, activeOrgName, activeRole, activeStoreName } = useOrg();
 
   const [handoffCount, setHandoffCount] = useState<number>(0);
   const [handoffLoading, setHandoffLoading] = useState(false);
@@ -1579,16 +1603,8 @@ export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const {
-    loading,
-    refreshing,
-    error,
-    refresh,
-    activeOrgName,
-    activeRole,
-    activeStoreName,
-    activeStoreId,
-  } = useOrg();
+  const { loading, refreshing, error, refresh, activeOrgName, activeRole, activeStoreName, activeStoreId } =
+    useOrg();
 
   const [dashTick, setDashTick] = useState(0);
   const [pulling, setPulling] = useState(false);

@@ -1,4 +1,3 @@
-// app/finance/history.tsx
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -81,6 +80,76 @@ type HealthSummary = {
   expensesRatio: number | null;
   salesTrend: "INCREASING" | "STABLE" | "DECLINING" | "NO_DATA";
   message: string;
+};
+
+type ProductProfitRow = {
+  product_id: string;
+  product_name: string;
+  sku: string | null;
+  category: string | null;
+  unit: string | null;
+  qty_sold: number;
+  revenue: number;
+  estimated_cost: number;
+  gross_profit: number;
+  profit_margin_pct: number;
+  sales_count: number;
+};
+
+type StockIntelBucket = "FAST_MOVING" | "SLOW_MOVING" | "DEAD_STOCK" | "LOW_STOCK";
+
+type StockIntelRow = {
+  bucket: StockIntelBucket;
+  product_id: string;
+  product_name: string;
+  sku: string | null;
+  category: string | null;
+  unit: string | null;
+  store_id: string | null;
+  qty_sold: number;
+  sales_count: number;
+  stock_on_hand: number;
+  low_stock_threshold: number;
+  stock_status: string;
+  activity_score: number;
+};
+
+type ForecastSummary = {
+  scope_used: "STORE" | "ALL";
+  forecast_days: number;
+  period_sales: number;
+  period_orders: number;
+  avg_daily_sales: number;
+  avg_daily_orders: number;
+  projected_sales_next_period: number;
+  projected_orders_next_period: number;
+  trend_label: "INCREASING" | "STABLE" | "DECLINING";
+  trend_pct: number;
+  stockout_risk_count: number;
+  urgent_restock_count: number;
+};
+
+type FinanceCachePayload = {
+  salesRow: SalesSummary;
+  expRow: ExpenseSummary;
+  profitRow: ProfitSummary;
+  pay: PayBreakdown;
+  collections: CreditCollections;
+  trendRows: TrendPoint[];
+  comparisonRows: StoreComparisonRow[];
+  health: HealthSummary | null;
+  productProfitRows: ProductProfitRow[];
+  stockIntelRows: StockIntelRow[];
+  forecast: ForecastSummary | null;
+};
+
+type InsightTone = "good" | "warn" | "danger" | "info";
+
+type InsightItem = {
+  id: string;
+  title: string;
+  body: string;
+  tone: InsightTone;
 };
 
 function toNum(x: any) {
@@ -234,6 +303,117 @@ function buildTrendBuckets(fromYMD: string, toYMD: string): TrendBucket[] {
 function percent(n: number | null) {
   if (n == null || !Number.isFinite(n)) return "—";
   return `${n.toFixed(1)}%`;
+}
+
+function normalizeStockBucket(x: any): StockIntelBucket {
+  const v = String(x ?? "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "_");
+
+  if (v === "FAST_MOVING") return "FAST_MOVING";
+  if (v === "SLOW_MOVING") return "SLOW_MOVING";
+  if (v === "DEAD_STOCK") return "DEAD_STOCK";
+  return "LOW_STOCK";
+}
+
+function getBucketTitle(bucket: StockIntelBucket) {
+  if (bucket === "FAST_MOVING") return "Fast Moving";
+  if (bucket === "SLOW_MOVING") return "Slow Moving";
+  if (bucket === "DEAD_STOCK") return "Dead Stock";
+  return "Low Stock";
+}
+
+function getBucketHint(bucket: StockIntelBucket, scope: "STORE" | "ALL") {
+  if (bucket === "FAST_MOVING") {
+    return scope === "ALL"
+      ? "Bidhaa zinazotoka sana kwenye org nzima"
+      : "Bidhaa zinazotoka sana kwenye store hii";
+  }
+  if (bucket === "SLOW_MOVING") {
+    return scope === "ALL"
+      ? "Bidhaa zinauza taratibu kwenye org nzima"
+      : "Bidhaa zinauza taratibu kwenye store hii";
+  }
+  if (bucket === "DEAD_STOCK") {
+    return "Zipo stock lakini hazijauza ndani ya kipindi";
+  }
+  return scope === "ALL"
+    ? "Bidhaa zilizokaribia kuisha kwenye org nzima"
+    : "Bidhaa zilizokaribia kuisha kwenye store hii";
+}
+
+function getBucketAccent(bucket: StockIntelBucket) {
+  if (bucket === "FAST_MOVING") {
+    return {
+      borderColor: "rgba(16,185,129,0.24)",
+      backgroundColor: "rgba(16,185,129,0.08)",
+    };
+  }
+  if (bucket === "SLOW_MOVING") {
+    return {
+      borderColor: "rgba(59,130,246,0.24)",
+      backgroundColor: "rgba(59,130,246,0.08)",
+    };
+  }
+  if (bucket === "DEAD_STOCK") {
+    return {
+      borderColor: "rgba(201,74,74,0.24)",
+      backgroundColor: "rgba(201,74,74,0.08)",
+    };
+  }
+  return {
+    borderColor: "rgba(245,158,11,0.24)",
+    backgroundColor: "rgba(245,158,11,0.08)",
+  };
+}
+
+function getInsightToneStyle(tone: InsightTone) {
+  if (tone === "good") {
+    return {
+      borderColor: "rgba(16,185,129,0.26)",
+      backgroundColor: "rgba(16,185,129,0.08)",
+    };
+  }
+  if (tone === "warn") {
+    return {
+      borderColor: "rgba(245,158,11,0.26)",
+      backgroundColor: "rgba(245,158,11,0.08)",
+    };
+  }
+  if (tone === "danger") {
+    return {
+      borderColor: "rgba(201,74,74,0.28)",
+      backgroundColor: "rgba(201,74,74,0.08)",
+    };
+  }
+  return {
+    borderColor: "rgba(59,130,246,0.24)",
+    backgroundColor: "rgba(59,130,246,0.08)",
+  };
+}
+
+function topRowByActivity(rows: StockIntelRow[]) {
+  if (!rows.length) return null;
+  return [...rows].sort((a, b) => b.activity_score - a.activity_score)[0];
+}
+
+function bottomStoreRow(rows: StoreComparisonRow[], mode: Mode): StoreComparisonRow | null {
+  if (!rows.length) return null;
+
+  const sorted = [...rows].sort((a, b) => {
+    if (mode === "EXPENSES") return a.expenses - b.expenses;
+    if (mode === "PROFIT") return toNum(a.profit) - toNum(b.profit);
+    return a.sales - b.sales;
+  });
+
+  return sorted[0] ?? null;
+}
+
+function valueByMode(row: StoreComparisonRow, mode: Mode) {
+  if (mode === "EXPENSES") return row.expenses;
+  if (mode === "PROFIT") return toNum(row.profit);
+  return row.sales;
 }
 
 function Chip({
@@ -489,7 +669,8 @@ function TrendChart({
                 {data.map((p) => {
                   const salesH = Math.max(3, (toNum(p.sales) / maxVal) * (chartHeight - 12));
                   const expH = Math.max(3, (toNum(p.expenses) / maxVal) * (chartHeight - 12));
-                  const profitVal = showProfit && p.profit != null ? Math.max(0, toNum(p.profit)) : 0;
+                  const profitVal =
+                    showProfit && p.profit != null ? Math.max(0, toNum(p.profit)) : 0;
                   const profitH =
                     showProfit && p.profit != null
                       ? Math.max(3, (profitVal / maxVal) * (chartHeight - 12))
@@ -554,7 +735,10 @@ function TrendChart({
             <View style={{ flexDirection: "row", marginTop: 10 }}>
               {data.map((p) => (
                 <View key={`label-${p.key}`} style={{ width: groupWidth, alignItems: "center" }}>
-                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }} numberOfLines={1}>
+                  <Text
+                    style={{ color: UI.text, fontWeight: "900", fontSize: 11 }}
+                    numberOfLines={1}
+                  >
                     {p.label}
                   </Text>
                   <Text
@@ -669,7 +853,8 @@ export default function FinanceHistoryScreen() {
       .filter((s) => String((s as any)?.organization_id ?? "").trim() === orgId)
       .map((s) => ({
         storeId: String((s as any)?.store_id ?? "").trim(),
-        storeName: String((s as any)?.store_name ?? (s as any)?.name ?? "Store").trim() || "Store",
+        storeName:
+          String((s as any)?.store_name ?? (s as any)?.name ?? "Store").trim() || "Store",
       }))
       .filter((x) => !!x.storeId);
 
@@ -694,6 +879,8 @@ export default function FinanceHistoryScreen() {
 
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [stockIntelErr, setStockIntelErr] = useState<string | null>(null);
+  const [forecastErr, setForecastErr] = useState<string | null>(null);
 
   const [salesRow, setSalesRow] = useState<SalesSummary>({
     total: 0,
@@ -730,8 +917,12 @@ export default function FinanceHistoryScreen() {
   const [trendRows, setTrendRows] = useState<TrendPoint[]>([]);
   const [comparisonRows, setComparisonRows] = useState<StoreComparisonRow[]>([]);
   const [health, setHealth] = useState<HealthSummary | null>(null);
+  const [productProfitRows, setProductProfitRows] = useState<ProductProfitRow[]>([]);
+  const [stockIntelRows, setStockIntelRows] = useState<StockIntelRow[]>([]);
+  const [forecast, setForecast] = useState<ForecastSummary | null>(null);
 
   const reqRef = useRef(0);
+  const cacheRef = useRef<Map<string, FinanceCachePayload>>(new Map());
 
   const desiredRef = useRef<{
     mode?: Mode;
@@ -741,6 +932,20 @@ export default function FinanceHistoryScreen() {
   }>({});
 
   const appliedOnceRef = useRef(false);
+
+  const applyCachePayload = useCallback((payload: FinanceCachePayload) => {
+    setSalesRow(payload.salesRow);
+    setExpRow(payload.expRow);
+    setProfitRow(payload.profitRow);
+    setPay(payload.pay);
+    setCollections(payload.collections);
+    setTrendRows(payload.trendRows);
+    setComparisonRows(payload.comparisonRows);
+    setHealth(payload.health);
+    setProductProfitRows(payload.productProfitRows);
+    setStockIntelRows(payload.stockIntelRows);
+    setForecast(payload.forecast);
+  }, []);
 
   React.useEffect(() => {
     const pMode = String(params?.mode ?? "").trim().toUpperCase();
@@ -760,7 +965,6 @@ export default function FinanceHistoryScreen() {
 
     desiredRef.current = next;
     appliedOnceRef.current = false;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params?.mode, params?.scope, params?.from, params?.to, params?.dateFrom, params?.dateTo]);
 
   React.useEffect(() => {
@@ -784,8 +988,7 @@ export default function FinanceHistoryScreen() {
     if (desired.to) setDateTo(desired.to);
 
     appliedOnceRef.current = true;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orgId, storeId, canAll, isOwner]);
+  }, [orgId, storeId, canAll, isOwner, mode, scope]);
 
   React.useEffect(() => {
     if (!canAll) setScope("STORE");
@@ -976,6 +1179,149 @@ export default function FinanceHistoryScreen() {
     [isOwner]
   );
 
+  const callProductProfitReport = useCallback(
+    async (sid: string, fromISO: string, toISO: string): Promise<ProductProfitRow[]> => {
+      if (!isOwner) return [];
+
+      const { data, error } = await supabase.rpc(
+        "get_product_profit_report_v2",
+        {
+          p_store_id: sid,
+          p_from: fromISO,
+          p_to: toISO,
+          p_limit: 20,
+        } as any
+      );
+
+      if (error) throw error;
+
+      const rows = (Array.isArray(data) ? data : []) as any[];
+
+      return rows.map((r) => ({
+        product_id: String(r?.product_id ?? ""),
+        product_name: String(r?.product_name ?? "Product").trim() || "Product",
+        sku: r?.sku ?? null,
+        category: r?.category ?? null,
+        unit: r?.unit ?? null,
+        qty_sold: toNum(r?.qty_sold),
+        revenue: toNum(r?.revenue),
+        estimated_cost: toNum(r?.estimated_cost),
+        gross_profit: toNum(r?.gross_profit),
+        profit_margin_pct: toNum(r?.profit_margin_pct),
+        sales_count: toInt(r?.sales_count),
+      }));
+    },
+    [isOwner]
+  );
+
+  const callStockIntelligence = useCallback(
+    async (
+      fromISO: string,
+      toISO: string,
+      nextScope: "STORE" | "ALL",
+      sid: string | null
+    ): Promise<StockIntelRow[]> => {
+      if (!orgId) return [];
+
+      const scopeCandidates = nextScope === "STORE" ? ["STORE", "store"] : ["ALL", "all"];
+
+      let lastError: any = null;
+
+      for (const scopeArg of scopeCandidates) {
+        const { data, error } = await supabase.rpc(
+          "get_stock_intelligence_v1",
+          {
+            p_org_id: orgId,
+            p_store_id: nextScope === "STORE" ? sid : null,
+            p_scope: scopeArg,
+            p_from: fromISO,
+            p_to: toISO,
+            p_limit: 10,
+          } as any
+        );
+
+        if (error) {
+          lastError = error;
+          continue;
+        }
+
+        const rows = (Array.isArray(data) ? data : []) as any[];
+
+        return rows.map((r) => ({
+          bucket: normalizeStockBucket(r?.bucket),
+          product_id: String(r?.product_id ?? ""),
+          product_name: String(r?.product_name ?? "Product").trim() || "Product",
+          sku: r?.sku ?? null,
+          category: r?.category ?? null,
+          unit: r?.unit ?? null,
+          store_id: r?.store_id ? String(r.store_id) : null,
+          qty_sold: toNum(r?.qty_sold),
+          sales_count: toInt(r?.sales_count),
+          stock_on_hand: toNum(r?.stock_on_hand),
+          low_stock_threshold: toNum(r?.low_stock_threshold),
+          stock_status: String(r?.stock_status ?? "").trim().toUpperCase(),
+          activity_score: toNum(r?.activity_score),
+        }));
+      }
+
+      if (lastError) throw lastError;
+      return [];
+    },
+    [orgId]
+  );
+
+  const callForecastSummary = useCallback(
+    async (
+      fromISO: string,
+      toISO: string,
+      nextScope: "STORE" | "ALL",
+      sid: string | null
+    ): Promise<ForecastSummary | null> => {
+      if (!orgId) return null;
+
+      const { data, error } = await supabase.rpc(
+        "get_sales_forecast_v1",
+        {
+          p_org_id: orgId,
+          p_store_id: nextScope === "STORE" ? sid : null,
+          p_scope: nextScope,
+          p_from: fromISO,
+          p_to: toISO,
+        } as any
+      );
+
+      if (error) throw error;
+
+      const row = (Array.isArray(data) ? data[0] : data) as any;
+      if (!row) return null;
+
+      const forecastDays = toInt(row?.forecast_days);
+      const trendPct = toNum(row?.trend_pct);
+
+      return {
+        scope_used:
+          String(row?.scope_used ?? nextScope).trim().toUpperCase() === "ALL" ? "ALL" : "STORE",
+        forecast_days: forecastDays,
+        period_sales: toNum(row?.period_sales),
+        period_orders: toInt(row?.period_orders),
+        avg_daily_sales: toNum(row?.avg_daily_sales),
+        avg_daily_orders: toNum(row?.avg_daily_orders),
+        projected_sales_next_period: toNum(row?.projected_sales_next_period),
+        projected_orders_next_period: toNum(row?.projected_orders_next_period),
+        trend_label:
+          String(row?.trend_label ?? "STABLE").trim().toUpperCase() === "INCREASING"
+            ? "INCREASING"
+            : String(row?.trend_label ?? "STABLE").trim().toUpperCase() === "DECLINING"
+              ? "DECLINING"
+              : "STABLE",
+        trend_pct: trendPct,
+        stockout_risk_count: toInt(row?.stockout_risk_count),
+        urgent_restock_count: toInt(row?.urgent_restock_count),
+      };
+    },
+    [orgId]
+  );
+
   const run = useCallback(async () => {
     const rid = ++reqRef.current;
 
@@ -1014,11 +1360,53 @@ export default function FinanceHistoryScreen() {
       return;
     }
 
+    const cacheKey = `${orgId}|${scope}|${storeId}|${mode}|${dateFrom}|${dateTo}`;
+    const cached = cacheRef.current.get(cacheKey);
+
+    if (cached) {
+      applyCachePayload(cached);
+    }
+
+    if (mode !== "PROFIT" && !cached) {
+      setProductProfitRows([]);
+    }
+
     setLoading(true);
     setErr(null);
+    setStockIntelErr(null);
+    setForecastErr(null);
 
     try {
       const comparisonOut: StoreComparisonRow[] = [];
+
+      let nextSalesRow: SalesSummary = {
+        total: 0,
+        orders: 0,
+        currency: "TZS",
+        directOrders: 0,
+        clubOrders: 0,
+      };
+
+      let nextExpRow: ExpenseSummary = { total: 0, count: 0 };
+      let nextProfitRow: ProfitSummary = { net: 0, sales: null, expenses: null };
+      let nextPay: PayBreakdown = {
+        cash: 0,
+        bank: 0,
+        mobile: 0,
+        credit: 0,
+        other: 0,
+        orders: 0,
+      };
+      let nextCollections: CreditCollections = {
+        cash: 0,
+        bank: 0,
+        mobile: 0,
+        other: 0,
+        payments: 0,
+      };
+      let nextProductProfitRows: ProductProfitRow[] = [];
+      let nextStockIntelRows: StockIntelRow[] = [];
+      let nextForecast: ForecastSummary | null = null;
 
       if (mode === "SALES") {
         const rows = await Promise.all(targets.map((sid) => callSalesForStore(sid, fromISO, toISO)));
@@ -1034,17 +1422,15 @@ export default function FinanceHistoryScreen() {
         const pb = await callPaymentBreakdownV3(fromISO, toISO, sidOrNull);
         const cc = await callCreditCollections(fromISO, toISO, sidOrNull);
 
-        if (rid !== reqRef.current) return;
-
-        setSalesRow({
+        nextSalesRow = {
           total: sumTotal,
           orders: sumOrders,
           currency,
           directOrders: sumDirectOrders,
           clubOrders: sumClubOrders,
-        });
-        setPay(pb);
-        setCollections(cc);
+        };
+        nextPay = pb;
+        nextCollections = cc;
 
         for (let i = 0; i < targets.length; i += 1) {
           const sid = targets[i];
@@ -1076,12 +1462,13 @@ export default function FinanceHistoryScreen() {
           });
         }
       } else if (mode === "EXPENSES") {
-        const rows = await Promise.all(targets.map((sid) => callExpenseForStore(sid, dateFrom, dateTo)));
+        const rows = await Promise.all(
+          targets.map((sid) => callExpenseForStore(sid, dateFrom, dateTo))
+        );
         const sumTotal = rows.reduce((a, r) => a + toNum(r.total), 0);
         const sumCount = rows.reduce((a, r) => a + toInt(r.count), 0);
 
-        if (rid !== reqRef.current) return;
-        setExpRow({ total: sumTotal, count: sumCount });
+        nextExpRow = { total: sumTotal, count: sumCount };
 
         for (let i = 0; i < targets.length; i += 1) {
           const sid = targets[i];
@@ -1120,11 +1507,23 @@ export default function FinanceHistoryScreen() {
         const sumSalesRaw = rows.reduce((a, r) => a + (r.sales == null ? 0 : toNum(r.sales)), 0);
         const sumSalesAny = rows.some((r) => r.sales != null) ? sumSalesRaw : null;
 
-        const sumExpRaw = rows.reduce((a, r) => a + (r.expenses == null ? 0 : toNum(r.expenses)), 0);
+        const sumExpRaw = rows.reduce(
+          (a, r) => a + (r.expenses == null ? 0 : toNum(r.expenses)),
+          0
+        );
         const sumExpAny = rows.some((r) => r.expenses != null) ? sumExpRaw : null;
 
-        if (rid !== reqRef.current) return;
-        setProfitRow({ net: sumNet, sales: sumSalesAny, expenses: sumExpAny });
+        nextProfitRow = { net: sumNet, sales: sumSalesAny, expenses: sumExpAny };
+
+        if (scope === "STORE" && storeId) {
+          try {
+            nextProductProfitRows = await callProductProfitReport(storeId, fromISO, toISO);
+          } catch {
+            nextProductProfitRows = [];
+          }
+        } else {
+          nextProductProfitRows = [];
+        }
 
         for (let i = 0; i < targets.length; i += 1) {
           const sid = targets[i];
@@ -1145,6 +1544,30 @@ export default function FinanceHistoryScreen() {
             orders: ordersForStore,
           });
         }
+      }
+
+      try {
+        nextStockIntelRows = await callStockIntelligence(
+          fromISO,
+          toISO,
+          scope,
+          scope === "STORE" ? storeId : null
+        );
+      } catch (stockErr: any) {
+        nextStockIntelRows = [];
+        setStockIntelErr(stockErr?.message ?? "Failed to load stock intelligence");
+      }
+
+      try {
+        nextForecast = await callForecastSummary(
+          fromISO,
+          toISO,
+          scope,
+          scope === "STORE" ? storeId : null
+        );
+      } catch (forecastError: any) {
+        nextForecast = null;
+        setForecastErr(forecastError?.message ?? "Failed to load forecast engine");
       }
 
       const buckets = buildTrendBuckets(dateFrom, dateTo);
@@ -1192,18 +1615,9 @@ export default function FinanceHistoryScreen() {
             ? [...comparisonOut].sort((a, b) => toNum(b.profit) - toNum(a.profit))
             : [...comparisonOut].sort((a, b) => b.sales - a.sales);
 
-      const totalSalesForHealth =
-        mode === "PROFIT"
-          ? toNum(
-              comparisonOut.reduce((acc, row) => acc + toNum(row.sales), 0)
-            )
-          : mode === "EXPENSES"
-            ? toNum(
-                comparisonOut.reduce((acc, row) => acc + toNum(row.sales), 0)
-              )
-            : toNum(
-                comparisonOut.reduce((acc, row) => acc + toNum(row.sales), 0)
-              );
+      const totalSalesForHealth = toNum(
+        comparisonOut.reduce((acc, row) => acc + toNum(row.sales), 0)
+      );
 
       const totalExpensesForHealth = toNum(
         comparisonOut.reduce((acc, row) => acc + toNum(row.expenses), 0)
@@ -1226,13 +1640,9 @@ export default function FinanceHistoryScreen() {
       const right = trendOut.slice(Math.max(1, half));
 
       const avgLeft =
-        left.length > 0
-          ? left.reduce((acc, p) => acc + toNum(p.sales), 0) / left.length
-          : 0;
+        left.length > 0 ? left.reduce((acc, p) => acc + toNum(p.sales), 0) / left.length : 0;
       const avgRight =
-        right.length > 0
-          ? right.reduce((acc, p) => acc + toNum(p.sales), 0) / right.length
-          : 0;
+        right.length > 0 ? right.reduce((acc, p) => acc + toNum(p.sales), 0) / right.length : 0;
 
       let salesTrend: HealthSummary["salesTrend"] = "NO_DATA";
       if (trendOut.length >= 2 && avgLeft > 0) {
@@ -1273,10 +1683,15 @@ export default function FinanceHistoryScreen() {
       else label = "CRITICAL";
 
       let message = "Business performance needs attention.";
-      if (label === "EXCELLENT") message = "Strong performance. Sales, cost control, and trend look healthy.";
-      else if (label === "GOOD") message = "Business is healthy with stable fundamentals and manageable cost pressure.";
-      else if (label === "WATCH") message = "Business is okay, but margin, expenses, or trend needs close monitoring.";
-      else if (label === "CRITICAL") message = "Urgent review needed. Profitability or trend is under pressure.";
+      if (label === "EXCELLENT") {
+        message = "Strong performance. Sales, cost control, and trend look healthy.";
+      } else if (label === "GOOD") {
+        message = "Business is healthy with stable fundamentals and manageable cost pressure.";
+      } else if (label === "WATCH") {
+        message = "Business is okay, but margin, expenses, or trend needs close monitoring.";
+      } else if (label === "CRITICAL") {
+        message = "Urgent review needed. Profitability or trend is under pressure.";
+      }
 
       const nextHealth: HealthSummary = {
         score,
@@ -1287,11 +1702,24 @@ export default function FinanceHistoryScreen() {
         message,
       };
 
+      const payload: FinanceCachePayload = {
+        salesRow: nextSalesRow,
+        expRow: nextExpRow,
+        profitRow: nextProfitRow,
+        pay: nextPay,
+        collections: nextCollections,
+        trendRows: trendOut,
+        comparisonRows: comparisonSorted,
+        health: nextHealth,
+        productProfitRows: nextProductProfitRows,
+        stockIntelRows: nextStockIntelRows,
+        forecast: nextForecast,
+      };
+
       if (rid !== reqRef.current) return;
 
-      setTrendRows(trendOut);
-      setComparisonRows(comparisonSorted);
-      setHealth(nextHealth);
+      cacheRef.current.set(cacheKey, payload);
+      applyCachePayload(payload);
     } catch (e: any) {
       if (rid !== reqRef.current) return;
       setErr(e?.message ?? "Failed to search");
@@ -1314,6 +1742,10 @@ export default function FinanceHistoryScreen() {
     callCreditCollections,
     callExpenseForStore,
     callProfitOwnerOnly,
+    callProductProfitReport,
+    callStockIntelligence,
+    callForecastSummary,
+    applyCachePayload,
   ]);
 
   React.useEffect(() => {
@@ -1324,8 +1756,6 @@ export default function FinanceHistoryScreen() {
 
     void run();
   }, [orgId, storeId, scope, mode, dateFrom, dateTo, run]);
-
-  const subtitle = scope === "STORE" ? `Store: ${storeName}` : `Org: ${orgName} (ALL)`;
 
   const salesTotal = fmt(salesRow.total);
   const salesOrders = String(salesRow.orders ?? 0);
@@ -1382,6 +1812,314 @@ export default function FinanceHistoryScreen() {
       : mode === "PROFIT"
         ? "Store Comparison • Profit"
         : "Store Comparison • Sales";
+
+  const subtitle = scope === "STORE" ? `Store: ${storeName}` : `Org: ${orgName} (ALL)`;
+
+  const stockIntelByBucket = useMemo(() => {
+    const order: StockIntelBucket[] = ["FAST_MOVING", "SLOW_MOVING", "DEAD_STOCK", "LOW_STOCK"];
+    return order.map((bucket) => ({
+      bucket,
+      rows: stockIntelRows.filter((r) => normalizeStockBucket(r.bucket) === bucket),
+    }));
+  }, [stockIntelRows]);
+
+  const aiInsights = useMemo<InsightItem[]>(() => {
+    const items: InsightItem[] = [];
+
+    if (health?.label === "EXCELLENT") {
+      items.push({
+        id: "health-excellent",
+        tone: "good",
+        title: "Biashara iko strong",
+        body: `Health score ni ${health.score}/100 na trend ni ${health.salesTrend}. Endelea kusukuma bidhaa zinazouza zaidi na linda margin iliyopo.`,
+      });
+    } else if (health?.label === "GOOD") {
+      items.push({
+        id: "health-good",
+        tone: "info",
+        title: "Biashara iko vizuri",
+        body: `Health score ni ${health.score}/100. Kuna msingi mzuri, lakini endelea kufuatilia expenses na kasi ya mauzo.`,
+      });
+    } else if (health?.label === "WATCH") {
+      items.push({
+        id: "health-watch",
+        tone: "warn",
+        title: "Kuna maeneo ya kuangalia",
+        body: `Health score ni ${health.score}/100. Angalia margin, expense ratio, na bidhaa ambazo hazizunguki vizuri.`,
+      });
+    } else if (health?.label === "CRITICAL") {
+      items.push({
+        id: "health-critical",
+        tone: "danger",
+        title: "Hatua ya haraka inahitajika",
+        body: `Health score ni ${health?.score ?? 0}/100. Punguza matumizi, sukuma bidhaa zenye mzunguko, na hakikisha cash-in haichelewi.`,
+      });
+    }
+
+    if (salesRow.orders > 0) {
+      const avgOrder = salesRow.total / Math.max(1, salesRow.orders);
+      items.push({
+        id: "avg-order",
+        tone: "info",
+        title: "Average order value",
+        body: `Kila order kwa wastani ni ${fmt(avgOrder)}. Tumia hii kupima kama upsell/cross-sell zinafanya kazi kwenye kipindi hiki.`,
+      });
+    }
+
+    if (pay.credit > 0) {
+      items.push({
+        id: "credit-balance",
+        tone: "warn",
+        title: "Kuna pesa bado kwenye Credit",
+        body: `Credit balance ni ${fmt(pay.credit)}. Hii si money-in bado, hivyo fanya follow-up ya makusanyo ili cash flow isikwame.`,
+      });
+    }
+
+    if (collections.payments > 0 && cTotalNum > 0) {
+      items.push({
+        id: "collections",
+        tone: "good",
+        title: "Makusanyo ya credit yameingia",
+        body: `Umekusanya ${fmt(cTotalNum)} kutoka kwenye malipo ${collections.payments}. Hii ni dalili nzuri ya kurejesha cash flow.`,
+      });
+    }
+
+    if (expRow.total > 0 && salesRow.total > 0) {
+      const ratio = (expRow.total / salesRow.total) * 100;
+      if (ratio >= 35) {
+        items.push({
+          id: "expense-high",
+          tone: "danger",
+          title: "Expenses ziko juu ukilinganisha na sales",
+          body: `Expense ratio ya kipindi hiki ni ${ratio.toFixed(
+            1
+          )}%. Kagua matumizi makubwa kabla hayajaanza kula margin kwa nguvu.`,
+        });
+      } else if (ratio >= 20) {
+        items.push({
+          id: "expense-watch",
+          tone: "warn",
+          title: "Expenses zinahitaji uangalizi",
+          body: `Expense ratio ni ${ratio.toFixed(
+            1
+          )}%. Biashara bado iko sawa, lakini ni muda mzuri wa kubana maeneo yasiyo lazima.`,
+        });
+      }
+    }
+
+    if (stockIntelRows.length) {
+      const fast = stockIntelRows.filter((x) => x.bucket === "FAST_MOVING");
+      const slow = stockIntelRows.filter((x) => x.bucket === "SLOW_MOVING");
+      const dead = stockIntelRows.filter((x) => x.bucket === "DEAD_STOCK");
+      const low = stockIntelRows.filter((x) => x.bucket === "LOW_STOCK");
+
+      if (fast.length) {
+        const topFast = topRowByActivity(fast);
+        const fastStore =
+          topFast?.store_id && storesMeta.has(topFast.store_id)
+            ? storesMeta.get(topFast.store_id)
+            : null;
+
+        if (topFast) {
+          items.push({
+            id: "fast-moving",
+            tone: "good",
+            title: scope === "ALL" ? "Bidhaa inayongoza kwenye org" : "Bidhaa ya kusukuma / kurestock",
+            body:
+              scope === "ALL"
+                ? `${topFast.product_name}${fastStore ? ` (${fastStore})` : ""} inaongoza kwa movement ndani ya org. Activity score yake ni ${topFast.activity_score.toFixed(1)}.`
+                : `${topFast.product_name} inaonekana kuwa fast-moving. Activity score yake ni ${topFast.activity_score.toFixed(1)}, hivyo hii ni candidate mzuri ya kuhakikisha haikatiki stock.`,
+          });
+        }
+      }
+
+      if (slow.length) {
+        const topSlow = topRowByActivity(slow);
+        const slowStore =
+          topSlow?.store_id && storesMeta.has(topSlow.store_id)
+            ? storesMeta.get(topSlow.store_id)
+            : null;
+
+        if (topSlow) {
+          items.push({
+            id: "slow-moving",
+            tone: "warn",
+            title: "Bidhaa ya kuangalia kwa karibu",
+            body:
+              scope === "ALL"
+                ? `${topSlow.product_name}${slowStore ? ` (${slowStore})` : ""} ipo kwenye slow-moving ndani ya org. Angalia display, promo, au uhamishe kwenye store yenye demand zaidi.`
+                : `${topSlow.product_name} ipo kwenye slow-moving. Angalia display, bei, au promo ili kuongeza mzunguko wake.`,
+          });
+        }
+      }
+
+      if (dead.length) {
+        const topDead = dead[0];
+        const deadStore =
+          topDead?.store_id && storesMeta.has(topDead.store_id)
+            ? storesMeta.get(topDead.store_id)
+            : null;
+
+        items.push({
+          id: "dead-stock",
+          tone: "danger",
+          title: "Kuna dead stock",
+          body:
+            scope === "ALL"
+              ? `${topDead.product_name}${deadStore ? ` (${deadStore})` : ""} ipo kwenye dead-stock. Iangalie kwa markdown, transfer, au promo.`
+              : `${topDead.product_name} ipo kwenye dead-stock. Iangalie kwa markdown, promo, au uhamisho kwenda store nyingine yenye mzunguko.`,
+        });
+      }
+
+      if (low.length) {
+        const topLow = [...low].sort((a, b) => toNum(a.stock_on_hand) - toNum(b.stock_on_hand))[0];
+        const lowStore =
+          topLow?.store_id && storesMeta.has(topLow.store_id)
+            ? storesMeta.get(topLow.store_id)
+            : null;
+
+        items.push({
+          id: "low-stock",
+          tone: "warn",
+          title: "Bidhaa inakaribia kuisha",
+          body:
+            scope === "ALL"
+              ? `${topLow.product_name}${lowStore ? ` (${lowStore})` : ""} ipo low-stock na on-hand ni ${topLow.stock_on_hand}. Panga restock mapema.`
+              : `${topLow.product_name} ipo low-stock na on-hand ni ${topLow.stock_on_hand}. Panga restock mapema kabla mauzo hayajasimama.`,
+        });
+      }
+    }
+
+    if (forecast) {
+      if (forecast.trend_label === "INCREASING") {
+        items.push({
+          id: "forecast-up",
+          tone: "good",
+          title: "Forecast inaonyesha ukuaji",
+          body: `Kwa siku ${forecast.forecast_days} zijazo, biashara inaelekea kwenye momentum nzuri. Projected sales ni ${fmt(
+            forecast.projected_sales_next_period
+          )} na trend change ni ${forecast.trend_pct.toFixed(1)}%.`,
+        });
+      } else if (forecast.trend_label === "DECLINING") {
+        items.push({
+          id: "forecast-down",
+          tone: "warn",
+          title: "Forecast inaonyesha kushuka",
+          body: `Kwa siku ${forecast.forecast_days} zijazo, projected sales ni ${fmt(
+            forecast.projected_sales_next_period
+          )}. Trend imepungua kwa ${Math.abs(forecast.trend_pct).toFixed(
+            1
+          )}%, hivyo ongeza promo, follow-up, au push ya bidhaa zinazotoka.`,
+        });
+      } else {
+        items.push({
+          id: "forecast-stable",
+          tone: "info",
+          title: "Forecast inaonyesha utulivu",
+          body: `Kwa siku ${forecast.forecast_days} zijazo, projected sales ni ${fmt(
+            forecast.projected_sales_next_period
+          )}. Trend iko stable, hivyo focus iwe kwenye kuongeza order value na stock discipline.`,
+        });
+      }
+
+      if (forecast.stockout_risk_count > 0) {
+        items.push({
+          id: "forecast-stockout-risk",
+          tone: "warn",
+          title: "Kuna risk ya stockout",
+          body: `${forecast.stockout_risk_count} bidhaa zinaonyesha risk ya kuisha mapema kwa mwendo wa mauzo wa sasa. Restock planning ifanyike kabla ya sales kukatika.`,
+        });
+      }
+
+      if (forecast.urgent_restock_count > 0) {
+        items.push({
+          id: "forecast-urgent-restock",
+          tone: "danger",
+          title: "Urgent restock inahitajika",
+          body: `${forecast.urgent_restock_count} bidhaa zipo kwenye threshold ya low-stock au chini yake. Hii ni signal ya haraka kwa purchasing/restock.`,
+        });
+      }
+    }
+
+    if (mode === "PROFIT" && scope === "STORE" && productProfitRows.length) {
+      const topProfit = [...productProfitRows].sort((a, b) => b.gross_profit - a.gross_profit)[0];
+      const worstMargin = [...productProfitRows].sort(
+        (a, b) => a.profit_margin_pct - b.profit_margin_pct
+      )[0];
+
+      items.push({
+        id: "top-profit-product",
+        tone: "good",
+        title: "Bidhaa inayobeba profit zaidi",
+        body: `${topProfit.product_name} imeleta gross profit ya ${fmt(
+          topProfit.gross_profit
+        )}. Hii ni bidhaa ya kulindwa kwenye stock na mauzo.`,
+      });
+
+      if (worstMargin && worstMargin.product_id !== topProfit.product_id) {
+        items.push({
+          id: "weak-margin-product",
+          tone: "warn",
+          title: "Bidhaa yenye margin ndogo",
+          body: `${worstMargin.product_name} ina margin ya ${worstMargin.profit_margin_pct.toFixed(
+            1
+          )}%. Kagua cost, pricing, au discount zake.`,
+        });
+      }
+    }
+
+    if (scope === "ALL" && comparisonRows.length > 1) {
+      const topStore = comparisonRows[0];
+      const weakestStore = bottomStoreRow(comparisonRows, mode);
+
+      items.push({
+        id: "store-leader",
+        tone: "info",
+        title: "Store inayotangulia",
+        body: `${topStore.storeName} inaongoza ndani ya range hii na value ya ${fmt(
+          valueByMode(topStore, mode)
+        )}. Tumia hii kama benchmark ya stores nyingine.`,
+      });
+
+      if (weakestStore && weakestStore.storeId !== topStore.storeId) {
+        items.push({
+          id: "store-bottom",
+          tone: "warn",
+          title: "Store inayohitaji review",
+          body: `${weakestStore.storeName} inahitaji review kwenye kipindi hiki. Linganisha sales effort, stock mix, na matumizi dhidi ya ${topStore.storeName}.`,
+        });
+      }
+    }
+
+    if (!items.length) {
+      items.push({
+        id: "default",
+        tone: "info",
+        title: "Hakuna insight ya kutosha bado",
+        body: "Endelea kutumia Search kwa range tofauti au scope tofauti ili kupata ushauri wa biashara ulio wazi zaidi.",
+      });
+    }
+
+    return items.slice(0, 6);
+  }, [
+    health,
+    salesRow,
+    pay.credit,
+    collections.payments,
+    cTotalNum,
+    expRow.total,
+    stockIntelRows,
+    forecast,
+    mode,
+    scope,
+    productProfitRows,
+    comparisonRows,
+    fmt,
+    storesMeta,
+  ]);
+
+  const currentCacheKey = `${orgId}|${scope}|${storeId}|${mode}|${dateFrom}|${dateTo}`;
+  const hasCache = cacheRef.current.has(currentCacheKey);
 
   return (
     <Screen>
@@ -1441,7 +2179,11 @@ export default function FinanceHistoryScreen() {
 
           <View style={{ flexDirection: "row", gap: 10 }}>
             <Chip active={mode === "SALES"} label="Sales" onPress={() => setMode("SALES")} />
-            <Chip active={mode === "EXPENSES"} label="Expenses" onPress={() => setMode("EXPENSES")} />
+            <Chip
+              active={mode === "EXPENSES"}
+              label="Expenses"
+              onPress={() => setMode("EXPENSES")}
+            />
             <Chip
               active={mode === "PROFIT"}
               label="Profit"
@@ -1454,11 +2196,17 @@ export default function FinanceHistoryScreen() {
           {canAll && (
             <>
               <View style={{ height: 4 }} />
-              <Text style={{ color: UI.faint, fontWeight: "900", fontSize: 12, letterSpacing: 0.4 }}>
+              <Text
+                style={{ color: UI.faint, fontWeight: "900", fontSize: 12, letterSpacing: 0.4 }}
+              >
                 SCOPE
               </Text>
               <View style={{ flexDirection: "row", gap: 10 }}>
-                <SmallChip active={scope === "STORE"} label="STORE" onPress={() => setScope("STORE")} />
+                <SmallChip
+                  active={scope === "STORE"}
+                  label="STORE"
+                  onPress={() => setScope("STORE")}
+                />
                 <SmallChip active={scope === "ALL"} label="ALL" onPress={() => setScope("ALL")} />
               </View>
             </>
@@ -1541,7 +2289,7 @@ export default function FinanceHistoryScreen() {
         <Card style={{ gap: 10 }}>
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>Results</Text>
 
-          {loading ? (
+          {loading && !hasCache ? (
             <View style={{ paddingVertical: 18 }}>
               <ActivityIndicator />
             </View>
@@ -1570,29 +2318,39 @@ export default function FinanceHistoryScreen() {
                 }}
               >
                 <View style={{ flexDirection: "row", alignItems: "center" }}>
-                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 13, letterSpacing: 0.3 }}>
+                  <Text
+                    style={{ color: UI.text, fontWeight: "900", fontSize: 13, letterSpacing: 0.3 }}
+                  >
                     RECEIPTS SUMMARY
                   </Text>
                   <View style={{ flex: 1 }} />
-                  <Text style={{ color: UI.faint, fontWeight: "900", fontSize: 12 }}>strict methods</Text>
+                  <Text style={{ color: UI.faint, fontWeight: "900", fontSize: 12 }}>
+                    strict methods
+                  </Text>
                 </View>
 
                 <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.10)" }} />
 
                 <View style={{ flexDirection: "row", gap: 12 }}>
-                  <MiniStat label="Total Receipts" value={totalReceipts} hint="sales total (incl. credit)" />
+                  <MiniStat
+                    label="Total Receipts"
+                    value={totalReceipts}
+                    hint="sales total (incl. credit)"
+                  />
                   <MiniStat label="Total Money In" value={totalMoneyIn} hint="money received" />
                 </View>
 
                 <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                  Total Receipts = Sales total (including Credit). Total Money In = Sales paid + Credit
-                  collections.
+                  Total Receipts = Sales total (including Credit). Total Money In = Sales paid +
+                  Credit collections.
                 </Text>
               </View>
 
               <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
 
-              <Text style={{ color: UI.faint, fontWeight: "900", fontSize: 12, letterSpacing: 0.3 }}>
+              <Text
+                style={{ color: UI.faint, fontWeight: "900", fontSize: 12, letterSpacing: 0.3 }}
+              >
                 PAYMENT BREAKDOWN (PAID + CREDIT BALANCE)
               </Text>
 
@@ -1610,7 +2368,9 @@ export default function FinanceHistoryScreen() {
 
               <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
 
-              <Text style={{ color: UI.faint, fontWeight: "900", fontSize: 12, letterSpacing: 0.3 }}>
+              <Text
+                style={{ color: UI.faint, fontWeight: "900", fontSize: 12, letterSpacing: 0.3 }}
+              >
                 CREDIT COLLECTIONS (PAYMENTS RECEIVED)
               </Text>
 
@@ -1638,11 +2398,15 @@ export default function FinanceHistoryScreen() {
                 }}
               >
                 <View style={{ flexDirection: "row", alignItems: "center" }}>
-                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 13, letterSpacing: 0.3 }}>
+                  <Text
+                    style={{ color: UI.text, fontWeight: "900", fontSize: 13, letterSpacing: 0.3 }}
+                  >
                     TOTAL MONEY IN
                   </Text>
                   <View style={{ flex: 1 }} />
-                  <Text style={{ color: UI.faint, fontWeight: "900", fontSize: 12 }}>Money received</Text>
+                  <Text style={{ color: UI.faint, fontWeight: "900", fontSize: 12 }}>
+                    Money received
+                  </Text>
                 </View>
 
                 <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.10)" }} />
@@ -1679,10 +2443,103 @@ export default function FinanceHistoryScreen() {
               <MiniStat label="Avg/Expense" value={String(expAvg).replace(/\s+/g, " ")} />
             </View>
           ) : (
-            <View style={{ flexDirection: "row", gap: 12 }}>
-              <MiniStat label="Profit" value={pNet} hint="owner-only" />
-              <MiniStat label="Sales" value={pSales} />
-              <MiniStat label="Expenses" value={pExp} />
+            <View style={{ gap: 12 }}>
+              <View style={{ flexDirection: "row", gap: 12 }}>
+                <MiniStat label="Profit" value={pNet} hint="owner-only" />
+                <MiniStat label="Sales" value={pSales} />
+                <MiniStat label="Expenses" value={pExp} />
+              </View>
+
+              {scope === "STORE" ? (
+                <>
+                  <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
+
+                  <Text
+                    style={{
+                      color: UI.faint,
+                      fontWeight: "900",
+                      fontSize: 12,
+                      letterSpacing: 0.3,
+                    }}
+                  >
+                    PRODUCT INTELLIGENCE
+                  </Text>
+
+                  {productProfitRows.length ? (
+                    <View style={{ gap: 10 }}>
+                      {productProfitRows.slice(0, 8).map((row, idx) => (
+                        <View
+                          key={`${row.product_id}-${idx}`}
+                          style={{
+                            borderRadius: 16,
+                            borderWidth: 1,
+                            borderColor: "rgba(255,255,255,0.08)",
+                            backgroundColor: "rgba(255,255,255,0.04)",
+                            padding: 12,
+                            gap: 8,
+                          }}
+                        >
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              justifyContent: "space-between",
+                              gap: 10,
+                              alignItems: "center",
+                            }}
+                          >
+                            <View style={{ flex: 1, minWidth: 0 }}>
+                              <Text
+                                style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}
+                                numberOfLines={1}
+                              >
+                                {idx + 1}. {row.product_name}
+                              </Text>
+
+                              <Text
+                                style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}
+                                numberOfLines={1}
+                              >
+                                SKU: {row.sku ?? "—"}
+                                {row.category ? ` • ${row.category}` : ""}
+                              </Text>
+                            </View>
+
+                            <Text
+                              style={{ color: UI.text, fontWeight: "900", fontSize: 13 }}
+                              numberOfLines={1}
+                            >
+                              {fmt(row.gross_profit)}
+                            </Text>
+                          </View>
+
+                          <View style={{ flexDirection: "row", gap: 12 }}>
+                            <MiniStat label="Revenue" value={fmt(row.revenue)} />
+                            <MiniStat label="Cost" value={fmt(row.estimated_cost)} />
+                            <MiniStat
+                              label="Margin"
+                              value={`${row.profit_margin_pct.toFixed(1)}%`}
+                            />
+                          </View>
+
+                          <View style={{ flexDirection: "row", gap: 12 }}>
+                            <MiniStat label="Qty Sold" value={String(row.qty_sold)} />
+                            <MiniStat label="Sales Count" value={String(row.sales_count)} />
+                            <View style={{ flex: 1 }} />
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  ) : (
+                    <Text style={{ color: UI.muted, fontWeight: "800" }}>
+                      No product profit data yet for this store and range.
+                    </Text>
+                  )}
+                </>
+              ) : (
+                <Text style={{ color: UI.muted, fontWeight: "800" }}>
+                  Product Intelligence inaonekana kwenye STORE scope tu.
+                </Text>
+              )}
             </View>
           )}
 
@@ -1717,7 +2574,319 @@ export default function FinanceHistoryScreen() {
         <Card style={{ gap: 12 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>Finance Graph</Text>
+              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
+                AI Actionable Insights
+              </Text>
+              <Text style={{ color: UI.muted, fontWeight: "800" }} numberOfLines={1}>
+                Ushauri wa biashara kutoka kwenye data ya kipindi ulichochagua
+              </Text>
+            </View>
+            {loading ? <ActivityIndicator /> : null}
+          </View>
+
+          <View style={{ gap: 10 }}>
+            {aiInsights.map((item) => {
+              const toneStyle = getInsightToneStyle(item.tone);
+              return (
+                <View
+                  key={item.id}
+                  style={{
+                    borderRadius: 18,
+                    borderWidth: 1,
+                    borderColor: toneStyle.borderColor,
+                    backgroundColor: toneStyle.backgroundColor,
+                    padding: 12,
+                    gap: 6,
+                  }}
+                >
+                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
+                    {item.title}
+                  </Text>
+                  <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 20 }}>
+                    {item.body}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        </Card>
+
+        <View style={{ height: 12 }} />
+
+        <Card style={{ gap: 12 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
+                AI Forecast Engine
+              </Text>
+              <Text style={{ color: UI.muted, fontWeight: "800" }} numberOfLines={1}>
+                Projection ya kipindi kijacho kwa kutumia trend ya range uliyochagua
+              </Text>
+            </View>
+            {loading ? <ActivityIndicator /> : null}
+          </View>
+
+          {!!forecastErr && (
+            <Card
+              style={{
+                borderColor: "rgba(201,74,74,0.35)",
+                backgroundColor: "rgba(201,74,74,0.10)",
+                borderRadius: 18,
+                padding: 12,
+              }}
+            >
+              <Text style={{ color: UI.danger, fontWeight: "900" }}>{forecastErr}</Text>
+            </Card>
+          )}
+
+          {forecast ? (
+            <View
+              style={{
+                borderRadius: 20,
+                borderWidth: 1,
+                borderColor:
+                  forecast.trend_label === "INCREASING"
+                    ? "rgba(16,185,129,0.26)"
+                    : forecast.trend_label === "DECLINING"
+                      ? "rgba(245,158,11,0.26)"
+                      : "rgba(59,130,246,0.24)",
+                backgroundColor:
+                  forecast.trend_label === "INCREASING"
+                    ? "rgba(16,185,129,0.08)"
+                    : forecast.trend_label === "DECLINING"
+                      ? "rgba(245,158,11,0.08)"
+                      : "rgba(59,130,246,0.08)",
+                padding: 14,
+                gap: 10,
+              }}
+            >
+              <View style={{ flexDirection: "row", gap: 12 }}>
+                <MiniStat label="Forecast Days" value={String(forecast.forecast_days)} />
+                <MiniStat label="Trend" value={forecast.trend_label} />
+                <MiniStat label="Trend %" value={`${forecast.trend_pct.toFixed(1)}%`} />
+              </View>
+
+              <View style={{ flexDirection: "row", gap: 12 }}>
+                <MiniStat
+                  label="Projected Sales"
+                  value={fmt(forecast.projected_sales_next_period)}
+                />
+                <MiniStat
+                  label="Projected Orders"
+                  value={String(Math.round(forecast.projected_orders_next_period))}
+                />
+                <MiniStat label="Avg/Day" value={fmt(forecast.avg_daily_sales)} />
+              </View>
+
+              <View style={{ flexDirection: "row", gap: 12 }}>
+                <MiniStat label="Stockout Risk" value={String(forecast.stockout_risk_count)} />
+                <MiniStat
+                  label="Urgent Restock"
+                  value={String(forecast.urgent_restock_count)}
+                />
+                <MiniStat
+                  label="Avg Orders/Day"
+                  value={String(forecast.avg_daily_orders.toFixed(1))}
+                />
+              </View>
+
+              <Text style={{ color: UI.text, fontWeight: "800" }}>
+                {forecast.trend_label === "INCREASING"
+                  ? "Momentum inaonekana kuongezeka. Linda stock ya bidhaa zinazotoka na sukuma conversion."
+                  : forecast.trend_label === "DECLINING"
+                    ? "Kuna dalili ya kushuka. Ongeza promo, display, follow-up, na restock ya bidhaa zenye movement."
+                    : "Trend iko stable. Hii ni nafasi ya kuongeza order value, margin, na discipline ya stock."}
+              </Text>
+            </View>
+          ) : (
+            <Text style={{ color: UI.muted, fontWeight: "800" }}>
+              No forecast data yet for this scope and range.
+            </Text>
+          )}
+        </Card>
+
+        <View style={{ height: 12 }} />
+
+        <Card style={{ gap: 12 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
+                Stock Intelligence
+              </Text>
+
+              <View style={{ gap: 2 }}>
+                <Text style={{ color: UI.muted, fontWeight: "800" }} numberOfLines={1}>
+                  {scope === "STORE" ? `Store: ${storeName}` : `Org: ${orgName} (ALL stores)`}
+                </Text>
+
+                <Text
+                  style={{ color: UI.faint, fontWeight: "800", fontSize: 12 }}
+                  numberOfLines={1}
+                >
+                  {scope === "STORE"
+                    ? "Fast / Slow / Dead / Low stock kwa store iliyochaguliwa"
+                    : "Fast / Slow / Dead / Low stock kwa stores zote ndani ya organization"}
+                </Text>
+              </View>
+            </View>
+
+            {loading ? <ActivityIndicator /> : null}
+          </View>
+
+          {scope === "ALL" ? (
+            <View
+              style={{
+                borderRadius: 14,
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,0.08)",
+                backgroundColor: "rgba(255,255,255,0.04)",
+                paddingHorizontal: 12,
+                paddingVertical: 10,
+              }}
+            >
+              <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                Stores in scope:{" "}
+                <Text style={{ color: UI.text, fontWeight: "900" }}>{storeIdsInOrg.length}</Text>
+              </Text>
+            </View>
+          ) : null}
+
+          {!!stockIntelErr && (
+            <Card
+              style={{
+                borderColor: "rgba(201,74,74,0.35)",
+                backgroundColor: "rgba(201,74,74,0.10)",
+                borderRadius: 18,
+                padding: 12,
+              }}
+            >
+              <Text style={{ color: UI.danger, fontWeight: "900" }}>{stockIntelErr}</Text>
+            </Card>
+          )}
+
+          {stockIntelRows.length ? (
+            <View style={{ gap: 12 }}>
+              {stockIntelByBucket.map(({ bucket, rows }) => {
+                const accent = getBucketAccent(bucket);
+
+                return (
+                  <View
+                    key={bucket}
+                    style={{
+                      borderRadius: 20,
+                      borderWidth: 1,
+                      borderColor: accent.borderColor,
+                      backgroundColor: accent.backgroundColor,
+                      padding: 12,
+                      gap: 10,
+                    }}
+                  >
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
+                          {getBucketTitle(bucket)}
+                        </Text>
+                        <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                          {getBucketHint(bucket, scope)}
+                        </Text>
+                      </View>
+                      <Text style={{ color: UI.text, fontWeight: "900" }}>{rows.length}</Text>
+                    </View>
+
+                    {rows.length ? (
+                      rows.slice(0, 6).map((row, idx) => {
+                        const rowStoreName =
+                          row.store_id && storesMeta.has(row.store_id)
+                            ? storesMeta.get(row.store_id)
+                            : "Store";
+
+                        return (
+                          <View
+                            key={`${bucket}-${row.product_id}-${idx}`}
+                            style={{
+                              borderRadius: 16,
+                              borderWidth: 1,
+                              borderColor: "rgba(255,255,255,0.08)",
+                              backgroundColor: "rgba(255,255,255,0.04)",
+                              padding: 12,
+                              gap: 8,
+                            }}
+                          >
+                            <View
+                              style={{
+                                flexDirection: "row",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                gap: 10,
+                              }}
+                            >
+                              <View style={{ flex: 1, minWidth: 0 }}>
+                                <Text
+                                  style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}
+                                  numberOfLines={1}
+                                >
+                                  {idx + 1}. {row.product_name}
+                                </Text>
+
+                                <Text
+                                  style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}
+                                  numberOfLines={1}
+                                >
+                                  SKU: {row.sku ?? "—"}
+                                  {row.category ? ` • ${row.category}` : ""}
+                                  {scope === "ALL" ? ` • ${rowStoreName}` : ""}
+                                </Text>
+                              </View>
+
+                              <Text
+                                style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}
+                                numberOfLines={1}
+                              >
+                                {row.stock_status || "—"}
+                              </Text>
+                            </View>
+
+                            <View style={{ flexDirection: "row", gap: 12 }}>
+                              <MiniStat label="Qty Sold" value={String(row.qty_sold)} />
+                              <MiniStat label="Sales Count" value={String(row.sales_count)} />
+                              <MiniStat label="On Hand" value={String(row.stock_on_hand)} />
+                            </View>
+
+                            <View style={{ flexDirection: "row", gap: 12 }}>
+                              <MiniStat
+                                label="Threshold"
+                                value={String(row.low_stock_threshold)}
+                              />
+                              <MiniStat label="Activity" value={row.activity_score.toFixed(1)} />
+                              <MiniStat label="Unit" value={row.unit ?? "—"} />
+                            </View>
+                          </View>
+                        );
+                      })
+                    ) : (
+                      <Text style={{ color: UI.muted, fontWeight: "800" }}>
+                        No items in this bucket for selected range.
+                      </Text>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+          ) : (
+            <Text style={{ color: UI.muted, fontWeight: "800" }}>
+              No stock intelligence data yet for this scope and range.
+            </Text>
+          )}
+        </Card>
+
+        <View style={{ height: 12 }} />
+
+        <Card style={{ gap: 12 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
+                Finance Graph
+              </Text>
               <Text style={{ color: UI.muted, fontWeight: "800" }} numberOfLines={1}>
                 {bucketInfo} • Sales / Expenses / Profit
               </Text>
@@ -1783,7 +2952,9 @@ export default function FinanceHistoryScreen() {
         <View style={{ height: 12 }} />
 
         <Card style={{ gap: 10 }}>
-          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>Business Health Score</Text>
+          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
+            Business Health Score
+          </Text>
           <Text style={{ color: UI.muted, fontWeight: "800" }}>
             AI CFO style summary kwa kipindi ulichochagua.
           </Text>
@@ -1836,7 +3007,7 @@ export default function FinanceHistoryScreen() {
           onPress={() => {
             Alert.alert(
               "How it works",
-              "TOTAL RECEIPTS: Sales total (ina include Credit).\n\nPAYMENT BREAKDOWN: inaonyesha pesa zilizolipwa (Cash/Bank/Mobile) + Credit (Balance) ambayo bado haijalipwa.\n\nCREDIT COLLECTIONS: ni malipo ya madeni yaliyopokelewa ndani ya date range.\n\nTOTAL MONEY IN: Sales PAID + Credit Collections (money received). Credit balance haijumuishwi.\n\nBUSINESS HEALTH SCORE: ni summary ya margin, expense ratio, na sales trend kwa kipindi ulichochagua."
+              "TOTAL RECEIPTS: Sales total (ina include Credit).\n\nPAYMENT BREAKDOWN: inaonyesha pesa zilizolipwa (Cash/Bank/Mobile) + Credit (Balance) ambayo bado haijalipwa.\n\nCREDIT COLLECTIONS: ni malipo ya madeni yaliyopokelewa ndani ya date range.\n\nTOTAL MONEY IN: Sales PAID + Credit Collections (money received). Credit balance haijumuishwi.\n\nAI ACTIONABLE INSIGHTS: inaweka ushauri wa moja kwa moja kutoka kwenye Sales, Stock Intelligence, Product Profit, Store Comparison, Health Score, na Forecast Engine.\n\nAI FORECAST ENGINE: ina-project kipindi kijacho kwa kutumia trend ya date range uliyochagua, pamoja na stockout risk na urgent restock counts.\n\nSTOCK INTELLIGENCE: inaonyesha fast moving, slow moving, dead stock, na low stock kwa STORE au ALL scope.\n\nBUSINESS HEALTH SCORE: ni summary ya margin, expense ratio, na sales trend kwa kipindi ulichochagua."
             );
           }}
           style={({ pressed }) => ({ opacity: pressed ? 0.92 : 1, alignSelf: "flex-start" })}

@@ -21,7 +21,7 @@ type InventoryRow = {
   sku: string | null;
   unit: string | null;
   category: string | null;
-  barcode: string | null; // ✅ v2
+  barcode: string | null;
   qty: number;
 };
 
@@ -42,6 +42,29 @@ function cleanBarcode(raw: any) {
   const s = String(raw ?? "").trim();
   if (!s) return "";
   return s.replace(/\s+/g, "");
+}
+
+function sameRows(a: InventoryRow[], b: InventoryRow[]) {
+  if (a === b) return true;
+  if (!Array.isArray(a) || !Array.isArray(b)) return false;
+  if (a.length !== b.length) return false;
+
+  for (let i = 0; i < a.length; i++) {
+    const x = a[i];
+    const y = b[i];
+    if (
+      x.product_id !== y.product_id ||
+      x.product_name !== y.product_name ||
+      x.sku !== y.sku ||
+      x.unit !== y.unit ||
+      x.category !== y.category ||
+      x.barcode !== y.barcode ||
+      Number(x.qty ?? 0) !== Number(y.qty ?? 0)
+    ) {
+      return false;
+    }
+  }
+  return true;
 }
 
 export default function StoreInventoryScreen() {
@@ -88,11 +111,14 @@ export default function StoreInventoryScreen() {
 
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState<InventoryRow[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const rowsRef = useRef<InventoryRow[]>([]);
+  useEffect(() => {
+    rowsRef.current = rows;
+  }, [rows]);
 
+  const [error, setError] = useState<string | null>(null);
   const [q, setQ] = useState("");
 
-  // ✅ NEW: recent scanned priority
   const [recentScannedIds, setRecentScannedIds] = useState<string[]>([]);
   const bumpRecent = useCallback((productId: string) => {
     if (!productId) return;
@@ -108,10 +134,15 @@ export default function StoreInventoryScreen() {
     } catch {}
   }, []);
 
-  // Threshold cache
   const [thrByProductId, setThrByProductId] = useState<Record<string, number>>({});
+  const thrRef = useRef<Record<string, number>>({});
+  useEffect(() => {
+    thrRef.current = thrByProductId;
+  }, [thrByProductId]);
+
   const [thrLoading, setThrLoading] = useState(false);
 
+  // Visible status only (do not update this during silent refresh)
   const [source, setSource] = useState<SourceMode>("NONE");
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
 
@@ -126,6 +157,8 @@ export default function StoreInventoryScreen() {
   }, [activeStoreId]);
 
   const didInitRef = useRef(false);
+  const inFlightLiveRef = useRef(false);
+  const lastFocusRefreshAtRef = useRef(0);
 
   const loadFromCache = useCallback(async () => {
     if (!CACHE_KEY || !SYNC_KEY) return;
@@ -139,19 +172,21 @@ export default function StoreInventoryScreen() {
       const parsed: InventoryRow[] = rawRows ? JSON.parse(rawRows) : [];
       const syncIso = rawSync ? String(rawSync) : null;
 
-      if (syncIso) setLastSyncedAt(syncIso);
-
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(parsed)) {
         setRows(parsed);
-        setSource("CACHED");
-        setError(null);
       } else {
-        if ((rows ?? []).length === 0) setSource("NONE");
+        setRows([]);
       }
+
+      setSource(Array.isArray(parsed) && parsed.length > 0 ? "CACHED" : "NONE");
+      setLastSyncedAt(syncIso || null);
+      setError(null);
     } catch {
-      if ((rows ?? []).length === 0) setSource("NONE");
+      setRows([]);
+      setSource("NONE");
+      setLastSyncedAt(null);
     }
-  }, [CACHE_KEY, SYNC_KEY, rows]);
+  }, [CACHE_KEY, SYNC_KEY]);
 
   const saveCache = useCallback(
     async (nextRows: InventoryRow[], syncIso: string) => {
@@ -166,95 +201,143 @@ export default function StoreInventoryScreen() {
     [CACHE_KEY, SYNC_KEY]
   );
 
-  const loadLive = useCallback(async () => {
-    if (!activeStoreId) {
-      setError("No active store selected.");
-      if ((rows ?? []).length === 0) setSource("NONE");
-      return;
-    }
+  const loadThresholdsForRows = useCallback(
+    async (
+      inputRows: InventoryRow[],
+      opts: { silent?: boolean } = {}
+    ) => {
+      const { silent = false } = opts;
 
-    if (storeOrgMismatch) {
-      setError("Active store haifanani na Organization. Tafadhali chagua store tena.");
-      if ((rows ?? []).length === 0) setSource("NONE");
-      return;
-    }
+      if (!activeStoreId) return;
+      if (storeOrgMismatch) return;
+      if (isOffline) return;
 
-    if (isOffline) {
-      setError(null);
-      await loadFromCache();
-      return;
-    }
+      const ids = (inputRows ?? []).map((r) => r.product_id).filter(Boolean);
+      if (ids.length === 0) {
+        if (!silent) setThrByProductId({});
+        return;
+      }
 
-    setLoading(true);
-    setError(null);
+      if (!silent) setThrLoading(true);
 
-    try {
-      // ✅ D1: use v2 (includes barcode)
-      const { data, error: e } = await supabase.rpc("get_store_inventory_v2", {
-        p_store_id: activeStoreId,
-      });
-      if (e) throw e;
+      try {
+        const results = await Promise.all(
+          ids.map(async (pid) => {
+            try {
+              const { data, error: e } = await supabase.rpc("get_inventory_threshold", {
+                p_store_id: activeStoreId,
+                p_product_id: pid,
+              });
+              if (e) throw e;
 
-      const nextRows = (data ?? []) as InventoryRow[];
-      setRows(nextRows);
-      setSource("LIVE");
+              const n = Number(data ?? 0);
+              return [pid, Number.isFinite(n) ? n : 0] as const;
+            } catch {
+              return [pid, 0] as const;
+            }
+          })
+        );
 
-      const nowIso = new Date().toISOString();
-      setLastSyncedAt(nowIso);
+        const next: Record<string, number> = {};
+        for (const [pid, thr] of results) next[pid] = thr;
 
-      void saveCache(nextRows, nowIso);
-    } catch (err: any) {
-      setError(err?.message ?? "Failed to load inventory");
-      await loadFromCache();
-    } finally {
-      setLoading(false);
-    }
-  }, [activeStoreId, storeOrgMismatch, isOffline, loadFromCache, saveCache, rows]);
+        const prevJson = JSON.stringify(thrRef.current);
+        const nextJson = JSON.stringify(next);
+        if (prevJson !== nextJson) {
+          setThrByProductId(next);
+        }
+      } finally {
+        if (!silent) setThrLoading(false);
+      }
+    },
+    [activeStoreId, storeOrgMismatch, isOffline]
+  );
 
-  const loadThresholds = useCallback(async () => {
-    if (!activeStoreId) return;
-    if (storeOrgMismatch) return;
-    if (isOffline) return;
+  const loadLive = useCallback(
+    async ({ silent = false }: { silent?: boolean } = {}) => {
+      if (!activeStoreId) {
+        setError("No active store selected.");
+        if (rowsRef.current.length === 0) setSource("NONE");
+        return;
+      }
 
-    const ids = (rows ?? []).map((r) => r.product_id).filter(Boolean);
-    if (ids.length === 0) {
-      setThrByProductId({});
-      return;
-    }
+      if (storeOrgMismatch) {
+        setError("Active store haifanani na Organization. Tafadhali chagua store tena.");
+        if (rowsRef.current.length === 0) setSource("NONE");
+        return;
+      }
 
-    setThrLoading(true);
-    try {
-      const results = await Promise.all(
-        ids.map(async (pid) => {
-          try {
-            const { data, error: e } = await supabase.rpc("get_inventory_threshold", {
-              p_store_id: activeStoreId,
-              p_product_id: pid,
-            });
-            if (e) throw e;
+      if (isOffline) {
+        setError(null);
+        if (!silent) {
+          await loadFromCache();
+        }
+        return;
+      }
 
-            const n = Number(data ?? 0);
-            return [pid, Number.isFinite(n) ? n : 0] as const;
-          } catch {
-            return [pid, 0] as const;
-          }
-        })
-      );
+      if (inFlightLiveRef.current) return;
+      inFlightLiveRef.current = true;
 
-      const next: Record<string, number> = {};
-      for (const [pid, thr] of results) next[pid] = thr;
-      setThrByProductId(next);
-    } finally {
-      setThrLoading(false);
-    }
-  }, [activeStoreId, rows, storeOrgMismatch, isOffline]);
+      if (!silent) setLoading(true);
+      if (!silent) setError(null);
+
+      try {
+        const { data, error: e } = await supabase.rpc("get_store_inventory_v2", {
+          p_store_id: activeStoreId,
+        });
+        if (e) throw e;
+
+        const nextRows = (data ?? []) as InventoryRow[];
+        const changed = !sameRows(rowsRef.current, nextRows);
+
+        if (changed) {
+          setRows(nextRows);
+        }
+
+        const nowIso = new Date().toISOString();
+        void saveCache(nextRows, nowIso);
+
+        // Visible status updates only for manual/visible refresh
+        if (!silent) {
+          setSource("LIVE");
+          setLastSyncedAt(nowIso);
+        }
+
+        // Thresholds refresh silently too
+        void loadThresholdsForRows(nextRows, { silent: true });
+      } catch (err: any) {
+        if (!silent) {
+          setError(err?.message ?? "Failed to load inventory");
+          await loadFromCache();
+        }
+      } finally {
+        if (!silent) setLoading(false);
+        inFlightLiveRef.current = false;
+      }
+    },
+    [
+      activeStoreId,
+      storeOrgMismatch,
+      isOffline,
+      loadFromCache,
+      saveCache,
+      loadThresholdsForRows,
+    ]
+  );
 
   useEffect(() => {
     didInitRef.current = false;
+    inFlightLiveRef.current = false;
+    lastFocusRefreshAtRef.current = 0;
+    rowsRef.current = [];
+    thrRef.current = {};
     setError(null);
     setThrByProductId({});
     setThrLoading(false);
     setRecentScannedIds([]);
+    setRows([]);
+    setSource("NONE");
+    setLastSyncedAt(null);
   }, [activeStoreId]);
 
   useEffect(() => {
@@ -264,60 +347,58 @@ export default function StoreInventoryScreen() {
 
     void (async () => {
       await loadFromCache();
-      await loadLive();
+      void loadLive({ silent: true });
     })();
   }, [activeStoreId, loadFromCache, loadLive]);
 
-  const AUTO_REFRESH_MS = 25_000;
-  const lastAutoRefreshAtRef = useRef<number>(0);
+  const AUTO_REFRESH_MS = 20000;
 
   useFocusEffect(
     useCallback(() => {
       let alive = true;
       let intervalId: any = null;
 
-      const runOnce = async () => {
+      const runImmediateRefresh = async () => {
         if (!alive) return;
         if (!activeStoreId) return;
         if (storeOrgMismatch) return;
 
         const now = Date.now();
-        if (now - lastAutoRefreshAtRef.current < 1500) return;
-        lastAutoRefreshAtRef.current = now;
+        if (now - lastFocusRefreshAtRef.current < 700) return;
+        lastFocusRefreshAtRef.current = now;
 
-        if (loading) return;
-
-        if (isOffline) {
-          await loadFromCache();
-          return;
+        // On focus: refresh silently only, no visible status dancing
+        if (!isOffline) {
+          void loadLive({ silent: true });
         }
-
-        await loadLive();
       };
 
-      void runOnce();
+      void runImmediateRefresh();
 
       intervalId = setInterval(() => {
         if (!alive) return;
         if (!activeStoreId) return;
         if (storeOrgMismatch) return;
         if (isOffline) return;
-        if (loading) return;
-        void loadLive();
+        void loadLive({ silent: true });
       }, AUTO_REFRESH_MS);
 
       return () => {
         alive = false;
         if (intervalId) clearInterval(intervalId);
       };
-    }, [activeStoreId, storeOrgMismatch, isOffline, loading, loadFromCache, loadLive])
+    }, [activeStoreId, storeOrgMismatch, isOffline, loadLive])
   );
 
   useEffect(() => {
-    void loadThresholds();
-  }, [loadThresholds]);
+    if (!rows.length) {
+      setThrByProductId({});
+      return;
+    }
+    if (isOffline) return;
+    void loadThresholdsForRows(rows, { silent: true });
+  }, [rows, isOffline, loadThresholdsForRows]);
 
-  // ✅ C: Listen to ScanBus for Inventory
   const handleInventoryScan = useCallback(
     (rawInput: any) => {
       const code = cleanBarcode(rawInput);
@@ -325,7 +406,6 @@ export default function StoreInventoryScreen() {
 
       setQ(code);
 
-      // try match for bump + vibrate
       const target =
         rows.find((r) => cleanBarcode(r.barcode) === code) ||
         rows.find((r) => cleanBarcode(r.sku) === code);
@@ -333,9 +413,6 @@ export default function StoreInventoryScreen() {
       if (target) {
         bumpRecent(target.product_id);
         vibrateScan();
-      } else {
-        // no match yet -> user can press Refresh if needed
-        // keep silent (no error spam)
       }
     },
     [bumpRecent, rows, vibrateScan]
@@ -354,7 +431,8 @@ export default function StoreInventoryScreen() {
     const base = !needle
       ? rows
       : rows.filter((r) => {
-          const hay = `${r.product_name ?? ""} ${r.sku ?? ""} ${r.unit ?? ""} ${r.category ?? ""} ${r.barcode ?? ""}`.toLowerCase();
+          const hay =
+            `${r.product_name ?? ""} ${r.sku ?? ""} ${r.unit ?? ""} ${r.category ?? ""} ${r.barcode ?? ""}`.toLowerCase();
           return hay.includes(needle);
         });
 
@@ -443,7 +521,6 @@ export default function StoreInventoryScreen() {
     } as any);
   }, [activeStoreId, activeStoreName, router, storeOrgMismatch, isOffline]);
 
-  // ✅ C: go scan
   const goScan = useCallback(() => {
     if (!activeStoreId) {
       Alert.alert("Missing", "No active store selected.");
@@ -460,7 +537,7 @@ export default function StoreInventoryScreen() {
     const mode = isOffline ? "OFFLINE" : "ONLINE";
 
     const effectiveSource: SourceMode =
-      source === "NONE" && (rows ?? []).length > 0 ? "CACHED" : source;
+      source === "NONE" && rows.length > 0 ? "CACHED" : source;
 
     const src = isOffline
       ? "CACHED"
@@ -471,7 +548,7 @@ export default function StoreInventoryScreen() {
           : "—";
 
     return `${mode} • Source: ${src} • Last sync: ${fmtLocal(lastSyncedAt)}`;
-  }, [isOffline, source, lastSyncedAt, rows]);
+  }, [isOffline, source, lastSyncedAt, rows.length]);
 
   return (
     <Screen scroll>
@@ -539,12 +616,11 @@ export default function StoreInventoryScreen() {
           ) : null}
         </View>
 
-        {/* ✅ C: action row with Scan icon (no big card) */}
         <View style={{ flexDirection: "row", gap: 10, marginTop: 6, alignItems: "center" }}>
           <View style={{ flex: 1 }}>
             <Button
               title={loading ? "Loading..." : "Refresh"}
-              onPress={loadLive}
+              onPress={() => loadLive({ silent: false })}
               disabled={loading}
               variant="primary"
             />
@@ -588,15 +664,15 @@ export default function StoreInventoryScreen() {
 
         <View style={{ marginTop: 10 }}>
           <Button
-            title={thrLoading ? "Checking Low Stock..." : "Low Stock"}
+            title="Low Stock"
             onPress={openLowStockList}
-            disabled={loading || thrLoading || !activeStoreId || isOffline}
+            disabled={loading || !activeStoreId || isOffline}
             variant="secondary"
           />
         </View>
 
         <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>
-          Tip: Scan → search inawekwa auto → item inapanda juu ili u-Adjust haraka.
+          Tip: Inventory inajirefresh kimya kimya bila UI kuonyesha kuchezacheza.
         </Text>
       </Card>
 
