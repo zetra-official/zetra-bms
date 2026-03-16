@@ -47,6 +47,15 @@ type CreditCollections = {
   payments: number;
 };
 
+type ExpenseChannelBreakdown = {
+  cash: number;
+  bank: number;
+  mobile: number;
+  other: number;
+  total: number;
+  count: number;
+};
+
 type TrendPoint = {
   key: string;
   label: string;
@@ -129,18 +138,30 @@ type ForecastSummary = {
   urgent_restock_count: number;
 };
 
+type CashflowPrediction = {
+  scope_used: "STORE" | "ALL";
+  forecast_days: number;
+  projected_cash_in: number;
+  projected_cash_orders: number;
+  avg_daily_cash: number;
+  avg_daily_orders: number;
+  confidence: "HIGH" | "MEDIUM" | "LOW";
+};
+
 type FinanceCachePayload = {
   salesRow: SalesSummary;
   expRow: ExpenseSummary;
   profitRow: ProfitSummary;
   pay: PayBreakdown;
   collections: CreditCollections;
+  expPay: ExpenseChannelBreakdown;
   trendRows: TrendPoint[];
   comparisonRows: StoreComparisonRow[];
   health: HealthSummary | null;
   productProfitRows: ProductProfitRow[];
   stockIntelRows: StockIntelRow[];
   forecast: ForecastSummary | null;
+  cashflow: CashflowPrediction | null;
 };
 
 type InsightTone = "good" | "warn" | "danger" | "info";
@@ -315,6 +336,51 @@ function normalizeStockBucket(x: any): StockIntelBucket {
   if (v === "SLOW_MOVING") return "SLOW_MOVING";
   if (v === "DEAD_STOCK") return "DEAD_STOCK";
   return "LOW_STOCK";
+}
+
+function normalizeConfidence(x: any): CashflowPrediction["confidence"] {
+  const v = String(x ?? "").trim().toUpperCase();
+  if (v === "HIGH") return "HIGH";
+  if (v === "LOW") return "LOW";
+  return "MEDIUM";
+}
+
+function normalizeMoneyChannel(x: any): "CASH" | "BANK" | "MOBILE" | "OTHER" {
+  const v = String(x ?? "").trim().toUpperCase();
+
+  if (v === "CASH") return "CASH";
+
+  if (v === "BANK" || v === "BANK_TRANSFER" || v === "TRANSFER") return "BANK";
+
+  if (
+    v === "MOBILE" ||
+    v === "MOBILE_MONEY" ||
+    v === "M-PESA" ||
+    v === "MPESA" ||
+    v === "TIGOPESA" ||
+    v === "AIRTELMONEY" ||
+    v === "HALOPESA" ||
+    v === "AZAMPESA"
+  ) {
+    return "MOBILE";
+  }
+
+  return "OTHER";
+}
+
+function zeroExpenseChannelBreakdown(): ExpenseChannelBreakdown {
+  return {
+    cash: 0,
+    bank: 0,
+    mobile: 0,
+    other: 0,
+    total: 0,
+    count: 0,
+  };
+}
+
+function subtractFloor(a: number, b: number) {
+  return Math.max(0, toNum(a) - toNum(b));
 }
 
 function getBucketTitle(bucket: StockIntelBucket) {
@@ -881,6 +947,7 @@ export default function FinanceHistoryScreen() {
   const [err, setErr] = useState<string | null>(null);
   const [stockIntelErr, setStockIntelErr] = useState<string | null>(null);
   const [forecastErr, setForecastErr] = useState<string | null>(null);
+  const [cashflowErr, setCashflowErr] = useState<string | null>(null);
 
   const [salesRow, setSalesRow] = useState<SalesSummary>({
     total: 0,
@@ -914,12 +981,15 @@ export default function FinanceHistoryScreen() {
     payments: 0,
   });
 
+  const [expPay, setExpPay] = useState<ExpenseChannelBreakdown>(zeroExpenseChannelBreakdown());
+
   const [trendRows, setTrendRows] = useState<TrendPoint[]>([]);
   const [comparisonRows, setComparisonRows] = useState<StoreComparisonRow[]>([]);
   const [health, setHealth] = useState<HealthSummary | null>(null);
   const [productProfitRows, setProductProfitRows] = useState<ProductProfitRow[]>([]);
   const [stockIntelRows, setStockIntelRows] = useState<StockIntelRow[]>([]);
   const [forecast, setForecast] = useState<ForecastSummary | null>(null);
+  const [cashflow, setCashflow] = useState<CashflowPrediction | null>(null);
 
   const reqRef = useRef(0);
   const cacheRef = useRef<Map<string, FinanceCachePayload>>(new Map());
@@ -939,12 +1009,14 @@ export default function FinanceHistoryScreen() {
     setProfitRow(payload.profitRow);
     setPay(payload.pay);
     setCollections(payload.collections);
+    setExpPay(payload.expPay);
     setTrendRows(payload.trendRows);
     setComparisonRows(payload.comparisonRows);
     setHealth(payload.health);
     setProductProfitRows(payload.productProfitRows);
     setStockIntelRows(payload.stockIntelRows);
     setForecast(payload.forecast);
+    setCashflow(payload.cashflow);
   }, []);
 
   React.useEffect(() => {
@@ -1160,6 +1232,39 @@ export default function FinanceHistoryScreen() {
     []
   );
 
+  const callExpenseChannelBreakdownForStore = useCallback(
+    async (sid: string, fromYMD: string, toYMD: string): Promise<ExpenseChannelBreakdown> => {
+      const { data, error } = await supabase.rpc(
+        "get_expenses",
+        {
+          p_store_id: sid,
+          p_from: fromYMD,
+          p_to: toYMD,
+        } as any
+      );
+      if (error) throw error;
+
+      const rows = (Array.isArray(data) ? data : []) as any[];
+      const out = zeroExpenseChannelBreakdown();
+
+      for (const r of rows) {
+        const amt = toNum(r?.amount ?? 0);
+        const ch = normalizeMoneyChannel(r?.payment_method);
+
+        out.total += amt;
+        out.count += 1;
+
+        if (ch === "CASH") out.cash += amt;
+        else if (ch === "BANK") out.bank += amt;
+        else if (ch === "MOBILE") out.mobile += amt;
+        else out.other += amt;
+      }
+
+      return out;
+    },
+    []
+  );
+
   const callProfitOwnerOnly = useCallback(
     async (sid: string, fromISO: string, toISO: string): Promise<ProfitSummary> => {
       if (!isOwner) return { net: 0, sales: null, expenses: null };
@@ -1322,6 +1427,49 @@ export default function FinanceHistoryScreen() {
     [orgId]
   );
 
+  const callCashflowPrediction = useCallback(
+    async (
+      fromISO: string,
+      toISO: string,
+      nextScope: "STORE" | "ALL",
+      sid: string | null
+    ): Promise<CashflowPrediction | null> => {
+      if (!orgId) return null;
+
+      const { data, error } = await supabase.rpc(
+        "get_cashflow_prediction_v1",
+        {
+          p_org_id: orgId,
+          p_store_id: nextScope === "STORE" ? sid : null,
+          p_scope: nextScope,
+          p_from: fromISO,
+          p_to: toISO,
+        } as any
+      );
+
+      if (error) throw error;
+
+      const row = (Array.isArray(data) ? data[0] : data) as any;
+      if (!row) return null;
+
+      return {
+        scope_used:
+          String(row?.scope_used ?? nextScope).trim().toUpperCase() === "ALL" ? "ALL" : "STORE",
+        forecast_days: toInt(row?.forecast_days),
+        projected_cash_in: toNum(
+          row?.projected_cash_in ?? row?.projected_cash ?? row?.cash_in_next_period
+        ),
+        projected_cash_orders: toInt(
+          row?.projected_cash_orders ?? row?.cash_orders ?? row?.projected_orders
+        ),
+        avg_daily_cash: toNum(row?.avg_daily_cash ?? row?.daily_cash_avg),
+        avg_daily_orders: toNum(row?.avg_daily_orders ?? row?.daily_orders_avg),
+        confidence: normalizeConfidence(row?.confidence ?? row?.confidence_label),
+      };
+    },
+    [orgId]
+  );
+
   const run = useCallback(async () => {
     const rid = ++reqRef.current;
 
@@ -1375,6 +1523,7 @@ export default function FinanceHistoryScreen() {
     setErr(null);
     setStockIntelErr(null);
     setForecastErr(null);
+    setCashflowErr(null);
 
     try {
       const comparisonOut: StoreComparisonRow[] = [];
@@ -1404,9 +1553,11 @@ export default function FinanceHistoryScreen() {
         other: 0,
         payments: 0,
       };
+      let nextExpPay: ExpenseChannelBreakdown = zeroExpenseChannelBreakdown();
       let nextProductProfitRows: ProductProfitRow[] = [];
       let nextStockIntelRows: StockIntelRow[] = [];
       let nextForecast: ForecastSummary | null = null;
+      let nextCashflow: CashflowPrediction | null = null;
 
       if (mode === "SALES") {
         const rows = await Promise.all(targets.map((sid) => callSalesForStore(sid, fromISO, toISO)));
@@ -1421,6 +1572,22 @@ export default function FinanceHistoryScreen() {
 
         const pb = await callPaymentBreakdownV3(fromISO, toISO, sidOrNull);
         const cc = await callCreditCollections(fromISO, toISO, sidOrNull);
+
+        if (canSeeExpenses) {
+          const expChannelRows = await Promise.all(
+            targets.map((sid) => callExpenseChannelBreakdownForStore(sid, dateFrom, dateTo))
+          );
+
+          nextExpPay = expChannelRows.reduce<ExpenseChannelBreakdown>((acc, row) => {
+            acc.cash += toNum(row.cash);
+            acc.bank += toNum(row.bank);
+            acc.mobile += toNum(row.mobile);
+            acc.other += toNum(row.other);
+            acc.total += toNum(row.total);
+            acc.count += toInt(row.count);
+            return acc;
+          }, zeroExpenseChannelBreakdown());
+        }
 
         nextSalesRow = {
           total: sumTotal,
@@ -1470,6 +1637,22 @@ export default function FinanceHistoryScreen() {
 
         nextExpRow = { total: sumTotal, count: sumCount };
 
+        if (canSeeExpenses) {
+          const expChannelRows = await Promise.all(
+            targets.map((sid) => callExpenseChannelBreakdownForStore(sid, dateFrom, dateTo))
+          );
+
+          nextExpPay = expChannelRows.reduce<ExpenseChannelBreakdown>((acc, row) => {
+            acc.cash += toNum(row.cash);
+            acc.bank += toNum(row.bank);
+            acc.mobile += toNum(row.mobile);
+            acc.other += toNum(row.other);
+            acc.total += toNum(row.total);
+            acc.count += toInt(row.count);
+            return acc;
+          }, zeroExpenseChannelBreakdown());
+        }
+
         for (let i = 0; i < targets.length; i += 1) {
           const sid = targets[i];
           const exp = rows[i];
@@ -1514,6 +1697,22 @@ export default function FinanceHistoryScreen() {
         const sumExpAny = rows.some((r) => r.expenses != null) ? sumExpRaw : null;
 
         nextProfitRow = { net: sumNet, sales: sumSalesAny, expenses: sumExpAny };
+
+        if (canSeeExpenses) {
+          const expChannelRows = await Promise.all(
+            targets.map((sid) => callExpenseChannelBreakdownForStore(sid, dateFrom, dateTo))
+          );
+
+          nextExpPay = expChannelRows.reduce<ExpenseChannelBreakdown>((acc, row) => {
+            acc.cash += toNum(row.cash);
+            acc.bank += toNum(row.bank);
+            acc.mobile += toNum(row.mobile);
+            acc.other += toNum(row.other);
+            acc.total += toNum(row.total);
+            acc.count += toInt(row.count);
+            return acc;
+          }, zeroExpenseChannelBreakdown());
+        }
 
         if (scope === "STORE" && storeId) {
           try {
@@ -1568,6 +1767,18 @@ export default function FinanceHistoryScreen() {
       } catch (forecastError: any) {
         nextForecast = null;
         setForecastErr(forecastError?.message ?? "Failed to load forecast engine");
+      }
+
+      try {
+        nextCashflow = await callCashflowPrediction(
+          fromISO,
+          toISO,
+          scope,
+          scope === "STORE" ? storeId : null
+        );
+      } catch (cashflowError: any) {
+        nextCashflow = null;
+        setCashflowErr(cashflowError?.message ?? "Failed to load cashflow engine");
       }
 
       const buckets = buildTrendBuckets(dateFrom, dateTo);
@@ -1708,12 +1919,14 @@ export default function FinanceHistoryScreen() {
         profitRow: nextProfitRow,
         pay: nextPay,
         collections: nextCollections,
+        expPay: nextExpPay,
         trendRows: trendOut,
         comparisonRows: comparisonSorted,
         health: nextHealth,
         productProfitRows: nextProductProfitRows,
         stockIntelRows: nextStockIntelRows,
         forecast: nextForecast,
+        cashflow: nextCashflow,
       };
 
       if (rid !== reqRef.current) return;
@@ -1741,10 +1954,12 @@ export default function FinanceHistoryScreen() {
     callPaymentBreakdownV3,
     callCreditCollections,
     callExpenseForStore,
+    callExpenseChannelBreakdownForStore,
     callProfitOwnerOnly,
     callProductProfitReport,
     callStockIntelligence,
     callForecastSummary,
+    callCashflowPrediction,
     applyCachePayload,
   ]);
 
@@ -1763,9 +1978,9 @@ export default function FinanceHistoryScreen() {
   const directOrdersText = String(salesRow.directOrders ?? 0);
   const clubOrdersText = String(salesRow.clubOrders ?? 0);
 
-  const cash = fmt(pay.cash);
-  const bank = fmt(pay.bank);
-  const mobile = fmt(pay.mobile);
+  const grossCash = fmt(pay.cash);
+  const grossBank = fmt(pay.bank);
+  const grossMobile = fmt(pay.mobile);
   const credit = fmt(pay.credit);
 
   const expTotal = fmt(expRow.total);
@@ -1776,24 +1991,39 @@ export default function FinanceHistoryScreen() {
   const pSales = profitRow.sales == null ? "—" : fmt(profitRow.sales);
   const pExp = profitRow.expenses == null ? "—" : fmt(profitRow.expenses);
 
+  const expenseCash = fmt(expPay.cash);
+  const expenseBank = fmt(expPay.bank);
+  const expenseMobile = fmt(expPay.mobile);
+  const expenseOther = fmt(expPay.other);
+  const expenseByChannelsTotal = fmt(expPay.total);
+
   const cCash = fmt(collections.cash);
   const cBank = fmt(collections.bank);
   const cMobile = fmt(collections.mobile);
-  const cTotalNum = collections.cash + collections.bank + collections.mobile;
+  const cTotalNum = collections.cash + collections.bank + collections.mobile + collections.other;
   const cTotal = fmt(cTotalNum);
   const cPayments = String(collections.payments ?? 0);
 
-  const paidMoneyInNum = pay.cash + pay.bank + pay.mobile;
-  const totalMoneyInNum = paidMoneyInNum + cTotalNum;
+  const availableCashNum = subtractFloor(pay.cash + collections.cash, expPay.cash);
+  const availableBankNum = subtractFloor(pay.bank + collections.bank, expPay.bank);
+  const availableMobileNum = subtractFloor(pay.mobile + collections.mobile, expPay.mobile);
+  const availableOtherNum = subtractFloor(pay.other + collections.other, expPay.other);
 
-  const paidMoneyIn = fmt(paidMoneyInNum);
+  const availableCash = fmt(availableCashNum);
+  const availableBank = fmt(availableBankNum);
+  const availableMobile = fmt(availableMobileNum);
+
+  const totalMoneyInNum = availableCashNum + availableBankNum + availableMobileNum + availableOtherNum;
   const totalMoneyIn = fmt(totalMoneyInNum);
+
+  const paidMoneyInNum = pay.cash + pay.bank + pay.mobile;
+  const paidMoneyIn = fmt(paidMoneyInNum);
 
   const totalReceipts = salesTotal;
 
-  const totalInCash = fmt(pay.cash + collections.cash);
-  const totalInBank = fmt(pay.bank + collections.bank);
-  const totalInMobile = fmt(pay.mobile + collections.mobile);
+  const totalInCash = fmt(availableCashNum);
+  const totalInBank = fmt(availableBankNum);
+  const totalInMobile = fmt(availableMobileNum);
 
   const bucketInfo = useMemo(() => {
     const totalDays =
@@ -2041,6 +2271,57 @@ export default function FinanceHistoryScreen() {
       }
     }
 
+    if (cashflow) {
+      if (cashflow.projected_cash_in > 0 && expRow.total > 0) {
+        if (cashflow.projected_cash_in < expRow.total) {
+          items.push({
+            id: "cashflow-gap",
+            tone: "danger",
+            title: "Cashflow gap inaonekana",
+            body: `Projected cash-in ya siku ${cashflow.forecast_days} zijazo ni ${fmt(
+              cashflow.projected_cash_in
+            )}, chini ya expenses za kipindi hiki (${fmt(
+              expRow.total
+            )}). Dhibiti matumizi na fanya collections mapema.`,
+          });
+        } else {
+          items.push({
+            id: "cashflow-healthy",
+            tone: "good",
+            title: "Cashflow inaonekana kuwa nzuri",
+            body: `Projected cash-in ya siku ${cashflow.forecast_days} zijazo ni ${fmt(
+              cashflow.projected_cash_in
+            )}. Hii inaonyesha uwezo mzuri wa kuhimili movement ya pesa ya karibu.`,
+          });
+        }
+      } else if (cashflow.projected_cash_in > 0) {
+        items.push({
+          id: "cashflow-projection",
+          tone: "info",
+          title: "Cashflow projection ipo tayari",
+          body: `Kwa siku ${cashflow.forecast_days} zijazo, projected cash-in ni ${fmt(
+            cashflow.projected_cash_in
+          )} kutoka kwenye orders ${cashflow.projected_cash_orders}.`,
+        });
+      }
+
+      if (cashflow.confidence === "LOW") {
+        items.push({
+          id: "cashflow-confidence-low",
+          tone: "warn",
+          title: "Cashflow confidence iko chini",
+          body: "Prediction confidence iko LOW. Jaribu kutumia range pana zaidi au data zaidi ili projection iwe imara zaidi.",
+        });
+      } else if (cashflow.confidence === "HIGH") {
+        items.push({
+          id: "cashflow-confidence-high",
+          tone: "good",
+          title: "Cashflow signal ina nguvu",
+          body: "Prediction confidence iko HIGH. Hii ni signal nzuri ya kutumia projection hii kwenye planning ya short-term cash movement.",
+        });
+      }
+    }
+
     if (mode === "PROFIT" && scope === "STORE" && productProfitRows.length) {
       const topProfit = [...productProfitRows].sort((a, b) => b.gross_profit - a.gross_profit)[0];
       const worstMargin = [...productProfitRows].sort(
@@ -2110,6 +2391,7 @@ export default function FinanceHistoryScreen() {
     expRow.total,
     stockIntelRows,
     forecast,
+    cashflow,
     mode,
     scope,
     productProfitRows,
@@ -2325,7 +2607,7 @@ export default function FinanceHistoryScreen() {
                   </Text>
                   <View style={{ flex: 1 }} />
                   <Text style={{ color: UI.faint, fontWeight: "900", fontSize: 12 }}>
-                    strict methods
+                    after expenses
                   </Text>
                 </View>
 
@@ -2337,12 +2619,12 @@ export default function FinanceHistoryScreen() {
                     value={totalReceipts}
                     hint="sales total (incl. credit)"
                   />
-                  <MiniStat label="Total Money In" value={totalMoneyIn} hint="money received" />
+                  <MiniStat label="Total Money In" value={totalMoneyIn} hint="after expenses" />
                 </View>
 
                 <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                  Total Receipts = Sales total (including Credit). Total Money In = Sales paid +
-                  Credit collections.
+                  Total Receipts = Sales total (including Credit). Total Money In = (Sales paid +
+                  Credit collections) - expenses by payment channel.
                 </Text>
               </View>
 
@@ -2351,18 +2633,38 @@ export default function FinanceHistoryScreen() {
               <Text
                 style={{ color: UI.faint, fontWeight: "900", fontSize: 12, letterSpacing: 0.3 }}
               >
-                PAYMENT BREAKDOWN (PAID + CREDIT BALANCE)
+                PAYMENT BREAKDOWN (AFTER EXPENSES + CREDIT BALANCE)
               </Text>
 
               <View style={{ flexDirection: "row", gap: 12 }}>
-                <MiniStat label="Cash" value={cash} />
-                <MiniStat label="Mobile" value={mobile} />
-                <MiniStat label="Paid Total" value={paidMoneyIn} hint="money-in" />
+                <MiniStat label="Cash" value={availableCash} hint="after expense" />
+                <MiniStat label="Mobile" value={availableMobile} hint="after expense" />
+                <MiniStat label="Total Money In" value={totalMoneyIn} hint="available + received" />
               </View>
 
               <View style={{ flexDirection: "row", gap: 12 }}>
-                <MiniStat label="Bank" value={bank} />
+                <MiniStat label="Bank" value={availableBank} hint="after expense" />
                 <MiniStat label="Credit (Balance)" value={credit} hint="not money-in" />
+                <View style={{ flex: 1 }} />
+              </View>
+
+              <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
+
+              <Text
+                style={{ color: UI.faint, fontWeight: "900", fontSize: 12, letterSpacing: 0.3 }}
+              >
+                EXPENSES BY PAYMENT CHANNEL
+              </Text>
+
+              <View style={{ flexDirection: "row", gap: 12 }}>
+                <MiniStat label="Cash" value={expenseCash} />
+                <MiniStat label="Mobile" value={expenseMobile} />
+                <MiniStat label="Total" value={expenseByChannelsTotal} hint={`${expPay.count} expenses`} />
+              </View>
+
+              <View style={{ flexDirection: "row", gap: 12 }}>
+                <MiniStat label="Bank" value={expenseBank} />
+                <MiniStat label="Other" value={expenseOther} />
                 <View style={{ flex: 1 }} />
               </View>
 
@@ -2405,7 +2707,7 @@ export default function FinanceHistoryScreen() {
                   </Text>
                   <View style={{ flex: 1 }} />
                   <Text style={{ color: UI.faint, fontWeight: "900", fontSize: 12 }}>
-                    Money received
+                    after expenses
                   </Text>
                 </View>
 
@@ -2414,7 +2716,7 @@ export default function FinanceHistoryScreen() {
                 <View style={{ flexDirection: "row", gap: 12 }}>
                   <MiniStat label="Cash" value={totalInCash} />
                   <MiniStat label="Mobile" value={totalInMobile} />
-                  <MiniStat label="Total" value={totalMoneyIn} hint="received" />
+                  <MiniStat label="Total" value={totalMoneyIn} hint="available" />
                 </View>
 
                 <View style={{ flexDirection: "row", gap: 12 }}>
@@ -2424,23 +2726,46 @@ export default function FinanceHistoryScreen() {
                 </View>
 
                 <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                  Includes: Sales PAID + Credit Collections received. Excludes: Credit (Balance).
+                  Includes: Sales PAID + Credit Collections received. Then subtracts expenses from
+                  the same payment channel. Excludes: Credit (Balance).
                 </Text>
 
                 <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
 
                 <View style={{ flexDirection: "row", gap: 12 }}>
-                  <MiniStat label="Sales Paid" value={paidMoneyIn} hint="money-in" />
+                  <MiniStat label="Sales Paid" value={paidMoneyIn} hint="before expense" />
                   <MiniStat label="Collections" value={cTotal} hint="payments received" />
                   <View style={{ flex: 1 }} />
                 </View>
               </View>
             </View>
           ) : mode === "EXPENSES" ? (
-            <View style={{ flexDirection: "row", gap: 12 }}>
-              <MiniStat label="Expenses" value={expTotal} />
-              <MiniStat label="Count" value={expCount} />
-              <MiniStat label="Avg/Expense" value={String(expAvg).replace(/\s+/g, " ")} />
+            <View style={{ gap: 12 }}>
+              <View style={{ flexDirection: "row", gap: 12 }}>
+                <MiniStat label="Expenses" value={expTotal} />
+                <MiniStat label="Count" value={expCount} />
+                <MiniStat label="Avg/Expense" value={String(expAvg).replace(/\s+/g, " ")} />
+              </View>
+
+              <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
+
+              <Text
+                style={{ color: UI.faint, fontWeight: "900", fontSize: 12, letterSpacing: 0.3 }}
+              >
+                EXPENSE CHANNEL BREAKDOWN
+              </Text>
+
+              <View style={{ flexDirection: "row", gap: 12 }}>
+                <MiniStat label="Cash" value={expenseCash} />
+                <MiniStat label="Mobile" value={expenseMobile} />
+                <MiniStat label="Total" value={expenseByChannelsTotal} hint={`${expPay.count} expenses`} />
+              </View>
+
+              <View style={{ flexDirection: "row", gap: 12 }}>
+                <MiniStat label="Bank" value={expenseBank} />
+                <MiniStat label="Other" value={expenseOther} />
+                <View style={{ flex: 1 }} />
+              </View>
             </View>
           ) : (
             <View style={{ gap: 12 }}>
@@ -2448,6 +2773,26 @@ export default function FinanceHistoryScreen() {
                 <MiniStat label="Profit" value={pNet} hint="owner-only" />
                 <MiniStat label="Sales" value={pSales} />
                 <MiniStat label="Expenses" value={pExp} />
+              </View>
+
+              <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
+
+              <Text
+                style={{ color: UI.faint, fontWeight: "900", fontSize: 12, letterSpacing: 0.3 }}
+              >
+                EXPENSE CHANNEL BREAKDOWN
+              </Text>
+
+              <View style={{ flexDirection: "row", gap: 12 }}>
+                <MiniStat label="Cash" value={expenseCash} />
+                <MiniStat label="Mobile" value={expenseMobile} />
+                <MiniStat label="Total" value={expenseByChannelsTotal} hint={`${expPay.count} expenses`} />
+              </View>
+
+              <View style={{ flexDirection: "row", gap: 12 }}>
+                <MiniStat label="Bank" value={expenseBank} />
+                <MiniStat label="Other" value={expenseOther} />
+                <View style={{ flex: 1 }} />
               </View>
 
               {scope === "STORE" ? (
@@ -2701,6 +3046,94 @@ export default function FinanceHistoryScreen() {
           ) : (
             <Text style={{ color: UI.muted, fontWeight: "800" }}>
               No forecast data yet for this scope and range.
+            </Text>
+          )}
+        </Card>
+
+        <View style={{ height: 12 }} />
+
+        <Card style={{ gap: 12 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
+                AI Cashflow Prediction
+              </Text>
+              <Text style={{ color: UI.muted, fontWeight: "800" }} numberOfLines={1}>
+                Projection ya cash-in ya kipindi kijacho kwa kutumia range uliyochagua
+              </Text>
+            </View>
+            {loading ? <ActivityIndicator /> : null}
+          </View>
+
+          {!!cashflowErr && (
+            <Card
+              style={{
+                borderColor: "rgba(201,74,74,0.35)",
+                backgroundColor: "rgba(201,74,74,0.10)",
+                borderRadius: 18,
+                padding: 12,
+              }}
+            >
+              <Text style={{ color: UI.danger, fontWeight: "900" }}>{cashflowErr}</Text>
+            </Card>
+          )}
+
+          {cashflow ? (
+            <View
+              style={{
+                borderRadius: 20,
+                borderWidth: 1,
+                borderColor:
+                  cashflow.confidence === "HIGH"
+                    ? "rgba(16,185,129,0.26)"
+                    : cashflow.confidence === "LOW"
+                      ? "rgba(245,158,11,0.26)"
+                      : "rgba(59,130,246,0.24)",
+                backgroundColor:
+                  cashflow.confidence === "HIGH"
+                    ? "rgba(16,185,129,0.08)"
+                    : cashflow.confidence === "LOW"
+                      ? "rgba(245,158,11,0.08)"
+                      : "rgba(59,130,246,0.08)",
+                padding: 14,
+                gap: 10,
+              }}
+            >
+              <View style={{ flexDirection: "row", gap: 12 }}>
+                <MiniStat label="Forecast Days" value={String(cashflow.forecast_days)} />
+                <MiniStat label="Confidence" value={cashflow.confidence} />
+                <MiniStat label="Scope" value={cashflow.scope_used} />
+              </View>
+
+              <View style={{ flexDirection: "row", gap: 12 }}>
+                <MiniStat label="Projected Cash In" value={fmt(cashflow.projected_cash_in)} />
+                <MiniStat
+                  label="Projected Orders"
+                  value={String(Math.round(cashflow.projected_cash_orders))}
+                />
+                <MiniStat label="Avg Cash/Day" value={fmt(cashflow.avg_daily_cash)} />
+              </View>
+
+              <View style={{ flexDirection: "row", gap: 12 }}>
+                <MiniStat
+                  label="Avg Orders/Day"
+                  value={String(cashflow.avg_daily_orders.toFixed(1))}
+                />
+                <View style={{ flex: 1 }} />
+                <View style={{ flex: 1 }} />
+              </View>
+
+              <Text style={{ color: UI.text, fontWeight: "800" }}>
+                {cashflow.confidence === "HIGH"
+                  ? "Cashflow signal ina nguvu. Unaweza kuitumia kwa planning ya short-term purchasing, collections, na matumizi."
+                  : cashflow.confidence === "LOW"
+                    ? "Cashflow signal bado ni ya tahadhari. Jaribu kutumia range pana zaidi ili prediction iwe imara zaidi."
+                    : "Cashflow signal iko wastani. Tumia pamoja na forecast na collections trend kabla ya kufanya maamuzi makubwa ya matumizi."}
+              </Text>
+            </View>
+          ) : (
+            <Text style={{ color: UI.muted, fontWeight: "800" }}>
+              No cashflow prediction yet for this scope and range.
             </Text>
           )}
         </Card>
@@ -3007,7 +3440,7 @@ export default function FinanceHistoryScreen() {
           onPress={() => {
             Alert.alert(
               "How it works",
-              "TOTAL RECEIPTS: Sales total (ina include Credit).\n\nPAYMENT BREAKDOWN: inaonyesha pesa zilizolipwa (Cash/Bank/Mobile) + Credit (Balance) ambayo bado haijalipwa.\n\nCREDIT COLLECTIONS: ni malipo ya madeni yaliyopokelewa ndani ya date range.\n\nTOTAL MONEY IN: Sales PAID + Credit Collections (money received). Credit balance haijumuishwi.\n\nAI ACTIONABLE INSIGHTS: inaweka ushauri wa moja kwa moja kutoka kwenye Sales, Stock Intelligence, Product Profit, Store Comparison, Health Score, na Forecast Engine.\n\nAI FORECAST ENGINE: ina-project kipindi kijacho kwa kutumia trend ya date range uliyochagua, pamoja na stockout risk na urgent restock counts.\n\nSTOCK INTELLIGENCE: inaonyesha fast moving, slow moving, dead stock, na low stock kwa STORE au ALL scope.\n\nBUSINESS HEALTH SCORE: ni summary ya margin, expense ratio, na sales trend kwa kipindi ulichochagua."
+              "TOTAL RECEIPTS: Sales total (ina include Credit).\n\nPAYMENT BREAKDOWN: inaonyesha cash/mobile/bank zilizobaki baada ya kuondoa expenses za channel hiyo, pamoja na Credit (Balance) ambayo bado haijalipwa.\n\nEXPENSES BY PAYMENT CHANNEL: inaonyesha expense ilitoka wapi hasa (Cash / Mobile / Bank / Other).\n\nCREDIT COLLECTIONS: ni malipo ya madeni yaliyopokelewa ndani ya date range.\n\nTOTAL MONEY IN: (Sales PAID + Credit Collections) - Expenses za channel husika. Credit balance haijumuishwi.\n\nAI ACTIONABLE INSIGHTS: inaweka ushauri wa moja kwa moja kutoka kwenye Sales, Stock Intelligence, Product Profit, Store Comparison, Health Score, Forecast Engine, na Cashflow Prediction.\n\nAI FORECAST ENGINE: ina-project kipindi kijacho kwa kutumia trend ya date range uliyochagua, pamoja na stockout risk na urgent restock counts.\n\nAI CASHFLOW PREDICTION: inaonyesha projected cash-in, projected paid orders, avg cash/day, na confidence ya signal.\n\nSTOCK INTELLIGENCE: inaonyesha fast moving, slow moving, dead stock, na low stock kwa STORE au ALL scope.\n\nBUSINESS HEALTH SCORE: ni summary ya margin, expense ratio, na sales trend kwa kipindi ulichochagua."
             );
           }}
           style={({ pressed }) => ({ opacity: pressed ? 0.92 : 1, alignSelf: "flex-start" })}

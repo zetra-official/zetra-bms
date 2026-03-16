@@ -111,6 +111,37 @@ function sanitizeAmountInput(v: string) {
   return `${parts[0]}.${parts.slice(1).join("")}`;
 }
 
+function normalizeExpensePaymentMethod(value: any): "CASH" | "MOBILE" | "BANK" | "OTHER" {
+  const v = String(value ?? "").trim().toUpperCase();
+
+  if (v === "CASH") return "CASH";
+
+  if (
+    v === "MOBILE" ||
+    v === "MOBILE_MONEY" ||
+    v === "M-PESA" ||
+    v === "MPESA" ||
+    v === "TIGOPESA" ||
+    v === "AIRTELMONEY" ||
+    v === "HALOPESA"
+  ) {
+    return "MOBILE";
+  }
+
+  if (v === "BANK" || v === "BANK_TRANSFER" || v === "TRANSFER") {
+    return "BANK";
+  }
+
+  return "OTHER";
+}
+
+function paymentMethodIcon(method: string): keyof typeof Ionicons.glyphMap {
+  if (method === "CASH") return "wallet-outline";
+  if (method === "MOBILE") return "phone-portrait-outline";
+  if (method === "BANK") return "business-outline";
+  return "help-circle-outline";
+}
+
 function sectionTitle(title: string) {
   return (
     <Text
@@ -171,7 +202,7 @@ function PillChip({
       ) : null}
       <Text
         style={{
-          color: active ? theme.colors.text : theme.colors.text,
+          color: theme.colors.text,
           fontWeight: "900",
           fontSize: 13,
         }}
@@ -315,9 +346,6 @@ export default function ExpensesScreen() {
   const fmt = useCallback((n: number) => money.fmt(n), [money]);
 
   const canCreate = useMemo(() => !!activeStoreId, [activeStoreId]);
-  const canManage = useMemo(() => {
-    return (["owner", "admin"] as const).includes((activeRole ?? "staff") as any);
-  }, [activeRole]);
 
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState<ExpenseRow[]>([]);
@@ -330,7 +358,7 @@ export default function ExpensesScreen() {
   const [amount, setAmount] = useState<string>("");
   const [category, setCategory] = useState<string>("");
   const [note, setNote] = useState<string>("");
-  const [paymentMethod, setPaymentMethod] = useState<string>("CASH");
+  const [paymentMethod, setPaymentMethod] = useState<"CASH" | "MOBILE" | "BANK">("CASH");
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const liftAnim = useRef(new Animated.Value(10)).current;
@@ -547,7 +575,7 @@ export default function ExpensesScreen() {
     []
   );
 
-  const paymentMethods = useMemo(() => ["CASH", "M-PESA", "BANK", "CARD"], []);
+  const paymentMethods = useMemo(() => ["CASH", "MOBILE", "BANK"] as const, []);
 
   return (
     <Screen scroll={false} bottomPad={40}>
@@ -563,7 +591,6 @@ export default function ExpensesScreen() {
             gap: 14,
           }}
         >
-          {/* Header */}
           <View
             style={{
               flexDirection: "row",
@@ -613,7 +640,6 @@ export default function ExpensesScreen() {
             </Pressable>
           </View>
 
-          {/* Top compact overview */}
           <Card
             style={{
               gap: 14,
@@ -758,7 +784,6 @@ export default function ExpensesScreen() {
             </Card>
           )}
 
-          {/* Summary */}
           {sectionTitle("Summary")}
 
           <View style={{ flexDirection: "row", gap: 10 }}>
@@ -786,7 +811,6 @@ export default function ExpensesScreen() {
             accent="violet"
           />
 
-          {/* Add Expense */}
           {sectionTitle("Add Expense")}
 
           <Card
@@ -860,15 +884,7 @@ export default function ExpensesScreen() {
                     label={m}
                     active={paymentMethodLabel === m}
                     onPress={() => setPaymentMethod(m)}
-                    icon={
-                      m === "CASH"
-                        ? "wallet-outline"
-                        : m === "M-PESA"
-                        ? "phone-portrait-outline"
-                        : m === "BANK"
-                        ? "business-outline"
-                        : "card-outline"
-                    }
+                    icon={paymentMethodIcon(m)}
                   />
                 ))}
               </View>
@@ -907,7 +923,6 @@ export default function ExpensesScreen() {
             )}
           </Card>
 
-          {/* Recent */}
           {sectionTitle(`Recent (This Month) (${rows.length})`)}
 
           {rows.length === 0 ? (
@@ -941,154 +956,146 @@ export default function ExpensesScreen() {
               </Text>
             </Card>
           ) : (
-            rows.map((r, idx) => (
-              <Animated.View
-                key={r.id}
-                style={{
-                  opacity: fadeAnim,
-                  transform: [{ translateY: Animated.multiply(liftAnim, 0.6) }],
-                }}
-              >
-                <Card
+            rows.map((r, idx) => {
+              const method = normalizeExpensePaymentMethod(r.payment_method);
+
+              return (
+                <Animated.View
+                  key={r.id}
                   style={{
-                    gap: 12,
-                    padding: 16,
-                    borderRadius: 22,
-                    backgroundColor: "rgba(255,255,255,0.035)",
-                    borderColor:
-                      idx === 0 ? "rgba(239,68,68,0.24)" : theme.colors.border,
+                    opacity: fadeAnim,
+                    transform: [{ translateY: Animated.multiply(liftAnim, 0.6) }],
                   }}
                 >
-                  <View
+                  <Card
                     style={{
-                      flexDirection: "row",
-                      justifyContent: "space-between",
-                      alignItems: "flex-start",
                       gap: 12,
+                      padding: 16,
+                      borderRadius: 22,
+                      backgroundColor: "rgba(255,255,255,0.035)",
+                      borderColor:
+                        idx === 0 ? "rgba(239,68,68,0.24)" : theme.colors.border,
                     }}
                   >
-                    <View style={{ flex: 1 }}>
-                      <Text
-                        style={{
-                          color: theme.colors.text,
-                          fontWeight: "900",
-                          fontSize: 17,
-                        }}
-                        numberOfLines={1}
-                      >
-                        {r.category ?? "Expense"}
-                      </Text>
-
-                      <View
-                        style={{
-                          flexDirection: "row",
-                          flexWrap: "wrap",
-                          gap: 8,
-                          marginTop: 8,
-                        }}
-                      >
-                        <View
-                          style={{
-                            paddingHorizontal: 10,
-                            paddingVertical: 6,
-                            borderRadius: 999,
-                            borderWidth: 1,
-                            borderColor: theme.colors.border,
-                            backgroundColor: "rgba(255,255,255,0.04)",
-                          }}
-                        >
-                          <Text style={{ color: theme.colors.text, fontWeight: "800", fontSize: 12 }}>
-                            {r.payment_method ?? "—"}
-                          </Text>
-                        </View>
-
-                        <View
-                          style={{
-                            paddingHorizontal: 10,
-                            paddingVertical: 6,
-                            borderRadius: 999,
-                            borderWidth: 1,
-                            borderColor: theme.colors.border,
-                            backgroundColor: "rgba(255,255,255,0.04)",
-                          }}
-                        >
-                          <Text style={{ color: theme.colors.text, fontWeight: "800", fontSize: 12 }}>
-                            {r.expense_date}
-                          </Text>
-                        </View>
-                      </View>
-                    </View>
-
-                    <View
-                      style={{
-                        borderWidth: 1,
-                        borderColor: theme.colors.dangerBorder,
-                        paddingHorizontal: 14,
-                        paddingVertical: 8,
-                        borderRadius: 999,
-                        backgroundColor: theme.colors.dangerSoft,
-                      }}
-                    >
-                      <Text
-                        style={{
-                          color: theme.colors.danger,
-                          fontWeight: "900",
-                          fontSize: 15,
-                        }}
-                      >
-                        {fmt(Number(r.amount ?? 0))}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {!!r.note && (
-                    <View
-                      style={{
-                        borderWidth: 1,
-                        borderColor: theme.colors.border,
-                        borderRadius: 16,
-                        backgroundColor: "rgba(255,255,255,0.035)",
-                        padding: 12,
-                      }}
-                    >
-                      <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
-                        NOTE
-                      </Text>
-                      <Text
-                        style={{
-                          color: theme.colors.text,
-                          fontWeight: "800",
-                          marginTop: 6,
-                          lineHeight: 20,
-                        }}
-                      >
-                        {r.note}
-                      </Text>
-                    </View>
-                  )}
-
-                  {canManage ? (
                     <View
                       style={{
                         flexDirection: "row",
-                        alignItems: "center",
-                        gap: 8,
-                        paddingTop: 2,
+                        justifyContent: "space-between",
+                        alignItems: "flex-start",
+                        gap: 12,
                       }}
                     >
-                      <Ionicons
-                        name="construct-outline"
-                        size={14}
-                        color={theme.colors.muted}
-                      />
-                      <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                        Owner/Admin management hooks reserved (next step).
-                      </Text>
+                      <View style={{ flex: 1 }}>
+                        <Text
+                          style={{
+                            color: theme.colors.text,
+                            fontWeight: "900",
+                            fontSize: 17,
+                          }}
+                          numberOfLines={1}
+                        >
+                          {r.category ?? "Expense"}
+                        </Text>
+
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            flexWrap: "wrap",
+                            gap: 8,
+                            marginTop: 8,
+                          }}
+                        >
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
+                              gap: 6,
+                              paddingHorizontal: 10,
+                              paddingVertical: 6,
+                              borderRadius: 999,
+                              borderWidth: 1,
+                              borderColor: theme.colors.border,
+                              backgroundColor: "rgba(255,255,255,0.04)",
+                            }}
+                          >
+                            <Ionicons
+                              name={paymentMethodIcon(method)}
+                              size={13}
+                              color={theme.colors.muted}
+                            />
+                            <Text style={{ color: theme.colors.text, fontWeight: "800", fontSize: 12 }}>
+                              {method === "OTHER" ? "—" : method}
+                            </Text>
+                          </View>
+
+                          <View
+                            style={{
+                              paddingHorizontal: 10,
+                              paddingVertical: 6,
+                              borderRadius: 999,
+                              borderWidth: 1,
+                              borderColor: theme.colors.border,
+                              backgroundColor: "rgba(255,255,255,0.04)",
+                            }}
+                          >
+                            <Text style={{ color: theme.colors.text, fontWeight: "800", fontSize: 12 }}>
+                              {r.expense_date}
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+
+                      <View
+                        style={{
+                          borderWidth: 1,
+                          borderColor: theme.colors.dangerBorder,
+                          paddingHorizontal: 14,
+                          paddingVertical: 8,
+                          borderRadius: 999,
+                          backgroundColor: theme.colors.dangerSoft,
+                        }}
+                      >
+                        <Text
+                          style={{
+                            color: theme.colors.danger,
+                            fontWeight: "900",
+                            fontSize: 15,
+                          }}
+                        >
+                          {fmt(Number(r.amount ?? 0))}
+                        </Text>
+                      </View>
                     </View>
-                  ) : null}
-                </Card>
-              </Animated.View>
-            ))
+
+                    {!!r.note && (
+                      <View
+                        style={{
+                          borderWidth: 1,
+                          borderColor: theme.colors.border,
+                          borderRadius: 16,
+                          backgroundColor: "rgba(255,255,255,0.035)",
+                          padding: 12,
+                        }}
+                      >
+                        <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
+                          NOTE
+                        </Text>
+                        <Text
+                          style={{
+                            color: theme.colors.text,
+                            fontWeight: "800",
+                            marginTop: 6,
+                            lineHeight: 20,
+                          }}
+                        >
+                          {r.note}
+                        </Text>
+                      </View>
+                    )}
+                  </Card>
+                </Animated.View>
+              );
+            })
           )}
         </Animated.View>
       </ScrollView>

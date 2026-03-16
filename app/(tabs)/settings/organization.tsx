@@ -32,6 +32,15 @@ function Pill({ icon, label }: { icon: keyof typeof Ionicons.glyphMap; label: st
 
 export default function OrganizationSettings() {
   const router = useRouter();
+
+  const goBackSafe = React.useCallback(() => {
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+    router.push("/(tabs)/settings");
+  }, [router]);
+
   const org = useOrg();
 
   const name = org.activeOrgName ?? "No organization";
@@ -47,7 +56,7 @@ export default function OrganizationSettings() {
     <Screen scroll>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginTop: 2 }}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={goBackSafe}
           style={({ pressed }) => [
             {
               width: 42,

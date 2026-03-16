@@ -123,7 +123,7 @@ export default function TaskDetailScreen() {
           paddingHorizontal: 16,
           borderBottomWidth: 1,
           borderBottomColor: "rgba(255,255,255,0.08)",
-          backgroundColor: UI.colors.background,
+          backgroundColor: UI.background,
         }}
       >
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>

@@ -2,7 +2,6 @@
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Animated,
   AppState,
@@ -96,6 +95,12 @@ type CollectionBreakdown = {
   other: number;
   total: number;
   payments: number;
+};
+
+type ExpenseChannelBreakdown = {
+  cash: number;
+  bank: number;
+  mobile: number;
 };
 
 const AUTO_REFRESH_MS = 20_000;
@@ -401,6 +406,12 @@ function CompactFinanceCardHomePreview() {
     payments: 0,
   });
 
+  const [expenseByChannel, setExpenseByChannel] = useState<ExpenseChannelBreakdown>({
+    cash: 0,
+    bank: 0,
+    mobile: 0,
+  });
+
   const reqIdRef = useRef(0);
   const loadingRef = useRef(false);
 
@@ -585,6 +596,37 @@ function CompactFinanceCardHomePreview() {
     [orgId]
   );
 
+  const callExpenseBreakdown = useCallback(
+    async (sid: string, fromYMD: string, toYMD: string): Promise<ExpenseChannelBreakdown> => {
+      const { data, error } = await supabase.rpc("get_expense_channel_summary_v1", {
+        p_store_id: sid,
+        p_from: fromYMD,
+        p_to: toYMD,
+      } as any);
+      if (error) throw error;
+
+      const rows = (Array.isArray(data) ? data : []) as any[];
+
+      const out: ExpenseChannelBreakdown = {
+        cash: 0,
+        bank: 0,
+        mobile: 0,
+      };
+
+      for (const r of rows) {
+        const ch = String(r?.channel ?? "").trim().toUpperCase();
+        const amt = toNum(r?.amount ?? 0);
+
+        if (ch === "CASH") out.cash += amt;
+        else if (ch === "BANK") out.bank += amt;
+        else if (ch === "MOBILE") out.mobile += amt;
+      }
+
+      return out;
+    },
+    []
+  );
+
   const load = useCallback(
     async (opts?: { silent?: boolean }) => {
       const silent = !!opts?.silent;
@@ -607,12 +649,20 @@ function CompactFinanceCardHomePreview() {
         const { from, to } = rangeToFromTo(range);
         const { from: fromYMD, to: toYMD } = rangeToDates(range);
 
-        const [salesRes, expenseRes, profitRes, payRes, collectionsRes] = await Promise.allSettled([
+        const [
+          salesRes,
+          expenseRes,
+          profitRes,
+          payRes,
+          collectionsRes,
+          expenseBreakdownRes,
+        ] = await Promise.allSettled([
           callSalesForStore(storeId, from, to),
           callExpenseForStore(storeId, fromYMD, toYMD),
           callProfitOwnerOnly(storeId, from, to),
           callPaymentBreakdown(from, to, storeId),
           callCreditCollections(from, to, storeId),
+          callExpenseBreakdown(storeId, fromYMD, toYMD),
         ]);
 
         if (rid !== reqIdRef.current) return;
@@ -622,6 +672,7 @@ function CompactFinanceCardHomePreview() {
         if (profitRes.status === "fulfilled") setProfitRow(profitRes.value);
         if (payRes.status === "fulfilled") setPay(payRes.value);
         if (collectionsRes.status === "fulfilled") setCollections(collectionsRes.value);
+        if (expenseBreakdownRes.status === "fulfilled") setExpenseByChannel(expenseBreakdownRes.value);
 
         const firstErr =
           (salesRes.status === "rejected" && salesRes.reason) ||
@@ -629,6 +680,7 @@ function CompactFinanceCardHomePreview() {
           (profitRes.status === "rejected" && profitRes.reason) ||
           (payRes.status === "rejected" && payRes.reason) ||
           (collectionsRes.status === "rejected" && collectionsRes.reason) ||
+          (expenseBreakdownRes.status === "rejected" && expenseBreakdownRes.reason) ||
           null;
 
         if (firstErr) {
@@ -650,6 +702,7 @@ function CompactFinanceCardHomePreview() {
       callProfitOwnerOnly,
       callPaymentBreakdown,
       callCreditCollections,
+      callExpenseBreakdown,
     ]
   );
 
@@ -683,12 +736,16 @@ function CompactFinanceCardHomePreview() {
     const avg =
       salesRow.orders > 0 ? fmtMoney(salesRow.total / Math.max(1, salesRow.orders)) : "—";
 
-    const paidCash = fmtMoney(pay.cash);
-    const paidBank = fmtMoney(pay.bank);
-    const paidMobile = fmtMoney(pay.mobile);
+    const cashAfterExpenseNum = pay.cash - expenseByChannel.cash;
+    const bankAfterExpenseNum = pay.bank - expenseByChannel.bank;
+    const mobileAfterExpenseNum = pay.mobile - expenseByChannel.mobile;
+
+    const paidCash = fmtMoney(cashAfterExpenseNum);
+    const paidBank = fmtMoney(bankAfterExpenseNum);
+    const paidMobile = fmtMoney(mobileAfterExpenseNum);
     const creditBal = fmtMoney(pay.credit);
 
-    const paidTotalNum = pay.cash + pay.bank + pay.mobile;
+    const paidTotalNum = cashAfterExpenseNum + bankAfterExpenseNum + mobileAfterExpenseNum;
     const totalMoneyInNum = paidTotalNum + toNum(collections.total);
     const totalMoneyIn = fmtMoney(totalMoneyInNum);
 
@@ -709,23 +766,23 @@ function CompactFinanceCardHomePreview() {
         <View style={{ flexDirection: "row", gap: 12 }}>
           <MiniStat label="Orders" value={orders} />
           <MiniStat label="Avg/Order" value={avg.toString().replace(/\s+/g, " ")} />
-          <MiniStat label="Money In" value={totalMoneyIn} hint="received" />
+          <MiniStat label="Money In" value={totalMoneyIn} hint="after expenses" />
         </View>
 
         <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
 
         <Text style={{ color: UI.faint, fontWeight: "900", fontSize: 12, letterSpacing: 0.3 }}>
-          PAYMENT BREAKDOWN (PAID + CREDIT BALANCE)
+          PAYMENT BREAKDOWN (AFTER EXPENSES + CREDIT BALANCE)
         </Text>
 
         <View style={{ flexDirection: "row", gap: 12 }}>
-          <MiniStat label="Cash" value={paidCash} />
-          <MiniStat label="Mobile" value={paidMobile} />
-          <MiniStat label="Total Money In" value={totalMoneyIn} hint="money received" />
+          <MiniStat label="Cash" value={paidCash} hint="after expense" />
+          <MiniStat label="Mobile" value={paidMobile} hint="after expense" />
+          <MiniStat label="Total Money In" value={totalMoneyIn} hint="available + received" />
         </View>
 
         <View style={{ flexDirection: "row", gap: 12 }}>
-          <MiniStat label="Bank" value={paidBank} />
+          <MiniStat label="Bank" value={paidBank} hint="after expense" />
           <MiniStat label="Credit (Balance)" value={creditBal} hint="not money-in" />
           <View style={{ flex: 1 }} />
         </View>
@@ -749,7 +806,17 @@ function CompactFinanceCardHomePreview() {
         </View>
       </View>
     );
-  }, [salesRow, expRow, profitRow, pay, collections, displayCurrency, displayLocale, isOwner]);
+  }, [
+    salesRow,
+    expRow,
+    profitRow,
+    pay,
+    collections,
+    expenseByChannel,
+    displayCurrency,
+    displayLocale,
+    isOwner,
+  ]);
 
   return (
     <View style={{ paddingTop: 12 }}>
@@ -814,18 +881,22 @@ function CompactFinanceCardHomePreview() {
           }}
           hitSlop={10}
           style={({ pressed }) => ({
+            marginTop: 2,
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: "rgba(16,185,129,0.28)",
+            backgroundColor: "rgba(16,185,129,0.10)",
+            paddingVertical: 14,
+            paddingHorizontal: 14,
             flexDirection: "row",
             alignItems: "center",
+            justifyContent: "center",
+            gap: 10,
             opacity: pressed ? 0.92 : 1,
           })}
         >
-          <Text style={{ color: UI.muted, fontWeight: "800" }}>Today details</Text>
-          <View style={{ flex: 1 }} />
-          {loading ? (
-            <ActivityIndicator />
-          ) : (
-            <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 18 }}>›</Text>
-          )}
+          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>Open Finance</Text>
+          <Text style={{ color: UI.faint, fontWeight: "900", fontSize: 16 }}>›</Text>
         </Pressable>
       </Card>
     </View>
@@ -993,7 +1064,7 @@ function CompactClubRevenueCardHomePreview({ onOpen }: { onOpen: () => void }) {
           </Text>
           <View style={{ flex: 1 }} />
           {loading ? (
-            <ActivityIndicator />
+            <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 18 }}>...</Text>
           ) : (
             <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 18 }}>›</Text>
           )}
@@ -1222,7 +1293,7 @@ function CompactStockValueCardHomePreview() {
           </Text>
           <View style={{ flex: 1 }} />
           {loading ? (
-            <ActivityIndicator />
+            <Text style={{ color: UI.muted, fontWeight: "900" }}>...</Text>
           ) : (
             <Text style={{ color: UI.faint, fontWeight: "900" }}>{STOCK_IN_VERSION_BADGE}</Text>
           )}

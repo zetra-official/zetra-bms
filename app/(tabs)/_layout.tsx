@@ -127,6 +127,13 @@ export default function TabsLayout() {
       <Tabs.Screen name="settings/subscription" options={{ href: null }} />
       <Tabs.Screen name="settings/cashier-closing" options={{ href: null }} />
       <Tabs.Screen name="settings/business-statement" options={{ href: null }} />
+
+      {/* Meeting Room Flow */}
+      <Tabs.Screen name="settings/meeting-room" options={{ href: null }} />
+      <Tabs.Screen name="settings/meeting-room-create" options={{ href: null }} />
+      <Tabs.Screen name="settings/meeting-room-list" options={{ href: null }} />
+      <Tabs.Screen name="settings/meeting-room-detail" options={{ href: null }} />
+      <Tabs.Screen name="settings/meeting-room-invites" options={{ href: null }} />
     </Tabs>
   );
 }
