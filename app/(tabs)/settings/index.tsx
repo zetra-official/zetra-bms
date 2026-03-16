@@ -179,6 +179,16 @@ export default function MoreHome() {
         />
       </Card>
 
+      <SectionTitle label="Communication" />
+      <Card>
+        <Row
+          icon="chatbubbles-outline"
+          title="Meeting Room"
+          subtitle="Create rooms and chat with invited members"
+          onPress={() => router.push("/(tabs)/settings/meeting-room")}
+        />
+      </Card>
+
       <SectionTitle label="Organization" />
       <Card>
         <Row

@@ -1262,9 +1262,7 @@ export default function AiChatScreen() {
   const consumeAiCredits = useCallback(
     async (credits: number): Promise<{ ok: boolean; error: string }> => {
       const orgId = clean(org.activeOrgId);
-      if (!orgId) return { ok: false, error: "Missing orgId" };
-
-      const n = Number(credits);
+      if (!orgId) return { ok: false, error: "Missing orgId" };const n = Number(credits);
       if (!Number.isFinite(n) || n <= 0) {
         return { ok: false, error: "Invalid credits amount" };
       }

@@ -220,8 +220,16 @@ function guessLangLabelFromLocale(locale: string) {
 
 export default function RegionalSettings() {
   const router = useRouter();
-  const org = useOrg();
 
+  const goBackSafe = useCallback(() => {
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+    router.push("/(tabs)/settings");
+  }, [router]);
+
+  const org = useOrg();
   const orgId = clean(org.activeOrgId);
   const canEdit = org.activeRole === "owner" || org.activeRole === "admin";
 
@@ -625,7 +633,7 @@ export default function RegionalSettings() {
     <Screen scroll>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginTop: 2 }}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={goBackSafe}
           style={({ pressed }) => [
             {
               width: 42,

@@ -1,6 +1,16 @@
 // app/(tabs)/products.tsx
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert, Modal, Pressable, Text, TextInput, View } from "react-native";
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { CameraView, useCameraPermissions } from "expo-camera";
 
@@ -19,14 +29,9 @@ type ProductRow = {
   sku: string | null;
   unit: string | null;
   category: string | null;
-
   selling_price: number | null;
-
-  // manage-only RPC may return it; staff-safe might omit/return null
   cost_price?: number | null;
-
   barcode?: string | null;
-
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -57,7 +62,6 @@ function cleanBarcode(raw: string) {
 export default function ProductsTabScreen() {
   const { activeOrgId, activeOrgName, activeRole } = useOrg();
 
-  // ✅ Single source of truth for money display (org currency from KV)
   const money = useOrgMoneyPrefs(activeOrgId ?? "");
 
   const canManage = useMemo(
@@ -78,19 +82,20 @@ export default function ProductsTabScreen() {
   const [sku, setSku] = useState("");
   const [unit, setUnit] = useState("");
   const [category, setCategory] = useState("");
-
-  // ✅ Selling OPTIONAL
   const [sellingPrice, setSellingPrice] = useState("");
-
-  // ✅ Cost OPTIONAL
   const [costPrice, setCostPrice] = useState("");
-
-  // ✅ Barcode OPTIONAL
   const [barcode, setBarcode] = useState("");
 
-  /* =========================
-     Barcode Scanner (Modal)
-  ========================= */
+  const [editOpen, setEditOpen] = useState(false);
+  const [editProductId, setEditProductId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editSku, setEditSku] = useState("");
+  const [editUnit, setEditUnit] = useState("");
+  const [editCategory, setEditCategory] = useState("");
+  const [editSellingPrice, setEditSellingPrice] = useState("");
+  const [editCostPrice, setEditCostPrice] = useState("");
+  const [editBarcode, setEditBarcode] = useState("");
+
   const [permission, requestPermission] = useCameraPermissions();
   const [scanOpen, setScanOpen] = useState(false);
   const [scanBusy, setScanBusy] = useState(false);
@@ -124,8 +129,7 @@ export default function ProductsTabScreen() {
 
   const onBarcodeScanned = useCallback(
     (result: any) => {
-      if (!scanOpen) return;
-      if (scanBusy) return;
+      if (!scanOpen || scanBusy) return;
 
       const raw = String(result?.data ?? "").trim();
       const v = cleanBarcode(raw);
@@ -133,6 +137,7 @@ export default function ProductsTabScreen() {
 
       setScanBusy(true);
       setBarcode(v);
+
       setTimeout(() => {
         closeScan();
       }, 180);
@@ -174,6 +179,30 @@ export default function ProductsTabScreen() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const openEdit = useCallback((p: ProductRow) => {
+    setEditProductId(p.id);
+    setEditName(String(p.name ?? ""));
+    setEditSku(String(p.sku ?? ""));
+    setEditUnit(String(p.unit ?? ""));
+    setEditCategory(String(p.category ?? ""));
+    setEditSellingPrice(p.selling_price != null ? String(Math.trunc(Number(p.selling_price))) : "");
+    setEditCostPrice(p.cost_price != null ? String(Math.trunc(Number(p.cost_price))) : "");
+    setEditBarcode(String(p.barcode ?? ""));
+    setEditOpen(true);
+  }, []);
+
+  const closeEdit = useCallback(() => {
+    setEditOpen(false);
+    setEditProductId(null);
+    setEditName("");
+    setEditSku("");
+    setEditUnit("");
+    setEditCategory("");
+    setEditSellingPrice("");
+    setEditCostPrice("");
+    setEditBarcode("");
+  }, []);
 
   const add = useCallback(async () => {
     if (!activeOrgId) return;
@@ -246,7 +275,86 @@ export default function ProductsTabScreen() {
     } finally {
       setLoading(false);
     }
-  }, [activeOrgId, canManage, name, sku, unit, category, sellingPrice, costPrice, barcode, load]);
+  }, [activeOrgId, barcode, canManage, category, costPrice, load, name, sellingPrice, sku, unit]);
+
+  const saveEdit = useCallback(async () => {
+    if (!activeOrgId || !editProductId) return;
+
+    if (!canManage) {
+      Alert.alert("No Access", "Owner/Admin only.");
+      return;
+    }
+
+    const n = editName.trim();
+    if (!n) {
+      Alert.alert("Missing", "Weka product name.");
+      return;
+    }
+
+    const sp = parsePositiveNumberOrNull(editSellingPrice);
+    if (editSellingPrice.trim() && sp === null) {
+      Alert.alert("Invalid", "Selling Price iwe namba (> 0) au uiache wazi.");
+      return;
+    }
+
+    const cp = parseZeroOrPositiveNumberOrNull(editCostPrice);
+    if (editCostPrice.trim() && cp === null) {
+      Alert.alert("Invalid", "Cost Price iwe namba (>= 0) au uiache wazi.");
+      return;
+    }
+
+    if (sp === null && cp === null) {
+      Alert.alert("Missing", "Weka angalau Cost Price au Selling Price (hata moja).");
+      return;
+    }
+
+    const bc = cleanBarcode(editBarcode);
+    if (bc && bc.length < 6) {
+      Alert.alert("Invalid", "Barcode inaonekana fupi sana. Hakikisha umeweka sahihi.");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { error: e } = await supabase.rpc("upsert_product", {
+        p_org_id: activeOrgId,
+        p_product_id: editProductId,
+        p_name: n,
+        p_sku: editSku.trim() || null,
+        p_unit: editUnit.trim() || null,
+        p_category: editCategory.trim() || null,
+        p_is_active: true,
+        p_selling_price: sp,
+        p_cost_price: cp,
+        p_barcode: bc || null,
+      });
+
+      if (e) throw e;
+
+      closeEdit();
+      await load();
+      Alert.alert("Success ✅", "Product updated");
+    } catch (err: any) {
+      Alert.alert("Failed", err?.message ?? "Unknown error");
+    } finally {
+      setLoading(false);
+    }
+  }, [
+    activeOrgId,
+    canManage,
+    closeEdit,
+    editBarcode,
+    editCategory,
+    editCostPrice,
+    editName,
+    editProductId,
+    editSellingPrice,
+    editSku,
+    editUnit,
+    load,
+  ]);
 
   const remove = useCallback(
     async (productId: string, productName: string) => {
@@ -273,7 +381,9 @@ export default function ProductsTabScreen() {
                   p_product_id: productId,
                 });
                 if (e) throw e;
+
                 await load();
+                Alert.alert("Success ✅", "Product deleted/archived safely");
               } catch (err: any) {
                 Alert.alert("Failed", err?.message ?? "Unknown error");
               } finally {
@@ -287,6 +397,19 @@ export default function ProductsTabScreen() {
     },
     [activeOrgId, canManage, load]
   );
+
+  const visibleRows = useMemo(() => rows.filter((r) => r.is_active !== false), [rows]);
+
+  const solidInputStyle = {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.lg,
+    backgroundColor: "#111827",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    color: theme.colors.text,
+    fontWeight: "800" as const,
+  };
 
   return (
     <Screen scroll>
@@ -361,6 +484,7 @@ export default function ProductsTabScreen() {
                 }}
               />
             </View>
+
             <View style={{ flex: 1 }}>
               <TextInput
                 value={unit}
@@ -398,7 +522,6 @@ export default function ProductsTabScreen() {
             }}
           />
 
-          {/* ✅ Barcode (optional) + Scan */}
           <View style={{ gap: 8 }}>
             <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Barcode (optional)</Text>
 
@@ -425,20 +548,18 @@ export default function ProductsTabScreen() {
               <Pressable
                 onPress={openScan}
                 disabled={loading}
-                style={({ pressed }) => [
-                  {
-                    width: 48,
-                    height: 48,
-                    borderRadius: 999,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderWidth: 1,
-                    borderColor: theme.colors.emeraldBorder,
-                    backgroundColor: theme.colors.emeraldSoft,
-                    opacity: loading ? 0.55 : pressed ? 0.92 : 1,
-                    transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
-                  },
-                ]}
+                style={({ pressed }) => ({
+                  width: 48,
+                  height: 48,
+                  borderRadius: 999,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderWidth: 1,
+                  borderColor: theme.colors.emeraldBorder,
+                  backgroundColor: theme.colors.emeraldSoft,
+                  opacity: loading ? 0.55 : pressed ? 0.92 : 1,
+                  transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
+                })}
               >
                 <Ionicons name="barcode-outline" size={20} color={theme.colors.text} />
               </Pressable>
@@ -447,20 +568,18 @@ export default function ProductsTabScreen() {
                 <Pressable
                   onPress={() => setBarcode("")}
                   disabled={loading}
-                  style={({ pressed }) => [
-                    {
-                      width: 48,
-                      height: 48,
-                      borderRadius: 999,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      borderWidth: 1,
-                      borderColor: theme.colors.border,
-                      backgroundColor: "rgba(255,255,255,0.06)",
-                      opacity: loading ? 0.55 : pressed ? 0.92 : 1,
-                      transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
-                    },
-                  ]}
+                  style={({ pressed }) => ({
+                    width: 48,
+                    height: 48,
+                    borderRadius: 999,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderWidth: 1,
+                    borderColor: theme.colors.border,
+                    backgroundColor: "rgba(255,255,255,0.06)",
+                    opacity: loading ? 0.55 : pressed ? 0.92 : 1,
+                    transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
+                  })}
                 >
                   <Ionicons name="close" size={20} color={theme.colors.text} />
                 </Pressable>
@@ -510,9 +629,13 @@ export default function ProductsTabScreen() {
             />
           )}
 
-          <Button title={loading ? "Saving..." : "Add Product"} onPress={add} disabled={loading} variant="primary" />
+          <Button
+            title={loading ? "Saving..." : "Add Product"}
+            onPress={add}
+            disabled={loading}
+            variant="primary"
+          />
 
-          {/* Scanner modal */}
           <Modal
             visible={scanOpen}
             animationType="fade"
@@ -616,7 +739,7 @@ export default function ProductsTabScreen() {
 
       <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>Product List</Text>
 
-      {rows.length === 0 ? (
+      {visibleRows.length === 0 ? (
         <Card>
           <Text style={{ color: theme.colors.text, fontWeight: "900" }}>No products yet</Text>
           <Text style={{ color: theme.colors.muted, fontWeight: "700", marginTop: 6 }}>
@@ -624,10 +747,10 @@ export default function ProductsTabScreen() {
           </Text>
         </Card>
       ) : (
-        rows.map((p) => {
+        visibleRows.map((p) => {
           const sp = Number(p.selling_price ?? 0);
           const cp = Number(p.cost_price ?? NaN);
-          const bc = String((p as any).barcode ?? "").trim();
+          const bc = String(p.barcode ?? "").trim();
 
           return (
             <Pressable
@@ -671,14 +794,186 @@ export default function ProductsTabScreen() {
               )}
 
               {canManage && (
-                <View style={{ marginTop: 12 }}>
-                  <Button title="Delete" variant="secondary" onPress={() => remove(p.id, p.name)} disabled={loading} />
+                <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
+                  <View style={{ flex: 1 }}>
+                    <Button title="Edit" variant="primary" onPress={() => openEdit(p)} disabled={loading} />
+                  </View>
+
+                  <View style={{ flex: 1 }}>
+                    <Button title="Delete" variant="secondary" onPress={() => remove(p.id, p.name)} disabled={loading} />
+                  </View>
                 </View>
               )}
             </Pressable>
           );
         })
       )}
+
+      <Modal
+        visible={editOpen}
+        animationType="fade"
+        transparent
+        presentationStyle="overFullScreen"
+        statusBarTranslucent
+        onRequestClose={closeEdit}
+      >
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={0}
+        >
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: "rgba(2,6,23,0.96)",
+              paddingHorizontal: 16,
+              paddingTop: 28,
+              paddingBottom: 18,
+              justifyContent: "center",
+            }}
+          >
+            <View
+              style={{
+                width: "100%",
+                maxHeight: "88%",
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,0.10)",
+                borderRadius: 24,
+                backgroundColor: "#0B1220",
+                overflow: "hidden",
+                shadowColor: "#000",
+                shadowOpacity: 0.35,
+                shadowRadius: 24,
+                shadowOffset: { width: 0, height: 12 },
+                elevation: 18,
+              }}
+            >
+              <View
+                style={{
+                  paddingHorizontal: 16,
+                  paddingTop: 16,
+                  paddingBottom: 14,
+                  borderBottomWidth: 1,
+                  borderBottomColor: "rgba(255,255,255,0.08)",
+                  backgroundColor: "#0F172A",
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 20 }}>
+                  Edit Product
+                </Text>
+
+                <Pressable
+                  onPress={closeEdit}
+                  hitSlop={10}
+                  style={({ pressed }) => ({
+                    width: 44,
+                    height: 44,
+                    borderRadius: 999,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderWidth: 1,
+                    borderColor: "rgba(255,255,255,0.12)",
+                    backgroundColor: pressed ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.08)",
+                  })}
+                >
+                  <Ionicons name="close" size={22} color={theme.colors.text} />
+                </Pressable>
+              </View>
+
+              <ScrollView
+                style={{ flexGrow: 0 }}
+                contentContainerStyle={{ padding: 16, paddingBottom: 22, gap: 12 }}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+              >
+                <TextInput
+                  value={editName}
+                  onChangeText={setEditName}
+                  placeholder="Product name"
+                  placeholderTextColor="rgba(255,255,255,0.35)"
+                  style={solidInputStyle}
+                />
+
+                <View style={{ flexDirection: "row", gap: 10 }}>
+                  <View style={{ flex: 1 }}>
+                    <TextInput
+                      value={editSku}
+                      onChangeText={setEditSku}
+                      placeholder="SKU (optional)"
+                      placeholderTextColor="rgba(255,255,255,0.35)"
+                      style={solidInputStyle}
+                    />
+                  </View>
+
+                  <View style={{ flex: 1 }}>
+                    <TextInput
+                      value={editUnit}
+                      onChangeText={setEditUnit}
+                      placeholder="Unit (optional)"
+                      placeholderTextColor="rgba(255,255,255,0.35)"
+                      style={solidInputStyle}
+                    />
+                  </View>
+                </View>
+
+                <TextInput
+                  value={editCategory}
+                  onChangeText={setEditCategory}
+                  placeholder="Category (optional)"
+                  placeholderTextColor="rgba(255,255,255,0.35)"
+                  style={solidInputStyle}
+                />
+
+                <TextInput
+                  value={editBarcode}
+                  onChangeText={(t) => setEditBarcode(cleanBarcode(t))}
+                  placeholder="Barcode (optional)"
+                  placeholderTextColor="rgba(255,255,255,0.35)"
+                  style={solidInputStyle}
+                />
+
+                <TextInput
+                  value={editSellingPrice}
+                  onChangeText={(t) => setEditSellingPrice(t.replace(/[^0-9]/g, ""))}
+                  placeholder="Selling Price (optional)"
+                  keyboardType="numeric"
+                  placeholderTextColor="rgba(255,255,255,0.35)"
+                  style={solidInputStyle}
+                />
+
+                {canSeeCost && (
+                  <TextInput
+                    value={editCostPrice}
+                    onChangeText={(t) => setEditCostPrice(t.replace(/[^0-9]/g, ""))}
+                    placeholder="Cost Price (optional)"
+                    keyboardType="numeric"
+                    placeholderTextColor="rgba(255,255,255,0.35)"
+                    style={solidInputStyle}
+                  />
+                )}
+
+                <View style={{ flexDirection: "row", gap: 10, marginTop: 6 }}>
+                  <View style={{ flex: 1 }}>
+                    <Button title="Cancel" variant="secondary" onPress={closeEdit} disabled={loading} />
+                  </View>
+
+                  <View style={{ flex: 1 }}>
+                    <Button
+                      title={loading ? "Saving..." : "Save Changes"}
+                      variant="primary"
+                      onPress={saveEdit}
+                      disabled={loading}
+                    />
+                  </View>
+                </View>
+              </ScrollView>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </Screen>
   );
 }
