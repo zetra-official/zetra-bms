@@ -1,3 +1,4 @@
+// app/finance/history.tsx
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -624,6 +625,18 @@ function TrendLegend() {
         />
         <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>Profit</Text>
       </View>
+
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+        <View
+          style={{
+            width: 10,
+            height: 10,
+            borderRadius: 999,
+            backgroundColor: "rgba(201,74,74,0.95)",
+          }}
+        />
+        <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>Negative Profit</Text>
+      </View>
     </View>
   );
 }
@@ -644,15 +657,32 @@ function TrendChart({
   const barGap = 6;
   const gridLines = 4;
 
-  const maxVal = useMemo(() => {
-    const vals: number[] = [1];
+  const { maxVal, minVal } = useMemo(() => {
+    const vals: number[] = [0];
+
     for (const p of data) {
       vals.push(toNum(p.sales));
       vals.push(toNum(p.expenses));
-      if (showProfit && p.profit != null) vals.push(Math.max(0, toNum(p.profit)));
+      if (showProfit && p.profit != null) vals.push(toNum(p.profit));
     }
-    return Math.max(...vals);
+
+    return {
+      maxVal: Math.max(...vals, 1),
+      minVal: Math.min(...vals, 0),
+    };
   }, [data, showProfit]);
+
+  const range = Math.max(1, maxVal - minVal);
+
+  const valueToY = useCallback(
+    (value: number) => {
+      const ratio = (maxVal - value) / range;
+      return ratio * chartHeight;
+    },
+    [chartHeight, maxVal, range]
+  );
+
+  const zeroY = valueToY(0);
 
   if (!data.length) {
     return (
@@ -670,12 +700,12 @@ function TrendChart({
   }
 
   const ticks = Array.from({ length: gridLines + 1 }, (_, i) => {
-    const ratio = 1 - i / gridLines;
-    const value = maxVal * ratio;
+    const ratio = i / gridLines;
+    const value = maxVal - ratio * range;
     return {
       key: `tick-${i}`,
       value,
-      top: chartHeight * (i / gridLines),
+      top: chartHeight * ratio,
     };
   });
 
@@ -726,21 +756,28 @@ function TrendChart({
                     top: t.top,
                     height: 1,
                     backgroundColor:
-                      t.value === 0 ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.07)",
+                      Math.abs(t.value) < 0.0001
+                        ? "rgba(255,255,255,0.18)"
+                        : "rgba(255,255,255,0.07)",
                   }}
                 />
               ))}
 
               <View style={{ flexDirection: "row", alignItems: "flex-end", height: chartHeight }}>
                 {data.map((p) => {
-                  const salesH = Math.max(3, (toNum(p.sales) / maxVal) * (chartHeight - 12));
-                  const expH = Math.max(3, (toNum(p.expenses) / maxVal) * (chartHeight - 12));
-                  const profitVal =
-                    showProfit && p.profit != null ? Math.max(0, toNum(p.profit)) : 0;
-                  const profitH =
-                    showProfit && p.profit != null
-                      ? Math.max(3, (profitVal / maxVal) * (chartHeight - 12))
-                      : 0;
+                  const salesVal = toNum(p.sales);
+                  const expVal = toNum(p.expenses);
+                  const profitVal = showProfit && p.profit != null ? toNum(p.profit) : null;
+
+                  const salesTop = valueToY(salesVal);
+                  const salesHeight = Math.max(3, Math.abs(zeroY - salesTop));
+
+                  const expTop = valueToY(expVal);
+                  const expHeight = Math.max(3, Math.abs(zeroY - expTop));
+
+                  const profitTop = profitVal != null ? valueToY(profitVal) : zeroY;
+                  const profitHeight =
+                    profitVal != null ? Math.max(3, Math.abs(zeroY - profitTop)) : 0;
 
                   return (
                     <View
@@ -765,31 +802,66 @@ function TrendChart({
                         <View
                           style={{
                             width: barWidth,
-                            height: salesH,
-                            borderTopLeftRadius: 8,
-                            borderTopRightRadius: 8,
-                            backgroundColor: "rgba(16,185,129,0.95)",
+                            height: chartHeight,
+                            position: "relative",
                           }}
-                        />
+                        >
+                          <View
+                            style={{
+                              position: "absolute",
+                              left: 0,
+                              right: 0,
+                              top: Math.min(zeroY, salesTop),
+                              height: salesHeight,
+                              borderRadius: 8,
+                              backgroundColor: "rgba(16,185,129,0.95)",
+                            }}
+                          />
+                        </View>
+
                         <View
                           style={{
                             width: barWidth,
-                            height: expH,
-                            borderTopLeftRadius: 8,
-                            borderTopRightRadius: 8,
-                            backgroundColor: "rgba(245,158,11,0.95)",
+                            height: chartHeight,
+                            position: "relative",
                           }}
-                        />
+                        >
+                          <View
+                            style={{
+                              position: "absolute",
+                              left: 0,
+                              right: 0,
+                              top: Math.min(zeroY, expTop),
+                              height: expHeight,
+                              borderRadius: 8,
+                              backgroundColor: "rgba(245,158,11,0.95)",
+                            }}
+                          />
+                        </View>
+
                         {showProfit ? (
                           <View
                             style={{
                               width: barWidth,
-                              height: profitH,
-                              borderTopLeftRadius: 8,
-                              borderTopRightRadius: 8,
-                              backgroundColor: "rgba(59,130,246,0.95)",
+                              height: chartHeight,
+                              position: "relative",
                             }}
-                          />
+                          >
+                            <View
+                              style={{
+                                position: "absolute",
+                                left: 0,
+                                right: 0,
+                                top: Math.min(zeroY, profitTop),
+                                height: profitHeight,
+                                borderRadius: 8,
+                                backgroundColor:
+                                  profitVal != null && profitVal < 0
+                                    ? "rgba(201,74,74,0.95)"
+                                    : "rgba(59,130,246,0.95)",
+                              }}
+                            />
+                          </View>
                         ) : null}
                       </View>
                     </View>
@@ -1188,7 +1260,11 @@ export default function FinanceHistoryScreen() {
   );
 
   const callCreditCollections = useCallback(
-    async (fromISO: string, toISO: string, sidOrNull: string | null): Promise<CreditCollections> => {
+    async (
+      fromISO: string,
+      toISO: string,
+      sidOrNull: string | null
+    ): Promise<CreditCollections> => {
       if (!orgId) return { cash: 0, bank: 0, mobile: 0, other: 0, payments: 0 };
 
       const { data, error } = await supabase.rpc(
@@ -1868,40 +1944,60 @@ export default function FinanceHistoryScreen() {
       let score = 50;
 
       if (profitMargin != null) {
-        if (profitMargin >= 20) score += 25;
-        else if (profitMargin >= 10) score += 15;
-        else if (profitMargin >= 0) score += 5;
-        else score -= 20;
+        if (profitMargin >= 25) score += 28;
+        else if (profitMargin >= 15) score += 20;
+        else if (profitMargin >= 8) score += 12;
+        else if (profitMargin >= 0) score += 4;
+        else if (profitMargin >= -5) score -= 18;
+        else if (profitMargin >= -10) score -= 30;
+        else score -= 42;
       }
 
       if (expensesRatio != null) {
-        if (expensesRatio <= 20) score += 15;
-        else if (expensesRatio <= 35) score += 8;
-        else if (expensesRatio <= 50) score += 2;
-        else score -= 15;
+        if (expensesRatio <= 10) score += 16;
+        else if (expensesRatio <= 20) score += 10;
+        else if (expensesRatio <= 30) score += 4;
+        else if (expensesRatio <= 40) score -= 6;
+        else if (expensesRatio <= 50) score -= 14;
+        else score -= 24;
       }
 
-      if (salesTrend === "INCREASING") score += 15;
-      else if (salesTrend === "STABLE") score += 5;
-      else if (salesTrend === "DECLINING") score -= 15;
+      if (salesTrend === "INCREASING") score += 14;
+      else if (salesTrend === "STABLE") score += 4;
+      else if (salesTrend === "DECLINING") score -= 16;
+
+      if (isOwner && totalProfitForHealth != null && totalProfitForHealth < 0) {
+        score -= 12;
+      }
 
       score = Math.max(0, Math.min(100, Math.round(score)));
 
       let label: HealthSummary["label"] = "WATCH";
-      if (score >= 80) label = "EXCELLENT";
-      else if (score >= 60) label = "GOOD";
-      else if (score >= 40) label = "WATCH";
-      else label = "CRITICAL";
+
+      if (profitMargin != null && profitMargin < -8) {
+        label = "CRITICAL";
+      } else if (score >= 85) {
+        label = "EXCELLENT";
+      } else if (score >= 65) {
+        label = "GOOD";
+      } else if (score >= 40) {
+        label = "WATCH";
+      } else {
+        label = "CRITICAL";
+      }
 
       let message = "Business performance needs attention.";
+
       if (label === "EXCELLENT") {
         message = "Strong performance. Sales, cost control, and trend look healthy.";
       } else if (label === "GOOD") {
         message = "Business is healthy with stable fundamentals and manageable cost pressure.";
       } else if (label === "WATCH") {
-        message = "Business is okay, but margin, expenses, or trend needs close monitoring.";
-      } else if (label === "CRITICAL") {
-        message = "Urgent review needed. Profitability or trend is under pressure.";
+        message =
+          "Business needs close monitoring. Margin, expenses, or stock movement should be reviewed.";
+      } else {
+        message =
+          "Critical attention needed. Profitability is under pressure and immediate action is recommended.";
       }
 
       const nextHealth: HealthSummary = {
@@ -1978,11 +2074,6 @@ export default function FinanceHistoryScreen() {
   const directOrdersText = String(salesRow.directOrders ?? 0);
   const clubOrdersText = String(salesRow.clubOrders ?? 0);
 
-  const grossCash = fmt(pay.cash);
-  const grossBank = fmt(pay.bank);
-  const grossMobile = fmt(pay.mobile);
-  const credit = fmt(pay.credit);
-
   const expTotal = fmt(expRow.total);
   const expCount = String(expRow.count ?? 0);
   const expAvg = expRow.count > 0 ? fmt(expRow.total / Math.max(1, expRow.count)) : "—";
@@ -2004,6 +2095,8 @@ export default function FinanceHistoryScreen() {
   const cTotal = fmt(cTotalNum);
   const cPayments = String(collections.payments ?? 0);
 
+  const credit = fmt(pay.credit);
+
   const availableCashNum = subtractFloor(pay.cash + collections.cash, expPay.cash);
   const availableBankNum = subtractFloor(pay.bank + collections.bank, expPay.bank);
   const availableMobileNum = subtractFloor(pay.mobile + collections.mobile, expPay.mobile);
@@ -2013,7 +2106,8 @@ export default function FinanceHistoryScreen() {
   const availableBank = fmt(availableBankNum);
   const availableMobile = fmt(availableMobileNum);
 
-  const totalMoneyInNum = availableCashNum + availableBankNum + availableMobileNum + availableOtherNum;
+  const totalMoneyInNum =
+    availableCashNum + availableBankNum + availableMobileNum + availableOtherNum;
   const totalMoneyIn = fmt(totalMoneyInNum);
 
   const paidMoneyInNum = pay.cash + pay.bank + pay.mobile;
@@ -2114,9 +2208,30 @@ export default function FinanceHistoryScreen() {
       });
     }
 
+    if (isOwner && profitRow.net < 0) {
+      items.push({
+        id: "negative-profit",
+        tone: "danger",
+        title: "Biashara ipo negative profit",
+        body: `Profit ya kipindi hiki ni ${fmt(
+          profitRow.net
+        )}. Hii inaonyesha sales hazijatosha kufunika cost na expenses. Punguza matumizi ya haraka, kagua pricing, na sukuma bidhaa zenye margin nzuri.`,
+      });
+    }
+
     if (expRow.total > 0 && salesRow.total > 0) {
       const ratio = (expRow.total / salesRow.total) * 100;
-      if (ratio >= 35) {
+
+      if (isOwner && profitRow.net < 0 && expRow.total > Math.abs(profitRow.net)) {
+        items.push({
+          id: "expenses-eating-profit",
+          tone: "danger",
+          title: "Expenses zinakula profit kwa nguvu",
+          body: `Expenses za kipindi hiki ni ${fmt(expRow.total)} wakati net profit ni ${fmt(
+            profitRow.net
+          )}. Hii ni signal ya kubana matumizi na kuchambua expense kubwa moja moja.`,
+        });
+      } else if (ratio >= 35) {
         items.push({
           id: "expense-high",
           tone: "danger",
@@ -2154,7 +2269,8 @@ export default function FinanceHistoryScreen() {
           items.push({
             id: "fast-moving",
             tone: "good",
-            title: scope === "ALL" ? "Bidhaa inayongoza kwenye org" : "Bidhaa ya kusukuma / kurestock",
+            title:
+              scope === "ALL" ? "Bidhaa inayongoza kwenye org" : "Bidhaa ya kusukuma / kurestock",
             body:
               scope === "ALL"
                 ? `${topFast.product_name}${fastStore ? ` (${fastStore})` : ""} inaongoza kwa movement ndani ya org. Activity score yake ni ${topFast.activity_score.toFixed(1)}.`
@@ -2398,6 +2514,8 @@ export default function FinanceHistoryScreen() {
     comparisonRows,
     fmt,
     storesMeta,
+    profitRow,
+    isOwner,
   ]);
 
   const currentCacheKey = `${orgId}|${scope}|${storeId}|${mode}|${dateFrom}|${dateTo}`;
@@ -2659,7 +2777,11 @@ export default function FinanceHistoryScreen() {
               <View style={{ flexDirection: "row", gap: 12 }}>
                 <MiniStat label="Cash" value={expenseCash} />
                 <MiniStat label="Mobile" value={expenseMobile} />
-                <MiniStat label="Total" value={expenseByChannelsTotal} hint={`${expPay.count} expenses`} />
+                <MiniStat
+                  label="Total"
+                  value={expenseByChannelsTotal}
+                  hint={`${expPay.count} expenses`}
+                />
               </View>
 
               <View style={{ flexDirection: "row", gap: 12 }}>
@@ -2758,7 +2880,11 @@ export default function FinanceHistoryScreen() {
               <View style={{ flexDirection: "row", gap: 12 }}>
                 <MiniStat label="Cash" value={expenseCash} />
                 <MiniStat label="Mobile" value={expenseMobile} />
-                <MiniStat label="Total" value={expenseByChannelsTotal} hint={`${expPay.count} expenses`} />
+                <MiniStat
+                  label="Total"
+                  value={expenseByChannelsTotal}
+                  hint={`${expPay.count} expenses`}
+                />
               </View>
 
               <View style={{ flexDirection: "row", gap: 12 }}>
@@ -2786,7 +2912,11 @@ export default function FinanceHistoryScreen() {
               <View style={{ flexDirection: "row", gap: 12 }}>
                 <MiniStat label="Cash" value={expenseCash} />
                 <MiniStat label="Mobile" value={expenseMobile} />
-                <MiniStat label="Total" value={expenseByChannelsTotal} hint={`${expPay.count} expenses`} />
+                <MiniStat
+                  label="Total"
+                  value={expenseByChannelsTotal}
+                  hint={`${expPay.count} expenses`}
+                />
               </View>
 
               <View style={{ flexDirection: "row", gap: 12 }}>
@@ -3084,7 +3214,7 @@ export default function FinanceHistoryScreen() {
                 borderRadius: 20,
                 borderWidth: 1,
                 borderColor:
-                  cashflow.confidence === "HIGH"
+                 cashflow.confidence === "HIGH"
                     ? "rgba(16,185,129,0.26)"
                     : cashflow.confidence === "LOW"
                       ? "rgba(245,158,11,0.26)"
@@ -3331,7 +3461,8 @@ export default function FinanceHistoryScreen() {
           <TrendChart data={trendRows} fmtShort={fmtShort} showProfit={isOwner} />
 
           <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 12 }}>
-            Profit graph ni Owner-only. Expenses graph inaonekana kwa owner/admin.
+            Profit graph ni Owner-only. Expenses graph inaonekana kwa owner/admin. Profit ikiwa
+            negative itaonekana kwa red chini ya zero line.
           </Text>
         </Card>
 

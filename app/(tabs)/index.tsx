@@ -2,7 +2,6 @@
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Alert,
   Animated,
   AppState,
   Pressable,
@@ -12,10 +11,10 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 
 import { useOrg } from "../../src/context/OrgContext";
 import { supabase } from "../../src/supabase/supabaseClient";
-import { Button } from "../../src/ui/Button";
 import { Card } from "../../src/ui/Card";
 import { Screen } from "../../src/ui/Screen";
 import { StoreGuard } from "../../src/ui/StoreGuard";
@@ -101,6 +100,44 @@ type ExpenseChannelBreakdown = {
   cash: number;
   bank: number;
   mobile: number;
+};
+
+type NotifRow = {
+  id: string;
+  organization_id: string;
+  store_id: string;
+  source_store_id: string | null;
+  event_type: string;
+  title: string;
+  body: any;
+  items: any;
+  total_units: number;
+  total_skus: number;
+  actor_user_id: string;
+  actor_name: string | null;
+  ref_movement_id: string | null;
+  created_by: string;
+  created_at: string;
+  is_read: boolean;
+  read_at: string | null;
+};
+
+type Receipt = {
+  key: string;
+  movement_id: string | null;
+  organization_id: string;
+  store_id: string;
+  source_store_id: string | null;
+  event_type: string;
+  title: string;
+  actor_user_id: string;
+  actor_name: string | null;
+  created_at: string;
+  total_units: number;
+  total_skus: number;
+  is_read: boolean;
+  rows: NotifRow[];
+  items: any[];
 };
 
 const AUTO_REFRESH_MS = 20_000;
@@ -262,6 +299,26 @@ function extractScalarValue(x: any): number {
   return 0;
 }
 
+function clean(v: any) {
+  return String(v ?? "").trim();
+}
+
+function clampInt(n: any, fallback = 0) {
+  const x = Number(n);
+  if (!Number.isFinite(x)) return fallback;
+  return Math.floor(x);
+}
+
+function fmtLocal(iso: string) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  try {
+    return d.toLocaleString();
+  } catch {
+    return iso;
+  }
+}
+
 function MiniStat({
   label,
   value,
@@ -343,6 +400,468 @@ function useAutoRefresh(cb: () => void, enabled: boolean, ms: number) {
       if (interval) clearInterval(interval);
     };
   }, [enabled, ms]);
+}
+
+function HeaderHero({
+  activeOrgName,
+  activeStoreName,
+  isCashier,
+}: {
+  activeOrgName?: string | null;
+  activeStoreName?: string | null;
+  isCashier: boolean;
+}) {
+  const orgLabel = String(activeOrgName ?? "Workspace").trim() || "Workspace";
+  const storeLabel = String(activeStoreName ?? "No active store").trim() || "No active store";
+
+  return (
+    <View style={{ marginBottom: 6 }}>
+      <Text style={{ fontSize: 30, fontWeight: "900", color: UI.text, letterSpacing: 0.2 }}>
+        ZETRA BMS
+      </Text>
+
+      <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 4, fontSize: 16 }}>
+        {isCashier ? "Cashier Dashboard" : "Business Command Center"}
+      </Text>
+
+      <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
+        <View
+          style={{
+            paddingHorizontal: 10,
+            paddingVertical: 6,
+            borderRadius: 999,
+            borderWidth: 1,
+            borderColor: "rgba(255,255,255,0.10)",
+            backgroundColor: "rgba(255,255,255,0.04)",
+          }}
+        >
+          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }} numberOfLines={1}>
+            {orgLabel}
+          </Text>
+        </View>
+
+        <View
+          style={{
+            paddingHorizontal: 10,
+            paddingVertical: 6,
+            borderRadius: 999,
+            borderWidth: 1,
+            borderColor: "rgba(16,185,129,0.20)",
+            backgroundColor: "rgba(16,185,129,0.08)",
+            maxWidth: "55%",
+          }}
+        >
+          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }} numberOfLines={1}>
+            {storeLabel}
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function PremiumMetricCard({
+  title,
+  subtitle,
+  iconName,
+  loading,
+  badgeText,
+  children,
+  ctaLabel,
+  onPress,
+  footerRight,
+  error,
+}: {
+  title: string;
+  subtitle: string;
+  iconName: keyof typeof Ionicons.glyphMap;
+  loading?: boolean;
+  badgeText?: string;
+  children: React.ReactNode;
+  ctaLabel: string;
+  onPress: () => void;
+  footerRight?: React.ReactNode;
+  error?: string | null;
+}) {
+  return (
+    <View style={{ paddingTop: 14 }}>
+      <Card
+        style={{
+          gap: 14,
+          borderRadius: 22,
+          borderColor: "rgba(16,185,129,0.22)",
+          backgroundColor: "rgba(15,18,24,0.98)",
+          overflow: "hidden",
+        }}
+      >
+        <View
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            top: -72,
+            right: -42,
+            width: 180,
+            height: 180,
+            borderRadius: 999,
+            backgroundColor: "rgba(16,185,129,0.08)",
+          }}
+        />
+
+        <View
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            left: -46,
+            bottom: -82,
+            width: 170,
+            height: 170,
+            borderRadius: 999,
+            backgroundColor: "rgba(34,211,238,0.04)",
+          }}
+        />
+
+        <View
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            left: 0,
+            right: 0,
+            top: 0,
+            height: 1,
+            backgroundColor: "rgba(255,255,255,0.10)",
+          }}
+        />
+
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <View
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: 16,
+              alignItems: "center",
+              justifyContent: "center",
+              borderWidth: 1,
+              borderColor: "rgba(16,185,129,0.28)",
+              backgroundColor: "rgba(16,185,129,0.12)",
+            }}
+          >
+            <Ionicons name={loading ? "ellipsis-horizontal" : iconName} size={20} color={UI.emerald} />
+          </View>
+
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }} numberOfLines={1}>
+              {title}
+            </Text>
+            <Text style={{ color: UI.muted, fontWeight: "700", marginTop: 2 }} numberOfLines={1}>
+              {subtitle}
+            </Text>
+          </View>
+
+          {badgeText ? (
+            <View
+              style={{
+                paddingHorizontal: 10,
+                paddingVertical: 6,
+                borderRadius: 999,
+                borderWidth: 1,
+                borderColor: "rgba(16,185,129,0.24)",
+                backgroundColor: "rgba(16,185,129,0.10)",
+              }}
+            >
+              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }}>{badgeText}</Text>
+            </View>
+          ) : null}
+        </View>
+
+        {!!error && (
+          <Card
+            style={{
+              borderColor: "rgba(201,74,74,0.35)",
+              backgroundColor: "rgba(201,74,74,0.10)",
+              borderRadius: 18,
+              padding: 12,
+            }}
+          >
+            <Text style={{ color: UI.danger, fontWeight: "900" }}>{error}</Text>
+          </Card>
+        )}
+
+        {children}
+
+        <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
+
+        <Pressable
+          onPress={onPress}
+          hitSlop={10}
+          style={({ pressed }) => ({
+            borderRadius: 18,
+            borderWidth: 1,
+            borderColor: "rgba(16,185,129,0.30)",
+            backgroundColor: "rgba(16,185,129,0.12)",
+            paddingVertical: 15,
+            paddingHorizontal: 16,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 10,
+            opacity: pressed ? 0.92 : 1,
+          })}
+        >
+          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>{ctaLabel}</Text>
+          {footerRight ? footerRight : <Text style={{ color: UI.faint, fontWeight: "900", fontSize: 16 }}>›</Text>}
+        </Pressable>
+      </Card>
+    </View>
+  );
+}
+
+function CompactNotificationsHomeCard() {
+  const router = useRouter();
+  const { activeStoreId, activeStoreName, stores } = useOrg();
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [rows, setRows] = useState<NotifRow[]>([]);
+
+  const storeNameById = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const s of stores ?? []) {
+      map[String((s as any).store_id)] = String((s as any).store_name ?? "Store");
+    }
+    return map;
+  }, [stores]);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { data, error: e } = await supabase.rpc("get_my_notifications", {
+        p_store_id: null,
+        p_limit: 80,
+      });
+
+      if (e) throw e;
+      setRows((data ?? []) as NotifRow[]);
+    } catch (err: any) {
+      setError(err?.message ?? "Failed to load notifications");
+      setRows([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load])
+  );
+
+  useAutoRefresh(() => {
+    void load();
+  }, true, AUTO_REFRESH_MS);
+
+  const receipts: Receipt[] = useMemo(() => {
+    const map = new Map<string, Receipt>();
+
+    for (const n of rows ?? []) {
+      const key = n.ref_movement_id ? `mv:${n.ref_movement_id}` : `n:${n.id}`;
+      const itemsArr = Array.isArray(n.items) ? n.items : [];
+
+      const existing = map.get(key);
+      if (!existing) {
+        map.set(key, {
+          key,
+          movement_id: n.ref_movement_id ?? null,
+          organization_id: n.organization_id,
+          store_id: n.store_id,
+          source_store_id: n.source_store_id ?? null,
+          event_type: n.event_type,
+          title: n.title,
+          actor_user_id: n.actor_user_id,
+          actor_name: n.actor_name ?? null,
+          created_at: n.created_at,
+          total_units: clampInt(n.total_units, 0),
+          total_skus: clampInt(n.total_skus, 0),
+          is_read: !!n.is_read,
+          rows: [n],
+          items: [...itemsArr],
+        });
+        continue;
+      }
+
+      existing.rows.push(n);
+
+      if (new Date(n.created_at).getTime() > new Date(existing.created_at).getTime()) {
+        existing.created_at = n.created_at;
+      }
+
+      existing.total_units += clampInt(n.total_units, 0);
+
+      if (itemsArr.length > 0) {
+        existing.items.push(...itemsArr);
+      }
+
+      existing.is_read = existing.is_read && !!n.is_read;
+    }
+
+    const out = Array.from(map.values());
+    out.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    return out;
+  }, [rows]);
+
+  const unreadCount = useMemo(() => receipts.filter((r) => !r.is_read).length, [receipts]);
+
+  const activeStoreUnread = useMemo(() => {
+    if (!activeStoreId) return 0;
+    return receipts.filter((r) => clean(r.store_id) === clean(activeStoreId) && !r.is_read).length;
+  }, [receipts, activeStoreId]);
+
+  const openNotifications = useCallback(() => {
+    router.push("/notifications");
+  }, [router]);
+
+  return (
+    <View style={{ paddingTop: 14 }}>
+      <Pressable
+        onPress={openNotifications}
+        hitSlop={10}
+        style={({ pressed }) => ({
+          opacity: pressed ? 0.97 : 1,
+          transform: pressed ? [{ scale: 0.997 }] : [{ scale: 1 }],
+        })}
+      >
+        <Card
+          style={{
+            gap: 10,
+            padding: 14,
+            borderRadius: 20,
+            borderColor: unreadCount > 0 ? "rgba(16,185,129,0.24)" : "rgba(255,255,255,0.10)",
+            backgroundColor: "rgba(15,18,24,0.98)",
+          }}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <View
+              style={{
+                width: 42,
+                height: 42,
+                borderRadius: 14,
+                alignItems: "center",
+                justifyContent: "center",
+                borderWidth: 1,
+                borderColor: unreadCount > 0 ? UI.emeraldBorder : "rgba(255,255,255,0.10)",
+                backgroundColor: unreadCount > 0 ? UI.emeraldSoft : "rgba(255,255,255,0.05)",
+              }}
+            >
+              <Ionicons
+                name={unreadCount > 0 ? "notifications" : "notifications-outline"}
+                size={18}
+                color={unreadCount > 0 ? UI.emerald : UI.text}
+              />
+            </View>
+
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }} numberOfLines={1}>
+                Notifications
+              </Text>
+              <Text
+                style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 2 }}
+                numberOfLines={1}
+              >
+                Alerts, movements, stock entries
+              </Text>
+            </View>
+
+            <View
+              style={{
+                minWidth: 40,
+                paddingHorizontal: 10,
+                paddingVertical: 5,
+                borderRadius: 999,
+                borderWidth: 1,
+                borderColor: unreadCount > 0 ? UI.emeraldBorder : "rgba(255,255,255,0.10)",
+                backgroundColor: unreadCount > 0 ? UI.emeraldSoft : "rgba(255,255,255,0.05)",
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }}>
+                {loading ? "..." : unreadCount}
+              </Text>
+            </View>
+          </View>
+
+          {!!error && (
+            <Card
+              style={{
+                borderColor: "rgba(201,74,74,0.35)",
+                backgroundColor: "rgba(201,74,74,0.10)",
+                borderRadius: 16,
+                padding: 10,
+              }}
+            >
+              <Text style={{ color: UI.danger, fontWeight: "900", fontSize: 12 }}>{error}</Text>
+            </Card>
+          )}
+
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 11 }}>Unread</Text>
+              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18, marginTop: 2 }}>
+                {unreadCount}
+              </Text>
+            </View>
+
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 11 }}>This Store</Text>
+              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18, marginTop: 2 }}>
+                {activeStoreUnread}
+              </Text>
+              <Text
+                style={{ color: UI.faint, fontWeight: "800", fontSize: 11, marginTop: 2 }}
+                numberOfLines={1}
+              >
+                {activeStoreName ?? "—"}
+              </Text>
+            </View>
+
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 11 }}>Receipts</Text>
+              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18, marginTop: 2 }}>
+                {receipts.length}
+              </Text>
+              <Text
+                style={{ color: UI.faint, fontWeight: "800", fontSize: 11, marginTop: 2 }}
+                numberOfLines={1}
+              >
+                recently loaded
+              </Text>
+            </View>
+          </View>
+
+          <Pressable
+            onPress={openNotifications}
+            hitSlop={10}
+            style={({ pressed }) => ({
+              flexDirection: "row",
+              alignItems: "center",
+              opacity: pressed ? 0.92 : 1,
+              paddingTop: 2,
+            })}
+          >
+            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 13 }}>
+              Open Notification Center
+            </Text>
+            <View style={{ flex: 1 }} />
+            <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 16 }}>›</Text>
+          </Pressable>
+        </Card>
+      </Pressable>
+    </View>
+  );
 }
 
 function CompactFinanceCardHomePreview() {
@@ -722,8 +1241,6 @@ function CompactFinanceCardHomePreview() {
     void load({ silent: true });
   }, !!orgId && !!storeId, AUTO_REFRESH_MS);
 
-  const subtitle = `Store: ${storeName}`;
-
   const body = useMemo(() => {
     const fmtMoney = (n: number) =>
       formatMoney(n, { currency: displayCurrency, locale: displayLocale }).replace(/\s+/g, " ");
@@ -736,24 +1253,14 @@ function CompactFinanceCardHomePreview() {
     const avg =
       salesRow.orders > 0 ? fmtMoney(salesRow.total / Math.max(1, salesRow.orders)) : "—";
 
-    const cashAfterExpenseNum = pay.cash - expenseByChannel.cash;
-    const bankAfterExpenseNum = pay.bank - expenseByChannel.bank;
-    const mobileAfterExpenseNum = pay.mobile - expenseByChannel.mobile;
+    const paidTotalNum =
+      pay.cash -
+      expenseByChannel.cash +
+      (pay.bank - expenseByChannel.bank) +
+      (pay.mobile - expenseByChannel.mobile);
 
-    const paidCash = fmtMoney(cashAfterExpenseNum);
-    const paidBank = fmtMoney(bankAfterExpenseNum);
-    const paidMobile = fmtMoney(mobileAfterExpenseNum);
-    const creditBal = fmtMoney(pay.credit);
-
-    const paidTotalNum = cashAfterExpenseNum + bankAfterExpenseNum + mobileAfterExpenseNum;
     const totalMoneyInNum = paidTotalNum + toNum(collections.total);
     const totalMoneyIn = fmtMoney(totalMoneyInNum);
-
-    const colCash = fmtMoney(collections.cash);
-    const colBank = fmtMoney(collections.bank);
-    const colMobile = fmtMoney(collections.mobile);
-    const colTotal = fmtMoney(collections.total);
-    const colCountHint = collections.payments > 0 ? `${collections.payments} payments` : "0 payments";
 
     return (
       <View style={{ gap: 10, paddingTop: 2 }}>
@@ -767,42 +1274,6 @@ function CompactFinanceCardHomePreview() {
           <MiniStat label="Orders" value={orders} />
           <MiniStat label="Avg/Order" value={avg.toString().replace(/\s+/g, " ")} />
           <MiniStat label="Money In" value={totalMoneyIn} hint="after expenses" />
-        </View>
-
-        <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
-
-        <Text style={{ color: UI.faint, fontWeight: "900", fontSize: 12, letterSpacing: 0.3 }}>
-          PAYMENT BREAKDOWN (AFTER EXPENSES + CREDIT BALANCE)
-        </Text>
-
-        <View style={{ flexDirection: "row", gap: 12 }}>
-          <MiniStat label="Cash" value={paidCash} hint="after expense" />
-          <MiniStat label="Mobile" value={paidMobile} hint="after expense" />
-          <MiniStat label="Total Money In" value={totalMoneyIn} hint="available + received" />
-        </View>
-
-        <View style={{ flexDirection: "row", gap: 12 }}>
-          <MiniStat label="Bank" value={paidBank} hint="after expense" />
-          <MiniStat label="Credit (Balance)" value={creditBal} hint="not money-in" />
-          <View style={{ flex: 1 }} />
-        </View>
-
-        <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
-
-        <Text style={{ color: UI.faint, fontWeight: "900", fontSize: 12, letterSpacing: 0.3 }}>
-          CREDIT COLLECTIONS (PAYMENTS RECEIVED)
-        </Text>
-
-        <View style={{ flexDirection: "row", gap: 12 }}>
-          <MiniStat label="Cash" value={colCash} />
-          <MiniStat label="Mobile" value={colMobile} />
-          <MiniStat label="Total" value={colTotal} hint={colCountHint} />
-        </View>
-
-        <View style={{ flexDirection: "row", gap: 12 }}>
-          <MiniStat label="Bank" value={colBank} />
-          <View style={{ flex: 1 }} />
-          <View style={{ flex: 1 }} />
         </View>
       </View>
     );
@@ -819,87 +1290,30 @@ function CompactFinanceCardHomePreview() {
   ]);
 
   return (
-    <View style={{ paddingTop: 12 }}>
-      <Card style={{ gap: 10 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-              Finance
-            </Text>
-            <Text style={{ color: UI.muted, fontWeight: "700", marginTop: 2 }} numberOfLines={1}>
-              {subtitle}
-            </Text>
-          </View>
-
-          <Pressable
-            onPress={() => void load()}
-            hitSlop={10}
-            style={({ pressed }) => ({
-              paddingHorizontal: 12,
-              paddingVertical: 10,
-              borderRadius: 999,
-              borderWidth: 1,
-              borderColor: "rgba(255,255,255,0.12)",
-              backgroundColor: "rgba(255,255,255,0.06)",
-              opacity: pressed ? 0.92 : 1,
-            })}
-          >
-            <Text style={{ color: UI.text, fontWeight: "900" }}>{loading ? "..." : "Reload"}</Text>
-          </Pressable>
-        </View>
-
-        {!!err && (
-          <Card
-            style={{
-              borderColor: "rgba(201,74,74,0.35)",
-              backgroundColor: "rgba(201,74,74,0.10)",
-              borderRadius: 18,
-              padding: 12,
-            }}
-          >
-            <Text style={{ color: UI.danger, fontWeight: "900" }}>{err}</Text>
-          </Card>
-        )}
-
-        {body}
-
-        <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)", marginTop: 4 }} />
-
-        <Pressable
-          onPress={() => {
-            const dates = rangeToDates("today");
-            router.push({
-              pathname: "/finance/history",
-              params: {
-                mode: "SALES",
-                scope: "STORE",
-                range: "today",
-                from: dates.from,
-                to: dates.to,
-              } as any,
-            } as any);
-          }}
-          hitSlop={10}
-          style={({ pressed }) => ({
-            marginTop: 2,
-            borderRadius: 16,
-            borderWidth: 1,
-            borderColor: "rgba(16,185,129,0.28)",
-            backgroundColor: "rgba(16,185,129,0.10)",
-            paddingVertical: 14,
-            paddingHorizontal: 14,
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 10,
-            opacity: pressed ? 0.92 : 1,
-          })}
-        >
-          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>Open Finance</Text>
-          <Text style={{ color: UI.faint, fontWeight: "900", fontSize: 16 }}>›</Text>
-        </Pressable>
-      </Card>
-    </View>
+    <PremiumMetricCard
+      title="Finance"
+      subtitle={`Store: ${storeName}`}
+      iconName="bar-chart-outline"
+      loading={loading}
+      badgeText={isOwner ? "LIVE" : "STORE"}
+      error={err}
+      ctaLabel="Open Finance"
+      onPress={() => {
+        const dates = rangeToDates("today");
+        router.push({
+          pathname: "/finance/history",
+          params: {
+            mode: "SALES",
+            scope: "STORE",
+            range: "today",
+            from: dates.from,
+            to: dates.to,
+          } as any,
+        } as any);
+      }}
+    >
+      {body}
+    </PremiumMetricCard>
   );
 }
 
@@ -1000,77 +1414,22 @@ function CompactClubRevenueCardHomePreview({ onOpen }: { onOpen: () => void }) {
   }).replace(/\s+/g, " ");
 
   return (
-    <View style={{ paddingTop: 10 }}>
-      <Card style={{ gap: 10 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-              Club Revenue
-            </Text>
-            <Text style={{ color: UI.muted, fontWeight: "700", marginTop: 2 }} numberOfLines={1}>
-              Store: {storeName}
-            </Text>
-          </View>
-
-          <Pressable
-            onPress={() => void load()}
-            hitSlop={10}
-            style={({ pressed }) => ({
-              paddingHorizontal: 12,
-              paddingVertical: 10,
-              borderRadius: 999,
-              borderWidth: 1,
-              borderColor: "rgba(255,255,255,0.12)",
-              backgroundColor: "rgba(255,255,255,0.06)",
-              opacity: pressed ? 0.92 : 1,
-            })}
-          >
-            <Text style={{ color: UI.text, fontWeight: "900" }}>{loading ? "..." : "Reload"}</Text>
-          </Pressable>
-        </View>
-
-        {!!err && (
-          <Card
-            style={{
-              borderColor: "rgba(201,74,74,0.35)",
-              backgroundColor: "rgba(201,74,74,0.10)",
-              borderRadius: 18,
-              padding: 12,
-            }}
-          >
-            <Text style={{ color: UI.danger, fontWeight: "900" }}>{err}</Text>
-          </Card>
-        )}
-
-        <View style={{ flexDirection: "row", gap: 12, paddingTop: 2 }}>
-          <MiniStat label="Revenue" value={revenue} />
-          <MiniStat label="Paid" value={paid} />
-          <MiniStat label="Orders" value={String(row?.delivered_orders ?? 0)} hint="delivered" />
-        </View>
-
-        <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)", marginTop: 4 }} />
-
-        <Pressable
-          onPress={onOpen}
-          hitSlop={10}
-          style={({ pressed }) => ({
-            flexDirection: "row",
-            alignItems: "center",
-            opacity: pressed ? 0.92 : 1,
-          })}
-        >
-          <Text style={{ color: UI.muted, fontWeight: "800" }} numberOfLines={1}>
-            {row ? "Live dashboard" : "—"}
-          </Text>
-          <View style={{ flex: 1 }} />
-          {loading ? (
-            <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 18 }}>...</Text>
-          ) : (
-            <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 18 }}>›</Text>
-          )}
-        </Pressable>
-      </Card>
-    </View>
+    <PremiumMetricCard
+      title="Club Revenue"
+      subtitle={`Store: ${storeName}`}
+      iconName="pulse-outline"
+      loading={loading}
+      badgeText="LIVE"
+      error={err}
+      ctaLabel="Open Club Revenue"
+      onPress={onOpen}
+    >
+      <View style={{ flexDirection: "row", gap: 12, paddingTop: 2 }}>
+        <MiniStat label="Revenue" value={revenue} />
+        <MiniStat label="Paid" value={paid} />
+        <MiniStat label="Orders" value={String(row?.delivered_orders ?? 0)} hint="delivered" />
+      </View>
+    </PremiumMetricCard>
   );
 }
 
@@ -1211,10 +1570,6 @@ function CompactStockValueCardHomePreview() {
     void load();
   }, !!orgId && !!storeId, AUTO_REFRESH_MS);
 
-  const openHistory = useCallback(() => {
-    router.push("/stocks/history");
-  }, [router]);
-
   const onHand = formatMoney(toNum(row?.stock_on_hand_value), {
     currency: displayCurrency,
     locale: displayLocale,
@@ -1224,82 +1579,27 @@ function CompactStockValueCardHomePreview() {
     locale: displayLocale,
   }).replace(/\s+/g, " ");
 
-  const subtitle = `Store: ${storeName}`;
-
   return (
-    <View style={{ paddingTop: 12 }}>
-      <Card style={{ gap: 10 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-              Stock Value
-            </Text>
-            <Text style={{ color: UI.muted, fontWeight: "700", marginTop: 2 }} numberOfLines={1}>
-              {subtitle}
-            </Text>
-          </View>
-
-          <Pressable
-            onPress={() => void load()}
-            hitSlop={10}
-            style={({ pressed }) => ({
-              paddingHorizontal: 12,
-              paddingVertical: 10,
-              borderRadius: 999,
-              borderWidth: 1,
-              borderColor: "rgba(255,255,255,0.12)",
-              backgroundColor: "rgba(255,255,255,0.06)",
-              opacity: pressed ? 0.92 : 1,
-            })}
-          >
-            <Text style={{ color: UI.text, fontWeight: "900" }}>{loading ? "..." : "Reload"}</Text>
-          </Pressable>
-        </View>
-
-        {!!err && (
-          <Card
-            style={{
-              borderColor: "rgba(201,74,74,0.35)",
-              backgroundColor: "rgba(201,74,74,0.10)",
-              borderRadius: 18,
-              padding: 12,
-            }}
-          >
-            <Text style={{ color: UI.danger, fontWeight: "900" }}>{err}</Text>
-            <Text style={{ color: UI.faint, fontWeight: "800", marginTop: 6 }}>
-              Tip: stock-in uses {STOCK_IN_VERSION_BADGE} (fallback to v1 if missing).
-            </Text>
-          </Card>
-        )}
-
-        <View style={{ flexDirection: "row", gap: 12, paddingTop: 2 }}>
-          <MiniStat label="On Hand Value" value={onHand} hint="current stock" />
-          <MiniStat label="Stock In Value" value={stockIn} hint="received (+)" />
-        </View>
-
-        <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)", marginTop: 4 }} />
-
-        <Pressable
-          onPress={openHistory}
-          hitSlop={10}
-          style={({ pressed }) => ({
-            flexDirection: "row",
-            alignItems: "center",
-            opacity: pressed ? 0.92 : 1,
-          })}
-        >
-          <Text style={{ color: UI.muted, fontWeight: "800" }}>
-            {row ? `Range: ${row.date_from} → ${row.date_to}` : "—"}
-          </Text>
-          <View style={{ flex: 1 }} />
-          {loading ? (
-            <Text style={{ color: UI.muted, fontWeight: "900" }}>...</Text>
-          ) : (
-            <Text style={{ color: UI.faint, fontWeight: "900" }}>{STOCK_IN_VERSION_BADGE}</Text>
-          )}
-        </Pressable>
-      </Card>
-    </View>
+    <PremiumMetricCard
+      title="Stock Value"
+      subtitle={`Store: ${storeName}`}
+      iconName="cube-outline"
+      loading={loading}
+      badgeText="INVENTORY"
+      error={err}
+      ctaLabel="Open Stock History"
+      onPress={() => router.push("/stocks/history")}
+      footerRight={
+        <Text style={{ color: UI.faint, fontWeight: "900", fontSize: 12 }}>
+          {loading ? "..." : STOCK_IN_VERSION_BADGE}
+        </Text>
+      }
+    >
+      <View style={{ flexDirection: "row", gap: 12, paddingTop: 2 }}>
+        <MiniStat label="On Hand Value" value={onHand} hint="current stock" />
+        <MiniStat label="Stock In Value" value={stockIn} hint="received (+)" />
+      </View>
+    </PremiumMetricCard>
   );
 }
 
@@ -1393,7 +1693,7 @@ function ZetraAiCard({ onOpen }: { onOpen: () => void }) {
   };
 
   return (
-    <View style={{ paddingTop: 12 }}>
+    <View style={{ paddingTop: 14 }}>
       <Pressable
         onPress={onOpen}
         hitSlop={10}
@@ -1567,7 +1867,7 @@ function ZetraAiCard({ onOpen }: { onOpen: () => void }) {
 
 function CashierQuickHome() {
   const router = useRouter();
-  const { loading, refreshing, refresh, activeOrgName, activeRole, activeStoreName } = useOrg();
+  const { refreshing, refresh, activeOrgName, activeRole, activeStoreName } = useOrg();
 
   const [handoffCount, setHandoffCount] = useState<number>(0);
   const [handoffLoading, setHandoffLoading] = useState(false);
@@ -1612,7 +1912,7 @@ function CashierQuickHome() {
       <Text style={{ color: UI.muted, fontWeight: "800" }}>Cashier Workspace</Text>
 
       <Text style={{ color: UI.faint, fontWeight: "800" }}>
-        Org: <Text style={{ color: UI.text, fontWeight: "900" }}>{activeOrgName ?? "—"}</Text>
+        Organization: <Text style={{ color: UI.text, fontWeight: "900" }}>{activeOrgName ?? "—"}</Text>
       </Text>
 
       <Text style={{ color: UI.faint, fontWeight: "800" }}>
@@ -1620,7 +1920,7 @@ function CashierQuickHome() {
       </Text>
 
       <Text style={{ color: UI.faint, fontWeight: "800" }}>
-        Store: <Text style={{ color: UI.text, fontWeight: "900" }}>{activeStoreName ?? "—"}</Text>
+        Active Store: <Text style={{ color: UI.text, fontWeight: "900" }}>{activeStoreName ?? "—"}</Text>
       </Text>
 
       {!!handoffError && (
@@ -1652,21 +1952,194 @@ function CashierQuickHome() {
         </Text>
 
         <Text style={{ color: UI.muted, fontWeight: "800" }}>
-          Hizi ni order zilizotumwa kwa cashier queue yako.
+          Hizi ni order zilizotumwa kwenye cashier queue yako.
         </Text>
       </Card>
 
-      <Button
-        title={loading || refreshing || handoffLoading ? "Refreshing..." : "Refresh"}
+      <Pressable
         onPress={onRefreshAll}
-        disabled={loading || refreshing || handoffLoading}
-        variant="primary"
-      />
+        disabled={refreshing || handoffLoading}
+        style={({ pressed }) => ({
+          borderRadius: 18,
+          borderWidth: 1,
+          borderColor: "rgba(16,185,129,0.30)",
+          backgroundColor: "rgba(16,185,129,0.12)",
+          paddingVertical: 15,
+          paddingHorizontal: 16,
+          alignItems: "center",
+          justifyContent: "center",
+          opacity: pressed || refreshing || handoffLoading ? 0.92 : 1,
+        })}
+      >
+        <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
+          {refreshing || handoffLoading ? "Refreshing..." : "Refresh Workspace"}
+        </Text>
+      </Pressable>
 
-      <Button title="Open Sales" onPress={() => router.push("/(tabs)/sales")} variant="primary" />
-
-      <Button title="Open Stores" onPress={() => router.push("/(tabs)/stores")} variant="secondary" />
+      <Pressable
+        onPress={() => router.push("/(tabs)/sales")}
+        style={({ pressed }) => ({
+          borderRadius: 18,
+          borderWidth: 1,
+          borderColor: "rgba(16,185,129,0.30)",
+          backgroundColor: "rgba(16,185,129,0.12)",
+          paddingVertical: 15,
+          paddingHorizontal: 16,
+          alignItems: "center",
+          justifyContent: "center",
+          opacity: pressed ? 0.92 : 1,
+        })}
+      >
+        <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>Open Sales</Text>
+      </Pressable>
     </Card>
+  );
+}
+
+function WorkspaceCard({
+  activeOrgName,
+  activeRole,
+  activeStoreName,
+  activeStoreId,
+  onOpen,
+}: {
+  activeOrgName?: string | null;
+  activeRole?: string | null;
+  activeStoreName?: string | null;
+  activeStoreId?: string | null;
+  onOpen: () => void;
+}) {
+  const roleLabel = String(activeRole ?? "—").trim() || "—";
+  const orgLabel = String(activeOrgName ?? "—").trim() || "—";
+  const storeLabel = String(activeStoreName ?? "—").trim() || "—";
+
+  return (
+    <View style={{ marginTop: 14 }}>
+      <Card
+        style={{
+          gap: 14,
+          borderRadius: 22,
+          borderColor: "rgba(16,185,129,0.22)",
+          backgroundColor: "rgba(15,18,24,0.98)",
+          overflow: "hidden",
+        }}
+      >
+        <View
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            top: -70,
+            right: -50,
+            width: 180,
+            height: 180,
+            borderRadius: 999,
+            backgroundColor: "rgba(16,185,129,0.08)",
+          }}
+        />
+
+        <View
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            left: -50,
+            bottom: -80,
+            width: 180,
+            height: 180,
+            borderRadius: 999,
+            backgroundColor: "rgba(34,211,238,0.04)",
+          }}
+        />
+
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <View
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: 16,
+              alignItems: "center",
+              justifyContent: "center",
+              borderWidth: 1,
+              borderColor: "rgba(16,185,129,0.28)",
+              backgroundColor: "rgba(16,185,129,0.12)",
+            }}
+          >
+            <Ionicons name="business-outline" size={20} color={UI.emerald} />
+          </View>
+
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text
+              style={{
+                color: UI.faint,
+                fontWeight: "900",
+                fontSize: 10,
+                letterSpacing: 0.9,
+              }}
+            >
+              CURRENT WORKSPACE
+            </Text>
+
+            <Text
+              style={{ color: UI.text, fontWeight: "900", fontSize: 20, marginTop: 4 }}
+              numberOfLines={1}
+            >
+              {orgLabel}
+            </Text>
+          </View>
+
+          <View
+            style={{
+              paddingHorizontal: 10,
+              paddingVertical: 6,
+              borderRadius: 999,
+              borderWidth: 1,
+              borderColor: "rgba(16,185,129,0.24)",
+              backgroundColor: "rgba(16,185,129,0.10)",
+            }}
+          >
+            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }}>
+              {roleLabel.toUpperCase()}
+            </Text>
+          </View>
+        </View>
+
+        <View style={{ flexDirection: "row", gap: 10 }}>
+          <MiniStat label="Organization" value={orgLabel} />
+          <MiniStat label="Role" value={roleLabel} />
+          <MiniStat
+            label="Active Store"
+            value={storeLabel}
+            hint={activeStoreId ? "live context" : "not selected"}
+          />
+        </View>
+
+        {!activeStoreId ? (
+          <Text style={{ color: UI.muted, fontWeight: "800" }}>
+            Hujachagua active store bado. Fungua workspace switcher uchague context sahihi ya kazi.
+          </Text>
+        ) : null}
+
+        <Pressable
+          onPress={onOpen}
+          hitSlop={10}
+          style={({ pressed }) => ({
+            borderRadius: 18,
+            borderWidth: 1,
+            borderColor: "rgba(16,185,129,0.30)",
+            backgroundColor: "rgba(16,185,129,0.12)",
+            paddingVertical: 15,
+            paddingHorizontal: 16,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 10,
+            opacity: pressed ? 0.92 : 1,
+          })}
+        >
+          <Ionicons name="swap-horizontal" size={18} color={UI.text} />
+          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>Switch Workspace</Text>
+        </Pressable>
+      </Card>
+    </View>
   );
 }
 
@@ -1674,24 +2147,11 @@ export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const { loading, refreshing, error, refresh, activeOrgName, activeRole, activeStoreName, activeStoreId } =
+  const { refreshing, error, refresh, activeOrgName, activeRole, activeStoreName, activeStoreId } =
     useOrg();
 
   const [dashTick, setDashTick] = useState(0);
   const [pulling, setPulling] = useState(false);
-
-  const onLogout = useCallback(async () => {
-    try {
-      const { error: e } = await supabase.auth.signOut();
-      if (e) throw e;
-    } catch (err: any) {
-      Alert.alert("Logout failed", err?.message ?? "Unknown error");
-    }
-  }, []);
-
-  const goStaff = useCallback(() => {
-    router.push("/(tabs)/staff");
-  }, [router]);
 
   const goOrgSwitcher = useCallback(() => {
     router.push("/org-switcher");
@@ -1705,11 +2165,7 @@ export default function HomeScreen() {
     router.push("/ai");
   }, [router]);
 
-  const goStores = useCallback(() => {
-    router.push("/(tabs)/stores");
-  }, [router]);
-
-  const bottomPad = useMemo(() => Math.max(insets.bottom, 8) + 12, [insets.bottom]);
+  const bottomPad = useMemo(() => Math.max(insets.bottom, 8) + 14, [insets.bottom]);
   const topPad = useMemo(() => Math.max(insets.top, 10) + 8, [insets.top]);
 
   const onPullRefresh = useCallback(async () => {
@@ -1722,7 +2178,6 @@ export default function HomeScreen() {
     }
   }, [refresh]);
 
-  const canManageStaff = activeRole === "owner" || activeRole === "admin";
   const isCashier = activeRole === "cashier";
 
   return (
@@ -1744,12 +2199,14 @@ export default function HomeScreen() {
           paddingBottom: bottomPad,
         }}
       >
-        <Text style={{ fontSize: 28, fontWeight: "900", color: UI.text }}>ZETRA BMS</Text>
-        <Text style={{ color: UI.muted, fontWeight: "700", marginTop: 2 }}>
-          {isCashier ? "Cashier Dashboard" : "Dashboard"}
-        </Text>
+        <HeaderHero
+          activeOrgName={activeOrgName}
+          activeStoreName={activeStoreName}
+          isCashier={isCashier}
+        />
 
         {!isCashier ? <ZetraAiCard onOpen={goAI} /> : null}
+        {!isCashier ? <CompactNotificationsHomeCard /> : null}
 
         {!!error && (
           <Card
@@ -1758,78 +2215,30 @@ export default function HomeScreen() {
               backgroundColor: "rgba(201,74,74,0.10)",
               borderRadius: 18,
               padding: 12,
-              marginTop: 12,
+              marginTop: 14,
             }}
           >
             <Text style={{ color: UI.danger, fontWeight: "900" }}>{error}</Text>
           </Card>
         )}
 
-        <View style={{ height: 14 }} />
-
-        <Card style={{ gap: 10 }}>
-          <Text style={{ color: UI.muted, fontWeight: "800" }}>Account</Text>
-
-          <Pressable
-            onPress={goOrgSwitcher}
-            hitSlop={10}
-            style={({ pressed }) => ({
-              opacity: pressed ? 0.92 : 1,
-              transform: pressed ? [{ scale: 0.998 }] : [{ scale: 1 }],
-            })}
-          >
-            <Text style={{ color: UI.faint, fontWeight: "800" }}>
-              Org: <Text style={{ color: UI.text, fontWeight: "900" }}>{activeOrgName ?? "—"}</Text>
-              <Text style={{ color: UI.muted, fontWeight: "900" }}>  ›</Text>
-            </Text>
-          </Pressable>
-
-          <Text style={{ color: UI.faint, fontWeight: "800" }}>
-            Role: <Text style={{ color: UI.text, fontWeight: "900" }}>{activeRole ?? "—"}</Text>
-          </Text>
-
-          <Text style={{ color: UI.faint, fontWeight: "800" }}>
-            Store: <Text style={{ color: UI.text, fontWeight: "900" }}>{activeStoreName ?? "—"}</Text>
-          </Text>
-
-          {!activeStoreId && (
-            <Text style={{ color: UI.muted, fontWeight: "800" }}>
-              Hujachagua active store bado. Fungua Stores u-select store yako.
-            </Text>
-          )}
-
-          <Button
-            title={loading ? "Loading..." : refreshing ? "Refreshing..." : "Refresh"}
-            onPress={() => {
-              refresh();
-              setDashTick((x) => x + 1);
-            }}
-            disabled={loading || refreshing}
-            variant="primary"
+        {!isCashier ? (
+          <WorkspaceCard
+            activeOrgName={activeOrgName}
+            activeRole={activeRole}
+            activeStoreName={activeStoreName}
+            activeStoreId={activeStoreId}
+            onOpen={goOrgSwitcher}
           />
-
-          <Button title="Open Stores" onPress={goStores} variant="secondary" />
-
-          {canManageStaff ? <Button title="Staff Management" onPress={goStaff} variant="secondary" /> : null}
-
-          <Button
-            title="Logout"
-            onPress={onLogout}
-            variant="secondary"
-            style={{
-              borderColor: "rgba(201,74,74,0.28)",
-              backgroundColor: "rgba(201,74,74,0.06)",
-            }}
-          />
-        </Card>
+        ) : null}
 
         {isCashier ? (
           <CashierQuickHome />
         ) : (
           <StoreGuard>
-            <CompactClubRevenueCardHomePreview key={`club-mini-${dashTick}`} onOpen={goClubRevenue} />
             <CompactFinanceCardHomePreview />
             <CompactStockValueCardHomePreview />
+            <CompactClubRevenueCardHomePreview key={`club-mini-${dashTick}`} onOpen={goClubRevenue} />
           </StoreGuard>
         )}
       </ScrollView>
