@@ -1,4 +1,5 @@
-import React, { useMemo } from "react";
+// app/(tabs)/settings/index.tsx
+import React, { useCallback, useMemo } from "react";
 import { Alert, Pressable, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -7,6 +8,7 @@ import { Screen } from "@/src/ui/Screen";
 import { Card } from "@/src/ui/Card";
 import { theme, UI } from "@/src/ui/theme";
 import { useOrg } from "@/src/context/OrgContext";
+import { supabase } from "@/src/supabase/supabaseClient";
 
 type RowProps = {
   icon: keyof typeof Ionicons.glyphMap;
@@ -14,7 +16,86 @@ type RowProps = {
   subtitle?: string;
   onPress?: () => void;
   disabled?: boolean;
+  badge?: string;
 };
+
+function SectionTitle({ label }: { label: string }) {
+  return (
+    <Text
+      style={{
+        color: "rgba(255,255,255,0.72)",
+        fontWeight: "900",
+        fontSize: 12,
+        letterSpacing: 0.8,
+        marginBottom: 10,
+        marginTop: 16,
+      }}
+    >
+      {label.toUpperCase()}
+    </Text>
+  );
+}
+
+function PremiumSectionCard({
+  children,
+  style,
+}: {
+  children: React.ReactNode;
+  style?: any;
+}) {
+  return (
+    <Card
+      style={{
+        gap: 0,
+        borderRadius: 24,
+        borderColor: "rgba(255,255,255,0.08)",
+        backgroundColor: "rgba(15,18,24,0.98)",
+        overflow: "hidden",
+        ...style,
+      }}
+    >
+      <View
+        pointerEvents="none"
+        style={{
+          position: "absolute",
+          top: -70,
+          right: -60,
+          width: 180,
+          height: 180,
+          borderRadius: 999,
+          backgroundColor: "rgba(16,185,129,0.05)",
+        }}
+      />
+
+      <View
+        pointerEvents="none"
+        style={{
+          position: "absolute",
+          left: -60,
+          bottom: -90,
+          width: 180,
+          height: 180,
+          borderRadius: 999,
+          backgroundColor: "rgba(34,211,238,0.03)",
+        }}
+      />
+
+      <View
+        pointerEvents="none"
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          top: 0,
+          height: 1,
+          backgroundColor: "rgba(255,255,255,0.08)",
+        }}
+      />
+
+      {children}
+    </Card>
+  );
+}
 
 function Divider() {
   return (
@@ -22,13 +103,13 @@ function Divider() {
       style={{
         height: 1,
         backgroundColor: "rgba(255,255,255,0.08)",
-        marginVertical: 10,
+        marginLeft: 74,
       }}
     />
   );
 }
 
-function Row({ icon, title, subtitle, onPress, disabled }: RowProps) {
+function Row({ icon, title, subtitle, onPress, disabled, badge }: RowProps) {
   return (
     <Pressable
       onPress={disabled ? undefined : onPress}
@@ -36,17 +117,18 @@ function Row({ icon, title, subtitle, onPress, disabled }: RowProps) {
         {
           flexDirection: "row",
           alignItems: "center",
-          gap: 12,
-          paddingVertical: 12,
-          opacity: disabled ? 0.45 : pressed ? 0.9 : 1,
+          gap: 14,
+          paddingVertical: 16,
+          paddingHorizontal: 14,
+          opacity: disabled ? 0.45 : pressed ? 0.92 : 1,
         },
       ]}
     >
       <View
         style={{
-          width: 44,
-          height: 44,
-          borderRadius: 16,
+          width: 50,
+          height: 50,
+          borderRadius: 18,
           alignItems: "center",
           justifyContent: "center",
           backgroundColor: UI.emeraldSoft,
@@ -57,8 +139,8 @@ function Row({ icon, title, subtitle, onPress, disabled }: RowProps) {
         <Ionicons name={icon} size={22} color={UI.emerald} />
       </View>
 
-      <View style={{ flex: 1 }}>
-        <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }} numberOfLines={1}>
           {title}
         </Text>
 
@@ -68,7 +150,8 @@ function Row({ icon, title, subtitle, onPress, disabled }: RowProps) {
               color: UI.muted,
               fontWeight: "800",
               fontSize: 12,
-              marginTop: 3,
+              marginTop: 4,
+              lineHeight: 17,
             }}
             numberOfLines={2}
           >
@@ -77,29 +160,208 @@ function Row({ icon, title, subtitle, onPress, disabled }: RowProps) {
         ) : null}
       </View>
 
-      <Ionicons
-        name="chevron-forward"
-        size={18}
-        color="rgba(255,255,255,0.55)"
-      />
+      <View style={{ alignItems: "flex-end", gap: 8 }}>
+        {badge ? (
+          <View
+            style={{
+              paddingHorizontal: 10,
+              paddingVertical: 5,
+              borderRadius: 999,
+              borderWidth: 1,
+              borderColor: "rgba(255,255,255,0.10)",
+              backgroundColor: "rgba(255,255,255,0.05)",
+            }}
+          >
+            <Text
+              style={{
+                color: UI.text,
+                fontWeight: "900",
+                fontSize: 10,
+                letterSpacing: 0.4,
+              }}
+            >
+              {badge}
+            </Text>
+          </View>
+        ) : null}
+
+        <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.55)" />
+      </View>
     </Pressable>
   );
 }
 
-function SectionTitle({ label }: { label: string }) {
+function HeroContextCard({
+  orgName,
+  role,
+  store,
+}: {
+  orgName: string;
+  role: string;
+  store: string;
+}) {
   return (
-    <Text
+    <PremiumSectionCard
       style={{
-        color: "rgba(255,255,255,0.72)",
-        fontWeight: "900",
-        fontSize: 12,
-        letterSpacing: 0.7,
-        marginBottom: 10,
-        marginTop: 14,
+        borderColor: "rgba(16,185,129,0.22)",
+        backgroundColor: "rgba(15,18,24,0.98)",
       }}
     >
-      {label.toUpperCase()}
-    </Text>
+      <View style={{ padding: 16, gap: 14 }}>
+        <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
+          <View
+            style={{
+              width: 54,
+              height: 54,
+              borderRadius: 18,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: UI.emeraldSoft,
+              borderWidth: 1,
+              borderColor: UI.emeraldBorder,
+            }}
+          >
+            <Ionicons name="grid-outline" size={24} color={UI.emerald} />
+          </View>
+
+          <View style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
+            <Text
+              style={{
+                color: "rgba(255,255,255,0.62)",
+                fontWeight: "900",
+                fontSize: 11,
+                letterSpacing: 0.8,
+              }}
+            >
+              BUSINESS COMMAND CENTER
+            </Text>
+
+            <Text
+              style={{
+                color: UI.text,
+                fontWeight: "900",
+                fontSize: 30,
+                lineHeight: 34,
+                marginTop: 6,
+                letterSpacing: 0.2,
+              }}
+              numberOfLines={2}
+            >
+              {orgName}
+            </Text>
+          </View>
+
+          <View
+            style={{
+              paddingHorizontal: 12,
+              paddingVertical: 7,
+              borderRadius: 999,
+              borderWidth: 1,
+              borderColor: UI.emeraldBorder,
+              backgroundColor: UI.emeraldSoft,
+              alignSelf: "flex-start",
+              marginTop: 2,
+            }}
+          >
+            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }}>
+              {role}
+            </Text>
+          </View>
+        </View>
+
+        <View style={{ flexDirection: "row", gap: 10 }}>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 11 }}>
+              Organization
+            </Text>
+            <Text
+              style={{ color: UI.text, fontWeight: "900", fontSize: 18, marginTop: 4 }}
+              numberOfLines={1}
+            >
+              {orgName}
+            </Text>
+          </View>
+
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 11 }}>
+              Role
+            </Text>
+            <Text
+              style={{ color: UI.text, fontWeight: "900", fontSize: 18, marginTop: 4 }}
+              numberOfLines={1}
+            >
+              {role}
+            </Text>
+          </View>
+
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 11 }}>
+              Active Store
+            </Text>
+            <Text
+              style={{ color: UI.text, fontWeight: "900", fontSize: 18, marginTop: 4 }}
+              numberOfLines={1}
+            >
+              {store}
+            </Text>
+          </View>
+        </View>
+      </View>
+    </PremiumSectionCard>
+  );
+}
+
+function LogoutCard({ onLogout }: { onLogout: () => void }) {
+  return (
+    <PremiumSectionCard
+      style={{
+        borderColor: "rgba(201,74,74,0.18)",
+      }}
+    >
+      <Pressable
+        onPress={onLogout}
+        style={({ pressed }) => ({
+          padding: 16,
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 14,
+          opacity: pressed ? 0.92 : 1,
+        })}
+      >
+        <View
+          style={{
+            width: 50,
+            height: 50,
+            borderRadius: 18,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "rgba(201,74,74,0.10)",
+            borderWidth: 1,
+            borderColor: "rgba(201,74,74,0.22)",
+          }}
+        >
+          <Ionicons name="log-out-outline" size={22} color={UI.danger} />
+        </View>
+
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
+            Logout
+          </Text>
+          <Text
+            style={{
+              color: UI.muted,
+              fontWeight: "800",
+              fontSize: 12,
+              marginTop: 4,
+            }}
+          >
+            Exit this account on this device
+          </Text>
+        </View>
+
+        <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.45)" />
+      </Pressable>
+    </PremiumSectionCard>
   );
 }
 
@@ -114,30 +376,62 @@ export default function MoreHome() {
     return `${name} • ${role} • ${store}`;
   }, [org.activeOrgName, org.activeRole, org.activeStoreName]);
 
-  const canManageStaff =
-    org.activeRole === "owner" || org.activeRole === "admin";
+  const orgName = useMemo(() => org.activeOrgName ?? "No organization", [org.activeOrgName]);
+  const roleLabel = useMemo(
+    () => (org.activeRole ? String(org.activeRole).toUpperCase() : "—"),
+    [org.activeRole]
+  );
+  const storeLabel = useMemo(() => org.activeStoreName ?? "—", [org.activeStoreName]);
 
+  const canManageStaff = org.activeRole === "owner" || org.activeRole === "admin";
   const canManageBilling = org.activeRole === "owner";
-
-  const canViewStatement =
-    org.activeRole === "owner" || org.activeRole === "admin";
-
+  const canViewStatement = org.activeRole === "owner" || org.activeRole === "admin";
   const isCashier = org.activeRole === "cashier";
+
+  const onLogout = useCallback(() => {
+    Alert.alert("Logout", "Unataka kutoka kwenye account hii kwenye device hii?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Logout",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            const { error } = await supabase.auth.signOut();
+            if (error) throw error;
+          } catch (e: any) {
+            Alert.alert("Logout failed", e?.message ?? "Unknown error");
+          }
+        },
+      },
+    ]);
+  }, []);
 
   return (
     <Screen scroll>
       <View style={{ paddingTop: 6 }}>
-        <Text style={{ color: UI.text, fontWeight: "900", fontSize: 26 }}>
+        <Text style={{ color: UI.text, fontWeight: "900", fontSize: 30 }}>
           More
         </Text>
 
-        <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 6 }}>
-          Quick shortcuts for organization, reports, staff, and preferences.
+        <Text
+          style={{
+            color: UI.muted,
+            fontWeight: "800",
+            marginTop: 8,
+            fontSize: 15,
+            lineHeight: 22,
+          }}
+        >
+          Executive shortcuts for organization, reports, staff, billing, and preferences.
         </Text>
       </View>
 
+      <View style={{ marginTop: 14 }}>
+        <HeroContextCard orgName={orgName} role={roleLabel} store={storeLabel} />
+      </View>
+
       <SectionTitle label="Operations" />
-      <Card>
+      <PremiumSectionCard>
         <Row
           icon="document-text-outline"
           title="Business Statement"
@@ -146,6 +440,7 @@ export default function MoreHome() {
               ? "Generate date-range statement: sales, expenses, profit, balances"
               : "Owner/Admin only"
           }
+          badge={canViewStatement ? "REPORTS" : "LOCKED"}
           disabled={!canViewStatement}
           onPress={() => router.push("/(tabs)/settings/business-statement")}
         />
@@ -157,9 +452,10 @@ export default function MoreHome() {
           title="Staff Management"
           subtitle={
             canManageStaff
-              ? "Add staff and assign stores"
-              : "View only (Owner/Admin manages)"
+              ? "Add staff, assign stores, and manage team access"
+              : "Owner/Admin manages staff access"
           }
+          badge={canManageStaff ? "TEAM" : "LOCKED"}
           disabled={!canManageStaff}
           onPress={() => router.push("/(tabs)/staff")}
         />
@@ -169,32 +465,31 @@ export default function MoreHome() {
         <Row
           icon="cash-outline"
           title="Cashier Closing"
-          subtitle={
-            isCashier
-              ? "Close your shift and review cashier totals"
-              : "Cashier only"
-          }
+          subtitle={isCashier ? "Close your shift and review cashier totals" : "Cashier only"}
+          badge={isCashier ? "CASHIER" : "LOCKED"}
           disabled={!isCashier}
           onPress={() => router.push("/(tabs)/settings/cashier-closing")}
         />
-      </Card>
+      </PremiumSectionCard>
 
       <SectionTitle label="Communication" />
-      <Card>
+      <PremiumSectionCard>
         <Row
           icon="chatbubbles-outline"
           title="Meeting Room"
-          subtitle="Create rooms and chat with invited members"
+          subtitle="Create rooms, invite members, and collaborate in real time"
+          badge="LIVE"
           onPress={() => router.push("/(tabs)/settings/meeting-room")}
         />
-      </Card>
+      </PremiumSectionCard>
 
       <SectionTitle label="Organization" />
-      <Card>
+      <PremiumSectionCard>
         <Row
           icon="business-outline"
           title="Organization"
           subtitle={orgSummary}
+          badge="WORKSPACE"
           onPress={() => router.push("/(tabs)/settings/organization")}
         />
 
@@ -205,35 +500,35 @@ export default function MoreHome() {
           title="Subscription & Billing"
           subtitle={
             canManageBilling
-              ? "Manage plan, duration, and activation"
-              : "Owner only (view managed by owner)"
+              ? "Manage plan, duration, activation, and subscription control"
+              : "Owner only"
           }
+          badge={canManageBilling ? "OWNER" : "LOCKED"}
           disabled={!canManageBilling}
           onPress={() => router.push("/(tabs)/settings/subscription")}
         />
-      </Card>
+      </PremiumSectionCard>
 
       <SectionTitle label="Regional & Localization" />
-      <Card>
+      <PremiumSectionCard>
         <Row
           icon="globe-outline"
           title="Regional Settings"
           subtitle="Language • Currency • Timezone • Date • Number"
+          badge="GLOBAL"
           onPress={() => router.push("/(tabs)/settings/regional")}
         />
-      </Card>
+      </PremiumSectionCard>
 
       <SectionTitle label="Preferences" />
-      <Card>
+      <PremiumSectionCard>
         <Row
           icon="sparkles-outline"
           title="AI Preferences"
           subtitle="Language, tone, assistant behavior (coming next)"
+          badge="NEXT"
           onPress={() =>
-            Alert.alert(
-              "Coming next",
-              "AI Preferences itaingia kwenye hatua inayofuata."
-            )
+            Alert.alert("Coming next", "AI Preferences itaingia kwenye hatua inayofuata.")
           }
         />
 
@@ -243,6 +538,7 @@ export default function MoreHome() {
           icon="shield-checkmark-outline"
           title="Security & Privacy"
           subtitle="Permissions, sensitive data rules (coming next)"
+          badge="NEXT"
           onPress={() =>
             Alert.alert(
               "Coming next",
@@ -250,7 +546,10 @@ export default function MoreHome() {
             )
           }
         />
-      </Card>
+      </PremiumSectionCard>
+
+      <SectionTitle label="Account" />
+      <LogoutCard onLogout={onLogout} />
 
       <View style={{ height: theme.spacing.gap }} />
 

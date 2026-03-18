@@ -389,13 +389,21 @@ function SwipeReplyWrapper({
 
 export default function MeetingRoomDetailScreen() {
   const router = useRouter();
+
+  const goBackSafe = React.useCallback(() => {
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+    router.push("/(tabs)/settings/meeting-room");
+  }, [router]);
+
   const params = useLocalSearchParams<{
     roomId?: string;
     room_id?: string;
     roomName?: string;
     room_name?: string;
   }>();
-
   useOrg();
 
   const roomId = clean(params.roomId || params.room_id);
@@ -1290,7 +1298,7 @@ export default function MeetingRoomDetailScreen() {
           }}
         >
           <Pressable
-            onPress={() => router.back()}
+            onPress={goBackSafe}
             style={({ pressed }) => ({
               width: 42,
               height: 42,
