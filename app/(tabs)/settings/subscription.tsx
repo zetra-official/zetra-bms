@@ -4,7 +4,6 @@ import {
   Alert,
   FlatList,
   Pressable,
-  ScrollView,
   Text,
   TextInput,
   View,
@@ -102,6 +101,24 @@ type LatestRequestRow = {
   updated_at?: string | null;
 };
 
+type ParsedRawSms = {
+  reference: string;
+  phone: string;
+  amount: number | null;
+  payerName: string;
+};
+
+type ReconcileRow = {
+  ok?: boolean | null;
+  matched?: boolean | null;
+  approved?: boolean | null;
+  activated?: boolean | null;
+  message?: string | null;
+  request_id?: string | null;
+  sms_log_id?: string | null;
+  match_id?: string | null;
+};
+
 function fmtLimit(v: any) {
   if (v === null || v === undefined) return "—";
   const n = Number(v);
@@ -150,6 +167,22 @@ function fmtDateTime(v: any) {
     return `${y}-${m}-${dd} ${hh}:${mm}`;
   } catch {
     return s;
+  }
+}
+
+function addMonthsISO(source: any, months: number) {
+  const s = clean(source);
+  const m = Number(months);
+  if (!s || !Number.isFinite(m) || m <= 0) return "—";
+
+  try {
+    const d = new Date(s);
+    if (Number.isNaN(d.getTime())) return "—";
+    const next = new Date(d);
+    next.setMonth(next.getMonth() + m);
+    return next.toISOString().slice(0, 10);
+  } catch {
+    return "—";
   }
 }
 
@@ -234,8 +267,158 @@ function getPlanLimits(p: any) {
 function normalizeTxRef(input: any) {
   const t = upper(input);
   const collapsed = t.replace(/\s+/g, " ").trim();
-  const safe = collapsed.replace(/[^A-Z0-9 _-]/g, "");
+
+  // IMPORTANT:
+  // We now preserve dot (.) because Airtel references come like:
+  // MP260320.1512.L37591
+  const safe = collapsed.replace(/[^A-Z0-9._-]/g, "");
+
   return safe;
+}
+
+function normalizeRawSms(input: any) {
+  return clean(input).replace(/\r/g, "").replace(/[ \t]+/g, " ");
+}
+
+function digitsOnly(input: any) {
+  return clean(input).replace(/\D+/g, "");
+}
+
+function normalizePhone(input: any) {
+  const raw = digitsOnly(input);
+  if (!raw) return "";
+
+  if (raw.startsWith("255") && raw.length >= 12) {
+    return `0${raw.slice(-9)}`;
+  }
+
+  if (raw.length === 9) {
+    return `0${raw}`;
+  }
+
+  if (raw.length >= 10 && raw.startsWith("0")) {
+    return raw.slice(0, 10);
+  }
+
+  return raw;
+}
+
+function extractSmsReference(text: string) {
+  const src = upper(text);
+  if (!src) return "";
+
+  // 1) Strong labeled patterns first: TID, TXN, RECEIPT, REFERENCE, etc.
+  const strongPatterns = [
+    /(?:TID|TRANS(?:ACTION)?(?:\s*(?:ID|NO|NUMBER|#))?|TXN(?:\s*(?:ID|NO|NUMBER|#))?|TX(?:\s*(?:ID|NO|NUMBER|#))?|RECEIPT(?:\s*(?:NO|NUMBER|#))?|REFERENCE(?:\s*(?:NO|NUMBER|#))?|KUMBUKUMBU|MUAMALA(?:\s*(?:NO|NUMBER|#))?)\s*[:#-]?\s*([A-Z0-9]+(?:[._-][A-Z0-9]+)*)/i,
+    /(?:CODE|MPESA CODE|M-PESA CODE|TOKEN)\s*[:#-]?\s*([A-Z0-9]+(?:[._-][A-Z0-9]+)*)/i,
+  ];
+
+  for (const rx of strongPatterns) {
+    const m = src.match(rx);
+    const candidate = normalizeTxRef(m?.[1] ?? "");
+    const hasLetter = /[A-Z]/.test(candidate);
+    const hasDigit = /\d/.test(candidate);
+
+    if (candidate && candidate.length >= 6 && hasLetter && hasDigit) {
+      return candidate;
+    }
+  }
+
+  // 2) Airtel-style exact TID fallback, e.g. MP260320.1512.L37591
+  const airtelTid = src.match(/\b([A-Z]{2}\d{6}\.\d{4}\.[A-Z0-9]{4,})\b/i);
+  if (airtelTid?.[1]) {
+    const candidate = normalizeTxRef(airtelTid[1]);
+    if (candidate) return candidate;
+  }
+
+  // 3) Generic fallback:
+  // capture tokens joined by dot / underscore / hyphen
+  const generic =
+    src.match(/\b([A-Z0-9]+(?:[._-][A-Z0-9]+)+|[A-Z0-9]{8,}|[A-Z0-9-]{8,})\b/g) ?? [];
+
+  for (const token of generic) {
+    const candidate = normalizeTxRef(token);
+    const hasLetter = /[A-Z]/.test(candidate);
+    const hasDigit = /\d/.test(candidate);
+
+    if (candidate.length >= 8 && hasLetter && hasDigit) {
+      return candidate;
+    }
+  }
+
+  return "";
+}
+
+function extractSmsAmount(text: string): number | null {
+  const src = upper(text);
+  if (!src) return null;
+
+  const patterns = [
+    /(?:TZS|TSH|SHS?)\s*([0-9][0-9,\.]*)/i,
+    /([0-9][0-9,\.]*)\s*(?:TZS|TSH|SHS?)/i,
+    /(?:KIASI|AMOUNT|PAID|UMELIPA|IMELIPWA)\s*[:=]?\s*(?:TZS|TSH|SHS?)?\s*([0-9][0-9,\.]*)/i,
+  ];
+
+  for (const rx of patterns) {
+    const m = src.match(rx);
+    const raw = clean(m?.[1] ?? "").replace(/,/g, "");
+    const n = Number(raw);
+    if (Number.isFinite(n) && n > 0) {
+      return Math.round(n);
+    }
+  }
+
+  return null;
+}
+
+function extractSmsPayerName(text: string) {
+  const src = clean(text);
+  if (!src) return "";
+
+  const patterns = [
+    /(?:JINA|NAME|FROM)\s*[:=-]?\s*([A-Z][A-Z .'-]{4,})/i,
+    /(?:MTEJA|CUSTOMER)\s*[:=-]?\s*([A-Z][A-Z .'-]{4,})/i,
+  ];
+
+  for (const rx of patterns) {
+    const m = src.match(rx);
+    const candidate = clean(m?.[1] ?? "").replace(/\s{2,}/g, " ");
+    if (candidate.length >= 4) return candidate;
+  }
+
+  return "";
+}
+
+function parseRawSms(text: any): ParsedRawSms {
+  const src = normalizeRawSms(text);
+
+  function extractSmsPhone(text: string) {
+  const src = upper(text);
+  if (!src) return "";
+
+  // Tanzania phone formats
+  const patterns = [
+    /\b(0\d{9})\b/,                 // 0758014675
+    /\b(255\d{9})\b/,               // 255758014675
+    /\b(\+255\d{9})\b/,             // +255758014675
+  ];
+
+  for (const rx of patterns) {
+    const m = src.match(rx);
+    if (m?.[1]) {
+      return m[1];
+    }
+  }
+
+  return "";
+}
+
+  return {
+    reference: extractSmsReference(src),
+    phone: extractSmsPhone(src),
+    amount: extractSmsAmount(src),
+    payerName: extractSmsPayerName(src),
+  };
 }
 
 function statusTone(status: string) {
@@ -267,12 +450,14 @@ function Field({
   onChangeText,
   placeholder,
   keyboardType,
+  multiline,
 }: {
   label: string;
   value: string;
   onChangeText: (v: string) => void;
   placeholder: string;
   keyboardType?: "default" | "number-pad" | "phone-pad";
+  multiline?: boolean;
 }) {
   return (
     <View style={{ gap: 6 }}>
@@ -285,14 +470,17 @@ function Field({
         keyboardType={keyboardType ?? "default"}
         autoCapitalize="characters"
         autoCorrect={false}
+        multiline={!!multiline}
+        textAlignVertical={multiline ? "top" : "center"}
         style={{
-          minHeight: 52,
+          minHeight: multiline ? 110 : 52,
           borderRadius: 16,
           borderWidth: 1,
           borderColor: "rgba(255,255,255,0.12)",
           backgroundColor: "rgba(255,255,255,0.06)",
           color: UI.text,
           paddingHorizontal: 12,
+          paddingVertical: multiline ? 12 : 0,
           fontWeight: "900",
         }}
       />
@@ -377,6 +565,7 @@ export default function SubscriptionScreen() {
   const [payerPhone, setPayerPhone] = useState("");
   const [payerName, setPayerName] = useState("");
   const [txRef, setTxRef] = useState("");
+  const [rawSms, setRawSms] = useState("");
 
   const userTouchedPlanRef = useRef(false);
 
@@ -396,7 +585,7 @@ export default function SubscriptionScreen() {
   const loadLatestRequest = useCallback(async () => {
     if (!orgId) {
       setLatestRequest(null);
-      return;
+      return null;
     }
 
     try {
@@ -428,10 +617,12 @@ export default function SubscriptionScreen() {
 
       if (error) throw error;
 
-      const row = Array.isArray(data) ? (data[0] as LatestRequestRow | undefined) : undefined;
-      setLatestRequest(row ?? null);
+      const row = Array.isArray(data) ? ((data[0] as LatestRequestRow | undefined) ?? null) : null;
+      setLatestRequest(row);
+      return row;
     } catch {
       setLatestRequest(null);
+      return null;
     }
   }, [orgId]);
 
@@ -451,21 +642,47 @@ export default function SubscriptionScreen() {
       });
 
       let currentCode = "";
+      let currentStatus = "";
 
       if (!subErr) {
         const row = Array.isArray(subData) ? (subData?.[0] as any) : (subData as any);
-        const normalized = (row ?? null) as any;
+        const normalized = (row ?? null) as MySubRow | null;
         setMySub(normalized);
 
         currentCode = upper(
           normalized?.plan_code || normalized?.code || normalized?.plan_name || ""
         );
-
-        if (currentCode && !userTouchedPlanRef.current) {
-          setSelectedPlanCode(currentCode);
-        }
+        currentStatus = upper(normalized?.status || "");
       } else {
         setMySub(null);
+      }
+
+      const latestReq = await loadLatestRequest();
+      const latestReqCode = upper(latestReq?.plan_code || "");
+      const latestReqStatus = upper(latestReq?.status || "");
+
+      const effectiveCode =
+        currentCode && currentCode !== "FREE"
+          ? currentCode
+          : latestReqStatus === "APPROVED" && latestReqCode
+          ? latestReqCode
+          : currentCode || latestReqCode || "";
+
+      const shouldAutoAdoptCurrentPlan =
+        !!effectiveCode &&
+        (
+          !userTouchedPlanRef.current ||
+          !clean(selectedPlanCodeRef.current) ||
+          (upper(selectedPlanCodeRef.current) === "FREE" && effectiveCode !== "FREE") ||
+          (
+            latestReqStatus === "APPROVED" &&
+            upper(selectedPlanCodeRef.current) !== effectiveCode &&
+            (currentStatus === "APPROVED" || !currentStatus || currentStatus === "FREE")
+          )
+        );
+
+      if (shouldAutoAdoptCurrentPlan) {
+        setSelectedPlanCode(effectiveCode);
       }
 
       const { data: planData, error: planErr } = await supabase.rpc("get_public_plans");
@@ -474,9 +691,8 @@ export default function SubscriptionScreen() {
       const planRows = (planData ?? []) as PlanRow[];
       setPlans(planRows);
 
-      const sel = selectedPlanCodeRef.current;
-      if (!sel) {
-        const pick = currentCode || getPlanCode(planRows?.[0]);
+      if (!clean(selectedPlanCodeRef.current) && !effectiveCode) {
+        const pick = getPlanCode(planRows?.[0]);
         if (pick) setSelectedPlanCode(upper(pick));
       }
 
@@ -499,14 +715,12 @@ export default function SubscriptionScreen() {
           }
         }
       }
-
-      await loadLatestRequest();
     } catch (e: any) {
       safeAlert("Subscription", e?.message ?? "Failed to load subscription data");
     } finally {
       setLoading(false);
     }
-  }, [orgId, selectedMonths, loadLatestRequest]);
+  }, [loadLatestRequest, orgId, selectedMonths]);
 
   useEffect(() => {
     void loadSession();
@@ -516,28 +730,76 @@ export default function SubscriptionScreen() {
     void loadAll();
   }, [loadAll]);
 
-  useEffect(() => {
-    const code = upper(mySub?.plan_code);
-    if (code && !userTouchedPlanRef.current) {
-      setSelectedPlanCode(code);
+  const resolvedPlanCode = useMemo(() => {
+    const rpcCode = upper(mySub?.plan_code || mySub?.plan_name || "");
+    const reqCode = upper(latestRequest?.plan_code || "");
+    const reqStatus = upper(latestRequest?.status || "");
+
+    if (reqStatus === "APPROVED" && reqCode) {
+      if (!rpcCode || rpcCode === "FREE") return reqCode;
     }
-  }, [mySub]);
+
+    return rpcCode || reqCode || "";
+  }, [latestRequest, mySub]);
+
+  const resolvedStatus = useMemo(() => {
+    const rpcStatus = upper(mySub?.status || "");
+    const reqStatus = upper(latestRequest?.status || "");
+
+    if (reqStatus === "APPROVED" && resolvedPlanCode && (!rpcStatus || rpcStatus === "FREE")) {
+      return "APPROVED";
+    }
+
+    return rpcStatus || reqStatus || "";
+  }, [latestRequest, mySub, resolvedPlanCode]);
+
+  useEffect(() => {
+    const resolved = upper(resolvedPlanCode);
+    const currentSel = upper(selectedPlanCode);
+
+    if (!resolved) return;
+
+    const shouldForceSelection =
+      !userTouchedPlanRef.current ||
+      !currentSel ||
+      (currentSel === "FREE" && resolved !== "FREE") ||
+      (upper(resolvedStatus) === "APPROVED" && currentSel !== resolved);
+
+    if (shouldForceSelection && currentSel !== resolved) {
+      setSelectedPlanCode(resolved);
+    }
+  }, [resolvedPlanCode, resolvedStatus, selectedPlanCode]);
+
+  const resolvedStartedLabel = useMemo(() => {
+    const rpcStart = mySub?.started_at || mySub?.start_at;
+    if (clean(rpcStart)) return fmtISODate(rpcStart);
+
+    if (upper(latestRequest?.status || "") === "APPROVED" && clean(latestRequest?.approved_at)) {
+      return fmtISODate(latestRequest?.approved_at);
+    }
+
+    return "—";
+  }, [latestRequest, mySub]);
+
+  const resolvedExpiryLabel = useMemo(() => {
+    const rpcEnd = mySub?.expires_at || mySub?.end_at;
+    if (clean(rpcEnd)) return fmtISODate(rpcEnd);
+
+    if (upper(latestRequest?.status || "") === "APPROVED" && clean(latestRequest?.approved_at)) {
+      return addMonthsISO(
+        latestRequest?.approved_at,
+        Number(latestRequest?.duration_months ?? 0)
+      );
+    }
+
+    return "—";
+  }, [latestRequest, mySub]);
 
   const currentPlanLabel = useMemo(() => {
-    if (!mySub) return "—";
-    const name = clean(mySub.plan_name) || clean(mySub.plan_code) || "—";
-    const st = upper(mySub.status || "");
-    return st ? `${name} • ${st}` : name;
-  }, [mySub]);
-
-  const startedLabel = useMemo(
-    () => fmtISODate(mySub?.started_at || mySub?.start_at),
-    [mySub]
-  );
-  const expiryLabel = useMemo(
-    () => fmtISODate(mySub?.expires_at || mySub?.end_at),
-    [mySub]
-  );
+    const plan = resolvedPlanCode || "—";
+    const st = resolvedStatus;
+    return st ? `${plan} • ${st}` : plan;
+  }, [resolvedPlanCode, resolvedStatus]);
 
   const selectedPlan = useMemo(() => {
     const key = upper(selectedPlanCode);
@@ -604,92 +866,154 @@ export default function SubscriptionScreen() {
     return "Your payment request was received and is under review by ZETRA office.";
   }, [latestRequest]);
 
-  const submitPaymentRequest = useCallback(async () => {
-    if (!canManage) {
-      safeAlert("Not allowed", "Billing ni Owner/Admin tu.");
-      return;
-    }
+  const parsedRawSms = useMemo(() => parseRawSms(rawSms), [rawSms]);
 
-    if (!orgId) {
-      safeAlert("No org", "Organization haijapatikana.");
-      return;
-    }
+  const effectivePhonePreview = useMemo(() => {
+    return normalizePhone(clean(payerPhone) || parsedRawSms.phone);
+  }, [parsedRawSms.phone, payerPhone]);
 
-    if (!selectedPlan) {
-      safeAlert("Plan", "Chagua plan kwanza.");
-      return;
-    }
+  const effectiveRefPreview = useMemo(() => {
+    return normalizeTxRef(clean(txRef) || parsedRawSms.reference);
+  }, [parsedRawSms.reference, txRef]);
 
-    if (expectedAmount === null) {
-      safeAlert("Amount", "Expected amount haijapatikana.");
-      return;
-    }
+  const effectiveNamePreview = useMemo(() => {
+    return clean(payerName) || clean(parsedRawSms.payerName);
+  }, [parsedRawSms.payerName, payerName]);
 
-    const phone = clean(payerPhone);
-    const ref = normalizeTxRef(txRef);
-    const name = clean(payerName);
+  const rawSmsAmountMismatch = useMemo(() => {
+    if (parsedRawSms.amount === null || expectedAmount === null) return false;
+    return Math.round(parsedRawSms.amount) !== Math.round(expectedAmount);
+  }, [expectedAmount, parsedRawSms.amount]);
 
-    if (!phone) {
-      safeAlert("Phone required", "Weka namba iliyotumika kulipa.");
-      return;
-    }
+ const submitPaymentRequest = useCallback(async () => {
+  if (!canManage) {
+    safeAlert("Not allowed", "Billing ni Owner/Admin tu.");
+    return;
+  }
 
-    if (!ref) {
-      safeAlert("Transaction ref", "Weka Transaction Reference (receipt code).");
-      return;
-    }
+  if (!orgId) {
+    safeAlert("No org", "Organization haijapatikana.");
+    return;
+  }
 
-    if (ref.length < 6) {
-      safeAlert(
-        "Transaction ref",
-        "Reference fupi sana. Copy receipt code kamili kutoka SMS ya muamala."
+  if (!selectedPlan) {
+    safeAlert("Plan", "Chagua plan kwanza.");
+    return;
+  }
+
+  if (expectedAmount === null) {
+    safeAlert("Amount", "Expected amount haijapatikana.");
+    return;
+  }
+
+  const rawParsed = parseRawSms(rawSms);
+  const phone = normalizePhone(clean(payerPhone) || rawParsed.phone);
+  const ref = normalizeTxRef(clean(txRef) || rawParsed.reference);
+  const name = clean(payerName) || clean(rawParsed.payerName);
+
+  if (!phone) {
+    safeAlert(
+      "Phone required",
+      "Weka namba iliyotumika kulipa au bandika RAW SMS yenye namba ya muamala."
+    );
+    return;
+  }
+
+  if (!ref) {
+    safeAlert(
+      "Transaction ref",
+      "Weka Transaction Reference (receipt code) au bandika RAW SMS ili system isome reference moja kwa moja."
+    );
+    return;
+  }
+
+  if (ref.length < 6) {
+    safeAlert(
+      "Transaction ref",
+      "Reference fupi sana. Copy receipt code kamili kutoka SMS ya muamala."
+    );
+    return;
+  }
+
+  setBusy(true);
+  try {
+    const payload = {
+      p_organization_id: orgId,
+      p_plan_code: getPlanCode(selectedPlan),
+      p_duration_months: selectedMonths,
+      p_expected_amount: expectedAmount,
+      p_submitted_amount: expectedAmount,
+      p_transaction_reference: ref,
+      p_payer_phone: phone,
+      p_payer_name: name || null,
+    };
+
+    const { error } = await supabase.rpc("submit_subscription_payment_request", payload);
+    if (error) throw error;
+
+    const latest = await loadLatestRequest();
+
+    let reconcileRow: ReconcileRow | null = null;
+
+    if (latest?.id) {
+      const { data: reconcileData, error: reconcileError } = await supabase.rpc(
+        "reconcile_subscription_request_with_office_sms_v2",
+        {
+          p_request_id: latest.id,
+        }
       );
-      return;
+
+      if (!reconcileError) {
+        reconcileRow = Array.isArray(reconcileData)
+          ? ((reconcileData?.[0] ?? null) as ReconcileRow | null)
+          : ((reconcileData ?? null) as ReconcileRow | null);
+      }
     }
 
-    setBusy(true);
-    try {
-      const payload = {
-        p_organization_id: orgId,
-        p_plan_code: getPlanCode(selectedPlan),
-        p_duration_months: selectedMonths,
-        p_expected_amount: expectedAmount,
-        p_submitted_amount: expectedAmount,
-        p_transaction_reference: ref,
-        p_payer_phone: phone,
-        p_payer_name: name || null,
-      };
+    setTxRef("");
+    setPayerPhone("");
+    setPayerName("");
+    setRawSms("");
 
-      const { error } = await supabase.rpc("submit_subscription_payment_request", payload);
-      if (error) throw error;
-
-      setTxRef("");
-      setPayerPhone("");
-      setPayerName("");
-
+    if (reconcileRow?.ok && reconcileRow?.approved && reconcileRow?.activated) {
+      safeAlert(
+        "Approved & Activated ✅",
+        clean(reconcileRow.message) ||
+          "Request ime-match na office SMS. Subscription ime-approve na ku-activate moja kwa moja."
+      );
+    } else if (reconcileRow?.matched) {
+      safeAlert(
+        "Request submitted ⏳",
+        clean(reconcileRow.message) ||
+          "Request imetumwa. Match imeonekana lakini bado inaweza kuhitaji review kidogo."
+      );
+    } else {
       safeAlert(
         "Request submitted ✅",
-        "Payment request imetumwa kikamilifu.\n\nStatus: PENDING\n\nOfisi ya ZETRA ita-review reference na ku-approve."
+        "Payment request imetumwa kikamilifu.\n\nStatus: PENDING / AUTO-CHECK\n\nKama office SMS iliyopo tayari ime-match, system ita-approve na ku-activate moja kwa moja."
       );
-
-      userTouchedPlanRef.current = false;
-      await loadAll();
-    } catch (e: any) {
-      safeAlert("Submit request", e?.message ?? "Failed to submit payment request");
-    } finally {
-      setBusy(false);
     }
-  }, [
-    canManage,
-    expectedAmount,
-    loadAll,
-    orgId,
-    payerName,
-    payerPhone,
-    selectedMonths,
-    selectedPlan,
-    txRef,
-  ]);
+
+    userTouchedPlanRef.current = false;
+    await loadAll();
+  } catch (e: any) {
+    safeAlert("Submit request", e?.message ?? "Failed to submit payment request");
+  } finally {
+    setBusy(false);
+  }
+}, [
+  canManage,
+  expectedAmount,
+  loadAll,
+  loadLatestRequest,
+  orgId,
+  payerName,
+  payerPhone,
+  rawSms,
+  selectedMonths,
+  selectedPlan,
+  txRef,
+]);
 
   const DurationPill = ({
     months,
@@ -731,7 +1055,7 @@ export default function SubscriptionScreen() {
     const code = getPlanCode(item);
     const active = upper(selectedPlanCode) === code;
 
-    const currentPaidCode = upper(mySub?.plan_code);
+    const currentPaidCode = upper(resolvedPlanCode);
     const isCurrentPaid = !!currentPaidCode && currentPaidCode === code;
 
     const label = clean(item.name) || clean(item.code) || "Plan";
@@ -767,7 +1091,9 @@ export default function SubscriptionScreen() {
           },
         ]}
       >
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+        <View
+          style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
+        >
           <View style={{ flex: 1, paddingRight: 10 }}>
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
               {label} {active ? "✅" : ""}
@@ -1066,11 +1392,11 @@ export default function SubscriptionScreen() {
               </Text>
 
               <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 6 }}>
-                Starts: {startedLabel}
+                Starts: {resolvedStartedLabel}
               </Text>
 
               <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 6 }}>
-                Server Expires: {expiryLabel}
+                Server Expires: {resolvedExpiryLabel}
               </Text>
 
               <View style={{ marginTop: 10 }}>
@@ -1086,7 +1412,14 @@ export default function SubscriptionScreen() {
                   <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
                     Plan limits are DB-driven ✅
                   </Text>
-                  <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 6 }}>
+                  <Text
+                    style={{
+                      color: UI.muted,
+                      fontWeight: "800",
+                      fontSize: 12,
+                      marginTop: 6,
+                    }}
+                  >
                     Stores/Staff/AI/Club zina-control kwa org level kupitia public.plans (plan_code).
                   </Text>
                 </View>
@@ -1139,7 +1472,9 @@ export default function SubscriptionScreen() {
 
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
                 Reference:{" "}
-                <Text style={{ color: UI.text }}>{clean(latestRequest.transaction_reference) || "—"}</Text>
+                <Text style={{ color: UI.text }}>
+                  {clean(latestRequest.transaction_reference) || "—"}
+                </Text>
               </Text>
 
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
@@ -1322,8 +1657,8 @@ export default function SubscriptionScreen() {
             <Text style={{ color: UI.text, fontWeight: "900" }}>{PAY_TO_PHONE}</Text>
 
             <Text style={{ color: UI.faint, fontWeight: "800", marginTop: 8 }}>
-              Baada ya kulipa, utapata SMS ya muamala. Copy ile
-              “Receipt/Reference/Transaction ID” uiweke hapa chini.
+              Baada ya kulipa, unaweza kubandika SMS nzima ya muamala hapa chini au ukaandika details
+              manually. System itatumia RAW SMS kusoma reference/phone moja kwa moja bila kuvunja RPC flow ya sasa.
             </Text>
           </View>
 
@@ -1356,6 +1691,62 @@ export default function SubscriptionScreen() {
 
           <View style={{ marginTop: 12, gap: 10 }}>
             <Field
+              label="RAW SMS (optional)"
+              value={rawSms}
+              onChangeText={setRawSms}
+              placeholder="Bandika SMS nzima ya muamala hapa..."
+              multiline
+            />
+
+            {clean(rawSms) ? (
+              <View
+                style={{
+                  borderWidth: 1,
+                  borderColor: rawSmsAmountMismatch
+                    ? "rgba(245,158,11,0.35)"
+                    : "rgba(255,255,255,0.10)",
+                  backgroundColor: rawSmsAmountMismatch
+                    ? "rgba(245,158,11,0.10)"
+                    : "rgba(255,255,255,0.04)",
+                  borderRadius: 16,
+                  padding: 12,
+                  gap: 6,
+                }}
+              >
+                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
+                  RAW SMS detected
+                </Text>
+
+                <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                  Reference: <Text style={{ color: UI.text }}>{parsedRawSms.reference || "—"}</Text>
+                </Text>
+
+                <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                  Phone: <Text style={{ color: UI.text }}>{parsedRawSms.phone || "—"}</Text>
+                </Text>
+
+                <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                  Amount in SMS:{" "}
+                  <Text style={{ color: UI.text }}>
+                    {parsedRawSms.amount === null ? "—" : fmtMoneyTZS(parsedRawSms.amount)}
+                  </Text>
+                </Text>
+
+                {clean(parsedRawSms.payerName) ? (
+                  <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                    Name in SMS: <Text style={{ color: UI.text }}>{parsedRawSms.payerName}</Text>
+                  </Text>
+                ) : null}
+
+                {rawSmsAmountMismatch ? (
+                  <Text style={{ color: UI.text, fontWeight: "800", fontSize: 12, marginTop: 4 }}>
+                    Warning: Amount inside SMS differs from selected subscription amount. Review before submit.
+                  </Text>
+                ) : null}
+              </View>
+            ) : null}
+
+            <Field
               label="Phone Number"
               value={payerPhone}
               onChangeText={setPayerPhone}
@@ -1378,6 +1769,38 @@ export default function SubscriptionScreen() {
             />
           </View>
 
+          <View
+            style={{
+              marginTop: 12,
+              padding: 12,
+              borderRadius: 16,
+              borderWidth: 1,
+              borderColor: "rgba(255,255,255,0.10)",
+              backgroundColor: "rgba(255,255,255,0.04)",
+              gap: 6,
+            }}
+          >
+            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
+              Final submit payload preview
+            </Text>
+
+            <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+              Phone: <Text style={{ color: UI.text }}>{effectivePhonePreview || "—"}</Text>
+            </Text>
+
+            <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+              Reference: <Text style={{ color: UI.text }}>{effectiveRefPreview || "—"}</Text>
+            </Text>
+
+            <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+              Name: <Text style={{ color: UI.text }}>{effectiveNamePreview || "—"}</Text>
+            </Text>
+
+            <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 12, marginTop: 2 }}>
+              Manual fields zina-priority. Zikiwa tupu, system itatumia values zilizopatikana kutoka RAW SMS.
+            </Text>
+          </View>
+
           <View style={{ marginTop: 14 }}>
             <PrimaryButton
               label={busy ? "Submitting..." : "CONFIRM & SEND REQUEST"}
@@ -1393,8 +1816,8 @@ export default function SubscriptionScreen() {
           ) : null}
 
           <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 12 }}>
-            Note: Kwa sasa tunatumia manual request flow. Request ikiingia, status yake huwa PENDING
-            mpaka ofisi ya ZETRA i-approve.
+            Note: Request ikipelekwa, inaweza kubaki PENDING au ku-auto-approve moja kwa moja
+            kama office SMS iliyopo tayari ime-match na reference ya muamala.
           </Text>
         </Card>
       </View>

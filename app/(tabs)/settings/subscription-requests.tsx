@@ -1,4 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+// app/(tabs)/settings/subscription-requests.tsx
+
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -33,6 +35,23 @@ function clean(s: any) {
 
 function upper(s: any) {
   return clean(s).toUpperCase();
+}
+
+function digitsOnly(s: any) {
+  return clean(s).replace(/\D/g, "");
+}
+
+function isUsefulPhone(s: any) {
+  const d = digitsOnly(s);
+  return d.length >= 7;
+}
+
+function isUsefulName(s: any) {
+  const v = clean(s);
+  if (!v) return false;
+  if (v.length < 4) return false;
+  if (/^[A-Z]{1,4}$/i.test(v)) return false;
+  return true;
 }
 
 type RequestRow = {
@@ -75,18 +94,43 @@ type OfficeSmsMatchRow = {
   notes: string | null;
 };
 
-type ParsedSmsRow = {
-  parsed_reference?: string | null;
-  parsed_amount?: number | string | null;
-  parsed_phone?: string | null;
-  parsed_name?: string | null;
-  parse_confidence?: number | null;
+type ParsedPaymentRow = {
+  provider_family?: string | null;
+  provider_code?: string | null;
+  country_code?: string | null;
+  direction?: string | null;
+  transaction_reference?: string | null;
+  amount_value?: number | string | null;
+  currency_code?: string | null;
+  sender_phone?: string | null;
+  sender_name?: string | null;
+  raw_text?: string | null;
+  parse_status?: string | null;
+  confidence_score?: number | null;
+  parse_notes?: string | null;
 };
 
-function fmtMoneyTZS(v: any) {
+type ParsedPaymentResult = {
+  parsedRef: string;
+  parsedPhone: string;
+  parsedAmt: string;
+  parsedName: string;
+  parsedScore: string;
+  providerFamily: string;
+  providerCode: string;
+  currencyCode: string;
+  countryCode: string;
+  direction: string;
+  parseStatus: string;
+  parseNotes: string;
+};
+
+function fmtMoney(v: any, currencyCode?: string | null) {
   const n = Number(v);
   if (!Number.isFinite(n)) return "—";
-  return `TZS ${Math.round(n).toLocaleString("en-US")}`;
+
+  const code = upper(currencyCode || "TZS");
+  return `${code} ${Math.round(n).toLocaleString("en-US")}`;
 }
 
 function fmtDateTime(v: any) {
@@ -146,26 +190,133 @@ function statusTone(status: string) {
   };
 }
 
-function isLikelyMpesaSms(text: string) {
+function hasMoneySignal(text: string) {
+  const t = clean(text).toLowerCase();
+  return (
+    t.includes("tsh") ||
+    t.includes("tshs") ||
+    t.includes("tzs") ||
+    t.includes("amount") ||
+    t.includes("kiasi") ||
+    t.includes("salio") ||
+    /\b\d[\d,]*\.\d{2}\b/.test(t) ||
+    /\b\d[\d,]*\b/.test(t)
+  );
+}
+
+function hasIncomingWords(text: string) {
+  const t = clean(text).toLowerCase();
+  return (
+    t.includes("umepokea") ||
+    t.includes("umelipwa") ||
+    t.includes("received") ||
+    t.includes("credited") ||
+    t.includes("credit alert") ||
+    t.includes("incoming payment") ||
+    t.includes("imethibitishwa. umepokea") ||
+    t.includes("imethibitishwa umepokea") ||
+    t.includes("imeingia") ||
+    t.includes("deposit received")
+  );
+}
+
+function hasProviderSignal(text: string) {
+  const t = clean(text).toLowerCase();
+  return (
+    t.includes("m-pesa") ||
+    t.includes("mpesa") ||
+    t.includes("vodacom") ||
+    t.includes("airtel money") ||
+    t.includes("airtelmoney") ||
+    t.includes("tigopesa") ||
+    t.includes("tigo pesa") ||
+    t.includes("mixx") ||
+    t.includes("halopesa") ||
+    t.includes("halo pesa") ||
+    t.includes("ezypesa") ||
+    t.includes("tpb") ||
+    t.includes("crdb") ||
+    t.includes("nmb") ||
+    t.includes("nbc") ||
+    t.includes("bank") ||
+    t.includes("benki")
+  );
+}
+
+function hasUsefulReferenceSignal(text: string) {
+  const t = upper(text);
+  if (!t) return false;
+
+  return (
+    /(?:^|\s)(?:TID|TXN|TX|TRANS(?:ACTION)?|RECEIPT|REFERENCE|REF|KUMBUKUMBU|MUAMALA)\s*[:#-]?\s*[A-Z0-9._-]{6,}/i.test(
+      t
+    ) ||
+    /\b[A-Z0-9]+(?:[._-][A-Z0-9]+)+\b/.test(t) ||
+    /\b[A-Z]{2,}[0-9]{4,}[A-Z0-9._-]*\b/.test(t)
+  );
+}
+
+function isLikelyOutgoingOrDebitSms(text: string) {
   const t = clean(text).toLowerCase();
   if (!t) return false;
 
   return (
-    t.includes("tsh") &&
-    (t.includes("imethibitishwa") ||
-      t.includes("umepokea") ||
-      t.includes("umetuma") ||
-      t.includes("kutoka") ||
-      t.includes("kwenda")) &&
-    t.includes("mnamo")
+    t.includes("imetolewa") ||
+    t.includes("umehamisha") ||
+    t.includes("umetuma") ||
+    t.includes("umelipa") ||
+    t.includes("debited") ||
+    t.includes("debit") ||
+    t.includes("sent to") ||
+    t.includes("send money") ||
+    t.includes("withdraw") ||
+    t.includes("withdrawn") ||
+    t.includes("cash out") ||
+    t.includes("umetoa") ||
+    t.includes("transfer kwenda") ||
+    t.includes("to account") ||
+    t.includes("kwa wakala") ||
+    t.includes("umefanya malipo") ||
+    t.includes("payment sent") ||
+    t.includes("paid out") ||
+    t.includes("kutoka ac:") ||
+    t.includes("kwenda mpesa") ||
+    t.includes("kutoka account") ||
+    t.includes("from ac:") ||
+    t.includes("from account") ||
+    t.includes("makato") ||
+    t.includes("withdrawal") ||
+    t.includes("purchase completed")
   );
+}
+
+function isStrongIncomingPaymentSms(text: string) {
+  const t = clean(text);
+  if (!t) return false;
+
+  const lowered = t.toLowerCase();
+
+  if (isLikelyOutgoingOrDebitSms(lowered)) return false;
+
+  const incoming = hasIncomingWords(lowered);
+  const money = hasMoneySignal(lowered);
+  const provider = hasProviderSignal(lowered);
+  const reference = hasUsefulReferenceSignal(t);
+
+  if (incoming && money && reference) return true;
+  if (incoming && money && provider) return true;
+
+  return false;
+}
+
+function shouldAutoProcessSms(text: string) {
+  return isStrongIncomingPaymentSms(text);
 }
 
 function parseIncomingLibrarySms(payload: any): { sender: string; body: string } {
   if (typeof payload === "string") {
     const raw = clean(payload);
 
-    // Common library shape: "[255760..., message body here]"
     if (raw.startsWith("[") && raw.endsWith("]")) {
       const inner = raw.slice(1, -1);
       const firstComma = inner.indexOf(",");
@@ -292,6 +443,13 @@ export default function SubscriptionRequestsScreen() {
   const [smsAmount, setSmsAmount] = useState("");
   const [parsedPayerName, setParsedPayerName] = useState("");
   const [parseConfidence, setParseConfidence] = useState("");
+  const [parsedProviderFamily, setParsedProviderFamily] = useState("");
+  const [parsedProviderCode, setParsedProviderCode] = useState("");
+  const [parsedCurrencyCode, setParsedCurrencyCode] = useState("");
+  const [parsedCountryCode, setParsedCountryCode] = useState("");
+  const [parsedDirection, setParsedDirection] = useState("");
+  const [parsedStatus, setParsedStatus] = useState("");
+  const [parsedNotes, setParsedNotes] = useState("");
   const [parsingSms, setParsingSms] = useState(false);
 
   const [ingestingSms, setIngestingSms] = useState(false);
@@ -303,12 +461,20 @@ export default function SubscriptionRequestsScreen() {
   const [smsPermissionGranted, setSmsPermissionGranted] = useState(false);
   const [officeListenerStarted, setOfficeListenerStarted] = useState(false);
   const [officeListenerStatus, setOfficeListenerStatus] = useState("OFF");
-  const [officeAutoMode, setOfficeAutoMode] = useState(true);
-
-  const lastProcessedFingerprintRef = useRef("");
-  const autoHandlingRef = useRef(false);
 
   const titleRightLabel = useMemo(() => "Office", []);
+
+  const resetParsedUi = useCallback(() => {
+    setParsedPayerName("");
+    setParseConfidence("");
+    setParsedProviderFamily("");
+    setParsedProviderCode("");
+    setParsedCurrencyCode("");
+    setParsedCountryCode("");
+    setParsedDirection("");
+    setParsedStatus("");
+    setParsedNotes("");
+  }, []);
 
   const loadRequests = useCallback(
     async (forcedFilter?: RequestFilter) => {
@@ -407,47 +573,71 @@ export default function SubscriptionRequestsScreen() {
   }, []);
 
   const parseSmsFromText = useCallback(
-    async (rawTextArg?: string, silent?: boolean) => {
+    async (rawTextArg?: string, silent?: boolean): Promise<ParsedPaymentResult | null> => {
       const body = clean(rawTextArg ?? smsText);
+
       if (!body) {
-        setParsedPayerName("");
-        setParseConfidence("");
+        resetParsedUi();
         return null;
       }
 
       setParsingSms(true);
+      setParsedStatus("PARSING");
+      setParsedNotes("");
+
       try {
-        const { data, error } = await supabase.rpc("parse_tz_mpesa_sms_v1", {
-          p_sms_text: body,
+        const { data, error } = await supabase.rpc("parse_incoming_payment_message_v1", {
+          p_raw_text: body,
         });
 
         if (error) throw error;
 
-        const row: ParsedSmsRow | null = Array.isArray(data)
-          ? ((data?.[0] ?? null) as ParsedSmsRow | null)
-          : ((data ?? null) as ParsedSmsRow | null);
+        const row: ParsedPaymentRow | null = Array.isArray(data)
+          ? ((data?.[0] ?? null) as ParsedPaymentRow | null)
+          : ((data ?? null) as ParsedPaymentRow | null);
 
         if (!row) {
+          setParsedStatus("NO_RESULT");
+          setParsedNotes("Parser hakurudisha row.");
           if (!silent) {
-            Alert.alert("Parser", "SMS parser hakurudisha data.");
+            Alert.alert("Parser", "Payment parser hakurudisha data.");
           }
           return null;
         }
 
-        const parsedRef = upper(row.parsed_reference);
-        const parsedPhone = clean(row.parsed_phone);
-        const parsedAmt = normalizeAmountText(row.parsed_amount);
-        const parsedName = clean(row.parsed_name);
+        const parsedRef = upper(row.transaction_reference);
+        const parsedPhoneRaw = clean(row.sender_phone);
+        const parsedAmt = normalizeAmountText(row.amount_value);
+        const parsedNameRaw = clean(row.sender_name);
         const parsedScore =
-          row.parse_confidence === null || row.parse_confidence === undefined
+          row.confidence_score === null || row.confidence_score === undefined
             ? ""
-            : fmtScore(row.parse_confidence);
+            : fmtScore(row.confidence_score);
+
+        const providerFamily = upper(row.provider_family);
+        const providerCode = upper(row.provider_code);
+        const currencyCode = upper(row.currency_code || "TZS");
+        const countryCode = upper(row.country_code);
+        const direction = upper(row.direction);
+        const parseStatus = upper(row.parse_status || "PARSED");
+        const parseNotes = clean(row.parse_notes);
+
+        const parsedPhone = isUsefulPhone(parsedPhoneRaw) ? parsedPhoneRaw : "";
+        const parsedName = isUsefulName(parsedNameRaw) ? parsedNameRaw : "";
 
         if (parsedRef) setSmsReference(parsedRef);
         if (parsedPhone) setSmsSender(parsedPhone);
         if (parsedAmt) setSmsAmount(parsedAmt);
+
         setParsedPayerName(parsedName);
         setParseConfidence(parsedScore);
+        setParsedProviderFamily(providerFamily);
+        setParsedProviderCode(providerCode);
+        setParsedCurrencyCode(currencyCode);
+        setParsedCountryCode(countryCode);
+        setParsedDirection(direction);
+        setParsedStatus(parseStatus);
+        setParsedNotes(parseNotes);
 
         return {
           parsedRef,
@@ -455,24 +645,33 @@ export default function SubscriptionRequestsScreen() {
           parsedAmt,
           parsedName,
           parsedScore,
+          providerFamily,
+          providerCode,
+          currencyCode,
+          countryCode,
+          direction,
+          parseStatus,
+          parseNotes,
         };
       } catch (e: any) {
+        const msg = clean(e?.message) || "Failed to parse incoming payment text.";
+        setParsedStatus("FAILED");
+        setParsedNotes(msg);
         if (!silent) {
-          Alert.alert("Parser failed", e?.message ?? "Failed to parse SMS text.");
+          Alert.alert("Parser failed", msg);
         }
         return null;
       } finally {
         setParsingSms(false);
       }
     },
-    [smsText]
+    [resetParsedUi, smsText]
   );
 
   useEffect(() => {
     const body = clean(smsText);
     if (!body || body.length < 10) {
-      setParsedPayerName("");
-      setParseConfidence("");
+      resetParsedUi();
       return;
     }
 
@@ -481,7 +680,7 @@ export default function SubscriptionRequestsScreen() {
     }, 700);
 
     return () => clearTimeout(t);
-  }, [smsText, parseSmsFromText]);
+  }, [smsText, parseSmsFromText, resetParsedUi]);
 
   const runBiometricGate = useCallback(async () => {
     try {
@@ -669,21 +868,20 @@ export default function SubscriptionRequestsScreen() {
 
         const smsLogId = clean(data);
         setLastSmsLogId(smsLogId);
-        setLastMatchId("");
-        setLastMatchRow(null);
-
         setSmsText(body);
         setSmsSender(sender);
         setSmsReference(reference);
         setSmsAmount(String(Math.round(amountNum)));
+        setOfficeListenerStatus("SMS INGESTED • WAITING MANUAL REVIEW");
 
-        if (!override) {
-          Alert.alert("SMS ingested ✅", `Office SMS imehifadhiwa.\n\nSMS Log ID:\n${smsLogId}`);
-        }
+        Alert.alert(
+          "SMS saved ✅",
+          "Office SMS imehifadhiwa. Sasa linganisha na request, kisha tumia APPROVE manually."
+        );
 
         return smsLogId;
       } catch (e: any) {
-        Alert.alert("Ingest failed", e?.message ?? "Failed to ingest office SMS.");
+        Alert.alert("Ingest failed", clean(e?.message) || "Failed to ingest office SMS.");
         return "";
       } finally {
         setIngestingSms(false);
@@ -703,7 +901,7 @@ export default function SubscriptionRequestsScreen() {
 
       setMatchingSms(true);
       try {
-        const { data, error } = await supabase.rpc("match_office_sms_v1", {
+        const { data, error } = await supabase.rpc("match_office_sms_v2", {
           p_sms_log_id: smsLogId,
         });
 
@@ -714,126 +912,20 @@ export default function SubscriptionRequestsScreen() {
         await loadLatestMatchById(matchId);
         await loadRequests();
 
-        if (!forcedSmsLogId) {
-          Alert.alert("Match completed ✅", `Office SMS match imekamilika.\n\nMatch ID:\n${matchId}`);
-        }
+        Alert.alert(
+          "Match completed ✅",
+          "Matcher ime-run kwa review tu. Hakuna auto approve wala auto activation."
+        );
 
         return matchId;
       } catch (e: any) {
-        Alert.alert("Match failed", e?.message ?? "Failed to run office SMS matcher.");
+        Alert.alert("Match failed", e?.message ?? "Failed to run office SMS V2 matcher.");
         return "";
       } finally {
         setMatchingSms(false);
       }
     },
     [lastSmsLogId, loadLatestMatchById, loadRequests]
-  );
-
-  const autoHandleOfficeSms = useCallback(
-    async (senderInput: string, bodyInput: string) => {
-      const sender = clean(senderInput);
-      const body = clean(bodyInput);
-
-      if (!body || !sender) return;
-      if (!officeAutoMode) return;
-      if (!isLikelyMpesaSms(body)) return;
-      if (autoHandlingRef.current) return;
-
-      const fingerprint = `${sender}||${body}`;
-      if (lastProcessedFingerprintRef.current === fingerprint) return;
-
-      autoHandlingRef.current = true;
-
-      try {
-        setSmsText(body);
-        setSmsSender(sender);
-
-        const parsed = await parseSmsFromText(body, true);
-
-        const parsedRef = upper(parsed?.parsedRef);
-        const parsedAmt = normalizeAmountText(parsed?.parsedAmt);
-        const parsedPhone = clean(parsed?.parsedPhone);
-        const parsedName = clean(parsed?.parsedName);
-        const parsedScore = clean(parsed?.parsedScore);
-
-        if (!parsedRef || !parsedAmt) {
-          setOfficeListenerStatus("SMS RECEIVED • NOT M-PESA MATCHABLE");
-          return;
-        }
-
-        setSmsReference(parsedRef);
-        setSmsAmount(parsedAmt);
-        if (parsedPhone) setSmsSender(parsedPhone);
-        if (parsedName) setParsedPayerName(parsedName);
-        if (parsedScore) setParseConfidence(parsedScore);
-
-        const smsLogId = await ingestOfficeSms({
-          body,
-          sender: parsedPhone || sender,
-        });
-
-        if (!smsLogId) {
-          setOfficeListenerStatus("AUTO INGEST FAILED");
-          return;
-        }
-
-        const matchId = await runOfficeSmsMatch(smsLogId);
-
-        if (!matchId) {
-          setOfficeListenerStatus("AUTO MATCH FAILED");
-          return;
-        }
-
-        lastProcessedFingerprintRef.current = fingerprint;
-        setOfficeListenerStatus("AUTO MATCH COMPLETE");
-
-        const { data, error } = await supabase
-          .from("office_sms_matches")
-          .select(
-            `
-              id,
-              sms_log_id,
-              request_id,
-              match_status,
-              confidence_score,
-              reference_match,
-              amount_match,
-              phone_match,
-              time_match,
-              decision_reason,
-              reviewed_by,
-              reviewed_at,
-              created_at,
-              updated_at,
-              review_required,
-              auto_approved,
-              notes
-            `
-          )
-          .eq("id", matchId)
-          .maybeSingle();
-
-        if (!error) {
-          const row = (data ?? null) as OfficeSmsMatchRow | null;
-          setLastMatchRow(row);
-
-          if (row?.auto_approved) {
-            Alert.alert(
-              "Auto-approved ✅",
-              "Office SMS imeingia, ime-match, na subscription imepitishwa moja kwa moja."
-            );
-          } else if (row?.review_required) {
-            Alert.alert(
-              "Review required",
-              "SMS imeingia lakini inahitaji ukaguzi wa office kabla ya approval."
-            );
-          }
-        }
-      } finally {
-        autoHandlingRef.current = false;
-      }
-    },
-    [ingestOfficeSms, officeAutoMode, parseSmsFromText, runOfficeSmsMatch]
   );
 
   const startOfficeSmsListener = useCallback(async () => {
@@ -860,7 +952,7 @@ export default function SubscriptionRequestsScreen() {
       setOfficeListenerStatus("STARTING LISTENER");
 
       startReadSMS(
-        (status: any, sms: any, error: any) => {
+        async (status: any, sms: any, error: any) => {
           const statusText = clean(status);
 
           if (statusText) {
@@ -871,20 +963,38 @@ export default function SubscriptionRequestsScreen() {
             return;
           }
 
-          if (
-            statusText.toLowerCase().includes("start read sms successfully") ||
-            statusText.toLowerCase() === "success"
-          ) {
-            const incoming = parseIncomingLibrarySms(sms);
-            const sender = clean(incoming.sender);
-            const body = clean(incoming.body);
+          const incoming = parseIncomingLibrarySms(sms);
+          const sender = clean(incoming?.sender);
+          const body = clean(incoming?.body);
 
-            if (!body) return;
+          if (!body) return;
 
+          if (!shouldAutoProcessSms(body)) {
+            setOfficeListenerStatus("IGNORED • NON PAYMENT SMS");
+            return;
+          }
+
+          try {
+            setOfficeListenerStatus("SMS RECEIVED • REVIEW MANUALLY");
             setSmsText(body);
             if (sender) setSmsSender(sender);
 
-            void autoHandleOfficeSms(sender, body);
+            const parsed = await parseSmsFromText(body, true);
+
+            const parsedRef = upper(parsed?.parsedRef);
+            const parsedAmt = normalizeAmountText(parsed?.parsedAmt);
+            const parsedPhone = clean(parsed?.parsedPhone || sender);
+            const parsedName = clean(parsed?.parsedName);
+            const parsedScore = clean(parsed?.parsedScore);
+
+            if (parsedRef) setSmsReference(parsedRef);
+            if (parsedAmt) setSmsAmount(parsedAmt);
+            if (parsedPhone) setSmsSender(parsedPhone);
+            if (parsedName) setParsedPayerName(parsedName);
+            if (parsedScore) setParseConfidence(parsedScore);
+          } catch (err) {
+            console.warn("LISTENER PARSE ERROR:", err);
+            setOfficeListenerStatus("SMS RECEIVED • PARSE REVIEW NEEDED");
           }
         },
         (status: any, sms: any, error: any) => {
@@ -902,17 +1012,17 @@ export default function SubscriptionRequestsScreen() {
       );
 
       setOfficeListenerStarted(true);
-      setOfficeListenerStatus("LISTENER ON");
+      setOfficeListenerStatus("LISTENER ON • MANUAL REVIEW MODE");
       Alert.alert(
         "Office listener started ✅",
-        "Simu hii ya office sasa inasikiliza SMS mpya za M-Pesa kwa auto ingest + auto match."
+        "Simu hii sasa inasoma SMS mpya na kuziweka kwa review ya manual tu."
       );
     } catch (e: any) {
       setOfficeListenerStarted(false);
       setOfficeListenerStatus("LISTENER ERROR");
       Alert.alert("Office listener", e?.message ?? "Failed to start office SMS listener.");
     }
-  }, [autoHandleOfficeSms]);
+  }, [parseSmsFromText]);
 
   const renderItem = ({ item }: { item: RequestRow }) => {
     const isBusy = busyId === item.id;
@@ -943,11 +1053,11 @@ export default function SubscriptionRequestsScreen() {
           </Text>
 
           <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-            Amount expected: <Text style={{ color: UI.text }}>{fmtMoneyTZS(item.expected_amount)}</Text>
+            Amount expected: <Text style={{ color: UI.text }}>{fmtMoney(item.expected_amount, "TZS")}</Text>
           </Text>
 
           <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-            Amount submitted: <Text style={{ color: UI.text }}>{fmtMoneyTZS(item.submitted_amount)}</Text>
+            Amount submitted: <Text style={{ color: UI.text }}>{fmtMoney(item.submitted_amount, "TZS")}</Text>
           </Text>
 
           <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
@@ -1055,6 +1165,14 @@ export default function SubscriptionRequestsScreen() {
     );
   };
 
+  const parserReady = parsingSms
+    ? "PARSING..."
+    : clean(parsedStatus)
+    ? clean(parsedStatus)
+    : clean(parseConfidence)
+    ? "READY"
+    : "WAITING";
+
   return (
     <Screen scroll>
       <View
@@ -1142,8 +1260,8 @@ export default function SubscriptionRequestsScreen() {
           </Text>
 
           <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 8 }}>
-            Simu hii ya office itasikiliza SMS mpya zinazoingia. ZETRA itachuja M-Pesa tu, kisha
-            ifanye auto ingest + auto match.
+            Simu hii ya office itasikiliza SMS mpya zinazoingia. SMS itaonekana hapa kwa review ya
+            manual, bila auto approve wala auto activation.
           </Text>
 
           <View
@@ -1163,7 +1281,9 @@ export default function SubscriptionRequestsScreen() {
 
             <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
               SMS permission:{" "}
-              <Text style={{ color: UI.text }}>{smsPermissionGranted ? "GRANTED" : "NOT GRANTED"}</Text>
+              <Text style={{ color: UI.text }}>
+                {smsPermissionGranted ? "GRANTED" : "NOT GRANTED"}
+              </Text>
             </Text>
 
             <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
@@ -1171,7 +1291,7 @@ export default function SubscriptionRequestsScreen() {
             </Text>
 
             <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-              Auto mode: <Text style={{ color: UI.text }}>{officeAutoMode ? "ON" : "OFF"}</Text>
+              Mode: <Text style={{ color: UI.text }}>MANUAL REVIEW ONLY</Text>
             </Text>
           </View>
 
@@ -1180,11 +1300,6 @@ export default function SubscriptionRequestsScreen() {
               label={officeListenerStarted ? "LISTENER ACTIVE" : "START OFFICE LISTENER"}
               onPress={() => void startOfficeSmsListener()}
               disabled={!authed || officeListenerStarted || Platform.OS !== "android"}
-            />
-            <PrimaryButton
-              label={officeAutoMode ? "AUTO MODE ON" : "AUTO MODE OFF"}
-              onPress={() => setOfficeAutoMode((v) => !v)}
-              danger={!officeAutoMode}
             />
           </View>
         </Card>
@@ -1197,7 +1312,7 @@ export default function SubscriptionRequestsScreen() {
           </Text>
 
           <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 8 }}>
-            Hapa tuna-test ingest + match ya SMS inayopokelewa na namba ya ofisi.
+            Hapa tuna-test parser + SMS logging + optional match helper kwa manual review.
           </Text>
 
           <View style={{ marginTop: 12, gap: 10 }}>
@@ -1285,10 +1400,31 @@ export default function SubscriptionRequestsScreen() {
               }}
             >
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                Parser status:{" "}
-                <Text style={{ color: UI.text }}>
-                  {parsingSms ? "PARSING..." : clean(parseConfidence) ? "READY" : "WAITING"}
-                </Text>
+                Parser status: <Text style={{ color: UI.text }}>{parserReady}</Text>
+              </Text>
+
+              <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                Parse engine status: <Text style={{ color: UI.text }}>{clean(parsedStatus) || "—"}</Text>
+              </Text>
+
+              <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                Provider family: <Text style={{ color: UI.text }}>{clean(parsedProviderFamily) || "—"}</Text>
+              </Text>
+
+              <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                Provider code: <Text style={{ color: UI.text }}>{clean(parsedProviderCode) || "—"}</Text>
+              </Text>
+
+              <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                Country code: <Text style={{ color: UI.text }}>{clean(parsedCountryCode) || "—"}</Text>
+              </Text>
+
+              <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                Direction: <Text style={{ color: UI.text }}>{clean(parsedDirection) || "—"}</Text>
+              </Text>
+
+              <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                Currency: <Text style={{ color: UI.text }}>{clean(parsedCurrencyCode) || "—"}</Text>
               </Text>
 
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
@@ -1297,6 +1433,17 @@ export default function SubscriptionRequestsScreen() {
 
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
                 Parse confidence: <Text style={{ color: UI.text }}>{clean(parseConfidence) || "—"}</Text>
+              </Text>
+
+              <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                Parse notes: <Text style={{ color: UI.text }}>{clean(parsedNotes) || "—"}</Text>
+              </Text>
+
+              <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                Payment-like SMS:{" "}
+                <Text style={{ color: UI.text }}>
+                  {shouldAutoProcessSms(smsText) ? "YES" : clean(smsText) ? "NO" : "—"}
+                </Text>
               </Text>
             </View>
 
@@ -1308,7 +1455,7 @@ export default function SubscriptionRequestsScreen() {
               />
 
               <PrimaryButton
-                label={ingestingSms ? "INGESTING..." : "INGEST SMS"}
+                label={ingestingSms ? "SAVING..." : "INGEST SMS"}
                 onPress={() => void ingestOfficeSms()}
                 disabled={ingestingSms || matchingSms}
               />
@@ -1429,7 +1576,11 @@ export default function SubscriptionRequestsScreen() {
               active={filter === "REJECTED"}
               onPress={() => setFilter("REJECTED")}
             />
-            <FilterPill label="ALL" active={filter === "ALL"} onPress={() => setFilter("ALL")} />
+            <FilterPill
+              label="ALL"
+              active={filter === "ALL"}
+              onPress={() => setFilter("ALL")}
+            />
           </View>
 
           <View

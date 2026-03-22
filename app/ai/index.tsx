@@ -52,6 +52,8 @@ type ChatMsg = {
   text: string;
   ts: number;
   images?: Array<{ id: string; uri: string }> | null;
+  autopilotAlerts?: AutopilotAlert[] | null;
+  analysisIntent?: "ANALYSIS" | "FORECAST" | "COACH" | null;
 };
 
 type ReqMsg = { role: "user" | "assistant"; text: string };
@@ -91,22 +93,51 @@ type AiBalanceRow = {
   period_start?: string | null;
   [k: string]: any;
 };
+type AutopilotAlert = {
+  level: "info" | "warning" | "critical";
+  title: string;
+  message: string;
+};
 
+type WorkerMeta = {
+  role?: string;
+  roleMeta?: any;
+  analysisIntent?: "ANALYSIS" | "FORECAST" | "COACH";
+  autopilotAlerts?: AutopilotAlert[];
+  [k: string]: any;
+};
 function clean(s: any) {
   return String(s ?? "").trim();
 }
+
 function upper(s: any) {
   return clean(s).toUpperCase();
 }
+
 function uid() {
   return `${Date.now()}_${Math.random().toString(36).slice(2)}`;
 }
+
 function fmtNum(v: any) {
   const n = Number(v);
   if (!Number.isFinite(n)) return "0";
   return Math.round(n).toString();
 }
 
+function buildAiContext(org: ReturnType<typeof useOrg>) {
+  return {
+    orgId: org.activeOrgId ?? null,
+    activeOrgId: org.activeOrgId ?? null,
+    orgName: org.activeOrgName ?? null,
+    activeOrgName: org.activeOrgName ?? null,
+    storeId: org.activeStoreId ?? null,
+    activeStoreId: org.activeStoreId ?? null,
+    storeName: org.activeStoreName ?? null,
+    activeStoreName: org.activeStoreName ?? null,
+    role: org.activeRole ?? null,
+    activeRole: org.activeRole ?? null,
+  };
+}
 const INPUT_MAX = 12_000;
 const C: any = (UI as any)?.colors ?? UI;
 
@@ -405,11 +436,26 @@ function nextTypingText(step: number) {
   const dots = step % 4;
   return `AI inaandika${".".repeat(dots)}`;
 }
-
+function normalizeAutopilotAlerts(meta: any): AutopilotAlert[] {
+  const arr = Array.isArray(meta?.autopilotAlerts) ? meta.autopilotAlerts : [];
+  return arr
+    .map((a: any) => ({
+      level: a?.level === "critical" || a?.level === "warning" ? a.level : "info",
+      title: clean(a?.title),
+      message: clean(a?.message),
+    }))
+    .filter((a: AutopilotAlert) => a.title || a.message);
+}
 export default function AiChatScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const org = useOrg();
+  const org = useOrg();const aiContext = useMemo(() => buildAiContext(org), [
+    org.activeOrgId,
+    org.activeOrgName,
+    org.activeStoreId,
+    org.activeStoreName,
+    org.activeRole,
+  ]);
 
   const topPad = Math.max(insets.top, 10) + 8;
 
@@ -459,7 +505,8 @@ export default function AiChatScreen() {
   const [tasks, setTasks] = useState<TaskRow[]>([]);
 
   const [imgPreview, setImgPreview] = useState<{ open: boolean; uri: string }>({ open: false, uri: "" });
-
+const [autopilotCards, setAutopilotCards] = useState<AutopilotAlert[]>([]);
+const [lastAnalysisIntent, setLastAnalysisIntent] = useState<"ANALYSIS" | "FORECAST" | "COACH" | null>(null);
   const anim = useRef(new Animated.Value(0)).current;
   const { height: screenH } = Dimensions.get("window");
 
@@ -486,11 +533,13 @@ export default function AiChatScreen() {
       id: uid(),
       role: "assistant",
       ts: Date.now(),
-      text:
-        "Karibu ZETRA AI.\n\n" +
-        "• Uliza maswali ya biashara (general)\n" +
-        "• Au niambie unataka kufanya nini ndani ya ZETRA BMS, nitakuongoza hatua kwa hatua.\n\n" +
-        "Tip: Andika Kiswahili au English — nita-adapt automatically.",
+    
+        text:
+  "Karibu ZETRA AI.\n\n" +
+  "• Uliza maswali ya biashara (general)\n" +
+  "• Nipe analysis, forecast, au profit coach ya store yako\n" +
+  "• Au niambie unataka kufanya nini ndani ya ZETRA BMS, nitakuongoza hatua kwa hatua.\n\n" +
+  "Tip: Andika Lugha yoyote unayotumia — nita-adapt automatically.",
     },
   ]);
 
@@ -1012,20 +1061,13 @@ export default function AiChatScreen() {
     async (text: string, history: ReqMsg[], signal?: AbortSignal) => {
       if (!requireWorkerUrlOrAlert()) throw new Error("Worker URL missing");
 
-      const payload = {
+   const payload = {
         text,
         mode,
         history,
-        context: {
-          orgId: org.activeOrgId,
-          activeOrgId: org.activeOrgId,
-          activeOrgName: org.activeOrgName,
-          activeStoreId: org.activeStoreId,
-          activeStoreName: org.activeStoreName,
-          activeRole: org.activeRole,
-        },
+        roleHint: "AUTO",
+        context: aiContext,
       };
-
       const url = `${AI_WORKER_URL}/v1/chat`;
       const out = await fetchJsonWithRetry(
         url,
@@ -1061,11 +1103,7 @@ export default function AiChatScreen() {
     },
     [
       mode,
-      org.activeOrgId,
-      org.activeOrgName,
-      org.activeRole,
-      org.activeStoreId,
-      org.activeStoreName,
+      aiContext,
       requireWorkerUrlOrAlert,
     ]
   );
@@ -1074,20 +1112,14 @@ export default function AiChatScreen() {
     async (text: string, images: AttachedImage[], history: ReqMsg[], signal?: AbortSignal) => {
       if (!requireWorkerUrlOrAlert()) throw new Error("Worker URL missing");
 
-      const payload = {
+   const payload = {
         message: text,
         images: images.map((x) => x.dataUrl),
         meta: {
           mode,
           history,
-          context: {
-            orgId: org.activeOrgId,
-            activeOrgId: org.activeOrgId,
-            activeOrgName: org.activeOrgName,
-            activeStoreId: org.activeStoreId,
-            activeStoreName: org.activeStoreName,
-            activeRole: org.activeRole,
-          },
+          roleHint: "AUTO",
+          context: aiContext,
         },
       };
 
@@ -1120,11 +1152,7 @@ export default function AiChatScreen() {
     },
     [
       mode,
-      org.activeOrgId,
-      org.activeOrgName,
-      org.activeRole,
-      org.activeStoreId,
-      org.activeStoreName,
+      aiContext,
       requireWorkerUrlOrAlert,
     ]
   );
@@ -1142,16 +1170,9 @@ export default function AiChatScreen() {
             "Content-Type": "application/json",
             Accept: "application/json",
           },
-          body: JSON.stringify({
+        body: JSON.stringify({
             prompt,
-            context: {
-              orgId: org.activeOrgId,
-              activeOrgId: org.activeOrgId,
-              activeOrgName: org.activeOrgName,
-              activeStoreId: org.activeStoreId,
-              activeStoreName: org.activeStoreName,
-              activeRole: org.activeRole,
-            },
+            context: aiContext,
           }),
           signal,
         },
@@ -1174,26 +1195,24 @@ export default function AiChatScreen() {
       return imgUrl;
     },
     [
-      org.activeOrgId,
-      org.activeOrgName,
-      org.activeRole,
-      org.activeStoreId,
-      org.activeStoreName,
+      aiContext,
       requireWorkerUrlOrAlert,
     ]
   );
 
-  const quickChips = useMemo(
-    () => [
-      { k: "sales", label: "Sales", icon: "trending-up", prompt: "Nipe mikakati 10 ya kuongeza mauzo wiki hii." },
-      { k: "stock", label: "Stock", icon: "cube", prompt: "Nisaidie kupunguza dead stock na kuongeza turnover." },
-      { k: "pricing", label: "Pricing", icon: "pricetag", prompt: "Nipe strategy ya bei (pricing) ya bidhaa zangu." },
-      { k: "marketing", label: "Marketing", icon: "megaphone", prompt: "Nipe plan ya marketing ya siku 7 kwa store yangu." },
-      { k: "staff", label: "Staff", icon: "people", prompt: "Nipe mfumo wa kusimamia wafanyakazi na KPI za kila wiki." },
-      { k: "reports", label: "Reports", icon: "bar-chart", prompt: "Ni report gani 5 za lazima kwa biashara ya retail?" },
-    ],
-    []
-  );
+const quickChips = useMemo(
+  () => [
+    { k: "sales", label: "Sales", icon: "trending-up", prompt: "Nipe mikakati 10 ya kuongeza mauzo wiki hii." },
+    { k: "stock", label: "Stock", icon: "cube", prompt: "Nisaidie kupunguza dead stock na kuongeza turnover." },
+    { k: "pricing", label: "Pricing", icon: "pricetag", prompt: "Nipe strategy ya bei (pricing) ya bidhaa zangu." },
+    { k: "marketing", label: "Marketing", icon: "megaphone", prompt: "Nipe plan ya marketing ya siku 7 kwa store yangu." },
+    { k: "staff", label: "Staff", icon: "people", prompt: "Nipe mfumo wa kusimamia wafanyakazi na KPI za kila wiki." },
+    { k: "reports", label: "Reports", icon: "bar-chart", prompt: "Ni report gani 5 za lazima kwa biashara ya retail?" },
+    { k: "forecast", label: "Forecast", icon: "analytics", prompt: "Nipe analysis na forecast ya biashara yangu kwa siku 7 zijazo kwa store hii." },
+    { k: "coach", label: "Profit Coach", icon: "sparkles", prompt: "Nifanyie profit coach ya store hii kwa kutumia sales, cogs na expenses za leo." },
+  ],
+  []
+);
 
   const applyChipPrompt = useCallback(
     (p: string) => {
@@ -1422,9 +1441,22 @@ export default function AiChatScreen() {
       const creditResult = await consumeAiCredits(1);
 
       let footerNote = creditResult.ok ? "" : "⚠️ AI response imefanikiwa lakini credit deduction imeshindikana.";
-      const resMeta: any = (res as any)?.meta ?? null;
+     const resMeta: any = (res as any)?.meta ?? null;
+const normalizedAlerts = normalizeAutopilotAlerts(resMeta);
 
-      if (aiEnabled && clean(org.activeOrgId) && Array.isArray(resMeta?.actions) && resMeta.actions.length) {
+setMessages((prev) =>
+  prev.map((m) =>
+    m.id === botId
+      ? {
+          ...m,
+          autopilotAlerts: normalizedAlerts,
+          analysisIntent: (resMeta?.analysisIntent as any) ?? null,
+        }
+      : m
+  )
+);
+
+if (aiEnabled && clean(org.activeOrgId) && Array.isArray(resMeta?.actions) && resMeta.actions.length) {
         const result = await createTasksFromAiActions({
           orgId: org.activeOrgId!,
           storeId: org.activeStoreId ?? null,
@@ -1584,9 +1616,22 @@ export default function AiChatScreen() {
       const creditResult = await consumeAiCredits(1);
 
       let footerNote = creditResult.ok ? "" : "⚠️ Retry chat imefanikiwa lakini credit deduction imeshindikana.";
-      const resMeta: any = (res as any)?.meta ?? null;
+     const resMeta: any = (res as any)?.meta ?? null;
+const normalizedAlerts = normalizeAutopilotAlerts(resMeta);
 
-      if (aiEnabled && clean(org.activeOrgId) && Array.isArray(resMeta?.actions) && resMeta.actions.length) {
+setMessages((prev) =>
+  prev.map((m) =>
+    m.id === botId
+      ? {
+          ...m,
+          autopilotAlerts: normalizedAlerts,
+          analysisIntent: (resMeta?.analysisIntent as any) ?? null,
+        }
+      : m
+  )
+);
+
+if (aiEnabled && clean(org.activeOrgId) && Array.isArray(resMeta?.actions) && resMeta.actions.length) { 
         const result = await createTasksFromAiActions({
           orgId: org.activeOrgId!,
           storeId: org.activeStoreId ?? null,
@@ -1686,261 +1731,197 @@ export default function AiChatScreen() {
     );
   };
 
-  const TopBar = (
+const TopBar = (
+  <View
+    style={{
+      paddingTop: topPad,
+      paddingBottom: 10,
+      paddingHorizontal: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: "rgba(255,255,255,0.08)",
+      backgroundColor: C.background,
+    }}
+  >
     <View
       style={{
-        paddingTop: topPad,
-        paddingBottom: 10,
-        paddingHorizontal: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: "rgba(255,255,255,0.08)",
-        backgroundColor: C.background,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 12,
       }}
     >
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-        <Pressable
-          onPress={() => router.back()}
-          hitSlop={10}
-          style={({ pressed }) => ({
-            width: 44,
-            height: 44,
-            borderRadius: 999,
-            borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.12)",
-            backgroundColor: "rgba(255,255,255,0.06)",
-            alignItems: "center",
-            justifyContent: "center",
-            opacity: pressed ? 0.92 : 1,
-            transform: [{ scale: pressed ? 0.985 : 1 }],
-          })}
+      {/* BACK */}
+      <Pressable
+        onPress={() => router.back()}
+        hitSlop={10}
+        style={({ pressed }) => ({
+          width: 46,
+          height: 46,
+          borderRadius: 999,
+          borderWidth: 1,
+          borderColor: "rgba(255,255,255,0.12)",
+          backgroundColor: "rgba(255,255,255,0.06)",
+          alignItems: "center",
+          justifyContent: "center",
+          opacity: pressed ? 0.92 : 1,
+          transform: [{ scale: pressed ? 0.985 : 1 }],
+        })}
+      >
+        <Ionicons name="chevron-back" size={22} color={UI.text} />
+      </Pressable>
+
+      {/* TITLE */}
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", minWidth: 0 }}>
+        <Text
+          style={{ color: UI.text, fontWeight: "900", fontSize: 18 }}
+          numberOfLines={1}
         >
-          <Ionicons name="chevron-back" size={22} color={UI.text} />
-        </Pressable>
-
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18 }} numberOfLines={1}>
-            ZETRA AI
-          </Text>
-          <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 2 }} numberOfLines={1}>
-            {headerSubtitle}
-          </Text>
-        </View>
-
-        {aiEnabled ? (
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 6,
-              paddingHorizontal: 10,
-              height: 34,
-              borderRadius: 999,
-              borderWidth: 1,
-              borderColor: C.emeraldBorder,
-              backgroundColor: "rgba(16,185,129,0.12)",
-              shadowColor: "#000",
-              shadowOpacity: 0.18,
-              shadowRadius: 10,
-              shadowOffset: { width: 0, height: 6 },
-              elevation: 5,
-            }}
-          >
-            <Ionicons name="sparkles" size={14} color={UI.text} />
-            <Text style={{ color: UI.text, fontWeight: "900" }}>AI ON</Text>
-          </View>
-        ) : (
-          <Pressable
-            onPress={() => openAiGate(defaultAiLockReason)}
-            hitSlop={10}
-            style={({ pressed }) => ({
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 6,
-              paddingHorizontal: 10,
-              height: 34,
-              borderRadius: 999,
-              borderWidth: 1,
-              borderColor: "rgba(255,255,255,0.12)",
-              backgroundColor: pressed ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.06)",
-            })}
-          >
-            <Ionicons name="lock-closed-outline" size={14} color={UI.text} />
-            <Text style={{ color: UI.text, fontWeight: "900" }}>LOCKED</Text>
-          </Pressable>
-        )}
-
-        <Pressable
-          onPress={() => router.push("/settings/subscription")}
-          hitSlop={10}
-          style={({ pressed }) => ({
-            paddingHorizontal: 12,
-            height: 44,
-            borderRadius: 999,
-            borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.12)",
-            backgroundColor: "rgba(255,255,255,0.06)",
-            alignItems: "center",
-            justifyContent: "center",
-            opacity: pressed ? 0.92 : 1,
-            transform: [{ scale: pressed ? 0.985 : 1 }],
-          })}
-        >
-          <Text style={{ color: UI.text, fontWeight: "900" }}>Subscription</Text>
-        </Pressable>
-
-        <Pressable
-          onPress={() => {
-            stopGenerating();
-            setMessages([
-              {
-                id: uid(),
-                role: "assistant",
-                ts: Date.now(),
-                text:
-                  "Karibu ZETRA AI.\n\n" +
-                  "• Uliza maswali ya biashara (general)\n" +
-                  "• Au niambie unataka kufanya nini ndani ya ZETRA BMS, nitakuongoza hatua kwa hatua.\n\n" +
-                  "Tip: Andika Kiswahili au English — nita-adapt automatically.",
-              },
-            ]);
-            setAttachedImages([]);
-            setRetryCard({ visible: false, label: "", payload: null });
-            lastPayloadRef.current = null;
-            requestAnimationFrame(() => inputRef.current?.focus());
-          }}
-          hitSlop={10}
-          style={({ pressed }) => ({
-            paddingHorizontal: 12,
-            height: 44,
-            borderRadius: 999,
-            borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.12)",
-            backgroundColor: "rgba(255,255,255,0.06)",
-            alignItems: "center",
-            justifyContent: "center",
-            opacity: pressed ? 0.92 : 1,
-            transform: [{ scale: pressed ? 0.985 : 1 }],
-          })}
-        >
-          <Text style={{ color: UI.text, fontWeight: "900" }}>Reset</Text>
-        </Pressable>
+          ZETRA AI
+        </Text>
       </View>
 
-      <View style={{ marginTop: 10, flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-        <View
-          style={{
-            paddingHorizontal: 10,
-            paddingVertical: 7,
-            borderRadius: 999,
-            borderWidth: 1,
-            borderColor: aiEnabled ? "rgba(16,185,129,0.35)" : "rgba(255,255,255,0.12)",
-            backgroundColor: aiEnabled ? "rgba(16,185,129,0.10)" : "rgba(255,255,255,0.06)",
-          }}
-        >
-          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
-            Plan: {currentPlanLabel}
-          </Text>
+      {/* RESET */}
+      <Pressable
+  onPress={() => {
+    stopGenerating();
+    setMessages([
+      {
+        id: uid(),
+        role: "assistant",
+        ts: Date.now(),
+        text:
+          "Karibu ZETRA AI.\n\n" +
+          "• Uliza maswali ya biashara (general)\n" +
+          "• Nipe analysis, forecast, au profit coach ya store yako\n" +
+          "• Au niambie unataka kufanya nini ndani ya ZETRA BMS, nitakuongoza hatua kwa hatua.\n\n" +
+          "Tip: Andika Lugha yoyote unayotumia — nita-adapt automatically.",
+      },
+    ]);
+    setAttachedImages([]);
+    setAutopilotCards([]);
+    setLastAnalysisIntent(null);
+    setRetryCard({ visible: false, label: "", payload: null });
+    lastPayloadRef.current = null;
+    requestAnimationFrame(() => inputRef.current?.focus());
+  }}
+        hitSlop={10}
+        style={({ pressed }) => ({
+          paddingHorizontal: 14,
+          height: 46,
+          borderRadius: 999,
+          borderWidth: 1,
+          borderColor: "rgba(255,255,255,0.12)",
+          backgroundColor: "rgba(255,255,255,0.06)",
+          alignItems: "center",
+          justifyContent: "center",
+          opacity: pressed ? 0.92 : 1,
+          transform: [{ scale: pressed ? 0.985 : 1 }],
+        })}
+      >
+        <Text style={{ color: UI.text, fontWeight: "900" }}>Reset</Text>
+      </Pressable>
+    </View>
+  </View>
+);
+
+ const renderMsg = useCallback(({ item }: { item: ChatMsg }) => {
+  const isUser = item.role === "user";
+  const imgs = Array.isArray(item.images) ? item.images : [];
+  const alerts = Array.isArray(item.autopilotAlerts) ? item.autopilotAlerts : [];
+
+  return (
+    <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
+      {isUser && imgs.length ? (
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
+          {imgs.map((x) => (
+            <Pressable
+              key={x.id}
+              onPress={() => setImgPreview({ open: true, uri: x.uri })}
+              style={({ pressed }) => ({
+                width: 64,
+                height: 64,
+                borderRadius: 14,
+                overflow: "hidden",
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,0.12)",
+                opacity: pressed ? 0.92 : 1,
+              })}
+            >
+              <Image source={{ uri: x.uri }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
+            </Pressable>
+          ))}
         </View>
-
-        {planAllowsAi ? (
-          <View
-            style={{
-              paddingHorizontal: 10,
-              paddingVertical: 7,
-              borderRadius: 999,
-              borderWidth: 1,
-              borderColor: isOwner ? "rgba(16,185,129,0.35)" : "rgba(245,158,11,0.35)",
-              backgroundColor: isOwner ? "rgba(16,185,129,0.10)" : "rgba(245,158,11,0.10)",
-            }}
-          >
-            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
-              AI: {isOwner ? "OWNER ONLY" : "NO ACCESS"}
-            </Text>
-          </View>
-        ) : null}
-
-        {aiEnabled ? (
-          <View
-            style={{
-              paddingHorizontal: 10,
-              paddingVertical: 7,
-              borderRadius: 999,
-              borderWidth: 1,
-              borderColor: "rgba(16,185,129,0.35)",
-              backgroundColor: "rgba(16,185,129,0.10)",
-            }}
-          >
-            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
-              Credits left: {fmtNum(aiCreditsRemaining)} / {fmtNum(aiCreditsMonthly)}
-            </Text>
-          </View>
-        ) : null}
-      </View>
-
-      {!aiEnabled ? (
-        <Pressable
-          onPress={() => openAiGate(defaultAiLockReason)}
-          style={({ pressed }) => ({
-            marginTop: 10,
-            borderWidth: 1,
-            borderColor: "rgba(245,158,11,0.30)",
-            backgroundColor: pressed ? "rgba(245,158,11,0.14)" : "rgba(245,158,11,0.10)",
-            borderRadius: 18,
-            paddingVertical: 10,
-            paddingHorizontal: 12,
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 10,
-          })}
-        >
-          <Ionicons name="lock-closed-outline" size={16} color={UI.text} />
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: UI.text, fontWeight: "900" }}>
-              {ownerOnlyReason ? "AI Owner Only" : `AI Locked (${currentPlanLabel})`}
-            </Text>
-            <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 2 }} numberOfLines={2}>
-              {ownerOnlyReason || "AI haipatikani kwenye kifurushi hiki — bonyeza kuona maelezo."}
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={UI.muted} />
-        </Pressable>
       ) : null}
+
+      {!isUser && alerts.length ? (
+        <Card style={{ padding: 14, borderRadius: 20, marginBottom: 10 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 10 }}>
+            <Ionicons name="sparkles" size={18} color={UI.text} />
+            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
+              {item.analysisIntent === "FORECAST"
+                ? "Autopilot Forecast Alerts"
+                : item.analysisIntent === "COACH"
+                ? "Autopilot Profit Coach"
+                : "Autopilot Business Alerts"}
+            </Text>
+          </View>
+
+          {alerts.map((a, idx) => {
+            const borderColor =
+              a.level === "critical"
+                ? "rgba(239,68,68,0.40)"
+                : a.level === "warning"
+                ? "rgba(245,158,11,0.40)"
+                : "rgba(16,185,129,0.40)";
+
+            const bg =
+              a.level === "critical"
+                ? "rgba(239,68,68,0.10)"
+                : a.level === "warning"
+                ? "rgba(245,158,11,0.10)"
+                : "rgba(16,185,129,0.10)";
+
+            const icon =
+              a.level === "critical"
+                ? "alert-circle"
+                : a.level === "warning"
+                ? "warning"
+                : "checkmark-circle";
+
+            return (
+              <View
+                key={`${item.id}_alert_${idx}`}
+                style={{
+                  borderWidth: 1,
+                  borderColor,
+                  backgroundColor: bg,
+                  borderRadius: 16,
+                  padding: 12,
+                  marginTop: idx === 0 ? 0 : 10,
+                }}
+              >
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <Ionicons name={icon as any} size={16} color={UI.text} />
+                  <Text style={{ color: UI.text, fontWeight: "900", flex: 1 }}>{a.title}</Text>
+                </View>
+
+                {!!clean(a.message) && (
+                  <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 6, lineHeight: 20 }}>
+                    {a.message}
+                  </Text>
+                )}
+              </View>
+            );
+          })}
+        </Card>
+      ) : null}
+
+      <AiMessageBubble role={isUser ? "user" : "assistant"} text={item.text} />
     </View>
   );
+}, []);
 
-  const renderMsg = useCallback(({ item }: { item: ChatMsg }) => {
-    const isUser = item.role === "user";
-    const imgs = Array.isArray(item.images) ? item.images : [];
-    return (
-      <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
-        {isUser && imgs.length ? (
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
-            {imgs.map((x) => (
-              <Pressable
-                key={x.id}
-                onPress={() => setImgPreview({ open: true, uri: x.uri })}
-                style={({ pressed }) => ({
-                  width: 64,
-                  height: 64,
-                  borderRadius: 14,
-                  overflow: "hidden",
-                  borderWidth: 1,
-                  borderColor: "rgba(255,255,255,0.12)",
-                  opacity: pressed ? 0.92 : 1,
-                })}
-              >
-                <Image source={{ uri: x.uri }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
-              </Pressable>
-            ))}
-          </View>
-        ) : null}
-
-        <AiMessageBubble role={isUser ? "user" : "assistant"} text={item.text} />
-      </View>
-    );
-  }, []);
-
-  const RetryBanner = useMemo(() => {
+const RetryBanner = useMemo(() => {
     if (!retryCard.visible || !retryCard.payload) return null;
     return (
       <View style={{ paddingHorizontal: 16, paddingTop: 10 }}>
@@ -2144,202 +2125,250 @@ export default function AiChatScreen() {
     </Modal>
   );
 
-  const PlusMenu = (
-    <Modal visible={plusOpen} transparent animationType="fade" onRequestClose={() => setPlusOpen(false)}>
+const PlusMenu = (
+  <Modal visible={plusOpen} transparent animationType="fade" onRequestClose={() => setPlusOpen(false)}>
+    <Pressable
+      onPress={() => setPlusOpen(false)}
+      style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.60)", justifyContent: "flex-end" }}
+    >
       <Pressable
-        onPress={() => setPlusOpen(false)}
-        style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.60)", justifyContent: "flex-end" }}
+        onPress={() => {}}
+        style={{
+          backgroundColor: C.background,
+          borderTopLeftRadius: 22,
+          borderTopRightRadius: 22,
+          borderWidth: 1,
+          borderColor: "rgba(255,255,255,0.10)",
+          padding: 14,
+          paddingBottom: Math.max(insets.bottom, 10) + 14,
+          maxHeight: "88%",
+        }}
       >
-        <Pressable
-          onPress={() => {}}
-          style={{
-            backgroundColor: C.background,
-            borderTopLeftRadius: 22,
-            borderTopRightRadius: 22,
-            borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.10)",
-            padding: 14,
-            paddingBottom: Math.max(insets.bottom, 10) + 14,
-            maxHeight: "86%",
-          }}
-        >
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>Menu</Text>
-            <Pressable
-              onPress={() => setPlusOpen(false)}
-              hitSlop={10}
-              style={({ pressed }) => ({
-                width: 40,
-                height: 40,
-                borderRadius: 14,
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>Menu</Text>
+
+          <Pressable
+            onPress={() => setPlusOpen(false)}
+            hitSlop={10}
+            style={({ pressed }) => ({
+              width: 40,
+              height: 40,
+              borderRadius: 14,
+              borderWidth: 1,
+              borderColor: "rgba(255,255,255,0.12)",
+              backgroundColor: pressed ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.06)",
+              alignItems: "center",
+              justifyContent: "center",
+            })}
+          >
+            <Ionicons name="close" size={18} color={UI.text} />
+          </Pressable>
+        </View>
+
+        {/* SUBSCRIPTION BUTTON */}
+        <View style={{ marginTop: 14 }}>
+          <Pressable
+            onPress={() => {
+              setPlusOpen(false);
+              router.push("/settings/subscription");
+            }}
+            hitSlop={10}
+            style={({ pressed }) => ({
+              height: 48,
+              borderRadius: 999,
+              borderWidth: 1,
+              borderColor: "rgba(255,255,255,0.12)",
+              backgroundColor: pressed ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.06)",
+              alignItems: "center",
+              justifyContent: "center",
+              flexDirection: "row",
+              gap: 10,
+            })}
+          >
+            <Ionicons name="card-outline" size={18} color={UI.text} />
+            <Text style={{ color: UI.text, fontWeight: "900" }}>Subscription</Text>
+          </Pressable>
+        </View>
+
+        {/* MOVED CARDS */}
+        <View style={{ marginTop: 14 }}>
+          <Text style={{ color: UI.muted, fontWeight: "900", marginBottom: 8 }}>Current AI Status</Text>
+
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+            <View
+              style={{
+                paddingHorizontal: 12,
+                height: 36,
+                borderRadius: 999,
                 borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.12)",
-                backgroundColor: pressed ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.06)",
+                borderColor: aiEnabled ? "rgba(16,185,129,0.35)" : "rgba(255,255,255,0.12)",
+                backgroundColor: aiEnabled ? "rgba(16,185,129,0.10)" : "rgba(255,255,255,0.06)",
                 alignItems: "center",
                 justifyContent: "center",
-              })}
+              }}
             >
-              <Ionicons name="close" size={18} color={UI.text} />
-            </Pressable>
-          </View>
-
-          <View style={{ marginTop: 12 }}>
-            <Text style={{ color: UI.muted, fontWeight: "900", marginBottom: 8 }}>AI Language</Text>
-            <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-              <ModePill k="AUTO" label="Auto" />
-              <ModePill k="SW" label="Swahili" />
-              <ModePill k="EN" label="English" />
+              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
+                {aiEnabled ? "AI ON" : "LOCKED"}
+              </Text>
             </View>
-          </View>
 
-          <View style={{ marginTop: 12 }}>
-            <Text style={{ color: UI.muted, fontWeight: "900", marginBottom: 8 }}>Current AI Plan</Text>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+            <View
+              style={{
+                paddingHorizontal: 12,
+                height: 36,
+                borderRadius: 999,
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,0.12)",
+                backgroundColor: "rgba(255,255,255,0.06)",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
+                Plan: {currentPlanLabel}
+              </Text>
+            </View>
+
+            {planAllowsAi ? (
               <View
                 style={{
                   paddingHorizontal: 12,
                   height: 36,
                   borderRadius: 999,
                   borderWidth: 1,
-                  borderColor: aiEnabled ? "rgba(16,185,129,0.35)" : "rgba(255,255,255,0.12)",
-                  backgroundColor: aiEnabled ? "rgba(16,185,129,0.10)" : "rgba(255,255,255,0.06)",
+                  borderColor: isOwner ? "rgba(16,185,129,0.35)" : "rgba(245,158,11,0.35)",
+                  backgroundColor: isOwner ? "rgba(16,185,129,0.10)" : "rgba(245,158,11,0.10)",
                   alignItems: "center",
                   justifyContent: "center",
                 }}
               >
                 <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
-                  {currentPlanLabel}
+                  AI: {isOwner ? "OWNER ONLY" : "NO ACCESS"}
                 </Text>
               </View>
+            ) : null}
 
-              {planAllowsAi ? (
-                <View
-                  style={{
-                    paddingHorizontal: 12,
-                    height: 36,
-                    borderRadius: 999,
-                    borderWidth: 1,
-                    borderColor: isOwner ? "rgba(16,185,129,0.35)" : "rgba(245,158,11,0.35)",
-                    backgroundColor: isOwner ? "rgba(16,185,129,0.10)" : "rgba(245,158,11,0.10)",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
-                    {isOwner ? "OWNER ONLY" : "NO ACCESS"}
-                  </Text>
-                </View>
-              ) : null}
-
-              {aiEnabled ? (
-                <View
-                  style={{
-                    paddingHorizontal: 12,
-                    height: 36,
-                    borderRadius: 999,
-                    borderWidth: 1,
-                    borderColor: "rgba(16,185,129,0.35)",
-                    backgroundColor: "rgba(16,185,129,0.10)",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
-                    {fmtNum(aiCreditsRemaining)} left • used {fmtNum(aiCreditsUsed)}
-                  </Text>
-                </View>
-              ) : null}
-            </View>
+            {aiEnabled ? (
+              <View
+                style={{
+                  paddingHorizontal: 12,
+                  height: 36,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: "rgba(16,185,129,0.35)",
+                  backgroundColor: "rgba(16,185,129,0.10)",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
+                  Credits: {fmtNum(aiCreditsRemaining)} / {fmtNum(aiCreditsMonthly)}
+                </Text>
+              </View>
+            ) : null}
           </View>
+        </View>
 
-          <View style={{ marginTop: 16, opacity: aiEnabled ? 1 : 0.55 }}>
-            <Text style={{ color: UI.muted, fontWeight: "900", marginBottom: 8 }}>Quick prompts</Text>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-              {quickChips.map((c) => (
-                <Pressable
-                  key={c.k}
-                  onPress={() => applyChipPrompt(c.prompt)}
-                  disabled={!aiEnabled}
-                  hitSlop={10}
-                  style={({ pressed }) => ({
-                    paddingHorizontal: 12,
-                    height: 36,
-                    borderRadius: 999,
-                    borderWidth: 1,
-                    borderColor: "rgba(255,255,255,0.12)",
-                    backgroundColor: pressed ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.06)",
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 8,
-                    opacity: pressed ? 0.92 : 1,
-                  })}
-                >
-                  <Ionicons name={c.icon as any} size={14} color={UI.text} />
-                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>{c.label}</Text>
-                </Pressable>
-              ))}
-            </View>
+        {/* AI LANGUAGE */}
+        <View style={{ marginTop: 16 }}>
+          <Text style={{ color: UI.muted, fontWeight: "900", marginBottom: 8 }}>AI Language</Text>
+          <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+            <ModePill k="AUTO" label="Auto" />
+            <ModePill k="SW" label="Swahili" />
+            <ModePill k="EN" label="English" />
           </View>
+        </View>
 
-          <View style={{ marginTop: 16, opacity: aiEnabled ? 1 : 0.55 }}>
-            <Pressable
-              onPress={() => {
-                if (!requireAi(ownerOnlyReason || `AI haipatikani kwenye ${currentPlanLabel}. Upgrade ili kufungua Tasks panel.`)) {
-                  return;
-                }
-                setPlusOpen(false);
-                Keyboard.dismiss();
-                setTasksOpen(true);
-                void loadTasks();
-              }}
-              disabled={!aiEnabled}
-              hitSlop={10}
-              style={({ pressed }) => ({
-                height: 48,
-                borderRadius: 999,
-                borderWidth: 1,
-                borderColor: "rgba(16,185,129,0.45)",
-                backgroundColor: pressed ? "rgba(16,185,129,0.20)" : "rgba(16,185,129,0.14)",
-                alignItems: "center",
-                justifyContent: "center",
-                flexDirection: "row",
-                gap: 10,
-              })}
-            >
-              <Ionicons name="checkbox-outline" size={18} color={UI.text} />
-              <Text style={{ color: UI.text, fontWeight: "900" }}>Open Tasks</Text>
-            </Pressable>
+        {/* QUICK PROMPTS */}
+        <View style={{ marginTop: 16, opacity: aiEnabled ? 1 : 0.55 }}>
+          <Text style={{ color: UI.muted, fontWeight: "900", marginBottom: 8 }}>Quick prompts</Text>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+            {quickChips.map((c) => (
+              <Pressable
+                key={c.k}
+                onPress={() => applyChipPrompt(c.prompt)}
+                disabled={!aiEnabled}
+                hitSlop={10}
+                style={({ pressed }) => ({
+                  paddingHorizontal: 12,
+                  height: 36,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: "rgba(255,255,255,0.12)",
+                  backgroundColor: pressed ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.06)",
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 8,
+                  opacity: pressed ? 0.92 : 1,
+                })}
+              >
+                <Ionicons name={c.icon as any} size={14} color={UI.text} />
+                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>{c.label}</Text>
+              </Pressable>
+            ))}
           </View>
+        </View>
 
-          {!aiEnabled ? (
-            <Pressable
-              onPress={() => {
-                setPlusOpen(false);
-                openAiGate(defaultAiLockReason);
-              }}
-              style={({ pressed }) => ({
-                marginTop: 14,
-                height: 48,
-                borderRadius: 999,
-                borderWidth: 1,
-                borderColor: "rgba(245,158,11,0.35)",
-                backgroundColor: pressed ? "rgba(245,158,11,0.16)" : "rgba(245,158,11,0.10)",
-                alignItems: "center",
-                justifyContent: "center",
-                flexDirection: "row",
-                gap: 10,
-              })}
-            >
-              <Ionicons name="lock-closed-outline" size={18} color={UI.text} />
-              <Text style={{ color: UI.text, fontWeight: "900" }}>
-                {ownerOnlyReason ? "AI Owner Only" : "AI Locked — Upgrade"}
-              </Text>
-            </Pressable>
-          ) : null}
-        </Pressable>
+        {/* TASKS */}
+        <View style={{ marginTop: 16, opacity: aiEnabled ? 1 : 0.55 }}>
+          <Pressable
+            onPress={() => {
+              if (!requireAi(ownerOnlyReason || `AI haipatikani kwenye ${currentPlanLabel}. Upgrade ili kufungua Tasks panel.`)) {
+                return;
+              }
+              setPlusOpen(false);
+              Keyboard.dismiss();
+              setTasksOpen(true);
+              void loadTasks();
+            }}
+            disabled={!aiEnabled}
+            hitSlop={10}
+            style={({ pressed }) => ({
+              height: 48,
+              borderRadius: 999,
+              borderWidth: 1,
+              borderColor: "rgba(16,185,129,0.45)",
+              backgroundColor: pressed ? "rgba(16,185,129,0.20)" : "rgba(16,185,129,0.14)",
+              alignItems: "center",
+              justifyContent: "center",
+              flexDirection: "row",
+              gap: 10,
+            })}
+          >
+            <Ionicons name="checkbox-outline" size={18} color={UI.text} />
+            <Text style={{ color: UI.text, fontWeight: "900" }}>Open Tasks</Text>
+          </Pressable>
+        </View>
+
+        {!aiEnabled ? (
+          <Pressable
+            onPress={() => {
+              setPlusOpen(false);
+              openAiGate(defaultAiLockReason);
+            }}
+            style={({ pressed }) => ({
+              marginTop: 14,
+              height: 48,
+              borderRadius: 999,
+              borderWidth: 1,
+              borderColor: "rgba(245,158,11,0.35)",
+              backgroundColor: pressed ? "rgba(245,158,11,0.16)" : "rgba(245,158,11,0.10)",
+              alignItems: "center",
+              justifyContent: "center",
+              flexDirection: "row",
+              gap: 10,
+            })}
+          >
+            <Ionicons name="lock-closed-outline" size={18} color={UI.text} />
+            <Text style={{ color: UI.text, fontWeight: "900" }}>
+              {ownerOnlyReason ? "AI Owner Only" : "AI Locked — Upgrade"}
+            </Text>
+          </Pressable>
+        ) : null}
       </Pressable>
-    </Modal>
-  );
+    </Pressable>
+  </Modal>
+);
 
   const Composer = (
     <View
@@ -2785,28 +2814,28 @@ export default function AiChatScreen() {
     </Modal>
   );
 
-  const Content = (
-    <View style={{ flex: 1 }}>
-      {RetryBanner}
+const Content = (
+  <View style={{ flex: 1 }}>
+    {RetryBanner}
 
-      <FlatList
-        ref={listRef}
-        data={messages}
-        keyExtractor={(m) => m.id}
-        renderItem={renderMsg}
-        inverted
-        keyboardShouldPersistTaps="always"
-        showsVerticalScrollIndicator={false}
-        style={{ flex: 1 }}
-        contentContainerStyle={{
-          paddingTop: 10,
-          paddingBottom: 10 + (Platform.OS === "android" ? androidComposerLift : 0),
-        }}
-      />
+    <FlatList
+      ref={listRef}
+      data={messages}
+      keyExtractor={(m) => m.id}
+      renderItem={renderMsg}
+      inverted
+      keyboardShouldPersistTaps="always"
+      showsVerticalScrollIndicator={false}
+      style={{ flex: 1 }}
+      contentContainerStyle={{
+        paddingTop: 10,
+        paddingBottom: 10 + (Platform.OS === "android" ? androidComposerLift : 0),
+      }}
+    />
 
-      {Composer}
-    </View>
-  );
+    {Composer}
+  </View>
+);
 
   return (
     <Screen scroll={false} contentStyle={{ paddingTop: 0, paddingHorizontal: 0, paddingBottom: 0 }}>

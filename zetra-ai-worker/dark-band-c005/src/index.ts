@@ -1,17 +1,19 @@
 ﻿export interface Env {
   OPENAI_API_KEY: string;
+  SUPABASE_URL: string;
+  SUPABASE_SERVICE_ROLE_KEY: string;
 
   // Chat + classifier
-  OPENAI_MODEL?: string; // e.g. "gpt-4o-mini"
-  OPENAI_CLASSIFIER_MODEL?: string; // e.g. "gpt-4o-mini"
+  OPENAI_MODEL?: string;
+  OPENAI_CLASSIFIER_MODEL?: string;
 
-  // Vision / Image / Transcribe (optional overrides)
-  OPENAI_VISION_MODEL?: string; // e.g. "gpt-4o-mini"
-  OPENAI_IMAGE_MODEL?: string; // e.g. "gpt-image-1" or "dall-e-3"
-  OPENAI_TRANSCRIBE_MODEL?: string; // e.g. "whisper-1"
+  // Vision / Image / Transcribe
+  OPENAI_VISION_MODEL?: string;
+  OPENAI_IMAGE_MODEL?: string;
+  OPENAI_TRANSCRIBE_MODEL?: string;
 
   // Image options
-  OPENAI_IMAGE_SIZE?: string; // e.g. "1024x1024"
+  OPENAI_IMAGE_SIZE?: string;
 }
 
 type ReqMsg = { role: "user" | "assistant"; text: string };
@@ -30,9 +32,8 @@ type ReqBody = {
   text?: string;
   mode?: "AUTO" | "SW" | "EN";
   locale?: string;
-  language?: any; // passthrough
+  language?: any;
   roleHint?: "AUTO" | AiRoleKey;
-
   context?: {
     orgId?: string | null;
     activeOrgId?: string | null;
@@ -42,13 +43,12 @@ type ReqBody = {
     activeRole?: string | null;
     [k: string]: unknown;
   };
-
   history?: ReqMsg[];
 };
 
 type VisionBody = {
   message?: string;
-  images?: string[]; // data urls or http urls
+  images?: string[];
   meta?: {
     mode?: "AUTO" | "SW" | "EN";
     locale?: string;
@@ -57,6 +57,32 @@ type VisionBody = {
     context?: ReqBody["context"];
     roleHint?: "AUTO" | AiRoleKey;
   };
+};
+
+type SnapshotRow = {
+  sales_total?: number | string | null;
+  cogs_total?: number | string | null;
+  expenses_total?: number | string | null;
+  net_profit?: number | string | null;
+  orders_count?: number | string | null;
+};
+
+type AnalysisIntent = "ANALYSIS" | "FORECAST" | "COACH";
+
+type AutopilotAlert = {
+  level: "info" | "warning" | "critical";
+  title: string;
+  message: string;
+};
+
+type ForecastPoint = {
+  label: string;
+  sales: number;
+  cogs: number;
+  expenses: number;
+  profit: number;
+  orders: number;
+  margin: number;
 };
 
 function clean(x: unknown) {
@@ -77,7 +103,7 @@ function json(data: unknown, init: ResponseInit = {}) {
 function corsHeaders(origin: string | null) {
   return {
     "Access-Control-Allow-Origin": origin ?? "*",
-    "Access-Control-Allow-Headers": "content-type, authorization",
+    "Access-Control-Allow-Headers": "content-type, authorization, x-zetra-role",
     "Access-Control-Allow-Methods": "POST, OPTIONS, GET",
   };
 }
@@ -89,11 +115,6 @@ function withCors(resp: Response, origin: string | null) {
   return new Response(resp.body, { status: resp.status, headers: h });
 }
 
-/**
- * mode is a hint:
- * - SW/EN => force reply fully in that language
- * - AUTO => reply in user's language(s)
- */
 function pickLang(mode?: "AUTO" | "SW" | "EN") {
   if (mode === "SW") return "sw" as const;
   if (mode === "EN") return "en" as const;
@@ -103,6 +124,7 @@ function pickLang(mode?: "AUTO" | "SW" | "EN") {
 function normalizeRoleHint(x: any): AiRoleKey | null {
   const v = clean(x).toUpperCase();
   if (!v || v === "AUTO") return null;
+
   const ok: Record<string, AiRoleKey> = {
     ZETRA_BMS: "ZETRA_BMS",
     ENGINEERING: "ENGINEERING",
@@ -113,6 +135,7 @@ function normalizeRoleHint(x: any): AiRoleKey | null {
     MARKETING: "MARKETING",
     GENERAL: "GENERAL",
   };
+
   return ok[v] ?? null;
 }
 
@@ -234,12 +257,10 @@ SAFETY (CRITICAL):
 
   const stopConversationPolicy = `
 STOP / CLOSING BEHAVIOR (CRITICAL):
-- If the user indicates they are done / have no question / don't need help now (e.g. "hapana sina swali", "kwa leo sitaki kitu", "sawa mkuu", "nipo sawa", "bye", "no thanks"):
+- If the user indicates they are done / have no question / don't need help now:
   - Reply with ONE short acknowledgement only.
-  - Do NOT ask follow-up questions like "unahitaji msaada mwingine?".
+  - Do NOT ask follow-up questions.
   - Do NOT suggest other topics.
-  - Example (SW): "Sawa mkuu. Nipo hapa ukihitaji."
-  - Example (EN): "All good. I'm here whenever you need me."
 `.trim();
 
   const roleBlock = buildRoleInstructions(role);
@@ -284,9 +305,9 @@ function isAbortOrTimeoutError(e: any) {
 async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number) {
   const controller = new AbortController();
   const t = setTimeout(() => controller.abort(), Math.max(2000, timeoutMs));
+
   try {
-    const res = await fetch(url, { ...init, signal: controller.signal });
-    return res;
+    return await fetch(url, { ...init, signal: controller.signal });
   } finally {
     clearTimeout(t);
   }
@@ -294,6 +315,7 @@ async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: numbe
 
 async function readJsonSafe(res: Response): Promise<{ ok: boolean; parsed: any; raw: string }> {
   const raw = await res.text();
+
   try {
     const parsed = raw ? JSON.parse(raw) : null;
     return { ok: true, parsed, raw };
@@ -321,12 +343,14 @@ function buildCtxLines(ctx: ReqBody["context"]) {
 function normalizeHistory(history?: ReqMsg[]) {
   const h = Array.isArray(history) ? history : [];
   const out: Array<{ role: "user" | "assistant"; content: string }> = [];
+
   for (const m of h) {
     const r = m?.role === "assistant" ? "assistant" : "user";
     const t = clean(m?.text);
     if (!t) continue;
     out.push({ role: r, content: t });
   }
+
   return out.slice(-20);
 }
 
@@ -339,13 +363,9 @@ function heuristicRole(text: string, ctx: ReqBody["context"]): AiRoleKey {
     /[\d]+\s*[%]/.test(t);
 
   const healthHit = /\b(headache|kizunguzungu|maumivu|homa|fever|pain|dizzy|nausea|dalili|clinic|hospital)\b/.test(t);
-
   const legalHit = /\b(contract|agreement|law|legal|sheria|kesi|court|lawsuit|breach|terms)\b/.test(t);
-
   const financeHit = /\b(profit|margin|cashflow|budget|faida|hasara|bei|gharama|mtaji|mapato|expense)\b/.test(t);
-
   const marketingHit = /\b(marketing|campaign|instagram|tiktok|ads|branding|wateja|mauzo|promotion|promo)\b/.test(t);
-
   const engHit =
     /\b(error|bug|crash|expo|router|supabase|sql|typescript|react|api|deploy|build|logs|worker|wrangler)\b/.test(t);
 
@@ -360,7 +380,6 @@ function heuristicRole(text: string, ctx: ReqBody["context"]): AiRoleKey {
   if (financeHit) return "FINANCE";
   if (marketingHit) return "MARKETING";
   if (engHit) return "ENGINEERING";
-
   if (hasOrg && bmsHit) return "ZETRA_BMS";
   return "GENERAL";
 }
@@ -372,18 +391,21 @@ function isClosingMessage(raw: string) {
   if (
     /^(sawa|poa|ok(ay)?|asante|thank(s)?)(\s+(mkuu|boss|bro|dad|sir))?[\s.!]*$/.test(t) ||
     /^(bye|goodbye|see you|ttyl|later)[\s.!]*$/.test(t)
-  )
+  ) {
     return true;
+  }
 
   if (
     /\b(hapana\s+sina\s+swali|sina\s+swali|sihitaji\s+kitu|kwa\s+leo\s+sihitaji|kwa\s+leo\s+sitaki\s+kitu|siitaji\s+msaada|sipo\s+tayari|nipo\s+sawa|ni\s+sawa)\b/.test(
       t
     )
-  )
+  ) {
     return true;
+  }
 
-  if (/\b(no\s+question|no\s+questions|no\s+thanks|i'?m\s+good|i\s+am\s+good|nothing\s+else|not\s+now)\b/.test(t))
+  if (/\b(no\s+question|no\s+questions|no\s+thanks|i'?m\s+good|i\s+am\s+good|nothing\s+else|not\s+now)\b/.test(t)) {
     return true;
+  }
 
   return false;
 }
@@ -391,6 +413,353 @@ function isClosingMessage(raw: string) {
 function closingReply(lang: "sw" | "en" | "auto") {
   if (lang === "en") return "All good. I’m here whenever you need me.";
   return "Sawa mkuu. Nipo hapa ukihitaji.";
+}
+
+function fmtMoney(n: number) {
+  const v = Number(n) || 0;
+  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(Math.round(v));
+}
+
+function fmtPercent(n: number) {
+  const v = Number(n) || 0;
+  return `${v.toFixed(1)}%`;
+}
+
+function detectBusinessIntent(text: string): AnalysisIntent {
+  const t = clean(text).toLowerCase();
+
+  const wantsForecast =
+    t.includes("forecast") ||
+    t.includes("utabiri") ||
+    t.includes("prediction") ||
+    t.includes("smart prediction") ||
+    t.includes("siku 7 zijazo") ||
+    t.includes("wiki ijayo") ||
+    t.includes("next day") ||
+    t.includes("next 7 days");
+
+  const wantsCoach =
+    t.includes("profit coach") ||
+    t.includes("coach") ||
+    t.includes("nishauri") ||
+    t.includes("nifundishe") ||
+    t.includes("niongoze kwenye profit") ||
+    t.includes("boresha faida");
+
+  if (wantsForecast) return "FORECAST";
+  if (wantsCoach) return "COACH";
+  return "ANALYSIS";
+}
+
+function avg(nums: number[]) {
+  if (!nums.length) return 0;
+  return nums.reduce((a, b) => a + b, 0) / nums.length;
+}
+
+function toUtcDayStartIso(d: Date) {
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 0, 0, 0, 0)).toISOString();
+}
+
+function toUtcNextDayStartIso(d: Date) {
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1, 0, 0, 0, 0)).toISOString();
+}
+
+async function getStoreBusinessSnapshotByRange(
+  env: Env,
+  storeId: string,
+  fromIso: string,
+  toIso: string
+): Promise<{
+  ok: boolean;
+  salesTotal: number;
+  cogsTotal: number;
+  expensesTotal: number;
+  netProfit: number;
+  ordersCount: number;
+  avgOrder: number;
+  moneyIn: number;
+  error: string;
+}> {
+  const supabaseUrl = clean(env.SUPABASE_URL);
+  const serviceRoleKey = clean(env.SUPABASE_SERVICE_ROLE_KEY);
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    return {
+      ok: false,
+      salesTotal: 0,
+      cogsTotal: 0,
+      expensesTotal: 0,
+      netProfit: 0,
+      ordersCount: 0,
+      avgOrder: 0,
+      moneyIn: 0,
+      error: "Missing Supabase envs",
+    };
+  }
+
+  if (!clean(storeId)) {
+    return {
+      ok: false,
+      salesTotal: 0,
+      cogsTotal: 0,
+      expensesTotal: 0,
+      netProfit: 0,
+      ordersCount: 0,
+      avgOrder: 0,
+      moneyIn: 0,
+      error: "Missing storeId",
+    };
+  }
+
+  try {
+    const res = await fetch(`${supabaseUrl}/rest/v1/rpc/get_store_net_profit_v2`, {
+      method: "POST",
+      headers: {
+        apikey: serviceRoleKey,
+        Authorization: `Bearer ${serviceRoleKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        p_store_id: storeId,
+        p_from: fromIso,
+        p_to: toIso,
+      }),
+    });
+
+    const raw = await res.text();
+    let parsed: SnapshotRow | SnapshotRow[] | null = null;
+
+    try {
+      parsed = raw ? JSON.parse(raw) : null;
+    } catch {}
+
+    if (!res.ok) {
+      return {
+        ok: false,
+        salesTotal: 0,
+        cogsTotal: 0,
+        expensesTotal: 0,
+        netProfit: 0,
+        ordersCount: 0,
+        avgOrder: 0,
+        moneyIn: 0,
+        error: clean((parsed as any)?.message) || clean((parsed as any)?.error) || safeSlice(raw, 400),
+      };
+    }
+
+    const row = (Array.isArray(parsed) ? parsed[0] : parsed) ?? {};
+
+    const salesTotal = Number(row.sales_total ?? 0) || 0;
+    const cogsTotal = Number(row.cogs_total ?? 0) || 0;
+    const expensesTotal = Number(row.expenses_total ?? 0) || 0;
+    const netProfit = Number(row.net_profit ?? 0) || 0;
+    const ordersCount = Number(row.orders_count ?? 0) || 0;
+    const avgOrder = ordersCount > 0 ? salesTotal / ordersCount : 0;
+    const moneyIn = salesTotal - expensesTotal;
+
+    return {
+      ok: true,
+      salesTotal,
+      cogsTotal,
+      expensesTotal,
+      netProfit,
+      ordersCount,
+      avgOrder,
+      moneyIn,
+      error: "",
+    };
+  } catch (e: any) {
+    return {
+      ok: false,
+      salesTotal: 0,
+      cogsTotal: 0,
+      expensesTotal: 0,
+      netProfit: 0,
+      ordersCount: 0,
+      avgOrder: 0,
+      moneyIn: 0,
+      error: clean(e?.message) || "Snapshot fetch failed",
+    };
+  }
+}
+
+async function getTodayStoreBusinessSnapshot(
+  env: Env,
+  storeId: string
+): Promise<{
+  ok: boolean;
+  salesTotal: number;
+  cogsTotal: number;
+  expensesTotal: number;
+  netProfit: number;
+  ordersCount: number;
+  avgOrder: number;
+  moneyIn: number;
+  error: string;
+}> {
+  const now = new Date();
+  return getStoreBusinessSnapshotByRange(env, storeId, toUtcDayStartIso(now), now.toISOString());
+}
+
+async function getRecentDailySnapshots(env: Env, storeId: string, days = 7): Promise<ForecastPoint[]> {
+  const out: ForecastPoint[] = [];
+  const today = new Date();
+
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate(), 0, 0, 0, 0));
+    d.setUTCDate(d.getUTCDate() - i);
+
+    const snap = await getStoreBusinessSnapshotByRange(env, storeId, toUtcDayStartIso(d), toUtcNextDayStartIso(d));
+
+    const sales = snap.ok ? snap.salesTotal : 0;
+    const cogs = snap.ok ? snap.cogsTotal : 0;
+    const expenses = snap.ok ? snap.expensesTotal : 0;
+    const profit = snap.ok ? snap.netProfit : 0;
+    const orders = snap.ok ? snap.ordersCount : 0;
+    const margin = sales > 0 ? (profit / sales) * 100 : 0;
+
+    const dd = String(d.getUTCDate()).padStart(2, "0");
+    const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+
+    out.push({
+      label: `${dd}/${mm}`,
+      sales,
+      cogs,
+      expenses,
+      profit,
+      orders,
+      margin,
+    });
+  }
+
+  return out;
+}
+
+function buildForecastBlock(points: ForecastPoint[]): string {
+  if (!Array.isArray(points) || points.length === 0) return "";
+
+  const salesSeries = points.map((p) => p.sales);
+  const profitSeries = points.map((p) => p.profit);
+  const ordersSeries = points.map((p) => p.orders);
+
+  const salesAvg = avg(salesSeries);
+  const profitAvg = avg(profitSeries);
+  const ordersAvg = avg(ordersSeries);
+
+  const last = points[points.length - 1];
+  const prev = points.slice(0, -1);
+
+  const prevSalesAvg = avg(prev.map((p) => p.sales));
+  const salesTrendPct = prevSalesAvg > 0 ? ((last.sales - prevSalesAvg) / prevSalesAvg) * 100 : 0;
+
+  const trendText =
+    salesTrendPct > 8
+      ? `📈 Trend: mauzo yanaongezeka (${fmtPercent(salesTrendPct)})`
+      : salesTrendPct < -8
+      ? `📉 Trend: mauzo yanashuka (${fmtPercent(salesTrendPct)})`
+      : `➡️ Trend: mauzo yako yapo stable (${fmtPercent(salesTrendPct)})`;
+
+  const projectedSales = Math.max(0, Math.round((salesAvg + last.sales) / 2));
+  const projectedProfit = Math.max(0, Math.round(profitAvg * 0.6 + last.profit * 0.4));
+  const projectedOrders = Math.max(0, Math.round(ordersAvg * 0.6 + last.orders * 0.4));
+
+  const risks: string[] = [];
+  const tips: string[] = [];
+
+  const lastCogsRate = last.sales > 0 ? (last.cogs / last.sales) * 100 : 0;
+  const lastExpenseRate = last.sales > 0 ? (last.expenses / last.sales) * 100 : 0;
+
+  if (salesTrendPct < -8) {
+    risks.push("⚠️ Forecast inaonyesha mauzo yanaweza kushuka kama trend hii ikiendelea.");
+    tips.push("💡 Fanya push ya bidhaa zinazoenda haraka ndani ya saa/chache zijazo.");
+  }
+
+  if (lastCogsRate > 80) {
+    risks.push("⚠️ COGS ratio yako ni kubwa sana.");
+    tips.push("💡 Jadili supplier cost au punguza discount zisizo za lazima.");
+  }
+
+  if (lastExpenseRate > 20) {
+    risks.push("⚠️ Expenses ratio yako ni nzito dhidi ya sales.");
+    tips.push("💡 Punguza matumizi yasiyo ya lazima kabla ya closing.");
+  }
+
+  const riskBlock = risks.length ? `\n\n🚨 PREDICTION RISKS:\n${risks.join("\n")}` : "";
+  const tipBlock = tips.length ? `\n\n🧠 SMART PREDICTIONS:\n${tips.join("\n")}` : "";
+
+  return (
+    `\n\n🔮 FORECAST (based on last 7 days):\n` +
+    `${trendText}\n` +
+    `📦 Projected Orders (next day): ${projectedOrders.toLocaleString("en-US")}\n` +
+    `💰 Projected Sales (next day): ${fmtMoney(projectedSales)}\n` +
+    `🏁 Projected Profit (next day): ${fmtMoney(projectedProfit)}` +
+    riskBlock +
+    tipBlock
+  );
+}
+
+function buildAutopilotAlerts(args: {
+  margin: number;
+  salesTotal: number;
+  cogsTotal: number;
+  expensesTotal: number;
+  ordersCount: number;
+  trendPct?: number;
+}): AutopilotAlert[] {
+  const alerts: AutopilotAlert[] = [];
+
+  const cogsRate = args.salesTotal > 0 ? (args.cogsTotal / args.salesTotal) * 100 : 0;
+  const expenseRate = args.salesTotal > 0 ? (args.expensesTotal / args.salesTotal) * 100 : 0;
+
+  if (args.margin < 10) {
+    alerts.push({
+      level: "critical",
+      title: "Low Margin Risk",
+      message: "Profit margin yako iko chini ya 10%. Kagua pricing, supplier cost, au unnecessary discount.",
+    });
+  }
+
+  if (cogsRate > 80) {
+    alerts.push({
+      level: "warning",
+      title: "High COGS Ratio",
+      message: "COGS yako imezidi 80% ya sales. Hii inabana faida moja kwa moja.",
+    });
+  }
+
+  if (expenseRate > 20) {
+    alerts.push({
+      level: "warning",
+      title: "Heavy Expense Load",
+      message: "Expenses zako ni nzito ukilinganisha na sales. Punguza matumizi yasiyo ya lazima.",
+    });
+  }
+
+  if (args.ordersCount <= 0) {
+    alerts.push({
+      level: "critical",
+      title: "No Orders Today",
+      message: "Hakuna mauzo yaliyorekodiwa leo. Fanya promotion ya haraka au customer push.",
+    });
+  }
+
+  if ((args.trendPct ?? 0) < -8) {
+    alerts.push({
+      level: "warning",
+      title: "Sales Trend Dropping",
+      message: "Trend ya mauzo inaonyesha kushuka. Chukua hatua mapema kabla sales hazijazidi kuporomoka.",
+    });
+  }
+
+  if (alerts.length === 0) {
+    alerts.push({
+      level: "info",
+      title: "Business Stable",
+      message: "Hakuna red flag kubwa kwa sasa. Endelea kufuatilia performance kila siku.",
+    });
+  }
+
+  return alerts;
 }
 
 async function classifyRole(
@@ -465,9 +834,11 @@ Rules:
 
   const txt = extractChatCompletionText(parsed);
   const j = safeSlice(txt, 400);
+
   try {
     const out = JSON.parse(j);
     const r = clean(out?.role).toUpperCase();
+
     const ok: Record<string, AiRoleKey> = {
       ZETRA_BMS: "ZETRA_BMS",
       ENGINEERING: "ENGINEERING",
@@ -478,6 +849,7 @@ Rules:
       MARKETING: "MARKETING",
       GENERAL: "GENERAL",
     };
+
     const role = ok[r] ?? "GENERAL";
     const confidence = Math.max(0, Math.min(1, Number(out?.confidence ?? 0)));
     const reason = safeSlice(clean(out?.reason) || "ok", 60);
@@ -494,6 +866,7 @@ async function openaiChatCompletions(
 ) {
   const OPENAI_API_KEY = clean(env.OPENAI_API_KEY);
   const model = clean(env.OPENAI_MODEL) || "gpt-4o-mini";
+
   if (!OPENAI_API_KEY) {
     return { ok: false as const, status: 500, text: "", error: "Missing OPENAI_API_KEY" };
   }
@@ -537,10 +910,13 @@ function buildMessages(
 ) {
   const ctxBlock = ctxLines.length ? `Context:\n- ${ctxLines.join("\n- ")}` : "";
   const msgs: Array<{ role: "system" | "user" | "assistant"; content: any }> = [];
+
   msgs.push({ role: "system", content: sys });
   if (ctxBlock) msgs.push({ role: "system", content: ctxBlock });
+
   for (const m of history) msgs.push({ role: m.role, content: m.content });
   msgs.push({ role: "user", content: userText });
+
   return msgs;
 }
 
@@ -553,6 +929,7 @@ function buildVisionMessages(
 ) {
   const ctxBlock = ctxLines.length ? `Context:\n- ${ctxLines.join("\n- ")}` : "";
   const msgs: Array<{ role: "system" | "user" | "assistant"; content: any }> = [];
+
   msgs.push({ role: "system", content: sys });
   if (ctxBlock) msgs.push({ role: "system", content: ctxBlock });
 
@@ -733,6 +1110,7 @@ export default {
     // ----------------------------
     if (path === "/v1/chat" || path === "/") {
       let body: ReqBody | null = null;
+
       try {
         body = (await request.json()) as ReqBody;
       } catch {
@@ -744,7 +1122,9 @@ export default {
       }
 
       const text = clean(body?.text);
-      if (!text) return withCors(json({ ok: false, error: "Missing text" }, { status: 400 }), origin);
+      if (!text) {
+        return withCors(json({ ok: false, error: "Missing text" }, { status: 400 }), origin);
+      }
 
       const mode = body?.mode ?? "AUTO";
       const lang = pickLang(mode);
@@ -770,6 +1150,172 @@ export default {
       const ctxLines = buildCtxLines(ctx);
       const history = normalizeHistory(body?.history);
 
+      const textLower = clean(text).toLowerCase();
+
+      const wantsBusinessAnalysis =
+        textLower.includes("analysis") ||
+        textLower.includes("uchambuzi") ||
+        textLower.includes("biashara yangu") ||
+        textLower.includes("mauzo ya leo") ||
+        textLower.includes("sales ya leo") ||
+        textLower.includes("profit ya leo") ||
+        textLower.includes("faida ya leo") ||
+        textLower.includes("analysis ya leo") ||
+        textLower.includes("business analysis") ||
+        textLower.includes("forecast") ||
+        textLower.includes("utabiri") ||
+        textLower.includes("prediction") ||
+        textLower.includes("smart prediction") ||
+        textLower.includes("profit coach") ||
+        textLower.includes("coach");
+
+      const activeStoreId = clean((ctx as any)?.activeStoreId || (ctx as any)?.storeId);
+      const activeStoreName = clean((ctx as any)?.activeStoreName || (ctx as any)?.storeName || "Store");
+      const activeOrgName = clean((ctx as any)?.activeOrgName || (ctx as any)?.orgName || "Organization");
+
+      if (wantsBusinessAnalysis && activeStoreId) {
+        const snap = await getTodayStoreBusinessSnapshot(env, activeStoreId);
+        const businessIntent = detectBusinessIntent(text);
+
+        if (snap.ok) {
+          const warnings: string[] = [];
+          const ideas: string[] = [];
+          const actions: string[] = [];
+
+          const margin = snap.salesTotal > 0 ? (snap.netProfit / snap.salesTotal) * 100 : 0;
+
+          if (margin < 10) {
+            warnings.push("⚠️ Margin yako ni ndogo sana (High Risk)");
+            ideas.push("💡 Punguza buying cost kwa supplier");
+            ideas.push("💡 Ongeza bei ya kuuza (price adjustment)");
+            actions.push("👉 Angalia bidhaa top 5 zinazouzwa zaidi — ongeza margin kidogo");
+            actions.push("👉 Jaribu supplier mwingine mwenye cost nafuu");
+          } else if (margin >= 10 && margin < 20) {
+            warnings.push("📌 Margin iko medium — inaweza kuboreshwa");
+            ideas.push("💡 Optimize pricing strategy");
+            ideas.push("💡 Reduce unnecessary expenses");
+            actions.push("👉 Punguza gharama zisizo muhimu leo");
+          } else {
+            warnings.push("✅ Margin iko vizuri sana");
+            ideas.push("💡 Scale biashara (ongeza stock & marketing)");
+            actions.push("👉 Ongeza bidhaa zinazouza sana");
+          }
+
+          if (snap.expensesTotal > snap.salesTotal * 0.3) {
+            warnings.push("⚠️ Expenses zako ni kubwa sana");
+            actions.push("👉 Punguza matumizi ya pesa yasiyo ya lazima");
+          }
+
+          if (snap.cogsTotal === 0) {
+            warnings.push("⚠️ COGS ni 0 — hakikisha sale_items zina cost sahihi");
+          } else if (snap.salesTotal > 0 && snap.cogsTotal > snap.salesTotal * 0.8) {
+            warnings.push("⚠️ COGS yako ni kubwa sana ukilinganisha na sales");
+            ideas.push("💡 Kagua supplier cost na pricing ya bidhaa");
+          }
+
+          if (snap.ordersCount <= 0) {
+            warnings.push("⚠️ Hakuna mauzo yaliyorekodiwa leo");
+            ideas.push("💡 Fanya promotion au offer ya haraka");
+            actions.push("👉 Tuma tangazo WhatsApp kwa wateja wako");
+          }
+
+          let forecastBlock = "";
+          let trendPct = 0;
+
+          try {
+            const forecastSeries = await getRecentDailySnapshots(env, activeStoreId, 7);
+
+            const last = forecastSeries[forecastSeries.length - 1];
+            const prev = forecastSeries.slice(0, -1);
+            const prevSalesAvg = avg(prev.map((p) => p.sales));
+            trendPct = prevSalesAvg > 0 ? ((last.sales - prevSalesAvg) / prevSalesAvg) * 100 : 0;
+
+            forecastBlock = buildForecastBlock(forecastSeries);
+          } catch {}
+
+          const insightsBlock =
+            warnings.length || ideas.length || actions.length
+              ? `\n\n🔍 INSIGHTS:\n${warnings.join("\n")}\n\n💡 IDEAS:\n${ideas.join("\n")}\n\n🚀 ACTIONS:\n${actions.join("\n")}`
+              : "";
+
+          const autopilotAlerts = buildAutopilotAlerts({
+            margin,
+            salesTotal: snap.salesTotal,
+            cogsTotal: snap.cogsTotal,
+            expensesTotal: snap.expensesTotal,
+            ordersCount: snap.ordersCount,
+            trendPct,
+          });
+
+          const headerText =
+            businessIntent === "FORECAST"
+              ? `Hapa kuna forecast ya biashara yako kwa store "${activeStoreName}" ndani ya "${activeOrgName}":\n\n`
+              : businessIntent === "COACH"
+              ? `Hapa kuna profit coach ya biashara yako kwa store "${activeStoreName}" ndani ya "${activeOrgName}":\n\n`
+              : `Hapa kuna analysis ya biashara yako ya leo kwa store "${activeStoreName}" ndani ya "${activeOrgName}":\n\n`;
+
+          const baseSummary =
+            `Sales: ${fmtMoney(snap.salesTotal)}\n` +
+            `COGS: ${fmtMoney(snap.cogsTotal)}\n` +
+            `Expenses: ${fmtMoney(snap.expensesTotal)}\n` +
+            `Profit: ${fmtMoney(snap.netProfit)}\n\n` +
+            `🧾 Orders: ${snap.ordersCount.toLocaleString("en-US")}\n` +
+            `🛒 Avg/Order: ${fmtMoney(snap.avgOrder)}\n` +
+            `💵 Money In: ${fmtMoney(snap.moneyIn)}\n\n` +
+            `📊 Margin: ${fmtPercent(margin)}`;
+
+          const coachIntro =
+            businessIntent === "COACH"
+              ? `\n\n🧠 COACH NOTE:\nLengo letu hapa ni kuongeza faida, kupunguza cost, na kulinda margin ya biashara yako.\n`
+              : "";
+
+          const reply = headerText + baseSummary + coachIntro + insightsBlock + forecastBlock;
+
+          return withCors(
+            json({
+              ok: true,
+              reply,
+              meta: {
+                role: "ZETRA_BMS",
+                roleMeta: {
+                  source: "live_store_snapshot",
+                  confidence: 1,
+                  reason: "today_store_analysis",
+                },
+                analysisIntent: businessIntent,
+                autopilotAlerts,
+                mode,
+                locale: body?.locale ?? null,
+                language: body?.language ?? null,
+              },
+            }),
+            origin
+          );
+        }
+
+        return withCors(
+          json({
+            ok: true,
+            reply:
+              `Nimeshindwa kusoma live business data ya leo kwa store "${activeStoreName}".\n\n` +
+              `Sababu: ${snap.error || "Unknown snapshot error"}\n\n` +
+              `Hii ina maana snapshot fetch imegoma, siyo kwamba analysis logic haipo.`,
+            meta: {
+              role: "ZETRA_BMS",
+              roleMeta: {
+                source: "live_store_snapshot_error",
+                confidence: 1,
+                reason: "snapshot_failed",
+              },
+              mode,
+              locale: body?.locale ?? null,
+              language: body?.language ?? null,
+            },
+          }),
+          origin
+        );
+      }
+
       const rr = await resolveRole(env, text, ctx, ctxLines, history, body?.roleHint);
       const role = rr.role;
       const roleMeta = rr.roleMeta;
@@ -778,7 +1324,9 @@ export default {
       const messages = buildMessages(sys, ctxLines, history, text);
 
       let out = await openaiChatCompletions(env, messages, 32_000);
-      if (!out.ok && /timeout|aborted/i.test(out.error)) out = await openaiChatCompletions(env, messages, 36_000);
+      if (!out.ok && /timeout|aborted/i.test(out.error)) {
+        out = await openaiChatCompletions(env, messages, 36_000);
+      }
 
       if (!out.ok) {
         return withCors(
@@ -815,6 +1363,7 @@ export default {
     // ----------------------------
     if (path === "/vision") {
       let body: VisionBody | null = null;
+
       try {
         body = (await request.json()) as VisionBody;
       } catch {
@@ -826,7 +1375,7 @@ export default {
       }
 
       const message = clean(body?.message);
-      const images = Array.isArray(body?.images) ? body!.images!.map((x) => clean(x)).filter(Boolean) : [];
+      const images = Array.isArray(body?.images) ? body.images.map((x) => clean(x)).filter(Boolean) : [];
       const meta = body?.meta ?? {};
       const mode = meta?.mode ?? "AUTO";
       const lang = pickLang(mode);
@@ -862,7 +1411,6 @@ export default {
 
       const sys = buildZetraInstructions(lang, role);
       const visionModel = clean(env.OPENAI_VISION_MODEL) || clean(env.OPENAI_MODEL) || "gpt-4o-mini";
-
       const messages = buildVisionMessages(sys, ctxLines, history, message, images);
 
       const OPENAI_API_KEY = clean(env.OPENAI_API_KEY);
@@ -901,6 +1449,7 @@ export default {
       }
 
       const reply = extractChatCompletionText(parsed) || "";
+
       return withCors(
         json({
           ok: true,
@@ -922,6 +1471,7 @@ export default {
     // ----------------------------
     if (path === "/image") {
       let body: any = null;
+
       try {
         body = await request.json();
       } catch {
@@ -933,7 +1483,9 @@ export default {
       }
 
       const prompt = clean(body?.prompt);
-      if (!prompt) return withCors(json({ ok: false, error: "Missing prompt" }, { status: 400 }), origin);
+      if (!prompt) {
+        return withCors(json({ ok: false, error: "Missing prompt" }, { status: 400 }), origin);
+      }
 
       const out = await openaiImageGenerate(env, prompt, 70_000);
       if (!out.ok) {
@@ -953,6 +1505,7 @@ export default {
       }
 
       let form: FormData | null = null;
+
       try {
         form = await request.formData();
       } catch {
@@ -964,7 +1517,7 @@ export default {
         return withCors(json({ ok: false, error: "Missing file" }, { status: 400 }), origin);
       }
 
-      const maxBytes = 16 * 1024 * 1024; // 16MB
+      const maxBytes = 16 * 1024 * 1024;
       if ((f as File).size > maxBytes) {
         return withCors(json({ ok: false, error: "Audio too large (max 16MB)" }, { status: 413 }), origin);
       }

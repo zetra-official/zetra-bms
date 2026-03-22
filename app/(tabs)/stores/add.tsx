@@ -1,4 +1,3 @@
-// app/(tabs)/stores/add.tsx
 import { useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
 import { Alert, Text } from "react-native";
@@ -22,17 +21,13 @@ function num(v: any): number | null {
   return n;
 }
 
-type MySubRow = {
+type OrgPlanLimitsRow = {
+  plan_id?: string;
   plan_code?: string;
-  status?: string;
-  [k: string]: any;
-};
-
-type PlanRow = {
-  code?: string;
+  posts_per_store_month?: number;
+  ai_enabled?: boolean;
+  staff_per_org?: number;
   stores_per_org?: number;
-  max_stores?: number;
-  maxStores?: number;
   [k: string]: any;
 };
 
@@ -41,44 +36,35 @@ export default function AddStoreScreen() {
   const { activeOrgId, activeOrgName, activeRole, refresh } = useOrg();
 
   const canCreate = activeRole === "owner" || activeRole === "admin";
-  const orgId = useMemo(() => (activeOrgId ?? "").trim(), [activeOrgId]);
+  const orgId = useMemo(() => clean(activeOrgId), [activeOrgId]);
 
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
 
   const guardPlanStoreLimit = async (): Promise<void> => {
-    // 1) get subscription
-    const { data: subData, error: subErr } = await supabase.rpc("get_my_subscription", {
+    if (!orgId) return;
+
+    const { data, error } = await supabase.rpc("_get_org_plan_limits_v1", {
       p_org_id: orgId,
     });
-    if (subErr) {
-      // If subscription RPC fails, we do NOT block (avoid accidental lockout),
-      // but we still proceed to DB which should enforce.
+
+    if (error) {
+      // Do not hard-lock client if RPC fails. DB create_store should still enforce.
       return;
     }
 
-    const subRow = (Array.isArray(subData) ? subData?.[0] : subData) as MySubRow | null;
-    const planCode = upper(subRow?.plan_code || "FREE");
+    const row = (Array.isArray(data) ? data?.[0] : data) as OrgPlanLimitsRow | null;
+    const planCode = upper(row?.plan_code || "CURRENT");
+    const storeLimit = num(row?.stores_per_org);
 
-    // 2) get plans (limits)
-    const { data: plansData, error: plansErr } = await supabase.rpc("get_public_plans");
-    if (plansErr) return;
-
-    const plans = (plansData ?? []) as PlanRow[];
-    const plan = plans.find((p) => upper(p?.code) === planCode) || null;
-
-    const storeLimit =
-      num((plan as any)?.stores_per_org) ??
-      num((plan as any)?.max_stores) ??
-      num((plan as any)?.maxStores) ??
-      null;
-
-    // If no limit in DB, do not block.
+    // If no limit returned, do not block on client side.
     if (storeLimit === null) return;
 
-    // 3) count current stores for this org (from canonical get_my_stores)
     const { data: storesData, error: storesErr } = await supabase.rpc("get_my_stores");
-    if (storesErr) return;
+    if (storesErr) {
+      // Let DB enforce if this fails
+      return;
+    }
 
     const stores = Array.isArray(storesData) ? (storesData as any[]) : [];
     const orgStores = stores.filter((s) => clean(s?.organization_id) === orgId);
@@ -102,7 +88,7 @@ export default function AddStoreScreen() {
       return;
     }
 
-    const storeName = name.trim();
+    const storeName = clean(name);
     if (!storeName) {
       Alert.alert("Missing Store Name", "Weka jina la store.");
       return;
@@ -110,10 +96,9 @@ export default function AddStoreScreen() {
 
     setSaving(true);
     try {
-      // ✅ Client-side guard (DB should ALSO enforce)
+      // Canonical client-side guard
       await guardPlanStoreLimit();
 
-      // ✅ Create store ONLY (no staff assignment here)
       const { error } = await supabase.rpc("create_store", {
         p_org_id: orgId,
         p_store_name: storeName,
@@ -122,13 +107,18 @@ export default function AddStoreScreen() {
       if (error) throw error;
 
       Alert.alert("Success ✅", "Store imeongezwa.");
-      await refresh(); // refresh OrgContext (stores list)
+      await refresh();
       router.back();
     } catch (e: any) {
       const msg = clean(e?.message ?? e);
-      if (msg.toLowerCase().includes("upgrade_plan") && msg.toLowerCase().includes("store limit")) {
+
+      if (
+        msg.toLowerCase().includes("upgrade_plan") &&
+        msg.toLowerCase().includes("store limit")
+      ) {
         const plan = msg.match(/Plan\s+([A-Z0-9_]+)/i)?.[1] || "CURRENT";
         const lim = msg.match(/allows\s+(\d+)/i)?.[1] || "—";
+
         Alert.alert(
           "Upgrade Required",
           `Umefika limit ya stores.\n\nPlan: ${plan}\nStores/Org allowed: ${lim}\n\nIli kuongeza store nyingine, tafadhali upgrade plan.`
@@ -151,15 +141,14 @@ export default function AddStoreScreen() {
         <Text style={{ color: UI.text, fontWeight: "900" }}>{activeOrgName ?? "—"}</Text>
       </Text>
 
-      {!canCreate && (
+      {!canCreate ? (
         <Card style={{ borderColor: UI.dangerBorder, backgroundColor: UI.dangerSoft }}>
           <Text style={{ color: UI.danger, fontWeight: "900" }}>
             No Access (Owner/Admin only)
           </Text>
         </Card>
-      )}
+      ) : null}
 
-      {/* ✅ ONE CARD ONLY: Store name */}
       <Card style={{ gap: 12, marginTop: 14 }}>
         <Text style={{ color: UI.muted, fontWeight: "800" }}>Store Name</Text>
         <Input

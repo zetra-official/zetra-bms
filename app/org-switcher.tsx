@@ -1,4 +1,3 @@
-// app/org-switcher.tsx
 import { useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
@@ -27,9 +26,16 @@ type OrgItem = {
 };
 
 type PlanInfo = {
-  code?: string; // e.g. "LITE"
-  name?: string; // e.g. "Lite"
-  max_organizations?: number; // e.g. 1
+  code?: string;
+  name?: string;
+  max_organizations?: number;
+};
+
+type MySubRow = {
+  plan_code?: string;
+  plan_name?: string;
+  max_organizations?: number;
+  [k: string]: any;
 };
 
 function normName(s: string) {
@@ -79,8 +85,11 @@ function clean(s: any) {
   return String(s ?? "").trim();
 }
 
+function upper(s: any) {
+  return clean(s).toUpperCase();
+}
+
 /**
- * Parse DB exception:
  * ORG_LIMIT_REACHED: plan=FREE | orgs_allowed=1 | owned=1
  */
 function parseOrgLimitError(
@@ -109,29 +118,32 @@ function safeInt(x: any, fallback = 0) {
   return Number.isFinite(n) ? n : fallback;
 }
 
-async function fetchActiveOrgPlanInfo(activeOrgId: string | null | undefined): Promise<PlanInfo | null> {
+async function fetchActiveOrgPlanInfo(
+  activeOrgId: string | null | undefined
+): Promise<PlanInfo | null> {
   const orgId = clean(activeOrgId);
   if (!orgId) return null;
 
-  // Uses your existing DB RPC:
-  // get_org_subscription(p_org_id uuid) => returns (organization_id, code, name, ..., max_organizations, ...)
-  const { data, error } = await supabase.rpc("get_org_subscription", { p_org_id: orgId });
+  const { data, error } = await supabase.rpc("get_my_subscription", {
+    p_org_id: orgId,
+  });
 
   if (error) return null;
 
-  // data can be array (TABLE) or single row depending on your RPC definition
-  const row = Array.isArray(data) ? data?.[0] : data;
-
+  const row = (Array.isArray(data) ? data?.[0] : data) as MySubRow | null;
   if (!row) return null;
 
-  const code = clean((row as any)?.code);
-  const name = clean((row as any)?.name);
-  const max_organizations = safeInt((row as any)?.max_organizations, 0);
+  const code = upper(row?.plan_code);
+  const name = clean(row?.plan_name);
+  const maxOrganizations = safeInt(row?.max_organizations, 0);
 
-  // If no meaningful info, treat as null
-  if (!code && !name && !max_organizations) return null;
+  if (!code && !name && !maxOrganizations) return null;
 
-  return { code: code ? code.toUpperCase() : undefined, name: name || undefined, max_organizations };
+  return {
+    code: code || undefined,
+    name: name || undefined,
+    max_organizations: maxOrganizations || undefined,
+  };
 }
 
 export default function OrgSwitcherScreen() {
@@ -157,12 +169,12 @@ export default function OrgSwitcherScreen() {
   const typedOrgs = (orgs ?? []) as OrgItem[];
 
   const filteredOrgs = useMemo(() => {
-    const query = String(q ?? "").trim().toLowerCase();
+    const query = clean(q).toLowerCase();
     if (!query) return typedOrgs;
 
     return typedOrgs.filter((o) => {
-      const name = String(o.organization_name ?? "").toLowerCase();
-      const role = String(o.role ?? "").toLowerCase();
+      const name = clean(o.organization_name).toLowerCase();
+      const role = clean(o.role).toLowerCase();
       return name.includes(query) || role.includes(query);
     });
   }, [typedOrgs, q]);
@@ -213,7 +225,6 @@ export default function OrgSwitcherScreen() {
     const planLabel = clean(info.planLabel) || "—";
     const allowed = safeInt(info.allowed, 1);
 
-    // Mpole, mfupi, premium
     const body =
       `Umefika limit ya kuongeza organizations kwenye kifurushi chako.\n\n` +
       `Kifurushi: ${planLabel}\n` +
@@ -224,9 +235,8 @@ export default function OrgSwitcherScreen() {
   };
 
   const handleLimitPopup = async (errMsg: string) => {
-    // 1) Try DB plan for ACTIVE ORG (most accurate)
+    // First choice: active org subscription shown inside the app
     const plan = await fetchActiveOrgPlanInfo(activeOrgId);
-
     if (plan) {
       showUpgradeRequired({
         planLabel: prettyPlanLabel(plan),
@@ -235,22 +245,21 @@ export default function OrgSwitcherScreen() {
       return;
     }
 
-    // 2) Fallback: parse from DB exception
+    // Fallback: parse DB error
     const lim = parseOrgLimitError(errMsg);
     if (lim) {
-      const planLabel = lim.plan ? lim.plan.toUpperCase() : "—";
+      const planLabel = lim.plan ? lim.plan.toUpperCase() : "CURRENT";
       const allowed = safeInt(lim.allowed, 1);
       showUpgradeRequired({ planLabel, allowed });
       return;
     }
 
-    // 3) Last fallback: generic
-    showUpgradeRequired({ planLabel: "—", allowed: 1 });
+    showUpgradeRequired({ planLabel: "CURRENT", allowed: 1 });
   };
 
   const onCreate = async () => {
-    const nameRaw = orgName.trim();
-    const storeRaw = storeName.trim();
+    const nameRaw = clean(orgName);
+    const storeRaw = clean(storeName);
 
     if (!nameRaw || !storeRaw) return;
 
@@ -327,15 +336,12 @@ export default function OrgSwitcherScreen() {
   return (
     <Screen>
       <View style={{ flex: 1 }}>
-        {/* ===== TOP (NOT SCROLL) ===== */}
         <View>
-          {/* Header */}
           <View style={{ flexDirection: "row", alignItems: "center" }}>
             <Text style={{ fontSize: 26, fontWeight: "900", color: UI.text, flex: 1 }}>
               Organizations
             </Text>
 
-            {/* Refresh icon */}
             <Pressable
               onPress={() => refresh()}
               disabled={loading || refreshing}
@@ -357,7 +363,6 @@ export default function OrgSwitcherScreen() {
               )}
             </Pressable>
 
-            {/* Close */}
             <Pressable
               onPress={() => router.back()}
               hitSlop={12}
@@ -377,7 +382,6 @@ export default function OrgSwitcherScreen() {
             Switch or create another organization
           </Text>
 
-          {/* CREATE */}
           <Card style={{ marginTop: 16, gap: 10 }}>
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
               Create Organization
@@ -429,7 +433,6 @@ export default function OrgSwitcherScreen() {
             />
           </Card>
 
-          {/* LIST HEADER + TOGGLE */}
           <View
             style={{
               marginTop: 18,
@@ -460,7 +463,6 @@ export default function OrgSwitcherScreen() {
             </Pressable>
           </View>
 
-          {/* SEARCH */}
           <View style={{ marginBottom: 10 }}>
             <TextInput
               value={q}
@@ -482,7 +484,6 @@ export default function OrgSwitcherScreen() {
           </View>
         </View>
 
-        {/* ===== BOTTOM (SCROLL ONLY) ===== */}
         <ScrollView
           style={{ flex: 1 }}
           contentContainerStyle={{ paddingBottom: 18 }}
@@ -492,7 +493,6 @@ export default function OrgSwitcherScreen() {
             <RefreshControl refreshing={!!refreshing} onRefresh={refresh} tintColor={UI.muted} />
           }
         >
-          {/* Loading state */}
           {loading ? (
             <Card style={{ marginTop: 6 }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
@@ -502,7 +502,6 @@ export default function OrgSwitcherScreen() {
             </Card>
           ) : null}
 
-          {/* Empty state */}
           {!loading && filteredOrgs.length === 0 ? (
             <Card style={{ marginTop: 6 }}>
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
