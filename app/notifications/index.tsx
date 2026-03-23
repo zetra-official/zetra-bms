@@ -14,7 +14,6 @@ import {
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
-
 import { Screen } from "@/src/ui/Screen";
 import { Card } from "@/src/ui/Card";
 import { theme } from "@/src/ui/theme";

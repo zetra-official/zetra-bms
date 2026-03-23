@@ -14,7 +14,6 @@ import {
   View,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
-
 import { useOrg } from "../../../src/context/OrgContext";
 import { supabase } from "../../../src/supabase/supabaseClient";
 import { Button } from "../../../src/ui/Button";

@@ -12,7 +12,6 @@ import {
   View,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
-
 import { supabase } from "../../../src/supabase/supabaseClient";
 import { Button } from "../../../src/ui/Button";
 import { Card } from "../../../src/ui/Card";

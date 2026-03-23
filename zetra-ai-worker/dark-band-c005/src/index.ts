@@ -270,10 +270,15 @@ You are ZETRA AI — Elite Multi-Role Intelligence System.
 
 CORE BEHAVIOR:
 - Be natural and adaptive.
+- Understand the user's likely goal, not just exact keywords.
+- Infer intent from wording, business context, and recent history.
 - Be detailed when needed, concise when appropriate.
 - Suggest next steps only if helpful or when user is solving something.
 - Do NOT force structured templates.
-
+- When the user sends an image, analyze the visible content directly.
+- Do not say you cannot see/analyze the image if image input is present.
+- Describe what is visible first, then answer the user's requested task.
+- If the image is unclear, say exactly what is unclear and give the best possible partial answer.
 LANGUAGE:
 ${langLine}
 
@@ -354,6 +359,108 @@ function normalizeHistory(history?: ReqMsg[]) {
   return out.slice(-20);
 }
 
+function tokenizeText(text: string) {
+  return clean(text)
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s/%-]/gu, " ")
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+function hasAnyPhrase(text: string, phrases: string[]) {
+  const t = clean(text).toLowerCase();
+  return phrases.some((p) => t.includes(clean(p).toLowerCase()));
+}
+
+function countPhraseHits(text: string, phrases: string[]) {
+  const t = clean(text).toLowerCase();
+  let hits = 0;
+  for (const p of phrases) {
+    if (t.includes(clean(p).toLowerCase())) hits++;
+  }
+  return hits;
+}
+
+function detectBusinessAnalysisRequest(text: string, ctx: ReqBody["context"], history: Array<{ role: "user" | "assistant"; content: string }>) {
+  const t = clean(text).toLowerCase();
+  const activeStoreId = clean((ctx as any)?.activeStoreId || (ctx as any)?.storeId);
+  if (!activeStoreId) return false;
+
+  const directSignals = [
+    "analysis",
+    "uchambuzi",
+    "business analysis",
+    "analysis ya leo",
+    "forecast",
+    "utabiri",
+    "prediction",
+    "smart prediction",
+    "profit coach",
+    "coach",
+    "boresha faida",
+    "niongoze kwenye profit",
+  ];
+
+  const financeSignals = [
+    "sales",
+    "mauzo",
+    "profit",
+    "faida",
+    "margin",
+    "expenses",
+    "gharama",
+    "expense",
+    "cogs",
+    "orders",
+    "order",
+    "money in",
+    "avg/order",
+    "avg order",
+    "biashara yangu",
+    "store hii",
+    "duka hili",
+    "duka yangu",
+    "biashara hii",
+  ];
+
+  const timeSignals = [
+    "leo",
+    "today",
+    "wiki",
+    "week",
+    "siku",
+    "month",
+    "mwezi",
+    "next day",
+    "next 7 days",
+    "siku 7 zijazo",
+    "wiki ijayo",
+    "jana",
+    "yesterday",
+  ];
+
+  const directHit = hasAnyPhrase(t, directSignals);
+  const financeHits = countPhraseHits(t, financeSignals);
+  const timeHits = countPhraseHits(t, timeSignals);
+
+  if (directHit) return true;
+  if (financeHits >= 2) return true;
+  if (financeHits >= 1 && timeHits >= 1) return true;
+
+  const lastUser = [...history].reverse().find((m) => m.role === "user");
+  const prevText = clean(lastUser?.content).toLowerCase();
+  if (prevText) {
+    const prevDirect = hasAnyPhrase(prevText, directSignals);
+    const currentShortFollowUp =
+      t.length <= 60 &&
+      hasAnyPhrase(t, ["endelea", "sasa", "na forecast", "na coach", "onyesha tena", "endelea hapo", "endelea kwenye analysis"]);
+
+    if (prevDirect && currentShortFollowUp) return true;
+  }
+
+  return false;
+}
+
 function heuristicRole(text: string, ctx: ReqBody["context"]): AiRoleKey {
   const t = clean(text).toLowerCase();
   const hasOrg = !!clean(ctx?.orgId ?? ctx?.activeOrgId);
@@ -377,10 +484,10 @@ function heuristicRole(text: string, ctx: ReqBody["context"]): AiRoleKey {
   if (mathHit) return "MATH";
   if (healthHit) return "HEALTH";
   if (legalHit) return "LEGAL";
-  if (financeHit) return "FINANCE";
-  if (marketingHit) return "MARKETING";
   if (engHit) return "ENGINEERING";
   if (hasOrg && bmsHit) return "ZETRA_BMS";
+  if (financeHit) return "FINANCE";
+  if (marketingHit) return "MARKETING";
   return "GENERAL";
 }
 
@@ -429,22 +536,33 @@ function detectBusinessIntent(text: string): AnalysisIntent {
   const t = clean(text).toLowerCase();
 
   const wantsForecast =
-    t.includes("forecast") ||
-    t.includes("utabiri") ||
-    t.includes("prediction") ||
-    t.includes("smart prediction") ||
-    t.includes("siku 7 zijazo") ||
-    t.includes("wiki ijayo") ||
-    t.includes("next day") ||
-    t.includes("next 7 days");
+    hasAnyPhrase(t, [
+      "forecast",
+      "utabiri",
+      "prediction",
+      "smart prediction",
+      "siku 7 zijazo",
+      "wiki ijayo",
+      "next day",
+      "next 7 days",
+      "kesho",
+      "tomorrow",
+      "projected",
+      "projection",
+    ]);
 
   const wantsCoach =
-    t.includes("profit coach") ||
-    t.includes("coach") ||
-    t.includes("nishauri") ||
-    t.includes("nifundishe") ||
-    t.includes("niongoze kwenye profit") ||
-    t.includes("boresha faida");
+    hasAnyPhrase(t, [
+      "profit coach",
+      "coach",
+      "nishauri",
+      "nifundishe",
+      "niongoze kwenye profit",
+      "boresha faida",
+      "how can i improve profit",
+      "increase profit",
+      "ongeza faida",
+    ]);
 
   if (wantsForecast) return "FORECAST";
   if (wantsCoach) return "COACH";
@@ -957,12 +1075,21 @@ async function openaiImageGenerate(env: Env, prompt: string, timeoutMs = 60_000)
   const model = clean(env.OPENAI_IMAGE_MODEL) || "gpt-image-1";
   const size = clean(env.OPENAI_IMAGE_SIZE) || "1024x1024";
 
-  const body: any = {
-    model,
-    prompt,
-    size,
-    response_format: "b64_json",
-  };
+ const isDalle = model === "dall-e-2" || model === "dall-e-3";
+
+  const body: any = isDalle
+    ? {
+        model,
+        prompt,
+        size,
+        response_format: "url",
+      }
+    : {
+        model,
+        prompt,
+        size,
+        output_format: "png",
+      };
 
   const url = "https://api.openai.com/v1/images/generations";
   const res = await fetchWithTimeout(
@@ -984,16 +1111,33 @@ async function openaiImageGenerate(env: Env, prompt: string, timeoutMs = 60_000)
     return { ok: false as const, status: res.status, url: "", error: msg };
   }
 
-  const b64 = clean(parsed?.data?.[0]?.b64_json);
+  const first = parsed?.data?.[0] ?? null;
+
+  const b64 = clean(first?.b64_json);
   if (b64) {
-    const dataUrl = `data:image/png;base64,${b64}`;
+    const mime =
+      clean(first?.mime_type) ||
+      (clean(first?.output_format).toLowerCase() === "jpeg"
+        ? "image/jpeg"
+        : clean(first?.output_format).toLowerCase() === "webp"
+        ? "image/webp"
+        : "image/png");
+
+    const dataUrl = `data:${mime};base64,${b64}`;
     return { ok: true as const, status: 200, url: dataUrl, error: "" };
   }
 
-  const u = clean(parsed?.data?.[0]?.url);
-  if (u) return { ok: true as const, status: 200, url: u, error: "" };
+  const u = clean(first?.url);
+  if (u) {
+    return { ok: true as const, status: 200, url: u, error: "" };
+  }
 
-  return { ok: false as const, status: 500, url: "", error: "No image returned" };
+  return {
+    ok: false as const,
+    status: 500,
+    url: "",
+    error: "No image returned from OpenAI image API",
+  };
 }
 
 async function openaiTranscribe(env: Env, file: File, timeoutMs = 55_000) {
@@ -1091,7 +1235,7 @@ export default {
           json({
             ok: true,
             service: "zetra-ai-worker",
-            version: "stable-full-v1",
+            version: "stable-full-v2-imagefix-b1",
             time: new Date().toISOString(),
           }),
           origin
@@ -1150,28 +1294,11 @@ export default {
       const ctxLines = buildCtxLines(ctx);
       const history = normalizeHistory(body?.history);
 
-      const textLower = clean(text).toLowerCase();
-
-      const wantsBusinessAnalysis =
-        textLower.includes("analysis") ||
-        textLower.includes("uchambuzi") ||
-        textLower.includes("biashara yangu") ||
-        textLower.includes("mauzo ya leo") ||
-        textLower.includes("sales ya leo") ||
-        textLower.includes("profit ya leo") ||
-        textLower.includes("faida ya leo") ||
-        textLower.includes("analysis ya leo") ||
-        textLower.includes("business analysis") ||
-        textLower.includes("forecast") ||
-        textLower.includes("utabiri") ||
-        textLower.includes("prediction") ||
-        textLower.includes("smart prediction") ||
-        textLower.includes("profit coach") ||
-        textLower.includes("coach");
-
       const activeStoreId = clean((ctx as any)?.activeStoreId || (ctx as any)?.storeId);
       const activeStoreName = clean((ctx as any)?.activeStoreName || (ctx as any)?.storeName || "Store");
       const activeOrgName = clean((ctx as any)?.activeOrgName || (ctx as any)?.orgName || "Organization");
+
+      const wantsBusinessAnalysis = detectBusinessAnalysisRequest(text, ctx, history);
 
       if (wantsBusinessAnalysis && activeStoreId) {
         const snap = await getTodayStoreBusinessSnapshot(env, activeStoreId);
@@ -1280,7 +1407,7 @@ export default {
                 roleMeta: {
                   source: "live_store_snapshot",
                   confidence: 1,
-                  reason: "today_store_analysis",
+                  reason: "smart_business_intent_detected",
                 },
                 analysisIntent: businessIntent,
                 autopilotAlerts,
@@ -1488,11 +1615,36 @@ export default {
       }
 
       const out = await openaiImageGenerate(env, prompt, 70_000);
+      const imageModel = clean(env.OPENAI_IMAGE_MODEL) || "gpt-image-1";
+
       if (!out.ok) {
-        return withCors(json({ ok: false, error: out.error }, { status: out.status || 500 }), origin);
+        return withCors(
+          json(
+            {
+              ok: false,
+              error: out.error,
+              debug: {
+                imageModel,
+                workerVersion: "stable-full-v2-imagefix-b1",
+              },
+            },
+            { status: out.status || 500 }
+          ),
+          origin
+        );
       }
 
-      return withCors(json({ ok: true, url: out.url }), origin);
+      return withCors(
+        json({
+          ok: true,
+          url: out.url,
+          debug: {
+            imageModel,
+            workerVersion: "stable-full-v2-imagefix-b1",
+          },
+        }),
+        origin
+      );
     }
 
     // ----------------------------
