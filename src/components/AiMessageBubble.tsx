@@ -1,18 +1,15 @@
-// src/components/AiMessageBubble.tsx
-import React, { useMemo } from "react";
-import { Image, Text, View } from "react-native";
-import Markdown from "react-native-markdown-display";
+import React, { useCallback, useMemo, useState } from "react";
+import { Alert, Image, Modal, Pressable, ScrollView, Share, Text, View } from "react-native";
+import * as FileSystem from "expo-file-system/legacy";
+import * as MediaLibrary from "expo-media-library";
+import * as Sharing from "expo-sharing";
+// Native selectable text priority:
+// tumetoa markdown renderer ili long-press ilete native text selection ya Android/iOS.
 import { UI } from "@/src/ui/theme";
 
 type ChatRole = "user" | "assistant";
 type ChatMsg = { id: string; role: ChatRole; text: string; ts: number };
 
-/**
- * ✅ THEME BRIDGE
- * theme.ts exports UI as flat tokens (UI.background, UI.emeraldBorder, ...)
- * but some older code may use UI.colors.*.
- * This supports BOTH without changing theme.ts.
- */
 const C: any = (UI as any)?.colors ?? UI;
 
 function clean(s: any) {
@@ -22,16 +19,58 @@ function clean(s: any) {
 function normalizeImageUri(uri: string) {
   const u = clean(uri);
   if (!u) return "";
-  // IMPORTANT: data:image base64 sometimes has whitespace/newlines -> remove them
   if (u.startsWith("data:image/")) return u.replace(/\s+/g, "");
   return u;
 }
 
-/**
- * Footer badge extraction:
- * - Pulls ONLY a trailing "✅ Saved to Tasks: N" line (last non-empty line)
- * - Removes it from markdown body and renders a premium pill badge below.
- */
+function getImageExtensionFromUri(uri: string) {
+  const u = normalizeImageUri(uri).toLowerCase();
+
+  if (u.startsWith("data:image/png")) return "png";
+  if (u.startsWith("data:image/jpeg") || u.startsWith("data:image/jpg")) return "jpg";
+  if (u.startsWith("data:image/webp")) return "webp";
+
+  if (u.includes(".png")) return "png";
+  if (u.includes(".jpg") || u.includes(".jpeg")) return "jpg";
+  if (u.includes(".webp")) return "webp";
+
+  return "png";
+}
+
+async function ensureLocalImageFile(uri: string) {
+  const normalized = normalizeImageUri(uri);
+  if (!normalized) throw new Error("Image URI missing");
+
+  const baseDir = FileSystem.cacheDirectory || FileSystem.documentDirectory;
+  if (!baseDir) throw new Error("No writable directory found");
+
+  const ext = getImageExtensionFromUri(normalized);
+  const target = `${baseDir}zetra_ai_${Date.now()}.${ext}`;
+
+  if (normalized.startsWith("file://")) {
+    return normalized;
+  }
+
+  if (normalized.startsWith("data:image/")) {
+    const m = normalized.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.*)$/i);
+    const b64 = clean(m?.[2]);
+    if (!b64) throw new Error("Invalid base64 image data");
+
+    await FileSystem.writeAsStringAsync(target, b64, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+
+    return target;
+  }
+
+  if (/^https?:\/\//i.test(normalized)) {
+    const out = await FileSystem.downloadAsync(normalized, target);
+    return out.uri;
+  }
+
+  throw new Error("Unsupported image URI format");
+}
+
 function splitFooterBadge(fullText: string) {
   const t = clean(fullText);
   if (!t) return { text: "", savedBadge: "" };
@@ -62,27 +101,12 @@ function splitFooterBadge(fullText: string) {
   return { text: clean(remaining.join("\n")), savedBadge: lastLine };
 }
 
-/**
- * NEXT MOVE parsing rules (safe + strict):
- * - Only split when "NEXT MOVE" appears as a standalone heading/line, not inside a sentence.
- * - Supports variants:
- *    "🎯 NEXT MOVE"
- *    "NEXT MOVE"
- *    "🎯 NEXT MOVE:"
- *    "### 🎯 NEXT MOVE"
- *    "**NEXT MOVE**"
- *
- * ✅ IMPORTANT FIX:
- * If ACTIONS appears after NEXT MOVE (some model replies do this),
- * we stop NEXT MOVE body before ACTIONS and keep ACTIONS in main.
- */
 function splitNextMove(text: string) {
   const t = clean(text);
   if (!t) return { main: "", nextMoveBody: "" };
 
   const src = t.replace(/\r\n/g, "\n");
 
-  // Heading-like NEXT MOVE line
   const nextMoveRe =
     /^([>\s]*)(#{1,6}\s*)?(\*\*)?\s*🎯?\s*NEXT\s+MOVE\s*:?\s*(\*\*)?\s*$/gim;
 
@@ -101,7 +125,6 @@ function splitNextMove(text: string) {
   const before = clean(src.slice(0, foundIndex));
   const afterRaw = src.slice(foundIndex);
 
-  // Remove ONLY the first NEXT MOVE heading line at the start of afterRaw
   const oneNextMoveLine =
     /^([>\s]*)(#{1,6}\s*)?(\*\*)?\s*🎯?\s*NEXT\s+MOVE\s*:?\s*(\*\*)?\s*$/im;
 
@@ -111,7 +134,6 @@ function splitNextMove(text: string) {
     return { main: before || src, nextMoveBody: "" };
   }
 
-  // Detect ACTIONS heading inside the remaining text
   const actionsRe =
     /^([>\s]*)(#{1,6}\s*)?(\*\*)?\s*✅?\s*ACTIONS\s*:?\s*(\*\*)?\s*$/im;
 
@@ -133,10 +155,6 @@ function splitNextMove(text: string) {
   return { main: mainMerged, nextMoveBody: nmBody };
 }
 
-/**
- * ✅ Remove "Link: data:image..." lines so base64 never floods UI.
- * - Also removes any standalone data:image line.
- */
 function stripDataImageLinkLines(fullText: string) {
   const src = clean(fullText).replace(/\r\n/g, "\n");
   if (!src) return "";
@@ -151,10 +169,7 @@ function stripDataImageLinkLines(fullText: string) {
 
     const lower = L.toLowerCase();
 
-    // Remove lines like: "Link: data:image/png;base64,..."
     if (lower.startsWith("link:") && lower.includes("data:image/")) continue;
-
-    // Remove if the line itself is a data:image url (rare)
     if (lower.startsWith("data:image/")) continue;
 
     outLines.push(line);
@@ -163,39 +178,217 @@ function stripDataImageLinkLines(fullText: string) {
   return clean(outLines.join("\n"));
 }
 
-/**
- * ✅ Extract FIRST markdown image from text:
- * - Supports: ![alt](url)
- * - Works with http(s) or data:image/...base64,...
- * - Returns { body, imageUri }
- *
- * IMPORTANT:
- * If found, we remove that image markdown segment from body
- * so base64 never shows as text.
- */
+function extractRawDataImage(text: string) {
+  const src = String(text ?? "");
+  const start = src.indexOf("data:image/");
+  if (start === -1) return "";
+
+  let out = "";
+  for (let i = start; i < src.length; i++) {
+    const ch = src[i];
+
+    const ok =
+      /[A-Za-z0-9+/=:_;,\-.]/.test(ch);
+
+    if (!ok) break;
+    out += ch;
+  }
+
+  return normalizeImageUri(out);
+}
+
+function removeRawDataImage(text: string, uri: string) {
+  const src = String(text ?? "");
+  if (!uri) return clean(src);
+  return clean(src.replace(uri, ""));
+}
+
 function extractFirstMarkdownImage(fullText: string): { body: string; imageUri: string } {
   const t = clean(fullText);
   if (!t) return { body: "", imageUri: "" };
 
-  // Capture URL inside (...) until first ')'
-  const re = /!\[[^\]]*?\]\(\s*([^)]+?)\s*\)/m;
+  // 1) markdown image first
+  const markdownRe = /!\[[^\]]*?\]\(\s*(data:image\/[^)\s]+|https?:\/\/[^)\s]+)\s*\)/im;
+  const mm = markdownRe.exec(t);
 
-  const m = re.exec(t);
-  if (!m?.[1]) return { body: fullText, imageUri: "" };
+  if (mm?.[1]) {
+    const uri = normalizeImageUri(mm[1]);
+    if (uri) {
+      const body = clean(t.replace(mm[0], "").trim());
+      return { body, imageUri: uri };
+    }
+  }
 
-  const uri = normalizeImageUri(m[1]);
-  if (!uri) return { body: fullText, imageUri: "" };
+  // 2) fallback: raw data:image string anywhere in message
+  const rawUri = extractRawDataImage(t);
+  if (rawUri) {
+    const withoutRaw = removeRawDataImage(t, rawUri)
+      .replace(/!\[[^\]]*?\]\(\s*\)/g, "")
+      .replace(/\(\s*\)/g, "")
+      .trim();
 
-  // Remove only the matched markdown image segment
-  const body = clean(t.replace(m[0], "").trim());
-  return { body, imageUri: uri };
+    return {
+      body: clean(withoutRaw),
+      imageUri: rawUri,
+    };
+  }
+
+  return { body: t, imageUri: "" };
 }
 
-/**
- * ✅ Props supports BOTH calling styles:
- * 1) <AiMessageBubble msg={item} />
- * 2) <AiMessageBubble role="user" text="hello" />
- */
+type MetricChip = {
+  key: string;
+  label: string;
+  value: string;
+  icon: string;
+};
+
+function extractMetricChips(fullText: string): { body: string; chips: MetricChip[] } {
+  const src = clean(fullText).replace(/\r\n/g, "\n");
+  if (!src) return { body: "", chips: [] };
+
+  const lines = src.split("\n");
+  const chips: MetricChip[] = [];
+  const kept: string[] = [];
+
+  const defs: Array<{
+    key: string;
+    label: string;
+    icon: string;
+    re: RegExp;
+  }> = [
+    { key: "sales", label: "Sales", icon: "S", re: /^sales\s*:\s*(.+)$/i },
+    { key: "cogs", label: "COGS", icon: "C", re: /^cogs\s*:\s*(.+)$/i },
+    { key: "expenses", label: "Expenses", icon: "E", re: /^expenses\s*:\s*(.+)$/i },
+    { key: "profit", label: "Profit", icon: "P", re: /^profit\s*:\s*(.+)$/i },
+    { key: "orders", label: "Orders", icon: "O", re: /^[🧾]?\s*orders\s*:\s*(.+)$/i },
+    { key: "avg_order", label: "Avg/Order", icon: "A", re: /^[🛒]?\s*avg\/order\s*:\s*(.+)$/i },
+    { key: "money_in", label: "Money In", icon: "M", re: /^[💵]?\s*money\s*in\s*:\s*(.+)$/i },
+    { key: "margin", label: "Margin", icon: "%", re: /^[📊]?\s*margin\s*:\s*(.+)$/i },
+  ];
+
+  for (const line of lines) {
+    const raw = line ?? "";
+    const t = clean(raw);
+
+    if (!t) {
+      kept.push(raw);
+      continue;
+    }
+
+    let matched = false;
+
+    for (const d of defs) {
+      const m = t.match(d.re);
+      if (!m?.[1]) continue;
+
+      const value = clean(m[1]);
+      if (!value) break;
+
+      if (!chips.some((c) => c.key === d.key)) {
+        chips.push({
+          key: d.key,
+          label: d.label,
+          value,
+          icon: d.icon,
+        });
+      }
+
+      matched = true;
+      break;
+    }
+
+    if (!matched) kept.push(raw);
+  }
+
+  return {
+    body: clean(kept.join("\n")),
+    chips,
+  };
+}
+
+type ParsedSection = {
+  title: string;
+  icon: string;
+  body: string;
+  tone: "danger" | "warning" | "info" | "success";
+};
+
+function normalizeHeadingKey(line: string) {
+  return clean(line)
+    .toUpperCase()
+    .replace(/^[#>*\s]+/, "")
+    .replace(/\*\*/g, "")
+    .replace(/[^\p{L}\p{N}\s]/gu, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function getSectionMeta(line: string): Omit<ParsedSection, "body"> | null {
+  const key = normalizeHeadingKey(line);
+
+  if (key === "INSIGHTS") {
+    return { title: "INSIGHTS", icon: "🔍", tone: "warning" };
+  }
+  if (key === "IDEAS") {
+    return { title: "IDEAS", icon: "💡", tone: "info" };
+  }
+  if (key === "ACTIONS") {
+    return { title: "ACTIONS", icon: "🚀", tone: "success" };
+  }
+  if (key === "FORECAST BASED ON LAST 7 DAYS" || key === "FORECAST") {
+    return { title: "FORECAST", icon: "🔮", tone: "info" };
+  }
+  if (key === "PREDICTION RISKS") {
+    return { title: "PREDICTION RISKS", icon: "🚨", tone: "danger" };
+  }
+  if (key === "SMART PREDICTIONS") {
+    return { title: "SMART PREDICTIONS", icon: "🧠", tone: "success" };
+  }
+
+  return null;
+}
+
+function splitAssistantSections(text: string) {
+  const src = clean(text).replace(/\r\n/g, "\n");
+  if (!src) return { intro: "", sections: [] as ParsedSection[] };
+
+  const lines = src.split("\n");
+  const introLines: string[] = [];
+  const sections: ParsedSection[] = [];
+
+  let current: ParsedSection | null = null;
+
+  for (const line of lines) {
+    const meta = getSectionMeta(line);
+
+    if (meta) {
+      if (current) {
+        current.body = clean(current.body);
+        sections.push(current);
+      }
+      current = { ...meta, body: "" };
+      continue;
+    }
+
+    if (current) {
+      current.body = current.body ? `${current.body}\n${line}` : line;
+    } else {
+      introLines.push(line);
+    }
+  }
+
+  if (current) {
+    current.body = clean(current.body);
+    sections.push(current);
+  }
+
+  return {
+    intro: clean(introLines.join("\n")),
+    sections: sections.filter((s) => clean(s.body)),
+  };
+}
+
 type Props =
   | { msg: ChatMsg; role?: never; text?: never }
   | { msg?: undefined; role: ChatRole; text: string };
@@ -203,7 +396,6 @@ type Props =
 function safeMsgFromProps(p: Props): ChatMsg {
   const now = Date.now();
 
-  // style 1: msg provided
   if ((p as any)?.msg) {
     const m = (p as any).msg as ChatMsg;
     return {
@@ -214,7 +406,6 @@ function safeMsgFromProps(p: Props): ChatMsg {
     };
   }
 
-  // style 2: role/text provided
   const role = (p as any)?.role;
   const text = (p as any)?.text;
 
@@ -227,209 +418,596 @@ function safeMsgFromProps(p: Props): ChatMsg {
 }
 
 export function AiMessageBubble(props: Props) {
-  // ✅ NEVER crash: normalize props into a safe msg
   const msg = useMemo(() => safeMsgFromProps(props), [props]);
-
   const isUser = msg.role === "user";
 
-  // ✅ IMMERSIVE MODE:
-  // - Assistant message: FULL WIDTH (no card/bubble)
-  // - User message: keep compact bubble on the right (premium chat feel)
+  const [viewer, setViewer] = useState<{ open: boolean; uri: string }>({
+    open: false,
+    uri: "",
+  });
 
-  const { main, nextMoveBody, savedBadge, imageUriMain, imageUriNext } = useMemo(() => {
-    if (isUser)
+  const openViewer = useCallback((uri: string) => {
+    const normalized = normalizeImageUri(uri);
+    if (!normalized) return;
+    setViewer({ open: true, uri: normalized });
+  }, []);
+
+  const closeViewer = useCallback(() => {
+    setViewer({ open: false, uri: "" });
+  }, []);
+
+  const saveImageToDevice = useCallback(async (uri: string) => {
+    try {
+      const normalized = normalizeImageUri(uri);
+      if (!normalized) {
+        Alert.alert("Image missing", "Hakuna picha ya ku-save.");
+        return;
+      }
+
+      const perm = await MediaLibrary.requestPermissionsAsync();
+      if (perm.status !== "granted") {
+        Alert.alert("Permission required", "Ruhusu gallery/media access ili ku-save picha.");
+        return;
+      }
+
+      const localUri = await ensureLocalImageFile(normalized);
+      await MediaLibrary.saveToLibraryAsync(localUri);
+
+      Alert.alert("Saved", "Picha imehifadhiwa kwenye gallery.");
+    } catch (e: any) {
+      Alert.alert("Save failed", clean(e?.message) || "Imeshindikana ku-save picha.");
+    }
+  }, []);
+
+  const shareImageFromUri = useCallback(async (uri: string) => {
+    try {
+      const normalized = normalizeImageUri(uri);
+      if (!normalized) {
+        Alert.alert("Image missing", "Hakuna picha ya ku-share.");
+        return;
+      }
+
+      const localUri = await ensureLocalImageFile(normalized);
+
+      const canNativeShare = await Sharing.isAvailableAsync();
+      if (canNativeShare) {
+        await Sharing.shareAsync(localUri);
+        return;
+      }
+
+      await Share.share({
+        message: localUri,
+      });
+    } catch (e: any) {
+      Alert.alert("Share failed", clean(e?.message) || "Imeshindikana ku-share picha.");
+    }
+  }, []);
+
+  const openImageActions = useCallback(
+    (uri: string) => {
+      const normalized = normalizeImageUri(uri);
+      if (!normalized) return;
+
+      Alert.alert("Image actions", "Chagua unachotaka kufanya.", [
+        { text: "Cancel", style: "cancel" },
+        { text: "Open", onPress: () => openViewer(normalized) },
+        { text: "Share", onPress: () => void shareImageFromUri(normalized) },
+        { text: "Save", onPress: () => void saveImageToDevice(normalized) },
+      ]);
+    },
+    [openViewer, saveImageToDevice, shareImageFromUri]
+  );
+
+  const {
+    mainIntro,
+    mainSections,
+    nextMoveBody,
+    savedBadge,
+    imageUriMain,
+    imageUriNext,
+    metricChips,
+  } = useMemo(() => {
+    if (isUser) {
       return {
-        main: msg.text,
+        mainIntro: msg.text,
+        mainSections: [] as ParsedSection[],
         nextMoveBody: "",
         savedBadge: "",
         imageUriMain: "",
         imageUriNext: "",
+        metricChips: [] as MetricChip[],
       };
+    }
 
-    // 0) Strip base64 "Link:" lines early (prevents UI flood)
     const stripped = stripDataImageLinkLines(msg.text);
-
-    // 1) Extract trailing saved badge line (if present)
     const a = splitFooterBadge(stripped);
-
-    // 2) Split NEXT MOVE from remaining content
     const b = splitNextMove(a.text);
 
-    // 3) Extract images separately (so base64 never appears as text)
-    const mainImg = extractFirstMarkdownImage(b.main);
+    const chipsMain = extractMetricChips(b.main);
+    const mainImg = extractFirstMarkdownImage(chipsMain.body);
     const nextImg = extractFirstMarkdownImage(b.nextMoveBody);
 
+    const sectioned = splitAssistantSections(mainImg.body);
+
     return {
-      main: mainImg.body,
+      mainIntro: sectioned.intro,
+      mainSections: sectioned.sections,
       nextMoveBody: nextImg.body,
       savedBadge: a.savedBadge,
       imageUriMain: mainImg.imageUri,
       imageUriNext: nextImg.imageUri,
+      metricChips: chipsMain.chips,
     };
   }, [isUser, msg.text]);
 
-  const markdownStyle = useMemo(
-    () => ({
-      body: {
-        color: UI.text,
-        fontSize: 16.5,
-        lineHeight: 28,
-        fontWeight: "600",
-      },
+const renderSelectableBlock = useCallback(
+    (value: string, opts?: { strong?: boolean }) => {
+      const src = String(value ?? "").replace(/\r\n/g, "\n");
+      if (!clean(src)) return null;
 
-      heading1: { color: UI.text, fontSize: 20, fontWeight: "900", marginTop: 14, marginBottom: 8 },
-      heading2: { color: UI.text, fontSize: 18, fontWeight: "900", marginTop: 12, marginBottom: 8 },
-      heading3: { color: UI.text, fontSize: 17, fontWeight: "900", marginTop: 10, marginBottom: 6 },
-
-      strong: { fontWeight: "900" },
-      em: { fontStyle: "italic", opacity: 0.95 },
-
-      paragraph: { marginTop: 8, marginBottom: 8 },
-
-      bullet_list: { marginTop: 8, marginBottom: 8 },
-      ordered_list: { marginTop: 8, marginBottom: 8 },
-      list_item: { marginTop: 6, marginBottom: 6 },
-
-      bullet_list_icon: { color: C.emeraldBorder, marginRight: 10 },
-      ordered_list_icon: { color: C.emeraldBorder, marginRight: 10, fontWeight: "900" },
-
-      code_inline: {
-        backgroundColor: "rgba(255,255,255,0.08)",
-        borderColor: "rgba(255,255,255,0.15)",
-        borderWidth: 1,
-        borderRadius: 10,
-        paddingHorizontal: 8,
-        paddingVertical: 3,
-        fontWeight: "900",
-      },
-
-      fence: {
-        backgroundColor: "rgba(0,0,0,0.45)",
-        borderColor: "rgba(255,255,255,0.15)",
-        borderWidth: 1,
-        borderRadius: 14,
-        padding: 14,
-        fontSize: 13,
-        lineHeight: 20,
-      },
-
-      blockquote: {
-        borderLeftColor: C.emeraldBorder,
-        borderLeftWidth: 4,
-        paddingLeft: 14,
-        marginVertical: 10,
-        opacity: 0.95,
-      },
-    }),
+      return src.split("\n").map((line, idx, arr) => (
+        <Text
+          key={`sel_${idx}`}
+          selectable
+          selectionColor="rgba(16,185,129,0.35)"
+          style={{
+            color: UI.text,
+            fontSize: opts?.strong ? 15.5 : 16,
+            lineHeight: opts?.strong ? 24 : 28,
+            fontWeight: opts?.strong ? "900" : "700",
+            marginBottom: idx === arr.length - 1 ? 0 : 6,
+          }}
+        >
+          {line || " "}
+        </Text>
+      ));
+    },
     []
   );
 
-  // ✅ USER bubble styles (keep)
   const userBorder = "rgba(16,185,129,0.30)";
   const userBg = "rgba(16,185,129,0.16)";
 
+  function sectionToneStyles(tone: ParsedSection["tone"]) {
+    if (tone === "danger") {
+      return {
+        borderColor: "rgba(239,68,68,0.35)",
+        bg: "rgba(239,68,68,0.10)",
+      };
+    }
+    if (tone === "warning") {
+      return {
+        borderColor: "rgba(245,158,11,0.35)",
+        bg: "rgba(245,158,11,0.10)",
+      };
+    }
+    if (tone === "success") {
+      return {
+        borderColor: "rgba(16,185,129,0.35)",
+        bg: "rgba(16,185,129,0.10)",
+      };
+    }
+    return {
+      borderColor: "rgba(59,130,246,0.35)",
+      bg: "rgba(59,130,246,0.10)",
+    };
+  }
+
+  const showMetricChips = metricChips.length >= 3;
+
   return (
-    <View style={{ width: "100%" }}>
-      {isUser ? (
-        // ✅ USER: compact bubble right
-        <View style={{ alignItems: "flex-end", paddingVertical: 6 }}>
-          <View
+    <>
+      <View style={{ width: "100%" }}>
+        {isUser ? (
+          <View style={{ alignItems: "flex-end", paddingVertical: 6 }}>
+            <View
+              style={{
+                maxWidth: "88%",
+                borderWidth: 1,
+                borderColor: userBorder,
+                backgroundColor: userBg,
+                borderRadius: 18,
+                paddingHorizontal: 14,
+                paddingVertical: 12,
+                shadowColor: "#000",
+                shadowOpacity: 0.18,
+                shadowRadius: 10,
+                shadowOffset: { width: 0, height: 6 },
+                elevation: 4,
+              }}
+            >
+              {renderSelectableBlock(msg.text, { strong: true })}
+            </View>
+          </View>
+        ) : (
+          <View style={{ alignItems: "flex-start", paddingVertical: 6 }}>
+            {!!clean(imageUriMain) && (
+              <View style={{ width: "100%", marginBottom: 12 }}>
+                <Pressable
+                  onPress={() => openViewer(imageUriMain)}
+                  onLongPress={() => openImageActions(imageUriMain)}
+                  style={({ pressed }) => ({
+                    width: "100%",
+                    borderWidth: 1,
+                    borderColor: "rgba(255,255,255,0.10)",
+                    borderRadius: 16,
+                    overflow: "hidden",
+                    backgroundColor: "rgba(255,255,255,0.04)",
+                    opacity: pressed ? 0.96 : 1,
+                  })}
+                >
+                  <Image
+                    source={{ uri: imageUriMain }}
+                    style={{
+                      width: "100%",
+                      height: 280,
+                    }}
+                    resizeMode="contain"
+                  />
+                </Pressable>
+
+                <View
+                  style={{
+                    flexDirection: "row",
+                    gap: 8,
+                    marginTop: 8,
+                  }}
+                >
+                  <Pressable
+                    onPress={() => openViewer(imageUriMain)}
+                    style={({ pressed }) => ({
+                      flex: 1,
+                      height: 42,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: "rgba(255,255,255,0.14)",
+                      backgroundColor: pressed ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.06)",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    })}
+                  >
+                    <Text style={{ color: UI.text, fontWeight: "900" }}>Open</Text>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={() => void shareImageFromUri(imageUriMain)}
+                    style={({ pressed }) => ({
+                      flex: 1,
+                      height: 42,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: "rgba(255,255,255,0.14)",
+                      backgroundColor: pressed ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.06)",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    })}
+                  >
+                    <Text style={{ color: UI.text, fontWeight: "900" }}>Share</Text>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={() => void saveImageToDevice(imageUriMain)}
+                    style={({ pressed }) => ({
+                      flex: 1,
+                      height: 42,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: "rgba(16,185,129,0.35)",
+                      backgroundColor: pressed ? "rgba(16,185,129,0.18)" : "rgba(16,185,129,0.12)",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    })}
+                  >
+                    <Text style={{ color: UI.text, fontWeight: "900" }}>Save</Text>
+                  </Pressable>
+                </View>
+              </View>
+            )}
+
+            {!!clean(mainIntro) && (
+              <View style={{ width: "100%", marginBottom: showMetricChips ? 12 : 0 }}>
+                {renderSelectableBlock(mainIntro)}
+              </View>
+            )}
+
+            {showMetricChips && (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingRight: 8 }}
+                style={{ marginBottom: 12 }}
+              >
+                <View style={{ flexDirection: "row", gap: 10 }}>
+                  {metricChips.map((chip) => (
+                    <View
+                      key={chip.key}
+                      style={{
+                        width: 140,
+                        borderWidth: 1,
+                        borderColor: "rgba(255,255,255,0.10)",
+                        backgroundColor: "rgba(255,255,255,0.05)",
+                        borderRadius: 18,
+                        paddingHorizontal: 12,
+                        paddingVertical: 12,
+                      }}
+                    >
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                        <View
+                          style={{
+                            width: 34,
+                            height: 34,
+                            borderRadius: 999,
+                            alignItems: "center",
+                            justifyContent: "center",
+                            backgroundColor: "rgba(16,185,129,0.12)",
+                            borderWidth: 1,
+                            borderColor: "rgba(16,185,129,0.20)",
+                          }}
+                        >
+                          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
+                            {chip.icon}
+                          </Text>
+                        </View>
+
+                        <Text
+                          style={{ color: UI.muted, fontWeight: "900", fontSize: 12, flex: 1 }}
+                          numberOfLines={1}
+                        >
+                          {chip.label}
+                        </Text>
+                      </View>
+
+                      <Text
+                        style={{
+                          color: UI.text,
+                          fontWeight: "900",
+                          fontSize: 16,
+                          marginTop: 10,
+                        }}
+                        numberOfLines={1}
+                      >
+                        {chip.value}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </ScrollView>
+            )}
+
+            {!!mainSections.length && (
+              <View style={{ width: "100%", marginTop: clean(mainIntro) ? 0 : 0 }}>
+                {mainSections.map((section, idx) => {
+                  const tone = sectionToneStyles(section.tone);
+
+                  return (
+                    <View
+                      key={`${section.title}_${idx}`}
+                      style={{
+                        width: "100%",
+                        borderWidth: 1,
+                        borderColor: tone.borderColor,
+                        backgroundColor: tone.bg,
+                        borderRadius: 18,
+                        paddingHorizontal: 14,
+                        paddingVertical: 12,
+                        marginTop: idx === 0 ? 0 : 10,
+                      }}
+                    >
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                        <Text style={{ color: UI.text, fontSize: 17 }}>{section.icon}</Text>
+                        <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>{section.title}</Text>
+                      </View>
+
+                      {renderSelectableBlock(section.body)}
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+
+            {!!clean(nextMoveBody) && (
+              <View
+                style={{
+                  marginTop: 12,
+                  width: "100%",
+                  borderWidth: 1,
+                  borderColor: C.emeraldBorder,
+                  backgroundColor: "rgba(16,185,129,0.08)",
+                  borderRadius: 16,
+                  paddingHorizontal: 12,
+                  paddingVertical: 12,
+                }}
+              >
+                <Text style={{ color: UI.text, fontWeight: "900", marginBottom: 8 }}>🎯 NEXT MOVE</Text>
+
+                {!!clean(imageUriNext) && (
+                  <View style={{ marginBottom: 10 }}>
+                    <Pressable
+                      onPress={() => openViewer(imageUriNext)}
+                      onLongPress={() => openImageActions(imageUriNext)}
+                      style={({ pressed }) => ({
+                        borderRadius: 16,
+                        overflow: "hidden",
+                        opacity: pressed ? 0.96 : 1,
+                      })}
+                    >
+                      <Image
+                        source={{ uri: imageUriNext }}
+                        style={{
+                          width: "100%",
+                          height: 260,
+                          borderRadius: 16,
+                          borderWidth: 1,
+                          borderColor: "rgba(255,255,255,0.10)",
+                        }}
+                        resizeMode="cover"
+                      />
+                    </Pressable>
+
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        gap: 8,
+                        marginTop: 8,
+                      }}
+                    >
+                      <Pressable
+                        onPress={() => openViewer(imageUriNext)}
+                        style={({ pressed }) => ({
+                          flex: 1,
+                          height: 42,
+                          borderRadius: 12,
+                          borderWidth: 1,
+                          borderColor: "rgba(255,255,255,0.14)",
+                          backgroundColor: pressed ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.06)",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        })}
+                      >
+                        <Text style={{ color: UI.text, fontWeight: "900" }}>Open</Text>
+                      </Pressable>
+
+                      <Pressable
+                        onPress={() => void shareImageFromUri(imageUriNext)}
+                        style={({ pressed }) => ({
+                          flex: 1,
+                          height: 42,
+                          borderRadius: 12,
+                          borderWidth: 1,
+                          borderColor: "rgba(255,255,255,0.14)",
+                          backgroundColor: pressed ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.06)",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        })}
+                      >
+                        <Text style={{ color: UI.text, fontWeight: "900" }}>Share</Text>
+                      </Pressable>
+
+                      <Pressable
+                        onPress={() => void saveImageToDevice(imageUriNext)}
+                        style={({ pressed }) => ({
+                          flex: 1,
+                          height: 42,
+                          borderRadius: 12,
+                          borderWidth: 1,
+                          borderColor: "rgba(16,185,129,0.35)",
+                          backgroundColor: pressed ? "rgba(16,185,129,0.18)" : "rgba(16,185,129,0.12)",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        })}
+                      >
+                        <Text style={{ color: UI.text, fontWeight: "900" }}>Save</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                )}
+
+                {renderSelectableBlock(nextMoveBody)}
+              </View>
+            )}
+
+            {!!clean(savedBadge) && (
+              <View
+                style={{
+                  marginTop: 10,
+                  alignSelf: "flex-start",
+                  borderWidth: 1,
+                  borderColor: "rgba(16,185,129,0.35)",
+                  backgroundColor: "rgba(16,185,129,0.12)",
+                  borderRadius: 999,
+                  paddingHorizontal: 12,
+                  paddingVertical: 8,
+                }}
+              >
+                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12.5 }}>{savedBadge}</Text>
+              </View>
+            )}
+          </View>
+        )}
+      </View>
+
+      <Modal visible={viewer.open} transparent animationType="fade" onRequestClose={closeViewer}>
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.92)",
+            justifyContent: "center",
+            alignItems: "center",
+            padding: 16,
+          }}
+        >
+          <Pressable
+            onPress={closeViewer}
             style={{
-              maxWidth: "88%",
+              position: "absolute",
+              top: 18,
+              right: 18,
+              zIndex: 5,
               borderWidth: 1,
-              borderColor: userBorder,
-              backgroundColor: userBg,
-              borderRadius: 18,
+              borderColor: "rgba(255,255,255,0.14)",
+              backgroundColor: "rgba(255,255,255,0.08)",
+              borderRadius: 999,
               paddingHorizontal: 14,
-              paddingVertical: 12,
-              shadowColor: "#000",
-              shadowOpacity: 0.18,
-              shadowRadius: 10,
-              shadowOffset: { width: 0, height: 6 },
-              elevation: 4,
+              paddingVertical: 10,
             }}
           >
-            <Text style={{ color: UI.text, fontWeight: "900", lineHeight: 22, fontSize: 15.5 }}>
-              {msg.text}
-            </Text>
-          </View>
-        </View>
-      ) : (
-        // ✅ ASSISTANT: immersive full width (no card)
-        <View style={{ alignItems: "flex-start", paddingVertical: 6 }}>
-          {/* ✅ Main Image (if any) */}
-          {!!clean(imageUriMain) && (
+            <Text style={{ color: UI.text, fontWeight: "900" }}>Close</Text>
+          </Pressable>
+
+          {!!clean(viewer.uri) && (
             <Image
-              source={{ uri: imageUriMain }}
+              source={{ uri: viewer.uri }}
               style={{
                 width: "100%",
-                height: 280,
-                borderRadius: 16,
-                marginBottom: 12,
-                borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.10)",
+                height: "78%",
+                borderRadius: 18,
               }}
-              resizeMode="cover"
+              resizeMode="contain"
             />
           )}
 
-          {/* ✅ Main Markdown (full width) */}
-          <Markdown style={markdownStyle as any}>{main || ""}</Markdown>
-
-          {/* ✅ NEXT MOVE (still shown, but not inside a big "card" that narrows text) */}
-          {!!clean(nextMoveBody) && (
-            <View
-              style={{
-                marginTop: 12,
-                width: "100%",
+          <View
+            style={{
+              width: "100%",
+              marginTop: 16,
+              flexDirection: "row",
+              gap: 10,
+            }}
+          >
+            <Pressable
+              onPress={() => void shareImageFromUri(viewer.uri)}
+              style={({ pressed }) => ({
+                flex: 1,
+                height: 48,
+                borderRadius: 14,
                 borderWidth: 1,
-                borderColor: C.emeraldBorder,
-                backgroundColor: "rgba(16,185,129,0.08)",
-                borderRadius: 16,
-                paddingHorizontal: 12,
-                paddingVertical: 12,
-              }}
+                borderColor: "rgba(255,255,255,0.14)",
+                backgroundColor: pressed ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.06)",
+                alignItems: "center",
+                justifyContent: "center",
+              })}
             >
-              <Text style={{ color: UI.text, fontWeight: "900", marginBottom: 8 }}>🎯 NEXT MOVE</Text>
+              <Text style={{ color: UI.text, fontWeight: "900" }}>Share</Text>
+            </Pressable>
 
-              {!!clean(imageUriNext) && (
-                <Image
-                  source={{ uri: imageUriNext }}
-                  style={{
-                    width: "100%",
-                    height: 260,
-                    borderRadius: 16,
-                    marginBottom: 10,
-                    borderWidth: 1,
-                    borderColor: "rgba(255,255,255,0.10)",
-                  }}
-                  resizeMode="cover"
-                />
-              )}
-
-              <Markdown style={markdownStyle as any}>{nextMoveBody}</Markdown>
-            </View>
-          )}
-
-          {/* ✅ Saved Badge */}
-          {!!clean(savedBadge) && (
-            <View
-              style={{
-                marginTop: 10,
-                alignSelf: "flex-start",
+            <Pressable
+              onPress={() => void saveImageToDevice(viewer.uri)}
+              style={({ pressed }) => ({
+                flex: 1,
+                height: 48,
+                borderRadius: 14,
                 borderWidth: 1,
                 borderColor: "rgba(16,185,129,0.35)",
-                backgroundColor: "rgba(16,185,129,0.12)",
-                borderRadius: 999,
-                paddingHorizontal: 12,
-                paddingVertical: 8,
-              }}
+                backgroundColor: pressed ? "rgba(16,185,129,0.18)" : "rgba(16,185,129,0.12)",
+                alignItems: "center",
+                justifyContent: "center",
+              })}
             >
-              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12.5 }}>{savedBadge}</Text>
-            </View>
-          )}
+              <Text style={{ color: UI.text, fontWeight: "900" }}>Save</Text>
+            </Pressable>
+          </View>
         </View>
-      )}
-    </View>
+      </Modal>
+    </>
   );
 }

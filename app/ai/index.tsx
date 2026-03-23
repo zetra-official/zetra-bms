@@ -13,9 +13,12 @@ import {
   Keyboard,
   KeyboardAvoidingView,
   Modal,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   Platform,
   Pressable,
   RefreshControl,
+  Share,
   Text,
   TextInput,
   View,
@@ -23,6 +26,10 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from "expo-file-system/legacy";
+import * as MediaLibrary from "expo-media-library";
+import * as Sharing from "expo-sharing";
+import * as Clipboard from "expo-clipboard";
 import { Audio } from "expo-av";
 
 import { useOrg } from "@/src/context/OrgContext";
@@ -52,6 +59,8 @@ type ChatMsg = {
   text: string;
   ts: number;
   images?: Array<{ id: string; uri: string }> | null;
+  generatedImageUri?: string | null;
+  imagePrompt?: string | null;
   autopilotAlerts?: AutopilotAlert[] | null;
   analysisIntent?: "ANALYSIS" | "FORECAST" | "COACH" | null;
 };
@@ -124,6 +133,17 @@ function fmtNum(v: any) {
   return Math.round(n).toString();
 }
 
+function fmtChatTime(ts: number) {
+  try {
+    return new Date(ts).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return "";
+  }
+}
+
 function buildAiContext(org: ReturnType<typeof useOrg>) {
   return {
     orgId: org.activeOrgId ?? null,
@@ -140,6 +160,13 @@ function buildAiContext(org: ReturnType<typeof useOrg>) {
 }
 const INPUT_MAX = 12_000;
 const C: any = (UI as any)?.colors ?? UI;
+
+const TYPEWRITER_MIN_CHUNK = 2;
+const TYPEWRITER_MAX_CHUNK = 8;
+const TYPEWRITER_BASE_DELAY = 18;
+const TYPEWRITER_PUNCT_DELAY = 55;
+const TYPEWRITER_LINE_DELAY = 80;
+const AUTO_SCROLL_THROTTLE_MS = 120;
 
 function normalizeWorkerBaseUrl(raw: any) {
   let u = clean(raw);
@@ -167,6 +194,68 @@ function normalizeImageUrl(raw: string) {
   if (!u) return "";
   if (isDataImageUrl(u)) return u.replace(/\s+/g, "");
   return u;
+}
+
+function getImageExtensionFromUri(uri: string) {
+  const u = normalizeImageUrl(uri).toLowerCase();
+
+  if (u.startsWith("data:image/png")) return "png";
+  if (u.startsWith("data:image/jpeg") || u.startsWith("data:image/jpg")) return "jpg";
+  if (u.startsWith("data:image/webp")) return "webp";
+
+  if (u.includes(".png")) return "png";
+  if (u.includes(".jpg") || u.includes(".jpeg")) return "jpg";
+  if (u.includes(".webp")) return "webp";
+
+  return "png";
+}
+
+async function ensureLocalImageFile(uri: string) {
+  const normalized = normalizeImageUrl(uri);
+  if (!normalized) throw new Error("Image URI missing");
+
+  const baseDir = FileSystem.cacheDirectory || FileSystem.documentDirectory;
+  if (!baseDir) throw new Error("No writable directory found");
+
+  const ext = getImageExtensionFromUri(normalized);
+  const target = `${baseDir}zetra_ai_${Date.now()}.${ext}`;
+
+  if (normalized.startsWith("file://")) {
+    return normalized;
+  }
+
+  if (normalized.startsWith("data:image/")) {
+    const m = normalized.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.*)$/i);
+    const b64 = clean(m?.[2]);
+    if (!b64) throw new Error("Invalid base64 image data");
+
+    await FileSystem.writeAsStringAsync(target, b64, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+
+    return target;
+  }
+
+  if (/^https?:\/\//i.test(normalized)) {
+    const out = await FileSystem.downloadAsync(normalized, target);
+    return out.uri;
+  }
+
+  throw new Error("Unsupported image URI format");
+}
+
+function extractMarkdownImageUrl(raw: string) {
+  const t = String(raw ?? "");
+  const m = t.match(/!\[[^\]]*\]\((data:image\/[a-zA-Z0-9.+-]+;base64,[^)]+|https?:\/\/[^)\s]+)\)/i);
+  return clean(m?.[1]);
+}
+
+function stripMarkdownImageTag(raw: string) {
+  const t = String(raw ?? "");
+  return t
+    .replace(/!\[[^\]]*\]\((data:image\/[a-zA-Z0-9.+-]+;base64,[^)]+|https?:\/\/[^)\s]+)\)/gi, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
@@ -431,11 +520,26 @@ function detectImageIntent(rawText: string): { isImage: boolean; prompt: string 
 
   return { isImage: false, prompt: "" };
 }
-
 function nextTypingText(step: number) {
   const dots = step % 4;
   return `AI inaandika${".".repeat(dots)}`;
 }
+
+function appendAtEnd(base: string, extra: string) {
+  const a = String(base ?? "");
+  const b = String(extra ?? "");
+  if (!a.trim()) return b;
+  if (!b.trim()) return a;
+  return `${a}${b}`;
+}
+
+function getIntentLabel(intent?: "ANALYSIS" | "FORECAST" | "COACH" | null) {
+  if (intent === "FORECAST") return "Forecast";
+  if (intent === "COACH") return "Profit Coach";
+  if (intent === "ANALYSIS") return "Analysis";
+  return "Assistant";
+}
+
 function normalizeAutopilotAlerts(meta: any): AutopilotAlert[] {
   const arr = Array.isArray(meta?.autopilotAlerts) ? meta.autopilotAlerts : [];
   return arr
@@ -505,8 +609,75 @@ export default function AiChatScreen() {
   const [tasks, setTasks] = useState<TaskRow[]>([]);
 
   const [imgPreview, setImgPreview] = useState<{ open: boolean; uri: string }>({ open: false, uri: "" });
-const [autopilotCards, setAutopilotCards] = useState<AutopilotAlert[]>([]);
-const [lastAnalysisIntent, setLastAnalysisIntent] = useState<"ANALYSIS" | "FORECAST" | "COACH" | null>(null);
+  const [autopilotCards, setAutopilotCards] = useState<AutopilotAlert[]>([]);
+  const [lastAnalysisIntent, setLastAnalysisIntent] = useState<"ANALYSIS" | "FORECAST" | "COACH" | null>(null);
+ 
+
+  const savePreviewImageToDevice = useCallback(async () => {
+    try {
+      const normalized = normalizeImageUrl(imgPreview.uri);
+      if (!normalized) {
+        Alert.alert("Image missing", "Hakuna picha ya ku-save.");
+        return;
+      }
+
+      const perm = await MediaLibrary.requestPermissionsAsync();
+      if (perm.status !== "granted") {
+        Alert.alert("Permission required", "Ruhusu gallery/media access ili ku-save picha.");
+        return;
+      }
+
+      const localUri = await ensureLocalImageFile(normalized);
+      await MediaLibrary.saveToLibraryAsync(localUri);
+
+      Alert.alert("Saved", "Picha imehifadhiwa kwenye gallery.");
+    } catch (e: any) {
+      Alert.alert("Save failed", clean(e?.message) || "Imeshindikana ku-save picha.");
+    }
+  }, [imgPreview.uri]);
+
+  const sharePreviewImage = useCallback(async () => {
+    try {
+      const normalized = normalizeImageUrl(imgPreview.uri);
+      if (!normalized) {
+        Alert.alert("Image missing", "Hakuna picha ya ku-share.");
+        return;
+      }
+
+      const localUri = await ensureLocalImageFile(normalized);
+
+      const canNativeShare = await Sharing.isAvailableAsync();
+      if (canNativeShare) {
+        await Sharing.shareAsync(localUri);
+        return;
+      }
+
+      await Share.share({
+        message: localUri,
+      });
+    } catch (e: any) {
+      Alert.alert("Share failed", clean(e?.message) || "Imeshindikana ku-share picha.");
+    }
+  }, [imgPreview.uri]);
+
+  const copyImagePromptFromMessage = useCallback(async (prompt: string) => {
+    try {
+      const value = clean(prompt);
+      if (!value) {
+        Alert.alert("Prompt missing", "Hakuna prompt ya kukopi.");
+        return;
+      }
+
+      await Clipboard.setStringAsync(value);
+      Alert.alert("Copied", "Prompt imekopiwa.");
+    } catch (e: any) {
+      Alert.alert("Copy failed", clean(e?.message) || "Imeshindikana kukopi prompt.");
+    }
+  }, []);
+
+  
+
+
   const anim = useRef(new Animated.Value(0)).current;
   const { height: screenH } = Dimensions.get("window");
 
@@ -523,10 +694,12 @@ const [lastAnalysisIntent, setLastAnalysisIntent] = useState<"ANALYSIS" | "FOREC
 
   const [imagePrompt, setImagePrompt] = useState("");
   const [attachedImages, setAttachedImages] = useState<AttachedImage[]>([]);
-
-  const [recording, setRecording] = useState<Audio.Recording | null>(null);
-  const [recordingOn, setRecordingOn] = useState(false);
-  const [transcribing, setTranscribing] = useState(false);
+const [recording, setRecording] = useState<Audio.Recording | null>(null);
+const [recordingOn, setRecordingOn] = useState(false);
+const [transcribing, setTranscribing] = useState(false);
+const [recordingMs, setRecordingMs] = useState(0);
+const [liveMeter, setLiveMeter] = useState(-160);
+const waveformTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [messages, setMessages] = useState<ChatMsg[]>(() => [
     {
@@ -564,6 +737,9 @@ const [lastAnalysisIntent, setLastAnalysisIntent] = useState<"ANALYSIS" | "FOREC
 
   const netAbortRef = useRef<AbortController | null>(null);
   const scrollRafRef = useRef<number | null>(null);
+  const userNearBottomRef = useRef(true);
+  const autoScrollLockRef = useRef(false);
+  const lastAutoScrollTsRef = useRef(0);
 
   const androidExtraLift = 50;
 
@@ -639,7 +815,17 @@ const [lastAnalysisIntent, setLastAnalysisIntent] = useState<"ANALYSIS" | "FOREC
     return `${orgName} • ${storeName} • ${role}`;
   }, [org.activeOrgName, org.activeRole, org.activeStoreName]);
 
-  const scrollToLatest = useCallback((animated = false) => {
+const scrollToLatest = useCallback((animated = false, force = false) => {
+    const now = Date.now();
+
+    if (!force) {
+      if (!userNearBottomRef.current) return;
+      if (autoScrollLockRef.current) return;
+      if (now - lastAutoScrollTsRef.current < AUTO_SCROLL_THROTTLE_MS) return;
+    }
+
+    lastAutoScrollTsRef.current = now;
+
     if (scrollRafRef.current != null) {
       cancelAnimationFrame(scrollRafRef.current);
       scrollRafRef.current = null;
@@ -653,6 +839,30 @@ const [lastAnalysisIntent, setLastAnalysisIntent] = useState<"ANALYSIS" | "FOREC
     });
   }, []);
 
+  const useImagePromptAgainFromMessage = useCallback(
+    (prompt: string) => {
+      if (!requireAi(ownerOnlyReason || `AI haipatikani kwenye ${currentPlanLabel}. Upgrade ili kuendelea.`)) return;
+
+      const value = clean(prompt);
+      if (!value) {
+        Alert.alert("Prompt missing", "Hakuna prompt ya kutumia tena.");
+        return;
+      }
+
+      setRetryCard({ visible: false, label: "", payload: null });
+      lastPayloadRef.current = null;
+      setPlusOpen(false);
+      setAttachedImages([]);
+      setInput(`create image: ${value}`);
+
+      requestAnimationFrame(() => {
+        inputRef.current?.focus();
+        scrollToLatest(false, true);
+      });
+    },
+    [currentPlanLabel, ownerOnlyReason, requireAi, scrollToLatest]
+  );
+
   const stopTyping = useCallback(() => {
     typingAbortRef.current.aborted = true;
     if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
@@ -662,8 +872,14 @@ const [lastAnalysisIntent, setLastAnalysisIntent] = useState<"ANALYSIS" | "FOREC
   const patchMessageText = useCallback((id: string, nextText: string) => {
     setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, text: nextText } : m)));
   }, []);
+const handleListScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const y = Number(e.nativeEvent.contentOffset?.y ?? 0);
 
-  const typeOutChatGPTLike = useCallback(
+    // FlatList ni inverted, hivyo karibu na latest = offset ndogo
+    userNearBottomRef.current = y <= 120;
+    autoScrollLockRef.current = y > 180;
+  }, []);
+const typeOutChatGPTLike = useCallback(
     async (msgId: string, fullText: string, reqToken?: string) => {
       stopTyping();
       stopTypingDots();
@@ -671,6 +887,7 @@ const [lastAnalysisIntent, setLastAnalysisIntent] = useState<"ANALYSIS" | "FOREC
 
       const myToken = clean(reqToken || "");
       const txt = String(fullText ?? "");
+
       if (!txt.trim()) {
         if (myToken && activeReqTokenRef.current && myToken !== activeReqTokenRef.current) return;
         patchMessageText(msgId, "Samahani — AI imerudisha jibu tupu. Jaribu tena.");
@@ -682,37 +899,63 @@ const [lastAnalysisIntent, setLastAnalysisIntent] = useState<"ANALYSIS" | "FOREC
       patchMessageText(msgId, "");
 
       const L = txt.length;
-      const speedFactor = L > 1800 ? 0.72 : L > 1000 ? 0.82 : L > 600 ? 0.9 : 1.0;
+      const speedFactor = L > 1800 ? 0.55 : L > 1000 ? 0.68 : L > 600 ? 0.8 : 0.92;
 
       let i = 0;
+      let lastPainted = 0;
 
       const tick = () => {
         if (typingAbortRef.current.aborted) return;
         if (myToken && activeReqTokenRef.current && myToken !== activeReqTokenRef.current) return;
 
-        const r = Math.random();
-        const chunk = r < 0.78 ? 1 : r < 0.95 ? 2 : 3;
+        const remaining = txt.length - i;
+        const randomChunk =
+          TYPEWRITER_MIN_CHUNK + Math.floor(Math.random() * (TYPEWRITER_MAX_CHUNK - TYPEWRITER_MIN_CHUNK + 1));
+
+        let chunk = Math.min(randomChunk, remaining);
+
+        // kwa message ndefu, ongeza kasi bila kufanya screen icheze-cheze
+        if (remaining > 1200) chunk = Math.max(chunk, 8);
+        else if (remaining > 700) chunk = Math.max(chunk, 6);
+        else if (remaining > 350) chunk = Math.max(chunk, 4);
 
         const nextI = Math.min(txt.length, i + chunk);
         const next = txt.slice(0, nextI);
         const lastChar = next.charAt(next.length - 1);
 
         i = nextI;
-        patchMessageText(msgId, next);
+
+        // punguza rerender nyingi sana
+        const shouldPaint =
+          i === txt.length ||
+          i - lastPainted >= 6 ||
+          lastChar === "\n" ||
+          lastChar === "." ||
+          lastChar === "!" ||
+          lastChar === "?";
+
+        if (shouldPaint) {
+          patchMessageText(msgId, next);
+          lastPainted = i;
+          scrollToLatest(false, false);
+        }
 
         if (i >= txt.length) {
-          scrollToLatest(false);
+          patchMessageText(msgId, txt);
+          scrollToLatest(false, true);
           return;
         }
 
-        let delay = (28 + Math.floor(Math.random() * 18)) * speedFactor;
-        if (lastChar === "\n" || lastChar === "." || lastChar === "!" || lastChar === "?") delay += 160;
-        else if (isPunct(lastChar)) delay += 80;
+        let delay = TYPEWRITER_BASE_DELAY * speedFactor;
 
-        typingTimerRef.current = setTimeout(tick, Math.max(12, Math.floor(delay)));
+        if (lastChar === "\n") delay += TYPEWRITER_LINE_DELAY;
+        else if (lastChar === "." || lastChar === "!" || lastChar === "?") delay += TYPEWRITER_PUNCT_DELAY;
+        else if (isPunct(lastChar)) delay += 28;
+
+        typingTimerRef.current = setTimeout(tick, Math.max(10, Math.floor(delay)));
       };
 
-      typingTimerRef.current = setTimeout(tick, Math.floor(28 * speedFactor));
+      typingTimerRef.current = setTimeout(tick, Math.max(10, Math.floor(TYPEWRITER_BASE_DELAY * speedFactor)));
     },
     [patchMessageText, scrollToLatest, stopTyping, stopTypingDots]
   );
@@ -720,14 +963,12 @@ const [lastAnalysisIntent, setLastAnalysisIntent] = useState<"ANALYSIS" | "FOREC
   useEffect(() => {
     const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
     const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
-
-    const onShow = Keyboard.addListener(showEvent, (e: any) => {
+const onShow = Keyboard.addListener(showEvent, (e: any) => {
       const h = Number(e?.endCoordinates?.height ?? 0);
       setKeyboardVisible(true);
       setKeyboardHeight(h);
-      scrollToLatest(false);
+      scrollToLatest(false, true);
     });
-
     const onHide = Keyboard.addListener(hideEvent, () => {
       setKeyboardVisible(false);
       setKeyboardHeight(0);
@@ -740,23 +981,48 @@ const [lastAnalysisIntent, setLastAnalysisIntent] = useState<"ANALYSIS" | "FOREC
   }, [scrollToLatest]);
 
   useEffect(() => {
-    return () => {
-      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
-      typingTimerRef.current = null;
-      typingAbortRef.current.aborted = true;
-      stopTypingDots();
+  return () => {
+    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+    typingTimerRef.current = null;
+    typingAbortRef.current.aborted = true;
+    stopTypingDots();
 
-      try {
-        netAbortRef.current?.abort();
-      } catch {}
-      netAbortRef.current = null;
+    try {
+      netAbortRef.current?.abort();
+    } catch {}
+    netAbortRef.current = null;
 
-      if (scrollRafRef.current != null) {
-        cancelAnimationFrame(scrollRafRef.current);
-        scrollRafRef.current = null;
-      }
-    };
-  }, [stopTypingDots]);
+    if (scrollRafRef.current != null) {
+      cancelAnimationFrame(scrollRafRef.current);
+      scrollRafRef.current = null;
+    }
+
+    if (waveformTimerRef.current) clearInterval(waveformTimerRef.current);
+    waveformTimerRef.current = null;
+  };
+}, [stopTypingDots]);
+
+useEffect(() => {
+  if (!recordingOn) {
+    if (waveformTimerRef.current) clearInterval(waveformTimerRef.current);
+    waveformTimerRef.current = null;
+    setLiveMeter(-160);
+    setRecordingMs(0);
+    return;
+  }
+
+  if (waveformTimerRef.current) clearInterval(waveformTimerRef.current);
+
+  waveformTimerRef.current = setInterval(() => {
+    setLiveMeter(-95 + Math.random() * 70);
+    setRecordingMs((prev) => prev + 80);
+  }, 80);
+
+  return () => {
+    if (waveformTimerRef.current) clearInterval(waveformTimerRef.current);
+    waveformTimerRef.current = null;
+  };
+}, [recordingOn]);
 
   const loadAiBalance = useCallback(async (): Promise<{
     ok: boolean;
@@ -930,8 +1196,10 @@ const [lastAnalysisIntent, setLastAnalysisIntent] = useState<"ANALYSIS" | "FOREC
           dataUrl,
         },
       ]);
-
-      requestAnimationFrame(() => inputRef.current?.focus());
+requestAnimationFrame(() => {
+        inputRef.current?.focus();
+        scrollToLatest(false, true);
+      });
     } catch (e: any) {
       Alert.alert("Error", clean(e?.message) || "Image pick error");
     }
@@ -961,14 +1229,42 @@ const [lastAnalysisIntent, setLastAnalysisIntent] = useState<"ANALYSIS" | "FOREC
       });
 
       const rec = new Audio.Recording();
-      await rec.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+      // live waveform handled by local timer effect
+
+      await rec.prepareToRecordAsync({
+        android: {
+          extension: ".m4a",
+          outputFormat: 2, // MPEG_4
+          audioEncoder: 3, // AAC
+          sampleRate: 44100,
+          numberOfChannels: 1,
+          bitRate: 128000,
+          
+        },
+        ios: {
+          extension: ".m4a",
+          audioQuality: 1,
+          sampleRate: 44100,
+          numberOfChannels: 1,
+          bitRate: 128000,
+          outputFormat: "mpeg4aac",
+        
+        },
+        web: {},
+      });
+
+      rec.setProgressUpdateInterval(80);
       await rec.startAsync();
 
+      setRecordingMs(0);
+      setLiveMeter(-160);
       setRecording(rec);
       setRecordingOn(true);
     } catch (e: any) {
       Alert.alert("Mic error", clean(e?.message) || "Failed to start recording");
       setRecording(null);
+      setRecordingMs(0);
+      setLiveMeter(-160);
       setRecordingOn(false);
     }
   }, [currentPlanLabel, ownerOnlyReason, requireAi, requireWorkerUrlOrAlert]);
@@ -976,13 +1272,15 @@ const [lastAnalysisIntent, setLastAnalysisIntent] = useState<"ANALYSIS" | "FOREC
   const stopRecordingAndTranscribe = useCallback(async () => {
     try {
       if (!recording) return;
-
-      setTranscribing(true);
+setTranscribing(true);
+setInput("...");
       setRecordingOn(false);
 
       await recording.stopAndUnloadAsync();
       const uri = recording.getURI();
       setRecording(null);
+      setRecordingMs(0);
+      setLiveMeter(-160);
 
       if (!uri) {
         Alert.alert("Error", "Recording URI missing.");
@@ -996,7 +1294,7 @@ const [lastAnalysisIntent, setLastAnalysisIntent] = useState<"ANALYSIS" | "FOREC
         {
           uri,
           name: "voice.m4a",
-          type: Platform.OS === "ios" ? "audio/m4a" : "audio/mp4",
+         type: "audio/m4a",
         } as any
       );
 
@@ -1005,18 +1303,18 @@ const [lastAnalysisIntent, setLastAnalysisIntent] = useState<"ANALYSIS" | "FOREC
       const abort = new AbortController();
       netAbortRef.current = abort;
 
-      const out = await fetchJsonWithRetry(
-        url,
-        {
-          method: "POST",
-          headers: {
-            "x-zetra-role": clean(org.activeRole),
-          },
-          body: form,
-          signal: abort.signal,
-        },
-        { timeoutMs: 45_000, retries: 2, tag: "transcribe" }
-      );
+     const out = await fetchJsonWithRetry(
+  url,
+  {
+    method: "POST",
+    headers: {
+      "x-zetra-role": clean(org.activeRole),
+    },
+    body: form,
+    signal: abort.signal,
+  },
+  { timeoutMs: 20_000, retries: 0, tag: "transcribe" }
+);
 
       const data: any = out.data;
 
@@ -1035,15 +1333,153 @@ const [lastAnalysisIntent, setLastAnalysisIntent] = useState<"ANALYSIS" | "FOREC
         return;
       }
 
-      setInput((prev) => (clean(prev) ? `${clean(prev)}\n${text}` : text));
-      requestAnimationFrame(() => inputRef.current?.focus());
+    setInput("");
+await (async () => {
+  const directText = clean(text);
+  if (!directText) return;
+
+  const history = buildHistory();
+  setRetryCard({ visible: false, label: "", payload: null });
+  lastPayloadRef.current = null;
+
+  setThinking(true);
+  stopTyping();
+  stopTypingDots();
+
+  const reqToken = makeReqToken();
+  activeReqTokenRef.current = reqToken;
+
+  const abortDirect = new AbortController();
+  netAbortRef.current = abortDirect;
+
+  const userMsg: ChatMsg = {
+    id: uid(),
+    role: "user",
+    text: directText,
+    ts: Date.now(),
+    images: null,
+  };
+
+  const botId = uid();
+  const botPlaceholder: ChatMsg = {
+    id: botId,
+    role: "assistant",
+    ts: Date.now(),
+    text: "AI inaandika",
+  };
+
+  setMessages((prev) => [botPlaceholder, userMsg, ...prev]);
+  userNearBottomRef.current = true;
+  autoScrollLockRef.current = false;
+  scrollToLatest(false, true);
+  startTypingDots(botId);
+
+  try {
+    const payload: RetryPayload = { kind: "chat", text: directText, history };
+    lastPayloadRef.current = payload;
+    setRetryCard({ visible: false, label: "", payload });
+
+    const res = await callWorkerChat(directText, history, abortDirect.signal);
+
+    if (reqToken !== activeReqTokenRef.current) return;
+
+    const creditResult = await consumeAiCredits(1);
+
+    let footerNote = creditResult.ok ? "" : "⚠️ AI response imefanikiwa lakini credit deduction imeshindikana.";
+    const resMeta: any = (res as any)?.meta ?? null;
+    const normalizedAlerts = normalizeAutopilotAlerts(resMeta);
+
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === botId
+          ? {
+              ...m,
+              autopilotAlerts: normalizedAlerts,
+              analysisIntent: (resMeta?.analysisIntent as any) ?? null,
+            }
+          : m
+      )
+    );
+
+    if (aiEnabled && clean(org.activeOrgId) && Array.isArray(resMeta?.actions) && resMeta.actions.length) {
+      const result = await createTasksFromAiActions({
+        orgId: org.activeOrgId!,
+        storeId: org.activeStoreId ?? null,
+        actions: resMeta.actions as ActionItem[],
+      });
+
+      if (result.created > 0) {
+        footerNote = footerNote
+          ? `${footerNote}\n\n✅ Saved to Tasks: ${result.created}${result.failed > 0 ? ` • Failed: ${result.failed}` : ""}`
+          : `✅ Saved to Tasks: ${result.created}${result.failed > 0 ? ` • Failed: ${result.failed}` : ""}`;
+      } else if (result.failed > 0) {
+        const taskWarn =
+          "⚠️ Actions zimeshindwa ku-save kwenye Tasks.\n" +
+          "Tip: Hakikisha RPC `create_task_from_ai` ipo na una role ya owner/admin.";
+
+        footerNote = footerNote ? `${footerNote}\n\n${taskWarn}` : taskWarn;
+      }
+    }
+
+    const packed = packAssistantText({
+      text: res.text,
+      actions: resMeta?.actions ?? [],
+      footerNote,
+    });
+
+    await typeOutChatGPTLike(botId, packed || sanitizeAssistantText(res.text), reqToken);
+  } catch (e: any) {
+    stopTypingDots();
+
+    const msg = clean(e?.message);
+    const isAbort =
+      msg.toLowerCase().includes("aborted") ||
+      msg.toLowerCase().includes("abort") ||
+      msg.toLowerCase().includes("canceled") ||
+      msg.toLowerCase().includes("cancelled");
+
+    patchMessageText(
+      botId,
+      isAbort
+        ? "⛔ Umesimamisha AI.\n\nUkihitaji, tuma tena ujumbe."
+        : "Samahani — kuna hitilafu kidogo.\n" +
+            (e?.message ? `\nError: ${String(e.message)}` : "") +
+            `\n\n[debug] EXPO_PUBLIC_AI_WORKER_URL(base) = ${AI_WORKER_URL || "EMPTY"}`
+    );
+
+    const last = lastPayloadRef.current;
+    if (last && !isAbort) {
+      setRetryCard({
+        visible: true,
+        label: "Network issue — Retry",
+        payload: last,
+      });
+    }
+  } finally {
+    netAbortRef.current = null;
+    setThinking(false);
+    scrollToLatest(false, true);
+  }
+})();
+     requestAnimationFrame(() => {
+        inputRef.current?.focus();
+        scrollToLatest(false, true);
+      });
     } catch (e: any) {
       Alert.alert("Transcribe error", clean(e?.message) || "Unknown transcribe error");
     } finally {
       setTranscribing(false);
       netAbortRef.current = null;
     }
-  }, [org.activeRole, recording]);
+  }, [
+  currentPlanLabel,
+  org.activeRole,
+  recording,
+  scrollToLatest,
+  startTypingDots,
+  stopTyping,
+  stopTypingDots,
+]);
 
   const toggleMic = useCallback(() => {
     if (!aiEnabled) {
@@ -1214,6 +1650,21 @@ const quickChips = useMemo(
   []
 );
 
+  const focusComposer = useCallback(() => {
+   requestAnimationFrame(() => {
+        inputRef.current?.focus();
+        scrollToLatest(false, true);
+      });
+  }, []);
+
+  const clearComposer = useCallback(() => {
+    setInput("");
+    setAttachedImages([]);
+   requestAnimationFrame(() => {
+        inputRef.current?.focus();
+        scrollToLatest(false, true);
+      });
+  }, []);
   const applyChipPrompt = useCallback(
     (p: string) => {
       if (!requireAi(ownerOnlyReason || `AI haipatikani kwenye ${currentPlanLabel}. Upgrade ili kutumia AI prompts.`)) {
@@ -1226,7 +1677,10 @@ const quickChips = useMemo(
       lastPayloadRef.current = null;
       setPlusOpen(false);
       setInput(t);
-      requestAnimationFrame(() => inputRef.current?.focus());
+      requestAnimationFrame(() => {
+        inputRef.current?.focus();
+        scrollToLatest(false, true);
+      });
     },
     [currentPlanLabel, ownerOnlyReason, requireAi]
   );
@@ -1325,11 +1779,136 @@ const quickChips = useMemo(
     setThinking(false);
   }, [stopTyping, stopTypingDots]);
 
+  const regenerateImageFromMessage = useCallback(
+    async (prompt: string) => {
+      if (!requireAi(ownerOnlyReason || `AI haipatikani kwenye ${currentPlanLabel}. Upgrade ili kuendelea.`)) return;
+
+      const p = clean(prompt);
+      if (!p || thinking) return;
+
+      setRetryCard({ visible: false, label: "", payload: null });
+      lastPayloadRef.current = null;
+      setInput("");
+      setAttachedImages([]);
+      setThinking(true);
+
+      stopTyping();
+      stopTypingDots();
+
+      const reqToken = makeReqToken();
+      activeReqTokenRef.current = reqToken;
+
+      const abort = new AbortController();
+      netAbortRef.current = abort;
+
+      const userMsg: ChatMsg = {
+        id: uid(),
+        role: "user",
+        text: `create image: ${p}`,
+        ts: Date.now(),
+        images: null,
+      };
+
+      const botId = uid();
+      const botPlaceholder: ChatMsg = {
+        id: botId,
+        role: "assistant",
+        ts: Date.now(),
+        text: "AI inaandika",
+      };
+
+      setMessages((prev) => [botPlaceholder, userMsg, ...prev]);
+      userNearBottomRef.current = true;
+      autoScrollLockRef.current = false;
+      scrollToLatest(false, true);
+      startTypingDots(botId);
+
+      try {
+        const payload: RetryPayload = { kind: "image", prompt: p };
+        lastPayloadRef.current = payload;
+        setRetryCard({ visible: false, label: "", payload });
+
+        const url = await callWorkerImageGenerate(p, abort.signal);
+
+        if (reqToken !== activeReqTokenRef.current) return;
+
+        const creditResult = await consumeAiCredits(1);
+
+        const reply = creditResult.ok
+          ? "✅ Image generated"
+          : "✅ Image generated\n\n⚠️ AI image imetoka lakini credit deduction imeshindikana.";
+
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === botId
+              ? {
+                  ...m,
+                  generatedImageUri: url,
+                  imagePrompt: p,
+                }
+              : m
+          )
+        );
+
+        await typeOutChatGPTLike(botId, reply, reqToken);
+      } catch (e: any) {
+        stopTypingDots();
+
+        const msg = clean(e?.message);
+        const isAbort =
+          msg.toLowerCase().includes("aborted") ||
+          msg.toLowerCase().includes("abort") ||
+          msg.toLowerCase().includes("canceled") ||
+          msg.toLowerCase().includes("cancelled");
+
+        if (reqToken !== activeReqTokenRef.current) return;
+
+        patchMessageText(
+          botId,
+          isAbort
+            ? "⛔ Umesimamisha AI.\n\nUkihitaji, tuma tena ujumbe."
+            : "Samahani — kuna hitilafu kidogo.\n" +
+                (e?.message ? `\nError: ${String(e.message)}` : "") +
+                `\n\n[debug] EXPO_PUBLIC_AI_WORKER_URL(base) = ${AI_WORKER_URL || "EMPTY"}`
+        );
+
+        const last = lastPayloadRef.current;
+        if (last && !isAbort) {
+          setRetryCard({
+            visible: true,
+            label: "Network issue — Retry",
+            payload: last,
+          });
+        }
+      } finally {
+        netAbortRef.current = null;
+        setThinking(false);
+        scrollToLatest(false, true);
+      }
+    },
+    [
+      callWorkerImageGenerate,
+      consumeAiCredits,
+      currentPlanLabel,
+      ownerOnlyReason,
+      patchMessageText,
+      requireAi,
+      scrollToLatest,
+      startTypingDots,
+      stopTyping,
+      stopTypingDots,
+      thinking,
+      typeOutChatGPTLike,
+    ]
+  );
+
   const send = useCallback(async () => {
     if (!requireAi(ownerOnlyReason || `AI haipatikani kwenye ${currentPlanLabel}. Upgrade ili kuendelea.`)) return;
 
     const text = clean(input);
-    if (!text || thinking) return;
+    const hasImages = attachedImages.length > 0;
+
+    if ((!text && !hasImages) || thinking) return;
 
     setRetryCard({ visible: false, label: "", payload: null });
     lastPayloadRef.current = null;
@@ -1368,16 +1947,17 @@ const quickChips = useMemo(
     const userMsg: ChatMsg = {
       id: uid(),
       role: "user",
-      text,
+      text: text || (imagesToSend.length ? "📷 Image attached" : ""),
       ts: Date.now(),
       images: imagesToSend.length ? imagesToSend.map((x) => ({ id: x.id, uri: x.uri })) : null,
     };
 
     const botId = uid();
     const botPlaceholder: ChatMsg = { id: botId, role: "assistant", ts: Date.now(), text: "AI inaandika" };
-
-    setMessages((prev) => [botPlaceholder, userMsg, ...prev]);
-    scrollToLatest(false);
+setMessages((prev) => [botPlaceholder, userMsg, ...prev]);
+    userNearBottomRef.current = true;
+    autoScrollLockRef.current = false;
+    scrollToLatest(false, true);
     startTypingDots(botId);
 
     try {
@@ -1418,16 +1998,24 @@ const quickChips = useMemo(
 
         const creditResult = await consumeAiCredits(1);
 
-        const replyBase = isDataImageUrl(url)
-          ? `✅ Image generated\n\n![ZETRA Image](${url})`
-          : `✅ Image generated\n\n![ZETRA Image](${url})\n\nLink: ${url}`;
-
         const reply = creditResult.ok
-          ? replyBase
-          : `${replyBase}\n\n⚠️ AI image imetoka lakini credit deduction imeshindikana.`;
+  ? "✅ Image generated"
+  : "✅ Image generated\n\n⚠️ AI image imetoka lakini credit deduction imeshindikana.";
 
-        await typeOutChatGPTLike(botId, reply, reqToken);
-        return;
+setMessages((prev) =>
+  prev.map((m) =>
+    m.id === botId
+      ? {
+          ...m,
+          generatedImageUri: url,
+          imagePrompt: p,
+        }
+      : m
+  )
+);
+
+await typeOutChatGPTLike(botId, reply, reqToken);
+return;
       }
 
       const payload: RetryPayload = { kind: "chat", text, history };
@@ -1515,7 +2103,7 @@ if (aiEnabled && clean(org.activeOrgId) && Array.isArray(resMeta?.actions) && re
     } finally {
       netAbortRef.current = null;
       setThinking(false);
-      scrollToLatest(false);
+      scrollToLatest(false, true);
     }
   }, [
     aiEnabled,
@@ -1555,12 +2143,12 @@ if (aiEnabled && clean(org.activeOrgId) && Array.isArray(resMeta?.actions) && re
     const abort = new AbortController();
     netAbortRef.current = abort;
 
-    const userMsg: ChatMsg = {
-      id: uid(),
-      role: "user",
-      ts: Date.now(),
-      text: p.kind === "image" ? `[Retry Image] ${p.prompt}` : `[Retry] ${p.kind.toUpperCase()}`,
-    };
+  const userMsg: ChatMsg = {
+  id: uid(),
+  role: "user",
+  ts: Date.now(),
+  text: p.kind === "image" ? `create image: ${p.prompt}` : `[Retry] ${p.kind.toUpperCase()}`,
+};
 
     const botId = uid();
     const botPlaceholder: ChatMsg = { id: botId, role: "assistant", ts: Date.now(), text: "AI inaandika" };
@@ -1570,7 +2158,9 @@ if (aiEnabled && clean(org.activeOrgId) && Array.isArray(resMeta?.actions) && re
     stopTypingDots();
 
     setMessages((prev) => [botPlaceholder, userMsg, ...prev]);
-    scrollToLatest(false);
+    userNearBottomRef.current = true;
+    autoScrollLockRef.current = false;
+    scrollToLatest(false, true);
     startTypingDots(botId);
 
     try {
@@ -1581,16 +2171,27 @@ if (aiEnabled && clean(org.activeOrgId) && Array.isArray(resMeta?.actions) && re
 
         const creditResult = await consumeAiCredits(1);
 
-        const replyBase = isDataImageUrl(url)
-          ? `✅ Image generated\n\n![ZETRA Image](${url})`
-          : `✅ Image generated\n\n![ZETRA Image](${url})\n\nLink: ${url}`;
-
         const reply = creditResult.ok
-          ? replyBase
-          : `${replyBase}\n\n⚠️ Retry image imetoka lakini credit deduction imeshindikana.`;
+  ? "✅ Image generated"
+  : "✅ Image generated\n\n⚠️ Retry image imetoka lakini credit deduction imeshindikana.";
 
-        await typeOutChatGPTLike(botId, reply, reqToken);
-        return;
+setMessages((prev) =>
+  prev.map((m) =>
+    m.id === botId
+      ? {
+          ...m,
+          generatedImageUri: url,
+          imagePrompt: p.prompt,
+        }
+      : m
+  )
+);
+
+await typeOutChatGPTLike(botId, reply, reqToken);
+return;
+
+await typeOutChatGPTLike(botId, reply, reqToken);
+return;
       }
 
       if (p.kind === "vision") {
@@ -1670,8 +2271,7 @@ if (aiEnabled && clean(org.activeOrgId) && Array.isArray(resMeta?.actions) && re
 
       if (reqToken !== activeReqTokenRef.current) return;
 
-      patchMessageText(
-        botId,
+      patchMessageText(botId,
         isAbort
           ? "⛔ Retry imesimamishwa.\n\nUkihitaji, bonyeza Retry tena."
           : "Samahani — retry imegoma.\n" + (e?.message ? `\nError: ${String(e.message)}` : "") + "\n\nJaribu tena."
@@ -1684,7 +2284,7 @@ if (aiEnabled && clean(org.activeOrgId) && Array.isArray(resMeta?.actions) && re
     } finally {
       netAbortRef.current = null;
       setThinking(false);
-      scrollToLatest(false);
+      scrollToLatest(false, true);
     }
   }, [
     aiEnabled,
@@ -1802,7 +2402,10 @@ const TopBar = (
     setLastAnalysisIntent(null);
     setRetryCard({ visible: false, label: "", payload: null });
     lastPayloadRef.current = null;
-    requestAnimationFrame(() => inputRef.current?.focus());
+   requestAnimationFrame(() => {
+        inputRef.current?.focus();
+        scrollToLatest(false, true);
+      });
   }}
         hitSlop={10}
         style={({ pressed }) => ({
@@ -1824,46 +2427,141 @@ const TopBar = (
   </View>
 );
 
- const renderMsg = useCallback(({ item }: { item: ChatMsg }) => {
+const renderMsg = useCallback(({ item }: { item: ChatMsg }) => {
   const isUser = item.role === "user";
   const imgs = Array.isArray(item.images) ? item.images : [];
   const alerts = Array.isArray(item.autopilotAlerts) ? item.autopilotAlerts : [];
+  const msgTime = fmtChatTime(item.ts);
+  const intentLabel = getIntentLabel(item.analysisIntent);
+
+ const generatedImageUri = !isUser
+  ? normalizeImageUrl(item.generatedImageUri || extractMarkdownImageUrl(item.text))
+  : "";
+
+const displayText = !isUser
+  ? stripMarkdownImageTag(item.text)
+  : item.text;
+
+const imagePromptText = !isUser
+  ? clean(item.imagePrompt)
+  : "";
 
   return (
-    <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
-      {isUser && imgs.length ? (
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
-          {imgs.map((x) => (
-            <Pressable
-              key={x.id}
-              onPress={() => setImgPreview({ open: true, uri: x.uri })}
-              style={({ pressed }) => ({
-                width: 64,
-                height: 64,
-                borderRadius: 14,
-                overflow: "hidden",
-                borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.12)",
-                opacity: pressed ? 0.92 : 1,
-              })}
-            >
-              <Image source={{ uri: x.uri }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
-            </Pressable>
-          ))}
+    <View style={{ paddingHorizontal: 16, paddingTop: 10 }}>
+      <View
+        style={{
+          flexDirection: "row",
+          justifyContent: isUser ? "flex-end" : "flex-start",
+          marginBottom: 6,
+        }}
+      >
+        <View
+          style={{
+            paddingHorizontal: 10,
+            height: 24,
+            borderRadius: 999,
+            borderWidth: 1,
+            borderColor: isUser ? "rgba(16,185,129,0.28)" : "rgba(255,255,255,0.10)",
+            backgroundColor: isUser ? "rgba(16,185,129,0.10)" : "rgba(255,255,255,0.05)",
+            alignItems: "center",
+            justifyContent: "center",
+            flexDirection: "row",
+            gap: 6,
+          }}
+        >
+          <Ionicons
+            name={isUser ? "person-circle-outline" : "sparkles-outline"}
+            size={12}
+            color={UI.text}
+          />
+          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }}>
+            {isUser ? "You" : `ZETRA AI • ${intentLabel}`}
+          </Text>
+          {!!msgTime && (
+            <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 10 }}>
+              {msgTime}
+            </Text>
+          )}
+        </View></View>
+
+   {isUser && imgs.length ? (
+  <View
+    style={{
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+      marginBottom: 10,
+      justifyContent: "flex-end",
+    }}
+  >
+    {imgs.map((x, idx) => (
+      <Pressable
+        key={x.id}
+        onPress={() => setImgPreview({ open: true, uri: x.uri })}
+        style={({ pressed }) => ({
+          width: 74,
+          height: 74,
+          borderRadius: 16,
+          overflow: "hidden",
+          borderWidth: 1,
+          borderColor: "rgba(255,255,255,0.12)",
+          backgroundColor: "rgba(255,255,255,0.04)",
+          opacity: pressed ? 0.92 : 1,
+        })}
+      >
+        <Image source={{ uri: x.uri }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
+        <View
+          style={{
+            position: "absolute",
+            left: 6,
+            bottom: 6,
+            paddingHorizontal: 6,
+            height: 18,
+            borderRadius: 999,
+            backgroundColor: "rgba(0,0,0,0.55)",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Text style={{ color: "#fff", fontWeight: "900", fontSize: 10 }}>
+            IMG {idx + 1}
+          </Text>
         </View>
-      ) : null}
+      </Pressable>
+    ))}
+  </View>
+) : null}
 
       {!isUser && alerts.length ? (
         <Card style={{ padding: 14, borderRadius: 20, marginBottom: 10 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 10 }}>
-            <Ionicons name="sparkles" size={18} color={UI.text} />
-            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
-              {item.analysisIntent === "FORECAST"
-                ? "Autopilot Forecast Alerts"
-                : item.analysisIntent === "COACH"
-                ? "Autopilot Profit Coach"
-                : "Autopilot Business Alerts"}
-            </Text>
+            <View
+              style={{
+                width: 30,
+                height: 30,
+                borderRadius: 999,
+                borderWidth: 1,
+                borderColor: "rgba(16,185,129,0.25)",
+                backgroundColor: "rgba(16,185,129,0.10)",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Ionicons name="sparkles" size={15} color={UI.text} />
+            </View>
+
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
+                {item.analysisIntent === "FORECAST"
+                  ? "Autopilot Forecast Alerts"
+                  : item.analysisIntent === "COACH"
+                  ? "Autopilot Profit Coach"
+                  : "Autopilot Business Alerts"}
+              </Text>
+              <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 11, marginTop: 2 }}>
+                Smart highlights from this response
+              </Text>
+            </View>
           </View>
 
           {alerts.map((a, idx) => {
@@ -1916,10 +2614,134 @@ const TopBar = (
         </Card>
       ) : null}
 
-      <AiMessageBubble role={isUser ? "user" : "assistant"} text={item.text} />
+      <View
+        style={{
+          alignItems: isUser ? "flex-end" : "flex-start",
+        }}
+      >
+        {!!displayText ? (
+          <View
+            style={{
+              maxWidth: "100%",
+              borderRadius: 24,
+              overflow: "hidden",
+            }}
+          >
+            <AiMessageBubble role={isUser ? "user" : "assistant"} text={displayText} />
+          </View>
+        ) : null}
+
+        {!isUser && !!generatedImageUri ? (
+          <View
+            style={{
+              marginTop: displayText ? 10 : 0,
+              width: Math.min(Dimensions.get("window").width * 0.72, 320),
+            }}
+          >
+            <Pressable
+              onPress={() => setImgPreview({ open: true, uri: generatedImageUri })}
+              style={({ pressed }) => ({
+                width: "100%",
+                aspectRatio: 1,
+                borderRadius: 22,
+                overflow: "hidden",
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,0.12)",
+                backgroundColor: "rgba(255,255,255,0.04)",
+                opacity: pressed ? 0.95 : 1,
+              })}
+            >
+              <Image
+                source={{ uri: generatedImageUri }}
+                style={{ width: "100%", height: "100%" }}
+                resizeMode="cover"
+              />
+            </Pressable>
+
+            {!!imagePromptText && (
+              <View
+                style={{
+                  marginTop: 8,
+                  gap: 8,
+                }}
+              >
+                <View
+                  style={{
+                    flexDirection: "row",
+                    gap: 8,
+                  }}
+                >
+                  <Pressable
+                    onPress={() => void copyImagePromptFromMessage(imagePromptText)}
+                    style={({ pressed }) => ({
+                      flex: 1,
+                      height: 40,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: "rgba(255,255,255,0.14)",
+                      backgroundColor: pressed ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.06)",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexDirection: "row",
+                      gap: 6,
+                    })}
+                  >
+                    <Ionicons name="copy-outline" size={16} color={UI.text} />
+                    <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>Copy Prompt</Text>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={() => useImagePromptAgainFromMessage(imagePromptText)}
+                    style={({ pressed }) => ({
+                      flex: 1,
+                      height: 40,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: "rgba(255,255,255,0.14)",
+                      backgroundColor: pressed ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.06)",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexDirection: "row",
+                      gap: 6,
+                    })}
+                  >
+                    <Ionicons name="create-outline" size={16} color={UI.text} />
+                    <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>Use Again</Text>
+                  </Pressable>
+                </View>
+
+                <Pressable
+                  onPress={() => void regenerateImageFromMessage(imagePromptText)}
+                  style={({ pressed }) => ({
+                    width: "100%",
+                    height: 42,
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: "rgba(16,185,129,0.35)",
+                    backgroundColor: pressed ? "rgba(16,185,129,0.18)" : "rgba(16,185,129,0.12)",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexDirection: "row",
+                    gap: 8,
+                  })}
+                >
+                  <Ionicons name="refresh-outline" size={16} color={UI.text} />
+                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>Regenerate</Text>
+                </Pressable>
+              </View>
+            )}
+          </View>
+        ) : null}
+      </View>
     </View>
   );
-}, []);
+}, [
+  regenerateImageFromMessage,
+  copyImagePromptFromMessage,
+  savePreviewImageToDevice,
+  sharePreviewImage,
+  useImagePromptAgainFromMessage,
+]);
 
 const RetryBanner = useMemo(() => {
     if (!retryCard.visible || !retryCard.payload) return null;
@@ -1932,7 +2754,7 @@ const RetryBanner = useMemo(() => {
             borderWidth: 1,
             borderColor: "rgba(245,158,11,0.45)",
             backgroundColor: pressed ? "rgba(245,158,11,0.14)" : "rgba(245,158,11,0.10)",
-            borderRadius: 18,
+            borderRadius: 20,
             padding: 12,
             flexDirection: "row",
             alignItems: "center",
@@ -1941,34 +2763,49 @@ const RetryBanner = useMemo(() => {
           })}
         >
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
-            <Ionicons name="refresh" size={18} color={UI.text} />
+            <View
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 999,
+                borderWidth: 1,
+                borderColor: "rgba(245,158,11,0.35)",
+                backgroundColor: "rgba(245,158,11,0.12)",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Ionicons name="refresh" size={16} color={UI.text} />
+            </View>
+
             <View style={{ flex: 1 }}>
               <Text style={{ color: UI.text, fontWeight: "900" }}>{retryCard.label || "Retry"}</Text>
               <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 2 }} numberOfLines={1}>
-                Bonyeza kuretry request ya mwisho.
+                Network ilikatika au request ilifail. Bonyeza kujaribu tena.
               </Text>
             </View>
           </View>
+
           <Ionicons name="chevron-forward" size={18} color={UI.muted} />
         </Pressable>
       </View>
     );
   }, [retryCard.label, retryCard.payload, retryCard.visible, retryLast]);
 
-  const AttachRow = useMemo(() => {
+ const AttachRow = useMemo(() => {
     if (!attachedImages.length) return null;
 
     return (
-      <View style={{ paddingHorizontal: 14, paddingBottom: 10 }}>
+      <View style={{ paddingHorizontal: 6, paddingBottom: 10 }}>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-          {attachedImages.map((x) => (
+          {attachedImages.map((x, idx) => (
             <View
               key={x.id}
               style={{
                 borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.12)",
-                backgroundColor: "rgba(255,255,255,0.06)",
-                borderRadius: 999,
+                borderColor: "rgba(255,255,255,0.10)",
+                backgroundColor: "rgba(255,255,255,0.05)",
+                borderRadius: 16,
                 paddingVertical: 8,
                 paddingHorizontal: 10,
                 flexDirection: "row",
@@ -1976,20 +2813,42 @@ const RetryBanner = useMemo(() => {
                 gap: 8,
               }}
             >
-              <Ionicons name="image" size={16} color={UI.text} />
-              <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 12 }}>Attached</Text>
+              <Pressable
+                onPress={() => setImgPreview({ open: true, uri: x.uri })}
+                hitSlop={8}
+                style={({ pressed }) => ({
+                  width: 34,
+                  height: 34,
+                  borderRadius: 10,
+                  overflow: "hidden",
+                  opacity: pressed ? 0.9 : 1,
+                })}
+              >
+                <Image source={{ uri: x.uri }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
+              </Pressable>
+
+              <View>
+                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
+                  Image {idx + 1}
+                </Text>
+                <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 11 }}>
+                  Ready to send
+                </Text>
+              </View>
+
               <Pressable
                 onPress={() => removeAttachedImage(x.id)}
                 hitSlop={10}
                 style={({ pressed }) => ({
-                  width: 26,
-                  height: 26,
+                  width: 28,
+                  height: 28,
                   borderRadius: 999,
                   alignItems: "center",
                   justifyContent: "center",
                   backgroundColor: pressed ? "rgba(239,68,68,0.18)" : "rgba(239,68,68,0.12)",
                   borderWidth: 1,
                   borderColor: "rgba(239,68,68,0.30)",
+                  marginLeft: 2,
                 })}
               >
                 <Ionicons name="close" size={14} color={UI.text} />
@@ -2004,9 +2863,9 @@ const RetryBanner = useMemo(() => {
   const canSend = useMemo(() => {
     if (!aiEnabled) return false;
     if (thinking) return false;
-    if (!clean(input)) return false;
+    if (!clean(input) && attachedImages.length === 0) return false;
     return true;
-  }, [aiEnabled, input, thinking]);
+  }, [aiEnabled, attachedImages.length, input, thinking]);
 
   const AiLockedModal = (
     <Modal visible={aiGateOpen} transparent animationType="fade" onRequestClose={() => setAiGateOpen(false)}>
@@ -2164,7 +3023,61 @@ const PlusMenu = (
             <Ionicons name="close" size={18} color={UI.text} />
           </Pressable>
         </View>
+<View style={{ marginTop: 14 }}>
+  <Text style={{ color: UI.muted, fontWeight: "900", marginBottom: 8 }}>Quick actions</Text>
 
+  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+    <Pressable
+      onPress={() => {
+        setPlusOpen(false);
+        void pickAndAttachImage();
+      }}
+      disabled={!aiEnabled}
+      hitSlop={10}
+      style={({ pressed }) => ({
+        height: 42,
+        paddingHorizontal: 14,
+        borderRadius: 999,
+        borderWidth: 1,
+        borderColor: "rgba(255,255,255,0.12)",
+        backgroundColor: pressed ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.06)",
+        alignItems: "center",
+        justifyContent: "center",
+        flexDirection: "row",
+        gap: 8,
+        opacity: !aiEnabled ? 0.55 : pressed ? 0.92 : 1,
+      })}
+    >
+      <Ionicons name="image-outline" size={16} color={UI.text} />
+      <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>Attach Image</Text>
+    </Pressable>
+
+    {(clean(input) || attachedImages.length > 0) && !thinking ? (
+      <Pressable
+        onPress={() => {
+          setPlusOpen(false);
+          clearComposer();
+        }}
+        hitSlop={10}
+        style={({ pressed }) => ({
+          height: 42,
+          paddingHorizontal: 14,
+          borderRadius: 999,
+          borderWidth: 1,
+          borderColor: "rgba(239,68,68,0.24)",
+          backgroundColor: pressed ? "rgba(239,68,68,0.16)" : "rgba(239,68,68,0.08)",
+          alignItems: "center",
+          justifyContent: "center",
+          flexDirection: "row",
+          gap: 8,
+        })}
+      >
+        <Ionicons name="close-circle-outline" size={16} color={UI.text} />
+        <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>Clear</Text>
+      </Pressable>
+    ) : null}
+  </View>
+</View>
         {/* SUBSCRIPTION BUTTON */}
         <View style={{ marginTop: 14 }}>
           <Pressable
@@ -2370,226 +3283,294 @@ const PlusMenu = (
   </Modal>
 );
 
-  const Composer = (
+const Composer = (
+  <View
+    style={{
+      paddingHorizontal: 14,
+      paddingTop: 8,
+      paddingBottom: Math.max(insets.bottom, 0) + androidComposerLift,
+      backgroundColor: "transparent",
+      opacity: aiEnabled ? 1 : 0.76,
+    }}
+  >
     <View
       style={{
-        paddingHorizontal: 14,
+        borderWidth: 1,
+        borderColor: "rgba(255,255,255,0.10)",
+        backgroundColor: "rgba(10,14,20,0.96)",
+        borderRadius: 28,
+        paddingHorizontal: 10,
         paddingTop: 10,
-        paddingBottom: Math.max(insets.bottom, 0) + androidComposerLift,
-        backgroundColor: "transparent",
-        opacity: aiEnabled ? 1 : 0.72,
+        paddingBottom: 10,
+        shadowColor: "#000",
+        shadowOpacity: 0.24,
+        shadowRadius: 18,
+        shadowOffset: { width: 0, height: 10 },
+        elevation: 10,
       }}
     >
       {AttachRow}
 
       <View
         style={{
-          borderWidth: 1,
-          borderColor: "rgba(255,255,255,0.12)",
-          backgroundColor: "rgba(12,16,22,0.92)",
-          borderRadius: 18,
-          padding: 10,
-          shadowColor: "#000",
-          shadowOpacity: 0.25,
-          shadowRadius: 18,
-          shadowOffset: { width: 0, height: 10 },
-          elevation: 10,
+          flexDirection: "row",
+          alignItems: "flex-end",
+          gap: 8,
         }}
       >
-        <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 10 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <Pressable
-              onPress={() => {
-                if (!aiEnabled) {
-                  openAiGate(defaultAiLockReason);
-                  return;
-                }
-                Keyboard.dismiss();
-                setPlusOpen(true);
-              }}
-              disabled={!aiEnabled}
-              hitSlop={10}
-              style={({ pressed }) => ({
-                width: 40,
-                height: 40,
-                borderRadius: 14,
-                borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.12)",
-                backgroundColor: pressed ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.06)",
-                alignItems: "center",
-                justifyContent: "center",
-                opacity: !aiEnabled ? 0.55 : pressed ? 0.92 : 1,
-              })}
-            >
-              <Ionicons name="add" size={20} color={UI.text} />
-            </Pressable>
+        <Pressable
+          onPress={() => {
+            if (!aiEnabled) {
+              openAiGate(defaultAiLockReason);
+              return;
+            }
+            Keyboard.dismiss();
+            setPlusOpen(true);
+          }}
+          disabled={!aiEnabled}
+          hitSlop={10}
+          style={({ pressed }) => ({
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            borderWidth: 1,
+            borderColor: "rgba(255,255,255,0.10)",
+            backgroundColor: pressed ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.05)",
+            alignItems: "center",
+            justifyContent: "center",
+            opacity: !aiEnabled ? 0.55 : pressed ? 0.92 : 1,
+          })}
+        >
+          <Ionicons name="add" size={18} color={UI.text} />
+        </Pressable>
 
-            <Pressable
-              onPress={() => void pickAndAttachImage()}
-              disabled={!aiEnabled}
-              hitSlop={10}
-              style={({ pressed }) => ({
-                width: 40,
-                height: 40,
-                borderRadius: 14,
-                borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.12)",
-                backgroundColor: pressed ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.06)",
-                alignItems: "center",
-                justifyContent: "center",
-                opacity: !aiEnabled ? 0.55 : pressed ? 0.92 : 1,
-              })}
-            >
-              <Ionicons name="image-outline" size={18} color={UI.text} />
-            </Pressable>
-
-            <Pressable
-              onPress={toggleMic}
-              disabled={!aiEnabled}
-              hitSlop={10}
-              style={({ pressed }) => ({
-                width: 40,
-                height: 40,
-                borderRadius: 14,
-                borderWidth: 1,
-                borderColor: recordingOn ? C.emeraldBorder : "rgba(255,255,255,0.12)",
-                backgroundColor: recordingOn
-                  ? "rgba(16,185,129,0.16)"
-                  : pressed
-                  ? "rgba(255,255,255,0.08)"
-                  : "rgba(255,255,255,0.06)",
-                alignItems: "center",
-                justifyContent: "center",
-                opacity: !aiEnabled ? 0.55 : pressed ? 0.92 : 1,
-              })}
-            >
-              <Ionicons name={recordingOn ? "mic" : "mic-outline"} size={18} color={UI.text} />
-            </Pressable>
-          </View>
-
-          <View style={{ flex: 1 }}>
-            <TextInput
-              ref={inputRef}
-              value={input}
-              onChangeText={setInput}
-              placeholder={
-                aiEnabled
-                  ? transcribing
-                    ? "Transcribing..."
-                    : "Andika ujumbe..."
-                  : ownerOnlyReason
-                  ? "AI ni ya OWNER pekee"
-                  : `AI imezimwa (${currentPlanLabel}) — upgrade ili kutumia`
+        <View
+          style={{
+            flex: 1,
+            minHeight: 44,
+            borderRadius: 22,
+            justifyContent: "center",
+            paddingHorizontal: 2,
+          }}
+        >
+          <TextInput
+            ref={inputRef}
+            value={input}
+            onChangeText={setInput}
+            placeholder={
+              aiEnabled
+                ? transcribing
+                  ? "Transcribing voice..."
+                  : attachedImages.length
+                  ? "Add message about the image..."
+                  : "Message ZETRA AI..."
+                : ownerOnlyReason
+                ? "AI ni ya OWNER pekee"
+                : `AI imezimwa (${currentPlanLabel}) — upgrade ili kutumia`
+            }
+            placeholderTextColor={UI.faint}
+            multiline
+            maxLength={INPUT_MAX}
+            editable={aiEnabled}
+            style={{
+              color: UI.text,
+              fontWeight: "800",
+              fontSize: 16,
+              lineHeight: 22,
+              minHeight: 24,
+              maxHeight: 140,
+              paddingHorizontal: 4,
+              paddingTop: 8,
+              paddingBottom: 8,
+            }}
+            keyboardAppearance="dark"
+            autoCorrect
+            autoCapitalize="sentences"
+            returnKeyType="default"
+            blurOnSubmit={false}
+            textAlignVertical="top"
+            onFocus={() => {
+              if (Platform.OS === "android") {
+                scrollToLatest(false, true);
               }
-              placeholderTextColor={UI.faint}
-              multiline
-              maxLength={INPUT_MAX}
-              editable={aiEnabled}
-              style={{
-                minHeight: 40,
-                maxHeight: 130,
-                color: UI.text,
-                fontWeight: "800",
-                paddingHorizontal: 12,
-                paddingTop: 10,
-                paddingBottom: 10,
-                borderRadius: 16,
-                borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.10)",
-                backgroundColor: "rgba(255,255,255,0.04)",
-              }}
-              keyboardAppearance="dark"
-              autoCorrect
-              autoCapitalize="sentences"
-              returnKeyType="send"
-              blurOnSubmit={false}
-              onFocus={() => {
-                if (Platform.OS === "android") {
-                  scrollToLatest(false);
-                }
-              }}
-              onSubmitEditing={() => {}}
-            />
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 6 }}>
-              <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 11 }}>
-                {clean(input).length}/{INPUT_MAX.toLocaleString()}
-              </Text>
-              {thinking ? (
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                  <ActivityIndicator />
-                  <Text style={{ color: UI.muted, fontWeight: "900" }}>AI...</Text>
-                </View>
-              ) : null}
-            </View>
-          </View>
-
-          <Pressable
-            onPress={() => void send()}
-            disabled={!canSend}
-            hitSlop={10}
-            style={({ pressed }) => ({
-              width: 44,
-              height: 44,
-              borderRadius: 16,
-              borderWidth: 1,
-              borderColor: canSend ? C.emeraldBorder : "rgba(255,255,255,0.12)",
-              backgroundColor: canSend ? C.emeraldSoft : "rgba(255,255,255,0.06)",
-              alignItems: "center",
-              justifyContent: "center",
-              opacity: !canSend ? 0.55 : pressed ? 0.92 : 1,
-              transform: [{ scale: pressed ? 0.985 : 1 }],
-            })}
-          >
-            <Ionicons name="send" size={18} color={UI.text} />
-          </Pressable>
+            }}
+            onSubmitEditing={() => {}}
+          />
         </View>
 
-        {thinking ? (
-          <View style={{ marginTop: 10 }}>
-            <Pressable
-              onPress={stopGenerating}
-              style={({ pressed }) => ({
-                height: 44,
-                borderRadius: 999,
-                borderWidth: 1,
-                borderColor: "rgba(239,68,68,0.35)",
-                backgroundColor: pressed ? "rgba(239,68,68,0.18)" : "rgba(239,68,68,0.12)",
-                alignItems: "center",
-                justifyContent: "center",
-                flexDirection: "row",
-                gap: 10,
-              })}
-            >
-              <Ionicons name="stop-circle-outline" size={18} color={UI.text} />
-              <Text style={{ color: UI.text, fontWeight: "900" }}>STOP GENERATING</Text>
-            </Pressable>
-          </View>
-        ) : !aiEnabled ? (
-          <View style={{ marginTop: 10 }}>
-            <Pressable
-              onPress={() => openAiGate(defaultAiLockReason)}
-              style={({ pressed }) => ({
-                height: 44,
-                borderRadius: 999,
-                borderWidth: 1,
-                borderColor: "rgba(245,158,11,0.35)",
-                backgroundColor: pressed ? "rgba(245,158,11,0.18)" : "rgba(245,158,11,0.12)",
-                alignItems: "center",
-                justifyContent: "center",
-                flexDirection: "row",
-                gap: 10,
-              })}
-            >
-              <Ionicons name="lock-closed-outline" size={18} color={UI.text} />
-              <Text style={{ color: UI.text, fontWeight: "900" }}>
-                {ownerOnlyReason ? "OWNER ONLY AI" : "UPGRADE TO USE AI"}
-              </Text>
-            </Pressable>
-          </View>
-        ) : null}
+        <Pressable
+          onPress={() => {
+            if (recordingOn) {
+              void stopRecordingAndTranscribe();
+              return;
+            }
+            if (canSend) {
+              void send();
+              return;
+            }
+            toggleMic();
+          }}
+          disabled={recordingOn ? false : canSend ? !canSend : !aiEnabled}
+          hitSlop={10}
+          style={({ pressed }) => {
+            const activeSend = recordingOn || canSend;
+
+            return {
+              width: 42,
+              height: 42,
+              borderRadius: 21,
+              borderWidth: 1,
+              borderColor: activeSend ? C.emeraldBorder : "rgba(255,255,255,0.10)",
+              backgroundColor: activeSend
+                ? C.emeraldSoft
+                : pressed
+                ? "rgba(255,255,255,0.08)"
+                : "rgba(255,255,255,0.05)",
+              alignItems: "center",
+              justifyContent: "center",
+              opacity: !recordingOn && !canSend && !aiEnabled ? 0.55 : pressed ? 0.92 : 1,
+              transform: [{ scale: pressed ? 0.985 : 1 }],
+            };
+          }}
+        >
+          <Ionicons
+            name={recordingOn || canSend ? "arrow-up" : "mic-outline"}
+            size={18}
+            color={UI.text}
+          />
+        </Pressable>
       </View>
+
+      <View
+  style={{
+    marginTop: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+    paddingHorizontal: 2,
+  }}
+>
+  {recordingOn ? (
+    <View
+      style={{
+        flex: 1,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 10,
+        minHeight: 28,
+      }}
+    >
+      <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 11, width: 64 }}>
+        Listening...
+      </Text>
+
+      <View
+        style={{
+          flex: 1,
+          height: 26,
+          flexDirection: "row",
+          alignItems: "flex-end",
+          gap: 3,
+          overflow: "hidden",
+        }}
+      >
+        {Array.from({ length: 14 }).map((_, idx) => {
+          const normalized = Math.max(0, Math.min(1, (liveMeter + 160) / 160));
+          const base = [0.42, 0.62, 0.86, 0.58, 0.96, 0.48, 0.74];
+          const factor = base[idx % base.length];
+          const h = Math.max(6, Math.min(24, Math.round((6 + normalized * 18) * factor)));
+
+          return (
+            <View
+              key={`bar_${idx}`}
+              style={{
+                width: 4,
+                height: h,
+                borderRadius: 999,
+                backgroundColor:
+                  idx % 3 === 0 ? "rgba(16,185,129,0.95)" : "rgba(255,255,255,0.75)",
+              }}
+            />
+          );
+        })}
+      </View>
+
+      <Text
+        style={{
+          color: UI.faint,
+          fontWeight: "800",
+          fontSize: 11,
+          width: 36,
+          textAlign: "right",
+        }}
+      >
+        {(recordingMs / 1000).toFixed(1)}s
+      </Text>
     </View>
-  );
+  ) : (
+    <>
+      <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 11 }}>
+        {transcribing
+          ? "Voice inachakatwa..."
+          : attachedImages.length
+          ? `${attachedImages.length} image attached`
+          : "AI ready"}
+      </Text>
+
+      <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 11 }}>
+        {clean(input).length}/{INPUT_MAX.toLocaleString()}
+      </Text>
+    </>
+  )}
+</View>
+
+      {thinking ? (
+        <View style={{ marginTop: 10 }}>
+          <Pressable
+            onPress={stopGenerating}
+            style={({ pressed }) => ({
+              height: 42,
+              borderRadius: 999,
+              borderWidth: 1,
+              borderColor: "rgba(239,68,68,0.35)",
+              backgroundColor: pressed ? "rgba(239,68,68,0.18)" : "rgba(239,68,68,0.12)",
+              alignItems: "center",
+              justifyContent: "center",
+              flexDirection: "row",
+              gap: 10,
+            })}
+          >
+            <Ionicons name="stop-circle-outline" size={18} color={UI.text} />
+            <Text style={{ color: UI.text, fontWeight: "900" }}>STOP GENERATING</Text>
+          </Pressable>
+        </View>
+      ) : !aiEnabled ? (
+        <View style={{ marginTop: 10 }}>
+          <Pressable
+            onPress={() => openAiGate(defaultAiLockReason)}
+            style={({ pressed }) => ({
+              height: 42,
+              borderRadius: 999,
+              borderWidth: 1,
+              borderColor: "rgba(245,158,11,0.35)",
+              backgroundColor: pressed ? "rgba(245,158,11,0.18)" : "rgba(245,158,11,0.12)",
+              alignItems: "center",
+              justifyContent: "center",
+              flexDirection: "row",
+              gap: 10,
+            })}
+          >
+            <Ionicons name="lock-closed-outline" size={18} color={UI.text} />
+            <Text style={{ color: UI.text, fontWeight: "900" }}>
+              {ownerOnlyReason ? "OWNER ONLY AI" : "UPGRADE TO USE AI"}
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
+    </View>
+  </View>
+);
 
   const TasksModal = (
     <Modal visible={tasksOpen} transparent animationType="fade" onRequestClose={() => setTasksOpen(false)}>
@@ -2788,12 +3769,36 @@ const PlusMenu = (
     >
       <Pressable
         onPress={() => setImgPreview({ open: false, uri: "" })}
-        style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.85)", alignItems: "center", justifyContent: "center" }}
+        style={{
+          flex: 1,
+          backgroundColor: "rgba(0,0,0,0.85)",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
       >
-        <Pressable onPress={() => {}} style={{ width: "92%", aspectRatio: 1, borderRadius: 18, overflow: "hidden" }}>
-          <Image source={{ uri: imgPreview.uri }} style={{ width: "100%", height: "100%" }} resizeMode="contain" />
+        <Pressable
+          onPress={() => {}}
+          style={{
+            width: "92%",
+            aspectRatio: 1,
+            borderRadius: 18,
+            overflow: "hidden",
+          }}
+        >
+          <Image
+            source={{ uri: imgPreview.uri }}
+            style={{ width: "100%", height: "100%" }}
+            resizeMode="contain"
+          />
         </Pressable>
-        <View style={{ position: "absolute", top: Math.max(insets.top, 12) + 12, right: 16 }}>
+
+        <View
+          style={{
+            position: "absolute",
+            top: Math.max(insets.top, 12) + 12,
+            right: 16,
+          }}
+        >
           <Pressable
             onPress={() => setImgPreview({ open: false, uri: "" })}
             style={({ pressed }) => ({
@@ -2810,6 +3815,57 @@ const PlusMenu = (
             <Ionicons name="close" size={22} color={UI.text} />
           </Pressable>
         </View>
+
+        {!!clean(imgPreview.uri) && (
+          <View
+            style={{
+              position: "absolute",
+              left: 16,
+              right: 16,
+              bottom: Math.max(insets.bottom, 12) + 12,
+              flexDirection: "row",
+              gap: 10,
+            }}
+          >
+            <Pressable
+              onPress={() => void sharePreviewImage()}
+              style={({ pressed }) => ({
+                flex: 1,
+                height: 48,
+                borderRadius: 14,
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,0.14)",
+                backgroundColor: pressed ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.06)",
+                alignItems: "center",
+                justifyContent: "center",
+                flexDirection: "row",
+                gap: 8,
+              })}
+            >
+              <Ionicons name="share-social-outline" size={18} color={UI.text} />
+              <Text style={{ color: UI.text, fontWeight: "900" }}>Share</Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => void savePreviewImageToDevice()}
+              style={({ pressed }) => ({
+                flex: 1,
+                height: 48,
+                borderRadius: 14,
+                borderWidth: 1,
+                borderColor: "rgba(16,185,129,0.35)",
+                backgroundColor: pressed ? "rgba(16,185,129,0.18)" : "rgba(16,185,129,0.12)",
+                alignItems: "center",
+                justifyContent: "center",
+                flexDirection: "row",
+                gap: 8,
+              })}
+            >
+              <Ionicons name="download-outline" size={18} color={UI.text} />
+              <Text style={{ color: UI.text, fontWeight: "900" }}>Save</Text>
+            </Pressable>
+          </View>
+        )}
       </Pressable>
     </Modal>
   );
@@ -2818,20 +3874,27 @@ const Content = (
   <View style={{ flex: 1 }}>
     {RetryBanner}
 
-    <FlatList
+   <FlatList
       ref={listRef}
       data={messages}
       keyExtractor={(m) => m.id}
       renderItem={renderMsg}
       inverted
       keyboardShouldPersistTaps="always"
+      keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
       showsVerticalScrollIndicator={false}
+      removeClippedSubviews={Platform.OS === "android"}
+      initialNumToRender={12}
+      maxToRenderPerBatch={8}
+      windowSize={10}
+      scrollEventThrottle={16}
+      onScroll={handleListScroll}
       style={{ flex: 1 }}
       contentContainerStyle={{
-        paddingTop: 10,
-        paddingBottom: 10 + (Platform.OS === "android" ? androidComposerLift : 0),
+        paddingTop: 12,
+        paddingBottom: 16 + (Platform.OS === "android" ? androidComposerLift : 0),
       }}
-    />
+    /> 
 
     {Composer}
   </View>
@@ -2851,6 +3914,7 @@ const Content = (
         )}
 
         {TasksModal}
+        
         {ImagePreviewModal}
         {PlusMenu}
         {AiLockedModal}

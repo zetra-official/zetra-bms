@@ -451,6 +451,20 @@ function normalizeImageUrl(raw: string) {
   return u;
 }
 
+function extractMarkdownImageUrl(raw: string) {
+  const t = String(raw ?? "");
+  const m = t.match(/!\[[^\]]*\]\((data:image\/[a-zA-Z0-9.+-]+;base64,[^)]+|https?:\/\/[^)\s]+)\)/i);
+  return clean(m?.[1]);
+}
+
+function stripMarkdownImageTag(raw: string) {
+  const t = String(raw ?? "");
+  return t
+    .replace(/!\[[^\]]*\]\((data:image\/[a-zA-Z0-9.+-]+;base64,[^)]+|https?:\/\/[^)\s]+)\)/gi, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 /**
  * Canonical: Chat (AUTO language, follow user)
  */
@@ -695,7 +709,7 @@ export async function transcribeZetraAudio(
     {
       uri: u,
       name: "voice.m4a",
-      type: clean(mimeType) || "audio/mp4",
+      type: clean(mimeType) || "audio/m4a",
     } as any
   );
 
