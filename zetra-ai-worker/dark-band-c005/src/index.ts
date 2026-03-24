@@ -1235,7 +1235,7 @@ export default {
           json({
             ok: true,
             service: "zetra-ai-worker",
-            version: "stable-full-v2-imagefix-b1",
+            version: "stable-full-v2-recovered-b1",
             time: new Date().toISOString(),
           }),
           origin
@@ -1625,7 +1625,7 @@ export default {
               error: out.error,
               debug: {
                 imageModel,
-                workerVersion: "stable-full-v2-imagefix-b1",
+                workerversion: "stable-full-v2-recovered-b1",
               },
             },
             { status: out.status || 500 }
@@ -1640,7 +1640,7 @@ export default {
           url: out.url,
           debug: {
             imageModel,
-            workerVersion: "stable-full-v2-imagefix-b1",
+            workerversion: "stable-full-v2-recovered-b1",
           },
         }),
         origin
