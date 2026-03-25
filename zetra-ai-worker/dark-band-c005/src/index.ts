@@ -34,6 +34,7 @@ type ReqBody = {
   locale?: string;
   language?: any;
   roleHint?: "AUTO" | AiRoleKey;
+  systemPrompt?: string;
   context?: {
     orgId?: string | null;
     activeOrgId?: string | null;
@@ -56,6 +57,7 @@ type VisionBody = {
     language?: any;
     context?: ReqBody["context"];
     roleHint?: "AUTO" | AiRoleKey;
+    systemPrompt?: string;
   };
 };
 
@@ -345,6 +347,584 @@ function buildCtxLines(ctx: ReqBody["context"]) {
   return lines;
 }
 
+function num(x: unknown) {
+  const n = Number(x);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function buildInjectedDataLines(ctx: ReqBody["context"]) {
+  const c: any = ctx ?? {};
+  const lines: string[] = [];
+
+  const businessIntent = clean(c.businessIntent);
+  if (businessIntent) lines.push(`businessIntent: ${businessIntent}`);
+
+  if (c.forceUseRealBusinessData) lines.push("forceUseRealBusinessData: true");
+  if (c.forceUseRealProductNames) lines.push("forceUseRealProductNames: true");
+  if (c.disallowGenericProductAdvice) lines.push("disallowGenericProductAdvice: true");
+
+  const topProducts = Array.isArray(c.topProducts) ? c.topProducts : [];
+  const lowStockItems = Array.isArray(c.lowStockItems) ? c.lowStockItems : [];
+  const slowItems = Array.isArray(c.slowItems) ? c.slowItems : [];
+
+  if (topProducts.length) {
+    lines.push("TOP PRODUCTS (REAL DATA):");
+    for (const p of topProducts.slice(0, 8)) {
+      lines.push(
+        `- ${clean(p?.product_name) || "Unknown Product"} | sku=${clean(p?.sku) || "N/A"} | qty=${num(
+          p?.qty_sold
+        )} | sales=${num(p?.sales_amount)} | profit=${num(p?.profit_amount)}`
+      );
+    }
+  }
+
+  if (lowStockItems.length) {
+    lines.push("LOW STOCK ITEMS (REAL DATA):");
+    for (const p of lowStockItems.slice(0, 8)) {
+      lines.push(
+        `- ${clean(p?.product_name) || "Unknown Product"} | sku=${clean(p?.sku) || "N/A"} | stock=${num(
+          p?.stock_qty
+        )} | threshold=${num(p?.threshold_qty)} | status=${clean(p?.stock_status) || "LOW"}`
+      );
+    }
+  }
+
+  if (slowItems.length) {
+    lines.push("SLOW / DEAD STOCK ITEMS (REAL DATA):");
+    for (const p of slowItems.slice(0, 8)) {
+      lines.push(
+        `- ${clean(p?.product_name) || "Unknown Product"} | sku=${clean(p?.sku) || "N/A"} | stock=${num(
+          p?.stock_qty
+        )} | days_without_sale=${num(p?.days_without_sale)}`
+      );
+    }
+  }
+
+  const injectedBusinessContext = clean(c.injectedBusinessContext);
+  if (injectedBusinessContext) {
+    lines.push("INJECTED BUSINESS CONTEXT:");
+    lines.push(injectedBusinessContext);
+  }
+
+  const productIntelligenceBlock = clean(c.productIntelligenceBlock);
+  if (productIntelligenceBlock) {
+    lines.push("PRODUCT INTELLIGENCE BLOCK:");
+    lines.push(productIntelligenceBlock);
+  }
+
+  return lines;
+}
+
+function buildDataDrivenRules(ctx: ReqBody["context"]) {
+  const c: any = ctx ?? {};
+  const topProducts = Array.isArray(c.topProducts) ? c.topProducts : [];
+  const lowStockItems = Array.isArray(c.lowStockItems) ? c.lowStockItems : [];
+  const slowItems = Array.isArray(c.slowItems) ? c.slowItems : [];
+
+  const hasInjectedProducts = topProducts.length || lowStockItems.length || slowItems.length;
+
+  if (!hasInjectedProducts) return "";
+
+  return `
+DATA-DRIVEN PRODUCT RULES (CRITICAL):
+- You have REAL injected business product data from ZETRA BMS.
+- You MUST use the injected product names directly when answering.
+- You MUST NOT answer with generic examples or generic retail theory if injected data already exists.
+- If user asks:
+  - about low stock -> use LOW STOCK ITEMS first
+  - about slow/idle products -> use SLOW / DEAD STOCK ITEMS first
+  - about top/best products -> use TOP PRODUCTS first
+  - about profit leak -> connect answer to margin, COGS, expenses, and real products when available
+- If a requested category has no injected items, say clearly that category has no injected data instead of inventing.
+- Never say “I cannot see product-level data” when injected product data is present in context.
+`.trim();
+}
+
+function detectDirectProductQuestion(text: string) {
+  const t = clean(text).toLowerCase();
+
+  return {
+    asksLowStock: hasAnyPhrase(t, [
+      "low stock",
+      "ziko low",
+      "stock low",
+      "chini cha hisa",
+      "hisa ndogo",
+      "restock",
+      "hatari ya kuisha stock",
+      "inventory risk",
+      "bidhaa ziko low",
+      "bidhaa zipi ziko low",
+    ]),
+    asksSlowItems: hasAnyPhrase(t, [
+      "slow moving",
+      "slow items",
+      "dead stock",
+      "hazitembei",
+      "hazikauzwi",
+      "hazikauzwa",
+      "zinakaa muda mrefu",
+      "bila kuuzwa",
+      "slow moving products",
+      "idle products",
+    ]),
+    asksTopProducts: hasAnyPhrase(t, [
+      "top bidhaa",
+      "top products",
+      "best seller",
+      "best sellers",
+      "zinaouza zaidi",
+      "zinazouza zaidi",
+      "fast moving",
+      "top zinauza",
+    ]),
+    asksProfitLeak: hasAnyPhrase(t, [
+      "profit leak",
+      "leak ya profit",
+      "leak ya faida",
+      "faida inapotea wapi",
+      "profit wapi",
+      "nina leak ya profit",
+      "profit risk",
+    ]),
+    asksSteps: hasAnyPhrase(t, [
+      "hatua",
+      "steps",
+      "nifanye nini",
+      "what should i do",
+      "haraka",
+      "quick actions",
+    ]),
+  };
+}
+
+function formatInjectedProductLine(p: any, mode: "TOP" | "LOW" | "SLOW") {
+  const name = clean(p?.product_name) || "Unknown Product";
+  const sku = clean(p?.sku);
+  const stock = num(p?.stock_qty);
+  const qtySold = num(p?.qty_sold);
+  const salesAmount = num(p?.sales_amount);
+  const profitAmount = num(p?.profit_amount);
+  const threshold = num(p?.threshold_qty);
+  const days = num(p?.days_without_sale);
+  const status = clean(p?.stock_status) || "LOW";
+
+  if (mode === "TOP") {
+    return `• ${name}${sku ? ` (SKU: ${sku})` : ""} — qty sold: ${qtySold}, sales: ${fmtMoney(
+      salesAmount
+    )}, profit: ${fmtMoney(profitAmount)}`;
+  }
+
+  if (mode === "LOW") {
+    return `• ${name}${sku ? ` (SKU: ${sku})` : ""} — stock: ${stock}, threshold: ${threshold}, status: ${status}`;
+  }
+
+  return `• ${name}${sku ? ` (SKU: ${sku})` : ""} — stock: ${stock}, days_without_sale: ${days}`;
+}
+
+function buildFullCombinedDataReply(text: string, ctx: ReqBody["context"]) {
+  const c: any = ctx ?? {};
+
+  const topProducts = Array.isArray(c?.topProducts) ? c.topProducts : [];
+  const lowStockItems = Array.isArray(c?.lowStockItems) ? c.lowStockItems : [];
+  const slowItems = Array.isArray(c?.slowItems) ? c.slowItems : [];
+  const snapshot = c?.businessSnapshot ?? null;
+
+  const q = detectDirectProductQuestion(text);
+
+  const hasAnyInjected = topProducts.length || lowStockItems.length || slowItems.length;
+  if (!hasAnyInjected) return "";
+
+  const asksAnythingProduct =
+    q.asksLowStock || q.asksSlowItems || q.asksTopProducts || q.asksProfitLeak;
+
+  if (!asksAnythingProduct) return "";
+
+  const lines: string[] = [];
+
+  if (q.asksLowStock) {
+    lines.push("LOW STOCK ITEMS:");
+    if (lowStockItems.length) {
+      for (const p of lowStockItems.slice(0, 8)) {
+        lines.push(formatInjectedProductLine(p, "LOW"));
+      }
+    } else {
+      lines.push("• Hakuna low stock items zilizoinjectiwa kwa sasa.");
+    }
+    lines.push("");
+  }
+
+  if (q.asksSlowItems) {
+    lines.push("SLOW / DEAD STOCK ITEMS:");
+    if (slowItems.length) {
+      for (const p of slowItems.slice(0, 8)) {
+        lines.push(formatInjectedProductLine(p, "SLOW"));
+      }
+    } else {
+      lines.push("• Hakuna slow/dead stock items zilizoinjectiwa kwa sasa.");
+    }
+    lines.push("");
+  }
+
+  if (q.asksTopProducts) {
+    lines.push("TOP PRODUCTS:");
+    if (topProducts.length) {
+      for (const p of topProducts.slice(0, 8)) {
+        lines.push(formatInjectedProductLine(p, "TOP"));
+      }
+    } else {
+      lines.push("• Hakuna top products zilizoinjectiwa kwa sasa.");
+    }
+    lines.push("");
+  }
+
+  if (q.asksProfitLeak) {
+    const salesTotal = num(snapshot?.sales_total);
+    const cogsTotal = num(snapshot?.cogs_total);
+    const expensesTotal = num(snapshot?.expenses_total);
+    const profitTotal = num(snapshot?.profit_total);
+    const marginPct = num(snapshot?.margin_pct);
+
+    lines.push("PROFIT LEAK ANALYSIS:");
+    lines.push(`• Sales: ${fmtMoney(salesTotal)}`);
+    lines.push(`• COGS: ${fmtMoney(cogsTotal)}`);
+    lines.push(`• Expenses: ${fmtMoney(expensesTotal)}`);
+    lines.push(`• Profit: ${fmtMoney(profitTotal)}`);
+    lines.push(`• Margin: ${fmtPercent(marginPct)}`);
+
+    if (marginPct < 10) {
+      lines.push("• Leak kubwa iko kwenye margin kuwa ndogo sana.");
+    }
+
+    if (salesTotal > 0 && cogsTotal > salesTotal * 0.8) {
+      lines.push("• Leak kubwa iko kwenye COGS kuwa kubwa sana dhidi ya sales.");
+    }
+
+    if (salesTotal > 0 && expensesTotal > salesTotal * 0.2) {
+      lines.push("• Leak nyingine iko kwenye expenses kuwa nzito dhidi ya sales.");
+    }
+
+    if (topProducts.length) {
+      lines.push("");
+      lines.push("Bidhaa za kwanza kukaguliwa kwa pricing/cost:");
+      for (const p of topProducts.slice(0, 5)) {
+        lines.push(formatInjectedProductLine(p, "TOP"));
+      }
+    }
+
+    if (slowItems.length) {
+      lines.push("");
+      lines.push("Bidhaa zinazofunga cash bila movement:");
+      for (const p of slowItems.slice(0, 5)) {
+        lines.push(formatInjectedProductLine(p, "SLOW"));
+      }
+    }
+
+    lines.push("");
+  }
+
+  if (q.asksSteps || (q.asksTopProducts && q.asksSlowItems) || q.asksProfitLeak) {
+    lines.push("HATUA ZA HARAKA:");
+    lines.push("• Linda stock ya top products zisije kuisha.");
+    lines.push("• Punguza reorder ya slow/dead stock kwanza.");
+    lines.push("• Tumia bundle ya top product + slow item kusukuma movement.");
+    lines.push("• Kagua supplier cost ya top products kwanza.");
+    lines.push("• Rekebisha price/margin ya bidhaa zinazobeba mauzo lakini faida ndogo.");
+  }
+
+  return lines.join("\n").trim();
+}
+
+function buildDirectProductDataReply(text: string, ctx: ReqBody["context"]) {
+  const c: any = ctx ?? {};
+
+  const topProducts = Array.isArray(c?.topProducts) ? c.topProducts : [];
+  const lowStockItems = Array.isArray(c?.lowStockItems) ? c.lowStockItems : [];
+  const slowItems = Array.isArray(c?.slowItems) ? c.slowItems : [];
+  const snapshot = c?.businessSnapshot ?? null;
+
+  const q = detectDirectProductQuestion(text);
+
+  const hasAnyInjected = topProducts.length || lowStockItems.length || slowItems.length;
+  if (!hasAnyInjected) return "";
+
+  if (q.asksLowStock && !q.asksSlowItems && !q.asksTopProducts && !q.asksProfitLeak) {
+    if (!lowStockItems.length) {
+      return "Kwa data ya sasa iliyoinjectiwa kutoka ZETRA BMS, sijaona bidhaa zilizo kwenye LOW STOCK list kwa sasa.";
+    }
+
+    return [
+      "Hizi ndizo bidhaa zako ziko low stock kwa data halisi ya sasa:",
+      "",
+      ...lowStockItems.slice(0, 12).map((p: any) => formatInjectedProductLine(p, "LOW")),
+      "",
+      "Hatua ya haraka:",
+      "• Refill bidhaa zenye stock ndogo kuliko threshold kwanza",
+      "• Zenye status OUT ziwe priority ya kwanza kurestock",
+    ].join("\n");
+  }
+
+  if (q.asksSlowItems && !q.asksLowStock && !q.asksTopProducts && !q.asksProfitLeak) {
+    if (!slowItems.length) {
+      return "Kwa data ya sasa iliyoinjectiwa kutoka ZETRA BMS, sijaona bidhaa kwenye slow/dead stock list kwa sasa.";
+    }
+
+    return [
+      "Hizi ndizo bidhaa zako slow moving / dead stock kwa data halisi ya sasa:",
+      "",
+      ...slowItems.slice(0, 12).map((p: any) => formatInjectedProductLine(p, "SLOW")),
+      "",
+      "Hatua ya haraka:",
+      "• Punguza reorder ya bidhaa hizi kwanza",
+      "• Fikiria offer/bundle kwa bidhaa hizi ili zitembee",
+      "• Kagua kama pricing au display yake inahitaji kubadilishwa",
+    ].join("\n");
+  }
+
+  if (q.asksTopProducts && !q.asksSlowItems && !q.asksLowStock && !q.asksProfitLeak) {
+    if (!topProducts.length) {
+      return "Kwa data ya sasa iliyoinjectiwa kutoka ZETRA BMS, sijaona top products list yenye product-level details kwa sasa.";
+    }
+
+    return [
+      "Hizi ndizo top products zako kwa data halisi ya sasa:",
+      "",
+      ...topProducts.slice(0, 12).map((p: any) => formatInjectedProductLine(p, "TOP")),
+      "",
+      "Hatua ya haraka:",
+      "• Linda stock ya bidhaa hizi zisije kuisha",
+      "• Kagua margin ya bidhaa hizi kwa sababu ndizo zinabeba mauzo zaidi",
+      "• Tumia bidhaa hizi kama anchor ya bundles/offers",
+    ].join("\n");
+  }
+
+  if (q.asksTopProducts && q.asksSlowItems) {
+    const topLines = topProducts.length
+      ? topProducts.slice(0, 5).map((p: any) => formatInjectedProductLine(p, "TOP"))
+      : ["• Hakuna top products zilizoinjectiwa kwa sasa"];
+
+    const slowLines = slowItems.length
+      ? slowItems.slice(0, 5).map((p: any) => formatInjectedProductLine(p, "SLOW"))
+      : ["• Hakuna slow/dead stock items zilizoinjectiwa kwa sasa"];
+
+    const actions: string[] = [];
+    actions.push("1. Linda availability ya top products zako kwanza.");
+    actions.push("2. Usiongeze buying ya slow items mpaka zilizopo zipungue.");
+    actions.push("3. Tumia bundle: top product + slow item ili kusukuma slow stock.");
+    actions.push("4. Kagua pricing ya slow items kama bei imebana movement.");
+    actions.push("5. Toa display/promo ya haraka kwa slow items zenye stock kubwa.");
+
+    return [
+      "Hapa kuna mchanganuo wa real products zako za top vs slow moving:",
+      "",
+      "TOP PRODUCTS:",
+      ...topLines,
+      "",
+      "SLOW / DEAD STOCK:",
+      ...slowLines,
+      "",
+      "Hatua 5 za haraka:",
+      ...actions.map((x) => `• ${x}`),
+    ].join("\n");
+  }
+
+  if (q.asksProfitLeak) {
+    const salesTotal = num(snapshot?.sales_total);
+    const cogsTotal = num(snapshot?.cogs_total);
+    const expensesTotal = num(snapshot?.expenses_total);
+    const profitTotal = num(snapshot?.profit_total);
+    const marginPct = num(snapshot?.margin_pct);
+
+    const lines: string[] = [];
+    lines.push("Hapa kuna leak ya profit kwa kutumia data halisi ya sasa:");
+
+    if (marginPct < 10) {
+      lines.push(`• Margin iko chini: ${fmtPercent(marginPct)}`);
+    }
+
+    if (salesTotal > 0 && cogsTotal > salesTotal * 0.8) {
+      lines.push(`• COGS imebana sana faida: sales ${fmtMoney(salesTotal)} vs COGS ${fmtMoney(cogsTotal)}`);
+    }
+
+    if (salesTotal > 0 && expensesTotal > salesTotal * 0.2) {
+      lines.push(`• Expenses ni nzito dhidi ya sales: ${fmtMoney(expensesTotal)}`);
+    }
+
+    if (topProducts.length) {
+      lines.push("");
+      lines.push("Bidhaa za kwanza za kukaguliwa kwa pricing/cost:");
+      for (const p of topProducts.slice(0, 5)) {
+        lines.push(formatInjectedProductLine(p, "TOP"));
+      }
+    }
+
+    if (slowItems.length) {
+      lines.push("");
+      lines.push("Bidhaa zinazofunga cash bila movement:");
+      for (const p of slowItems.slice(0, 5)) {
+        lines.push(formatInjectedProductLine(p, "SLOW"));
+      }
+    }
+
+    if (lowStockItems.length) {
+      lines.push("");
+      lines.push("Bidhaa zenye risk ya stock interruption:");
+      for (const p of lowStockItems.slice(0, 5)) {
+        lines.push(formatInjectedProductLine(p, "LOW"));
+      }
+    }
+
+    lines.push("");
+    lines.push("Hatua ya haraka:");
+    lines.push("• Kagua supplier cost ya top products kwanza");
+    lines.push("• Rekebisha price/margin ya top movers kama margin ni ndogo");
+    lines.push("• Punguza buying ya slow items zinazokaa bila kuuzwa");
+    lines.push("• Restock low-stock winners ili usikate mauzo");
+
+    return lines.join("\n");
+  }
+
+  return "";
+}
+
+type SlashCommandKey = "/heal" | "/finance" | "/stock" | "/profit" | "/debug";
+
+function detectSlashCommand(raw: string): { command: SlashCommandKey | null; rest: string } {
+  const src = clean(raw);
+  if (!src.startsWith("/")) return { command: null, rest: src };
+
+  const m = src.match(/^\/([a-zA-Z]+)\s*(.*)$/);
+  const cmd = clean(m?.[1]).toLowerCase();
+  const rest = clean(m?.[2]);
+
+  if (cmd === "heal") return { command: "/heal", rest };
+  if (cmd === "finance") return { command: "/finance", rest };
+  if (cmd === "stock") return { command: "/stock", rest };
+  if (cmd === "profit") return { command: "/profit", rest };
+  if (cmd === "debug") return { command: "/debug", rest };
+
+  return { command: null, rest: src };
+}
+
+function roleHintFromSlashCommand(command: SlashCommandKey | null): AiRoleKey | null {
+  if (command === "/heal") return "HEALTH";
+  if (command === "/finance") return "FINANCE";
+  if (command === "/debug") return "ENGINEERING";
+  if (command === "/stock") return "ZETRA_BMS";
+  if (command === "/profit") return "ZETRA_BMS";
+  return null;
+}
+
+function normalizeCommandUserText(command: SlashCommandKey | null, rest: string) {
+  const body = clean(rest);
+
+  if (command === "/heal") {
+    return body || "Nahitaji msaada wa afya. Nipe mwongozo wa afya kwa lugha rahisi.";
+  }
+
+  if (command === "/finance") {
+    return body || "Nipe mwongozo wa kifedha kwa biashara yangu kwa lugha rahisi.";
+  }
+
+  if (command === "/debug") {
+    return body || "Nisaidie kufanya debugging ya tatizo la mfumo kwa hatua za kitaalamu.";
+  }
+
+  if (command === "/stock") {
+    return body || "Nipe uchambuzi wa stock, low stock, slow moving, na display risk.";
+  }
+
+  if (command === "/profit") {
+    return body || "Nipe uchambuzi wa profit leak, margin, expenses, na hatua za kuongeza profit.";
+  }
+
+  return body;
+}
+
+function buildSlashCommandSystemBlock(command: SlashCommandKey | null) {
+  if (command === "/heal") {
+    return `
+SLASH COMMAND MODE: /heal
+- Route this request as HEALTH mode directly.
+- Jibu kwa lugha rahisi, practical, na ya tahadhari.
+- General health information only.
+- Ukipewa dalili, eleza possible meaning, red flags, na hatua salama za kuchukua.
+`.trim();
+  }
+
+  if (command === "/finance") {
+    return `
+SLASH COMMAND MODE: /finance
+- Route this request as FINANCE mode directly.
+- Focus on cashflow, margins, pricing, budgeting, and business decisions.
+`.trim();
+  }
+
+  if (command === "/debug") {
+    return `
+SLASH COMMAND MODE: /debug
+- Route this request as ENGINEERING mode directly.
+- Focus on root cause, logs, exact failure path, and safe fixes.
+`.trim();
+  }
+
+  if (command === "/stock") {
+    return `
+SLASH COMMAND MODE: /stock
+- Route this request as ZETRA_BMS stock intelligence mode.
+- Focus on low stock, dead stock, display risk, restock urgency, and movement.
+`.trim();
+  }
+
+  if (command === "/profit") {
+    return `
+SLASH COMMAND MODE: /profit
+- Route this request as ZETRA_BMS profit intelligence mode.
+- Focus on margin, COGS, expenses, profit leaks, and corrective actions.
+`.trim();
+  }
+
+  return "";
+}
+
+function buildVisionPriorityRules(text: string, images: string[], ctx: ReqBody["context"]) {
+  if (!Array.isArray(images) || images.length === 0) return "";
+
+  const c: any = ctx ?? {};
+  const asksStockOrDisplay = hasAnyPhrase(text, [
+    "stock",
+    "display",
+    "risk",
+    "inventory",
+    "low stock",
+    "shelf",
+    "rack",
+    "bidhaa",
+    "akiba",
+    "restock",
+    "display risk",
+    "stock risk",
+  ]);
+
+  const hasInjectedProducts =
+    (Array.isArray(c?.topProducts) && c.topProducts.length > 0) ||
+    (Array.isArray(c?.lowStockItems) && c.lowStockItems.length > 0) ||
+    (Array.isArray(c?.slowItems) && c.slowItems.length > 0);
+
+  return `
+VISION PRIORITY RULES (CRITICAL):
+- An image is attached in this request.
+- The visible image is PRIMARY evidence.
+- First describe what is actually visible in the image.
+- Then answer the user's question using the image first.
+- Use injected business/product/store data only as secondary supporting context.
+- Never ignore the image and jump straight to generic business summary.
+${asksStockOrDisplay ? "- If user asks stock/display risk, inspect visible arrangement, emptiness, crowding, accessibility, shelf/display quality, and obvious stock signals from the image." : ""}
+${hasInjectedProducts ? "- If injected product/store data exists, use it only to cross-check or strengthen the image-based answer, not to replace the image analysis." : ""}
+- If the image is unclear, say exactly what is unclear, then give the best partial answer.
+`.trim();
+}
+
 function normalizeHistory(history?: ReqMsg[]) {
   const h = Array.isArray(history) ? history : [];
   const out: Array<{ role: "user" | "assistant"; content: string }> = [];
@@ -383,7 +963,15 @@ function countPhraseHits(text: string, phrases: string[]) {
 
 function detectBusinessAnalysisRequest(text: string, ctx: ReqBody["context"], history: Array<{ role: "user" | "assistant"; content: string }>) {
   const t = clean(text).toLowerCase();
-  const activeStoreId = clean((ctx as any)?.activeStoreId || (ctx as any)?.storeId);
+  const c: any = ctx ?? {};
+  const activeStoreId = clean(c?.activeStoreId || c?.storeId);
+
+  const hasInjectedProducts =
+    (Array.isArray(c?.topProducts) && c.topProducts.length > 0) ||
+    (Array.isArray(c?.lowStockItems) && c.lowStockItems.length > 0) ||
+    (Array.isArray(c?.slowItems) && c.slowItems.length > 0);
+
+  if (hasInjectedProducts) return true;
   if (!activeStoreId) return false;
 
   const directSignals = [
@@ -567,6 +1155,103 @@ function detectBusinessIntent(text: string): AnalysisIntent {
   if (wantsForecast) return "FORECAST";
   if (wantsCoach) return "COACH";
   return "ANALYSIS";
+}
+
+function detectSlashModeCommand(text: string) {
+  const t = clean(text).toLowerCase();
+
+  if (!t.startsWith("/")) return null;
+
+  if (t === "/heal" || t === "/health") return "HEALTH";
+  if (t === "/pro" || t === "/profit") return "PROFIT";
+  if (t === "/sto" || t === "/stock") return "STOCK";
+  if (t === "/for" || t === "/forecast") return "FORECAST";
+
+  return null;
+}
+
+function buildSlashModeReply(cmd: "HEALTH" | "PROFIT" | "STOCK" | "FORECAST", lang: "sw" | "en" | "auto") {
+  if (cmd === "HEALTH") {
+    if (lang === "en") {
+      return (
+        "Health mode is active.\n\n" +
+        "You can now ask directly about a health issue, for example:\n" +
+        "• I have a severe headache\n" +
+        "• My stomach hurts\n" +
+        "• I feel dizzy\n\n" +
+        "I will give general health information and safe next steps."
+      );
+    }
+
+    return (
+      "Health mode imewashwa.\n\n" +
+      "Sasa unaweza kuuliza moja kwa moja tatizo la afya, mfano:\n" +
+      "• Kichwa kinauma sana\n" +
+      "• Tumbo linauma\n" +
+      "• Nahisi kizunguzungu\n\n" +
+      "Nitakupa taarifa za afya za jumla na hatua salama za kuanza nazo."
+    );
+  }
+
+  if (cmd === "PROFIT") {
+    return lang === "en"
+      ? "Profit mode is active. Ask about profit leaks, margin, COGS, expenses, or what to do next."
+      : "Profit mode imewashwa. Uliza kuhusu profit leak, margin, COGS, expenses, au hatua za kuchukua sasa.";
+  }
+
+  if (cmd === "STOCK") {
+    return lang === "en"
+      ? "Stock mode is active. Ask about low stock, dead stock, restock priorities, or display risk."
+      : "Stock mode imewashwa. Uliza kuhusu low stock, dead stock, restock priority, au display risk.";
+  }
+
+  return lang === "en"
+    ? "Forecast mode is active. Ask about trend, next-day projection, or next 7 days outlook."
+    : "Forecast mode imewashwa. Uliza kuhusu trend, projection ya kesho, au outlook ya siku 7 zijazo.";
+}
+
+function buildVisionBusinessGuard(text: string) {
+  const t = clean(text).toLowerCase();
+
+  const asksStockDisplay =
+    hasAnyPhrase(t, [
+      "stock",
+      "display",
+      "display risk",
+      "stock risk",
+      "inventory risk",
+      "shelf",
+      "rack",
+      "restock",
+      "bidhaa",
+      "akiba",
+      "merchandising",
+      "shop display",
+      "store display",
+      "product display",
+      "niambie kuna risk gani ya stock au display",
+    ]) ||
+    (t.includes("stock") && t.includes("picha")) ||
+    (t.includes("display") && t.includes("picha"));
+
+  if (!asksStockDisplay) return "";
+
+  return `
+BUSINESS IMAGE GUARD (CRITICAL):
+- The user is asking about STOCK / DISPLAY / MERCHANDISING risk from the image.
+- First determine what is actually visible in the image.
+- If the image is NOT a store/shop/product/display scene:
+  - say that clearly first,
+  - do NOT switch into unrelated domains like mechanic safety, vehicle workshop safety, or generic workplace hazard analysis,
+  - do NOT invent stock/display conclusions from a non-store image.
+- If the image IS a store/product/display scene:
+  - focus on visible shelf gaps, empty facing, clutter, poor arrangement, weak visibility, overstock clutter, accessibility, display quality, and customer shopping flow.
+- Always answer in this order:
+  1. What the image actually shows
+  2. Whether it is valid for stock/display analysis
+  3. Business risks visible (only if relevant)
+  4. Short next actions
+`.trim();
 }
 
 function avg(nums: number[]) {
@@ -1023,14 +1708,17 @@ async function openaiChatCompletions(
 function buildMessages(
   sys: string,
   ctxLines: string[],
+  injectedLines: string[],
   history: Array<{ role: "user" | "assistant"; content: string }>,
   userText: string
 ) {
   const ctxBlock = ctxLines.length ? `Context:\n- ${ctxLines.join("\n- ")}` : "";
+  const injectedBlock = injectedLines.length ? injectedLines.join("\n") : "";
   const msgs: Array<{ role: "system" | "user" | "assistant"; content: any }> = [];
 
   msgs.push({ role: "system", content: sys });
   if (ctxBlock) msgs.push({ role: "system", content: ctxBlock });
+  if (injectedBlock) msgs.push({ role: "system", content: injectedBlock });
 
   for (const m of history) msgs.push({ role: m.role, content: m.content });
   msgs.push({ role: "user", content: userText });
@@ -1041,15 +1729,18 @@ function buildMessages(
 function buildVisionMessages(
   sys: string,
   ctxLines: string[],
+  injectedLines: string[],
   history: Array<{ role: "user" | "assistant"; content: string }>,
   userText: string,
   images: string[]
 ) {
   const ctxBlock = ctxLines.length ? `Context:\n- ${ctxLines.join("\n- ")}` : "";
+  const injectedBlock = injectedLines.length ? injectedLines.join("\n") : "";
   const msgs: Array<{ role: "system" | "user" | "assistant"; content: any }> = [];
 
   msgs.push({ role: "system", content: sys });
   if (ctxBlock) msgs.push({ role: "system", content: ctxBlock });
+  if (injectedBlock) msgs.push({ role: "system", content: injectedBlock });
 
   for (const m of history) {
     msgs.push({ role: m.role, content: m.content });
@@ -1265,12 +1956,15 @@ export default {
         return ownerOnlyError(origin);
       }
 
-      const text = clean(body?.text);
-      if (!text) {
+      const rawText = clean(body?.text);
+      if (!rawText) {
         return withCors(json({ ok: false, error: "Missing text" }, { status: 400 }), origin);
       }
 
-      const mode = body?.mode ?? "AUTO";
+      const slash = detectSlashCommand(rawText);
+      const text = normalizeCommandUserText(slash.command, slash.rest) || rawText;
+
+      const mode: "AUTO" | "SW" | "EN" = body?.mode ?? "AUTO";
       const lang = pickLang(mode);
 
       if (isClosingMessage(text)) {
@@ -1290,13 +1984,95 @@ export default {
         );
       }
 
+      const slashCmd = detectSlashModeCommand(text);
+      if (slashCmd) {
+        const reply = buildSlashModeReply(slashCmd, lang);
+
+        return withCors(
+          json({
+            ok: true,
+            reply,
+            meta: {
+              role:
+                slashCmd === "HEALTH"
+                  ? "HEALTH"
+                  : slashCmd === "PROFIT" || slashCmd === "STOCK" || slashCmd === "FORECAST"
+                  ? "ZETRA_BMS"
+                  : "GENERAL",
+              roleMeta: {
+                source: "slash_mode_command",
+                confidence: 1,
+                reason: `direct_${slashCmd.toLowerCase()}_mode`,
+              },
+              analysisIntent:
+                slashCmd === "FORECAST"
+                  ? "FORECAST"
+                  : slashCmd === "PROFIT"
+                  ? "COACH"
+                  : "ANALYSIS",
+              mode,
+              locale: body?.locale ?? null,
+              language: body?.language ?? null,
+            },
+          }),
+          origin
+        );
+      }
+
       const ctx = body?.context ?? {};
       const ctxLines = buildCtxLines(ctx);
+      const injectedLines = buildInjectedDataLines(ctx);
       const history = normalizeHistory(body?.history);
 
       const activeStoreId = clean((ctx as any)?.activeStoreId || (ctx as any)?.storeId);
       const activeStoreName = clean((ctx as any)?.activeStoreName || (ctx as any)?.storeName || "Store");
       const activeOrgName = clean((ctx as any)?.activeOrgName || (ctx as any)?.orgName || "Organization");
+
+      const combinedInjectedReply = buildFullCombinedDataReply(text, ctx);
+      if (combinedInjectedReply) {
+        return withCors(
+          json({
+            ok: true,
+            reply: combinedInjectedReply,
+            meta: {
+              role: "ZETRA_BMS",
+              roleMeta: {
+                source: "combined_injected_product_data",
+                confidence: 1,
+                reason: "multi_intent_real_product_data_answered_directly",
+              },
+              analysisIntent: detectBusinessIntent(text),
+              mode,
+              locale: body?.locale ?? null,
+              language: body?.language ?? null,
+            },
+          }),
+          origin
+        );
+      }
+
+      const directInjectedReply = buildDirectProductDataReply(text, ctx);
+      if (directInjectedReply) {
+        return withCors(
+          json({
+            ok: true,
+            reply: directInjectedReply,
+            meta: {
+              role: "ZETRA_BMS",
+              roleMeta: {
+                source: "direct_injected_product_data",
+                confidence: 1,
+                reason: "real_product_data_answered_directly",
+              },
+              analysisIntent: detectBusinessIntent(text),
+              mode,
+              locale: body?.locale ?? null,
+              language: body?.language ?? null,
+            },
+          }),
+          origin
+        );
+      }
 
       const wantsBusinessAnalysis = detectBusinessAnalysisRequest(text, ctx, history);
 
@@ -1443,12 +2219,39 @@ export default {
         );
       }
 
-      const rr = await resolveRole(env, text, ctx, ctxLines, history, body?.roleHint);
+      const commandRoleHint = roleHintFromSlashCommand(slash.command);
+      const rr = await resolveRole(env, text, ctx, ctxLines, history, commandRoleHint ?? body?.roleHint);
       const role = rr.role;
       const roleMeta = rr.roleMeta;
 
-      const sys = buildZetraInstructions(lang, role);
-      const messages = buildMessages(sys, ctxLines, history, text);
+      const appSystemPrompt = clean(body?.systemPrompt);
+      const slashSystemBlock = buildSlashCommandSystemBlock(slash.command);
+      const dataDrivenRules = buildDataDrivenRules(ctx);
+
+      const hasInjectedProducts =
+        (Array.isArray((ctx as any)?.topProducts) && (ctx as any).topProducts.length > 0) ||
+        (Array.isArray((ctx as any)?.lowStockItems) && (ctx as any).lowStockItems.length > 0) ||
+        (Array.isArray((ctx as any)?.slowItems) && (ctx as any).slowItems.length > 0);
+
+      const sys = [
+        buildZetraInstructions(lang, role),
+        slashSystemBlock,
+        appSystemPrompt,
+        dataDrivenRules,
+        hasInjectedProducts
+          ? `
+STRICT FALLBACK RULE:
+- Injected product data exists in this request.
+- Never say you cannot access product-level, inventory, stock, or sales detail directly.
+- Use injected data first.
+- If a category is empty, say that exact injected category is empty.
+`
+          : "",
+      ]
+        .filter(Boolean)
+        .join("\n\n");
+
+      const messages = buildMessages(sys, ctxLines, injectedLines, history, text);
 
       let out = await openaiChatCompletions(env, messages, 32_000);
       if (!out.ok && /timeout|aborted/i.test(out.error)) {
@@ -1501,9 +2304,11 @@ export default {
         return ownerOnlyError(origin);
       }
 
-      const message = clean(body?.message);
+      const rawMessage = clean(body?.message);
       const images = Array.isArray(body?.images) ? body.images.map((x) => clean(x)).filter(Boolean) : [];
       const meta = body?.meta ?? {};
+      const slash = detectSlashCommand(rawMessage);
+      const message = normalizeCommandUserText(slash.command, slash.rest) || rawMessage;
       const mode = meta?.mode ?? "AUTO";
       const lang = pickLang(mode);
 
@@ -1530,15 +2335,62 @@ export default {
 
       const ctx = meta?.context ?? {};
       const ctxLines = buildCtxLines(ctx);
+      const injectedLines = buildInjectedDataLines(ctx);
       const history = normalizeHistory(meta?.history);
 
-      const rr = await resolveRole(env, message || "(vision)", ctx, ctxLines, history, meta?.roleHint);
+      const commandRoleHint = roleHintFromSlashCommand(slash.command);
+      const rr = await resolveRole(
+        env,
+        message || rawMessage || "(vision)",
+        ctx,
+        ctxLines,
+        history,
+        commandRoleHint ?? meta?.roleHint
+      );
       const role = rr.role;
       const roleMeta = rr.roleMeta;
 
-      const sys = buildZetraInstructions(lang, role);
+      const appSystemPrompt = clean(meta?.systemPrompt);
+      const slashSystemBlock = buildSlashCommandSystemBlock(slash.command);
+      const dataDrivenRules = buildDataDrivenRules(ctx);
+      const visionPriorityRules = buildVisionPriorityRules(message, images, ctx);
+      const visionBusinessGuard = buildVisionBusinessGuard(message);
+
+      const hasInjectedProducts =
+        (Array.isArray((ctx as any)?.topProducts) && (ctx as any).topProducts.length > 0) ||
+        (Array.isArray((ctx as any)?.lowStockItems) && (ctx as any).lowStockItems.length > 0) ||
+        (Array.isArray((ctx as any)?.slowItems) && (ctx as any).slowItems.length > 0);
+
+      const sys = [
+        buildZetraInstructions(lang, role),
+        slashSystemBlock,
+        appSystemPrompt,
+        visionPriorityRules,
+        dataDrivenRules,
+        visionBusinessGuard,
+        hasInjectedProducts
+          ? `
+STRICT FALLBACK RULE:
+- Injected product data exists in this request.
+- Never say you cannot access product-level, inventory, stock, or sales detail directly.
+- Use injected data only AFTER checking the image first.
+- If a category is empty, say that exact injected category is empty.
+- Do not replace image analysis with generic stock summary.
+`
+          : "",
+      ]
+        .filter(Boolean)
+        .join("\n\n");
+
       const visionModel = clean(env.OPENAI_VISION_MODEL) || clean(env.OPENAI_MODEL) || "gpt-4o-mini";
-      const messages = buildVisionMessages(sys, ctxLines, history, message, images);
+      const messages = buildVisionMessages(
+        sys,
+        ctxLines,
+        injectedLines,
+        history,
+        message || rawMessage,
+        images
+      );
 
       const OPENAI_API_KEY = clean(env.OPENAI_API_KEY);
       if (!OPENAI_API_KEY) {
