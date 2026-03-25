@@ -201,6 +201,10 @@ function toInt(x: any) {
   return Math.trunc(n);
 }
 
+function subtractFloor(a: number, b: number) {
+  return Math.max(0, toNum(a) - toNum(b));
+}
+
 function normalizeBreak(obj: any): JsonBreak | null {
   if (!obj || typeof obj !== "object") return null;
   const out: JsonBreak = {};
@@ -1253,13 +1257,14 @@ function CompactFinanceCardHomePreview() {
     const avg =
       salesRow.orders > 0 ? fmtMoney(salesRow.total / Math.max(1, salesRow.orders)) : "—";
 
-    const paidTotalNum =
-      pay.cash -
-      expenseByChannel.cash +
-      (pay.bank - expenseByChannel.bank) +
-      (pay.mobile - expenseByChannel.mobile);
+    const availableCashNum = subtractFloor(pay.cash + collections.cash, expenseByChannel.cash);
+    const availableBankNum = subtractFloor(pay.bank + collections.bank, expenseByChannel.bank);
+    const availableMobileNum = subtractFloor(
+      pay.mobile + collections.mobile,
+      expenseByChannel.mobile
+    );
 
-    const totalMoneyInNum = paidTotalNum + toNum(collections.total);
+    const totalMoneyInNum = availableCashNum + availableBankNum + availableMobileNum;
     const totalMoneyIn = fmtMoney(totalMoneyInNum);
 
     return (

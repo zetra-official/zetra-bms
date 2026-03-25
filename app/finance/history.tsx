@@ -219,7 +219,9 @@ function ymdToISOFrom(s: string) {
 }
 
 function ymdToISOTo(s: string) {
-  return startOfLocalDay(addDays(ymdToDate(s), 1)).toISOString();
+  const d = ymdToDate(s);
+  const next = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1, 0, 0, 0, 0);
+  return next.toISOString();
 }
 
 function addDays(d: Date, n: number) {
@@ -2250,8 +2252,8 @@ export default function FinanceHistoryScreen() {
             tone: "danger",
             title: "Expenses ziko juu ukilinganisha na sales",
             body: `Expense ratio ya kipindi hiki ni ${ratio.toFixed(
-              1
-            )}%. Kagua matumizi makubwa kabla hayajaanza kula margin kwa nguvu.`,
+            1
+          )}%. Hii ni ratio ya biashara yote kwenye range hii, si bidhaa moja moja. Kagua matumizi makubwa kabla hayajabana margin ya jumla.`,
           });
         } else if (ratio >= 20) {
           items.push({

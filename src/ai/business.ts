@@ -336,7 +336,7 @@ function insightsProfitLoss(lang: DetectedLang, r: { sales: number; cost: number
   sw.push(
     "Uchunguzi wa haraka:",
     "• Kama margin ni ndogo: supplier cost juu, bei chini, au leakages (discount/stock loss).",
-    "• Kama hasara: angalia fixed costs (rent/mishahara), na bidhaa zinazokula margin."
+    "• Kama hasara: angalia fixed costs (rent/mishahara), COGS, na bidhaa zenye margin ndogo. Tathmini ni ya biashara kwa jumla, sio bidhaa moja pekee."
   );
   en.push(
     "Quick diagnosis:",

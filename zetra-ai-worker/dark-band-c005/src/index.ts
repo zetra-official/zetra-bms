@@ -519,7 +519,7 @@ function formatInjectedProductLine(p: any, mode: "TOP" | "LOW" | "SLOW") {
     return `• ${name}${sku ? ` (SKU: ${sku})` : ""} — stock: ${stock}, threshold: ${threshold}, status: ${status}`;
   }
 
-  return `• ${name}${sku ? ` (SKU: ${sku})` : ""} — stock: ${stock}, days_without_sale: ${days}`;
+  return `• ${name}${sku ? ` (SKU: ${sku})` : ""} — stock: ${stock}, no sale days: ${days}`;
 }
 
 function buildFullCombinedDataReply(text: string, ctx: ReqBody["context"]) {
@@ -593,15 +593,15 @@ function buildFullCombinedDataReply(text: string, ctx: ReqBody["context"]) {
     lines.push(`• Margin: ${fmtPercent(marginPct)}`);
 
     if (marginPct < 10) {
-      lines.push("• Leak kubwa iko kwenye margin kuwa ndogo sana.");
+      lines.push("• Leak kubwa iko kwenye margin ya jumla ya biashara kuwa ndogo sana.");
     }
 
     if (salesTotal > 0 && cogsTotal > salesTotal * 0.8) {
-      lines.push("• Leak kubwa iko kwenye COGS kuwa kubwa sana dhidi ya sales.");
+      lines.push("• Leak kubwa iko kwenye COGS ya biashara kuwa kubwa sana dhidi ya sales za kipindi hiki.");
     }
 
     if (salesTotal > 0 && expensesTotal > salesTotal * 0.2) {
-      lines.push("• Leak nyingine iko kwenye expenses kuwa nzito dhidi ya sales.");
+      lines.push("• Leak nyingine iko kwenye expenses za biashara kuwa nzito dhidi ya sales za kipindi hiki.");
     }
 
     if (topProducts.length) {
@@ -752,10 +752,11 @@ function buildDirectProductDataReply(text: string, ctx: ReqBody["context"]) {
 
     if (topProducts.length) {
       lines.push("");
-      lines.push("Bidhaa za kwanza za kukaguliwa kwa pricing/cost:");
+      lines.push("Bidhaa za kwanza za kukaguliwa kwa pricing/cost/margin:");
       for (const p of topProducts.slice(0, 5)) {
         lines.push(formatInjectedProductLine(p, "TOP"));
       }
+      lines.push("• Kumbuka: top product si leak moja kwa moja; leak inathibitishwa na margin/cost/expense pressure.");
     }
 
     if (slowItems.length) {
@@ -2158,10 +2159,10 @@ export default {
               : `Hapa kuna analysis ya biashara yako ya leo kwa store "${activeStoreName}" ndani ya "${activeOrgName}":\n\n`;
 
           const baseSummary =
-            `Sales: ${fmtMoney(snap.salesTotal)}\n` +
-            `COGS: ${fmtMoney(snap.cogsTotal)}\n` +
-            `Expenses: ${fmtMoney(snap.expensesTotal)}\n` +
-            `Profit: ${fmtMoney(snap.netProfit)}\n\n` +
+            `Sales (jumla ya kipindi): ${fmtMoney(snap.salesTotal)}\n` +
+            `COGS (jumla ya kipindi): ${fmtMoney(snap.cogsTotal)}\n` +
+            `Expenses (jumla ya kipindi): ${fmtMoney(snap.expensesTotal)}\n` +
+            `Profit (jumla ya kipindi): ${fmtMoney(snap.netProfit)}\n\n` +
             `🧾 Orders: ${snap.ordersCount.toLocaleString("en-US")}\n` +
             `🛒 Avg/Order: ${fmtMoney(snap.avgOrder)}\n` +
             `💵 Money In: ${fmtMoney(snap.moneyIn)}\n\n` +
