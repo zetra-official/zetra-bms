@@ -3634,7 +3634,25 @@ const callWorkerChat = useCallback(
       const productIntelligenceBlock = buildProductIntelligenceBlock(businessSnapshot);
       const tasksFollowupBlock = buildTasksFollowupContextBlock(tasksFollowupSummary);
 
-      const systemPrompt = [systemPromptBase, injectedBusinessContext, productIntelligenceBlock, tasksFollowupBlock]
+      const visionPriorityInstruction = images.length
+        ? [
+            "IMAGE FIRST RULES:",
+            "- User attached image(s).",
+            "- Visible image content is PRIMARY evidence.",
+            "- Analyze what is visible in the image first.",
+            "- Use business snapshot only as secondary supporting context.",
+            "- Do not replace image analysis with generic stock summary.",
+            "- If user asks stock/display risk from image, inspect visible arrangement, emptiness, display quality, accessibility, and obvious risk signals first.",
+          ].join("\n")
+        : "";
+
+      const systemPrompt = [
+        systemPromptBase,
+        injectedBusinessContext,
+        productIntelligenceBlock,
+        tasksFollowupBlock,
+        visionPriorityInstruction,
+      ]
         .filter(Boolean)
         .join("\n\n");
 
@@ -3666,7 +3684,9 @@ const callWorkerChat = useCallback(
         };
       }
 
-      if (businessSnapshot) {
+      const shouldBypassLocalDeterministicForVision = images.length > 0;
+
+      if (businessSnapshot && !shouldBypassLocalDeterministicForVision) {
         if (pureDecisionMode) {
           return {
             text: buildPureDecisionReply(businessSnapshot, text),
@@ -3734,9 +3754,8 @@ const callWorkerChat = useCallback(
                     }
                   : null,
               ].filter(Boolean),
-             actions: buildDeterministicActions(businessSnapshot, "PROFIT"),
+              actions: buildDeterministicActions(businessSnapshot, "PROFIT"),
               hideActionsBlock: true,
-            
             },
           };
         }
@@ -3763,7 +3782,7 @@ const callWorkerChat = useCallback(
                   : null,
               ].filter(Boolean),
               actions: buildDeterministicActions(businessSnapshot, "SALES"),
-            hideActionsBlock: true,
+              hideActionsBlock: true,
             },
           };
         }
@@ -3794,8 +3813,8 @@ const callWorkerChat = useCallback(
                     }
                   : null,
               ].filter(Boolean),
-            actions: buildDeterministicActions(businessSnapshot, "COACH"),
-            hideActionsBlock: true,
+              actions: buildDeterministicActions(businessSnapshot, "COACH"),
+              hideActionsBlock: true,
             },
           };
         }
@@ -3830,6 +3849,8 @@ const callWorkerChat = useCallback(
             forceUseRealBusinessData: true,
             forceUseRealProductNames: true,
             disallowGenericProductAdvice: true,
+            imageAnalysisPrimary: images.length > 0,
+            imageCount: images.length,
           },
         },
       };
