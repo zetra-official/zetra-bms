@@ -160,8 +160,8 @@ function endOfLocalDay(d: Date) {
 
 function rangeToFromTo(k: RangeKey) {
   const now = new Date();
-  const to = endOfLocalDay(now);
   const from = startOfLocalDay(now);
+  const to = startOfLocalDay(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1));
 
   if (k === "today") {
     // no change
@@ -1267,7 +1267,7 @@ function CompactFinanceCardHomePreview() {
         <View style={{ flexDirection: "row", gap: 12 }}>
           <MiniStat label="Sales" value={totalSales} hint="today" />
           <MiniStat label="Expenses" value={totalExpenses} hint="today" />
-          <MiniStat label="Profit" value={netProfit} hint={isOwner ? "today" : "owner-only"} />
+          <MiniStat label="Net Profit" value={netProfit} hint={isOwner ? "after expenses" : "owner-only"} />
         </View>
 
         <View style={{ flexDirection: "row", gap: 12 }}>
