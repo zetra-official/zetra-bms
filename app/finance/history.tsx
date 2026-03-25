@@ -219,7 +219,7 @@ function ymdToISOFrom(s: string) {
 }
 
 function ymdToISOTo(s: string) {
-  return endOfLocalDay(ymdToDate(s)).toISOString();
+  return startOfLocalDay(addDays(ymdToDate(s), 1)).toISOString();
 }
 
 function addDays(d: Date, n: number) {
@@ -2079,6 +2079,8 @@ export default function FinanceHistoryScreen() {
   const expAvg = expRow.count > 0 ? fmt(expRow.total / Math.max(1, expRow.count)) : "—";
 
   const pNet = fmt(profitRow.net);
+  const pGross =
+    profitRow.expenses == null ? "—" : fmt(toNum(profitRow.net) + toNum(profitRow.expenses));
   const pSales = profitRow.sales == null ? "—" : fmt(profitRow.sales);
   const pExp = profitRow.expenses == null ? "—" : fmt(profitRow.expenses);
 
@@ -2220,37 +2222,48 @@ export default function FinanceHistoryScreen() {
     }
 
     if (expRow.total > 0 && salesRow.total > 0) {
-      const ratio = (expRow.total / salesRow.total) * 100;
+        const ratio = (expRow.total / salesRow.total) * 100;
+        const grossBeforeExpenses =
+          isOwner && profitRow.expenses != null
+            ? toNum(profitRow.net) + toNum(profitRow.expenses)
+            : null;
 
-      if (isOwner && profitRow.net < 0 && expRow.total > Math.abs(profitRow.net)) {
-        items.push({
-          id: "expenses-eating-profit",
-          tone: "danger",
-          title: "Expenses zinakula profit kwa nguvu",
-          body: `Expenses za kipindi hiki ni ${fmt(expRow.total)} wakati net profit ni ${fmt(
-            profitRow.net
-          )}. Hii ni signal ya kubana matumizi na kuchambua expense kubwa moja moja.`,
-        });
-      } else if (ratio >= 35) {
-        items.push({
-          id: "expense-high",
-          tone: "danger",
-          title: "Expenses ziko juu ukilinganisha na sales",
-          body: `Expense ratio ya kipindi hiki ni ${ratio.toFixed(
-            1
-          )}%. Kagua matumizi makubwa kabla hayajaanza kula margin kwa nguvu.`,
-        });
-      } else if (ratio >= 20) {
-        items.push({
-          id: "expense-watch",
-          tone: "warn",
-          title: "Expenses zinahitaji uangalizi",
-          body: `Expense ratio ni ${ratio.toFixed(
-            1
-          )}%. Biashara bado iko sawa, lakini ni muda mzuri wa kubana maeneo yasiyo lazima.`,
-        });
+        if (
+          isOwner &&
+          grossBeforeExpenses != null &&
+          grossBeforeExpenses > 0 &&
+          expRow.total > grossBeforeExpenses
+        ) {
+          items.push({
+            id: "expenses-over-gross-profit",
+            tone: "danger",
+            title: "Expenses zimezidi gross profit",
+            body: `Gross profit kabla ya expenses ni ${fmt(
+              grossBeforeExpenses
+            )}, lakini expenses za kipindi hiki ni ${fmt(
+              expRow.total
+            )}. Hapa net profit itashuka kwa sababu matumizi yamezidi faida ya jumla kabla ya expenses.`,
+          });
+        } else if (ratio >= 35) {
+          items.push({
+            id: "expense-high",
+            tone: "danger",
+            title: "Expenses ziko juu ukilinganisha na sales",
+            body: `Expense ratio ya kipindi hiki ni ${ratio.toFixed(
+              1
+            )}%. Kagua matumizi makubwa kabla hayajaanza kula margin kwa nguvu.`,
+          });
+        } else if (ratio >= 20) {
+          items.push({
+            id: "expense-watch",
+            tone: "warn",
+            title: "Expenses zinahitaji uangalizi",
+            body: `Expense ratio ni ${ratio.toFixed(
+              1
+            )}%. Biashara bado iko sawa, lakini ni muda mzuri wa kubana maeneo yasiyo lazima.`,
+          });
+        }
       }
-    }
 
     if (stockIntelRows.length) {
       const fast = stockIntelRows.filter((x) => x.bucket === "FAST_MOVING");
@@ -2896,8 +2909,8 @@ export default function FinanceHistoryScreen() {
           ) : (
             <View style={{ gap: 12 }}>
               <View style={{ flexDirection: "row", gap: 12 }}>
-                <MiniStat label="Profit" value={pNet} hint="owner-only" />
-                <MiniStat label="Sales" value={pSales} />
+                <MiniStat label="Net Profit" value={pNet} hint="after expenses" />
+                <MiniStat label="Gross Profit" value={pGross} hint="before expenses" />
                 <MiniStat label="Expenses" value={pExp} />
               </View>
 
@@ -2938,6 +2951,10 @@ export default function FinanceHistoryScreen() {
                     }}
                   >
                     PRODUCT INTELLIGENCE
+                  </Text>
+
+                  <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                    Gross Profit hapa ni faida ya bidhaa kabla ya store-level expenses. Net Profit ya juu tayari huondoa expenses za siku/range yote.
                   </Text>
 
                   {productProfitRows.length ? (
@@ -2991,7 +3008,7 @@ export default function FinanceHistoryScreen() {
                             <MiniStat label="Revenue" value={fmt(row.revenue)} />
                             <MiniStat label="Cost" value={fmt(row.estimated_cost)} />
                             <MiniStat
-                              label="Margin"
+                              label="Gross Margin"
                               value={`${row.profit_margin_pct.toFixed(1)}%`}
                             />
                           </View>
@@ -3571,7 +3588,7 @@ export default function FinanceHistoryScreen() {
           onPress={() => {
             Alert.alert(
               "How it works",
-              "TOTAL RECEIPTS: Sales total (ina include Credit).\n\nPAYMENT BREAKDOWN: inaonyesha cash/mobile/bank zilizobaki baada ya kuondoa expenses za channel hiyo, pamoja na Credit (Balance) ambayo bado haijalipwa.\n\nEXPENSES BY PAYMENT CHANNEL: inaonyesha expense ilitoka wapi hasa (Cash / Mobile / Bank / Other).\n\nCREDIT COLLECTIONS: ni malipo ya madeni yaliyopokelewa ndani ya date range.\n\nTOTAL MONEY IN: (Sales PAID + Credit Collections) - Expenses za channel husika. Credit balance haijumuishwi.\n\nAI ACTIONABLE INSIGHTS: inaweka ushauri wa moja kwa moja kutoka kwenye Sales, Stock Intelligence, Product Profit, Store Comparison, Health Score, Forecast Engine, na Cashflow Prediction.\n\nAI FORECAST ENGINE: ina-project kipindi kijacho kwa kutumia trend ya date range uliyochagua, pamoja na stockout risk na urgent restock counts.\n\nAI CASHFLOW PREDICTION: inaonyesha projected cash-in, projected paid orders, avg cash/day, na confidence ya signal.\n\nSTOCK INTELLIGENCE: inaonyesha fast moving, slow moving, dead stock, na low stock kwa STORE au ALL scope.\n\nBUSINESS HEALTH SCORE: ni summary ya margin, expense ratio, na sales trend kwa kipindi ulichochagua."
+              "TOTAL RECEIPTS: Sales total (ina include Credit).\n\nPAYMENT BREAKDOWN: inaonyesha cash/mobile/bank zilizobaki baada ya kuondoa expenses za channel hiyo, pamoja na Credit (Balance) ambayo bado haijalipwa.\n\nEXPENSES BY PAYMENT CHANNEL: inaonyesha expense ilitoka wapi hasa (Cash / Mobile / Bank / Other).\n\nCREDIT COLLECTIONS: ni malipo ya madeni yaliyopokelewa ndani ya date range.\n\nTOTAL MONEY IN: (Sales PAID + Credit Collections) - Expenses za channel husika. Credit balance haijumuishwi.\n\nGROSS PROFIT: faida kabla ya kuondoa store-level expenses.\n\nNET PROFIT: faida baada ya kuondoa COGS na expenses zote za kipindi.\n\nPRODUCT INTELLIGENCE: inaonyesha gross profit ya bidhaa moja moja; haiigawi store-level expenses kwa bidhaa moja moja.\n\nAI ACTIONABLE INSIGHTS: inaweka ushauri wa moja kwa moja kutoka kwenye Sales, Stock Intelligence, Product Profit, Store Comparison, Health Score, Forecast Engine, na Cashflow Prediction.\n\nAI FORECAST ENGINE: ina-project kipindi kijacho kwa kutumia trend ya date range uliyochagua, pamoja na stockout risk na urgent restock counts.\n\nAI CASHFLOW PREDICTION: inaonyesha projected cash-in, projected paid orders, avg cash/day, na confidence ya signal.\n\nSTOCK INTELLIGENCE: inaonyesha fast moving, slow moving, dead stock, na low stock kwa STORE au ALL scope.\n\nBUSINESS HEALTH SCORE: ni summary ya margin, expense ratio, na sales trend kwa kipindi ulichochagua."
             );
           }}
           style={({ pressed }) => ({ opacity: pressed ? 0.92 : 1, alignSelf: "flex-start" })}
