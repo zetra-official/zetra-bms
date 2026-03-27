@@ -308,7 +308,7 @@ export default function ClubOrdersListScreen() {
 
           {!!err && (
             <Card style={{ padding: 12, borderColor: theme.colors.dangerBorder, backgroundColor: theme.colors.dangerSoft }}>
-              <Text style={{ color: theme.colors.dangerText, fontWeight: "900" }}>{err}</Text>
+              <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{err}</Text>
             </Card>
           )}
         </Card>
