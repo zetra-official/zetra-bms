@@ -321,7 +321,7 @@ export default function ClubFeedScreen() {
   const [cursor, setCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
 
-  const [rpcUsed, setRpcUsed] = useState<string | null>(null);
+
 
   // saved state map (fast UI)
   const [savedMap, setSavedMap] = useState<Record<string, boolean>>({});
@@ -448,7 +448,6 @@ export default function ClubFeedScreen() {
     for (const fn of FEED_RPC_CANDIDATES) {
       const { data, error } = await supabase.rpc(fn as any, args);
       if (!error) {
-        setRpcUsed(String(fn));
         return { data: (data ?? []) as FeedPost[] };
       }
 
@@ -908,11 +907,7 @@ export default function ClubFeedScreen() {
               </Text>
             ) : null}
 
-            {!!rpcUsed ? (
-              <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 10, marginTop: 4 }}>
-                feed: {rpcUsed}
-              </Text>
-            ) : null}
+            
           </View>
 
           <View style={{ flexDirection: "row", alignItems: "center" }}>
@@ -929,7 +924,7 @@ export default function ClubFeedScreen() {
     openCreate,
     openProfile,
     openSaved,
-    rpcUsed,
+    
     topPad,
     usage,
     usageErr,

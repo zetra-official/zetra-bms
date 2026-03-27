@@ -39,6 +39,7 @@ type Props = {
   scroll?: boolean;
   style?: StyleProp<ViewStyle>;
   contentStyle?: StyleProp<ViewStyle>;
+  refreshControl?: React.ReactElement | null;
 };
 
 export function Screen({
@@ -47,6 +48,7 @@ export function Screen({
   scroll = false,
   style,
   contentStyle,
+  refreshControl,
 }: Props) {
   const insets = useSafeAreaInsets();
   const baseBg = theme.colors?.background ?? "#0B0F14";
@@ -225,6 +227,7 @@ export function Screen({
             },
             contentStyle,
           ]}
+          refreshControl={refreshControl as any}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "none"}
           showsVerticalScrollIndicator={false}

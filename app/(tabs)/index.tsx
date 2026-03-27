@@ -6,7 +6,6 @@ import {
   AppState,
   Pressable,
   RefreshControl,
-  ScrollView,
   Text,
   View,
 } from "react-native";
@@ -1914,7 +1913,9 @@ function CashierQuickHome() {
 
   return (
     <Card style={{ gap: 12, marginTop: 14 }}>
-      <Text style={{ color: UI.muted, fontWeight: "800" }}>Cashier Workspace</Text>
+      <Text style={{ color: UI.muted, fontWeight: "800" }}>
+        Cashier Workspace (depends on active org/workspace)
+      </Text>
 
       <Text style={{ color: UI.faint, fontWeight: "800" }}>
         Organization: <Text style={{ color: UI.text, fontWeight: "900" }}>{activeOrgName ?? "—"}</Text>
@@ -2141,7 +2142,7 @@ function WorkspaceCard({
           })}
         >
           <Ionicons name="swap-horizontal" size={18} color={UI.text} />
-          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>Switch Workspace</Text>
+          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>Switch Org / Workspace</Text>
         </Pressable>
       </Card>
     </View>
@@ -2183,70 +2184,64 @@ export default function HomeScreen() {
     }
   }, [refresh]);
 
-  const isCashier = activeRole === "cashier";
+  const isCashier = String(activeRole ?? "").trim().toLowerCase() === "cashier";
 
   return (
-    <Screen>
-      <ScrollView
-        style={{ flex: 1 }}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        refreshControl={
-          <RefreshControl
-            refreshing={pulling || refreshing}
-            onRefresh={onPullRefresh}
-            tintColor={UI.text}
-          />
-        }
-        contentContainerStyle={{
-          paddingTop: topPad,
-          paddingHorizontal: 16,
-          paddingBottom: bottomPad,
-        }}
-      >
-        <HeaderHero
-          activeOrgName={activeOrgName}
-          activeStoreName={activeStoreName}
-          isCashier={isCashier}
+    <Screen
+      scroll
+      refreshControl={
+        <RefreshControl
+          refreshing={pulling || refreshing}
+          onRefresh={onPullRefresh}
+          tintColor={UI.text}
         />
+      }
+      contentStyle={{
+        paddingTop: topPad,
+        paddingHorizontal: 16,
+        paddingBottom: bottomPad,
+      }}
+    >
+      <HeaderHero
+        activeOrgName={activeOrgName}
+        activeStoreName={activeStoreName}
+        isCashier={isCashier}
+      />
 
-        {!isCashier ? <ZetraAiCard onOpen={goAI} /> : null}
-        {!isCashier ? <CompactNotificationsHomeCard /> : null}
+      {!isCashier ? <ZetraAiCard onOpen={goAI} /> : null}
+      {!isCashier ? <CompactNotificationsHomeCard /> : null}
 
-        {!!error && (
-          <Card
-            style={{
-              borderColor: "rgba(201,74,74,0.35)",
-              backgroundColor: "rgba(201,74,74,0.10)",
-              borderRadius: 18,
-              padding: 12,
-              marginTop: 14,
-            }}
-          >
-            <Text style={{ color: UI.danger, fontWeight: "900" }}>{error}</Text>
-          </Card>
-        )}
+      {!!error && (
+        <Card
+          style={{
+            borderColor: "rgba(201,74,74,0.35)",
+            backgroundColor: "rgba(201,74,74,0.10)",
+            borderRadius: 18,
+            padding: 12,
+            marginTop: 14,
+          }}
+        >
+          <Text style={{ color: UI.danger, fontWeight: "900" }}>{error}</Text>
+        </Card>
+      )}
 
-        {!isCashier ? (
-          <WorkspaceCard
-            activeOrgName={activeOrgName}
-            activeRole={activeRole}
-            activeStoreName={activeStoreName}
-            activeStoreId={activeStoreId}
-            onOpen={goOrgSwitcher}
-          />
-        ) : null}
+      <WorkspaceCard
+        activeOrgName={activeOrgName}
+        activeRole={activeRole}
+        activeStoreName={activeStoreName}
+        activeStoreId={activeStoreId}
+        onOpen={goOrgSwitcher}
+      />
 
-        {isCashier ? (
-          <CashierQuickHome />
-        ) : (
-          <StoreGuard>
-            <CompactFinanceCardHomePreview />
-            <CompactStockValueCardHomePreview />
-            <CompactClubRevenueCardHomePreview key={`club-mini-${dashTick}`} onOpen={goClubRevenue} />
-          </StoreGuard>
-        )}
-      </ScrollView>
+      {isCashier ? (
+        <CashierQuickHome />
+      ) : (
+        <StoreGuard>
+          <CompactFinanceCardHomePreview />
+          <CompactStockValueCardHomePreview />
+          <CompactClubRevenueCardHomePreview key={`club-mini-${dashTick}`} onOpen={goClubRevenue} />
+        </StoreGuard>
+      )}
     </Screen>
   );
 }

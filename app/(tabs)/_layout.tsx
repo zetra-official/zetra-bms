@@ -14,7 +14,7 @@ export default function TabsLayout() {
   const insets = useSafeAreaInsets();
   const { activeRole } = useOrg();
 
-  const isCashier = activeRole === "cashier";
+  const isCashier = String(activeRole ?? "").trim().toLowerCase() === "cashier";
 
   return (
     <Tabs
@@ -50,7 +50,7 @@ export default function TabsLayout() {
         name="stores"
         options={{
           title: "Stores",
-          href: isCashier ? null : undefined,
+          tabBarItemStyle: isCashier ? { display: "none" } : undefined,
           tabBarLabel: ({ color }) => <TabLabel text="Stores" color={color} />,
           tabBarIcon: ({ size, color }) => (
             <Ionicons name="storefront-outline" size={size} color={color} />
@@ -62,7 +62,7 @@ export default function TabsLayout() {
         name="products"
         options={{
           title: "Products",
-          href: isCashier ? null : undefined,
+          tabBarItemStyle: isCashier ? { display: "none" } : undefined,
           tabBarLabel: ({ color }) => <TabLabel text="Products" color={color} />,
           tabBarIcon: ({ size, color }) => (
             <Ionicons name="pricetags-outline" size={size} color={color} />
@@ -85,7 +85,7 @@ export default function TabsLayout() {
         name="credit"
         options={{
           title: "Credit",
-          href: isCashier ? null : undefined,
+          tabBarItemStyle: isCashier ? { display: "none" } : undefined,
           tabBarLabel: ({ color }) => <TabLabel text="Credit" color={color} />,
           tabBarIcon: ({ size, color }) => (
             <Ionicons name="card-outline" size={size} color={color} />
@@ -97,7 +97,7 @@ export default function TabsLayout() {
         name="club"
         options={{
           title: "Club",
-          href: isCashier ? null : undefined,
+          tabBarItemStyle: isCashier ? { display: "none" } : undefined,
           tabBarLabel: ({ color }) => <TabLabel text="Club" color={color} />,
           tabBarIcon: ({ size, color }) => (
             <Ionicons name="people-circle-outline" size={size} color={color} />
