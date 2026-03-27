@@ -657,6 +657,8 @@ async function createTasksFromAiActions(args: {
 
 function detectImageIntent(rawText: string): { isImage: boolean; prompt: string } {
   const t = clean(rawText);
+  const loose = normalizeLooseText(rawText);
+
   if (!t) return { isImage: false, prompt: "" };
 
   const patterns: Array<{ re: RegExp; strip: (m: RegExpMatchArray) => string }> = [
@@ -666,15 +668,34 @@ function detectImageIntent(rawText: string): { isImage: boolean; prompt: string 
     { re: /^\s*generate\s+image\s*:\s*(.+)$/i, strip: (m) => clean(m[1]) },
     { re: /^\s*image\s*:\s*(.+)$/i, strip: (m) => clean(m[1]) },
     { re: /^\s*draw\s*:\s*(.+)$/i, strip: (m) => clean(m[1]) },
+    { re: /^\s*tengeneza\s+picha\s*:\s*(.+)$/i, strip: (m) => clean(m[1]) },
+    { re: /^\s*chora\s*:\s*(.+)$/i, strip: (m) => clean(m[1]) },
   ];
 
   for (const p of patterns) {
     const m = t.match(p.re);
     if (m) {
       const prompt = p.strip(m);
-      if (prompt) return { isImage: true, prompt };
-      return { isImage: true, prompt: t };
+      return { isImage: true, prompt: prompt || t };
     }
+  }
+
+  const looksLikeImageCommand =
+    hasLooseKeyword(loose, [
+      "create image",
+      "generate image",
+      "draw image",
+      "tengeneza picha",
+      "chora picha",
+      "create an image",
+    ]) ||
+    (
+      hasLooseKeyword(loose, ["image", "picha"]) &&
+      looksLikeAskIntent(loose)
+    );
+
+  if (looksLikeImageCommand) {
+    return { isImage: true, prompt: t };
   }
 
   return { isImage: false, prompt: "" };
@@ -736,13 +757,60 @@ function safeArray<T = any>(v: any): T[] {
   return Array.isArray(v) ? v : [];
 }
 
+async function waitForActiveSession(timeoutMs = 4000, stepMs = 250) {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    try {
+      const { data, error } = await supabase.auth.getSession();
+      if (!error && data?.session?.access_token) {
+        return {
+          ok: true,
+          session: data.session,
+          error: "",
+        };
+      }
+    } catch {}
+
+    await sleep(stepMs);
+  }
+
+  return {
+    ok: false,
+    session: null,
+    error: "Not authenticated",
+  };
+}
+
 async function safeRpcOne(name: string, args: Record<string, any>) {
   try {
+    const auth = await waitForActiveSession();
+
+    if (!auth.ok) {
+      return {
+        ok: false,
+        data: null,
+        error: auth.error || "Not authenticated",
+      };
+    }
+
     const { data, error } = await supabase.rpc(name, args);
-    if (error) return { ok: false, data: null, error: error.message };
+
+    if (error) {
+      return {
+        ok: false,
+        data: null,
+        error: clean(error.message) || `${name} failed`,
+      };
+    }
+
     return { ok: true, data, error: "" };
   } catch (e: any) {
-    return { ok: false, data: null, error: clean(e?.message) || `${name} failed` };
+    return {
+      ok: false,
+      data: null,
+      error: clean(e?.message) || `${name} failed`,
+    };
   }
 }
 function firstNumFromRow(row: any, keys: string[]) {
@@ -765,69 +833,209 @@ function sumRowsByKeys(rows: any[], keys: string[]) {
   return safeArray<any>(rows).reduce((acc, row) => acc + firstNumFromRow(row, keys), 0);
 }
 
-function detectBusinessIntent(rawText: string): "SALES" | "PROFIT" | "INVENTORY" | "PRODUCT" | "GENERAL" {
-  const t = clean(rawText).toLowerCase();
+function normalizeLooseText(raw: any) {
+  return clean(raw)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
+function squashLooseText(raw: any) {
+  return normalizeLooseText(raw).replace(/\s+/g, "");
+}
+
+function levenshteinDistance(a: string, b: string, maxLimit = 2) {
+  const x = clean(a);
+  const y = clean(b);
+
+  if (x === y) return 0;
+  if (!x.length) return y.length;
+  if (!y.length) return x.length;
+  if (Math.abs(x.length - y.length) > maxLimit) return maxLimit + 1;
+
+  const dp = Array.from({ length: x.length + 1 }, () => new Array(y.length + 1).fill(0));
+
+  for (let i = 0; i <= x.length; i++) dp[i][0] = i;
+  for (let j = 0; j <= y.length; j++) dp[0][j] = j;
+
+  for (let i = 1; i <= x.length; i++) {
+    let rowMin = Number.MAX_SAFE_INTEGER;
+
+    for (let j = 1; j <= y.length; j++) {
+      const cost = x[i - 1] === y[j - 1] ? 0 : 1;
+      dp[i][j] = Math.min(
+        dp[i - 1][j] + 1,
+        dp[i][j - 1] + 1,
+        dp[i - 1][j - 1] + cost
+      );
+      rowMin = Math.min(rowMin, dp[i][j]);
+    }
+
+    if (rowMin > maxLimit) return maxLimit + 1;
+  }
+
+  return dp[x.length][y.length];
+}
+
+function fuzzyWordMatch(word: string, target: string) {
+  const a = normalizeLooseText(word);
+  const b = normalizeLooseText(target);
+
+  if (!a || !b) return false;
+  if (a === b) return true;
+  if (a.includes(b) || b.includes(a)) return true;
+
+  const max =
+    b.length >= 8 ? 2 :
+    b.length >= 5 ? 1 :
+    0;
+
+  if (max === 0) return false;
+  return levenshteinDistance(a, b, max) <= max;
+}
+
+function hasLooseKeyword(rawText: string, keywords: string[]) {
+  const normalized = normalizeLooseText(rawText);
+  const squashed = squashLooseText(rawText);
+  const tokens = normalized.split(" ").filter(Boolean);
+
+  for (const key of keywords) {
+    const k = normalizeLooseText(key);
+    const ks = squashLooseText(key);
+
+    if (!k) continue;
+    if (normalized.includes(k)) return true;
+    if (ks && squashed.includes(ks)) return true;
+
+    const keyTokens = k.split(" ").filter(Boolean);
+
+    if (keyTokens.length === 1) {
+      if (tokens.some((t) => fuzzyWordMatch(t, keyTokens[0]))) return true;
+    } else {
+      for (let i = 0; i <= tokens.length - keyTokens.length; i++) {
+        let ok = true;
+        for (let j = 0; j < keyTokens.length; j++) {
+          if (!fuzzyWordMatch(tokens[i + j], keyTokens[j])) {
+            ok = false;
+            break;
+          }
+        }
+        if (ok) return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+function hasLooseAll(rawText: string, keywords: string[]) {
+  return keywords.every((k) => hasLooseKeyword(rawText, [k]));
+}
+
+function looksLikeAskIntent(rawText: string) {
+  return hasLooseKeyword(rawText, [
+    "nipe",
+    "nipa",
+    "naomba",
+    "niandikie",
+    "nifanyie",
+    "onyesha",
+    "leta",
+    "toa",
+    "give me",
+    "show me",
+    "tell me",
+    "nataka",
+    "ninataka",
+    "nitaka",
+    "ninatak",
+    "ntaka",
+  ]);
+}
+
+function detectBusinessIntent(rawText: string): "SALES" | "PROFIT" | "INVENTORY" | "PRODUCT" | "GENERAL" {
+  const t = normalizeLooseText(rawText);
   if (!t) return "GENERAL";
 
   if (
-    t.includes("profit") ||
-    t.includes("faida") ||
-    t.includes("margin") ||
-    t.includes("leak") ||
-    t.includes("loss") ||
-    t.includes("hasara") ||
-    t.includes("cogs") ||
-    t.includes("expense") ||
-    t.includes("expenses") ||
-    t.includes("gharama")
+    hasLooseKeyword(t, [
+      "profit",
+      "faida",
+      "margin",
+      "leak",
+      "loss",
+      "hasara",
+      "cogs",
+      "expense",
+      "expenses",
+      "gharama",
+      "net profit",
+      "faida halisi",
+      "profit leak",
+      "leak ya profit",
+      "leak ya faida",
+      "expense haitoki",
+      "gharama haitoki",
+      "faida inapotea",
+      "kwa nini profit",
+      "kwa nini faida",
+    ])
   ) {
     return "PROFIT";
   }
 
   if (
-    t.includes("low stock") ||
-    t.includes("stock out") ||
-    t.includes("out of stock") ||
-    t.includes("inventory") ||
-    t.includes("stock") ||
-    t.includes("restock") ||
-    t.includes("sku") ||
-    t.includes("hisa") ||
-    t.includes("imeisha stock") ||
-    t.includes("karibia kuisha") ||
-    t.includes("kuisha stock")
+    hasLooseKeyword(t, [
+      "low stock",
+      "stock out",
+      "out of stock",
+      "inventory",
+      "stock",
+      "restock",
+      "sku",
+      "hisa",
+      "imeisha stock",
+      "karibia kuisha",
+      "kuisha stock",
+    ])
   ) {
     return "INVENTORY";
   }
 
   if (
-    t.includes("top product") ||
-    t.includes("top bidhaa") ||
-    t.includes("best seller") ||
-    t.includes("best sellers") ||
-    t.includes("fast moving") ||
-    t.includes("slow moving") ||
-    t.includes("dead stock") ||
-    t.includes("hazitembei") ||
-    t.includes("hazikauzwi") ||
-    t.includes("zinaouza zaidi") ||
-    t.includes("zinazouza zaidi") ||
-    t.includes("bidhaa")
+    hasLooseKeyword(t, [
+      "top product",
+      "top bidhaa",
+      "best seller",
+      "best sellers",
+      "fast moving",
+      "slow moving",
+      "dead stock",
+      "hazitembei",
+      "hazikauzwi",
+      "zinaouza zaidi",
+      "zinazouza zaidi",
+      "bidhaa",
+    ])
   ) {
     return "PRODUCT";
   }
 
   if (
-    t.includes("sales") ||
-    t.includes("mauzo") ||
-    t.includes("orders") ||
-    t.includes("order") ||
-    t.includes("revenue") ||
-    t.includes("money in") ||
-    t.includes("forecast") ||
-    t.includes("utabiri") ||
-    t.includes("cashflow")
+    hasLooseKeyword(t, [
+      "sales",
+      "mauzo",
+      "orders",
+      "order",
+      "revenue",
+      "money in",
+      "forecast",
+      "utabiri",
+      "cashflow",
+    ])
   ) {
     return "SALES";
   }
@@ -835,30 +1043,188 @@ function detectBusinessIntent(rawText: string): "SALES" | "PROFIT" | "INVENTORY"
   return "GENERAL";
 }
 
-function detectPureDecisionMode(rawText: string) {
-  const t = clean(rawText).toLowerCase();
+function detectAnalysisFollowupIntent(rawText: string) {
+  const t = normalizeLooseText(rawText);
   if (!t) return false;
 
-  return (
-    t.includes("pure decision") ||
-    t.includes("direct decision") ||
-    t.includes("decision mode") ||
-    t.includes("ranking") ||
-    t.includes("rank") ||
-    t.includes("top 3") ||
-    t.includes("3 za kwanza") ||
-    t.includes("3 za juu") ||
-    t.includes("nipa 3") ||
-    t.includes("tatu za kwanza") ||
-    t.includes("usielezee") ||
-    t.includes("usi elezee") ||
-    t.includes("usi-nielezee") ||
-    t.includes("bila explanation") ||
-    t.includes("no explanation") ||
-    t.includes("not explanation") ||
-    t.includes("action ya kila")
-  );
+  const asksAnalysis =
+    hasLooseKeyword(t, [
+      "analysis",
+      "analysis ya",
+      "business analysis",
+      "uchambuzi",
+      "uchambuzi wa biashara",
+      "analysis nzuri",
+      "good analysis",
+      "nice analysis",
+    ]) &&
+    (
+      looksLikeAskIntent(t) ||
+      hasLooseKeyword(t, [
+        "analysis",
+        "business analysis",
+        "uchambuzi mzuri",
+        "analysis nzuri",
+        "good analysis",
+        "nice analysis",
+      ])
+    );
+
+  const asksContinuation = hasLooseKeyword(t, [
+    "endelea",
+    "endelea hapo",
+    "sawa",
+    "ok",
+    "okay",
+    "poa",
+    "good",
+    "vizuri",
+    "nimeelewa",
+    "sasa je",
+    "then what",
+    "what next",
+    "next",
+    "next step",
+    "nifanye nini sasa",
+    "what should i do now",
+    "kwa hiyo nifanye nini",
+    "based on that",
+    "kutokana na hayo",
+    "hapo sasa",
+    "na sasa",
+    "basi nifanye nini",
+  ]);
+
+  return asksAnalysis || asksContinuation;
 }
+
+
+function detectPureDecisionMode(rawText: string) {
+  const t = normalizeLooseText(rawText);
+  if (!t) return false;
+
+  return hasLooseKeyword(t, [
+    "pure decision",
+    "direct decision",
+    "decision mode",
+    "ranking",
+    "rank",
+    "top 3",
+    "3 za kwanza",
+    "3 za juu",
+    "nipa 3",
+    "nipe 3",
+    "tatu za kwanza",
+    "usielezee",
+    "usi elezee",
+    "usi nielezee",
+    "bila explanation",
+    "no explanation",
+    "not explanation",
+    "action ya kila",
+  ]);
+}
+
+function extractLooseNumericTokens(rawText: string): number[] {
+  const tokens = clean(rawText).match(/[-+]?\d[\d, _]*(?:\.\d+)?\s*[km]?/gi) ?? [];
+  const out: number[] = [];
+
+  for (const t of tokens) {
+    const raw = clean(t).toLowerCase();
+    if (!raw) continue;
+
+    let mul = 1;
+    if (raw.endsWith("k")) mul = 1_000;
+    if (raw.endsWith("m")) mul = 1_000_000;
+
+    const normalized = raw.replace(/[km]$/i, "").replace(/[, _]/g, "");
+    const n = Number(normalized);
+
+    if (!Number.isFinite(n)) continue;
+    out.push(n * mul);
+
+    if (out.length >= 8) break;
+  }
+
+  return out;
+}
+
+function detectBusinessCalcBypass(rawText: string) {
+  const t = normalizeLooseText(rawText);
+  if (!t) return false;
+
+  const nums = extractLooseNumericTokens(rawText);
+  const hasTwoNums = nums.length >= 2;
+
+  const hasCalcWord = hasLooseKeyword(t, [
+    "sales",
+    "salse",
+    "sale",
+    "mauzo",
+    "mauz",
+    "revenue",
+    "mapato",
+    "cost",
+    "cogs",
+    "gharama",
+    "gharma",
+    "margin",
+    "margn",
+    "markup",
+    "markp",
+    "profit",
+    "faida",
+    "loss",
+    "hasara",
+    "breakeven",
+    "break even",
+    "breakevn",
+    "fixed",
+    "roi",
+    "return on investment",
+    "investment",
+    "investmnt",
+    "mtaji",
+    "uwekezaji",
+    "other",
+    "expense",
+    "expenses",
+    "overhead",
+  ]);
+
+  const salesLike = hasLooseKeyword(t, ["sales", "salse", "sale", "mauzo", "mauz", "revenue", "mapato"]);
+  const costLike = hasLooseKeyword(t, ["cost", "cogs", "gharama", "gharma", "buying", "purchase"]);
+  const calcIntentLike = hasLooseKeyword(t, [
+    "margin",
+    "margn",
+    "markup",
+    "markp",
+    "breakeven",
+    "break even",
+    "breakevn",
+    "roi",
+    "return on investment",
+    "investment",
+    "investmnt",
+    "mtaji",
+    "uwekezaji",
+    "profit",
+    "faida",
+    "loss",
+    "hasara",
+  ]);
+
+  if (calcIntentLike && hasTwoNums) return true;
+  if (salesLike && costLike && hasTwoNums) return true;
+  if (costLike && hasTwoNums) return true;
+  if (hasCalcWord && hasTwoNums) return true;
+
+  return false;
+}
+
+
+
+
 function getLowestProfitEfficiencyProducts(rows: InjectedTopProductRow[]) {
   return safeArray<InjectedTopProductRow>(rows)
     .filter((p) => num(p.sales_amount) > 0)
@@ -1330,6 +1696,75 @@ function buildProfitDeterministicReply(
   return prettifyAssistantSections(lines.join("\n"));
 }
 
+function buildAnalysisFollowupReply(snapshot: BusinessInjectionSnapshot | null) {
+  if (!snapshot) return "";
+
+  const storeName = clean(snapshot.store_name) || "store hii";
+  const top = Array.isArray(snapshot.top_products) ? snapshot.top_products : [];
+  const low = Array.isArray(snapshot.low_stock_items) ? snapshot.low_stock_items : [];
+  const dead = Array.isArray(snapshot.dead_stock_items) ? snapshot.dead_stock_items : [];
+  const weakest = getLowestProfitEfficiencyProducts(top)[0] ?? null;
+  const bestOne = top[0] ?? null;
+  const expenses = num(snapshot.expenses_total);
+  const margin = Number(num(snapshot.margin_pct).toFixed(1));
+
+  const lines: string[] = [];
+  lines.push(`Sawa — hapa ndiyo next move ya ${storeName}:`);
+  lines.push("");
+
+  lines.push("## 🎯 Focus ya Sasa");
+
+  if (weakest) {
+    lines.push(`- Kwanza angalia **${clean(weakest.product_name)}** kwa sababu ndiyo sehemu dhaifu kwenye profit efficiency.`);
+  } else if (margin < 10) {
+    lines.push("- Kwanza angalia bidhaa zenye margin ndogo kwa sababu ndizo zinabana faida.");
+  } else {
+    lines.push("- Kwanza linda bidhaa zinazoingiza pesa zaidi na margin yako ya sasa.");
+  }
+
+  if (expenses > 0) {
+    lines.push(`- Pili punguza au hakiki expenses za ${fmtMoney(expenses)} kwa sababu zinakata profit moja kwa moja.`);
+  }
+
+  if (low.length > 0) {
+    lines.push(`- Tatu restock bidhaa low stock mapema kabla mauzo hayajakatika.`);
+  } else if (dead.length > 0) {
+    lines.push(`- Tatu fungua cash iliyokwama kwenye dead stock.`);
+  } else if (bestOne) {
+    lines.push(`- Tatu sukuma zaidi **${clean(bestOne.product_name)}** kwa sababu ndiyo strongest mover sasa.`);
+  }
+
+  lines.push("");
+  lines.push("## ✅ Hatua 3 za Haraka");
+
+  if (weakest) {
+    lines.push(`1. Pitia buying price / markup / selling price ya **${clean(weakest.product_name)}** leo.`);
+  } else {
+    lines.push("1. Pitia pricing ya bidhaa zenye margin ndogo leo.");
+  }
+
+  if (expenses > 0) {
+    lines.push("2. Kagua expense kubwa na kata zisizo za lazima.");
+  } else if (dead.length > 0) {
+    lines.push("2. Fanya promo au markdown kwa dead stock.");
+  } else {
+    lines.push("2. Linda margin kwa kuzuia discount zisizo za lazima.");
+  }
+
+  if (low.length > 0) {
+    lines.push("3. Restock bidhaa muhimu kabla stockout haijaharibu momentum.");
+  } else if (bestOne) {
+    lines.push(`3. Ongeza nguvu ya mauzo kwa kusukuma **${clean(bestOne.product_name)}** zaidi.`);
+  } else {
+    lines.push("3. Endelea kufuatilia bidhaa zenye contribution kubwa ya sales na profit.");
+  }
+
+  return prettifyAssistantSections(lines.join("\n"));
+}
+
+
+
+
 function buildCoachDeterministicReply(snapshot: BusinessInjectionSnapshot | null) {
   if (!snapshot) return "";
 
@@ -1780,7 +2215,7 @@ function buildTasksFollowupContextBlock(summary: TaskFollowupSummary | null) {
 }
 
 function detectTaskFollowupIntent(rawText: string) {
-  const t = clean(rawText).toLowerCase();
+  const t = normalizeLooseText(rawText);
   if (!t) {
     return {
       asksTasks: false,
@@ -1790,47 +2225,47 @@ function detectTaskFollowupIntent(rawText: string) {
     };
   }
 
-  // IMPORTANT:
-  // Usitumie neno generic kama "kazi" peke yake,
-  // maana linaweza kumaanisha "nimefunga kazi ya leo"
-  // na si "tasks za mfumo".
-  const asksTasks =
-    t.includes("task") ||
-    t.includes("tasks") ||
-    t.includes("open task") ||
-    t.includes("open tasks") ||
-    t.includes("task list") ||
-    t.includes("task zangu") ||
-    t.includes("open tasks zangu") ||
-    t.includes("majukumu ya mfumo") ||
-    t.includes("task za mfumo");
+  const asksTasks = hasLooseKeyword(t, [
+    "task",
+    "tasks",
+    "open task",
+    "open tasks",
+    "task list",
+    "task zangu",
+    "open tasks zangu",
+    "majukumu ya mfumo",
+    "task za mfumo",
+  ]);
 
-  const asksSummary =
-    t.includes("summary ya open tasks") ||
-    t.includes("summary ya tasks") ||
-    t.includes("muhtasari wa tasks") ||
-    t.includes("muhtasari wa open tasks") ||
-    t.includes("nipe summary ya tasks") ||
-    t.includes("onyesha open tasks");
+  const asksSummary = hasLooseKeyword(t, [
+    "summary ya open tasks",
+    "summary ya tasks",
+    "muhtasari wa tasks",
+    "muhtasari wa open tasks",
+    "nipe summary ya tasks",
+    "onyesha open tasks",
+  ]);
 
-  const asksOverdue =
-    t.includes("overdue") ||
-    t.includes("task zipi zinachelewa") ||
-    t.includes("tasks zipi zinachelewa") ||
-    t.includes("open tasks zinachelewa") ||
-    t.includes("due today") ||
-    t.includes("task za leo") ||
-    t.includes("tasks za leo zinatakiwa") ||
-    t.includes("majukumu gani yamechelewa");
+  const asksOverdue = hasLooseKeyword(t, [
+    "overdue",
+    "task zipi zinachelewa",
+    "tasks zipi zinachelewa",
+    "open tasks zinachelewa",
+    "due today",
+    "task za leo",
+    "tasks za leo zinatakiwa",
+    "majukumu gani yamechelewa",
+  ]);
 
-  const asksWhatNow =
-    t.includes("nifanye nini sasa kwenye tasks") ||
-    t.includes("what should i do now with tasks") ||
-    t.includes("what to do now with tasks") ||
-    t.includes("kipaumbele gani sasa kwenye tasks") ||
-    t.includes("ni task zipi zifuatiliwe kwanza") ||
-    t.includes("tasks za zamani zifuatiliwe kwanza") ||
-    t.includes("task gani nifanye kwanza");
+  const asksWhatNow = hasLooseKeyword(t, [
+    "nifanye nini sasa kwenye tasks",
+    "what should i do now with tasks",
+    "what to do now with tasks",
+    "kipaumbele gani sasa kwenye tasks",
+    "ni task zipi zifuatiliwe kwanza",
+    "tasks za zamani zifuatiliwe kwanza",
+    "task gani nifanye kwanza",
+  ]);
 
   return {
     asksTasks,
@@ -2709,6 +3144,12 @@ useEffect(() => {
       return;
     }
 
+    const auth = await waitForActiveSession();
+    if (!auth.ok) {
+      setBusinessSnapshot(null);
+      return;
+    }
+
     const pFrom = startOfTodayIso();
     const pTo = endExclusiveTomorrowIso();
 
@@ -2816,13 +3257,19 @@ useEffect(() => {
     if (profitRes.ok) {
       const row = Array.isArray(profitRes.data) ? profitRes.data[0] : profitRes.data;
 
-      const profitSales = firstNumFromRow(row, ["sales_total", "sales", "total_sales"]);
-      const profitExpenses = firstNumFromRow(row, ["expenses_total", "expenses", "total_expenses"]);
-      const profitValue = firstNumFromRow(row, ["net_profit", "profit", "profit_total"]);
+      const canonicalSales = firstNumFromRow(row, ["sales_total", "sales", "total_sales"]);
+      const canonicalCogs = firstNumFromRow(row, ["cogs_total", "cogs", "total_cogs"]);
+      const canonicalExpenses = firstNumFromRow(row, ["expenses_total", "expenses", "total_expenses"]);
+      const canonicalProfit = firstNumFromRow(row, ["net_profit", "profit", "profit_total"]);
+      const canonicalOrders = firstNumFromRow(row, ["orders_count", "orders", "total_orders"]);
 
-      if (profitSales > 0) salesTotal = profitSales;
-      if (profitExpenses > 0) expensesTotal = profitExpenses;
-      if (profitValue || profitValue === 0) profitTotal = profitValue;
+      // CANONICAL SOURCE OF TRUTH FOR AI ANALYSIS
+      // Tukishapata get_store_net_profit_v2, tusiruhusu sources nyingine zipindishe numbers hizi.
+      salesTotal = canonicalSales;
+      cogsTotal = canonicalCogs;
+      expensesTotal = canonicalExpenses;
+      profitTotal = canonicalProfit;
+      ordersCount = canonicalOrders;
     }
 
     if (inventoryRes.ok) {
@@ -2939,8 +3386,20 @@ useEffect(() => {
       }
     }
 
-    cogsTotal = Math.max(0, salesTotal - profitTotal - expensesTotal);
+    // IMPORTANT:
+    // COGS isi-derive tena hapa kama tayari canonical profit RPC imeitoa.
+    // Tukifanya derive upya tunaweza kuvuruga analysis baada ya expense/profit fixes.
+    if (!Number.isFinite(cogsTotal)) {
+      cogsTotal = 0;
+    }
+
     avgOrderValue = ordersCount > 0 ? salesTotal / ordersCount : 0;
+
+    // SAFETY FALLBACK:
+    // Kama canonical profit RPC imefail, profit ibaki derived fallback badala ya kuwa random.
+    if (!profitRes.ok) {
+      profitTotal = salesTotal - cogsTotal - expensesTotal;
+    }
 
     const snapshot = buildBusinessInjectionSnapshot({
       orgId,
@@ -3356,6 +3815,8 @@ const callWorkerChat = useCallback(
 
     const detectedIntent = detectBusinessIntent(text);
     const pureDecisionMode = detectPureDecisionMode(text);
+    const analysisFollowupMode = detectAnalysisFollowupIntent(text);
+    const businessCalcBypass = detectBusinessCalcBypass(text);
 
     const systemPromptBase = buildZetraSystemPrompt({
       orgName: org.activeOrgName,
@@ -3400,7 +3861,48 @@ const callWorkerChat = useCallback(
       };
     }
 
-    if (businessSnapshot) {
+    if (analysisFollowupMode && !businessSnapshot) {
+      return {
+        text:
+          "Sina snapshot ya analysis kwa sasa.\n\n" +
+          "Jaribu tena baada ya business data kusomwa vizuri, au bonyeza Reset kisha ulize tena.",
+        meta: {
+          analysisIntent: "ANALYSIS",
+          autopilotAlerts: [],
+          actions: [],
+          hideActionsBlock: true,
+        },
+      };
+    }
+
+    if (businessSnapshot && !businessCalcBypass) {
+      if (analysisFollowupMode) {
+        return {
+          text: buildAnalysisFollowupReply(businessSnapshot),
+          meta: {
+            analysisIntent: "ANALYSIS",
+            autopilotAlerts: [
+              businessSnapshot.low_stock_items?.length
+                ? {
+                    level: "warning",
+                    title: "Restock Risk",
+                    message: `${businessSnapshot.low_stock_items.length} bidhaa zinahitaji uangalizi wa stock.`,
+                  }
+                : null,
+              businessSnapshot.dead_stock_items?.length
+                ? {
+                    level: "info",
+                    title: "Dead Stock Attention",
+                    message: `${businessSnapshot.dead_stock_items.length} bidhaa zina cash iliyokwama.`,
+                  }
+                : null,
+            ].filter(Boolean),
+            actions: buildDeterministicActions(businessSnapshot, "COACH"),
+            hideActionsBlock: true,
+          },
+        };
+      }
+
       if (pureDecisionMode) {
         return {
           text: buildPureDecisionReply(businessSnapshot, text),
@@ -3504,10 +4006,16 @@ const callWorkerChat = useCallback(
       }
 
       if (
-        clean(text).toLowerCase().includes("coach") ||
-        clean(text).toLowerCase().includes("ushauri") ||
-        clean(text).toLowerCase().includes("nifanye nini") ||
-        clean(text).toLowerCase().includes("hatua gani")
+        hasLooseKeyword(text, [
+          "coach",
+          "ushauri",
+          "nifanye nini",
+          "hatua gani",
+          "next move",
+          "what should i do",
+          "nipe ushauri",
+          "naomba ushauri",
+        ])
       ) {
         return {
           text: buildCoachDeterministicReply(businessSnapshot),
@@ -3620,8 +4128,10 @@ const callWorkerChat = useCallback(
     async (text: string, images: AttachedImage[], history: ReqMsg[], signal?: AbortSignal) => {
       if (!requireWorkerUrlOrAlert()) throw new Error("Worker URL missing");
 
-    const detectedIntent = detectBusinessIntent(text);
+      const detectedIntent = detectBusinessIntent(text);
       const pureDecisionMode = detectPureDecisionMode(text);
+      const analysisFollowupMode = detectAnalysisFollowupIntent(text);
+      const businessCalcBypass = detectBusinessCalcBypass(text);
 
       const systemPromptBase = buildZetraSystemPrompt({
         orgName: org.activeOrgName,
@@ -3686,7 +4196,48 @@ const callWorkerChat = useCallback(
 
       const shouldBypassLocalDeterministicForVision = images.length > 0;
 
-      if (businessSnapshot && !shouldBypassLocalDeterministicForVision) {
+      if (analysisFollowupMode && !businessSnapshot && !shouldBypassLocalDeterministicForVision) {
+        return {
+          text:
+            "Sina snapshot ya analysis kwa sasa.\n\n" +
+            "Jaribu tena baada ya business data kusomwa vizuri, au bonyeza Reset kisha ulize tena.",
+          meta: {
+            analysisIntent: "ANALYSIS",
+            autopilotAlerts: [],
+            actions: [],
+            hideActionsBlock: true,
+          },
+        };
+      }
+
+      if (businessSnapshot && !shouldBypassLocalDeterministicForVision && !businessCalcBypass) {
+        if (analysisFollowupMode) {
+          return {
+            text: buildAnalysisFollowupReply(businessSnapshot),
+            meta: {
+              analysisIntent: "ANALYSIS",
+              autopilotAlerts: [
+                businessSnapshot.low_stock_items?.length
+                  ? {
+                      level: "warning",
+                      title: "Restock Risk",
+                      message: `${businessSnapshot.low_stock_items.length} bidhaa zinahitaji uangalizi wa stock.`,
+                    }
+                  : null,
+                businessSnapshot.dead_stock_items?.length
+                  ? {
+                      level: "info",
+                      title: "Dead Stock Attention",
+                      message: `${businessSnapshot.dead_stock_items.length} bidhaa zina cash iliyokwama.`,
+                    }
+                  : null,
+              ].filter(Boolean),
+              actions: buildDeterministicActions(businessSnapshot, "COACH"),
+              hideActionsBlock: true,
+            },
+          };
+        }
+
         if (pureDecisionMode) {
           return {
             text: buildPureDecisionReply(businessSnapshot, text),
@@ -3786,12 +4337,17 @@ const callWorkerChat = useCallback(
             },
           };
         }
-
-        if (
-          clean(text).toLowerCase().includes("coach") ||
-          clean(text).toLowerCase().includes("ushauri") ||
-          clean(text).toLowerCase().includes("nifanye nini") ||
-          clean(text).toLowerCase().includes("hatua gani")
+if (
+          hasLooseKeyword(text, [
+            "coach",
+            "ushauri",
+            "nifanye nini",
+            "hatua gani",
+            "next move",
+            "what should i do",
+            "nipe ushauri",
+            "naomba ushauri",
+          ])
         ) {
           return {
             text: buildCoachDeterministicReply(businessSnapshot),
@@ -4068,7 +4624,8 @@ function buildTopProductsFromSalesRows(rows: any[]): InjectedTopProductRow[] {
   useEffect(() => {
     void loadBusinessSnapshot();
     void loadTasksFollowupSummary();
-  }, [loadBusinessSnapshot, loadTasksFollowupSummary]);
+    void loadAiBalance();
+  }, [loadAiBalance, loadBusinessSnapshot, loadTasksFollowupSummary]);
   const loadTasks = useCallback(async () => {
     const orgId = clean(org.activeOrgId);
     if (!orgId) {
@@ -4420,8 +4977,13 @@ scrollToLatest(false, true);
 startTypingDots(botId);
 
 // background refresh bila ku-block send click
-void loadBusinessSnapshot();
-void loadTasksFollowupSummary();
+// NOTE:
+// Tuna-refresh snapshot kwa utulivu, lakini canonical analysis bado inategemea
+// latest snapshot iliyopo. Hii inasaidia UI ibaki fast na stable.
+setTimeout(() => {
+  void loadBusinessSnapshot();
+  void loadTasksFollowupSummary();
+}, 0);
     try {
       if (reqToken !== activeReqTokenRef.current) return;
 
@@ -4793,6 +5355,7 @@ const TopBar = (
 
    void loadBusinessSnapshot();
     void loadTasksFollowupSummary();
+    void loadAiBalance();
 
     requestAnimationFrame(() => {
       inputRef.current?.focus();
