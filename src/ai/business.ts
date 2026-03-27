@@ -12,9 +12,102 @@ function U(s: any) {
   return clean(s).toUpperCase();
 }
 
+function normalizeLooseText(s: any) {
+  return clean(s)
+    .toLowerCase()
+    .replace(/[%]/g, " percent ")
+    .replace(/[&]/g, " and ")
+    .replace(/[^a-z0-9\s]/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function looseTokens(s: any) {
+  return normalizeLooseText(s).split(" ").map(clean).filter(Boolean);
+}
+
+function levenshteinDistance(a: string, b: string, maxLimit = 2) {
+  const x = clean(a).toLowerCase();
+  const y = clean(b).toLowerCase();
+
+  if (x === y) return 0;
+  if (!x.length) return y.length;
+  if (!y.length) return x.length;
+  if (Math.abs(x.length - y.length) > maxLimit) return maxLimit + 1;
+
+  const dp = Array.from({ length: x.length + 1 }, () => new Array(y.length + 1).fill(0));
+
+  for (let i = 0; i <= x.length; i++) dp[i][0] = i;
+  for (let j = 0; j <= y.length; j++) dp[0][j] = j;
+
+  for (let i = 1; i <= x.length; i++) {
+    let rowMin = Number.MAX_SAFE_INTEGER;
+
+    for (let j = 1; j <= y.length; j++) {
+      const cost = x[i - 1] === y[j - 1] ? 0 : 1;
+
+      dp[i][j] = Math.min(
+        dp[i - 1][j] + 1,
+        dp[i][j - 1] + 1,
+        dp[i - 1][j - 1] + cost
+      );
+
+      rowMin = Math.min(rowMin, dp[i][j]);
+    }
+
+    if (rowMin > maxLimit) return maxLimit + 1;
+  }
+
+  return dp[x.length][y.length];
+}
+
+function looseTokenMatch(inputToken: string, targetToken: string) {
+  const a = clean(inputToken).toLowerCase();
+  const b = clean(targetToken).toLowerCase();
+
+  if (!a || !b) return false;
+  if (a === b) return true;
+
+  if (a.length >= 4 && b.length >= 4) {
+    if (a.startsWith(b) || b.startsWith(a)) return true;
+  }
+
+  const maxDist = Math.max(a.length, b.length) >= 7 ? 2 : 1;
+  return levenshteinDistance(a, b, maxDist) <= maxDist;
+}
+
+function containsLoosePhrase(text: string, phrase: string) {
+  const textNorm = normalizeLooseText(text);
+  const phraseNorm = normalizeLooseText(phrase);
+
+  if (!textNorm || !phraseNorm) return false;
+  if (textNorm.includes(phraseNorm)) return true;
+
+  const textParts = looseTokens(textNorm);
+  const phraseParts = looseTokens(phraseNorm);
+
+  if (!textParts.length || !phraseParts.length) return false;
+  if (phraseParts.length > textParts.length) return false;
+
+  for (let i = 0; i <= textParts.length - phraseParts.length; i++) {
+    let ok = true;
+
+    for (let j = 0; j < phraseParts.length; j++) {
+      if (!looseTokenMatch(textParts[i + j], phraseParts[j])) {
+        ok = false;
+        break;
+      }
+    }
+
+    if (ok) return true;
+  }
+
+  return false;
+}
+
 function hasAny(textUpper: string, keys: string[]) {
   for (const k of keys) {
-    if (textUpper.includes(k)) return true;
+    if (containsLoosePhrase(textUpper, k)) return true;
   }
   return false;
 }
@@ -39,19 +132,67 @@ function parseNumberToken(token: string): number | null {
 }
 
 function extractNamedNumber(text: string, names: string[]): number | null {
-  // Matches patterns like:
-  // "sales 800000", "sales: 800000", "sales=800000", "sales Tsh 800000"
+  // Supports exact + fuzzy business labels:
+  // "sales 800000", "salse 800000", "mauz 800000", "cost tsh 520000", etc.
   const s = clean(text);
+  if (!s) return null;
 
+  // 1) Exact regex first (fast path)
   for (const name of names) {
+    const escaped = clean(name).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const re = new RegExp(
-      String.raw`(?:^|\s)${name}\s*(?:[:=]?\s*)?(?:tzs|tsh|usd|eur)?\s*([-+]?\d[\d, _]*(?:\.\d+)?\s*[km]?)`,
+      String.raw`(?:^|\s)${escaped}\s*(?:[:=]?\s*)?(?:tzs|tsh|usd|eur)?\s*([-+]?\d[\d, _]*(?:\.\d+)?\s*[km]?)`,
       "i"
     );
     const m = s.match(re);
     if (m?.[1]) {
       const n = parseNumberToken(m[1]);
       if (n !== null) return n;
+    }
+  }
+
+  // 2) Fuzzy phrase scan
+  const rawTokens = s
+    .split(/[\s,;|/()[\]{}]+/)
+    .map((x) => clean(x))
+    .filter(Boolean);
+
+  if (!rawTokens.length) return null;
+
+  for (const name of names) {
+    const phraseTokens = looseTokens(name);
+    if (!phraseTokens.length) continue;
+
+    for (let i = 0; i <= rawTokens.length - phraseTokens.length; i++) {
+      let matched = true;
+
+      for (let j = 0; j < phraseTokens.length; j++) {
+        if (!looseTokenMatch(rawTokens[i + j], phraseTokens[j])) {
+          matched = false;
+          break;
+        }
+      }
+
+      if (!matched) continue;
+
+      for (let k = i + phraseTokens.length; k < Math.min(rawTokens.length, i + phraseTokens.length + 5); k++) {
+        const tk = clean(rawTokens[k]).toLowerCase();
+
+        if (
+          tk === ":" ||
+          tk === "=" ||
+          tk === "-" ||
+          tk === "tzs" ||
+          tk === "tsh" ||
+          tk === "usd" ||
+          tk === "eur"
+        ) {
+          continue;
+        }
+
+        const n = parseNumberToken(tk);
+        if (n !== null) return n;
+      }
     }
   }
 
@@ -88,6 +229,141 @@ function fmtPctFromPercent(p: number) {
 
 function langMixed(sw: string, en: string) {
   return `🇹🇿 Kiswahili:\n${sw}\n\n🇬🇧 English:\n${en}`;
+}
+
+function shortLang(lang: DetectedLang, sw: string, en: string) {
+  if (lang === "SW") return sw;
+  if (lang === "EN") return en;
+  return langMixed(sw, en);
+}
+
+function numSafe(v: any) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function wantsShortCalcMode(text: string) {
+  const t = normalizeLooseText(text);
+  if (!t) return false;
+
+  const nums = extractNumericTokens(text);
+
+  // HARD RULE:
+  // kama user ametuma structure ya calculator yenye numbers 2+, prefer short answer
+  if (nums.length >= 2) {
+    const calcLike =
+      hasAny(t, [
+        "sales",
+        "revenue",
+        "mauzo",
+        "mapato",
+        "cost",
+        "cogs",
+        "gharama",
+        "buying",
+        "purchase",
+        "margin",
+        "markup",
+        "breakeven",
+        "break even",
+        "fixed",
+        "roi",
+        "return on investment",
+        "investment",
+        "capital",
+        "mtaji",
+        "uwekezaji",
+        "profit",
+        "faida",
+        "loss",
+        "hasara",
+      ]) || isBusinessLike(text);
+
+    const asksLongExplanation = hasAny(t, [
+      "explain",
+      "eleza",
+      "fafanua",
+      "formula",
+      "how",
+      "vipi",
+      "why",
+      "kwanini",
+      "show steps",
+      "onyesha steps",
+      "detail",
+      "details",
+      "uchambuzi",
+      "analysis",
+    ]);
+
+    return calcLike && !asksLongExplanation;
+  }
+
+  return false;
+}
+
+function formatShortProfitLoss(
+  lang: DetectedLang,
+  r: { sales: number; cost: number; other: number; profit: number; margin: number }
+) {
+  const sign = r.profit >= 0 ? "" : "−";
+  const absProfit = Math.abs(r.profit);
+  const marginPct = fmtPctFromRatio(r.margin);
+
+  const swLines = [
+    `Faida/Hasara: ${sign}${fmtMoney(absProfit)}`,
+    `Margin: ${marginPct}`,
+  ];
+
+  const enLines = [
+    `Profit/Loss: ${sign}${fmtMoney(absProfit)}`,
+    `Margin: ${marginPct}`,
+  ];
+
+  if (numSafe(r.other) > 0) {
+    swLines.unshift(`Gharama nyingine: ${fmtMoney(r.other)}`);
+    enLines.unshift(`Other Costs: ${fmtMoney(r.other)}`);
+  }
+
+  return shortLang(lang, swLines.join("\n"), enLines.join("\n"));
+}
+
+function formatShortMargin(
+  lang: DetectedLang,
+  r: { sales: number; cost: number; profit: number; marginPct: number }
+) {
+  return shortLang(
+    lang,
+    `Faida: ${fmtMoney(r.profit)}\nMargin: ${fmtPctFromPercent(r.marginPct)}`,
+    `Profit: ${fmtMoney(r.profit)}\nMargin: ${fmtPctFromPercent(r.marginPct)}`
+  );
+}
+
+function formatShortMarkup(lang: DetectedLang, r: { cost: number; markupPct: number; selling: number }) {
+  return shortLang(
+    lang,
+    `Bei ya kuuza: ${fmtMoney(r.selling)}`,
+    `Selling Price: ${fmtMoney(r.selling)}`
+  );
+}
+
+function formatShortBreakeven(
+  lang: DetectedLang,
+  r: { fixed: number; marginPct: number; breakevenSales: number }
+) {
+  return shortLang(
+    lang,
+    `Break-even Sales: ${fmtMoney(r.breakevenSales)}`,
+    `Break-even Sales: ${fmtMoney(r.breakevenSales)}`
+  );
+}
+
+function formatShortRoi(lang: DetectedLang, r: { investment: number; profit: number; roi: number }) {
+  return shortLang(
+    lang,
+    `ROI: ${fmtPctFromRatio(r.roi)}`,
+    `ROI: ${fmtPctFromRatio(r.roi)}`
+  );
 }
 
 /**
@@ -140,20 +416,14 @@ export function isBusinessLike(text: string): boolean {
     "PURCHASE",
   ]);
 
-  // ✅ Numeric pattern detection
   const nums = extractNumericTokens(t);
   const hasAtLeast2Nums = nums.length >= 2;
 
-  // ✅ Keyword hint: cost/gharama/cogs present
   const hasCostWord = hasAny(T, ["COST", "COGS", "GHARAMA", "BUYING", "PURCHASE"]);
 
-  // ✅ If it has cost word + 2 numbers => business calc even without "sales"
   if (hasCostWord && hasAtLeast2Nums) return true;
-
-  // If it explicitly has business words + at least 1 number => likely business calc
   if (hasBizWords && nums.length >= 1) return true;
 
-  // If it has the classic pair: sales + cost
   const hasSalesWord = hasAny(T, ["SALES", "MAUZO", "REVENUE", "MAPATO"]);
   if (hasSalesWord && hasCostWord) return true;
 
@@ -193,26 +463,31 @@ function detectCalcIntent(text: string): BizCalcIntent {
   const hasProfitWord = hasAny(T, ["PROFIT", "FAIDA", "GAIN"]);
   const hasLossWord = hasAny(T, ["LOSS", "HASARA"]);
 
-  const hasMargin = hasAny(T, ["MARGIN", "GROSS MARGIN", "NET MARGIN", "ASILIMIA YA FAIDA", "FAIDA KWA ASILIMIA"]);
+  const hasMargin = hasAny(T, [
+    "MARGIN",
+    "GROSS MARGIN",
+    "NET MARGIN",
+    "ASILIMIA YA FAIDA",
+    "FAIDA KWA ASILIMIA",
+  ]);
   const hasMarkup = hasAny(T, ["MARKUP", "ONGEZA BEI", "PRICE FROM COST", "SELLING PRICE"]);
-  const hasBreakeven = hasAny(T, ["BREAK EVEN", "BREAKEVEN", "POINT YA BREAK", "KUFIKIA HASARA SIFURI", "FIXED COST"]);
+  const hasBreakeven = hasAny(T, [
+    "BREAK EVEN",
+    "BREAKEVEN",
+    "POINT YA BREAK",
+    "KUFIKIA HASARA SIFURI",
+    "FIXED COST",
+  ]);
 
-  // ✅ ROI FIRST
   if ((hasInvestment && hasProfitWord) || hasAny(T, ["ROI", "RETURN ON INVESTMENT", "UREJESHO"])) return "ROI";
-
-  // ✅ BREAKEVEN
   if (hasBreakeven) return "BREAKEVEN";
-
-  // ✅ MARKUP
   if (hasMarkup) return "MARKUP";
-
-  // ✅ MARGIN
   if (hasMargin) return "MARGIN";
 
-  // ✅ PROFIT/LOSS (fix: cost + 2 numbers qualifies even if no "sales")
-  if ((hasSales && hasCost) || (hasCost && nums.length >= 2) || hasProfitWord || hasLossWord) return "PROFIT_LOSS";
+  if ((hasSales && hasCost) || (hasCost && nums.length >= 2) || hasProfitWord || hasLossWord) {
+    return "PROFIT_LOSS";
+  }
 
-  // General business advice
   if (hasAny(T, ["BUSINESS", "BIASHARA", "MKAKATI", "STRATEGY", "MARKETING", "WAZO"])) return "GENERAL";
 
   return "NONE";
@@ -223,7 +498,6 @@ function computeProfitLoss(text: string) {
   const cost = extractNamedNumber(text, ["cost", "cogs", "gharama", "buying", "purchase"]);
   const other = extractNamedNumber(text, ["other", "expenses", "expense", "overhead", "gharama nyingine"]);
 
-  // fallback: first two numbers => assume sales, cost
   const nums = extractNumericTokens(text);
   const S = sales ?? (nums.length >= 1 ? nums[0] : null);
   const C = cost ?? (nums.length >= 2 ? nums[1] : null);
@@ -300,24 +574,23 @@ function computeRoi(text: string) {
    ========================= */
 
 const TH = {
-  // margins
   marginDangerPct: 10,
   marginLowPct: 15,
   marginGoodPct: 25,
-  // markup
   markupLowPct: 15,
-  // ROI (ratio)
-  roiLow: 0.2, // 20%
-  roiGood: 0.5, // 50%
+  roiLow: 0.2,
+  roiGood: 0.5,
 };
 
-function insightsProfitLoss(lang: DetectedLang, r: { sales: number; cost: number; other: number; profit: number; margin: number }) {
+function insightsProfitLoss(
+  lang: DetectedLang,
+  r: { sales: number; cost: number; other: number; profit: number; margin: number }
+) {
   const marginPct = r.sales > 0 ? (r.profit / r.sales) * 100 : 0;
 
   const sw: string[] = [];
   const en: string[] = [];
 
-  // headline severity
   if (r.profit < 0) {
     sw.push("⚠️ Hali: HASARA (unauza chini ya gharama + overhead).");
     en.push("⚠️ Status: LOSS (selling below cost + overhead).");
@@ -332,7 +605,6 @@ function insightsProfitLoss(lang: DetectedLang, r: { sales: number; cost: number
     en.push("✅ Status: Mid margin (okay).");
   }
 
-  // diagnosis hints
   sw.push(
     "Uchunguzi wa haraka:",
     "• Kama margin ni ndogo: supplier cost juu, bei chini, au leakages (discount/stock loss).",
@@ -344,7 +616,6 @@ function insightsProfitLoss(lang: DetectedLang, r: { sales: number; cost: number
     "• Loss: check fixed costs (rent/salaries) and margin-killer items."
   );
 
-  // action plan (short, structured)
   sw.push(
     "Mpango wa siku 7 (actionable):",
     "1) Pitia bidhaa top 20 zinazouza sana: rekebisha bei/discount policy.",
@@ -366,7 +637,10 @@ function insightsProfitLoss(lang: DetectedLang, r: { sales: number; cost: number
   return langMixed(outSW, outEN);
 }
 
-function insightsMargin(lang: DetectedLang, r: { sales: number; cost: number; profit: number; marginPct: number }) {
+function insightsMargin(
+  lang: DetectedLang,
+  r: { sales: number; cost: number; profit: number; marginPct: number }
+) {
   const sw: string[] = [];
   const en: string[] = [];
 
@@ -441,7 +715,10 @@ function insightsMarkup(lang: DetectedLang, r: { cost: number; markupPct: number
   return langMixed(outSW, outEN);
 }
 
-function insightsBreakeven(lang: DetectedLang, r: { fixed: number; marginPct: number; breakevenSales: number }) {
+function insightsBreakeven(
+  lang: DetectedLang,
+  r: { fixed: number; marginPct: number; breakevenSales: number }
+) {
   const sw: string[] = [];
   const en: string[] = [];
 
@@ -578,7 +855,6 @@ function menuEN() {
 export function businessReply(lang: DetectedLang, text: string): string {
   const intent = detectCalcIntent(text);
 
-  // ROI
   if (intent === "ROI") {
     const r = computeRoi(text);
     if (!r) {
@@ -587,6 +863,10 @@ export function businessReply(lang: DetectedLang, text: string): string {
       if (lang === "SW") return sw;
       if (lang === "EN") return en;
       return langMixed(sw, en);
+    }
+
+    if (wantsShortCalcMode(text)) {
+      return formatShortRoi(lang, r);
     }
 
     const roiPct = fmtPctFromRatio(r.roi);
@@ -616,7 +896,6 @@ export function businessReply(lang: DetectedLang, text: string): string {
     return langMixed(`${sw}\n\n${insights}`, `${en}\n\n${insights}`);
   }
 
-  // BREAKEVEN
   if (intent === "BREAKEVEN") {
     const r = computeBreakeven(text);
     if (!r) {
@@ -625,6 +904,10 @@ export function businessReply(lang: DetectedLang, text: string): string {
       if (lang === "SW") return sw;
       if (lang === "EN") return en;
       return langMixed(sw, en);
+    }
+
+    if (wantsShortCalcMode(text)) {
+      return formatShortBreakeven(lang, r);
     }
 
     const sw =
@@ -652,7 +935,6 @@ export function businessReply(lang: DetectedLang, text: string): string {
     return langMixed(`${sw}\n\n${insights}`, `${en}\n\n${insights}`);
   }
 
-  // MARKUP
   if (intent === "MARKUP") {
     const r = computeMarkup(text);
     if (!r) {
@@ -661,6 +943,10 @@ export function businessReply(lang: DetectedLang, text: string): string {
       if (lang === "SW") return sw;
       if (lang === "EN") return en;
       return langMixed(sw, en);
+    }
+
+    if (wantsShortCalcMode(text)) {
+      return formatShortMarkup(lang, r);
     }
 
     const sw =
@@ -684,7 +970,6 @@ export function businessReply(lang: DetectedLang, text: string): string {
     return langMixed(`${sw}\n\n${insights}`, `${en}\n\n${insights}`);
   }
 
-  // MARGIN
   if (intent === "MARGIN") {
     const r = computeMargin(text);
     if (!r) {
@@ -693,6 +978,10 @@ export function businessReply(lang: DetectedLang, text: string): string {
       if (lang === "SW") return sw;
       if (lang === "EN") return en;
       return langMixed(sw, en);
+    }
+
+    if (wantsShortCalcMode(text)) {
+      return formatShortMargin(lang, r);
     }
 
     const sw =
@@ -722,7 +1011,6 @@ export function businessReply(lang: DetectedLang, text: string): string {
     return langMixed(`${sw}\n\n${insights}`, `${en}\n\n${insights}`);
   }
 
-  // PROFIT/LOSS
   if (intent === "PROFIT_LOSS") {
     const r = computeProfitLoss(text);
     if (!r) {
@@ -731,6 +1019,10 @@ export function businessReply(lang: DetectedLang, text: string): string {
       if (lang === "SW") return sw;
       if (lang === "EN") return en;
       return langMixed(sw, en);
+    }
+
+    if (wantsShortCalcMode(text)) {
+      return formatShortProfitLoss(lang, r);
     }
 
     const sign = r.profit >= 0 ? "+" : "−";
@@ -766,12 +1058,10 @@ export function businessReply(lang: DetectedLang, text: string): string {
     return langMixed(`${sw}\n\n${insights}`, `${en}\n\n${insights}`);
   }
 
-  // GENERAL
   if (intent === "GENERAL") {
     const sw = swGeneralAdvice();
     const en = enGeneralAdvice();
 
-    // Light always-on “coach” footer (still safe)
     const swI =
       "🧠 ZETRA AI Insights\n" +
       "• Ukiwa tayari, nitengenezee ‘snapshot’ ya biashara yako: mtaji, gharama za mwezi, na mauzo ya siku.\n" +
@@ -786,7 +1076,6 @@ export function businessReply(lang: DetectedLang, text: string): string {
     return langMixed(`${sw}\n\n${swI}`, `${en}\n\n${enI}`);
   }
 
-  // NONE
   const sw = menuSW();
   const en = menuEN();
 
