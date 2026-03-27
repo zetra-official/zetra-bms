@@ -415,6 +415,24 @@ function buildInjectedDataLines(ctx: ReqBody["context"]) {
   return lines;
 }
 
+function hasInjectedBusinessSnapshot(ctx: ReqBody["context"]) {
+  const c: any = ctx ?? {};
+  const snap = c?.businessSnapshot ?? null;
+  if (!snap || typeof snap !== "object") return false;
+
+  const hasTop = Array.isArray(c?.topProducts) && c.topProducts.length > 0;
+  const hasLow = Array.isArray(c?.lowStockItems) && c.lowStockItems.length > 0;
+  const hasSlow = Array.isArray(c?.slowItems) && c.slowItems.length > 0;
+
+  const hasCoreNumbers =
+    Number.isFinite(Number(snap?.sales_total)) ||
+    Number.isFinite(Number(snap?.profit_total)) ||
+    Number.isFinite(Number(snap?.expenses_total)) ||
+    Number.isFinite(Number(snap?.orders_count));
+
+  return hasCoreNumbers || hasTop || hasLow || hasSlow;
+}
+
 function buildDataDrivenRules(ctx: ReqBody["context"]) {
   const c: any = ctx ?? {};
   const topProducts = Array.isArray(c.topProducts) ? c.topProducts : [];
@@ -633,6 +651,229 @@ function buildFullCombinedDataReply(text: string, ctx: ReqBody["context"]) {
   }
 
   return lines.join("\n").trim();
+}
+
+function buildInjectedSnapshotReply(text: string, ctx: ReqBody["context"]) {
+  const c: any = ctx ?? {};
+  const snapshot = c?.businessSnapshot ?? null;
+
+  if (!snapshot || typeof snapshot !== "object") return "";
+
+  const topProducts = Array.isArray(c?.topProducts) ? c.topProducts : [];
+  const lowStockItems = Array.isArray(c?.lowStockItems) ? c.lowStockItems : [];
+  const slowItems = Array.isArray(c?.slowItems) ? c.slowItems : [];
+
+  const salesTotal = num(snapshot?.sales_total);
+  const cogsTotal = num(snapshot?.cogs_total);
+  const expensesTotal = num(snapshot?.expenses_total);
+  const profitTotal = num(snapshot?.profit_total);
+  const ordersCount = num(snapshot?.orders_count);
+  const avgOrderValue = num(snapshot?.avg_order_value);
+  const marginPct = num(snapshot?.margin_pct);
+
+  const forecast = snapshot?.forecast ?? null;
+  const trendLabel = clean(forecast?.trend_label).toUpperCase();
+  const projectedSales = num(forecast?.projected_sales_next_period);
+  const projectedOrders = num(forecast?.projected_orders_next_period);
+  const trendPct = num(forecast?.trend_pct);
+
+  const intent = detectBusinessIntent(text);
+  const t = clean(text).toLowerCase();
+
+  const wantsGeneralAnalysis =
+    hasAnyPhrase(t, [
+      "analysis",
+      "uchambuzi",
+      "analysis ya leo",
+      "nionyeshe analysis",
+      "nipe analysis",
+      "hali ya biashara",
+      "biashara yangu leo",
+      "summary ya biashara",
+    ]) && intent === "ANALYSIS";
+
+  const wantsForecast = intent === "FORECAST";
+  const wantsCoach =
+    intent === "COACH" ||
+    hasAnyPhrase(t, ["nifanye nini", "hatua gani", "ushauri", "coach"]);
+
+  if (!wantsGeneralAnalysis && !wantsForecast && !wantsCoach) return "";
+
+  if (wantsForecast) {
+    const lines: string[] = [];
+    lines.push(`Hii ndiyo sales view ya ${clean(snapshot?.store_name) || "store hii"} sasa hivi:`);
+    lines.push("");
+    lines.push("CRITICAL RISKS:");
+    if (lowStockItems.length) {
+      lines.push(`• Kuna ${lowStockItems.length} bidhaa low stock zinazoweza kukata sales momentum.`);
+    } else if (trendLabel === "DECLINING") {
+      lines.push("• Trend ya mauzo inaonyesha kushuka.");
+    } else {
+      lines.push("• Hakuna sales risk kubwa iliyoonekana wazi kwa sasa.");
+    }
+
+    lines.push("");
+    lines.push("MONEY OPPORTUNITIES:");
+    if (topProducts.length) {
+      const p = topProducts[0];
+      lines.push(
+        `• ${clean(p?.product_name) || "Top product"} ndiyo strongest mover sasa — sukuma hii kwanza.`
+      );
+    }
+    lines.push(`• Average order value ya sasa ni ${fmtMoney(avgOrderValue)}.`);
+
+    lines.push("");
+    lines.push("FORECAST:");
+    if (trendLabel === "INCREASING") {
+      lines.push(`Trend: mauzo yanaongezeka (${fmtPercent(trendPct)}).`);
+    } else if (trendLabel === "DECLINING") {
+      lines.push(`Trend: mauzo yanashuka (${fmtPercent(trendPct)}).`);
+    } else {
+      lines.push(`Trend: mauzo yapo stable (${fmtPercent(trendPct)}).`);
+    }
+    if (projectedOrders > 0) lines.push(`Projected Orders (next day): ${projectedOrders.toLocaleString("en-US")}`);
+    if (projectedSales > 0) lines.push(`Projected Sales (next day): ${fmtMoney(projectedSales)}`);
+
+    lines.push("");
+    lines.push("ACTIONS:");
+    lines.push("• Linda top products zako zisikose stock.");
+    if (lowStockItems.length) lines.push("• Restock bidhaa muhimu kabla momentum haijakatika.");
+    if (trendLabel === "INCREASING") lines.push("• Andaa stock na timu kutumia momentum.");
+    if (trendLabel === "DECLINING") lines.push("• Rekebisha stock, pricing, na customer flow leo.");
+
+    return stabilizeReplyText(lines.join("\n"), {
+      actions: [
+        "Linda top products zako zisikose stock.",
+        lowStockItems.length ? "Restock bidhaa muhimu kabla momentum haijakatika." : "",
+        trendLabel === "INCREASING" ? "Andaa stock na timu kutumia momentum." : "",
+      ].filter(Boolean),
+      forceNextMove: true,
+    });
+  }
+
+  if (wantsCoach) {
+    const lines: string[] = [];
+    lines.push(`Hapa kuna business coach ya ${clean(snapshot?.store_name) || "store hii"} kwa sasa:`);
+    lines.push("");
+    lines.push("Summary:");
+    lines.push(`• Sales: ${fmtMoney(salesTotal)}`);
+    lines.push(`• Profit: ${fmtMoney(profitTotal)}`);
+    lines.push(`• Margin: ${fmtPercent(marginPct)}`);
+    lines.push(`• Expenses: ${fmtMoney(expensesTotal)}`);
+    lines.push(`• Low stock: ${lowStockItems.length}`);
+    lines.push(`• Dead stock: ${slowItems.length}`);
+
+    lines.push("");
+    lines.push("Mambo 2 Yako Strong:");
+    if (topProducts.length) {
+      lines.push(`• ${clean(topProducts[0]?.product_name)} inaonekana kuwa strongest contributor kwa sasa.`);
+    } else {
+      lines.push("• Biashara imeonyesha movement ya mauzo kwenye snapshot ya sasa.");
+    }
+    if (profitTotal > 0) {
+      lines.push("• Uko kwenye profit chanya, hivyo msingi wa biashara bado upo vizuri.");
+    } else {
+      lines.push("• Una nafasi ya kurekebisha performance kabla hali haijawa mbaya zaidi.");
+    }
+
+    lines.push("");
+    lines.push("Mambo 2 Yanahitaji Attention:");
+    if (topProducts.length > 1) {
+      lines.push(`• ${clean(topProducts[1]?.product_name)} inaonekana kuwa sehemu dhaifu kwenye efficiency ya profit.`);
+    } else if (marginPct < 12) {
+      lines.push("• Margin ya biashara iko chini kuliko comfort zone.");
+    } else {
+      lines.push("• Pricing/cost discipline bado vinahitaji kufuatiliwa karibu.");
+    }
+
+    if (lowStockItems.length) {
+      lines.push(`• Kuna ${lowStockItems.length} bidhaa low stock ambazo zinaweza kukata mauzo ukichelewa restock.`);
+    } else if (slowItems.length) {
+      lines.push(`• Kuna ${slowItems.length} bidhaa slow/dead stock zinazofunga cash.`);
+    } else if (expensesTotal > 0) {
+      lines.push(`• Expenses za ${fmtMoney(expensesTotal)} zinahitaji uhalali wa moja kwa moja.`);
+    }
+
+    lines.push("");
+    lines.push("ACTIONS:");
+    lines.push("• Kagua bidhaa zenye margin ndogo na uboreshe markup.");
+    if (lowStockItems.length) lines.push("• Restock bidhaa muhimu kabla sales momentum haijakatika.");
+    if (slowItems.length) lines.push("• Fanya promo au markdown kwa dead stock ili kufungua cash.");
+    if (expensesTotal > 0) lines.push("• Pitia expense kubwa na kata zisizo za lazima.");
+
+    return stabilizeReplyText(lines.join("\n"), {
+      actions: [
+        "Kagua bidhaa zenye margin ndogo na uboreshe markup.",
+        lowStockItems.length ? "Restock bidhaa muhimu kabla sales momentum haijakatika." : "",
+        slowItems.length ? "Fanya promo au markdown kwa dead stock ili kufungua cash." : "",
+        expensesTotal > 0 ? "Pitia expense kubwa na kata zisizo za lazima." : "",
+      ].filter(Boolean),
+      forceNextMove: true,
+    });
+  }
+
+  const lines: string[] = [];
+  lines.push(`Hapa kuna analysis ya biashara yako ya leo kwa ${clean(snapshot?.store_name) || "store hii"}:`);
+  lines.push("");
+  lines.push("Sales: " + fmtMoney(salesTotal));
+  lines.push("COGS: " + fmtMoney(cogsTotal));
+  lines.push("Expenses: " + fmtMoney(expensesTotal));
+  lines.push("Profit: " + fmtMoney(profitTotal));
+  lines.push("Orders: " + ordersCount.toLocaleString("en-US"));
+  lines.push("Avg/Order: " + fmtMoney(avgOrderValue));
+  lines.push("Margin: " + fmtPercent(marginPct));
+
+  lines.push("");
+  lines.push("INSIGHTS:");
+  if (marginPct < 10) {
+    lines.push("• Margin yako ni ndogo sana.");
+  } else if (marginPct < 20) {
+    lines.push("• Margin iko medium — inaweza kuboreshwa.");
+  } else {
+    lines.push("• Margin iko vizuri sana.");
+  }
+
+  if (expensesTotal > 0) {
+    lines.push(`• Expenses za ${fmtMoney(expensesTotal)} zinakata profit moja kwa moja.`);
+  }
+
+  if (lowStockItems.length) {
+    lines.push(`• Kuna ${lowStockItems.length} bidhaa low stock zinazohitaji uangalizi.`);
+  }
+
+  lines.push("");
+  lines.push("IDEAS:");
+  if (topProducts.length) {
+    lines.push(`• Sukuma ${clean(topProducts[0]?.product_name)} zaidi kwa sababu ndiyo strongest mover.`);
+  }
+  if (slowItems.length) {
+    lines.push("• Punguza cash iliyokwama kwenye bidhaa slow/dead stock.");
+  }
+  if (expensesTotal > 0) {
+    lines.push("• Punguza matumizi yasiyo ya lazima.");
+  }
+
+  lines.push("");
+  lines.push("ACTIONS:");
+  lines.push("• Linda top products zisikose stock.");
+  if (lowStockItems.length) lines.push("• Restock bidhaa muhimu mapema.");
+  if (slowItems.length) lines.push("• Fanya promo/markdown ya bidhaa slow moving.");
+  if (expensesTotal > 0) lines.push("• Pitia expenses kubwa za leo.");
+
+  return stabilizeReplyText(lines.join("\n"), {
+    warnings: [
+      marginPct < 10 ? "Margin yako ni ndogo sana." : marginPct < 20 ? "Margin iko medium — inaweza kuboreshwa." : "Margin iko vizuri sana.",
+      expensesTotal > 0 ? `Expenses za ${fmtMoney(expensesTotal)} zinakata profit moja kwa moja.` : "",
+      lowStockItems.length ? `Kuna ${lowStockItems.length} bidhaa low stock zinazohitaji uangalizi.` : "",
+    ].filter(Boolean),
+    actions: [
+      "Linda top products zisikose stock.",
+      lowStockItems.length ? "Restock bidhaa muhimu mapema." : "",
+      slowItems.length ? "Fanya promo/markdown ya bidhaa slow moving." : "",
+      expensesTotal > 0 ? "Pitia expenses kubwa za leo." : "",
+    ].filter(Boolean),
+    forceNextMove: true,
+  });
 }
 
 function buildDirectProductDataReply(text: string, ctx: ReqBody["context"]) {
@@ -972,7 +1213,12 @@ function detectBusinessAnalysisRequest(text: string, ctx: ReqBody["context"], hi
     (Array.isArray(c?.lowStockItems) && c.lowStockItems.length > 0) ||
     (Array.isArray(c?.slowItems) && c.slowItems.length > 0);
 
-  if (hasInjectedProducts) return true;
+  const hasInjectedSnapshot = hasInjectedBusinessSnapshot(ctx);
+
+  // IMPORTANT:
+  // kama app tayari imeinject business snapshot/product data,
+  // usi-trigger worker live snapshot fetch tena.
+  if (hasInjectedSnapshot || hasInjectedProducts) return false;
   if (!activeStoreId) return false;
 
   const directSignals = [
@@ -1119,6 +1365,100 @@ function fmtMoney(n: number) {
 function fmtPercent(n: number) {
   const v = Number(n) || 0;
   return `${v.toFixed(1)}%`;
+}
+
+function normalizeStableHeadingKey(line: string) {
+  return clean(line)
+    .toUpperCase()
+    .replace(/^[#>*\s]+/, "")
+    .replace(/[^\p{L}\p{N}\s]/gu, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function buildNextMoveLine(args: {
+  actions?: string[];
+  ideas?: string[];
+  warnings?: string[];
+}) {
+  const firstAction = clean(args.actions?.[0]);
+  if (firstAction) return firstAction;
+
+  const firstIdea = clean(args.ideas?.[0]);
+  if (firstIdea) return firstIdea;
+
+  const firstWarning = clean(args.warnings?.[0]);
+  if (firstWarning) return firstWarning;
+
+  return "";
+}
+
+function stabilizeReplyText(
+  raw: string,
+  opts?: {
+    actions?: string[];
+    ideas?: string[];
+    warnings?: string[];
+    forceNextMove?: boolean;
+  }
+) {
+  const src = String(raw ?? "").replace(/\r\n/g, "\n").trim();
+  if (!src) return "";
+
+  const lines = src.split("\n");
+  const out: string[] = [];
+
+  for (const line of lines) {
+    const key = normalizeStableHeadingKey(line);
+
+    if (key === "INSIGHTS") {
+      out.push("INSIGHTS:");
+      continue;
+    }
+    if (key === "IDEAS") {
+      out.push("IDEAS:");
+      continue;
+    }
+    if (key === "ACTIONS") {
+      out.push("ACTIONS:");
+      continue;
+    }
+    if (key === "FORECAST" || key === "FORECAST BASED ON LAST 7 DAYS") {
+      out.push("FORECAST:");
+      continue;
+    }
+    if (key === "PREDICTION RISKS") {
+      out.push("PREDICTION RISKS:");
+      continue;
+    }
+    if (key === "SMART PREDICTIONS") {
+      out.push("SMART PREDICTIONS:");
+      continue;
+    }
+    if (key === "NEXT MOVE") {
+      out.push("NEXT MOVE:");
+      continue;
+    }
+
+    out.push(line.replace(/^[-●▪‣]\s+/g, "• "));
+  }
+
+  let text = out.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+
+  const hasNextMove = /(^|\n)NEXT MOVE:\s*(\n|$)/i.test(text);
+  if (!hasNextMove && opts?.forceNextMove) {
+    const nextMove = buildNextMoveLine({
+      actions: opts.actions,
+      ideas: opts.ideas,
+      warnings: opts.warnings,
+    });
+
+    if (nextMove) {
+      text = `${text}\n\nNEXT MOVE:\n• ${nextMove}`.trim();
+    }
+  }
+
+  return text.replace(/\n{3,}/g, "\n\n").trim();
 }
 
 function detectBusinessIntent(text: string): AnalysisIntent {
@@ -1458,10 +1798,10 @@ function buildForecastBlock(points: ForecastPoint[]): string {
 
   const trendText =
     salesTrendPct > 8
-      ? `📈 Trend: mauzo yanaongezeka (${fmtPercent(salesTrendPct)})`
+      ? `Trend: mauzo yanaongezeka (${fmtPercent(salesTrendPct)})`
       : salesTrendPct < -8
-      ? `📉 Trend: mauzo yanashuka (${fmtPercent(salesTrendPct)})`
-      : `➡️ Trend: mauzo yako yapo stable (${fmtPercent(salesTrendPct)})`;
+      ? `Trend: mauzo yanashuka (${fmtPercent(salesTrendPct)})`
+      : `Trend: mauzo yako yapo stable (${fmtPercent(salesTrendPct)})`;
 
   const projectedSales = Math.max(0, Math.round((salesAvg + last.sales) / 2));
   const projectedProfit = Math.max(0, Math.round(profitAvg * 0.6 + last.profit * 0.4));
@@ -1474,29 +1814,29 @@ function buildForecastBlock(points: ForecastPoint[]): string {
   const lastExpenseRate = last.sales > 0 ? (last.expenses / last.sales) * 100 : 0;
 
   if (salesTrendPct < -8) {
-    risks.push("⚠️ Forecast inaonyesha mauzo yanaweza kushuka kama trend hii ikiendelea.");
-    tips.push("💡 Fanya push ya bidhaa zinazoenda haraka ndani ya saa/chache zijazo.");
+    risks.push("• Forecast inaonyesha mauzo yanaweza kushuka kama trend hii ikiendelea.");
+    tips.push("• Fanya push ya bidhaa zinazoenda haraka ndani ya saa/chache zijazo.");
   }
 
   if (lastCogsRate > 80) {
-    risks.push("⚠️ COGS ratio yako ni kubwa sana.");
-    tips.push("💡 Jadili supplier cost au punguza discount zisizo za lazima.");
+    risks.push("• COGS ratio yako ni kubwa sana.");
+    tips.push("• Jadili supplier cost au punguza discount zisizo za lazima.");
   }
 
   if (lastExpenseRate > 20) {
-    risks.push("⚠️ Expenses ratio yako ni nzito dhidi ya sales.");
-    tips.push("💡 Punguza matumizi yasiyo ya lazima kabla ya closing.");
+    risks.push("• Expenses ratio yako ni nzito dhidi ya sales.");
+    tips.push("• Punguza matumizi yasiyo ya lazima kabla ya closing.");
   }
 
-  const riskBlock = risks.length ? `\n\n🚨 PREDICTION RISKS:\n${risks.join("\n")}` : "";
-  const tipBlock = tips.length ? `\n\n🧠 SMART PREDICTIONS:\n${tips.join("\n")}` : "";
+  const riskBlock = risks.length ? `\n\nPREDICTION RISKS:\n${risks.join("\n")}` : "";
+  const tipBlock = tips.length ? `\n\nSMART PREDICTIONS:\n${tips.join("\n")}` : "";
 
   return (
-    `\n\n🔮 FORECAST (based on last 7 days):\n` +
+    `\n\nFORECAST:\n` +
     `${trendText}\n` +
-    `📦 Projected Orders (next day): ${projectedOrders.toLocaleString("en-US")}\n` +
-    `💰 Projected Sales (next day): ${fmtMoney(projectedSales)}\n` +
-    `🏁 Projected Profit (next day): ${fmtMoney(projectedProfit)}` +
+    `Projected Orders (next day): ${projectedOrders.toLocaleString("en-US")}\n` +
+    `Projected Sales (next day): ${fmtMoney(projectedSales)}\n` +
+    `Projected Profit (next day): ${fmtMoney(projectedProfit)}` +
     riskBlock +
     tipBlock
   );
@@ -2034,7 +2374,7 @@ export default {
         return withCors(
           json({
             ok: true,
-            reply: combinedInjectedReply,
+            reply: stabilizeReplyText(combinedInjectedReply),
             meta: {
               role: "ZETRA_BMS",
               roleMeta: {
@@ -2057,13 +2397,36 @@ export default {
         return withCors(
           json({
             ok: true,
-            reply: directInjectedReply,
+            reply: stabilizeReplyText(directInjectedReply),
             meta: {
               role: "ZETRA_BMS",
               roleMeta: {
                 source: "direct_injected_product_data",
                 confidence: 1,
                 reason: "real_product_data_answered_directly",
+              },
+              analysisIntent: detectBusinessIntent(text),
+              mode,
+              locale: body?.locale ?? null,
+              language: body?.language ?? null,
+            },
+          }),
+          origin
+        );
+      }
+
+      const injectedSnapshotReply = buildInjectedSnapshotReply(text, ctx);
+      if (injectedSnapshotReply) {
+        return withCors(
+          json({
+            ok: true,
+            reply: stabilizeReplyText(injectedSnapshotReply),
+            meta: {
+              role: "ZETRA_BMS",
+              roleMeta: {
+                source: "injected_business_snapshot",
+                confidence: 1,
+                reason: "analysis_answered_from_app_snapshot",
               },
               analysisIntent: detectBusinessIntent(text),
               mode,
@@ -2139,7 +2502,7 @@ export default {
 
           const insightsBlock =
             warnings.length || ideas.length || actions.length
-              ? `\n\n🔍 INSIGHTS:\n${warnings.join("\n")}\n\n💡 IDEAS:\n${ideas.join("\n")}\n\n🚀 ACTIONS:\n${actions.join("\n")}`
+              ? `\n\nINSIGHTS:\n${warnings.map((x) => `• ${clean(x).replace(/^•\s*/, "").replace(/^[⚠️📌✅👉💡🚀🔍🧠📈📉➡️🏁💰🧾🛒💵📊]+\s*/, "")}`).join("\n")}\n\nIDEAS:\n${ideas.map((x) => `• ${clean(x).replace(/^•\s*/, "").replace(/^[⚠️📌✅👉💡🚀🔍🧠📈📉➡️🏁💰🧾🛒💵📊]+\s*/, "")}`).join("\n")}\n\nACTIONS:\n${actions.map((x) => `• ${clean(x).replace(/^•\s*/, "").replace(/^[⚠️📌✅👉💡🚀🔍🧠📈📉➡️🏁💰🧾🛒💵📊]+\s*/, "")}`).join("\n")}`
               : "";
 
           const autopilotAlerts = buildAutopilotAlerts({
@@ -2173,7 +2536,15 @@ export default {
               ? `\n\n🧠 COACH NOTE:\nLengo letu hapa ni kuongeza faida, kupunguza cost, na kulinda margin ya biashara yako.\n`
               : "";
 
-          const reply = headerText + baseSummary + coachIntro + insightsBlock + forecastBlock;
+          const reply = stabilizeReplyText(
+            headerText + baseSummary + coachIntro + insightsBlock + forecastBlock,
+            {
+              warnings,
+              ideas,
+              actions,
+              forceNextMove: true,
+            }
+          );
 
           return withCors(
             json({
@@ -2276,7 +2647,7 @@ STRICT FALLBACK RULE:
       return withCors(
         json({
           ok: true,
-          reply: out.text || "",
+          reply: stabilizeReplyText(out.text || ""),
           meta: {
             role,
             roleMeta,
@@ -2428,7 +2799,7 @@ STRICT FALLBACK RULE:
         );
       }
 
-      const reply = extractChatCompletionText(parsed) || "";
+      const reply = stabilizeReplyText(extractChatCompletionText(parsed) || "");
 
       return withCors(
         json({
