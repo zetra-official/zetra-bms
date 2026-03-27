@@ -678,6 +678,7 @@ function buildInjectedSnapshotReply(text: string, ctx: ReqBody["context"]) {
   const trendPct = num(forecast?.trend_pct);
 
   const intent = detectBusinessIntent(text);
+
   const t = clean(text).toLowerCase();
 
   const wantsGeneralAnalysis =
