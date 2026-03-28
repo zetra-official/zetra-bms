@@ -47,6 +47,16 @@ type PaymentSummary = {
   total_balance: number;
 };
 
+const EMPTY_PAYMENT_SUMMARY: PaymentSummary = {
+  cash_total: 0,
+  mobile_total: 0,
+  bank_total: 0,
+  credit_collected_total: 0,
+  grand_paid_total: 0,
+  total_sales: 0,
+  total_balance: 0,
+};
+
 type OpenShiftRow = {
   shift_id: string;
   organization_id: string;
@@ -318,15 +328,7 @@ export default function CashierClosingScreen() {
   const [err, setErr] = useState<string | null>(null);
 
   const [rows, setRows] = useState<ClosingSaleRow[]>([]);
-  const [paymentSummary, setPaymentSummary] = useState<PaymentSummary>({
-    cash_total: 0,
-    mobile_total: 0,
-    bank_total: 0,
-    credit_collected_total: 0,
-    grand_paid_total: 0,
-    total_sales: 0,
-    total_balance: 0,
-  });
+  const [paymentSummary, setPaymentSummary] = useState<PaymentSummary>(EMPTY_PAYMENT_SUMMARY);
 
   const [openShift, setOpenShift] = useState<OpenShiftRow | null>(null);
 
@@ -461,18 +463,34 @@ export default function CashierClosingScreen() {
 
         if (!finalRange) throw new Error("Invalid custom date range.");
 
-        const salesRes = await supabase.rpc("get_sales_v2", {
-          p_store_id: activeStoreId,
-          p_from: finalRange.from,
-          p_to: finalRange.to,
-        } as any);
+        const useCashierScopedRpc = isCashier && !!shiftRowNormalized?.shift_id;
+
+        const salesRes = useCashierScopedRpc
+          ? await supabase.rpc("get_my_cashier_closing_sales_v1", {
+              p_shift_id: shiftRowNormalized!.shift_id,
+              p_from: finalRange.from,
+              p_to: finalRange.to,
+            } as any)
+          : await supabase.rpc("get_sales_v2", {
+              p_store_id: activeStoreId,
+              p_from: finalRange.from,
+              p_to: finalRange.to,
+            } as any);
+
         if (salesRes.error) throw salesRes.error;
 
-        const payRes = await supabase.rpc("get_sales_payment_summary_v1", {
-          p_store_id: activeStoreId,
-          p_from: finalRange.from,
-          p_to: finalRange.to,
-        } as any);
+        const payRes = useCashierScopedRpc
+          ? await supabase.rpc("get_my_cashier_closing_payment_summary_v1", {
+              p_shift_id: shiftRowNormalized!.shift_id,
+              p_from: finalRange.from,
+              p_to: finalRange.to,
+            } as any)
+          : await supabase.rpc("get_sales_payment_summary_v1", {
+              p_store_id: activeStoreId,
+              p_from: finalRange.from,
+              p_to: finalRange.to,
+            } as any);
+
         if (payRes.error) throw payRes.error;
 
         const raw = (salesRes.data ?? []) as AnyRow[];
@@ -500,16 +518,7 @@ export default function CashierClosingScreen() {
         });
       } catch (e: any) {
         setRows([]);
-        setOpenShift(null);
-        setPaymentSummary({
-          cash_total: 0,
-          mobile_total: 0,
-          bank_total: 0,
-          credit_collected_total: 0,
-          grand_paid_total: 0,
-          total_sales: 0,
-          total_balance: 0,
-        });
+        setPaymentSummary(EMPTY_PAYMENT_SUMMARY);
         setErr(e?.message ?? "Failed to load cashier closing");
       } finally {
         if (mode === "boot") setLoading(false);
@@ -537,9 +546,34 @@ export default function CashierClosingScreen() {
 
   const applyCustomRange = useCallback(() => {
     if (overdueShift?.shift_id) return;
+
+    const fromDate = parseDateInputStart(customFrom);
+    const toDate = parseDateInputEnd(customTo);
+
+    if (!fromDate || !toDate) {
+      setErr("Tumia format ya tarehe: YYYY-MM-DD");
+      return;
+    }
+
+    if (fromDate.getTime() > toDate.getTime()) {
+      setErr("From Date haiwezi kuwa kubwa kuliko To Date");
+      return;
+    }
+    useEffect(() => {
+    void load("boot");
+  }, [load]);
+useEffect(() => {
+    if (range === "custom") return;
+    void load("refresh");
+  }, [range, load]);
+    const nextRange = {
+      from: fromDate.toISOString(),
+      to: toDate.toISOString(),
+    };
+
     setRange("custom");
     void load("refresh");
-  }, [load, overdueShift?.shift_id]);
+  }, [customFrom, customTo, load, overdueShift?.shift_id]);
 
   const openReceipt = useCallback(
     (row: ClosingSaleRow) => {

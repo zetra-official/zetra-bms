@@ -1167,6 +1167,49 @@ function CompactFinanceCardHomePreview() {
       if (!silent) setLoading(true);
       setErr(null);
 
+      // ✅ reset preview state before each fresh load
+      // this prevents stale profit/sales/expenses from a previous successful request
+      setSalesRow({
+        total: 0,
+        orders: 0,
+        currency: "TZS",
+      });
+
+      setExpRow({
+        total: 0,
+        count: 0,
+      });
+
+      setProfitRow({
+        net: 0,
+        sales: null,
+        expenses: null,
+      });
+
+      setPay({
+        cash: 0,
+        bank: 0,
+        mobile: 0,
+        credit: 0,
+        other: 0,
+        orders: 0,
+      });
+
+      setCollections({
+        cash: 0,
+        bank: 0,
+        mobile: 0,
+        other: 0,
+        total: 0,
+        payments: 0,
+      });
+
+      setExpenseByChannel({
+        cash: 0,
+        bank: 0,
+        mobile: 0,
+      });
+
       try {
         const { from, to } = rangeToFromTo(range);
         const { from: fromYMD, to: toYMD } = rangeToDates(range);
@@ -1189,12 +1232,70 @@ function CompactFinanceCardHomePreview() {
 
         if (rid !== reqIdRef.current) return;
 
-        if (salesRes.status === "fulfilled") setSalesRow(salesRes.value);
-        if (expenseRes.status === "fulfilled") setExpRow(expenseRes.value);
-        if (profitRes.status === "fulfilled") setProfitRow(profitRes.value);
-        if (payRes.status === "fulfilled") setPay(payRes.value);
-        if (collectionsRes.status === "fulfilled") setCollections(collectionsRes.value);
-        if (expenseBreakdownRes.status === "fulfilled") setExpenseByChannel(expenseBreakdownRes.value);
+        if (salesRes.status === "fulfilled") {
+          setSalesRow(salesRes.value);
+        } else {
+          setSalesRow({
+            total: 0,
+            orders: 0,
+            currency: "TZS",
+          });
+        }
+
+        if (expenseRes.status === "fulfilled") {
+          setExpRow(expenseRes.value);
+        } else {
+          setExpRow({
+            total: 0,
+            count: 0,
+          });
+        }
+
+        if (profitRes.status === "fulfilled") {
+          setProfitRow(profitRes.value);
+        } else {
+          setProfitRow({
+            net: 0,
+            sales: null,
+            expenses: null,
+          });
+        }
+
+        if (payRes.status === "fulfilled") {
+          setPay(payRes.value);
+        } else {
+          setPay({
+            cash: 0,
+            bank: 0,
+            mobile: 0,
+            credit: 0,
+            other: 0,
+            orders: 0,
+          });
+        }
+
+        if (collectionsRes.status === "fulfilled") {
+          setCollections(collectionsRes.value);
+        } else {
+          setCollections({
+            cash: 0,
+            bank: 0,
+            mobile: 0,
+            other: 0,
+            total: 0,
+            payments: 0,
+          });
+        }
+
+        if (expenseBreakdownRes.status === "fulfilled") {
+          setExpenseByChannel(expenseBreakdownRes.value);
+        } else {
+          setExpenseByChannel({
+            cash: 0,
+            bank: 0,
+            mobile: 0,
+          });
+        }
 
         const firstErr =
           (salesRes.status === "rejected" && salesRes.reason) ||

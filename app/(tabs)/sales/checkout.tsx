@@ -1,19 +1,18 @@
 ﻿import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { Alert, Pressable, Text, TextInput, View } from "react-native";
 
 import { useNetInfo } from "@react-native-community/netinfo";
 
 import { useOrg } from "../../../src/context/OrgContext";
+import { enqueueSale, makeId } from "../../../src/offline/salesQueue";
 import { supabase } from "../../../src/supabase/supabaseClient";
 import { Button } from "../../../src/ui/Button";
 import { Card } from "../../../src/ui/Card";
 import { Screen } from "../../../src/ui/Screen";
-import { theme } from "../../../src/ui/theme";
-
-import { enqueueSale, makeId } from "../../../src/offline/salesQueue";
 import { formatMoney, useOrgMoneyPrefs } from "@/src/ui/money";
+import { theme } from "../../../src/ui/theme";
 
 type CartItem = {
   product_id: string;
@@ -29,6 +28,17 @@ type PayMethod = "CASH" | "MOBILE" | "BANK" | "CREDIT";
 
 type DiscountType = "fixed" | "percent" | null;
 type DiscountResult = { type: DiscountType; value: number; amount: number };
+
+type OpenCashierShiftRow = {
+  shift_id: string;
+  organization_id?: string | null;
+  store_id?: string | null;
+  membership_id?: string | null;
+  opening_cash?: number | null;
+  status?: string | null;
+  opened_at?: string | null;
+  closed_at?: string | null;
+};
 
 function one(v: string | string[] | undefined) {
   return Array.isArray(v) ? v[0] : v;
@@ -57,7 +67,7 @@ function parseDiscountInput(input: string, total: number): DiscountResult {
 
   const compact = t.replace(/\s+/g, "");
   const m = compact.match(/^(-?[0-9][0-9,]*(?:\.[0-9]+)?)([km])?$/i);
-  const rawNum = m?.[1] ?? (compact.match(/-?[0-9][0-9,]*(?:\.[0-9]+)?/)?.[0] ?? "");
+  const rawNum = m?.[1] ?? compact.match(/-?[0-9][0-9,]*(?:\.[0-9]+)?/)?.[0] ?? "";
   if (!rawNum) return { type: null, value: 0, amount: 0 };
 
   const suffix = (m?.[2] ?? compact.match(/[km]\b/i)?.[0] ?? "").toLowerCase();
@@ -79,8 +89,8 @@ function buildNoteWithDiscount(args: {
   discountAmount: number;
   subtotal: number;
 }) {
-  const base = (args.note ?? "").trim();
-  const dText = (args.discountText ?? "").trim();
+  const base = String(args.note ?? "").trim();
+  const dText = String(args.discountText ?? "").trim();
   const dAmt = Math.max(0, Math.round(args.discountAmount || 0));
   const sub = Math.max(0, Math.round(args.subtotal || 0));
 
@@ -133,6 +143,21 @@ function normalizeMoneyInput(raw: string) {
 
 function isStrictPayMethod(x: any): x is PayMethod {
   return x === "CASH" || x === "BANK" || x === "MOBILE" || x === "CREDIT";
+}
+
+async function getMyOpenCashierShiftId(storeId: string): Promise<string | null> {
+  const sid = String(storeId ?? "").trim();
+  if (!sid) return null;
+
+  const { data, error } = await supabase.rpc("get_my_open_cashier_shift_v1", {
+    p_store_id: sid,
+  } as any);
+
+  if (error) throw error;
+
+  const row = (Array.isArray(data) ? data[0] : data) as OpenCashierShiftRow | null;
+  const shiftId = String(row?.shift_id ?? "").trim();
+  return shiftId || null;
 }
 
 function FieldLabel({ children }: { children: any }) {
@@ -196,8 +221,8 @@ export default function CheckoutScreen() {
     [displayCurrency, displayLocale]
   );
 
-  const storeId = (one(params.storeId) ?? "").trim();
-  const storeNameParam = (one(params.storeName) ?? "").trim();
+  const storeId = String(one(params.storeId) ?? "").trim();
+  const storeNameParam = String(one(params.storeName) ?? "").trim();
   const cashierMode = one(params.cashierMode) === "1";
 
   const cart: CartItem[] = useMemo(() => {
@@ -234,15 +259,21 @@ export default function CheckoutScreen() {
   }, [params.cart]);
 
   const canSell = useMemo(() => {
-    const r = (activeRole ?? "staff") as "owner" | "admin" | "staff" | "cashier";
-    return r === "owner" || r === "admin" || r === "staff";
+    const r = String(activeRole ?? "staff").trim().toLowerCase();
+    return r === "owner" || r === "admin" || r === "staff" || r === "cashier";
   }, [activeRole]);
 
   const totalQty = useMemo(() => cart.reduce((a, c) => a + (c.qty || 0), 0), [cart]);
-  const subtotalAmount = useMemo(() => cart.reduce((a, c) => a + Number(c.line_total || 0), 0), [cart]);
+  const subtotalAmount = useMemo(
+    () => cart.reduce((a, c) => a + Number(c.line_total || 0), 0),
+    [cart]
+  );
 
   const [discountText, setDiscountText] = useState<string>("");
-  const discount = useMemo(() => parseDiscountInput(discountText, subtotalAmount), [discountText, subtotalAmount]);
+  const discount = useMemo(
+    () => parseDiscountInput(discountText, subtotalAmount),
+    [discountText, subtotalAmount]
+  );
 
   const grandTotal = useMemo(
     () => Math.max(0, subtotalAmount - (discount.amount || 0)),
@@ -250,13 +281,14 @@ export default function CheckoutScreen() {
   );
 
   const headerStoreName = storeNameParam || activeStoreName || "—";
-
   const mismatch = !!(activeStoreId && storeId && activeStoreId !== storeId);
 
   const [method, setMethod] = useState<PayMethod>("CASH");
   const [paidVia, setPaidVia] = useState<Exclude<PayMethod, "CREDIT">>("CASH");
 
-  const [paidStr, setPaidStr] = useState<string>(() => String(Math.round(grandTotal || subtotalAmount)));
+  const [paidStr, setPaidStr] = useState<string>(() =>
+    String(Math.round(grandTotal || subtotalAmount))
+  );
   const [channel, setChannel] = useState<string>("");
   const [reference, setReference] = useState<string>("");
 
@@ -265,6 +297,7 @@ export default function CheckoutScreen() {
 
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
+  const [openCashierShiftId, setOpenCashierShiftId] = useState<string | null>(null);
 
   const onPaidChange = useCallback((t: string) => {
     setPaidStr(normalizeMoneyInput(t));
@@ -331,6 +364,44 @@ export default function CheckoutScreen() {
   }, [rpcPaymentMethod, reference]);
 
   useEffect(() => {
+    let alive = true;
+
+    async function loadMyOpenCashierShift() {
+      try {
+        if (!storeId) {
+          if (alive) setOpenCashierShiftId(null);
+          return;
+        }
+
+        const role = String(activeRole ?? "").trim().toLowerCase();
+        if (role !== "cashier") {
+          if (alive) setOpenCashierShiftId(null);
+          return;
+        }
+
+        const { data, error } = await supabase.rpc("get_my_open_cashier_shift_v1", {
+          p_store_id: storeId,
+        } as any);
+
+        if (error) throw error;
+
+        const row = (Array.isArray(data) ? data[0] : data) as OpenCashierShiftRow | null;
+        const shiftId = String(row?.shift_id ?? "").trim();
+
+        if (alive) setOpenCashierShiftId(shiftId || null);
+      } catch {
+        if (alive) setOpenCashierShiftId(null);
+      }
+    }
+
+    void loadMyOpenCashierShift();
+
+    return () => {
+      alive = false;
+    };
+  }, [storeId, activeRole]);
+
+  useEffect(() => {
     if (cashierMode) return;
 
     const gt = Math.round(grandTotal);
@@ -353,9 +424,17 @@ export default function CheckoutScreen() {
   const invalidReason = useMemo(() => {
     if (!canSell) return "No permission to sell.";
     if (!storeId) return "Missing storeId.";
-    if (mismatch) return "Store mismatch: rudi nyuma, chagua store sahihi kisha uende Checkout upya.";
+    if (mismatch) {
+      return "Store mismatch: rudi nyuma, chagua store sahihi kisha uende Checkout upya.";
+    }
     if (cart.length === 0) return "Cart is empty.";
-    if (cart.some((c) => !Number.isFinite(c.unit_price) || c.unit_price <= 0)) return "Some items are missing price.";
+    if (cart.some((c) => !Number.isFinite(c.unit_price) || c.unit_price <= 0)) {
+      return "Some items are missing price.";
+    }
+
+    if (String(activeRole ?? "").trim().toLowerCase() === "cashier" && !cashierMode) {
+      if (!openCashierShiftId) return "Cashier hana OPEN shift kwa store hii.";
+    }
 
     if (cashierMode) {
       if (isOffline) return "Cashier handoff requires online connection.";
@@ -406,6 +485,8 @@ export default function CheckoutScreen() {
     rpcChannel,
     rpcReference,
     customerName,
+    activeRole,
+    openCashierShiftId,
   ]);
 
   const preflightCheckStock = useCallback(async () => {
@@ -436,7 +517,9 @@ export default function CheckoutScreen() {
         .map((x) => `• ${x.name}: have ${x.have}, need ${x.need}`)
         .join("\n");
 
-      throw new Error(`Stock haitoshi kwa store hii.\n\n${lines}\n\nNenda Inventory → Adjust Stock (ADD) kisha jaribu tena.`);
+      throw new Error(
+        `Stock haitoshi kwa store hii.\n\n${lines}\n\nNenda Inventory → Adjust Stock (ADD) kisha jaribu tena.`
+      );
     }
   }, [cart, storeId]);
 
@@ -455,8 +538,8 @@ export default function CheckoutScreen() {
         typeof d === "string"
           ? d
           : Array.isArray(d)
-          ? d?.[0]?.id ?? d?.[0]?.credit_account_id
-          : d?.id ?? d?.credit_account_id;
+            ? d?.[0]?.id ?? d?.[0]?.credit_account_id
+            : d?.id ?? d?.credit_account_id;
 
       if (!id) throw new Error("create_credit_account_v2 did not return account id");
       return String(id);
@@ -465,7 +548,13 @@ export default function CheckoutScreen() {
   );
 
   const recordCreditSaleV2 = useCallback(
-    async (args: { storeId: string; creditAccountId: string; amount: number; note?: string | null; reference?: string | null }) => {
+    async (args: {
+      storeId: string;
+      creditAccountId: string;
+      amount: number;
+      note?: string | null;
+      reference?: string | null;
+    }) => {
       const payload = {
         p_store_id: args.storeId,
         p_credit_account_id: args.creditAccountId,
@@ -537,6 +626,13 @@ export default function CheckoutScreen() {
       try {
         const clientSaleId = makeId();
 
+        if (String(activeRole ?? "").trim().toLowerCase() === "cashier") {
+          const cashierShiftId = await getMyOpenCashierShiftId(storeId);
+          if (!cashierShiftId) {
+            throw new Error("Cashier hana OPEN shift. Fungua shift kwanza kabla ya kufanya sale.");
+          }
+        }
+
         const items = cart.map((c) => ({
           product_id: c.product_id,
           qty: Math.trunc(Number(c.qty)),
@@ -550,11 +646,17 @@ export default function CheckoutScreen() {
         const p_payment_method = rpcPaymentMethod;
 
         const p_payment_channel =
-          p_payment_method === "MOBILE" || p_payment_method === "BANK" ? (rpcChannel.trim() || null) : null;
+          p_payment_method === "MOBILE" || p_payment_method === "BANK"
+            ? rpcChannel.trim() || null
+            : null;
         const p_reference =
-          p_payment_method === "MOBILE" || p_payment_method === "BANK" ? (rpcReference.trim() || null) : null;
+          p_payment_method === "MOBILE" || p_payment_method === "BANK"
+            ? rpcReference.trim() || null
+            : null;
 
-        const customerLines = isCredit ? `CUSTOMER: ${customerName.trim()}\nPHONE: ${customerPhone.trim() || "-"}\n` : "";
+        const customerLines = isCredit
+          ? `CUSTOMER: ${customerName.trim()}\nPHONE: ${customerPhone.trim() || "-"}\n`
+          : "";
 
         const finalNote = buildNoteWithDiscount({
           note: `${customerLines}${note || ""}`,
@@ -563,14 +665,15 @@ export default function CheckoutScreen() {
           subtotal: subtotalAmount,
         });
 
-        const rpcDiscountType = discount.type === "percent" ? "PERCENT" : discount.type === "fixed" ? "FIXED" : null;
+        const rpcDiscountType =
+          discount.type === "percent" ? "PERCENT" : discount.type === "fixed" ? "FIXED" : null;
 
         const rpcDiscountValue =
           discount.type === "percent"
             ? Number(discount.value || 0)
             : discount.type === "fixed"
-            ? Number(discount.amount || 0)
-            : null;
+              ? Number(discount.amount || 0)
+              : null;
 
         await enqueueSale(storeId, {
           client_sale_id: clientSaleId,
@@ -587,7 +690,7 @@ export default function CheckoutScreen() {
             discount_note: discountText.trim() || null,
             is_credit: isCredit,
             customer_name: isCredit ? customerName.trim() : null,
-            customer_phone: isCredit ? (customerPhone.trim() || null) : null,
+            customer_phone: isCredit ? customerPhone.trim() || null : null,
             credit_balance: Number(balance || 0),
           },
         });
@@ -615,7 +718,9 @@ export default function CheckoutScreen() {
 
       const p_paid_amount = Number(paidAmount);
 
-      const customerLines = isCredit ? `CUSTOMER: ${customerName.trim()}\nPHONE: ${customerPhone.trim() || "-"}\n` : "";
+      const customerLines = isCredit
+        ? `CUSTOMER: ${customerName.trim()}\nPHONE: ${customerPhone.trim() || "-"}\n`
+        : "";
 
       const finalNote = buildNoteWithDiscount({
         note: `${customerLines}${note || ""}`,
@@ -624,26 +729,42 @@ export default function CheckoutScreen() {
         subtotal: subtotalAmount,
       });
 
-      const rpcDiscountType = discount.type === "percent" ? "PERCENT" : discount.type === "fixed" ? "FIXED" : null;
+      const rpcDiscountType =
+        discount.type === "percent" ? "PERCENT" : discount.type === "fixed" ? "FIXED" : null;
 
       const rpcDiscountValue =
         discount.type === "percent"
           ? Number(discount.value || 0)
           : discount.type === "fixed"
-          ? Number(discount.amount || 0)
-          : null;
+            ? Number(discount.amount || 0)
+            : null;
 
       const clientSaleId = makeId();
 
-      const res = await supabase.rpc("create_sale_with_payment_v3", {
+      let cashierShiftId: string | null = null;
+      const isCashierUser = String(activeRole ?? "").trim().toLowerCase() === "cashier";
+
+      if (isCashierUser) {
+        cashierShiftId = await getMyOpenCashierShiftId(storeId);
+        if (!cashierShiftId) {
+          throw new Error("Cashier hana OPEN shift. Fungua shift kwanza kabla ya kufanya sale.");
+        }
+      }
+
+      const res = await supabase.rpc("create_sale_with_payment_v4", {
         p_store_id: storeId,
         p_items: items,
         p_note: finalNote,
         p_payment_method: rpcPaymentMethod,
         p_paid_amount: p_paid_amount,
         p_payment_channel:
-          rpcPaymentMethod === "MOBILE" || rpcPaymentMethod === "BANK" ? (rpcChannel.trim() || null) : null,
-        p_reference: rpcPaymentMethod === "MOBILE" || rpcPaymentMethod === "BANK" ? (rpcReference.trim() || null) : null,
+          rpcPaymentMethod === "MOBILE" || rpcPaymentMethod === "BANK"
+            ? rpcChannel.trim() || null
+            : null,
+        p_reference:
+          rpcPaymentMethod === "MOBILE" || rpcPaymentMethod === "BANK"
+            ? rpcReference.trim() || null
+            : null,
         p_customer_id: null,
         p_customer_phone: null,
         p_customer_full_name: null,
@@ -651,12 +772,18 @@ export default function CheckoutScreen() {
         p_discount_value: rpcDiscountValue,
         p_discount_note: discountText.trim() || null,
         p_client_sale_id: clientSaleId,
+        p_cashier_shift_id: isCashierUser ? cashierShiftId : null,
       } as any);
 
       if (res.error) throw res.error;
 
       const row = Array.isArray(res.data) ? (res.data[0] ?? null) : res.data;
-      const saleId: string | null = row?.sale_id ? String(row.sale_id) : null;
+      const saleId: string | null =
+        row?.sale_id != null
+          ? String(row.sale_id)
+          : row != null && typeof row === "string"
+            ? String(row)
+            : null;
 
       let creditRecorded = false;
       if (isCredit && balance > 0) {
@@ -714,6 +841,7 @@ export default function CheckoutScreen() {
     ensureCreditAccountV2,
     recordCreditSaleV2,
     discount,
+    activeRole,
   ]);
 
   const cartTotalLabel = useMemo(() => {
@@ -724,7 +852,10 @@ export default function CheckoutScreen() {
   const prettySubtotal = useMemo(() => fmt(subtotalAmount), [fmt, subtotalAmount]);
   const prettyDiscount = useMemo(() => fmt(discount.amount), [fmt, discount.amount]);
   const prettyTotal = useMemo(() => fmt(grandTotal), [fmt, grandTotal]);
-  const prettyPaid = useMemo(() => fmt(Number.isFinite(paidAmount) ? paidAmount : 0), [fmt, paidAmount]);
+  const prettyPaid = useMemo(
+    () => fmt(Number.isFinite(paidAmount) ? paidAmount : 0),
+    [fmt, paidAmount]
+  );
   const prettyBal = useMemo(() => fmt(balance), [fmt, balance]);
 
   const showChannelRef = useMemo(() => {
@@ -779,7 +910,8 @@ export default function CheckoutScreen() {
               Cashier Flow
             </Text>
             <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-              Hapa order itatumwa kwenye cashier queue ya store hii. Cashier yeyote aliye-assigniwa store hii anaweza kuipokea na kukamilisha malipo.
+              Hapa order itatumwa kwenye cashier queue ya store hii. Cashier yeyote aliye-assigniwa
+              store hii anaweza kuipokea na kukamilisha malipo.
             </Text>
             <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
               • Hii mode inahitaji ONLINE
@@ -790,11 +922,36 @@ export default function CheckoutScreen() {
           </Card>
         ) : null}
 
+        {!cashierMode && String(activeRole ?? "").trim().toLowerCase() === "cashier" ? (
+          <Card style={{ gap: 8 }}>
+            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+              Cashier Shift Link
+            </Text>
+            <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+              Sale za cashier zitafungwa kwenye OPEN shift ya cashier huyu kwa store hii.
+            </Text>
+            <Text
+              style={{
+                color: openCashierShiftId ? theme.colors.emerald : theme.colors.danger,
+                fontWeight: "900",
+              }}
+            >
+              {openCashierShiftId
+                ? `OPEN SHIFT: ${openCashierShiftId.slice(0, 8)}...`
+                : "Hakuna OPEN cashier shift kwa store hii."}
+            </Text>
+          </Card>
+        ) : null}
+
         <Card style={{ gap: 10 }}>
           <View style={{ flexDirection: "row", alignItems: "center" }}>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>Order Summary</Text>
-              <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 2 }}>{cartTotalLabel}</Text>
+              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+                Order Summary
+              </Text>
+              <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 2 }}>
+                {cartTotalLabel}
+              </Text>
             </View>
             <View
               style={{
@@ -847,21 +1004,29 @@ export default function CheckoutScreen() {
           <View style={{ flexDirection: "row", gap: 10 }}>
             <View style={{ flex: 1 }}>
               <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Subtotal</Text>
-              <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>{prettySubtotal}</Text>
+              <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>
+                {prettySubtotal}
+              </Text>
             </View>
             <View style={{ flex: 1 }}>
               <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Discount</Text>
-              <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>{prettyDiscount}</Text>
+              <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>
+                {prettyDiscount}
+              </Text>
             </View>
             <View style={{ flex: 1 }}>
               <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Total</Text>
-              <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>{prettyTotal}</Text>
+              <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>
+                {prettyTotal}
+              </Text>
             </View>
           </View>
         </Card>
 
         <Card style={{ gap: 10 }}>
-          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>Discount & Note</Text>
+          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+            Discount & Note
+          </Text>
 
           <View>
             <FieldLabel>Discount (e.g. 10% • 5000 • 5k • 1m)</FieldLabel>
@@ -883,7 +1048,11 @@ export default function CheckoutScreen() {
             <InputBox
               value={note}
               onChangeText={setNote}
-              placeholder={cashierMode ? "andika maelezo ya order kwa cashiers..." : "andika maelezo ya mauzo..."}
+              placeholder={
+                cashierMode
+                  ? "andika maelezo ya order kwa cashiers..."
+                  : "andika maelezo ya mauzo..."
+              }
               keyboardType="default"
               multiline
             />
@@ -893,13 +1062,23 @@ export default function CheckoutScreen() {
         {!cashierMode ? (
           <>
             <Card style={{ gap: 12 }}>
-              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>Payment</Text>
+              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+                Payment
+              </Text>
 
               <View style={{ flexDirection: "row", gap: 10 }}>
                 <MethodChip label="Cash" active={method === "CASH"} onPress={() => onSetMethod("CASH")} />
-                <MethodChip label="Mobile" active={method === "MOBILE"} onPress={() => onSetMethod("MOBILE")} />
+                <MethodChip
+                  label="Mobile"
+                  active={method === "MOBILE"}
+                  onPress={() => onSetMethod("MOBILE")}
+                />
                 <MethodChip label="Bank" active={method === "BANK"} onPress={() => onSetMethod("BANK")} />
-                <MethodChip label="Credit" active={method === "CREDIT"} onPress={() => onSetMethod("CREDIT")} />
+                <MethodChip
+                  label="Credit"
+                  active={method === "CREDIT"}
+                  onPress={() => onSetMethod("CREDIT")}
+                />
               </View>
 
               <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
@@ -907,9 +1086,16 @@ export default function CheckoutScreen() {
               <View style={{ flexDirection: "row", gap: 10 }}>
                 <View style={{ flex: 1 }}>
                   <FieldLabel>Paid ({displayCurrency})</FieldLabel>
-                  <InputBox value={paidStr} onChangeText={onPaidChange} placeholder="mf: 120000" keyboardType="numeric" />
+                  <InputBox
+                    value={paidStr}
+                    onChangeText={onPaidChange}
+                    placeholder="mf: 120000"
+                    keyboardType="numeric"
+                  />
                   <Text style={{ color: theme.colors.faint, fontWeight: "800", marginTop: 8 }}>
-                    {method === "CREDIT" ? "Unaweza kuweka 0 hadi total (partial payment)." : "Kwa non-credit, lazima ulipe full total."}
+                    {method === "CREDIT"
+                      ? "Unaweza kuweka 0 hadi total (partial payment)."
+                      : "Kwa non-credit, lazima ulipe full total."}
                   </Text>
                 </View>
                 <View style={{ width: 10 }} />
@@ -918,15 +1104,25 @@ export default function CheckoutScreen() {
               <View style={{ flexDirection: "row", gap: 10 }}>
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Total</Text>
-                  <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>{prettyTotal}</Text>
+                  <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>
+                    {prettyTotal}
+                  </Text>
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Paid</Text>
-                  <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>{prettyPaid}</Text>
+                  <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>
+                    {prettyPaid}
+                  </Text>
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Balance</Text>
-                  <Text style={{ color: isCredit ? theme.colors.emerald : theme.colors.text, fontWeight: "900", marginTop: 4 }}>
+                  <Text
+                    style={{
+                      color: isCredit ? theme.colors.emerald : theme.colors.text,
+                      fontWeight: "900",
+                      marginTop: 4,
+                    }}
+                  >
                     {prettyBal}
                   </Text>
                 </View>
@@ -976,7 +1172,9 @@ export default function CheckoutScreen() {
                   <View style={{ gap: 10 }}>
                     <View>
                       <FieldLabel>
-                        {rpcPaymentMethod === "MOBILE" ? "Mobile Channel (e.g. M-PESA / TIGO-PESA)" : "Bank Channel (e.g. NMB / CRDB)"}
+                        {rpcPaymentMethod === "MOBILE"
+                          ? "Mobile Channel (e.g. M-PESA / TIGO-PESA)"
+                          : "Bank Channel (e.g. NMB / CRDB)"}
                       </FieldLabel>
                       <InputBox
                         value={channel}
@@ -988,7 +1186,12 @@ export default function CheckoutScreen() {
 
                     <View>
                       <FieldLabel>Reference / Transaction ID</FieldLabel>
-                      <InputBox value={reference} onChangeText={setReference} placeholder="mf: TXN12345" keyboardType="default" />
+                      <InputBox
+                        value={reference}
+                        onChangeText={setReference}
+                        placeholder="mf: TXN12345"
+                        keyboardType="default"
+                      />
                     </View>
                   </View>
                 </>
@@ -1003,16 +1206,28 @@ export default function CheckoutScreen() {
 
             {isCredit && (
               <Card style={{ gap: 10 }}>
-                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>Customer (for Credit/Partial)</Text>
+                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+                  Customer (for Credit/Partial)
+                </Text>
 
                 <View>
                   <FieldLabel>Customer Name *</FieldLabel>
-                  <InputBox value={customerName} onChangeText={setCustomerName} placeholder="mf: Juma Ali" keyboardType="default" />
+                  <InputBox
+                    value={customerName}
+                    onChangeText={setCustomerName}
+                    placeholder="mf: Juma Ali"
+                    keyboardType="default"
+                  />
                 </View>
 
                 <View>
                   <FieldLabel>Customer Phone (optional)</FieldLabel>
-                  <InputBox value={customerPhone} onChangeText={setCustomerPhone} placeholder="mf: 0712xxxxxx" keyboardType="phone-pad" />
+                  <InputBox
+                    value={customerPhone}
+                    onChangeText={setCustomerPhone}
+                    placeholder="mf: 0712xxxxxx"
+                    keyboardType="phone-pad"
+                  />
                 </View>
 
                 <Text style={{ color: theme.colors.faint, fontWeight: "800" }}>
@@ -1031,10 +1246,10 @@ export default function CheckoutScreen() {
                   ? "Sending..."
                   : "Creating..."
                 : cashierMode
-                ? "Send to Cashiers"
-                : isOffline
-                ? "Save Offline"
-                : "Confirm Sale"
+                  ? "Send to Cashiers"
+                  : isOffline
+                    ? "Save Offline"
+                    : "Confirm Sale"
             }
             onPress={confirm}
             disabled={saving || !!invalidReason}
@@ -1043,9 +1258,7 @@ export default function CheckoutScreen() {
           <Button title="Back" onPress={() => router.back()} disabled={saving} variant="secondary" />
 
           {!!invalidReason && (
-            <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>
-              ⚠ {invalidReason}
-            </Text>
+            <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>⚠ {invalidReason}</Text>
           )}
         </Card>
 
