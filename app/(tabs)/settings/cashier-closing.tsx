@@ -474,6 +474,16 @@ export default function CashierClosingScreen() {
 
           setOpenShift(shiftRowNormalized);
           setLatestShift(latestShiftNormalized);
+
+          if (shiftRowNormalized?.status === "OPEN") {
+            setClosingSubmitted(false);
+            setReviewed(false);
+          } else if (latestShiftNormalized?.status === "CLOSED") {
+            setClosingSubmitted(true);
+            setReviewed(true);
+          } else {
+            setClosingSubmitted(false);
+          }
         } else {
           setOpenShift(null);
           setLatestShift(null);
@@ -654,10 +664,11 @@ export default function CashierClosingScreen() {
 
   const closingStatusLabel = useMemo(() => {
     if (closingSubmitted) return "SUBMITTED";
+    if (!openShift?.shift_id && latestShift?.status === "CLOSED") return "SUBMITTED";
     if (reviewed) return "REVIEWED";
     if (overdueShift?.shift_id) return "OVERDUE";
     return "OPEN";
-  }, [closingSubmitted, overdueShift?.shift_id, reviewed]);
+  }, [closingSubmitted, latestShift?.status, openShift?.shift_id, overdueShift?.shift_id, reviewed]);
 
   const canSubmitClosing = useMemo(() => {
     if (loading || submitBusy) return false;
@@ -1111,6 +1122,18 @@ export default function CashierClosingScreen() {
               await closeShiftInDb();
 
               const nowIso = new Date().toISOString();
+
+              if (openShift) {
+                setLatestShift({
+                  ...openShift,
+                  status: "CLOSED",
+                  closed_at: nowIso,
+                  drawer_count: drawerCount,
+                  closing_note: String(closingNote ?? "").trim() || null,
+                });
+              }
+
+              setOpenShift(null);
               setClosingSubmitted(true);
               setReviewed(true);
               setSubmittedAt(nowIso);
@@ -1605,6 +1628,8 @@ export default function CashierClosingScreen() {
     openingCash,
     overdueShift?.shift_id,
     shiftContext?.opened_at,
+
+
     shiftContext?.closed_at,
     shiftContext?.drawer_count,
     shiftContext?.status,

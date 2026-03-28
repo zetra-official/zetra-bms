@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
@@ -192,12 +193,36 @@ function normalizeMoneyInput(raw: string) {
   return digitsOnly.replace(/^0+(?=\d)/, "");
 }
 
+function formatTimeAgo(input?: string | null) {
+  const raw = String(input ?? "").trim();
+  if (!raw) return "—";
+
+  const ts = Date.parse(raw);
+  if (!Number.isFinite(ts)) return "—";
+
+  const diffMs = Date.now() - ts;
+  const diffSec = Math.max(0, Math.floor(diffMs / 1000));
+
+  if (diffSec <= 5) return "Just now";
+  if (diffSec < 60) return `${diffSec} sec ago`;
+
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin} min ago`;
+
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr} hr ago`;
+
+  const diffDay = Math.floor(diffHr / 24);
+  return `${diffDay} day${diffDay === 1 ? "" : "s"} ago`;
+}
+
 /* =========================
    Screen
 ========================= */
 export default function SalesHomeScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ barcode?: string; _ts?: string }>();
+ const params = useLocalSearchParams<{ barcode?: string; _ts?: string }>();
+  const insets = useSafeAreaInsets();
 
   const { activeOrgId, activeOrgName, activeStoreId, activeStoreName, activeRole } = useOrg();
 
@@ -226,7 +251,8 @@ export default function SalesHomeScreen() {
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [pendingCount, setPendingCount] = useState<number>(0);
 
-  const [lastHandledParamScan, setLastHandledParamScan] = useState<string>("");
+ const [lastHandledParamScan, setLastHandledParamScan] = useState<string>("");
+  const [, setLiveTick] = useState(0); 
 
   const [recentScannedIds, setRecentScannedIds] = useState<string[]>([]);
 
@@ -337,10 +363,8 @@ export default function SalesHomeScreen() {
       if (mode === "refresh") setCashierRefreshing(true);
 
       try {
-        const statusParam = cashierFilter === "ALL" ? null : cashierFilter;
-
         const { data, error } = await supabase.rpc("get_my_cashier_handoffs_v2", {
-          p_status: statusParam,
+          p_status: null,
         });
 
         if (error) throw error;
@@ -354,12 +378,13 @@ export default function SalesHomeScreen() {
         if (mode === "refresh") setCashierRefreshing(false);
       }
     },
-    [cashierFilter, isCashier]
+    [isCashier]
   );
 
   const refreshCashierSurface = useCallback(async () => {
     if (!isCashier) return;
     await Promise.allSettled([loadOpenShift(), loadCashierHandoffs("refresh")]);
+    setLastSync(new Date().toISOString());
   }, [isCashier, loadCashierHandoffs, loadOpenShift]);
 
   const startCashierShift = useCallback(async () => {
@@ -755,8 +780,10 @@ export default function SalesHomeScreen() {
     setRecentScannedIds([]);
 
     if (isCashier) {
-      void loadCashierHandoffs("boot");
-      void loadOpenShift();
+      void (async () => {
+        await Promise.allSettled([loadCashierHandoffs("boot"), loadOpenShift()]);
+        setLastSync(new Date().toISOString());
+      })();
       return;
     }
 
@@ -894,6 +921,14 @@ export default function SalesHomeScreen() {
         refreshTimerRef.current = null;
       }
     };
+  }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setLiveTick((x) => x + 1);
+    }, 15000);
+
+    return () => clearInterval(timer);
   }, []);
 
   useEffect(() => {
@@ -1154,11 +1189,17 @@ export default function SalesHomeScreen() {
 
   const statusLine = useMemo(() => {
     const net = isOffline ? "OFFLINE" : "ONLINE";
+
+    if (isCashier) {
+      const sync = ` • Last update: ${formatTimeAgo(lastSync)}`;
+      return `${net}${sync}`;
+    }
+
     const src = isOffline ? "CACHED" : source;
     const pend = pendingCount > 0 ? ` • Pending: ${pendingCount}` : "";
-    const sync = ` • Last sync: ${lastSync ?? "—"}`;
+    const sync = ` • Last sync: ${formatTimeAgo(lastSync)}`;
     return `${net} • Source: ${src}${sync}${pend}`;
-  }, [isOffline, lastSync, pendingCount, source]);
+  }, [isCashier, isOffline, lastSync, pendingCount, source]);
 
   const cashierCounts = useMemo(() => {
     const out = { pending: 0, accepted: 0, completed: 0, all: cashierRows.length };
@@ -1173,10 +1214,29 @@ export default function SalesHomeScreen() {
     return out;
   }, [cashierRows]);
 
+  const filteredCashierRows = useMemo(() => {
+    if (cashierFilter === "ALL") return cashierRows;
+    return cashierRows.filter(
+      (r) => String(r.status ?? "").toUpperCase() === cashierFilter
+    );
+  }, [cashierFilter, cashierRows]);
+
   const cashierTotalAmount = useMemo(
+    () => filteredCashierRows.reduce((a, r) => a + Number(r.total ?? 0), 0),
+    [filteredCashierRows]
+  );
+
+  const allQueueTotalAmount = useMemo(
     () => cashierRows.reduce((a, r) => a + Number(r.total ?? 0), 0),
     [cashierRows]
   );
+
+  const activeFilterCount = useMemo(() => {
+    if (cashierFilter === "PENDING") return cashierCounts.pending;
+    if (cashierFilter === "ACCEPTED") return cashierCounts.accepted;
+    if (cashierFilter === "COMPLETED") return cashierCounts.completed;
+    return cashierCounts.all;
+  }, [cashierCounts, cashierFilter]);
 
   const CashierFilterChip = ({
     label,
@@ -1191,8 +1251,8 @@ export default function SalesHomeScreen() {
       <Pressable
         onPress={() => setCashierFilter(value)}
         style={({ pressed }) => ({
-          paddingVertical: 10,
-          paddingHorizontal: 14,
+          paddingVertical: 9,
+          paddingHorizontal: 12,
           borderRadius: theme.radius.pill,
           borderWidth: 1,
           borderColor: active ? theme.colors.emeraldBorder : theme.colors.border,
@@ -1200,7 +1260,7 @@ export default function SalesHomeScreen() {
           opacity: pressed ? 0.92 : 1,
         })}
       >
-        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}>
+        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>
           {label}
         </Text>
       </Pressable>
@@ -1212,90 +1272,102 @@ export default function SalesHomeScreen() {
   ========================= */
   const TopBar = useMemo(() => {
     return (
-      <View style={{ gap: 6 }}>
-        <View style={{ flexDirection: "row", alignItems: "flex-end" }}>
-          <Text style={{ fontSize: 26, fontWeight: "900", color: theme.colors.text }}>
-            Sales
-          </Text>
-        </View>
-
+      <View style={{ gap: 10 }}>
         <View
           style={{
             flexDirection: "row",
-            alignItems: "center",
+            alignItems: "flex-start",
             justifyContent: "space-between",
-            gap: 10,
+            gap: 12,
           }}
         >
-          <View style={{ flex: 1, gap: 2 }}>
-            <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
+          <View style={{ flex: 1, gap: 4 }}>
+            <Text style={{ fontSize: 34, fontWeight: "900", color: theme.colors.text }}>
+              Sales
+            </Text>
+
+            <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 14 }}>
               {headerSubtitle}
             </Text>
-            <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 12 }}>
+
+            <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 13 }}>
               {todayLabel}
             </Text>
+
             <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
               {statusLine}
             </Text>
           </View>
 
+          <Pressable
+            onPress={() => router.push("/(tabs)/sales/history")}
+            hitSlop={10}
+            style={({ pressed }) => ({
+              minWidth: 92,
+              paddingHorizontal: 12,
+              paddingVertical: 10,
+              borderRadius: 16,
+              borderWidth: 1,
+              borderColor: theme.colors.border,
+              backgroundColor: "rgba(255,255,255,0.06)",
+              opacity: pressed ? 0.92 : 1,
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 2,
+            })}
+          >
+            <Ionicons name="time-outline" size={16} color={theme.colors.text} />
+            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>
+              History
+            </Text>
+          </Pressable>
+        </View>
+
+        {!isCashier ? (
           <View style={{ flexDirection: "row", gap: 8 }}>
-            {!isCashier ? (
-              <Pressable
-                onPress={() => router.push("/(tabs)/sales/expenses")}
-                hitSlop={10}
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 999,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderWidth: 1,
-                  borderColor: "rgba(255,255,255,0.10)",
-                  backgroundColor: "rgba(255,255,255,0.06)",
-                }}
-              >
-                <Ionicons name="cash-outline" size={19} color={theme.colors.text} />
-              </Pressable>
-            ) : null}
-
-            {isOwner && !isCashier ? (
-              <Pressable
-                onPress={() => router.push("/(tabs)/sales/profit")}
-                hitSlop={10}
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 999,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderWidth: 1,
-                  borderColor: "rgba(255,255,255,0.10)",
-                  backgroundColor: "rgba(255,255,255,0.06)",
-                }}
-              >
-                <Ionicons name="stats-chart" size={19} color={theme.colors.text} />
-              </Pressable>
-            ) : null}
-
             <Pressable
-              onPress={() => router.push("/(tabs)/sales/history")}
+              onPress={() => router.push("/(tabs)/sales/expenses")}
               hitSlop={10}
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 999,
+              style={({ pressed }) => ({
+                flex: 1,
+                minHeight: 44,
+                borderRadius: 16,
                 alignItems: "center",
                 justifyContent: "center",
                 borderWidth: 1,
                 borderColor: "rgba(255,255,255,0.10)",
                 backgroundColor: "rgba(255,255,255,0.06)",
-              }}
+                opacity: pressed ? 0.92 : 1,
+              })}
             >
-              <Ionicons name="time-outline" size={19} color={theme.colors.text} />
+              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}>
+                Expenses
+              </Text>
             </Pressable>
+
+            {isOwner ? (
+              <Pressable
+                onPress={() => router.push("/(tabs)/sales/profit")}
+                hitSlop={10}
+                style={({ pressed }) => ({
+                  flex: 1,
+                  minHeight: 44,
+                  borderRadius: 16,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderWidth: 1,
+                  borderColor: "rgba(255,255,255,0.10)",
+                  backgroundColor: "rgba(255,255,255,0.06)",
+                  opacity: pressed ? 0.92 : 1,
+                })}
+              >
+                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}>
+                  Profit
+                </Text>
+              </Pressable>
+            ) : null}
           </View>
-        </View>
+        ) : null}
       </View>
     );
   }, [headerSubtitle, isCashier, isOwner, router, statusLine, todayLabel]);
@@ -1475,14 +1547,33 @@ export default function SalesHomeScreen() {
     if (!isCashier) return null;
 
     return (
-      <Card style={{ gap: 12, padding: 12 }}>
-        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-          Cashier Queue
-        </Text>
+      <Card style={{ gap: 10, padding: 12 }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
+          <View style={{ flex: 1, gap: 4 }}>
+            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 17 }}>
+              Cashier Queue
+            </Text>
+            <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}>
+              Live queue status ya store uliyoassigniwa.
+            </Text>
+          </View>
 
-        <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-          Hapa cashier anaona orders zilizotumwa kwenye cashier queue ya stores alizoassigniwa.
-        </Text>
+          <View
+            style={{
+              paddingHorizontal: 12,
+              paddingVertical: 8,
+              borderRadius: 999,
+              borderWidth: 1,
+              borderColor: openShift ? theme.colors.emeraldBorder : theme.colors.border,
+              backgroundColor: openShift ? theme.colors.emeraldSoft : "rgba(255,255,255,0.06)",
+              alignSelf: "flex-start",
+            }}
+          >
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+              {openShift ? "SHIFT OPEN" : "NO SHIFT"}
+            </Text>
+          </View>
+        </View>
 
         {!!cashierErr && (
           <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{cashierErr}</Text>
@@ -1492,22 +1583,60 @@ export default function SalesHomeScreen() {
           <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{shiftErr}</Text>
         )}
 
-        <View style={{ flexDirection: "row", gap: 10 }}>
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Pending</Text>
-            <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          <View
+            style={{
+              flex: 1,
+              borderRadius: 14,
+              paddingVertical: 10,
+              paddingHorizontal: 10,
+              borderWidth: 1,
+              borderColor: theme.colors.border,
+              backgroundColor: "rgba(255,255,255,0.04)",
+            }}
+          >
+            <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}>
+              Pending
+            </Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4, fontSize: 18 }}>
               {cashierCounts.pending}
             </Text>
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Accepted</Text>
-            <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>
+
+          <View
+            style={{
+              flex: 1,
+              borderRadius: 14,
+              paddingVertical: 10,
+              paddingHorizontal: 10,
+              borderWidth: 1,
+              borderColor: theme.colors.border,
+              backgroundColor: "rgba(255,255,255,0.04)",
+            }}
+          >
+            <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}>
+              Accepted
+            </Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4, fontSize: 18 }}>
               {cashierCounts.accepted}
             </Text>
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Completed</Text>
-            <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>
+
+          <View
+            style={{
+              flex: 1,
+              borderRadius: 14,
+              paddingVertical: 10,
+              paddingHorizontal: 10,
+              borderWidth: 1,
+              borderColor: theme.colors.border,
+              backgroundColor: "rgba(255,255,255,0.04)",
+            }}
+          >
+            <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}>
+              Completed
+            </Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4, fontSize: 18 }}>
               {cashierCounts.completed}
             </Text>
           </View>
@@ -1518,12 +1647,20 @@ export default function SalesHomeScreen() {
             borderWidth: 1,
             borderColor: theme.colors.emeraldBorder,
             backgroundColor: theme.colors.emeraldSoft,
-            borderRadius: 16,
-            padding: 12,
+            borderRadius: 14,
+            paddingVertical: 10,
+            paddingHorizontal: 12,
+            gap: 4,
           }}
         >
-          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-            Queue Total: {fmt(cashierTotalAmount)}
+          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14 }}>
+            Active Filter: {cashierFilter}
+          </Text>
+          <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
+            Showing {activeFilterCount} item(s) • Filter Total: {fmt(cashierTotalAmount)}
+          </Text>
+          <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
+            All Queue Total: {fmt(allQueueTotalAmount)}
           </Text>
         </View>
 
@@ -1533,9 +1670,10 @@ export default function SalesHomeScreen() {
               borderWidth: 1,
               borderColor: theme.colors.emeraldBorder,
               backgroundColor: "rgba(16,185,129,0.10)",
-              borderRadius: 16,
-              padding: 12,
-              gap: 6,
+              borderRadius: 14,
+              paddingVertical: 10,
+              paddingHorizontal: 12,
+              gap: 4,
             }}
           >
             <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
@@ -1567,12 +1705,12 @@ export default function SalesHomeScreen() {
               Hakuna shift wazi kwa cashier huyu.
             </Text>
             <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-              Sasa unaweza kufungua shift mpya.
+              Fungua shift mpya kabla ya kuendelea na queue.
             </Text>
           </View>
         )}
 
-        <View style={{ flexDirection: "row", gap: 10 }}>
+        <View style={{ flexDirection: "row", gap: 8 }}>
           <Pressable
             onPress={() => {
               if (openShift) {
@@ -1583,7 +1721,7 @@ export default function SalesHomeScreen() {
             }}
             style={({ pressed }) => ({
               flex: 1,
-              paddingVertical: 14,
+              paddingVertical: 12,
               borderRadius: theme.radius.pill,
               borderWidth: 1,
               borderColor: theme.colors.emeraldBorder,
@@ -1602,7 +1740,7 @@ export default function SalesHomeScreen() {
             onPress={goCashierClosing}
             style={({ pressed }) => ({
               flex: 1,
-              paddingVertical: 14,
+              paddingVertical: 12,
               borderRadius: theme.radius.pill,
               borderWidth: 1,
               borderColor: theme.colors.border,
@@ -1618,12 +1756,7 @@ export default function SalesHomeScreen() {
           </Pressable>
         </View>
 
-        <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-          Mpangilio salama: cashier afungue shift yake kwanza, afanye malipo kwa akaunti yake,
-          kisha afunge ripoti yake kupitia Cashier Closing.
-        </Text>
-
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
           <CashierFilterChip label={`Pending (${cashierCounts.pending})`} value="PENDING" />
           <CashierFilterChip label={`Accepted (${cashierCounts.accepted})`} value="ACCEPTED" />
           <CashierFilterChip label={`Completed (${cashierCounts.completed})`} value="COMPLETED" />
@@ -1648,6 +1781,28 @@ export default function SalesHomeScreen() {
               : "Refresh Queue"}
           </Text>
         </Pressable>
+
+        <View
+          style={{
+            alignItems: "center",
+            justifyContent: "center",
+            paddingTop: 2,
+            paddingBottom: 2,
+          }}
+        >
+          <Text
+            style={{
+              color: theme.colors.muted,
+              fontWeight: "800",
+              textAlign: "center",
+              fontSize: 12,
+            }}
+          >
+            {cashierLoading
+              ? "Refreshing queue..."
+              : `No ${cashierFilter.toLowerCase()} cashier handoffs found.`}
+          </Text>
+        </View>
       </Card>
     );
   }, [
@@ -1655,8 +1810,11 @@ export default function SalesHomeScreen() {
     cashierErr,
     shiftErr,
     cashierCounts,
+    cashierFilter,
+    activeFilterCount,
     fmt,
     cashierTotalAmount,
+    allQueueTotalAmount,
     openShift,
     shiftLoading,
     goShiftOpening,
@@ -1965,36 +2123,28 @@ export default function SalesHomeScreen() {
       scroll={false}
       contentStyle={{ paddingHorizontal: 0, paddingTop: 0, paddingBottom: 0 }}
     >
-      <View style={{ padding: 16, paddingBottom: 8, gap: 10 }}>
+      <View
+        style={{
+          paddingHorizontal: 16,
+          paddingTop: Math.max(insets.top + 6, 16),
+          paddingBottom: 8,
+          gap: 12,
+        }}
+      >
         {TopBar}
         {!isCashier ? QuickBar : null}
       </View>
 
       {isCashier ? (
-        <FlatList<CashierHandoffRow>
-          data={cashierLoading && cashierRows.length === 0 ? [] : cashierRows}
-          keyExtractor={(item) => item.id}
-          refreshing={cashierRefreshing}
-          onRefresh={() => {
-            void refreshCashierSurface();
-          }}
-          showsVerticalScrollIndicator={false}
-          renderItem={renderCashierItem}
-          contentContainerStyle={{
+        <View
+          style={{
+            flex: 1,
             paddingHorizontal: 16,
-            paddingBottom: 140,
+            paddingBottom: Math.max(insets.bottom + 90, 110),
           }}
-          ListHeaderComponent={<View style={{ paddingBottom: 10 }}>{CashierBar}</View>}
-          ListEmptyComponent={
-            !cashierLoading ? (
-              <View style={{ paddingTop: 10, alignItems: "center" }}>
-                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                  No cashier handoffs found.
-                </Text>
-              </View>
-            ) : null
-          }
-        />
+        >
+          {CashierBar}
+        </View>
       ) : (
         <FlatList<ProductRow>
           data={loading ? [] : filtered}
