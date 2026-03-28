@@ -49,17 +49,33 @@ function parseDiscountFromNote(note: string | null | undefined) {
 function stripDiscountTag(note: string | null | undefined) {
   const raw = String(note ?? "").trim();
   if (!raw) return null;
-  const idx = raw.indexOf("DISCOUNT:");
-  if (idx < 0) return raw;
-  const before = raw.slice(0, idx).trim();
-  return before || null;
+
+  let cleaned = raw;
+
+  const discountIdx = cleaned.indexOf("DISCOUNT:");
+  if (discountIdx >= 0) {
+    cleaned = cleaned.slice(0, discountIdx).trim();
+  }
+
+  cleaned = cleaned
+    .split("\n")
+    .map((x) => x.trim())
+    .filter((line) => {
+      if (!line) return false;
+      if (/^CASHIER_HANDOFF_ID\s*:/i.test(line)) return false;
+      return true;
+    })
+    .join("\n")
+    .trim();
+
+  return cleaned || null;
 }
 
 function parseCustomerFromNote(note: string | null | undefined) {
   const raw = String(note ?? "");
   if (!raw.trim()) return { name: null as string | null, phone: null as string | null };
 
-  const clean = stripDiscountTag(raw) ?? raw;
+  const clean = stripDiscountTag(raw) ?? "";
 
   const lines = String(clean)
     .split("\n")
@@ -433,10 +449,12 @@ export default function ReceiptScreen() {
                 </View>
               )}
 
-              {!!cleanNote && (
+              {!!cleanNote && cleanNote.trim() && (
                 <View style={{ marginTop: 2 }}>
                   <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Note</Text>
-                  <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 6 }}>{cleanNote}</Text>
+                  <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 6 }}>
+                    {cleanNote}
+                  </Text>
                 </View>
               )}
             </Card>
