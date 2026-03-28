@@ -63,6 +63,8 @@ type OpenShiftRow = {
   store_id: string;
   membership_id: string;
   opening_cash: number;
+  drawer_count?: number | null;
+  closing_note?: string | null;
   status: string;
   opened_at: string;
   closed_at?: string | null;
@@ -210,6 +212,8 @@ function normalizeOpenShiftRow(row: any): OpenShiftRow | null {
     store_id: String(row.store_id ?? ""),
     membership_id: String(row.membership_id ?? ""),
     opening_cash: toNum(row.opening_cash ?? 0),
+    drawer_count: row.drawer_count == null ? null : toNum(row.drawer_count),
+    closing_note: row.closing_note != null ? String(row.closing_note) : null,
     status: String(row.status ?? "OPEN"),
     opened_at: String(row.opened_at ?? ""),
     closed_at: row.closed_at ?? null,
@@ -331,6 +335,7 @@ export default function CashierClosingScreen() {
   const [paymentSummary, setPaymentSummary] = useState<PaymentSummary>(EMPTY_PAYMENT_SUMMARY);
 
   const [openShift, setOpenShift] = useState<OpenShiftRow | null>(null);
+  const [latestShift, setLatestShift] = useState<OpenShiftRow | null>(null);
 
   const [closingNote, setClosingNote] = useState("");
   const [reviewed, setReviewed] = useState(false);
@@ -441,20 +446,40 @@ export default function CashierClosingScreen() {
         if (access.error) throw access.error;
 
         let shiftRowNormalized: OpenShiftRow | null = null;
+        let latestShiftNormalized: OpenShiftRow | null = null;
 
         if (isCashier) {
-          const shiftRes = await supabase.rpc("get_my_open_cashier_shift_v1", {
-            p_store_id: activeStoreId,
-          } as any);
+          const [openShiftRes, latestShiftRes] = await Promise.all([
+            supabase.rpc("get_my_open_cashier_shift_v1", {
+              p_store_id: activeStoreId,
+            } as any),
+            supabase.rpc("get_my_latest_cashier_shift_v1", {
+              p_store_id: activeStoreId,
+            } as any),
+          ]);
 
-          if (shiftRes.error) throw shiftRes.error;
+          if (openShiftRes.error) throw openShiftRes.error;
+          if (latestShiftRes.error) throw latestShiftRes.error;
 
-          const shiftRow = Array.isArray(shiftRes.data) ? shiftRes.data[0] : shiftRes.data;
-          shiftRowNormalized = normalizeOpenShiftRow(shiftRow);
+          const openShiftRow = Array.isArray(openShiftRes.data)
+            ? openShiftRes.data[0]
+            : openShiftRes.data;
+
+          const latestShiftRow = Array.isArray(latestShiftRes.data)
+            ? latestShiftRes.data[0]
+            : latestShiftRes.data;
+
+          shiftRowNormalized = normalizeOpenShiftRow(openShiftRow);
+          latestShiftNormalized = normalizeOpenShiftRow(latestShiftRow);
+
           setOpenShift(shiftRowNormalized);
+          setLatestShift(latestShiftNormalized);
         } else {
           setOpenShift(null);
+          setLatestShift(null);
         }
+
+        const shiftContext = shiftRowNormalized ?? latestShiftNormalized;
 
         const finalRange =
           shiftRowNormalized?.opened_at && isShiftOverdue(shiftRowNormalized.opened_at)
@@ -463,11 +488,11 @@ export default function CashierClosingScreen() {
 
         if (!finalRange) throw new Error("Invalid custom date range.");
 
-        const useCashierScopedRpc = isCashier && !!shiftRowNormalized?.shift_id;
+        const useCashierScopedRpc = isCashier && !!shiftContext?.shift_id;
 
         const salesRes = useCashierScopedRpc
           ? await supabase.rpc("get_my_cashier_closing_sales_v1", {
-              p_shift_id: shiftRowNormalized!.shift_id,
+              p_shift_id: shiftContext!.shift_id,
               p_from: finalRange.from,
               p_to: finalRange.to,
             } as any)
@@ -481,7 +506,7 @@ export default function CashierClosingScreen() {
 
         const payRes = useCashierScopedRpc
           ? await supabase.rpc("get_my_cashier_closing_payment_summary_v1", {
-              p_shift_id: shiftRowNormalized!.shift_id,
+              p_shift_id: shiftContext!.shift_id,
               p_from: finalRange.from,
               p_to: finalRange.to,
             } as any)
@@ -516,6 +541,10 @@ export default function CashierClosingScreen() {
           total_sales: toNum(payRow?.v_total_sales ?? payRow?.total_sales ?? 0),
           total_balance: toNum(payRow?.v_total_balance ?? payRow?.total_balance ?? 0),
         });
+
+        if (!submittedAt && latestShiftNormalized?.closed_at) {
+          setSubmittedAt(String(latestShiftNormalized.closed_at));
+        }
       } catch (e: any) {
         setRows([]);
         setPaymentSummary(EMPTY_PAYMENT_SUMMARY);
@@ -525,7 +554,7 @@ export default function CashierClosingScreen() {
         if (mode === "refresh") setRefreshing(false);
       }
     },
-    [activeStoreId, canView, isCashier, resolvedRange]
+    [activeStoreId, canView, isCashier, resolvedRange, submittedAt]
   );
 
   useEffect(() => {
@@ -544,6 +573,11 @@ export default function CashierClosingScreen() {
     }, [load, loadCurrentUserEmail])
   );
 
+  useEffect(() => {
+    if (range === "custom") return;
+    void load("refresh");
+  }, [range, load]);
+
   const applyCustomRange = useCallback(() => {
     if (overdueShift?.shift_id) return;
 
@@ -559,18 +593,8 @@ export default function CashierClosingScreen() {
       setErr("From Date haiwezi kuwa kubwa kuliko To Date");
       return;
     }
-    useEffect(() => {
-    void load("boot");
-  }, [load]);
-useEffect(() => {
-    if (range === "custom") return;
-    void load("refresh");
-  }, [range, load]);
-    const nextRange = {
-      from: fromDate.toISOString(),
-      to: toDate.toISOString(),
-    };
 
+    setErr(null);
     setRange("custom");
     void load("refresh");
   }, [customFrom, customTo, load, overdueShift?.shift_id]);
@@ -597,7 +621,12 @@ useEffect(() => {
     return paymentSummary.total_sales / saleCount;
   }, [paymentSummary.total_sales, saleCount]);
 
-  const openingCash = useMemo(() => toNum(openShift?.opening_cash ?? 0), [openShift?.opening_cash]);
+  const shiftContext = openShift ?? latestShift;
+
+  const openingCash = useMemo(
+    () => toNum(shiftContext?.opening_cash ?? 0),
+    [shiftContext?.opening_cash]
+  );
 
   const expectedDrawer = useMemo(() => {
     return openingCash + paymentSummary.cash_total;
@@ -609,9 +638,9 @@ useEffect(() => {
 
   const drawerCount = useMemo(() => {
     const raw = String(drawerCountDraft ?? "").trim();
-    if (!raw) return 0;
-    return toNum(raw);
-  }, [drawerCountDraft]);
+    if (raw) return toNum(raw);
+    return toNum(shiftContext?.drawer_count ?? 0);
+  }, [drawerCountDraft, shiftContext?.drawer_count]);
 
   const drawerDifference = useMemo(() => {
     return drawerCount - expectedDrawer;
@@ -638,6 +667,12 @@ useEffect(() => {
     if (drawerCountDraft.trim() === "") return false;
     return true;
   }, [closingSubmitted, drawerCountDraft, isCashier, loading, openShift?.shift_id, submitBusy]);
+
+  const effectiveClosingNote = useMemo(() => {
+    const draft = String(closingNote ?? "").trim();
+    if (draft) return draft;
+    return String(shiftContext?.closing_note ?? "").trim();
+  }, [closingNote, shiftContext?.closing_note]);
 
   const rangeTextForPdf = useMemo(() => {
     if (overdueShift?.opened_at) {
@@ -814,7 +849,7 @@ useEffect(() => {
             </tr>
             <tr>
               <th>Shift Opened At</th>
-              <td>${escapeHtml(openShift?.opened_at ? safeWhenLabel(openShift.opened_at) : "—")}</td>
+              <td>${escapeHtml(shiftContext?.opened_at ? safeWhenLabel(shiftContext.opened_at) : "—")}</td>
             </tr>
             <tr>
               <th>Opening Cash</th>
@@ -943,7 +978,7 @@ useEffect(() => {
           </table>
 
           <div class="section-title">Closing Note</div>
-          <div class="note-box">${escapeHtml(closingNote || "No closing note.")}</div>
+          <div class="note-box">${escapeHtml(effectiveClosingNote || "No closing note.")}</div>
 
           <div class="section-title">Sales Included in This Closing</div>
           <table class="grid">
@@ -979,8 +1014,8 @@ useEffect(() => {
     activeStoreName,
     avgSale,
     cashierEmail,
-    closingNote,
     closingStatusLabel,
+    effectiveClosingNote,
     collectedNonCash,
     drawerCount,
     drawerDifference,
@@ -988,7 +1023,7 @@ useEffect(() => {
     expectedDrawer,
     fmtMoney,
     openingCash,
-    openShift?.opened_at,
+    shiftContext?.opened_at,
     paymentSummary.cash_total,
     paymentSummary.mobile_total,
     paymentSummary.bank_total,
@@ -1080,7 +1115,6 @@ useEffect(() => {
               setReviewed(true);
               setSubmittedAt(nowIso);
 
-              setOpenShift(null);
               setDrawerCountDraft("");
               setClosingNote("");
 
@@ -1367,14 +1401,22 @@ useEffect(() => {
           />
         </View>
 
-        {!!openShift?.opened_at && (
+        {!!shiftContext?.opened_at && (
           <Card style={{ gap: 8 }}>
-            <Text style={{ color: UI.text, fontWeight: "900" }}>Active Shift</Text>
+            <Text style={{ color: UI.text, fontWeight: "900" }}>
+              {shiftContext?.status === "OPEN" ? "Active Shift" : "Latest Shift"}
+            </Text>
             <Text style={{ color: UI.muted, fontWeight: "800" }}>
-              Shift Opened At: {safeWhenLabel(openShift.opened_at)}
+              Shift Opened At: {safeWhenLabel(shiftContext.opened_at)}
+            </Text>
+            <Text style={{ color: UI.muted, fontWeight: "800" }}>
+              Shift Closed At: {shiftContext.closed_at ? safeWhenLabel(shiftContext.closed_at) : "—"}
             </Text>
             <Text style={{ color: UI.muted, fontWeight: "800" }}>
               Opening Cash iliyotumika kwenye hesabu hii: {fmtMoney(openingCash)}
+            </Text>
+            <Text style={{ color: UI.muted, fontWeight: "800" }}>
+              Drawer Count ya shift: {fmtMoney(toNum(shiftContext.drawer_count ?? 0))}
             </Text>
             <Text style={{ color: UI.muted, fontWeight: "800" }}>
               Cashier Email: {cashierEmail}
@@ -1540,8 +1582,8 @@ useEffect(() => {
     avgSale,
     canSubmitClosing,
     cashierEmail,
-    closingNote,
     closingStatusLabel,
+    effectiveClosingNote,
     closingSubmitted,
     collectedNonCash,
     customFrom,
@@ -1561,8 +1603,11 @@ useEffect(() => {
     load,
     loading,
     openingCash,
-    openShift?.opened_at,
     overdueShift?.shift_id,
+    shiftContext?.opened_at,
+    shiftContext?.closed_at,
+    shiftContext?.drawer_count,
+    shiftContext?.status,
     paymentSummary.bank_total,
     paymentSummary.cash_total,
     paymentSummary.credit_collected_total,
