@@ -210,15 +210,19 @@ export default function OrgSwitcherScreen() {
     return isNonEmpty(orgName) && isNonEmpty(storeName);
   }, [orgName, storeName, creating]);
 
-  const onSwitch = (orgId: string) => {
+  const onSwitch = async (orgId: string) => {
     setActiveOrgId(orgId);
-    router.back();
+
+    // ruhusu OrgContext ipate muda wa kubadilisha org/store/role
+    setTimeout(() => {
+      router.replace("/(tabs)" as any);
+    }, 0);
   };
 
-  const onPressGroup = (list: OrgItem[]) => {
+  const onPressGroup = async (list: OrgItem[]) => {
     const pick = list.find((x) => x.organization_id === activeOrgId) ?? list[0] ?? null;
     if (!pick) return;
-    onSwitch(pick.organization_id);
+    await onSwitch(pick.organization_id);
   };
 
   const showUpgradeRequired = (info: { planLabel: string; allowed: number }) => {
@@ -275,7 +279,7 @@ export default function OrgSwitcherScreen() {
         `Organization "${desired}" tayari ipo. Unataka ku-switch badala ya ku-create nyingine?`,
         [
           { text: "Cancel", style: "cancel" },
-          { text: "Switch", onPress: () => onSwitch(pick.organization_id) },
+          { text: "Switch", onPress: () => { void onSwitch(pick.organization_id); } },
           {
             text: "Create anyway",
             style: "destructive",
@@ -522,7 +526,7 @@ export default function OrgSwitcherScreen() {
                 const count = list.length;
 
                 return (
-                  <Pressable key={g.key} onPress={() => onPressGroup(list)} disabled={topRightBusy}>
+                 <Pressable key={g.key} onPress={() => { void onPressGroup(list); }} disabled={topRightBusy}> 
                     <Card
                       style={{
                         marginBottom: 10,
@@ -568,11 +572,11 @@ export default function OrgSwitcherScreen() {
                   const active = o.organization_id === activeOrgId;
 
                   return (
-                    <Pressable
+       <Pressable
                       key={o.organization_id}
-                      onPress={() => onSwitch(o.organization_id)}
+                      onPress={() => { void onSwitch(o.organization_id); }}
                       disabled={topRightBusy}
-                    >
+                    >             
                       <Card
                         style={{
                           marginBottom: 10,

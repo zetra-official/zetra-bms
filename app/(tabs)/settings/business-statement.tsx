@@ -35,6 +35,21 @@ type PaymentSummary = {
   total_balance: number;
 };
 
+type ProfitSummary = {
+  net: number;
+  sales: number | null;
+  expenses: number | null;
+};
+
+type CollectionBreakdown = {
+  cash: number;
+  bank: number;
+  mobile: number;
+  other: number;
+  total: number;
+  payments: number;
+};
+
 type StatementRow = {
   sale_id?: string;
   sold_at?: string;
@@ -254,7 +269,17 @@ function pickExpenseTitle(r: AnyRow) {
 }
 
 function pickExpenseCategory(r: AnyRow) {
-  const v = r.category ?? r.expense_category ?? r.type ?? null;
+  const v =
+    r.category ??
+    r.category_name ??
+    r.expense_category ??
+    r.expense_category_name ??
+    r.type ??
+    r.expense_type ??
+    r.category_title ??
+    r.category_label ??
+    null;
+
   return v != null ? String(v) : null;
 }
 
@@ -266,6 +291,91 @@ function pickExpenseWhen(r: AnyRow) {
 function pickExpenseNote(r: AnyRow) {
   const v = r.note ?? r.description ?? r.details ?? null;
   return v != null ? String(v) : null;
+}
+
+async function getCreditCollectionsSummary(
+  orgId: string,
+  storeId: string,
+  fromISO: string,
+  toISO: string
+): Promise<CollectionBreakdown> {
+  if (!orgId || !storeId) {
+    return {
+      cash: 0,
+      bank: 0,
+      mobile: 0,
+      other: 0,
+      total: 0,
+      payments: 0,
+    };
+  }
+
+  const fnCandidates = [
+    "get_credit_collections_summary_v2",
+    "get_credit_collections_channel_summary_v2",
+    "get_credit_collections_channel_summary_v1",
+    "get_credit_collections_channel_summary",
+    "get_credit_payments_channel_summary_v1",
+    "get_credit_payments_channel_summary",
+  ];
+
+  let lastErr: any = null;
+
+  for (const fn of fnCandidates) {
+    const { data, error } = await supabase.rpc(fn, {
+      p_org_id: orgId,
+      p_from: fromISO,
+      p_to: toISO,
+      p_store_id: storeId,
+    } as any);
+
+    if (error) {
+      lastErr = error;
+      continue;
+    }
+
+    const rows = (Array.isArray(data) ? data : []) as any[];
+
+    const out: CollectionBreakdown = {
+      cash: 0,
+      bank: 0,
+      mobile: 0,
+      other: 0,
+      total: 0,
+      payments: 0,
+    };
+
+    for (const r of rows) {
+      const ch = String(
+        r?.channel ?? r?.payment_method ?? r?.method ?? ""
+      )
+        .trim()
+        .toUpperCase();
+
+      const amt = toNum(r?.amount ?? r?.revenue ?? r?.total ?? 0);
+      const cnt = toNum(r?.payments ?? r?.count ?? 0);
+
+      out.payments += cnt;
+
+      if (ch === "CASH") out.cash += amt;
+      else if (ch === "BANK") out.bank += amt;
+      else if (ch === "MOBILE") out.mobile += amt;
+      else out.other += amt;
+    }
+
+    out.total = out.cash + out.bank + out.mobile;
+    return out;
+  }
+
+  const _ignored = lastErr;
+  return {
+    cash: 0,
+    bank: 0,
+    mobile: 0,
+    other: 0,
+    total: 0,
+    payments: 0,
+  };
 }
 
 function buildStatementRef(
@@ -325,6 +435,21 @@ export default function BusinessStatementScreen() {
     grand_paid_total: 0,
     total_sales: 0,
     total_balance: 0,
+  });
+
+  const [profitSummary, setProfitSummary] = useState<ProfitSummary>({
+    net: 0,
+    sales: null,
+    expenses: null,
+  });
+
+  const [creditCollections, setCreditCollections] = useState<CollectionBreakdown>({
+    cash: 0,
+    bank: 0,
+    mobile: 0,
+    other: 0,
+    total: 0,
+    payments: 0,
   });
 
   const canView = useMemo(() => {
@@ -394,41 +519,66 @@ export default function BusinessStatementScreen() {
         });
         if (access.error) throw access.error;
 
-        const [salesRes, payRes, expensesRes] = await Promise.all([
-          supabase.rpc("get_sales_v2", {
-            p_store_id: activeStoreId,
-            p_from: finalRange.from,
-            p_to: finalRange.to,
-          } as any),
-          supabase.rpc("get_sales_payment_summary_v1", {
-            p_store_id: activeStoreId,
-            p_from: finalRange.from,
-            p_to: finalRange.to,
-          } as any),
-          supabase
-            .from("expenses")
-            .select("*")
-            .eq("store_id", activeStoreId)
-            .gte("spent_at", finalRange.from)
-            .lte("spent_at", finalRange.to)
-            .order("spent_at", { ascending: false }),
-        ]);
+        const [salesRes, payRes, profitRes, creditCollectionsRes, expensesRes] =
+          await Promise.all([
+            supabase.rpc("get_sales_v2", {
+              p_store_id: activeStoreId,
+              p_from: finalRange.from,
+              p_to: finalRange.to,
+            } as any),
+            supabase.rpc("get_sales_payment_summary_v1", {
+              p_store_id: activeStoreId,
+              p_from: finalRange.from,
+              p_to: finalRange.to,
+            } as any),
+            supabase.rpc("get_store_net_profit_v2", {
+              p_store_id: activeStoreId,
+              p_from: finalRange.from,
+              p_to: finalRange.to,
+            } as any),
+            getCreditCollectionsSummary(
+              String(activeOrgId ?? "").trim(),
+              String(activeStoreId ?? "").trim(),
+              finalRange.from,
+              finalRange.to
+            ),
+            supabase
+              .from("expenses")
+              .select("*")
+              .eq("store_id", activeStoreId)
+              .gte("spent_at", finalRange.from)
+              .lte("spent_at", finalRange.to)
+              .order("spent_at", { ascending: false }),
+          ]);
 
         if (salesRes.error) throw salesRes.error;
         if (payRes.error) throw payRes.error;
+        if (profitRes.error) throw profitRes.error;
 
         let rawExpenses: AnyRow[] = [];
         if (expensesRes.error) {
-          const fallback = await supabase
+          const fallbackByExpenseDate = await supabase
             .from("expenses")
             .select("*")
             .eq("store_id", activeStoreId)
-            .gte("created_at", finalRange.from)
-            .lte("created_at", finalRange.to)
-            .order("created_at", { ascending: false });
+            .gte("expense_date", finalRange.from.slice(0, 10))
+            .lte("expense_date", finalRange.to.slice(0, 10))
+            .order("expense_date", { ascending: false });
 
-          if (fallback.error) throw fallback.error;
-          rawExpenses = (fallback.data ?? []) as AnyRow[];
+          if (!fallbackByExpenseDate.error) {
+            rawExpenses = (fallbackByExpenseDate.data ?? []) as AnyRow[];
+          } else {
+            const fallbackByCreatedAt = await supabase
+              .from("expenses")
+              .select("*")
+              .eq("store_id", activeStoreId)
+              .gte("created_at", finalRange.from)
+              .lte("created_at", finalRange.to)
+              .order("created_at", { ascending: false });
+
+            if (fallbackByCreatedAt.error) throw fallbackByCreatedAt.error;
+            rawExpenses = (fallbackByCreatedAt.data ?? []) as AnyRow[];
+          }
         } else {
           rawExpenses = (expensesRes.data ?? []) as AnyRow[];
         }
@@ -441,26 +591,49 @@ export default function BusinessStatementScreen() {
         });
 
         const payRow = Array.isArray(payRes.data) ? (payRes.data[0] ?? null) : payRes.data;
+        const profitRow = Array.isArray(profitRes.data)
+          ? (profitRes.data[0] ?? null)
+          : profitRes.data;
 
         const expenses: ExpenseRow[] = rawExpenses.map((r) => ({
           id: String(r.id ?? ""),
           title: pickExpenseTitle(r),
           amount: toNum(r.amount ?? 0),
           spent_at: pickExpenseWhen(r),
-          category: pickExpenseCategory(r),
+          category: (pickExpenseCategory(r) ?? "—").trim() || "—",
           note: pickExpenseNote(r),
         }));
 
+        const mergedCash = toNum(payRow?.v_cash_total ?? payRow?.cash_total ?? 0);
+        const mergedMobile = toNum(payRow?.v_mobile_total ?? payRow?.mobile_total ?? 0);
+        const mergedBank = toNum(payRow?.v_bank_total ?? payRow?.bank_total ?? 0);
+        const mergedCreditCollected = toNum(
+          creditCollectionsRes?.total ??
+            payRow?.v_credit_collected_total ??
+            payRow?.credit_collected_total ??
+            0
+        );
+
         setSalesRows(sales);
         setExpenseRows(expenses);
+        setCreditCollections(creditCollectionsRes);
+        setProfitSummary({
+          net: toNum(profitRow?.net_profit ?? profitRow?.net ?? 0),
+          sales:
+            profitRow?.sales_total != null ? toNum(profitRow.sales_total) : null,
+          expenses:
+            profitRow?.expenses_total != null ? toNum(profitRow.expenses_total) : null,
+        });
         setPaymentSummary({
-          cash_total: toNum(payRow?.v_cash_total ?? payRow?.cash_total ?? 0),
-          mobile_total: toNum(payRow?.v_mobile_total ?? payRow?.mobile_total ?? 0),
-          bank_total: toNum(payRow?.v_bank_total ?? payRow?.bank_total ?? 0),
-          credit_collected_total: toNum(
-            payRow?.v_credit_collected_total ?? payRow?.credit_collected_total ?? 0
+          cash_total: mergedCash,
+          mobile_total: mergedMobile,
+          bank_total: mergedBank,
+          credit_collected_total: mergedCreditCollected,
+          grand_paid_total: toNum(
+            payRow?.v_grand_paid_total ??
+              payRow?.grand_paid_total ??
+              mergedCash + mergedMobile + mergedBank
           ),
-          grand_paid_total: toNum(payRow?.v_grand_paid_total ?? payRow?.grand_paid_total ?? 0),
           total_sales: toNum(payRow?.v_total_sales ?? payRow?.total_sales ?? 0),
           total_balance: toNum(payRow?.v_total_balance ?? payRow?.total_balance ?? 0),
         });
@@ -476,13 +649,26 @@ export default function BusinessStatementScreen() {
           total_sales: 0,
           total_balance: 0,
         });
+        setProfitSummary({
+          net: 0,
+          sales: null,
+          expenses: null,
+        });
+        setCreditCollections({
+          cash: 0,
+          bank: 0,
+          mobile: 0,
+          other: 0,
+          total: 0,
+          payments: 0,
+        });
         setErr(e?.message ?? "Failed to load business statement");
       } finally {
         if (mode === "boot") setLoading(false);
         if (mode === "refresh") setRefreshing(false);
       }
     },
-    [activeStoreId, canView, resolvedRange]
+    [activeOrgId, activeStoreId, canView, resolvedRange]
   );
 
   useEffect(() => {
@@ -534,15 +720,19 @@ export default function BusinessStatementScreen() {
 
   const expenseCount = expenseRows.length;
 
-  const totalExpenses = useMemo(
-    () => expenseRows.reduce((a, r) => a + toNum(r.amount ?? 0), 0),
-    [expenseRows]
-  );
+  const totalExpenses = useMemo(() => {
+    if (profitSummary.expenses != null) {
+      return toNum(profitSummary.expenses);
+    }
+    return expenseRows.reduce((a, r) => a + toNum(r.amount ?? 0), 0);
+  }, [expenseRows, profitSummary.expenses]);
 
-  const netProfit = useMemo(
-    () => paymentSummary.total_sales - totalExpenses,
-    [paymentSummary.total_sales, totalExpenses]
-  );
+  const netProfit = useMemo(() => {
+    if (profitSummary.net != null) {
+      return toNum(profitSummary.net);
+    }
+    return toNum(paymentSummary.total_sales) - toNum(totalExpenses);
+  }, [paymentSummary.total_sales, profitSummary.net, totalExpenses]);
 
   const rangeTextForPdf = useMemo(() => {
     if (!resolvedRange) return labelForRange(range);

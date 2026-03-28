@@ -69,7 +69,45 @@ export default function CheckoutScreen() {
   const [method, setMethod] = useState<PayMethod>("CASH");
   const [paidAmount, setPaidAmount] = useState<string>("");
   const [saving, setSaving] = useState(false);
+const [openCashierShiftId, setOpenCashierShiftId] = useState<string | null>(null);
 
+useEffect(() => {
+  let alive = true;
+
+  async function loadMyOpenCashierShift() {
+    try {
+      if (!storeId) {
+        if (alive) setOpenCashierShiftId(null);
+        return;
+      }
+
+      const role = String(activeRole ?? "").trim().toLowerCase();
+      if (role !== "cashier") {
+        if (alive) setOpenCashierShiftId(null);
+        return;
+      }
+
+      const { data, error } = await supabase.rpc("get_my_open_cashier_shift_v1", {
+        p_store_id: storeId,
+      } as any);
+
+      if (error) throw error;
+
+      const row = (Array.isArray(data) ? data?.[0] : data) as any;
+      const shiftId = String(row?.shift_id ?? "").trim();
+
+      if (alive) setOpenCashierShiftId(shiftId || null);
+    } catch {
+      if (alive) setOpenCashierShiftId(null);
+    }
+  }
+
+  loadMyOpenCashierShift();
+
+  return () => {
+    alive = false;
+  };
+}, [storeId, activeRole]);
   const invalidReason = useMemo(() => {
     if (!canSell) return "No permission to sell.";
     if (!storeId) return "Missing storeId.";
