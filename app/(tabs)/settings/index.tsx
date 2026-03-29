@@ -385,7 +385,7 @@ export default function MoreHome() {
 
   const canManageStaff = org.activeRole === "owner" || org.activeRole === "admin";
   const canManageBilling = org.activeRole === "owner";
-  const canViewStatement = org.activeRole === "owner" || org.activeRole === "admin";
+  const canViewStatement = org.activeRole === "owner";
   const isCashier = org.activeRole === "cashier";
 
   const onLogout = useCallback(() => {
@@ -438,7 +438,7 @@ export default function MoreHome() {
           subtitle={
             canViewStatement
               ? "Generate date-range statement: sales, expenses, profit, balances"
-              : "Owner/Admin only"
+              : "Owner only"
           }
           badge={canViewStatement ? "REPORTS" : "LOCKED"}
           disabled={!canViewStatement}

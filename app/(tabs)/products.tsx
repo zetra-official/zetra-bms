@@ -65,12 +65,12 @@ export default function ProductsTabScreen() {
   const money = useOrgMoneyPrefs(activeOrgId ?? "");
 
   const canManage = useMemo(
-    () => (["owner", "admin"] as const).includes((activeRole ?? "staff") as any),
+    () => (activeRole ?? "staff") === "owner",
     [activeRole]
   );
 
   const canSeeCost = useMemo(
-    () => (["owner", "admin"] as const).includes((activeRole ?? "staff") as any),
+    () => (activeRole ?? "staff") === "owner",
     [activeRole]
   );
 
@@ -102,7 +102,7 @@ export default function ProductsTabScreen() {
 
   const openScan = useCallback(async () => {
     if (!canManage) {
-      Alert.alert("No Access", "Owner/Admin only.");
+      Alert.alert("No Access", "Owner only.");
       return;
     }
 
@@ -214,7 +214,7 @@ export default function ProductsTabScreen() {
     }
 
     if (!canManage) {
-      Alert.alert("No Access", "Owner/Admin only.");
+      Alert.alert("No Access", "Owner only.");
       return;
     }
 
@@ -281,7 +281,7 @@ export default function ProductsTabScreen() {
     if (!activeOrgId || !editProductId) return;
 
     if (!canManage) {
-      Alert.alert("No Access", "Owner/Admin only.");
+      Alert.alert("No Access", "Owner only.");
       return;
     }
 
@@ -361,7 +361,7 @@ export default function ProductsTabScreen() {
       if (!activeOrgId) return;
 
       if (!canManage) {
-        Alert.alert("No Access", "Owner/Admin only.");
+        Alert.alert("No Access", "Owner only.");
         return;
       }
 
@@ -743,7 +743,7 @@ export default function ProductsTabScreen() {
         <Card>
           <Text style={{ color: theme.colors.text, fontWeight: "900" }}>No products yet</Text>
           <Text style={{ color: theme.colors.muted, fontWeight: "700", marginTop: 6 }}>
-            {canManage ? "Ongeza product juu kisha Refresh." : "Muombe admin/owner aongeze products."}
+            {canManage ? "Ongeza product juu kisha Refresh." : "Muombe owner aongeze au abadili products."}
           </Text>
         </Card>
       ) : (

@@ -531,7 +531,7 @@ export default function StoresTabScreen() {
           Stores
         </Text>
 
-        {!!error && (
+        {!!error && !String(error).toLowerCase().includes("not allowed") && (
           <Card
             style={{
               borderColor: DANGER_BORDER,
@@ -832,7 +832,15 @@ export default function StoresTabScreen() {
         ListEmptyComponent={
           <View style={{ paddingTop: 10 }}>
             <Card>
-              <Text style={{ fontWeight: "900", color: TEXT }}>No stores found</Text>
+              <Text style={{ fontWeight: "900", color: TEXT }}>
+                {activeRole === "staff" ? "No assigned stores loaded" : "No stores found"}
+              </Text>
+
+              <Text style={{ color: MUTED, fontWeight: "700", marginTop: 6 }}>
+                {activeRole === "staff"
+                  ? "Store zako bado hazijarudi kutoka mfumo. Hii ni dalili ya store-assignment/RPC issue, siyo kwamba account yako imekosea."
+                  : "Hakuna stores zilizopatikana kwenye organization hii."}
+              </Text>
             </Card>
           </View>
         }

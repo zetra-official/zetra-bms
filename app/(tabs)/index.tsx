@@ -720,8 +720,9 @@ function CompactNotificationsHomeCard() {
   const unreadCount = useMemo(() => receipts.filter((r) => !r.is_read).length, [receipts]);
 
   const activeStoreUnread = useMemo(() => {
-    if (!activeStoreId) return 0;
-    return receipts.filter((r) => clean(r.store_id) === clean(activeStoreId) && !r.is_read).length;
+    const scopedStoreId = String(activeStoreId ?? "").trim();
+    if (!scopedStoreId) return 0;
+    return receipts.filter((r) => clean(r.store_id) === scopedStoreId && !r.is_read).length;
   }, [receipts, activeStoreId]);
 
   const openNotifications = useCallback(() => {
@@ -806,7 +807,9 @@ function CompactNotificationsHomeCard() {
                 padding: 10,
               }}
             >
-              <Text style={{ color: UI.danger, fontWeight: "900", fontSize: 12 }}>{error}</Text>
+              <Text style={{ color: UI.danger, fontWeight: "900", fontSize: 12 }}>
+                {error}
+              </Text>
             </Card>
           )}
 
@@ -827,7 +830,7 @@ function CompactNotificationsHomeCard() {
                 style={{ color: UI.faint, fontWeight: "800", fontSize: 11, marginTop: 2 }}
                 numberOfLines={1}
               >
-                {activeStoreName ?? "—"}
+                {activeStoreName ?? "Active store only"}
               </Text>
             </View>
 
@@ -876,6 +879,8 @@ function CompactFinanceCardHomePreview() {
   const storeName = String(org.activeStoreName ?? "Store").trim() || "Store";
   const roleLower = String(org.activeRole ?? "").trim().toLowerCase();
   const isOwner = roleLower === "owner";
+  const isOwnerOrAdmin = roleLower === "owner" || roleLower === "admin";
+  const isStaffView = roleLower === "staff";
 
   const money = useOrgMoneyPrefs(orgId);
 
@@ -1345,6 +1350,13 @@ function CompactFinanceCardHomePreview() {
     void load({ silent: true });
   }, !!orgId && !!storeId, AUTO_REFRESH_MS);
 
+  const financeTitle = isStaffView ? "Sales Summary" : "Finance";
+  const financeSubtitle = isStaffView
+    ? `Store: ${storeName}`
+    : `Store: ${storeName}`;
+  const financeCtaLabel = isStaffView ? "Open Sales Summary" : "Open Finance";
+  const financeError = isStaffView ? null : err;
+
   const body = useMemo(() => {
     const fmtMoney = (n: number) =>
       formatMoney(n, { currency: displayCurrency, locale: displayLocale }).replace(/\s+/g, " ");
@@ -1369,17 +1381,39 @@ function CompactFinanceCardHomePreview() {
 
     return (
       <View style={{ gap: 10, paddingTop: 2 }}>
-        <View style={{ flexDirection: "row", gap: 12 }}>
-          <MiniStat label="Sales" value={totalSales} hint="today" />
-          <MiniStat label="Expenses" value={totalExpenses} hint="today" />
-          <MiniStat label="Net Profit" value={netProfit} hint={isOwner ? "after expenses" : "owner-only"} />
-        </View>
+        {isStaffView ? (
+          <>
+            <View style={{ flexDirection: "row", gap: 12 }}>
+              <MiniStat label="Sales" value={totalSales} hint="today" />
+              <MiniStat label="Money In" value={totalMoneyIn} hint="today" />
+              <MiniStat label="Orders" value={orders} hint="completed" />
+            </View>
 
-        <View style={{ flexDirection: "row", gap: 12 }}>
-          <MiniStat label="Orders" value={orders} />
-          <MiniStat label="Avg/Order" value={avg.toString().replace(/\s+/g, " ")} />
-          <MiniStat label="Money In" value={totalMoneyIn} hint="after expenses" />
-        </View>
+            <View style={{ flexDirection: "row", gap: 12 }}>
+              <MiniStat label="Avg/Order" value={avg.toString().replace(/\s+/g, " ")} />
+              <MiniStat label="Store View" value="Active" hint="sales summary" />
+              <MiniStat label="Access" value="Standard" hint="staff view" />
+            </View>
+          </>
+        ) : (
+          <>
+            <View style={{ flexDirection: "row", gap: 12 }}>
+              <MiniStat label="Sales" value={totalSales} hint="today" />
+              <MiniStat label="Expenses" value={totalExpenses} hint="today" />
+              <MiniStat
+                label="Net Profit"
+                value={netProfit}
+                hint={isOwner ? "after expenses" : "owner-only"}
+              />
+            </View>
+
+            <View style={{ flexDirection: "row", gap: 12 }}>
+              <MiniStat label="Orders" value={orders} />
+              <MiniStat label="Avg/Order" value={avg.toString().replace(/\s+/g, " ")} />
+              <MiniStat label="Money In" value={totalMoneyIn} hint="after expenses" />
+            </View>
+          </>
+        )}
       </View>
     );
   }, [
@@ -1392,17 +1426,18 @@ function CompactFinanceCardHomePreview() {
     displayCurrency,
     displayLocale,
     isOwner,
+    isStaffView,
   ]);
 
   return (
-    <PremiumMetricCard
-      title="Finance"
-      subtitle={`Store: ${storeName}`}
+   <PremiumMetricCard
+      title={financeTitle}
+      subtitle={financeSubtitle}
       iconName="bar-chart-outline"
       loading={loading}
-      badgeText={isOwner ? "LIVE" : "STORE"}
-      error={err}
-      ctaLabel="Open Finance"
+      badgeText={isOwnerOrAdmin ? "LIVE" : "STORE"}
+      error={financeError}
+      ctaLabel={financeCtaLabel}
       onPress={() => {
         const dates = rangeToDates("today");
         router.push({
@@ -2312,7 +2347,7 @@ export default function HomeScreen() {
       {!isCashier ? <ZetraAiCard onOpen={goAI} /> : null}
       {!isCashier ? <CompactNotificationsHomeCard /> : null}
 
-      {!!error && (
+      {!!error && !String(error).toLowerCase().includes("not allowed") && (
         <Card
           style={{
             borderColor: "rgba(201,74,74,0.35)",
