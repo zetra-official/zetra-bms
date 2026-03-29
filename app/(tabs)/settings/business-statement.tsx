@@ -452,9 +452,9 @@ export default function BusinessStatementScreen() {
     payments: 0,
   });
 
-  const canView = useMemo(() => {
+ const canView = useMemo(() => {
     const r = String(activeRole ?? "").toLowerCase();
-    return r === "owner" || r === "admin";
+    return r === "owner";
   }, [activeRole]);
 
   const resolvedRange = useMemo(() => {
@@ -508,7 +508,7 @@ export default function BusinessStatementScreen() {
       if (mode === "refresh") setRefreshing(true);
 
       try {
-        if (!canView) throw new Error("Business Statement ni kwa owner/admin tu.");
+        if (!canView) throw new Error("Business Statement ni kwa owner tu.");
         if (!activeStoreId) throw new Error("No active store selected.");
 
         const finalRange = overrideRange ?? resolvedRange;
@@ -1007,6 +1007,62 @@ export default function BusinessStatementScreen() {
     [range]
   );
 
+  if (!canView) {
+    return (
+      <Screen scroll={false}>
+        <View style={{ gap: 14 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <Pressable
+              onPress={() => router.back()}
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 999,
+                alignItems: "center",
+                justifyContent: "center",
+                borderWidth: 1,
+                borderColor: theme.colors.border,
+                backgroundColor: "rgba(255,255,255,0.06)",
+              }}
+            >
+              <Ionicons name="chevron-back" size={22} color={theme.colors.text} />
+            </Pressable>
+
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 26, fontWeight: "900", color: theme.colors.text }}>
+                Business Statement
+              </Text>
+              <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                {activeOrgName ?? "—"} • {activeStoreName ?? "No store"} • {activeRole ?? "—"}
+              </Text>
+              <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
+                {isOffline ? "OFFLINE" : "ONLINE"}
+              </Text>
+            </View>
+          </View>
+
+          <Card
+            style={{
+              gap: 10,
+              borderColor: theme.colors.dangerBorder,
+              backgroundColor: theme.colors.dangerSoft,
+            }}
+          >
+            <Text style={{ color: theme.colors.danger, fontWeight: "900", fontSize: 16 }}>
+              Access Denied
+            </Text>
+
+            <Text style={{ color: theme.colors.text, fontWeight: "800", lineHeight: 22 }}>
+              Business Statement ni eneo nyeti la kifedha. Kwa sasa inaruhusiwa kwa owner tu.
+            </Text>
+
+            <Button title="Go Back" variant="secondary" onPress={() => router.back()} />
+          </Card>
+        </View>
+      </Screen>
+    );
+  }
+
   return (
     <Screen scroll={false}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
@@ -1041,14 +1097,7 @@ export default function BusinessStatementScreen() {
             </View>
           </View>
 
-          {!canView && (
-            <Card style={{ gap: 8 }}>
-              <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>
-                Business Statement ni kwa owner/admin tu.
-              </Text>
-            </Card>
-          )}
-
+   
           <Card style={{ gap: 10 }}>
             <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Range</Text>
 

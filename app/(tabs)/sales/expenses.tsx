@@ -98,7 +98,7 @@ function prettyRpcError(err: any): string {
   if (!msg) return "Something went wrong.";
   if (/not authenticated/i.test(msg)) return "Not authenticated. Tafadhali login tena.";
   if (/no access/i.test(msg) || /owner\/admin/i.test(msg)) {
-    return "No access. Hii kazi ni ya Owner/Admin tu.";
+    return "Screen hii ni kwa usimamizi wa matumizi ya store. Tafadhali tumia mwonekano wa sales summary.";
   }
   if (/timed out/i.test(msg)) return msg;
   return msg;
@@ -345,7 +345,11 @@ export default function ExpensesScreen() {
   const money = useOrgMoneyPrefs(String(activeOrgId || ""));
   const fmt = useCallback((n: number) => money.fmt(n), [money]);
 
-  const canCreate = useMemo(() => !!activeStoreId, [activeStoreId]);
+  const roleLower = String(activeRole ?? "").trim().toLowerCase();
+  const isOwnerOrAdmin = roleLower === "owner" || roleLower === "admin";
+  const isStaffView = roleLower === "staff";
+
+  const canCreate = useMemo(() => !!activeStoreId && isOwnerOrAdmin, [activeStoreId, isOwnerOrAdmin]);
 
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState<ExpenseRow[]>([]);
@@ -506,6 +510,10 @@ export default function ExpensesScreen() {
       Alert.alert("Missing", "No active store selected.");
       return;
     }
+    if (!isOwnerOrAdmin) {
+      Alert.alert("View Only", "Muonekano huu wa kuingiza expense ni wa owner/admin tu.");
+      return;
+    }
     if (!canCreate) return;
     if (loading) return;
 
@@ -560,6 +568,7 @@ export default function ExpensesScreen() {
     }
   }, [
     activeStoreId,
+    isOwnerOrAdmin,
     canCreate,
     loading,
     amount,
@@ -576,6 +585,229 @@ export default function ExpensesScreen() {
   );
 
   const paymentMethods = useMemo(() => ["CASH", "MOBILE", "BANK"] as const, []);
+
+  if (isStaffView) {
+    return (
+      <Screen scroll={false} bottomPad={40}>
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 36 }}
+        >
+          <Animated.View
+            style={{
+              opacity: fadeAnim,
+              transform: [{ translateY: liftAnim }],
+              gap: 14,
+            }}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12,
+              }}
+            >
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={{
+                    fontSize: 31,
+                    fontWeight: "900",
+                    color: theme.colors.text,
+                    letterSpacing: -0.6,
+                  }}
+                >
+                  Store Spending
+                </Text>
+                <Text
+                  style={{
+                    color: theme.colors.muted,
+                    fontWeight: "800",
+                    marginTop: 4,
+                  }}
+                >
+                  View ya muhtasari wa matumizi ya store yako.
+                </Text>
+              </View>
+
+              <Pressable
+                onPress={() => router.back()}
+                hitSlop={10}
+                style={({ pressed }) => ({
+                  width: 48,
+                  height: 48,
+                  borderRadius: 999,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderWidth: 1,
+                  borderColor: theme.colors.border,
+                  backgroundColor: "rgba(255,255,255,0.05)",
+                  opacity: pressed ? 0.92 : 1,
+                })}
+              >
+                <Ionicons name="chevron-back" size={22} color={theme.colors.text} />
+              </Pressable>
+            </View>
+
+            <Card
+              style={{
+                gap: 14,
+                padding: 16,
+                borderRadius: 24,
+                backgroundColor: "rgba(255,255,255,0.035)",
+              }}
+            >
+              <View>
+                <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
+                  Organization
+                </Text>
+                <Text
+                  style={{
+                    color: theme.colors.text,
+                    fontWeight: "900",
+                    fontSize: 20,
+                    marginTop: 4,
+                  }}
+                  numberOfLines={1}
+                >
+                  {activeOrgName ?? "—"}
+                </Text>
+              </View>
+
+              <View style={{ flexDirection: "row", gap: 10 }}>
+                <View
+                  style={{
+                    flex: 1,
+                    borderWidth: 1,
+                    borderColor: theme.colors.border,
+                    borderRadius: 18,
+                    backgroundColor: "rgba(255,255,255,0.035)",
+                    padding: 12,
+                  }}
+                >
+                  <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
+                    Active Store
+                  </Text>
+                  <Text
+                    style={{ color: theme.colors.text, fontWeight: "900", marginTop: 6 }}
+                    numberOfLines={1}
+                  >
+                    {activeStoreName ?? "—"}
+                  </Text>
+                </View>
+
+                <View
+                  style={{
+                    width: 110,
+                    borderWidth: 1,
+                    borderColor: theme.colors.border,
+                    borderRadius: 18,
+                    backgroundColor: "rgba(255,255,255,0.035)",
+                    padding: 12,
+                  }}
+                >
+                  <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
+                    Role
+                  </Text>
+                  <Text
+                    style={{
+                      color: theme.colors.text,
+                      fontWeight: "900",
+                      marginTop: 6,
+                      textTransform: "capitalize",
+                    }}
+                  >
+                    {activeRole ?? "—"}
+                  </Text>
+                </View>
+              </View>
+
+              <View
+                style={{
+                  borderWidth: 1,
+                  borderColor: theme.colors.emeraldBorder,
+                  borderRadius: 18,
+                  backgroundColor: theme.colors.emeraldSoft,
+                  paddingVertical: 12,
+                  paddingHorizontal: 14,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 10,
+                }}
+              >
+                <Ionicons name="eye-outline" size={18} color={theme.colors.emerald} />
+                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+                  Hapa unaona muhtasari wa matumizi tu
+                </Text>
+              </View>
+            </Card>
+
+            {!!error && (
+              <Card
+                style={{
+                  borderColor: theme.colors.dangerBorder,
+                  backgroundColor: theme.colors.dangerSoft,
+                  padding: 14,
+                }}
+              >
+                <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
+                  <Ionicons name="alert-circle-outline" size={18} color={theme.colors.danger} />
+                  <Text style={{ color: theme.colors.danger, fontWeight: "900", flex: 1 }}>
+                    {error}
+                  </Text>
+                </View>
+              </Card>
+            )}
+
+            {sectionTitle("Summary")}
+
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <SummaryMiniCard
+                title="Today"
+                value={fmt(today.total)}
+                count={today.count}
+                icon="sunny-outline"
+                accent="emerald"
+              />
+              <SummaryMiniCard
+                title="Week"
+                value={fmt(week.total)}
+                count={week.count}
+                icon="calendar-outline"
+                accent="blue"
+              />
+            </View>
+
+            <SummaryMiniCard
+              title="This Month"
+              value={fmt(month.total)}
+              count={month.count}
+              icon="stats-chart-outline"
+              accent="violet"
+            />
+
+            <Card
+              style={{
+                padding: 18,
+                gap: 8,
+                borderRadius: 22,
+                backgroundColor: "rgba(255,255,255,0.035)",
+              }}
+            >
+              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+                Management Only
+              </Text>
+              <Text style={{ color: theme.colors.muted, fontWeight: "800", lineHeight: 20 }}>
+                Kuongeza au kubadilisha expense kunafanywa na owner/admin. Wewe unaendelea kuona
+                muhtasari wa matumizi ya store yako kwa urahisi.
+              </Text>
+            </Card>
+          </Animated.View>
+        </ScrollView>
+      </Screen>
+    );
+  }
 
   return (
     <Screen scroll={false} bottomPad={40}>
@@ -784,7 +1016,24 @@ export default function ExpensesScreen() {
             </Card>
           )}
 
-          {sectionTitle("Summary")}
+          {!!error && (
+              <Card
+                style={{
+                  borderColor: theme.colors.dangerBorder,
+                  backgroundColor: theme.colors.dangerSoft,
+                  padding: 14,
+                }}
+              >
+                <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
+                  <Ionicons name="alert-circle-outline" size={18} color={theme.colors.danger} />
+                  <Text style={{ color: theme.colors.danger, fontWeight: "900", flex: 1 }}>
+                    {error}
+                  </Text>
+                </View>
+              </Card>
+            )}
+
+            {sectionTitle("Summary")}
 
           <View style={{ flexDirection: "row", gap: 10 }}>
             <SummaryMiniCard

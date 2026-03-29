@@ -103,13 +103,67 @@ async function rpcFirstWorkingStores(): Promise<MyStoreRow[]> {
       msg.includes("does not exist") ||
       msg.includes("function") ||
       msg.includes("rpc");
-    // if missing -> try next; else stop
-    if (!missing) break;
+
+    const recoverable =
+      missing ||
+      msg.includes("not allowed") ||
+      msg.includes("permission denied") ||
+      msg.includes("access denied");
+
+    // if recoverable -> try next candidate; else stop
+    if (!recoverable) break;
   }
 
   throw lastErr ?? new Error("get_my_stores RPC missing");
 }
+function resolveConsistentSelection(args: {
+  orgs: MyOrgRow[];
+  stores: MyStoreRow[];
+  preferredOrgId: string | null;
+  preferredStoreId: string | null;
+}) {
+  const orgs = args.orgs ?? [];
+  const stores = args.stores ?? [];
 
+  const preferredOrgId = clean(args.preferredOrgId);
+  const preferredStoreId = clean(args.preferredStoreId);
+
+  const preferredStore =
+    stores.find((s) => clean(s.store_id) === preferredStoreId) ?? null;
+
+  const preferredStoreOrgId = clean(preferredStore?.organization_id);
+
+  // 1) store ikijulikana, org yake ndiyo iwe source of truth
+  let nextOrgId =
+    preferredStoreOrgId ||
+    (orgs.find((o) => clean(o.organization_id) === preferredOrgId)
+      ? preferredOrgId
+      : "") ||
+    clean(orgs[0]?.organization_id) ||
+    null;
+
+  const withinOrg = nextOrgId
+    ? stores.filter((s) => clean(s.organization_id) === nextOrgId)
+    : [];
+
+  const isAllowed = (s: MyStoreRow | null | undefined) =>
+    typeof s?.is_allowed === "boolean" ? s.is_allowed : true;
+
+  const selectedStore =
+    withinOrg.find(
+      (s) => clean(s.store_id) === preferredStoreId && isAllowed(s)
+    ) ?? null;
+
+  const firstAllowedStore = withinOrg.find((s) => isAllowed(s)) ?? null;
+  const fallbackStore = withinOrg[0] ?? null;
+
+  const nextStore = selectedStore ?? firstAllowedStore ?? fallbackStore ?? null;
+
+  return {
+    orgId: nextOrgId,
+    storeId: clean(nextStore?.store_id) || null,
+  };
+}
 export function OrgProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -148,7 +202,9 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
 
   const deriveActive = useMemo(() => {
     const org =
-      orgs.find((o) => o.organization_id === activeOrgId) ?? orgs[0] ?? null;
+      orgs.find((o) => clean(o.organization_id) === clean(activeOrgId)) ??
+      orgs[0] ??
+      null;
 
     return {
       orgId: org?.organization_id ?? null,
@@ -191,7 +247,7 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
     const firstAllowed =
       withinOrg.find((s) => isAllowed(s)) ?? null;
 
-    const fallback = withinOrg[0] ?? (stores ?? [])[0] ?? null;
+    const fallback = withinOrg[0] ?? null;
 
     const store = selected ?? firstAllowed ?? fallback;
 
@@ -268,9 +324,37 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
         const typedOrgs = (orgData ?? []) as MyOrgRow[];
         setOrgs(typedOrgs);
 
-        // 2) stores (prefer v2; fallback to legacy)
-        const typedStores = await rpcFirstWorkingStores();
-        setStores(typedStores);
+      // 2) stores (prefer v2; fallback to legacy)
+        // IMPORTANT:
+        // do not let store-loading failure break whole OrgContext state.
+        // orgs may still be valid even if stores RPC is restricted or empty.
+        let typedStores: MyStoreRow[] = [];
+
+        try {
+          typedStores = await rpcFirstWorkingStores();
+          setStores(typedStores);
+        } catch (storeErr: any) {
+          typedStores = [];
+          setStores([]);
+          // keep orgs loaded; expose softer message instead of breaking whole app
+          setError(storeErr?.message ?? "Failed to load stores");
+        }
+
+        // 3) resolve consistent active org/store for multi-workspace users
+        const resolved = resolveConsistentSelection({
+          orgs: typedOrgs,
+          stores: typedStores,
+          preferredOrgId: activeOrgId,
+          preferredStoreId: activeStoreId,
+        });
+
+        _setActiveOrgId(resolved.orgId);
+        _setActiveStoreId(resolved.storeId);
+
+        await Promise.all([
+          kv.setString(KV_KEYS.activeOrgId, resolved.orgId),
+          kv.setString(KV_KEYS.activeStoreId, resolved.storeId),
+        ]);
       } catch (e: any) {
         setError(e?.message ?? "Failed to load org/store data");
         // IMPORTANT: do NOT clear org/store selection here.
@@ -279,7 +363,7 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
         if (mode === "refresh") setRefreshing(false);
       }
     },
-    [hydrateSelectionOnce]
+    [hydrateSelectionOnce, activeOrgId, activeStoreId]
   );
 
   const refresh = useCallback(async () => {

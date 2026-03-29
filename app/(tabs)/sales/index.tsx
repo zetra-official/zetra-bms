@@ -309,6 +309,10 @@ export default function SalesHomeScreen() {
   }, [currentRole]);
 
   const isOwner = useMemo(() => currentRole === "owner", [currentRole]);
+  const isOwnerOrAdmin = useMemo(
+    () => currentRole === "owner" || currentRole === "admin",
+    [currentRole]
+  );
 
   const loadOpenShift = useCallback(async () => {
     if (!isCashier || !activeStoreId) {
@@ -1168,9 +1172,11 @@ export default function SalesHomeScreen() {
 
   const headerBlockedReason = useMemo(() => {
     if (isCashier) {
-      return "Cashier role hupokea handoff na kukamilisha malipo tu. Product picking haipo kwenye screen hii.";
+      return "Hapa cashier anapokea orders zilizotumwa na anakamilisha malipo. Uchaguzi wa bidhaa unafanyika kwenye upande wa sales workspace.";
     }
-    if (!canSellDirect) return "Huna ruhusa ya kuuza. (Owner/Admin/Staff only)";
+    if (!canSellDirect) {
+      return "Sales workspace hii haijafunguliwa kwa role yako kwenye context ya sasa.";
+    }
     return null;
   }, [canSellDirect, isCashier]);
 
@@ -1323,7 +1329,7 @@ export default function SalesHomeScreen() {
           </Pressable>
         </View>
 
-        {!isCashier ? (
+        {!isCashier && isOwnerOrAdmin ? (
           <View style={{ flexDirection: "row", gap: 8 }}>
             <Pressable
               onPress={() => router.push("/(tabs)/sales/expenses")}
@@ -1370,7 +1376,7 @@ export default function SalesHomeScreen() {
         ) : null}
       </View>
     );
-  }, [headerSubtitle, isCashier, isOwner, router, statusLine, todayLabel]);
+  }, [headerSubtitle, isCashier, isOwner, isOwnerOrAdmin, router, statusLine, todayLabel]);
 
   const QuickBar = useMemo(() => {
     return (
@@ -2143,7 +2149,7 @@ export default function SalesHomeScreen() {
             paddingBottom: Math.max(insets.bottom + 90, 110),
           }}
         >
-          {CashierBar}
+          {CashierBar} 
         </View>
       ) : (
         <FlatList<ProductRow>
