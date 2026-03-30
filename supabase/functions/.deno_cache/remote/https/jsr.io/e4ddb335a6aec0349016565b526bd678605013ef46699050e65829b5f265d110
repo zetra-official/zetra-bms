@@ -1,0 +1,38 @@
+type Fetch = typeof fetch
+
+export const resolveFetch = (customFetch?: Fetch): Fetch => {
+  if (customFetch) {
+    return (...args: Parameters<Fetch>) => customFetch(...args)
+  }
+  return (...args: Parameters<Fetch>) => fetch(...args)
+}
+
+export const resolveHeadersConstructor = () => {
+  return Headers
+}
+
+export const fetchWithAuth = (
+  supabaseKey: string,
+  getAccessToken: () => Promise<string | null>,
+  customFetch?: Fetch
+): Fetch => {
+  const fetch = resolveFetch(customFetch)
+  const HeadersConstructor = resolveHeadersConstructor()
+
+  return async (input, init) => {
+    const accessToken = (await getAccessToken()) ?? supabaseKey
+    let headers = new HeadersConstructor(init?.headers)
+
+    if (!headers.has('apikey')) {
+      headers.set('apikey', supabaseKey)
+    }
+
+    if (!headers.has('Authorization')) {
+      headers.set('Authorization', `Bearer ${accessToken}`)
+    }
+
+    return fetch(input, { ...init, headers })
+  }
+}
+
+// denoCacheMetadata={"headers":{"x-jsr-backend":"modules","x-robots-tag":"noindex","cf-ray":"9e49410aaf5f2229-JNB","etag":"\"290ab1aa2861e9521245792f14cf1169\"","report-to":"{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=nA2eYv7HwkxwmAhY2TBYQCbG4CJ7Wjcqh3qC1Feq21gkefuplJ5KzAt%2B2rOe2Cm6qq2TJ32nZlQfi%2BQvVgYop1meKKp76JTBIcG2JjJcfDLTPGlhIbe9kSY%3D\"}]}","content-type":"text/typescript","content-length":"941","access-control-expose-headers":"*","cache-control":"public, max-age=31536000, immutable","access-control-allow-origin":"*","content-encoding":"identity","x-content-type-options":"nosniff","vary":"Origin","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","date":"Mon, 30 Mar 2026 18:42:25 GMT","cross-origin-resource-policy":"cross-origin","server":"cloudflare","nel":"{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}","alt-svc":"h3=\":443\"; ma=86400"},"url":"https://jsr.io/@supabase/supabase-js/2.101.0/src/lib/fetch.ts","time":1774896149}

@@ -1,0 +1,10 @@
+import { Fetch } from './types.ts'
+
+export const resolveFetch = (customFetch?: Fetch): Fetch => {
+  if (customFetch) {
+    return (...args) => customFetch(...args)
+  }
+  return (...args) => fetch(...args)
+}
+
+// denoCacheMetadata={"headers":{"access-control-expose-headers":"*","x-content-type-options":"nosniff","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","report-to":"{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=3O%2BMeIB8cTzjvfM1I%2F5eQXWnDY%2Fd5ZYdsSwLhVMgQDJFXd3%2B%2FPLK3TBFr0mVr67NVjgL4qiLDjl7HHXFEkNK0GBVb9OlQyz%2BZSYsnTLBllaMbJoPtX2sxg8%3D\"}]}","content-length":"207","cache-control":"public, max-age=31536000, immutable","server":"cloudflare","access-control-allow-origin":"*","alt-svc":"h3=\":443\"; ma=86400","date":"Mon, 30 Mar 2026 18:42:25 GMT","nel":"{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}","cross-origin-resource-policy":"cross-origin","etag":"\"ada53d97c325f541a186244739207bbd\"","vary":"Origin","x-robots-tag":"noindex","content-type":"text/typescript","x-jsr-backend":"modules","cf-ray":"9e49410aaf7f2229-JNB"},"url":"https://jsr.io/@supabase/functions-js/0.0.0-jsr-test.1/src/helper.ts","time":1774896149}
