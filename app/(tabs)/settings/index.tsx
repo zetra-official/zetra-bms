@@ -548,6 +548,17 @@ export default function MoreHome() {
         />
       </PremiumSectionCard>
 
+      <SectionTitle label="Account & Privacy" />
+      <PremiumSectionCard>
+        <Row
+          icon="shield-half-outline"
+          title="Account & Privacy"
+          subtitle="Manage account safety, privacy controls, and Danger Zone"
+          badge="SECURE"
+          onPress={() => router.push("/(tabs)/settings/account-privacy")}
+        />
+      </PremiumSectionCard>
+
       <SectionTitle label="Account" />
       <LogoutCard onLogout={onLogout} />
 

@@ -1,0 +1,12 @@
+export { FunctionsClient } from './FunctionsClient.ts'
+export {
+  type FunctionInvokeOptions,
+  FunctionsError,
+  FunctionsFetchError,
+  FunctionsHttpError,
+  FunctionsRelayError,
+  FunctionRegion,
+  type FunctionsResponse,
+} from './types.ts'
+
+// denoCacheMetadata={"headers":{"cf-ray":"9e49410aaf752229-JNB","cache-control":"public, max-age=31536000, immutable","x-robots-tag":"noindex","server":"cloudflare","access-control-expose-headers":"*","x-content-type-options":"nosniff","etag":"\"1182209cf5e2c4a46430966d01de257f\"","cross-origin-resource-policy":"cross-origin","x-jsr-backend":"modules","report-to":"{\"group\":\"cf-nel\",\"max_age\":604800,\"endpoints\":[{\"url\":\"https://a.nel.cloudflare.com/report/v4?s=WVV%2BKsMq%2BK8CtM0H2jaRzhdMQOKuEN8ZnSw82w9O5XkK%2BoI1%2FA%2BpeMBHGrlFKsYXGdnZf1TLM2TbzQO4UYmYSkqxPzAosnvLTvYHHT2Q%2Brzue0hAdeWtZpk%3D\"}]}","access-control-allow-origin":"*","content-security-policy":"default-src 'none'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; frame-ancestors 'none'; sandbox; form-action 'none';","content-type":"text/typescript","nel":"{\"report_to\":\"cf-nel\",\"success_fraction\":0.0,\"max_age\":604800}","content-length":"244","date":"Mon, 30 Mar 2026 18:42:25 GMT","vary":"Origin","alt-svc":"h3=\":443\"; ma=86400"},"url":"https://jsr.io/@supabase/functions-js/0.0.0-jsr-test.1/src/index.ts","time":1774896149}
