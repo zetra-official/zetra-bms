@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   ActivityIndicator,
   Alert,
+  AppState,
   FlatList,
   Pressable,
   Text,
@@ -92,6 +93,7 @@ type LatestRequestRow = {
   transaction_reference: string;
   payer_phone: string;
   payer_name: string | null;
+  raw_sms?: string | null;
   status: string;
   admin_note: string | null;
   rejection_reason: string | null;
@@ -303,6 +305,12 @@ function normalizePhone(input: any) {
   return raw;
 }
 
+function buildManualRequestRef(orgId: string) {
+  const stamp = Date.now();
+  const tail = upper(clean(orgId)).replace(/[^A-Z0-9]/g, "").slice(-6) || "ORG";
+  return `MANUAL-${tail}-${stamp}`;
+}
+
 function extractSmsReference(text: string) {
   const src = upper(text);
   if (!src) return "";
@@ -451,6 +459,7 @@ function Field({
   placeholder,
   keyboardType,
   multiline,
+  autoCapitalize,
 }: {
   label: string;
   value: string;
@@ -458,6 +467,7 @@ function Field({
   placeholder: string;
   keyboardType?: "default" | "number-pad" | "phone-pad";
   multiline?: boolean;
+  autoCapitalize?: "none" | "sentences" | "words" | "characters";
 }) {
   return (
     <View style={{ gap: 6 }}>
@@ -468,7 +478,7 @@ function Field({
         placeholder={placeholder}
         placeholderTextColor="rgba(255,255,255,0.45)"
         keyboardType={keyboardType ?? "default"}
-        autoCapitalize="characters"
+        autoCapitalize={autoCapitalize ?? "none"}
         autoCorrect={false}
         multiline={!!multiline}
         textAlignVertical={multiline ? "top" : "center"}
@@ -568,6 +578,8 @@ export default function SubscriptionScreen() {
   const [rawSms, setRawSms] = useState("");
 
   const userTouchedPlanRef = useRef(false);
+  const isRefreshingRef = useRef(false);
+  const loadAllRef = useRef<() => Promise<void>>(async () => {});
 
   const safeAlert = (title: string, msg: string) => Alert.alert(title, msg);
 
@@ -602,6 +614,7 @@ export default function SubscriptionScreen() {
             transaction_reference,
             payer_phone,
             payer_name,
+            raw_sms,
             status,
             admin_note,
             rejection_reason,
@@ -635,7 +648,10 @@ export default function SubscriptionScreen() {
       return;
     }
 
-    setLoading(true);
+    if (!isRefreshingRef.current) {
+      setLoading(true);
+    }
+
     try {
       const { data: subData, error: subErr } = await supabase.rpc("get_my_subscription", {
         p_org_id: orgId,
@@ -727,8 +743,86 @@ export default function SubscriptionScreen() {
   }, [loadSession]);
 
   useEffect(() => {
+    loadAllRef.current = loadAll;
+  }, [loadAll]);
+
+  useEffect(() => {
     void loadAll();
   }, [loadAll]);
+
+  useEffect(() => {
+    if (!orgId) return;
+
+    let mounted = true;
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const safeRealtimeRefresh = async () => {
+      if (!mounted) return;
+      if (isRefreshingRef.current) return;
+
+      isRefreshingRef.current = true;
+      try {
+        await loadAllRef.current();
+      } finally {
+        isRefreshingRef.current = false;
+      }
+    };
+
+    const scheduleRefresh = () => {
+      if (!mounted) return;
+      if (debounceTimer) clearTimeout(debounceTimer);
+
+      debounceTimer = setTimeout(() => {
+        void safeRealtimeRefresh();
+      }, 350);
+    };
+
+    const requestsChannel = supabase
+      .channel(`subscription-requests-${orgId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "subscription_payment_requests",
+          filter: `organization_id=eq.${orgId}`,
+        },
+        () => {
+          scheduleRefresh();
+        }
+      )
+      .subscribe();
+
+    const subsChannel = supabase
+      .channel(`organization-subscriptions-${orgId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "organization_subscriptions",
+          filter: `organization_id=eq.${orgId}`,
+        },
+        () => {
+          scheduleRefresh();
+        }
+      )
+      .subscribe();
+
+    const appStateSub = AppState.addEventListener("change", (nextState) => {
+      if (nextState === "active") {
+        void safeRealtimeRefresh();
+      }
+    });
+
+    return () => {
+      mounted = false;
+      if (debounceTimer) clearTimeout(debounceTimer);
+      appStateSub.remove();
+      void supabase.removeChannel(requestsChannel);
+      void supabase.removeChannel(subsChannel);
+    };
+  }, [orgId]);
 
   const resolvedPlanCode = useMemo(() => {
     const rpcCode = upper(mySub?.plan_code || mySub?.plan_name || "");
@@ -906,32 +1000,23 @@ export default function SubscriptionScreen() {
     return;
   }
 
-  const rawParsed = parseRawSms(rawSms);
-  const phone = normalizePhone(clean(payerPhone) || rawParsed.phone);
-  const ref = normalizeTxRef(clean(txRef) || rawParsed.reference);
-  const name = clean(payerName) || clean(rawParsed.payerName);
+  const rawMessage = clean(rawSms);
+  const phone = normalizePhone(payerPhone);
+  const name = clean(payerName);
+  const manualRef = normalizeTxRef(clean(txRef)) || buildManualRequestRef(orgId);
+
+  if (!rawMessage) {
+    safeAlert("RAW SMS required", "Bandika SMS nzima ya muamala kama ilivyo.");
+    return;
+  }
 
   if (!phone) {
-    safeAlert(
-      "Phone required",
-      "Weka namba iliyotumika kulipa au bandika RAW SMS yenye namba ya muamala."
-    );
+    safeAlert("Phone required", "Weka namba iliyotumika kulipa.");
     return;
   }
 
-  if (!ref) {
-    safeAlert(
-      "Transaction ref",
-      "Weka Transaction Reference (receipt code) au bandika RAW SMS ili system isome reference moja kwa moja."
-    );
-    return;
-  }
-
-  if (ref.length < 6) {
-    safeAlert(
-      "Transaction ref",
-      "Reference fupi sana. Copy receipt code kamili kutoka SMS ya muamala."
-    );
+  if (!name) {
+    safeAlert("Name required", "Weka jina la aliyefanya malipo.");
     return;
   }
 
@@ -943,59 +1028,32 @@ export default function SubscriptionScreen() {
       p_duration_months: selectedMonths,
       p_expected_amount: expectedAmount,
       p_submitted_amount: expectedAmount,
-      p_transaction_reference: ref,
+      p_transaction_reference: manualRef,
       p_payer_phone: phone,
-      p_payer_name: name || null,
+      p_payer_name: name,
+      p_raw_sms: rawMessage,
     };
 
     const { error } = await supabase.rpc("submit_subscription_payment_request", payload);
     if (error) throw error;
-
-    const latest = await loadLatestRequest();
-
-    let reconcileRow: ReconcileRow | null = null;
-
-    if (latest?.id) {
-      const { data: reconcileData, error: reconcileError } = await supabase.rpc(
-        "reconcile_subscription_request_with_office_sms_v2",
-        {
-          p_request_id: latest.id,
-        }
-      );
-
-      if (!reconcileError) {
-        reconcileRow = Array.isArray(reconcileData)
-          ? ((reconcileData?.[0] ?? null) as ReconcileRow | null)
-          : ((reconcileData ?? null) as ReconcileRow | null);
-      }
-    }
 
     setTxRef("");
     setPayerPhone("");
     setPayerName("");
     setRawSms("");
 
-    if (reconcileRow?.ok && reconcileRow?.approved && reconcileRow?.activated) {
-      safeAlert(
-        "Approved & Activated ✅",
-        clean(reconcileRow.message) ||
-          "Request ime-match na office SMS. Subscription ime-approve na ku-activate moja kwa moja."
-      );
-    } else if (reconcileRow?.matched) {
-      safeAlert(
-        "Request submitted ⏳",
-        clean(reconcileRow.message) ||
-          "Request imetumwa. Match imeonekana lakini bado inaweza kuhitaji review kidogo."
-      );
-    } else {
-      safeAlert(
-        "Request submitted ✅",
-        "Payment request imetumwa kikamilifu.\n\nStatus: PENDING / AUTO-CHECK\n\nKama office SMS iliyopo tayari ime-match, system ita-approve na ku-activate moja kwa moja."
-      );
-    }
+    safeAlert(
+      "Request submitted ✅",
+      "Payment request imetumwa successfully.\n\nOffice ita-review SMS uliyobandika pamoja na jina na namba ya simu."
+    );
 
     userTouchedPlanRef.current = false;
-    await loadAll();
+    isRefreshingRef.current = true;
+    try {
+      await loadAll();
+    } finally {
+      isRefreshingRef.current = false;
+    }
   } catch (e: any) {
     safeAlert("Submit request", e?.message ?? "Failed to submit payment request");
   } finally {
@@ -1005,7 +1063,6 @@ export default function SubscriptionScreen() {
   canManage,
   expectedAmount,
   loadAll,
-  loadLatestRequest,
   orgId,
   payerName,
   payerPhone,
@@ -1338,8 +1395,12 @@ export default function SubscriptionScreen() {
 
         <Pressable
           onPress={() => {
+            if (isRefreshingRef.current) return;
             userTouchedPlanRef.current = false;
-            void loadAll();
+            isRefreshingRef.current = true;
+            void loadAll().finally(() => {
+              isRefreshingRef.current = false;
+            });
           }}
           style={({ pressed }) => [
             {
@@ -1474,6 +1535,13 @@ export default function SubscriptionScreen() {
                 Reference:{" "}
                 <Text style={{ color: UI.text }}>
                   {clean(latestRequest.transaction_reference) || "—"}
+                </Text>
+              </Text>
+
+              <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                RAW SMS:{" "}
+                <Text style={{ color: UI.text }}>
+                  {clean(latestRequest.raw_sms) ? "ATTACHED" : "—"}
                 </Text>
               </Text>
 
@@ -1657,8 +1725,9 @@ export default function SubscriptionScreen() {
             <Text style={{ color: UI.text, fontWeight: "900" }}>{PAY_TO_PHONE}</Text>
 
             <Text style={{ color: UI.faint, fontWeight: "800", marginTop: 8 }}>
-              Baada ya kulipa, unaweza kubandika SMS nzima ya muamala hapa chini au ukaandika details
-              manually. System itatumia RAW SMS kusoma reference/phone moja kwa moja bila kuvunja RPC flow ya sasa.
+              Baada ya kulipa, bandika SMS nzima ya muamala hapa chini kama ilivyo. Kisha jaza
+              namba ya simu iliyotumika kulipa na jina la mlipaji. Office ndiyo itafanya review na
+              matching manually.
             </Text>
           </View>
 
@@ -1691,81 +1760,37 @@ export default function SubscriptionScreen() {
 
           <View style={{ marginTop: 12, gap: 10 }}>
             <Field
-              label="RAW SMS (optional)"
+              label="RAW SMS"
               value={rawSms}
               onChangeText={setRawSms}
-              placeholder="Bandika SMS nzima ya muamala hapa..."
+              placeholder="Bandika SMS nzima ya muamala hapa kama ilivyo..."
               multiline
+              autoCapitalize="none"
             />
-
-            {clean(rawSms) ? (
-              <View
-                style={{
-                  borderWidth: 1,
-                  borderColor: rawSmsAmountMismatch
-                    ? "rgba(245,158,11,0.35)"
-                    : "rgba(255,255,255,0.10)",
-                  backgroundColor: rawSmsAmountMismatch
-                    ? "rgba(245,158,11,0.10)"
-                    : "rgba(255,255,255,0.04)",
-                  borderRadius: 16,
-                  padding: 12,
-                  gap: 6,
-                }}
-              >
-                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
-                  RAW SMS detected
-                </Text>
-
-                <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                  Reference: <Text style={{ color: UI.text }}>{parsedRawSms.reference || "—"}</Text>
-                </Text>
-
-                <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                  Phone: <Text style={{ color: UI.text }}>{parsedRawSms.phone || "—"}</Text>
-                </Text>
-
-                <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                  Amount in SMS:{" "}
-                  <Text style={{ color: UI.text }}>
-                    {parsedRawSms.amount === null ? "—" : fmtMoneyTZS(parsedRawSms.amount)}
-                  </Text>
-                </Text>
-
-                {clean(parsedRawSms.payerName) ? (
-                  <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                    Name in SMS: <Text style={{ color: UI.text }}>{parsedRawSms.payerName}</Text>
-                  </Text>
-                ) : null}
-
-                {rawSmsAmountMismatch ? (
-                  <Text style={{ color: UI.text, fontWeight: "800", fontSize: 12, marginTop: 4 }}>
-                    Warning: Amount inside SMS differs from selected subscription amount. Review before submit.
-                  </Text>
-                ) : null}
-              </View>
-            ) : null}
 
             <Field
               label="Phone Number"
               value={payerPhone}
               onChangeText={setPayerPhone}
-              placeholder="Andika namba yako ya simu hapa"
+              placeholder="Andika namba iliyotumika kulipa hapa"
               keyboardType="phone-pad"
+              autoCapitalize="none"
             />
 
             <Field
-              label="Transaction Reference (receipt code)"
-              value={txRef}
-              onChangeText={(t) => setTxRef(normalizeTxRef(t))}
-              placeholder="TEUEHHJAL"
-            />
-
-            <Field
-              label="Payer Name (optional)"
+              label="Payer Name"
               value={payerName}
               onChangeText={setPayerName}
-              placeholder="Andika jina lako kamili hapa"
+              placeholder="Andika jina la aliyefanya malipo hapa"
+              autoCapitalize="words"
+            />
+
+            <Field
+              label="Transaction Reference (optional)"
+              value={txRef}
+              onChangeText={(t) => setTxRef(normalizeTxRef(t))}
+              placeholder="Acha wazi kama hutaki kuijaza"
+              autoCapitalize="characters"
             />
           </View>
 
@@ -1785,19 +1810,26 @@ export default function SubscriptionScreen() {
             </Text>
 
             <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-              Phone: <Text style={{ color: UI.text }}>{effectivePhonePreview || "—"}</Text>
+              Phone: <Text style={{ color: UI.text }}>{normalizePhone(payerPhone) || "—"}</Text>
             </Text>
 
             <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-              Reference: <Text style={{ color: UI.text }}>{effectiveRefPreview || "—"}</Text>
+              Reference:{" "}
+              <Text style={{ color: UI.text }}>
+                {normalizeTxRef(txRef) || (orgId ? buildManualRequestRef(orgId) : "—")}
+              </Text>
             </Text>
 
             <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-              Name: <Text style={{ color: UI.text }}>{effectiveNamePreview || "—"}</Text>
+              Name: <Text style={{ color: UI.text }}>{clean(payerName) || "—"}</Text>
+            </Text>
+
+            <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+              RAW SMS: <Text style={{ color: UI.text }}>{clean(rawSms) ? "ATTACHED" : "—"}</Text>
             </Text>
 
             <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 12, marginTop: 2 }}>
-              Manual fields zina-priority. Zikiwa tupu, system itatumia values zilizopatikana kutoka RAW SMS.
+              User ata-submit SMS kama ilivyo. Office ndiyo itafanya review na matching manually.
             </Text>
           </View>
 
@@ -1816,8 +1848,8 @@ export default function SubscriptionScreen() {
           ) : null}
 
           <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 12 }}>
-            Note: Request ikipelekwa, inaweza kubaki PENDING au ku-auto-approve moja kwa moja
-            kama office SMS iliyopo tayari ime-match na reference ya muamala.
+            Note: Request ikipelekwa, itabaki kwa manual office review. Office italinganisha SMS
+            uliyobandika na muamala ulioingia kwenye simu ya office.
           </Text>
         </Card>
       </View>

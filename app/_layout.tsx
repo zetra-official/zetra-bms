@@ -3,7 +3,7 @@ import { supabase } from "@/src/supabase/supabaseClient";
 import { theme } from "@/src/ui/theme";
 import { Stack, useRouter, useSegments } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
-import { Platform } from "react-native";
+import { ActivityIndicator, Platform, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 
 function AuthGate() {
@@ -12,7 +12,6 @@ function AuthGate() {
   const segmentsRef = useRef<string[]>([]);
   const [ready, setReady] = useState(false);
 
-  // keep latest segments available to auth callback (avoid stale closure)
   useEffect(() => {
     segmentsRef.current = segments;
   }, [segments]);
@@ -21,6 +20,8 @@ function AuthGate() {
     let alive = true;
 
     const isInAuth = (segs: string[]) => segs?.[0] === "(auth)";
+    const isEmailVerified = (user: any) =>
+      !!(user?.email_confirmed_at ?? user?.confirmed_at);
 
     const boot = async () => {
       const {
@@ -37,15 +38,23 @@ function AuthGate() {
 
       const inAuth = isInAuth(segmentsRef.current);
 
-      // ✅ No session: only force-login if user is NOT already in auth group
       if (!session) {
         if (!inAuth) router.replace("/(auth)/login");
         setReady(true);
         return;
       }
 
-      // ✅ Has session: if user is on auth screens, kick to tabs
-      if (session && inAuth) {
+      const verified = isEmailVerified(session.user);
+
+      // user ana session lakini email bado haijaverify
+      if (!verified) {
+        if (!inAuth) router.replace("/(auth)/login");
+        setReady(true);
+        return;
+      }
+
+      // verified users only
+      if (inAuth) {
         router.replace("/(tabs)");
       }
 
@@ -54,17 +63,24 @@ function AuthGate() {
 
     void boot();
 
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
       const inAuth = isInAuth(segmentsRef.current);
 
       if (!session) {
-        // ✅ DO NOT override auth routes (register/login) when session is null
         if (!inAuth) router.replace("/(auth)/login");
         return;
       }
 
-      // session exists
-      if (inAuth) router.replace("/(tabs)");
+      const verified = isEmailVerified(session.user);
+
+      if (!verified) {
+        if (!inAuth) router.replace("/(auth)/login");
+        return;
+      }
+
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION") {
+        if (inAuth) router.replace("/(tabs)");
+      }
     });
 
     return () => {
@@ -73,21 +89,30 @@ function AuthGate() {
     };
   }, [router]);
 
-  if (!ready) return null;
+  if (!ready) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: theme.colors.background,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <StatusBar style="light" backgroundColor={theme.colors.background} />
+        <ActivityIndicator />
+      </View>
+    );
+  }
 
   return (
     <>
-      {/* ✅ Prevent white flash: force dark status bar + dark background */}
       <StatusBar style="light" backgroundColor={theme.colors.background} />
 
       <Stack
         screenOptions={{
           headerShown: false,
-
-          // ✅ KEY FIX: stack scenes background is DARK (no more white flash)
           contentStyle: { backgroundColor: theme.colors.background },
-
-          // ✅ Optional: smoother transition (reduces "flash feel")
           animation: Platform.OS === "android" ? "fade" : "default",
         }}
       />

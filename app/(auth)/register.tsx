@@ -1,6 +1,6 @@
 // app/(auth)/register.tsx
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Alert, Pressable, Text, TextInput, View } from "react-native";
 import { supabase } from "../../src/supabase/supabaseClient";
 
@@ -25,9 +25,13 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  const emailTrimmed = useMemo(() => email.trim(), [email]);
 
   const onRegister = async () => {
-    const e = email.trim();
+    const e = emailTrimmed;
     const p = password;
 
     if (!e) return Alert.alert("Missing", "Email is required.");
@@ -49,100 +53,178 @@ export default function RegisterScreen() {
       return Alert.alert("Register Failed", error.message);
     }
 
-    // ✅ wait a moment for session to become available
+    // after sign up, user must verify email first
     const { session } = await getSessionWithRetry();
-    setLoading(false);
 
     if (session) {
-      // ✅ Let AuthGate drive: no store yet => onboarding
-      router.replace("/(onboarding)");
-      return;
+      try {
+        await supabase.auth.signOut();
+      } catch {}
     }
 
+    setLoading(false);
+
     Alert.alert(
-      "Account created",
-      "Tafadhali login kuendelea (session haijarudi)."
+      "Verify your email",
+      "Account imeundwa. Tumejaribu kutuma verification email.\n\nFungua email yako, verify account, kisha login kuendelea."
     );
     router.replace("/(auth)/login");
   };
 
   return (
-    <View style={{ flex: 1, padding: 20, justifyContent: "center" }}>
-      <Text style={{ fontSize: 26, fontWeight: "900", marginBottom: 8 }}>
-        ZETRA BMS
-      </Text>
-      <Text style={{ opacity: 0.7, marginBottom: 20 }}>Create account</Text>
-
-      <Text style={{ fontWeight: "700" }}>Email</Text>
-      <TextInput
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-        keyboardType="email-address"
+    <View
+      style={{
+        flex: 1,
+        justifyContent: "center",
+        paddingHorizontal: 20,
+        backgroundColor: "#0B0F14",
+      }}
+    >
+      <View
         style={{
           borderWidth: 1,
-          borderColor: "#ddd",
-          borderRadius: 10,
-          padding: 12,
-          marginTop: 8,
-          marginBottom: 14,
-        }}
-      />
-
-      <Text style={{ fontWeight: "700" }}>Password</Text>
-      <TextInput
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        style={{
-          borderWidth: 1,
-          borderColor: "#ddd",
-          borderRadius: 10,
-          padding: 12,
-          marginTop: 8,
-          marginBottom: 14,
-        }}
-      />
-
-      <Text style={{ fontWeight: "700" }}>Confirm Password</Text>
-      <TextInput
-        value={confirm}
-        onChangeText={setConfirm}
-        secureTextEntry
-        style={{
-          borderWidth: 1,
-          borderColor: "#ddd",
-          borderRadius: 10,
-          padding: 12,
-          marginTop: 8,
-          marginBottom: 18,
-        }}
-      />
-
-      <Pressable
-        onPress={onRegister}
-        disabled={loading}
-        style={{
-          backgroundColor: "black",
-          padding: 14,
-          borderRadius: 14,
-          alignItems: "center",
-          opacity: loading ? 0.7 : 1,
+          borderColor: "rgba(255,255,255,0.10)",
+          backgroundColor: "rgba(255,255,255,0.04)",
+          borderRadius: 24,
+          padding: 20,
         }}
       >
-        <Text style={{ color: "white", fontWeight: "900" }}>
-          {loading ? "Creating..." : "Create account"}
+        <Text style={{ color: "white", fontSize: 28, fontWeight: "900", marginBottom: 8 }}>
+          Create Account
         </Text>
-      </Pressable>
+        <Text style={{ color: "rgba(255,255,255,0.65)", marginBottom: 22 }}>
+          Start your business journey with ZETRA BMS.
+        </Text>
 
-      <Pressable
-        onPress={() => router.replace("/(auth)/login")}
-        style={{ marginTop: 14, alignItems: "center" }}
-      >
-        <Text style={{ textDecorationLine: "underline" }}>
-          Already have an account? Login
+        <Text style={{ color: "white", fontWeight: "800", marginBottom: 8 }}>Email</Text>
+        <TextInput
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          placeholder="you@example.com"
+          placeholderTextColor="rgba(255,255,255,0.35)"
+          style={{
+            borderWidth: 1,
+            borderColor: "rgba(255,255,255,0.12)",
+            backgroundColor: "rgba(255,255,255,0.06)",
+            color: "white",
+            borderRadius: 14,
+            paddingHorizontal: 14,
+            paddingVertical: 14,
+            marginBottom: 16,
+          }}
+        />
+
+        <Text style={{ color: "white", fontWeight: "800", marginBottom: 8 }}>Password</Text>
+        <View
+          style={{
+            borderWidth: 1,
+            borderColor: "rgba(255,255,255,0.12)",
+            backgroundColor: "rgba(255,255,255,0.06)",
+            borderRadius: 14,
+            paddingHorizontal: 14,
+            flexDirection: "row",
+            alignItems: "center",
+            marginBottom: 16,
+          }}
+        >
+          <TextInput
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry={!showPassword}
+            placeholder="Create a password"
+            placeholderTextColor="rgba(255,255,255,0.35)"
+            style={{
+              flex: 1,
+              color: "white",
+              paddingVertical: 14,
+            }}
+          />
+
+          <Pressable onPress={() => setShowPassword((v) => !v)}>
+            <Text style={{ color: "#34D399", fontWeight: "800" }}>
+              {showPassword ? "Hide" : "Show"}
+            </Text>
+          </Pressable>
+        </View>
+
+        <Text style={{ color: "white", fontWeight: "800", marginBottom: 8 }}>
+          Confirm Password
         </Text>
-      </Pressable>
+        <View
+          style={{
+            borderWidth: 1,
+            borderColor: "rgba(255,255,255,0.12)",
+            backgroundColor: "rgba(255,255,255,0.06)",
+            borderRadius: 14,
+            paddingHorizontal: 14,
+            flexDirection: "row",
+            alignItems: "center",
+            marginBottom: 18,
+          }}
+        >
+          <TextInput
+            value={confirm}
+            onChangeText={setConfirm}
+            secureTextEntry={!showConfirm}
+            placeholder="Repeat your password"
+            placeholderTextColor="rgba(255,255,255,0.35)"
+            style={{
+              flex: 1,
+              color: "white",
+              paddingVertical: 14,
+            }}
+          />
+
+          <Pressable onPress={() => setShowConfirm((v) => !v)}>
+            <Text style={{ color: "#34D399", fontWeight: "800" }}>
+              {showConfirm ? "Hide" : "Show"}
+            </Text>
+          </Pressable>
+        </View>
+
+        <View
+          style={{
+            borderWidth: 1,
+            borderColor: "rgba(16,185,129,0.25)",
+            backgroundColor: "rgba(16,185,129,0.08)",
+            borderRadius: 16,
+            padding: 12,
+            marginBottom: 18,
+          }}
+        >
+          <Text style={{ color: "white", fontWeight: "800", fontSize: 12, lineHeight: 18 }}>
+            After creating account, you will verify your email first before login.
+          </Text>
+        </View>
+
+        <Pressable
+          onPress={onRegister}
+          disabled={loading}
+          style={{
+            backgroundColor: "#10B981",
+            paddingVertical: 15,
+            borderRadius: 16,
+            alignItems: "center",
+            opacity: loading ? 0.7 : 1,
+          }}
+        >
+          <Text style={{ color: "#08110F", fontWeight: "900", fontSize: 15 }}>
+            {loading ? "Creating..." : "Create account"}
+          </Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() => router.replace("/(auth)/login")}
+          style={{ marginTop: 16, alignItems: "center" }}
+        >
+          <Text style={{ color: "white" }}>
+            Already have an account?{" "}
+            <Text style={{ color: "#34D399", fontWeight: "900" }}>Login</Text>
+          </Text>
+        </Pressable>
+      </View>
     </View>
   );
 }

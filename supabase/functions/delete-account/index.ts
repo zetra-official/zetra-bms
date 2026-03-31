@@ -7,6 +7,10 @@ type DeleteAccountBody = {
   current_password?: string;
 };
 
+type MembershipRow = {
+  id: string;
+};
+
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -24,6 +28,18 @@ function json(data: unknown, status = 200) {
 
 function clean(v: unknown) {
   return String(v ?? "").trim();
+}
+
+function uniqueStrings(values: string[]) {
+  return Array.from(new Set(values.filter(Boolean)));
+}
+
+async function readJsonSafe(res: Response) {
+  try {
+    return await res.json();
+  } catch {
+    return null;
+  }
 }
 
 Deno.serve(async (req) => {
@@ -46,10 +62,18 @@ Deno.serve(async (req) => {
       return json({ error: "Server environment is not configured correctly" }, 500);
     }
 
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return json({ error: "Missing Authorization header" }, 401);
+  const authHeader = req.headers.get("Authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return json({ error: "Missing or invalid Authorization header" }, 401);
     }
+
+    const token = authHeader.replace("Bearer ", "").trim();
+    if (!token) {
+      return json({ error: "Empty bearer token" }, 401);
+    }
+
+    console.log("AUTH HEADER RECEIVED");
+    console.log("TOKEN LENGTH:", token.length);
 
     let body: DeleteAccountBody = {};
     try {
@@ -63,76 +87,216 @@ Deno.serve(async (req) => {
       return json({ error: "current_password is required" }, 400);
     }
 
-    // User-scoped client to identify the caller from bearer token
-    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: {
-          Authorization: authHeader,
+    // 1) Read current authenticated user via REST
+    const meRes = await fetch(`${supabaseUrl}/auth/v1/user`, {
+      method: "GET",
+      headers: {
+        apikey: supabaseAnonKey,
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const mePayload = await readJsonSafe(meRes);
+
+    if (!meRes.ok || !mePayload?.id) {
+      console.error("auth user lookup failed:", mePayload);
+      return json(
+        {
+          error: mePayload?.message || mePayload?.error_description || mePayload?.error || "Not authenticated",
         },
-      },
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-    });
-
-    const {
-      data: { user },
-      error: getUserError,
-    } = await userClient.auth.getUser();
-
-    if (getUserError || !user) {
-      return json({ error: "Not authenticated" }, 401);
+        401
+      );
     }
 
+    const user = mePayload as { id: string; email?: string | null };
     const userEmail = clean(user.email);
+
     if (!userEmail) {
-      return json({ error: "This account has no email; delete flow is not supported" }, 400);
+      return json(
+        { error: "This account has no email; delete flow is not supported" },
+        400
+      );
     }
 
-    // Re-authenticate with email + current password
-    const verifyClient = createClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
+    // 2) Verify password via REST password grant
+    const verifyRes = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
+      method: "POST",
+      headers: {
+        apikey: supabaseAnonKey,
+        "Content-Type": "application/json",
       },
+      body: JSON.stringify({
+        email: userEmail,
+        password: currentPassword,
+      }),
     });
 
-    const { error: verifyError } = await verifyClient.auth.signInWithPassword({
-      email: userEmail,
-      password: currentPassword,
-    });
+    const verifyPayload = await readJsonSafe(verifyRes);
 
-    if (verifyError) {
-      return json({ error: "Incorrect password" }, 401);
-    }
-
-    // Admin client for final delete
-    const adminClient = createClient(supabaseUrl, supabaseServiceRoleKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-    });
-
-    // Optional cleanup: profile row (best-effort)
-    // Keep additive and non-blocking
-    try {
-      await adminClient.from("profiles").delete().eq("id", user.id);
-    } catch {
-      // ignore profile cleanup failure
-    }
-
-    const { error: deleteError } = await adminClient.auth.admin.deleteUser(user.id);
-
-    if (deleteError) {
-      console.error("deleteUser failed:", deleteError);
-
+    if (!verifyRes.ok) {
+      console.error("password verify failed:", verifyPayload);
       return json(
         {
           error:
-            deleteError.message ||
-            "Failed to delete account. Database cleanup rules may still be required.",
+            verifyPayload?.msg ||
+            verifyPayload?.message ||
+            verifyPayload?.error_description ||
+            "Incorrect password",
+        },
+        401
+      );
+    }
+
+    const adminClient = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+    // STEP 1: read org memberships first
+    let membershipIds: string[] = [];
+
+    try {
+      const { data: memberships, error: readMembershipErr } = await adminClient
+        .from("org_memberships")
+        .select("id")
+        .eq("user_id", user.id);
+
+      if (readMembershipErr) {
+        console.error("cleanup read memberships failed:", readMembershipErr);
+      } else {
+        const rows = (memberships ?? []) as MembershipRow[];
+        membershipIds = uniqueStrings(rows.map((x) => String(x.id)));
+      }
+    } catch (err) {
+      console.error("cleanup memberships lookup crashed:", err);
+    }
+
+    // STEP 2: FORCE DELETE membership-store links FIRST (CRITICAL)
+if (membershipIds.length > 0) {
+  try {
+    const { error } = await adminClient
+      .from("org_membership_stores")
+      .delete()
+      .in("membership_id", membershipIds);
+
+    if (error) {
+      console.error("❌ BLOCKER: org_membership_stores delete failed:", error);
+      return json(
+        {
+          error: "Failed to remove store links. Delete blocked by FK constraint.",
+        },
+        500
+      );
+    } else {
+      console.log("✅ org_membership_stores cleaned");
+    }
+  } catch (err) {
+    console.error("❌ CRASH: org_membership_stores:", err);
+    return json({ error: "Failed cleaning store links" }, 500);
+  }
+}
+
+// VERIFY memberships removed
+const { data: checkMemberships } = await adminClient
+  .from("org_memberships")
+  .select("id")
+  .eq("user_id", user.id);
+
+if (checkMemberships && checkMemberships.length > 0) {
+  return json({
+    error: "Memberships still exist after delete. FK dependency remains.",
+  }, 500);
+}
+
+    if (membershipIds.length > 0) {
+      try {
+        const { error } = await adminClient
+          .from("org_membership_stores")
+          .delete()
+          .in("membership_id", membershipIds);
+
+        if (error) {
+          console.error("cleanup org_membership_stores failed:", error);
+        }
+      } catch (err) {
+        console.error("cleanup org_membership_stores crashed:", err);
+      }
+    }
+
+    // STEP 3: delete org memberships
+    try {
+      const { error } = await adminClient
+        .from("org_memberships")
+        .delete()
+        .eq("user_id", user.id);
+
+      if (error) {
+        console.error("cleanup org_memberships failed:", error);
+      }
+    } catch (err) {
+      console.error("cleanup org_memberships crashed:", err);
+    }
+
+    // STEP 4: best-effort cleanup for user-created stores
+    try {
+      const { error } = await adminClient
+        .from("stores")
+        .delete()
+        .eq("created_by", user.id);
+
+      if (error) {
+        console.error("cleanup stores failed:", error);
+      }
+    } catch (err) {
+      console.error("cleanup stores crashed:", err);
+    }
+
+    // STEP 5: best-effort cleanup for user-created organizations
+    try {
+      const { error } = await adminClient
+        .from("organizations")
+        .delete()
+        .eq("created_by", user.id);
+
+      if (error) {
+        console.error("cleanup organizations failed:", error);
+      }
+    } catch (err) {
+      console.error("cleanup organizations crashed:", err);
+    }
+
+    // STEP 6: delete profile row
+    try {
+      const { error } = await adminClient
+        .from("profiles")
+        .delete()
+        .eq("id", user.id);
+
+      if (error) {
+        console.error("cleanup profiles failed:", error);
+      }
+    } catch (err) {
+      console.error("cleanup profiles crashed:", err);
+    }
+
+    // STEP 7: final auth delete via REST admin endpoint
+    const deleteRes = await fetch(`${supabaseUrl}/auth/v1/admin/users/${user.id}`, {
+      method: "DELETE",
+      headers: {
+        apikey: supabaseServiceRoleKey,
+        Authorization: `Bearer ${supabaseServiceRoleKey}`,
+      },
+    });
+
+    const deletePayload = await readJsonSafe(deleteRes);
+
+    if (!deleteRes.ok) {
+      console.error("deleteUser failed:", deletePayload);
+      return json(
+        {
+          error:
+            deletePayload?.msg ||
+            deletePayload?.message ||
+            deletePayload?.error_description ||
+            deletePayload?.error ||
+            "Failed to delete account. Some linked database records may still block deletion.",
         },
         500
       );
