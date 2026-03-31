@@ -1,6 +1,6 @@
 // app/(tabs)/settings/subscription-requests.tsx
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -65,6 +65,7 @@ type RequestRow = {
   transaction_reference: string;
   payer_phone: string;
   payer_name: string | null;
+  raw_sms?: string | null;
   status: string;
   admin_note: string | null;
   rejection_reason: string | null;
@@ -431,6 +432,7 @@ export default function SubscriptionRequestsScreen() {
   const [busyId, setBusyId] = useState<string>("");
   const [requests, setRequests] = useState<RequestRow[]>([]);
   const [errorText, setErrorText] = useState("");
+  const isRefreshingRef = useRef(false);
 
   const [rejectingId, setRejectingId] = useState<string>("");
   const [rejectReason, setRejectReason] = useState("");
@@ -498,6 +500,7 @@ export default function SubscriptionRequestsScreen() {
               transaction_reference,
               payer_phone,
               payer_name,
+              raw_sms,
               status,
               admin_note,
               rejection_reason,
@@ -751,6 +754,35 @@ export default function SubscriptionRequestsScreen() {
     void loadRequests();
   }, [authed, filter, loadRequests]);
 
+  useEffect(() => {
+    if (!authed || !allowed) return;
+
+    const channel = supabase
+      .channel(`office-subscription-requests-${filter}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "subscription_payment_requests",
+        },
+        async () => {
+          if (isRefreshingRef.current) return;
+          isRefreshingRef.current = true;
+          try {
+            await loadRequests();
+          } finally {
+            isRefreshingRef.current = false;
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [authed, allowed, filter, loadRequests]);
+
   const approveRequest = useCallback(
     async (requestId: string) => {
       setBusyId(requestId);
@@ -763,7 +795,12 @@ export default function SubscriptionRequestsScreen() {
         if (error) throw error;
 
         Alert.alert("Approved ✅", "Subscription request approved successfully.");
-        await loadRequests();
+        isRefreshingRef.current = true;
+        try {
+          await loadRequests();
+        } finally {
+          isRefreshingRef.current = false;
+        }
       } catch (e: any) {
         Alert.alert(
           "Approve failed",
@@ -798,7 +835,12 @@ export default function SubscriptionRequestsScreen() {
         setRejectingId("");
         setRejectReason("");
         Alert.alert("Rejected", "Subscription request rejected successfully.");
-        await loadRequests();
+        isRefreshingRef.current = true;
+        try {
+          await loadRequests();
+        } finally {
+          isRefreshingRef.current = false;
+        }
       } catch (e: any) {
         Alert.alert(
           "Reject failed",
@@ -876,7 +918,7 @@ export default function SubscriptionRequestsScreen() {
 
         Alert.alert(
           "SMS saved ✅",
-          "Office SMS imehifadhiwa. Sasa linganisha na request, kisha tumia APPROVE manually."
+          "Office SMS imehifadhiwa. Sasa linganisha na request ya user kwa kutumia jina, namba ya simu, na ushahidi wa muamala."
         );
 
         return smsLogId;
@@ -910,7 +952,13 @@ export default function SubscriptionRequestsScreen() {
         const matchId = clean(data);
         setLastMatchId(matchId);
         await loadLatestMatchById(matchId);
-        await loadRequests();
+
+        isRefreshingRef.current = true;
+        try {
+          await loadRequests();
+        } finally {
+          isRefreshingRef.current = false;
+        }
 
         Alert.alert(
           "Match completed ✅",
@@ -1071,6 +1119,27 @@ export default function SubscriptionRequestsScreen() {
           <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
             Reference: <Text style={{ color: UI.text }}>{item.transaction_reference || "—"}</Text>
           </Text>
+
+          <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+            RAW SMS: <Text style={{ color: UI.text }}>{clean(item.raw_sms) ? "ATTACHED" : "—"}</Text>
+          </Text>
+
+          {clean(item.raw_sms) ? (
+            <View
+              style={{
+                marginTop: 4,
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,0.10)",
+                backgroundColor: "rgba(255,255,255,0.04)",
+                borderRadius: 12,
+                padding: 10,
+              }}
+            >
+              <Text style={{ color: UI.text, fontWeight: "800", fontSize: 12, lineHeight: 18 }}>
+                {clean(item.raw_sms)}
+              </Text>
+            </View>
+          ) : null}
 
           <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
             Submitted at: <Text style={{ color: UI.text }}>{fmtDateTime(item.submitted_at)}</Text>
@@ -1260,8 +1329,8 @@ export default function SubscriptionRequestsScreen() {
           </Text>
 
           <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 8 }}>
-            Simu hii ya office itasikiliza SMS mpya zinazoingia. SMS itaonekana hapa kwa review ya
-            manual, bila auto approve wala auto activation.
+            Simu hii ya office itasikiliza SMS mpya zinazoingia. SMS zitatumika kama ushahidi wa
+            muamala, kisha office itafanya review na comparison manually.
           </Text>
 
           <View
@@ -1312,7 +1381,8 @@ export default function SubscriptionRequestsScreen() {
           </Text>
 
           <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 8 }}>
-            Hapa tuna-test parser + SMS logging + optional match helper kwa manual review.
+            Hapa office ina-review SMS za malipo na kufanya matching manually. Parser/matcher ni
+            helper tu, siyo lazima kwa approval ya mwisho.
           </Text>
 
           <View style={{ marginTop: 12, gap: 10 }}>
@@ -1596,7 +1666,13 @@ export default function SubscriptionRequestsScreen() {
             </Text>
 
             <Pressable
-              onPress={() => void loadRequests()}
+              onPress={() => {
+                if (isRefreshingRef.current) return;
+                isRefreshingRef.current = true;
+                void loadRequests().finally(() => {
+                  isRefreshingRef.current = false;
+                });
+              }}
               style={({ pressed }) => [
                 {
                   width: 40,

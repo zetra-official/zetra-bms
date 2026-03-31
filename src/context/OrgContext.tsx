@@ -75,6 +75,19 @@ function clean(s: any) {
   return String(s ?? "").trim();
 }
 
+function isDisabledAccountMessage(message: unknown) {
+  const msg = String(message ?? "").toLowerCase();
+
+  return (
+    msg.includes("disabled") ||
+    msg.includes("deleted") ||
+    msg.includes("deactivated") ||
+    msg.includes("inactive") ||
+    msg.includes("account disabled") ||
+    msg.includes("account deleted")
+  );
+}
+
 // ✅ prefer v2 then fallback
 const GET_MY_STORES_CANDIDATES = ["get_my_stores_v2", "get_my_stores"] as const;
 
@@ -319,7 +332,26 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
 
         // 1) canonical org list
         const { data: orgData, error: orgErr } = await supabase.rpc("get_my_orgs");
-        if (orgErr) throw orgErr;
+
+        if (orgErr) {
+          if (isDisabledAccountMessage(orgErr.message)) {
+            try {
+              await supabase.auth.signOut();
+            } catch (err: any) {
+              console.log("OrgContext disabled-account signOut ignore:", err);
+            }
+
+            setOrgs([]);
+            setStores([]);
+            _setActiveOrgId(null);
+            _setActiveStoreId(null);
+            await kv.clearActiveSelection();
+            setError("This account has been disabled.");
+            return;
+          }
+
+          throw orgErr;
+        }
 
         const typedOrgs = (orgData ?? []) as MyOrgRow[];
         setOrgs(typedOrgs);
@@ -356,8 +388,25 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
           kv.setString(KV_KEYS.activeStoreId, resolved.storeId),
         ]);
       } catch (e: any) {
-        setError(e?.message ?? "Failed to load org/store data");
-        // IMPORTANT: do NOT clear org/store selection here.
+        const msg = e?.message ?? "Failed to load org/store data";
+
+        if (isDisabledAccountMessage(msg)) {
+          try {
+            await supabase.auth.signOut();
+          } catch (err: any) {
+            console.log("loadAll disabled-account signOut ignore:", err);
+          }
+
+          setOrgs([]);
+          setStores([]);
+          _setActiveOrgId(null);
+          _setActiveStoreId(null);
+          await kv.clearActiveSelection();
+          setError("This account has been disabled.");
+        } else {
+          setError(msg);
+          // IMPORTANT: do NOT clear org/store selection here.
+        }
       } finally {
         if (mode === "boot") setLoading(false);
         if (mode === "refresh") setRefreshing(false);

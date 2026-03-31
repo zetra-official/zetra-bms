@@ -18,7 +18,10 @@ import { Screen } from "@/src/ui/Screen";
 import { Card } from "@/src/ui/Card";
 import { UI } from "@/src/ui/theme";
 import { useOrg } from "@/src/context/OrgContext";
-import { supabase } from "@/src/supabase/supabaseClient";
+import {
+  clearCorruptSupabaseSession,
+  supabase,
+} from "@/src/supabase/supabaseClient";
 
 function SectionTitle({ label }: { label: string }) {
   return (
@@ -226,7 +229,7 @@ export default function AccountPrivacyScreen() {
   const store = org.activeStoreName ?? "—";
 
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState("");
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -241,21 +244,21 @@ export default function AccountPrivacyScreen() {
   const closeDeleteModal = useCallback(() => {
     if (deleting) return;
     setConfirmOpen(false);
-    setCurrentPassword("");
+    setDeleteConfirmation("");
     setShowPassword(false);
   }, [deleting]);
 
   const onDeleteAccount = useCallback(() => {
     Alert.alert(
       "Delete Account",
-      "Hii action ni ya mwisho kabisa na haitarudishwa nyuma.\n\nUtaombwa uweke password ya account yako ili kuthibitisha.",
+      "Hii action ni ya mwisho kabisa na haitarudishwa nyuma.\n\nUtaandika DELETE kuthibitisha kufunga account yako.",
       [
         { text: "Cancel", style: "cancel" },
         {
           text: "Continue",
           style: "destructive",
           onPress: () => {
-            setCurrentPassword("");
+            setDeleteConfirmation("");
             setShowPassword(false);
             setConfirmOpen(true);
           },
@@ -265,47 +268,69 @@ export default function AccountPrivacyScreen() {
   }, []);
 
   const handleConfirmDelete = useCallback(async () => {
-    const pwd = String(currentPassword ?? "").trim();
+    const confirmation = String(deleteConfirmation ?? "").trim();
 
-    if (!pwd) {
-      Alert.alert("Password required", "Weka password ya account yako kwanza.");
+    if (!confirmation) {
+      Alert.alert("Confirmation required", "Andika DELETE kuthibitisha.");
+      return;
+    }
+
+    if (confirmation.toUpperCase() !== "DELETE") {
+      Alert.alert("Confirmation failed", "Lazima uandike DELETE kuthibitisha.");
       return;
     }
 
     setDeleting(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke("delete-account", {
-        body: {
-          current_password: pwd,
-        },
-      });
+      const { data, error } = await supabase.rpc("disable_my_account");
 
       if (error) {
-        throw new Error(error.message || "Failed to call delete-account function");
+        throw error;
       }
 
-      if (data?.error) {
-        throw new Error(String(data.error));
+      const payload = data as any;
+
+      if (payload?.ok !== true) {
+        throw new Error(payload?.message || "Failed to disable account.");
       }
 
       closeDeleteModal();
 
+      try {
+        await supabase.auth.signOut();
+      } catch (err) {
+        console.log("post-disable signOut ignore:", err);
+      }
+
+      try {
+        await clearCorruptSupabaseSession();
+      } catch (err) {
+        console.log("clear auth storage ignore:", err);
+      }
+
       Alert.alert(
         "Account deleted",
-        "Account yako imefutwa successfully. Utaondolewa kwenye session sasa hivi."
+        "Account yako imezimwa successfully. Huwezi kuingia tena.",
+        [
+          {
+            text: "OK",
+            onPress: () => {
+              router.replace("/(auth)/login");
+            },
+          },
+        ]
       );
-
-      await supabase.auth.signOut();
     } catch (err: any) {
-      Alert.alert(
-        "Delete failed",
-        err?.message || "Imeshindikana kufuta account. Hakikisha password ni sahihi."
-      );
+      const msg =
+        err?.message || "Imeshindikana kuzima account kwa sasa.";
+
+      console.log("disable-account client error:", msg, err);
+      Alert.alert("Delete failed", msg);
     } finally {
       setDeleting(false);
     }
-  }, [closeDeleteModal, currentPassword]);
+  }, [closeDeleteModal, deleteConfirmation, router]);
 
   return (
     <Screen scroll>
@@ -418,8 +443,8 @@ export default function AccountPrivacyScreen() {
               lineHeight: 20,
             }}
           >
-            Delete Account sasa ipo na uthibitisho wa mwisho wa password kabla ya action
-            kufanyika.
+            Delete Account sasa ipo na uthibitisho wa mwisho wa manual confirmation
+            kabla ya action kufanyika.
           </Text>
         </View>
       </PremiumCard>
@@ -433,7 +458,7 @@ export default function AccountPrivacyScreen() {
         <Row
           icon="warning-outline"
           title="Delete Account"
-          subtitle="Permanently remove this account after entering your current password"
+          subtitle="Disable this account after final confirmation"
           badge="DANGER"
           danger
           onPress={onDeleteAccount}
@@ -454,8 +479,8 @@ export default function AccountPrivacyScreen() {
               lineHeight: 20,
             }}
           >
-            Hili eneo ni la mwisho kabisa. Ukithibitisha kwa password sahihi, account itafutwa
-            moja kwa moja na action hii haiwezi kurudishwa nyuma.
+            Hili eneo ni la mwisho kabisa. Ukithibitisha kwa kuandika DELETE, account
+            itazimwa mara moja na action hii haiwezi kurudishwa nyuma.
           </Text>
         </View>
       </PremiumCard>
@@ -546,7 +571,7 @@ export default function AccountPrivacyScreen() {
                     lineHeight: 22,
                   }}
                 >
-                  Weka password yako ya sasa
+                  Andika DELETE kuthibitisha
                 </Text>
 
                 <Text
@@ -557,8 +582,8 @@ export default function AccountPrivacyScreen() {
                     lineHeight: 20,
                   }}
                 >
-                  Hii ndiyo hatua ya mwisho ya kuthibitisha kuwa wewe ndiye mwenye account
-                  kabla haijafutwa kabisa.
+                  Hii ndiyo hatua ya mwisho. Ukiandika DELETE, account yako
+                  itazimwa na hutoweza kuingia tena.
                 </Text>
 
                 <View
@@ -574,13 +599,13 @@ export default function AccountPrivacyScreen() {
                   }}
                 >
                   <TextInput
-                    value={currentPassword}
-                    onChangeText={setCurrentPassword}
-                    placeholder="Current password"
+                    value={deleteConfirmation}
+                    onChangeText={(v) => setDeleteConfirmation(String(v ?? "").toUpperCase())}
+                    placeholder="Andika DELETE"
                     placeholderTextColor="rgba(255,255,255,0.35)"
-                    secureTextEntry={!showPassword}
+                    secureTextEntry={false}
                     editable={!deleting}
-                    autoCapitalize="none"
+                    autoCapitalize="characters"
                     autoCorrect={false}
                     style={{
                       flex: 1,
@@ -590,20 +615,7 @@ export default function AccountPrivacyScreen() {
                     }}
                   />
 
-                  <Pressable
-                    onPress={() => setShowPassword((v) => !v)}
-                    disabled={deleting}
-                    style={{
-                      paddingVertical: 8,
-                      paddingLeft: 8,
-                    }}
-                  >
-                    <Ionicons
-                      name={showPassword ? "eye-off-outline" : "eye-outline"}
-                      size={20}
-                      color={UI.muted}
-                    />
-                  </Pressable>
+                  <View style={{ width: 20, marginLeft: 8 }} />
                 </View>
 
                 <Text
@@ -615,7 +627,7 @@ export default function AccountPrivacyScreen() {
                     fontSize: 12,
                   }}
                 >
-                  Ukikosea password, deletion haitafanyika.
+                  Ukikosea neno DELETE, action haitafanyika.
                 </Text>
 
                 <View style={{ flexDirection: "row", gap: 10, marginTop: 18 }}>
