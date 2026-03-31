@@ -1,21 +1,84 @@
-// app/(auth)/register.tsx
 import { useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
-import { Alert, Pressable, Text, TextInput, View } from "react-native";
+import {
+  Alert,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableWithoutFeedback,
+  View,
+} from "react-native";
 import { supabase } from "../../src/supabase/supabaseClient";
 
-async function sleep(ms: number) {
-  return new Promise((r) => setTimeout(r, ms));
+function FieldLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <Text
+      style={{
+        color: "white",
+        fontWeight: "900",
+        marginBottom: 8,
+        fontSize: 14,
+      }}
+    >
+      {children}
+    </Text>
+  );
 }
 
-async function getSessionWithRetry() {
-  for (let i = 0; i < 4; i++) {
-    const { data, error } = await supabase.auth.getSession();
-    if (error) return { session: null, error };
-    if (data.session) return { session: data.session, error: null };
-    await sleep(250);
-  }
-  return { session: null, error: null };
+function GlassInput({
+  value,
+  onChangeText,
+  placeholder,
+  secureTextEntry,
+  keyboardType,
+  autoCapitalize,
+  rightSlot,
+}: {
+  value: string;
+  onChangeText: (v: string) => void;
+  placeholder: string;
+  secureTextEntry?: boolean;
+  keyboardType?: "default" | "email-address";
+  autoCapitalize?: "none" | "sentences" | "words" | "characters";
+  rightSlot?: React.ReactNode;
+}) {
+  return (
+    <View
+      style={{
+        minHeight: 60,
+        borderWidth: 1,
+        borderColor: "rgba(255,255,255,0.10)",
+        backgroundColor: "rgba(255,255,255,0.06)",
+        borderRadius: 18,
+        paddingHorizontal: 16,
+        flexDirection: "row",
+        alignItems: "center",
+      }}
+    >
+      <TextInput
+        value={value}
+        onChangeText={onChangeText}
+        secureTextEntry={secureTextEntry}
+        placeholder={placeholder}
+        placeholderTextColor="rgba(255,255,255,0.35)"
+        autoCapitalize={autoCapitalize ?? "none"}
+        keyboardType={keyboardType ?? "default"}
+        autoCorrect={false}
+        style={{
+          flex: 1,
+          color: "white",
+          fontSize: 16,
+          fontWeight: "700",
+          paddingVertical: 16,
+        }}
+      />
+      {rightSlot}
+    </View>
+  );
 }
 
 export default function RegisterScreen() {
@@ -36,30 +99,26 @@ export default function RegisterScreen() {
 
     if (!e) return Alert.alert("Missing", "Email is required.");
     if (!p) return Alert.alert("Missing", "Password is required.");
-    if (p.length < 6)
+    if (p.length < 6) {
       return Alert.alert("Weak password", "Use at least 6 characters.");
-    if (p !== confirm)
+    }
+    if (p !== confirm) {
       return Alert.alert("Mismatch", "Password and confirm do not match.");
+    }
 
     setLoading(true);
 
     const { error } = await supabase.auth.signUp({
       email: e,
       password: p,
+      options: {
+        emailRedirectTo: "zetrabmsclean://login",
+      },
     });
 
     if (error) {
       setLoading(false);
       return Alert.alert("Register Failed", error.message);
-    }
-
-    // after sign up, user must verify email first
-    const { session } = await getSessionWithRetry();
-
-    if (session) {
-      try {
-        await supabase.auth.signOut();
-      } catch {}
     }
 
     setLoading(false);
@@ -72,159 +131,227 @@ export default function RegisterScreen() {
   };
 
   return (
-    <View
-      style={{
-        flex: 1,
-        justifyContent: "center",
-        paddingHorizontal: 20,
-        backgroundColor: "#0B0F14",
-      }}
-    >
-      <View
-        style={{
-          borderWidth: 1,
-          borderColor: "rgba(255,255,255,0.10)",
-          backgroundColor: "rgba(255,255,255,0.04)",
-          borderRadius: 24,
-          padding: 20,
-        }}
-      >
-        <Text style={{ color: "white", fontSize: 28, fontWeight: "900", marginBottom: 8 }}>
-          Create Account
-        </Text>
-        <Text style={{ color: "rgba(255,255,255,0.65)", marginBottom: 22 }}>
-          Start your business journey with ZETRA BMS.
-        </Text>
-
-        <Text style={{ color: "white", fontWeight: "800", marginBottom: 8 }}>Email</Text>
-        <TextInput
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          placeholder="you@example.com"
-          placeholderTextColor="rgba(255,255,255,0.35)"
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <View style={{ flex: 1, backgroundColor: "#061018" }}>
+        <View
+          pointerEvents="none"
           style={{
-            borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.12)",
-            backgroundColor: "rgba(255,255,255,0.06)",
-            color: "white",
-            borderRadius: 14,
-            paddingHorizontal: 14,
-            paddingVertical: 14,
-            marginBottom: 16,
+            position: "absolute",
+            top: -40,
+            right: -40,
+            width: 220,
+            height: 220,
+            borderRadius: 999,
+            backgroundColor: "rgba(16,185,129,0.12)",
+          }}
+        />
+        <View
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            bottom: -80,
+            left: -60,
+            width: 220,
+            height: 220,
+            borderRadius: 999,
+            backgroundColor: "rgba(16,185,129,0.08)",
           }}
         />
 
-        <Text style={{ color: "white", fontWeight: "800", marginBottom: 8 }}>Password</Text>
-        <View
-          style={{
-            borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.12)",
-            backgroundColor: "rgba(255,255,255,0.06)",
-            borderRadius: 14,
-            paddingHorizontal: 14,
-            flexDirection: "row",
-            alignItems: "center",
-            marginBottom: 16,
-          }}
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={0}
         >
-          <TextInput
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry={!showPassword}
-            placeholder="Create a password"
-            placeholderTextColor="rgba(255,255,255,0.35)"
-            style={{
-              flex: 1,
-              color: "white",
-              paddingVertical: 14,
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{
+              flexGrow: 1,
+              justifyContent: "center",
+              paddingHorizontal: 22,
+              paddingVertical: 28,
             }}
-          />
+          >
+            <View
+              style={{
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,0.10)",
+                backgroundColor: "rgba(255,255,255,0.04)",
+                borderRadius: 28,
+                padding: 22,
+              }}
+            >
+              <View
+                style={{
+                  alignSelf: "flex-start",
+                  paddingHorizontal: 12,
+                  paddingVertical: 8,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: "rgba(16,185,129,0.22)",
+                  backgroundColor: "rgba(16,185,129,0.10)",
+                  marginBottom: 16,
+                }}
+              >
+                <Text style={{ color: "#34D399", fontWeight: "900", fontSize: 12 }}>
+                  Start Secure Access
+                </Text>
+              </View>
 
-          <Pressable onPress={() => setShowPassword((v) => !v)}>
-            <Text style={{ color: "#34D399", fontWeight: "800" }}>
-              {showPassword ? "Hide" : "Show"}
-            </Text>
-          </Pressable>
-        </View>
+              <Text
+                style={{
+                  color: "white",
+                  fontSize: 36,
+                  lineHeight: 40,
+                  fontWeight: "900",
+                  marginBottom: 10,
+                }}
+              >
+                Create Account
+              </Text>
 
-        <Text style={{ color: "white", fontWeight: "800", marginBottom: 8 }}>
-          Confirm Password
-        </Text>
-        <View
-          style={{
-            borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.12)",
-            backgroundColor: "rgba(255,255,255,0.06)",
-            borderRadius: 14,
-            paddingHorizontal: 14,
-            flexDirection: "row",
-            alignItems: "center",
-            marginBottom: 18,
-          }}
-        >
-          <TextInput
-            value={confirm}
-            onChangeText={setConfirm}
-            secureTextEntry={!showConfirm}
-            placeholder="Repeat your password"
-            placeholderTextColor="rgba(255,255,255,0.35)"
-            style={{
-              flex: 1,
-              color: "white",
-              paddingVertical: 14,
-            }}
-          />
+              <Text
+                style={{
+                  color: "rgba(255,255,255,0.68)",
+                  marginBottom: 24,
+                  lineHeight: 23,
+                  fontSize: 16,
+                  fontWeight: "600",
+                }}
+              >
+                Start your business journey with ZETRA BMS and verify your email before first login.
+              </Text>
 
-          <Pressable onPress={() => setShowConfirm((v) => !v)}>
-            <Text style={{ color: "#34D399", fontWeight: "800" }}>
-              {showConfirm ? "Hide" : "Show"}
-            </Text>
-          </Pressable>
-        </View>
+              <FieldLabel>Email</FieldLabel>
+              <GlassInput
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                placeholder="you@example.com"
+              />
 
-        <View
-          style={{
-            borderWidth: 1,
-            borderColor: "rgba(16,185,129,0.25)",
-            backgroundColor: "rgba(16,185,129,0.08)",
-            borderRadius: 16,
-            padding: 12,
-            marginBottom: 18,
-          }}
-        >
-          <Text style={{ color: "white", fontWeight: "800", fontSize: 12, lineHeight: 18 }}>
-            After creating account, you will verify your email first before login.
-          </Text>
-        </View>
+              <View style={{ height: 16 }} />
 
-        <Pressable
-          onPress={onRegister}
-          disabled={loading}
-          style={{
-            backgroundColor: "#10B981",
-            paddingVertical: 15,
-            borderRadius: 16,
-            alignItems: "center",
-            opacity: loading ? 0.7 : 1,
-          }}
-        >
-          <Text style={{ color: "#08110F", fontWeight: "900", fontSize: 15 }}>
-            {loading ? "Creating..." : "Create account"}
-          </Text>
-        </Pressable>
+              <FieldLabel>Password</FieldLabel>
+              <GlassInput
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                placeholder="Create a password"
+                rightSlot={
+                  <Pressable
+                    onPress={() => setShowPassword((v) => !v)}
+                    hitSlop={10}
+                    style={{ paddingLeft: 12, paddingVertical: 4 }}
+                  >
+                    <Text style={{ color: "#34D399", fontWeight: "900", fontSize: 14 }}>
+                      {showPassword ? "Hide" : "Show"}
+                    </Text>
+                  </Pressable>
+                }
+              />
 
-        <Pressable
-          onPress={() => router.replace("/(auth)/login")}
-          style={{ marginTop: 16, alignItems: "center" }}
-        >
-          <Text style={{ color: "white" }}>
-            Already have an account?{" "}
-            <Text style={{ color: "#34D399", fontWeight: "900" }}>Login</Text>
-          </Text>
-        </Pressable>
+              <Text
+                style={{
+                  color: "rgba(255,255,255,0.48)",
+                  marginTop: 8,
+                  marginBottom: 16,
+                  fontSize: 12,
+                  fontWeight: "700",
+                }}
+              >
+                Use at least 6 characters.
+              </Text>
+
+              <FieldLabel>Confirm Password</FieldLabel>
+              <GlassInput
+                value={confirm}
+                onChangeText={setConfirm}
+                secureTextEntry={!showConfirm}
+                placeholder="Repeat your password"
+                rightSlot={
+                  <Pressable
+                    onPress={() => setShowConfirm((v) => !v)}
+                    hitSlop={10}
+                    style={{ paddingLeft: 12, paddingVertical: 4 }}
+                  >
+                    <Text style={{ color: "#34D399", fontWeight: "900", fontSize: 14 }}>
+                      {showConfirm ? "Hide" : "Show"}
+                    </Text>
+                  </Pressable>
+                }
+              />
+
+              <View
+                style={{
+                  borderWidth: 1,
+                  borderColor: "rgba(16,185,129,0.22)",
+                  backgroundColor: "rgba(16,185,129,0.08)",
+                  borderRadius: 18,
+                  padding: 14,
+                  marginTop: 18,
+                  marginBottom: 20,
+                }}
+              >
+                <Text
+                  style={{
+                    color: "white",
+                    fontWeight: "800",
+                    fontSize: 13,
+                    lineHeight: 20,
+                  }}
+                >
+                  After creating your account, verify your email first. Then login and continue to onboarding.
+                </Text>
+              </View>
+
+              <Pressable
+                onPress={onRegister}
+                disabled={loading}
+                style={{
+                  backgroundColor: "#1DBA84",
+                  paddingVertical: 17,
+                  borderRadius: 18,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  opacity: loading ? 0.7 : 1,
+                }}
+              >
+                <Text style={{ color: "#07120F", fontWeight: "900", fontSize: 18 }}>
+                  {loading ? "Creating..." : "Create account"}
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => router.replace("/(auth)/login")}
+                style={{
+                  marginTop: 18,
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{ color: "rgba(255,255,255,0.92)", fontSize: 16 }}>
+                  Already have an account?{" "}
+                  <Text style={{ color: "#34D399", fontWeight: "900" }}>Login</Text>
+                </Text>
+              </Pressable>
+
+              <Text
+                style={{
+                  color: "rgba(255,255,255,0.42)",
+                  fontSize: 12,
+                  fontWeight: "700",
+                  textAlign: "center",
+                  marginTop: 18,
+                  lineHeight: 18,
+                }}
+              >
+                Protected account creation for your business workspace.
+              </Text>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </View>
-    </View>
+    </TouchableWithoutFeedback>
   );
 }

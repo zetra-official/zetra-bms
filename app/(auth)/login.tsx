@@ -1,7 +1,17 @@
-﻿// app/(auth)/login.tsx
-import { useRouter } from "expo-router";
+﻿import { useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
-import { Alert, Pressable, Text, TextInput, View } from "react-native";
+import {
+  Alert,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableWithoutFeedback,
+  View,
+} from "react-native";
 import { useOrg } from "../../src/context/OrgContext";
 import {
   clearCorruptSupabaseSession,
@@ -22,12 +32,75 @@ function isDisabledAccountMessage(message: unknown) {
 }
 
 function isEmailNotVerified(user: any) {
-  const confirmedAt =
-    user?.email_confirmed_at ??
-    user?.confirmed_at ??
-    null;
-
+  const confirmedAt = user?.email_confirmed_at ?? user?.confirmed_at ?? null;
   return !confirmedAt;
+}
+
+function FieldLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <Text
+      style={{
+        color: "white",
+        fontWeight: "900",
+        marginBottom: 8,
+        fontSize: 14,
+      }}
+    >
+      {children}
+    </Text>
+  );
+}
+
+function GlassInput({
+  value,
+  onChangeText,
+  placeholder,
+  secureTextEntry,
+  keyboardType,
+  autoCapitalize,
+  rightSlot,
+}: {
+  value: string;
+  onChangeText: (v: string) => void;
+  placeholder: string;
+  secureTextEntry?: boolean;
+  keyboardType?: "default" | "email-address";
+  autoCapitalize?: "none" | "sentences" | "words" | "characters";
+  rightSlot?: React.ReactNode;
+}) {
+  return (
+    <View
+      style={{
+        minHeight: 60,
+        borderWidth: 1,
+        borderColor: "rgba(255,255,255,0.10)",
+        backgroundColor: "rgba(255,255,255,0.06)",
+        borderRadius: 18,
+        paddingHorizontal: 16,
+        flexDirection: "row",
+        alignItems: "center",
+      }}
+    >
+      <TextInput
+        value={value}
+        onChangeText={onChangeText}
+        secureTextEntry={secureTextEntry}
+        placeholder={placeholder}
+        placeholderTextColor="rgba(255,255,255,0.35)"
+        autoCapitalize={autoCapitalize ?? "none"}
+        keyboardType={keyboardType ?? "default"}
+        autoCorrect={false}
+        style={{
+          flex: 1,
+          color: "white",
+          fontSize: 16,
+          fontWeight: "700",
+          paddingVertical: 16,
+        }}
+      />
+      {rightSlot}
+    </View>
+  );
 }
 
 export default function LoginScreen() {
@@ -55,12 +128,15 @@ export default function LoginScreen() {
 
     setSendingReset(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(e);
+      const { error } = await supabase.auth.resetPasswordForEmail(e, {
+        redirectTo: "zetrabmsclean://reset-password",
+      });
+
       if (error) throw error;
 
       Alert.alert(
         "Reset email sent",
-        "Tumejaribu kutuma email ya kubadili password. Fungua email yako ufuate maelekezo."
+        "Tumejaribu kutuma email ya kubadili password. Fungua email yako, bonyeza link, kisha rudi kwenye app kuweka password mpya."
       );
     } catch (err: any) {
       Alert.alert("Reset Failed", err?.message ?? "Failed to send reset email.");
@@ -71,33 +147,28 @@ export default function LoginScreen() {
 
   const onLogin = async () => {
     const e = emailTrimmed;
+
     if (!e) return Alert.alert("Missing", "Email is required.");
     if (!password) return Alert.alert("Missing", "Password is required.");
 
     setLoading(true);
 
     try {
-      // 1) force-clear stale persisted auth
       await clearCorruptSupabaseSession();
 
-      // 2) clear in-memory session too
       try {
         await supabase.auth.signOut();
       } catch (err: any) {
         console.log("pre-login signOut ignore:", err);
       }
 
-      // 3) fresh login
       const { data, error } = await supabase.auth.signInWithPassword({
         email: e,
         password,
       });
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
-      // 4) ensure session exists
       let accessToken: string | null = data?.session?.access_token ?? null;
 
       if (!accessToken) {
@@ -106,10 +177,7 @@ export default function LoginScreen() {
           error: sessionError,
         } = await supabase.auth.getSession();
 
-        if (sessionError) {
-          throw sessionError;
-        }
-
+        if (sessionError) throw sessionError;
         accessToken = session?.access_token ?? null;
       }
 
@@ -117,19 +185,13 @@ export default function LoginScreen() {
         throw new Error("Fresh session was not created after login.");
       }
 
-      // 5) read current user first
       const {
         data: { user },
         error: getUserError,
       } = await supabase.auth.getUser();
 
-      if (getUserError) {
-        throw getUserError;
-      }
-
-      if (!user?.id) {
-        throw new Error("Failed to load authenticated user after login.");
-      }
+      if (getUserError) throw getUserError;
+      if (!user?.id) throw new Error("Failed to load authenticated user after login.");
 
       if (isEmailNotVerified(user)) {
         try {
@@ -142,21 +204,18 @@ export default function LoginScreen() {
 
         Alert.alert(
           "Verify your email",
-          "Email yako bado haijaverify. Fungua email yako kwanza, kisha verify account ndipo uingie."
+          "Email yako bado haijaverify. Fungua email yako, verify account, kisha login."
         );
         return;
       }
 
-      // 6) check disabled status directly from profile
       const { data: profileRow, error: profileError } = await supabase
         .from("profiles")
         .select("is_disabled, disabled_reason")
         .eq("id", user.id)
         .maybeSingle();
 
-      if (profileError) {
-        throw profileError;
-      }
+      if (profileError) throw profileError;
 
       if (profileRow?.is_disabled === true) {
         try {
@@ -174,9 +233,7 @@ export default function LoginScreen() {
         return;
       }
 
-      // 7) force canonical refresh only after disabled-check passes
       await refresh();
-
       router.replace("/(tabs)");
     } catch (err: any) {
       const msg = err?.message ?? "Unknown login error";
@@ -197,6 +254,18 @@ export default function LoginScreen() {
         return;
       }
 
+      if (
+        String(msg).toLowerCase().includes("email not confirmed") ||
+        String(msg).toLowerCase().includes("email_not_confirmed") ||
+        String(msg).toLowerCase().includes("confirm your email")
+      ) {
+        Alert.alert(
+          "Verify your email",
+          "Email yako bado haijaverify. Fungua email yako kwanza, verify account, kisha login."
+        );
+        return;
+      }
+
       Alert.alert("Login Failed", msg);
     } finally {
       setLoading(false);
@@ -204,119 +273,187 @@ export default function LoginScreen() {
   };
 
   return (
-    <View
-      style={{
-        flex: 1,
-        justifyContent: "center",
-        paddingHorizontal: 20,
-        backgroundColor: "#0B0F14",
-      }}
-    >
-      <View
-        style={{
-          borderWidth: 1,
-          borderColor: "rgba(255,255,255,0.10)",
-          backgroundColor: "rgba(255,255,255,0.04)",
-          borderRadius: 24,
-          padding: 20,
-        }}
-      >
-        <Text style={{ color: "white", fontSize: 28, fontWeight: "900", marginBottom: 8 }}>
-          Welcome Back
-        </Text>
-        <Text style={{ color: "rgba(255,255,255,0.65)", marginBottom: 22 }}>
-          Login to continue managing your business with ZETRA BMS.
-        </Text>
-
-        <Text style={{ color: "white", fontWeight: "800", marginBottom: 8 }}>Email</Text>
-        <TextInput
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          placeholder="you@example.com"
-          placeholderTextColor="rgba(255,255,255,0.35)"
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <View style={{ flex: 1, backgroundColor: "#061018" }}>
+        <View
+          pointerEvents="none"
           style={{
-            borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.12)",
-            backgroundColor: "rgba(255,255,255,0.06)",
-            color: "white",
-            borderRadius: 14,
-            paddingHorizontal: 14,
-            paddingVertical: 14,
-            marginBottom: 16,
+            position: "absolute",
+            top: -40,
+            right: -40,
+            width: 220,
+            height: 220,
+            borderRadius: 999,
+            backgroundColor: "rgba(16,185,129,0.12)",
+          }}
+        />
+        <View
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            bottom: -80,
+            left: -60,
+            width: 220,
+            height: 220,
+            borderRadius: 999,
+            backgroundColor: "rgba(16,185,129,0.08)",
           }}
         />
 
-        <Text style={{ color: "white", fontWeight: "800", marginBottom: 8 }}>Password</Text>
-        <View
-          style={{
-            borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.12)",
-            backgroundColor: "rgba(255,255,255,0.06)",
-            borderRadius: 14,
-            paddingHorizontal: 14,
-            flexDirection: "row",
-            alignItems: "center",
-            marginBottom: 12,
-          }}
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={0}
         >
-          <TextInput
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry={!showPassword}
-            placeholder="Enter your password"
-            placeholderTextColor="rgba(255,255,255,0.35)"
-            style={{
-              flex: 1,
-              color: "white",
-              paddingVertical: 14,
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{
+              flexGrow: 1,
+              justifyContent: "center",
+              paddingHorizontal: 22,
+              paddingVertical: 28,
             }}
-          />
+          >
+            <View
+              style={{
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,0.10)",
+                backgroundColor: "rgba(255,255,255,0.04)",
+                borderRadius: 28,
+                padding: 22,
+              }}
+            >
+              <View
+                style={{
+                  alignSelf: "flex-start",
+                  paddingHorizontal: 12,
+                  paddingVertical: 8,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: "rgba(16,185,129,0.22)",
+                  backgroundColor: "rgba(16,185,129,0.10)",
+                  marginBottom: 16,
+                }}
+              >
+                <Text style={{ color: "#34D399", fontWeight: "900", fontSize: 12 }}>
+                  Secure Business Access
+                </Text>
+              </View>
 
-          <Pressable onPress={() => setShowPassword((v) => !v)}>
-            <Text style={{ color: "#34D399", fontWeight: "800" }}>
-              {showPassword ? "Hide" : "Show"}
-            </Text>
-          </Pressable>
-        </View>
+              <Text
+                style={{
+                  color: "white",
+                  fontSize: 38,
+                  lineHeight: 42,
+                  fontWeight: "900",
+                  marginBottom: 10,
+                }}
+              >
+                Welcome Back
+              </Text>
 
-        <Pressable
-          onPress={onForgotPassword}
-          disabled={sendingReset}
-          style={{ alignSelf: "flex-end", marginBottom: 18 }}
-        >
-          <Text style={{ color: "#34D399", fontWeight: "800" }}>
-            {sendingReset ? "Sending..." : "Forgot Password?"}
-          </Text>
-        </Pressable>
+              <Text
+                style={{
+                  color: "rgba(255,255,255,0.68)",
+                  marginBottom: 24,
+                  lineHeight: 23,
+                  fontSize: 16,
+                  fontWeight: "600",
+                }}
+              >
+                Sign in to continue managing your business with ZETRA BMS.
+              </Text>
 
-        <Pressable
-          onPress={onLogin}
-          disabled={loading}
-          style={{
-            backgroundColor: "#10B981",
-            paddingVertical: 15,
-            borderRadius: 16,
-            alignItems: "center",
-            opacity: loading ? 0.7 : 1,
-          }}
-        >
-          <Text style={{ color: "#08110F", fontWeight: "900", fontSize: 15 }}>
-            {loading ? "Signing In..." : "Login"}
-          </Text>
-        </Pressable>
+              <FieldLabel>Email</FieldLabel>
+              <GlassInput
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                placeholder="you@example.com"
+              />
 
-        <Pressable
-          onPress={() => router.push("/(auth)/register")}
-          style={{ marginTop: 16, alignItems: "center" }}
-        >
-          <Text style={{ color: "white" }}>
-            Don&apos;t have an account?{" "}
-            <Text style={{ color: "#34D399", fontWeight: "900" }}>Create account</Text>
-          </Text>
-        </Pressable>
+              <View style={{ height: 16 }} />
+
+              <FieldLabel>Password</FieldLabel>
+              <GlassInput
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                placeholder="Enter your password"
+                rightSlot={
+                  <Pressable
+                    onPress={() => setShowPassword((v) => !v)}
+                    hitSlop={10}
+                    style={{ paddingLeft: 12, paddingVertical: 4 }}
+                  >
+                    <Text style={{ color: "#34D399", fontWeight: "900", fontSize: 14 }}>
+                      {showPassword ? "Hide" : "Show"}
+                    </Text>
+                  </Pressable>
+                }
+              />
+
+              <Pressable
+                onPress={onForgotPassword}
+                disabled={sendingReset}
+                style={{
+                  alignSelf: "flex-end",
+                  marginTop: 12,
+                  marginBottom: 22,
+                }}
+              >
+                <Text style={{ color: "#34D399", fontWeight: "900", fontSize: 15 }}>
+                  {sendingReset ? "Sending..." : "Forgot Password?"}
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={onLogin}
+                disabled={loading}
+                style={{
+                  backgroundColor: "#1DBA84",
+                  paddingVertical: 17,
+                  borderRadius: 18,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  opacity: loading ? 0.7 : 1,
+                }}
+              >
+                <Text style={{ color: "#07120F", fontWeight: "900", fontSize: 18 }}>
+                  {loading ? "Signing In..." : "Login"}
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => router.push("/(auth)/register")}
+                style={{
+                  marginTop: 18,
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{ color: "rgba(255,255,255,0.92)", fontSize: 16 }}>
+                  Don&apos;t have an account?{" "}
+                  <Text style={{ color: "#34D399", fontWeight: "900" }}>Create account</Text>
+                </Text>
+              </Pressable>
+
+              <Text
+                style={{
+                  color: "rgba(255,255,255,0.42)",
+                  fontSize: 12,
+                  fontWeight: "700",
+                  textAlign: "center",
+                  marginTop: 18,
+                  lineHeight: 18,
+                }}
+              >
+                Secure sign-in for business owners, admins and staff.
+              </Text>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </View>
-    </View>
+    </TouchableWithoutFeedback>
   );
 }
