@@ -146,6 +146,28 @@ function endOfDayFromYmdLocal(ymd: string) {
   return d;
 }
 
+function isoToYmdLocal(iso: string) {
+  return ymdFromDateLocal(new Date(iso));
+}
+
+function formatMoneyProfessional(raw: string, value: number) {
+  const text = String(raw ?? "").trim();
+  if (!text) return text;
+  if (!(Number(value) < 0)) return text;
+
+  const unsigned = text.replace(/^-+\s*/, "").trim();
+
+  const currencyMatch = unsigned.match(/^([^\d\-+]+)\s*(.*)$/);
+  if (!currencyMatch) return `- ${unsigned}`;
+
+  const currency = String(currencyMatch[1] ?? "").trim();
+  const rest = String(currencyMatch[2] ?? "").trim();
+
+  if (!currency || !rest) return `- ${unsigned}`;
+
+  return `${currency} -${rest}`;
+}
+
 export default function ProfitScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -157,6 +179,11 @@ export default function ProfitScreen() {
   const fmt = useCallback((n: number) => money.fmt(n), [money]);
 
   const isOwner = useMemo(() => (activeRole ?? "staff") === "owner", [activeRole]);
+
+  const fmtDisplay = useCallback(
+    (n: number) => formatMoneyProfessional(fmt(n), n),
+    [fmt]
+  );
 
   const [view, setView] = useState<RangeKey>("month");
 
@@ -194,43 +221,75 @@ export default function ProfitScreen() {
     };
   }, []);
 
-  /**
-   * DORA v1 (profit must be computed in DB; owner-only; cost hidden):
-   * ✅ Use ONE canonical DB function for profit: get_store_net_profit_v2
-   *   Returns: sales_total, cogs_total, expenses_total, net_profit
-   */
-  const callProfit = useCallback(
-    async (fromISO: string, toISO: string): Promise<Summary> => {
-      if (!activeStoreId) return { net: 0, sales: null, cogs: null, expenses: null };
+  const callExpenseSummary = useCallback(
+    async (fromISO: string, toISO: string): Promise<number> => {
+      if (!activeStoreId) return 0;
 
-      const res = await supabase.rpc("get_store_net_profit_v2", {
+      const fromYmd = isoToYmdLocal(fromISO);
+      const toYmd = isoToYmdLocal(toISO);
+
+      const res = await supabase.rpc("get_expense_summary", {
         p_store_id: activeStoreId,
-        p_from: fromISO,
-        p_to: toISO,
+        p_from: fromYmd,
+        p_to: toYmd,
       });
 
       if (res.error) throw res.error;
 
       const row = Array.isArray(res.data) ? res.data[0] : res.data;
+      return pickNumber(row ?? {}, ["total", "amount", "sum"]) ?? 0;
+    },
+    [activeStoreId]
+  );
 
-      const net = pickNumber(row ?? {}, ["net_profit"]) ?? pickNumber(row ?? {}, ["net"]) ?? 0;
+  /**
+   * DORA v1:
+   * - profit display must stay aligned with Finance
+   * - expenses come from canonical expense summary path
+   * - UI reconciles sales/cogs from profit RPC with expenses from expense summary
+   */
+  const callProfit = useCallback(
+    async (fromISO: string, toISO: string): Promise<Summary> => {
+      if (!activeStoreId) return { net: 0, sales: null, cogs: null, expenses: null };
+
+      const [profitRes, explicitExpenses] = await Promise.all([
+        supabase.rpc("get_store_net_profit_v2", {
+          p_store_id: activeStoreId,
+          p_from: fromISO,
+          p_to: toISO,
+        }),
+        callExpenseSummary(fromISO, toISO),
+      ]);
+
+      if (profitRes.error) throw profitRes.error;
+
+      const row = Array.isArray(profitRes.data) ? profitRes.data[0] : profitRes.data;
+
+      const rpcNet = pickNumber(row ?? {}, ["net_profit"]) ?? pickNumber(row ?? {}, ["net"]) ?? 0;
 
       const sales =
         pickNumber(row ?? {}, ["sales_total"]) ?? pickNumber(row ?? {}, ["revenue"]) ?? null;
 
       const cogs = pickNumber(row ?? {}, ["cogs_total"]) ?? null;
 
-      const expenses =
-        pickNumber(row ?? {}, ["expenses_total"]) ?? pickNumber(row ?? {}, ["expense_total"]) ?? null;
+      const rpcExpenses =
+        pickNumber(row ?? {}, ["expenses_total"]) ?? pickNumber(row ?? {}, ["expense_total"]) ?? 0;
+
+      const resolvedExpenses = Number.isFinite(explicitExpenses) ? explicitExpenses : rpcExpenses;
+
+      const resolvedNet =
+        sales !== null && cogs !== null
+          ? Number(sales) - Number(cogs) - Number(resolvedExpenses)
+          : rpcNet;
 
       return {
-        net: Number.isFinite(net) ? net : 0,
+        net: Number.isFinite(resolvedNet) ? resolvedNet : 0,
         sales: sales === null ? null : Number.isFinite(sales) ? sales : null,
         cogs: cogs === null ? null : Number.isFinite(cogs) ? cogs : null,
-        expenses: expenses === null ? null : Number.isFinite(expenses) ? expenses : null,
+        expenses: Number.isFinite(resolvedExpenses) ? resolvedExpenses : 0,
       };
     },
-    [activeStoreId]
+    [activeStoreId, callExpenseSummary]
   );
 
   const computeTrendForView = useCallback(
@@ -402,13 +461,23 @@ export default function ProfitScreen() {
     const label = view === "today" ? "vs yesterday" : view === "week" ? "vs previous week" : "vs previous period";
 
     const pctText = trend.pct === null ? "—" : `${trend.pct >= 0 ? "+" : ""}${trend.pct.toFixed(1)}%`;
-    const deltaText = fmt(Math.abs(trend.delta));
+    const deltaText = fmtDisplay(Math.abs(trend.delta));
 
     return (
       <Card
         style={{
-          borderColor: theme.colors.border,
-          backgroundColor: "rgba(255,255,255,0.05)",
+          borderColor:
+            trend.direction === "down"
+              ? theme.colors.dangerBorder
+              : trend.direction === "up"
+                ? theme.colors.emeraldBorder
+                : theme.colors.border,
+          backgroundColor:
+            trend.direction === "down"
+              ? theme.colors.dangerSoft
+              : trend.direction === "up"
+                ? theme.colors.emeraldSoft
+                : "rgba(255,255,255,0.05)",
           gap: 8,
           padding: 14,
         }}
@@ -423,11 +492,25 @@ export default function ProfitScreen() {
                 alignItems: "center",
                 justifyContent: "center",
                 borderWidth: 1,
-                borderColor: theme.colors.emeraldBorder,
-                backgroundColor: theme.colors.emeraldSoft,
+                borderColor:
+                  trend.direction === "down"
+                    ? theme.colors.dangerBorder
+                    : trend.direction === "up"
+                      ? theme.colors.emeraldBorder
+                      : theme.colors.border,
+                backgroundColor:
+                  trend.direction === "down"
+                    ? theme.colors.dangerSoft
+                    : trend.direction === "up"
+                      ? theme.colors.emeraldSoft
+                      : "rgba(255,255,255,0.06)",
               }}
             >
-              <Ionicons name={arrow as any} size={18} color={theme.colors.text} />
+              <Ionicons
+                name={arrow as any}
+                size={18}
+                color={trend.direction === "down" ? theme.colors.danger : theme.colors.text}
+              />
             </View>
 
             <View style={{ gap: 2, flex: 1 }}>
@@ -439,8 +522,21 @@ export default function ProfitScreen() {
           </View>
 
           <View style={{ alignItems: "flex-end" }}>
-            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{pctText}</Text>
-            <Text style={{ color: theme.colors.muted, fontWeight: "800" }} numberOfLines={1}>
+            <Text
+              style={{
+                color: trend.direction === "down" ? theme.colors.danger : theme.colors.text,
+                fontWeight: "900",
+              }}
+            >
+              {pctText}
+            </Text>
+            <Text
+              style={{
+                color: trend.direction === "down" ? theme.colors.danger : theme.colors.muted,
+                fontWeight: "800",
+              }}
+              numberOfLines={1}
+            >
               Δ {deltaText}
             </Text>
           </View>
@@ -612,11 +708,39 @@ export default function ProfitScreen() {
 
   return (
     <Screen scroll={false} contentStyle={{ paddingHorizontal: 0, paddingTop: 0, paddingBottom: 0 }}>
-      <View style={{ flex: 1, padding: theme.spacing.page, gap: 10 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, paddingTop: 4 }}>
-          <View style={{ flex: 1, gap: 4 }}>
-            <Text style={{ fontSize: 23, fontWeight: "900", color: theme.colors.text }}>Profit</Text>
-            <Text style={{ color: theme.colors.muted, fontWeight: "800" }} numberOfLines={1}>
+      <View
+        style={{
+          flex: 1,
+          paddingHorizontal: theme.spacing.page,
+          paddingBottom: theme.spacing.page,
+          paddingTop: Math.max(theme.spacing.page, insets.top + 8),
+          gap: 12,
+        }}
+      >
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            gap: 12,
+          }}
+        >
+          <View style={{ flex: 1, gap: 6, paddingTop: 2 }}>
+            <Text
+              style={{
+                fontSize: 22,
+                lineHeight: 26,
+                fontWeight: "900",
+                color: theme.colors.text,
+                letterSpacing: 0.2,
+              }}
+            >
+              Profit
+            </Text>
+            <Text
+              style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 13, lineHeight: 18 }}
+              numberOfLines={1}
+            >
               {headerSubtitle}
             </Text>
           </View>
@@ -625,8 +749,8 @@ export default function ProfitScreen() {
             onPress={() => router.back()}
             hitSlop={10}
             style={({ pressed }) => ({
-              width: 42,
-              height: 42,
+              width: 44,
+              height: 44,
               borderRadius: 999,
               alignItems: "center",
               justifyContent: "center",
@@ -635,6 +759,7 @@ export default function ProfitScreen() {
               backgroundColor: "rgba(255,255,255,0.06)",
               opacity: pressed ? 0.92 : 1,
               transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
+              marginTop: 2,
             })}
           >
             <Ionicons name="chevron-back" size={22} color={theme.colors.text} />
@@ -749,14 +874,32 @@ export default function ProfitScreen() {
                     </View>
                   </View>
 
-                  <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 24 }}>{fmt(current.net)}</Text>
+                  <MoneyText
+                    style={{
+                      color: current.net < 0 ? theme.colors.danger : theme.colors.text,
+                      fontWeight: "900",
+                      fontSize: 30,
+                      lineHeight: 36,
+                      letterSpacing: -0.4,
+                    }}
+                  >
+                    {fmtDisplay(current.net)}
+                  </MoneyText>
 
-                  <View style={{ flexDirection: "row", gap: 10, marginTop: 2 }}>
-                    <MiniCard title="Sales" value={current.sales === null ? "—" : fmt(current.sales)} icon="cash-outline" />
-                    <MiniCard title="COGS" value={current.cogs === null ? "—" : fmt(current.cogs)} icon="pricetag-outline" />
+                  <View style={{ flexDirection: "row", gap: 10, marginTop: 4 }}>
+                    <MiniCard
+                      title="Sales"
+                      value={current.sales === null ? "—" : fmtDisplay(current.sales)}
+                      icon="cash-outline"
+                    />
+                    <MiniCard
+                      title="COGS"
+                      value={current.cogs === null ? "—" : fmtDisplay(current.cogs)}
+                      icon="pricetag-outline"
+                    />
                     <MiniCard
                       title="Expenses"
-                      value={current.expenses === null ? "—" : fmt(current.expenses)}
+                      value={current.expenses === null ? "—" : fmtDisplay(current.expenses)}
                       icon="remove-circle-outline"
                     />
                   </View>
@@ -769,8 +912,14 @@ export default function ProfitScreen() {
                     <Text style={{ color: theme.colors.muted, fontWeight: "800" }} numberOfLines={1}>
                       Today
                     </Text>
-                    <MoneyText style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-                      {fmt(today.net)}
+                    <MoneyText
+                      style={{
+                        color: today.net < 0 ? theme.colors.danger : theme.colors.text,
+                        fontWeight: "900",
+                        fontSize: 16,
+                      }}
+                    >
+                      {fmtDisplay(today.net)}
                     </MoneyText>
                   </Card>
 
@@ -778,8 +927,14 @@ export default function ProfitScreen() {
                     <Text style={{ color: theme.colors.muted, fontWeight: "800" }} numberOfLines={1}>
                       This Week
                     </Text>
-                    <MoneyText style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-                      {fmt(week.net)}
+                    <MoneyText
+                      style={{
+                        color: week.net < 0 ? theme.colors.danger : theme.colors.text,
+                        fontWeight: "900",
+                        fontSize: 16,
+                      }}
+                    >
+                      {fmtDisplay(week.net)}
                     </MoneyText>
                   </Card>
 
@@ -787,24 +942,31 @@ export default function ProfitScreen() {
                     <Text style={{ color: theme.colors.muted, fontWeight: "800" }} numberOfLines={1}>
                       This Month
                     </Text>
-                    <MoneyText style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-                      {fmt(month.net)}
+                    <MoneyText
+                      style={{
+                        color: month.net < 0 ? theme.colors.danger : theme.colors.text,
+                        fontWeight: "900",
+                        fontSize: 16,
+                      }}
+                    >
+                      {fmtDisplay(month.net)}
                     </MoneyText>
                   </Card>
                 </View>
               </Animated.View>
 
-              <View style={{ paddingTop: 6 }}>
-                <Text style={{ color: theme.colors.muted, fontWeight: "900", letterSpacing: 1, fontSize: 12 }}>SECURITY</Text>
+              <View style={{ paddingTop: 8, paddingBottom: Math.max(18, insets.bottom + 8) }}>
+                <Text style={{ color: theme.colors.muted, fontWeight: "900", letterSpacing: 1, fontSize: 12 }}>
+                  SECURITY
+                </Text>
                 <Text
                   style={{
                     color: theme.colors.text,
                     fontWeight: "800",
                     opacity: 0.92,
-                    marginTop: 4,
-                    lineHeight: 18,
+                    marginTop: 6,
+                    lineHeight: 20,
                   }}
-                  numberOfLines={2}
                 >
                   Owner-only profit. Cost data is protected. Database is the source of truth.
                 </Text>
@@ -996,24 +1158,47 @@ export default function ProfitScreen() {
                               </View>
                             </View>
 
-                            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 24 }}>
-                              {fmt(archiveResult.summary.net)}
-                            </Text>
+                           <MoneyText
+                              style={{
+                                color:
+                                  archiveResult.summary.net < 0
+                                    ? theme.colors.danger
+                                    : theme.colors.text,
+                                fontWeight: "900",
+                                fontSize: 28,
+                                lineHeight: 34,
+                                letterSpacing: -0.3,
+                              }}
+                            >
+                              {fmtDisplay(archiveResult.summary.net)}
+                            </MoneyText> 
 
                             <View style={{ flexDirection: "row", gap: 10, marginTop: 2 }}>
                               <MiniCard
                                 title="Sales"
-                                value={archiveResult.summary.sales === null ? "—" : fmt(archiveResult.summary.sales)}
+                                value={
+                                  archiveResult.summary.sales === null
+                                    ? "—"
+                                    : fmtDisplay(archiveResult.summary.sales)
+                                }
                                 icon="cash-outline"
                               />
                               <MiniCard
                                 title="COGS"
-                                value={archiveResult.summary.cogs === null ? "—" : fmt(archiveResult.summary.cogs)}
+                                value={
+                                  archiveResult.summary.cogs === null
+                                    ? "—"
+                                    : fmtDisplay(archiveResult.summary.cogs)
+                                }
                                 icon="pricetag-outline"
                               />
                               <MiniCard
                                 title="Expenses"
-                                value={archiveResult.summary.expenses === null ? "—" : fmt(archiveResult.summary.expenses)}
+                                value={
+                                  archiveResult.summary.expenses === null
+                                    ? "—"
+                                    : fmtDisplay(archiveResult.summary.expenses)
+                                }
                                 icon="remove-circle-outline"
                               />
                             </View>

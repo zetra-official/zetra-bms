@@ -75,6 +75,14 @@ function clean(s: any) {
   return String(s ?? "").trim();
 }
 
+function activeOrgKeyForUser(userId: string) {
+  return `${KV_KEYS.activeOrgId}:${userId}`;
+}
+
+function activeStoreKeyForUser(userId: string) {
+  return `${KV_KEYS.activeStoreId}:${userId}`;
+}
+
 function isDisabledAccountMessage(message: unknown) {
   const msg = String(message ?? "").toLowerCase();
 
@@ -188,30 +196,61 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
   const [activeOrgId, _setActiveOrgId] = useState<string | null>(null);
   const [activeStoreId, _setActiveStoreId] = useState<string | null>(null);
 
-  // prevent overriding user selection after first hydration
-  const hydratedRef = useRef(false);
+  // latest selection refs (avoid boot-loop dependencies)
+  const activeOrgIdRef = useRef<string | null>(null);
+  const activeStoreIdRef = useRef<string | null>(null);
+
+  // per-user hydration / persistence guards
+  const hydratedUserRef = useRef<string | null>(null);
+  const currentUserIdRef = useRef<string | null>(null);
 
   // ✅ FIX A: when org changes, clear active store (state + KV)
   const setActiveOrgId = useCallback(
     (orgId: string | null) => {
       const prevOrgId = activeOrgId;
+      const userId = currentUserIdRef.current;
 
       _setActiveOrgId(orgId);
+      activeOrgIdRef.current = orgId;
       void kv.setString(KV_KEYS.activeOrgId, orgId);
+
+      if (userId) {
+        void kv.setString(activeOrgKeyForUser(userId), orgId);
+      }
 
       // If org is changing, store selection from old org must NOT carry over
       if (orgId !== prevOrgId) {
         _setActiveStoreId(null);
+        activeStoreIdRef.current = null;
         void kv.setString(KV_KEYS.activeStoreId, null);
+
+        if (userId) {
+          void kv.setString(activeStoreKeyForUser(userId), null);
+        }
       }
     },
     [activeOrgId]
   );
 
   const setActiveStoreId = useCallback((storeId: string | null) => {
+    const userId = currentUserIdRef.current;
+
     _setActiveStoreId(storeId);
+    activeStoreIdRef.current = storeId;
     void kv.setString(KV_KEYS.activeStoreId, storeId);
+
+    if (userId) {
+      void kv.setString(activeStoreKeyForUser(userId), storeId);
+    }
   }, []);
+
+  useEffect(() => {
+    activeOrgIdRef.current = activeOrgId;
+  }, [activeOrgId]);
+
+  useEffect(() => {
+    activeStoreIdRef.current = activeStoreId;
+  }, [activeStoreId]);
 
   const deriveActive = useMemo(() => {
     const org =
@@ -238,7 +277,13 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
 
     if (activeOrgId !== deriveActive.orgId) {
       _setActiveOrgId(deriveActive.orgId);
+      activeOrgIdRef.current = deriveActive.orgId;
       void kv.setString(KV_KEYS.activeOrgId, deriveActive.orgId);
+
+      const userId = currentUserIdRef.current;
+      if (userId) {
+        void kv.setString(activeOrgKeyForUser(userId), deriveActive.orgId);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deriveActive.orgId, loading, refreshing]);
@@ -282,23 +327,41 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
 
     if (activeStoreId !== deriveActiveStore.storeId) {
       _setActiveStoreId(deriveActiveStore.storeId);
+      activeStoreIdRef.current = deriveActiveStore.storeId;
       void kv.setString(KV_KEYS.activeStoreId, deriveActiveStore.storeId);
+
+      const userId = currentUserIdRef.current;
+      if (userId) {
+        void kv.setString(activeStoreKeyForUser(userId), deriveActiveStore.storeId);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deriveActiveStore.storeId, loading, refreshing]);
 
-  // hydrate saved selection once (org/store ids) — runs before first boot load
-  const hydrateSelectionOnce = useCallback(async () => {
-    if (hydratedRef.current) return;
-    hydratedRef.current = true;
+  // hydrate saved selection once per authenticated user
+  const hydrateSelectionOnce = useCallback(async (userId: string) => {
+    if (hydratedUserRef.current === userId) return;
+    hydratedUserRef.current = userId;
 
-    const [savedOrgId, savedStoreId] = await Promise.all([
-      kv.getString(KV_KEYS.activeOrgId),
-      kv.getString(KV_KEYS.activeStoreId),
-    ]);
+    const [savedUserOrgId, savedUserStoreId, legacyOrgId, legacyStoreId] =
+      await Promise.all([
+        kv.getString(activeOrgKeyForUser(userId)),
+        kv.getString(activeStoreKeyForUser(userId)),
+        kv.getString(KV_KEYS.activeOrgId),
+        kv.getString(KV_KEYS.activeStoreId),
+      ]);
 
-    if (savedOrgId) _setActiveOrgId(savedOrgId);
-    if (savedStoreId) _setActiveStoreId(savedStoreId);
+    const nextOrgId = savedUserOrgId || legacyOrgId || null;
+    const nextStoreId = savedUserStoreId || legacyStoreId || null;
+
+    if (nextOrgId) {
+      _setActiveOrgId(nextOrgId);
+      activeOrgIdRef.current = nextOrgId;
+    }
+    if (nextStoreId) {
+      _setActiveStoreId(nextStoreId);
+      activeStoreIdRef.current = nextStoreId;
+    }
   }, []);
 
   const loadAll = useCallback(
@@ -308,11 +371,6 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
       if (mode === "refresh") setRefreshing(true);
 
       try {
-        // ✅ hydrate only at app start / auth change boot
-        if (mode === "boot") {
-          await hydrateSelectionOnce();
-        }
-
         const {
           data: { session },
           error: sessErr,
@@ -320,14 +378,23 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
 
         if (sessErr) throw sessErr;
 
-        // not logged in => clear (this is the ONLY place we wipe selection)
+        // not logged in => clear volatile active state only
+        // IMPORTANT: keep per-user last workspace memory intact
         if (!session) {
+          currentUserIdRef.current = null;
           setOrgs([]);
           setStores([]);
           _setActiveOrgId(null);
           _setActiveStoreId(null);
           await kv.clearActiveSelection();
           return;
+        }
+
+        currentUserIdRef.current = session.user.id;
+
+        // hydrate only after we know exactly which authenticated user is active
+        if (mode === "boot") {
+          await hydrateSelectionOnce(session.user.id);
         }
 
         // 1) canonical org list
@@ -376,16 +443,26 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
         const resolved = resolveConsistentSelection({
           orgs: typedOrgs,
           stores: typedStores,
-          preferredOrgId: activeOrgId,
-          preferredStoreId: activeStoreId,
+          preferredOrgId: activeOrgIdRef.current,
+          preferredStoreId: activeStoreIdRef.current,
         });
 
         _setActiveOrgId(resolved.orgId);
         _setActiveStoreId(resolved.storeId);
+        activeOrgIdRef.current = resolved.orgId;
+        activeStoreIdRef.current = resolved.storeId;
+
+        const userId = currentUserIdRef.current;
 
         await Promise.all([
           kv.setString(KV_KEYS.activeOrgId, resolved.orgId),
           kv.setString(KV_KEYS.activeStoreId, resolved.storeId),
+          ...(userId
+            ? [
+                kv.setString(activeOrgKeyForUser(userId), resolved.orgId),
+                kv.setString(activeStoreKeyForUser(userId), resolved.storeId),
+              ]
+            : []),
         ]);
       } catch (e: any) {
         const msg = e?.message ?? "Failed to load org/store data";
@@ -412,7 +489,7 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
         if (mode === "refresh") setRefreshing(false);
       }
     },
-    [hydrateSelectionOnce, activeOrgId, activeStoreId]
+    [hydrateSelectionOnce]
   );
 
   const refresh = useCallback(async () => {
@@ -453,7 +530,8 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange(
       (_event: AuthChangeEvent, _session: Session | null) => {
-        hydratedRef.current = false;
+        hydratedUserRef.current = null;
+        currentUserIdRef.current = _session?.user?.id ?? null;
         loadAll("boot");
       }
     );

@@ -18,6 +18,7 @@ import {
   View,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system/legacy";
@@ -248,6 +249,101 @@ function displayMemberName(v?: string | null, fallbackId?: string | null) {
   if (fid) return `USER_${fid}`;
   return "Member";
 }
+
+function mentionSeenStorageKey(roomId?: string | null, userId?: string | null) {
+  const rid = clean(roomId);
+  const uid = clean(userId);
+  if (!rid || !uid) return "";
+  return `zetra_meeting_room_seen_mentions_v1:${rid}:${uid}`;
+}
+
+function mediaLocalCacheStorageKey(roomId?: string | null, userId?: string | null) {
+  const rid = clean(roomId);
+  const uid = clean(userId);
+  if (!rid || !uid) return "";
+  return `zetra_meeting_room_local_media_v1:${rid}:${uid}`;
+}
+
+function sanitizeFileName(v?: string | null) {
+  const raw = clean(v);
+  if (!raw) return `file-${Date.now()}`;
+  return raw.replace(/[^\w.\-]+/g, "_");
+}
+
+function isLocalFileUri(v?: string | null) {
+  const s = clean(v).toLowerCase();
+  return s.startsWith("file://");
+}
+
+function buildPdfViewerSourceUri(url?: string | null) {
+  const target = clean(url);
+  if (!target) return "";
+  if (isLocalFileUri(target)) return target;
+  return `https://docs.google.com/gview?embedded=1&url=${encodeURIComponent(target)}`;
+}
+
+function buildMeetingRoomMediaLocalDir(roomId?: string | null, userId?: string | null) {
+  const rid = clean(roomId);
+  const uid = clean(userId);
+  const base = FileSystem.documentDirectory || FileSystem.cacheDirectory || "";
+  if (!base || !rid || !uid) return "";
+  return `${base}meeting-room-media/${uid}/${rid}/`;
+}
+
+function mediaCacheKeys(item: {
+  attachment_path?: string | null;
+  attachment_url?: string | null;
+}) {
+  const keys: string[] = [];
+
+  const path = clean(item?.attachment_path);
+  const url = clean(item?.attachment_url);
+
+  if (path) keys.push(`path:${path}`);
+  if (url) keys.push(`url:${url}`);
+
+  return keys;
+}
+
+function pickCachedMediaUri(
+  cache: Record<string, string>,
+  item: {
+    attachment_path?: string | null;
+    attachment_url?: string | null;
+  }
+) {
+  const keys = mediaCacheKeys(item);
+  for (const key of keys) {
+    const found = clean(cache?.[key]);
+    if (found) return found;
+  }
+  return "";
+}
+
+async function ensureLocalDir(dir: string) {
+  const target = clean(dir);
+  if (!target) return;
+  try {
+    const info = await FileSystem.getInfoAsync(target);
+    if (!info.exists) {
+      await FileSystem.makeDirectoryAsync(target, { intermediates: true });
+    }
+  } catch {
+    // silent
+  }
+}
+
+async function localFileExists(uri?: string | null) {
+  const target = clean(uri);
+  if (!target) return false;
+  try {
+    const info = await FileSystem.getInfoAsync(target);
+    return !!info.exists;
+  } catch {
+    return false;
+  }
+}
+
 const MEETING_ROOM_MEDIA_BUCKET = "club-media";
 const MAX_IMAGE_SIZE_MB = 8;
 const MAX_VIDEO_SIZE_MB = 20;
@@ -416,17 +512,20 @@ function MessageTextWithMentions({
     </Text>
   );
 }
-function MessageMediaBlock({
+ function MessageMediaBlock({
   item,
+  resolvedUri,
   onOpenMedia,
 }: {
   item: MessageRow;
-  onOpenMedia: (url: string, kind: "IMAGE" | "VIDEO" | "AUDIO" | "PDF" | "DOCUMENT") => void;
+  resolvedUri?: string | null;
+  onOpenMedia: (item: MessageRow, kind: "IMAGE" | "VIDEO" | "AUDIO" | "PDF" | "DOCUMENT") => void;
 }) {
   const messageType = normalizeMessageType(item.message_type);
   const mediaKind = normalizeMediaKind(item.media_kind);
-  const mediaUrl = clean(item.attachment_url);
-  const expired = !!item.is_expired;
+  const mediaUrl = clean(resolvedUri) || clean(item.attachment_url);
+  const hasLocalCopy = isLocalFileUri(resolvedUri);
+  const expired = !!item.is_expired && !hasLocalCopy;
 
   if (messageType !== "MEDIA") return null;
 
@@ -483,113 +582,290 @@ function MessageMediaBlock({
 
   if (mediaKind === "IMAGE") {
     return (
-      <Pressable
-        onPress={() => onOpenMedia(mediaUrl, "IMAGE")}
-        style={({ pressed }) => ({
-          marginBottom: clean(item.message_text) ? 8 : 0,
-          opacity: pressed ? 0.94 : 1,
-        })}
-      >
-        <Image
-          source={{ uri: mediaUrl }}
-          resizeMode="cover"
-          style={{
-            width: 220,
-            height: 240,
-            borderRadius: 16,
-            backgroundColor: "rgba(255,255,255,0.05)",
-          }}
-        />
-        <Text
-          style={{
-            color: UI.faint,
-            fontWeight: "800",
-            fontSize: 11,
-            marginTop: 6,
-          }}
+      <View style={{ marginBottom: clean(item.message_text) ? 8 : 0 }}>
+        {hasLocalCopy ? (
+          <View
+            style={{
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: UI.emeraldBorder,
+              backgroundColor: "rgba(16,185,129,0.08)",
+              paddingHorizontal: 10,
+              paddingVertical: 8,
+              marginBottom: 8,
+            }}
+          >
+            <Text style={{ color: UI.emerald, fontWeight: "900", fontSize: 12 }}>
+              Saved on this device
+            </Text>
+            <Text
+              style={{
+                color: UI.faint,
+                fontWeight: "700",
+                fontSize: 12,
+                marginTop: 4,
+                lineHeight: 18,
+              }}
+            >
+              Hii media inasomwa kutoka kwenye simu yako.
+            </Text>
+          </View>
+        ) : null}
+
+        <Pressable
+          onPress={() => onOpenMedia(item, "IMAGE")}
+          style={({ pressed }) => ({
+            opacity: pressed ? 0.94 : 1,
+          })}
         >
-          Tap to view image
-        </Text>
-      </Pressable>
+          <Image
+            source={{ uri: mediaUrl }}
+            resizeMode="cover"
+            style={{
+              width: 220,
+              height: 240,
+              borderRadius: 16,
+              backgroundColor: "rgba(255,255,255,0.05)",
+            }}
+          />
+          <Text
+            style={{
+              color: UI.faint,
+              fontWeight: "800",
+              fontSize: 11,
+              marginTop: 6,
+            }}
+          >
+            Tap to view image
+          </Text>
+        </Pressable>
+      </View>
     );
   }
 
   if (mediaKind === "VIDEO") {
     return (
-      <Pressable
-        onPress={() => onOpenMedia(mediaUrl, "VIDEO")}
-        style={({ pressed }) => ({
-          marginBottom: clean(item.message_text) ? 8 : 0,
-          opacity: pressed ? 0.94 : 1,
-        })}
-      >
-        <View
-          style={{
-            width: 220,
-            height: 240,
-            borderRadius: 16,
-            overflow: "hidden",
-            backgroundColor: "rgba(255,255,255,0.05)",
-            position: "relative",
-          }}
-        >
-          <Video
-            source={{ uri: mediaUrl }}
-            style={{ width: "100%", height: "100%" }}
-            resizeMode={ResizeMode.COVER}
-            shouldPlay={false}
-            isLooping={false}
-            isMuted
-            useNativeControls={false}
-          />
-
+      <View style={{ marginBottom: clean(item.message_text) ? 8 : 0 }}>
+        {hasLocalCopy ? (
           <View
-            pointerEvents="none"
             style={{
-              position: "absolute",
-              inset: 0,
-              alignItems: "center",
-              justifyContent: "center",
-              backgroundColor: "rgba(0,0,0,0.18)",
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: UI.emeraldBorder,
+              backgroundColor: "rgba(16,185,129,0.08)",
+              paddingHorizontal: 10,
+              paddingVertical: 8,
+              marginBottom: 8,
             }}
           >
-            <View
+            <Text style={{ color: UI.emerald, fontWeight: "900", fontSize: 12 }}>
+              Saved on this device
+            </Text>
+            <Text
               style={{
-                width: 58,
-                height: 58,
-                borderRadius: 999,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: "rgba(0,0,0,0.42)",
-                borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.18)",
+                color: UI.faint,
+                fontWeight: "700",
+                fontSize: 12,
+                marginTop: 4,
+                lineHeight: 18,
               }}
             >
-              <Ionicons name="play" size={26} color="#FFFFFF" />
+              Hii media inasomwa kutoka kwenye simu yako.
+            </Text>
+          </View>
+        ) : null}
+
+        <Pressable
+          onPress={() => onOpenMedia(item, "VIDEO")}
+          style={({ pressed }) => ({
+            opacity: pressed ? 0.94 : 1,
+          })}
+        >
+          <View
+            style={{
+              width: 220,
+              height: 240,
+              borderRadius: 16,
+              overflow: "hidden",
+              backgroundColor: "rgba(255,255,255,0.05)",
+              position: "relative",
+            }}
+          >
+            <Video
+              source={{ uri: mediaUrl }}
+              style={{ width: "100%", height: "100%" }}
+              resizeMode={ResizeMode.COVER}
+              shouldPlay={false}
+              isLooping={false}
+              isMuted
+              useNativeControls={false}
+            />
+
+            <View
+              pointerEvents="none"
+              style={{
+                position: "absolute",
+                inset: 0,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: "rgba(0,0,0,0.18)",
+              }}
+            >
+              <View
+                style={{
+                  width: 58,
+                  height: 58,
+                  borderRadius: 999,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: "rgba(0,0,0,0.42)",
+                  borderWidth: 1,
+                  borderColor: "rgba(255,255,255,0.18)",
+                }}
+              >
+                <Ionicons name="play" size={26} color="#FFFFFF" />
+              </View>
             </View>
           </View>
-        </View>
 
-        <Text
-          style={{
-            color: UI.faint,
-            fontWeight: "800",
-            fontSize: 11,
-            marginTop: 6,
-          }}
-        >
-          Tap to play video
-        </Text>
-      </Pressable>
+          <Text
+            style={{
+              color: UI.faint,
+              fontWeight: "800",
+              fontSize: 11,
+              marginTop: 6,
+            }}
+          >
+            Tap to play video
+          </Text>
+        </Pressable>
+      </View>
     );
   }
 
- if (mediaKind === "PDF" || mediaKind === "DOCUMENT") {
+  if (mediaKind === "PDF" || mediaKind === "DOCUMENT") {
     return (
+      <View style={{ marginBottom: clean(item.message_text) ? 8 : 0 }}>
+        {hasLocalCopy ? (
+          <View
+            style={{
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: UI.emeraldBorder,
+              backgroundColor: "rgba(16,185,129,0.08)",
+              paddingHorizontal: 10,
+              paddingVertical: 8,
+              marginBottom: 8,
+            }}
+          >
+            <Text style={{ color: UI.emerald, fontWeight: "900", fontSize: 12 }}>
+              Saved on this device
+            </Text>
+            <Text
+              style={{
+                color: UI.faint,
+                fontWeight: "700",
+                fontSize: 12,
+                marginTop: 4,
+                lineHeight: 18,
+              }}
+            >
+              Hii media inasomwa kutoka kwenye simu yako.
+            </Text>
+          </View>
+        ) : null}
+
+        <Pressable
+          onPress={() => onOpenMedia(item, mediaKind)}
+          style={({ pressed }) => ({
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: "rgba(255,255,255,0.10)",
+            backgroundColor: "rgba(255,255,255,0.05)",
+            padding: 14,
+            opacity: pressed ? 0.94 : 1,
+          })}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <View
+              style={{
+                width: 46,
+                height: 46,
+                borderRadius: 14,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: "rgba(16,185,129,0.12)",
+                borderWidth: 1,
+                borderColor: UI.emeraldBorder,
+              }}
+            >
+              <Ionicons
+                name={mediaKind === "PDF" ? "document-text" : "document-attach"}
+                size={22}
+                color={UI.emerald}
+              />
+            </View>
+
+            <View style={{ flex: 1 }}>
+              <Text
+                style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}
+                numberOfLines={1}
+              >
+                {clean(item.file_name) || (mediaKind === "PDF" ? "PDF document" : "Document")}
+              </Text>
+
+              <Text
+                style={{
+                  color: UI.faint,
+                  fontWeight: "800",
+                  fontSize: 12,
+                  marginTop: 4,
+                }}
+                numberOfLines={1}
+              >
+                {mediaKind === "PDF" ? "Tap to open PDF" : "Tap to open document"}
+              </Text>
+            </View>
+          </View>
+        </Pressable>
+      </View>
+    );
+  }
+
+  return (
+    <View style={{ marginBottom: clean(item.message_text) ? 8 : 0 }}>
+      {hasLocalCopy ? (
+        <View
+          style={{
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: UI.emeraldBorder,
+            backgroundColor: "rgba(16,185,129,0.08)",
+            paddingHorizontal: 10,
+            paddingVertical: 8,
+            marginBottom: 8,
+          }}
+        >
+          <Text style={{ color: UI.emerald, fontWeight: "900", fontSize: 12 }}>
+            Saved on this device
+          </Text>
+          <Text
+            style={{
+              color: UI.faint,
+              fontWeight: "700",
+              fontSize: 12,
+              marginTop: 4,
+              lineHeight: 18,
+            }}
+          >
+            Hii media inasomwa kutoka kwenye simu yako.
+          </Text>
+        </View>
+      ) : null}
+
       <Pressable
-        onPress={() => onOpenMedia(mediaUrl, mediaKind)}
+        onPress={() => onOpenMedia(item, "AUDIO")}
         style={({ pressed }) => ({
-          marginBottom: clean(item.message_text) ? 8 : 0,
           borderRadius: 16,
           borderWidth: 1,
           borderColor: "rgba(255,255,255,0.10)",
@@ -598,12 +874,12 @@ function MessageMediaBlock({
           opacity: pressed ? 0.94 : 1,
         })}
       >
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
           <View
             style={{
-              width: 46,
-              height: 46,
-              borderRadius: 14,
+              width: 42,
+              height: 42,
+              borderRadius: 999,
               alignItems: "center",
               justifyContent: "center",
               backgroundColor: "rgba(16,185,129,0.12)",
@@ -611,21 +887,13 @@ function MessageMediaBlock({
               borderColor: UI.emeraldBorder,
             }}
           >
-            <Ionicons
-              name={mediaKind === "PDF" ? "document-text" : "document-attach"}
-              size={22}
-              color={UI.emerald}
-            />
+            <Ionicons name="mic" size={18} color={UI.emerald} />
           </View>
 
           <View style={{ flex: 1 }}>
-            <Text
-              style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}
-              numberOfLines={1}
-            >
-              {clean(item.file_name) || (mediaKind === "PDF" ? "PDF document" : "Document")}
+            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
+              Audio attachment
             </Text>
-
             <Text
               style={{
                 color: UI.faint,
@@ -633,64 +901,15 @@ function MessageMediaBlock({
                 fontSize: 12,
                 marginTop: 4,
               }}
-              numberOfLines={1}
             >
-              {mediaKind === "PDF" ? "Tap to open PDF" : "Tap to open document"}
+              Tap to open audio
             </Text>
           </View>
         </View>
       </Pressable>
-    );
-  }
-
-  return (
-    <Pressable
-      onPress={() => onOpenMedia(mediaUrl, "AUDIO")}
-      style={({ pressed }) => ({
-        marginBottom: clean(item.message_text) ? 8 : 0,
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: "rgba(255,255,255,0.10)",
-        backgroundColor: "rgba(255,255,255,0.05)",
-        padding: 14,
-        opacity: pressed ? 0.94 : 1,
-      })}
-    >
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-        <View
-          style={{
-            width: 42,
-            height: 42,
-            borderRadius: 999,
-            alignItems: "center",
-            justifyContent: "center",
-            backgroundColor: "rgba(16,185,129,0.12)",
-            borderWidth: 1,
-            borderColor: UI.emeraldBorder,
-          }}
-        >
-          <Ionicons name="mic" size={18} color={UI.emerald} />
-        </View>
-
-        <View style={{ flex: 1 }}>
-          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-            Audio attachment
-          </Text>
-          <Text
-            style={{
-              color: UI.faint,
-              fontWeight: "800",
-              fontSize: 12,
-              marginTop: 4,
-            }}
-          >
-            Tap to open audio
-          </Text>
-        </View>
-      </View>
-    </Pressable>
+    </View>
   );
-} 
+}
 function SwipeReplyWrapper({
   mine,
   onReply,
@@ -826,11 +1045,200 @@ export default function MeetingRoomDetailScreen() {
   const listRef = useRef<FlatList<MessageRow>>(null);
   const typingIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const seenMentionIdsRef = useRef<Set<string>>(new Set());
+  const seenMentionsHydratedRef = useRef(false);
+  const mentionPersistSaveBusyRef = useRef(false);
+
+  const [mediaCacheByKey, setMediaCacheByKey] = useState<Record<string, string>>({});
+  const mediaCacheRef = useRef<Record<string, string>>({});
+
+  useEffect(() => {
+    mediaCacheRef.current = mediaCacheByKey;
+  }, [mediaCacheByKey]);
 
   const canManageMembers = useMemo(() => {
     const rr = clean(roomRole).toUpperCase();
     return rr === "OWNER" || rr === "ADMIN";
   }, [roomRole]);
+
+  const hydrateSeenMentions = useCallback(async () => {
+    const key = mentionSeenStorageKey(roomId, myUserId);
+    if (!key) {
+      seenMentionIdsRef.current = new Set();
+      seenMentionsHydratedRef.current = true;
+      return;
+    }
+
+    try {
+      const raw = await AsyncStorage.getItem(key);
+      const parsed = raw ? JSON.parse(raw) : [];
+      const ids = Array.isArray(parsed)
+        ? parsed.map((x) => clean(x)).filter(Boolean)
+        : [];
+
+      seenMentionIdsRef.current = new Set(ids);
+    } catch {
+      seenMentionIdsRef.current = new Set();
+    } finally {
+      seenMentionsHydratedRef.current = true;
+    }
+  }, [roomId, myUserId]);
+
+  const persistSeenMentions = useCallback(async () => {
+    const key = mentionSeenStorageKey(roomId, myUserId);
+    if (!key) return;
+    if (mentionPersistSaveBusyRef.current) return;
+
+    mentionPersistSaveBusyRef.current = true;
+    try {
+      const ids = Array.from(seenMentionIdsRef.current).filter(Boolean).slice(-300);
+      await AsyncStorage.setItem(key, JSON.stringify(ids));
+    } catch {
+      // silent
+    } finally {
+      mentionPersistSaveBusyRef.current = false;
+    }
+  }, [roomId, myUserId]);
+
+  const hydrateLocalMediaCache = useCallback(async () => {
+    const key = mediaLocalCacheStorageKey(roomId, myUserId);
+    if (!key) {
+      setMediaCacheByKey({});
+      mediaCacheRef.current = {};
+      return;
+    }
+
+    try {
+      const raw = await AsyncStorage.getItem(key);
+      const parsed = raw ? JSON.parse(raw) : {};
+      const next =
+        parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+
+      setMediaCacheByKey(next);
+      mediaCacheRef.current = next;
+    } catch {
+      setMediaCacheByKey({});
+      mediaCacheRef.current = {};
+    }
+  }, [roomId, myUserId]);
+
+  const persistLocalMediaCache = useCallback(
+    async (nextMap: Record<string, string>) => {
+      const key = mediaLocalCacheStorageKey(roomId, myUserId);
+      if (!key) return;
+      try {
+        await AsyncStorage.setItem(key, JSON.stringify(nextMap ?? {}));
+      } catch {
+        // silent
+      }
+    },
+    [roomId, myUserId]
+  );
+
+  const rememberLocalMedia = useCallback(
+    async (args: {
+      attachmentPath?: string | null;
+      attachmentUrl?: string | null;
+      localUri?: string | null;
+    }) => {
+      const localUri = clean(args.localUri);
+      if (!localUri) return;
+
+      const exists = await localFileExists(localUri);
+      if (!exists) return;
+
+      const keys = mediaCacheKeys({
+        attachment_path: args.attachmentPath,
+        attachment_url: args.attachmentUrl,
+      });
+
+      if (keys.length === 0) return;
+
+      const next = { ...mediaCacheRef.current };
+      for (const key of keys) {
+        next[key] = localUri;
+      }
+
+      mediaCacheRef.current = next;
+      setMediaCacheByKey(next);
+      await persistLocalMediaCache(next);
+    },
+    [persistLocalMediaCache]
+  );
+
+  const resolveLocalMediaUri = useCallback((item: MessageRow) => {
+    return pickCachedMediaUri(mediaCacheRef.current, {
+      attachment_path: item.attachment_path,
+      attachment_url: item.attachment_url,
+    });
+  }, []);
+
+  const cacheSourceFileToDevice = useCallback(
+    async (args: {
+      sourceUri: string;
+      fileName?: string | null;
+      mimeType?: string | null;
+      kind?: string | null;
+    }) => {
+      const sourceUri = clean(args.sourceUri);
+      const dir = buildMeetingRoomMediaLocalDir(roomId, myUserId);
+
+      if (!sourceUri || !dir) return "";
+
+      await ensureLocalDir(dir);
+
+      const ext = safeFileExt(args.fileName, args.mimeType, args.kind);
+      const baseName = sanitizeFileName(
+        clean(args.fileName) || `media-${Date.now()}.${ext}`
+      );
+      const finalName = baseName.includes(".") ? baseName : `${baseName}.${ext}`;
+      const destination = `${dir}${Date.now()}-${finalName}`;
+
+      try {
+        if (isLocalFileUri(sourceUri)) {
+          await FileSystem.copyAsync({ from: sourceUri, to: destination });
+        } else {
+          await FileSystem.downloadAsync(sourceUri, destination);
+        }
+
+        const exists = await localFileExists(destination);
+        return exists ? destination : "";
+      } catch {
+        return "";
+      }
+    },
+    [roomId, myUserId]
+  );
+
+  const ensureMediaAvailableLocally = useCallback(
+    async (item: MessageRow) => {
+      const cached = resolveLocalMediaUri(item);
+      if (cached) {
+        const exists = await localFileExists(cached);
+        if (exists) return cached;
+      }
+
+      const remoteUrl = clean(item.attachment_url);
+      if (!remoteUrl) return "";
+
+      const localUri = await cacheSourceFileToDevice({
+        sourceUri: remoteUrl,
+        fileName: clean(item.file_name) || `${clean(item.id) || "media"}`,
+        mimeType: item.mime_type,
+        kind: item.media_kind,
+      });
+
+      if (localUri) {
+        await rememberLocalMedia({
+          attachmentPath: item.attachment_path,
+          attachmentUrl: item.attachment_url,
+          localUri,
+        });
+      }
+
+      return localUri || remoteUrl;
+    },
+    [resolveLocalMediaUri, cacheSourceFileToDevice, rememberLocalMedia]
+  );
 
   const mentionQuery = useMemo(() => extractMentionQuery(text), [text]);
 
@@ -1051,7 +1459,13 @@ export default function MeetingRoomDetailScreen() {
     } catch {
       // silent
     }
-  }, [roomId]);
+
+    try {
+      await persistSeenMentions();
+    } catch {
+      // silent
+    }
+  }, [roomId, persistSeenMentions]);
 
   const setTypingStateSafe = useCallback(
     async (isTyping: boolean) => {
@@ -1095,8 +1509,27 @@ export default function MeetingRoomDetailScreen() {
   ]);
 
   useEffect(() => {
+    seenMentionsHydratedRef.current = false;
+    seenMentionIdsRef.current = new Set();
+  }, [roomId, myUserId]);
+
+  useEffect(() => {
+    setMediaCacheByKey({});
+    mediaCacheRef.current = {};
+    if (!roomId || !myUserId) return;
+    void hydrateLocalMediaCache();
+  }, [roomId, myUserId, hydrateLocalMediaCache]);
+
+  useEffect(() => {
     void loadAll();
   }, [loadAll]);
+
+  useEffect(() => {
+    if (!roomId || !myUserId) return;
+    if (seenMentionsHydratedRef.current) return;
+
+    void hydrateSeenMentions();
+  }, [roomId, myUserId, hydrateSeenMentions]);
 
   useEffect(() => {
     if (!messages.length) return;
@@ -1169,15 +1602,17 @@ export default function MeetingRoomDetailScreen() {
 
   useEffect(() => {
     if (!messages.length || myMentionKeys.size === 0 || !myUserId) return;
+    if (!seenMentionsHydratedRef.current) return;
 
-    const fresh = [...messages].slice(-20);
+    const fresh = [...messages].slice(-30);
+    let changed = false;
 
     for (const msg of fresh) {
       const msgId = clean(msg.id);
       if (!msgId) continue;
+      if (msgId.startsWith("local-")) continue;
+      if (msgId.startsWith("local-media-")) continue;
       if (seenMentionIdsRef.current.has(msgId)) continue;
-
-      seenMentionIdsRef.current.add(msgId);
 
       const isMine =
         clean(msg.sender_user_id) && clean(msg.sender_user_id) === clean(myUserId);
@@ -1186,12 +1621,19 @@ export default function MeetingRoomDetailScreen() {
       const tokens = extractMentionTokens(clean(msg.message_text));
       const mentionedMe = tokens.some((t) => myMentionKeys.has(t));
 
-      if (mentionedMe) {
-        const sender = displayMemberName(msg.sender_display_name, msg.sender_user_id);
-        Alert.alert("Mention", `${sender} amekutaja kwenye room.`);
-      }
+      if (!mentionedMe) continue;
+
+      seenMentionIdsRef.current.add(msgId);
+      changed = true;
+
+      const sender = displayMemberName(msg.sender_display_name, msg.sender_user_id);
+      Alert.alert("Mention", `${sender} amekutaja kwenye room.`);
     }
-  }, [messages, myMentionKeys, myUserId]);
+
+    if (changed) {
+      void persistSeenMentions();
+    }
+  }, [messages, myMentionKeys, myUserId, persistSeenMentions]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -1553,6 +1995,21 @@ const pickMediaFromLibrary = useCallback(async () => {
 
       if (rpcError) throw rpcError;
 
+      const savedLocalUri = await cacheSourceFileToDevice({
+        sourceUri: pendingMedia.uri,
+        fileName: pendingMedia.fileName,
+        mimeType: pendingMedia.mimeType,
+        kind: pendingMedia.kind,
+      });
+
+      if (savedLocalUri) {
+        await rememberLocalMedia({
+          attachmentPath: uploaded.attachmentPath,
+          attachmentUrl: uploaded.attachmentUrl,
+          localUri: savedLocalUri,
+        });
+      }
+
       setPendingMedia(null);
       setText("");
       setReplyTo(null);
@@ -1804,15 +2261,16 @@ const pickMediaFromLibrary = useCallback(async () => {
   }, [actionMessage]);
 
   const openMediaViewer = useCallback(
-    (url: string, kind: "IMAGE" | "VIDEO" | "AUDIO" | "PDF" | "DOCUMENT") => {
-      const target = clean(url);
-      if (!target) return;
+    async (item: MessageRow, kind: "IMAGE" | "VIDEO" | "AUDIO" | "PDF" | "DOCUMENT") => {
+      const target = await ensureMediaAvailableLocally(item);
+      const finalUri = clean(target) || clean(item.attachment_url);
+      if (!finalUri) return;
 
-      setViewerUrl(target);
+      setViewerUrl(finalUri);
       setViewerKind(kind);
       setViewerOpen(true);
     },
-    []
+    [ensureMediaAvailableLocally]
   );
 
   const title = useMemo(() => roomName || "Room Chat", [roomName]);
@@ -1838,6 +2296,7 @@ const pickMediaFromLibrary = useCallback(async () => {
       const busyReaction = reactingId === clean(item.id);
 
       const senderName = displayMemberName(item.sender_display_name, item.sender_user_id);
+      const resolvedMediaUri = resolveLocalMediaUri(item);
 
       return (
         <View>
@@ -1987,6 +2446,7 @@ const pickMediaFromLibrary = useCallback(async () => {
 
                       <MessageMediaBlock
                         item={item}
+                        resolvedUri={resolvedMediaUri}
                         onOpenMedia={openMediaViewer}
                       />
 
@@ -2068,6 +2528,7 @@ const pickMediaFromLibrary = useCallback(async () => {
       toggleReaction,
       scrollToMessage,
       openMediaViewer,
+      resolveLocalMediaUri,
     ]
   );
 
@@ -3080,7 +3541,7 @@ const pickMediaFromLibrary = useCallback(async () => {
     }}
   >
     <WebView
-      source={{ uri: buildPdfViewerUrl(viewerUrl) }}
+      source={{ uri: buildPdfViewerSourceUri(viewerUrl) }}
       style={{ flex: 1, backgroundColor: "#000000" }}
       startInLoadingState
       renderLoading={() => (
@@ -3228,10 +3689,9 @@ const pickMediaFromLibrary = useCallback(async () => {
                 )}
               </Text>
 
-              {actionMessage?.messageType === "MEDIA" && clean(actionMessage?.attachmentUrl) ? (
+             {actionMessage?.messageType === "MEDIA" && clean(actionMessage?.attachmentUrl) ? (
                 <Pressable
                   onPress={() => {
-                    const url = clean(actionMessage?.attachmentUrl);
                     const kind =
                       actionMessage?.mediaKind === "VIDEO"
                         ? "VIDEO"
@@ -3243,9 +3703,27 @@ const pickMediaFromLibrary = useCallback(async () => {
                         ? "DOCUMENT"
                         : "IMAGE";
 
+                    const found = messages.find(
+                      (m) => clean(m.id) === clean(actionMessage?.id)
+                    );
+
                     setActionMessage(null);
-                    openMediaViewer(url, kind);
-                  }}
+
+                    if (found) {
+                      void openMediaViewer(found, kind);
+                      return;
+                    }
+
+                    const fallbackItem: MessageRow = {
+                      id: clean(actionMessage?.id),
+                      attachment_url: clean(actionMessage?.attachmentUrl),
+                      attachment_path: null,
+                      message_type: "MEDIA",
+                      media_kind: kind,
+                    };
+
+                    void openMediaViewer(fallbackItem, kind);
+                  }} 
                   style={({ pressed }) => ({
                     minHeight: 46,
                     borderRadius: 14,

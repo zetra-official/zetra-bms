@@ -137,24 +137,36 @@ export default function RegisterScreen() {
           pointerEvents="none"
           style={{
             position: "absolute",
-            top: -40,
-            right: -40,
-            width: 220,
-            height: 220,
+            top: -70,
+            right: -50,
+            width: 180,
+            height: 180,
             borderRadius: 999,
-            backgroundColor: "rgba(16,185,129,0.12)",
+            backgroundColor: "rgba(16,185,129,0.08)",
           }}
         />
         <View
           pointerEvents="none"
           style={{
             position: "absolute",
-            bottom: -80,
-            left: -60,
-            width: 220,
-            height: 220,
+            top: 120,
+            left: -70,
+            width: 140,
+            height: 140,
             borderRadius: 999,
-            backgroundColor: "rgba(16,185,129,0.08)",
+            backgroundColor: "rgba(59,130,246,0.05)",
+          }}
+        />
+        <View
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            bottom: -90,
+            left: -40,
+            width: 190,
+            height: 190,
+            borderRadius: 999,
+            backgroundColor: "rgba(16,185,129,0.05)",
           }}
         />
 
@@ -168,55 +180,71 @@ export default function RegisterScreen() {
             contentContainerStyle={{
               flexGrow: 1,
               justifyContent: "center",
-              paddingHorizontal: 22,
-              paddingVertical: 28,
+              paddingHorizontal: 20,
+              paddingVertical: 32,
             }}
           >
             <View
               style={{
                 borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.10)",
-                backgroundColor: "rgba(255,255,255,0.04)",
-                borderRadius: 28,
-                padding: 22,
+                borderColor: "rgba(255,255,255,0.08)",
+                backgroundColor: "rgba(255,255,255,0.045)",
+                borderRadius: 30,
+                paddingHorizontal: 20,
+                paddingTop: 20,
+                paddingBottom: 18,
+                shadowColor: "#000",
+                shadowOpacity: 0.18,
+                shadowRadius: 24,
+                shadowOffset: { width: 0, height: 10 },
+                elevation: 8,
               }}
             >
               <View
                 style={{
                   alignSelf: "flex-start",
                   paddingHorizontal: 12,
-                  paddingVertical: 8,
+                  paddingVertical: 7,
                   borderRadius: 999,
                   borderWidth: 1,
-                  borderColor: "rgba(16,185,129,0.22)",
-                  backgroundColor: "rgba(16,185,129,0.10)",
-                  marginBottom: 16,
+                  borderColor: "rgba(16,185,129,0.18)",
+                  backgroundColor: "rgba(16,185,129,0.08)",
+                  marginBottom: 18,
                 }}
               >
-                <Text style={{ color: "#34D399", fontWeight: "900", fontSize: 12 }}>
-                  Start Secure Access
+                <Text
+                  style={{
+                    color: "#6EE7B7",
+                    fontWeight: "900",
+                    fontSize: 11,
+                    letterSpacing: 0.8,
+                  }}
+                >
+                  START SECURE ACCESS
                 </Text>
               </View>
 
               <Text
                 style={{
                   color: "white",
-                  fontSize: 36,
-                  lineHeight: 40,
+                  fontSize: 32,
+                  lineHeight: 36,
                   fontWeight: "900",
-                  marginBottom: 10,
+                  marginBottom: 8,
+                  letterSpacing: 0.2,
                 }}
               >
-                Create Account
+                Create account
               </Text>
 
               <Text
                 style={{
-                  color: "rgba(255,255,255,0.68)",
-                  marginBottom: 24,
-                  lineHeight: 23,
-                  fontSize: 16,
+                  color: "rgba(255,255,255,0.66)",
+                  marginBottom: 26,
+                  lineHeight: 22,
+                  fontSize: 15,
                   fontWeight: "600",
+                  maxWidth: 340,
                 }}
               >
                 Start your business journey with ZETRA BMS and verify your email before first login.
@@ -286,8 +314,8 @@ export default function RegisterScreen() {
               <View
                 style={{
                   borderWidth: 1,
-                  borderColor: "rgba(16,185,129,0.22)",
-                  backgroundColor: "rgba(16,185,129,0.08)",
+                  borderColor: "rgba(255,255,255,0.08)",
+                  backgroundColor: "rgba(255,255,255,0.04)",
                   borderRadius: 18,
                   padding: 14,
                   marginTop: 18,
@@ -296,7 +324,7 @@ export default function RegisterScreen() {
               >
                 <Text
                   style={{
-                    color: "white",
+                    color: "rgba(255,255,255,0.88)",
                     fontWeight: "800",
                     fontSize: 13,
                     lineHeight: 20,
@@ -310,15 +338,28 @@ export default function RegisterScreen() {
                 onPress={onRegister}
                 disabled={loading}
                 style={{
-                  backgroundColor: "#1DBA84",
+                  backgroundColor: "#22C58B",
                   paddingVertical: 17,
                   borderRadius: 18,
                   alignItems: "center",
                   justifyContent: "center",
                   opacity: loading ? 0.7 : 1,
+                  marginTop: 2,
+                  shadowColor: "#22C58B",
+                  shadowOpacity: 0.16,
+                  shadowRadius: 16,
+                  shadowOffset: { width: 0, height: 8 },
+                  elevation: 6,
                 }}
               >
-                <Text style={{ color: "#07120F", fontWeight: "900", fontSize: 18 }}>
+                <Text
+                  style={{
+                    color: "#04110C",
+                    fontWeight: "900",
+                    fontSize: 17,
+                    letterSpacing: 0.2,
+                  }}
+                >
                   {loading ? "Creating..." : "Create account"}
                 </Text>
               </Pressable>
@@ -330,19 +371,25 @@ export default function RegisterScreen() {
                   alignItems: "center",
                 }}
               >
-                <Text style={{ color: "rgba(255,255,255,0.92)", fontSize: 16 }}>
+                <Text
+                  style={{
+                    color: "rgba(255,255,255,0.88)",
+                    fontSize: 15,
+                    lineHeight: 22,
+                  }}
+                >
                   Already have an account?{" "}
-                  <Text style={{ color: "#34D399", fontWeight: "900" }}>Login</Text>
+                  <Text style={{ color: "#6EE7B7", fontWeight: "900" }}>Login</Text>
                 </Text>
               </Pressable>
 
               <Text
                 style={{
-                  color: "rgba(255,255,255,0.42)",
+                  color: "rgba(255,255,255,0.38)",
                   fontSize: 12,
                   fontWeight: "700",
                   textAlign: "center",
-                  marginTop: 18,
+                  marginTop: 16,
                   lineHeight: 18,
                 }}
               >

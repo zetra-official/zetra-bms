@@ -12,7 +12,10 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
-import { supabase } from "../../src/supabase/supabaseClient";
+import {
+  applySupabaseSessionFromInitialUrl,
+  supabase,
+} from "../../src/supabase/supabaseClient";
 
 function clean(s: any) {
   return String(s ?? "").trim();
@@ -101,19 +104,19 @@ export default function ResetPasswordScreen() {
   useEffect(() => {
     let alive = true;
 
-    const checkRecoverySession = async () => {
+    const bootstrapRecovery = async () => {
       try {
+        // 1) kwanza jaribu kuset session kutoka deep link ya email
+        await applySupabaseSessionFromInitialUrl();
+
+        // 2) kisha soma session ya sasa
         const {
           data: { session },
         } = await supabase.auth.getSession();
 
         if (!alive) return;
 
-        if (session) {
-          setRecoveryReady(true);
-        } else {
-          setRecoveryReady(false);
-        }
+        setRecoveryReady(!!session);
       } catch {
         if (!alive) return;
         setRecoveryReady(false);
@@ -122,7 +125,7 @@ export default function ResetPasswordScreen() {
       }
     };
 
-    void checkRecoverySession();
+    void bootstrapRecovery();
 
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
       if (!alive) return;
@@ -205,24 +208,36 @@ export default function ResetPasswordScreen() {
           pointerEvents="none"
           style={{
             position: "absolute",
-            top: -40,
-            right: -40,
-            width: 220,
-            height: 220,
+            top: -70,
+            right: -50,
+            width: 180,
+            height: 180,
             borderRadius: 999,
-            backgroundColor: "rgba(16,185,129,0.12)",
+            backgroundColor: "rgba(16,185,129,0.08)",
           }}
         />
         <View
           pointerEvents="none"
           style={{
             position: "absolute",
-            bottom: -80,
-            left: -60,
-            width: 220,
-            height: 220,
+            top: 120,
+            left: -70,
+            width: 140,
+            height: 140,
             borderRadius: 999,
-            backgroundColor: "rgba(16,185,129,0.08)",
+            backgroundColor: "rgba(59,130,246,0.05)",
+          }}
+        />
+        <View
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            bottom: -90,
+            left: -40,
+            width: 190,
+            height: 190,
+            borderRadius: 999,
+            backgroundColor: "rgba(16,185,129,0.05)",
           }}
         />
 
@@ -236,55 +251,71 @@ export default function ResetPasswordScreen() {
             contentContainerStyle={{
               flexGrow: 1,
               justifyContent: "center",
-              paddingHorizontal: 22,
-              paddingVertical: 28,
+              paddingHorizontal: 20,
+              paddingVertical: 32,
             }}
           >
             <View
               style={{
                 borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.10)",
-                backgroundColor: "rgba(255,255,255,0.04)",
-                borderRadius: 28,
-                padding: 22,
+                borderColor: "rgba(255,255,255,0.08)",
+                backgroundColor: "rgba(255,255,255,0.045)",
+                borderRadius: 30,
+                paddingHorizontal: 20,
+                paddingTop: 20,
+                paddingBottom: 18,
+                shadowColor: "#000",
+                shadowOpacity: 0.18,
+                shadowRadius: 24,
+                shadowOffset: { width: 0, height: 10 },
+                elevation: 8,
               }}
             >
               <View
                 style={{
                   alignSelf: "flex-start",
                   paddingHorizontal: 12,
-                  paddingVertical: 8,
+                  paddingVertical: 7,
                   borderRadius: 999,
                   borderWidth: 1,
-                  borderColor: "rgba(16,185,129,0.22)",
-                  backgroundColor: "rgba(16,185,129,0.10)",
-                  marginBottom: 16,
+                  borderColor: "rgba(16,185,129,0.18)",
+                  backgroundColor: "rgba(16,185,129,0.08)",
+                  marginBottom: 18,
                 }}
               >
-                <Text style={{ color: "#34D399", fontWeight: "900", fontSize: 12 }}>
-                  Secure Password Recovery
+                <Text
+                  style={{
+                    color: "#6EE7B7",
+                    fontWeight: "900",
+                    fontSize: 11,
+                    letterSpacing: 0.8,
+                  }}
+                >
+                  SECURE PASSWORD RECOVERY
                 </Text>
               </View>
 
               <Text
                 style={{
                   color: "white",
-                  fontSize: 34,
-                  lineHeight: 38,
+                  fontSize: 32,
+                  lineHeight: 36,
                   fontWeight: "900",
-                  marginBottom: 10,
+                  marginBottom: 8,
+                  letterSpacing: 0.2,
                 }}
               >
-                Reset Password
+                Reset password
               </Text>
 
               <Text
                 style={{
-                  color: "rgba(255,255,255,0.68)",
-                  marginBottom: 22,
-                  lineHeight: 23,
-                  fontSize: 16,
+                  color: "rgba(255,255,255,0.66)",
+                  marginBottom: 24,
+                  lineHeight: 22,
+                  fontSize: 15,
                   fontWeight: "600",
+                  maxWidth: 340,
                 }}
               >
                 Weka password mpya kwa account yako ya ZETRA BMS.
@@ -294,46 +325,52 @@ export default function ResetPasswordScreen() {
                 <View
                   style={{
                     borderWidth: 1,
-                    borderColor: "rgba(255,255,255,0.10)",
+                    borderColor: "rgba(255,255,255,0.08)",
                     backgroundColor: "rgba(255,255,255,0.04)",
                     borderRadius: 18,
                     padding: 14,
                     marginBottom: 18,
                   }}
                 >
-                  <Text style={{ color: "white", fontWeight: "800" }}>
+                  <Text style={{ color: "rgba(255,255,255,0.90)", fontWeight: "800" }}>
                     Checking reset session...
                   </Text>
                 </View>
-              ) : !recoveryReady ? (
+              ) : recoveryReady ? (
                 <View
                   style={{
                     borderWidth: 1,
-                    borderColor: "rgba(239,68,68,0.22)",
-                    backgroundColor: "rgba(239,68,68,0.10)",
+                    borderColor: "rgba(16,185,129,0.18)",
+                    backgroundColor: "rgba(16,185,129,0.08)",
                     borderRadius: 18,
                     padding: 14,
                     marginBottom: 18,
                   }}
                 >
-                  <Text style={{ color: "white", fontWeight: "800", lineHeight: 20 }}>
-                    Reset session haijapatikana. Rudi kwenye login, bonyeza Forgot Password, kisha
-                    fungua link mpya kutoka email yako.
+                  <Text style={{ color: "rgba(255,255,255,0.92)", fontWeight: "800" }}>
+                    Reset session ready ✅
                   </Text>
                 </View>
               ) : (
                 <View
                   style={{
                     borderWidth: 1,
-                    borderColor: "rgba(16,185,129,0.22)",
-                    backgroundColor: "rgba(16,185,129,0.10)",
+                    borderColor: "rgba(239,68,68,0.18)",
+                    backgroundColor: "rgba(239,68,68,0.09)",
                     borderRadius: 18,
                     padding: 14,
                     marginBottom: 18,
                   }}
                 >
-                  <Text style={{ color: "white", fontWeight: "800" }}>
-                    Reset session ready ✅
+                  <Text
+                    style={{
+                      color: "rgba(255,255,255,0.92)",
+                      fontWeight: "800",
+                      lineHeight: 20,
+                    }}
+                  >
+                    Reset session haijapatikana. Rudi kwenye login, bonyeza Forgot Password, kisha
+                    fungua link mpya kutoka email yako.
                   </Text>
                 </View>
               )}
@@ -392,16 +429,28 @@ export default function ResetPasswordScreen() {
                 onPress={onUpdatePassword}
                 disabled={loading || checkingRecovery || !recoveryReady}
                 style={{
-                  backgroundColor: "#1DBA84",
+                  backgroundColor: "#22C58B",
                   paddingVertical: 17,
                   borderRadius: 18,
                   alignItems: "center",
                   justifyContent: "center",
                   opacity: loading || checkingRecovery || !recoveryReady ? 0.7 : 1,
                   marginTop: 20,
+                  shadowColor: "#22C58B",
+                  shadowOpacity: 0.16,
+                  shadowRadius: 16,
+                  shadowOffset: { width: 0, height: 8 },
+                  elevation: 6,
                 }}
               >
-                <Text style={{ color: "#07120F", fontWeight: "900", fontSize: 18 }}>
+                <Text
+                  style={{
+                    color: "#04110C",
+                    fontWeight: "900",
+                    fontSize: 17,
+                    letterSpacing: 0.2,
+                  }}
+                >
                   {loading ? "Updating..." : "Save New Password"}
                 </Text>
               </Pressable>
@@ -413,8 +462,14 @@ export default function ResetPasswordScreen() {
                   alignItems: "center",
                 }}
               >
-                <Text style={{ color: "rgba(255,255,255,0.92)", fontSize: 16 }}>
-                  Back to <Text style={{ color: "#34D399", fontWeight: "900" }}>Login</Text>
+                <Text
+                  style={{
+                    color: "rgba(255,255,255,0.88)",
+                    fontSize: 15,
+                    lineHeight: 22,
+                  }}
+                >
+                  Back to <Text style={{ color: "#6EE7B7", fontWeight: "900" }}>Login</Text>
                 </Text>
               </Pressable>
             </View>
