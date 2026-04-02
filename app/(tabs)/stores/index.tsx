@@ -677,15 +677,16 @@ export default function StoresTabScreen() {
           return (
             <Pressable
               onPress={() => pick(storeId, item.store_name, isAllowed, lockReason)}
-              style={{
+              style={({ pressed }) => ({
                 borderWidth: 1,
                 borderColor,
                 borderRadius: radiusXL,
                 backgroundColor: CARD,
                 padding: 16,
                 marginBottom: 12,
-                opacity,
-              }}
+                opacity: pressed ? Math.max(0.88, opacity - 0.04) : opacity,
+                transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
+              })}
             >
               <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
                 <View style={{ flex: 1 }}>
@@ -700,14 +701,22 @@ export default function StoresTabScreen() {
                     </Text>
                   </Text>
 
-                  {!isAllowed ? (
+                 {!isAllowed ? (
                     <Text style={{ marginTop: 8, color: FAINT, fontWeight: "900", lineHeight: 18 }}>
                       🔒 LOCKED — upgrade plan ili u-activate.
                     </Text>
-                  ) : null}
+                  ) : !isActive ? (
+                    <Text style={{ marginTop: 8, color: FAINT, fontWeight: "800", lineHeight: 18 }}>
+                      Bonyeza kadi hii kuchagua store hii kama Active Store.
+                    </Text>
+                  ) : (
+                    <Text style={{ marginTop: 8, color: EMERALD, fontWeight: "800", lineHeight: 18 }}>
+                      Hii ndiyo Active Store ya sasa.
+                    </Text>
+                  )} 
                 </View>
 
-                {/* Badges */}
+                {/* Badges / Selection Hint */}
                 <View style={{ gap: 8, alignItems: "flex-end" }}>
                   {isActive ? (
                     <View
@@ -723,6 +732,22 @@ export default function StoresTabScreen() {
                     >
                       <Text style={{ color: EMERALD, fontWeight: "900", fontSize: 12 }}>
                         ACTIVE
+                      </Text>
+                    </View>
+                  ) : isAllowed ? (
+                    <View
+                      style={{
+                        paddingHorizontal: 10,
+                        paddingVertical: 6,
+                        borderRadius: radiusPill,
+                        borderWidth: 1,
+                        borderColor: BORDER_SOFT,
+                        backgroundColor: "rgba(255,255,255,0.06)",
+                        alignSelf: "flex-start",
+                      }}
+                    >
+                      <Text style={{ color: MUTED, fontWeight: "900", fontSize: 12 }}>
+                        Tap to activate  ›
                       </Text>
                     </View>
                   ) : null}

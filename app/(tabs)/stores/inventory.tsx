@@ -499,27 +499,7 @@ export default function StoreInventoryScreen() {
     } as any);
   }, [activeStoreId, activeStoreName, router, storeOrgMismatch]);
 
-  const openLowStockList = useCallback(() => {
-    if (!activeStoreId) {
-      Alert.alert("Missing", "No active store selected.");
-      return;
-    }
-    if (storeOrgMismatch) {
-      Alert.alert("Mismatch", "Active store haifanani na Organization. Chagua store tena.");
-      return;
-    }
-    if (isOffline) {
-      Alert.alert(
-        "Offline",
-        "Low Stock list inahitaji mtandao kwa sasa. Washa data/Wi-Fi kisha jaribu tena."
-      );
-      return;
-    }
-    router.push({
-      pathname: "/(tabs)/stores/inventory/low-stock-alerts" as any,
-      params: { storeId: activeStoreId, storeName: activeStoreName ?? "" },
-    } as any);
-  }, [activeStoreId, activeStoreName, router, storeOrgMismatch, isOffline]);
+  
 
   const goScan = useCallback(() => {
     if (!activeStoreId) {
@@ -662,16 +642,9 @@ export default function StoreInventoryScreen() {
           </Pressable>
         </View>
 
-        <View style={{ marginTop: 10 }}>
-          <Button
-            title="Low Stock"
-            onPress={openLowStockList}
-            disabled={loading || !activeStoreId || isOffline}
-            variant="secondary"
-          />
-        </View>
+        
 
-        <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>
+        <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 4 }}>
           Tip: Inventory inajirefresh kimya kimya bila UI kuonyesha kuchezacheza.
         </Text>
       </Card>
