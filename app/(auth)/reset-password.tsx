@@ -201,9 +201,8 @@ export default function ResetPasswordScreen() {
     }
   };
 
-  return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <View style={{ flex: 1, backgroundColor: "#061018" }}>
+  const content = (
+    <View style={{ flex: 1, backgroundColor: "#061018" }}>
         <View
           pointerEvents="none"
           style={{
@@ -243,7 +242,13 @@ export default function ResetPasswordScreen() {
 
         <KeyboardAvoidingView
           style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          behavior={
+            Platform.OS === "ios"
+              ? "padding"
+              : Platform.OS === "android"
+              ? "height"
+              : undefined
+          }
           keyboardVerticalOffset={0}
         >
           <ScrollView
@@ -476,6 +481,15 @@ export default function ResetPasswordScreen() {
           </ScrollView>
         </KeyboardAvoidingView>
       </View>
+  );
+
+  if (Platform.OS === "web") {
+    return content;
+  }
+
+  return (
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      {content}
     </TouchableWithoutFeedback>
   );
 }

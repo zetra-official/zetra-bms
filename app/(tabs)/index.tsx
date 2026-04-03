@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   Animated,
   AppState,
+  Platform,
   Pressable,
   RefreshControl,
   Text,
@@ -2321,17 +2322,18 @@ export default function HomeScreen() {
   }, [refresh]);
 
   const isCashier = String(activeRole ?? "").trim().toLowerCase() === "cashier";
-
+const homeRefreshControl =
+    Platform.OS === "web" ? null : (
+      <RefreshControl
+        refreshing={pulling || refreshing}
+        onRefresh={onPullRefresh}
+        tintColor={UI.text}
+      />
+    );
   return (
     <Screen
       scroll
-      refreshControl={
-        <RefreshControl
-          refreshing={pulling || refreshing}
-          onRefresh={onPullRefresh}
-          tintColor={UI.text}
-        />
-      }
+      refreshControl={homeRefreshControl}
       contentStyle={{
         paddingTop: topPad,
         paddingHorizontal: 16,

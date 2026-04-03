@@ -1,5 +1,6 @@
 // src/storage/kv.ts
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Platform } from "react-native";
 
 export const KV_KEYS = {
   activeOrgId: "zetra_active_org_id",
@@ -36,18 +37,23 @@ export function orgNumberFormatKey(orgId: string) {
   return `zetra_org_number_format_v1_${id}`;
 }
 
-async function safeGet(key: string): Promise<string | null> {
+async function storageGetItem(key: string): Promise<string | null> {
   try {
+    if (Platform.OS === "web") {
+      if (typeof window === "undefined" || !window.localStorage) return null;
+      return window.localStorage.getItem(key);
+    }
     return await AsyncStorage.getItem(key);
   } catch {
     return null;
   }
 }
 
-async function safeSet(key: string, value: string | null): Promise<void> {
+async function storageSetItem(key: string, value: string): Promise<void> {
   try {
-    if (value === null) {
-      await AsyncStorage.removeItem(key);
+    if (Platform.OS === "web") {
+      if (typeof window === "undefined" || !window.localStorage) return;
+      window.localStorage.setItem(key, value);
       return;
     }
     await AsyncStorage.setItem(key, value);
@@ -56,12 +62,37 @@ async function safeSet(key: string, value: string | null): Promise<void> {
   }
 }
 
-async function safeRemove(key: string): Promise<void> {
+async function storageRemoveItem(key: string): Promise<void> {
   try {
+    if (Platform.OS === "web") {
+      if (typeof window === "undefined" || !window.localStorage) return;
+      window.localStorage.removeItem(key);
+      return;
+    }
     await AsyncStorage.removeItem(key);
   } catch {
     // ignore
   }
+}
+
+async function safeGet(key: string): Promise<string | null> {
+  return storageGetItem(key);
+}
+
+async function safeSet(key: string, value: string | null): Promise<void> {
+  try {
+    if (value === null) {
+      await storageRemoveItem(key);
+      return;
+    }
+    await storageSetItem(key, value);
+  } catch {
+    // ignore storage failure (app must still run)
+  }
+}
+
+async function safeRemove(key: string): Promise<void> {
+  await storageRemoveItem(key);
 }
 
 function safeJsonParse<T>(raw: string | null): T | null {
@@ -91,7 +122,7 @@ export const kv = {
         await safeRemove(key);
         return;
       }
-      await AsyncStorage.setItem(key, JSON.stringify(value));
+      await storageSetItem(key, JSON.stringify(value));
     } catch {
       // ignore
     }

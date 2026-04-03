@@ -130,9 +130,8 @@ export default function RegisterScreen() {
     router.replace("/(auth)/login");
   };
 
-  return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <View style={{ flex: 1, backgroundColor: "#061018" }}>
+  const content = (
+    <View style={{ flex: 1, backgroundColor: "#061018" }}>
         <View
           pointerEvents="none"
           style={{
@@ -172,7 +171,13 @@ export default function RegisterScreen() {
 
         <KeyboardAvoidingView
           style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          behavior={
+            Platform.OS === "ios"
+              ? "padding"
+              : Platform.OS === "android"
+              ? "height"
+              : undefined
+          }
           keyboardVerticalOffset={0}
         >
           <ScrollView
@@ -399,6 +404,15 @@ export default function RegisterScreen() {
           </ScrollView>
         </KeyboardAvoidingView>
       </View>
+  );
+
+  if (Platform.OS === "web") {
+    return content;
+  }
+
+  return (
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      {content}
     </TouchableWithoutFeedback>
   );
 }
