@@ -9,6 +9,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { useOrg } from "@/src/context/OrgContext";
@@ -952,6 +953,75 @@ function ComparisonRow({
   );
 }
 
+function SectionCard({
+  title,
+  subtitle,
+  icon,
+  open,
+  onToggle,
+  children,
+  rightNode,
+}: {
+  title: string;
+  subtitle?: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  open: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+  rightNode?: React.ReactNode;
+}) {
+  return (
+    <Card style={{ gap: 12 }}>
+      <Pressable
+        onPress={onToggle}
+        hitSlop={10}
+        style={({ pressed }) => ({
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 12,
+          opacity: pressed ? 0.92 : 1,
+        })}
+      >
+        <View
+          style={{
+            width: 42,
+            height: 42,
+            borderRadius: 999,
+            borderWidth: 1,
+            borderColor: "rgba(42,168,118,0.28)",
+            backgroundColor: "rgba(42,168,118,0.10)",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Ionicons name={icon} size={18} color={UI.text} />
+        </View>
+
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }} numberOfLines={1}>
+            {title}
+          </Text>
+          {!!subtitle && (
+            <Text style={{ color: UI.muted, fontWeight: "800" }} numberOfLines={1}>
+              {subtitle}
+            </Text>
+          )}
+        </View>
+
+        {rightNode}
+
+        <Ionicons
+          name={open ? "chevron-up" : "chevron-down"}
+          size={18}
+          color={UI.muted}
+        />
+      </Pressable>
+
+      {open ? children : null}
+    </Card>
+  );
+}
+
 export default function FinanceHistoryScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<any>();
@@ -1064,6 +1134,14 @@ export default function FinanceHistoryScreen() {
   const [stockIntelRows, setStockIntelRows] = useState<StockIntelRow[]>([]);
   const [forecast, setForecast] = useState<ForecastSummary | null>(null);
   const [cashflow, setCashflow] = useState<CashflowPrediction | null>(null);
+
+  const [showInsights, setShowInsights] = useState(true);
+  const [showForecast, setShowForecast] = useState(false);
+  const [showCashflow, setShowCashflow] = useState(false);
+  const [showStockIntel, setShowStockIntel] = useState(false);
+  const [showGraph, setShowGraph] = useState(false);
+  const [showComparison, setShowComparison] = useState(false);
+  const [showHealth, setShowHealth] = useState(false);
 
   const reqRef = useRef(0);
   const cacheRef = useRef<Map<string, FinanceCachePayload>>(new Map());
@@ -2547,41 +2625,80 @@ export default function FinanceHistoryScreen() {
             onPress={() => router.back()}
             hitSlop={10}
             style={({ pressed }) => ({
-              paddingHorizontal: 12,
-              paddingVertical: 10,
+              width: 42,
+              height: 42,
               borderRadius: 999,
               borderWidth: 1,
               borderColor: "rgba(255,255,255,0.12)",
               backgroundColor: "rgba(255,255,255,0.06)",
+              alignItems: "center",
+              justifyContent: "center",
               opacity: pressed ? 0.92 : 1,
             })}
           >
-            <Text style={{ color: UI.text, fontWeight: "900" }}>Back</Text>
+            <Ionicons name="arrow-back" size={18} color={UI.text} />
           </Pressable>
 
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18 }} numberOfLines={1}>
-              Finance Search
-            </Text>
-            <Text style={{ color: UI.muted, fontWeight: "800" }} numberOfLines={1}>
-              {subtitle}
-            </Text>
+          <View
+            style={{
+              flex: 1,
+              minWidth: 0,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 12,
+              borderWidth: 1,
+              borderColor: "rgba(255,255,255,0.10)",
+              backgroundColor: "rgba(255,255,255,0.04)",
+              borderRadius: 18,
+              paddingHorizontal: 12,
+              paddingVertical: 10,
+            }}
+          >
+            <View
+              style={{
+                width: 42,
+                height: 42,
+                borderRadius: 999,
+                borderWidth: 1,
+                borderColor: "rgba(42,168,118,0.28)",
+                backgroundColor: "rgba(42,168,118,0.10)",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Ionicons name="bar-chart-outline" size={18} color={UI.text} />
+            </View>
+
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18 }} numberOfLines={1}>
+                Finance Search
+              </Text>
+              <Text style={{ color: UI.muted, fontWeight: "800" }} numberOfLines={1}>
+                {subtitle}
+              </Text>
+            </View>
           </View>
 
           <Pressable
             onPress={() => void run()}
             hitSlop={10}
             style={({ pressed }) => ({
-              paddingHorizontal: 12,
-              paddingVertical: 10,
+              width: 42,
+              height: 42,
               borderRadius: 999,
               borderWidth: 1,
               borderColor: "rgba(42,168,118,0.35)",
               backgroundColor: "rgba(42,168,118,0.10)",
+              alignItems: "center",
+              justifyContent: "center",
               opacity: pressed ? 0.92 : 1,
             })}
           >
-            <Text style={{ color: UI.text, fontWeight: "900" }}>{loading ? "..." : "Search"}</Text>
+            {loading ? (
+              <ActivityIndicator size="small" />
+            ) : (
+              <Ionicons name="search" size={18} color={UI.text} />
+            )}
           </Pressable>
         </View>
 
@@ -3065,19 +3182,14 @@ export default function FinanceHistoryScreen() {
 
         <View style={{ height: 12 }} />
 
-        <Card style={{ gap: 12 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-                AI Actionable Insights
-              </Text>
-              <Text style={{ color: UI.muted, fontWeight: "800" }} numberOfLines={1}>
-                Ushauri wa biashara kutoka kwenye data ya kipindi ulichochagua
-              </Text>
-            </View>
-            {loading ? <ActivityIndicator /> : null}
-          </View>
-
+        <SectionCard
+          title="AI Actionable Insights"
+          subtitle="Ushauri wa biashara kutoka kwenye data ya kipindi ulichochagua"
+          icon="sparkles-outline"
+          open={showInsights}
+          onToggle={() => setShowInsights((v) => !v)}
+          rightNode={loading ? <ActivityIndicator /> : null}
+        >
           <View style={{ gap: 10 }}>
             {aiInsights.map((item) => {
               const toneStyle = getInsightToneStyle(item.tone);
@@ -3103,23 +3215,18 @@ export default function FinanceHistoryScreen() {
               );
             })}
           </View>
-        </Card>
+        </SectionCard>
 
         <View style={{ height: 12 }} />
 
-        <Card style={{ gap: 12 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-                AI Forecast Engine
-              </Text>
-              <Text style={{ color: UI.muted, fontWeight: "800" }} numberOfLines={1}>
-                Projection ya kipindi kijacho kwa kutumia trend ya range uliyochagua
-              </Text>
-            </View>
-            {loading ? <ActivityIndicator /> : null}
-          </View>
-
+        <SectionCard
+          title="AI Forecast Engine"
+          subtitle="Projection ya kipindi kijacho kwa kutumia trend ya range uliyochagua"
+          icon="trending-up-outline"
+          open={showForecast}
+          onToggle={() => setShowForecast((v) => !v)}
+          rightNode={loading ? <ActivityIndicator /> : null}
+        >
           {!!forecastErr && (
             <Card
               style={{
@@ -3197,23 +3304,18 @@ export default function FinanceHistoryScreen() {
               No forecast data yet for this scope and range.
             </Text>
           )}
-        </Card>
+        </SectionCard>
 
         <View style={{ height: 12 }} />
 
-        <Card style={{ gap: 12 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-                AI Cashflow Prediction
-              </Text>
-              <Text style={{ color: UI.muted, fontWeight: "800" }} numberOfLines={1}>
-                Projection ya cash-in ya kipindi kijacho kwa kutumia range uliyochagua
-              </Text>
-            </View>
-            {loading ? <ActivityIndicator /> : null}
-          </View>
-
+        <SectionCard
+          title="AI Cashflow Prediction"
+          subtitle="Projection ya cash-in ya kipindi kijacho kwa kutumia range uliyochagua"
+          icon="cash-outline"
+          open={showCashflow}
+          onToggle={() => setShowCashflow((v) => !v)}
+          rightNode={loading ? <ActivityIndicator /> : null}
+        >
           {!!cashflowErr && (
             <Card
               style={{
@@ -3233,7 +3335,7 @@ export default function FinanceHistoryScreen() {
                 borderRadius: 20,
                 borderWidth: 1,
                 borderColor:
-                 cashflow.confidence === "HIGH"
+                  cashflow.confidence === "HIGH"
                     ? "rgba(16,185,129,0.26)"
                     : cashflow.confidence === "LOW"
                       ? "rgba(245,158,11,0.26)"
@@ -3285,36 +3387,22 @@ export default function FinanceHistoryScreen() {
               No cashflow prediction yet for this scope and range.
             </Text>
           )}
-        </Card>
+        </SectionCard>
 
         <View style={{ height: 12 }} />
 
-        <Card style={{ gap: 12 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-                Stock Intelligence
-              </Text>
-
-              <View style={{ gap: 2 }}>
-                <Text style={{ color: UI.muted, fontWeight: "800" }} numberOfLines={1}>
-                  {scope === "STORE" ? `Store: ${storeName}` : `Org: ${orgName} (ALL stores)`}
-                </Text>
-
-                <Text
-                  style={{ color: UI.faint, fontWeight: "800", fontSize: 12 }}
-                  numberOfLines={1}
-                >
-                  {scope === "STORE"
-                    ? "Fast / Slow / Dead / Low stock kwa store iliyochaguliwa"
-                    : "Fast / Slow / Dead / Low stock kwa stores zote ndani ya organization"}
-                </Text>
-              </View>
-            </View>
-
-            {loading ? <ActivityIndicator /> : null}
-          </View>
-
+        <SectionCard
+          title="Stock Intelligence"
+          subtitle={
+            scope === "STORE"
+              ? `Store: ${storeName}`
+              : `Org: ${orgName} (ALL stores)`
+          }
+          icon="cube-outline"
+          open={showStockIntel}
+          onToggle={() => setShowStockIntel((v) => !v)}
+          rightNode={loading ? <ActivityIndicator /> : null}
+        >
           {scope === "ALL" ? (
             <View
               style={{
@@ -3459,22 +3547,17 @@ export default function FinanceHistoryScreen() {
               No stock intelligence data yet for this scope and range.
             </Text>
           )}
-        </Card>
+        </SectionCard>
 
-        <View style={{ height: 12 }} />
+<View style={{ height: 12 }} />
 
-        <Card style={{ gap: 12 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-                Finance Graph
-              </Text>
-              <Text style={{ color: UI.muted, fontWeight: "800" }} numberOfLines={1}>
-                {bucketInfo} • Sales / Expenses / Profit
-              </Text>
-            </View>
-          </View>
-
+<SectionCard
+  title="Finance Graph"
+          subtitle={`${bucketInfo} • Sales / Expenses / Profit`}
+          icon="analytics-outline"
+          open={showGraph}
+          onToggle={() => setShowGraph((v) => !v)}
+        >
           <TrendLegend />
 
           <TrendChart data={trendRows} fmtShort={fmtShort} showProfit={isOwner} />
@@ -3483,20 +3566,19 @@ export default function FinanceHistoryScreen() {
             Profit graph ni Owner-only. Expenses graph inaonekana kwa owner/admin. Profit ikiwa
             negative itaonekana kwa red chini ya zero line.
           </Text>
-        </Card>
+        </SectionCard>
 
         {canAll ? (
           <>
             <View style={{ height: 12 }} />
 
-            <Card style={{ gap: 10 }}>
-              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-                {comparisonTitle}
-              </Text>
-              <Text style={{ color: UI.muted, fontWeight: "800" }}>
-                Ranking ya stores ndani ya range uliyochagua.
-              </Text>
-
+           <SectionCard
+              title={comparisonTitle}
+              subtitle="Ranking ya stores ndani ya range uliyochagua."
+              icon="git-compare-outline"
+              open={showComparison}
+              onToggle={() => setShowComparison((v) => !v)}
+            >
               {comparisonRows.length ? (
                 comparisonRows.map((row, idx) => {
                   const value =
@@ -3528,20 +3610,19 @@ export default function FinanceHistoryScreen() {
               ) : (
                 <Text style={{ color: UI.muted, fontWeight: "800" }}>No comparison data yet.</Text>
               )}
-            </Card>
+            </SectionCard> 
           </>
         ) : null}
 
         <View style={{ height: 12 }} />
 
-        <Card style={{ gap: 10 }}>
-          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-            Business Health Score
-          </Text>
-          <Text style={{ color: UI.muted, fontWeight: "800" }}>
-            AI CFO style summary kwa kipindi ulichochagua.
-          </Text>
-
+        <SectionCard
+          title="Business Health Score"
+          subtitle="AI CFO style summary kwa kipindi ulichochagua."
+          icon="pulse-outline"
+          open={showHealth}
+          onToggle={() => setShowHealth((v) => !v)}
+        >
           <View
             style={{
               borderRadius: 20,
@@ -3582,7 +3663,7 @@ export default function FinanceHistoryScreen() {
               {health?.message ?? "No health summary yet."}
             </Text>
           </View>
-        </Card>
+        </SectionCard>
 
         <View style={{ height: 18 }} />
 

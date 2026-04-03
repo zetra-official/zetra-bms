@@ -1,7 +1,16 @@
 ﻿import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert, Pressable, Text, TextInput, View } from "react-native";
+import {
+  Alert,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+  useWindowDimensions,
+} from "react-native";
 
 import { useNetInfo } from "@react-native-community/netinfo";
 
@@ -106,18 +115,23 @@ function MethodChip({
   label,
   active,
   onPress,
+  compact = false,
 }: {
   label: string;
   active: boolean;
   onPress: () => void;
+  compact?: boolean;
 }) {
   return (
     <Pressable
       onPress={onPress}
       hitSlop={8}
       style={({ pressed }) => ({
-        flex: 1,
-        paddingVertical: 10,
+        flex: compact ? undefined : 1,
+        width: compact ? ("48.7%" as any) : undefined,
+        minHeight: compact ? 44 : 48,
+        paddingVertical: compact ? 8 : 10,
+        paddingHorizontal: compact ? 10 : 12,
         borderRadius: theme.radius.pill,
         borderWidth: 1,
         borderColor: active ? "rgba(52,211,153,0.40)" : theme.colors.border,
@@ -127,7 +141,13 @@ function MethodChip({
         opacity: pressed ? 0.92 : 1,
       })}
     >
-      <Text style={{ color: active ? theme.colors.emerald : theme.colors.text, fontWeight: "900" }}>
+      <Text
+        style={{
+          color: active ? theme.colors.emerald : theme.colors.text,
+          fontWeight: "900",
+          fontSize: compact ? 13 : 14,
+        }}
+      >
         {label}
       </Text>
     </Pressable>
@@ -196,6 +216,8 @@ function InputBox(props: {
 
 export default function CheckoutScreen() {
   const router = useRouter();
+  const { width, height } = useWindowDimensions();
+
   const params = useLocalSearchParams<{
     storeId?: string | string[];
     storeName?: string | string[];
@@ -257,6 +279,9 @@ export default function CheckoutScreen() {
       return [];
     }
   }, [params.cart]);
+
+  const isDesktopWeb = Platform.OS === "web" && width >= 1180;
+  const desktopPaneHeight = Math.max(520, height - 220);
 
   const canSell = useMemo(() => {
     const r = String(activeRole ?? "staff").trim().toLowerCase();
@@ -864,10 +889,443 @@ export default function CheckoutScreen() {
     return rpcPaymentMethod === "MOBILE" || rpcPaymentMethod === "BANK";
   }, [cashierMode, isOffline, rpcPaymentMethod]);
 
+  const summaryCard = (
+    <Card style={{ gap: 10 }}>
+      <View style={{ flexDirection: "row", alignItems: "center" }}>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+            Order Summary
+          </Text>
+          <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 2 }}>
+            {cartTotalLabel}
+          </Text>
+        </View>
+        <View
+          style={{
+            paddingHorizontal: 12,
+            paddingVertical: 8,
+            borderRadius: 999,
+            borderWidth: 1,
+            borderColor: "rgba(52,211,153,0.22)",
+            backgroundColor: "rgba(52,211,153,0.10)",
+          }}
+        >
+          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{prettyTotal}</Text>
+        </View>
+      </View>
+
+      <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
+
+      <View style={{ gap: 10 }}>
+        {cart.map((c) => {
+          const line = fmt(Number(c.line_total || 0));
+          const up = fmt(Number(c.unit_price || 0));
+          return (
+            <View
+              key={`${c.product_id}-${c.sku ?? ""}`}
+              style={{
+                padding: 12,
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,0.10)",
+                backgroundColor: "rgba(255,255,255,0.05)",
+                gap: 4,
+              }}
+            >
+              <Text style={{ color: theme.colors.text, fontWeight: "900" }} numberOfLines={1}>
+                {c.name}
+              </Text>
+              <Text style={{ color: theme.colors.muted, fontWeight: "800" }} numberOfLines={1}>
+                SKU: {c.sku ?? "—"} • Qty: {c.qty} • Unit: {c.unit ?? "—"}
+              </Text>
+              <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>
+                Unit: {up} • Line: {line}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
+
+      <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
+
+      <View
+        style={{
+          flexDirection: isDesktopWeb ? "column" : "row",
+          gap: 10,
+        }}
+      >
+        <View
+          style={{
+            flex: 1,
+            padding: 12,
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: "rgba(255,255,255,0.08)",
+            backgroundColor: "rgba(255,255,255,0.04)",
+          }}
+        >
+          <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Subtotal</Text>
+          <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>
+            {prettySubtotal}
+          </Text>
+        </View>
+
+        <View
+          style={{
+            flex: 1,
+            padding: 12,
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: "rgba(255,255,255,0.08)",
+            backgroundColor: "rgba(255,255,255,0.04)",
+          }}
+        >
+          <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Discount</Text>
+          <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>
+            {prettyDiscount}
+          </Text>
+        </View>
+
+        <View
+          style={{
+            flex: 1,
+            padding: 12,
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: "rgba(52,211,153,0.20)",
+            backgroundColor: "rgba(52,211,153,0.08)",
+          }}
+        >
+          <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Total</Text>
+          <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>
+            {prettyTotal}
+          </Text>
+        </View>
+      </View>
+    </Card>
+  );
+
+  const discountNoteCard = (
+    <Card style={{ gap: 10 }}>
+      <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+        Discount & Note
+      </Text>
+
+      <View>
+        <FieldLabel>Discount (e.g. 10% • 5000 • 5k • 1m)</FieldLabel>
+        <InputBox
+          value={discountText}
+          onChangeText={setDiscountText}
+          placeholder="mf: 10% au 5000 au 5k"
+          keyboardType="default"
+        />
+        <Text style={{ color: theme.colors.faint, fontWeight: "800", marginTop: 8 }}>
+          Tip: Ukiweka discount, total itashuka moja kwa moja.
+        </Text>
+      </View>
+
+      <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
+
+      <View>
+        <FieldLabel>Note (optional)</FieldLabel>
+        <InputBox
+          value={note}
+          onChangeText={setNote}
+          placeholder={
+            cashierMode
+              ? "andika maelezo ya order kwa cashiers..."
+              : "andika maelezo ya mauzo..."
+          }
+          keyboardType="default"
+          multiline
+        />
+      </View>
+    </Card>
+  );
+
+  const paymentCard = !cashierMode ? (
+    <Card style={{ gap: 12 }}>
+      <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+        Payment
+      </Text>
+
+      <View
+        style={{
+          flexDirection: "row",
+          flexWrap: isDesktopWeb ? "wrap" : "nowrap",
+          gap: 8,
+          justifyContent: "space-between",
+        }}
+      >
+        <MethodChip
+          label="Cash"
+          active={method === "CASH"}
+          onPress={() => onSetMethod("CASH")}
+          compact={isDesktopWeb}
+        />
+        <MethodChip
+          label="Mobile"
+          active={method === "MOBILE"}
+          onPress={() => onSetMethod("MOBILE")}
+          compact={isDesktopWeb}
+        />
+        <MethodChip
+          label="Bank"
+          active={method === "BANK"}
+          onPress={() => onSetMethod("BANK")}
+          compact={isDesktopWeb}
+        />
+        <MethodChip
+          label="Credit"
+          active={method === "CREDIT"}
+          onPress={() => onSetMethod("CREDIT")}
+          compact={isDesktopWeb}
+        />
+      </View>
+
+      <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
+
+      <View>
+        <FieldLabel>Paid ({displayCurrency})</FieldLabel>
+        <InputBox
+          value={paidStr}
+          onChangeText={onPaidChange}
+          placeholder="mf: 120000"
+          keyboardType="numeric"
+        />
+        <Text style={{ color: theme.colors.faint, fontWeight: "800", marginTop: 8 }}>
+          {method === "CREDIT"
+            ? "Unaweza kuweka 0 hadi total (partial payment)."
+            : "Kwa non-credit, lazima ulipe full total."}
+        </Text>
+      </View>
+
+      <View
+        style={{
+          flexDirection: isDesktopWeb ? "column" : "row",
+          gap: 10,
+        }}
+      >
+        <View
+          style={{
+            flex: 1,
+            padding: 12,
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: "rgba(255,255,255,0.08)",
+            backgroundColor: "rgba(255,255,255,0.04)",
+          }}
+        >
+          <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Total</Text>
+          <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>
+            {prettyTotal}
+          </Text>
+        </View>
+
+        <View
+          style={{
+            flex: 1,
+            padding: 12,
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: "rgba(255,255,255,0.08)",
+            backgroundColor: "rgba(255,255,255,0.04)",
+          }}
+        >
+          <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Paid</Text>
+          <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>
+            {prettyPaid}
+          </Text>
+        </View>
+
+        <View
+          style={{
+            flex: 1,
+            padding: 12,
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: isCredit ? "rgba(52,211,153,0.20)" : "rgba(255,255,255,0.08)",
+            backgroundColor: isCredit ? "rgba(52,211,153,0.08)" : "rgba(255,255,255,0.04)",
+          }}
+        >
+          <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Balance</Text>
+          <Text
+            style={{
+              color: isCredit ? theme.colors.emerald : theme.colors.text,
+              fontWeight: "900",
+              marginTop: 4,
+            }}
+          >
+            {prettyBal}
+          </Text>
+        </View>
+      </View>
+
+      {method === "CREDIT" ? (
+        <>
+          <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
+
+          <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>
+            CREDIT MODE: ukiweka Paid &gt; 0, chagua Paid Via (mali uliyopokea leo).
+          </Text>
+
+          <View
+            style={{
+              flexDirection: "row",
+              flexWrap: isDesktopWeb ? "wrap" : "nowrap",
+              gap: 8,
+              opacity: showPaidVia ? 1 : 0.55,
+              justifyContent: "space-between",
+            }}
+          >
+            <MethodChip
+              label="Cash"
+              active={paidVia === "CASH"}
+              compact={isDesktopWeb}
+              onPress={() => {
+                if (!showPaidVia) return;
+                setPaidVia("CASH");
+              }}
+            />
+            <MethodChip
+              label="Mobile"
+              active={paidVia === "MOBILE"}
+              compact={isDesktopWeb}
+              onPress={() => {
+                if (!showPaidVia) return;
+                setPaidVia("MOBILE");
+                if (!channel) setChannel("M-PESA");
+              }}
+            />
+            <MethodChip
+              label="Bank"
+              active={paidVia === "BANK"}
+              compact={isDesktopWeb}
+              onPress={() => {
+                if (!showPaidVia) return;
+                setPaidVia("BANK");
+              }}
+            />
+          </View>
+        </>
+      ) : null}
+
+      {showChannelRef ? (
+        <>
+          <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
+          <View style={{ gap: 10 }}>
+            <View>
+              <FieldLabel>
+                {rpcPaymentMethod === "MOBILE"
+                  ? "Mobile Channel (e.g. M-PESA / TIGO-PESA)"
+                  : "Bank Channel (e.g. NMB / CRDB)"}
+              </FieldLabel>
+              <InputBox
+                value={channel}
+                onChangeText={setChannel}
+                placeholder={rpcPaymentMethod === "MOBILE" ? "M-PESA" : "NMB"}
+                keyboardType="default"
+              />
+            </View>
+
+            <View>
+              <FieldLabel>Reference / Transaction ID</FieldLabel>
+              <InputBox
+                value={reference}
+                onChangeText={setReference}
+                placeholder="mf: TXN12345"
+                keyboardType="default"
+              />
+            </View>
+          </View>
+        </>
+      ) : null}
+
+      {isOffline ? (
+        <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+          OFFLINE: mobile/bank reference haitahitajika sasa; sale itasave offline na itasync.
+        </Text>
+      ) : null}
+    </Card>
+  ) : null;
+
+  const customerCard =
+    !cashierMode && isCredit ? (
+      <Card style={{ gap: 10 }}>
+        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+          Customer (for Credit/Partial)
+        </Text>
+
+        <View>
+          <FieldLabel>Customer Name *</FieldLabel>
+          <InputBox
+            value={customerName}
+            onChangeText={setCustomerName}
+            placeholder="mf: Juma Ali"
+            keyboardType="default"
+          />
+        </View>
+
+        <View>
+          <FieldLabel>Customer Phone (optional)</FieldLabel>
+          <InputBox
+            value={customerPhone}
+            onChangeText={setCustomerPhone}
+            placeholder="mf: 0712xxxxxx"
+            keyboardType="phone-pad"
+          />
+        </View>
+
+        <Text style={{ color: theme.colors.faint, fontWeight: "800" }}>
+          Tip: Credit itarekodiwa v2 na balance itaingia kwenye Credit account.
+        </Text>
+      </Card>
+    ) : null;
+
+  const actionCard = (
+    <Card style={{ gap: 10 }}>
+      <Button
+        title={
+          saving
+            ? cashierMode
+              ? "Sending..."
+              : "Creating..."
+            : cashierMode
+              ? "Send to Cashiers"
+              : isOffline
+                ? "Save Offline"
+                : "Confirm Sale"
+        }
+        onPress={confirm}
+        disabled={saving || !!invalidReason}
+        variant="primary"
+      />
+      <Button title="Back" onPress={() => router.back()} disabled={saving} variant="secondary" />
+
+      {!!invalidReason && (
+        <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>⚠ {invalidReason}</Text>
+      )}
+    </Card>
+  );
+
   return (
     <Screen scroll bottomPad={240}>
-      <View style={{ flex: 1, gap: 14 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+      <View
+        style={{
+          flex: 1,
+          gap: 14,
+          width: "100%",
+          maxWidth: isDesktopWeb ? 1380 : 980,
+          alignSelf: "center",
+        }}
+      >
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 10,
+          }}
+        >
           <Pressable
             onPress={() => router.back()}
             style={{
@@ -895,14 +1353,14 @@ export default function CheckoutScreen() {
           </View>
         </View>
 
-        {mismatch && (
+        {mismatch ? (
           <Card>
             <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>
               ⚠️ Store mismatch: Active store na store ya checkout ni tofauti.
               {"\n"}Rudi nyuma → chagua store sahihi → checkout upya.
             </Text>
           </Card>
-        )}
+        ) : null}
 
         {cashierMode ? (
           <Card style={{ gap: 8 }}>
@@ -943,324 +1401,52 @@ export default function CheckoutScreen() {
           </Card>
         ) : null}
 
-        <Card style={{ gap: 10 }}>
-          <View style={{ flexDirection: "row", alignItems: "center" }}>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-                Order Summary
-              </Text>
-              <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 2 }}>
-                {cartTotalLabel}
-              </Text>
-            </View>
-            <View
+        {isDesktopWeb ? (
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "flex-start",
+              gap: 18,
+            }}
+          >
+            <ScrollView
               style={{
-                paddingHorizontal: 12,
-                paddingVertical: 8,
-                borderRadius: 999,
-                borderWidth: 1,
-                borderColor: "rgba(52,211,153,0.22)",
-                backgroundColor: "rgba(52,211,153,0.10)",
+                flex: 1.2,
+                minWidth: 0,
+                maxHeight: desktopPaneHeight,
               }}
+              contentContainerStyle={{ gap: 14, paddingRight: 4 }}
+              showsVerticalScrollIndicator={false}
+              nestedScrollEnabled
             >
-              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{prettyTotal}</Text>
-            </View>
+              {summaryCard}
+            </ScrollView>
+
+            <ScrollView
+              style={{
+                width: 460,
+                minWidth: 460,
+                maxHeight: desktopPaneHeight,
+              }}
+              contentContainerStyle={{ gap: 14, paddingRight: 4 }}
+              showsVerticalScrollIndicator={false}
+              nestedScrollEnabled
+            >
+              {discountNoteCard}
+              {paymentCard}
+              {customerCard}
+              {actionCard}
+            </ScrollView>
           </View>
-
-          <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
-
-          <View style={{ gap: 10 }}>
-            {cart.map((c) => {
-              const line = fmt(Number(c.line_total || 0));
-              const up = fmt(Number(c.unit_price || 0));
-              return (
-                <View
-                  key={`${c.product_id}-${c.sku ?? ""}`}
-                  style={{
-                    padding: 12,
-                    borderRadius: 16,
-                    borderWidth: 1,
-                    borderColor: "rgba(255,255,255,0.10)",
-                    backgroundColor: "rgba(255,255,255,0.05)",
-                    gap: 4,
-                  }}
-                >
-                  <Text style={{ color: theme.colors.text, fontWeight: "900" }} numberOfLines={1}>
-                    {c.name}
-                  </Text>
-                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }} numberOfLines={1}>
-                    SKU: {c.sku ?? "—"} • Qty: {c.qty} • Unit: {c.unit ?? "—"}
-                  </Text>
-                  <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>
-                    Unit: {up} • Line: {line}
-                  </Text>
-                </View>
-              );
-            })}
-          </View>
-
-          <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
-
-          <View style={{ flexDirection: "row", gap: 10 }}>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Subtotal</Text>
-              <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>
-                {prettySubtotal}
-              </Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Discount</Text>
-              <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>
-                {prettyDiscount}
-              </Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Total</Text>
-              <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>
-                {prettyTotal}
-              </Text>
-            </View>
-          </View>
-        </Card>
-
-        <Card style={{ gap: 10 }}>
-          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-            Discount & Note
-          </Text>
-
-          <View>
-            <FieldLabel>Discount (e.g. 10% • 5000 • 5k • 1m)</FieldLabel>
-            <InputBox
-              value={discountText}
-              onChangeText={setDiscountText}
-              placeholder="mf: 10% au 5000 au 5k"
-              keyboardType="default"
-            />
-            <Text style={{ color: theme.colors.faint, fontWeight: "800", marginTop: 8 }}>
-              Tip: Ukiweka discount, total itashuka moja kwa moja.
-            </Text>
-          </View>
-
-          <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
-
-          <View>
-            <FieldLabel>Note (optional)</FieldLabel>
-            <InputBox
-              value={note}
-              onChangeText={setNote}
-              placeholder={
-                cashierMode
-                  ? "andika maelezo ya order kwa cashiers..."
-                  : "andika maelezo ya mauzo..."
-              }
-              keyboardType="default"
-              multiline
-            />
-          </View>
-        </Card>
-
-        {!cashierMode ? (
+        ) : (
           <>
-            <Card style={{ gap: 12 }}>
-              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-                Payment
-              </Text>
-
-              <View style={{ flexDirection: "row", gap: 10 }}>
-                <MethodChip label="Cash" active={method === "CASH"} onPress={() => onSetMethod("CASH")} />
-                <MethodChip
-                  label="Mobile"
-                  active={method === "MOBILE"}
-                  onPress={() => onSetMethod("MOBILE")}
-                />
-                <MethodChip label="Bank" active={method === "BANK"} onPress={() => onSetMethod("BANK")} />
-                <MethodChip
-                  label="Credit"
-                  active={method === "CREDIT"}
-                  onPress={() => onSetMethod("CREDIT")}
-                />
-              </View>
-
-              <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
-
-              <View style={{ flexDirection: "row", gap: 10 }}>
-                <View style={{ flex: 1 }}>
-                  <FieldLabel>Paid ({displayCurrency})</FieldLabel>
-                  <InputBox
-                    value={paidStr}
-                    onChangeText={onPaidChange}
-                    placeholder="mf: 120000"
-                    keyboardType="numeric"
-                  />
-                  <Text style={{ color: theme.colors.faint, fontWeight: "800", marginTop: 8 }}>
-                    {method === "CREDIT"
-                      ? "Unaweza kuweka 0 hadi total (partial payment)."
-                      : "Kwa non-credit, lazima ulipe full total."}
-                  </Text>
-                </View>
-                <View style={{ width: 10 }} />
-              </View>
-
-              <View style={{ flexDirection: "row", gap: 10 }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Total</Text>
-                  <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>
-                    {prettyTotal}
-                  </Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Paid</Text>
-                  <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>
-                    {prettyPaid}
-                  </Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Balance</Text>
-                  <Text
-                    style={{
-                      color: isCredit ? theme.colors.emerald : theme.colors.text,
-                      fontWeight: "900",
-                      marginTop: 4,
-                    }}
-                  >
-                    {prettyBal}
-                  </Text>
-                </View>
-              </View>
-
-              {method === "CREDIT" && (
-                <>
-                  <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
-
-                  <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>
-                    CREDIT MODE: ukiweka Paid &gt; 0, chagua Paid Via (mali uliyopokea leo).
-                  </Text>
-
-                  <View style={{ flexDirection: "row", gap: 10, opacity: showPaidVia ? 1 : 0.55 }}>
-                    <MethodChip
-                      label="Cash"
-                      active={paidVia === "CASH"}
-                      onPress={() => {
-                        if (!showPaidVia) return;
-                        setPaidVia("CASH");
-                      }}
-                    />
-                    <MethodChip
-                      label="Mobile"
-                      active={paidVia === "MOBILE"}
-                      onPress={() => {
-                        if (!showPaidVia) return;
-                        setPaidVia("MOBILE");
-                        if (!channel) setChannel("M-PESA");
-                      }}
-                    />
-                    <MethodChip
-                      label="Bank"
-                      active={paidVia === "BANK"}
-                      onPress={() => {
-                        if (!showPaidVia) return;
-                        setPaidVia("BANK");
-                      }}
-                    />
-                  </View>
-                </>
-              )}
-
-              {showChannelRef && (
-                <>
-                  <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
-                  <View style={{ gap: 10 }}>
-                    <View>
-                      <FieldLabel>
-                        {rpcPaymentMethod === "MOBILE"
-                          ? "Mobile Channel (e.g. M-PESA / TIGO-PESA)"
-                          : "Bank Channel (e.g. NMB / CRDB)"}
-                      </FieldLabel>
-                      <InputBox
-                        value={channel}
-                        onChangeText={setChannel}
-                        placeholder={rpcPaymentMethod === "MOBILE" ? "M-PESA" : "NMB"}
-                        keyboardType="default"
-                      />
-                    </View>
-
-                    <View>
-                      <FieldLabel>Reference / Transaction ID</FieldLabel>
-                      <InputBox
-                        value={reference}
-                        onChangeText={setReference}
-                        placeholder="mf: TXN12345"
-                        keyboardType="default"
-                      />
-                    </View>
-                  </View>
-                </>
-              )}
-
-              {isOffline && (
-                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                  OFFLINE: mobile/bank reference haitahitajika sasa; sale itasave offline na itasync.
-                </Text>
-              )}
-            </Card>
-
-            {isCredit && (
-              <Card style={{ gap: 10 }}>
-                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-                  Customer (for Credit/Partial)
-                </Text>
-
-                <View>
-                  <FieldLabel>Customer Name *</FieldLabel>
-                  <InputBox
-                    value={customerName}
-                    onChangeText={setCustomerName}
-                    placeholder="mf: Juma Ali"
-                    keyboardType="default"
-                  />
-                </View>
-
-                <View>
-                  <FieldLabel>Customer Phone (optional)</FieldLabel>
-                  <InputBox
-                    value={customerPhone}
-                    onChangeText={setCustomerPhone}
-                    placeholder="mf: 0712xxxxxx"
-                    keyboardType="phone-pad"
-                  />
-                </View>
-
-                <Text style={{ color: theme.colors.faint, fontWeight: "800" }}>
-                  Tip: Credit itarekodiwa v2 na balance itaingia kwenye Credit account.
-                </Text>
-              </Card>
-            )}
+            {summaryCard}
+            {discountNoteCard}
+            {paymentCard}
+            {customerCard}
+            {actionCard}
           </>
-        ) : null}
-
-        <Card style={{ gap: 10 }}>
-          <Button
-            title={
-              saving
-                ? cashierMode
-                  ? "Sending..."
-                  : "Creating..."
-                : cashierMode
-                  ? "Send to Cashiers"
-                  : isOffline
-                    ? "Save Offline"
-                    : "Confirm Sale"
-            }
-            onPress={confirm}
-            disabled={saving || !!invalidReason}
-            variant="primary"
-          />
-          <Button title="Back" onPress={() => router.back()} disabled={saving} variant="secondary" />
-
-          {!!invalidReason && (
-            <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>⚠ {invalidReason}</Text>
-          )}
-        </Card>
+        )}
 
         <View style={{ height: 24 }} />
       </View>

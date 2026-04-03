@@ -120,6 +120,10 @@ export function Screen({
   const effectiveBottomPad = useMemo(() => {
     if (typeof bottomPad === "number") return bottomPad;
 
+    if (Platform.OS === "web") {
+      return 24;
+    }
+
     if (keyboardOpen) {
       if (Platform.OS === "android") return 16;
       return 24;
@@ -198,22 +202,24 @@ export function Screen({
 
       {OfflineBanner}
 
-      <View
-        pointerEvents="box-none"
-        style={{
-          position: "absolute",
-          top: 0,
-          right: 0,
-          zIndex: 60,
-          ...(Platform.OS === "android" ? { elevation: 60 } : null),
-          width: 96,
-          height: 96,
-          alignItems: "flex-end",
-          justifyContent: "flex-start",
-        }}
-      >
-        <NotificationBell key={`bell-${resumeTick}`} top={bellTop} right={16} />
-      </View>
+      {Platform.OS !== "web" ? (
+        <View
+          pointerEvents="box-none"
+          style={{
+            position: "absolute",
+            top: 0,
+            right: 0,
+            zIndex: 60,
+            ...(Platform.OS === "android" ? { elevation: 60 } : null),
+            width: 96,
+            height: 96,
+            alignItems: "flex-end",
+            justifyContent: "flex-start",
+          }}
+        >
+          <NotificationBell key={`bell-${resumeTick}`} top={bellTop} right={16} />
+        </View>
+      ) : null}
 
       {scroll ? (
         <ScrollView
@@ -221,7 +227,7 @@ export function Screen({
           contentContainerStyle={[
             {
               paddingTop: scrollableTopSpacer,
-              paddingHorizontal: 16,
+              paddingHorizontal: Platform.OS === "web" ? 20 : 16,
               paddingBottom,
               backgroundColor: baseBg,
             },
@@ -248,7 +254,7 @@ export function Screen({
             {
               flex: 1,
               paddingTop: scrollableTopSpacer,
-              paddingHorizontal: 16,
+              paddingHorizontal: Platform.OS === "web" ? 20 : 16,
               paddingBottom,
               backgroundColor: baseBg,
             },

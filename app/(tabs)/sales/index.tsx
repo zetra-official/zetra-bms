@@ -11,10 +11,12 @@ import {
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   Text,
   TextInput,
   View,
   Vibration,
+  useWindowDimensions,
 } from "react-native";
 
 import { useNetInfo } from "@react-native-community/netinfo";
@@ -216,13 +218,74 @@ function formatTimeAgo(input?: string | null) {
   return `${diffDay} day${diffDay === 1 ? "" : "s"} ago`;
 }
 
+function isTypingIntoField(target: any) {
+  if (!target) return false;
+  const tag = String(target.tagName ?? "").toLowerCase();
+  const editable = !!target.isContentEditable;
+  return editable || tag === "input" || tag === "textarea" || tag === "select";
+}
+
+function ScannerFabIcon({ size = 24, color = "#E5E7EB" }: { size?: number; color?: string }) {
+  const bodyW = Math.max(18, Math.round(size * 0.9));
+  const bodyH = Math.max(12, Math.round(size * 0.5));
+  const handleW = Math.max(8, Math.round(size * 0.28));
+  const handleH = Math.max(9, Math.round(size * 0.34));
+  const lensW = Math.max(10, Math.round(size * 0.42));
+  const lensH = Math.max(5, Math.round(size * 0.18));
+
+  return (
+    <View style={{ width: size + 2, height: size + 2, alignItems: "center", justifyContent: "center" }}>
+      <View
+        style={{
+          width: bodyW,
+          height: bodyH,
+          borderWidth: 2,
+          borderColor: color,
+          borderRadius: 8,
+          transform: [{ rotate: "-12deg" }],
+          alignItems: "flex-end",
+          justifyContent: "center",
+          paddingRight: 3,
+          backgroundColor: "transparent",
+        }}
+      >
+        <View
+          style={{
+            width: lensW,
+            height: lensH,
+            borderWidth: 2,
+            borderColor: color,
+            borderRadius: 4,
+          }}
+        />
+      </View>
+
+      <View
+        style={{
+          position: "absolute",
+          right: Math.round(size * 0.18),
+          bottom: Math.round(size * 0.1),
+          width: handleW,
+          height: handleH,
+          borderWidth: 2,
+          borderColor: color,
+          borderRadius: 6,
+          transform: [{ rotate: "-18deg" }],
+          backgroundColor: "transparent",
+        }}
+      />
+    </View>
+  );
+}
+
 /* =========================
    Screen
 ========================= */
 export default function SalesHomeScreen() {
   const router = useRouter();
- const params = useLocalSearchParams<{ barcode?: string; _ts?: string }>();
+  const params = useLocalSearchParams<{ barcode?: string; _ts?: string }>();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
 
   const { activeOrgId, activeOrgName, activeStoreId, activeStoreName, activeRole } = useOrg();
 
@@ -255,6 +318,10 @@ export default function SalesHomeScreen() {
   const [, setLiveTick] = useState(0); 
 
   const [recentScannedIds, setRecentScannedIds] = useState<string[]>([]);
+
+  const webScanBufferRef = useRef("");
+  const webScanLastAtRef = useRef(0);
+  const webScanTimerRef = useRef<any>(null);
 
   const [cashierFilter, setCashierFilter] = useState<
     "PENDING" | "ACCEPTED" | "COMPLETED" | "ALL"
@@ -299,6 +366,11 @@ export default function SalesHomeScreen() {
 
   const currentRole = useMemo(() => normalizeRole(activeRole), [activeRole]);
   const isCashier = useMemo(() => currentRole === "cashier", [currentRole]);
+
+  const isWeb = Platform.OS === "web";
+  const isDesktopWeb = isWeb && width >= 1100;
+  const isWideDesktopWeb = isWeb && width >= 1500;
+  const desktopProductColumns = isWideDesktopWeb ? 3 : 2;
 
   const canSellDirect = useMemo(() => {
     return currentRole === "owner" || currentRole === "admin" || currentRole === "staff";
@@ -928,6 +1000,8 @@ export default function SalesHomeScreen() {
   }, []);
 
   useEffect(() => {
+    if (Platform.OS === "web") return;
+
     const timer = setInterval(() => {
       setLiveTick((x) => x + 1);
     }, 15000);
@@ -936,6 +1010,7 @@ export default function SalesHomeScreen() {
   }, []);
 
   useEffect(() => {
+    if (Platform.OS === "web") return;
     if (!isCashier) return;
 
     const timer = setInterval(() => {
@@ -1065,6 +1140,61 @@ export default function SalesHomeScreen() {
     });
     return unsub;
   }, [handleBarcode]);
+
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    if (isCashier) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as any;
+      if (isTypingIntoField(target)) return;
+
+      const key = String(e.key ?? "");
+      const now = Date.now();
+
+      if (key === "Enter") {
+        const code = cleanBarcode(webScanBufferRef.current);
+        webScanBufferRef.current = "";
+        webScanLastAtRef.current = 0;
+
+        if (webScanTimerRef.current) {
+          clearTimeout(webScanTimerRef.current);
+          webScanTimerRef.current = null;
+        }
+
+        if (code.length >= 4) {
+          handleBarcode(code);
+        }
+        return;
+      }
+
+      if (key.length !== 1) return;
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+      if (now - webScanLastAtRef.current > 120) {
+        webScanBufferRef.current = "";
+      }
+
+      webScanBufferRef.current += key;
+      webScanLastAtRef.current = now;
+
+      if (webScanTimerRef.current) clearTimeout(webScanTimerRef.current);
+      webScanTimerRef.current = setTimeout(() => {
+        webScanBufferRef.current = "";
+        webScanLastAtRef.current = 0;
+      }, 180);
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      if (webScanTimerRef.current) {
+        clearTimeout(webScanTimerRef.current);
+        webScanTimerRef.current = null;
+      }
+    };
+  }, [handleBarcode, isCashier]);
 
   useEffect(() => {
     const raw = cleanBarcode(params?.barcode);
@@ -1483,7 +1613,7 @@ export default function SalesHomeScreen() {
             ]}
             hitSlop={10}
           >
-            <Ionicons name="barcode-outline" size={26} color={theme.colors.text} />
+            <ScannerFabIcon size={26} color={theme.colors.text} />
           </Pressable>
 
           <Pressable
@@ -1547,6 +1677,146 @@ export default function SalesHomeScreen() {
     cart.length,
     query,
     loading,
+  ]);
+
+  const DesktopCheckoutPanel = useMemo(() => {
+    if (isCashier || !isDesktopWeb) return null;
+
+    return (
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 24 }}
+        style={{ flex: 1 }}
+      >
+        <View style={{ gap: 12 }}>
+          {QuickBar}
+
+          <Card style={{ gap: 10, padding: 14 }}>
+            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+              Current Cart
+            </Text>
+
+            <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
+              {cartTotalLines} line(s) • {cartCount} qty • {fmt(cartTotalAmount)}
+            </Text>
+
+            {cart.length === 0 ? (
+              <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                Hakuna bidhaa zilizochaguliwa bado.
+              </Text>
+            ) : (
+              <View style={{ gap: 8 }}>
+                {cart.map((item) => (
+                  <View
+                    key={item.product_id}
+                    style={{
+                      borderWidth: 1,
+                      borderColor: theme.colors.border,
+                      backgroundColor: "rgba(255,255,255,0.04)",
+                      borderRadius: 16,
+                      padding: 12,
+                      gap: 8,
+                    }}
+                  >
+                    <View style={{ gap: 3 }}>
+                      <Text
+                        style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14 }}
+                        numberOfLines={1}
+                      >
+                        {item.name}
+                      </Text>
+                      <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
+                        Qty: {item.qty} • Unit: {fmt(item.unit_price)} • Total: {fmt(item.line_total)}
+                      </Text>
+                    </View>
+
+                    <View style={{ flexDirection: "row", gap: 8 }}>
+                      <Pressable
+                        onPress={() => dec(item.product_id)}
+                        style={({ pressed }) => ({
+                          flex: 1,
+                          paddingVertical: 10,
+                          borderRadius: theme.radius.pill,
+                          borderWidth: 1,
+                          borderColor: theme.colors.border,
+                          backgroundColor: "rgba(255,255,255,0.06)",
+                          alignItems: "center",
+                          opacity: pressed ? 0.92 : 1,
+                        })}
+                      >
+                        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>−</Text>
+                      </Pressable>
+
+                      <Pressable
+                        onPress={() => openQtyEditor(item)}
+                        style={({ pressed }) => ({
+                          minWidth: 72,
+                          paddingVertical: 10,
+                          paddingHorizontal: 14,
+                          borderRadius: theme.radius.pill,
+                          borderWidth: 1,
+                          borderColor: theme.colors.emeraldBorder,
+                          backgroundColor: "rgba(16,185,129,0.10)",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          opacity: pressed ? 0.92 : 1,
+                        })}
+                      >
+                        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{item.qty}</Text>
+                      </Pressable>
+
+                      <Pressable
+                        onPress={() => inc(item.product_id)}
+                        style={({ pressed }) => ({
+                          flex: 1,
+                          paddingVertical: 10,
+                          borderRadius: theme.radius.pill,
+                          borderWidth: 1,
+                          borderColor: theme.colors.emeraldBorder,
+                          backgroundColor: theme.colors.emeraldSoft,
+                          alignItems: "center",
+                          opacity: pressed ? 0.92 : 1,
+                        })}
+                      >
+                        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>+</Text>
+                      </Pressable>
+                    </View>
+
+                    <Pressable
+                      onPress={() => removeItem(item.product_id)}
+                      style={({ pressed }) => ({
+                        paddingVertical: 10,
+                        borderRadius: theme.radius.pill,
+                        borderWidth: 1,
+                        borderColor: theme.colors.border,
+                        backgroundColor: "rgba(255,255,255,0.06)",
+                        alignItems: "center",
+                        opacity: pressed ? 0.92 : 1,
+                      })}
+                    >
+                      <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Remove</Text>
+                    </Pressable>
+                  </View>
+                ))}
+              </View>
+            )}
+          </Card>
+        </View>
+      </ScrollView>
+    );
+  }, [
+    QuickBar,
+    cart,
+    cartCount,
+    cartTotalAmount,
+    cartTotalLines,
+    dec,
+    fmt,
+    inc,
+    isCashier,
+    isDesktopWeb,
+    openQtyEditor,
+    removeItem,
   ]);
 
   const CashierBar = useMemo(() => {
@@ -1840,16 +2110,35 @@ export default function SalesHomeScreen() {
         stockQty === null ? null : stockQty <= 0 ? "Out of stock" : `Stock: ${stockQty}`;
 
       return (
-        <Card style={{ marginBottom: 10, gap: 8, padding: 14 }}>
+        <View
+          style={{
+            flex: isDesktopWeb ? 1 : undefined,
+            marginBottom: 10,
+          }}
+        >
+          <Card
+            style={{
+              gap: 8,
+              padding: isDesktopWeb ? 12 : 14,
+              minHeight: isDesktopWeb ? 178 : undefined,
+            }}
+          >
           <View style={{ gap: 4 }}>
             <Text
-              style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}
+              style={{
+                color: theme.colors.text,
+                fontWeight: "900",
+                fontSize: isDesktopWeb ? 15 : 16,
+              }}
               numberOfLines={1}
             >
               {item.name}
             </Text>
 
-            <Text style={{ color: theme.colors.muted, fontWeight: "800" }} numberOfLines={1}>
+            <Text
+              style={{ color: theme.colors.muted, fontWeight: "800", fontSize: isDesktopWeb ? 12 : 13 }}
+              numberOfLines={1}
+            >
               SKU: {item.sku ?? "—"}
               {item.category ? `  •  ${item.category}` : ""}
               {item.barcode ? `  •  ${item.barcode}` : ""}
@@ -1860,6 +2149,7 @@ export default function SalesHomeScreen() {
                 style={{
                   color: stockQty && stockQty > 0 ? theme.colors.faint : theme.colors.muted,
                   fontWeight: "800",
+                  fontSize: isDesktopWeb ? 12 : 13,
                 }}
               >
                 {stockLabel}
@@ -1987,9 +2277,21 @@ export default function SalesHomeScreen() {
             </View>
           )}
         </Card>
+        </View>
       );
     },
-    [addAuto, cart, dec, fmt, getStockQty, inc, openPriceModal, openQtyEditor, removeItem]
+    [
+      addAuto,
+      cart,
+      dec,
+      fmt,
+      getStockQty,
+      inc,
+      isDesktopWeb,
+      openPriceModal,
+      openQtyEditor,
+      removeItem,
+    ]
   );
 
   const renderCashierItem = useCallback(
@@ -2138,7 +2440,7 @@ export default function SalesHomeScreen() {
         }}
       >
         {TopBar}
-        {!isCashier ? QuickBar : null}
+        {!isCashier && !isDesktopWeb ? QuickBar : null}
       </View>
 
       {isCashier ? (
@@ -2150,6 +2452,73 @@ export default function SalesHomeScreen() {
           }}
         >
           {CashierBar} 
+        </View>
+      ) : isDesktopWeb ? (
+        <View
+          style={{
+            flex: 1,
+            flexDirection: "row",
+            gap: 16,
+            paddingHorizontal: 16,
+            paddingBottom: Math.max(insets.bottom + 16, 20),
+          }}
+        >
+          <View style={{ flex: 1.45, minWidth: 0 }}>
+            <FlatList<ProductRow>
+              data={loading ? [] : filtered}
+              key={`desktop-sales-${desktopProductColumns}`}
+              numColumns={desktopProductColumns}
+              keyExtractor={(item) => item.id}
+              refreshing={refreshing}
+              onRefresh={() => {
+                void loadProducts("refresh");
+              }}
+              showsVerticalScrollIndicator={false}
+              renderItem={renderItem}
+              columnWrapperStyle={
+                desktopProductColumns > 1
+                  ? {
+                      gap: 10,
+                      alignItems: "stretch",
+                    }
+                  : undefined
+              }
+              contentContainerStyle={{
+                paddingBottom: 140,
+                paddingTop: 4,
+              }}
+              ListHeaderComponent={
+                <View style={{ paddingBottom: 12 }}>
+                  <Card style={{ padding: 12, gap: 8 }}>
+                    <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+                      Product Catalog
+                    </Text>
+                    <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
+                      Chagua bidhaa nyingi kwa haraka kwenye desktop workspace.
+                    </Text>
+                    <Input
+                      value={query}
+                      onChangeText={setQuery}
+                      placeholder="Search name / SKU / category / barcode..."
+                    />
+                  </Card>
+                </View>
+              }
+              ListEmptyComponent={
+                !loading ? (
+                  <View style={{ paddingTop: 10, alignItems: "center" }}>
+                    <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                      No products found.
+                    </Text>
+                  </View>
+                ) : null
+              }
+            />
+          </View>
+
+          <View style={{ width: 390, minWidth: 390 }}>
+            {DesktopCheckoutPanel}
+          </View>
         </View>
       ) : (
         <FlatList<ProductRow>

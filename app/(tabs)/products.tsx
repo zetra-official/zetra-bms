@@ -1,5 +1,5 @@
 // app/(tabs)/products.tsx
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -59,6 +59,66 @@ function cleanBarcode(raw: string) {
   return s.replace(/\s+/g, "");
 }
 
+function isTypingIntoField(target: any) {
+  if (!target) return false;
+  const tag = String(target.tagName ?? "").toLowerCase();
+  const editable = !!target.isContentEditable;
+  return editable || tag === "input" || tag === "textarea" || tag === "select";
+}
+
+function ScannerFabIcon({ size = 20, color = "#E5E7EB" }: { size?: number; color?: string }) {
+  const bodyW = Math.max(16, Math.round(size * 0.9));
+  const bodyH = Math.max(11, Math.round(size * 0.5));
+  const handleW = Math.max(7, Math.round(size * 0.28));
+  const handleH = Math.max(8, Math.round(size * 0.34));
+  const lensW = Math.max(9, Math.round(size * 0.42));
+  const lensH = Math.max(5, Math.round(size * 0.18));
+
+  return (
+    <View style={{ width: size + 2, height: size + 2, alignItems: "center", justifyContent: "center" }}>
+      <View
+        style={{
+          width: bodyW,
+          height: bodyH,
+          borderWidth: 2,
+          borderColor: color,
+          borderRadius: 8,
+          transform: [{ rotate: "-12deg" }],
+          alignItems: "flex-end",
+          justifyContent: "center",
+          paddingRight: 3,
+          backgroundColor: "transparent",
+        }}
+      >
+        <View
+          style={{
+            width: lensW,
+            height: lensH,
+            borderWidth: 2,
+            borderColor: color,
+            borderRadius: 4,
+          }}
+        />
+      </View>
+
+      <View
+        style={{
+          position: "absolute",
+          right: Math.round(size * 0.18),
+          bottom: Math.round(size * 0.1),
+          width: handleW,
+          height: handleH,
+          borderWidth: 2,
+          borderColor: color,
+          borderRadius: 6,
+          transform: [{ rotate: "-18deg" }],
+          backgroundColor: "transparent",
+        }}
+      />
+    </View>
+  );
+}
+
 export default function ProductsTabScreen() {
   const { activeOrgId, activeOrgName, activeRole } = useOrg();
 
@@ -99,6 +159,10 @@ export default function ProductsTabScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanOpen, setScanOpen] = useState(false);
   const [scanBusy, setScanBusy] = useState(false);
+
+  const webScanBufferRef = useRef("");
+  const webScanLastAtRef = useRef(0);
+  const webScanTimerRef = useRef<any>(null);
 
   const openScan = useCallback(async () => {
     if (!canManage) {
@@ -179,6 +243,62 @@ export default function ProductsTabScreen() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    if (!canManage) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as any;
+      if (isTypingIntoField(target)) return;
+
+      const key = String(e.key ?? "");
+      const now = Date.now();
+
+      if (key === "Enter") {
+        const code = cleanBarcode(webScanBufferRef.current);
+        webScanBufferRef.current = "";
+        webScanLastAtRef.current = 0;
+
+        if (webScanTimerRef.current) {
+          clearTimeout(webScanTimerRef.current);
+          webScanTimerRef.current = null;
+        }
+
+        if (code.length >= 4) {
+          if (editOpen) setEditBarcode(code);
+          else setBarcode(code);
+        }
+        return;
+      }
+
+      if (key.length !== 1) return;
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+      if (now - webScanLastAtRef.current > 120) {
+        webScanBufferRef.current = "";
+      }
+
+      webScanBufferRef.current += key;
+      webScanLastAtRef.current = now;
+
+      if (webScanTimerRef.current) clearTimeout(webScanTimerRef.current);
+      webScanTimerRef.current = setTimeout(() => {
+        webScanBufferRef.current = "";
+        webScanLastAtRef.current = 0;
+      }, 180);
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      if (webScanTimerRef.current) {
+        clearTimeout(webScanTimerRef.current);
+        webScanTimerRef.current = null;
+      }
+    };
+  }, [canManage, editOpen]);
 
   const openEdit = useCallback((p: ProductRow) => {
     setEditProductId(p.id);
@@ -561,7 +681,7 @@ export default function ProductsTabScreen() {
                   transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
                 })}
               >
-                <Ionicons name="barcode-outline" size={20} color={theme.colors.text} />
+                <ScannerFabIcon size={20} color={theme.colors.text} />
               </Pressable>
 
               {!!barcode && (

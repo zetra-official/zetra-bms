@@ -16,6 +16,7 @@ import {
   Text,
   TextInput,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -67,7 +68,10 @@ function isClearedBalance(n: number) {
 export default function CreditHomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const { activeRole, activeStoreId, activeStoreName, activeOrgId } = useOrg();
+
+  const isDesktopWeb = width >= 1100;
 
   // ✅ single source of truth for money formatting
   const money = useOrgMoneyPrefs(String(activeOrgId ?? ""));
@@ -654,58 +658,80 @@ export default function CreditHomeScreen() {
 
   return (
     <Screen scroll bottomPad={160}>
-      <View style={{ paddingTop: 6, paddingBottom: 10 }}>
-        <Text style={{ color: theme.colors.text, fontSize: 20, fontWeight: "900" }}>Credit</Text>
-        <Text style={{ color: theme.colors.muted, marginTop: 4, fontWeight: "800" }}>
-          Credit v2 – Accounts
-        </Text>
-      </View>
-
-      <Card style={{ padding: 14, gap: 12 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-          <View
-            style={{
-              width: 52,
-              height: 52,
-              borderRadius: 999,
-              borderWidth: 1,
-              borderColor: theme.colors.emeraldBorder,
-              backgroundColor: theme.colors.emeraldSoft,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Ionicons name="card-outline" size={22} color={theme.colors.emerald} />
-          </View>
-
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-              Credit Accounts (v2)
-            </Text>
-            <Text style={{ color: theme.colors.faint, fontWeight: "900", marginTop: 4 }}>
-              {headerSubtitle}
-            </Text>
-          </View>
-        </View>
-
+      <View
+        style={{
+          paddingTop: 6,
+          paddingBottom: 10,
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 12,
+        }}
+      >
         <View
           style={{
+            width: 46,
+            height: 46,
+            borderRadius: 14,
             borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.10)",
-            backgroundColor: "rgba(255,255,255,0.04)",
-            borderRadius: theme.radius.xl,
-            padding: 12,
-            gap: 6,
+            borderColor: theme.colors.emeraldBorder,
+            backgroundColor: theme.colors.emeraldSoft,
+            alignItems: "center",
+            justifyContent: "center",
           }}
         >
-          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Access</Text>
-          <Text style={{ color: theme.colors.muted, fontWeight: "800", lineHeight: 18 }}>
-            {accessText}
-          </Text>
+          <Ionicons name="card-outline" size={20} color={theme.colors.emerald} />
         </View>
 
-        <View style={{ gap: 10 }}>
-          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Search</Text>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={{ color: theme.colors.text, fontSize: 22, fontWeight: "900" }}>Credit</Text>
+          <Text style={{ color: theme.colors.muted, marginTop: 4, fontWeight: "800" }}>
+            Credit v2 – Accounts
+          </Text>
+        </View>
+      </View>
+
+      <View
+        style={{
+          flexDirection: isDesktopWeb ? "row" : "column",
+          alignItems: "flex-start",
+          gap: 14,
+        }}
+      >
+        <Card
+          style={{
+            padding: 14,
+            gap: 12,
+            flex: isDesktopWeb ? 0 : undefined,
+            width: isDesktopWeb ? 420 : "100%",
+            alignSelf: "stretch",
+          }}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <View
+              style={{
+                width: 52,
+                height: 52,
+                borderRadius: 999,
+                borderWidth: 1,
+                borderColor: theme.colors.emeraldBorder,
+                backgroundColor: theme.colors.emeraldSoft,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Ionicons name="card-outline" size={22} color={theme.colors.emerald} />
+            </View>
+
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+                Credit Accounts (v2)
+              </Text>
+              <Text style={{ color: theme.colors.faint, fontWeight: "900", marginTop: 4 }}>
+                {headerSubtitle}
+              </Text>
+            </View>
+          </View>
+
           <View
             style={{
               flexDirection: "row",
@@ -713,177 +739,306 @@ export default function CreditHomeScreen() {
               gap: 10,
               borderWidth: 1,
               borderColor: "rgba(255,255,255,0.10)",
-              backgroundColor: "rgba(255,255,255,0.04)",
+              backgroundColor: "rgba(255,255,255,0.035)",
               borderRadius: theme.radius.xl,
               paddingHorizontal: 12,
-              height: 48,
+              paddingVertical: 10,
             }}
           >
-            <Ionicons name="search" size={18} color={theme.colors.muted} />
-            <TextInput
-              value={q}
-              onChangeText={setQ}
-              placeholder="Tafuta jina au simu..."
-              placeholderTextColor={theme.colors.faint}
-              style={{ flex: 1, color: theme.colors.text, fontWeight: "800" }}
-              autoCorrect={false}
-              autoCapitalize="none"
-            />
-            {!!q ? (
-              <Pressable onPress={() => setQ("")} hitSlop={10}>
-                <Ionicons name="close-circle" size={18} color={theme.colors.muted} />
-              </Pressable>
-            ) : null}
+            <View
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 999,
+                borderWidth: 1,
+                borderColor: canStaffManage || isOwnerAdmin
+                  ? theme.colors.emeraldBorder
+                  : "rgba(255,255,255,0.12)",
+                backgroundColor: canStaffManage || isOwnerAdmin
+                  ? theme.colors.emeraldSoft
+                  : "rgba(255,255,255,0.05)",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Ionicons
+                name={canStaffManage || isOwnerAdmin ? "shield-checkmark-outline" : "eye-outline"}
+                size={16}
+                color={canStaffManage || isOwnerAdmin ? theme.colors.emerald : theme.colors.muted}
+              />
+            </View>
+
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}>
+                Access Status
+              </Text>
+              <Text
+                style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}
+                numberOfLines={2}
+              >
+                {accessText}
+              </Text>
+            </View>
           </View>
 
-          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Sort</Text>
-          <View style={{ flexDirection: "row", gap: 10 }}>
-            <Seg k="BAL_DESC" label="Top Debt" />
-            <Seg k="NAME_ASC" label="Name" />
-            <Seg k="BAL_ASC" label="Low Debt" />
-          </View>
-        </View>
-
-        {/* ✅ TWO CARDS ROW (simple, no tabs) */}
-        <View style={{ flexDirection: "row", gap: 10 }}>
-          <Pressable
-            onPress={openCleared}
-            hitSlop={10}
-            style={({ pressed }) => ({
-              flex: 1,
-              height: 48,
-              borderRadius: theme.radius.xl,
-              borderWidth: 1,
-              borderColor: theme.colors.borderSoft,
-              backgroundColor: "rgba(255,255,255,0.04)",
-              alignItems: "center",
-              justifyContent: "center",
-              opacity: pressed ? 0.92 : 1,
-            })}
-          >
-            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-              View Cleared
-            </Text>
-          </Pressable>
-
-          <Pressable
-            onPress={openTimeline}
-            hitSlop={10}
-            style={({ pressed }) => ({
-              flex: 1,
-              height: 48,
-              borderRadius: theme.radius.xl,
-              borderWidth: 1,
-              borderColor: theme.colors.emeraldBorder,
-              backgroundColor: theme.colors.emeraldSoft,
-              alignItems: "center",
-              justifyContent: "center",
-              opacity: pressed ? 0.92 : 1,
-            })}
-          >
-            <Text style={{ color: theme.colors.emerald, fontWeight: "900", fontSize: 16 }}>
-              Borrow Timeline
-            </Text>
-          </Pressable>
-        </View>
-
-        {errMsg ? (
-          <View
-            style={{
-              borderWidth: 1,
-              borderColor: theme.colors.dangerBorder,
-              backgroundColor: theme.colors.dangerSoft,
-              padding: 12,
-              borderRadius: theme.radius.xl,
-            }}
-          >
-            <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{errMsg}</Text>
-          </View>
-        ) : null}
-
-        {loading ? (
-          <View style={{ paddingVertical: 16 }}>
-            <ActivityIndicator />
-          </View>
-        ) : filtered.length === 0 && activeStoreId ? (
-          <View style={{ paddingVertical: 10 }}>
-            <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-              {q ? "No match found." : "No active debtors right now."}
-            </Text>
-            <Text style={{ color: theme.colors.faint, marginTop: 6 }}>
-              (Waliomaliza wapo kwenye View Cleared.)
-            </Text>
-          </View>
-        ) : (
-          <FlatList
-            data={filtered}
-            keyExtractor={(it) => it.account_id}
-            scrollEnabled={false}
-            ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
-            renderItem={({ item }) => {
-              const name = item.customer_name ?? "Customer";
-              const phone = item.phone ?? "No phone";
-              const bal = Number(item.balance ?? 0);
-
-              return (
-                <Pressable
-                  onPress={() => openAccount(item.account_id)}
-                  hitSlop={10}
-                  style={({ pressed }) => ({
-                    borderWidth: 1,
-                    borderColor: "rgba(255,255,255,0.10)",
-                    backgroundColor: "rgba(255,255,255,0.04)",
-                    borderRadius: theme.radius.xl,
-                    padding: 12,
-                    opacity: pressed ? 0.92 : 1,
-                  })}
-                >
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{name}</Text>
-                      <Text style={{ color: theme.colors.faint, marginTop: 4, fontWeight: "800" }}>
-                        {phone}
-                      </Text>
-                    </View>
-
-                    <View style={{ alignItems: "flex-end" }}>
-                      <Text style={{ color: theme.colors.muted, fontSize: 12 }}>Balance</Text>
-                      <Text style={{ color: theme.colors.emerald, fontWeight: "900" }}>
-                        {money.fmt(Math.max(0, bal))}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={{ height: 10 }} />
-                  <Text style={{ color: theme.colors.emerald, fontWeight: "900" }}>Open →</Text>
+          <View style={{ gap: 10 }}>
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Search</Text>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 10,
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,0.10)",
+                backgroundColor: "rgba(255,255,255,0.04)",
+                borderRadius: theme.radius.xl,
+                paddingHorizontal: 12,
+                height: 48,
+              }}
+            >
+              <Ionicons name="search" size={18} color={theme.colors.muted} />
+              <TextInput
+                value={q}
+                onChangeText={setQ}
+                placeholder="Tafuta jina au simu..."
+                placeholderTextColor={theme.colors.faint}
+                style={{ flex: 1, color: theme.colors.text, fontWeight: "800" }}
+                autoCorrect={false}
+                autoCapitalize="none"
+              />
+              {!!q ? (
+                <Pressable onPress={() => setQ("")} hitSlop={10}>
+                  <Ionicons name="close-circle" size={18} color={theme.colors.muted} />
                 </Pressable>
-              );
-            }}
-          />
-        )}
+              ) : null}
+            </View>
 
-        <Pressable
-          onPress={() => {
-            loadAccess();
-            load();
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Sort</Text>
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <Seg k="BAL_DESC" label="Top Debt" />
+              <Seg k="NAME_ASC" label="Name" />
+              <Seg k="BAL_ASC" label="Low Debt" />
+            </View>
+          </View>
+
+         <View style={{ gap: 10 }}>
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Quick Actions</Text>
+
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <Pressable
+                onPress={openCleared}
+                hitSlop={10}
+                style={({ pressed }) => ({
+                  flex: 1,
+                  height: 46,
+                  borderRadius: theme.radius.xl,
+                  borderWidth: 1,
+                  borderColor: theme.colors.borderSoft,
+                  backgroundColor: "rgba(255,255,255,0.035)",
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  opacity: pressed ? 0.92 : 1,
+                })}
+              >
+                <Ionicons name="archive-outline" size={16} color={theme.colors.text} />
+                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14 }}>
+                  Cleared
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={openTimeline}
+                hitSlop={10}
+                style={({ pressed }) => ({
+                  flex: 1,
+                  height: 46,
+                  borderRadius: theme.radius.xl,
+                  borderWidth: 1,
+                  borderColor: theme.colors.emeraldBorder,
+                  backgroundColor: theme.colors.emeraldSoft,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  opacity: pressed ? 0.92 : 1,
+                })}
+              >
+                <Ionicons name="time-outline" size={16} color={theme.colors.emerald} />
+                <Text style={{ color: theme.colors.emerald, fontWeight: "900", fontSize: 14 }}>
+                  Timeline
+                </Text>
+              </Pressable>
+            </View>
+
+            <Pressable
+              onPress={() => {
+                loadAccess();
+                load();
+              }}
+              hitSlop={10}
+              style={({ pressed }) => ({
+                height: 44,
+                borderRadius: theme.radius.xl,
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,0.10)",
+                backgroundColor: "rgba(255,255,255,0.035)",
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+                opacity: pressed ? 0.92 : 1,
+              })}
+            >
+              <Ionicons name="refresh-outline" size={16} color={theme.colors.muted} />
+              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14 }}>
+                Refresh Data
+              </Text>
+            </Pressable>
+          </View> 
+        </Card>
+
+        <Card
+          style={{
+            padding: 14,
+            gap: 12,
+            flex: 1,
+            width: isDesktopWeb ? undefined : "100%",
+            alignSelf: "stretch",
+            minHeight: isDesktopWeb ? 720 : undefined,
           }}
-          hitSlop={10}
-          style={({ pressed }) => ({
-            height: 48,
-            borderRadius: theme.radius.xl,
-            borderWidth: 1,
-            borderColor: theme.colors.emeraldBorder,
-            backgroundColor: theme.colors.emeraldSoft,
-            alignItems: "center",
-            justifyContent: "center",
-            opacity: pressed ? 0.92 : 1,
-          })}
         >
-          <Text style={{ color: theme.colors.emerald, fontWeight: "900", fontSize: 16 }}>
-            Refresh
-          </Text>
-        </Pressable>
-      </Card>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <View
+              style={{
+                width: 42,
+                height: 42,
+                borderRadius: 999,
+                borderWidth: 1,
+                borderColor: theme.colors.emeraldBorder,
+                backgroundColor: theme.colors.emeraldSoft,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Ionicons name="people-outline" size={18} color={theme.colors.emerald} />
+            </View>
+
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 17 }}>
+                Debtors List
+              </Text>
+              <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 4 }}>
+                {q ? "Filtered results" : "Active debtors in this store"}
+              </Text>
+            </View>
+
+            <View
+              style={{
+                minWidth: 40,
+                paddingHorizontal: 10,
+                paddingVertical: 6,
+                borderRadius: 999,
+                borderWidth: 1,
+                borderColor: theme.colors.emeraldBorder,
+                backgroundColor: theme.colors.emeraldSoft,
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ color: theme.colors.emerald, fontWeight: "900", fontSize: 12 }}>
+                {filtered.length}
+              </Text>
+            </View>
+          </View>
+
+          {errMsg ? (
+            <View
+              style={{
+                borderWidth: 1,
+                borderColor: theme.colors.dangerBorder,
+                backgroundColor: theme.colors.dangerSoft,
+                padding: 12,
+                borderRadius: theme.radius.xl,
+              }}
+            >
+              <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{errMsg}</Text>
+            </View>
+          ) : null}
+
+          {loading ? (
+            <View style={{ paddingVertical: 16 }}>
+              <ActivityIndicator />
+            </View>
+          ) : filtered.length === 0 && activeStoreId ? (
+            <View style={{ paddingVertical: 10 }}>
+              <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                {q ? "No match found." : "No active debtors right now."}
+              </Text>
+              <Text style={{ color: theme.colors.faint, marginTop: 6 }}>
+                (Waliomaliza wapo kwenye View Cleared.)
+              </Text>
+            </View>
+          ) : (
+            <View
+              style={{
+                maxHeight: isDesktopWeb ? 620 : undefined,
+              }}
+            >
+              <FlatList
+                data={filtered}
+                keyExtractor={(it) => it.account_id}
+                scrollEnabled={isDesktopWeb}
+                nestedScrollEnabled
+                showsVerticalScrollIndicator={isDesktopWeb}
+                ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+                renderItem={({ item }) => {
+                  const name = item.customer_name ?? "Customer";
+                  const phone = item.phone ?? "No phone";
+                  const bal = Number(item.balance ?? 0);
+
+                  return (
+                    <Pressable
+                      onPress={() => openAccount(item.account_id)}
+                      hitSlop={10}
+                      style={({ pressed }) => ({
+                        borderWidth: 1,
+                        borderColor: "rgba(255,255,255,0.10)",
+                        backgroundColor: "rgba(255,255,255,0.04)",
+                        borderRadius: theme.radius.xl,
+                        padding: 12,
+                        opacity: pressed ? 0.92 : 1,
+                      })}
+                    >
+                      <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{name}</Text>
+                          <Text style={{ color: theme.colors.faint, marginTop: 4, fontWeight: "800" }}>
+                            {phone}
+                          </Text>
+                        </View>
+
+                        <View style={{ alignItems: "flex-end" }}>
+                          <Text style={{ color: theme.colors.muted, fontSize: 12 }}>Balance</Text>
+                          <Text style={{ color: theme.colors.emerald, fontWeight: "900" }}>
+                            {money.fmt(Math.max(0, bal))}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View style={{ height: 10 }} />
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                        <Text style={{ color: theme.colors.emerald, fontWeight: "900" }}>Open</Text>
+                        <Ionicons name="arrow-forward" size={14} color={theme.colors.emerald} />
+                      </View>
+                    </Pressable>
+                  );
+                }}
+              />
+            </View>
+          )}
+        </Card>
+      </View>
 
       {/* =========================
           TIMELINE MODAL (FULL SCREEN)

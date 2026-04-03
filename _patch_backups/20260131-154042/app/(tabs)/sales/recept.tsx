@@ -29,6 +29,7 @@ type SaleDetail = {
 
 export default function ReceiptScreen() {
   const router = useRouter();
+  const { width } = useWindowDimensions();
   const params = useLocalSearchParams<{ saleId?: string | string[] }>();
   const saleId = (one(params.saleId) ?? "").trim();
 

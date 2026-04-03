@@ -8,7 +8,15 @@ import { theme } from "@/src/ui/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, Share, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Platform,
+  Pressable,
+  Share,
+  Text,
+  View,
+  useWindowDimensions,
+} from "react-native";
 
 function one(v: string | string[] | undefined) {
   return Array.isArray(v) ? v[0] : v;
@@ -127,20 +135,92 @@ type SaleDetail = {
   }>;
 };
 
+function MetaBlock({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <View
+      style={{
+        flex: 1,
+        minWidth: 0,
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: "rgba(255,255,255,0.08)",
+        backgroundColor: "rgba(255,255,255,0.04)",
+      }}
+    >
+      <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>{label}</Text>
+      <Text
+        style={{ color: theme.colors.text, fontWeight: "900", marginTop: 6 }}
+        numberOfLines={2}
+      >
+        {value || "—"}
+      </Text>
+    </View>
+  );
+}
+
+function MoneyTile({
+  label,
+  value,
+  highlight = false,
+}: {
+  label: string;
+  value: string;
+  highlight?: boolean;
+}) {
+  return (
+    <View
+      style={{
+        flex: 1,
+        minWidth: 0,
+        paddingVertical: 12,
+        paddingHorizontal: 14,
+        borderRadius: 18,
+        borderWidth: 1,
+        borderColor: highlight ? "rgba(52,211,153,0.28)" : "rgba(255,255,255,0.08)",
+        backgroundColor: highlight ? "rgba(52,211,153,0.10)" : "rgba(255,255,255,0.04)",
+      }}
+    >
+      <Text style={{ color: theme.colors.muted, fontWeight: "900", fontSize: 12 }}>{label}</Text>
+      <Text
+        style={{
+          color: theme.colors.text,
+          fontWeight: "900",
+          fontSize: 18,
+          marginTop: 6,
+        }}
+        numberOfLines={1}
+      >
+        {value}
+      </Text>
+    </View>
+  );
+}
+
 export default function ReceiptScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ saleId?: string | string[] }>();
   const saleId = (one(params.saleId) ?? "").trim();
+  const { width } = useWindowDimensions();
 
   const { activeOrgId, activeOrgName, activeStoreName, activeRole } = useOrg() as any;
 
   const money = useOrgMoneyPrefs(activeOrgId);
-  // ✅ FIX: hook returns money.fmt (NOT money.formatMoney)
   const fmtMoney = useCallback((n: number) => money.fmt(Number(n || 0)), [money]);
 
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [detail, setDetail] = useState<SaleDetail | null>(null);
+
+  const isDesktopWeb = Platform.OS === "web" && width >= 1180;
+  const isWideWeb = Platform.OS === "web" && width >= 900;
 
   const load = useCallback(async () => {
     setErr(null);
@@ -186,9 +266,12 @@ export default function ReceiptScreen() {
     return items.reduce((a, it) => a + Number(it.line_total ?? 0), 0);
   }, [detail?.total_amount, items]);
 
-  const computedQty = useMemo(() => items.reduce((a, it) => a + Number(it.qty ?? 0), 0), [items]);
+  const computedQty = useMemo(
+    () => items.reduce((a, it) => a + Number(it.qty ?? 0), 0),
+    [items]
+  );
 
-  const payLabel = (detail?.payment_method ?? "CASH").toUpperCase();
+const payLabel = (detail?.payment_method ?? "CASH").toUpperCase();
   const channelLabel = (detail?.payment_channel ?? "").trim();
   const referenceLabel = (detail?.reference ?? "").trim();
 
@@ -280,7 +363,9 @@ export default function ReceiptScreen() {
     if (discountMeta) {
       const subtotal = discountMeta.subtotal;
       if (typeof subtotal === "number") moneyBlock.push(`SUBTOTAL: ${fmtMoney(subtotal)}`);
-      moneyBlock.push(`DISCOUNT: -${fmtMoney(discountMeta.discountAmount)} (${discountMeta.discountText})`);
+      moneyBlock.push(
+        `DISCOUNT: -${fmtMoney(discountMeta.discountAmount)} (${discountMeta.discountText})`
+      );
       moneyBlock.push(`TOTAL (AFTER DISCOUNT): ${fmtMoney(computedTotal)}`);
       moneyBlock.push("");
     }
@@ -306,9 +391,7 @@ export default function ReceiptScreen() {
 
     try {
       await Share.share({ message });
-    } catch {
-      // ignore
-    }
+    } catch {}
   }, [
     saleId,
     activeOrgName,
@@ -332,6 +415,216 @@ export default function ReceiptScreen() {
     fmtMoney,
   ]);
 
+  const headerCard = (
+    <Card
+      style={{
+        gap: 12,
+        borderWidth: 1,
+        borderColor: isCredit ? "rgba(251,191,36,0.22)" : "rgba(52,211,153,0.22)",
+        backgroundColor: "rgba(255,255,255,0.04)",
+      }}
+    >
+      <View
+        style={{
+          flexDirection: isWideWeb ? "row" : "column",
+          justifyContent: "space-between",
+          gap: 10,
+        }}
+      >
+        <MetaBlock label="Business" value={activeOrgName ?? "—"} />
+        <MetaBlock label="Store" value={activeStoreName ?? "—"} />
+      </View>
+
+      <View
+        style={{
+          flexDirection: isWideWeb ? "row" : "column",
+          justifyContent: "space-between",
+          gap: 10,
+        }}
+      >
+        <MetaBlock label="When" value={when} />
+        <MetaBlock label="Sold By" value={soldByLabel} />
+      </View>
+
+      {(channelLabel || referenceLabel) && (
+        <View
+          style={{
+            flexDirection: isWideWeb ? "row" : "column",
+            justifyContent: "space-between",
+            gap: 10,
+          }}
+        >
+          <MetaBlock label="Channel" value={channelLabel || "—"} />
+          <MetaBlock label="Reference" value={referenceLabel || "—"} />
+        </View>
+      )}
+
+      {(isCredit || !!customerName || !!customerPhone) && (
+        <View
+          style={{
+            paddingVertical: 10,
+            paddingHorizontal: 12,
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: "rgba(255,255,255,0.08)",
+            backgroundColor: "rgba(255,255,255,0.04)",
+          }}
+        >
+          <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
+            Customer
+          </Text>
+          <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 6 }}>
+            {customerName || "—"}
+          </Text>
+          {!!customerPhone && (
+            <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
+              Phone: {customerPhone}
+            </Text>
+          )}
+        </View>
+      )}
+
+      {!!cleanNote && cleanNote.trim() && (
+        <View
+          style={{
+            paddingVertical: 10,
+            paddingHorizontal: 12,
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: "rgba(255,255,255,0.08)",
+            backgroundColor: "rgba(255,255,255,0.04)",
+          }}
+        >
+          <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
+            Note
+          </Text>
+          <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 6 }}>
+            {cleanNote}
+          </Text>
+        </View>
+      )}
+    </Card>
+  );
+
+  const itemsCard = (
+    <Card style={{ gap: 10 }}>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
+        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+          Items ({items.length})
+        </Text>
+        <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Qty ({computedQty})</Text>
+      </View>
+
+      {items.length === 0 ? (
+        <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>No items found.</Text>
+      ) : (
+        items.map((it, idx) => {
+          const unitPrice = Number(it.unit_price ?? 0);
+          const lineTotal = Number(it.line_total ?? unitPrice * Number(it.qty ?? 0));
+
+          return (
+            <View
+              key={`${it.product_id}-${idx}`}
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 12,
+                paddingVertical: 12,
+                borderTopWidth: idx === 0 ? 0 : 1,
+                borderTopColor: "rgba(255,255,255,0.06)",
+              }}
+            >
+              <View style={{ flex: 1, gap: 5 }}>
+                <Text style={{ color: theme.colors.text, fontWeight: "900" }} numberOfLines={1}>
+                  {it.product_name ?? "Product"}
+                </Text>
+
+                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                  SKU: {it.sku ?? "—"}
+                </Text>
+
+                <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>
+                  {Number(it.qty ?? 0)} × {fmtMoney(unitPrice)}
+                </Text>
+              </View>
+
+              <View
+                style={{
+                  minWidth: isDesktopWeb ? 160 : 110,
+                  alignItems: "flex-end",
+                  justifyContent: "center",
+                }}
+              >
+                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+                  {fmtMoney(lineTotal)}
+                </Text>
+              </View>
+            </View>
+          );
+        })
+      )}
+    </Card>
+  );
+
+  const totalsCard = (
+    <Card style={{ gap: 12 }}>
+      <View
+        style={{
+          flexDirection: isWideWeb ? "row" : "column",
+          gap: 10,
+        }}
+      >
+        {discountMeta ? (
+          <>
+            <MoneyTile
+              label="Subtotal"
+              value={fmtMoney(discountMeta.subtotal ?? computedTotal)}
+            />
+            <MoneyTile
+              label={`Discount (${discountMeta.discountText})`}
+              value={`-${fmtMoney(discountMeta.discountAmount)}`}
+            />
+            <MoneyTile label="Total After Discount" value={fmtMoney(computedTotal)} highlight />
+          </>
+        ) : isCredit ? (
+          <>
+            <MoneyTile label="Total" value={fmtMoney(computedTotal)} />
+            <MoneyTile label="Paid" value={fmtMoney(paidAmount)} />
+            <MoneyTile label="Due (Credit)" value={fmtMoney(dueAmount)} highlight />
+          </>
+        ) : (
+          <MoneyTile label="Total Money In" value={fmtMoney(computedTotal)} highlight />
+        )}
+      </View>
+
+      {isCredit ? (
+        <View
+          style={{
+            paddingVertical: 10,
+            paddingHorizontal: 12,
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: dueAmount > 0 ? "rgba(251,191,36,0.28)" : "rgba(52,211,153,0.28)",
+            backgroundColor: dueAmount > 0 ? "rgba(251,191,36,0.10)" : "rgba(52,211,153,0.10)",
+          }}
+        >
+          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+            Status: {dueAmount > 0 ? "OUTSTANDING" : "CLEARED"}
+          </Text>
+        </View>
+      ) : null}
+
+      <Button title="Share Receipt" onPress={shareReceipt} variant="secondary" />
+      <Button
+        title="Back to History"
+        onPress={() => router.replace("/(tabs)/sales/history")}
+        variant="primary"
+      />
+      <Button title="Back" onPress={() => router.back()} variant="secondary" />
+    </Card>
+  );
+
   return (
     <Screen scroll bottomPad={180}>
       <View style={{ flex: 1, gap: 14 }}>
@@ -353,8 +646,12 @@ export default function ReceiptScreen() {
           </Pressable>
 
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 28, fontWeight: "900", color: theme.colors.text }}>Receipt</Text>
-            <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Receipt #{receiptNo}</Text>
+            <Text style={{ fontSize: 28, fontWeight: "900", color: theme.colors.text }}>
+              Receipt
+            </Text>
+            <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+              Receipt #{receiptNo}
+            </Text>
           </View>
 
           <View
@@ -390,148 +687,28 @@ export default function ReceiptScreen() {
             <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{err}</Text>
             <Button title="Retry" onPress={load} variant="primary" />
           </Card>
+        ) : isDesktopWeb ? (
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "flex-start",
+              gap: 16,
+            }}
+          >
+            <View style={{ flex: 1.15, minWidth: 0, gap: 14 }}>
+              {headerCard}
+              {itemsCard}
+            </View>
+
+            <View style={{ width: 360, minWidth: 360, gap: 14 }}>
+              {totalsCard}
+            </View>
+          </View>
         ) : (
           <>
-            <Card
-              style={{
-                gap: 10,
-                borderWidth: 1,
-                borderColor: isCredit ? "rgba(251,191,36,0.22)" : "rgba(52,211,153,0.22)",
-                backgroundColor: "rgba(255,255,255,0.04)",
-              }}
-            >
-              <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
-                <View style={{ flex: 1, gap: 4 }}>
-                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Business</Text>
-                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{activeOrgName ?? "—"}</Text>
-                </View>
-                <View style={{ flex: 1, gap: 4 }}>
-                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Store</Text>
-                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{activeStoreName ?? "—"}</Text>
-                </View>
-              </View>
-
-              <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
-                <View style={{ flex: 1, gap: 4 }}>
-                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>When</Text>
-                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{when}</Text>
-                </View>
-                <View style={{ flex: 1, gap: 4 }}>
-                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Sold By</Text>
-                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{soldByLabel}</Text>
-                </View>
-              </View>
-
-              {(channelLabel || referenceLabel) && (
-                <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
-                  <View style={{ flex: 1, gap: 4 }}>
-                    <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Channel</Text>
-                    <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{channelLabel || "—"}</Text>
-                  </View>
-                  <View style={{ flex: 1, gap: 4 }}>
-                    <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Reference</Text>
-                    <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{referenceLabel || "—"}</Text>
-                  </View>
-                </View>
-              )}
-
-              {(isCredit || !!customerName || !!customerPhone) && (
-                <View style={{ marginTop: 2 }}>
-                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Customer</Text>
-                  <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 6 }}>
-                    {customerName || "—"}
-                  </Text>
-                  {!!customerPhone && (
-                    <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-                      Phone: {customerPhone}
-                    </Text>
-                  )}
-                </View>
-              )}
-
-              {!!cleanNote && cleanNote.trim() && (
-                <View style={{ marginTop: 2 }}>
-                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Note</Text>
-                  <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 6 }}>
-                    {cleanNote}
-                  </Text>
-                </View>
-              )}
-            </Card>
-
-            <Card style={{ gap: 10 }}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
-                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-                  Items ({items.length})
-                </Text>
-                <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Qty ({computedQty})</Text>
-              </View>
-
-              {items.length === 0 ? (
-                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>No items found.</Text>
-              ) : (
-                items.map((it, idx) => {
-                  const unitPrice = Number(it.unit_price ?? 0);
-                  const lineTotal = Number(it.line_total ?? unitPrice * Number(it.qty ?? 0));
-
-                  return (
-                    <View
-                      key={`${it.product_id}-${idx}`}
-                      style={{
-                        flexDirection: "row",
-                        justifyContent: "space-between",
-                        gap: 10,
-                        paddingVertical: 12,
-                        borderTopWidth: idx === 0 ? 0 : 1,
-                        borderTopColor: "rgba(255,255,255,0.06)",
-                      }}
-                    >
-                      <View style={{ flex: 1, gap: 5 }}>
-                        <Text style={{ color: theme.colors.text, fontWeight: "900" }} numberOfLines={1}>
-                          {it.product_name ?? "Product"}
-                        </Text>
-
-                        <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>SKU: {it.sku ?? "—"}</Text>
-
-                        <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>
-                          {Number(it.qty ?? 0)} × {fmtMoney(unitPrice)}
-                        </Text>
-                      </View>
-
-                      <View style={{ alignItems: "flex-end", justifyContent: "center" }}>
-                        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{fmtMoney(lineTotal)}</Text>
-                      </View>
-                    </View>
-                  );
-                })
-              )}
-            </Card>
-
-            <Card style={{ gap: 12 }}>
-              <View
-                style={{
-                  paddingVertical: 12,
-                  paddingHorizontal: 14,
-                  borderRadius: theme.radius.xl,
-                  borderWidth: 1,
-                  borderColor: "rgba(52,211,153,0.35)",
-                  backgroundColor: "rgba(52,211,153,0.10)",
-                }}
-              >
-                <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>TOTAL MONEY IN</Text>
-                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 20 }}>
-                  {fmtMoney(computedTotal)}
-                </Text>
-              </View>
-
-              <Button title="Share Receipt" onPress={shareReceipt} variant="secondary" />
-              <Button
-                title="Back to History"
-                onPress={() => router.replace("/(tabs)/sales/history")}
-                variant="primary"
-              />
-              <Button title="Back" onPress={() => router.back()} variant="secondary" />
-            </Card>
+            {headerCard}
+            {itemsCard}
+            {totalsCard}
           </>
         )}
       </View>

@@ -3,7 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNetInfo } from "@react-native-community/netinfo";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Keyboard, Pressable, Text, TextInput, View, Vibration } from "react-native";
+import { Alert, Keyboard, Platform, Pressable, Text, TextInput, View, Vibration } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import { useOrg } from "../../../src/context/OrgContext";
@@ -67,6 +67,66 @@ function sameRows(a: InventoryRow[], b: InventoryRow[]) {
   return true;
 }
 
+function isTypingIntoField(target: any) {
+  if (!target) return false;
+  const tag = String(target.tagName ?? "").toLowerCase();
+  const editable = !!target.isContentEditable;
+  return editable || tag === "input" || tag === "textarea" || tag === "select";
+}
+
+function ScannerFabIcon({ size = 24, color = "#E5E7EB" }: { size?: number; color?: string }) {
+  const bodyW = Math.max(18, Math.round(size * 0.9));
+  const bodyH = Math.max(12, Math.round(size * 0.5));
+  const handleW = Math.max(8, Math.round(size * 0.28));
+  const handleH = Math.max(9, Math.round(size * 0.34));
+  const lensW = Math.max(10, Math.round(size * 0.42));
+  const lensH = Math.max(5, Math.round(size * 0.18));
+
+  return (
+    <View style={{ width: size + 2, height: size + 2, alignItems: "center", justifyContent: "center" }}>
+      <View
+        style={{
+          width: bodyW,
+          height: bodyH,
+          borderWidth: 2,
+          borderColor: color,
+          borderRadius: 8,
+          transform: [{ rotate: "-12deg" }],
+          alignItems: "flex-end",
+          justifyContent: "center",
+          paddingRight: 3,
+          backgroundColor: "transparent",
+        }}
+      >
+        <View
+          style={{
+            width: lensW,
+            height: lensH,
+            borderWidth: 2,
+            borderColor: color,
+            borderRadius: 4,
+          }}
+        />
+      </View>
+
+      <View
+        style={{
+          position: "absolute",
+          right: Math.round(size * 0.18),
+          bottom: Math.round(size * 0.1),
+          width: handleW,
+          height: handleH,
+          borderWidth: 2,
+          borderColor: color,
+          borderRadius: 6,
+          transform: [{ rotate: "-18deg" }],
+          backgroundColor: "transparent",
+        }}
+      />
+    </View>
+  );
+}
+
 export default function StoreInventoryScreen() {
   const router = useRouter();
   const netInfo = useNetInfo();
@@ -120,6 +180,10 @@ export default function StoreInventoryScreen() {
   const [q, setQ] = useState("");
 
   const [recentScannedIds, setRecentScannedIds] = useState<string[]>([]);
+
+  const webScanBufferRef = useRef("");
+  const webScanLastAtRef = useRef(0);
+  const webScanTimerRef = useRef<any>(null);
   const bumpRecent = useCallback((productId: string) => {
     if (!productId) return;
     setRecentScannedIds((prev) => {
@@ -425,6 +489,60 @@ export default function StoreInventoryScreen() {
     return unsub;
   }, [handleInventoryScan]);
 
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as any;
+      if (isTypingIntoField(target)) return;
+
+      const key = String(e.key ?? "");
+      const now = Date.now();
+
+      if (key === "Enter") {
+        const code = cleanBarcode(webScanBufferRef.current);
+        webScanBufferRef.current = "";
+        webScanLastAtRef.current = 0;
+
+        if (webScanTimerRef.current) {
+          clearTimeout(webScanTimerRef.current);
+          webScanTimerRef.current = null;
+        }
+
+        if (code.length >= 4) {
+          handleInventoryScan(code);
+        }
+        return;
+      }
+
+      if (key.length !== 1) return;
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+      if (now - webScanLastAtRef.current > 120) {
+        webScanBufferRef.current = "";
+      }
+
+      webScanBufferRef.current += key;
+      webScanLastAtRef.current = now;
+
+      if (webScanTimerRef.current) clearTimeout(webScanTimerRef.current);
+      webScanTimerRef.current = setTimeout(() => {
+        webScanBufferRef.current = "";
+        webScanLastAtRef.current = 0;
+      }, 180);
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      if (webScanTimerRef.current) {
+        clearTimeout(webScanTimerRef.current);
+        webScanTimerRef.current = null;
+      }
+    };
+  }, [handleInventoryScan]);
+
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
 
@@ -638,7 +756,7 @@ export default function StoreInventoryScreen() {
               },
             ]}
           >
-            <Ionicons name="barcode-outline" size={24} color={theme.colors.text} />
+            <ScannerFabIcon size={24} color={theme.colors.text} />
           </Pressable>
         </View>
 
