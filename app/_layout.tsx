@@ -7,6 +7,8 @@ import {
 import { theme } from "@/src/ui/theme";
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as Linking from "expo-linking";
+import { Ionicons } from "@expo/vector-icons";
+import { useFonts } from "expo-font";
 import React, { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Platform, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
@@ -16,6 +18,11 @@ function AuthGate() {
   const segments = useSegments();
   const segmentsRef = useRef<string[]>([]);
   const [ready, setReady] = useState(false);
+  const [hasSession, setHasSession] = useState<boolean | null>(null);
+
+  const [fontsLoaded] = useFonts({
+    ...Ionicons.font,
+  });
 
   // ✅ Read org context here instead of doing duplicate RPC in AuthGate
   const { loading: orgLoading, orgs } = useOrg();
@@ -99,6 +106,8 @@ function AuthGate() {
       }
 
       if (!session) {
+        setHasSession(false);
+
         if (!inAuth) {
           router.replace(routes.login as any);
         }
@@ -115,12 +124,16 @@ function AuthGate() {
       const verified = isEmailVerified(session.user);
 
       if (!verified) {
+        setHasSession(false);
+
         if (!inAuth) {
           router.replace(routes.login as any);
         }
         setReady(true);
         return;
       }
+
+      setHasSession(true);
 
       // ✅ Do NOT call get_my_orgs here.
       // OrgContext is the single source of truth for org/store routing state.
@@ -141,6 +154,8 @@ function AuthGate() {
         }
 
         if (!session) {
+          setHasSession(false);
+
           if (!inAuth) {
             router.replace(routes.login as any);
           }
@@ -152,11 +167,15 @@ function AuthGate() {
         const verified = isEmailVerified(session.user);
 
         if (!verified) {
+          setHasSession(false);
+
           if (!inAuth) {
             router.replace(routes.login as any);
           }
           return;
         }
+
+        setHasSession(true);
 
         // ✅ No duplicate goAfterLogin RPC here.
         if (event === "SIGNED_IN" || event === "INITIAL_SESSION" || event === "USER_UPDATED") {
@@ -184,7 +203,10 @@ function AuthGate() {
         data: { session },
       } = await supabase.auth.getSession();
 
-      if (!session) return;
+      if (!session) {
+        setHasSession(false);
+        return;
+      }
 
       const currentSegs = segmentsRef.current;
       const inResetPassword = isResetPasswordRoute(currentSegs);
@@ -194,10 +216,12 @@ function AuthGate() {
       const verified = isEmailVerified(session.user);
 
       if (!verified) {
+        setHasSession(false);
         router.replace(routes.login as any);
         return;
       }
 
+      setHasSession(true);
       router.replace(routes.home as any);
     });
 
@@ -211,6 +235,7 @@ function AuthGate() {
   // ✅ After auth is ready, routing between home/onboarding comes from OrgContext state
   useEffect(() => {
     if (!ready) return;
+    if (hasSession !== true) return;
 
     const currentSegs = segmentsRef.current;
 
@@ -261,9 +286,9 @@ function AuthGate() {
     if (inAuth || inOnboarding) {
       router.replace("/(tabs)" as any);
     }
-  }, [ready, orgLoading, orgs, router]);
+  }, [ready, hasSession, orgLoading, orgs, router]);
 
-  if (!ready || orgLoading) {
+  if (!ready || orgLoading || !fontsLoaded) {
     return (
       <View
         style={{

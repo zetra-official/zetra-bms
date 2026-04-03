@@ -1,6 +1,6 @@
 // app/(tabs)/settings/index.tsx
 import React, { useCallback, useMemo } from "react";
-import { Alert, Pressable, Text, View } from "react-native";
+import { Alert, Platform, Pressable, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
@@ -8,7 +8,7 @@ import { Screen } from "@/src/ui/Screen";
 import { Card } from "@/src/ui/Card";
 import { theme, UI } from "@/src/ui/theme";
 import { useOrg } from "@/src/context/OrgContext";
-import { supabase } from "@/src/supabase/supabaseClient";
+import { hardSignOutSupabase } from "@/src/supabase/supabaseClient";
 
 type RowProps = {
   icon: keyof typeof Ionicons.glyphMap;
@@ -311,7 +311,13 @@ function HeroContextCard({
   );
 }
 
-function LogoutCard({ onLogout }: { onLogout: () => void }) {
+function LogoutCard({
+  onLogout,
+  isWeb,
+}: {
+  onLogout: () => void;
+  isWeb?: boolean;
+}) {
   return (
     <PremiumSectionCard
       style={{
@@ -320,6 +326,10 @@ function LogoutCard({ onLogout }: { onLogout: () => void }) {
     >
       <Pressable
         onPress={onLogout}
+        // @ts-ignore - helpful on web
+        onClick={onLogout}
+        hitSlop={12}
+        accessibilityRole="button"
         style={({ pressed }) => ({
           padding: 16,
           flexDirection: "row",
@@ -345,7 +355,7 @@ function LogoutCard({ onLogout }: { onLogout: () => void }) {
 
         <View style={{ flex: 1 }}>
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
-            Logout
+            {isWeb ? "Browser Logout" : "Logout"}
           </Text>
           <Text
             style={{
@@ -388,26 +398,51 @@ export default function MoreHome() {
   const canViewStatement = org.activeRole === "owner";
   const isCashier = org.activeRole === "cashier";
 
+  const doLogoutNow = useCallback(async () => {
+    try {
+      if (Platform.OS === "web" && typeof window !== "undefined") {
+        try {
+          await hardSignOutSupabase();
+        } catch {}
+
+        try {
+          window.localStorage.removeItem("zetra-bms-auth");
+          window.localStorage.removeItem("sb-access-token");
+          window.localStorage.removeItem("sb-refresh-token");
+          window.sessionStorage.clear();
+        } catch {}
+
+        window.location.href = "/login";
+        return;
+      }
+
+      await hardSignOutSupabase();
+      router.replace("/login" as any);
+    } catch (e: any) {
+      Alert.alert("Logout failed", e?.message ?? "Unknown error");
+    }
+  }, [router]);
+
   const onLogout = useCallback(() => {
+    if (Platform.OS === "web") {
+      void doLogoutNow();
+      return;
+    }
+
     Alert.alert("Logout", "Unataka kutoka kwenye account hii kwenye device hii?", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Logout",
         style: "destructive",
-        onPress: async () => {
-          try {
-            const { error } = await supabase.auth.signOut();
-            if (error) throw error;
-          } catch (e: any) {
-            Alert.alert("Logout failed", e?.message ?? "Unknown error");
-          }
+        onPress: () => {
+          void doLogoutNow();
         },
       },
     ]);
-  }, []);
+  }, [doLogoutNow]);
 
   return (
-    <Screen scroll>
+    <Screen scroll bottomPad={120}>
       <View style={{ paddingTop: 6 }}>
         <Text style={{ color: UI.text, fontWeight: "900", fontSize: 30 }}>
           More
@@ -560,7 +595,7 @@ export default function MoreHome() {
       </PremiumSectionCard>
 
       <SectionTitle label="Account" />
-      <LogoutCard onLogout={onLogout} />
+      <LogoutCard onLogout={onLogout} isWeb={Platform.OS === "web"} />
 
       <View style={{ height: theme.spacing.gap }} />
 

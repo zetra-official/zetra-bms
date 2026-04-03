@@ -1,6 +1,6 @@
 // src/ui/Card.tsx
 import React from "react";
-import { StyleProp, View, ViewStyle } from "react-native";
+import { Platform, StyleProp, View, ViewStyle } from "react-native";
 import { UI } from "@/src/ui/theme";
 
 /**
@@ -10,6 +10,7 @@ import { UI } from "@/src/ui/theme";
  */
 
 const C: any = (UI as any)?.colors ?? UI;
+const IS_WEB = Platform.OS === "web";
 
 type Props = {
   children?: React.ReactNode;
@@ -35,10 +36,10 @@ export function Card({ children, style, padding = 16, noPadding }: Props) {
 
           // subtle shadow/elevation
           shadowColor: "#000",
-          shadowOpacity: 0.25,
-          shadowRadius: 18,
-          shadowOffset: { width: 0, height: 10 },
-          elevation: 6,
+          shadowOpacity: IS_WEB ? 0 : 0.25,
+          shadowRadius: IS_WEB ? 0 : 18,
+          shadowOffset: IS_WEB ? { width: 0, height: 0 } : { width: 0, height: 10 },
+          elevation: IS_WEB ? 0 : 6,
         },
         style,
       ]}

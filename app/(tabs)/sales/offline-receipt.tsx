@@ -2,7 +2,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, Share, Text, View } from "react-native";
+import { ActivityIndicator, Platform, Pressable, Share, Text, View, useWindowDimensions } from "react-native";
 
 import { useOrg } from "../../../src/context/OrgContext";
 import { Button } from "../../../src/ui/Button";

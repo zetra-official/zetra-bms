@@ -9,9 +9,12 @@ import {
   RefreshControl,
   Text,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { useNetInfo } from "@react-native-community/netinfo";
+import { syncSalesQueueOnce } from "../../src/offline/salesSync";
 
 import { useOrg } from "../../src/context/OrgContext";
 import { supabase } from "../../src/supabase/supabaseClient";
@@ -370,7 +373,10 @@ function useAutoRefresh(cb: () => void, enabled: boolean, ms: number) {
   cbRef.current = cb;
 
   useEffect(() => {
-    if (!enabled) return;
+    // ✅ WEB HOTFIX:
+    // Browser static export imekuwa ikipata request-storm / page freeze.
+    // Auto refresh ibaki MOBILE only.
+    if (!enabled || Platform.OS === "web") return;
 
     let alive = true;
     let interval: any = null;
@@ -596,6 +602,8 @@ function PremiumMetricCard({
 
         <Pressable
           onPress={onPress}
+          // @ts-ignore - web click fallback
+          onClick={onPress}
           hitSlop={10}
           style={({ pressed }) => ({
             borderRadius: 18,
@@ -874,6 +882,7 @@ function CompactNotificationsHomeCard() {
 function CompactFinanceCardHomePreview() {
   const router = useRouter();
   const org = useOrg();
+  const isWeb = Platform.OS === "web";
 
   const orgId = String(org.activeOrgId ?? "").trim();
   const storeId = String(org.activeStoreId ?? "").trim();
@@ -1342,10 +1351,16 @@ function CompactFinanceCardHomePreview() {
   useFocusEffect(
     useCallback(() => {
       if (!orgId || !storeId) return;
-      void load({ silent: true });
+      void load();
     }, [orgId, storeId, load])
   );
 
+  useFocusEffect(
+    useCallback(() => {
+      if (!orgId || !storeId) return;
+      void load({ silent: true });
+    }, [orgId, storeId, load])
+  );
   useAutoRefresh(() => {
     if (!orgId || !storeId) return;
     void load({ silent: true });
@@ -1460,6 +1475,7 @@ function CompactFinanceCardHomePreview() {
 
 function CompactClubRevenueCardHomePreview({ onOpen }: { onOpen: () => void }) {
   const orgAny = useOrg() as any;
+  const isWeb = Platform.OS === "web";
 
   const orgId: string = String(
     orgAny?.activeOrgId ??
@@ -1540,6 +1556,14 @@ function CompactClubRevenueCardHomePreview({ onOpen }: { onOpen: () => void }) {
     void load();
   }, [storeId, load]);
 
+  useFocusEffect(
+    useCallback(() => {
+      if (isWeb) return;
+      if (!storeId) return;
+      void load();
+    }, [isWeb, storeId, load])
+  );
+
   useAutoRefresh(() => {
     if (!storeId) return;
     void load();
@@ -1577,6 +1601,7 @@ function CompactClubRevenueCardHomePreview({ onOpen }: { onOpen: () => void }) {
 function CompactStockValueCardHomePreview() {
   const router = useRouter();
   const orgAny = useOrg() as any;
+  const isWeb = Platform.OS === "web";
 
   const orgId: string = String(
     orgAny?.activeOrgId ??
@@ -1702,9 +1727,17 @@ function CompactStockValueCardHomePreview() {
     }
   }, [orgId, storeId, range, loadForStore]);
 
-  useEffect(() => {
+ useEffect(() => {
     void load();
   }, [orgId, storeId, load]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (isWeb) return;
+      if (!orgId || !storeId) return;
+      void load();
+    }, [isWeb, orgId, storeId, load])
+  );
 
   useAutoRefresh(() => {
     if (!orgId || !storeId) return;
@@ -1745,6 +1778,8 @@ function CompactStockValueCardHomePreview() {
 }
 
 function ZetraAiCard({ onOpen }: { onOpen: () => void }) {
+  const isWeb = Platform.OS === "web";
+
   const tips = useMemo(
     () => [
       "Stock alert: cheki bidhaa zilizo chini ya kiwango.",
@@ -1759,6 +1794,8 @@ function ZetraAiCard({ onOpen }: { onOpen: () => void }) {
   const fade = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
+    if (isWeb) return;
+
     let alive = true;
     let interval: any = null;
 
@@ -1792,12 +1829,17 @@ function ZetraAiCard({ onOpen }: { onOpen: () => void }) {
         sub?.remove?.();
       } catch {}
     };
-  }, [tips.length]);
+  }, [isWeb, tips.length]);
 
   useEffect(() => {
+    if (isWeb) {
+      fade.setValue(1);
+      return;
+    }
+
     fade.setValue(0);
     Animated.timing(fade, { toValue: 1, duration: 260, useNativeDriver: true }).start();
-  }, [i, fade]);
+  }, [fade, i, isWeb]);
 
   const preview = tips[i];
 
@@ -2286,12 +2328,186 @@ function WorkspaceCard({
   );
 }
 
+function WebSafeHomeActions({
+  onOpenAI,
+  onOpenOrgSwitcher,
+  onOpenFinance,
+  onOpenStores,
+  onOpenProducts,
+  onOpenSales,
+  width,
+}: {
+  onOpenAI: () => void;
+  onOpenOrgSwitcher: () => void;
+  onOpenFinance: () => void;
+  onOpenStores: () => void;
+  onOpenProducts: () => void;
+  onOpenSales: () => void;
+  width: number;
+}) {
+  const isWide = width >= 1100;
+  const buttonWidth = isWide ? "48.8%" : "100%";
+
+  const ActionButton = ({
+    label,
+    sublabel,
+    onPress,
+  }: {
+    label: string;
+    sublabel: string;
+    onPress: () => void;
+  }) => {
+    return (
+      <Pressable
+        onPress={onPress}
+        hitSlop={10}
+        style={({ pressed }) => ({
+          width: buttonWidth as any,
+          minHeight: 92,
+          borderRadius: 20,
+          borderWidth: 1,
+          borderColor: "rgba(16,185,129,0.26)",
+          backgroundColor: "rgba(16,185,129,0.10)",
+          paddingVertical: 16,
+          paddingHorizontal: 16,
+          justifyContent: "center",
+          opacity: pressed ? 0.92 : 1,
+        })}
+      >
+        <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
+          {label}
+        </Text>
+
+        <Text
+          style={{
+            color: UI.muted,
+            fontWeight: "800",
+            fontSize: 12,
+            marginTop: 6,
+            lineHeight: 18,
+          }}
+          numberOfLines={2}
+        >
+          {sublabel}
+        </Text>
+      </Pressable>
+    );
+  };
+
+  return (
+    <View style={{ paddingTop: 14 }}>
+      <Card
+        style={{
+          gap: 16,
+          borderRadius: 24,
+          borderColor: "rgba(16,185,129,0.22)",
+          backgroundColor: "rgba(15,18,24,0.98)",
+          padding: 18,
+        }}
+      >
+        <View style={{ gap: 6 }}>
+          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 22 }}>
+            Web Quick Access
+          </Text>
+
+          <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22, fontSize: 13 }}>
+            Desktop web mode: tumepanga actions kwa muonekano wa laptop ili navigation iwe
+            safi, pana, na rahisi kutumia.
+          </Text>
+        </View>
+
+        <View
+          style={{
+            flexDirection: "row",
+            flexWrap: "wrap",
+            justifyContent: "space-between",
+            gap: 12,
+          }}
+        >
+          <ActionButton
+            label="Open AI"
+            sublabel="Assistant, ideas, and business guidance"
+            onPress={onOpenAI}
+          />
+          <ActionButton
+            label="Switch Org / Workspace"
+            sublabel="Badili organization au active context"
+            onPress={onOpenOrgSwitcher}
+          />
+          <ActionButton
+            label="Open Finance"
+            sublabel="Sales, expenses, and finance history"
+            onPress={onOpenFinance}
+          />
+          <ActionButton
+            label="Open Stores"
+            sublabel="Store list, access, and switching"
+            onPress={onOpenStores}
+          />
+          <ActionButton
+            label="Open Products"
+            sublabel="Manage products and pricing"
+            onPress={onOpenProducts}
+          />
+          <ActionButton
+            label="Open Sales"
+            sublabel="Go straight to sales flow"
+            onPress={onOpenSales}
+          />
+        </View>
+      </Card>
+    </View>
+  );
+}
+
+function WebDesktopShell({
+  width,
+  left,
+  right,
+}: {
+  width: number;
+  left: React.ReactNode;
+  right: React.ReactNode;
+}) {
+  const desktopMax = width >= 1600 ? 1480 : width >= 1380 ? 1320 : 1200;
+  const twoCols = width >= 1180;
+
+  if (!twoCols) {
+    return (
+      <View style={{ width: "100%", maxWidth: 980, alignSelf: "center" }}>
+        {left}
+        {right}
+      </View>
+    );
+  }
+
+  return (
+    <View
+      style={{
+        width: "100%",
+        maxWidth: desktopMax,
+        alignSelf: "center",
+        flexDirection: "row",
+        alignItems: "flex-start",
+        gap: 20,
+      }}
+    >
+      <View style={{ flex: 1.35, minWidth: 0 }}>{left}</View>
+      <View style={{ width: 390, minWidth: 390 }}>{right}</View>
+    </View>
+  );
+}
+
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
 
   const { refreshing, error, refresh, activeOrgName, activeRole, activeStoreName, activeStoreId } =
     useOrg();
+
+  const netInfo = useNetInfo();
+  const isOnline = !!(netInfo.isConnected && netInfo.isInternetReachable !== false);
 
   const [dashTick, setDashTick] = useState(0);
   const [pulling, setPulling] = useState(false);
@@ -2315,14 +2531,57 @@ export default function HomeScreen() {
     setPulling(true);
     try {
       await Promise.resolve(refresh());
+
+      if (activeStoreId && isOnline) {
+        try {
+          await syncSalesQueueOnce(String(activeStoreId));
+        } catch {}
+      }
+
       setDashTick((x) => x + 1);
     } finally {
       setPulling(false);
     }
-  }, [refresh]);
+  }, [refresh, activeStoreId, isOnline]);
 
   const isCashier = String(activeRole ?? "").trim().toLowerCase() === "cashier";
-const homeRefreshControl =
+  const isWeb = Platform.OS === "web";
+  const isDesktopWeb = isWeb && width >= 1024;
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!activeStoreId || !isOnline) return;
+      void syncSalesQueueOnce(String(activeStoreId));
+    }, [activeStoreId, isOnline])
+  );
+
+  useEffect(() => {
+    if (!activeStoreId || !isOnline) return;
+
+    void syncSalesQueueOnce(String(activeStoreId));
+
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active" && activeStoreId && isOnline) {
+        void syncSalesQueueOnce(String(activeStoreId));
+      }
+    });
+
+    const timer = setInterval(() => {
+      if (activeStoreId && isOnline) {
+        void syncSalesQueueOnce(String(activeStoreId));
+      }
+    }, 15000);
+
+    return () => {
+      try {
+        // @ts-ignore
+        sub?.remove?.();
+      } catch {}
+      clearInterval(timer);
+    };
+  }, [activeStoreId, isOnline]);
+
+  const homeRefreshControl =
     Platform.OS === "web" ? null : (
       <RefreshControl
         refreshing={pulling || refreshing}
@@ -2335,19 +2594,21 @@ const homeRefreshControl =
       scroll
       refreshControl={homeRefreshControl}
       contentStyle={{
-        paddingTop: topPad,
-        paddingHorizontal: 16,
+        paddingTop: isDesktopWeb ? Math.max(insets.top, 18) + 10 : topPad,
+        paddingHorizontal: isDesktopWeb ? 22 : 16,
         paddingBottom: bottomPad,
       }}
     >
-      <HeaderHero
-        activeOrgName={activeOrgName}
-        activeStoreName={activeStoreName}
-        isCashier={isCashier}
-      />
+      {!isDesktopWeb ? (
+        <HeaderHero
+          activeOrgName={activeOrgName}
+          activeStoreName={activeStoreName}
+          isCashier={isCashier}
+        />
+      ) : null}
 
-      {!isCashier ? <ZetraAiCard onOpen={goAI} /> : null}
-      {!isCashier ? <CompactNotificationsHomeCard /> : null}
+      {!isCashier && !isWeb ? <ZetraAiCard onOpen={goAI} /> : null}
+      {!isCashier && !isWeb ? <CompactNotificationsHomeCard /> : null}
 
       {!!error && !String(error).toLowerCase().includes("not allowed") && (
         <Card
@@ -2363,22 +2624,89 @@ const homeRefreshControl =
         </Card>
       )}
 
-      <WorkspaceCard
-        activeOrgName={activeOrgName}
-        activeRole={activeRole}
-        activeStoreName={activeStoreName}
-        activeStoreId={activeStoreId}
-        onOpen={goOrgSwitcher}
-      />
-
       {isCashier ? (
-        <CashierQuickHome />
+        <>
+          <WorkspaceCard
+            activeOrgName={activeOrgName}
+            activeRole={activeRole}
+            activeStoreName={activeStoreName}
+            activeStoreId={activeStoreId}
+            onOpen={goOrgSwitcher}
+          />
+          <CashierQuickHome />
+        </>
+      ) : isWeb ? (
+        <WebDesktopShell
+          width={width}
+          left={
+            <>
+              <HeaderHero
+                activeOrgName={activeOrgName}
+                activeStoreName={activeStoreName}
+                isCashier={isCashier}
+              />
+
+              <WorkspaceCard
+                activeOrgName={activeOrgName}
+                activeRole={activeRole}
+                activeStoreName={activeStoreName}
+                activeStoreId={activeStoreId}
+                onOpen={goOrgSwitcher}
+              />
+
+              <StoreGuard>
+                <CompactFinanceCardHomePreview />
+                <CompactStockValueCardHomePreview />
+                <CompactClubRevenueCardHomePreview
+                  key={`club-mini-${dashTick}`}
+                  onOpen={goClubRevenue}
+                />
+              </StoreGuard>
+            </>
+          }
+          right={
+            <>
+              {width < 1500 ? null : <ZetraAiCard onOpen={goAI} />}
+
+              <WebSafeHomeActions
+                width={width}
+                onOpenAI={goAI}
+                onOpenOrgSwitcher={goOrgSwitcher}
+                onOpenFinance={() => {
+                  const dates = rangeToDates("today");
+                  router.push({
+                    pathname: "/finance/history",
+                    params: {
+                      mode: "SALES",
+                      scope: "STORE",
+                      range: "today",
+                      from: dates.from,
+                      to: dates.to,
+                    } as any,
+                  } as any);
+                }}
+                onOpenStores={() => router.push("/(tabs)/stores")}
+                onOpenProducts={() => router.push("/(tabs)/products")}
+                onOpenSales={() => router.push("/(tabs)/sales")}
+              />
+            </>
+          }
+        />
       ) : (
-        <StoreGuard>
-          <CompactFinanceCardHomePreview />
-          <CompactStockValueCardHomePreview />
-          <CompactClubRevenueCardHomePreview key={`club-mini-${dashTick}`} onOpen={goClubRevenue} />
-        </StoreGuard>
+        <>
+          <WorkspaceCard
+            activeOrgName={activeOrgName}
+            activeRole={activeRole}
+            activeStoreName={activeStoreName}
+            activeStoreId={activeStoreId}
+            onOpen={goOrgSwitcher}
+          />
+          <StoreGuard>
+            <CompactFinanceCardHomePreview />
+            <CompactStockValueCardHomePreview />
+            <CompactClubRevenueCardHomePreview key={`club-mini-${dashTick}`} onOpen={goClubRevenue} />
+          </StoreGuard>
+        </>
       )}
     </Screen>
   );

@@ -31,7 +31,7 @@ export async function syncSalesQueueOnce(storeId: string) {
           unit_price: Number(it?.unit_price ?? 0),
         }));
 
-        const res = await supabase.rpc("create_sale_with_payment_v3", {
+        const res = await supabase.rpc("create_sale_with_payment_v4", {
           p_store_id: item.store_id,
           p_items: safeItems,
           p_note: p.note,
