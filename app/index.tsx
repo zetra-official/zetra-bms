@@ -1,9 +1,9 @@
-﻿import { supabase } from "@/src/supabase/client";
+﻿import { supabase } from "@/src/supabase/supabaseClient";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, Platform, View } from "react-native";
 
-type OrgRow = { id: string };
+type OrgRow = { id?: string; organization_id?: string };
 
 export default function GateScreen() {
   const router = useRouter();
@@ -12,47 +12,59 @@ export default function GateScreen() {
   useEffect(() => {
     let alive = true;
 
+    const routes = {
+      login: Platform.OS === "web" ? "/login" : "/(auth)/login",
+      onboarding: "/(onboarding)/business",
+      home: "/(tabs)",
+    };
+
     async function runGate() {
       try {
+        if (!alive) return;
         setLoading(true);
 
-        const { data: sessionRes, error: sessionErr } =
-          await supabase.auth.getSession();
-        if (sessionErr) throw sessionErr;
+        const {
+          data: { session },
+          error: sessionErr,
+        } = await supabase.auth.getSession();
 
-        const session = sessionRes.session;
+        if (sessionErr) throw sessionErr;
 
         // 1) No session => login
         if (!session) {
-          router.replace("/(auth)/login");
+          router.replace(routes.login as any);
           return;
         }
 
         // 2) Session exists => DB truth check
         const { data: orgs, error: orgErr } = await supabase.rpc("get_my_orgs");
-        if (orgErr) throw orgErr;
 
-        const list = (orgs ?? []) as OrgRow[];
+        if (orgErr) {
+          router.replace(routes.home as any);
+          return;
+        }
+
+        const list = Array.isArray(orgs) ? ((orgs ?? []) as OrgRow[]) : [];
 
         // 3) No org => onboarding
         if (list.length === 0) {
-          router.replace("/(onboarding)");
+          router.replace(routes.onboarding as any);
           return;
         }
 
         // 4) Has org => app
-        router.replace("/(tabs)");
-      } catch (e) {
-        router.replace("/(auth)/login");
+        router.replace(routes.home as any);
+      } catch {
+        router.replace(routes.login as any);
       } finally {
         if (alive) setLoading(false);
       }
     }
 
-    runGate();
+    void runGate();
 
     const { data: sub } = supabase.auth.onAuthStateChange(() => {
-      runGate();
+      void runGate();
     });
 
     return () => {

@@ -526,17 +526,50 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
     loadAll("boot");
   }, [loadAll]);
 
-  // Auth changes => reload canonical state
+  // Auth changes => reload canonical state (guarded to avoid web loop/request storms)
   useEffect(() => {
+    let alive = true;
+
     const { data } = supabase.auth.onAuthStateChange(
       (_event: AuthChangeEvent, _session: Session | null) => {
-        hydratedUserRef.current = null;
-        currentUserIdRef.current = _session?.user?.id ?? null;
-        loadAll("boot");
+        if (!alive) return;
+
+        const event = String(_event ?? "").toUpperCase();
+        const nextUserId = _session?.user?.id ?? null;
+        const prevUserId = currentUserIdRef.current;
+
+        // always track latest user id
+        currentUserIdRef.current = nextUserId;
+
+        // ✅ Only reset hydration memory when actual user identity changes
+        if (prevUserId !== nextUserId) {
+          hydratedUserRef.current = null;
+        }
+
+        // ✅ Ignore noisy refresh events on web to stop request loops
+        if (event === "TOKEN_REFRESHED") {
+          return;
+        }
+
+        // ✅ Initial session already handled by boot loader
+        if (event === "INITIAL_SESSION") {
+          return;
+        }
+
+        // ✅ Only reload for meaningful auth events
+        if (
+          event === "SIGNED_IN" ||
+          event === "SIGNED_OUT" ||
+          event === "USER_UPDATED" ||
+          event === "PASSWORD_RECOVERY"
+        ) {
+          void loadAll("boot");
+        }
       }
     );
 
     return () => {
+      alive = false;
       data.subscription.unsubscribe();
     };
   }, [loadAll]);

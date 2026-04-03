@@ -1,5 +1,5 @@
 ﻿import { useRouter } from "expo-router";
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import {
   Alert,
   Keyboard,
@@ -90,6 +90,8 @@ function GlassInput({
         autoCapitalize={autoCapitalize ?? "none"}
         keyboardType={keyboardType ?? "default"}
         autoCorrect={false}
+        autoComplete={keyboardType === "email-address" ? "email" : secureTextEntry ? "password" : "off"}
+        textContentType={secureTextEntry ? "password" : keyboardType === "email-address" ? "emailAddress" : "none"}
         style={{
           flex: 1,
           color: "white",
@@ -112,6 +114,8 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [sendingReset, setSendingReset] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  const loginLockedRef = useRef(false);
 
   const emailTrimmed = useMemo(() => email.trim(), [email]);
 
@@ -146,11 +150,21 @@ export default function LoginScreen() {
   };
 
   const onLogin = async () => {
+    if (loginLockedRef.current || loading) return;
+
     const e = emailTrimmed;
 
-    if (!e) return Alert.alert("Missing", "Email is required.");
-    if (!password) return Alert.alert("Missing", "Password is required.");
+    if (!e) {
+      Alert.alert("Missing", "Email is required.");
+      return;
+    }
 
+    if (!password) {
+      Alert.alert("Missing", "Password is required.");
+      return;
+    }
+
+    loginLockedRef.current = true;
     setLoading(true);
 
     try {
@@ -268,13 +282,13 @@ export default function LoginScreen() {
 
       Alert.alert("Login Failed", msg);
     } finally {
+      loginLockedRef.current = false;
       setLoading(false);
     }
   };
 
-  return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <View style={{ flex: 1, backgroundColor: "#061018" }}>
+  const content = (
+    <View style={{ flex: 1, backgroundColor: "#061018" }}>
         <View
           pointerEvents="none"
           style={{
@@ -314,7 +328,7 @@ export default function LoginScreen() {
 
         <KeyboardAvoidingView
           style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          behavior={Platform.OS === "ios" ? "padding" : Platform.OS === "android" ? "height" : undefined}
           keyboardVerticalOffset={0}
         >
           <ScrollView
@@ -404,23 +418,36 @@ export default function LoginScreen() {
               <View style={{ height: 16 }} />
 
               <FieldLabel>Password</FieldLabel>
-              <GlassInput
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                placeholder="Enter your password"
-                rightSlot={
-                  <Pressable
-                    onPress={() => setShowPassword((v) => !v)}
-                    hitSlop={10}
-                    style={{ paddingLeft: 12, paddingVertical: 4 }}
-                  >
-                    <Text style={{ color: "#34D399", fontWeight: "900", fontSize: 14 }}>
-                      {showPassword ? "Hide" : "Show"}
-                    </Text>
-                  </Pressable>
-                }
-              />
+              <View
+                {...(Platform.OS === "web"
+                  ? {
+                      onKeyDown: (e: any) => {
+                        if (e?.key === "Enter") {
+                          e.preventDefault?.();
+                          void onLogin();
+                        }
+                      },
+                    }
+                  : {})}
+              >
+                <GlassInput
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  placeholder="Enter your password"
+                  rightSlot={
+                    <Pressable
+                      onPress={() => setShowPassword((v) => !v)}
+                      hitSlop={10}
+                      style={{ paddingLeft: 12, paddingVertical: 4 }}
+                    >
+                      <Text style={{ color: "#34D399", fontWeight: "900", fontSize: 14 }}>
+                        {showPassword ? "Hide" : "Show"}
+                      </Text>
+                    </Pressable>
+                  }
+                />
+              </View>
 
               <Pressable
                 onPress={onForgotPassword}
@@ -439,6 +466,7 @@ export default function LoginScreen() {
               <Pressable
                 onPress={onLogin}
                 disabled={loading}
+                accessibilityRole="button"
                 style={{
                   backgroundColor: "#22C58B",
                   paddingVertical: 17,
@@ -452,6 +480,7 @@ export default function LoginScreen() {
                   shadowRadius: 16,
                   shadowOffset: { width: 0, height: 8 },
                   elevation: 6,
+                  cursor: Platform.OS === "web" ? ("pointer" as any) : undefined,
                 }}
               >
                 <Text
@@ -460,6 +489,7 @@ export default function LoginScreen() {
                     fontWeight: "900",
                     fontSize: 17,
                     letterSpacing: 0.2,
+                    userSelect: Platform.OS === "web" ? ("none" as any) : undefined,
                   }}
                 >
                   {loading ? "Signing In..." : "Login"}
@@ -495,12 +525,21 @@ export default function LoginScreen() {
                   lineHeight: 18,
                 }}
               >
-                Secure sign-in for owners, admins and staff.
+                Secure sign-in for owners, admins, cashier, supervisor and staff.
               </Text>
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
       </View>
+  );
+
+  if (Platform.OS === "web") {
+    return content;
+  }
+
+  return (
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      {content}
     </TouchableWithoutFeedback>
   );
 }

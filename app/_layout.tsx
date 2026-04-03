@@ -1,4 +1,4 @@
-﻿import { OrgProvider } from "@/src/context/OrgContext";
+﻿import { OrgProvider, useOrg } from "@/src/context/OrgContext";
 import {
   applySupabaseSessionFromInitialUrl,
   applySupabaseSessionFromUrl,
@@ -17,6 +17,9 @@ function AuthGate() {
   const segmentsRef = useRef<string[]>([]);
   const [ready, setReady] = useState(false);
 
+  // ✅ Read org context here instead of doing duplicate RPC in AuthGate
+  const { loading: orgLoading, orgs } = useOrg();
+
   useEffect(() => {
     segmentsRef.current = segments;
   }, [segments]);
@@ -24,33 +27,45 @@ function AuthGate() {
   useEffect(() => {
     let alive = true;
 
-    const isInAuth = (segs: string[]) => segs?.[0] === "(auth)";
-    const isResetPasswordRoute = (segs: string[]) =>
-      segs?.[0] === "(auth)" && segs?.[1] === "reset-password";
-    const isOnboardingRoute = (segs: string[]) => segs?.[0] === "(onboarding)";
+    const isInAuth = (segs: string[]) => {
+      const a = segs?.[0];
+      const b = segs?.[1];
+      return (
+        a === "(auth)" ||
+        a === "login" ||
+        a === "register" ||
+        a === "reset-password" ||
+        (a === "(auth)" &&
+          (b === "login" || b === "register" || b === "reset-password"))
+      );
+    };
+
+    const isResetPasswordRoute = (segs: string[]) => {
+      const a = segs?.[0];
+      const b = segs?.[1];
+      return a === "reset-password" || (a === "(auth)" && b === "reset-password");
+    };
+
+    const isOnboardingRoute = (segs: string[]) => {
+      const a = segs?.[0];
+      const b = segs?.[1];
+      return (
+        a === "(onboarding)" ||
+        a === "business" ||
+        a === "store" ||
+        (a === "(onboarding)" && (b === "business" || b === "store"))
+      );
+    };
+
     const isEmailVerified = (user: any) =>
       !!(user?.email_confirmed_at ?? user?.confirmed_at);
 
-    const goAfterLogin = async () => {
-      try {
-        const { data: orgData, error: orgErr } = await supabase.rpc("get_my_orgs");
-
-        if (orgErr) {
-          router.replace("/(tabs)");
-          return;
-        }
-
-        const orgs = Array.isArray(orgData) ? orgData : [];
-
-        if (orgs.length === 0) {
-          router.replace("/(onboarding)");
-          return;
-        }
-
-        router.replace("/(tabs)");
-      } catch {
-        router.replace("/(tabs)");
-      }
+    const routes = {
+      login: Platform.OS === "web" ? "/login" : "/(auth)/login",
+      resetPassword:
+        Platform.OS === "web" ? "/reset-password" : "/(auth)/reset-password",
+      onboarding: "/(onboarding)/business",
+      home: "/(tabs)",
     };
 
     const boot = async () => {
@@ -61,13 +76,14 @@ function AuthGate() {
       const currentSegs = segmentsRef.current;
       const inAuth = isInAuth(currentSegs);
       const inResetPassword = isResetPasswordRoute(currentSegs);
-      const inOnboarding = isOnboardingRoute(currentSegs);
 
       if (
         initialResult.handled &&
         String(initialResult.type ?? "").toLowerCase() === "recovery"
       ) {
-        router.replace("/(auth)/reset-password");
+        router.replace(routes.resetPassword as any);
+        setReady(true);
+        return;
       }
 
       const {
@@ -84,7 +100,7 @@ function AuthGate() {
 
       if (!session) {
         if (!inAuth) {
-          router.replace("/(auth)/login");
+          router.replace(routes.login as any);
         }
         setReady(true);
         return;
@@ -100,16 +116,14 @@ function AuthGate() {
 
       if (!verified) {
         if (!inAuth) {
-          router.replace("/(auth)/login");
+          router.replace(routes.login as any);
         }
         setReady(true);
         return;
       }
 
-      if (inAuth || inOnboarding) {
-        await goAfterLogin();
-      }
-
+      // ✅ Do NOT call get_my_orgs here.
+      // OrgContext is the single source of truth for org/store routing state.
       setReady(true);
     };
 
@@ -120,41 +134,35 @@ function AuthGate() {
         const currentSegs = segmentsRef.current;
         const inAuth = isInAuth(currentSegs);
         const inResetPassword = isResetPasswordRoute(currentSegs);
-        const inOnboarding = isOnboardingRoute(currentSegs);
 
         if (event === "PASSWORD_RECOVERY") {
-          router.replace("/(auth)/reset-password");
+          router.replace(routes.resetPassword as any);
           return;
         }
 
         if (!session) {
           if (!inAuth) {
-            router.replace("/(auth)/login");
+            router.replace(routes.login as any);
           }
           return;
         }
 
-        if (inResetPassword) {
-          return;
-        }
+        if (inResetPassword) return;
 
         const verified = isEmailVerified(session.user);
 
         if (!verified) {
           if (!inAuth) {
-            router.replace("/(auth)/login");
+            router.replace(routes.login as any);
           }
           return;
         }
 
-        if (
-          event === "SIGNED_IN" ||
-          event === "TOKEN_REFRESHED" ||
-          event === "INITIAL_SESSION" ||
-          event === "USER_UPDATED"
-        ) {
-          if (inAuth || inOnboarding) {
-            await goAfterLogin();
+        // ✅ No duplicate goAfterLogin RPC here.
+        if (event === "SIGNED_IN" || event === "INITIAL_SESSION" || event === "USER_UPDATED") {
+          const a = segmentsRef.current?.[0];
+          if (a === "login" || a === "register" || a === "(auth)") {
+            router.replace(routes.home as any);
           }
         }
       }
@@ -165,16 +173,12 @@ function AuthGate() {
       const authType = String(result.type ?? "").toLowerCase();
 
       if (authType === "recovery") {
-        router.replace("/(auth)/reset-password");
+        router.replace(routes.resetPassword as any);
       }
 
       if (!result.handled) return;
-
       if (!result.ok) return;
-
-      if (authType === "recovery") {
-        return;
-      }
+      if (authType === "recovery") return;
 
       const {
         data: { session },
@@ -190,11 +194,11 @@ function AuthGate() {
       const verified = isEmailVerified(session.user);
 
       if (!verified) {
-        router.replace("/(auth)/login");
+        router.replace(routes.login as any);
         return;
       }
 
-      await goAfterLogin();
+      router.replace(routes.home as any);
     });
 
     return () => {
@@ -204,7 +208,62 @@ function AuthGate() {
     };
   }, [router]);
 
-  if (!ready) {
+  // ✅ After auth is ready, routing between home/onboarding comes from OrgContext state
+  useEffect(() => {
+    if (!ready) return;
+
+    const currentSegs = segmentsRef.current;
+
+    const isInAuth = (segs: string[]) => {
+      const a = segs?.[0];
+      const b = segs?.[1];
+      return (
+        a === "(auth)" ||
+        a === "login" ||
+        a === "register" ||
+        a === "reset-password" ||
+        (a === "(auth)" &&
+          (b === "login" || b === "register" || b === "reset-password"))
+      );
+    };
+
+    const isResetPasswordRoute = (segs: string[]) => {
+      const a = segs?.[0];
+      const b = segs?.[1];
+      return a === "reset-password" || (a === "(auth)" && b === "reset-password");
+    };
+
+    const isOnboardingRoute = (segs: string[]) => {
+      const a = segs?.[0];
+      const b = segs?.[1];
+      return (
+        a === "(onboarding)" ||
+        a === "business" ||
+        a === "store" ||
+        (a === "(onboarding)" && (b === "business" || b === "store"))
+      );
+    };
+
+    if (isResetPasswordRoute(currentSegs)) return;
+    if (orgLoading) return;
+
+    const inAuth = isInAuth(currentSegs);
+    const inOnboarding = isOnboardingRoute(currentSegs);
+    const hasOrg = Array.isArray(orgs) && orgs.length > 0;
+
+    if (!hasOrg) {
+      if (!inOnboarding) {
+        router.replace("/(onboarding)/business" as any);
+      }
+      return;
+    }
+
+    if (inAuth || inOnboarding) {
+      router.replace("/(tabs)" as any);
+    }
+  }, [ready, orgLoading, orgs, router]);
+
+  if (!ready || orgLoading) {
     return (
       <View
         style={{

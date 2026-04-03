@@ -1,9 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import {
-  createClient,
-  type EmailOtpType,
-} from "@supabase/supabase-js";
+import { createClient, type EmailOtpType } from "@supabase/supabase-js";
 import * as Linking from "expo-linking";
+import { Platform } from "react-native";
 import "react-native-url-polyfill/auto";
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
@@ -23,12 +21,44 @@ export const AUTH_STORAGE_KEY = "zetra-bms-auth";
 const FALLBACK_SUPABASE_URL = "https://placeholder.invalid";
 const FALLBACK_SUPABASE_ANON_KEY = "placeholder-anon-key";
 
+type SupabaseStorageLike = {
+  getItem: (key: string) => Promise<string | null>;
+  setItem: (key: string, value: string) => Promise<void>;
+  removeItem: (key: string) => Promise<void>;
+};
+
+const webStorage: SupabaseStorageLike = {
+  async getItem(key: string) {
+    try {
+      if (typeof window === "undefined" || !window.localStorage) return null;
+      return window.localStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  },
+  async setItem(key: string, value: string) {
+    try {
+      if (typeof window === "undefined" || !window.localStorage) return;
+      window.localStorage.setItem(key, value);
+    } catch {}
+  },
+  async removeItem(key: string) {
+    try {
+      if (typeof window === "undefined" || !window.localStorage) return;
+      window.localStorage.removeItem(key);
+    } catch {}
+  },
+};
+
+const authStorage: SupabaseStorageLike =
+  Platform.OS === "web" ? webStorage : AsyncStorage;
+
 export const supabase = createClient(
   SUPABASE_URL || FALLBACK_SUPABASE_URL,
   SUPABASE_ANON_KEY || FALLBACK_SUPABASE_ANON_KEY,
   {
     auth: {
-      storage: AsyncStorage,
+      storage: authStorage,
       storageKey: AUTH_STORAGE_KEY,
       persistSession: true,
       autoRefreshToken: true,
@@ -69,7 +99,7 @@ function parseParamsFromChunk(chunk: string): Record<string, string> {
 
 export async function clearCorruptSupabaseSession(): Promise<void> {
   try {
-    await AsyncStorage.removeItem(AUTH_STORAGE_KEY);
+    await authStorage.removeItem(AUTH_STORAGE_KEY);
   } catch {}
 }
 
@@ -195,7 +225,6 @@ export async function applySupabaseSessionFromUrl(
     };
   }
 
-  // 1) PKCE / auth-code flow
   if (code) {
     try {
       const { error } = await supabase.auth.exchangeCodeForSession(code);
@@ -225,7 +254,6 @@ export async function applySupabaseSessionFromUrl(
     }
   }
 
-  // 2) token_hash flow from email templates
   if (tokenHash) {
     const otpType = normalizeEmailOtpType(authType);
 
@@ -269,7 +297,6 @@ export async function applySupabaseSessionFromUrl(
     }
   }
 
-  // 3) implicit flow with access/refresh tokens
   if (accessToken && refreshToken) {
     try {
       const { error } = await supabase.auth.setSession({
