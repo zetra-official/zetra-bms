@@ -630,6 +630,11 @@ function PremiumMetricCard({
 function CompactNotificationsHomeCard() {
   const router = useRouter();
   const { activeStoreId, activeStoreName, stores } = useOrg();
+  const isWeb = Platform.OS === "web";
+
+  if (isWeb) return null;
+
+  if (isWeb) return null;
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -669,8 +674,9 @@ function CompactNotificationsHomeCard() {
 
   useFocusEffect(
     useCallback(() => {
+      if (isWeb) return;
       void load();
-    }, [load])
+    }, [isWeb, load])
   );
 
   useAutoRefresh(() => {
@@ -1350,16 +1356,18 @@ function CompactFinanceCardHomePreview() {
 
   useFocusEffect(
     useCallback(() => {
+      if (isWeb) return;
       if (!orgId || !storeId) return;
       void load();
-    }, [orgId, storeId, load])
+    }, [isWeb, orgId, storeId, load])
   );
 
   useFocusEffect(
     useCallback(() => {
+      if (isWeb) return;
       if (!orgId || !storeId) return;
       void load({ silent: true });
-    }, [orgId, storeId, load])
+    }, [isWeb, orgId, storeId, load])
   );
   useAutoRefresh(() => {
     if (!orgId || !storeId) return;
@@ -1476,6 +1484,8 @@ function CompactFinanceCardHomePreview() {
 function CompactClubRevenueCardHomePreview({ onOpen }: { onOpen: () => void }) {
   const orgAny = useOrg() as any;
   const isWeb = Platform.OS === "web";
+
+  if (isWeb) return null;
 
   const orgId: string = String(
     orgAny?.activeOrgId ??
@@ -1602,6 +1612,8 @@ function CompactStockValueCardHomePreview() {
   const router = useRouter();
   const orgAny = useOrg() as any;
   const isWeb = Platform.OS === "web";
+
+  if (isWeb) return null;
 
   const orgId: string = String(
     orgAny?.activeOrgId ??
@@ -2550,12 +2562,14 @@ export default function HomeScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      if (Platform.OS === "web") return;
       if (!activeStoreId || !isOnline) return;
       void syncSalesQueueOnce(String(activeStoreId));
     }, [activeStoreId, isOnline])
   );
 
   useEffect(() => {
+    if (Platform.OS === "web") return;
     if (!activeStoreId || !isOnline) return;
 
     void syncSalesQueueOnce(String(activeStoreId));
@@ -2655,18 +2669,36 @@ export default function HomeScreen() {
               />
 
               <StoreGuard>
-                <CompactFinanceCardHomePreview />
-                <CompactStockValueCardHomePreview />
-                <CompactClubRevenueCardHomePreview
-                  key={`club-mini-${dashTick}`}
-                  onOpen={goClubRevenue}
-                />
+                <CompactFinanceCardHomePreview key={`web-finance-live-${dashTick}`} />
               </StoreGuard>
+
+              <Card
+                style={{
+                  marginTop: 14,
+                  gap: 10,
+                  borderRadius: 22,
+                  borderColor: "rgba(16,185,129,0.22)",
+                  backgroundColor: "rgba(15,18,24,0.98)",
+                }}
+              >
+                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18 }}>
+                  Web Home Mode
+                </Text>
+
+                <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22 }}>
+                  Open Finance sasa ipo live tena kwenye homepage ya web, lakini auto-refresh ya browser
+                  imebaki imezimwa ili page isiwe nzito na buttons zibaki clickable muda wote.
+                </Text>
+
+                <Text style={{ color: UI.faint, fontWeight: "800" }}>
+                  Data itapakiwa kwenye load ya page, store switch, na refresh ya homepage.
+                </Text>
+              </Card>
             </>
           }
           right={
             <>
-              {width < 1500 ? null : <ZetraAiCard onOpen={goAI} />}
+              {null}
 
               <WebSafeHomeActions
                 width={width}

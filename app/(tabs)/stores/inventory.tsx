@@ -13,7 +13,7 @@ import { Card } from "../../../src/ui/Card";
 import { Screen } from "../../../src/ui/Screen";
 import { theme } from "../../../src/ui/theme";
 
-import { subscribeScanBarcode } from "@/src/utils/scanBus";
+import { setActiveScanScope, subscribeScanBarcode } from "@/src/utils/scanBus";
 
 type InventoryRow = {
   product_id: string;
@@ -482,12 +482,23 @@ export default function StoreInventoryScreen() {
     [bumpRecent, rows, vibrateScan]
   );
 
-  useEffect(() => {
-    const unsub = subscribeScanBarcode((barcode) => {
-      handleInventoryScan(barcode);
-    });
-    return unsub;
-  }, [handleInventoryScan]);
+  useFocusEffect(
+    useCallback(() => {
+      setActiveScanScope("INVENTORY");
+
+      const unsub = subscribeScanBarcode(
+        (barcode) => {
+          handleInventoryScan(barcode);
+        },
+        { scope: "INVENTORY" }
+      );
+
+      return () => {
+        unsub();
+        setActiveScanScope("GLOBAL");
+      };
+    }, [handleInventoryScan])
+  );
 
   useEffect(() => {
     if (Platform.OS !== "web") return;
