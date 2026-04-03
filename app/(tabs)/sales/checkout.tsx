@@ -543,7 +543,7 @@ export default function CheckoutScreen() {
         .join("\n");
 
       throw new Error(
-        `Stock haitoshi kwa store hii.\n\n${lines}\n\nNenda Inventory → Adjust Stock (ADD) kisha jaribu tena.`
+        `Stock insufficient to complete this sale.\n\n${lines}\n\nPlease go to Inventory → Adjust Stock (ADD), then try again.`
       );
     }
   }, [cart, storeId]);

@@ -13,12 +13,30 @@ import React, { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Platform, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 
+function cleanBarcode(raw: any) {
+  const s = String(raw ?? "").trim();
+  if (!s) return "";
+  return s.replace(/\s+/g, "");
+}
+
+function isTypingIntoField(target: any) {
+  if (!target) return false;
+  const tag = String(target.tagName ?? "").toLowerCase();
+  const editable = !!target.isContentEditable;
+  return editable || tag === "input" || tag === "textarea" || tag === "select";
+}
+
 function AuthGate() {
   const router = useRouter();
   const segments = useSegments();
   const segmentsRef = useRef<string[]>([]);
   const [ready, setReady] = useState(false);
   const [hasSession, setHasSession] = useState<boolean | null>(null);
+
+  const webScanBufferRef = useRef("");
+  const webScanLastAtRef = useRef(0);
+  const webScanStartedAtRef = useRef(0);
+  const webScanTimerRef = useRef<any>(null);
 
   const [fontsLoaded] = useFonts({
     ...Ionicons.font,
@@ -30,6 +48,136 @@ function AuthGate() {
   useEffect(() => {
     segmentsRef.current = segments;
   }, [segments]);
+
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+
+    const resetWebScanBuffer = () => {
+      webScanBufferRef.current = "";
+      webScanLastAtRef.current = 0;
+      webScanStartedAtRef.current = 0;
+
+      if (webScanTimerRef.current) {
+        clearTimeout(webScanTimerRef.current);
+        webScanTimerRef.current = null;
+      }
+    };
+
+    const flushWebScanBuffer = () => {
+      const code = cleanBarcode(webScanBufferRef.current);
+      const startedAt = webScanStartedAtRef.current;
+      const endedAt = webScanLastAtRef.current;
+
+      resetWebScanBuffer();
+
+      if (!code || code.length < 4) return;
+
+      const duration = startedAt > 0 && endedAt >= startedAt ? endedAt - startedAt : 0;
+
+      // Fast scanner input only; avoid normal human typing
+      if (duration > 900 && code.length < 8) return;
+
+      const segs = segmentsRef.current ?? [];
+      const a = segs?.[0];
+      const b = segs?.[1];
+      const c = segs?.[2];
+
+      const isInAuth =
+        a === "(auth)" ||
+        a === "login" ||
+        a === "register" ||
+        a === "reset-password" ||
+        (a === "(auth)" &&
+          (b === "login" || b === "register" || b === "reset-password"));
+
+      const isInOnboarding =
+        a === "(onboarding)" ||
+        a === "business" ||
+        a === "store" ||
+        (a === "(onboarding)" && (b === "business" || b === "store"));
+
+      // IMPORTANT:
+      // Products and Inventory own their scan behavior locally.
+      // Root layout must NOT hijack scanner there.
+      const isProductsRoute =
+        a === "(tabs)" && b === "products";
+
+      const isInventoryRoute =
+        (a === "(tabs)" && b === "stores" && c === "inventory") ||
+        (a === "(tabs)" && b === "stores" && String(c ?? "").startsWith("inventory"));
+
+      if (!ready) return;
+      if (hasSession !== true) return;
+      if (orgLoading) return;
+      if (isInAuth || isInOnboarding) return;
+      if (isProductsRoute || isInventoryRoute) return;
+
+      router.replace({
+        pathname: "/(tabs)/sales",
+        params: {
+          barcode: code,
+          _ts: String(Date.now()),
+        },
+      } as any);
+    };
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as any;
+      if (isTypingIntoField(target)) return;
+
+      const key = String(e.key ?? "");
+      const now = Date.now();
+
+      if (!key) return;
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+      if (
+        key === "Shift" ||
+        key === "Control" ||
+        key === "Alt" ||
+        key === "Meta" ||
+        key === "Tab"
+      ) {
+        return;
+      }
+
+      // scanners nyingi hutuma Enter mwisho
+      if (key === "Enter") {
+        flushWebScanBuffer();
+        return;
+      }
+
+      if (key.length !== 1) return;
+
+      if (now - webScanLastAtRef.current > 120) {
+        webScanBufferRef.current = "";
+        webScanStartedAtRef.current = now;
+      }
+
+      if (!webScanStartedAtRef.current) {
+        webScanStartedAtRef.current = now;
+      }
+
+      webScanBufferRef.current += key;
+      webScanLastAtRef.current = now;
+
+      if (webScanTimerRef.current) {
+        clearTimeout(webScanTimerRef.current);
+      }
+
+      // fallback kwa scanner ambazo hazitumi Enter suffix
+      webScanTimerRef.current = setTimeout(() => {
+        flushWebScanBuffer();
+      }, 180);
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      resetWebScanBuffer();
+    };
+  }, [router, ready, hasSession, orgLoading]);
 
   useEffect(() => {
     let alive = true;
@@ -287,6 +435,15 @@ function AuthGate() {
       router.replace("/(tabs)" as any);
     }
   }, [ready, hasSession, orgLoading, orgs, router]);
+
+  useEffect(() => {
+    return () => {
+      if (webScanTimerRef.current) {
+        clearTimeout(webScanTimerRef.current);
+        webScanTimerRef.current = null;
+      }
+    };
+  }, []);
 
   if (!ready || orgLoading || !fontsLoaded) {
     return (

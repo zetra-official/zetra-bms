@@ -40,7 +40,7 @@ import { Screen } from "../../../src/ui/Screen";
 import { theme } from "../../../src/ui/theme";
 
 import { formatMoney, useOrgMoneyPrefs } from "@/src/ui/money";
-import { subscribeScanBarcode } from "@/src/utils/scanBus";
+import { setActiveScanScope, subscribeScanBarcode } from "@/src/utils/scanBus";
 
 /* =========================
    Types
@@ -195,6 +195,13 @@ function normalizeMoneyInput(raw: string) {
   return digitsOnly.replace(/^0+(?=\d)/, "");
 }
 
+function isTypingIntoField(target: any) {
+  if (!target) return false;
+  const tag = String(target.tagName ?? "").toLowerCase();
+  const editable = !!target.isContentEditable;
+  return editable || tag === "input" || tag === "textarea" || tag === "select";
+}
+
 function formatTimeAgo(input?: string | null) {
   const raw = String(input ?? "").trim();
   if (!raw) return "—";
@@ -218,12 +225,7 @@ function formatTimeAgo(input?: string | null) {
   return `${diffDay} day${diffDay === 1 ? "" : "s"} ago`;
 }
 
-function isTypingIntoField(target: any) {
-  if (!target) return false;
-  const tag = String(target.tagName ?? "").toLowerCase();
-  const editable = !!target.isContentEditable;
-  return editable || tag === "input" || tag === "textarea" || tag === "select";
-}
+
 
 function ScannerFabIcon({ size = 24, color = "#E5E7EB" }: { size?: number; color?: string }) {
   const bodyW = Math.max(18, Math.round(size * 0.9));
@@ -321,6 +323,7 @@ export default function SalesHomeScreen() {
 
   const webScanBufferRef = useRef("");
   const webScanLastAtRef = useRef(0);
+  const webScanStartedAtRef = useRef(0);
   const webScanTimerRef = useRef<any>(null);
 
   const [cashierFilter, setCashierFilter] = useState<
@@ -1062,6 +1065,8 @@ export default function SalesHomeScreen() {
       const raw = cleanBarcode(rawInput);
       if (!raw) return;
 
+      setErr(null);
+
       if (!activeStoreId) {
         setErr("No active store selected.");
         return;
@@ -1134,65 +1139,116 @@ export default function SalesHomeScreen() {
     [activeStoreId, addAuto, bumpRecent, isCashier, isOffline, products, vibrateScan]
   );
 
-  useEffect(() => {
-    const unsub = subscribeScanBarcode((barcode) => {
-      handleBarcode(barcode);
-    });
-    return unsub;
-  }, [handleBarcode]);
+  useFocusEffect(
+    useCallback(() => {
+      setActiveScanScope("SALES");
+
+      const unsub = subscribeScanBarcode(
+        (barcode) => {
+          handleBarcode(barcode);
+        },
+        { scope: "SALES" }
+      );
+
+      return () => {
+        unsub();
+        setActiveScanScope("GLOBAL");
+      };
+    }, [handleBarcode])
+  );
 
   useEffect(() => {
     if (Platform.OS !== "web") return;
     if (isCashier) return;
 
+    const resetWebScanBuffer = () => {
+      webScanBufferRef.current = "";
+      webScanLastAtRef.current = 0;
+      webScanStartedAtRef.current = 0;
+
+      if (webScanTimerRef.current) {
+        clearTimeout(webScanTimerRef.current);
+        webScanTimerRef.current = null;
+      }
+    };
+
+    const flushWebScanBuffer = () => {
+      const code = cleanBarcode(webScanBufferRef.current);
+      const startedAt = webScanStartedAtRef.current;
+      const endedAt = webScanLastAtRef.current;
+
+      resetWebScanBuffer();
+
+      if (!code || code.length < 4) return;
+
+      const duration = startedAt > 0 && endedAt >= startedAt ? endedAt - startedAt : 0;
+
+      // Scanner input usually comes very fast.
+      // Human typing is usually slower.
+      if (duration > 900 && code.length < 8) return;
+
+      handleBarcode(code);
+    };
+
     const onKeyDown = (e: KeyboardEvent) => {
       const target = e.target as any;
+
+      // Usichukue scanner wakati user anaandika kwenye input/search box
       if (isTypingIntoField(target)) return;
 
       const key = String(e.key ?? "");
       const now = Date.now();
 
+      if (!key) return;
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+      if (
+        key === "Shift" ||
+        key === "Control" ||
+        key === "Alt" ||
+        key === "Meta" ||
+        key === "Tab"
+      ) {
+        return;
+      }
+
+      // Zuia global listener wa juu asije akachukua hii scan tena
+      e.stopPropagation();
+
       if (key === "Enter") {
-        const code = cleanBarcode(webScanBufferRef.current);
-        webScanBufferRef.current = "";
-        webScanLastAtRef.current = 0;
-
-        if (webScanTimerRef.current) {
-          clearTimeout(webScanTimerRef.current);
-          webScanTimerRef.current = null;
-        }
-
-        if (code.length >= 4) {
-          handleBarcode(code);
-        }
+        e.preventDefault();
+        flushWebScanBuffer();
         return;
       }
 
       if (key.length !== 1) return;
-      if (e.ctrlKey || e.altKey || e.metaKey) return;
 
       if (now - webScanLastAtRef.current > 120) {
         webScanBufferRef.current = "";
+        webScanStartedAtRef.current = now;
+      }
+
+      if (!webScanStartedAtRef.current) {
+        webScanStartedAtRef.current = now;
       }
 
       webScanBufferRef.current += key;
       webScanLastAtRef.current = now;
 
-      if (webScanTimerRef.current) clearTimeout(webScanTimerRef.current);
+      if (webScanTimerRef.current) {
+        clearTimeout(webScanTimerRef.current);
+      }
+
       webScanTimerRef.current = setTimeout(() => {
-        webScanBufferRef.current = "";
-        webScanLastAtRef.current = 0;
+        flushWebScanBuffer();
       }, 180);
     };
 
-    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keydown", onKeyDown, true);
 
     return () => {
-      window.removeEventListener("keydown", onKeyDown);
-      if (webScanTimerRef.current) {
-        clearTimeout(webScanTimerRef.current);
-        webScanTimerRef.current = null;
-      }
+      window.removeEventListener("keydown", onKeyDown, true);
+      resetWebScanBuffer();
     };
   }, [handleBarcode, isCashier]);
 
@@ -1200,6 +1256,8 @@ export default function SalesHomeScreen() {
     const raw = cleanBarcode(params?.barcode);
     if (!raw) return;
 
+    // Web ndani ya Sales page sasa inasikiliza local scanner moja kwa moja,
+    // hivyo route-param scan ibaki mainly kwa navigation kutoka pages nyingine.
     const key = `${activeStoreId ?? "no-store"}::${raw}::${String(params?._ts ?? "")}`;
     if (key === lastHandledParamScan) return;
     setLastHandledParamScan(key);
@@ -1613,7 +1671,9 @@ export default function SalesHomeScreen() {
             ]}
             hitSlop={10}
           >
-            <ScannerFabIcon size={26} color={theme.colors.text} />
+            <View style={{ marginLeft: 1, marginTop: 1 }}>
+              <ScannerFabIcon size={26} color={theme.colors.text} />
+            </View>
           </Pressable>
 
           <Pressable

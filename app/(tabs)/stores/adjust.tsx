@@ -8,6 +8,7 @@ import {
   TextInput,
   TouchableWithoutFeedback,
   View,
+  Platform,
 } from "react-native";
 import { useOrg } from "../../../src/context/OrgContext";
 import { supabase } from "../../../src/supabase/supabaseClient";
@@ -222,142 +223,149 @@ export default function AdjustStockScreen() {
     router,
   ]);
 
+  const content = (
+    <View style={{ flex: 1, gap: 14 }}>
+      <Text style={{ fontSize: 26, fontWeight: "900", color: theme.colors.text }}>
+        Adjust Stock
+      </Text>
+
+      <Card style={{ gap: 8 }}>
+        <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Active Store</Text>
+        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
+          {activeStoreName ?? "—"}
+        </Text>
+
+        <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
+          Product
+        </Text>
+        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{displayName}</Text>
+
+        <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
+          SKU
+        </Text>
+        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{displaySku}</Text>
+
+        <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
+          Current Qty
+        </Text>
+        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{currentQty}</Text>
+      </Card>
+
+      <Card style={{ gap: 10 }}>
+        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+          Mode
+        </Text>
+
+        <View style={{ flexDirection: "row", gap: 10 }}>
+          <Button
+            title="ADD"
+            variant="secondary"
+            onPress={() => setMode("ADD")}
+            style={{
+              flex: 1,
+              borderColor:
+                mode === "ADD" ? "rgba(52,211,153,0.55)" : theme.colors.border,
+            }}
+          />
+
+          <Button
+            title="REDUCE"
+            variant="secondary"
+            onPress={() => setMode("REDUCE")}
+            style={{
+              flex: 1,
+              borderColor:
+                mode === "REDUCE" ? theme.colors.dangerBorder : theme.colors.border,
+            }}
+          />
+        </View>
+
+        <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 6 }}>
+          Amount
+        </Text>
+        <TextInput
+          value={amount}
+          onChangeText={onAmountChange}
+          keyboardType="numeric"
+          returnKeyType="done"
+          onSubmitEditing={Keyboard.dismiss}
+          placeholder="e.g 5"
+          placeholderTextColor="rgba(255,255,255,0.35)"
+          style={{
+            borderWidth: 1,
+            borderColor: theme.colors.border,
+            borderRadius: theme.radius.lg,
+            backgroundColor: "rgba(255,255,255,0.05)",
+            paddingHorizontal: 14,
+            paddingVertical: 12,
+            color: theme.colors.text,
+            fontWeight: "800",
+          }}
+        />
+
+        <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 6 }}>
+          Reason (optional)
+        </Text>
+        <TextInput
+          value={reason}
+          onChangeText={setReason}
+          placeholder="mf: Damaged, Transfer, Adjustment..."
+          placeholderTextColor="rgba(255,255,255,0.35)"
+          multiline
+          textAlignVertical="top"
+          style={{
+            minHeight: 110,
+            borderWidth: 1,
+            borderColor: theme.colors.border,
+            borderRadius: theme.radius.lg,
+            backgroundColor: "rgba(255,255,255,0.05)",
+            paddingHorizontal: 14,
+            paddingVertical: 12,
+            color: theme.colors.text,
+            fontWeight: "800",
+          }}
+        />
+
+        <View style={{ gap: 10, marginTop: 2 }}>
+          <Button
+            title={saving ? "Saving..." : "Submit"}
+            onPress={() => {
+              Keyboard.dismiss();
+              void submit();
+            }}
+            disabled={saving}
+            variant="primary"
+          />
+
+          <Button
+            title="Back"
+            onPress={() => {
+              Keyboard.dismiss();
+              router.back();
+            }}
+            disabled={saving}
+            variant="secondary"
+          />
+        </View>
+
+        {!canAdjust && (
+          <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+            Huna ruhusa ya kubadili stock. (Owner/Admin only)
+          </Text>
+        )}
+      </Card>
+    </View>
+  );
+
   return (
     <Screen scroll bottomPad={kbHeight > 0 ? kbHeight + 24 : 160}>
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-        <View style={{ flex: 1, gap: 14 }}>
-          <Text style={{ fontSize: 26, fontWeight: "900", color: theme.colors.text }}>
-            Adjust Stock
-          </Text>
-
-          <Card style={{ gap: 8 }}>
-            <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Active Store</Text>
-            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
-              {activeStoreName ?? "—"}
-            </Text>
-
-            <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-              Product
-            </Text>
-            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{displayName}</Text>
-
-            <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-              SKU
-            </Text>
-            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{displaySku}</Text>
-
-            <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-              Current Qty
-            </Text>
-            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{currentQty}</Text>
-          </Card>
-
-          {/* Stock Adjustment */}
-          <Card style={{ gap: 10 }}>
-            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-              Mode
-            </Text>
-
-            <View style={{ flexDirection: "row", gap: 10 }}>
-              <Button
-                title="ADD"
-                variant="secondary"
-                onPress={() => setMode("ADD")}
-                style={{
-                  flex: 1,
-                  borderColor:
-                    mode === "ADD" ? "rgba(52,211,153,0.55)" : theme.colors.border,
-                }}
-              />
-
-              <Button
-                title="REDUCE"
-                variant="secondary"
-                onPress={() => setMode("REDUCE")}
-                style={{
-                  flex: 1,
-                  borderColor:
-                    mode === "REDUCE" ? theme.colors.dangerBorder : theme.colors.border,
-                }}
-              />
-            </View>
-
-            <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 6 }}>
-              Amount
-            </Text>
-            <TextInput
-              value={amount}
-              onChangeText={onAmountChange}
-              keyboardType="numeric"
-              returnKeyType="done"
-              onSubmitEditing={Keyboard.dismiss}
-              placeholder="e.g 5"
-              placeholderTextColor="rgba(255,255,255,0.35)"
-              style={{
-                borderWidth: 1,
-                borderColor: theme.colors.border,
-                borderRadius: theme.radius.lg,
-                backgroundColor: "rgba(255,255,255,0.05)",
-                paddingHorizontal: 14,
-                paddingVertical: 12,
-                color: theme.colors.text,
-                fontWeight: "800",
-              }}
-            />
-
-            <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 6 }}>
-              Reason (optional)
-            </Text>
-            <TextInput
-              value={reason}
-              onChangeText={setReason}
-              placeholder="mf: Damaged, Transfer, Adjustment..."
-              placeholderTextColor="rgba(255,255,255,0.35)"
-              multiline
-              textAlignVertical="top"
-              style={{
-                minHeight: 110,
-                borderWidth: 1,
-                borderColor: theme.colors.border,
-                borderRadius: theme.radius.lg,
-                backgroundColor: "rgba(255,255,255,0.05)",
-                paddingHorizontal: 14,
-                paddingVertical: 12,
-                color: theme.colors.text,
-                fontWeight: "800",
-              }}
-            />
-
-            <View style={{ gap: 10, marginTop: 2 }}>
-              <Button
-                title={saving ? "Saving..." : "Submit"}
-                onPress={() => {
-                  Keyboard.dismiss();
-                  void submit();
-                }}
-                disabled={saving}
-                variant="primary"
-              />
-
-              <Button
-                title="Back"
-                onPress={() => {
-                  Keyboard.dismiss();
-                  router.back();
-                }}
-                disabled={saving}
-                variant="secondary"
-              />
-            </View>
-
-            {!canAdjust && (
-              <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                Huna ruhusa ya kubadili stock. (Owner/Admin only)
-              </Text>
-            )}
-          </Card>
-        </View>
-      </TouchableWithoutFeedback>
+      {Platform.OS === "web" ? (
+        content
+      ) : (
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          {content}
+        </TouchableWithoutFeedback>
+      )}
     </Screen>
   );
 }

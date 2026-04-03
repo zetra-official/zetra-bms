@@ -14,6 +14,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { CameraView, useCameraPermissions } from "expo-camera";
 
+import { useFocusEffect } from "expo-router";
 import { useOrg } from "../../src/context/OrgContext";
 import { supabase } from "../../src/supabase/supabaseClient";
 import { Button } from "../../src/ui/Button";
@@ -21,6 +22,7 @@ import { Card } from "../../src/ui/Card";
 import { Screen } from "../../src/ui/Screen";
 import { theme } from "../../src/ui/theme";
 import { useOrgMoneyPrefs } from "../../src/ui/money";
+import { setActiveScanScope, subscribeScanBarcode } from "@/src/utils/scanBus";
 
 type ProductRow = {
   id: string;
@@ -160,6 +162,22 @@ export default function ProductsTabScreen() {
   const [scanOpen, setScanOpen] = useState(false);
   const [scanBusy, setScanBusy] = useState(false);
 
+  const handleProductsScopedScan = useCallback(
+    (rawInput: any) => {
+      if (!canManage) return;
+
+      const code = cleanBarcode(rawInput);
+      if (!code) return;
+
+      if (editOpen) {
+        setEditBarcode(code);
+      } else {
+        setBarcode(code);
+      }
+    },
+    [canManage, editOpen]
+  );
+
   const webScanBufferRef = useRef("");
   const webScanLastAtRef = useRef(0);
   const webScanTimerRef = useRef<any>(null);
@@ -244,6 +262,24 @@ export default function ProductsTabScreen() {
     void load();
   }, [load]);
 
+  useFocusEffect(
+    useCallback(() => {
+      setActiveScanScope("PRODUCTS");
+
+      const unsub = subscribeScanBarcode(
+        (barcode) => {
+          handleProductsScopedScan(barcode);
+        },
+        { scope: "PRODUCTS" }
+      );
+
+      return () => {
+        unsub();
+        setActiveScanScope("GLOBAL");
+      };
+    }, [handleProductsScopedScan])
+  );
+
   useEffect(() => {
     if (Platform.OS !== "web") return;
     if (!canManage) return;
@@ -266,8 +302,7 @@ export default function ProductsTabScreen() {
         }
 
         if (code.length >= 4) {
-          if (editOpen) setEditBarcode(code);
-          else setBarcode(code);
+          handleProductsScopedScan(code);
         }
         return;
       }
@@ -298,7 +333,7 @@ export default function ProductsTabScreen() {
         webScanTimerRef.current = null;
       }
     };
-  }, [canManage, editOpen]);
+  }, [canManage, handleProductsScopedScan]);
 
   const openEdit = useCallback((p: ProductRow) => {
     setEditProductId(p.id);

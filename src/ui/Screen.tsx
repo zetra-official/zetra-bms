@@ -52,6 +52,7 @@ export function Screen({
 }: Props) {
   const insets = useSafeAreaInsets();
   const baseBg = theme.colors?.background ?? "#0B0F14";
+  const isWeb = Platform.OS === "web";
 
   // ✅ Tab bar constants (match app/(tabs)/_layout.tsx)
   const TAB_BAR_BASE_HEIGHT = 56;
@@ -66,6 +67,8 @@ export function Screen({
   const [resumeTick, setResumeTick] = useState(0);
 
   useEffect(() => {
+    if (isWeb) return;
+
     const showSub = Keyboard.addListener("keyboardDidShow", () => {
       setKeyboardOpen(true);
     });
@@ -78,9 +81,11 @@ export function Screen({
       showSub.remove();
       hideSub.remove();
     };
-  }, []);
+  }, [isWeb]);
 
   useEffect(() => {
+    if (isWeb) return;
+
     const sub = AppState.addEventListener("change", (state) => {
       if (state === "active") {
         setResumeTick((x) => x + 1);
@@ -93,9 +98,10 @@ export function Screen({
         sub?.remove?.();
       } catch {}
     };
-  }, []);
+  }, [isWeb]);
 
   useEffect(() => {
+    if (isWeb) return;
     if (!NetInfo?.addEventListener) return;
 
     const unsub = NetInfo.addEventListener((state: any) => {
@@ -115,12 +121,12 @@ export function Screen({
         unsub?.();
       } catch {}
     };
-  }, []);
+  }, [isWeb]);
 
   const effectiveBottomPad = useMemo(() => {
     if (typeof bottomPad === "number") return bottomPad;
 
-    if (Platform.OS === "web") {
+    if (isWeb) {
       return 24;
     }
 
@@ -130,12 +136,12 @@ export function Screen({
     }
 
     return TAB_BAR_BASE_HEIGHT + TAB_BAR_EXTRA_GAP;
-  }, [bottomPad, keyboardOpen]);
+  }, [bottomPad, keyboardOpen, isWeb]);
 
   // ✅ Stronger safe-area spacing for top headers
   const topInset = Math.max(insets.top, 10);
   const topContentPad = topInset + 8;
-  const offlineExtra = isOffline ? 44 : 0;
+  const offlineExtra = !isWeb && isOffline ? 44 : 0;
   const scrollableTopSpacer = topContentPad + offlineExtra;
 
   const paddingBottom = Math.max(insets.bottom, 10) + effectiveBottomPad;
@@ -192,13 +198,7 @@ export function Screen({
 
   const Root = (
     <View style={[{ flex: 1, backgroundColor: baseBg }, style]}>
-      <View
-        pointerEvents="none"
-        style={{
-          ...AbsoluteFillObject,
-          backgroundColor: "transparent",
-        }}
-      />
+      {null}
 
       {OfflineBanner}
 
@@ -227,7 +227,7 @@ export function Screen({
           contentContainerStyle={[
             {
               paddingTop: scrollableTopSpacer,
-              paddingHorizontal: Platform.OS === "web" ? 20 : 16,
+              paddingHorizontal: isWeb ? 20 : 16,
               paddingBottom,
               backgroundColor: baseBg,
             },
@@ -254,7 +254,7 @@ export function Screen({
             {
               flex: 1,
               paddingTop: scrollableTopSpacer,
-              paddingHorizontal: Platform.OS === "web" ? 20 : 16,
+              paddingHorizontal: isWeb ? 20 : 16,
               paddingBottom,
               backgroundColor: baseBg,
             },
@@ -267,7 +267,7 @@ export function Screen({
     </View>
   );
 
-  if (Platform.OS !== "ios") return Root;
+  if (isWeb || Platform.OS !== "ios") return Root;
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding" keyboardVerticalOffset={0}>

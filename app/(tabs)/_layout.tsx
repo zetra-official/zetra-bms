@@ -230,6 +230,38 @@ export default function TabsLayout() {
         }}
       />
 
+      <Tabs.Screen
+        name="notifications"
+        options={{
+          href: isWeb ? "/notifications" : null,
+          title: "Notifications",
+          tabBarItemStyle: isCashier ? { display: "none" } : undefined,
+          tabBarLabel: ({ color }) => <TabLabel text="Notifications" color={color} />,
+          tabBarIcon: ({ size, color }) =>
+            isWeb ? (
+              <WebTabIcon emoji="🔔" color={color} />
+            ) : (
+              <Ionicons name="notifications-outline" size={size} color={color} />
+            ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="stocks/history"
+        options={{
+          href: isWeb ? "/stocks/history" : null,
+          title: "Stock Value",
+          tabBarItemStyle: isCashier ? { display: "none" } : undefined,
+          tabBarLabel: ({ color }) => <TabLabel text="Stock Value" color={color} />,
+          tabBarIcon: ({ size, color }) =>
+            isWeb ? (
+              <WebTabIcon emoji="📦" color={color} />
+            ) : (
+              <Ionicons name="cube-outline" size={size} color={color} />
+            ),
+        }}
+      />
+
       {/* hidden routes */}
       <Tabs.Screen name="staff" options={{ href: null }} />
     </Tabs>

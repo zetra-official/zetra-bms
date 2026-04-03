@@ -251,9 +251,19 @@ export default function CreditHomeScreen() {
     router.push("/(tabs)/credit/cleared" as any);
   }
 
-  const headerSubtitle = useMemo(() => {
+ const headerSubtitle = useMemo(() => {
     return `Store: ${activeStoreName ?? "No active store"} • Role: ${roleLabel}`;
   }, [activeStoreName, roleLabel]);
+
+  const desktopLeftWidth = useMemo(() => {
+    if (!isDesktopWeb) return "100%";
+    return width >= 1500 ? 440 : 400;
+  }, [isDesktopWeb, width]);
+
+  const desktopRightMinHeight = useMemo(() => {
+    if (!isDesktopWeb) return undefined;
+    return Math.max(620, 760);
+  }, [isDesktopWeb]);
 
   const filtered = useMemo(() => {
     const query = norm(q);
@@ -657,7 +667,7 @@ export default function CreditHomeScreen() {
   }, [clearedTimelineRows, clearedOpen, openAccount, money]);
 
   return (
-    <Screen scroll bottomPad={160}>
+    <Screen scroll={!isDesktopWeb} bottomPad={isDesktopWeb ? 24 : 160}>
       <View
         style={{
           paddingTop: 6,
@@ -693,17 +703,30 @@ export default function CreditHomeScreen() {
       <View
         style={{
           flexDirection: isDesktopWeb ? "row" : "column",
-          alignItems: "flex-start",
+          alignItems: "stretch",
           gap: 14,
+          width: "100%",
+          ...(isDesktopWeb
+            ? {
+                minHeight: Math.max(620, width >= 1500 ? 760 : 700),
+                maxHeight: Math.max(620, width >= 1500 ? 760 : 700),
+              }
+            : null),
         }}
       >
         <Card
           style={{
             padding: 14,
             gap: 12,
-            flex: isDesktopWeb ? 0 : undefined,
-            width: isDesktopWeb ? 420 : "100%",
+            width: isDesktopWeb ? (desktopLeftWidth as any) : "100%",
             alignSelf: "stretch",
+            flexShrink: 0,
+            ...(isDesktopWeb
+              ? {
+                  height: "100%",
+                  overflow: "hidden",
+                }
+              : null),
           }}
         >
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
@@ -734,51 +757,23 @@ export default function CreditHomeScreen() {
 
           <View
             style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 10,
               borderWidth: 1,
               borderColor: "rgba(255,255,255,0.10)",
-              backgroundColor: "rgba(255,255,255,0.035)",
+              backgroundColor: "rgba(255,255,255,0.04)",
               borderRadius: theme.radius.xl,
-              paddingHorizontal: 12,
-              paddingVertical: 10,
+              padding: 12,
+              gap: 6,
+              shadowColor: "#000",
+              shadowOpacity: 0.18,
+              shadowRadius: 14,
+              shadowOffset: { width: 0, height: 8 },
+              elevation: 6,
             }}
           >
-            <View
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 999,
-                borderWidth: 1,
-                borderColor: canStaffManage || isOwnerAdmin
-                  ? theme.colors.emeraldBorder
-                  : "rgba(255,255,255,0.12)",
-                backgroundColor: canStaffManage || isOwnerAdmin
-                  ? theme.colors.emeraldSoft
-                  : "rgba(255,255,255,0.05)",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Ionicons
-                name={canStaffManage || isOwnerAdmin ? "shield-checkmark-outline" : "eye-outline"}
-                size={16}
-                color={canStaffManage || isOwnerAdmin ? theme.colors.emerald : theme.colors.muted}
-              />
-            </View>
-
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}>
-                Access Status
-              </Text>
-              <Text
-                style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}
-                numberOfLines={2}
-              >
-                {accessText}
-              </Text>
-            </View>
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Access</Text>
+            <Text style={{ color: theme.colors.muted, fontWeight: "800", lineHeight: 18 }}>
+              {accessText}
+            </Text>
           </View>
 
           <View style={{ gap: 10 }}>
@@ -821,112 +816,91 @@ export default function CreditHomeScreen() {
             </View>
           </View>
 
-         <View style={{ gap: 10 }}>
-            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Quick Actions</Text>
-
-            <View style={{ flexDirection: "row", gap: 10 }}>
-              <Pressable
-                onPress={openCleared}
-                hitSlop={10}
-                style={({ pressed }) => ({
-                  flex: 1,
-                  height: 46,
-                  borderRadius: theme.radius.xl,
-                  borderWidth: 1,
-                  borderColor: theme.colors.borderSoft,
-                  backgroundColor: "rgba(255,255,255,0.035)",
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 8,
-                  opacity: pressed ? 0.92 : 1,
-                })}
-              >
-                <Ionicons name="archive-outline" size={16} color={theme.colors.text} />
-                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14 }}>
-                  Cleared
-                </Text>
-              </Pressable>
-
-              <Pressable
-                onPress={openTimeline}
-                hitSlop={10}
-                style={({ pressed }) => ({
-                  flex: 1,
-                  height: 46,
-                  borderRadius: theme.radius.xl,
-                  borderWidth: 1,
-                  borderColor: theme.colors.emeraldBorder,
-                  backgroundColor: theme.colors.emeraldSoft,
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 8,
-                  opacity: pressed ? 0.92 : 1,
-                })}
-              >
-                <Ionicons name="time-outline" size={16} color={theme.colors.emerald} />
-                <Text style={{ color: theme.colors.emerald, fontWeight: "900", fontSize: 14 }}>
-                  Timeline
-                </Text>
-              </Pressable>
-            </View>
-
+          <View style={{ flexDirection: "row", gap: 10 }}>
             <Pressable
-              onPress={() => {
-                loadAccess();
-                load();
-              }}
+              onPress={openCleared}
               hitSlop={10}
               style={({ pressed }) => ({
-                height: 44,
+                flex: 1,
+                height: 48,
                 borderRadius: theme.radius.xl,
                 borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.10)",
-                backgroundColor: "rgba(255,255,255,0.035)",
-                flexDirection: "row",
+                borderColor: theme.colors.borderSoft,
+                backgroundColor: "rgba(255,255,255,0.04)",
                 alignItems: "center",
                 justifyContent: "center",
-                gap: 8,
                 opacity: pressed ? 0.92 : 1,
               })}
             >
-              <Ionicons name="refresh-outline" size={16} color={theme.colors.muted} />
-              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14 }}>
-                Refresh Data
+              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+                View Cleared
               </Text>
             </Pressable>
-          </View> 
+
+            <Pressable
+              onPress={openTimeline}
+              hitSlop={10}
+              style={({ pressed }) => ({
+                flex: 1,
+                height: 48,
+                borderRadius: theme.radius.xl,
+                borderWidth: 1,
+                borderColor: theme.colors.emeraldBorder,
+                backgroundColor: theme.colors.emeraldSoft,
+                alignItems: "center",
+                justifyContent: "center",
+                opacity: pressed ? 0.92 : 1,
+              })}
+            >
+              <Text style={{ color: theme.colors.emerald, fontWeight: "900", fontSize: 16 }}>
+                Borrow Timeline
+              </Text>
+            </Pressable>
+          </View>
+
+          <Pressable
+            onPress={() => {
+              loadAccess();
+              load();
+            }}
+            hitSlop={10}
+            style={({ pressed }) => ({
+              height: 48,
+              borderRadius: theme.radius.xl,
+              borderWidth: 1,
+              borderColor: theme.colors.emeraldBorder,
+              backgroundColor: theme.colors.emeraldSoft,
+              alignItems: "center",
+              justifyContent: "center",
+              opacity: pressed ? 0.92 : 1,
+            })}
+          >
+            <Text style={{ color: theme.colors.emerald, fontWeight: "900", fontSize: 16 }}>
+              Refresh
+            </Text>
+          </Pressable>
         </Card>
 
         <Card
           style={{
             padding: 14,
             gap: 12,
-            flex: 1,
             width: isDesktopWeb ? undefined : "100%",
+            flex: isDesktopWeb ? 1 : undefined,
             alignSelf: "stretch",
-            minHeight: isDesktopWeb ? 720 : undefined,
+            flexShrink: 0,
+            ...(isDesktopWeb
+              ? {
+                  minWidth: 0,
+                  height: "100%",
+                  overflow: "hidden",
+                }
+              : null),
           }}
         >
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-            <View
-              style={{
-                width: 42,
-                height: 42,
-                borderRadius: 999,
-                borderWidth: 1,
-                borderColor: theme.colors.emeraldBorder,
-                backgroundColor: theme.colors.emeraldSoft,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Ionicons name="people-outline" size={18} color={theme.colors.emerald} />
-            </View>
-
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 17 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
                 Debtors List
               </Text>
               <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 4 }}>
@@ -936,17 +910,15 @@ export default function CreditHomeScreen() {
 
             <View
               style={{
-                minWidth: 40,
                 paddingHorizontal: 10,
                 paddingVertical: 6,
                 borderRadius: 999,
                 borderWidth: 1,
-                borderColor: theme.colors.emeraldBorder,
-                backgroundColor: theme.colors.emeraldSoft,
-                alignItems: "center",
+                borderColor: "rgba(255,255,255,0.10)",
+                backgroundColor: "rgba(255,255,255,0.05)",
               }}
             >
-              <Text style={{ color: theme.colors.emerald, fontWeight: "900", fontSize: 12 }}>
+              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>
                 {filtered.length}
               </Text>
             </View>
@@ -982,15 +954,34 @@ export default function CreditHomeScreen() {
           ) : (
             <View
               style={{
-                maxHeight: isDesktopWeb ? 620 : undefined,
+                width: "100%",
+                flex: isDesktopWeb ? 1 : undefined,
+                minHeight: isDesktopWeb ? 0 : undefined,
+                ...(isDesktopWeb
+                  ? {
+                      overflow: "hidden",
+                    }
+                  : null),
               }}
             >
               <FlatList
                 data={filtered}
                 keyExtractor={(it) => it.account_id}
                 scrollEnabled={isDesktopWeb}
-                nestedScrollEnabled
+                nestedScrollEnabled={isDesktopWeb}
                 showsVerticalScrollIndicator={isDesktopWeb}
+                style={
+                  isDesktopWeb
+                    ? {
+                        flex: 1,
+                        minHeight: 0,
+                      }
+                    : undefined
+                }
+                contentContainerStyle={{
+                  paddingBottom: isDesktopWeb ? 10 : 0,
+                  flexGrow: isDesktopWeb ? 1 : 0,
+                }}
                 ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
                 renderItem={({ item }) => {
                   const name = item.customer_name ?? "Customer";
@@ -1027,10 +1018,7 @@ export default function CreditHomeScreen() {
                       </View>
 
                       <View style={{ height: 10 }} />
-                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                        <Text style={{ color: theme.colors.emerald, fontWeight: "900" }}>Open</Text>
-                        <Ionicons name="arrow-forward" size={14} color={theme.colors.emerald} />
-                      </View>
+                      <Text style={{ color: theme.colors.emerald, fontWeight: "900" }}>Open →</Text>
                     </Pressable>
                   );
                 }}
