@@ -1,5 +1,5 @@
 // src/ui/Card.tsx
-import React from "react";
+import React, { useMemo } from "react";
 import { Platform, StyleProp, View, ViewStyle } from "react-native";
 import { UI } from "@/src/ui/theme";
 
@@ -24,27 +24,33 @@ type Props = {
 };
 
 export function Card({ children, style, padding = 16, noPadding }: Props) {
-  return (
-    <View
-      style={[
-        {
-          borderRadius: 22,
-          borderWidth: 1,
-          borderColor: "rgba(255,255,255,0.12)",
-          backgroundColor: C?.card ?? "rgba(255,255,255,0.05)",
-          padding: noPadding ? 0 : padding,
+  const baseStyle = useMemo(
+    () => ({
+      borderRadius: 22,
+      borderWidth: 1,
+      borderColor: "rgba(255,255,255,0.12)",
+      backgroundColor: C?.card ?? "rgba(255,255,255,0.05)",
+      padding: noPadding ? 0 : padding,
 
-          // subtle shadow/elevation
-          shadowColor: "#000",
-          shadowOpacity: IS_WEB ? 0 : 0.25,
-          shadowRadius: IS_WEB ? 0 : 18,
-          shadowOffset: IS_WEB ? { width: 0, height: 0 } : { width: 0, height: 10 },
-          elevation: IS_WEB ? 0 : 6,
-        },
-        style,
-      ]}
-    >
-      {children}
-    </View>
+      // subtle shadow/elevation
+      shadowColor: "#000",
+      shadowOpacity: IS_WEB ? 0 : 0.25,
+      shadowRadius: IS_WEB ? 0 : 18,
+      shadowOffset: IS_WEB ? { width: 0, height: 0 } : { width: 0, height: 10 },
+      elevation: IS_WEB ? 0 : 6,
+
+      // web/mobile-browser stabilization
+      ...(IS_WEB
+        ? ({
+            overflow: "hidden",
+            transform: "translateZ(0)",
+            backfaceVisibility: "hidden",
+            willChange: "auto",
+          } as any)
+        : null),
+    }),
+    [noPadding, padding]
   );
+
+  return <View style={[baseStyle, style]}>{children}</View>;
 }

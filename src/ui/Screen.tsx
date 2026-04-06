@@ -197,7 +197,22 @@ export function Screen({
   }, [topContentPad, isOffline]);
 
   const Root = (
-    <View style={[{ flex: 1, backgroundColor: baseBg }, style]}>
+    <View
+      style={[
+        {
+          flex: 1,
+          minHeight: 0,
+          backgroundColor: baseBg,
+          ...(isWeb
+            ? {
+                width: "100%",
+                overflow: "hidden" as const,
+              }
+            : null),
+        },
+        style,
+      ]}
+    >
       {null}
 
       {OfflineBanner}
@@ -223,13 +238,27 @@ export function Screen({
 
       {scroll ? (
         <ScrollView
-          style={{ flex: 1, backgroundColor: baseBg }}
+          style={[
+            {
+              flex: 1,
+              minHeight: 0,
+              backgroundColor: baseBg,
+            },
+            isWeb
+              ? ({
+                  width: "100%",
+                  overflow: "auto",
+                  WebkitOverflowScrolling: "touch",
+                } as any)
+              : null,
+          ]}
           contentContainerStyle={[
             {
               paddingTop: scrollableTopSpacer,
               paddingHorizontal: isWeb ? 20 : 16,
               paddingBottom,
               backgroundColor: baseBg,
+              minHeight: isWeb ? "100%" : undefined,
             },
             contentStyle,
           ]}
@@ -241,10 +270,19 @@ export function Screen({
           {children}
         </ScrollView>
       ) : childIsScrollableRoot ? (
-        <View style={[{ flex: 1, backgroundColor: baseBg }, contentStyle]}>
-          {/* ✅ Critical fix:
-              Every root FlatList/ScrollView/SectionList screen now starts BELOW safe area.
-              This fixes History / Closing History jumping into the top status area. */}
+        <View
+          style={[
+            {
+              flex: 1,
+              minHeight: 0,
+              backgroundColor: baseBg,
+              paddingHorizontal: isWeb ? 20 : 16,
+              paddingBottom,
+            },
+            contentStyle,
+          ]}
+        >
+          {/* ✅ Root scrollable screens start below safe area and keep bottom-safe spacing. */}
           <View style={{ height: scrollableTopSpacer }} />
           {children}
         </View>
@@ -253,6 +291,7 @@ export function Screen({
           style={[
             {
               flex: 1,
+              minHeight: 0,
               paddingTop: scrollableTopSpacer,
               paddingHorizontal: isWeb ? 20 : 16,
               paddingBottom,

@@ -3,12 +3,14 @@ import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
   Text,
   TextInput,
   View,
+  useWindowDimensions,
 } from "react-native";
 
 import { useOrg } from "../src/context/OrgContext";
@@ -148,6 +150,11 @@ async function fetchActiveOrgPlanInfo(
 
 export default function OrgSwitcherScreen() {
   const router = useRouter();
+  const { width } = useWindowDimensions();
+
+  const isWeb = Platform.OS === "web";
+  const isDesktopWeb = isWeb && width >= 1100;
+  const desktopMaxWidth = width >= 1600 ? 1460 : width >= 1380 ? 1320 : 1200;
 
   const {
     orgs,
@@ -339,13 +346,40 @@ export default function OrgSwitcherScreen() {
 
   return (
     <Screen>
-      <View style={{ flex: 1 }}>
-        <View>
-          <View style={{ flexDirection: "row", alignItems: "center" }}>
-            <Text style={{ fontSize: 26, fontWeight: "900", color: UI.text, flex: 1 }}>
+      <View
+        style={{
+          flex: 1,
+          width: "100%",
+          maxWidth: isDesktopWeb ? desktopMaxWidth : undefined,
+          alignSelf: "center",
+        }}
+      >
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "flex-start",
+            gap: 12,
+            marginBottom: 10,
+          }}
+        >
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: isDesktopWeb ? 34 : 26, fontWeight: "900", color: UI.text }}>
               Organizations
             </Text>
 
+            <Text
+              style={{
+                color: UI.muted,
+                fontWeight: "700",
+                marginTop: 6,
+                fontSize: isDesktopWeb ? 15 : 14,
+              }}
+            >
+              Switch or create another organization
+            </Text>
+          </View>
+
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
             <Pressable
               onPress={() => refresh()}
               disabled={loading || refreshing}
@@ -356,7 +390,6 @@ export default function OrgSwitcherScreen() {
                 borderRadius: 12,
                 borderWidth: 1,
                 borderColor: UI.border,
-                marginRight: 10,
                 opacity: loading || refreshing ? 0.6 : 1,
               }}
             >
@@ -381,122 +414,134 @@ export default function OrgSwitcherScreen() {
               <Text style={{ fontSize: 16, color: UI.muted, fontWeight: "900" }}>✕</Text>
             </Pressable>
           </View>
-
-          <Text style={{ color: UI.muted, fontWeight: "700", marginTop: 6 }}>
-            Switch or create another organization
-          </Text>
-
-          <Card style={{ marginTop: 16, gap: 10 }}>
-            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-              Create Organization
-            </Text>
-
-            <TextInput
-              value={orgName}
-              onChangeText={setOrgName}
-              placeholder="Organization / Business name"
-              placeholderTextColor={UI.faint}
-              style={{
-                borderWidth: 1,
-                borderColor: UI.border,
-                borderRadius: 14,
-                padding: 14,
-                color: UI.text,
-                fontWeight: "800",
-              }}
-              autoCapitalize="words"
-              returnKeyType="next"
-            />
-
-            <TextInput
-              value={storeName}
-              onChangeText={setStoreName}
-              placeholder="First store name"
-              placeholderTextColor={UI.faint}
-              style={{
-                borderWidth: 1,
-                borderColor: UI.border,
-                borderRadius: 14,
-                padding: 14,
-                color: UI.text,
-                fontWeight: "800",
-              }}
-              autoCapitalize="words"
-              returnKeyType="done"
-            />
-
-            <Text style={{ color: UI.muted, fontWeight: "700", marginTop: 2 }}>
-              Tip: Jaza majina yote mawili ndipo “Create & Switch” iwe active.
-            </Text>
-
-            <Button
-              title={creating ? "Creating..." : "Create & Switch"}
-              onPress={onCreate}
-              disabled={!canCreate}
-              variant="primary"
-            />
-          </Card>
-
-          <View
-            style={{
-              marginTop: 18,
-              marginBottom: 8,
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 10,
-            }}
-          >
-            <Text style={{ color: UI.muted, fontWeight: "800", flex: 1 }}>
-              Your Organizations
-            </Text>
-
-            <Pressable
-              onPress={() => setShowAll((v) => !v)}
-              hitSlop={10}
-              style={{
-                paddingHorizontal: 12,
-                paddingVertical: 8,
-                borderRadius: 999,
-                borderWidth: 1,
-                borderColor: UI.border,
-              }}
-            >
-              <Text style={{ color: UI.muted, fontWeight: "900" }}>
-                {showAll ? "Grouped view" : "Show individual"}
-              </Text>
-            </Pressable>
-          </View>
-
-          <View style={{ marginBottom: 10 }}>
-            <TextInput
-              value={q}
-              onChangeText={setQ}
-              placeholder="Search organizations (name or role)..."
-              placeholderTextColor={UI.faint}
-              style={{
-                borderWidth: 1,
-                borderColor: UI.border,
-                borderRadius: 14,
-                padding: 14,
-                color: UI.text,
-                fontWeight: "800",
-              }}
-              autoCapitalize="none"
-              autoCorrect={false}
-              clearButtonMode="while-editing"
-            />
-          </View>
         </View>
 
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={{ paddingBottom: 18 }}
-          showsVerticalScrollIndicator={false}
-          nestedScrollEnabled
-          refreshControl={
-            <RefreshControl refreshing={!!refreshing} onRefresh={refresh} tintColor={UI.muted} />
-          }
+        <View
+          style={{
+            flex: 1,
+            flexDirection: isDesktopWeb ? "row" : "column",
+            alignItems: "flex-start",
+            gap: 18,
+          }}
         >
+          <View
+            style={{
+              width: isDesktopWeb ? 380 : "100%",
+              minWidth: isDesktopWeb ? 380 : undefined,
+            }}
+          >
+            <Card style={{ marginTop: 6, gap: 10 }}>
+              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
+                Create Organization
+              </Text>
+
+              <TextInput
+                value={orgName}
+                onChangeText={setOrgName}
+                placeholder="Organization / Business name"
+                placeholderTextColor={UI.faint}
+                style={{
+                  borderWidth: 1,
+                  borderColor: UI.border,
+                  borderRadius: 14,
+                  padding: 14,
+                  color: UI.text,
+                  fontWeight: "800",
+                }}
+                autoCapitalize="words"
+                returnKeyType="next"
+              />
+
+              <TextInput
+                value={storeName}
+                onChangeText={setStoreName}
+                placeholder="First store name"
+                placeholderTextColor={UI.faint}
+                style={{
+                  borderWidth: 1,
+                  borderColor: UI.border,
+                  borderRadius: 14,
+                  padding: 14,
+                  color: UI.text,
+                  fontWeight: "800",
+                }}
+                autoCapitalize="words"
+                returnKeyType="done"
+              />
+
+              <Text style={{ color: UI.muted, fontWeight: "700", marginTop: 2 }}>
+                Tip: Jaza majina yote mawili ndipo “Create & Switch” iwe active.
+              </Text>
+
+              <Button
+                title={creating ? "Creating..." : "Create & Switch"}
+                onPress={onCreate}
+                disabled={!canCreate}
+                variant="primary"
+              />
+            </Card>
+          </View>
+
+          <View style={{ flex: 1, width: "100%" }}>
+            <View
+              style={{
+                marginTop: 6,
+                marginBottom: 8,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 10,
+              }}
+            >
+              <Text style={{ color: UI.muted, fontWeight: "800", flex: 1, fontSize: isDesktopWeb ? 15 : 14 }}>
+                Your Organizations
+              </Text>
+
+              <Pressable
+                onPress={() => setShowAll((v) => !v)}
+                hitSlop={10}
+                style={{
+                  paddingHorizontal: 12,
+                  paddingVertical: 8,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: UI.border,
+                }}
+              >
+                <Text style={{ color: UI.muted, fontWeight: "900" }}>
+                  {showAll ? "Grouped view" : "Show individual"}
+                </Text>
+              </Pressable>
+            </View>
+
+            <View style={{ marginBottom: 10 }}>
+              <TextInput
+                value={q}
+                onChangeText={setQ}
+                placeholder="Search organizations (name or role)..."
+                placeholderTextColor={UI.faint}
+                style={{
+                  borderWidth: 1,
+                  borderColor: UI.border,
+                  borderRadius: 14,
+                  padding: 14,
+                  color: UI.text,
+                  fontWeight: "800",
+                }}
+                autoCapitalize="none"
+                autoCorrect={false}
+                clearButtonMode="while-editing"
+              />
+            </View>
+
+            <ScrollView
+              style={{ flex: 1 }}
+              contentContainerStyle={{ paddingBottom: 18 }}
+              showsVerticalScrollIndicator={false}
+              nestedScrollEnabled
+              refreshControl={
+                <RefreshControl refreshing={!!refreshing} onRefresh={refresh} tintColor={UI.muted} />
+              }
+            >
           {loading ? (
             <Card style={{ marginTop: 6 }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
@@ -529,22 +574,45 @@ export default function OrgSwitcherScreen() {
                  <Pressable key={g.key} onPress={() => { void onPressGroup(list); }} disabled={topRightBusy}> 
                     <Card
                       style={{
-                        marginBottom: 10,
+                        marginBottom: 12,
                         borderColor: activeInGroup ? "rgba(52,211,153,0.55)" : UI.border,
+                        padding: isDesktopWeb ? 18 : 16,
                       }}
                     >
-                      <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 10 }}>
-                        <View style={{ flex: 1 }}>
-                          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                        <View style={{ flex: 1, minWidth: 0 }}>
+                          <Text
+                            style={{
+                              color: UI.text,
+                              fontWeight: "900",
+                              fontSize: isDesktopWeb ? 20 : 16,
+                            }}
+                            numberOfLines={1}
+                          >
                             {g.displayName}
+                          </Text>
+
+                          <Text
+                            style={{
+                              color: UI.faint,
+                              fontWeight: "700",
+                              marginTop: 6,
+                              fontSize: 12,
+                            }}
+                            numberOfLines={1}
+                          >
+                            {count > 1
+                              ? `${count} linked memberships in this grouped view`
+                              : "Single organization entry"}
                           </Text>
 
                           <View
                             style={{
                               flexDirection: "row",
                               alignItems: "center",
+                              flexWrap: "wrap",
                               gap: 8,
-                              marginTop: 8,
+                              marginTop: 10,
                             }}
                           >
                             <Badge text={`ROLE: ${roleLabel(g.role).toUpperCase()}`} variant="muted" />
@@ -553,7 +621,34 @@ export default function OrgSwitcherScreen() {
                           </View>
                         </View>
 
-                        <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 18 }}>›</Text>
+                        <View
+                          style={{
+                            minWidth: isDesktopWeb ? 120 : 36,
+                            alignItems: "flex-end",
+                            justifyContent: "center",
+                          }}
+                        >
+                          {isDesktopWeb ? (
+                            <View
+                              style={{
+                                paddingHorizontal: 14,
+                                paddingVertical: 10,
+                                borderRadius: 14,
+                                borderWidth: 1,
+                                borderColor: activeInGroup ? "rgba(52,211,153,0.45)" : UI.border,
+                                backgroundColor: activeInGroup
+                                  ? "rgba(52,211,153,0.10)"
+                                  : "rgba(255,255,255,0.04)",
+                              }}
+                            >
+                              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
+                                {activeInGroup ? "Open Active" : "Switch"}
+                              </Text>
+                            </View>
+                          ) : (
+                            <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 18 }}>›</Text>
+                          )}
+                        </View>
                       </View>
                     </Card>
                   </Pressable>
@@ -579,22 +674,43 @@ export default function OrgSwitcherScreen() {
                     >             
                       <Card
                         style={{
-                          marginBottom: 10,
+                          marginBottom: 12,
                           borderColor: active ? "rgba(52,211,153,0.55)" : UI.border,
+                          padding: isDesktopWeb ? 18 : 16,
                         }}
                       >
-                        <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 10 }}>
-                          <View style={{ flex: 1 }}>
-                            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                          <View style={{ flex: 1, minWidth: 0 }}>
+                            <Text
+                              style={{
+                                color: UI.text,
+                                fontWeight: "900",
+                                fontSize: isDesktopWeb ? 20 : 16,
+                              }}
+                              numberOfLines={1}
+                            >
                               {o.organization_name}
+                            </Text>
+
+                            <Text
+                              style={{
+                                color: UI.faint,
+                                fontWeight: "700",
+                                marginTop: 6,
+                                fontSize: 12,
+                              }}
+                              numberOfLines={1}
+                            >
+                              Ready to open this organization workspace
                             </Text>
 
                             <View
                               style={{
                                 flexDirection: "row",
                                 alignItems: "center",
+                                flexWrap: "wrap",
                                 gap: 8,
-                                marginTop: 8,
+                                marginTop: 10,
                               }}
                             >
                               <Badge text={`ROLE: ${roleLabel(o.role).toUpperCase()}`} variant="muted" />
@@ -602,13 +718,42 @@ export default function OrgSwitcherScreen() {
                             </View>
                           </View>
 
-                          <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 18 }}>›</Text>
+                          <View
+                            style={{
+                              minWidth: isDesktopWeb ? 120 : 36,
+                              alignItems: "flex-end",
+                              justifyContent: "center",
+                            }}
+                          >
+                            {isDesktopWeb ? (
+                              <View
+                                style={{
+                                  paddingHorizontal: 14,
+                                  paddingVertical: 10,
+                                  borderRadius: 14,
+                                  borderWidth: 1,
+                                  borderColor: active ? "rgba(52,211,153,0.45)" : UI.border,
+                                  backgroundColor: active
+                                    ? "rgba(52,211,153,0.10)"
+                                    : "rgba(255,255,255,0.04)",
+                                }}
+                              >
+                                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
+                                  {active ? "Open Active" : "Switch"}
+                                </Text>
+                              </View>
+                            ) : (
+                              <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 18 }}>›</Text>
+                            )}
+                          </View>
                         </View>
                       </Card>
                     </Pressable>
                   );
                 })}
         </ScrollView>
+          </View>
+        </View>
       </View>
     </Screen>
   );

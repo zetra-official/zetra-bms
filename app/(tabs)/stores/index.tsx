@@ -5,10 +5,12 @@ import {
   Alert,
   FlatList,
   Modal,
+  Platform,
   Pressable,
   Switch,
   Text,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { useOrg } from "../../../src/context/OrgContext";
 import { supabase } from "../../../src/supabase/supabaseClient";
@@ -40,6 +42,11 @@ type StaffChoiceRow = {
   role: string;
 };
 
+function normalizeStoreType(v: any): "STANDARD" | "CAPITAL_RECOVERY" {
+  const t = String(v ?? "STANDARD").trim().toUpperCase();
+  return t === "CAPITAL_RECOVERY" ? "CAPITAL_RECOVERY" : "STANDARD";
+}
+
 export default function StoresTabScreen() {
   const router = useRouter();
 
@@ -60,6 +67,12 @@ export default function StoresTabScreen() {
   const canManage = (["owner", "admin"] as const).includes(
     (activeRole ?? "staff") as any
   );
+
+  const { width } = useWindowDimensions();
+  const isWeb = Platform.OS === "web";
+  const isDesktopWeb = isWeb && width >= 1100;
+  const desktopMaxWidth = width >= 1600 ? 1480 : width >= 1380 ? 1320 : 1200;
+  const desktopColumns = isDesktopWeb ? 2 : 1;
 
   // ✅ SAFE spacing (prevents: Cannot read property 'page' of undefined)
   const PAGE = (theme as any)?.spacing?.page ?? 16;
@@ -525,11 +538,69 @@ export default function StoresTabScreen() {
   }, [activeStoreId, activeStoreName, router]);
 
   const Header = useMemo(() => {
+    const busy =
+      loading || refreshing || mgrLoading || creditFlagLoading || movementFlagLoading;
+
     return (
-      <View style={{ gap: 14 }}>
-        <Text style={{ fontSize: 26, fontWeight: "900", color: TEXT }}>
-          Stores
-        </Text>
+      <View style={{ gap: 16 }}>
+        <View
+          style={{
+            gap: 8,
+            flexDirection: isDesktopWeb ? "row" : "column",
+            alignItems: isDesktopWeb ? "flex-end" : "flex-start",
+            justifyContent: "space-between",
+          }}
+        >
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={{ fontSize: isDesktopWeb ? 34 : 26, fontWeight: "900", color: TEXT }}>
+              Stores
+            </Text>
+
+            <Text
+              style={{
+                color: MUTED,
+                fontWeight: "800",
+                marginTop: 6,
+                fontSize: isDesktopWeb ? 14 : 13,
+                lineHeight: 22,
+                maxWidth: isDesktopWeb ? 760 : undefined,
+              }}
+            >
+              Simamia stores zako, badili active store, fungua inventory, na dhibiti ruhusa za staff
+              kwa muonekano wa desktop ulio wazi, mpana, na wa biashara halisi.
+            </Text>
+          </View>
+
+          <View
+            style={{
+              flexDirection: "row",
+              gap: 10,
+              width: isDesktopWeb ? "auto" : "100%",
+            }}
+          >
+            <View style={{ flex: isDesktopWeb ? 0 : 1 }}>
+              <Button
+                title={busy ? "Refreshing..." : "Refresh"}
+                onPress={onRefreshAll}
+                disabled={busy}
+                variant="primary"
+              />
+            </View>
+
+            {canManage ? (
+              <View style={{ flex: isDesktopWeb ? 0 : 1 }}>
+                <Button
+                  title="+ Add Store"
+                  variant="primary"
+                  onPress={() => {
+                    // @ts-ignore
+                    router.push("/(tabs)/stores/add");
+                  }}
+                />
+              </View>
+            ) : null}
+          </View>
+        </View>
 
         {!!error && !String(error).toLowerCase().includes("not allowed") && (
           <Card
@@ -542,81 +613,138 @@ export default function StoresTabScreen() {
           </Card>
         )}
 
-        <Card style={{ gap: 10 }}>
-          <Text style={{ color: MUTED, fontWeight: "800" }}>Organization</Text>
-          <Text style={{ fontSize: 20, fontWeight: "900", color: TEXT }}>
-            {activeOrgName ?? "—"}
-          </Text>
-
-          <Text style={{ color: MUTED, fontWeight: "800" }}>Role</Text>
-          <Text style={{ fontWeight: "900", color: TEXT }}>
-            {activeRole ?? "—"}
-          </Text>
-
-          <Text style={{ color: MUTED, fontWeight: "800" }}>Active Store</Text>
-          <Text style={{ fontWeight: "900", color: TEXT }}>
-            {activeStoreName ?? "—"}
-          </Text>
-
-          <Button
-            title={
-              loading ||
-              refreshing ||
-              mgrLoading ||
-              creditFlagLoading ||
-              movementFlagLoading
-                ? "Refreshing..."
-                : "Refresh"
-            }
-            onPress={onRefreshAll}
-            disabled={loading || refreshing || mgrLoading || creditFlagLoading || movementFlagLoading}
-            variant="primary"
-          />
-        </Card>
-
-        {canManage && (
-          <Button
-            title="+ Add Store"
-            variant="primary"
-            onPress={() => {
-              // @ts-ignore
-              router.push("/(tabs)/stores/add");
-            }}
-          />
-        )}
-
-        {/* Store Actions */}
-        <Button
-          title="Open Inventory"
-          variant="secondary"
-          onPress={() => {
-            // @ts-ignore
-            router.push("/(tabs)/stores/inventory");
+        <View
+          style={{
+            flexDirection: isDesktopWeb ? "row" : "column",
+            gap: 14,
+            alignItems: "stretch",
           }}
-        />
+        >
+          <Card
+            style={{
+              gap: 12,
+              flex: isDesktopWeb ? 1.2 : undefined,
+              minHeight: isDesktopWeb ? 220 : undefined,
+            }}
+          >
+            <Text style={{ color: FAINT, fontWeight: "900", fontSize: 11, letterSpacing: 0.8 }}>
+              STORE WORKSPACE
+            </Text>
 
-        <Button title="Stock Movement" variant="secondary" onPress={openMovement} />
+            <Text style={{ color: MUTED, fontWeight: "800" }}>Organization</Text>
+            <Text style={{ fontSize: isDesktopWeb ? 24 : 20, fontWeight: "900", color: TEXT }}>
+              {activeOrgName ?? "—"}
+            </Text>
 
-        <Text style={{ fontWeight: "900", fontSize: 16, color: TEXT }}>
-          Available Stores
-        </Text>
+            <View
+              style={{
+                flexDirection: isDesktopWeb ? "row" : "column",
+                gap: 14,
+              }}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: MUTED, fontWeight: "800" }}>Role</Text>
+                <Text style={{ fontWeight: "900", color: TEXT, marginTop: 4 }}>
+                  {activeRole ?? "—"}
+                </Text>
+              </View>
 
-        <Text style={{ color: MUTED, fontWeight: "800", lineHeight: 18 }}>
-          Stores zilizofungwa (LOCKED) zitaonekana hapa, lakini haziwezi kuwa ACTIVE mpaka u-upgrade plan.
-        </Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: MUTED, fontWeight: "800" }}>Active Store</Text>
+                <Text style={{ fontWeight: "900", color: TEXT, marginTop: 4 }}>
+                  {activeStoreName ?? "—"}
+                </Text>
+              </View>
+            </View>
+
+            <Text style={{ color: MUTED, fontWeight: "800", lineHeight: 20 }}>
+              Chagua store sahihi kama active context kabla ya kufanya inventory, movement, au
+              marekebisho ya ruhusa za staff.
+            </Text>
+          </Card>
+
+          <Card
+            style={{
+              gap: 12,
+              flex: isDesktopWeb ? 0.9 : undefined,
+              minHeight: isDesktopWeb ? 220 : undefined,
+            }}
+          >
+            <Text style={{ color: FAINT, fontWeight: "900", fontSize: 11, letterSpacing: 0.8 }}>
+              QUICK ACTIONS
+            </Text>
+
+            <Pressable
+              onPress={() => {
+                // @ts-ignore
+                router.push("/(tabs)/stores/inventory");
+              }}
+              style={({ pressed }) => ({
+                borderRadius: radiusXL,
+                borderWidth: 1,
+                borderColor: BORDER_SOFT,
+                backgroundColor: "rgba(255,255,255,0.05)",
+                paddingVertical: 14,
+                paddingHorizontal: 16,
+                opacity: pressed ? 0.92 : 1,
+              })}
+            >
+              <Text style={{ color: TEXT, fontWeight: "900", fontSize: 15 }}>Open Inventory</Text>
+              <Text style={{ color: MUTED, fontWeight: "800", marginTop: 4, fontSize: 12 }}>
+                Fungua inventory ya active store
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={openMovement}
+              style={({ pressed }) => ({
+                borderRadius: radiusXL,
+                borderWidth: 1,
+                borderColor: BORDER_SOFT,
+                backgroundColor: "rgba(255,255,255,0.05)",
+                paddingVertical: 14,
+                paddingHorizontal: 16,
+                opacity: pressed ? 0.92 : 1,
+              })}
+            >
+              <Text style={{ color: TEXT, fontWeight: "900", fontSize: 15 }}>Stock Movement</Text>
+              <Text style={{ color: MUTED, fontWeight: "800", marginTop: 4, fontSize: 12 }}>
+                Hamisha stock kutoka active store
+              </Text>
+            </Pressable>
+
+            <Text style={{ color: MUTED, fontWeight: "800", lineHeight: 18 }}>
+              Stores zilizofungwa (LOCKED) zitaonekana hapa, lakini haziwezi kuwa ACTIVE mpaka
+              u-upgrade plan.
+            </Text>
+          </Card>
+        </View>
+
+        <View style={{ gap: 4 }}>
+          <Text style={{ fontWeight: "900", fontSize: 16, color: TEXT }}>
+            Available Stores
+          </Text>
+          <Text style={{ color: MUTED, fontWeight: "800", lineHeight: 18 }}>
+            Desktop view imepangwa ili cards za stores zisibane na kila store ionekane kwa nafasi
+            yake vizuri.
+          </Text>
+        </View>
       </View>
     );
   }, [
     TEXT,
     MUTED,
+    FAINT,
     DANGER,
     DANGER_BORDER,
     DANGER_SOFT,
+    BORDER_SOFT,
     activeOrgName,
     activeRole,
     activeStoreName,
     canManage,
     error,
+    isDesktopWeb,
     loading,
     mgrLoading,
     creditFlagLoading,
@@ -625,6 +753,7 @@ export default function StoresTabScreen() {
     refreshing,
     router,
     openMovement,
+    radiusXL,
   ]);
 
   return (
@@ -635,22 +764,46 @@ export default function StoresTabScreen() {
     >
       <FlatList
         data={list}
+        key={isDesktopWeb ? "stores-desktop-grid" : "stores-mobile-list"}
+        numColumns={desktopColumns}
         keyExtractor={(item: any) => item.store_id}
         onRefresh={onRefreshAll}
         refreshing={!!(refreshing || mgrLoading || creditFlagLoading || movementFlagLoading)}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
-          <View style={{ paddingHorizontal: PAGE, paddingTop: PAGE }}>
+          <View
+            style={{
+              width: "100%",
+              maxWidth: desktopMaxWidth,
+              alignSelf: "center",
+              paddingHorizontal: PAGE,
+              paddingTop: PAGE,
+              paddingBottom: 6,
+            }}
+          >
             {Header}
           </View>
+        }
+        columnWrapperStyle={
+          isDesktopWeb
+            ? {
+                gap: 14,
+                alignItems: "stretch",
+              }
+            : undefined
         }
         contentContainerStyle={{
           paddingHorizontal: PAGE,
           paddingBottom: 140,
         }}
+        style={{
+          width: "100%",
+        }}
         renderItem={({ item }: { item: any }) => {
-          const storeId = String(item.store_id);
-          const isActive = storeId === activeStoreId;
+        const storeId = String(item.store_id);
+const isActive = storeId === activeStoreId;
+const storeType = normalizeStoreType(item?.store_type);
+const isCapitalRecovery = storeType === "CAPITAL_RECOVERY";
 
           // ✅ lock flags from v2 (default allowed if missing)
           const isAllowed =
@@ -675,32 +828,43 @@ export default function StoresTabScreen() {
           const opacity = !isAllowed ? 0.72 : 1;
 
           return (
-            <Pressable
-              onPress={() => pick(storeId, item.store_name, isAllowed, lockReason)}
-              style={({ pressed }) => ({
-                borderWidth: 1,
-                borderColor,
-                borderRadius: radiusXL,
-                backgroundColor: CARD,
-                padding: 16,
+            <View
+              style={{
+                width: isDesktopWeb ? "49.4%" : "100%",
+                maxWidth: isDesktopWeb ? undefined : desktopMaxWidth,
+                alignSelf: "center",
                 marginBottom: 12,
-                opacity: pressed ? Math.max(0.88, opacity - 0.04) : opacity,
-                transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
-              })}
+              }}
             >
-              <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
+              <Pressable
+                onPress={() => pick(storeId, item.store_name, isAllowed, lockReason)}
+                style={({ pressed }) => ({
+                  borderWidth: 1,
+                  borderColor,
+                  borderRadius: radiusXL,
+                  backgroundColor: CARD,
+                  padding: isDesktopWeb ? 18 : 16,
+                  minHeight: isDesktopWeb ? 250 : undefined,
+                  opacity: pressed ? Math.max(0.88, opacity - 0.04) : opacity,
+                  transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
+                })}
+              >
+                <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontWeight: "900", color: TEXT, fontSize: 16 }}>
-                    {item.store_name}
-                  </Text>
+  {item.store_name}
+</Text>
 
-                  <Text style={{ marginTop: 6, color: MUTED, fontWeight: "800" }}>
-                    Managed by:{" "}
-                    <Text style={{ color: TEXT, fontWeight: "900" }}>
-                      {managedBy}
-                    </Text>
-                  </Text>
+<Text style={{ marginTop: 4, color: isCapitalRecovery ? EMERALD : MUTED, fontWeight: "900", fontSize: 12 }}>
+  {isCapitalRecovery ? "CAPITAL RECOVERY STORE" : "STANDARD STORE"}
+</Text>
 
+<Text style={{ marginTop: 6, color: MUTED, fontWeight: "800" }}>
+  Managed by:{" "}
+  <Text style={{ color: TEXT, fontWeight: "900" }}>
+    {managedBy}
+  </Text>
+</Text>
                  {!isAllowed ? (
                     <Text style={{ marginTop: 8, color: FAINT, fontWeight: "900", lineHeight: 18 }}>
                       🔒 LOCKED — upgrade plan ili u-activate.
@@ -752,28 +916,73 @@ export default function StoresTabScreen() {
                     </View>
                   ) : null}
 
-                  {!isAllowed ? (
-                    <View
-                      style={{
-                        paddingHorizontal: 10,
-                        paddingVertical: 6,
-                        borderRadius: radiusPill,
-                        borderWidth: 1,
-                        borderColor: "rgba(255,255,255,0.14)",
-                        backgroundColor: "rgba(255,255,255,0.06)",
-                        alignSelf: "flex-start",
-                      }}
-                    >
-                      <Text style={{ color: FAINT, fontWeight: "900", fontSize: 12 }}>
-                        LOCKED
-                      </Text>
-                    </View>
-                  ) : null}
+                 {isCapitalRecovery ? (
+  <View
+    style={{
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: radiusPill,
+      borderWidth: 1,
+      borderColor: "rgba(16,185,129,0.28)",
+      backgroundColor: "rgba(16,185,129,0.12)",
+      alignSelf: "flex-start",
+    }}
+  >
+    <Text style={{ color: EMERALD, fontWeight: "900", fontSize: 12 }}>
+      CAPITAL
+    </Text>
+  </View>
+) : null}
+
+{!isAllowed ? (
+  <View
+    style={{
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: radiusPill,
+      borderWidth: 1,
+      borderColor: "rgba(255,255,255,0.14)",
+      backgroundColor: "rgba(255,255,255,0.06)",
+      alignSelf: "flex-start",
+    }}
+  >
+    <Text style={{ color: FAINT, fontWeight: "900", fontSize: 12 }}>
+      LOCKED
+    </Text>
+  </View>
+) : null}
                 </View>
               </View>
 
-              {canManage && isAllowed ? (
-                <View style={{ marginTop: 12, gap: 12 }}>
+             {isCapitalRecovery && isAllowed ? (
+  <View style={{ marginTop: 12, gap: 10 }}>
+    <Pressable
+      onPress={() => {
+        setActiveStoreId(storeId);
+        router.push("/(tabs)");
+      }}
+      style={({ pressed }) => ({
+        borderRadius: radiusXL,
+        borderWidth: 1,
+        borderColor: "rgba(16,185,129,0.30)",
+        backgroundColor: "rgba(16,185,129,0.12)",
+        paddingVertical: 12,
+        paddingHorizontal: 14,
+        opacity: pressed ? 0.92 : 1,
+      })}
+    >
+      <Text style={{ color: TEXT, fontWeight: "900", fontSize: 14 }}>
+        Open Capital Workspace
+      </Text>
+      <Text style={{ color: MUTED, fontWeight: "800", marginTop: 4, fontSize: 12 }}>
+        Fungua dashboard maalum ya Capital Recovery
+      </Text>
+    </Pressable>
+  </View>
+) : null}
+
+{canManage && isAllowed ? (
+  <View style={{ marginTop: 12, gap: 12 }}>
                   {/* Credit switch */}
                   <View
                     style={{
@@ -851,7 +1060,8 @@ export default function StoresTabScreen() {
                   ) : null}
                 </View>
               ) : null}
-            </Pressable>
+              </Pressable>
+            </View>
           );
         }}
         ListEmptyComponent={

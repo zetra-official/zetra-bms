@@ -85,6 +85,7 @@ export default function RegisterScreen() {
   const router = useRouter();
 
   const [email, setEmail] = useState("");
+  const [confirmEmail, setConfirmEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
@@ -92,12 +93,18 @@ export default function RegisterScreen() {
   const [showConfirm, setShowConfirm] = useState(false);
 
   const emailTrimmed = useMemo(() => email.trim(), [email]);
+  const confirmEmailTrimmed = useMemo(() => confirmEmail.trim(), [confirmEmail]);
 
   const onRegister = async () => {
     const e = emailTrimmed;
+    const ce = confirmEmailTrimmed;
     const p = password;
 
     if (!e) return Alert.alert("Missing", "Email is required.");
+    if (!ce) return Alert.alert("Missing", "Confirm Email is required.");
+    if (e.toLowerCase() !== ce.toLowerCase()) {
+      return Alert.alert("Mismatch", "Email and confirm email do not match.");
+    }
     if (!p) return Alert.alert("Missing", "Password is required.");
     if (p.length < 6) {
       return Alert.alert("Weak password", "Use at least 6 characters.");
@@ -108,7 +115,7 @@ export default function RegisterScreen() {
 
     setLoading(true);
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email: e,
       password: p,
       options: {
@@ -121,11 +128,25 @@ export default function RegisterScreen() {
       return Alert.alert("Register Failed", error.message);
     }
 
+    const session = data?.session ?? null;
+    const user = data?.user ?? null;
+
     setLoading(false);
 
+    if (!user?.id) {
+      return Alert.alert("Register Failed", "Account haikuweza kuundwa vizuri.");
+    }
+
+    // Email confirmation ikiwa OFF, user aende moja kwa moja onboarding.
+    if (session) {
+      router.replace("/(onboarding)");
+      return;
+    }
+
+    // fallback salama endapo backend itarudisha user bila session
     Alert.alert(
-      "Verify your email",
-      "Account imeundwa. Tumejaribu kutuma verification email.\n\nFungua email yako, verify account, kisha login kuendelea."
+      "Continue to login",
+      "Account imeundwa. Tafadhali login kuendelea na onboarding."
     );
     router.replace("/(auth)/login");
   };
@@ -252,10 +273,10 @@ export default function RegisterScreen() {
                   maxWidth: 340,
                 }}
               >
-                Start your business journey with ZETRA BMS and verify your email before first login.
+                Start your business journey with ZETRA BMS and continue directly to business setup.
               </Text>
 
-              <FieldLabel>Email</FieldLabel>
+             <FieldLabel>Email</FieldLabel>
               <GlassInput
                 value={email}
                 onChangeText={setEmail}
@@ -266,7 +287,28 @@ export default function RegisterScreen() {
 
               <View style={{ height: 16 }} />
 
-              <FieldLabel>Password</FieldLabel>
+              <FieldLabel>Confirm Email</FieldLabel>
+              <GlassInput
+                value={confirmEmail}
+                onChangeText={setConfirmEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                placeholder="Repeat your email"
+              />
+
+              <Text
+                style={{
+                  color: "rgba(255,255,255,0.48)",
+                  marginTop: 8,
+                  marginBottom: 16,
+                  fontSize: 12,
+                  fontWeight: "700",
+                }}
+              >
+                Tumia email sahihi kwa ajili ya password reset baadaye.
+              </Text>
+
+              <FieldLabel>Password</FieldLabel> 
               <GlassInput
                 value={password}
                 onChangeText={setPassword}
@@ -335,7 +377,7 @@ export default function RegisterScreen() {
                     lineHeight: 20,
                   }}
                 >
-                  After creating your account, verify your email first. Then login and continue to onboarding.
+                  After creating your account, utaingia moja kwa moja kwenye onboarding ya business setup. Hakikisha email umeiandika sawa kwa sababu itatumika kusaidia password reset baadaye.
                 </Text>
               </View>
 

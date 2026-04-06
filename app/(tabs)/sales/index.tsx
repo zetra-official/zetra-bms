@@ -1432,6 +1432,17 @@ export default function SalesHomeScreen() {
     return cashierCounts.all;
   }, [cashierCounts, cashierFilter]);
 
+  const cashierEmptyText = useMemo(() => {
+    if (cashierLoading || cashierRefreshing || shiftLoading) {
+      return "Refreshing queue...";
+    }
+
+    if (cashierFilter === "PENDING") return "No pending cashier handoffs found.";
+    if (cashierFilter === "ACCEPTED") return "No accepted cashier handoffs found.";
+    if (cashierFilter === "COMPLETED") return "No completed cashier handoffs found.";
+    return "No cashier handoffs found.";
+  }, [cashierFilter, cashierLoading, cashierRefreshing, shiftLoading]);
+
   const CashierFilterChip = ({
     label,
     value,
@@ -2118,27 +2129,7 @@ export default function SalesHomeScreen() {
           </Text>
         </Pressable>
 
-        <View
-          style={{
-            alignItems: "center",
-            justifyContent: "center",
-            paddingTop: 2,
-            paddingBottom: 2,
-          }}
-        >
-          <Text
-            style={{
-              color: theme.colors.muted,
-              fontWeight: "800",
-              textAlign: "center",
-              fontSize: 12,
-            }}
-          >
-            {cashierLoading
-              ? "Refreshing queue..."
-              : `No ${cashierFilter.toLowerCase()} cashier handoffs found.`}
-          </Text>
-        </View>
+        <View style={{ height: 2 }} />
       </Card>
     );
   }, [
@@ -2504,15 +2495,43 @@ export default function SalesHomeScreen() {
       </View>
 
       {isCashier ? (
-        <View
-          style={{
-            flex: 1,
+        <FlatList<CashierHandoffRow>
+          data={filteredCashierRows}
+          keyExtractor={(item) => item.id}
+          refreshing={cashierRefreshing || shiftLoading}
+          onRefresh={() => {
+            void refreshCashierSurface();
+          }}
+          showsVerticalScrollIndicator={false}
+          renderItem={renderCashierItem}
+          contentContainerStyle={{
             paddingHorizontal: 16,
             paddingBottom: Math.max(insets.bottom + 90, 110),
+            paddingTop: 0,
           }}
-        >
-          {CashierBar} 
-        </View>
+          ListHeaderComponent={CashierBar}
+          ListEmptyComponent={
+            <View
+              style={{
+                paddingTop: 10,
+                paddingBottom: 20,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Text
+                style={{
+                  color: theme.colors.muted,
+                  fontWeight: "800",
+                  textAlign: "center",
+                  fontSize: 12,
+                }}
+              >
+                {cashierEmptyText}
+              </Text>
+            </View>
+          }
+        />
       ) : isDesktopWeb ? (
         <View
           style={{

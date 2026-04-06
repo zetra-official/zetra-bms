@@ -32,6 +32,7 @@ export type MyStoreRow = {
   store_id: string;
   store_name: string;
   organization_id: string;
+  store_type?: "STANDARD" | "CAPITAL_RECOVERY";
 
   // ✅ PLAN LOCK (V2)
   is_allowed?: boolean; // default true if missing
@@ -105,17 +106,18 @@ async function rpcFirstWorkingStores(): Promise<MyStoreRow[]> {
   for (const fn of GET_MY_STORES_CANDIDATES) {
     const { data, error } = await supabase.rpc(fn as any);
     if (!error) {
-      const rows = (data ?? []) as any[];
-      // normalize (ensure new fields exist as defaults)
-      return rows.map((r) => ({
-        store_id: clean(r?.store_id ?? r?.id),
-        store_name: clean(r?.store_name ?? r?.name),
-        organization_id: clean(r?.organization_id),
-        is_allowed:
-          typeof r?.is_allowed === "boolean" ? r.is_allowed : true,
-        lock_reason: clean(r?.lock_reason) ? String(r.lock_reason) : null,
-      })) as MyStoreRow[];
-    }
+  const rows = (data ?? []) as any[];
+  // normalize (ensure new fields exist as defaults)
+  return rows.map((r) => ({
+    store_id: clean(r?.store_id ?? r?.id),
+    store_name: clean(r?.store_name ?? r?.name),
+    organization_id: clean(r?.organization_id),
+    store_type: (r?.store_type ?? "STANDARD") as "STANDARD" | "CAPITAL_RECOVERY",
+    is_allowed:
+      typeof r?.is_allowed === "boolean" ? r.is_allowed : true,
+    lock_reason: clean(r?.lock_reason) ? String(r.lock_reason) : null,
+  })) as MyStoreRow[];
+}
 
     lastErr = error;
 

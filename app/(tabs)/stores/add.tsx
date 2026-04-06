@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
-import { Alert, Text } from "react-native";
+import { Alert, Text, View } from "react-native";
 import { useOrg } from "../../../src/context/OrgContext";
 import { supabase } from "../../../src/supabase/supabaseClient";
 import { Button } from "../../../src/ui/Button";
@@ -39,6 +39,7 @@ export default function AddStoreScreen() {
   const orgId = useMemo(() => clean(activeOrgId), [activeOrgId]);
 
   const [name, setName] = useState("");
+const [storeType, setStoreType] = useState<"STANDARD" | "CAPITAL_RECOVERY">("STANDARD");
   const [saving, setSaving] = useState(false);
 
   const guardPlanStoreLimit = async (): Promise<void> => {
@@ -99,10 +100,11 @@ export default function AddStoreScreen() {
       // Canonical client-side guard
       await guardPlanStoreLimit();
 
-      const { error } = await supabase.rpc("create_store", {
-        p_org_id: orgId,
-        p_store_name: storeName,
-      });
+    const { error } = await supabase.rpc("create_store", {
+  p_org_id: orgId,
+  p_store_name: storeName,
+  p_store_type: storeType,
+});
 
       if (error) throw error;
 
@@ -150,14 +152,35 @@ export default function AddStoreScreen() {
       ) : null}
 
       <Card style={{ gap: 12, marginTop: 14 }}>
-        <Text style={{ color: UI.muted, fontWeight: "800" }}>Store Name</Text>
-        <Input
-          value={name}
-          onChangeText={setName}
-          placeholder="mfano: SMART MEN"
-          autoCapitalize="characters"
-        />
-      </Card>
+  <Text style={{ color: UI.muted, fontWeight: "800" }}>Store Type</Text>
+
+  <View style={{ flexDirection: "row", gap: 10 }}>
+    <Button
+      title="Standard"
+      variant={storeType === "STANDARD" ? "primary" : "secondary"}
+      onPress={() => setStoreType("STANDARD")}
+    />
+    <Button
+      title="Capital Recovery"
+      variant={storeType === "CAPITAL_RECOVERY" ? "primary" : "secondary"}
+      onPress={() => setStoreType("CAPITAL_RECOVERY")}
+    />
+  </View>
+
+  <Text style={{ color: UI.muted, fontSize: 12 }}>
+    Capital Recovery = biashara ya mtaji, gharama, na faida halisi
+  </Text>
+
+  <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 10 }}>
+    Store Name
+  </Text>
+  <Input
+    value={name}
+    onChangeText={setName}
+    placeholder="mfano: SMART MEN"
+    autoCapitalize="characters"
+  />
+</Card>
 
       <Button
         title={saving ? "Saving..." : "Save Store"}

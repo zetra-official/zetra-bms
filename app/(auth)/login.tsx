@@ -2,6 +2,7 @@
 import React, { useMemo, useRef, useState } from "react";
 import {
   Alert,
+  Image,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -11,6 +12,7 @@ import {
   TextInput,
   TouchableWithoutFeedback,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { useOrg } from "../../src/context/OrgContext";
 import {
@@ -71,7 +73,7 @@ function GlassInput({
   return (
     <View
       style={{
-        minHeight: 60,
+        minHeight: Platform.OS === "web" ? 62 : 60,
         borderWidth: 1,
         borderColor: "rgba(255,255,255,0.10)",
         backgroundColor: "rgba(255,255,255,0.06)",
@@ -105,9 +107,225 @@ function GlassInput({
   );
 }
 
+function DesktopBrandPanel() {
+  return (
+    <View
+      style={{
+        flex: 1.08,
+        minWidth: 0,
+        borderWidth: 1,
+        borderColor: "rgba(255,255,255,0.08)",
+        backgroundColor: "rgba(255,255,255,0.045)",
+        borderRadius: 34,
+        paddingHorizontal: 28,
+        paddingVertical: 30,
+        overflow: "hidden",
+        position: "relative",
+      }}
+    >
+      <View
+        pointerEvents="none"
+        style={{
+          position: "absolute",
+          top: -60,
+          right: -30,
+          width: 220,
+          height: 220,
+          borderRadius: 999,
+          backgroundColor: "rgba(16,185,129,0.10)",
+        }}
+      />
+      <View
+        pointerEvents="none"
+        style={{
+          position: "absolute",
+          bottom: -80,
+          left: -60,
+          width: 240,
+          height: 240,
+          borderRadius: 999,
+          backgroundColor: "rgba(59,130,246,0.06)",
+        }}
+      />
+
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 16,
+        }}
+      >
+        <View
+          style={{
+            width: 84,
+            height: 84,
+            borderRadius: 24,
+            alignItems: "center",
+            justifyContent: "center",
+            borderWidth: 1,
+            borderColor: "rgba(16,185,129,0.28)",
+            backgroundColor: "rgba(16,185,129,0.10)",
+            overflow: "hidden",
+          }}
+        >
+          <Image
+            source={require("../../assets/images/zetra-logo.png")}
+            resizeMode="contain"
+            style={{
+              width: 68,
+              height: 68,
+            }}
+          />
+        </View>
+
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text
+            style={{
+              color: "#6EE7B7",
+              fontWeight: "900",
+              fontSize: 11,
+              letterSpacing: 1.1,
+            }}
+          >
+            ZETRA BUSINESS OS
+          </Text>
+
+          <Text
+            style={{
+              color: "white",
+              fontSize: 22,
+              lineHeight: 28,
+              fontWeight: "900",
+              marginTop: 6,
+              letterSpacing: 0.2,
+            }}
+          >
+            ZETRA BMS
+          </Text>
+
+          <Text
+            style={{
+              color: "rgba(255,255,255,0.64)",
+              fontSize: 13,
+              lineHeight: 20,
+              fontWeight: "700",
+              marginTop: 4,
+            }}
+          >
+            Professional business workspace for modern operations.
+          </Text>
+        </View>
+      </View>
+
+      <View style={{ marginTop: 24 }}>
+        <Text
+          style={{
+            color: "white",
+            fontSize: 42,
+            lineHeight: 48,
+            fontWeight: "900",
+            marginTop: 8,
+            letterSpacing: 0.2,
+            maxWidth: 520,
+          }}
+        >
+          Run your business with confidence.
+        </Text>
+
+        <Text
+          style={{
+            color: "rgba(255,255,255,0.68)",
+            fontSize: 16,
+            lineHeight: 26,
+            fontWeight: "700",
+            marginTop: 16,
+            maxWidth: 520,
+          }}
+        >
+          ZETRA BMS helps you manage stores, products, sales, finance, and staff
+          operations from one professional workspace.
+        </Text>
+      </View>
+
+      <View style={{ marginTop: 28, gap: 14 }}>
+        {[
+          {
+            title: "Sales & Inventory Control",
+            text: "Track stock, movement, and daily sales with clear business flow.",
+          },
+          {
+            title: "Staff & Store Management",
+            text: "Switch workspaces, manage stores, and control operational access.",
+          },
+          {
+            title: "Finance & Business Insights",
+            text: "Review expenses, performance, and financial activity from one place.",
+          },
+        ].map((item) => (
+          <View
+            key={item.title}
+            style={{
+              borderWidth: 1,
+              borderColor: "rgba(255,255,255,0.08)",
+              backgroundColor: "rgba(255,255,255,0.04)",
+              borderRadius: 22,
+              paddingHorizontal: 18,
+              paddingVertical: 16,
+            }}
+          >
+            <Text
+              style={{
+                color: "white",
+                fontWeight: "900",
+                fontSize: 16,
+                marginBottom: 6,
+              }}
+            >
+              {item.title}
+            </Text>
+            <Text
+              style={{
+                color: "rgba(255,255,255,0.64)",
+                fontWeight: "700",
+                lineHeight: 22,
+                fontSize: 14,
+              }}
+            >
+              {item.text}
+            </Text>
+          </View>
+        ))}
+      </View>
+
+      <View style={{ marginTop: 22, flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+        {["Secure Access", "Multi-Store Ready", "Business Command Center"].map((pill) => (
+          <View
+            key={pill}
+            style={{
+              paddingHorizontal: 12,
+              paddingVertical: 8,
+              borderRadius: 999,
+              borderWidth: 1,
+              borderColor: "rgba(255,255,255,0.10)",
+              backgroundColor: "rgba(255,255,255,0.05)",
+            }}
+          >
+            <Text style={{ color: "rgba(255,255,255,0.80)", fontWeight: "900", fontSize: 12 }}>
+              {pill}
+            </Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 export default function LoginScreen() {
   const router = useRouter();
   const { refresh } = useOrg();
+  const { width } = useWindowDimensions();
+
+  const isDesktopWeb = Platform.OS === "web" && width >= 1100;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -289,66 +507,88 @@ export default function LoginScreen() {
 
   const content = (
     <View style={{ flex: 1, backgroundColor: "#061018" }}>
-        <View
-          pointerEvents="none"
-          style={{
-            position: "absolute",
-            top: -70,
-            right: -50,
-            width: 180,
-            height: 180,
-            borderRadius: 999,
-            backgroundColor: "rgba(16,185,129,0.08)",
-          }}
-        />
-        <View
-          pointerEvents="none"
-          style={{
-            position: "absolute",
-            top: 120,
-            left: -70,
-            width: 140,
-            height: 140,
-            borderRadius: 999,
-            backgroundColor: "rgba(59,130,246,0.05)",
-          }}
-        />
-        <View
-          pointerEvents="none"
-          style={{
-            position: "absolute",
-            bottom: -90,
-            left: -40,
-            width: 190,
-            height: 190,
-            borderRadius: 999,
-            backgroundColor: "rgba(16,185,129,0.05)",
-          }}
-        />
+      <View
+        pointerEvents="none"
+        style={{
+          position: "absolute",
+          top: -70,
+          right: -50,
+          width: 180,
+          height: 180,
+          borderRadius: 999,
+          backgroundColor: "rgba(16,185,129,0.08)",
+        }}
+      />
+      <View
+        pointerEvents="none"
+        style={{
+          position: "absolute",
+          top: 120,
+          left: -70,
+          width: 140,
+          height: 140,
+          borderRadius: 999,
+          backgroundColor: "rgba(59,130,246,0.05)",
+        }}
+      />
+      <View
+        pointerEvents="none"
+        style={{
+          position: "absolute",
+          bottom: -90,
+          left: -40,
+          width: 190,
+          height: 190,
+          borderRadius: 999,
+          backgroundColor: "rgba(16,185,129,0.05)",
+        }}
+      />
 
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : Platform.OS === "android" ? "height" : undefined}
-          keyboardVerticalOffset={0}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={
+          Platform.OS === "ios"
+            ? "padding"
+            : Platform.OS === "android"
+            ? "height"
+            : undefined
+        }
+        keyboardVerticalOffset={0}
+      >
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{
+            flexGrow: 1,
+            justifyContent: "center",
+            paddingHorizontal: isDesktopWeb ? 28 : 20,
+            paddingVertical: isDesktopWeb ? 28 : 32,
+          }}
         >
-          <ScrollView
-            keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{
-              flexGrow: 1,
-              justifyContent: "center",
-              paddingHorizontal: 20,
-              paddingVertical: 32,
+          <View
+            style={{
+              width: "100%",
+              maxWidth: isDesktopWeb ? 1320 : 560,
+              alignSelf: "center",
+              flexDirection: isDesktopWeb ? "row" : "column",
+              gap: isDesktopWeb ? 24 : 0,
+              alignItems: "stretch",
             }}
           >
+            {isDesktopWeb ? <DesktopBrandPanel /> : null}
+
             <View
               style={{
+                flex: isDesktopWeb ? 0.92 : undefined,
+                width: isDesktopWeb ? undefined : "100%",
+                maxWidth: isDesktopWeb ? 480 : undefined,
+                alignSelf: "center",
                 borderWidth: 1,
                 borderColor: "rgba(255,255,255,0.08)",
                 backgroundColor: "rgba(255,255,255,0.045)",
-                borderRadius: 30,
-                paddingHorizontal: 20,
-                paddingTop: 20,
-                paddingBottom: 18,
+                borderRadius: isDesktopWeb ? 34 : 30,
+                paddingHorizontal: isDesktopWeb ? 26 : 20,
+                paddingTop: isDesktopWeb ? 24 : 20,
+                paddingBottom: isDesktopWeb ? 22 : 18,
                 shadowColor: "#000",
                 shadowOpacity: 0.18,
                 shadowRadius: 24,
@@ -358,33 +598,64 @@ export default function LoginScreen() {
             >
               <View
                 style={{
-                  alignSelf: "flex-start",
-                  paddingHorizontal: 12,
-                  paddingVertical: 7,
-                  borderRadius: 999,
-                  borderWidth: 1,
-                  borderColor: "rgba(16,185,129,0.18)",
-                  backgroundColor: "rgba(16,185,129,0.08)",
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 12,
                   marginBottom: 18,
                 }}
               >
-                <Text
+                <View
                   style={{
-                    color: "#6EE7B7",
-                    fontWeight: "900",
-                    fontSize: 11,
-                    letterSpacing: 0.8,
+                    width: isDesktopWeb ? 58 : 52,
+                    height: isDesktopWeb ? 58 : 52,
+                    borderRadius: 16,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderWidth: 1,
+                    borderColor: "rgba(16,185,129,0.18)",
+                    backgroundColor: "rgba(16,185,129,0.08)",
+                    overflow: "hidden",
                   }}
                 >
-                  SECURE BUSINESS ACCESS
-                </Text>
+                  <Image
+                    source={require("../../assets/images/zetra-logo.png")}
+                    resizeMode="contain"
+                    style={{
+                      width: isDesktopWeb ? 42 : 38,
+                      height: isDesktopWeb ? 42 : 38,
+                    }}
+                  />
+                </View>
+
+                <View
+                  style={{
+                    alignSelf: "flex-start",
+                    paddingHorizontal: 12,
+                    paddingVertical: 7,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    borderColor: "rgba(16,185,129,0.18)",
+                    backgroundColor: "rgba(16,185,129,0.08)",
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: "#6EE7B7",
+                      fontWeight: "900",
+                      fontSize: 11,
+                      letterSpacing: 0.8,
+                    }}
+                  >
+                    SECURE BUSINESS ACCESS
+                  </Text>
+                </View>
               </View>
 
               <Text
                 style={{
                   color: "white",
-                  fontSize: 32,
-                  lineHeight: 36,
+                  fontSize: isDesktopWeb ? 36 : 32,
+                  lineHeight: isDesktopWeb ? 40 : 36,
                   fontWeight: "900",
                   marginBottom: 8,
                   letterSpacing: 0.2,
@@ -396,11 +667,11 @@ export default function LoginScreen() {
               <Text
                 style={{
                   color: "rgba(255,255,255,0.66)",
-                  marginBottom: 26,
+                  marginBottom: isDesktopWeb ? 28 : 26,
                   lineHeight: 22,
                   fontSize: 15,
                   fontWeight: "600",
-                  maxWidth: 340,
+                  maxWidth: 360,
                 }}
               >
                 Sign in to continue managing your business with ZETRA BMS.
@@ -508,6 +779,7 @@ export default function LoginScreen() {
                     color: "rgba(255,255,255,0.88)",
                     fontSize: 15,
                     lineHeight: 22,
+                    textAlign: "center",
                   }}
                 >
                   Don&apos;t have an account?{" "}
@@ -528,9 +800,10 @@ export default function LoginScreen() {
                 Secure sign-in for owners, admins, cashier, supervisor and staff.
               </Text>
             </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 
   if (Platform.OS === "web") {

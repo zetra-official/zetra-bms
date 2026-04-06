@@ -2,12 +2,15 @@
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  Alert,
   Animated,
   AppState,
   Platform,
   Pressable,
   RefreshControl,
   Text,
+  TextInput,
+  TouchableOpacity,
   View,
   useWindowDimensions,
 } from "react-native";
@@ -141,6 +144,26 @@ type Receipt = {
   is_read: boolean;
   rows: NotifRow[];
   items: any[];
+};
+
+type CapitalRecoverySummaryRow = {
+  total_asset: number;
+  total_cost: number;
+  total_income: number;
+  remaining_cost: number;
+  remaining_asset: number;
+  realized_profit: number;
+  entries_count: number;
+  last_entry_at: string | null;
+};
+
+type CapitalRecoveryHistoryRow = {
+  id: string;
+  entry_type: "ASSET" | "COST" | "INCOME";
+  amount: number;
+  note: string | null;
+  created_at: string;
+  created_by?: string | null;
 };
 
 const AUTO_REFRESH_MS = 20_000;
@@ -326,14 +349,37 @@ function fmtLocal(iso: string) {
   }
 }
 
+function isDesktopWebEnv(width?: number) {
+  if (Platform.OS !== "web") return false;
+
+  const ua =
+    typeof navigator !== "undefined" ? String(navigator.userAgent ?? "") : "";
+
+  const isMobileUa = /Android|iPhone|iPad|iPod/i.test(ua);
+
+  if (isMobileUa) return false;
+
+  if (typeof width === "number" && width > 0) {
+    return width >= 1024;
+  }
+
+  return true;
+}
+
+function isMobileWebEnv(width?: number) {
+  return Platform.OS === "web" && !isDesktopWebEnv(width);
+}
+
 function MiniStat({
   label,
   value,
   hint,
+  multilineValue = false,
 }: {
   label: string;
   value: string;
   hint?: string;
+  multilineValue?: boolean;
 }) {
   return (
     <View style={{ flex: 1, gap: 4, minWidth: 0 }}>
@@ -346,9 +392,9 @@ function MiniStat({
       </Text>
 
       <Text
-        style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}
-        numberOfLines={1}
-        adjustsFontSizeToFit
+        style={{ color: UI.text, fontWeight: "900", fontSize: 16, lineHeight: 20 }}
+        numberOfLines={multilineValue ? 2 : 1}
+        adjustsFontSizeToFit={!multilineValue}
         minimumFontScale={0.75}
         allowFontScaling={false}
       >
@@ -481,6 +527,7 @@ function PremiumMetricCard({
   onPress,
   footerRight,
   error,
+  mobileWebLite = false,
 }: {
   title: string;
   subtitle: string;
@@ -492,6 +539,7 @@ function PremiumMetricCard({
   onPress: () => void;
   footerRight?: React.ReactNode;
   error?: string | null;
+  mobileWebLite?: boolean;
 }) {
   return (
     <View style={{ paddingTop: 14 }}>
@@ -504,31 +552,35 @@ function PremiumMetricCard({
           overflow: "hidden",
         }}
       >
-        <View
-          pointerEvents="none"
-          style={{
-            position: "absolute",
-            top: -72,
-            right: -42,
-            width: 180,
-            height: 180,
-            borderRadius: 999,
-            backgroundColor: "rgba(16,185,129,0.08)",
-          }}
-        />
+        {!mobileWebLite ? (
+          <>
+            <View
+              pointerEvents="none"
+              style={{
+                position: "absolute",
+                top: -72,
+                right: -42,
+                width: 180,
+                height: 180,
+                borderRadius: 999,
+                backgroundColor: "rgba(16,185,129,0.08)",
+              }}
+            />
 
-        <View
-          pointerEvents="none"
-          style={{
-            position: "absolute",
-            left: -46,
-            bottom: -82,
-            width: 170,
-            height: 170,
-            borderRadius: 999,
-            backgroundColor: "rgba(34,211,238,0.04)",
-          }}
-        />
+            <View
+              pointerEvents="none"
+              style={{
+                position: "absolute",
+                left: -46,
+                bottom: -82,
+                width: 170,
+                height: 170,
+                borderRadius: 999,
+                backgroundColor: "rgba(34,211,238,0.04)",
+              }}
+            />
+          </>
+        ) : null}
 
         <View
           pointerEvents="none"
@@ -629,12 +681,11 @@ function PremiumMetricCard({
 
 function CompactNotificationsHomeCard() {
   const router = useRouter();
+  const { width } = useWindowDimensions();
   const { activeStoreId, activeStoreName, stores } = useOrg();
-  const isWeb = Platform.OS === "web";
+  const isDesktopWeb = isDesktopWebEnv(width);
 
-  if (isWeb) return null;
-
-  if (isWeb) return null;
+  if (isDesktopWeb) return null;
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -674,9 +725,9 @@ function CompactNotificationsHomeCard() {
 
   useFocusEffect(
     useCallback(() => {
-      if (isWeb) return;
+      if (isDesktopWeb) return;
       void load();
-    }, [isWeb, load])
+    }, [isDesktopWeb, load])
   );
 
   useAutoRefresh(() => {
@@ -887,8 +938,12 @@ function CompactNotificationsHomeCard() {
 
 function CompactFinanceCardHomePreview() {
   const router = useRouter();
+  const { width } = useWindowDimensions();
   const org = useOrg();
-  const isWeb = Platform.OS === "web";
+  const isDesktopWeb = isDesktopWebEnv(width);
+  const isMobileWeb = isMobileWebEnv(width);
+
+  if (isDesktopWeb) return null;
 
   const orgId = String(org.activeOrgId ?? "").trim();
   const storeId = String(org.activeStoreId ?? "").trim();
@@ -1356,18 +1411,18 @@ function CompactFinanceCardHomePreview() {
 
   useFocusEffect(
     useCallback(() => {
-      if (isWeb) return;
+      if (isDesktopWeb) return;
       if (!orgId || !storeId) return;
       void load();
-    }, [isWeb, orgId, storeId, load])
+    }, [isDesktopWeb, orgId, storeId, load])
   );
 
   useFocusEffect(
     useCallback(() => {
-      if (isWeb) return;
+      if (isDesktopWeb) return;
       if (!orgId || !storeId) return;
       void load({ silent: true });
-    }, [isWeb, orgId, storeId, load])
+    }, [isDesktopWeb, orgId, storeId, load])
   );
   useAutoRefresh(() => {
     if (!orgId || !storeId) return;
@@ -1400,41 +1455,107 @@ function CompactFinanceCardHomePreview() {
       expenseByChannel.mobile
     );
 
-    const totalMoneyInNum = availableCashNum + availableBankNum + availableMobileNum;
+   const totalMoneyInNum = availableCashNum + availableBankNum + availableMobileNum;
     const totalMoneyIn = fmtMoney(totalMoneyInNum);
+
+    const rowStyle = isMobileWeb
+      ? ({ flexDirection: "row", flexWrap: "wrap", gap: 12 } as const)
+      : ({ flexDirection: "row", gap: 12 } as const);
+
+    const cellStyle = isMobileWeb
+      ? ({ flexBasis: "47%" } as const)
+      : ({ flex: 1 } as const);
 
     return (
       <View style={{ gap: 10, paddingTop: 2 }}>
         {isStaffView ? (
           <>
-            <View style={{ flexDirection: "row", gap: 12 }}>
-              <MiniStat label="Sales" value={totalSales} hint="today" />
-              <MiniStat label="Money In" value={totalMoneyIn} hint="today" />
-              <MiniStat label="Orders" value={orders} hint="completed" />
+            <View style={rowStyle}>
+              <View style={cellStyle}>
+                <MiniStat
+                  label="Sales"
+                  value={totalSales}
+                  hint="today"
+                  multilineValue={isMobileWeb}
+                />
+              </View>
+              <View style={cellStyle}>
+                <MiniStat
+                  label="Money In"
+                  value={totalMoneyIn}
+                  hint="today"
+                  multilineValue={isMobileWeb}
+                />
+              </View>
+              <View style={cellStyle}>
+                <MiniStat label="Orders" value={orders} hint="completed" />
+              </View>
             </View>
 
-            <View style={{ flexDirection: "row", gap: 12 }}>
-              <MiniStat label="Avg/Order" value={avg.toString().replace(/\s+/g, " ")} />
-              <MiniStat label="Store View" value="Active" hint="sales summary" />
-              <MiniStat label="Access" value="Standard" hint="staff view" />
+            <View style={rowStyle}>
+              <View style={cellStyle}>
+                <MiniStat
+                  label="Avg/Order"
+                  value={avg.toString().replace(/\s+/g, " ")}
+                  multilineValue={isMobileWeb}
+                />
+              </View>
+              <View style={cellStyle}>
+                <MiniStat label="Store View" value="Active" hint="sales summary" />
+              </View>
+              <View style={cellStyle}>
+                <MiniStat label="Access" value="Standard" hint="staff view" />
+              </View>
             </View>
           </>
         ) : (
           <>
-            <View style={{ flexDirection: "row", gap: 12 }}>
-              <MiniStat label="Sales" value={totalSales} hint="today" />
-              <MiniStat label="Expenses" value={totalExpenses} hint="today" />
-              <MiniStat
-                label="Net Profit"
-                value={netProfit}
-                hint={isOwner ? "after expenses" : "owner-only"}
-              />
+            <View style={rowStyle}>
+              <View style={cellStyle}>
+                <MiniStat
+                  label="Sales"
+                  value={totalSales}
+                  hint="today"
+                  multilineValue={isMobileWeb}
+                />
+              </View>
+              <View style={cellStyle}>
+                <MiniStat
+                  label="Expenses"
+                  value={totalExpenses}
+                  hint="today"
+                  multilineValue={isMobileWeb}
+                />
+              </View>
+              <View style={cellStyle}>
+                <MiniStat
+                  label="Net Profit"
+                  value={netProfit}
+                  hint={isOwner ? "after expenses" : "owner-only"}
+                  multilineValue={isMobileWeb}
+                />
+              </View>
             </View>
 
-            <View style={{ flexDirection: "row", gap: 12 }}>
-              <MiniStat label="Orders" value={orders} />
-              <MiniStat label="Avg/Order" value={avg.toString().replace(/\s+/g, " ")} />
-              <MiniStat label="Money In" value={totalMoneyIn} hint="after expenses" />
+            <View style={rowStyle}>
+              <View style={cellStyle}>
+                <MiniStat label="Orders" value={orders} />
+              </View>
+              <View style={cellStyle}>
+                <MiniStat
+                  label="Avg/Order"
+                  value={avg.toString().replace(/\s+/g, " ")}
+                  multilineValue={isMobileWeb}
+                />
+              </View>
+              <View style={cellStyle}>
+                <MiniStat
+                  label="Money In"
+                  value={totalMoneyIn}
+                  hint="after expenses"
+                  multilineValue={isMobileWeb}
+                />
+              </View>
             </View>
           </>
         )}
@@ -1451,6 +1572,7 @@ function CompactFinanceCardHomePreview() {
     displayLocale,
     isOwner,
     isStaffView,
+    isMobileWeb,
   ]);
 
   return (
@@ -1462,6 +1584,7 @@ function CompactFinanceCardHomePreview() {
       badgeText={isOwnerOrAdmin ? "LIVE" : "STORE"}
       error={financeError}
       ctaLabel={financeCtaLabel}
+      mobileWebLite={isMobileWeb}
       onPress={() => {
         const dates = rangeToDates("today");
         router.push({
@@ -1482,10 +1605,12 @@ function CompactFinanceCardHomePreview() {
 }
 
 function CompactClubRevenueCardHomePreview({ onOpen }: { onOpen: () => void }) {
+  const { width } = useWindowDimensions();
   const orgAny = useOrg() as any;
-  const isWeb = Platform.OS === "web";
+  const isDesktopWeb = isDesktopWebEnv(width);
+  const isMobileWeb = isMobileWebEnv(width);
 
-  if (isWeb) return null;
+  if (isDesktopWeb) return null;
 
   const orgId: string = String(
     orgAny?.activeOrgId ??
@@ -1568,10 +1693,10 @@ function CompactClubRevenueCardHomePreview({ onOpen }: { onOpen: () => void }) {
 
   useFocusEffect(
     useCallback(() => {
-      if (isWeb) return;
+      if (isDesktopWeb) return;
       if (!storeId) return;
       void load();
-    }, [isWeb, storeId, load])
+    }, [isDesktopWeb, storeId, load])
   );
 
   useAutoRefresh(() => {
@@ -1597,6 +1722,7 @@ function CompactClubRevenueCardHomePreview({ onOpen }: { onOpen: () => void }) {
       badgeText="LIVE"
       error={err}
       ctaLabel="Open Club Revenue"
+      mobileWebLite={isMobileWeb}
       onPress={onOpen}
     >
       <View style={{ flexDirection: "row", gap: 12, paddingTop: 2 }}>
@@ -1610,10 +1736,12 @@ function CompactClubRevenueCardHomePreview({ onOpen }: { onOpen: () => void }) {
 
 function CompactStockValueCardHomePreview() {
   const router = useRouter();
+  const { width } = useWindowDimensions();
   const orgAny = useOrg() as any;
-  const isWeb = Platform.OS === "web";
+  const isDesktopWeb = isDesktopWebEnv(width);
+  const isMobileWeb = isMobileWebEnv(width);
 
-  if (isWeb) return null;
+  if (isDesktopWeb) return null;
 
   const orgId: string = String(
     orgAny?.activeOrgId ??
@@ -1692,7 +1820,7 @@ function CompactStockValueCardHomePreview() {
         store_id: sid,
         date_from: dateFrom,
         date_to: dateTo,
-        stock_on_hand_value: onVal,
+        stock_on_hand_value:onVal,
         stock_in_value: inVal,
       } as FinRow;
     },
@@ -1745,10 +1873,10 @@ function CompactStockValueCardHomePreview() {
 
   useFocusEffect(
     useCallback(() => {
-      if (isWeb) return;
+      if (isDesktopWeb) return;
       if (!orgId || !storeId) return;
       void load();
-    }, [isWeb, orgId, storeId, load])
+    }, [isDesktopWeb, orgId, storeId, load])
   );
 
   useAutoRefresh(() => {
@@ -1774,6 +1902,7 @@ function CompactStockValueCardHomePreview() {
       badgeText="INVENTORY"
       error={err}
       ctaLabel="Open Stock History"
+      mobileWebLite={isMobileWeb}
       onPress={() => router.push("/stocks/history")}
       footerRight={
         <Text style={{ color: UI.faint, fontWeight: "900", fontSize: 12 }}>
@@ -1790,7 +1919,9 @@ function CompactStockValueCardHomePreview() {
 }
 
 function ZetraAiCard({ onOpen }: { onOpen: () => void }) {
-  const isWeb = Platform.OS === "web";
+  const { width } = useWindowDimensions();
+  const isDesktopWeb = isDesktopWebEnv(width);
+  const isMobileWeb = isMobileWebEnv(width);
 
   const tips = useMemo(
     () => [
@@ -1806,7 +1937,7 @@ function ZetraAiCard({ onOpen }: { onOpen: () => void }) {
   const fade = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    if (isWeb) return;
+    if (Platform.OS === "web") return;
 
     let alive = true;
     let interval: any = null;
@@ -1841,17 +1972,17 @@ function ZetraAiCard({ onOpen }: { onOpen: () => void }) {
         sub?.remove?.();
       } catch {}
     };
-  }, [isWeb, tips.length]);
+  }, [isDesktopWeb, tips.length]);
 
   useEffect(() => {
-    if (isWeb) {
+    if (Platform.OS === "web") {
       fade.setValue(1);
       return;
     }
 
     fade.setValue(0);
     Animated.timing(fade, { toValue: 1, duration: 260, useNativeDriver: true }).start();
-  }, [fade, i, isWeb]);
+  }, [fade, i, isDesktopWeb]);
 
   const preview = tips[i];
 
@@ -1865,6 +1996,7 @@ function ZetraAiCard({ onOpen }: { onOpen: () => void }) {
     onPress: () => void;
   }) => {
     const primary = kind === "primary";
+
     return (
       <Pressable
         onPress={onPress}
@@ -1907,42 +2039,46 @@ function ZetraAiCard({ onOpen }: { onOpen: () => void }) {
           }}
         >
           <View style={{ position: "relative" }}>
-            <View
-              pointerEvents="none"
-              style={{
-                position: "absolute",
-                left: -80,
-                top: -90,
-                width: 260,
-                height: 260,
-                borderRadius: 999,
-                backgroundColor: "rgba(16,185,129,0.10)",
-              }}
-            />
-            <View
-              pointerEvents="none"
-              style={{
-                position: "absolute",
-                right: -120,
-                top: -110,
-                width: 320,
-                height: 320,
-                borderRadius: 999,
-                backgroundColor: "rgba(34,211,238,0.05)",
-              }}
-            />
-            <View
-              pointerEvents="none"
-              style={{
-                position: "absolute",
-                left: -60,
-                bottom: -180,
-                width: 360,
-                height: 360,
-                borderRadius: 999,
-                backgroundColor: "rgba(0,0,0,0.42)",
-              }}
-            />
+            {!isMobileWeb ? (
+              <>
+                <View
+                  pointerEvents="none"
+                  style={{
+                    position: "absolute",
+                    left: -80,
+                    top: -90,
+                    width: 260,
+                    height: 260,
+                    borderRadius: 999,
+                    backgroundColor: "rgba(16,185,129,0.10)",
+                  }}
+                />
+                <View
+                  pointerEvents="none"
+                  style={{
+                    position: "absolute",
+                    right: -120,
+                    top: -110,
+                    width: 320,
+                    height: 320,
+                    borderRadius: 999,
+                    backgroundColor: "rgba(34,211,238,0.05)",
+                  }}
+                />
+                <View
+                  pointerEvents="none"
+                  style={{
+                    position: "absolute",
+                    left: -60,
+                    bottom: -180,
+                    width: 360,
+                    height: 360,
+                    borderRadius: 999,
+                    backgroundColor: "rgba(0,0,0,0.42)",
+                  }}
+                />
+              </>
+            ) : null}
             <View
               pointerEvents="none"
               style={{
@@ -2206,6 +2342,8 @@ function WorkspaceCard({
   activeStoreId?: string | null;
   onOpen: () => void;
 }) {
+  const { width } = useWindowDimensions();
+  const isMobileWeb = isMobileWebEnv(width);
   const roleLabel = String(activeRole ?? "—").trim() || "—";
   const orgLabel = String(activeOrgName ?? "—").trim() || "—";
   const storeLabel = String(activeStoreName ?? "—").trim() || "—";
@@ -2221,31 +2359,35 @@ function WorkspaceCard({
           overflow: "hidden",
         }}
       >
-        <View
-          pointerEvents="none"
-          style={{
-            position: "absolute",
-            top: -70,
-            right: -50,
-            width: 180,
-            height: 180,
-            borderRadius: 999,
-            backgroundColor: "rgba(16,185,129,0.08)",
-          }}
-        />
+        {!isMobileWeb ? (
+          <>
+            <View
+              pointerEvents="none"
+              style={{
+                position: "absolute",
+                top: -70,
+                right: -50,
+                width: 180,
+                height: 180,
+                borderRadius: 999,
+                backgroundColor: "rgba(16,185,129,0.08)",
+              }}
+            />
 
-        <View
-          pointerEvents="none"
-          style={{
-            position: "absolute",
-            left: -50,
-            bottom: -80,
-            width: 180,
-            height: 180,
-            borderRadius: 999,
-            backgroundColor: "rgba(34,211,238,0.04)",
-          }}
-        />
+            <View
+              pointerEvents="none"
+              style={{
+                position: "absolute",
+                left: -50,
+                bottom: -80,
+                width: 180,
+                height: 180,
+                borderRadius: 999,
+                backgroundColor: "rgba(34,211,238,0.04)",
+              }}
+            />
+          </>
+        ) : null}
 
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
           <View
@@ -2419,12 +2561,11 @@ function WebSafeHomeActions({
       >
         <View style={{ gap: 6 }}>
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 22 }}>
-            Web Quick Access
+            Quick Actions
           </Text>
 
           <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22, fontSize: 13 }}>
-            Desktop web mode: tumepanga actions kwa muonekano wa laptop ili navigation iwe
-            safi, pana, na rahisi kutumia.
+            Hatua za haraka za kila siku kwa desktop workflow.
           </Text>
         </View>
 
@@ -2472,6 +2613,872 @@ function WebSafeHomeActions({
   );
 }
 
+function DesktopKpiStrip({
+  sales,
+  expenses,
+  profit,
+  orders,
+  moneyIn,
+  stockValue,
+  isOwner,
+}: {
+  sales: string;
+  expenses: string;
+  profit: string;
+  orders: string;
+  moneyIn: string;
+  stockValue: string;
+  isOwner: boolean;
+}) {
+  const Item = ({
+    label,
+    value,
+    hint,
+  }: {
+    label: string;
+    value: string;
+    hint?: string;
+  }) => {
+    return (
+      <Card
+        style={{
+          flex: 1,
+          minWidth: 180,
+          gap: 6,
+          borderRadius: 20,
+          borderColor: "rgba(16,185,129,0.18)",
+          backgroundColor: "rgba(15,18,24,0.98)",
+          padding: 16,
+        }}
+      >
+        <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }} numberOfLines={1}>
+          {label}
+        </Text>
+        <Text
+          style={{ color: UI.text, fontWeight: "900", fontSize: 22 }}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.8}
+        >
+          {value}
+        </Text>
+        {!!hint && (
+          <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 11 }} numberOfLines={1}>
+            {hint}
+          </Text>
+        )}
+      </Card>
+    );
+  };
+
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: 12,
+        marginTop: 14,
+      }}
+    >
+      <Item label="Sales Today" value={sales} hint="store performance" />
+      <Item label="Expenses" value={expenses} hint="today" />
+      <Item label="Orders" value={orders} hint="completed" />
+      <Item label="Money In" value={moneyIn} hint="after expenses" />
+      <Item label="Stock Value" value={stockValue} hint="on hand" />
+      <Item label="Net Profit" value={profit} hint={isOwner ? "owner view" : "owner-only"} />
+    </View>
+  );
+}
+
+function DesktopSignalCard({
+  title,
+  body,
+  badge,
+}: {
+  title: string;
+  body: string;
+  badge?: string;
+}) {
+  return (
+    <Card
+      style={{
+        gap: 10,
+        borderRadius: 20,
+        borderColor: "rgba(16,185,129,0.18)",
+        backgroundColor: "rgba(15,18,24,0.98)",
+        padding: 16,
+      }}
+    >
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+        <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16, flex: 1 }}>{title}</Text>
+        {!!badge ? (
+          <View
+            style={{
+              paddingHorizontal: 9,
+              paddingVertical: 5,
+              borderRadius: 999,
+              borderWidth: 1,
+              borderColor: "rgba(16,185,129,0.22)",
+              backgroundColor: "rgba(16,185,129,0.10)",
+            }}
+          >
+            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }}>{badge}</Text>
+          </View>
+        ) : null}
+      </View>
+
+      <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 21 }}>{body}</Text>
+    </Card>
+  );
+}
+
+function CapitalRecoverySummaryCard({
+  loading,
+  error,
+  summary,
+  onRefresh,
+}: {
+  loading: boolean;
+  error: string | null;
+  summary: CapitalRecoverySummaryRow;
+  onRefresh: () => void;
+}) {
+  const fmt = useCallback(
+    (n: number) =>
+      formatMoney(n, {
+        currency: "TZS",
+        locale: "en-TZ",
+      }).replace(/\s+/g, " "),
+    []
+  );
+
+  return (
+    <Card
+      style={{
+        gap: 14,
+        borderRadius: 24,
+        borderColor: "rgba(16,185,129,0.22)",
+        backgroundColor: "rgba(15,18,24,0.98)",
+      }}
+    >
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+        <Text style={{ color: UI.text, fontWeight: "900", fontSize: 20, flex: 1 }}>
+          Capital Recovery Summary
+        </Text>
+
+        <Pressable
+          onPress={onRefresh}
+          style={({ pressed }) => ({
+            paddingHorizontal: 10,
+            paddingVertical: 6,
+            borderRadius: 999,
+            borderWidth: 1,
+            borderColor: "rgba(16,185,129,0.24)",
+            backgroundColor: "rgba(16,185,129,0.10)",
+            opacity: pressed ? 0.92 : 1,
+          })}
+        >
+          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }}>
+            {loading ? "LOADING" : "LIVE"}
+          </Text>
+        </Pressable>
+      </View>
+
+      {!!error ? (
+        <Card
+          style={{
+            borderColor: "rgba(201,74,74,0.35)",
+            backgroundColor: "rgba(201,74,74,0.10)",
+            borderRadius: 18,
+            padding: 12,
+          }}
+        >
+          <Text style={{ color: UI.danger, fontWeight: "900" }}>{error}</Text>
+        </Card>
+      ) : null}
+
+      <View style={{ flexDirection: "row", gap: 12 }}>
+        <MiniStat label="Income" value={fmt(summary.total_income)} hint="all entries" />
+        <MiniStat label="Cost" value={fmt(summary.total_cost)} hint="operating" />
+        <MiniStat label="Asset" value={fmt(summary.total_asset)} hint="capital target" />
+      </View>
+
+      <View style={{ flexDirection: "row", gap: 12 }}>
+        <MiniStat label="Remaining Cost" value={fmt(summary.remaining_cost)} />
+        <MiniStat label="Remaining Asset" value={fmt(summary.remaining_asset)} />
+        <MiniStat label="Profit" value={fmt(summary.realized_profit)} hint="after cost + asset" />
+      </View>
+
+      <View style={{ flexDirection: "row", gap: 12 }}>
+        <MiniStat label="Entries" value={String(summary.entries_count ?? 0)} />
+        <MiniStat
+          label="Last Entry"
+          value={summary.last_entry_at ? fmtLocal(summary.last_entry_at) : "—"}
+          multilineValue
+        />
+      </View>
+    </Card>
+  );
+}
+
+function CapitalRecoveryHomeShell({
+  activeOrgName,
+  activeStoreName,
+  activeStoreId,
+  onOpenStores,
+  onRefreshDone,
+  summary,
+  summaryLoading,
+  summaryError,
+  onRefreshSummary,
+}: {
+  activeOrgName?: string | null;
+  activeStoreName?: string | null;
+  activeStoreId?: string | null;
+  onOpenStores: () => void;
+  onRefreshDone?: () => Promise<void> | void;
+  summary: CapitalRecoverySummaryRow;
+  summaryLoading: boolean;
+  summaryError: string | null;
+  onRefreshSummary: () => void;
+}) {
+  const [entryType, setEntryType] = useState<"ASSET" | "COST" | "INCOME">("ASSET");
+  const [amount, setAmount] = useState("");
+  const [note, setNote] = useState("");
+
+  const amountNum = toNum(String(amount).replace(/,/g, "").trim());
+  const canPreview = amountNum > 0;
+
+  const previewTitle =
+    entryType === "ASSET"
+      ? "Asset Entry Preview"
+      : entryType === "COST"
+      ? "Operating Cost Preview"
+      : "Income Entry Preview";
+
+  const previewHint =
+    entryType === "ASSET"
+      ? "Hii itaingia upande wa mtaji/asset."
+      : entryType === "COST"
+      ? "Hii itaingia upande wa gharama za uendeshaji."
+      : "Hii itaingia upande wa mapato/income.";
+
+  const formattedPreviewAmount = formatMoney(amountNum, {
+    currency: "TZS",
+    locale: "en-TZ",
+  }).replace(/\s+/g, " ");
+
+  const [saving, setSaving] = useState(false);
+
+  const onSaveEntry = useCallback(async () => {
+    const storeId = String(activeStoreId ?? "").trim();
+
+    if (!storeId) {
+      Alert.alert("Missing Store", "Hakuna active Capital Recovery store.");
+      return;
+    }
+
+    if (!amountNum || amountNum <= 0) {
+      Alert.alert("Invalid Amount", "Weka amount sahihi zaidi ya sifuri.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const { error } = await supabase.rpc("create_capital_recovery_entry", {
+        p_store_id: storeId,
+        p_entry_type: entryType,
+        p_amount: amountNum,
+        p_note: clean(note) || null,
+      });
+
+      if (error) throw error;
+
+      setAmount("");
+      setNote("");
+
+      if (onRefreshDone) {
+        await onRefreshDone();
+      }
+
+      Alert.alert("Success ✅", `${entryType} entry imehifadhiwa vizuri.`);
+    } catch (e: any) {
+      Alert.alert("Save failed", clean(e?.message) || "Unknown error");
+    } finally {
+      setSaving(false);
+    }
+  }, [activeStoreId, amountNum, entryType, note, onRefreshDone]);
+
+  const Pill = ({
+    title,
+    active,
+    onPress,
+  }: {
+    title: string;
+    active: boolean;
+    onPress: () => void;
+  }) => {
+    return (
+      <TouchableOpacity
+        onPress={onPress}
+        activeOpacity={0.86}
+        style={{
+          flex: 1,
+          minWidth: 0,
+          minHeight: 48,
+          paddingHorizontal: 12,
+          paddingVertical: 12,
+          borderRadius: 16,
+          borderWidth: 1,
+          borderColor: active ? "rgba(16,185,129,0.34)" : "rgba(255,255,255,0.10)",
+          backgroundColor: active ? "rgba(16,185,129,0.14)" : "rgba(255,255,255,0.05)",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Text style={{ color: UI.text, fontWeight: "900", fontSize: 13 }}>{title}</Text>
+      </TouchableOpacity>
+    );
+  };
+
+  return (
+    <View style={{ marginTop: 14 }}>
+      <View style={{ gap: 14 }}>
+        <CapitalRecoverySummaryCard
+          loading={summaryLoading}
+          error={summaryError}
+          summary={summary}
+          onRefresh={onRefreshSummary}
+        />
+
+        <Card
+          style={{
+            gap: 16,
+            borderRadius: 24,
+            borderColor: "rgba(16,185,129,0.24)",
+            backgroundColor: "rgba(15,18,24,0.98)",
+            overflow: "hidden",
+          }}
+        >
+        <View
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            top: -80,
+            right: -60,
+            width: 220,
+            height: 220,
+            borderRadius: 999,
+            backgroundColor: "rgba(16,185,129,0.08)",
+          }}
+        />
+
+        <View
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            left: -70,
+            bottom: -100,
+            width: 220,
+            height: 220,
+            borderRadius: 999,
+            backgroundColor: "rgba(34,211,238,0.04)",
+          }}
+        />
+
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <View
+            style={{
+              width: 52,
+              height: 52,
+              borderRadius: 18,
+              alignItems: "center",
+              justifyContent: "center",
+              borderWidth: 1,
+              borderColor: "rgba(16,185,129,0.30)",
+              backgroundColor: "rgba(16,185,129,0.12)",
+            }}
+          >
+            <Ionicons name="layers-outline" size={22} color={UI.emerald} />
+          </View>
+
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text
+              style={{
+                color: UI.faint,
+                fontWeight: "900",
+                fontSize: 11,
+                letterSpacing: 0.9,
+              }}
+            >
+              CAPITAL RECOVERY WORKSPACE
+            </Text>
+
+            <Text
+              style={{ color: UI.text, fontWeight: "900", fontSize: 22, marginTop: 4 }}
+              numberOfLines={1}
+            >
+              {activeStoreName ?? "Capital Recovery Store"}
+            </Text>
+          </View>
+
+          <View
+            style={{
+              paddingHorizontal: 10,
+              paddingVertical: 6,
+              borderRadius: 999,
+              borderWidth: 1,
+              borderColor: "rgba(16,185,129,0.24)",
+              backgroundColor: "rgba(16,185,129,0.10)",
+            }}
+          >
+            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }}>
+              ACTIVE MODE
+            </Text>
+          </View>
+        </View>
+
+        <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22 }}>
+          Hii store iko kwenye environment yake maalum ya Capital Recovery. Dashboard ya kawaida
+          ya sales/inventory imezuiwa hapa ili logic ya mtaji, operating cost, asset, na profit
+          ibaki safi na isichanganyike.
+        </Text>
+
+        <View style={{ flexDirection: "row", gap: 12 }}>
+          <MiniStat label="Organization" value={String(activeOrgName ?? "—")} />
+          <MiniStat label="Store" value={String(activeStoreName ?? "—")} />
+          <MiniStat
+            label="Mode"
+            value="Capital Recovery"
+            hint={activeStoreId ? "special workspace" : "no store"}
+          />
+        </View>
+
+        <Card
+          style={{
+            gap: 12,
+            borderRadius: 20,
+            borderColor: "rgba(255,255,255,0.10)",
+            backgroundColor: "rgba(255,255,255,0.04)",
+          }}
+        >
+          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 17 }}>
+            Mfumo huu utatumia sheria hii:
+          </Text>
+
+          <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22 }}>
+            Income → inalipa Operating Cost → iliyobaki inalipa Asset → ikimaliza Asset kinachobaki
+            ni Profit.
+          </Text>
+        </Card>
+
+        <Card
+          style={{
+            gap: 14,
+            borderRadius: 20,
+            borderColor: "rgba(16,185,129,0.18)",
+            backgroundColor: "rgba(255,255,255,0.04)",
+          }}
+        >
+          <View style={{ gap: 6 }}>
+            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 17 }}>
+              Quick Entry
+            </Text>
+            <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 20 }}>
+              Hapa ndipo entry za Capital Recovery zitaanzia. Chagua aina ya entry, weka amount,
+              na maelezo mafupi.
+            </Text>
+          </View>
+
+          <View
+            style={{
+              flexDirection: "row",
+              gap: 10,
+              width: "100%",
+            }}
+          >
+            <Pill
+              title="Add Asset"
+              active={entryType === "ASSET"}
+              onPress={() => setEntryType("ASSET")}
+            />
+            <Pill
+              title="Add Cost"
+              active={entryType === "COST"}
+              onPress={() => setEntryType("COST")}
+            />
+            <Pill
+              title="Add Income"
+              active={entryType === "INCOME"}
+              onPress={() => setEntryType("INCOME")}
+            />
+          </View>
+
+          <View style={{ gap: 8 }}>
+            <Text style={{ color: UI.muted, fontWeight: "800" }}>Amount (TZS)</Text>
+            <TextInput
+              value={amount}
+              onChangeText={setAmount}
+              placeholder="mfano: 250000"
+              placeholderTextColor="rgba(234,242,255,0.35)"
+              keyboardType="numeric"
+              style={{
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,0.10)",
+                backgroundColor: "rgba(255,255,255,0.05)",
+                color: UI.text,
+                borderRadius: 18,
+                paddingHorizontal: 14,
+                paddingVertical: 14,
+                fontWeight: "800",
+                fontSize: 15,
+              }}
+            />
+          </View>
+
+          <View style={{ gap: 8 }}>
+            <Text style={{ color: UI.muted, fontWeight: "800" }}>Note / Description</Text>
+            <TextInput
+              value={note}
+              onChangeText={setNote}
+              placeholder="mfano: kununua mashine / gharama ya kodi / mapato ya biashara"
+              placeholderTextColor="rgba(234,242,255,0.35)"
+              multiline
+              style={{
+                minHeight: 96,
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,0.10)",
+                backgroundColor: "rgba(255,255,255,0.05)",
+                color: UI.text,
+                borderRadius: 18,
+                paddingHorizontal: 14,
+                paddingVertical: 14,
+                fontWeight: "800",
+                fontSize: 15,
+                textAlignVertical: "top",
+              }}
+            />
+          </View>
+        </Card>
+
+        <Card
+          style={{
+            gap: 10,
+            borderRadius: 20,
+            borderColor: canPreview ? "rgba(16,185,129,0.22)" : "rgba(255,255,255,0.10)",
+            backgroundColor: canPreview ? "rgba(16,185,129,0.07)" : "rgba(255,255,255,0.04)",
+          }}
+        >
+          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
+            {previewTitle}
+          </Text>
+
+          <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 20 }}>
+            {previewHint}
+          </Text>
+
+          <View style={{ flexDirection: "row", gap: 12 }}>
+            <MiniStat
+              label="Entry Type"
+              value={entryType}
+              hint="current selection"
+            />
+            <MiniStat
+              label="Amount"
+              value={canPreview ? formattedPreviewAmount : "TSh 0"}
+              hint="preview"
+            />
+          </View>
+
+          <Card
+            style={{
+              borderColor: "rgba(255,255,255,0.10)",
+              backgroundColor: "rgba(255,255,255,0.04)",
+              borderRadius: 18,
+              padding: 12,
+            }}
+          >
+            <Text style={{ color: UI.faint, fontWeight: "800", lineHeight: 20 }}>
+              {clean(note)
+                ? note
+                : "Hakuna maelezo bado. Weka note fupi ili entry iwe clear."}
+            </Text>
+          </Card>
+        </Card>
+
+        <View style={{ gap: 10 }}>
+          <Pressable
+            onPress={onSaveEntry}
+            disabled={!canPreview || saving}
+            style={({ pressed }) => ({
+              borderRadius: 18,
+              borderWidth: 1,
+              borderColor:
+                canPreview && !saving
+                  ? "rgba(16,185,129,0.30)"
+                  : "rgba(255,255,255,0.10)",
+              backgroundColor:
+                canPreview && !saving
+                  ? "rgba(16,185,129,0.12)"
+                  : "rgba(255,255,255,0.05)",
+              paddingVertical: 15,
+              paddingHorizontal: 16,
+              alignItems: "center",
+              justifyContent: "center",
+              opacity: pressed ? 0.92 : canPreview && !saving ? 1 : 0.6,
+            })}
+          >
+            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
+              {saving ? "Saving..." : "Save Entry"}
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={onOpenStores}
+            style={({ pressed }) => ({
+              borderRadius: 18,
+              borderWidth: 1,
+              borderColor: "rgba(16,185,129,0.30)",
+              backgroundColor: "rgba(16,185,129,0.12)",
+              paddingVertical: 15,
+              paddingHorizontal: 16,
+              alignItems: "center",
+              justifyContent: "center",
+              opacity: pressed ? 0.92 : 1,
+            })}
+          >
+            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
+              Open Stores
+            </Text>
+          </Pressable>
+
+          <Card
+            style={{
+              borderColor: "rgba(255,255,255,0.10)",
+              backgroundColor: "rgba(255,255,255,0.04)",
+              borderRadius: 18,
+              padding: 12,
+            }}
+          >
+            <Text style={{ color: UI.faint, fontWeight: "800", lineHeight: 20 }}>
+  PATCH 2E iko active: save entry, reports, filters, na edit/delete UI layer sasa
+  vimefungwa ndani ya Capital Recovery workspace. Edit/Delete backend RPC bado
+  haijafungwa, hivyo button zimewekwa kwa hali salama ya UI-only.
+</Text>
+          </Card>
+        </View>
+      </Card>
+      </View>
+    </View>
+  );
+}
+
+function CapitalRecoverySummaryHistoryCard({
+  activeStoreId,
+  reloadKey = 0,
+}: {
+  activeStoreId?: string | null;
+  reloadKey?: number;
+}) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const [history, setHistory] = useState<CapitalRecoveryHistoryRow[]>([]);
+
+  const storeId = String(activeStoreId ?? "").trim();
+
+  const load = useCallback(async () => {
+    if (!storeId) {
+      setHistory([]);
+      setError("No active Capital Recovery store selected");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { data, error: hErr } = await supabase.rpc("get_capital_recovery_history_v1", {
+        p_store_id: storeId,
+        p_limit: 100,
+      });
+
+      if (hErr) throw hErr;
+
+      const rows = (Array.isArray(data) ? data : []) as any[];
+      setHistory(
+        rows.map((r) => ({
+          id: String(r?.id ?? ""),
+          entry_type: String(r?.entry_type ?? "ASSET").toUpperCase() as
+            | "ASSET"
+            | "COST"
+            | "INCOME",
+          amount: toNum(r?.amount),
+          note: clean(r?.note) || null,
+          created_at: String(r?.created_at ?? ""),
+          created_by: clean(r?.created_by) || null,
+        }))
+      );
+    } catch (e: any) {
+      setError(clean(e?.message) || "Failed to load Capital Recovery history");
+      setHistory([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [storeId]);
+
+  useEffect(() => {
+    void load();
+  }, [load, reloadKey]);
+
+  const fmt = useCallback(
+    (n: number) =>
+      formatMoney(n, {
+        currency: "TZS",
+        locale: "en-TZ",
+      }).replace(/\s+/g, " "),
+    []
+  );
+
+  const report = useMemo(() => {
+    const base = {
+      ASSET: { count: 0, amount: 0 },
+      COST: { count: 0, amount: 0 },
+      INCOME: { count: 0, amount: 0 },
+    };
+
+    for (const item of history) {
+      base[item.entry_type].count += 1;
+      base[item.entry_type].amount += toNum(item.amount);
+    }
+
+    return base;
+  }, [history]);
+
+  return (
+    <View style={{ marginTop: 14, gap: 14 }}>
+      <Card
+        style={{
+          gap: 14,
+          borderRadius: 24,
+          borderColor: "rgba(16,185,129,0.22)",
+          backgroundColor: "rgba(15,18,24,0.98)",
+        }}
+      >
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 20, flex: 1 }}>
+            Reports
+          </Text>
+
+          <Pressable
+            onPress={() => void load()}
+            style={({ pressed }) => ({
+              paddingHorizontal: 10,
+              paddingVertical: 6,
+              borderRadius: 999,
+              borderWidth: 1,
+              borderColor: "rgba(16,185,129,0.24)",
+              backgroundColor: "rgba(16,185,129,0.10)",
+              opacity: pressed ? 0.92 : 1,
+            })}
+          >
+            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }}>
+              {loading ? "LOADING" : "LIVE"}
+            </Text>
+          </Pressable>
+        </View>
+
+        {!!error ? (
+          <Card
+            style={{
+              borderColor: "rgba(201,74,74,0.35)",
+              backgroundColor: "rgba(201,74,74,0.10)",
+              borderRadius: 18,
+              padding: 12,
+            }}
+          >
+            <Text style={{ color: UI.danger, fontWeight: "900" }}>{error}</Text>
+          </Card>
+        ) : null}
+
+        <View style={{ flexDirection: "row", gap: 12 }}>
+          <MiniStat
+            label="Asset Entries"
+            value={String(report.ASSET.count)}
+            hint={fmt(report.ASSET.amount)}
+          />
+          <MiniStat
+            label="Cost Entries"
+            value={String(report.COST.count)}
+            hint={fmt(report.COST.amount)}
+          />
+          <MiniStat
+            label="Income Entries"
+            value={String(report.INCOME.count)}
+            hint={fmt(report.INCOME.amount)}
+          />
+        </View>
+      </Card>
+
+      <Card
+        style={{
+          gap: 14,
+          borderRadius: 24,
+          borderColor: "rgba(16,185,129,0.22)",
+          backgroundColor: "rgba(15,18,24,0.98)",
+        }}
+      >
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 20, flex: 1 }}>
+            Recent History
+          </Text>
+
+          <View
+            style={{
+              paddingHorizontal: 10,
+              paddingVertical: 6,
+              borderRadius: 999,
+              borderWidth: 1,
+              borderColor: "rgba(255,255,255,0.10)",
+              backgroundColor: "rgba(255,255,255,0.05)",
+            }}
+          >
+            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }}>
+              {history.length}
+            </Text>
+          </View>
+        </View>
+
+        <Pressable
+          onPress={() => router.push("/capital-recovery/history")}
+          style={({ pressed }) => ({
+            borderRadius: 18,
+            borderWidth: 1,
+            borderColor: "rgba(16,185,129,0.30)",
+            backgroundColor: "rgba(16,185,129,0.12)",
+            paddingVertical: 15,
+            paddingHorizontal: 16,
+            alignItems: "center",
+            justifyContent: "center",
+            opacity: pressed ? 0.92 : 1,
+          })}
+        >
+          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
+            Open Recent History
+          </Text>
+        </Pressable>
+
+        <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22 }}>
+          Recent History ipo kwenye page yake maalum ili Home ibaki safi, fupi, na nyepesi.
+        </Text>
+      </Card>
+      </View>
+  
+  );
+}
+    
+
 function WebDesktopShell({
   width,
   left,
@@ -2515,14 +3522,65 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
 
-  const { refreshing, error, refresh, activeOrgName, activeRole, activeStoreName, activeStoreId } =
-    useOrg();
+const {
+  refreshing,
+  error,
+  refresh,
+  activeOrgId,
+  activeOrgName,
+  activeRole,
+  activeStoreName,
+  activeStoreId,
+  stores,
+} = useOrg();
 
   const netInfo = useNetInfo();
   const isOnline = !!(netInfo.isConnected && netInfo.isInternetReachable !== false);
 
   const [dashTick, setDashTick] = useState(0);
+  const [capitalRecoveryTick, setCapitalRecoveryTick] = useState(0);
   const [pulling, setPulling] = useState(false);
+
+  const [desktopLoading, setDesktopLoading] = useState(false);
+  const [desktopFinanceErr, setDesktopFinanceErr] = useState<string | null>(null);
+  const [desktopSales, setDesktopSales] = useState<SalesSummary>({
+    total: 0,
+    orders: 0,
+    currency: "TZS",
+  });
+  const [desktopExpenses, setDesktopExpenses] = useState<ExpenseSummary>({
+    total: 0,
+    count: 0,
+  });
+  const [desktopProfit, setDesktopProfit] = useState<ProfitSummary>({
+    net: 0,
+    sales: null,
+    expenses: null,
+  });
+  const [desktopPay, setDesktopPay] = useState<PayBreakdown>({
+    cash: 0,
+    bank: 0,
+    mobile: 0,
+    credit: 0,
+    other: 0,
+    orders: 0,
+  });
+  const [desktopCollections, setDesktopCollections] = useState<CollectionBreakdown>({
+    cash: 0,
+    bank: 0,
+    mobile: 0,
+    other: 0,
+    total: 0,
+    payments: 0,
+  });
+  const [desktopExpenseByChannel, setDesktopExpenseByChannel] = useState<ExpenseChannelBreakdown>({
+    cash: 0,
+    bank: 0,
+    mobile: 0,
+  });
+  const [desktopStockValue, setDesktopStockValue] = useState(0);
+  const desktopLoadBusyRef = useRef(false);
+  const desktopLoadSeqRef = useRef(0);
 
   const goOrgSwitcher = useCallback(() => {
     router.push("/org-switcher");
@@ -2551,6 +3609,7 @@ export default function HomeScreen() {
       }
 
       setDashTick((x) => x + 1);
+      setCapitalRecoveryTick((x) => x + 1);
     } finally {
       setPulling(false);
     }
@@ -2558,7 +3617,269 @@ export default function HomeScreen() {
 
   const isCashier = String(activeRole ?? "").trim().toLowerCase() === "cashier";
   const isWeb = Platform.OS === "web";
-  const isDesktopWeb = isWeb && width >= 1024;
+  const isDesktopWeb = isDesktopWebEnv(width);
+  const isMobileWeb = isWeb && !isDesktopWeb;
+
+  const activeStoreType = useMemo(() => {
+    const row = (stores ?? []).find(
+      (s: any) => String(s?.store_id ?? "") === String(activeStoreId ?? "")
+    );
+    const t = String((row as any)?.store_type ?? "STANDARD").trim().toUpperCase();
+    return t === "CAPITAL_RECOVERY" ? "CAPITAL_RECOVERY" : "STANDARD";
+  }, [stores, activeStoreId]);
+
+  const isCapitalRecoveryStore = activeStoreType === "CAPITAL_RECOVERY";
+
+  const orgId = String(activeOrgId ?? "").trim();
+  const storeId = String(activeStoreId ?? "").trim();
+  const roleLower = String(activeRole ?? "").trim().toLowerCase();
+  const isOwner = roleLower === "owner";
+
+  const moneyPrefs = useOrgMoneyPrefs(orgId);
+
+  const desktopFmtMoney = useCallback(
+    (n: number) =>
+      formatMoney(n, {
+        currency: moneyPrefs.currency || "TZS",
+        locale: moneyPrefs.locale || "en-TZ",
+      }).replace(/\s+/g, " "),
+    [moneyPrefs.currency, moneyPrefs.locale]
+  );
+
+  const onCapitalRecoveryRefreshDone = useCallback(async () => {
+    await Promise.resolve(refresh());
+
+    if (activeStoreId && isOnline) {
+      try {
+        await syncSalesQueueOnce(String(activeStoreId));
+      } catch {}
+    }
+
+    setCapitalRecoveryTick((x) => x + 1);
+  }, [refresh, activeStoreId, isOnline]);
+
+  const desktopLoad = useCallback(async () => {
+    if (!isDesktopWeb) return;
+    if (isCapitalRecoveryStore) return;
+    if (!orgId || !storeId) return;
+    if (desktopLoadBusyRef.current) return;
+
+    const seq = ++desktopLoadSeqRef.current;
+    desktopLoadBusyRef.current = true;
+
+    setDesktopLoading(true);
+    setDesktopFinanceErr(null);
+
+    try {
+      const { from, to } = rangeToFromTo("today");
+      const { from: fromYMD, to: toYMD } = rangeToDates("today");
+
+      const salesPromise = supabase.rpc("get_sales", {
+        p_store_id: storeId,
+        p_from: from,
+        p_to: to,
+      } as any);
+
+      const expensePromise = supabase.rpc("get_expense_summary", {
+        p_store_id: storeId,
+        p_from: fromYMD,
+        p_to: toYMD,
+      } as any);
+
+      const profitPromise = isOwner
+        ? supabase.rpc("get_store_net_profit_v2", {
+            p_store_id: storeId,
+            p_from: from,
+            p_to: to,
+          } as any)
+        : Promise.resolve({ data: null, error: null } as any);
+
+      const payPromise = supabase.rpc("get_sales_channel_summary_v3", {
+        p_org_id: orgId,
+        p_from: from,
+        p_to: to,
+        p_store_id: storeId,
+      } as any);
+
+      const collectionsPromise = supabase.rpc("get_credit_collections_summary_v2", {
+        p_org_id: orgId,
+        p_from: from,
+        p_to: to,
+        p_store_id: storeId,
+      } as any);
+
+      const expenseChannelPromise = supabase.rpc("get_expense_channel_summary_v1", {
+        p_store_id: storeId,
+        p_from: fromYMD,
+        p_to: toYMD,
+      } as any);
+
+      const stockPromise = supabase.rpc("get_stock_on_hand_value_v1", {
+        p_org_id: orgId,
+        p_store_id: storeId,
+      } as any);
+
+      const [
+        salesRes,
+        expenseRes,
+        profitRes,
+        payRes,
+        collectionsRes,
+        expenseChannelRes,
+        stockRes,
+      ] = await Promise.all([
+        salesPromise,
+        expensePromise,
+        profitPromise,
+        payPromise,
+        collectionsPromise,
+        expenseChannelPromise,
+        stockPromise,
+      ]);
+
+      if (salesRes.error) throw salesRes.error;
+      if (expenseRes.error) throw expenseRes.error;
+      if (profitRes?.error) throw profitRes.error;
+      if (payRes.error) throw payRes.error;
+      if (expenseChannelRes.error) throw expenseChannelRes.error;
+      if (stockRes.error) throw stockRes.error;
+
+      const salesRows = Array.isArray(salesRes.data) ? salesRes.data : [];
+      const salesTotal = salesRows.reduce((acc: number, r: any) => {
+        return (
+          acc +
+          toNum(
+            r?.total_amount ??
+              r?.total ??
+              r?.amount ??
+              r?.grand_total ??
+              r?.paid_amount ??
+              r?.revenue ??
+              0
+          )
+        );
+      }, 0);
+
+      const salesOrders = salesRows.reduce((acc: number, r: any) => {
+        const st = String(r?.status ?? "").toLowerCase().trim();
+        if (st === "cancelled" || st === "canceled" || st === "void") return acc;
+        return acc + 1;
+      }, 0);
+
+      if (seq !== desktopLoadSeqRef.current) return;
+
+      setDesktopSales({
+        total: salesTotal,
+        orders: salesOrders,
+        currency: "TZS",
+      });
+
+      const expenseRow = Array.isArray(expenseRes.data) ? expenseRes.data[0] : expenseRes.data;
+      setDesktopExpenses({
+        total: toNum(expenseRow?.total ?? expenseRow?.amount ?? expenseRow?.sum ?? 0),
+        count: toInt(expenseRow?.count ?? expenseRow?.items ?? 0),
+      });
+
+      const profitRow = Array.isArray(profitRes?.data) ? profitRes.data[0] : profitRes?.data;
+      setDesktopProfit({
+        net: isOwner ? toNum(profitRow?.net_profit ?? profitRow?.net ?? 0) : 0,
+        sales: profitRow?.sales_total != null ? toNum(profitRow?.sales_total) : null,
+        expenses: profitRow?.expenses_total != null ? toNum(profitRow?.expenses_total) : null,
+      });
+
+      const payRows = Array.isArray(payRes.data) ? payRes.data : [];
+      const payOut: PayBreakdown = {
+        cash: 0,
+        bank: 0,
+        mobile: 0,
+        credit: 0,
+        other: 0,
+        orders: 0,
+      };
+
+      for (const r of payRows) {
+        const ch = String(r?.channel ?? r?.payment_method ?? "").trim().toUpperCase();
+        const amt = toNum(r?.revenue ?? r?.total ?? 0);
+        const ord = toInt(r?.orders ?? 0);
+        payOut.orders += ord;
+
+        if (ch === "CASH") payOut.cash += amt;
+        else if (ch === "BANK") payOut.bank += amt;
+        else if (ch === "MOBILE") payOut.mobile += amt;
+        else if (ch === "CREDIT") payOut.credit += amt;
+        else payOut.other += amt;
+      }
+
+      setDesktopPay(payOut);
+
+      const collectionRows = Array.isArray(collectionsRes.data) ? collectionsRes.data : [];
+      const collOut: CollectionBreakdown = {
+        cash: 0,
+        bank: 0,
+        mobile: 0,
+        other: 0,
+        total: 0,
+        payments: 0,
+      };
+
+      for (const r of collectionRows) {
+        const ch = String(r?.channel ?? r?.payment_method ?? r?.method ?? "")
+          .trim()
+          .toUpperCase();
+        const amt = toNum(r?.amount ?? r?.revenue ?? r?.total ?? 0);
+        const cnt = toInt(r?.payments ?? r?.count ?? 0);
+
+        collOut.payments += cnt;
+
+        if (ch === "CASH") collOut.cash += amt;
+        else if (ch === "BANK") collOut.bank += amt;
+        else if (ch === "MOBILE") collOut.mobile += amt;
+        else collOut.other += amt;
+      }
+
+      collOut.total = collOut.cash + collOut.bank + collOut.mobile;
+      setDesktopCollections(collOut);
+
+      const expenseChannelRows = Array.isArray(expenseChannelRes.data) ? expenseChannelRes.data : [];
+      const expCh: ExpenseChannelBreakdown = { cash: 0, bank: 0, mobile: 0 };
+
+      for (const r of expenseChannelRows) {
+        const ch = String(r?.channel ?? "").trim().toUpperCase();
+        const amt = toNum(r?.amount ?? 0);
+
+        if (ch === "CASH") expCh.cash += amt;
+        else if (ch === "BANK") expCh.bank += amt;
+        else if (ch === "MOBILE") expCh.mobile += amt;
+      }
+
+      setDesktopExpenseByChannel(expCh);
+
+      const stockRaw = Array.isArray(stockRes.data) ? stockRes.data[0] : stockRes.data;
+      setDesktopStockValue(extractScalarValue(stockRaw));
+    } catch (e: any) {
+      if (seq === desktopLoadSeqRef.current) {
+        setDesktopFinanceErr(e?.message ?? "Failed to load desktop dashboard");
+      }
+    } finally {
+      if (seq === desktopLoadSeqRef.current) {
+        setDesktopLoading(false);
+      }
+      desktopLoadBusyRef.current = false;
+    }
+  }, [isDesktopWeb, isCapitalRecoveryStore, orgId, storeId, isOwner]);
+
+  useEffect(() => {
+    if (!orgId) return;
+    void moneyPrefs.refresh();
+  }, [orgId, moneyPrefs]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!isDesktopWeb) return;
+      if (isCapitalRecoveryStore) return;
+      void desktopLoad();
+    }, [isDesktopWeb, isCapitalRecoveryStore, desktopLoad])
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -2596,17 +3917,19 @@ export default function HomeScreen() {
   }, [activeStoreId, isOnline]);
 
   const homeRefreshControl =
-    Platform.OS === "web" ? null : (
-      <RefreshControl
-        refreshing={pulling || refreshing}
-        onRefresh={onPullRefresh}
-        tintColor={UI.text}
-      />
-    );
+    Platform.OS === "web"
+      ? undefined
+      : (
+          <RefreshControl
+            refreshing={pulling || refreshing}
+            onRefresh={onPullRefresh}
+            tintColor={UI.text}
+          />
+        );
   return (
     <Screen
       scroll
-      refreshControl={homeRefreshControl}
+      refreshControl={homeRefreshControl as any}
       contentStyle={{
         paddingTop: isDesktopWeb ? Math.max(insets.top, 18) + 10 : topPad,
         paddingHorizontal: isDesktopWeb ? 22 : 16,
@@ -2616,13 +3939,17 @@ export default function HomeScreen() {
       {!isDesktopWeb ? (
         <HeaderHero
           activeOrgName={activeOrgName}
-          activeStoreName={activeStoreName}
+          activeStoreName={
+            isCapitalRecoveryStore
+              ? `${activeStoreName ?? "Store"} • CAPITAL RECOVERY`
+              : activeStoreName
+          }
           isCashier={isCashier}
         />
       ) : null}
 
-      {!isCashier && !isWeb ? <ZetraAiCard onOpen={goAI} /> : null}
-      {!isCashier && !isWeb ? <CompactNotificationsHomeCard /> : null}
+      {!isCashier && !isDesktopWeb && !isCapitalRecoveryStore ? <ZetraAiCard onOpen={goAI} /> : null}
+      {!isCashier && !isDesktopWeb && !isCapitalRecoveryStore ? <CompactNotificationsHomeCard /> : null}
 
       {!!error && !String(error).toLowerCase().includes("not allowed") && (
         <Card
@@ -2649,7 +3976,47 @@ export default function HomeScreen() {
           />
           <CashierQuickHome />
         </>
-      ) : isWeb ? (
+      ) : isCapitalRecoveryStore ? (
+        <>
+          <WorkspaceCard
+            activeOrgName={activeOrgName}
+            activeRole={activeRole}
+            activeStoreName={activeStoreName}
+            activeStoreId={activeStoreId}
+            onOpen={goOrgSwitcher}
+          />
+
+          <StoreGuard>
+            <CapitalRecoveryHomeShell
+              activeOrgName={activeOrgName}
+              activeStoreName={activeStoreName}
+              activeStoreId={activeStoreId}
+              onOpenStores={() => router.push("/(tabs)/stores")}
+              onRefreshDone={onCapitalRecoveryRefreshDone}
+              summaryLoading={false}
+              summaryError={null}
+              summary={{
+                total_asset: 0,
+                total_cost: 0,
+                total_income: 0,
+                remaining_cost: 0,
+                remaining_asset: 0,
+                realized_profit: 0,
+                entries_count: 0,
+                last_entry_at: null,
+              }}
+              onRefreshSummary={() => {
+                setCapitalRecoveryTick((x) => x + 1);
+              }}
+            />
+
+            <CapitalRecoverySummaryHistoryCard
+              activeStoreId={activeStoreId}
+              reloadKey={capitalRecoveryTick}
+            />
+          </StoreGuard>
+        </>
+      ) : isDesktopWeb ? (
         <WebDesktopShell
           width={width}
           left={
@@ -2668,37 +4035,135 @@ export default function HomeScreen() {
                 onOpen={goOrgSwitcher}
               />
 
-              <StoreGuard>
-                <CompactFinanceCardHomePreview key={`web-finance-live-${dashTick}`} />
-              </StoreGuard>
+              <DesktopKpiStrip
+                sales={desktopLoading ? "..." : desktopFmtMoney(desktopSales.total)}
+                expenses={desktopLoading ? "..." : desktopFmtMoney(desktopExpenses.total)}
+                profit={desktopLoading ? "..." : isOwner ? desktopFmtMoney(desktopProfit.net) : "—"}
+                orders={desktopLoading ? "..." : String(desktopSales.orders)}
+                moneyIn={
+                  desktopLoading
+                    ? "..."
+                    : desktopFmtMoney(
+                        subtractFloor(
+                          desktopPay.cash + desktopCollections.cash,
+                          desktopExpenseByChannel.cash
+                        ) +
+                          subtractFloor(
+                            desktopPay.bank + desktopCollections.bank,
+                            desktopExpenseByChannel.bank
+                          ) +
+                          subtractFloor(
+                            desktopPay.mobile + desktopCollections.mobile,
+                            desktopExpenseByChannel.mobile
+                          )
+                      )
+                }
+                stockValue={desktopLoading ? "..." : desktopFmtMoney(desktopStockValue)}
+                isOwner={isOwner}
+              />
 
               <Card
                 style={{
                   marginTop: 14,
-                  gap: 10,
+                  gap: 12,
                   borderRadius: 22,
                   borderColor: "rgba(16,185,129,0.22)",
                   backgroundColor: "rgba(15,18,24,0.98)",
                 }}
               >
-                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18 }}>
-                  Web Home Mode
-                </Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 20, flex: 1 }}>
+                    Finance Command
+                  </Text>
+
+                  <View
+                    style={{
+                      paddingHorizontal: 10,
+                      paddingVertical: 6,
+                      borderRadius: 999,
+                      borderWidth: 1,
+                      borderColor: "rgba(16,185,129,0.24)",
+                      backgroundColor: "rgba(16,185,129,0.10)",
+                    }}
+                  >
+                    <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }}>
+                      TODAY
+                    </Text>
+                  </View>
+                </View>
 
                 <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22 }}>
-                  Open Finance sasa ipo live tena kwenye homepage ya web, lakini auto-refresh ya browser
-                  imebaki imezimwa ili page isiwe nzito na buttons zibaki clickable muda wote.
+                  Hii ndiyo sehemu kuu ya kufungua sales, expenses, profit, na history ya store
+                  iliyochaguliwa. Desktop homepage sasa imepangwa kama business command center.
                 </Text>
 
-                <Text style={{ color: UI.faint, fontWeight: "800" }}>
-                  Data itapakiwa kwenye load ya page, store switch, na refresh ya homepage.
-                </Text>
+                {!!desktopFinanceErr ? (
+                  <Card
+                    style={{
+                      borderColor: "rgba(201,74,74,0.35)",
+                      backgroundColor: "rgba(201,74,74,0.10)",
+                      borderRadius: 18,
+                      padding: 12,
+                    }}
+                  >
+                    <Text style={{ color: UI.danger, fontWeight: "900" }}>{desktopFinanceErr}</Text>
+                  </Card>
+                ) : null}
+
+                <Pressable
+                  onPress={() => {
+                    const dates = rangeToDates("today");
+                    router.push({
+                      pathname: "/finance/history",
+                      params: {
+                        mode: "SALES",
+                        scope: "STORE",
+                        range: "today",
+                        from: dates.from,
+                        to: dates.to,
+                      } as any,
+                    } as any);
+                  }}
+                  hitSlop={10}
+                  style={({ pressed }) => ({
+                    borderRadius: 18,
+                    borderWidth: 1,
+                    borderColor: "rgba(16,185,129,0.30)",
+                    backgroundColor: "rgba(16,185,129,0.12)",
+                    paddingVertical: 15,
+                    paddingHorizontal: 16,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 10,
+                    opacity: pressed ? 0.92 : 1,
+                  })}
+                >
+                  <Ionicons name="bar-chart-outline" size={18} color={UI.text} />
+                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
+                    Open Finance
+                  </Text>
+                </Pressable>
               </Card>
             </>
           }
           right={
             <>
-              {null}
+              <DesktopSignalCard
+                title="Notifications"
+                badge="LIVE"
+                body="Angalia alerts, stock movements, receipts, na matukio muhimu ya store bila kuondoka kwenye desktop workflow."
+              />
+
+              <View style={{ height: 14 }} />
+
+              <DesktopSignalCard
+                title="AI Insights"
+                badge="COPILOT"
+                body="Tumia ZETRA AI kupata mwongozo wa bidhaa, uendeshaji wa staff, na maamuzi ya biashara kwa haraka."
+              />
+
+              <View style={{ height: 14 }} />
 
               <WebSafeHomeActions
                 width={width}
@@ -2733,11 +4198,104 @@ export default function HomeScreen() {
             activeStoreId={activeStoreId}
             onOpen={goOrgSwitcher}
           />
-          <StoreGuard>
-            <CompactFinanceCardHomePreview />
-            <CompactStockValueCardHomePreview />
-            <CompactClubRevenueCardHomePreview key={`club-mini-${dashTick}`} onOpen={goClubRevenue} />
-          </StoreGuard>
+
+          {isMobileWeb ? (
+            <StoreGuard>
+              <CompactFinanceCardHomePreview />
+              <CompactStockValueCardHomePreview />
+              <CompactClubRevenueCardHomePreview
+                key={`club-mini-${dashTick}`}
+                onOpen={goClubRevenue}
+              />
+
+              <Card
+                style={{
+                  marginTop: 14,
+                  gap: 12,
+                  borderRadius: 22,
+                  borderColor: "rgba(16,185,129,0.22)",
+                  backgroundColor: "rgba(15,18,24,0.98)",
+                }}
+              >
+                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18 }}>
+                  Quick Actions
+                </Text>
+
+                <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22 }}>
+                  Browser ya simu imewekwa kwenye mobile-safe mode: cards zipo mbele,
+                  lakini desktop web imeachwa lightweight ili isiwe nzito.
+                </Text>
+
+                <View style={{ gap: 10 }}>
+                  <Pressable
+                    onPress={() => router.push("/(tabs)/stores")}
+                    hitSlop={10}
+                    style={({ pressed }) => ({
+                      borderRadius: 18,
+                      borderWidth: 1,
+                      borderColor: "rgba(16,185,129,0.30)",
+                      backgroundColor: "rgba(16,185,129,0.12)",
+                      paddingVertical: 15,
+                      paddingHorizontal: 16,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      opacity: pressed ? 0.92 : 1,
+                    })}
+                  >
+                    <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
+                      Open Stores
+                    </Text>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={() => router.push("/(tabs)/products")}
+                    hitSlop={10}
+                    style={({ pressed }) => ({
+                      borderRadius: 18,
+                      borderWidth: 1,
+                      borderColor: "rgba(16,185,129,0.30)",
+                      backgroundColor: "rgba(16,185,129,0.12)",
+                      paddingVertical: 15,
+                      paddingHorizontal: 16,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      opacity: pressed ? 0.92 : 1,
+                    })}
+                  >
+                    <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
+                      Open Products
+                    </Text>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={() => router.push("/(tabs)/sales")}
+                    hitSlop={10}
+                    style={({ pressed }) => ({
+                      borderRadius: 18,
+                      borderWidth: 1,
+                      borderColor: "rgba(16,185,129,0.30)",
+                      backgroundColor: "rgba(16,185,129,0.12)",
+                      paddingVertical: 15,
+                      paddingHorizontal: 16,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      opacity: pressed ? 0.92 : 1,
+                    })}
+                  >
+                    <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
+                      Open Sales
+                    </Text>
+                  </Pressable>
+                </View>
+              </Card>
+            </StoreGuard>
+          ) : (
+            <StoreGuard>
+              <CompactFinanceCardHomePreview />
+              <CompactStockValueCardHomePreview />
+              <CompactClubRevenueCardHomePreview key={`club-mini-${dashTick}`} onOpen={goClubRevenue} />
+            </StoreGuard>
+          )}
         </>
       )}
     </Screen>

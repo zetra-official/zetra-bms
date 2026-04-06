@@ -99,6 +99,9 @@ function AuthGate() {
       // IMPORTANT:
       // Products and Inventory own their scan behavior locally.
       // Root layout must NOT hijack scanner there.
+      const isSalesRoute =
+        a === "(tabs)" && b === "sales";
+
       const isProductsRoute =
         a === "(tabs)" && b === "products";
 
@@ -110,7 +113,13 @@ function AuthGate() {
       if (hasSession !== true) return;
       if (orgLoading) return;
       if (isInAuth || isInOnboarding) return;
+
+      // Products + Inventory ziendelee kujisimamia zenyewe
       if (isProductsRoute || isInventoryRoute) return;
+
+      // Ukiwa tayari ndani ya Sales, root layout isichukue scan.
+      // Sales page yenyewe ndiyo ishughulikie local scan.
+      if (isSalesRoute) return;
 
       router.replace({
         pathname: "/(tabs)/sales",
@@ -143,11 +152,15 @@ function AuthGate() {
 
       // scanners nyingi hutuma Enter mwisho
       if (key === "Enter") {
+        e.preventDefault();
+        e.stopPropagation();
         flushWebScanBuffer();
         return;
       }
 
       if (key.length !== 1) return;
+
+      e.stopPropagation();
 
       if (now - webScanLastAtRef.current > 120) {
         webScanBufferRef.current = "";
@@ -171,10 +184,10 @@ function AuthGate() {
       }, 180);
     };
 
-    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keydown", onKeyDown, true);
 
     return () => {
-      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keydown", onKeyDown, true);
       resetWebScanBuffer();
     };
   }, [router, ready, hasSession, orgLoading]);

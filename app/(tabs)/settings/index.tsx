@@ -1,6 +1,6 @@
 // app/(tabs)/settings/index.tsx
 import React, { useCallback, useMemo } from "react";
-import { Alert, Platform, Pressable, Text, View } from "react-native";
+import { Alert, Platform, Pressable, Text, View, useWindowDimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
@@ -9,6 +9,23 @@ import { Card } from "@/src/ui/Card";
 import { theme, UI } from "@/src/ui/theme";
 import { useOrg } from "@/src/context/OrgContext";
 import { hardSignOutSupabase } from "@/src/supabase/supabaseClient";
+
+function isDesktopWebEnv(width?: number) {
+  if (Platform.OS !== "web") return false;
+
+  const ua =
+    typeof navigator !== "undefined" ? String(navigator.userAgent ?? "") : "";
+
+  const isMobileUa = /Android|iPhone|iPad|iPod/i.test(ua);
+
+  if (isMobileUa) return false;
+
+  if (typeof width === "number" && width > 0) {
+    return width >= 1024;
+  }
+
+  return true;
+}
 
 type RowProps = {
   icon: keyof typeof Ionicons.glyphMap;
@@ -378,6 +395,10 @@ function LogoutCard({
 export default function MoreHome() {
   const router = useRouter();
   const org = useOrg();
+  const { width } = useWindowDimensions();
+
+  const isDesktopWeb = isDesktopWebEnv(width);
+  const isMobileLike = Platform.OS !== "web" || !isDesktopWeb;
 
   const orgSummary = useMemo(() => {
     const name = org.activeOrgName ?? "No organization";
@@ -424,7 +445,7 @@ export default function MoreHome() {
   }, [router]);
 
   const onLogout = useCallback(() => {
-    if (Platform.OS === "web") {
+    if (isDesktopWeb) {
       void doLogoutNow();
       return;
     }
@@ -439,7 +460,7 @@ export default function MoreHome() {
         },
       },
     ]);
-  }, [doLogoutNow]);
+  }, [doLogoutNow, isDesktopWeb]);
 
   return (
     <Screen scroll bottomPad={120}>
@@ -595,7 +616,7 @@ export default function MoreHome() {
       </PremiumSectionCard>
 
       <SectionTitle label="Account" />
-      <LogoutCard onLogout={onLogout} isWeb={Platform.OS === "web"} />
+      <LogoutCard onLogout={onLogout} isWeb={isDesktopWeb} />
 
       <View style={{ height: theme.spacing.gap }} />
 

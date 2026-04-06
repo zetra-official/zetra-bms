@@ -4,18 +4,32 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFonts } from "expo-font";
 import { Tabs } from "expo-router";
 import React from "react";
-import { ActivityIndicator, Platform, Text, View } from "react-native";
+import { ActivityIndicator, Platform, Text, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-function TabLabel({ text, color }: { text: string; color: string }) {
+function TabLabel({
+  text,
+  color,
+  mobileWeb = false,
+}: {
+  text: string;
+  color: string;
+  mobileWeb?: boolean;
+}) {
   return (
     <Text
       style={{
         color,
         fontWeight: "800",
-        fontSize: 14,
+        fontSize: mobileWeb ? 11 : 12,
+        lineHeight: mobileWeb ? 13 : 14,
+        textAlign: "center",
+        includeFontPadding: false,
+        width: "100%",
       }}
       numberOfLines={1}
+      ellipsizeMode="clip"
+      adjustsFontSizeToFit={false}
     >
       {text}
     </Text>
@@ -25,21 +39,33 @@ function TabLabel({ text, color }: { text: string; color: string }) {
 function WebTabIcon({
   emoji,
   color,
+  mobileWeb = false,
 }: {
   emoji: string;
   color: string;
+  mobileWeb?: boolean;
 }) {
   return (
-    <Text
+    <View
       style={{
-        fontSize: 18,
-        color,
-        textAlign: "center",
-        includeFontPadding: false,
+        width: mobileWeb ? 26 : 24,
+        height: mobileWeb ? 22 : 20,
+        alignItems: "center",
+        justifyContent: "center",
       }}
     >
-      {emoji}
-    </Text>
+      <Text
+        style={{
+          fontSize: mobileWeb ? 20 : 18,
+          color,
+          textAlign: "center",
+          includeFontPadding: false,
+          lineHeight: mobileWeb ? 20 : 18,
+        }}
+      >
+        {emoji}
+      </Text>
+    </View>
   );
 }
 
@@ -68,17 +94,24 @@ export default function TabsLayout() {
   }
 
   const isWeb = Platform.OS === "web";
+  const { width } = useWindowDimensions();
+
+  // IMPORTANT:
+  // Desktop web ibaki kama ilivyo.
+  // Mobile web (iPhone/Android browser) ifanane na app ya simu.
+  const isMobileWeb = isWeb && width < 900;
+  const useLeftSidebarWeb = isWeb && !isMobileWeb;
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarPosition: isWeb ? "left" : "bottom",
-        tabBarLabelPosition: isWeb ? "beside-icon" : "below-icon",
+        tabBarPosition: useLeftSidebarWeb ? "left" : "bottom",
+        tabBarLabelPosition: useLeftSidebarWeb ? "beside-icon" : "below-icon",
         sceneStyle: {
           backgroundColor: theme.colors.background,
         },
-        tabBarStyle: isWeb
+        tabBarStyle: useLeftSidebarWeb
           ? {
               backgroundColor: theme.colors.tabBarBg,
               borderRightColor: "rgba(255,255,255,0.08)",
@@ -93,29 +126,57 @@ export default function TabsLayout() {
               backgroundColor: theme.colors.tabBarBg,
               borderTopColor: "rgba(255,255,255,0.08)",
               borderTopWidth: 1,
-              height: 56 + insets.bottom,
-              paddingBottom: insets.bottom,
-              paddingTop: 6,
+              height: isMobileWeb ? 72 + Math.max(insets.bottom, 8) : 56 + insets.bottom,
+              paddingBottom: isMobileWeb ? Math.max(insets.bottom, 8) : insets.bottom,
+              paddingTop: isMobileWeb ? 4 : 6,
+              paddingHorizontal: isMobileWeb ? 4 : 0,
             },
-        tabBarItemStyle: isWeb
+        tabBarItemStyle: useLeftSidebarWeb
           ? {
               minHeight: 56,
               borderRadius: 16,
               marginVertical: 4,
               paddingHorizontal: 10,
             }
+          : isMobileWeb
+          ? {
+              minHeight: 56,
+              paddingTop: 2,
+              paddingBottom: 4,
+              paddingHorizontal: 0,
+              marginHorizontal: 0,
+              alignItems: "center",
+              justifyContent: "center",
+            }
           : undefined,
-        tabBarLabelStyle: isWeb
+        tabBarLabelStyle: useLeftSidebarWeb
           ? {
               marginLeft: 10,
             }
+          : isMobileWeb
+          ? {
+              fontSize: 11,
+              fontWeight: "800",
+              lineHeight: 13,
+              marginTop: 0,
+              marginBottom: 0,
+              paddingBottom: 0,
+              textAlign: "center",
+              alignSelf: "center",
+            }
           : undefined,
-        tabBarIconStyle: isWeb
+        tabBarIconStyle: useLeftSidebarWeb
           ? {
               marginLeft: 2,
             }
+          : isMobileWeb
+          ? {
+              marginTop: 0,
+              marginBottom: 0,
+              alignSelf: "center",
+            }
           : undefined,
-        tabBarActiveBackgroundColor: isWeb ? "rgba(16,185,129,0.14)" : "transparent",
+        tabBarActiveBackgroundColor: useLeftSidebarWeb ? "rgba(16,185,129,0.14)" : "transparent",
         tabBarBackground: () => (
           <View style={{ flex: 1, backgroundColor: theme.colors.tabBarBg }} />
         ),
@@ -128,13 +189,10 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: "Home",
-          tabBarLabel: ({ color }) => <TabLabel text="Home" color={color} />,
-          tabBarIcon: ({ size, color }) =>
-            isWeb ? (
-              <WebTabIcon emoji="🏠" color={color} />
-            ) : (
-              <Ionicons name="home-outline" size={size} color={color} />
-            ),
+          tabBarLabel: ({ color }) => <TabLabel text="Home" color={color} mobileWeb={isMobileWeb} />,
+         tabBarIcon: ({ color }) => (
+  <WebTabIcon emoji="🏠" color={color} mobileWeb={isMobileWeb} />
+),
         }}
       />
 
@@ -144,12 +202,9 @@ export default function TabsLayout() {
           title: "Stores",
           tabBarItemStyle: isCashier ? { display: "none" } : undefined,
           tabBarLabel: ({ color }) => <TabLabel text="Stores" color={color} />,
-          tabBarIcon: ({ size, color }) =>
-            isWeb ? (
-              <WebTabIcon emoji="🏬" color={color} />
-            ) : (
-              <Ionicons name="storefront-outline" size={size} color={color} />
-            ),
+       tabBarIcon: ({ color }) => (
+  <WebTabIcon emoji="🏬" color={color} mobileWeb={isMobileWeb} />
+),
         }}
       />
 
@@ -159,12 +214,9 @@ export default function TabsLayout() {
           title: "Products",
           tabBarItemStyle: isCashier ? { display: "none" } : undefined,
           tabBarLabel: ({ color }) => <TabLabel text="Products" color={color} />,
-          tabBarIcon: ({ size, color }) =>
-            isWeb ? (
-              <WebTabIcon emoji="🏷️" color={color} />
-            ) : (
-              <Ionicons name="pricetags-outline" size={size} color={color} />
-            ),
+  tabBarIcon: ({ color }) => (
+  <WebTabIcon emoji="🏷️" color={color} mobileWeb={isMobileWeb} />
+),
         }}
       />
 
@@ -173,12 +225,9 @@ export default function TabsLayout() {
         options={{
           title: "Sales",
           tabBarLabel: ({ color }) => <TabLabel text="Sales" color={color} />,
-          tabBarIcon: ({ size, color }) =>
-            isWeb ? (
-              <WebTabIcon emoji="🛒" color={color} />
-            ) : (
-              <Ionicons name="cart-outline" size={size} color={color} />
-            ),
+   tabBarIcon: ({ color }) => (
+  <WebTabIcon emoji="🛒" color={color} mobileWeb={isMobileWeb} />
+),
         }}
       />
 
@@ -188,12 +237,9 @@ export default function TabsLayout() {
           title: "Credit",
           tabBarItemStyle: isCashier ? { display: "none" } : undefined,
           tabBarLabel: ({ color }) => <TabLabel text="Credit" color={color} />,
-          tabBarIcon: ({ size, color }) =>
-            isWeb ? (
-              <WebTabIcon emoji="💳" color={color} />
-            ) : (
-              <Ionicons name="card-outline" size={size} color={color} />
-            ),
+          tabBarIcon: ({ color }) => (
+  <WebTabIcon emoji="💳" color={color} mobileWeb={isMobileWeb} />
+),
         }}
       />
 
@@ -203,12 +249,9 @@ export default function TabsLayout() {
           title: "Club",
           tabBarItemStyle: isCashier ? { display: "none" } : undefined,
           tabBarLabel: ({ color }) => <TabLabel text="Club" color={color} />,
-          tabBarIcon: ({ size, color }) =>
-            isWeb ? (
-              <WebTabIcon emoji="👥" color={color} />
-            ) : (
-              <Ionicons name="people-circle-outline" size={size} color={color} />
-            ),
+          tabBarIcon: ({ color }) => (
+  <WebTabIcon emoji="👥" color={color} mobileWeb={isMobileWeb} />
+),
         }}
       />
 
@@ -217,16 +260,9 @@ export default function TabsLayout() {
         options={{
           title: "More",
           tabBarLabel: ({ color }) => <TabLabel text="More" color={color} />,
-          tabBarIcon: ({ size, color }) =>
-            isWeb ? (
-              <WebTabIcon emoji="⋯" color={color} />
-            ) : (
-              <Ionicons
-                name="ellipsis-horizontal-circle-outline"
-                size={Math.max(size, 24)}
-                color={color}
-              />
-            ),
+         tabBarIcon: ({ color }) => (
+  <WebTabIcon emoji="⋯" color={color} mobileWeb={isMobileWeb} />
+),
         }}
       />
 
@@ -237,12 +273,9 @@ export default function TabsLayout() {
           title: "Notifications",
           tabBarItemStyle: isCashier ? { display: "none" } : undefined,
           tabBarLabel: ({ color }) => <TabLabel text="Notifications" color={color} />,
-          tabBarIcon: ({ size, color }) =>
-            isWeb ? (
-              <WebTabIcon emoji="🔔" color={color} />
-            ) : (
-              <Ionicons name="notifications-outline" size={size} color={color} />
-            ),
+          tabBarIcon: ({ color }) => (
+  <WebTabIcon emoji="🔔" color={color} mobileWeb={isMobileWeb} />
+),
         }}
       />
 
@@ -253,12 +286,9 @@ export default function TabsLayout() {
           title: "Stock Value",
           tabBarItemStyle: isCashier ? { display: "none" } : undefined,
           tabBarLabel: ({ color }) => <TabLabel text="Stock Value" color={color} />,
-          tabBarIcon: ({ size, color }) =>
-            isWeb ? (
-              <WebTabIcon emoji="📦" color={color} />
-            ) : (
-              <Ionicons name="cube-outline" size={size} color={color} />
-            ),
+          tabBarIcon: ({ color }) => (
+  <WebTabIcon emoji="📦" color={color} mobileWeb={isMobileWeb} />
+),
         }}
       />
 

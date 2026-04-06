@@ -79,22 +79,40 @@ export default function OnboardingBusinessScreen() {
   }
 
   return (
-    <Screen scroll>
-      {/* Header */}
+    <Screen
+      scroll
+      contentStyle={{
+        paddingTop: 12,
+        paddingBottom: 28,
+        backgroundColor: "#0B0F14",
+      }}
+    >
       <View style={{ marginTop: 6 }}>
-        <Text style={{ color: UI.text, fontWeight: "900", fontSize: 26 }}>
+        <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 26 }}>
           Business Setup
         </Text>
-        <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 6, lineHeight: 18 }}>
-          Weka jina la biashara + timezone ya reports/daily closing.
+        <Text
+          style={{
+            color: "rgba(255,255,255,0.72)",
+            fontWeight: "800",
+            marginTop: 6,
+            lineHeight: 20,
+          }}
+        >
+          Weka jina la biashara na timezone ya reports, daily closing, na date cutoffs.
         </Text>
       </View>
 
-      {/* Main Card */}
       <View style={{ marginTop: 14 }}>
-        <Card>
-          {/* Business name */}
-          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
+        <Card
+          style={{
+            borderColor: "rgba(255,255,255,0.10)",
+            backgroundColor: "rgba(15,18,24,0.98)",
+            borderRadius: 24,
+            overflow: "hidden",
+          }}
+        >
+          <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 14 }}>
             Business name
           </Text>
 
@@ -105,8 +123,8 @@ export default function OnboardingBusinessScreen() {
               borderColor: "rgba(255,255,255,0.12)",
               backgroundColor: "rgba(255,255,255,0.04)",
               borderRadius: 18,
-              paddingHorizontal: 12,
-              paddingVertical: 10,
+              paddingHorizontal: 14,
+              paddingVertical: 14,
             }}
           >
             <TextInput
@@ -115,7 +133,7 @@ export default function OnboardingBusinessScreen() {
               placeholder="e.g. JOFU QUALITY"
               placeholderTextColor="rgba(255,255,255,0.40)"
               style={{
-                color: UI.text,
+                color: "#FFFFFF",
                 fontWeight: "900",
                 fontSize: 14,
                 paddingVertical: 0,
@@ -124,8 +142,7 @@ export default function OnboardingBusinessScreen() {
             />
           </View>
 
-          {/* Business type */}
-          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14, marginTop: 14 }}>
+          <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 14, marginTop: 14 }}>
             Business type
           </Text>
 
@@ -136,8 +153,8 @@ export default function OnboardingBusinessScreen() {
               borderColor: "rgba(255,255,255,0.12)",
               backgroundColor: "rgba(255,255,255,0.04)",
               borderRadius: 18,
-              paddingHorizontal: 12,
-              paddingVertical: 10,
+              paddingHorizontal: 14,
+              paddingVertical: 14,
             }}
           >
             <TextInput
@@ -146,7 +163,7 @@ export default function OnboardingBusinessScreen() {
               placeholder="GENERAL / RETAIL / PHARMACY ..."
               placeholderTextColor="rgba(255,255,255,0.40)"
               style={{
-                color: UI.text,
+                color: "#FFFFFF",
                 fontWeight: "900",
                 fontSize: 14,
                 paddingVertical: 0,
@@ -156,7 +173,6 @@ export default function OnboardingBusinessScreen() {
             />
           </View>
 
-          {/* Divider */}
           <View
             style={{
               height: 1,
@@ -165,11 +181,17 @@ export default function OnboardingBusinessScreen() {
             }}
           />
 
-          {/* Timezone picker (premium dropdown modal) */}
-          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
+          <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 14 }}>
             Timezone (Required)
           </Text>
-          <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 6 }}>
+          <Text
+            style={{
+              color: "rgba(255,255,255,0.68)",
+              fontWeight: "800",
+              fontSize: 12,
+              marginTop: 6,
+            }}
+          >
             Controls reports, daily closing, and date cutoffs (org-level).
           </Text>
 
@@ -188,7 +210,7 @@ export default function OnboardingBusinessScreen() {
 
           <Text
             style={{
-              color: "rgba(255,255,255,0.65)",
+              color: "rgba(255,255,255,0.60)",
               fontWeight: "800",
               fontSize: 12,
               marginTop: 10,
@@ -201,7 +223,6 @@ export default function OnboardingBusinessScreen() {
         </Card>
       </View>
 
-      {/* Continue */}
       <View style={{ marginTop: 14 }}>
         <Button
           title={busy ? "Please wait..." : "Continue"}
@@ -210,7 +231,6 @@ export default function OnboardingBusinessScreen() {
         />
       </View>
 
-      {/* Small helper */}
       {!clean(name) ? (
         <Text
           style={{
@@ -218,6 +238,7 @@ export default function OnboardingBusinessScreen() {
             fontWeight: "800",
             fontSize: 12,
             marginTop: 10,
+            lineHeight: 18,
           }}
         >
           Tip: Andika jina la biashara kwanza, kisha chagua timezone na uthibitishe.
