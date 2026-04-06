@@ -404,22 +404,7 @@ export default function ClubCreatePostScreen() {
     setProductOpen(false);
   }, []);
 
-  const checkPostingAllowed = useCallback(async () => {
-    const orgId = clean(activeOrgId);
-    const storeId = clean(activeStoreId);
-
-    if (!orgId) throw new Error("Org Required");
-    if (!storeId) throw new Error("Store Required");
-
-    const { data, error } = await supabase.rpc("is_club_posting_allowed", {
-      p_org_id: orgId,
-      p_store_id: storeId,
-    } as any);
-
-    if (error) throw error;
-
-    return !!data;
-  }, [activeOrgId, activeStoreId]);
+  
 
   const submit = useCallback(async () => {
     const orgId = clean(activeOrgId);
@@ -446,21 +431,8 @@ export default function ClubCreatePostScreen() {
 
     setErr(null);
 
-    // gate before upload/post
-    try {
-      const allowed = await checkPostingAllowed();
-      if (!allowed) {
-        setUpgradeMsg(
-          "UPGRADE_PLAN: Posting is not allowed on your current plan.\n\n" +
-            "✅ Unaweza bado ku-view posts, ku-like, ku-comment, na ku-order.\n" +
-            "🔒 Ili kupost, unahitaji plan ya kulipia (LITE/STARTER/PRO...)."
-        );
-        setUpgradeOpen(true);
-        return;
-      }
-    } catch (e: any) {
-      console.log("[club.create] is_club_posting_allowed check failed:", e?.message);
-    }
+    // PATCH: usikatae mapema kwa pre-check ya app side.
+    // Canonical post RPC ndiyo iamue mwisho kama posting inaruhusiwa au la.
 
     setSaving(true);
 
@@ -520,7 +492,7 @@ export default function ClubCreatePostScreen() {
     selectedProductId,
     uploadTwoSizes,
     selectedPrice,
-    checkPostingAllowed,
+  
   ]);
 
   const topPad = Math.max(insets.top, 10) + 8;

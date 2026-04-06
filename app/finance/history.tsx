@@ -1372,6 +1372,26 @@ export default function FinanceHistoryScreen() {
     [orgId]
   );
 
+  const callCreditBalanceForStore = useCallback(
+    async (sid: string): Promise<number> => {
+      const store = String(sid ?? "").trim();
+      if (!store) return 0;
+
+      const { data, error } = await supabase.rpc(
+        "get_store_credit_accounts_v2",
+        { p_store_id: store } as any
+      );
+      if (error) throw error;
+
+      const rows = (Array.isArray(data) ? data : []) as any[];
+
+      return rows.reduce((sum, r) => {
+        return sum + toNum(r?.balance ?? r?.remaining_balance ?? r?.amount_due ?? 0);
+      }, 0);
+    },
+    []
+  );
+
   const callExpenseForStore = useCallback(
     async (sid: string, fromYMD: string, toYMD: string): Promise<ExpenseSummary> => {
       const { data, error } = await supabase.rpc(
@@ -1728,6 +1748,10 @@ export default function FinanceHistoryScreen() {
 
         const pb = await callPaymentBreakdownV3(fromISO, toISO, sidOrNull);
         const cc = await callCreditCollections(fromISO, toISO, sidOrNull);
+        const creditBalanceRows = await Promise.all(
+          targets.map((sid) => callCreditBalanceForStore(sid))
+        );
+        const realCreditBalance = creditBalanceRows.reduce((a, n) => a + toNum(n), 0);
 
         if (canSeeExpenses) {
           const expChannelRows = await Promise.all(
@@ -1752,7 +1776,10 @@ export default function FinanceHistoryScreen() {
           directOrders: sumDirectOrders,
           clubOrders: sumClubOrders,
         };
-        nextPay = pb;
+        nextPay = {
+          ...pb,
+          credit: realCreditBalance,
+        };
         nextCollections = cc;
 
         for (let i = 0; i < targets.length; i += 1) {
@@ -2129,6 +2156,7 @@ export default function FinanceHistoryScreen() {
     callSalesForStore,
     callPaymentBreakdownV3,
     callCreditCollections,
+    callCreditBalanceForStore,
     callExpenseForStore,
     callExpenseChannelBreakdownForStore,
     callProfitOwnerOnly,

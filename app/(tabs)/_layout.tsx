@@ -294,6 +294,7 @@ export default function TabsLayout() {
 
       {/* hidden routes */}
       <Tabs.Screen name="staff" options={{ href: null }} />
+      <Tabs.Screen name="capital-recovery/workspace" options={{ href: null }} />
     </Tabs>
   );
 }

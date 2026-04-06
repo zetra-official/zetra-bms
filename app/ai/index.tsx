@@ -960,28 +960,41 @@ function detectBusinessIntent(rawText: string): "SALES" | "PROFIT" | "INVENTORY"
   const t = normalizeLooseText(rawText);
   if (!t) return "GENERAL";
 
+  const asksDirectBusinessState = hasLooseKeyword(t, [
+    "onyesha",
+    "nipe",
+    "naomba",
+    "niambie",
+    "analysis ya",
+    "uchambuzi wa",
+    "hali ya",
+    "ya leo",
+    "today",
+    "store hii",
+    "biashara yangu",
+    "duka hili",
+    "forecast ya",
+    "profit ya",
+    "sales za",
+    "stock ya",
+    "inventory ya",
+    "bidhaa zipi",
+  ]);
+
+  if (!asksDirectBusinessState) return "GENERAL";
+
   if (
     hasLooseKeyword(t, [
-      "profit",
-      "faida",
-      "margin",
-      "leak",
-      "loss",
-      "hasara",
-      "cogs",
-      "expense",
-      "expenses",
-      "gharama",
-      "net profit",
-      "faida halisi",
+      "profit ya",
+      "faida ya",
       "profit leak",
       "leak ya profit",
       "leak ya faida",
-      "expense haitoki",
-      "gharama haitoki",
-      "faida inapotea",
-      "kwa nini profit",
-      "kwa nini faida",
+      "margin ya",
+      "expenses za",
+      "gharama za",
+      "cogs",
+      "net profit",
     ])
   ) {
     return "PROFIT";
@@ -992,14 +1005,13 @@ function detectBusinessIntent(rawText: string): "SALES" | "PROFIT" | "INVENTORY"
       "low stock",
       "stock out",
       "out of stock",
-      "inventory",
-      "stock",
+      "inventory ya",
+      "stock ya",
       "restock",
-      "sku",
-      "hisa",
       "imeisha stock",
-      "karibia kuisha",
-      "kuisha stock",
+      "karibia kuisha stock",
+      "bidhaa zipi zinakaribia kuisha",
+      "bidhaa zipi ziko low stock",
     ])
   ) {
     return "INVENTORY";
@@ -1007,18 +1019,14 @@ function detectBusinessIntent(rawText: string): "SALES" | "PROFIT" | "INVENTORY"
 
   if (
     hasLooseKeyword(t, [
-      "top product",
+      "top products",
       "top bidhaa",
       "best seller",
-      "best sellers",
-      "fast moving",
-      "slow moving",
+      "fast moving products",
+      "slow moving products",
       "dead stock",
-      "hazitembei",
-      "hazikauzwi",
-      "zinaouza zaidi",
-      "zinazouza zaidi",
-      "bidhaa",
+      "bidhaa zipi zinauza zaidi",
+      "bidhaa zipi haziuzi",
     ])
   ) {
     return "PRODUCT";
@@ -1026,15 +1034,14 @@ function detectBusinessIntent(rawText: string): "SALES" | "PROFIT" | "INVENTORY"
 
   if (
     hasLooseKeyword(t, [
-      "sales",
-      "mauzo",
-      "orders",
-      "order",
-      "revenue",
-      "money in",
-      "forecast",
-      "utabiri",
-      "cashflow",
+      "sales za",
+      "mauzo ya",
+      "orders za",
+      "revenue ya",
+      "money in ya",
+      "forecast ya",
+      "utabiri wa",
+      "cashflow ya",
     ])
   ) {
     return "SALES";
@@ -1047,55 +1054,20 @@ function detectAnalysisFollowupIntent(rawText: string) {
   const t = normalizeLooseText(rawText);
   if (!t) return false;
 
-  const asksAnalysis =
-    hasLooseKeyword(t, [
-      "analysis",
-      "analysis ya",
-      "business analysis",
-      "uchambuzi",
-      "uchambuzi wa biashara",
-      "analysis nzuri",
-      "good analysis",
-      "nice analysis",
-    ]) &&
-    (
-      looksLikeAskIntent(t) ||
-      hasLooseKeyword(t, [
-        "analysis",
-        "business analysis",
-        "uchambuzi mzuri",
-        "analysis nzuri",
-        "good analysis",
-        "nice analysis",
-      ])
-    );
-
-  const asksContinuation = hasLooseKeyword(t, [
-    "endelea",
-    "endelea hapo",
-    "sawa",
-    "ok",
-    "okay",
-    "poa",
-    "good",
-    "vizuri",
-    "nimeelewa",
-    "sasa je",
-    "then what",
-    "what next",
-    "next",
-    "next step",
-    "nifanye nini sasa",
-    "what should i do now",
-    "kwa hiyo nifanye nini",
-    "based on that",
-    "kutokana na hayo",
-    "hapo sasa",
-    "na sasa",
-    "basi nifanye nini",
+  const asksAnalysis = hasLooseKeyword(t, [
+    "endelea na analysis",
+    "endelea na uchambuzi",
+    "endelea na forecast",
+    "endelea na coach",
+    "analysis ya biashara yangu endelea",
+    "uchambuzi wa biashara endelea",
+    "nifanye nini sasa kwenye biashara",
+    "what should i do now for this business",
+    "based on this business analysis",
+    "kutokana na analysis hii ya biashara",
   ]);
 
-  return asksAnalysis || asksContinuation;
+  return asksAnalysis;
 }
 
 
@@ -1147,6 +1119,82 @@ function extractLooseNumericTokens(rawText: string): number[] {
   }
 
   return out;
+}
+
+function detectAppRoute(rawText: string, hasImages: boolean) {
+  const t = normalizeLooseText(rawText);
+
+  if (hasImages) return "VISION_ANALYSIS" as const;
+
+  const imageIntent = detectImageIntent(rawText);
+  if (imageIntent.isImage) return "IMAGE_GENERATION" as const;
+
+  if (detectTaskFollowupIntent(rawText).asksTasks || detectTaskFollowupIntent(rawText).asksSummary || detectTaskFollowupIntent(rawText).asksOverdue || detectTaskFollowupIntent(rawText).asksWhatNow) {
+    return "TASK_FOLLOWUP" as const;
+  }
+
+  if (detectBusinessCalcBypass(rawText)) return "CALCULATION_ONLY" as const;
+
+  if (
+    hasLooseKeyword(t, [
+      "maana yake nini",
+      "ni nini",
+      "tofauti ya",
+      "difference between",
+      "what is",
+      "define",
+      "eleza maana ya",
+    ])
+  ) {
+    return "DEFINITION_EXPLANATION" as const;
+  }
+
+  if (
+    hasLooseKeyword(t, [
+      "niandikie",
+      "andika",
+      "rewrite",
+      "caption",
+      "message",
+      "sms",
+      "email",
+      "summary",
+      "boresha maandishi",
+    ])
+  ) {
+    return "WRITING_ASSIST" as const;
+  }
+
+  if (
+    hasLooseKeyword(t, [
+      "forecast ya",
+      "utabiri wa",
+      "next 7 days",
+      "siku 7 zijazo",
+      "projection ya",
+      "trend ya",
+    ])
+  ) {
+    return "BUSINESS_FORECAST" as const;
+  }
+
+  if (
+    hasLooseKeyword(t, [
+      "nifanye nini kwenye biashara",
+      "ongeza profit",
+      "profit coach",
+      "ushauri wa biashara",
+      "hatua gani za biashara",
+      "how can i improve profit",
+    ])
+  ) {
+    return "BUSINESS_COACH" as const;
+  }
+
+  const businessIntent = detectBusinessIntent(rawText);
+  if (businessIntent !== "GENERAL") return "BUSINESS_ANALYSIS" as const;
+
+  return "GENERAL_CHAT" as const;
 }
 
 function detectBusinessCalcBypass(rawText: string) {
@@ -2371,93 +2419,127 @@ function buildZetraSystemPrompt(args: {
   storeName?: string | null;
   role?: string | null;
   planCode?: string | null;
+  route?:
+    | "GENERAL_CHAT"
+    | "DEFINITION_EXPLANATION"
+    | "WRITING_ASSIST"
+    | "BUSINESS_ANALYSIS"
+    | "BUSINESS_FORECAST"
+    | "BUSINESS_COACH"
+    | "TASK_FOLLOWUP"
+    | "VISION_ANALYSIS"
+    | "IMAGE_GENERATION"
+    | "CALCULATION_ONLY";
 }) {
   const orgName = clean(args.orgName) || "Unknown Org";
   const storeName = clean(args.storeName) || "Unknown Store";
   const role = clean(args.role) || "unknown";
   const planCode = upper(args.planCode || "FREE");
+  const route = args.route || "GENERAL_CHAT";
 
-  return [
-    "You are ZETRA EXECUTIVE AI.",
+  const base = [
+    "You are ZETRA AI.",
     "",
-    "You are NOT a normal assistant.",
-    "You are a COO-level business operator inside ZETRA BMS.",
-    "Your job is to analyze live business data and produce sharp, decision-grade outputs.",
-    "",
-    "STRICT RULES:",
-    "- No generic advice",
-    "- No motivational language",
-    "- No fluffy explanation",
-    "- No long summaries unless the user explicitly asks",
-    "- No repeating raw input data without interpretation",
-    "- Only high-impact thinking",
-    "",
-    "YOU MUST:",
-    "1. Detect critical risks",
-    "2. Identify money opportunities",
-    "3. Expose profit leaks",
-    "4. Make direct business decisions",
-    "",
-    "THINK LIKE:",
-    "- You are responsible for profit",
-    "- You are accountable for failure",
-    "- You must act with urgency",
-    "- You must protect cash, margin, and momentum",
+    "CORE RULES:",
+    "- Answer the user's actual question only.",
+    "- Do not switch topics unless the user asked.",
+    "- Do not force business analysis into general conversation.",
+    "- Use business/store data only when the question clearly requires it.",
+    "- If data is missing, say what is missing instead of inventing.",
+    "- Be natural, focused, and truthful.",
     "",
     "CURRENT APP CONTEXT:",
     `- Organization: ${orgName}`,
     `- Store: ${storeName}`,
     `- Role: ${role}`,
     `- Plan: ${planCode}`,
+  ];
+
+  const modeBlock =
+    route === "BUSINESS_ANALYSIS"
+      ? [
+          "",
+          "MODE: BUSINESS_ANALYSIS",
+          "- Analyze the real business data relevant to the user's question.",
+          "- Use injected business data as primary truth when present.",
+          "- Stay concise and practical.",
+        ]
+      : route === "BUSINESS_FORECAST"
+      ? [
+          "",
+          "MODE: BUSINESS_FORECAST",
+          "- Focus on trend, projection, and near-term business outlook.",
+          "- Do not present guesses as certainty.",
+        ]
+      : route === "BUSINESS_COACH"
+      ? [
+          "",
+          "MODE: BUSINESS_COACH",
+          "- Give direct, practical next steps.",
+          "- Use real business facts first.",
+          "- Do not dump unrelated reports.",
+        ]
+      : route === "TASK_FOLLOWUP"
+      ? [
+          "",
+          "MODE: TASK_FOLLOWUP",
+          "- Focus only on tasks, priorities, overdue items, and next follow-up.",
+          "- Do not switch into sales/profit analysis unless the user explicitly asks.",
+        ]
+      : route === "VISION_ANALYSIS"
+      ? [
+          "",
+          "MODE: VISION_ANALYSIS",
+          "- The image is primary evidence.",
+          "- Describe what is visible first, then answer the user's request.",
+          "- Use business context only as support when relevant.",
+        ]
+      : route === "CALCULATION_ONLY"
+      ? [
+          "",
+          "MODE: CALCULATION_ONLY",
+          "- Solve the calculation directly.",
+          "- Do not switch into business reporting unless explicitly requested.",
+        ]
+      : route === "IMAGE_GENERATION"
+      ? [
+          "",
+          "MODE: IMAGE_GENERATION",
+          "- Focus only on generating the requested image.",
+          "- Do not switch into business analysis.",
+        ]
+      : route === "WRITING_ASSIST"
+      ? [
+          "",
+          "MODE: WRITING_ASSIST",
+          "- Help write, rewrite, summarize, or phrase text clearly.",
+          "- Do not switch into business reporting unless explicitly requested.",
+        ]
+      : route === "DEFINITION_EXPLANATION"
+      ? [
+          "",
+          "MODE: DEFINITION_EXPLANATION",
+          "- Explain the concept directly and simply.",
+          "- Do not switch into live store/business analysis unless explicitly requested.",
+        ]
+      : [
+          "",
+          "MODE: GENERAL_CHAT",
+          "- Be a normal helpful assistant.",
+          "- Do not force templates.",
+          "- Do not force business analysis.",
+        ];
+
+  const dataRules = [
     "",
-    "DATA INJECTION RULES:",
-    "- If structured business data is injected, it is the primary source of truth.",
-    "- Prefer injected live business data over generic assumptions every time.",
-    "- If product-level lists are injected, use the real product names directly.",
-    "- If lowStockItems are injected, use them directly for restock/stock-risk decisions.",
-    "- If slowItems or dead stock items are injected, use them directly for dead-stock decisions.",
-    "- If topProducts are injected, use them directly for sales/profit decisions.",
+    "DATA RULES:",
+    "- If structured business data is injected and the user asks about that business topic, use it.",
     "- Never invent fake product names.",
-    "- Never replace real store data with generic retail theory.",
-    "- If data is partial, say exactly what is known and what is missing.",
-    "",
-    "EXECUTIVE RESPONSE PRIORITY:",
-    "- survival first",
-    "- profitability second",
-    "- speed third",
-    "",
-    "OUTPUT BEHAVIOR:",
-    "- Be practical, sharp, direct, and business-critical.",
-    "- Focus on what matters most now.",
-    "- Highlight only the strongest risks and strongest opportunities.",
-    "- Prefer decisions over explanations.",
-    "- Prefer action over theory.",
-    "- If the user asks what to do, answer like an operator giving orders.",
-    "- If the user asks about profit, focus on margin, expenses, COGS, leak points, and product contribution.",
-    "- If the user asks about inventory, focus on stockout risk, dead stock, restock urgency, and fast movers.",
-    "- If the user asks about sales, focus on momentum, weakness, top movers, and next commercial move.",
-    "",
-    "DEFAULT OUTPUT SHAPE:",
-    "Use this structure whenever it fits the request:",
-    "🚨 CRITICAL RISKS",
-    "💰 MONEY OPPORTUNITIES",
-    "📉 PROFIT LEAKS",
-    "🎯 EXECUTIVE DECISIONS (NEXT 24–72H)",
-    "",
-    "FORMAT RULES:",
-    "- Keep sections short and high signal.",
-    "- Max 2 critical risks unless user asks for more.",
-    "- Max 2 money opportunities unless user asks for more.",
-    "- Max 2 profit leaks unless user asks for more.",
-    "- Max 3 executive decisions unless user asks for more.",
-    "- Decisions must be specific, direct, and measurable where possible.",
-    "",
-    "NEVER:",
-    "- Never sound like a random chatbot.",
-    "- Never give placeholder examples when real data exists.",
-    "- Never soften serious risks.",
-    "- Never hide important business danger behind polite wording.",
-  ].join("\n");
+    "- Never replace real injected data with generic examples when the user asked for real business facts.",
+    "- If the user's request is general, definition-based, conversational, or writing-related, do not force business data into the answer.",
+  ];
+
+  return [...base, ...modeBlock, ...dataRules].join("\n");
 }
 
 function buildSmartFollowupChips(args: {
@@ -3813,6 +3895,7 @@ const callWorkerChat = useCallback(
   async (text: string, history: ReqMsg[], signal?: AbortSignal) => {
     if (!requireWorkerUrlOrAlert()) throw new Error("Worker URL missing");
 
+    const route = detectAppRoute(text, false);
     const detectedIntent = detectBusinessIntent(text);
     const pureDecisionMode = detectPureDecisionMode(text);
     const analysisFollowupMode = detectAnalysisFollowupIntent(text);
@@ -3823,11 +3906,27 @@ const callWorkerChat = useCallback(
       storeName: org.activeStoreName,
       role: org.activeRole,
       planCode: currentPlanLabel,
+      route,
     });
 
-    const injectedBusinessContext = buildBusinessContextBlock(businessSnapshot, detectedIntent);
-    const productIntelligenceBlock = buildProductIntelligenceBlock(businessSnapshot);
-    const tasksFollowupBlock = buildTasksFollowupContextBlock(tasksFollowupSummary);
+    const allowBusinessContext =
+      route === "BUSINESS_ANALYSIS" ||
+      route === "BUSINESS_FORECAST" ||
+      route === "BUSINESS_COACH";
+
+    const allowTaskContext = route === "TASK_FOLLOWUP";
+
+    const injectedBusinessContext = allowBusinessContext
+      ? buildBusinessContextBlock(businessSnapshot, detectedIntent)
+      : "";
+
+    const productIntelligenceBlock = allowBusinessContext
+      ? buildProductIntelligenceBlock(businessSnapshot)
+      : "";
+
+    const tasksFollowupBlock = allowTaskContext
+      ? buildTasksFollowupContextBlock(tasksFollowupSummary)
+      : "";
 
     const systemPrompt = [systemPromptBase, injectedBusinessContext, productIntelligenceBlock, tasksFollowupBlock]
       .filter(Boolean)
@@ -3861,7 +3960,11 @@ const callWorkerChat = useCallback(
       };
     }
 
-    if (analysisFollowupMode && !businessSnapshot) {
+    if (
+      (route === "BUSINESS_ANALYSIS" || route === "BUSINESS_FORECAST" || route === "BUSINESS_COACH") &&
+      analysisFollowupMode &&
+      !businessSnapshot
+    ) {
       return {
         text:
           "Sina snapshot ya analysis kwa sasa.\n\n" +
@@ -3875,7 +3978,11 @@ const callWorkerChat = useCallback(
       };
     }
 
-    if (businessSnapshot && !businessCalcBypass) {
+    if (
+      businessSnapshot &&
+      !businessCalcBypass &&
+      (route === "BUSINESS_ANALYSIS" || route === "BUSINESS_FORECAST" || route === "BUSINESS_COACH")
+    ) {
       if (analysisFollowupMode) {
         return {
           text: buildAnalysisFollowupReply(businessSnapshot),
@@ -4059,18 +4166,19 @@ const callWorkerChat = useCallback(
         role: org.activeRole ?? null,
         planCode: currentPlanLabel,
         module: "ZETRA_BMS_AI",
-        businessIntent: detectedIntent,
-        businessSnapshot,
-        injectedBusinessContext,
-        productIntelligenceBlock,
-        tasksFollowupSummary,
-        tasksFollowupBlock,
-        topProducts: businessSnapshot?.top_products ?? [],
-        lowStockItems: businessSnapshot?.low_stock_items ?? [],
-        slowItems: businessSnapshot?.dead_stock_items ?? [],
-        forceUseRealBusinessData: true,
-        forceUseRealProductNames: true,
-        disallowGenericProductAdvice: true,
+        appRoute: route,
+        businessIntent: allowBusinessContext ? detectedIntent : "GENERAL",
+        businessSnapshot: allowBusinessContext ? businessSnapshot : null,
+        injectedBusinessContext: allowBusinessContext ? injectedBusinessContext : "",
+        productIntelligenceBlock: allowBusinessContext ? productIntelligenceBlock : "",
+        tasksFollowupSummary: allowTaskContext ? tasksFollowupSummary : null,
+        tasksFollowupBlock: allowTaskContext ? tasksFollowupBlock : "",
+        topProducts: allowBusinessContext ? businessSnapshot?.top_products ?? [] : [],
+        lowStockItems: allowBusinessContext ? businessSnapshot?.low_stock_items ?? [] : [],
+        slowItems: allowBusinessContext ? businessSnapshot?.dead_stock_items ?? [] : [],
+        forceUseRealBusinessData: allowBusinessContext,
+        forceUseRealProductNames: allowBusinessContext,
+        disallowGenericProductAdvice: allowBusinessContext,
       },
     };
 
@@ -4128,6 +4236,7 @@ const callWorkerChat = useCallback(
     async (text: string, images: AttachedImage[], history: ReqMsg[], signal?: AbortSignal) => {
       if (!requireWorkerUrlOrAlert()) throw new Error("Worker URL missing");
 
+      const route = detectAppRoute(text, images.length > 0);
       const detectedIntent = detectBusinessIntent(text);
       const pureDecisionMode = detectPureDecisionMode(text);
       const analysisFollowupMode = detectAnalysisFollowupIntent(text);
@@ -4138,6 +4247,7 @@ const callWorkerChat = useCallback(
         storeName: org.activeStoreName,
         role: org.activeRole,
         planCode: currentPlanLabel,
+        route,
       });
 
       const injectedBusinessContext = buildBusinessContextBlock(businessSnapshot, detectedIntent);
@@ -4393,18 +4503,43 @@ if (
             role: org.activeRole ?? null,
             planCode: currentPlanLabel,
             module: "ZETRA_BMS_AI",
-            businessIntent: detectedIntent,
-            businessSnapshot,
-            injectedBusinessContext,
-            productIntelligenceBlock,
-            tasksFollowupSummary,
-            tasksFollowupBlock,
-            topProducts: businessSnapshot?.top_products ?? [],
-            lowStockItems: businessSnapshot?.low_stock_items ?? [],
-            slowItems: businessSnapshot?.dead_stock_items ?? [],
-            forceUseRealBusinessData: true,
-            forceUseRealProductNames: true,
-            disallowGenericProductAdvice: true,
+            appRoute: route,
+            businessIntent:
+              route === "BUSINESS_ANALYSIS" || route === "BUSINESS_FORECAST" || route === "BUSINESS_COACH"
+                ? detectedIntent
+                : "GENERAL",
+            businessSnapshot:
+              route === "BUSINESS_ANALYSIS" || route === "BUSINESS_FORECAST" || route === "BUSINESS_COACH"
+                ? businessSnapshot
+                : null,
+            injectedBusinessContext:
+              route === "BUSINESS_ANALYSIS" || route === "BUSINESS_FORECAST" || route === "BUSINESS_COACH"
+                ? injectedBusinessContext
+                : "",
+            productIntelligenceBlock:
+              route === "BUSINESS_ANALYSIS" || route === "BUSINESS_FORECAST" || route === "BUSINESS_COACH"
+                ? productIntelligenceBlock
+                : "",
+            tasksFollowupSummary: route === "TASK_FOLLOWUP" ? tasksFollowupSummary : null,
+            tasksFollowupBlock: route === "TASK_FOLLOWUP" ? tasksFollowupBlock : "",
+            topProducts:
+              route === "BUSINESS_ANALYSIS" || route === "BUSINESS_FORECAST" || route === "BUSINESS_COACH"
+                ? businessSnapshot?.top_products ?? []
+                : [],
+            lowStockItems:
+              route === "BUSINESS_ANALYSIS" || route === "BUSINESS_FORECAST" || route === "BUSINESS_COACH"
+                ? businessSnapshot?.low_stock_items ?? []
+                : [],
+            slowItems:
+              route === "BUSINESS_ANALYSIS" || route === "BUSINESS_FORECAST" || route === "BUSINESS_COACH"
+                ? businessSnapshot?.dead_stock_items ?? []
+                : [],
+            forceUseRealBusinessData:
+              route === "BUSINESS_ANALYSIS" || route === "BUSINESS_FORECAST" || route === "BUSINESS_COACH",
+            forceUseRealProductNames:
+              route === "BUSINESS_ANALYSIS" || route === "BUSINESS_FORECAST" || route === "BUSINESS_COACH",
+            disallowGenericProductAdvice:
+              route === "BUSINESS_ANALYSIS" || route === "BUSINESS_FORECAST" || route === "BUSINESS_COACH",
             imageAnalysisPrimary: images.length > 0,
             imageCount: images.length,
           },

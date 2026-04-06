@@ -14,6 +14,8 @@ import {
   Text,
   View,
   LayoutChangeEvent,
+  Platform,
+  useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -114,6 +116,8 @@ const FeedPostItem = memo(function FeedPostItem({
   onOpenComments,
   onToggleSave,
 }: FeedItemProps) {
+  const { width } = useWindowDimensions();
+
   const img = clean(item.image_url) || clean(item.image_hq_url) || "";
   const caption = clean(item.caption);
   const storeName = safeStr(item.store_display_name ?? item.store_name, "Store");
@@ -124,18 +128,42 @@ const FeedPostItem = memo(function FeedPostItem({
 
   const when = fmtWhen(item.created_at);
 
+  const isDesktopWeb = Platform.OS === "web" && width >= 1024;
+  const cardMaxWidth = isDesktopWeb ? 720 : undefined;
+  const imageAspectRatio = isDesktopWeb ? 4 / 5 : 0.8;
+
   return (
-    <Pressable onPress={() => onOpenPost(item)} hitSlop={10} style={({ pressed }) => [{ opacity: pressed ? 0.98 : 1 }]}>
-      <Card
-        style={{
-          padding: 0,
-          borderRadius: 0,
-          borderWidth: 0,
-          backgroundColor: theme.colors.background,
-          borderBottomWidth: 1,
-          borderBottomColor: theme.colors.borderSoft,
-        }}
+    <View
+      style={{
+        width: "100%",
+        alignItems: "center",
+        paddingHorizontal: isDesktopWeb ? 18 : 0,
+        paddingTop: isDesktopWeb ? 14 : 0,
+      }}
+    >
+      <Pressable
+        onPress={() => onOpenPost(item)}
+        hitSlop={10}
+        style={({ pressed }) => [
+          {
+            opacity: pressed ? 0.98 : 1,
+            width: "100%",
+            maxWidth: cardMaxWidth,
+          },
+        ]}
       >
+        <Card
+          style={{
+            padding: 0,
+            borderRadius: isDesktopWeb ? 24 : 0,
+            borderWidth: isDesktopWeb ? 1 : 0,
+            backgroundColor: theme.colors.background,
+            borderColor: isDesktopWeb ? theme.colors.borderSoft : "transparent",
+            borderBottomWidth: isDesktopWeb ? 1 : 1,
+            borderBottomColor: theme.colors.borderSoft,
+            overflow: "hidden",
+          }}
+        >
         {/* HEADER */}
         <View style={{ paddingHorizontal: theme.spacing.page, paddingTop: 12, paddingBottom: 10 }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
@@ -173,7 +201,13 @@ const FeedPostItem = memo(function FeedPostItem({
 
         {/* IMAGE */}
         {img ? (
-          <View style={{ width: "100%", aspectRatio: 0.8, backgroundColor: "rgba(255,255,255,0.05)" }}>
+          <View
+            style={{
+              width: "100%",
+              aspectRatio: imageAspectRatio,
+              backgroundColor: "rgba(255,255,255,0.05)",
+            }}
+          >
             <ExpoImage
               source={{ uri: img }}
               style={{ width: "100%", height: "100%" }}
@@ -296,7 +330,8 @@ const FeedPostItem = memo(function FeedPostItem({
           )}
         </View>
       </Card>
-    </Pressable>
+      </Pressable>
+    </View>
   );
 });
 
@@ -411,14 +446,19 @@ export default function ClubFeedScreen() {
     const storeId = clean(activeStoreId);
     if (!storeId) return;
 
-    const channelName = `club_usage_posts_${storeId}`;
+    const channelName = `club_usage_posts_${storeId}_${Date.now()}`;
+
     const ch = supabase
       .channel(channelName)
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: POSTS_TABLE, filter: `store_id=eq.${storeId}` },
+        {
+          event: "INSERT",
+          schema: "public",
+          table: POSTS_TABLE,
+          filter: `store_id=eq.${storeId}`,
+        },
         () => {
-          // don't spam loud loading; keep it silent and fast
           void fetchUsage("silent");
         }
       )
@@ -426,7 +466,7 @@ export default function ClubFeedScreen() {
 
     return () => {
       try {
-        supabase.removeChannel(ch);
+        void supabase.removeChannel(ch);
       } catch {}
     };
   }, [activeStoreId, fetchUsage]);
@@ -546,31 +586,37 @@ export default function ClubFeedScreen() {
 
   // REALTIME (optional) - cheap update, still okay
   useEffect(() => {
+    const channelName = `club_feed_comments_live_${Date.now()}`;
+
     const ch = supabase
-      .channel("club_feed_comments_live")
-      .on("postgres_changes", { event: "*", schema: "public", table: COMMENTS_TABLE }, (payload: any) => {
-        if (!bootedRef.current) return;
+      .channel(channelName)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: COMMENTS_TABLE },
+        (payload: any) => {
+          if (!bootedRef.current) return;
 
-        const postId = clean(payload?.new?.post_id) || clean(payload?.old?.post_id);
-        if (!postId) return;
+          const postId = clean(payload?.new?.post_id) || clean(payload?.old?.post_id);
+          if (!postId) return;
 
-        const ev = String(payload?.eventType ?? "").toUpperCase();
-        if (ev !== "INSERT" && ev !== "DELETE") return;
+          const ev = String(payload?.eventType ?? "").toUpperCase();
+          if (ev !== "INSERT" && ev !== "DELETE") return;
 
-        setPosts((prev) =>
-          prev.map((p) => {
-            if (clean(p.post_id) !== postId) return p;
-            const cur = Number(p.comments_count) || 0;
-            const next = ev === "INSERT" ? cur + 1 : Math.max(0, cur - 1);
-            return { ...p, comments_count: next };
-          })
-        );
-      })
+          setPosts((prev) =>
+            prev.map((p) => {
+              if (clean(p.post_id) !== postId) return p;
+              const cur = Number(p.comments_count) || 0;
+              const next = ev === "INSERT" ? cur + 1 : Math.max(0, cur - 1);
+              return { ...p, comments_count: next };
+            })
+          );
+        }
+      )
       .subscribe();
 
     return () => {
       try {
-        supabase.removeChannel(ch);
+        void supabase.removeChannel(ch);
       } catch {}
     };
   }, []);

@@ -71,6 +71,21 @@ type SnapshotRow = {
 
 type AnalysisIntent = "ANALYSIS" | "FORECAST" | "COACH";
 
+type WorkerRoute =
+  | "GENERAL_CHAT"
+  | "DEFINITION_EXPLANATION"
+  | "WRITING_ASSIST"
+  | "BUSINESS_ANALYSIS"
+  | "BUSINESS_FORECAST"
+  | "BUSINESS_COACH"
+  | "TASK_FOLLOWUP"
+  | "VISION_ANALYSIS"
+  | "IMAGE_GENERATION"
+  | "CALCULATION_ONLY"
+  | "ENGINEERING_DEBUG"
+  | "HEALTH_INFO"
+  | "LEGAL_INFO";
+
 type AutopilotAlert = {
   level: "info" | "warning" | "critical";
   title: string;
@@ -683,14 +698,12 @@ function buildInjectedSnapshotReply(text: string, ctx: ReqBody["context"]) {
 
   const wantsGeneralAnalysis =
     hasAnyPhrase(t, [
-      "analysis",
-      "uchambuzi",
-      "analysis ya leo",
-      "nionyeshe analysis",
-      "nipe analysis",
-      "hali ya biashara",
-      "biashara yangu leo",
-      "summary ya biashara",
+      "analysis ya biashara",
+      "uchambuzi wa biashara",
+      "analysis ya leo ya biashara",
+      "nipe analysis ya biashara",
+      "hali ya biashara yangu leo",
+      "summary ya biashara yangu",
     ]) && intent === "ANALYSIS";
 
   const wantsForecast = intent === "FORECAST";
@@ -1216,85 +1229,24 @@ function detectBusinessAnalysisRequest(text: string, ctx: ReqBody["context"], hi
 
   const hasInjectedSnapshot = hasInjectedBusinessSnapshot(ctx);
 
-  // IMPORTANT:
-  // kama app tayari imeinject business snapshot/product data,
-  // usi-trigger worker live snapshot fetch tena.
   if (hasInjectedSnapshot || hasInjectedProducts) return false;
   if (!activeStoreId) return false;
 
-  const directSignals = [
-    "analysis",
-    "uchambuzi",
-    "business analysis",
-    "analysis ya leo",
-    "forecast",
-    "utabiri",
-    "prediction",
-    "smart prediction",
-    "profit coach",
-    "coach",
-    "boresha faida",
-    "niongoze kwenye profit",
-  ];
-
-  const financeSignals = [
-    "sales",
-    "mauzo",
-    "profit",
-    "faida",
-    "margin",
-    "expenses",
-    "gharama",
-    "expense",
-    "cogs",
-    "orders",
-    "order",
-    "money in",
-    "avg/order",
-    "avg order",
-    "biashara yangu",
-    "store hii",
-    "duka hili",
-    "duka yangu",
-    "biashara hii",
-  ];
-
-  const timeSignals = [
-    "leo",
-    "today",
-    "wiki",
-    "week",
-    "siku",
-    "month",
-    "mwezi",
-    "next day",
-    "next 7 days",
-    "siku 7 zijazo",
-    "wiki ijayo",
-    "jana",
-    "yesterday",
-  ];
-
-  const directHit = hasAnyPhrase(t, directSignals);
-  const financeHits = countPhraseHits(t, financeSignals);
-  const timeHits = countPhraseHits(t, timeSignals);
-
-  if (directHit) return true;
-  if (financeHits >= 2) return true;
-  if (financeHits >= 1 && timeHits >= 1) return true;
-
-  const lastUser = [...history].reverse().find((m) => m.role === "user");
-  const prevText = clean(lastUser?.content).toLowerCase();
-  if (prevText) {
-    const prevDirect = hasAnyPhrase(prevText, directSignals);
-    const currentShortFollowUp =
-      t.length <= 60 &&
-      hasAnyPhrase(t, ["endelea", "sasa", "na forecast", "na coach", "onyesha tena", "endelea hapo", "endelea kwenye analysis"]);
-
-    if (prevDirect && currentShortFollowUp) return true;
-  }
-
-  return false;
+  return hasAnyPhrase(t, [
+    "analysis ya biashara",
+    "uchambuzi wa biashara",
+    "analysis ya store",
+    "uchambuzi wa store",
+    "onyesha sales za leo",
+    "onyesha profit ya leo",
+    "onyesha expenses za leo",
+    "forecast ya biashara",
+    "utabiri wa biashara",
+    "nifanye nini kuongeza profit kwenye biashara",
+    "bidhaa zipi ziko low stock",
+    "inventory ya store hii",
+    "stock ya store hii",
+  ]);
 }
 
 function heuristicRole(text: string, ctx: ReqBody["context"]): AiRoleKey {
@@ -1313,9 +1265,18 @@ function heuristicRole(text: string, ctx: ReqBody["context"]): AiRoleKey {
     /\b(error|bug|crash|expo|router|supabase|sql|typescript|react|api|deploy|build|logs|worker|wrangler)\b/.test(t);
 
   const bmsHit =
-    /\b(zetra|bms|dashboard|home|screen|skrini|module|moduli|tab|sales|mauzo|stock|inventory|bidhaa|product|products|store|duka|stores|pricing|bei|reports|report|transfer|movement|closing|lock|tasks|staff|admin|owner|org|organization|settings|profile)\b/.test(
-      t
-    );
+    /\b(zetra|bms|dashboard|home|screen|skrini|module|moduli|tab|settings|profile)\b/.test(t) ||
+    hasAnyPhrase(t, [
+      "store hii",
+      "duka hili",
+      "biashara yangu",
+      "analysis ya biashara",
+      "uchambuzi wa biashara",
+      "profit ya leo",
+      "sales za leo",
+      "low stock ya store",
+      "task za system",
+    ]);
 
   if (mathHit) return "MATH";
   if (healthHit) return "HEALTH";
@@ -1460,6 +1421,113 @@ function stabilizeReplyText(
   }
 
   return text.replace(/\n{3,}/g, "\n\n").trim();
+}
+
+function detectWorkerRoute(text: string, ctx: ReqBody["context"], hasImages = false): { route: WorkerRoute; confidence: number; reason: string } {
+  const t = clean(text).toLowerCase();
+  const appRoute = clean((ctx as any)?.appRoute).toUpperCase();
+
+  if (hasImages) return { route: "VISION_ANALYSIS", confidence: 1, reason: "image_present" };
+
+  if (appRoute === "GENERAL_CHAT") return { route: "GENERAL_CHAT", confidence: 1, reason: "app_route" };
+  if (appRoute === "DEFINITION_EXPLANATION") return { route: "DEFINITION_EXPLANATION", confidence: 1, reason: "app_route" };
+  if (appRoute === "WRITING_ASSIST") return { route: "WRITING_ASSIST", confidence: 1, reason: "app_route" };
+  if (appRoute === "BUSINESS_ANALYSIS") return { route: "BUSINESS_ANALYSIS", confidence: 1, reason: "app_route" };
+  if (appRoute === "BUSINESS_FORECAST") return { route: "BUSINESS_FORECAST", confidence: 1, reason: "app_route" };
+  if (appRoute === "BUSINESS_COACH") return { route: "BUSINESS_COACH", confidence: 1, reason: "app_route" };
+  if (appRoute === "TASK_FOLLOWUP") return { route: "TASK_FOLLOWUP", confidence: 1, reason: "app_route" };
+  if (appRoute === "CALCULATION_ONLY") return { route: "CALCULATION_ONLY", confidence: 1, reason: "app_route" };
+
+  if (
+    hasAnyPhrase(t, [
+      "maana yake nini",
+      "ni nini",
+      "what is",
+      "define",
+      "difference between",
+      "tofauti ya",
+      "eleza maana ya",
+    ])
+  ) {
+    return { route: "DEFINITION_EXPLANATION", confidence: 0.92, reason: "definition_request" };
+  }
+
+  if (
+    hasAnyPhrase(t, [
+      "niandikie",
+      "andika",
+      "rewrite",
+      "caption",
+      "message",
+      "email",
+      "sms",
+      "summary",
+      "boresha maandishi",
+    ])
+  ) {
+    return { route: "WRITING_ASSIST", confidence: 0.9, reason: "writing_request" };
+  }
+
+  if (
+    hasAnyPhrase(t, [
+      "forecast ya",
+      "utabiri wa",
+      "next 7 days",
+      "siku 7 zijazo",
+      "projection ya",
+      "trend ya",
+    ])
+  ) {
+    return { route: "BUSINESS_FORECAST", confidence: 0.9, reason: "forecast_request" };
+  }
+
+  if (
+    hasAnyPhrase(t, [
+      "ongeza profit",
+      "profit coach",
+      "ushauri wa biashara",
+      "nifanye nini kwenye biashara",
+      "hatua gani za biashara",
+      "how can i improve profit",
+    ])
+  ) {
+    return { route: "BUSINESS_COACH", confidence: 0.88, reason: "coach_request" };
+  }
+
+  if (
+    hasAnyPhrase(t, [
+      "analysis ya biashara",
+      "uchambuzi wa biashara",
+      "hali ya biashara",
+      "analysis ya store",
+      "onyesha profit ya leo",
+      "onyesha sales za leo",
+      "bidhaa zipi ziko low stock",
+      "inventory ya store",
+      "stock ya store",
+    ])
+  ) {
+    return { route: "BUSINESS_ANALYSIS", confidence: 0.88, reason: "business_request" };
+  }
+
+  if (
+    hasAnyPhrase(t, [
+      "task",
+      "open task",
+      "overdue task",
+      "task summary",
+      "task gani",
+      "tasks zangu",
+    ])
+  ) {
+    return { route: "TASK_FOLLOWUP", confidence: 0.88, reason: "task_request" };
+  }
+
+  if (/\d/.test(t) && hasAnyPhrase(t, ["margin", "markup", "roi", "break even", "breakeven", "profit", "asilimia"])) {
+    return { route: "CALCULATION_ONLY", confidence: 0.82, reason: "calculation_request" };
+  }
+
+  return { route: "GENERAL_CHAT", confidence: 0.6, reason: "default_general" };
 }
 
 function detectBusinessIntent(text: string): AnalysisIntent {
@@ -2365,6 +2433,7 @@ export default {
       const ctxLines = buildCtxLines(ctx);
       const injectedLines = buildInjectedDataLines(ctx);
       const history = normalizeHistory(body?.history);
+      const workerRoute = detectWorkerRoute(text, ctx, false);
 
       const activeStoreId = clean((ctx as any)?.activeStoreId || (ctx as any)?.storeId);
       const activeStoreName = clean((ctx as any)?.activeStoreName || (ctx as any)?.storeName || "Store");
@@ -2416,7 +2485,13 @@ export default {
         );
       }
 
-      const injectedSnapshotReply = buildInjectedSnapshotReply(text, ctx);
+      const injectedSnapshotReply =
+        workerRoute.route === "BUSINESS_ANALYSIS" ||
+        workerRoute.route === "BUSINESS_FORECAST" ||
+        workerRoute.route === "BUSINESS_COACH"
+          ? buildInjectedSnapshotReply(text, ctx)
+          : "";
+
       if (injectedSnapshotReply) {
         return withCors(
           json({
@@ -2439,7 +2514,11 @@ export default {
         );
       }
 
-      const wantsBusinessAnalysis = detectBusinessAnalysisRequest(text, ctx, history);
+      const wantsBusinessAnalysis =
+        (workerRoute.route === "BUSINESS_ANALYSIS" ||
+          workerRoute.route === "BUSINESS_FORECAST" ||
+          workerRoute.route === "BUSINESS_COACH") &&
+        detectBusinessAnalysisRequest(text, ctx, history);
 
       if (wantsBusinessAnalysis && activeStoreId) {
         const snap = await getTodayStoreBusinessSnapshot(env, activeStoreId);
@@ -2597,17 +2676,44 @@ export default {
       const role = rr.role;
       const roleMeta = rr.roleMeta;
 
+      const effectiveRoute = workerRoute.route;
+
+      const routeSystemBlock =
+        effectiveRoute === "GENERAL_CHAT"
+          ? "ROUTE MODE: GENERAL_CHAT\n- Answer naturally.\n- Do not force business analysis."
+          : effectiveRoute === "DEFINITION_EXPLANATION"
+          ? "ROUTE MODE: DEFINITION_EXPLANATION\n- Explain the concept directly.\n- Do not switch into live business analysis unless explicitly requested."
+          : effectiveRoute === "WRITING_ASSIST"
+          ? "ROUTE MODE: WRITING_ASSIST\n- Help write/rewrite/summarize clearly.\n- Do not force business reporting."
+          : effectiveRoute === "BUSINESS_ANALYSIS"
+          ? "ROUTE MODE: BUSINESS_ANALYSIS\n- Use real business data only if relevant to the user's request."
+          : effectiveRoute === "BUSINESS_FORECAST"
+          ? "ROUTE MODE: BUSINESS_FORECAST\n- Focus on forecast, trends, and projection."
+          : effectiveRoute === "BUSINESS_COACH"
+          ? "ROUTE MODE: BUSINESS_COACH\n- Give practical next actions grounded in real facts."
+          : effectiveRoute === "TASK_FOLLOWUP"
+          ? "ROUTE MODE: TASK_FOLLOWUP\n- Focus only on tasks and priorities."
+          : effectiveRoute === "CALCULATION_ONLY"
+          ? "ROUTE MODE: CALCULATION_ONLY\n- Solve the calculation directly."
+          : "";
+
       const appSystemPrompt = clean(body?.systemPrompt);
       const slashSystemBlock = buildSlashCommandSystemBlock(slash.command);
       const dataDrivenRules = buildDataDrivenRules(ctx);
 
-      const hasInjectedProducts =
-        (Array.isArray((ctx as any)?.topProducts) && (ctx as any).topProducts.length > 0) ||
-        (Array.isArray((ctx as any)?.lowStockItems) && (ctx as any).lowStockItems.length > 0) ||
-        (Array.isArray((ctx as any)?.slowItems) && (ctx as any).slowItems.length > 0);
+     const hasInjectedProducts =
+        (workerRoute.route === "BUSINESS_ANALYSIS" ||
+          workerRoute.route === "BUSINESS_FORECAST" ||
+          workerRoute.route === "BUSINESS_COACH") &&
+        (
+          (Array.isArray((ctx as any)?.topProducts) && (ctx as any).topProducts.length > 0) ||
+          (Array.isArray((ctx as any)?.lowStockItems) && (ctx as any).lowStockItems.length > 0) ||
+          (Array.isArray((ctx as any)?.slowItems) && (ctx as any).slowItems.length > 0)
+        );
 
       const sys = [
         buildZetraInstructions(lang, role),
+        routeSystemBlock,
         slashSystemBlock,
         appSystemPrompt,
         dataDrivenRules,
@@ -2711,6 +2817,8 @@ STRICT FALLBACK RULE:
       const injectedLines = buildInjectedDataLines(ctx);
       const history = normalizeHistory(meta?.history);
 
+      const visionRoute = detectWorkerRoute(message || rawMessage || "", ctx, images.length > 0);
+
       const commandRoleHint = roleHintFromSlashCommand(slash.command);
       const rr = await resolveRole(
         env,
@@ -2723,19 +2831,31 @@ STRICT FALLBACK RULE:
       const role = rr.role;
       const roleMeta = rr.roleMeta;
 
+      const visionRouteSystemBlock =
+        visionRoute.route === "VISION_ANALYSIS"
+          ? "ROUTE MODE: VISION_ANALYSIS\n- Analyze the image first.\n- Do not replace image reasoning with unrelated business reporting."
+          : "ROUTE MODE: GENERAL_CHAT";
+
       const appSystemPrompt = clean(meta?.systemPrompt);
       const slashSystemBlock = buildSlashCommandSystemBlock(slash.command);
       const dataDrivenRules = buildDataDrivenRules(ctx);
       const visionPriorityRules = buildVisionPriorityRules(message, images, ctx);
       const visionBusinessGuard = buildVisionBusinessGuard(message);
 
-      const hasInjectedProducts =
-        (Array.isArray((ctx as any)?.topProducts) && (ctx as any).topProducts.length > 0) ||
-        (Array.isArray((ctx as any)?.lowStockItems) && (ctx as any).lowStockItems.length > 0) ||
-        (Array.isArray((ctx as any)?.slowItems) && (ctx as any).slowItems.length > 0);
+     const hasInjectedProducts =
+        (visionRoute.route === "BUSINESS_ANALYSIS" ||
+          visionRoute.route === "BUSINESS_FORECAST" ||
+          visionRoute.route === "BUSINESS_COACH" ||
+          visionRoute.route === "VISION_ANALYSIS") &&
+        (
+          (Array.isArray((ctx as any)?.topProducts) && (ctx as any).topProducts.length > 0) ||
+          (Array.isArray((ctx as any)?.lowStockItems) && (ctx as any).lowStockItems.length > 0) ||
+          (Array.isArray((ctx as any)?.slowItems) && (ctx as any).slowItems.length > 0)
+        );
 
       const sys = [
         buildZetraInstructions(lang, role),
+        visionRouteSystemBlock,
         slashSystemBlock,
         appSystemPrompt,
         visionPriorityRules,

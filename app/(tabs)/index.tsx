@@ -1,5 +1,6 @@
 ﻿// app/(tabs)/index.tsx
 import { useFocusEffect, useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
@@ -15,7 +16,6 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
 import { useNetInfo } from "@react-native-community/netinfo";
 import { syncSalesQueueOnce } from "../../src/offline/salesSync";
 
@@ -2736,12 +2736,10 @@ function CapitalRecoverySummaryCard({
   loading,
   error,
   summary,
-  onRefresh,
 }: {
   loading: boolean;
   error: string | null;
   summary: CapitalRecoverySummaryRow;
-  onRefresh: () => void;
 }) {
   const fmt = useCallback(
     (n: number) =>
@@ -2765,23 +2763,6 @@ function CapitalRecoverySummaryCard({
         <Text style={{ color: UI.text, fontWeight: "900", fontSize: 20, flex: 1 }}>
           Capital Recovery Summary
         </Text>
-
-        <Pressable
-          onPress={onRefresh}
-          style={({ pressed }) => ({
-            paddingHorizontal: 10,
-            paddingVertical: 6,
-            borderRadius: 999,
-            borderWidth: 1,
-            borderColor: "rgba(16,185,129,0.24)",
-            backgroundColor: "rgba(16,185,129,0.10)",
-            opacity: pressed ? 0.92 : 1,
-          })}
-        >
-          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }}>
-            {loading ? "LOADING" : "LIVE"}
-          </Text>
-        </Pressable>
       </View>
 
       {!!error ? (
@@ -2825,465 +2806,41 @@ function CapitalRecoveryHomeShell({
   activeOrgName,
   activeStoreName,
   activeStoreId,
-  onOpenStores,
-  onRefreshDone,
   summary,
   summaryLoading,
   summaryError,
-  onRefreshSummary,
+  onOpenWorkspace,
 }: {
   activeOrgName?: string | null;
   activeStoreName?: string | null;
   activeStoreId?: string | null;
-  onOpenStores: () => void;
-  onRefreshDone?: () => Promise<void> | void;
   summary: CapitalRecoverySummaryRow;
   summaryLoading: boolean;
   summaryError: string | null;
-  onRefreshSummary: () => void;
+  onOpenWorkspace: () => void;
 }) {
-  const [entryType, setEntryType] = useState<"ASSET" | "COST" | "INCOME">("ASSET");
-  const [amount, setAmount] = useState("");
-  const [note, setNote] = useState("");
-
-  const amountNum = toNum(String(amount).replace(/,/g, "").trim());
-  const canPreview = amountNum > 0;
-
-  const previewTitle =
-    entryType === "ASSET"
-      ? "Asset Entry Preview"
-      : entryType === "COST"
-      ? "Operating Cost Preview"
-      : "Income Entry Preview";
-
-  const previewHint =
-    entryType === "ASSET"
-      ? "Hii itaingia upande wa mtaji/asset."
-      : entryType === "COST"
-      ? "Hii itaingia upande wa gharama za uendeshaji."
-      : "Hii itaingia upande wa mapato/income.";
-
-  const formattedPreviewAmount = formatMoney(amountNum, {
-    currency: "TZS",
-    locale: "en-TZ",
-  }).replace(/\s+/g, " ");
-
-  const [saving, setSaving] = useState(false);
-
-  const onSaveEntry = useCallback(async () => {
-    const storeId = String(activeStoreId ?? "").trim();
-
-    if (!storeId) {
-      Alert.alert("Missing Store", "Hakuna active Capital Recovery store.");
-      return;
-    }
-
-    if (!amountNum || amountNum <= 0) {
-      Alert.alert("Invalid Amount", "Weka amount sahihi zaidi ya sifuri.");
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const { error } = await supabase.rpc("create_capital_recovery_entry", {
-        p_store_id: storeId,
-        p_entry_type: entryType,
-        p_amount: amountNum,
-        p_note: clean(note) || null,
-      });
-
-      if (error) throw error;
-
-      setAmount("");
-      setNote("");
-
-      if (onRefreshDone) {
-        await onRefreshDone();
-      }
-
-      Alert.alert("Success ✅", `${entryType} entry imehifadhiwa vizuri.`);
-    } catch (e: any) {
-      Alert.alert("Save failed", clean(e?.message) || "Unknown error");
-    } finally {
-      setSaving(false);
-    }
-  }, [activeStoreId, amountNum, entryType, note, onRefreshDone]);
-
-  const Pill = ({
-    title,
-    active,
-    onPress,
-  }: {
-    title: string;
-    active: boolean;
-    onPress: () => void;
-  }) => {
-    return (
-      <TouchableOpacity
-        onPress={onPress}
-        activeOpacity={0.86}
-        style={{
-          flex: 1,
-          minWidth: 0,
-          minHeight: 48,
-          paddingHorizontal: 12,
-          paddingVertical: 12,
-          borderRadius: 16,
-          borderWidth: 1,
-          borderColor: active ? "rgba(16,185,129,0.34)" : "rgba(255,255,255,0.10)",
-          backgroundColor: active ? "rgba(16,185,129,0.14)" : "rgba(255,255,255,0.05)",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <Text style={{ color: UI.text, fontWeight: "900", fontSize: 13 }}>{title}</Text>
-      </TouchableOpacity>
-    );
-  };
-
   return (
     <View style={{ marginTop: 14 }}>
-      <View style={{ gap: 14 }}>
-        <CapitalRecoverySummaryCard
-          loading={summaryLoading}
-          error={summaryError}
-          summary={summary}
-          onRefresh={onRefreshSummary}
-        />
-
-        <Card
-          style={{
-            gap: 16,
-            borderRadius: 24,
-            borderColor: "rgba(16,185,129,0.24)",
-            backgroundColor: "rgba(15,18,24,0.98)",
-            overflow: "hidden",
-          }}
-        >
-        <View
-          pointerEvents="none"
-          style={{
-            position: "absolute",
-            top: -80,
-            right: -60,
-            width: 220,
-            height: 220,
-            borderRadius: 999,
-            backgroundColor: "rgba(16,185,129,0.08)",
-          }}
-        />
-
-        <View
-          pointerEvents="none"
-          style={{
-            position: "absolute",
-            left: -70,
-            bottom: -100,
-            width: 220,
-            height: 220,
-            borderRadius: 999,
-            backgroundColor: "rgba(34,211,238,0.04)",
-          }}
-        />
-
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-          <View
-            style={{
-              width: 52,
-              height: 52,
-              borderRadius: 18,
-              alignItems: "center",
-              justifyContent: "center",
-              borderWidth: 1,
-              borderColor: "rgba(16,185,129,0.30)",
-              backgroundColor: "rgba(16,185,129,0.12)",
-            }}
-          >
-            <Ionicons name="layers-outline" size={22} color={UI.emerald} />
-          </View>
-
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Text
-              style={{
-                color: UI.faint,
-                fontWeight: "900",
-                fontSize: 11,
-                letterSpacing: 0.9,
-              }}
-            >
-              CAPITAL RECOVERY WORKSPACE
-            </Text>
-
-            <Text
-              style={{ color: UI.text, fontWeight: "900", fontSize: 22, marginTop: 4 }}
-              numberOfLines={1}
-            >
-              {activeStoreName ?? "Capital Recovery Store"}
-            </Text>
-          </View>
-
-          <View
-            style={{
-              paddingHorizontal: 10,
-              paddingVertical: 6,
-              borderRadius: 999,
-              borderWidth: 1,
-              borderColor: "rgba(16,185,129,0.24)",
-              backgroundColor: "rgba(16,185,129,0.10)",
-            }}
-          >
-            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }}>
-              ACTIVE MODE
-            </Text>
-          </View>
-        </View>
-
-        <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22 }}>
-          Hii store iko kwenye environment yake maalum ya Capital Recovery. Dashboard ya kawaida
-          ya sales/inventory imezuiwa hapa ili logic ya mtaji, operating cost, asset, na profit
-          ibaki safi na isichanganyike.
-        </Text>
-
-        <View style={{ flexDirection: "row", gap: 12 }}>
-          <MiniStat label="Organization" value={String(activeOrgName ?? "—")} />
-          <MiniStat label="Store" value={String(activeStoreName ?? "—")} />
-          <MiniStat
-            label="Mode"
-            value="Capital Recovery"
-            hint={activeStoreId ? "special workspace" : "no store"}
-          />
-        </View>
-
-        <Card
-          style={{
-            gap: 12,
-            borderRadius: 20,
-            borderColor: "rgba(255,255,255,0.10)",
-            backgroundColor: "rgba(255,255,255,0.04)",
-          }}
-        >
-          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 17 }}>
-            Mfumo huu utatumia sheria hii:
-          </Text>
-
-          <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22 }}>
-            Income → inalipa Operating Cost → iliyobaki inalipa Asset → ikimaliza Asset kinachobaki
-            ni Profit.
-          </Text>
-        </Card>
-
-        <Card
-          style={{
-            gap: 14,
-            borderRadius: 20,
-            borderColor: "rgba(16,185,129,0.18)",
-            backgroundColor: "rgba(255,255,255,0.04)",
-          }}
-        >
-          <View style={{ gap: 6 }}>
-            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 17 }}>
-              Quick Entry
-            </Text>
-            <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 20 }}>
-              Hapa ndipo entry za Capital Recovery zitaanzia. Chagua aina ya entry, weka amount,
-              na maelezo mafupi.
-            </Text>
-          </View>
-
-          <View
-            style={{
-              flexDirection: "row",
-              gap: 10,
-              width: "100%",
-            }}
-          >
-            <Pill
-              title="Add Asset"
-              active={entryType === "ASSET"}
-              onPress={() => setEntryType("ASSET")}
-            />
-            <Pill
-              title="Add Cost"
-              active={entryType === "COST"}
-              onPress={() => setEntryType("COST")}
-            />
-            <Pill
-              title="Add Income"
-              active={entryType === "INCOME"}
-              onPress={() => setEntryType("INCOME")}
-            />
-          </View>
-
-          <View style={{ gap: 8 }}>
-            <Text style={{ color: UI.muted, fontWeight: "800" }}>Amount (TZS)</Text>
-            <TextInput
-              value={amount}
-              onChangeText={setAmount}
-              placeholder="mfano: 250000"
-              placeholderTextColor="rgba(234,242,255,0.35)"
-              keyboardType="numeric"
-              style={{
-                borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.10)",
-                backgroundColor: "rgba(255,255,255,0.05)",
-                color: UI.text,
-                borderRadius: 18,
-                paddingHorizontal: 14,
-                paddingVertical: 14,
-                fontWeight: "800",
-                fontSize: 15,
-              }}
-            />
-          </View>
-
-          <View style={{ gap: 8 }}>
-            <Text style={{ color: UI.muted, fontWeight: "800" }}>Note / Description</Text>
-            <TextInput
-              value={note}
-              onChangeText={setNote}
-              placeholder="mfano: kununua mashine / gharama ya kodi / mapato ya biashara"
-              placeholderTextColor="rgba(234,242,255,0.35)"
-              multiline
-              style={{
-                minHeight: 96,
-                borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.10)",
-                backgroundColor: "rgba(255,255,255,0.05)",
-                color: UI.text,
-                borderRadius: 18,
-                paddingHorizontal: 14,
-                paddingVertical: 14,
-                fontWeight: "800",
-                fontSize: 15,
-                textAlignVertical: "top",
-              }}
-            />
-          </View>
-        </Card>
-
-        <Card
-          style={{
-            gap: 10,
-            borderRadius: 20,
-            borderColor: canPreview ? "rgba(16,185,129,0.22)" : "rgba(255,255,255,0.10)",
-            backgroundColor: canPreview ? "rgba(16,185,129,0.07)" : "rgba(255,255,255,0.04)",
-          }}
-        >
-          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-            {previewTitle}
-          </Text>
-
-          <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 20 }}>
-            {previewHint}
-          </Text>
-
-          <View style={{ flexDirection: "row", gap: 12 }}>
-            <MiniStat
-              label="Entry Type"
-              value={entryType}
-              hint="current selection"
-            />
-            <MiniStat
-              label="Amount"
-              value={canPreview ? formattedPreviewAmount : "TSh 0"}
-              hint="preview"
-            />
-          </View>
-
-          <Card
-            style={{
-              borderColor: "rgba(255,255,255,0.10)",
-              backgroundColor: "rgba(255,255,255,0.04)",
-              borderRadius: 18,
-              padding: 12,
-            }}
-          >
-            <Text style={{ color: UI.faint, fontWeight: "800", lineHeight: 20 }}>
-              {clean(note)
-                ? note
-                : "Hakuna maelezo bado. Weka note fupi ili entry iwe clear."}
-            </Text>
-          </Card>
-        </Card>
-
-        <View style={{ gap: 10 }}>
-          <Pressable
-            onPress={onSaveEntry}
-            disabled={!canPreview || saving}
-            style={({ pressed }) => ({
-              borderRadius: 18,
-              borderWidth: 1,
-              borderColor:
-                canPreview && !saving
-                  ? "rgba(16,185,129,0.30)"
-                  : "rgba(255,255,255,0.10)",
-              backgroundColor:
-                canPreview && !saving
-                  ? "rgba(16,185,129,0.12)"
-                  : "rgba(255,255,255,0.05)",
-              paddingVertical: 15,
-              paddingHorizontal: 16,
-              alignItems: "center",
-              justifyContent: "center",
-              opacity: pressed ? 0.92 : canPreview && !saving ? 1 : 0.6,
-            })}
-          >
-            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
-              {saving ? "Saving..." : "Save Entry"}
-            </Text>
-          </Pressable>
-
-          <Pressable
-            onPress={onOpenStores}
-            style={({ pressed }) => ({
-              borderRadius: 18,
-              borderWidth: 1,
-              borderColor: "rgba(16,185,129,0.30)",
-              backgroundColor: "rgba(16,185,129,0.12)",
-              paddingVertical: 15,
-              paddingHorizontal: 16,
-              alignItems: "center",
-              justifyContent: "center",
-              opacity: pressed ? 0.92 : 1,
-            })}
-          >
-            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
-              Open Stores
-            </Text>
-          </Pressable>
-
-          <Card
-            style={{
-              borderColor: "rgba(255,255,255,0.10)",
-              backgroundColor: "rgba(255,255,255,0.04)",
-              borderRadius: 18,
-              padding: 12,
-            }}
-          >
-            <Text style={{ color: UI.faint, fontWeight: "800", lineHeight: 20 }}>
-  PATCH 2E iko active: save entry, reports, filters, na edit/delete UI layer sasa
-  vimefungwa ndani ya Capital Recovery workspace. Edit/Delete backend RPC bado
-  haijafungwa, hivyo button zimewekwa kwa hali salama ya UI-only.
-</Text>
-          </Card>
-        </View>
-      </Card>
-      </View>
+      <CapitalRecoverySummaryCard
+        loading={summaryLoading}
+        error={summaryError}
+        summary={summary}
+      />
     </View>
   );
 }
 
-function CapitalRecoverySummaryHistoryCard({
+function CapitalRecoveryReportsCard({
   activeStoreId,
   reloadKey = 0,
+  onOpenWorkspace,
 }: {
   activeStoreId?: string | null;
   reloadKey?: number;
+  onOpenWorkspace: () => void;
 }) {
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   const [history, setHistory] = useState<CapitalRecoveryHistoryRow[]>([]);
 
   const storeId = String(activeStoreId ?? "").trim();
@@ -3357,7 +2914,7 @@ function CapitalRecoverySummaryHistoryCard({
   }, [history]);
 
   return (
-    <View style={{ marginTop: 14, gap: 14 }}>
+    <View style={{ marginTop: 14 }}>
       <Card
         style={{
           gap: 14,
@@ -3367,26 +2924,24 @@ function CapitalRecoverySummaryHistoryCard({
         }}
       >
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 20, flex: 1 }}>
+          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18, flex: 1 }}>
             Reports
           </Text>
 
-          <Pressable
-            onPress={() => void load()}
-            style={({ pressed }) => ({
+          <View
+            style={{
               paddingHorizontal: 10,
               paddingVertical: 6,
               borderRadius: 999,
               borderWidth: 1,
-              borderColor: "rgba(16,185,129,0.24)",
-              backgroundColor: "rgba(16,185,129,0.10)",
-              opacity: pressed ? 0.92 : 1,
-            })}
+              borderColor: "rgba(255,255,255,0.10)",
+              backgroundColor: "rgba(255,255,255,0.05)",
+            }}
           >
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }}>
-              {loading ? "LOADING" : "LIVE"}
+              {loading ? "..." : history.length}
             </Text>
-          </Pressable>
+          </View>
         </View>
 
         {!!error ? (
@@ -3404,77 +2959,50 @@ function CapitalRecoverySummaryHistoryCard({
 
         <View style={{ flexDirection: "row", gap: 12 }}>
           <MiniStat
-            label="Asset Entries"
+            label="Asset"
             value={String(report.ASSET.count)}
             hint={fmt(report.ASSET.amount)}
           />
           <MiniStat
-            label="Cost Entries"
+            label="Cost"
             value={String(report.COST.count)}
             hint={fmt(report.COST.amount)}
           />
           <MiniStat
-            label="Income Entries"
+            label="Income"
             value={String(report.INCOME.count)}
             hint={fmt(report.INCOME.amount)}
           />
         </View>
-      </Card>
-
-      <Card
-        style={{
-          gap: 14,
-          borderRadius: 24,
-          borderColor: "rgba(16,185,129,0.22)",
-          backgroundColor: "rgba(15,18,24,0.98)",
-        }}
-      >
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 20, flex: 1 }}>
-            Recent History
-          </Text>
-
-          <View
-            style={{
-              paddingHorizontal: 10,
-              paddingVertical: 6,
-              borderRadius: 999,
-              borderWidth: 1,
-              borderColor: "rgba(255,255,255,0.10)",
-              backgroundColor: "rgba(255,255,255,0.05)",
-            }}
-          >
-            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }}>
-              {history.length}
-            </Text>
-          </View>
-        </View>
 
         <Pressable
-          onPress={() => router.push("/capital-recovery/history")}
+          onPress={onOpenWorkspace}
+          // @ts-ignore
+          onClick={onOpenWorkspace}
+          hitSlop={10}
           style={({ pressed }) => ({
-            borderRadius: 18,
+            borderRadius: 20,
             borderWidth: 1,
-            borderColor: "rgba(16,185,129,0.30)",
-            backgroundColor: "rgba(16,185,129,0.12)",
-            paddingVertical: 15,
+            borderColor: "rgba(16,185,129,0.34)",
+            backgroundColor: "rgba(16,185,129,0.16)",
+            paddingVertical: 16,
             paddingHorizontal: 16,
             alignItems: "center",
             justifyContent: "center",
             opacity: pressed ? 0.92 : 1,
+            transform: pressed ? [{ scale: 0.99 }] : [{ scale: 1 }],
           })}
         >
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
-            Open Recent History
+            Open Workspace
           </Text>
         </Pressable>
 
-        <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22 }}>
-          Recent History ipo kwenye page yake maalum ili Home ibaki safi, fupi, na nyepesi.
+      <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22 }}>
+          Recording ya Asset, Cost, na Income imehamishwa kwenye workspace page yake maalum.
         </Text>
       </Card>
-      </View>
-  
+    </View>
   );
 }
     
@@ -3579,6 +3107,20 @@ const {
     mobile: 0,
   });
   const [desktopStockValue, setDesktopStockValue] = useState(0);
+
+  const [capitalSummaryLoading, setCapitalSummaryLoading] = useState(false);
+  const [capitalSummaryError, setCapitalSummaryError] = useState<string | null>(null);
+  const [capitalSummary, setCapitalSummary] = useState<CapitalRecoverySummaryRow>({
+    total_asset: 0,
+    total_cost: 0,
+    total_income: 0,
+    remaining_cost: 0,
+    remaining_asset: 0,
+    realized_profit: 0,
+    entries_count: 0,
+    last_entry_at: null,
+  });
+
   const desktopLoadBusyRef = useRef(false);
   const desktopLoadSeqRef = useRef(0);
 
@@ -3646,6 +3188,63 @@ const {
     [moneyPrefs.currency, moneyPrefs.locale]
   );
 
+  const loadCapitalRecoverySummary = useCallback(async () => {
+    const sid = String(activeStoreId ?? "").trim();
+
+    if (!sid) {
+      setCapitalSummary({
+        total_asset: 0,
+        total_cost: 0,
+        total_income: 0,
+        remaining_cost: 0,
+        remaining_asset: 0,
+        realized_profit: 0,
+        entries_count: 0,
+        last_entry_at: null,
+      });
+      setCapitalSummaryError("No active Capital Recovery store selected");
+      return;
+    }
+
+    setCapitalSummaryLoading(true);
+    setCapitalSummaryError(null);
+
+    try {
+      const { data, error } = await supabase.rpc("get_capital_recovery_summary_v1", {
+        p_store_id: sid,
+      });
+
+      if (error) throw error;
+
+      const row = (Array.isArray(data) ? data[0] : data) as any;
+
+      setCapitalSummary({
+        total_asset: toNum(row?.total_asset),
+        total_cost: toNum(row?.total_cost),
+        total_income: toNum(row?.total_income),
+        remaining_cost: toNum(row?.remaining_cost),
+        remaining_asset: toNum(row?.remaining_asset),
+        realized_profit: toNum(row?.realized_profit),
+        entries_count: toInt(row?.entries_count),
+        last_entry_at: clean(row?.last_entry_at) || null,
+      });
+    } catch (e: any) {
+      setCapitalSummaryError(clean(e?.message) || "Failed to load Capital Recovery summary");
+      setCapitalSummary({
+        total_asset: 0,
+        total_cost: 0,
+        total_income: 0,
+        remaining_cost: 0,
+        remaining_asset: 0,
+        realized_profit: 0,
+        entries_count: 0,
+        last_entry_at: null,
+      });
+    } finally {
+      setCapitalSummaryLoading(false);
+    }
+  }, [activeStoreId]);
+
   const onCapitalRecoveryRefreshDone = useCallback(async () => {
     await Promise.resolve(refresh());
 
@@ -3655,8 +3254,9 @@ const {
       } catch {}
     }
 
+    await loadCapitalRecoverySummary();
     setCapitalRecoveryTick((x) => x + 1);
-  }, [refresh, activeStoreId, isOnline]);
+  }, [refresh, activeStoreId, isOnline, loadCapitalRecoverySummary]);
 
   const desktopLoad = useCallback(async () => {
     if (!isDesktopWeb) return;
@@ -3890,6 +3490,18 @@ const {
   );
 
   useEffect(() => {
+    if (!isCapitalRecoveryStore) return;
+    void loadCapitalRecoverySummary();
+  }, [isCapitalRecoveryStore, activeStoreId, capitalRecoveryTick, loadCapitalRecoverySummary]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!isCapitalRecoveryStore) return;
+      void loadCapitalRecoverySummary();
+    }, [isCapitalRecoveryStore, loadCapitalRecoverySummary])
+  );
+
+  useEffect(() => {
     if (Platform.OS === "web") return;
     if (!activeStoreId || !isOnline) return;
 
@@ -3991,28 +3603,16 @@ const {
               activeOrgName={activeOrgName}
               activeStoreName={activeStoreName}
               activeStoreId={activeStoreId}
-              onOpenStores={() => router.push("/(tabs)/stores")}
-              onRefreshDone={onCapitalRecoveryRefreshDone}
-              summaryLoading={false}
-              summaryError={null}
-              summary={{
-                total_asset: 0,
-                total_cost: 0,
-                total_income: 0,
-                remaining_cost: 0,
-                remaining_asset: 0,
-                realized_profit: 0,
-                entries_count: 0,
-                last_entry_at: null,
-              }}
-              onRefreshSummary={() => {
-                setCapitalRecoveryTick((x) => x + 1);
-              }}
+              summaryLoading={capitalSummaryLoading}
+              summaryError={capitalSummaryError}
+              summary={capitalSummary}
+              onOpenWorkspace={() => router.push("/(tabs)/capital-recovery/workspace")}
             />
 
-            <CapitalRecoverySummaryHistoryCard
+            <CapitalRecoveryReportsCard
               activeStoreId={activeStoreId}
               reloadKey={capitalRecoveryTick}
+              onOpenWorkspace={() => router.push("/(tabs)/capital-recovery/workspace")}
             />
           </StoreGuard>
         </>

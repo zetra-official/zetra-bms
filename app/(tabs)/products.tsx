@@ -746,24 +746,6 @@ export default function ProductsTabScreen() {
             </Text>
           </View>
 
-          <TextInput
-            value={sellingPrice}
-            onChangeText={(t) => setSellingPrice(t.replace(/[^0-9]/g, ""))}
-            placeholder="Selling Price (optional)"
-            keyboardType="numeric"
-            placeholderTextColor="rgba(255,255,255,0.35)"
-            style={{
-              borderWidth: 1,
-              borderColor: theme.colors.border,
-              borderRadius: theme.radius.lg,
-              backgroundColor: "rgba(255,255,255,0.05)",
-              paddingHorizontal: 14,
-              paddingVertical: 12,
-              color: theme.colors.text,
-              fontWeight: "800",
-            }}
-          />
-
           {canSeeCost && (
             <TextInput
               value={costPrice}
@@ -783,6 +765,24 @@ export default function ProductsTabScreen() {
               }}
             />
           )}
+
+          <TextInput
+            value={sellingPrice}
+            onChangeText={(t) => setSellingPrice(t.replace(/[^0-9]/g, ""))}
+            placeholder="Selling Price (optional)"
+            keyboardType="numeric"
+            placeholderTextColor="rgba(255,255,255,0.35)"
+            style={{
+              borderWidth: 1,
+              borderColor: theme.colors.border,
+              borderRadius: theme.radius.lg,
+              backgroundColor: "rgba(255,255,255,0.05)",
+              paddingHorizontal: 14,
+              paddingVertical: 12,
+              color: theme.colors.text,
+              fontWeight: "800",
+            }}
+          />
 
           <Button
             title={loading ? "Saving..." : "Add Product"}
@@ -1090,15 +1090,6 @@ export default function ProductsTabScreen() {
                   style={solidInputStyle}
                 />
 
-                <TextInput
-                  value={editSellingPrice}
-                  onChangeText={(t) => setEditSellingPrice(t.replace(/[^0-9]/g, ""))}
-                  placeholder="Selling Price (optional)"
-                  keyboardType="numeric"
-                  placeholderTextColor="rgba(255,255,255,0.35)"
-                  style={solidInputStyle}
-                />
-
                 {canSeeCost && (
                   <TextInput
                     value={editCostPrice}
@@ -1109,6 +1100,15 @@ export default function ProductsTabScreen() {
                     style={solidInputStyle}
                   />
                 )}
+
+                <TextInput
+                  value={editSellingPrice}
+                  onChangeText={(t) => setEditSellingPrice(t.replace(/[^0-9]/g, ""))}
+                  placeholder="Selling Price (optional)"
+                  keyboardType="numeric"
+                  placeholderTextColor="rgba(255,255,255,0.35)"
+                  style={solidInputStyle}
+                />
 
                 <View style={{ flexDirection: "row", gap: 10, marginTop: 6 }}>
                   <View style={{ flex: 1 }}>

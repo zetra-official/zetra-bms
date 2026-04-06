@@ -6,7 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Image as ExpoImage } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Modal, Pressable, Text, View } from "react-native";
+import { Modal, Platform, Pressable, Text, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // ✅ ADD
@@ -73,6 +73,12 @@ export default function ClubPostDetailScreen() {
   const subtitle = [storeCategory, storeLocation].filter(Boolean).join(" • ");
 
   const topPad = Math.max(insets.top, 10) + 8;
+
+  const { width } = useWindowDimensions();
+  const isDesktopWeb = Platform.OS === "web" && width >= 1024;
+
+  const pageMaxWidth = isDesktopWeb ? 860 : undefined;
+  const mediaMaxWidth = isDesktopWeb ? 760 : undefined;
 
   const [fullOpen, setFullOpen] = useState(false);
 
@@ -292,7 +298,17 @@ export default function ClubPostDetailScreen() {
             <View style={{ flex: 1 }} />
           </View>
 
-          <View style={{ flex: 1, paddingHorizontal: theme.spacing.page, paddingTop: 12, paddingBottom: 12 }}>
+          <View
+            style={{
+              flex: 1,
+              paddingHorizontal: theme.spacing.page,
+              paddingTop: 12,
+              paddingBottom: 12,
+              width: "100%",
+              maxWidth: isDesktopWeb ? 1100 : undefined,
+              alignSelf: "center",
+            }}
+          >
             {!!imageUrl ? (
               <ExpoImage
                 source={{ uri: imageUrl }}
@@ -326,8 +342,15 @@ export default function ClubPostDetailScreen() {
 
   return (
     <Screen scroll contentStyle={{ paddingTop: topPad }}>
-      <View style={{ gap: 12 }}>
-        <Card style={{ padding: 14, backgroundColor: theme.colors.surface, borderColor: theme.colors.borderSoft }}>
+      <View
+        style={{
+          gap: 12,
+          width: "100%",
+          maxWidth: pageMaxWidth,
+          alignSelf: "center",
+        }}
+      >
+        <Card style={{ padding: 14,backgroundColor: theme.colors.card,  borderColor: theme.colors.borderSoft }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
             <Pressable
               onPress={goBack}
@@ -500,9 +523,23 @@ export default function ClubPostDetailScreen() {
         )}
 
         {!!imageUrl && (
-          <Card style={{ padding: 0, overflow: "hidden" }}>
+          <Card
+            style={{
+              padding: 0,
+              overflow: "hidden",
+              width: "100%",
+              maxWidth: mediaMaxWidth,
+              alignSelf: "center",
+            }}
+          >
             <Pressable onPress={() => setFullOpen(true)} style={{ width: "100%" }}>
-              <View style={{ width: "100%", aspectRatio: 16 / 9, backgroundColor: "rgba(0,0,0,0.35)" }}>
+              <View
+                style={{
+                  width: "100%",
+                  aspectRatio: isDesktopWeb ? 4 / 5 : 16 / 9,
+                  backgroundColor: "rgba(0,0,0,0.35)",
+                }}
+              >
                 <ExpoImage
                   source={{ uri: imageUrl }}
                   style={{ width: "100%", height: "100%" }}
@@ -522,7 +559,7 @@ export default function ClubPostDetailScreen() {
 
         {!postId ? (
           <Card style={{ backgroundColor: theme.colors.dangerSoft, borderColor: theme.colors.dangerBorder }}>
-            <Text style={{ color: theme.colors.dangerText, fontWeight: "900" }}>
+            <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>
               Post haijapokelewa vizuri. Rudi kwenye feed uifungue tena.
             </Text>
           </Card>
