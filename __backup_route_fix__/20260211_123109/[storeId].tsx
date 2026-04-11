@@ -424,7 +424,7 @@ export default function ClubStoreDashboardScreen() {
                   justifyContent: "center",
                 }}
               >
-                <Ionicons name="storefront-outline" size={18} color={theme.colors.emerald} />
+                <SafeIcon name="storefront-outline" size={18} color={theme.colors.emerald} />
               </View>
 
               <View>

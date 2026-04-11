@@ -4,11 +4,11 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Keyboard,
+  Platform,
   Text,
   TextInput,
   TouchableWithoutFeedback,
   View,
-  Platform,
 } from "react-native";
 import { useOrg } from "../../../src/context/OrgContext";
 import { supabase } from "../../../src/supabase/supabaseClient";
@@ -28,7 +28,6 @@ function asInt(n: number) {
   return Number.isFinite(x) ? x : 0;
 }
 
-// ✅ local YYYY-MM-DD
 function localYMD(d = new Date()) {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -45,12 +44,14 @@ export default function AdjustStockScreen() {
     currentQty?: string | string[];
   }>();
 
-  const { activeRole, activeStoreId, activeStoreName } = useOrg();
+  const { activeRole, activeStoreId, activeStoreName, activeStoreType } = useOrg();
+  const isCapitalRecoveryStore = activeStoreType === "CAPITAL_RECOVERY";
 
   const canAdjust = useMemo(() => {
-    const r = (activeRole ?? "staff") as "owner" | "admin" | "staff";
+    if (isCapitalRecoveryStore) return false;
+    const r = (activeRole ?? "staff") as "owner" | "admin" | "staff" | "cashier";
     return r === "owner" || r === "admin";
-  }, [activeRole]);
+  }, [activeRole, isCapitalRecoveryStore]);
 
   const productId = (one(params.productId) ?? "").trim();
   const passedName = (one(params.productName) ?? "").trim();
@@ -80,7 +81,6 @@ export default function AdjustStockScreen() {
     };
   }, []);
 
-  // ✅ hydrate product name/sku if missing
   useEffect(() => {
     let cancelled = false;
 
@@ -92,6 +92,13 @@ export default function AdjustStockScreen() {
       }
 
       if (!productId) return;
+      if (isCapitalRecoveryStore) {
+        if (!cancelled) {
+          setDisplayName(passedName || "Product");
+          setDisplaySku("—");
+        }
+        return;
+      }
 
       try {
         if (activeStoreId) {
@@ -124,20 +131,21 @@ export default function AdjustStockScreen() {
       }
     }
 
-    hydrateFromDb();
+    void hydrateFromDb();
+
     return () => {
       cancelled = true;
     };
-  }, [productId, passedName, passedSku, activeStoreId]);
+  }, [productId, passedName, passedSku, activeStoreId, isCapitalRecoveryStore]);
 
   const onAmountChange = useCallback((txt: string) => {
     const cleaned = txt.replace(/[^\d]/g, "");
     setAmount(cleaned);
   }, []);
 
-  // ✅ UI guard: block if day locked
   const ensureNotLockedToday = useCallback(async () => {
     if (!activeStoreId) return false;
+    if (isCapitalRecoveryStore) return false;
 
     const today = localYMD();
     const { data, error } = await supabase.rpc("is_closing_locked", {
@@ -146,7 +154,6 @@ export default function AdjustStockScreen() {
     });
 
     if (error) {
-      // if rpc fails, we do NOT block UI here (DB trigger still blocks)
       return true;
     }
 
@@ -158,28 +165,53 @@ export default function AdjustStockScreen() {
       );
       return false;
     }
+
     return true;
-  }, [activeStoreId]);
+  }, [activeStoreId, isCapitalRecoveryStore]);
 
   const submit = useCallback(async () => {
     if (saving) return;
 
-    if (!activeStoreId) return Alert.alert("Missing", "No active store selected.");
-    if (!productId) return Alert.alert("Missing", "Product not found.");
-    if (!canAdjust) return Alert.alert("No Access", "Owner/Admin only.");
+    if (!activeStoreId) {
+      Alert.alert("Missing", "No active store selected.");
+      return;
+    }
+
+    if (isCapitalRecoveryStore) {
+      Alert.alert("Not Available", "Adjust Stock haitumiki kwa Capital Recovery store.");
+      return;
+    }
+
+    if (!productId) {
+      Alert.alert("Missing", "Product not found.");
+      return;
+    }
+
+    if (!canAdjust) {
+      Alert.alert("No Access", "Owner/Admin only.");
+      return;
+    }
 
     const okToProceed = await ensureNotLockedToday();
     if (!okToProceed) return;
 
     const trimmed = (amount ?? "").trim();
-    if (!trimmed) return Alert.alert("Invalid", "Amount lazima iandikwe.");
+    if (!trimmed) {
+      Alert.alert("Invalid", "Amount lazima iandikwe.");
+      return;
+    }
 
     const n = Number(trimmed);
-    if (!Number.isFinite(n) || n <= 0)
-      return Alert.alert("Invalid", "Amount lazima iwe namba > 0");
+    if (!Number.isFinite(n) || n <= 0) {
+      Alert.alert("Invalid", "Amount lazima iwe namba > 0");
+      return;
+    }
 
     const intAmount = asInt(n);
-    if (intAmount <= 0) return Alert.alert("Invalid", "Amount lazima iwe namba halali (> 0).");
+    if (intAmount <= 0) {
+      Alert.alert("Invalid", "Amount lazima iwe namba halali (> 0).");
+      return;
+    }
 
     setSaving(true);
     try {
@@ -188,23 +220,20 @@ export default function AdjustStockScreen() {
       });
       if (access.error) throw access.error;
 
-      // ✅ use canonical adjust_stock (updates public.inventory)
       const { data, error } = await supabase.rpc("adjust_stock", {
         p_store_id: activeStoreId,
         p_product_id: productId,
         p_amount: Math.abs(intAmount),
-        p_mode: mode, // "ADD" | "REDUCE"
+        p_mode: mode,
         p_note: reason?.trim() ? reason.trim() : null,
       } as any);
 
       if (error) throw error;
 
-      // adjust_stock returns TABLE(new_qty integer) - usually array with 1 row
       const newQty =
         Array.isArray(data) && data.length > 0 ? (data[0] as any)?.new_qty : null;
 
       Alert.alert("Success ✅", newQty === null ? "Stock updated" : `New Qty: ${newQty}`);
-
       router.back();
     } catch (err: any) {
       Alert.alert("Failed", err?.message ?? "Unknown error");
@@ -214,6 +243,7 @@ export default function AdjustStockScreen() {
   }, [
     saving,
     activeStoreId,
+    isCapitalRecoveryStore,
     productId,
     canAdjust,
     ensureNotLockedToday,
@@ -226,7 +256,7 @@ export default function AdjustStockScreen() {
   const content = (
     <View style={{ flex: 1, gap: 14 }}>
       <Text style={{ fontSize: 26, fontWeight: "900", color: theme.colors.text }}>
-        Adjust Stock
+        {isCapitalRecoveryStore ? "Adjust Disabled" : "Adjust Stock"}
       </Text>
 
       <Card style={{ gap: 8 }}>
@@ -249,6 +279,26 @@ export default function AdjustStockScreen() {
           Current Qty
         </Text>
         <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{currentQty}</Text>
+
+        {isCapitalRecoveryStore ? (
+          <View
+            style={{
+              marginTop: 10,
+              borderWidth: 1,
+              borderColor: theme.colors.emeraldBorder,
+              borderRadius: theme.radius.xl,
+              backgroundColor: theme.colors.emeraldSoft,
+              padding: 14,
+            }}
+          >
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+              Capital Recovery store haitumii Adjust Stock.
+            </Text>
+            <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>
+              Tumia Products + Capital Recovery Workspace. Inventory adjustment imezimwa kwenye mode hii.
+            </Text>
+          </View>
+        ) : null}
       </Card>
 
       <Card style={{ gap: 10 }}>
@@ -261,10 +311,12 @@ export default function AdjustStockScreen() {
             title="ADD"
             variant="secondary"
             onPress={() => setMode("ADD")}
+            disabled={isCapitalRecoveryStore || saving}
             style={{
               flex: 1,
               borderColor:
                 mode === "ADD" ? "rgba(52,211,153,0.55)" : theme.colors.border,
+              opacity: isCapitalRecoveryStore ? 0.6 : 1,
             }}
           />
 
@@ -272,10 +324,12 @@ export default function AdjustStockScreen() {
             title="REDUCE"
             variant="secondary"
             onPress={() => setMode("REDUCE")}
+            disabled={isCapitalRecoveryStore || saving}
             style={{
               flex: 1,
               borderColor:
                 mode === "REDUCE" ? theme.colors.dangerBorder : theme.colors.border,
+              opacity: isCapitalRecoveryStore ? 0.6 : 1,
             }}
           />
         </View>
@@ -291,6 +345,7 @@ export default function AdjustStockScreen() {
           onSubmitEditing={Keyboard.dismiss}
           placeholder="e.g 5"
           placeholderTextColor="rgba(255,255,255,0.35)"
+          editable={!isCapitalRecoveryStore && !saving}
           style={{
             borderWidth: 1,
             borderColor: theme.colors.border,
@@ -300,6 +355,7 @@ export default function AdjustStockScreen() {
             paddingVertical: 12,
             color: theme.colors.text,
             fontWeight: "800",
+            opacity: isCapitalRecoveryStore ? 0.6 : 1,
           }}
         />
 
@@ -313,6 +369,7 @@ export default function AdjustStockScreen() {
           placeholderTextColor="rgba(255,255,255,0.35)"
           multiline
           textAlignVertical="top"
+          editable={!isCapitalRecoveryStore && !saving}
           style={{
             minHeight: 110,
             borderWidth: 1,
@@ -323,17 +380,24 @@ export default function AdjustStockScreen() {
             paddingVertical: 12,
             color: theme.colors.text,
             fontWeight: "800",
+            opacity: isCapitalRecoveryStore ? 0.6 : 1,
           }}
         />
 
         <View style={{ gap: 10, marginTop: 2 }}>
           <Button
-            title={saving ? "Saving..." : "Submit"}
+            title={
+              isCapitalRecoveryStore
+                ? "Adjust Disabled"
+                : saving
+                ? "Saving..."
+                : "Submit"
+            }
             onPress={() => {
               Keyboard.dismiss();
               void submit();
             }}
-            disabled={saving}
+            disabled={saving || isCapitalRecoveryStore}
             variant="primary"
           />
 
@@ -348,11 +412,15 @@ export default function AdjustStockScreen() {
           />
         </View>
 
-        {!canAdjust && (
+        {isCapitalRecoveryStore ? (
+          <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+            Capital Recovery store haitumii stock adjustment.
+          </Text>
+        ) : !canAdjust ? (
           <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
             Huna ruhusa ya kubadili stock. (Owner/Admin only)
           </Text>
-        )}
+        ) : null}
       </Card>
     </View>
   );

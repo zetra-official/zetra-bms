@@ -9,6 +9,7 @@ import { Screen } from "@/src/ui/Screen";
 import { Card } from "@/src/ui/Card";
 import { theme } from "@/src/ui/theme";
 import { publishScanBarcode } from "@/src/utils/scanBus";
+import { useOrg } from "@/src/context/OrgContext";
 
 function cleanBarcode(raw: any) {
   const s = String(raw ?? "").trim();
@@ -18,6 +19,9 @@ function cleanBarcode(raw: any) {
 
 export default function StoreScanScreen() {
   const router = useRouter();
+  const { activeStoreType } = useOrg();
+  const isCapitalRecoveryStore = activeStoreType === "CAPITAL_RECOVERY";
+
   const [permission, requestPermission] = useCameraPermissions();
   const [busy, setBusy] = useState(false);
   const [last, setLast] = useState<string>("");
@@ -25,23 +29,31 @@ export default function StoreScanScreen() {
   const granted = !!permission?.granted;
 
   const ensurePermission = useCallback(async () => {
+    if (isCapitalRecoveryStore) {
+      Alert.alert("Not Available", "Inventory scan haitumiki kwa Capital Recovery store.");
+      return false;
+    }
+
     try {
       if (granted) return true;
+
       const res = await requestPermission();
       if (!res.granted) {
         Alert.alert("Camera Permission", "Ruhusa ya camera inahitajika ili kuscan barcode.");
         return false;
       }
+
       return true;
     } catch {
       Alert.alert("Camera", "Imeshindikana kuomba ruhusa ya camera.");
       return false;
     }
-  }, [granted, requestPermission]);
+  }, [granted, isCapitalRecoveryStore, requestPermission]);
 
   useEffect(() => {
+    if (isCapitalRecoveryStore) return;
     void ensurePermission();
-  }, [ensurePermission]);
+  }, [ensurePermission, isCapitalRecoveryStore]);
 
   const close = useCallback(() => {
     router.back();
@@ -50,6 +62,7 @@ export default function StoreScanScreen() {
   const onBarcodeScanned = useCallback(
     async (result: any) => {
       if (busy) return;
+      if (isCapitalRecoveryStore) return;
 
       const ok = await ensurePermission();
       if (!ok) return;
@@ -71,7 +84,7 @@ export default function StoreScanScreen() {
         setTimeout(() => setBusy(false), 400);
       }, 50);
     },
-    [busy, ensurePermission, router]
+    [busy, ensurePermission, isCapitalRecoveryStore, router]
   );
 
   const cameraTypes = useMemo(
@@ -92,13 +105,22 @@ export default function StoreScanScreen() {
   );
 
   return (
-    <Screen scroll={false} contentStyle={{ paddingTop: 0, paddingHorizontal: 0, paddingBottom: 0 }}>
+    <Screen
+      scroll={false}
+      contentStyle={{ paddingTop: 0, paddingHorizontal: 0, paddingBottom: 0 }}
+    >
       <View style={{ padding: theme.spacing.page, paddingBottom: 12, gap: 10 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+        <View
+          style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
+        >
           <View style={{ gap: 2 }}>
-            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 22 }}>Scan Item</Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 22 }}>
+              {isCapitalRecoveryStore ? "Scan Disabled" : "Scan Item"}
+            </Text>
             <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-              Scan → Inventory itaiweka item juu ili u-Adjust haraka.
+              {isCapitalRecoveryStore
+                ? "Capital Recovery store haitumii inventory scan."
+                : "Scan → Inventory itaiweka item juu ili u-Adjust haraka."}
             </Text>
           </View>
 
@@ -132,7 +154,45 @@ export default function StoreScanScreen() {
             backgroundColor: "rgba(255,255,255,0.04)",
           }}
         >
-          {granted ? (
+          {isCapitalRecoveryStore ? (
+            <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 18 }}>
+              <Card
+                style={{
+                  width: "100%",
+                  padding: 16,
+                  gap: 10,
+                  borderColor: theme.colors.emeraldBorder,
+                  backgroundColor: theme.colors.emeraldSoft,
+                }}
+              >
+                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+                  Scan haipatikani
+                </Text>
+                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                  Capital Recovery store haitumii inventory barcode scan. Tumia Products +
+                  Capital Recovery Workspace.
+                </Text>
+
+                <Pressable
+                  onPress={close}
+                  style={({ pressed }) => [
+                    {
+                      paddingVertical: 12,
+                      borderRadius: theme.radius.pill,
+                      borderWidth: 1,
+                      borderColor: theme.colors.border,
+                      backgroundColor: theme.colors.surface2,
+                      alignItems: "center",
+                      opacity: pressed ? 0.92 : 1,
+                      transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
+                    },
+                  ]}
+                >
+                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Back</Text>
+                </Pressable>
+              </Card>
+            </View>
+          ) : granted ? (
             <CameraView
               style={{ flex: 1 }}
               facing="back"
@@ -164,29 +224,31 @@ export default function StoreScanScreen() {
                     },
                   ]}
                 >
-                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Grant Camera Permission</Text>
+                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+                    Grant Camera Permission
+                  </Text>
                 </Pressable>
               </Card>
             </View>
           )}
 
-          {/* scanning frame */}
-          <View
-            pointerEvents="none"
-            style={{
-              position: "absolute",
-              left: 18,
-              right: 18,
-              top: "32%",
-              height: 140,
-              borderRadius: 16,
-              borderWidth: 2,
-              borderColor: "rgba(52,211,153,0.55)",
-              backgroundColor: "rgba(0,0,0,0.05)",
-            }}
-          />
+          {!isCapitalRecoveryStore ? (
+            <View
+              pointerEvents="none"
+              style={{
+                position: "absolute",
+                left: 18,
+                right: 18,
+                top: "32%",
+                height: 140,
+                borderRadius: 16,
+                borderWidth: 2,
+                borderColor: "rgba(52,211,153,0.55)",
+                backgroundColor: "rgba(0,0,0,0.05)",
+              }}
+            />
+          ) : null}
 
-          {/* top hint */}
           <View
             pointerEvents="none"
             style={{
@@ -198,10 +260,20 @@ export default function StoreScanScreen() {
           >
             <Card style={{ padding: 12, gap: 6 }}>
               <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                {busy ? "Captured ✅" : "Ready"}
+                {isCapitalRecoveryStore ? "Disabled" : busy ? "Captured ✅" : "Ready"}
               </Text>
+
               <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                Last: <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{last || "—"}</Text>
+                {isCapitalRecoveryStore ? (
+                  "Inventory scan haipo kwenye Capital Recovery mode."
+                ) : (
+                  <>
+                    Last:{" "}
+                    <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+                      {last || "—"}
+                    </Text>
+                  </>
+                )}
               </Text>
             </Card>
           </View>

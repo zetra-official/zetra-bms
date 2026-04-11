@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/src/supabaseClient";
+import { supabase } from "@/src/supabase/supabaseClient";
 
 type Props = {
   params:

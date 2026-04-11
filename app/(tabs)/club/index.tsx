@@ -75,6 +75,18 @@ function fmtWhen(createdAt: any) {
   return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 }
 
+function SafeIcon({
+  name,
+  size = 18,
+  color,
+}: {
+  name: keyof typeof Ionicons.glyphMap;
+  size?: number;
+  color: string;
+}) {
+  return <Ionicons name={name} size={size} color={color} />;
+}
+
 const FEED_RPC_CANDIDATES = [
   "get_club_feed_posts", // our bridge
   "get_club_feed",
@@ -129,8 +141,9 @@ const FeedPostItem = memo(function FeedPostItem({
   const when = fmtWhen(item.created_at);
 
   const isDesktopWeb = Platform.OS === "web" && width >= 1024;
-  const cardMaxWidth = isDesktopWeb ? 720 : undefined;
-  const imageAspectRatio = isDesktopWeb ? 4 / 5 : 0.8;
+  const cardMaxWidth = isDesktopWeb ? 640 : undefined;
+  const imageAspectRatio = isDesktopWeb ? 1.08 : 0.8;
+  const desktopImageMaxHeight = isDesktopWeb ? 560 : undefined;
 
   return (
     <View
@@ -184,7 +197,7 @@ const FeedPostItem = memo(function FeedPostItem({
                   justifyContent: "center",
                 }}
               >
-                <Ionicons name="storefront-outline" size={18} color={theme.colors.emerald} />
+                <SafeIcon name="storefront-outline" size={18} color={theme.colors.emerald} />
               </View>
 
               <View>
@@ -194,7 +207,7 @@ const FeedPostItem = memo(function FeedPostItem({
             </Pressable>
 
             <Pressable onPress={() => onOpenMenu(item)} hitSlop={10} style={{ padding: 6 }}>
-              <Ionicons name="ellipsis-horizontal" size={18} color={theme.colors.faint} />
+              <SafeIcon name="ellipsis-horizontal" size={18} color={theme.colors.faint} />
             </Pressable>
           </View>
         </View>
@@ -205,7 +218,10 @@ const FeedPostItem = memo(function FeedPostItem({
             style={{
               width: "100%",
               aspectRatio: imageAspectRatio,
+              maxHeight: desktopImageMaxHeight,
+              alignSelf: "center",
               backgroundColor: "rgba(255,255,255,0.05)",
+              overflow: "hidden",
             }}
           >
             <ExpoImage
@@ -237,7 +253,7 @@ const FeedPostItem = memo(function FeedPostItem({
                   },
                 ]}
               >
-                <Ionicons
+                <SafeIcon
                   name={liked ? "heart" : "heart-outline"}
                   size={24}
                   color={liked ? theme.colors.emerald : theme.colors.text}
@@ -258,7 +274,7 @@ const FeedPostItem = memo(function FeedPostItem({
                   },
                 ]}
               >
-                <Ionicons name="chatbubble-outline" size={24} color={theme.colors.text} />
+                <SafeIcon name="chatbubble-outline" size={24} color={theme.colors.text} />
               </Pressable>
 
               <Pressable
@@ -275,7 +291,7 @@ const FeedPostItem = memo(function FeedPostItem({
                   },
                 ]}
               >
-                <Ionicons name="paper-plane-outline" size={24} color={theme.colors.text} />
+                <SafeIcon name="paper-plane-outline" size={24} color={theme.colors.text} />
               </Pressable>
             </View>
 
@@ -293,11 +309,11 @@ const FeedPostItem = memo(function FeedPostItem({
                 },
               ]}
             >
-              <Ionicons
-                name={saved ? "bookmark" : "bookmark-outline"}
-                size={24}
-                color={saved ? theme.colors.emerald : theme.colors.text}
-              />
+             <SafeIcon
+  name={saved ? "bookmark" : "bookmark-outline"}
+  size={24}
+  color={saved ? theme.colors.emerald : theme.colors.text}
+/>
             </Pressable>
           </View>
 
@@ -810,11 +826,11 @@ export default function ClubFeedScreen() {
             },
           ]}
         >
-          <Ionicons
-            name={icon}
-            size={size ?? 24}
-            color={color ?? (active ? theme.colors.emerald : theme.colors.text)}
-          />
+          <SafeIcon
+  name={icon}
+  size={size ?? 24}
+  color={color ?? (active ? theme.colors.emerald : theme.colors.text)}
+/>
         </Pressable>
       );
     };
@@ -867,7 +883,7 @@ export default function ClubFeedScreen() {
                 <Text style={{ fontWeight: "900", fontStyle: "italic" }}>Zetra Business</Text>
                 <Text style={{ fontWeight: "800" }}> Club</Text>
               </Text>
-              <Ionicons name="chevron-down" size={14} color={theme.colors.faint} />
+              <SafeIcon name="chevron-down" size={14} color={theme.colors.faint} />
             </View>
 
             {/* ✅ Compact pill (same vibe, fixed content) */}
@@ -901,7 +917,7 @@ export default function ClubFeedScreen() {
                     justifyContent: "center",
                   }}
                 >
-                  <Ionicons name="speedometer-outline" size={12} color={theme.colors.emerald} />
+                  <SafeIcon name="speedometer-outline" size={12} color={theme.colors.emerald} />
                 </View>
 
                 <Text
@@ -934,11 +950,11 @@ export default function ClubFeedScreen() {
                     },
                   ]}
                 >
-                  <Ionicons
-                    name={usageLoading ? "hourglass-outline" : "refresh"}
-                    size={12}
-                    color={theme.colors.faint}
-                  />
+                  <SafeIcon
+  name={usageLoading ? "hourglass-outline" : "refresh"}
+  size={12}
+  color={theme.colors.faint}
+/>
                 </Pressable>
               </View>
             ) : (

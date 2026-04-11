@@ -349,25 +349,93 @@ function fmtLocal(iso: string) {
   }
 }
 
-function isDesktopWebEnv(width?: number) {
+function isDesktopWebEnv(_width?: number) {
   if (Platform.OS !== "web") return false;
 
-  const ua =
-    typeof navigator !== "undefined" ? String(navigator.userAgent ?? "") : "";
-
-  const isMobileUa = /Android|iPhone|iPad|iPod/i.test(ua);
-
-  if (isMobileUa) return false;
-
-  if (typeof width === "number" && width > 0) {
-    return width >= 1024;
-  }
-
-  return true;
+  // MOBILE-FORCE FIX:
+  // Kwenye browser tunalazimisha Home isome kama mobile UI
+  // ili kuepuka desktop/web fallback rendering inayosababisha vibox.
+  return false;
 }
 
 function isMobileWebEnv(width?: number) {
   return Platform.OS === "web" && !isDesktopWebEnv(width);
+}
+
+function webIconFallback(name: keyof typeof Ionicons.glyphMap) {
+  switch (name) {
+    case "storefront-outline":
+      return "S";
+    case "ellipsis-horizontal":
+      return "...";
+    case "heart":
+      return "♥";
+    case "heart-outline":
+      return "♡";
+    case "chatbubble-outline":
+      return "C";
+    case "paper-plane-outline":
+      return ">";
+    case "bookmark":
+      return "B";
+    case "bookmark-outline":
+      return "B";
+    case "add":
+      return "+";
+    case "person-circle-outline":
+      return "P";
+    case "speedometer-outline":
+      return "O";
+    case "refresh":
+      return "R";
+    case "hourglass-outline":
+      return "...";
+    case "chevron-down":
+      return "v";
+    default:
+      return "•";
+  }
+}
+
+function SafeIcon({
+  name,
+  size = 18,
+  color,
+}: {
+  name: keyof typeof Ionicons.glyphMap;
+  size?: number;
+  color: string;
+}) {
+  if (Platform.OS === "web") {
+    const label = webIconFallback(name);
+
+    return (
+      <View
+        style={{
+          minWidth: size + 10,
+          height: size + 10,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Text
+          style={{
+            color,
+            fontSize: Math.max(12, size - 2),
+            lineHeight: Math.max(14, size),
+            fontWeight: "900",
+            textAlign: "center",
+            includeFontPadding: false,
+          }}
+          numberOfLines={1}
+        >
+          {label}
+        </Text>
+      </View>
+    );
+  }
+
+  return <Ionicons name={name} size={size} color={color} />;
 }
 
 function MiniStat({
@@ -607,7 +675,11 @@ function PremiumMetricCard({
               backgroundColor: "rgba(16,185,129,0.12)",
             }}
           >
-            <Ionicons name={loading ? "ellipsis-horizontal" : iconName} size={20} color={UI.emerald} />
+            <SafeIcon
+  name={loading ? "ellipsis-horizontal" : iconName}
+  size={20}
+  color={UI.emerald}
+/>
           </View>
 
           <View style={{ flex: 1, minWidth: 0 }}>
@@ -827,11 +899,11 @@ function CompactNotificationsHomeCard() {
                 backgroundColor: unreadCount > 0 ? UI.emeraldSoft : "rgba(255,255,255,0.05)",
               }}
             >
-              <Ionicons
-                name={unreadCount > 0 ? "notifications" : "notifications-outline"}
-                size={18}
-                color={unreadCount > 0 ? UI.emerald : UI.text}
-              />
+             <SafeIcon
+  name={unreadCount > 0 ? "notifications" : "notifications-outline"}
+  size={18}
+  color={unreadCount > 0 ? UI.emerald : UI.text}
+/>
             </View>
 
             <View style={{ flex: 1, minWidth: 0 }}>
@@ -2352,57 +2424,43 @@ function WorkspaceCard({
     <View style={{ marginTop: 14 }}>
       <Card
         style={{
-          gap: 14,
-          borderRadius: 22,
-          borderColor: "rgba(16,185,129,0.22)",
+          gap: 12,
+          borderRadius: 20,
+          borderColor: "rgba(16,185,129,0.20)",
           backgroundColor: "rgba(15,18,24,0.98)",
           overflow: "hidden",
+          padding: 16,
         }}
       >
         {!isMobileWeb ? (
-          <>
-            <View
-              pointerEvents="none"
-              style={{
-                position: "absolute",
-                top: -70,
-                right: -50,
-                width: 180,
-                height: 180,
-                borderRadius: 999,
-                backgroundColor: "rgba(16,185,129,0.08)",
-              }}
-            />
-
-            <View
-              pointerEvents="none"
-              style={{
-                position: "absolute",
-                left: -50,
-                bottom: -80,
-                width: 180,
-                height: 180,
-                borderRadius: 999,
-                backgroundColor: "rgba(34,211,238,0.04)",
-              }}
-            />
-          </>
+          <View
+            pointerEvents="none"
+            style={{
+              position: "absolute",
+              top: -52,
+              right: -42,
+              width: 140,
+              height: 140,
+              borderRadius: 999,
+              backgroundColor: "rgba(16,185,129,0.06)",
+            }}
+          />
         ) : null}
 
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
           <View
             style={{
-              width: 48,
-              height: 48,
-              borderRadius: 16,
+              width: 42,
+              height: 42,
+              borderRadius: 14,
               alignItems: "center",
               justifyContent: "center",
               borderWidth: 1,
-              borderColor: "rgba(16,185,129,0.28)",
-              backgroundColor: "rgba(16,185,129,0.12)",
+              borderColor: "rgba(16,185,129,0.24)",
+              backgroundColor: "rgba(16,185,129,0.10)",
             }}
           >
-            <Ionicons name="business-outline" size={20} color={UI.emerald} />
+            <SafeIcon name="business-outline" size={18} color={UI.emerald} />
           </View>
 
           <View style={{ flex: 1, minWidth: 0 }}>
@@ -2411,14 +2469,14 @@ function WorkspaceCard({
                 color: UI.faint,
                 fontWeight: "900",
                 fontSize: 10,
-                letterSpacing: 0.9,
+                letterSpacing: 0.8,
               }}
             >
               CURRENT WORKSPACE
             </Text>
 
             <Text
-              style={{ color: UI.text, fontWeight: "900", fontSize: 20, marginTop: 4 }}
+              style={{ color: UI.text, fontWeight: "900", fontSize: 18, marginTop: 2 }}
               numberOfLines={1}
             >
               {orgLabel}
@@ -2428,14 +2486,14 @@ function WorkspaceCard({
           <View
             style={{
               paddingHorizontal: 10,
-              paddingVertical: 6,
+              paddingVertical: 5,
               borderRadius: 999,
               borderWidth: 1,
-              borderColor: "rgba(16,185,129,0.24)",
+              borderColor: "rgba(16,185,129,0.22)",
               backgroundColor: "rgba(16,185,129,0.10)",
             }}
           >
-            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }}>
+            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 10 }}>
               {roleLabel.toUpperCase()}
             </Text>
           </View>
@@ -2461,11 +2519,11 @@ function WorkspaceCard({
           onPress={onOpen}
           hitSlop={10}
           style={({ pressed }) => ({
-            borderRadius: 18,
+            borderRadius: 16,
             borderWidth: 1,
-            borderColor: "rgba(16,185,129,0.30)",
+            borderColor: "rgba(16,185,129,0.28)",
             backgroundColor: "rgba(16,185,129,0.12)",
-            paddingVertical: 15,
+            paddingVertical: 13,
             paddingHorizontal: 16,
             flexDirection: "row",
             alignItems: "center",
@@ -2474,8 +2532,10 @@ function WorkspaceCard({
             opacity: pressed ? 0.92 : 1,
           })}
         >
-          <Ionicons name="swap-horizontal" size={18} color={UI.text} />
-          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>Switch Org / Workspace</Text>
+          <SafeIcon name="swap-horizontal" size={17} color={UI.text} />
+          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
+            Switch Org / Workspace
+          </Text>
         </Pressable>
       </Card>
     </View>
@@ -2486,17 +2546,11 @@ function WebSafeHomeActions({
   onOpenAI,
   onOpenOrgSwitcher,
   onOpenFinance,
-  onOpenStores,
-  onOpenProducts,
-  onOpenSales,
   width,
 }: {
   onOpenAI: () => void;
   onOpenOrgSwitcher: () => void;
   onOpenFinance: () => void;
-  onOpenStores: () => void;
-  onOpenProducts: () => void;
-  onOpenSales: () => void;
   width: number;
 }) {
   const isWide = width >= 1100;
@@ -2591,21 +2645,6 @@ function WebSafeHomeActions({
             label="Open Finance"
             sublabel="Sales, expenses, and finance history"
             onPress={onOpenFinance}
-          />
-          <ActionButton
-            label="Open Stores"
-            sublabel="Store list, access, and switching"
-            onPress={onOpenStores}
-          />
-          <ActionButton
-            label="Open Products"
-            sublabel="Manage products and pricing"
-            onPress={onOpenProducts}
-          />
-          <ActionButton
-            label="Open Sales"
-            sublabel="Go straight to sales flow"
-            onPress={onOpenSales}
           />
         </View>
       </Card>
@@ -3008,7 +3047,7 @@ function CapitalRecoveryReportsCard({
     
 
 function WebDesktopShell({
-  width,
+  width: _width,
   left,
   right,
 }: {
@@ -3016,8 +3055,8 @@ function WebDesktopShell({
   left: React.ReactNode;
   right: React.ReactNode;
 }) {
-  const desktopMax = width >= 1600 ? 1480 : width >= 1380 ? 1320 : 1200;
-  const twoCols = width >= 1180;
+ const desktopMax = _width >= 1600 ? 1480 : _width >= 1380 ? 1320 : 1200;
+const twoCols = _width >= 1180;
 
   if (!twoCols) {
     return (
@@ -3136,6 +3175,10 @@ const {
     router.push("/ai");
   }, [router]);
 
+  const goLive = useCallback(() => {
+    router.push("/finance/live");
+  }, [router]);
+
   const bottomPad = useMemo(() => Math.max(insets.bottom, 8) + 14, [insets.bottom]);
   const topPad = useMemo(() => Math.max(insets.top, 10) + 8, [insets.top]);
 
@@ -3162,6 +3205,10 @@ const {
   const isDesktopWeb = isDesktopWebEnv(width);
   const isMobileWeb = isWeb && !isDesktopWeb;
 
+  // WEB SAFE LITE MODE:
+  // Browser Home ibaki very light ili buttons zisigande.
+  const isWebLiteHome = isWeb;
+
   const activeStoreType = useMemo(() => {
     const row = (stores ?? []).find(
       (s: any) => String(s?.store_id ?? "") === String(activeStoreId ?? "")
@@ -3178,6 +3225,8 @@ const {
   const isOwner = roleLower === "owner";
 
   const moneyPrefs = useOrgMoneyPrefs(orgId);
+  const moneyRefreshRef = useRef<null | (() => Promise<any> | any)>(null);
+  moneyRefreshRef.current = moneyPrefs.refresh;
 
   const desktopFmtMoney = useCallback(
     (n: number) =>
@@ -3259,6 +3308,11 @@ const {
   }, [refresh, activeStoreId, isOnline, loadCapitalRecoverySummary]);
 
   const desktopLoad = useCallback(async () => {
+    // WEB SAFE MODE HOTFIX:
+    // Desktop browser Home imekuwa ikipata freeze / page unresponsive.
+    // Tunazima live heavy RPC loading kwenye Home ya web desktop kwa sasa.
+    // Detailed pages (Finance / Stores / Products / Sales) bado zinafunguka kawaida.
+    if (Platform.OS === "web") return;
     if (!isDesktopWeb) return;
     if (isCapitalRecoveryStore) return;
     if (!orgId || !storeId) return;
@@ -3470,16 +3524,24 @@ const {
 
   useEffect(() => {
     if (!orgId) return;
-    void moneyPrefs.refresh();
-  }, [orgId, moneyPrefs]);
 
-  useFocusEffect(
-    useCallback(() => {
-      if (!isDesktopWeb) return;
-      if (isCapitalRecoveryStore) return;
-      void desktopLoad();
-    }, [isDesktopWeb, isCapitalRecoveryStore, desktopLoad])
-  );
+    const run = async () => {
+      try {
+        await moneyRefreshRef.current?.();
+      } catch {}
+    };
+
+    void run();
+  }, [orgId]);
+
+  useEffect(() => {
+    if (isWebLiteHome) return;
+    if (!isDesktopWeb) return;
+    if (isCapitalRecoveryStore) return;
+    if (!orgId || !storeId) return;
+
+    void desktopLoad();
+  }, [isWebLiteHome, isDesktopWeb, isCapitalRecoveryStore, orgId, storeId, desktopLoad]);
 
   useFocusEffect(
     useCallback(() => {
@@ -3502,7 +3564,7 @@ const {
   );
 
   useEffect(() => {
-    if (Platform.OS === "web") return;
+    if (isWebLiteHome) return;
     if (!activeStoreId || !isOnline) return;
 
     void syncSalesQueueOnce(String(activeStoreId));
@@ -3526,7 +3588,7 @@ const {
       } catch {}
       clearInterval(timer);
     };
-  }, [activeStoreId, isOnline]);
+  }, [activeStoreId, isOnline, isWebLiteHome]);
 
   const homeRefreshControl =
     Platform.OS === "web"
@@ -3560,8 +3622,13 @@ const {
         />
       ) : null}
 
-      {!isCashier && !isDesktopWeb && !isCapitalRecoveryStore ? <ZetraAiCard onOpen={goAI} /> : null}
-      {!isCashier && !isDesktopWeb && !isCapitalRecoveryStore ? <CompactNotificationsHomeCard /> : null}
+      {!isWebLiteHome && !isCashier && !isDesktopWeb && !isCapitalRecoveryStore ? (
+        <ZetraAiCard onOpen={goAI} />
+      ) : null}
+
+      {!isWebLiteHome && !isCashier && !isDesktopWeb && !isCapitalRecoveryStore ? (
+        <CompactNotificationsHomeCard />
+      ) : null}
 
       {!!error && !String(error).toLowerCase().includes("not allowed") && (
         <Card
@@ -3577,7 +3644,149 @@ const {
         </Card>
       )}
 
-      {isCashier ? (
+      {isWebLiteHome ? (
+        <>
+          <WorkspaceCard
+            activeOrgName={activeOrgName}
+            activeRole={activeRole}
+            activeStoreName={activeStoreName}
+            activeStoreId={activeStoreId}
+            onOpen={goOrgSwitcher}
+          />
+
+          <Card
+            style={{
+              marginTop: 14,
+              gap: 12,
+              borderRadius: 22,
+              borderColor: "rgba(16,185,129,0.22)",
+              backgroundColor: "rgba(15,18,24,0.98)",
+            }}
+          >
+            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18 }}>
+              Browser Safe Mode
+            </Text>
+
+            <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22 }}>
+              Home ya browser imewekwa light mode ili buttons ziwe responsive na page isigande.
+            </Text>
+
+            <View style={{ gap: 10 }}>
+              <Pressable
+                onPress={goAI}
+                // @ts-ignore
+                onClick={goAI}
+                hitSlop={10}
+                style={({ pressed }) => ({
+                  borderRadius: 18,
+                  borderWidth: 1,
+                  borderColor: "rgba(16,185,129,0.30)",
+                  backgroundColor: "rgba(16,185,129,0.12)",
+                  paddingVertical: 15,
+                  paddingHorizontal: 16,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  opacity: pressed ? 0.92 : 1,
+                })}
+              >
+                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
+                  Open AI
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={goOrgSwitcher}
+                // @ts-ignore
+                onClick={goOrgSwitcher}
+                hitSlop={10}
+                style={({ pressed }) => ({
+                  borderRadius: 18,
+                  borderWidth: 1,
+                  borderColor: "rgba(16,185,129,0.30)",
+                  backgroundColor: "rgba(16,185,129,0.12)",
+                  paddingVertical: 15,
+                  paddingHorizontal: 16,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  opacity: pressed ? 0.92 : 1,
+                })}
+              >
+                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
+                  Switch Workspace
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={goLive}
+                // @ts-ignore
+                onClick={goLive}
+                hitSlop={10}
+                style={({ pressed }) => ({
+                  borderRadius: 18,
+                  borderWidth: 1,
+                  borderColor: "rgba(16,185,129,0.30)",
+                  backgroundColor: "rgba(16,185,129,0.12)",
+                  paddingVertical: 15,
+                  paddingHorizontal: 16,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  opacity: pressed ? 0.92 : 1,
+                })}
+              >
+                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
+                  Open Live
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => {
+                  const dates = rangeToDates("today");
+                  router.push({
+                    pathname: "/finance/history",
+                    params: {
+                      mode: "SALES",
+                      scope: "STORE",
+                      range: "today",
+                      from: dates.from,
+                      to: dates.to,
+                    } as any,
+                  } as any);
+                }}
+                // @ts-ignore
+                onClick={() => {
+                  const dates = rangeToDates("today");
+                  router.push({
+                    pathname: "/finance/history",
+                    params: {
+                      mode: "SALES",
+                      scope: "STORE",
+                      range: "today",
+                      from: dates.from,
+                      to: dates.to,
+                    } as any,
+                  } as any);
+                }}
+                hitSlop={10}
+                style={({ pressed }) => ({
+                  borderRadius: 18,
+                  borderWidth: 1,
+                  borderColor: "rgba(16,185,129,0.30)",
+                  backgroundColor: "rgba(16,185,129,0.12)",
+                  paddingVertical: 15,
+                  paddingHorizontal: 16,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  opacity: pressed ? 0.92 : 1,
+                })}
+              >
+                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
+                  Open Finance
+                </Text>
+              </Pressable>
+            </View>
+          </Card>
+        </>
+      ) : isCashier ? (
         <>
           <WorkspaceCard
             activeOrgName={activeOrgName}
@@ -3635,33 +3844,6 @@ const {
                 onOpen={goOrgSwitcher}
               />
 
-              <DesktopKpiStrip
-                sales={desktopLoading ? "..." : desktopFmtMoney(desktopSales.total)}
-                expenses={desktopLoading ? "..." : desktopFmtMoney(desktopExpenses.total)}
-                profit={desktopLoading ? "..." : isOwner ? desktopFmtMoney(desktopProfit.net) : "—"}
-                orders={desktopLoading ? "..." : String(desktopSales.orders)}
-                moneyIn={
-                  desktopLoading
-                    ? "..."
-                    : desktopFmtMoney(
-                        subtractFloor(
-                          desktopPay.cash + desktopCollections.cash,
-                          desktopExpenseByChannel.cash
-                        ) +
-                          subtractFloor(
-                            desktopPay.bank + desktopCollections.bank,
-                            desktopExpenseByChannel.bank
-                          ) +
-                          subtractFloor(
-                            desktopPay.mobile + desktopCollections.mobile,
-                            desktopExpenseByChannel.mobile
-                          )
-                      )
-                }
-                stockValue={desktopLoading ? "..." : desktopFmtMoney(desktopStockValue)}
-                isOwner={isOwner}
-              />
-
               <Card
                 style={{
                   marginTop: 14,
@@ -3673,7 +3855,7 @@ const {
               >
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                   <Text style={{ color: UI.text, fontWeight: "900", fontSize: 20, flex: 1 }}>
-                    Finance Command
+                    Executive Overview
                   </Text>
 
                   <View
@@ -3687,14 +3869,14 @@ const {
                     }}
                   >
                     <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }}>
-                      TODAY
+                      DESKTOP
                     </Text>
                   </View>
                 </View>
 
                 <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22 }}>
-                  Hii ndiyo sehemu kuu ya kufungua sales, expenses, profit, na history ya store
-                  iliyochaguliwa. Desktop homepage sasa imepangwa kama business command center.
+                  Hii ni summary ya haraka ya workspace yako ya sasa. Tumia Finance, AI, na Workspace switcher
+                  kama command center ya kazi za kila siku bila kujaza Home na vitu vinavyojirudia.
                 </Text>
 
                 {!!desktopFinanceErr ? (
@@ -3739,7 +3921,7 @@ const {
                     opacity: pressed ? 0.92 : 1,
                   })}
                 >
-                  <Ionicons name="bar-chart-outline" size={18} color={UI.text} />
+                  <SafeIcon name="bar-chart-outline" size={18} color={UI.text} />
                   <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
                     Open Finance
                   </Text>
@@ -3749,10 +3931,13 @@ const {
           }
           right={
             <>
-              <DesktopSignalCard
+              
+
+              <View style={{ height: 14 }} />
+<DesktopSignalCard
                 title="Notifications"
                 badge="LIVE"
-                body="Angalia alerts, stock movements, receipts, na matukio muhimu ya store bila kuondoka kwenye desktop workflow."
+                body="Fuatilia alerts, stock movements, receipts, na matukio muhimu ya biashara kutoka eneo moja la usimamizi."
               />
 
               <View style={{ height: 14 }} />
@@ -3760,11 +3945,8 @@ const {
               <DesktopSignalCard
                 title="AI Insights"
                 badge="COPILOT"
-                body="Tumia ZETRA AI kupata mwongozo wa bidhaa, uendeshaji wa staff, na maamuzi ya biashara kwa haraka."
+                body="Pata mwongozo wa biashara, bidhaa, staff, na maamuzi ya kila siku kwa mtazamo wa haraka na wa kitaalamu."
               />
-
-              <View style={{ height: 14 }} />
-
               <WebSafeHomeActions
                 width={width}
                 onOpenAI={goAI}
@@ -3782,9 +3964,6 @@ const {
                     } as any,
                   } as any);
                 }}
-                onOpenStores={() => router.push("/(tabs)/stores")}
-                onOpenProducts={() => router.push("/(tabs)/products")}
-                onOpenSales={() => router.push("/(tabs)/sales")}
               />
             </>
           }
@@ -3801,12 +3980,14 @@ const {
 
           {isMobileWeb ? (
             <StoreGuard>
-              <CompactFinanceCardHomePreview />
-              <CompactStockValueCardHomePreview />
-              <CompactClubRevenueCardHomePreview
-                key={`club-mini-${dashTick}`}
-                onOpen={goClubRevenue}
-              />
+              {!isWebLiteHome ? <CompactFinanceCardHomePreview /> : null}
+              {!isWebLiteHome ? <CompactStockValueCardHomePreview /> : null}
+              {!isWebLiteHome ? (
+                <CompactClubRevenueCardHomePreview
+                  key={`club-mini-${dashTick}`}
+                  onOpen={goClubRevenue}
+                />
+              ) : null}
 
               <Card
                 style={{
@@ -3818,17 +3999,19 @@ const {
                 }}
               >
                 <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18 }}>
-                  Quick Actions
+                  Priority Actions
                 </Text>
 
                 <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22 }}>
-                  Browser ya simu imewekwa kwenye mobile-safe mode: cards zipo mbele,
-                  lakini desktop web imeachwa lightweight ili isiwe nzito.
+                  Home ya mobile browser ibaki nyepesi. Hapa tunaacha actions muhimu tu, huku navigation
+                  nyingine zikiendelea kupatikana kwenye tab menu ya kawaida.
                 </Text>
 
                 <View style={{ gap: 10 }}>
                   <Pressable
-                    onPress={() => router.push("/(tabs)/stores")}
+                    onPress={() => goAI()}
+                    // @ts-ignore
+                    onClick={() => goAI()}
                     hitSlop={10}
                     style={({ pressed }) => ({
                       borderRadius: 18,
@@ -3843,12 +4026,14 @@ const {
                     })}
                   >
                     <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
-                      Open Stores
+                      Open AI
                     </Text>
                   </Pressable>
 
                   <Pressable
-                    onPress={() => router.push("/(tabs)/products")}
+                    onPress={goOrgSwitcher}
+                    // @ts-ignore
+                    onClick={goOrgSwitcher}
                     hitSlop={10}
                     style={({ pressed }) => ({
                       borderRadius: 18,
@@ -3863,12 +4048,14 @@ const {
                     })}
                   >
                     <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
-                      Open Products
+                      Switch Workspace
                     </Text>
                   </Pressable>
 
                   <Pressable
-                    onPress={() => router.push("/(tabs)/sales")}
+                    onPress={goLive}
+                    // @ts-ignore
+                    onClick={goLive}
                     hitSlop={10}
                     style={({ pressed }) => ({
                       borderRadius: 18,
@@ -3883,7 +4070,53 @@ const {
                     })}
                   >
                     <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
-                      Open Sales
+                      Open Live
+                    </Text>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={() => {
+                      const dates = rangeToDates("today");
+                      router.push({
+                        pathname: "/finance/history",
+                        params: {
+                          mode: "SALES",
+                          scope: "STORE",
+                          range: "today",
+                          from: dates.from,
+                          to: dates.to,
+                        } as any,
+                      } as any);
+                    }}
+                    // @ts-ignore
+                    onClick={() => {
+                      const dates = rangeToDates("today");
+                      router.push({
+                        pathname: "/finance/history",
+                        params: {
+                          mode: "SALES",
+                          scope: "STORE",
+                          range: "today",
+                          from: dates.from,
+                          to: dates.to,
+                        } as any,
+                      } as any);
+                    }}
+                    hitSlop={10}
+                    style={({ pressed }) => ({
+                      borderRadius: 18,
+                      borderWidth: 1,
+                      borderColor: "rgba(16,185,129,0.30)",
+                      backgroundColor: "rgba(16,185,129,0.12)",
+                      paddingVertical: 15,
+                      paddingHorizontal: 16,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      opacity: pressed ? 0.92 : 1,
+                    })}
+                  >
+                    <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
+                      Open Finance
                     </Text>
                   </Pressable>
                 </View>
@@ -3893,7 +4126,10 @@ const {
             <StoreGuard>
               <CompactFinanceCardHomePreview />
               <CompactStockValueCardHomePreview />
-              <CompactClubRevenueCardHomePreview key={`club-mini-${dashTick}`} onOpen={goClubRevenue} />
+              <CompactClubRevenueCardHomePreview
+                key={`club-mini-${dashTick}`}
+                onOpen={goClubRevenue}
+              />
             </StoreGuard>
           )}
         </>

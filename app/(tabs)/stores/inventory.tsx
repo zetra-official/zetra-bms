@@ -74,53 +74,100 @@ function isTypingIntoField(target: any) {
   return editable || tag === "input" || tag === "textarea" || tag === "select";
 }
 
-function ScannerFabIcon({ size = 24, color = "#E5E7EB" }: { size?: number; color?: string }) {
-  const bodyW = Math.max(18, Math.round(size * 0.9));
-  const bodyH = Math.max(12, Math.round(size * 0.5));
-  const handleW = Math.max(8, Math.round(size * 0.28));
-  const handleH = Math.max(9, Math.round(size * 0.34));
-  const lensW = Math.max(10, Math.round(size * 0.42));
-  const lensH = Math.max(5, Math.round(size * 0.18));
+function ScannerFabIcon({ size = 28, color = "#E5E7EB" }: { size?: number; color?: string }) {
+  const w = Math.max(22, Math.round(size * 1.05));
+  const h = Math.max(18, Math.round(size * 0.78));
+  const barHeights = [0.72, 0.46, 0.86, 0.58, 0.92, 0.52, 0.8];
+  const barWidths = [2, 1.5, 2.2, 1.4, 2.4, 1.6, 2];
+  const gap = Math.max(1.5, Math.round(size * 0.04));
 
   return (
-    <View style={{ width: size + 2, height: size + 2, alignItems: "center", justifyContent: "center" }}>
+    <View
+      style={{
+        width: size + 4,
+        height: size + 4,
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
       <View
         style={{
-          width: bodyW,
-          height: bodyH,
-          borderWidth: 2,
+          width: w,
+          height: h,
+          borderRadius: 7,
+          borderWidth: 1.8,
           borderColor: color,
-          borderRadius: 8,
-          transform: [{ rotate: "-12deg" }],
+          paddingHorizontal: 3,
+          flexDirection: "row",
           alignItems: "flex-end",
           justifyContent: "center",
-          paddingRight: 3,
           backgroundColor: "transparent",
+          gap,
         }}
       >
-        <View
-          style={{
-            width: lensW,
-            height: lensH,
-            borderWidth: 2,
-            borderColor: color,
-            borderRadius: 4,
-          }}
-        />
+        {barHeights.map((ratio, idx) => (
+          <View
+            key={idx}
+            style={{
+              width: barWidths[idx],
+              height: Math.max(5, Math.round(h * ratio)),
+              backgroundColor: color,
+              borderRadius: 1.5,
+            }}
+          />
+        ))}
       </View>
 
       <View
         style={{
           position: "absolute",
-          right: Math.round(size * 0.18),
-          bottom: Math.round(size * 0.1),
-          width: handleW,
-          height: handleH,
-          borderWidth: 2,
+          left: -1,
+          top: -1,
+          width: 8,
+          height: 8,
+          borderLeftWidth: 2,
+          borderTopWidth: 2,
           borderColor: color,
-          borderRadius: 6,
-          transform: [{ rotate: "-18deg" }],
-          backgroundColor: "transparent",
+          borderTopLeftRadius: 3,
+        }}
+      />
+      <View
+        style={{
+          position: "absolute",
+          right: -1,
+          top: -1,
+          width: 8,
+          height: 8,
+          borderRightWidth: 2,
+          borderTopWidth: 2,
+          borderColor: color,
+          borderTopRightRadius: 3,
+        }}
+      />
+      <View
+        style={{
+          position: "absolute",
+          left: -1,
+          bottom: -1,
+          width: 8,
+          height: 8,
+          borderLeftWidth: 2,
+          borderBottomWidth: 2,
+          borderColor: color,
+          borderBottomLeftRadius: 3,
+        }}
+      />
+      <View
+        style={{
+          position: "absolute",
+          right: -1,
+          bottom: -1,
+          width: 8,
+          height: 8,
+          borderRightWidth: 2,
+          borderBottomWidth: 2,
+          borderColor: color,
+          borderBottomRightRadius: 3,
         }}
       />
     </View>
@@ -137,12 +184,17 @@ export default function StoreInventoryScreen() {
     activeRole,
     activeStoreId,
     activeStoreName,
+    activeStoreType,
     stores,
   } = useOrg();
 
+  const isCapitalRecoveryStore = activeStoreType === "CAPITAL_RECOVERY";
+
   const canAdjust = useMemo(
-    () => (["owner", "admin"] as const).includes((activeRole ?? "staff") as any),
-    [activeRole]
+    () =>
+      !isCapitalRecoveryStore &&
+      (["owner", "admin"] as const).includes((activeRole ?? "staff") as any),
+    [activeRole, isCapitalRecoveryStore]
   );
 
   const rawIsOnline = !!(netInfo.isConnected && netInfo.isInternetReachable !== false);
@@ -225,6 +277,13 @@ export default function StoreInventoryScreen() {
   const lastFocusRefreshAtRef = useRef(0);
 
   const loadFromCache = useCallback(async () => {
+    if (isCapitalRecoveryStore) {
+      setRows([]);
+      setSource("NONE");
+      setLastSyncedAt(null);
+      return;
+    }
+
     if (!CACHE_KEY || !SYNC_KEY) return;
 
     try {
@@ -250,7 +309,7 @@ export default function StoreInventoryScreen() {
       setSource("NONE");
       setLastSyncedAt(null);
     }
-  }, [CACHE_KEY, SYNC_KEY]);
+  }, [CACHE_KEY, SYNC_KEY, isCapitalRecoveryStore]);
 
   const saveCache = useCallback(
     async (nextRows: InventoryRow[], syncIso: string) => {
@@ -273,6 +332,7 @@ export default function StoreInventoryScreen() {
       const { silent = false } = opts;
 
       if (!activeStoreId) return;
+      if (isCapitalRecoveryStore) return;
       if (storeOrgMismatch) return;
       if (isOffline) return;
 
@@ -314,7 +374,7 @@ export default function StoreInventoryScreen() {
         if (!silent) setThrLoading(false);
       }
     },
-    [activeStoreId, storeOrgMismatch, isOffline]
+    [activeStoreId, isCapitalRecoveryStore, storeOrgMismatch, isOffline]
   );
 
   const loadLive = useCallback(
@@ -322,6 +382,14 @@ export default function StoreInventoryScreen() {
       if (!activeStoreId) {
         setError("No active store selected.");
         if (rowsRef.current.length === 0) setSource("NONE");
+        return;
+      }
+
+      if (isCapitalRecoveryStore) {
+        setRows([]);
+        setThrByProductId({});
+        setError(null);
+        setSource("NONE");
         return;
       }
 
@@ -381,6 +449,7 @@ export default function StoreInventoryScreen() {
     },
     [
       activeStoreId,
+      isCapitalRecoveryStore,
       storeOrgMismatch,
       isOffline,
       loadFromCache,
@@ -402,10 +471,11 @@ export default function StoreInventoryScreen() {
     setRows([]);
     setSource("NONE");
     setLastSyncedAt(null);
-  }, [activeStoreId]);
+  }, [activeStoreId, isCapitalRecoveryStore]);
 
   useEffect(() => {
     if (!activeStoreId) return;
+    if (isCapitalRecoveryStore) return;
     if (didInitRef.current) return;
     didInitRef.current = true;
 
@@ -413,7 +483,7 @@ export default function StoreInventoryScreen() {
       await loadFromCache();
       void loadLive({ silent: true });
     })();
-  }, [activeStoreId, loadFromCache, loadLive]);
+  }, [activeStoreId, isCapitalRecoveryStore, loadFromCache, loadLive]);
 
   const AUTO_REFRESH_MS = 20000;
 
@@ -425,6 +495,7 @@ export default function StoreInventoryScreen() {
       const runImmediateRefresh = async () => {
         if (!alive) return;
         if (!activeStoreId) return;
+        if (isCapitalRecoveryStore) return;
         if (storeOrgMismatch) return;
 
         const now = Date.now();
@@ -440,8 +511,9 @@ export default function StoreInventoryScreen() {
       void runImmediateRefresh();
 
       intervalId = setInterval(() => {
-        if (!alive) return;
+       if (!alive) return;
         if (!activeStoreId) return;
+        if (isCapitalRecoveryStore) return;
         if (storeOrgMismatch) return;
         if (isOffline) return;
         void loadLive({ silent: true });
@@ -451,7 +523,7 @@ export default function StoreInventoryScreen() {
         alive = false;
         if (intervalId) clearInterval(intervalId);
       };
-    }, [activeStoreId, storeOrgMismatch, isOffline, loadLive])
+    }, [activeStoreId, isCapitalRecoveryStore, storeOrgMismatch, isOffline, loadLive])
   );
 
   useEffect(() => {
@@ -484,6 +556,13 @@ export default function StoreInventoryScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      if (isCapitalRecoveryStore) {
+        setActiveScanScope("GLOBAL");
+        return () => {
+          setActiveScanScope("GLOBAL");
+        };
+      }
+
       setActiveScanScope("INVENTORY");
 
       const unsub = subscribeScanBarcode(
@@ -497,11 +576,12 @@ export default function StoreInventoryScreen() {
         unsub();
         setActiveScanScope("GLOBAL");
       };
-    }, [handleInventoryScan])
+    }, [handleInventoryScan, isCapitalRecoveryStore])
   );
 
   useEffect(() => {
     if (Platform.OS !== "web") return;
+    if (isCapitalRecoveryStore) return;
 
     const onKeyDown = (e: KeyboardEvent) => {
       const target = e.target as any;
@@ -552,7 +632,7 @@ export default function StoreInventoryScreen() {
         webScanTimerRef.current = null;
       }
     };
-  }, [handleInventoryScan]);
+  }, [handleInventoryScan, isCapitalRecoveryStore]);
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -585,6 +665,11 @@ export default function StoreInventoryScreen() {
     (r: InventoryRow) => {
       if (!activeStoreId) return;
 
+      if (isCapitalRecoveryStore) {
+        Alert.alert("Not Available", "Adjust Stock haitumiki kwa Capital Recovery store.");
+        return;
+      }
+
       if (!canAdjust) {
         Alert.alert("No Access", "Owner/Admin only.");
         return;
@@ -610,12 +695,16 @@ export default function StoreInventoryScreen() {
         },
       } as any);
     },
-    [activeStoreId, activeStoreName, canAdjust, router, isOffline]
+    [activeStoreId, activeStoreName, canAdjust, isCapitalRecoveryStore, router, isOffline]
   );
 
   const openHistory = useCallback(() => {
     if (!activeStoreId) {
       Alert.alert("Missing", "No active store selected.");
+      return;
+    }
+    if (isCapitalRecoveryStore) {
+      Alert.alert("Not Available", "Inventory Scan haitumiki kwa Capital Recovery store.");
       return;
     }
     if (storeOrgMismatch) {
@@ -626,7 +715,7 @@ export default function StoreInventoryScreen() {
       pathname: "/(tabs)/stores/history" as any,
       params: { storeId: activeStoreId, storeName: activeStoreName ?? "" },
     } as any);
-  }, [activeStoreId, activeStoreName, router, storeOrgMismatch]);
+  }, [activeStoreId, activeStoreName, isCapitalRecoveryStore, router, storeOrgMismatch]);
 
   
 
@@ -635,12 +724,16 @@ export default function StoreInventoryScreen() {
       Alert.alert("Missing", "No active store selected.");
       return;
     }
+    if (isCapitalRecoveryStore) {
+      Alert.alert("Not Available", "Inventory Scan haitumiki kwa Capital Recovery store.");
+      return;
+    }
     if (storeOrgMismatch) {
       Alert.alert("Mismatch", "Active store haifanani na Organization. Chagua store tena.");
       return;
     }
     router.push("/(tabs)/stores/scan");
-  }, [activeStoreId, router, storeOrgMismatch]);
+  }, [activeStoreId, isCapitalRecoveryStore, router, storeOrgMismatch]);
 
   const StatusLine = useMemo(() => {
     const mode = isOffline ? "OFFLINE" : "ONLINE";
@@ -680,7 +773,7 @@ export default function StoreInventoryScreen() {
       ) : null}
 
       <Text style={{ fontSize: 26, fontWeight: "900", color: theme.colors.text }}>
-        Inventory
+        {isCapitalRecoveryStore ? "Inventory Disabled" : "Inventory"}
       </Text>
 
       <Card style={{ gap: 10 }}>
@@ -707,18 +800,22 @@ export default function StoreInventoryScreen() {
           style={{
             marginTop: 6,
             borderWidth: 1,
-            borderColor: theme.colors.border,
+            borderColor: isCapitalRecoveryStore ? theme.colors.emeraldBorder : theme.colors.border,
             borderRadius: theme.radius.xl,
-            backgroundColor: theme.colors.card,
+            backgroundColor: isCapitalRecoveryStore ? theme.colors.emeraldSoft : theme.colors.card,
             padding: 14,
           }}
         >
           <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Status</Text>
           <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 6 }}>
-            {StatusLine}
+            {isCapitalRecoveryStore ? "Capital Recovery store haitumii inventory." : StatusLine}
           </Text>
 
-          {isOffline ? (
+          {isCapitalRecoveryStore ? (
+            <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>
+              Bidhaa za Capital Recovery hutumika kwenye income flow tu, si inventory/stock tracking.
+            </Text>
+          ) : isOffline ? (
             <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>
               Ukiwa OFFLINE, app itaonyesha “last known cache” bila kukwama.
             </Text>
@@ -730,7 +827,7 @@ export default function StoreInventoryScreen() {
             <Button
               title={loading ? "Loading..." : "Refresh"}
               onPress={() => loadLive({ silent: false })}
-              disabled={loading}
+              disabled={loading || isCapitalRecoveryStore}
               variant="primary"
             />
           </View>
@@ -739,7 +836,7 @@ export default function StoreInventoryScreen() {
             <Button
               title="History"
               onPress={openHistory}
-              disabled={loading || !activeStoreId}
+              disabled={loading || !activeStoreId || isCapitalRecoveryStore}
               variant="secondary"
             />
           </View>
@@ -749,32 +846,36 @@ export default function StoreInventoryScreen() {
             hitSlop={10}
             style={({ pressed }) => [
               {
-                width: 52,
-                height: 52,
+                width: 62,
+                height: 62,
                 borderRadius: 999,
                 alignItems: "center",
                 justifyContent: "center",
                 borderWidth: 1,
                 borderColor: theme.colors.emeraldBorder,
                 backgroundColor: theme.colors.emeraldSoft,
-                opacity: !activeStoreId ? 0.5 : pressed ? 0.92 : 1,
+                opacity: !activeStoreId || isCapitalRecoveryStore ? 0.5 : pressed ? 0.92 : 1,
                 transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
                 shadowColor: "#000",
-                shadowOpacity: !activeStoreId ? 0 : 0.25,
+                shadowOpacity: !activeStoreId || isCapitalRecoveryStore ? 0 : 0.25,
                 shadowRadius: 10,
                 shadowOffset: { width: 0, height: 6 },
-                elevation: !activeStoreId ? 0 : 8,
+                elevation: !activeStoreId || isCapitalRecoveryStore ? 0 : 8,
               },
             ]}
           >
-            <ScannerFabIcon size={24} color={theme.colors.text} />
+            <View style={{ marginLeft: 1, marginTop: 1 }}>
+              <ScannerFabIcon size={28} color={theme.colors.text} />
+            </View>
           </Pressable>
         </View>
 
         
 
         <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 4 }}>
-          Tip: Inventory inajirefresh kimya kimya bila UI kuonyesha kuchezacheza.
+          {isCapitalRecoveryStore
+            ? "Capital Recovery hutumia Products + Workspace, si inventory refresh."
+            : "Tip: Inventory inajirefresh kimya kimya bila UI kuonyesha kuchezacheza."}
         </Text>
       </Card>
 
@@ -797,16 +898,21 @@ export default function StoreInventoryScreen() {
 
       <Card style={{ gap: 10 }}>
         <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-          Search
+          {isCapitalRecoveryStore ? "Inventory Disabled" : "Search"}
         </Text>
 
         <TextInput
           value={q}
           onChangeText={setQ}
-          placeholder="Tafuta kwa jina / SKU / category / barcode..."
+          placeholder={
+            isCapitalRecoveryStore
+              ? "Inventory haitumiki kwa Capital Recovery"
+              : "Tafuta kwa jina / SKU / category / barcode..."
+          }
           placeholderTextColor="rgba(255,255,255,0.35)"
           returnKeyType="search"
           onSubmitEditing={Keyboard.dismiss}
+          editable={!isCapitalRecoveryStore}
           style={{
             borderWidth: 1,
             borderColor: theme.colors.border,
@@ -816,16 +922,19 @@ export default function StoreInventoryScreen() {
             paddingVertical: 12,
             color: theme.colors.text,
             fontWeight: "800",
+            opacity: isCapitalRecoveryStore ? 0.6 : 1,
           }}
         />
 
-        {!canAdjust && (
+        {isCapitalRecoveryStore ? (
+          <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+            Capital Recovery store haitumii inventory, stock alert, au stock adjustment.
+          </Text>
+        ) : !canAdjust ? (
           <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
             (Read-only) Muombe Owner/Admin kufanya stock adjustment.
           </Text>
-        )}
-
-        {isOffline ? (
+        ) : isOffline ? (
           <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
             Offline: “write actions” (Adjust/Save Alert) zimezimwa kwa usalama.
           </Text>
@@ -833,10 +942,19 @@ export default function StoreInventoryScreen() {
       </Card>
 
       <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>
-        Items ({filtered.length})
+        {isCapitalRecoveryStore ? "Inventory Not Used" : `Items (${filtered.length})`}
       </Text>
 
-      {filtered.length === 0 ? (
+      {isCapitalRecoveryStore ? (
+        <Card>
+          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+            Inventory disabled for Capital Recovery
+          </Text>
+          <Text style={{ color: theme.colors.muted, fontWeight: "700", marginTop: 6 }}>
+            Tumia Products + Capital Recovery Workspace kwa income entries. Inventory haitumiki kwenye mode hii.
+          </Text>
+        </Card>
+      ) : filtered.length === 0 ? (
         <Card>
           <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
             No inventory rows

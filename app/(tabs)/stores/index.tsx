@@ -1,5 +1,5 @@
 // app/(tabs)/stores/index.tsx
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
@@ -9,6 +9,7 @@ import {
   Pressable,
   Switch,
   Text,
+  TextInput,
   View,
   useWindowDimensions,
 } from "react-native";
@@ -42,9 +43,75 @@ type StaffChoiceRow = {
   role: string;
 };
 
+type StoreProductPreviewRow = {
+  id: string;
+  name: string;
+  sku: string | null;
+  qty: number;
+};
+
 function normalizeStoreType(v: any): "STANDARD" | "CAPITAL_RECOVERY" {
   const t = String(v ?? "STANDARD").trim().toUpperCase();
   return t === "CAPITAL_RECOVERY" ? "CAPITAL_RECOVERY" : "STANDARD";
+}
+
+function CompactSettingRow({
+  title,
+  subtitle,
+  value,
+  onValueChange,
+  disabled,
+  borderColor,
+  backgroundColor,
+  textColor,
+  mutedColor,
+}: {
+  title: string;
+  subtitle: string;
+  value: boolean;
+  onValueChange: (v: boolean) => void;
+  disabled?: boolean;
+  borderColor: string;
+  backgroundColor: string;
+  textColor: string;
+  mutedColor: string;
+}) {
+  return (
+    <View
+      style={{
+        borderWidth: 1,
+        borderColor,
+        backgroundColor,
+        borderRadius: 16,
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 12,
+      }}
+    >
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={{ color: textColor, fontWeight: "900", fontSize: 13 }}>
+          {title}
+        </Text>
+        <Text
+          style={{
+            color: mutedColor,
+            marginTop: 4,
+            lineHeight: 17,
+            fontWeight: "800",
+            fontSize: 11.5,
+          }}
+          numberOfLines={2}
+        >
+          {subtitle}
+        </Text>
+      </View>
+
+      <Switch value={value} onValueChange={onValueChange} disabled={disabled} />
+    </View>
+  );
 }
 
 export default function StoresTabScreen() {
@@ -57,6 +124,7 @@ export default function StoresTabScreen() {
     stores,
     activeStoreId,
     activeStoreName,
+    activeStoreType,
     setActiveStoreId,
     refresh,
     loading,
@@ -446,6 +514,29 @@ export default function StoresTabScreen() {
   const [q, setQ] = useState("");
   const [savingAssign, setSavingAssign] = useState(false);
 
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [renameStoreId, setRenameStoreId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [renameSaving, setRenameSaving] = useState(false);
+
+  const [closeOpen, setCloseOpen] = useState(false);
+  const [closeStoreId, setCloseStoreId] = useState<string | null>(null);
+  const [closeStoreName, setCloseStoreName] = useState("");
+  const [closeConfirmText, setCloseConfirmText] = useState("");
+  const [closeSaving, setCloseSaving] = useState(false);
+
+  const [actionsOpenByStoreId, setActionsOpenByStoreId] = useState<Record<string, boolean>>({});
+  const [productsByStoreId, setProductsByStoreId] = useState<Record<string, StoreProductPreviewRow[]>>({});
+  const [productsLoadingByStoreId, setProductsLoadingByStoreId] = useState<Record<string, boolean>>({});
+
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        setActionsOpenByStoreId({});
+      };
+    }, [])
+  );
+
   const openManage = async (storeId: string, storeName: string) => {
     if (!canManage) {
       Alert.alert("No Access", "Owner/Admin only.");
@@ -465,6 +556,262 @@ export default function StoresTabScreen() {
     setManageStoreName("");
     setQ("");
   };
+
+  const openRename = useCallback((storeId: string, storeName: string) => {
+    setRenameStoreId(storeId);
+    setRenameValue(storeName);
+    setRenameOpen(true);
+  }, []);
+
+  const closeRename = useCallback(() => {
+    if (renameSaving) return;
+    setRenameOpen(false);
+    setRenameStoreId(null);
+    setRenameValue("");
+  }, [renameSaving]);
+
+  const openCloseStore = useCallback((storeId: string, storeName: string) => {
+    setCloseStoreId(storeId);
+    setCloseStoreName(storeName);
+    setCloseConfirmText("");
+    setCloseOpen(true);
+  }, []);
+
+  const closeCloseStore = useCallback(() => {
+    if (closeSaving) return;
+    setCloseOpen(false);
+    setCloseStoreId(null);
+    setCloseStoreName("");
+    setCloseConfirmText("");
+  }, [closeSaving]);
+
+  const loadStoreProductsPreview = useCallback(async (storeId: string) => {
+    const sid = String(storeId ?? "").trim();
+    if (!sid) return;
+
+    setProductsLoadingByStoreId((prev) => ({ ...prev, [sid]: true }));
+
+    try {
+      const { data, error } = await supabase.rpc("get_store_inventory_v2", {
+        p_store_id: sid,
+      });
+
+      if (error) throw error;
+
+      const rows = Array.isArray(data) ? data : [];
+
+      const mapped: StoreProductPreviewRow[] = rows
+        .map((r: any, index: number) => {
+          const rawId =
+            r?.product_id ??
+            r?.id ??
+            `${sid}-${index}`;
+
+          const rawName =
+            r?.product_name ??
+            r?.name ??
+            r?.item_name ??
+            "Unnamed Product";
+
+          const rawSku =
+            r?.sku ??
+            r?.product_sku ??
+            r?.item_sku ??
+            null;
+
+          const rawQty =
+            r?.quantity ??
+            r?.qty ??
+            r?.on_hand_qty ??
+            r?.stock_qty ??
+            r?.current_stock ??
+            r?.current_qty ??
+            0;
+
+          return {
+            id: String(rawId),
+            name: String(rawName ?? "Unnamed Product"),
+            sku: rawSku ? String(rawSku) : null,
+            qty: Number(rawQty ?? 0),
+          };
+        })
+        .filter((r) => !!r.name)
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      setProductsByStoreId((prev) => ({
+        ...prev,
+        [sid]: mapped,
+      }));
+    } catch {
+      setProductsByStoreId((prev) => ({
+        ...prev,
+        [sid]: [],
+      }));
+    } finally {
+      setProductsLoadingByStoreId((prev) => ({ ...prev, [sid]: false }));
+    }
+  }, []);
+
+  const toggleStoreActions = useCallback((storeId: string) => {
+    const sid = String(storeId ?? "").trim();
+    if (!sid) return;
+
+    const nextOpen = !actionsOpenByStoreId[sid];
+
+    setActionsOpenByStoreId(nextOpen ? { [sid]: true } : {});
+
+    if (nextOpen && !productsByStoreId[sid] && !productsLoadingByStoreId[sid]) {
+      void loadStoreProductsPreview(sid);
+    }
+  }, [actionsOpenByStoreId, productsByStoreId, productsLoadingByStoreId, loadStoreProductsPreview]);
+
+  const saveRenameStore = useCallback(async () => {
+    if (!canManage) {
+      Alert.alert("No Access", "Owner/Admin only.");
+      return;
+    }
+
+    const orgId = String(activeOrgId ?? "").trim();
+    const sid = String(renameStoreId ?? "").trim();
+    const nextName = String(renameValue ?? "").trim();
+
+    if (!orgId) {
+      Alert.alert("Missing", "Organization haijapatikana.");
+      return;
+    }
+
+    if (!sid) {
+      Alert.alert("Missing", "Store haijapatikana.");
+      return;
+    }
+
+    if (!nextName) {
+      Alert.alert("Missing", "Weka jina jipya la store.");
+      return;
+    }
+
+    setRenameSaving(true);
+    try {
+      const { error: e } = await supabase.rpc("rename_store_v1", {
+        p_org_id: orgId,
+        p_store_id: sid,
+        p_new_name: nextName,
+      });
+
+      if (e) throw e;
+
+      await refresh();
+      await loadManagers();
+      await loadCreditFlags();
+      await loadMovementFlags();
+
+      if (sid === String(activeStoreId ?? "").trim()) {
+        await setActiveStoreId(sid);
+      }
+
+      Alert.alert("Success ✅", "Store name updated successfully.");
+      closeRename();
+    } catch (err: any) {
+      Alert.alert("Rename failed", err?.message ?? "Unknown error");
+    } finally {
+      setRenameSaving(false);
+    }
+  }, [
+    canManage,
+    activeOrgId,
+    renameStoreId,
+    renameValue,
+    activeStoreId,
+    setActiveStoreId,
+    refresh,
+    loadManagers,
+    loadCreditFlags,
+    loadMovementFlags,
+    closeRename,
+  ]);
+
+  const closeStoreNow = useCallback(async () => {
+    if (!canManage) {
+      Alert.alert("No Access", "Owner/Admin only.");
+      return;
+    }
+
+    const orgId = String(activeOrgId ?? "").trim();
+    const sid = String(closeStoreId ?? "").trim();
+    const closingName = String(closeStoreName ?? "").trim();
+    const typedName = String(closeConfirmText ?? "").trim();
+
+    if (!orgId) {
+      Alert.alert("Missing", "Organization haijapatikana.");
+      return;
+    }
+
+    if (!sid) {
+      Alert.alert("Missing", "Store haijapatikana.");
+      return;
+    }
+
+    if (!closingName) {
+      Alert.alert("Missing", "Store name haijapatikana.");
+      return;
+    }
+
+    if (typedName !== closingName) {
+      Alert.alert("Confirmation failed", "Andika jina la store sawa kabisa ili kuendelea.");
+      return;
+    }
+
+    setCloseSaving(true);
+    try {
+      const { error: e } = await supabase.rpc("close_store_v1", {
+        p_org_id: orgId,
+        p_store_id: sid,
+        p_close_note: `Closed from app by ${String(activeRole ?? "owner").toUpperCase()}`,
+      });
+
+      if (e) throw e;
+
+      const wasActive = sid === String(activeStoreId ?? "").trim();
+
+      await refresh();
+      await loadManagers();
+      await loadCreditFlags();
+      await loadMovementFlags();
+
+      if (wasActive) {
+        const nextActive = (list ?? []).find((s: any) => {
+          const id = String(s?.store_id ?? "").trim();
+          return id && id !== sid && (typeof s?.is_allowed === "boolean" ? s.is_allowed : true);
+        });
+
+        if (nextActive?.store_id) {
+          await setActiveStoreId(String(nextActive.store_id));
+        }
+      }
+
+      Alert.alert("Success ✅", "Store imefungwa vizuri.");
+      closeCloseStore();
+    } catch (err: any) {
+      Alert.alert("Close failed", err?.message ?? "Unknown error");
+    } finally {
+      setCloseSaving(false);
+    }
+  }, [
+    canManage,
+    activeOrgId,
+    closeStoreId,
+    closeStoreName,
+    closeConfirmText,
+    activeRole,
+    activeStoreId,
+    list,
+    setActiveStoreId,
+    refresh,
+    loadManagers,
+    loadCreditFlags,
+    loadMovementFlags,
+    closeCloseStore,
+  ]);
 
   const filteredChoices = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -676,6 +1023,13 @@ export default function StoresTabScreen() {
 
             <Pressable
               onPress={() => {
+                if (activeStoreType === "CAPITAL_RECOVERY") {
+                  Alert.alert(
+                    "Not Available",
+                    "Inventory haitumiki kwa Capital Recovery store."
+                  );
+                  return;
+                }
                 // @ts-ignore
                 router.push("/(tabs)/stores/inventory");
               }}
@@ -683,33 +1037,46 @@ export default function StoresTabScreen() {
                 borderRadius: radiusXL,
                 borderWidth: 1,
                 borderColor: BORDER_SOFT,
-                backgroundColor: "rgba(255,255,255,0.05)",
+                backgroundColor: "#161C27",
                 paddingVertical: 14,
                 paddingHorizontal: 16,
-                opacity: pressed ? 0.92 : 1,
+                opacity: activeStoreType === "CAPITAL_RECOVERY" ? 0.55 : pressed ? 0.92 : 1,
               })}
             >
               <Text style={{ color: TEXT, fontWeight: "900", fontSize: 15 }}>Open Inventory</Text>
               <Text style={{ color: MUTED, fontWeight: "800", marginTop: 4, fontSize: 12 }}>
-                Fungua inventory ya active store
+                {activeStoreType === "CAPITAL_RECOVERY"
+                  ? "Inventory imezimwa kwa Capital Recovery"
+                  : "Fungua inventory ya active store"}
               </Text>
             </Pressable>
 
             <Pressable
-              onPress={openMovement}
+              onPress={() => {
+                if (activeStoreType === "CAPITAL_RECOVERY") {
+                  Alert.alert(
+                    "Not Available",
+                    "Stock Movement haitumiki kwa Capital Recovery store."
+                  );
+                  return;
+                }
+                openMovement();
+              }}
               style={({ pressed }) => ({
                 borderRadius: radiusXL,
                 borderWidth: 1,
                 borderColor: BORDER_SOFT,
-                backgroundColor: "rgba(255,255,255,0.05)",
+                backgroundColor: "#161C27",
                 paddingVertical: 14,
                 paddingHorizontal: 16,
-                opacity: pressed ? 0.92 : 1,
+                opacity: activeStoreType === "CAPITAL_RECOVERY" ? 0.55 : pressed ? 0.92 : 1,
               })}
             >
               <Text style={{ color: TEXT, fontWeight: "900", fontSize: 15 }}>Stock Movement</Text>
               <Text style={{ color: MUTED, fontWeight: "800", marginTop: 4, fontSize: 12 }}>
-                Hamisha stock kutoka active store
+                {activeStoreType === "CAPITAL_RECOVERY"
+                  ? "Movement imezimwa kwa Capital Recovery"
+                  : "Hamisha stock kutoka active store"}
               </Text>
             </Pressable>
 
@@ -742,6 +1109,7 @@ export default function StoresTabScreen() {
     activeOrgName,
     activeRole,
     activeStoreName,
+    activeStoreType,
     canManage,
     error,
     isDesktopWeb,
@@ -826,6 +1194,9 @@ const isCapitalRecovery = storeType === "CAPITAL_RECOVERY";
             : BORDER;
 
           const opacity = !isAllowed ? 0.72 : 1;
+          const actionsOpen = !!actionsOpenByStoreId[storeId];
+          const productPreview = productsByStoreId[storeId] ?? [];
+          const productPreviewLoading = !!productsLoadingByStoreId[storeId];
 
           return (
             <View
@@ -833,148 +1204,195 @@ const isCapitalRecovery = storeType === "CAPITAL_RECOVERY";
                 width: isDesktopWeb ? "49.4%" : "100%",
                 maxWidth: isDesktopWeb ? undefined : desktopMaxWidth,
                 alignSelf: "center",
-                marginBottom: 12,
+                marginBottom: 10,
               }}
             >
-              <Pressable
+    <Pressable
                 onPress={() => pick(storeId, item.store_name, isAllowed, lockReason)}
                 style={({ pressed }) => ({
                   borderWidth: 1,
                   borderColor,
-                  borderRadius: radiusXL,
-                  backgroundColor: CARD,
-                  padding: isDesktopWeb ? 18 : 16,
-                  minHeight: isDesktopWeb ? 250 : undefined,
-                  opacity: pressed ? Math.max(0.88, opacity - 0.04) : opacity,
-                  transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
+                  borderRadius: 22,
+                  backgroundColor: "#0F141C",
+                  padding: isDesktopWeb ? 16 : 14,
+                  opacity: pressed ? Math.max(0.9, opacity - 0.03) : opacity,
+                  transform: pressed ? [{ scale: 0.996 }] : [{ scale: 1 }],
                 })}
               >
-                <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontWeight: "900", color: TEXT, fontSize: 16 }}>
-  {item.store_name}
-</Text>
+                <View style={{ gap: 8 }}>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "flex-start",
+                      justifyContent: "space-between",
+                      gap: 12,
+                    }}
+                  >
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text
+                        style={{
+                          fontWeight: "900",
+                          color: TEXT,
+                          fontSize: 17,
+                          letterSpacing: 0.2,
+                        }}
+                        numberOfLines={1}
+                      >
+                        {item.store_name}
+                      </Text>
 
-<Text style={{ marginTop: 4, color: isCapitalRecovery ? EMERALD : MUTED, fontWeight: "900", fontSize: 12 }}>
-  {isCapitalRecovery ? "CAPITAL RECOVERY STORE" : "STANDARD STORE"}
-</Text>
+                      <Text
+                        style={{
+                          marginTop: 4,
+                          color: isCapitalRecovery ? EMERALD : MUTED,
+                          fontWeight: "900",
+                          fontSize: 11.5,
+                          letterSpacing: 0.4,
+                        }}
+                        numberOfLines={1}
+                      >
+                        {isCapitalRecovery ? "CAPITAL RECOVERY STORE" : "STANDARD STORE"}
+                      </Text>
 
-<Text style={{ marginTop: 6, color: MUTED, fontWeight: "800" }}>
-  Managed by:{" "}
-  <Text style={{ color: TEXT, fontWeight: "900" }}>
-    {managedBy}
-  </Text>
-</Text>
-                 {!isAllowed ? (
-                    <Text style={{ marginTop: 8, color: FAINT, fontWeight: "900", lineHeight: 18 }}>
+                      <Text
+                        style={{
+                          marginTop: 5,
+                          color: MUTED,
+                          fontWeight: "800",
+                          fontSize: 11.5,
+                        }}
+                        numberOfLines={1}
+                      >
+                        Managed by:{" "}
+                        <Text style={{ color: TEXT, fontWeight: "900" }}>
+                          {managedBy}
+                        </Text>
+                      </Text>
+                    </View>
+
+                    <View style={{ gap: 8, alignItems: "flex-end", justifyContent: "flex-start" }}>
+                      {isActive ? (
+                        <View
+                          style={{
+                            paddingHorizontal: 10,
+                            paddingVertical: 6,
+                            borderRadius: radiusPill,
+                            borderWidth: 1,
+                            borderColor: "rgba(52,211,153,0.45)",
+                            backgroundColor: "rgba(16,185,129,0.12)",
+                          }}
+                        >
+                          <Text style={{ color: EMERALD, fontWeight: "900", fontSize: 11.5 }}>
+                            ACTIVE
+                          </Text>
+                        </View>
+                      ) : isAllowed ? (
+                        <View
+                          style={{
+                            paddingHorizontal: 10,
+                            paddingVertical: 6,
+                            borderRadius: radiusPill,
+                            borderWidth: 1,
+                            borderColor: BORDER_SOFT,
+                            backgroundColor: "rgba(255,255,255,0.06)",
+                          }}
+                        >
+                          <Text style={{ color: MUTED, fontWeight: "900", fontSize: 11.5 }}>
+                            Tap to activate ›
+                          </Text>
+                        </View>
+                      ) : null}
+
+                      {isCapitalRecovery ? (
+                        <View
+                          style={{
+                            paddingHorizontal: 10,
+                            paddingVertical: 6,
+                            borderRadius: radiusPill,
+                            borderWidth: 1,
+                            borderColor: "rgba(16,185,129,0.28)",
+                            backgroundColor: "rgba(16,185,129,0.12)",
+                          }}
+                        >
+                          <Text style={{ color: EMERALD, fontWeight: "900", fontSize: 11.5 }}>
+                            CAPITAL
+                          </Text>
+                        </View>
+                      ) : (
+                        <View
+                          style={{
+                            paddingHorizontal: 10,
+                            paddingVertical: 6,
+                            borderRadius: radiusPill,
+                            borderWidth: 1,
+                            borderColor: "rgba(255,255,255,0.16)",
+                            backgroundColor: "rgba(255,255,255,0.07)",
+                          }}
+                        >
+                          <Text style={{ color: TEXT, fontWeight: "900", fontSize: 11.5 }}>
+                            STANDARD
+                          </Text>
+                        </View>
+                      )}
+
+                      {!isAllowed ? (
+                        <View
+                          style={{
+                            paddingHorizontal: 10,
+                            paddingVertical: 6,
+                            borderRadius: radiusPill,
+                            borderWidth: 1,
+                            borderColor: "rgba(255,255,255,0.14)",
+                            backgroundColor: "rgba(255,255,255,0.06)",
+                          }}
+                        >
+                          <Text style={{ color: FAINT, fontWeight: "900", fontSize: 11.5 }}>
+                            LOCKED
+                          </Text>
+                        </View>
+                      ) : null}
+                    </View>
+                  </View>
+
+                  <View style={{ height: 2 }} />
+
+                  {!isAllowed ? (
+                    <Text style={{ color: FAINT, fontWeight: "900", fontSize: 12, lineHeight: 18 }}>
                       🔒 LOCKED — upgrade plan ili u-activate.
                     </Text>
                   ) : !isActive ? (
-                    <Text style={{ marginTop: 8, color: FAINT, fontWeight: "800", lineHeight: 18 }}>
+                    <Text style={{ color: FAINT, fontWeight: "800", fontSize: 12, lineHeight: 18 }}>
                       Bonyeza kadi hii kuchagua store hii kama Active Store.
                     </Text>
                   ) : (
-                    <Text style={{ marginTop: 8, color: EMERALD, fontWeight: "800", lineHeight: 18 }}>
+                    <Text style={{ color: EMERALD, fontWeight: "800", fontSize: 12, lineHeight: 18 }}>
                       Hii ndiyo Active Store ya sasa.
                     </Text>
-                  )} 
+                  )}
                 </View>
-
-                {/* Badges / Selection Hint */}
-                <View style={{ gap: 8, alignItems: "flex-end" }}>
-                  {isActive ? (
-                    <View
-                      style={{
-                        paddingHorizontal: 10,
-                        paddingVertical: 6,
-                        borderRadius: radiusPill,
-                        borderWidth: 1,
-                        borderColor: "rgba(52,211,153,0.45)",
-                        backgroundColor: "rgba(16,185,129,0.12)",
-                        alignSelf: "flex-start",
-                      }}
-                    >
-                      <Text style={{ color: EMERALD, fontWeight: "900", fontSize: 12 }}>
-                        ACTIVE
-                      </Text>
-                    </View>
-                  ) : isAllowed ? (
-                    <View
-                      style={{
-                        paddingHorizontal: 10,
-                        paddingVertical: 6,
-                        borderRadius: radiusPill,
-                        borderWidth: 1,
-                        borderColor: BORDER_SOFT,
-                        backgroundColor: "rgba(255,255,255,0.06)",
-                        alignSelf: "flex-start",
-                      }}
-                    >
-                      <Text style={{ color: MUTED, fontWeight: "900", fontSize: 12 }}>
-                        Tap to activate  ›
-                      </Text>
-                    </View>
-                  ) : null}
-
-                 {isCapitalRecovery ? (
-  <View
-    style={{
-      paddingHorizontal: 10,
-      paddingVertical: 6,
-      borderRadius: radiusPill,
-      borderWidth: 1,
-      borderColor: "rgba(16,185,129,0.28)",
-      backgroundColor: "rgba(16,185,129,0.12)",
-      alignSelf: "flex-start",
-    }}
-  >
-    <Text style={{ color: EMERALD, fontWeight: "900", fontSize: 12 }}>
-      CAPITAL
-    </Text>
-  </View>
-) : null}
-
-{!isAllowed ? (
-  <View
-    style={{
-      paddingHorizontal: 10,
-      paddingVertical: 6,
-      borderRadius: radiusPill,
-      borderWidth: 1,
-      borderColor: "rgba(255,255,255,0.14)",
-      backgroundColor: "rgba(255,255,255,0.06)",
-      alignSelf: "flex-start",
-    }}
-  >
-    <Text style={{ color: FAINT, fontWeight: "900", fontSize: 12 }}>
-      LOCKED
-    </Text>
-  </View>
-) : null}
-                </View>
-              </View>
 
              {isCapitalRecovery && isAllowed ? (
-  <View style={{ marginTop: 12, gap: 10 }}>
+  <View style={{ marginTop: 8 }}>
     <Pressable
       onPress={() => {
         setActiveStoreId(storeId);
-        router.push("/(tabs)");
+        // @ts-ignore
+        router.push("/(tabs)/capital-recovery/workspace");
       }}
       style={({ pressed }) => ({
-        borderRadius: radiusXL,
+        borderRadius: 16,
         borderWidth: 1,
-        borderColor: "rgba(16,185,129,0.30)",
-        backgroundColor: "rgba(16,185,129,0.12)",
-        paddingVertical: 12,
-        paddingHorizontal: 14,
+        borderColor: "rgba(16,185,129,0.26)",
+        backgroundColor: "rgba(16,185,129,0.10)",
+        paddingVertical: 11,
+        paddingHorizontal: 13,
         opacity: pressed ? 0.92 : 1,
       })}
     >
-      <Text style={{ color: TEXT, fontWeight: "900", fontSize: 14 }}>
-        Open Capital Workspace
+      <Text style={{ color: TEXT, fontWeight: "900", fontSize: 13.5 }}>
+        Open Capital Recovery Workspace
       </Text>
-      <Text style={{ color: MUTED, fontWeight: "800", marginTop: 4, fontSize: 12 }}>
+      <Text style={{ color: MUTED, fontWeight: "800", marginTop: 3, fontSize: 11.5 }}>
         Fungua dashboard maalum ya Capital Recovery
       </Text>
     </Pressable>
@@ -982,84 +1400,196 @@ const isCapitalRecovery = storeType === "CAPITAL_RECOVERY";
 ) : null}
 
 {canManage && isAllowed ? (
-  <View style={{ marginTop: 12, gap: 12 }}>
-                  {/* Credit switch */}
-                  <View
-                    style={{
-                      borderWidth: 1,
-                      borderColor: BORDER_SOFT,
-                      backgroundColor: SURFACE2,
-                      borderRadius: radiusXL,
-                      paddingVertical: 10,
-                      paddingHorizontal: 12,
-                      flexDirection: "row",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: 10,
-                    }}
-                  >
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ color: FAINT, fontWeight: "900" }}>
-                        Staff can manage credit
-                      </Text>
-                      <Text style={{ color: MUTED, marginTop: 4, lineHeight: 18 }}>
-                        Ikiwashwa, staff wa store hii ataona/kurekodi malipo ya madeni ya store yake
-                        tu. Ikizimwa, ataona tu (read-only).
-                      </Text>
-                    </View>
+  <View style={{ marginTop: 10, gap: 10 }}>
+    <Pressable
+      onPress={() => toggleStoreActions(storeId)}
+      style={({ pressed }) => ({
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: actionsOpen ? "rgba(16,185,129,0.24)" : BORDER_SOFT,
+        backgroundColor: actionsOpen ? "rgba(16,185,129,0.08)" : "#161C27",
+        paddingVertical: 11,
+        paddingHorizontal: 14,
+        opacity: pressed ? 0.92 : 1,
+      })}
+    >
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 10,
+        }}
+      >
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: TEXT, fontWeight: "900", fontSize: 14 }}>
+            Store Actions
+          </Text>
+          <Text style={{ color: MUTED, fontWeight: "800", marginTop: 4, fontSize: 12 }}>
+            Settings, products, rename na close store
+          </Text>
+        </View>
 
-                    <Switch
-                      value={staffCreditEnabled}
-                      onValueChange={(v) => toggleStoreCredit(storeId, v)}
-                      disabled={creditSaving}
-                    />
-                  </View>
+        <Text style={{ color: actionsOpen ? EMERALD : MUTED, fontWeight: "900", fontSize: 18 }}>
+          {actionsOpen ? "−" : "+"}
+        </Text>
+      </View>
+    </Pressable>
 
-                  {creditSaving ? (
-                    <Text style={{ color: FAINT, marginTop: -4, fontWeight: "800" }}>
-                      Saving credit setting...
-                    </Text>
-                  ) : null}
+    {actionsOpen ? (
+      <View
+        style={{
+          gap: 8,
+          paddingTop: 2,
+        }}
+      >
+        <CompactSettingRow
+          title="Staff credit"
+          subtitle="Staff arekodi na aone credit ya store hii"
+          value={staffCreditEnabled}
+          onValueChange={(v) => toggleStoreCredit(storeId, v)}
+          disabled={creditSaving}
+          borderColor={BORDER_SOFT}
+          backgroundColor="#141A24"
+          textColor={FAINT}
+          mutedColor={MUTED}
+        />
 
-                  {/* Movement switch */}
-                  <View
-                    style={{
-                      borderWidth: 1,
-                      borderColor: BORDER_SOFT,
-                      backgroundColor: SURFACE2,
-                      borderRadius: radiusXL,
-                      paddingVertical: 10,
-                      paddingHorizontal: 12,
-                      flexDirection: "row",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: 10,
-                    }}
-                  >
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ color: FAINT, fontWeight: "900" }}>
-                        Allow staff stock movement
-                      </Text>
-                      <Text style={{ color: MUTED, marginTop: 4, lineHeight: 18 }}>
-                        Ikiwashwa, staff wa store hii ataruhusiwa kuhamisha stock (FROM store yake).
-                        Ikizimwa, movement itakuwa Owner/Admin tu. (Admin/Owner wana ruhusa muda wote.)
-                      </Text>
-                    </View>
+        {creditSaving ? (
+          <Text style={{ color: FAINT, marginTop: -4, fontWeight: "800", fontSize: 11.5 }}>
+            Saving credit setting...
+          </Text>
+        ) : null}
 
-                    <Switch
-                      value={staffMovementEnabled}
-                      onValueChange={(v) => toggleStoreMovement(storeId, v)}
-                      disabled={movementSaving}
-                    />
-                  </View>
+        <CompactSettingRow
+          title="Stock movement"
+          subtitle="Ruhusu staff kuhamisha stock kutoka store hii"
+          value={staffMovementEnabled}
+          onValueChange={(v) => toggleStoreMovement(storeId, v)}
+          disabled={movementSaving}
+          borderColor={BORDER_SOFT}
+          backgroundColor="#141A24"
+          textColor={FAINT}
+          mutedColor={MUTED}
+        />
 
-                  {movementSaving ? (
-                    <Text style={{ color: FAINT, marginTop: -4, fontWeight: "800" }}>
-                      Saving movement setting...
-                    </Text>
-                  ) : null}
-                </View>
-              ) : null}
+        {movementSaving ? (
+          <Text style={{ color: FAINT, marginTop: -4, fontWeight: "800", fontSize: 11.5 }}>
+            Saving movement setting...
+          </Text>
+        ) : null}
+
+        <Pressable
+          onPress={() => {
+            // @ts-ignore
+            router.push({
+              pathname: "/(tabs)/stores/store-products",
+              params: {
+                storeId,
+                storeName: item.store_name,
+              },
+            });
+          }}
+          style={({ pressed }) => ({
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: BORDER_SOFT,
+            backgroundColor: "#141A24",
+            paddingVertical: 11,
+            paddingHorizontal: 13,
+            opacity: pressed ? 0.92 : 1,
+          })}
+        >
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 10,
+            }}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: TEXT, fontWeight: "900", fontSize: 14 }}>
+                Products in this store
+              </Text>
+              <Text
+                style={{
+                  color: MUTED,
+                  fontWeight: "800",
+                  marginTop: 4,
+                  fontSize: 12,
+                }}
+              >
+                Open full page — view store products only
+              </Text>
+            </View>
+
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <View
+                style={{
+                  paddingHorizontal: 10,
+                  paddingVertical: 6,
+                  borderRadius: radiusPill,
+                  borderWidth: 1,
+                  borderColor: BORDER_SOFT,
+                  backgroundColor: "rgba(255,255,255,0.06)",
+                }}
+              >
+                <Text style={{ color: TEXT, fontWeight: "900", fontSize: 11.5 }}>
+                  {productPreviewLoading ? "..." : `${productPreview.length} items`}
+                </Text>
+              </View>
+
+              <Text style={{ color: MUTED, fontWeight: "900", fontSize: 18 }}>
+                ›
+              </Text>
+            </View>
+          </View>
+        </Pressable>
+
+        <Pressable
+          onPress={() => openRename(storeId, item.store_name)}
+          style={({ pressed }) => ({
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: BORDER_SOFT,
+            backgroundColor: "#141A24",
+            paddingVertical: 11,
+            paddingHorizontal: 13,
+            opacity: pressed ? 0.92 : 1,
+          })}
+        >
+          <Text style={{ color: TEXT, fontWeight: "900", fontSize: 14 }}>
+            Rename Store
+          </Text>
+          <Text style={{ color: MUTED, fontWeight: "800", marginTop: 4, fontSize: 12 }}>
+            Badili jina la store hii
+          </Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() => openCloseStore(storeId, item.store_name)}
+          style={({ pressed }) => ({
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: DANGER_BORDER,
+            backgroundColor: "rgba(239,68,68,0.12)",
+            paddingVertical: 11,
+            paddingHorizontal: 13,
+            opacity: pressed ? 0.92 : 1,
+          })}
+        >
+          <Text style={{ color: DANGER, fontWeight: "900", fontSize: 14 }}>
+            Close Store
+          </Text>
+          <Text style={{ color: MUTED, fontWeight: "800", marginTop: 4, fontSize: 12 }}>
+            Funga store hii na kufungua slot ya store mpya
+          </Text>
+        </Pressable>
+      </View>
+    ) : null}
+  </View>
+) : null}
               </Pressable>
             </View>
           );
@@ -1081,6 +1611,181 @@ const isCapitalRecovery = storeType === "CAPITAL_RECOVERY";
         }
       />
 
+      <Modal
+        visible={renameOpen}
+        transparent
+        animationType="fade"
+        statusBarTranslucent={false}
+        hardwareAccelerated
+        // @ts-ignore
+        presentationStyle="overFullScreen"
+        onRequestClose={closeRename}
+      >
+        <Pressable
+          onPress={closeRename}
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(4,8,15,0.94)",
+            paddingHorizontal: 14,
+            justifyContent: "center",
+          }}
+        >
+          <Pressable
+            onPress={() => {}}
+            style={{
+              borderRadius: radiusXL,
+              borderWidth: 1,
+              borderColor: BORDER_SOFT,
+              backgroundColor: "#11161F",
+              overflow: "hidden",
+            }}
+          >
+            <View style={{ padding: 14, borderBottomWidth: 1, borderBottomColor: BORDER_SOFT }}>
+              <Text style={{ color: TEXT, fontWeight: "900", fontSize: 18 }}>
+                Rename Store
+              </Text>
+              <Text style={{ color: MUTED, fontWeight: "800", marginTop: 6, lineHeight: 20 }}>
+                Badili jina la store bila kugusa reports za zamani.
+              </Text>
+            </View>
+
+            <View style={{ padding: 14, gap: 12 }}>
+              <TextInput
+                value={renameValue}
+                onChangeText={setRenameValue}
+                placeholder="Store name"
+                placeholderTextColor="rgba(255,255,255,0.35)"
+                style={{
+                  borderWidth: 1,
+                  borderColor: BORDER_SOFT,
+                  borderRadius: radiusXL,
+                  backgroundColor: "#161C27",
+                  paddingHorizontal: 14,
+                  paddingVertical: 12,
+                  color: TEXT,
+                  fontWeight: "800",
+                }}
+              />
+
+              <View style={{ flexDirection: "row", gap: 10 }}>
+                <View style={{ flex: 1 }}>
+                  <Button
+                    title="Cancel"
+                    onPress={closeRename}
+                    disabled={renameSaving}
+                    variant="secondary"
+                  />
+                </View>
+
+                <View style={{ flex: 1 }}>
+                  <Button
+                    title={renameSaving ? "Saving..." : "Save Name"}
+                    onPress={saveRenameStore}
+                    disabled={renameSaving}
+                    variant="primary"
+                  />
+                </View>
+              </View>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <Modal
+        visible={closeOpen}
+        transparent
+        animationType="fade"
+        statusBarTranslucent={false}
+        hardwareAccelerated
+        // @ts-ignore
+        presentationStyle="overFullScreen"
+        onRequestClose={closeCloseStore}
+      >
+        <Pressable
+          onPress={closeCloseStore}
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(4,8,15,0.94)",
+            paddingHorizontal: 14,
+            justifyContent: "center",
+          }}
+        >
+          <Pressable
+            onPress={() => {}}
+            style={{
+              borderRadius: radiusXL,
+              borderWidth: 1,
+              borderColor: DANGER_BORDER,
+              backgroundColor: "#11161F",
+              overflow: "hidden",
+            }}
+          >
+            <View style={{ padding: 14, borderBottomWidth: 1, borderBottomColor: BORDER_SOFT }}>
+              <Text style={{ color: TEXT, fontWeight: "900", fontSize: 18 }}>
+                Close Store
+              </Text>
+              <Text style={{ color: MUTED, fontWeight: "800", marginTop: 6, lineHeight: 20 }}>
+                Store ikifungwa, live operational data inaweza kuondolewa lakini reports/snapshots za zamani zibaki salama.
+              </Text>
+            </View>
+
+            <View style={{ padding: 14, gap: 12 }}>
+              <Card style={{ borderColor: DANGER_BORDER, backgroundColor: DANGER_SOFT }}>
+                <Text style={{ color: TEXT, fontWeight: "900", lineHeight: 20 }}>
+                  Unaenda kufunga store:
+                </Text>
+                <Text style={{ color: DANGER, fontWeight: "900", marginTop: 6, fontSize: 16 }}>
+                  {closeStoreName || "—"}
+                </Text>
+                <Text style={{ color: MUTED, fontWeight: "800", marginTop: 8, lineHeight: 20 }}>
+                  Ili kuendelea, andika jina la store hii kama uthibitisho. Ukifunga store, slot yake itafunguka kwa store mpya kulingana na plan yako.
+                </Text>
+              </Card>
+
+              <TextInput
+                value={closeConfirmText}
+                onChangeText={setCloseConfirmText}
+                placeholder="Andika jina la store hapa"
+                placeholderTextColor="rgba(255,255,255,0.35)"
+                style={{
+                  borderWidth: 1,
+                  borderColor: BORDER_SOFT,
+                  borderRadius: radiusXL,
+                  backgroundColor: "#161C27",
+                  paddingHorizontal: 14,
+                  paddingVertical: 12,
+                  color: TEXT,
+                  fontWeight: "800",
+                }}
+              />
+
+              <View style={{ flexDirection: "row", gap: 10 }}>
+                <View style={{ flex: 1 }}>
+                  <Button
+                    title="Cancel"
+                    onPress={closeCloseStore}
+                    disabled={closeSaving}
+                    variant="secondary"
+                  />
+                </View>
+
+                <View style={{ flex: 1 }}>
+                  <Button
+                    title={closeSaving ? "Closing..." : "Close Store"}
+                    onPress={closeStoreNow}
+                    disabled={
+                      closeSaving ||
+                      String(closeConfirmText).trim() !== String(closeStoreName).trim()
+                    }
+                    variant="primary"
+                  />
+                </View>
+              </View>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       {/* ✅ Upgrade Modal */}
       <Modal
         visible={upgradeOpen}
@@ -1096,7 +1801,7 @@ const isCapitalRecovery = storeType === "CAPITAL_RECOVERY";
           onPress={() => setUpgradeOpen(false)}
           style={{
             flex: 1,
-            backgroundColor: "rgba(0,0,0,0.75)",
+            backgroundColor: "rgba(4,8,15,0.94)",
             paddingHorizontal: 14,
             justifyContent: "center",
           }}
@@ -1107,7 +1812,7 @@ const isCapitalRecovery = storeType === "CAPITAL_RECOVERY";
               borderRadius: radiusXL,
               borderWidth: 1,
               borderColor: BORDER_SOFT,
-              backgroundColor: CARD,
+              backgroundColor: "#11161F",
               overflow: "hidden",
             }}
           >

@@ -3,7 +3,10 @@ import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
+  KeyboardAvoidingView,
+  Modal,
   Pressable,
+  ScrollView,
   Text,
   TextInput,
   View,
@@ -24,6 +27,22 @@ type CapitalRecoveryHistoryRow = {
   note: string | null;
   created_at: string;
   created_by?: string | null;
+};
+
+type EntryMethod = "MANUAL" | "PRODUCTS";
+
+type ProductRow = {
+  id: string;
+  store_id?: string | null;
+  name: string;
+  selling_price: number | null;
+  cost_price: number | null;
+  is_active?: boolean;
+};
+
+type ProductPickRow = {
+  product_id: string;
+  quantity: string;
 };
 
 function toNum(x: any) {
@@ -95,12 +114,21 @@ function MiniStat({
 
 export default function CapitalRecoveryWorkspaceScreen() {
   const router = useRouter();
-  const { activeOrgName, activeStoreName, activeStoreId, refresh } = useOrg();
+  const { activeOrgId, activeOrgName, activeStoreName, activeStoreId, refresh } = useOrg();
 
   const [entryType, setEntryType] = useState<"ASSET" | "COST" | "INCOME">("ASSET");
+  const [entryMethod, setEntryMethod] = useState<EntryMethod>("MANUAL");
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
+
+  const [productsLoading, setProductsLoading] = useState(false);
+  const [products, setProducts] = useState<ProductRow[]>([]);
+  const [productItems, setProductItems] = useState<ProductPickRow[]>([]);
+
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerSearch, setPickerSearch] = useState("");
+  const [pickerTargetIndex, setPickerTargetIndex] = useState<number | null>(null);
 
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
@@ -109,7 +137,53 @@ export default function CapitalRecoveryWorkspaceScreen() {
   const storeId = String(activeStoreId ?? "").trim();
 
   const amountNum = toNum(String(amount).replace(/,/g, "").trim());
-  const canSave = amountNum > 0;
+
+  const productModeEnabled = entryType === "COST" || entryType === "INCOME";
+
+ const eligibleProducts = useMemo(() => {
+    return products.filter((p) => {
+      if (entryType === "COST") return toNum(p.cost_price) > 0;
+      if (entryType === "INCOME") return toNum(p.selling_price) > 0;
+      return false;
+    });
+  }, [entryType, products]);
+
+  const filteredEligibleProducts = useMemo(() => {
+    const q = clean(pickerSearch).toLowerCase();
+    if (!q) return eligibleProducts;
+
+    return eligibleProducts.filter((p) => clean(p.name).toLowerCase().includes(q));
+  }, [eligibleProducts, pickerSearch]);
+
+  const selectedProductItems = useMemo(() => {
+    return productItems
+      .map((item) => {
+        const product = products.find((p) => p.id === item.product_id);
+        const qty = toNum(item.quantity);
+        const unitPrice =
+          entryType === "COST"
+            ? toNum(product?.cost_price)
+            : toNum(product?.selling_price);
+
+        return {
+          product_id: item.product_id,
+          product_name: String(product?.name ?? "").trim(),
+          quantity: qty,
+          unit_price: unitPrice,
+          line_total: qty > 0 ? qty * unitPrice : 0,
+        };
+      })
+      .filter((item) => item.product_id && item.product_name && item.quantity > 0 && item.unit_price > 0);
+  }, [entryType, productItems, products]);
+
+  const productModeTotal = useMemo(() => {
+    return selectedProductItems.reduce((sum, item) => sum + toNum(item.line_total), 0);
+  }, [selectedProductItems]);
+
+  const canSave =
+    entryMethod === "MANUAL"
+      ? amountNum > 0
+      : selectedProductItems.length > 0 && productModeTotal > 0;
 
   const previewTitle =
     entryType === "ASSET"
@@ -125,10 +199,49 @@ export default function CapitalRecoveryWorkspaceScreen() {
       ? "Hii itaingia upande wa gharama za uendeshaji."
       : "Hii itaingia upande wa mapato/income.";
 
-  const formattedPreviewAmount = formatMoney(amountNum, {
+  const previewAmountValue = entryMethod === "MANUAL" ? amountNum : productModeTotal;
+
+  const formattedPreviewAmount = formatMoney(previewAmountValue, {
     currency: "TZS",
     locale: "en-TZ",
   }).replace(/\s+/g, " ");
+
+  const loadProducts = useCallback(async () => {
+    const orgId = String(activeOrgId ?? "").trim();
+
+    if (!storeId || !orgId) {
+      setProducts([]);
+      return;
+    }
+
+    setProductsLoading(true);
+    try {
+     const { data, error } = await supabase.rpc("get_products_manage", {
+  p_org_id: orgId,
+  p_store_id: storeId,
+});
+
+      if (error) throw error;
+
+      const rows = Array.isArray(data) ? data : [];
+     setProducts(
+  rows
+    .map((r: any) => ({
+      id: String(r?.id ?? ""),
+      store_id: clean(r?.store_id) || null,
+      name: clean(r?.name),
+      selling_price: r?.selling_price == null ? null : toNum(r?.selling_price),
+      cost_price: r?.cost_price == null ? null : toNum(r?.cost_price),
+      is_active: !!r?.is_active,
+    }))
+    .filter((r) => r.id && r.name && r.is_active !== false)
+);
+    } catch (e) {
+      setProducts([]);
+    } finally {
+      setProductsLoading(false);
+    }
+  }, [activeOrgId, storeId]);
 
   const loadHistory = useCallback(async () => {
     if (!storeId) {
@@ -173,13 +286,22 @@ export default function CapitalRecoveryWorkspaceScreen() {
 
   useEffect(() => {
     void loadHistory();
-  }, [loadHistory]);
+    void loadProducts();
+  }, [loadHistory, loadProducts]);
 
   useFocusEffect(
     useCallback(() => {
       void loadHistory();
-    }, [loadHistory])
+      void loadProducts();
+    }, [loadHistory, loadProducts])
   );
+
+  useEffect(() => {
+    if (entryType === "ASSET") {
+      setEntryMethod("MANUAL");
+      setProductItems([]);
+    }
+  }, [entryType]);
 
   const report = useMemo(() => {
     const base = {
@@ -205,33 +327,155 @@ export default function CapitalRecoveryWorkspaceScreen() {
     }
 
     if (!canSave) {
-      Alert.alert("Invalid Amount", "Weka amount sahihi zaidi ya sifuri.");
+      Alert.alert(
+        "Invalid Entry",
+        entryMethod === "MANUAL"
+          ? "Weka amount sahihi zaidi ya sifuri."
+          : "Chagua product angalau moja yenye quantity sahihi."
+      );
       return;
     }
 
     setSaving(true);
     try {
-      const { error } = await supabase.rpc("create_capital_recovery_entry", {
-        p_store_id: storeId,
-        p_entry_type: entryType,
-        p_amount: amountNum,
-        p_note: clean(note) || null,
-      });
+      if (entryMethod === "MANUAL") {
+        const { error } = await supabase.rpc("create_capital_recovery_entry", {
+          p_store_id: storeId,
+          p_entry_type: entryType,
+          p_amount: amountNum,
+          p_note: clean(note) || null,
+        });
 
-      if (error) throw error;
+        if (error) throw error;
+      } else {
+        const payload = selectedProductItems.map((item) => ({
+          product_id: item.product_id,
+          quantity: item.quantity,
+        }));
+
+        const { error } = await supabase.rpc("create_capital_recovery_entry_items_v1", {
+          p_store_id: storeId,
+          p_entry_type: entryType,
+          p_items: payload,
+          p_note: clean(note) || null,
+        });
+
+        if (error) throw error;
+      }
 
       setAmount("");
       setNote("");
+      setProductItems([]);
       await Promise.resolve(refresh());
       await loadHistory();
+      await loadProducts();
 
-      Alert.alert("Success ✅", `${entryType} entry imehifadhiwa vizuri.`);
+      Alert.alert(
+        "Success ✅",
+        `${entryType} entry imehifadhiwa vizuri (${entryMethod === "MANUAL" ? "manual" : "products"}).`
+      );
     } catch (e: any) {
       Alert.alert("Save failed", clean(e?.message) || "Unknown error");
     } finally {
       setSaving(false);
     }
-  }, [storeId, canSave, entryType, amountNum, note, refresh, loadHistory]);
+  }, [
+    storeId,
+    canSave,
+    entryMethod,
+    entryType,
+    amountNum,
+    note,
+    selectedProductItems,
+    refresh,
+    loadHistory,
+    loadProducts,
+  ]);
+
+  const openAddProductPicker = useCallback(() => {
+    if (productsLoading || eligibleProducts.length === 0) return;
+    setPickerTargetIndex(null);
+    setPickerSearch("");
+    setPickerOpen(true);
+  }, [eligibleProducts.length, productsLoading]);
+
+  const openChangeProductPicker = useCallback(
+    (index: number) => {
+      if (productsLoading || eligibleProducts.length === 0) return;
+      setPickerTargetIndex(index);
+      setPickerSearch("");
+      setPickerOpen(true);
+    },
+    [eligibleProducts.length, productsLoading]
+  );
+
+  const closeProductPicker = useCallback(() => {
+    setPickerOpen(false);
+    setPickerSearch("");
+    setPickerTargetIndex(null);
+  }, []);
+
+  const selectProductFromPicker = useCallback(
+    (productId: string) => {
+      setProductItems((prev) => {
+        const pid = String(productId ?? "").trim();
+        if (!pid) return prev;
+
+        // ADD NEW PRODUCT
+        if (pickerTargetIndex == null) {
+          const existingIndex = prev.findIndex((row) => row.product_id === pid);
+          if (existingIndex >= 0) {
+            return prev.map((row, i) =>
+              i === existingIndex
+                ? { ...row, quantity: String(Math.max(1, toNum(row.quantity)) + 1) }
+                : row
+            );
+          }
+
+          return [...prev, { product_id: pid, quantity: "1" }];
+        }
+
+        // CHANGE EXISTING ROW PRODUCT
+        const currentRow = prev[pickerTargetIndex];
+        if (!currentRow) return prev;
+
+        const currentQty = Math.max(1, toNum(currentRow.quantity));
+        const existingIndex = prev.findIndex(
+          (row, i) => i !== pickerTargetIndex && row.product_id === pid
+        );
+
+        if (existingIndex >= 0) {
+          return prev
+            .map((row, i) =>
+              i === existingIndex
+                ? { ...row, quantity: String(Math.max(1, toNum(row.quantity)) + currentQty) }
+                : row
+            )
+            .filter((_, i) => i !== pickerTargetIndex);
+        }
+
+        return prev.map((row, i) =>
+          i === pickerTargetIndex ? { ...row, product_id: pid } : row
+        );
+      });
+
+      closeProductPicker();
+    },
+    [closeProductPicker, pickerTargetIndex]
+  );
+
+  const updateProductRow = useCallback(
+    (index: number, patch: Partial<ProductPickRow>) => {
+      setProductItems((prev) =>
+        prev.map((row, i) => (i === index ? { ...row, ...patch } : row))
+      );
+    },
+    []
+  );
+
+  const removeProductRow = useCallback((index: number) => {
+    setProductItems((prev) => prev.filter((_, i) => i !== index));
+  }, []);
 
   const Pill = ({
     title,
@@ -274,24 +518,32 @@ export default function CapitalRecoveryWorkspaceScreen() {
     }).replace(/\s+/g, " ");
 
   return (
-    <Screen
-      scroll
-      contentStyle={{
-        paddingTop: 14,
-        paddingHorizontal: 16,
-        paddingBottom: 24,
-      }}
-    >
-      <StoreGuard>
-        <Card
-          style={{
-            gap: 16,
-            borderRadius: 24,
-            borderColor: "rgba(16,185,129,0.24)",
-            backgroundColor: "rgba(15,18,24,0.98)",
-            overflow: "hidden",
+    <Screen scroll={false} contentStyle={{ paddingTop: 0, paddingHorizontal: 0, paddingBottom: 0 }}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior="height"
+        keyboardVerticalOffset={0}
+      >
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="none"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{
+            paddingTop: 14,
+            paddingHorizontal: 16,
+            paddingBottom: 24,
           }}
         >
+          <StoreGuard>
+            <Card
+              style={{
+                gap: 16,
+                borderRadius: 24,
+                borderColor: "rgba(16,185,129,0.24)",
+                backgroundColor: "rgba(15,18,24,0.98)",
+                overflow: "hidden",
+              }}
+            >
           <View
             pointerEvents="none"
             style={{
@@ -400,27 +652,224 @@ export default function CapitalRecoveryWorkspaceScreen() {
               />
             </View>
 
-            <View style={{ gap: 8 }}>
-              <Text style={{ color: UI.muted, fontWeight: "800" }}>Amount (TZS)</Text>
-              <TextInput
-                value={amount}
-                onChangeText={setAmount}
-                placeholder="mfano: 250000"
-                placeholderTextColor="rgba(234,242,255,0.35)"
-                keyboardType="numeric"
-                style={{
-                  borderWidth: 1,
-                  borderColor: "rgba(255,255,255,0.10)",
-                  backgroundColor: "rgba(255,255,255,0.05)",
-                  color: UI.text,
-                  borderRadius: 18,
-                  paddingHorizontal: 14,
-                  paddingVertical: 14,
-                  fontWeight: "800",
-                  fontSize: 15,
-                }}
-              />
-            </View>
+            {productModeEnabled && (
+              <View style={{ gap: 8 }}>
+                <Text style={{ color: UI.muted, fontWeight: "800" }}>Entry Method</Text>
+
+                <View
+                  style={{
+                    flexDirection: "row",
+                    gap: 10,
+                    width: "100%",
+                  }}
+                >
+                  <Pill
+                    title="Manual"
+                    active={entryMethod === "MANUAL"}
+                    onPress={() => setEntryMethod("MANUAL")}
+                  />
+                  <Pill
+                    title="Products"
+                    active={entryMethod === "PRODUCTS"}
+                    onPress={() => setEntryMethod("PRODUCTS")}
+                  />
+                </View>
+              </View>
+            )}
+
+            {entryMethod === "MANUAL" ? (
+              <View style={{ gap: 8 }}>
+                <Text style={{ color: UI.muted, fontWeight: "800" }}>Amount (TZS)</Text>
+                <TextInput
+                  value={amount}
+                  onChangeText={setAmount}
+                  placeholder="mfano: 250000"
+                  placeholderTextColor="rgba(234,242,255,0.35)"
+                  keyboardType="numeric"
+                  style={{
+                    borderWidth: 1,
+                    borderColor: "rgba(255,255,255,0.10)",
+                    backgroundColor: "rgba(255,255,255,0.05)",
+                    color: UI.text,
+                    borderRadius: 18,
+                    paddingHorizontal: 14,
+                    paddingVertical: 14,
+                    fontWeight: "800",
+                    fontSize: 15,
+                  }}
+                />
+              </View>
+            ) : (
+              <View style={{ gap: 10 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                  <Text style={{ color: UI.muted, fontWeight: "800" }}>Products & Quantity</Text>
+
+                  <Pressable
+                    onPress={openAddProductPicker}
+                    disabled={productsLoading || eligibleProducts.length === 0}
+                    style={({ pressed }) => ({
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      borderRadius: 999,
+                      borderWidth: 1,
+                      borderColor: "rgba(16,185,129,0.28)",
+                      backgroundColor: "rgba(16,185,129,0.12)",
+                      opacity: productsLoading || eligibleProducts.length === 0 ? 0.45 : pressed ? 0.92 : 1,
+                    })}
+                  >
+                    <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>Add Product</Text>
+                  </Pressable>
+                </View>
+
+                {productsLoading ? (
+                  <Text style={{ color: UI.faint, fontWeight: "800" }}>Loading products...</Text>
+                ) : productItems.length === 0 ? (
+                  <Card
+                    style={{
+                      borderColor: "rgba(255,255,255,0.10)",
+                      backgroundColor: "rgba(255,255,255,0.04)",
+                      borderRadius: 18,
+                      padding: 12,
+                    }}
+                  >
+                    <Text style={{ color: UI.faint, fontWeight: "800", lineHeight: 20 }}>
+                      Bofya Add Product kuchagua bidhaa. Ukichagua bidhaa iliyopo tayari, quantity itaongezeka badala ya kutengeneza duplicate.
+                    </Text>
+                  </Card>
+                ) : (
+                  <View style={{ gap: 10 }}>
+                    {productItems.map((row, index) => {
+                      const selected = products.find((p) => p.id === row.product_id);
+                      const unitPrice =
+                        entryType === "COST"
+                          ? toNum(selected?.cost_price)
+                          : toNum(selected?.selling_price);
+                      const qty = toNum(row.quantity);
+                      const lineTotal = unitPrice > 0 && qty > 0 ? unitPrice * qty : 0;
+
+                      return (
+                        <Card
+                          key={`product-row-${index}-${row.product_id || "empty"}`}
+                          style={{
+                            gap: 10,
+                            borderRadius: 18,
+                            borderColor: "rgba(255,255,255,0.10)",
+                            backgroundColor: "rgba(255,255,255,0.04)",
+                          }}
+                        >
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              gap: 10,
+                            }}
+                          >
+                            <View style={{ flex: 1, minWidth: 0 }}>
+                              <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                                Selected Product
+                              </Text>
+                              <Text
+                                style={{ color: UI.text, fontWeight: "900", fontSize: 16, marginTop: 4 }}
+                                numberOfLines={1}
+                              >
+                                {selected ? selected.name : "No product selected"}
+                              </Text>
+                              <Text
+                                style={{ color: UI.faint, fontWeight: "800", marginTop: 4 }}
+                                numberOfLines={1}
+                              >
+                                {selected
+                                  ? entryType === "COST"
+                                    ? `Cost ${fmt(toNum(selected.cost_price))}`
+                                    : `Selling ${fmt(toNum(selected.selling_price))}`
+                                  : "No price"}
+                              </Text>
+                            </View>
+
+                            <Pressable
+                              onPress={() => openChangeProductPicker(index)}
+                              style={({ pressed }) => ({
+                                paddingHorizontal: 12,
+                                paddingVertical: 10,
+                                borderRadius: 14,
+                                borderWidth: 1,
+                                borderColor: "rgba(16,185,129,0.28)",
+                                backgroundColor: "rgba(16,185,129,0.12)",
+                                opacity: pressed ? 0.92 : 1,
+                              })}
+                            >
+                              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
+                                Change
+                              </Text>
+                            </Pressable>
+                          </View>
+
+                          <View style={{ gap: 8 }}>
+                            <Text style={{ color: UI.muted, fontWeight: "800" }}>Quantity</Text>
+                            <TextInput
+                              value={row.quantity}
+                              onChangeText={(t) =>
+                                updateProductRow(index, { quantity: t.replace(/[^0-9.]/g, "") })
+                              }
+                              placeholder="mfano: 1"
+                              placeholderTextColor="rgba(234,242,255,0.35)"
+                              keyboardType="numeric"
+                              style={{
+                                borderWidth: 1,
+                                borderColor: "rgba(255,255,255,0.10)",
+                                backgroundColor: "rgba(255,255,255,0.05)",
+                                color: UI.text,
+                                borderRadius: 18,
+                                paddingHorizontal: 14,
+                                paddingVertical: 14,
+                                fontWeight: "800",
+                                fontSize: 15,
+                              }}
+                            />
+                          </View>
+
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              gap: 10,
+                            }}
+                          >
+                            <Text style={{ color: UI.faint, fontWeight: "800", flex: 1 }}>
+                              {selected ? `${selected.name} × ${qty || 0}` : "No product selected"}
+                            </Text>
+
+                            <Text style={{ color: UI.text, fontWeight: "900" }}>
+                              {lineTotal > 0 ? fmt(lineTotal) : "TSh 0"}
+                            </Text>
+                          </View>
+
+                          <Pressable
+                            onPress={() => removeProductRow(index)}
+                            style={({ pressed }) => ({
+                              borderRadius: 14,
+                              borderWidth: 1,
+                              borderColor: "rgba(201,74,74,0.30)",
+                              backgroundColor: "rgba(201,74,74,0.10)",
+                              paddingVertical: 10,
+                              alignItems: "center",
+                              justifyContent: "center",
+                              opacity: pressed ? 0.92 : 1,
+                            })}
+                          >
+                            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
+                              Remove
+                            </Text>
+                          </Pressable>
+                        </Card>
+                      );
+                    })}
+                  </View>
+                )}
+              </View>
+            )}
 
             <View style={{ gap: 8 }}>
               <Text style={{ color: UI.muted, fontWeight: "800" }}>Note / Description</Text>
@@ -466,11 +915,52 @@ export default function CapitalRecoveryWorkspaceScreen() {
             <View style={{ flexDirection: "row", gap: 12 }}>
               <MiniStat label="Entry Type" value={entryType} hint="current selection" />
               <MiniStat
+                label="Method"
+                value={entryMethod}
+                hint={entryMethod === "MANUAL" ? "direct amount" : "product-based"}
+              />
+              <MiniStat
                 label="Amount"
                 value={canSave ? formattedPreviewAmount : "TSh 0"}
                 hint="preview"
               />
             </View>
+
+            {entryMethod === "PRODUCTS" && (
+              <Card
+                style={{
+                  borderColor: "rgba(255,255,255,0.10)",
+                  backgroundColor: "rgba(255,255,255,0.04)",
+                  borderRadius: 18,
+                  padding: 12,
+                  gap: 8,
+                }}
+              >
+                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
+                  Product Breakdown
+                </Text>
+
+                {selectedProductItems.length === 0 ? (
+                  <Text style={{ color: UI.faint, fontWeight: "800", lineHeight: 20 }}>
+                    Hakuna bidhaa zilizochaguliwa bado.
+                  </Text>
+                ) : (
+                  selectedProductItems.map((item) => (
+                    <View
+                      key={`${item.product_id}-${item.quantity}-${item.line_total}`}
+                      style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}
+                    >
+                      <Text style={{ color: UI.faint, fontWeight: "800", flex: 1 }}>
+                        {item.product_name} × {item.quantity}
+                      </Text>
+                      <Text style={{ color: UI.text, fontWeight: "900" }}>
+                        {fmt(item.line_total)}
+                      </Text>
+                    </View>
+                  ))
+                )}
+              </Card>
+            )}
 
             <Card
               style={{
@@ -510,10 +1000,143 @@ export default function CapitalRecoveryWorkspaceScreen() {
             })}
           >
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
-              {saving ? "Saving..." : "Save Entry"}
+              {saving
+                ? "Saving..."
+                : entryMethod === "MANUAL"
+                ? "Save Entry"
+                : "Save Product Entry"}
             </Text>
           </Pressable>
         </Card>
+
+        <Modal
+          visible={pickerOpen}
+          animationType="slide"
+          transparent
+          onRequestClose={closeProductPicker}
+        >
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: "rgba(2,6,23,0.82)",
+              justifyContent: "flex-end",
+            }}
+          >
+            <View
+              style={{
+                maxHeight: "78%",
+                borderTopLeftRadius: 24,
+                borderTopRightRadius: 24,
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,0.10)",
+                backgroundColor: "rgba(15,18,24,0.98)",
+                paddingHorizontal: 16,
+                paddingTop: 16,
+                paddingBottom: 22,
+                gap: 12,
+              }}
+            >
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 12,
+                }}
+              >
+                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18 }}>
+                  Select Product
+                </Text>
+
+                <Pressable
+                  onPress={closeProductPicker}
+                  style={({ pressed }) => ({
+                    width: 40,
+                    height: 40,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    borderColor: "rgba(255,255,255,0.10)",
+                    backgroundColor: "rgba(255,255,255,0.05)",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    opacity: pressed ? 0.92 : 1,
+                  })}
+                >
+                  <Ionicons name="close" size={18} color={UI.text} />
+                </Pressable>
+              </View>
+
+              <TextInput
+                value={pickerSearch}
+                onChangeText={setPickerSearch}
+                placeholder="Search product..."
+                placeholderTextColor="rgba(234,242,255,0.35)"
+                style={{
+                  borderWidth: 1,
+                  borderColor: "rgba(255,255,255,0.10)",
+                  backgroundColor: "rgba(255,255,255,0.05)",
+                  color: UI.text,
+                  borderRadius: 16,
+                  paddingHorizontal: 14,
+                  paddingVertical: 14,
+                  fontWeight: "800",
+                  fontSize: 14,
+                }}
+              />
+
+              <Text style={{ color: UI.faint, fontWeight: "800" }}>
+                {entryType === "COST"
+                  ? "Showing products with cost price only."
+                  : "Showing products with selling price only."}
+              </Text>
+
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: 12, gap: 8 }}
+              >
+                {filteredEligibleProducts.length === 0 ? (
+                  <Card
+                    style={{
+                      borderColor: "rgba(255,255,255,0.10)",
+                      backgroundColor: "rgba(255,255,255,0.04)",
+                      borderRadius: 16,
+                      padding: 12,
+                    }}
+                  >
+                    <Text style={{ color: UI.faint, fontWeight: "800", lineHeight: 20 }}>
+                      Hakuna product inayolingana na search/mode hii.
+                    </Text>
+                  </Card>
+                ) : (
+                  filteredEligibleProducts.map((product) => (
+                    <Pressable
+                      key={product.id}
+                      onPress={() => selectProductFromPicker(product.id)}
+                      style={({ pressed }) => ({
+                        borderRadius: 16,
+                        borderWidth: 1,
+                        borderColor: "rgba(255,255,255,0.10)",
+                        backgroundColor: "rgba(255,255,255,0.05)",
+                        paddingHorizontal: 12,
+                        paddingVertical: 12,
+                        opacity: pressed ? 0.92 : 1,
+                      })}
+                    >
+                      <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
+                        {product.name}
+                      </Text>
+                      <Text style={{ color: UI.faint, fontWeight: "800", marginTop: 4 }}>
+                        {entryType === "COST"
+                          ? `Cost ${fmt(toNum(product.cost_price))}`
+                          : `Selling ${fmt(toNum(product.selling_price))}`}
+                      </Text>
+                    </Pressable>
+                  ))
+                )}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
 
         <Card
           style={{
@@ -593,6 +1216,8 @@ export default function CapitalRecoveryWorkspaceScreen() {
           </Pressable>
         </Card>
       </StoreGuard>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </Screen>
   );
 }

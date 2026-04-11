@@ -228,52 +228,99 @@ function formatTimeAgo(input?: string | null) {
 
 
 function ScannerFabIcon({ size = 24, color = "#E5E7EB" }: { size?: number; color?: string }) {
-  const bodyW = Math.max(18, Math.round(size * 0.9));
-  const bodyH = Math.max(12, Math.round(size * 0.5));
-  const handleW = Math.max(8, Math.round(size * 0.28));
-  const handleH = Math.max(9, Math.round(size * 0.34));
-  const lensW = Math.max(10, Math.round(size * 0.42));
-  const lensH = Math.max(5, Math.round(size * 0.18));
+  const w = Math.max(22, Math.round(size * 1.05));
+  const h = Math.max(18, Math.round(size * 0.78));
+  const barHeights = [0.72, 0.46, 0.86, 0.58, 0.92, 0.52, 0.8];
+  const barWidths = [2, 1.5, 2.2, 1.4, 2.4, 1.6, 2];
+  const gap = Math.max(1.5, Math.round(size * 0.04));
 
   return (
-    <View style={{ width: size + 2, height: size + 2, alignItems: "center", justifyContent: "center" }}>
+    <View
+      style={{
+        width: size + 4,
+        height: size + 4,
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
       <View
         style={{
-          width: bodyW,
-          height: bodyH,
-          borderWidth: 2,
+          width: w,
+          height: h,
+          borderRadius: 7,
+          borderWidth: 1.8,
           borderColor: color,
-          borderRadius: 8,
-          transform: [{ rotate: "-12deg" }],
+          paddingHorizontal: 3,
+          flexDirection: "row",
           alignItems: "flex-end",
           justifyContent: "center",
-          paddingRight: 3,
           backgroundColor: "transparent",
+          gap,
         }}
       >
-        <View
-          style={{
-            width: lensW,
-            height: lensH,
-            borderWidth: 2,
-            borderColor: color,
-            borderRadius: 4,
-          }}
-        />
+        {barHeights.map((ratio, idx) => (
+          <View
+            key={idx}
+            style={{
+              width: barWidths[idx],
+              height: Math.max(5, Math.round(h * ratio)),
+              backgroundColor: color,
+              borderRadius: 1.5,
+            }}
+          />
+        ))}
       </View>
 
       <View
         style={{
           position: "absolute",
-          right: Math.round(size * 0.18),
-          bottom: Math.round(size * 0.1),
-          width: handleW,
-          height: handleH,
-          borderWidth: 2,
+          left: -1,
+          top: -1,
+          width: 8,
+          height: 8,
+          borderLeftWidth: 2,
+          borderTopWidth: 2,
           borderColor: color,
-          borderRadius: 6,
-          transform: [{ rotate: "-18deg" }],
-          backgroundColor: "transparent",
+          borderTopLeftRadius: 3,
+        }}
+      />
+      <View
+        style={{
+          position: "absolute",
+          right: -1,
+          top: -1,
+          width: 8,
+          height: 8,
+          borderRightWidth: 2,
+          borderTopWidth: 2,
+          borderColor: color,
+          borderTopRightRadius: 3,
+        }}
+      />
+      <View
+        style={{
+          position: "absolute",
+          left: -1,
+          bottom: -1,
+          width: 8,
+          height: 8,
+          borderLeftWidth: 2,
+          borderBottomWidth: 2,
+          borderColor: color,
+          borderBottomLeftRadius: 3,
+        }}
+      />
+      <View
+        style={{
+          position: "absolute",
+          right: -1,
+          bottom: -1,
+          width: 8,
+          height: 8,
+          borderRightWidth: 2,
+          borderBottomWidth: 2,
+          borderColor: color,
+          borderBottomRightRadius: 3,
         }}
       />
     </View>
@@ -307,9 +354,12 @@ export default function SalesHomeScreen() {
   const refreshTimerRef = useRef<any>(null);
   const lastRealtimeRefreshAtRef = useRef<number>(0);
   const latestStoreIdRef = useRef<string>("");
+  const lastResetStoreIdRef = useRef<string>("");
+  const lastResetCashierModeRef = useRef<boolean | null>(null);
 
   useEffect(() => {
     latestStoreIdRef.current = String(activeStoreId ?? "").trim();
+    setLastHandledParamScan("");
   }, [activeStoreId]);
 
   const [source, setSource] = useState<"LIVE" | "CACHED" | "NONE">("NONE");
@@ -854,9 +904,18 @@ export default function SalesHomeScreen() {
   }, [isCashier, loadProducts]);
 
   useEffect(() => {
-    setCart([]);
-    setQuery("");
-    setRecentScannedIds([]);
+    const currentStoreId = String(activeStoreId ?? "").trim();
+    const shouldResetForStoreChange = lastResetStoreIdRef.current !== currentStoreId;
+    const shouldResetForModeChange =
+      lastResetCashierModeRef.current === null || lastResetCashierModeRef.current !== isCashier;
+
+    if (shouldResetForStoreChange || shouldResetForModeChange) {
+      setCart([]);
+      setQuery("");
+      setRecentScannedIds([]);
+      lastResetStoreIdRef.current = currentStoreId;
+      lastResetCashierModeRef.current = isCashier;
+    }
 
     if (isCashier) {
       void (async () => {
@@ -935,7 +994,9 @@ export default function SalesHomeScreen() {
 
     if (!storeIdNow || !orgIdNow) return;
 
-    const channel = supabase.channel(`sales-live:${orgIdNow}:${storeIdNow}`);
+    const channel = supabase.channel(
+      `sales-live:${orgIdNow}:${storeIdNow}:${Date.now()}`
+    );
 
     channel.on(
       "postgres_changes",
@@ -961,8 +1022,7 @@ export default function SalesHomeScreen() {
         triggerRealtimeRefresh();
       }
     );
-
-    channel.subscribe();
+channel.subscribe();
 
     realtimeChannelRef.current = channel;
 
@@ -972,11 +1032,15 @@ export default function SalesHomeScreen() {
         refreshTimerRef.current = null;
       }
 
-      if (realtimeChannelRef.current) {
-        supabase.removeChannel(realtimeChannelRef.current);
+      try {
+        supabase.removeChannel(channel);
+      } catch {}
+
+      if (realtimeChannelRef.current === channel) {
         realtimeChannelRef.current = null;
       }
     };
+    
   }, [activeOrgId, activeStoreId, isCashier, triggerRealtimeRefresh]);
 
   useEffect(() => {
@@ -1139,23 +1203,23 @@ export default function SalesHomeScreen() {
     [activeStoreId, addAuto, bumpRecent, isCashier, isOffline, products, vibrateScan]
   );
 
-  useFocusEffect(
-    useCallback(() => {
-      setActiveScanScope("SALES");
+  useEffect(() => {
+    if (isCashier) return;
 
-      const unsub = subscribeScanBarcode(
-        (barcode) => {
-          handleBarcode(barcode);
-        },
-        { scope: "SALES" }
-      );
+    setActiveScanScope("SALES");
 
-      return () => {
-        unsub();
-        setActiveScanScope("GLOBAL");
-      };
-    }, [handleBarcode])
-  );
+    const unsub = subscribeScanBarcode(
+      (barcode) => {
+        handleBarcode(barcode);
+      },
+      { scope: "SALES" }
+    );
+
+    return () => {
+      unsub();
+      setActiveScanScope("GLOBAL");
+    };
+  }, [handleBarcode, isCashier]);
 
   useEffect(() => {
     if (Platform.OS !== "web") return;
@@ -1255,15 +1319,22 @@ export default function SalesHomeScreen() {
   useEffect(() => {
     const raw = cleanBarcode(params?.barcode);
     if (!raw) return;
+    if (!activeStoreId) return;
+    if (isCashier) return;
 
-    // Web ndani ya Sales page sasa inasikiliza local scanner moja kwa moja,
-    // hivyo route-param scan ibaki mainly kwa navigation kutoka pages nyingine.
     const key = `${activeStoreId ?? "no-store"}::${raw}::${String(params?._ts ?? "")}`;
     if (key === lastHandledParamScan) return;
-    setLastHandledParamScan(key);
 
     handleBarcode(raw);
-  }, [activeStoreId, handleBarcode, lastHandledParamScan, params?._ts, params?.barcode]);
+    setLastHandledParamScan(key);
+  }, [
+    activeStoreId,
+    handleBarcode,
+    isCashier,
+    lastHandledParamScan,
+    params?._ts,
+    params?.barcode,
+  ]);
 
   /* =========================
      Navigation
@@ -1668,8 +1739,8 @@ export default function SalesHomeScreen() {
             disabled={!activeStoreId || !canSellDirect || isCashier}
             style={({ pressed }) => [
               {
-                width: 58,
-                height: 58,
+                width: 62,
+                height: 62,
                 borderRadius: 999,
                 alignItems: "center",
                 justifyContent: "center",
@@ -1683,7 +1754,7 @@ export default function SalesHomeScreen() {
             hitSlop={10}
           >
             <View style={{ marginLeft: 1, marginTop: 1 }}>
-              <ScannerFabIcon size={26} color={theme.colors.text} />
+              <ScannerFabIcon size={28} color={theme.colors.text} />
             </View>
           </Pressable>
 

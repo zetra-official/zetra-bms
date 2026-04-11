@@ -2,7 +2,6 @@
 import {
   AppState,
   FlatList,
-  Keyboard,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -58,30 +57,11 @@ export function Screen({
   const TAB_BAR_BASE_HEIGHT = 56;
   const TAB_BAR_EXTRA_GAP = 12;
 
-  const [keyboardOpen, setKeyboardOpen] = useState(false);
-
   // ✅ Global offline indicator
   const [isOffline, setIsOffline] = useState(false);
 
   // ✅ Remount overlays on resume (fix "touch dead until reload")
   const [resumeTick, setResumeTick] = useState(0);
-
-  useEffect(() => {
-    if (isWeb) return;
-
-    const showSub = Keyboard.addListener("keyboardDidShow", () => {
-      setKeyboardOpen(true);
-    });
-
-    const hideSub = Keyboard.addListener("keyboardDidHide", () => {
-      setKeyboardOpen(false);
-    });
-
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, [isWeb]);
 
   useEffect(() => {
     if (isWeb) return;
@@ -130,13 +110,8 @@ export function Screen({
       return 24;
     }
 
-    if (keyboardOpen) {
-      if (Platform.OS === "android") return 16;
-      return 24;
-    }
-
     return TAB_BAR_BASE_HEIGHT + TAB_BAR_EXTRA_GAP;
-  }, [bottomPad, keyboardOpen, isWeb]);
+  }, [bottomPad, isWeb]);
 
   // ✅ Stronger safe-area spacing for top headers
   const topInset = Math.max(insets.top, 10);
@@ -263,7 +238,7 @@ export function Screen({
             contentStyle,
           ]}
           refreshControl={refreshControl as any}
-          keyboardShouldPersistTaps="handled"
+          keyboardShouldPersistTaps="always"
           keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "none"}
           showsVerticalScrollIndicator={false}
         >

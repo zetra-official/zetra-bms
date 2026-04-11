@@ -137,7 +137,7 @@ export default function CreateClubOrderScreen() {
 
       const orderId = clean(data);
 
-      Alert.alert("Order", "Order imetumwa âœ…", [
+      Alert.alert("Order", "Order imetumwa ✅", [
         {
           text: "OPEN",
           onPress: () => {
@@ -146,7 +146,7 @@ export default function CreateClubOrderScreen() {
               return;
             }
 
-            // âœ… FIX: Open CUSTOMER detail inside Tabs (so it never falls into staff screen)
+            // ✅ FIX: Open CUSTOMER detail inside Tabs (so it never falls into staff screen)
             router.replace({
               pathname: "/(tabs)/club/customer/orders/customer/[orderId]" as any,
               params: { orderId, storeId, storeName },
@@ -185,7 +185,7 @@ export default function CreateClubOrderScreen() {
               <View>
                 <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>Create Order</Text>
                 <Text style={{ color: theme.colors.faint, fontWeight: "900", fontSize: 12 }}>
-                  Store: {storeName ? storeName : storeId ? storeId.slice(0, 8) + "â€¦" : "â€”"}
+                  Store: {storeName ? storeName : storeId ? storeId.slice(0, 8) + "..." : "—"}
                 </Text>
               </View>
             </View>
@@ -236,7 +236,7 @@ export default function CreateClubOrderScreen() {
                     },
                   ]}
                 >
-                  <Text style={{ color: theme.colors.dangerText, fontWeight: "900" }}>Remove</Text>
+                  <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>Remove</Text>
                 </Pressable>
               </View>
 

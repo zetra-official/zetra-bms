@@ -137,9 +137,9 @@ export default function RegisterScreen() {
       return Alert.alert("Register Failed", "Account haikuweza kuundwa vizuri.");
     }
 
-    // Email confirmation ikiwa OFF, user aende moja kwa moja onboarding.
+    // Email confirmation ikiwa OFF, user aende kwanza referral step, kisha onboarding.
     if (session) {
-      router.replace("/(onboarding)");
+      router.replace("/(onboarding)/referral");
       return;
     }
 

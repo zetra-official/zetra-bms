@@ -1029,8 +1029,13 @@ export default function FinanceHistoryScreen() {
 
   const orgId = String(org.activeOrgId ?? "").trim();
   const orgName = String(org.activeOrgName ?? "Org").trim() || "Org";
-  const storeId = String(org.activeStoreId ?? "").trim();
-  const storeName = String(org.activeStoreName ?? "Store").trim() || "Store";
+
+  const routeStoreId = String(params?.storeId ?? "").trim();
+  const routeStoreName = String(params?.storeName ?? "").trim();
+
+  const storeId = String(routeStoreId || org.activeStoreId || "").trim();
+  const storeName =
+    String(routeStoreName || org.activeStoreName || "Store").trim() || "Store";
 
   const roleLower = String(org.activeRole ?? "").trim().toLowerCase();
   const isOwner = roleLower === "owner";

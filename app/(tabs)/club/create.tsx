@@ -50,6 +50,44 @@ function fmtMoneyTZS(n: number, currency = "TZS") {
   }
 }
 
+function webIconFallback(name: keyof typeof Ionicons.glyphMap) {
+  switch (name) {
+    case "storefront-outline":
+      return "🏬";
+    default:
+      return "•";
+  }
+}
+
+function SafeIcon({
+  name,
+  size = 18,
+  color,
+}: {
+  name: keyof typeof Ionicons.glyphMap;
+  size?: number;
+  color: string;
+}) {
+  if (Platform.OS === "web") {
+    return (
+      <Text
+        style={{
+          color,
+          fontSize: size,
+          lineHeight: size + 2,
+          fontWeight: "900",
+          textAlign: "center",
+          includeFontPadding: false,
+        }}
+      >
+        {webIconFallback(name)}
+      </Text>
+    );
+  }
+
+  return <Ionicons name={name} size={size} color={color} />;
+}
+
 function base64ToUint8Array(base64: string) {
   // @ts-ignore
   const binary = atob(base64);
@@ -540,7 +578,7 @@ export default function ClubCreatePostScreen() {
                   justifyContent: "center",
                 }}
               >
-                <Ionicons name="storefront-outline" size={18} color={theme.colors.emerald} />
+                <SafeIcon name="storefront-outline" size={18} color={theme.colors.emerald} />
               </View>
 
               <View style={{ flex: 1 }}>
@@ -551,7 +589,7 @@ export default function ClubCreatePostScreen() {
               </View>
 
               <Pressable onPress={() => void loadProducts()} hitSlop={10} style={{ padding: 8 }}>
-                <Ionicons name="refresh" size={18} color={theme.colors.faint} />
+                <SafeIcon name="refresh" size={18} color={theme.colors.faint} />
               </Pressable>
             </View>
 

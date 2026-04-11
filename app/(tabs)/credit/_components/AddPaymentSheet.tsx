@@ -24,7 +24,7 @@ type Props = {
   creditId: string;
   canManageCredit: boolean; // ✅ NEW
   onClose: () => void;
-  onSuccess?: () => void;
+  onSuccess?: (paymentId?: string) => void;
 };
 
 type PayMethod = "CASH" | "MOBILE" | "BANK";
@@ -161,7 +161,7 @@ export default function AddPaymentSheet({
           ? null
           : `${(channel || "").trim()}${channel?.trim() ? " • " : ""}${reference.trim()}`.trim();
 
-      const { error } = await supabase.rpc(
+      const { data, error } = await supabase.rpc(
         "record_credit_payment_v2",
         {
           p_store_id: activeStoreId,
@@ -175,9 +175,11 @@ export default function AddPaymentSheet({
 
       if (error) throw error;
 
+      const paymentId = String(data ?? "").trim() || undefined;
+
       Keyboard.dismiss();
       onClose();
-      onSuccess?.();
+      onSuccess?.(paymentId);
     } catch (e: any) {
       Alert.alert("Payment failed", e?.message ?? "Failed to save payment.");
     } finally {

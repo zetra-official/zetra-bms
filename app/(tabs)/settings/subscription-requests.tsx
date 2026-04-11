@@ -12,7 +12,7 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as LocalAuthentication from "expo-local-authentication";
 import {
@@ -27,6 +27,7 @@ import { supabase } from "@/src/supabase/supabaseClient";
 
 const INTERNAL_BILLING_EMAIL = "zetraofficialtz@gmail.com";
 
+type OfficeTab = "REQUESTS" | "PARTNERS";
 type RequestFilter = "ALL" | "PENDING" | "APPROVED" | "REJECTED";
 
 function clean(s: any) {
@@ -126,6 +127,94 @@ type ParsedPaymentResult = {
   parseNotes: string;
 };
 
+type PartnerSummaryRow = {
+  total_partners?: number | null;
+  active_partners?: number | null;
+  total_referrals?: number | null;
+  active_referrals?: number | null;
+  total_earned_tzs?: number | null;
+  total_paid_tzs?: number | null;
+  total_unpaid_tzs?: number | null;
+};
+
+type PartnerListRow = {
+  partner_id: string;
+  user_id: string;
+  email_snapshot: string;
+  full_name_snapshot: string | null;
+  phone_snapshot: string | null;
+  referral_code: string;
+  status: string;
+  total_referrals: number | null;
+  active_referrals: number | null;
+  total_earned_tzs: number | null;
+  total_paid_tzs: number | null;
+  total_unpaid_tzs: number | null;
+  created_at: string | null;
+  activated_at: string | null;
+};
+
+type PartnerReferralRow = {
+  referral_id: string;
+  referred_user_id: string;
+  referred_email_snapshot: string;
+  referral_code_used: string;
+  status: string;
+  linked_at: string | null;
+  ended_at: string | null;
+  total_commission_tzs: number | null;
+  paid_commission_tzs: number | null;
+  unpaid_commission_tzs: number | null;
+};
+
+type PartnerCommissionRow = {
+  commission_id: string;
+  referral_id: string;
+  referred_user_id: string;
+  referred_email_snapshot: string;
+  subscription_payment_request_id: string;
+
+  payment_amount_tzs: number | null;
+  monthly_charge_tzs?: number | null;
+  months_paid_count?: number | null;
+  commission_month_number?: number | null;
+
+  commission_percent: number | null;
+  commission_amount_tzs: number | null;
+  payment_sequence_number: number | null;
+  commission_status: string;
+
+  earned_at: string | null;
+  approved_at: string | null;
+  paid_at: string | null;
+  unlock_at?: string | null;
+
+  payout_id: string | null;
+  notes: string | null;
+};
+
+type PartnerPayoutRow = {
+  payout_id: string;
+  payout_amount_tzs: number | null;
+  payout_status: string;
+  payout_method: string;
+  payout_reference: string | null;
+  payout_note: string | null;
+  payout_date: string | null;
+  created_at: string | null;
+};
+
+type OfficePartnerPayoutProfileRow = {
+  partner_id: string;
+  email_snapshot: string | null;
+  full_name_snapshot: string | null;
+  payout_method: string | null;
+  payout_phone: string | null;
+  payout_account_name: string | null;
+  payout_notes: string | null;
+  payout_updated_at: string | null;
+};
+
 function fmtMoney(v: any, currencyCode?: string | null) {
   const n = Number(v);
   if (!Number.isFinite(n)) return "—";
@@ -149,6 +238,29 @@ function fmtDateTime(v: any) {
   } catch {
     return s;
   }
+}
+
+function hasMoney(v: any) {
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0;
+}
+
+function hasCount(v: any) {
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0;
+}
+
+function isReadyCommission(status: any) {
+  const s = upper(status);
+  return s === "EARNED" || s === "APPROVED";
+}
+
+function isLockedCommission(status: any) {
+  return upper(status) === "LOCKED";
+}
+
+function isPaidCommission(status: any) {
+  return upper(status) === "PAID";
 }
 
 function fmtBool(v: any) {
@@ -188,6 +300,40 @@ function statusTone(status: string) {
   return {
     borderColor: "rgba(245,158,11,0.35)",
     backgroundColor: "rgba(245,158,11,0.10)",
+  };
+}
+
+function partnerStatusTone(status: string) {
+  const s = upper(status);
+
+  if (s === "ACTIVE") {
+    return {
+      borderColor: "rgba(16,185,129,0.35)",
+      backgroundColor: "rgba(16,185,129,0.12)",
+      text: "ACTIVE",
+    };
+  }
+
+  if (s === "SUSPENDED") {
+    return {
+      borderColor: "rgba(239,68,68,0.35)",
+      backgroundColor: "rgba(239,68,68,0.12)",
+      text: "SUSPENDED",
+    };
+  }
+
+  if (s === "PENDING") {
+    return {
+      borderColor: "rgba(245,158,11,0.35)",
+      backgroundColor: "rgba(245,158,11,0.12)",
+      text: "PENDING",
+    };
+  }
+
+  return {
+    borderColor: "rgba(255,255,255,0.14)",
+    backgroundColor: "rgba(255,255,255,0.06)",
+    text: s || "UNKNOWN",
   };
 }
 
@@ -422,6 +568,7 @@ function FilterPill({
 
 export default function SubscriptionRequestsScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ tab?: string }>();
   const insets = useSafeAreaInsets();
 
   const [checkingAccess, setCheckingAccess] = useState(true);
@@ -438,6 +585,9 @@ export default function SubscriptionRequestsScreen() {
   const [rejectReason, setRejectReason] = useState("");
 
   const [filter, setFilter] = useState<RequestFilter>("PENDING");
+  const [officeTab, setOfficeTab] = useState<OfficeTab>(
+    upper(clean(params?.tab)) === "PARTNERS" ? "PARTNERS" : "REQUESTS"
+  );
 
   const [smsText, setSmsText] = useState("");
   const [smsSender, setSmsSender] = useState("");
@@ -464,7 +614,37 @@ export default function SubscriptionRequestsScreen() {
   const [officeListenerStarted, setOfficeListenerStarted] = useState(false);
   const [officeListenerStatus, setOfficeListenerStatus] = useState("OFF");
 
-  const titleRightLabel = useMemo(() => "Office", []);
+  const [partnersLoading, setPartnersLoading] = useState(false);
+  const [partnersBusy, setPartnersBusy] = useState(false);
+  const [partnerSummary, setPartnerSummary] = useState<PartnerSummaryRow | null>(null);
+  const [partners, setPartners] = useState<PartnerListRow[]>([]);
+  const [selectedPartner, setSelectedPartner] = useState<PartnerListRow | null>(null);
+  const [partnerErrorText, setPartnerErrorText] = useState("");
+  const [partnerEmail, setPartnerEmail] = useState("");
+  const [partnerFullName, setPartnerFullName] = useState("");
+  const [partnerPhone, setPartnerPhone] = useState("");
+  const [partnerNotes, setPartnerNotes] = useState("");
+
+  const [partnerDetailLoading, setPartnerDetailLoading] = useState(false);
+  const [partnerReferrals, setPartnerReferrals] = useState<PartnerReferralRow[]>([]);
+  const [partnerCommissions, setPartnerCommissions] = useState<PartnerCommissionRow[]>([]);
+  const [partnerPayouts, setPartnerPayouts] = useState<PartnerPayoutRow[]>([]);
+  const [partnerDetailErrorText, setPartnerDetailErrorText] = useState("");
+
+  const [selectedPartnerPayoutProfile, setSelectedPartnerPayoutProfile] =
+    useState<OfficePartnerPayoutProfileRow | null>(null);
+
+  const [showPayoutForm, setShowPayoutForm] = useState(false);
+  const [selectedCommissionIds, setSelectedCommissionIds] = useState<string[]>([]);
+  const [payoutMethod, setPayoutMethod] = useState("MOBILE_MONEY");
+  const [payoutReference, setPayoutReference] = useState("");
+  const [payoutNote, setPayoutNote] = useState("");
+  const [creatingPayout, setCreatingPayout] = useState(false);
+
+  const titleRightLabel = useMemo(
+    () => (officeTab === "PARTNERS" ? "Partners" : "Office"),
+    [officeTab]
+  );
 
   const resetParsedUi = useCallback(() => {
     setParsedPayerName("");
@@ -575,6 +755,230 @@ export default function SubscriptionRequestsScreen() {
     }
   }, []);
 
+  const loadPartnersModule = useCallback(async () => {
+    setPartnersLoading(true);
+    setPartnerErrorText("");
+
+    try {
+      await supabase.rpc("gp_unlock_due_commissions_v1");
+
+      const [{ data: summaryData, error: summaryError }, { data: listData, error: listError }] =
+        await Promise.all([
+          supabase.rpc("gp_office_dashboard_summary_v1"),
+          supabase.rpc("gp_list_partners_v1"),
+        ]);
+
+      if (summaryError) throw summaryError;
+      if (listError) throw listError;
+
+      const summaryRow = Array.isArray(summaryData)
+        ? ((summaryData?.[0] ?? null) as PartnerSummaryRow | null)
+        : ((summaryData ?? null) as PartnerSummaryRow | null);
+
+      setPartnerSummary(summaryRow ?? null);
+      setPartners((Array.isArray(listData) ? listData : []) as PartnerListRow[]);
+    } catch (e: any) {
+      setPartnerSummary(null);
+      setPartners([]);
+      setPartnerErrorText(
+        clean(e?.message) || "Failed to load Growth Partners dashboard."
+      );
+    } finally {
+      setPartnersLoading(false);
+    }
+  }, []);
+
+
+const loadSelectedPartnerDetail = useCallback(async (partnerId: string) => {
+  const id = clean(partnerId);
+  if (!id) {
+    setPartnerReferrals([]);
+    setPartnerCommissions([]);
+    setPartnerPayouts([]);
+    setPartnerDetailErrorText("");
+    return;
+  }
+
+  setPartnerDetailLoading(true);
+  setPartnerDetailErrorText("");
+
+  try {
+    await supabase.rpc("gp_unlock_due_commissions_v1");
+
+    const [
+      { data: referralsData, error: referralsError },
+      { data: commissionsData, error: commissionsError },
+      { data: payoutsData, error: payoutsError },
+    ] = await Promise.all([
+      supabase.rpc("gp_list_partner_referrals_v1", { p_partner_id: id }),
+      supabase.rpc("gp_list_partner_commissions_v1", { p_partner_id: id }),
+      supabase.rpc("gp_list_partner_payouts_v1", { p_partner_id: id }),
+    ]);
+
+    if (referralsError) throw referralsError;
+    if (commissionsError) throw commissionsError;
+    if (payoutsError) throw payoutsError;
+
+    setPartnerReferrals(
+      (Array.isArray(referralsData) ? referralsData : []) as PartnerReferralRow[]
+    );
+
+    const commissionRows = (Array.isArray(commissionsData)
+      ? commissionsData
+      : []) as PartnerCommissionRow[];
+
+    commissionRows.sort((a, b) => {
+      const aPaidAt = clean(a.paid_at);
+      const bPaidAt = clean(b.paid_at);
+
+      if (aPaidAt && bPaidAt) {
+        return new Date(bPaidAt).getTime() - new Date(aPaidAt).getTime();
+      }
+
+      const aUnlock = clean(a.unlock_at);
+      const bUnlock = clean(b.unlock_at);
+
+      if (aUnlock && bUnlock) {
+        return new Date(aUnlock).getTime() - new Date(bUnlock).getTime();
+      }
+
+      const aMonth = Number(a.commission_month_number ?? 0);
+      const bMonth = Number(b.commission_month_number ?? 0);
+      if (aMonth !== bMonth) return aMonth - bMonth;
+
+      return (
+        new Date(clean(b.earned_at) || 0).getTime() -
+        new Date(clean(a.earned_at) || 0).getTime()
+      );
+    });
+
+    setPartnerCommissions(commissionRows);
+
+    setPartnerPayouts(
+      (Array.isArray(payoutsData) ? payoutsData : []) as PartnerPayoutRow[]
+    );
+  } catch (e: any) {
+    setPartnerReferrals([]);
+    setPartnerCommissions([]);
+    setPartnerPayouts([]);
+    setPartnerDetailErrorText(
+      clean(e?.message) || "Failed to load partner detail data."
+    );
+  } finally {
+    setPartnerDetailLoading(false);
+  }
+}, []);
+
+const loadSelectedPartnerPayoutProfile = useCallback(async (partnerId: string) => {
+  const id = clean(partnerId);
+  if (!id) {
+    setSelectedPartnerPayoutProfile(null);
+    return;
+  }
+
+  try {
+    const { data, error } = await supabase.rpc("gp_office_get_partner_payout_profile_v1", {
+      p_partner_id: id,
+    });
+
+    if (error) throw error;
+
+    const row = Array.isArray(data)
+      ? ((data?.[0] ?? null) as OfficePartnerPayoutProfileRow | null)
+      : ((data ?? null) as OfficePartnerPayoutProfileRow | null);
+
+    setSelectedPartnerPayoutProfile(row ?? null);
+
+    if (clean(row?.payout_method)) {
+      setPayoutMethod(upper(row?.payout_method));
+    }
+  } catch (e: any) {
+    setSelectedPartnerPayoutProfile(null);
+  }
+}, []);
+
+  const activatePartner = useCallback(async (partnerId: string) => {
+  try {
+    const { error } = await supabase.rpc("gp_set_partner_status_v1", {
+      p_partner_id: partnerId,
+      p_status: "ACTIVE",
+      p_notes: null,
+    });
+    if (error) throw error;
+
+    Alert.alert("Activated ✅", "Partner sasa yupo ACTIVE.");
+    await loadPartnersModule();
+    if (selectedPartner?.partner_id === partnerId) {
+      await loadSelectedPartnerDetail(partnerId);
+      await loadSelectedPartnerPayoutProfile(partnerId);
+    }
+  } catch (e: any) {
+    Alert.alert("Activation failed", clean(e?.message));
+  }
+}, [loadPartnersModule, loadSelectedPartnerDetail, selectedPartner?.partner_id]);
+
+const suspendPartner = useCallback(async (partnerId: string) => {
+  try {
+    const { error } = await supabase.rpc("gp_set_partner_status_v1", {
+      p_partner_id: partnerId,
+      p_status: "SUSPENDED",
+      p_notes: null,
+    });
+    if (error) throw error;
+
+    Alert.alert("Suspended ⚠️", "Partner ame-suspend.");
+    await loadPartnersModule();
+    if (selectedPartner?.partner_id === partnerId) {
+      await loadSelectedPartnerDetail(partnerId);
+      await loadSelectedPartnerPayoutProfile(partnerId);
+    }
+  } catch (e: any) {
+    Alert.alert("Suspend failed", clean(e?.message));
+  }
+}, [loadPartnersModule, loadSelectedPartnerDetail, selectedPartner?.partner_id]);
+
+const registerPartner = useCallback(async () => {
+  const email = clean(partnerEmail).toLowerCase();
+  const fullName = clean(partnerFullName);
+  const phone = clean(partnerPhone);
+  const notes = clean(partnerNotes);
+
+  if (!email) {
+    Alert.alert("Email required", "Weka email ya Growth Partner kwanza.");
+    return;
+  }
+
+  setPartnersBusy(true);
+  try {
+    const { error } = await supabase.rpc("gp_register_partner_v1", {
+      p_email: email,
+      p_full_name: fullName || null,
+      p_phone: phone || null,
+      p_notes: notes || null,
+    });
+
+    if (error) throw error;
+
+    setPartnerEmail("");
+    setPartnerFullName("");
+    setPartnerPhone("");
+    setPartnerNotes("");
+
+    Alert.alert(
+      "Growth Partner added ✅",
+      "Partner amesajiliwa successfully na referral code yake imetengenezwa."
+    );
+
+    await loadPartnersModule();
+  } catch (e: any) {
+    Alert.alert(
+      "Register failed",
+      clean(e?.message) || "Failed to register Growth Partner."
+    );
+  } finally {
+    setPartnersBusy(false);
+  }
+}, [loadPartnersModule, partnerEmail, partnerFullName, partnerNotes, partnerPhone]);
   const parseSmsFromText = useCallback(
     async (rawTextArg?: string, silent?: boolean): Promise<ParsedPaymentResult | null> => {
       const body = clean(rawTextArg ?? smsText);
@@ -671,19 +1075,9 @@ export default function SubscriptionRequestsScreen() {
     [resetParsedUi, smsText]
   );
 
-  useEffect(() => {
-    const body = clean(smsText);
-    if (!body || body.length < 10) {
-      resetParsedUi();
-      return;
-    }
+  
 
-    const t = setTimeout(() => {
-      void parseSmsFromText(body, true);
-    }, 700);
-
-    return () => clearTimeout(t);
-  }, [smsText, parseSmsFromText, resetParsedUi]);
+  
 
   const runBiometricGate = useCallback(async () => {
     try {
@@ -751,13 +1145,72 @@ export default function SubscriptionRequestsScreen() {
 
   useEffect(() => {
     if (!authed) return;
-    void loadRequests();
-  }, [authed, filter, loadRequests]);
+
+    if (officeTab === "REQUESTS") {
+      void loadRequests();
+      return;
+    }
+
+    void loadPartnersModule();
+  }, [authed, filter, officeTab, loadPartnersModule, loadRequests]);
+
+  useEffect(() => {
+    if (!selectedPartner?.partner_id) {
+      setPartnerReferrals([]);
+      setPartnerCommissions([]);
+      setPartnerPayouts([]);
+      setPartnerDetailErrorText("");
+      setSelectedPartnerPayoutProfile(null);
+      setShowPayoutForm(false);
+      setSelectedCommissionIds([]);
+      setPayoutMethod("MOBILE_MONEY");
+      setPayoutReference("");
+      setPayoutNote("");
+      return;
+    }
+
+    setShowPayoutForm(false);
+    setSelectedCommissionIds([]);
+    setPayoutMethod("MOBILE_MONEY");
+    setPayoutReference("");
+    setPayoutNote("");
+
+    void loadSelectedPartnerDetail(selectedPartner.partner_id);
+    void loadSelectedPartnerPayoutProfile(selectedPartner.partner_id);
+  }, [loadSelectedPartnerDetail, loadSelectedPartnerPayoutProfile, selectedPartner?.partner_id]);
 
   useEffect(() => {
     if (!authed || !allowed) return;
 
-    const channel = supabase
+    const safeRefreshPartners = async () => {
+      if (isRefreshingRef.current) return;
+      isRefreshingRef.current = true;
+      try {
+        if (officeTab === "PARTNERS") {
+          await loadPartnersModule();
+          if (selectedPartner?.partner_id) {
+            await loadSelectedPartnerDetail(selectedPartner.partner_id);
+            await loadSelectedPartnerPayoutProfile(selectedPartner.partner_id);
+          }
+        }
+      } finally {
+        isRefreshingRef.current = false;
+      }
+    };
+
+    const safeRefreshRequests = async () => {
+      if (isRefreshingRef.current) return;
+      isRefreshingRef.current = true;
+      try {
+        if (officeTab === "REQUESTS") {
+          await loadRequests();
+        }
+      } finally {
+        isRefreshingRef.current = false;
+      }
+    };
+
+    const requestsChannel = supabase
       .channel(`office-subscription-requests-${filter}`)
       .on(
         "postgres_changes",
@@ -766,22 +1219,65 @@ export default function SubscriptionRequestsScreen() {
           schema: "public",
           table: "subscription_payment_requests",
         },
-        async () => {
-          if (isRefreshingRef.current) return;
-          isRefreshingRef.current = true;
-          try {
-            await loadRequests();
-          } finally {
-            isRefreshingRef.current = false;
-          }
-        }
+        safeRefreshRequests
+      )
+      .subscribe();
+
+    const partnersChannel = supabase
+      .channel("office-growth-partners")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "growth_partner_profiles",
+        },
+        safeRefreshPartners
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "growth_partner_referrals",
+        },
+        safeRefreshPartners
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "growth_partner_commissions",
+        },
+        safeRefreshPartners
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "growth_partner_payouts",
+        },
+        safeRefreshPartners
       )
       .subscribe();
 
     return () => {
-      void supabase.removeChannel(channel);
+      void supabase.removeChannel(requestsChannel);
+      void supabase.removeChannel(partnersChannel);
     };
-  }, [authed, allowed, filter, loadRequests]);
+  }, [
+    authed,
+    allowed,
+    filter,
+    officeTab,
+    loadPartnersModule,
+    loadRequests,
+    loadSelectedPartnerDetail,
+    loadSelectedPartnerPayoutProfile,
+    selectedPartner?.partner_id,
+  ]);
 
   const approveRequest = useCallback(
     async (requestId: string) => {
@@ -853,6 +1349,8 @@ export default function SubscriptionRequestsScreen() {
     },
     [loadRequests, rejectReason]
   );
+
+
 
   const ingestOfficeSms = useCallback(
     async (override?: { body?: string; sender?: string }) => {
@@ -1242,6 +1740,1128 @@ export default function SubscriptionRequestsScreen() {
     ? "READY"
     : "WAITING";
 
+  const selectedPartnerStatus = upper(selectedPartner?.status);
+  const selectedPartnerTone = partnerStatusTone(selectedPartner?.status || "");
+  const partnerCanActivate = !!selectedPartner && selectedPartnerStatus !== "ACTIVE";
+  const partnerCanSuspend = !!selectedPartner && selectedPartnerStatus !== "SUSPENDED";
+
+  const unpaidPartnerCommissions = useMemo(() => {
+    return partnerCommissions.filter((row) => {
+      const s = upper(row.commission_status);
+      return s === "EARNED" || s === "APPROVED";
+    });
+  }, [partnerCommissions]);
+
+  const selectedPayoutTotal = useMemo(() => {
+    return selectedCommissionIds.reduce((sum, id) => {
+      const row = unpaidPartnerCommissions.find((x) => x.commission_id === id);
+      return sum + Number(row?.commission_amount_tzs ?? 0);
+    }, 0);
+  }, [selectedCommissionIds, unpaidPartnerCommissions]);
+
+  const readyCommissionCount = unpaidPartnerCommissions.length;
+
+  useEffect(() => {
+    if (!showPayoutForm) return;
+
+    const readyIds = unpaidPartnerCommissions
+      .map((row) => clean(row.commission_id))
+      .filter(Boolean);
+
+    setSelectedCommissionIds((prev) => {
+      const validPrev = prev.filter((id) => readyIds.includes(id));
+
+      if (validPrev.length > 0 && validPrev.length === prev.length) {
+        return validPrev;
+      }
+
+      return readyIds;
+    });
+  }, [showPayoutForm, unpaidPartnerCommissions]);
+
+  const toggleCommissionSelection = useCallback((commissionId: string) => {
+    const id = clean(commissionId);
+    if (!id) return;
+
+    setSelectedCommissionIds((prev) => {
+      if (prev.includes(id)) {
+        return prev.filter((x) => x !== id);
+      }
+      return [...prev, id];
+    });
+  }, []);
+const createPartnerPayout = useCallback(async () => {
+  if (!selectedPartner?.partner_id) {
+    Alert.alert("Partner required", "Chagua partner kwanza.");
+    return;
+  }
+
+  if (partnerDetailLoading) {
+    Alert.alert("Please wait", "Partner detail bado inaload. Subiri kwanza.");
+    return;
+  }
+
+  if (selectedCommissionIds.length === 0) {
+    Alert.alert("Select commissions", "Chagua angalau commission moja ya kulipa.");
+    return;
+  }
+
+  const method = clean(payoutMethod).toUpperCase();
+  if (!method) {
+    Alert.alert("Method required", "Weka payout method.");
+    return;
+  }
+
+  const selectedRows = unpaidPartnerCommissions.filter((row) =>
+    selectedCommissionIds.includes(row.commission_id)
+  );
+
+  if (selectedRows.length !== selectedCommissionIds.length) {
+    Alert.alert(
+      "Selection invalid",
+      "Baadhi ya commission ulizochagua si READY tena. Refresh detail kisha jaribu tena."
+    );
+    return;
+  }
+
+  const totalAmount = selectedRows.reduce(
+    (sum, row) => sum + Number(row.commission_amount_tzs ?? 0),
+    0
+  );
+
+  Alert.alert(
+    "Confirm payout",
+    `Unakaribia kurekodi payout ya ${fmtMoney(totalAmount, "TZS")} kwa commission ${selectedCommissionIds.length}. Uendelee?`,
+    [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "CONFIRM",
+        onPress: async () => {
+          setCreatingPayout(true);
+          try {
+            const { error } = await supabase.rpc("gp_create_partner_payout_v2", {
+              p_partner_id: selectedPartner.partner_id,
+              p_commission_ids: selectedCommissionIds,
+              p_payout_method: method,
+              p_payout_reference: clean(payoutReference) || null,
+              p_payout_note: clean(payoutNote) || null,
+            });
+
+            if (error) throw error;
+
+            Alert.alert(
+              "Payout recorded ✅",
+              "Partner payout imehifadhiwa successfully."
+            );
+
+            setShowPayoutForm(false);
+            setSelectedCommissionIds([]);
+            setPayoutMethod("MOBILE_MONEY");
+            setPayoutReference("");
+            setPayoutNote("");
+
+            await loadSelectedPartnerDetail(selectedPartner.partner_id);
+            await loadSelectedPartnerPayoutProfile(selectedPartner.partner_id);
+            await loadPartnersModule();
+          } catch (e: any) {
+            Alert.alert(
+              "Payout failed",
+              clean(e?.message) || "Failed to create partner payout."
+            );
+          } finally {
+            setCreatingPayout(false);
+          }
+        },
+      },
+    ]
+  );
+}, [
+  loadPartnersModule,
+  loadSelectedPartnerDetail,
+  loadSelectedPartnerPayoutProfile,
+  partnerDetailLoading,
+  payoutMethod,
+  payoutNote,
+  payoutReference,
+  selectedCommissionIds,
+  selectedPartner,
+  unpaidPartnerCommissions,
+]);
+  const renderPartnerSection = () => (
+    <>
+      <Card>
+        <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
+          ZETRA Growth Partners
+        </Text>
+
+        <Text
+          style={{
+            color: UI.muted,
+            fontWeight: "800",
+            fontSize: 12,
+            marginTop: 8,
+            lineHeight: 18,
+          }}
+        >
+          Hapa Office inasajili Growth Partner kwa email, inaona referral code, performance,
+          monthly commission releases, paid, na unpaid totals.
+        </Text>
+
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 12 }}>
+          <View
+            style={{
+              minWidth: "47%",
+              flex: 1,
+              borderWidth: 1,
+              borderColor: "rgba(16,185,129,0.22)",
+              backgroundColor: "rgba(16,185,129,0.08)",
+              borderRadius: 16,
+              padding: 12,
+            }}
+          >
+            <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 11 }}>
+              Total Partners
+            </Text>
+            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18, marginTop: 6 }}>
+              {Number(partnerSummary?.total_partners ?? 0).toLocaleString("en-US")}
+            </Text>
+          </View>
+
+          <View
+            style={{
+              minWidth: "47%",
+              flex: 1,
+              borderWidth: 1,
+              borderColor: "rgba(16,185,129,0.22)",
+              backgroundColor: "rgba(16,185,129,0.08)",
+              borderRadius: 16,
+              padding: 12,
+            }}
+          >
+            <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 11 }}>
+              Active Partners
+            </Text>
+            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18, marginTop: 6 }}>
+              {Number(partnerSummary?.active_partners ?? 0).toLocaleString("en-US")}
+            </Text>
+          </View>
+
+          <View
+            style={{
+              minWidth: "47%",
+              flex: 1,
+              borderWidth: 1,
+              borderColor: "rgba(255,255,255,0.10)",
+              backgroundColor: "rgba(255,255,255,0.04)",
+              borderRadius: 16,
+              padding: 12,
+            }}
+          >
+            <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 11 }}>
+              Total Referrals
+            </Text>
+            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18, marginTop: 6 }}>
+              {Number(partnerSummary?.total_referrals ?? 0).toLocaleString("en-US")}
+            </Text>
+          </View>
+
+          <View
+            style={{
+              minWidth: "47%",
+              flex: 1,
+              borderWidth: 1,
+              borderColor: "rgba(255,255,255,0.10)",
+              backgroundColor: "rgba(255,255,255,0.04)",
+              borderRadius: 16,
+              padding: 12,
+            }}
+          >
+            <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 11 }}>
+              Active Referrals
+            </Text>
+            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18, marginTop: 6 }}>
+              {Number(partnerSummary?.active_referrals ?? 0).toLocaleString("en-US")}
+            </Text>
+          </View>
+
+          <View
+            style={{
+              width: "100%",
+              borderWidth: 1,
+              borderColor: "rgba(255,255,255,0.10)",
+              backgroundColor: "rgba(255,255,255,0.04)",
+              borderRadius: 16,
+              padding: 12,
+              gap: 6,
+            }}
+          >
+            <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 11 }}>
+              All Generated
+            </Text>
+            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
+              {fmtMoney(partnerSummary?.total_earned_tzs ?? 0, "TZS")}
+            </Text>
+
+            <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 11, marginTop: 4 }}>
+              Total Paid
+            </Text>
+            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
+              {fmtMoney(partnerSummary?.total_paid_tzs ?? 0, "TZS")}
+            </Text>
+
+            <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 11, marginTop: 4 }}>
+              Ready Unpaid
+            </Text>
+            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
+              {fmtMoney(partnerSummary?.total_unpaid_tzs ?? 0, "TZS")}
+            </Text>
+          </View>
+        </View>
+      </Card>
+
+      <View style={{ marginTop: 12 }}>
+        <Card>
+          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
+            Register Growth Partner
+          </Text>
+
+          <View style={{ marginTop: 12, gap: 10 }}>
+            <TextInput
+              value={partnerEmail}
+              onChangeText={setPartnerEmail}
+              
+              placeholder="Email ya Growth Partner"
+              placeholderTextColor="rgba(255,255,255,0.45)"
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoComplete="off"
+              textContentType="none"
+              keyboardType="email-address"
+              returnKeyType="next"
+              blurOnSubmit={false}
+              style={{
+                minHeight: 52,
+                borderRadius: 14,
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,0.12)",
+                backgroundColor: "rgba(255,255,255,0.06)",
+                color: UI.text,
+                paddingHorizontal: 12,
+                fontWeight: "800",
+              }}
+            />
+
+            <TextInput
+              value={partnerFullName}
+              onChangeText={setPartnerFullName}
+              
+              placeholder="Full name (optional)"
+              placeholderTextColor="rgba(255,255,255,0.45)"
+              returnKeyType="next"
+              blurOnSubmit={false}
+              style={{
+                minHeight: 52,
+                borderRadius: 14,
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,0.12)",
+                backgroundColor: "rgba(255,255,255,0.06)",
+                color: UI.text,
+                paddingHorizontal: 12,
+                fontWeight: "800",
+              }}
+            />
+
+            <TextInput
+              value={partnerPhone}
+              onChangeText={setPartnerPhone}
+              
+              placeholder="Phone (optional)"
+              placeholderTextColor="rgba(255,255,255,0.45)"
+              keyboardType="phone-pad"
+              returnKeyType="next"
+              blurOnSubmit={false}
+              style={{
+                minHeight: 52,
+                borderRadius: 14,
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,0.12)",
+                backgroundColor: "rgba(255,255,255,0.06)",
+                color: UI.text,
+                paddingHorizontal: 12,
+                fontWeight: "800",
+              }}
+            />
+
+            <TextInput
+              value={partnerNotes}
+              onChangeText={setPartnerNotes}
+              
+              placeholder="Notes (optional)"
+              placeholderTextColor="rgba(255,255,255,0.45)"
+              multiline
+              blurOnSubmit={false}
+              style={{
+                minHeight: 88,
+                borderRadius: 14,
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,0.12)",
+                backgroundColor: "rgba(255,255,255,0.06)",
+                color: UI.text,
+                paddingHorizontal: 12,
+                paddingVertical: 12,
+                fontWeight: "800",
+                textAlignVertical: "top",
+              }}
+            />
+
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <PrimaryButton
+                label={partnersBusy ? "ADDING..." : "ADD GROWTH PARTNER"}
+                onPress={() => void registerPartner()}
+                disabled={partnersBusy || !clean(partnerEmail)}
+              />
+            </View>
+          </View>
+        </Card>
+      </View>
+
+      <View style={{ marginTop: 12 }}>
+        <Card>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
+              Partners List
+            </Text>
+
+            <Pressable
+              onPress={() => {
+                if (partnersLoading) return;
+                void loadPartnersModule();
+              }}
+              style={({ pressed }) => [
+                {
+                  width: 40,
+                  height: 40,
+                  borderRadius: 14,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderWidth: 1,
+                  borderColor: "rgba(255,255,255,0.10)",
+                  backgroundColor: "rgba(255,255,255,0.04)",
+                  opacity: pressed ? 0.9 : 1,
+                },
+              ]}
+            >
+              <Ionicons name="refresh-outline" size={18} color={UI.text} />
+            </Pressable>
+          </View>
+
+          {partnersLoading ? (
+            <View style={{ marginTop: 14 }}>
+              <ActivityIndicator />
+              <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 10 }}>
+                Loading Growth Partners…
+              </Text>
+            </View>
+          ) : partnerErrorText ? (
+            <View
+              style={{
+                marginTop: 14,
+                borderWidth: 1,
+                borderColor: "rgba(239,68,68,0.25)",
+                backgroundColor: "rgba(239,68,68,0.08)",
+                borderRadius: 16,
+                padding: 12,
+              }}
+            >
+              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
+                Growth Partners backend not ready
+              </Text>
+              <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 8 }}>
+                {partnerErrorText}
+              </Text>
+            </View>
+          ) : partners.length === 0 ? (
+            <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 14 }}>
+              No Growth Partners yet.
+            </Text>
+          ) : (
+            <View style={{ marginTop: 14, gap: 12 }}>
+              {partners.map((item) => (
+                <Pressable
+                  key={item.partner_id}
+                  onPress={() => setSelectedPartner(item)}
+                  style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}
+                >
+                  <View
+                    style={{
+                      borderWidth: 1,
+                      borderColor: "rgba(255,255,255,0.10)",
+                      backgroundColor: "rgba(255,255,255,0.04)",
+                      borderRadius: 16,
+                      padding: 12,
+                      gap: 6,
+                    }}
+                  >
+                    <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
+                      {clean(item.full_name_snapshot) || clean(item.email_snapshot) || "Growth Partner"}
+                    </Text>
+
+                    <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                      Email: <Text style={{ color: UI.text }}>{clean(item.email_snapshot) || "—"}</Text>
+                    </Text>
+
+                    <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                      Phone: <Text style={{ color: UI.text }}>{clean(item.phone_snapshot) || "—"}</Text>
+                    </Text>
+
+                    <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                      Code: <Text style={{ color: UI.text }}>{clean(item.referral_code) || "—"}</Text>
+                    </Text>
+
+                    <View style={{ marginTop: 2, flexDirection: "row", alignItems: "center" }}>
+                      <View
+                        style={{
+                          paddingVertical: 4,
+                          paddingHorizontal: 10,
+                          borderRadius: 999,
+                          borderWidth: 1,
+                          borderColor: partnerStatusTone(item.status).borderColor,
+                          backgroundColor: partnerStatusTone(item.status).backgroundColor,
+                        }}
+                      >
+                        <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }}>
+                          {partnerStatusTone(item.status).text}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                      Referrals:{" "}
+                      <Text style={{ color: UI.text }}>
+                        {Number(item.total_referrals ?? 0).toLocaleString("en-US")}
+                      </Text>
+                    </Text>
+
+                    <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                      Active referrals:{" "}
+                      <Text style={{ color: UI.text }}>
+                        {Number(item.active_referrals ?? 0).toLocaleString("en-US")}
+                      </Text>
+                    </Text>
+
+                    <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                      Earned: <Text style={{ color: UI.text }}>{fmtMoney(item.total_earned_tzs ?? 0, "TZS")}</Text>
+                    </Text>
+
+                    <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                      Paid: <Text style={{ color: UI.text }}>{fmtMoney(item.total_paid_tzs ?? 0, "TZS")}</Text>
+                    </Text>
+
+                    <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                      Unpaid: <Text style={{ color: UI.text }}>{fmtMoney(item.total_unpaid_tzs ?? 0, "TZS")}</Text>
+                    </Text>
+
+                    <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                      Created: <Text style={{ color: UI.text }}>{fmtDateTime(item.created_at)}</Text>
+                    </Text>
+                  </View>
+                </Pressable>
+              ))}
+            </View>
+          )}
+        </Card>
+      </View>
+
+      {selectedPartner ? (
+        <View style={{ marginTop: 12 }}>
+          <Card>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 10,
+              }}
+            >
+              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
+                Partner Detail
+              </Text>
+
+              <View
+                style={{
+                  paddingVertical: 5,
+                  paddingHorizontal: 10,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: selectedPartnerTone.borderColor,
+                  backgroundColor: selectedPartnerTone.backgroundColor,
+                }}
+              >
+                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }}>
+                  {selectedPartnerTone.text}
+                </Text>
+              </View>
+            </View>
+
+            <View style={{ marginTop: 12, gap: 6 }}>
+              <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                Email: <Text style={{ color: UI.text }}>{clean(selectedPartner.email_snapshot)}</Text>
+              </Text>
+
+              <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                Code: <Text style={{ color: UI.text }}>{clean(selectedPartner.referral_code)}</Text>
+              </Text>
+
+              <View style={{ marginTop: 2, flexDirection: "row", alignItems: "center" }}>
+                <View
+                  style={{
+                    paddingVertical: 5,
+                    paddingHorizontal: 10,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    borderColor: selectedPartnerTone.borderColor,
+                    backgroundColor: selectedPartnerTone.backgroundColor,
+                  }}
+                >
+                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }}>
+                    {selectedPartnerTone.text}
+                  </Text>
+                </View>
+              </View>
+
+              <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                All generated: <Text style={{ color: UI.text }}>{fmtMoney(selectedPartner.total_earned_tzs ?? 0, "TZS")}</Text>
+              </Text>
+
+              <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                Ready unpaid: <Text style={{ color: UI.text }}>{fmtMoney(selectedPartner.total_unpaid_tzs ?? 0, "TZS")}</Text>
+              </Text>
+            </View>
+
+            <View
+              style={{
+                marginTop: 12,
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,0.10)",
+                backgroundColor: "rgba(255,255,255,0.04)",
+                borderRadius: 14,
+                padding: 12,
+                gap: 6,
+              }}
+            >
+              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
+                Preferred payout destination
+              </Text>
+
+              <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                Method: <Text style={{ color: UI.text }}>{clean(selectedPartnerPayoutProfile?.payout_method) || "—"}</Text>
+              </Text>
+
+              <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                Phone: <Text style={{ color: UI.text }}>{clean(selectedPartnerPayoutProfile?.payout_phone) || "—"}</Text>
+              </Text>
+
+              <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                Receiver name: <Text style={{ color: UI.text }}>{clean(selectedPartnerPayoutProfile?.payout_account_name) || "—"}</Text>
+              </Text>
+
+              {!!clean(selectedPartnerPayoutProfile?.payout_notes) ? (
+                <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                  Partner note: <Text style={{ color: UI.text }}>{clean(selectedPartnerPayoutProfile?.payout_notes)}</Text>
+                </Text>
+              ) : null}
+
+              <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                Updated at: <Text style={{ color: UI.text }}>{fmtDateTime(selectedPartnerPayoutProfile?.payout_updated_at)}</Text>
+              </Text>
+            </View>
+
+            <View
+              style={{
+                marginTop: 12,
+                borderWidth: 1,
+                borderColor: "rgba(16,185,129,0.20)",
+                backgroundColor: "rgba(16,185,129,0.08)",
+                borderRadius: 14,
+                padding: 12,
+              }}
+            >
+              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
+                Monthly commission rule
+              </Text>
+              <Text
+                style={{
+                  color: UI.muted,
+                  fontWeight: "800",
+                  fontSize: 12,
+                  lineHeight: 18,
+                  marginTop: 6,
+                }}
+              >
+                Sequence 1 = 25%. Sequence 2 mpaka 12 = 10% kwa mwezi husika. Office inaona row
+                moja moja ya mwezi badala ya mkupuo usioeleweka.
+              </Text>
+            </View>
+
+            <View style={{ marginTop: 12, flexDirection: "row", gap: 10 }}>
+              <PrimaryButton
+                label={selectedPartnerStatus === "ACTIVE" ? "ALREADY ACTIVE" : "ACTIVATE"}
+                onPress={() => void activatePartner(selectedPartner.partner_id)}
+                disabled={!partnerCanActivate}
+              />
+              <PrimaryButton
+                label={selectedPartnerStatus === "SUSPENDED" ? "ALREADY SUSPENDED" : "SUSPEND"}
+                danger
+                onPress={() => void suspendPartner(selectedPartner.partner_id)}
+                disabled={!partnerCanSuspend}
+              />
+            </View>
+
+            <View style={{ marginTop: 10, gap: 8 }}>
+              <PrimaryButton
+                label={readyCommissionCount > 0 ? "RECORD PAYOUT" : "NO READY COMMISSIONS"}
+                onPress={() => {
+                  if (readyCommissionCount === 0) return;
+
+                  setShowPayoutForm((prev) => {
+                    const next = !prev;
+
+                    if (next) {
+                      const readyIds = unpaidPartnerCommissions
+                        .map((row) => clean(row.commission_id))
+                        .filter(Boolean);
+
+                      setSelectedCommissionIds(readyIds);
+                    }
+
+                    return next;
+                  });
+                }}
+                disabled={readyCommissionCount === 0}
+              />
+              <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                Ready commissions: <Text style={{ color: UI.text }}>{readyCommissionCount}</Text>
+              </Text>
+            </View>
+
+            {showPayoutForm ? (
+              <View
+                style={{
+                  marginTop: 14,
+                  borderWidth: 1,
+                  borderColor: "rgba(16,185,129,0.25)",
+                  backgroundColor: "rgba(16,185,129,0.08)",
+                  borderRadius: 16,
+                  padding: 12,
+                  gap: 10,
+                }}
+              >
+                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
+                  Create Payout
+                </Text>
+
+                <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                  Selected commissions: <Text style={{ color: UI.text }}>{selectedCommissionIds.length}</Text>
+                </Text>
+
+                <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                  Total payout: <Text style={{ color: UI.text }}>{fmtMoney(selectedPayoutTotal, "TZS")}</Text>
+                </Text>
+
+                <View
+                  style={{
+                    borderWidth: 1,
+                    borderColor: "rgba(255,255,255,0.10)",
+                    backgroundColor: "rgba(255,255,255,0.04)",
+                    borderRadius: 14,
+                    padding: 12,
+                    gap: 6,
+                  }}
+                >
+                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
+                    Destination to be used
+                  </Text>
+
+                  <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                    Method: <Text style={{ color: UI.text }}>{clean(selectedPartnerPayoutProfile?.payout_method) || payoutMethod || "—"}</Text>
+                  </Text>
+
+                  <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                    Phone: <Text style={{ color: UI.text }}>{clean(selectedPartnerPayoutProfile?.payout_phone) || "—"}</Text>
+                  </Text>
+
+                  <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                    Receiver name: <Text style={{ color: UI.text }}>{clean(selectedPartnerPayoutProfile?.payout_account_name) || "—"}</Text>
+                  </Text>
+                </View>
+
+                <TextInput
+                  value={payoutMethod}
+                  onChangeText={(v) => setPayoutMethod(upper(v))}
+                  placeholder="Payout method, mfano MOBILE_MONEY"
+                  placeholderTextColor="rgba(255,255,255,0.45)"
+                  autoCapitalize="characters"
+                  style={{
+                    minHeight: 52,
+                    borderRadius: 14,
+                    borderWidth: 1,
+                    borderColor: "rgba(255,255,255,0.12)",
+                    backgroundColor: "rgba(255,255,255,0.06)",
+                    color: UI.text,
+                    paddingHorizontal: 12,
+                    fontWeight: "800",
+                  }}
+                />
+
+                <TextInput
+                  value={payoutReference}
+                  onChangeText={setPayoutReference}
+                  placeholder="Payout reference (optional)"
+                  placeholderTextColor="rgba(255,255,255,0.45)"
+                  style={{
+                    minHeight: 52,
+                    borderRadius: 14,
+                    borderWidth: 1,
+                    borderColor: "rgba(255,255,255,0.12)",
+                    backgroundColor: "rgba(255,255,255,0.06)",
+                    color: UI.text,
+                    paddingHorizontal: 12,
+                    fontWeight: "800",
+                  }}
+                />
+
+                <TextInput
+                  value={payoutNote}
+                  onChangeText={setPayoutNote}
+                  placeholder="Payout note (optional)"
+                  placeholderTextColor="rgba(255,255,255,0.45)"
+                  multiline
+                  style={{
+                    minHeight: 88,
+                    borderRadius: 14,
+                    borderWidth: 1,
+                    borderColor: "rgba(255,255,255,0.12)",
+                    backgroundColor: "rgba(255,255,255,0.06)",
+                    color: UI.text,
+                    paddingHorizontal: 12,
+                    paddingVertical: 12,
+                    fontWeight: "800",
+                    textAlignVertical: "top",
+                  }}
+                />
+
+                <View style={{ flexDirection: "row", gap: 10 }}>
+                  <PrimaryButton
+                    label={creatingPayout ? "SAVING..." : "CONFIRM PAYOUT"}
+                    onPress={() => void createPartnerPayout()}
+                    disabled={
+                      creatingPayout ||
+                      partnerDetailLoading ||
+                      selectedCommissionIds.length === 0 ||
+                      readyCommissionCount === 0
+                    }
+                  />
+                  <PrimaryButton
+                    label="RESET ALL"
+                    danger
+                    onPress={() => {
+                      const readyIds = unpaidPartnerCommissions
+                        .map((row) => clean(row.commission_id))
+                        .filter(Boolean);
+
+                      setSelectedCommissionIds(readyIds);
+                      setPayoutReference("");
+                      setPayoutNote("");
+                    }}
+                    disabled={creatingPayout}
+                  />
+                </View>
+              </View>
+            ) : null}
+
+            {partnerDetailLoading ? (
+              <View style={{ marginTop: 14 }}>
+                <ActivityIndicator />
+                <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 10 }}>
+                  Loading partner detail…
+                </Text>
+              </View>
+            ) : partnerDetailErrorText ? (
+              <View
+                style={{
+                  marginTop: 14,
+                  borderWidth: 1,
+                  borderColor: "rgba(239,68,68,0.25)",
+                  backgroundColor: "rgba(239,68,68,0.08)",
+                  borderRadius: 16,
+                  padding: 12,
+                }}
+              >
+                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
+                  Partner detail not ready
+                </Text>
+                <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 8 }}>
+                  {partnerDetailErrorText}
+                </Text>
+              </View>
+            ) : (
+              <>
+                <View style={{ marginTop: 14 }}>
+                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
+                    Referrals
+                  </Text>
+
+                  {partnerReferrals.length === 0 ? (
+                    <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 8 }}>
+                      No referrals yet.
+                    </Text>
+                  ) : (
+                    <View style={{ marginTop: 10, gap: 10 }}>
+                      {partnerReferrals.map((row) => (
+                        <View
+                          key={row.referral_id}
+                          style={{
+                            borderWidth: 1,
+                            borderColor: "rgba(255,255,255,0.10)",
+                            backgroundColor: "rgba(255,255,255,0.04)",
+                            borderRadius: 14,
+                            padding: 12,
+                            gap: 4,
+                          }}
+                        >
+                          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 13 }}>
+                            {clean(row.referred_email_snapshot) || "Customer"}
+                          </Text>
+                          <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                            Status: <Text style={{ color: UI.text }}>{upper(row.status)}</Text>
+                          </Text>
+                          <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                            Linked: <Text style={{ color: UI.text }}>{fmtDateTime(row.linked_at)}</Text>
+                          </Text>
+                          <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                            Total commission: <Text style={{ color: UI.text }}>{fmtMoney(row.total_commission_tzs ?? 0, "TZS")}</Text>
+                          </Text>
+                          <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                            Unpaid: <Text style={{ color: UI.text }}>{fmtMoney(row.unpaid_commission_tzs ?? 0, "TZS")}</Text>
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
+
+                <View style={{ marginTop: 16 }}>
+                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
+                    Commissions
+                  </Text>
+
+                  {partnerCommissions.length === 0 ? (
+                    <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 8 }}>
+                      No commissions yet.
+                    </Text>
+                  ) : (
+                    <View style={{ marginTop: 10, gap: 10 }}>
+                      {partnerCommissions.map((row) => {
+                        const rowStatus = upper(row.commission_status);
+                        const isPaid = isPaidCommission(row.commission_status);
+                        const isLocked = isLockedCommission(row.commission_status);
+                        const isSelectable = isReadyCommission(row.commission_status);
+                        const isSelected = selectedCommissionIds.includes(row.commission_id);
+
+                        return (
+                          <Pressable
+                            key={row.commission_id}
+                            disabled={!isSelectable}
+                            onPress={() => toggleCommissionSelection(row.commission_id)}
+                            style={({ pressed }) => [
+                              {
+                                opacity: !isSelectable ? 0.7 : pressed ? 0.92 : 1,
+                              },
+                            ]}
+                          >
+                            <View
+                              style={{
+                                borderWidth: 1,
+                                borderColor: isSelected
+                                  ? "rgba(16,185,129,0.40)"
+                                  : isLocked
+                                  ? "rgba(245,158,11,0.25)"
+                                  : isPaid
+                                  ? "rgba(16,185,129,0.25)"
+                                  : "rgba(255,255,255,0.10)",
+                                backgroundColor: isSelected
+                                  ? "rgba(16,185,129,0.10)"
+                                  : isLocked
+                                  ? "rgba(245,158,11,0.08)"
+                                  : isPaid
+                                  ? "rgba(16,185,129,0.08)"
+                                  : "rgba(255,255,255,0.04)",
+                                borderRadius: 14,
+                                padding: 12,
+                                gap: 4,
+                              }}
+                            >
+                              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 13 }}>
+                                {clean(row.referred_email_snapshot) || "Customer commission"}
+                              </Text>
+
+                              <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                                Status: <Text style={{ color: UI.text }}>{rowStatus || "—"}</Text>
+                              </Text>
+
+                              <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                                Global sequence: <Text style={{ color: UI.text }}>{row.payment_sequence_number ?? "—"}</Text>
+                              </Text>
+
+                              {hasCount(row.commission_month_number) ? (
+                                <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                                  Commission month: <Text style={{ color: UI.text }}>{row.commission_month_number}</Text>
+                                </Text>
+                              ) : null}
+
+                              {hasCount(row.months_paid_count) ? (
+                                <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                                  Months paid in package: <Text style={{ color: UI.text }}>{row.months_paid_count}</Text>
+                                </Text>
+                              ) : null}
+
+                              <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                                Total payment: <Text style={{ color: UI.text }}>{fmtMoney(row.payment_amount_tzs ?? 0, "TZS")}</Text>
+                              </Text>
+
+                              {hasMoney(row.monthly_charge_tzs) ? (
+                                <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                                  Monthly charge base: <Text style={{ color: UI.text }}>{fmtMoney(row.monthly_charge_tzs ?? 0, "TZS")}</Text>
+                                </Text>
+                              ) : null}
+
+                              <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                                Commission: <Text style={{ color: UI.text }}>{fmtMoney(row.commission_amount_tzs ?? 0, "TZS")}</Text>
+                              </Text>
+
+                              <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                                Percent: <Text style={{ color: UI.text }}>{row.commission_percent ?? 0}%</Text>
+                              </Text>
+
+                              <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                                Unlock at:{" "}
+                                <Text style={{ color: UI.text }}>
+                                  {clean(row.unlock_at) ? fmtDateTime(row.unlock_at) : isLocked ? "WAITING RELEASE" : "—"}
+                                </Text>
+                              </Text>
+
+                              <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                                Earned at: <Text style={{ color: UI.text }}>{fmtDateTime(row.earned_at)}</Text>
+                              </Text>
+
+                              {isPaid ? (
+                                <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                                  Paid at: <Text style={{ color: UI.text }}>{fmtDateTime(row.paid_at)}</Text>
+                                </Text>
+                              ) : null}
+
+                              {!!clean(row.notes) ? (
+                                <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                                  Engine note: <Text style={{ color: UI.text }}>{clean(row.notes)}</Text>
+                                </Text>
+                              ) : null}
+
+                              {isSelectable ? (
+                                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12, marginTop: 4 }}>
+                                  {isSelected ? "SELECTED FOR PAYOUT" : "TAP TO SELECT"}
+                                </Text>
+                              ) : isPaid ? (
+                                <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 12, marginTop: 4 }}>
+                                  ALREADY PAID
+                                </Text>
+                              ) : isLocked ? (
+                                <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 12, marginTop: 4 }}>
+                                  LOCKED UNTIL RELEASE DATE
+                                </Text>
+                              ) : (
+                                <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 12, marginTop: 4 }}>
+                                  NOT READY
+                                </Text>
+                              )}
+                            </View>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  )}
+                </View>
+
+                <View style={{ marginTop: 16 }}>
+                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
+                    Payout History
+                  </Text>
+
+                  {partnerPayouts.length === 0 ? (
+                    <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 8 }}>
+                      No payouts yet.
+                    </Text>
+                  ) : (
+                    <View style={{ marginTop: 10, gap: 10 }}>
+                      {partnerPayouts.map((row) => (
+                        <View
+                          key={row.payout_id}
+                          style={{
+                            borderWidth: 1,
+                            borderColor: "rgba(255,255,255,0.10)",
+                            backgroundColor: "rgba(255,255,255,0.04)",
+                            borderRadius: 14,
+                            padding: 12,
+                            gap: 4,
+                          }}
+                        >
+                          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 13 }}>
+                            {fmtMoney(row.payout_amount_tzs ?? 0, "TZS")}
+                          </Text>
+                          <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                            Method: <Text style={{ color: UI.text }}>{clean(row.payout_method) || "—"}</Text>
+                          </Text>
+                          <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                            Status: <Text style={{ color: UI.text }}>{upper(row.payout_status)}</Text>
+                          </Text>
+                          <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                            Reference: <Text style={{ color: UI.text }}>{clean(row.payout_reference) || "—"}</Text>
+                          </Text>
+                          <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                            Date: <Text style={{ color: UI.text }}>{fmtDateTime(row.payout_date)}</Text>
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              </>
+            )}
+
+            <View style={{ marginTop: 12 }}>
+              <PrimaryButton
+                label="CLOSE"
+                onPress={() => {
+                  setShowPayoutForm(false);
+                  setSelectedCommissionIds([]);
+                  setPayoutMethod("MOBILE_MONEY");
+                  setPayoutReference("");
+                  setPayoutNote("");
+                  setSelectedPartner(null);
+                }}
+              />
+            </View>
+          </Card>
+        </View>
+      ) : null}
+    </>
+  );
+
   return (
     <Screen scroll>
       <View
@@ -1324,6 +2944,39 @@ export default function SubscriptionRequestsScreen() {
 
       <View style={{ marginTop: 12 }}>
         <Card>
+          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
+            Office Workspace
+          </Text>
+
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 12 }}>
+            <FilterPill
+              label="REQUESTS"
+              active={officeTab === "REQUESTS"}
+              onPress={() => setOfficeTab("REQUESTS")}
+            />
+            <FilterPill
+              label="GROWTH PARTNERS"
+              active={officeTab === "PARTNERS"}
+              onPress={() => setOfficeTab("PARTNERS")}
+            />
+          </View>
+
+          <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 10 }}>
+            Chagua eneo la kazi la Office: subscription requests au ZETRA Growth Partners.
+          </Text>
+        </Card>
+      </View>
+
+      {officeTab === "PARTNERS" ? (
+        <View style={{ marginTop: 12 }}>
+          {renderPartnerSection()}
+        </View>
+      ) : null}
+
+      {officeTab === "REQUESTS" ? (
+  <>
+    <View style={{ marginTop: 12 }}>
+      <Card>
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
             Office SMS Live Listener
           </Text>
@@ -1732,8 +3385,14 @@ export default function SubscriptionRequestsScreen() {
           )}
         </Card>
       </View>
-
-      <View style={{ height: 24 + Math.max(insets.bottom, 0) }} />
+</>
+    ) : null}
+<View
+        style={{
+          height: 24 + Math.max(insets.bottom, 0),
+        }}
+      />
     </Screen>
   );
 }
+      

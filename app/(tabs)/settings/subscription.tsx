@@ -1371,28 +1371,48 @@ export default function SubscriptionScreen() {
         </View>
 
         {isInternalBillingUser ? (
-          <Pressable
-            onPress={() => router.push("/(tabs)/settings/subscription-requests")}
-            style={({ pressed }) => [
-              {
-                minWidth: 42,
-                height: 42,
-                paddingHorizontal: 12,
-                borderRadius: 16,
-                alignItems: "center",
-                justifyContent: "center",
-                borderWidth: 1,
-                borderColor: UI.emeraldBorder,
-                backgroundColor: "rgba(16,185,129,0.10)",
-                opacity: pressed ? 0.9 : 1,
-                marginRight: 8,
-              },
-            ]}
-          >
-            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>Office</Text>
-          </Pressable>
-        ) : null}
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginRight: 8 }}>
+            <Pressable
+              onPress={() => router.push("/(tabs)/settings/subscription-requests")}
+              style={({ pressed }) => [
+                {
+                  minWidth: 42,
+                  height: 42,
+                  paddingHorizontal: 12,
+                  borderRadius: 16,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderWidth: 1,
+                  borderColor: UI.emeraldBorder,
+                  backgroundColor: "rgba(16,185,129,0.10)",
+                  opacity: pressed ? 0.9 : 1,
+                },
+              ]}
+            >
+              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>Office</Text>
+            </Pressable>
 
+            <Pressable
+              onPress={() => router.push("/(tabs)/settings/subscription-requests?tab=partners")}
+              style={({ pressed }) => [
+                {
+                  minWidth: 42,
+                  height: 42,
+                  paddingHorizontal: 12,
+                  borderRadius: 16,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderWidth: 1,
+                  borderColor: "rgba(16,185,129,0.28)",
+                  backgroundColor: "rgba(16,185,129,0.08)",
+                  opacity: pressed ? 0.9 : 1,
+                },
+              ]}
+            >
+              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>Partners</Text>
+            </Pressable>
+          </View>
+        ) : null}
         <Pressable
           onPress={() => {
             if (isRefreshingRef.current) return;

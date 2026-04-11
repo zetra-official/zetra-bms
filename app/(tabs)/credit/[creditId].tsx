@@ -6,7 +6,7 @@ import { Card } from "@/src/ui/Card";
 import { Screen } from "@/src/ui/Screen";
 import { theme } from "@/src/ui/theme";
 import { Ionicons } from "@expo/vector-icons";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import AddPaymentSheet from "./_components/AddPaymentSheet";
@@ -232,10 +232,12 @@ export default function CreditDetailScreen() {
     }
   }, [accountId, activeStoreId]);
 
-  useEffect(() => {
-    loadAccess();
-    load();
-  }, [loadAccess, load]);
+  useFocusEffect(
+    useCallback(() => {
+      loadAccess();
+      load();
+    }, [loadAccess, load])
+  );
 
   const txnsWithRunning: TxnWithRunning[] = useMemo(() => {
     if (!txns || txns.length === 0) return [];
@@ -313,7 +315,7 @@ export default function CreditDetailScreen() {
 
         {errMsg ? (
           <Card>
-            <Text style={{ color: theme.colors.dangerText, fontWeight: "900" }}>{errMsg}</Text>
+            <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{errMsg}</Text>
           </Card>
         ) : null}
 
@@ -482,9 +484,20 @@ export default function CreditDetailScreen() {
           creditId={accountId}
           canManageCredit={canManageCredit}
           onClose={() => setSheetOpen(false)}
-          onSuccess={() => {
+          onSuccess={(paymentId) => {
             loadAccess();
             load();
+
+            const pid = String(paymentId ?? "").trim();
+            if (pid) {
+              router.push({
+                pathname: "/(tabs)/credit/payment-receipt",
+                params: {
+                  creditId: accountId,
+                  paymentId: pid,
+                },
+              } as any);
+            }
           }}
         />
       </View>

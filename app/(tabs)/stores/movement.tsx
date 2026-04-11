@@ -100,6 +100,7 @@ export default function StoreMovementScreen() {
     activeRole,
     activeStoreId,
     activeStoreName,
+    activeStoreType,
     stores,
   } = useOrg();
 
@@ -141,6 +142,8 @@ export default function StoreMovementScreen() {
     return String(s.organization_id) !== String(activeOrgId);
   }, [fromStoreId, activeOrgId, withinOrgStores]);
 
+ const isCapitalRecoveryStore = activeStoreType === "CAPITAL_RECOVERY";
+
   const isOwnerAdmin = useMemo(
     () => (["owner", "admin"] as const).includes((activeRole ?? "staff") as any),
     [activeRole]
@@ -151,7 +154,7 @@ export default function StoreMovementScreen() {
   const [flagLoading, setFlagLoading] = useState(false);
 
   const loadMovementFlagForFromStore = useCallback(async () => {
-    if (!fromStoreId) {
+    if (!fromStoreId || isCapitalRecoveryStore) {
       setStaffMovementAllowed(false);
       return;
     }
@@ -186,16 +189,17 @@ export default function StoreMovementScreen() {
     } finally {
       setFlagLoading(false);
     }
-  }, [fromStoreId]);
+  }, [fromStoreId, isCapitalRecoveryStore]);
 
   useEffect(() => {
     void loadMovementFlagForFromStore();
   }, [loadMovementFlagForFromStore]);
 
-  const canMove = useMemo(() => {
+const canMove = useMemo(() => {
+    if (isCapitalRecoveryStore) return false;
     if (isOwnerAdmin) return true;
     return !!staffMovementAllowed;
-  }, [isOwnerAdmin, staffMovementAllowed]);
+  }, [isCapitalRecoveryStore, isOwnerAdmin, staffMovementAllowed]);
 
   // TO store selection
   const [toStoreId, setToStoreId] = useState<string>("");
@@ -247,21 +251,27 @@ export default function StoreMovementScreen() {
   const loadInventory = useCallback(async () => {
     setError(null);
 
-    if (!fromStoreId) {
-      setError("No FROM store selected (Active Store).");
-      return;
-    }
+   if (!fromStoreId) {
+  setError("No FROM store selected (Active Store).");
+  return;
+}
 
-    if (storeOrgMismatch) {
-      setError("FROM store haifanani na Organization. Tafadhali chagua store tena.");
-      return;
-    }
+if (isCapitalRecoveryStore) {
+  setRows([]);
+  setSelectedMap({});
+  setError("Stock Movement haitumiki kwa Capital Recovery store.");
+  return;
+}
 
-    if (isOffline) {
-      setError("Offline: huwezi kufetch inventory. Washa mtandao kisha jaribu tena.");
-      return;
-    }
+if (storeOrgMismatch) {
+  setError("FROM store haifanani na Organization. Tafadhali chagua store tena.");
+  return;
+}
 
+if (isOffline) {
+  setError("Offline: huwezi kufetch inventory. Washa mtandao kisha jaribu tena.");
+  return;
+} 
     setLoading(true);
     try {
       const { data, error: e } = await supabase.rpc("get_store_inventory", {
@@ -286,13 +296,14 @@ export default function StoreMovementScreen() {
     } finally {
       setLoading(false);
     }
-  }, [fromStoreId, storeOrgMismatch, isOffline]);
+  }, [fromStoreId, isCapitalRecoveryStore, storeOrgMismatch, isOffline]);
 
   useEffect(() => {
-    if (!fromStoreId) return;
-    if (isOffline) return;
-    void loadInventory();
-  }, [fromStoreId, isOffline, loadInventory]);
+   if (!fromStoreId) return;
+if (isCapitalRecoveryStore) return;
+if (isOffline) return;
+void loadInventory();
+  }, [fromStoreId, isCapitalRecoveryStore, isOffline, loadInventory]);
 
   const pickToStore = useCallback(
     (id: string) => {
@@ -462,10 +473,15 @@ export default function StoreMovementScreen() {
       return;
     }
 
-    if (!activeOrgId) {
-      Alert.alert("Missing", "No active Organization.");
-      return;
-    }
+   if (!activeOrgId) {
+  Alert.alert("Missing", "No active Organization.");
+  return;
+}
+
+if (isCapitalRecoveryStore) {
+  Alert.alert("Not Available", "Stock Movement haitumiki kwa Capital Recovery store.");
+  return;
+}
 
     if (!fromStoreId) {
       Alert.alert("Missing", "Chagua FROM store (Active Store) kwanza.");
@@ -634,6 +650,7 @@ export default function StoreMovementScreen() {
     activeOrgId,
     activeOrgName,
     activeRole,
+    isCapitalRecoveryStore,
     actorName,
     actorEmail,
     fromStoreId,
@@ -845,8 +862,8 @@ export default function StoreMovementScreen() {
       ) : null}
 
       <Text style={{ fontSize: 26, fontWeight: "900", color: theme.colors.text }}>
-        Stock Movement
-      </Text>
+  {isCapitalRecoveryStore ? "Movement Disabled" : "Stock Movement"}
+</Text>
 
       {/* Last Receipt Summary Card */}
       {lastReceipt ? (
@@ -891,11 +908,11 @@ export default function StoreMovementScreen() {
           <View style={{ flexDirection: "row", gap: 10, marginTop: 10 }}>
             <View style={{ flex: 1 }}>
               <Button
-                title="Open Receipt"
-                onPress={() => setReceiptModalOpen(true)}
-                disabled={loading}
-                variant="primary"
-              />
+  title="Open Receipt"
+  onPress={() => setReceiptModalOpen(true)}
+  disabled={loading || !lastReceipt}
+  variant="primary"
+/>
             </View>
             <View style={{ flex: 1 }}>
               <Button
@@ -922,23 +939,27 @@ export default function StoreMovementScreen() {
         <View style={{ marginTop: 4 }}>
           <Button
             title="Open Receipt History"
-            onPress={() => {
-              if (!activeOrgId) {
-                Alert.alert("Missing", "No active Organization.");
-                return;
-              }
-              router.push({
-                pathname: "/(tabs)/stores/receipt-history",
-                params: {
-                  orgId: activeOrgId,
-                  orgName: activeOrgName ?? "",
-                  actorEmail: processedByLabel,
-                },
-              } as any);
-            }}
-            disabled={!activeOrgId}
-            variant="primary"
-          />
+         onPress={() => {
+  if (!activeOrgId) {
+    Alert.alert("Missing", "No active Organization.");
+    return;
+  }
+  if (isCapitalRecoveryStore) {
+    Alert.alert("Not Available", "Receipt History ya stock movement haitumiki kwa Capital Recovery store.");
+    return;
+  }
+  router.push({
+    pathname: "/(tabs)/stores/receipt-history",
+    params: {
+      orgId: activeOrgId,
+      orgName: activeOrgName ?? "",
+      actorEmail: processedByLabel,
+    },
+  } as any);
+}}
+disabled={!activeOrgId || isCapitalRecoveryStore}
+variant="primary"
+/>
         </View>
       </Card>
 
@@ -954,36 +975,58 @@ export default function StoreMovementScreen() {
           {activeRole ?? "—"}
         </Text>
 
-        <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 2 }}>FROM</Text>
-        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-          {fromStoreName || "—"}
-        </Text>
+      <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 2 }}>FROM</Text>
+<Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+  {fromStoreName || "—"}
+</Text>
 
-        <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 2 }}>TO</Text>
-        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-          {toStoreName || "—"}
-        </Text>
+<Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 2 }}>TO</Text>
+<Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+  {toStoreName || "—"}
+</Text>
 
-        <View
-          style={{
-            marginTop: 6,
-            borderWidth: 1,
-            borderColor: theme.colors.border,
-            borderRadius: theme.radius.xl,
-            backgroundColor: theme.colors.card,
-            padding: 14,
-          }}
-        >
+{isCapitalRecoveryStore ? (
+  <View
+    style={{
+      marginTop: 6,
+      borderWidth: 1,
+      borderColor: theme.colors.emeraldBorder,
+      borderRadius: theme.radius.xl,
+      backgroundColor: theme.colors.emeraldSoft,
+      padding: 14,
+    }}
+  >
+    <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+      Capital Recovery store haitumii Stock Movement.
+    </Text>
+    <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>
+      Tumia Products + Capital Recovery Workspace. Movement ya stock imezimwa kabisa kwenye mode hii.
+    </Text>
+  </View>
+) : null}
+
+<View
+  style={{
+    marginTop: 6,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.xl,
+    backgroundColor: theme.colors.card,
+    padding: 14,
+  }}
+>
           <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Permission</Text>
           <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 6 }}>
-            {isOwnerAdmin
-              ? "Owner/Admin: allowed"
-              : flagLoading
-                ? "Checking staff permission..."
-                : staffMovementAllowed
-                  ? "Staff: allowed (switch ON)"
-                  : "Staff: NOT allowed (switch OFF)"}
-          </Text>
+  {isCapitalRecoveryStore
+    ? "Disabled for Capital Recovery"
+    : isOwnerAdmin
+      ? "Owner/Admin: allowed"
+      : flagLoading
+        ? "Checking staff permission..."
+        : staffMovementAllowed
+          ? "Staff: allowed (switch ON)"
+          : "Staff: NOT allowed (switch OFF)"}
+</Text>
 
           {!isOwnerAdmin && !flagLoading && !staffMovementAllowed ? (
             <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>
@@ -994,12 +1037,12 @@ export default function StoreMovementScreen() {
 
         <View style={{ flexDirection: "row", gap: 10, marginTop: 6 }}>
           <View style={{ flex: 1 }}>
-            <Button
-              title={loading ? "Loading..." : "Refresh Inventory"}
-              onPress={loadInventory}
-              disabled={loading || isOffline || !fromStoreId}
-              variant="primary"
-            />
+          <Button
+  title={loading ? "Loading..." : "Refresh Inventory"}
+  onPress={loadInventory}
+  disabled={loading || isOffline || !fromStoreId || isCapitalRecoveryStore}
+  variant="primary"
+/>
           </View>
           <View style={{ flex: 1 }}>
             <Button title="Back" onPress={() => router.back()} disabled={loading} variant="secondary" />
@@ -1018,45 +1061,49 @@ export default function StoreMovementScreen() {
         </Card>
       )}
 
-      {/* TO Store picker */}
-      <Card style={{ gap: 10 }}>
-        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-          Choose TO store
-        </Text>
+     {/* TO Store picker */}
+<Card style={{ gap: 10 }}>
+  <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+    {isCapitalRecoveryStore ? "TO Store Disabled" : "Choose TO store"}
+  </Text>
 
-        {toStores.length === 0 ? (
-          <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-            Hakuna store nyingine ndani ya org hii.
-          </Text>
-        ) : (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
-            {toStores.map((s: any) => {
-              const id = String(s.store_id);
-              const active = String(toStoreId) === id;
-              return (
-                <Pressable
-                  key={id}
-                  onPress={() => pickToStore(id)}
-                  style={{
-                    borderWidth: 1,
-                    borderColor: active ? "rgba(52,211,153,0.55)" : theme.colors.border,
-                    backgroundColor: theme.colors.surface2,
-                    borderRadius: theme.radius.xl,
-                    paddingVertical: 10,
-                    paddingHorizontal: 12,
-                    minWidth: 180,
-                  }}
-                >
-                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{s.store_name}</Text>
-                  <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-                    {active ? "Selected ✓" : "Tap to select"}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        )}
-      </Card>
+  {isCapitalRecoveryStore ? (
+    <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+      Capital Recovery store haitumii stock transfer, hivyo TO store selection imezimwa.
+    </Text>
+  ) : toStores.length === 0 ? (
+    <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+      Hakuna store nyingine ndani ya org hii.
+    </Text>
+  ) : (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
+      {toStores.map((s: any) => {
+        const id = String(s.store_id);
+        const active = String(toStoreId) === id;
+        return (
+          <Pressable
+            key={id}
+            onPress={() => pickToStore(id)}
+            style={{
+              borderWidth: 1,
+              borderColor: active ? "rgba(52,211,153,0.55)" : theme.colors.border,
+              backgroundColor: theme.colors.surface2,
+              borderRadius: theme.radius.xl,
+              paddingVertical: 10,
+              paddingHorizontal: 12,
+              minWidth: 180,
+            }}
+          >
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{s.store_name}</Text>
+            <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
+              {active ? "Selected ✓" : "Tap to select"}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </ScrollView>
+  )}
+</Card>
 
       {/* Move summary + button */}
       <Card style={{ gap: 10 }}>
@@ -1083,16 +1130,22 @@ export default function StoreMovementScreen() {
         </View>
 
         <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-          Selected items:{" "}
-          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{selectedCount}</Text>
-        </Text>
+  Selected items:{" "}
+  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{selectedCount}</Text>
+</Text>
 
-        <Button
-          title={loading ? "Processing..." : `Move Stock (${selectedCount})`}
-          onPress={submit}
-          disabled={loading || isOffline || !canMove || selectedCount === 0}
-          variant="primary"
-        />
+<Button
+  title={
+    isCapitalRecoveryStore
+      ? "Movement Disabled"
+      : loading
+        ? "Processing..."
+        : `Move Stock (${selectedCount})`
+  }
+  onPress={submit}
+  disabled={loading || isOffline || !canMove || selectedCount === 0 || isCapitalRecoveryStore}
+  variant="primary"
+/>
 
         {!isOwnerAdmin && !flagLoading && !staffMovementAllowed ? (
           <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
@@ -1104,126 +1157,134 @@ export default function StoreMovementScreen() {
       {/* Product picker */}
       <Card style={{ gap: 10 }}>
         <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-          Choose products (FROM inventory)
+          {isCapitalRecoveryStore ? "Inventory Picker Disabled" : "Choose products (FROM inventory)"}
         </Text>
 
-        <TextInput
-          value={q}
-          onChangeText={setQ}
-          placeholder="Tafuta product / SKU / category..."
-          placeholderTextColor="rgba(255,255,255,0.35)"
-          returnKeyType="search"
-          onSubmitEditing={Keyboard.dismiss}
-          style={{
-            borderWidth: 1,
-            borderColor: theme.colors.border,
-            borderRadius: theme.radius.lg,
-            backgroundColor: "rgba(255,255,255,0.05)",
-            paddingHorizontal: 14,
-            paddingVertical: 12,
-            color: theme.colors.text,
-            fontWeight: "800",
-          }}
-        />
-
-        {filtered.length === 0 ? (
+        {isCapitalRecoveryStore ? (
           <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-            Hakuna items. Bonyeza “Refresh Inventory”.
+            Capital Recovery store haitumii inventory picker. Tumia Products + Capital Recovery Workspace.
           </Text>
         ) : (
-          filtered.slice(0, 40).map((r) => {
-            const pid = String(r.product_id);
-            const currentQty = selectedMap[pid]?.qty ?? "";
-            const isSelected = parsePositiveInt(currentQty) > 0;
+          <>
+            <TextInput
+              value={q}
+              onChangeText={setQ}
+              placeholder="Tafuta product / SKU / category..."
+              placeholderTextColor="rgba(255,255,255,0.35)"
+              returnKeyType="search"
+              onSubmitEditing={Keyboard.dismiss}
+              style={{
+                borderWidth: 1,
+                borderColor: theme.colors.border,
+                borderRadius: theme.radius.lg,
+                backgroundColor: "rgba(255,255,255,0.05)",
+                paddingHorizontal: 14,
+                paddingVertical: 12,
+                color: theme.colors.text,
+                fontWeight: "800",
+              }}
+            />
 
-            return (
-              <View
-                key={pid}
-                style={{
-                  borderWidth: 1,
-                  borderColor: isSelected ? "rgba(52,211,153,0.55)" : theme.colors.border,
-                  borderRadius: theme.radius.xl,
-                  backgroundColor: theme.colors.card,
-                  padding: 14,
-                }}
-              >
-                <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
-                  <View style={{ flex: 1, paddingRight: 12 }}>
-                    <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                      {r.product_name}
-                    </Text>
+            {filtered.length === 0 ? (
+              <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                Hakuna items. Bonyeza “Refresh Inventory”.
+              </Text>
+            ) : (
+              filtered.slice(0, 40).map((r) => {
+                const pid = String(r.product_id);
+                const currentQty = selectedMap[pid]?.qty ?? "";
+                const isSelected = parsePositiveInt(currentQty) > 0;
 
-                    <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-                      SKU: <Text style={{ color: theme.colors.text }}>{r.sku ?? "—"}</Text>
-                      {"   "}|{"   "}
-                      QTY: <Text style={{ color: theme.colors.text }}>{r.qty}</Text>
-                    </Text>
-
-                    <Text
-                      style={{
-                        marginTop: 8,
-                        fontWeight: "900",
-                        color: isSelected ? theme.colors.emerald : theme.colors.faint,
-                      }}
-                    >
-                      {isSelected ? "Selected ✓" : "Type qty to select"}
-                    </Text>
-                  </View>
-
-                  <View style={{ width: 110 }}>
-                    <Text style={{ color: theme.colors.muted, fontWeight: "900", marginBottom: 8 }}>
-                      Qty
-                    </Text>
-
-                    <TextInput
-                      value={currentQty}
-                      onChangeText={(t) => setInlineQty(pid, t)}
-                      keyboardType="numeric"
-                      placeholder="0"
-                      placeholderTextColor="rgba(255,255,255,0.35)"
-                      style={{
-                        borderWidth: 1,
-                        borderColor: isSelected ? "rgba(52,211,153,0.55)" : theme.colors.border,
-                        borderRadius: theme.radius.lg,
-                        backgroundColor: "rgba(255,255,255,0.05)",
-                        paddingHorizontal: 12,
-                        paddingVertical: 10,
-                        color: theme.colors.text,
-                        fontWeight: "900",
-                        textAlign: "center",
-                      }}
-                    />
-
-                    {isSelected ? (
-                      <Pressable
-                        onPress={() => setInlineQty(pid, "")}
-                        style={{
-                          marginTop: 10,
-                          borderWidth: 1,
-                          borderColor: theme.colors.border,
-                          borderRadius: theme.radius.lg,
-                          backgroundColor: theme.colors.surface2,
-                          paddingVertical: 8,
-                          alignItems: "center",
-                        }}
-                      >
+                return (
+                  <View
+                    key={pid}
+                    style={{
+                      borderWidth: 1,
+                      borderColor: isSelected ? "rgba(52,211,153,0.55)" : theme.colors.border,
+                      borderRadius: theme.radius.xl,
+                      backgroundColor: theme.colors.card,
+                      padding: 14,
+                    }}
+                  >
+                    <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
+                      <View style={{ flex: 1, paddingRight: 12 }}>
                         <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                          Clear
+                          {r.product_name}
                         </Text>
-                      </Pressable>
-                    ) : null}
-                  </View>
-                </View>
-              </View>
-            );
-          })
-        )}
 
-        {filtered.length > 40 ? (
-          <Text style={{ color: theme.colors.faint, fontWeight: "800" }}>
-            Showing first 40 results. Refine search to narrow down.
-          </Text>
-        ) : null}
+                        <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
+                          SKU: <Text style={{ color: theme.colors.text }}>{r.sku ?? "—"}</Text>
+                          {"   "}|{"   "}
+                          QTY: <Text style={{ color: theme.colors.text }}>{r.qty}</Text>
+                        </Text>
+
+                        <Text
+                          style={{
+                            marginTop: 8,
+                            fontWeight: "900",
+                            color: isSelected ? theme.colors.emerald : theme.colors.faint,
+                          }}
+                        >
+                          {isSelected ? "Selected ✓" : "Type qty to select"}
+                        </Text>
+                      </View>
+
+                      <View style={{ width: 110 }}>
+                        <Text style={{ color: theme.colors.muted, fontWeight: "900", marginBottom: 8 }}>
+                          Qty
+                        </Text>
+
+                        <TextInput
+                          value={currentQty}
+                          onChangeText={(t) => setInlineQty(pid, t)}
+                          keyboardType="numeric"
+                          placeholder="0"
+                          placeholderTextColor="rgba(255,255,255,0.35)"
+                          style={{
+                            borderWidth: 1,
+                            borderColor: isSelected ? "rgba(52,211,153,0.55)" : theme.colors.border,
+                            borderRadius: theme.radius.lg,
+                            backgroundColor: "rgba(255,255,255,0.05)",
+                            paddingHorizontal: 12,
+                            paddingVertical: 10,
+                            color: theme.colors.text,
+                            fontWeight: "900",
+                            textAlign: "center",
+                          }}
+                        />
+
+                        {isSelected ? (
+                          <Pressable
+                            onPress={() => setInlineQty(pid, "")}
+                            style={{
+                              marginTop: 10,
+                              borderWidth: 1,
+                              borderColor: theme.colors.border,
+                              borderRadius: theme.radius.lg,
+                              backgroundColor: theme.colors.surface2,
+                              paddingVertical: 8,
+                              alignItems: "center",
+                            }}
+                          >
+                            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+                              Clear
+                            </Text>
+                          </Pressable>
+                        ) : null}
+                      </View>
+                    </View>
+                  </View>
+                );
+              })
+            )}
+
+            {filtered.length > 40 ? (
+              <Text style={{ color: theme.colors.faint, fontWeight: "800" }}>
+                Showing first 40 results. Refine search to narrow down.
+              </Text>
+            ) : null}
+          </>
+        )}
       </Card>
 
       <View style={{ height: 24 }} />

@@ -57,6 +57,7 @@ export type OrgState = {
   // active store selection
   activeStoreId: string | null;
   activeStoreName: string | null;
+  activeStoreType: "STANDARD" | "CAPITAL_RECOVERY" | null;
 
   // actions
   refresh: () => Promise<void>;
@@ -314,6 +315,7 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
     return {
       storeId: store?.store_id ?? null,
       storeName: store?.store_name ?? null,
+      storeType: (store?.store_type ?? null) as "STANDARD" | "CAPITAL_RECOVERY" | null,
     };
   }, [stores, deriveActive.orgId, activeStoreId]);
 
@@ -590,6 +592,7 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
 
     activeStoreId: deriveActiveStore.storeId,
     activeStoreName: deriveActiveStore.storeName,
+    activeStoreType: deriveActiveStore.storeType,
 
     refresh,
     setActiveOrgId,

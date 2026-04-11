@@ -7,7 +7,21 @@ import {
 import { theme } from "@/src/ui/theme";
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as Linking from "expo-linking";
-import { Ionicons } from "@expo/vector-icons";
+import {
+  Ionicons,
+  MaterialIcons,
+  MaterialCommunityIcons,
+  Feather,
+  FontAwesome,
+  FontAwesome5,
+  AntDesign,
+  Entypo,
+  EvilIcons,
+  Foundation,
+  Octicons,
+  SimpleLineIcons,
+  Zocial,
+} from "@expo/vector-icons";
 import { useFonts } from "expo-font";
 import React, { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Platform, View } from "react-native";
@@ -40,6 +54,18 @@ function AuthGate() {
 
   const [fontsLoaded] = useFonts({
     ...Ionicons.font,
+    ...MaterialIcons.font,
+    ...MaterialCommunityIcons.font,
+    ...Feather.font,
+    ...FontAwesome.font,
+    ...FontAwesome5.font,
+    ...AntDesign.font,
+    ...Entypo.font,
+    ...EvilIcons.font,
+    ...Foundation.font,
+    ...Octicons.font,
+    ...SimpleLineIcons.font,
+    ...Zocial.font,
   });
 
   // ✅ Read org context here instead of doing duplicate RPC in AuthGate

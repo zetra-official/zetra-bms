@@ -41,7 +41,43 @@ async function ensureSession() {
   }
   return { session: null as any, error: null as any };
 }
+async function getSavedReferralCode() {
+  try {
+    if ((kv as any)?.getString) {
+      return clean(await (kv as any).getString("zetra_onboarding_referral_code_v1"));
+    }
+  } catch {}
 
+  try {
+    if ((kv as any)?.get) {
+      return clean(await (kv as any).get("zetra_onboarding_referral_code_v1"));
+    }
+  } catch {}
+
+  return "";
+}
+
+async function clearSavedReferralCode() {
+  try {
+    if ((kv as any)?.remove) {
+      await (kv as any).remove("zetra_onboarding_referral_code_v1");
+      return;
+    }
+  } catch {}
+
+  try {
+    if ((kv as any)?.delete) {
+      await (kv as any).delete("zetra_onboarding_referral_code_v1");
+      return;
+    }
+  } catch {}
+
+  try {
+    if ((kv as any)?.setString) {
+      await (kv as any).setString("zetra_onboarding_referral_code_v1", "");
+    }
+  } catch {}
+}
 export default function FirstStoreOnboardingScreen() {
   const router = useRouter();
   const org = useOrg();
@@ -94,7 +130,44 @@ export default function FirstStoreOnboardingScreen() {
 
       // 2) refresh OrgContext (loads orgs/stores)
       await org.refresh();
+// 2.5) link referral code to this newly registered user (optional)
+      try {
+        const savedReferralCode = upper(await getSavedReferralCode());
+        const authUserId = clean(session?.user?.id);
+        const authEmail = clean(session?.user?.email).toLowerCase();
 
+        if (savedReferralCode && authUserId && authEmail) {
+          const { data: existingReferral, error: existingReferralError } = await supabase
+            .from("growth_partner_referrals")
+            .select("id")
+            .eq("referred_user_id", authUserId)
+            .maybeSingle();
+
+          if (!existingReferralError && !existingReferral?.id) {
+            const { data: partnerRow, error: partnerError } = await supabase
+              .from("growth_partner_profiles")
+              .select("id, referral_code, status")
+              .eq("referral_code", savedReferralCode)
+              .eq("status", "ACTIVE")
+              .maybeSingle();
+
+            if (!partnerError && partnerRow?.id) {
+              await supabase.from("growth_partner_referrals").insert({
+                partner_id: partnerRow.id,
+                referred_user_id: authUserId,
+                referred_email_snapshot: authEmail,
+                referral_code_used: savedReferralCode,
+                status: "ACTIVE",
+                source_type: "ONBOARDING_CODE",
+              });
+            }
+          }
+        }
+      } catch (e: any) {
+        console.log("referral link error:", e?.message || e);
+      } finally {
+        await clearSavedReferralCode();
+      }
       // 3) find orgId by name (DB stores UPPERCASE per katiba trigger)
       const { data: orgs, error: orgErr } = await supabase.rpc("get_my_orgs");
       if (orgErr) console.log("get_my_orgs error:", orgErr);

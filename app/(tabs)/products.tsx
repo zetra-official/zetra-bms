@@ -2,6 +2,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
+  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -27,6 +28,7 @@ import { setActiveScanScope, subscribeScanBarcode } from "@/src/utils/scanBus";
 type ProductRow = {
   id: string;
   organization_id: string;
+  store_id?: string | null;
   name: string;
   sku: string | null;
   unit: string | null;
@@ -68,53 +70,100 @@ function isTypingIntoField(target: any) {
   return editable || tag === "input" || tag === "textarea" || tag === "select";
 }
 
-function ScannerFabIcon({ size = 20, color = "#E5E7EB" }: { size?: number; color?: string }) {
-  const bodyW = Math.max(16, Math.round(size * 0.9));
-  const bodyH = Math.max(11, Math.round(size * 0.5));
-  const handleW = Math.max(7, Math.round(size * 0.28));
-  const handleH = Math.max(8, Math.round(size * 0.34));
-  const lensW = Math.max(9, Math.round(size * 0.42));
-  const lensH = Math.max(5, Math.round(size * 0.18));
+function ScannerFabIcon({ size = 28, color = "#E5E7EB" }: { size?: number; color?: string }) {
+  const w = Math.max(22, Math.round(size * 1.05));
+  const h = Math.max(18, Math.round(size * 0.78));
+  const barHeights = [0.72, 0.46, 0.86, 0.58, 0.92, 0.52, 0.8];
+  const barWidths = [2, 1.5, 2.2, 1.4, 2.4, 1.6, 2];
+  const gap = Math.max(1.5, Math.round(size * 0.04));
 
   return (
-    <View style={{ width: size + 2, height: size + 2, alignItems: "center", justifyContent: "center" }}>
+    <View
+      style={{
+        width: size + 4,
+        height: size + 4,
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
       <View
         style={{
-          width: bodyW,
-          height: bodyH,
-          borderWidth: 2,
+          width: w,
+          height: h,
+          borderRadius: 7,
+          borderWidth: 1.8,
           borderColor: color,
-          borderRadius: 8,
-          transform: [{ rotate: "-12deg" }],
+          paddingHorizontal: 3,
+          flexDirection: "row",
           alignItems: "flex-end",
           justifyContent: "center",
-          paddingRight: 3,
           backgroundColor: "transparent",
+          gap,
         }}
       >
-        <View
-          style={{
-            width: lensW,
-            height: lensH,
-            borderWidth: 2,
-            borderColor: color,
-            borderRadius: 4,
-          }}
-        />
+        {barHeights.map((ratio, idx) => (
+          <View
+            key={idx}
+            style={{
+              width: barWidths[idx],
+              height: Math.max(5, Math.round(h * ratio)),
+              backgroundColor: color,
+              borderRadius: 1.5,
+            }}
+          />
+        ))}
       </View>
 
       <View
         style={{
           position: "absolute",
-          right: Math.round(size * 0.18),
-          bottom: Math.round(size * 0.1),
-          width: handleW,
-          height: handleH,
-          borderWidth: 2,
+          left: -1,
+          top: -1,
+          width: 8,
+          height: 8,
+          borderLeftWidth: 2,
+          borderTopWidth: 2,
           borderColor: color,
-          borderRadius: 6,
-          transform: [{ rotate: "-18deg" }],
-          backgroundColor: "transparent",
+          borderTopLeftRadius: 3,
+        }}
+      />
+      <View
+        style={{
+          position: "absolute",
+          right: -1,
+          top: -1,
+          width: 8,
+          height: 8,
+          borderRightWidth: 2,
+          borderTopWidth: 2,
+          borderColor: color,
+          borderTopRightRadius: 3,
+        }}
+      />
+      <View
+        style={{
+          position: "absolute",
+          left: -1,
+          bottom: -1,
+          width: 8,
+          height: 8,
+          borderLeftWidth: 2,
+          borderBottomWidth: 2,
+          borderColor: color,
+          borderBottomLeftRadius: 3,
+        }}
+      />
+      <View
+        style={{
+          position: "absolute",
+          right: -1,
+          bottom: -1,
+          width: 8,
+          height: 8,
+          borderRightWidth: 2,
+          borderBottomWidth: 2,
+          borderColor: color,
+          borderBottomRightRadius: 3,
         }}
       />
     </View>
@@ -122,9 +171,18 @@ function ScannerFabIcon({ size = 20, color = "#E5E7EB" }: { size?: number; color
 }
 
 export default function ProductsTabScreen() {
-  const { activeOrgId, activeOrgName, activeRole } = useOrg();
+  const {
+  activeOrgId,
+  activeOrgName,
+  activeRole,
+  activeStoreId,
+  activeStoreName,
+  activeStoreType,
+} = useOrg();
 
   const money = useOrgMoneyPrefs(activeOrgId ?? "");
+const isCapitalRecoveryStore = activeStoreType === "CAPITAL_RECOVERY";
+const scopedStoreId = String(activeStoreId ?? "").trim() || null;
 
   const canManage = useMemo(
     () => (activeRole ?? "staff") === "owner",
@@ -132,8 +190,8 @@ export default function ProductsTabScreen() {
   );
 
   const canSeeCost = useMemo(
-    () => (activeRole ?? "staff") === "owner",
-    [activeRole]
+    () => (activeRole ?? "staff") === "owner" && !isCapitalRecoveryStore,
+    [activeRole, isCapitalRecoveryStore]
   );
 
   const [loading, setLoading] = useState(false);
@@ -161,6 +219,7 @@ export default function ProductsTabScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanOpen, setScanOpen] = useState(false);
   const [scanBusy, setScanBusy] = useState(false);
+  const [keyboardSpace, setKeyboardSpace] = useState(0);
 
   const handleProductsScopedScan = useCallback(
     (rawInput: any) => {
@@ -188,6 +247,11 @@ export default function ProductsTabScreen() {
       return;
     }
 
+    if (isCapitalRecoveryStore) {
+      Alert.alert("Not Needed", "Barcode haitumiki kwenye Capital Recovery products.");
+      return;
+    }
+
     try {
       if (!permission?.granted) {
         const res = await requestPermission();
@@ -202,7 +266,7 @@ export default function ProductsTabScreen() {
     } catch {
       Alert.alert("Camera", "Imeshindikana kuomba ruhusa ya camera.");
     }
-  }, [canManage, permission?.granted, requestPermission]);
+  }, [canManage, isCapitalRecoveryStore, permission?.granted, requestPermission]);
 
   const closeScan = useCallback(() => {
     setScanOpen(false);
@@ -227,36 +291,44 @@ export default function ProductsTabScreen() {
     [closeScan, scanBusy, scanOpen]
   );
 
-  const load = useCallback(async () => {
-    if (!activeOrgId) {
-      setRows([]);
-      return;
-    }
+const load = useCallback(async () => {
+  if (!activeOrgId) {
+    setRows([]);
+    return;
+  }
 
-    setLoading(true);
-    setError(null);
+  if (!scopedStoreId) {
+    setRows([]);
+    setError("No active store selected");
+    return;
+  }
 
-    try {
-      if (canManage) {
-        const { data, error: e } = await supabase.rpc("get_products_manage", {
-          p_org_id: activeOrgId,
-        });
-        if (e) throw e;
-        setRows((data ?? []) as ProductRow[]);
-      } else {
-        const { data, error: e } = await supabase.rpc("get_products", {
-          p_org_id: activeOrgId,
-        });
-        if (e) throw e;
-        setRows((data ?? []) as ProductRow[]);
-      }
-    } catch (err: any) {
-      setError(err?.message ?? "Failed to load products");
-      setRows([]);
-    } finally {
-      setLoading(false);
+  setLoading(true);
+  setError(null);
+
+  try {
+    if (canManage) {
+      const { data, error: e } = await supabase.rpc("get_products_manage", {
+        p_org_id: activeOrgId,
+        p_store_id: scopedStoreId,
+      });
+      if (e) throw e;
+      setRows((data ?? []) as ProductRow[]);
+    } else {
+      const { data, error: e } = await supabase.rpc("get_products", {
+        p_org_id: activeOrgId,
+        p_store_id: scopedStoreId,
+      });
+      if (e) throw e;
+      setRows((data ?? []) as ProductRow[]);
     }
-  }, [activeOrgId, canManage]);
+  } catch (err: any) {
+    setError(err?.message ?? "Failed to load products");
+    setRows([]);
+  } finally {
+    setLoading(false);
+  }
+}, [activeOrgId, canManage, scopedStoreId]);
 
   useEffect(() => {
     void load();
@@ -264,6 +336,13 @@ export default function ProductsTabScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      if (isCapitalRecoveryStore) {
+        setActiveScanScope("GLOBAL");
+        return () => {
+          setActiveScanScope("GLOBAL");
+        };
+      }
+
       setActiveScanScope("PRODUCTS");
 
       const unsub = subscribeScanBarcode(
@@ -277,8 +356,23 @@ export default function ProductsTabScreen() {
         unsub();
         setActiveScanScope("GLOBAL");
       };
-    }, [handleProductsScopedScan])
+    }, [handleProductsScopedScan, isCapitalRecoveryStore])
   );
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener("keyboardDidShow", (e) => {
+      setKeyboardSpace(Math.max(0, e.endCoordinates?.height ?? 0) + 24);
+    });
+
+    const hideSub = Keyboard.addListener("keyboardDidHide", () => {
+      setKeyboardSpace(0);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   useEffect(() => {
     if (Platform.OS !== "web") return;
@@ -359,8 +453,8 @@ export default function ProductsTabScreen() {
     setEditBarcode("");
   }, []);
 
-  const add = useCallback(async () => {
-    if (!activeOrgId) return;
+ const add = useCallback(async () => {
+  if (!activeOrgId || !scopedStoreId) return;
 
     const n = name.trim();
     if (!n) {
@@ -380,18 +474,25 @@ export default function ProductsTabScreen() {
     }
 
     const cp = parseZeroOrPositiveNumberOrNull(costPrice);
-    if (costPrice.trim() && cp === null) {
+    if (!isCapitalRecoveryStore && costPrice.trim() && cp === null) {
       Alert.alert("Invalid", "Cost Price iwe namba (>= 0) au uiache wazi.");
       return;
     }
 
-    if (sp === null && cp === null) {
-      Alert.alert("Missing", "Weka angalau Cost Price au Selling Price (hata moja).");
-      return;
+    if (isCapitalRecoveryStore) {
+      if (sp === null) {
+        Alert.alert("Missing", "Weka Selling Price kwa Capital Recovery product.");
+        return;
+      }
+    } else {
+      if (sp === null && cp === null) {
+        Alert.alert("Missing", "Weka angalau Cost Price au Selling Price (hata moja).");
+        return;
+      }
     }
 
     const bc = cleanBarcode(barcode);
-    if (bc && bc.length < 6) {
+    if (!isCapitalRecoveryStore && bc && bc.length < 6) {
       Alert.alert("Invalid", "Barcode inaonekana fupi sana. Hakikisha ume-scan sahihi.");
       return;
     }
@@ -401,17 +502,18 @@ export default function ProductsTabScreen() {
 
     try {
       const { error: e } = await supabase.rpc("upsert_product", {
-        p_org_id: activeOrgId,
-        p_product_id: null,
-        p_name: n,
-        p_sku: sku.trim() || null,
-        p_unit: unit.trim() || null,
-        p_category: category.trim() || null,
-        p_is_active: true,
-        p_selling_price: sp,
-        p_cost_price: cp,
-        p_barcode: bc || null,
-      });
+  p_org_id: activeOrgId,
+  p_product_id: null,
+  p_name: n,
+  p_sku: isCapitalRecoveryStore ? null : sku.trim() || null,
+  p_unit: isCapitalRecoveryStore ? null : unit.trim() || null,
+  p_category: category.trim() || null,
+  p_is_active: true,
+  p_selling_price: sp,
+  p_cost_price: isCapitalRecoveryStore ? null : cp,
+  p_barcode: isCapitalRecoveryStore ? null : bc || null,
+  p_store_id: scopedStoreId,
+});
 
       if (e) throw e;
 
@@ -424,16 +526,36 @@ export default function ProductsTabScreen() {
       setBarcode("");
 
       await load();
-      Alert.alert("Success ✅", bc ? "Product added (barcode saved)" : "Product added");
+      Alert.alert(
+        "Success ✅",
+        isCapitalRecoveryStore
+          ? "Income product added"
+          : bc
+          ? "Product added (barcode saved)"
+          : "Product added"
+      );
     } catch (err: any) {
       Alert.alert("Failed", err?.message ?? "Unknown error");
     } finally {
       setLoading(false);
     }
-  }, [activeOrgId, barcode, canManage, category, costPrice, load, name, sellingPrice, sku, unit]);
+  }, [
+    activeOrgId,
+    scopedStoreId,
+    barcode,
+    canManage,
+    category,
+    costPrice,
+    isCapitalRecoveryStore,
+    load,
+    name,
+    sellingPrice,
+    sku,
+    unit,
+  ]);
 
   const saveEdit = useCallback(async () => {
-    if (!activeOrgId || !editProductId) return;
+    if (!activeOrgId || !scopedStoreId || !editProductId) return;
 
     if (!canManage) {
       Alert.alert("No Access", "Owner only.");
@@ -453,18 +575,25 @@ export default function ProductsTabScreen() {
     }
 
     const cp = parseZeroOrPositiveNumberOrNull(editCostPrice);
-    if (editCostPrice.trim() && cp === null) {
+    if (!isCapitalRecoveryStore && editCostPrice.trim() && cp === null) {
       Alert.alert("Invalid", "Cost Price iwe namba (>= 0) au uiache wazi.");
       return;
     }
 
-    if (sp === null && cp === null) {
-      Alert.alert("Missing", "Weka angalau Cost Price au Selling Price (hata moja).");
-      return;
+    if (isCapitalRecoveryStore) {
+      if (sp === null) {
+        Alert.alert("Missing", "Weka Selling Price kwa Capital Recovery product.");
+        return;
+      }
+    } else {
+      if (sp === null && cp === null) {
+        Alert.alert("Missing", "Weka angalau Cost Price au Selling Price (hata moja).");
+        return;
+      }
     }
 
     const bc = cleanBarcode(editBarcode);
-    if (bc && bc.length < 6) {
+    if (!isCapitalRecoveryStore && bc && bc.length < 6) {
       Alert.alert("Invalid", "Barcode inaonekana fupi sana. Hakikisha umeweka sahihi.");
       return;
     }
@@ -477,15 +606,15 @@ export default function ProductsTabScreen() {
         p_org_id: activeOrgId,
         p_product_id: editProductId,
         p_name: n,
-        p_sku: editSku.trim() || null,
-        p_unit: editUnit.trim() || null,
+        p_sku: isCapitalRecoveryStore ? null : editSku.trim() || null,
+        p_unit: isCapitalRecoveryStore ? null : editUnit.trim() || null,
         p_category: editCategory.trim() || null,
         p_is_active: true,
         p_selling_price: sp,
-        p_cost_price: cp,
-        p_barcode: bc || null,
+        p_cost_price: isCapitalRecoveryStore ? null : cp,
+        p_barcode: isCapitalRecoveryStore ? null : bc || null,
+        p_store_id: scopedStoreId,
       });
-
       if (e) throw e;
 
       closeEdit();
@@ -498,6 +627,7 @@ export default function ProductsTabScreen() {
     }
   }, [
     activeOrgId,
+    scopedStoreId,
     canManage,
     closeEdit,
     editBarcode,
@@ -508,12 +638,13 @@ export default function ProductsTabScreen() {
     editSellingPrice,
     editSku,
     editUnit,
+    isCapitalRecoveryStore,
     load,
   ]);
 
   const remove = useCallback(
     async (productId: string, productName: string) => {
-      if (!activeOrgId) return;
+      if (!activeOrgId || !scopedStoreId) return;
 
       if (!canManage) {
         Alert.alert("No Access", "Owner only.");
@@ -532,9 +663,10 @@ export default function ProductsTabScreen() {
               setLoading(true);
               try {
                 const { error: e } = await supabase.rpc("delete_product", {
-                  p_org_id: activeOrgId,
-                  p_product_id: productId,
-                });
+  p_org_id: activeOrgId,
+  p_product_id: productId,
+  p_store_id: scopedStoreId,
+});
                 if (e) throw e;
 
                 await load();
@@ -550,7 +682,7 @@ export default function ProductsTabScreen() {
         { cancelable: true }
       );
     },
-    [activeOrgId, canManage, load]
+    [activeOrgId, scopedStoreId, canManage, load]
   );
 
   const visibleRows = useMemo(() => rows.filter((r) => r.is_active !== false), [rows]);
@@ -576,8 +708,30 @@ export default function ProductsTabScreen() {
           {activeOrgName ?? "—"}
         </Text>
 
+        <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>Active Store</Text>
+        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{activeStoreName ?? "—"}</Text>
+
         <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>Role</Text>
         <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{activeRole ?? "—"}</Text>
+
+        <Card
+          style={{
+            marginTop: 10,
+            borderColor: isCapitalRecoveryStore ? theme.colors.emeraldBorder : theme.colors.border,
+            backgroundColor: isCapitalRecoveryStore ? theme.colors.emeraldSoft : "rgba(255,255,255,0.04)",
+          }}
+        >
+          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+            {isCapitalRecoveryStore
+              ? "Capital Recovery Product Mode"
+              : "Standard Product Mode"}
+          </Text>
+          <Text style={{ color: theme.colors.muted, fontWeight: "700", marginTop: 6 }}>
+            {isCapitalRecoveryStore
+              ? "Hapa unaweka bidhaa za kuuza kwa income tu. Barcode, cost, unit, na inventory-style product fields hazitumiki kwenye mode hii."
+              : "Hapa unaweka bidhaa za kawaida za biashara, zikiwemo cost, barcode, na details nyingine."}
+          </Text>
+        </Card>
 
         <Button
           title={loading ? "Loading..." : "Refresh"}
@@ -601,7 +755,9 @@ export default function ProductsTabScreen() {
 
       {canManage && (
         <Card style={{ gap: 10 }}>
-          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>Add Product</Text>
+          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+            {isCapitalRecoveryStore ? "Add Income Product" : "Add Product"}
+          </Text>
 
           <TextInput
             value={name}
@@ -620,45 +776,47 @@ export default function ProductsTabScreen() {
             }}
           />
 
-          <View style={{ flexDirection: "row", gap: 10 }}>
-            <View style={{ flex: 1 }}>
-              <TextInput
-                value={sku}
-                onChangeText={setSku}
-                placeholder="SKU (optional)"
-                placeholderTextColor="rgba(255,255,255,0.35)"
-                style={{
-                  borderWidth: 1,
-                  borderColor: theme.colors.border,
-                  borderRadius: theme.radius.lg,
-                  backgroundColor: "rgba(255,255,255,0.05)",
-                  paddingHorizontal: 14,
-                  paddingVertical: 12,
-                  color: theme.colors.text,
-                  fontWeight: "800",
-                }}
-              />
-            </View>
+          {!isCapitalRecoveryStore && (
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <View style={{ flex: 1 }}>
+                <TextInput
+                  value={sku}
+                  onChangeText={setSku}
+                  placeholder="SKU (optional)"
+                  placeholderTextColor="rgba(255,255,255,0.35)"
+                  style={{
+                    borderWidth: 1,
+                    borderColor: theme.colors.border,
+                    borderRadius: theme.radius.lg,
+                    backgroundColor: "rgba(255,255,255,0.05)",
+                    paddingHorizontal: 14,
+                    paddingVertical: 12,
+                    color: theme.colors.text,
+                    fontWeight: "800",
+                  }}
+                />
+              </View>
 
-            <View style={{ flex: 1 }}>
-              <TextInput
-                value={unit}
-                onChangeText={setUnit}
-                placeholder="Unit (optional)"
-                placeholderTextColor="rgba(255,255,255,0.35)"
-                style={{
-                  borderWidth: 1,
-                  borderColor: theme.colors.border,
-                  borderRadius: theme.radius.lg,
-                  backgroundColor: "rgba(255,255,255,0.05)",
-                  paddingHorizontal: 14,
-                  paddingVertical: 12,
-                  color: theme.colors.text,
-                  fontWeight: "800",
-                }}
-              />
+              <View style={{ flex: 1 }}>
+                <TextInput
+                  value={unit}
+                  onChangeText={setUnit}
+                  placeholder="Unit (optional)"
+                  placeholderTextColor="rgba(255,255,255,0.35)"
+                  style={{
+                    borderWidth: 1,
+                    borderColor: theme.colors.border,
+                    borderRadius: theme.radius.lg,
+                    backgroundColor: "rgba(255,255,255,0.05)",
+                    paddingHorizontal: 14,
+                    paddingVertical: 12,
+                    color: theme.colors.text,
+                    fontWeight: "800",
+                  }}
+                />
+              </View>
             </View>
-          </View>
+          )}
 
           <TextInput
             value={category}
@@ -677,8 +835,9 @@ export default function ProductsTabScreen() {
             }}
           />
 
-          <View style={{ gap: 8 }}>
-            <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Barcode (optional)</Text>
+          {!isCapitalRecoveryStore && (
+            <View style={{ gap: 8 }}>
+              <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Barcode (optional)</Text>
 
             <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
               <View style={{ flex: 1 }}>
@@ -704,8 +863,8 @@ export default function ProductsTabScreen() {
                 onPress={openScan}
                 disabled={loading}
                 style={({ pressed }) => ({
-                  width: 48,
-                  height: 48,
+                  width: 62,
+                  height: 62,
                   borderRadius: 999,
                   alignItems: "center",
                   justifyContent: "center",
@@ -716,7 +875,9 @@ export default function ProductsTabScreen() {
                   transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
                 })}
               >
-                <ScannerFabIcon size={20} color={theme.colors.text} />
+                <View style={{ marginLeft: 1, marginTop: 1 }}>
+                  <ScannerFabIcon size={28} color={theme.colors.text} />
+                </View>
               </Pressable>
 
               {!!barcode && (
@@ -724,8 +885,8 @@ export default function ProductsTabScreen() {
                   onPress={() => setBarcode("")}
                   disabled={loading}
                   style={({ pressed }) => ({
-                    width: 48,
-                    height: 48,
+                    width: 52,
+                    height: 52,
                     borderRadius: 999,
                     alignItems: "center",
                     justifyContent: "center",
@@ -742,11 +903,12 @@ export default function ProductsTabScreen() {
             </View>
 
             <Text style={{ color: theme.colors.faint, fontWeight: "800" }}>
-              Tip: Scan barcode ili iwe fast kama supermarket.
-            </Text>
-          </View>
+                Tip: Scan barcode ili iwe fast kama supermarket.
+              </Text>
+            </View>
+          )}
 
-          {canSeeCost && (
+        {canSeeCost && (
             <TextInput
               value={costPrice}
               onChangeText={(t) => setCostPrice(t.replace(/[^0-9]/g, ""))}
@@ -769,7 +931,7 @@ export default function ProductsTabScreen() {
           <TextInput
             value={sellingPrice}
             onChangeText={(t) => setSellingPrice(t.replace(/[^0-9]/g, ""))}
-            placeholder="Selling Price (optional)"
+            placeholder={isCapitalRecoveryStore ? "Selling Price" : "Selling Price (optional)"}
             keyboardType="numeric"
             placeholderTextColor="rgba(255,255,255,0.35)"
             style={{
@@ -785,7 +947,7 @@ export default function ProductsTabScreen() {
           />
 
           <Button
-            title={loading ? "Saving..." : "Add Product"}
+            title={loading ? "Saving..." : isCapitalRecoveryStore ? "Add Income Product" : "Add Product"}
             onPress={add}
             disabled={loading}
             variant="primary"
@@ -892,13 +1054,21 @@ export default function ProductsTabScreen() {
         </Card>
       )}
 
-      <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>Product List</Text>
+      <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>
+        {isCapitalRecoveryStore ? "Income Product List" : "Product List"}
+      </Text>
 
       {visibleRows.length === 0 ? (
         <Card>
-          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>No products yet</Text>
+          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+            {isCapitalRecoveryStore ? "No income products yet" : "No products yet"}
+          </Text>
           <Text style={{ color: theme.colors.muted, fontWeight: "700", marginTop: 6 }}>
-            {canManage ? "Ongeza product juu kisha Refresh." : "Muombe owner aongeze au abadili products."}
+            {canManage
+              ? isCapitalRecoveryStore
+                ? "Ongeza bidhaa ya income juu kisha Refresh."
+                : "Ongeza product juu kisha Refresh."
+              : "Muombe owner aongeze au abadili products."}
           </Text>
         </Card>
       ) : (
@@ -921,19 +1091,29 @@ export default function ProductsTabScreen() {
             >
               <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>{p.name}</Text>
 
-              <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-                SKU: <Text style={{ color: theme.colors.text }}>{p.sku ?? "—"}</Text>
-                {"   "}•{"   "}
-                Unit: <Text style={{ color: theme.colors.text }}>{p.unit ?? "—"}</Text>
-              </Text>
+              {!isCapitalRecoveryStore && (
+                <>
+                  <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
+                    SKU: <Text style={{ color: theme.colors.text }}>{p.sku ?? "—"}</Text>
+                    {"   "}•{"   "}
+                    Unit: <Text style={{ color: theme.colors.text }}>{p.unit ?? "—"}</Text>
+                  </Text>
 
-              <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-                Category: <Text style={{ color: theme.colors.text }}>{p.category ?? "—"}</Text>
-              </Text>
+                  <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
+                    Category: <Text style={{ color: theme.colors.text }}>{p.category ?? "—"}</Text>
+                  </Text>
 
-              <Text style={{ color: theme.colors.muted, fontWeight: "900", marginTop: 8 }}>
-                Barcode: <Text style={{ color: theme.colors.text }}>{bc ? bc : "—"}</Text>
-              </Text>
+                  <Text style={{ color: theme.colors.muted, fontWeight: "900", marginTop: 8 }}>
+                    Barcode: <Text style={{ color: theme.colors.text }}>{bc ? bc : "—"}</Text>
+                  </Text>
+                </>
+              )}
+
+              {isCapitalRecoveryStore && (
+                <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
+                  Category: <Text style={{ color: theme.colors.text }}>{p.category ?? "—"}</Text>
+                </Text>
+              )}
 
               <Text style={{ color: theme.colors.muted, fontWeight: "900", marginTop: 8 }}>
                 Selling Price: <Text style={{ color: theme.colors.text }}>{sp > 0 ? money.fmt(sp) : "—"}</Text>
@@ -963,6 +1143,8 @@ export default function ProductsTabScreen() {
           );
         })
       )}
+
+     <View style={{ height: keyboardSpace }} />
 
       <Modal
         visible={editOpen}
@@ -1052,27 +1234,29 @@ export default function ProductsTabScreen() {
                   style={solidInputStyle}
                 />
 
-                <View style={{ flexDirection: "row", gap: 10 }}>
-                  <View style={{ flex: 1 }}>
-                    <TextInput
-                      value={editSku}
-                      onChangeText={setEditSku}
-                      placeholder="SKU (optional)"
-                      placeholderTextColor="rgba(255,255,255,0.35)"
-                      style={solidInputStyle}
-                    />
-                  </View>
+                {!isCapitalRecoveryStore && (
+                  <View style={{ flexDirection: "row", gap: 10 }}>
+                    <View style={{ flex: 1 }}>
+                      <TextInput
+                        value={editSku}
+                        onChangeText={setEditSku}
+                        placeholder="SKU (optional)"
+                        placeholderTextColor="rgba(255,255,255,0.35)"
+                        style={solidInputStyle}
+                      />
+                    </View>
 
-                  <View style={{ flex: 1 }}>
-                    <TextInput
-                      value={editUnit}
-                      onChangeText={setEditUnit}
-                      placeholder="Unit (optional)"
-                      placeholderTextColor="rgba(255,255,255,0.35)"
-                      style={solidInputStyle}
-                    />
+                    <View style={{ flex: 1 }}>
+                      <TextInput
+                        value={editUnit}
+                        onChangeText={setEditUnit}
+                        placeholder="Unit (optional)"
+                        placeholderTextColor="rgba(255,255,255,0.35)"
+                        style={solidInputStyle}
+                      />
+                    </View>
                   </View>
-                </View>
+                )}
 
                 <TextInput
                   value={editCategory}
@@ -1082,13 +1266,15 @@ export default function ProductsTabScreen() {
                   style={solidInputStyle}
                 />
 
-                <TextInput
-                  value={editBarcode}
-                  onChangeText={(t) => setEditBarcode(cleanBarcode(t))}
-                  placeholder="Barcode (optional)"
-                  placeholderTextColor="rgba(255,255,255,0.35)"
-                  style={solidInputStyle}
-                />
+                {!isCapitalRecoveryStore && (
+                  <TextInput
+                    value={editBarcode}
+                    onChangeText={(t) => setEditBarcode(cleanBarcode(t))}
+                    placeholder="Barcode (optional)"
+                    placeholderTextColor="rgba(255,255,255,0.35)"
+                    style={solidInputStyle}
+                  />
+                )}
 
                 {canSeeCost && (
                   <TextInput
@@ -1104,7 +1290,7 @@ export default function ProductsTabScreen() {
                 <TextInput
                   value={editSellingPrice}
                   onChangeText={(t) => setEditSellingPrice(t.replace(/[^0-9]/g, ""))}
-                  placeholder="Selling Price (optional)"
+                  placeholder={isCapitalRecoveryStore ? "Selling Price" : "Selling Price (optional)"}
                   keyboardType="numeric"
                   placeholderTextColor="rgba(255,255,255,0.35)"
                   style={solidInputStyle}

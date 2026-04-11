@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -31,6 +32,9 @@ type CartItem = {
   unit: string | null;
   unit_price: number;
   line_total: number;
+
+  // checkout-only dynamic markup
+  extra_per_qty?: number;
 };
 
 type PayMethod = "CASH" | "MOBILE" | "BANK" | "CREDIT";
@@ -165,6 +169,27 @@ function isStrictPayMethod(x: any): x is PayMethod {
   return x === "CASH" || x === "BANK" || x === "MOBILE" || x === "CREDIT";
 }
 
+function parseWholeNumberInput(raw: string) {
+  const cleaned = String(raw ?? "").replace(/[^\d]/g, "").trim();
+  if (!cleaned) return 0;
+  const n = Number(cleaned);
+  return Number.isFinite(n) && n >= 0 ? Math.round(n) : 0;
+}
+
+function getExtraPerQty(item: CartItem) {
+  const n = Number(item.extra_per_qty ?? 0);
+  return Number.isFinite(n) && n > 0 ? Math.round(n) : 0;
+}
+
+function getAdjustedUnitPrice(item: CartItem) {
+  return Math.max(0, Math.round(Number(item.unit_price || 0)) + getExtraPerQty(item));
+}
+
+function getAdjustedLineTotal(item: CartItem) {
+  const qty = Math.max(0, Math.trunc(Number(item.qty || 0)));
+  return getAdjustedUnitPrice(item) * qty;
+}
+
 async function getMyOpenCashierShiftId(storeId: string): Promise<string | null> {
   const sid = String(storeId ?? "").trim();
   if (!sid) return null;
@@ -280,6 +305,21 @@ export default function CheckoutScreen() {
     }
   }, [params.cart]);
 
+  const [checkoutCart, setCheckoutCart] = useState<CartItem[]>([]);
+  const [adjustModalVisible, setAdjustModalVisible] = useState(false);
+  const [adjustTargetIndex, setAdjustTargetIndex] = useState<number | null>(null);
+  const [adjustApplyToAll, setAdjustApplyToAll] = useState(false);
+  const [adjustValue, setAdjustValue] = useState("");
+
+  useEffect(() => {
+    setCheckoutCart(
+      cart.map((c) => ({
+        ...c,
+        extra_per_qty: Number((c as any)?.extra_per_qty ?? 0) || 0,
+      }))
+    );
+  }, [cart]);
+
   const isDesktopWeb = Platform.OS === "web" && width >= 1180;
   const desktopPaneHeight = Math.max(520, height - 220);
 
@@ -288,10 +328,60 @@ export default function CheckoutScreen() {
     return r === "owner" || r === "admin" || r === "staff" || r === "cashier";
   }, [activeRole]);
 
-  const totalQty = useMemo(() => cart.reduce((a, c) => a + (c.qty || 0), 0), [cart]);
+  const openAdjustModal = useCallback((index: number) => {
+    const row = checkoutCart[index];
+    if (!row) return;
+    setAdjustTargetIndex(index);
+    setAdjustApplyToAll(false);
+    setAdjustValue(String(getExtraPerQty(row) || ""));
+    setAdjustModalVisible(true);
+  }, [checkoutCart]);
+
+  const closeAdjustModal = useCallback(() => {
+    setAdjustModalVisible(false);
+    setAdjustTargetIndex(null);
+    setAdjustApplyToAll(false);
+    setAdjustValue("");
+  }, []);
+
+  const applyAdjustment = useCallback(() => {
+    const extra = parseWholeNumberInput(adjustValue);
+
+    if (adjustApplyToAll) {
+      setCheckoutCart((prev) =>
+        prev.map((item) => ({
+          ...item,
+          extra_per_qty: extra,
+        }))
+      );
+      closeAdjustModal();
+      return;
+    }
+
+    if (adjustTargetIndex == null) return;
+
+    setCheckoutCart((prev) =>
+      prev.map((item, idx) =>
+        idx === adjustTargetIndex
+          ? {
+              ...item,
+              extra_per_qty: extra,
+            }
+          : item
+      )
+    );
+
+    closeAdjustModal();
+  }, [adjustValue, adjustApplyToAll, adjustTargetIndex, closeAdjustModal]);
+
+  const totalQty = useMemo(
+    () => checkoutCart.reduce((a, c) => a + (c.qty || 0), 0),
+    [checkoutCart]
+  );
+
   const subtotalAmount = useMemo(
-    () => cart.reduce((a, c) => a + Number(c.line_total || 0), 0),
-    [cart]
+    () => checkoutCart.reduce((a, c) => a + getAdjustedLineTotal(c), 0),
+    [checkoutCart]
   );
 
   const [discountText, setDiscountText] = useState<string>("");
@@ -363,7 +453,7 @@ export default function CheckoutScreen() {
     return Math.max(0, grandTotal - Math.max(0, p));
   }, [paidAmount, grandTotal]);
 
-  const isCredit = useMemo(() => method === "CREDIT" || balance > 0, [method, balance]);
+  const isCredit = useMemo(() => method === "CREDIT", [method]);
 
   const showPaidVia = useMemo(
     () => method === "CREDIT" && (Number.isFinite(paidAmount) ? paidAmount : 0) > 0,
@@ -452,8 +542,8 @@ export default function CheckoutScreen() {
     if (mismatch) {
       return "Store mismatch: rudi nyuma, chagua store sahihi kisha uende Checkout upya.";
     }
-    if (cart.length === 0) return "Cart is empty.";
-    if (cart.some((c) => !Number.isFinite(c.unit_price) || c.unit_price <= 0)) {
+    if (checkoutCart.length === 0) return "Cart is empty.";
+    if (checkoutCart.some((c) => !Number.isFinite(c.unit_price) || c.unit_price <= 0)) {
       return "Some items are missing price.";
     }
 
@@ -498,7 +588,7 @@ export default function CheckoutScreen() {
     canSell,
     storeId,
     mismatch,
-    cart,
+    checkoutCart,
     cashierMode,
     isOffline,
     paidAmount,
@@ -515,7 +605,7 @@ export default function CheckoutScreen() {
   ]);
 
   const preflightCheckStock = useCallback(async () => {
-    const productIds = Array.from(new Set(cart.map((c) => c.product_id).filter(Boolean)));
+    const productIds = Array.from(new Set(checkoutCart.map((c) => c.product_id).filter(Boolean)));
     if (!storeId || productIds.length === 0) return;
 
     const { data, error } = await supabase
@@ -530,7 +620,7 @@ export default function CheckoutScreen() {
     (data ?? []).forEach((r: any) => map.set(String(r.product_id), Number(r.qty ?? 0)));
 
     const bad: { name: string; need: number; have: number }[] = [];
-    for (const c of cart) {
+    for (const c of checkoutCart) {
       const have = map.has(c.product_id) ? Number(map.get(c.product_id)) : 0;
       const need = Math.trunc(Number(c.qty || 0));
       if (need > 0 && have < need) bad.push({ name: c.name || "Product", need, have });
@@ -546,7 +636,7 @@ export default function CheckoutScreen() {
         `Stock insufficient to complete this sale.\n\n${lines}\n\nPlease go to Inventory → Adjust Stock (ADD), then try again.`
       );
     }
-  }, [cart, storeId]);
+  }, [checkoutCart, storeId]);
 
   const ensureCreditAccountV2 = useCallback(
     async (args: { storeId: string; customerName: string; customerPhone: string | null }) => {
@@ -612,14 +702,14 @@ export default function CheckoutScreen() {
           subtotal: subtotalAmount,
         });
 
-        const items = cart.map((c) => ({
+        const items = checkoutCart.map((c) => ({
           product_id: c.product_id,
           qty: Math.trunc(Number(c.qty)),
-          unit_price: Number(c.unit_price),
+          unit_price: getAdjustedUnitPrice(c),
           name: c.name ?? "Product",
           sku: c.sku ?? null,
           unit: c.unit ?? null,
-          line_total: Number(c.line_total ?? 0),
+          line_total: getAdjustedLineTotal(c),
         }));
 
         const { data, error } = await supabase.rpc("create_cashier_handoff_v2", {
@@ -658,10 +748,10 @@ export default function CheckoutScreen() {
           }
         }
 
-        const items = cart.map((c) => ({
+        const items = checkoutCart.map((c) => ({
           product_id: c.product_id,
           qty: Math.trunc(Number(c.qty)),
-          unit_price: Number(c.unit_price),
+          unit_price: getAdjustedUnitPrice(c),
           name: c.name ?? "Product",
           sku: c.sku ?? null,
           unit: c.unit ?? null,
@@ -735,10 +825,10 @@ export default function CheckoutScreen() {
       const access = await supabase.rpc("ensure_my_store_access", { p_store_id: storeId });
       if (access.error) throw access.error;
 
-      const items = cart.map((c) => ({
+      const items = checkoutCart.map((c) => ({
         product_id: c.product_id,
         qty: Math.trunc(Number(c.qty)),
-        unit_price: Number(c.unit_price),
+        unit_price: getAdjustedUnitPrice(c),
       }));
 
       const p_paid_amount = Number(paidAmount);
@@ -849,7 +939,7 @@ export default function CheckoutScreen() {
     discountText,
     discount.amount,
     subtotalAmount,
-    cart,
+    checkoutCart,
     storeId,
     grandTotal,
     router,
@@ -870,9 +960,9 @@ export default function CheckoutScreen() {
   ]);
 
   const cartTotalLabel = useMemo(() => {
-    const itemsCount = cart.length;
+    const itemsCount = checkoutCart.length;
     return `${itemsCount} item${itemsCount === 1 ? "" : "s"} • ${totalQty} qty`;
-  }, [cart.length, totalQty]);
+  }, [checkoutCart.length, totalQty]);
 
   const prettySubtotal = useMemo(() => fmt(subtotalAmount), [fmt, subtotalAmount]);
   const prettyDiscount = useMemo(() => fmt(discount.amount), [fmt, discount.amount]);
@@ -917,30 +1007,78 @@ export default function CheckoutScreen() {
       <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
 
       <View style={{ gap: 10 }}>
-        {cart.map((c) => {
-          const line = fmt(Number(c.line_total || 0));
-          const up = fmt(Number(c.unit_price || 0));
+        {checkoutCart.map((c, index) => {
+          const baseUnit = fmt(Number(c.unit_price || 0));
+          const adjustedUnit = fmt(getAdjustedUnitPrice(c));
+          const adjustedLine = fmt(getAdjustedLineTotal(c));
+          const extra = getExtraPerQty(c);
+          const extraLabel = extra > 0 ? fmt(extra) : null;
+
           return (
             <View
-              key={`${c.product_id}-${c.sku ?? ""}`}
+              key={`${c.product_id}-${c.sku ?? ""}-${index}`}
               style={{
                 padding: 12,
                 borderRadius: 16,
                 borderWidth: 1,
                 borderColor: "rgba(255,255,255,0.10)",
                 backgroundColor: "rgba(255,255,255,0.05)",
-                gap: 4,
+                gap: 8,
               }}
             >
-              <Text style={{ color: theme.colors.text, fontWeight: "900" }} numberOfLines={1}>
-                {c.name}
-              </Text>
-              <Text style={{ color: theme.colors.muted, fontWeight: "800" }} numberOfLines={1}>
-                SKU: {c.sku ?? "—"} • Qty: {c.qty} • Unit: {c.unit ?? "—"}
-              </Text>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 10,
+                }}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: theme.colors.text, fontWeight: "900" }} numberOfLines={1}>
+                    {c.name}
+                  </Text>
+                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }} numberOfLines={1}>
+                    SKU: {c.sku ?? "—"} • Qty: {c.qty} • Unit: {c.unit ?? "—"}
+                  </Text>
+                </View>
+
+                <Pressable
+                  onPress={() => openAdjustModal(index)}
+                  style={({ pressed }) => ({
+                    minWidth: 42,
+                    height: 42,
+                    borderRadius: 999,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderWidth: 1,
+                    borderColor: "rgba(52,211,153,0.30)",
+                    backgroundColor: "rgba(52,211,153,0.10)",
+                    opacity: pressed ? 0.9 : 1,
+                  })}
+                >
+                  <Ionicons name="add" size={20} color={theme.colors.emerald} />
+                </Pressable>
+              </View>
+
               <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>
-                Unit: {up} • Line: {line}
+                Unit: {adjustedUnit} • Line: {adjustedLine}
               </Text>
+
+              {extra > 0 ? (
+                <Text style={{ color: theme.colors.emerald, fontWeight: "900" }}>
+                  Markup: +{extraLabel} kwa kila qty
+                </Text>
+              ) : (
+                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                  Hakuna markup bado
+                </Text>
+              )}
+
+              {extra > 0 ? (
+                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                  Base Unit: {baseUnit}
+                </Text>
+              ) : null}
             </View>
           );
         })}
@@ -1021,6 +1159,9 @@ export default function CheckoutScreen() {
         />
         <Text style={{ color: theme.colors.faint, fontWeight: "800", marginTop: 8 }}>
           Tip: Ukiweka discount, total itashuka moja kwa moja.
+        </Text>
+        <Text style={{ color: theme.colors.faint, fontWeight: "800", marginTop: 4 }}>
+          Pia unaweza kubonyeza alama ya + kwenye kila item kuongeza bei kwa kila qty.
         </Text>
       </View>
 
@@ -1308,8 +1449,175 @@ export default function CheckoutScreen() {
     </Card>
   );
 
+  const adjustTargetItem =
+    adjustTargetIndex != null ? checkoutCart[adjustTargetIndex] ?? null : null;
+
+  const adjustPreviewExtra = parseWholeNumberInput(adjustValue);
+  const adjustPreviewQty = Math.max(0, Math.trunc(Number(adjustTargetItem?.qty || 0)));
+  const adjustPreviewLineAdd = adjustApplyToAll
+    ? 0
+    : adjustPreviewExtra > 0 && adjustPreviewQty > 0
+      ? adjustPreviewExtra * adjustPreviewQty
+      : 0;
+
   return (
     <Screen scroll bottomPad={240}>
+      <Modal
+        visible={adjustModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={closeAdjustModal}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.55)",
+            justifyContent: "center",
+            padding: 16,
+          }}
+        >
+          <View
+            style={{
+              borderRadius: 22,
+              borderWidth: 1,
+              borderColor: theme.colors.border,
+              backgroundColor: "#10141c",
+              padding: 16,
+              gap: 12,
+            }}
+          >
+            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
+              Adjust Price
+            </Text>
+
+            <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+              {adjustTargetItem?.name ?? "Item"}
+            </Text>
+
+            <View
+              style={{
+                padding: 12,
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,0.08)",
+                backgroundColor: "rgba(255,255,255,0.04)",
+                gap: 4,
+              }}
+            >
+              <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>
+                Mode: Add per qty
+              </Text>
+              <Text style={{ color: theme.colors.faint, fontWeight: "800" }}>
+                Ukiweka 5000 na qty ni 2, line itaongezeka 10000 moja kwa moja.
+              </Text>
+            </View>
+
+            <View>
+              <FieldLabel>Increase per qty ({displayCurrency})</FieldLabel>
+              <InputBox
+                value={adjustValue}
+                onChangeText={(v) => setAdjustValue(v.replace(/[^\d]/g, ""))}
+                placeholder="mf: 5000"
+                keyboardType="numeric"
+              />
+            </View>
+
+            <View style={{ gap: 8 }}>
+              <Pressable
+                onPress={() => setAdjustApplyToAll(false)}
+                style={({ pressed }) => ({
+                  borderRadius: 16,
+                  borderWidth: 1,
+                  borderColor: !adjustApplyToAll
+                    ? "rgba(52,211,153,0.40)"
+                    : theme.colors.border,
+                  backgroundColor: !adjustApplyToAll
+                    ? "rgba(52,211,153,0.10)"
+                    : "rgba(255,255,255,0.04)",
+                  paddingVertical: 12,
+                  paddingHorizontal: 12,
+                  opacity: pressed ? 0.92 : 1,
+                })}
+              >
+                <Text
+                  style={{
+                    color: !adjustApplyToAll ? theme.colors.emerald : theme.colors.text,
+                    fontWeight: "900",
+                  }}
+                >
+                  This item only
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => setAdjustApplyToAll(true)}
+                style={({ pressed }) => ({
+                  borderRadius: 16,
+                  borderWidth: 1,
+                  borderColor: adjustApplyToAll
+                    ? "rgba(52,211,153,0.40)"
+                    : theme.colors.border,
+                  backgroundColor: adjustApplyToAll
+                    ? "rgba(52,211,153,0.10)"
+                    : "rgba(255,255,255,0.04)",
+                  paddingVertical: 12,
+                  paddingHorizontal: 12,
+                  opacity: pressed ? 0.92 : 1,
+                })}
+              >
+                <Text
+                  style={{
+                    color: adjustApplyToAll ? theme.colors.emerald : theme.colors.text,
+                    fontWeight: "900",
+                  }}
+                >
+                  Apply to all items
+                </Text>
+              </Pressable>
+            </View>
+
+            <View
+              style={{
+                padding: 12,
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: "rgba(52,211,153,0.18)",
+                backgroundColor: "rgba(52,211,153,0.08)",
+                gap: 4,
+              }}
+            >
+              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+                Preview
+              </Text>
+
+              {adjustApplyToAll ? (
+                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                  Markup ya {fmt(adjustPreviewExtra)} itawekwa kwa kila qty kwenye items zote.
+                </Text>
+              ) : (
+                <>
+                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                    Qty: {adjustPreviewQty}
+                  </Text>
+                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                    Added to line: {fmt(adjustPreviewLineAdd)}
+                  </Text>
+                </>
+              )}
+            </View>
+
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <View style={{ flex: 1 }}>
+                <Button title="Cancel" onPress={closeAdjustModal} variant="secondary" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Button title="Apply" onPress={applyAdjustment} variant="primary" />
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <View
         style={{
           flex: 1,

@@ -1,5 +1,5 @@
 // app/(tabs)/settings/index.tsx
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Platform, Pressable, Text, View, useWindowDimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -8,7 +8,7 @@ import { Screen } from "@/src/ui/Screen";
 import { Card } from "@/src/ui/Card";
 import { theme, UI } from "@/src/ui/theme";
 import { useOrg } from "@/src/context/OrgContext";
-import { hardSignOutSupabase } from "@/src/supabase/supabaseClient";
+import { hardSignOutSupabase, supabase } from "@/src/supabase/supabaseClient";
 
 function isDesktopWebEnv(width?: number) {
   if (Platform.OS !== "web") return false;
@@ -25,6 +25,139 @@ function isDesktopWebEnv(width?: number) {
   }
 
   return true;
+}
+
+function webIconFallback(name: keyof typeof Ionicons.glyphMap) {
+  switch (name) {
+    case "document-text-outline":
+      return "R";
+    case "people-outline":
+      return "T";
+    case "cash-outline":
+      return "$";
+    case "chatbubbles-outline":
+      return "M";
+    case "business-outline":
+      return "O";
+    case "card-outline":
+      return "B";
+    case "globe-outline":
+      return "G";
+    case "sparkles-outline":
+      return "AI";
+    case "shield-checkmark-outline":
+      return "S";
+    case "shield-half-outline":
+      return "P";
+    case "log-out-outline":
+      return ">";
+    case "grid-outline":
+      return "Z";
+    case "chevron-forward":
+      return ">";
+    default:
+      return "•";
+  }
+}
+
+function SafeIcon({
+  name,
+  size = 22,
+  color,
+}: {
+  name: keyof typeof Ionicons.glyphMap;
+  size?: number;
+  color: string;
+}) {
+  if (Platform.OS === "web") {
+    const label = webIconFallback(name);
+
+    return (
+      <View
+        style={{
+          minWidth: size + 10,
+          height: size + 10,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Text
+          style={{
+            color,
+            fontSize: Math.max(11, size - 4),
+            lineHeight: Math.max(12, size),
+            fontWeight: "900",
+            textAlign: "center",
+            includeFontPadding: false,
+          }}
+          numberOfLines={1}
+        >
+          {label}
+        </Text>
+      </View>
+    );
+  }
+
+  return <Ionicons name={name} size={size} color={color} />;
+}
+
+function PageGlyph({
+  text,
+  color,
+  size = 22,
+}: {
+  text: string;
+  color: string;
+  size?: number;
+}) {
+  return (
+    <Text
+      style={{
+        color,
+        fontSize: Math.max(11, size - 4),
+        lineHeight: Math.max(12, size),
+        fontWeight: "900",
+        textAlign: "center",
+        includeFontPadding: false,
+      }}
+      numberOfLines={1}
+    >
+      {text}
+    </Text>
+  );
+}
+
+function getPageGlyph(name: keyof typeof Ionicons.glyphMap) {
+  switch (name) {
+    case "document-text-outline":
+      return "R";
+    case "people-outline":
+      return "T";
+    case "cash-outline":
+      return "$";
+    case "chatbubbles-outline":
+      return "M";
+    case "business-outline":
+      return "O";
+    case "card-outline":
+      return "B";
+    case "globe-outline":
+      return "G";
+    case "sparkles-outline":
+      return "AI";
+    case "shield-checkmark-outline":
+      return "S";
+    case "shield-half-outline":
+      return "P";
+    case "log-out-outline":
+      return ">";
+    case "grid-outline":
+      return "Z";
+    case "chevron-forward":
+      return ">";
+    default:
+      return "•";
+  }
 }
 
 type RowProps = {
@@ -153,7 +286,11 @@ function Row({ icon, title, subtitle, onPress, disabled, badge }: RowProps) {
           borderColor: UI.emeraldBorder,
         }}
       >
-        <Ionicons name={icon} size={22} color={UI.emerald} />
+        {Platform.OS === "web" ? (
+          <PageGlyph text={getPageGlyph(icon)} size={22} color={UI.emerald} />
+        ) : (
+          <SafeIcon name={icon} size={22} color={UI.emerald} />
+        )}
       </View>
 
       <View style={{ flex: 1, minWidth: 0 }}>
@@ -202,7 +339,11 @@ function Row({ icon, title, subtitle, onPress, disabled, badge }: RowProps) {
           </View>
         ) : null}
 
-        <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.55)" />
+        {Platform.OS === "web" ? (
+          <PageGlyph text=">" size={18} color="rgba(255,255,255,0.55)" />
+        ) : (
+          <SafeIcon name="chevron-forward" size={18} color="rgba(255,255,255,0.55)" />
+        )}
       </View>
     </Pressable>
   );
@@ -238,7 +379,11 @@ function HeroContextCard({
               borderColor: UI.emeraldBorder,
             }}
           >
-            <Ionicons name="grid-outline" size={24} color={UI.emerald} />
+            {Platform.OS === "web" ? (
+              <PageGlyph text="Z" size={24} color={UI.emerald} />
+            ) : (
+              <SafeIcon name="grid-outline" size={24} color={UI.emerald} />
+            )}
           </View>
 
           <View style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
@@ -367,7 +512,11 @@ function LogoutCard({
             borderColor: "rgba(201,74,74,0.22)",
           }}
         >
-          <Ionicons name="log-out-outline" size={22} color={UI.danger} />
+          {Platform.OS === "web" ? (
+            <PageGlyph text=">" size={22} color={UI.danger} />
+          ) : (
+            <SafeIcon name="log-out-outline" size={22} color={UI.danger} />
+          )}
         </View>
 
         <View style={{ flex: 1 }}>
@@ -386,7 +535,11 @@ function LogoutCard({
           </Text>
         </View>
 
-        <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.45)" />
+        {Platform.OS === "web" ? (
+          <PageGlyph text=">" size={18} color="rgba(255,255,255,0.45)" />
+        ) : (
+          <SafeIcon name="chevron-forward" size={18} color="rgba(255,255,255,0.45)" />
+        )}
       </Pressable>
     </PremiumSectionCard>
   );
@@ -398,7 +551,10 @@ export default function MoreHome() {
   const { width } = useWindowDimensions();
 
   const isDesktopWeb = isDesktopWebEnv(width);
-  const isMobileLike = Platform.OS !== "web" || !isDesktopWeb;
+
+  const [isGrowthPartner, setIsGrowthPartner] = useState(false);
+  const [partnerStatus, setPartnerStatus] = useState("");
+  const [partnerCode, setPartnerCode] = useState("");
 
   const orgSummary = useMemo(() => {
     const name = org.activeOrgName ?? "No organization";
@@ -408,6 +564,55 @@ export default function MoreHome() {
   }, [org.activeOrgName, org.activeRole, org.activeStoreName]);
 
   const orgName = useMemo(() => org.activeOrgName ?? "No organization", [org.activeOrgName]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    (async () => {
+      try {
+        const { data: authData } = await supabase.auth.getUser();
+        const userId = authData?.user?.id;
+
+        if (!userId) {
+          if (!mounted) return;
+          setIsGrowthPartner(false);
+          setPartnerStatus("");
+          setPartnerCode("");
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from("growth_partner_profiles")
+          .select("status, referral_code")
+          .eq("user_id", userId)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        if (!mounted) return;
+
+        if (data) {
+          setIsGrowthPartner(true);
+          setPartnerStatus(String(data.status ?? "").toUpperCase());
+          setPartnerCode(String(data.referral_code ?? ""));
+        } else {
+          setIsGrowthPartner(false);
+          setPartnerStatus("");
+          setPartnerCode("");
+        }
+      } catch {
+        if (!mounted) return;
+        setIsGrowthPartner(false);
+        setPartnerStatus("");
+        setPartnerCode("");
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const roleLabel = useMemo(
     () => (org.activeRole ? String(org.activeRole).toUpperCase() : "—"),
     [org.activeRole]
@@ -575,6 +780,25 @@ export default function MoreHome() {
           onPress={() => router.push("/(tabs)/settings/regional")}
         />
       </PremiumSectionCard>
+
+      {isGrowthPartner ? (
+        <>
+          <SectionTitle label="Growth Partner" />
+          <PremiumSectionCard>
+            <Row
+              icon="people-outline"
+              title="Partner Dashboard"
+              subtitle={
+                partnerCode
+                  ? `Code: ${partnerCode} • Status: ${partnerStatus || "ACTIVE"}`
+                  : `Status: ${partnerStatus || "ACTIVE"}`
+              }
+              badge={partnerStatus || "PARTNER"}
+              onPress={() => router.push("/partner")}
+            />
+          </PremiumSectionCard>
+        </>
+      ) : null}
 
       <SectionTitle label="Preferences" />
       <PremiumSectionCard>

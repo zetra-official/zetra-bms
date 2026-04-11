@@ -55,9 +55,47 @@ function clean(x: any) {
   return String(x ?? "").trim();
 }
 
-function safeStr(x: any, fallback = "â€”") {
+function safeStr(x: any, fallback = "—") {
   const s = clean(x);
   return s.length ? s : fallback;
+}
+
+function webIconFallback(name: keyof typeof Ionicons.glyphMap) {
+  switch (name) {
+    case "storefront-outline":
+      return "🏬";
+    default:
+      return "•";
+  }
+}
+
+function SafeIcon({
+  name,
+  size = 18,
+  color,
+}: {
+  name: keyof typeof Ionicons.glyphMap;
+  size?: number;
+  color: string;
+}) {
+  if (typeof window !== "undefined") {
+    return (
+      <Text
+        style={{
+          color,
+          fontSize: size,
+          lineHeight: size + 2,
+          fontWeight: "900",
+          textAlign: "center",
+          includeFontPadding: false,
+        }}
+      >
+        {webIconFallback(name)}
+      </Text>
+    );
+  }
+
+  return <Ionicons name={name} size={size} color={color} />;
 }
 
 /**
@@ -376,18 +414,18 @@ export default function ClubStoreDashboardScreen() {
     }
   }, [router, storeId]);
 
-  // âœ… Order button (PUBLIC) - normal order
+  // ✅ Order button (PUBLIC) - normal order
   const openOrders = useCallback(() => {
     if (!storeId) return;
 
-    // âœ… FIX ROUTE: order -> orders/create
+    // ✅ FIX ROUTE: order -> orders/create
     router.push({
       pathname: "/(tabs)/club/store/[storeId]/orders/create" as any,
       params: { storeId, storeName: safeStr(profile?.display_name, "Store") },
     } as any);
   }, [profile?.display_name, router, storeId]);
 
-  // âœ… Order from specific post (option)
+  // ✅ Order from specific post (option)
   const openOrderFromPost = useCallback(
     (item: StorePostRow) => {
       if (!storeId) return;
@@ -396,7 +434,7 @@ export default function ClubStoreDashboardScreen() {
       const postCaption = String(item?.caption ?? "");
       const postImageUrl = String(item?.image_url ?? "");
 
-      // âœ… FIX ROUTE: order -> orders/create
+      // ✅ FIX ROUTE: order -> orders/create
       router.push({
         pathname: "/(tabs)/club/store/[storeId]/orders/create" as any,
         params: {
@@ -427,9 +465,9 @@ export default function ClubStoreDashboardScreen() {
   const category = useMemo(() => clean(profile?.category), [profile?.category]);
   const location = useMemo(() => clean(profile?.location), [profile?.location]);
   const subtitle = useMemo(
-    () => [category, location].filter(Boolean).join(" â€¢ "),
-    [category, location]
-  );
+      () => [category, location].filter(Boolean).join(" • "),
+      [category, location]
+    );
 
   const avatarUrl = useMemo(
     () => clean(profile?.avatar_url),
@@ -443,17 +481,17 @@ export default function ClubStoreDashboardScreen() {
 
   const postsCount = useMemo(() => {
     const n = stats?.posts_count;
-    return typeof n === "number" ? String(n) : "â€”";
+    return typeof n === "number" ? String(n) : "—";
   }, [stats?.posts_count]);
 
   const followersCount = useMemo(() => {
     const n = stats?.followers_count;
-    return typeof n === "number" ? String(n) : "â€”";
+    return typeof n === "number" ? String(n) : "—";
   }, [stats?.followers_count]);
 
   const followingCount = useMemo(() => {
     const n = stats?.following_count;
-    return typeof n === "number" ? String(n) : "â€”";
+    return typeof n === "number" ? String(n) : "—";
   }, [stats?.following_count]);
 
   const TabBtn = useCallback(
@@ -519,7 +557,7 @@ export default function ClubStoreDashboardScreen() {
     [category, displayName, location, router, storeId]
   );
 
-  // âœ… Options menu on long-press
+ // ✅ Options menu on long-press
   const openPostOptions = useCallback(
     (item: StorePostRow) => {
       Alert.alert("Post Options", "Chagua unachotaka kufanya:", [
@@ -599,7 +637,7 @@ export default function ClubStoreDashboardScreen() {
                   justifyContent: "center",
                 }}
               >
-                <Ionicons name="storefront-outline" size={18} color={theme.colors.emerald} />
+                <SafeIcon name="storefront-outline" size={18} color={theme.colors.emerald} />
               </View>
 
               <View>
@@ -632,9 +670,11 @@ export default function ClubStoreDashboardScreen() {
           </View>
         </Card>
 
+        
+
         {!!err && (
           <Card style={{ backgroundColor: theme.colors.dangerSoft, borderColor: theme.colors.dangerBorder }}>
-            <Text style={{ color: theme.colors.dangerText, fontWeight: "900" }}>{err}</Text>
+            <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{err}</Text>
           </Card>
         )}
 
@@ -686,9 +726,9 @@ export default function ClubStoreDashboardScreen() {
                     </Text>
                   )}
 
-                  <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6, fontSize: 12 }}>
-                    Store ID: {storeId.slice(0, 8)}â€¦{isMyStore ? " â€¢ (My active store)" : ""}
-                  </Text>
+                 <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6, fontSize: 12 }}>
+                        Store ID: {storeId.slice(0, 8)}...{isMyStore ? " • (My active store)" : ""}
+                      </Text>
                 </View>
 
                 <View
@@ -855,7 +895,7 @@ export default function ClubStoreDashboardScreen() {
                   <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Contact</Text>
                 </Pressable>
 
-                {/* âœ… PUBLIC Order */}
+                {/* ✅ PUBLIC Order */}
                 <Pressable
                   onPress={openOrders}
                   hitSlop={10}
@@ -947,9 +987,9 @@ export default function ClubStoreDashboardScreen() {
                     </Pressable>
                   </View>
 
-                  <Text style={{ color: theme.colors.faint, fontWeight: "900", fontSize: 12, marginTop: 8 }}>
-                    Tip: Long press post kupata â€œOrder from this Postâ€.
-                  </Text>
+                 <Text style={{ color: theme.colors.faint, fontWeight: "900", fontSize: 12, marginTop: 8 }}>
+                        Tip: Long press post kupata "Order from this Post".
+                      </Text>
 
                   {postsLoading ? (
                     <View style={{ paddingVertical: 16, alignItems: "center" }}>
@@ -965,9 +1005,9 @@ export default function ClubStoreDashboardScreen() {
                       </Text>
 
                       {isOwnerView && (
-                        <Text style={{ color: theme.colors.faint, fontWeight: "900", marginTop: 10, fontSize: 12 }}>
-                          OWNER/ADMIN: â€œEdit Store Profile/Catalogâ€ (A42+). Staff hawataruhusiwa.
-                        </Text>
+                       <Text style={{ color: theme.colors.faint, fontWeight: "900", marginTop: 10, fontSize: 12 }}>
+                        OWNER/ADMIN: "Edit Store Profile/Catalog" (A42+). Staff hawataruhusiwa.
+                      </Text>
                       )}
                     </View>
                   ) : (
@@ -998,7 +1038,7 @@ export default function ClubStoreDashboardScreen() {
                             </View>
                           ) : !postsHasMore ? (
                             <Text style={{ color: theme.colors.faint, fontWeight: "900", textAlign: "center", marginTop: 8 }}>
-                              â€” End â€”
+                              — End —
                             </Text>
                           ) : null
                         }
@@ -1074,7 +1114,7 @@ export default function ClubStoreDashboardScreen() {
 
                   {isOwnerView ? (
                     <Text style={{ color: theme.colors.faint, fontWeight: "900", marginTop: 12, fontSize: 12 }}>
-                      OWNER/ADMIN: â€œEdit Store Profileâ€ tutaongeza A42+ (staff hawataruhusiwa).
+                      OWNER/ADMIN: "Edit Store Profile" tutaongeza A42+ (staff hawataruhusiwa).
                     </Text>
                   ) : (
                     <Text style={{ color: theme.colors.faint, fontWeight: "900", marginTop: 12, fontSize: 12 }}>
@@ -1133,12 +1173,12 @@ export default function ClubStoreDashboardScreen() {
                 <Card style={{ padding: 12, backgroundColor: theme.colors.surface2, borderColor: theme.colors.borderSoft }}>
                   <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Orders</Text>
                   <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-                    Customer ana-create order kwa â€œOrderâ€ button. Store staff wana-manage orders kwenye Orders panel.
+                    Customer ana-create order kwa "Order" button. Store staff wana-manage orders kwenye Orders panel.
                   </Text>
 
                   {isMyStore ? (
                     <View style={{ marginTop: 12, gap: 10 }}>
-                      {/* âœ… Staff manage */}
+                      {/* ✅ Staff manage */}
                       <Pressable
                         onPress={() => {
                           router.push({
@@ -1166,7 +1206,7 @@ export default function ClubStoreDashboardScreen() {
                         <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Manage Store Orders</Text>
                       </Pressable>
 
-                      {/* âœ… IMPORTANT: Keep Order Form reachable even on My Store */}
+                      {/* ✅ IMPORTANT: Keep Order Form reachable even on My Store */}
                       <Pressable
                         onPress={openOrders}
                         hitSlop={10}
