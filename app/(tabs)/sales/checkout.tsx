@@ -1,4 +1,4 @@
-﻿import { Ionicons } from "@expo/vector-icons";
+﻿import SafeIcon from "@/src/ui/SafeIcon";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -1056,7 +1056,7 @@ export default function CheckoutScreen() {
                     opacity: pressed ? 0.9 : 1,
                   })}
                 >
-                  <Ionicons name="add" size={20} color={theme.colors.emerald} />
+                  <SafeIcon name="add" size={20} color={theme.colors.emerald} />
                 </Pressable>
               </View>
 
@@ -1190,12 +1190,13 @@ export default function CheckoutScreen() {
         Payment
       </Text>
 
-      <View
+     <View
         style={{
           flexDirection: "row",
           flexWrap: isDesktopWeb ? "wrap" : "nowrap",
           gap: 8,
           justifyContent: "space-between",
+          alignItems: "stretch",
         }}
       >
         <MethodChip
@@ -1634,9 +1635,10 @@ export default function CheckoutScreen() {
             gap: 10,
           }}
         >
-          <Pressable
+         <Pressable
             onPress={() => router.back()}
-            style={{
+            hitSlop={10}
+            style={({ pressed }) => ({
               width: 44,
               height: 44,
               borderRadius: 999,
@@ -1645,9 +1647,10 @@ export default function CheckoutScreen() {
               borderWidth: 1,
               borderColor: theme.colors.border,
               backgroundColor: "rgba(255,255,255,0.06)",
-            }}
+              opacity: pressed ? 0.92 : 1,
+            })}
           >
-            <Ionicons name="chevron-back" size={22} color={theme.colors.text} />
+            <SafeIcon name="chevron-left" size={22} color={theme.colors.text} />
           </Pressable>
 
           <View style={{ flex: 1 }}>
@@ -1722,6 +1725,7 @@ export default function CheckoutScreen() {
                 flex: 1.2,
                 minWidth: 0,
                 maxHeight: desktopPaneHeight,
+                paddingRight: 2,
               }}
               contentContainerStyle={{ gap: 14, paddingRight: 4 }}
               showsVerticalScrollIndicator={false}
@@ -1732,8 +1736,8 @@ export default function CheckoutScreen() {
 
             <ScrollView
               style={{
-                width: 460,
-                minWidth: 460,
+                width: 500,
+                minWidth: 500,
                 maxHeight: desktopPaneHeight,
               }}
               contentContainerStyle={{ gap: 14, paddingRight: 4 }}

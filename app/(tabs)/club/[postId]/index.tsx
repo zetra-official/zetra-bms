@@ -101,12 +101,11 @@ export default function ClubPostDetailScreen() {
     } as any);
   }, [caption, postId, router]);
 
-  // ✅✅✅ FIXED: use canonical route (orders/create) — no store/[storeId]/order
-  const openOrderFromPost = useCallback(() => {
+  const openChatWithSeller = useCallback(() => {
     if (!storeId) return;
 
     router.push({
-      pathname: "/(tabs)/club/orders/create" as any,
+      pathname: "/(tabs)/club/inbox/store/[storeId]" as any,
       params: {
         storeId,
         storeName,
@@ -350,8 +349,8 @@ export default function ClubPostDetailScreen() {
           alignSelf: "center",
         }}
       >
-        <Card style={{ padding: 14,backgroundColor: theme.colors.card,  borderColor: theme.colors.borderSoft }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+        <Card style={{ padding: 14, backgroundColor: theme.colors.card, borderColor: theme.colors.borderSoft }}>
+          <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
             <Pressable
               onPress={goBack}
               hitSlop={10}
@@ -373,14 +372,27 @@ export default function ClubPostDetailScreen() {
             </Pressable>
 
             <View style={{ flex: 1 }}>
-              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>{storeName}</Text>
-              <Text style={{ color: theme.colors.faint, fontWeight: "900", fontSize: 12 }}>
+              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 17 }}>{storeName}</Text>
+              <Text style={{ color: theme.colors.faint, fontWeight: "900", fontSize: 12, marginTop: 2 }}>
                 {fmtTimeAgo(createdAt)}
                 {subtitle ? ` • ${subtitle}` : ""}
               </Text>
+
+              {!!caption && (
+                <Text
+                  style={{
+                    color: theme.colors.text,
+                    fontWeight: "800",
+                    fontSize: 14,
+                    lineHeight: 21,
+                    marginTop: 8,
+                  }}
+                >
+                  {caption}
+                </Text>
+              )}
             </View>
 
-            {/* ✅ Save */}
             {!!postId && (
               <Pressable
                 onPress={() => void onToggleSave()}
@@ -397,7 +409,6 @@ export default function ClubPostDetailScreen() {
                     alignItems: "center",
                     justifyContent: "center",
                     opacity: saveBusy ? 0.6 : pressed ? 0.92 : 1,
-                    marginRight: 8,
                   },
                 ]}
               >
@@ -408,15 +419,16 @@ export default function ClubPostDetailScreen() {
                 />
               </Pressable>
             )}
+          </View>
 
-            {/* ✅ Store */}
-            {!!storeId && (
+          {!!storeId && (
+            <View style={{ marginTop: 10, flexDirection: "row", justifyContent: "flex-end" }}>
               <Pressable
                 onPress={openStore}
                 hitSlop={10}
                 style={({ pressed }) => [
                   {
-                    height: 40,
+                    height: 38,
                     paddingHorizontal: 12,
                     borderRadius: theme.radius.pill,
                     borderWidth: 1,
@@ -432,10 +444,10 @@ export default function ClubPostDetailScreen() {
                 <Ionicons name="business-outline" size={16} color={theme.colors.text} />
                 <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>Store</Text>
               </Pressable>
-            )}
-          </View>
+            </View>
+          )}
 
-          {/* Like / Comments / Order */}
+          {/* Like / Comments / Chat */}
           <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
             <Pressable
               onPress={toggleLike}
@@ -490,7 +502,7 @@ export default function ClubPostDetailScreen() {
 
             {!!storeId && (
               <Pressable
-                onPress={openOrderFromPost}
+                onPress={openChatWithSeller}
                 hitSlop={10}
                 style={({ pressed }) => [
                   {
@@ -508,19 +520,16 @@ export default function ClubPostDetailScreen() {
                   },
                 ]}
               >
-                <Ionicons name="bag-handle-outline" size={16} color={theme.colors.emerald} />
-                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>Order</Text>
+                <Ionicons name="chatbubble-ellipses-outline" size={16} color={theme.colors.emerald} />
+                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>
+                  Zungumza na Muuzaji
+                </Text>
               </Pressable>
             )}
           </View>
         </Card>
 
-        {!!caption && (
-          <Card>
-            <Text style={{ color: theme.colors.text, fontWeight: "900", marginBottom: 6 }}>Caption</Text>
-            <Text style={{ color: theme.colors.text, fontWeight: "800", lineHeight: 20 }}>{caption}</Text>
-          </Card>
-        )}
+        {!!caption ? null : null}
 
         {!!imageUrl && (
           <Card
@@ -530,6 +539,8 @@ export default function ClubPostDetailScreen() {
               width: "100%",
               maxWidth: mediaMaxWidth,
               alignSelf: "center",
+              backgroundColor: theme.colors.card,
+              borderColor: theme.colors.borderSoft,
             }}
           >
             <Pressable onPress={() => setFullOpen(true)} style={{ width: "100%" }}>

@@ -322,7 +322,7 @@ function DesktopBrandPanel() {
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { refresh } = useOrg();
+  useOrg();
   const { width } = useWindowDimensions();
 
   const isDesktopWeb = Platform.OS === "web" && width >= 1100;
@@ -386,14 +386,6 @@ export default function LoginScreen() {
     setLoading(true);
 
     try {
-      await clearCorruptSupabaseSession();
-
-      try {
-        await supabase.auth.signOut();
-      } catch (err: any) {
-        console.log("pre-login signOut ignore:", err);
-      }
-
       const { data, error } = await supabase.auth.signInWithPassword({
         email: e,
         password,
@@ -401,29 +393,16 @@ export default function LoginScreen() {
 
       if (error) throw error;
 
-      let accessToken: string | null = data?.session?.access_token ?? null;
+      const session = data?.session ?? null;
+      const user = data?.user ?? session?.user ?? null;
 
-      if (!accessToken) {
-        const {
-          data: { session },
-          error: sessionError,
-        } = await supabase.auth.getSession();
-
-        if (sessionError) throw sessionError;
-        accessToken = session?.access_token ?? null;
-      }
-
-      if (!accessToken) {
+      if (!session?.access_token) {
         throw new Error("Fresh session was not created after login.");
       }
 
-      const {
-        data: { user },
-        error: getUserError,
-      } = await supabase.auth.getUser();
-
-      if (getUserError) throw getUserError;
-      if (!user?.id) throw new Error("Failed to load authenticated user after login.");
+      if (!user?.id) {
+        throw new Error("Failed to load authenticated user after login.");
+      }
 
       if (isEmailNotVerified(user)) {
         try {
@@ -443,7 +422,7 @@ export default function LoginScreen() {
 
       const { data: profileRow, error: profileError } = await supabase
         .from("profiles")
-        .select("is_disabled, disabled_reason")
+        .select("is_disabled")
         .eq("id", user.id)
         .maybeSingle();
 
@@ -465,7 +444,6 @@ export default function LoginScreen() {
         return;
       }
 
-      await refresh();
       router.replace("/(tabs)");
     } catch (err: any) {
       const msg = err?.message ?? "Unknown login error";
@@ -496,6 +474,17 @@ export default function LoginScreen() {
           "Email yako bado haijaverify. Fungua email yako kwanza, verify account, kisha login."
         );
         return;
+      }
+
+      if (
+        String(msg).toLowerCase().includes("invalid refresh token") ||
+        String(msg).toLowerCase().includes("refresh_token_not_found") ||
+        String(msg).toLowerCase().includes("jwt") ||
+        String(msg).toLowerCase().includes("session")
+      ) {
+        try {
+          await clearCorruptSupabaseSession();
+        } catch {}
       }
 
       Alert.alert("Login Failed", msg);

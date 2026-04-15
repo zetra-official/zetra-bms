@@ -1,6 +1,6 @@
 // app/ai/index.tsx
 
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons as BaseIonicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -294,6 +294,104 @@ function normalizeWorkerBaseUrl(raw: any) {
   return u;
 }
 const AI_WORKER_URL = normalizeWorkerBaseUrl(process.env.EXPO_PUBLIC_AI_WORKER_URL ?? "");
+
+type AiIconName = React.ComponentProps<typeof BaseIonicons>["name"];
+
+function webAiIconFallback(name: AiIconName) {
+  switch (name) {
+    case "chevron-back":
+      return "‹";
+    case "sparkles":
+    case "sparkles-outline":
+      return "AI";
+    case "person-circle-outline":
+      return "U";
+    case "alert-circle":
+      return "!";
+    case "warning":
+      return "!";
+    case "checkmark-circle":
+      return "✓";
+    case "copy-outline":
+      return "C";
+    case "create-outline":
+      return "E";
+    case "refresh":
+    case "refresh-outline":
+      return "R";
+    case "chevron-forward":
+      return "›";
+    case "lock-closed-outline":
+      return "L";
+    case "close":
+      return "×";
+    case "close-circle-outline":
+      return "×";
+    case "image-outline":
+      return "IMG";
+    case "card-outline":
+      return "$";
+    case "trending-up":
+      return "↗";
+    case "cube":
+      return "B";
+    case "checkbox":
+    case "checkbox-outline":
+      return "✓";
+    case "analytics":
+      return "%";
+    case "pricetag":
+      return "T";
+    case "add":
+      return "+";
+    case "arrow-up":
+      return "↑";
+    case "mic-outline":
+      return "MIC";
+    case "stop-circle-outline":
+      return "■";
+    case "download-outline":
+      return "↓";
+    case "share-social-outline":
+      return "S";
+    default:
+      return "•";
+  }
+}
+
+function Ionicons({
+  name,
+  size = 18,
+  color,
+  style,
+  ...rest
+}: React.ComponentProps<typeof BaseIonicons>) {
+  if (Platform.OS === "web") {
+    const label = webAiIconFallback(name as AiIconName);
+
+    return (
+      <Text
+        style={[
+          {
+            color: color || UI.text,
+            fontSize: Math.max(10, Number(size) - 4),
+            lineHeight: Math.max(12, Number(size)),
+            fontWeight: "900",
+            textAlign: "center",
+            includeFontPadding: false,
+            minWidth: Number(size) + 2,
+          },
+          style as any,
+        ]}
+        numberOfLines={1}
+      >
+        {label}
+      </Text>
+    );
+  }
+
+  return <BaseIonicons name={name} size={size} color={color} style={style} {...rest} />;
+}
 
 function isDataImageUrl(u: string) {
   const t = clean(u).toLowerCase();
@@ -5725,15 +5823,19 @@ const imagePromptText = !isUser
 
       <View
         style={{
+          width: "100%",
           alignItems: isUser ? "flex-end" : "flex-start",
         }}
       >
         {!!displayText ? (
           <View
             style={{
-              maxWidth: "100%",
+              width: "100%",
+              maxWidth: isUser ? "88%" : "94%",
+              minWidth: 0,
+              alignSelf: isUser ? "flex-end" : "flex-start",
               borderRadius: 24,
-              overflow: "hidden",
+              overflow: "visible",
             }}
           >
             <AiMessageBubble role={isUser ? "user" : "assistant"} text={displayText} />
@@ -5744,7 +5846,9 @@ const imagePromptText = !isUser
           <View
             style={{
               marginTop: displayText ? 10 : 0,
-              width: Math.min(Dimensions.get("window").width * 0.72, 320),
+              width: "100%",
+              maxWidth: 320,
+              alignSelf: isUser ? "flex-end" : "flex-start",
             }}
           >
             <Pressable
@@ -7031,7 +7135,7 @@ const Content = (
       keyboardShouldPersistTaps="always"
       keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
       showsVerticalScrollIndicator={false}
-      removeClippedSubviews={Platform.OS === "android"}
+      removeClippedSubviews={false}
       initialNumToRender={12}
       maxToRenderPerBatch={8}
       windowSize={10}

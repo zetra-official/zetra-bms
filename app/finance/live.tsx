@@ -6,6 +6,7 @@ import {
   ScrollView,
   Text,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -290,6 +291,37 @@ function MiniStat({
   );
 }
 
+function WebIcon({
+  name,
+  size = 18,
+  color = UI.text,
+  webLabel,
+}: {
+  name: React.ComponentProps<typeof Ionicons>["name"];
+  size?: number;
+  color?: string;
+  webLabel?: string;
+}) {
+  if (Platform.OS === "web") {
+    return (
+      <Text
+        style={{
+          color,
+          fontSize: Math.max(12, size - 1),
+          fontWeight: "900",
+          lineHeight: size + 2,
+          textAlign: "center",
+          includeFontPadding: false as any,
+        }}
+      >
+        {webLabel || "◻"}
+      </Text>
+    );
+  }
+
+  return <Ionicons name={name} size={size} color={color} />;
+}
+
 function MetricPill({
   label,
   value,
@@ -332,6 +364,17 @@ function MetricPill({
 export default function FinanceLiveScreen() {
   const router = useRouter();
   const org = useOrg();
+  const { width } = useWindowDimensions();
+
+  const isWeb = Platform.OS === "web";
+  const isMobileWeb = isWeb && width < 768;
+  const isTabletWeb = isWeb && width >= 768 && width < 1180;
+  const isDesktopWeb = isWeb && width >= 1180;
+
+  const pageMaxWidth = isDesktopWeb ? 1380 : isTabletWeb ? 1120 : 860;
+  const pageSidePad = isDesktopWeb ? 24 : 16;
+  const overviewColumns = isDesktopWeb ? 3 : isTabletWeb ? 2 : 1;
+  const rowMetricMinWidth = isDesktopWeb ? 148 : isTabletWeb ? 132 : 110;
 
   const orgId = String(org.activeOrgId ?? "").trim();
   const orgName = String(org.activeOrgName ?? "Organization").trim() || "Organization";
@@ -728,9 +771,23 @@ export default function FinanceLiveScreen() {
     <Screen>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingTop: 16, paddingHorizontal: 16, paddingBottom: 28 }}
+        contentContainerStyle={{
+          paddingTop: 16,
+          paddingHorizontal: pageSidePad,
+          paddingBottom: 28,
+          width: "100%",
+          maxWidth: pageMaxWidth,
+          alignSelf: "center",
+        }}
       >
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 10,
+            flexWrap: isMobileWeb ? "wrap" : "nowrap",
+          }}
+        >
           <Pressable
             onPress={() => router.back()}
             hitSlop={10}
@@ -746,13 +803,13 @@ export default function FinanceLiveScreen() {
               opacity: pressed ? 0.92 : 1,
             })}
           >
-            <Ionicons name="arrow-back" size={18} color={UI.text} />
+            <WebIcon name="arrow-back" size={18} color={UI.text} webLabel="←" />
           </Pressable>
 
           <View
             style={{
               flex: 1,
-              minWidth: 0,
+              minWidth: isMobileWeb ? "100%" : 0,
               flexDirection: "row",
               alignItems: "center",
               gap: 12,
@@ -776,7 +833,7 @@ export default function FinanceLiveScreen() {
                 justifyContent: "center",
               }}
             >
-              <Ionicons name="pulse-outline" size={18} color={UI.text} />
+              <WebIcon name="pulse-outline" size={18} color={UI.text} webLabel="◉" />
             </View>
 
             <View style={{ flex: 1, minWidth: 0 }}>
@@ -784,7 +841,7 @@ export default function FinanceLiveScreen() {
                 Live Finance
               </Text>
               <Text style={{ color: UI.muted, fontWeight: "800" }} numberOfLines={1}>
-                {orgName} • {currentStoreLabel}
+                {scope === "ALL" ? `PRO • ${currentStoreLabel}` : `${orgName} • ${currentStoreLabel}`}
               </Text>
             </View>
           </View>
@@ -807,7 +864,7 @@ export default function FinanceLiveScreen() {
             {loading ? (
               <ActivityIndicator size="small" />
             ) : (
-              <Ionicons name="refresh" size={18} color={UI.text} />
+              <WebIcon name="refresh" size={18} color={UI.text} webLabel="↻" />
             )}
           </Pressable>
         </View>
@@ -868,20 +925,40 @@ export default function FinanceLiveScreen() {
             Live Overview • Today
           </Text>
 
-          <View style={{ flexDirection: "row", gap: 12 }}>
-            <MiniStat label="Sales" value={fmtMoney(totals.sales)} />
-            <MiniStat label="Expenses" value={fmtMoney(totals.expenses)} />
-            <MiniStat label="Orders" value={String(totals.orders)} />
-          </View>
+          <View
+            style={{
+              flexDirection: "row",
+              flexWrap: "wrap",
+              gap: 12,
+            }}
+          >
+            <View style={{ width: isMobileWeb ? "100%" : overviewColumns === 3 ? "31.8%" : "48.2%" }}>
+              <MiniStat label="Sales" value={fmtMoney(totals.sales)} />
+            </View>
 
-          <View style={{ flexDirection: "row", gap: 12 }}>
-            <MiniStat label="Money In" value={fmtMoney(totals.moneyIn)} />
-            <MiniStat label="Stock Value" value={fmtMoney(totals.stockValue)} />
-            <MiniStat
-              label="Profit"
-              value={isOwner ? fmtMoney(totals.profit) : "—"}
-              hint={isOwner ? "owner-only" : "owner only"}
-            />
+            <View style={{ width: isMobileWeb ? "100%" : overviewColumns === 3 ? "31.8%" : "48.2%" }}>
+              <MiniStat label="Expenses" value={fmtMoney(totals.expenses)} />
+            </View>
+
+            <View style={{ width: isMobileWeb ? "100%" : overviewColumns === 3 ? "31.8%" : "48.2%" }}>
+              <MiniStat label="Orders" value={String(totals.orders)} />
+            </View>
+
+            <View style={{ width: isMobileWeb ? "100%" : overviewColumns === 3 ? "31.8%" : "48.2%" }}>
+              <MiniStat label="Money In" value={fmtMoney(totals.moneyIn)} />
+            </View>
+
+            <View style={{ width: isMobileWeb ? "100%" : overviewColumns === 3 ? "31.8%" : "48.2%" }}>
+              <MiniStat label="Stock Value" value={fmtMoney(totals.stockValue)} />
+            </View>
+
+            <View style={{ width: isMobileWeb ? "100%" : overviewColumns === 3 ? "31.8%" : "48.2%" }}>
+              <MiniStat
+                label="Profit"
+                value={isOwner ? fmtMoney(totals.profit) : "—"}
+                hint={isOwner ? "owner-only" : "owner only"}
+              />
+            </View>
           </View>
 
           <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 20 }}>
@@ -931,7 +1008,14 @@ export default function FinanceLiveScreen() {
                     : "rgba(15,18,24,0.98)",
                 }}
               >
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 10,
+                    flexWrap: isMobileWeb ? "wrap" : "nowrap",
+                  }}
+                >
                   <View
                     style={{
                       width: 42,
@@ -948,10 +1032,11 @@ export default function FinanceLiveScreen() {
                         : "rgba(16,185,129,0.10)",
                     }}
                   >
-                    <Ionicons
+                    <WebIcon
                       name={isTopPerformer ? "flash-outline" : "business-outline"}
                       size={18}
                       color={UI.text}
+                      webLabel={isTopPerformer ? "⚡" : "▣"}
                     />
                   </View>
 
@@ -1000,48 +1085,75 @@ export default function FinanceLiveScreen() {
                   )}
                 </View>
 
-                <View style={{ flexDirection: "row", gap: 10, flexWrap: "wrap" }}>
-                  <MetricPill
-                    label="Sales"
-                    value={fmtMoney(row.sales)}
-                    tone={getMetricTone(row.sales, "sales")}
-                  />
-                  <MetricPill
-                    label="Money In"
-                    value={fmtMoney(row.moneyIn)}
-                    tone={getMetricTone(row.moneyIn, "moneyIn")}
-                  />
-                  <MetricPill
-                    label="Expenses"
-                    value={fmtMoney(row.expenses)}
-                    tone={getMetricTone(row.expenses, "expenses")}
-                  />
-                  <MetricPill
-                    label="Stock Value"
-                    value={fmtMoney(row.stockValue)}
-                    tone="neutral"
-                  />
-                  <MetricPill
-                    label="Orders"
-                    value={String(row.orders)}
-                    tone="neutral"
-                  />
-                  <MetricPill
-                    label="Profit"
-                    value={isOwner ? fmtMoney(toNum(row.profit)) : "—"}
-                    tone={isOwner ? getMetricTone(toNum(row.profit), "profit") : "neutral"}
-                  />
+                <View
+                  style={{
+                    flexDirection: "row",
+                    gap: 10,
+                    flexWrap: "wrap",
+                    alignItems: "stretch",
+                  }}
+                >
+                  <View style={{ minWidth: rowMetricMinWidth, flexGrow: isDesktopWeb ? 1 : 0 }}>
+                    <MetricPill
+                      label="Sales"
+                      value={fmtMoney(row.sales)}
+                      tone={getMetricTone(row.sales, "sales")}
+                    />
+                  </View>
+                  <View style={{ minWidth: rowMetricMinWidth, flexGrow: isDesktopWeb ? 1 : 0 }}>
+                    <MetricPill
+                      label="Money In"
+                      value={fmtMoney(row.moneyIn)}
+                      tone={getMetricTone(row.moneyIn, "moneyIn")}
+                    />
+                  </View>
+                  <View style={{ minWidth: rowMetricMinWidth, flexGrow: isDesktopWeb ? 1 : 0 }}>
+                    <MetricPill
+                      label="Expenses"
+                      value={fmtMoney(row.expenses)}
+                      tone={getMetricTone(row.expenses, "expenses")}
+                    />
+                  </View>
+                  <View style={{ minWidth: rowMetricMinWidth, flexGrow: isDesktopWeb ? 1 : 0 }}>
+                    <MetricPill
+                      label="Stock Value"
+                      value={fmtMoney(row.stockValue)}
+                      tone="neutral"
+                    />
+                  </View>
+                  <View style={{ minWidth: rowMetricMinWidth, flexGrow: isDesktopWeb ? 1 : 0 }}>
+                    <MetricPill
+                      label="Orders"
+                      value={String(row.orders)}
+                      tone="neutral"
+                    />
+                  </View>
+                  <View style={{ minWidth: rowMetricMinWidth, flexGrow: isDesktopWeb ? 1 : 0 }}>
+                    <MetricPill
+                      label="Profit"
+                      value={isOwner ? fmtMoney(toNum(row.profit)) : "—"}
+                      tone={isOwner ? getMetricTone(toNum(row.profit), "profit") : "neutral"}
+                    />
+                  </View>
                 </View>
 
                 <View
                   style={{
-                    flexDirection: "row",
-                    alignItems: "center",
+                    flexDirection: isMobileWeb ? "column" : "row",
+                    alignItems: isMobileWeb ? "stretch" : "center",
                     gap: 10,
                     paddingTop: 2,
                   }}
                 >
-                  <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 12, flex: 1 }}>
+                  <Text
+                    style={{
+                      color: UI.faint,
+                      fontWeight: "800",
+                      fontSize: 12,
+                      flex: isMobileWeb ? 0 : 1,
+                      lineHeight: 18,
+                    }}
+                  >
                     {isTopPerformer
                       ? "Store hii inaongoza kwa live performance ya sasa."
                       : "Open detail kuona finance history ya store hii moja kwa moja."}

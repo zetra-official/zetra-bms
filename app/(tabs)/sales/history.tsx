@@ -34,6 +34,9 @@ type SaleRow = {
   payment_channel?: string | null;
   paid_amount?: number | null;
   balance_amount?: number | null;
+  edited_at?: string | null;
+  edited_by?: string | null;
+  edit_count?: number | null;
 };
 
 type PaymentSummary = {
@@ -121,14 +124,13 @@ function normalizeSaleRow(r: AnyRow): SaleRow {
     status,
     total_qty: qty == null ? null : toNum(qty),
     total_amount: amount == null ? null : toNum(amount),
-    payment_method:
-      r.payment_method != null ? String(r.payment_method) : null,
-    payment_channel:
-      r.payment_channel != null ? String(r.payment_channel) : null,
-    paid_amount:
-      r.paid_amount == null ? null : toNum(r.paid_amount),
-    balance_amount:
-      r.balance_amount == null ? null : toNum(r.balance_amount),
+    payment_method: r.payment_method != null ? String(r.payment_method) : null,
+    payment_channel: r.payment_channel != null ? String(r.payment_channel) : null,
+    paid_amount: r.paid_amount == null ? null : toNum(r.paid_amount),
+    balance_amount: r.balance_amount == null ? null : toNum(r.balance_amount),
+    edited_at: r.edited_at != null ? String(r.edited_at) : null,
+    edited_by: r.edited_by != null ? String(r.edited_by) : null,
+    edit_count: r.edit_count == null ? 0 : toNum(r.edit_count),
   };
 }
 
@@ -410,8 +412,8 @@ export default function SalesHistoryScreen() {
           throw new Error("Invalid custom date range.");
         }
 
-        const [salesRes, payRes] = await Promise.all([
-          supabase.rpc("get_sales_v2", {
+        const [salesRes, payRes] = await Promise.allSettled([
+          supabase.rpc("get_sales_v3", {
             p_store_id: activeStoreId,
             p_from: resolvedRange.from,
             p_to: resolvedRange.to,
@@ -423,10 +425,15 @@ export default function SalesHistoryScreen() {
           } as any),
         ]);
 
-        if (salesRes.error) throw salesRes.error;
-        if (payRes.error) throw payRes.error;
+        if (salesRes.status !== "fulfilled") {
+          throw salesRes.reason;
+        }
 
-        const raw = (salesRes.data ?? []) as AnyRow[];
+        if (salesRes.value?.error) {
+          throw salesRes.value.error;
+        }
+
+        const raw = (salesRes.value.data ?? []) as AnyRow[];
         const list = raw.map(normalizeSaleRow);
 
         list.sort((a, b) => {
@@ -435,18 +442,33 @@ export default function SalesHistoryScreen() {
           return tb - ta;
         });
 
-        const payRow = Array.isArray(payRes.data) ? (payRes.data[0] ?? null) : payRes.data;
-
         setRows(list);
-        setPaymentSummary({
-          cash_total: toNum(payRow?.cash_total ?? 0),
-          mobile_total: toNum(payRow?.mobile_total ?? 0),
-          bank_total: toNum(payRow?.bank_total ?? 0),
-          credit_collected_total: toNum(payRow?.credit_collected_total ?? 0),
-          grand_paid_total: toNum(payRow?.grand_paid_total ?? 0),
-          total_sales: toNum(payRow?.total_sales ?? 0),
-          total_balance: toNum(payRow?.total_balance ?? 0),
-        });
+
+        if (payRes.status === "fulfilled" && !payRes.value?.error) {
+          const payRow = Array.isArray(payRes.value.data)
+            ? (payRes.value.data[0] ?? null)
+            : payRes.value.data;
+
+          setPaymentSummary({
+            cash_total: toNum(payRow?.cash_total ?? 0),
+            mobile_total: toNum(payRow?.mobile_total ?? 0),
+            bank_total: toNum(payRow?.bank_total ?? 0),
+            credit_collected_total: toNum(payRow?.credit_collected_total ?? 0),
+            grand_paid_total: toNum(payRow?.grand_paid_total ?? 0),
+            total_sales: toNum(payRow?.total_sales ?? 0),
+            total_balance: toNum(payRow?.total_balance ?? 0),
+          });
+        } else {
+          setPaymentSummary({
+            cash_total: 0,
+            mobile_total: 0,
+            bank_total: 0,
+            credit_collected_total: 0,
+            grand_paid_total: 0,
+            total_sales: 0,
+            total_balance: 0,
+          });
+        }
       } catch (e: any) {
         setErr(e?.message ?? "Failed to load sales");
         setRows([]);
@@ -734,7 +756,7 @@ export default function SalesHistoryScreen() {
         </Card>
 
         <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>
-          Summary ({labelForRange(range)})
+          Sales Summary ({labelForRange(range)})
         </Text>
 
         <View style={{ flexDirection: "row", gap: 10 }}>
@@ -931,6 +953,12 @@ export default function SalesHistoryScreen() {
                       Balance: <Text style={{ color: theme.colors.text }}>{fmtMoney(balanceAmount)}</Text>
                     </Text>
                   </>
+                )}
+
+                {!!toNum(item.edit_count ?? 0) && !isPending && (
+                  <Text style={{ color: theme.colors.emerald, fontWeight: "900" }}>
+                    Edited {toNum(item.edit_count ?? 0)} time(s)
+                  </Text>
                 )}
 
                 <Text

@@ -5,7 +5,7 @@ import { Button } from "@/src/ui/Button";
 import { Card } from "@/src/ui/Card";
 import { Screen } from "@/src/ui/Screen";
 import { theme } from "@/src/ui/theme";
-import { Ionicons } from "@expo/vector-icons";
+import SafeIcon from "@/src/ui/SafeIcon";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
@@ -299,7 +299,7 @@ export default function CreditDetailScreen() {
                 backgroundColor: "rgba(255,255,255,0.06)",
               }}
             >
-              <Ionicons name="chevron-back" size={22} color={theme.colors.text} />
+              <SafeIcon name="chevron-left" size={22} color={theme.colors.text} />
             </Pressable>
 
             <View style={{ flex: 1 }}>

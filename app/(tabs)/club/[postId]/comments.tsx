@@ -1,7 +1,8 @@
 // app/(tabs)/club/[postId]/comments.tsx
 
 import { supabase } from "@/src/supabase/supabaseClient";
-import { Card } from "@/src/ui/Card";
+import { useOrg } from "@/src/context/OrgContext";
+
 import { Screen } from "@/src/ui/Screen";
 import { theme } from "@/src/ui/theme";
 import { Ionicons } from "@expo/vector-icons";
@@ -32,9 +33,28 @@ function fmtTimeAgo(iso?: string | null) {
   return `${sec}s`;
 }
 
+function getCommentDisplayName(item: CommentRow, fallback = "Store") {
+  return safeStr(
+    item.store_profile_name ??
+      item.store_profile_display_name ??
+      item.club_store_profile_name ??
+      item.club_profile_name ??
+      item.store_display_name ??
+      item.store_public_name ??
+      item.store_name ??
+      item.author_store_name ??
+      item.author_name ??
+      item.user_name ??
+      item.full_name ??
+      item.customer_name,
+    fallback
+  );
+}
+
 type ReplyTarget = {
   commentId: string;
   snippet: string;
+  authorName: string;
 };
 
 function snippetOf(body: string, max = 80) {
@@ -43,9 +63,14 @@ function snippetOf(body: string, max = 80) {
   return s.slice(0, max - 1) + "…";
 }
 
+function hasStoreLink(item: CommentRow) {
+  return String(item?.store_id ?? "").trim().length > 0;
+}
+
 export default function ClubCommentsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { activeStoreId } = useOrg();
 
   const params = useLocalSearchParams<{
     postId: string;
@@ -69,14 +94,30 @@ export default function ClubCommentsScreen() {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
 
+  const [viewerUserId, setViewerUserId] = useState<string>("");
+  const [activeStoreName, setActiveStoreName] = useState<string>("");
+
   const sendingRef = useRef(false);
 
   // ✅ Reply state
   const [replyTo, setReplyTo] = useState<ReplyTarget | null>(null);
 
-  const goBack = useCallback(() => {
+ const goBack = useCallback(() => {
     router.back();
   }, [router]);
+
+  const openStore = useCallback(
+    (storeId: string) => {
+      const sid = String(storeId ?? "").trim();
+      if (!sid) return;
+
+      router.push({
+        pathname: "/(tabs)/club/store/[storeId]" as any,
+        params: { storeId: sid },
+      } as any);
+    },
+    [router]
+  );
 
   const fetchPage = useCallback(
     async (mode: "boot" | "refresh" | "more") => {
@@ -96,7 +137,7 @@ export default function ClubCommentsScreen() {
         const args: any = { p_post_id: postId, p_limit: PAGE };
         if (mode === "more" && cursor) args.p_before = cursor;
 
-        const { data, error } = await supabase.rpc("get_club_comments", args);
+        const { data, error } = await supabase.rpc("get_club_comments_v3", args);
         if (error) throw error;
 
         const list = (data ?? []) as CommentRow[];
@@ -138,6 +179,39 @@ export default function ClubCommentsScreen() {
     void fetchPage("boot");
   }, [fetchPage]);
 
+  useEffect(() => {
+    let alive = true;
+
+    async function loadViewerContext() {
+      try {
+        const [{ data: authData }, storeRes] = await Promise.all([
+          supabase.auth.getUser(),
+          activeStoreId
+            ? supabase.from("stores").select("name").eq("id", activeStoreId).maybeSingle()
+            : Promise.resolve({ data: null, error: null } as any),
+        ]);
+
+        if (!alive) return;
+
+        const uid = String(authData?.user?.id ?? "").trim();
+        const sname = String(storeRes?.data?.name ?? "").trim();
+
+        setViewerUserId(uid);
+        setActiveStoreName(sname);
+      } catch {
+        if (!alive) return;
+        setViewerUserId("");
+        setActiveStoreName("");
+      }
+    }
+
+    void loadViewerContext();
+
+    return () => {
+      alive = false;
+    };
+  }, [activeStoreId]);
+
   const onRefresh = useCallback(() => {
     setCursor(null);
     setHasMore(true);
@@ -158,20 +232,34 @@ export default function ClubCommentsScreen() {
     const body = String(item.body ?? "").trim();
     const snip = snippetOf(body, 80);
 
-    setReplyTo({ commentId: id, snippet: snip || "Comment" });
+    const backendAuthor = getCommentDisplayName(item, "");
+    const isMine = String(item.profile_id ?? "").trim() === viewerUserId;
+    const authorName =
+      backendAuthor || (isMine ? safeStr(activeStoreName, "My Store") : "Store");
+
+    setReplyTo({
+      commentId: id,
+      snippet: snip || "Comment",
+      authorName,
+    });
 
     // focus UX: usivunje button taps
     setTimeout(() => {
       // keep keyboard as is; user can type immediately
     }, 0);
-  }, []);
+  }, [activeStoreName, viewerUserId]);
 
   const cancelReply = useCallback(() => {
     setReplyTo(null);
-  }, []);
+  }, [activeStoreName, viewerUserId]);
 
   const sendComment = useCallback(async () => {
     if (!postId) return;
+
+    if (!activeStoreId) {
+      setErr("Chagua store kwanza kabla ya ku-comment");
+      return;
+    }
 
     const body = String(text ?? "").trim();
     if (!body.length) {
@@ -192,9 +280,10 @@ export default function ClubCommentsScreen() {
         p_post_id: postId,
         p_body: body,
         p_parent_comment_id: replyTo?.commentId ? replyTo.commentId : null,
+        p_store_id: activeStoreId,
       };
 
-      const { error } = await supabase.rpc("create_club_comment", payload);
+      const { error } = await supabase.rpc("create_club_comment_v2", payload);
       if (error) throw error;
 
       setText("");
@@ -213,7 +302,7 @@ export default function ClubCommentsScreen() {
       setSending(false);
       sendingRef.current = false;
     }
-  }, [fetchPage, postId, replyTo, text]);
+  }, [activeStoreId, fetchPage, postId, replyTo, text]);
 
   // ✅ Build nested tree (roots + children)
   const nestedData = useMemo(() => {
@@ -253,7 +342,16 @@ export default function ClubCommentsScreen() {
     const headerTopPad = Math.max(insets.top, 10) + 6;
 
     return (
-      <View style={{ paddingTop: headerTopPad, paddingBottom: 10, gap: 10 }}>
+      <View
+        style={{
+          paddingTop: headerTopPad,
+          paddingBottom: 12,
+          gap: 10,
+          borderBottomWidth: 1,
+          borderBottomColor: "rgba(255,255,255,0.06)",
+          marginBottom: 2,
+        }}
+      >
         <View
           style={{
             flexDirection: "row",
@@ -322,15 +420,17 @@ export default function ClubCommentsScreen() {
         </View>
 
         {!!err && (
-          <Card
+          <View
             style={{
+              borderWidth: 1,
               borderColor: theme.colors.dangerBorder,
               backgroundColor: theme.colors.dangerSoft,
               padding: 12,
+              borderRadius: 14,
             }}
           >
-            <Text style={{ color: theme.colors.dangerText, fontWeight: "900" }}>{err}</Text>
-          </Card>
+            <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{err}</Text>
+          </View>
         )}
       </View>
     );
@@ -342,47 +442,166 @@ export default function ClubCommentsScreen() {
       const body = safeStr(item.body, "");
       const createdAt = item.created_at ? String(item.created_at) : null;
 
-      const padLeft = Math.min(28, Math.max(0, depth) * 14);
+      const backendAuthor = getCommentDisplayName(item, "");
+      const isMine = String(item.profile_id ?? "").trim() === viewerUserId;
+
+      const author =
+        backendAuthor ||
+        (isMine ? safeStr(activeStoreName, depth > 0 ? "My Store Reply" : "My Store") : "") ||
+        (depth > 0 ? "Store Reply" : "Store");
+
+      const likesCount = Number(item.likes_count ?? item.like_count ?? 0) || 0;
+      const repliesCount = Number(item.replies_count ?? item.reply_count ?? 0) || 0;
+
+      const padLeft = Math.min(40, Math.max(0, depth) * 22);
 
       return (
-        <View key={`${id}:${depth}`} style={{ paddingLeft: padLeft }}>
-          <Card style={{ marginBottom: 10, padding: 12, gap: 6 }}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
-              <Text style={{ color: theme.colors.faint, fontWeight: "900", fontSize: 12 }}>
-                {fmtTimeAgo(createdAt)}
-              </Text>
-
-              <Pressable
-                onPress={() => openReply(item)}
-                hitSlop={10}
-                style={({ pressed }) => [
-                  {
-                    height: 28,
-                    paddingHorizontal: 10,
-                    borderRadius: 999,
-                    borderWidth: 1,
-                    borderColor: "rgba(255,255,255,0.12)",
-                    backgroundColor: "rgba(255,255,255,0.06)",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    opacity: pressed ? 0.92 : 1,
-                  },
-                ]}
-              >
-                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>
-                  Reply
-                </Text>
-              </Pressable>
+        <View
+          key={`${id}:${depth}`}
+          style={{
+            paddingLeft: padLeft,
+            paddingTop: 10,
+            paddingBottom: 2,
+            borderBottomWidth: depth === 0 ? 1 : 0,
+            borderBottomColor: "rgba(255,255,255,0.06)",
+          }}
+        >
+          <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 10 }}>
+            <View
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 999,
+                backgroundColor: depth > 0 ? "rgba(255,255,255,0.06)" : theme.colors.emeraldSoft,
+                borderWidth: 1,
+                borderColor: depth > 0 ? "rgba(255,255,255,0.10)" : theme.colors.emeraldBorder,
+                alignItems: "center",
+                justifyContent: "center",
+                marginTop: 2,
+              }}
+            >
+              <Ionicons
+                name={depth > 0 ? "storefront-outline" : "business-outline"}
+                size={16}
+                color={depth > 0 ? theme.colors.text : theme.colors.emerald}
+              />
             </View>
 
-            <Text style={{ color: theme.colors.text, fontWeight: "800", lineHeight: 20 }}>
-              {body}
-            </Text>
-          </Card>
+            <View style={{ flex: 1, paddingRight: 2 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap" }}>
+                <Pressable
+                  onPress={() => {
+                    const sid = String(item.store_id ?? "").trim();
+                    if (!sid) return;
+                    openStore(sid);
+                  }}
+                  disabled={!hasStoreLink(item)}
+                  hitSlop={12}
+                  pressRetentionOffset={12}
+                  style={({ pressed }) => [
+                    {
+                      flexDirection: "row",
+                      alignItems: "center",
+                      borderRadius: 10,
+                      paddingHorizontal: hasStoreLink(item) ? 6 : 0,
+                      paddingVertical: hasStoreLink(item) ? 3 : 0,
+                      marginLeft: hasStoreLink(item) ? -6 : 0,
+                      backgroundColor:
+                        hasStoreLink(item) && pressed ? "rgba(16,185,129,0.10)" : "transparent",
+                      opacity: pressed ? 0.82 : 1,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={{
+                      color: hasStoreLink(item) ? theme.colors.emerald : theme.colors.text,
+                      fontWeight: "900",
+                      fontSize: 14,
+                    }}
+                  >
+                    {author}
+                  </Text>
+
+                  {hasStoreLink(item) ? (
+                    <Ionicons
+                      name="chevron-forward"
+                      size={12}
+                      color={theme.colors.emerald}
+                      style={{ marginLeft: 3, marginTop: 1 }}
+                    />
+                  ) : null}
+                </Pressable>
+
+                <Text
+                  style={{
+                    color: theme.colors.faint,
+                    fontWeight: "800",
+                    fontSize: 12,
+                    marginLeft: 8,
+                  }}
+                >
+                  {fmtTimeAgo(createdAt)}
+                </Text>
+              </View>
+
+              <Text
+                style={{
+                  color: theme.colors.text,
+                  fontWeight: "800",
+                  fontSize: 15,
+                  lineHeight: 22,
+                  marginTop: 3,
+                }}
+              >
+                {body}
+              </Text>
+
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 16,
+                  marginTop: 8,
+                  paddingBottom: 4,
+                }}
+              >
+                <Pressable
+                  hitSlop={10}
+                  style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+                >
+                  <Text style={{ color: theme.colors.muted, fontWeight: "900", fontSize: 12 }}>
+                    Like
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => openReply(item)}
+                  hitSlop={10}
+                  style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
+                >
+                  <Text style={{ color: theme.colors.muted, fontWeight: "900", fontSize: 12 }}>
+                    Reply
+                  </Text>
+                </Pressable>
+
+                {likesCount > 0 ? (
+                  <Text style={{ color: theme.colors.faint, fontWeight: "900", fontSize: 12 }}>
+                    {likesCount} likes
+                  </Text>
+                ) : null}
+
+                {repliesCount > 0 && depth === 0 ? (
+                  <Text style={{ color: theme.colors.faint, fontWeight: "900", fontSize: 12 }}>
+                    {repliesCount} replies
+                  </Text>
+                ) : null}
+              </View>
+            </View>
+          </View>
         </View>
       );
     },
-    [openReply]
+    [activeStoreName, openReply, openStore, viewerUserId]
   );
 
   const renderItem = useCallback(
@@ -407,124 +626,123 @@ export default function ClubCommentsScreen() {
 
   const EmptyState = useMemo(() => {
     return (
-      <View style={{ paddingTop: 8 }}>
-        <Card style={{ padding: 14 }}>
-          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-            No comments yet
-          </Text>
-          <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-            Kuwa wa kwanza ku-comment.
-          </Text>
-        </Card>
+      <View
+        style={{
+          paddingTop: 10,
+          paddingBottom: 8,
+          borderBottomWidth: 1,
+          borderBottomColor: "rgba(255,255,255,0.06)",
+        }}
+      >
+        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+          No comments yet
+        </Text>
+        <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
+          Kuwa wa kwanza ku-comment.
+        </Text>
       </View>
     );
   }, []);
 
   const FooterComposer = useMemo(() => {
     return (
-      <View style={{ paddingTop: 10, paddingBottom: Math.max(insets.bottom, 10) + 16 }}>
-        <Card style={{ padding: 14, gap: 10 }}>
-          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-            {replyTo ? "Reply" : "Add comment"}
-          </Text>
+      <View
+        style={{
+          paddingTop: 14,
+          paddingBottom: Math.max(insets.bottom, 10) + 16,
+          borderTopWidth: 1,
+          borderTopColor: "rgba(255,255,255,0.06)",
+        }}
+      >
+        <Text style={{ color: theme.colors.text, fontWeight: "900", marginBottom: 10 }}>
+          {replyTo ? "Reply" : "Add comment"}
+        </Text>
 
-          {!!replyTo && (
-            <View
-              style={{
-                borderWidth: 1,
-                borderColor: "rgba(16,185,129,0.28)",
-                backgroundColor: "rgba(16,185,129,0.10)",
-                borderRadius: theme.radius.xl,
-                paddingHorizontal: 12,
-                paddingVertical: 10,
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: 10,
-              }}
-            >
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: theme.colors.emerald, fontWeight: "900", fontSize: 12 }}>
-                  Replying to
-                </Text>
-                <Text
-                  style={{ color: theme.colors.text, fontWeight: "800", marginTop: 2 }}
-                  numberOfLines={2}
-                >
-                  {replyTo.snippet}
-                </Text>
-              </View>
-
-              <Pressable
-                onPress={cancelReply}
-                hitSlop={10}
-                style={({ pressed }) => [
-                  {
-                    width: 36,
-                    height: 36,
-                    borderRadius: 999,
-                    borderWidth: 1,
-                    borderColor: "rgba(255,255,255,0.14)",
-                    backgroundColor: "rgba(255,255,255,0.06)",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    opacity: pressed ? 0.92 : 1,
-                  },
-                ]}
-              >
-                <Ionicons name="close" size={18} color={theme.colors.text} />
-              </Pressable>
-            </View>
-          )}
-
+        {!!replyTo && (
           <View
             style={{
               borderWidth: 1,
-              borderColor: "rgba(255,255,255,0.12)",
-              borderRadius: theme.radius.xl,
-              backgroundColor: "rgba(255,255,255,0.05)",
+              borderColor: "rgba(16,185,129,0.28)",
+              backgroundColor: "rgba(16,185,129,0.10)",
+              borderRadius: 14,
               paddingHorizontal: 12,
               paddingVertical: 10,
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 10,
+              marginBottom: 10,
             }}
           >
-            <TextInput
-              value={text}
-              onChangeText={setText}
-              placeholder={replyTo ? "Andika reply..." : "Andika comment..."}
-              placeholderTextColor={theme.colors.faint}
-              style={{
-                color: theme.colors.text,
-                fontWeight: "800",
-                minHeight: 44,
-              }}
-              multiline
-              // ✅ Do not block button taps; FlatList handles taps now.
-              blurOnSubmit={false}
-            />
-          </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: theme.colors.emerald, fontWeight: "900", fontSize: 12 }}>
+                Replying to {replyTo.authorName}
+              </Text>
+              <Text
+                style={{ color: theme.colors.text, fontWeight: "800", marginTop: 2 }}
+                numberOfLines={2}
+              >
+                {replyTo.snippet}
+              </Text>
+            </View>
 
-          <Pressable
-            onPress={sendComment}
-            disabled={sending || !String(text).trim().length}
-            hitSlop={12}
-            style={({ pressed }) => [
-              {
-                height: 52,
-                borderRadius: theme.radius.pill,
-                alignItems: "center",
-                justifyContent: "center",
-                borderWidth: 1,
-                borderColor: theme.colors.emeraldBorder,
-                backgroundColor: theme.colors.emeraldSoft,
-                opacity: sending || !String(text).trim().length ? 0.55 : pressed ? 0.92 : 1,
-              },
-            ]}
-          >
-            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-              {sending ? "Sending..." : replyTo ? "Send Reply" : "Send Comment"}
-            </Text>
-          </Pressable>
-        </Card>
+            <Pressable
+              onPress={cancelReply}
+              hitSlop={10}
+              style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1, padding: 4 }]}
+            >
+              <Ionicons name="close" size={18} color={theme.colors.text} />
+            </Pressable>
+          </View>
+        )}
+
+        <View
+          style={{
+            borderWidth: 1,
+            borderColor: "rgba(255,255,255,0.12)",
+            borderRadius: 18,
+            backgroundColor: "rgba(255,255,255,0.05)",
+            paddingHorizontal: 14,
+            paddingVertical: 10,
+          }}
+        >
+          <TextInput
+            value={text}
+            onChangeText={setText}
+            placeholder={replyTo ? "Andika reply..." : "Andika comment..."}
+            placeholderTextColor={theme.colors.faint}
+            style={{
+              color: theme.colors.text,
+              fontWeight: "800",
+              minHeight: 44,
+            }}
+            multiline
+            blurOnSubmit={false}
+          />
+        </View>
+
+        <Pressable
+          onPress={sendComment}
+          disabled={sending || !String(text).trim().length}
+          hitSlop={12}
+          style={({ pressed }) => [
+            {
+              marginTop: 12,
+              height: 50,
+              borderRadius: theme.radius.pill,
+              alignItems: "center",
+              justifyContent: "center",
+              borderWidth: 1,
+              borderColor: theme.colors.emeraldBorder,
+              backgroundColor: theme.colors.emeraldSoft,
+              opacity: sending || !String(text).trim().length ? 0.55 : pressed ? 0.92 : 1,
+            },
+          ]}
+        >
+          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+            {sending ? "Sending..." : replyTo ? "Send Reply" : "Send Comment"}
+          </Text>
+        </Pressable>
       </View>
     );
   }, [cancelReply, insets.bottom, replyTo, sendComment, sending, text]);
@@ -544,6 +762,7 @@ export default function ClubCommentsScreen() {
         contentContainerStyle={{
           paddingHorizontal: theme.spacing.page,
           paddingBottom: 0,
+          paddingTop: 0,
         }}
         ListEmptyComponent={!loading ? EmptyState : null}
         ListFooterComponent={

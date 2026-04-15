@@ -303,7 +303,7 @@ export default function ClubProfileScreen() {
         <Card
           style={{
             padding: 14,
-            backgroundColor: theme.colors.surface,
+            backgroundColor: theme.colors.surface2,
             borderColor: theme.colors.borderSoft,
           }}
         >
@@ -352,7 +352,7 @@ export default function ClubProfileScreen() {
 
         {!!err && (
           <Card style={{ borderColor: theme.colors.dangerBorder, backgroundColor: theme.colors.dangerSoft, padding: 12 }}>
-            <Text style={{ color: theme.colors.dangerText, fontWeight: "900" }}>{err}</Text>
+            <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{err}</Text>
           </Card>
         )}
 
@@ -481,7 +481,7 @@ export default function ClubProfileScreen() {
                       },
                     ]}
                   >
-                    <Text style={{ color: theme.colors.dangerText, fontWeight: "900" }}>Cancel</Text>
+                    <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>Cancel</Text>
                   </Pressable>
                 )}
               </View>

@@ -5,6 +5,7 @@ import { Platform } from "react-native";
 export const KV_KEYS = {
   activeOrgId: "zetra_active_org_id",
   activeStoreId: "zetra_active_store_id",
+  lastWorkspacePrefix: "zetra_last_workspace_v1",
 } as const;
 
 /** ✅ Canonical per-org currency key (org-level accounting consistency) */
@@ -183,5 +184,42 @@ export const kv = {
 
   clearActiveSelection: async () => {
     await Promise.all([safeRemove(KV_KEYS.activeOrgId), safeRemove(KV_KEYS.activeStoreId)]);
+  },
+
+  lastWorkspaceKeyForUser: (userId: string) => {
+    const id = String(userId || "").trim() || "anonymous";
+    return `${KV_KEYS.lastWorkspacePrefix}:${id}`;
+  },
+
+  getLastWorkspaceForUser: async (
+    userId: string
+  ): Promise<{ orgId: string | null; storeId: string | null } | null> => {
+    const key = `${KV_KEYS.lastWorkspacePrefix}:${String(userId || "").trim() || "anonymous"}`;
+    const raw = await safeGet(key);
+    const parsed = safeJsonParse<{ orgId?: string | null; storeId?: string | null }>(raw);
+
+    if (!parsed) return null;
+
+    return {
+      orgId: String(parsed.orgId ?? "").trim() || null,
+      storeId: String(parsed.storeId ?? "").trim() || null,
+    };
+  },
+
+  setLastWorkspaceForUser: async (
+    userId: string,
+    value: { orgId: string | null; storeId: string | null } | null
+  ): Promise<void> => {
+    const key = `${KV_KEYS.lastWorkspacePrefix}:${String(userId || "").trim() || "anonymous"}`;
+
+    if (!value) {
+      await safeRemove(key);
+      return;
+    }
+
+    await kv.setJson(key, {
+      orgId: String(value.orgId ?? "").trim() || null,
+      storeId: String(value.storeId ?? "").trim() || null,
+    });
   },
 };

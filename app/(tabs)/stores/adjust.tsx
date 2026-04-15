@@ -62,8 +62,9 @@ export default function AdjustStockScreen() {
   const [displaySku, setDisplaySku] = useState<string>(passedSku || "—");
 
   const [mode, setMode] = useState<Mode>("ADD");
-  const [amount, setAmount] = useState<string>("1");
+  const [amount, setAmount] = useState<string>("0");
   const [reason, setReason] = useState<string>("");
+  const [expiryDate, setExpiryDate] = useState<string>("");
   const [saving, setSaving] = useState(false);
 
   const [kbHeight, setKbHeight] = useState(0);
@@ -143,6 +144,17 @@ export default function AdjustStockScreen() {
     setAmount(cleaned);
   }, []);
 
+  const isValidExpiryInput = useCallback((value: string) => {
+    const s = String(value ?? "").trim();
+    if (!s) return true;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+
+    const d = new Date(`${s}T00:00:00`);
+    if (!Number.isFinite(d.getTime())) return false;
+
+    return localYMD(d) === s;
+  }, []);
+
   const ensureNotLockedToday = useCallback(async () => {
     if (!activeStoreId) return false;
     if (isCapitalRecoveryStore) return false;
@@ -196,21 +208,47 @@ export default function AdjustStockScreen() {
     if (!okToProceed) return;
 
     const trimmed = (amount ?? "").trim();
+    const trimmedExpiry = (expiryDate ?? "").trim();
+
     if (!trimmed) {
       Alert.alert("Invalid", "Amount lazima iandikwe.");
       return;
     }
 
     const n = Number(trimmed);
-    if (!Number.isFinite(n) || n <= 0) {
-      Alert.alert("Invalid", "Amount lazima iwe namba > 0");
+    if (!Number.isFinite(n) || n < 0) {
+      Alert.alert("Invalid", "Amount haiwezi kuwa negative.");
       return;
     }
 
     const intAmount = asInt(n);
-    if (intAmount <= 0) {
-      Alert.alert("Invalid", "Amount lazima iwe namba halali (> 0).");
+    if (intAmount < 0) {
+      Alert.alert("Invalid", "Amount lazima iwe namba halali.");
       return;
+    }
+
+    if (mode === "ADD" && trimmedExpiry) {
+      if (!isValidExpiryInput(trimmedExpiry)) {
+        Alert.alert("Invalid Expiry", "Tumia format sahihi ya expiry date: YYYY-MM-DD");
+        return;
+      }
+
+      if (trimmedExpiry < localYMD()) {
+        Alert.alert("Invalid Expiry", "Expiry date haiwezi kuwa ya nyuma.");
+        return;
+      }
+    }
+
+    if (intAmount === 0) {
+      if (mode !== "ADD") {
+        Alert.alert("Invalid", "Amount ya 0 inaruhusiwa kwa expiry update tu.");
+        return;
+      }
+
+      if (!trimmedExpiry) {
+        Alert.alert("Invalid", "Weka expiry date kama amount ni 0.");
+        return;
+      }
     }
 
     setSaving(true);
@@ -226,6 +264,7 @@ export default function AdjustStockScreen() {
         p_amount: Math.abs(intAmount),
         p_mode: mode,
         p_note: reason?.trim() ? reason.trim() : null,
+        p_expiry_date: mode === "ADD" && expiryDate.trim() ? expiryDate.trim() : null,
       } as any);
 
       if (error) throw error;
@@ -233,7 +272,16 @@ export default function AdjustStockScreen() {
       const newQty =
         Array.isArray(data) && data.length > 0 ? (data[0] as any)?.new_qty : null;
 
-      Alert.alert("Success ✅", newQty === null ? "Stock updated" : `New Qty: ${newQty}`);
+      Alert.alert(
+        "Success ✅",
+        intAmount === 0
+          ? "Expiry updated"
+          : newQty === null
+          ? "Stock updated"
+          : `New Qty: ${newQty}`
+      );
+      setExpiryDate("");
+      setAmount("0");
       router.back();
     } catch (err: any) {
       Alert.alert("Failed", err?.message ?? "Unknown error");
@@ -250,6 +298,8 @@ export default function AdjustStockScreen() {
     amount,
     reason,
     mode,
+    expiryDate,
+    isValidExpiryInput,
     router,
   ]);
 
@@ -323,7 +373,10 @@ export default function AdjustStockScreen() {
           <Button
             title="REDUCE"
             variant="secondary"
-            onPress={() => setMode("REDUCE")}
+            onPress={() => {
+              setMode("REDUCE");
+              setExpiryDate("");
+            }}
             disabled={isCapitalRecoveryStore || saving}
             style={{
               flex: 1,
@@ -343,7 +396,7 @@ export default function AdjustStockScreen() {
           keyboardType="numeric"
           returnKeyType="done"
           onSubmitEditing={Keyboard.dismiss}
-          placeholder="e.g 5"
+          placeholder="e.g 0 or 5"
           placeholderTextColor="rgba(255,255,255,0.35)"
           editable={!isCapitalRecoveryStore && !saving}
           style={{
@@ -358,6 +411,37 @@ export default function AdjustStockScreen() {
             opacity: isCapitalRecoveryStore ? 0.6 : 1,
           }}
         />
+
+        {mode === "ADD" ? (
+          <>
+            <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 6 }}>
+              Expiry Date (optional)
+            </Text>
+            <TextInput
+              value={expiryDate}
+              onChangeText={setExpiryDate}
+              placeholder="YYYY-MM-DD"
+              placeholderTextColor="rgba(255,255,255,0.35)"
+              editable={!isCapitalRecoveryStore && !saving}
+              autoCapitalize="none"
+              autoCorrect={false}
+              style={{
+                borderWidth: 1,
+                borderColor: theme.colors.border,
+                borderRadius: theme.radius.lg,
+                backgroundColor: "rgba(255,255,255,0.05)",
+                paddingHorizontal: 14,
+                paddingVertical: 12,
+                color: theme.colors.text,
+                fontWeight: "800",
+                opacity: isCapitalRecoveryStore ? 0.6 : 1,
+              }}
+            />
+            <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+  Weka expiry kwa format ya YYYY-MM-DD. Unaweza kuweka amount 0 kama unabadilisha expiry tu.
+</Text>
+          </>
+        ) : null}
 
         <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 6 }}>
           Reason (optional)

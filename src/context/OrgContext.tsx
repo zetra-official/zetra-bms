@@ -152,17 +152,14 @@ function resolveConsistentSelection(args: {
   const preferredOrgId = clean(args.preferredOrgId);
   const preferredStoreId = clean(args.preferredStoreId);
 
-  const preferredStore =
-    stores.find((s) => clean(s.store_id) === preferredStoreId) ?? null;
+  const validPreferredOrg =
+    orgs.find((o) => clean(o.organization_id) === preferredOrgId) ?? null;
 
-  const preferredStoreOrgId = clean(preferredStore?.organization_id);
-
-  // 1) store ikijulikana, org yake ndiyo iwe source of truth
-  let nextOrgId =
-    preferredStoreOrgId ||
-    (orgs.find((o) => clean(o.organization_id) === preferredOrgId)
-      ? preferredOrgId
-      : "") ||
+  // IMPORTANT:
+  // explicit org choice must win.
+  // old store from another org must never drag user back to previous org.
+  const nextOrgId =
+    clean(validPreferredOrg?.organization_id) ||
     clean(orgs[0]?.organization_id) ||
     null;
 
@@ -212,40 +209,58 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
     (orgId: string | null) => {
       const prevOrgId = activeOrgId;
       const userId = currentUserIdRef.current;
+      const orgChanged = orgId !== prevOrgId;
 
       _setActiveOrgId(orgId);
       activeOrgIdRef.current = orgId;
       void kv.setString(KV_KEYS.activeOrgId, orgId);
 
-      if (userId) {
-        void kv.setString(activeOrgKeyForUser(userId), orgId);
-      }
-
-      // If org is changing, store selection from old org must NOT carry over
-      if (orgId !== prevOrgId) {
+      if (orgChanged) {
         _setActiveStoreId(null);
         activeStoreIdRef.current = null;
         void kv.setString(KV_KEYS.activeStoreId, null);
+      }
 
-        if (userId) {
-          void kv.setString(activeStoreKeyForUser(userId), null);
-        }
+      if (userId) {
+        void kv.setString(activeOrgKeyForUser(userId), orgId);
+        void kv.setString(activeStoreKeyForUser(userId), orgChanged ? null : activeStoreIdRef.current);
+        void kv.setLastWorkspaceForUser(userId, {
+          orgId,
+          storeId: orgChanged ? null : activeStoreIdRef.current,
+        });
       }
     },
     [activeOrgId]
   );
 
-  const setActiveStoreId = useCallback((storeId: string | null) => {
-    const userId = currentUserIdRef.current;
+  const setActiveStoreId = useCallback(
+    (storeId: string | null) => {
+      const userId = currentUserIdRef.current;
+      const nextStoreId = clean(storeId) || null;
 
-    _setActiveStoreId(storeId);
-    activeStoreIdRef.current = storeId;
-    void kv.setString(KV_KEYS.activeStoreId, storeId);
+      if (nextStoreId && activeOrgIdRef.current) {
+        const store = stores.find((s) => clean(s.store_id) === nextStoreId) ?? null;
+        const storeOrgId = clean(store?.organization_id) || null;
 
-    if (userId) {
-      void kv.setString(activeStoreKeyForUser(userId), storeId);
-    }
-  }, []);
+        if (storeOrgId && storeOrgId !== activeOrgIdRef.current) {
+          return;
+        }
+      }
+
+      _setActiveStoreId(nextStoreId);
+      activeStoreIdRef.current = nextStoreId;
+      void kv.setString(KV_KEYS.activeStoreId, nextStoreId);
+
+      if (userId) {
+        void kv.setString(activeStoreKeyForUser(userId), nextStoreId);
+        void kv.setLastWorkspaceForUser(userId, {
+          orgId: activeOrgIdRef.current,
+          storeId: nextStoreId,
+        });
+      }
+    },
+    [stores]
+  );
 
   useEffect(() => {
     activeOrgIdRef.current = activeOrgId;
@@ -347,16 +362,26 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
     if (hydratedUserRef.current === userId) return;
     hydratedUserRef.current = userId;
 
-    const [savedUserOrgId, savedUserStoreId, legacyOrgId, legacyStoreId] =
+    const [savedUserOrgId, savedUserStoreId, legacyOrgId, legacyStoreId, lastWorkspace] =
       await Promise.all([
         kv.getString(activeOrgKeyForUser(userId)),
         kv.getString(activeStoreKeyForUser(userId)),
         kv.getString(KV_KEYS.activeOrgId),
         kv.getString(KV_KEYS.activeStoreId),
+        kv.getLastWorkspaceForUser(userId),
       ]);
 
-    const nextOrgId = savedUserOrgId || legacyOrgId || null;
-    const nextStoreId = savedUserStoreId || legacyStoreId || null;
+    const nextOrgId =
+      savedUserOrgId ||
+      lastWorkspace?.orgId ||
+      legacyOrgId ||
+      null;
+
+    const nextStoreId =
+      savedUserStoreId ||
+      lastWorkspace?.storeId ||
+      legacyStoreId ||
+      null;
 
     if (nextOrgId) {
       _setActiveOrgId(nextOrgId);
@@ -385,11 +410,22 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
         // not logged in => clear volatile active state only
         // IMPORTANT: keep per-user last workspace memory intact
         if (!session) {
+          const prevUserId = currentUserIdRef.current;
+
+          if (prevUserId) {
+            await kv.setLastWorkspaceForUser(prevUserId, {
+              orgId: activeOrgIdRef.current,
+              storeId: activeStoreIdRef.current,
+            });
+          }
+
           currentUserIdRef.current = null;
           setOrgs([]);
           setStores([]);
           _setActiveOrgId(null);
           _setActiveStoreId(null);
+          activeOrgIdRef.current = null;
+          activeStoreIdRef.current = null;
           await kv.clearActiveSelection();
           return;
         }
@@ -465,6 +501,10 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
             ? [
                 kv.setString(activeOrgKeyForUser(userId), resolved.orgId),
                 kv.setString(activeStoreKeyForUser(userId), resolved.storeId),
+                kv.setLastWorkspaceForUser(userId, {
+                  orgId: resolved.orgId,
+                  storeId: resolved.storeId,
+                }),
               ]
             : []),
         ]);

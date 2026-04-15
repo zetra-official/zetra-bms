@@ -69,6 +69,12 @@ function toNum(v: any) {
   return Number.isFinite(n) ? n : 0;
 }
 
+function isUuid(v: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    String(v ?? "").trim()
+  );
+}
+
 function normalizeHandoff(row: any): CashierHandoffRow | null {
   if (!row) return null;
 
@@ -207,6 +213,9 @@ export default function CashierHandoffDetailScreen() {
 
     try {
       if (!handoffId) throw new Error("Missing handoffId");
+      if (!isUuid(handoffId)) {
+        throw new Error("Invalid handoff route");
+      }
 
       const { data, error } = await supabase.rpc("get_cashier_handoff_by_id_v1", {
         p_handoff_id: handoffId,
@@ -400,8 +409,17 @@ export default function CashierHandoffDetailScreen() {
           </View>
         ) : err ? (
           <Card style={{ gap: 10 }}>
-            <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{err}</Text>
-            <Button title="Retry" onPress={load} variant="primary" />
+            <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>
+              {err === "Invalid handoff route"
+                ? "This route is reserved for cashier handoff only."
+                : err}
+            </Text>
+
+            {err === "Invalid handoff route" ? (
+              <Button title="Back" onPress={() => router.back()} variant="primary" />
+            ) : (
+              <Button title="Retry" onPress={load} variant="primary" />
+            )}
           </Card>
         ) : !row ? (
           <Card>

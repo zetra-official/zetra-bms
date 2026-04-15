@@ -104,13 +104,20 @@ export function Screen({
   }, [isWeb]);
 
   const effectiveBottomPad = useMemo(() => {
-    if (typeof bottomPad === "number") return bottomPad;
-
     if (isWeb) {
-      return 24;
+      return typeof bottomPad === "number" ? bottomPad : 24;
     }
 
-    return TAB_BAR_BASE_HEIGHT + TAB_BAR_EXTRA_GAP;
+    const tabBase = TAB_BAR_BASE_HEIGHT + TAB_BAR_EXTRA_GAP;
+
+    // ✅ IMPORTANT:
+    // bottomPad isi-replace tab bar space.
+    // Iongezwe juu ya tab bar clearance ili content isikatwe chini.
+    if (typeof bottomPad === "number") {
+      return tabBase + bottomPad;
+    }
+
+    return tabBase;
   }, [bottomPad, isWeb]);
 
   // ✅ Stronger safe-area spacing for top headers

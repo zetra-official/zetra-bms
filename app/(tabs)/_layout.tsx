@@ -1,7 +1,7 @@
 ﻿import { useOrg } from "@/src/context/OrgContext";
 import { theme } from "@/src/ui/theme";
 import { Tabs } from "expo-router";
-import React from "react";
+import React, { useMemo } from "react";
 import { Platform, Text, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -71,8 +71,18 @@ function WebTabIcon({
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
-  const { activeRole } = useOrg();
+  const { activeRole, activeStoreId, stores } = useOrg();
   const isCashier = String(activeRole ?? "").trim().toLowerCase() === "cashier";
+
+  const activeStoreType = React.useMemo(() => {
+    const row = (stores ?? []).find(
+      (s: any) => String(s?.store_id ?? "") === String(activeStoreId ?? "")
+    );
+    const t = String((row as any)?.store_type ?? "STANDARD").trim().toUpperCase();
+    return t === "CAPITAL_RECOVERY" ? "CAPITAL_RECOVERY" : "STANDARD";
+  }, [stores, activeStoreId]);
+
+  const isCapitalRecoveryStore = activeStoreType === "CAPITAL_RECOVERY";
 
   const isWeb = Platform.OS === "web";
   const { width } = useWindowDimensions();
@@ -95,10 +105,10 @@ export default function TabsLayout() {
               borderRightColor: "rgba(255,255,255,0.08)",
               borderRightWidth: 1,
               borderTopWidth: 0,
-              width: 252,
+              width: 232,
               paddingTop: Math.max(insets.top, 16),
               paddingBottom: Math.max(insets.bottom, 16),
-              paddingHorizontal: 12,
+              paddingHorizontal: 10,
             }
           : {
               backgroundColor: theme.colors.tabBarBg,
@@ -111,10 +121,10 @@ export default function TabsLayout() {
             },
         tabBarItemStyle: useLeftSidebarWeb
           ? {
-              minHeight: 56,
+              minHeight: 54,
               borderRadius: 16,
-              marginVertical: 4,
-              paddingHorizontal: 10,
+              marginVertical: 3,
+              paddingHorizontal: 8,
             }
           : isMobileWeb
           ? {
@@ -129,7 +139,9 @@ export default function TabsLayout() {
           : undefined,
         tabBarLabelStyle: useLeftSidebarWeb
           ? {
-              marginLeft: 10,
+              marginLeft: 4,
+              fontSize: 13,
+              fontWeight: "800",
             }
           : isMobileWeb
           ? {
@@ -145,7 +157,8 @@ export default function TabsLayout() {
           : undefined,
         tabBarIconStyle: useLeftSidebarWeb
           ? {
-              marginLeft: 2,
+              marginLeft: 0,
+              marginRight: -2,
             }
           : isMobileWeb
           ? {
@@ -203,6 +216,8 @@ export default function TabsLayout() {
         name="sales"
         options={{
           title: "Sales",
+          tabBarItemStyle: isCapitalRecoveryStore ? { display: "none" } : undefined,
+          href: isCapitalRecoveryStore ? null : undefined,
           tabBarLabel: ({ color }) => <TabLabel text="Sales" color={color} />,
           tabBarIcon: ({ color }) => (
             <WebTabIcon emoji="🛒" color={color} mobileWeb={isMobileWeb} />
@@ -214,7 +229,9 @@ export default function TabsLayout() {
         name="credit"
         options={{
           title: "Credit",
-          tabBarItemStyle: isCashier ? { display: "none" } : undefined,
+          tabBarItemStyle:
+            isCashier || isCapitalRecoveryStore ? { display: "none" } : undefined,
+          href: isCapitalRecoveryStore ? null : undefined,
           tabBarLabel: ({ color }) => <TabLabel text="Credit" color={color} />,
           tabBarIcon: ({ color }) => (
             <WebTabIcon emoji="💳" color={color} mobileWeb={isMobileWeb} />
@@ -222,11 +239,31 @@ export default function TabsLayout() {
         }}
       />
 
+     <Tabs.Screen
+        name="capital-recovery/workspace"
+        options={{
+          title: "Recovery",
+          href:
+            isCapitalRecoveryStore && !isCashier
+              ? "/capital-recovery/workspace"
+              : null,
+          tabBarItemStyle:
+            !isCapitalRecoveryStore || isCashier ? { display: "none" } : undefined,
+          tabBarLabel: ({ color }) => (
+            <TabLabel text="Recovery" color={color} mobileWeb={isMobileWeb} />
+          ),
+          tabBarIcon: ({ color }) => (
+            <WebTabIcon emoji="💼" color={color} mobileWeb={isMobileWeb} />
+          ),
+        }}
+      />
       <Tabs.Screen
         name="club"
         options={{
           title: "Club",
-          tabBarItemStyle: isCashier ? { display: "none" } : undefined,
+          tabBarItemStyle:
+            isCashier || isCapitalRecoveryStore ? { display: "none" } : undefined,
+          href: isCapitalRecoveryStore ? null : undefined,
           tabBarLabel: ({ color }) => <TabLabel text="Club" color={color} />,
           tabBarIcon: ({ color }) => (
             <WebTabIcon emoji="👥" color={color} mobileWeb={isMobileWeb} />
@@ -240,7 +277,7 @@ export default function TabsLayout() {
           title: "More",
           tabBarLabel: ({ color }) => <TabLabel text="More" color={color} />,
           tabBarIcon: ({ color }) => (
-            <WebTabIcon emoji="⋯" color={color} mobileWeb={isMobileWeb} />
+            <WebTabIcon emoji="⚙️" color={color} mobileWeb={isMobileWeb} />
           ),
         }}
       />
@@ -274,7 +311,8 @@ export default function TabsLayout() {
       {/* hidden routes */}
       <Tabs.Screen name="staff" options={{ href: null }} />
       <Tabs.Screen name="stores/store-products" options={{ href: null }} />
-      <Tabs.Screen name="capital-recovery/workspace" options={{ href: null }} />
+      
+      
     </Tabs>
   );
 }

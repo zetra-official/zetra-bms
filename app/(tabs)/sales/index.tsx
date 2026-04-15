@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import SafeIcon from "@/src/ui/SafeIcon";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -438,6 +438,51 @@ export default function SalesHomeScreen() {
     () => currentRole === "owner" || currentRole === "admin",
     [currentRole]
   );
+
+  const [staffExpenseAllowed, setStaffExpenseAllowed] = useState(false);
+  const [staffExpenseLoading, setStaffExpenseLoading] = useState(false);
+
+  const canOpenExpenses = useMemo(() => {
+    if (isOwnerOrAdmin) return true;
+    if (currentRole === "staff" && staffExpenseAllowed) return true;
+    return false;
+  }, [currentRole, isOwnerOrAdmin, staffExpenseAllowed]);
+
+  const loadStaffExpensePermission = useCallback(async () => {
+    if (!activeStoreId || currentRole !== "staff") {
+      setStaffExpenseAllowed(false);
+      setStaffExpenseLoading(false);
+      return;
+    }
+
+    setStaffExpenseLoading(true);
+
+    try {
+      const { data, error } = await supabase
+        .from("stores")
+        .select("staff_can_manage_expense")
+        .eq("id", activeStoreId)
+        .maybeSingle();
+
+      if (error) throw error;
+      setStaffExpenseAllowed(!!data?.staff_can_manage_expense);
+    } catch {
+      try {
+        const { data, error } = await supabase
+          .from("stores")
+          .select("allow_staff_expense")
+          .eq("id", activeStoreId)
+          .maybeSingle();
+
+        if (error) throw error;
+        setStaffExpenseAllowed(!!data?.allow_staff_expense);
+      } catch {
+        setStaffExpenseAllowed(false);
+      }
+    } finally {
+      setStaffExpenseLoading(false);
+    }
+  }, [activeStoreId, currentRole]);
 
   const loadOpenShift = useCallback(async () => {
     if (!isCashier || !activeStoreId) {
@@ -902,6 +947,10 @@ export default function SalesHomeScreen() {
       void loadProducts("refresh");
     }, 250);
   }, [isCashier, loadProducts]);
+
+  useEffect(() => {
+    void loadStaffExpensePermission();
+  }, [loadStaffExpensePermission]);
 
   useEffect(() => {
     const currentStoreId = String(activeStoreId ?? "").trim();
@@ -1592,14 +1641,14 @@ channel.subscribe();
               gap: 2,
             })}
           >
-            <Ionicons name="time-outline" size={16} color={theme.colors.text} />
+            <SafeIcon name="time-outline" size={16} color={theme.colors.text} />
             <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>
               History
             </Text>
           </Pressable>
         </View>
 
-        {!isCashier && isOwnerOrAdmin ? (
+        {!isCashier && canOpenExpenses ? (
           <View style={{ flexDirection: "row", gap: 8 }}>
             <Pressable
               onPress={() => router.push("/(tabs)/sales/expenses")}
@@ -1617,7 +1666,7 @@ channel.subscribe();
               })}
             >
               <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}>
-                Expenses
+                {staffExpenseLoading && currentRole === "staff" ? "Expenses..." : "Expenses"}
               </Text>
             </Pressable>
 
@@ -1646,7 +1695,18 @@ channel.subscribe();
         ) : null}
       </View>
     );
-  }, [headerSubtitle, isCashier, isOwner, isOwnerOrAdmin, router, statusLine, todayLabel]);
+  }, [
+    headerSubtitle,
+    isCashier,
+    isOwner,
+    isOwnerOrAdmin,
+    canOpenExpenses,
+    currentRole,
+    staffExpenseLoading,
+    router,
+    statusLine,
+    todayLabel,
+  ]);
 
   const QuickBar = useMemo(() => {
     return (
@@ -1695,7 +1755,7 @@ channel.subscribe();
               },
             ]}
           >
-            <Ionicons name="shield-checkmark-outline" size={16} color={theme.colors.text} />
+            <SafeIcon name="check-circle" size={16} color={theme.colors.text} />
             <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14 }}>
               Complete Sale
             </Text>
@@ -1727,7 +1787,7 @@ channel.subscribe();
                 },
               ]}
             >
-              <Ionicons name="wallet-outline" size={16} color={theme.colors.text} />
+              <SafeIcon name="cash-outline" size={16} color={theme.colors.text} />
               <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14 }}>
                 Cashiers
               </Text>

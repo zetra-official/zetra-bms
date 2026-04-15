@@ -27,6 +27,13 @@ type InventoryRow = {
 
 type SourceMode = "LIVE" | "CACHED" | "NONE";
 
+type ExpirySummaryRow = {
+  product_id: string;
+  nearest_expiry_date: string | null;
+  nearest_expiry_days_left: number | null;
+  expiry_status: "SAFE" | "NEAR_EXPIRY" | "URGENT" | "EXPIRED" | null;
+};
+
 function fmtLocal(iso: string | null) {
   if (!iso) return "—";
   const d = new Date(iso);
@@ -42,6 +49,75 @@ function cleanBarcode(raw: any) {
   const s = String(raw ?? "").trim();
   if (!s) return "";
   return s.replace(/\s+/g, "");
+}
+
+function fmtExpiryDate(ymd: string | null) {
+  if (!ymd) return "—";
+  const d = new Date(`${ymd}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return ymd;
+  try {
+    return d.toLocaleDateString();
+  } catch {
+    return ymd;
+  }
+}
+
+function expiryLabel(daysLeft: number | null, status: string | null, ymd: string | null) {
+  if (!ymd || daysLeft === null || !status) return "No expiry";
+
+  if (status === "EXPIRED") {
+    return `Expired ${Math.abs(daysLeft)}d`;
+  }
+
+  if (daysLeft === 0) {
+    return "Exp today";
+  }
+
+  if (status === "URGENT") {
+    return `Exp ${daysLeft}d`;
+  }
+
+  if (status === "NEAR_EXPIRY") {
+    return `Exp ${daysLeft}d`;
+  }
+
+  return `Exp ${daysLeft}d`;
+}
+
+function expiryTone(status: string | null) {
+  if (status === "EXPIRED") {
+    return {
+      borderColor: "rgba(239,68,68,0.45)",
+      backgroundColor: "rgba(239,68,68,0.10)",
+      textColor: "#FCA5A5",
+      subColor: "#FECACA",
+    };
+  }
+
+  if (status === "URGENT") {
+    return {
+      borderColor: "rgba(239,68,68,0.40)",
+      backgroundColor: "rgba(239,68,68,0.08)",
+      textColor: "#FCA5A5",
+      subColor: "#FECACA",
+    };
+  }
+
+  if (status === "NEAR_EXPIRY") {
+    return {
+      borderColor: "rgba(245,158,11,0.45)",
+      backgroundColor: "rgba(245,158,11,0.10)",
+      textColor: "#FCD34D",
+      subColor: "#FDE68A",
+    };
+  }
+
+  return {
+    borderColor: "rgba(52,211,153,0.35)",
+    backgroundColor: "rgba(52,211,153,0.10)",
+    textColor: theme.colors.emerald,
+    subColor: theme.colors.muted,
+  };
 }
 
 function sameRows(a: InventoryRow[], b: InventoryRow[]) {
@@ -64,6 +140,7 @@ function sameRows(a: InventoryRow[], b: InventoryRow[]) {
       return false;
     }
   }
+
   return true;
 }
 
@@ -252,11 +329,68 @@ export default function StoreInventoryScreen() {
 
   const [thrByProductId, setThrByProductId] = useState<Record<string, number>>({});
   const thrRef = useRef<Record<string, number>>({});
+
+  const [expiryByProductId, setExpiryByProductId] = useState<Record<string, ExpirySummaryRow>>({});
+  const expiryRef = useRef<Record<string, ExpirySummaryRow>>({});
   useEffect(() => {
     thrRef.current = thrByProductId;
   }, [thrByProductId]);
 
+  useEffect(() => {
+    expiryRef.current = expiryByProductId;
+  }, [expiryByProductId]);
+
   const [thrLoading, setThrLoading] = useState(false);
+
+  const loadExpirySummary = useCallback(
+    async (inputRows: InventoryRow[]) => {
+      if (!activeStoreId) return;
+      if (isCapitalRecoveryStore) return;
+      if (storeOrgMismatch) return;
+      if (isOffline) return;
+
+      const ids = (inputRows ?? []).map((r) => r.product_id).filter(Boolean);
+      if (!ids.length) {
+        setExpiryByProductId({});
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase.rpc("get_store_inventory_expiry_summary_v1", {
+          p_store_id: activeStoreId,
+        });
+
+        if (error) throw error;
+
+        const rows = Array.isArray(data) ? (data as any[]) : [];
+        const next: Record<string, ExpirySummaryRow> = {};
+
+        for (const row of rows) {
+          const pid = String(row?.product_id ?? "").trim();
+          if (!pid) continue;
+
+          next[pid] = {
+            product_id: pid,
+            nearest_expiry_date: row?.nearest_expiry_date ?? null,
+            nearest_expiry_days_left:
+              row?.nearest_expiry_days_left == null
+                ? null
+                : Number(row.nearest_expiry_days_left),
+            expiry_status: (row?.expiry_status ?? null) as any,
+          };
+        }
+
+        const prevJson = JSON.stringify(expiryRef.current);
+        const nextJson = JSON.stringify(next);
+        if (prevJson !== nextJson) {
+          setExpiryByProductId(next);
+        }
+      } catch {
+        // keep existing expiry map silently
+      }
+    },
+    [activeStoreId, isCapitalRecoveryStore, storeOrgMismatch, isOffline]
+  );
 
   // Visible status only (do not update this during silent refresh)
   const [source, setSource] = useState<SourceMode>("NONE");
@@ -435,8 +569,9 @@ export default function StoreInventoryScreen() {
           setLastSyncedAt(nowIso);
         }
 
-        // Thresholds refresh silently too
+        // Thresholds + expiry refresh silently too
         void loadThresholdsForRows(nextRows, { silent: true });
+        void loadExpirySummary(nextRows);
       } catch (err: any) {
         if (!silent) {
           setError(err?.message ?? "Failed to load inventory");
@@ -455,6 +590,7 @@ export default function StoreInventoryScreen() {
       loadFromCache,
       saveCache,
       loadThresholdsForRows,
+      loadExpirySummary,
     ]
   );
 
@@ -466,6 +602,7 @@ export default function StoreInventoryScreen() {
     thrRef.current = {};
     setError(null);
     setThrByProductId({});
+    setExpiryByProductId({});
     setThrLoading(false);
     setRecentScannedIds([]);
     setRows([]);
@@ -529,11 +666,13 @@ export default function StoreInventoryScreen() {
   useEffect(() => {
     if (!rows.length) {
       setThrByProductId({});
+      setExpiryByProductId({});
       return;
     }
     if (isOffline) return;
     void loadThresholdsForRows(rows, { silent: true });
-  }, [rows, isOffline, loadThresholdsForRows]);
+    void loadExpirySummary(rows);
+  }, [rows, isOffline, loadThresholdsForRows, loadExpirySummary]);
 
   const handleInventoryScan = useCallback(
     (rawInput: any) => {
@@ -968,6 +1107,15 @@ export default function StoreInventoryScreen() {
           const thr = Number(thrByProductId?.[r.product_id] ?? 0);
           const isLow = !isOffline && thr > 0 && Number(r.qty ?? 0) <= thr;
 
+          const expiry = expiryByProductId?.[r.product_id] ?? null;
+          const expiryStatus = expiry?.expiry_status ?? null;
+          const expiryDaysLeft =
+            expiry?.nearest_expiry_days_left == null
+              ? null
+              : Number(expiry.nearest_expiry_days_left);
+          const expiryDate = expiry?.nearest_expiry_date ?? null;
+          const expiryUi = expiryTone(expiryStatus);
+
           return (
             <Pressable
               key={r.product_id}
@@ -1086,6 +1234,41 @@ export default function StoreInventoryScreen() {
                     }}
                     disabled={loading || !activeStoreId || isOffline}
                   />
+
+                  <View
+                    style={{
+                      borderWidth: 1,
+                      borderColor: expiryUi.borderColor,
+                      borderRadius: theme.radius.lg,
+                      backgroundColor: expiryUi.backgroundColor,
+                      paddingHorizontal: 12,
+                      paddingVertical: 10,
+                      minHeight: 56,
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: expiryUi.textColor,
+                        fontWeight: "900",
+                        fontSize: 13,
+                      }}
+                    >
+                      {expiryLabel(expiryDaysLeft, expiryStatus, expiryDate)}
+                    </Text>
+
+                    <Text
+                      style={{
+                        color: expiryUi.subColor,
+                        fontWeight: "800",
+                        fontSize: 11,
+                        marginTop: 4,
+                      }}
+                      numberOfLines={1}
+                    >
+                      {expiryDate ? fmtExpiryDate(expiryDate) : "No expiry tracked"}
+                    </Text>
+                  </View>
 
                   {canAdjust && (
                     <Button

@@ -10,20 +10,17 @@ export default function SalesStackLayout() {
         animation: "fade",
       }}
     >
-      {/* Sales flow */}
       <Stack.Screen name="index" />
       <Stack.Screen name="checkout" />
       <Stack.Screen name="history" />
 
-      {/* Cashier flow */}
       <Stack.Screen name="cashier/index" />
 
-      {/* Top icons screens */}
       <Stack.Screen name="profit" />
       <Stack.Screen name="expenses" />
 
-      {/* Receipt */}
       <Stack.Screen name="receipt" />
+      <Stack.Screen name="edit-receipt" />
     </Stack>
   );
 }

@@ -10,6 +10,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Platform,
   Pressable,
   Share,
@@ -104,6 +105,36 @@ function parseCustomerFromNote(note: string | null | undefined) {
   return { name: name || null, phone: phone || null };
 }
 
+function darDateKey(input?: string | null) {
+  if (!input) return null;
+
+  const d = new Date(input);
+  if (!Number.isFinite(d.getTime())) return null;
+
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Africa/Dar_es_Salaam",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(d);
+
+  const year = parts.find((p) => p.type === "year")?.value;
+  const month = parts.find((p) => p.type === "month")?.value;
+  const day = parts.find((p) => p.type === "day")?.value;
+
+  if (!year || !month || !day) return null;
+  return `${year}-${month}-${day}`;
+}
+
+function isSameDayDar(input?: string | null) {
+  const saleKey = darDateKey(input);
+  const nowKey = darDateKey(new Date().toISOString());
+  if (!saleKey || !nowKey) return false;
+  return saleKey === nowKey;
+}
+
+
+
 type SaleDetail = {
   sale_id?: string;
   id?: string;
@@ -124,6 +155,12 @@ type SaleDetail = {
   created_by?: string | null;
   sold_by_name?: string | null;
   sold_by_role?: string | null;
+
+  edited_at?: string | null;
+  edited_by?: string | null;
+  edited_by_name?: string | null;
+  edit_count?: number | null;
+  can_edit_same_day?: boolean | null;
 
   items?: Array<{
     product_id: string;
@@ -216,6 +253,7 @@ export default function ReceiptScreen() {
   const fmtMoney = useCallback((n: number) => money.fmt(Number(n || 0)), [money]);
 
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [detail, setDetail] = useState<SaleDetail | null>(null);
 
@@ -233,7 +271,19 @@ export default function ReceiptScreen() {
       if (res.error) throw res.error;
 
       const d = Array.isArray(res.data) ? (res.data[0] ?? null) : res.data;
-      setDetail(d as any);
+
+      setDetail(
+        d
+          ? ({
+              ...d,
+              edited_at: d?.edited_at ?? null,
+              edited_by: d?.edited_by ?? null,
+              edited_by_name: d?.edited_by_name ?? null,
+              edit_count: d?.edit_count ?? 0,
+              can_edit_same_day: d?.can_edit_same_day ?? false,
+            } as any)
+          : null
+      );
     } catch (e: any) {
       setErr(e?.message ?? "Failed to load receipt");
       setDetail(null);
@@ -303,6 +353,34 @@ const payLabel = (detail?.payment_method ?? "CASH").toUpperCase();
     return `${r} (You)`;
   }, [detail?.sold_by_name, detail?.sold_by_role, activeRole]);
 
+  const dbCanEditSameDay = !!detail?.can_edit_same_day;
+  const uiSameDayGuard = useMemo(() => isSameDayDar(detail?.created_at), [detail?.created_at]);
+  const canEditSameDay = dbCanEditSameDay && uiSameDayGuard;
+
+  const editCountLabel = useMemo(() => {
+    const n = Number(detail?.edit_count ?? 0);
+    return Number.isFinite(n) ? Math.max(0, Math.trunc(n)) : 0;
+  }, [detail?.edit_count]);
+
+  const editedByLabel = useMemo(() => {
+    const name = String(detail?.edited_by_name ?? "").trim();
+    const raw = String(detail?.edited_by ?? "").trim();
+
+    if (name) return name;
+    if (raw) return raw;
+    return "—";
+  }, [detail?.edited_by_name, detail?.edited_by]);
+
+  const editedAtLabel = useMemo(() => {
+    const t = String(detail?.edited_at ?? "").trim();
+    if (!t) return "—";
+    try {
+      return new Date(t).toLocaleString();
+    } catch {
+      return t;
+    }
+  }, [detail?.edited_at]);
+
   const paidAmount = useMemo(() => {
     if (!isCredit) return computedTotal;
     const p = Number(detail?.paid_amount ?? NaN);
@@ -316,6 +394,59 @@ const payLabel = (detail?.payment_method ?? "CASH").toUpperCase();
   }, [isCredit, computedTotal, paidAmount]);
 
   const paymentTitle = useMemo(() => (isCredit ? "CREDIT" : payLabel), [isCredit, payLabel]);
+
+  const deleteSameDay = useCallback(() => {
+    if (!saleId) return;
+    if (!canEditSameDay) {
+      Alert.alert(
+        "Delete closed",
+        "Risiti hii haiwezi kufutwa. Same-day rule ni ya leo tu kwa timezone ya Africa/Dar_es_Salaam."
+      );
+      return;
+    }
+    if (deleting) return;
+
+    Alert.alert(
+      "Delete Same Day",
+      "Ukifuta risiti hii, items zote zitarudi store na sale itaondoka kabisa. Uko sure?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setDeleting(true);
+
+              const { data, error } = await supabase.rpc("delete_sale_same_day_v1", {
+                p_sale_id: saleId,
+              } as any);
+
+              if (error) throw error;
+
+              const row = Array.isArray(data) ? data[0] : data;
+              const restoredQty = Number(row?.restored_qty ?? 0);
+
+              Alert.alert(
+                "Deleted",
+                `Receipt imefutwa vizuri. Stock restored: ${restoredQty}.`,
+                [
+                  {
+                    text: "OK",
+                    onPress: () => router.replace("/(tabs)/sales/history"),
+                  },
+                ]
+              );
+            } catch (e: any) {
+              Alert.alert("Delete failed", e?.message ?? "Failed to delete same-day receipt");
+            } finally {
+              setDeleting(false);
+            }
+          },
+        },
+      ]
+    );
+  }, [saleId, canEditSameDay, deleting, router]);
 
   const shareReceipt = useCallback(async () => {
     if (!saleId) return;
@@ -484,6 +615,49 @@ const payLabel = (detail?.payment_method ?? "CASH").toUpperCase();
         </View>
       )}
 
+      {(editCountLabel > 0 || dbCanEditSameDay || uiSameDayGuard) && (
+        <View
+          style={{
+            paddingVertical: 10,
+            paddingHorizontal: 12,
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: canEditSameDay ? "rgba(52,211,153,0.28)" : "rgba(255,255,255,0.08)",
+            backgroundColor: canEditSameDay ? "rgba(52,211,153,0.10)" : "rgba(255,255,255,0.04)",
+          }}
+        >
+          <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
+            Edit Status
+          </Text>
+
+          <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 6 }}>
+            {canEditSameDay ? "Same-day edit allowed" : "Edit window closed"}
+          </Text>
+
+          {!uiSameDayGuard ? (
+            <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>
+              Local guard: receipt si ya leo kwa timezone ya Africa/Dar_es_Salaam.
+            </Text>
+          ) : null}
+
+          
+
+          {editCountLabel > 0 && (
+            <>
+              <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>
+                Edited by: <Text style={{ color: theme.colors.text }}>{editedByLabel}</Text>
+              </Text>
+              <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 4 }}>
+                Edited at: <Text style={{ color: theme.colors.text }}>{editedAtLabel}</Text>
+              </Text>
+              <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 4 }}>
+                Edit count: <Text style={{ color: theme.colors.text }}>{editCountLabel}</Text>
+              </Text>
+            </>
+          )}
+        </View>
+      )}
+
       {!!cleanNote && cleanNote.trim() && (
         <View
           style={{
@@ -613,6 +787,36 @@ const payLabel = (detail?.payment_method ?? "CASH").toUpperCase();
             Status: {dueAmount > 0 ? "OUTSTANDING" : "CLEARED"}
           </Text>
         </View>
+      ) : null}
+
+      {canEditSameDay ? (
+        <>
+          <Button
+            title="Edit Same Day"
+            onPress={() => {
+              if (!canEditSameDay) {
+                Alert.alert(
+                  "Edit closed",
+                  "Risiti hii haiwezi ku-editiwa. Same-day rule ni ya leo tu kwa timezone ya Africa/Dar_es_Salaam."
+                );
+                return;
+              }
+
+              router.push({
+                pathname: "/(tabs)/sales/edit-receipt",
+                params: { saleId },
+              } as any);
+            }}
+            variant="primary"
+          />
+
+          <Button
+            title={deleting ? "Deleting..." : "Delete Same Day"}
+            onPress={deleteSameDay}
+            disabled={deleting}
+            variant="secondary"
+          />
+        </>
       ) : null}
 
       <Button title="Share Receipt" onPress={shareReceipt} variant="secondary" />

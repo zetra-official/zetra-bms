@@ -488,7 +488,7 @@ export default function CapitalRecoveryHistoryScreen() {
                           </Text>
                         </View>
 
-                        <View style={{ flex: 1 }} />
+                       
 
                         <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
                           {fmt(item.amount)}

@@ -1,17 +1,38 @@
-// app/(tabs)/club/orders/store/[storeId].tsx
-
 import { supabase } from "@/src/supabase/supabaseClient";
 import { Card } from "@/src/ui/Card";
 import { Screen } from "@/src/ui/Screen";
 import { theme } from "@/src/ui/theme";
 import { Ionicons } from "@expo/vector-icons";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, FlatList, Pressable, Text, View } from "react-native";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import React, { useCallback, useMemo, useState } from "react";
+import { ActivityIndicator, Alert, FlatList, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+type ThreadRow = {
+  thread_id: string;
+  store_id: string;
+  post_id?: string | null;
+  customer_id?: string | null;
+  customer_name?: string | null;
+  customer_phone?: string | null;
+  last_message?: string | null;
+  unread_count?: number | null;
+  updated_at?: string | null;
+  created_at?: string | null;
+};
 
 function clean(x: any) {
   return String(x ?? "").trim();
+}
+
+function safeStr(x: any, fallback = "—") {
+  const s = clean(x);
+  return s.length ? s : fallback;
+}
+
+function safeNum(x: any, fallback = 0) {
+  const n = Number(x);
+  return Number.isFinite(n) ? n : fallback;
 }
 
 function isUuid(v: string) {
@@ -19,138 +40,174 @@ function isUuid(v: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s);
 }
 
-function fmtMoney(n: number, currency?: string | null) {
-  const c = clean(currency) || "TZS";
-  const v = Math.max(0, Number(n) || 0);
-  try {
-    return new Intl.NumberFormat("en-TZ", {
-      style: "currency",
-      currency: c,
-      maximumFractionDigits: 0,
-    }).format(v);
-  } catch {
-    return `${c} ${String(Math.round(v))}`;
-  }
+function fmtWhen(iso?: string | null) {
+  const s = clean(iso);
+  if (!s) return "—";
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString();
 }
 
-type OrderRowAny = Record<string, any>;
-
-type OrderRow = {
-  id: string;
-  store_id: string;
-  created_at: string | null;
-
-  status?: string | null;
-  currency?: string | null;
-
-  customer_name?: string | null;
-  customer_phone?: string | null;
-
-  total_amount?: number | null;
-  paid_amount?: number | null;
-
-  sale_id?: string | null;
-  payment_status?: string | null;
-  payment_method?: string | null;
-};
-
-function normalizeOrderRow(r: OrderRowAny): OrderRow {
-  const id = String(r.id ?? r.order_id ?? r.orderId ?? "");
-  const store_id = String(r.store_id ?? r.storeId ?? "");
-  const created_at = (r.created_at ?? r.inserted_at ?? r.createdAt ?? null) != null ? String(r.created_at ?? r.inserted_at ?? r.createdAt) : null;
-
-  const status = r.status != null ? String(r.status) : null;
-  const currency = r.currency != null ? String(r.currency) : null;
-
-  const customer_name =
-    (r.customer_name ?? r.customer_full_name ?? r.full_name ?? r.name ?? null) != null
-      ? String(r.customer_name ?? r.customer_full_name ?? r.full_name ?? r.name)
-      : null;
-
-  const customer_phone =
-    (r.customer_phone ?? r.phone ?? r.mobile ?? null) != null
-      ? String(r.customer_phone ?? r.phone ?? r.mobile)
-      : null;
-
-  const total_amount = r.total_amount ?? r.total ?? r.amount ?? null;
-  const paid_amount = r.paid_amount ?? r.paid ?? null;
-
-  const sale_id = (r.sale_id ?? r.saleId ?? null) != null ? String(r.sale_id ?? r.saleId) : null;
-  const payment_status = (r.payment_status ?? r.pay_status ?? null) != null ? String(r.payment_status ?? r.pay_status) : null;
-  const payment_method = (r.payment_method ?? r.pay_method ?? null) != null ? String(r.payment_method ?? r.pay_method) : null;
-
+function normalizeThreadRow(x: any, fallbackStoreId: string): ThreadRow {
   return {
-    id,
-    store_id,
-    created_at,
-    status,
-    currency,
-    customer_name,
-    customer_phone,
-    total_amount: total_amount == null ? null : Number(total_amount),
-    paid_amount: paid_amount == null ? null : Number(paid_amount),
-    sale_id,
-    payment_status,
-    payment_method,
+    thread_id: clean(x?.thread_id ?? x?.id ?? x?.conversation_id ?? x?.chat_thread_id),
+    store_id: clean(x?.store_id ?? fallbackStoreId),
+    post_id: clean(x?.post_id ?? x?.source_post_id) || null,
+    customer_id: clean(x?.customer_id ?? x?.buyer_id ?? x?.created_by) || null,
+    customer_name:
+      clean(x?.customer_name ?? x?.full_name ?? x?.name ?? x?.buyer_name ?? x?.client_name) || null,
+    customer_phone:
+      clean(x?.customer_phone ?? x?.phone ?? x?.mobile ?? x?.buyer_phone ?? x?.client_phone) || null,
+    last_message:
+      clean(x?.last_message ?? x?.last_body ?? x?.body_preview ?? x?.preview ?? x?.message) || null,
+    unread_count: safeNum(x?.unread_count ?? x?.unread ?? 0, 0),
+    updated_at: clean(x?.updated_at ?? x?.last_message_at ?? x?.last_at) || null,
+    created_at: clean(x?.created_at) || null,
   };
 }
 
-function safeDateLabel(iso: string | null | undefined) {
-  if (!iso) return "—";
-  try {
-    return new Date(iso).toLocaleString();
-  } catch {
-    return String(iso);
-  }
-}
+const THREADS_RPC_CANDIDATES = [
+  "get_store_inbox_threads",
+  "get_store_chat_threads",
+  "get_store_threads",
+  "get_club_store_threads",
+  "get_inbox_threads_for_store",
+] as const;
 
-export default function ClubOrdersByStoreScreen() {
+const ENSURE_THREAD_RPC_CANDIDATES = [
+  "get_or_create_thread_for_post",
+  "get_or_create_store_thread_for_post",
+  "get_or_create_club_thread_for_post",
+  "get_or_create_post_thread_v1",
+  "ensure_club_post_thread_v1",
+  "create_or_get_post_thread_v1",
+] as const;
+
+const THREADS_TABLE_CANDIDATES = [
+  "club_message_threads",
+  "club_inbox_threads",
+  "club_threads",
+] as const;
+
+export default function ClubInboxStoreThreadsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const topPad = Math.max(insets.top, 10) + 8;
 
-  const params = useLocalSearchParams<{ storeId?: string; storeName?: string }>();
-  const storeId = clean(params?.storeId);
-  const storeName = clean(params?.storeName);
+  const params = useLocalSearchParams<{
+    storeId?: string;
+    storeName?: string;
+    postId?: string;
+    postCaption?: string;
+    postImageUrl?: string;
+  }>();
 
-  const storeIdOk = isUuid(storeId);
+  const storeId = clean(params?.storeId);
+  const storeName = clean(params?.storeName) || "Store";
+  const postId = clean(params?.postId);
+  const postCaption = clean(params?.postCaption);
+  const postImageUrl = clean(params?.postImageUrl);
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [rows, setRows] = useState<OrderRow[]>([]);
+  const [rows, setRows] = useState<ThreadRow[]>([]);
+  const [sourceUsed, setSourceUsed] = useState<string | null>(null);
+  const [openingPostChat, setOpeningPostChat] = useState(false);
+
+  const storeIdOk = isUuid(storeId);
+
+  const openThread = useCallback(
+    (threadId: string) => {
+      const tid = clean(threadId);
+      if (!tid) return;
+
+      router.push({
+        pathname: "/(tabs)/club/inbox/[threadId]" as any,
+        params: {
+          threadId: tid,
+          storeId,
+        },
+      } as any);
+    },
+    [router, storeId]
+  );
 
   const load = useCallback(
-    async (mode: "boot" | "refresh") => {
-      setErr(null);
+    async (mode: "boot" | "refresh" = "boot") => {
       if (mode === "boot") setLoading(true);
       if (mode === "refresh") setRefreshing(true);
+      setErr(null);
 
       try {
         if (!storeId) throw new Error("Store missing");
         if (!storeIdOk) throw new Error(`Invalid storeId: "${storeId}"`);
 
-        // ✅ Load orders for this store
-        const res = await supabase
-          .from("club_orders")
-          .select(
-            "id, store_id, created_at, status, currency, customer_name, customer_phone, total_amount, paid_amount, sale_id, payment_status, payment_method"
-          )
-          .eq("store_id", storeId)
-          .order("created_at", { ascending: false })
-          .limit(200);
+        let loaded: ThreadRow[] = [];
+        let loadedFrom: string | null = null;
+        let lastErr: any = null;
 
-        if (res.error) throw res.error;
+        for (const fn of THREADS_RPC_CANDIDATES) {
+          const { data, error } = await supabase.rpc(fn as any, { p_store_id: storeId } as any);
+          if (!error) {
+            loaded = ((data ?? []) as any[])
+              .map((x) => normalizeThreadRow(x, storeId))
+              .filter((x) => clean(x.thread_id).length > 0);
+            loadedFrom = `rpc:${fn}`;
+            break;
+          }
 
-        const list = (res.data ?? []).map(normalizeOrderRow);
+          lastErr = error;
+          const msg = String(error.message ?? "").toLowerCase();
+          const missing =
+            msg.includes("does not exist") ||
+            msg.includes("function") ||
+            msg.includes("rpc");
 
-        // Ensure we only keep rows with ids (safety)
-        const cleanList = list.filter((x) => clean(x.id).length > 0);
+          if (!missing) break;
+        }
 
-        setRows(cleanList);
+        if (!loadedFrom) {
+          for (const table of THREADS_TABLE_CANDIDATES) {
+            const { data, error } = await supabase
+              .from(table as any)
+              .select("*")
+              .eq("store_id", storeId)
+              .order("updated_at", { ascending: false });
+
+            if (!error) {
+              loaded = ((data ?? []) as any[])
+                .map((x) => normalizeThreadRow(x, storeId))
+                .filter((x) => clean(x.thread_id).length > 0);
+              loadedFrom = `table:${table}`;
+              break;
+            }
+
+            lastErr = error;
+            const msg = String(error.message ?? "").toLowerCase();
+            const missing =
+              msg.includes("does not exist") ||
+              msg.includes("relation") ||
+              msg.includes("table");
+
+            if (!missing) break;
+          }
+        }
+
+        if (!loadedFrom && lastErr) throw lastErr;
+
+        loaded.sort((a, b) => {
+          const ta = new Date(a.updated_at || a.created_at || 0).getTime();
+          const tb = new Date(b.updated_at || b.created_at || 0).getTime();
+          return tb - ta;
+        });
+
+        setRows(loaded);
+        setSourceUsed(loadedFrom);
       } catch (e: any) {
         setRows([]);
-        setErr(e?.message ?? "Failed to load orders");
+        setSourceUsed(null);
+        setErr(e?.message ?? "Failed to load inbox threads");
       } finally {
         if (mode === "boot") setLoading(false);
         if (mode === "refresh") setRefreshing(false);
@@ -159,47 +216,86 @@ export default function ClubOrdersByStoreScreen() {
     [storeId, storeIdOk]
   );
 
-  useEffect(() => {
-    void load("boot");
-  }, [load]);
+  useFocusEffect(
+    useCallback(() => {
+      void load("boot");
+    }, [load])
+  );
+
+const openOrCreatePostThread = useCallback(async () => {
+  if (!storeIdOk || !postId) return;
+
+  setOpeningPostChat(true);
+  try {
+    const existing = rows.find((x) => clean(x.post_id) === postId);
+    if (existing?.thread_id) {
+      openThread(existing.thread_id);
+      return;
+    }
+
+    let lastErr: any = null;
+
+    for (const fn of ENSURE_THREAD_RPC_CANDIDATES) {
+      const payload = {
+        p_store_id: storeId,
+        p_post_id: postId,
+      } as any;
+
+      const { data, error } = await supabase.rpc(fn as any, payload);
+
+      if (!error) {
+        const row = Array.isArray(data) ? data?.[0] : data;
+        const threadId = clean(
+          row?.thread_id ?? row?.id ?? row?.conversation_id ?? data
+        );
+
+        if (threadId) {
+          openThread(threadId);
+          return;
+        }
+      } else {
+        lastErr = error;
+        const msg = String(error.message ?? "").toLowerCase();
+        const missing =
+          msg.includes("does not exist") ||
+          msg.includes("function") ||
+          msg.includes("rpc") ||
+          msg.includes("could not find");
+
+        if (!missing) break;
+      }
+    }
+
+    Alert.alert(
+      "Chat",
+      lastErr?.message ?? "Imeshindikana kufungua au kutengeneza thread ya post hii."
+    );
+  } catch (e: any) {
+    Alert.alert("Chat", e?.message ?? "Failed to open seller chat");
+  } finally {
+    setOpeningPostChat(false);
+  }
+}, [openThread, postId, rows, storeId, storeIdOk]);
 
   const subtitle = useMemo(() => {
     if (storeName) return `Store: ${storeName}`;
     if (storeId) return `Store: ${storeId.slice(0, 8)}…`;
-    return "Chagua store kwanza";
+    return "Store inbox";
   }, [storeId, storeName]);
-
-  const openOrder = useCallback(
-    (row: OrderRow) => {
-      const orderId = clean(row.id);
-      if (!orderId) return;
-
-      router.push({
-        pathname: "/(tabs)/club/orders/[orderId]" as any,
-        params: {
-          orderId,
-          storeId,
-          storeName: storeName || undefined,
-        },
-      } as any);
-    },
-    [router, storeId, storeName]
-  );
-
-  const goCreate = useCallback(() => {
-    if (!storeIdOk) return;
-    router.push({
-      pathname: "/(tabs)/club/orders/create" as any,
-      params: { storeId, storeName: storeName || undefined },
-    } as any);
-  }, [router, storeId, storeIdOk, storeName]);
 
   const Header = useMemo(() => {
     return (
       <View style={{ paddingTop: topPad, paddingBottom: 12, gap: 12 }}>
         <Card style={{ padding: 14 }}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+            }}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
               <View
                 style={{
                   width: 44,
@@ -212,18 +308,20 @@ export default function ClubOrdersByStoreScreen() {
                   justifyContent: "center",
                 }}
               >
-                <Ionicons name="receipt-outline" size={18} color={theme.colors.emerald} />
+                <Ionicons name="chatbubble-ellipses-outline" size={18} color={theme.colors.emerald} />
               </View>
 
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>Customer Orders</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+                  Store Inbox
+                </Text>
                 <Text style={{ color: theme.colors.faint, fontWeight: "900", fontSize: 12 }} numberOfLines={1}>
                   {subtitle}
                 </Text>
               </View>
             </View>
 
-            <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
               <Pressable
                 onPress={() => void load("refresh")}
                 hitSlop={10}
@@ -259,9 +357,9 @@ export default function ClubOrdersByStoreScreen() {
                     borderWidth: 1,
                     borderColor: "rgba(255,255,255,0.12)",
                     backgroundColor: "rgba(255,255,255,0.06)",
-                    opacity: pressed ? 0.92 : 1,
                     alignItems: "center",
                     justifyContent: "center",
+                    opacity: pressed ? 0.92 : 1,
                   },
                 ]}
               >
@@ -269,133 +367,191 @@ export default function ClubOrdersByStoreScreen() {
               </Pressable>
             </View>
           </View>
+
+          {!!sourceUsed && (
+            <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 11, marginTop: 10 }}>
+              Threads source: {sourceUsed}
+            </Text>
+          )}
         </Card>
 
-        {!!err && (
-          <Card style={{ padding: 12, borderColor: theme.colors.dangerBorder, backgroundColor: theme.colors.dangerSoft }}>
-            <Text style={{ color: theme.colors.dangerText, fontWeight: "900" }}>{err}</Text>
-          </Card>
-        )}
+        {!!postId && (
+          <Card style={{ padding: 14, gap: 10 }}>
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+              Zungumza kuhusu post hii
+            </Text>
 
-        <Card style={{ padding: 14, gap: 10 }}>
-          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Actions</Text>
-
-          <Pressable
-            onPress={goCreate}
-            hitSlop={10}
-            disabled={!storeIdOk}
-            style={({ pressed }) => [
-              {
-                height: 48,
-                borderRadius: theme.radius.pill,
-                borderWidth: 1,
-                borderColor: theme.colors.emeraldBorder,
-                backgroundColor: theme.colors.emeraldSoft,
-                alignItems: "center",
-                justifyContent: "center",
-                flexDirection: "row",
-                gap: 10,
-                opacity: !storeIdOk ? 0.6 : pressed ? 0.92 : 1,
-              },
-            ]}
-          >
-            <Ionicons name="add-circle-outline" size={18} color={theme.colors.emerald} />
-            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Create Order</Text>
-          </Pressable>
-
-          <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 12, lineHeight: 16 }}>
-            TIP: Hapa ndipo utaona orders zote za wateja kwa store hii (tap kufungua).
-          </Text>
-        </Card>
-
-        {loading && (
-          <View style={{ paddingTop: 8, alignItems: "center" }}>
-            <ActivityIndicator />
-            <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>Loading orders...</Text>
-          </View>
-        )}
-      </View>
-    );
-  }, [err, goCreate, load, loading, refreshing, router, storeIdOk, subtitle, topPad]);
-
-  const renderItem = useCallback(
-    ({ item }: { item: OrderRow }) => {
-      const id = clean(item.id);
-      const status = clean(item.status).toUpperCase() || "PENDING";
-      const currency = clean(item.currency) || "TZS";
-      const when = safeDateLabel(item.created_at);
-
-      const customerName = clean(item.customer_name) || "Customer";
-      const customerPhone = clean(item.customer_phone);
-
-      const total = Number(item.total_amount ?? 0) || 0;
-      const paid = Number(item.paid_amount ?? 0) || 0;
-
-      const hasSale = !!clean(item.sale_id);
-
-      return (
-        <Pressable onPress={() => openOrder(item)} hitSlop={10} style={({ pressed }) => [{ opacity: pressed ? 0.92 : 1 }]}>
-          <Card style={{ marginBottom: 12, gap: 10 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16, flex: 1 }} numberOfLines={1}>
-                Order {id ? id.slice(0, 8) : "—"}
+            {!!postCaption && (
+              <Text style={{ color: theme.colors.muted, fontWeight: "800" }} numberOfLines={2}>
+                {postCaption}
               </Text>
+            )}
 
-              <View
-                style={{
-                  paddingHorizontal: 10,
-                  paddingVertical: 6,
-                  borderRadius: 999,
+            <Pressable
+              onPress={() => void openOrCreatePostThread()}
+              disabled={openingPostChat}
+              hitSlop={10}
+              style={({ pressed }) => [
+                {
+                  height: 48,
+                  borderRadius: theme.radius.pill,
                   borderWidth: 1,
                   borderColor: theme.colors.emeraldBorder,
                   backgroundColor: theme.colors.emeraldSoft,
-                }}
-              >
-                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{status}</Text>
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexDirection: "row",
+                  gap: 10,
+                  opacity: openingPostChat ? 0.6 : pressed ? 0.92 : 1,
+                },
+              ]}
+            >
+              <Ionicons name="chatbubble-ellipses-outline" size={18} color={theme.colors.emerald} />
+              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+                {openingPostChat ? "Opening..." : "Open Chat for This Post"}
+              </Text>
+            </Pressable>
+          </Card>
+        )}
+
+        {!!err && (
+          <Card
+            style={{
+              padding: 12,
+              borderColor: theme.colors.dangerBorder,
+              backgroundColor: theme.colors.dangerSoft,
+            }}
+          >
+            <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{err}</Text>
+          </Card>
+        )}
+
+        <Text style={{ color: theme.colors.faint, fontWeight: "900", paddingHorizontal: 2 }}>
+          Conversations
+        </Text>
+      </View>
+    );
+  }, [
+    err,
+    load,
+    openingPostChat,
+    openOrCreatePostThread,
+    postCaption,
+    postId,
+    refreshing,
+    router,
+    sourceUsed,
+    subtitle,
+    topPad,
+  ]);
+
+  const renderItem = useCallback(
+    ({ item }: { item: ThreadRow }) => {
+      const threadId = clean(item.thread_id);
+      const customerName = safeStr(item.customer_name, "Customer");
+      const customerPhone = clean(item.customer_phone);
+      const lastMessage = safeStr(item.last_message, "No messages yet");
+      const unread = safeNum(item.unread_count, 0);
+      const when = fmtWhen(item.updated_at || item.created_at);
+
+      return (
+        <Pressable
+          onPress={() => openThread(threadId)}
+          hitSlop={10}
+          style={({ pressed }) => [{ opacity: pressed ? 0.92 : 1, marginBottom: 12 }]}
+        >
+          <Card style={{ padding: 12, gap: 10 }}>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 10,
+              }}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
+                <View
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    borderColor: theme.colors.emeraldBorder,
+                    backgroundColor: theme.colors.emeraldSoft,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Ionicons name="person-outline" size={17} color={theme.colors.emerald} />
+                </View>
+
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: theme.colors.text, fontWeight: "900" }} numberOfLines={1}>
+                    {customerName}
+                  </Text>
+                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }} numberOfLines={1}>
+                    {customerPhone ? customerPhone : "No phone"}
+                  </Text>
+                </View>
               </View>
+
+              {unread > 0 ? (
+                <View
+                  style={{
+                    minWidth: 26,
+                    height: 26,
+                    paddingHorizontal: 8,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    borderColor: theme.colors.emeraldBorder,
+                    backgroundColor: theme.colors.emeraldSoft,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>
+                    {unread}
+                  </Text>
+                </View>
+              ) : (
+                <Ionicons name="chevron-forward" size={18} color={theme.colors.faint} />
+              )}
             </View>
 
-            <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-              Customer: <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{customerName}</Text>
-              {customerPhone ? (
-                <Text style={{ color: theme.colors.faint, fontWeight: "900" }}> • {customerPhone}</Text>
+            <Text style={{ color: theme.colors.text, fontWeight: unread > 0 ? "900" : "800" }} numberOfLines={2}>
+              {lastMessage}
+            </Text>
+
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 10,
+              }}
+            >
+              <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 12 }}>
+                {when}
+              </Text>
+
+              {item.post_id ? (
+                <Text style={{ color: theme.colors.muted, fontWeight: "900", fontSize: 12 }}>
+                  Linked to post
+                </Text>
               ) : null}
-            </Text>
-
-            <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-              When: <Text style={{ color: theme.colors.text }}>{when}</Text>
-            </Text>
-
-            <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
-              <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                Total: <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{fmtMoney(total, currency)}</Text>
-              </Text>
-
-              <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                Paid: <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{fmtMoney(paid, currency)}</Text>
-              </Text>
-            </View>
-
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-              <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>
-                {hasSale ? "Converted to Sale ✅" : "Not yet sale"}
-              </Text>
-              <Text style={{ color: theme.colors.muted, fontWeight: "800", textDecorationLine: "underline" }}>
-                Open
-              </Text>
             </View>
           </Card>
         </Pressable>
       );
     },
-    [openOrder]
+    [openThread]
   );
 
   return (
     <Screen scroll={false} contentStyle={{ paddingTop: 0, paddingHorizontal: 0, paddingBottom: 0 }}>
       <FlatList
         data={loading ? [] : rows}
-        keyExtractor={(x, idx) => String(x.id ?? idx)}
+        keyExtractor={(x, i) => clean(x.thread_id) || String(i)}
         renderItem={renderItem}
         ListHeaderComponent={Header}
         contentContainerStyle={{
@@ -404,11 +560,20 @@ export default function ClubOrdersByStoreScreen() {
         }}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
-          loading ? null : (
+          loading ? (
+            <View style={{ paddingVertical: 18, alignItems: "center" }}>
+              <ActivityIndicator />
+              <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 10 }}>
+                Loading conversations...
+              </Text>
+            </View>
+          ) : (
             <Card style={{ padding: 14 }}>
-              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>No orders</Text>
+              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+                No conversations yet
+              </Text>
               <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-                Hakuna orders bado kwa store hii.
+                Hakuna chat bado kwa store hii.
               </Text>
             </Card>
           )

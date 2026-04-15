@@ -114,7 +114,7 @@ export default function ClubInboxEntryScreen() {
           </Text>
 
           {!canRedirect ? (
-            <Text style={{ color: theme.colors.dangerText, fontWeight: "900", marginTop: 6 }}>
+            <Text style={{ color: theme.colors.danger, fontWeight: "900", marginTop: 6 }}>
               Activate store kwanza (Stores tab), kisha rudi Inbox.
             </Text>
           ) : (

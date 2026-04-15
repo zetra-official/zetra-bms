@@ -1,6 +1,8 @@
 // app/(tabs)/stores/index.tsx
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { Ionicons } from "@expo/vector-icons";
+import SafeIcon from "@/src/ui/SafeIcon";
 import {
   Alert,
   FlatList,
@@ -53,6 +55,84 @@ type StoreProductPreviewRow = {
 function normalizeStoreType(v: any): "STANDARD" | "CAPITAL_RECOVERY" {
   const t = String(v ?? "STANDARD").trim().toUpperCase();
   return t === "CAPITAL_RECOVERY" ? "CAPITAL_RECOVERY" : "STANDARD";
+}
+
+function HeaderActionButton({
+  title,
+  icon,
+  onPress,
+  disabled,
+  fullWidth,
+  textColor,
+  mutedColor,
+  borderColor,
+  backgroundColor,
+  accentColor,
+  isWebOnlyPolish,
+}: {
+  title: string;
+  icon: string;
+  onPress: () => void;
+  disabled?: boolean;
+  fullWidth?: boolean;
+  textColor: string;
+  mutedColor: string;
+  borderColor: string;
+  backgroundColor: string;
+  accentColor: string;
+  isWebOnlyPolish?: boolean;
+}) {
+  return (
+    <Pressable
+      onPress={disabled ? undefined : onPress}
+      style={({ pressed }) => ({
+        minHeight: isWebOnlyPolish ? 58 : 52,
+        borderRadius: isWebOnlyPolish ? 20 : 18,
+        borderWidth: 1,
+        borderColor,
+        backgroundColor,
+        paddingHorizontal: isWebOnlyPolish ? 16 : 14,
+        paddingVertical: isWebOnlyPolish ? 13 : 12,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: isWebOnlyPolish ? 12 : 10,
+        opacity: disabled ? 0.55 : pressed ? 0.92 : 1,
+        width: fullWidth ? "100%" : undefined,
+        shadowColor: "#000",
+        shadowOpacity: isWebOnlyPolish ? 0.18 : 0,
+        shadowRadius: isWebOnlyPolish ? 16 : 0,
+        shadowOffset: { width: 0, height: isWebOnlyPolish ? 8 : 0 },
+      })}
+    >
+      <View
+        style={{
+          width: isWebOnlyPolish ? 32 : 28,
+          height: isWebOnlyPolish ? 32 : 28,
+          borderRadius: 999,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: "rgba(255,255,255,0.08)",
+          borderWidth: 1,
+          borderColor: "rgba(255,255,255,0.10)",
+        }}
+      >
+        <SafeIcon name={icon} size={isWebOnlyPolish ? 17 : 16} color={accentColor} />
+      </View>
+
+      <Text
+        style={{
+          color: textColor,
+          fontWeight: "900",
+          fontSize: isWebOnlyPolish ? 15 : 14,
+          lineHeight: 18,
+        }}
+        numberOfLines={1}
+      >
+        {title}
+      </Text>
+    </Pressable>
+  );
 }
 
 function CompactSettingRow({
@@ -371,6 +451,109 @@ export default function StoresTabScreen() {
       }
     },
     [canManage, loadCreditFlags, refresh]
+  );
+
+  // =========================
+  // ✅ EXPENSE SWITCH
+  // =========================
+  const [expenseFlagByStoreId, setExpenseFlagByStoreId] = useState<Record<string, boolean>>({});
+  const [expenseFlagLoading, setExpenseFlagLoading] = useState(false);
+  const [expenseFlagSaving, setExpenseFlagSaving] = useState<Record<string, boolean>>({});
+
+  const loadExpenseFlags = useCallback(async () => {
+    if (!canManage || !activeOrgId) {
+      setExpenseFlagByStoreId({});
+      return;
+    }
+
+    const ids = (list ?? []).map((s: any) => s.store_id).filter(Boolean);
+    if (ids.length === 0) {
+      setExpenseFlagByStoreId({});
+      return;
+    }
+
+    setExpenseFlagLoading(true);
+
+    const apply = (rows: any[], key: "staff_can_manage_expense" | "allow_staff_expense") => {
+      const map: Record<string, boolean> = {};
+      for (const r of rows ?? []) {
+        map[String(r.id)] = !!r?.[key];
+      }
+      setExpenseFlagByStoreId(map);
+    };
+
+    try {
+      const { data, error: e } = await supabase
+        .from("stores")
+        .select("id, staff_can_manage_expense")
+        .in("id", ids);
+
+      if (e) throw e;
+      apply(data ?? [], "staff_can_manage_expense");
+    } catch {
+      try {
+        const { data: d2, error: e2 } = await supabase
+          .from("stores")
+          .select("id, allow_staff_expense")
+          .in("id", ids);
+
+        if (e2) throw e2;
+        apply(d2 ?? [], "allow_staff_expense");
+      } catch {
+        // keep last known
+      }
+    } finally {
+      setExpenseFlagLoading(false);
+    }
+  }, [activeOrgId, canManage, list]);
+
+  useEffect(() => {
+    void loadExpenseFlags();
+  }, [loadExpenseFlags]);
+
+  const toggleStoreExpense = useCallback(
+    async (storeId: string, next: boolean) => {
+      if (!canManage) {
+        Alert.alert("No Access", "Owner/Admin only.");
+        return;
+      }
+
+      setExpenseFlagSaving((p) => ({ ...p, [storeId]: true }));
+      setExpenseFlagByStoreId((p) => ({ ...p, [storeId]: next }));
+
+      try {
+        const { error: e } = await supabase
+          .from("stores")
+          .update({ staff_can_manage_expense: next } as any)
+          .eq("id", storeId);
+
+        if (e) throw e;
+
+        await refresh();
+        await loadExpenseFlags();
+      } catch (err1: any) {
+        try {
+          const { error: e2 } = await supabase
+            .from("stores")
+            .update({ allow_staff_expense: next } as any)
+            .eq("id", storeId);
+
+          if (e2) throw e2;
+
+          await refresh();
+          await loadExpenseFlags();
+        } catch (err2: any) {
+          setExpenseFlagByStoreId((p) => ({ ...p, [storeId]: !next }));
+          Alert.alert(
+            "Failed",
+            err2?.message ?? err1?.message ?? "Imeshindikana kubadili expense setting."
+          );
+        }
+      } finally {
+        setExpenseFlagSaving((p) => ({ ...p, [storeId]: false }));
+      }
+    },
+    [canManage, loadExpenseFlags, refresh]
   );
 
   // =========================
@@ -703,6 +886,7 @@ export default function StoresTabScreen() {
       await refresh();
       await loadManagers();
       await loadCreditFlags();
+      await loadExpenseFlags();
       await loadMovementFlags();
 
       if (sid === String(activeStoreId ?? "").trim()) {
@@ -776,6 +960,7 @@ export default function StoresTabScreen() {
       await refresh();
       await loadManagers();
       await loadCreditFlags();
+      await loadExpenseFlags();
       await loadMovementFlags();
 
       if (wasActive) {
@@ -866,6 +1051,7 @@ export default function StoresTabScreen() {
     await refresh();
     await loadManagers();
     await loadCreditFlags();
+    await loadExpenseFlags();
     await loadMovementFlags();
   };
 
@@ -886,15 +1072,20 @@ export default function StoresTabScreen() {
 
   const Header = useMemo(() => {
     const busy =
-      loading || refreshing || mgrLoading || creditFlagLoading || movementFlagLoading;
+      loading ||
+      refreshing ||
+      mgrLoading ||
+      creditFlagLoading ||
+      expenseFlagLoading ||
+      movementFlagLoading;
 
     return (
       <View style={{ gap: 16 }}>
         <View
           style={{
-            gap: 8,
+            gap: 12,
             flexDirection: isDesktopWeb ? "row" : "column",
-            alignItems: isDesktopWeb ? "flex-end" : "flex-start",
+            alignItems: isDesktopWeb ? "center" : "flex-start",
             justifyContent: "space-between",
           }}
         >
@@ -921,28 +1112,55 @@ export default function StoresTabScreen() {
           <View
             style={{
               flexDirection: "row",
-              gap: 10,
+              flexWrap: isDesktopWeb ? "nowrap" : "wrap",
+              gap: isWeb ? 12 : 10,
               width: isDesktopWeb ? "auto" : "100%",
+              justifyContent: isDesktopWeb ? "flex-end" : "flex-start",
+              alignItems: "center",
             }}
           >
-            <View style={{ flex: isDesktopWeb ? 0 : 1 }}>
-              <Button
+            <View
+              style={{
+                flex: isDesktopWeb ? 0 : 1,
+                minWidth: isDesktopWeb ? 160 : 0,
+              }}
+            >
+              <HeaderActionButton
                 title={busy ? "Refreshing..." : "Refresh"}
+                icon="refresh"
                 onPress={onRefreshAll}
                 disabled={busy}
-                variant="primary"
+                fullWidth
+                textColor={TEXT}
+                mutedColor={MUTED}
+                borderColor={busy ? "rgba(255,255,255,0.10)" : "rgba(16,185,129,0.30)"}
+                backgroundColor={busy ? "rgba(255,255,255,0.05)" : "rgba(16,185,129,0.10)"}
+                accentColor={EMERALD}
+                isWebOnlyPolish={isWeb}
               />
             </View>
 
             {canManage ? (
-              <View style={{ flex: isDesktopWeb ? 0 : 1 }}>
-                <Button
-                  title="+ Add Store"
-                  variant="primary"
+              <View
+                style={{
+                  flex: isDesktopWeb ? 0 : 1,
+                  minWidth: isDesktopWeb ? 180 : 0,
+                }}
+              >
+                <HeaderActionButton
+                  title="Add Store"
+                  icon="add"
                   onPress={() => {
                     // @ts-ignore
                     router.push("/(tabs)/stores/add");
                   }}
+                  fullWidth
+                  textColor={TEXT}
+                  mutedColor={MUTED}
+                  borderColor="rgba(255,255,255,0.12)"
+                  backgroundColor="#161C27"
+                  accentColor={EMERALD}
+                  isWebOnlyPolish={isWeb}
                 />
               </View>
             ) : null}
@@ -1116,6 +1334,7 @@ export default function StoresTabScreen() {
     loading,
     mgrLoading,
     creditFlagLoading,
+    expenseFlagLoading,
     movementFlagLoading,
     onRefreshAll,
     refreshing,
@@ -1136,7 +1355,13 @@ export default function StoresTabScreen() {
         numColumns={desktopColumns}
         keyExtractor={(item: any) => item.store_id}
         onRefresh={onRefreshAll}
-        refreshing={!!(refreshing || mgrLoading || creditFlagLoading || movementFlagLoading)}
+        refreshing={!!(
+          refreshing ||
+          mgrLoading ||
+          creditFlagLoading ||
+          expenseFlagLoading ||
+          movementFlagLoading
+        )}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           <View
@@ -1184,6 +1409,9 @@ const isCapitalRecovery = storeType === "CAPITAL_RECOVERY";
           const staffCreditEnabled = !!creditFlagByStoreId?.[storeId];
           const creditSaving = !!creditFlagSaving?.[storeId];
 
+          const staffExpenseEnabled = !!expenseFlagByStoreId?.[storeId];
+          const expenseSaving = !!expenseFlagSaving?.[storeId];
+
           const staffMovementEnabled = !!movementFlagByStoreId?.[storeId];
           const movementSaving = !!movementFlagSaving?.[storeId];
 
@@ -1201,7 +1429,7 @@ const isCapitalRecovery = storeType === "CAPITAL_RECOVERY";
           return (
             <View
               style={{
-                width: isDesktopWeb ? "49.4%" : "100%",
+                width: isDesktopWeb ? "49.1%" : "100%",
                 maxWidth: isDesktopWeb ? undefined : desktopMaxWidth,
                 alignSelf: "center",
                 marginBottom: 10,
@@ -1214,7 +1442,7 @@ const isCapitalRecovery = storeType === "CAPITAL_RECOVERY";
                   borderColor,
                   borderRadius: 22,
                   backgroundColor: "#0F141C",
-                  padding: isDesktopWeb ? 16 : 14,
+                  padding: isDesktopWeb ? 18 : 14,
                   opacity: pressed ? Math.max(0.9, opacity - 0.03) : opacity,
                   transform: pressed ? [{ scale: 0.996 }] : [{ scale: 1 }],
                 })}
@@ -1233,7 +1461,7 @@ const isCapitalRecovery = storeType === "CAPITAL_RECOVERY";
                         style={{
                           fontWeight: "900",
                           color: TEXT,
-                          fontSize: 17,
+                          fontSize: isWeb ? 18 : 17,
                           letterSpacing: 0.2,
                         }}
                         numberOfLines={1}
@@ -1458,6 +1686,24 @@ const isCapitalRecovery = storeType === "CAPITAL_RECOVERY";
         {creditSaving ? (
           <Text style={{ color: FAINT, marginTop: -4, fontWeight: "800", fontSize: 11.5 }}>
             Saving credit setting...
+          </Text>
+        ) : null}
+
+        <CompactSettingRow
+          title="Staff expense"
+          subtitle="Ruhusu staff kurekodi expense katika store hii"
+          value={staffExpenseEnabled}
+          onValueChange={(v) => toggleStoreExpense(storeId, v)}
+          disabled={expenseSaving}
+          borderColor={BORDER_SOFT}
+          backgroundColor="#141A24"
+          textColor={FAINT}
+          mutedColor={MUTED}
+        />
+
+        {expenseSaving ? (
+          <Text style={{ color: FAINT, marginTop: -4, fontWeight: "800", fontSize: 11.5 }}>
+            Saving expense setting...
           </Text>
         ) : null}
 

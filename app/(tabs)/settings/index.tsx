@@ -9,6 +9,7 @@ import { Card } from "@/src/ui/Card";
 import { theme, UI } from "@/src/ui/theme";
 import { useOrg } from "@/src/context/OrgContext";
 import { hardSignOutSupabase, supabase } from "@/src/supabase/supabaseClient";
+import { kv } from "@/src/storage/kv";
 
 function isDesktopWebEnv(width?: number) {
   if (Platform.OS !== "web") return false;
@@ -488,7 +489,7 @@ function LogoutCard({
     >
       <Pressable
         onPress={onLogout}
-        // @ts-ignore - helpful on web
+        // @ts-ignore
         onClick={onLogout}
         hitSlop={12}
         accessibilityRole="button"
@@ -551,10 +552,12 @@ export default function MoreHome() {
   const { width } = useWindowDimensions();
 
   const isDesktopWeb = isDesktopWebEnv(width);
+  const isWeb = Platform.OS === "web";
 
   const [isGrowthPartner, setIsGrowthPartner] = useState(false);
   const [partnerStatus, setPartnerStatus] = useState("");
   const [partnerCode, setPartnerCode] = useState("");
+  const [logoutBusy, setLogoutBusy] = useState(false);
 
   const orgSummary = useMemo(() => {
     const name = org.activeOrgName ?? "No organization";
@@ -625,20 +628,64 @@ export default function MoreHome() {
   const isCashier = org.activeRole === "cashier";
 
   const doLogoutNow = useCallback(async () => {
+    if (logoutBusy) return;
+
+    setLogoutBusy(true);
+
     try {
-      if (Platform.OS === "web" && typeof window !== "undefined") {
+      const { data: authData } = await supabase.auth.getUser();
+      const userId = String(authData?.user?.id ?? "").trim();
+
+      if (userId) {
+        await kv.setLastWorkspaceForUser(userId, {
+          orgId: org.activeOrgId ?? null,
+          storeId: org.activeStoreId ?? null,
+        });
+      }
+
+      if (isWeb && typeof window !== "undefined") {
         try {
           await hardSignOutSupabase();
         } catch {}
 
         try {
-          window.localStorage.removeItem("zetra-bms-auth");
-          window.localStorage.removeItem("sb-access-token");
-          window.localStorage.removeItem("sb-refresh-token");
-          window.sessionStorage.clear();
+          localStorage.removeItem("zetra-bms-auth");
+          localStorage.removeItem("sb-access-token");
+          localStorage.removeItem("sb-refresh-token");
         } catch {}
 
-        window.location.href = "/login";
+        try {
+          // Do not blanket-clear sessionStorage because browser workspace
+          // helpers may live there in some environments.
+          sessionStorage.removeItem("zetra-bms-auth");
+        } catch {}
+
+        try {
+          const keysToRemove: string[] = [];
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (!k) continue;
+
+            const lower = String(k).toLowerCase();
+
+            // IMPORTANT:
+            // remove auth/session keys only
+            // preserve workspace memory keys like active org/store selection
+            if (
+              lower.startsWith("sb-") ||
+              lower.includes("supabase") ||
+              lower === "zetra-bms-auth"
+            ) {
+              keysToRemove.push(k);
+            }
+          }
+
+          for (const k of keysToRemove) {
+            localStorage.removeItem(k);
+          }
+        } catch {}
+
+        window.location.replace("/login");
         return;
       }
 
@@ -646,11 +693,14 @@ export default function MoreHome() {
       router.replace("/login" as any);
     } catch (e: any) {
       Alert.alert("Logout failed", e?.message ?? "Unknown error");
+      setLogoutBusy(false);
     }
-  }, [router]);
+  }, [isWeb, logoutBusy, router]);
 
   const onLogout = useCallback(() => {
-    if (isDesktopWeb) {
+    if (logoutBusy) return;
+
+    if (isWeb) {
       void doLogoutNow();
       return;
     }
@@ -665,7 +715,7 @@ export default function MoreHome() {
         },
       },
     ]);
-  }, [doLogoutNow, isDesktopWeb]);
+  }, [doLogoutNow, isWeb, logoutBusy]);
 
   return (
     <Screen scroll bottomPad={120}>
@@ -841,6 +891,19 @@ export default function MoreHome() {
 
       <SectionTitle label="Account" />
       <LogoutCard onLogout={onLogout} isWeb={isDesktopWeb} />
+
+      {logoutBusy ? (
+        <Text
+          style={{
+            color: UI.muted,
+            fontWeight: "800",
+            fontSize: 12,
+            marginTop: 10,
+          }}
+        >
+          Logging out...
+        </Text>
+      ) : null}
 
       <View style={{ height: theme.spacing.gap }} />
 

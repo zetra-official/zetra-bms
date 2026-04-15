@@ -194,7 +194,7 @@ async function uploadJpegToClubMedia(uid: string, localUri: string, tag: "feed" 
   return clean(data?.publicUrl ?? "");
 }
 
-/* ---------------- PATCH A helpers ---------------- */
+/* ---------------- posting helpers ---------------- */
 
 function isUpgradePlanError(msg: string) {
   const m = clean(msg).toLowerCase();
@@ -314,16 +314,19 @@ export default function ClubCreatePostScreen() {
   const [selectedPrice, setSelectedPrice] = useState<number>(0);
   const [currency, setCurrency] = useState<"TZS">("TZS");
 
-  const canSubmit = useMemo(() => {
+ const canSubmit = useMemo(() => {
+    const hasCaption = clean(caption).length > 0;
+    const hasProduct = !!clean(selectedProductId);
+    const hasImage = !!clean(localUri);
+
     return (
-      clean(caption).length > 0 &&
       !!clean(activeOrgId) &&
       !!activeStoreId &&
-      !!clean(selectedProductId) &&
+      (hasCaption || hasProduct || hasImage) &&
       !saving &&
       !uploading
     );
-  }, [caption, activeOrgId, activeStoreId, saving, uploading, selectedProductId]);
+  }, [caption, activeOrgId, activeStoreId, saving, uploading, selectedProductId, localUri]);
 
   const pickImage = useCallback(async () => {
     setErr(null);
@@ -457,14 +460,15 @@ export default function ClubCreatePostScreen() {
       Alert.alert("Store Required", "Tafadhali chagua/activate store kwanza kabla ya kupost.");
       return;
     }
-    if (!productId) {
-      Alert.alert("Product Required", "Chagua bidhaa kwanza (inahitajika).");
+    const hasProduct = !!productId;
+    const hasCaption = !!clean(caption);
+    const hasImage = !!clean(localUri);
+
+    if (!hasProduct && !hasCaption && !hasImage) {
+      Alert.alert("Nothing to Post", "Weka angalau picha, caption, au product kabla ya kupost.");
       return;
     }
-    if (!clean(caption)) {
-      Alert.alert("Caption Required", "Andika ujumbe/caption kwanza.");
-      return;
-    }
+
     if (!canSubmit) return;
 
     setErr(null);
@@ -484,12 +488,12 @@ export default function ClubCreatePostScreen() {
         hqUrl = clean(up.hqUrl ?? "") || null;
       }
 
-      const payload: any = {
+  const payload: any = {
         p_store_id: storeId,
-        p_product_id: productId,
-        p_caption: clean(caption),
-        p_price: Number.isFinite(Number(selectedPrice)) ? Number(selectedPrice) : 0,
-        p_currency: currency,
+        p_product_id: hasProduct ? productId : null,
+        p_caption: hasCaption ? clean(caption) : null,
+        p_price: hasProduct && Number.isFinite(Number(selectedPrice)) ? Number(selectedPrice) : null,
+        p_currency: hasProduct ? currency : "TZS",
         p_image_url: feedUrl,
         p_image_hq_url: hqUrl,
       };
@@ -645,7 +649,7 @@ export default function ClubCreatePostScreen() {
             >
               <Ionicons name="pricetag-outline" size={18} color={theme.colors.emerald} />
               <Text style={{ fontWeight: "900", color: theme.colors.text }}>
-                {prodLoading ? "Loading products..." : selectedName ? "Change Product" : "Chagua Bidhaa"}
+                {prodLoading ? "Loading products..." : selectedName ? "Change Product" : "Chagua Bidhaa (hiari)"}
               </Text>
             </Pressable>
 
@@ -666,13 +670,13 @@ export default function ClubCreatePostScreen() {
 
             {!selectedName ? (
               <Text style={{ marginTop: 10, color: theme.colors.faint, fontWeight: "900" }}>
-                ⚠️ Product ni required kwa post.
+                Product ni hiari. Unaweza kupost picha pekee, caption pekee, au product pamoja na vingine.
               </Text>
             ) : null}
           </Card>
 
           <Card>
-            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Ujumbe (Caption)</Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Ujumbe (Caption) — hiari</Text>
             <TextInput
               value={caption}
               onChangeText={setCaption}
@@ -746,10 +750,20 @@ export default function ClubCreatePostScreen() {
           </Card>
 
           <Button
-            title={uploading ? "Uploading..." : saving ? "Posting..." : "Post Now"}
+            title={
+              uploading
+                ? "Uploading..."
+                : saving
+                ? "Posting..."
+                : "Post Now"
+            }
             onPress={submit}
             disabled={!canSubmit}
           />
+
+          <Text style={{ color: theme.colors.faint, fontWeight: "800", textAlign: "center" }}>
+            Unaweza kupost picha pekee, caption pekee, product pekee, au mchanganyiko wa vyote.
+          </Text>
         </View>
 
         {/* ✅ Upgrade Modal (HEAVY + READABLE) */}

@@ -1,6 +1,7 @@
 // app/(tabs)/sales/expenses.tsx
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+
 import React, {
   useCallback,
   useEffect,
@@ -13,7 +14,6 @@ import {
   Animated,
   Keyboard,
   Pressable,
-  ScrollView,
   Text,
   TextInput,
   View,
@@ -340,6 +340,7 @@ function InputShell({
 
 export default function ExpensesScreen() {
   const router = useRouter();
+  
   const { activeOrgId, activeOrgName, activeRole, activeStoreId, activeStoreName } = useOrg();
 
   const money = useOrgMoneyPrefs(String(activeOrgId || ""));
@@ -349,7 +350,17 @@ export default function ExpensesScreen() {
   const isOwnerOrAdmin = roleLower === "owner" || roleLower === "admin";
   const isStaffView = roleLower === "staff";
 
-  const canCreate = useMemo(() => !!activeStoreId && isOwnerOrAdmin, [activeStoreId, isOwnerOrAdmin]);
+  const [staffExpenseAllowed, setStaffExpenseAllowed] = useState(false);
+  const [staffExpenseLoading, setStaffExpenseLoading] = useState(false);
+
+  const canCreate = useMemo(() => {
+    if (!activeStoreId) return false;
+    if (isOwnerOrAdmin) return true;
+    if (isStaffView && staffExpenseAllowed) return true;
+    return false;
+  }, [activeStoreId, isOwnerOrAdmin, isStaffView, staffExpenseAllowed]);
+
+  const showSummaryOnly = isStaffView && !staffExpenseAllowed;
 
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState<ExpenseRow[]>([]);
@@ -384,6 +395,40 @@ export default function ExpensesScreen() {
 
   const paymentMethodLabel = useMemo(() => paymentMethod.trim() || "CASH", [paymentMethod]);
 
+  const loadStaffExpensePermission = useCallback(async () => {
+    if (!activeStoreId || !isStaffView) {
+      setStaffExpenseAllowed(false);
+      return;
+    }
+
+    setStaffExpenseLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("stores")
+        .select("staff_can_manage_expense")
+        .eq("id", activeStoreId)
+        .maybeSingle();
+
+      if (error) throw error;
+      setStaffExpenseAllowed(!!data?.staff_can_manage_expense);
+    } catch {
+      try {
+        const { data, error } = await supabase
+          .from("stores")
+          .select("allow_staff_expense")
+          .eq("id", activeStoreId)
+          .maybeSingle();
+
+        if (error) throw error;
+        setStaffExpenseAllowed(!!data?.allow_staff_expense);
+      } catch {
+        setStaffExpenseAllowed(false);
+      }
+    } finally {
+      setStaffExpenseLoading(false);
+    }
+  }, [activeStoreId, isStaffView]);
+
   const ranges = useMemo(() => {
     const now = new Date();
     const todayDate = new Date(now);
@@ -417,13 +462,13 @@ export default function ExpensesScreen() {
 
     const call = async (from: string, to: string): Promise<Summary> => {
       const res = await withTimeout(
-        supabase.rpc("get_expense_summary", {
+        supabase.rpc("get_expense_summary_v2", {
           p_store_id: activeStoreId,
           p_from: from,
           p_to: to,
         }),
         12_000,
-        "get_expense_summary"
+        "get_expense_summary_v2"
       );
 
       const data = (res as any)?.data;
@@ -455,13 +500,13 @@ export default function ExpensesScreen() {
     }
 
     const res = await withTimeout(
-      supabase.rpc("get_expenses", {
+      supabase.rpc("get_expenses_v2", {
         p_store_id: activeStoreId,
         p_from: ranges.month.from,
         p_to: ranges.month.to,
       }),
       12_000,
-      "get_expenses"
+      "get_expenses_v2"
     );
 
     const data = (res as any)?.data;
@@ -501,6 +546,10 @@ export default function ExpensesScreen() {
     }
   }, [activeStoreId, loadSummary, loadList]);
 
+useEffect(() => {
+    void loadStaffExpensePermission();
+  }, [loadStaffExpensePermission]);
+
   useEffect(() => {
     void loadAll();
   }, [loadAll]);
@@ -510,8 +559,11 @@ export default function ExpensesScreen() {
       Alert.alert("Missing", "No active store selected.");
       return;
     }
-    if (!isOwnerOrAdmin) {
-      Alert.alert("View Only", "Muonekano huu wa kuingiza expense ni wa owner/admin tu.");
+    if (!canCreate) {
+      Alert.alert(
+        "No Access",
+        "Huna ruhusa ya kurekodi expense kwenye store hii. Owner awezeshe Staff expense kwenye store husika."
+      );
       return;
     }
     if (!canCreate) return;
@@ -536,7 +588,7 @@ export default function ExpensesScreen() {
 
     try {
       const res = await withTimeout(
-        supabase.rpc("create_expense", {
+        supabase.rpc("create_expense_v2", {
           p_store_id: activeStoreId,
           p_amount: n,
           p_category: cat,
@@ -545,7 +597,7 @@ export default function ExpensesScreen() {
           p_expense_date: ranges.today.from,
         }),
         12_000,
-        "create_expense"
+        "create_expense_v2"
       );
 
       const e = (res as any)?.error;
@@ -568,7 +620,6 @@ export default function ExpensesScreen() {
     }
   }, [
     activeStoreId,
-    isOwnerOrAdmin,
     canCreate,
     loading,
     amount,
@@ -586,15 +637,10 @@ export default function ExpensesScreen() {
 
   const paymentMethods = useMemo(() => ["CASH", "MOBILE", "BANK"] as const, []);
 
-  if (isStaffView) {
+  if (showSummaryOnly) {
     return (
-      <Screen scroll={false} bottomPad={40}>
-        <ScrollView
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 36 }}
-        >
-          <Animated.View
+      <Screen scroll bottomPad={24}>
+        <Animated.View
             style={{
               opacity: fadeAnim,
               transform: [{ translateY: liftAnim }],
@@ -804,19 +850,13 @@ export default function ExpensesScreen() {
               </Text>
             </Card>
           </Animated.View>
-        </ScrollView>
       </Screen>
     );
   }
 
   return (
-    <Screen scroll={false} bottomPad={40}>
-      <ScrollView
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 36 }}
-      >
-        <Animated.View
+    <Screen scroll bottomPad={24}>
+      <Animated.View
           style={{
             opacity: fadeAnim,
             transform: [{ translateY: liftAnim }],
@@ -972,12 +1012,15 @@ export default function ExpensesScreen() {
               >
                 <Ionicons name="wallet-outline" size={18} color={theme.colors.emerald} />
                 <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                  Ready to record expense
+                  {isStaffView ? "Staff expense enabled for this store" : "Ready to record expense"}
                 </Text>
               </View>
 
               <Pressable
-                onPress={() => void loadAll()}
+                onPress={() => {
+                  void loadStaffExpensePermission();
+                  void loadAll();
+                }}
                 disabled={loading}
                 style={({ pressed }) => ({
                   width: 56,
@@ -1016,22 +1059,7 @@ export default function ExpensesScreen() {
             </Card>
           )}
 
-          {!!error && (
-              <Card
-                style={{
-                  borderColor: theme.colors.dangerBorder,
-                  backgroundColor: theme.colors.dangerSoft,
-                  padding: 14,
-                }}
-              >
-                <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
-                  <Ionicons name="alert-circle-outline" size={18} color={theme.colors.danger} />
-                  <Text style={{ color: theme.colors.danger, fontWeight: "900", flex: 1 }}>
-                    {error}
-                  </Text>
-                </View>
-              </Card>
-            )}
+          
 
             {sectionTitle("Summary")}
 
@@ -1159,9 +1187,9 @@ export default function ExpensesScreen() {
             </InputShell>
 
             <Button
-              title={loading ? "Saving..." : "Save Expense"}
+              title={loading ? "Saving..." : staffExpenseLoading ? "Checking..." : "Save Expense"}
               onPress={createExpense}
-              disabled={loading || !canCreate}
+              disabled={loading || staffExpenseLoading || !canCreate}
               variant="primary"
             />
 
@@ -1347,7 +1375,6 @@ export default function ExpensesScreen() {
             })
           )}
         </Animated.View>
-      </ScrollView>
     </Screen>
   );
 }

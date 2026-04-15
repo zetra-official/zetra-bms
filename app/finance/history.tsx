@@ -3,14 +3,17 @@ import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   Pressable,
   ScrollView,
   Text,
   TextInput,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import SafeIcon from "@/src/ui/SafeIcon";
 
 import { useOrg } from "@/src/context/OrgContext";
 import { supabase } from "@/src/supabase/supabaseClient";
@@ -36,7 +39,9 @@ type PayBreakdown = {
   cash: number;
   bank: number;
   mobile: number;
-  credit: number;
+  credit: number; // compatibility alias = outstanding
+  credit_today: number;
+  credit_outstanding: number;
   other: number;
   orders: number;
 };
@@ -87,10 +92,45 @@ type StoreComparisonRow = {
 type HealthSummary = {
   score: number;
   label: "EXCELLENT" | "GOOD" | "WATCH" | "CRITICAL";
+  basis: "FULL" | "OPERATIONS_ONLY";
   profitMargin: number | null;
   expensesRatio: number | null;
   salesTrend: "INCREASING" | "STABLE" | "DECLINING" | "NO_DATA";
   message: string;
+};
+
+type PreviousPeriodSnapshot = {
+  fromYMD: string;
+  toYMD: string;
+  sales: number;
+  orders: number;
+  expenses: number;
+  profit: number | null;
+  collections: number;
+  avgOrderValue: number;
+};
+
+type ExecutiveSummary = {
+  title: string;
+  body: string;
+  tone: InsightTone;
+};
+
+type PriorityAction = {
+  id: string;
+  title: string;
+  body: string;
+  priority: "NOW" | "NEXT" | "WATCH";
+  tone: InsightTone;
+};
+
+type PeriodDeltaSummary = {
+  salesPct: number | null;
+  ordersPct: number | null;
+  expensesPct: number | null;
+  profitPct: number | null;
+  collectionsPct: number | null;
+  avgOrderPct: number | null;
 };
 
 type ProductProfitRow = {
@@ -160,6 +200,7 @@ type FinanceCachePayload = {
   trendRows: TrendPoint[];
   comparisonRows: StoreComparisonRow[];
   health: HealthSummary | null;
+  previousPeriod: PreviousPeriodSnapshot | null;
   productProfitRows: ProductProfitRow[];
   stockIntelRows: StockIntelRow[];
   forecast: ForecastSummary | null;
@@ -328,6 +369,33 @@ function buildTrendBuckets(fromYMD: string, toYMD: string): TrendBucket[] {
 function percent(n: number | null) {
   if (n == null || !Number.isFinite(n)) return "—";
   return `${n.toFixed(1)}%`;
+}
+
+function pctChange(current: number | null, previous: number | null) {
+  const c = toNum(current);
+  const p = toNum(previous);
+
+  if (!Number.isFinite(c) || !Number.isFinite(p)) return null;
+  if (p === 0) {
+    if (c === 0) return 0;
+    return null;
+  }
+
+  return ((c - p) / Math.abs(p)) * 100;
+}
+
+function buildPreviousPeriodRange(fromYMD: string, toYMD: string) {
+  const days = Math.max(1, diffDaysInclusive(fromYMD, toYMD));
+  const currentFrom = ymdToDate(fromYMD);
+  const prevTo = addDays(currentFrom, -1);
+  const prevFrom = addDays(prevTo, -(days - 1));
+
+  return {
+    fromYMD: toIsoDateLocal(prevFrom),
+    toYMD: toIsoDateLocal(prevTo),
+    fromISO: ymdToISOFrom(toIsoDateLocal(prevFrom)),
+    toISO: ymdToISOTo(toIsoDateLocal(prevTo)),
+  };
 }
 
 function normalizeStockBucket(x: any): StockIntelBucket {
@@ -568,21 +636,94 @@ function SmallChip({
 
 function MiniStat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <View style={{ flex: 1, gap: 4, minWidth: 0 }}>
-      <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }} numberOfLines={1}>
+    <View
+      style={{
+        flex: 1,
+        flexGrow: 1,
+        flexShrink: 1,
+        flexBasis: Platform.OS === "web" ? 180 : 145,
+        minWidth: Platform.OS === "web" ? 180 : 145,
+        gap: 4,
+        borderWidth: 1,
+        borderColor: "rgba(255,255,255,0.08)",
+        backgroundColor: "rgba(255,255,255,0.035)",
+        borderRadius: 14,
+        paddingHorizontal: 12,
+        paddingVertical: 11,
+      }}
+    >
+      <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 11 }} numberOfLines={1}>
         {label}
       </Text>
       <Text
         style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}
         numberOfLines={1}
         adjustsFontSizeToFit
-        minimumFontScale={0.75}
+        minimumFontScale={0.78}
         allowFontScaling={false}
       >
         {value}
       </Text>
       {!!hint && (
-        <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 12 }} numberOfLines={1}>
+        <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 11 }} numberOfLines={1}>
+          {hint}
+        </Text>
+      )}
+    </View>
+  );
+}
+
+function WideStatCard({
+  title,
+  value,
+  subtitle,
+  hint,
+}: {
+  title: string;
+  value: string;
+  subtitle?: string;
+  hint?: string;
+}) {
+  return (
+    <View
+      style={{
+        width: "100%",
+        borderRadius: 18,
+        borderWidth: 1,
+        borderColor: "rgba(16,185,129,0.26)",
+        backgroundColor: "rgba(16,185,129,0.08)",
+        paddingHorizontal: 12,
+        paddingVertical: 12,
+        gap: 6,
+      }}
+    >
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+        <Text
+          style={{
+            color: UI.text,
+            fontWeight: "900",
+            fontSize: 13,
+            letterSpacing: 0.35,
+          }}
+        >
+          {title}
+        </Text>
+        
+        {!!subtitle && (
+          <Text style={{ color: UI.faint, fontWeight: "900", fontSize: 12 }} numberOfLines={1}>
+            {subtitle}
+          </Text>
+        )}
+      </View>
+
+      <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.10)" }} />
+
+      <Text style={{ color: UI.text, fontWeight: "900", fontSize: 24 }} numberOfLines={1}>
+        {value}
+      </Text>
+
+      {!!hint && (
+        <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 20 }}>
           {hint}
         </Text>
       )}
@@ -971,7 +1112,17 @@ function SectionCard({
   rightNode?: React.ReactNode;
 }) {
   return (
-    <Card style={{ gap: 12 }}>
+    <Card
+      style={{
+        gap: 10,
+        borderRadius: 22,
+        borderColor: "rgba(16,185,129,0.22)",
+        backgroundColor: "rgba(15,18,24,0.98)",
+        paddingHorizontal: 14,
+        paddingVertical: 14,
+        overflow: "hidden",
+      }}
+    >
       <Pressable
         onPress={onToggle}
         hitSlop={10}
@@ -986,23 +1137,27 @@ function SectionCard({
           style={{
             width: 42,
             height: 42,
-            borderRadius: 999,
+            borderRadius: 14,
             borderWidth: 1,
             borderColor: "rgba(42,168,118,0.28)",
             backgroundColor: "rgba(42,168,118,0.10)",
             alignItems: "center",
             justifyContent: "center",
+            flexShrink: 0,
           }}
         >
-          <Ionicons name={icon} size={18} color={UI.text} />
+          <SafeIcon name={icon} size={20} color={UI.text} />
         </View>
 
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }} numberOfLines={1}>
+          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }} numberOfLines={1}>
             {title}
           </Text>
           {!!subtitle && (
-            <Text style={{ color: UI.muted, fontWeight: "800" }} numberOfLines={1}>
+            <Text
+              style={{ color: UI.muted, fontWeight: "800", fontSize: 13, marginTop: 2 }}
+              numberOfLines={2}
+            >
               {subtitle}
             </Text>
           )}
@@ -1010,11 +1165,25 @@ function SectionCard({
 
         {rightNode}
 
-        <Ionicons
-          name={open ? "chevron-up" : "chevron-down"}
-          size={18}
-          color={UI.muted}
-        />
+        <View
+          style={{
+            width: 30,
+            height: 30,
+            borderRadius: 999,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "rgba(255,255,255,0.05)",
+            borderWidth: 1,
+            borderColor: "rgba(255,255,255,0.08)",
+            flexShrink: 0,
+          }}
+        >
+          <SafeIcon
+            name={open ? "chevron-up-outline" : "chevron-down-outline"}
+            size={16}
+            color={UI.muted}
+          />
+        </View>
       </Pressable>
 
       {open ? children : null}
@@ -1046,6 +1215,15 @@ export default function FinanceHistoryScreen() {
   const money = useOrgMoneyPrefs(orgId);
   const displayCurrency = money.currency || "TZS";
   const displayLocale = money.locale || "en-TZ";
+
+  const { width } = useWindowDimensions();
+  const isWeb = Platform.OS === "web";
+  const isDesktopWeb = isWeb && width >= 1100;
+  const isTabletWeb = isWeb && width >= 780;
+  const pageMaxWidth = isDesktopWeb ? 980 : isTabletWeb ? 900 : undefined;
+  const pageSidePad = isDesktopWeb ? 16 : 10;
+  const sectionGap = 10;
+  const compactCardPad = isDesktopWeb ? 14 : 12;
 
   const fmt = useCallback(
     (n: number) =>
@@ -1092,7 +1270,8 @@ export default function FinanceHistoryScreen() {
   const [dateFrom, setDateFrom] = useState<string>(today);
   const [dateTo, setDateTo] = useState<string>(today);
 
-  const [loading, setLoading] = useState(false);
+ const [loading, setLoading] = useState(false);
+  const [loadingDeep, setLoadingDeep] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [stockIntelErr, setStockIntelErr] = useState<string | null>(null);
   const [forecastErr, setForecastErr] = useState<string | null>(null);
@@ -1118,6 +1297,8 @@ export default function FinanceHistoryScreen() {
     bank: 0,
     mobile: 0,
     credit: 0,
+    credit_today: 0,
+    credit_outstanding: 0,
     other: 0,
     orders: 0,
   });
@@ -1135,6 +1316,7 @@ export default function FinanceHistoryScreen() {
   const [trendRows, setTrendRows] = useState<TrendPoint[]>([]);
   const [comparisonRows, setComparisonRows] = useState<StoreComparisonRow[]>([]);
   const [health, setHealth] = useState<HealthSummary | null>(null);
+  const [previousPeriod, setPreviousPeriod] = useState<PreviousPeriodSnapshot | null>(null);
   const [productProfitRows, setProductProfitRows] = useState<ProductProfitRow[]>([]);
   const [stockIntelRows, setStockIntelRows] = useState<StockIntelRow[]>([]);
   const [forecast, setForecast] = useState<ForecastSummary | null>(null);
@@ -1147,6 +1329,7 @@ export default function FinanceHistoryScreen() {
   const [showGraph, setShowGraph] = useState(false);
   const [showComparison, setShowComparison] = useState(false);
   const [showHealth, setShowHealth] = useState(false);
+  const [showHowItWorks, setShowHowItWorks] = useState(false);
 
   const reqRef = useRef(0);
   const cacheRef = useRef<Map<string, FinanceCachePayload>>(new Map());
@@ -1160,7 +1343,7 @@ export default function FinanceHistoryScreen() {
 
   const appliedOnceRef = useRef(false);
 
-  const applyCachePayload = useCallback((payload: FinanceCachePayload) => {
+ const applyCachePayload = useCallback((payload: FinanceCachePayload) => {
     setSalesRow(payload.salesRow);
     setExpRow(payload.expRow);
     setProfitRow(payload.profitRow);
@@ -1170,6 +1353,7 @@ export default function FinanceHistoryScreen() {
     setTrendRows(payload.trendRows);
     setComparisonRows(payload.comparisonRows);
     setHealth(payload.health);
+    setPreviousPeriod(payload.previousPeriod);
     setProductProfitRows(payload.productProfitRows);
     setStockIntelRows(payload.stockIntelRows);
     setForecast(payload.forecast);
@@ -1316,7 +1500,18 @@ export default function FinanceHistoryScreen() {
 
   const callPaymentBreakdownV3 = useCallback(
     async (fromISO: string, toISO: string, sidOrNull: string | null): Promise<PayBreakdown> => {
-      if (!orgId) return { cash: 0, bank: 0, mobile: 0, credit: 0, other: 0, orders: 0 };
+      if (!orgId) {
+        return {
+          cash: 0,
+          bank: 0,
+          mobile: 0,
+          credit: 0,
+          credit_today: 0,
+          credit_outstanding: 0,
+          other: 0,
+          orders: 0,
+        };
+      }
 
       const { data, error } = await supabase.rpc(
         "get_sales_channel_summary_v3",
@@ -1325,7 +1520,16 @@ export default function FinanceHistoryScreen() {
       if (error) throw error;
 
       const rows = (Array.isArray(data) ? data : []) as any[];
-      const out: PayBreakdown = { cash: 0, bank: 0, mobile: 0, credit: 0, other: 0, orders: 0 };
+      const out: PayBreakdown = {
+        cash: 0,
+        bank: 0,
+        mobile: 0,
+        credit: 0,
+        credit_today: 0,
+        credit_outstanding: 0,
+        other: 0,
+        orders: 0,
+      };
 
       for (const r of rows) {
         const ch = String(r?.channel ?? r?.payment_method ?? "").trim().toUpperCase();
@@ -1651,6 +1855,72 @@ export default function FinanceHistoryScreen() {
     [orgId]
   );
 
+  const loadPreviousPeriodSnapshot = useCallback(
+    async (
+      targets: string[],
+      fromYMD: string,
+      toYMD: string
+    ): Promise<PreviousPeriodSnapshot | null> => {
+      if (!targets.length) return null;
+
+      const prev = buildPreviousPeriodRange(fromYMD, toYMD);
+
+      const salesRows = await Promise.all(
+        targets.map((sid) => callSalesForStore(sid, prev.fromISO, prev.toISO))
+      );
+
+      const sales = salesRows.reduce((acc, row) => acc + toNum(row.total), 0);
+      const orders = salesRows.reduce((acc, row) => acc + toInt(row.orders), 0);
+
+      let expenses = 0;
+      if (canSeeExpenses) {
+        const expenseRows = await Promise.all(
+          targets.map((sid) => callExpenseForStore(sid, prev.fromYMD, prev.toYMD))
+        );
+        expenses = expenseRows.reduce((acc, row) => acc + toNum(row.total), 0);
+      }
+
+      let profit: number | null = null;
+      if (isOwner) {
+        const profitRows = await Promise.all(
+          targets.map((sid) => callProfitOwnerOnly(sid, prev.fromISO, prev.toISO))
+        );
+        profit = profitRows.reduce((acc, row) => acc + toNum(row.net), 0);
+      }
+
+      let collectionsTotal = 0;
+      try {
+        const coll = await callCreditCollections(
+          prev.fromISO,
+          prev.toISO,
+          scope === "STORE" ? storeId : null
+        );
+        collectionsTotal = toNum(coll.cash) + toNum(coll.bank) + toNum(coll.mobile) + toNum(coll.other);
+      } catch {}
+
+      return {
+        fromYMD: prev.fromYMD,
+        toYMD: prev.toYMD,
+        sales,
+        orders,
+        expenses,
+        profit,
+        collections: collectionsTotal,
+        avgOrderValue: orders > 0 ? sales / Math.max(1, orders) : 0,
+      };
+    },
+    [
+      callSalesForStore,
+      callExpenseForStore,
+      callProfitOwnerOnly,
+      callCreditCollections,
+      canSeeExpenses,
+      isOwner,
+      scope,
+      storeId,
+    ]
+  );
+
   const run = useCallback(async () => {
     const rid = ++reqRef.current;
 
@@ -1701,13 +1971,14 @@ export default function FinanceHistoryScreen() {
     }
 
     setLoading(true);
+    setLoadingDeep(false);
     setErr(null);
     setStockIntelErr(null);
     setForecastErr(null);
     setCashflowErr(null);
 
     try {
-      const comparisonOut: StoreComparisonRow[] = [];
+      const comparisonOut: StoreComparisonRow[] =[];
 
       let nextSalesRow: SalesSummary = {
         total: 0,
@@ -1724,6 +1995,8 @@ export default function FinanceHistoryScreen() {
         bank: 0,
         mobile: 0,
         credit: 0,
+        credit_today: 0,
+        credit_outstanding: 0,
         other: 0,
         orders: 0,
       };
@@ -1784,6 +2057,8 @@ export default function FinanceHistoryScreen() {
         nextPay = {
           ...pb,
           credit: realCreditBalance,
+          credit_today: toNum(pb.credit),
+          credit_outstanding: realCreditBalance,
         };
         nextCollections = cc;
 
@@ -1933,6 +2208,35 @@ export default function FinanceHistoryScreen() {
         }
       }
 
+      const coreComparisonSorted =
+        mode === "EXPENSES"
+          ? [...comparisonOut].sort((a, b) => b.expenses - a.expenses)
+          : mode === "PROFIT"
+            ? [...comparisonOut].sort((a, b) => toNum(b.profit) - toNum(a.profit))
+            : [...comparisonOut].sort((a, b) => b.sales - a.sales);
+
+      if (rid !== reqRef.current) return;
+
+      applyCachePayload({
+        salesRow: nextSalesRow,
+        expRow: nextExpRow,
+        profitRow: nextProfitRow,
+        pay: nextPay,
+        collections: nextCollections,
+        expPay: nextExpPay,
+        trendRows: [],
+        comparisonRows: coreComparisonSorted,
+        health: null,
+        previousPeriod: null,
+        productProfitRows: nextProductProfitRows,
+        stockIntelRows: [],
+        forecast: null,
+        cashflow: null,
+      });
+
+      setLoading(false);
+      setLoadingDeep(true);
+
       try {
         nextStockIntelRows = await callStockIntelligence(
           fromISO,
@@ -1970,42 +2274,57 @@ export default function FinanceHistoryScreen() {
       }
 
       const buckets = buildTrendBuckets(dateFrom, dateTo);
-      const trendOut: TrendPoint[] = [];
 
-      for (const bucket of buckets) {
-        let salesTotal = 0;
-        let expensesTotal = 0;
-        let profitTotal = 0;
-        let hasProfit = false;
+      const trendOut = await Promise.all(
+        buckets.map(async (bucket) => {
+          const perStore = await Promise.all(
+            targets.map(async (sid) => {
+              const salesPromise = callSalesForStore(sid, bucket.fromISO, bucket.toISO);
+              const expensePromise = canSeeExpenses
+                ? callExpenseForStore(sid, bucket.fromYMD, bucket.toYMD).catch(() => ({
+                    total: 0,
+                    count: 0,
+                  }))
+                : Promise.resolve({ total: 0, count: 0 });
 
-        for (const sid of targets) {
-          const sales = await callSalesForStore(sid, bucket.fromISO, bucket.toISO);
-          salesTotal += toNum(sales.total);
+              const profitPromise = isOwner
+                ? callProfitOwnerOnly(sid, bucket.fromISO, bucket.toISO).catch(() => ({
+                    net: 0,
+                    sales: null,
+                    expenses: null,
+                  }))
+                : Promise.resolve({ net: 0, sales: null, expenses: null });
 
-          if (canSeeExpenses) {
-            try {
-              const exp = await callExpenseForStore(sid, bucket.fromYMD, bucket.toYMD);
-              expensesTotal += toNum(exp.total);
-            } catch {}
-          }
+              const [sales, exp, profit] = await Promise.all([
+                salesPromise,
+                expensePromise,
+                profitPromise,
+              ]);
 
-          if (isOwner) {
-            try {
-              const profit = await callProfitOwnerOnly(sid, bucket.fromISO, bucket.toISO);
-              profitTotal += toNum(profit.net);
-              hasProfit = true;
-            } catch {}
-          }
-        }
+              return {
+                sales: toNum(sales.total),
+                expenses: toNum(exp.total),
+                profit: isOwner ? toNum(profit.net) : null,
+              };
+            })
+          );
 
-        trendOut.push({
-          key: bucket.key,
-          label: bucket.label,
-          sales: salesTotal,
-          expenses: expensesTotal,
-          profit: isOwner && hasProfit ? profitTotal : null,
-        });
-      }
+          const salesTotal = perStore.reduce((acc, row) => acc + toNum(row.sales), 0);
+          const expensesTotal = perStore.reduce((acc, row) => acc + toNum(row.expenses), 0);
+          const profitTotal = perStore.reduce((acc, row) => acc + toNum(row.profit), 0);
+          const hasProfit = isOwner && perStore.some((row) => row.profit != null);
+
+          return {
+            key: bucket.key,
+            label: bucket.label,
+            sales: salesTotal,
+            expenses: expensesTotal,
+            profit: isOwner && hasProfit ? profitTotal : null,
+          } as TrendPoint;
+        })
+      );
+
+      const previousPeriodSnapshot = await loadPreviousPeriodSnapshot(targets, dateFrom, dateTo);
 
       const comparisonSorted =
         mode === "EXPENSES"
@@ -2051,46 +2370,154 @@ export default function FinanceHistoryScreen() {
         else salesTrend = "STABLE";
       } else if (trendOut.length >= 2) {
         salesTrend = avgRight > avgLeft ? "INCREASING" : "STABLE";
+      } else if (previousPeriodSnapshot) {
+        const prevSales = toNum(previousPeriodSnapshot.sales);
+        const currSales = toNum(nextSalesRow.total);
+        if (prevSales > 0) {
+          const delta = ((currSales - prevSales) / prevSales) * 100;
+          if (delta > 8) salesTrend = "INCREASING";
+          else if (delta < -8) salesTrend = "DECLINING";
+          else salesTrend = "STABLE";
+        } else if (currSales > 0) {
+          salesTrend = "INCREASING";
+        } else {
+          salesTrend = "STABLE";
+        }
+      } else if (nextForecast?.trend_label) {
+        salesTrend = nextForecast.trend_label;
       }
 
-      let score = 50;
+      const previousSales = toNum(previousPeriodSnapshot?.sales);
+      const previousExpenses = toNum(previousPeriodSnapshot?.expenses);
+      const previousProfit = toNum(previousPeriodSnapshot?.profit);
+      const previousCollections = toNum(previousPeriodSnapshot?.collections);
+
+      const rangeDays = Math.max(1, diffDaysInclusive(dateFrom, dateTo));
+      const isShortRange = rangeDays <= 1;
+      const isMediumRange = rangeDays > 1 && rangeDays < 7;
+
+      const salesDeltaForHealth =
+        previousPeriodSnapshot && previousSales > 0
+          ? ((toNum(nextSalesRow.total) - previousSales) / previousSales) * 100
+          : null;
+
+      const expenseDeltaForHealth =
+        previousPeriodSnapshot && previousExpenses > 0
+          ? ((toNum(nextExpRow.total) - previousExpenses) / previousExpenses) * 100
+          : null;
+
+      const profitDeltaForHealth =
+        isOwner && previousPeriodSnapshot && previousProfit !== 0
+          ? ((toNum(nextProfitRow.net) - previousProfit) / Math.abs(previousProfit)) * 100
+          : null;
+
+      const collectionsNow =
+        toNum(nextCollections.cash) +
+        toNum(nextCollections.bank) +
+        toNum(nextCollections.mobile) +
+        toNum(nextCollections.other);
+
+      const collectionsDeltaForHealth =
+        previousPeriodSnapshot && previousCollections > 0
+          ? ((collectionsNow - previousCollections) / previousCollections) * 100
+          : null;
+
+      const creditTodayForHealth = toNum(nextPay.credit_today);
+      const creditOutstandingForHealth = toNum(nextPay.credit_outstanding || nextPay.credit);
+
+      const severeSalesDrop =
+        !isShortRange && salesDeltaForHealth != null && salesDeltaForHealth <= -35;
+
+      const severeProfitDrop =
+        !isShortRange &&
+        isOwner &&
+        profitDeltaForHealth != null &&
+        profitDeltaForHealth <= -35;
+
+      const severeCollectionsDrop =
+        !isShortRange &&
+        collectionsDeltaForHealth != null &&
+        collectionsDeltaForHealth <= -50;
+
+      const forecastDecliningHard =
+        nextForecast?.trend_label === "DECLINING" && toNum(nextForecast?.trend_pct) <= -10;
+
+      const creditPressure =
+        creditOutstandingForHealth > 0 &&
+        collectionsNow < Math.max(1, creditOutstandingForHealth * 0.25);
+
+      const expensePressure =
+        expensesRatio != null && expensesRatio >= 35;
+
+      let score = 68;
 
       if (profitMargin != null) {
-        if (profitMargin >= 25) score += 28;
-        else if (profitMargin >= 15) score += 20;
-        else if (profitMargin >= 8) score += 12;
-        else if (profitMargin >= 0) score += 4;
-        else if (profitMargin >= -5) score -= 18;
-        else if (profitMargin >= -10) score -= 30;
-        else score -= 42;
+        if (profitMargin >= 25) score += 16;
+        else if (profitMargin >= 15) score += 10;
+        else if (profitMargin >= 8) score += 5;
+        else if (profitMargin >= 0) score += 1;
+        else if (profitMargin >= -5) score -= 10;
+        else if (profitMargin >= -10) score -= 18;
+        else score -= 26;
       }
 
       if (expensesRatio != null) {
-        if (expensesRatio <= 10) score += 16;
-        else if (expensesRatio <= 20) score += 10;
-        else if (expensesRatio <= 30) score += 4;
+        if (expensesRatio <= 10) score += 8;
+        else if (expensesRatio <= 20) score += 5;
+        else if (expensesRatio <= 30) score += 1;
         else if (expensesRatio <= 40) score -= 6;
-        else if (expensesRatio <= 50) score -= 14;
-        else score -= 24;
+        else if (expensesRatio <= 50) score -= 12;
+        else score -= 18;
       }
 
-      if (salesTrend === "INCREASING") score += 14;
-      else if (salesTrend === "STABLE") score += 4;
-      else if (salesTrend === "DECLINING") score -= 16;
+      if (salesTrend === "INCREASING") score += 6;
+      else if (salesTrend === "STABLE") score += 2;
+      else if (salesTrend === "DECLINING") score -= isShortRange ? 4 : 10;
+
+      if (severeSalesDrop) score -= isMediumRange ? 10 : 16;
+      if (severeProfitDrop) score -= isMediumRange ? 10 : 16;
+      if (severeCollectionsDrop) score -= isMediumRange ? 6 : 10;
+
+      if (forecastDecliningHard) {
+        score -= isShortRange ? 3 : 7;
+      }
+
+      if (creditPressure) {
+        score -= isShortRange ? 3 : 7;
+      }
+
+      if (expensePressure) {
+        score -= 6;
+      }
 
       if (isOwner && totalProfitForHealth != null && totalProfitForHealth < 0) {
-        score -= 12;
+        score -= isShortRange ? 6 : 10;
+      }
+
+      if (
+        creditTodayForHealth > 0 &&
+        creditTodayForHealth > Math.max(1, toNum(nextSalesRow.total) * 0.35)
+      ) {
+        score -= 4;
       }
 
       score = Math.max(0, Math.min(100, Math.round(score)));
 
       let label: HealthSummary["label"] = "WATCH";
 
-      if (profitMargin != null && profitMargin < -8) {
+      const hardCriticalByProfit =
+        profitMargin != null && profitMargin < -8;
+
+      const hardCriticalByCombinedSignals =
+        (severeSalesDrop && (forecastDecliningHard || creditPressure)) ||
+        (severeProfitDrop && (expensePressure || forecastDecliningHard)) ||
+        (expensePressure && isOwner && toNum(nextProfitRow.net) < 0);
+
+      if (hardCriticalByProfit || hardCriticalByCombinedSignals) {
         label = "CRITICAL";
-      } else if (score >= 85) {
+      } else if (score >= 82) {
         label = "EXCELLENT";
-      } else if (score >= 65) {
+      } else if (score >= 62) {
         label = "GOOD";
       } else if (score >= 40) {
         label = "WATCH";
@@ -2101,24 +2528,50 @@ export default function FinanceHistoryScreen() {
       let message = "Business performance needs attention.";
 
       if (label === "EXCELLENT") {
-        message = "Strong performance. Sales, cost control, and trend look healthy.";
+        message = "Strong performance. Sales, margins, and operating signals are aligned well.";
       } else if (label === "GOOD") {
-        message = "Business is healthy with stable fundamentals and manageable cost pressure.";
+        message = "Business is healthy overall, with a few areas to monitor closely.";
       } else if (label === "WATCH") {
-        message =
-          "Business needs close monitoring. Margin, expenses, or stock movement should be reviewed.";
+        if (expensePressure) {
+          message =
+            "Business needs close monitoring. Expense pressure should be reviewed alongside sales and stock movement.";
+        } else if (creditPressure) {
+          message =
+            "Business needs close monitoring. Credit backlog and slow collections need closer follow-up.";
+        } else if (salesTrend === "DECLINING" || forecastDecliningHard) {
+          message =
+            "Business needs close monitoring. Sales momentum is softer than expected and needs closer follow-up.";
+        } else {
+          message =
+            "Business needs close monitoring. Trend, credit, or stock pressure needs review.";
+        }
       } else {
-        message =
-          "Critical attention needed. Profitability is under pressure and immediate action is recommended.";
+        if (expensePressure) {
+          message =
+            "Critical attention needed. Expenses are putting visible pressure on business performance and should be controlled immediately.";
+        } else if (creditPressure) {
+          message =
+            "Critical attention needed. Credit backlog and weak collections are putting pressure on liquidity.";
+        } else if (salesTrend === "DECLINING" || forecastDecliningHard) {
+          message =
+            "Critical attention needed. Sales momentum is under pressure and immediate action is needed to stabilize movement.";
+        } else {
+          message =
+            "Critical attention needed. Current signals show pressure on sales, collections, profit, or stock continuity.";
+        }
       }
 
       const nextHealth: HealthSummary = {
         score,
         label,
+        basis: isOwner ? "FULL" : "OPERATIONS_ONLY",
         profitMargin,
         expensesRatio,
         salesTrend,
-        message,
+        message:
+          !isOwner
+            ? `${message} Health hii ni operational view kwa sababu profit ni Owner-only.`
+            : message,
       };
 
       const payload: FinanceCachePayload = {
@@ -2131,6 +2584,7 @@ export default function FinanceHistoryScreen() {
         trendRows: trendOut,
         comparisonRows: comparisonSorted,
         health: nextHealth,
+        previousPeriod: previousPeriodSnapshot,
         productProfitRows: nextProductProfitRows,
         stockIntelRows: nextStockIntelRows,
         forecast: nextForecast,
@@ -2145,7 +2599,10 @@ export default function FinanceHistoryScreen() {
       if (rid !== reqRef.current) return;
       setErr(e?.message ?? "Failed to search");
     } finally {
-      if (rid === reqRef.current) setLoading(false);
+      if (rid === reqRef.current) {
+        setLoading(false);
+        setLoadingDeep(false);
+      }
     }
   }, [
     orgId,
@@ -2170,6 +2627,7 @@ export default function FinanceHistoryScreen() {
     callForecastSummary,
     callCashflowPrediction,
     applyCachePayload,
+    loadPreviousPeriodSnapshot,
   ]);
 
   React.useEffect(() => {
@@ -2210,7 +2668,10 @@ export default function FinanceHistoryScreen() {
   const cTotal = fmt(cTotalNum);
   const cPayments = String(collections.payments ?? 0);
 
-  const credit = fmt(pay.credit);
+  const creditTodayNum = toNum(pay.credit_today);
+  const creditOutstandingNum = toNum(pay.credit_outstanding || pay.credit);
+  const creditToday = fmt(creditTodayNum);
+  const creditOutstanding = fmt(creditOutstandingNum);
 
   const availableCashNum = subtractFloor(pay.cash + collections.cash, expPay.cash);
   const availableBankNum = subtractFloor(pay.bank + collections.bank, expPay.bank);
@@ -2262,8 +2723,49 @@ export default function FinanceHistoryScreen() {
     }));
   }, [stockIntelRows]);
 
+  const previousDeltas = useMemo<PeriodDeltaSummary>(() => {
+    if (!previousPeriod) {
+      return {
+        salesPct: null,
+        ordersPct: null,
+        expensesPct: null,
+        profitPct: null,
+        collectionsPct: null,
+        avgOrderPct: null,
+      };
+    }
+
+    const currentCollectionsTotal =
+      toNum(collections.cash) +
+      toNum(collections.bank) +
+      toNum(collections.mobile) +
+      toNum(collections.other);
+
+    return {
+      salesPct: pctChange(salesRow.total, previousPeriod.sales),
+      ordersPct: pctChange(salesRow.orders, previousPeriod.orders),
+      expensesPct: pctChange(expRow.total, previousPeriod.expenses),
+      profitPct: isOwner ? pctChange(profitRow.net, previousPeriod.profit) : null,
+      collectionsPct: pctChange(currentCollectionsTotal, previousPeriod.collections),
+      avgOrderPct: pctChange(
+        salesRow.orders > 0 ? salesRow.total / Math.max(1, salesRow.orders) : 0,
+        previousPeriod.avgOrderValue
+      ),
+    };
+  }, [previousPeriod, salesRow, expRow, collections, profitRow, isOwner]);
+
   const aiInsights = useMemo<InsightItem[]>(() => {
     const items: InsightItem[] = [];
+    const salesDelta = previousDeltas.salesPct;
+    const expenseDelta = previousDeltas.expensesPct;
+    const profitDelta = previousDeltas.profitPct;
+    const collectionsDelta = previousDeltas.collectionsPct;
+    const avgOrderDelta = previousDeltas.avgOrderPct;
+    const currentCollectionsTotal =
+      toNum(collections.cash) +
+      toNum(collections.bank) +
+      toNum(collections.mobile) +
+      toNum(collections.other);
 
     if (health?.label === "EXCELLENT") {
       items.push({
@@ -2273,11 +2775,29 @@ export default function FinanceHistoryScreen() {
         body: `Health score ni ${health.score}/100 na trend ni ${health.salesTrend}. Endelea kusukuma bidhaa zinazouza zaidi na linda margin iliyopo.`,
       });
     } else if (health?.label === "GOOD") {
+      const salesNow = toNum(salesRow.total);
+      const expensesNow = toNum(expRow.total);
+      const expenseRatioNow = salesNow > 0 ? (expensesNow / Math.max(1, salesNow)) * 100 : 0;
+
+      let goodBody = `Health score ni ${health.score}/100. Kuna msingi mzuri wa biashara.`;
+
+      if (expensesNow > 0 && expenseRatioNow >= 20) {
+        goodBody += " Endelea kufuatilia expenses na kasi ya mauzo.";
+      } else if (expensesNow > 0) {
+        goodBody += " Endelea kufuatilia kasi ya mauzo na matumizi ya kawaida ya biashara.";
+      } else if (health.salesTrend === "DECLINING") {
+        goodBody += " Endelea kufuatilia kasi ya mauzo kwa karibu.";
+      } else if (toNum(pay.credit_today) > 0 || toNum(pay.credit_outstanding || pay.credit) > 0) {
+        goodBody += " Endelea kufuatilia credit na collections kwa ukaribu.";
+      } else {
+        goodBody += " Mauzo, margin, na matumizi vinaonekana kuwa kwenye mstari mzuri.";
+      }
+
       items.push({
         id: "health-good",
         tone: "info",
         title: "Biashara iko vizuri",
-        body: `Health score ni ${health.score}/100. Kuna msingi mzuri, lakini endelea kufuatilia expenses na kasi ya mauzo.`,
+        body: goodBody,
       });
     } else if (health?.label === "WATCH") {
       items.push({
@@ -2287,11 +2807,24 @@ export default function FinanceHistoryScreen() {
         body: `Health score ni ${health.score}/100. Angalia margin, expense ratio, na bidhaa ambazo hazizunguki vizuri.`,
       });
     } else if (health?.label === "CRITICAL") {
+      const hasExpensePressureNow =
+        salesRow.total > 0 && expRow.total > 0 ? expRow.total / salesRow.total >= 0.35 : false;
+
+      const hasCreditPressureNow =
+        toNum(pay.credit_outstanding || pay.credit) > 0 &&
+        currentCollectionsTotal < Math.max(1, toNum(pay.credit_outstanding || pay.credit) * 0.35);
+
+      const criticalBody = hasExpensePressureNow
+        ? "Punguza matumizi yasiyo ya lazima, sukuma bidhaa zenye mzunguko, na hakikisha cash-in haichelewi."
+        : hasCreditPressureNow
+          ? "Harakisha collections, simamia credit kwa karibu, na linda cash-in ya karibu."
+          : "Sukuma bidhaa zenye movement, boresha follow-up ya mauzo, na linda cashflow ya karibu.";
+
       items.push({
         id: "health-critical",
         tone: "danger",
         title: "Hatua ya haraka inahitajika",
-        body: `Health score ni ${health?.score ?? 0}/100. Punguza matumizi, sukuma bidhaa zenye mzunguko, na hakikisha cash-in haichelewi.`,
+        body: `Health score ni ${health?.score ?? 0}/100. ${criticalBody}`,
       });
     }
 
@@ -2299,27 +2832,45 @@ export default function FinanceHistoryScreen() {
       const avgOrder = salesRow.total / Math.max(1, salesRow.orders);
       items.push({
         id: "avg-order",
-        tone: "info",
+        tone: avgOrderDelta != null && avgOrderDelta < -5 ? "warn" : "info",
         title: "Average order value",
-        body: `Kila order kwa wastani ni ${fmt(avgOrder)}. Tumia hii kupima kama upsell/cross-sell zinafanya kazi kwenye kipindi hiki.`,
+        body: `Kila order kwa wastani ni ${fmt(avgOrder)}.${
+          avgOrderDelta != null
+            ? ` Ukilinganisha na previous period, imebadilika kwa ${avgOrderDelta.toFixed(1)}%.`
+            : ""
+        } Tumia hii kupima kama upsell/cross-sell zinafanya kazi kwenye kipindi hiki.`,
       });
     }
 
-    if (pay.credit > 0) {
-      items.push({
-        id: "credit-balance",
-        tone: "warn",
-        title: "Kuna pesa bado kwenye Credit",
-        body: `Credit balance ni ${fmt(pay.credit)}. Hii si money-in bado, hivyo fanya follow-up ya makusanyo ili cash flow isikwame.`,
-      });
-    }
+    const creditOutstanding = toNum(pay.credit_outstanding || pay.credit);
+    const creditToday = toNum(pay.credit_today);
 
-    if (collections.payments > 0 && cTotalNum > 0) {
+    if (creditOutstanding > 0 || creditToday > 0 || (collections.payments > 0 && currentCollectionsTotal > 0)) {
       items.push({
-        id: "collections",
-        tone: "good",
-        title: "Makusanyo ya credit yameingia",
-        body: `Umekusanya ${fmt(cTotalNum)} kutoka kwenye malipo ${collections.payments}. Hii ni dalili nzuri ya kurejesha cash flow.`,
+        id: "credit-collections-summary",
+        tone:
+          creditOutstanding > 0 && currentCollectionsTotal < Math.max(1, creditOutstanding * 0.35)
+            ? "warn"
+            : "info",
+        title: "Credit & Collections",
+        body:
+          creditToday > 0 || creditOutstanding > 0
+            ? `Credit ya leo ni ${fmt(creditToday)} na outstanding credit yote ni ${fmt(
+                creditOutstanding
+              )}. ${
+                currentCollectionsTotal > 0
+                  ? `Makusanyo yaliyoingia ni ${fmt(currentCollectionsTotal)} kupitia malipo ${collections.payments}.`
+                  : "Hakuna collections zilizoingia kwenye range hii."
+              }${
+                collectionsDelta != null
+                  ? ` Movement vs previous period ni ${collectionsDelta.toFixed(1)}%.`
+                  : ""
+              } Endelea na follow-up ili cash flow ikae imara.`
+            : `Umekusanya ${fmt(currentCollectionsTotal)} kutoka kwenye malipo ${collections.payments}.${
+                collectionsDelta != null
+                  ? ` Movement vs previous period ni ${collectionsDelta.toFixed(1)}%.`
+                  : ""
+              } Hii ni signal nzuri ya kurejesha cash flow.`,
       });
     }
 
@@ -2458,6 +3009,61 @@ export default function FinanceHistoryScreen() {
             scope === "ALL"
               ? `${topLow.product_name}${lowStore ? ` (${lowStore})` : ""} ipo low-stock na on-hand ni ${topLow.stock_on_hand}. Panga restock mapema.`
               : `${topLow.product_name} ipo low-stock na on-hand ni ${topLow.stock_on_hand}. Panga restock mapema kabla mauzo hayajasimama.`,
+        });
+      }
+    }
+
+    if (salesDelta != null) {
+      if (salesDelta <= -10) {
+        items.push({
+          id: "sales-down-vs-prev",
+          tone: "danger",
+          title: "Sales zimeshuka dhidi ya previous period",
+          body: `Sales zimebadilika kwa ${salesDelta.toFixed(
+            1
+          )}% dhidi ya kipindi kilichopita chenye ukubwa sawa. Hii inaonyesha weakness ya demand, execution, au stock availability.`,
+        });
+      } else if (salesDelta >= 10) {
+        items.push({
+          id: "sales-up-vs-prev",
+          tone: "good",
+          title: "Sales zimepanda dhidi ya previous period",
+          body: `Sales zimeongezeka kwa ${salesDelta.toFixed(
+            1
+          )}% dhidi ya previous period. Hii ni signal ya momentum nzuri ya biashara ndani ya range hii.`,
+        });
+      }
+    }
+
+    if (expenseDelta != null && expenseDelta >= 12) {
+      items.push({
+        id: "expenses-rising-vs-prev",
+        tone: "warn",
+        title: "Expenses zimekua haraka",
+        body: `Expenses zimeongezeka kwa ${expenseDelta.toFixed(
+          1
+        )}% dhidi ya previous period. Kagua kama ongezeko hili lina support na sales growth au ni leakage ya matumizi.`,
+      });
+    }
+
+    if (isOwner && profitDelta != null) {
+      if (profitDelta <= -12) {
+        items.push({
+          id: "profit-down-vs-prev",
+          tone: "danger",
+          title: "Profit imeharibika dhidi ya previous period",
+          body: `Profit imebadilika kwa ${profitDelta.toFixed(
+            1
+          )}%. Hii ni signal ya kuangalia pricing, cost, na matumizi kwa pamoja badala ya kuangalia sales pekee.`,
+        });
+      } else if (profitDelta >= 12) {
+        items.push({
+          id: "profit-up-vs-prev",
+          tone: "good",
+          title: "Profit imeimarika dhidi ya previous period",
+          body: `Profit imeongezeka kwa ${profitDelta.toFixed(
+            1
+          )}%. Hii inaonyesha improvement kwenye margin, expense control, au mix ya bidhaa.`,
         });
       }
     }
@@ -2628,6 +3234,9 @@ export default function FinanceHistoryScreen() {
     health,
     salesRow,
     pay.credit,
+    pay.credit_today,
+    pay.credit_outstanding,
+    collections,
     collections.payments,
     cTotalNum,
     expRow.total,
@@ -2642,18 +3251,260 @@ export default function FinanceHistoryScreen() {
     storesMeta,
     profitRow,
     isOwner,
+    previousDeltas,
   ]);
 
   const currentCacheKey = `${orgId}|${scope}|${storeId}|${mode}|${dateFrom}|${dateTo}`;
   const hasCache = cacheRef.current.has(currentCacheKey);
 
+  
+
+  const executiveSummary = useMemo<ExecutiveSummary>(() => {
+    const salesDelta = previousDeltas.salesPct;
+    const expenseDelta = previousDeltas.expensesPct;
+    const profitDelta = previousDeltas.profitPct;
+
+    const currentCollectionsTotal =
+      toNum(collections.cash) + toNum(collections.bank) + toNum(collections.mobile) + toNum(collections.other);
+
+    const creditOutstanding = toNum(pay.credit_outstanding || pay.credit);
+    const creditToday = toNum(pay.credit_today);
+    const hasLiquidityPressure =
+      creditOutstanding > 0 && currentCollectionsTotal > 0
+        ? currentCollectionsTotal < creditOutstanding * 0.35
+        : creditOutstanding > 0;
+
+    const hasExpensePressure =
+      salesRow.total > 0 && expRow.total > 0 ? expRow.total / salesRow.total >= 0.3 : false;
+
+    const hasStockPressure =
+      !!forecast && (forecast.stockout_risk_count > 0 || forecast.urgent_restock_count > 0);
+
+    const rangeDays = Math.max(1, diffDaysInclusive(dateFrom, dateTo));
+
+    if (health?.label === "CRITICAL") {
+      const primaryAction = hasExpensePressure
+        ? "Kipaumbele cha kwanza ni kudhibiti expenses na kulinda margin."
+        : hasLiquidityPressure
+          ? "Kipaumbele cha kwanza ni kulinda cashflow na kuharakisha collections."
+          : "Kipaumbele cha kwanza ni kuongeza movement ya mauzo na kulinda stock ya vitu vinavyotoka.";
+
+      return {
+        tone: "danger",
+        title: "Biashara inahitaji hatua ya haraka",
+        body: `${
+          salesDelta != null ? `Sales change ni ${salesDelta.toFixed(1)}% dhidi ya previous period. ` : ""
+        }${
+          isOwner && profitDelta != null ? `Profit change ni ${profitDelta.toFixed(1)}%. ` : ""
+        }${
+          forecast ? `Forecast trend ni ${forecast.trend_label} (${forecast.trend_pct.toFixed(1)}%). ` : ""
+        }${
+          rangeDays <= 1
+            ? "Hii ni one-day view, hivyo swings zinaweza kuwa kali kuliko trend halisi. "
+            : ""
+        }${primaryAction}`
+      };
+    }
+
+    if (health?.label === "WATCH") {
+      return {
+        tone: "warn",
+        title: "Biashara iko kwenye zone ya tahadhari",
+        body: `${
+          salesDelta != null ? `Sales change ni ${salesDelta.toFixed(1)}%. ` : ""
+        }${
+          hasExpensePressure ? `Expense ratio iko juu kuliko kawaida. ` : ""
+        }${
+          hasLiquidityPressure ? `Outstanding credit ni ${fmt(creditOutstanding)}. ` : ""
+        }${
+          rangeDays <= 1
+            ? "One-day comparison itumike kwa tahadhari; 7d au 30d itatoa picha iliyo stable zaidi. "
+            : ""
+        }Focus iwe kwenye signal kuu inayoonekana kwenye kipindi hiki.`
+      };
+    }
+
+    if (hasLiquidityPressure || hasStockPressure || creditToday > 0) {
+      return {
+        tone: "info",
+        title: "Biashara inaendelea, lakini control ya cash na stock inahitajika",
+        body: `${creditToday > 0 ? `Credit ya leo ni ${fmt(creditToday)}. ` : ""}${
+          creditOutstanding > 0 ? `Outstanding credit yote ni ${fmt(creditOutstanding)}. ` : ""
+        }${
+          hasStockPressure && forecast
+            ? `${forecast.stockout_risk_count} stockout risks na ${forecast.urgent_restock_count} urgent restock signals zimeonekana. `
+            : ""
+        }Endelea kusimamia collections na restock ya fast-moving items.`
+      };
+    }
+
+    return {
+      tone: "good",
+      title: "Biashara iko kwenye mstari mzuri",
+      body: `${
+        salesDelta != null ? `Sales change vs previous period ni ${salesDelta.toFixed(1)}%. ` : ""
+      }${
+        previousDeltas.avgOrderPct != null
+          ? `Average order value imebadilika kwa ${previousDeltas.avgOrderPct.toFixed(1)}%. `
+          : ""
+      }Signals kuu zinaonyesha utulivu mzuri wa biashara ndani ya kipindi hiki.`
+    };
+  }, [
+    previousDeltas,
+    collections,
+    pay.credit,
+    pay.credit_today,
+    pay.credit_outstanding,
+    salesRow,
+    expRow,
+    profitRow,
+    forecast,
+    isOwner,
+    fmt,
+    health,
+    dateFrom,
+    dateTo,
+  ]);
+
+  const priorityActions = useMemo<PriorityAction[]>(() => {
+    const items: PriorityAction[] = [];
+    const currentCollectionsTotal =
+      toNum(collections.cash) + toNum(collections.bank) + toNum(collections.mobile) + toNum(collections.other);
+
+    const creditOutstanding = toNum(pay.credit_outstanding || pay.credit);
+    const creditToday = toNum(pay.credit_today);
+
+    if (creditOutstanding > 0 || creditToday > 0) {
+      const creditPriority: PriorityAction["priority"] =
+        creditToday > 0 ? "NOW" : "NEXT";
+
+      items.push({
+        id: "collect-credit",
+        title: "Simamia credit kwa ukaribu",
+        body:
+          creditToday > 0
+            ? `Credit ya leo ni ${fmt(creditToday)}, na outstanding credit yote ni ${fmt(creditOutstanding)}. Hii si money-in bado, hivyo follow-up ya wadaiwa na collections iwe ya karibu.`
+            : `Outstanding credit yote ni ${fmt(creditOutstanding)}. Hii ni backlog ya madeni ambayo inahitaji collections za karibu, lakini isiichanganye na sales za leo pekee.`,
+        priority: creditPriority,
+        tone: creditToday > 0
+          ? "danger"
+          : creditOutstanding > salesRow.total * 0.35
+            ? "warn"
+            : "info",
+      });
+    }
+
+    if (forecast && forecast.urgent_restock_count > 0) {
+      items.push({
+        id: "urgent-restock",
+        title: "Panga urgent restock",
+        body: `${forecast.urgent_restock_count} bidhaa ziko kwenye urgent restock. Kwanza linda bidhaa zinazobeba movement kabla sales hazijakatika.`,
+        priority: "NOW",
+        tone: "danger",
+      });
+    }
+
+    if (salesRow.total > 0 && expRow.total / Math.max(1, salesRow.total) >= 0.3) {
+      items.push({
+        id: "control-expenses",
+        title: "Bana matumizi yasiyo ya lazima",
+        body: `Expense ratio ya kipindi hiki ni ${((expRow.total / Math.max(1, salesRow.total)) * 100).toFixed(
+          1
+        )}%. Review cash expenses, recurring spend, na matumizi yasiyoleta movement ya moja kwa moja.`,
+        priority: "NOW",
+        tone: "warn",
+      });
+    }
+
+    if (mode === "PROFIT" && scope === "STORE" && productProfitRows.length) {
+      const weakMargin = [...productProfitRows].sort((a, b) => a.profit_margin_pct - b.profit_margin_pct)[0];
+      if (weakMargin) {
+        items.push({
+          id: "fix-margin",
+          title: "Kagua bidhaa yenye weak margin",
+          body: `${weakMargin.product_name} ina gross margin ya ${weakMargin.profit_margin_pct.toFixed(
+            1
+          )}%. Kagua pricing, discount, au cost source yake.`,
+          priority: "NEXT",
+          tone: "warn",
+        });
+      }
+    }
+
+    if (scope === "ALL" && comparisonRows.length > 1) {
+      const weakest = bottomStoreRow(comparisonRows, mode);
+      const leader = comparisonRows[0];
+
+      if (weakest && leader && weakest.storeId !== leader.storeId) {
+        items.push({
+          id: "store-gap",
+          title: "Linganisha weakest store dhidi ya leader",
+          body: `${weakest.storeName} inahitaji review dhidi ya ${leader.storeName}. Angalia stock mix, mauzo, display, na expense behavior.`,
+          priority: "NEXT",
+          tone: "info",
+        });
+      }
+    }
+
+    if (currentCollectionsTotal > 0 && cashflow?.confidence === "LOW") {
+      items.push({
+        id: "cashflow-watch",
+        title: "Tumia range pana zaidi kwa planning",
+        body: "Cashflow confidence iko LOW. Tumia 30d au 90d ili projection ya maamuzi ya muda mfupi iwe imara zaidi.",
+        priority: "WATCH",
+        tone: "info",
+      });
+    }
+
+    if (!items.length) {
+      items.push({
+        id: "default-action",
+        title: "Endelea kufuatilia trend",
+        body: "Data ya sasa haijaonyesha emergency kubwa. Endelea kufuatilia sales trend, stock movement, na order value.",
+        priority: "WATCH",
+        tone: "info",
+      });
+    }
+
+    const order = { NOW: 0, NEXT: 1, WATCH: 2 } as const;
+    return items.sort((a, b) => order[a.priority] - order[b.priority]).slice(0, 5);
+  }, [
+    pay.credit,
+    pay.credit_today,
+    pay.credit_outstanding,
+    forecast,
+    salesRow,
+    expRow,
+    mode,
+    scope,
+    productProfitRows,
+    comparisonRows,
+    collections,
+    cashflow,
+    fmt,
+  ]);
+
   return (
     <Screen>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingTop: 16, paddingHorizontal: 16, paddingBottom: 24 }}
+        contentContainerStyle={{
+          paddingTop: 14,
+          paddingHorizontal: pageSidePad,
+          paddingBottom: 20,
+          width: "100%",
+          maxWidth: pageMaxWidth,
+          alignSelf: isDesktopWeb ? "center" : "stretch",
+        }}
       >
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 10,
+            justifyContent: "space-between",
+          }}
+        >
           <Pressable
             onPress={() => router.back()}
             hitSlop={10}
@@ -2669,7 +3520,7 @@ export default function FinanceHistoryScreen() {
               opacity: pressed ? 0.92 : 1,
             })}
           >
-            <Ionicons name="arrow-back" size={18} color={UI.text} />
+            <SafeIcon name="arrow-back" size={18} color={UI.text} />
           </Pressable>
 
           <View
@@ -2699,7 +3550,7 @@ export default function FinanceHistoryScreen() {
                 justifyContent: "center",
               }}
             >
-              <Ionicons name="bar-chart-outline" size={18} color={UI.text} />
+              <SafeIcon name="analytics-outline" size={18} color={UI.text} />
             </View>
 
             <View style={{ flex: 1, minWidth: 0 }}>
@@ -2727,22 +3578,34 @@ export default function FinanceHistoryScreen() {
               opacity: pressed ? 0.92 : 1,
             })}
           >
-            {loading ? (
+            {loading || loadingDeep ? (
               <ActivityIndicator size="small" />
             ) : (
-              <Ionicons name="search" size={18} color={UI.text} />
+              <SafeIcon name="search" size={18} color={UI.text} />
             )}
           </Pressable>
         </View>
 
         <View style={{ height: 12 }} />
 
-        <Card style={{ gap: 10 }}>
+        <Card
+          style={{
+            gap: 10,
+            borderRadius: isDesktopWeb ? 22 : 18,
+            padding: compactCardPad,
+          }}
+        >
           <Text style={{ color: UI.faint, fontWeight: "900", fontSize: 12, letterSpacing: 0.4 }}>
             MODE
           </Text>
 
-          <View style={{ flexDirection: "row", gap: 10 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              gap: 10,
+              flexWrap: isDesktopWeb ? "nowrap" : "wrap",
+            }}
+          >
             <Chip active={mode === "SALES"} label="Sales" onPress={() => setMode("SALES")} />
             <Chip
               active={mode === "EXPENSES"}
@@ -2766,7 +3629,13 @@ export default function FinanceHistoryScreen() {
               >
                 SCOPE
               </Text>
-              <View style={{ flexDirection: "row", gap: 10 }}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  gap: 10,
+                  flexWrap: isDesktopWeb ? "nowrap" : "wrap",
+                }}
+              >
                 <SmallChip
                   active={scope === "STORE"}
                   label="STORE"
@@ -2783,7 +3652,12 @@ export default function FinanceHistoryScreen() {
             DATE RANGE (YYYY-MM-DD)
           </Text>
 
-          <View style={{ flexDirection: "row", gap: 10 }}>
+          <View
+            style={{
+              flexDirection: isDesktopWeb ? "row" : "column",
+              gap: 10,
+            }}
+          >
             <View style={{ flex: 1 }}>
               <Text style={{ color: UI.muted, fontWeight: "800", marginBottom: 6 }}>From</Text>
               <TextInput
@@ -2827,7 +3701,15 @@ export default function FinanceHistoryScreen() {
             </View>
           </View>
 
-          <View style={{ flexDirection: "row", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
+          <View
+            style={{
+              flexDirection: "row",
+              gap: 10,
+              marginTop: 10,
+              flexWrap: "wrap",
+              alignItems: "center",
+            }}
+          >
             <SmallChip active={false} label="Today" onPress={() => applyQuick("today")} />
             <SmallChip active={false} label="7 Days" onPress={() => applyQuick("7d")} />
             <SmallChip active={false} label="30 Days" onPress={() => applyQuick("30d")} />
@@ -2851,35 +3733,214 @@ export default function FinanceHistoryScreen() {
 
         <View style={{ height: 12 }} />
 
-        <Card style={{ gap: 10 }}>
+        <Card
+          style={{
+            gap: 12,
+            padding: compactCardPad,
+            borderRadius: 22,
+            borderColor: "rgba(16,185,129,0.22)",
+            backgroundColor: "rgba(15,18,24,0.98)",
+            overflow: "hidden",
+          }}
+        >
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>Results</Text>
 
           {loading && !hasCache ? (
             <View style={{ paddingVertical: 18 }}>
               <ActivityIndicator />
-            </View>
-          ) : mode === "SALES" ? (
-            <View style={{ gap: 12 }}>
-              <View style={{ flexDirection: "row", gap: 12 }}>
+            </View>) : mode === "SALES" ? (
+            <View style={{ gap: 10 }}>
+              <View
+                style={{
+                  flexDirection: isDesktopWeb ? "row" : "column",
+                  gap: 12,
+                }}
+              >
                 <MiniStat label="Sales" value={salesTotal} />
                 <MiniStat label="Orders" value={salesOrders} />
                 <MiniStat label="Avg/Order" value={String(salesAvg).replace(/\s+/g, " ")} />
               </View>
 
-              <View style={{ flexDirection: "row", gap: 12 }}>
+              <View
+  style={{
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    alignItems: "stretch",
+  }}
+>
                 <MiniStat label="Direct Sales" value={directOrdersText} hint="normal sales" />
                 <MiniStat label="Club Sales" value={clubOrdersText} hint="club orders" />
-                <View style={{ flex: 1 }} />
+                
+              </View>
+
+              <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
+
+              <Text
+                style={{ color: UI.faint, fontWeight: "900", fontSize: 12, letterSpacing: 0.3 }}
+              >
+                PAYMENT BREAKDOWN (AFTER EXPENSES + CREDIT BALANCE)
+              </Text>
+
+              <View
+                style={{
+                  flexDirection: "row",
+                  flexWrap: "wrap",
+                  gap: 10,
+                  alignItems: "stretch",
+                }}
+              >
+                <MiniStat label="Cash" value={availableCash} hint="after expense" />
+                <MiniStat label="Bank" value={availableBank} hint="after expense" />
+                <MiniStat label="Mobile" value={availableMobile} hint="after expense" />
+                <MiniStat label="Credit Today" value={creditToday} hint="sold on credit" />
+              </View>
+
+              <WideStatCard
+                title="TOTAL MONEY IN"
+                subtitle="after expenses"
+                value={totalMoneyIn}
+                hint="Hii imejitenga makusudi ili isichanganyike na Cash / Bank / Mobile. Total Money In = pesa yote inayopatikana baada ya kuondoa expenses za channel husika."
+              />
+
+              <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
+
+              <Text
+                style={{ color: UI.faint, fontWeight: "900", fontSize: 12, letterSpacing: 0.3 }}
+              >
+                EXPENSES BY PAYMENT CHANNEL
+              </Text>
+
+              <View
+  style={{
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    alignItems: "stretch",
+  }}
+>
+                <MiniStat label="Cash" value={expenseCash} />
+                <MiniStat label="Mobile" value={expenseMobile} />
+                <MiniStat
+                  label="Total"
+                  value={expenseByChannelsTotal}
+                  hint={`${expPay.count} expenses`}
+                />
+              </View>
+
+              <View
+  style={{
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    alignItems: "stretch",
+  }}
+>
+                <MiniStat label="Bank" value={expenseBank} />
+                <MiniStat label="Other" value={expenseOther} />
+               
+              </View>
+
+              <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
+
+              <Text
+                style={{ color: UI.faint, fontWeight: "900", fontSize: 12, letterSpacing: 0.3 }}
+              >
+                CREDIT COLLECTIONS (PAYMENTS RECEIVED)
+              </Text>
+
+            <View
+  style={{
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    alignItems: "stretch",
+  }}
+>
+                <MiniStat label="Cash" value={cCash} />
+                <MiniStat label="Mobile" value={cMobile} />
+                <MiniStat label="Total" value={cTotal} hint={`${cPayments} payments`} />
+              </View>
+
+             <View
+  style={{
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    alignItems: "stretch",
+  }}
+>
+                <MiniStat label="Bank" value={cBank} />
+                
+                <View style={{flex: 1 }} />
               </View>
 
               <View
                 style={{
-                  borderRadius: 20,
+                  marginTop: 4,
+                  borderRadius: 18,
+                  borderWidth: 1,
+                  borderColor: "rgba(16,185,129,0.26)",
+                  backgroundColor: "rgba(16,185,129,0.08)",
+                  padding: 11,
+                  gap: 8,
+                }}
+              >
+                <Text
+                  style={{
+                    color: UI.text,
+                    fontWeight: "900",
+                    fontSize: 13,
+                    letterSpacing: 0.35,
+                  }}
+                >
+                  MONEY-IN BREAKDOWN SUMMARY
+                </Text>
+
+                <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.10)" }} />
+
+                <View
+                  style={{
+                    flexDirection: "row",
+                    flexWrap: "wrap",
+                    gap: 10,
+                    alignItems: "stretch",
+                  }}
+                >
+                  <MiniStat label="Cash In" value={totalInCash} />
+                  <MiniStat label="Bank In" value={totalInBank} />
+                  <MiniStat label="Mobile In" value={totalInMobile} />
+                </View>
+
+                <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, lineHeight: 19 }}>
+                  Includes: Sales PAID + Credit Collections received. Then subtracts expenses from
+                  the same payment channel. Excludes: Credit (Balance).
+                </Text>
+
+                <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
+
+              <View
+                  style={{
+                    flexDirection: "row",
+                    flexWrap: "wrap",
+                    gap: 10,
+                    alignItems: "stretch",
+                  }}
+                >
+                  <MiniStat label="Sales Paid" value={paidMoneyIn} hint="before expense" />
+                  <MiniStat label="Collections" value={cTotal} hint="payments received" />
+                  <MiniStat label="Outstanding Credit" value={creditOutstanding} hint="all unpaid credit" />
+                </View>
+              </View>
+
+              <View
+                style={{
+                  borderRadius: 18,
                   borderWidth: 1,
                   borderColor: "rgba(16,185,129,0.24)",
                   backgroundColor: "rgba(16,185,129,0.07)",
-                  padding: 12,
-                  gap: 10,
+                  padding: 11,
+                  gap: 8,
                 }}
               >
                 <View style={{ flexDirection: "row", alignItems: "center" }}>
@@ -2888,15 +3949,23 @@ export default function FinanceHistoryScreen() {
                   >
                     RECEIPTS SUMMARY
                   </Text>
-                  <View style={{ flex: 1 }} />
-                  <Text style={{ color: UI.faint, fontWeight: "900", fontSize: 12 }}>
+                  <Text
+                    style={{ color: UI.faint, fontWeight: "900", fontSize: 12, marginLeft: "auto" }}
+                  >
                     after expenses
                   </Text>
                 </View>
 
                 <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.10)" }} />
 
-                <View style={{ flexDirection: "row", gap: 12 }}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    flexWrap: "wrap",
+                    gap: 10,
+                    alignItems: "stretch",
+                  }}
+                >
                   <MiniStat
                     label="Total Receipts"
                     value={totalReceipts}
@@ -2910,125 +3979,17 @@ export default function FinanceHistoryScreen() {
                   Credit collections) - expenses by payment channel.
                 </Text>
               </View>
-
-              <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
-
-              <Text
-                style={{ color: UI.faint, fontWeight: "900", fontSize: 12, letterSpacing: 0.3 }}
-              >
-                PAYMENT BREAKDOWN (AFTER EXPENSES + CREDIT BALANCE)
-              </Text>
-
-              <View style={{ flexDirection: "row", gap: 12 }}>
-                <MiniStat label="Cash" value={availableCash} hint="after expense" />
-                <MiniStat label="Mobile" value={availableMobile} hint="after expense" />
-                <MiniStat label="Total Money In" value={totalMoneyIn} hint="available + received" />
-              </View>
-
-              <View style={{ flexDirection: "row", gap: 12 }}>
-                <MiniStat label="Bank" value={availableBank} hint="after expense" />
-                <MiniStat label="Credit (Balance)" value={credit} hint="not money-in" />
-                <View style={{ flex: 1 }} />
-              </View>
-
-              <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
-
-              <Text
-                style={{ color: UI.faint, fontWeight: "900", fontSize: 12, letterSpacing: 0.3 }}
-              >
-                EXPENSES BY PAYMENT CHANNEL
-              </Text>
-
-              <View style={{ flexDirection: "row", gap: 12 }}>
-                <MiniStat label="Cash" value={expenseCash} />
-                <MiniStat label="Mobile" value={expenseMobile} />
-                <MiniStat
-                  label="Total"
-                  value={expenseByChannelsTotal}
-                  hint={`${expPay.count} expenses`}
-                />
-              </View>
-
-              <View style={{ flexDirection: "row", gap: 12 }}>
-                <MiniStat label="Bank" value={expenseBank} />
-                <MiniStat label="Other" value={expenseOther} />
-                <View style={{ flex: 1 }} />
-              </View>
-
-              <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
-
-              <Text
-                style={{ color: UI.faint, fontWeight: "900", fontSize: 12, letterSpacing: 0.3 }}
-              >
-                CREDIT COLLECTIONS (PAYMENTS RECEIVED)
-              </Text>
-
-              <View style={{ flexDirection: "row", gap: 12 }}>
-                <MiniStat label="Cash" value={cCash} />
-                <MiniStat label="Mobile" value={cMobile} />
-                <MiniStat label="Total" value={cTotal} hint={`${cPayments} payments`} />
-              </View>
-
-              <View style={{ flexDirection: "row", gap: 12 }}>
-                <MiniStat label="Bank" value={cBank} />
-                <View style={{ flex: 1 }} />
-                <View style={{ flex: 1 }} />
-              </View>
-
-              <View
-                style={{
-                  marginTop: 6,
-                  borderRadius: 20,
-                  borderWidth: 1,
-                  borderColor: "rgba(16,185,129,0.26)",
-                  backgroundColor: "rgba(16,185,129,0.08)",
-                  padding: 12,
-                  gap: 10,
-                }}
-              >
-                <View style={{ flexDirection: "row", alignItems: "center" }}>
-                  <Text
-                    style={{ color: UI.text, fontWeight: "900", fontSize: 13, letterSpacing: 0.3 }}
-                  >
-                    TOTAL MONEY IN
-                  </Text>
-                  <View style={{ flex: 1 }} />
-                  <Text style={{ color: UI.faint, fontWeight: "900", fontSize: 12 }}>
-                    after expenses
-                  </Text>
-                </View>
-
-                <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.10)" }} />
-
-                <View style={{ flexDirection: "row", gap: 12 }}>
-                  <MiniStat label="Cash" value={totalInCash} />
-                  <MiniStat label="Mobile" value={totalInMobile} />
-                  <MiniStat label="Total" value={totalMoneyIn} hint="available" />
-                </View>
-
-                <View style={{ flexDirection: "row", gap: 12 }}>
-                  <MiniStat label="Bank" value={totalInBank} />
-                  <View style={{ flex: 1 }} />
-                  <View style={{ flex: 1 }} />
-                </View>
-
-                <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                  Includes: Sales PAID + Credit Collections received. Then subtracts expenses from
-                  the same payment channel. Excludes: Credit (Balance).
-                </Text>
-
-                <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
-
-                <View style={{ flexDirection: "row", gap: 12 }}>
-                  <MiniStat label="Sales Paid" value={paidMoneyIn} hint="before expense" />
-                  <MiniStat label="Collections" value={cTotal} hint="payments received" />
-                  <View style={{ flex: 1 }} />
-                </View>
-              </View>
-            </View>
+            </View>  
           ) : mode === "EXPENSES" ? (
-            <View style={{ gap: 12 }}>
-              <View style={{ flexDirection: "row", gap: 12 }}>
+            <View style={{ gap: 10 }}>
+            <View
+  style={{
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    alignItems: "stretch",
+  }}
+>
                 <MiniStat label="Expenses" value={expTotal} />
                 <MiniStat label="Count" value={expCount} />
                 <MiniStat label="Avg/Expense" value={String(expAvg).replace(/\s+/g, " ")} />
@@ -3042,7 +4003,14 @@ export default function FinanceHistoryScreen() {
                 EXPENSE CHANNEL BREAKDOWN
               </Text>
 
-              <View style={{ flexDirection: "row", gap: 12 }}>
+              <View
+ style={{
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    alignItems: "stretch",
+  }} 
+>
                 <MiniStat label="Cash" value={expenseCash} />
                 <MiniStat label="Mobile" value={expenseMobile} />
                 <MiniStat
@@ -3052,15 +4020,29 @@ export default function FinanceHistoryScreen() {
                 />
               </View>
 
-              <View style={{ flexDirection: "row", gap: 12 }}>
+              <View
+  style={{
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    alignItems: "stretch",
+  }}
+>
                 <MiniStat label="Bank" value={expenseBank} />
                 <MiniStat label="Other" value={expenseOther} />
-                <View style={{ flex: 1 }} />
+                
               </View>
             </View>
           ) : (
-            <View style={{ gap: 12 }}>
-              <View style={{ flexDirection: "row", gap: 12 }}>
+            <View style={{ gap: 10 }}>
+             <View
+  style={{
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    alignItems: "stretch",
+  }}
+>
                 <MiniStat label="Net Profit" value={pNet} hint="after expenses" />
                 <MiniStat label="Gross Profit" value={pGross} hint="before expenses" />
                 <MiniStat label="Expenses" value={pExp} />
@@ -3074,7 +4056,14 @@ export default function FinanceHistoryScreen() {
                 EXPENSE CHANNEL BREAKDOWN
               </Text>
 
-              <View style={{ flexDirection: "row", gap: 12 }}>
+              <View
+  style={{
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    alignItems: "stretch",
+  }}
+>
                 <MiniStat label="Cash" value={expenseCash} />
                 <MiniStat label="Mobile" value={expenseMobile} />
                 <MiniStat
@@ -3084,10 +4073,17 @@ export default function FinanceHistoryScreen() {
                 />
               </View>
 
-              <View style={{ flexDirection: "row", gap: 12 }}>
+              <View
+  style={{
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    alignItems: "stretch",
+  }}
+>
                 <MiniStat label="Bank" value={expenseBank} />
                 <MiniStat label="Other" value={expenseOther} />
-                <View style={{ flex: 1 }} />
+                
               </View>
 
               {scope === "STORE" ? (
@@ -3156,7 +4152,14 @@ export default function FinanceHistoryScreen() {
                             </Text>
                           </View>
 
-                          <View style={{ flexDirection: "row", gap: 12 }}>
+                          <View
+  style={{
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    alignItems: "stretch",
+  }}
+>
                             <MiniStat label="Revenue" value={fmt(row.revenue)} />
                             <MiniStat label="Cost" value={fmt(row.estimated_cost)} />
                             <MiniStat
@@ -3165,10 +4168,17 @@ export default function FinanceHistoryScreen() {
                             />
                           </View>
 
-                          <View style={{ flexDirection: "row", gap: 12 }}>
+                          <View
+  style={{
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    alignItems: "stretch",
+  }}
+>
                             <MiniStat label="Qty Sold" value={String(row.qty_sold)} />
                             <MiniStat label="Sales Count" value={String(row.sales_count)} />
-                            <View style={{ flex: 1 }} />
+                           
                           </View>
                         </View>
                       ))}
@@ -3215,502 +4225,784 @@ export default function FinanceHistoryScreen() {
 
         <View style={{ height: 12 }} />
 
-        <SectionCard
-          title="AI Actionable Insights"
-          subtitle="Ushauri wa biashara kutoka kwenye data ya kipindi ulichochagua"
-          icon="sparkles-outline"
-          open={showInsights}
-          onToggle={() => setShowInsights((v) => !v)}
-          rightNode={loading ? <ActivityIndicator /> : null}
-        >
-          <View style={{ gap: 10 }}>
-            {aiInsights.map((item) => {
-              const toneStyle = getInsightToneStyle(item.tone);
-              return (
+      <View
+        style={{
+          flexDirection: "column",
+          alignItems: "stretch",
+          gap: sectionGap,
+          width: "100%",
+        }}
+      >
+          <View
+            style={{
+              width: "100%",
+              minWidth: 0,
+              gap: sectionGap,
+            }}
+          >
+            <SectionCard
+              title="AI Actionable Insights"
+              subtitle="Ushauri wa biashara kutoka kwenye data ya kipindi ulichochagua"
+              icon="sparkles-outline"
+              open={showInsights}
+              onToggle={() => setShowInsights((v) => !v)}
+              rightNode={loadingDeep ? <ActivityIndicator /> : null}
+            >
+              <View style={{ gap: 10 }}>
                 <View
-                  key={item.id}
                   style={{
-                    borderRadius: 18,
+                    borderRadius: 20,
                     borderWidth: 1,
-                    borderColor: toneStyle.borderColor,
-                    backgroundColor: toneStyle.backgroundColor,
+                    borderColor: getInsightToneStyle(executiveSummary.tone).borderColor,
+                    backgroundColor: getInsightToneStyle(executiveSummary.tone).backgroundColor,
                     padding: 12,
                     gap: 6,
                   }}
                 >
+                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
+                    Executive Summary
+                  </Text>
                   <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-                    {item.title}
+                    {executiveSummary.title}
                   </Text>
                   <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 20 }}>
-                    {item.body}
+                    {executiveSummary.body}
                   </Text>
                 </View>
-              );
-            })}
-          </View>
-        </SectionCard>
 
-        <View style={{ height: 12 }} />
-
-        <SectionCard
-          title="AI Forecast Engine"
-          subtitle="Projection ya kipindi kijacho kwa kutumia trend ya range uliyochagua"
-          icon="trending-up-outline"
-          open={showForecast}
-          onToggle={() => setShowForecast((v) => !v)}
-          rightNode={loading ? <ActivityIndicator /> : null}
-        >
-          {!!forecastErr && (
-            <Card
-              style={{
-                borderColor: "rgba(201,74,74,0.35)",
-                backgroundColor: "rgba(201,74,74,0.10)",
-                borderRadius: 18,
-                padding: 12,
-              }}
-            >
-              <Text style={{ color: UI.danger, fontWeight: "900" }}>{forecastErr}</Text>
-            </Card>
-          )}
-
-          {forecast ? (
-            <View
-              style={{
-                borderRadius: 20,
-                borderWidth: 1,
-                borderColor:
-                  forecast.trend_label === "INCREASING"
-                    ? "rgba(16,185,129,0.26)"
-                    : forecast.trend_label === "DECLINING"
-                      ? "rgba(245,158,11,0.26)"
-                      : "rgba(59,130,246,0.24)",
-                backgroundColor:
-                  forecast.trend_label === "INCREASING"
-                    ? "rgba(16,185,129,0.08)"
-                    : forecast.trend_label === "DECLINING"
-                      ? "rgba(245,158,11,0.08)"
-                      : "rgba(59,130,246,0.08)",
-                padding: 14,
-                gap: 10,
-              }}
-            >
-              <View style={{ flexDirection: "row", gap: 12 }}>
-                <MiniStat label="Forecast Days" value={String(forecast.forecast_days)} />
-                <MiniStat label="Trend" value={forecast.trend_label} />
-                <MiniStat label="Trend %" value={`${forecast.trend_pct.toFixed(1)}%`} />
-              </View>
-
-              <View style={{ flexDirection: "row", gap: 12 }}>
-                <MiniStat
-                  label="Projected Sales"
-                  value={fmt(forecast.projected_sales_next_period)}
-                />
-                <MiniStat
-                  label="Projected Orders"
-                  value={String(Math.round(forecast.projected_orders_next_period))}
-                />
-                <MiniStat label="Avg/Day" value={fmt(forecast.avg_daily_sales)} />
-              </View>
-
-              <View style={{ flexDirection: "row", gap: 12 }}>
-                <MiniStat label="Stockout Risk" value={String(forecast.stockout_risk_count)} />
-                <MiniStat
-                  label="Urgent Restock"
-                  value={String(forecast.urgent_restock_count)}
-                />
-                <MiniStat
-                  label="Avg Orders/Day"
-                  value={String(forecast.avg_daily_orders.toFixed(1))}
-                />
-              </View>
-
-              <Text style={{ color: UI.text, fontWeight: "800" }}>
-                {forecast.trend_label === "INCREASING"
-                  ? "Momentum inaonekana kuongezeka. Linda stock ya bidhaa zinazotoka na sukuma conversion."
-                  : forecast.trend_label === "DECLINING"
-                    ? "Kuna dalili ya kushuka. Ongeza promo, display, follow-up, na restock ya bidhaa zenye movement."
-                    : "Trend iko stable. Hii ni nafasi ya kuongeza order value, margin, na discipline ya stock."}
-              </Text>
-            </View>
-          ) : (
-            <Text style={{ color: UI.muted, fontWeight: "800" }}>
-              No forecast data yet for this scope and range.
-            </Text>
-          )}
-        </SectionCard>
-
-        <View style={{ height: 12 }} />
-
-        <SectionCard
-          title="AI Cashflow Prediction"
-          subtitle="Projection ya cash-in ya kipindi kijacho kwa kutumia range uliyochagua"
-          icon="cash-outline"
-          open={showCashflow}
-          onToggle={() => setShowCashflow((v) => !v)}
-          rightNode={loading ? <ActivityIndicator /> : null}
-        >
-          {!!cashflowErr && (
-            <Card
-              style={{
-                borderColor: "rgba(201,74,74,0.35)",
-                backgroundColor: "rgba(201,74,74,0.10)",
-                borderRadius: 18,
-                padding: 12,
-              }}
-            >
-              <Text style={{ color: UI.danger, fontWeight: "900" }}>{cashflowErr}</Text>
-            </Card>
-          )}
-
-          {cashflow ? (
-            <View
-              style={{
-                borderRadius: 20,
-                borderWidth: 1,
-                borderColor:
-                  cashflow.confidence === "HIGH"
-                    ? "rgba(16,185,129,0.26)"
-                    : cashflow.confidence === "LOW"
-                      ? "rgba(245,158,11,0.26)"
-                      : "rgba(59,130,246,0.24)",
-                backgroundColor:
-                  cashflow.confidence === "HIGH"
-                    ? "rgba(16,185,129,0.08)"
-                    : cashflow.confidence === "LOW"
-                      ? "rgba(245,158,11,0.08)"
-                      : "rgba(59,130,246,0.08)",
-                padding: 14,
-                gap: 10,
-              }}
-            >
-              <View style={{ flexDirection: "row", gap: 12 }}>
-                <MiniStat label="Forecast Days" value={String(cashflow.forecast_days)} />
-                <MiniStat label="Confidence" value={cashflow.confidence} />
-                <MiniStat label="Scope" value={cashflow.scope_used} />
-              </View>
-
-              <View style={{ flexDirection: "row", gap: 12 }}>
-                <MiniStat label="Projected Cash In" value={fmt(cashflow.projected_cash_in)} />
-                <MiniStat
-                  label="Projected Orders"
-                  value={String(Math.round(cashflow.projected_cash_orders))}
-                />
-                <MiniStat label="Avg Cash/Day" value={fmt(cashflow.avg_daily_cash)} />
-              </View>
-
-              <View style={{ flexDirection: "row", gap: 12 }}>
-                <MiniStat
-                  label="Avg Orders/Day"
-                  value={String(cashflow.avg_daily_orders.toFixed(1))}
-                />
-                <View style={{ flex: 1 }} />
-                <View style={{ flex: 1 }} />
-              </View>
-
-              <Text style={{ color: UI.text, fontWeight: "800" }}>
-                {cashflow.confidence === "HIGH"
-                  ? "Cashflow signal ina nguvu. Unaweza kuitumia kwa planning ya short-term purchasing, collections, na matumizi."
-                  : cashflow.confidence === "LOW"
-                    ? "Cashflow signal bado ni ya tahadhari. Jaribu kutumia range pana zaidi ili prediction iwe imara zaidi."
-                    : "Cashflow signal iko wastani. Tumia pamoja na forecast na collections trend kabla ya kufanya maamuzi makubwa ya matumizi."}
-              </Text>
-            </View>
-          ) : (
-            <Text style={{ color: UI.muted, fontWeight: "800" }}>
-              No cashflow prediction yet for this scope and range.
-            </Text>
-          )}
-        </SectionCard>
-
-        <View style={{ height: 12 }} />
-
-        <SectionCard
-          title="Stock Intelligence"
-          subtitle={
-            scope === "STORE"
-              ? `Store: ${storeName}`
-              : `Org: ${orgName} (ALL stores)`
-          }
-          icon="cube-outline"
-          open={showStockIntel}
-          onToggle={() => setShowStockIntel((v) => !v)}
-          rightNode={loading ? <ActivityIndicator /> : null}
-        >
-          {scope === "ALL" ? (
-            <View
-              style={{
-                borderRadius: 14,
-                borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.08)",
-                backgroundColor: "rgba(255,255,255,0.04)",
-                paddingHorizontal: 12,
-                paddingVertical: 10,
-              }}
-            >
-              <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                Stores in scope:{" "}
-                <Text style={{ color: UI.text, fontWeight: "900" }}>{storeIdsInOrg.length}</Text>
-              </Text>
-            </View>
-          ) : null}
-
-          {!!stockIntelErr && (
-            <Card
-              style={{
-                borderColor: "rgba(201,74,74,0.35)",
-                backgroundColor: "rgba(201,74,74,0.10)",
-                borderRadius: 18,
-                padding: 12,
-              }}
-            >
-              <Text style={{ color: UI.danger, fontWeight: "900" }}>{stockIntelErr}</Text>
-            </Card>
-          )}
-
-          {stockIntelRows.length ? (
-            <View style={{ gap: 12 }}>
-              {stockIntelByBucket.map(({ bucket, rows }) => {
-                const accent = getBucketAccent(bucket);
-
-                return (
+                {previousPeriod ? (
                   <View
-                    key={bucket}
                     style={{
-                      borderRadius: 20,
+                      borderRadius: 18,
                       borderWidth: 1,
-                      borderColor: accent.borderColor,
-                      backgroundColor: accent.backgroundColor,
-                      padding: 12,
-                      gap: 10,
+                      borderColor: "rgba(255,255,255,0.10)",
+                      backgroundColor: "rgba(255,255,255,0.04)",
+                      padding: 11,
+                      gap: 8,
                     }}
                   >
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                      <View style={{ flex: 1, minWidth: 0 }}>
-                        <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-                          {getBucketTitle(bucket)}
-                        </Text>
-                        <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                          {getBucketHint(bucket, scope)}
-                        </Text>
-                      </View>
-                      <Text style={{ color: UI.text, fontWeight: "900" }}>{rows.length}</Text>
+                    <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
+                      Previous Period Comparison
+                    </Text>
+                    <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                      {previousPeriod.fromYMD} → {previousPeriod.toYMD}
+                    </Text>
+
+                    {diffDaysInclusive(dateFrom, dateTo) <= 1 ? (
+                      <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 11 }}>
+                        One-day comparison inaweza kuwa na swings kali zaidi; tumia 7d au 30d kwa trend iliyo stable zaidi.
+                      </Text>
+                    ) : null}
+
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        flexWrap: "wrap",
+                        gap: 10,
+                        alignItems: "stretch",
+                      }}
+                    >
+                      <MiniStat label="Sales Δ" value={percent(previousDeltas.salesPct)} />
+                      <MiniStat label="Orders Δ" value={percent(previousDeltas.ordersPct)} />
+                      <MiniStat label="Avg Order Δ" value={percent(previousDeltas.avgOrderPct)} />
                     </View>
 
-                    {rows.length ? (
-                      rows.slice(0, 6).map((row, idx) => {
-                        const rowStoreName =
-                          row.store_id && storesMeta.has(row.store_id)
-                            ? storesMeta.get(row.store_id)
-                            : "Store";
-
-                        return (
-                          <View
-                            key={`${bucket}-${row.product_id}-${idx}`}
-                            style={{
-                              borderRadius: 16,
-                              borderWidth: 1,
-                              borderColor: "rgba(255,255,255,0.08)",
-                              backgroundColor: "rgba(255,255,255,0.04)",
-                              padding: 12,
-                              gap: 8,
-                            }}
-                          >
-                            <View
-                              style={{
-                                flexDirection: "row",
-                                alignItems: "center",
-                                justifyContent: "space-between",
-                                gap: 10,
-                              }}
-                            >
-                              <View style={{ flex: 1, minWidth: 0 }}>
-                                <Text
-                                  style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}
-                                  numberOfLines={1}
-                                >
-                                  {idx + 1}. {row.product_name}
-                                </Text>
-
-                                <Text
-                                  style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}
-                                  numberOfLines={1}
-                                >
-                                  SKU: {row.sku ?? "—"}
-                                  {row.category ? ` • ${row.category}` : ""}
-                                  {scope === "ALL" ? ` • ${rowStoreName}` : ""}
-                                </Text>
-                              </View>
-
-                              <Text
-                                style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}
-                                numberOfLines={1}
-                              >
-                                {row.stock_status || "—"}
-                              </Text>
-                            </View>
-
-                            <View style={{ flexDirection: "row", gap: 12 }}>
-                              <MiniStat label="Qty Sold" value={String(row.qty_sold)} />
-                              <MiniStat label="Sales Count" value={String(row.sales_count)} />
-                              <MiniStat label="On Hand" value={String(row.stock_on_hand)} />
-                            </View>
-
-                            <View style={{ flexDirection: "row", gap: 12 }}>
-                              <MiniStat
-                                label="Threshold"
-                                value={String(row.low_stock_threshold)}
-                              />
-                              <MiniStat label="Activity" value={row.activity_score.toFixed(1)} />
-                              <MiniStat label="Unit" value={row.unit ?? "—"} />
-                            </View>
-                          </View>
-                        );
-                      })
-                    ) : (
-                      <Text style={{ color: UI.muted, fontWeight: "800" }}>
-                        No items in this bucket for selected range.
-                      </Text>
-                    )}
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        flexWrap: "wrap",
+                        gap: 10,
+                        alignItems: "stretch",
+                      }}
+                    >
+                      <MiniStat label="Expenses Δ" value={percent(previousDeltas.expensesPct)} />
+                      <MiniStat label="Collections Δ" value={percent(previousDeltas.collectionsPct)} />
+                      <MiniStat
+                        label="Profit Δ"
+                        value={isOwner ? percent(previousDeltas.profitPct) : "Owner only"}
+                      />
+                    </View>
                   </View>
-                );
-              })}
-            </View>
-          ) : (
-            <Text style={{ color: UI.muted, fontWeight: "800" }}>
-              No stock intelligence data yet for this scope and range.
-            </Text>
-          )}
-        </SectionCard>
+                ) : null}
 
-<View style={{ height: 12 }} />
+                <View
+                  style={{
+                    borderRadius: 18,
+                    borderWidth: 1,
+                    borderColor: "rgba(255,255,255,0.10)",
+                    backgroundColor: "rgba(255,255,255,0.04)",
+                    padding: 12,
+                    gap: 10,
+                  }}
+                >
+                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
+                    Priority Action Plan
+                  </Text>
 
-<SectionCard
-  title="Finance Graph"
-          subtitle={`${bucketInfo} • Sales / Expenses / Profit`}
-          icon="analytics-outline"
-          open={showGraph}
-          onToggle={() => setShowGraph((v) => !v)}
-        >
-          <TrendLegend />
+                  {priorityActions.map((item) => {
+                    const toneStyle = getInsightToneStyle(item.tone);
+                    return (
+                      <View
+                        key={item.id}
+                        style={{
+                          borderRadius: 16,
+                          borderWidth: 1,
+                          borderColor: toneStyle.borderColor,
+                          backgroundColor: toneStyle.backgroundColor,
+                          padding: 10,
+                          gap: 5,
+                        }}
+                      >
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 13 }}>
+                            {item.priority}
+                          </Text>
+                          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
+                            {item.title}
+                          </Text>
+                        </View>
+                        <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 20 }}>
+                          {item.body}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </View>
 
-          <TrendChart data={trendRows} fmtShort={fmtShort} showProfit={isOwner} />
+                <View style={{ gap: 10 }}>
+                  {aiInsights.map((item) => {
+                    const toneStyle = getInsightToneStyle(item.tone);
+                    return (
+                      <View
+                        key={item.id}
+                        style={{
+                          borderRadius: 18,
+                          borderWidth: 1,
+                          borderColor: toneStyle.borderColor,
+                          backgroundColor: toneStyle.backgroundColor,
+                          padding: 10,
+                          gap: 5,
+                        }}
+                      >
+                        <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
+                          {item.title}
+                        </Text>
+                        <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 19 }}>
+                          {item.body}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
+            </SectionCard>
 
-          <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 12 }}>
-            Profit graph ni Owner-only. Expenses graph inaonekana kwa owner/admin. Profit ikiwa
-            negative itaonekana kwa red chini ya zero line.
-          </Text>
-        </SectionCard>
-
-        {canAll ? (
-          <>
-            <View style={{ height: 12 }} />
-
-           <SectionCard
-              title={comparisonTitle}
-              subtitle="Ranking ya stores ndani ya range uliyochagua."
-              icon="git-compare-outline"
-              open={showComparison}
-              onToggle={() => setShowComparison((v) => !v)}
+            <SectionCard
+              title="AI Forecast Engine"
+              subtitle="Projection ya kipindi kijacho kwa kutumia trend ya range uliyochagua"
+              icon="trending-up-outline"
+              open={showForecast}
+              onToggle={() => setShowForecast((v) => !v)}
+              rightNode={loadingDeep ? <ActivityIndicator /> : null}
             >
-              {comparisonRows.length ? (
-                comparisonRows.map((row, idx) => {
-                  const value =
-                    mode === "EXPENSES"
-                      ? fmt(row.expenses)
-                      : mode === "PROFIT"
-                        ? row.profit == null
-                          ? "—"
-                          : fmt(row.profit)
-                        : fmt(row.sales);
-
-                  const hint =
-                    mode === "EXPENSES"
-                      ? `${row.orders} orders • Sales ${fmt(row.sales)}`
-                      : mode === "PROFIT"
-                        ? `Expenses ${fmt(row.expenses)} • ${row.orders} orders`
-                        : `Expenses ${fmt(row.expenses)} • ${row.orders} orders`;
-
-                  return (
-                    <ComparisonRow
-                      key={row.storeId}
-                      rank={idx + 1}
-                      name={row.storeName}
-                      value={value}
-                      hint={hint}
-                    />
-                  );
-                })
-              ) : (
-                <Text style={{ color: UI.muted, fontWeight: "800" }}>No comparison data yet.</Text>
+              {!!forecastErr && (
+                <Card
+                  style={{
+                    borderColor: "rgba(201,74,74,0.35)",
+                    backgroundColor: "rgba(201,74,74,0.10)",
+                    borderRadius: 18,
+                    padding: 12,
+                  }}
+                >
+                  <Text style={{ color: UI.danger, fontWeight: "900" }}>{forecastErr}</Text>
+                </Card>
               )}
-            </SectionCard> 
-          </>
-        ) : null}
 
-        <View style={{ height: 12 }} />
+              {forecast ? (
+                <View
+                  style={{
+                    borderRadius: 20,
+                    borderWidth: 1,
+                    borderColor:
+                      forecast.trend_label === "INCREASING"
+                        ? "rgba(16,185,129,0.26)"
+                        : forecast.trend_label === "DECLINING"
+                          ? "rgba(245,158,11,0.26)"
+                          : "rgba(59,130,246,0.24)",
+                    backgroundColor:
+                      forecast.trend_label === "INCREASING"
+                        ? "rgba(16,185,129,0.08)"
+                        : forecast.trend_label === "DECLINING"
+                          ? "rgba(245,158,11,0.08)"
+                          : "rgba(59,130,246,0.08)",
+                    padding: 14,
+                    gap: 10,
+                  }}
+                >
+                  <View
+  style={{
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    alignItems: "stretch",
+  }}
+>
+                    <MiniStat label="Forecast Days" value={String(forecast.forecast_days)} />
+                    <MiniStat label="Trend" value={forecast.trend_label} />
+                    <MiniStat label="Trend %" value={`${forecast.trend_pct.toFixed(1)}%`} />
+                  </View>
 
-        <SectionCard
-          title="Business Health Score"
-          subtitle="AI CFO style summary kwa kipindi ulichochagua."
-          icon="pulse-outline"
-          open={showHealth}
-          onToggle={() => setShowHealth((v) => !v)}
-        >
+                  <View
+  style={{
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    alignItems: "stretch",
+  }}
+>
+                    <MiniStat
+                      label="Projected Sales"
+                      value={fmt(forecast.projected_sales_next_period)}
+                    />
+                    <MiniStat
+                      label="Projected Orders"
+                      value={String(Math.round(forecast.projected_orders_next_period))}
+                    />
+                    <MiniStat label="Avg/Day" value={fmt(forecast.avg_daily_sales)} />
+                  </View>
+
+                 <View
+  style={{
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    alignItems: "stretch",
+  }}
+>
+                    <MiniStat label="Stockout Risk" value={String(forecast.stockout_risk_count)} />
+                    <MiniStat
+                      label="Urgent Restock"
+                      value={String(forecast.urgent_restock_count)}
+                    />
+                    <MiniStat
+                      label="Avg Orders/Day"
+                      value={String(forecast.avg_daily_orders.toFixed(1))}
+                    />
+                  </View>
+
+                  <Text style={{ color: UI.text, fontWeight: "800" }}>
+                    {forecast.trend_label === "INCREASING"
+                      ? "Momentum inaonekana kuongezeka. Linda stock ya bidhaa zinazotoka na sukuma conversion."
+                      : forecast.trend_label === "DECLINING"
+                        ? "Kuna dalili ya kushuka. Ongeza promo, display, follow-up, na restock ya bidhaa zenye movement."
+                        : "Trend iko stable. Hii ni nafasi ya kuongeza order value, margin, na discipline ya stock."}
+                  </Text>
+                </View>
+              ) : (
+                <Text style={{ color: UI.muted, fontWeight: "800" }}>
+                  No forecast data yet for this scope and range.
+                </Text>
+              )}
+            </SectionCard>
+
+            <SectionCard
+              title="AI Cashflow Prediction"
+              subtitle="Projection ya cash-in ya kipindi kijacho kwa kutumia range uliyochagua"
+              icon="cash-outline"
+              open={showCashflow}
+              onToggle={() => setShowCashflow((v) => !v)}
+              rightNode={loadingDeep ? <ActivityIndicator /> : null}
+            >
+              {!!cashflowErr && (
+                <Card
+                  style={{
+                    borderColor: "rgba(201,74,74,0.35)",
+                    backgroundColor: "rgba(201,74,74,0.10)",
+                    borderRadius: 18,
+                    padding: 12,
+                  }}
+                >
+                  <Text style={{ color: UI.danger, fontWeight: "900" }}>{cashflowErr}</Text>
+                </Card>
+              )}
+
+              {cashflow ? (
+                <View
+                  style={{
+                    borderRadius: 20,
+                    borderWidth: 1,
+                    borderColor:
+                      cashflow.confidence === "HIGH"
+                        ? "rgba(16,185,129,0.26)"
+                        : cashflow.confidence === "LOW"
+                          ? "rgba(245,158,11,0.26)"
+                          : "rgba(59,130,246,0.24)",
+                    backgroundColor:
+                      cashflow.confidence === "HIGH"
+                        ? "rgba(16,185,129,0.08)"
+                        : cashflow.confidence === "LOW"
+                          ? "rgba(245,158,11,0.08)"
+                          : "rgba(59,130,246,0.08)",
+                    padding: 14,
+                    gap: 10,
+                  }}
+                >
+                  <View
+  style={{
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    alignItems: "stretch",
+  }}
+>
+                    <MiniStat label="Forecast Days" value={String(cashflow.forecast_days)} />
+                    <MiniStat label="Confidence" value={cashflow.confidence} />
+                    <MiniStat label="Scope" value={cashflow.scope_used} />
+                  </View>
+
+                  <View
+  style={{
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    alignItems: "stretch",
+  }}
+>
+                    <MiniStat label="Projected Cash In" value={fmt(cashflow.projected_cash_in)} />
+                    <MiniStat
+                      label="Projected Orders"
+                      value={String(Math.round(cashflow.projected_cash_orders))}
+                    />
+                    <MiniStat label="Avg Cash/Day" value={fmt(cashflow.avg_daily_cash)} />
+                  </View>
+
+                  <View
+  style={{
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    alignItems: "stretch",
+  }}
+>
+                    <MiniStat
+                      label="Avg Orders/Day"
+                      value={String(cashflow.avg_daily_orders.toFixed(1))}
+                    />
+                   
+                    
+                  </View>
+
+                  <Text style={{ color: UI.text, fontWeight: "800" }}>
+                    {cashflow.confidence === "HIGH"
+                      ? "Cashflow signal ina nguvu. Unaweza kuitumia kwa planning ya short-term purchasing, collections, na matumizi."
+                      : cashflow.confidence === "LOW"
+                        ? "Cashflow signal bado ni ya tahadhari. Jaribu kutumia range pana zaidi ili prediction iwe imara zaidi."
+                        : "Cashflow signal iko wastani. Tumia pamoja na forecast na collections trend kabla ya kufanya maamuzi makubwa ya matumizi."}
+                  </Text>
+                </View>
+              ) : (
+                <Text style={{ color: UI.muted, fontWeight: "800" }}>
+                  No cashflow prediction yet for this scope and range.
+                </Text>
+              )}
+            </SectionCard>
+          </View>
+
           <View
             style={{
-              borderRadius: 20,
-              borderWidth: 1,
-              borderColor:
-                health?.label === "EXCELLENT"
-                  ? "rgba(16,185,129,0.30)"
-                  : health?.label === "GOOD"
-                    ? "rgba(42,168,118,0.28)"
-                    : health?.label === "WATCH"
-                      ? "rgba(245,158,11,0.26)"
-                      : "rgba(201,74,74,0.30)",
-              backgroundColor:
-                health?.label === "EXCELLENT"
-                  ? "rgba(16,185,129,0.08)"
-                  : health?.label === "GOOD"
-                    ? "rgba(42,168,118,0.08)"
-                    : health?.label === "WATCH"
-                      ? "rgba(245,158,11,0.08)"
-                      : "rgba(201,74,74,0.08)",
-              padding: 14,
-              gap: 10,
+              width: "100%",
+              minWidth: 0,
+              gap: sectionGap,
             }}
           >
-            <View style={{ flexDirection: "row", gap: 12 }}>
-              <MiniStat label="Health" value={health?.label ?? "—"} />
-              <MiniStat label="Score" value={health ? `${health.score}/100` : "—"} />
-              <MiniStat label="Sales Trend" value={health?.salesTrend ?? "—"} />
-            </View>
+            <SectionCard
+              title="Stock Intelligence"
+              subtitle={
+                scope === "STORE"
+                  ? `Store: ${storeName}`
+                  : `Org: ${orgName} (ALL stores)`
+              }
+              icon="cube-outline"
+              open={showStockIntel}
+              onToggle={() => setShowStockIntel((v) => !v)}
+              rightNode={loadingDeep ? <ActivityIndicator /> : null}
+            >
+              {scope === "ALL" ? (
+                <View
+                  style={{
+                    borderRadius: 14,
+                    borderWidth: 1,
+                    borderColor: "rgba(255,255,255,0.08)",
+                    backgroundColor: "rgba(255,255,255,0.04)",
+                    paddingHorizontal: 12,
+                    paddingVertical: 10,
+                  }}
+                >
+                  <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                    Stores in scope:{" "}
+                    <Text style={{ color: UI.text, fontWeight: "900" }}>{storeIdsInOrg.length}</Text>
+                  </Text>
+                </View>
+              ) : null}
 
-            <View style={{ flexDirection: "row", gap: 12 }}>
-              <MiniStat label="Profit Margin" value={percent(health?.profitMargin ?? null)} />
-              <MiniStat label="Expenses Ratio" value={percent(health?.expensesRatio ?? null)} />
-              <View style={{ flex: 1 }} />
-            </View>
+              {!!stockIntelErr && (
+                <Card
+                  style={{
+                    borderColor: "rgba(201,74,74,0.35)",
+                    backgroundColor: "rgba(201,74,74,0.10)",
+                    borderRadius: 18,
+                    padding: 12,
+                  }}
+                >
+                  <Text style={{ color: UI.danger, fontWeight: "900" }}>{stockIntelErr}</Text>
+                </Card>
+              )}
 
-            <Text style={{ color: UI.text, fontWeight: "800" }}>
-              {health?.message ?? "No health summary yet."}
-            </Text>
+              {stockIntelRows.length ? (
+                <View style={{ gap: 10 }}>
+                  {stockIntelByBucket.map(({ bucket, rows }) => {
+                    const accent = getBucketAccent(bucket);
+
+                    return (
+                      <View
+                        key={bucket}
+                        style={{
+                          borderRadius: 20,
+                          borderWidth: 1,
+                          borderColor: accent.borderColor,
+                          backgroundColor: accent.backgroundColor,
+                          padding: 12,
+                          gap: 10,
+                        }}
+                      >
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                          <View style={{ flex: 1, minWidth: 0 }}>
+                            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
+                              {getBucketTitle(bucket)}
+                            </Text>
+                            <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                              {getBucketHint(bucket, scope)}
+                            </Text>
+                          </View>
+                          <Text style={{ color: UI.text, fontWeight: "900" }}>{rows.length}</Text>
+                        </View>
+
+                        {rows.length ? (
+                          rows.slice(0, 6).map((row, idx) => {
+                            const rowStoreName =
+                              row.store_id && storesMeta.has(row.store_id)
+                                ? storesMeta.get(row.store_id)
+                                : "Store";
+
+                            return (
+                              <View
+                                key={`${bucket}-${row.product_id}-${idx}`}
+                                style={{
+                                  borderRadius: 16,
+                                  borderWidth: 1,
+                                  borderColor: "rgba(255,255,255,0.08)",
+                                  backgroundColor: "rgba(255,255,255,0.04)",
+                                  padding: 12,
+                                  gap: 8,
+                                }}
+                              >
+                                <View
+                                  style={{
+                                    flexDirection: "row",
+                                    alignItems: "center",
+                                    justifyContent: "space-between",
+                                    gap: 10,
+                                  }}
+                                >
+                                  <View style={{ flex: 1, minWidth: 0 }}>
+                                    <Text
+                                      style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}
+                                      numberOfLines={1}
+                                    >
+                                      {idx + 1}. {row.product_name}
+                                    </Text>
+
+                                    <Text
+                                      style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}
+                                      numberOfLines={1}
+                                    >
+                                      SKU: {row.sku ?? "—"}
+                                      {row.category ? ` • ${row.category}` : ""}
+                                      {scope === "ALL" ? ` • ${rowStoreName}` : ""}
+                                    </Text>
+                                  </View>
+
+                                  <Text
+                                    style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}
+                                    numberOfLines={1}
+                                  >
+                                    {row.stock_status || "—"}
+                                  </Text>
+                                </View>
+
+                                <View
+  style={{
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    alignItems: "stretch",
+  }}
+>
+                                  <MiniStat label="Qty Sold" value={String(row.qty_sold)} />
+                                  <MiniStat label="Sales Count" value={String(row.sales_count)} />
+                                  <MiniStat label="On Hand" value={String(row.stock_on_hand)} />
+                                </View>
+
+                                <View
+  style={{
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    alignItems: "stretch",
+  }}
+>
+                                  <MiniStat
+                                    label="Threshold"
+                                    value={String(row.low_stock_threshold)}
+                                  />
+                                  <MiniStat label="Activity" value={row.activity_score.toFixed(1)} />
+                                  <MiniStat label="Unit" value={row.unit ?? "—"} />
+                                </View>
+                              </View>
+                            );
+                          })
+                        ) : (
+                          <Text style={{ color: UI.muted, fontWeight: "800" }}>
+                            No items in this bucket for selected range.
+                          </Text>
+                        )}
+                      </View>
+                    );
+                  })}
+                </View>
+              ) : (
+                <Text style={{ color: UI.muted, fontWeight: "800" }}>
+                  No stock intelligence data yet for this scope and range.
+                </Text>
+              )}
+            </SectionCard>
+
+            <SectionCard
+              title="Finance Graph"
+              subtitle={`${bucketInfo} • Sales / Expenses / Profit`}
+              icon="analytics-outline"
+              open={showGraph}
+              onToggle={() => setShowGraph((v) => !v)}
+            >
+              <TrendLegend />
+              <TrendChart data={trendRows} fmtShort={fmtShort} showProfit={isOwner} />
+              <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 12 }}>
+                Profit graph ni Owner-only. Expenses graph inaonekana kwa owner/admin. Profit ikiwa
+                negative itaonekana kwa red chini ya zero line.
+              </Text>
+            </SectionCard>
+
+            {canAll ? (
+              <SectionCard
+                title={comparisonTitle}
+                subtitle="Ranking ya stores ndani ya range uliyochagua."
+                icon="layers-outline"
+                open={showComparison}
+                onToggle={() => setShowComparison((v) => !v)}
+              >
+                {comparisonRows.length ? (
+                  comparisonRows.map((row, idx) => {
+                    const value =
+                      mode === "EXPENSES"
+                        ? fmt(row.expenses)
+                        : mode === "PROFIT"
+                          ? row.profit == null
+                            ? "—"
+                            : fmt(row.profit)
+                          : fmt(row.sales);
+
+                    const hint =
+                      mode === "EXPENSES"
+                        ? `${row.orders} orders • Sales ${fmt(row.sales)}`
+                        : mode === "PROFIT"
+                          ? `Expenses ${fmt(row.expenses)} • ${row.orders} orders`
+                          : `Expenses ${fmt(row.expenses)} • ${row.orders} orders`;
+
+                    return (
+                      <ComparisonRow
+                        key={row.storeId}
+                        rank={idx + 1}
+                        name={row.storeName}
+                        value={value}
+                        hint={hint}
+                      />
+                    );
+                  })
+                ) : (
+                  <Text style={{ color: UI.muted, fontWeight: "800" }}>No comparison data yet.</Text>
+                )}
+              </SectionCard>
+            ) : null}
+
+            <SectionCard
+              title="Business Health Score"
+              subtitle="AI CFO style summary kwa kipindi ulichochagua."
+              icon="pulse-outline"
+              open={showHealth}
+              onToggle={() => setShowHealth((v) => !v)}
+            >
+              <View
+                style={{
+                  borderRadius: 20,
+                  borderWidth: 1,
+                  borderColor:
+                    health?.label === "EXCELLENT"
+                      ? "rgba(16,185,129,0.30)"
+                      : health?.label === "GOOD"
+                        ? "rgba(42,168,118,0.28)"
+                        : health?.label === "WATCH"
+                          ? "rgba(245,158,11,0.26)"
+                          : "rgba(201,74,74,0.30)",
+                  backgroundColor:
+                    health?.label === "EXCELLENT"
+                      ? "rgba(16,185,129,0.08)"
+                      : health?.label === "GOOD"
+                        ? "rgba(42,168,118,0.08)"
+                        : health?.label === "WATCH"
+                          ? "rgba(245,158,11,0.08)"
+                          : "rgba(201,74,74,0.08)",
+                  padding: 14,
+                  gap: 10,
+                }}
+              >
+                <View
+  style={{
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    alignItems: "stretch",
+  }}
+>
+                  <MiniStat label="Health" value={health?.label ?? "—"} />
+                  <MiniStat label="Score" value={health ? `${health.score}/100` : "—"} />
+                  <MiniStat label="Basis" value={health?.basis ?? "—"} />
+                </View>
+
+                <View
+  style={{
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    alignItems: "stretch",
+  }}
+>
+                  <MiniStat label="Profit Margin" value={percent(health?.profitMargin ?? null)} />
+                  <MiniStat label="Expenses Ratio" value={percent(health?.expensesRatio ?? null)} />
+                  
+                </View>
+
+                <Text style={{ color: UI.text, fontWeight: "800" }}>
+                  {health?.message ?? "No health summary yet."}
+                </Text>
+
+                {!isOwner ? (
+                  <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 12 }}>
+                    OPERATIONS_ONLY = score hii imetokana na sales, expenses, trend, stock, na
+                    operational signals bila profit ya ndani ya owner.
+                  </Text>
+                ) : null}
+              </View>
+            </SectionCard>
           </View>
-        </SectionCard>
+        </View>
 
         <View style={{ height: 18 }} />
 
         <Pressable
-          onPress={() => {
-            Alert.alert(
-              "How it works",
-              "TOTAL RECEIPTS: Sales total (ina include Credit).\n\nPAYMENT BREAKDOWN: inaonyesha cash/mobile/bank zilizobaki baada ya kuondoa expenses za channel hiyo, pamoja na Credit (Balance) ambayo bado haijalipwa.\n\nEXPENSES BY PAYMENT CHANNEL: inaonyesha expense ilitoka wapi hasa (Cash / Mobile / Bank / Other).\n\nCREDIT COLLECTIONS: ni malipo ya madeni yaliyopokelewa ndani ya date range.\n\nTOTAL MONEY IN: (Sales PAID + Credit Collections) - Expenses za channel husika. Credit balance haijumuishwi.\n\nGROSS PROFIT: faida kabla ya kuondoa store-level expenses.\n\nNET PROFIT: faida baada ya kuondoa COGS na expenses zote za kipindi.\n\nPRODUCT INTELLIGENCE: inaonyesha gross profit ya bidhaa moja moja; haiigawi store-level expenses kwa bidhaa moja moja.\n\nAI ACTIONABLE INSIGHTS: inaweka ushauri wa moja kwa moja kutoka kwenye Sales, Stock Intelligence, Product Profit, Store Comparison, Health Score, Forecast Engine, na Cashflow Prediction.\n\nAI FORECAST ENGINE: ina-project kipindi kijacho kwa kutumia trend ya date range uliyochagua, pamoja na stockout risk na urgent restock counts.\n\nAI CASHFLOW PREDICTION: inaonyesha projected cash-in, projected paid orders, avg cash/day, na confidence ya signal.\n\nSTOCK INTELLIGENCE: inaonyesha fast moving, slow moving, dead stock, na low stock kwa STORE au ALL scope.\n\nBUSINESS HEALTH SCORE: ni summary ya margin, expense ratio, na sales trend kwa kipindi ulichochagua."
-            );
-          }}
-          style={({ pressed }) => ({ opacity: pressed ? 0.92 : 1, alignSelf: "flex-start" })}
+          onPress={() => setShowHowItWorks((v) => !v)}
+          style={({ pressed }) => ({
+            opacity: pressed ? 0.92 : 1,
+            alignSelf: "flex-start",
+            paddingVertical: 4,
+          })}
         >
-          <Text style={{ color: UI.faint, fontWeight: "900" }}>💡 How it works</Text>
+          <Text style={{ color: UI.faint, fontWeight: "900" }}>
+            💡 {showHowItWorks ? "Hide how it works" : "How it works"}
+          </Text>
         </Pressable>
+
+        {showHowItWorks ? (
+          <Card
+            style={{
+              marginTop: 10,
+              gap: 8,
+              borderRadius: 18,
+              borderColor: "rgba(255,255,255,0.10)",
+              backgroundColor: "rgba(255,255,255,0.04)",
+              padding: 12,
+            }}
+          >
+            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
+              How Finance Search works
+            </Text>
+
+            <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22 }}>
+              TOTAL RECEIPTS: Sales total (ina include Credit).
+            </Text>
+
+            <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22 }}>
+              PAYMENT BREAKDOWN: inaonyesha cash/mobile/bank zilizobaki baada ya kuondoa expenses za channel hiyo, pamoja na Credit (Balance) ambayo bado haijalipwa.
+            </Text>
+
+            <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22 }}>
+              EXPENSES BY PAYMENT CHANNEL: inaonyesha expense ilitoka wapi hasa (Cash / Mobile / Bank / Other).
+            </Text>
+
+            <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22 }}>
+              CREDIT COLLECTIONS: ni malipo ya madeni yaliyopokelewa ndani ya date range.
+            </Text>
+
+            <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22 }}>
+              TOTAL MONEY IN: (Sales PAID + Credit Collections) - Expenses za channel husika. Credit balance haijumuishwi.
+            </Text>
+
+            <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22 }}>
+              GROSS PROFIT: faida kabla ya kuondoa store-level expenses.
+            </Text>
+
+            <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22 }}>
+              NET PROFIT: faida baada ya kuondoa COGS na expenses zote za kipindi.
+            </Text>
+
+            <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22 }}>
+              PRODUCT INTELLIGENCE: inaonyesha gross profit ya bidhaa moja moja; haiigawi store-level expenses kwa bidhaa moja moja.
+            </Text>
+
+            <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22 }}>
+              AI ACTIONABLE INSIGHTS: inaweka ushauri wa moja kwa moja kutoka kwenye Sales, Stock Intelligence, Product Profit, Store Comparison, Health Score, Forecast Engine, Cashflow Prediction, na previous-period comparison.
+            </Text>
+
+            <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22 }}>
+              AI FORECAST ENGINE: ina-project kipindi kijacho kwa kutumia trend ya date range uliyochagua, pamoja na stockout risk na urgent restock counts.
+            </Text>
+
+            <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22 }}>
+              AI CASHFLOW PREDICTION: inaonyesha projected cash-in, projected paid orders, avg cash/day, na confidence ya signal.
+            </Text>
+
+            <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22 }}>
+              STOCK INTELLIGENCE: inaonyesha fast moving, slow moving, dead stock, na low stock kwa STORE au ALL scope.
+            </Text>
+
+            <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22 }}>
+              BUSINESS HEALTH SCORE: ni summary ya margin, expense ratio, sales trend, na operational signals kwa kipindi ulichochagua. Kwa admin/staff view inaweza kuwa OPERATIONS_ONLY badala ya FULL.
+            </Text>
+
+            <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22 }}>
+              PREVIOUS PERIOD COMPARISON: inalinganisha range uliyochagua na kipindi kilichotangulia chenye ukubwa sawa ili kuona movement ya sales, orders, expenses, collections, avg order value, na profit (owner only).
+            </Text>
+          </Card>
+        ) : null}
 
         <View style={{ height: 30 }} />
       </ScrollView>

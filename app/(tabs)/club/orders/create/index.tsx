@@ -114,27 +114,31 @@ export default function CreateClubOrderScreen() {
       const pUnit = Number(unit);
       const unitPrice = Number.isFinite(pUnit) ? pUnit : 0;
 
-      if (!pName) throw new Error("Preview missing product_name");
-      if (!pId) throw new Error("Preview missing product_id");
-
-      // StoreId fallback (should already match param)
       if (!storeId && pStore) setStoreId(pStore);
       setCurrency(pCurrency || "TZS");
 
-      // ✅ Force Item #1 to match post snapshot (readonly in UI)
       setItems((prev) => {
         const first =
           prev?.[0] ?? { key: "1", product_name: "", unit_price: "", qty: "1", product_id: null };
         const qtyKeep = asQty(first.qty) >= 1 ? first.qty : "1";
-        const nextFirst: DraftItem = {
-          key: "1",
-          product_id: pId,
-          product_name: pName,
-          unit_price: String(unitPrice),
-          qty: qtyKeep,
-        };
-        return [nextFirst];
+
+        return [
+          {
+            key: "1",
+            product_id: pId || null,
+            product_name: pName || first.product_name || "",
+            unit_price:
+              pName || pId
+                ? String(unitPrice)
+                : first.unit_price || "",
+            qty: qtyKeep,
+          },
+        ];
       });
+
+      if (!pName && !pId) {
+        setPreviewErr("Post hii haina product iliyofungwa. Unaweza kuandika item manually na kutuma order kawaida.");
+      }
     } catch (e: any) {
       setPreviewErr(e?.message ?? "Failed to load post order preview");
     } finally {
@@ -171,11 +175,9 @@ export default function CreateClubOrderScreen() {
   const canSubmit = useMemo(() => {
     if (!storeId) return false;
 
-    // customer required
     if (clean(customerName).length < 2) return false;
     if (clean(customerPhone).length < 6) return false;
 
-    // items valid
     const valid = items.some((it) => clean(it.product_name).length && asQty(it.qty) >= 1);
     return valid && !busy && !previewLoading;
   }, [busy, customerName, customerPhone, items, previewLoading, storeId]);
@@ -209,8 +211,13 @@ export default function CreateClubOrderScreen() {
         prev.map((x) => {
           if (x.key !== key) return x;
 
-          // ✅ In post-mode: lock name + price, allow qty only
-          if (fromPost && x.key === "1") {
+          const hasLockedPostProduct =
+            fromPost &&
+            x.key === "1" &&
+            !!clean(x.product_id) &&
+            !!clean(x.product_name);
+
+          if (hasLockedPostProduct) {
             return { ...x, qty: patch.qty ?? x.qty };
           }
 
@@ -226,22 +233,20 @@ export default function CreateClubOrderScreen() {
     if (!storeId) return;
     if (!canSubmit) return;
 
-    // ✅ safety: in post-mode, ensure we have product_id + price
+    // In post-mode:
+    // - kama post ina product, itatumika auto-fill
+    // - kama post haina product, customer anaweza kuandika item manually
     if (fromPost) {
       const first = items?.[0];
-      if (!clean(first?.product_id)) {
-        Alert.alert("Order", "Product haijajazwa. Tafadhali rudi u-open post tena.");
-        return;
-      }
       if (!clean(first?.product_name)) {
-        Alert.alert("Order", "Product name haijajazwa. Tafadhali rudi u-open post tena.");
+        Alert.alert("Order", "Andika angalau item name kabla ya kutuma order.");
         return;
       }
     }
 
     const payloadItems = items
       .map((it) => ({
-        product_id: clean(it.product_id),
+        product_id: clean(it.product_id) || null,
         product_name: clean(it.product_name),
         unit_price: String(asMoney(it.unit_price)),
         qty: String(asQty(it.qty) || 1),
@@ -374,7 +379,7 @@ export default function CreateClubOrderScreen() {
             </View>
 
             {!!previewErr ? (
-              <Text style={{ marginTop: 10, color: theme.colors.dangerText, fontWeight: "900" }}>
+              <Text style={{ marginTop: 10, color: theme.colors.danger, fontWeight: "900" }}>
                 {previewErr}
               </Text>
             ) : null}
@@ -437,7 +442,11 @@ export default function CreateClubOrderScreen() {
           <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14 }}>Items</Text>
 
           {items.map((it) => {
-            const lockItem = fromPost && it.key === "1";
+            const lockItem =
+              fromPost &&
+              it.key === "1" &&
+              !!clean(it.product_id) &&
+              !!clean(it.product_name);
             return (
               <Card
                 key={it.key}
@@ -467,7 +476,7 @@ export default function CreateClubOrderScreen() {
                         },
                       ]}
                     >
-                      <Text style={{ color: theme.colors.dangerText, fontWeight: "900" }}>Remove</Text>
+                      <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>Remove</Text>
                     </Pressable>
                   ) : (
                     <View
@@ -559,6 +568,10 @@ export default function CreateClubOrderScreen() {
                 {lockItem ? (
                   <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 12, lineHeight: 16 }}>
                     Product & price zimetoka kwenye post (snapshot). Customer anaweka qty tu.
+                  </Text>
+                ) : fromPost && it.key === "1" ? (
+                  <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 12, lineHeight: 16 }}>
+                    Post hii haina product ya DB. Andika item manually kisha tuma order kwa seller.
                   </Text>
                 ) : null}
               </Card>

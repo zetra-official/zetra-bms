@@ -166,6 +166,12 @@ type CapitalRecoveryHistoryRow = {
   created_by?: string | null;
 };
 
+type CapitalRecoveryTodayReport = {
+  asset: number;
+  cost: number;
+  income: number;
+};
+
 const AUTO_REFRESH_MS = 20_000;
 
 function pad2(n: number) {
@@ -1025,6 +1031,9 @@ function CompactFinanceCardHomePreview() {
   const isOwnerOrAdmin = roleLower === "owner" || roleLower === "admin";
   const isStaffView = roleLower === "staff";
 
+  const [staffExpenseAllowed, setStaffExpenseAllowed] = useState(false);
+  const [staffExpenseLoading, setStaffExpenseLoading] = useState(false);
+
   const money = useOrgMoneyPrefs(orgId);
 
   useFocusEffect(
@@ -1032,6 +1041,46 @@ function CompactFinanceCardHomePreview() {
       void money.refresh();
     }, [money])
   );
+
+  const loadStaffExpensePermission = useCallback(async () => {
+    if (!storeId || !isStaffView) {
+      setStaffExpenseAllowed(false);
+      setStaffExpenseLoading(false);
+      return;
+    }
+
+    setStaffExpenseLoading(true);
+
+    try {
+      const { data, error } = await supabase
+        .from("stores")
+        .select("staff_can_manage_expense")
+        .eq("id", storeId)
+        .maybeSingle();
+
+      if (error) throw error;
+      setStaffExpenseAllowed(!!data?.staff_can_manage_expense);
+    } catch {
+      try {
+        const { data, error } = await supabase
+          .from("stores")
+          .select("allow_staff_expense")
+          .eq("id", storeId)
+          .maybeSingle();
+
+        if (error) throw error;
+        setStaffExpenseAllowed(!!data?.allow_staff_expense);
+      } catch {
+        setStaffExpenseAllowed(false);
+      }
+    } finally {
+      setStaffExpenseLoading(false);
+    }
+  }, [storeId, isStaffView]);
+
+  useEffect(() => {
+    void loadStaffExpensePermission();
+  }, [loadStaffExpensePermission]);
 
   const displayCurrency = money.currency || "TZS";
   const displayLocale = money.locale || "en-TZ";
@@ -1085,6 +1134,8 @@ function CompactFinanceCardHomePreview() {
   const reqIdRef = useRef(0);
   const loadingRef = useRef(false);
 
+  const canStaffSeeExpenseFinance = isStaffView && staffExpenseAllowed;
+
   useEffect(() => {
     loadingRef.current = loading;
   }, [loading]);
@@ -1132,7 +1183,12 @@ function CompactFinanceCardHomePreview() {
 
   const callExpenseForStore = useCallback(
     async (sid: string, fromYMD: string, toYMD: string): Promise<ExpenseSummary> => {
-      const { data, error } = await supabase.rpc("get_expense_summary", {
+      const fnName =
+        isStaffView && canStaffSeeExpenseFinance
+          ? "get_expense_summary_v2"
+          : "get_expense_summary";
+
+      const { data, error } = await supabase.rpc(fnName, {
         p_store_id: sid,
         p_from: fromYMD,
         p_to: toYMD,
@@ -1145,7 +1201,7 @@ function CompactFinanceCardHomePreview() {
         count: toInt(row?.count ?? row?.items ?? 0),
       };
     },
-    []
+    [isStaffView, canStaffSeeExpenseFinance]
   );
 
   const callProfitOwnerOnly = useCallback(
@@ -1455,7 +1511,17 @@ function CompactFinanceCardHomePreview() {
           null;
 
         if (firstErr) {
-          setErr(firstErr?.message ?? "Failed to load some finance data");
+          const msg = firstErr?.message ?? "Failed to load some finance data";
+
+          if (isStaffView && canStaffSeeExpenseFinance) {
+            if (/owner\/admin only|no access|not allowed/i.test(String(msg))) {
+              setErr(null);
+            } else {
+              setErr(msg);
+            }
+          } else {
+            setErr(msg);
+          }
         }
       } catch (e: any) {
         if (rid !== reqIdRef.current) return;
@@ -1501,19 +1567,43 @@ function CompactFinanceCardHomePreview() {
     void load({ silent: true });
   }, !!orgId && !!storeId, AUTO_REFRESH_MS);
 
-  const financeTitle = isStaffView ? "Sales Summary" : "Finance";
-  const financeSubtitle = isStaffView
-    ? `Store: ${storeName}`
-    : `Store: ${storeName}`;
-  const financeCtaLabel = isStaffView ? "Open Sales Summary" : "Open Finance";
-  const financeError = isStaffView ? null : err;
+  const financeTitle = isStaffView
+    ? canStaffSeeExpenseFinance
+      ? "Finance"
+      : "Sales Summary"
+    : "Finance";
+
+  const financeSubtitle = `Store: ${storeName}`;
+
+  const financeCtaLabel = isStaffView
+    ? canStaffSeeExpenseFinance
+      ? "Open Expenses"
+      : "Open Sales Summary"
+    : "Open Finance";
+
+  const financeError =
+    isStaffView
+      ? canStaffSeeExpenseFinance
+        ? null
+        : null
+      : err;
 
   const body = useMemo(() => {
     const fmtMoney = (n: number) =>
       formatMoney(n, { currency: displayCurrency, locale: displayLocale }).replace(/\s+/g, " ");
 
+    const expenseBreakdownTotal =
+      toNum(expenseByChannel.cash) +
+      toNum(expenseByChannel.bank) +
+      toNum(expenseByChannel.mobile);
+
+    const effectiveExpenseTotal =
+      isStaffView && canStaffSeeExpenseFinance
+        ? Math.max(toNum(expRow.total), expenseBreakdownTotal)
+        : toNum(expRow.total);
+
     const totalSales = fmtMoney(salesRow.total);
-    const totalExpenses = fmtMoney(expRow.total);
+    const totalExpenses = fmtMoney(effectiveExpenseTotal);
     const netProfit = isOwner ? fmtMoney(profitRow.net) : "—";
 
     const orders = String(salesRow.orders ?? 0);
@@ -1527,7 +1617,7 @@ function CompactFinanceCardHomePreview() {
       expenseByChannel.mobile
     );
 
-   const totalMoneyInNum = availableCashNum + availableBankNum + availableMobileNum;
+    const totalMoneyInNum = availableCashNum + availableBankNum + availableMobileNum;
     const totalMoneyIn = fmtMoney(totalMoneyInNum);
 
     const rowStyle = isMobileWeb
@@ -1541,45 +1631,92 @@ function CompactFinanceCardHomePreview() {
     return (
       <View style={{ gap: 10, paddingTop: 2 }}>
         {isStaffView ? (
-          <>
-            <View style={rowStyle}>
-              <View style={cellStyle}>
-                <MiniStat
-                  label="Sales"
-                  value={totalSales}
-                  hint="today"
-                  multilineValue={isMobileWeb}
-                />
+          canStaffSeeExpenseFinance ? (
+            <>
+              <View style={rowStyle}>
+                <View style={cellStyle}>
+                  <MiniStat
+                    label="Sales"
+                    value={totalSales}
+                    hint="today"
+                    multilineValue={isMobileWeb}
+                  />
+                </View>
+                <View style={cellStyle}>
+                  <MiniStat
+                    label="Expenses"
+                    value={totalExpenses}
+                    hint="today"
+                    multilineValue={isMobileWeb}
+                  />
+                </View>
+                <View style={cellStyle}>
+                  <MiniStat
+                    label="Money In"
+                    value={totalMoneyIn}
+                    hint="after expenses"
+                    multilineValue={isMobileWeb}
+                  />
+                </View>
               </View>
-              <View style={cellStyle}>
-                <MiniStat
-                  label="Money In"
-                  value={totalMoneyIn}
-                  hint="today"
-                  multilineValue={isMobileWeb}
-                />
-              </View>
-              <View style={cellStyle}>
-                <MiniStat label="Orders" value={orders} hint="completed" />
-              </View>
-            </View>
 
-            <View style={rowStyle}>
-              <View style={cellStyle}>
-                <MiniStat
-                  label="Avg/Order"
-                  value={avg.toString().replace(/\s+/g, " ")}
-                  multilineValue={isMobileWeb}
-                />
+              <View style={rowStyle}>
+                <View style={cellStyle}>
+                  <MiniStat label="Orders" value={orders} hint="completed" />
+                </View>
+                <View style={cellStyle}>
+                  <MiniStat
+                    label="Avg/Order"
+                    value={avg.toString().replace(/\s+/g, " ")}
+                    multilineValue={isMobileWeb}
+                  />
+                </View>
+                <View style={cellStyle}>
+                  <MiniStat label="Access" value="Expense Enabled" hint="staff finance view" />
+                </View>
               </View>
-              <View style={cellStyle}>
-                <MiniStat label="Store View" value="Active" hint="sales summary" />
+            </>
+          ) : (
+            <>
+              <View style={rowStyle}>
+                <View style={cellStyle}>
+                  <MiniStat
+                    label="Sales"
+                    value={totalSales}
+                    hint="today"
+                    multilineValue={isMobileWeb}
+                  />
+                </View>
+                <View style={cellStyle}>
+                  <MiniStat
+                    label="Money In"
+                    value={totalMoneyIn}
+                    hint="today"
+                    multilineValue={isMobileWeb}
+                  />
+                </View>
+                <View style={cellStyle}>
+                  <MiniStat label="Orders" value={orders} hint="completed" />
+                </View>
               </View>
-              <View style={cellStyle}>
-                <MiniStat label="Access" value="Standard" hint="staff view" />
+
+              <View style={rowStyle}>
+                <View style={cellStyle}>
+                  <MiniStat
+                    label="Avg/Order"
+                    value={avg.toString().replace(/\s+/g, " ")}
+                    multilineValue={isMobileWeb}
+                  />
+                </View>
+                <View style={cellStyle}>
+                  <MiniStat label="Store View" value="Active" hint="sales summary" />
+                </View>
+                <View style={cellStyle}>
+                  <MiniStat label="Access" value="Standard" hint="staff view" />
+                </View>
               </View>
-            </View>
-          </>
+            </>
+          )
         ) : (
           <>
             <View style={rowStyle}>
@@ -1644,6 +1781,7 @@ function CompactFinanceCardHomePreview() {
     displayLocale,
     isOwner,
     isStaffView,
+    canStaffSeeExpenseFinance,
     isMobileWeb,
   ]);
 
@@ -1652,12 +1790,38 @@ function CompactFinanceCardHomePreview() {
       title={financeTitle}
       subtitle={financeSubtitle}
       iconName="bar-chart-outline"
-      loading={loading}
-      badgeText={isOwnerOrAdmin ? "LIVE" : "STORE"}
+      loading={loading || staffExpenseLoading}
+      badgeText={
+        isOwnerOrAdmin
+          ? "LIVE"
+          : canStaffSeeExpenseFinance
+          ? "EXPENSE"
+          : "STORE"
+      }
       error={financeError}
       ctaLabel={financeCtaLabel}
       mobileWebLite={isMobileWeb}
       onPress={() => {
+        if (isStaffView) {
+          if (canStaffSeeExpenseFinance) {
+            router.push("/(tabs)/sales/expenses" as any);
+            return;
+          }
+
+          const dates = rangeToDates("today");
+          router.push({
+            pathname: "/finance/history",
+            params: {
+              mode: "SALES",
+              scope: "STORE",
+              range: "today",
+              from: dates.from,
+              to: dates.to,
+            } as any,
+          } as any);
+          return;
+        }
+
         const dates = rangeToDates("today");
         router.push({
           pathname: "/finance/history",
@@ -1701,6 +1865,8 @@ function CompactClubRevenueCardHomePreview({ onOpen }: { onOpen: () => void }) {
       void money.refresh();
     }, [money])
   );
+
+  
 
   const displayCurrency = money.currency || "TZS";
   const displayLocale = money.locale || "en-TZ";
@@ -1832,6 +1998,8 @@ function CompactStockValueCardHomePreview() {
       void money.refresh();
     }, [money])
   );
+
+  
 
   const displayCurrency = money.currency || "TZS";
   const displayLocale = money.locale || "en-TZ";
@@ -2611,8 +2779,22 @@ function WebSafeHomeActions({
           borderColor: "rgba(16,185,129,0.22)",
           backgroundColor: "rgba(15,18,24,0.98)",
           padding: 18,
+          overflow: "hidden",
         }}
       >
+        <View
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            top: -50,
+            right: -40,
+            width: 180,
+            height: 180,
+            borderRadius: 999,
+            backgroundColor: "rgba(16,185,129,0.06)",
+          }}
+        />
+
         <View style={{ gap: 6 }}>
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 22 }}>
             Quick Actions
@@ -2840,7 +3022,71 @@ function CapitalRecoverySummaryCard({
     </Card>
   );
 }
+function CapitalRecoveryActionHero({
+  activeOrgName,
+  activeStoreName,
+}: {
+  activeOrgName?: string | null;
+  activeStoreName?: string | null;
+}) {
+  return (
+    <View style={{ marginTop: 14 }}>
+      <Card
+        style={{
+          gap: 14,
+          borderRadius: 24,
+          borderColor: "rgba(16,185,129,0.24)",
+          backgroundColor: "rgba(15,18,24,0.98)",
+          overflow: "hidden",
+        }}
+      >
+        <View
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            top: -60,
+            right: -40,
+            width: 180,
+            height: 180,
+            borderRadius: 999,
+            backgroundColor: "rgba(16,185,129,0.08)",
+          }}
+        />
 
+        <View
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            left: -50,
+            bottom: -90,
+            width: 170,
+            height: 170,
+            borderRadius: 999,
+            backgroundColor: "rgba(34,211,238,0.04)",
+          }}
+        />
+
+        <Text style={{ color: UI.faint, fontWeight: "900", fontSize: 11, letterSpacing: 0.8 }}>
+          CAPITAL RECOVERY MODE
+        </Text>
+
+        <Text style={{ color: UI.text, fontWeight: "900", fontSize: 22 }}>
+          Recovery Command Zone
+        </Text>
+
+        <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22 }}>
+          Hii ni mode maalum ya Capital Recovery. Focus kuu hapa ni Asset, Cost, Income,
+          na ufuatiliaji wa kurejesha mtaji bila kuchanganya na maeneo yasiyo ya recovery.
+        </Text>
+
+        <View style={{ flexDirection: "row", gap: 12 }}>
+          <MiniStat label="Organization" value={String(activeOrgName ?? "—")} />
+          <MiniStat label="Recovery Store" value={String(activeStoreName ?? "—")} />
+        </View>
+      </Card>
+    </View>
+  );
+}
 function CapitalRecoveryHomeShell({
   activeOrgName,
   activeStoreName,
@@ -2848,7 +3094,6 @@ function CapitalRecoveryHomeShell({
   summary,
   summaryLoading,
   summaryError,
-  onOpenWorkspace,
 }: {
   activeOrgName?: string | null;
   activeStoreName?: string | null;
@@ -2856,10 +3101,14 @@ function CapitalRecoveryHomeShell({
   summary: CapitalRecoverySummaryRow;
   summaryLoading: boolean;
   summaryError: string | null;
-  onOpenWorkspace: () => void;
 }) {
   return (
-    <View style={{ marginTop: 14 }}>
+    <View style={{ marginTop: 14, gap: 14 }}>
+      <CapitalRecoveryActionHero
+        activeOrgName={activeOrgName}
+        activeStoreName={activeStoreName}
+      />
+
       <CapitalRecoverySummaryCard
         loading={summaryLoading}
         error={summaryError}
@@ -2869,24 +3118,83 @@ function CapitalRecoveryHomeShell({
   );
 }
 
+function CapitalRecoveryBottomSwitcherCard({
+  onOpenOrgSwitcher,
+}: {
+  onOpenOrgSwitcher: () => void;
+}) {
+  return (
+    <View style={{ marginTop: 14 }}>
+      <Card
+        style={{
+          gap: 12,
+          borderRadius: 24,
+          borderColor: "rgba(16,185,129,0.22)",
+          backgroundColor: "rgba(15,18,24,0.98)",
+        }}
+      >
+        <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18 }}>
+          Switch Organization
+        </Text>
+
+        <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22 }}>
+          Ukiwa bado kwenye dashboard hii unaweza kubadili organization au workspace na kuhamia
+          biashara nyingine moja kwa moja.
+        </Text>
+
+        <Pressable
+          onPress={onOpenOrgSwitcher}
+          // @ts-ignore
+          onClick={onOpenOrgSwitcher}
+          hitSlop={10}
+          style={({ pressed }) => ({
+            borderRadius: 20,
+            borderWidth: 1,
+            borderColor: "rgba(16,185,129,0.34)",
+            backgroundColor: "rgba(16,185,129,0.16)",
+            paddingVertical: 16,
+            paddingHorizontal: 16,
+            alignItems: "center",
+            justifyContent: "center",
+            opacity: pressed ? 0.92 : 1,
+            transform: pressed ? [{ scale: 0.99 }] : [{ scale: 1 }],
+          })}
+        >
+          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
+            Switch Org / Workspace
+          </Text>
+        </Pressable>
+      </Card>
+    </View>
+  );
+}
+
 function CapitalRecoveryReportsCard({
   activeStoreId,
   reloadKey = 0,
-  onOpenWorkspace,
 }: {
   activeStoreId?: string | null;
   reloadKey?: number;
-  onOpenWorkspace: () => void;
 }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<CapitalRecoveryHistoryRow[]>([]);
+  const [todayReport, setTodayReport] = useState<CapitalRecoveryTodayReport>({
+    asset: 0,
+    cost: 0,
+    income: 0,
+  });
 
   const storeId = String(activeStoreId ?? "").trim();
 
   const load = useCallback(async () => {
     if (!storeId) {
       setHistory([]);
+      setTodayReport({
+        asset: 0,
+        cost: 0,
+        income: 0,
+      });
       setError("No active Capital Recovery store selected");
       return;
     }
@@ -2903,22 +3211,55 @@ function CapitalRecoveryReportsCard({
       if (hErr) throw hErr;
 
       const rows = (Array.isArray(data) ? data : []) as any[];
-      setHistory(
-        rows.map((r) => ({
-          id: String(r?.id ?? ""),
-          entry_type: String(r?.entry_type ?? "ASSET").toUpperCase() as
-            | "ASSET"
-            | "COST"
-            | "INCOME",
-          amount: toNum(r?.amount),
-          note: clean(r?.note) || null,
-          created_at: String(r?.created_at ?? ""),
-          created_by: clean(r?.created_by) || null,
-        }))
-      );
+
+      const mappedRows: CapitalRecoveryHistoryRow[] = rows.map((r) => ({
+        id: String(r?.id ?? ""),
+        entry_type: String(r?.entry_type ?? "ASSET").toUpperCase() as
+          | "ASSET"
+          | "COST"
+          | "INCOME",
+        amount: toNum(r?.amount),
+        note: clean(r?.note) || null,
+        created_at: String(r?.created_at ?? ""),
+        created_by: clean(r?.created_by) || null,
+      }));
+
+      setHistory(mappedRows);
+
+      const today = toIsoDateLocal(new Date());
+
+      let asset = 0;
+      let cost = 0;
+      let income = 0;
+
+      for (const item of mappedRows) {
+        const created = clean(item.created_at);
+        if (!created) continue;
+
+        const d = new Date(created);
+        if (Number.isNaN(d.getTime())) continue;
+
+        const itemDay = toIsoDateLocal(d);
+        if (itemDay !== today) continue;
+
+        if (item.entry_type === "ASSET") asset += toNum(item.amount);
+        else if (item.entry_type === "COST") cost += toNum(item.amount);
+        else if (item.entry_type === "INCOME") income += toNum(item.amount);
+      }
+
+      setTodayReport({
+        asset,
+        cost,
+        income,
+      });
     } catch (e: any) {
       setError(clean(e?.message) || "Failed to load Capital Recovery history");
       setHistory([]);
+      setTodayReport({
+        asset: 0,
+        cost: 0,
+        income: 0,
+      });
     } finally {
       setLoading(false);
     }
@@ -3014,32 +3355,40 @@ function CapitalRecoveryReportsCard({
           />
         </View>
 
-        <Pressable
-          onPress={onOpenWorkspace}
-          // @ts-ignore
-          onClick={onOpenWorkspace}
-          hitSlop={10}
-          style={({ pressed }) => ({
-            borderRadius: 20,
+        <View
+          style={{
             borderWidth: 1,
-            borderColor: "rgba(16,185,129,0.34)",
-            backgroundColor: "rgba(16,185,129,0.16)",
-            paddingVertical: 16,
-            paddingHorizontal: 16,
-            alignItems: "center",
-            justifyContent: "center",
-            opacity: pressed ? 0.92 : 1,
-            transform: pressed ? [{ scale: 0.99 }] : [{ scale: 1 }],
-          })}
+            borderColor: "rgba(255,255,255,0.08)",
+            backgroundColor: "rgba(255,255,255,0.04)",
+            borderRadius: 18,
+            padding: 12,
+            gap: 10,
+          }}
         >
-          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
-            Open Workspace
+          <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 12 }}>
+            TODAY REPORT
           </Text>
-        </Pressable>
 
-      <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22 }}>
-          Recording ya Asset, Cost, na Income imehamishwa kwenye workspace page yake maalum.
-        </Text>
+          <View style={{ flexDirection: "row", gap: 12 }}>
+            <MiniStat
+              label="Today Asset"
+              value={fmt(todayReport.asset)}
+              hint="today"
+            />
+            <MiniStat
+              label="Today Cost"
+              value={fmt(todayReport.cost)}
+              hint="today"
+            />
+            <MiniStat
+              label="Today Income"
+              value={fmt(todayReport.income)}
+              hint="today"
+            />
+          </View>
+        </View>
+
+     
       </Card>
     </View>
   );
@@ -3334,7 +3683,7 @@ const {
         p_to: to,
       } as any);
 
-      const expensePromise = supabase.rpc("get_expense_summary", {
+      const expensePromise = supabase.rpc("get_expense_summary_v2", {
         p_store_id: storeId,
         p_from: fromYMD,
         p_to: toYMD,
@@ -3644,7 +3993,29 @@ const {
         </Card>
       )}
 
-      {isWebLiteHome ? (
+      {isCapitalRecoveryStore ? (
+        <>
+          <StoreGuard>
+            <CapitalRecoveryHomeShell
+              activeOrgName={activeOrgName}
+              activeStoreName={activeStoreName}
+              activeStoreId={activeStoreId}
+              summaryLoading={capitalSummaryLoading}
+              summaryError={capitalSummaryError}
+              summary={capitalSummary}
+            />
+
+            <CapitalRecoveryReportsCard
+              activeStoreId={activeStoreId}
+              reloadKey={capitalRecoveryTick}
+            />
+
+            <CapitalRecoveryBottomSwitcherCard
+              onOpenOrgSwitcher={goOrgSwitcher}
+            />
+          </StoreGuard>
+        </>
+      ) : isWebLiteHome ? (
         <>
           <WorkspaceCard
             activeOrgName={activeOrgName}
@@ -3657,19 +4028,22 @@ const {
           <Card
             style={{
               marginTop: 14,
-              gap: 12,
-              borderRadius: 22,
+              gap: 16,
+              borderRadius: 24,
               borderColor: "rgba(16,185,129,0.22)",
               backgroundColor: "rgba(15,18,24,0.98)",
+              padding: 18,
             }}
           >
-            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18 }}>
-              Browser Safe Mode
-            </Text>
+            <View style={{ gap: 6 }}>
+              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 22 }}>
+                Quick Actions
+              </Text>
 
-            <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22 }}>
-              Home ya browser imewekwa light mode ili buttons ziwe responsive na page isigande.
-            </Text>
+              <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22, fontSize: 13 }}>
+                Fungua maeneo muhimu ya kazi kwa haraka kutoka Home.
+              </Text>
+            </View>
 
             <View style={{ gap: 10 }}>
               <Pressable
@@ -3678,15 +4052,16 @@ const {
                 onClick={goAI}
                 hitSlop={10}
                 style={({ pressed }) => ({
-                  borderRadius: 18,
+                  borderRadius: 20,
                   borderWidth: 1,
-                  borderColor: "rgba(16,185,129,0.30)",
-                  backgroundColor: "rgba(16,185,129,0.12)",
-                  paddingVertical: 15,
+                  borderColor: "rgba(16,185,129,0.24)",
+                  backgroundColor: "rgba(16,185,129,0.10)",
+                  paddingVertical: 16,
                   paddingHorizontal: 16,
                   alignItems: "center",
                   justifyContent: "center",
                   opacity: pressed ? 0.92 : 1,
+                  transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
                 })}
               >
                 <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
@@ -3700,15 +4075,16 @@ const {
                 onClick={goOrgSwitcher}
                 hitSlop={10}
                 style={({ pressed }) => ({
-                  borderRadius: 18,
+                  borderRadius: 20,
                   borderWidth: 1,
-                  borderColor: "rgba(16,185,129,0.30)",
-                  backgroundColor: "rgba(16,185,129,0.12)",
-                  paddingVertical: 15,
+                  borderColor: "rgba(16,185,129,0.24)",
+                  backgroundColor: "rgba(16,185,129,0.10)",
+                  paddingVertical: 16,
                   paddingHorizontal: 16,
                   alignItems: "center",
                   justifyContent: "center",
                   opacity: pressed ? 0.92 : 1,
+                  transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
                 })}
               >
                 <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
@@ -3722,15 +4098,16 @@ const {
                 onClick={goLive}
                 hitSlop={10}
                 style={({ pressed }) => ({
-                  borderRadius: 18,
+                  borderRadius: 20,
                   borderWidth: 1,
-                  borderColor: "rgba(16,185,129,0.30)",
-                  backgroundColor: "rgba(16,185,129,0.12)",
-                  paddingVertical: 15,
+                  borderColor: "rgba(16,185,129,0.24)",
+                  backgroundColor: "rgba(16,185,129,0.10)",
+                  paddingVertical: 16,
                   paddingHorizontal: 16,
                   alignItems: "center",
                   justifyContent: "center",
                   opacity: pressed ? 0.92 : 1,
+                  transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
                 })}
               >
                 <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
@@ -3768,15 +4145,16 @@ const {
                 }}
                 hitSlop={10}
                 style={({ pressed }) => ({
-                  borderRadius: 18,
+                  borderRadius: 20,
                   borderWidth: 1,
-                  borderColor: "rgba(16,185,129,0.30)",
-                  backgroundColor: "rgba(16,185,129,0.12)",
-                  paddingVertical: 15,
+                  borderColor: "rgba(16,185,129,0.24)",
+                  backgroundColor: "rgba(16,185,129,0.10)",
+                  paddingVertical: 16,
                   paddingHorizontal: 16,
                   alignItems: "center",
                   justifyContent: "center",
                   opacity: pressed ? 0.92 : 1,
+                  transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
                 })}
               >
                 <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
@@ -3796,34 +4174,6 @@ const {
             onOpen={goOrgSwitcher}
           />
           <CashierQuickHome />
-        </>
-      ) : isCapitalRecoveryStore ? (
-        <>
-          <WorkspaceCard
-            activeOrgName={activeOrgName}
-            activeRole={activeRole}
-            activeStoreName={activeStoreName}
-            activeStoreId={activeStoreId}
-            onOpen={goOrgSwitcher}
-          />
-
-          <StoreGuard>
-            <CapitalRecoveryHomeShell
-              activeOrgName={activeOrgName}
-              activeStoreName={activeStoreName}
-              activeStoreId={activeStoreId}
-              summaryLoading={capitalSummaryLoading}
-              summaryError={capitalSummaryError}
-              summary={capitalSummary}
-              onOpenWorkspace={() => router.push("/(tabs)/capital-recovery/workspace")}
-            />
-
-            <CapitalRecoveryReportsCard
-              activeStoreId={activeStoreId}
-              reloadKey={capitalRecoveryTick}
-              onOpenWorkspace={() => router.push("/(tabs)/capital-recovery/workspace")}
-            />
-          </StoreGuard>
         </>
       ) : isDesktopWeb ? (
         <WebDesktopShell
@@ -3854,7 +4204,7 @@ const {
                 }}
               >
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 20, flex: 1 }}>
+                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 22, flex: 1 }}>
                     Executive Overview
                   </Text>
 
@@ -3875,8 +4225,8 @@ const {
                 </View>
 
                 <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22 }}>
-                  Hii ni summary ya haraka ya workspace yako ya sasa. Tumia Finance, AI, na Workspace switcher
-                  kama command center ya kazi za kila siku bila kujaza Home na vitu vinavyojirudia.
+                  Muhtasari wa haraka wa workspace yako ya sasa. Tumia Finance, AI, na Workspace switcher
+                  kama command center ya kila siku kwenye browser ya kompyuta.
                 </Text>
 
                 {!!desktopFinanceErr ? (
@@ -3931,22 +4281,6 @@ const {
           }
           right={
             <>
-              
-
-              <View style={{ height: 14 }} />
-<DesktopSignalCard
-                title="Notifications"
-                badge="LIVE"
-                body="Fuatilia alerts, stock movements, receipts, na matukio muhimu ya biashara kutoka eneo moja la usimamizi."
-              />
-
-              <View style={{ height: 14 }} />
-
-              <DesktopSignalCard
-                title="AI Insights"
-                badge="COPILOT"
-                body="Pata mwongozo wa biashara, bidhaa, staff, na maamuzi ya kila siku kwa mtazamo wa haraka na wa kitaalamu."
-              />
               <WebSafeHomeActions
                 width={width}
                 onOpenAI={goAI}
@@ -3965,6 +4299,22 @@ const {
                   } as any);
                 }}
               />
+
+              <View style={{ height: 14 }} />
+
+              <DesktopSignalCard
+                title="Notifications"
+                badge="LIVE"
+                body="Fuatilia alerts, stock movements, receipts, na matukio muhimu ya biashara kutoka eneo moja la usimamizi."
+              />
+
+              <View style={{ height: 14 }} />
+
+              <DesktopSignalCard
+                title="AI Insights"
+                badge="COPILOT"
+                body="Pata mwongozo wa biashara, bidhaa, staff, na maamuzi ya kila siku kwa mtazamo wa haraka na wa kitaalamu."
+              />
             </>
           }
         />
@@ -3978,160 +4328,14 @@ const {
             onOpen={goOrgSwitcher}
           />
 
-          {isMobileWeb ? (
-            <StoreGuard>
-              {!isWebLiteHome ? <CompactFinanceCardHomePreview /> : null}
-              {!isWebLiteHome ? <CompactStockValueCardHomePreview /> : null}
-              {!isWebLiteHome ? (
-                <CompactClubRevenueCardHomePreview
-                  key={`club-mini-${dashTick}`}
-                  onOpen={goClubRevenue}
-                />
-              ) : null}
-
-              <Card
-                style={{
-                  marginTop: 14,
-                  gap: 12,
-                  borderRadius: 22,
-                  borderColor: "rgba(16,185,129,0.22)",
-                  backgroundColor: "rgba(15,18,24,0.98)",
-                }}
-              >
-                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18 }}>
-                  Priority Actions
-                </Text>
-
-                <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22 }}>
-                  Home ya mobile browser ibaki nyepesi. Hapa tunaacha actions muhimu tu, huku navigation
-                  nyingine zikiendelea kupatikana kwenye tab menu ya kawaida.
-                </Text>
-
-                <View style={{ gap: 10 }}>
-                  <Pressable
-                    onPress={() => goAI()}
-                    // @ts-ignore
-                    onClick={() => goAI()}
-                    hitSlop={10}
-                    style={({ pressed }) => ({
-                      borderRadius: 18,
-                      borderWidth: 1,
-                      borderColor: "rgba(16,185,129,0.30)",
-                      backgroundColor: "rgba(16,185,129,0.12)",
-                      paddingVertical: 15,
-                      paddingHorizontal: 16,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      opacity: pressed ? 0.92 : 1,
-                    })}
-                  >
-                    <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
-                      Open AI
-                    </Text>
-                  </Pressable>
-
-                  <Pressable
-                    onPress={goOrgSwitcher}
-                    // @ts-ignore
-                    onClick={goOrgSwitcher}
-                    hitSlop={10}
-                    style={({ pressed }) => ({
-                      borderRadius: 18,
-                      borderWidth: 1,
-                      borderColor: "rgba(16,185,129,0.30)",
-                      backgroundColor: "rgba(16,185,129,0.12)",
-                      paddingVertical: 15,
-                      paddingHorizontal: 16,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      opacity: pressed ? 0.92 : 1,
-                    })}
-                  >
-                    <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
-                      Switch Workspace
-                    </Text>
-                  </Pressable>
-
-                  <Pressable
-                    onPress={goLive}
-                    // @ts-ignore
-                    onClick={goLive}
-                    hitSlop={10}
-                    style={({ pressed }) => ({
-                      borderRadius: 18,
-                      borderWidth: 1,
-                      borderColor: "rgba(16,185,129,0.30)",
-                      backgroundColor: "rgba(16,185,129,0.12)",
-                      paddingVertical: 15,
-                      paddingHorizontal: 16,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      opacity: pressed ? 0.92 : 1,
-                    })}
-                  >
-                    <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
-                      Open Live
-                    </Text>
-                  </Pressable>
-
-                  <Pressable
-                    onPress={() => {
-                      const dates = rangeToDates("today");
-                      router.push({
-                        pathname: "/finance/history",
-                        params: {
-                          mode: "SALES",
-                          scope: "STORE",
-                          range: "today",
-                          from: dates.from,
-                          to: dates.to,
-                        } as any,
-                      } as any);
-                    }}
-                    // @ts-ignore
-                    onClick={() => {
-                      const dates = rangeToDates("today");
-                      router.push({
-                        pathname: "/finance/history",
-                        params: {
-                          mode: "SALES",
-                          scope: "STORE",
-                          range: "today",
-                          from: dates.from,
-                          to: dates.to,
-                        } as any,
-                      } as any);
-                    }}
-                    hitSlop={10}
-                    style={({ pressed }) => ({
-                      borderRadius: 18,
-                      borderWidth: 1,
-                      borderColor: "rgba(16,185,129,0.30)",
-                      backgroundColor: "rgba(16,185,129,0.12)",
-                      paddingVertical: 15,
-                      paddingHorizontal: 16,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      opacity: pressed ? 0.92 : 1,
-                    })}
-                  >
-                    <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
-                      Open Finance
-                    </Text>
-                  </Pressable>
-                </View>
-              </Card>
-            </StoreGuard>
-          ) : (
-            <StoreGuard>
-              <CompactFinanceCardHomePreview />
-              <CompactStockValueCardHomePreview />
-              <CompactClubRevenueCardHomePreview
-                key={`club-mini-${dashTick}`}
-                onOpen={goClubRevenue}
-              />
-            </StoreGuard>
-          )}
+          <StoreGuard>
+            <CompactFinanceCardHomePreview />
+            <CompactStockValueCardHomePreview />
+            <CompactClubRevenueCardHomePreview
+              key={`club-mini-${dashTick}`}
+              onOpen={goClubRevenue}
+            />
+          </StoreGuard>
         </>
       )}
     </Screen>

@@ -3,7 +3,7 @@ import { supabase } from "@/src/supabase/supabaseClient";
 import { Card } from "@/src/ui/Card";
 import { Screen } from "@/src/ui/Screen";
 import { theme } from "@/src/ui/theme";
-import { Ionicons } from "@expo/vector-icons";
+import SafeIcon from "@/src/ui/SafeIcon";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -75,17 +75,7 @@ function fmtWhen(createdAt: any) {
   return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 }
 
-function SafeIcon({
-  name,
-  size = 18,
-  color,
-}: {
-  name: keyof typeof Ionicons.glyphMap;
-  size?: number;
-  color: string;
-}) {
-  return <Ionicons name={name} size={size} color={color} />;
-}
+
 
 const FEED_RPC_CANDIDATES = [
   "get_club_feed_posts", // our bridge
@@ -141,17 +131,21 @@ const FeedPostItem = memo(function FeedPostItem({
   const when = fmtWhen(item.created_at);
 
   const isDesktopWeb = Platform.OS === "web" && width >= 1024;
-  const cardMaxWidth = isDesktopWeb ? 640 : undefined;
-  const imageAspectRatio = isDesktopWeb ? 1.08 : 0.8;
-  const desktopImageMaxHeight = isDesktopWeb ? 560 : undefined;
+  const isLargeDesktopWeb = Platform.OS === "web" && width >= 1400;
+
+  const cardMaxWidth = isDesktopWeb ? (isLargeDesktopWeb ? 560 : 520) : undefined;
+
+  // desktop only: punguza urefu wa picha ili actions za chini zionekane mapema
+  const imageAspectRatio = isDesktopWeb ? 1.22 : 0.8;
+  const desktopImageMaxHeight = isDesktopWeb ? (isLargeDesktopWeb ? 430 : 390) : undefined;
 
   return (
     <View
       style={{
         width: "100%",
         alignItems: "center",
-        paddingHorizontal: isDesktopWeb ? 18 : 0,
-        paddingTop: isDesktopWeb ? 14 : 0,
+        paddingHorizontal: isDesktopWeb ? 12 : 0,
+        paddingTop: isDesktopWeb ? 10 : 0,
       }}
     >
       <Pressable
@@ -168,7 +162,7 @@ const FeedPostItem = memo(function FeedPostItem({
         <Card
           style={{
             padding: 0,
-            borderRadius: isDesktopWeb ? 24 : 0,
+            borderRadius: isDesktopWeb ? 20 : 0,
             borderWidth: isDesktopWeb ? 1 : 0,
             backgroundColor: theme.colors.background,
             borderColor: isDesktopWeb ? theme.colors.borderSoft : "transparent",
@@ -177,36 +171,78 @@ const FeedPostItem = memo(function FeedPostItem({
             overflow: "hidden",
           }}
         >
-        {/* HEADER */}
+        {/* HEADER + CAPTION ABOVE IMAGE */}
         <View style={{ paddingHorizontal: theme.spacing.page, paddingTop: 12, paddingBottom: 10 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
             <Pressable
               onPress={() => onOpenStore(String(item.store_id ?? ""))}
               hitSlop={10}
-              style={{ flexDirection: "row", alignItems: "center", gap: 10 }}
+              style={{ flexDirection: "row", alignItems: "flex-start", gap: 10, flex: 1 }}
             >
               <View
                 style={{
-                  width: 36,
-                  height: 36,
+                  width: 38,
+                  height: 38,
                   borderRadius: 999,
                   borderWidth: 1,
                   borderColor: theme.colors.emeraldBorder,
                   backgroundColor: theme.colors.emeraldSoft,
                   alignItems: "center",
                   justifyContent: "center",
+                  marginTop: 1,
                 }}
               >
                 <SafeIcon name="storefront-outline" size={18} color={theme.colors.emerald} />
               </View>
 
-              <View>
-                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{storeName}</Text>
-                <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 12 }}>Tap kuona post</Text>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap" }}>
+                  <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 15 }}>
+                    {storeName}
+                  </Text>
+
+                  {!!when && (
+                    <Text
+                      style={{
+                        color: theme.colors.faint,
+                        fontWeight: "800",
+                        fontSize: 12,
+                        marginLeft: 8,
+                      }}
+                    >
+                      {when}
+                    </Text>
+                  )}
+                </View>
+
+                {!!caption ? (
+                  <Text
+                    style={{
+                      color: theme.colors.text,
+                      fontWeight: "800",
+                      fontSize: 14,
+                      lineHeight: 21,
+                      marginTop: 4,
+                    }}
+                  >
+                    {caption}
+                  </Text>
+                ) : (
+                  <Text
+                    style={{
+                      color: theme.colors.faint,
+                      fontWeight: "800",
+                      fontSize: 12,
+                      marginTop: 4,
+                    }}
+                  >
+                    Tap kuona post
+                  </Text>
+                )}
               </View>
             </Pressable>
 
-            <Pressable onPress={() => onOpenMenu(item)} hitSlop={10} style={{ padding: 6 }}>
+            <Pressable onPress={() => onOpenMenu(item)} hitSlop={10} style={{ padding: 6, marginTop: 2 }}>
               <SafeIcon name="ellipsis-horizontal" size={18} color={theme.colors.faint} />
             </Pressable>
           </View>
@@ -220,7 +256,7 @@ const FeedPostItem = memo(function FeedPostItem({
               aspectRatio: imageAspectRatio,
               maxHeight: desktopImageMaxHeight,
               alignSelf: "center",
-              backgroundColor: "rgba(255,255,255,0.05)",
+              backgroundColor: "rgba(255,255,255,0.04)",
               overflow: "hidden",
             }}
           >
@@ -318,18 +354,15 @@ const FeedPostItem = memo(function FeedPostItem({
           </View>
 
           <View style={{ marginTop: 2, flexDirection: "row", alignItems: "center", gap: 14 }}>
-            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{likes} likes</Text>
-            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{comments} comments</Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}>
+              {likes} likes
+            </Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}>
+              {comments} comments
+            </Text>
           </View>
 
-          {!!caption && (
-            <View style={{ marginTop: 4 }}>
-              <Text style={{ color: theme.colors.text, lineHeight: 22 }}>
-                <Text style={{ fontWeight: "900" }}>{storeName} </Text>
-                <Text style={{ fontWeight: "800" }}>{caption}</Text>
-              </Text>
-            </View>
-          )}
+          {!!caption ? null : null}
 
           <Pressable onPress={() => onOpenComments(item)} hitSlop={10} style={{ marginTop: 6 }}>
             <Text style={{ color: comments > 0 ? theme.colors.muted : theme.colors.faint, fontWeight: "900" }}>
@@ -710,14 +743,32 @@ export default function ClubFeedScreen() {
   const openMenu = useCallback(
     (item: FeedPost) => {
       const storeName = safeStr(item.store_display_name ?? item.store_name, "Store");
+      const storeId = clean(item.store_id);
+      const postId = clean(item.post_id);
 
       Alert.alert(storeName, "Chagua", [
-        { text: "Open Store", onPress: () => openStore(String(item.store_id ?? "")) },
-        { text: "Order", onPress: () => void openOrder(item) },
+        { text: "Open Store", onPress: () => openStore(storeId) },
+        {
+          text: "Zungumza na Muuzaji",
+          onPress: () => {
+            if (!storeId) return;
+
+            router.push({
+              pathname: "/(tabs)/club/inbox/store/[storeId]" as any,
+              params: {
+                storeId,
+                storeName,
+                postId,
+                postCaption: String(item.caption ?? ""),
+                postImageUrl: String(item.image_url ?? ""),
+              },
+            } as any);
+          },
+        },
         { text: "Cancel", style: "cancel" },
       ]);
     },
-    [openOrder, openStore]
+    [openStore, router]
   );
 
   const toggleLike = useCallback(async (p: FeedPost) => {
@@ -794,21 +845,24 @@ export default function ClubFeedScreen() {
   /* ---------------- Top Bar (Compact Usage Pill) ---------------- */
 
   const TopBar = useMemo(() => {
-    const IgTopIcon = ({
-      icon,
-      onPress,
-      active,
-      size,
-      color,
-      hitSlopSize,
-    }: {
-      icon: any;
-      onPress: () => void;
-      active?: boolean;
-      size?: number;
-      color?: string;
-      hitSlopSize?: number;
-    }) => {
+   const IgTopIcon = ({
+        icon,
+        onPress,
+        active,
+        size,
+        color,
+        hitSlopSize,
+      }: {
+        icon:
+          | "add"
+          | "bookmark-outline"
+          | "person-circle-outline";
+        onPress: () => void;
+        active?: boolean;
+        size?: number;
+        color?: string;
+        hitSlopSize?: number;
+      }) => {
       const hs = hitSlopSize ?? 26;
       return (
         <Pressable

@@ -1,6 +1,16 @@
 import { useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
-import { Alert, Text, View } from "react-native";
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+  useWindowDimensions,
+} from "react-native";
+import SafeIcon from "@/src/ui/SafeIcon";
 import { useOrg } from "../../../src/context/OrgContext";
 import { supabase } from "../../../src/supabase/supabaseClient";
 import { Button } from "../../../src/ui/Button";
@@ -34,12 +44,17 @@ type OrgPlanLimitsRow = {
 export default function AddStoreScreen() {
   const router = useRouter();
   const { activeOrgId, activeOrgName, activeRole, refresh } = useOrg();
+  const { width } = useWindowDimensions();
+
+  const isWeb = Platform.OS === "web";
+  const isDesktopWeb = isWeb && width >= 1100;
+  const contentMaxWidth = isDesktopWeb ? 980 : isWeb ? 760 : undefined;
 
   const canCreate = activeRole === "owner" || activeRole === "admin";
   const orgId = useMemo(() => clean(activeOrgId), [activeOrgId]);
 
   const [name, setName] = useState("");
-const [storeType, setStoreType] = useState<"STANDARD" | "CAPITAL_RECOVERY">("STANDARD");
+  const [storeType, setStoreType] = useState<"STANDARD" | "CAPITAL_RECOVERY">("STANDARD");
   const [saving, setSaving] = useState(false);
 
   const guardPlanStoreLimit = async (): Promise<void> => {
@@ -135,66 +150,227 @@ const [storeType, setStoreType] = useState<"STANDARD" | "CAPITAL_RECOVERY">("STA
   };
 
   return (
-    <Screen>
-      <Text style={{ fontSize: 22, fontWeight: "900", color: UI.text }}>Add Store</Text>
-
-      <Text style={{ color: UI.muted, fontWeight: "700", marginTop: 6 }}>
-        Org:{" "}
-        <Text style={{ color: UI.text, fontWeight: "900" }}>{activeOrgName ?? "—"}</Text>
-      </Text>
-
-      {!canCreate ? (
-        <Card style={{ borderColor: UI.dangerBorder, backgroundColor: UI.dangerSoft }}>
-          <Text style={{ color: UI.danger, fontWeight: "900" }}>
-            No Access (Owner/Admin only)
+    <Screen scroll={false}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={0}
+      >
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{
+            paddingBottom: 28,
+          }}
+        >
+          <View
+            style={{
+              width: "100%",
+              maxWidth: contentMaxWidth,
+              alignSelf: "center",
+              gap: 14,
+            }}
+          >
+        <View
+          style={{
+            gap: 6,
+            marginBottom: 2,
+          }}
+        >
+          <Text
+            style={{
+              fontSize: isWeb ? 28 : 22,
+              fontWeight: "900",
+              color: UI.text,
+            }}
+          >
+            Add Store
           </Text>
+
+          <Text style={{ color: UI.muted, fontWeight: "700", marginTop: 2 }}>
+            Org:{" "}
+            <Text style={{ color: UI.text, fontWeight: "900" }}>{activeOrgName ?? "—"}</Text>
+          </Text>
+        </View>
+
+        {!canCreate ? (
+          <Card style={{ borderColor: UI.dangerBorder, backgroundColor: UI.dangerSoft }}>
+            <Text style={{ color: UI.danger, fontWeight: "900" }}>
+              No Access (Owner/Admin only)
+            </Text>
+          </Card>
+        ) : null}
+
+        <Card
+          style={{
+            gap: 14,
+            marginTop: 4,
+            padding: isWeb ? 18 : undefined,
+          }}
+        >
+          <Text style={{ color: UI.muted, fontWeight: "800", fontSize: isWeb ? 13 : 12 }}>
+            Store Type
+          </Text>
+
+          <View
+            style={{
+              flexDirection: isDesktopWeb ? "row" : "column",
+              gap: 12,
+            }}
+          >
+            <Pressable
+              onPress={() => setStoreType("STANDARD")}
+              style={({ pressed }) => ({
+                flex: isDesktopWeb ? 1 : undefined,
+                minHeight: isWeb ? 160 : 132,
+                borderWidth: 1,
+                borderColor:
+                  storeType === "STANDARD"
+                    ? "rgba(16,185,129,0.40)"
+                    : "rgba(255,255,255,0.12)",
+                backgroundColor:
+                  storeType === "STANDARD"
+                    ? "rgba(16,185,129,0.12)"
+                    : "rgba(255,255,255,0.04)",
+                borderRadius: 20,
+                padding: 16,
+                justifyContent: "flex-start",
+                opacity: pressed ? 0.92 : 1,
+              })}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <View
+                  style={{
+                    width: 34,
+                    height: 34,
+                    borderRadius: 999,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: "rgba(255,255,255,0.08)",
+                    borderWidth: 1,
+                    borderColor: "rgba(255,255,255,0.10)",
+                  }}
+                >
+                  <SafeIcon name="cube-outline" size={18} color={UI.text} />
+                </View>
+
+                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
+                  Standard
+                </Text>
+              </View>
+
+              <Text
+                style={{
+                  color: UI.muted,
+                  fontWeight: "800",
+                  marginTop: 10,
+                  lineHeight: 20,
+                  fontSize: 12.5,
+                }}
+              >
+                Inafaa kwa biashara za kawaida za store, inventory, mauzo ya kila siku, stock movement,
+                bidhaa nyingi, na uendeshaji wa kawaida wa retail.
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => setStoreType("CAPITAL_RECOVERY")}
+              style={({ pressed }) => ({
+                flex: isDesktopWeb ? 1 : undefined,
+                minHeight: isWeb ? 160 : 132,
+                borderWidth: 1,
+                borderColor:
+                  storeType === "CAPITAL_RECOVERY"
+                    ? "rgba(16,185,129,0.40)"
+                    : "rgba(255,255,255,0.12)",
+                backgroundColor:
+                  storeType === "CAPITAL_RECOVERY"
+                    ? "rgba(16,185,129,0.12)"
+                    : "rgba(255,255,255,0.04)",
+                borderRadius: 20,
+                padding: 16,
+                justifyContent: "flex-start",
+                opacity: pressed ? 0.92 : 1,
+              })}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <View
+                  style={{
+                    width: 34,
+                    height: 34,
+                    borderRadius: 999,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: "rgba(255,255,255,0.08)",
+                    borderWidth: 1,
+                    borderColor: "rgba(255,255,255,0.10)",
+                  }}
+                >
+                  <SafeIcon name="cash-outline" size={18} color={UI.text} />
+                </View>
+
+                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
+                  Capital Recovery
+                </Text>
+              </View>
+
+              <Text
+                style={{
+                  color: UI.muted,
+                  fontWeight: "800",
+                  marginTop: 10,
+                  lineHeight: 20,
+                  fontSize: 12.5,
+                }}
+              >
+                Inafaa kwa biashara ya mtaji, gharama, na faida halisi ambapo lengo kuu ni kufuatilia
+                kurudi kwa mtaji, ulinzi wa fedha, na hesabu ya faida kwa umakini zaidi.
+              </Text>
+            </Pressable>
+          </View>
+
+          <View style={{ marginTop: 2 }}>
+            <Text style={{ color: UI.muted, fontWeight: "800", marginBottom: 8 }}>
+              Store Name
+            </Text>
+            <Input
+              value={name}
+              onChangeText={setName}
+              placeholder="mfano: SMART MEN"
+              autoCapitalize="characters"
+            />
+          </View>
         </Card>
-      ) : null}
 
-      <Card style={{ gap: 12, marginTop: 14 }}>
-  <Text style={{ color: UI.muted, fontWeight: "800" }}>Store Type</Text>
+        <View
+              style={{
+                flexDirection: isDesktopWeb ? "row" : "column",
+                gap: 12,
+                marginTop: 2,
+              }}
+            >
+              <View style={{ flex: isDesktopWeb ? 1 : undefined }}>
+                <Button
+                  title={saving ? "Saving..." : "Save Store"}
+                  variant="primary"
+                  onPress={onSave}
+                  disabled={!canCreate || saving}
+                />
+              </View>
 
-  <View style={{ flexDirection: "row", gap: 10 }}>
-    <Button
-      title="Standard"
-      variant={storeType === "STANDARD" ? "primary" : "secondary"}
-      onPress={() => setStoreType("STANDARD")}
-    />
-    <Button
-      title="Capital Recovery"
-      variant={storeType === "CAPITAL_RECOVERY" ? "primary" : "secondary"}
-      onPress={() => setStoreType("CAPITAL_RECOVERY")}
-    />
-  </View>
-
-  <Text style={{ color: UI.muted, fontSize: 12 }}>
-    Capital Recovery = biashara ya mtaji, gharama, na faida halisi
-  </Text>
-
-  <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 10 }}>
-    Store Name
-  </Text>
-  <Input
-    value={name}
-    onChangeText={setName}
-    placeholder="mfano: SMART MEN"
-    autoCapitalize="characters"
-  />
-</Card>
-
-      <Button
-        title={saving ? "Saving..." : "Save Store"}
-        variant="primary"
-        onPress={onSave}
-        disabled={!canCreate || saving}
-      />
-
-      <Button
-        title="Cancel"
-        variant="secondary"
-        onPress={() => router.back()}
-        disabled={saving}
-      />
+              <View style={{ flex: isDesktopWeb ? 1 : undefined }}>
+                <Button
+                  title="Cancel"
+                  variant="secondary"
+                  onPress={() => router.back()}
+                  disabled={saving}
+                />
+              </View>
+            </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </Screen>
   );
 }

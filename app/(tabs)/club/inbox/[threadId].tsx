@@ -8,7 +8,17 @@ import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useIsFocused } from "@react-navigation/native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, FlatList, Pressable, Text, TextInput, View } from "react-native";
+import {
+  ActivityIndicator,
+  FlatList,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type Msg = {
@@ -35,6 +45,7 @@ export default function ThreadChatScreen() {
   const storeId = clean(params?.storeId);
 
   const topPad = Math.max(insets.top, 10) + 8;
+  const listRef = React.useRef<FlatList<Msg> | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -46,6 +57,7 @@ export default function ThreadChatScreen() {
 
   const [senderType, setSenderType] = useState<"customer" | "store">("customer");
   const [senderTypeLoading, setSenderTypeLoading] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {
     let mounted = true;
@@ -86,6 +98,23 @@ export default function ThreadChatScreen() {
     void resolveSenderType();
   }, [resolveSenderType]);
 
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+
+    const showSub = Keyboard.addListener("keyboardDidShow", (e) => {
+      setKeyboardHeight(e.endCoordinates?.height ?? 0);
+    });
+
+    const hideSub = Keyboard.addListener("keyboardDidHide", () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
   const load = useCallback(async () => {
     setErr(null);
     setLoading(true);
@@ -107,6 +136,14 @@ export default function ThreadChatScreen() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      listRef.current?.scrollToEnd?.({ animated: true });
+    }, 80);
+
+    return () => clearTimeout(t);
+  }, [msgs.length]);
 
   const send = useCallback(async () => {
     if (!threadId) return;
@@ -185,7 +222,7 @@ export default function ThreadChatScreen() {
 
         {!!err && (
           <Card style={{ padding: 12, borderColor: theme.colors.dangerBorder, backgroundColor: theme.colors.dangerSoft }}>
-            <Text style={{ color: theme.colors.dangerText, fontWeight: "900" }}>{err}</Text>
+            <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{err}</Text>
           </Card>
         )}
       </View>
@@ -225,98 +262,119 @@ export default function ThreadChatScreen() {
     return !busy && !!clean(text).length && !senderTypeLoading;
   }, [busy, senderTypeLoading, text]);
 
-  const composerBottom = tabBarH;
+  const keyboardOffset = Platform.OS === "ios" ? Math.max(tabBarH - 12, 0) : 0;
+
+  const composerBottom =
+    Platform.OS === "android"
+      ? Math.max(keyboardHeight - Math.max(insets.bottom, 0), 0)
+      : 0;
 
   return (
     <Screen scroll={false} contentStyle={{ paddingTop: 0, paddingHorizontal: 0, paddingBottom: 0 }}>
-      <FlatList
-        data={msgs}
-        keyExtractor={(x) => String(x.id)}
-        renderItem={renderItem}
-        ListHeaderComponent={Header}
-        contentContainerStyle={{
-          paddingHorizontal: theme.spacing.page,
-          paddingBottom: composerBottom + Math.max(insets.bottom, 10) + 100,
-        }}
-        ListEmptyComponent={
-          loading ? null : (
-            <Card style={{ padding: 14 }}>
-              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>No messages</Text>
-              <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>Andika message ya kwanza.</Text>
-            </Card>
-          )
-        }
-        ListFooterComponent={
-          loading ? (
-            <View style={{ paddingVertical: 14, alignItems: "center" }}>
-              <ActivityIndicator />
-              <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>Loading...</Text>
-            </View>
-          ) : null
-        }
-        showsVerticalScrollIndicator={false}
-      />
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={keyboardOffset}
+      >
+        <View style={{ flex: 1 }}>
+          <FlatList
+            ref={listRef}
+            data={msgs}
+            keyExtractor={(x) => String(x.id)}
+            renderItem={renderItem}
+            ListHeaderComponent={Header}
+            contentContainerStyle={{
+              paddingHorizontal: theme.spacing.page,
+              paddingBottom: 90,
+              flexGrow: 1,
+            }}
+            ListEmptyComponent={
+              loading ? null : (
+                <Card style={{ padding: 14 }}>
+                  <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+                    No messages
+                  </Text>
+                  <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
+                    Andika message ya kwanza.
+                  </Text>
+                </Card>
+              )
+            }
+            ListFooterComponent={
+              loading ? (
+                <View style={{ paddingVertical: 14, alignItems: "center" }}>
+                  <ActivityIndicator />
+                  <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>
+                    Loading...
+                  </Text>
+                </View>
+              ) : null
+            }
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            onContentSizeChange={() => listRef.current?.scrollToEnd?.({ animated: true })}
+          />
 
-      {/* ✅ Composer (ONLY when focused) + ✅ does NOT block tabs */}
-      {isFocused && (
-        <View
-          pointerEvents="box-none"
-          style={{
-            position: "absolute",
-            left: 0,
-            right: 0,
-            bottom: composerBottom,
-            paddingBottom: Math.max(insets.bottom, 10),
-            paddingHorizontal: theme.spacing.page,
-            paddingTop: 10,
-            backgroundColor: "rgba(0,0,0,0.25)",
-          }}
-        >
-          <View pointerEvents="auto" style={{ flexDirection: "row", gap: 10, alignItems: "flex-end" }}>
-            <TextInput
-              value={text}
-              onChangeText={setText}
-              placeholder="Type a message..."
-              placeholderTextColor={theme.colors.muted}
-              multiline
+          {isFocused && (
+            <View
               style={{
-                flex: 1,
-                minHeight: 44,
-                maxHeight: 120,
-                paddingHorizontal: 12,
-                paddingVertical: 10,
-                borderRadius: 18,
-                borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.12)",
-                backgroundColor: "rgba(255,255,255,0.06)",
-                color: theme.colors.text,
-                fontWeight: "800",
+                paddingHorizontal: theme.spacing.page,
+                paddingTop: 4,
+                paddingBottom: Math.max(insets.bottom, 4),
+                backgroundColor: theme.colors.background,
+                borderTopWidth: 1,
+                borderTopColor: "rgba(255,255,255,0.08)",
+                marginBottom: composerBottom,
               }}
-            />
-
-            <Pressable
-              onPress={send}
-              disabled={!canSend}
-              hitSlop={10}
-              style={({ pressed }) => [
-                {
-                  width: 54,
-                  height: 44,
-                  borderRadius: 18,
-                  borderWidth: 1,
-                  borderColor: theme.colors.emeraldBorder,
-                  backgroundColor: theme.colors.emeraldSoft,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  opacity: !canSend ? 0.6 : pressed ? 0.92 : 1,
-                },
-              ]}
             >
-              <Ionicons name="send" size={18} color={theme.colors.emerald} />
-            </Pressable>
-          </View>
+              <View style={{ flexDirection: "row", gap: 10, alignItems: "flex-end" }}>
+                <TextInput
+                  value={text}
+                  onChangeText={setText}
+                  placeholder="Type a message..."
+                  placeholderTextColor={theme.colors.muted}
+                  multiline
+                  textAlignVertical="top"
+                  style={{
+                    flex: 1,
+                    minHeight: 48,
+                    maxHeight: 120,
+                    paddingHorizontal: 14,
+                    paddingVertical: 12,
+                    borderRadius: 18,
+                    borderWidth: 1,
+                    borderColor: "rgba(255,255,255,0.12)",
+                    backgroundColor: "rgba(255,255,255,0.06)",
+                    color: theme.colors.text,
+                    fontWeight: "800",
+                  }}
+                />
+
+                <Pressable
+                  onPress={send}
+                  disabled={!canSend}
+                  hitSlop={10}
+                  style={({ pressed }) => [
+                    {
+                      width: 56,
+                      height: 48,
+                      borderRadius: 18,
+                      borderWidth: 1,
+                      borderColor: theme.colors.emeraldBorder,
+                      backgroundColor: theme.colors.emeraldSoft,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      opacity: !canSend ? 0.6 : pressed ? 0.92 : 1,
+                    },
+                  ]}
+                >
+                  <Ionicons name="send" size={18} color={theme.colors.emerald} />
+                </Pressable>
+              </View>
+            </View>
+          )}
         </View>
-      )}
+      </KeyboardAvoidingView>
     </Screen>
   );
 }

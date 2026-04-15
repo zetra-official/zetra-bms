@@ -4,12 +4,12 @@ import { supabase } from "@/src/supabase/supabaseClient";
 import { Card } from "@/src/ui/Card";
 import { Screen } from "@/src/ui/Screen";
 import { theme } from "@/src/ui/theme";
-import { Ionicons } from "@expo/vector-icons";
+import SafeIcon from "@/src/ui/SafeIcon";
 import { useFocusEffect, useRouter } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  FlatList,
+  
   Modal,
   Pressable,
   ScrollView,
@@ -91,7 +91,11 @@ export default function CreditHomeScreen() {
 
   const [rows, setRows] = useState<CreditAccountRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [errMsg, setErrMsg] = useState<string | null>(null);
+
+  const firstLoadDoneRef = useRef(false);
+  const lastLoadAtRef = useRef(0);
 
   const [q, setQ] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("BAL_DESC");
@@ -140,45 +144,53 @@ export default function CreditHomeScreen() {
     }
   }, [activeStoreId, isOwnerAdmin]);
 
-  const load = useCallback(async () => {
-    try {
-      setErrMsg(null);
-      setLoading(true);
+  const load = useCallback(
+    async (mode: "boot" | "refresh" = "boot") => {
+      try {
+        setErrMsg(null);
 
-      if (!activeStoreId) {
+        if (mode === "boot") setLoading(true);
+        if (mode === "refresh") setRefreshing(true);
+
+        if (!activeStoreId) {
+          setRows([]);
+          setErrMsg("Chagua store kwanza. Credit ni store-scoped.");
+          return;
+        }
+
+        const { data, error } = await supabase.rpc("get_store_credit_accounts_v2", {
+          p_store_id: activeStoreId,
+          p_status: "ALL",
+        } as any);
+
+        if (error) throw error;
+
+        const mapped: CreditAccountRow[] = ((data ?? []) as any[])
+          .map((x) => {
+            const id = x.account_id ?? x.credit_account_id ?? x.id;
+            return {
+              account_id: String(id),
+              customer_name: x.customer_name ?? x.full_name ?? x.name ?? null,
+              phone: x.phone ?? x.normalized_phone ?? null,
+              balance: Number(x.balance ?? x.balance_amount ?? 0),
+            };
+          })
+          .filter((r) => Number(r.balance ?? 0) > 0);
+
+        mapped.sort((a, b) => Number(b.balance ?? 0) - Number(a.balance ?? 0));
+        setRows(mapped);
+        firstLoadDoneRef.current = true;
+        lastLoadAtRef.current = Date.now();
+      } catch (e: any) {
         setRows([]);
-        setErrMsg("Chagua store kwanza. Credit ni store-scoped.");
-        return;
+        setErrMsg(e?.message ?? "Failed to load credit accounts.");
+      } finally {
+        if (mode === "boot") setLoading(false);
+        if (mode === "refresh") setRefreshing(false);
       }
-
-      const { data, error } = await supabase.rpc("get_store_credit_accounts_v2", {
-        p_store_id: activeStoreId,
-        p_status: "ALL",
-      } as any);
-
-      if (error) throw error;
-
-      const mapped: CreditAccountRow[] = ((data ?? []) as any[])
-        .map((x) => {
-          const id = x.account_id ?? x.credit_account_id ?? x.id;
-          return {
-            account_id: String(id),
-            customer_name: x.customer_name ?? x.full_name ?? x.name ?? null,
-            phone: x.phone ?? x.normalized_phone ?? null,
-            balance: Number(x.balance ?? x.balance_amount ?? 0),
-          };
-        })
-        .filter((r) => Number(r.balance ?? 0) > 0);
-
-      mapped.sort((a, b) => Number(b.balance ?? 0) - Number(a.balance ?? 0));
-      setRows(mapped);
-    } catch (e: any) {
-      setRows([]);
-      setErrMsg(e?.message ?? "Failed to load credit accounts.");
-    } finally {
-      setLoading(false);
-    }
-  }, [activeStoreId]);
+    },
+    [activeStoreId]
+  );
 
   const loadTimeline = useCallback(async () => {
     try {
@@ -229,21 +241,27 @@ export default function CreditHomeScreen() {
   }, [activeStoreId, p_days]);
 
   useEffect(() => {
-    loadAccess();
-    load();
+    void loadAccess();
+    void load("boot");
   }, [loadAccess, load]);
 
   useFocusEffect(
     useCallback(() => {
-      loadAccess();
-      load();
+      void loadAccess();
+
+      if (!firstLoadDoneRef.current) return;
+
+      const now = Date.now();
+      if (now - lastLoadAtRef.current < 1500) return;
+
+      void load("refresh");
     }, [loadAccess, load])
   );
 
   function openAccount(accountId: string) {
     router.push({
-      pathname: "/(tabs)/credit/[creditId]",
-      params: { creditId: accountId },
+      pathname: "/(tabs)/credit/[id]",
+      params: { id: accountId },
     } as any);
   }
 
@@ -543,7 +561,7 @@ export default function CreditHomeScreen() {
                   justifyContent: "center",
                 }}
               >
-                <Ionicons name="archive-outline" size={18} color={theme.colors.muted} />
+                <SafeIcon name="archive" size={18} color={theme.colors.muted} />
               </View>
 
               <View style={{ gap: 2 }}>
@@ -570,11 +588,11 @@ export default function CreditHomeScreen() {
                 </Text>
               </View>
 
-              <Ionicons
-                name={clearedOpen ? "chevron-up" : "chevron-down"}
-                size={18}
-                color={theme.colors.muted}
-              />
+            <SafeIcon
+              name={clearedOpen ? "chevron-up" : "chevron-down"}
+              size={18}
+              color={theme.colors.muted}
+            />
             </View>
           </View>
         </Pressable>
@@ -624,7 +642,7 @@ export default function CreditHomeScreen() {
                               backgroundColor: "rgba(255,255,255,0.05)",
                             }}
                           >
-                            <Ionicons name="checkmark-circle" size={14} color={theme.colors.emerald} />
+                            <SafeIcon name="check-circle" size={14} color={theme.colors.emerald} />
                             <Text style={{ color: theme.colors.muted, fontWeight: "900", fontSize: 12 }}>
                               CLEARED
                             </Text>
@@ -667,7 +685,7 @@ export default function CreditHomeScreen() {
   }, [clearedTimelineRows, clearedOpen, openAccount, money]);
 
   return (
-    <Screen scroll={!isDesktopWeb} bottomPad={isDesktopWeb ? 24 : 160}>
+    <Screen scroll bottomPad={isDesktopWeb ? 24 : 160}>
       <View
         style={{
           paddingTop: 6,
@@ -689,7 +707,7 @@ export default function CreditHomeScreen() {
             justifyContent: "center",
           }}
         >
-          <Ionicons name="card-outline" size={20} color={theme.colors.emerald} />
+          <SafeIcon name="card" size={20} color={theme.colors.emerald} />
         </View>
 
         <View style={{ flex: 1, minWidth: 0 }}>
@@ -706,12 +724,6 @@ export default function CreditHomeScreen() {
           alignItems: "stretch",
           gap: 14,
           width: "100%",
-          ...(isDesktopWeb
-            ? {
-                minHeight: Math.max(620, width >= 1500 ? 760 : 700),
-                maxHeight: Math.max(620, width >= 1500 ? 760 : 700),
-              }
-            : null),
         }}
       >
         <Card
@@ -721,12 +733,6 @@ export default function CreditHomeScreen() {
             width: isDesktopWeb ? (desktopLeftWidth as any) : "100%",
             alignSelf: "stretch",
             flexShrink: 0,
-            ...(isDesktopWeb
-              ? {
-                  height: "100%",
-                  overflow: "hidden",
-                }
-              : null),
           }}
         >
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
@@ -742,7 +748,7 @@ export default function CreditHomeScreen() {
                 justifyContent: "center",
               }}
             >
-              <Ionicons name="card-outline" size={22} color={theme.colors.emerald} />
+              <SafeIcon name="card" size={22} color={theme.colors.emerald} />
             </View>
 
             <View style={{ flex: 1 }}>
@@ -791,7 +797,7 @@ export default function CreditHomeScreen() {
                 height: 48,
               }}
             >
-              <Ionicons name="search" size={18} color={theme.colors.muted} />
+              <SafeIcon name="search" size={18} color={theme.colors.muted} />
               <TextInput
                 value={q}
                 onChangeText={setQ}
@@ -803,7 +809,7 @@ export default function CreditHomeScreen() {
               />
               {!!q ? (
                 <Pressable onPress={() => setQ("")} hitSlop={10}>
-                  <Ionicons name="close-circle" size={18} color={theme.colors.muted} />
+                  <SafeIcon name="close" size={16} color={theme.colors.muted} />
                 </Pressable>
               ) : null}
             </View>
@@ -860,8 +866,8 @@ export default function CreditHomeScreen() {
 
           <Pressable
             onPress={() => {
-              loadAccess();
-              load();
+              void loadAccess();
+              void load("refresh");
             }}
             hitSlop={10}
             style={({ pressed }) => ({
@@ -892,8 +898,6 @@ export default function CreditHomeScreen() {
             ...(isDesktopWeb
               ? {
                   minWidth: 0,
-                  height: "100%",
-                  overflow: "hidden",
                 }
               : null),
           }}
@@ -955,74 +959,50 @@ export default function CreditHomeScreen() {
             <View
               style={{
                 width: "100%",
-                flex: isDesktopWeb ? 1 : undefined,
-                minHeight: isDesktopWeb ? 0 : undefined,
-                ...(isDesktopWeb
-                  ? {
-                      overflow: "hidden",
-                    }
-                  : null),
+                gap: 10,
+                paddingBottom: 12,
               }}
             >
-              <FlatList
-                data={filtered}
-                keyExtractor={(it) => it.account_id}
-                scrollEnabled={isDesktopWeb}
-                nestedScrollEnabled={isDesktopWeb}
-                showsVerticalScrollIndicator={isDesktopWeb}
-                style={
-                  isDesktopWeb
-                    ? {
-                        flex: 1,
-                        minHeight: 0,
-                      }
-                    : undefined
-                }
-                contentContainerStyle={{
-                  paddingBottom: isDesktopWeb ? 10 : 0,
-                  flexGrow: isDesktopWeb ? 1 : 0,
-                }}
-                ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
-                renderItem={({ item }) => {
-                  const name = item.customer_name ?? "Customer";
-                  const phone = item.phone ?? "No phone";
-                  const bal = Number(item.balance ?? 0);
+              {filtered.map((item) => {
+                const name = item.customer_name ?? "Customer";
+                const phone = item.phone ?? "No phone";
+                const bal = Number(item.balance ?? 0);
 
-                  return (
-                    <Pressable
-                      onPress={() => openAccount(item.account_id)}
-                      hitSlop={10}
-                      style={({ pressed }) => ({
-                        borderWidth: 1,
-                        borderColor: "rgba(255,255,255,0.10)",
-                        backgroundColor: "rgba(255,255,255,0.04)",
-                        borderRadius: theme.radius.xl,
-                        padding: 12,
-                        opacity: pressed ? 0.92 : 1,
-                      })}
-                    >
-                      <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
-                        <View style={{ flex: 1 }}>
-                          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{name}</Text>
-                          <Text style={{ color: theme.colors.faint, marginTop: 4, fontWeight: "800" }}>
-                            {phone}
-                          </Text>
-                        </View>
-
-                        <View style={{ alignItems: "flex-end" }}>
-                          <Text style={{ color: theme.colors.muted, fontSize: 12 }}>Balance</Text>
-                          <Text style={{ color: theme.colors.emerald, fontWeight: "900" }}>
-                            {money.fmt(Math.max(0, bal))}
-                          </Text>
-                        </View>
+                return (
+                  <Pressable
+                    key={item.account_id}
+                    onPress={() => openAccount(item.account_id)}
+                    hitSlop={10}
+                    style={({ pressed }) => ({
+                      borderWidth: 1,
+                      borderColor: "rgba(255,255,255,0.10)",
+                      backgroundColor: "rgba(255,255,255,0.04)",
+                      borderRadius: theme.radius.xl,
+                      padding: 12,
+                      opacity: pressed ? 0.92 : 1,
+                    })}
+                  >
+                    <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{name}</Text>
+                        <Text style={{ color: theme.colors.faint, marginTop: 4, fontWeight: "800" }}>
+                          {phone}
+                        </Text>
                       </View>
 
-                      <View style={{ height: 10 }} />
-                      <Text style={{ color: theme.colors.emerald, fontWeight: "900" }}>Open →</Text>
-                    </Pressable>
-                  );
-                }}
-              />
+                      <View style={{ alignItems: "flex-end" }}>
+                        <Text style={{ color: theme.colors.muted, fontSize: 12 }}>Balance</Text>
+                        <Text style={{ color: theme.colors.emerald, fontWeight: "900" }}>
+                          {money.fmt(Math.max(0, bal))}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={{ height: 10 }} />
+                    <Text style={{ color: theme.colors.emerald, fontWeight: "900" }}>Open →</Text>
+                  </Pressable>
+                );
+              })}
             </View>
           )}
         </Card>
@@ -1084,7 +1064,7 @@ export default function CreditHomeScreen() {
                 </View>
 
                 <Pressable onPress={closeTimeline} hitSlop={10}>
-                  <Ionicons name="close" size={20} color={theme.colors.muted} />
+                  <SafeIcon name="close" size={20} color={theme.colors.muted} />
                 </Pressable>
               </View>
 
