@@ -62,12 +62,37 @@ export default function OnboardingReferralScreen() {
     } catch {}
   }
 
+  async function markReferralDone() {
+    try {
+      if ((kv as any)?.setString) {
+        await (kv as any).setString("zetra_onboarding_referral_done_v1", "1");
+        return;
+      }
+    } catch {}
+
+    try {
+      if ((kv as any)?.set) {
+        await (kv as any).set("zetra_onboarding_referral_done_v1", "1");
+      }
+    } catch {}
+  }
+
   async function onSkip() {
-    await clearReferralCode();
-    router.replace("/(onboarding)");
+    if (checking) return;
+
+    setChecking(true);
+    try {
+      await clearReferralCode();
+      await markReferralDone();
+      router.replace("/(onboarding)/business" as any);
+    } finally {
+      setChecking(false);
+    }
   }
 
   async function onContinue() {
+    if (checking) return;
+
     const referralCode = normalizedCode;
 
     if (!referralCode) {
@@ -98,7 +123,8 @@ export default function OnboardingReferralScreen() {
       }
 
       await saveReferralCode(referralCode);
-      router.replace("/(onboarding)");
+      await markReferralDone();
+      router.replace("/(onboarding)/business" as any);
     } finally {
       setChecking(false);
     }
@@ -110,6 +136,7 @@ export default function OnboardingReferralScreen() {
         <Text style={{ color: UI.text, fontWeight: "900", fontSize: 26 }}>
           Referral Code
         </Text>
+
         <Text
           style={{
             color: UI.muted,
@@ -118,7 +145,8 @@ export default function OnboardingReferralScreen() {
             lineHeight: 20,
           }}
         >
-          Ukiwa umesaidiwa na Growth Partner, weka code yake hapa. Ukiwa huna, unaweza kuendelea kwa Skip.
+          Ukiwa umesaidiwa na Growth Partner, weka code yake hapa. Ukiwa huna,
+          unaweza kuendelea kwa Skip.
         </Text>
       </View>
 
@@ -146,6 +174,7 @@ export default function OnboardingReferralScreen() {
               placeholderTextColor="rgba(255,255,255,0.40)"
               autoCapitalize="characters"
               autoCorrect={false}
+              editable={!checking}
               style={{
                 color: "#FFFFFF",
                 fontWeight: "900",
@@ -164,7 +193,8 @@ export default function OnboardingReferralScreen() {
               lineHeight: 16,
             }}
           >
-            Ukijaza code halali, account yako itaunganishwa na Growth Partner aliyekusaidia. Ukiskip, utaendelea bila referral.
+            Ukijaza code halali, account yako itaunganishwa na Growth Partner
+            aliyekusaidia. Ukiskip, utaendelea bila referral.
           </Text>
         </Card>
       </View>
@@ -179,7 +209,7 @@ export default function OnboardingReferralScreen() {
 
       <View style={{ marginTop: 10 }}>
         <Button
-          title="Skip"
+          title={checking ? "Please wait..." : "Skip"}
           onPress={onSkip}
           disabled={checking}
           variant="secondary"

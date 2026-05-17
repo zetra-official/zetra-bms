@@ -5,11 +5,14 @@ import {
   Alert,
   Keyboard,
   Platform,
+  Pressable,
+  ScrollView,
   Text,
   TextInput,
   TouchableWithoutFeedback,
   View,
 } from "react-native";
+
 import { useOrg } from "../../../src/context/OrgContext";
 import { supabase } from "../../../src/supabase/supabaseClient";
 import { Button } from "../../../src/ui/Button";
@@ -19,13 +22,27 @@ import { theme } from "../../../src/ui/theme";
 
 type Mode = "ADD" | "REDUCE";
 
+type SupplierRow = {
+  id: string;
+  name: string;
+  phone?: string | null;
+  email?: string | null;
+};
+
+type PrecisionMeta = {
+  is_precision_product: boolean;
+  precision_pack_size: number | null;
+  precision_base_unit: string | null;
+  precision_package_unit: string | null;
+};
+
 function one(v: string | string[] | undefined) {
   return Array.isArray(v) ? v[0] : v;
 }
 
-function asInt(n: number) {
-  const x = Math.trunc(n);
-  return Number.isFinite(x) ? x : 0;
+function asDecimal(n: number) {
+  if (!Number.isFinite(n)) return 0;
+  return Number(n.toFixed(3));
 }
 
 function localYMD(d = new Date()) {
@@ -44,7 +61,7 @@ export default function AdjustStockScreen() {
     currentQty?: string | string[];
   }>();
 
-  const { activeRole, activeStoreId, activeStoreName, activeStoreType } = useOrg();
+  const { activeOrgId, activeRole, activeStoreId, activeStoreName, activeStoreType } = useOrg();
   const isCapitalRecoveryStore = activeStoreType === "CAPITAL_RECOVERY";
 
   const canAdjust = useMemo(() => {
@@ -58,22 +75,38 @@ export default function AdjustStockScreen() {
   const passedSku = (one(params.sku) ?? "").trim();
   const currentQty = (one(params.currentQty) ?? "—").trim() || "—";
 
-  const [displayName, setDisplayName] = useState<string>(passedName || "Product");
-  const [displaySku, setDisplaySku] = useState<string>(passedSku || "—");
+ const [displayName, setDisplayName] = useState<string>(passedName || "Product");
+const [displaySku, setDisplaySku] = useState<string>(passedSku || "—");
+
+const [precisionMeta, setPrecisionMeta] = useState<PrecisionMeta>({
+  is_precision_product: false,
+  precision_pack_size: null,
+  precision_base_unit: null,
+  precision_package_unit: null,
+});
+
+const [precisionStockMode, setPrecisionStockMode] = useState<"UNIT" | "BOX">("BOX");
 
   const [mode, setMode] = useState<Mode>("ADD");
-  const [amount, setAmount] = useState<string>("0");
+  const [amount, setAmount] = useState<string>("");
   const [reason, setReason] = useState<string>("");
+  const [supplierName, setSupplierName] = useState<string>("");
+  const [supplierInvoiceNo, setSupplierInvoiceNo] = useState<string>("");
+  const [suppliers, setSuppliers] = useState<SupplierRow[]>([]);
+  const [supplierLoading, setSupplierLoading] = useState(false);
   const [expiryDate, setExpiryDate] = useState<string>("");
-  const [saving, setSaving] = useState(false);
+  const [expiryAlertDays, setExpiryAlertDays] = useState<number>(30);
+const [saving, setSaving] = useState(false);
+const [showOptionalDetails, setShowOptionalDetails] = useState(false);
 
-  const [kbHeight, setKbHeight] = useState(0);
+const [kbHeight, setKbHeight] = useState(0);
 
   useEffect(() => {
     const show = Keyboard.addListener("keyboardDidShow", (e: any) => {
       const h = e?.endCoordinates?.height ?? 0;
       setKbHeight(h);
     });
+
     const hide = Keyboard.addListener("keyboardDidHide", () => setKbHeight(0));
 
     return () => {
@@ -89,10 +122,10 @@ export default function AdjustStockScreen() {
       if (passedName) {
         setDisplayName(passedName);
         if (passedSku) setDisplaySku(passedSku);
-        return;
       }
 
       if (!productId) return;
+
       if (isCapitalRecoveryStore) {
         if (!cancelled) {
           setDisplayName(passedName || "Product");
@@ -106,25 +139,45 @@ export default function AdjustStockScreen() {
           const access = await supabase.rpc("ensure_my_store_access", {
             p_store_id: activeStoreId,
           });
+
           if (access.error) throw access.error;
         }
 
-        const { data, error } = await supabase.rpc("get_products");
-        if (error) throw error;
+       if (!activeOrgId) {
+  throw new Error("org_id required");
+}
 
-        const list = (data ?? []) as Array<{
-          id: string;
-          name?: string | null;
-          sku?: string | null;
-        }>;
+const { data, error } = await supabase.rpc("get_products_manage", {
+  p_org_id: activeOrgId,
+  p_store_id: activeStoreId,
+});
 
-        const found = list.find((p) => p.id === productId);
+if (error) throw error;
 
-        if (!cancelled) {
-          setDisplayName((found?.name ?? "").trim() || "Product");
-          if (!passedSku) setDisplaySku((found?.sku ?? "").trim() || "—");
-        }
-      } catch {
+const found = Array.isArray(data)
+  ? data.find((x: any) => String(x.id) === String(productId))
+  : null;
+
+if (error) throw error;
+
+      
+
+console.log("PRECISION PRODUCT RAW =>", found);
+
+if (!cancelled) {
+  setDisplayName((found?.name ?? "").trim() || "Product");
+  if (!passedSku) setDisplaySku((found?.sku ?? "").trim() || "—");
+
+  setPrecisionMeta({
+    is_precision_product: Boolean(found?.is_precision_product),
+    precision_pack_size:
+      found?.precision_pack_size != null ? Number(found.precision_pack_size) : null,
+    precision_base_unit: found?.precision_base_unit ?? null,
+    precision_package_unit: found?.unit ?? null,
+  });
+}
+      } catch (e) {
+        console.log("ADJUST HYDRATE ERROR =>", e);
         if (!cancelled) {
           setDisplayName(passedName || "Product");
           setDisplaySku(passedSku || "—");
@@ -137,11 +190,67 @@ export default function AdjustStockScreen() {
     return () => {
       cancelled = true;
     };
-  }, [productId, passedName, passedSku, activeStoreId, isCapitalRecoveryStore]);
+  }, [productId, passedName, passedSku, activeOrgId, activeStoreId, isCapitalRecoveryStore]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSuppliers() {
+      if (!activeStoreId || isCapitalRecoveryStore) {
+        setSuppliers([]);
+        return;
+      }
+
+      setSupplierLoading(true);
+
+      try {
+        const { data: storeData, error: storeErr } = await supabase
+          .from("stores")
+          .select("organization_id")
+          .eq("id", activeStoreId)
+          .maybeSingle();
+
+        if (storeErr) throw storeErr;
+
+        const orgId = String((storeData as any)?.organization_id ?? "").trim();
+        if (!orgId) {
+          if (!cancelled) setSuppliers([]);
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from("suppliers")
+          .select("id, name, phone, email")
+          .eq("organization_id", orgId)
+          .order("name", { ascending: true });
+
+        if (error) throw error;
+
+        if (!cancelled) {
+          setSuppliers((data ?? []) as SupplierRow[]);
+        }
+      } catch {
+        if (!cancelled) setSuppliers([]);
+      } finally {
+        if (!cancelled) setSupplierLoading(false);
+      }
+    }
+
+    void loadSuppliers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeStoreId, isCapitalRecoveryStore]);
 
   const onAmountChange = useCallback((txt: string) => {
-    const cleaned = txt.replace(/[^\d]/g, "");
-    setAmount(cleaned);
+    const raw = String(txt ?? "").replace(",", ".");
+    const cleaned = raw.replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1");
+
+    const [whole, decimal] = cleaned.split(".");
+    const next = decimal !== undefined ? `${whole}.${decimal.slice(0, 3)}` : whole;
+
+    setAmount(next);
   }, []);
 
   const isValidExpiryInput = useCallback((value: string) => {
@@ -160,16 +269,16 @@ export default function AdjustStockScreen() {
     if (isCapitalRecoveryStore) return false;
 
     const today = localYMD();
+
     const { data, error } = await supabase.rpc("is_closing_locked", {
       p_store_id: activeStoreId,
       p_date: today,
     });
 
-    if (error) {
-      return true;
-    }
+    if (error) return true;
 
     const locked = Boolean(data);
+
     if (locked) {
       Alert.alert(
         "Locked",
@@ -216,13 +325,15 @@ export default function AdjustStockScreen() {
     }
 
     const n = Number(trimmed);
+
     if (!Number.isFinite(n) || n < 0) {
       Alert.alert("Invalid", "Amount haiwezi kuwa negative.");
       return;
     }
 
-    const intAmount = asInt(n);
-    if (intAmount < 0) {
+    const decimalAmount = asDecimal(n);
+
+    if (decimalAmount < 0) {
       Alert.alert("Invalid", "Amount lazima iwe namba halali.");
       return;
     }
@@ -239,7 +350,7 @@ export default function AdjustStockScreen() {
       }
     }
 
-    if (intAmount === 0) {
+    if (decimalAmount === 0) {
       if (mode !== "ADD") {
         Alert.alert("Invalid", "Amount ya 0 inaruhusiwa kwa expiry update tu.");
         return;
@@ -252,19 +363,31 @@ export default function AdjustStockScreen() {
     }
 
     setSaving(true);
+
     try {
       const access = await supabase.rpc("ensure_my_store_access", {
         p_store_id: activeStoreId,
       });
+
       if (access.error) throw access.error;
 
       const { data, error } = await supabase.rpc("adjust_stock", {
         p_store_id: activeStoreId,
         p_product_id: productId,
-        p_amount: Math.abs(intAmount),
+        p_amount: Math.abs(decimalAmount),
         p_mode: mode,
         p_note: reason?.trim() ? reason.trim() : null,
         p_expiry_date: mode === "ADD" && expiryDate.trim() ? expiryDate.trim() : null,
+        p_supplier_name: mode === "ADD" && supplierName.trim() ? supplierName.trim() : null,
+        p_supplier_invoice_no:
+  mode === "ADD" && supplierInvoiceNo.trim() ? supplierInvoiceNo.trim() : null,
+
+p_expiry_alert_days:
+  mode === "ADD" && expiryDate.trim()
+    ? expiryAlertDays
+    : null,
+
+p_precision_stock_mode: precisionMeta.is_precision_product ? precisionStockMode : "UNIT",
       } as any);
 
       if (error) throw error;
@@ -274,14 +397,19 @@ export default function AdjustStockScreen() {
 
       Alert.alert(
         "Success ✅",
-        intAmount === 0
+        decimalAmount === 0
           ? "Expiry updated"
           : newQty === null
-          ? "Stock updated"
-          : `New Qty: ${newQty}`
+            ? "Stock updated"
+            : `New Qty: ${newQty}`
       );
+
       setExpiryDate("");
-      setAmount("0");
+      setExpiryAlertDays(30);
+      setSupplierName("");
+      setSupplierInvoiceNo("");
+      setAmount("");
+
       router.back();
     } catch (err: any) {
       Alert.alert("Failed", err?.message ?? "Unknown error");
@@ -297,126 +425,207 @@ export default function AdjustStockScreen() {
     ensureNotLockedToday,
     amount,
     reason,
+    supplierName,
+    supplierInvoiceNo,
     mode,
-    expiryDate,
-    isValidExpiryInput,
-    router,
+   expiryDate,
+expiryAlertDays,
+isValidExpiryInput,
+precisionMeta.is_precision_product,
+precisionStockMode,
+router,
   ]);
 
-  const content = (
-    <View style={{ flex: 1, gap: 14 }}>
-      <Text style={{ fontSize: 26, fontWeight: "900", color: theme.colors.text }}>
-        {isCapitalRecoveryStore ? "Adjust Disabled" : "Adjust Stock"}
-      </Text>
-
-      <Card style={{ gap: 8 }}>
-        <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Active Store</Text>
-        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
-          {activeStoreName ?? "—"}
+const content = (
+    <View style={{ flex: 1, gap: 12 }}>
+      <View style={{ gap: 6 }}>
+        <Text style={{ fontSize: 28, fontWeight: "900", color: theme.colors.text }}>
+          {isCapitalRecoveryStore ? "Adjust Disabled" : "Adjust Stock"}
         </Text>
 
-        <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-          Product
+        <Text style={{ color: theme.colors.muted, fontWeight: "800", lineHeight: 20 }}>
+          {activeStoreName ?? "—"} • {displayName} • Current Qty: {currentQty}
         </Text>
-        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{displayName}</Text>
+      </View>
 
-        <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-          SKU
-        </Text>
-        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{displaySku}</Text>
+      {isCapitalRecoveryStore ? (
+        <Card style={{ gap: 8 }}>
+          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+            Capital Recovery store haitumii Adjust Stock.
+          </Text>
+          <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+            Tumia Products + Capital Recovery Workspace. Inventory adjustment imezimwa kwenye mode hii.
+          </Text>
+        </Card>
+      ) : null}
 
-        <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-          Current Qty
-        </Text>
-        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{currentQty}</Text>
-
-        {isCapitalRecoveryStore ? (
-          <View
-            style={{
-              marginTop: 10,
-              borderWidth: 1,
-              borderColor: theme.colors.emeraldBorder,
-              borderRadius: theme.radius.xl,
-              backgroundColor: theme.colors.emeraldSoft,
-              padding: 14,
-            }}
-          >
-            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-              Capital Recovery store haitumii Adjust Stock.
-            </Text>
-            <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>
-              Tumia Products + Capital Recovery Workspace. Inventory adjustment imezimwa kwenye mode hii.
-            </Text>
-          </View>
-        ) : null}
-      </Card>
-
-      <Card style={{ gap: 10 }}>
-        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-          Mode
-        </Text>
+      <Card style={{ gap: 12 }}>
+        <View style={{ gap: 4 }}>
+          <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Product</Text>
+          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
+            {displayName}
+          </Text>
+          <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+            SKU: {displaySku} • Store: {activeStoreName ?? "—"}
+          </Text>
+        </View>
 
         <View style={{ flexDirection: "row", gap: 10 }}>
-          <Button
-            title="ADD"
-            variant="secondary"
+          <Pressable
             onPress={() => setMode("ADD")}
             disabled={isCapitalRecoveryStore || saving}
-            style={{
+            style={({ pressed }) => ({
               flex: 1,
-              borderColor:
-                mode === "ADD" ? "rgba(52,211,153,0.55)" : theme.colors.border,
-              opacity: isCapitalRecoveryStore ? 0.6 : 1,
-            }}
-          />
+              minHeight: 46,
+              borderRadius: 999,
+              borderWidth: 1,
+              borderColor: mode === "ADD" ? "rgba(52,211,153,0.55)" : theme.colors.border,
+              backgroundColor: mode === "ADD" ? "rgba(52,211,153,0.12)" : "rgba(255,255,255,0.05)",
+              alignItems: "center",
+              justifyContent: "center",
+              opacity: pressed ? 0.92 : isCapitalRecoveryStore ? 0.6 : 1,
+            })}
+          >
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Add Stock</Text>
+          </Pressable>
 
-          <Button
-            title="REDUCE"
-            variant="secondary"
+          <Pressable
             onPress={() => {
               setMode("REDUCE");
               setExpiryDate("");
+              setExpiryAlertDays(30);
+              setSupplierName("");
+              setSupplierInvoiceNo("");
+              setShowOptionalDetails(false);
             }}
             disabled={isCapitalRecoveryStore || saving}
-            style={{
+            style={({ pressed }) => ({
               flex: 1,
-              borderColor:
-                mode === "REDUCE" ? theme.colors.dangerBorder : theme.colors.border,
+              minHeight: 46,
+              borderRadius: 999,
+              borderWidth: 1,
+              borderColor: mode === "REDUCE" ? theme.colors.dangerBorder : theme.colors.border,
+              backgroundColor: mode === "REDUCE" ? "rgba(239,68,68,0.10)" : "rgba(255,255,255,0.05)",
+              alignItems: "center",
+              justifyContent: "center",
+              opacity: pressed ? 0.92 : isCapitalRecoveryStore ? 0.6 : 1,
+            })}
+          >
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Reduce Stock</Text>
+          </Pressable>
+        </View>
+
+        <View style={{ gap: 8 }}>
+          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+            {precisionMeta.is_precision_product
+              ? precisionStockMode === "BOX"
+                ? `Stock Quantity (${precisionMeta.precision_package_unit ?? "Box/Pack"})`
+                : `Stock Quantity (${precisionMeta.precision_base_unit ?? "Units"})`
+              : "Stock Quantity"}
+          </Text>
+
+          {precisionMeta.is_precision_product ? (
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <Pressable
+                onPress={() => setPrecisionStockMode("BOX")}
+                disabled={saving}
+                style={{
+                  flex: 1,
+                  minHeight: 42,
+                  borderRadius: 999,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderWidth: 1,
+                  borderColor:
+                    precisionStockMode === "BOX"
+                      ? theme.colors.emeraldBorder
+                      : theme.colors.border,
+                  backgroundColor:
+                    precisionStockMode === "BOX"
+                      ? theme.colors.emeraldSoft
+                      : "rgba(255,255,255,0.05)",
+                }}
+              >
+                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+  {precisionMeta.precision_package_unit ?? "Box/Pack"}
+</Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => setPrecisionStockMode("UNIT")}
+                disabled={saving}
+                style={{
+                  flex: 1,
+                  minHeight: 42,
+                  borderRadius: 999,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderWidth: 1,
+                  borderColor:
+                    precisionStockMode === "UNIT"
+                      ? theme.colors.emeraldBorder
+                      : theme.colors.border,
+                  backgroundColor:
+                    precisionStockMode === "UNIT"
+                      ? theme.colors.emeraldSoft
+                      : "rgba(255,255,255,0.05)",
+                }}
+              >
+                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+                  {precisionMeta.precision_base_unit ?? "Unit"}
+                </Text>
+              </Pressable>
+            </View>
+          ) : null}
+
+          <TextInput
+            value={amount}
+            onChangeText={onAmountChange}
+            onFocus={() => {
+              if (amount === "0") setAmount("");
+            }}
+            keyboardType="decimal-pad"
+            returnKeyType="done"
+            onSubmitEditing={Keyboard.dismiss}
+            placeholder={
+  precisionMeta.is_precision_product
+    ? precisionStockMode === "BOX"
+      ? `mf. 1 ${precisionMeta.precision_package_unit ?? "box"}`
+      : `mf. 100 ${precisionMeta.precision_base_unit ?? "unit"}`
+    : "0"
+}
+            placeholderTextColor="rgba(255,255,255,0.35)"
+            editable={!isCapitalRecoveryStore && !saving}
+            style={{
+              borderWidth: 1,
+              borderColor: theme.colors.border,
+              borderRadius: theme.radius.lg,
+              backgroundColor: "rgba(255,255,255,0.05)",
+              paddingHorizontal: 14,
+              paddingVertical: 12,
+              color: theme.colors.text,
+              fontWeight: "900",
               opacity: isCapitalRecoveryStore ? 0.6 : 1,
             }}
           />
+
+          {mode === "ADD" ? (
+            <Text style={{ color: theme.colors.muted, fontWeight: "800", lineHeight: 18 }}>
+              {precisionMeta.is_precision_product && precisionMeta.precision_pack_size
+  ? precisionStockMode === "BOX"
+  ? `Mfano: ukiweka 1 ${precisionMeta.precision_package_unit ?? "box"}, mfumo utaongeza ${precisionMeta.precision_pack_size} ${precisionMeta.precision_base_unit ?? "units"} kwenye stock.`
+  : `Mfano: ukiweka ${precisionMeta.precision_pack_size} ${precisionMeta.precision_base_unit ?? "units"}, ni sawa na 1 ${precisionMeta.precision_package_unit ?? "box"}.`
+  : "Weka 0 kama unabadilisha expiry date tu."}
+            </Text>
+          ) : null}
         </View>
 
-        <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 6 }}>
-          Amount
-        </Text>
-        <TextInput
-          value={amount}
-          onChangeText={onAmountChange}
-          keyboardType="numeric"
-          returnKeyType="done"
-          onSubmitEditing={Keyboard.dismiss}
-          placeholder="e.g 0 or 5"
-          placeholderTextColor="rgba(255,255,255,0.35)"
-          editable={!isCapitalRecoveryStore && !saving}
-          style={{
-            borderWidth: 1,
-            borderColor: theme.colors.border,
-            borderRadius: theme.radius.lg,
-            backgroundColor: "rgba(255,255,255,0.05)",
-            paddingHorizontal: 14,
-            paddingVertical: 12,
-            color: theme.colors.text,
-            fontWeight: "800",
-            opacity: isCapitalRecoveryStore ? 0.6 : 1,
-          }}
-        />
-
         {mode === "ADD" ? (
-          <>
-            <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 6 }}>
+          <View style={{ gap: 8 }}>
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
               Expiry Date (optional)
             </Text>
+
             <TextInput
               value={expiryDate}
               onChangeText={setExpiryDate}
@@ -433,49 +642,231 @@ export default function AdjustStockScreen() {
                 paddingHorizontal: 14,
                 paddingVertical: 12,
                 color: theme.colors.text,
-                fontWeight: "800",
+                fontWeight: "900",
                 opacity: isCapitalRecoveryStore ? 0.6 : 1,
               }}
             />
-            <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-  Weka expiry kwa format ya YYYY-MM-DD. Unaweza kuweka amount 0 kama unabadilisha expiry tu.
-</Text>
-          </>
+
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              {[7, 14, 30, 60, 90].map((d) => {
+                const active = expiryAlertDays === d;
+
+                return (
+                  <Pressable
+                    key={d}
+                    onPress={() => setExpiryAlertDays(d)}
+                    style={({ pressed }) => ({
+                      borderWidth: 1,
+                      borderColor: active ? theme.colors.dangerBorder : theme.colors.border,
+                      backgroundColor: active ? "rgba(239,68,68,0.12)" : "rgba(255,255,255,0.05)",
+                      borderRadius: 999,
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      opacity: pressed ? 0.9 : 1,
+                    })}
+                  >
+                    <Text
+                      style={{
+                        color: active ? theme.colors.danger : theme.colors.text,
+                        fontWeight: "900",
+                        fontSize: 12,
+                      }}
+                    >
+                      {d}d
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
         ) : null}
 
-        <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 6 }}>
-          Reason (optional)
-        </Text>
-        <TextInput
-          value={reason}
-          onChangeText={setReason}
-          placeholder="mf: Damaged, Transfer, Adjustment..."
-          placeholderTextColor="rgba(255,255,255,0.35)"
-          multiline
-          textAlignVertical="top"
-          editable={!isCapitalRecoveryStore && !saving}
-          style={{
-            minHeight: 110,
-            borderWidth: 1,
-            borderColor: theme.colors.border,
-            borderRadius: theme.radius.lg,
-            backgroundColor: "rgba(255,255,255,0.05)",
+        <Pressable
+          onPress={() => setShowOptionalDetails((v) => !v)}
+          disabled={saving || isCapitalRecoveryStore}
+          style={({ pressed }) => ({
+            minHeight: 64,
+            borderRadius: 18,
+            borderWidth: 1.2,
+            borderColor: showOptionalDetails
+              ? "rgba(52,211,153,0.55)"
+              : "rgba(37,99,235,0.28)",
+            backgroundColor: showOptionalDetails
+              ? "rgba(52,211,153,0.13)"
+              : "rgba(37,99,235,0.08)",
             paddingHorizontal: 14,
-            paddingVertical: 12,
-            color: theme.colors.text,
-            fontWeight: "800",
-            opacity: isCapitalRecoveryStore ? 0.6 : 1,
-          }}
-        />
+            paddingVertical: 10,
+            shadowColor: "#000",
+            shadowOpacity: 0.08,
+            shadowRadius: 10,
+            shadowOffset: { width: 0, height: 4 },
+            elevation: 2,
+            opacity: pressed ? 0.9 : isCapitalRecoveryStore ? 0.6 : 1,
+          })}
+        >
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+            }}
+          >
+            <View style={{ flex: 1, gap: 3 }}>
+              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 15 }}>
+                {showOptionalDetails ? "Hide More Stock Details" : "More Stock Details"}
+              </Text>
 
-        <View style={{ gap: 10, marginTop: 2 }}>
+              <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
+                {showOptionalDetails
+                  ? "Tap to hide supplier, invoice/ref and stock note."
+                  : "Add supplier, invoice/ref and stock note."}
+              </Text>
+            </View>
+
+            <Text
+              style={{
+                color: showOptionalDetails ? theme.colors.emerald : theme.colors.text,
+                fontWeight: "900",
+                fontSize: 20,
+              }}
+            >
+              {showOptionalDetails ? "⌃" : "⌄"}
+            </Text>
+          </View>
+        </Pressable>
+
+        {showOptionalDetails ? (
+          <View style={{ gap: 10 }}>
+            {mode === "ADD" ? (
+              <>
+                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+                  Supplier Name (optional)
+                </Text>
+
+                {supplierLoading ? (
+                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                    Loading suppliers...
+                  </Text>
+                ) : suppliers.length > 0 ? (
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                    contentContainerStyle={{ gap: 8, paddingVertical: 2 }}
+                  >
+                    {suppliers.map((s) => {
+                      const active =
+                        supplierName.trim().toLowerCase() === s.name.trim().toLowerCase();
+
+                      return (
+                        <Pressable
+                          key={s.id}
+                          onPress={() => setSupplierName(s.name)}
+                          style={({ pressed }) => ({
+                            borderWidth: 1,
+                            borderColor: active ? theme.colors.emeraldBorder : theme.colors.border,
+                            backgroundColor: active
+                              ? theme.colors.emeraldSoft
+                              : "rgba(255,255,255,0.05)",
+                            borderRadius: 999,
+                            paddingHorizontal: 12,
+                            paddingVertical: 8,
+                            opacity: pressed ? 0.9 : 1,
+                          })}
+                        >
+                          <Text
+                            style={{
+                              color: active ? theme.colors.emerald : theme.colors.text,
+                              fontWeight: "900",
+                            }}
+                          >
+                            {s.name}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </ScrollView>
+                ) : null}
+
+                <TextInput
+                  value={supplierName}
+                  onChangeText={setSupplierName}
+                  placeholder="mf. MSD, Duka la dawa..."
+                  placeholderTextColor="rgba(255,255,255,0.35)"
+                  editable={!isCapitalRecoveryStore && !saving}
+                  style={{
+                    borderWidth: 1,
+                    borderColor: theme.colors.border,
+                    borderRadius: theme.radius.lg,
+                    backgroundColor: "rgba(255,255,255,0.05)",
+                    paddingHorizontal: 14,
+                    paddingVertical: 12,
+                    color: theme.colors.text,
+                    fontWeight: "800",
+                  }}
+                />
+
+                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+                  Supplier Invoice / Ref (optional)
+                </Text>
+
+                <TextInput
+                  value={supplierInvoiceNo}
+                  onChangeText={setSupplierInvoiceNo}
+                  placeholder="mf. INV-001, Receipt no..."
+                  placeholderTextColor="rgba(255,255,255,0.35)"
+                  editable={!isCapitalRecoveryStore && !saving}
+                  autoCapitalize="characters"
+                  style={{
+                    borderWidth: 1,
+                    borderColor: theme.colors.border,
+                    borderRadius: theme.radius.lg,
+                    backgroundColor: "rgba(255,255,255,0.05)",
+                    paddingHorizontal: 14,
+                    paddingVertical: 12,
+                    color: theme.colors.text,
+                    fontWeight: "800",
+                  }}
+                />
+              </>
+            ) : null}
+
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+              Stock Note (optional)
+            </Text>
+
+            <TextInput
+              value={reason}
+              onChangeText={setReason}
+              placeholder="mf. Damaged, transfer, supplier correction..."
+              placeholderTextColor="rgba(255,255,255,0.35)"
+              multiline
+              textAlignVertical="top"
+              editable={!isCapitalRecoveryStore && !saving}
+              style={{
+                minHeight: 80,
+                borderWidth: 1,
+                borderColor: theme.colors.border,
+                borderRadius: theme.radius.lg,
+                backgroundColor: "rgba(255,255,255,0.05)",
+                paddingHorizontal: 14,
+                paddingVertical: 12,
+                color: theme.colors.text,
+                fontWeight: "800",
+              }}
+            />
+          </View>
+        ) : null}
+
+        <View style={{ gap: 10 }}>
           <Button
             title={
               isCapitalRecoveryStore
                 ? "Adjust Disabled"
                 : saving
-                ? "Saving..."
-                : "Submit"
+                  ? "Saving..."
+                  : "Save Stock Update"
             }
             onPress={() => {
               Keyboard.dismiss();
@@ -509,6 +900,7 @@ export default function AdjustStockScreen() {
     </View>
   );
 
+    
   return (
     <Screen scroll bottomPad={kbHeight > 0 ? kbHeight + 24 : 160}>
       {Platform.OS === "web" ? (

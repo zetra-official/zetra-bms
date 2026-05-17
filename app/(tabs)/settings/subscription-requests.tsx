@@ -935,7 +935,69 @@ const suspendPartner = useCallback(async (partnerId: string) => {
   } catch (e: any) {
     Alert.alert("Suspend failed", clean(e?.message));
   }
-}, [loadPartnersModule, loadSelectedPartnerDetail, selectedPartner?.partner_id]);
+}, [loadPartnersModule, loadSelectedPartnerDetail, loadSelectedPartnerPayoutProfile, selectedPartner?.partner_id]);
+
+const deletePartnerPermanently = useCallback(async (partner: PartnerListRow) => {
+  const partnerId = clean(partner?.partner_id);
+  if (!partnerId) return;
+
+  Alert.alert(
+    "Delete Growth Partner",
+    `Unataka kumfuta kabisa ${clean(partner.full_name_snapshot) || clean(partner.email_snapshot) || "partner"}?\n\nReferral code yake haitafanya kazi tena na dashboard yake itaondoka.`,
+    [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Continue",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            const hasHardware = await LocalAuthentication.hasHardwareAsync();
+            const enrolled = await LocalAuthentication.isEnrolledAsync();
+
+            if (!hasHardware || !enrolled) {
+              Alert.alert("Biometric required", "Fingerprint/biometric haijawekwa kwenye kifaa hiki.");
+              return;
+            }
+
+            const result = await LocalAuthentication.authenticateAsync({
+              promptMessage: "Confirm delete Growth Partner",
+              cancelLabel: "Cancel",
+              disableDeviceFallback: false,
+            });
+
+            if (!result.success) {
+              Alert.alert("Cancelled", "Biometric verification failed.");
+              return;
+            }
+
+            setPartnersBusy(true);
+
+            const { error } = await supabase.rpc("gp_delete_partner_permanently_v1", {
+              p_partner_id: partnerId,
+            });
+
+            if (error) throw error;
+
+            if (selectedPartner?.partner_id === partnerId) {
+              setSelectedPartner(null);
+              setPartnerReferrals([]);
+              setPartnerCommissions([]);
+              setPartnerPayouts([]);
+              setSelectedPartnerPayoutProfile(null);
+            }
+
+            Alert.alert("Deleted ✅", "Growth Partner amefutwa na code yake imezimwa.");
+            await loadPartnersModule();
+          } catch (e: any) {
+            Alert.alert("Delete failed", clean(e?.message) || "Failed to delete partner.");
+          } finally {
+            setPartnersBusy(false);
+          }
+        },
+      },
+    ]
+  );
+}, [loadPartnersModule, selectedPartner?.partner_id]);
 
 const registerPartner = useCallback(async () => {
   const email = clean(partnerEmail).toLowerCase();
@@ -2268,8 +2330,23 @@ const createPartnerPayout = useCallback(async () => {
                     </Text>
 
                     <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                      Created: <Text style={{ color: UI.text }}>{fmtDateTime(item.created_at)}</Text>
-                    </Text>
+  Created: <Text style={{ color: UI.text }}>{fmtDateTime(item.created_at)}</Text>
+</Text>
+
+<View style={{ flexDirection: "row", gap: 10, marginTop: 8 }}>
+  <PrimaryButton
+    label="DETAIL"
+    onPress={() => setSelectedPartner(item)}
+    disabled={partnersBusy}
+  />
+
+  <PrimaryButton
+    label="DELETE"
+    danger
+    onPress={() => void deletePartnerPermanently(item)}
+    disabled={partnersBusy}
+  />
+</View>
                   </View>
                 </Pressable>
               ))}

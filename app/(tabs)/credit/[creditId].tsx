@@ -283,8 +283,8 @@ export default function CreditDetailScreen() {
   return (
     <Screen scroll bottomPad={220}>
       <View style={{ flex: 1, gap: 14 }}>
-        <View style={{ paddingTop: 6, paddingBottom: 6 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+        <View style={{ paddingTop: 6, paddingBottom: 10 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
             <Pressable
               onPress={() => router.back()}
               hitSlop={10}
@@ -295,15 +295,15 @@ export default function CreditDetailScreen() {
                 alignItems: "center",
                 justifyContent: "center",
                 borderWidth: 1,
-                borderColor: theme.colors.border,
-                backgroundColor: "rgba(255,255,255,0.06)",
+                borderColor: "rgba(148,163,184,0.22)",
+                backgroundColor: "#FFFFFF",
               }}
             >
               <SafeIcon name="chevron-left" size={22} color={theme.colors.text} />
             </Pressable>
 
             <View style={{ flex: 1 }}>
-              <Text style={{ color: theme.colors.text, fontSize: 18, fontWeight: "900" }}>
+              <Text style={{ color: theme.colors.text, fontSize: 24, fontWeight: "900" }}>
                 Credit Detail
               </Text>
               <Text style={{ color: theme.colors.muted, marginTop: 4 }}>
@@ -319,7 +319,19 @@ export default function CreditDetailScreen() {
           </Card>
         ) : null}
 
-        <Card style={{ gap: 10 }}>
+        <Card
+          style={{
+            gap: 12,
+            padding: 18,
+            backgroundColor: "#FFFFFF",
+            borderColor: "rgba(148,163,184,0.22)",
+            shadowColor: "#0F172A",
+            shadowOpacity: 0.08,
+            shadowRadius: 14,
+            shadowOffset: { width: 0, height: 8 },
+            elevation: 3,
+          }}
+        >
           <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Summary</Text>
 
           <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
@@ -337,10 +349,10 @@ export default function CreditDetailScreen() {
               marginTop: 4,
               paddingVertical: 10,
               paddingHorizontal: 12,
-              borderRadius: theme.radius.lg,
+              borderRadius: 18,
               borderWidth: 1,
-              borderColor: "rgba(52,211,153,0.35)",
-              backgroundColor: "rgba(52,211,153,0.10)",
+              borderColor: "rgba(16,185,129,0.26)",
+              backgroundColor: "rgba(16,185,129,0.08)",
             }}
           >
             <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Balance</Text>
@@ -373,18 +385,49 @@ export default function CreditDetailScreen() {
             </View>
           ) : null}
 
-          <Button
-            title={isCleared ? "Account Cleared 🔒" : "Add Payment"}
+          <Pressable
             onPress={openPaymentSheet}
             disabled={!accountId || !canManageCredit || isCleared}
-          />
+            style={({ pressed }) => ({
+              minHeight: 56,
+              borderRadius: 18,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor:
+                !accountId || !canManageCredit || isCleared
+                  ? "rgba(16,185,129,0.35)"
+                  : "#059669",
+              opacity: pressed ? 0.9 : 1,
+              shadowColor: "#059669",
+              shadowOpacity: 0.18,
+              shadowRadius: 12,
+              shadowOffset: { width: 0, height: 8 },
+              elevation: 3,
+            })}
+          >
+            <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 16 }}>
+              {isCleared ? "Account Cleared 🔒" : "Add Payment"}
+            </Text>
+          </Pressable>
 
           <Text style={{ color: theme.colors.faint, fontSize: 12 }}>
             {canManageCredit ? "Staff (Allowed) / Owner/Admin" : "Staff"} • Credit v2 • Transactions
           </Text>
         </Card>
 
-        <Card style={{ gap: 10 }}>
+        <Card
+          style={{
+            gap: 12,
+            padding: 18,
+            backgroundColor: "#FFFFFF",
+            borderColor: "rgba(148,163,184,0.22)",
+            shadowColor: "#0F172A",
+            shadowOpacity: 0.08,
+            shadowRadius: 14,
+            shadowOffset: { width: 0, height: 8 },
+            elevation: 3,
+          }}
+        >
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
             <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
               Recent Transactions
@@ -416,7 +459,7 @@ export default function CreditDetailScreen() {
                   style={{
                     paddingTop: 10,
                     borderTopWidth: 1,
-                    borderTopColor: "rgba(255,255,255,0.06)",
+                    borderTopColor: "rgba(148,163,184,0.18)",
                   }}
                 >
                   <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
@@ -467,7 +510,19 @@ export default function CreditDetailScreen() {
           )}
         </Card>
 
-        <Card style={{ gap: 10 }}>
+        <Card
+          style={{
+            gap: 12,
+            padding: 18,
+            backgroundColor: "#FFFFFF",
+            borderColor: "rgba(148,163,184,0.22)",
+            shadowColor: "#0F172A",
+            shadowOpacity: 0.08,
+            shadowRadius: 14,
+            shadowOffset: { width: 0, height: 8 },
+            elevation: 3,
+          }}
+        >
           <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
             Payments
           </Text>

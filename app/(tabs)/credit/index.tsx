@@ -686,36 +686,13 @@ export default function CreditHomeScreen() {
 
   return (
     <Screen scroll bottomPad={isDesktopWeb ? 24 : 160}>
-      <View
-        style={{
-          paddingTop: 6,
-          paddingBottom: 10,
-          flexDirection: "row",
-          alignItems: "center",
-          gap: 12,
-        }}
-      >
-        <View
-          style={{
-            width: 46,
-            height: 46,
-            borderRadius: 14,
-            borderWidth: 1,
-            borderColor: theme.colors.emeraldBorder,
-            backgroundColor: theme.colors.emeraldSoft,
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <SafeIcon name="card" size={20} color={theme.colors.emerald} />
-        </View>
-
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={{ color: theme.colors.text, fontSize: 22, fontWeight: "900" }}>Credit</Text>
-          <Text style={{ color: theme.colors.muted, marginTop: 4, fontWeight: "800" }}>
-            Credit v2 – Accounts
-          </Text>
-        </View>
+      <View style={{ paddingTop: 6, paddingBottom: 12, gap: 6 }}>
+        <Text style={{ color: theme.colors.text, fontSize: 30, fontWeight: "900" }}>
+          Credit
+        </Text>
+        <Text style={{ color: theme.colors.muted, fontWeight: "800", lineHeight: 22 }}>
+          Manage debtors, payments, balances, and borrow timelines.
+        </Text>
       </View>
 
       <View
@@ -728,11 +705,18 @@ export default function CreditHomeScreen() {
       >
         <Card
           style={{
-            padding: 14,
-            gap: 12,
+            padding: 18,
+            gap: 14,
             width: isDesktopWeb ? (desktopLeftWidth as any) : "100%",
             alignSelf: "stretch",
             flexShrink: 0,
+            backgroundColor: "#FFFFFF",
+            borderColor: "rgba(148,163,184,0.22)",
+            shadowColor: "#0F172A",
+            shadowOpacity: 0.08,
+            shadowRadius: 14,
+            shadowOffset: { width: 0, height: 8 },
+            elevation: 3,
           }}
         >
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
@@ -764,16 +748,11 @@ export default function CreditHomeScreen() {
           <View
             style={{
               borderWidth: 1,
-              borderColor: "rgba(255,255,255,0.10)",
-              backgroundColor: "rgba(255,255,255,0.04)",
-              borderRadius: theme.radius.xl,
+              borderColor: "rgba(16,185,129,0.22)",
+              backgroundColor: "rgba(16,185,129,0.06)",
+              borderRadius: 18,
               padding: 12,
               gap: 6,
-              shadowColor: "#000",
-              shadowOpacity: 0.18,
-              shadowRadius: 14,
-              shadowOffset: { width: 0, height: 8 },
-              elevation: 6,
             }}
           >
             <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Access</Text>
@@ -790,11 +769,11 @@ export default function CreditHomeScreen() {
                 alignItems: "center",
                 gap: 10,
                 borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.10)",
-                backgroundColor: "rgba(255,255,255,0.04)",
-                borderRadius: theme.radius.xl,
+                borderColor: theme.colors.emeraldBorder,
+                backgroundColor: "rgba(16,185,129,0.08)",
+                borderRadius: 18,
                 paddingHorizontal: 12,
-                height: 48,
+                height: 50,
               }}
             >
               <SafeIcon name="search" size={18} color={theme.colors.muted} />
@@ -871,11 +850,11 @@ export default function CreditHomeScreen() {
             }}
             hitSlop={10}
             style={({ pressed }) => ({
-              height: 48,
-              borderRadius: theme.radius.xl,
+              height: 54,
+              borderRadius: 18,
               borderWidth: 1,
               borderColor: theme.colors.emeraldBorder,
-              backgroundColor: theme.colors.emeraldSoft,
+              backgroundColor: "rgba(16,185,129,0.10)",
               alignItems: "center",
               justifyContent: "center",
               opacity: pressed ? 0.92 : 1,
@@ -889,12 +868,19 @@ export default function CreditHomeScreen() {
 
         <Card
           style={{
-            padding: 14,
-            gap: 12,
+            padding: 18,
+            gap: 14,
             width: isDesktopWeb ? undefined : "100%",
             flex: isDesktopWeb ? 1 : undefined,
             alignSelf: "stretch",
             flexShrink: 0,
+            backgroundColor: "#FFFFFF",
+            borderColor: "rgba(148,163,184,0.22)",
+            shadowColor: "#0F172A",
+            shadowOpacity: 0.08,
+            shadowRadius: 14,
+            shadowOffset: { width: 0, height: 8 },
+            elevation: 3,
             ...(isDesktopWeb
               ? {
                   minWidth: 0,
@@ -975,11 +961,16 @@ export default function CreditHomeScreen() {
                     hitSlop={10}
                     style={({ pressed }) => ({
                       borderWidth: 1,
-                      borderColor: "rgba(255,255,255,0.10)",
-                      backgroundColor: "rgba(255,255,255,0.04)",
-                      borderRadius: theme.radius.xl,
-                      padding: 12,
+                      borderColor: "rgba(148,163,184,0.20)",
+                      backgroundColor: "#FFFFFF",
+                      borderRadius: 20,
+                      padding: 14,
                       opacity: pressed ? 0.92 : 1,
+                      shadowColor: "#0F172A",
+                      shadowOpacity: 0.05,
+                      shadowRadius: 10,
+                      shadowOffset: { width: 0, height: 6 },
+                      elevation: 2,
                     })}
                   >
                     <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>

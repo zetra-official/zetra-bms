@@ -205,8 +205,7 @@ export default function AddStaffScreen() {
 
     setSaving(true);
     try {
-      await guardPlanStaffLimit();
-
+      // Limit check is enforced by DB/RPC to avoid counting removed/inactive staff incorrectly.
       const safeEmail = email.trim().toLowerCase();
 
       if (role === "cashier") {
@@ -231,8 +230,8 @@ export default function AddStaffScreen() {
         `Member ameongezwa.\nEmail: ${safeEmail}\nRole: ${role.toUpperCase()}`
       );
 
-      await refresh();
-      router.back();
+      setEmail("");
+      setRole(allowedRoles[0] ?? "staff");
     } catch (e: any) {
       const mapped = mapAddStaffErrorMessage(e);
       Alert.alert(mapped.title, mapped.body);

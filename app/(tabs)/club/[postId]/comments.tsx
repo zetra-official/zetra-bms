@@ -8,7 +8,17 @@ import { theme } from "@/src/ui/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FlatList, Keyboard, Pressable, Text, TextInput, View } from "react-native";
+import type { ReactElement } from "react";
+import {
+  FlatList,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type CommentRow = Record<string, any>;
@@ -98,6 +108,7 @@ export default function ClubCommentsScreen() {
   const [activeStoreName, setActiveStoreName] = useState<string>("");
 
   const sendingRef = useRef(false);
+  const listRef = useRef<FlatList<CommentRow> | null>(null);
 
   // ✅ Reply state
   const [replyTo, setReplyTo] = useState<ReplyTarget | null>(null);
@@ -179,6 +190,8 @@ export default function ClubCommentsScreen() {
     void fetchPage("boot");
   }, [fetchPage]);
 
+  
+
   useEffect(() => {
     let alive = true;
 
@@ -243,10 +256,9 @@ export default function ClubCommentsScreen() {
       authorName,
     });
 
-    // focus UX: usivunje button taps
     setTimeout(() => {
-      // keep keyboard as is; user can type immediately
-    }, 0);
+      listRef.current?.scrollToEnd({ animated: true });
+    }, 80);
   }, [activeStoreName, viewerUserId]);
 
   const cancelReply = useCallback(() => {
@@ -453,7 +465,7 @@ export default function ClubCommentsScreen() {
       const likesCount = Number(item.likes_count ?? item.like_count ?? 0) || 0;
       const repliesCount = Number(item.replies_count ?? item.reply_count ?? 0) || 0;
 
-      const padLeft = Math.min(40, Math.max(0, depth) * 22);
+      const padLeft = Math.min(48, Math.max(0, depth) * 16);
 
       return (
         <View
@@ -604,24 +616,28 @@ export default function ClubCommentsScreen() {
     [activeStoreName, openReply, openStore, viewerUserId]
   );
 
-  const renderItem = useCallback(
-    ({ item }: { item: CommentRow }) => {
+  const renderThread = useCallback(
+    (item: CommentRow, depth: number): ReactElement | null => {
       const id = String(item.comment_id ?? item.id ?? "").trim();
       if (!id) return null;
 
-      const blocks: React.ReactNode[] = [];
-      blocks.push(renderCommentCard(item, 0));
-
       const kids = nestedData.children.get(id) ?? [];
-      for (const child of kids) {
-        const cid = String(child.comment_id ?? child.id ?? "").trim();
-        if (!cid) continue;
-        blocks.push(renderCommentCard(child, 1));
-      }
 
-      return <View>{blocks}</View>;
+      return (
+        <View key={`${id}:${depth}`}>
+          {renderCommentCard(item, depth)}
+          {kids.map((child) => renderThread(child, depth + 1))}
+        </View>
+      );
     },
     [nestedData.children, renderCommentCard]
+  );
+
+  const renderItem = useCallback(
+    ({ item }: { item: CommentRow }): ReactElement | null => {
+      return renderThread(item, 0);
+    },
+    [renderThread]
   );
 
   const EmptyState = useMemo(() => {
@@ -649,9 +665,7 @@ export default function ClubCommentsScreen() {
       <View
         style={{
           paddingTop: 14,
-          paddingBottom: Math.max(insets.bottom, 10) + 16,
-          borderTopWidth: 1,
-          borderTopColor: "rgba(255,255,255,0.06)",
+          paddingBottom: Math.max(insets.bottom, 4),
         }}
       >
         <Text style={{ color: theme.colors.text, fontWeight: "900", marginBottom: 10 }}>
@@ -709,6 +723,11 @@ export default function ClubCommentsScreen() {
           <TextInput
             value={text}
             onChangeText={setText}
+            onFocus={() => {
+              setTimeout(() => {
+                listRef.current?.scrollToEnd({ animated: true });
+              }, 120);
+            }}
             placeholder={replyTo ? "Andika reply..." : "Andika comment..."}
             placeholderTextColor={theme.colors.faint}
             style={{
@@ -749,44 +768,53 @@ export default function ClubCommentsScreen() {
 
   return (
     <Screen scroll={false} contentStyle={{ paddingHorizontal: 0, paddingTop: 0, paddingBottom: 0 }}>
-      <FlatList
-        data={loading ? [] : nestedData.roots}
-        keyExtractor={(item, idx) => String(item.comment_id ?? item.id ?? idx)}
-        renderItem={renderItem}
-        ListHeaderComponent={Header}
-        showsVerticalScrollIndicator={false}
-        refreshing={refreshing}
-        onRefresh={onRefresh}
-        onEndReachedThreshold={0.35}
-        onEndReached={onEndReached}
-        contentContainerStyle={{
-          paddingHorizontal: theme.spacing.page,
-          paddingBottom: 0,
-          paddingTop: 0,
-        }}
-        ListEmptyComponent={!loading ? EmptyState : null}
-        ListFooterComponent={
-          <>
-            {loadingMore ? (
-              <View style={{ alignItems: "center", paddingVertical: 12 }}>
-                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                  Loading more...
-                </Text>
-              </View>
-            ) : !hasMore && rows.length > 0 ? (
-              <View style={{ alignItems: "center", paddingVertical: 12 }}>
-                <Text style={{ color: theme.colors.faint, fontWeight: "800" }}>
-                  End of comments
-                </Text>
-              </View>
-            ) : null}
-            {FooterComposer}
-          </>
-        }
-        // ✅ KEY FIX: button works on FIRST tap even if keyboard is open
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
-      />
+      <KeyboardAvoidingView
+  style={{ flex: 1 }}
+  behavior={Platform.OS === "ios" ? "padding" : "height"}
+  keyboardVerticalOffset={Platform.OS === "android" ? -10 : 0}
+>
+      
+        <FlatList
+          ref={(r) => {
+            listRef.current = r;
+          }}
+          data={loading ? [] : nestedData.roots}
+          keyExtractor={(item, idx) => String(item.comment_id ?? item.id ?? idx)}
+          renderItem={renderItem}
+          ListHeaderComponent={Header}
+          showsVerticalScrollIndicator={false}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          onEndReachedThreshold={0.35}
+          onEndReached={onEndReached}
+          contentContainerStyle={{
+            paddingHorizontal: theme.spacing.page,
+            paddingBottom: Math.max(insets.bottom, 4) + 4,
+            paddingTop: 0,
+          }}
+          ListEmptyComponent={!loading ? EmptyState : null}
+          ListFooterComponent={
+            <>
+              {loadingMore ? (
+                <View style={{ alignItems: "center", paddingVertical: 12 }}>
+                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                    Loading more...
+                  </Text>
+                </View>
+              ) : !hasMore && rows.length > 0 ? (
+                <View style={{ alignItems: "center", paddingVertical: 12 }}>
+                  <Text style={{ color: theme.colors.faint, fontWeight: "800" }}>
+                    End of comments
+                  </Text>
+                </View>
+              ) : null}
+              {FooterComposer}
+            </>
+          }
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+        />
+      </KeyboardAvoidingView>
     </Screen>
   );
 }

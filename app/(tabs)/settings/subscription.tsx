@@ -3,13 +3,13 @@ import {
   ActivityIndicator,
   Alert,
   AppState,
-  FlatList,
+  Linking,
   Pressable,
   Text,
   TextInput,
   View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -197,9 +197,13 @@ const FALLBACK_PRICE_TZS: Record<string, number> = {
   EXECUTIVE: 150000,
 };
 
-const PAY_TO_NAME = "JOFREY JOHN SANGA";
-const PAY_TO_NETWORK = "VODACOM (M-PESA)";
-const PAY_TO_PHONE = "0758014675";
+const PAY_TO_NAME = "ZETRA TECHNOLOGIES";
+const PAY_TO_NETWORK = "VODACOM (M-PESA LIPA)";
+const PAY_TO_PHONE = "354098140";
+
+const ZETRA_SALES_WHATSAPP = "255758014675";
+const ZETRA_SALES_MESSAGE =
+  "Hello ZETRA Office, I am interested in the ELITE subscription plan. Please guide me on setup and pricing.";
 
 function getPlanCode(p: any) {
   return upper(p?.code) || upper(p?.id) || upper(p?.name) || "";
@@ -960,24 +964,7 @@ export default function SubscriptionScreen() {
     return "Your payment request was received and is under review by ZETRA office.";
   }, [latestRequest]);
 
-  const parsedRawSms = useMemo(() => parseRawSms(rawSms), [rawSms]);
-
-  const effectivePhonePreview = useMemo(() => {
-    return normalizePhone(clean(payerPhone) || parsedRawSms.phone);
-  }, [parsedRawSms.phone, payerPhone]);
-
-  const effectiveRefPreview = useMemo(() => {
-    return normalizeTxRef(clean(txRef) || parsedRawSms.reference);
-  }, [parsedRawSms.reference, txRef]);
-
-  const effectiveNamePreview = useMemo(() => {
-    return clean(payerName) || clean(parsedRawSms.payerName);
-  }, [parsedRawSms.payerName, payerName]);
-
-  const rawSmsAmountMismatch = useMemo(() => {
-    if (parsedRawSms.amount === null || expectedAmount === null) return false;
-    return Math.round(parsedRawSms.amount) !== Math.round(expectedAmount);
-  }, [expectedAmount, parsedRawSms.amount]);
+  
 
  const submitPaymentRequest = useCallback(async () => {
   if (!canManage) {
@@ -1256,16 +1243,26 @@ export default function SubscriptionScreen() {
     );
   };
 
+  const openEliteWhatsApp = useCallback(async () => {
+    const url = `https://wa.me/${ZETRA_SALES_WHATSAPP}?text=${encodeURIComponent(
+      ZETRA_SALES_MESSAGE
+    )}`;
+
+    try {
+      await Linking.openURL(url);
+    } catch {
+      Alert.alert(
+        "Contact Sales",
+        "Imeshindikana kufungua WhatsApp. Tafadhali wasiliana na ZETRA office moja kwa moja."
+      );
+    }
+  }, []);
+
   const EliteCard = () => {
     return (
       <View style={{ marginTop: 12 }}>
         <Pressable
-          onPress={() =>
-            Alert.alert(
-              "ELITE (Contact Sales)",
-              "Hii ni kifurushi cha biashara kubwa.\n\n• Unlimited Organizations\n• Unlimited Stores\n• Unlimited Staff\n• Unlimited Stock/Products\n• Unlimited Club growth\n\n⚠️ Note: AI na Analytics bado vina limit (kwa usalama na gharama za huduma).\n\nBonyeza “Contact Sales” kupata utaratibu na bei."
-            )
-          }
+          onPress={openEliteWhatsApp}
           style={({ pressed }) => [
             {
               borderRadius: 22,
@@ -1290,13 +1287,13 @@ export default function SubscriptionScreen() {
                 borderColor: "rgba(16,185,129,0.35)",
               }}
             >
-              <Ionicons name="sparkles-outline" size={22} color={UI.emerald} />
+              <Text style={{ color: UI.emerald, fontWeight: "900", fontSize: 20 }}>★</Text>
             </View>
 
             <View style={{ flex: 1 }}>
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>ELITE</Text>
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 4 }}>
-                Unlimited growth • Contact Sales for setup & pricing
+                Unlimited growth • Contact ZETRA Office via WhatsApp
               </Text>
             </View>
 
@@ -1325,13 +1322,8 @@ export default function SubscriptionScreen() {
 
           <View style={{ marginTop: 12 }}>
             <PrimaryButton
-              label="Contact Sales"
-              onPress={() =>
-                Alert.alert(
-                  "Contact Sales",
-                  "Tafadhali wasiliana nasi kupata utaratibu wa ELITE.\n\n(Tutakuja kuweka njia rasmi: WhatsApp / Call / Email ndani ya app.)"
-                )
-              }
+              label="Contact Sales on WhatsApp"
+              onPress={openEliteWhatsApp}
             />
           </View>
         </Pressable>
@@ -1358,7 +1350,7 @@ export default function SubscriptionScreen() {
             },
           ]}
         >
-          <Ionicons name="chevron-back" size={20} color={UI.text} />
+          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18 }}>←</Text>
         </Pressable>
 
         <View style={{ flex: 1 }}>
@@ -1437,7 +1429,7 @@ export default function SubscriptionScreen() {
             },
           ]}
         >
-          <Ionicons name="refresh-outline" size={18} color={UI.text} />
+          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>↻</Text>
         </Pressable>
       </View>
 
@@ -1639,31 +1631,34 @@ export default function SubscriptionScreen() {
                 No plans returned. (Check get_public_plans RPC)
               </Text>
             ) : (
-              <FlatList
-                data={plans}
-                keyExtractor={(it, idx) => getPlanCode(it) || String(idx)}
-                scrollEnabled={false}
-                renderItem={({ item }) => <PlanCard item={item} />}
-              />
+              <View style={{ gap: 0 }}>
+                {plans.map((item, idx) => (
+                  <PlanCard
+                    key={getPlanCode(item) || String(idx)}
+                    item={item}
+                  />
+                ))}
+              </View>
             )}
           </View>
 
           <EliteCard />
 
           <View style={{ marginTop: 12 }}>
-            <View
-              style={{
-                borderWidth: 1.5,
-                borderColor: "rgba(16,185,129,0.35)",
-                backgroundColor: "rgba(10,12,16,0.90)",
-                borderRadius: 22,
-                padding: 14,
-                shadowColor: "#000",
-                shadowOpacity: 0.25,
-                shadowRadius: 16,
-                shadowOffset: { width: 0, height: 8 },
-              }}
-            >
+     <View
+  style={{
+    borderWidth: 1,
+    borderColor: "rgba(16,185,129,0.22)",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 22,
+    padding: 14,
+    shadowColor: "#0F172A",
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 3,
+  }}
+>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                 <View
                   style={{
@@ -1677,7 +1672,7 @@ export default function SubscriptionScreen() {
                     borderColor: "rgba(16,185,129,0.35)",
                   }}
                 >
-                  <Ionicons name="checkmark-done-outline" size={20} color={UI.emerald} />
+                  <Text style={{ color: UI.emerald, fontWeight: "900", fontSize: 18 }}>✓</Text>
                 </View>
 
                 <View style={{ flex: 1 }}>
@@ -1686,7 +1681,7 @@ export default function SubscriptionScreen() {
                   </Text>
                   <Text
                     style={{
-                      color: "rgba(255,255,255,0.60)",
+                      color: UI.muted,
                       fontWeight: "800",
                       fontSize: 12,
                       marginTop: 3,
@@ -1706,7 +1701,7 @@ export default function SubscriptionScreen() {
                   planFeatures.map((x, i) => (
                     <Text
                       key={`${x}-${i}`}
-                      style={{ color: "rgba(255,255,255,0.72)", fontWeight: "900", fontSize: 12 }}
+                      style={{ color: UI.muted, fontWeight: "900", fontSize: 12 }}
                     >
                       • {x}
                     </Text>
@@ -1741,8 +1736,8 @@ export default function SubscriptionScreen() {
             <Text style={{ color: UI.muted, fontWeight: "900", marginTop: 4 }}>Network</Text>
             <Text style={{ color: UI.text, fontWeight: "900" }}>{PAY_TO_NETWORK}</Text>
 
-            <Text style={{ color: UI.muted, fontWeight: "900", marginTop: 4 }}>Phone Number</Text>
-            <Text style={{ color: UI.text, fontWeight: "900" }}>{PAY_TO_PHONE}</Text>
+           <Text style={{ color: UI.muted, fontWeight: "900", marginTop: 4 }}>Lipa Number</Text>
+<Text style={{ color: UI.text, fontWeight: "900" }}>{PAY_TO_PHONE}</Text>
 
             <Text style={{ color: UI.faint, fontWeight: "800", marginTop: 8 }}>
               Baada ya kulipa, bandika SMS nzima ya muamala hapa chini kama ilivyo. Kisha jaza

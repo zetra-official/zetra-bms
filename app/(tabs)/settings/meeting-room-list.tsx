@@ -31,6 +31,21 @@ type RoomRow = {
   unread_count?: number;
 };
 
+const MR = {
+  page: "#F4F8FC",
+  card: "#FFFFFF",
+  cardSoft: "#F8FAFC",
+  border: "rgba(15,23,42,0.10)",
+  borderStrong: "rgba(5,150,105,0.34)",
+  text: "#0F172A",
+  muted: "#475569",
+  faint: "#64748B",
+  emerald: "#059669",
+  emeraldSoft: "#ECFDF5",
+  blue: "#2563EB",
+  danger: "#DC2626",
+};
+
 function clean(s: any) {
   return String(s ?? "").trim();
 }
@@ -76,13 +91,15 @@ function formatDateLabel(ts?: string | null) {
   }
 }
 
-function EmptyState({
-  onCreate,
-}: {
-  onCreate: () => void;
-}) {
+function EmptyState({ onCreate }: { onCreate: () => void }) {
   return (
-    <Card style={{ gap: 12 }}>
+    <Card
+      style={{
+        gap: 12,
+        borderColor: MR.border,
+        backgroundColor: MR.card,
+      }}
+    >
       <View
         style={{
           width: 52,
@@ -91,18 +108,18 @@ function EmptyState({
           alignItems: "center",
           justifyContent: "center",
           borderWidth: 1,
-          borderColor: UI.emeraldBorder,
-          backgroundColor: UI.emeraldSoft,
+          borderColor: MR.borderStrong,
+          backgroundColor: MR.emeraldSoft,
         }}
       >
-        <Ionicons name="albums-outline" size={24} color={UI.emerald} />
+        <Ionicons name="albums-outline" size={24} color={MR.emerald} />
       </View>
 
-      <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
+      <Text style={{ color: MR.text, fontWeight: "900", fontSize: 16 }}>
         No rooms yet
       </Text>
 
-      <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 20 }}>
+      <Text style={{ color: MR.muted, fontWeight: "800", lineHeight: 20 }}>
         Hujajiunga na room yoyote bado kwa account hii.
       </Text>
 
@@ -112,14 +129,14 @@ function EmptyState({
           minHeight: 48,
           borderRadius: 999,
           borderWidth: 1,
-          borderColor: UI.emeraldBorder,
-          backgroundColor: UI.emeraldSoft,
+          borderColor: MR.borderStrong,
+          backgroundColor: MR.emeraldSoft,
           alignItems: "center",
           justifyContent: "center",
           opacity: pressed ? 0.94 : 1,
         })}
       >
-        <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
+        <Text style={{ color: MR.text, fontWeight: "900", fontSize: 14 }}>
           Create Meeting Room
         </Text>
       </Pressable>
@@ -146,33 +163,40 @@ function RoomCard({
             alignItems: "center",
             gap: 12,
             opacity: pressed ? 0.95 : 1,
+            borderColor: unread > 0 ? MR.borderStrong : MR.border,
+            backgroundColor: unread > 0 ? MR.emeraldSoft : MR.card,
+            shadowColor: "#0F172A",
+            shadowOpacity: 0.08,
+            shadowRadius: 14,
+            shadowOffset: { width: 0, height: 8 },
+            elevation: 2,
           }}
         >
           <View
             style={{
-              width: 48,
-              height: 48,
-              borderRadius: 16,
+              width: 50,
+              height: 50,
+              borderRadius: 18,
               alignItems: "center",
               justifyContent: "center",
-              backgroundColor: UI.emeraldSoft,
+              backgroundColor: MR.emeraldSoft,
               borderWidth: 1,
-              borderColor: UI.emeraldBorder,
+              borderColor: MR.borderStrong,
             }}
           >
             <Ionicons
               name="chatbubble-ellipses-outline"
               size={22}
-              color={UI.emerald}
+              color={MR.emerald}
             />
           </View>
 
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text
               style={{
-                color: UI.text,
+                color: MR.text,
                 fontWeight: "900",
-                fontSize: 15,
+                fontSize: 16,
               }}
               numberOfLines={1}
             >
@@ -181,35 +205,38 @@ function RoomCard({
 
             <Text
               style={{
-                color: UI.muted,
+                color: MR.muted,
                 fontSize: 12,
                 marginTop: 4,
                 fontWeight: "800",
               }}
               numberOfLines={1}
             >
-              {clean(room.organization_name) || "Unknown Organization"} • {niceRole(room.my_role)} • {toInt(room.members_count)} members
+              {clean(room.organization_name) || "Unknown Organization"} •{" "}
+              {niceRole(room.my_role)} • {toInt(room.members_count)} members
             </Text>
 
             <Text
               style={{
-                color: UI.faint,
+                color: MR.faint,
                 fontSize: 12,
                 marginTop: 6,
-                fontWeight: "700",
+                fontWeight: "800",
               }}
               numberOfLines={1}
             >
-              {clean(room.last_message_preview) || clean(room.description) || "No activity yet"}
+              {clean(room.last_message_preview) ||
+                clean(room.description) ||
+                "No activity yet"}
             </Text>
           </View>
 
           <View style={{ alignItems: "flex-end", gap: 8 }}>
             <Text
               style={{
-                color: UI.faint,
+                color: MR.faint,
                 fontSize: 11,
-                fontWeight: "800",
+                fontWeight: "900",
               }}
             >
               {formatDateLabel(room.last_message_at)}
@@ -218,7 +245,7 @@ function RoomCard({
             {unread > 0 ? (
               <View
                 style={{
-                  backgroundColor: UI.emerald,
+                  backgroundColor: MR.emerald,
                   borderRadius: 999,
                   paddingHorizontal: 8,
                   paddingVertical: 3,
@@ -228,7 +255,7 @@ function RoomCard({
               >
                 <Text
                   style={{
-                    color: "#000",
+                    color: "#FFFFFF",
                     fontSize: 11,
                     fontWeight: "900",
                   }}
@@ -237,11 +264,7 @@ function RoomCard({
                 </Text>
               </View>
             ) : (
-              <Ionicons
-                name="chevron-forward"
-                size={18}
-                color="rgba(255,255,255,0.45)"
-              />
+              <Ionicons name="chevron-forward" size={18} color={MR.faint} />
             )}
           </View>
         </Card>
@@ -346,7 +369,11 @@ export default function MeetingRoomListScreen() {
   );
 
   return (
-    <Screen>
+    <Screen
+      contentStyle={{
+        backgroundColor: MR.page,
+      }}
+    >
       <View
         style={{
           flexDirection: "row",
@@ -363,20 +390,20 @@ export default function MeetingRoomListScreen() {
             borderRadius: 16,
             alignItems: "center",
             justifyContent: "center",
-            backgroundColor: "rgba(255,255,255,0.05)",
+            backgroundColor: MR.card,
             borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.10)",
+            borderColor: MR.border,
             opacity: pressed ? 0.9 : 1,
           })}
         >
-          <Ionicons name="chevron-back" size={20} color={UI.text} />
+          <Ionicons name="chevron-back" size={20} color={MR.text} />
         </Pressable>
 
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text
             style={{
-              color: UI.text,
-              fontSize: 22,
+              color: MR.text,
+              fontSize: 24,
               fontWeight: "900",
             }}
             numberOfLines={1}
@@ -386,7 +413,7 @@ export default function MeetingRoomListScreen() {
 
           <Text
             style={{
-              color: UI.muted,
+              color: MR.muted,
               fontWeight: "800",
               marginTop: 4,
             }}
@@ -399,26 +426,38 @@ export default function MeetingRoomListScreen() {
         <Pressable
           onPress={openCreate}
           style={({ pressed }) => ({
-            width: 42,
-            height: 42,
-            borderRadius: 16,
+            width: 46,
+            height: 46,
+            borderRadius: 18,
             alignItems: "center",
             justifyContent: "center",
-            backgroundColor: UI.emeraldSoft,
+            backgroundColor: MR.emeraldSoft,
             borderWidth: 1,
-            borderColor: UI.emeraldBorder,
+            borderColor: MR.borderStrong,
             opacity: pressed ? 0.9 : 1,
           })}
         >
-          <Ionicons name="add" size={20} color={UI.emerald} />
+          <Ionicons name="add" size={22} color={MR.emerald} />
         </Pressable>
       </View>
 
-      <Card style={{ marginBottom: 14, gap: 6 }}>
-        <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
+      <Card
+        style={{
+          marginBottom: 14,
+          gap: 6,
+          borderColor: MR.borderStrong,
+          backgroundColor: MR.card,
+          shadowColor: "#0F172A",
+          shadowOpacity: 0.08,
+          shadowRadius: 14,
+          shadowOffset: { width: 0, height: 8 },
+          elevation: 2,
+        }}
+      >
+        <Text style={{ color: MR.text, fontWeight: "900", fontSize: 16 }}>
           Active Rooms
         </Text>
-        <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 20 }}>
+        <Text style={{ color: MR.muted, fontWeight: "800", lineHeight: 20 }}>
           Umejiunga na room {activeRooms.length} active kwa account hii.
         </Text>
       </Card>
@@ -427,13 +466,13 @@ export default function MeetingRoomListScreen() {
         <Card
           style={{
             marginBottom: 14,
-            borderColor: "rgba(201,74,74,0.35)",
-            backgroundColor: "rgba(201,74,74,0.10)",
+            borderColor: "rgba(220,38,38,0.30)",
+            backgroundColor: "rgba(254,242,242,1)",
             gap: 8,
           }}
         >
-          <Text style={{ color: UI.danger, fontWeight: "900" }}>{err}</Text>
-          <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 20 }}>
+          <Text style={{ color: MR.danger, fontWeight: "900" }}>{err}</Text>
+          <Text style={{ color: MR.muted, fontWeight: "800", lineHeight: 20 }}>
             Reload tena au rudi nyuma kisha fungua page upya.
           </Text>
         </Card>
@@ -441,7 +480,7 @@ export default function MeetingRoomListScreen() {
 
       {loading ? (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <ActivityIndicator size="large" color={UI.emerald} />
+          <ActivityIndicator size="large" color={MR.emerald} />
         </View>
       ) : activeRooms.length === 0 ? (
         <EmptyState onCreate={openCreate} />

@@ -70,6 +70,17 @@ type ExpenseRow = {
   note: string | null;
 };
 
+type CapitalRecoveryRow = {
+  id: string;
+  entry_type: "ASSET" | "COST" | "INCOME";
+  amount: number;
+  note: string | null;
+  created_at: string;
+  created_by?: string | null;
+  created_role?: string | null;
+  created_by_name?: string | null;
+};
+
 type AnyRow = Record<string, any>;
 
 function startOfDayLocal(d: Date) {
@@ -427,6 +438,7 @@ export default function BusinessStatementScreen() {
 
   const [salesRows, setSalesRows] = useState<StatementRow[]>([]);
   const [expenseRows, setExpenseRows] = useState<ExpenseRow[]>([]);
+const [capitalRows, setCapitalRows] = useState<CapitalRecoveryRow[]>([]);
   const [paymentSummary, setPaymentSummary] = useState<PaymentSummary>({
     cash_total: 0,
     mobile_total: 0,
@@ -454,7 +466,7 @@ export default function BusinessStatementScreen() {
 
  const canView = useMemo(() => {
     const r = String(activeRole ?? "").toLowerCase();
-    return r === "owner";
+    return r === "owner" || r === "admin";
   }, [activeRole]);
 
   const resolvedRange = useMemo(() => {
@@ -519,7 +531,7 @@ export default function BusinessStatementScreen() {
         });
         if (access.error) throw access.error;
 
-        const [salesRes, payRes, profitRes, creditCollectionsRes, expensesRes] =
+        const [salesRes, payRes, profitRes, creditCollectionsRes, expensesRes, capitalRes] =
           await Promise.all([
             supabase.rpc("get_sales_v2", {
               p_store_id: activeStoreId,
@@ -549,6 +561,11 @@ export default function BusinessStatementScreen() {
               .gte("spent_at", finalRange.from)
               .lte("spent_at", finalRange.to)
               .order("spent_at", { ascending: false }),
+
+            supabase.rpc("get_capital_recovery_history_v2", {
+              p_store_id: activeStoreId,
+              p_limit: 500,
+            }),
           ]);
 
         if (salesRes.error) throw salesRes.error;
@@ -604,6 +621,27 @@ export default function BusinessStatementScreen() {
           note: pickExpenseNote(r),
         }));
 
+        const rawCapital = capitalRes.error ? [] : Array.isArray(capitalRes.data) ? capitalRes.data : [];
+
+        const capital: CapitalRecoveryRow[] = rawCapital
+          .map((r: any) => ({
+            id: String(r?.id ?? ""),
+            entry_type: String(r?.entry_type ?? "").toUpperCase() as "ASSET" | "COST" | "INCOME",
+            amount: toNum(r?.amount),
+            note: String(r?.note ?? "").trim() || null,
+            created_at: String(r?.created_at ?? ""),
+            created_by: String(r?.created_by ?? "").trim() || null,
+            created_role: String(r?.created_role ?? "").trim() || null,
+            created_by_name: String(r?.created_by_name ?? "").trim() || null,
+          }))
+          .filter((r) => {
+            const t = Date.parse(r.created_at);
+            if (!Number.isFinite(t)) return false;
+            return t >= Date.parse(finalRange.from) && t <= Date.parse(finalRange.to);
+          })
+          .filter((r) => r.entry_type === "ASSET" || r.entry_type === "COST" || r.entry_type === "INCOME")
+          .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
+
         const mergedCash = toNum(payRow?.v_cash_total ?? payRow?.cash_total ?? 0);
         const mergedMobile = toNum(payRow?.v_mobile_total ?? payRow?.mobile_total ?? 0);
         const mergedBank = toNum(payRow?.v_bank_total ?? payRow?.bank_total ?? 0);
@@ -616,6 +654,7 @@ export default function BusinessStatementScreen() {
 
         setSalesRows(sales);
         setExpenseRows(expenses);
+        setCapitalRows(capital);
         setCreditCollections(creditCollectionsRes);
         setProfitSummary({
           net: toNum(profitRow?.net_profit ?? profitRow?.net ?? 0),
@@ -640,6 +679,7 @@ export default function BusinessStatementScreen() {
       } catch (e: any) {
         setSalesRows([]);
         setExpenseRows([]);
+        setCapitalRows([]);
         setPaymentSummary({
           cash_total: 0,
           mobile_total: 0,
@@ -734,6 +774,28 @@ export default function BusinessStatementScreen() {
     return toNum(paymentSummary.total_sales) - toNum(totalExpenses);
   }, [paymentSummary.total_sales, profitSummary.net, totalExpenses]);
 
+  const capitalSummary = useMemo(() => {
+    const asset = capitalRows
+      .filter((r) => r.entry_type === "ASSET")
+      .reduce((a, r) => a + toNum(r.amount), 0);
+
+    const cost = capitalRows
+      .filter((r) => r.entry_type === "COST")
+      .reduce((a, r) => a + toNum(r.amount), 0);
+
+    const income = capitalRows
+      .filter((r) => r.entry_type === "INCOME")
+      .reduce((a, r) => a + toNum(r.amount), 0);
+
+    return {
+      asset,
+      cost,
+      income,
+      net: income - cost,
+      count: capitalRows.length,
+    };
+  }, [capitalRows]);
+
   const rangeTextForPdf = useMemo(() => {
     if (!resolvedRange) return labelForRange(range);
     return `${labelForRange(range)} (${safeWhenLabel(resolvedRange.from)} → ${safeWhenLabel(
@@ -818,9 +880,9 @@ export default function BusinessStatementScreen() {
           </style>
         </head>
         <body>
-          <h1>Business Statement</h1>
+          <h1>${escapeHtml(activeStoreName ?? activeOrgName ?? "Business Statement")}</h1>
           <div class="sub">
-            ${escapeHtml(activeOrgName ?? "—")} • ${escapeHtml(activeStoreName ?? "—")} • ${escapeHtml(activeRole ?? "—")}
+            Business Statement • ${escapeHtml(activeRole ?? "—")}
           </div>
           <div class="ref">Statement Ref: ${escapeHtml(statementRef)}</div>
 
@@ -926,7 +988,7 @@ export default function BusinessStatementScreen() {
           </table>
 
           <div class="footer">
-            ZETRA Business Statement • Sales + Expenses + Profit + Balance
+            Powered by ZETRA BMS • Business Statement • Sales + Expenses + Profit + Balance
           </div>
         </body>
       </html>
@@ -1186,6 +1248,28 @@ export default function BusinessStatementScreen() {
           </View>
 
           <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>
+            Capital Recovery Statement
+          </Text>
+
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <MetricCard title="INCOME" amount={fmtMoney(capitalSummary.income)} />
+            <MetricCard title="COST" amount={fmtMoney(capitalSummary.cost)} />
+          </View>
+
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            {String(activeRole ?? "").toLowerCase() === "owner" ? (
+              <MetricCard title="ASSET" amount={fmtMoney(capitalSummary.asset)} />
+            ) : null}
+            <MetricCard
+              title="NET POSITION"
+              amount={`${capitalSummary.net >= 0 ? "+" : "-"} ${fmtMoney(Math.abs(capitalSummary.net))}`}
+              subtitle="Income - Cost"
+            />
+          </View>
+
+          <MetricCard title="RECOVERY RECORDS" amount={String(capitalSummary.count)} />
+
+          <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>
             Payment Breakdown
           </Text>
 
@@ -1230,6 +1314,55 @@ export default function BusinessStatementScreen() {
               balances kwa period uliyochagua.
             </Text>
           </Card>
+
+          <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>
+            Capital Recovery Records
+          </Text>
+
+          {capitalRows.length === 0 ? (
+            <View style={{ paddingTop: 4, alignItems: "center" }}>
+              <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                No capital recovery records found.
+              </Text>
+            </View>
+          ) : (
+            capitalRows.slice(0, 10).map((item) => {
+              const isCost = item.entry_type === "COST";
+              const isIncome = item.entry_type === "INCOME";
+
+              return (
+                <Card key={item.id} style={{ marginBottom: 12, gap: 8 }}>
+                  <Text
+                    style={{
+                      color: isCost
+                        ? theme.colors.danger
+                        : isIncome
+                        ? theme.colors.emerald
+                        : theme.colors.text,
+                      fontWeight: "900",
+                      fontSize: 16,
+                    }}
+                  >
+                    {item.entry_type} — {fmtMoney(item.amount)}
+                  </Text>
+
+                  {!!item.note && (
+                    <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                      {item.note}
+                    </Text>
+                  )}
+
+                  <Text style={{ color: theme.colors.faint, fontWeight: "800" }}>
+                    {safeWhenLabel(item.created_at)}
+                  </Text>
+
+                  <Text style={{ color: theme.colors.faint, fontWeight: "800" }}>
+                    Recorded by: {item.created_by_name || item.created_by || "Unknown"}
+                  </Text>
+                </Card>
+              );
+            })
+          )}
 
           <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>
             Recent Sales In Statement

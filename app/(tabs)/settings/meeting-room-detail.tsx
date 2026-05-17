@@ -349,6 +349,22 @@ const MAX_IMAGE_SIZE_MB = 8;
 const MAX_VIDEO_SIZE_MB = 20;
 const MAX_DOCUMENT_SIZE_MB = 12;
 
+const MR = {
+  page: "#EAF2FA",
+  panel: "#FFFFFF",
+  panelSoft: "#F8FAFC",
+  bubbleMine: "#ECFDF5",
+  bubbleOther: "#FFFFFF",
+  border: "rgba(15,23,42,0.10)",
+  borderStrong: "rgba(5,150,105,0.34)",
+  text: "#0F172A",
+  muted: "#475569",
+  faint: "#64748B",
+  emerald: "#059669",
+  danger: "#DC2626",
+  inputBg: "#FFFFFF",
+};
+
 function bytesToMb(bytes?: number | null) {
   const n = Number(bytes ?? 0);
   if (!Number.isFinite(n) || n <= 0) return 0;
@@ -452,7 +468,7 @@ function ReactionChip({
       <Text style={{ fontSize: 12 }}>{emoji}</Text>
       <Text
         style={{
-          color: UI.text,
+          color: MR.text,
           fontWeight: "900",
           fontSize: 12,
         }}
@@ -474,7 +490,7 @@ function MessageTextWithMentions({
   return (
     <Text
       style={{
-        color: UI.text,
+        color: MR.text,
         fontWeight: "800",
         fontSize: 15,
         lineHeight: 21,
@@ -501,7 +517,7 @@ function MessageTextWithMentions({
           <Text
             key={`${part}-${idx}`}
             style={{
-              color: UI.text,
+              color: MR.text,
               fontWeight: "800",
             }}
           >
@@ -535,19 +551,19 @@ function MessageTextWithMentions({
         style={{
           borderRadius: 14,
           borderWidth: 1,
-          borderColor: "rgba(255,255,255,0.10)",
-          backgroundColor: "rgba(255,255,255,0.05)",
+         borderColor: MR.border,
+backgroundColor: "#F8FAFC",
           paddingHorizontal: 12,
           paddingVertical: 12,
           marginBottom: clean(item.message_text) ? 8 : 0,
         }}
       >
-        <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 12 }}>
+        <Text style={{ color: MR.muted, fontWeight: "900", fontSize: 12 }}>
           Media expired
         </Text>
         <Text
           style={{
-            color: UI.faint,
+            color: MR.faint,
             fontWeight: "700",
             fontSize: 12,
             marginTop: 4,
@@ -566,14 +582,14 @@ function MessageTextWithMentions({
         style={{
           borderRadius: 14,
           borderWidth: 1,
-          borderColor: "rgba(255,255,255,0.10)",
-          backgroundColor: "rgba(255,255,255,0.05)",
+        borderColor: MR.border,
+backgroundColor: "#F8FAFC",
           paddingHorizontal: 12,
           paddingVertical: 12,
           marginBottom: clean(item.message_text) ? 8 : 0,
         }}
       >
-        <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 12 }}>
+        <Text style={{ color: MR.muted, fontWeight: "900", fontSize: 12 }}>
           Media unavailable
         </Text>
       </View>
@@ -589,7 +605,7 @@ function MessageTextWithMentions({
               borderRadius: 12,
               borderWidth: 1,
               borderColor: UI.emeraldBorder,
-              backgroundColor: "rgba(16,185,129,0.08)",
+              backgroundColor: "#ECFDF5",
               paddingHorizontal: 10,
               paddingVertical: 8,
               marginBottom: 8,
@@ -600,7 +616,7 @@ function MessageTextWithMentions({
             </Text>
             <Text
               style={{
-                color: UI.faint,
+                color: MR.faint,
                 fontWeight: "700",
                 fontSize: 12,
                 marginTop: 4,
@@ -630,7 +646,7 @@ function MessageTextWithMentions({
           />
           <Text
             style={{
-              color: UI.faint,
+              color: MR.faint,
               fontWeight: "800",
               fontSize: 11,
               marginTop: 6,
@@ -652,7 +668,7 @@ function MessageTextWithMentions({
               borderRadius: 12,
               borderWidth: 1,
               borderColor: UI.emeraldBorder,
-              backgroundColor: "rgba(16,185,129,0.08)",
+              backgroundColor: "#ECFDF5",
               paddingHorizontal: 10,
               paddingVertical: 8,
               marginBottom: 8,
@@ -663,7 +679,7 @@ function MessageTextWithMentions({
             </Text>
             <Text
               style={{
-                color: UI.faint,
+                color: MR.faint,
                 fontWeight: "700",
                 fontSize: 12,
                 marginTop: 4,
@@ -718,19 +734,19 @@ function MessageTextWithMentions({
                   borderRadius: 999,
                   alignItems: "center",
                   justifyContent: "center",
-                  backgroundColor: "rgba(0,0,0,0.42)",
+                  backgroundColor: "transparent",
                   borderWidth: 1,
                   borderColor: "rgba(255,255,255,0.18)",
                 }}
               >
-                <Ionicons name="play" size={26} color="#FFFFFF" />
+                <Ionicons name="play" size={26} color={MR.text} />
               </View>
             </View>
           </View>
 
           <Text
             style={{
-              color: UI.faint,
+              color: MR.faint,
               fontWeight: "800",
               fontSize: 11,
               marginTop: 6,
@@ -752,7 +768,7 @@ function MessageTextWithMentions({
               borderRadius: 12,
               borderWidth: 1,
               borderColor: UI.emeraldBorder,
-              backgroundColor: "rgba(16,185,129,0.08)",
+              backgroundColor: "#ECFDF5",
               paddingHorizontal: 10,
               paddingVertical: 8,
               marginBottom: 8,
@@ -763,7 +779,7 @@ function MessageTextWithMentions({
             </Text>
             <Text
               style={{
-                color: UI.faint,
+                color: MR.faint,
                 fontWeight: "700",
                 fontSize: 12,
                 marginTop: 4,
@@ -780,8 +796,8 @@ function MessageTextWithMentions({
           style={({ pressed }) => ({
             borderRadius: 16,
             borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.10)",
-            backgroundColor: "rgba(255,255,255,0.05)",
+           borderColor: MR.border,
+backgroundColor: "#F8FAFC",
             padding: 14,
             opacity: pressed ? 0.94 : 1,
           })}
@@ -808,7 +824,7 @@ function MessageTextWithMentions({
 
             <View style={{ flex: 1 }}>
               <Text
-                style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}
+                style={{ color: MR.text, fontWeight: "900", fontSize: 14 }}
                 numberOfLines={1}
               >
                 {clean(item.file_name) || (mediaKind === "PDF" ? "PDF document" : "Document")}
@@ -816,7 +832,7 @@ function MessageTextWithMentions({
 
               <Text
                 style={{
-                  color: UI.faint,
+                  color: MR.faint,
                   fontWeight: "800",
                   fontSize: 12,
                   marginTop: 4,
@@ -840,7 +856,7 @@ function MessageTextWithMentions({
             borderRadius: 12,
             borderWidth: 1,
             borderColor: UI.emeraldBorder,
-            backgroundColor: "rgba(16,185,129,0.08)",
+            backgroundColor: "#ECFDF5",
             paddingHorizontal: 10,
             paddingVertical: 8,
             marginBottom: 8,
@@ -851,7 +867,7 @@ function MessageTextWithMentions({
           </Text>
           <Text
             style={{
-              color: UI.faint,
+              color: MR.faint,
               fontWeight: "700",
               fontSize: 12,
               marginTop: 4,
@@ -868,8 +884,8 @@ function MessageTextWithMentions({
         style={({ pressed }) => ({
           borderRadius: 16,
           borderWidth: 1,
-          borderColor: "rgba(255,255,255,0.10)",
-          backgroundColor: "rgba(255,255,255,0.05)",
+      borderColor: MR.border,
+backgroundColor: "#F8FAFC",
           padding: 14,
           opacity: pressed ? 0.94 : 1,
         })}
@@ -891,12 +907,12 @@ function MessageTextWithMentions({
           </View>
 
           <View style={{ flex: 1 }}>
-            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
+            <Text style={{ color: MR.text, fontWeight: "900", fontSize: 14 }}>
               Audio attachment
             </Text>
             <Text
               style={{
-                color: UI.faint,
+                color: MR.faint,
                 fontWeight: "800",
                 fontSize: 12,
                 marginTop: 4,
@@ -2320,7 +2336,7 @@ const pickMediaFromLibrary = useCallback(async () => {
               >
                 <Text
                   style={{
-                    color: UI.muted,
+                    color: MR.muted,
                     fontSize: 11,
                     fontWeight: "900",
                   }}
@@ -2341,7 +2357,7 @@ const pickMediaFromLibrary = useCallback(async () => {
               {!mine ? (
                 <Text
                   style={{
-                    color: UI.muted,
+                    color: MR.muted,
                     fontWeight: "900",
                     fontSize: 12,
                     marginBottom: 6,
@@ -2400,8 +2416,8 @@ const pickMediaFromLibrary = useCallback(async () => {
                         paddingVertical: 10,
                         paddingHorizontal: 12,
                         borderWidth: 1,
-                        borderColor: mine ? UI.emeraldBorder : "rgba(255,255,255,0.10)",
-                        backgroundColor: mine ? UI.emeraldSoft : "rgba(255,255,255,0.06)",
+                       borderColor: mine ? MR.borderStrong : MR.border,
+backgroundColor: mine ? MR.bubbleMine : MR.bubbleOther,
                         opacity: pressed ? 0.96 : 1,
                       }}
                     >
@@ -2432,7 +2448,7 @@ const pickMediaFromLibrary = useCallback(async () => {
                           </Text>
                           <Text
                             style={{
-                              color: UI.faint,
+                              color: MR.faint,
                               fontWeight: "700",
                               fontSize: 12,
                               lineHeight: 17,
@@ -2557,8 +2573,8 @@ const pickMediaFromLibrary = useCallback(async () => {
               alignItems: "center",
               justifyContent: "center",
               borderWidth: 1,
-              borderColor: "rgba(255,255,255,0.10)",
-              backgroundColor: "rgba(255,255,255,0.04)",
+        borderColor: MR.border,
+backgroundColor: MR.inputBg,
               opacity: pressed ? 0.9 : 1,
             })}
           >
@@ -2568,7 +2584,7 @@ const pickMediaFromLibrary = useCallback(async () => {
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text
               style={{
-                color: UI.text,
+                color: MR.text,
                 fontWeight: "900",
                 fontSize: 22,
               }}
@@ -2579,7 +2595,7 @@ const pickMediaFromLibrary = useCallback(async () => {
 
             <Text
               style={{
-                color: UI.muted,
+                color: MR.muted,
                 fontWeight: "800",
                 marginTop: 3,
                 fontSize: 12,
@@ -2606,7 +2622,7 @@ const pickMediaFromLibrary = useCallback(async () => {
                 opacity: pressed ? 0.9 : 1,
               })}
             >
-              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
+              <Text style={{ color: MR.text, fontWeight: "900", fontSize: 12 }}>
                 {inviteOpen ? "Close" : "Invite"}
               </Text>
             </Pressable>
@@ -2622,7 +2638,7 @@ const pickMediaFromLibrary = useCallback(async () => {
               justifyContent: "center",
               borderWidth: 1,
               borderColor: "rgba(255,255,255,0.10)",
-              backgroundColor: "rgba(255,255,255,0.04)",
+              backgroundColor: "#FFFFFF",
               opacity: pressed ? 0.9 : 1,
             })}
           >
@@ -2640,13 +2656,13 @@ const pickMediaFromLibrary = useCallback(async () => {
               style={{
                 borderRadius: 18,
                 borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.10)",
-                backgroundColor: "rgba(255,255,255,0.04)",
+           borderColor: MR.border,
+backgroundColor: MR.panel,
                 padding: 12,
                 gap: 10,
               }}
             >
-              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
+              <Text style={{ color: MR.text, fontWeight: "900", fontSize: 14 }}>
                 Invite ZETRA Account
               </Text>
 
@@ -2661,9 +2677,9 @@ const pickMediaFromLibrary = useCallback(async () => {
                   minHeight: 46,
                   borderRadius: 14,
                   borderWidth: 1,
-                  borderColor: "rgba(255,255,255,0.10)",
-                  backgroundColor: "rgba(255,255,255,0.04)",
-                  color: UI.text,
+              borderColor: MR.border,
+backgroundColor: MR.panel,
+                  color: MR.text,
                   fontWeight: "700",
                   paddingHorizontal: 14,
                 }}
@@ -2690,7 +2706,7 @@ const pickMediaFromLibrary = useCallback(async () => {
                     opacity: pressed ? 0.92 : 1,
                   })}
                 >
-                  <Text style={{ color: UI.text, fontWeight: "900" }}>INTERNAL</Text>
+                  <Text style={{ color: MR.text, fontWeight: "900" }}>INTERNAL</Text>
                 </Pressable>
 
                 <Pressable
@@ -2713,7 +2729,7 @@ const pickMediaFromLibrary = useCallback(async () => {
                     opacity: pressed ? 0.92 : 1,
                   })}
                 >
-                  <Text style={{ color: UI.text, fontWeight: "900" }}>EXTERNAL</Text>
+                  <Text style={{ color: MR.text, fontWeight: "900" }}>EXTERNAL</Text>
                 </Pressable>
               </View>
 
@@ -2738,7 +2754,7 @@ const pickMediaFromLibrary = useCallback(async () => {
                     opacity: pressed ? 0.92 : 1,
                   })}
                 >
-                  <Text style={{ color: UI.text, fontWeight: "900" }}>MEMBER</Text>
+                  <Text style={{ color: MR.text, fontWeight: "900" }}>MEMBER</Text>
                 </Pressable>
 
                 <Pressable
@@ -2761,7 +2777,7 @@ const pickMediaFromLibrary = useCallback(async () => {
                     opacity: pressed ? 0.92 : 1,
                   })}
                 >
-                  <Text style={{ color: UI.text, fontWeight: "900" }}>ADMIN</Text>
+                  <Text style={{ color: MR.text, fontWeight: "900" }}>ADMIN</Text>
                 </Pressable>
               </View>
 
@@ -2782,7 +2798,7 @@ const pickMediaFromLibrary = useCallback(async () => {
                 {inviting ? (
                   <ActivityIndicator />
                 ) : (
-                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
+                  <Text style={{ color: MR.text, fontWeight: "900", fontSize: 14 }}>
                     Send Invitation
                   </Text>
                 )}
@@ -2806,7 +2822,7 @@ const pickMediaFromLibrary = useCallback(async () => {
                   justifyContent: "space-between",
                 }}
               >
-                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 13 }}>
+                <Text style={{ color: MR.text, fontWeight: "900", fontSize: 13 }}>
                   Pending Invites
                 </Text>
                 {invitesLoading ? (
@@ -2819,7 +2835,7 @@ const pickMediaFromLibrary = useCallback(async () => {
               </View>
 
               {pendingInvites.length === 0 ? (
-                <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 20 }}>
+                <Text style={{ color: MR.muted, fontWeight: "800", lineHeight: 20 }}>
                   Hakuna pending invites kwa room hii sasa hivi.
                 </Text>
               ) : (
@@ -2829,19 +2845,19 @@ const pickMediaFromLibrary = useCallback(async () => {
                     style={{
                       borderRadius: 14,
                       borderWidth: 1,
-                      borderColor: "rgba(255,255,255,0.10)",
-                      backgroundColor: "rgba(255,255,255,0.04)",
+                    borderColor: MR.border,
+backgroundColor: MR.panel,
                       padding: 10,
                       gap: 4,
                     }}
                   >
-                    <Text style={{ color: UI.text, fontWeight: "900" }}>
+                    <Text style={{ color: MR.text, fontWeight: "900" }}>
                       {clean(inv.email) || "No email"}
                     </Text>
-                    <Text style={{ color: UI.muted, fontSize: 12, fontWeight: "800" }}>
+                    <Text style={{ color: MR.muted, fontSize: 12, fontWeight: "800" }}>
                       {niceMemberType(inv.member_type)} • {niceRole(inv.role)}
                     </Text>
-                    <Text style={{ color: UI.faint, fontSize: 11, fontWeight: "800" }}>
+                    <Text style={{ color: MR.faint, fontSize: 11, fontWeight: "800" }}>
                       {formatDateTime(inv.created_at)}
                     </Text>
                   </View>
@@ -2892,7 +2908,7 @@ const pickMediaFromLibrary = useCallback(async () => {
               <Ionicons name="chatbubble-outline" size={28} color={UI.emerald} />
               <Text
                 style={{
-                  color: UI.text,
+                  color: MR.text,
                   fontWeight: "900",
                   fontSize: 17,
                   marginTop: 10,
@@ -2902,7 +2918,7 @@ const pickMediaFromLibrary = useCallback(async () => {
               </Text>
               <Text
                 style={{
-                  color: UI.muted,
+                  color: MR.muted,
                   fontWeight: "800",
                   textAlign: "center",
                   lineHeight: 20,
@@ -2951,8 +2967,8 @@ const pickMediaFromLibrary = useCallback(async () => {
             paddingTop: 8,
             paddingBottom: 8,
             borderTopWidth: 1,
-            borderTopColor: "rgba(255,255,255,0.06)",
-            backgroundColor: "#0B0F14",
+        borderTopColor: MR.border,
+backgroundColor: MR.panel,
           }}
         >
           {replyTo ? (
@@ -2963,7 +2979,7 @@ const pickMediaFromLibrary = useCallback(async () => {
                 borderRadius: 16,
                 borderWidth: 1,
                 borderColor: UI.emeraldBorder,
-                backgroundColor: "rgba(16,185,129,0.08)",
+                backgroundColor: "#ECFDF5",
                 paddingHorizontal: 12,
                 paddingVertical: 10,
                 flexDirection: "row",
@@ -2986,7 +3002,7 @@ const pickMediaFromLibrary = useCallback(async () => {
                 </Text>
                 <Text
                   style={{
-                    color: UI.text,
+                    color: MR.text,
                     fontWeight: "700",
                     fontSize: 13,
                   }}
@@ -3043,7 +3059,7 @@ const pickMediaFromLibrary = useCallback(async () => {
                 borderRadius: 16,
                 borderWidth: 1,
                 borderColor: UI.emeraldBorder,
-                backgroundColor: "rgba(16,185,129,0.08)",
+                backgroundColor: "#ECFDF5",
                 padding: 10,
               }}
             >
@@ -3104,7 +3120,7 @@ const pickMediaFromLibrary = useCallback(async () => {
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text
                     style={{
-                      color: UI.text,
+                      color: MR.text,
                       fontWeight: "900",
                       fontSize: 13,
                     }}
@@ -3120,7 +3136,7 @@ const pickMediaFromLibrary = useCallback(async () => {
 
                   <Text
                     style={{
-                      color: UI.muted,
+                      color: MR.muted,
                       fontWeight: "800",
                       fontSize: 12,
                       marginTop: 4,
@@ -3132,7 +3148,7 @@ const pickMediaFromLibrary = useCallback(async () => {
 
                   <Text
                     style={{
-                      color: UI.faint,
+                      color: MR.faint,
                       fontWeight: "800",
                       fontSize: 11,
                       marginTop: 4,
@@ -3174,7 +3190,7 @@ const pickMediaFromLibrary = useCallback(async () => {
                 borderRadius: 16,
                 borderWidth: 1,
                 borderColor: UI.emeraldBorder,
-                backgroundColor: "rgba(16,185,129,0.08)",
+                backgroundColor: "#ECFDF5",
                 overflow: "hidden",
               }}
             >
@@ -3217,12 +3233,12 @@ const pickMediaFromLibrary = useCallback(async () => {
                       : "transparent",
                   })}
                 >
-                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
+                  <Text style={{ color: MR.text, fontWeight: "900", fontSize: 14 }}>
                     {member.fullName}
                   </Text>
                   <Text
                     style={{
-                      color: UI.muted,
+                      color: MR.muted,
                       fontWeight: "800",
                       fontSize: 12,
                       marginTop: 2,
@@ -3241,8 +3257,8 @@ const pickMediaFromLibrary = useCallback(async () => {
               gap: 10,
               borderRadius: 22,
               borderWidth: 1,
-              borderColor: "rgba(255,255,255,0.10)",
-              backgroundColor: "rgba(255,255,255,0.04)",
+           borderColor: MR.border,
+backgroundColor: MR.panel,
               paddingLeft: 8,
               paddingRight: 8,
               paddingTop: 8,
@@ -3259,8 +3275,8 @@ const pickMediaFromLibrary = useCallback(async () => {
                 alignItems: "center",
                 justifyContent: "center",
                 borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.10)",
-                backgroundColor: "rgba(255,255,255,0.05)",
+             borderColor: MR.border,
+backgroundColor: "#F8FAFC",
                 opacity: pressed ? 0.9 : 1,
               })}
             >
@@ -3281,7 +3297,7 @@ const pickMediaFromLibrary = useCallback(async () => {
                 flex: 1,
                 minHeight: 44,
                 maxHeight: 120,
-                color: UI.text,
+                color: MR.text,
                 fontWeight: "700",
                 fontSize: 15,
                 paddingVertical: 10,
@@ -3336,7 +3352,7 @@ const pickMediaFromLibrary = useCallback(async () => {
             onPress={() => setAttachMenuOpen(false)}
             style={{
               flex: 1,
-              backgroundColor: "rgba(0,0,0,0.55)",
+              backgroundColor: "rgba(15,23,42,0.18)",
               justifyContent: "flex-end",
               paddingBottom: 0,
             }}
@@ -3355,7 +3371,7 @@ const pickMediaFromLibrary = useCallback(async () => {
                 gap: 10,
               }}
             >
-              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
+              <Text style={{ color: MR.text, fontWeight: "900", fontSize: 16 }}>
                 Attach
               </Text>
 
@@ -3369,13 +3385,13 @@ const pickMediaFromLibrary = useCallback(async () => {
                   borderRadius: 14,
                   borderWidth: 1,
                   borderColor: UI.emeraldBorder,
-                  backgroundColor: "rgba(16,185,129,0.08)",
+                  backgroundColor: "#ECFDF5",
                   justifyContent: "center",
                   paddingHorizontal: 14,
                   opacity: pressed ? 0.9 : 1,
                 })}
               >
-                <Text style={{ color: UI.text, fontWeight: "900" }}>
+                <Text style={{ color: MR.text, fontWeight: "900" }}>
                   Photos / Videos
                 </Text>
               </Pressable>
@@ -3389,14 +3405,14 @@ const pickMediaFromLibrary = useCallback(async () => {
                   minHeight: 48,
                   borderRadius: 14,
                   borderWidth: 1,
-                  borderColor: "rgba(255,255,255,0.10)",
-                  backgroundColor: "rgba(255,255,255,0.04)",
+               borderColor: MR.border,
+backgroundColor: MR.panel,
                   justifyContent: "center",
                   paddingHorizontal: 14,
                   opacity: pressed ? 0.9 : 1,
                 })}
               >
-                <Text style={{ color: UI.text, fontWeight: "900" }}>
+                <Text style={{ color: MR.text, fontWeight: "900" }}>
                   PDF / Documents
                 </Text>
               </Pressable>
@@ -3407,15 +3423,15 @@ const pickMediaFromLibrary = useCallback(async () => {
                   minHeight: 50,
                   borderRadius: 14,
                   borderWidth: 1,
-                  borderColor: "rgba(255,255,255,0.10)",
-                  backgroundColor: "rgba(255,255,255,0.04)",
+                 borderColor: MR.border,
+backgroundColor: MR.panel,
                   justifyContent: "center",
                   paddingHorizontal: 14,
                   marginTop: 4,
                   opacity: pressed ? 0.9 : 1,
                 })}
               >
-                <Text style={{ color: UI.muted, fontWeight: "900" }}>Cancel</Text>
+                <Text style={{ color: MR.muted, fontWeight: "900" }}>Cancel</Text>
               </Pressable>
             </Pressable>
           </Pressable>
@@ -3430,7 +3446,7 @@ const pickMediaFromLibrary = useCallback(async () => {
           <View
             style={{
               flex: 1,
-              backgroundColor: "#000000",
+              backgroundColor: MR.page,
             }}
           >
             <View
@@ -3445,7 +3461,7 @@ const pickMediaFromLibrary = useCallback(async () => {
                 borderBottomColor: "rgba(255,255,255,0.08)",
               }}
             >
-            <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 16 }}>
+            <Text style={{ color: MR.text, fontWeight: "900", fontSize: 16 }}>
   {viewerKind === "VIDEO"
     ? "Video"
     : viewerKind === "IMAGE"
@@ -3494,7 +3510,7 @@ const pickMediaFromLibrary = useCallback(async () => {
       opacity: pressed ? 0.88 : 1,
     })}
   >
-    <Ionicons name="close" size={20} color="#FFFFFF" />
+    <Ionicons name="close" size={20} color={MR.text} />
   </Pressable>
 </View>  
               
@@ -3516,7 +3532,7 @@ const pickMediaFromLibrary = useCallback(async () => {
                   style={{
                     width: "100%",
                     height: "100%",
-                    backgroundColor: "#000000",
+                    backgroundColor: MR.page,
                   }}
                 />
               ) : viewerKind === "VIDEO" ? (
@@ -3525,7 +3541,7 @@ const pickMediaFromLibrary = useCallback(async () => {
                   style={{
                     width: "100%",
                     height: "100%",
-                    backgroundColor: "#000000",
+                    backgroundColor: MR.page,
                   }}
                   resizeMode={ResizeMode.CONTAIN}
                   useNativeControls
@@ -3537,7 +3553,7 @@ const pickMediaFromLibrary = useCallback(async () => {
     style={{
       width: "100%",
       height: "100%",
-      backgroundColor: "#000000",
+      backgroundColor: MR.page,
     }}
   >
     <WebView
@@ -3550,10 +3566,10 @@ const pickMediaFromLibrary = useCallback(async () => {
             flex: 1,
             alignItems: "center",
             justifyContent: "center",
-            backgroundColor: "#000000",
+            backgroundColor: MR.page,
           }}
         >
-          <ActivityIndicator size="large" color="#FFFFFF" />
+          <ActivityIndicator size="large" color={MR.text} />
           <Text
             style={{
               color: "#FFFFFF",
@@ -3587,7 +3603,7 @@ const pickMediaFromLibrary = useCallback(async () => {
     <Ionicons
       name="document-attach"
       size={54}
-      color="#FFFFFF"
+      color={MR.text}
     />
     <Text
       style={{
@@ -3601,7 +3617,7 @@ const pickMediaFromLibrary = useCallback(async () => {
     </Text>
     <Text
       style={{
-        color: "rgba(255,255,255,0.72)",
+        color: MR.muted,
         fontWeight: "700",
         fontSize: 13,
         textAlign: "center",
@@ -3619,7 +3635,7 @@ const pickMediaFromLibrary = useCallback(async () => {
         borderRadius: 14,
         borderWidth: 1,
         borderColor: UI.emeraldBorder,
-        backgroundColor: "rgba(16,185,129,0.08)",
+        backgroundColor: "#ECFDF5",
         alignItems: "center",
         justifyContent: "center",
         paddingHorizontal: 16,
@@ -3661,20 +3677,20 @@ const pickMediaFromLibrary = useCallback(async () => {
                 borderTopRightRadius: 24,
                 borderWidth: 1,
                 borderColor: "rgba(255,255,255,0.10)",
-                backgroundColor: "#0F141B",
+                backgroundColor: MR.panel,
                 paddingTop: 16,
                 paddingHorizontal: 16,
                 paddingBottom: Math.max(insets.bottom, 14) + 18,
                 gap: 10,
               }}
             >
-              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
+              <Text style={{ color: MR.text, fontWeight: "900", fontSize: 16 }}>
                 Message Actions
               </Text>
 
               <Text
                 style={{
-                  color: UI.muted,
+                  color: MR.muted,
                   fontWeight: "700",
                   lineHeight: 20,
                 }}
@@ -3729,13 +3745,13 @@ const pickMediaFromLibrary = useCallback(async () => {
                     borderRadius: 14,
                     borderWidth: 1,
                     borderColor: UI.emeraldBorder,
-                    backgroundColor: "rgba(16,185,129,0.08)",
+                    backgroundColor: "#ECFDF5",
                     justifyContent: "center",
                     paddingHorizontal: 14,
                     opacity: pressed ? 0.9 : 1,
                   })}
                 >
-                  <Text style={{ color: UI.text, fontWeight: "900" }}>Open</Text>
+                  <Text style={{ color: MR.text, fontWeight: "900" }}>Open</Text>
                 </Pressable>
               ) : null}
 
@@ -3745,14 +3761,14 @@ const pickMediaFromLibrary = useCallback(async () => {
                   minHeight: 46,
                   borderRadius: 14,
                   borderWidth: 1,
-                  borderColor: "rgba(255,255,255,0.10)",
-                  backgroundColor: "rgba(255,255,255,0.04)",
+               borderColor: MR.border,
+backgroundColor: MR.panel,
                   justifyContent: "center",
                   paddingHorizontal: 14,
                   opacity: pressed ? 0.9 : 1,
                 })}
               >
-                <Text style={{ color: UI.text, fontWeight: "900" }}>Reply</Text>
+                <Text style={{ color: MR.text, fontWeight: "900" }}>Reply</Text>
               </Pressable>
 
               <Pressable
@@ -3761,14 +3777,14 @@ const pickMediaFromLibrary = useCallback(async () => {
                   minHeight: 46,
                   borderRadius: 14,
                   borderWidth: 1,
-                  borderColor: "rgba(255,255,255,0.10)",
-                  backgroundColor: "rgba(255,255,255,0.04)",
+               borderColor: MR.border,
+backgroundColor: MR.panel,
                   justifyContent: "center",
                   paddingHorizontal: 14,
                   opacity: pressed ? 0.9 : 1,
                 })}
               >
-                <Text style={{ color: UI.text, fontWeight: "900" }}>Copy</Text>
+                <Text style={{ color: MR.text, fontWeight: "900" }}>Copy</Text>
               </Pressable>
 
               <Pressable
@@ -3777,14 +3793,14 @@ const pickMediaFromLibrary = useCallback(async () => {
                   minHeight: 46,
                   borderRadius: 14,
                   borderWidth: 1,
-                  borderColor: "rgba(255,255,255,0.10)",
-                  backgroundColor: "rgba(255,255,255,0.04)",
+                borderColor: MR.border,
+backgroundColor: MR.panel,
                   justifyContent: "center",
                   paddingHorizontal: 14,
                   opacity: pressed ? 0.9 : 1,
                 })}
               >
-                <Text style={{ color: UI.text, fontWeight: "900" }}>Share</Text>
+                <Text style={{ color: MR.text, fontWeight: "900" }}>Share</Text>
               </Pressable>
 
               <Pressable
@@ -3797,13 +3813,13 @@ const pickMediaFromLibrary = useCallback(async () => {
                   borderRadius: 14,
                   borderWidth: 1,
                   borderColor: UI.emeraldBorder,
-                  backgroundColor: "rgba(16,185,129,0.08)",
+                  backgroundColor: "#ECFDF5",
                   justifyContent: "center",
                   paddingHorizontal: 14,
                   opacity: pressed ? 0.9 : 1,
                 })}
               >
-                <Text style={{ color: UI.text, fontWeight: "900" }}>
+                <Text style={{ color: MR.text, fontWeight: "900" }}>
                   {actionMessage?.myLoveReacted ? "Unlike ❤️" : "Love ❤️"}
                 </Text>
               </Pressable>
@@ -3817,14 +3833,14 @@ const pickMediaFromLibrary = useCallback(async () => {
                   minHeight: 46,
                   borderRadius: 14,
                   borderWidth: 1,
-                  borderColor: "rgba(255,255,255,0.10)",
-                  backgroundColor: "rgba(255,255,255,0.04)",
+                  borderColor: MR.border,
+backgroundColor: MR.panel,
                   justifyContent: "center",
                   paddingHorizontal: 14,
                   opacity: pressed ? 0.9 : 1,
                 })}
               >
-                <Text style={{ color: UI.text, fontWeight: "900" }}>
+                <Text style={{ color: MR.text, fontWeight: "900" }}>
                   {actionMessage?.myLikeReacted ? "Remove 👍" : "Like 👍"}
                 </Text>
               </Pressable>
@@ -3838,14 +3854,14 @@ const pickMediaFromLibrary = useCallback(async () => {
                   minHeight: 46,
                   borderRadius: 14,
                   borderWidth: 1,
-                  borderColor: "rgba(255,255,255,0.10)",
-                  backgroundColor: "rgba(255,255,255,0.04)",
+                 borderColor: MR.border,
+backgroundColor: MR.panel,
                   justifyContent: "center",
                   paddingHorizontal: 14,
                   opacity: pressed ? 0.9 : 1,
                 })}
               >
-                <Text style={{ color: UI.text, fontWeight: "900" }}>
+                <Text style={{ color: MR.text, fontWeight: "900" }}>
                   {actionMessage?.myFireReacted ? "Remove 🔥" : "Fire 🔥"}
                 </Text>
               </Pressable>
@@ -3856,14 +3872,14 @@ const pickMediaFromLibrary = useCallback(async () => {
                   minHeight: 46,
                   borderRadius: 14,
                   borderWidth: 1,
-                  borderColor: "rgba(255,255,255,0.10)",
-                  backgroundColor: "rgba(255,255,255,0.04)",
+                  bborderColor: MR.border,
+backgroundColor: MR.panel,
                   justifyContent: "center",
                   paddingHorizontal: 14,
                   opacity: pressed ? 0.9 : 1,
                 })}
               >
-                <Text style={{ color: UI.muted, fontWeight: "900" }}>Cancel</Text>
+                <Text style={{ color: MR.muted, fontWeight: "900" }}>Cancel</Text>
               </Pressable>
             </Pressable>
           </Pressable>

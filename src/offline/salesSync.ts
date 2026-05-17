@@ -27,11 +27,11 @@ export async function syncSalesQueueOnce(storeId: string) {
         // ✅ IMPORTANT: send SAFE items only -> RPC stability
         const safeItems = (Array.isArray(p?.items) ? p.items : []).map((it: any) => ({
           product_id: String(it?.product_id ?? ""),
-          qty: Math.trunc(Number(it?.qty ?? 0)),
+          qty: Number(Number(it?.qty ?? 0).toFixed(3)),
           unit_price: Number(it?.unit_price ?? 0),
         }));
 
-        const res = await supabase.rpc("create_sale_with_payment_v4", {
+        const res = await supabase.rpc("create_sale_with_payment_v6", {
           p_store_id: item.store_id,
           p_items: safeItems,
           p_note: p.note,
@@ -42,14 +42,15 @@ export async function syncSalesQueueOnce(storeId: string) {
           p_reference: p.reference,
 
           p_customer_id: null,
-          p_customer_phone: null,
-          p_customer_full_name: null,
+          p_customer_phone: p.customer_phone ?? null,
+p_customer_full_name: p.customer_name ?? null,
 
           p_discount_type: p.discount_type,
           p_discount_value: p.discount_value,
           p_discount_note: p.discount_note,
 
           p_client_sale_id: item.client_sale_id, // must be UUID string
+          p_sold_by_membership_id: p.sold_by_membership_id ?? null,
         } as any);
 
         if (res.error) throw res.error;

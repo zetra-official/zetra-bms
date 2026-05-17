@@ -17,6 +17,19 @@ import { UI } from "@/src/ui/theme";
 import { useOrg } from "@/src/context/OrgContext";
 import { supabase } from "@/src/supabase/supabaseClient";
 
+const MR = {
+  card: "#FFFFFF",
+  card2: "#F8FAFC",
+  border: "rgba(15,23,42,0.12)",
+  borderStrong: "rgba(5,150,105,0.36)",
+  input: "#FFFFFF",
+  text: "#0F172A",
+  muted: "#475569",
+  faint: "#64748B",
+  emerald: "#047857",
+  emeraldSoft: "#ECFDF5",
+};
+
 function clean(s: any) {
   return String(s ?? "").trim();
 }
@@ -35,17 +48,17 @@ function CountPill({
         paddingVertical: 10,
         borderRadius: 999,
         borderWidth: 1,
-        borderColor: "rgba(255,255,255,0.10)",
-        backgroundColor: "rgba(255,255,255,0.05)",
+        borderColor: MR.border,
+backgroundColor: MR.card2,
         minWidth: 120,
       }}
     >
-      <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 11 }}>
+      <Text style={{ color: MR.muted, fontWeight: "800", fontSize: 11 }}>
         {label}
       </Text>
       <Text
         style={{
-          color: UI.text,
+          color: MR.text,
           fontWeight: "900",
           fontSize: 16,
           marginTop: 4,
@@ -175,8 +188,8 @@ export default function MeetingRoomCreateScreen() {
             alignItems: "center",
             justifyContent: "center",
             borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.10)",
-            backgroundColor: "rgba(255,255,255,0.04)",
+          borderColor: MR.border,
+backgroundColor: MR.card,
             opacity: pressed ? 0.9 : 1,
           })}
         >
@@ -185,13 +198,13 @@ export default function MeetingRoomCreateScreen() {
 
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text
-            style={{ color: UI.text, fontWeight: "900", fontSize: 22 }}
+            style={{ color: MR.text, fontWeight: "900", fontSize: 22 }}
             numberOfLines={1}
           >
             Create Meeting Room
           </Text>
           <Text
-            style={{ color: UI.muted, fontWeight: "800", marginTop: 4 }}
+            style={{ color: MR.muted, fontWeight: "800", marginTop: 4 }}
             numberOfLines={1}
           >
             {orgName} • {role || "—"}
@@ -203,8 +216,13 @@ export default function MeetingRoomCreateScreen() {
         <Card
           style={{
             gap: 14,
-            borderColor: UI.emeraldBorder,
-            backgroundColor: "rgba(16,185,129,0.06)",
+            borderColor: MR.borderStrong,
+            backgroundColor: MR.card,
+            shadowColor: MR.emerald,
+            shadowOpacity: 0.12,
+            shadowRadius: 16,
+            shadowOffset: { width: 0, height: 8 },
+            elevation: 4,
           }}
         >
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
@@ -216,23 +234,23 @@ export default function MeetingRoomCreateScreen() {
                 alignItems: "center",
                 justifyContent: "center",
                 borderWidth: 1,
-                borderColor: UI.emeraldBorder,
-                backgroundColor: UI.emeraldSoft,
+               borderColor: MR.borderStrong,
+backgroundColor: MR.emeraldSoft,
               }}
             >
-              <Ionicons name="add-circle-outline" size={24} color={UI.emerald} />
+              <Ionicons name="add-circle-outline" size={24} color={MR.emerald} />
             </View>
 
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text
-                style={{ color: UI.text, fontWeight: "900", fontSize: 17 }}
+                style={{ color: MR.text, fontWeight: "900", fontSize: 17 }}
                 numberOfLines={2}
               >
                 New Organization Room
               </Text>
               <Text
                 style={{
-                  color: UI.muted,
+                  color: MR.muted,
                   fontWeight: "800",
                   fontSize: 12,
                   marginTop: 4,
@@ -264,7 +282,7 @@ export default function MeetingRoomCreateScreen() {
             <Text style={{ color: UI.danger, fontWeight: "900" }}>
               Not allowed
             </Text>
-            <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 20 }}>
+            <Text style={{ color: MR.muted, fontWeight: "800", lineHeight: 20 }}>
               Meeting rooms can only be created by Owner/Admin.
             </Text>
           </Card>
@@ -272,13 +290,19 @@ export default function MeetingRoomCreateScreen() {
       ) : null}
 
       <View style={{ marginTop: 14 }}>
-        <Card style={{ gap: 14 }}>
-          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
+        <Card
+          style={{
+            gap: 14,
+            borderColor: MR.border,
+            backgroundColor: MR.card,
+          }}
+        >
+          <Text style={{ color: MR.text, fontWeight: "900", fontSize: 15 }}>
             Room Details
           </Text>
 
           <View style={{ gap: 8 }}>
-            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 13 }}>
+            <Text style={{ color: MR.text, fontWeight: "900", fontSize: 13 }}>
               Room Name
             </Text>
 
@@ -287,15 +311,15 @@ export default function MeetingRoomCreateScreen() {
               onChangeText={setName}
               editable={!loading && canCreate}
               placeholder="e.g. Leadership, Suppliers, Sales Team"
-              placeholderTextColor="rgba(255,255,255,0.38)"
+            placeholderTextColor={UI.faint}
               maxLength={80}
               style={{
                 minHeight: 58,
                 borderRadius: 18,
                 borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.10)",
-                backgroundColor: "rgba(255,255,255,0.05)",
-                color: UI.text,
+                borderColor: MR.border,
+                backgroundColor: MR.input,
+                color: MR.text,
                 paddingHorizontal: 14,
                 fontWeight: "800",
                 fontSize: 15,
@@ -322,7 +346,7 @@ export default function MeetingRoomCreateScreen() {
           </View>
 
           <View style={{ gap: 8 }}>
-            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 13 }}>
+            <Text style={{ color: MR.text, fontWeight: "900", fontSize: 13 }}>
               Description
             </Text>
 
@@ -331,7 +355,7 @@ export default function MeetingRoomCreateScreen() {
               onChangeText={setDescription}
               editable={!loading && canCreate}
               placeholder="Optional note about what this room will be used for"
-              placeholderTextColor="rgba(255,255,255,0.38)"
+              placeholderTextColor={MR.faint}
               multiline
               textAlignVertical="top"
               maxLength={240}
@@ -339,9 +363,9 @@ export default function MeetingRoomCreateScreen() {
                 minHeight: 132,
                 borderRadius: 18,
                 borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.10)",
-                backgroundColor: "rgba(255,255,255,0.05)",
-                color: UI.text,
+               borderColor: MR.border,
+backgroundColor: MR.input,
+color: MR.text,
                 paddingHorizontal: 14,
                 paddingTop: 14,
                 paddingBottom: 14,
@@ -351,7 +375,7 @@ export default function MeetingRoomCreateScreen() {
             />
 
             <View style={{ alignItems: "flex-end" }}>
-              <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 11 }}>
+              <Text style={{ color: MR.faint, fontWeight: "800", fontSize: 11 }}>
                 {descCount}/240
               </Text>
             </View>
@@ -360,18 +384,24 @@ export default function MeetingRoomCreateScreen() {
       </View>
 
       <View style={{ marginTop: 14 }}>
-        <Card style={{ gap: 10 }}>
-          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
+        <Card
+          style={{
+            gap: 10,
+            borderColor: MR.border,
+            backgroundColor: MR.card2,
+          }}
+        >
+          <Text style={{ color: MR.text, fontWeight: "900", fontSize: 15 }}>
             What happens next
           </Text>
 
-          <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 21 }}>
+          <Text style={{ color: MR.muted, fontWeight: "800", lineHeight: 21 }}>
             • Room will be created inside this organization.
           </Text>
-          <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 21 }}>
+          <Text style={{ color: MR.muted, fontWeight: "800", lineHeight: 21 }}>
             • You become the first active room member automatically.
           </Text>
-          <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 21 }}>
+          <Text style={{ color: MR.muted, fontWeight: "800", lineHeight: 21 }}>
             • After opening the room, utaweza ku-invite mtu yeyote mwenye akaunti ya ZETRA hata kama hayupo kwenye organization hiyo.
           </Text>
         </Card>
@@ -385,8 +415,8 @@ export default function MeetingRoomCreateScreen() {
             minHeight: 56,
             borderRadius: 999,
             borderWidth: 1,
-            borderColor: disabled ? "rgba(255,255,255,0.10)" : UI.emeraldBorder,
-            backgroundColor: disabled ? "rgba(255,255,255,0.05)" : UI.emeraldSoft,
+            borderColor: disabled ? MR.border : MR.borderStrong,
+            backgroundColor: disabled ? "#E5E7EB" : MR.emeraldSoft,
             alignItems: "center",
             justifyContent: "center",
             flexDirection: "row",
@@ -400,13 +430,13 @@ export default function MeetingRoomCreateScreen() {
             <Ionicons
               name="checkmark-circle-outline"
               size={20}
-              color={disabled ? "rgba(255,255,255,0.45)" : UI.emerald}
+              color={disabled ? MR.faint : MR.emerald}
             />
           )}
 
           <Text
             style={{
-              color: disabled ? "rgba(255,255,255,0.45)" : UI.text,
+              color: disabled ? MR.faint : MR.text,
               fontWeight: "900",
               fontSize: 15,
             }}
@@ -429,7 +459,7 @@ export default function MeetingRoomCreateScreen() {
             opacity: pressed ? 0.94 : 1,
           })}
         >
-          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
+          <Text style={{ color: MR.text, fontWeight: "900", fontSize: 14 }}>
             Cancel
           </Text>
         </Pressable>

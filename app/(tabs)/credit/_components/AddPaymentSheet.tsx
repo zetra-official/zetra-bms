@@ -53,8 +53,8 @@ function MethodChip({
         paddingVertical: 10,
         borderRadius: theme.radius.pill,
         borderWidth: 1,
-        borderColor: active ? "rgba(52,211,153,0.40)" : theme.colors.border,
-        backgroundColor: active ? "rgba(52,211,153,0.12)" : "rgba(255,255,255,0.06)",
+        borderColor: active ? theme.colors.emeraldBorder : "rgba(148,163,184,0.22)",
+        backgroundColor: active ? "rgba(16,185,129,0.10)" : "#FFFFFF",
         alignItems: "center",
         justifyContent: "center",
       }}
@@ -83,18 +83,7 @@ export default function AddPaymentSheet({
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const [kbH, setKbH] = useState(0);
-
-  useEffect(() => {
-    const show = Keyboard.addListener("keyboardDidShow", (e) => {
-      setKbH(e.endCoordinates?.height ?? 0);
-    });
-    const hide = Keyboard.addListener("keyboardDidHide", () => setKbH(0));
-    return () => {
-      show.remove();
-      hide.remove();
-    };
-  }, []);
+  
 
   useEffect(() => {
     if (!visible) return;
@@ -192,11 +181,11 @@ export default function AddPaymentSheet({
   const bottomGap = Math.max(insets.bottom, 10);
 
   const HEADER_H = 86;
-  const FOOTER_H = 132 + bottomGap;
-  const maxSheetH = Math.min(SCREEN_H * 0.92, SCREEN_H - topGap);
-  const minSheetH = 520;
+  const FOOTER_H = 150 + bottomGap;
+  const maxSheetH = Math.min(SCREEN_H * 0.84, SCREEN_H - topGap - 18);
+  const minSheetH = Math.min(500, SCREEN_H * 0.76);
 
-  const availableH = Math.max(360, SCREEN_H - kbH - topGap);
+  const availableH = Math.max(360, SCREEN_H - topGap - 18);
   const sheetH = Math.max(Math.min(maxSheetH, availableH), minSheetH);
 
   const bodyMaxH = Math.max(220, sheetH - HEADER_H - FOOTER_H);
@@ -212,7 +201,7 @@ export default function AddPaymentSheet({
       hardwareAccelerated
       onRequestClose={onClose}
     >
-      <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.72)" }}>
+      <View style={{ flex: 1, backgroundColor: "rgba(15,23,42,0.38)" }}>
         <Pressable
           onPress={onClose}
           style={{ position: "absolute", left: 0, top: 0, right: 0, bottom: 0 }}
@@ -220,7 +209,7 @@ export default function AddPaymentSheet({
 
         <KeyboardAvoidingView
           style={{ flex: 1, justifyContent: "flex-end" }}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
           keyboardVerticalOffset={0}
         >
           <Pressable onPress={() => {}} style={{ width: "100%" }}>
@@ -228,25 +217,30 @@ export default function AddPaymentSheet({
               style={{
                 width: "100%",
                 height: sheetH,
-                borderTopLeftRadius: theme.radius.xl,
-                borderTopRightRadius: theme.radius.xl,
+                borderTopLeftRadius: 28,
+                borderTopRightRadius: 28,
                 borderWidth: 1,
-                borderColor: theme.colors.borderSoft,
-                backgroundColor: "rgba(11,15,20,0.96)",
+                borderColor: "rgba(148,163,184,0.22)",
+                backgroundColor: "#FFFFFF",
                 overflow: "hidden",
+                shadowColor: "#0F172A",
+                shadowOpacity: 0.18,
+                shadowRadius: 22,
+                shadowOffset: { width: 0, height: -8 },
+                elevation: 12,
               }}
             >
               <View
                 style={{
-                  paddingHorizontal: 16,
-                  paddingTop: 16,
+                  paddingHorizontal: 18,
+                  paddingTop: 14,
                   paddingBottom: 12,
                   borderBottomWidth: 1,
-                  borderBottomColor: theme.colors.border,
-                  backgroundColor: "rgba(11,15,20,0.98)",
+                  borderBottomColor: "rgba(148,163,184,0.18)",
+                  backgroundColor: "#FFFFFF",
                 }}
               >
-                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 22 }}>
+                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 20 }}>
                   Add Payment
                 </Text>
                 <Text style={{ color: theme.colors.muted, marginTop: 4 }}>
@@ -257,21 +251,21 @@ export default function AddPaymentSheet({
               <ScrollView
                 style={{ maxHeight: bodyMaxH }}
                 keyboardShouldPersistTaps="handled"
-                keyboardDismissMode="on-drag"
+                keyboardDismissMode="none"
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{
-                  paddingHorizontal: 16,
-                  paddingTop: 14,
-                  paddingBottom: bodyPadBottom,
-                  gap: 14,
+                  paddingHorizontal: 18,
+                  paddingTop: 16,
+                  paddingBottom: bodyPadBottom + 90,
+                  gap: 12,
                 }}
               >
                 <View
                   style={{
                     borderWidth: 1,
-                    borderColor: theme.colors.border,
-                    borderRadius: theme.radius.xl,
-                    backgroundColor: "rgba(255,255,255,0.03)",
+                    borderColor: "rgba(148,163,184,0.20)",
+                    borderRadius: 20,
+                    backgroundColor: "#FFFFFF",
                     padding: 14,
                     gap: 10,
                   }}
@@ -283,16 +277,17 @@ export default function AddPaymentSheet({
                     onChangeText={setAmount}
                     keyboardType="numeric"
                     placeholder="mf: 50000"
-                    placeholderTextColor="rgba(255,255,255,0.30)"
+                    placeholderTextColor={theme.colors.faint}
                     style={{
                       borderWidth: 1,
-                      borderColor: theme.colors.border,
-                      borderRadius: theme.radius.lg,
-                      backgroundColor: "rgba(255,255,255,0.05)",
+                      borderColor: "rgba(148,163,184,0.22)",
+                      borderRadius: 18,
+                      backgroundColor: "#FFFFFF",
                       paddingHorizontal: 14,
                       paddingVertical: 12,
                       color: theme.colors.text,
                       fontWeight: "900",
+                      fontSize: 16,
                     }}
                   />
                 </View>
@@ -300,9 +295,9 @@ export default function AddPaymentSheet({
                 <View
                   style={{
                     borderWidth: 1,
-                    borderColor: theme.colors.border,
-                    borderRadius: theme.radius.xl,
-                    backgroundColor: "rgba(255,255,255,0.03)",
+                    borderColor: "rgba(148,163,184,0.20)",
+                    borderRadius: 20,
+                    backgroundColor: "#FFFFFF",
                     padding: 14,
                     gap: 12,
                   }}
@@ -343,12 +338,12 @@ export default function AddPaymentSheet({
                           value={channel}
                           onChangeText={setChannel}
                           placeholder={method === "MOBILE" ? "mf: M-PESA" : "mf: NMB/CRDB"}
-                          placeholderTextColor="rgba(255,255,255,0.30)"
+                          placeholderTextColor={theme.colors.faint}
                           style={{
                             borderWidth: 1,
-                            borderColor: theme.colors.border,
-                            borderRadius: theme.radius.lg,
-                            backgroundColor: "rgba(255,255,255,0.05)",
+                            borderColor: "rgba(148,163,184,0.22)",
+                            borderRadius: 18,
+                            backgroundColor: "#FFFFFF",
                             paddingHorizontal: 14,
                             paddingVertical: 12,
                             color: theme.colors.text,
@@ -365,12 +360,12 @@ export default function AddPaymentSheet({
                           value={reference}
                           onChangeText={setReference}
                           placeholder="mf: TXN123456"
-                          placeholderTextColor="rgba(255,255,255,0.30)"
+                          placeholderTextColor={theme.colors.faint}
                           style={{
                             borderWidth: 1,
-                            borderColor: theme.colors.border,
-                            borderRadius: theme.radius.lg,
-                            backgroundColor: "rgba(255,255,255,0.05)",
+                            borderColor: "rgba(148,163,184,0.22)",
+                            borderRadius: 18,
+                            backgroundColor: "#FFFFFF",
                             paddingHorizontal: 14,
                             paddingVertical: 12,
                             color: theme.colors.text,
@@ -385,9 +380,9 @@ export default function AddPaymentSheet({
                 <View
                   style={{
                     borderWidth: 1,
-                    borderColor: theme.colors.border,
-                    borderRadius: theme.radius.xl,
-                    backgroundColor: "rgba(255,255,255,0.03)",
+                    borderColor: "rgba(148,163,184,0.20)",
+                    borderRadius: 20,
+                    backgroundColor: "#FFFFFF",
                     padding: 14,
                     gap: 10,
                   }}
@@ -400,15 +395,15 @@ export default function AddPaymentSheet({
                     value={note}
                     onChangeText={setNote}
                     placeholder="mf: customer paid cash"
-                    placeholderTextColor="rgba(255,255,255,0.30)"
+                    placeholderTextColor={theme.colors.faint}
                     multiline
                     textAlignVertical="top"
                     style={{
-                      minHeight: 90,
+                      minHeight: 68,
                       borderWidth: 1,
-                      borderColor: theme.colors.border,
-                      borderRadius: theme.radius.lg,
-                      backgroundColor: "rgba(255,255,255,0.05)",
+                      borderColor: "rgba(148,163,184,0.22)",
+                      borderRadius: 18,
+                      backgroundColor: "#FFFFFF",
                       paddingHorizontal: 14,
                       paddingVertical: 12,
                       color: theme.colors.text,
@@ -420,12 +415,12 @@ export default function AddPaymentSheet({
 
               <View
                 style={{
-                  paddingHorizontal: 16,
-                  paddingTop: 14,
-                  paddingBottom: 14 + bottomGap,
+                  paddingHorizontal: 18,
+                  paddingTop: 12,
+                  paddingBottom: 12 + bottomGap,
                   borderTopWidth: 1,
-                  borderTopColor: theme.colors.border,
-                  backgroundColor: "rgba(11,15,20,0.98)",
+                  borderTopColor: "rgba(148,163,184,0.18)",
+                  backgroundColor: "#FFFFFF",
                   gap: 10,
                 }}
               >
@@ -433,20 +428,20 @@ export default function AddPaymentSheet({
                   onPress={save}
                   disabled={!canSave}
                   style={({ pressed }) => ({
-                    borderRadius: theme.radius.xl,
+                    borderRadius: 18,
                     paddingVertical: 16,
                     alignItems: "center",
                     justifyContent: "center",
                     borderWidth: 1,
                     borderColor: theme.colors.emeraldBorder,
-                    backgroundColor: theme.colors.emeraldSoft,
-                    opacity: !canSave ? 0.55 : pressed ? 0.92 : 1,
+                    backgroundColor: canSave ? "#059669" : "rgba(16,185,129,0.22)",
+                    opacity: pressed ? 0.92 : 1,
                   })}
                 >
                   {loading ? (
                     <ActivityIndicator />
                   ) : (
-                    <Text style={{ color: theme.colors.emerald, fontWeight: "900", fontSize: 16 }}>
+                    <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 16 }}>
                       Save Payment
                     </Text>
                   )}
@@ -455,13 +450,13 @@ export default function AddPaymentSheet({
                 <Pressable
                   onPress={onClose}
                   style={({ pressed }) => ({
-                    borderRadius: theme.radius.xl,
+                    borderRadius: 18,
                     paddingVertical: 16,
                     alignItems: "center",
                     justifyContent: "center",
                     borderWidth: 1,
-                    borderColor: theme.colors.borderSoft,
-                    backgroundColor: "rgba(255,255,255,0.04)",
+                    borderColor: "rgba(148,163,184,0.24)",
+                    backgroundColor: "#FFFFFF",
                     opacity: pressed ? 0.92 : 1,
                   })}
                 >

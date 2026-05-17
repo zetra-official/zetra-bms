@@ -1,8 +1,8 @@
 import { useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   Alert,
-  KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
@@ -10,6 +10,7 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
+
 import SafeIcon from "@/src/ui/SafeIcon";
 import { useOrg } from "../../../src/context/OrgContext";
 import { supabase } from "../../../src/supabase/supabaseClient";
@@ -22,14 +23,18 @@ import { UI } from "../../../src/ui/theme";
 function clean(s: any) {
   return String(s ?? "").trim();
 }
+
 function upper(s: any) {
   return clean(s).toUpperCase();
 }
+
 function num(v: any): number | null {
   const n = Number(v);
   if (!Number.isFinite(n)) return null;
   return n;
 }
+
+type StoreType = "STANDARD" | "CAPITAL_RECOVERY" | "FIELD_PROCUREMENT" | "PRECISION_RETAIL";
 
 type OrgPlanLimitsRow = {
   plan_id?: string;
@@ -45,6 +50,7 @@ export default function AddStoreScreen() {
   const router = useRouter();
   const { activeOrgId, activeOrgName, activeRole, refresh } = useOrg();
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
   const isWeb = Platform.OS === "web";
   const isDesktopWeb = isWeb && width >= 1100;
@@ -54,8 +60,46 @@ export default function AddStoreScreen() {
   const orgId = useMemo(() => clean(activeOrgId), [activeOrgId]);
 
   const [name, setName] = useState("");
-  const [storeType, setStoreType] = useState<"STANDARD" | "CAPITAL_RECOVERY">("STANDARD");
+  const [storeType, setStoreType] = useState<StoreType>("STANDARD");
   const [saving, setSaving] = useState(false);
+
+  const storeTypes = useMemo(
+    () => [
+      {
+        key: "STANDARD" as StoreType,
+        title: "Standard Retail",
+        icon: "cube-outline",
+        color: "rgba(16,185,129,0.42)",
+        bg: "rgba(16,185,129,0.12)",
+        desc: "For daily sales, inventory, stock movement, products, and normal retail operations.",
+      },
+      {
+        key: "CAPITAL_RECOVERY" as StoreType,
+        title: "Capital Recovery",
+        icon: "cash-outline",
+        color: "rgba(251,191,36,0.42)",
+        bg: "rgba(251,191,36,0.10)",
+        desc: "For tracking capital, costs, real profit, recovery progress, and money protection.",
+      },
+      {
+        key: "FIELD_PROCUREMENT" as StoreType,
+        title: "Field Procurement",
+        icon: "trail-sign-outline",
+        color: "rgba(56,189,248,0.42)",
+        bg: "rgba(56,189,248,0.10)",
+        desc: "For field buying, cash advances, purchases, expenses, balances, and received stock.",
+      },
+      {
+        key: "PRECISION_RETAIL" as StoreType,
+        title: "Precision Retail",
+        icon: "flask-outline",
+        color: "rgba(168,85,247,0.42)",
+        bg: "rgba(168,85,247,0.10)",
+        desc: "For pharmacy, chemicals, beauty, food portions, and decimal quantities like 0.5 or 1.25.",
+      },
+    ],
+    []
+  );
 
   const guardPlanStoreLimit = async (): Promise<void> => {
     if (!orgId) return;
@@ -64,23 +108,16 @@ export default function AddStoreScreen() {
       p_org_id: orgId,
     });
 
-    if (error) {
-      // Do not hard-lock client if RPC fails. DB create_store should still enforce.
-      return;
-    }
+    if (error) return;
 
     const row = (Array.isArray(data) ? data?.[0] : data) as OrgPlanLimitsRow | null;
     const planCode = upper(row?.plan_code || "CURRENT");
     const storeLimit = num(row?.stores_per_org);
 
-    // If no limit returned, do not block on client side.
     if (storeLimit === null) return;
 
     const { data: storesData, error: storesErr } = await supabase.rpc("get_my_stores");
-    if (storesErr) {
-      // Let DB enforce if this fails
-      return;
-    }
+    if (storesErr) return;
 
     const stores = Array.isArray(storesData) ? (storesData as any[]) : [];
     const orgStores = stores.filter((s) => clean(s?.organization_id) === orgId);
@@ -111,15 +148,15 @@ export default function AddStoreScreen() {
     }
 
     setSaving(true);
+
     try {
-      // Canonical client-side guard
       await guardPlanStoreLimit();
 
-    const { error } = await supabase.rpc("create_store", {
-  p_org_id: orgId,
-  p_store_name: storeName,
-  p_store_type: storeType,
-});
+      const { error } = await supabase.rpc("create_store", {
+        p_org_id: orgId,
+        p_store_name: storeName,
+        p_store_type: storeType,
+      });
 
       if (error) throw error;
 
@@ -150,68 +187,161 @@ export default function AddStoreScreen() {
   };
 
   return (
-    <Screen scroll={false}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={0}
+    <Screen scroll={false} contentStyle={{ paddingHorizontal: 0, paddingBottom: 0 }}>
+      <ScrollView
+        style={{ flex: 1, width: "100%" }}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          flexGrow: 1,
+          paddingHorizontal: isWeb ? 20 : 16,
+          paddingBottom: Math.max(insets.bottom, 10) + 190,
+        }}
       >
-        <ScrollView
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{
-            paddingBottom: 28,
-          }}
-        >
-          <View
-            style={{
-              width: "100%",
-              maxWidth: contentMaxWidth,
-              alignSelf: "center",
-              gap: 14,
-            }}
-          >
         <View
           style={{
-            gap: 6,
-            marginBottom: 2,
+            width: "100%",
+            maxWidth: contentMaxWidth,
+            alignSelf: "center",
+            gap: 14,
           }}
         >
-          <Text
+          <View style={{ gap: 6 }}>
+            <Text
+              style={{
+                fontSize: isWeb ? 28 : 28,
+                fontWeight: "900",
+                color: UI.text,
+              }}
+            >
+              Add Store
+            </Text>
+
+            <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 14 }}>
+              Org: <Text style={{ color: UI.text, fontWeight: "900" }}>{activeOrgName ?? "—"}</Text>
+            </Text>
+          </View>
+
+          {!canCreate ? (
+            <Card style={{ borderColor: UI.dangerBorder, backgroundColor: UI.dangerSoft }}>
+              <Text style={{ color: UI.danger, fontWeight: "900" }}>
+                No Access (Owner/Admin only)
+              </Text>
+            </Card>
+          ) : null}
+
+          <Card
             style={{
-              fontSize: isWeb ? 28 : 22,
-              fontWeight: "900",
-              color: UI.text,
+              gap: 14,
+              padding: isWeb ? 18 : 14,
             }}
           >
-            Add Store
-          </Text>
-
-          <Text style={{ color: UI.muted, fontWeight: "700", marginTop: 2 }}>
-            Org:{" "}
-            <Text style={{ color: UI.text, fontWeight: "900" }}>{activeOrgName ?? "—"}</Text>
-          </Text>
-        </View>
-
-        {!canCreate ? (
-          <Card style={{ borderColor: UI.dangerBorder, backgroundColor: UI.dangerSoft }}>
-            <Text style={{ color: UI.danger, fontWeight: "900" }}>
-              No Access (Owner/Admin only)
+            <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 13 }}>
+              Store Type
             </Text>
-          </Card>
-        ) : null}
 
-        <Card
-          style={{
-            gap: 14,
-            marginTop: 4,
-            padding: isWeb ? 18 : undefined,
-          }}
-        >
-          <Text style={{ color: UI.muted, fontWeight: "800", fontSize: isWeb ? 13 : 12 }}>
-            Store Type
-          </Text>
+            <View
+              style={{
+                flexDirection: isDesktopWeb ? "row" : "column",
+                flexWrap: isDesktopWeb ? "wrap" : "nowrap",
+                gap: 10,
+              }}
+            >
+              {storeTypes.map((item) => {
+                const active = storeType === item.key;
+
+                return (
+                  <Pressable
+                    key={item.key}
+                    onPress={() => setStoreType(item.key)}
+                    style={({ pressed }) => ({
+                      flexBasis: isDesktopWeb ? "48.7%" : undefined,
+                      minHeight: 104,
+                      borderWidth: 1,
+                      borderColor: active ? item.color : "rgba(255,255,255,0.10)",
+                      backgroundColor: active ? item.bg : "rgba(255,255,255,0.035)",
+                      borderRadius: 22,
+                      padding: 14,
+                      justifyContent: "center",
+                      opacity: pressed ? 0.92 : 1,
+                    })}
+                  >
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                      <View
+                        style={{
+                          width: 38,
+                          height: 38,
+                          borderRadius: 999,
+                          alignItems: "center",
+                          justifyContent: "center",
+                          backgroundColor: active ? item.bg : "rgba(255,255,255,0.06)",
+                          borderWidth: 1,
+                          borderColor: active ? item.color : "rgba(255,255,255,0.10)",
+                        }}
+                      >
+                        <SafeIcon name={item.icon as any} size={18} color={UI.text} />
+                      </View>
+
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                          <Text
+                            style={{
+                              color: UI.text,
+                              fontWeight: "900",
+                              fontSize: 16,
+                              flexShrink: 1,
+                            }}
+                            numberOfLines={1}
+                          >
+                            {item.title}
+                          </Text>
+
+                          {active ? (
+                            <Text
+                              style={{
+                                color: UI.emerald,
+                                fontWeight: "900",
+                                fontSize: 11,
+                              }}
+                            >
+                              SELECTED
+                            </Text>
+                          ) : null}
+                        </View>
+
+                        <Text
+                          style={{
+                            color: UI.muted,
+                            fontWeight: "800",
+                            marginTop: 6,
+                            lineHeight: 18,
+                            fontSize: 12,
+                          }}
+                          numberOfLines={3}
+                        >
+                          {item.desc}
+                        </Text>
+                      </View>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <View style={{ marginTop: 2 }}>
+              <Text style={{ color: UI.muted, fontWeight: "900", marginBottom: 8 }}>
+                Store Name
+              </Text>
+
+              <Input
+                value={name}
+                onChangeText={setName}
+                placeholder="mfano: SMART MEN"
+                autoCapitalize="characters"
+              />
+            </View>
+          </Card>
 
           <View
             style={{
@@ -219,158 +349,26 @@ export default function AddStoreScreen() {
               gap: 12,
             }}
           >
-            <Pressable
-              onPress={() => setStoreType("STANDARD")}
-              style={({ pressed }) => ({
-                flex: isDesktopWeb ? 1 : undefined,
-                minHeight: isWeb ? 160 : 132,
-                borderWidth: 1,
-                borderColor:
-                  storeType === "STANDARD"
-                    ? "rgba(16,185,129,0.40)"
-                    : "rgba(255,255,255,0.12)",
-                backgroundColor:
-                  storeType === "STANDARD"
-                    ? "rgba(16,185,129,0.12)"
-                    : "rgba(255,255,255,0.04)",
-                borderRadius: 20,
-                padding: 16,
-                justifyContent: "flex-start",
-                opacity: pressed ? 0.92 : 1,
-              })}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                <View
-                  style={{
-                    width: 34,
-                    height: 34,
-                    borderRadius: 999,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    backgroundColor: "rgba(255,255,255,0.08)",
-                    borderWidth: 1,
-                    borderColor: "rgba(255,255,255,0.10)",
-                  }}
-                >
-                  <SafeIcon name="cube-outline" size={18} color={UI.text} />
-                </View>
+            <View style={{ flex: isDesktopWeb ? 1 : undefined }}>
+              <Button
+                title={saving ? "Saving..." : "Save Store"}
+                variant="primary"
+                onPress={onSave}
+                disabled={!canCreate || saving}
+              />
+            </View>
 
-                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-                  Standard
-                </Text>
-              </View>
-
-              <Text
-                style={{
-                  color: UI.muted,
-                  fontWeight: "800",
-                  marginTop: 10,
-                  lineHeight: 20,
-                  fontSize: 12.5,
-                }}
-              >
-                Inafaa kwa biashara za kawaida za store, inventory, mauzo ya kila siku, stock movement,
-                bidhaa nyingi, na uendeshaji wa kawaida wa retail.
-              </Text>
-            </Pressable>
-
-            <Pressable
-              onPress={() => setStoreType("CAPITAL_RECOVERY")}
-              style={({ pressed }) => ({
-                flex: isDesktopWeb ? 1 : undefined,
-                minHeight: isWeb ? 160 : 132,
-                borderWidth: 1,
-                borderColor:
-                  storeType === "CAPITAL_RECOVERY"
-                    ? "rgba(16,185,129,0.40)"
-                    : "rgba(255,255,255,0.12)",
-                backgroundColor:
-                  storeType === "CAPITAL_RECOVERY"
-                    ? "rgba(16,185,129,0.12)"
-                    : "rgba(255,255,255,0.04)",
-                borderRadius: 20,
-                padding: 16,
-                justifyContent: "flex-start",
-                opacity: pressed ? 0.92 : 1,
-              })}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                <View
-                  style={{
-                    width: 34,
-                    height: 34,
-                    borderRadius: 999,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    backgroundColor: "rgba(255,255,255,0.08)",
-                    borderWidth: 1,
-                    borderColor: "rgba(255,255,255,0.10)",
-                  }}
-                >
-                  <SafeIcon name="cash-outline" size={18} color={UI.text} />
-                </View>
-
-                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-                  Capital Recovery
-                </Text>
-              </View>
-
-              <Text
-                style={{
-                  color: UI.muted,
-                  fontWeight: "800",
-                  marginTop: 10,
-                  lineHeight: 20,
-                  fontSize: 12.5,
-                }}
-              >
-                Inafaa kwa biashara ya mtaji, gharama, na faida halisi ambapo lengo kuu ni kufuatilia
-                kurudi kwa mtaji, ulinzi wa fedha, na hesabu ya faida kwa umakini zaidi.
-              </Text>
-            </Pressable>
-          </View>
-
-          <View style={{ marginTop: 2 }}>
-            <Text style={{ color: UI.muted, fontWeight: "800", marginBottom: 8 }}>
-              Store Name
-            </Text>
-            <Input
-              value={name}
-              onChangeText={setName}
-              placeholder="mfano: SMART MEN"
-              autoCapitalize="characters"
-            />
-          </View>
-        </Card>
-
-        <View
-              style={{
-                flexDirection: isDesktopWeb ? "row" : "column",
-                gap: 12,
-                marginTop: 2,
-              }}
-            >
-              <View style={{ flex: isDesktopWeb ? 1 : undefined }}>
-                <Button
-                  title={saving ? "Saving..." : "Save Store"}
-                  variant="primary"
-                  onPress={onSave}
-                  disabled={!canCreate || saving}
-                />
-              </View>
-
-              <View style={{ flex: isDesktopWeb ? 1 : undefined }}>
-                <Button
-                  title="Cancel"
-                  variant="secondary"
-                  onPress={() => router.back()}
-                  disabled={saving}
-                />
-              </View>
+            <View style={{ flex: isDesktopWeb ? 1 : undefined }}>
+              <Button
+                title="Cancel"
+                variant="secondary"
+                onPress={() => router.back()}
+                disabled={saving}
+              />
             </View>
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </View>
+      </ScrollView>
     </Screen>
   );
 }

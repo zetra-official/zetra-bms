@@ -1,5 +1,5 @@
 ﻿import { useRouter } from "expo-router";
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Image,
@@ -14,6 +14,8 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
+import * as LocalAuthentication from "expo-local-authentication";
+import * as SecureStore from "expo-secure-store";
 import { useOrg } from "../../src/context/OrgContext";
 import {
   clearCorruptSupabaseSession,
@@ -32,6 +34,10 @@ function isDisabledAccountMessage(message: unknown) {
     msg.includes("account deleted")
   );
 }
+
+const BIOMETRIC_ENABLED_KEY = "zetra_biometric_login_enabled_v1";
+const BIOMETRIC_EMAIL_KEY = "zetra_biometric_login_email_v1";
+const BIOMETRIC_PASSWORD_KEY = "zetra_biometric_login_password_v1";
 
 function isEmailNotVerified(user: any) {
   const confirmedAt = user?.email_confirmed_at ?? user?.confirmed_at ?? null;
@@ -332,10 +338,48 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [sendingReset, setSendingReset] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [biometricReady, setBiometricReady] = useState(false);
+  const [biometricEmail, setBiometricEmail] = useState("");
+  const [biometricLoading, setBiometricLoading] = useState(false);
 
   const loginLockedRef = useRef(false);
 
   const emailTrimmed = useMemo(() => email.trim(), [email]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function checkBiometric() {
+      if (Platform.OS === "web") return;
+
+      try {
+        const enabled = await SecureStore.getItemAsync(BIOMETRIC_ENABLED_KEY);
+        const savedEmail = await SecureStore.getItemAsync(BIOMETRIC_EMAIL_KEY);
+        const savedPassword = await SecureStore.getItemAsync(BIOMETRIC_PASSWORD_KEY);
+
+        const hasHardware = await LocalAuthentication.hasHardwareAsync();
+        const enrolled = await LocalAuthentication.isEnrolledAsync();
+
+        if (!cancelled) {
+          setBiometricEmail(savedEmail ?? "");
+          setBiometricReady(
+            enabled === "true" && !!savedEmail && !!savedPassword && hasHardware && enrolled
+          );
+        }
+      } catch {
+        if (!cancelled) {
+          setBiometricReady(false);
+          setBiometricEmail("");
+        }
+      }
+    }
+
+    void checkBiometric();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const onForgotPassword = async () => {
     const e = emailTrimmed;
@@ -367,17 +411,69 @@ export default function LoginScreen() {
     }
   };
 
-  const onLogin = async () => {
+  const offerEnableBiometric = async (loginEmail: string, loginPassword: string) => {
+    if (Platform.OS === "web") return;
+
+    try {
+      const hasHardware = await LocalAuthentication.hasHardwareAsync();
+      const enrolled = await LocalAuthentication.isEnrolledAsync();
+
+      if (!hasHardware || !enrolled) return;
+
+      await new Promise<void>((resolve) => {
+        Alert.alert(
+          "Enable Fingerprint Login?",
+          "Unataka kuwezesha login kwa fingerprint/biometric kwenye simu hii? Utaendelea pia kutumia password ya kawaida ukitaka.",
+          [
+            { text: "Not now", style: "cancel", onPress: () => resolve() },
+            {
+              text: "Enable",
+              onPress: async () => {
+                try {
+                  const auth = await LocalAuthentication.authenticateAsync({
+                    promptMessage: "Confirm Fingerprint",
+                    fallbackLabel: "Use device passcode",
+                    cancelLabel: "Cancel",
+                    disableDeviceFallback: false,
+                  });
+
+                  if (!auth.success) {
+                    resolve();
+                    return;
+                  }
+
+                  await SecureStore.setItemAsync(BIOMETRIC_ENABLED_KEY, "true");
+                  await SecureStore.setItemAsync(BIOMETRIC_EMAIL_KEY, loginEmail);
+                  await SecureStore.setItemAsync(BIOMETRIC_PASSWORD_KEY, loginPassword);
+
+                  setBiometricReady(true);
+                  setBiometricEmail(loginEmail);
+                } catch {}
+                resolve();
+              },
+            },
+          ]
+        );
+      });
+    } catch {}
+  };
+
+  const onLogin = async (override?: {
+    email?: string;
+    password?: string;
+    skipBiometricOffer?: boolean;
+  }) => {
     if (loginLockedRef.current || loading) return;
 
-    const e = emailTrimmed;
+    const e = String(override?.email ?? emailTrimmed).trim();
+    const p = String(override?.password ?? password);
 
     if (!e) {
       Alert.alert("Missing", "Email is required.");
       return;
     }
 
-    if (!password) {
+    if (!p) {
       Alert.alert("Missing", "Password is required.");
       return;
     }
@@ -388,7 +484,7 @@ export default function LoginScreen() {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email: e,
-        password,
+        password: p,
       });
 
       if (error) throw error;
@@ -444,6 +540,10 @@ export default function LoginScreen() {
         return;
       }
 
+      if (!override?.skipBiometricOffer) {
+        await offerEnableBiometric(e, p);
+      }
+
       router.replace("/(tabs)");
     } catch (err: any) {
       const msg = err?.message ?? "Unknown login error";
@@ -491,6 +591,41 @@ export default function LoginScreen() {
     } finally {
       loginLockedRef.current = false;
       setLoading(false);
+    }
+  };
+
+  const onBiometricLogin = async () => {
+    if (Platform.OS === "web" || biometricLoading || loading) return;
+
+    setBiometricLoading(true);
+
+    try {
+      const savedEmail = await SecureStore.getItemAsync(BIOMETRIC_EMAIL_KEY);
+      const savedPassword = await SecureStore.getItemAsync(BIOMETRIC_PASSWORD_KEY);
+
+      if (!savedEmail || !savedPassword) {
+        Alert.alert("Fingerprint Login", "Login kwa fingerprint haijawezeshwa bado.");
+        return;
+      }
+
+      const auth = await LocalAuthentication.authenticateAsync({
+        promptMessage: "Login with Fingerprint",
+        fallbackLabel: "Use device passcode",
+        cancelLabel: "Cancel",
+        disableDeviceFallback: false,
+      });
+
+      if (!auth.success) return;
+
+      await onLogin({
+        email: savedEmail,
+        password: savedPassword,
+        skipBiometricOffer: true,
+      });
+    } catch (err: any) {
+      Alert.alert("Fingerprint Login Failed", err?.message ?? "Imeshindikana kuingia.");
+    } finally {
+      setBiometricLoading(false);
     }
   };
 
@@ -724,7 +859,9 @@ export default function LoginScreen() {
               </Pressable>
 
               <Pressable
-                onPress={onLogin}
+                onPress={() => {
+  void onLogin();
+}}
                 disabled={loading}
                 accessibilityRole="button"
                 style={{
@@ -755,6 +892,42 @@ export default function LoginScreen() {
                   {loading ? "Signing In..." : "Login"}
                 </Text>
               </Pressable>
+
+              {biometricReady ? (
+                <Pressable
+                  onPress={onBiometricLogin}
+                  disabled={biometricLoading || loading}
+                  accessibilityRole="button"
+                  style={{
+                    marginTop: 12,
+                    borderWidth: 1,
+                    borderColor: "rgba(52,211,153,0.28)",
+                    backgroundColor: "rgba(52,211,153,0.08)",
+                    paddingVertical: 14,
+                    borderRadius: 18,
+                    alignItems: "center",
+                    opacity: biometricLoading || loading ? 0.65 : 1,
+                  }}
+                >
+                  <Text style={{ color: "#6EE7B7", fontWeight: "900", fontSize: 15 }}>
+                    {biometricLoading ? "Checking Fingerprint..." : "Login with Fingerprint"}
+                  </Text>
+
+                  {!!biometricEmail ? (
+                    <Text
+                      numberOfLines={1}
+                      style={{
+                        marginTop: 4,
+                        color: "rgba(255,255,255,0.45)",
+                        fontWeight: "800",
+                        fontSize: 11,
+                      }}
+                    >
+                      {biometricEmail}
+                    </Text>
+                  ) : null}
+                </Pressable>
+              ) : null}
 
               <Pressable
                 onPress={() => router.push("/(auth)/register")}

@@ -1,99 +1,107 @@
 // src/ui/theme.ts
-// ZETRA Premium Dark Theme (DORA UI Standard)
-//
-// Exports:
-// - UI: direct tokens (UI.text, UI.emeraldBorder, etc.)
-// - theme: legacy-friendly tokens (theme.colors.*, theme.radius.*, theme.spacing.*)
-// - colors/radius/spacing: convenient named exports
-// - default export: theme (helps avoid wrong import patterns)
+// ZETRA Enterprise Clean Theme
+// Premium business UI • calm • readable • international-grade
 
 export const UI = {
-  // Core
-  background: "#0B0F14",
-  tabBarBg: "#070A0E",
+  // ===== BACKGROUND =====
+  background: "#EAF0F7",
+  backgroundSoft: "#EDF2F8",
 
-  // Surfaces
-  card: "rgba(255,255,255,0.06)",
-  cardStrong: "rgba(255,255,255,0.08)",
-  surface2: "rgba(255,255,255,0.04)",
+  // ===== TAB BAR =====
+  tabBarBg: "#0B1F3A",
 
-  // Text
-  text: "rgba(255,255,255,0.92)",
-  muted: "rgba(255,255,255,0.68)",
-  faint: "rgba(255,255,255,0.45)",
+  // ===== SURFACES =====
+  card: "#FFFFFF",
+  cardStrong: "#FFFFFF",
 
-  // Borders
-  border: "rgba(255,255,255,0.12)",
-  borderSoft: "rgba(255,255,255,0.08)",
+  surface2: "#F8FAFC",
+  surface3: "#EEF4FB",
 
-  // Brand (Emerald)
-  emerald: "rgba(16,185,129,1)",
-  emeraldSoft: "rgba(16,185,129,0.16)",
-  emeraldBorder: "rgba(16,185,129,0.45)",
+  glass: "#FFFFFF",
+  glassStrong: "#FFFFFF",
 
-  // Status
-  danger: "rgba(239,68,68,1)",
-  dangerSoft: "rgba(239,68,68,0.14)",
-  dangerBorder: "rgba(239,68,68,0.45)",
+  // ===== TEXT =====
+  text: "#111827",
+  muted: "#5B6472",
+  faint: "#8A94A6",
 
-  warning: "rgba(245,158,11,1)",
-  warningSoft: "rgba(245,158,11,0.12)",
+  inverseText: "#FFFFFF",
+
+  // ===== BORDERS =====
+  border: "#D7DEE8",
+  borderSoft: "#E6EBF2",
+  borderStrong: "#B8C4D3",
+
+  // ===== PRIMARY =====
+  primary: "#005BBB",
+
+  primarySoft: "#EAF3FF",
+  primaryBorder: "#7FB5FF",
+
+  // ===== ACCENT =====
+  accent: "#1D4ED8",
+
+  accentSoft: "#EEF4FF",
+  accentBorder: "#A8C7FF",
+
+  // ===== SUCCESS =====
+  emerald: "#0F9F6E",
+
+  emeraldSoft: "#EAFBF4",
+  emeraldBorder: "#8BE0BF",
+
+  success: "#0F9F6E",
+  successSoft: "#EAFBF4",
+  successBorder: "#8BE0BF",
+
+  // ===== DANGER =====
+  danger: "#D92D20",
+
+  dangerSoft: "#FEF3F2",
+  dangerBorder: "#FDA29B",
+
+  // ===== WARNING =====
+  warning: "#B7791F",
+
+  warningSoft: "#FFF8E6",
+  warningBorder: "#FACC6B",
+
+  // ===== SHADOW =====
+  shadow: "rgba(15,23,42,0.06)",
+
+  // disabled old atmospheric glows
+  glowBlue: "transparent",
+  glowEmerald: "transparent",
+  glowViolet: "transparent",
+  glowPink: "transparent",
 } as const;
 
 export const theme = {
   colors: {
-    // App backgrounds
-    background: UI.background,
-    tabBarBg: UI.tabBarBg,
-
-    // Surfaces
-    card: UI.card,
-    cardStrong: UI.cardStrong,
-    surface2: UI.surface2,
-
-    // Text
-    text: UI.text,
-    muted: UI.muted,
-    faint: UI.faint,
-
-    // Borders
-    border: UI.border,
-    borderSoft: UI.borderSoft,
-
-    // Brand
-    emerald: UI.emerald,
-    emeraldSoft: UI.emeraldSoft,
-    emeraldBorder: UI.emeraldBorder,
-
-    // Status
-    danger: UI.danger,
-    dangerSoft: UI.dangerSoft,
-    dangerBorder: UI.dangerBorder,
-    warning: UI.warning,
-    warningSoft: UI.warningSoft,
+    ...UI,
   },
 
   spacing: {
     page: 16,
-    card: 14,
+    card: 16,
     row: 12,
     input: 12,
     gap: 12,
+    section: 20,
   },
 
   radius: {
-    sm: 10,
-    md: 14,
-    lg: 18,
-    xl: 22,
+    sm: 8,
+    md: 10,
+    lg: 12,
+    xl: 14,
+    xxl: 18,
     pill: 999,
   },
 } as const;
 
-// Convenience named exports (helps avoid "undefined" from wrong destructuring)
 export const colors = theme.colors;
 export const spacing = theme.spacing;
 export const radius = theme.radius;
 
-// Default export for safer imports: import theme from "@/src/ui/theme"
 export default theme;

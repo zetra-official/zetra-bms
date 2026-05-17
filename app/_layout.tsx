@@ -40,6 +40,63 @@ function isTypingIntoField(target: any) {
   return editable || tag === "input" || tag === "textarea" || tag === "select";
 }
 
+function isEmailVerified(user: any) {
+  return !!(user?.email_confirmed_at ?? user?.confirmed_at);
+}
+
+function isAuthRoute(segs: string[]) {
+  const a = segs?.[0];
+  const b = segs?.[1];
+  return (
+    a === "(auth)" ||
+    a === "login" ||
+    a === "register" ||
+    a === "reset-password" ||
+    (a === "(auth)" &&
+      (b === "login" || b === "register" || b === "reset-password"))
+  );
+}
+
+function isOnboardingRoute(segs: string[]) {
+  const a = segs?.[0];
+  const b = segs?.[1];
+
+  return (
+    a === "(onboarding)" ||
+    a === "business" ||
+    a === "store" ||
+    a === "referral" ||
+    (a === "(onboarding)" &&
+      (b === "business" || b === "store" || b === "referral"))
+  );
+}
+
+async function getValidSession() {
+  const {
+    data: { session },
+    error,
+  } = await supabase.auth.getSession();
+
+  const jwtExpired =
+    !!error && /jwt\s*expired/i.test(String(error.message ?? ""));
+
+  const isExpiredByTime =
+    !!session?.expires_at && session.expires_at * 1000 <= Date.now() + 5000;
+
+  if (jwtExpired || isExpiredByTime) {
+    const { data: refreshed, error: refreshError } =
+      await supabase.auth.refreshSession();
+
+    if (refreshError) {
+      return { session: null, error: refreshError };
+    }
+
+    return { session: refreshed.session ?? null, error: null };
+  }
+
+  return { session: session ?? null, error: error ?? null };
+}
+
 function AuthGate() {
   const router = useRouter();
   const segments = useSegments();
@@ -68,8 +125,9 @@ function AuthGate() {
     ...Zocial.font,
   });
 
-  // ✅ Read org context here instead of doing duplicate RPC in AuthGate
-  const { loading: orgLoading, orgs } = useOrg();
+  const { loading: orgLoading, refreshing: orgRefreshing, orgs } = useOrg();
+
+  const orgSettling = orgLoading || orgRefreshing;
 
   useEffect(() => {
     segmentsRef.current = segments;
@@ -98,9 +156,9 @@ function AuthGate() {
 
       if (!code || code.length < 4) return;
 
-      const duration = startedAt > 0 && endedAt >= startedAt ? endedAt - startedAt : 0;
+      const duration =
+        startedAt > 0 && endedAt >= startedAt ? endedAt - startedAt : 0;
 
-      // Fast scanner input only; avoid normal human typing
       if (duration > 900 && code.length < 8) return;
 
       const segs = segmentsRef.current ?? [];
@@ -108,43 +166,26 @@ function AuthGate() {
       const b = segs?.[1];
       const c = segs?.[2];
 
-      const isInAuth =
-        a === "(auth)" ||
-        a === "login" ||
-        a === "register" ||
-        a === "reset-password" ||
-        (a === "(auth)" &&
-          (b === "login" || b === "register" || b === "reset-password"));
+      const isInAuth = isAuthRoute(segs);
+      const isInOnboarding = isOnboardingRoute(segs);
 
-      const isInOnboarding =
-        a === "(onboarding)" ||
-        a === "business" ||
-        a === "store" ||
-        (a === "(onboarding)" && (b === "business" || b === "store"));
+      const isSalesRoute = a === "(tabs)" && b === "sales";
 
-      // IMPORTANT:
-      // Products and Inventory own their scan behavior locally.
-      // Root layout must NOT hijack scanner there.
-      const isSalesRoute =
-        a === "(tabs)" && b === "sales";
-
-      const isProductsRoute =
-        a === "(tabs)" && b === "products";
+      const isProductsRoute = a === "(tabs)" && b === "products";
 
       const isInventoryRoute =
         (a === "(tabs)" && b === "stores" && c === "inventory") ||
-        (a === "(tabs)" && b === "stores" && String(c ?? "").startsWith("inventory"));
+        (a === "(tabs)" &&
+          b === "stores" &&
+          String(c ?? "").startsWith("inventory"));
 
       if (!ready) return;
       if (hasSession !== true) return;
-      if (orgLoading) return;
+      if (orgSettling) return;
       if (isInAuth || isInOnboarding) return;
 
-      // Products + Inventory ziendelee kujisimamia zenyewe
       if (isProductsRoute || isInventoryRoute) return;
 
-      // Ukiwa tayari ndani ya Sales, root layout isichukue scan.
-      // Sales page yenyewe ndiyo ishughulikie local scan.
       if (isSalesRoute) return;
 
       router.replace({
@@ -176,7 +217,6 @@ function AuthGate() {
         return;
       }
 
-      // scanners nyingi hutuma Enter mwisho
       if (key === "Enter") {
         e.preventDefault();
         e.stopPropagation();
@@ -204,7 +244,6 @@ function AuthGate() {
         clearTimeout(webScanTimerRef.current);
       }
 
-      // fallback kwa scanner ambazo hazitumi Enter suffix
       webScanTimerRef.current = setTimeout(() => {
         flushWebScanBuffer();
       }, 180);
@@ -216,23 +255,12 @@ function AuthGate() {
       window.removeEventListener("keydown", onKeyDown, true);
       resetWebScanBuffer();
     };
-  }, [router, ready, hasSession, orgLoading]);
+  }, [router, ready, hasSession, orgSettling]);
 
   useEffect(() => {
     let alive = true;
 
-    const isInAuth = (segs: string[]) => {
-      const a = segs?.[0];
-      const b = segs?.[1];
-      return (
-        a === "(auth)" ||
-        a === "login" ||
-        a === "register" ||
-        a === "reset-password" ||
-        (a === "(auth)" &&
-          (b === "login" || b === "register" || b === "reset-password"))
-      );
-    };
+    const isInAuth = (segs: string[]) => isAuthRoute(segs);
 
     const isResetPasswordRoute = (segs: string[]) => {
       const a = segs?.[0];
@@ -240,25 +268,11 @@ function AuthGate() {
       return a === "reset-password" || (a === "(auth)" && b === "reset-password");
     };
 
-    const isOnboardingRoute = (segs: string[]) => {
-      const a = segs?.[0];
-      const b = segs?.[1];
-      return (
-        a === "(onboarding)" ||
-        a === "business" ||
-        a === "store" ||
-        (a === "(onboarding)" && (b === "business" || b === "store"))
-      );
-    };
-
-    const isEmailVerified = (user: any) =>
-      !!(user?.email_confirmed_at ?? user?.confirmed_at);
-
     const routes = {
-      login: Platform.OS === "web" ? "/login" : "/(auth)/login",
+      login: "/login",
       resetPassword:
         Platform.OS === "web" ? "/reset-password" : "/(auth)/reset-password",
-      onboarding: "/(onboarding)/business",
+      onboarding: "/(onboarding)/referral",
       home: "/(tabs)",
     };
 
@@ -280,10 +294,7 @@ function AuthGate() {
         return;
       }
 
-      const {
-        data: { session },
-        error,
-      } = await supabase.auth.getSession();
+      const { session, error } = await getValidSession();
 
       if (!alive) return;
 
@@ -302,8 +313,8 @@ function AuthGate() {
         return;
       }
 
-      // stay on reset-password screen when recovery session exists
       if (inResetPassword) {
+        setHasSession(true);
         setReady(true);
         return;
       }
@@ -321,9 +332,6 @@ function AuthGate() {
       }
 
       setHasSession(true);
-
-      // ✅ Do NOT call get_my_orgs here.
-      // OrgContext is the single source of truth for org/store routing state.
       setReady(true);
     };
 
@@ -340,8 +348,24 @@ function AuthGate() {
           return;
         }
 
+        if (event === "SIGNED_OUT") {
+          setHasSession(false);
+          setReady(true);
+
+          if (!inAuth) {
+            router.replace(routes.login as any);
+          }
+          return;
+        }
+
+        if (event === "TOKEN_REFRESHED") {
+          setHasSession(!!session);
+          return;
+        }
+
         if (!session) {
           setHasSession(false);
+          setReady(true);
 
           if (!inAuth) {
             router.replace(routes.login as any);
@@ -355,6 +379,7 @@ function AuthGate() {
 
         if (!verified) {
           setHasSession(false);
+          setReady(true);
 
           if (!inAuth) {
             router.replace(routes.login as any);
@@ -363,14 +388,7 @@ function AuthGate() {
         }
 
         setHasSession(true);
-
-        // ✅ No duplicate goAfterLogin RPC here.
-        if (event === "SIGNED_IN" || event === "INITIAL_SESSION" || event === "USER_UPDATED") {
-          const a = segmentsRef.current?.[0];
-          if (a === "login" || a === "register" || a === "(auth)") {
-            router.replace(routes.home as any);
-          }
-        }
+        setReady(true);
       }
     );
 
@@ -386,27 +404,9 @@ function AuthGate() {
       if (!result.ok) return;
       if (authType === "recovery") return;
 
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      const recovered = await getValidSession();
 
-      if (!session) {
-        setHasSession(false);
-        return;
-      }
-
-      const currentSegs = segmentsRef.current;
-      const inResetPassword = isResetPasswordRoute(currentSegs);
-
-      if (inResetPassword) return;
-
-      const verified = isEmailVerified(session.user);
-
-      if (!verified) {
-        setHasSession(false);
-        router.replace(routes.login as any);
-        return;
-      }
+      if (!recovered.session) return;
 
       setHasSession(true);
       router.replace(routes.home as any);
@@ -419,25 +419,13 @@ function AuthGate() {
     };
   }, [router]);
 
-  // ✅ After auth is ready, routing between home/onboarding comes from OrgContext state
   useEffect(() => {
     if (!ready) return;
     if (hasSession !== true) return;
 
     const currentSegs = segmentsRef.current;
 
-    const isInAuth = (segs: string[]) => {
-      const a = segs?.[0];
-      const b = segs?.[1];
-      return (
-        a === "(auth)" ||
-        a === "login" ||
-        a === "register" ||
-        a === "reset-password" ||
-        (a === "(auth)" &&
-          (b === "login" || b === "register" || b === "reset-password"))
-      );
-    };
+    const isInAuth = (segs: string[]) => isAuthRoute(segs);
 
     const isResetPasswordRoute = (segs: string[]) => {
       const a = segs?.[0];
@@ -445,19 +433,8 @@ function AuthGate() {
       return a === "reset-password" || (a === "(auth)" && b === "reset-password");
     };
 
-    const isOnboardingRoute = (segs: string[]) => {
-      const a = segs?.[0];
-      const b = segs?.[1];
-      return (
-        a === "(onboarding)" ||
-        a === "business" ||
-        a === "store" ||
-        (a === "(onboarding)" && (b === "business" || b === "store"))
-      );
-    };
-
     if (isResetPasswordRoute(currentSegs)) return;
-    if (orgLoading) return;
+    if (orgSettling) return;
 
     const inAuth = isInAuth(currentSegs);
     const inOnboarding = isOnboardingRoute(currentSegs);
@@ -465,7 +442,7 @@ function AuthGate() {
 
     if (!hasOrg) {
       if (!inOnboarding) {
-        router.replace("/(onboarding)/business" as any);
+        router.replace("/(onboarding)/referral" as any);
       }
       return;
     }
@@ -473,7 +450,7 @@ function AuthGate() {
     if (inAuth || inOnboarding) {
       router.replace("/(tabs)" as any);
     }
-  }, [ready, hasSession, orgLoading, orgs, router]);
+  }, [ready, hasSession, orgSettling, orgs, router]);
 
   useEffect(() => {
     return () => {
@@ -484,7 +461,7 @@ function AuthGate() {
     };
   }, []);
 
-  if (!ready || orgLoading || !fontsLoaded) {
+  if (!ready || !fontsLoaded || (hasSession === true && orgSettling)) {
     return (
       <View
         style={{

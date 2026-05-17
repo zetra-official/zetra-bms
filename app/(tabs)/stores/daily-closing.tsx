@@ -417,8 +417,50 @@ export default function DailyClosingScreen() {
   const snapStatusTone = snapStatusMeta.tone;
 
   const emergencySnapshot = useCallback(() => {
-    Alert.alert("Not Included", "Emergency Snapshot logic iko unchanged kwako — tumeacha kama ilivyokuwa.");
-  }, []);
+    if (!activeStoreId) return Alert.alert("Missing", "No active store selected.");
+    if (!isOwnerOrAdmin) return Alert.alert("No Access", "Owner/Admin only.");
+    if (mode !== "day") return Alert.alert("Day Only", "Emergency Snapshot inatumika kwenye Day mode tu.");
+    if (snapGenLoading) return;
+
+    Alert.alert(
+      "Emergency Snapshot",
+      `Hii itachukua stock ya sasa kwenye inventory na kui-save kama snapshot ya ${dateStr}.\n\nEndelea?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Create Snapshot",
+          onPress: async () => {
+            setSnapGenLoading(true);
+            try {
+              const { data, error: e } = await supabase.rpc("create_inventory_daily_snapshot_v1", {
+                p_store_id: activeStoreId,
+                p_snapshot_date: dateStr,
+              });
+
+              if (e) throw e;
+
+              await checkSnapshot();
+              await load();
+
+              Alert.alert("Snapshot Created ✅", `Snapshot imeundwa. Products captured: ${Number(data ?? 0)}`);
+            } catch (err: any) {
+              Alert.alert("Snapshot Failed", err?.message ?? "Unknown error");
+            } finally {
+              setSnapGenLoading(false);
+            }
+          },
+        },
+      ]
+    );
+  }, [
+    activeStoreId,
+    isOwnerOrAdmin,
+    mode,
+    snapGenLoading,
+    dateStr,
+    checkSnapshot,
+    load,
+  ]);
 
   const lockDay = useCallback(() => {
     if (!activeStoreId) return Alert.alert("Missing", "No active store selected.");
@@ -713,15 +755,15 @@ export default function DailyClosingScreen() {
           </View>
         )}
 
-        {!showLockControls && isOwnerOrAdmin && (
-          <Button
-            title={snapGenLoading ? "Generating..." : "Emergency Snapshot (Admin)"}
-            onPress={emergencySnapshot}
-            disabled={snapGenLoading || loading}
-            variant="secondary"
-            style={{ marginTop: 10 }}
-          />
-        )}
+        {isOwnerOrAdmin && mode === "day" && snapState !== "ok" && !isLocked && (
+  <Button
+    title={snapGenLoading ? "Generating..." : "Emergency Snapshot (Admin)"}
+    onPress={emergencySnapshot}
+    disabled={snapGenLoading || loading || snapCheckLoading}
+    variant="secondary"
+    style={{ marginTop: 10 }}
+  />
+)}
       </Card>
 
       {!!error && (

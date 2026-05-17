@@ -41,6 +41,7 @@ import { theme } from "../../../src/ui/theme";
 
 import { formatMoney, useOrgMoneyPrefs } from "@/src/ui/money";
 import { setActiveScanScope, subscribeScanBarcode } from "@/src/utils/scanBus";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 /* =========================
    Types
@@ -55,16 +56,30 @@ type ProductRow = {
   cost_price?: number | null;
   stock_qty?: number | null;
   barcode?: string | null;
+
+  is_precision_product?: boolean | null;
+  precision_pack_size?: number | null;
+  precision_base_unit?: string | null;
+  precision_sell_mode?: string | null;
+  precision_allow_box_sales?: boolean | null;
+  precision_allow_unit_sales?: boolean | null;
 };
 
 type CartItem = {
+  cart_key?: string;
   product_id: string;
   name: string;
   sku: string | null;
-  qty: number;
+  qty: number; // stock/base qty used by DB
   unit: string | null;
   unit_price: number;
   line_total: number;
+
+  sell_mode?: "PACK" | "UNIT" | null;
+  pack_size?: number | null;
+  pack_unit?: string | null;
+  base_unit?: string | null;
+  stock_qty_per_sell_unit?: number | null;
 };
 
 type SalesRole = "owner" | "admin" | "staff" | "cashier";
@@ -109,7 +124,7 @@ type OpenCashierShiftRow = {
 ========================= */
 function clampQty(n: number) {
   if (!Number.isFinite(n)) return 1;
-  return Math.max(1, Math.min(999999, Math.trunc(n)));
+  return Number(Math.max(0.001, Math.min(999999, n)).toFixed(3));
 }
 
 function parsePositiveNumber(raw: string): number | null {
@@ -118,10 +133,10 @@ function parsePositiveNumber(raw: string): number | null {
   return x;
 }
 
-function parsePositiveInt(raw: string): number | null {
+function parsePositiveQty(raw: string): number | null {
   const x = Number(String(raw ?? "").trim());
   if (!Number.isFinite(x) || x <= 0) return null;
-  return Math.trunc(x);
+  return Number(x.toFixed(3));
 }
 
 function fmtDateShort(d = new Date()) {
@@ -200,6 +215,51 @@ function isTypingIntoField(target: any) {
   const tag = String(target.tagName ?? "").toLowerCase();
   const editable = !!target.isContentEditable;
   return editable || tag === "input" || tag === "textarea" || tag === "select";
+}
+
+function fmtQty(n: any) {
+  const x = Number(n);
+  if (!Number.isFinite(x)) return "0";
+  return String(Number(x.toFixed(3)));
+}
+
+function isPrecisionProduct(p: ProductRow | null | undefined) {
+  return Boolean((p as any)?.is_precision_product);
+}
+
+function getPackSize(p: ProductRow | null | undefined) {
+  const n = Number((p as any)?.precision_pack_size ?? 0);
+  return Number.isFinite(n) && n > 0 ? n : 1;
+}
+
+function getBaseUnitLabel(p: ProductRow | null | undefined) {
+  return String((p as any)?.precision_base_unit ?? p?.unit ?? "unit").trim() || "unit";
+}
+
+function getPackLabel(p: ProductRow | null | undefined) {
+  const u = String(p?.unit ?? "").trim();
+  return u || "BOX/PACK";
+}
+
+function getCartKey(x: CartItem | ProductRow, mode?: "PACK" | "UNIT") {
+  const id = "product_id" in x ? x.product_id : x.id;
+  const existingKey = "cart_key" in x ? x.cart_key : null;
+  if (existingKey) return existingKey;
+  return mode ? `${id}:${mode}` : id;
+}
+
+function getCartDisplayQty(item: CartItem) {
+  if (item.sell_mode === "PACK") {
+    const pack = Number(item.pack_size ?? item.stock_qty_per_sell_unit ?? 1);
+    if (Number.isFinite(pack) && pack > 0) return item.qty / pack;
+  }
+  return item.qty;
+}
+
+function getCartDisplayUnit(item: CartItem) {
+  if (item.sell_mode === "PACK") return item.pack_unit || item.unit || "Box";
+  if (item.sell_mode === "UNIT") return item.base_unit || item.unit || "Unit";
+  return item.unit || "Unit";
 }
 
 function formatTimeAgo(input?: string | null) {
@@ -350,6 +410,7 @@ export default function SalesHomeScreen() {
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
 
+  const CART_KEY = (storeId: string) => `sales_cart_${storeId}`;
   const realtimeChannelRef = useRef<RealtimeChannel | null>(null);
   const refreshTimerRef = useRef<any>(null);
   const lastRealtimeRefreshAtRef = useRef<number>(0);
@@ -419,6 +480,46 @@ export default function SalesHomeScreen() {
 
   const currentRole = useMemo(() => normalizeRole(activeRole), [activeRole]);
   const isCashier = useMemo(() => currentRole === "cashier", [currentRole]);
+const restorePersistedCart = useCallback(async () => {
+    const sid = String(activeStoreId ?? "").trim();
+
+    if (!sid || isCashier) {
+      setCart([]);
+      return;
+    }
+
+    try {
+      const raw = await AsyncStorage.getItem(CART_KEY(sid));
+
+      if (!raw) {
+        setCart([]);
+        return;
+      }
+
+      const parsed = JSON.parse(raw);
+      setCart(Array.isArray(parsed) ? parsed : []);
+    } catch {
+      setCart([]);
+    }
+  }, [activeStoreId, isCashier]);
+
+  useEffect(() => {
+    void restorePersistedCart();
+  }, [restorePersistedCart]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void restorePersistedCart();
+    }, [restorePersistedCart])
+  );
+
+  useEffect(() => {
+    const sid = String(activeStoreId ?? "").trim();
+    if (!sid || isCashier) return;
+
+    void AsyncStorage.setItem(CART_KEY(sid), JSON.stringify(cart));
+  }, [activeStoreId, isCashier, cart]);
+  
 
   const isWeb = Platform.OS === "web";
   const isDesktopWeb = isWeb && width >= 1100;
@@ -629,11 +730,14 @@ export default function SalesHomeScreen() {
   /* =========================
      Price Modal State
   ========================= */
-  const [priceModalOpen, setPriceModalOpen] = useState(false);
-  const [selected, setSelected] = useState<ProductRow | null>(null);
-  const [priceDraft, setPriceDraft] = useState("");
-  const [qtyDraft, setQtyDraft] = useState("1");
-  const [modalErr, setModalErr] = useState<string | null>(null);
+const [priceModalOpen, setPriceModalOpen] = useState(false);
+const [selected, setSelected] = useState<ProductRow | null>(null);
+const [priceDraft, setPriceDraft] = useState("");
+const [qtyDraft, setQtyDraft] = useState("1");
+const [modalErr, setModalErr] = useState<string | null>(null);
+
+const [sellModeOpen, setSellModeOpen] = useState(false);
+const [sellModeProduct, setSellModeProduct] = useState<ProductRow | null>(null);
 
   const openPriceModal = useCallback((p: ProductRow) => {
     setModalErr(null);
@@ -706,12 +810,85 @@ export default function SalesHomeScreen() {
     closePriceModal();
   }, [closePriceModal, fmt, priceDraft, qtyDraft, selected]);
 
-  /* =========================
-     Cart Helpers
-  ========================= */
-  const addAuto = useCallback(
-    (p: ProductRow) => {
-      const spRaw = Number(p.selling_price ?? 0);
+/* =========================
+   Cart Helpers
+========================= */
+const openSellMode = useCallback((p: ProductRow) => {
+  setSellModeProduct(p);
+  setSellModeOpen(true);
+}, []);
+
+const closeSellMode = useCallback(() => {
+  setSellModeProduct(null);
+  setSellModeOpen(false);
+}, []);
+
+const addPrecisionToCart = useCallback(
+  (p: ProductRow, mode: "PACK" | "UNIT") => {
+    const baseUnitPrice = Number(p.selling_price ?? 0);
+    const packSize = getPackSize(p);
+
+    const packUnit = getPackLabel(p);
+    const baseUnit = getBaseUnitLabel(p);
+
+    const stockQtyToReduce = mode === "PACK" ? packSize : 1;
+    const sellUnitPrice = mode === "PACK" ? baseUnitPrice * packSize : baseUnitPrice;
+    const key = getCartKey(p, mode);
+
+    if (!Number.isFinite(baseUnitPrice) || baseUnitPrice <= 0) {
+      closeSellMode();
+      openPriceModal(p);
+      return;
+    }
+
+    setCart((prev) => {
+      const idx = prev.findIndex((x) => getCartKey(x) === key);
+
+      if (idx >= 0) {
+        const existing = prev[idx];
+        const nextQty = clampQty(existing.qty + stockQtyToReduce);
+        const next = [...prev];
+        next[idx] = {
+          ...existing,
+          qty: nextQty,
+          line_total: Number(existing.unit_price) * nextQty,
+        };
+        return next;
+      }
+
+      return [
+        ...prev,
+        {
+          cart_key: key,
+          product_id: p.id,
+          name: p.name,
+          sku: p.sku ?? null,
+          qty: stockQtyToReduce,
+          unit: mode === "PACK" ? packUnit : baseUnit,
+          unit_price: baseUnitPrice,
+          line_total: baseUnitPrice * stockQtyToReduce,
+          sell_mode: mode,
+          pack_size: packSize,
+          pack_unit: packUnit,
+          base_unit: baseUnit,
+          stock_qty_per_sell_unit: stockQtyToReduce,
+        },
+      ];
+    });
+
+    closeSellMode();
+  },
+  [closeSellMode, openPriceModal]
+);
+
+const addAuto = useCallback(
+   (p: ProductRow) => {
+  if (isPrecisionProduct(p)) {
+    openSellMode(p);
+    return;
+  }
+
+  const spRaw = Number(p.selling_price ?? 0);
       const sp = Math.trunc(spRaw);
 
       if (!Number.isFinite(sp) || sp <= 0) {
@@ -747,39 +924,49 @@ export default function SalesHomeScreen() {
         ];
       });
     },
-    [openPriceModal]
+    [openPriceModal, openSellMode]
   );
 
-  const inc = useCallback((productId: string) => {
-    setCart((prev) =>
-      prev.map((x) => {
-        if (x.product_id !== productId) return x;
-        const nextQty = clampQty(x.qty + 1);
-        return { ...x, qty: nextQty, line_total: Number(x.unit_price) * nextQty };
+const inc = useCallback((key: string) => {
+  setCart((prev) =>
+    prev.map((x) => {
+      if (getCartKey(x) !== key && x.product_id !== key) return x;
+      const step = Number(x.stock_qty_per_sell_unit ?? 1);
+      const nextQty = clampQty(x.qty + (Number.isFinite(step) && step > 0 ? step : 1));
+      return { ...x, qty: nextQty, line_total: Number(x.unit_price) * nextQty };
+    })
+  );
+}, []);
+
+const dec = useCallback((key: string) => {
+  setCart((prev) =>
+    prev
+      .map((x) => {
+        if (getCartKey(x) !== key && x.product_id !== key) return x;
+        const step = Number(x.stock_qty_per_sell_unit ?? 1);
+        const nextQty = x.qty - (Number.isFinite(step) && step > 0 ? step : 1);
+        return {
+          ...x,
+          qty: nextQty,
+          line_total: Number(x.unit_price) * Math.max(nextQty, 0),
+        };
       })
-    );
-  }, []);
+      .filter((x) => x.qty > 0)
+  );
+}, []);
 
-  const dec = useCallback((productId: string) => {
-    setCart((prev) =>
-      prev
-        .map((x) => {
-          if (x.product_id !== productId) return x;
-          const nextQty = x.qty - 1;
-          return {
-            ...x,
-            qty: nextQty,
-            line_total: Number(x.unit_price) * Math.max(nextQty, 0),
-          };
-        })
-        .filter((x) => x.qty > 0)
-    );
-  }, []);
+const clearCart = useCallback(() => {
+  setCart([]);
 
-  const clearCart = useCallback(() => setCart([]), []);
-  const removeItem = useCallback((productId: string) => {
-    setCart((prev) => prev.filter((x) => x.product_id !== productId));
-  }, []);
+  const sid = String(activeStoreId ?? "").trim();
+  if (sid) {
+    void AsyncStorage.removeItem(CART_KEY(sid));
+  }
+}, [activeStoreId]);
+
+const removeItem = useCallback((key: string) => {
+  setCart((prev) => prev.filter((x) => getCartKey(x) !== key && x.product_id !== key));
+}, []);
 
   /* =========================
      Qty editor modal
@@ -792,9 +979,9 @@ export default function SalesHomeScreen() {
 
   const openQtyEditor = useCallback((item: CartItem) => {
     setQtyEditorErr(null);
-    setQtyEditorProductId(item.product_id);
+    setQtyEditorProductId(getCartKey(item));
     setQtyEditorName(item.name ?? "Product");
-    setQtyEditorDraft(String(Math.trunc(Number(item.qty ?? 1))));
+    setQtyEditorDraft(String(Number(item.qty ?? 1)));
     setQtyEditorOpen(true);
   }, []);
 
@@ -810,7 +997,7 @@ export default function SalesHomeScreen() {
   const confirmQtyEditor = useCallback(() => {
     if (!qtyEditorProductId) return;
 
-    const q = parsePositiveInt(qtyEditorDraft);
+    const q = parsePositiveQty(qtyEditorDraft);
     if (!q) {
       setQtyEditorErr("Weka quantity sahihi (namba > 0).");
       return;
@@ -820,7 +1007,7 @@ export default function SalesHomeScreen() {
 
     setCart((prev) =>
       prev.map((x) => {
-        if (x.product_id !== qtyEditorProductId) return x;
+        if (getCartKey(x) !== qtyEditorProductId && x.product_id !== qtyEditorProductId) return x;
         return {
           ...x,
           qty: nextQty,
@@ -889,6 +1076,12 @@ export default function SalesHomeScreen() {
           cost_price: number | null;
           qty: number | null;
           barcode?: string | null;
+is_precision_product?: boolean | null;
+precision_pack_size?: number | null;
+precision_base_unit?: string | null;
+precision_sell_mode?: string | null;
+precision_allow_box_sales?: boolean | null;
+precision_allow_unit_sales?: boolean | null;
         }>;
 
         const list: ProductRow[] = rows
@@ -903,6 +1096,12 @@ export default function SalesHomeScreen() {
             cost_price: r.cost_price ?? null,
             stock_qty: r.qty ?? null,
             barcode: (r as any).barcode ?? null,
+is_precision_product: Boolean((r as any).is_precision_product),
+precision_pack_size: (r as any).precision_pack_size ?? null,
+precision_base_unit: (r as any).precision_base_unit ?? null,
+precision_sell_mode: (r as any).precision_sell_mode ?? null,
+precision_allow_box_sales: (r as any).precision_allow_box_sales ?? null,
+precision_allow_unit_sales: (r as any).precision_allow_unit_sales ?? null,
           }));
 
         list.sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""));
@@ -1409,7 +1608,7 @@ channel.subscribe();
       },
     });
 
-    setCart([]);
+    // Do not clear cart here. User may press Back from checkout and must find items preserved.
   }, [activeStoreId, activeStoreName, canSellDirect, cart, router]);
 
   const goCashierCheckout = useCallback(() => {
@@ -1434,7 +1633,7 @@ channel.subscribe();
       },
     });
 
-    setCart([]);
+    // Do not clear cart here. User may press Back from checkout and must find items preserved.
   }, [activeStoreId, activeStoreName, canUseCashierHandoff, cart, router]);
 
   const goScan = useCallback(() => {
@@ -1491,14 +1690,32 @@ channel.subscribe();
   const checkoutDisabled = useMemo(() => {
     return !activeStoreId || cart.length === 0 || !canSellDirect || isCashier;
   }, [activeStoreId, cart.length, canSellDirect, isCashier]);
+const cartHasItems = cart.length > 0 && cartTotalAmount > 0;
 
+  const cartAccent = useMemo(() => {
+    if (!cartHasItems) {
+      return {
+        border: "rgba(15,23,42,0.10)",
+        bg: "#FFFFFF",
+        soft: "#F8FAFC",
+        text: "#0F172A",
+      };
+    }
+
+    return {
+      border: "rgba(16,185,129,0.75)",
+      bg: "#DDF7EF",
+      soft: "#CFFAEA",
+      text: "#047857",
+    };
+  }, [cartHasItems]);
   const cashierDisabled = useMemo(() => {
     return !activeStoreId || cart.length === 0 || !canUseCashierHandoff || isCashier;
   }, [activeStoreId, cart.length, canUseCashierHandoff, isCashier]);
 
   const getStockQty = useCallback((p: ProductRow): number | null => {
     const n = Number(p.stock_qty);
-    return Number.isFinite(n) ? Math.trunc(n) : null;
+    return Number.isFinite(n) ? Number(n.toFixed(3)) : null;
   }, []);
 
   const statusLine = useMemo(() => {
@@ -1595,128 +1812,163 @@ channel.subscribe();
   /* =========================
      UI Sections
   ========================= */
-  const TopBar = useMemo(() => {
-    return (
-      <View style={{ gap: 10 }}>
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "flex-start",
-            justifyContent: "space-between",
-            gap: 12,
-          }}
-        >
-          <View style={{ flex: 1, gap: 4 }}>
-            <Text style={{ fontSize: 34, fontWeight: "900", color: theme.colors.text }}>
-              Sales
-            </Text>
+const TopBar = useMemo(() => {
+  return (
+    <View style={{ gap: 8 }}>
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          gap: 10,
+        }}
+      >
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text style={{ fontSize: 28, fontWeight: "900", color: theme.colors.text }}>
+            Sales
+          </Text>
 
-            <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 14 }}>
-              {headerSubtitle}
-            </Text>
+          <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }} numberOfLines={1}>
+            {headerSubtitle}
+          </Text>
 
-            <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 13 }}>
-              {todayLabel}
-            </Text>
+          <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 11 }}>
+            {todayLabel}
+          </Text>
 
-            <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
-              {statusLine}
-            </Text>
-          </View>
-
-          <Pressable
-            onPress={() => router.push("/(tabs)/sales/history")}
-            hitSlop={10}
-            style={({ pressed }) => ({
-              minWidth: 92,
-              paddingHorizontal: 12,
-              paddingVertical: 10,
-              borderRadius: 16,
-              borderWidth: 1,
-              borderColor: theme.colors.border,
-              backgroundColor: "rgba(255,255,255,0.06)",
-              opacity: pressed ? 0.92 : 1,
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 2,
-            })}
-          >
-            <SafeIcon name="time-outline" size={16} color={theme.colors.text} />
-            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>
-              History
-            </Text>
-          </Pressable>
+          <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }} numberOfLines={1}>
+            {statusLine}
+          </Text>
         </View>
 
-        {!isCashier && canOpenExpenses ? (
-          <View style={{ flexDirection: "row", gap: 8 }}>
+        <Pressable
+          onPress={() => router.push("/(tabs)/sales/history")}
+          hitSlop={10}
+          style={({ pressed }) => ({
+            minWidth: 96,
+            minHeight: 62,
+            paddingHorizontal: 14,
+            paddingVertical: 10,
+            borderRadius: 20,
+            borderWidth: 1.4,
+            borderColor: "rgba(15,23,42,0.12)",
+            backgroundColor: "#FFFFFF",
+            opacity: pressed ? 0.9 : 1,
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 4,
+            shadowColor: "#0F172A",
+            shadowOpacity: 0.12,
+            shadowRadius: 14,
+            shadowOffset: { width: 0, height: 8 },
+            elevation: 4,
+          })}
+        >
+          <SafeIcon name="time-outline" size={14} color={theme.colors.text} />
+          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 11 }}>
+            History
+          </Text>
+        </Pressable>
+      </View>
+
+      {!isCashier && canOpenExpenses ? (
+        <View style={{ flexDirection: "row", gap: 10 }}>
+          <Pressable
+            onPress={() => router.push("/(tabs)/sales/expenses")}
+            hitSlop={10}
+            style={({ pressed }) => ({
+              flex: 1,
+              minHeight: 64,
+              borderRadius: 20,
+              alignItems: "center",
+              justifyContent: "center",
+              borderWidth: 1.4,
+              borderColor: "rgba(239,68,68,0.22)",
+              backgroundColor: "#FFF7F7",
+              opacity: pressed ? 0.9 : 1,
+              shadowColor: "#991B1B",
+              shadowOpacity: 0.1,
+              shadowRadius: 14,
+              shadowOffset: { width: 0, height: 8 },
+              elevation: 4,
+            })}
+          >
+            <Text style={{ color: "#991B1B", fontWeight: "900", fontSize: 15 }}>
+              {staffExpenseLoading && currentRole === "staff" ? "Expenses..." : "Expenses"}
+            </Text>
+            <Text style={{ color: "#64748B", fontWeight: "800", fontSize: 10, marginTop: 3 }}>
+              Track business costs
+            </Text>
+          </Pressable>
+
+          {isOwner ? (
             <Pressable
-              onPress={() => router.push("/(tabs)/sales/expenses")}
+              onPress={() => router.push("/(tabs)/sales/profit")}
               hitSlop={10}
               style={({ pressed }) => ({
                 flex: 1,
-                minHeight: 44,
-                borderRadius: 16,
+                minHeight: 64,
+                borderRadius: 20,
                 alignItems: "center",
                 justifyContent: "center",
-                borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.10)",
-                backgroundColor: "rgba(255,255,255,0.06)",
-                opacity: pressed ? 0.92 : 1,
+                borderWidth: 1.4,
+                borderColor: "rgba(16,185,129,0.28)",
+                backgroundColor: "#ECFDF5",
+                opacity: pressed ? 0.9 : 1,
+                shadowColor: "#047857",
+                shadowOpacity: 0.12,
+                shadowRadius: 14,
+                shadowOffset: { width: 0, height: 8 },
+                elevation: 4,
               })}
             >
-              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}>
-                {staffExpenseLoading && currentRole === "staff" ? "Expenses..." : "Expenses"}
+              <Text style={{ color: "#047857", fontWeight: "900", fontSize: 15 }}>
+                Profit
+              </Text>
+              <Text style={{ color: "#64748B", fontWeight: "800", fontSize: 10, marginTop: 3 }}>
+                Owner earnings
               </Text>
             </Pressable>
-
-            {isOwner ? (
-              <Pressable
-                onPress={() => router.push("/(tabs)/sales/profit")}
-                hitSlop={10}
-                style={({ pressed }) => ({
-                  flex: 1,
-                  minHeight: 44,
-                  borderRadius: 16,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderWidth: 1,
-                  borderColor: "rgba(255,255,255,0.10)",
-                  backgroundColor: "rgba(255,255,255,0.06)",
-                  opacity: pressed ? 0.92 : 1,
-                })}
-              >
-                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}>
-                  Profit
-                </Text>
-              </Pressable>
-            ) : null}
-          </View>
-        ) : null}
-      </View>
-    );
-  }, [
-    headerSubtitle,
-    isCashier,
-    isOwner,
-    isOwnerOrAdmin,
-    canOpenExpenses,
-    currentRole,
-    staffExpenseLoading,
-    router,
-    statusLine,
-    todayLabel,
-  ]);
+          ) : null}
+        </View>
+      ) : null}
+    </View>
+  );
+}, [
+  headerSubtitle,
+  isCashier,
+  isOwner,
+  canOpenExpenses,
+  currentRole,
+  staffExpenseLoading,
+  router,
+  statusLine,
+  todayLabel,
+]);
 
   const QuickBar = useMemo(() => {
     return (
-      <Card style={{ gap: 10, padding: 12 }}>
+      <Card
+        style={{
+          gap: 10,
+          padding: 14,
+          borderRadius: 22,
+          borderWidth: 1.5,
+          borderColor: cartAccent.border,
+          backgroundColor: cartAccent.bg,
+          shadowColor: "#10B981",
+          shadowOpacity: cartHasItems ? 0.18 : 0.05,
+          shadowRadius: 16,
+          shadowOffset: { width: 0, height: 8 },
+          elevation: cartHasItems ? 5 : 1,
+        }}
+      >
         <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
-          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 15 }}>
-            {cartTotalLines} items • {cartCount} qty
+          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}>
+            {cartTotalLines} items • {fmtQty(cartCount)} qty
           </Text>
 
-          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 15 }}>
+          <Text style={{ color: cartAccent.text, fontWeight: "900", fontSize: 14 }}>
             {fmt(cartTotalAmount)}
           </Text>
         </View>
@@ -1735,28 +1987,28 @@ channel.subscribe();
             disabled={checkoutDisabled}
             style={({ pressed }) => [
               {
-                paddingVertical: 12,
-                paddingHorizontal: 16,
+                paddingVertical: 9,
+                paddingHorizontal: 12,
                 borderRadius: theme.radius.pill,
                 borderWidth: 1,
                 borderColor: checkoutDisabled
-                  ? "rgba(255,255,255,0.10)"
-                  : theme.colors.emeraldBorder,
+                  ? "rgba(148,163,184,0.25)"
+                  : "#059669",
                 backgroundColor: checkoutDisabled
-                  ? "rgba(255,255,255,0.05)"
-                  : theme.colors.emeraldSoft,
+                  ? "#F1F5F9"
+                  : "#10B981",
                 alignItems: "center",
                 justifyContent: "center",
                 opacity: checkoutDisabled ? 0.55 : pressed ? 0.92 : 1,
                 transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
                 flexDirection: "row",
-                gap: 8,
+                gap: 6,
                 flex: 1,
               },
             ]}
           >
             <SafeIcon name="check-circle" size={16} color={theme.colors.text} />
-            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14 }}>
+            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>
               Complete Sale
             </Text>
           </Pressable>
@@ -1772,11 +2024,11 @@ channel.subscribe();
                   borderRadius: theme.radius.pill,
                   borderWidth: 1,
                   borderColor: cashierDisabled
-                    ? "rgba(255,255,255,0.10)"
-                    : theme.colors.emeraldBorder,
+                    ? "rgba(148,163,184,0.25)"
+                    : "#0EA5E9",
                   backgroundColor: cashierDisabled
-                    ? "rgba(255,255,255,0.05)"
-                    : "rgba(16,185,129,0.10)",
+                    ? "#F1F5F9"
+                    : "#E0F2FE",
                   alignItems: "center",
                   justifyContent: "center",
                   opacity: cashierDisabled ? 0.55 : pressed ? 0.92 : 1,
@@ -1788,7 +2040,7 @@ channel.subscribe();
               ]}
             >
               <SafeIcon name="cash-outline" size={16} color={theme.colors.text} />
-              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14 }}>
+              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>
                 Cashiers
               </Text>
             </Pressable>
@@ -1799,14 +2051,14 @@ channel.subscribe();
             disabled={!activeStoreId || !canSellDirect || isCashier}
             style={({ pressed }) => [
               {
-                width: 62,
-                height: 62,
+                width: 54,
+                height: 54,
                 borderRadius: 999,
                 alignItems: "center",
                 justifyContent: "center",
                 borderWidth: 1,
-                borderColor: theme.colors.emeraldBorder,
-                backgroundColor: theme.colors.emeraldSoft,
+                borderColor: "#10B981",
+                backgroundColor: "#ECFDF5",
                 opacity: !activeStoreId || !canSellDirect || isCashier ? 0.5 : pressed ? 0.92 : 1,
                 transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
               },
@@ -1814,7 +2066,7 @@ channel.subscribe();
             hitSlop={10}
           >
             <View style={{ marginLeft: 1, marginTop: 1 }}>
-              <ScannerFabIcon size={28} color={theme.colors.text} />
+              <ScannerFabIcon size={24} color={theme.colors.text} />
             </View>
           </Pressable>
 
@@ -1823,13 +2075,13 @@ channel.subscribe();
             disabled={cart.length === 0}
             style={({ pressed }) => [
               {
-                paddingVertical: 12,
-                paddingHorizontal: 14,
+                paddingVertical: 9,
+                paddingHorizontal: 12,
                 borderRadius: theme.radius.pill,
                 borderWidth: 1,
-                borderColor: theme.colors.border,
+                borderColor: cart.length === 0 ? "rgba(148,163,184,0.25)" : "#CBD5E1",
                 backgroundColor:
-                  cart.length === 0 ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.06)",
+                  cart.length === 0 ? "#F8FAFC" : "#FFFFFF",
                 opacity: cart.length === 0 ? 0.5 : pressed ? 0.92 : 1,
                 transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
                 alignItems: "center",
@@ -1837,7 +2089,7 @@ channel.subscribe();
               },
             ]}
           >
-            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14 }}>
+            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>
               Clear
             </Text>
           </Pressable>
@@ -1849,6 +2101,7 @@ channel.subscribe();
               value={query}
               onChangeText={setQuery}
               placeholder="Search name / SKU / category / barcode..."
+              style={{ minHeight: 42, fontSize: 13 }}
             />
           </View>
         ) : null}
@@ -1865,6 +2118,7 @@ channel.subscribe();
     cartCount,
     fmt,
     cartTotalAmount,
+    cartAccent,
     err,
     headerBlockedReason,
     goCheckout,
@@ -1910,7 +2164,7 @@ channel.subscribe();
               <View style={{ gap: 8 }}>
                 {cart.map((item) => (
                   <View
-                    key={item.product_id}
+                    key={getCartKey(item)}
                     style={{
                       borderWidth: 1,
                       borderColor: theme.colors.border,
@@ -1928,13 +2182,13 @@ channel.subscribe();
                         {item.name}
                       </Text>
                       <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
-                        Qty: {item.qty} • Unit: {fmt(item.unit_price)} • Total: {fmt(item.line_total)}
+                        {getCartDisplayUnit(item)}: {fmtQty(getCartDisplayQty(item))} • Stock qty: {fmtQty(item.qty)} • Unit: {fmt(item.unit_price)} • Total: {fmt(item.line_total)}
                       </Text>
                     </View>
 
                     <View style={{ flexDirection: "row", gap: 8 }}>
                       <Pressable
-                        onPress={() => dec(item.product_id)}
+                        onPress={() => dec(getCartKey(item))}
                         style={({ pressed }) => ({
                           flex: 1,
                           paddingVertical: 10,
@@ -1968,7 +2222,7 @@ channel.subscribe();
                       </Pressable>
 
                       <Pressable
-                        onPress={() => inc(item.product_id)}
+                        onPress={() => inc(getCartKey(item))}
                         style={({ pressed }) => ({
                           flex: 1,
                           paddingVertical: 10,
@@ -1985,7 +2239,7 @@ channel.subscribe();
                     </View>
 
                     <Pressable
-                      onPress={() => removeItem(item.product_id)}
+                      onPress={() => removeItem(getCartKey(item))}
                       style={({ pressed }) => ({
                         paddingVertical: 10,
                         borderRadius: theme.radius.pill,
@@ -2285,180 +2539,202 @@ channel.subscribe();
   const renderItem = useCallback(
     ({ item }: { item: ProductRow }) => {
       const inCart = cart.find((c) => c.product_id === item.id);
-      const qty = inCart?.qty ?? 0;
-
+const qty = inCart ? getCartDisplayQty(inCart) : 0;
+const cartKey = inCart ? getCartKey(inCart) : item.id;
       const stockQty = getStockQty(item);
       const stockLabel =
-        stockQty === null ? null : stockQty <= 0 ? "Out of stock" : `Stock: ${stockQty}`;
+        stockQty === null ? null : stockQty <= 0 ? "Out of stock" : `Stock: ${fmtQty(stockQty)}`;
 
       return (
         <View
           style={{
             flex: isDesktopWeb ? 1 : undefined,
-            marginBottom: 10,
+            marginBottom: 8,
           }}
         >
           <Card
             style={{
-              gap: 8,
-              padding: isDesktopWeb ? 12 : 14,
-              minHeight: isDesktopWeb ? 178 : undefined,
+              paddingVertical: isDesktopWeb ? 12 : 11,
+              paddingHorizontal: isDesktopWeb ? 14 : 12,
+              minHeight: undefined,
+              borderWidth: 1.2,
+              borderColor: qty > 0 ? "#10B981" : "rgba(15,23,42,0.08)",
+              backgroundColor: qty > 0 ? "#ECFDF5" : "#FFFFFF",
             }}
           >
-          <View style={{ gap: 4 }}>
-            <Text
+            <View
               style={{
-                color: theme.colors.text,
-                fontWeight: "900",
-                fontSize: isDesktopWeb ? 15 : 16,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 10,
               }}
-              numberOfLines={1}
             >
-              {item.name}
-            </Text>
-
-            <Text
-              style={{ color: theme.colors.muted, fontWeight: "800", fontSize: isDesktopWeb ? 12 : 13 }}
-              numberOfLines={1}
-            >
-              SKU: {item.sku ?? "—"}
-              {item.category ? `  •  ${item.category}` : ""}
-              {item.barcode ? `  •  ${item.barcode}` : ""}
-            </Text>
-
-            {!!stockLabel && (
-              <Text
-                style={{
-                  color: stockQty && stockQty > 0 ? theme.colors.faint : theme.colors.muted,
-                  fontWeight: "800",
-                  fontSize: isDesktopWeb ? 12 : 13,
-                }}
-              >
-                {stockLabel}
-              </Text>
-            )}
-
-            {qty > 0 && (
-              <Text style={{ color: theme.colors.muted, fontWeight: "900" }} numberOfLines={1}>
-                Price:{" "}
-                <Text style={{ color: theme.colors.text }}>
-                  {fmt(Number(inCart?.unit_price ?? 0))}
+              <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                <Text
+                  style={{
+                    color: theme.colors.text,
+                    fontWeight: "900",
+                    fontSize: isDesktopWeb ? 14 : 13,
+                  }}
+                  numberOfLines={1}
+                >
+                  {item.name}
                 </Text>
-                {" • "}
-                Line:{" "}
-                <Text style={{ color: theme.colors.text }}>
-                  {fmt(Number(inCart?.line_total ?? 0))}
+
+                <Text
+                  style={{
+                    color: theme.colors.muted,
+                    fontWeight: "800",
+                    fontSize: isDesktopWeb ? 11 : 10,
+                  }}
+                  numberOfLines={1}
+                >
+                  SKU: {item.sku ?? "—"}
+                  {item.category ? ` • ${item.category}` : ""}
+                  {item.barcode ? ` • ${item.barcode}` : ""}
                 </Text>
-              </Text>
-            )}
-          </View>
 
-          {qty <= 0 ? (
-            <Pressable
-              onPress={() => addAuto(item)}
-              onLongPress={() => openPriceModal(item)}
-              style={({ pressed }) => [
-                {
-                  paddingVertical: 11,
-                  borderRadius: theme.radius.pill,
-                  borderWidth: 1,
-                  borderColor: theme.colors.emeraldBorder,
-                  backgroundColor: theme.colors.emeraldSoft,
-                  alignItems: "center",
-                  opacity: pressed ? 0.92 : 1,
-                  transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
-                },
-              ]}
-            >
-              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Add</Text>
-            </Pressable>
-          ) : (
-            <View style={{ gap: 10 }}>
-              <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
-                <Pressable
-                  onPress={() => dec(item.id)}
-                  style={({ pressed }) => [
-                    {
-                      flex: 1,
-                      paddingVertical: 11,
-                      borderRadius: theme.radius.pill,
-                      borderWidth: 1,
-                      borderColor: theme.colors.border,
-                      backgroundColor: "rgba(255,255,255,0.06)",
-                      alignItems: "center",
-                      opacity: pressed ? 0.92 : 1,
-                      transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
-                    },
-                  ]}
-                >
-                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>−</Text>
-                </Pressable>
+                {!!stockLabel && (
+                  <Text
+                    style={{
+                      color: stockQty && stockQty > 0 ? theme.colors.faint : theme.colors.muted,
+                      fontWeight: "800",
+                      fontSize: isDesktopWeb ? 11 : 10,
+                    }}
+                    numberOfLines={1}
+                  >
+                    {stockLabel}
+                    {inCart ? ` • ${getCartDisplayUnit(inCart)}: ${fmtQty(getCartDisplayQty(inCart))}` : ""}
+                  </Text>
+                )}
 
-                <Pressable
-                  onPress={() => openQtyEditor(inCart as CartItem)}
-                  hitSlop={10}
-                  style={({ pressed }) => [
-                    {
-                      minWidth: 66,
-                      paddingVertical: 11,
-                      borderRadius: theme.radius.pill,
-                      borderWidth: 1,
-                      borderColor: theme.colors.emeraldBorder,
-                      backgroundColor: "rgba(16,185,129,0.10)",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      paddingHorizontal: 14,
-                      opacity: pressed ? 0.92 : 1,
-                      transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
-                    },
-                  ]}
-                >
-                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{qty}</Text>
-                </Pressable>
-
-                <Pressable
-                  onPress={() => inc(item.id)}
-                  style={({ pressed }) => [
-                    {
-                      flex: 1,
-                      paddingVertical: 11,
-                      borderRadius: theme.radius.pill,
-                      borderWidth: 1,
-                      borderColor: theme.colors.emeraldBorder,
-                      backgroundColor: theme.colors.emeraldSoft,
-                      alignItems: "center",
-                      opacity: pressed ? 0.92 : 1,
-                      transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
-                    },
-                  ]}
-                >
-                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>+</Text>
-                </Pressable>
-
-                <Pressable
-                  onPress={() => removeItem(item.id)}
-                  hitSlop={10}
-                  style={({ pressed }) => [
-                    {
-                      paddingVertical: 11,
-                      paddingHorizontal: 14,
-                      borderRadius: theme.radius.pill,
-                      borderWidth: 1,
-                      borderColor: theme.colors.border,
-                      backgroundColor: "rgba(255,255,255,0.06)",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      opacity: pressed ? 0.92 : 1,
-                      transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
-                    },
-                  ]}
-                >
-                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Remove</Text>
-                </Pressable>
+                {qty > 0 && (
+                  <Text
+                    style={{ color: theme.colors.muted, fontWeight: "900", fontSize: isDesktopWeb ? 11 : 10 }}
+                    numberOfLines={1}
+                  >
+                    Price: <Text style={{ color: theme.colors.text }}>{fmt(Number(inCart?.unit_price ?? 0))}</Text>
+                    {" • "}
+                    Line: <Text style={{ color: theme.colors.text }}>{fmt(Number(inCart?.line_total ?? 0))}</Text>
+                  </Text>
+                )}
               </View>
+
+              {qty <= 0 ? (
+                <Pressable
+                  onPress={() => addAuto(item)}
+                  onLongPress={() => openPriceModal(item)}
+                  style={({ pressed }) => [
+                    {
+                      minWidth: 54,
+                      height: 40,
+                      paddingHorizontal: 12,
+                      borderRadius: 999,
+                      borderWidth: 1,
+                      borderColor: "#10B981",
+                      backgroundColor: "#ECFDF5",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      opacity: pressed ? 0.92 : 1,
+                      transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
+                    },
+                  ]}
+                >
+                  <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>
+                    Add
+                  </Text>
+                </Pressable>
+              ) : (
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <Pressable
+                    onPress={() => dec(cartKey)}
+                    style={({ pressed }) => [
+                      {
+                        width: 34,
+                        height: 34,
+                        borderRadius: 999,
+                        borderWidth: 1,
+                        borderColor: theme.colors.border,
+                        backgroundColor: "rgba(255,255,255,0.06)",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        opacity: pressed ? 0.92 : 1,
+                        transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
+                      },
+                    ]}
+                  >
+                    <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 15 }}>−</Text>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={() => openQtyEditor(inCart as CartItem)}
+                    hitSlop={10}
+                    style={({ pressed }) => [
+                      {
+                        minWidth: 38,
+                        height: 34,
+                        paddingHorizontal: 8,
+                        borderRadius: 999,
+                        borderWidth: 1,
+                        borderColor: theme.colors.emeraldBorder,
+                        backgroundColor: "rgba(16,185,129,0.10)",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        opacity: pressed ? 0.92 : 1,
+                        transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
+                      },
+                    ]}
+                  >
+                    <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>{qty}</Text>
+                  </Pressable>
+
+                  <Pressable
+                   onPress={() => inc(cartKey)} 
+                    style={({ pressed }) => [
+                      {
+                        width: 34,
+                        height: 34,
+                        borderRadius: 999,
+                        borderWidth: 1,
+                        borderColor: theme.colors.emeraldBorder,
+                        backgroundColor: theme.colors.emeraldSoft,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        opacity: pressed ? 0.92 : 1,
+                        transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
+                      },
+                    ]}
+                  >
+                    <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 15 }}>+</Text>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={() => removeItem(cartKey)}
+                    hitSlop={10}
+                    style={({ pressed }) => [
+                      {
+                        minWidth: 54,
+                        height: 34,
+                        paddingHorizontal: 10,
+                        borderRadius: 999,
+                        borderWidth: 1,
+                        borderColor: theme.colors.border,
+                        backgroundColor: "rgba(255,255,255,0.06)",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        opacity: pressed ? 0.92 : 1,
+                        transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
+                      },
+                    ]}
+                  >
+                    <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 11 }}>
+                      Del
+                    </Text>
+                  </Pressable>
+                </View>
+              )}
             </View>
-          )}
-        </Card>
+          </Card>
         </View>
       );
     },
@@ -2616,9 +2892,9 @@ channel.subscribe();
       <View
         style={{
           paddingHorizontal: 16,
-          paddingTop: Math.max(insets.top + 6, 16),
-          paddingBottom: 8,
-          gap: 12,
+          paddingTop: Math.max(insets.top + 4, 12),
+          paddingBottom: 6,
+          gap: 10,
         }}
       >
         {TopBar}
@@ -2756,7 +3032,200 @@ channel.subscribe();
         />
       )}
 
-      <PriceModal
+      <Modal
+  visible={sellModeOpen}
+  transparent
+  animationType="fade"
+  presentationStyle="overFullScreen"
+  statusBarTranslucent
+  hardwareAccelerated
+  onRequestClose={closeSellMode}
+>
+  <View
+    style={{
+      flex: 1,
+      backgroundColor: "rgba(15,23,42,0.28)",
+      justifyContent: "flex-end",
+      paddingHorizontal: 14,
+      paddingBottom: Math.max(insets.bottom + 18, 24),
+    }}
+  >
+    <Pressable
+      onPress={closeSellMode}
+      style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: "rgba(15,23,42,0.22)",
+      }}
+    />
+
+    <View
+      style={{
+        width: "100%",
+        borderRadius: 28,
+        borderWidth: 1,
+        borderColor: "rgba(15,23,42,0.10)",
+        backgroundColor: "#FFFFFF",
+        padding: 20,
+        gap: 14,
+        shadowColor: "#0F172A",
+        shadowOpacity: 0.18,
+        shadowRadius: 28,
+        shadowOffset: { width: 0, height: 18 },
+        elevation: 18,
+      }}
+    >
+      <View
+        style={{
+          alignSelf: "center",
+          width: 54,
+          height: 6,
+          borderRadius: 999,
+          backgroundColor: "rgba(15,23,42,0.18)",
+          marginBottom: 6,
+        }}
+      />
+
+      <Text
+        style={{
+          color: "#0F172A",
+          fontWeight: "900",
+          fontSize: 24,
+          textAlign: "center",
+        }}
+      >
+        Choose Selling Unit
+      </Text>
+
+      <Text style={{ color: "#64748B", fontWeight: "900", fontSize: 16 }}>
+        {sellModeProduct?.name ?? "Product"}
+      </Text>
+
+      <View style={{ height: 1, backgroundColor: "rgba(15,23,42,0.10)" }} />
+
+      <Pressable
+        onPress={() => sellModeProduct && addPrecisionToCart(sellModeProduct, "PACK")}
+        style={({ pressed }) => ({
+          minHeight: 86,
+          borderRadius: 18,
+          borderWidth: 1.5,
+          borderColor: "#10B981",
+          backgroundColor: "#ECFDF5",
+          paddingHorizontal: 18,
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 14,
+          opacity: pressed ? 0.9 : 1,
+          transform: pressed ? [{ scale: 0.99 }] : [{ scale: 1 }],
+        })}
+      >
+        <View
+          style={{
+            width: 52,
+            height: 52,
+            borderRadius: 999,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "rgba(16,185,129,0.14)",
+          }}
+        >
+          <SafeIcon name="cube-outline" size={28} color="#059669" />
+        </View>
+
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: "#0F172A", fontWeight: "900", fontSize: 17 }}>
+            Sell by {getPackLabel(sellModeProduct)}
+          </Text>
+          <Text style={{ color: "#64748B", fontWeight: "900", marginTop: 4 }}>
+            {fmtQty(getPackSize(sellModeProduct))} {getBaseUnitLabel(sellModeProduct)}
+          </Text>
+        </View>
+
+        <SafeIcon name="checkmark-circle" size={30} color="#059669" />
+      </Pressable>
+
+      <Pressable
+        onPress={() => sellModeProduct && addPrecisionToCart(sellModeProduct, "UNIT")}
+        style={({ pressed }) => ({
+          minHeight: 86,
+          borderRadius: 18,
+          borderWidth: 1,
+          borderColor: "rgba(15,23,42,0.12)",
+          backgroundColor: "#F8FAFC",
+          paddingHorizontal: 18,
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 14,
+          opacity: pressed ? 0.9 : 1,
+          transform: pressed ? [{ scale: 0.99 }] : [{ scale: 1 }],
+        })}
+      >
+        <View
+          style={{
+            width: 52,
+            height: 52,
+            borderRadius: 999,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "rgba(15,23,42,0.06)",
+          }}
+        >
+          <SafeIcon name="medical-outline" size={28} color="#475569" />
+        </View>
+
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: "#0F172A", fontWeight: "900", fontSize: 17 }}>
+            Sell by {getBaseUnitLabel(sellModeProduct)}
+          </Text>
+          <Text style={{ color: "#64748B", fontWeight: "900", marginTop: 4 }}>
+            1 {getBaseUnitLabel(sellModeProduct)}
+          </Text>
+        </View>
+
+        <SafeIcon name="ellipse-outline" size={30} color="#94A3B8" />
+      </Pressable>
+
+      <Pressable
+        onPress={closeSellMode}
+        style={({ pressed }) => ({
+          minHeight: 72,
+          borderRadius: 18,
+          borderWidth: 1,
+          borderColor: "rgba(15,23,42,0.12)",
+          backgroundColor: "#F8FAFC",
+          paddingHorizontal: 18,
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 14,
+          opacity: pressed ? 0.9 : 1,
+          transform: pressed ? [{ scale: 0.99 }] : [{ scale: 1 }],
+        })}
+      >
+        <View
+          style={{
+            width: 52,
+            height: 52,
+            borderRadius: 999,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "rgba(15,23,42,0.06)",
+          }}
+        >
+          <SafeIcon name="close" size={30} color="#0F172A" />
+        </View>
+
+        <Text style={{ color: "#0F172A", fontWeight: "900", fontSize: 17 }}>
+          Cancel
+        </Text>
+      </Pressable>
+    </View>
+  </View>
+</Modal>
+
+<PriceModal
         visible={priceModalOpen}
         productName={selected?.name ?? "—"}
         price={priceDraft}
@@ -2827,9 +3296,9 @@ channel.subscribe();
                     setQtyEditorErr(null);
                     setQtyEditorDraft(t);
                   }}
-                  placeholder="mf: 15"
+                  placeholder="mf: 1.5"
                   placeholderTextColor="rgba(255,255,255,0.35)"
-                  keyboardType="numeric"
+                  keyboardType="decimal-pad"
                   returnKeyType="done"
                   blurOnSubmit
                   onSubmitEditing={confirmQtyEditor}

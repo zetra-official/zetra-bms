@@ -1,23 +1,38 @@
-﻿import React, { forwardRef } from "react";
+﻿// src/ui/Input.tsx
+import React, { forwardRef } from "react";
 import { TextInput, TextInputProps } from "react-native";
+
 import { theme } from "./theme";
 
-export const Input = forwardRef<TextInput, TextInputProps>(function Input(props, ref) {
+export const Input = forwardRef<TextInput, TextInputProps>(function Input(
+  props,
+  ref
+) {
   return (
     <TextInput
       ref={ref}
       {...props}
-      placeholderTextColor="rgba(255,255,255,0.35)"
+      placeholderTextColor="#8B95A7"
+      selectionColor={theme.colors.primary}
       style={[
         {
           borderWidth: 1,
-          borderColor: theme.colors.border,
-          borderRadius: theme.radius.lg,
-          backgroundColor: "rgba(255,255,255,0.05)",
+          borderColor: "#D7DFEA",
+
+          borderRadius: 12,
+
+          backgroundColor: "#FFFFFF",
+
           paddingHorizontal: 14,
-          paddingVertical: 12,
-          color: theme.colors.text,
-          fontWeight: "800",
+          paddingVertical: 13,
+
+          color: "#172033",
+
+          fontWeight: "600",
+          fontSize: 15,
+
+          shadowOpacity: 0,
+          elevation: 0,
         },
         props.style,
       ]}

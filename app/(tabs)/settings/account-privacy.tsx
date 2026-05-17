@@ -16,18 +16,33 @@ import { useRouter } from "expo-router";
 
 import { Screen } from "@/src/ui/Screen";
 import { Card } from "@/src/ui/Card";
-import { UI } from "@/src/ui/theme";
 import { useOrg } from "@/src/context/OrgContext";
 import {
   clearCorruptSupabaseSession,
   supabase,
 } from "@/src/supabase/supabaseClient";
 
+const L = {
+  bg: "#F3F7FC",
+  card: "#FFFFFF",
+  softCard: "#F8FAFC",
+  border: "rgba(15,23,42,0.10)",
+  text: "#0F172A",
+  muted: "#64748B",
+  faint: "#94A3B8",
+  emerald: "#059669",
+  emeraldSoft: "rgba(5,150,105,0.10)",
+  emeraldBorder: "rgba(5,150,105,0.22)",
+  danger: "#DC2626",
+  dangerSoft: "rgba(220,38,38,0.08)",
+  dangerBorder: "rgba(220,38,38,0.22)",
+};
+
 function SectionTitle({ label }: { label: string }) {
   return (
     <Text
       style={{
-        color: "rgba(255,255,255,0.72)",
+        color: L.muted,
         fontWeight: "900",
         fontSize: 12,
         letterSpacing: 0.8,
@@ -52,8 +67,8 @@ function PremiumCard({
       style={{
         gap: 0,
         borderRadius: 24,
-        borderColor: "rgba(255,255,255,0.08)",
-        backgroundColor: "rgba(15,18,24,0.98)",
+        borderColor: L.border,
+        backgroundColor: L.card,
         overflow: "hidden",
         ...style,
       }}
@@ -67,7 +82,7 @@ function PremiumCard({
           width: 180,
           height: 180,
           borderRadius: 999,
-          backgroundColor: "rgba(16,185,129,0.05)",
+          backgroundColor: "rgba(5,150,105,0.06)",
         }}
       />
 
@@ -80,7 +95,7 @@ function PremiumCard({
           width: 180,
           height: 180,
           borderRadius: 999,
-          backgroundColor: "rgba(34,211,238,0.03)",
+          backgroundColor: "rgba(59,130,246,0.05)",
         }}
       />
 
@@ -92,7 +107,7 @@ function PremiumCard({
           right: 0,
           top: 0,
           height: 1,
-          backgroundColor: "rgba(255,255,255,0.08)",
+          backgroundColor: "rgba(255,255,255,0.95)",
         }}
       />
 
@@ -106,7 +121,7 @@ function Divider() {
     <View
       style={{
         height: 1,
-        backgroundColor: "rgba(255,255,255,0.08)",
+        backgroundColor: L.border,
         marginLeft: 74,
       }}
     />
@@ -128,9 +143,9 @@ function Row({
   badge?: string;
   danger?: boolean;
 }) {
-  const iconBg = danger ? "rgba(201,74,74,0.10)" : UI.emeraldSoft;
-  const iconBorder = danger ? "rgba(201,74,74,0.22)" : UI.emeraldBorder;
-  const iconColor = danger ? UI.danger : UI.emerald;
+  const iconBg = danger ? L.dangerSoft : L.emeraldSoft;
+  const iconBorder = danger ? L.dangerBorder : L.emeraldBorder;
+  const iconColor = danger ? L.danger : L.emerald;
 
   return (
     <Pressable
@@ -164,7 +179,7 @@ function Row({
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text
           style={{
-            color: danger ? UI.danger : UI.text,
+            color: danger ? L.danger : L.text,
             fontWeight: "900",
             fontSize: 15,
           }}
@@ -176,7 +191,7 @@ function Row({
         {subtitle ? (
           <Text
             style={{
-              color: UI.muted,
+              color: L.muted,
               fontWeight: "800",
               fontSize: 12,
               marginTop: 4,
@@ -197,13 +212,13 @@ function Row({
               paddingVertical: 5,
               borderRadius: 999,
               borderWidth: 1,
-              borderColor: danger ? "rgba(201,74,74,0.18)" : "rgba(255,255,255,0.10)",
-              backgroundColor: danger ? "rgba(201,74,74,0.10)" : "rgba(255,255,255,0.05)",
+              borderColor: danger ? L.dangerBorder : L.border,
+              backgroundColor: danger ? L.dangerSoft : L.softCard,
             }}
           >
             <Text
               style={{
-                color: danger ? UI.danger : UI.text,
+                color: danger ? L.danger : L.text,
                 fontWeight: "900",
                 fontSize: 10,
                 letterSpacing: 0.4,
@@ -214,7 +229,7 @@ function Row({
           </View>
         ) : null}
 
-        <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.55)" />
+        <Ionicons name="chevron-forward" size={18} color={L.faint} />
       </View>
     </Pressable>
   );
@@ -230,7 +245,6 @@ export default function AccountPrivacyScreen() {
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   const goBack = useCallback(() => {
@@ -245,7 +259,6 @@ export default function AccountPrivacyScreen() {
     if (deleting) return;
     setConfirmOpen(false);
     setDeleteConfirmation("");
-    setShowPassword(false);
   }, [deleting]);
 
   const onDeleteAccount = useCallback(() => {
@@ -259,7 +272,6 @@ export default function AccountPrivacyScreen() {
           style: "destructive",
           onPress: () => {
             setDeleteConfirmation("");
-            setShowPassword(false);
             setConfirmOpen(true);
           },
         },
@@ -285,9 +297,7 @@ export default function AccountPrivacyScreen() {
     try {
       const { data, error } = await supabase.rpc("disable_my_account");
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
       const payload = data as any;
 
@@ -322,9 +332,7 @@ export default function AccountPrivacyScreen() {
         ]
       );
     } catch (err: any) {
-      const msg =
-        err?.message || "Imeshindikana kuzima account kwa sasa.";
-
+      const msg = err?.message || "Imeshindikana kuzima account kwa sasa.";
       console.log("disable-account client error:", msg, err);
       Alert.alert("Delete failed", msg);
     } finally {
@@ -334,356 +342,350 @@ export default function AccountPrivacyScreen() {
 
   return (
     <Screen scroll>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginTop: 2 }}>
-        <Pressable
-          onPress={goBack}
-          style={({ pressed }) => [
-            {
-              width: 42,
-              height: 42,
-              borderRadius: 16,
-              alignItems: "center",
-              justifyContent: "center",
-              borderWidth: 1,
-              borderColor: "rgba(255,255,255,0.10)",
-              backgroundColor: "rgba(255,255,255,0.04)",
-              opacity: pressed ? 0.9 : 1,
-            },
-          ]}
-        >
-          <Ionicons name="chevron-back" size={20} color={UI.text} />
-        </Pressable>
-
-        <View style={{ flex: 1 }}>
-          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 22 }}>
-            Account & Privacy
-          </Text>
-          <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 4 }}>
-            {orgName} • {role} • {store}
-          </Text>
-        </View>
-      </View>
-
-      <View style={{ marginTop: 14 }}>
-        <PremiumCard
-          style={{
-            borderColor: "rgba(16,185,129,0.22)",
-          }}
-        >
-          <View style={{ padding: 16, gap: 14 }}>
-            <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
-              <View
-                style={{
-                  width: 54,
-                  height: 54,
-                  borderRadius: 18,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  backgroundColor: UI.emeraldSoft,
-                  borderWidth: 1,
-                  borderColor: UI.emeraldBorder,
-                }}
-              >
-                <Ionicons name="shield-checkmark-outline" size={24} color={UI.emerald} />
-              </View>
-
-              <View style={{ flex: 1 }}>
-                <Text
-                  style={{
-                    color: UI.text,
-                    fontWeight: "900",
-                    fontSize: 20,
-                    lineHeight: 24,
-                  }}
-                >
-                  Privacy & Account Safety
-                </Text>
-
-                <Text
-                  style={{
-                    color: UI.muted,
-                    fontWeight: "800",
-                    marginTop: 8,
-                    lineHeight: 20,
-                  }}
-                >
-                  Hapa ndipo tunaweka controls nyeti za account, usalama wa taarifa, na
-                  Danger Zone kwa hatua za mwisho za account.
-                </Text>
-              </View>
-            </View>
-          </View>
-        </PremiumCard>
-      </View>
-
-      <SectionTitle label="Privacy" />
-      <PremiumCard>
-        <View style={{ padding: 16 }}>
-          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
-            Current position
-          </Text>
-
-          <Text
-            style={{
-              color: UI.muted,
-              fontWeight: "800",
-              marginTop: 8,
-              lineHeight: 20,
-            }}
-          >
-            Kwa sasa app ina eneo maalum la Account & Privacy ili mtumiaji ajue wazi mahali
-            pa controls nyeti. Hii ni hatua nzuri kabla ya kupeleka app kwa watu.
-          </Text>
-
-          <Text
-            style={{
-              color: UI.muted,
-              fontWeight: "800",
-              marginTop: 10,
-              lineHeight: 20,
-            }}
-          >
-            Delete Account sasa ipo na uthibitisho wa mwisho wa manual confirmation
-            kabla ya action kufanyika.
-          </Text>
-        </View>
-      </PremiumCard>
-
-      <SectionTitle label="Danger Zone" />
-      <PremiumCard
-        style={{
-          borderColor: "rgba(201,74,74,0.18)",
-        }}
-      >
-        <Row
-          icon="warning-outline"
-          title="Delete Account"
-          subtitle="Disable this account after final confirmation"
-          badge="DANGER"
-          danger
-          onPress={onDeleteAccount}
-        />
-
-        <Divider />
-
-        <View style={{ padding: 16, paddingTop: 14 }}>
-          <Text style={{ color: UI.danger, fontWeight: "900", fontSize: 13 }}>
-            Warning
-          </Text>
-
-          <Text
-            style={{
-              color: UI.muted,
-              fontWeight: "800",
-              marginTop: 8,
-              lineHeight: 20,
-            }}
-          >
-            Hili eneo ni la mwisho kabisa. Ukithibitisha kwa kuandika DELETE, account
-            itazimwa mara moja na action hii haiwezi kurudishwa nyuma.
-          </Text>
-        </View>
-      </PremiumCard>
-
-      <View style={{ height: 28 }} />
-
-      <Modal
-        visible={confirmOpen}
-        transparent
-        animationType="fade"
-        statusBarTranslucent
-        onRequestClose={closeDeleteModal}
-      >
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={0}
-        >
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: "rgba(0,0,0,0.78)",
-              padding: 16,
-              justifyContent: "center",
-            }}
-          >
-            <Pressable
-              onPress={closeDeleteModal}
-              style={{
-                position: "absolute",
-                top: 0,
-                right: 0,
-                bottom: 0,
-                left: 0,
-              }}
-            />
-
-            <View
-              style={{
-                borderRadius: 24,
+      <View style={{ flex: 1, backgroundColor: L.bg }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginTop: 2 }}>
+          <Pressable
+            onPress={goBack}
+            style={({ pressed }) => [
+              {
+                width: 42,
+                height: 42,
+                borderRadius: 16,
+                alignItems: "center",
+                justifyContent: "center",
                 borderWidth: 1,
-                borderColor: "rgba(201,74,74,0.20)",
-                backgroundColor: "rgba(15,18,24,0.98)",
-                overflow: "hidden",
-              }}
-            >
-              <View
-                style={{
-                  paddingHorizontal: 16,
-                  paddingTop: 16,
-                  paddingBottom: 14,
-                  borderBottomWidth: 1,
-                  borderBottomColor: "rgba(255,255,255,0.08)",
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                }}
-              >
-                <Text style={{ color: UI.danger, fontWeight: "900", fontSize: 20 }}>
-                  Confirm Delete
-                </Text>
+                borderColor: L.border,
+                backgroundColor: L.card,
+                opacity: pressed ? 0.9 : 1,
+              },
+            ]}
+          >
+            <Ionicons name="chevron-back" size={20} color={L.text} />
+          </Pressable>
 
-                <Pressable
-                  onPress={closeDeleteModal}
-                  disabled={deleting}
-                  style={({ pressed }) => ({
-                    width: 42,
-                    height: 42,
-                    borderRadius: 999,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderWidth: 1,
-                    borderColor: "rgba(255,255,255,0.10)",
-                    backgroundColor: pressed ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.06)",
-                    opacity: deleting ? 0.5 : 1,
-                  })}
-                >
-                  <Ionicons name="close" size={20} color={UI.text} />
-                </Pressable>
-              </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: L.text, fontWeight: "900", fontSize: 22 }}>
+              Account & Privacy
+            </Text>
+            <Text style={{ color: L.muted, fontWeight: "800", marginTop: 4 }}>
+              {orgName} • {role} • {store}
+            </Text>
+          </View>
+        </View>
 
-              <View style={{ padding: 16 }}>
-                <Text
-                  style={{
-                    color: UI.text,
-                    fontWeight: "900",
-                    fontSize: 16,
-                    lineHeight: 22,
-                  }}
-                >
-                  Andika DELETE kuthibitisha
-                </Text>
-
-                <Text
-                  style={{
-                    color: UI.muted,
-                    fontWeight: "800",
-                    marginTop: 8,
-                    lineHeight: 20,
-                  }}
-                >
-                  Hii ndiyo hatua ya mwisho. Ukiandika DELETE, account yako
-                  itazimwa na hutoweza kuingia tena.
-                </Text>
-
+        <View style={{ marginTop: 14 }}>
+          <PremiumCard style={{ borderColor: L.emeraldBorder }}>
+            <View style={{ padding: 16, gap: 14 }}>
+              <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
                 <View
                   style={{
-                    marginTop: 14,
-                    borderWidth: 1,
-                    borderColor: "rgba(255,255,255,0.10)",
+                    width: 54,
+                    height: 54,
                     borderRadius: 18,
-                    backgroundColor: "rgba(255,255,255,0.05)",
-                    flexDirection: "row",
                     alignItems: "center",
-                    paddingHorizontal: 12,
+                    justifyContent: "center",
+                    backgroundColor: L.emeraldSoft,
+                    borderWidth: 1,
+                    borderColor: L.emeraldBorder,
                   }}
                 >
-                  <TextInput
-                    value={deleteConfirmation}
-                    onChangeText={(v) => setDeleteConfirmation(String(v ?? "").toUpperCase())}
-                    placeholder="Andika DELETE"
-                    placeholderTextColor="rgba(255,255,255,0.35)"
-                    secureTextEntry={false}
-                    editable={!deleting}
-                    autoCapitalize="characters"
-                    autoCorrect={false}
-                    style={{
-                      flex: 1,
-                      color: UI.text,
-                      fontWeight: "800",
-                      paddingVertical: 14,
-                    }}
-                  />
-
-                  <View style={{ width: 20, marginLeft: 8 }} />
+                  <Ionicons name="shield-checkmark-outline" size={24} color={L.emerald} />
                 </View>
 
-                <Text
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={{
+                      color: L.text,
+                      fontWeight: "900",
+                      fontSize: 20,
+                      lineHeight: 24,
+                    }}
+                  >
+                    Privacy & Account Safety
+                  </Text>
+
+                  <Text
+                    style={{
+                      color: L.muted,
+                      fontWeight: "800",
+                      marginTop: 8,
+                      lineHeight: 20,
+                    }}
+                  >
+                    Hapa ndipo tunaweka controls nyeti za account, usalama wa taarifa, na
+                    Danger Zone kwa hatua za mwisho za account.
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </PremiumCard>
+        </View>
+
+        <SectionTitle label="Privacy" />
+        <PremiumCard>
+          <View style={{ padding: 16 }}>
+            <Text style={{ color: L.text, fontWeight: "900", fontSize: 15 }}>
+              Current position
+            </Text>
+
+            <Text
+              style={{
+                color: L.muted,
+                fontWeight: "800",
+                marginTop: 8,
+                lineHeight: 20,
+              }}
+            >
+              Kwa sasa app ina eneo maalum la Account & Privacy ili mtumiaji ajue wazi mahali
+              pa controls nyeti. Hii ni hatua nzuri kabla ya kupeleka app kwa watu.
+            </Text>
+
+            <Text
+              style={{
+                color: L.muted,
+                fontWeight: "800",
+                marginTop: 10,
+                lineHeight: 20,
+              }}
+            >
+              Delete Account sasa ipo na uthibitisho wa mwisho wa manual confirmation
+              kabla ya action kufanyika.
+            </Text>
+          </View>
+        </PremiumCard>
+
+        <SectionTitle label="Danger Zone" />
+        <PremiumCard style={{ borderColor: L.dangerBorder }}>
+          <Row
+            icon="warning-outline"
+            title="Delete Account"
+            subtitle="Disable this account after final confirmation"
+            badge="DANGER"
+            danger
+            onPress={onDeleteAccount}
+          />
+
+          <Divider />
+
+          <View style={{ padding: 16, paddingTop: 14 }}>
+            <Text style={{ color: L.danger, fontWeight: "900", fontSize: 13 }}>
+              Warning
+            </Text>
+
+            <Text
+              style={{
+                color: L.muted,
+                fontWeight: "800",
+                marginTop: 8,
+                lineHeight: 20,
+              }}
+            >
+              Hili eneo ni la mwisho kabisa. Ukithibitisha kwa kuandika DELETE, account
+              itazimwa mara moja na action hii haiwezi kurudishwa nyuma.
+            </Text>
+          </View>
+        </PremiumCard>
+
+        <View style={{ height: 28 }} />
+
+        <Modal
+          visible={confirmOpen}
+          transparent
+          animationType="fade"
+          statusBarTranslucent
+          onRequestClose={closeDeleteModal}
+        >
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            keyboardVerticalOffset={0}
+          >
+            <View
+              style={{
+                flex: 1,
+                backgroundColor: "rgba(15,23,42,0.40)",
+                padding: 16,
+                justifyContent: "center",
+              }}
+            >
+              <Pressable
+                onPress={closeDeleteModal}
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  right: 0,
+                  bottom: 0,
+                  left: 0,
+                }}
+              />
+
+              <View
+                style={{
+                  borderRadius: 24,
+                  borderWidth: 1,
+                  borderColor: L.dangerBorder,
+                  backgroundColor: L.card,
+                  overflow: "hidden",
+                }}
+              >
+                <View
                   style={{
-                    color: UI.danger,
-                    fontWeight: "800",
-                    marginTop: 10,
-                    lineHeight: 19,
-                    fontSize: 12,
+                    paddingHorizontal: 16,
+                    paddingTop: 16,
+                    paddingBottom: 14,
+                    borderBottomWidth: 1,
+                    borderBottomColor: L.border,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
                   }}
                 >
-                  Ukikosea neno DELETE, action haitafanyika.
-                </Text>
+                  <Text style={{ color: L.danger, fontWeight: "900", fontSize: 20 }}>
+                    Confirm Delete
+                  </Text>
 
-                <View style={{ flexDirection: "row", gap: 10, marginTop: 18 }}>
-                  <View style={{ flex: 1 }}>
-                    <Pressable
-                      onPress={closeDeleteModal}
-                      disabled={deleting}
-                      style={({ pressed }) => ({
+                  <Pressable
+                    onPress={closeDeleteModal}
+                    disabled={deleting}
+                    style={({ pressed }) => ({
+                      width: 42,
+                      height: 42,
+                      borderRadius: 999,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderWidth: 1,
+                      borderColor: L.border,
+                      backgroundColor: pressed ? "#EEF2F7" : L.softCard,
+                      opacity: deleting ? 0.5 : 1,
+                    })}
+                  >
+                    <Ionicons name="close" size={20} color={L.text} />
+                  </Pressable>
+                </View>
+
+                <View style={{ padding: 16 }}>
+                  <Text
+                    style={{
+                      color: L.text,
+                      fontWeight: "900",
+                      fontSize: 16,
+                      lineHeight: 22,
+                    }}
+                  >
+                    Andika DELETE kuthibitisha
+                  </Text>
+
+                  <Text
+                    style={{
+                      color: L.muted,
+                      fontWeight: "800",
+                      marginTop: 8,
+                      lineHeight: 20,
+                    }}
+                  >
+                    Hii ndiyo hatua ya mwisho. Ukiandika DELETE, account yako
+                    itazimwa na hutoweza kuingia tena.
+                  </Text>
+
+                  <View
+                    style={{
+                      marginTop: 14,
+                      borderWidth: 1,
+                      borderColor: L.border,
+                      borderRadius: 18,
+                      backgroundColor: L.softCard,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      paddingHorizontal: 12,
+                    }}
+                  >
+                    <TextInput
+                      value={deleteConfirmation}
+                      onChangeText={(v) => setDeleteConfirmation(String(v ?? "").toUpperCase())}
+                      placeholder="Andika DELETE"
+                      placeholderTextColor={L.faint}
+                      secureTextEntry={false}
+                      editable={!deleting}
+                      autoCapitalize="characters"
+                      autoCorrect={false}
+                      style={{
+                        flex: 1,
+                        color: L.text,
+                        fontWeight: "800",
                         paddingVertical: 14,
-                        borderRadius: 999,
-                        borderWidth: 1,
-                        borderColor: "rgba(255,255,255,0.10)",
-                        backgroundColor: "rgba(255,255,255,0.05)",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        opacity: deleting ? 0.5 : pressed ? 0.92 : 1,
-                      })}
-                    >
-                      <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
-                        Cancel
-                      </Text>
-                    </Pressable>
+                      }}
+                    />
+
+                    <View style={{ width: 20, marginLeft: 8 }} />
                   </View>
 
-                  <View style={{ flex: 1 }}>
-                    <Pressable
-                      onPress={() => {
-                        void handleConfirmDelete();
-                      }}
-                      disabled={deleting}
-                      style={({ pressed }) => ({
-                        paddingVertical: 14,
-                        borderRadius: 999,
-                        borderWidth: 1,
-                        borderColor: "rgba(201,74,74,0.28)",
-                        backgroundColor: "rgba(201,74,74,0.16)",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        opacity: deleting ? 0.75 : pressed ? 0.92 : 1,
-                      })}
-                    >
-                      {deleting ? (
-                        <ActivityIndicator color={UI.text} />
-                      ) : (
-                        <Text style={{ color: UI.danger, fontWeight: "900", fontSize: 15 }}>
-                          Delete Now
+                  <Text
+                    style={{
+                      color: L.danger,
+                      fontWeight: "800",
+                      marginTop: 10,
+                      lineHeight: 19,
+                      fontSize: 12,
+                    }}
+                  >
+                    Ukikosea neno DELETE, action haitafanyika.
+                  </Text>
+
+                  <View style={{ flexDirection: "row", gap: 10, marginTop: 18 }}>
+                    <View style={{ flex: 1 }}>
+                      <Pressable
+                        onPress={closeDeleteModal}
+                        disabled={deleting}
+                        style={({ pressed }) => ({
+                          paddingVertical: 14,
+                          borderRadius: 999,
+                          borderWidth: 1,
+                          borderColor: L.border,
+                          backgroundColor: pressed ? "#EEF2F7" : L.softCard,
+                          alignItems: "center",
+                          justifyContent: "center",
+                          opacity: deleting ? 0.5 : pressed ? 0.92 : 1,
+                        })}
+                      >
+                        <Text style={{ color: L.text, fontWeight: "900", fontSize: 15 }}>
+                          Cancel
                         </Text>
-                      )}
-                    </Pressable>
+                      </Pressable>
+                    </View>
+
+                    <View style={{ flex: 1 }}>
+                      <Pressable
+                        onPress={() => {
+                          void handleConfirmDelete();
+                        }}
+                        disabled={deleting}
+                        style={({ pressed }) => ({
+                          paddingVertical: 14,
+                          borderRadius: 999,
+                          borderWidth: 1,
+                          borderColor: L.dangerBorder,
+                          backgroundColor: L.dangerSoft,
+                          alignItems: "center",
+                          justifyContent: "center",
+                          opacity: deleting ? 0.75 : pressed ? 0.92 : 1,
+                        })}
+                      >
+                        {deleting ? (
+                          <ActivityIndicator color={L.danger} />
+                        ) : (
+                          <Text style={{ color: L.danger, fontWeight: "900", fontSize: 15 }}>
+                            Delete Now
+                          </Text>
+                        )}
+                      </Pressable>
+                    </View>
                   </View>
                 </View>
               </View>
             </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
+          </KeyboardAvoidingView>
+        </Modal>
+      </View>
     </Screen>
   );
 }

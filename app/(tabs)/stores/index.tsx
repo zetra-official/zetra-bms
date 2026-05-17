@@ -52,10 +52,107 @@ type StoreProductPreviewRow = {
   qty: number;
 };
 
-function normalizeStoreType(v: any): "STANDARD" | "CAPITAL_RECOVERY" {
+type StoreType = "STANDARD" | "CAPITAL_RECOVERY" | "FIELD_PROCUREMENT" | "PRECISION_RETAIL";
+
+function normalizeStoreType(v: any): StoreType {
   const t = String(v ?? "STANDARD").trim().toUpperCase();
-  return t === "CAPITAL_RECOVERY" ? "CAPITAL_RECOVERY" : "STANDARD";
+
+  if (t === "CAPITAL_RECOVERY") return "CAPITAL_RECOVERY";
+  if (t === "FIELD_PROCUREMENT") return "FIELD_PROCUREMENT";
+  if (t === "PRECISION_RETAIL") return "PRECISION_RETAIL";
+
+  return "STANDARD";
 }
+
+function storeTypeTitle(type: StoreType) {
+  if (type === "CAPITAL_RECOVERY") return "CAPITAL RECOVERY STORE";
+  if (type === "FIELD_PROCUREMENT") return "FIELD PROCUREMENT STORE";
+  if (type === "PRECISION_RETAIL") return "PRECISION RETAIL STORE";
+  return "STANDARD STORE";
+}
+
+function storeTypeBadge(type: StoreType) {
+  if (type === "CAPITAL_RECOVERY") return "CAPITAL";
+  if (type === "FIELD_PROCUREMENT") return "FIELD";
+  if (type === "PRECISION_RETAIL") return "PRECISION";
+  return "STANDARD";
+}
+
+function storeTypeVisual(type: StoreType, isActive: boolean, isAllowed: boolean) {
+  if (!isAllowed) {
+    return {
+      accent: "#64748B",
+      border: "rgba(100,116,139,0.35)",
+      bg: "#F8FAFC",
+      activeBg: "#E2E8F0",
+      badgeBg: "rgba(100,116,139,0.12)",
+      badgeBorder: "rgba(100,116,139,0.28)",
+      shadow: "rgba(15,23,42,0.10)",
+      text: "#0F172A",
+      muted: "#64748B",
+      faint: "#94A3B8",
+    };
+  }
+
+  if (type === "CAPITAL_RECOVERY") {
+    return {
+      accent: "#7C3AED",
+      border: isActive ? "rgba(124,58,237,0.92)" : "rgba(124,58,237,0.28)",
+      bg: isActive ? "#F1E9FF" : "#FBF8FF",
+      activeBg: "#EDE2FF",
+      badgeBg: "rgba(124,58,237,0.13)",
+      badgeBorder: "rgba(124,58,237,0.34)",
+      shadow: "rgba(124,58,237,0.22)",
+      text: "#111827",
+      muted: "#4B5563",
+      faint: "#6B7280",
+    };
+  }
+
+  if (type === "FIELD_PROCUREMENT") {
+    return {
+      accent: "#B45309",
+      border: isActive ? "rgba(180,83,9,0.92)" : "rgba(217,119,6,0.30)",
+      bg: isActive ? "#FFF1D6" : "#FFFCF5",
+      activeBg: "#FFE8B6",
+      badgeBg: "rgba(217,119,6,0.14)",
+      badgeBorder: "rgba(217,119,6,0.34)",
+      shadow: "rgba(217,119,6,0.20)",
+      text: "#111827",
+      muted: "#4B5563",
+      faint: "#6B7280",
+    };
+  }
+
+  if (type === "PRECISION_RETAIL") {
+    return {
+      accent: "#047857",
+      border: isActive ? "rgba(4,120,87,0.95)" : "rgba(5,150,105,0.30)",
+      bg: isActive ? "#DDF8EE" : "#F6FFFB",
+      activeBg: "#CFF5E8",
+      badgeBg: "rgba(5,150,105,0.14)",
+      badgeBorder: "rgba(5,150,105,0.34)",
+      shadow: "rgba(5,150,105,0.24)",
+      text: "#0F172A",
+      muted: "#475569",
+      faint: "#64748B",
+    };
+  }
+
+  return {
+    accent: "#1D4ED8",
+    border: isActive ? "rgba(29,78,216,0.90)" : "rgba(37,99,235,0.22)",
+    bg: isActive ? "#E6F0FF" : "#FFFFFF",
+    activeBg: "#DCEAFF",
+    badgeBg: "rgba(37,99,235,0.12)",
+    badgeBorder: "rgba(37,99,235,0.30)",
+    shadow: "rgba(37,99,235,0.18)",
+    text: "#0F172A",
+    muted: "#475569",
+    faint: "#64748B",
+  };
+}
+
 
 function HeaderActionButton({
   title,
@@ -215,7 +312,9 @@ export default function StoresTabScreen() {
   const canManage = (["owner", "admin"] as const).includes(
     (activeRole ?? "staff") as any
   );
-
+const activeType = normalizeStoreType(activeStoreType);
+const isActivePremiumType =
+  activeType === "CAPITAL_RECOVERY" || activeType === "FIELD_PROCUREMENT";
   const { width } = useWindowDimensions();
   const isWeb = Platform.OS === "web";
   const isDesktopWeb = isWeb && width >= 1100;
@@ -224,6 +323,7 @@ export default function StoresTabScreen() {
 
   // ✅ SAFE spacing (prevents: Cannot read property 'page' of undefined)
   const PAGE = (theme as any)?.spacing?.page ?? 16;
+const MOBILE_SIDE_PAD = 12;
 
   // ✅ SAFE theme colors (prevents TS errors + runtime crashes if keys missing)
   const C: any = (theme as any)?.colors ?? {};
@@ -429,7 +529,6 @@ export default function StoresTabScreen() {
 
         if (e) throw e;
 
-        await refresh();
         await loadCreditFlags();
       } catch (err1: any) {
         try {
@@ -529,7 +628,6 @@ export default function StoresTabScreen() {
 
         if (e) throw e;
 
-        await refresh();
         await loadExpenseFlags();
       } catch (err1: any) {
         try {
@@ -577,10 +675,10 @@ export default function StoresTabScreen() {
 
     setMovementFlagLoading(true);
 
-    const apply = (rows: any[], key: "staff_can_manage_movement" | "allow_staff_movement") => {
+    const apply = (rows: any[]) => {
       const map: Record<string, boolean> = {};
       for (const r of rows ?? []) {
-        map[String(r.id)] = !!r?.[key];
+        map[String(r.id)] = !!r?.staff_can_manage_movement;
       }
       setMovementFlagByStoreId(map);
     };
@@ -592,19 +690,9 @@ export default function StoresTabScreen() {
         .in("id", ids);
 
       if (e) throw e;
-      apply(data ?? [], "staff_can_manage_movement");
+      apply(data ?? []);
     } catch {
-      try {
-        const { data: d2, error: e2 } = await supabase
-          .from("stores")
-          .select("id, allow_staff_movement")
-          .in("id", ids);
-
-        if (e2) throw e2;
-        apply(d2 ?? [], "allow_staff_movement");
-      } catch {
-        // keep last known
-      }
+      // keep last known
     } finally {
       setMovementFlagLoading(false);
     }
@@ -632,26 +720,13 @@ export default function StoresTabScreen() {
 
         if (e) throw e;
 
-        await refresh();
         await loadMovementFlags();
       } catch (err1: any) {
-        try {
-          const { error: e2 } = await supabase
-            .from("stores")
-            .update({ allow_staff_movement: next } as any)
-            .eq("id", storeId);
-
-          if (e2) throw e2;
-
-          await refresh();
-          await loadMovementFlags();
-        } catch (err2: any) {
-          setMovementFlagByStoreId((p) => ({ ...p, [storeId]: !next }));
-          Alert.alert(
-            "Failed",
-            err2?.message ?? err1?.message ?? "Imeshindikana kubadili movement setting."
-          );
-        }
+        setMovementFlagByStoreId((p) => ({ ...p, [storeId]: !next }));
+        Alert.alert(
+          "Failed",
+          err1?.message ?? "Imeshindikana kubadili movement setting."
+        );
       } finally {
         setMovementFlagSaving((p) => ({ ...p, [storeId]: false }));
       }
@@ -768,72 +843,48 @@ export default function StoresTabScreen() {
     setCloseConfirmText("");
   }, [closeSaving]);
 
-  const loadStoreProductsPreview = useCallback(async (storeId: string) => {
-    const sid = String(storeId ?? "").trim();
-    if (!sid) return;
+const loadStoreProductsPreview = useCallback(async (storeId: string) => {
+  const sid = String(storeId ?? "").trim();
+  if (!sid) return;
 
-    setProductsLoadingByStoreId((prev) => ({ ...prev, [sid]: true }));
+  setProductsLoadingByStoreId((prev) => ({ ...prev, [sid]: true }));
 
-    try {
-      const { data, error } = await supabase.rpc("get_store_inventory_v2", {
-        p_store_id: sid,
-      });
+  try {
+    const { data, error } = await supabase.rpc("get_store_inventory_v2", {
+      p_store_id: sid,
+    });
 
-      if (error) throw error;
+    if (error) throw error;
 
-      const rows = Array.isArray(data) ? data : [];
+    const rows = Array.isArray(data) ? data : [];
 
-      const mapped: StoreProductPreviewRow[] = rows
-        .map((r: any, index: number) => {
-          const rawId =
-            r?.product_id ??
-            r?.id ??
-            `${sid}-${index}`;
+    const mapped: StoreProductPreviewRow[] = rows
+      .map((r: any, index: number) => {
+        const qty = Number(r?.qty ?? r?.quantity ?? r?.current_qty ?? 0);
 
-          const rawName =
-            r?.product_name ??
-            r?.name ??
-            r?.item_name ??
-            "Unnamed Product";
+        return {
+          id: String(r?.product_id ?? r?.id ?? `${sid}-${index}`),
+          name: String(r?.product_name ?? r?.name ?? "Unnamed Product"),
+          sku: r?.sku ? String(r.sku) : null,
+          qty,
+        };
+      })
+      .filter((r) => !!r.id && !!r.name && Number(r.qty) > 0)
+      .sort((a, b) => a.name.localeCompare(b.name));
 
-          const rawSku =
-            r?.sku ??
-            r?.product_sku ??
-            r?.item_sku ??
-            null;
-
-          const rawQty =
-            r?.quantity ??
-            r?.qty ??
-            r?.on_hand_qty ??
-            r?.stock_qty ??
-            r?.current_stock ??
-            r?.current_qty ??
-            0;
-
-          return {
-            id: String(rawId),
-            name: String(rawName ?? "Unnamed Product"),
-            sku: rawSku ? String(rawSku) : null,
-            qty: Number(rawQty ?? 0),
-          };
-        })
-        .filter((r) => !!r.name)
-        .sort((a, b) => a.name.localeCompare(b.name));
-
-      setProductsByStoreId((prev) => ({
-        ...prev,
-        [sid]: mapped,
-      }));
-    } catch {
-      setProductsByStoreId((prev) => ({
-        ...prev,
-        [sid]: [],
-      }));
-    } finally {
-      setProductsLoadingByStoreId((prev) => ({ ...prev, [sid]: false }));
-    }
-  }, []);
+    setProductsByStoreId((prev) => ({
+      ...prev,
+      [sid]: mapped,
+    }));
+  } catch {
+    setProductsByStoreId((prev) => ({
+      ...prev,
+      [sid]: [],
+    }));
+  } finally {
+    setProductsLoadingByStoreId((prev) => ({ ...prev, [sid]: false }));
+  }
+}, []);
 
   const toggleStoreActions = useCallback((storeId: string) => {
     const sid = String(storeId ?? "").trim();
@@ -843,10 +894,10 @@ export default function StoresTabScreen() {
 
     setActionsOpenByStoreId(nextOpen ? { [sid]: true } : {});
 
-    if (nextOpen && !productsByStoreId[sid] && !productsLoadingByStoreId[sid]) {
+    if (nextOpen && !productsLoadingByStoreId[sid]) {
       void loadStoreProductsPreview(sid);
     }
-  }, [actionsOpenByStoreId, productsByStoreId, productsLoadingByStoreId, loadStoreProductsPreview]);
+  }, [actionsOpenByStoreId, productsLoadingByStoreId, loadStoreProductsPreview]);
 
   const saveRenameStore = useCallback(async () => {
     if (!canManage) {
@@ -1158,7 +1209,7 @@ export default function StoresTabScreen() {
                   textColor={TEXT}
                   mutedColor={MUTED}
                   borderColor="rgba(255,255,255,0.12)"
-                  backgroundColor="#161C27"
+                  backgroundColor={theme.colors.primarySoft}
                   accentColor={EMERALD}
                   isWebOnlyPolish={isWeb}
                 />
@@ -1185,124 +1236,195 @@ export default function StoresTabScreen() {
             alignItems: "stretch",
           }}
         >
-          <Card
+        <View
+          style={{
+            gap: 12,
+            flex: isDesktopWeb ? 1.2 : undefined,
+            borderRadius: 28,
+            borderWidth: 1,
+            borderColor: "rgba(5,150,105,0.24)",
+            backgroundColor: "#F8FFFC",
+            paddingVertical: 22,
+            paddingHorizontal: 22,
+            shadowColor: "#059669",
+            shadowOpacity: 0.10,
+            shadowRadius: 16,
+            shadowOffset: { width: 0, height: 10 },
+            elevation: 4,
+          }}
+        >
+          <Text
             style={{
-              gap: 12,
-              flex: isDesktopWeb ? 1.2 : undefined,
-              minHeight: isDesktopWeb ? 220 : undefined,
+              color: "rgba(15,23,42,0.52)",
+              fontWeight: "900",
+              fontSize: 11,
+              letterSpacing: 1,
             }}
           >
-            <Text style={{ color: FAINT, fontWeight: "900", fontSize: 11, letterSpacing: 0.8 }}>
-              STORE WORKSPACE
-            </Text>
+            STORE WORKSPACE
+          </Text>
 
-            <Text style={{ color: MUTED, fontWeight: "800" }}>Organization</Text>
-            <Text style={{ fontSize: isDesktopWeb ? 24 : 20, fontWeight: "900", color: TEXT }}>
-              {activeOrgName ?? "—"}
-            </Text>
+          <Text style={{ color: "rgba(15,23,42,0.66)", fontWeight: "900", marginTop: 2 }}>
+            Organization
+          </Text>
+
+          <Text style={{ fontSize: 24, fontWeight: "900", color: "#0F172A" }}>
+            {activeOrgName ?? "—"}
+          </Text>
+
+          <View style={{ flexDirection: "row", gap: 12, marginTop: 4 }}>
+            <View
+              style={{
+                flex: 1,
+                borderRadius: 18,
+                borderWidth: 1,
+                borderColor: "rgba(5,150,105,0.18)",
+                backgroundColor: "#ECFDF5",
+                padding: 12,
+              }}
+            >
+              <Text style={{ color: "rgba(15,23,42,0.56)", fontWeight: "900", fontSize: 12 }}>
+                Role
+              </Text>
+              <Text style={{ color: "#0F172A", fontWeight: "900", marginTop: 5 }}>
+                {activeRole ?? "—"}
+              </Text>
+            </View>
 
             <View
               style={{
-                flexDirection: isDesktopWeb ? "row" : "column",
-                gap: 14,
+                flex: 1,
+                borderRadius: 18,
+                borderWidth: 1,
+                borderColor: "rgba(37,99,235,0.16)",
+                backgroundColor: "#EFF6FF",
+                padding: 12,
               }}
             >
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: MUTED, fontWeight: "800" }}>Role</Text>
-                <Text style={{ fontWeight: "900", color: TEXT, marginTop: 4 }}>
-                  {activeRole ?? "—"}
-                </Text>
-              </View>
-
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: MUTED, fontWeight: "800" }}>Active Store</Text>
-                <Text style={{ fontWeight: "900", color: TEXT, marginTop: 4 }}>
-                  {activeStoreName ?? "—"}
-                </Text>
-              </View>
+              <Text style={{ color: "rgba(15,23,42,0.56)", fontWeight: "900", fontSize: 12 }}>
+                Active Store
+              </Text>
+              <Text style={{ color: "#0F172A", fontWeight: "900", marginTop: 5 }}>
+                {activeStoreName ?? "—"}
+              </Text>
             </View>
+          </View>
 
-            <Text style={{ color: MUTED, fontWeight: "800", lineHeight: 20 }}>
-              Chagua store sahihi kama active context kabla ya kufanya inventory, movement, au
-              marekebisho ya ruhusa za staff.
-            </Text>
-          </Card>
+          <Text style={{ color: "rgba(15,23,42,0.70)", fontWeight: "800", lineHeight: 20, marginTop: 6 }}>
+            Chagua store sahihi kama active context kabla ya kufanya inventory, movement, au ruhusa za staff.
+          </Text>
+        </View>
 
-          <Card
-            style={{
-              gap: 12,
-              flex: isDesktopWeb ? 0.9 : undefined,
-              minHeight: isDesktopWeb ? 220 : undefined,
-            }}
-          >
-            <Text style={{ color: FAINT, fontWeight: "900", fontSize: 11, letterSpacing: 0.8 }}>
-              QUICK ACTIONS
-            </Text>
+         <View
+  style={{
+    gap: 12,
+    flex: isDesktopWeb ? 0.9 : undefined,
+    minHeight: isDesktopWeb ? 220 : undefined,
+  }}
+>
+  <Text style={{ color: FAINT, fontWeight: "900", fontSize: 11, letterSpacing: 0.8 }}>
+    QUICK ACTIONS
+  </Text>
 
-            <Pressable
-              onPress={() => {
-                if (activeStoreType === "CAPITAL_RECOVERY") {
-                  Alert.alert(
-                    "Not Available",
-                    "Inventory haitumiki kwa Capital Recovery store."
-                  );
-                  return;
-                }
-                // @ts-ignore
-                router.push("/(tabs)/stores/inventory");
-              }}
-              style={({ pressed }) => ({
-                borderRadius: radiusXL,
-                borderWidth: 1,
-                borderColor: BORDER_SOFT,
-                backgroundColor: "#161C27",
-                paddingVertical: 14,
-                paddingHorizontal: 16,
-                opacity: activeStoreType === "CAPITAL_RECOVERY" ? 0.55 : pressed ? 0.92 : 1,
-              })}
-            >
-              <Text style={{ color: TEXT, fontWeight: "900", fontSize: 15 }}>Open Inventory</Text>
-              <Text style={{ color: MUTED, fontWeight: "800", marginTop: 4, fontSize: 12 }}>
-                {activeStoreType === "CAPITAL_RECOVERY"
-                  ? "Inventory imezimwa kwa Capital Recovery"
-                  : "Fungua inventory ya active store"}
-              </Text>
-            </Pressable>
+  <Pressable
+    onPress={() => {
+      if (isActivePremiumType) {
+        Alert.alert("Not Available", "Inventory haitumiki kwa Capital Recovery store.");
+        return;
+      }
+      // @ts-ignore
+      router.push("/(tabs)/stores/inventory");
+    }}
+    style={({ pressed }) => ({
+      borderRadius: 24,
+      borderWidth: 1,
+      borderColor: "rgba(37,99,235,0.55)",
+      backgroundColor: "#0B4FB3",
+      paddingVertical: 18,
+      paddingHorizontal: 18,
+      opacity: isActivePremiumType ? 0.55 : pressed ? 0.92 : 1,
+      shadowColor: "#0B4FB3",
+      shadowOpacity: 0.24,
+      shadowRadius: 14,
+      shadowOffset: { width: 0, height: 8 },
+      elevation: 4,
+    })}
+  >
+    <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 19 }}>
+      Open Inventory
+    </Text>
+    <Text style={{ color: "rgba(255,255,255,0.82)", fontWeight: "900", marginTop: 6, fontSize: 13, lineHeight: 19 }}>
+      {isActivePremiumType
+        ? "Inventory imezimwa kwa store type hii"
+        : "Fungua inventory ya active store"}
+    </Text>
+  </Pressable>
 
-            <Pressable
-              onPress={() => {
-                if (activeStoreType === "CAPITAL_RECOVERY") {
-                  Alert.alert(
-                    "Not Available",
-                    "Stock Movement haitumiki kwa Capital Recovery store."
-                  );
-                  return;
-                }
-                openMovement();
-              }}
-              style={({ pressed }) => ({
-                borderRadius: radiusXL,
-                borderWidth: 1,
-                borderColor: BORDER_SOFT,
-                backgroundColor: "#161C27",
-                paddingVertical: 14,
-                paddingHorizontal: 16,
-                opacity: activeStoreType === "CAPITAL_RECOVERY" ? 0.55 : pressed ? 0.92 : 1,
-              })}
-            >
-              <Text style={{ color: TEXT, fontWeight: "900", fontSize: 15 }}>Stock Movement</Text>
-              <Text style={{ color: MUTED, fontWeight: "800", marginTop: 4, fontSize: 12 }}>
-                {activeStoreType === "CAPITAL_RECOVERY"
-                  ? "Movement imezimwa kwa Capital Recovery"
-                  : "Hamisha stock kutoka active store"}
-              </Text>
-            </Pressable>
+  <Pressable
+    onPress={() => {
+      if (isActivePremiumType) {
+        Alert.alert("Not Available", "Stock Movement haitumiki kwa Capital Recovery store.");
+        return;
+      }
+      openMovement();
+    }}
+    style={({ pressed }) => ({
+      borderRadius: 24,
+      borderWidth: 1,
+      borderColor: "rgba(124,58,237,0.55)",
+      backgroundColor: "#5B21B6",
+      paddingVertical: 18,
+      paddingHorizontal: 18,
+      opacity: isActivePremiumType ? 0.55 : pressed ? 0.92 : 1,
+      shadowColor: "#5B21B6",
+      shadowOpacity: 0.24,
+      shadowRadius: 14,
+      shadowOffset: { width: 0, height: 8 },
+      elevation: 4,
+    })}
+  >
+    <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 19 }}>
+      Stock Movement
+    </Text>
+    <Text style={{ color: "rgba(255,255,255,0.82)", fontWeight: "900", marginTop: 6, fontSize: 13, lineHeight: 19 }}>
+      {isActivePremiumType
+        ? "Movement imezimwa kwa store type hii"
+        : "Hamisha stock kutoka active store"}
+    </Text>
+  </Pressable>
 
-            <Text style={{ color: MUTED, fontWeight: "800", lineHeight: 18 }}>
-              Stores zilizofungwa (LOCKED) zitaonekana hapa, lakini haziwezi kuwa ACTIVE mpaka
-              u-upgrade plan.
-            </Text>
-          </Card>
+  <Pressable
+    onPress={() => {
+      router.push("/stores/suppliers" as any);
+    }}
+    style={({ pressed }) => ({
+      borderRadius: 24,
+      borderWidth: 1,
+      borderColor: "rgba(5,150,105,0.60)",
+      backgroundColor: "#047857",
+      paddingVertical: 18,
+      paddingHorizontal: 18,
+      opacity: pressed ? 0.92 : 1,
+      shadowColor: "#047857",
+      shadowOpacity: 0.24,
+      shadowRadius: 14,
+      shadowOffset: { width: 0, height: 8 },
+      elevation: 4,
+    })}
+  >
+    <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 19 }}>
+      Supplier History
+    </Text>
+    <Text style={{ color: "rgba(255,255,255,0.82)", fontWeight: "900", marginTop: 6, fontSize: 13, lineHeight: 19 }}>
+      Angalia suppliers, mzigo waliouleta, invoice/ref na historia ya stock
+    </Text>
+  </Pressable>
+
+  <Text style={{ color: MUTED, fontWeight: "800", lineHeight: 18 }}>
+    Stores zilizofungwa (LOCKED) zitaonekana hapa, lakini haziwezi kuwa ACTIVE mpaka
+    u-upgrade plan.
+  </Text>
+</View>
         </View>
 
         <View style={{ gap: 4 }}>
@@ -1369,7 +1491,7 @@ export default function StoresTabScreen() {
               width: "100%",
               maxWidth: desktopMaxWidth,
               alignSelf: "center",
-              paddingHorizontal: PAGE,
+              paddingHorizontal: isDesktopWeb ? PAGE : MOBILE_SIDE_PAD,
               paddingTop: PAGE,
               paddingBottom: 6,
             }}
@@ -1384,11 +1506,10 @@ export default function StoresTabScreen() {
                 alignItems: "stretch",
               }
             : undefined
-        }
-        contentContainerStyle={{
-          paddingHorizontal: PAGE,
-          paddingBottom: 140,
-        }}
+        }contentContainerStyle={{
+  paddingHorizontal: isDesktopWeb ? PAGE : MOBILE_SIDE_PAD,
+  paddingBottom: 140,
+}}
         style={{
           width: "100%",
         }}
@@ -1397,11 +1518,16 @@ export default function StoresTabScreen() {
 const isActive = storeId === activeStoreId;
 const storeType = normalizeStoreType(item?.store_type);
 const isCapitalRecovery = storeType === "CAPITAL_RECOVERY";
+const isFieldProcurement = storeType === "FIELD_PROCUREMENT";
+const isPrecisionRetail = storeType === "PRECISION_RETAIL";
+
 
           // ✅ lock flags from v2 (default allowed if missing)
           const isAllowed =
             typeof item?.is_allowed === "boolean" ? item.is_allowed : true;
           const lockReason = (item?.lock_reason ?? "").toString();
+
+          const visual = storeTypeVisual(storeType, isActive, isAllowed);
 
           const mgr = mgrByStoreId?.[storeId];
           const managedBy = (mgr?.email ?? "").trim() || "UNASSIGNED";
@@ -1435,16 +1561,21 @@ const isCapitalRecovery = storeType === "CAPITAL_RECOVERY";
                 marginBottom: 10,
               }}
             >
-    <Pressable
+  <Pressable
                 onPress={() => pick(storeId, item.store_name, isAllowed, lockReason)}
                 style={({ pressed }) => ({
-                  borderWidth: 1,
-                  borderColor,
-                  borderRadius: 22,
-                  backgroundColor: "#0F141C",
+                  borderWidth: isActive ? 2.2 : 1.2,
+                  borderColor: isActive ? visual.border : visual.border,
+                  borderRadius: 24,
+                  backgroundColor: isActive ? visual.activeBg : visual.bg,
                   padding: isDesktopWeb ? 18 : 14,
                   opacity: pressed ? Math.max(0.9, opacity - 0.03) : opacity,
                   transform: pressed ? [{ scale: 0.996 }] : [{ scale: 1 }],
+                  shadowColor: visual.accent,
+                  shadowOpacity: isActive ? 0.22 : 0.11,
+                  shadowRadius: isActive ? 18 : 12,
+                  shadowOffset: { width: 0, height: isActive ? 10 : 7 },
+                  elevation: isActive ? 5 : 2,
                 })}
               >
                 <View style={{ gap: 8 }}>
@@ -1460,7 +1591,7 @@ const isCapitalRecovery = storeType === "CAPITAL_RECOVERY";
                       <Text
                         style={{
                           fontWeight: "900",
-                          color: TEXT,
+                          color: visual.text,
                           fontSize: isWeb ? 18 : 17,
                           letterSpacing: 0.2,
                         }}
@@ -1472,29 +1603,29 @@ const isCapitalRecovery = storeType === "CAPITAL_RECOVERY";
                       <Text
                         style={{
                           marginTop: 4,
-                          color: isCapitalRecovery ? EMERALD : MUTED,
+                          color: visual.accent,
                           fontWeight: "900",
                           fontSize: 11.5,
                           letterSpacing: 0.4,
                         }}
                         numberOfLines={1}
                       >
-                        {isCapitalRecovery ? "CAPITAL RECOVERY STORE" : "STANDARD STORE"}
+                        {storeTypeTitle(storeType)}
                       </Text>
 
                       <Text
                         style={{
                           marginTop: 5,
-                          color: MUTED,
-                          fontWeight: "800",
-                          fontSize: 11.5,
+                         color: visual.muted,
+fontWeight: "900",
+fontSize: 11.5,
                         }}
                         numberOfLines={1}
                       >
                         Managed by:{" "}
-                        <Text style={{ color: TEXT, fontWeight: "900" }}>
-                          {managedBy}
-                        </Text>
+                       <Text style={{ color: visual.text, fontWeight: "900" }}>
+  {managedBy}
+</Text>
                       </Text>
                     </View>
 
@@ -1522,7 +1653,7 @@ const isCapitalRecovery = storeType === "CAPITAL_RECOVERY";
                             borderRadius: radiusPill,
                             borderWidth: 1,
                             borderColor: BORDER_SOFT,
-                            backgroundColor: "rgba(255,255,255,0.06)",
+                            backgroundColor: "#F8FAFC",
                           }}
                         >
                           <Text style={{ color: MUTED, fontWeight: "900", fontSize: 11.5 }}>
@@ -1531,37 +1662,26 @@ const isCapitalRecovery = storeType === "CAPITAL_RECOVERY";
                         </View>
                       ) : null}
 
-                      {isCapitalRecovery ? (
-                        <View
-                          style={{
-                            paddingHorizontal: 10,
-                            paddingVertical: 6,
-                            borderRadius: radiusPill,
-                            borderWidth: 1,
-                            borderColor: "rgba(16,185,129,0.28)",
-                            backgroundColor: "rgba(16,185,129,0.12)",
-                          }}
-                        >
-                          <Text style={{ color: EMERALD, fontWeight: "900", fontSize: 11.5 }}>
-                            CAPITAL
-                          </Text>
-                        </View>
-                      ) : (
-                        <View
-                          style={{
-                            paddingHorizontal: 10,
-                            paddingVertical: 6,
-                            borderRadius: radiusPill,
-                            borderWidth: 1,
-                            borderColor: "rgba(255,255,255,0.16)",
-                            backgroundColor: "rgba(255,255,255,0.07)",
-                          }}
-                        >
-                          <Text style={{ color: TEXT, fontWeight: "900", fontSize: 11.5 }}>
-                            STANDARD
-                          </Text>
-                        </View>
-                      )}
+                     <View
+  style={{
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: radiusPill,
+    borderWidth: 1,
+    borderColor: visual.badgeBorder,
+    backgroundColor: visual.badgeBg,
+  }}
+>
+  <Text
+    style={{
+      color: visual.accent,
+      fontWeight: "900",
+      fontSize: 11.5,
+    }}
+  >
+    {storeTypeBadge(storeType)}
+  </Text>
+</View>
 
                       {!isAllowed ? (
                         <View
@@ -1593,9 +1713,9 @@ const isCapitalRecovery = storeType === "CAPITAL_RECOVERY";
                       Bonyeza kadi hii kuchagua store hii kama Active Store.
                     </Text>
                   ) : (
-                    <Text style={{ color: EMERALD, fontWeight: "800", fontSize: 12, lineHeight: 18 }}>
-                      Hii ndiyo Active Store ya sasa.
-                    </Text>
+                   <Text style={{ color: visual.accent, fontWeight: "900", fontSize: 13, lineHeight: 20 }}>
+  ✓ Hii ndiyo Active Store inayotumika sasa.
+</Text>
                   )}
                 </View>
 
@@ -1627,6 +1747,34 @@ const isCapitalRecovery = storeType === "CAPITAL_RECOVERY";
   </View>
 ) : null}
 
+{isFieldProcurement && isAllowed ? (
+  <View style={{ marginTop: 8 }}>
+    <Pressable
+      onPress={() => {
+        setActiveStoreId(storeId);
+        // @ts-ignore
+        router.push("/(tabs)/field-procurement/workspace");
+      }}
+      style={({ pressed }) => ({
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: "rgba(16,185,129,0.26)",
+        backgroundColor: "rgba(16,185,129,0.10)",
+        paddingVertical: 11,
+        paddingHorizontal: 13,
+        opacity: pressed ? 0.92 : 1,
+      })}
+    >
+      <Text style={{ color: TEXT, fontWeight: "900", fontSize: 13.5 }}>
+        Open Field Procurement Workspace
+      </Text>
+      <Text style={{ color: MUTED, fontWeight: "800", marginTop: 3, fontSize: 11.5 }}>
+        Fungua dashboard ya field wallet, manunuzi, matumizi na balance
+      </Text>
+    </Pressable>
+  </View>
+) : null}
+
 {canManage && isAllowed ? (
   <View style={{ marginTop: 10, gap: 10 }}>
     <Pressable
@@ -1635,7 +1783,7 @@ const isCapitalRecovery = storeType === "CAPITAL_RECOVERY";
         borderRadius: 16,
         borderWidth: 1,
         borderColor: actionsOpen ? "rgba(16,185,129,0.24)" : BORDER_SOFT,
-        backgroundColor: actionsOpen ? "rgba(16,185,129,0.08)" : "#161C27",
+        backgroundColor: actionsOpen ? "#DDF8EE" : "#F1F6FF",
         paddingVertical: 11,
         paddingHorizontal: 14,
         opacity: pressed ? 0.92 : 1,
@@ -1678,7 +1826,7 @@ const isCapitalRecovery = storeType === "CAPITAL_RECOVERY";
           onValueChange={(v) => toggleStoreCredit(storeId, v)}
           disabled={creditSaving}
           borderColor={BORDER_SOFT}
-          backgroundColor="#141A24"
+          backgroundColor="#F8FAFC"
           textColor={FAINT}
           mutedColor={MUTED}
         />
@@ -1696,7 +1844,7 @@ const isCapitalRecovery = storeType === "CAPITAL_RECOVERY";
           onValueChange={(v) => toggleStoreExpense(storeId, v)}
           disabled={expenseSaving}
           borderColor={BORDER_SOFT}
-          backgroundColor="#141A24"
+          backgroundColor="#F8FAFC"
           textColor={FAINT}
           mutedColor={MUTED}
         />
@@ -1714,7 +1862,7 @@ const isCapitalRecovery = storeType === "CAPITAL_RECOVERY";
           onValueChange={(v) => toggleStoreMovement(storeId, v)}
           disabled={movementSaving}
           borderColor={BORDER_SOFT}
-          backgroundColor="#141A24"
+          backgroundColor="#F8FAFC"
           textColor={FAINT}
           mutedColor={MUTED}
         />
@@ -1740,7 +1888,7 @@ const isCapitalRecovery = storeType === "CAPITAL_RECOVERY";
             borderRadius: 16,
             borderWidth: 1,
             borderColor: BORDER_SOFT,
-            backgroundColor: "#141A24",
+            backgroundColor: SURFACE2,
             paddingVertical: 11,
             paddingHorizontal: 13,
             opacity: pressed ? 0.92 : 1,
@@ -1778,7 +1926,7 @@ const isCapitalRecovery = storeType === "CAPITAL_RECOVERY";
                   borderRadius: radiusPill,
                   borderWidth: 1,
                   borderColor: BORDER_SOFT,
-                  backgroundColor: "rgba(255,255,255,0.06)",
+                  backgroundColor: "#F8FAFC",
                 }}
               >
                 <Text style={{ color: TEXT, fontWeight: "900", fontSize: 11.5 }}>
@@ -1799,7 +1947,7 @@ const isCapitalRecovery = storeType === "CAPITAL_RECOVERY";
             borderRadius: 16,
             borderWidth: 1,
             borderColor: BORDER_SOFT,
-            backgroundColor: "#141A24",
+            backgroundColor: SURFACE2,
             paddingVertical: 11,
             paddingHorizontal: 13,
             opacity: pressed ? 0.92 : 1,
@@ -1871,7 +2019,7 @@ const isCapitalRecovery = storeType === "CAPITAL_RECOVERY";
           onPress={closeRename}
           style={{
             flex: 1,
-            backgroundColor: "rgba(4,8,15,0.94)",
+            backgroundColor: "rgba(15,23,42,0.35)",
             paddingHorizontal: 14,
             justifyContent: "center",
           }}
@@ -1882,7 +2030,7 @@ const isCapitalRecovery = storeType === "CAPITAL_RECOVERY";
               borderRadius: radiusXL,
               borderWidth: 1,
               borderColor: BORDER_SOFT,
-              backgroundColor: "#11161F",
+              backgroundColor: CARD,
               overflow: "hidden",
             }}
           >
@@ -1900,12 +2048,12 @@ const isCapitalRecovery = storeType === "CAPITAL_RECOVERY";
                 value={renameValue}
                 onChangeText={setRenameValue}
                 placeholder="Store name"
-                placeholderTextColor="rgba(255,255,255,0.35)"
+                placeholderTextColor={FAINT}
                 style={{
                   borderWidth: 1,
                   borderColor: BORDER_SOFT,
                   borderRadius: radiusXL,
-                  backgroundColor: "#161C27",
+                  backgroundColor: SURFACE2,
                   paddingHorizontal: 14,
                   paddingVertical: 12,
                   color: TEXT,
@@ -1951,7 +2099,7 @@ const isCapitalRecovery = storeType === "CAPITAL_RECOVERY";
           onPress={closeCloseStore}
           style={{
             flex: 1,
-            backgroundColor: "rgba(4,8,15,0.94)",
+            backgroundColor: "rgba(15,23,42,0.35)",
             paddingHorizontal: 14,
             justifyContent: "center",
           }}
@@ -1962,7 +2110,7 @@ const isCapitalRecovery = storeType === "CAPITAL_RECOVERY";
               borderRadius: radiusXL,
               borderWidth: 1,
               borderColor: DANGER_BORDER,
-              backgroundColor: "#11161F",
+              backgroundColor: CARD,
               overflow: "hidden",
             }}
           >
@@ -1992,12 +2140,12 @@ const isCapitalRecovery = storeType === "CAPITAL_RECOVERY";
                 value={closeConfirmText}
                 onChangeText={setCloseConfirmText}
                 placeholder="Andika jina la store hapa"
-                placeholderTextColor="rgba(255,255,255,0.35)"
+                placeholderTextColor={FAINT}
                 style={{
                   borderWidth: 1,
                   borderColor: BORDER_SOFT,
                   borderRadius: radiusXL,
-                  backgroundColor: "#161C27",
+                 backgroundColor: SURFACE2,
                   paddingHorizontal: 14,
                   paddingVertical: 12,
                   color: TEXT,
@@ -2047,7 +2195,7 @@ const isCapitalRecovery = storeType === "CAPITAL_RECOVERY";
           onPress={() => setUpgradeOpen(false)}
           style={{
             flex: 1,
-            backgroundColor: "rgba(4,8,15,0.94)",
+            backgroundColor: "rgba(15,23,42,0.35)",
             paddingHorizontal: 14,
             justifyContent: "center",
           }}
@@ -2058,7 +2206,7 @@ const isCapitalRecovery = storeType === "CAPITAL_RECOVERY";
               borderRadius: radiusXL,
               borderWidth: 1,
               borderColor: BORDER_SOFT,
-              backgroundColor: "#11161F",
+              backgroundColor: CARD,
               overflow: "hidden",
             }}
           >

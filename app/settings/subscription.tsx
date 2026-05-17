@@ -595,14 +595,14 @@ export default function SubscriptionScreen() {
               gap: 8,
             }}
           >
-            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>Pay To</Text>
-            <Text style={{ color: UI.text, fontWeight: "900" }}>JOFREY JOHN SANGA</Text>
+<Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>Pay To</Text>
+<Text style={{ color: UI.text, fontWeight: "900" }}>ZETRA TECHNOLOGIES</Text>
 
-            <Text style={{ color: UI.muted, fontWeight: "900", marginTop: 4 }}>Network</Text>
-            <Text style={{ color: UI.text, fontWeight: "900" }}>VODACOM (M-PESA)</Text>
+<Text style={{ color: UI.muted, fontWeight: "900", marginTop: 4 }}>Payment Method</Text>
+<Text style={{ color: UI.text, fontWeight: "900" }}>VODACOM M-PESA LIPA</Text>
 
-            <Text style={{ color: UI.muted, fontWeight: "900", marginTop: 4 }}>Phone Number</Text>
-            <Text style={{ color: UI.text, fontWeight: "900" }}>0758014675</Text>
+<Text style={{ color: UI.muted, fontWeight: "900", marginTop: 4 }}>Lipa Number</Text>
+<Text style={{ color: UI.text, fontWeight: "900" }}>354098140</Text>
 
             <Text style={{ color: UI.faint, fontWeight: "800", marginTop: 8 }}>
               Baada ya kulipa, utapata SMS ya muamala. Copy ile

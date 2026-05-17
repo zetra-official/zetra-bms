@@ -17,8 +17,17 @@ import { supabase } from "../../../src/supabase/supabaseClient";
 import { Card } from "../../../src/ui/Card";
 import { Screen } from "../../../src/ui/Screen";
 import { StoreGuard } from "../../../src/ui/StoreGuard";
-import { UI } from "../../../src/ui/theme";
+
 import { formatMoney } from "../../../src/ui/money";
+
+const UI = {
+  text: "#0F172A",
+  muted: "#5B6575",
+  faint: "#8A94A6",
+  emerald: "#059669",
+  warning: "#B45309",
+  danger: "#DC2626",
+};
 
 type CapitalRecoveryHistoryRow = {
   id: string;
@@ -27,6 +36,7 @@ type CapitalRecoveryHistoryRow = {
   note: string | null;
   created_at: string;
   created_by?: string | null;
+  created_role?: string | null;
 };
 
 type EntryMethod = "MANUAL" | "PRODUCTS";
@@ -114,7 +124,14 @@ function MiniStat({
 
 export default function CapitalRecoveryWorkspaceScreen() {
   const router = useRouter();
-  const { activeOrgId, activeOrgName, activeStoreName, activeStoreId, refresh } = useOrg();
+  const {
+  activeOrgId,
+  activeOrgName,
+  activeStoreName,
+  activeStoreId,
+  activeRole,
+  refresh,
+} = useOrg();
 
   const [entryType, setEntryType] = useState<"ASSET" | "COST" | "INCOME">("ASSET");
   const [entryMethod, setEntryMethod] = useState<EntryMethod>("MANUAL");
@@ -135,6 +152,15 @@ export default function CapitalRecoveryWorkspaceScreen() {
   const [history, setHistory] = useState<CapitalRecoveryHistoryRow[]>([]);
 
   const storeId = String(activeStoreId ?? "").trim();
+
+  const normalizedRole = String(activeRole ?? "").trim().toLowerCase();
+  const isOwner = normalizedRole === "owner";
+  const canSeeAsset = isOwner;
+  const canAddAsset = isOwner;
+
+  const [lockLoading, setLockLoading] = useState(false);
+  const [isLocked, setIsLocked] = useState(false);
+  const [lockNote, setLockNote] = useState<string | null>(null);
 
   const amountNum = toNum(String(amount).replace(/,/g, "").trim());
 
@@ -180,10 +206,14 @@ export default function CapitalRecoveryWorkspaceScreen() {
     return selectedProductItems.reduce((sum, item) => sum + toNum(item.line_total), 0);
   }, [selectedProductItems]);
 
-  const canSave =
+  const baseCanSave =
     entryMethod === "MANUAL"
       ? amountNum > 0
       : selectedProductItems.length > 0 && productModeTotal > 0;
+
+  const blockedByLock = isLocked && !isOwner;
+
+  const canSave = baseCanSave && !blockedByLock;
 
   const previewTitle =
     entryType === "ASSET"
@@ -243,6 +273,32 @@ export default function CapitalRecoveryWorkspaceScreen() {
     }
   }, [activeOrgId, storeId]);
 
+  const loadLockStatus = useCallback(async () => {
+    if (!storeId) {
+      setIsLocked(false);
+      setLockNote(null);
+      return;
+    }
+
+    setLockLoading(true);
+    try {
+      const { data, error } = await supabase.rpc("get_capital_recovery_lock_status_v1", {
+        p_store_id: storeId,
+      });
+
+      if (error) throw error;
+
+      const row = Array.isArray(data) ? data[0] : null;
+      setIsLocked(!!row?.is_locked);
+      setLockNote(clean(row?.locked_note) || null);
+    } catch {
+      setIsLocked(false);
+      setLockNote(null);
+    } finally {
+      setLockLoading(false);
+    }
+  }, [storeId]);
+
   const loadHistory = useCallback(async () => {
     if (!storeId) {
       setHistory([]);
@@ -254,7 +310,7 @@ export default function CapitalRecoveryWorkspaceScreen() {
     setHistoryError(null);
 
     try {
-      const { data, error } = await supabase.rpc("get_capital_recovery_history_v1", {
+      const { data, error } = await supabase.rpc("get_capital_recovery_history_v2", {
         p_store_id: storeId,
         p_limit: 100,
       });
@@ -274,6 +330,7 @@ export default function CapitalRecoveryWorkspaceScreen() {
           note: clean(r?.note) || null,
           created_at: String(r?.created_at ?? ""),
           created_by: clean(r?.created_by) || null,
+          created_role: clean(r?.created_role) || null,
         }))
       );
     } catch (e: any) {
@@ -287,21 +344,27 @@ export default function CapitalRecoveryWorkspaceScreen() {
   useEffect(() => {
     void loadHistory();
     void loadProducts();
-  }, [loadHistory, loadProducts]);
+    void loadLockStatus();
+  }, [loadHistory, loadProducts, loadLockStatus]);
 
   useFocusEffect(
     useCallback(() => {
       void loadHistory();
       void loadProducts();
-    }, [loadHistory, loadProducts])
+      void loadLockStatus();
+    }, [loadHistory, loadProducts, loadLockStatus])
   );
 
   useEffect(() => {
+    if (!canAddAsset && entryType === "ASSET") {
+      setEntryType("INCOME");
+    }
+
     if (entryType === "ASSET") {
       setEntryMethod("MANUAL");
       setProductItems([]);
     }
-  }, [entryType]);
+  }, [entryType, canAddAsset]);
 
   const report = useMemo(() => {
     const base = {
@@ -326,7 +389,17 @@ export default function CapitalRecoveryWorkspaceScreen() {
       return;
     }
 
-    if (!canSave) {
+    if (blockedByLock) {
+      Alert.alert(
+        "Locked",
+        lockNote
+          ? `Capital Recovery imefungwa. ${lockNote}`
+          : "Capital Recovery imefungwa kwa store hii."
+      );
+      return;
+    }
+
+    if (!baseCanSave) {
       Alert.alert(
         "Invalid Entry",
         entryMethod === "MANUAL"
@@ -339,7 +412,7 @@ export default function CapitalRecoveryWorkspaceScreen() {
     setSaving(true);
     try {
       if (entryMethod === "MANUAL") {
-        const { error } = await supabase.rpc("create_capital_recovery_entry", {
+        const { error } = await supabase.rpc("create_capital_recovery_entry_v2", {
           p_store_id: storeId,
           p_entry_type: entryType,
           p_amount: amountNum,
@@ -353,7 +426,7 @@ export default function CapitalRecoveryWorkspaceScreen() {
           quantity: item.quantity,
         }));
 
-        const { error } = await supabase.rpc("create_capital_recovery_entry_items_v1", {
+        const { error } = await supabase.rpc("create_capital_recovery_entry_items_v2", {
           p_store_id: storeId,
           p_entry_type: entryType,
           p_items: payload,
@@ -369,6 +442,7 @@ export default function CapitalRecoveryWorkspaceScreen() {
       await Promise.resolve(refresh());
       await loadHistory();
       await loadProducts();
+      await loadLockStatus();
 
       Alert.alert(
         "Success ✅",
@@ -390,6 +464,10 @@ export default function CapitalRecoveryWorkspaceScreen() {
     refresh,
     loadHistory,
     loadProducts,
+    loadLockStatus,
+    blockedByLock,
+    baseCanSave,
+    lockNote,
   ]);
 
   const openAddProductPicker = useCallback(() => {
@@ -518,7 +596,7 @@ export default function CapitalRecoveryWorkspaceScreen() {
     }).replace(/\s+/g, " ");
 
   return (
-    <Screen scroll={false} contentStyle={{ paddingTop: 0, paddingHorizontal: 0, paddingBottom: 0 }}>
+    <Screen scroll={false} contentStyle={{ backgroundColor: "#EAF2FA", paddingTop: 0, paddingHorizontal: 0, paddingBottom: 0 }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior="height"
@@ -531,7 +609,7 @@ export default function CapitalRecoveryWorkspaceScreen() {
           contentContainerStyle={{
             paddingTop: 14,
             paddingHorizontal: 16,
-            paddingBottom: 24,
+            paddingBottom: 120,
           }}
         >
           <StoreGuard>
@@ -540,7 +618,7 @@ export default function CapitalRecoveryWorkspaceScreen() {
                 gap: 16,
                 borderRadius: 24,
                 borderColor: "rgba(16,185,129,0.24)",
-                backgroundColor: "rgba(15,18,24,0.98)",
+                backgroundColor: "#FFF7D6",
                 overflow: "hidden",
               }}
             >
@@ -553,7 +631,7 @@ export default function CapitalRecoveryWorkspaceScreen() {
               width: 220,
               height: 220,
               borderRadius: 999,
-              backgroundColor: "rgba(16,185,129,0.08)",
+              backgroundColor: "rgba(16,185,129,0.10)",
             }}
           />
 
@@ -566,7 +644,7 @@ export default function CapitalRecoveryWorkspaceScreen() {
               width: 220,
               height: 220,
               borderRadius: 999,
-              backgroundColor: "rgba(34,211,238,0.04)",
+              backgroundColor: "transparent",
             }}
           />
 
@@ -616,7 +694,7 @@ export default function CapitalRecoveryWorkspaceScreen() {
               gap: 12,
               borderRadius: 20,
               borderColor: "rgba(255,255,255,0.10)",
-              backgroundColor: "rgba(255,255,255,0.04)",
+              backgroundColor: "#F1F5F9",
             }}
           >
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 17 }}>
@@ -627,6 +705,37 @@ export default function CapitalRecoveryWorkspaceScreen() {
               Hapa ndipo uta-record Asset, Cost, na Income.
             </Text>
 
+            <Card
+              style={{
+                gap: 6,
+                borderRadius: 16,
+                borderColor: isLocked ? "rgba(201,74,74,0.32)" : "rgba(16,185,129,0.22)",
+                backgroundColor: isLocked ? "rgba(201,74,74,0.10)" : "rgba(16,185,129,0.08)",
+              }}
+            >
+              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 13 }}>
+                {lockLoading
+                  ? "Checking lock status..."
+                  : isLocked
+                  ? isOwner
+                    ? "Capital Recovery Locked — owner override active"
+                    : "Capital Recovery Locked"
+                  : "Capital Recovery Open"}
+              </Text>
+
+              <Text style={{ color: UI.faint, fontWeight: "800", lineHeight: 20 }}>
+                {isLocked
+                  ? lockNote
+                    ? lockNote
+                    : isOwner
+                    ? "Store hii imefungwa, lakini owner bado anaweza kufanya entry."
+                    : "Store hii imefungwa. Huwezi kuingiza entry kwa sasa."
+                  : canSeeAsset
+                  ? "Owner anaweza kurecord Asset, Cost, na Income."
+                  : "Unaweza kurecord Cost na Income tu. Asset imefichwa kwa role yako."}
+              </Text>
+            </Card>
+
             <View
               style={{
                 flexDirection: "row",
@@ -635,11 +744,14 @@ export default function CapitalRecoveryWorkspaceScreen() {
                 width: "100%",
               }}
             >
-              <Pill
-                title="Add Asset"
-                active={entryType === "ASSET"}
-                onPress={() => setEntryType("ASSET")}
-              />
+              {canAddAsset ? (
+                <Pill
+                  title="Add Asset"
+                  active={entryType === "ASSET"}
+                  onPress={() => setEntryType("ASSET")}
+                />
+              ) : null}
+
               <Pill
                 title="Add Cost"
                 active={entryType === "COST"}
@@ -689,7 +801,7 @@ export default function CapitalRecoveryWorkspaceScreen() {
                   style={{
                     borderWidth: 1,
                     borderColor: "rgba(255,255,255,0.10)",
-                    backgroundColor: "rgba(255,255,255,0.05)",
+                    backgroundColor: "#F8FAFC",
                     color: UI.text,
                     borderRadius: 18,
                     paddingHorizontal: 14,
@@ -713,7 +825,7 @@ export default function CapitalRecoveryWorkspaceScreen() {
                       borderRadius: 999,
                       borderWidth: 1,
                       borderColor: "rgba(16,185,129,0.28)",
-                      backgroundColor: "rgba(16,185,129,0.12)",
+                      backgroundColor: "#DDF7EA",
                       opacity: productsLoading || eligibleProducts.length === 0 ? 0.45 : pressed ? 0.92 : 1,
                     })}
                   >
@@ -1002,6 +1114,8 @@ export default function CapitalRecoveryWorkspaceScreen() {
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
               {saving
                 ? "Saving..."
+                : blockedByLock
+                ? "Locked"
                 : entryMethod === "MANUAL"
                 ? "Save Entry"
                 : "Save Product Entry"}
@@ -1165,11 +1279,14 @@ export default function CapitalRecoveryWorkspaceScreen() {
           ) : null}
 
           <View style={{ flexDirection: "row", gap: 12 }}>
-            <MiniStat
-              label="Asset Entries"
-              value={String(report.ASSET.count)}
-              hint={fmt(report.ASSET.amount)}
-            />
+            {canSeeAsset ? (
+              <MiniStat
+                label="Asset Entries"
+                value={String(report.ASSET.count)}
+                hint={fmt(report.ASSET.amount)}
+              />
+            ) : null}
+
             <MiniStat
               label="Cost Entries"
               value={String(report.COST.count)}
@@ -1202,7 +1319,7 @@ export default function CapitalRecoveryWorkspaceScreen() {
               borderRadius: 20,
               borderWidth: 1,
               borderColor: "rgba(16,185,129,0.34)",
-              backgroundColor: "rgba(16,185,129,0.16)",
+              backgroundColor: "#D1FAE5",
               paddingVertical: 16,
               paddingHorizontal: 16,
               alignItems: "center",
@@ -1211,7 +1328,7 @@ export default function CapitalRecoveryWorkspaceScreen() {
             })}
           >
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
-              Open Recent History
+              Open Role-Safe History
             </Text>
           </Pressable>
         </Card>

@@ -1,6 +1,8 @@
-﻿import React, { useEffect, useMemo, useState } from "react";
+﻿// src/ui/Screen.tsx
+import React, { useEffect, useMemo, useState } from "react";
 import {
   AppState,
+  StatusBar,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -12,25 +14,16 @@ import {
   ViewStyle,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { theme } from "./theme";
-import { NotificationBell } from "@/src/ui/NotificationBell";
 
-// ✅ Optional NetInfo (safe: does NOT crash if package missing)
+import { NotificationBell } from "@/src/ui/NotificationBell";
+import { theme } from "./theme";
+
 let NetInfo: any = null;
 try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   NetInfo = require("@react-native-community/netinfo");
 } catch {
   NetInfo = null;
 }
-
-const AbsoluteFillObject = {
-  position: "absolute" as const,
-  left: 0,
-  right: 0,
-  top: 0,
-  bottom: 0,
-};
 
 type Props = {
   children: React.ReactNode;
@@ -50,31 +43,30 @@ export function Screen({
   refreshControl,
 }: Props) {
   const insets = useSafeAreaInsets();
-  const baseBg = theme.colors?.background ?? "#0B0F14";
+  const baseBg = theme.colors.background;
   const isWeb = Platform.OS === "web";
 
-  // ✅ Tab bar constants (match app/(tabs)/_layout.tsx)
+  const statusBarStyle =
+    String(baseBg).toUpperCase() === "#0F172A" ||
+    String(baseBg).toUpperCase() === "#020617"
+      ? "light-content"
+      : "dark-content";
+
   const TAB_BAR_BASE_HEIGHT = 56;
   const TAB_BAR_EXTRA_GAP = 12;
 
-  // ✅ Global offline indicator
   const [isOffline, setIsOffline] = useState(false);
-
-  // ✅ Remount overlays on resume (fix "touch dead until reload")
   const [resumeTick, setResumeTick] = useState(0);
 
   useEffect(() => {
     if (isWeb) return;
 
     const sub = AppState.addEventListener("change", (state) => {
-      if (state === "active") {
-        setResumeTick((x) => x + 1);
-      }
+      if (state === "active") setResumeTick((x) => x + 1);
     });
 
     return () => {
       try {
-        // @ts-ignore
         sub?.remove?.();
       } catch {}
     };
@@ -86,7 +78,6 @@ export function Screen({
 
     const unsub = NetInfo.addEventListener((state: any) => {
       const connected = !!state?.isConnected;
-
       const reachable =
         state?.isInternetReachable === null ||
         state?.isInternetReachable === undefined
@@ -104,28 +95,16 @@ export function Screen({
   }, [isWeb]);
 
   const effectiveBottomPad = useMemo(() => {
-    if (isWeb) {
-      return typeof bottomPad === "number" ? bottomPad : 24;
-    }
+    if (isWeb) return typeof bottomPad === "number" ? bottomPad : 24;
 
     const tabBase = TAB_BAR_BASE_HEIGHT + TAB_BAR_EXTRA_GAP;
-
-    // ✅ IMPORTANT:
-    // bottomPad isi-replace tab bar space.
-    // Iongezwe juu ya tab bar clearance ili content isikatwe chini.
-    if (typeof bottomPad === "number") {
-      return tabBase + bottomPad;
-    }
-
-    return tabBase;
+    return typeof bottomPad === "number" ? tabBase + bottomPad : tabBase;
   }, [bottomPad, isWeb]);
 
-  // ✅ Stronger safe-area spacing for top headers
   const topInset = Math.max(insets.top, 10);
   const topContentPad = topInset + 8;
   const offlineExtra = !isWeb && isOffline ? 44 : 0;
   const scrollableTopSpacer = topContentPad + offlineExtra;
-
   const paddingBottom = Math.max(insets.bottom, 10) + effectiveBottomPad;
 
   const childCount = React.Children.count(children);
@@ -153,9 +132,9 @@ export function Screen({
           top: topContentPad,
           zIndex: 40,
           borderWidth: 1,
-          borderColor: "rgba(245,158,11,0.45)",
-          backgroundColor: "rgba(245,158,11,0.12)",
-          borderRadius: 999,
+          borderColor: theme.colors.warningBorder,
+          backgroundColor: theme.colors.warningSoft,
+          borderRadius: theme.radius.pill,
           paddingVertical: 8,
           paddingHorizontal: 12,
           alignItems: "center",
@@ -164,7 +143,7 @@ export function Screen({
         <Text
           style={{
             color: theme.colors.text,
-            fontWeight: "900",
+            fontWeight: "800",
             fontSize: 12,
           }}
         >
@@ -194,10 +173,16 @@ export function Screen({
         },
         style,
       ]}
-    >
-      {null}
+    >{Platform.OS !== "web" ? (
+        <StatusBar
+          barStyle={statusBarStyle as any}
+          backgroundColor={baseBg}
+          translucent={false}
+        />
+      ) : null}
 
       {OfflineBanner}
+      
 
       {Platform.OS !== "web" ? (
         <View
@@ -237,10 +222,10 @@ export function Screen({
           contentContainerStyle={[
             {
               paddingTop: scrollableTopSpacer,
-              paddingHorizontal: isWeb ? 20 : 16,
+              paddingHorizontal: isWeb ? 22 : 16,
               paddingBottom,
-              backgroundColor: baseBg,
               minHeight: isWeb ? "100%" : undefined,
+              backgroundColor: baseBg,
             },
             contentStyle,
           ]}
@@ -258,13 +243,11 @@ export function Screen({
               flex: 1,
               minHeight: 0,
               backgroundColor: baseBg,
-              paddingHorizontal: isWeb ? 20 : 16,
-              paddingBottom,
+              paddingHorizontal: isWeb ? 22 : 16,
             },
             contentStyle,
           ]}
         >
-          {/* ✅ Root scrollable screens start below safe area and keep bottom-safe spacing. */}
           <View style={{ height: scrollableTopSpacer }} />
           {children}
         </View>
@@ -275,7 +258,7 @@ export function Screen({
               flex: 1,
               minHeight: 0,
               paddingTop: scrollableTopSpacer,
-              paddingHorizontal: isWeb ? 20 : 16,
+              paddingHorizontal: isWeb ? 22 : 16,
               paddingBottom,
               backgroundColor: baseBg,
             },
@@ -291,7 +274,11 @@ export function Screen({
   if (isWeb || Platform.OS !== "ios") return Root;
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding" keyboardVerticalOffset={0}>
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: baseBg }}
+      behavior="padding"
+      keyboardVerticalOffset={0}
+    >
       {Root}
     </KeyboardAvoidingView>
   );

@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -111,8 +111,22 @@ function InputBox(props: {
 
 export default function ShiftOpeningScreen() {
   const router = useRouter();
+
+  const params = useLocalSearchParams<{
+    storeId?: string | string[];
+    storeName?: string | string[];
+    fromHandoff?: string | string[];
+    handoffId?: string | string[];
+  }>();
+
+  const routeStoreId = Array.isArray(params.storeId) ? params.storeId[0] : params.storeId;
+  const routeStoreName = Array.isArray(params.storeName) ? params.storeName[0] : params.storeName;
+
   const { activeOrgId, activeOrgName, activeStoreId, activeStoreName, activeRole } =
     useOrg() as any;
+
+  const effectiveStoreId = String(routeStoreId ?? activeStoreId ?? "").trim();
+  const effectiveStoreName = String(routeStoreName ?? activeStoreName ?? "No store").trim();
 
   const money = useOrgMoneyPrefs(activeOrgId);
   const fmtMoney = useCallback((n: number) => money.fmt(Number(n || 0)), [money]);
@@ -150,12 +164,12 @@ export default function ShiftOpeningScreen() {
           throw new Error("Shift Opening ni kwa cashier tu.");
         }
 
-        if (!activeStoreId) {
+        if (!effectiveStoreId) {
           throw new Error("No active store selected.");
         }
 
         const { data, error } = await supabase.rpc("get_my_open_cashier_shift_v1", {
-          p_store_id: activeStoreId,
+          p_store_id: effectiveStoreId,
         });
 
         if (error) throw error;
@@ -184,7 +198,7 @@ export default function ShiftOpeningScreen() {
         if (mode === "refresh") setRefreshing(false);
       }
     },
-    [activeStoreId, isCashier]
+    [effectiveStoreId, isCashier]
   );
 
   useEffect(() => {
@@ -204,7 +218,7 @@ export default function ShiftOpeningScreen() {
       return;
     }
 
-    if (!activeStoreId) {
+    if (!effectiveStoreId) {
       Alert.alert("Missing", "No active store selected.");
       return;
     }
@@ -238,7 +252,7 @@ export default function ShiftOpeningScreen() {
     setSaving(true);
     try {
       const { data, error } = await supabase.rpc("open_cashier_shift_v1", {
-        p_store_id: activeStoreId,
+        p_store_id: effectiveStoreId,
         p_opening_cash: openingCash,
       });
 
@@ -266,7 +280,7 @@ export default function ShiftOpeningScreen() {
     } finally {
       setSaving(false);
     }
-  }, [activeStoreId, isCashier, isOffline, openShift?.shift_id, openingCashDraft, overdueShift]);
+  }, [effectiveStoreId, isCashier, isOffline, openShift?.shift_id, openingCashDraft, overdueShift]);
 
   const goSalesHome = useCallback(() => {
     router.replace("/(tabs)/sales" as any);
@@ -305,7 +319,7 @@ export default function ShiftOpeningScreen() {
               Shift Opening
             </Text>
             <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-              {activeOrgName ?? "—"} • {activeStoreName ?? "No store"} • {activeRole ?? "—"}
+              {activeOrgName ?? "—"} • {effectiveStoreName} • {activeRole ?? "—"}
             </Text>
             <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
               {isOffline ? "OFFLINE" : "ONLINE"}

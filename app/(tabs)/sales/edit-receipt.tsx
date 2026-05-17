@@ -12,6 +12,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   Pressable,
   ScrollView,
   Text,
@@ -154,7 +155,7 @@ export default function EditReceiptScreen() {
             product_id: String(it?.product_id ?? "").trim(),
             product_name: String(it?.product_name ?? "Product").trim() || "Product",
             sku: String(it?.sku ?? "").trim(),
-            qty: String(Math.max(0, Math.trunc(Number(it?.qty ?? 0)))),
+            qty: sanitizeNumberInput(String(Number(it?.qty ?? 0))),
             unit_price: String(toNum(it?.unit_price ?? 0)),
           }))
         : [];
@@ -202,7 +203,7 @@ export default function EditReceiptScreen() {
     let totalAmount = 0;
 
     for (const it of items) {
-      const qty = Math.max(0, Math.trunc(Number(it.qty || 0)));
+      const qty = Math.max(0, toNum(it.qty || 0));
       const unit = Math.max(0, toNum(it.unit_price || 0));
       totalQty += qty;
       totalAmount += qty * unit;
@@ -219,7 +220,7 @@ export default function EditReceiptScreen() {
     let totalAmount = 0;
 
     for (const it of originalItems) {
-      const qty = Math.max(0, Math.trunc(Number(it.qty || 0)));
+      const qty = Math.max(0, toNum(it.qty || 0));
       const unit = Math.max(0, toNum(it.unit_price || 0));
       totalQty += qty;
       totalAmount += qty * unit;
@@ -255,7 +256,7 @@ export default function EditReceiptScreen() {
     }
 
     for (const it of items) {
-      const qty = Math.max(0, Math.trunc(Number(it.qty || 0)));
+      const qty = Math.max(0, toNum(it.qty || 0));
       const unit = Math.max(0, toNum(it.unit_price || 0));
       const original = getOriginalItem(it.product_id);
 
@@ -272,7 +273,7 @@ export default function EditReceiptScreen() {
         return false;
       }
 
-      const originalQty = Math.max(0, Math.trunc(Number(original.qty || 0)));
+      const originalQty = Math.max(0, toNum(original.qty || 0));
       const originalUnit = Math.max(0, toNum(original.unit_price || 0));
 
       if (qty <= 0) {
@@ -321,8 +322,9 @@ export default function EditReceiptScreen() {
     fmtMoney,
   ]);
 
-  const deleteSameDay = useCallback(() => {
+  const deleteSameDay = useCallback(async () => {
     if (!saleId) return;
+
     if (!canEditSameDay) {
       Alert.alert(
         "Delete closed",
@@ -330,7 +332,42 @@ export default function EditReceiptScreen() {
       );
       return;
     }
+
     if (deleting) return;
+
+    const runDelete = async () => {
+      try {
+        setDeleting(true);
+
+        const { data, error } = await supabase.rpc("delete_sale_same_day_v1", {
+          p_sale_id: saleId,
+        } as any);
+
+        if (error) throw error;
+
+        const row = Array.isArray(data) ? data[0] : data;
+        const restoredQty = Number(row?.restored_qty ?? 0);
+
+        Alert.alert("Deleted", `Receipt imefutwa vizuri. Stock restored: ${restoredQty}.`);
+
+        router.replace("/(tabs)/sales/history");
+      } catch (e: any) {
+        Alert.alert("Delete failed", e?.message ?? "Failed to delete same-day receipt");
+      } finally {
+        setDeleting(false);
+      }
+    };
+
+    if (Platform.OS === "web") {
+      const ok = window.confirm(
+        "Delete Same Day\n\nUkifuta risiti hii, items zote zitarudi store na sale itaondoka kabisa. Uko sure?"
+      );
+
+      if (!ok) return;
+
+      await runDelete();
+      return;
+    }
 
     Alert.alert(
       "Delete Same Day",
@@ -340,35 +377,7 @@ export default function EditReceiptScreen() {
         {
           text: "Delete",
           style: "destructive",
-          onPress: async () => {
-            try {
-              setDeleting(true);
-
-              const { data, error } = await supabase.rpc("delete_sale_same_day_v1", {
-                p_sale_id: saleId,
-              } as any);
-
-              if (error) throw error;
-
-              const row = Array.isArray(data) ? data[0] : data;
-              const restoredQty = Number(row?.restored_qty ?? 0);
-
-              Alert.alert(
-                "Deleted",
-                `Receipt imefutwa vizuri. Stock restored: ${restoredQty}.`,
-                [
-                  {
-                    text: "OK",
-                    onPress: () => router.replace("/(tabs)/sales/history"),
-                  },
-                ]
-              );
-            } catch (e: any) {
-              Alert.alert("Delete failed", e?.message ?? "Failed to delete same-day receipt");
-            } finally {
-              setDeleting(false);
-            }
-          },
+          onPress: runDelete,
         },
       ]
     );
@@ -382,7 +391,7 @@ export default function EditReceiptScreen() {
     try {
       const payloadItems = items.map((it) => ({
         product_id: it.product_id,
-        qty: Math.max(0, Math.trunc(Number(it.qty || 0))),
+        qty: Math.max(0, toNum(it.qty || 0)),
         unit_price: Math.max(0, toNum(it.unit_price || 0)),
       }));
 
@@ -513,7 +522,7 @@ export default function EditReceiptScreen() {
               </Text>
 
               {items.map((it, idx) => {
-                const qtyNum = Math.max(0, Math.trunc(Number(it.qty || 0)));
+                const qtyNum = Math.max(0, toNum(it.qty || 0));
                 const unitNum = Math.max(0, toNum(it.unit_price || 0));
                 const lineTotal = qtyNum * unitNum;
 
@@ -555,23 +564,16 @@ export default function EditReceiptScreen() {
                         </Text>
                        <TextInput
                           value={it.qty}
-                          onChangeText={(v) => {
-                            const original = getOriginalItem(it.product_id);
-                            const originalQty = Math.max(
-                              0,
-                              Math.trunc(Number(original?.qty || 0))
-                            );
+                         onChangeText={(v) => {
+  const original = getOriginalItem(it.product_id);
+  const originalQty = Math.max(0, toNum(original?.qty || 0));
+  const nextQty = Math.max(0, toNum(sanitizeNumberInput(v)));
 
-                            const nextQty = Math.max(
-                              0,
-                              Math.trunc(Number(v.replace(/[^\d]/g, "") || 0))
-                            );
-
-                            updateItem(idx, {
-                              qty: String(Math.min(nextQty, originalQty)),
-                            });
-                          }}
-                          keyboardType="number-pad"
+  updateItem(idx, {
+    qty: sanitizeNumberInput(String(Math.min(nextQty, originalQty))),
+  });
+}}
+keyboardType="decimal-pad"
                           style={{
                             color: theme.colors.text,
                             fontWeight: "800",

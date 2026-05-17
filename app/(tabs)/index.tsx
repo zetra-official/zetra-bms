@@ -170,9 +170,67 @@ type CapitalRecoveryTodayReport = {
   asset: number;
   cost: number;
   income: number;
+  net: number;
 };
 
 const AUTO_REFRESH_MS = 20_000;
+
+const HOME_CARD_TEXT = "#FFFFFF";
+const HOME_CARD_MUTED = "rgba(255,255,255,0.78)";
+const HOME_CARD_FAINT = "rgba(255,255,255,0.58)";
+
+const HOME_CARD_BG = "#0F3D5E";
+const HOME_CARD_ALT_BG = "#064E3B";
+const HOME_CARD_AI_BG = "#3B1D78";
+const HOME_CARD_BORDER = "rgba(255,255,255,0.18)";
+const HOME_CARD_BORDER_STRONG = "rgba(255,255,255,0.26)";
+const HOME_CARD_SOFT_BLUE = "rgba(255,255,255,0.12)";
+const HOME_CARD_SOFT_EMERALD = "rgba(255,255,255,0.14)";
+
+const HOME_PALETTE = {
+  finance: {
+    bg: "#0B5CAD",
+    border: "rgba(147,197,253,0.44)",
+    soft: "rgba(255,255,255,0.13)",
+    accent: "#BFDBFE",
+  },
+  stock: {
+    bg: "#0F766E",
+    border: "rgba(153,246,228,0.42)",
+    soft: "rgba(255,255,255,0.13)",
+    accent: "#99F6E4",
+  },
+  notification: {
+    bg: "#0B5CAD",
+    border: "rgba(147,197,253,0.44)",
+    soft: "rgba(255,255,255,0.13)",
+    accent: "#BFDBFE",
+  },
+  ai: {
+    bg: "#0F766E",
+    border: "rgba(153,246,228,0.42)",
+    soft: "rgba(255,255,255,0.13)",
+    accent: "#99F6E4",
+  },
+  club: {
+    bg: "#92400E",
+    border: "rgba(253,186,116,0.44)",
+    soft: "rgba(255,255,255,0.13)",
+    accent: "#FDBA74",
+  },
+  workspace: {
+    bg: "#1E3A8A",
+    border: "rgba(191,219,254,0.44)",
+    soft: "rgba(255,255,255,0.13)",
+    accent: "#BFDBFE",
+  },
+} as const;
+
+const HomeCardToneContext = React.createContext({
+  text: UI.text,
+  muted: UI.muted,
+  faint: UI.faint,
+});
 
 function pad2(n: number) {
   return String(n).padStart(2, "0");
@@ -455,10 +513,12 @@ function MiniStat({
   hint?: string;
   multilineValue?: boolean;
 }) {
+  const tone = React.useContext(HomeCardToneContext);
+
   return (
     <View style={{ flex: 1, gap: 4, minWidth: 0 }}>
       <Text
-        style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}
+        style={{ color: tone.muted, fontWeight: "800", fontSize: 12 }}
         numberOfLines={1}
         ellipsizeMode="tail"
       >
@@ -466,7 +526,7 @@ function MiniStat({
       </Text>
 
       <Text
-        style={{ color: UI.text, fontWeight: "900", fontSize: 16, lineHeight: 20 }}
+        style={{ color: tone.text, fontWeight: "900", fontSize: 16, lineHeight: 20 }}
         numberOfLines={multilineValue ? 2 : 1}
         adjustsFontSizeToFit={!multilineValue}
         minimumFontScale={0.75}
@@ -477,7 +537,7 @@ function MiniStat({
 
       {!!hint && (
         <Text
-          style={{ color: UI.faint, fontWeight: "800", fontSize: 12 }}
+         style={{ color: tone.faint, fontWeight: "800", fontSize: 12 }}
           numberOfLines={1}
           ellipsizeMode="tail"
         >
@@ -576,8 +636,8 @@ function HeaderHero({
             paddingVertical: 6,
             borderRadius: 999,
             borderWidth: 1,
-            borderColor: "rgba(16,185,129,0.20)",
-            backgroundColor: "rgba(16,185,129,0.08)",
+            borderColor: "rgba(79,140,255,0.22)",
+            backgroundColor: "transparent",
             maxWidth: "55%",
           }}
         >
@@ -602,6 +662,7 @@ function PremiumMetricCard({
   footerRight,
   error,
   mobileWebLite = false,
+  tone = "finance",
 }: {
   title: string;
   subtitle: string;
@@ -614,47 +675,24 @@ function PremiumMetricCard({
   footerRight?: React.ReactNode;
   error?: string | null;
   mobileWebLite?: boolean;
+  tone?: keyof typeof HOME_PALETTE;
 }) {
+  const p = HOME_PALETTE[tone];
+
   return (
     <View style={{ paddingTop: 14 }}>
-      <Card
+      <View
         style={{
           gap: 14,
           borderRadius: 22,
-          borderColor: "rgba(16,185,129,0.22)",
-          backgroundColor: "rgba(15,18,24,0.98)",
+          borderWidth: 1,
+          borderColor: p.border,
+          backgroundColor: p.bg,
           overflow: "hidden",
+          padding: 16,
         }}
       >
-        {!mobileWebLite ? (
-          <>
-            <View
-              pointerEvents="none"
-              style={{
-                position: "absolute",
-                top: -72,
-                right: -42,
-                width: 180,
-                height: 180,
-                borderRadius: 999,
-                backgroundColor: "rgba(16,185,129,0.08)",
-              }}
-            />
-
-            <View
-              pointerEvents="none"
-              style={{
-                position: "absolute",
-                left: -46,
-                bottom: -82,
-                width: 170,
-                height: 170,
-                borderRadius: 999,
-                backgroundColor: "rgba(34,211,238,0.04)",
-              }}
-            />
-          </>
-        ) : null}
+        
 
         <View
           pointerEvents="none"
@@ -664,7 +702,7 @@ function PremiumMetricCard({
             right: 0,
             top: 0,
             height: 1,
-            backgroundColor: "rgba(255,255,255,0.10)",
+            backgroundColor: UI.borderSoft,
           }}
         />
 
@@ -677,22 +715,22 @@ function PremiumMetricCard({
               alignItems: "center",
               justifyContent: "center",
               borderWidth: 1,
-              borderColor: "rgba(16,185,129,0.28)",
-              backgroundColor: "rgba(16,185,129,0.12)",
+              borderColor: "rgba(79,140,255,0.32)",
+              backgroundColor: p.soft,
             }}
           >
             <SafeIcon
   name={loading ? "ellipsis-horizontal" : iconName}
   size={20}
-  color={UI.emerald}
+  color={p.accent}
 />
           </View>
 
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }} numberOfLines={1}>
+            <Text style={{ color: HOME_CARD_TEXT, fontWeight: "900", fontSize: 16 }} numberOfLines={1}>
               {title}
             </Text>
-            <Text style={{ color: UI.muted, fontWeight: "700", marginTop: 2 }} numberOfLines={1}>
+            <Text style={{ color: HOME_CARD_MUTED, fontWeight: "800", marginTop: 2 }} numberOfLines={1}>
               {subtitle}
             </Text>
           </View>
@@ -704,11 +742,11 @@ function PremiumMetricCard({
                 paddingVertical: 6,
                 borderRadius: 999,
                 borderWidth: 1,
-                borderColor: "rgba(16,185,129,0.24)",
-                backgroundColor: "rgba(16,185,129,0.10)",
+                borderColor: "rgba(79,140,255,0.28)",
+                backgroundColor: "rgba(79,140,255,0.10)",
               }}
             >
-              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }}>{badgeText}</Text>
+              <Text style={{ color: HOME_CARD_TEXT, fontWeight: "900", fontSize: 11 }}>{badgeText}</Text>
             </View>
           ) : null}
         </View>
@@ -726,9 +764,17 @@ function PremiumMetricCard({
           </Card>
         )}
 
-        {children}
+        <HomeCardToneContext.Provider
+          value={{
+            text: HOME_CARD_TEXT,
+            muted: HOME_CARD_MUTED,
+            faint: HOME_CARD_FAINT,
+          }}
+        >
+          {children}
+        </HomeCardToneContext.Provider>
 
-        <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
+        <View style={{ height: 1, backgroundColor: UI.borderSoft }} />
 
         <Pressable
           onPress={onPress}
@@ -738,8 +784,8 @@ function PremiumMetricCard({
           style={({ pressed }) => ({
             borderRadius: 18,
             borderWidth: 1,
-            borderColor: "rgba(16,185,129,0.30)",
-            backgroundColor: "rgba(16,185,129,0.12)",
+            borderColor: UI.primaryBorder,
+            backgroundColor: p.soft,
             paddingVertical: 15,
             paddingHorizontal: 16,
             flexDirection: "row",
@@ -749,10 +795,10 @@ function PremiumMetricCard({
             opacity: pressed ? 0.92 : 1,
           })}
         >
-          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>{ctaLabel}</Text>
+          <Text style={{ color: HOME_CARD_TEXT, fontWeight: "900", fontSize: 15 }}>{ctaLabel}</Text>
           {footerRight ? footerRight : <Text style={{ color: UI.faint, fontWeight: "900", fontSize: 16 }}>›</Text>}
         </Pressable>
-      </Card>
+      </View>
     </View>
   );
 }
@@ -883,13 +929,15 @@ function CompactNotificationsHomeCard() {
           transform: pressed ? [{ scale: 0.997 }] : [{ scale: 1 }],
         })}
       >
-        <Card
+        <View
           style={{
             gap: 10,
             padding: 14,
             borderRadius: 20,
-            borderColor: unreadCount > 0 ? "rgba(16,185,129,0.24)" : "rgba(255,255,255,0.10)",
-            backgroundColor: "rgba(15,18,24,0.98)",
+            borderWidth: 1,
+            borderColor: HOME_PALETTE.notification.border,
+            backgroundColor: HOME_PALETTE.notification.bg,
+            overflow: "hidden",
           }}
         >
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
@@ -901,23 +949,23 @@ function CompactNotificationsHomeCard() {
                 alignItems: "center",
                 justifyContent: "center",
                 borderWidth: 1,
-                borderColor: unreadCount > 0 ? UI.emeraldBorder : "rgba(255,255,255,0.10)",
-                backgroundColor: unreadCount > 0 ? UI.emeraldSoft : "rgba(255,255,255,0.05)",
+                borderColor: HOME_PALETTE.notification.border,
+                backgroundColor: HOME_PALETTE.notification.soft,
               }}
             >
              <SafeIcon
   name={unreadCount > 0 ? "notifications" : "notifications-outline"}
   size={18}
-  color={unreadCount > 0 ? UI.emerald : UI.text}
+  color={HOME_PALETTE.notification.accent}
 />
             </View>
 
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }} numberOfLines={1}>
+              <Text style={{ color: HOME_CARD_TEXT, fontWeight: "900", fontSize: 16 }} numberOfLines={1}>
                 Notifications
               </Text>
               <Text
-                style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 2 }}
+                style={{ color: HOME_CARD_MUTED, fontWeight: "800", fontSize: 12, marginTop: 2 }}
                 numberOfLines={1}
               >
                 Alerts, movements, stock entries
@@ -931,12 +979,12 @@ function CompactNotificationsHomeCard() {
                 paddingVertical: 5,
                 borderRadius: 999,
                 borderWidth: 1,
-                borderColor: unreadCount > 0 ? UI.emeraldBorder : "rgba(255,255,255,0.10)",
-                backgroundColor: unreadCount > 0 ? UI.emeraldSoft : "rgba(255,255,255,0.05)",
+                borderColor: HOME_PALETTE.notification.border,
+                backgroundColor: HOME_PALETTE.notification.soft,
                 alignItems: "center",
               }}
             >
-              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }}>
+              <Text style={{ color: HOME_CARD_TEXT, fontWeight: "900", fontSize: 11 }}>
                 {loading ? "..." : unreadCount}
               </Text>
             </View>
@@ -959,19 +1007,19 @@ function CompactNotificationsHomeCard() {
 
           <View style={{ flexDirection: "row", gap: 10 }}>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 11 }}>Unread</Text>
-              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18, marginTop: 2 }}>
+              <Text style={{ color: HOME_CARD_MUTED, fontWeight: "800", fontSize: 11 }}>Unread</Text>
+              <Text style={{ color: HOME_CARD_TEXT, fontWeight: "900", fontSize: 18, marginTop: 2 }}>
                 {unreadCount}
               </Text>
             </View>
 
             <View style={{ flex: 1 }}>
-              <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 11 }}>This Store</Text>
-              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18, marginTop: 2 }}>
+              <Text style={{ color: HOME_CARD_MUTED, fontWeight: "800", fontSize: 11 }}>This Store</Text>
+              <Text style={{ color: HOME_CARD_TEXT, fontWeight: "900", fontSize: 18, marginTop: 2 }}>
                 {activeStoreUnread}
               </Text>
               <Text
-                style={{ color: UI.faint, fontWeight: "800", fontSize: 11, marginTop: 2 }}
+                style={{ color: HOME_CARD_FAINT, fontWeight: "800", fontSize: 11, marginTop: 2 }}
                 numberOfLines={1}
               >
                 {activeStoreName ?? "Active store only"}
@@ -979,12 +1027,12 @@ function CompactNotificationsHomeCard() {
             </View>
 
             <View style={{ flex: 1 }}>
-              <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 11 }}>Receipts</Text>
-              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18, marginTop: 2 }}>
+              <Text style={{ color: HOME_CARD_MUTED, fontWeight: "800", fontSize: 11 }}>Receipts</Text>
+              <Text style={{ color: HOME_CARD_TEXT, fontWeight: "900", fontSize: 18, marginTop: 2 }}>
                 {receipts.length}
               </Text>
               <Text
-                style={{ color: UI.faint, fontWeight: "800", fontSize: 11, marginTop: 2 }}
+                style={{ color: HOME_CARD_FAINT, fontWeight: "800", fontSize: 11, marginTop: 2 }}
                 numberOfLines={1}
               >
                 recently loaded
@@ -1002,13 +1050,13 @@ function CompactNotificationsHomeCard() {
               paddingTop: 2,
             })}
           >
-            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 13 }}>
+            <Text style={{ color: HOME_CARD_TEXT, fontWeight: "900", fontSize: 13 }}>
               Open Notification Center
             </Text>
             <View style={{ flex: 1 }} />
-            <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 16 }}>›</Text>
+            <Text style={{ color: HOME_CARD_MUTED, fontWeight: "900", fontSize: 16 }}>›</Text>
           </Pressable>
-        </Card>
+        </View>
       </Pressable>
     </View>
   );
@@ -1028,6 +1076,7 @@ function CompactFinanceCardHomePreview() {
   const storeName = String(org.activeStoreName ?? "Store").trim() || "Store";
   const roleLower = String(org.activeRole ?? "").trim().toLowerCase();
   const isOwner = roleLower === "owner";
+  const canSeeCapitalSecrets = isOwner;
   const isOwnerOrAdmin = roleLower === "owner" || roleLower === "admin";
   const isStaffView = roleLower === "staff";
 
@@ -1183,10 +1232,7 @@ function CompactFinanceCardHomePreview() {
 
   const callExpenseForStore = useCallback(
     async (sid: string, fromYMD: string, toYMD: string): Promise<ExpenseSummary> => {
-      const fnName =
-        isStaffView && canStaffSeeExpenseFinance
-          ? "get_expense_summary_v2"
-          : "get_expense_summary";
+      const fnName = "get_expense_summary_v2";
 
       const { data, error } = await supabase.rpc(fnName, {
         p_store_id: sid,
@@ -1324,7 +1370,7 @@ function CompactFinanceCardHomePreview() {
 
   const callExpenseBreakdown = useCallback(
     async (sid: string, fromYMD: string, toYMD: string): Promise<ExpenseChannelBreakdown> => {
-      const { data, error } = await supabase.rpc("get_expense_channel_summary_v1", {
+      const { data, error } = await supabase.rpc("get_expense_channel_summary_v2", {
         p_store_id: sid,
         p_from: fromYMD,
         p_to: toYMD,
@@ -1505,7 +1551,6 @@ function CompactFinanceCardHomePreview() {
           (salesRes.status === "rejected" && salesRes.reason) ||
           (expenseRes.status === "rejected" && expenseRes.reason) ||
           (profitRes.status === "rejected" && profitRes.reason) ||
-          (payRes.status === "rejected" && payRes.reason) ||
           (collectionsRes.status === "rejected" && collectionsRes.reason) ||
           (expenseBreakdownRes.status === "rejected" && expenseBreakdownRes.reason) ||
           null;
@@ -1801,6 +1846,7 @@ function CompactFinanceCardHomePreview() {
       error={financeError}
       ctaLabel={financeCtaLabel}
       mobileWebLite={isMobileWeb}
+      tone="finance"
       onPress={() => {
         if (isStaffView) {
           if (canStaffSeeExpenseFinance) {
@@ -1961,6 +2007,7 @@ function CompactClubRevenueCardHomePreview({ onOpen }: { onOpen: () => void }) {
       error={err}
       ctaLabel="Open Club Revenue"
       mobileWebLite={isMobileWeb}
+      tone="club"
       onPress={onOpen}
     >
       <View style={{ flexDirection: "row", gap: 12, paddingTop: 2 }}>
@@ -2143,6 +2190,7 @@ function CompactStockValueCardHomePreview() {
       error={err}
       ctaLabel="Open Stock History"
       mobileWebLite={isMobileWeb}
+      tone="stock"
       onPress={() => router.push("/stocks/history")}
       footerRight={
         <Text style={{ color: UI.faint, fontWeight: "900", fontSize: 12 }}>
@@ -2246,8 +2294,8 @@ function ZetraAiCard({ onOpen }: { onOpen: () => void }) {
           height: 42,
           borderRadius: 999,
           borderWidth: 1,
-          borderColor: primary ? "rgba(16,185,129,0.30)" : "rgba(255,255,255,0.12)",
-          backgroundColor: primary ? "rgba(16,185,129,0.14)" : "rgba(255,255,255,0.06)",
+          borderColor: primary ? "rgba(79,140,255,0.34)" : "rgba(255,255,255,0.12)",
+          backgroundColor: primary ? "rgba(79,140,255,0.14)" : "rgba(255,255,255,0.06)",
           alignItems: "center",
           justifyContent: "center",
           opacity: pressed ? 0.92 : 1,
@@ -2269,56 +2317,18 @@ function ZetraAiCard({ onOpen }: { onOpen: () => void }) {
           transform: pressed ? [{ scale: 0.997 }] : [{ scale: 1 }],
         })}
       >
-        <Card
+        <View
           style={{
             padding: 0,
             overflow: "hidden",
             borderRadius: 22,
-            borderColor: "rgba(16,185,129,0.28)",
-            backgroundColor: "rgba(15,18,24,0.98)",
+            borderWidth: 1,
+            borderColor: HOME_PALETTE.ai.border,
+            backgroundColor: HOME_PALETTE.ai.bg,
           }}
         >
           <View style={{ position: "relative" }}>
-            {!isMobileWeb ? (
-              <>
-                <View
-                  pointerEvents="none"
-                  style={{
-                    position: "absolute",
-                    left: -80,
-                    top: -90,
-                    width: 260,
-                    height: 260,
-                    borderRadius: 999,
-                    backgroundColor: "rgba(16,185,129,0.10)",
-                  }}
-                />
-                <View
-                  pointerEvents="none"
-                  style={{
-                    position: "absolute",
-                    right: -120,
-                    top: -110,
-                    width: 320,
-                    height: 320,
-                    borderRadius: 999,
-                    backgroundColor: "rgba(34,211,238,0.05)",
-                  }}
-                />
-                <View
-                  pointerEvents="none"
-                  style={{
-                    position: "absolute",
-                    left: -60,
-                    bottom: -180,
-                    width: 360,
-                    height: 360,
-                    borderRadius: 999,
-                    backgroundColor: "rgba(0,0,0,0.42)",
-                  }}
-                />
-              </>
-            ) : null}
+            
             <View
               pointerEvents="none"
               style={{
@@ -2327,60 +2337,36 @@ function ZetraAiCard({ onOpen }: { onOpen: () => void }) {
                 right: 0,
                 top: 0,
                 height: 1,
-                backgroundColor: "rgba(255,255,255,0.10)",
+                backgroundColor: UI.borderSoft,
               }}
             />
 
-            <View style={{ padding: 16, gap: 12 }}>
+            <View style={{ padding: 14, gap: 10 }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
                 <View style={{ position: "relative" }}>
-                  <View
-                    pointerEvents="none"
-                    style={{
-                      position: "absolute",
-                      left: -12,
-                      top: -12,
-                      width: 74,
-                      height: 74,
-                      borderRadius: 999,
-                      backgroundColor: "rgba(16,185,129,0.08)",
-                      borderWidth: 1,
-                      borderColor: "rgba(16,185,129,0.16)",
-                    }}
-                  />
+                  
                   <View
                     style={{
-                      width: 50,
-                      height: 50,
+                     width: 42,
+height: 38,
                       borderRadius: 999,
                       borderWidth: 1,
                       borderColor: "rgba(16,185,129,0.36)",
-                      backgroundColor: "rgba(16,185,129,0.14)",
+                      backgroundColor: "rgba(79,140,255,0.14)",
                       alignItems: "center",
                       justifyContent: "center",
                     }}
                   >
-                    <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>AI</Text>
+                    <Text style={{ color: HOME_CARD_TEXT, fontWeight: "900", fontSize: 14 }}>AI</Text>
                   </View>
-                  <View
-                    pointerEvents="none"
-                    style={{
-                      position: "absolute",
-                      left: 10,
-                      top: 10,
-                      width: 10,
-                      height: 10,
-                      borderRadius: 999,
-                      backgroundColor: "rgba(255,255,255,0.18)",
-                    }}
-                  />
+                  
                 </View>
 
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 17 }} numberOfLines={1}>
+                  <Text style={{ color: HOME_CARD_TEXT, fontWeight: "900", fontSize: 16 }} numberOfLines={1}>
                     ZETRA AI
                   </Text>
-                  <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 3 }} numberOfLines={1}>
+                  <Text style={{ color: HOME_CARD_MUTED, fontWeight: "800", marginTop: 3 }} numberOfLines={1}>
                     Business Intelligence Engine
                   </Text>
                 </View>
@@ -2391,31 +2377,32 @@ function ZetraAiCard({ onOpen }: { onOpen: () => void }) {
                     paddingVertical: 6,
                     borderRadius: 999,
                     borderWidth: 1,
-                    borderColor: "rgba(16,185,129,0.22)",
-                    backgroundColor: "rgba(16,185,129,0.10)",
+                    borderColor: "rgba(79,140,255,0.26)",
+                    backgroundColor: "rgba(79,140,255,0.10)",
                   }}
                 >
-                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11, letterSpacing: 0.3 }}>
+                  <Text style={{ color: HOME_CARD_TEXT, fontWeight: "900", fontSize: 11, letterSpacing: 0.3 }}>
                     LIVE • COPILOT
                   </Text>
                 </View>
               </View>
 
-              <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
+              <View style={{ height: 1, backgroundColor: UI.borderSoft, marginVertical: -2 }} />
 
               <View style={{ gap: 6 }}>
-                <Text style={{ color: UI.faint, fontWeight: "900", fontSize: 12, letterSpacing: 0.4 }}>
+                <Text style={{ color: HOME_CARD_FAINT, fontWeight: "900", fontSize: 12, letterSpacing: 0.4 }}>
                   SMART INSIGHT
                 </Text>
 
-                <Animated.Text
-                  style={{ opacity: fade, color: UI.text, fontWeight: "900", fontSize: 14, lineHeight: 20 }}
-                  numberOfLines={2}
-                >
+              <Animated.Text
+  style={{ opacity: fade, color: HOME_CARD_TEXT, fontWeight: "900", fontSize: 13, lineHeight: 18 }}
+  numberOfLines={1}
+>
+              
                   {preview}
                 </Animated.Text>
 
-                <Text style={{ color: UI.muted, fontWeight: "800" }} numberOfLines={1}>
+                <Text style={{ color: HOME_CARD_MUTED, fontWeight: "800" }} numberOfLines={1}>
                   SW/EN auto • mwongozo wa kutumia ZETRA BMS • maamuzi ya biashara
                 </Text>
               </View>
@@ -2425,12 +2412,12 @@ function ZetraAiCard({ onOpen }: { onOpen: () => void }) {
                 <CtaButton title="View Insights" kind="ghost" onPress={onOpen} />
               </View>
 
-              <Text style={{ color: UI.faint, fontWeight: "800" }} numberOfLines={2}>
-                Tip: “Nifanyeje kuongeza bidhaa?” • “How do I manage staff?” • “Nipe wazo la biashara.”
-              </Text>
+        <Text style={{ color: HOME_CARD_FAINT, fontWeight: "800", fontSize: 11 }} numberOfLines={1}>
+  Smart tips • Business guidance • Fast decisions
+</Text>
             </View>
           </View>
-        </Card>
+        </View>
       </Pressable>
     </View>
   );
@@ -2535,8 +2522,8 @@ function CashierQuickHome() {
         style={({ pressed }) => ({
           borderRadius: 18,
           borderWidth: 1,
-          borderColor: "rgba(16,185,129,0.30)",
-          backgroundColor: "rgba(16,185,129,0.12)",
+          borderColor: UI.primaryBorder,
+          backgroundColor: UI.primarySoft,
           paddingVertical: 15,
           paddingHorizontal: 16,
           alignItems: "center",
@@ -2554,8 +2541,8 @@ function CashierQuickHome() {
         style={({ pressed }) => ({
           borderRadius: 18,
           borderWidth: 1,
-          borderColor: "rgba(16,185,129,0.30)",
-          backgroundColor: "rgba(16,185,129,0.12)",
+          borderColor: UI.primaryBorder,
+          backgroundColor: UI.primarySoft,
           paddingVertical: 15,
           paddingHorizontal: 16,
           alignItems: "center",
@@ -2590,14 +2577,15 @@ function WorkspaceCard({
 
   return (
     <View style={{ marginTop: 14 }}>
-      <Card
+      <View
         style={{
-          gap: 12,
-          borderRadius: 20,
-          borderColor: "rgba(16,185,129,0.20)",
-          backgroundColor: "rgba(15,18,24,0.98)",
+          gap: 10,
+          borderRadius: 22,
+          borderWidth: 1,
+          borderColor: HOME_PALETTE.workspace.border,
+          backgroundColor: HOME_PALETTE.workspace.bg,
           overflow: "hidden",
-          padding: 16,
+          padding: 14,
         }}
       >
         {!isMobileWeb ? (
@@ -2610,7 +2598,7 @@ function WorkspaceCard({
               width: 140,
               height: 140,
               borderRadius: 999,
-              backgroundColor: "rgba(16,185,129,0.06)",
+              backgroundColor: "transparent",
             }}
           />
         ) : null}
@@ -2619,22 +2607,22 @@ function WorkspaceCard({
           <View
             style={{
               width: 42,
-              height: 42,
+              height: 38,
               borderRadius: 14,
               alignItems: "center",
               justifyContent: "center",
               borderWidth: 1,
-              borderColor: "rgba(16,185,129,0.24)",
-              backgroundColor: "rgba(16,185,129,0.10)",
+              borderColor: "rgba(79,140,255,0.28)",
+              backgroundColor: HOME_PALETTE.workspace.soft,
             }}
           >
-            <SafeIcon name="business-outline" size={18} color={UI.emerald} />
+            <SafeIcon name="business-outline" size={18} color={UI.primary} />
           </View>
 
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text
               style={{
-                color: UI.faint,
+                color: HOME_CARD_FAINT,
                 fontWeight: "900",
                 fontSize: 10,
                 letterSpacing: 0.8,
@@ -2644,7 +2632,7 @@ function WorkspaceCard({
             </Text>
 
             <Text
-              style={{ color: UI.text, fontWeight: "900", fontSize: 18, marginTop: 2 }}
+              style={{ color: HOME_CARD_TEXT, fontWeight: "900", fontSize: 17, marginTop: 2 }}
               numberOfLines={1}
             >
               {orgLabel}
@@ -2657,8 +2645,8 @@ function WorkspaceCard({
               paddingVertical: 5,
               borderRadius: 999,
               borderWidth: 1,
-              borderColor: "rgba(16,185,129,0.22)",
-              backgroundColor: "rgba(16,185,129,0.10)",
+              borderColor: "rgba(79,140,255,0.26)",
+              backgroundColor: "rgba(79,140,255,0.10)",
             }}
           >
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 10 }}>
@@ -2667,6 +2655,9 @@ function WorkspaceCard({
           </View>
         </View>
 
+        <HomeCardToneContext.Provider
+          value={{ text: HOME_CARD_TEXT, muted: HOME_CARD_MUTED, faint: HOME_CARD_FAINT }}
+        >
         <View style={{ flexDirection: "row", gap: 10 }}>
           <MiniStat label="Organization" value={orgLabel} />
           <MiniStat label="Role" value={roleLabel} />
@@ -2676,6 +2667,8 @@ function WorkspaceCard({
             hint={activeStoreId ? "live context" : "not selected"}
           />
         </View>
+
+        </HomeCardToneContext.Provider>
 
         {!activeStoreId ? (
           <Text style={{ color: UI.muted, fontWeight: "800" }}>
@@ -2689,8 +2682,8 @@ function WorkspaceCard({
           style={({ pressed }) => ({
             borderRadius: 16,
             borderWidth: 1,
-            borderColor: "rgba(16,185,129,0.28)",
-            backgroundColor: "rgba(16,185,129,0.12)",
+            borderColor: "rgba(79,140,255,0.32)",
+            backgroundColor: HOME_PALETTE.workspace.soft,
             paddingVertical: 13,
             paddingHorizontal: 16,
             flexDirection: "row",
@@ -2705,7 +2698,7 @@ function WorkspaceCard({
             Switch Org / Workspace
           </Text>
         </Pressable>
-      </Card>
+      </View>
     </View>
   );
 }
@@ -2743,7 +2736,7 @@ function WebSafeHomeActions({
           borderRadius: 20,
           borderWidth: 1,
           borderColor: "rgba(16,185,129,0.26)",
-          backgroundColor: "rgba(16,185,129,0.10)",
+          backgroundColor: "rgba(79,140,255,0.10)",
           paddingVertical: 16,
           paddingHorizontal: 16,
           justifyContent: "center",
@@ -2776,8 +2769,8 @@ function WebSafeHomeActions({
         style={{
           gap: 16,
           borderRadius: 24,
-          borderColor: "rgba(16,185,129,0.22)",
-          backgroundColor: "rgba(15,18,24,0.98)",
+          borderColor: HOME_CARD_BORDER,
+          backgroundColor: HOME_CARD_BG,
           padding: 18,
           overflow: "hidden",
         }}
@@ -2791,7 +2784,7 @@ function WebSafeHomeActions({
             width: 180,
             height: 180,
             borderRadius: 999,
-            backgroundColor: "rgba(16,185,129,0.06)",
+            backgroundColor: "transparent",
           }}
         />
 
@@ -2867,8 +2860,8 @@ function DesktopKpiStrip({
           minWidth: 180,
           gap: 6,
           borderRadius: 20,
-          borderColor: "rgba(16,185,129,0.18)",
-          backgroundColor: "rgba(15,18,24,0.98)",
+          borderColor: "rgba(79,140,255,0.20)",
+          backgroundColor: UI.card,
           padding: 16,
         }}
       >
@@ -2925,8 +2918,8 @@ function DesktopSignalCard({
       style={{
         gap: 10,
         borderRadius: 20,
-        borderColor: "rgba(16,185,129,0.18)",
-        backgroundColor: "rgba(15,18,24,0.98)",
+        borderColor: "rgba(79,140,255,0.20)",
+        backgroundColor: UI.card,
         padding: 16,
       }}
     >
@@ -2939,8 +2932,8 @@ function DesktopSignalCard({
               paddingVertical: 5,
               borderRadius: 999,
               borderWidth: 1,
-              borderColor: "rgba(16,185,129,0.22)",
-              backgroundColor: "rgba(16,185,129,0.10)",
+              borderColor: "rgba(79,140,255,0.26)",
+              backgroundColor: "rgba(79,140,255,0.10)",
             }}
           >
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }}>{badge}</Text>
@@ -2957,10 +2950,12 @@ function CapitalRecoverySummaryCard({
   loading,
   error,
   summary,
+  canSeeCapitalSecrets,
 }: {
   loading: boolean;
   error: string | null;
   summary: CapitalRecoverySummaryRow;
+  canSeeCapitalSecrets: boolean;
 }) {
   const fmt = useCallback(
     (n: number) =>
@@ -2976,8 +2971,8 @@ function CapitalRecoverySummaryCard({
       style={{
         gap: 14,
         borderRadius: 24,
-        borderColor: "rgba(16,185,129,0.22)",
-        backgroundColor: "rgba(15,18,24,0.98)",
+        borderColor: "rgba(79,140,255,0.26)",
+        backgroundColor: UI.card,
       }}
     >
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
@@ -3002,13 +2997,19 @@ function CapitalRecoverySummaryCard({
       <View style={{ flexDirection: "row", gap: 12 }}>
         <MiniStat label="Income" value={fmt(summary.total_income)} hint="all entries" />
         <MiniStat label="Cost" value={fmt(summary.total_cost)} hint="operating" />
-        <MiniStat label="Asset" value={fmt(summary.total_asset)} hint="capital target" />
+        {canSeeCapitalSecrets ? (
+          <MiniStat label="Asset" value={fmt(summary.total_asset)} hint="capital target" />
+        ) : null}
       </View>
 
       <View style={{ flexDirection: "row", gap: 12 }}>
         <MiniStat label="Remaining Cost" value={fmt(summary.remaining_cost)} />
-        <MiniStat label="Remaining Asset" value={fmt(summary.remaining_asset)} />
-        <MiniStat label="Profit" value={fmt(summary.realized_profit)} hint="after cost + asset" />
+        {canSeeCapitalSecrets ? (
+          <MiniStat label="Remaining Asset" value={fmt(summary.remaining_asset)} />
+        ) : null}
+        {canSeeCapitalSecrets ? (
+          <MiniStat label="Profit" value={fmt(summary.realized_profit)} hint="after cost + asset" />
+        ) : null}
       </View>
 
       <View style={{ flexDirection: "row", gap: 12 }}>
@@ -3035,8 +3036,8 @@ function CapitalRecoveryActionHero({
         style={{
           gap: 14,
           borderRadius: 24,
-          borderColor: "rgba(16,185,129,0.24)",
-          backgroundColor: "rgba(15,18,24,0.98)",
+          borderColor: "rgba(79,140,255,0.28)",
+          backgroundColor: UI.card,
           overflow: "hidden",
         }}
       >
@@ -3049,7 +3050,7 @@ function CapitalRecoveryActionHero({
             width: 180,
             height: 180,
             borderRadius: 999,
-            backgroundColor: "rgba(16,185,129,0.08)",
+            backgroundColor: "transparent",
           }}
         />
 
@@ -3062,7 +3063,7 @@ function CapitalRecoveryActionHero({
             width: 170,
             height: 170,
             borderRadius: 999,
-            backgroundColor: "rgba(34,211,238,0.04)",
+            backgroundColor: "transparent",
           }}
         />
 
@@ -3094,6 +3095,7 @@ function CapitalRecoveryHomeShell({
   summary,
   summaryLoading,
   summaryError,
+  canSeeCapitalSecrets,
 }: {
   activeOrgName?: string | null;
   activeStoreName?: string | null;
@@ -3101,6 +3103,7 @@ function CapitalRecoveryHomeShell({
   summary: CapitalRecoverySummaryRow;
   summaryLoading: boolean;
   summaryError: string | null;
+  canSeeCapitalSecrets: boolean;
 }) {
   return (
     <View style={{ marginTop: 14, gap: 14 }}>
@@ -3113,6 +3116,7 @@ function CapitalRecoveryHomeShell({
         loading={summaryLoading}
         error={summaryError}
         summary={summary}
+        canSeeCapitalSecrets={canSeeCapitalSecrets}
       />
     </View>
   );
@@ -3129,8 +3133,8 @@ function CapitalRecoveryBottomSwitcherCard({
         style={{
           gap: 12,
           borderRadius: 24,
-          borderColor: "rgba(16,185,129,0.22)",
-          backgroundColor: "rgba(15,18,24,0.98)",
+          borderColor: HOME_CARD_BORDER,
+          backgroundColor: HOME_CARD_BG,
         }}
       >
         <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18 }}>
@@ -3151,7 +3155,7 @@ function CapitalRecoveryBottomSwitcherCard({
             borderRadius: 20,
             borderWidth: 1,
             borderColor: "rgba(16,185,129,0.34)",
-            backgroundColor: "rgba(16,185,129,0.16)",
+            backgroundColor: "rgba(79,140,255,0.16)",
             paddingVertical: 16,
             paddingHorizontal: 16,
             alignItems: "center",
@@ -3172,18 +3176,21 @@ function CapitalRecoveryBottomSwitcherCard({
 function CapitalRecoveryReportsCard({
   activeStoreId,
   reloadKey = 0,
+  canSeeCapitalSecrets,
 }: {
   activeStoreId?: string | null;
   reloadKey?: number;
+  canSeeCapitalSecrets: boolean;
 }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<CapitalRecoveryHistoryRow[]>([]);
-  const [todayReport, setTodayReport] = useState<CapitalRecoveryTodayReport>({
-    asset: 0,
-    cost: 0,
-    income: 0,
-  });
+ const [todayReport, setTodayReport] = useState<CapitalRecoveryTodayReport>({
+  asset: 0,
+  cost: 0,
+  income: 0,
+  net: 0,
+});
 
   const storeId = String(activeStoreId ?? "").trim();
 
@@ -3191,10 +3198,11 @@ function CapitalRecoveryReportsCard({
     if (!storeId) {
       setHistory([]);
       setTodayReport({
-        asset: 0,
-        cost: 0,
-        income: 0,
-      });
+  asset: 0,
+  cost: 0,
+  income: 0,
+  net: 0,
+});
       setError("No active Capital Recovery store selected");
       return;
     }
@@ -3203,7 +3211,7 @@ function CapitalRecoveryReportsCard({
     setError(null);
 
     try {
-      const { data, error: hErr } = await supabase.rpc("get_capital_recovery_history_v1", {
+      const { data, error: hErr } = await supabase.rpc("get_capital_recovery_history_v2", {
         p_store_id: storeId,
         p_limit: 100,
       });
@@ -3248,18 +3256,20 @@ function CapitalRecoveryReportsCard({
       }
 
       setTodayReport({
-        asset,
-        cost,
-        income,
-      });
+  asset,
+  cost,
+  income,
+  net: income - cost,
+});
     } catch (e: any) {
       setError(clean(e?.message) || "Failed to load Capital Recovery history");
       setHistory([]);
       setTodayReport({
-        asset: 0,
-        cost: 0,
-        income: 0,
-      });
+  asset: 0,
+  cost: 0,
+  income: 0,
+  net: 0,
+});
     } finally {
       setLoading(false);
     }
@@ -3268,7 +3278,11 @@ function CapitalRecoveryReportsCard({
   useEffect(() => {
     void load();
   }, [load, reloadKey]);
-
+useFocusEffect(
+  useCallback(() => {
+    void load();
+  }, [load])
+);
   const fmt = useCallback(
     (n: number) =>
       formatMoney(n, {
@@ -3299,8 +3313,8 @@ function CapitalRecoveryReportsCard({
         style={{
           gap: 14,
           borderRadius: 24,
-          borderColor: "rgba(16,185,129,0.22)",
-          backgroundColor: "rgba(15,18,24,0.98)",
+          borderColor: "rgba(79,140,255,0.26)",
+          backgroundColor: "rgba(255,255,255,0.055)",
         }}
       >
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
@@ -3338,62 +3352,132 @@ function CapitalRecoveryReportsCard({
         ) : null}
 
         <View style={{ flexDirection: "row", gap: 12 }}>
-          <MiniStat
-            label="Asset"
-            value={String(report.ASSET.count)}
-            hint={fmt(report.ASSET.amount)}
-          />
+          {canSeeCapitalSecrets ? (
+            <MiniStat
+              label="Asset"
+              value={String(report.ASSET.count)}
+              hint={fmt(report.ASSET.amount)}
+            />
+          ) : null}
           <MiniStat
             label="Cost"
             value={String(report.COST.count)}
             hint={fmt(report.COST.amount)}
           />
           <MiniStat
-            label="Income"
-            value={String(report.INCOME.count)}
-            hint={fmt(report.INCOME.amount)}
-          />
-        </View>
+  label="Income"
+  value={String(report.INCOME.count)}
+  hint={fmt(report.INCOME.amount)}
+/>
+</View>
 
-        <View
-          style={{
-            borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.08)",
-            backgroundColor: "rgba(255,255,255,0.04)",
-            borderRadius: 18,
-            padding: 12,
-            gap: 10,
-          }}
-        >
+{/* 🔽 TODAY NET POSITION */}
+<View
+  style={{
+    borderWidth: 1,
+    borderColor:
+      todayReport.income - todayReport.cost >= 0
+        ? "rgba(16,185,129,0.32)"
+        : "rgba(239,68,68,0.32)",
+    backgroundColor:
+      todayReport.income - todayReport.cost >= 0
+        ? "rgba(79,140,255,0.10)"
+        : "rgba(239,68,68,0.10)",
+    borderRadius: 18,
+    padding: 12,
+    gap: 6,
+  }}
+>
+  <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 12 }}>
+    TODAY NET POSITION
+  </Text>
+
+  <Text
+    style={{
+      color: todayReport.income - todayReport.cost >= 0 ? UI.success : UI.danger,
+      fontWeight: "900",
+      fontSize: 18,
+    }}
+  >
+    {todayReport.income - todayReport.cost >= 0
+      ? `+ ${fmt(todayReport.income - todayReport.cost)}`
+      : `- ${fmt(Math.abs(todayReport.income - todayReport.cost))}`}
+  </Text>
+
+  <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 12 }}>
+    {todayReport.income - todayReport.cost >= 0 ? "Today profit" : "Today loss"}
+  </Text>
+</View>
+
+<View
+  style={{
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+    backgroundColor: "rgba(255,255,255,0.04)",
+    borderRadius: 18,
+    padding: 12,
+    gap: 10,
+  }}
+></View>
           <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 12 }}>
             TODAY REPORT
           </Text>
 
-          <View style={{ flexDirection: "row", gap: 12 }}>
-            <MiniStat
-              label="Today Asset"
-              value={fmt(todayReport.asset)}
-              hint="today"
-            />
-            <MiniStat
-              label="Today Cost"
-              value={fmt(todayReport.cost)}
-              hint="today"
-            />
-            <MiniStat
-              label="Today Income"
-              value={fmt(todayReport.income)}
-              hint="today"
-            />
-          </View>
-        </View>
+         <View style={{ flexDirection: "row", gap: 12 }}>
+  {canSeeCapitalSecrets ? (
+    <MiniStat label="Today Asset" value={fmt(todayReport.asset)} hint="today" />
+  ) : null}
+  <MiniStat label="Today Cost" value={fmt(todayReport.cost)} hint="today" />
+  <MiniStat label="Today Income" value={fmt(todayReport.income)} hint="today" />
+</View>
 
-     
-      </Card>
+<View
+  style={{
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor:
+      todayReport.net < 0 ? "rgba(201,74,74,0.45)" : "rgba(16,185,129,0.35)",
+    backgroundColor:
+      todayReport.net < 0 ? "rgba(201,74,74,0.12)" : "rgba(79,140,255,0.10)",
+    borderRadius: 16,
+    padding: 12,
+  }}
+>
+  <Text
+    style={{
+      color: todayReport.net < 0 ? UI.danger : UI.emerald,
+      fontWeight: "900",
+      fontSize: 12,
+    }}
+  >
+    TODAY NET POSITION
+  </Text>
+
+  <Text
+    style={{
+      color: todayReport.net < 0 ? UI.danger : UI.emerald,
+      fontWeight: "900",
+      fontSize: 20,
+      marginTop: 6,
+    }}
+    numberOfLines={1}
+    adjustsFontSizeToFit
+    minimumFontScale={0.75}
+  >
+    {todayReport.net < 0 ? "-" : "+"}
+    {fmt(Math.abs(todayReport.net))}
+  </Text>
+
+  <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 4 }}>
+    {todayReport.net < 0 ? "Cost imezidi income ya leo" : "Income imezidi cost ya leo"}
+  </Text>
+</View>
+</Card>
     </View>
   );
 }
-    
+     
+     
 
 function WebDesktopShell({
   width: _width,
@@ -3516,9 +3600,7 @@ const {
     router.push("/org-switcher");
   }, [router]);
 
-  const goClubRevenue = useCallback(() => {
-    router.push("/club-revenue");
-  }, [router]);
+  
 
   const goAI = useCallback(() => {
     router.push("/ai");
@@ -3526,6 +3608,10 @@ const {
 
   const goLive = useCallback(() => {
     router.push("/finance/live");
+  }, [router]);
+
+  const goStockValue = useCallback(() => {
+    router.push("/stocks/history" as any);
   }, [router]);
 
   const bottomPad = useMemo(() => Math.max(insets.bottom, 8) + 14, [insets.bottom]);
@@ -3572,6 +3658,7 @@ const {
   const storeId = String(activeStoreId ?? "").trim();
   const roleLower = String(activeRole ?? "").trim().toLowerCase();
   const isOwner = roleLower === "owner";
+  const canSeeCapitalSecrets = isOwner;
 
   const moneyPrefs = useOrgMoneyPrefs(orgId);
   const moneyRefreshRef = useRef<null | (() => Promise<any> | any)>(null);
@@ -3971,13 +4058,12 @@ const {
         />
       ) : null}
 
-      {!isWebLiteHome && !isCashier && !isDesktopWeb && !isCapitalRecoveryStore ? (
-        <ZetraAiCard onOpen={goAI} />
-      ) : null}
-
-      {!isWebLiteHome && !isCashier && !isDesktopWeb && !isCapitalRecoveryStore ? (
-        <CompactNotificationsHomeCard />
-      ) : null}
+    {!isCashier && !isDesktopWeb && !isCapitalRecoveryStore ? (
+  <>
+    <CompactNotificationsHomeCard />
+    <ZetraAiCard onOpen={goAI} />
+  </>
+) : null}
 
       {!!error && !String(error).toLowerCase().includes("not allowed") && (
         <Card
@@ -4003,11 +4089,13 @@ const {
               summaryLoading={capitalSummaryLoading}
               summaryError={capitalSummaryError}
               summary={capitalSummary}
+              canSeeCapitalSecrets={canSeeCapitalSecrets}
             />
 
             <CapitalRecoveryReportsCard
               activeStoreId={activeStoreId}
               reloadKey={capitalRecoveryTick}
+              canSeeCapitalSecrets={canSeeCapitalSecrets}
             />
 
             <CapitalRecoveryBottomSwitcherCard
@@ -4030,8 +4118,8 @@ const {
               marginTop: 14,
               gap: 16,
               borderRadius: 24,
-              borderColor: "rgba(16,185,129,0.22)",
-              backgroundColor: "rgba(15,18,24,0.98)",
+              borderColor: "rgba(79,140,255,0.26)",
+              backgroundColor: UI.card,
               padding: 18,
             }}
           >
@@ -4054,8 +4142,8 @@ const {
                 style={({ pressed }) => ({
                   borderRadius: 20,
                   borderWidth: 1,
-                  borderColor: "rgba(16,185,129,0.24)",
-                  backgroundColor: "rgba(16,185,129,0.10)",
+                  borderColor: "rgba(79,140,255,0.28)",
+                  backgroundColor: "rgba(79,140,255,0.10)",
                   paddingVertical: 16,
                   paddingHorizontal: 16,
                   alignItems: "center",
@@ -4077,8 +4165,8 @@ const {
                 style={({ pressed }) => ({
                   borderRadius: 20,
                   borderWidth: 1,
-                  borderColor: "rgba(16,185,129,0.24)",
-                  backgroundColor: "rgba(16,185,129,0.10)",
+                  borderColor: "rgba(79,140,255,0.28)",
+                  backgroundColor: "rgba(79,140,255,0.10)",
                   paddingVertical: 16,
                   paddingHorizontal: 16,
                   alignItems: "center",
@@ -4100,8 +4188,8 @@ const {
                 style={({ pressed }) => ({
                   borderRadius: 20,
                   borderWidth: 1,
-                  borderColor: "rgba(16,185,129,0.24)",
-                  backgroundColor: "rgba(16,185,129,0.10)",
+                  borderColor: "rgba(79,140,255,0.28)",
+                  backgroundColor: "rgba(79,140,255,0.10)",
                   paddingVertical: 16,
                   paddingHorizontal: 16,
                   alignItems: "center",
@@ -4147,8 +4235,8 @@ const {
                 style={({ pressed }) => ({
                   borderRadius: 20,
                   borderWidth: 1,
-                  borderColor: "rgba(16,185,129,0.24)",
-                  backgroundColor: "rgba(16,185,129,0.10)",
+                  borderColor: "rgba(79,140,255,0.28)",
+                  backgroundColor: "rgba(79,140,255,0.10)",
                   paddingVertical: 16,
                   paddingHorizontal: 16,
                   alignItems: "center",
@@ -4159,6 +4247,29 @@ const {
               >
                 <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
                   Open Finance
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={goStockValue}
+                // @ts-ignore
+                onClick={goStockValue}
+                hitSlop={10}
+                style={({ pressed }) => ({
+                  borderRadius: 20,
+                  borderWidth: 1,
+                  borderColor: "rgba(79,140,255,0.28)",
+                  backgroundColor: "rgba(79,140,255,0.10)",
+                  paddingVertical: 16,
+                  paddingHorizontal: 16,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  opacity: pressed ? 0.92 : 1,
+                  transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
+                })}
+              >
+                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
+                  Open Stock Value
                 </Text>
               </Pressable>
             </View>
@@ -4199,8 +4310,8 @@ const {
                   marginTop: 14,
                   gap: 12,
                   borderRadius: 22,
-                  borderColor: "rgba(16,185,129,0.22)",
-                  backgroundColor: "rgba(15,18,24,0.98)",
+                  borderColor: "rgba(79,140,255,0.26)",
+                  backgroundColor: UI.card,
                 }}
               >
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
@@ -4214,8 +4325,8 @@ const {
                       paddingVertical: 6,
                       borderRadius: 999,
                       borderWidth: 1,
-                      borderColor: "rgba(16,185,129,0.24)",
-                      backgroundColor: "rgba(16,185,129,0.10)",
+                      borderColor: "rgba(79,140,255,0.28)",
+                      backgroundColor: "rgba(79,140,255,0.10)",
                     }}
                   >
                     <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }}>
@@ -4260,8 +4371,8 @@ const {
                   style={({ pressed }) => ({
                     borderRadius: 18,
                     borderWidth: 1,
-                    borderColor: "rgba(16,185,129,0.30)",
-                    backgroundColor: "rgba(16,185,129,0.12)",
+                    borderColor: UI.primaryBorder,
+                    backgroundColor: UI.primarySoft,
                     paddingVertical: 15,
                     paddingHorizontal: 16,
                     flexDirection: "row",
@@ -4320,22 +4431,18 @@ const {
         />
       ) : (
         <>
-          <WorkspaceCard
-            activeOrgName={activeOrgName}
-            activeRole={activeRole}
-            activeStoreName={activeStoreName}
-            activeStoreId={activeStoreId}
-            onOpen={goOrgSwitcher}
-          />
+         <WorkspaceCard
+  activeOrgName={activeOrgName}
+  activeRole={activeRole}
+  activeStoreName={activeStoreName}
+  activeStoreId={activeStoreId}
+  onOpen={goOrgSwitcher}
+/>
 
-          <StoreGuard>
-            <CompactFinanceCardHomePreview />
-            <CompactStockValueCardHomePreview />
-            <CompactClubRevenueCardHomePreview
-              key={`club-mini-${dashTick}`}
-              onOpen={goClubRevenue}
-            />
-          </StoreGuard>
+<StoreGuard>
+  <CompactFinanceCardHomePreview />
+  <CompactStockValueCardHomePreview />
+</StoreGuard>
         </>
       )}
     </Screen>

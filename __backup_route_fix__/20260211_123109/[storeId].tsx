@@ -443,7 +443,7 @@ export default function ClubStoreDashboardScreen() {
                   borderRadius: 999,
                   borderWidth: 1,
                   borderColor: "rgba(255,255,255,0.12)",
-                  backgroundColor: "rgba(255,255,255,0.06)",
+                  backgroundColor: "#FFFFFF",
                   opacity: pressed ? 0.92 : 1,
                 },
               ]}

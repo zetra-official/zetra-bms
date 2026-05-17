@@ -242,8 +242,20 @@ const FeedPostItem = memo(function FeedPostItem({
               </View>
             </Pressable>
 
-            <Pressable onPress={() => onOpenMenu(item)} hitSlop={10} style={{ padding: 6, marginTop: 2 }}>
-              <SafeIcon name="ellipsis-horizontal" size={18} color={theme.colors.faint} />
+            <Pressable
+              onPress={() => onOpenMenu(item)}
+              hitSlop={14}
+              style={({ pressed }) => ({
+                width: 36,
+                height: 32,
+                borderRadius: 999,
+                alignItems: "center",
+                justifyContent: "center",
+                marginTop: 0,
+                backgroundColor: pressed ? "rgba(255,255,255,0.08)" : "transparent",
+              })}
+            >
+              <SafeIcon name="ellipsis-horizontal" size={26} color={theme.colors.muted} />
             </Pressable>
           </View>
         </View>
@@ -409,6 +421,9 @@ export default function ClubFeedScreen() {
 
   // saved state map (fast UI)
   const [savedMap, setSavedMap] = useState<Record<string, boolean>>({});
+
+  // ✅ moderation/delete state
+  const [deletingPostIds, setDeletingPostIds] = useState<Record<string, boolean>>({});
 
   // guard: ignore realtime updates before first load is ready
   const bootedRef = useRef(false);
@@ -740,11 +755,46 @@ export default function ClubFeedScreen() {
     [router]
   );
 
+  const deleteClubPost = useCallback(
+    async (item: FeedPost) => {
+      const postId = clean(item.post_id);
+      if (!postId) return;
+
+      if (deletingPostIds[postId]) return;
+
+      setDeletingPostIds((prev) => ({ ...prev, [postId]: true }));
+      setErr(null);
+
+      try {
+        const { error } = await supabase.rpc("club_delete_post_v1", {
+          p_post_id: postId,
+        } as any);
+
+        if (error) throw error;
+
+        setPosts((prev) => prev.filter((p) => clean(p.post_id) !== postId));
+        setSavedMap((prev) => {
+          const next = { ...prev };
+          delete next[postId];
+          return next;
+        });
+
+        Alert.alert("Deleted ✅", "Post imefutwa kwenye Zetra Business Club.");
+      } catch (e: any) {
+        Alert.alert("Delete Failed", e?.message ?? "Imeshindikana kufuta post.");
+      } finally {
+        setDeletingPostIds((prev) => ({ ...prev, [postId]: false }));
+      }
+    },
+    [deletingPostIds]
+  );
+
   const openMenu = useCallback(
     (item: FeedPost) => {
       const storeName = safeStr(item.store_display_name ?? item.store_name, "Store");
       const storeId = clean(item.store_id);
       const postId = clean(item.post_id);
+      const deleting = !!deletingPostIds[postId];
 
       Alert.alert(storeName, "Chagua", [
         { text: "Open Store", onPress: () => openStore(storeId) },
@@ -765,10 +815,32 @@ export default function ClubFeedScreen() {
             } as any);
           },
         },
+        {
+          text: deleting ? "Deleting..." : "Delete Post",
+          style: "destructive",
+          onPress: () => {
+            if (deleting) return;
+
+            Alert.alert(
+              "Delete Post",
+              "Una uhakika unataka kufuta post hii? Ikiwa wewe ni ZETRA Office au mwenye ruhusa, post itaondoka kwenye feed.",
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Delete",
+                  style: "destructive",
+                  onPress: () => {
+                    void deleteClubPost(item);
+                  },
+                },
+              ]
+            );
+          },
+        },
         { text: "Cancel", style: "cancel" },
       ]);
     },
-    [openStore, router]
+    [deleteClubPost, deletingPostIds, openStore, router]
   );
 
   const toggleLike = useCallback(async (p: FeedPost) => {

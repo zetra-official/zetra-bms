@@ -20,7 +20,7 @@ import { Screen } from "../../../src/ui/Screen";
 import { theme } from "../../../src/ui/theme";
 import { formatMoney, useOrgMoneyPrefs } from "@/src/ui/money";
 
-type PayMethod = "CASH" | "MOBILE" | "BANK";
+type PayMethod = "CASH" | "MOBILE" | "BANK" | "SPLIT";
 
 type CashierHandoffRow = {
   id: string;
@@ -67,6 +67,12 @@ function fmtDateTimeLocal(input?: string | null) {
 function toNum(v: any) {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
+}
+
+function normalizeMoneyInput(raw: string) {
+  const digitsOnly = String(raw ?? "").replace(/[^\d]/g, "");
+  if (!digitsOnly) return "";
+  return digitsOnly.replace(/^0+(?=\d)/, "");
 }
 
 function isUuid(v: string) {
@@ -203,6 +209,9 @@ export default function CashierHandoffDetailScreen() {
   const [method, setMethod] = useState<PayMethod>("CASH");
   const [channel, setChannel] = useState("");
   const [reference, setReference] = useState("");
+  const [splitCashStr, setSplitCashStr] = useState("");
+  const [splitMobileStr, setSplitMobileStr] = useState("");
+  const [splitBankStr, setSplitBankStr] = useState("");
   const [note, setNote] = useState("");
 
   const isCashier = String(activeRole ?? "").trim().toLowerCase() === "cashier";
@@ -246,9 +255,23 @@ export default function CashierHandoffDetailScreen() {
     return isCashier && !!row?.id && status === "PENDING" && !saving;
   }, [isCashier, row?.id, saving, status]);
 
+  const splitCashAmount = useMemo(() => toNum(splitCashStr), [splitCashStr]);
+  const splitMobileAmount = useMemo(() => toNum(splitMobileStr), [splitMobileStr]);
+  const splitBankAmount = useMemo(() => toNum(splitBankStr), [splitBankStr]);
+
+  const splitTotalPaid = useMemo(() => {
+    return Math.max(0, splitCashAmount) + Math.max(0, splitMobileAmount) + Math.max(0, splitBankAmount);
+  }, [splitCashAmount, splitMobileAmount, splitBankAmount]);
+
   const canComplete = useMemo(() => {
     if (!isCashier || !row?.id || saving) return false;
     if (status !== "ACCEPTED") return false;
+
+    if (method === "SPLIT") {
+      if (splitTotalPaid <= 0) return false;
+      if (Math.round(splitTotalPaid) !== Math.round(Number(row.total ?? 0))) return false;
+      return true;
+    }
 
     if (method === "MOBILE" || method === "BANK") {
       if (!channel.trim()) return false;
@@ -256,7 +279,7 @@ export default function CashierHandoffDetailScreen() {
     }
 
     return true;
-  }, [isCashier, row?.id, saving, status, method, channel, reference]);
+  }, [isCashier, row?.id, row?.total, saving, status, method, channel, reference, splitTotalPaid]);
 
   const acceptNow = useCallback(async () => {
     if (!canAccept || !row?.id) return;
@@ -283,6 +306,13 @@ export default function CashierHandoffDetailScreen() {
 
     setSaving(true);
     try {
+      const splitNote =
+        method === "SPLIT"
+          ? `SPLIT_PAYMENT: CASH=${splitCashAmount} | MOBILE=${splitMobileAmount} | BANK=${splitBankAmount}`
+          : "";
+
+      const finalNote = [splitNote, note.trim()].filter(Boolean).join("\n");
+
       const { data, error } = await supabase.rpc("complete_cashier_handoff_v1", {
         p_handoff_id: row.id,
         p_payment_method: method,
@@ -291,7 +321,7 @@ export default function CashierHandoffDetailScreen() {
           method === "MOBILE" || method === "BANK" ? channel.trim() || null : null,
         p_reference:
           method === "MOBILE" || method === "BANK" ? reference.trim() || null : null,
-        p_note: note.trim() || null,
+        p_note: finalNote || null,
       });
 
       if (error) throw error;
@@ -315,7 +345,20 @@ export default function CashierHandoffDetailScreen() {
     } finally {
       setSaving(false);
     }
-  }, [canComplete, channel, load, method, note, reference, row?.id, row?.total, router]);
+  }, [
+    canComplete,
+    channel,
+    load,
+    method,
+    note,
+    reference,
+    row?.id,
+    row?.total,
+    router,
+    splitBankAmount,
+    splitCashAmount,
+    splitMobileAmount,
+  ]);
 
   const openReceipt = useCallback(() => {
     const saleId = String(row?.sale_id ?? "").trim();
@@ -341,9 +384,11 @@ export default function CashierHandoffDetailScreen() {
       params: {
         storeId,
         storeName,
+        fromHandoff: "1",
+        handoffId: row?.id ?? "",
       },
     } as any);
-  }, [router, row?.store_id, row?.store_name]);
+  }, [router, row?.id, row?.store_id, row?.store_name]);
 
   const goCashierClosing = useCallback(() => {
     router.push("/(tabs)/settings/cashier-closing" as any);
@@ -560,7 +605,7 @@ export default function CashierHandoffDetailScreen() {
                 <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>No items found.</Text>
               ) : (
                 items.map((it: any, idx: number) => {
-                  const qty = Math.trunc(Number(it?.qty ?? 0));
+                  const qty = Number(Number(it?.qty ?? 0).toFixed(3));
                   const unitPrice = Number(it?.unit_price ?? 0);
                   const lineTotal = Number(it?.line_total ?? qty * unitPrice);
 
@@ -643,9 +688,52 @@ export default function CashierHandoffDetailScreen() {
                     active={method === "BANK"}
                     onPress={() => setMethod("BANK")}
                   />
+                  <MethodChip
+                    label="Split"
+                    active={method === "SPLIT"}
+                    onPress={() => setMethod("SPLIT")}
+                  />
                 </View>
+{method === "SPLIT" && (
+                  <>
+                    <View>
+                      <FieldLabel>Cash Paid</FieldLabel>
+                      <InputBox
+                        value={splitCashStr}
+                        onChangeText={(v) => setSplitCashStr(normalizeMoneyInput(v))}
+                        placeholder="mf: 50000"
+                        keyboardType="numeric"
+                      />
+                    </View>
+
+                    <View>
+                      <FieldLabel>Mobile Paid</FieldLabel>
+                      <InputBox
+                        value={splitMobileStr}
+                        onChangeText={(v) => setSplitMobileStr(normalizeMoneyInput(v))}
+                        placeholder="mf: 100000"
+                        keyboardType="numeric"
+                      />
+                    </View>
+
+                    <View>
+                      <FieldLabel>Bank Paid</FieldLabel>
+                      <InputBox
+                        value={splitBankStr}
+                        onChangeText={(v) => setSplitBankStr(normalizeMoneyInput(v))}
+                        placeholder="mf: 120000"
+                        keyboardType="numeric"
+                      />
+                    </View>
+
+                    <Text style={{ color: theme.colors.faint, fontWeight: "800" }}>
+                      Split total lazima ilingane na total ya sale: {fmtMoney(Number(row.total ?? 0))}
+                    </Text>
+                  </>
+                )}
 
                 {(method === "MOBILE" || method === "BANK") && (
+                
                   <>
                     <View>
                       <FieldLabel>

@@ -1,4 +1,5 @@
 ﻿import SafeIcon from "@/src/ui/SafeIcon";
+import { Audio } from "expo-av";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -14,6 +15,7 @@ import {
 } from "react-native";
 
 import { useNetInfo } from "@react-native-community/netinfo";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { useOrg } from "../../../src/context/OrgContext";
 import { enqueueSale, makeId } from "../../../src/offline/salesQueue";
@@ -38,6 +40,7 @@ type CartItem = {
 };
 
 type PayMethod = "CASH" | "MOBILE" | "BANK" | "CREDIT";
+type CheckoutMethod = PayMethod | "SPLIT";
 
 type DiscountType = "fixed" | "percent" | null;
 type DiscountResult = { type: DiscountType; value: number; amount: number };
@@ -51,6 +54,51 @@ type OpenCashierShiftRow = {
   status?: string | null;
   opened_at?: string | null;
   closed_at?: string | null;
+};
+const SALE_SUCCESS_SOUND_URI =
+  "https://assets.mixkit.co/active_storage/sfx/951/951-preview.mp3";
+
+async function playSaleSuccessSoundSafe() {
+  if (Platform.OS === "web") return;
+
+  try {
+    await Audio.setAudioModeAsync({
+      playsInSilentModeIOS: true,
+      staysActiveInBackground: false,
+      shouldDuckAndroid: true,
+    });
+
+    const { sound } = await Audio.Sound.createAsync(
+      { uri: SALE_SUCCESS_SOUND_URI },
+      {
+        shouldPlay: true,
+        volume: 0.46,
+      }
+    );
+
+    sound.setOnPlaybackStatusUpdate((status) => {
+      if (!status.isLoaded) return;
+
+      if (status.didJustFinish) {
+        void sound.unloadAsync();
+      }
+    });
+  } catch {
+    // sale success sound must never break checkout
+  }
+}
+type StaffAttributionStoreRow = {
+  store_id: string;
+  store_name: string;
+};
+
+type StaffAttributionRow = {
+  user_id: string;
+  membership_id: string;
+  role?: string | null;
+  email?: string | null;
+  user_email?: string | null;
+  stores?: StaffAttributionStoreRow[];
 };
 
 function one(v: string | string[] | undefined) {
@@ -135,7 +183,7 @@ function MethodChip({
         width: compact ? ("48.7%" as any) : undefined,
         minHeight: compact ? 44 : 48,
         paddingVertical: compact ? 8 : 10,
-        paddingHorizontal: compact ? 10 : 12,
+        paddingHorizontal: 4,
         borderRadius: theme.radius.pill,
         borderWidth: 1,
         borderColor: active ? "rgba(52,211,153,0.40)" : theme.colors.border,
@@ -146,10 +194,17 @@ function MethodChip({
       })}
     >
       <Text
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.72}
+        allowFontScaling={false}
         style={{
           color: active ? theme.colors.emerald : theme.colors.text,
           fontWeight: "900",
           fontSize: compact ? 13 : 14,
+          textAlign: "center",
+          includeFontPadding: false,
+          width: "100%",
         }}
       >
         {label}
@@ -165,8 +220,8 @@ function normalizeMoneyInput(raw: string) {
   return stripped;
 }
 
-function isStrictPayMethod(x: any): x is PayMethod {
-  return x === "CASH" || x === "BANK" || x === "MOBILE" || x === "CREDIT";
+function isCheckoutMethod(x: any): x is CheckoutMethod {
+  return x === "CASH" || x === "BANK" || x === "MOBILE" || x === "CREDIT" || x === "SPLIT";
 }
 
 function parseWholeNumberInput(raw: string) {
@@ -186,7 +241,7 @@ function getAdjustedUnitPrice(item: CartItem) {
 }
 
 function getAdjustedLineTotal(item: CartItem) {
-  const qty = Math.max(0, Math.trunc(Number(item.qty || 0)));
+  const qty = Math.max(0, Number(item.qty || 0));
   return getAdjustedUnitPrice(item) * qty;
 }
 
@@ -207,6 +262,11 @@ async function getMyOpenCashierShiftId(storeId: string): Promise<string | null> 
 
 function FieldLabel({ children }: { children: any }) {
   return <Text style={{ color: theme.colors.muted, fontWeight: "900", marginBottom: 6 }}>{children}</Text>;
+}
+
+function pickStaffEmail(r?: StaffAttributionRow | null) {
+  if (!r) return null;
+  return String(r.email ?? r.user_email ?? "").trim() || null;
 }
 
 function InputBox(props: {
@@ -241,7 +301,7 @@ function InputBox(props: {
 
 export default function CheckoutScreen() {
   const router = useRouter();
-  const { width, height } = useWindowDimensions();
+  const { width } = useWindowDimensions();
 
   const params = useLocalSearchParams<{
     storeId?: string | string[];
@@ -255,7 +315,13 @@ export default function CheckoutScreen() {
   const isOffline = !isOnline;
 
   const orgCtx: any = useOrg();
-  const { activeOrgId, activeStoreId, activeStoreName, activeRole } = orgCtx;
+  const {
+    activeOrgId,
+    activeStoreId,
+    activeStoreName,
+    activeRole,
+    activeMembershipId,
+  } = orgCtx;
 
   const orgId = String(activeOrgId ?? "").trim();
   const money = useOrgMoneyPrefs(orgId);
@@ -269,6 +335,15 @@ export default function CheckoutScreen() {
   );
 
   const storeId = String(one(params.storeId) ?? "").trim();
+
+  const clearPersistedSalesCart = useCallback(async () => {
+    const sid = String(storeId ?? "").trim();
+    if (!sid) return;
+
+    try {
+      await AsyncStorage.removeItem(`sales_cart_${sid}`);
+    } catch {}
+  }, [storeId]);
   const storeNameParam = String(one(params.storeName) ?? "").trim();
   const cashierMode = one(params.cashierMode) === "1";
 
@@ -282,7 +357,7 @@ export default function CheckoutScreen() {
 
       return parsed
         .map((x: any) => {
-          const qty = Math.trunc(Number(x.qty ?? 0));
+          const qty = Number(Number(x.qty ?? 0).toFixed(3));
           const unit_price = Number(x.unit_price ?? 0);
           const line_total =
             Number.isFinite(unit_price) && unit_price > 0 && Number.isFinite(qty) && qty > 0
@@ -321,7 +396,28 @@ export default function CheckoutScreen() {
   }, [cart]);
 
   const isDesktopWeb = Platform.OS === "web" && width >= 1180;
-  const desktopPaneHeight = Math.max(520, height - 220);
+  
+
+  const desktopShellWidth = useMemo(() => {
+    if (!isDesktopWeb) return 0;
+    if (width >= 1700) return 1500;
+    if (width >= 1500) return 1400;
+    if (width >= 1360) return 1280;
+    return 1180;
+  }, [isDesktopWeb, width]);
+
+  const desktopSummaryWidth = useMemo(() => {
+    if (!isDesktopWeb) return 0;
+    if (width >= 1700) return 420;
+    if (width >= 1500) return 390;
+    if (width >= 1360) return 360;
+    return 320;
+  }, [isDesktopWeb, width]);
+
+  const desktopRightPaneWidth = useMemo(() => {
+    if (!isDesktopWeb) return 0;
+    return Math.max(0, desktopShellWidth - desktopSummaryWidth - 20);
+  }, [isDesktopWeb, desktopShellWidth, desktopSummaryWidth]);
 
   const canSell = useMemo(() => {
     const r = String(activeRole ?? "staff").trim().toLowerCase();
@@ -398,36 +494,62 @@ export default function CheckoutScreen() {
   const headerStoreName = storeNameParam || activeStoreName || "—";
   const mismatch = !!(activeStoreId && storeId && activeStoreId !== storeId);
 
-  const [method, setMethod] = useState<PayMethod>("CASH");
+  const [method, setMethod] = useState<CheckoutMethod>("CASH");
   const [paidVia, setPaidVia] = useState<Exclude<PayMethod, "CREDIT">>("CASH");
 
   const [paidStr, setPaidStr] = useState<string>(() =>
     String(Math.round(grandTotal || subtotalAmount))
   );
+
+  const [splitCashStr, setSplitCashStr] = useState<string>("");
+  const [splitMobileStr, setSplitMobileStr] = useState<string>("");
+  const [splitBankStr, setSplitBankStr] = useState<string>("");
   const [channel, setChannel] = useState<string>("");
   const [reference, setReference] = useState<string>("");
 
   const [customerName, setCustomerName] = useState<string>("");
   const [customerPhone, setCustomerPhone] = useState<string>("");
 
+ const [staffOptions, setStaffOptions] = useState<StaffAttributionRow[]>([]);
+const [myStaffMembershipId, setMyStaffMembershipId] = useState<string>("");
+const [currentActorMembershipId, setCurrentActorMembershipId] = useState<string>("");
+const [soldByMembershipId, setSoldByMembershipId] = useState<string>("");
+const [staffDropdownOpen, setStaffDropdownOpen] = useState(false);
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [openCashierShiftId, setOpenCashierShiftId] = useState<string | null>(null);
+  const [webBanner, setWebBanner] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
 
   const onPaidChange = useCallback((t: string) => {
     setPaidStr(normalizeMoneyInput(t));
   }, []);
 
   const onSetMethod = useCallback(
-    (m: PayMethod) => {
-      if (!isStrictPayMethod(m)) return;
+    (m: CheckoutMethod) => {
+      if (!isCheckoutMethod(m)) return;
       setMethod(m);
 
       if (m === "CREDIT") {
         setPaidStr("0");
+        setSplitCashStr("");
+        setSplitMobileStr("");
+        setSplitBankStr("");
         setPaidVia("CASH");
         setChannel("");
         setReference("");
+        return;
+      }
+
+      if (m === "SPLIT") {
+        setPaidStr("0");
+        setSplitCashStr("");
+        setSplitMobileStr("");
+        setSplitBankStr("");
+        setPaidVia("CASH");
+        if (!channel) setChannel("M-PESA");
         return;
       }
 
@@ -446,7 +568,21 @@ export default function CheckoutScreen() {
     [grandTotal, channel]
   );
 
-  const paidAmount = useMemo(() => parseMoney(paidStr), [paidStr]);
+  const splitCashAmount = useMemo(() => parseMoney(splitCashStr), [splitCashStr]);
+  const splitMobileAmount = useMemo(() => parseMoney(splitMobileStr), [splitMobileStr]);
+  const splitBankAmount = useMemo(() => parseMoney(splitBankStr), [splitBankStr]);
+
+  const splitTotalPaid = useMemo(() => {
+    const cash = Number.isFinite(splitCashAmount) ? splitCashAmount : 0;
+    const mobile = Number.isFinite(splitMobileAmount) ? splitMobileAmount : 0;
+    const bank = Number.isFinite(splitBankAmount) ? splitBankAmount : 0;
+    return Math.max(0, cash) + Math.max(0, mobile) + Math.max(0, bank);
+  }, [splitCashAmount, splitMobileAmount, splitBankAmount]);
+
+  const paidAmount = useMemo(() => {
+    if (method === "SPLIT") return splitTotalPaid;
+    return parseMoney(paidStr);
+  }, [method, paidStr, splitTotalPaid]);
 
   const balance = useMemo(() => {
     const p = Number.isFinite(paidAmount) ? paidAmount : 0;
@@ -454,6 +590,7 @@ export default function CheckoutScreen() {
   }, [paidAmount, grandTotal]);
 
   const isCredit = useMemo(() => method === "CREDIT", [method]);
+  const isSplit = useMemo(() => method === "SPLIT", [method]);
 
   const showPaidVia = useMemo(
     () => method === "CREDIT" && (Number.isFinite(paidAmount) ? paidAmount : 0) > 0,
@@ -461,7 +598,12 @@ export default function CheckoutScreen() {
   );
 
   const rpcPaymentMethod: PayMethod = useMemo(() => {
+    if (method === "SPLIT") {
+      return "CASH";
+    }
+
     if (method !== "CREDIT") return method;
+
     const p = Number.isFinite(paidAmount) ? paidAmount : 0;
     if (p > 0) return paidVia;
     return "CREDIT";
@@ -480,6 +622,77 @@ export default function CheckoutScreen() {
 
   useEffect(() => {
     let alive = true;
+
+    async function loadStaffAttributionOptions() {
+      try {
+        if (!orgId || !storeId || cashierMode) {
+          if (alive) {
+            setStaffOptions([]);
+            setMyStaffMembershipId("");
+            setCurrentActorMembershipId("");
+            setSoldByMembershipId("");
+          }
+          return;
+        }
+
+        const [{ data: authData }, rpcRes] = await Promise.all([
+          supabase.auth.getUser(),
+          supabase.rpc("get_org_staff_with_stores", { p_org_id: orgId }),
+        ]);
+
+        if (rpcRes.error) throw rpcRes.error;
+
+        const authUserId = String(authData?.user?.id ?? "").trim();
+
+        const role = String(activeRole ?? "").trim().toLowerCase();
+
+        const allStaffRows = ((rpcRes.data ?? []) as StaffAttributionRow[]).filter(
+          (r) => String(r.role ?? "").toLowerCase() === "staff"
+        );
+
+        const nextRows =
+          role === "owner" || role === "admin"
+            ? allStaffRows
+            : allStaffRows.filter((r) => {
+                const stores = Array.isArray(r.stores) ? r.stores : [];
+                return stores.some((s) => String(s.store_id ?? "") === storeId);
+              });
+
+        const myRow = nextRows.find((r) => String(r.user_id ?? "") === authUserId);
+        const myMembership = String(myRow?.membership_id ?? "").trim();
+
+        let currentMembership = String(activeMembershipId ?? "").trim();
+
+        if (!currentMembership && authUserId) {
+          const ownMembershipRes = await supabase
+            .from("org_memberships")
+            .select("id")
+            .eq("organization_id", orgId)
+            .eq("user_id", authUserId)
+            .maybeSingle();
+
+          if (ownMembershipRes.error) throw ownMembershipRes.error;
+          currentMembership = String(ownMembershipRes.data?.id ?? "").trim();
+        }
+
+        if (!alive) return;
+
+        setStaffOptions(nextRows);
+        setMyStaffMembershipId(myMembership);
+        setCurrentActorMembershipId(currentMembership);
+
+        if (role === "staff" && (myMembership || currentMembership)) {
+          setSoldByMembershipId(myMembership || currentMembership);
+        }
+      } catch {
+        if (!alive) return;
+        setStaffOptions([]);
+        setMyStaffMembershipId("");
+        setCurrentActorMembershipId("");
+      }
+    }
+
+    void loadStaffAttributionOptions();
 
     async function loadMyOpenCashierShift() {
       try {
@@ -514,7 +727,7 @@ export default function CheckoutScreen() {
     return () => {
       alive = false;
     };
-  }, [storeId, activeRole]);
+  }, [storeId, activeRole, activeMembershipId, orgId, cashierMode]);
 
   useEffect(() => {
     if (cashierMode) return;
@@ -536,6 +749,28 @@ export default function CheckoutScreen() {
     if (current > gt) setPaidStr(String(gt));
   }, [cashierMode, grandTotal, paidStr, isCredit]);
 
+  const effectiveSoldByMembershipId = useMemo(() => {
+    const role = String(activeRole ?? "").trim().toLowerCase();
+
+    // STAFF: attribution ni ya staff mwenyewe moja kwa moja
+    if (role === "staff") {
+      return myStaffMembershipId || soldByMembershipId || "";
+    }
+
+    // OWNER / ADMIN / CASHIER:
+    // attribution itumwe tu kama wamechagua staff fulani
+    return soldByMembershipId || "";
+  }, [activeRole, myStaffMembershipId, soldByMembershipId]);
+
+  const selectedSoldByLabel = useMemo(() => {
+    if (!effectiveSoldByMembershipId) return "No staff selected";
+
+    const found = staffOptions.find(
+      (r) => String(r.membership_id ?? "") === String(effectiveSoldByMembershipId ?? "")
+    );
+    return pickStaffEmail(found) ?? "Selected staff";
+  }, [staffOptions, effectiveSoldByMembershipId]);
+
   const invalidReason = useMemo(() => {
     if (!canSell) return "No permission to sell.";
     if (!storeId) return "Missing storeId.";
@@ -556,12 +791,29 @@ export default function CheckoutScreen() {
       return null;
     }
 
+    
+
     if (!Number.isFinite(paidAmount)) return "Enter a valid paid amount.";
     if (paidAmount < 0) return "Paid amount cannot be negative.";
     if (paidAmount > grandTotal) return "Paid amount cannot exceed total.";
 
     if (!isCredit && Math.round(paidAmount) !== Math.round(grandTotal)) {
-      return "Non-credit sale must be fully paid.";
+      return isSplit
+        ? "Split payment total must equal full sale total."
+        : "Non-credit sale must be fully paid.";
+    }
+
+    if (isSplit) {
+      const cash = Number.isFinite(splitCashAmount) ? splitCashAmount : 0;
+      const mobile = Number.isFinite(splitMobileAmount) ? splitMobileAmount : 0;
+      const bank = Number.isFinite(splitBankAmount) ? splitBankAmount : 0;
+
+      if (cash < 0 || mobile < 0 || bank < 0) return "Split payment cannot be negative.";
+      if (cash <= 0 && mobile <= 0 && bank <= 0) return "Enter at least one split payment amount.";
+
+      // Split payment details are saved inside note as:
+      // SPLIT_PAYMENT: CASH=... | MOBILE=... | BANK=...
+      // We do not require one channel/reference here because split can contain multiple channels.
     }
 
     if (showPaidVia) {
@@ -602,6 +854,11 @@ export default function CheckoutScreen() {
     customerName,
     activeRole,
     openCashierShiftId,
+    effectiveSoldByMembershipId,
+    isSplit,
+    splitCashAmount,
+    splitMobileAmount,
+    splitBankAmount,
   ]);
 
   const preflightCheckStock = useCallback(async () => {
@@ -622,7 +879,7 @@ export default function CheckoutScreen() {
     const bad: { name: string; need: number; have: number }[] = [];
     for (const c of checkoutCart) {
       const have = map.has(c.product_id) ? Number(map.get(c.product_id)) : 0;
-      const need = Math.trunc(Number(c.qty || 0));
+      const need = Number(Number(c.qty || 0).toFixed(3));
       if (need > 0 && have < need) bad.push({ name: c.name || "Product", need, have });
     }
 
@@ -687,8 +944,14 @@ export default function CheckoutScreen() {
   const confirm = useCallback(async () => {
     if (saving) return;
 
+    setWebBanner(null);
+
     if (invalidReason) {
-      Alert.alert("Blocked", invalidReason);
+      if (Platform.OS === "web") {
+        setWebBanner({ type: "error", text: invalidReason });
+      } else {
+        Alert.alert("Blocked", invalidReason);
+      }
       return;
     }
 
@@ -704,7 +967,7 @@ export default function CheckoutScreen() {
 
         const items = checkoutCart.map((c) => ({
           product_id: c.product_id,
-          qty: Math.trunc(Number(c.qty)),
+         qty: Number(Number(c.qty).toFixed(3)),
           unit_price: getAdjustedUnitPrice(c),
           name: c.name ?? "Product",
           sku: c.sku ?? null,
@@ -723,14 +986,24 @@ export default function CheckoutScreen() {
 
         if (error) throw error;
 
-        Alert.alert(
-          "Sent to Cashiers ✅",
-          `Order imetumwa kwa cashier queue ya store hii.\n\nHandoff ID: ${String(data ?? "").slice(0, 8)}...`
-        );
+        const successMsg = `Order imetumwa kwa cashier queue ya store hii. Handoff ID: ${String(data ?? "").slice(0, 8)}...`;
 
-        router.replace("/(tabs)/sales" as any);
+        if (Platform.OS === "web") {
+          setWebBanner({ type: "success", text: successMsg });
+          setTimeout(() => {
+            router.replace("/(tabs)/sales" as any);
+          }, 650);
+        } else {
+          Alert.alert("Sent to Cashiers ✅", successMsg);
+          router.replace("/(tabs)/sales" as any);
+        }
       } catch (e: any) {
-        Alert.alert("Failed", e?.message ?? "Failed to send order to cashier queue");
+        const msg = e?.message ?? "Failed to send order to cashier queue";
+        if (Platform.OS === "web") {
+          setWebBanner({ type: "error", text: msg });
+        } else {
+          Alert.alert("Failed", msg);
+        }
       } finally {
         setSaving(false);
       }
@@ -750,7 +1023,7 @@ export default function CheckoutScreen() {
 
         const items = checkoutCart.map((c) => ({
           product_id: c.product_id,
-          qty: Math.trunc(Number(c.qty)),
+          qty: Number(Number(c.qty).toFixed(3)),
           unit_price: getAdjustedUnitPrice(c),
           name: c.name ?? "Product",
           sku: c.sku ?? null,
@@ -773,8 +1046,13 @@ export default function CheckoutScreen() {
           ? `CUSTOMER: ${customerName.trim()}\nPHONE: ${customerPhone.trim() || "-"}\n`
           : "";
 
+        const splitLines =
+          isSplit
+            ? `SPLIT_PAYMENT: CASH=${Math.round(Number.isFinite(splitCashAmount) ? splitCashAmount : 0)} | MOBILE=${Math.round(Number.isFinite(splitMobileAmount) ? splitMobileAmount : 0)} | BANK=${Math.round(Number.isFinite(splitBankAmount) ? splitBankAmount : 0)}\n`
+            : "";
+
         const finalNote = buildNoteWithDiscount({
-          note: `${customerLines}${note || ""}`,
+          note: `${customerLines}${splitLines}${note || ""}`,
           discountText,
           discountAmount: discount.amount,
           subtotal: subtotalAmount,
@@ -804,16 +1082,32 @@ export default function CheckoutScreen() {
             discount_value: rpcDiscountValue,
             discount_note: discountText.trim() || null,
             is_credit: isCredit,
-            customer_name: isCredit ? customerName.trim() : null,
-            customer_phone: isCredit ? customerPhone.trim() || null : null,
+            customer_name: customerName.trim() || null,
+customer_phone: customerPhone.trim() || null,
             credit_balance: Number(balance || 0),
+            sold_by_membership_id: effectiveSoldByMembershipId || null,
           },
         });
 
-        Alert.alert("Saved Offline ✅", "Sale imehifadhiwa. Itasync mtandao ukirudi.");
-        router.replace("/(tabs)/sales/history" as any);
+        const successMsg = "Sale imehifadhiwa. Itasync mtandao ukirudi.";
+        void playSaleSuccessSoundSafe();
+
+        if (Platform.OS === "web") {
+          setWebBanner({ type: "success", text: successMsg });
+          setTimeout(() => {
+            router.replace("/(tabs)/sales/history" as any);
+          }, 650);
+        } else {
+          Alert.alert("Saved Offline ✅", successMsg);
+          router.replace("/(tabs)/sales/history" as any);
+        }
       } catch (e: any) {
-        Alert.alert("Failed", e?.message ?? "Failed to save offline");
+        const msg = e?.message ?? "Failed to save offline";
+        if (Platform.OS === "web") {
+          setWebBanner({ type: "error", text: msg });
+        } else {
+          Alert.alert("Failed", msg);
+        }
       }
       return;
     }
@@ -827,7 +1121,7 @@ export default function CheckoutScreen() {
 
       const items = checkoutCart.map((c) => ({
         product_id: c.product_id,
-        qty: Math.trunc(Number(c.qty)),
+        qty: Number(Number(c.qty).toFixed(3)),
         unit_price: getAdjustedUnitPrice(c),
       }));
 
@@ -837,8 +1131,13 @@ export default function CheckoutScreen() {
         ? `CUSTOMER: ${customerName.trim()}\nPHONE: ${customerPhone.trim() || "-"}\n`
         : "";
 
+      const splitLines =
+        isSplit
+          ? `SPLIT_PAYMENT: CASH=${Math.round(Number.isFinite(splitCashAmount) ? splitCashAmount : 0)} | MOBILE=${Math.round(Number.isFinite(splitMobileAmount) ? splitMobileAmount : 0)} | BANK=${Math.round(Number.isFinite(splitBankAmount) ? splitBankAmount : 0)}\n`
+          : "";
+
       const finalNote = buildNoteWithDiscount({
-        note: `${customerLines}${note || ""}`,
+        note: `${customerLines}${splitLines}${note || ""}`,
         discountText,
         discountAmount: discount.amount,
         subtotal: subtotalAmount,
@@ -866,7 +1165,7 @@ export default function CheckoutScreen() {
         }
       }
 
-      const res = await supabase.rpc("create_sale_with_payment_v4", {
+      const res = await supabase.rpc("create_sale_with_payment_v6", {
         p_store_id: storeId,
         p_items: items,
         p_note: finalNote,
@@ -880,14 +1179,15 @@ export default function CheckoutScreen() {
           rpcPaymentMethod === "MOBILE" || rpcPaymentMethod === "BANK"
             ? rpcReference.trim() || null
             : null,
-        p_customer_id: null,
-        p_customer_phone: null,
-        p_customer_full_name: null,
+       p_customer_id: null,
+p_customer_phone: customerPhone.trim() || null,
+p_customer_full_name: customerName.trim() || null,
         p_discount_type: rpcDiscountType,
         p_discount_value: rpcDiscountValue,
         p_discount_note: discountText.trim() || null,
         p_client_sale_id: clientSaleId,
         p_cashier_shift_id: isCashierUser ? cashierShiftId : null,
+        p_sold_by_membership_id: effectiveSoldByMembershipId || null,
       } as any);
 
       if (res.error) throw res.error;
@@ -899,6 +1199,18 @@ export default function CheckoutScreen() {
           : row != null && typeof row === "string"
             ? String(row)
             : null;
+
+      if (saleId && customerPhone.trim()) {
+        const attachRes = await supabase.rpc("attach_customer_to_sale", {
+          p_sale_id: saleId,
+          p_store_id: storeId,
+          p_phone: customerPhone.trim(),
+          p_name: customerName.trim() || null,
+          p_amount: grandTotal,
+        } as any);
+
+        if (attachRes.error) throw attachRes.error;
+      }
 
       let creditRecorded = false;
       if (isCredit && balance > 0) {
@@ -919,15 +1231,54 @@ export default function CheckoutScreen() {
         creditRecorded = true;
       }
 
-      Alert.alert("Success ✅", creditRecorded ? "Sale created (credit recorded v2)" : "Sale created");
+      const successMsg = creditRecorded
+        ? "Sale created successfully (credit recorded v2)"
+        : "Sale created successfully";
 
-      if (saleId) {
-        router.replace({ pathname: "/(tabs)/sales/receipt", params: { saleId } } as any);
+      await clearPersistedSalesCart();
+      void playSaleSuccessSoundSafe();
+
+      if (Platform.OS === "web") {
+        setWebBanner({ type: "success", text: successMsg });
+
+        setTimeout(() => {
+          if (saleId) {
+            router.replace({
+              pathname: "/(tabs)/sales/receipt",
+              params: { saleId },
+            } as any);
+          } else {
+            router.replace("/(tabs)/sales/history" as any);
+          }
+        }, 650);
       } else {
-        router.replace("/(tabs)/sales/history" as any);
+        Alert.alert(
+          "Success ✅",
+          creditRecorded ? "Sale created (credit recorded v2)" : "Sale created",
+          [
+            {
+              text: "OK",
+              onPress: () => {
+                if (saleId) {
+                  router.replace({
+                    pathname: "/(tabs)/sales/receipt",
+                    params: { saleId },
+                  } as any);
+                } else {
+                  router.replace("/(tabs)/sales/history" as any);
+                }
+              },
+            },
+          ]
+        );
       }
     } catch (e: any) {
-      Alert.alert("Failed", e?.message ?? "Unknown error");
+      const msg = e?.message ?? "Unknown error";
+      if (Platform.OS === "web") {
+        setWebBanner({ type: "error", text: msg });
+      } else {
+        Alert.alert("Failed", msg);
+      }
     } finally {
       setSaving(false);
     }
@@ -957,6 +1308,13 @@ export default function CheckoutScreen() {
     recordCreditSaleV2,
     discount,
     activeRole,
+    effectiveSoldByMembershipId,
+    setWebBanner,
+    clearPersistedSalesCart,
+    isSplit,
+    splitCashAmount,
+    splitMobileAmount,
+    splitBankAmount,
   ]);
 
   const cartTotalLabel = useMemo(() => {
@@ -976,6 +1334,7 @@ export default function CheckoutScreen() {
   const showChannelRef = useMemo(() => {
     if (cashierMode) return false;
     if (isOffline) return false;
+    if (method === "SPLIT") return false;
     return rpcPaymentMethod === "MOBILE" || rpcPaymentMethod === "BANK";
   }, [cashierMode, isOffline, rpcPaymentMethod]);
 
@@ -1029,15 +1388,27 @@ export default function CheckoutScreen() {
               <View
                 style={{
                   flexDirection: "row",
-                  alignItems: "center",
+                  alignItems: "flex-start",
                   gap: 10,
                 }}
               >
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: theme.colors.text, fontWeight: "900" }} numberOfLines={1}>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text
+                    style={{ color: theme.colors.text, fontWeight: "900" }}
+                    numberOfLines={isDesktopWeb ? 2 : 1}
+                  >
                     {c.name}
                   </Text>
-                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }} numberOfLines={1}>
+
+                  <Text
+                    style={{
+                      color: theme.colors.muted,
+                      fontWeight: "800",
+                      lineHeight: 18,
+                      marginTop: 2,
+                    }}
+                    numberOfLines={isDesktopWeb ? 3 : 1}
+                  >
                     SKU: {c.sku ?? "—"} • Qty: {c.qty} • Unit: {c.unit ?? "—"}
                   </Text>
                 </View>
@@ -1046,6 +1417,7 @@ export default function CheckoutScreen() {
                   onPress={() => openAdjustModal(index)}
                   style={({ pressed }) => ({
                     minWidth: 42,
+                    width: 42,
                     height: 42,
                     borderRadius: 999,
                     alignItems: "center",
@@ -1054,13 +1426,18 @@ export default function CheckoutScreen() {
                     borderColor: "rgba(52,211,153,0.30)",
                     backgroundColor: "rgba(52,211,153,0.10)",
                     opacity: pressed ? 0.9 : 1,
+                    flexShrink: 0,
+                    marginTop: 2,
                   })}
                 >
                   <SafeIcon name="add" size={20} color={theme.colors.emerald} />
                 </Pressable>
               </View>
 
-              <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>
+              <Text
+                style={{ color: theme.colors.faint, fontWeight: "900", lineHeight: 18 }}
+                numberOfLines={isDesktopWeb ? 2 : 1}
+              >
                 Unit: {adjustedUnit} • Line: {adjustedLine}
               </Text>
 
@@ -1088,7 +1465,7 @@ export default function CheckoutScreen() {
 
       <View
         style={{
-          flexDirection: isDesktopWeb ? "column" : "row",
+          flexDirection: "row",
           gap: 10,
         }}
       >
@@ -1184,6 +1561,162 @@ export default function CheckoutScreen() {
     </Card>
   );
 
+const staffAttributionCard =
+    !cashierMode ? (
+      <Card style={{ gap: 10 }}>
+        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+          Staff Attribution
+        </Text>
+
+        {String(activeRole ?? "").trim().toLowerCase() === "staff" ? (
+          <>
+            <Text style={{ color: theme.colors.muted, fontWeight: "800", lineHeight: 20 }}>
+              Sale hii itahesabiwa kwenye account yako ya staff moja kwa moja.
+            </Text>
+
+            <View
+              style={{
+                borderWidth: 1,
+                borderColor: "rgba(52,211,153,0.20)",
+                backgroundColor: "rgba(52,211,153,0.08)",
+                borderRadius: 16,
+                padding: 12,
+              }}
+            >
+              <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                Sold By Staff
+              </Text>
+              <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 6 }}>
+                {selectedSoldByLabel}
+              </Text>
+            </View>
+          </>
+        ) : (
+          <>
+            <Text style={{ color: theme.colors.muted, fontWeight: "800", lineHeight: 20 }}>
+              Chagua staff kama unataka sale hii ihesabiwe kwa staff fulani. Usipochagua, sale itaendelea kawaida bila staff commission attribution.
+            </Text>
+
+            <View style={{ gap: 8 }}>
+              <Pressable
+                onPress={() => setStaffDropdownOpen((v) => !v)}
+                style={{
+                  borderWidth: 1,
+                  borderColor: staffDropdownOpen
+                    ? "rgba(52,211,153,0.30)"
+                    : theme.colors.border,
+                  backgroundColor: staffDropdownOpen
+                    ? "rgba(52,211,153,0.10)"
+                    : "rgba(255,255,255,0.04)",
+                  borderRadius: 16,
+                  paddingVertical: 12,
+                  paddingHorizontal: 12,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 10,
+                }}
+              >
+                <Text
+                  numberOfLines={1}
+                  style={{
+                    flex: 1,
+                    color: soldByMembershipId ? theme.colors.emerald : theme.colors.text,
+                    fontWeight: "900",
+                  }}
+                >
+                  {soldByMembershipId ? selectedSoldByLabel : "No staff attribution"}
+                </Text>
+
+                <SafeIcon
+                  name={staffDropdownOpen ? "chevron-up" : "chevron-down"}
+                  size={18}
+                  color={theme.colors.muted}
+                />
+              </Pressable>
+
+              {staffDropdownOpen ? (
+                <View style={{ gap: 8 }}>
+                  <Pressable
+                    onPress={() => {
+                      setSoldByMembershipId("");
+                      setStaffDropdownOpen(false);
+                    }}
+                    style={{
+                      borderWidth: 1,
+                      borderColor: !soldByMembershipId
+                        ? "rgba(52,211,153,0.30)"
+                        : theme.colors.border,
+                      backgroundColor: !soldByMembershipId
+                        ? "rgba(52,211,153,0.10)"
+                        : "rgba(255,255,255,0.04)",
+                      borderRadius: 16,
+                      paddingVertical: 12,
+                      paddingHorizontal: 12,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: !soldByMembershipId ? theme.colors.emerald : theme.colors.text,
+                        fontWeight: "900",
+                      }}
+                    >
+                      No staff attribution
+                    </Text>
+                  </Pressable>
+
+                  {staffOptions.map((row) => {
+                    const membershipId = String(row.membership_id ?? "");
+                    const label =
+                      pickStaffEmail(row) ?? `Membership ${membershipId.slice(0, 8)}...`;
+                    const active = soldByMembershipId === membershipId;
+
+                    return (
+                      <Pressable
+                        key={membershipId}
+                        onPress={() => {
+                          setSoldByMembershipId(membershipId);
+                          setStaffDropdownOpen(false);
+                        }}
+                        style={{
+                          borderWidth: 1,
+                          borderColor: active
+                            ? "rgba(52,211,153,0.30)"
+                            : theme.colors.border,
+                          backgroundColor: active
+                            ? "rgba(52,211,153,0.10)"
+                            : "rgba(255,255,255,0.04)",
+                          borderRadius: 16,
+                          paddingVertical: 12,
+                          paddingHorizontal: 12,
+                        }}
+                      >
+                        <Text
+                          numberOfLines={1}
+                          style={{
+                            color: active ? theme.colors.emerald : theme.colors.text,
+                            fontWeight: "900",
+                          }}
+                        >
+                          {label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+
+                  {staffOptions.length === 0 ? (
+                    <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                      Hakuna staff waliosajiliwa kwenye organization hii kwa sasa.
+                    </Text>
+                  ) : null}
+                </View>
+              ) : null}
+            </View>
+          </>
+        )}
+      </Card>
+    ) : null;
+
   const paymentCard = !cashierMode ? (
     <Card style={{ gap: 12 }}>
       <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
@@ -1218,6 +1751,13 @@ export default function CheckoutScreen() {
           compact={isDesktopWeb}
         />
         <MethodChip
+          label="Split"
+          active={method === "SPLIT"}
+          onPress={() => onSetMethod("SPLIT")}
+          compact={isDesktopWeb}
+        />
+
+        <MethodChip
           label="Credit"
           active={method === "CREDIT"}
           onPress={() => onSetMethod("CREDIT")}
@@ -1227,24 +1767,62 @@ export default function CheckoutScreen() {
 
       <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
 
-      <View>
-        <FieldLabel>Paid ({displayCurrency})</FieldLabel>
-        <InputBox
-          value={paidStr}
-          onChangeText={onPaidChange}
-          placeholder="mf: 120000"
-          keyboardType="numeric"
-        />
-        <Text style={{ color: theme.colors.faint, fontWeight: "800", marginTop: 8 }}>
-          {method === "CREDIT"
-            ? "Unaweza kuweka 0 hadi total (partial payment)."
-            : "Kwa non-credit, lazima ulipe full total."}
-        </Text>
-      </View>
+      {method === "SPLIT" ? (
+        <View style={{ gap: 10 }}>
+          <View>
+            <FieldLabel>Cash Paid ({displayCurrency})</FieldLabel>
+            <InputBox
+              value={splitCashStr}
+              onChangeText={(v) => setSplitCashStr(normalizeMoneyInput(v))}
+              placeholder="mf: 300000"
+              keyboardType="numeric"
+            />
+          </View>
+
+          <View>
+            <FieldLabel>Mobile Paid ({displayCurrency})</FieldLabel>
+            <InputBox
+              value={splitMobileStr}
+              onChangeText={(v) => setSplitMobileStr(normalizeMoneyInput(v))}
+              placeholder="mf: 250000"
+              keyboardType="numeric"
+            />
+          </View>
+
+          <View>
+            <FieldLabel>Bank Paid ({displayCurrency})</FieldLabel>
+            <InputBox
+              value={splitBankStr}
+              onChangeText={(v) => setSplitBankStr(normalizeMoneyInput(v))}
+              placeholder="mf: 50000"
+              keyboardType="numeric"
+            />
+          </View>
+
+          <Text style={{ color: theme.colors.faint, fontWeight: "800" }}>
+            Split total lazima ilingane na sale total.
+          </Text>
+        </View>
+      ) : (
+        <View>
+          <FieldLabel>Paid ({displayCurrency})</FieldLabel>
+          <InputBox
+            value={paidStr}
+            onChangeText={onPaidChange}
+            placeholder="mf: 120000"
+            keyboardType="numeric"
+          />
+          <Text style={{ color: theme.colors.faint, fontWeight: "800", marginTop: 8 }}>
+            {method === "CREDIT"
+              ? "Unaweza kuweka 0 hadi total (partial payment)."
+              : "Kwa non-credit, lazima ulipe full total."}
+          </Text>
+        </View>
+      )}
 
       <View
         style={{
-          flexDirection: isDesktopWeb ? "column" : "row",
+          flexDirection: "row",
           gap: 10,
         }}
       >
@@ -1392,14 +1970,14 @@ export default function CheckoutScreen() {
   ) : null;
 
   const customerCard =
-    !cashierMode && isCredit ? (
+    !cashierMode ? (
       <Card style={{ gap: 10 }}>
         <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-          Customer (for Credit/Partial)
+          Customer Tracking
         </Text>
 
         <View>
-          <FieldLabel>Customer Name *</FieldLabel>
+          <FieldLabel>Customer Name {isCredit ? "*" : "(optional)"}</FieldLabel>
           <InputBox
             value={customerName}
             onChangeText={setCustomerName}
@@ -1409,7 +1987,7 @@ export default function CheckoutScreen() {
         </View>
 
         <View>
-          <FieldLabel>Customer Phone (optional)</FieldLabel>
+          <FieldLabel>Customer Phone (optional but recommended)</FieldLabel>
           <InputBox
             value={customerPhone}
             onChangeText={setCustomerPhone}
@@ -1419,7 +1997,7 @@ export default function CheckoutScreen() {
         </View>
 
         <Text style={{ color: theme.colors.faint, fontWeight: "800" }}>
-          Tip: Credit itarekodiwa v2 na balance itaingia kwenye Credit account.
+          Tip: Ukiweka namba ya mteja, ZETRA itamtengenezea customer profile ya store hii na kuweka purchase history yake.
         </Text>
       </Card>
     ) : null;
@@ -1454,7 +2032,7 @@ export default function CheckoutScreen() {
     adjustTargetIndex != null ? checkoutCart[adjustTargetIndex] ?? null : null;
 
   const adjustPreviewExtra = parseWholeNumberInput(adjustValue);
-  const adjustPreviewQty = Math.max(0, Math.trunc(Number(adjustTargetItem?.qty || 0)));
+  const adjustPreviewQty = Math.max(0, Number(Number(adjustTargetItem?.qty || 0).toFixed(3)));
   const adjustPreviewLineAdd = adjustApplyToAll
     ? 0
     : adjustPreviewExtra > 0 && adjustPreviewQty > 0
@@ -1624,7 +2202,7 @@ export default function CheckoutScreen() {
           flex: 1,
           gap: 14,
           width: "100%",
-          maxWidth: isDesktopWeb ? 1380 : 980,
+          maxWidth: isDesktopWeb ? desktopShellWidth : 980,
           alignSelf: "center",
         }}
       >
@@ -1663,6 +2241,38 @@ export default function CheckoutScreen() {
             </Text>
           </View>
         </View>
+
+        {webBanner ? (
+          <Card
+            style={{
+              gap: 6,
+              borderColor:
+                webBanner.type === "success"
+                  ? "rgba(52,211,153,0.28)"
+                  : "rgba(239,68,68,0.28)",
+              backgroundColor:
+                webBanner.type === "success"
+                  ? "rgba(52,211,153,0.10)"
+                  : "rgba(239,68,68,0.10)",
+            }}
+          >
+            <Text
+              style={{
+                color:
+                  webBanner.type === "success"
+                    ? theme.colors.emerald
+                    : theme.colors.danger,
+                fontWeight: "900",
+              }}
+            >
+              {webBanner.type === "success" ? "Success ✅" : "Failed ❌"}
+            </Text>
+
+            <Text style={{ color: theme.colors.text, fontWeight: "800" }}>
+              {webBanner.text}
+            </Text>
+          </Card>
+        ) : null}
 
         {mismatch ? (
           <Card>
@@ -1711,49 +2321,46 @@ export default function CheckoutScreen() {
             </Text>
           </Card>
         ) : null}
-
-        {isDesktopWeb ? (
+{isDesktopWeb ? (
           <View
             style={{
               flexDirection: "row",
               alignItems: "flex-start",
-              gap: 18,
+              gap: 20,
+              width: "100%",
             }}
           >
-            <ScrollView
+            <View
               style={{
-                flex: 1.2,
-                minWidth: 0,
-                maxHeight: desktopPaneHeight,
-                paddingRight: 2,
+                width: desktopSummaryWidth,
+                minWidth: desktopSummaryWidth,
+                maxWidth: desktopSummaryWidth,
+                flexShrink: 0,
               }}
-              contentContainerStyle={{ gap: 14, paddingRight: 4 }}
-              showsVerticalScrollIndicator={false}
-              nestedScrollEnabled
             >
               {summaryCard}
-            </ScrollView>
+            </View>
 
-            <ScrollView
+            <View
               style={{
-                width: 500,
-                minWidth: 500,
-                maxHeight: desktopPaneHeight,
+                width: desktopRightPaneWidth,
+                minWidth: 0,
+                flex: 1,
+                gap: 14,
               }}
-              contentContainerStyle={{ gap: 14, paddingRight: 4 }}
-              showsVerticalScrollIndicator={false}
-              nestedScrollEnabled
             >
               {discountNoteCard}
+              {staffAttributionCard}
               {paymentCard}
               {customerCard}
               {actionCard}
-            </ScrollView>
+            </View>
           </View>
         ) : (
           <>
             {summaryCard}
             {discountNoteCard}
+            {staffAttributionCard}
             {paymentCard}
             {customerCard}
             {actionCard}

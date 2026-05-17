@@ -1,5 +1,6 @@
 ﻿import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -16,7 +17,7 @@ import { useNetInfo } from "@react-native-community/netinfo";
 import { useOrg } from "../../../src/context/OrgContext";
 import { useOrgMoneyPrefs } from "@/src/ui/money";
 import { supabase } from "../../../src/supabase/supabaseClient";
-import { Button } from "../../../src/ui/Button";
+
 import { Card } from "../../../src/ui/Card";
 import { Screen } from "../../../src/ui/Screen";
 import { theme } from "../../../src/ui/theme";
@@ -204,7 +205,14 @@ function parseDateInputEnd(input: string) {
 
 function InputLabel({ children }: { children: React.ReactNode }) {
   return (
-    <Text style={{ color: theme.colors.muted, fontWeight: "900", marginBottom: 6 }}>
+    <Text
+      style={{
+        color: theme.colors.muted,
+        fontWeight: "900",
+        marginBottom: 4,
+        fontSize: 11,
+      }}
+    >
       {children}
     </Text>
   );
@@ -226,12 +234,13 @@ function InputBox(props: {
       style={{
         color: theme.colors.text,
         fontWeight: "800",
+        fontSize: 13,
         borderWidth: 1,
         borderColor: theme.colors.border,
-        backgroundColor: "rgba(255,255,255,0.06)",
-        borderRadius: 16,
+        backgroundColor: "rgba(255,255,255,0.05)",
+        borderRadius: 14,
         paddingHorizontal: 12,
-        paddingVertical: 10,
+        paddingVertical: 9,
       }}
     />
   );
@@ -247,13 +256,15 @@ function PaymentChip({
   subtitle?: string;
 }) {
   return (
-    <Card style={{ flex: 1, gap: 6 }}>
-      <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{title}</Text>
-      <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
+    <Card style={{ flex: 1, gap: 4, padding: 10 }}>
+      <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}>
+        {title}
+      </Text>
+      <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 15 }} numberOfLines={1}>
         {amount}
       </Text>
       {!!subtitle && (
-        <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 12 }}>
+        <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 10 }} numberOfLines={1}>
           {subtitle}
         </Text>
       )}
@@ -263,6 +274,7 @@ function PaymentChip({
 
 export default function SalesHistoryScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { activeOrgId, activeOrgName, activeStoreId, activeStoreName, activeRole } = useOrg() as any;
 
   const money = useOrgMoneyPrefs(activeOrgId);
@@ -579,16 +591,16 @@ export default function SalesHistoryScreen() {
           onPress={() => setRange(k)}
           style={{
             flex: 1,
-            paddingVertical: 10,
+            paddingVertical: 8,
             borderRadius: 999,
             alignItems: "center",
             justifyContent: "center",
             borderWidth: 1,
             borderColor: active ? theme.colors.emeraldBorder : theme.colors.border,
-            backgroundColor: active ? theme.colors.emeraldSoft : "rgba(255,255,255,0.06)",
+            backgroundColor: active ? theme.colors.emeraldSoft : "rgba(255,255,255,0.05)",
           }}
         >
-          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{label}</Text>
+          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>{label}</Text>
         </Pressable>
       );
     },
@@ -600,9 +612,9 @@ export default function SalesHistoryScreen() {
 
     if (pendingCountState <= 0) {
       return (
-        <Card style={{ gap: 8 }}>
-          <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>
-            Offline Queue: 0 pending {isOffline ? "• OFFLINE" : "• ONLINE"}
+        <Card style={{ gap: 6, padding: 10 }}>
+          <Text style={{ color: theme.colors.muted, fontWeight: "900", fontSize: 12 }}>
+            Offline Queue: 0 pending • {isOffline ? "OFFLINE" : "ONLINE"}
           </Text>
         </Card>
       );
@@ -612,14 +624,16 @@ export default function SalesHistoryScreen() {
     const pendingTotalAmt = pendingRows.reduce((a, r) => a + toNum(r.total_amount ?? 0), 0);
 
     return (
-      <Card style={{ gap: 10 }}>
+      <Card style={{ gap: 8, padding: 10 }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
-          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Pending Offline Sales</Text>
+          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}>
+            Pending Offline Sales
+          </Text>
 
           <View
             style={{
-              paddingHorizontal: 10,
-              paddingVertical: 6,
+              paddingHorizontal: 9,
+              paddingVertical: 5,
               borderRadius: 999,
               borderWidth: 1,
               borderColor: theme.colors.border,
@@ -630,20 +644,33 @@ export default function SalesHistoryScreen() {
           </View>
         </View>
 
-        <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+        <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}>
           Qty: <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{pendingTotalQty}</Text>
           {"   "}•{"   "}
           Amount: <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{fmtMoney(pendingTotalAmt)}</Text>
         </Text>
 
-        <Button
-          title={syncing ? "Syncing..." : isOnline ? "Sync Now" : "Offline"}
+        <Pressable
           onPress={syncNow}
           disabled={!isOnline || syncing}
-          variant="primary"
-        />
+          style={({ pressed }) => ({
+            minHeight: 42,
+            borderRadius: 14,
+            borderWidth: 1,
+            borderColor: "rgba(52,211,153,0.26)",
+            backgroundColor: "rgba(52,211,153,0.10)",
+            alignItems: "center",
+            justifyContent: "center",
+            paddingHorizontal: 14,
+            opacity: !isOnline || syncing ? 0.5 : pressed ? 0.92 : 1,
+          })}
+        >
+          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}>
+            {syncing ? "Syncing..." : isOnline ? "Sync Now" : "Offline"}
+          </Text>
+        </Pressable>
 
-        <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+<Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}>
           {isOnline
             ? "Ukisync, sales hizi zitaingia DB na zitaonekana kwenye list ya kawaida."
             : "Mtandao ukirudi, sync itajaribu automatically."}
@@ -670,28 +697,31 @@ export default function SalesHistoryScreen() {
           <Pressable
             onPress={() => router.back()}
             style={{
-              width: 44,
-              height: 44,
+              width: 40,
+              height: 40,
               borderRadius: 999,
               alignItems: "center",
               justifyContent: "center",
               borderWidth: 1,
               borderColor: theme.colors.border,
-              backgroundColor: "rgba(255,255,255,0.06)",
+              backgroundColor: "rgba(255,255,255,0.05)",
             }}
           >
-            <Ionicons name="chevron-back" size={22} color={theme.colors.text} />
+            <Ionicons name="chevron-back" size={20} color={theme.colors.text} />
           </Pressable>
 
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 26, fontWeight: "900", color: theme.colors.text }}>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={{ fontSize: 24, fontWeight: "900", color: theme.colors.text }}>
               History
             </Text>
-            <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+            <Text
+              style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}
+              numberOfLines={1}
+            >
               {activeOrgName ?? "—"} • {activeStoreName ?? "No store"} • {activeRole ?? "—"}
             </Text>
 
-            <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
+            <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}>
               {isOffline ? "OFFLINE" : "ONLINE"}
               {pendingCountState > 0 ? ` • Pending: ${pendingCountState}` : ""}
             </Text>
@@ -700,10 +730,10 @@ export default function SalesHistoryScreen() {
 
         {PendingHeader}
 
-        <Card style={{ gap: 10 }}>
-          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Range</Text>
+        <Card style={{ gap: 8, padding: 10 }}>
+          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}>Range</Text>
 
-          <View style={{ flexDirection: "row", gap: 10 }}>
+          <View style={{ flexDirection: "row", gap: 8 }}>
             <SegButton k="today" label="Today" />
             <SegButton k="week" label="Week" />
             <SegButton k="month" label="Month" />
@@ -736,62 +766,95 @@ export default function SalesHistoryScreen() {
                 </Text>
               )}
 
-              <Button
-                title="Apply Custom Range"
+              <Pressable
                 onPress={applyCustomRange}
                 disabled={!!customRangeError}
-                variant="secondary"
-              />
+                style={({ pressed }) => ({
+                  minHeight: 42,
+                  borderRadius: 14,
+                  borderWidth: 1,
+                  borderColor: "rgba(255,255,255,0.08)",
+                  backgroundColor: "rgba(255,255,255,0.04)",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  paddingHorizontal: 14,
+                  opacity: customRangeError ? 0.5 : pressed ? 0.92 : 1,
+                })}
+              >
+                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}>
+                  Apply Custom Range
+                </Text>
+              </Pressable>
             </View>
           )}
 
-          <Button
-            title={refreshing ? "Refreshing..." : "Refresh"}
+          <Pressable
             onPress={() => load("refresh")}
             disabled={refreshing || (range === "custom" && !!customRangeError)}
-            variant="primary"
-          />
+            style={({ pressed }) => ({
+              minHeight: 44,
+              borderRadius: 16,
+              borderWidth: 1,
+              borderColor: "rgba(52,211,153,0.26)",
+              backgroundColor: "rgba(52,211,153,0.10)",
+              alignItems: "center",
+              justifyContent: "center",
+              paddingHorizontal: 14,
+              opacity:
+                refreshing || (range === "custom" && !!customRangeError) ? 0.5 : pressed ? 0.92 : 1,
+            })}
+          >
+            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}>
+              {refreshing ? "Refreshing..." : "Refresh"}
+            </Text>
+          </Pressable>
 
           {!!err && <Text style={{ color: theme.colors.danger, fontWeight: "800" }}>{err}</Text>}
         </Card>
 
-        <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>
+        <Text style={{ fontWeight: "900", fontSize: 15, color: theme.colors.text }}>
           Sales Summary ({labelForRange(range)})
         </Text>
 
-        <View style={{ flexDirection: "row", gap: 10 }}>
-          <Card style={{ flex: 1, gap: 6 }}>
-            <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Sales Count</Text>
-            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          <Card style={{ flex: 1, gap: 4, padding: 10 }}>
+            <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}>
+              Sales Count
+            </Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
               {summary.count}
             </Text>
           </Card>
 
-          <Card style={{ flex: 1, gap: 6 }}>
-            <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Total Qty</Text>
-            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
+          <Card style={{ flex: 1, gap: 4, padding: 10 }}>
+            <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}>
+              Total Qty
+            </Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
               {summary.totalQty}
             </Text>
           </Card>
         </View>
 
-        <Card style={{ gap: 6 }}>
-          <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>TOTAL SALES</Text>
-          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 22 }}>
+        <Card style={{ gap: 4, padding: 10 }}>
+          <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}>
+            TOTAL SALES
+          </Text>
+          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
             {fmtMoney(paymentSummary.total_sales)}
           </Text>
         </Card>
 
-        <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>
+        <Text style={{ fontWeight: "900", fontSize: 15, color: theme.colors.text }}>
           Payment Breakdown
         </Text>
 
-        <View style={{ flexDirection: "row", gap: 10 }}>
+        <View style={{ flexDirection: "row", gap: 8 }}>
           <PaymentChip title="Cash" amount={fmtMoney(paymentSummary.cash_total)} />
           <PaymentChip title="Mobile" amount={fmtMoney(paymentSummary.mobile_total)} />
         </View>
 
-        <View style={{ flexDirection: "row", gap: 10 }}>
+        <View style={{ flexDirection: "row", gap: 8 }}>
           <PaymentChip title="Bank" amount={fmtMoney(paymentSummary.bank_total)} />
           <PaymentChip
             title="Credit Collected"
@@ -799,7 +862,7 @@ export default function SalesHistoryScreen() {
           />
         </View>
 
-        <View style={{ flexDirection: "row", gap: 10 }}>
+        <View style={{ flexDirection: "row", gap: 8 }}>
           <PaymentChip
             title="Grand Paid In"
             amount={fmtMoney(paymentSummary.grand_paid_total)}
@@ -815,7 +878,7 @@ export default function SalesHistoryScreen() {
         {loading && (
           <View style={{ paddingTop: 10, alignItems: "center" }}>
             <ActivityIndicator />
-            <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+            <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}>
               Loading sales...
             </Text>
           </View>
@@ -863,16 +926,20 @@ export default function SalesHistoryScreen() {
   }, [pendingRows, rows]);
 
   return (
-    <Screen scroll={false}>
+    <Screen scroll={false} bottomPad={0}>
       <FlatList
-        style={{ flex: 1 }}
+        style={{ flex: 1, minHeight: 0 }}
         data={loading ? [] : combined}
         keyExtractor={(item, idx) => String(item.sale_id ?? idx)}
         refreshing={refreshing}
         onRefresh={() => load("refresh")}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={ListHeader}
-        contentContainerStyle={{ paddingBottom: 20 }}
+        contentContainerStyle={{
+          paddingTop: 0,
+          paddingBottom: Math.max(insets.bottom + 92, 120),
+          flexGrow: 1,
+        }}
         renderItem={({ item }) => {
           const saleId = (item.sale_id ?? "").trim();
           const when = safeWhenLabel(item.sold_at);
@@ -896,7 +963,7 @@ export default function SalesHistoryScreen() {
 
           return (
             <Pressable onPress={() => openReceipt(item)}>
-              <Card style={{ marginBottom: 12, gap: 10 }}>
+              <Card style={{ marginBottom: 8, gap: 6, padding: 10 }}>
                 <View
                   style={{
                     flexDirection: "row",
@@ -906,7 +973,7 @@ export default function SalesHistoryScreen() {
                   }}
                 >
                   <Text
-                    style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16, flex: 1 }}
+                    style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14, flex: 1 }}
                     numberOfLines={1}
                   >
                     {title}
@@ -914,25 +981,25 @@ export default function SalesHistoryScreen() {
 
                   <View
                     style={{
-                      paddingHorizontal: 10,
-                      paddingVertical: 6,
+                      paddingHorizontal: 8,
+                      paddingVertical: 5,
                       borderRadius: 999,
                       borderWidth: 1,
                       borderColor: chipBorder,
                       backgroundColor: chipBg,
                     }}
                   >
-                    <Text style={{ color: chipText, fontWeight: "900" }}>
+                    <Text style={{ color: chipText, fontWeight: "900", fontSize: 11 }}>
                       {isPending ? "PENDING OFFLINE" : status}
                     </Text>
                   </View>
                 </View>
 
-                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}>
                   When: <Text style={{ color: theme.colors.text }}>{when}</Text>
                 </Text>
 
-                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}>
                   Qty: <Text style={{ color: theme.colors.text }}>{qty}</Text>
                   {"   "}•{"   "}
                   Amount: <Text style={{ color: theme.colors.text }}>{fmtMoney(amount)}</Text>
@@ -940,14 +1007,14 @@ export default function SalesHistoryScreen() {
 
                 {!isPending && (
                   <>
-                    <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                    <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}>
                       Method: <Text style={{ color: theme.colors.text }}>{method || "—"}</Text>
                       {channel ? (
                         <Text style={{ color: theme.colors.text }}> • {channel}</Text>
                       ) : null}
                     </Text>
 
-                    <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                    <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}>
                       Paid In: <Text style={{ color: theme.colors.text }}>{fmtMoney(paidAmount)}</Text>
                       {"   "}•{"   "}
                       Balance: <Text style={{ color: theme.colors.text }}>{fmtMoney(balanceAmount)}</Text>
@@ -965,6 +1032,7 @@ export default function SalesHistoryScreen() {
                   style={{
                     color: theme.colors.muted,
                     fontWeight: "800",
+                    fontSize: 11,
                     textDecorationLine: "underline",
                   }}
                 >
@@ -977,12 +1045,13 @@ export default function SalesHistoryScreen() {
         ListEmptyComponent={
           !loading ? (
             <View style={{ paddingTop: 16, alignItems: "center" }}>
-              <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+              <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}>
                 No sales ({labelForRange(range)}).
               </Text>
             </View>
           ) : null
         }
+        ListFooterComponent={<View style={{ height: Math.max(insets.bottom + 12, 20) }} />}
       />
     </Screen>
   );

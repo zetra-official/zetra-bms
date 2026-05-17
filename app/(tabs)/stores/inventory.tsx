@@ -23,6 +23,11 @@ type InventoryRow = {
   category: string | null;
   barcode: string | null;
   qty: number;
+  is_precision_product?: boolean | null;
+  precision_pack_size?: number | null;
+  precision_base_unit?: string | null;
+  pack_unit_qty?: number | null;
+  base_unit_qty?: number | null;
 };
 
 type SourceMode = "LIVE" | "CACHED" | "NONE";
@@ -49,6 +54,29 @@ function cleanBarcode(raw: any) {
   const s = String(raw ?? "").trim();
   if (!s) return "";
   return s.replace(/\s+/g, "");
+}
+
+function fmtQty(v: any) {
+  const n = Number(v ?? 0);
+  if (!Number.isFinite(n)) return "0";
+  return n.toFixed(3).replace(/\.?0+$/, "");
+}
+
+function getPrecisionQtyLabels(r: InventoryRow) {
+  const isPrecision = Boolean(r.is_precision_product);
+  const packSize = Number(r.precision_pack_size ?? 0);
+  const baseQty = Number(r.base_unit_qty ?? r.qty ?? 0);
+
+  if (!isPrecision || !Number.isFinite(packSize) || packSize <= 0) return null;
+
+  const packQty = Number.isFinite(Number(r.pack_unit_qty))
+    ? Number(r.pack_unit_qty)
+    : baseQty / packSize;
+
+  return {
+    packLabel: `${r.unit ?? "Pack"}: ${fmtQty(packQty)}`,
+    baseLabel: `${r.precision_base_unit ?? "Units"}: ${fmtQty(baseQty)}`,
+  };
 }
 
 function fmtExpiryDate(ymd: string | null) {
@@ -135,7 +163,12 @@ function sameRows(a: InventoryRow[], b: InventoryRow[]) {
       x.unit !== y.unit ||
       x.category !== y.category ||
       x.barcode !== y.barcode ||
-      Number(x.qty ?? 0) !== Number(y.qty ?? 0)
+      Number(x.qty ?? 0) !== Number(y.qty ?? 0) ||
+      Boolean(x.is_precision_product) !== Boolean(y.is_precision_product) ||
+      Number(x.precision_pack_size ?? 0) !== Number(y.precision_pack_size ?? 0) ||
+      x.precision_base_unit !== y.precision_base_unit ||
+      Number(x.pack_unit_qty ?? 0) !== Number(y.pack_unit_qty ?? 0) ||
+      Number(x.base_unit_qty ?? 0) !== Number(y.base_unit_qty ?? 0)
     ) {
       return false;
     }
@@ -830,7 +863,7 @@ export default function StoreInventoryScreen() {
           productId: r.product_id,
           productName: r.product_name,
           sku: r.sku ?? "",
-          currentQty: String(r.qty),
+          currentQty: fmtQty(r.qty),
         },
       } as any);
     },
@@ -1189,16 +1222,43 @@ export default function StoreInventoryScreen() {
                     paddingHorizontal: 10,
                   }}
                 >
-                  <Text
-                    style={{
-                      color: theme.colors.emerald,
-                      fontWeight: "900",
-                      fontSize: 16,
-                      textAlign: "center",
-                    }}
-                  >
-                    QTY: {r.qty}
-                  </Text>
+                  {getPrecisionQtyLabels(r) ? (
+                    <>
+                      <Text
+                        style={{
+                          color: theme.colors.emerald,
+                          fontWeight: "900",
+                          fontSize: 14,
+                          textAlign: "center",
+                        }}
+                      >
+                        {getPrecisionQtyLabels(r)?.packLabel}
+                      </Text>
+
+                      <Text
+                        style={{
+                          color: theme.colors.text,
+                          fontWeight: "900",
+                          fontSize: 12,
+                          marginTop: 5,
+                          textAlign: "center",
+                        }}
+                      >
+                        {getPrecisionQtyLabels(r)?.baseLabel}
+                      </Text>
+                    </>
+                  ) : (
+                    <Text
+                      style={{
+                        color: theme.colors.emerald,
+                        fontWeight: "900",
+                        fontSize: 16,
+                        textAlign: "center",
+                      }}
+                    >
+                      QTY: {fmtQty(r.qty)}
+                    </Text>
+                  )}
 
                   <Text
                     style={{
@@ -1228,7 +1288,7 @@ export default function StoreInventoryScreen() {
                           storeName: activeStoreName ?? "",
                           productId: r.product_id,
                           productName: r.product_name,
-                          currentQty: String(r.qty),
+                          currentQty: fmtQty(r.qty),
                         },
                       } as any);
                     }}

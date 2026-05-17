@@ -21,7 +21,7 @@ import {
 
 import { useOrg } from "../../../src/context/OrgContext";
 import { supabase } from "../../../src/supabase/supabaseClient";
-import { Button } from "../../../src/ui/Button";
+
 import { Card } from "../../../src/ui/Card";
 import { Screen } from "../../../src/ui/Screen";
 import { theme } from "../../../src/ui/theme";
@@ -37,7 +37,10 @@ type ExpenseRow = {
   payment_method?: string | null;
   expense_date: string; // yyyy-mm-dd
   created_at: string;
-  created_by_membership_id?: string;
+  created_by?: string | null;
+  created_by_membership_id?: string | null;
+  recorded_by_email?: string | null;
+  recorded_by_role?: string | null;
 };
 
 type Summary = {
@@ -147,9 +150,9 @@ function sectionTitle(title: string) {
     <Text
       style={{
         fontWeight: "900",
-        fontSize: 18,
+        fontSize: 15,
         color: theme.colors.text,
-        letterSpacing: 0.2,
+        letterSpacing: 0.1,
       }}
     >
       {title}
@@ -159,7 +162,14 @@ function sectionTitle(title: string) {
 
 function InputLabel({ children }: { children: React.ReactNode }) {
   return (
-    <Text style={{ color: theme.colors.muted, fontWeight: "900", marginBottom: 8 }}>
+    <Text
+      style={{
+        color: theme.colors.muted,
+        fontWeight: "900",
+        marginBottom: 4,
+        fontSize: 11,
+      }}
+    >
       {children}
     </Text>
   );
@@ -184,8 +194,8 @@ function PillChip({
         flexDirection: "row",
         alignItems: "center",
         gap: 8,
-        paddingVertical: 10,
-        paddingHorizontal: 14,
+        paddingVertical: 8,
+        paddingHorizontal: 12,
         borderRadius: 999,
         borderWidth: 1,
         borderColor: active ? theme.colors.emeraldBorder : theme.colors.border,
@@ -196,7 +206,7 @@ function PillChip({
       {icon ? (
         <Ionicons
           name={icon}
-          size={15}
+          size={14}
           color={active ? theme.colors.emerald : theme.colors.text}
         />
       ) : null}
@@ -204,7 +214,7 @@ function PillChip({
         style={{
           color: theme.colors.text,
           fontWeight: "900",
-          fontSize: 13,
+          fontSize: 12,
         }}
       >
         {label}
@@ -249,19 +259,19 @@ function SummaryMiniCard({
     <View
       style={{
         flex: 1,
-        minHeight: 124,
+        minHeight: 104,
         borderWidth: 1,
         borderColor: theme.colors.border,
-        borderRadius: 22,
-        backgroundColor: "rgba(255,255,255,0.035)",
-        padding: 14,
+        borderRadius: 18,
+        backgroundColor: "rgba(255,255,255,0.03)",
+        padding: 12,
         justifyContent: "space-between",
       }}
     >
       <View
         style={{
-          width: 38,
-          height: 38,
+          width: 32,
+          height: 32,
           borderRadius: 999,
           alignItems: "center",
           justifyContent: "center",
@@ -270,25 +280,25 @@ function SummaryMiniCard({
           backgroundColor: accentMap.bg,
         }}
       >
-        <Ionicons name={icon} size={18} color={accentMap.icon} />
+        <Ionicons name={icon} size={16} color={accentMap.icon} />
       </View>
 
       <View style={{ marginTop: 10 }}>
-        <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 13 }}>
+        <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
           {title}
         </Text>
         <Text
           style={{
             color: theme.colors.text,
             fontWeight: "900",
-            fontSize: 21,
+            fontSize: 17,
             marginTop: 6,
           }}
           numberOfLines={1}
         >
           {value}
         </Text>
-        <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
+        <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 4, fontSize: 11 }}>
           Count: <Text style={{ color: theme.colors.text }}>{count}</Text>
         </Text>
       </View>
@@ -308,19 +318,19 @@ function InputShell({
       style={{
         flexDirection: "row",
         alignItems: "flex-start",
-        gap: 12,
+        gap: 10,
         borderWidth: 1,
         borderColor: theme.colors.border,
-        borderRadius: 18,
-        backgroundColor: "rgba(255,255,255,0.045)",
-        paddingHorizontal: 14,
-        paddingVertical: 12,
+        borderRadius: 16,
+        backgroundColor: "rgba(255,255,255,0.035)",
+        paddingHorizontal: 12,
+        paddingVertical: 10,
       }}
     >
       <View
         style={{
-          width: 34,
-          height: 34,
+          width: 30,
+          height: 30,
           borderRadius: 999,
           alignItems: "center",
           justifyContent: "center",
@@ -330,7 +340,7 @@ function InputShell({
           marginTop: 1,
         }}
       >
-        <Ionicons name={icon} size={16} color={theme.colors.muted} />
+        <Ionicons name={icon} size={14} color={theme.colors.muted} />
       </View>
 
       <View style={{ flex: 1 }}>{children}</View>
@@ -374,6 +384,9 @@ export default function ExpensesScreen() {
   const [category, setCategory] = useState<string>("");
   const [note, setNote] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState<"CASH" | "MOBILE" | "BANK">("CASH");
+
+  const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
+  const isEditing = !!editingExpenseId;
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const liftAnim = useRef(new Animated.Value(10)).current;
@@ -554,11 +567,30 @@ useEffect(() => {
     void loadAll();
   }, [loadAll]);
 
-  const createExpense = useCallback(async () => {
+const resetExpenseForm = useCallback(() => {
+    setEditingExpenseId(null);
+    setAmount("");
+    setCategory("");
+    setNote("");
+    setPaymentMethod("CASH");
+    Keyboard.dismiss();
+  }, []);
+
+  const startEditExpense = useCallback((r: ExpenseRow) => {
+    setEditingExpenseId(r.id);
+    setAmount(String(Number(r.amount ?? 0)));
+    setCategory(String(r.category ?? "").trim());
+    setNote(String(r.note ?? ""));
+    const method = normalizeExpensePaymentMethod(r.payment_method);
+    setPaymentMethod(method === "OTHER" ? "CASH" : method);
+  }, []);
+
+  const saveExpense = useCallback(async () => {
     if (!activeStoreId) {
       Alert.alert("Missing", "No active store selected.");
       return;
     }
+
     if (!canCreate) {
       Alert.alert(
         "No Access",
@@ -566,7 +598,7 @@ useEffect(() => {
       );
       return;
     }
-    if (!canCreate) return;
+
     if (loading) return;
 
     const raw = amount.trim();
@@ -588,29 +620,33 @@ useEffect(() => {
 
     try {
       const res = await withTimeout(
-        supabase.rpc("create_expense_v2", {
-          p_store_id: activeStoreId,
-          p_amount: n,
-          p_category: cat,
-          p_note: note.trim() || null,
-          p_payment_method: paymentMethodLabel,
-          p_expense_date: ranges.today.from,
-        }),
+        isEditing
+          ? supabase.rpc("update_expense_v2", {
+              p_expense_id: editingExpenseId,
+              p_amount: n,
+              p_category: cat,
+              p_note: note.trim() || null,
+              p_payment_method: paymentMethodLabel,
+            })
+          : supabase.rpc("create_expense_v2", {
+              p_store_id: activeStoreId,
+              p_amount: n,
+              p_category: cat,
+              p_note: note.trim() || null,
+              p_payment_method: paymentMethodLabel,
+              p_expense_date: ranges.today.from,
+            }),
         12_000,
-        "create_expense_v2"
+        isEditing ? "update_expense_v2" : "create_expense_v2"
       );
 
       const e = (res as any)?.error;
       if (e) throw e;
 
-      setAmount("");
-      setCategory("");
-      setNote("");
-      setPaymentMethod("CASH");
-      Keyboard.dismiss();
+      resetExpenseForm();
 
       await loadAll();
-      Alert.alert("Saved", "Expense imeongezwa.");
+      Alert.alert("Saved", isEditing ? "Expense imebadilishwa." : "Expense imeongezwa.");
     } catch (err: any) {
       const msg = prettyRpcError(err);
       setError(msg);
@@ -628,7 +664,59 @@ useEffect(() => {
     paymentMethodLabel,
     ranges.today.from,
     loadAll,
+    isEditing,
+    editingExpenseId,
+    resetExpenseForm,
   ]);
+
+  const deleteExpense = useCallback(
+    (r: ExpenseRow) => {
+      Alert.alert(
+        "Delete Expense",
+        "Una uhakika unataka kufuta expense hii?",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Delete",
+            style: "destructive",
+            onPress: async () => {
+              if (loading) return;
+
+              setLoading(true);
+              setError(null);
+
+              try {
+                const res = await withTimeout(
+                  supabase.rpc("delete_expense_v2", {
+                    p_expense_id: r.id,
+                  }),
+                  12_000,
+                  "delete_expense_v2"
+                );
+
+                const e = (res as any)?.error;
+                if (e) throw e;
+
+                if (editingExpenseId === r.id) {
+                  resetExpenseForm();
+                }
+
+                await loadAll();
+                Alert.alert("Deleted", "Expense imefutwa.");
+              } catch (err: any) {
+                const msg = prettyRpcError(err);
+                setError(msg);
+                Alert.alert("Failed", msg);
+              } finally {
+                setLoading(false);
+              }
+            },
+          },
+        ]
+      );
+    },
+    [editingExpenseId, loadAll, loading, resetExpenseForm]
+  );
 
   const quickCategories = useMemo(
     () => ["Rent", "Transport", "WiFi", "Electricity", "Office", "Fuel"],
@@ -639,7 +727,7 @@ useEffect(() => {
 
   if (showSummaryOnly) {
     return (
-      <Screen scroll bottomPad={24}>
+      <Screen scroll bottomPad={110}>
         <Animated.View
             style={{
               opacity: fadeAnim,
@@ -658,7 +746,7 @@ useEffect(() => {
               <View style={{ flex: 1 }}>
                 <Text
                   style={{
-                    fontSize: 31,
+                    fontSize: 24,
                     fontWeight: "900",
                     color: theme.colors.text,
                     letterSpacing: -0.6,
@@ -670,7 +758,7 @@ useEffect(() => {
                   style={{
                     color: theme.colors.muted,
                     fontWeight: "800",
-                    marginTop: 4,
+                    marginTop: 2,
                   }}
                 >
                   View ya muhtasari wa matumizi ya store yako.
@@ -698,10 +786,10 @@ useEffect(() => {
 
             <Card
               style={{
-                gap: 14,
-                padding: 16,
-                borderRadius: 24,
-                backgroundColor: "rgba(255,255,255,0.035)",
+                gap: 10,
+                padding: 12,
+                borderRadius: 18,
+                backgroundColor: "rgba(255,255,255,0.03)",
               }}
             >
               <View>
@@ -712,7 +800,7 @@ useEffect(() => {
                   style={{
                     color: theme.colors.text,
                     fontWeight: "900",
-                    fontSize: 20,
+                    fontSize: 17,
                     marginTop: 4,
                   }}
                   numberOfLines={1}
@@ -727,9 +815,9 @@ useEffect(() => {
                     flex: 1,
                     borderWidth: 1,
                     borderColor: theme.colors.border,
-                    borderRadius: 18,
+                    borderRadius: 14,
                     backgroundColor: "rgba(255,255,255,0.035)",
-                    padding: 12,
+                    padding: 10,
                   }}
                 >
                   <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
@@ -745,7 +833,7 @@ useEffect(() => {
 
                 <View
                   style={{
-                    width: 110,
+                    width: 96,
                     borderWidth: 1,
                     borderColor: theme.colors.border,
                     borderRadius: 18,
@@ -773,17 +861,17 @@ useEffect(() => {
                 style={{
                   borderWidth: 1,
                   borderColor: theme.colors.emeraldBorder,
-                  borderRadius: 18,
+                  borderRadius: 14,
                   backgroundColor: theme.colors.emeraldSoft,
-                  paddingVertical: 12,
-                  paddingHorizontal: 14,
+                  paddingVertical: 10,
+                  paddingHorizontal: 12,
                   flexDirection: "row",
                   alignItems: "center",
                   gap: 10,
                 }}
               >
-                <Ionicons name="eye-outline" size={18} color={theme.colors.emerald} />
-                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+                <Ionicons name="eye-outline" size={16} color={theme.colors.emerald} />
+                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>
                   Hapa unaona muhtasari wa matumizi tu
                 </Text>
               </View>
@@ -897,8 +985,8 @@ useEffect(() => {
               onPress={() => router.back()}
               hitSlop={10}
               style={({ pressed }) => ({
-                width: 48,
-                height: 48,
+                width: 40,
+                height: 40,
                 borderRadius: 999,
                 alignItems: "center",
                 justifyContent: "center",
@@ -908,7 +996,7 @@ useEffect(() => {
                 opacity: pressed ? 0.92 : 1,
               })}
             >
-              <Ionicons name="chevron-back" size={22} color={theme.colors.text} />
+              <Ionicons name="chevron-back" size={20} color={theme.colors.text} />
             </Pressable>
           </View>
 
@@ -1010,7 +1098,7 @@ useEffect(() => {
                   gap: 10,
                 }}
               >
-                <Ionicons name="wallet-outline" size={18} color={theme.colors.emerald} />
+                <Ionicons name="wallet-outline" size={16} color={theme.colors.emerald} />
                 <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
                   {isStaffView ? "Staff expense enabled for this store" : "Ready to record expense"}
                 </Text>
@@ -1023,8 +1111,8 @@ useEffect(() => {
                 }}
                 disabled={loading}
                 style={({ pressed }) => ({
-                  width: 56,
-                  borderRadius: 18,
+                  width: 46,
+                  borderRadius: 14,
                   borderWidth: 1,
                   borderColor: theme.colors.border,
                   backgroundColor: "rgba(255,255,255,0.05)",
@@ -1035,7 +1123,7 @@ useEffect(() => {
               >
                 <Ionicons
                   name="refresh"
-                  size={20}
+                  size={18}
                   color={theme.colors.text}
                 />
               </Pressable>
@@ -1063,7 +1151,7 @@ useEffect(() => {
 
             {sectionTitle("Summary")}
 
-          <View style={{ flexDirection: "row", gap: 10 }}>
+          <View style={{ flexDirection: "row", gap: 8 }}>
             <SummaryMiniCard
               title="Today"
               value={fmt(today.total)}
@@ -1092,10 +1180,10 @@ useEffect(() => {
 
           <Card
             style={{
-              gap: 14,
-              padding: 16,
-              borderRadius: 24,
-              backgroundColor: "rgba(255,255,255,0.035)",
+              gap: 10,
+              padding: 12,
+              borderRadius: 18,
+              backgroundColor: "rgba(255,255,255,0.03)",
             }}
           >
             <InputShell icon="cash-outline">
@@ -1110,7 +1198,7 @@ useEffect(() => {
                 style={{
                   color: theme.colors.text,
                   fontWeight: "900",
-                  fontSize: 16,
+                  fontSize: 14,
                   paddingVertical: 2,
                 }}
               />
@@ -1178,20 +1266,61 @@ useEffect(() => {
                 style={{
                   color: theme.colors.text,
                   fontWeight: "800",
-                  fontSize: 15,
-                  minHeight: 64,
+                  fontSize: 13,
+                  minHeight: 52,
                   textAlignVertical: "top",
                   paddingVertical: 2,
                 }}
               />
             </InputShell>
 
-            <Button
-              title={loading ? "Saving..." : staffExpenseLoading ? "Checking..." : "Save Expense"}
-              onPress={createExpense}
+            <Pressable
+              onPress={saveExpense}
               disabled={loading || staffExpenseLoading || !canCreate}
-              variant="primary"
-            />
+              style={({ pressed }) => ({
+                minHeight: 44,
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: theme.colors.emeraldBorder,
+                backgroundColor: theme.colors.emeraldSoft,
+                alignItems: "center",
+                justifyContent: "center",
+                paddingHorizontal: 14,
+                opacity: loading || staffExpenseLoading || !canCreate ? 0.5 : pressed ? 0.92 : 1,
+              })}
+            >
+              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}>
+                {loading
+                  ? "Saving..."
+                  : staffExpenseLoading
+                  ? "Checking..."
+                  : isEditing
+                  ? "Update Expense"
+                  : "Save Expense"}
+              </Text>
+            </Pressable>
+
+            {isEditing && (
+              <Pressable
+                onPress={resetExpenseForm}
+                disabled={loading}
+                style={({ pressed }) => ({
+                  minHeight: 42,
+                  borderRadius: 16,
+                  borderWidth: 1,
+                  borderColor: theme.colors.border,
+                  backgroundColor: "rgba(255,255,255,0.04)",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  paddingHorizontal: 14,
+                  opacity: loading ? 0.5 : pressed ? 0.92 : 1,
+                })}
+              >
+                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}>
+                  Cancel Edit
+                </Text>
+              </Pressable>
+            )}
 
             {!activeStoreId && (
               <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
@@ -1205,15 +1334,16 @@ useEffect(() => {
           {rows.length === 0 ? (
             <Card
               style={{
-                padding: 18,
-                gap: 8,
+                padding: 12,
+                gap: 6,
                 alignItems: "flex-start",
+                borderRadius: 18,
               }}
             >
               <View
                 style={{
-                  width: 44,
-                  height: 44,
+                  width: 34,
+                  height: 34,
                   borderRadius: 999,
                   alignItems: "center",
                   justifyContent: "center",
@@ -1222,10 +1352,10 @@ useEffect(() => {
                   borderColor: theme.colors.border,
                 }}
               >
-                <Ionicons name="receipt-outline" size={20} color={theme.colors.muted} />
+                <Ionicons name="receipt-outline" size={16} color={theme.colors.muted} />
               </View>
 
-              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14 }}>
                 No expenses yet
               </Text>
               <Text style={{ color: theme.colors.muted, fontWeight: "700" }}>
@@ -1246,12 +1376,12 @@ useEffect(() => {
                 >
                   <Card
                     style={{
-                      gap: 12,
-                      padding: 16,
-                      borderRadius: 22,
-                      backgroundColor: "rgba(255,255,255,0.035)",
+                      gap: 8,
+                      padding: 12,
+                      borderRadius: 16,
+                      backgroundColor: "rgba(255,255,255,0.03)",
                       borderColor:
-                        idx === 0 ? "rgba(239,68,68,0.24)" : theme.colors.border,
+                        idx === 0 ? "rgba(239,68,68,0.20)" : theme.colors.border,
                     }}
                   >
                     <View
@@ -1267,7 +1397,7 @@ useEffect(() => {
                           style={{
                             color: theme.colors.text,
                             fontWeight: "900",
-                            fontSize: 17,
+                            fontSize: 14,
                           }}
                           numberOfLines={1}
                         >
@@ -1287,8 +1417,8 @@ useEffect(() => {
                               flexDirection: "row",
                               alignItems: "center",
                               gap: 6,
-                              paddingHorizontal: 10,
-                              paddingVertical: 6,
+                              paddingHorizontal: 8,
+                              paddingVertical: 5,
                               borderRadius: 999,
                               borderWidth: 1,
                               borderColor: theme.colors.border,
@@ -1297,10 +1427,10 @@ useEffect(() => {
                           >
                             <Ionicons
                               name={paymentMethodIcon(method)}
-                              size={13}
+                              size={12}
                               color={theme.colors.muted}
                             />
-                            <Text style={{ color: theme.colors.text, fontWeight: "800", fontSize: 12 }}>
+                            <Text style={{ color: theme.colors.text, fontWeight: "800", fontSize: 11 }}>
                               {method === "OTHER" ? "—" : method}
                             </Text>
                           </View>
@@ -1315,8 +1445,23 @@ useEffect(() => {
                               backgroundColor: "rgba(255,255,255,0.04)",
                             }}
                           >
-                            <Text style={{ color: theme.colors.text, fontWeight: "800", fontSize: 12 }}>
+                            <Text style={{ color: theme.colors.text, fontWeight: "800", fontSize: 11 }}>
                               {r.expense_date}
+                            </Text>
+                          </View>
+
+                          <View
+                            style={{
+                              paddingHorizontal: 10,
+                              paddingVertical: 6,
+                              borderRadius: 999,
+                              borderWidth: 1,
+                              borderColor: theme.colors.emeraldBorder,
+                              backgroundColor: theme.colors.emeraldSoft,
+                            }}
+                          >
+                            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 11 }}>
+                              By: {r.recorded_by_email || r.recorded_by_role || "User"}
                             </Text>
                           </View>
                         </View>
@@ -1326,8 +1471,8 @@ useEffect(() => {
                         style={{
                           borderWidth: 1,
                           borderColor: theme.colors.dangerBorder,
-                          paddingHorizontal: 14,
-                          paddingVertical: 8,
+                          paddingHorizontal: 10,
+                          paddingVertical: 6,
                           borderRadius: 999,
                           backgroundColor: theme.colors.dangerSoft,
                         }}
@@ -1336,7 +1481,7 @@ useEffect(() => {
                           style={{
                             color: theme.colors.danger,
                             fontWeight: "900",
-                            fontSize: 15,
+                            fontSize: 13,
                           }}
                         >
                           {fmt(Number(r.amount ?? 0))}
@@ -1344,25 +1489,68 @@ useEffect(() => {
                       </View>
                     </View>
 
+                    <View style={{ flexDirection: "row", gap: 8 }}>
+                      <Pressable
+                        onPress={() => startEditExpense(r)}
+                        disabled={loading}
+                        style={({ pressed }) => ({
+                          flex: 1,
+                          minHeight: 38,
+                          borderRadius: 14,
+                          borderWidth: 1,
+                          borderColor: theme.colors.emeraldBorder,
+                          backgroundColor: theme.colors.emeraldSoft,
+                          alignItems: "center",
+                          justifyContent: "center",
+                          opacity: loading ? 0.5 : pressed ? 0.92 : 1,
+                        })}
+                      >
+                        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>
+                          Edit
+                        </Text>
+                      </Pressable>
+
+                      <Pressable
+                        onPress={() => deleteExpense(r)}
+                        disabled={loading}
+                        style={({ pressed }) => ({
+                          flex: 1,
+                          minHeight: 38,
+                          borderRadius: 14,
+                          borderWidth: 1,
+                          borderColor: theme.colors.dangerBorder,
+                          backgroundColor: theme.colors.dangerSoft,
+                          alignItems: "center",
+                          justifyContent: "center",
+                          opacity: loading ? 0.5 : pressed ? 0.92 : 1,
+                        })}
+                      >
+                        <Text style={{ color: theme.colors.danger, fontWeight: "900", fontSize: 12 }}>
+                          Delete
+                        </Text>
+                      </Pressable>
+                    </View>
+
                     {!!r.note && (
                       <View
                         style={{
                           borderWidth: 1,
                           borderColor: theme.colors.border,
-                          borderRadius: 16,
-                          backgroundColor: "rgba(255,255,255,0.035)",
-                          padding: 12,
+                          borderRadius: 12,
+                          backgroundColor: "rgba(255,255,255,0.03)",
+                          padding: 10,
                         }}
                       >
-                        <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
+                        <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}>
                           NOTE
                         </Text>
                         <Text
                           style={{
                             color: theme.colors.text,
                             fontWeight: "800",
-                            marginTop: 6,
-                            lineHeight: 20,
+                            marginTop: 4,
+                            lineHeight: 18,
+                            fontSize: 12,
                           }}
                         >
                           {r.note}

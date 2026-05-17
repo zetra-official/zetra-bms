@@ -1,7 +1,7 @@
 ﻿// app/(tabs)/staff/assign.tsx
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert, Text, View } from "react-native";
+import { Alert, Pressable, Text, View } from "react-native";
 import { useOrg } from "../../../src/context/OrgContext";
 import { supabase } from "../../../src/supabase/supabaseClient";
 import { Button } from "../../../src/ui/Button";
@@ -198,8 +198,16 @@ export default function AssignStaffStoresScreen() {
   };
 
   return (
-    <Screen scroll>
-      <Text style={{ fontSize: 22, fontWeight: "900", color: UI.text }}>
+    <Screen
+      scroll
+      contentStyle={{
+        backgroundColor: "#F3F6FB",
+        paddingHorizontal: 18,
+        paddingTop: 14,
+        paddingBottom: 140,
+      }}
+    >
+      <Text style={{ fontSize: 28, fontWeight: "900", color: "#0F172A" }}>
         Assign Stores
       </Text>
 
@@ -351,9 +359,23 @@ export default function AssignStaffStoresScreen() {
         })
       )}
 
-      <View style={{ marginTop: 14 }}>
-        <Button title="Back" variant="secondary" onPress={() => router.back()} />
-      </View>
+      <Pressable
+        onPress={() => router.back()}
+        style={{
+          marginTop: 14,
+          height: 52,
+          borderRadius: 999,
+          borderWidth: 1,
+          borderColor: "rgba(15,23,42,0.10)",
+          backgroundColor: "#FFFFFF",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Text style={{ color: "#0F172A", fontWeight: "900", fontSize: 16 }}>
+          Back
+        </Text>
+      </Pressable>
     </Screen>
   );
 }

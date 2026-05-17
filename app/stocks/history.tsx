@@ -114,15 +114,25 @@ function MiniStat({ label, value, hint }: { label: string; value: string; hint?:
       <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }} numberOfLines={1}>
         {label}
       </Text>
+
       <Text
-        style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}
-        numberOfLines={1}
+        style={{
+          color: UI.text,
+          fontWeight: "900",
+          fontSize: 16,
+          lineHeight: 20,
+          flexShrink: 1,
+          width: "100%",
+        }}
+        numberOfLines={2}
+        ellipsizeMode="tail"
         adjustsFontSizeToFit
-        minimumFontScale={0.75}
+        minimumFontScale={0.62}
         allowFontScaling={false}
       >
         {value}
       </Text>
+
       {!!hint && (
         <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 12 }} numberOfLines={1}>
           {hint}
@@ -169,9 +179,21 @@ export default function StockHistoryScreen() {
 
   const storeIdsInOrg = useMemo(() => {
     const ids = (org.stores ?? [])
-      .filter((s) => String((s as any)?.organization_id ?? "").trim() === orgId)
-      .map((s) => String((s as any)?.store_id ?? "").trim())
+      .filter((s: any) => {
+        const rowOrgId = String(
+          s?.organization_id ??
+            s?.org_id ??
+            s?.activeOrgId ??
+            s?.activeOrganizationId ??
+            ""
+        ).trim();
+
+        // Forward-safe: if store row has no org id in OrgContext, don't exclude it.
+        return !rowOrgId || rowOrgId === orgId;
+      })
+      .map((s: any) => String(s?.store_id ?? s?.id ?? "").trim())
       .filter(Boolean);
+
     return Array.from(new Set(ids));
   }, [org.stores, orgId]);
 
@@ -287,6 +309,13 @@ export default function StockHistoryScreen() {
       if (rid === reqRef.current) setLoading(false);
     }
   }, [orgId, dateFrom, dateTo, scope, storeId, canAll, isStaff, storeIdsInOrg, loadForStore]);
+
+  React.useEffect(() => {
+    if (!orgId) return;
+    if (scope === "STORE" && !storeId) return;
+
+    void run();
+  }, [orgId, storeId, scope, dateFrom, dateTo, run]);
 
   const subtitle = isStaff
     ? `Store: ${storeName}`

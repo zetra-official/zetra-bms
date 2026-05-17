@@ -1,6 +1,6 @@
 // app/(tabs)/settings/index.tsx
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert, Platform, Pressable, Text, View, useWindowDimensions } from "react-native";
+import { Alert, Linking, Platform, Pressable, Text, View, useWindowDimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
@@ -8,7 +8,12 @@ import { Screen } from "@/src/ui/Screen";
 import { Card } from "@/src/ui/Card";
 import { theme, UI } from "@/src/ui/theme";
 import { useOrg } from "@/src/context/OrgContext";
-import { hardSignOutSupabase, supabase } from "@/src/supabase/supabaseClient";
+import {
+  AUTH_STORAGE_KEY,
+  clearCorruptSupabaseSession,
+  hardSignOutSupabase,
+  supabase,
+} from "@/src/supabase/supabaseClient";
 import { kv } from "@/src/storage/kv";
 
 function isDesktopWebEnv(width?: number) {
@@ -34,10 +39,14 @@ function webIconFallback(name: keyof typeof Ionicons.glyphMap) {
       return "R";
     case "people-outline":
       return "T";
+    case "person-circle-outline":
+      return "C";
     case "cash-outline":
       return "$";
     case "chatbubbles-outline":
       return "M";
+    case "logo-whatsapp":
+      return "W";
     case "business-outline":
       return "O";
     case "card-outline":
@@ -134,10 +143,14 @@ function getPageGlyph(name: keyof typeof Ionicons.glyphMap) {
       return "R";
     case "people-outline":
       return "T";
+    case "person-circle-outline":
+      return "C";
     case "cash-outline":
       return "$";
     case "chatbubbles-outline":
       return "M";
+    case "logo-whatsapp":
+      return "W";
     case "business-outline":
       return "O";
     case "card-outline":
@@ -168,13 +181,15 @@ type RowProps = {
   onPress?: () => void;
   disabled?: boolean;
   badge?: string;
+  accent?: string;
+  soft?: string;
 };
 
 function SectionTitle({ label }: { label: string }) {
   return (
     <Text
       style={{
-        color: "rgba(255,255,255,0.72)",
+       color: "#64748B",
         fontWeight: "900",
         fontSize: 12,
         letterSpacing: 0.8,
@@ -190,17 +205,21 @@ function SectionTitle({ label }: { label: string }) {
 function PremiumSectionCard({
   children,
   style,
+  accent = "#10B981",
+  glow = "rgba(16,185,129,0.10)",
 }: {
   children: React.ReactNode;
   style?: any;
+  accent?: string;
+  glow?: string;
 }) {
   return (
     <Card
       style={{
         gap: 0,
         borderRadius: 24,
-        borderColor: "rgba(255,255,255,0.08)",
-        backgroundColor: "rgba(15,18,24,0.98)",
+       borderColor: `${accent}40`,
+backgroundColor: "#FFFFFF",
         overflow: "hidden",
         ...style,
       }}
@@ -214,7 +233,7 @@ function PremiumSectionCard({
           width: 180,
           height: 180,
           borderRadius: 999,
-          backgroundColor: "rgba(16,185,129,0.05)",
+         backgroundColor: `${accent}18`,
         }}
       />
 
@@ -227,7 +246,7 @@ function PremiumSectionCard({
           width: 180,
           height: 180,
           borderRadius: 999,
-          backgroundColor: "rgba(34,211,238,0.03)",
+          backgroundColor: `${accent}10`,
         }}
       />
 
@@ -239,7 +258,7 @@ function PremiumSectionCard({
           right: 0,
           top: 0,
           height: 1,
-          backgroundColor: "rgba(255,255,255,0.08)",
+         backgroundColor: "rgba(15,23,42,0.08)",
         }}
       />
 
@@ -253,14 +272,23 @@ function Divider() {
     <View
       style={{
         height: 1,
-        backgroundColor: "rgba(255,255,255,0.08)",
+       backgroundColor: "rgba(15,23,42,0.08)",
         marginLeft: 74,
       }}
     />
   );
 }
 
-function Row({ icon, title, subtitle, onPress, disabled, badge }: RowProps) {
+function Row({
+  icon,
+  title,
+  subtitle,
+  onPress,
+  disabled,
+  badge,
+  accent = "#10B981",
+  soft = "rgba(16,185,129,0.12)",
+}: RowProps) {
   return (
     <Pressable
       onPress={disabled ? undefined : onPress}
@@ -282,15 +310,15 @@ function Row({ icon, title, subtitle, onPress, disabled, badge }: RowProps) {
           borderRadius: 18,
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: UI.emeraldSoft,
-          borderWidth: 1,
-          borderColor: UI.emeraldBorder,
+          backgroundColor: soft,
+borderWidth: 1,
+borderColor: `${accent}66`,
         }}
       >
         {Platform.OS === "web" ? (
-          <PageGlyph text={getPageGlyph(icon)} size={22} color={UI.emerald} />
+          <PageGlyph text={getPageGlyph(icon)} size={22} color={accent} />
         ) : (
-          <SafeIcon name={icon} size={22} color={UI.emerald} />
+          <SafeIcon name={icon} size={22} color={accent} />
         )}
       </View>
 
@@ -324,7 +352,7 @@ function Row({ icon, title, subtitle, onPress, disabled, badge }: RowProps) {
               borderRadius: 999,
               borderWidth: 1,
               borderColor: "rgba(255,255,255,0.10)",
-              backgroundColor: "rgba(255,255,255,0.05)",
+             backgroundColor: "#F8FAFC",
             }}
           >
             <Text
@@ -341,9 +369,9 @@ function Row({ icon, title, subtitle, onPress, disabled, badge }: RowProps) {
         ) : null}
 
         {Platform.OS === "web" ? (
-          <PageGlyph text=">" size={18} color="rgba(255,255,255,0.55)" />
+         <PageGlyph text=">" size={18} color="#64748B" /> 
         ) : (
-          <SafeIcon name="chevron-forward" size={18} color="rgba(255,255,255,0.55)" />
+          <SafeIcon name="chevron-forward" size={18} color="#64748B" />
         )}
       </View>
     </Pressable>
@@ -363,7 +391,7 @@ function HeroContextCard({
     <PremiumSectionCard
       style={{
         borderColor: "rgba(16,185,129,0.22)",
-        backgroundColor: "rgba(15,18,24,0.98)",
+        backgroundColor: "#FFFFFF",
       }}
     >
       <View style={{ padding: 16, gap: 14 }}>
@@ -390,7 +418,7 @@ function HeroContextCard({
           <View style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
             <Text
               style={{
-                color: "rgba(255,255,255,0.62)",
+                color: "#64748B",
                 fontWeight: "900",
                 fontSize: 11,
                 letterSpacing: 0.8,
@@ -553,6 +581,7 @@ export default function MoreHome() {
 
   const isDesktopWeb = isDesktopWebEnv(width);
   const isWeb = Platform.OS === "web";
+  const loginRoute = isWeb ? "/login" : "/(auth)/login";
 
   const [isGrowthPartner, setIsGrowthPartner] = useState(false);
   const [partnerStatus, setPartnerStatus] = useState("");
@@ -623,18 +652,25 @@ export default function MoreHome() {
   const storeLabel = useMemo(() => org.activeStoreName ?? "—", [org.activeStoreName]);
 
   const canManageStaff = org.activeRole === "owner" || org.activeRole === "admin";
+  const canOpenStaffArea =
+    org.activeRole === "owner" ||
+    org.activeRole === "admin" ||
+    org.activeRole === "staff";
   const canManageBilling = org.activeRole === "owner";
   const canViewStatement = org.activeRole === "owner";
   const isCashier = org.activeRole === "cashier";
 
-  const doLogoutNow = useCallback(async () => {
+ const doLogoutNow = useCallback(async () => {
     if (logoutBusy) return;
 
     setLogoutBusy(true);
 
     try {
-      const { data: authData } = await supabase.auth.getUser();
-      const userId = String(authData?.user?.id ?? "").trim();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      const userId = String(session?.user?.id ?? "").trim();
 
       if (userId) {
         await kv.setLastWorkspaceForUser(userId, {
@@ -643,21 +679,17 @@ export default function MoreHome() {
         });
       }
 
+      await hardSignOutSupabase();
+
       if (isWeb && typeof window !== "undefined") {
         try {
-          await hardSignOutSupabase();
-        } catch {}
-
-        try {
-          localStorage.removeItem("zetra-bms-auth");
+          localStorage.removeItem(AUTH_STORAGE_KEY);
           localStorage.removeItem("sb-access-token");
           localStorage.removeItem("sb-refresh-token");
         } catch {}
 
         try {
-          // Do not blanket-clear sessionStorage because browser workspace
-          // helpers may live there in some environments.
-          sessionStorage.removeItem("zetra-bms-auth");
+          sessionStorage.removeItem(AUTH_STORAGE_KEY);
         } catch {}
 
         try {
@@ -668,13 +700,10 @@ export default function MoreHome() {
 
             const lower = String(k).toLowerCase();
 
-            // IMPORTANT:
-            // remove auth/session keys only
-            // preserve workspace memory keys like active org/store selection
             if (
               lower.startsWith("sb-") ||
               lower.includes("supabase") ||
-              lower === "zetra-bms-auth"
+              lower === AUTH_STORAGE_KEY.toLowerCase()
             ) {
               keysToRemove.push(k);
             }
@@ -689,13 +718,12 @@ export default function MoreHome() {
         return;
       }
 
-      await hardSignOutSupabase();
-      router.replace("/login" as any);
+      router.replace(loginRoute as any);
     } catch (e: any) {
       Alert.alert("Logout failed", e?.message ?? "Unknown error");
       setLogoutBusy(false);
     }
-  }, [isWeb, logoutBusy, router]);
+   }, [isWeb, loginRoute, logoutBusy, org.activeOrgId, org.activeStoreId, router]);
 
   const onLogout = useCallback(() => {
     if (logoutBusy) return;
@@ -716,6 +744,25 @@ export default function MoreHome() {
       },
     ]);
   }, [doLogoutNow, isWeb, logoutBusy]);
+
+  const openZetraSupportWhatsApp = useCallback(async () => {
+    const message = encodeURIComponent(
+      `Hello ZETRA Support, I need help with my ZETRA BMS account.\n\nOrganization: ${org.activeOrgName ?? "—"}\nRole: ${
+        org.activeRole ? String(org.activeRole).toUpperCase() : "—"
+      }\nStore: ${org.activeStoreName ?? "—"}`
+    );
+
+    const url = `https://wa.me/255758014675?text=${message}`;
+
+    try {
+      await Linking.openURL(url);
+    } catch {
+      Alert.alert(
+        "Contact Support",
+        "Imeshindikana kufungua WhatsApp. Tafadhali wasiliana na ZETRA Support kupitia +255758014675."
+      );
+    }
+  }, [org.activeOrgName, org.activeRole, org.activeStoreName]);
 
   return (
     <Screen scroll bottomPad={120}>
@@ -742,7 +789,7 @@ export default function MoreHome() {
       </View>
 
       <SectionTitle label="Operations" />
-      <PremiumSectionCard>
+      <PremiumSectionCard accent="#2563EB" glow="rgba(37,99,235,0.13)">
         <Row
           icon="document-text-outline"
           title="Business Statement"
@@ -754,6 +801,20 @@ export default function MoreHome() {
           badge={canViewStatement ? "REPORTS" : "LOCKED"}
           disabled={!canViewStatement}
           onPress={() => router.push("/(tabs)/settings/business-statement")}
+accent="#2563EB"
+soft="rgba(37,99,235,0.13)"
+        />
+
+        <Divider />
+
+        <Row
+          icon="person-circle-outline"
+          title="Customers"
+          subtitle="View customer profiles, purchase history, call, SMS, and WhatsApp"
+          badge="CRM"
+          onPress={() => router.push("/customers")}
+accent="#7C3AED"
+soft="rgba(124,58,237,0.13)"
         />
 
         <Divider />
@@ -763,12 +824,22 @@ export default function MoreHome() {
           title="Staff Management"
           subtitle={
             canManageStaff
-              ? "Add staff, assign stores, and manage team access"
-              : "Owner/Admin manages staff access"
+              ? "Add staff, assign stores, manage team access, and view staff sales"
+              : org.activeRole === "staff"
+                ? "Open your staff area and view My Sales"
+                : "Owner/Admin manages staff access"
           }
-          badge={canManageStaff ? "TEAM" : "LOCKED"}
-          disabled={!canManageStaff}
+          badge={
+            canManageStaff
+              ? "TEAM"
+              : org.activeRole === "staff"
+                ? "MY SALES"
+                : "LOCKED"
+          }
+          disabled={!canOpenStaffArea}
           onPress={() => router.push("/(tabs)/staff")}
+accent="#F59E0B"
+soft="rgba(245,158,11,0.14)"
         />
 
         <Divider />
@@ -780,28 +851,46 @@ export default function MoreHome() {
           badge={isCashier ? "CASHIER" : "LOCKED"}
           disabled={!isCashier}
           onPress={() => router.push("/(tabs)/settings/cashier-closing")}
+accent="#EF4444"
+soft="rgba(239,68,68,0.12)"
         />
       </PremiumSectionCard>
 
       <SectionTitle label="Communication" />
-      <PremiumSectionCard>
+      <PremiumSectionCard accent="#06B6D4" glow="rgba(6,182,212,0.13)">
         <Row
           icon="chatbubbles-outline"
           title="Meeting Room"
           subtitle="Create rooms, invite members, and collaborate in real time"
           badge="LIVE"
           onPress={() => router.push("/(tabs)/settings/meeting-room")}
+accent="#06B6D4"
+soft="rgba(6,182,212,0.13)"
+        />
+
+        <Divider />
+
+        <Row
+          icon="logo-whatsapp"
+          title="Contact Support"
+          subtitle="Need help? Chat with ZETRA support on WhatsApp"
+          badge="HELP"
+          onPress={openZetraSupportWhatsApp}
+accent="#22C55E"
+soft="rgba(34,197,94,0.13)"
         />
       </PremiumSectionCard>
 
       <SectionTitle label="Organization" />
-      <PremiumSectionCard>
+      <PremiumSectionCard accent="#8B5CF6" glow="rgba(139,92,246,0.13)">
         <Row
           icon="business-outline"
           title="Organization"
           subtitle={orgSummary}
           badge="WORKSPACE"
           onPress={() => router.push("/(tabs)/settings/organization")}
+accent="#8B5CF6"
+soft="rgba(139,92,246,0.13)"
         />
 
         <Divider />
@@ -817,17 +906,21 @@ export default function MoreHome() {
           badge={canManageBilling ? "OWNER" : "LOCKED"}
           disabled={!canManageBilling}
           onPress={() => router.push("/(tabs)/settings/subscription")}
+accent="#F97316"
+soft="rgba(249,115,22,0.13)"
         />
       </PremiumSectionCard>
 
       <SectionTitle label="Regional & Localization" />
-      <PremiumSectionCard>
+      <PremiumSectionCard accent="#0EA5E9" glow="rgba(14,165,233,0.13)">
         <Row
           icon="globe-outline"
           title="Regional Settings"
           subtitle="Language • Currency • Timezone • Date • Number"
           badge="GLOBAL"
           onPress={() => router.push("/(tabs)/settings/regional")}
+accent="#0EA5E9"
+soft="rgba(14,165,233,0.13)"
         />
       </PremiumSectionCard>
 
@@ -851,7 +944,7 @@ export default function MoreHome() {
       ) : null}
 
       <SectionTitle label="Preferences" />
-      <PremiumSectionCard>
+      <PremiumSectionCard accent="#A855F7" glow="rgba(168,85,247,0.13)">
         <Row
           icon="sparkles-outline"
           title="AI Preferences"
@@ -879,7 +972,7 @@ export default function MoreHome() {
       </PremiumSectionCard>
 
       <SectionTitle label="Account & Privacy" />
-      <PremiumSectionCard>
+      <PremiumSectionCard accent="#10B981" glow="rgba(16,185,129,0.13)">
         <Row
           icon="shield-half-outline"
           title="Account & Privacy"
@@ -909,7 +1002,7 @@ export default function MoreHome() {
 
       <Text
         style={{
-          color: "rgba(255,255,255,0.48)",
+          color: "#94A3B8",
           fontWeight: "800",
           fontSize: 12,
         }}

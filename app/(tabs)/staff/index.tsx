@@ -34,15 +34,15 @@ type StaffRow = {
 };
 
 const UI = {
-  bg0: "#05070D",
-  card: "rgba(255,255,255,0.06)",
-  border: "rgba(255,255,255,0.10)",
-  text: "rgba(255,255,255,0.92)",
-  muted: "rgba(255,255,255,0.65)",
-  faint: "rgba(255,255,255,0.45)",
-  emerald: "#34D399",
-  emeraldSoft: "rgba(52,211,153,0.14)",
-  danger: "#FB7185",
+  bg0: "#F3F7FC",
+  card: "#FFFFFF",
+  border: "rgba(15,23,42,0.10)",
+  text: "#0F172A",
+  muted: "#64748B",
+  faint: "#94A3B8",
+  emerald: "#059669",
+  emeraldSoft: "rgba(5,150,105,0.10)",
+  danger: "#E11D48",
 };
 
 function shortId(v: string) {
@@ -76,6 +76,15 @@ function roleBadgeBg(role: StaffRole) {
   return "rgba(255,255,255,0.06)";
 }
 
+function roleLabel(role: StaffRole | string | null | undefined) {
+  const r = String(role ?? "").trim().toLowerCase();
+  if (r === "owner") return "OWNER";
+  if (r === "admin") return "ADMIN";
+  if (r === "staff") return "STAFF";
+  if (r === "cashier") return "CASHIER";
+  return "—";
+}
+
 export default function StaffTabScreen() {
   const router = useRouter();
   const { activeOrgId, activeOrgName, activeRole } = useOrg();
@@ -88,6 +97,7 @@ export default function StaffTabScreen() {
   const [rows, setRows] = useState<StaffRow[]>([]);
 
   const canManage = activeRole === "owner" || activeRole === "admin";
+  const [removingByMembershipId, setRemovingByMembershipId] = useState<Record<string, boolean>>({});
 
   const fetchStaff = useCallback(
     async (opts?: { silent?: boolean }) => {
@@ -169,6 +179,102 @@ export default function StaffTabScreen() {
     });
   };
 
+  const openCommission = () => {
+    if (!canManage) {
+      Alert.alert("No Access", "Owner/Admin only.");
+      return;
+    }
+
+    router.push("/(tabs)/staff/commission");
+  };
+
+  const openMySales = () => {
+    if (activeRole !== "staff") {
+      Alert.alert("No Access", "Staff only.");
+      return;
+    }
+
+    router.push("/(tabs)/staff/my-sales");
+  };
+
+  const openPayoutProfile = () => {
+    if (activeRole !== "staff") {
+      Alert.alert("No Access", "Staff only.");
+      return;
+    }
+
+    router.push("/(tabs)/staff/payout-profile");
+  };
+
+  const openCommissionHistory = () => {
+    if (activeRole !== "staff") {
+      Alert.alert("No Access", "Staff only.");
+      return;
+    }
+
+    router.push("/(tabs)/staff/commission-history");
+  };
+
+  const openCommissionCashOut = () => {
+    if (!canManage) {
+      Alert.alert("No Access", "Owner/Admin only.");
+      return;
+    }
+
+    router.push("/(tabs)/staff/cash-out");
+  };
+
+  const removeStaff = (r: StaffRow) => {
+    if (!canManage) {
+      Alert.alert("No Access", "Owner/Admin only.");
+      return;
+    }
+
+    if (!activeOrgId) {
+      Alert.alert("Missing", "Organization haijapatikana.");
+      return;
+    }
+
+    if (r.role === "owner") {
+      Alert.alert("Not Allowed", "Owner hawezi kuondolewa kwenye screen hii.");
+      return;
+    }
+
+    const email = pickEmail(r) ?? shortId(r.user_id);
+
+    Alert.alert(
+      "Remove Staff",
+      `Una uhakika unataka kumuondoa ${email}?\n\nAtaondolewa kwenye stores zote na hataweza kuendelea kufanya majukumu yake, lakini history zake za zamani zitabaki salama.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: async () => {
+            setRemovingByMembershipId((p) => ({ ...p, [r.membership_id]: true }));
+            setError(null);
+
+            try {
+              const { error: e } = await supabase.rpc("remove_org_staff_v1", {
+                p_org_id: activeOrgId,
+                p_membership_id: r.membership_id,
+              });
+
+              if (e) throw e;
+
+              await fetchStaff();
+              Alert.alert("Removed ✅", "Staff ameondolewa kikamilifu.");
+            } catch (err: any) {
+              Alert.alert("Failed", err?.message ?? "Imeshindikana kumuondoa staff.");
+            } finally {
+              setRemovingByMembershipId((p) => ({ ...p, [r.membership_id]: false }));
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const info = (r: StaffRow) => {
     const email = pickEmail(r);
     Alert.alert(
@@ -186,12 +292,12 @@ export default function StaffTabScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onPullRefresh} />
         }
         contentContainerStyle={{
-          padding: 16,
-          paddingBottom: 120,
+          padding: 18,
+          paddingBottom: 170,
           gap: 12,
         }}
       >
-        <Text style={{ fontSize: 26, fontWeight: "900", color: UI.text }}>
+        <Text style={{ fontSize: 30, fontWeight: "900", color: UI.text, letterSpacing: -0.8 }}>
           Staff Management
         </Text>
 
@@ -223,13 +329,13 @@ export default function StaffTabScreen() {
               }}
             >
               <Text style={{ color: UI.text, fontWeight: "900" }}>
-                {activeRole ?? "—"}
+                {roleLabel(activeRole)}
               </Text>
             </View>
           </View>
 
-          <Text style={{ color: UI.faint, fontWeight: "800" }}>
-            Tip: List inajirefresh yenyewe ukifungua/ukirudi. Unaweza pia kudrag juu (pull-to-refresh).
+          <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 20 }}>
+            Owner/Admin anaweza kuongeza staff, ku-assign store, kuweka commission, na kufanya cash out.
           </Text>
         </View>
 
@@ -246,6 +352,94 @@ export default function StaffTabScreen() {
             <Text style={{ color: UI.danger, fontWeight: "900" }}>{error}</Text>
           </View>
         )}
+
+        {canManage ? (
+          <>
+            <Pressable
+              onPress={openCommission}
+              style={{
+                backgroundColor: "rgba(52,211,153,0.10)",
+                borderWidth: 1,
+                borderColor: "rgba(52,211,153,0.30)",
+                paddingVertical: 16,
+                borderRadius: 22,
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
+                Staff Sales & Commission
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={openCommissionCashOut}
+              style={{
+                backgroundColor: "rgba(255,255,255,0.06)",
+                borderWidth: 1,
+                borderColor: "rgba(52,211,153,0.24)",
+                paddingVertical: 16,
+                borderRadius: 22,
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
+                Commission Cash Out
+              </Text>
+            </Pressable>
+          </>
+        ) : null}
+
+        {activeRole === "staff" ? (
+          <>
+            <Pressable
+              onPress={openMySales}
+              style={{
+                backgroundColor: "rgba(52,211,153,0.10)",
+                borderWidth: 1,
+                borderColor: "rgba(52,211,153,0.30)",
+                paddingVertical: 16,
+                borderRadius: 22,
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
+                My Sales
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={openPayoutProfile}
+              style={{
+                backgroundColor: "rgba(255,255,255,0.06)",
+                borderWidth: 1,
+                borderColor: "rgba(52,211,153,0.24)",
+                paddingVertical: 16,
+                borderRadius: 22,
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
+                Payout Profile
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={openCommissionHistory}
+              style={{
+                backgroundColor: "rgba(255,255,255,0.05)",
+                borderWidth: 1,
+                borderColor: UI.border,
+                paddingVertical: 16,
+                borderRadius: 22,
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
+                Commission History
+              </Text>
+            </Pressable>
+          </>
+        ) : null}
 
         <Pressable
           onPress={openAdd}
@@ -438,7 +632,27 @@ export default function StaffTabScreen() {
                   </Pressable>
                 </View>
 
-                <Text style={{ color: UI.muted, fontWeight: "700", marginTop: 2 }}>
+                {canManage && r.role !== "owner" ? (
+                  <Pressable
+                    onPress={() => removeStaff(r)}
+                    disabled={!!removingByMembershipId[r.membership_id]}
+                    style={{
+                      backgroundColor: "rgba(251,113,133,0.10)",
+                      borderWidth: 1,
+                      borderColor: "rgba(251,113,133,0.35)",
+                      paddingVertical: 12,
+                      borderRadius: 18,
+                      alignItems: "center",
+                      opacity: removingByMembershipId[r.membership_id] ? 0.55 : 1,
+                    }}
+                  >
+                    <Text style={{ color: UI.danger, fontWeight: "900" }}>
+                      {removingByMembershipId[r.membership_id] ? "Removing..." : "Remove Staff"}
+                    </Text>
+                  </Pressable>
+                ) : null}
+
+                <Text style={{ color: UI.muted, fontWeight: "700", marginTop: 2, lineHeight: 20 }}>
                   Tip: Bonyeza “Assign Store” kwenye {r.role === "cashier" ? "cashier" : "staff"} card ili uende ku-assign /
                   ku-unassign (membershipId tayari ✅)
                 </Text>

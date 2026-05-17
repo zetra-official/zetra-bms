@@ -204,6 +204,11 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
   const hydratedUserRef = useRef<string | null>(null);
   const currentUserIdRef = useRef<string | null>(null);
 
+  // ✅ AUTH/LOAD SINGLE-FLIGHT GUARD
+  // Prevent overlapping loadAll() calls that can fight over Supabase auth lock.
+  const loadInFlightRef = useRef<Promise<void> | null>(null);
+  const queuedLoadModeRef = useRef<"boot" | "refresh" | null>(null);
+
   // ✅ FIX A: when org changes, clear active store (state + KV)
   const setActiveOrgId = useCallback(
     (orgId: string | null) => {
@@ -393,7 +398,7 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const loadAll = useCallback(
+  const runLoadAll = useCallback(
     async (mode: "boot" | "refresh") => {
       setError(null);
       if (mode === "boot") setLoading(true);
@@ -463,7 +468,7 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
         const typedOrgs = (orgData ?? []) as MyOrgRow[];
         setOrgs(typedOrgs);
 
-      // 2) stores (prefer v2; fallback to legacy)
+        // 2) stores (prefer v2; fallback to legacy)
         // IMPORTANT:
         // do not let store-loading failure break whole OrgContext state.
         // orgs may still be valid even if stores RPC is restricted or empty.
@@ -536,6 +541,44 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
     [hydrateSelectionOnce]
   );
 
+  const loadAll = useCallback(
+    async (mode: "boot" | "refresh") => {
+      const queuedModeRef = queuedLoadModeRef;
+
+      // If a load is already running, queue the strongest next mode and wait.
+      if (loadInFlightRef.current) {
+        queuedModeRef.current =
+          queuedModeRef.current === "boot" || mode === "boot" ? "boot" : "refresh";
+
+        try {
+          await loadInFlightRef.current;
+        } catch {}
+        return;
+      }
+
+      const effectiveMode = queuedModeRef.current === "boot" ? "boot" : mode;
+      queuedModeRef.current = null;
+
+      const task = runLoadAll(effectiveMode).finally(() => {
+        if (loadInFlightRef.current === task) {
+          loadInFlightRef.current = null;
+        }
+      });
+
+      loadInFlightRef.current = task;
+      await task;
+
+      // If something requested another load while this one was running,
+      // run exactly one more pass after the first finishes.
+      if (queuedModeRef.current) {
+        const nextMode = queuedModeRef.current;
+        queuedModeRef.current = null;
+        await loadAll(nextMode);
+      }
+    },
+    [runLoadAll]
+  );
+
   const refresh = useCallback(async () => {
     await loadAll("refresh");
   }, [loadAll]);
@@ -567,7 +610,7 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
 
   // Boot load
   useEffect(() => {
-    loadAll("boot");
+    void loadAll("boot");
   }, [loadAll]);
 
   // Auth changes => reload canonical state (guarded to avoid web loop/request storms)
@@ -601,13 +644,14 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
         }
 
         // ✅ Only reload for meaningful auth events
+        // Use guarded loader so auth events cannot overlap and steal auth lock.
         if (
           event === "SIGNED_IN" ||
           event === "SIGNED_OUT" ||
           event === "USER_UPDATED" ||
           event === "PASSWORD_RECOVERY"
         ) {
-          void loadAll("boot");
+          void loadAll(event === "SIGNED_OUT" ? "boot" : "refresh");
         }
       }
     );

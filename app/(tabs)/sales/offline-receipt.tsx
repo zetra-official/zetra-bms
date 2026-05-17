@@ -291,7 +291,7 @@ export default function OfflineReceiptScreen() {
           </View>
         ) : err ? (
           <Card style={{ gap: 10 }}>
-            <Text style={{ color: theme.colors.dangerText, fontWeight: "900" }}>{err}</Text>
+            <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{err}</Text>
             <Button title="Retry" onPress={load} variant="primary" />
             <Button title="Back" onPress={() => router.back()} variant="secondary" />
           </Card>
@@ -340,7 +340,7 @@ export default function OfflineReceiptScreen() {
               {!!detail?.last_error && (
                 <View style={{ marginTop: 2 }}>
                   <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Last Sync Error</Text>
-                  <Text style={{ color: theme.colors.dangerText, fontWeight: "900", marginTop: 6 }}>
+                  <Text style={{ color: theme.colors.danger, fontWeight: "900", marginTop: 6 }}>
                     {String(detail.last_error)}
                   </Text>
                 </View>

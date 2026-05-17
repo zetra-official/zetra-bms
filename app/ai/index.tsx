@@ -6548,14 +6548,14 @@ const Composer = (
     <View
       style={{
         borderWidth: 1,
-        borderColor: "rgba(255,255,255,0.10)",
-        backgroundColor: "rgba(10,14,20,0.96)",
+       borderColor: "rgba(96,165,250,0.24)",
+backgroundColor: "#F7FAFF",
         borderRadius: 28,
         paddingHorizontal: 10,
         paddingTop: 10,
         paddingBottom: 10,
-        shadowColor: "#000",
-        shadowOpacity: 0.24,
+        shadowColor: "#0B1220",
+shadowOpacity: Platform.OS === "android" ? 0.14 : 0.10,
         shadowRadius: 18,
         shadowOffset: { width: 0, height: 10 },
         elevation: 10,
@@ -6582,9 +6582,9 @@ const Composer = (
           disabled={!aiEnabled}
           hitSlop={10}
           style={({ pressed }) => ({
-            width: 40,
-            height: 40,
-            borderRadius: 20,
+           width: 48,
+height: 48,
+borderRadius: 24,
             borderWidth: 1,
             borderColor: "rgba(255,255,255,0.10)",
             backgroundColor: pressed ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.05)",
@@ -6593,7 +6593,7 @@ const Composer = (
             opacity: !aiEnabled ? 0.55 : pressed ? 0.92 : 1,
           })}
         >
-          <Ionicons name="add" size={18} color={UI.text} />
+          <Ionicons name="add" size={28} color={UI.text} />
         </Pressable>
 
         <View

@@ -112,8 +112,8 @@ export default function CreditClearedScreen() {
 
   return (
     <Screen scroll bottomPad={160}>
-      <View style={{ paddingTop: 6, paddingBottom: 10 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+      <View style={{ paddingTop: 6, paddingBottom: 14 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
           <Pressable
             onPress={() => router.back()}
             hitSlop={10}
@@ -124,16 +124,16 @@ export default function CreditClearedScreen() {
               alignItems: "center",
               justifyContent: "center",
               borderWidth: 1,
-              borderColor: theme.colors.border,
-              backgroundColor: "rgba(255,255,255,0.06)",
+              borderColor: "rgba(148,163,184,0.22)",
+              backgroundColor: "#FFFFFF",
             }}
           >
             <Ionicons name="chevron-back" size={22} color={theme.colors.text} />
           </Pressable>
 
           <View style={{ flex: 1 }}>
-            <Text style={{ color: theme.colors.text, fontSize: 20, fontWeight: "900" }}>
-              Cleared
+            <Text style={{ color: theme.colors.text, fontSize: 24, fontWeight: "900" }}>
+              Cleared Accounts
             </Text>
             <Text style={{ color: theme.colors.muted, marginTop: 4, fontWeight: "800" }}>
               Credit v2 – Paid Off
@@ -142,7 +142,19 @@ export default function CreditClearedScreen() {
         </View>
       </View>
 
-      <Card style={{ padding: 14, gap: 12 }}>
+      <Card
+        style={{
+          padding: 18,
+          gap: 14,
+          backgroundColor: "#FFFFFF",
+          borderColor: "rgba(148,163,184,0.22)",
+          shadowColor: "#0F172A",
+          shadowOpacity: 0.08,
+          shadowRadius: 14,
+          shadowOffset: { width: 0, height: 8 },
+          elevation: 3,
+        }}
+      >
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
           <View
             style={{
@@ -150,8 +162,8 @@ export default function CreditClearedScreen() {
               height: 52,
               borderRadius: 999,
               borderWidth: 1,
-              borderColor: theme.colors.borderSoft,
-              backgroundColor: "rgba(255,255,255,0.04)",
+              borderColor: theme.colors.emeraldBorder,
+              backgroundColor: theme.colors.emeraldSoft,
               alignItems: "center",
               justifyContent: "center",
             }}
@@ -172,9 +184,9 @@ export default function CreditClearedScreen() {
         <View
           style={{
             borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.10)",
-            backgroundColor: "rgba(255,255,255,0.04)",
-            borderRadius: theme.radius.xl,
+            borderColor: "rgba(16,185,129,0.22)",
+            backgroundColor: "rgba(16,185,129,0.06)",
+            borderRadius: 18,
             padding: 12,
             gap: 6,
           }}
@@ -195,10 +207,10 @@ export default function CreditClearedScreen() {
               borderRadius: theme.radius.xl,
             }}
           >
-            <Text style={{ color: theme.colors.dangerText, fontWeight: "900" }}>
+            <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>
               Chagua store kwanza
             </Text>
-            <Text style={{ color: theme.colors.dangerText, marginTop: 4 }}>
+            <Text style={{ color: theme.colors.danger, marginTop: 4 }}>
               Activate store kisha list itaonekana hapa.
             </Text>
           </View>
@@ -214,7 +226,7 @@ export default function CreditClearedScreen() {
               borderRadius: theme.radius.xl,
             }}
           >
-            <Text style={{ color: theme.colors.dangerText, fontWeight: "900" }}>{errMsg}</Text>
+            <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{errMsg}</Text>
           </View>
         ) : null}
 
@@ -248,11 +260,16 @@ export default function CreditClearedScreen() {
                   hitSlop={10}
                   style={({ pressed }) => ({
                     borderWidth: 1,
-                    borderColor: "rgba(255,255,255,0.10)",
-                    backgroundColor: "rgba(255,255,255,0.04)",
-                    borderRadius: theme.radius.xl,
-                    padding: 12,
+                    borderColor: "rgba(148,163,184,0.20)",
+                    backgroundColor: "#FFFFFF",
+                    borderRadius: 20,
+                    padding: 14,
                     opacity: pressed ? 0.92 : 1,
+                    shadowColor: "#0F172A",
+                    shadowOpacity: 0.05,
+                    shadowRadius: 10,
+                    shadowOffset: { width: 0, height: 6 },
+                    elevation: 2,
                   })}
                 >
                   <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
@@ -283,11 +300,11 @@ export default function CreditClearedScreen() {
           onPress={load}
           hitSlop={10}
           style={({ pressed }) => ({
-            height: 48,
-            borderRadius: theme.radius.xl,
+            height: 54,
+            borderRadius: 18,
             borderWidth: 1,
             borderColor: theme.colors.emeraldBorder,
-            backgroundColor: theme.colors.emeraldSoft,
+            backgroundColor: "rgba(16,185,129,0.10)",
             alignItems: "center",
             justifyContent: "center",
             opacity: pressed ? 0.92 : 1,

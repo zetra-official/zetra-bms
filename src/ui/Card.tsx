@@ -1,56 +1,120 @@
 // src/ui/Card.tsx
+
 import React, { useMemo } from "react";
-import { Platform, StyleProp, View, ViewStyle } from "react-native";
-import { UI } from "@/src/ui/theme";
-
-/**
- * ✅ Premium glass card used across app
- * - Safe even if theme tokens differ (supports UI.colors.* or flat UI.*)
- * - Exports named component: Card
- */
-
-const C: any = (UI as any)?.colors ?? UI;
-const IS_WEB = Platform.OS === "web";
+import {
+  Platform,
+  StyleProp,
+  View,
+  ViewStyle,
+} from "react-native";
 
 type Props = {
   children?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
-
-  /** default padding = 16 */
   padding?: number;
-
-  /** disables default padding */
   noPadding?: boolean;
+  strong?: boolean;
 };
 
-export function Card({ children, style, padding = 16, noPadding }: Props) {
+export function Card({
+  children,
+  style,
+  padding = 16,
+  noPadding,
+  strong,
+}: Props) {
   const baseStyle = useMemo(
     () => ({
-      borderRadius: 22,
-      borderWidth: 1,
-      borderColor: "rgba(255,255,255,0.12)",
-      backgroundColor: C?.card ?? "rgba(255,255,255,0.05)",
+      borderRadius: 26,
+
+      borderWidth: strong ? 1.4 : 1.15,
+
+      borderColor: strong
+        ? "rgba(59,130,246,0.30)"
+        : "rgba(148,163,184,0.16)",
+
+      backgroundColor: strong
+        ? "#F4F8FF"
+        : "#FCFDFF",
+
       padding: noPadding ? 0 : padding,
 
-      // subtle shadow/elevation
-      shadowColor: "#000",
-      shadowOpacity: IS_WEB ? 0 : 0.25,
-      shadowRadius: IS_WEB ? 0 : 18,
-      shadowOffset: IS_WEB ? { width: 0, height: 0 } : { width: 0, height: 10 },
-      elevation: IS_WEB ? 0 : 6,
+      shadowColor: "#0F172A",
 
-      // web/mobile-browser stabilization
-      ...(IS_WEB
-        ? ({
-            overflow: "hidden",
-            transform: "translateZ(0)",
-            backfaceVisibility: "hidden",
-            willChange: "auto",
-          } as any)
-        : null),
+      shadowOpacity:
+        Platform.OS === "android"
+          ? 0.16
+          : 0.11,
+
+      shadowRadius: 20,
+
+      shadowOffset: {
+        width: 0,
+        height: 10,
+      },
+
+      elevation: 5,
+
+      overflow: "hidden" as const,
     }),
-    [noPadding, padding]
+    [noPadding, padding, strong]
   );
 
-  return <View style={[baseStyle, style]}>{children}</View>;
+  return (
+    <View
+      style={[
+        baseStyle,
+
+        // soft premium glow layer
+        {
+          position: "relative",
+        },
+
+        style,
+      ]}
+    >
+      {/* TOP LIGHT */}
+      <View
+        pointerEvents="none"
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 1.2,
+          backgroundColor: "rgba(255,255,255,0.92)",
+        }}
+      />
+
+      {/* SOFT BLUE GLOW */}
+      <View
+        pointerEvents="none"
+        style={{
+          position: "absolute",
+          top: -40,
+          right: -30,
+          width: 140,
+          height: 140,
+          borderRadius: 999,
+          backgroundColor: "rgba(59,130,246,0.05)",
+        }}
+      />
+
+      {/* SOFT BOTTOM LIGHT */}
+      <View
+        pointerEvents="none"
+        style={{
+          position: "absolute",
+          bottom: -50,
+          left: -40,
+          width: 160,
+          height: 160,
+          borderRadius: 999,
+          backgroundColor: "rgba(255,255,255,0.45)",
+        }}
+      />
+
+      {children}
+    </View>
+  );
 }

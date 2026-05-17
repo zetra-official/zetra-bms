@@ -41,6 +41,9 @@ export type SaleQueueItem = {
     customer_name: string | null;
     customer_phone: string | null;
     credit_balance: number; // 0 if none
+
+    // staff attribution (optional)
+    sold_by_membership_id?: string | null;
   };
 };
 

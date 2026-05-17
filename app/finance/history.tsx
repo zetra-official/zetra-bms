@@ -440,6 +440,21 @@ function normalizeMoneyChannel(x: any): "CASH" | "BANK" | "MOBILE" | "OTHER" {
   return "OTHER";
 }
 
+function parseSplitPaymentFromNote(note: any) {
+  const raw = String(note ?? "");
+  const m = raw.match(
+    /SPLIT_PAYMENT:\s*CASH=([0-9]+)\s*\|\s*MOBILE=([0-9]+)\s*\|\s*BANK=([0-9]+)/i
+  );
+
+  if (!m) return null;
+
+  return {
+    cash: toNum(m[1]),
+    mobile: toNum(m[2]),
+    bank: toNum(m[3]),
+  };
+}
+
 function zeroExpenseChannelBreakdown(): ExpenseChannelBreakdown {
   return {
     cash: 0,
@@ -1116,8 +1131,8 @@ function SectionCard({
       style={{
         gap: 10,
         borderRadius: 22,
-        borderColor: "rgba(16,185,129,0.22)",
-        backgroundColor: "rgba(15,18,24,0.98)",
+       borderColor: "rgba(96,165,250,0.22)",
+backgroundColor: "#F7FAFF",
         paddingHorizontal: 14,
         paddingVertical: 14,
         overflow: "hidden",
@@ -1548,38 +1563,70 @@ export default function FinanceHistoryScreen() {
     [orgId]
   );
 
-  const callCreditCollections = useCallback(
-    async (
-      fromISO: string,
-      toISO: string,
-      sidOrNull: string | null
-    ): Promise<CreditCollections> => {
-      if (!orgId) return { cash: 0, bank: 0, mobile: 0, other: 0, payments: 0 };
+ const callSplitPaymentAdjustmentsForStore = useCallback(
+  async (sid: string, fromISO: string, toISO: string) => {
+    const { data, error } = await supabase.rpc(
+      "get_sales",
+      { p_store_id: sid, p_from: fromISO, p_to: toISO } as any
+    );
 
-      const { data, error } = await supabase.rpc(
-        "get_credit_collections_summary_v2",
-        { p_org_id: orgId, p_from: fromISO, p_to: toISO, p_store_id: sidOrNull } as any
-      );
-      if (error) throw error;
+    if (error) throw error;
 
-      const rows = (Array.isArray(data) ? data : []) as any[];
-      const out: CreditCollections = { cash: 0, bank: 0, mobile: 0, other: 0, payments: 0 };
+    const rows = (Array.isArray(data) ? data : []) as any[];
 
-      for (const r of rows) {
-        const ch = String(r?.channel ?? "").trim().toUpperCase();
-        const amt = toNum(r?.amount ?? r?.total ?? 0);
-        const cnt = toInt(r?.payments ?? r?.count ?? 0);
-        out.payments += cnt;
+    let cash = 0;
+    let mobile = 0;
+    let bank = 0;
+    let splitTotal = 0;
 
-        if (ch === "CASH") out.cash += amt;
-        else if (ch === "BANK") out.bank += amt;
-        else if (ch === "MOBILE") out.mobile += amt;
-        else out.other += amt;
-      }
-      return out;
-    },
-    [orgId]
-  );
+    for (const r of rows) {
+      const split = parseSplitPaymentFromNote(r?.note);
+      if (!split) continue;
+
+      cash += split.cash;
+      mobile += split.mobile;
+      bank += split.bank;
+      splitTotal += split.cash + split.mobile + split.bank;
+    }
+
+    return { cash, mobile, bank, splitTotal };
+  },
+  []
+);
+
+const callCreditCollections = useCallback(
+  async (
+    fromISO: string,
+    toISO: string,
+    sidOrNull: string | null
+  ): Promise<CreditCollections> => {
+    if (!orgId) return { cash: 0, bank: 0, mobile: 0, other: 0, payments: 0 };
+
+    const { data, error } = await supabase.rpc(
+      "get_credit_collections_summary_v2",
+      { p_org_id: orgId, p_from: fromISO, p_to: toISO, p_store_id: sidOrNull } as any
+    );
+    if (error) throw error;
+
+    const rows = (Array.isArray(data) ? data : []) as any[];
+    const out: CreditCollections = { cash: 0, bank: 0, mobile: 0, other: 0, payments: 0 };
+
+    for (const r of rows) {
+      const ch = String(r?.channel ?? "").trim().toUpperCase();
+      const amt = toNum(r?.amount ?? r?.total ?? 0);
+      const cnt = toInt(r?.payments ?? r?.count ?? 0);
+      out.payments += cnt;
+
+      if (ch === "CASH") out.cash += amt;
+      else if (ch === "BANK") out.bank += amt;
+      else if (ch === "MOBILE") out.mobile += amt;
+      else out.other += amt;
+    }
+    return out;
+  },
+  [orgId]
+);
+      
 
   const callCreditBalanceForStore = useCallback(
     async (sid: string): Promise<number> => {
@@ -1604,8 +1651,8 @@ export default function FinanceHistoryScreen() {
   const callExpenseForStore = useCallback(
     async (sid: string, fromYMD: string, toYMD: string): Promise<ExpenseSummary> => {
       const { data, error } = await supabase.rpc(
-        "get_expense_summary",
-        { p_store_id: sid, p_from: fromYMD, p_to: toYMD } as any
+        "get_expense_summary_v2",
+{ p_store_id: sid, p_from: fromYMD, p_to: toYMD } as any
       );
       if (error) throw error;
       const row = (Array.isArray(data) ? data[0] : data) as any;
@@ -1619,33 +1666,60 @@ export default function FinanceHistoryScreen() {
 
   const callExpenseChannelBreakdownForStore = useCallback(
     async (sid: string, fromYMD: string, toYMD: string): Promise<ExpenseChannelBreakdown> => {
-      const { data, error } = await supabase.rpc(
-        "get_expenses",
-        {
+      const out = zeroExpenseChannelBreakdown();
+
+      try {
+        const { data, error } = await supabase.rpc("get_expense_channel_summary_v2", {
           p_store_id: sid,
           p_from: fromYMD,
           p_to: toYMD,
-        } as any
-      );
-      if (error) throw error;
+        } as any);
 
-      const rows = (Array.isArray(data) ? data : []) as any[];
-      const out = zeroExpenseChannelBreakdown();
+        if (error) throw error;
 
-      for (const r of rows) {
-        const amt = toNum(r?.amount ?? 0);
-        const ch = normalizeMoneyChannel(r?.payment_method);
+        const rows = (Array.isArray(data) ? data : []) as any[];
 
-        out.total += amt;
-        out.count += 1;
+        for (const r of rows) {
+          const ch = normalizeMoneyChannel(r?.channel ?? r?.payment_method);
+          const amt = toNum(r?.amount ?? r?.total ?? 0);
+          const cnt = toInt(r?.count ?? r?.items ?? 0);
 
-        if (ch === "CASH") out.cash += amt;
-        else if (ch === "BANK") out.bank += amt;
-        else if (ch === "MOBILE") out.mobile += amt;
-        else out.other += amt;
+          out.total += amt;
+          out.count += cnt > 0 ? cnt : amt > 0 ? 1 : 0;
+
+          if (ch === "CASH") out.cash += amt;
+          else if (ch === "BANK") out.bank += amt;
+          else if (ch === "MOBILE") out.mobile += amt;
+          else out.other += amt;
+        }
+
+        return out;
+      } catch {
+        const { data, error } = await supabase.rpc("get_expenses_v2", {
+          p_store_id: sid,
+          p_from: fromYMD,
+          p_to: toYMD,
+        } as any);
+
+        if (error) throw error;
+
+        const rows = (Array.isArray(data) ? data : []) as any[];
+
+        for (const r of rows) {
+          const amt = toNum(r?.amount ?? 0);
+          const ch = normalizeMoneyChannel(r?.payment_method);
+
+          out.total += amt;
+          out.count += 1;
+
+          if (ch === "CASH") out.cash += amt;
+          else if (ch === "BANK") out.bank += amt;
+          else if (ch === "MOBILE") out.mobile += amt;
+          else out.other += amt;
+        }
+
+        return out;
       }
-
-      return out;
     },
     []
   );
@@ -2025,7 +2099,29 @@ export default function FinanceHistoryScreen() {
         const sidOrNull = scope === "STORE" ? storeId : null;
 
         const pb = await callPaymentBreakdownV3(fromISO, toISO, sidOrNull);
-        const cc = await callCreditCollections(fromISO, toISO, sidOrNull);
+const cc = await callCreditCollections(fromISO, toISO, sidOrNull);
+
+const splitRows = await Promise.all(
+  targets.map((sid) => callSplitPaymentAdjustmentsForStore(sid, fromISO, toISO))
+);
+
+const splitFix = splitRows.reduce(
+  (acc, row) => {
+    acc.cash += toNum(row.cash);
+    acc.mobile += toNum(row.mobile);
+    acc.bank += toNum(row.bank);
+    acc.splitTotal += toNum(row.splitTotal);
+    return acc;
+  },
+  { cash: 0, mobile: 0, bank: 0, splitTotal: 0 }
+);
+
+if (splitFix.splitTotal > 0) {
+  pb.mobile = Math.max(0, toNum(pb.mobile) - splitFix.splitTotal);
+  pb.cash += splitFix.cash;
+  pb.mobile += splitFix.mobile;
+  pb.bank += splitFix.bank;
+}
         const creditBalanceRows = await Promise.all(
           targets.map((sid) => callCreditBalanceForStore(sid))
         );
@@ -2618,6 +2714,7 @@ export default function FinanceHistoryScreen() {
     callSalesForStore,
     callPaymentBreakdownV3,
     callCreditCollections,
+    callSplitPaymentAdjustmentsForStore,
     callCreditBalanceForStore,
     callExpenseForStore,
     callExpenseChannelBreakdownForStore,
@@ -3738,8 +3835,8 @@ export default function FinanceHistoryScreen() {
             gap: 12,
             padding: compactCardPad,
             borderRadius: 22,
-            borderColor: "rgba(16,185,129,0.22)",
-            backgroundColor: "rgba(15,18,24,0.98)",
+           borderColor: "rgba(96,165,250,0.22)",
+backgroundColor: "#F7FAFF",
             overflow: "hidden",
           }}
         >

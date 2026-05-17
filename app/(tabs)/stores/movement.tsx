@@ -63,11 +63,19 @@ function norm(s: any) {
   return String(s ?? "").trim();
 }
 
-function parsePositiveInt(s: string) {
-  const n = Number(String(s ?? "").trim());
+function cleanQtyText(raw: string) {
+  return String(raw ?? "")
+    .trim()
+    .replace(",", ".")
+    .replace(/[^0-9.]/g, "")
+    .replace(/(\..*)\./g, "$1");
+}
+
+function parsePositiveQty(s: string) {
+  const cleaned = cleanQtyText(s);
+  const n = Number(cleaned);
   if (!Number.isFinite(n)) return 0;
-  const i = Math.floor(n);
-  return i > 0 ? i : 0;
+  return n > 0 ? Number(n.toFixed(3)) : 0;
 }
 
 function fmtEAT(iso: string) {
@@ -203,12 +211,47 @@ const canMove = useMemo(() => {
 
   // TO store selection
   const [toStoreId, setToStoreId] = useState<string>("");
+  const [transferStores, setTransferStores] = useState<any[]>([]);
+
+  const loadTransferStores = useCallback(async () => {
+    if (!activeOrgId || isCapitalRecoveryStore) {
+      setTransferStores([]);
+      return;
+    }
+
+    try {
+      const { data, error: e } = await supabase
+        .from("stores")
+        .select("id, name, store_name, organization_id, store_type, is_active")
+        .eq("organization_id", activeOrgId)
+        .eq("is_active", true);
+
+      if (e) throw e;
+
+      setTransferStores(
+        ((data ?? []) as any[]).map((s) => ({
+          ...s,
+          store_id: String(s.id),
+          store_name: String(s.store_name ?? s.name ?? "Store"),
+        }))
+      );
+    } catch {
+      setTransferStores([]);
+    }
+  }, [activeOrgId, isCapitalRecoveryStore]);
+
+  useEffect(() => {
+    void loadTransferStores();
+  }, [loadTransferStores]);
 
   const toStoreName = useMemo(() => {
     if (!toStoreId) return "—";
-    const s = withinOrgStores.find((x: any) => String(x.store_id) === String(toStoreId));
+
+    const source = transferStores.length > 0 ? transferStores : withinOrgStores;
+    const s = source.find((x: any) => String(x.store_id) === String(toStoreId));
+
     return s?.store_name ?? "—";
-  }, [toStoreId, withinOrgStores]);
+  }, [toStoreId, transferStores, withinOrgStores]);
 
   // Inventory
   const [loading, setLoading] = useState(false);
@@ -231,7 +274,7 @@ const canMove = useMemo(() => {
           available: Number(r?.qty ?? 0),
         };
       })
-      .filter((x) => parsePositiveInt(x.qty) > 0)
+      .filter((x) => parsePositiveQty(x.qty) > 0)
       .sort((a, b) => String(a.product_name).localeCompare(String(b.product_name)));
     return items;
   }, [selectedMap, rows]);
@@ -274,7 +317,7 @@ if (isOffline) {
 } 
     setLoading(true);
     try {
-      const { data, error: e } = await supabase.rpc("get_store_inventory", {
+      const { data, error: e } = await supabase.rpc("get_store_inventory_v2", {
         p_store_id: fromStoreId,
       });
       if (e) throw e;
@@ -323,22 +366,21 @@ void loadInventory();
 
   // Inline qty handler
   const setInlineQty = useCallback((productId: string, qty: string) => {
-    const pid = String(productId);
-    const raw = String(qty ?? "");
-    const n = parsePositiveInt(raw);
+  const pid = String(productId);
+  const raw = cleanQtyText(qty);
 
-    setSelectedMap((prev) => {
-      const next = { ...prev };
+  setSelectedMap((prev) => {
+    const next = { ...prev };
 
-      if (!raw.trim() || n <= 0) {
-        delete next[pid];
-        return next;
-      }
-
-      next[pid] = { product_id: pid, qty: raw };
+    if (!raw.trim()) {
+      delete next[pid];
       return next;
-    });
-  }, []);
+    }
+
+    next[pid] = { product_id: pid, qty: raw };
+    return next;
+  });
+}, []);
 
   // Actor display + email
   const [actorName, setActorName] = useState<string>("—");
@@ -526,7 +568,7 @@ if (isCapitalRecoveryStore) {
     }> = [];
 
     for (const it of selectedList) {
-      const qtyNum = parsePositiveInt(it.qty);
+      const qtyNum = parsePositiveQty(it.qty);
       const available = Number(it.available ?? 0);
 
       if (!qtyNum) {
@@ -666,8 +708,9 @@ if (isCapitalRecoveryStore) {
   ]);
 
   const toStores = useMemo(() => {
-    return withinOrgStores.filter((s: any) => String(s.store_id) !== String(fromStoreId));
-  }, [withinOrgStores, fromStoreId]);
+    const source = transferStores.length > 0 ? transferStores : withinOrgStores;
+    return source.filter((s: any) => String(s.store_id) !== String(fromStoreId));
+  }, [transferStores, withinOrgStores, fromStoreId]);
 
   const processedByLabel = useMemo(() => {
     const em = norm(actorEmail);
@@ -1193,7 +1236,7 @@ variant="primary"
               filtered.slice(0, 40).map((r) => {
                 const pid = String(r.product_id);
                 const currentQty = selectedMap[pid]?.qty ?? "";
-                const isSelected = parsePositiveInt(currentQty) > 0;
+                const isSelected = parsePositiveQty(currentQty) > 0;
 
                 return (
                   <View
@@ -1236,13 +1279,13 @@ variant="primary"
 
                         <TextInput
                           value={currentQty}
-                          onChangeText={(t) => setInlineQty(pid, t)}
-                          keyboardType="numeric"
+                         onChangeText={(t) => setInlineQty(pid, t)}
+keyboardType="decimal-pad"
                           placeholder="0"
                           placeholderTextColor="rgba(255,255,255,0.35)"
                           style={{
                             borderWidth: 1,
-                            borderColor: isSelected ? "rgba(52,211,153,0.55)" : theme.colors.border,
+                            borderColor: isSelected ? "rgba(156, 166, 163, 0.55)" : theme.colors.border,
                             borderRadius: theme.radius.lg,
                             backgroundColor: "rgba(255,255,255,0.05)",
                             paddingHorizontal: 12,

@@ -1,11 +1,13 @@
 ﻿import { useOrg } from "@/src/context/OrgContext";
 import { useOrgMoneyPrefs } from "@/src/ui/money";
 import { supabase } from "@/src/supabase/supabaseClient";
-import { Button } from "@/src/ui/Button";
+
 import { Card } from "@/src/ui/Card";
 import { Screen } from "@/src/ui/Screen";
 import { theme } from "@/src/ui/theme";
 import { Ionicons } from "@expo/vector-icons";
+import * as Print from "expo-print";
+import * as Sharing from "expo-sharing";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -72,6 +74,7 @@ function stripDiscountTag(note: string | null | undefined) {
     .filter((line) => {
       if (!line) return false;
       if (/^CASHIER_HANDOFF_ID\s*:/i.test(line)) return false;
+      if (/^SPLIT_PAYMENT\s*:/i.test(line)) return false;
       return true;
     })
     .join("\n")
@@ -79,7 +82,22 @@ function stripDiscountTag(note: string | null | undefined) {
 
   return cleaned || null;
 }
+function parseSplitPaymentFromNote(note: string | null | undefined) {
+  const raw = String(note ?? "");
+  const m = raw.match(/SPLIT_PAYMENT:\s*CASH=([0-9]+)\s*\|\s*MOBILE=([0-9]+)\s*\|\s*BANK=([0-9]+)/i);
 
+  if (!m) return null;
+
+  const cash = Number(m[1] ?? 0);
+  const mobile = Number(m[2] ?? 0);
+  const bank = Number(m[3] ?? 0);
+
+  return {
+    cash: Number.isFinite(cash) ? Math.max(0, Math.round(cash)) : 0,
+    mobile: Number.isFinite(mobile) ? Math.max(0, Math.round(mobile)) : 0,
+    bank: Number.isFinite(bank) ? Math.max(0, Math.round(bank)) : 0,
+  };
+}
 function parseCustomerFromNote(note: string | null | undefined) {
   const raw = String(note ?? "");
   if (!raw.trim()) return { name: null as string | null, phone: null as string | null };
@@ -184,17 +202,17 @@ function MetaBlock({
       style={{
         flex: 1,
         minWidth: 0,
-        paddingVertical: 10,
-        paddingHorizontal: 12,
-        borderRadius: 16,
+        paddingVertical: 8,
+        paddingHorizontal: 10,
+        borderRadius: 14,
         borderWidth: 1,
-        borderColor: "rgba(255,255,255,0.08)",
-        backgroundColor: "rgba(255,255,255,0.04)",
+        borderColor: "rgba(255,255,255,0.07)",
+        backgroundColor: "rgba(255,255,255,0.03)",
       }}
     >
-      <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>{label}</Text>
+      <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}>{label}</Text>
       <Text
-        style={{ color: theme.colors.text, fontWeight: "900", marginTop: 6 }}
+        style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4, fontSize: 13 }}
         numberOfLines={2}
       >
         {value || "—"}
@@ -217,21 +235,21 @@ function MoneyTile({
       style={{
         flex: 1,
         minWidth: 0,
-        paddingVertical: 12,
-        paddingHorizontal: 14,
-        borderRadius: 18,
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        borderRadius: 16,
         borderWidth: 1,
-        borderColor: highlight ? "rgba(52,211,153,0.28)" : "rgba(255,255,255,0.08)",
-        backgroundColor: highlight ? "rgba(52,211,153,0.10)" : "rgba(255,255,255,0.04)",
+        borderColor: highlight ? "rgba(52,211,153,0.26)" : "rgba(255,255,255,0.07)",
+        backgroundColor: highlight ? "rgba(52,211,153,0.08)" : "rgba(255,255,255,0.03)",
       }}
     >
-      <Text style={{ color: theme.colors.muted, fontWeight: "900", fontSize: 12 }}>{label}</Text>
+      <Text style={{ color: theme.colors.muted, fontWeight: "900", fontSize: 11 }}>{label}</Text>
       <Text
         style={{
           color: theme.colors.text,
           fontWeight: "900",
-          fontSize: 18,
-          marginTop: 6,
+          fontSize: 15,
+          marginTop: 4,
         }}
         numberOfLines={1}
       >
@@ -256,6 +274,7 @@ export default function ReceiptScreen() {
   const [deleting, setDeleting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [detail, setDetail] = useState<SaleDetail | null>(null);
+  const [showMoreOptions, setShowMoreOptions] = useState(false);
 
   const isDesktopWeb = Platform.OS === "web" && width >= 1180;
   const isWideWeb = Platform.OS === "web" && width >= 900;
@@ -326,6 +345,7 @@ const payLabel = (detail?.payment_method ?? "CASH").toUpperCase();
   const referenceLabel = (detail?.reference ?? "").trim();
 
   const discountMeta = useMemo(() => parseDiscountFromNote(detail?.note), [detail?.note]);
+  const splitPaymentMeta = useMemo(() => parseSplitPaymentFromNote(detail?.note), [detail?.note]);
   const cleanNote = useMemo(() => stripDiscountTag(detail?.note), [detail?.note]);
 
   const isCredit = useMemo(() => payLabel === "CREDIT", [payLabel]);
@@ -393,10 +413,14 @@ const payLabel = (detail?.payment_method ?? "CASH").toUpperCase();
     return Math.max(0, computedTotal - Math.max(0, paidAmount));
   }, [isCredit, computedTotal, paidAmount]);
 
-  const paymentTitle = useMemo(() => (isCredit ? "CREDIT" : payLabel), [isCredit, payLabel]);
+  const paymentTitle = useMemo(
+    () => (splitPaymentMeta ? "SPLIT" : isCredit ? "CREDIT" : payLabel),
+    [splitPaymentMeta, isCredit, payLabel]
+  );
 
-  const deleteSameDay = useCallback(() => {
+  const deleteSameDay = useCallback(async () => {
     if (!saleId) return;
+
     if (!canEditSameDay) {
       Alert.alert(
         "Delete closed",
@@ -404,7 +428,42 @@ const payLabel = (detail?.payment_method ?? "CASH").toUpperCase();
       );
       return;
     }
+
     if (deleting) return;
+
+    const runDelete = async () => {
+      try {
+        setDeleting(true);
+
+        const { data, error } = await supabase.rpc("delete_sale_same_day_v1", {
+          p_sale_id: saleId,
+        } as any);
+
+        if (error) throw error;
+
+        const row = Array.isArray(data) ? data[0] : data;
+        const restoredQty = Number(row?.restored_qty ?? 0);
+
+        Alert.alert("Deleted", `Receipt imefutwa vizuri. Stock restored: ${restoredQty}.`);
+
+        router.replace("/(tabs)/sales/history");
+      } catch (e: any) {
+        Alert.alert("Delete failed", e?.message ?? "Failed to delete same-day receipt");
+      } finally {
+        setDeleting(false);
+      }
+    };
+
+    if (Platform.OS === "web") {
+      const ok = window.confirm(
+        "Delete Same Day\n\nUkifuta risiti hii, items zote zitarudi store na sale itaondoka kabisa. Uko sure?"
+      );
+
+      if (!ok) return;
+
+      await runDelete();
+      return;
+    }
 
     Alert.alert(
       "Delete Same Day",
@@ -414,35 +473,7 @@ const payLabel = (detail?.payment_method ?? "CASH").toUpperCase();
         {
           text: "Delete",
           style: "destructive",
-          onPress: async () => {
-            try {
-              setDeleting(true);
-
-              const { data, error } = await supabase.rpc("delete_sale_same_day_v1", {
-                p_sale_id: saleId,
-              } as any);
-
-              if (error) throw error;
-
-              const row = Array.isArray(data) ? data[0] : data;
-              const restoredQty = Number(row?.restored_qty ?? 0);
-
-              Alert.alert(
-                "Deleted",
-                `Receipt imefutwa vizuri. Stock restored: ${restoredQty}.`,
-                [
-                  {
-                    text: "OK",
-                    onPress: () => router.replace("/(tabs)/sales/history"),
-                  },
-                ]
-              );
-            } catch (e: any) {
-              Alert.alert("Delete failed", e?.message ?? "Failed to delete same-day receipt");
-            } finally {
-              setDeleting(false);
-            }
-          },
+          onPress: runDelete,
         },
       ]
     );
@@ -455,8 +486,9 @@ const payLabel = (detail?.payment_method ?? "CASH").toUpperCase();
     const store = activeStoreName ?? "—";
 
     const header = [
-      "🧾 ZETRA BMS RECEIPT",
-      `Receipt #${receiptNo}`,
+     "🧾 ZETRA BMS INVOICE RECEIPT",
+      `Store: ${store}`,
+      `No. ${receiptNo}`,
       `Payment: ${paymentTitle}`,
       channelLabel ? `Channel: ${channelLabel}` : null,
       referenceLabel ? `Reference: ${referenceLabel}` : null,
@@ -467,8 +499,13 @@ const payLabel = (detail?.payment_method ?? "CASH").toUpperCase();
       `Sold By: ${soldByLabel}`,
       "",
     ].filter(Boolean) as string[];
-
-    if (isCredit) {
+if (splitPaymentMeta) {
+      header.push(`Cash Paid: ${fmtMoney(splitPaymentMeta.cash)}`);
+      header.push(`Mobile Paid: ${fmtMoney(splitPaymentMeta.mobile)}`);
+      header.push(`Bank Paid: ${fmtMoney(splitPaymentMeta.bank)}`);
+      header.push("");
+    }
+    if (customerName || customerPhone) {
       header.push(`Customer: ${customerName || "—"}`);
       if (customerPhone) header.push(`Phone: ${customerPhone}`);
       header.push("");
@@ -540,19 +577,140 @@ const payLabel = (detail?.payment_method ?? "CASH").toUpperCase();
     computedQty,
     computedTotal,
     discountMeta,
+    splitPaymentMeta,
     cleanNote,
     paidAmount,
     dueAmount,
     fmtMoney,
   ]);
 
+  const shareReceiptPdf = useCallback(async () => {
+    if (!saleId) return;
+
+    const org = activeOrgName ?? "—";
+    const store = activeStoreName ?? "—";
+
+    const itemsHtml =
+      items.length === 0
+        ? `<tr><td colspan="4">No items found.</td></tr>`
+        : items
+            .map((it) => {
+              const unitPrice = Number(it.unit_price ?? 0);
+              const lineTotal = Number(it.line_total ?? unitPrice * Number(it.qty ?? 0));
+              return `
+                <tr>
+                  <td>
+                    <strong>${String(it.product_name ?? "Product")}</strong><br/>
+                    <span>SKU: ${String(it.sku ?? "—")}</span>
+                  </td>
+                  <td>${Number(it.qty ?? 0)}</td>
+                  <td>${fmtMoney(unitPrice)}</td>
+                  <td><strong>${fmtMoney(lineTotal)}</strong></td>
+                </tr>
+              `;
+            })
+            .join("");
+
+    const html = `
+      <html>
+        <head>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          <style>
+            body { font-family: Arial, sans-serif; padding: 24px; color: #111827; }
+            .top { border-bottom: 2px solid #10b981; padding-bottom: 14px; margin-bottom: 18px; }
+            .store { color: #047857; font-size: 14px; font-weight: 800; letter-spacing: .4px; }
+            h1 { margin: 6px 0 4px; font-size: 28px; }
+            .no { color: #6b7280; font-weight: 700; }
+            .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0; }
+            .box { border: 1px solid #e5e7eb; border-radius: 12px; padding: 10px; }
+            .label { color: #6b7280; font-size: 12px; font-weight: 700; }
+            .value { margin-top: 4px; font-weight: 800; }
+            table { width: 100%; border-collapse: collapse; margin-top: 18px; }
+            th { text-align: left; background: #f3f4f6; padding: 10px; font-size: 12px; }
+            td { border-bottom: 1px solid #e5e7eb; padding: 10px; vertical-align: top; }
+            .total { margin-top: 18px; border: 1px solid #10b981; background: #ecfdf5; border-radius: 14px; padding: 14px; }
+            .total-label { color: #047857; font-weight: 800; }
+            .total-value { font-size: 24px; font-weight: 900; margin-top: 6px; }
+            .footer { margin-top: 24px; color: #6b7280; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="top">
+            <div class="store">${store}</div>
+            <h1>Invoice Receipt</h1>
+            <div class="no">No. ${receiptNo}</div>
+          </div>
+
+          <div class="grid">
+            <div class="box"><div class="label">Business</div><div class="value">${org}</div></div>
+            <div class="box"><div class="label">Store</div><div class="value">${store}</div></div>
+            <div class="box"><div class="label">When</div><div class="value">${when}</div></div>
+            <div class="box"><div class="label">Payment</div><div class="value">${paymentTitle}</div></div>
+            <div class="box"><div class="label">Sold By</div><div class="value">${soldByLabel}</div></div>
+            ${
+              customerName || customerPhone
+                ? `<div class="box"><div class="label">Customer</div><div class="value">${customerName || "—"}${customerPhone ? `<br/><span>${customerPhone}</span>` : ""}</div></div>`
+                : ""
+            }
+            ${channelLabel ? `<div class="box"><div class="label">Channel</div><div class="value">${channelLabel}</div></div>` : ""}
+            ${referenceLabel ? `<div class="box"><div class="label">Reference</div><div class="value">${referenceLabel}</div></div>` : ""}
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Qty</th>
+                <th>Unit Price</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>${itemsHtml}</tbody>
+          </table>
+
+          <div class="total">
+            <div class="total-label">Total Money In</div>
+            <div class="total-value">${fmtMoney(computedTotal)}</div>
+          </div>
+
+          <div class="footer">Generated by ZETRA BMS • Thank you for shopping with us.</div>
+        </body>
+      </html>
+    `;
+
+    try {
+      const file = await Print.printToFileAsync({ html });
+      await Sharing.shareAsync(file.uri, {
+        mimeType: "application/pdf",
+        dialogTitle: "Share Invoice Receipt PDF",
+      });
+    } catch (e: any) {
+      Alert.alert("PDF failed", e?.message ?? "Failed to create PDF invoice receipt.");
+    }
+  }, [
+    saleId,
+    activeOrgName,
+    activeStoreName,
+    receiptNo,
+    items,
+    fmtMoney,
+    computedTotal,
+    when,
+    paymentTitle,
+soldByLabel,
+customerName,
+customerPhone,
+channelLabel,
+referenceLabel,
+  ]);
   const headerCard = (
     <Card
       style={{
-        gap: 12,
+        gap: 10,
+        padding: 12,
         borderWidth: 1,
-        borderColor: isCredit ? "rgba(251,191,36,0.22)" : "rgba(52,211,153,0.22)",
-        backgroundColor: "rgba(255,255,255,0.04)",
+        borderColor: isCredit ? "rgba(251,191,36,0.18)" : "rgba(52,211,153,0.18)",
+        backgroundColor: "rgba(255,255,255,0.03)",
       }}
     >
       <View
@@ -593,12 +751,12 @@ const payLabel = (detail?.payment_method ?? "CASH").toUpperCase();
       {(isCredit || !!customerName || !!customerPhone) && (
         <View
           style={{
-            paddingVertical: 10,
-            paddingHorizontal: 12,
-            borderRadius: 16,
+            paddingVertical: 8,
+            paddingHorizontal: 10,
+            borderRadius: 14,
             borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.08)",
-            backgroundColor: "rgba(255,255,255,0.04)",
+            borderColor: "rgba(255,255,255,0.07)",
+            backgroundColor: "rgba(255,255,255,0.03)",
           }}
         >
           <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
@@ -618,19 +776,19 @@ const payLabel = (detail?.payment_method ?? "CASH").toUpperCase();
       {(editCountLabel > 0 || dbCanEditSameDay || uiSameDayGuard) && (
         <View
           style={{
-            paddingVertical: 10,
-            paddingHorizontal: 12,
-            borderRadius: 16,
+            paddingVertical: 8,
+            paddingHorizontal: 10,
+            borderRadius: 14,
             borderWidth: 1,
-            borderColor: canEditSameDay ? "rgba(52,211,153,0.28)" : "rgba(255,255,255,0.08)",
-            backgroundColor: canEditSameDay ? "rgba(52,211,153,0.10)" : "rgba(255,255,255,0.04)",
+            borderColor: canEditSameDay ? "rgba(52,211,153,0.24)" : "rgba(255,255,255,0.07)",
+            backgroundColor: canEditSameDay ? "rgba(52,211,153,0.08)" : "rgba(255,255,255,0.03)",
           }}
         >
-          <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
+          <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}>
             Edit Status
           </Text>
 
-          <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 6 }}>
+          <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4, fontSize: 13 }}>
             {canEditSameDay ? "Same-day edit allowed" : "Edit window closed"}
           </Text>
 
@@ -661,12 +819,12 @@ const payLabel = (detail?.payment_method ?? "CASH").toUpperCase();
       {!!cleanNote && cleanNote.trim() && (
         <View
           style={{
-            paddingVertical: 10,
-            paddingHorizontal: 12,
-            borderRadius: 16,
+            paddingVertical: 8,
+            paddingHorizontal: 10,
+            borderRadius: 14,
             borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.08)",
-            backgroundColor: "rgba(255,255,255,0.04)",
+            borderColor: "rgba(255,255,255,0.07)",
+            backgroundColor: "rgba(255,255,255,0.03)",
           }}
         >
           <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
@@ -681,12 +839,12 @@ const payLabel = (detail?.payment_method ?? "CASH").toUpperCase();
   );
 
   const itemsCard = (
-    <Card style={{ gap: 10 }}>
+    <Card style={{ gap: 8, padding: 12 }}>
       <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
-        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14 }}>
           Items ({items.length})
         </Text>
-        <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Qty ({computedQty})</Text>
+        <Text style={{ color: theme.colors.muted, fontWeight: "900", fontSize: 12 }}>Qty ({computedQty})</Text>
       </View>
 
       {items.length === 0 ? (
@@ -703,34 +861,43 @@ const payLabel = (detail?.payment_method ?? "CASH").toUpperCase();
                 flexDirection: "row",
                 justifyContent: "space-between",
                 alignItems: "center",
-                gap: 12,
-                paddingVertical: 12,
+                gap: 10,
+                paddingVertical: 9,
                 borderTopWidth: idx === 0 ? 0 : 1,
-                borderTopColor: "rgba(255,255,255,0.06)",
+                borderTopColor: "rgba(255,255,255,0.05)",
               }}
             >
-              <View style={{ flex: 1, gap: 5 }}>
-                <Text style={{ color: theme.colors.text, fontWeight: "900" }} numberOfLines={1}>
+              <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
+                <Text
+                  style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}
+                  numberOfLines={1}
+                >
                   {it.product_name ?? "Product"}
                 </Text>
 
-                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                <Text
+                  style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}
+                  numberOfLines={1}
+                >
                   SKU: {it.sku ?? "—"}
                 </Text>
 
-                <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>
+                <Text style={{ color: theme.colors.muted, fontWeight: "900", fontSize: 11 }}>
                   {Number(it.qty ?? 0)} × {fmtMoney(unitPrice)}
                 </Text>
               </View>
 
               <View
                 style={{
-                  minWidth: isDesktopWeb ? 160 : 110,
+                  minWidth: isDesktopWeb ? 140 : 96,
                   alignItems: "flex-end",
                   justifyContent: "center",
                 }}
               >
-                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+                <Text
+                  style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}
+                  numberOfLines={1}
+                >
                   {fmtMoney(lineTotal)}
                 </Text>
               </View>
@@ -741,20 +908,30 @@ const payLabel = (detail?.payment_method ?? "CASH").toUpperCase();
     </Card>
   );
 
-  const totalsCard = (
-    <Card style={{ gap: 12 }}>
+const totalsCard = (
+    <Card style={{ gap: 10, padding: 12 }}>
       <View
         style={{
           flexDirection: isWideWeb ? "row" : "column",
           gap: 10,
         }}
       >
-        {discountMeta ? (
+        {splitPaymentMeta ? (
           <>
+            <MoneyTile label="Cash Paid" value={fmtMoney(splitPaymentMeta.cash)} />
+            <MoneyTile label="Mobile Paid" value={fmtMoney(splitPaymentMeta.mobile)} />
+            <MoneyTile label="Bank Paid" value={fmtMoney(splitPaymentMeta.bank)} />
             <MoneyTile
-              label="Subtotal"
-              value={fmtMoney(discountMeta.subtotal ?? computedTotal)}
+              label="Total Paid"
+              value={fmtMoney(
+                splitPaymentMeta.cash + splitPaymentMeta.mobile + splitPaymentMeta.bank
+              )}
+              highlight
             />
+          </>
+        ) : discountMeta ? (
+          <>
+            <MoneyTile label="Subtotal" value={fmtMoney(discountMeta.subtotal ?? computedTotal)} />
             <MoneyTile
               label={`Discount (${discountMeta.discountText})`}
               value={`-${fmtMoney(discountMeta.discountAmount)}`}
@@ -775,93 +952,205 @@ const payLabel = (detail?.payment_method ?? "CASH").toUpperCase();
       {isCredit ? (
         <View
           style={{
-            paddingVertical: 10,
-            paddingHorizontal: 12,
-            borderRadius: 16,
+            paddingVertical: 8,
+            paddingHorizontal: 10,
+            borderRadius: 14,
             borderWidth: 1,
-            borderColor: dueAmount > 0 ? "rgba(251,191,36,0.28)" : "rgba(52,211,153,0.28)",
-            backgroundColor: dueAmount > 0 ? "rgba(251,191,36,0.10)" : "rgba(52,211,153,0.10)",
+            borderColor: dueAmount > 0 ? "rgba(251,191,36,0.24)" : "rgba(52,211,153,0.24)",
+            backgroundColor: dueAmount > 0 ? "rgba(251,191,36,0.08)" : "rgba(52,211,153,0.08)",
           }}
         >
-          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>
             Status: {dueAmount > 0 ? "OUTSTANDING" : "CLEARED"}
           </Text>
         </View>
       ) : null}
 
-      {canEditSameDay ? (
-        <>
-          <Button
-            title="Edit Same Day"
-            onPress={() => {
-              if (!canEditSameDay) {
-                Alert.alert(
-                  "Edit closed",
-                  "Risiti hii haiwezi ku-editiwa. Same-day rule ni ya leo tu kwa timezone ya Africa/Dar_es_Salaam."
-                );
-                return;
-              }
+      <Pressable
+        onPress={() =>
+          Alert.alert("Share Invoice Receipt", "Choose sharing option", [
+            { text: "Share as Text", onPress: () => void shareReceipt() },
+            { text: "Share as PDF", onPress: () => void shareReceiptPdf() },
+            { text: "Cancel", style: "cancel" },
+          ])
+        }
+        style={({ pressed }) => ({
+          minHeight: 46,
+          borderRadius: 16,
+          borderWidth: 1,
+          borderColor: "rgba(52,211,153,0.26)",
+          backgroundColor: "rgba(52,211,153,0.10)",
+          alignItems: "center",
+          justifyContent: "center",
+          paddingHorizontal: 14,
+          opacity: pressed ? 0.92 : 1,
+        })}
+      >
+        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}>
+          Share Invoice Receipt
+        </Text>
+      </Pressable>
 
-              router.push({
-                pathname: "/(tabs)/sales/edit-receipt",
-                params: { saleId },
-              } as any);
-            }}
-            variant="primary"
-          />
+      <Pressable
+        onPress={() => setShowMoreOptions((v) => !v)}
+        style={({ pressed }) => ({
+          minHeight: 42,
+          borderRadius: 16,
+          borderWidth: 1,
+          borderColor: "rgba(255,255,255,0.08)",
+          backgroundColor: "rgba(255,255,255,0.04)",
+          alignItems: "center",
+          justifyContent: "center",
+          paddingHorizontal: 14,
+          opacity: pressed ? 0.92 : 1,
+        })}
+      >
+        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}>
+          {showMoreOptions ? "Hide Options" : "More Options"}
+        </Text>
+      </Pressable>
 
-          <Button
-            title={deleting ? "Deleting..." : "Delete Same Day"}
-            onPress={deleteSameDay}
-            disabled={deleting}
-            variant="secondary"
-          />
-        </>
+      {showMoreOptions ? (
+        <View style={{ gap: 8 }}>
+          {canEditSameDay ? (
+            <>
+              <Pressable
+                onPress={() =>
+                  router.push({
+                    pathname: "/(tabs)/sales/edit-receipt",
+                    params: { saleId },
+                  } as any)
+                }
+                style={({ pressed }) => ({
+                  minHeight: 40,
+                  borderRadius: 14,
+                  borderWidth: 1,
+                  borderColor: "rgba(52,211,153,0.20)",
+                  backgroundColor: "rgba(52,211,153,0.07)",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  paddingHorizontal: 12,
+                  opacity: pressed ? 0.92 : 1,
+                })}
+              >
+                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>
+                  Edit Same Day
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={deleteSameDay}
+                disabled={deleting}
+                style={({ pressed }) => ({
+                  minHeight: 40,
+                  borderRadius: 14,
+                  borderWidth: 1,
+                  borderColor: "rgba(255,255,255,0.08)",
+                  backgroundColor: "rgba(255,255,255,0.04)",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  paddingHorizontal: 12,
+                  opacity: deleting ? 0.55 : pressed ? 0.92 : 1,
+                })}
+              >
+                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>
+                  {deleting ? "Deleting..." : "Delete Same Day"}
+                </Text>
+              </Pressable>
+            </>
+          ) : null}
+
+          <Pressable
+            onPress={() => router.replace("/(tabs)/sales/history")}
+            style={({ pressed }) => ({
+              minHeight: 40,
+              borderRadius: 14,
+              borderWidth: 1,
+              borderColor: "rgba(255,255,255,0.08)",
+              backgroundColor: "rgba(255,255,255,0.04)",
+              alignItems: "center",
+              justifyContent: "center",
+              paddingHorizontal: 12,
+              opacity: pressed ? 0.92 : 1,
+            })}
+          >
+            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>
+              Back to History
+            </Text>
+          </Pressable>
+        </View>
       ) : null}
 
-      <Button title="Share Receipt" onPress={shareReceipt} variant="secondary" />
-      <Button
-        title="Back to History"
-        onPress={() => router.replace("/(tabs)/sales/history")}
-        variant="primary"
-      />
-      <Button title="Back" onPress={() => router.back()} variant="secondary" />
+      <Pressable
+        onPress={() => router.back()}
+        style={({ pressed }) => ({
+          minHeight: 42,
+          borderRadius: 16,
+          borderWidth: 1,
+          borderColor: "rgba(255,255,255,0.08)",
+          backgroundColor: "rgba(255,255,255,0.04)",
+          alignItems: "center",
+          justifyContent: "center",
+          paddingHorizontal: 14,
+          opacity: pressed ? 0.92 : 1,
+        })}
+      >
+        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}>
+          Back
+        </Text>
+      </Pressable>
     </Card>
   );
 
   return (
-    <Screen scroll bottomPad={180}>
-      <View style={{ flex: 1, gap: 14 }}>
+    <Screen scroll bottomPad={150}>
+      <View style={{ flex: 1, gap: 12 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
           <Pressable
             onPress={() => router.back()}
             style={{
-              width: 44,
-              height: 44,
+              width: 40,
+              height: 40,
               borderRadius: 999,
               alignItems: "center",
               justifyContent: "center",
               borderWidth: 1,
               borderColor: theme.colors.border,
-              backgroundColor: "rgba(255,255,255,0.06)",
+              backgroundColor: "rgba(255,255,255,0.05)",
             }}
           >
-            <Ionicons name="chevron-back" size={22} color={theme.colors.text} />
+            <Ionicons name="chevron-back" size={20} color={theme.colors.text} />
           </Pressable>
 
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 28, fontWeight: "900", color: theme.colors.text }}>
-              Receipt
-            </Text>
-            <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-              Receipt #{receiptNo}
-            </Text>
-          </View>
+         <View style={{ flex: 1, minWidth: 0 }}>
+  <Text
+    style={{
+      fontSize: 24,
+      fontWeight: "900",
+      color: theme.colors.text,
+      marginTop: 2,
+    }}
+  >
+    Invoice Receipt
+  </Text>
+
+  <Text
+    style={{
+      color: theme.colors.muted,
+      fontWeight: "800",
+      fontSize: 12,
+      marginTop: 2,
+    }}
+    numberOfLines={1}
+  >
+    No. {receiptNo}
+  </Text>
+</View>
 
           <View
             style={{
-              paddingHorizontal: 12,
-              paddingVertical: 8,
+              paddingHorizontal: 11,
+              paddingVertical: 7,
               borderRadius: theme.radius.pill,
               borderWidth: 1,
               borderColor: isCredit ? "rgba(251,191,36,0.35)" : "rgba(52,211,153,0.35)",
@@ -872,6 +1161,7 @@ const payLabel = (detail?.payment_method ?? "CASH").toUpperCase();
               style={{
                 color: isCredit ? "rgba(251,191,36,1)" : theme.colors.emerald,
                 fontWeight: "900",
+                fontSize: 12,
               }}
             >
               {paymentTitle}
@@ -889,7 +1179,24 @@ const payLabel = (detail?.payment_method ?? "CASH").toUpperCase();
         ) : err ? (
           <Card style={{ gap: 10 }}>
             <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{err}</Text>
-            <Button title="Retry" onPress={load} variant="primary" />
+            <Pressable
+  onPress={load}
+  style={({ pressed }) => ({
+    minHeight: 46,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(52,211,153,0.26)",
+    backgroundColor: "rgba(52,211,153,0.10)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 14,
+    opacity: pressed ? 0.92 : 1,
+  })}
+>
+  <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}>
+    Retry
+  </Text>
+</Pressable>
           </Card>
         ) : isDesktopWeb ? (
           <View
@@ -899,12 +1206,12 @@ const payLabel = (detail?.payment_method ?? "CASH").toUpperCase();
               gap: 16,
             }}
           >
-            <View style={{ flex: 1.15, minWidth: 0, gap: 14 }}>
+            <View style={{ flex: 1.15, minWidth: 0, gap: 12 }}>
               {headerCard}
               {itemsCard}
             </View>
 
-            <View style={{ width: 360, minWidth: 360, gap: 14 }}>
+            <View style={{ width: 340, minWidth: 340, gap: 12 }}>
               {totalsCard}
             </View>
           </View>

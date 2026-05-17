@@ -1,6 +1,7 @@
 // src/ui/Button.tsx
 import React from "react";
 import { Pressable, StyleProp, Text, ViewStyle } from "react-native";
+
 import { theme } from "./theme";
 
 type Variant = "primary" | "secondary";
@@ -22,30 +23,37 @@ export function Button({
 }: Props) {
   const isPrimary = variant === "primary";
 
-  const bg = isPrimary ? theme.colors.emeraldSoft : theme.colors.card;
-  const border = isPrimary ? theme.colors.emeraldBorder : theme.colors.border;
-
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled}
-      // ✅ IMPORTANT: remove android_ripple to stop flash
       style={({ pressed }) => [
         {
           borderWidth: 1,
-          borderColor: border,
-          borderRadius: theme.radius.pill,
-          backgroundColor: bg,
-          paddingVertical: 14,
+          borderColor: isPrimary ? theme.colors.primary : theme.colors.border,
+
+          borderRadius: theme.radius.md,
+
+          backgroundColor: isPrimary ? theme.colors.primary : "#FFFFFF",
+
+          paddingVertical: 13,
+          paddingHorizontal: 16,
+
           alignItems: "center",
           justifyContent: "center",
-          opacity: disabled ? 0.5 : pressed ? 0.92 : 1,
-          transform: pressed ? [{ scale: 0.99 }] : [{ scale: 1 }],
+
+          opacity: disabled ? 0.5 : pressed ? 0.88 : 1,
         },
         style as any,
       ]}
     >
-      <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+      <Text
+        style={{
+          color: isPrimary ? theme.colors.inverseText : theme.colors.text,
+          fontWeight: "700",
+          fontSize: 15,
+        }}
+      >
         {title}
       </Text>
     </Pressable>

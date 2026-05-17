@@ -163,7 +163,7 @@ export default function ClosingHistoryScreen() {
 
       const lockedSet = new Set(
         (lockRows ?? [])
-          .filter((r: any) => !r.lock_type || String(r.lock_type) === "daily")
+          .filter((r: any) => !r.lock_type || String(r.lock_type) === "day")
           .map((r: any) => String(r.lock_date))
       );
 

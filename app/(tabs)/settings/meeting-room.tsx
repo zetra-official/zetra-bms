@@ -89,6 +89,21 @@ function timeAgo(ts: string | null) {
   return new Date(ts).toLocaleDateString();
 }
 
+const MR = {
+  pageBg: "#F4F8FC",
+  card: "#FFFFFF",
+  card2: "#F8FAFC",
+  border: "rgba(15,23,42,0.12)",
+  borderStrong: "rgba(5,150,105,0.38)",
+  text: "#0F172A",
+  muted: "#475569",
+  faint: "#64748B",
+  emerald: "#047857",
+  emeraldSoft: "#ECFDF5",
+  iconSoft: "#F0FDF4",
+  danger: "#B91C1C",
+};
+
 function StatPill({
   icon,
   label,
@@ -105,54 +120,51 @@ function StatPill({
       style={{
         flex: 1,
         minWidth: 0,
-        borderRadius: 18,
+        borderRadius: 20,
         borderWidth: 1,
-        borderColor: "rgba(255,255,255,0.10)",
-        backgroundColor: "rgba(255,255,255,0.05)",
-        padding: 12,
+        borderColor: MR.border,
+        backgroundColor: MR.card2,
+        padding: 13,
         gap: 8,
+        shadowColor: "#000",
+        shadowOpacity: 0.16,
+        shadowRadius: 14,
+        shadowOffset: { width: 0, height: 8 },
+        elevation: 4,
       }}
     >
       <View
         style={{
-          width: 36,
-          height: 36,
-          borderRadius: 14,
+          width: 38,
+          height: 38,
+          borderRadius: 15,
           alignItems: "center",
           justifyContent: "center",
           borderWidth: 1,
-          borderColor: UI.emeraldBorder,
-          backgroundColor: UI.emeraldSoft,
+          borderColor: MR.borderStrong,
+          backgroundColor: "rgba(16,185,129,0.12)",
         }}
       >
-        <Ionicons name={icon} size={18} color={UI.emerald} />
+        <Ionicons name={icon} size={18} color={MR.emerald} />
       </View>
 
-      <Text
-        style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}
-        numberOfLines={1}
-      >
+      <Text style={{ color: MR.faint, fontWeight: "900", fontSize: 11 }} numberOfLines={1}>
         {label}
       </Text>
 
-      <Text
-        style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}
-        numberOfLines={1}
-      >
+      <Text style={{ color: MR.text, fontWeight: "900", fontSize: 16 }} numberOfLines={1}>
         {value}
       </Text>
 
       {!!hint ? (
-        <Text
-          style={{ color: UI.faint, fontWeight: "800", fontSize: 12 }}
-          numberOfLines={1}
-        >
+        <Text style={{ color: MR.muted, fontWeight: "800", fontSize: 12 }} numberOfLines={1}>
           {hint}
         </Text>
       ) : null}
     </View>
   );
 }
+
 
 function ActionButton({
   title,
@@ -176,12 +188,17 @@ function ActionButton({
         flexDirection: "row",
         alignItems: "center",
         gap: 12,
-        borderRadius: 20,
+        borderRadius: 22,
         borderWidth: 1,
-        borderColor: primary ? UI.emeraldBorder : "rgba(255,255,255,0.10)",
-        backgroundColor: primary ? UI.emeraldSoft : "rgba(255,255,255,0.04)",
+        borderColor: primary ? MR.borderStrong : MR.border,
+        backgroundColor: primary ? "rgba(16,185,129,0.14)" : MR.card2,
         padding: 14,
         opacity: pressed ? 0.92 : 1,
+        shadowColor: primary ? MR.emerald : "#000",
+        shadowOpacity: primary ? 0.16 : 0.10,
+        shadowRadius: 14,
+        shadowOffset: { width: 0, height: 8 },
+        elevation: primary ? 4 : 2,
       })}
     >
       <View
@@ -192,28 +209,26 @@ function ActionButton({
           alignItems: "center",
           justifyContent: "center",
           borderWidth: 1,
-          borderColor: primary ? UI.emeraldBorder : "rgba(255,255,255,0.10)",
-          backgroundColor: primary
-            ? "rgba(16,185,129,0.14)"
-            : "rgba(255,255,255,0.05)",
+          borderColor: primary ? MR.borderStrong : MR.border,
+backgroundColor: primary ? MR.iconSoft : "#FFFFFF",
         }}
       >
         <Ionicons
           name={icon}
           size={20}
-          color={primary ? UI.emerald : UI.text}
+          color={primary ? MR.emerald : MR.text}
         />
       </View>
 
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
+        <Text style={{ color: MR.text, fontWeight: "900", fontSize: 15 }}>
           {title}
         </Text>
 
         {!!subtitle ? (
           <Text
             style={{
-              color: UI.muted,
+              color: MR.muted,
               fontWeight: "800",
               fontSize: 12,
               marginTop: 4,
@@ -232,13 +247,11 @@ function ActionButton({
             paddingVertical: 6,
             borderRadius: 999,
             borderWidth: 1,
-            borderColor: primary ? UI.emeraldBorder : "rgba(255,255,255,0.10)",
-            backgroundColor: primary
-              ? "rgba(16,185,129,0.10)"
-              : "rgba(255,255,255,0.05)",
+           borderColor: primary ? MR.borderStrong : MR.border,
+backgroundColor: primary ? MR.emeraldSoft : "#FFFFFF",
           }}
         >
-          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
+          <Text style={{ color: MR.text, fontWeight: "900", fontSize: 12 }}>
             {rightText}
           </Text>
         </View>
@@ -267,8 +280,8 @@ function SmallRoomCard({
           style={{
             borderRadius: 18,
             borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.10)",
-            backgroundColor: "rgba(255,255,255,0.04)",
+            borderColor: MR.border,
+backgroundColor: MR.card2,
             padding: 12,
             gap: 8,
             opacity: pressed ? 0.94 : 1,
@@ -287,19 +300,19 @@ function SmallRoomCard({
                 backgroundColor: UI.emeraldSoft,
               }}
             >
-              <Ionicons name="chatbubbles-outline" size={18} color={UI.emerald} />
+              <Ionicons name="chatbubbles-outline" size={18} color={MR.emerald} />
             </View>
 
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text
-                style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}
+                style={{ color: MR.text, fontWeight: "900", fontSize: 14 }}
                 numberOfLines={1}
               >
                 {row.room_name}
               </Text>
               <Text
                 style={{
-                  color: UI.muted,
+                  color: MR.muted,
                   fontWeight: "800",
                   fontSize: 12,
                   marginTop: 2,
@@ -310,7 +323,7 @@ function SmallRoomCard({
               </Text>
             </View>
 
-            <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 11 }}>
+            <Text style={{ color: MR.faint, fontWeight: "800", fontSize: 11 }}>
               {timeAgo(row.last_message_at)}
             </Text>
           </View>
@@ -520,8 +533,8 @@ export default function MeetingRoomScreen() {
             alignItems: "center",
             justifyContent: "center",
             borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.10)",
-            backgroundColor: "rgba(255,255,255,0.04)",
+            borderColor: MR.border,
+backgroundColor: MR.card,
             opacity: pressed ? 0.9 : 1,
           })}
         >
@@ -529,10 +542,10 @@ export default function MeetingRoomScreen() {
         </Pressable>
 
         <View style={{ flex: 1 }}>
-          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 22 }}>
+          <Text style={{ color: MR.text, fontWeight: "900", fontSize: 24 }}>
             Meeting Room
           </Text>
-          <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 4 }}>
+          <Text style={{ color: MR.muted, fontWeight: "800", marginTop: 4 }}>
             {orgName} • {role}
           </Text>
         </View>
@@ -563,8 +576,13 @@ export default function MeetingRoomScreen() {
         <Card
           style={{
             gap: 14,
-            borderColor: UI.emeraldBorder,
-            backgroundColor: "rgba(16,185,129,0.06)",
+            borderColor: MR.borderStrong,
+            backgroundColor: MR.card,
+            shadowColor: MR.emerald,
+            shadowOpacity: 0.12,
+            shadowRadius: 18,
+            shadowOffset: { width: 0, height: 10 },
+            elevation: 5,
           }}
         >
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
@@ -584,12 +602,12 @@ export default function MeetingRoomScreen() {
             </View>
 
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 17 }}>
+              <Text style={{ color: MR.text, fontWeight: "900", fontSize: 17 }}>
                 Organization Communication Hub
               </Text>
               <Text
                 style={{
-                  color: UI.muted,
+                  color: MR.muted,
                   fontWeight: "800",
                   fontSize: 12,
                   marginTop: 4,
@@ -704,8 +722,8 @@ export default function MeetingRoomScreen() {
                   style={{
                     borderRadius: 18,
                     borderWidth: 1,
-                    borderColor: "rgba(255,255,255,0.10)",
-                    backgroundColor: "rgba(255,255,255,0.04)",
+                   borderColor: MR.border,
+backgroundColor: MR.card2,
                     padding: 12,
                     gap: 8,
                   }}
@@ -832,22 +850,7 @@ export default function MeetingRoomScreen() {
         </Card>
       </View>
 
-      <View style={{ marginTop: 14 }}>
-        <Card
-          style={{
-            gap: 8,
-            borderColor: "rgba(255,255,255,0.10)",
-            backgroundColor: "rgba(255,255,255,0.04)",
-          }}
-        >
-          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-            Current Stage
-          </Text>
-          <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 20 }}>
-            MR-DB-FIX-2 wired: My Rooms now reads all joined rooms for current account.
-          </Text>
-        </Card>
-      </View>
+      
 
       <View style={{ height: 24 }} />
     </Screen>

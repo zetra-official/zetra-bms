@@ -39,28 +39,86 @@ type ProductRow = {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+
+  is_precision_product?: boolean | null;
+  precision_pack_size?: number | null;
+  precision_base_unit?: string | null;
+  precision_sell_mode?: string | null;
+  precision_allow_box_sales?: boolean | null;
+  precision_allow_unit_sales?: boolean | null;
 };
+const PRODUCT_PRICE_DECIMALS = 6;
+
+function isPrecisionRetailType(storeType: any) {
+  const t = String(storeType ?? "").trim().toUpperCase();
+  return (
+    t === "PRECISION_RETAIL" ||
+    t === "PRECISION" ||
+    t === "PHARMACY" ||
+    t === "PHARMA"
+  );
+}
+
+function fmtFormulaNumber(n: number) {
+  if (!Number.isFinite(n)) return "";
+
+  const fixed = n.toFixed(PRODUCT_PRICE_DECIMALS);
+
+  return fixed.includes(".")
+    ? fixed.replace(/\.?0+$/, "")
+    : fixed;
+}
+
+function normalizeDecimalInput(raw: string) {
+  const cleaned = String(raw ?? "")
+    .replace(",", ".")
+    .replace(/[^0-9.]/g, "")
+    .replace(/(\..*)\./g, "$1");
+
+  const [whole, decimal] = cleaned.split(".");
+  return decimal !== undefined
+    ? `${whole}.${decimal.slice(0, PRODUCT_PRICE_DECIMALS)}`
+    : whole;
+}
 
 function parsePositiveNumberOrNull(raw: string): number | null {
-  const t = String(raw ?? "").trim();
+  const t = normalizeDecimalInput(raw).trim();
   if (!t) return null;
   const n = Number(t);
   if (!Number.isFinite(n) || n <= 0) return null;
-  return Math.trunc(n);
+  return Number(n.toFixed(PRODUCT_PRICE_DECIMALS));
 }
 
 function parseZeroOrPositiveNumberOrNull(raw: string): number | null {
-  const t = String(raw ?? "").trim();
+  const t = normalizeDecimalInput(raw).trim();
   if (!t) return null;
   const n = Number(t);
   if (!Number.isFinite(n) || n < 0) return null;
-  return Math.trunc(n);
+  return Number(n.toFixed(PRODUCT_PRICE_DECIMALS));
 }
 
 function cleanBarcode(raw: string) {
   const s = String(raw ?? "").trim();
   if (!s) return "";
   return s.replace(/\s+/g, "");
+}
+
+function getProductLimitFriendlyMessage(err: any) {
+  const raw = String(err?.message ?? "").trim();
+  const msg = raw.toLowerCase();
+
+  if (
+    msg.includes("free plan limit reached") ||
+    msg.includes("product limit") ||
+    msg.includes("upgrade to continue")
+  ) {
+    const m = raw.match(/(\d+)/);
+    const limit = m?.[1] ?? "30";
+
+    return `Umefikia limit ya bidhaa ${limit} kwenye FREE plan. Ili kuendelea kuongeza bidhaa zaidi, tafadhali upgrade kwenda LITE plan.`;
+  }
+
+  return raw || "Unknown error";
 }
 
 function isTypingIntoField(target: any) {
@@ -182,7 +240,12 @@ export default function ProductsTabScreen() {
 
   const money = useOrgMoneyPrefs(activeOrgId ?? "");
 const isCapitalRecoveryStore = activeStoreType === "CAPITAL_RECOVERY";
+const isPrecisionRetailStore = isPrecisionRetailType(activeStoreType);
 const scopedStoreId = String(activeStoreId ?? "").trim() || null;
+// Products list must be organization-wide.
+// Store is only needed for active context/inventory, not for product ownership.
+const productStoreScope =
+  isCapitalRecoveryStore || isPrecisionRetailStore ? scopedStoreId : null;
 
   const canManage = useMemo(
     () => (activeRole ?? "staff") === "owner",
@@ -220,6 +283,20 @@ const scopedStoreId = String(activeStoreId ?? "").trim() || null;
   const [scanOpen, setScanOpen] = useState(false);
   const [scanBusy, setScanBusy] = useState(false);
   const [keyboardSpace, setKeyboardSpace] = useState(0);
+const [productSearch, setProductSearch] = useState("");
+
+const [precisionPackQty, setPrecisionPackQty] = useState("");
+const [precisionPackCost, setPrecisionPackCost] = useState("");
+const [precisionPackSelling, setPrecisionPackSelling] = useState("");
+const [precisionUnit, setPrecisionUnit] = useState("");
+
+const [editPrecisionPackQty, setEditPrecisionPackQty] = useState("");
+const [editPrecisionPackCost, setEditPrecisionPackCost] = useState("");
+const [editPrecisionPackSelling, setEditPrecisionPackSelling] = useState("");
+const [editPrecisionUnit, setEditPrecisionUnit] = useState("");
+
+const [precisionCalcOpen, setPrecisionCalcOpen] = useState(false);
+const [editPrecisionCalcOpen, setEditPrecisionCalcOpen] = useState(false);
 
   const handleProductsScopedScan = useCallback(
     (rawInput: any) => {
@@ -297,7 +374,7 @@ const load = useCallback(async () => {
     return;
   }
 
-  if (!scopedStoreId) {
+  if (isCapitalRecoveryStore && !scopedStoreId) {
     setRows([]);
     setError("No active store selected");
     return;
@@ -310,14 +387,14 @@ const load = useCallback(async () => {
     if (canManage) {
       const { data, error: e } = await supabase.rpc("get_products_manage", {
         p_org_id: activeOrgId,
-        p_store_id: scopedStoreId,
+        p_store_id: productStoreScope,
       });
       if (e) throw e;
       setRows((data ?? []) as ProductRow[]);
     } else {
       const { data, error: e } = await supabase.rpc("get_products", {
         p_org_id: activeOrgId,
-        p_store_id: scopedStoreId,
+        p_store_id: productStoreScope,
       });
       if (e) throw e;
       setRows((data ?? []) as ProductRow[]);
@@ -328,7 +405,7 @@ const load = useCallback(async () => {
   } finally {
     setLoading(false);
   }
-}, [activeOrgId, canManage, scopedStoreId]);
+}, [activeOrgId, canManage, isCapitalRecoveryStore, productStoreScope, scopedStoreId]);
 
   useEffect(() => {
     void load();
@@ -429,15 +506,80 @@ const load = useCallback(async () => {
     };
   }, [canManage, handleProductsScopedScan]);
 
-  const openEdit = useCallback((p: ProductRow) => {
+  const applyPrecisionFormula = useCallback(() => {
+  const packQty = Number(normalizeDecimalInput(precisionPackQty));
+  const packCost = Number(normalizeDecimalInput(precisionPackCost));
+  const packSelling = Number(normalizeDecimalInput(precisionPackSelling));
+
+  if (!Number.isFinite(packQty) || packQty <= 0) {
+    Alert.alert("Missing", "Weka Pack Size / Quantity, mfano 100.");
+    return;
+  }
+
+  if (!Number.isFinite(packCost) || packCost < 0) {
+    Alert.alert("Missing", "Weka Buying/Cost Price ya box/pack.");
+    return;
+  }
+
+  if (!Number.isFinite(packSelling) || packSelling <= 0) {
+    Alert.alert("Missing", "Weka Selling Price ya box/pack.");
+    return;
+  }
+
+  const unitCost = packCost / packQty;
+  const unitSelling = packSelling / packQty;
+
+  // Usibadilishe Unit ya juu. Unit ya juu ni pack/jumla mfano Box, Carton, Belo.
+  // PrecisionUnit ni unit ya ndani mfano Capsule, Tablet, Piece.
+  setCostPrice(fmtFormulaNumber(unitCost));
+  setSellingPrice(fmtFormulaNumber(unitSelling));
+
+  if (!category.trim()) setCategory("General");
+}, [category, precisionPackCost, precisionPackQty, precisionPackSelling, precisionUnit]);
+
+const applyEditPrecisionFormula = useCallback(() => {
+  const packQty = Number(normalizeDecimalInput(editPrecisionPackQty));
+  const packCost = Number(normalizeDecimalInput(editPrecisionPackCost));
+  const packSelling = Number(normalizeDecimalInput(editPrecisionPackSelling));
+
+  if (!Number.isFinite(packQty) || packQty <= 0) {
+    Alert.alert("Missing", "Weka Pack Size / Quantity, mfano 100.");
+    return;
+  }
+
+  if (!Number.isFinite(packCost) || packCost < 0) {
+    Alert.alert("Missing", "Weka Buying/Cost Price ya box/pack.");
+    return;
+  }
+
+  if (!Number.isFinite(packSelling) || packSelling <= 0) {
+    Alert.alert("Missing", "Weka Selling Price ya box/pack.");
+    return;
+  }
+
+  setEditCostPrice(fmtFormulaNumber(packCost / packQty));
+  setEditSellingPrice(fmtFormulaNumber(packSelling / packQty));
+
+  if (!editCategory.trim()) setEditCategory("General");
+}, [editCategory, editPrecisionPackCost, editPrecisionPackQty, editPrecisionPackSelling]);
+
+const openEdit = useCallback((p: ProductRow) => {
     setEditProductId(p.id);
     setEditName(String(p.name ?? ""));
     setEditSku(String(p.sku ?? ""));
     setEditUnit(String(p.unit ?? ""));
     setEditCategory(String(p.category ?? ""));
-    setEditSellingPrice(p.selling_price != null ? String(Math.trunc(Number(p.selling_price))) : "");
-    setEditCostPrice(p.cost_price != null ? String(Math.trunc(Number(p.cost_price))) : "");
+    setEditSellingPrice(p.selling_price != null ? String(Number(p.selling_price)) : "");
+setEditCostPrice(p.cost_price != null ? String(Number(p.cost_price)) : "");
     setEditBarcode(String(p.barcode ?? ""));
+
+    setEditPrecisionPackQty(
+      p.precision_pack_size != null ? String(Number(p.precision_pack_size)) : ""
+    );
+    setEditPrecisionPackCost("");
+    setEditPrecisionPackSelling("");
+    setEditPrecisionUnit(String(p.precision_base_unit ?? ""));
+
     setEditOpen(true);
   }, []);
 
@@ -451,10 +593,15 @@ const load = useCallback(async () => {
     setEditSellingPrice("");
     setEditCostPrice("");
     setEditBarcode("");
+    setEditPrecisionPackQty("");
+    setEditPrecisionPackCost("");
+    setEditPrecisionPackSelling("");
+    setEditPrecisionUnit("");
   }, []);
 
  const add = useCallback(async () => {
-  if (!activeOrgId || !scopedStoreId) return;
+  if (!activeOrgId) return;
+if (isCapitalRecoveryStore && !scopedStoreId) return;
 
     const n = name.trim();
     if (!n) {
@@ -512,7 +659,13 @@ const load = useCallback(async () => {
   p_selling_price: sp,
   p_cost_price: isCapitalRecoveryStore ? null : cp,
   p_barcode: isCapitalRecoveryStore ? null : bc || null,
-  p_store_id: scopedStoreId,
+  p_store_id: productStoreScope,
+p_is_precision_product: isPrecisionRetailStore,
+p_precision_pack_size: isPrecisionRetailStore ? parsePositiveNumberOrNull(precisionPackQty) : null,
+p_precision_base_unit: isPrecisionRetailStore ? precisionUnit.trim() || unit.trim() || null : null,
+p_precision_sell_mode: isPrecisionRetailStore ? "BOTH" : "UNIT",
+p_precision_allow_box_sales: isPrecisionRetailStore,
+p_precision_allow_unit_sales: true,
 });
 
       if (e) throw e;
@@ -523,9 +676,13 @@ const load = useCallback(async () => {
       setCategory("");
       setSellingPrice("");
       setCostPrice("");
-      setBarcode("");
+     setBarcode("");
+setPrecisionPackQty("");
+setPrecisionPackCost("");
+setPrecisionPackSelling("");
+setPrecisionUnit("");
 
-      await load();
+await load();
       Alert.alert(
         "Success ✅",
         isCapitalRecoveryStore
@@ -535,13 +692,14 @@ const load = useCallback(async () => {
           : "Product added"
       );
     } catch (err: any) {
-      Alert.alert("Failed", err?.message ?? "Unknown error");
+      Alert.alert("Plan Limit", getProductLimitFriendlyMessage(err));
     } finally {
       setLoading(false);
     }
   }, [
     activeOrgId,
     scopedStoreId,
+    productStoreScope,
     barcode,
     canManage,
     category,
@@ -552,10 +710,14 @@ const load = useCallback(async () => {
     sellingPrice,
     sku,
     unit,
+isPrecisionRetailStore,
+precisionPackQty,
+precisionUnit,
   ]);
 
   const saveEdit = useCallback(async () => {
-    if (!activeOrgId || !scopedStoreId || !editProductId) return;
+    if (!activeOrgId || !editProductId) return;
+if (isCapitalRecoveryStore && !scopedStoreId) return;
 
     if (!canManage) {
       Alert.alert("No Access", "Owner only.");
@@ -613,21 +775,33 @@ const load = useCallback(async () => {
         p_selling_price: sp,
         p_cost_price: isCapitalRecoveryStore ? null : cp,
         p_barcode: isCapitalRecoveryStore ? null : bc || null,
-        p_store_id: scopedStoreId,
-      });
+p_store_id: productStoreScope,
+
+p_is_precision_product: isPrecisionRetailStore,
+p_precision_pack_size: isPrecisionRetailStore
+  ? parsePositiveNumberOrNull(editPrecisionPackQty)
+  : null,
+p_precision_base_unit: isPrecisionRetailStore
+  ? editPrecisionUnit.trim() || editUnit.trim() || null
+  : null,
+p_precision_sell_mode: isPrecisionRetailStore ? "BOTH" : "UNIT",
+p_precision_allow_box_sales: isPrecisionRetailStore,
+p_precision_allow_unit_sales: true,
+});
       if (e) throw e;
 
       closeEdit();
       await load();
       Alert.alert("Success ✅", "Product updated");
     } catch (err: any) {
-      Alert.alert("Failed", err?.message ?? "Unknown error");
+      Alert.alert("Plan Limit", getProductLimitFriendlyMessage(err));
     } finally {
       setLoading(false);
     }
   }, [
     activeOrgId,
     scopedStoreId,
+    productStoreScope,
     canManage,
     closeEdit,
     editBarcode,
@@ -639,12 +813,15 @@ const load = useCallback(async () => {
     editSku,
     editUnit,
     isCapitalRecoveryStore,
+    isPrecisionRetailStore,
     load,
+    editPrecisionPackQty,
+    editPrecisionUnit,
   ]);
 
   const remove = useCallback(
     async (productId: string, productName: string) => {
-      if (!activeOrgId || !scopedStoreId) return;
+      if (!activeOrgId) return;
 
       if (!canManage) {
         Alert.alert("No Access", "Owner only.");
@@ -665,7 +842,7 @@ const load = useCallback(async () => {
                 const { error: e } = await supabase.rpc("delete_product", {
   p_org_id: activeOrgId,
   p_product_id: productId,
-  p_store_id: scopedStoreId,
+  p_store_id: productStoreScope,
 });
                 if (e) throw e;
 
@@ -682,16 +859,58 @@ const load = useCallback(async () => {
         { cancelable: true }
       );
     },
-    [activeOrgId, scopedStoreId, canManage, load]
+    [activeOrgId, productStoreScope, canManage, load]
   );
 
-  const visibleRows = useMemo(() => rows.filter((r) => r.is_active !== false), [rows]);
+  const visibleRows = useMemo(() => {
+    const normalizeSearchText = (value: any) =>
+      String(value ?? "")
+        .toLowerCase()
+        .trim()
+        .replace(/[^\p{L}\p{N}]+/gu, " ")
+        .replace(/\s+/g, " ");
+
+    const normalizeCompactText = (value: any) =>
+      normalizeSearchText(value).replace(/\s+/g, "");
+
+    const q = normalizeSearchText(productSearch);
+    const qCompact = normalizeCompactText(productSearch);
+
+    const activeRows = rows.filter((r) => r.is_active !== false);
+
+    if (!q && !qCompact) return activeRows;
+
+    return activeRows
+      .map((r) => {
+        const fields = [r.name, r.sku, r.unit, r.category, r.barcode];
+
+        const fieldTexts = fields.map((v) => normalizeSearchText(v));
+        const fieldCompacts = fields.map((v) => normalizeCompactText(v));
+
+        const exactField = fieldTexts.some((v) => v === q) || fieldCompacts.some((v) => v === qCompact);
+        const startsField = fieldTexts.some((v) => v.startsWith(q)) || fieldCompacts.some((v) => v.startsWith(qCompact));
+        const containsField = fieldTexts.some((v) => v.includes(q)) || fieldCompacts.some((v) => v.includes(qCompact));
+
+        let score = 0;
+        if (exactField) score = 300;
+        else if (startsField) score = 200;
+        else if (containsField) score = 100;
+
+        return { row: r, score };
+      })
+      .filter((x) => x.score > 0)
+      .sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        return String(a.row.name ?? "").localeCompare(String(b.row.name ?? ""));
+      })
+      .map((x) => x.row);
+  }, [productSearch, rows]);
 
   const solidInputStyle = {
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: theme.radius.lg,
-    backgroundColor: "#111827",
+    backgroundColor: "#FFFFFF",
     paddingHorizontal: 14,
     paddingVertical: 12,
     color: theme.colors.text,
@@ -700,9 +919,22 @@ const load = useCallback(async () => {
 
   return (
     <Screen scroll>
-      <Text style={{ fontSize: 26, fontWeight: "900", color: theme.colors.text }}>Products</Text>
+      <View style={{ gap: 6 }}>
+  <Text style={{ fontSize: 30, fontWeight: "900", color: theme.colors.text }}>
+    Products
+  </Text>
+  <Text style={{ color: theme.colors.muted, fontWeight: "800", lineHeight: 22 }}>
+    Manage catalog, barcode, pricing, units, and store-ready products.
+  </Text>
+</View>
 
-      <Card style={{ gap: 8 }}>
+      <Card
+  style={{
+    gap: 12,
+    borderColor: "rgba(148,163,184,0.22)",
+    backgroundColor: "#FFFFFF",
+  }}
+>
         <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Organization</Text>
         <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
           {activeOrgName ?? "—"}
@@ -713,33 +945,93 @@ const load = useCallback(async () => {
 
         <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>Role</Text>
         <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{activeRole ?? "—"}</Text>
-
-        <Card
-          style={{
-            marginTop: 10,
-            borderColor: isCapitalRecoveryStore ? theme.colors.emeraldBorder : theme.colors.border,
-            backgroundColor: isCapitalRecoveryStore ? theme.colors.emeraldSoft : "rgba(255,255,255,0.04)",
-          }}
-        >
+<Card
+  style={{
+    marginTop: 8,
+    borderRadius: 22,
+    borderColor: isCapitalRecoveryStore || isPrecisionRetailStore
+      ? theme.colors.emeraldBorder
+      : "rgba(148,163,184,0.20)",
+    backgroundColor: isCapitalRecoveryStore || isPrecisionRetailStore
+      ? "rgba(16,185,129,0.08)"
+      : "rgba(241,245,249,0.72)",
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    elevation: 3,
+  }}
+>
           <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-            {isCapitalRecoveryStore
-              ? "Capital Recovery Product Mode"
-              : "Standard Product Mode"}
+           {isCapitalRecoveryStore
+  ? "Capital Recovery Product Mode"
+  : isPrecisionRetailStore
+  ? "Precision Retail Product Mode"
+  : "Standard Product Mode"}
           </Text>
           <Text style={{ color: theme.colors.muted, fontWeight: "700", marginTop: 6 }}>
             {isCapitalRecoveryStore
-              ? "Hapa unaweka bidhaa za kuuza kwa income tu. Barcode, cost, unit, na inventory-style product fields hazitumiki kwenye mode hii."
-              : "Hapa unaweka bidhaa za kawaida za biashara, zikiwemo cost, barcode, na details nyingine."}
+  ? "Hapa unaweka bidhaa za kuuza kwa income tu. Barcode, cost, unit, na inventory-style product fields hazitumiki kwenye mode hii."
+  : isPrecisionRetailStore
+  ? "Hapa unaweka bidhaa zinazouzwa kwa pack, box, carton, dozen au jumla na kuzigawa kwenye unit ndogo kama tablet, piece, bottle, capsule au kipimo kingine. Mfumo utahesabu cost/selling ya unit moja automatic."
+  : "Hapa unaweka bidhaa za kawaida za biashara, zikiwemo cost, barcode, na details nyingine."}
           </Text>
         </Card>
 
-        <Button
-          title={loading ? "Loading..." : "Refresh"}
-          onPress={load}
-          disabled={loading}
-          variant="primary"
-          style={{ marginTop: 10 }}
-        />
+        <View style={{ flexDirection: "row", gap: 10, marginTop: 10, alignItems: "center" }}>
+  <View style={{ flex: 1 }}>
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        borderWidth: 1,
+        borderColor: theme.colors.emeraldBorder,
+        borderRadius: theme.radius.lg,
+        backgroundColor: "rgba(16,185,129,0.10)",
+        paddingHorizontal: 14,
+        minHeight: 54,
+      }}
+    >
+      <Ionicons name="search" size={18} color={theme.colors.muted} />
+      <TextInput
+        value={productSearch}
+        onChangeText={setProductSearch}
+        placeholder="Search name, SKU, category..."
+        placeholderTextColor={theme.colors.faint}
+        autoCorrect={false}
+        autoCapitalize="none"
+        style={{
+          flex: 1,
+          color: theme.colors.text,
+          fontWeight: "900",
+          paddingVertical: 12,
+        }}
+      />
+      {!!productSearch.trim() && (
+        <Pressable onPress={() => setProductSearch("")} hitSlop={10}>
+          <Ionicons name="close-circle" size={20} color={theme.colors.muted} />
+        </Pressable>
+      )}
+    </View>
+  </View>
+
+  <Pressable
+    onPress={load}
+    disabled={loading}
+    style={({ pressed }) => ({
+      width: 58,
+      height: 54,
+      borderRadius: theme.radius.lg,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor: theme.colors.emeraldBorder,
+      backgroundColor: theme.colors.emeraldSoft,
+      opacity: loading ? 0.55 : pressed ? 0.88 : 1,
+    })}
+  >
+    <Ionicons name="refresh" size={22} color={theme.colors.text} />
+  </Pressable>
+</View>
       </Card>
 
       {!!error && (
@@ -754,7 +1046,13 @@ const load = useCallback(async () => {
       )}
 
       {canManage && (
-        <Card style={{ gap: 10 }}>
+        <Card
+  style={{
+    gap: 12,
+    borderColor: "rgba(148,163,184,0.22)",
+    backgroundColor: "#FFFFFF",
+  }}
+>
           <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
             {isCapitalRecoveryStore ? "Add Income Product" : "Add Product"}
           </Text>
@@ -763,12 +1061,12 @@ const load = useCallback(async () => {
             value={name}
             onChangeText={setName}
             placeholder="Product name"
-            placeholderTextColor="rgba(255,255,255,0.35)"
+            placeholderTextColor={theme.colors.faint}
             style={{
               borderWidth: 1,
               borderColor: theme.colors.border,
               borderRadius: theme.radius.lg,
-              backgroundColor: "rgba(255,255,255,0.05)",
+              backgroundColor: "#FFFFFF",
               paddingHorizontal: 14,
               paddingVertical: 12,
               color: theme.colors.text,
@@ -783,12 +1081,12 @@ const load = useCallback(async () => {
                   value={sku}
                   onChangeText={setSku}
                   placeholder="SKU (optional)"
-                  placeholderTextColor="rgba(255,255,255,0.35)"
+                  placeholderTextColor={theme.colors.faint}
                   style={{
                     borderWidth: 1,
                     borderColor: theme.colors.border,
                     borderRadius: theme.radius.lg,
-                    backgroundColor: "rgba(255,255,255,0.05)",
+                    backgroundColor: "#FFFFFF",
                     paddingHorizontal: 14,
                     paddingVertical: 12,
                     color: theme.colors.text,
@@ -802,12 +1100,12 @@ const load = useCallback(async () => {
                   value={unit}
                   onChangeText={setUnit}
                   placeholder="Unit (optional)"
-                  placeholderTextColor="rgba(255,255,255,0.35)"
+                  placeholderTextColor={theme.colors.faint}
                   style={{
                     borderWidth: 1,
                     borderColor: theme.colors.border,
                     borderRadius: theme.radius.lg,
-                    backgroundColor: "rgba(255,255,255,0.05)",
+                    backgroundColor: "#FFFFFF",
                     paddingHorizontal: 14,
                     paddingVertical: 12,
                     color: theme.colors.text,
@@ -822,12 +1120,12 @@ const load = useCallback(async () => {
             value={category}
             onChangeText={setCategory}
             placeholder="Category (optional)"
-            placeholderTextColor="rgba(255,255,255,0.35)"
+            placeholderTextColor={theme.colors.faint}
             style={{
               borderWidth: 1,
               borderColor: theme.colors.border,
               borderRadius: theme.radius.lg,
-              backgroundColor: "rgba(255,255,255,0.05)",
+              backgroundColor: "#FFFFFF",
               paddingHorizontal: 14,
               paddingVertical: 12,
               color: theme.colors.text,
@@ -845,12 +1143,12 @@ const load = useCallback(async () => {
                   value={barcode}
                   onChangeText={(t) => setBarcode(cleanBarcode(t))}
                   placeholder="Scan or type barcode"
-                  placeholderTextColor="rgba(255,255,255,0.35)"
+                  placeholderTextColor={theme.colors.faint}
                   style={{
                     borderWidth: 1,
                     borderColor: theme.colors.border,
                     borderRadius: theme.radius.lg,
-                    backgroundColor: "rgba(255,255,255,0.05)",
+                    backgroundColor: "#FFFFFF",
                     paddingHorizontal: 14,
                     paddingVertical: 12,
                     color: theme.colors.text,
@@ -908,18 +1206,134 @@ const load = useCallback(async () => {
             </View>
           )}
 
+       {isPrecisionRetailStore && canSeeCost && (
+  <Card
+    style={{
+      gap: 10,
+      borderRadius: 22,
+      borderColor: "rgba(52,211,153,0.30)",
+      backgroundColor: "rgba(16,185,129,0.07)",
+      shadowOpacity: 0.06,
+      shadowRadius: 12,
+      elevation: 2,
+    }}
+  >
+    <Pressable
+      onPress={() => setPrecisionCalcOpen((v) => !v)}
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 10,
+      }}
+    >
+            <View style={{ flex: 1 }}>
+  <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 15 }}>
+    Unit & Pack Calculator
+  </Text>
+  <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 3 }}>
+    Auto calculate unit cost/selling
+  </Text>
+</View>
+
+<Ionicons
+  name={precisionCalcOpen ? "chevron-up" : "chevron-down"}
+  size={22}
+  color={theme.colors.text}
+/>
+</Pressable>
+
+{precisionCalcOpen && (
+  <>
+
+<Text style={{ color: theme.colors.muted, fontWeight: "800", lineHeight: 19 }}>
+  Mfano: Box, carton, dozen, sack au pack inaweza kugawanywa kwenye unit ndogo.
+  Mfumo utapata cost/selling ya unit moja automatic.
+</Text>
+
+          <View style={{ flexDirection: "row", gap: 10 }}>
+  <View style={{ flex: 1.15 }}>
+    <TextInput
+      value={precisionPackQty}
+      onChangeText={(t) => setPrecisionPackQty(normalizeDecimalInput(t))}
+      placeholder="Pack size e.g. 100"
+      keyboardType="numeric"
+      placeholderTextColor={theme.colors.faint}
+      style={[
+        solidInputStyle,
+        {
+          fontSize: 13,
+          backgroundColor: "#FFFFFF",
+        },
+      ]}
+    />
+  </View>
+
+  <View style={{ flex: 1 }}>
+    <TextInput
+      value={precisionUnit}
+      onChangeText={setPrecisionUnit}
+      placeholder="Unit e.g. tablet"
+      placeholderTextColor={theme.colors.faint}
+      style={[
+        solidInputStyle,
+        {
+          fontSize: 13,
+          backgroundColor: "#ECFDF5",
+          borderColor: theme.colors.emeraldBorder,
+          color: theme.colors.text,
+          fontWeight: "900",
+        },
+      ]}
+    />
+  </View>
+</View>
+
+              <TextInput
+                value={precisionPackCost}
+                onChangeText={(t) => setPrecisionPackCost(normalizeDecimalInput(t))}
+                placeholder="Buying/Cost price ya box/pack"
+                keyboardType="numeric"
+                placeholderTextColor={theme.colors.faint}
+                style={solidInputStyle}
+              />
+
+              <TextInput
+                value={precisionPackSelling}
+                onChangeText={(t) => setPrecisionPackSelling(normalizeDecimalInput(t))}
+                placeholder="Selling price ya box/pack"
+                keyboardType="numeric"
+                placeholderTextColor={theme.colors.faint}
+                style={solidInputStyle}
+              />
+
+              <Button
+                title="Calculate Per Unit Price"
+                onPress={applyPrecisionFormula}
+                disabled={loading}
+                variant="secondary"
+              />
+
+              <Text style={{ color: theme.colors.faint, fontWeight: "800" }}>
+  Baada ya calculate, Cost Price na Selling Price chini zitajazwa kama bei ya unit moja.
+</Text>
+</>
+)}
+            </Card>
+          )}
+
         {canSeeCost && (
             <TextInput
               value={costPrice}
-              onChangeText={(t) => setCostPrice(t.replace(/[^0-9]/g, ""))}
+              onChangeText={(t) => setCostPrice(normalizeDecimalInput(t))}
               placeholder="Cost Price (optional)"
               keyboardType="numeric"
-              placeholderTextColor="rgba(255,255,255,0.35)"
+              placeholderTextColor={theme.colors.faint}
               style={{
                 borderWidth: 1,
                 borderColor: theme.colors.border,
                 borderRadius: theme.radius.lg,
-                backgroundColor: "rgba(255,255,255,0.05)",
+                backgroundColor: "#FFFFFF",
                 paddingHorizontal: 14,
                 paddingVertical: 12,
                 color: theme.colors.text,
@@ -930,15 +1344,15 @@ const load = useCallback(async () => {
 
           <TextInput
             value={sellingPrice}
-            onChangeText={(t) => setSellingPrice(t.replace(/[^0-9]/g, ""))}
+            onChangeText={(t) => setSellingPrice(normalizeDecimalInput(t))}
             placeholder={isCapitalRecoveryStore ? "Selling Price" : "Selling Price (optional)"}
             keyboardType="numeric"
-            placeholderTextColor="rgba(255,255,255,0.35)"
+            placeholderTextColor={theme.colors.faint}
             style={{
               borderWidth: 1,
               borderColor: theme.colors.border,
               borderRadius: theme.radius.lg,
-              backgroundColor: "rgba(255,255,255,0.05)",
+              backgroundColor: "#FFFFFF",
               paddingHorizontal: 14,
               paddingVertical: 12,
               color: theme.colors.text,
@@ -946,12 +1360,32 @@ const load = useCallback(async () => {
             }}
           />
 
-          <Button
-            title={loading ? "Saving..." : isCapitalRecoveryStore ? "Add Income Product" : "Add Product"}
-            onPress={add}
-            disabled={loading}
-            variant="primary"
-          />
+       <Pressable
+  onPress={add}
+  disabled={loading}
+  style={({ pressed }) => ({
+    minHeight: 58,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: loading ? "rgba(16,185,129,0.45)" : "#059669",
+    opacity: pressed ? 0.9 : 1,
+    shadowColor: "#059669",
+    shadowOpacity: 0.22,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 4,
+  })}
+>
+  <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 16 }}>
+    {loading ? "Saving..." : isCapitalRecoveryStore ? "Add Income Product" : "Add Product"}
+  </Text>
+</Pressable>
+          {!isCapitalRecoveryStore && (
+            <Text style={{ color: theme.colors.faint, fontWeight: "800", marginTop: 2 }}>
+              FREE plan ina limit ya products. Ukifika mwisho, utaombwa u-upgrade.
+            </Text>
+          )}
 
           <Modal
             visible={scanOpen}
@@ -1054,21 +1488,32 @@ const load = useCallback(async () => {
         </Card>
       )}
 
-      <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>
-        {isCapitalRecoveryStore ? "Income Product List" : "Product List"}
-      </Text>
+     <View style={{ marginTop: 4, gap: 4 }}>
+  <Text style={{ fontWeight: "900", fontSize: 20, color: theme.colors.text }}>
+    {isCapitalRecoveryStore ? "Income Products" : "Product Catalog"}
+  </Text>
+  <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+    {visibleRows.length} active item{visibleRows.length === 1 ? "" : "s"}
+  </Text>
+</View>
 
       {visibleRows.length === 0 ? (
         <Card>
           <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-            {isCapitalRecoveryStore ? "No income products yet" : "No products yet"}
+            {productSearch.trim()
+  ? "No matching products"
+  : isCapitalRecoveryStore
+  ? "No income products yet"
+  : "No products yet"}
           </Text>
           <Text style={{ color: theme.colors.muted, fontWeight: "700", marginTop: 6 }}>
-            {canManage
-              ? isCapitalRecoveryStore
-                ? "Ongeza bidhaa ya income juu kisha Refresh."
-                : "Ongeza product juu kisha Refresh."
-              : "Muombe owner aongeze au abadili products."}
+           {productSearch.trim()
+  ? "Badili neno la search au futa search kuona bidhaa zote."
+  : canManage
+  ? isCapitalRecoveryStore
+    ? "Ongeza bidhaa ya income juu kisha Refresh."
+    : "Ongeza product juu kisha Refresh."
+  : "Muombe owner aongeze au abadili products."}
           </Text>
         </Card>
       ) : (
@@ -1080,14 +1525,19 @@ const load = useCallback(async () => {
           return (
             <Pressable
               key={p.id}
-              style={{
-                borderWidth: 1,
-                borderColor: theme.colors.border,
-                borderRadius: theme.radius.xl,
-                backgroundColor: theme.colors.card,
-                padding: 16,
-                marginBottom: 12,
-              }}
+           style={{
+  borderWidth: 1,
+  borderColor: "rgba(148,163,184,0.22)",
+  borderRadius: 24,
+  backgroundColor: "#FFFFFF",
+  padding: 18,
+  marginBottom: 12,
+  shadowColor: "#0F172A",
+  shadowOpacity: 0.08,
+  shadowRadius: 14,
+  shadowOffset: { width: 0, height: 8 },
+  elevation: 3,
+}}
             >
               <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>{p.name}</Text>
 
@@ -1129,7 +1579,7 @@ const load = useCallback(async () => {
               )}
 
               {canManage && (
-                <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
+                <View style={{ flexDirection: "row", gap: 10, marginTop: 16 }}>
                   <View style={{ flex: 1 }}>
                     <Button title="Edit" variant="primary" onPress={() => openEdit(p)} disabled={loading} />
                   </View>
@@ -1230,7 +1680,7 @@ const load = useCallback(async () => {
                   value={editName}
                   onChangeText={setEditName}
                   placeholder="Product name"
-                  placeholderTextColor="rgba(255,255,255,0.35)"
+                  placeholderTextColor={theme.colors.faint}
                   style={solidInputStyle}
                 />
 
@@ -1241,7 +1691,7 @@ const load = useCallback(async () => {
                         value={editSku}
                         onChangeText={setEditSku}
                         placeholder="SKU (optional)"
-                        placeholderTextColor="rgba(255,255,255,0.35)"
+                        placeholderTextColor={theme.colors.faint}
                         style={solidInputStyle}
                       />
                     </View>
@@ -1250,8 +1700,8 @@ const load = useCallback(async () => {
                       <TextInput
                         value={editUnit}
                         onChangeText={setEditUnit}
-                        placeholder="Unit (optional)"
-                        placeholderTextColor="rgba(255,255,255,0.35)"
+                        placeholder="Unit / UOM (optional)"
+                        placeholderTextColor={theme.colors.faint}
                         style={solidInputStyle}
                       />
                     </View>
@@ -1262,7 +1712,7 @@ const load = useCallback(async () => {
                   value={editCategory}
                   onChangeText={setEditCategory}
                   placeholder="Category (optional)"
-                  placeholderTextColor="rgba(255,255,255,0.35)"
+                  placeholderTextColor={theme.colors.faint}
                   style={solidInputStyle}
                 />
 
@@ -1276,23 +1726,108 @@ const load = useCallback(async () => {
                   />
                 )}
 
+                {isPrecisionRetailStore && canSeeCost && (
+                  <Card
+                    style={{
+                      gap: 10,
+                      borderColor: "rgba(52,211,153,0.28)",
+                      backgroundColor: "rgba(52,211,153,0.08)",
+                    }}
+                  >
+                    <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 15 }}>
+                      Unit & Pack Calculator
+                    </Text>
+
+                    <Text style={{ color: theme.colors.muted, fontWeight: "800", lineHeight: 19 }}>
+                      Badili pack size, unit ya ndani, cost ya pack na selling ya pack. Mfumo utahesabu bei ya unit moja automatic.
+                    </Text>
+
+                   <View style={{ flexDirection: "row", gap: 10 }}>
+  <View style={{ flex: 1.15 }}>
+    <TextInput
+      value={editPrecisionPackQty}
+      onChangeText={(t) => setEditPrecisionPackQty(normalizeDecimalInput(t))}
+      placeholder="Pack size e.g. 100"
+      keyboardType="numeric"
+      placeholderTextColor={theme.colors.faint}
+      style={[
+        solidInputStyle,
+        {
+          fontSize: 13,
+          backgroundColor: "#FFFFFF",
+        },
+      ]}
+    />
+  </View>
+
+  <View style={{ flex: 1 }}>
+    <TextInput
+      value={editPrecisionUnit}
+      onChangeText={setEditPrecisionUnit}
+      placeholder="Unit e.g. capsule"
+      placeholderTextColor={theme.colors.faint}
+      style={[
+        solidInputStyle,
+        {
+          fontSize: 13,
+          backgroundColor: "#ECFDF5",
+          borderColor: theme.colors.emeraldBorder,
+          color: theme.colors.text,
+          fontWeight: "900",
+        },
+      ]}
+    />
+  </View>
+</View>
+
+                    <TextInput
+                      value={editPrecisionPackCost}
+                      onChangeText={(t) => setEditPrecisionPackCost(normalizeDecimalInput(t))}
+                      placeholder="Buying/Cost price ya box/pack"
+                      keyboardType="numeric"
+                      placeholderTextColor={theme.colors.faint}
+                      style={solidInputStyle}
+                    />
+
+                    <TextInput
+                      value={editPrecisionPackSelling}
+                      onChangeText={(t) => setEditPrecisionPackSelling(normalizeDecimalInput(t))}
+                      placeholder="Selling price ya box/pack"
+                      keyboardType="numeric"
+                      placeholderTextColor={theme.colors.faint}
+                      style={solidInputStyle}
+                    />
+
+                    <Button
+                      title="Calculate Per Unit Price"
+                      onPress={applyEditPrecisionFormula}
+                      disabled={loading}
+                      variant="secondary"
+                    />
+
+                    <Text style={{ color: theme.colors.faint, fontWeight: "800" }}>
+                      Baada ya calculate, Cost Price na Selling Price chini zitabadilishwa kama bei ya unit moja.
+                    </Text>
+                  </Card>
+                )}
+
                 {canSeeCost && (
                   <TextInput
                     value={editCostPrice}
-                    onChangeText={(t) => setEditCostPrice(t.replace(/[^0-9]/g, ""))}
+                    onChangeText={(t) => setEditCostPrice(normalizeDecimalInput(t))}
                     placeholder="Cost Price (optional)"
                     keyboardType="numeric"
-                    placeholderTextColor="rgba(255,255,255,0.35)"
+                    placeholderTextColor={theme.colors.faint}
                     style={solidInputStyle}
                   />
                 )}
 
                 <TextInput
                   value={editSellingPrice}
-                  onChangeText={(t) => setEditSellingPrice(t.replace(/[^0-9]/g, ""))}
+                  onChangeText={(t) => setEditSellingPrice(normalizeDecimalInput(t))}
                   placeholder={isCapitalRecoveryStore ? "Selling Price" : "Selling Price (optional)"}
                   keyboardType="numeric"
-                  placeholderTextColor="rgba(255,255,255,0.35)"
+                  placeholderTextColor={theme.colors.faint}
                   style={solidInputStyle}
                 />
 
