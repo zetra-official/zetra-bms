@@ -154,6 +154,23 @@ function storeTypeVisual(type: StoreType, isActive: boolean, isAllowed: boolean)
 }
 
 
+function isSubscriptionExpiredFromSnapshot(row: any) {
+  const status = String(row?.status ?? row?.subscription_status ?? "")
+    .trim()
+    .toUpperCase();
+
+  if (status === "EXPIRED") return true;
+  if (status === "ACTIVE") return false;
+
+  const expiresRaw = row?.expires_at ?? row?.end_at ?? row?.server_expires_at ?? null;
+  if (expiresRaw) {
+    const t = new Date(expiresRaw).getTime();
+    if (Number.isFinite(t)) return t <= Date.now();
+  }
+
+  return false;
+}
+
 function HeaderActionButton({
   title,
   icon,
@@ -356,10 +373,47 @@ const MOBILE_SIDE_PAD = 12;
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [upgradeMsg, setUpgradeMsg] = useState("");
 
+  const [orgSubscriptionExpired, setOrgSubscriptionExpired] = useState(false);
+  const [orgPlanCode, setOrgPlanCode] = useState<string | null>(null);
+  const [orgSubscriptionStatus, setOrgSubscriptionStatus] = useState<string | null>(null);
+
   const openUpgrade = (msg: string) => {
     setUpgradeMsg(msg);
     setUpgradeOpen(true);
   };
+
+  const loadOrgSubscriptionLock = useCallback(async () => {
+    if (!activeOrgId) {
+      setOrgSubscriptionExpired(false);
+      setOrgPlanCode(null);
+      setOrgSubscriptionStatus(null);
+      return;
+    }
+
+    try {
+      const { data, error: e } = await supabase.rpc("get_org_subscription_snapshot_v1", {
+        p_org_id: activeOrgId,
+      } as any);
+
+      if (e) throw e;
+
+      const row = Array.isArray(data) ? data[0] : data;
+      const status = String(row?.status ?? "").trim().toUpperCase() || null;
+      const planCode = String(row?.plan_code ?? row?.plan ?? "").trim().toUpperCase() || null;
+
+      setOrgSubscriptionStatus(status);
+      setOrgPlanCode(planCode);
+      setOrgSubscriptionExpired(isSubscriptionExpiredFromSnapshot(row));
+    } catch {
+      setOrgSubscriptionStatus(null);
+      setOrgPlanCode(null);
+      setOrgSubscriptionExpired(false);
+    }
+  }, [activeOrgId]);
+
+  useEffect(() => {
+    void loadOrgSubscriptionLock();
+  }, [loadOrgSubscriptionLock]);
 
   // canonical store list
   const list = useMemo(() => {
@@ -1100,6 +1154,7 @@ const loadStoreProductsPreview = useCallback(async (storeId: string) => {
 
   const onRefreshAll = async () => {
     await refresh();
+    await loadOrgSubscriptionLock();
     await loadManagers();
     await loadCreditFlags();
     await loadExpenseFlags();
@@ -1181,7 +1236,7 @@ const loadStoreProductsPreview = useCallback(async (storeId: string) => {
                 icon="refresh"
                 onPress={onRefreshAll}
                 disabled={busy}
-                fullWidth
+               fullWidth
                 textColor={TEXT}
                 mutedColor={MUTED}
                 borderColor={busy ? "rgba(255,255,255,0.10)" : "rgba(16,185,129,0.30)"}
@@ -1328,6 +1383,11 @@ const loadStoreProductsPreview = useCallback(async (storeId: string) => {
 
   <Pressable
     onPress={() => {
+      if (orgSubscriptionExpired) {
+        openUpgrade("Subscription EXPIRED: renew plan ili kutumia Inventory.");
+        return;
+      }
+
       if (isActivePremiumType) {
         Alert.alert("Not Available", "Inventory haitumiki kwa Capital Recovery store.");
         return;
@@ -1366,6 +1426,11 @@ const loadStoreProductsPreview = useCallback(async (storeId: string) => {
         Alert.alert("Not Available", "Stock Movement haitumiki kwa Capital Recovery store.");
         return;
       }
+      if (orgSubscriptionExpired) {
+        openUpgrade("Subscription EXPIRED: renew plan ili kutumia Stock Movement.");
+        return;
+      }
+
       openMovement();
     }}
     style={({ pressed }) => ({
@@ -1395,6 +1460,11 @@ const loadStoreProductsPreview = useCallback(async (storeId: string) => {
 
   <Pressable
     onPress={() => {
+      if (orgSubscriptionExpired) {
+        openUpgrade("Subscription EXPIRED: renew plan ili kutumia sehemu hii.");
+        return;
+      }
+
       router.push("/stores/suppliers" as any);
     }}
     style={({ pressed }) => ({
@@ -1417,6 +1487,138 @@ const loadStoreProductsPreview = useCallback(async (storeId: string) => {
     </Text>
     <Text style={{ color: "rgba(255,255,255,0.82)", fontWeight: "900", marginTop: 6, fontSize: 13, lineHeight: 19 }}>
       Angalia suppliers, mzigo waliouleta, invoice/ref na historia ya stock
+    </Text>
+  </Pressable>
+<Pressable
+    onPress={() => {
+      if (!activeOrgId) {
+        Alert.alert("Missing organization", "Organization haijapatikana.");
+        return;
+      }
+
+      if (!activeStoreId) {
+        Alert.alert("Select store", "Chagua active store kwanza.");
+        return;
+      }
+
+      router.push({
+        pathname: "/stores/chapchap" as any,
+        params: {
+          orgId: activeOrgId,
+          storeId: activeStoreId,
+          storeName: activeStoreName ?? "Active Store",
+        },
+      });
+    }}
+    style={({ pressed }) => ({
+      borderRadius: 24,
+      borderWidth: 1,
+      borderColor: "rgba(236,72,153,0.60)",
+      backgroundColor: "#BE185D",
+      paddingVertical: 18,
+      paddingHorizontal: 18,
+      opacity: pressed ? 0.92 : 1,
+      shadowColor: "#BE185D",
+      shadowOpacity: 0.24,
+      shadowRadius: 14,
+      shadowOffset: { width: 0, height: 8 },
+      elevation: 4,
+    })}
+  >
+    <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 19 }}>
+  Sold Items
+</Text>
+    <Text style={{ color: "rgba(255,255,255,0.82)", fontWeight: "900", marginTop: 6, fontSize: 13, lineHeight: 19 }}>
+      Bidhaa zilizouzwa leo, jana, wiki au tarehe maalum
+    </Text>
+  </Pressable>
+  <Pressable
+    onPress={() => {
+      if (!activeOrgId) {
+        Alert.alert("Missing organization", "Organization haijapatikana.");
+        return;
+      }
+
+      if (!activeStoreId) {
+        Alert.alert("Select store", "Chagua active store kwanza.");
+        return;
+      }
+
+      router.push({
+        pathname: "/stores/items-overview" as any,
+        params: {
+          orgId: activeOrgId,
+          storeId: activeStoreId,
+          storeName: activeStoreName ?? "Active Store",
+          scope: "STORE",
+        },
+      });
+    }}
+    style={({ pressed }) => ({
+      borderRadius: 24,
+      borderWidth: 1,
+      borderColor: "rgba(245,158,11,0.60)",
+      backgroundColor: "#B45309",
+      paddingVertical: 18,
+      paddingHorizontal: 18,
+      opacity: pressed ? 0.92 : 1,
+      shadowColor: "#B45309",
+      shadowOpacity: 0.24,
+      shadowRadius: 14,
+      shadowOffset: { width: 0, height: 8 },
+      elevation: 4,
+    })}
+  >
+    <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 19 }}>
+      Items Overview
+    </Text>
+    <Text style={{ color: "rgba(255,255,255,0.82)", fontWeight: "900", marginTop: 6, fontSize: 13, lineHeight: 19 }}>
+      Angalia bidhaa, picha, quantity na bei kwa store au organization
+    </Text>
+  </Pressable>
+
+  <Pressable
+    onPress={() => {
+      if (!activeOrgId) {
+        Alert.alert("Missing organization", "Organization haijapatikana.");
+        return;
+      }
+
+      if (!activeStoreId) {
+        Alert.alert("Select store", "Chagua active store kwanza.");
+        return;
+      }
+
+      router.push({
+        pathname: "/stores/orders" as any,
+        params: {
+          orgId: activeOrgId,
+          storeId: activeStoreId,
+          storeName: activeStoreName ?? "Active Store",
+          scope: "STORE",
+        },
+      });
+    }}
+    style={({ pressed }) => ({
+      borderRadius: 24,
+      borderWidth: 1,
+      borderColor: "rgba(14,165,233,0.60)",
+      backgroundColor: "#0369A1",
+      paddingVertical: 18,
+      paddingHorizontal: 18,
+      opacity: pressed ? 0.92 : 1,
+      shadowColor: "#0369A1",
+      shadowOpacity: 0.24,
+      shadowRadius: 14,
+      shadowOffset: { width: 0, height: 8 },
+      elevation: 4,
+    })}
+  >
+    <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 19 }}>
+      Orders
+    </Text>
+    <Text style={{ color: "rgba(255,255,255,0.82)", fontWeight: "900", marginTop: 6, fontSize: 13, lineHeight: 19 }}>
+      Reservations na Pre Orders kwa active store hii
     </Text>
   </Pressable>
 
@@ -1448,6 +1650,8 @@ const loadStoreProductsPreview = useCallback(async (storeId: string) => {
     BORDER_SOFT,
     activeOrgName,
     activeRole,
+    activeOrgId,
+    activeStoreId,
     activeStoreName,
     activeStoreType,
     canManage,
@@ -1462,6 +1666,8 @@ const loadStoreProductsPreview = useCallback(async (storeId: string) => {
     refreshing,
     router,
     openMovement,
+    openUpgrade,
+    orgSubscriptionExpired,
     radiusXL,
   ]);
 
@@ -1515,7 +1721,7 @@ const loadStoreProductsPreview = useCallback(async (storeId: string) => {
         }}
         renderItem={({ item }: { item: any }) => {
         const storeId = String(item.store_id);
-const isActive = storeId === activeStoreId;
+const rawIsActive = storeId === activeStoreId;
 const storeType = normalizeStoreType(item?.store_type);
 const isCapitalRecovery = storeType === "CAPITAL_RECOVERY";
 const isFieldProcurement = storeType === "FIELD_PROCUREMENT";
@@ -1523,11 +1729,17 @@ const isPrecisionRetail = storeType === "PRECISION_RETAIL";
 
 
           // ✅ lock flags from v2 (default allowed if missing)
-          const isAllowed =
+          const baseAllowed =
             typeof item?.is_allowed === "boolean" ? item.is_allowed : true;
-          const lockReason = (item?.lock_reason ?? "").toString();
 
-          const visual = storeTypeVisual(storeType, isActive, isAllowed);
+          const isAllowed = orgSubscriptionExpired ? false : baseAllowed;
+
+          const lockReason = orgSubscriptionExpired
+            ? `Subscription EXPIRED${orgPlanCode ? ` (${orgPlanCode})` : ""}. Renew plan ili store ifunguke tena.`
+            : (item?.lock_reason ?? "").toString();
+
+          const cardIsActive = rawIsActive && isAllowed;
+          const visual = storeTypeVisual(storeType, cardIsActive, isAllowed);
 
           const mgr = mgrByStoreId?.[storeId];
           const managedBy = (mgr?.email ?? "").trim() || "UNASSIGNED";
@@ -1541,7 +1753,7 @@ const isPrecisionRetail = storeType === "PRECISION_RETAIL";
           const staffMovementEnabled = !!movementFlagByStoreId?.[storeId];
           const movementSaving = !!movementFlagSaving?.[storeId];
 
-          const borderColor = isActive
+          const borderColor = cardIsActive
             ? "rgba(52,211,153,0.55)"
             : !isAllowed
             ? "rgba(255,255,255,0.10)"
@@ -1564,18 +1776,18 @@ const isPrecisionRetail = storeType === "PRECISION_RETAIL";
   <Pressable
                 onPress={() => pick(storeId, item.store_name, isAllowed, lockReason)}
                 style={({ pressed }) => ({
-                  borderWidth: isActive ? 2.2 : 1.2,
-                  borderColor: isActive ? visual.border : visual.border,
+                  borderWidth: cardIsActive ? 2.2 : 1.2,
+                  borderColor: cardIsActive ? visual.border : visual.border,
                   borderRadius: 24,
-                  backgroundColor: isActive ? visual.activeBg : visual.bg,
+                  backgroundColor: cardIsActive ? visual.activeBg : visual.bg,
                   padding: isDesktopWeb ? 18 : 14,
                   opacity: pressed ? Math.max(0.9, opacity - 0.03) : opacity,
                   transform: pressed ? [{ scale: 0.996 }] : [{ scale: 1 }],
                   shadowColor: visual.accent,
-                  shadowOpacity: isActive ? 0.22 : 0.11,
-                  shadowRadius: isActive ? 18 : 12,
-                  shadowOffset: { width: 0, height: isActive ? 10 : 7 },
-                  elevation: isActive ? 5 : 2,
+                  shadowOpacity: cardIsActive ? 0.22 : 0.11,
+                  shadowRadius: cardIsActive ? 18 : 12,
+                  shadowOffset: { width: 0, height: cardIsActive ? 10 : 7 },
+                  elevation: cardIsActive ? 5 : 2,
                 })}
               >
                 <View style={{ gap: 8 }}>
@@ -1630,7 +1842,7 @@ fontSize: 11.5,
                     </View>
 
                     <View style={{ gap: 8, alignItems: "flex-end", justifyContent: "flex-start" }}>
-                      {isActive ? (
+                      {cardIsActive ? (
                         <View
                           style={{
                             paddingHorizontal: 10,
@@ -1708,7 +1920,7 @@ fontSize: 11.5,
                     <Text style={{ color: FAINT, fontWeight: "900", fontSize: 12, lineHeight: 18 }}>
                       🔒 LOCKED — upgrade plan ili u-activate.
                     </Text>
-                  ) : !isActive ? (
+                  ) : !cardIsActive ? (
                     <Text style={{ color: FAINT, fontWeight: "800", fontSize: 12, lineHeight: 18 }}>
                       Bonyeza kadi hii kuchagua store hii kama Active Store.
                     </Text>

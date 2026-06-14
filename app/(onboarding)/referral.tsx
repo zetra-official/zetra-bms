@@ -5,7 +5,6 @@ import { Alert, Text, TextInput, View } from "react-native";
 import { Screen } from "@/src/ui/Screen";
 import { Card } from "@/src/ui/Card";
 import { Button } from "@/src/ui/Button";
-import { UI } from "@/src/ui/theme";
 import { kv } from "@/src/storage/kv";
 import { supabase } from "@/src/supabase/supabaseClient";
 
@@ -16,6 +15,19 @@ function clean(v: any) {
 function upper(v: any) {
   return clean(v).toUpperCase();
 }
+
+const LIGHT = {
+  bg: "#EAF2FA",
+  card: "#FFFFFF",
+  text: "#0F172A",
+  muted: "#64748B",
+  faint: "#94A3B8",
+  border: "rgba(15,23,42,0.10)",
+  soft: "#F8FAFC",
+  emerald: "#059669",
+  emeraldSoft: "#ECFDF5",
+  blue: "#0B63CE",
+};
 
 export default function OnboardingReferralScreen() {
   const router = useRouter();
@@ -131,15 +143,19 @@ export default function OnboardingReferralScreen() {
   }
 
   return (
-    <Screen scroll>
+    <Screen
+      scroll
+      style={{ backgroundColor: LIGHT.bg } as any}
+      contentStyle={{ backgroundColor: LIGHT.bg } as any}
+    >
       <View style={{ marginTop: 6 }}>
-        <Text style={{ color: UI.text, fontWeight: "900", fontSize: 26 }}>
+        <Text style={{ color: LIGHT.text, fontWeight: "900", fontSize: 26 }}>
           Referral Code
         </Text>
 
         <Text
           style={{
-            color: UI.muted,
+            color: LIGHT.muted,
             fontWeight: "800",
             marginTop: 6,
             lineHeight: 20,
@@ -151,8 +167,44 @@ export default function OnboardingReferralScreen() {
       </View>
 
       <View style={{ marginTop: 14 }}>
-        <Card>
-          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
+        <Card
+          style={{
+            backgroundColor: LIGHT.card,
+            borderColor: LIGHT.border,
+            borderWidth: 1,
+            borderRadius: 26,
+            shadowColor: "#0F172A",
+            shadowOpacity: 0.10,
+            shadowRadius: 18,
+            shadowOffset: { width: 0, height: 10 },
+            elevation: 4,
+          }}
+        >
+          <View
+            style={{
+              alignSelf: "flex-start",
+              paddingHorizontal: 12,
+              paddingVertical: 7,
+              borderRadius: 999,
+              backgroundColor: LIGHT.emeraldSoft,
+              borderWidth: 1,
+              borderColor: "rgba(5,150,105,0.22)",
+              marginBottom: 14,
+            }}
+          >
+            <Text
+              style={{
+                color: LIGHT.emerald,
+                fontWeight: "900",
+                fontSize: 12,
+                letterSpacing: 0.5,
+              }}
+            >
+              OPTIONAL PARTNER CODE
+            </Text>
+          </View>
+
+          <Text style={{ color: LIGHT.text, fontWeight: "900", fontSize: 14 }}>
             ZGP Code (optional)
           </Text>
 
@@ -160,8 +212,8 @@ export default function OnboardingReferralScreen() {
             style={{
               marginTop: 10,
               borderWidth: 1,
-              borderColor: "rgba(255,255,255,0.12)",
-              backgroundColor: "rgba(255,255,255,0.04)",
+              borderColor: LIGHT.border,
+              backgroundColor: LIGHT.soft,
               borderRadius: 18,
               paddingHorizontal: 14,
               paddingVertical: 14,
@@ -171,12 +223,12 @@ export default function OnboardingReferralScreen() {
               value={code}
               onChangeText={setCode}
               placeholder="e.g. ZGP-42D0D8"
-              placeholderTextColor="rgba(255,255,255,0.40)"
+              placeholderTextColor={LIGHT.faint}
               autoCapitalize="characters"
               autoCorrect={false}
               editable={!checking}
               style={{
-                color: "#FFFFFF",
+                color: LIGHT.text,
                 fontWeight: "900",
                 fontSize: 14,
                 paddingVertical: 0,
@@ -186,11 +238,11 @@ export default function OnboardingReferralScreen() {
 
           <Text
             style={{
-              color: "rgba(255,255,255,0.60)",
+              color: LIGHT.muted,
               fontWeight: "800",
               fontSize: 12,
               marginTop: 10,
-              lineHeight: 16,
+              lineHeight: 17,
             }}
           >
             Ukijaza code halali, account yako itaunganishwa na Growth Partner

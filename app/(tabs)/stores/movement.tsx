@@ -14,6 +14,8 @@ import {
   View,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
+import * as Print from "expo-print";
+import * as Sharing from "expo-sharing";
 import { useOrg } from "../../../src/context/OrgContext";
 import { supabase } from "../../../src/supabase/supabaseClient";
 import { Button } from "../../../src/ui/Button";
@@ -92,7 +94,13 @@ function fmtEAT(iso: string) {
     return iso;
   }
 }
-
+function escHtml(v: any) {
+  return String(v ?? "—")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
 export default function StoreMovementScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{
@@ -506,7 +514,193 @@ void loadInventory();
       Alert.alert("Failed", "Imeshindikana ku-copy receipt.");
     }
   }, [lastReceipt, buildReceiptText]);
+const onShareReceiptPdf = useCallback(async () => {
+  if (!lastReceipt) return;
 
+  const itemsHtml = lastReceipt.items
+    .map(
+      (it) => `
+        <tr>
+          <td>
+            <strong>${escHtml(it.product_name)}</strong>
+            ${it.sku ? `<br/><span>SKU: ${escHtml(it.sku)}</span>` : ""}
+          </td>
+          <td><strong>${escHtml(it.qty)}</strong></td>
+        </tr>
+      `
+    )
+    .join("");
+
+  const movementHtml = lastReceipt.movementIds
+    .map((id) => `<div class="id">${escHtml(id)}</div>`)
+    .join("");
+
+  const html = `
+    <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <style>
+          @page { size: A4; margin: 14mm; }
+
+          html, body {
+            margin: 0;
+            padding: 0;
+            background: #ffffff;
+            color: #0F172A;
+            font-family: Arial, sans-serif;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+
+          .page {
+            width: 100%;
+            max-width: 760px;
+            margin: 0 auto;
+          }
+
+          .top {
+            border-bottom: 2px solid #16A34A;
+            padding-bottom: 14px;
+            margin-bottom: 18px;
+          }
+
+          h1 {
+            color: #16A34A;
+            margin: 0;
+            font-size: 28px;
+          }
+
+          .subtitle {
+            margin-top: 8px;
+            color: #475569;
+            font-weight: 800;
+          }
+
+          .line {
+            margin-top: 10px;
+            font-weight: 800;
+            color: #475569;
+            line-height: 1.45;
+          }
+
+          .value {
+            color: #2563EB;
+            font-weight: 900;
+          }
+
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 18px;
+            table-layout: fixed;
+          }
+
+          th {
+            background: #F1F5F9;
+            text-align: left;
+            padding: 10px;
+            color: #0F172A;
+            font-size: 12px;
+          }
+
+          td {
+            border-bottom: 1px solid #E5E7EB;
+            padding: 10px;
+            vertical-align: top;
+            font-weight: 800;
+            color: #0F172A;
+            word-break: break-word;
+          }
+
+          td:nth-child(2), th:nth-child(2) {
+            width: 90px;
+            text-align: center;
+          }
+
+          span {
+            color: #64748B;
+            font-size: 12px;
+          }
+
+          .box {
+            margin-top: 18px;
+            border: 1px solid #E5E7EB;
+            border-radius: 12px;
+            padding: 12px;
+            background: #F8FAFC;
+          }
+
+          .box-title {
+            color: #0F172A;
+            font-weight: 900;
+            margin-bottom: 8px;
+          }
+
+          .id {
+            color: #2563EB;
+            font-weight: 900;
+            margin-top: 6px;
+            word-break: break-word;
+          }
+
+          .footer {
+            margin-top: 24px;
+            color: #64748B;
+            font-size: 12px;
+            border-top: 1px solid #E5E7EB;
+            padding-top: 12px;
+          }
+        </style>
+      </head>
+
+      <body>
+        <div class="page">
+          <div class="top">
+            <h1>Movement Success ✅</h1>
+            <div class="subtitle">ZETRA BMS • Stock Transfer Receipt</div>
+          </div>
+
+          <div class="line">Date/Time (EAT): <span class="value">${escHtml(fmtEAT(lastReceipt.createdAt))}</span></div>
+          <div class="line">Organization: <span class="value">${escHtml(lastReceipt.organizationName)}</span></div>
+          <div class="line">FROM: <span class="value">${escHtml(lastReceipt.fromStoreName)}</span> → TO: <span class="value">${escHtml(lastReceipt.toStoreName)}</span></div>
+          <div class="line">Processed by: <span class="value">${escHtml(lastReceipt.actorEmail || lastReceipt.actorName)}</span> (${escHtml(lastReceipt.actorRole)})</div>
+          <div class="line">Receipt ID: <span class="value">${escHtml(lastReceipt.reportReceiptId || "—")}</span></div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Qty</th>
+              </tr>
+            </thead>
+            <tbody>${itemsHtml}</tbody>
+          </table>
+
+          <div class="box">
+            <div class="box-title">Items (${escHtml(lastReceipt.totalItems)}) • Total Qty ${escHtml(lastReceipt.totalQty)}</div>
+          </div>
+
+          <div class="box">
+            <div class="box-title">Movement IDs</div>
+            ${movementHtml || `<div class="id">—</div>`}
+          </div>
+
+          <div class="footer">Generated by ZETRA BMS.</div>
+        </div>
+      </body>
+    </html>
+  `;
+
+  try {
+    const file = await Print.printToFileAsync({ html });
+    await Sharing.shareAsync(file.uri, {
+      mimeType: "application/pdf",
+      dialogTitle: "Share Stock Transfer Receipt PDF",
+    });
+  } catch (e: any) {
+    Alert.alert("PDF failed", e?.message ?? "Failed to create PDF receipt.");
+  }
+}, [lastReceipt]);
   const submit = useCallback(async () => {
     Keyboard.dismiss();
 
@@ -721,170 +915,210 @@ if (isCapitalRecoveryStore) {
 
   return (
     <Screen scroll>
-      {/* Receipt Modal */}
-      <Modal
-        visible={receiptModalOpen}
-        transparent
-        animationType="fade"
-        statusBarTranslucent
-        hardwareAccelerated
-        onRequestClose={() => setReceiptModalOpen(false)}
+{/* Receipt Modal */}
+<Modal
+  visible={receiptModalOpen}
+  transparent
+  animationType="fade"
+  statusBarTranslucent
+  hardwareAccelerated
+  onRequestClose={() => setReceiptModalOpen(false)}
+>
+  <Pressable
+    onPress={() => setReceiptModalOpen(false)}
+    style={{
+      flex: 1,
+      backgroundColor: "rgba(15,23,42,0.35)",
+      padding: 18,
+      justifyContent: "center",
+      alignItems: "center",
+    }}
+  >
+    <Pressable
+      onPress={() => {}}
+      onPressIn={() => {}}
+      style={{
+        width: "100%",
+        maxWidth: 520,
+        alignSelf: "stretch",
+        borderRadius: 28,
+        backgroundColor: "#FFFFFF",
+        borderWidth: 1,
+        borderColor: "rgba(15,23,42,0.10)",
+        padding: 18,
+        maxHeight: "85%",
+        minHeight: 240,
+        elevation: 30,
+        zIndex: 999,
+      }}
+    >
+      <ScrollView
+        style={{ flexGrow: 0 }}
+        contentContainerStyle={{ paddingBottom: 14 }}
+        showsVerticalScrollIndicator
+        keyboardShouldPersistTaps="handled"
       >
-        <Pressable
-          onPress={() => setReceiptModalOpen(false)}
-          style={{
-            flex: 1,
-            backgroundColor: "rgba(0,0,0,0.88)",
-            padding: 18,
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-        >
-          <Pressable
-            onPress={() => {}}
-            onPressIn={() => {}}
-            style={{
-              width: "100%",
-              maxWidth: 520,
-              alignSelf: "stretch",
-              borderRadius: theme.radius.xl,
-              backgroundColor: "rgba(15,18,24,0.98)",
-              borderWidth: 1,
-              borderColor: "rgba(52,211,153,0.45)",
-              padding: 14,
-              maxHeight: "85%",
-              minHeight: 240,
-              elevation: 30,
-              zIndex: 999,
-            }}
-          >
-            <ScrollView
-              style={{ flexGrow: 0 }}
-              contentContainerStyle={{ paddingBottom: 14 }}
-              showsVerticalScrollIndicator
-              keyboardShouldPersistTaps="handled"
+        <Text style={{ color: "#16A34A", fontWeight: "900", fontSize: 22 }}>
+          Movement Success ✅
+        </Text>
+
+        {lastReceipt ? (
+          <>
+            <Text style={{ color: "#475569", fontWeight: "800", marginTop: 14 }}>
+              Date/Time (EAT):{" "}
+              <Text style={{ color: "#2563EB", fontWeight: "900" }}>
+                {fmtEAT(lastReceipt.createdAt)}
+              </Text>
+            </Text>
+
+            <Text style={{ color: "#475569", fontWeight: "800", marginTop: 8 }}>
+              FROM:{" "}
+              <Text style={{ color: "#2563EB", fontWeight: "900" }}>
+                {lastReceipt.fromStoreName}
+              </Text>
+              {"  "}→{"  "}
+              TO:{" "}
+              <Text style={{ color: "#2563EB", fontWeight: "900" }}>
+                {lastReceipt.toStoreName}
+              </Text>
+            </Text>
+
+            <Text style={{ color: "#475569", fontWeight: "800", marginTop: 8 }}>
+              Processed by:{" "}
+              <Text style={{ color: "#2563EB", fontWeight: "900" }}>
+                {lastReceipt.actorEmail ? lastReceipt.actorEmail : lastReceipt.actorName}
+              </Text>{" "}
+              <Text style={{ color: "#0F172A", fontWeight: "900" }}>
+                ({lastReceipt.actorRole})
+              </Text>
+            </Text>
+
+            {lastReceipt.reportReceiptId ? (
+              <Text style={{ color: "#475569", fontWeight: "800", marginTop: 10 }}>
+                Receipt ID:{" "}
+                <Text style={{ color: "#2563EB", fontWeight: "900" }}>
+                  {lastReceipt.reportReceiptId}
+                </Text>
+              </Text>
+            ) : (
+              <Text style={{ color: "#64748B", fontWeight: "800", marginTop: 10 }}>
+                (Report save haikupatikana — movement bado imefanikiwa)
+              </Text>
+            )}
+
+            <View
+              style={{
+                marginTop: 14,
+                gap: 8,
+                borderWidth: 1,
+                borderColor: "rgba(15,23,42,0.08)",
+                backgroundColor: "#F8FAFC",
+                borderRadius: 16,
+                padding: 12,
+              }}
             >
-              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
-                Movement Success ✅
+              <Text style={{ color: "#0F172A", fontWeight: "900", fontSize: 15 }}>
+                Items ({lastReceipt.totalItems}) • Total Qty {lastReceipt.totalQty}
               </Text>
 
-              {lastReceipt ? (
-                <>
-                  <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 10 }}>
-                    Date/Time (EAT):{" "}
-                    <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                      {fmtEAT(lastReceipt.createdAt)}
-                    </Text>
-                  </Text>
-
-                  <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-                    FROM:{" "}
-                    <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                      {lastReceipt.fromStoreName}
-                    </Text>
-                    {"  "}→{"  "}
-                    TO:{" "}
-                    <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                      {lastReceipt.toStoreName}
-                    </Text>
-                  </Text>
-
-                  <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-                    Processed by:{" "}
-                    <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                      {lastReceipt.actorEmail ? lastReceipt.actorEmail : lastReceipt.actorName}
-                    </Text>{" "}
-                    <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>
-                      ({lastReceipt.actorRole})
-                    </Text>
-                  </Text>
-
-                  {lastReceipt.reportReceiptId ? (
-                    <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>
-                      Receipt ID:{" "}
-                      <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                        {lastReceipt.reportReceiptId}
-                      </Text>
-                    </Text>
-                  ) : (
-                    <Text style={{ color: theme.colors.faint, fontWeight: "800", marginTop: 8 }}>
-                      (Report save haikupatikana — movement bado imefanikiwa)
-                    </Text>
-                  )}
-
-                  <Text style={{ color: theme.colors.muted, fontWeight: "900", marginTop: 12 }}>
-                    Items ({lastReceipt.totalItems}) • Total Qty {lastReceipt.totalQty}
-                  </Text>
-
-                  <View style={{ marginTop: 8, gap: 6 }}>
-                    {lastReceipt.items.map((it) => (
-                      <Text key={it.product_id} style={{ color: theme.colors.text, fontWeight: "900" }}>
-                        • {it.product_name} — {it.qty}
-                      </Text>
-                    ))}
-                  </View>
-
-                  <Text style={{ color: theme.colors.muted, fontWeight: "900", marginTop: 12 }}>
-                    Movement IDs
-                  </Text>
-
-                  <View style={{ marginTop: 8, gap: 6 }}>
-                    {(showAllMovementIds ? lastReceipt.movementIds : lastReceipt.movementIds.slice(0, 3)).map(
-                      (id, idx) => (
-                        <Text key={`${id}-${idx}`} style={{ color: theme.colors.text, fontWeight: "800" }}>
-                          {id}
-                        </Text>
-                      )
-                    )}
-
-                    {lastReceipt.movementIds.length > 3 ? (
-                      <Pressable
-                        onPress={() => setShowAllMovementIds((v) => !v)}
-                        style={{
-                          marginTop: 6,
-                          alignSelf: "flex-start",
-                          paddingHorizontal: 10,
-                          paddingVertical: 8,
-                          borderRadius: theme.radius.lg,
-                          borderWidth: 1,
-                          borderColor: theme.colors.border,
-                          backgroundColor: theme.colors.surface2,
-                        }}
-                      >
-                        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                          {showAllMovementIds ? "Hide IDs" : `Show all (${lastReceipt.movementIds.length})`}
-                        </Text>
-                      </Pressable>
-                    ) : null}
-                  </View>
-
-                  <View style={{ flexDirection: "row", gap: 10, marginTop: 14 }}>
-                    <View style={{ flex: 1 }}>
-                      <Button title="Share Receipt" onPress={onShareReceipt} disabled={loading} variant="primary" />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Button title="Copy" onPress={onCopyReceipt} disabled={loading} variant="secondary" />
-                    </View>
-                  </View>
-
-                  <View style={{ marginTop: 10 }}>
-                    <Button
-                      title="Close"
-                      onPress={() => setReceiptModalOpen(false)}
-                      disabled={loading}
-                      variant="secondary"
-                    />
-                  </View>
-                </>
-              ) : (
-                <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>
-                  No receipt loaded.
+              {lastReceipt.items.map((it) => (
+                <Text key={it.product_id} style={{ color: "#2563EB", fontWeight: "900" }}>
+                  • {it.product_name} — {it.qty}
                 </Text>
-              )}
-            </ScrollView>
-          </Pressable>
-        </Pressable>
-      </Modal>
+              ))}
+            </View>
+
+            <View
+              style={{
+                marginTop: 14,
+                gap: 8,
+                borderWidth: 1,
+                borderColor: "rgba(15,23,42,0.08)",
+                backgroundColor: "#F8FAFC",
+                borderRadius: 16,
+                padding: 12,
+              }}
+            >
+              <Text style={{ color: "#0F172A", fontWeight: "900", fontSize: 15 }}>
+                Movement IDs
+              </Text>
+
+              {(showAllMovementIds
+                ? lastReceipt.movementIds
+                : lastReceipt.movementIds.slice(0, 3)
+              ).map((id, idx) => (
+                <Text key={`${id}-${idx}`} style={{ color: "#2563EB", fontWeight: "900" }}>
+                  {id}
+                </Text>
+              ))}
+
+              {lastReceipt.movementIds.length > 3 ? (
+                <Pressable
+                  onPress={() => setShowAllMovementIds((v) => !v)}
+                  style={{
+                    marginTop: 6,
+                    alignSelf: "flex-start",
+                    paddingHorizontal: 12,
+                    paddingVertical: 9,
+                    borderRadius: 14,
+                    borderWidth: 1,
+                    borderColor: "rgba(37,99,235,0.28)",
+                    backgroundColor: "#EFF6FF",
+                  }}
+                >
+                  <Text style={{ color: "#2563EB", fontWeight: "900" }}>
+                    {showAllMovementIds ? "Hide IDs" : `Show all (${lastReceipt.movementIds.length})`}
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
+<View style={{ flexDirection: "row", gap: 10, marginTop: 16 }}>
+  <View style={{ flex: 1 }}>
+    <Button
+      title="Share Text"
+      onPress={onShareReceipt}
+      disabled={loading}
+      variant="secondary"
+    />
+  </View>
+
+  <View style={{ flex: 1 }}>
+    <Button
+      title="Share PDF"
+      onPress={onShareReceiptPdf}
+      disabled={loading}
+      variant="primary"
+    />
+  </View>
+</View>
+
+<View style={{ marginTop: 10 }}>
+  <Button
+    title="Copy Text"
+    onPress={onCopyReceipt}
+    disabled={loading}
+    variant="secondary"
+  />
+</View>
+
+<View style={{ marginTop: 10 }}>
+  <Button
+    title="Close"
+    onPress={() => setReceiptModalOpen(false)}
+    disabled={loading}
+    variant="secondary"
+  />
+</View>
+          </>
+        ) : (
+          <Text style={{ color: "#475569", fontWeight: "800", marginTop: 8 }}>
+            No receipt loaded.
+          </Text>
+        )}
+      </ScrollView>
+    </Pressable>
+  </Pressable>
+</Modal>
 
       {isOffline ? (
         <View

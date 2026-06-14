@@ -10,6 +10,7 @@ import {
   Text,
   TextInput,
   View,
+  useWindowDimensions,
 } from "react-native";
 
 import { useOrg } from "../../../src/context/OrgContext";
@@ -17,6 +18,7 @@ import { supabase } from "../../../src/supabase/supabaseClient";
 import { Card } from "../../../src/ui/Card";
 import { Screen } from "../../../src/ui/Screen";
 import { StoreGuard } from "../../../src/ui/StoreGuard";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { formatMoney } from "../../../src/ui/money";
 
@@ -124,6 +126,9 @@ function MiniStat({
 
 export default function CapitalRecoveryWorkspaceScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 900;
   const {
   activeOrgId,
   activeOrgName,
@@ -607,9 +612,12 @@ export default function CapitalRecoveryWorkspaceScreen() {
           keyboardDismissMode="none"
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{
-            paddingTop: 14,
-            paddingHorizontal: 16,
-            paddingBottom: 120,
+            paddingTop: Math.max(insets.top + 10, 18),
+            paddingHorizontal: isDesktop ? 24 : 16,
+            paddingBottom: Math.max(insets.bottom, 24) + 120,
+            width: "100%",
+            maxWidth: isDesktop ? 980 : undefined,
+            alignSelf: "center",
           }}
         >
           <StoreGuard>
@@ -693,7 +701,7 @@ export default function CapitalRecoveryWorkspaceScreen() {
             style={{
               gap: 12,
               borderRadius: 20,
-              borderColor: "rgba(255,255,255,0.10)",
+              borderColor: "rgba(147,197,253,0.45)",
               backgroundColor: "#F1F5F9",
             }}
           >
@@ -800,7 +808,7 @@ export default function CapitalRecoveryWorkspaceScreen() {
                   keyboardType="numeric"
                   style={{
                     borderWidth: 1,
-                    borderColor: "rgba(255,255,255,0.10)",
+                    borderColor: "rgba(147,197,253,0.45)",
                     backgroundColor: "#F8FAFC",
                     color: UI.text,
                     borderRadius: 18,
@@ -813,8 +821,62 @@ export default function CapitalRecoveryWorkspaceScreen() {
               </View>
             ) : (
               <View style={{ gap: 10 }}>
-                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                <View style={{ gap: 10 }}>
                   <Text style={{ color: UI.muted, fontWeight: "800" }}>Products & Quantity</Text>
+
+                  <Card
+                    style={{
+                      borderColor: "rgba(147,197,253,0.45)",
+                      backgroundColor: "#F8FAFC",
+                      borderRadius: 18,
+                      padding: 12,
+                      gap: 10,
+                    }}
+                  >
+                    <View style={{ flexDirection: "row", gap: 12 }}>
+                      <MiniStat
+                        label="Selected"
+                        value={String(selectedProductItems.length)}
+                        hint="products"
+                      />
+                      <MiniStat
+                        label="Qty"
+                        value={String(
+                          selectedProductItems.reduce((sum, item) => sum + toNum(item.quantity), 0)
+                        )}
+                        hint="total qty"
+                      />
+                      <MiniStat
+                        label="Value"
+                        value={fmt(productModeTotal)}
+                        hint="live total"
+                      />
+                    </View>
+                  </Card>
+
+                  <View
+                    style={{
+                      flexDirection: isDesktop ? "row" : "column",
+                      gap: 10,
+                      width: "100%",
+                    }}
+                  >
+                    <Pressable
+                      onPress={() => router.push("/(tabs)/products" as any)}
+                    style={({ pressed }) => ({
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      borderRadius: 999,
+                      borderWidth: 1,
+                      borderColor: "rgba(147,197,253,0.45)",
+                      backgroundColor: "#F8FAFC",
+                      opacity: pressed ? 0.88 : 1,
+                    })}
+                  >
+                    <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
+                      Manage Products
+                    </Text>
+                  </Pressable>
 
                   <Pressable
                     onPress={openAddProductPicker}
@@ -831,6 +893,7 @@ export default function CapitalRecoveryWorkspaceScreen() {
                   >
                     <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>Add Product</Text>
                   </Pressable>
+                  </View>
                 </View>
 
                 {productsLoading ? (
@@ -838,8 +901,8 @@ export default function CapitalRecoveryWorkspaceScreen() {
                 ) : productItems.length === 0 ? (
                   <Card
                     style={{
-                      borderColor: "rgba(255,255,255,0.10)",
-                      backgroundColor: "rgba(255,255,255,0.04)",
+                      borderColor: "rgba(147,197,253,0.45)",
+                      backgroundColor: "#F8FAFC",
                       borderRadius: 18,
                       padding: 12,
                     }}
@@ -865,8 +928,8 @@ export default function CapitalRecoveryWorkspaceScreen() {
                           style={{
                             gap: 10,
                             borderRadius: 18,
-                            borderColor: "rgba(255,255,255,0.10)",
-                            backgroundColor: "rgba(255,255,255,0.04)",
+                            borderColor: "rgba(147,197,253,0.45)",
+                            backgroundColor: "#F8FAFC",
                           }}
                         >
                           <View
@@ -925,12 +988,12 @@ export default function CapitalRecoveryWorkspaceScreen() {
                                 updateProductRow(index, { quantity: t.replace(/[^0-9.]/g, "") })
                               }
                               placeholder="mfano: 1"
-                              placeholderTextColor="rgba(234,242,255,0.35)"
+                              placeholderTextColor={UI.faint}
                               keyboardType="numeric"
                               style={{
                                 borderWidth: 1,
-                                borderColor: "rgba(255,255,255,0.10)",
-                                backgroundColor: "rgba(255,255,255,0.05)",
+                                borderColor: "rgba(147,197,253,0.45)",
+                                backgroundColor: "#F1F5F9",
                                 color: UI.text,
                                 borderRadius: 18,
                                 paddingHorizontal: 14,
@@ -994,8 +1057,8 @@ export default function CapitalRecoveryWorkspaceScreen() {
                 style={{
                   minHeight: 96,
                   borderWidth: 1,
-                  borderColor: "rgba(255,255,255,0.10)",
-                  backgroundColor: "rgba(255,255,255,0.05)",
+                  borderColor: "rgba(147,197,253,0.45)",
+                  backgroundColor: "#F1F5F9",
                   color: UI.text,
                   borderRadius: 18,
                   paddingHorizontal: 14,
@@ -1041,8 +1104,8 @@ export default function CapitalRecoveryWorkspaceScreen() {
             {entryMethod === "PRODUCTS" && (
               <Card
                 style={{
-                  borderColor: "rgba(255,255,255,0.10)",
-                  backgroundColor: "rgba(255,255,255,0.04)",
+                  borderColor: "rgba(147,197,253,0.45)",
+                  backgroundColor: "#F8FAFC",
                   borderRadius: 18,
                   padding: 12,
                   gap: 8,
@@ -1076,8 +1139,8 @@ export default function CapitalRecoveryWorkspaceScreen() {
 
             <Card
               style={{
-                borderColor: "rgba(255,255,255,0.10)",
-                backgroundColor: "rgba(255,255,255,0.04)",
+                borderColor: "rgba(147,197,253,0.45)",
+                backgroundColor: "#F8FAFC",
                 borderRadius: 18,
                 padding: 12,
               }}
@@ -1142,8 +1205,8 @@ export default function CapitalRecoveryWorkspaceScreen() {
                 borderTopLeftRadius: 24,
                 borderTopRightRadius: 24,
                 borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.10)",
-                backgroundColor: "rgba(15,18,24,0.98)",
+                borderColor: "rgba(147,197,253,0.45)",
+                backgroundColor: "#FFFFFF",
                 paddingHorizontal: 16,
                 paddingTop: 16,
                 paddingBottom: 22,
@@ -1169,8 +1232,8 @@ export default function CapitalRecoveryWorkspaceScreen() {
                     height: 40,
                     borderRadius: 999,
                     borderWidth: 1,
-                    borderColor: "rgba(255,255,255,0.10)",
-                    backgroundColor: "rgba(255,255,255,0.05)",
+                    borderColor: "rgba(147,197,253,0.45)",
+                    backgroundColor: "#F1F5F9",
                     alignItems: "center",
                     justifyContent: "center",
                     opacity: pressed ? 0.92 : 1,
@@ -1187,8 +1250,8 @@ export default function CapitalRecoveryWorkspaceScreen() {
                 placeholderTextColor="rgba(234,242,255,0.35)"
                 style={{
                   borderWidth: 1,
-                  borderColor: "rgba(255,255,255,0.10)",
-                  backgroundColor: "rgba(255,255,255,0.05)",
+                  borderColor: "rgba(147,197,253,0.45)",
+                  backgroundColor: "#F1F5F9",
                   color: UI.text,
                   borderRadius: 16,
                   paddingHorizontal: 14,
@@ -1211,8 +1274,8 @@ export default function CapitalRecoveryWorkspaceScreen() {
                 {filteredEligibleProducts.length === 0 ? (
                   <Card
                     style={{
-                      borderColor: "rgba(255,255,255,0.10)",
-                      backgroundColor: "rgba(255,255,255,0.04)",
+                      borderColor: "rgba(147,197,253,0.45)",
+                      backgroundColor: "#F8FAFC",
                       borderRadius: 16,
                       padding: 12,
                     }}
@@ -1229,8 +1292,8 @@ export default function CapitalRecoveryWorkspaceScreen() {
                       style={({ pressed }) => ({
                         borderRadius: 16,
                         borderWidth: 1,
-                        borderColor: "rgba(255,255,255,0.10)",
-                        backgroundColor: "rgba(255,255,255,0.05)",
+                        borderColor: "rgba(147,197,253,0.45)",
+                        backgroundColor: "#F1F5F9",
                         paddingHorizontal: 12,
                         paddingVertical: 12,
                         opacity: pressed ? 0.92 : 1,
@@ -1258,7 +1321,7 @@ export default function CapitalRecoveryWorkspaceScreen() {
             gap: 14,
             borderRadius: 24,
             borderColor: "rgba(16,185,129,0.22)",
-            backgroundColor: "rgba(15,18,24,0.98)",
+            backgroundColor: "#FFFFFF",
           }}
         >
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 20 }}>

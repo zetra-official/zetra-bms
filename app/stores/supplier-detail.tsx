@@ -17,6 +17,7 @@ import { Button } from "@/src/ui/Button";
 import { Card } from "@/src/ui/Card";
 import { Screen } from "@/src/ui/Screen";
 import { theme } from "@/src/ui/theme";
+import { formatMoney, useOrgMoneyPrefs } from "@/src/ui/money";
 
 type MovementRow = {
   id: string;
@@ -33,6 +34,19 @@ type MovementRow = {
 };
 
 type HistoryRange = "RECENT" | "TODAY" | "WEEK" | "MONTH" | "ALL";
+
+type SupplierDebtRow = {
+  id: string;
+  lender_name: string;
+  principal_amount: number;
+  paid_amount: number;
+  balance_amount: number;
+  purpose: string | null;
+  note: string | null;
+  status: string;
+  debt_date: string | null;
+  created_at: string | null;
+};
 
 type SupplierRow = {
   id: string;
@@ -101,6 +115,18 @@ export default function SupplierDetailScreen() {
 
   const [supplier, setSupplier] = useState<SupplierRow | null>(null);
   const [rows, setRows] = useState<MovementRow[]>([]);
+  const [debtRows, setDebtRows] = useState<SupplierDebtRow[]>([]);
+
+  const money = useOrgMoneyPrefs(String(activeOrgId ?? "").trim());
+
+  const fmt = useCallback(
+    (n: number) =>
+      formatMoney(Number(n) || 0, {
+        currency: money.currency || "TZS",
+        locale: money.locale || "en-TZ",
+      }).replace(/\s+/g, " "),
+    [money.currency, money.locale]
+  );
 
   const [name, setName] = useState(supplierNameParam);
   const [phone, setPhone] = useState("");
@@ -142,8 +168,17 @@ export default function SupplierDetailScreen() {
       if (historyRes.error) throw historyRes.error;
 
       setRows((historyRes.data ?? []) as any);
+
+      const debtRes = await supabase.rpc("get_supplier_debt_history_v1", {
+        p_supplier_id: supplierId,
+      });
+
+      if (debtRes.error) throw debtRes.error;
+
+      setDebtRows((debtRes.data ?? []) as SupplierDebtRow[]);
     } catch (e: any) {
       setRows([]);
+      setDebtRows([]);
       Alert.alert("Failed", e?.message ?? "Failed to load supplier detail");
     } finally {
       setLoading(false);
@@ -260,6 +295,18 @@ export default function SupplierDetailScreen() {
       return true;
     });
   }, [historyRange, rows]);
+
+  const debtSummary = useMemo(() => {
+    return debtRows.reduce(
+      (acc, r) => {
+        acc.total += Number(r.principal_amount ?? 0);
+        acc.paid += Number(r.paid_amount ?? 0);
+        acc.balance += Number(r.balance_amount ?? 0);
+        return acc;
+      },
+      { total: 0, paid: 0, balance: 0 }
+    );
+  }, [debtRows]);
 
   const supplierTitle = name.trim() || supplier?.name || supplierNameParam || "Supplier";
 
@@ -500,6 +547,87 @@ export default function SupplierDetailScreen() {
           <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
             Showing: {visibleRows.length} entries
           </Text>
+        </Card>
+
+        <Card style={{ gap: 10 }}>
+          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
+            Supplier Debt Summary
+          </Text>
+
+          <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+            Hii inaonyesha madeni yote yaliyowekwa kwa supplier huyu kupitia Business Debts.
+          </Text>
+
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: theme.colors.muted, fontWeight: "900", fontSize: 12 }}>
+                Total Debt
+              </Text>
+              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+                {fmt(debtSummary.total)}
+              </Text>
+            </View>
+
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: theme.colors.muted, fontWeight: "900", fontSize: 12 }}>
+                Paid
+              </Text>
+              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+                {fmt(debtSummary.paid)}
+              </Text>
+            </View>
+
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: theme.colors.muted, fontWeight: "900", fontSize: 12 }}>
+                Balance
+              </Text>
+              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+                {fmt(debtSummary.balance)}
+              </Text>
+            </View>
+          </View>
+
+          {debtRows.length === 0 ? (
+            <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>
+              Hakuna business debt iliyounganishwa na supplier huyu bado.
+            </Text>
+          ) : (
+            debtRows.map((d) => (
+              <View
+                key={d.id}
+                style={{
+                  borderWidth: 1,
+                  borderColor: theme.colors.border,
+                  backgroundColor: "rgba(255,255,255,0.06)",
+                  borderRadius: 16,
+                  padding: 12,
+                  gap: 6,
+                }}
+              >
+                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 15 }}>
+                  {d.purpose || d.lender_name}
+                </Text>
+
+                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                  Debt: {fmt(d.principal_amount)} • Paid: {fmt(d.paid_amount)}
+                </Text>
+
+                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+                  Balance: {fmt(d.balance_amount)}
+                </Text>
+
+                <Text style={{ color: theme.colors.emerald, fontWeight: "900", fontSize: 12 }}>
+                  {d.status} • {d.debt_date || fmtDate(d.created_at)}
+                </Text>
+
+                {!!d.note ? (
+                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                    {d.note}
+                  </Text>
+                ) : null}
+              </View>
+            ))
+          )}
         </Card>
 
         {loading ? (

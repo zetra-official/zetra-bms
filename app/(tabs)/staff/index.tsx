@@ -21,6 +21,16 @@ type StaffStoreRow = {
 
 type StaffRole = "owner" | "admin" | "staff" | "cashier";
 
+type StaffPerformanceRow = {
+  membership_id: string;
+  user_id: string;
+  email: string | null;
+  role: string | null;
+  total_sales: number | string | null;
+  sales_count: number | string | null;
+  remaining_commission?: number | string | null;
+};
+
 type StaffRow = {
   user_id: string;
   role: StaffRole;
@@ -76,6 +86,15 @@ function roleBadgeBg(role: StaffRole) {
   return "rgba(255,255,255,0.06)";
 }
 
+function toNum(v: any) {
+  const n = Number(v ?? 0);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function formatTZS(n: number) {
+  return `TSh ${Math.round(n).toLocaleString("en-TZ")}`;
+}
+
 function roleLabel(role: StaffRole | string | null | undefined) {
   const r = String(role ?? "").trim().toLowerCase();
   if (r === "owner") return "OWNER";
@@ -95,6 +114,8 @@ export default function StaffTabScreen() {
 
   const [q, setQ] = useState("");
   const [rows, setRows] = useState<StaffRow[]>([]);
+  const [performanceRows, setPerformanceRows] = useState<StaffPerformanceRow[]>([]);
+  const [showPerformanceInsights, setShowPerformanceInsights] = useState(false);
 
   const canManage = activeRole === "owner" || activeRole === "admin";
   const [removingByMembershipId, setRemovingByMembershipId] = useState<Record<string, boolean>>({});
@@ -120,13 +141,28 @@ export default function StaffTabScreen() {
         if (e) throw e;
 
         setRows((data ?? []) as StaffRow[]);
+
+        if (canManage) {
+          const { data: perfData } = await supabase.rpc(
+            "get_org_staff_commission_dashboard_v2",
+            { p_org_id: activeOrgId }
+          );
+
+          setPerformanceRows(
+            ((perfData ?? []) as StaffPerformanceRow[]).filter(
+              (x) => String(x.role ?? "").toLowerCase() === "staff"
+            )
+          );
+        } else {
+          setPerformanceRows([]);
+        }
       } catch (err: any) {
         if (!silent) setError(err?.message ?? "Failed to load staff");
       } finally {
         if (!silent) setLoading(false);
       }
     },
-    [activeOrgId]
+    [activeOrgId, canManage]
   );
 
   useFocusEffect(
@@ -275,6 +311,26 @@ export default function StaffTabScreen() {
     );
   };
 
+  const staffPerformance = useMemo(() => {
+    const sorted = [...performanceRows]
+      .map((r) => ({
+        ...r,
+        totalSalesNum: toNum(r.total_sales),
+        salesCountNum: toNum(r.sales_count),
+        remainingCommissionNum: toNum(r.remaining_commission),
+      }))
+      .filter((r) => r.totalSalesNum > 0 || r.salesCountNum > 0)
+      .sort((a, b) => {
+        if (b.totalSalesNum !== a.totalSalesNum) return b.totalSalesNum - a.totalSalesNum;
+        return b.salesCountNum - a.salesCountNum;
+      });
+
+    return {
+      best: sorted[0] ?? null,
+      needsFollowUp: sorted.length > 1 ? sorted[sorted.length - 1] : null,
+    };
+  }, [performanceRows]);
+
   const info = (r: StaffRow) => {
     const email = pickEmail(r);
     Alert.alert(
@@ -386,10 +442,40 @@ export default function StaffTabScreen() {
                 Commission Cash Out
               </Text>
             </Pressable>
-          </>
-        ) : null}
 
-        {activeRole === "staff" ? (
+           <Pressable
+              onPress={() => router.push("/staff/performance" as any)}
+              style={({ pressed }) => ({
+                backgroundColor: "rgba(255,255,255,0.06)",
+                borderWidth: 1,
+                borderColor: showPerformanceInsights
+                  ? "rgba(52,211,153,0.35)"
+                  : "rgba(52,211,153,0.24)",
+                paddingVertical: 16,
+                paddingHorizontal: 16,
+                borderRadius: 22,
+                opacity: pressed ? 0.9 : 1,
+              })}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
+                    Performance Insights
+                  </Text>
+                  <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 4 }}>
+                    View best performer and follow-up insights
+                  </Text>
+                </View>
+
+             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 22 }}>
+                ›
+              </Text>
+            </View>
+          </Pressable>
+        </>
+      ) : null}
+
+      {activeRole === "staff" ? (
           <>
             <Pressable
               onPress={openMySales}

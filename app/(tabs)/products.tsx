@@ -9,11 +9,13 @@ import {
   Pressable,
   ScrollView,
   Text,
+  Image,
   TextInput,
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { CameraView, useCameraPermissions } from "expo-camera";
+import * as ImagePicker from "expo-image-picker";
 
 import { useFocusEffect } from "expo-router";
 import { useOrg } from "../../src/context/OrgContext";
@@ -36,6 +38,7 @@ type ProductRow = {
   selling_price: number | null;
   cost_price?: number | null;
   barcode?: string | null;
+  image_url?: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -48,6 +51,34 @@ type ProductRow = {
   precision_allow_unit_sales?: boolean | null;
 };
 const PRODUCT_PRICE_DECIMALS = 6;
+const PRODUCT_DRAFT_VERSION = "v1";
+
+function safeStorageKey(parts: Array<string | null | undefined>) {
+  return parts.map((p) => String(p ?? "none").trim() || "none").join(":");
+}
+
+function readWebLocalStorage(key: string) {
+  if (Platform.OS !== "web") return null;
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeWebLocalStorage(key: string, value: string) {
+  if (Platform.OS !== "web") return;
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {}
+}
+
+function removeWebLocalStorage(key: string) {
+  if (Platform.OS !== "web") return;
+  try {
+    window.localStorage.removeItem(key);
+  } catch {}
+}
 
 function isPrecisionRetailType(storeType: any) {
   const t = String(storeType ?? "").trim().toUpperCase();
@@ -103,6 +134,13 @@ function cleanBarcode(raw: string) {
   return s.replace(/\s+/g, "");
 }
 
+function normalizeDuplicateKey(raw: any) {
+  return String(raw ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
 function getProductLimitFriendlyMessage(err: any) {
   const raw = String(err?.message ?? "").trim();
   const msg = raw.toLowerCase();
@@ -126,6 +164,51 @@ function isTypingIntoField(target: any) {
   const tag = String(target.tagName ?? "").toLowerCase();
   const editable = !!target.isContentEditable;
   return editable || tag === "input" || tag === "textarea" || tag === "select";
+}
+
+function WebSafeIcon({
+  name,
+  size = 22,
+  color = "#0F172A",
+}: {
+  name: string;
+  size?: number;
+  color?: string;
+}) {
+  const glyph =
+    name === "search"
+      ? "⌕"
+      : name === "refresh"
+      ? "↻"
+      : name === "close-circle"
+      ? "✕"
+      : name === "close"
+      ? "✕"
+      : name === "image-outline"
+      ? "▧"
+      : name === "cube-outline"
+      ? "□"
+      : name === "chevron-up"
+      ? "⌃"
+      : name === "chevron-down"
+      ? "⌄"
+      : "□";
+
+  return (
+    <Text style={{ color, fontSize: size, fontWeight: "900", lineHeight: size + 4 }}>
+      {glyph}
+    </Text>
+  );
+}
+
+function isMobileWebBrowser() {
+  if (Platform.OS !== "web") return false;
+
+  try {
+    return /Android|iPhone|iPad|iPod|Mobile/i.test(window.navigator.userAgent);
+  } catch {
+    return false;
+  }
 }
 
 function ScannerFabIcon({ size = 28, color = "#E5E7EB" }: { size?: number; color?: string }) {
@@ -268,6 +351,8 @@ const productStoreScope =
   const [sellingPrice, setSellingPrice] = useState("");
   const [costPrice, setCostPrice] = useState("");
   const [barcode, setBarcode] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [imageUploading, setImageUploading] = useState(false);
 
   const [editOpen, setEditOpen] = useState(false);
   const [editProductId, setEditProductId] = useState<string | null>(null);
@@ -278,6 +363,8 @@ const productStoreScope =
   const [editSellingPrice, setEditSellingPrice] = useState("");
   const [editCostPrice, setEditCostPrice] = useState("");
   const [editBarcode, setEditBarcode] = useState("");
+  const [editImageUrl, setEditImageUrl] = useState("");
+  const [editImageUploading, setEditImageUploading] = useState(false);
 
   const [permission, requestPermission] = useCameraPermissions();
   const [scanOpen, setScanOpen] = useState(false);
@@ -298,6 +385,204 @@ const [editPrecisionUnit, setEditPrecisionUnit] = useState("");
 const [precisionCalcOpen, setPrecisionCalcOpen] = useState(false);
 const [editPrecisionCalcOpen, setEditPrecisionCalcOpen] = useState(false);
 
+const productDraftKey = useMemo(
+  () =>
+    safeStorageKey([
+      "zetra",
+      "product_add_draft",
+      PRODUCT_DRAFT_VERSION,
+      activeOrgId,
+      productStoreScope ?? "org",
+      activeRole,
+    ]),
+  [activeOrgId, productStoreScope, activeRole]
+);
+
+const draftHydratedRef = useRef(false);
+
+const uploadProductImageFile = useCallback(
+  async (file: any, mode: "add" | "edit") => {
+    if (!activeOrgId) {
+      Alert.alert("Missing", "No active organization.");
+      return;
+    }
+
+    const setBusy = mode === "edit" ? setEditImageUploading : setImageUploading;
+    const setUrl = mode === "edit" ? setEditImageUrl : setImageUrl;
+
+    setBusy(true);
+
+    try {
+      const fileName = String(file?.name ?? "product.jpg");
+      const ext = fileName.split(".").pop()?.toLowerCase() || "jpg";
+      const safeExt = ["jpg", "jpeg", "png", "webp"].includes(ext) ? ext : "jpg";
+      const path = `${activeOrgId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${safeExt}`;
+      const contentType = file?.type || `image/${safeExt === "jpg" ? "jpeg" : safeExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("product-images")
+        .upload(path, file, {
+          contentType,
+          upsert: false,
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage.from("product-images").getPublicUrl(path);
+      const publicUrl = data?.publicUrl ?? "";
+      if (!publicUrl) throw new Error("Image uploaded but URL was not returned.");
+
+      setUrl(publicUrl);
+    } catch (e: any) {
+      Alert.alert("Image Upload Failed", e?.message ?? "Failed to upload product image.");
+    } finally {
+      setBusy(false);
+    }
+  },
+  [activeOrgId]
+);
+
+const uploadProductImage = useCallback(
+    async (uri: string, mode: "add" | "edit") => {
+      if (!activeOrgId) {
+        Alert.alert("Missing", "No active organization.");
+        return;
+      }
+
+      const setBusy = mode === "edit" ? setEditImageUploading : setImageUploading;
+      const setUrl = mode === "edit" ? setEditImageUrl : setImageUrl;
+
+      setBusy(true);
+
+      try {
+        const ext = String(uri).split(".").pop()?.split("?")[0]?.toLowerCase() || "jpg";
+        const safeExt = ["jpg", "jpeg", "png", "webp"].includes(ext) ? ext : "jpg";
+        const path = `${activeOrgId}/${Date.now()}-${Math.random()
+          .toString(36)
+          .slice(2)}.${safeExt}`;
+
+        const response = await fetch(uri);
+
+        if (!response.ok) {
+          throw new Error("Failed to read selected image.");
+        }
+
+        const arrayBuffer = await response.arrayBuffer();
+        const contentType = `image/${safeExt === "jpg" ? "jpeg" : safeExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("product-images")
+          .upload(path, arrayBuffer, {
+            contentType,
+            upsert: false,
+          });
+
+        if (uploadError) throw uploadError;
+
+        const { data } = supabase.storage.from("product-images").getPublicUrl(path);
+
+        const publicUrl = data?.publicUrl ?? "";
+        if (!publicUrl) throw new Error("Image uploaded but URL was not returned.");
+
+        setUrl(publicUrl);
+      } catch (e: any) {
+        Alert.alert("Image Upload Failed", e?.message ?? "Failed to upload product image.");
+      } finally {
+        setBusy(false);
+      }
+    },
+    [activeOrgId]
+  );
+
+  const pickWebProductImage = useCallback(
+    async (mode: "add" | "edit", captureCamera = false) => {
+      if (!canManage || Platform.OS !== "web") return;
+
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/*";
+
+      if (captureCamera) {
+        input.setAttribute("capture", "environment");
+      }
+
+      input.onchange = async () => {
+        const file = input.files?.[0];
+        if (file) await uploadProductImageFile(file, mode);
+      };
+
+      input.click();
+    },
+    [canManage, uploadProductImageFile]
+  );
+
+  const pickProductImage = useCallback(
+    async (mode: "add" | "edit") => {
+      if (!canManage) return;
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.75,
+      });
+
+      if (result.canceled) return;
+
+      const uri = result.assets?.[0]?.uri;
+      if (uri) await uploadProductImage(uri, mode);
+    },
+    [canManage, uploadProductImage]
+  );
+
+  const takeProductPhoto = useCallback(
+    async (mode: "add" | "edit") => {
+      if (!canManage) return;
+
+      const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert("Camera Permission", "Ruhusa ya camera inahitajika kupiga picha ya bidhaa.");
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.75,
+      });
+
+      if (result.canceled) return;
+
+      const uri = result.assets?.[0]?.uri;
+      if (uri) await uploadProductImage(uri, mode);
+    },
+    [canManage, uploadProductImage]
+  );
+
+  const chooseImageSource = useCallback(
+    (mode: "add" | "edit") => {
+      if (Platform.OS === "web") {
+        if (!isMobileWebBrowser()) {
+          void pickWebProductImage(mode, false);
+          return;
+        }
+
+        Alert.alert("Product Image", "Chagua namna ya kuweka picha ya bidhaa.", [
+          { text: "Camera", onPress: () => void pickWebProductImage(mode, true) },
+          { text: "Gallery / File", onPress: () => void pickWebProductImage(mode, false) },
+          { text: "Cancel", style: "cancel" },
+        ]);
+        return;
+      }
+
+      Alert.alert("Product Image", "Chagua namna ya kuweka picha ya bidhaa.", [
+        { text: "Camera", onPress: () => void takeProductPhoto(mode) },
+        { text: "Gallery / File", onPress: () => void pickProductImage(mode) },
+        { text: "Cancel", style: "cancel" },
+      ]);
+    },
+    [pickProductImage, pickWebProductImage, takeProductPhoto]
+  );
   const handleProductsScopedScan = useCallback(
     (rawInput: any) => {
       if (!canManage) return;
@@ -349,6 +634,38 @@ const [editPrecisionCalcOpen, setEditPrecisionCalcOpen] = useState(false);
     setScanOpen(false);
     setScanBusy(false);
   }, []);
+
+  useEffect(() => {
+    if (!canManage) return;
+    if (!activeOrgId) return;
+    if (draftHydratedRef.current) return;
+
+    const raw = readWebLocalStorage(productDraftKey);
+    if (!raw) {
+      draftHydratedRef.current = true;
+      return;
+    }
+
+    try {
+      const draft = JSON.parse(raw);
+
+      setName(String(draft.name ?? ""));
+      setSku(String(draft.sku ?? ""));
+      setUnit(String(draft.unit ?? ""));
+      setCategory(String(draft.category ?? ""));
+      setSellingPrice(String(draft.sellingPrice ?? ""));
+      setCostPrice(String(draft.costPrice ?? ""));
+      setBarcode(String(draft.barcode ?? ""));
+      setImageUrl(String(draft.imageUrl ?? ""));
+      setPrecisionPackQty(String(draft.precisionPackQty ?? ""));
+      setPrecisionPackCost(String(draft.precisionPackCost ?? ""));
+      setPrecisionPackSelling(String(draft.precisionPackSelling ?? ""));
+      setPrecisionUnit(String(draft.precisionUnit ?? ""));
+      setPrecisionCalcOpen(Boolean(draft.precisionCalcOpen ?? false));
+    } catch {}
+
+    draftHydratedRef.current = true;
+  }, [activeOrgId, canManage, productDraftKey]);
 
   const onBarcodeScanned = useCallback(
     (result: any) => {
@@ -410,6 +727,68 @@ const load = useCallback(async () => {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (!canManage) return;
+    if (!activeOrgId) return;
+    if (!draftHydratedRef.current) return;
+
+    const hasDraft =
+      !!name.trim() ||
+      !!sku.trim() ||
+      !!unit.trim() ||
+      !!category.trim() ||
+      !!sellingPrice.trim() ||
+      !!costPrice.trim() ||
+      !!barcode.trim() ||
+      !!imageUrl.trim() ||
+      !!precisionPackQty.trim() ||
+      !!precisionPackCost.trim() ||
+      !!precisionPackSelling.trim() ||
+      !!precisionUnit.trim();
+
+    if (!hasDraft) {
+      removeWebLocalStorage(productDraftKey);
+      return;
+    }
+
+    writeWebLocalStorage(
+      productDraftKey,
+      JSON.stringify({
+        name,
+        sku,
+        unit,
+        category,
+        sellingPrice,
+        costPrice,
+        barcode,
+        imageUrl,
+        precisionPackQty,
+        precisionPackCost,
+        precisionPackSelling,
+        precisionUnit,
+        precisionCalcOpen,
+        savedAt: new Date().toISOString(),
+      })
+    );
+  }, [
+    activeOrgId,
+    canManage,
+    productDraftKey,
+    name,
+    sku,
+    unit,
+    category,
+    sellingPrice,
+    costPrice,
+    barcode,
+    imageUrl,
+    precisionPackQty,
+    precisionPackCost,
+    precisionPackSelling,
+    precisionUnit,
+    precisionCalcOpen,
+  ]);
 
   useFocusEffect(
     useCallback(() => {
@@ -572,6 +951,7 @@ const openEdit = useCallback((p: ProductRow) => {
     setEditSellingPrice(p.selling_price != null ? String(Number(p.selling_price)) : "");
 setEditCostPrice(p.cost_price != null ? String(Number(p.cost_price)) : "");
     setEditBarcode(String(p.barcode ?? ""));
+    setEditImageUrl(String(p.image_url ?? ""));
 
     setEditPrecisionPackQty(
       p.precision_pack_size != null ? String(Number(p.precision_pack_size)) : ""
@@ -593,13 +973,15 @@ setEditCostPrice(p.cost_price != null ? String(Number(p.cost_price)) : "");
     setEditSellingPrice("");
     setEditCostPrice("");
     setEditBarcode("");
+    setEditImageUrl("");
     setEditPrecisionPackQty("");
     setEditPrecisionPackCost("");
     setEditPrecisionPackSelling("");
     setEditPrecisionUnit("");
   }, []);
 
- const add = useCallback(async () => {
+ const add = useCallback(async (forceDuplicateSave?: boolean | any) => {
+  const allowDuplicateSave = forceDuplicateSave === true;
   if (!activeOrgId) return;
 if (isCapitalRecoveryStore && !scopedStoreId) return;
 
@@ -644,6 +1026,58 @@ if (isCapitalRecoveryStore && !scopedStoreId) return;
       return;
     }
 
+    if (!allowDuplicateSave && !isCapitalRecoveryStore) {
+      const nextNameKey = normalizeDuplicateKey(n);
+      const nextSkuKey = normalizeDuplicateKey(sku);
+      const nextUnitKey = normalizeDuplicateKey(unit);
+      const nextCategoryKey = normalizeDuplicateKey(category);
+      const nextBarcodeKey = normalizeDuplicateKey(bc);
+
+      const duplicate = rows.find((p) => {
+        if (p.is_active === false) return false;
+
+        const sameScope =
+          productStoreScope == null ||
+          String(p.store_id ?? "") === String(productStoreScope ?? "");
+
+        return (
+          sameScope &&
+          normalizeDuplicateKey(p.name) === nextNameKey &&
+          normalizeDuplicateKey(p.sku) === nextSkuKey &&
+          normalizeDuplicateKey(p.unit) === nextUnitKey &&
+          normalizeDuplicateKey(p.category) === nextCategoryKey &&
+          normalizeDuplicateKey(p.barcode) === nextBarcodeKey
+        );
+      });
+
+      if (duplicate) {
+        const msg =
+          `Bidhaa inayofanana ipo tayari.\n\n` +
+          `Jina: ${duplicate.name}\n` +
+          `SKU: ${duplicate.sku ?? "—"}\n` +
+          `Unit: ${duplicate.unit ?? "—"}\n` +
+          `Category: ${duplicate.category ?? "—"}\n\n` +
+          `Unataka kuisave tena kama bidhaa tofauti?`;
+
+        if (Platform.OS === "web") {
+          const ok = window.confirm(msg);
+          if (!ok) return;
+          await add(true);
+          return;
+        }
+
+        Alert.alert("Duplicate Product", msg, [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Save Anyway",
+            style: "destructive",
+            onPress: () => void add(true),
+          },
+        ]);
+        return;
+      }
+    }
+
     setLoading(true);
     setError(null);
 
@@ -666,9 +1100,12 @@ p_precision_base_unit: isPrecisionRetailStore ? precisionUnit.trim() || unit.tri
 p_precision_sell_mode: isPrecisionRetailStore ? "BOTH" : "UNIT",
 p_precision_allow_box_sales: isPrecisionRetailStore,
 p_precision_allow_unit_sales: true,
+p_image_url: imageUrl.trim() || null,
 });
 
       if (e) throw e;
+
+      removeWebLocalStorage(productDraftKey);
 
       setName("");
       setSku("");
@@ -676,11 +1113,12 @@ p_precision_allow_unit_sales: true,
       setCategory("");
       setSellingPrice("");
       setCostPrice("");
-     setBarcode("");
-setPrecisionPackQty("");
-setPrecisionPackCost("");
-setPrecisionPackSelling("");
-setPrecisionUnit("");
+      setBarcode("");
+      setImageUrl("");
+      setPrecisionPackQty("");
+      setPrecisionPackCost("");
+      setPrecisionPackSelling("");
+      setPrecisionUnit("");
 
 await load();
       Alert.alert(
@@ -713,6 +1151,9 @@ await load();
 isPrecisionRetailStore,
 precisionPackQty,
 precisionUnit,
+imageUrl,
+productDraftKey,
+rows,
   ]);
 
   const saveEdit = useCallback(async () => {
@@ -787,6 +1228,7 @@ p_precision_base_unit: isPrecisionRetailStore
 p_precision_sell_mode: isPrecisionRetailStore ? "BOTH" : "UNIT",
 p_precision_allow_box_sales: isPrecisionRetailStore,
 p_precision_allow_unit_sales: true,
+p_image_url: editImageUrl.trim() || null,
 });
       if (e) throw e;
 
@@ -797,8 +1239,7 @@ p_precision_allow_unit_sales: true,
       Alert.alert("Plan Limit", getProductLimitFriendlyMessage(err));
     } finally {
       setLoading(false);
-    }
-  }, [
+    }}, [
     activeOrgId,
     scopedStoreId,
     productStoreScope,
@@ -812,6 +1253,7 @@ p_precision_allow_unit_sales: true,
     editSellingPrice,
     editSku,
     editUnit,
+    editImageUrl,
     isCapitalRecoveryStore,
     isPrecisionRetailStore,
     load,
@@ -819,48 +1261,58 @@ p_precision_allow_unit_sales: true,
     editPrecisionUnit,
   ]);
 
-  const remove = useCallback(
-    async (productId: string, productName: string) => {
-      if (!activeOrgId) return;
+const remove = useCallback(
+  async (productId: string, productName: string) => {
+    if (!activeOrgId) return;
 
-      if (!canManage) {
-        Alert.alert("No Access", "Owner only.");
-        return;
+    if (!canManage) {
+      Alert.alert("No Access", "Owner only.");
+      return;
+    }
+
+    const doDelete = async () => {
+      setLoading(true);
+      try {
+        const { error: e } = await supabase.rpc("delete_product", {
+          p_org_id: activeOrgId,
+          p_product_id: productId,
+          p_store_id: productStoreScope,
+        });
+
+        if (e) throw e;
+
+        await load();
+        Alert.alert("Success ✅", "Product deleted/archived safely");
+      } catch (err: any) {
+        Alert.alert("Failed", err?.message ?? "Unknown error");
+      } finally {
+        setLoading(false);
       }
+    };
 
-      Alert.alert(
-        "Delete Product?",
-        productName,
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Delete",
-            style: "destructive",
-            onPress: async () => {
-              setLoading(true);
-              try {
-                const { error: e } = await supabase.rpc("delete_product", {
-  p_org_id: activeOrgId,
-  p_product_id: productId,
-  p_store_id: productStoreScope,
-});
-                if (e) throw e;
+    if (Platform.OS === "web") {
+      const ok = window.confirm(`Delete Product?\n\n${productName}`);
+      if (!ok) return;
+      await doDelete();
+      return;
+    }
 
-                await load();
-                Alert.alert("Success ✅", "Product deleted/archived safely");
-              } catch (err: any) {
-                Alert.alert("Failed", err?.message ?? "Unknown error");
-              } finally {
-                setLoading(false);
-              }
-            },
-          },
-        ],
-        { cancelable: true }
-      );
-    },
-    [activeOrgId, productStoreScope, canManage, load]
-  );
+    Alert.alert(
+      "Delete Product?",
+      productName,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => void doDelete(),
+        },
+      ],
+      { cancelable: true }
+    );
+  },
+  [activeOrgId, productStoreScope, canManage, load]
+);
 
   const visibleRows = useMemo(() => {
     const normalizeSearchText = (value: any) =>
@@ -991,7 +1443,7 @@ p_precision_allow_unit_sales: true,
         minHeight: 54,
       }}
     >
-      <Ionicons name="search" size={18} color={theme.colors.muted} />
+      <WebSafeIcon name="search" size={18} color={theme.colors.muted} />
       <TextInput
         value={productSearch}
         onChangeText={setProductSearch}
@@ -1008,7 +1460,7 @@ p_precision_allow_unit_sales: true,
       />
       {!!productSearch.trim() && (
         <Pressable onPress={() => setProductSearch("")} hitSlop={10}>
-          <Ionicons name="close-circle" size={20} color={theme.colors.muted} />
+          <WebSafeIcon name="close-circle" size={20} color={theme.colors.muted} />
         </Pressable>
       )}
     </View>
@@ -1029,7 +1481,7 @@ p_precision_allow_unit_sales: true,
       opacity: loading ? 0.55 : pressed ? 0.88 : 1,
     })}
   >
-    <Ionicons name="refresh" size={22} color={theme.colors.text} />
+    <WebSafeIcon name="refresh" size={22} color={theme.colors.text} />
   </Pressable>
 </View>
       </Card>
@@ -1133,6 +1585,63 @@ p_precision_allow_unit_sales: true,
             }}
           />
 
+          <View style={{ gap: 8 }}>
+            <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Product Image (optional)</Text>
+
+            <Pressable
+              onPress={() => chooseImageSource("add")}
+              disabled={imageUploading || loading}
+              style={({ pressed }) => ({
+                minHeight: 86,
+                borderRadius: 22,
+                borderWidth: 1,
+                borderColor: imageUrl ? theme.colors.emeraldBorder : theme.colors.border,
+                backgroundColor: imageUrl ? "#ECFDF5" : "#F8FAFC",
+                padding: 12,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 12,
+                opacity: imageUploading || loading ? 0.6 : pressed ? 0.9 : 1,
+              })}
+            >
+              {imageUrl ? (
+                <Image
+                  source={{ uri: imageUrl }}
+                  style={{ width: 62, height: 62, borderRadius: 18, backgroundColor: "#E2E8F0" }}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View
+                  style={{
+                    width: 62,
+                    height: 62,
+                    borderRadius: 18,
+                    backgroundColor: "rgba(16,185,129,0.10)",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <WebSafeIcon name="image-outline" size={28} color={theme.colors.text} />
+                </View>
+              )}
+
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+                  {imageUploading ? "Uploading image..." : imageUrl ? "Product image selected" : "Add product photo"}
+                </Text>
+                <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 4 }}>
+                  Camera au Gallery/File
+                </Text>
+              </View>
+            </Pressable>
+
+            {!!imageUrl && (
+              <Pressable onPress={() => setImageUrl("")} disabled={loading}>
+                <Text style={{ color: "#B91C1C", fontWeight: "900" }}>Remove image</Text>
+              </Pressable>
+            )}
+          </View>
+
           {!isCapitalRecoveryStore && (
             <View style={{ gap: 8 }}>
               <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Barcode (optional)</Text>
@@ -1195,7 +1704,7 @@ p_precision_allow_unit_sales: true,
                     transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
                   })}
                 >
-                  <Ionicons name="close" size={20} color={theme.colors.text} />
+                  <WebSafeIcon name="close" size={20} color={theme.colors.text} />
                 </Pressable>
               )}
             </View>
@@ -1236,7 +1745,7 @@ p_precision_allow_unit_sales: true,
   </Text>
 </View>
 
-<Ionicons
+<WebSafeIcon
   name={precisionCalcOpen ? "chevron-up" : "chevron-down"}
   size={22}
   color={theme.colors.text}
@@ -1414,7 +1923,7 @@ p_precision_allow_unit_sales: true,
                       backgroundColor: "rgba(255,255,255,0.06)",
                     }}
                   >
-                    <Ionicons name="close" size={22} color={theme.colors.text} />
+                    <WebSafeIcon name="close" size={22} color={theme.colors.text} />
                   </Pressable>
                 </View>
 
@@ -1522,10 +2031,10 @@ p_precision_allow_unit_sales: true,
           const cp = Number(p.cost_price ?? NaN);
           const bc = String(p.barcode ?? "").trim();
 
-          return (
-            <Pressable
-              key={p.id}
-           style={{
+      return (
+  <View
+    key={p.id}
+    style={{
   borderWidth: 1,
   borderColor: "rgba(148,163,184,0.22)",
   borderRadius: 24,
@@ -1539,7 +2048,44 @@ p_precision_allow_unit_sales: true,
   elevation: 3,
 }}
             >
-              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>{p.name}</Text>
+              <View style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
+                {p.image_url ? (
+                  <Image
+                    source={{ uri: p.image_url }}
+                    style={{
+                      width: 64,
+                      height: 64,
+                      borderRadius: 18,
+                      backgroundColor: "#E2E8F0",
+                    }}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View
+                    style={{
+                      width: 64,
+                      height: 64,
+                      borderRadius: 18,
+                      backgroundColor: "#F1F5F9",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderWidth: 1,
+                      borderColor: "rgba(148,163,184,0.22)",
+                    }}
+                  >
+                    <WebSafeIcon name="cube-outline" size={26} color={theme.colors.muted} />
+                  </View>
+                )}
+
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+                    {p.name}
+                  </Text>
+                  <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 4 }}>
+                    {p.image_url ? "Image attached" : "No image"}
+                  </Text>
+                </View>
+              </View>
 
               {!isCapitalRecoveryStore && (
                 <>
@@ -1583,13 +2129,30 @@ p_precision_allow_unit_sales: true,
                   <View style={{ flex: 1 }}>
                     <Button title="Edit" variant="primary" onPress={() => openEdit(p)} disabled={loading} />
                   </View>
-
-                  <View style={{ flex: 1 }}>
-                    <Button title="Delete" variant="secondary" onPress={() => remove(p.id, p.name)} disabled={loading} />
-                  </View>
+<View style={{ flex: 1 }}>
+  <Pressable
+    onPress={() => void remove(p.id, p.name)}
+    disabled={loading}
+    style={({ pressed }) => ({
+      minHeight: 52,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: "rgba(148,163,184,0.45)",
+      backgroundColor: pressed ? "#F1F5F9" : "#FFFFFF",
+      alignItems: "center",
+      justifyContent: "center",
+      opacity: loading ? 0.5 : 1,
+      cursor: Platform.OS === "web" ? "pointer" : undefined,
+    })}
+  >
+    <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 15 }}>
+      Delete
+    </Text>
+  </Pressable>
+</View>
                 </View>
               )}
-            </Pressable>
+            </View>
           );
         })
       )}
@@ -1612,7 +2175,7 @@ p_precision_allow_unit_sales: true,
           <View
             style={{
               flex: 1,
-              backgroundColor: "rgba(2,6,23,0.96)",
+              backgroundColor: "rgba(15,23,42,0.34)",
               paddingHorizontal: 16,
               paddingTop: 28,
               paddingBottom: 18,
@@ -1624,9 +2187,9 @@ p_precision_allow_unit_sales: true,
                 width: "100%",
                 maxHeight: "88%",
                 borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.10)",
-                borderRadius: 24,
-                backgroundColor: "#0B1220",
+               borderColor: "rgba(15,23,42,0.12)",
+borderRadius: 28,
+backgroundColor: "#FFFFFF",
                 overflow: "hidden",
                 shadowColor: "#000",
                 shadowOpacity: 0.35,
@@ -1641,8 +2204,8 @@ p_precision_allow_unit_sales: true,
                   paddingTop: 16,
                   paddingBottom: 14,
                   borderBottomWidth: 1,
-                  borderBottomColor: "rgba(255,255,255,0.08)",
-                  backgroundColor: "#0F172A",
+              borderBottomColor: "rgba(15,23,42,0.10)",
+backgroundColor: "#FFFFFF",
                   flexDirection: "row",
                   alignItems: "center",
                   justifyContent: "space-between",
@@ -1662,8 +2225,8 @@ p_precision_allow_unit_sales: true,
                     alignItems: "center",
                     justifyContent: "center",
                     borderWidth: 1,
-                    borderColor: "rgba(255,255,255,0.12)",
-                    backgroundColor: pressed ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.08)",
+                   borderColor: "rgba(15,23,42,0.12)",
+backgroundColor: pressed ? "#E2E8F0" : "#F8FAFC",
                   })}
                 >
                   <Ionicons name="close" size={22} color={theme.colors.text} />
@@ -1716,12 +2279,69 @@ p_precision_allow_unit_sales: true,
                   style={solidInputStyle}
                 />
 
+                <View style={{ gap: 8 }}>
+                  <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Product Image</Text>
+
+                  <Pressable
+                    onPress={() => chooseImageSource("edit")}
+                    disabled={editImageUploading || loading}
+                    style={({ pressed }) => ({
+                      minHeight: 88,
+                      borderRadius: 22,
+                      borderWidth: 1,
+                      borderColor: editImageUrl ? theme.colors.emeraldBorder : theme.colors.border,
+                      backgroundColor: editImageUrl ? "#ECFDF5" : "#F8FAFC",
+                      padding: 12,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 12,
+                      opacity: editImageUploading || loading ? 0.6 : pressed ? 0.9 : 1,
+                    })}
+                  >
+                    {editImageUrl ? (
+                      <Image
+                        source={{ uri: editImageUrl }}
+                        style={{ width: 64, height: 64, borderRadius: 18, backgroundColor: "#E2E8F0" }}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <View
+                        style={{
+                          width: 64,
+                          height: 64,
+                          borderRadius: 18,
+                          backgroundColor: "rgba(16,185,129,0.10)",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <Ionicons name="image-outline" size={28} color={theme.colors.text} />
+                      </View>
+                    )}
+
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+                        {editImageUploading ? "Uploading image..." : editImageUrl ? "Change product image" : "Add product image"}
+                      </Text>
+                      <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 4 }}>
+                        Camera au Gallery/File
+                      </Text>
+                    </View>
+                  </Pressable>
+
+                  {!!editImageUrl && (
+                    <Pressable onPress={() => setEditImageUrl("")} disabled={loading}>
+                      <Text style={{ color: "#B91C1C", fontWeight: "900" }}>Remove image</Text>
+                    </Pressable>
+                  )}
+                </View>
+
                 {!isCapitalRecoveryStore && (
                   <TextInput
                     value={editBarcode}
                     onChangeText={(t) => setEditBarcode(cleanBarcode(t))}
                     placeholder="Barcode (optional)"
-                    placeholderTextColor="rgba(255,255,255,0.35)"
+                    placeholderTextColor={theme.colors.faint}
                     style={solidInputStyle}
                   />
                 )}

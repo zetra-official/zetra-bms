@@ -18,6 +18,21 @@ type FinRow = {
   stock_in_value: number;
 };
 
+type StockInItemRow = {
+  id: string;
+  product_id: string | null;
+  product_name: string;
+  store_id: string | null;
+  qty: number;
+  unit_cost: number;
+  total_value: number;
+  created_at: string | null;
+  source: string | null;
+  movement_mode?: string | null;
+  mode?: string | null;
+  note?: string | null;
+};
+
 function toNum(x: any) {
   const n = Number(x);
   return Number.isFinite(n) ? n : 0;
@@ -71,6 +86,67 @@ function extractScalarValue(x: any): number {
   }
 
   return 0;
+}
+
+function stockInModeOf(r: any) {
+  return String(
+    r?.movement_mode ??
+      r?.mode ??
+      r?.source ??
+      r?.movement_type ??
+      r?.type ??
+      r?.reason ??
+      r?.note ??
+      ""
+  )
+    .trim()
+    .toUpperCase();
+}
+
+function isRealStockInRow(r: any) {
+  const qty = toNum(r?.qty ?? r?.qty_change ?? r?.delta ?? r?.change_qty ?? r?.amount);
+  const mode = stockInModeOf(r);
+
+  if (qty <= 0) return false;
+
+  const blocked = [
+    "SALE",
+    "SALES",
+    "SOLD",
+    "POS",
+    "CHECKOUT",
+    "REDUCE",
+    "OUT",
+    "STOCK_OUT",
+    "TRANSFER_OUT",
+    "ADJUST_REDUCE",
+    "DELETE_SALE",
+    "VOID",
+    "RETURN_OUT",
+  ];
+
+  return !blocked.some((x) => mode.includes(x));
+}
+
+function normalizeStockInRow(r: any, sid: string): StockInItemRow {
+  const qty = toNum(r?.qty ?? r?.qty_change ?? r?.delta ?? r?.change_qty ?? r?.amount);
+  const unitCost = toNum(r?.unit_cost ?? r?.cost_price ?? r?.buying_price ?? r?.purchase_price);
+  const totalValue = toNum(r?.total_value ?? r?.value ?? qty * unitCost);
+
+  return {
+    id: String(r.id ?? r.movement_id ?? `${r.product_id ?? "row"}-${r.created_at ?? ""}`),
+    product_id: r.product_id ? String(r.product_id) : null,
+    product_name: String(r.product_name ?? r.name ?? "Unknown Product"),
+    store_id: r.store_id ? String(r.store_id) : sid,
+    qty,
+    unit_cost: unitCost,
+    total_value: totalValue,
+    created_at: r.created_at ? String(r.created_at) : null,
+    source: String(r.source ?? "stock_movements"),
+    movement_mode: r.movement_mode ? String(r.movement_mode) : null,
+    mode: r.mode ? String(r.mode) : null,
+    note: r.note ? String(r.note) : null,
+  };
 }
 
 function SmallChip({
@@ -166,6 +242,7 @@ export default function StockHistoryScreen() {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [row, setRow] = useState<FinRow | null>(null);
+  const [stockInItems, setStockInItems] = useState<StockInItemRow[]>([]);
 
   const reqRef = useRef(0);
 
@@ -210,7 +287,47 @@ export default function StockHistoryScreen() {
     }
     throw lastErr ?? new Error("RPC failed");
   }, []);
+async function loadStockInItems(args: {
+  orgId: string;
+  storeId: string | null;
+  storeIds: string[];
+  scope: "STORE" | "ALL";
+  fromYMD: string;
+  toYMD: string;
+}): Promise<StockInItemRow[]> {
+  const ids =
+    args.scope === "STORE"
+      ? args.storeId
+        ? [args.storeId]
+        : []
+      : args.storeIds;
 
+  if (!args.orgId || ids.length === 0) return [];
+
+  const allRows: StockInItemRow[] = [];
+
+  for (const sid of ids) {
+    const { data, error } = await supabase.rpc("get_stock_in_items_v1", {
+      p_org_id: args.orgId,
+      p_store_id: sid,
+      p_date_from: args.fromYMD,
+      p_date_to: args.toYMD,
+    } as any);
+
+    if (error) throw error;
+
+    for (const r of (data ?? []) as any[]) {
+      if (!isRealStockInRow(r)) continue;
+      allRows.push(normalizeStockInRow(r, sid));
+    }
+  }
+
+  return allRows.sort((a, b) => {
+    const ta = a.created_at ? Date.parse(a.created_at) : 0;
+    const tb = b.created_at ? Date.parse(b.created_at) : 0;
+    return tb - ta;
+  });
+}
   const loadForStore = useCallback(
     async (sid: string, fromYMD: string, toYMD: string): Promise<FinRow> => {
       const onVal = await rpcTryScalar(["get_stock_on_hand_value_v1"], {
@@ -218,12 +335,16 @@ export default function StockHistoryScreen() {
         p_store_id: sid,
       });
 
-      const inVal = await rpcTryScalar(["get_stock_in_value_v2", "get_stock_in_value_v1"], {
-        p_org_id: orgId,
-        p_store_id: sid,
-        p_date_from: fromYMD,
-        p_date_to: toYMD,
+      const stockInRows = await loadStockInItems({
+        orgId,
+        storeId: sid,
+        storeIds: [sid],
+        scope: "STORE",
+        fromYMD,
+        toYMD,
       });
+
+      const inVal = stockInRows.reduce((sum, x) => sum + toNum(x.total_value), 0);
 
       return {
         org_id: orgId,
@@ -237,21 +358,30 @@ export default function StockHistoryScreen() {
     [orgId, rpcTryScalar]
   );
 
+ const [quickRange, setQuickRange] = useState<"today" | "7d" | "30d" | "custom">("today");
+
   const applyQuick = useCallback((k: "today" | "7d" | "30d") => {
     const now = new Date();
     const to = new Date(now);
     const from = new Date(now);
-    if (k === "today") {
-      // none
-    } else if (k === "7d") {
-      from.setDate(from.getDate() - 6);
-    } else {
-      from.setDate(from.getDate() - 29);
-    }
+
+    if (k === "7d") from.setDate(from.getDate() - 6);
+    if (k === "30d") from.setDate(from.getDate() - 29);
+
+    setQuickRange(k);
     setDateFrom(toIsoDateLocal(from));
     setDateTo(toIsoDateLocal(to));
   }, []);
 
+  const onChangeFrom = useCallback((v: string) => {
+    setQuickRange("custom");
+    setDateFrom(v);
+  }, []);
+
+  const onChangeTo = useCallback((v: string) => {
+    setQuickRange("custom");
+    setDateTo(v);
+  }, []);
   const run = useCallback(async () => {
     const rid = ++reqRef.current;
 
@@ -275,9 +405,21 @@ export default function StockHistoryScreen() {
 
     try {
       if (!canAll || isStaff || scope === "STORE") {
-        const r = await loadForStore(storeId, dateFrom, dateTo);
+        const [r, items] = await Promise.all([
+          loadForStore(storeId, dateFrom, dateTo),
+          loadStockInItems({
+            orgId,
+            storeId,
+            storeIds: storeIdsInOrg,
+            scope: "STORE",
+            fromYMD: dateFrom,
+            toYMD: dateTo,
+          }),
+        ]);
+
         if (rid !== reqRef.current) return;
         setRow(r);
+        setStockInItems(items);
         return;
       }
 
@@ -288,9 +430,20 @@ export default function StockHistoryScreen() {
         return;
       }
 
-      const results = await Promise.all(ids.map((sid) => loadForStore(sid, dateFrom, dateTo)));
-      const sumOn = results.reduce((a, r) => a + toNum(r.stock_on_hand_value), 0);
-      const sumIn = results.reduce((a, r) => a + toNum(r.stock_in_value), 0);
+      const [results, items] = await Promise.all([
+        Promise.all(ids.map((sid) => loadForStore(sid, dateFrom, dateTo))),
+        loadStockInItems({
+          orgId,
+          storeId: null,
+          storeIds: ids,
+          scope: "ALL",
+          fromYMD: dateFrom,
+          toYMD: dateTo,
+        }),
+      ]);
+
+      const sumOn = results.reduce((a: number, r: FinRow) => a + toNum(r.stock_on_hand_value), 0);
+      const sumIn = results.reduce((a: number, r: FinRow) => a + toNum(r.stock_in_value), 0);
 
       if (rid !== reqRef.current) return;
       setRow({
@@ -301,10 +454,12 @@ export default function StockHistoryScreen() {
         stock_on_hand_value: sumOn,
         stock_in_value: sumIn,
       });
+      setStockInItems(items);
     } catch (e: any) {
       if (rid !== reqRef.current) return;
       setErr(e?.message ?? "Failed to search stock values");
       setRow(null);
+      setStockInItems([]);
     } finally {
       if (rid === reqRef.current) setLoading(false);
     }
@@ -325,6 +480,21 @@ export default function StockHistoryScreen() {
 
   const onHand = fmtMoney(toNum(row?.stock_on_hand_value), "TZS").replace(/\s+/g, " ");
   const stockIn = fmtMoney(toNum(row?.stock_in_value), "TZS").replace(/\s+/g, " ");
+
+  const stockInItemsQty = useMemo(
+    () => stockInItems.reduce((a, x) => a + toNum(x.qty), 0),
+    [stockInItems]
+  );
+
+  const stockInItemsTotal = useMemo(
+    () => stockInItems.reduce((a, x) => a + toNum(x.total_value), 0),
+    [stockInItems]
+  );
+
+  const stockInItemsTotalLabel = useMemo(
+    () => fmtMoney(stockInItemsTotal, "TZS").replace(/\s+/g, " "),
+    [stockInItemsTotal]
+  );
 
   return (
     <Screen>
@@ -391,7 +561,7 @@ export default function StockHistoryScreen() {
               <Text style={{ color: UI.muted, fontWeight: "800", marginBottom: 6 }}>From</Text>
               <TextInput
                 value={dateFrom}
-                onChangeText={setDateFrom}
+                onChangeText={onChangeFrom}
                 placeholder="2025-01-01"
                 placeholderTextColor={UI.faint}
                 autoCapitalize="none"
@@ -412,7 +582,7 @@ export default function StockHistoryScreen() {
               <Text style={{ color: UI.muted, fontWeight: "800", marginBottom: 6 }}>To</Text>
               <TextInput
                 value={dateTo}
-                onChangeText={setDateTo}
+                onChangeText={onChangeTo}
                 placeholder="2025-01-31"
                 placeholderTextColor={UI.faint}
                 autoCapitalize="none"
@@ -431,9 +601,9 @@ export default function StockHistoryScreen() {
           </View>
 
           <View style={{ flexDirection: "row", gap: 10, marginTop: 10 }}>
-            <SmallChip active={false} label="Today" onPress={() => applyQuick("today")} />
-            <SmallChip active={false} label="7 Days" onPress={() => applyQuick("7d")} />
-            <SmallChip active={false} label="30 Days" onPress={() => applyQuick("30d")} />
+          <SmallChip active={quickRange === "today"} label="Today" onPress={() => applyQuick("today")} />
+<SmallChip active={quickRange === "7d"} label="7 Days" onPress={() => applyQuick("7d")} />
+<SmallChip active={quickRange === "30d"} label="30 Days" onPress={() => applyQuick("30d")} />
           </View>
 
           {!!err && (
@@ -449,8 +619,6 @@ export default function StockHistoryScreen() {
             </Card>
           )}
         </Card>
-
-        <View style={{ height: 12 }} />
 
         <Card style={{ gap: 10 }}>
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>Results</Text>
@@ -473,6 +641,132 @@ export default function StockHistoryScreen() {
             <Text style={{ color: UI.text, fontWeight: "900" }}>{dateTo}</Text>
           </Text>
         </Card>
+
+        <View style={{ height: 12 }} />
+
+     <Card style={{ gap: 14 }}>
+  <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 10 }}>
+    <View style={{ flex: 1, minWidth: 0 }}>
+      <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18 }}>
+        Stock In Items
+      </Text>
+      <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 4 }}>
+        Bidhaa zilizoingia ndani ya range uliyochagua.
+      </Text>
+    </View>
+
+    <View
+      style={{
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 999,
+        backgroundColor: "rgba(42,168,118,0.10)",
+        borderWidth: 1,
+        borderColor: "rgba(42,168,118,0.25)",
+      }}
+    >
+      <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
+        {stockInItems.length} items
+      </Text>
+    </View>
+  </View>
+
+  {!loading && stockInItems.length > 0 ? (
+    <View
+      style={{
+        flexDirection: "row",
+        gap: 10,
+        padding: 12,
+        borderRadius: 18,
+        backgroundColor: "rgba(37,99,235,0.08)",
+        borderWidth: 1,
+        borderColor: "rgba(37,99,235,0.18)",
+      }}
+    >
+      <MiniStat label="Total Qty In" value={String(stockInItemsQty)} />
+      <MiniStat label="Items Value" value={stockInItemsTotalLabel} />
+    </View>
+  ) : null}
+
+  {loading ? (
+    <View style={{ paddingVertical: 18 }}>
+      <ActivityIndicator />
+    </View>
+  ) : stockInItems.length === 0 ? (
+    <View
+      style={{
+        padding: 14,
+        borderRadius: 18,
+        backgroundColor: "rgba(148,163,184,0.10)",
+        borderWidth: 1,
+        borderColor: "rgba(148,163,184,0.16)",
+      }}
+    >
+      <Text style={{ color: UI.faint, fontWeight: "900" }}>
+        Hakuna bidhaa zilizoingia kwenye range hii.
+      </Text>
+    </View>
+  ) : (
+    <View style={{ gap: 12 }}>
+      {stockInItems.slice(0, 120).map((item, idx) => {
+        const itemTotal = fmtMoney(item.total_value, "TZS").replace(/\s+/g, " ");
+        const unitCost = fmtMoney(item.unit_cost, "TZS").replace(/\s+/g, " ");
+        const dt = item.created_at ? new Date(item.created_at).toLocaleString() : "—";
+
+        return (
+          <View
+            key={`${item.id}-${idx}`}
+            style={{
+              borderWidth: 1,
+              borderColor: "rgba(15,23,42,0.08)",
+              backgroundColor: "rgba(255,255,255,0.72)",
+              borderRadius: 18,
+              padding: 14,
+              gap: 10,
+            }}
+          >
+            <View style={{ flexDirection: "row", gap: 10, alignItems: "flex-start" }}>
+              <View
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: 999,
+                  backgroundColor: "rgba(42,168,118,0.12)",
+                  borderWidth: 1,
+                  borderColor: "rgba(42,168,118,0.22)",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
+                  {idx + 1}
+                </Text>
+              </View>
+
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text
+                  style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}
+                  numberOfLines={2}
+                >
+                  {item.product_name}
+                </Text>
+                <Text style={{ color: UI.faint, fontWeight: "800", marginTop: 3, fontSize: 12 }}>
+                  Date: {dt}
+                </Text>
+              </View>
+            </View>
+
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <MiniStat label="Qty In" value={String(item.qty)} />
+              <MiniStat label="Unit Cost" value={unitCost} />
+              <MiniStat label="Total Value" value={itemTotal} />
+            </View>
+          </View>
+        );
+      })}
+    </View>
+  )}
+</Card>
 
         <View style={{ height: 24 }} />
       </ScrollView>

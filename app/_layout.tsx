@@ -127,7 +127,8 @@ function AuthGate() {
 
   const { loading: orgLoading, refreshing: orgRefreshing, orgs } = useOrg();
 
-  const orgSettling = orgLoading || orgRefreshing;
+  const orgSettling = orgLoading;
+  const orgBusy = orgLoading || orgRefreshing;
 
   useEffect(() => {
     segmentsRef.current = segments;
@@ -181,7 +182,7 @@ function AuthGate() {
 
       if (!ready) return;
       if (hasSession !== true) return;
-      if (orgSettling) return;
+      if (orgBusy) return;
       if (isInAuth || isInOnboarding) return;
 
       if (isProductsRoute || isInventoryRoute) return;
@@ -255,7 +256,7 @@ function AuthGate() {
       window.removeEventListener("keydown", onKeyDown, true);
       resetWebScanBuffer();
     };
-  }, [router, ready, hasSession, orgSettling]);
+  }, [router, ready, hasSession, orgBusy]);
 
   useEffect(() => {
     let alive = true;
@@ -434,7 +435,7 @@ function AuthGate() {
     };
 
     if (isResetPasswordRoute(currentSegs)) return;
-    if (orgSettling) return;
+    if (orgLoading) return;
 
     const inAuth = isInAuth(currentSegs);
     const inOnboarding = isOnboardingRoute(currentSegs);
@@ -450,7 +451,7 @@ function AuthGate() {
     if (inAuth || inOnboarding) {
       router.replace("/(tabs)" as any);
     }
-  }, [ready, hasSession, orgSettling, orgs, router]);
+  }, [ready, hasSession, orgLoading, orgs, router]);
 
   useEffect(() => {
     return () => {
@@ -461,7 +462,11 @@ function AuthGate() {
     };
   }, []);
 
-  if (!ready || !fontsLoaded || (hasSession === true && orgSettling)) {
+  if (
+  !ready ||
+  !fontsLoaded ||
+  (Platform.OS !== "web" && hasSession === true && orgLoading)
+) {
     return (
       <View
         style={{

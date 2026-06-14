@@ -82,11 +82,11 @@ function getToneStyle(tone: MetricTone) {
     };
   }
 
-  return {
-    borderColor: "rgba(255,255,255,0.10)",
-    backgroundColor: "rgba(255,255,255,0.05)",
-    textColor: UI.text,
-  };
+return {
+  borderColor: "rgba(15,23,42,0.10)",
+  backgroundColor: "rgba(241,245,249,0.72)",
+  textColor: UI.text,
+};
 }
 
 function getRowScore(row: StoreLiveRow) {
@@ -1003,9 +1003,7 @@ export default function FinanceLiveScreen() {
                   borderColor: isTopPerformer
                     ? "rgba(16,185,129,0.34)"
                     : "rgba(16,185,129,0.22)",
-                  backgroundColor: isTopPerformer
-                    ? "rgba(18,24,28,0.99)"
-                    : "rgba(15,18,24,0.98)",
+               backgroundColor: "#FFFFFF",
                 }}
               >
                 <View
@@ -1074,8 +1072,8 @@ export default function FinanceLiveScreen() {
                         paddingVertical: 6,
                         borderRadius: 999,
                         borderWidth: 1,
-                        borderColor: "rgba(255,255,255,0.10)",
-                        backgroundColor: "rgba(255,255,255,0.05)",
+                      borderColor: "rgba(15,23,42,0.10)",
+backgroundColor: "rgba(241,245,249,0.72)",
                       }}
                     >
                       <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }}>

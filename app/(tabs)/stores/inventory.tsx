@@ -3,7 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNetInfo } from "@react-native-community/netinfo";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Keyboard, Platform, Pressable, Text, TextInput, View, Vibration } from "react-native";
+import { Alert, Image, Keyboard, Platform, Pressable, Text, TextInput, View, Vibration } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import { useOrg } from "../../../src/context/OrgContext";
@@ -22,6 +22,7 @@ type InventoryRow = {
   unit: string | null;
   category: string | null;
   barcode: string | null;
+  image_url?: string | null;
   qty: number;
   is_precision_product?: boolean | null;
   precision_pack_size?: number | null;
@@ -163,6 +164,7 @@ function sameRows(a: InventoryRow[], b: InventoryRow[]) {
       x.unit !== y.unit ||
       x.category !== y.category ||
       x.barcode !== y.barcode ||
+      x.image_url !== y.image_url ||
       Number(x.qty ?? 0) !== Number(y.qty ?? 0) ||
       Boolean(x.is_precision_product) !== Boolean(y.is_precision_product) ||
       Number(x.precision_pack_size ?? 0) !== Number(y.precision_pack_size ?? 0) ||
@@ -1166,10 +1168,39 @@ export default function StoreInventoryScreen() {
               ]}
             >
               <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-                    {r.product_name}
-                  </Text>
+                <View style={{ flexDirection: "row", flex: 1, gap: 12, alignItems: "center" }}>
+                  {r.image_url ? (
+                    <Image
+                      source={{ uri: r.image_url }}
+                      style={{
+                        width: 66,
+                        height: 66,
+                        borderRadius: 18,
+                        backgroundColor: "#E2E8F0",
+                      }}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View
+                      style={{
+                        width: 66,
+                        height: 66,
+                        borderRadius: 18,
+                        backgroundColor: "#F1F5F9",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        borderWidth: 1,
+                        borderColor: "rgba(148,163,184,0.28)",
+                      }}
+                    >
+                      <Ionicons name="cube-outline" size={28} color={theme.colors.muted} />
+                    </View>
+                  )}
+
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+                      {r.product_name}
+                    </Text>
 
                   <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
                     SKU: <Text style={{ color: theme.colors.text }}>{r.sku ?? "—"}</Text>
@@ -1187,6 +1218,7 @@ export default function StoreInventoryScreen() {
                       </>
                     ) : null}
                   </Text>
+                </View>
                 </View>
 
                 {isLow ? (

@@ -271,8 +271,8 @@ export default function CapitalRecoveryHistoryScreen() {
                 height: 44,
                 borderRadius: 14,
                 borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.10)",
-                backgroundColor: "rgba(255,255,255,0.05)",
+                borderColor: "rgba(147,197,253,0.45)",
+                backgroundColor: "#F1F5F9",
                 alignItems: "center",
                 justifyContent: "center",
                 opacity: pressed ? 0.92 : 1,
@@ -326,7 +326,7 @@ export default function CapitalRecoveryHistoryScreen() {
               gap: 14,
               borderRadius: 24,
               borderColor: "rgba(16,185,129,0.22)",
-              backgroundColor: "rgba(15,18,24,0.98)",
+              backgroundColor: "#FFFFFF",
             }}
           >
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 20 }}>
@@ -341,8 +341,8 @@ export default function CapitalRecoveryHistoryScreen() {
                 placeholderTextColor="rgba(234,242,255,0.35)"
                 style={{
                   borderWidth: 1,
-                  borderColor: "rgba(255,255,255,0.10)",
-                  backgroundColor: "rgba(255,255,255,0.05)",
+                  borderColor: "rgba(147,197,253,0.45)",
+                  backgroundColor: "#F1F5F9",
                   color: UI.text,
                   borderRadius: 18,
                   paddingHorizontal: 14,
@@ -372,7 +372,7 @@ export default function CapitalRecoveryHistoryScreen() {
               gap: 14,
               borderRadius: 24,
               borderColor: "rgba(16,185,129,0.22)",
-              backgroundColor: "rgba(15,18,24,0.98)",
+              backgroundColor: "#FFFFFF",
             }}
           >
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 20 }}>
@@ -417,7 +417,7 @@ export default function CapitalRecoveryHistoryScreen() {
               gap: 14,
               borderRadius: 24,
               borderColor: "rgba(16,185,129,0.22)",
-              backgroundColor: "rgba(15,18,24,0.98)",
+              backgroundColor: "#FFFFFF",
             }}
           >
             <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
@@ -431,8 +431,8 @@ export default function CapitalRecoveryHistoryScreen() {
                   paddingVertical: 6,
                   borderRadius: 999,
                   borderWidth: 1,
-                  borderColor: "rgba(255,255,255,0.10)",
-                  backgroundColor: "rgba(255,255,255,0.05)",
+                  borderColor: "rgba(147,197,253,0.45)",
+                  backgroundColor: "#F1F5F9",
                 }}
               >
                 <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }}>
@@ -448,8 +448,8 @@ export default function CapitalRecoveryHistoryScreen() {
             ) : filteredHistory.length === 0 ? (
               <Card
                 style={{
-                  borderColor: "rgba(255,255,255,0.10)",
-                  backgroundColor: "rgba(255,255,255,0.04)",
+                  borderColor: "rgba(147,197,253,0.45)",
+                  backgroundColor: "#F8FAFC",
                   borderRadius: 18,
                   padding: 12,
                 }}
@@ -469,8 +469,8 @@ export default function CapitalRecoveryHistoryScreen() {
                       style={{
                         gap: 10,
                         borderRadius: 18,
-                        borderColor: "rgba(255,255,255,0.10)",
-                        backgroundColor: "rgba(255,255,255,0.04)",
+                        borderColor: "rgba(147,197,253,0.45)",
+                        backgroundColor: "#F8FAFC",
                       }}
                     >
                       <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>

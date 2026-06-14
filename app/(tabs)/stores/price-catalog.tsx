@@ -1,3 +1,5 @@
+// app/stores/price-catalog.tsx
+
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
@@ -6,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Platform,
   Pressable,
   Text,
   TextInput,
@@ -34,7 +37,46 @@ function escapeHtml(value: any) {
   return String(value ?? "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function printHtmlPdfOnWeb(html: string) {
+  if (Platform.OS !== "web" || typeof document === "undefined") return false;
+
+  const iframe = document.createElement("iframe");
+  iframe.style.position = "fixed";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "0";
+  iframe.style.visibility = "hidden";
+
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentWindow?.document;
+  if (!doc) {
+    document.body.removeChild(iframe);
+    return false;
+  }
+
+  doc.open();
+  doc.write(html);
+  doc.close();
+
+  setTimeout(() => {
+    iframe.contentWindow?.focus();
+    iframe.contentWindow?.print();
+
+    setTimeout(() => {
+      try {
+        document.body.removeChild(iframe);
+      } catch {}
+    }, 1500);
+  }, 500);
+
+  return true;
 }
 
 export default function PriceCatalogScreen() {
@@ -48,26 +90,15 @@ export default function PriceCatalogScreen() {
   const storeId = String(params?.storeId ?? "").trim();
   const storeName = String(params?.storeName ?? "Store").trim();
 
-  const C: any = (theme as any)?.colors ?? {};
-  const col = (key: string, fallback: string) => {
-    const v = C?.[key];
-    return typeof v === "string" && v.trim() ? v : fallback;
-  };
-
   const TEXT = "#0F172A";
-const MUTED = "#64748B";
-const BORDER_SOFT = "#DDE7F3";
-const EMERALD = "#059669";
-
-const SURFACE = "#F8FAFC";
-const CARD_WHITE = "#FFFFFF";
-const BLUE = "#0B63CE";
-const BLUE_SOFT = "#EAF3FF";
-const GOLD = "#B7791F";
-const GOLD_SOFT = "#FFF7E6";
-const DARK_CARD = "#102033";
-const SELECTED_BG = "#E7F8EF";
-const SELECTED_BORDER = "#5DD6A0";
+  const MUTED = "#64748B";
+  const BORDER_SOFT = "#DDE7F3";
+  const EMERALD = "#059669";
+  const BLUE = "#0B63CE";
+  const BLUE_SOFT = "#EAF3FF";
+  const DARK_CARD = "#102033";
+  const SELECTED_BG = "#E7F8EF";
+  const SELECTED_BORDER = "#5DD6A0";
 
   const [rows, setRows] = useState<CatalogProductRow[]>([]);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
@@ -87,36 +118,28 @@ const SELECTED_BORDER = "#5DD6A0";
       if (error) throw error;
 
       const mapped: CatalogProductRow[] = (Array.isArray(data) ? data : [])
-        .map((r: any, index: number) => {
-          const rawId = r?.product_id ?? r?.id ?? `${storeId}-${index}`;
-          const rawName = r?.product_name ?? r?.name ?? r?.item_name ?? "Unnamed Product";
-          const rawSku = r?.sku ?? r?.product_sku ?? r?.item_sku ?? null;
-
-          const rawQty =
+        .map((r: any, index: number) => ({
+          id: String(r?.product_id ?? r?.id ?? `${storeId}-${index}`),
+          name: String(r?.product_name ?? r?.name ?? r?.item_name ?? "Unnamed Product"),
+          sku: r?.sku ?? r?.product_sku ?? r?.item_sku ?? null,
+          qty: Number(
             r?.quantity ??
-            r?.qty ??
-            r?.on_hand_qty ??
-            r?.stock_qty ??
-            r?.current_stock ??
-            r?.current_qty ??
-            0;
-
-          const rawPrice =
+              r?.qty ??
+              r?.on_hand_qty ??
+              r?.stock_qty ??
+              r?.current_stock ??
+              r?.current_qty ??
+              0
+          ),
+          sellingPrice: Number(
             r?.selling_price ??
-            r?.price ??
-            r?.retail_price ??
-            r?.sale_price ??
-            r?.unit_price ??
-            0;
-
-          return {
-            id: String(rawId),
-            name: String(rawName ?? "Unnamed Product"),
-            sku: rawSku ? String(rawSku) : null,
-            qty: Number(rawQty ?? 0),
-            sellingPrice: Number(rawPrice ?? 0),
-          };
-        })
+              r?.price ??
+              r?.retail_price ??
+              r?.sale_price ??
+              r?.unit_price ??
+              0
+          ),
+        }))
         .filter((r) => !!r.name)
         .sort((a, b) => a.name.localeCompare(b.name));
 
@@ -144,10 +167,9 @@ const SELECTED_BORDER = "#5DD6A0";
     const needle = query.trim().toLowerCase();
     if (!needle) return rows;
 
-    return rows.filter((item) => {
-      const hay = `${item.name} ${item.sku ?? ""}`.toLowerCase();
-      return hay.includes(needle);
-    });
+    return rows.filter((item) =>
+      `${item.name} ${item.sku ?? ""}`.toLowerCase().includes(needle)
+    );
   }, [rows, query]);
 
   const selectedRows = useMemo(
@@ -171,8 +193,8 @@ const SELECTED_BORDER = "#5DD6A0";
     setSelected({});
   };
 
-  const generateHtml = () => {
-    const today = new Date().toLocaleDateString();
+  const generateHtml = useCallback(() => {
+    const today = new Date().toLocaleDateString("en-GB");
 
     const tableRows = selectedRows
       .map(
@@ -180,110 +202,203 @@ const SELECTED_BORDER = "#5DD6A0";
           <tr>
             <td>${index + 1}</td>
             <td>
-              <strong>${escapeHtml(item.name)}</strong>
-              <br/>
-              <span>${escapeHtml(item.sku || "SKU: —")}</span>
+              <b>${escapeHtml(item.name)}</b><br/>
+              <span>SKU: ${escapeHtml(item.sku || "—")}</span>
             </td>
-            <td>${money(item.sellingPrice)}</td>
+            <td class="right">${escapeHtml(money(item.sellingPrice))}</td>
           </tr>
         `
       )
       .join("");
 
     return `
-      <html>
-        <head>
-          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-          <style>
-            body {
-              font-family: Arial, sans-serif;
-              padding: 24px;
-              color: #111827;
-            }
-            .header {
-              border-bottom: 2px solid #111827;
-              padding-bottom: 14px;
-              margin-bottom: 18px;
-            }
-            .brand {
-              font-size: 24px;
-              font-weight: 900;
-              margin-bottom: 4px;
-            }
-            .subtitle {
-              font-size: 13px;
-              color: #4B5563;
-              font-weight: 700;
-            }
-            table {
-              width: 100%;
-              border-collapse: collapse;
-              margin-top: 16px;
-            }
-            th {
-              background: #111827;
-              color: white;
-              text-align: left;
-              padding: 10px;
-              font-size: 12px;
-            }
-            td {
-              border-bottom: 1px solid #E5E7EB;
-              padding: 10px;
-              font-size: 12px;
-              vertical-align: top;
-            }
-            td:nth-child(1) {
-              width: 40px;
-              font-weight: 800;
-            }
-            td:nth-child(3) {
-              width: 130px;
-              font-weight: 900;
-              color: #047857;
-            }
-            span {
-              color: #6B7280;
-              font-size: 10px;
-              font-weight: 700;
-            }
-            .footer {
-              margin-top: 24px;
-              padding-top: 12px;
-              border-top: 1px solid #E5E7EB;
-              font-size: 11px;
-              color: #6B7280;
-              font-weight: 700;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <div class="brand">${escapeHtml(storeName)}</div>
-            <div class="subtitle">Product Price Catalog • ${today}</div>
-            <div class="subtitle">Selected Products: ${selectedRows.length}</div>
-          </div>
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>${escapeHtml(storeName)} Price Catalog</title>
+  <style>
+    @page { size: A4 portrait; margin: 12mm 10mm; }
 
-          <table>
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Product</th>
-                <th>Selling Price</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${tableRows}
-            </tbody>
-          </table>
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
 
-          <div class="footer">
-            Generated by ZETRA BMS
-          </div>
-        </body>
-      </html>
-    `;
-  };
+    html, body {
+      margin: 0 !important;
+      padding: 0 !important;
+      background: #ffffff;
+      color: #111827;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 10.5px;
+      line-height: 1.32;
+    }
+
+    .page {
+      width: 100%;
+      background: #ffffff;
+    }
+
+    .header {
+      display: table;
+      width: 100%;
+      border-bottom: 2px solid #111827;
+      padding-bottom: 8px;
+      margin-bottom: 10px;
+    }
+
+    .brand, .meta {
+      display: table-cell;
+      vertical-align: top;
+    }
+
+    .brand-title {
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: 0.2px;
+    }
+
+    .brand-sub {
+      margin-top: 3px;
+      font-size: 10px;
+      font-weight: 800;
+      color: #475569;
+    }
+
+    .meta {
+      width: 38%;
+      text-align: right;
+      font-size: 9.5px;
+      color: #334155;
+      line-height: 1.45;
+    }
+
+    .badge {
+      display: inline-block;
+      border: 1px solid #10b981;
+      background: #ecfdf5;
+      color: #047857;
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-weight: 900;
+      margin-top: 4px;
+    }
+
+    .info-table, .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      margin-top: 8px;
+    }
+
+    .info-table td {
+      border: 1px solid #cbd5e1;
+      padding: 7px;
+      vertical-align: top;
+      word-break: break-word;
+    }
+
+    .section-title {
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+      margin: 13px 0 6px;
+      border-bottom: 1px solid #cbd5e1;
+      padding-bottom: 4px;
+    }
+
+    .data-table th, .data-table td {
+      border: 1px solid #cbd5e1;
+      padding: 6px;
+      text-align: left;
+      vertical-align: top;
+      word-break: break-word;
+    }
+
+    .data-table th {
+      background: #f1f5f9;
+      font-size: 8.5px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .data-table td {
+      font-size: 9.5px;
+    }
+
+    .data-table span {
+      color: #64748b;
+      font-size: 8.7px;
+      font-weight: 800;
+    }
+
+    .right {
+      text-align: right;
+      white-space: nowrap;
+      font-weight: 900;
+      color: #047857;
+    }
+
+    .footer {
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px solid #e5e7eb;
+      color: #64748b;
+      text-align: center;
+      font-size: 9px;
+      font-weight: 800;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="page">
+    <div class="header">
+      <div class="brand">
+        <div class="brand-title">${escapeHtml(storeName)}</div>
+        <div class="brand-sub">Product Price Catalog</div>
+      </div>
+
+      <div class="meta">
+        <b>Date:</b> ${escapeHtml(today)}<br/>
+        <b>Total Products:</b> ${selectedRows.length}<br/>
+        <span class="badge">Selling Price PDF</span>
+      </div>
+    </div>
+
+    <table class="info-table">
+      <tr>
+        <td><b>Store</b><br/>${escapeHtml(storeName)}</td>
+        <td><b>Selected Products</b><br/>${selectedRows.length}</td>
+        <td><b>Generated</b><br/>${escapeHtml(today)}</td>
+      </tr>
+    </table>
+
+    <div class="section-title">Products & Selling Prices</div>
+
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th style="width:6%">#</th>
+          <th style="width:64%">Product</th>
+          <th style="width:30%" class="right">Selling Price</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${tableRows || `<tr><td colspan="3">No products selected.</td></tr>`}
+      </tbody>
+    </table>
+
+    <div class="footer">
+      Generated by ZETRA BMS • Price Catalog
+    </div>
+  </div>
+</body>
+</html>
+`;
+  }, [selectedRows, storeName]);
 
   const sharePdf = async () => {
     if (selectedRows.length === 0) {
@@ -293,22 +408,24 @@ const SELECTED_BORDER = "#5DD6A0";
 
     setPrinting(true);
     try {
+      const html = generateHtml();
+
+      if (printHtmlPdfOnWeb(html)) return;
+
       const file = await Print.printToFileAsync({
-        html: generateHtml(),
+        html,
         base64: false,
       });
 
-      const canShare = await Sharing.isAvailableAsync();
-      if (!canShare) {
-        Alert.alert("PDF created", file.uri);
-        return;
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(file.uri, {
+          mimeType: "application/pdf",
+          dialogTitle: `${storeName} Price Catalog`,
+          UTI: "com.adobe.pdf",
+        });
+      } else {
+        await Print.printAsync({ uri: file.uri });
       }
-
-      await Sharing.shareAsync(file.uri, {
-        mimeType: "application/pdf",
-        dialogTitle: `${storeName} Price Catalog`,
-        UTI: "com.adobe.pdf",
-      });
     } catch (err: any) {
       Alert.alert("PDF failed", err?.message ?? "Imeshindikana kutengeneza PDF.");
     } finally {
@@ -348,7 +465,9 @@ const SELECTED_BORDER = "#5DD6A0";
                   opacity: pressed ? 0.9 : 1,
                 })}
               >
-                <Text style={{ color: TEXT, fontWeight: "900", fontSize: 12.5 }}>← Back</Text>
+                <Text style={{ color: TEXT, fontWeight: "900", fontSize: 12.5 }}>
+                  ← Back
+                </Text>
               </Pressable>
 
               <Pressable
@@ -370,13 +489,7 @@ const SELECTED_BORDER = "#5DD6A0";
               </Pressable>
             </View>
 
-            <Card
-  style={{
-    gap: 12,
-    backgroundColor: CARD_WHITE,
-    borderColor: BORDER_SOFT,
-  }}
->
+            <Card style={{ gap: 12, backgroundColor: "#FFFFFF", borderColor: BORDER_SOFT }}>
               <Text style={{ color: MUTED, fontWeight: "900", fontSize: 10.5, letterSpacing: 1 }}>
                 PRICE CATALOG
               </Text>
@@ -391,26 +504,17 @@ const SELECTED_BORDER = "#5DD6A0";
               </View>
 
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                <View style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, borderWidth: 1, borderColor: "rgba(16,185,129,0.28)",backgroundColor: SELECTED_BG  }}>
+                <View style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, borderWidth: 1, borderColor: "rgba(16,185,129,0.28)", backgroundColor: SELECTED_BG }}>
                   <Text style={{ color: EMERALD, fontWeight: "900", fontSize: 11.5 }}>
                     Selected {selectedRows.length}
                   </Text>
                 </View>
 
-                <View
-  style={{
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: BORDER_SOFT,
-    backgroundColor: "#FFFFFF",
-  }}
->
-  <Text style={{ color: TEXT, fontWeight: "900", fontSize: 11.5 }}>
-    Total {rows.length}
-  </Text>
-</View>
+                <View style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, borderWidth: 1, borderColor: BORDER_SOFT, backgroundColor: "#FFFFFF" }}>
+                  <Text style={{ color: TEXT, fontWeight: "900", fontSize: 11.5 }}>
+                    Total {rows.length}
+                  </Text>
+                </View>
               </View>
 
               <View style={{ flexDirection: "row", gap: 8 }}>
@@ -421,7 +525,7 @@ const SELECTED_BORDER = "#5DD6A0";
                     borderRadius: 14,
                     borderWidth: 1,
                     borderColor: BORDER_SOFT,
-                   backgroundColor: "#FFFFFF",
+                    backgroundColor: "#FFFFFF",
                     paddingVertical: 11,
                     alignItems: "center",
                     opacity: pressed ? 0.85 : 1,
@@ -451,7 +555,7 @@ const SELECTED_BORDER = "#5DD6A0";
                 </Pressable>
               </View>
 
-              <View style={{ borderWidth: 1, borderColor: BORDER_SOFT, borderRadius: 16,backgroundColor: "#FFFFFF", paddingHorizontal: 12, paddingVertical: 4 }}>
+              <View style={{ borderWidth: 1, borderColor: BORDER_SOFT, borderRadius: 16, backgroundColor: "#FFFFFF", paddingHorizontal: 12, paddingVertical: 4 }}>
                 <TextInput
                   value={query}
                   onChangeText={setQuery}
@@ -486,34 +590,48 @@ const SELECTED_BORDER = "#5DD6A0";
           const isSelected = !!selected[item.id];
 
           return (
-            <Pressable onPress={() => toggleOne(item.id)} style={({ pressed }) => ({ opacity: pressed ? 0.88 : 1 })}>
+            <Pressable
+              onPress={() => toggleOne(item.id)}
+              style={({ pressed }) => ({ opacity: pressed ? 0.88 : 1 })}
+            >
               <Card
-  style={{
-    borderColor: isSelected ? SELECTED_BORDER : "#C7D2E1",
-    backgroundColor: isSelected ? SELECTED_BG : DARK_CARD,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-  }}
->
+                style={{
+                  borderColor: isSelected ? SELECTED_BORDER : "#C7D2E1",
+                  backgroundColor: isSelected ? SELECTED_BG : DARK_CARD,
+                  paddingVertical: 12,
+                  paddingHorizontal: 12,
+                }}
+              >
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                  <View style={{ width: 36, height: 36, borderRadius: 12, borderWidth: 1, borderColor: isSelected ? "rgba(16,185,129,0.45)" : BORDER_SOFT, backgroundColor: isSelected ? "rgba(16,185,129,0.14)" : "rgba(255,255,255,0.05)", alignItems: "center", justifyContent: "center" }}>
-                    <Text style={{ color: isSelected ? EMERALD : TEXT, fontWeight: "900", fontSize: 12 }}>
+                  <View
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: isSelected ? "rgba(16,185,129,0.45)" : BORDER_SOFT,
+                      backgroundColor: isSelected ? "rgba(16,185,129,0.14)" : "rgba(255,255,255,0.05)",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Text style={{ color: isSelected ? EMERALD : "#FFFFFF", fontWeight: "900", fontSize: 12 }}>
                       {isSelected ? "✓" : index + 1}
                     </Text>
                   </View>
 
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={{ color: TEXT, fontWeight: "900", fontSize: 14.5 }} numberOfLines={1}>
+                    <Text style={{ color: isSelected ? TEXT : "#FFFFFF", fontWeight: "900", fontSize: 14.5 }} numberOfLines={1}>
                       {item.name}
                     </Text>
-                    <Text style={{ color: MUTED, fontWeight: "800", marginTop: 4, fontSize: 11.5 }} numberOfLines={1}>
-                      SKU: {item.sku || "—"} • Qty {item.qty}
+                    <Text style={{ color: isSelected ? MUTED : "rgba(255,255,255,0.72)", fontWeight: "800", marginTop: 4, fontSize: 11.5 }} numberOfLines={1}>
+                      SKU: {item.sku || "—"}
                     </Text>
                   </View>
 
                   <Text style={{ color: isSelected ? BLUE : "#FBBF24", fontWeight: "900", fontSize: 12 }}>
-  {money(item.sellingPrice)}
-</Text>
+                    {money(item.sellingPrice)}
+                  </Text>
                 </View>
               </Card>
             </Pressable>

@@ -480,7 +480,7 @@ function Field({
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor="rgba(255,255,255,0.45)"
+        placeholderTextColor="#94A3B8"
         keyboardType={keyboardType ?? "default"}
         autoCapitalize={autoCapitalize ?? "none"}
         autoCorrect={false}
@@ -490,9 +490,9 @@ function Field({
           minHeight: multiline ? 110 : 52,
           borderRadius: 16,
           borderWidth: 1,
-          borderColor: "rgba(255,255,255,0.12)",
-          backgroundColor: "rgba(255,255,255,0.06)",
-          color: UI.text,
+        borderColor: "rgba(15,23,42,0.12)",
+backgroundColor: "#F8FAFC",
+color: "#0F172A",
           paddingHorizontal: 12,
           paddingVertical: multiline ? 12 : 0,
           fontWeight: "900",

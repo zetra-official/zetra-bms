@@ -10,10 +10,13 @@ import {
   Text,
   TextInput,
   View,
+  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons as VectorIonicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
+import * as Print from "expo-print";
+import * as Sharing from "expo-sharing";
 import { Screen } from "@/src/ui/Screen";
 import { Card } from "@/src/ui/Card";
 import { theme } from "@/src/ui/theme";
@@ -65,6 +68,34 @@ type Receipt = {
   items: any[];
 };
 
+function Ionicons({
+  name,
+  size = 18,
+  color = theme.colors.text,
+}: {
+  name: string;
+  size?: number;
+  color?: string;
+}) {
+  if (Platform.OS !== "web") {
+    return <VectorIonicons name={name as any} size={size} color={color} />;
+  }
+
+  const glyph =
+    name === "chevron-back" ? "‹" :
+    name === "receipt-outline" ? "▤" :
+    name === "arrow-forward" ? "→" :
+    name === "search" ? "⌕" :
+    name === "close" ? "×" :
+    "•";
+
+  return (
+    <Text style={{ color, fontSize: size, fontWeight: "900", lineHeight: size + 4 }}>
+      {glyph}
+    </Text>
+  );
+}
+
 function fmtLocal(iso: string) {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
@@ -89,7 +120,13 @@ function fmtEAT(iso: string) {
     return iso;
   }
 }
-
+function escHtml(v: any) {
+  return String(v ?? "—")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
 function shortId(id: string) {
   if (!id) return "—";
   return `${id.slice(0, 6)}…${id.slice(-4)}`;
@@ -163,7 +200,35 @@ function itemMetaLine(it: any) {
 
   return meta;
 }
+function notificationItemsOf(row: any) {
+  const body = row?.body ?? {};
 
+  const arr =
+    Array.isArray(row?.items) ? row.items :
+    Array.isArray(body?.items) ? body.items :
+    Array.isArray(body?.products) ? body.products :
+    Array.isArray(body?.stock_items) ? body.stock_items :
+    [];
+
+  return arr;
+}
+
+function itemQtyOf(it: any) {
+  return clampInt(
+    it?.qty ??
+      it?.quantity ??
+      it?.amount ??
+      it?.qty_change ??
+      it?.delta ??
+      it?.total_units ??
+      0,
+    0
+  );
+}
+function totalQtyOfItems(items: any[], fallback = 0) {
+  const sum = (items ?? []).reduce((a, it) => a + itemQtyOf(it), 0);
+  return sum > 0 ? sum : clampInt(fallback, 0);
+}
 function prettyTypeLabel(v: any) {
   const t = clean(v).toUpperCase();
   if (!t) return "—";
@@ -188,7 +253,28 @@ function prettyDateTimeEAT(iso: string) {
     return iso;
   }
 }
+function receiptActionLabel(r: Receipt) {
+  const t = clean(r.event_type).toUpperCase();
+  const title = clean(r.title).toUpperCase();
 
+  if (t.includes("STOCK_OUT") || title.includes("REDUCED")) return "Stock Reduced";
+  if (t.includes("STOCK_IN") || title.includes("NEW STOCK")) return "New Stock Received";
+  if (t.includes("TRANSFER")) return "Store Transfer";
+
+  return prettyTypeLabel(r.event_type);
+}
+
+function productNamesSummary(items: any[]) {
+  const names = (items ?? [])
+    .map((it: any) => firstNonEmpty(it?.product_name, it?.name))
+    .filter(Boolean);
+
+  if (names.length === 0) return "Product details";
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return `${names[0]} + ${names[1]}`;
+
+  return `${names[0]} +${names.length - 1} more`;
+}
 function compactReceiptSummary(r: Receipt, items: any[]) {
   const first = items?.[0];
   const firstName =
@@ -247,7 +333,7 @@ export default function NotificationsCenter() {
       }
     >
   >({});
-
+const [movementItemsById, setMovementItemsById] = useState<Record<string, any[]>>({});
   // ✅ receipt modal
   const [modalOpen, setModalOpen] = useState(false);
   const [selected, setSelected] = useState<Receipt | null>(null);
@@ -365,7 +451,7 @@ export default function NotificationsCenter() {
     const ids = Array.from(
       new Set(
         (rows ?? [])
-          .flatMap((r) => (Array.isArray(r.items) ? r.items : []))
+          .flatMap((r) => notificationItemsOf(r))
           .map((it: any) => clean(it?.product_id))
           .filter(Boolean)
       )
@@ -423,14 +509,66 @@ export default function NotificationsCenter() {
       alive = false;
     };
   }, [rows, productMeta]);
+useEffect(() => {
+  let alive = true;
 
+  const movementIds = Array.from(
+    new Set((rows ?? []).map((r) => clean(r.ref_movement_id)).filter(Boolean))
+  );
+
+  const missing = movementIds.filter((id) => !movementItemsById[id]);
+  if (missing.length === 0) return;
+
+  (async () => {
+    try {
+      const { data, error } = await supabase.rpc("get_notification_movement_items_v1", {
+        p_movement_ids: missing,
+      } as any);
+
+      if (error) throw error;
+
+      const next: Record<string, any[]> = {};
+
+      for (const row of (data ?? []) as any[]) {
+        const mid = clean(row?.movement_id);
+        if (!mid) continue;
+
+        next[mid] = [
+          {
+            product_id: clean(row?.product_id),
+            product_name: clean(row?.product_name) || "Unknown Product",
+            name: clean(row?.product_name) || "Unknown Product",
+            sku: clean(row?.sku),
+            barcode: clean(row?.barcode),
+            category: clean(row?.category),
+            unit: clean(row?.unit),
+            selling_price: row?.selling_price ?? null,
+            qty: Math.abs(Number(row?.qty ?? 0)),
+            source: "stock_movements_rpc",
+            mode: clean(row?.mode),
+          },
+        ];
+      }
+
+      if (!alive) return;
+      setMovementItemsById((prev) => ({ ...prev, ...next }));
+    } catch {
+      // non-blocking
+    }
+  })();
+
+
+  return () => {
+    alive = false;
+  };
+}, [rows, movementItemsById]);
   /** ✅ Group notifications into one "receipt" per movement_id */
   const receipts: Receipt[] = useMemo(() => {
     const map = new Map<string, Receipt>();
 
     for (const n of rows ?? []) {
       const key = n.ref_movement_id ? `mv:${n.ref_movement_id}` : `n:${n.id}`;
-      const itemsArr = Array.isArray(n.items) ? n.items : [];
+      const itemsArr = notificationItemsOf(n);
 
       const existing = map.get(key);
       if (!existing) {
@@ -695,52 +833,93 @@ export default function NotificationsCenter() {
     [storeNameById]
   );
 
-  const mergedItemsForReceipt = useCallback(
-    (r: Receipt) => {
-      const m = new Map<string, any>();
+const mergedItemsForReceipt = useCallback(
+  (r: Receipt) => {
+    const m = new Map<string, any>();
+    const movementId = clean(r.movement_id);
 
-      for (const it of r.items ?? []) {
-        const pid = clean(it?.product_id) || "__no_product__";
-        const meta = productMeta[pid] ?? {};
-        const prev = m.get(pid);
-        const qty = clampInt(it?.qty, 0);
+    const notifItems = [
+      ...(Array.isArray(r.items) ? r.items : []),
+      ...((r.rows ?? []).flatMap((row) => notificationItemsOf(row))),
+    ];
 
-        const normalized = {
-          ...it,
-          product_id: pid !== "__no_product__" ? pid : "",
-          product_name: firstNonEmpty(it?.product_name, it?.name, meta?.name),
-          name: firstNonEmpty(it?.name, it?.product_name, meta?.name),
-          sku: firstNonEmpty(it?.sku, it?.product_sku, meta?.sku),
-          product_sku: firstNonEmpty(it?.product_sku, it?.sku, meta?.sku),
-          barcode: firstNonEmpty(it?.barcode, it?.product_barcode, meta?.barcode),
-          product_barcode: firstNonEmpty(it?.product_barcode, it?.barcode, meta?.barcode),
-          category: firstNonEmpty(it?.category, it?.product_category, meta?.category),
-          product_category: firstNonEmpty(it?.product_category, it?.category, meta?.category),
-          unit: firstNonEmpty(it?.unit, it?.product_unit, meta?.unit),
-          product_unit: firstNonEmpty(it?.product_unit, it?.unit, meta?.unit),
-          selling_price:
-            it?.selling_price ?? it?.unit_price ?? it?.price ?? meta?.selling_price ?? null,
-          unit_price:
-            it?.unit_price ?? it?.selling_price ?? it?.price ?? meta?.selling_price ?? null,
-          price:
-            it?.price ?? it?.selling_price ?? it?.unit_price ?? meta?.selling_price ?? null,
-          qty,
-        };
+    const notifHasRealName = notifItems.some((it: any) => {
+      const nm = firstNonEmpty(it?.product_name, it?.name, it?.item_name, it?.product?.name);
+      return nm && nm.toLowerCase() !== "unknown product" && nm.toLowerCase() !== "product";
+    });
 
-        if (!prev) {
-          m.set(pid, normalized);
-        } else {
-          m.set(pid, {
-            ...prev,
-            qty: clampInt(prev.qty, 0) + qty,
-          });
-        }
+    const movementFallback =
+      movementId && Array.isArray(movementItemsById[movementId])
+        ? movementItemsById[movementId]
+        : [];
+
+    const rawItems =
+      movementFallback.length > 0 && !notifHasRealName
+        ? movementFallback
+        : notifItems.length > 0
+        ? notifItems
+        : movementFallback;
+
+    for (const it of rawItems) {
+      const pid = clean(it?.product_id);
+      const meta = pid ? productMeta[pid] ?? {} : {};
+
+      const name = firstNonEmpty(
+        it?.product_name,
+        it?.name,
+        it?.item_name,
+        it?.product?.name,
+        meta?.name
+      );
+
+      const finalName =
+        name && name.toLowerCase() !== "unknown product" && name.toLowerCase() !== "product"
+          ? name
+          : firstNonEmpty(meta?.name) || "Unknown Product";
+
+      const key = pid || `name:${finalName}`;
+      const prev = m.get(key);
+      const qty = itemQtyOf(it);
+
+      const normalized = {
+        ...it,
+        product_id: pid,
+        product_name: finalName,
+        name: finalName,
+        sku: firstNonEmpty(it?.sku, it?.product_sku, meta?.sku),
+        product_sku: firstNonEmpty(it?.product_sku, it?.sku, meta?.sku),
+        barcode: firstNonEmpty(it?.barcode, it?.product_barcode, meta?.barcode),
+        product_barcode: firstNonEmpty(it?.product_barcode, it?.barcode, meta?.barcode),
+        category: firstNonEmpty(it?.category, it?.product_category, meta?.category),
+        product_category: firstNonEmpty(it?.product_category, it?.category, meta?.category),
+        unit: firstNonEmpty(it?.unit, it?.product_unit, meta?.unit),
+        product_unit: firstNonEmpty(it?.product_unit, it?.unit, meta?.unit),
+        selling_price:
+          it?.selling_price ?? it?.unit_price ?? it?.price ?? meta?.selling_price ?? null,
+        unit_price:
+          it?.unit_price ?? it?.selling_price ?? it?.price ?? meta?.selling_price ?? null,
+        price:
+          it?.price ?? it?.selling_price ?? it?.unit_price ?? meta?.selling_price ?? null,
+        qty,
+      };
+
+      if (!prev) {
+        m.set(key, normalized);
+      } else {
+        m.set(key, {
+          ...prev,
+          ...normalized,
+          qty: clampInt(prev.qty, 0) + qty,
+        });
       }
+    }
 
-      return Array.from(m.values());
-    },
-    [productMeta]
-  );
+    return Array.from(m.values()).filter((x) => clean(x?.product_name || x?.name));
+  },
+  [movementItemsById, productMeta]
+);
+
+      
 
   const buildReceiptText = useCallback(
     (r: Receipt) => {
@@ -762,7 +941,7 @@ export default function NotificationsCenter() {
       lines.push(`Receipt: ${shortId(movementId)}`);
       lines.push(`Processed by: ${actor}`);
       lines.push("");
-      lines.push(`Items: ${items.length} | Total Units: ${clampInt(r.total_units, 0)}`);
+      lines.push(`Items: ${items.length} | Total Units: ${totalQtyOfItems(items, r.total_units)}`);
       lines.push("");
       lines.push("Items:");
       for (const it of items) {
@@ -790,9 +969,7 @@ export default function NotificationsCenter() {
       }
 
       lines.push("");
-      lines.push("IDs:");
-      if (r.movement_id) lines.push(`Movement ID: ${r.movement_id}`);
-      for (const n of r.rows ?? []) lines.push(`Notification: ${n.id}`);
+      lines.push(`Receipt Ref: ${shortId(movementId)}`);
 
       return lines.join("\n");
     },
@@ -817,7 +994,186 @@ export default function NotificationsCenter() {
       Alert.alert("Failed", "Imeshindikana ku-copy receipt.");
     }
   }, [buildReceiptText, selected]);
+const shareSelectedPdf = useCallback(async () => {
+  if (!selected) return;
 
+  const { from, to } = routeLabel(selected);
+  const actor = actorLabel(selected);
+  const src = sourceLabel(selected);
+  const movementId = selected.movement_id ? selected.movement_id : selected.key;
+  const items = mergedItemsForReceipt(selected);
+
+  const itemsHtml = items
+    .map((it: any) => {
+      const name =
+        firstNonEmpty(it?.product_name, it?.name) ||
+        (clean(it?.product_id) ? shortId(clean(it?.product_id)) : "Item");
+
+      const sku = firstNonEmpty(it?.sku, it?.product_sku);
+      const barcode = firstNonEmpty(it?.barcode, it?.product_barcode);
+      const category = firstNonEmpty(it?.category, it?.product_category);
+      const unit = firstNonEmpty(it?.unit, it?.product_unit);
+      const qty = clampInt(it?.qty, 0);
+
+      return `
+        <tr>
+          <td>
+            <strong>${escHtml(name)}</strong>
+            ${sku ? `<br/><span>SKU: ${escHtml(sku)}</span>` : ""}
+            ${barcode ? `<br/><span>Barcode: ${escHtml(barcode)}</span>` : ""}
+            ${category ? `<br/><span>Category: ${escHtml(category)}</span>` : ""}
+            ${unit ? `<br/><span>Unit: ${escHtml(unit)}</span>` : ""}
+          </td>
+          <td>${escHtml(qty)}</td>
+        </tr>
+      `;
+    })
+    .join("");
+
+  const html = `
+    <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <style>
+          @page { size: A4; margin: 14mm; }
+          body {
+            margin: 0;
+            padding: 0;
+            background: #ffffff;
+            color: #0F172A;
+            font-family: Arial, sans-serif;
+          }
+          .top {
+            border-bottom: 2px solid #10B981;
+            padding-bottom: 14px;
+            margin-bottom: 18px;
+          }
+          h1 {
+            margin: 0;
+            color: #059669;
+            font-size: 28px;
+            font-weight: 900;
+          }
+          .sub {
+            margin-top: 6px;
+            color: #64748B;
+            font-weight: 800;
+          }
+          .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 16px;
+          }
+          .box {
+            border: 1px solid #E5E7EB;
+            border-radius: 12px;
+            padding: 10px;
+            background: #F8FAFC;
+          }
+          .label {
+            color: #64748B;
+            font-size: 12px;
+            font-weight: 800;
+          }
+          .value {
+            margin-top: 4px;
+            color: #0F172A;
+            font-weight: 900;
+            word-break: break-word;
+          }
+          .blue { color: #2563EB; }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+          }
+          th {
+            text-align: left;
+            background: #F1F5F9;
+            padding: 10px;
+            font-size: 12px;
+            color: #475569;
+          }
+          td {
+            border-bottom: 1px solid #E5E7EB;
+            padding: 10px;
+            vertical-align: top;
+            font-weight: 800;
+          }
+          td:nth-child(2), th:nth-child(2) {
+            width: 90px;
+            text-align: center;
+          }
+          span {
+            color: #64748B;
+            font-size: 12px;
+            font-weight: 700;
+          }
+          .summary {
+            margin-top: 18px;
+            border: 1px solid #10B981;
+            background: #ECFDF5;
+            border-radius: 14px;
+            padding: 14px;
+            font-weight: 900;
+          }
+          .footer {
+            margin-top: 24px;
+            color: #64748B;
+            font-size: 12px;
+            font-weight: 700;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="top">
+          <h1>Stock Movement Receipt</h1>
+          <div class="sub">Generated by ZETRA BMS</div>
+        </div>
+
+        <div class="grid">
+          <div class="box"><div class="label">Date / Time (EAT)</div><div class="value blue">${escHtml(fmtEAT(selected.created_at))}</div></div>
+          <div class="box"><div class="label">Type</div><div class="value">${escHtml(prettyTypeLabel(selected.event_type))}</div></div>
+          <div class="box"><div class="label">From</div><div class="value blue">${escHtml(from)}</div></div>
+          <div class="box"><div class="label">To</div><div class="value blue">${escHtml(to)}</div></div>
+          <div class="box"><div class="label">Source</div><div class="value">${escHtml(src)}</div></div>
+          <div class="box"><div class="label">Processed By</div><div class="value">${escHtml(actor)}</div></div>
+          <div class="box"><div class="label">Receipt</div><div class="value blue">${escHtml(shortId(movementId))}</div></div>
+          <div class="box"><div class="label">Reference</div><div class="value">${escHtml(shortId(movementId))}</div></div>
+        </div>
+
+        <div class="summary">
+          Products: ${escHtml(items.length)} &nbsp;&nbsp; • &nbsp;&nbsp; Total Units: ${escHtml(totalQtyOfItems(items, selected.total_units))}
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Item Details</th>
+              <th>Qty</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemsHtml || `<tr><td colspan="2">No items found.</td></tr>`}
+          </tbody>
+        </table>
+
+        <div class="footer">This receipt is system generated by ZETRA BMS.</div>
+      </body>
+    </html>
+  `;
+
+  try {
+    const file = await Print.printToFileAsync({ html });
+    await Sharing.shareAsync(file.uri, {
+      mimeType: "application/pdf",
+      dialogTitle: "Share Notification Receipt PDF",
+    });
+  } catch (e: any) {
+    Alert.alert("PDF failed", e?.message ?? "Failed to create PDF receipt.");
+  }
+}, [actorLabel, mergedItemsForReceipt, routeLabel, selected, sourceLabel]);
   const openReceipt = useCallback(
     async (r: Receipt) => {
       // Mark read first (stability: keep DB state correct)
@@ -854,7 +1210,7 @@ export default function NotificationsCenter() {
         <View
           style={{
             flex: 1,
-            backgroundColor: "rgba(0,0,0,0.88)",
+            backgroundColor: "rgba(15,23,42,0.35)",
             padding: 18,
             justifyContent: "center",
             alignItems: "center",
@@ -877,9 +1233,9 @@ export default function NotificationsCenter() {
               maxWidth: 560,
               alignSelf: "stretch",
               borderRadius: 28,
-              backgroundColor: "rgba(10,14,22,0.985)",
+              backgroundColor: "#FFFFFF",
               borderWidth: 1,
-              borderColor: "rgba(16,185,129,0.42)",
+              borderColor: "rgba(148,163,184,0.22)",
               padding: 0,
               maxHeight: "84%",
               minHeight: 260,
@@ -899,7 +1255,7 @@ export default function NotificationsCenter() {
               <View
                 style={{
                   borderBottomWidth: 1,
-                  borderBottomColor: "rgba(255,255,255,0.08)",
+                  borderBottomColor: "rgba(15,23,42,0.10)",
                   paddingBottom: 14,
                   marginBottom: 14,
                 }}
@@ -947,7 +1303,7 @@ export default function NotificationsCenter() {
                           style={{
                             borderWidth: 1,
                             borderColor: "rgba(255,255,255,0.08)",
-                            backgroundColor: "rgba(255,255,255,0.03)",
+                            backgroundColor: "#FFFFFF",
                             borderRadius: 20,
                             padding: 14,
                             gap: 12,
@@ -1147,7 +1503,7 @@ export default function NotificationsCenter() {
                                     marginTop: 2,
                                   }}
                                 >
-                                  {clampInt(selected.total_units, 0)}
+                                  {totalQtyOfItems(items, selected.total_units)}
                                 </Text>
                               </View>
                             </View>
@@ -1158,13 +1514,30 @@ export default function NotificationsCenter() {
                           <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
                             Items
                           </Text>
-                          <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 4 }}>
-                            Product details included in this receipt
-                          </Text>
+                        <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 4 }}>
+  Majina ya bidhaa, idadi na taarifa muhimu za kila product.
+</Text>
                         </View>
 
                         <View style={{ marginTop: 10, gap: 10 }}>
-                          {items.map((it: any, idx: number) => {
+                          {items.length === 0 ? (
+  <View
+    style={{
+      borderWidth: 1,
+      borderColor: "rgba(239,68,68,0.20)",
+      backgroundColor: "rgba(239,68,68,0.06)",
+      borderRadius: 18,
+      padding: 14,
+    }}
+  >
+    <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+      Hakuna product details zilizopatikana kwenye notification hii.
+    </Text>
+    <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
+      Hii inaonyesha notification ya zamani au RPC haikutuma items/body.items.
+    </Text>
+  </View>
+) : items.map((it: any, idx: number) => {
                             const name =
                               firstNonEmpty(it?.product_name, it?.name) ||
                               (clean(it?.product_id) ? shortId(clean(it?.product_id)) : "Item");
@@ -1245,133 +1618,100 @@ export default function NotificationsCenter() {
                           })}
                         </View>
 
-                        <View style={{ marginTop: 16 }}>
-                          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-                            Audit IDs
-                          </Text>
-                          <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 4 }}>
-                            Internal tracking references
-                          </Text>
-                        </View>
-
-                        <View
+<View
                           style={{
-                            marginTop: 10,
+                            marginTop: 16,
                             borderWidth: 1,
-                            borderColor: "rgba(255,255,255,0.08)",
-                            backgroundColor: "rgba(255,255,255,0.03)",
+                            borderColor: "rgba(16,185,129,0.18)",
+                            backgroundColor: "rgba(16,185,129,0.07)",
                             borderRadius: 18,
                             padding: 14,
-                            gap: 8,
                           }}
                         >
-                          {selected.movement_id ? (
-                            <View>
-                              <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 11 }}>
-                                MOVEMENT ID
-                              </Text>
-                              <Text
-                                style={{
-                                  color: theme.colors.text,
-                                  fontWeight: "800",
-                                  fontSize: 14,
-                                  marginTop: 4,
-                                }}
-                              >
-                                {selected.movement_id}
-                              </Text>
-                            </View>
-                          ) : null}
-
-                          {(selected.rows ?? []).slice(0, 6).map((n, i) => (
-                            <View key={n.id}>
-                              <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 11 }}>
-                                NOTIFICATION ID {i + 1}
-                              </Text>
-                              <Text
-                                style={{
-                                  color: theme.colors.text,
-                                  fontWeight: "800",
-                                  fontSize: 14,
-                                  marginTop: 4,
-                                }}
-                              >
-                                {n.id}
-                              </Text>
-                            </View>
-                          ))}
-
-                          {(selected.rows ?? []).length > 6 ? (
-                            <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 2 }}>
-                              +{(selected.rows ?? []).length - 6} more...
-                            </Text>
-                          ) : null}
+                          <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 11 }}>
+                            RECEIPT REF
+                          </Text>
+                          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16, marginTop: 4 }}>
+                            {shortId(movementId)}
+                          </Text>
                         </View>
+<View style={{ flexDirection: "row", gap: 10, marginTop: 18 }}>
+  <View style={{ flex: 1 }}>
+    <Pressable
+      onPress={shareSelected}
+      style={({ pressed }) => ({
+        paddingVertical: 14,
+        borderRadius: 999,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+        backgroundColor: "#FFFFFF",
+        opacity: pressed ? 0.92 : 1,
+        alignItems: "center",
+      })}
+    >
+      <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 15 }}>
+        Share Text
+      </Text>
+    </Pressable>
+  </View>
 
-                        <View style={{ flexDirection: "row", gap: 10, marginTop: 18 }}>
-                          <View style={{ flex: 1 }}>
-                            <Pressable
-                              onPress={shareSelected}
-                              style={({ pressed }) => [
-                                {
-                                  paddingVertical: 14,
-                                  borderRadius: 999,
-                                  borderWidth: 1,
-                                  borderColor: theme.colors.emeraldBorder,
-                                  backgroundColor: theme.colors.emeraldSoft,
-                                  opacity: pressed ? 0.92 : 1,
-                                  alignItems: "center",
-                                },
-                              ]}
-                            >
-                              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-                                Share Receipt
-                              </Text>
-                            </Pressable>
-                          </View>
+  <View style={{ flex: 1 }}>
+    <Pressable
+      onPress={shareSelectedPdf}
+      style={({ pressed }) => ({
+        paddingVertical: 14,
+        borderRadius: 999,
+        borderWidth: 1,
+        borderColor: "#0B63CE",
+        backgroundColor: "#0B63CE",
+        opacity: pressed ? 0.92 : 1,
+        alignItems: "center",
+      })}
+    >
+      <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 15 }}>
+        Share PDF
+      </Text>
+    </Pressable>
+  </View>
+</View>
 
-                          <View style={{ flex: 1 }}>
-                            <Pressable
-                              onPress={copySelected}
-                              style={({ pressed }) => [
-                                {
-                                  paddingVertical: 14,
-                                  borderRadius: 999,
-                                  borderWidth: 1,
-                                  borderColor: theme.colors.border,
-                                  backgroundColor: "rgba(255,255,255,0.05)",
-                                  opacity: pressed ? 0.92 : 1,
-                                  alignItems: "center",
-                                },
-                              ]}
-                            >
-                              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-                                Copy
-                              </Text>
-                            </Pressable>
-                          </View>
-                        </View>
+<View style={{ marginTop: 10 }}>
+  <Pressable
+    onPress={copySelected}
+    style={({ pressed }) => ({
+      paddingVertical: 14,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      backgroundColor: "#FFFFFF",
+      opacity: pressed ? 0.92 : 1,
+      alignItems: "center",
+    })}
+  >
+    <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 15 }}>
+      Copy Text
+    </Text>
+  </Pressable>
+</View>
 
-                        <View style={{ marginTop: 10 }}>
-                          <Pressable
-                            onPress={() => setModalOpen(false)}
-                            style={({ pressed }) => [
-                              {
-                                paddingVertical: 14,
-                                borderRadius: 999,
-                                borderWidth: 1,
-                                borderColor: theme.colors.border,
-                                backgroundColor: theme.colors.card,
-                                opacity: pressed ? 0.92 : 1,
-                                alignItems: "center",
-                              },
-                            ]}
-                          >
-                            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-                              Close
-                            </Text>
-                          </Pressable>
-                        </View>
+<View style={{ marginTop: 10 }}>
+  <Pressable
+    onPress={() => setModalOpen(false)}
+    style={({ pressed }) => ({
+      paddingVertical: 14,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      backgroundColor: "#FFFFFF",
+      opacity: pressed ? 0.92 : 1,
+      alignItems: "center",
+    })}
+  >
+    <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 15 }}>
+      Close
+    </Text>
+  </Pressable>
+</View>
                       </>
                     );
                   })()}
@@ -1626,8 +1966,8 @@ export default function NotificationsCenter() {
               const isUnread = !r.is_read;
               const mvLabel = r.movement_id ? shortId(r.movement_id) : shortId(r.key);
               const mergedItems = mergedItemsForReceipt(r);
-              const source = sourceLabel(r);
-              const summary = compactReceiptSummary(r, mergedItems);
+              const action = receiptActionLabel(r);
+              const summary = productNamesSummary(mergedItems);
 
               return (
                 <Pressable
@@ -1650,7 +1990,7 @@ export default function NotificationsCenter() {
                           style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}
                           numberOfLines={1}
                         >
-                          {r.title}
+                          {action}
                         </Text>
 
                         <Text
@@ -1668,18 +2008,20 @@ export default function NotificationsCenter() {
                         </Text>
 
                         <Text
-                          style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}
-                          numberOfLines={1}
-                        >
-                          {source}
-                        </Text>
-
-                        <Text
-                          style={{ color: theme.colors.text, fontWeight: "800", marginTop: 6 }}
+                          style={{ color: theme.colors.text, fontWeight: "900", marginTop: 8 }}
                           numberOfLines={1}
                         >
                           {summary}
                         </Text>
+
+                        <Text
+                          style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}
+                          numberOfLines={1}
+                        >
+                          {mergedItems.length} product(s) • {clampInt(r.total_units, 0)} pcs
+                        </Text>
+
+                     
 
                         <Text
                           style={{ color: theme.colors.faint, fontWeight: "800", marginTop: 6, fontSize: 12 }}
@@ -1729,8 +2071,8 @@ export default function NotificationsCenter() {
               const isUnread = !r.is_read;
               const mvLabel = r.movement_id ? shortId(r.movement_id) : shortId(r.key);
               const mergedItems = mergedItemsForReceipt(r);
-              const source = sourceLabel(r);
-              const summary = compactReceiptSummary(r, mergedItems);
+              const action = receiptActionLabel(r);
+              const summary = productNamesSummary(mergedItems);
 
               return (
                 <Pressable
@@ -1753,7 +2095,7 @@ export default function NotificationsCenter() {
                           style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}
                           numberOfLines={1}
                         >
-                          {r.title}
+                          {action}
                         </Text>
 
                         <Text
@@ -1771,17 +2113,17 @@ export default function NotificationsCenter() {
                         </Text>
 
                         <Text
-                          style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}
-                          numberOfLines={1}
-                        >
-                          {source}
-                        </Text>
-
-                        <Text
-                          style={{ color: theme.colors.text, fontWeight: "800", marginTop: 6 }}
+                          style={{ color: theme.colors.text, fontWeight: "900", marginTop: 8 }}
                           numberOfLines={1}
                         >
                           {summary}
+                        </Text>
+
+                        <Text
+                          style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}
+                          numberOfLines={1}
+                        >
+                          {mergedItems.length} product(s) • {clampInt(r.total_units, 0)} pcs
                         </Text>
 
                         <Text

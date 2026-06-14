@@ -1,5 +1,5 @@
-﻿import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect, useRouter } from "expo-router";
+﻿
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -274,6 +274,7 @@ function PaymentChip({
 
 export default function SalesHistoryScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ range?: string }>();
   const insets = useSafeAreaInsets();
   const { activeOrgId, activeOrgName, activeStoreId, activeStoreName, activeRole } = useOrg() as any;
 
@@ -284,7 +285,20 @@ export default function SalesHistoryScreen() {
   const isOnline = !!(netInfo.isConnected && netInfo.isInternetReachable !== false);
   const isOffline = !isOnline;
 
-  const [range, setRange] = useState<RangeKey>("month");
+  const [range, setRange] = useState<RangeKey>(() => {
+    const incoming = String(params?.range ?? "").trim().toLowerCase();
+    if (incoming === "today" || incoming === "week" || incoming === "month") {
+      return incoming as RangeKey;
+    }
+    return "month";
+  });
+
+  useEffect(() => {
+    const incoming = String(params?.range ?? "").trim().toLowerCase();
+    if (incoming === "today" || incoming === "week" || incoming === "month") {
+      setRange(incoming as RangeKey);
+    }
+  }, [params?.range]);
 
   const now = useMemo(() => new Date(), []);
   const [customFrom, setCustomFrom] = useState<string>(() =>
@@ -707,7 +721,9 @@ export default function SalesHistoryScreen() {
               backgroundColor: "rgba(255,255,255,0.05)",
             }}
           >
-            <Ionicons name="chevron-back" size={20} color={theme.colors.text} />
+            <Text style={{ color: theme.colors.text, fontSize: 24, fontWeight: "900", lineHeight: 26 }}>
+  ‹
+</Text>
           </Pressable>
 
           <View style={{ flex: 1, minWidth: 0 }}>

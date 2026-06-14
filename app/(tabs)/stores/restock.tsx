@@ -4,12 +4,15 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Platform,
   Pressable,
   Share,
   Text,
   TextInput,
   View,
 } from "react-native";
+import * as Print from "expo-print";
+import * as Sharing from "expo-sharing";
 
 import { supabase } from "../../../src/supabase/supabaseClient";
 import { Card } from "../../../src/ui/Card";
@@ -42,7 +45,46 @@ function escapeHtml(s: any) {
   return String(s ?? "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function printHtmlPdfOnWeb(html: string) {
+  if (Platform.OS !== "web" || typeof document === "undefined") return false;
+
+  const iframe = document.createElement("iframe");
+  iframe.style.position = "fixed";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "0";
+  iframe.style.visibility = "hidden";
+
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentWindow?.document;
+  if (!doc) {
+    document.body.removeChild(iframe);
+    return false;
+  }
+
+  doc.open();
+  doc.write(html);
+  doc.close();
+
+  setTimeout(() => {
+    iframe.contentWindow?.focus();
+    iframe.contentWindow?.print();
+
+    setTimeout(() => {
+      try {
+        document.body.removeChild(iframe);
+      } catch {}
+    }, 1500);
+  }, 500);
+
+  return true;
 }
 
 export default function RestockScreen() {
@@ -158,19 +200,14 @@ export default function RestockScreen() {
 
   const updateQty = useCallback((productId: string, value: string) => {
     const cleaned = value.replace(/[^\d.]/g, "");
-
     setRows((prev) =>
-      prev.map((r) =>
-        r.product_id === productId ? { ...r, order_qty: cleaned } : r
-      )
+      prev.map((r) => (r.product_id === productId ? { ...r, order_qty: cleaned } : r))
     );
   }, []);
 
   const toggleIncluded = useCallback((productId: string) => {
     setRows((prev) =>
-      prev.map((r) =>
-        r.product_id === productId ? { ...r, included: !r.included } : r
-      )
+      prev.map((r) => (r.product_id === productId ? { ...r, included: !r.included } : r))
     );
   }, []);
 
@@ -235,32 +272,25 @@ export default function RestockScreen() {
         order_qty: r.order_qty,
       }));
 
-      const { error } = await supabase.rpc(
-        "create_purchase_order_from_restock_v1",
-        {
-          p_org_id: orgId,
-          p_store_id: storeId,
-          p_items: payload,
-          p_supplier_name: null,
-          p_notes: "Created from Restock Assistant",
-        }
-      );
+      const { error } = await supabase.rpc("create_purchase_order_from_restock_v1", {
+        p_org_id: orgId,
+        p_store_id: storeId,
+        p_items: payload,
+        p_supplier_name: null,
+        p_notes: "Created from Restock Assistant",
+      });
 
       if (error) throw error;
 
-      Alert.alert(
-        "Order Created",
-        "Purchase order imehifadhiwa kwenye database.",
-        [
-          { text: "OK" },
-          {
-            text: "Share",
-            onPress: () => {
-              void Share.share({ message: orderText });
-            },
+      Alert.alert("Order Created", "Purchase order imehifadhiwa kwenye database.", [
+        { text: "OK" },
+        {
+          text: "Share",
+          onPress: () => {
+            void Share.share({ message: orderText });
           },
-        ]
-      );
+        },
+      ]);
     } catch (err: any) {
       Alert.alert("Failed", err?.message ?? "Imeshindikana ku-create order.");
     } finally {
@@ -287,72 +317,235 @@ export default function RestockScreen() {
     }
 
     try {
-      const Print = require("expo-print");
-      const Sharing = require("expo-sharing");
-
       const htmlRows = validItems
         .map(
           (r, i) => `
-          <tr>
-            <td>${i + 1}</td>
-            <td>${escapeHtml(r.product_name)}</td>
-            <td>${escapeHtml(r.sku || "—")}</td>
-            <td>${r.is_custom ? "Custom" : "Inventory"}</td>
-            <td>${r.order_qty}</td>
-          </tr>
-        `
+            <tr>
+              <td>${i + 1}</td>
+              <td><b>${escapeHtml(r.product_name)}</b></td>
+              <td>${escapeHtml(r.sku || "—")}</td>
+              <td>${r.is_custom ? "Custom" : "Inventory"}</td>
+              <td class="right">${escapeHtml(String(r.order_qty))}</td>
+            </tr>
+          `
         )
         .join("");
 
       const html = `
-        <html>
-          <head>
-            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-            <style>
-              body { font-family: Arial, sans-serif; padding: 24px; color: #111827; }
-              h1 { font-size: 22px; margin-bottom: 4px; }
-              p { margin: 4px 0 16px; color: #374151; }
-              table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-              th, td { border: 1px solid #D1D5DB; padding: 10px; font-size: 13px; text-align: left; }
-              th { background: #F3F4F6; }
-              .footer { margin-top: 22px; font-size: 12px; color: #6B7280; }
-            </style>
-          </head>
-          <body>
-            <h1>RESTOCK ORDER</h1>
-            <p><strong>Store:</strong> ${escapeHtml(storeName)}</p>
-            <p><strong>Total Items:</strong> ${validItems.length} | <strong>Total Qty:</strong> ${totalQty}</p>
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Restock Order - ${escapeHtml(storeName)}</title>
+  <style>
+    @page { size: A4 portrait; margin: 12mm 10mm; }
 
-            <table>
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Product</th>
-                  <th>SKU / Note</th>
-                  <th>Type</th>
-                  <th>Order Qty</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${htmlRows}
-              </tbody>
-            </table>
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
 
-            <div class="footer">Generated by ZETRA BMS</div>
-          </body>
-        </html>
-      `;
+    html, body {
+      margin: 0 !important;
+      padding: 0 !important;
+      background: #ffffff;
+      color: #111827;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 10.5px;
+      line-height: 1.32;
+    }
+
+    .page { width: 100%; background: #ffffff; }
+
+    .header {
+      display: table;
+      width: 100%;
+      border-bottom: 2px solid #111827;
+      padding-bottom: 8px;
+      margin-bottom: 10px;
+    }
+
+    .brand, .meta {
+      display: table-cell;
+      vertical-align: top;
+    }
+
+    .brand-title {
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: 0.2px;
+    }
+
+    .brand-sub {
+      margin-top: 3px;
+      font-size: 10px;
+      font-weight: 800;
+      color: #475569;
+    }
+
+    .meta {
+      width: 38%;
+      text-align: right;
+      font-size: 9.5px;
+      color: #334155;
+      line-height: 1.45;
+    }
+
+    .badge {
+      display: inline-block;
+      border: 1px solid #10b981;
+      background: #ecfdf5;
+      color: #047857;
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-weight: 900;
+      margin-top: 4px;
+    }
+
+    .info-table, .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      margin-top: 8px;
+    }
+
+    .info-table td {
+      border: 1px solid #cbd5e1;
+      padding: 7px;
+      vertical-align: top;
+      word-break: break-word;
+    }
+
+    .data-table th, .data-table td {
+      border: 1px solid #cbd5e1;
+      padding: 5px;
+      text-align: left;
+      vertical-align: top;
+      word-break: break-word;
+    }
+
+    .data-table th {
+      background: #f1f5f9;
+      font-size: 8.5px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .data-table td { font-size: 9px; }
+
+    .section-title {
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+      margin: 13px 0 6px;
+      border-bottom: 1px solid #cbd5e1;
+      padding-bottom: 4px;
+    }
+
+    .right {
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .total-box {
+      margin-top: 12px;
+      border: 1.5px solid #10b981;
+      background: #ecfdf5;
+      padding: 10px;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .total-label {
+      color: #047857;
+      font-weight: 900;
+      font-size: 10px;
+      text-transform: uppercase;
+    }
+
+    .total-value {
+      font-size: 20px;
+      font-weight: 900;
+      margin-top: 3px;
+    }
+
+    .footer {
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px solid #e5e7eb;
+      color: #64748b;
+      text-align: center;
+      font-size: 9px;
+      font-weight: 800;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="page">
+    <div class="header">
+      <div class="brand">
+        <div class="brand-title">Restock Order</div>
+        <div class="brand-sub">Restock Assistant & Place Order</div>
+      </div>
+
+      <div class="meta">
+        <b>Store:</b> ${escapeHtml(storeName)}<br/>
+        <b>Generated:</b> ${escapeHtml(new Date().toLocaleString())}<br/>
+        <span class="badge">${validItems.length} Selected • Qty ${totalQty}</span>
+      </div>
+    </div>
+
+    <table class="info-table">
+      <tr>
+        <td><b>Store</b><br/>${escapeHtml(storeName)}</td>
+        <td><b>Total Items</b><br/>${validItems.length}</td>
+        <td><b>Total Qty</b><br/>${totalQty}</td>
+      </tr>
+    </table>
+
+    <div class="section-title">Order Items</div>
+
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th style="width:5%">#</th>
+          <th style="width:42%">Product</th>
+          <th style="width:23%">SKU / Note</th>
+          <th style="width:17%">Type</th>
+          <th style="width:13%" class="right">Qty</th>
+        </tr>
+      </thead>
+      <tbody>${htmlRows}</tbody>
+    </table>
+
+    <div class="total-box">
+      <div class="total-label">Total Order Qty</div>
+      <div class="total-value">${totalQty}</div>
+    </div>
+
+    <div class="footer">Generated by ZETRA BMS • Restock Assistant</div>
+  </div>
+</body>
+</html>
+`;
+
+      if (printHtmlPdfOnWeb(html)) return;
 
       const file = await Print.printToFileAsync({ html });
-      await Sharing.shareAsync(file.uri, {
-        mimeType: "application/pdf",
-        dialogTitle: "Share Restock Order PDF",
-      });
-    } catch {
-      Alert.alert(
-        "PDF not ready",
-        "PDF sharing inahitaji expo-print na expo-sharing ziwe installed kwenye app."
-      );
+
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(file.uri, {
+          mimeType: "application/pdf",
+          dialogTitle: "Share Restock Order PDF",
+          UTI: "com.adobe.pdf",
+        });
+      } else {
+        await Print.printAsync({ uri: file.uri });
+      }
+    } catch (e: any) {
+      Alert.alert("PDF Failed", e?.message ?? "Imeshindikana kutengeneza PDF.");
     }
   }, [validItems, storeName, totalQty]);
 
@@ -658,12 +851,12 @@ export default function RestockScreen() {
                   ? "rgba(239,68,68,0.28)"
                   : BORDER_SOFT,
                 backgroundColor: muted
-  ? "#F8FAFC"
-  : danger
-  ? "#FFF1F2"
-  : item.is_custom
-  ? "#ECFDF5"
-  : "#F8FAFC",
+                  ? "#F8FAFC"
+                  : danger
+                  ? "#FFF1F2"
+                  : item.is_custom
+                  ? "#ECFDF5"
+                  : "#F8FAFC",
                 paddingVertical: 12,
                 paddingHorizontal: 12,
                 opacity: muted ? 0.62 : 1,
@@ -682,16 +875,16 @@ export default function RestockScreen() {
                     justifyContent: "center",
                   }}
                 >
-                  <Text style={{ color: TEXT, fontWeight: "900", fontSize: 12 }}>
+                  <Text style={{ color: "#0F172A", fontWeight: "900", fontSize: 12 }}>
                     {index + 1}
                   </Text>
                 </View>
 
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text
-                   style={{
-  color: "#0F172A",
-  fontWeight: "900",
+                    style={{
+                      color: "#0F172A",
+                      fontWeight: "900",
                       fontSize: 14.5,
                     }}
                     numberOfLines={1}
@@ -701,7 +894,7 @@ export default function RestockScreen() {
 
                   <Text
                     style={{
-                      color: MUTED,
+                      color: "#64748B",
                       fontWeight: "800",
                       marginTop: 4,
                       fontSize: 11.5,
@@ -715,7 +908,7 @@ export default function RestockScreen() {
 
                   <Text
                     style={{
-                      color: item.is_custom ? EMERALD : danger ? "#F87171" : "#FBBF24",
+                      color: item.is_custom ? "#047857" : danger ? "#DC2626" : "#B45309",
                       fontWeight: "900",
                       marginTop: 4,
                       fontSize: 11,
@@ -730,8 +923,8 @@ export default function RestockScreen() {
                     width: 74,
                     borderRadius: 14,
                     borderWidth: 1,
-                    borderColor: BORDER_SOFT,
-                    backgroundColor: "rgba(255,255,255,0.06)",
+                    borderColor: "rgba(15,23,42,0.10)",
+                    backgroundColor: "#FFFFFF",
                     paddingHorizontal: 8,
                     paddingVertical: 2,
                   }}
@@ -741,9 +934,9 @@ export default function RestockScreen() {
                     onChangeText={(v) => updateQty(item.product_id, v)}
                     keyboardType="numeric"
                     placeholder="Qty"
-                    placeholderTextColor="rgba(234,242,255,0.35)"
+                    placeholderTextColor="#94A3B8"
                     style={{
-                      color: TEXT,
+                      color: "#0F172A",
                       fontWeight: "900",
                       textAlign: "center",
                       paddingVertical: 8,

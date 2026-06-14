@@ -4,6 +4,8 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Keyboard,
+  KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -43,6 +45,45 @@ function one(v: string | string[] | undefined) {
 function asDecimal(n: number) {
   if (!Number.isFinite(n)) return 0;
   return Number(n.toFixed(3));
+}
+
+const PRODUCT_PRICE_DECIMALS = 6;
+
+function normalizeDecimalInput(raw: string) {
+  const cleaned = String(raw ?? "")
+    .replace(",", ".")
+    .replace(/[^0-9.]/g, "")
+    .replace(/(\..*)\./g, "$1");
+
+  const [whole, decimal] = cleaned.split(".");
+  return decimal !== undefined ? `${whole}.${decimal.slice(0, PRODUCT_PRICE_DECIMALS)}` : whole;
+}
+
+function parsePositiveNumberOrNull(raw: string): number | null {
+  const t = normalizeDecimalInput(raw).trim();
+  if (!t) return null;
+  const n = Number(t);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return Number(n.toFixed(PRODUCT_PRICE_DECIMALS));
+}
+
+function parseZeroOrPositiveNumberOrNull(raw: string): number | null {
+  const t = normalizeDecimalInput(raw).trim();
+  if (!t) return null;
+  const n = Number(t);
+  if (!Number.isFinite(n) || n < 0) return null;
+  return Number(n.toFixed(PRODUCT_PRICE_DECIMALS));
+}
+
+function cleanBarcode(raw: string) {
+  const s = String(raw ?? "").trim();
+  if (!s) return "";
+  return s.replace(/\s+/g, "");
+}
+
+function isPrecisionRetailType(storeType: any) {
+  const t = String(storeType ?? "").trim().toUpperCase();
+  return t === "PRECISION_RETAIL" || t === "PRECISION" || t === "PHARMACY" || t === "PHARMA";
 }
 
 function localYMD(d = new Date()) {
@@ -98,6 +139,27 @@ const [precisionStockMode, setPrecisionStockMode] = useState<"UNIT" | "BOX">("BO
   const [expiryAlertDays, setExpiryAlertDays] = useState<number>(30);
 const [saving, setSaving] = useState(false);
 const [showOptionalDetails, setShowOptionalDetails] = useState(false);
+
+const isPrecisionRetailStore = isPrecisionRetailType(activeStoreType);
+const productStoreScope = isPrecisionRetailStore ? activeStoreId : null;
+const canQuickEditProduct = canAdjust;
+
+const [productDetails, setProductDetails] = useState<any | null>(null);
+const [quickEditOpen, setQuickEditOpen] = useState(false);
+const [quickEditSaving, setQuickEditSaving] = useState(false);
+
+const [quickName, setQuickName] = useState("");
+const [quickSku, setQuickSku] = useState("");
+const [quickUnit, setQuickUnit] = useState("");
+const [quickCategory, setQuickCategory] = useState("");
+const [quickBarcode, setQuickBarcode] = useState("");
+const [quickCostPrice, setQuickCostPrice] = useState("");
+const [quickSellingPrice, setQuickSellingPrice] = useState("");
+
+const [quickPrecisionPackQty, setQuickPrecisionPackQty] = useState("");
+const [quickPrecisionPackCost, setQuickPrecisionPackCost] = useState("");
+const [quickPrecisionPackSelling, setQuickPrecisionPackSelling] = useState("");
+const [quickPrecisionUnit, setQuickPrecisionUnit] = useState("");
 
 const [kbHeight, setKbHeight] = useState(0);
 
@@ -168,7 +230,9 @@ if (!cancelled) {
   setDisplayName((found?.name ?? "").trim() || "Product");
   if (!passedSku) setDisplaySku((found?.sku ?? "").trim() || "—");
 
-  setPrecisionMeta({
+  setProductDetails(found ?? null);
+
+setPrecisionMeta({
     is_precision_product: Boolean(found?.is_precision_product),
     precision_pack_size:
       found?.precision_pack_size != null ? Number(found.precision_pack_size) : null,
@@ -289,6 +353,182 @@ if (!cancelled) {
 
     return true;
   }, [activeStoreId, isCapitalRecoveryStore]);
+
+  const applyQuickPrecisionFormula = useCallback(() => {
+    const packQty = Number(normalizeDecimalInput(quickPrecisionPackQty));
+    const packCost = Number(normalizeDecimalInput(quickPrecisionPackCost));
+    const packSelling = Number(normalizeDecimalInput(quickPrecisionPackSelling));
+
+    if (!Number.isFinite(packQty) || packQty <= 0) {
+      Alert.alert("Missing", "Weka Pack Size / Quantity, mfano 100.");
+      return;
+    }
+
+    if (!Number.isFinite(packCost) || packCost < 0) {
+      Alert.alert("Missing", "Weka Buying/Cost Price ya box/pack.");
+      return;
+    }
+
+    if (!Number.isFinite(packSelling) || packSelling <= 0) {
+      Alert.alert("Missing", "Weka Selling Price ya box/pack.");
+      return;
+    }
+
+    setQuickCostPrice(String(Number((packCost / packQty).toFixed(PRODUCT_PRICE_DECIMALS))));
+    setQuickSellingPrice(String(Number((packSelling / packQty).toFixed(PRODUCT_PRICE_DECIMALS))));
+
+    if (!quickCategory.trim()) setQuickCategory("General");
+  }, [quickCategory, quickPrecisionPackCost, quickPrecisionPackQty, quickPrecisionPackSelling]);
+
+  const openQuickEdit = useCallback(() => {
+    if (!canQuickEditProduct) {
+      Alert.alert("No Access", "Owner/Admin only.");
+      return;
+    }
+
+    const p = productDetails ?? {};
+
+    setQuickName(String(p?.name ?? displayName ?? ""));
+    setQuickSku(String(p?.sku ?? (displaySku === "—" ? "" : displaySku) ?? ""));
+    setQuickUnit(String(p?.unit ?? ""));
+    setQuickCategory(String(p?.category ?? ""));
+    setQuickBarcode(String(p?.barcode ?? ""));
+    setQuickCostPrice(p?.cost_price != null ? String(Number(p.cost_price)) : "");
+    setQuickSellingPrice(p?.selling_price != null ? String(Number(p.selling_price)) : "");
+
+    setQuickPrecisionPackQty(
+      p?.precision_pack_size != null ? String(Number(p.precision_pack_size)) : ""
+    );
+    setQuickPrecisionPackCost("");
+    setQuickPrecisionPackSelling("");
+    setQuickPrecisionUnit(String(p?.precision_base_unit ?? ""));
+
+    setQuickEditOpen(true);
+  }, [canQuickEditProduct, displayName, displaySku, productDetails]);
+
+  const closeQuickEdit = useCallback(() => {
+    if (quickEditSaving) return;
+    setQuickEditOpen(false);
+  }, [quickEditSaving]);
+
+  const saveQuickEdit = useCallback(async () => {
+    if (!activeOrgId || !productId) return;
+
+    const n = quickName.trim();
+    if (!n) {
+      Alert.alert("Missing", "Weka product name.");
+      return;
+    }
+
+    const sp = parsePositiveNumberOrNull(quickSellingPrice);
+    if (quickSellingPrice.trim() && sp === null) {
+      Alert.alert("Invalid", "Selling Price iwe namba (> 0) au uiache wazi.");
+      return;
+    }
+
+    const cp = parseZeroOrPositiveNumberOrNull(quickCostPrice);
+    if (quickCostPrice.trim() && cp === null) {
+      Alert.alert("Invalid", "Cost Price iwe namba (>= 0) au uiache wazi.");
+      return;
+    }
+
+    if (sp === null && cp === null) {
+      Alert.alert("Missing", "Weka angalau Cost Price au Selling Price.");
+      return;
+    }
+
+    const bc = cleanBarcode(quickBarcode);
+    if (bc && bc.length < 6) {
+      Alert.alert("Invalid", "Barcode inaonekana fupi sana.");
+      return;
+    }
+
+    setQuickEditSaving(true);
+
+    try {
+      const { error } = await supabase.rpc("upsert_product", {
+        p_org_id: activeOrgId,
+        p_product_id: productId,
+        p_name: n,
+        p_sku: quickSku.trim() || null,
+        p_unit: quickUnit.trim() || null,
+        p_category: quickCategory.trim() || null,
+        p_is_active: true,
+        p_selling_price: sp,
+        p_cost_price: cp,
+        p_barcode: bc || null,
+        p_store_id: productStoreScope,
+
+        p_is_precision_product: isPrecisionRetailStore,
+        p_precision_pack_size: isPrecisionRetailStore
+          ? parsePositiveNumberOrNull(quickPrecisionPackQty)
+          : null,
+        p_precision_base_unit: isPrecisionRetailStore
+          ? quickPrecisionUnit.trim() || quickUnit.trim() || null
+          : null,
+        p_precision_sell_mode: isPrecisionRetailStore ? "BOTH" : "UNIT",
+        p_precision_allow_box_sales: isPrecisionRetailStore,
+        p_precision_allow_unit_sales: true,
+      });
+
+      if (error) throw error;
+
+      setDisplayName(n);
+      setDisplaySku(quickSku.trim() || "—");
+      setProductDetails((prev: any) => ({
+        ...(prev ?? {}),
+        id: productId,
+        name: n,
+        sku: quickSku.trim() || null,
+        unit: quickUnit.trim() || null,
+        category: quickCategory.trim() || null,
+        barcode: bc || null,
+        cost_price: cp,
+        selling_price: sp,
+        is_precision_product: isPrecisionRetailStore,
+        precision_pack_size: isPrecisionRetailStore
+          ? parsePositiveNumberOrNull(quickPrecisionPackQty)
+          : null,
+        precision_base_unit: isPrecisionRetailStore
+          ? quickPrecisionUnit.trim() || quickUnit.trim() || null
+          : null,
+      }));
+
+      setPrecisionMeta((prev) => ({
+        ...prev,
+        is_precision_product: isPrecisionRetailStore,
+        precision_pack_size: isPrecisionRetailStore
+          ? parsePositiveNumberOrNull(quickPrecisionPackQty)
+          : null,
+        precision_base_unit: isPrecisionRetailStore
+          ? quickPrecisionUnit.trim() || quickUnit.trim() || null
+          : null,
+        precision_package_unit: quickUnit.trim() || prev.precision_package_unit,
+      }));
+
+      setQuickEditOpen(false);
+      Alert.alert("Success ✅", "Product details updated.");
+    } catch (err: any) {
+      Alert.alert("Update failed", err?.message ?? "Unknown error");
+    } finally {
+      setQuickEditSaving(false);
+    }
+  }, [
+    activeOrgId,
+    productId,
+    quickName,
+    quickSku,
+    quickUnit,
+    quickCategory,
+    quickBarcode,
+    quickCostPrice,
+    quickSellingPrice,
+    productStoreScope,
+    productDetails,
+    isPrecisionRetailStore,
+    quickPrecisionPackQty,
+    quickPrecisionUnit,
+  ]);
 
   const submit = useCallback(async () => {
     if (saving) return;
@@ -682,6 +922,28 @@ const content = (
         ) : null}
 
         <Pressable
+          onPress={openQuickEdit}
+          disabled={saving || isCapitalRecoveryStore || !canQuickEditProduct}
+          style={({ pressed }) => ({
+            minHeight: 64,
+            borderRadius: 18,
+            borderWidth: 1.2,
+            borderColor: "rgba(14,165,233,0.28)",
+            backgroundColor: "rgba(14,165,233,0.08)",
+            paddingHorizontal: 14,
+            paddingVertical: 10,
+            opacity: pressed ? 0.9 : isCapitalRecoveryStore || !canQuickEditProduct ? 0.55 : 1,
+          })}
+        >
+          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 15 }}>
+            Edit Product Details
+          </Text>
+          <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12, marginTop: 3 }}>
+            Edit product details exactly like Products page before saving stock.
+          </Text>
+        </Pressable>
+
+        <Pressable
           onPress={() => setShowOptionalDetails((v) => !v)}
           disabled={saving || isCapitalRecoveryStore}
           style={({ pressed }) => ({
@@ -910,6 +1172,149 @@ const content = (
           {content}
         </TouchableWithoutFeedback>
       )}
+    <Modal
+        visible={quickEditOpen}
+        animationType="fade"
+        transparent
+        presentationStyle="overFullScreen"
+        statusBarTranslucent
+        onRequestClose={closeQuickEdit}
+      >
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: "rgba(15,23,42,0.34)",
+              paddingHorizontal: 16,
+              paddingTop: 34,
+              paddingBottom: 24,
+              justifyContent: "center",
+            }}
+          >
+            <View
+              style={{
+                width: "100%",
+                maxHeight: "86%",
+                borderRadius: 28,
+                backgroundColor: "#FFFFFF",
+                borderWidth: 1,
+                borderColor: "rgba(15,23,42,0.12)",
+                overflow: "hidden",
+                shadowColor: "#0F172A",
+                shadowOpacity: 0.24,
+                shadowRadius: 24,
+                shadowOffset: { width: 0, height: 12 },
+                elevation: 18,
+              }}
+            >
+              <View
+                style={{
+                  padding: 16,
+                  borderBottomWidth: 1,
+                  borderBottomColor: "rgba(15,23,42,0.10)",
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 20 }}>
+                  Edit Product
+                </Text>
+
+                <Pressable
+                  onPress={closeQuickEdit}
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 999,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderWidth: 1,
+                    borderColor: "rgba(15,23,42,0.12)",
+                    backgroundColor: "#F8FAFC",
+                  }}
+                >
+                  <Text style={{ color: theme.colors.text, fontSize: 24, fontWeight: "900" }}>×</Text>
+                </Pressable>
+              </View>
+
+              <ScrollView
+                style={{ flexGrow: 0 }}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{
+                  padding: 16,
+                  paddingBottom: 24,
+                  gap: 12,
+                }}
+              >
+                <TextInput value={quickName} onChangeText={setQuickName} placeholder="Product name" placeholderTextColor={theme.colors.faint} style={{ borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.lg, backgroundColor: "#FFFFFF", paddingHorizontal: 14, paddingVertical: 12, color: theme.colors.text, fontWeight: "900" }} />
+
+                <View style={{ flexDirection: "row", gap: 10 }}>
+                  <TextInput value={quickSku} onChangeText={setQuickSku} placeholder="SKU" placeholderTextColor={theme.colors.faint} style={{ flex: 1, borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.lg, backgroundColor: "#FFFFFF", paddingHorizontal: 14, paddingVertical: 12, color: theme.colors.text, fontWeight: "900" }} />
+                  <TextInput value={quickUnit} onChangeText={setQuickUnit} placeholder="Unit" placeholderTextColor={theme.colors.faint} style={{ flex: 1, borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.lg, backgroundColor: "#FFFFFF", paddingHorizontal: 14, paddingVertical: 12, color: theme.colors.text, fontWeight: "900" }} />
+                </View>
+
+                <TextInput value={quickCategory} onChangeText={setQuickCategory} placeholder="Category" placeholderTextColor={theme.colors.faint} style={{ borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.lg, backgroundColor: "#FFFFFF", paddingHorizontal: 14, paddingVertical: 12, color: theme.colors.text, fontWeight: "900" }} />
+
+                <TextInput value={quickBarcode} onChangeText={(t) => setQuickBarcode(cleanBarcode(t))} placeholder="Barcode (optional)" placeholderTextColor={theme.colors.faint} style={{ borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.lg, backgroundColor: "#FFFFFF", paddingHorizontal: 14, paddingVertical: 12, color: theme.colors.text, fontWeight: "900" }} />
+
+                {isPrecisionRetailStore ? (
+                  <Card
+                    style={{
+                      gap: 8,
+                      borderRadius: 22,
+                      borderColor: "rgba(52,211,153,0.28)",
+                      backgroundColor: "rgba(52,211,153,0.08)",
+                      padding: 12,
+                    }}
+                  >
+                    <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 15 }}>
+                      Unit & Pack Calculator
+                    </Text>
+
+                    <Text style={{ color: theme.colors.muted, fontWeight: "800", lineHeight: 19 }}>
+                      Badili pack size, unit ya ndani, cost ya pack na selling ya pack. Mfumo utahesabu bei ya unit moja automatic.
+                    </Text>
+
+                    <View style={{ flexDirection: "row", gap: 10 }}>
+                      <TextInput value={quickPrecisionPackQty} onChangeText={(t) => setQuickPrecisionPackQty(normalizeDecimalInput(t))} placeholder="Pack size e.g. 100" keyboardType="numeric" placeholderTextColor={theme.colors.faint} style={{ flex: 1.15, borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.lg, backgroundColor: "#FFFFFF", paddingHorizontal: 14, paddingVertical: 12, color: theme.colors.text, fontWeight: "900" }} />
+
+                      <TextInput value={quickPrecisionUnit} onChangeText={setQuickPrecisionUnit} placeholder="Unit e.g. capsule" placeholderTextColor={theme.colors.faint} style={{ flex: 1, borderWidth: 1, borderColor: theme.colors.emeraldBorder, borderRadius: theme.radius.lg, backgroundColor: "#ECFDF5", paddingHorizontal: 14, paddingVertical: 12, color: theme.colors.text, fontWeight: "900" }} />
+                    </View>
+
+                    <TextInput value={quickPrecisionPackCost} onChangeText={(t) => setQuickPrecisionPackCost(normalizeDecimalInput(t))} placeholder="Buying/Cost price ya box/pack" keyboardType="numeric" placeholderTextColor={theme.colors.faint} style={{ borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.lg, backgroundColor: "#FFFFFF", paddingHorizontal: 14, paddingVertical: 12, color: theme.colors.text, fontWeight: "900" }} />
+
+                    <TextInput value={quickPrecisionPackSelling} onChangeText={(t) => setQuickPrecisionPackSelling(normalizeDecimalInput(t))} placeholder="Selling price ya box/pack" keyboardType="numeric" placeholderTextColor={theme.colors.faint} style={{ borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.lg, backgroundColor: "#FFFFFF", paddingHorizontal: 14, paddingVertical: 12, color: theme.colors.text, fontWeight: "900" }} />
+
+                    <Button title="Calculate Per Unit Price" onPress={applyQuickPrecisionFormula} disabled={quickEditSaving} variant="secondary" />
+
+                    <Text style={{ color: theme.colors.faint, fontWeight: "800" }}>
+                      Baada ya calculate, Cost Price na Selling Price chini zitabadilishwa kama bei ya unit moja.
+                    </Text>
+                  </Card>
+                ) : null}
+
+                <TextInput value={quickCostPrice} onChangeText={(t) => setQuickCostPrice(normalizeDecimalInput(t))} placeholder="Cost Price" keyboardType="numeric" placeholderTextColor={theme.colors.faint} style={{ borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.lg, backgroundColor: "#FFFFFF", paddingHorizontal: 14, paddingVertical: 12, color: theme.colors.text, fontWeight: "900" }} />
+
+                <TextInput value={quickSellingPrice} onChangeText={(t) => setQuickSellingPrice(normalizeDecimalInput(t))} placeholder="Selling Price" keyboardType="numeric" placeholderTextColor={theme.colors.faint} style={{ borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.lg, backgroundColor: "#FFFFFF", paddingHorizontal: 14, paddingVertical: 12, color: theme.colors.text, fontWeight: "900" }} />
+
+                <View style={{ flexDirection: "row", gap: 10, marginTop: 4 }}>
+                  <View style={{ flex: 1 }}>
+                    <Button title="Cancel" variant="secondary" onPress={closeQuickEdit} disabled={quickEditSaving} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Button title={quickEditSaving ? "Saving..." : "Save Changes"} variant="primary" onPress={saveQuickEdit} disabled={quickEditSaving} />
+                  </View>
+                </View>
+              </ScrollView>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </Screen>
   );
 }

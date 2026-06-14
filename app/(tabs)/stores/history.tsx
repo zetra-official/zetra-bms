@@ -72,7 +72,17 @@ function pickDelta(r: MovementRow) {
 function pickMode(r: MovementRow) {
   return r.movement_mode ?? r.mode ?? "—";
 }
+function isStockInMovement(r: MovementRow) {
+  const delta = pickDelta(r);
+  const mode = String(pickMode(r) ?? "").trim().toUpperCase();
 
+  if (delta <= 0) return false;
+
+  const blockedModes = ["SALE", "SOLD", "REDUCE", "OUT", "TRANSFER_OUT", "ADJUST_REDUCE"];
+  if (blockedModes.some((x) => mode.includes(x))) return false;
+
+  return true;
+}
 function fmtDelta(n: number) {
   const sign = n > 0 ? "+" : "";
   return `${sign}${n}`;
@@ -168,7 +178,11 @@ export default function InventoryHistoryScreen() {
         });
         if (e) throw e;
 
-        const incoming = (data ?? []) as MovementRow[];
+        const rawIncoming = (data ?? []) as MovementRow[];
+
+// ✅ Stock In only: onyesha bidhaa zilizoingia tu.
+// Mauzo, reduce, transfer out zisihesabiwe kama stock in.
+const incoming = rawIncoming.filter(isStockInMovement);
 
         if (reset) {
           setRows(incoming);
@@ -357,7 +371,7 @@ export default function InventoryHistoryScreen() {
         <Card>
           <Text style={{ color: theme.colors.text, fontWeight: "900" }}>No history yet</Text>
           <Text style={{ color: theme.colors.muted, fontWeight: "700", marginTop: 6 }}>
-            Fanya Adjust Stock kisha urudi hapa ku-check movement logs.
+            Hakuna stock iliyoingia kwenye history hii. Mauzo na stock zilizotoka hazionyeshwi hapa.
           </Text>
         </Card>
       ) : (

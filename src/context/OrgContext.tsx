@@ -499,7 +499,8 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
 
         const userId = currentUserIdRef.current;
 
-        await Promise.all([
+        // Do not block first app render while saving workspace cache.
+        void Promise.all([
           kv.setString(KV_KEYS.activeOrgId, resolved.orgId),
           kv.setString(KV_KEYS.activeStoreId, resolved.storeId),
           ...(userId
@@ -625,9 +626,6 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
         const nextUserId = _session?.user?.id ?? null;
         const prevUserId = currentUserIdRef.current;
 
-        // always track latest user id
-        currentUserIdRef.current = nextUserId;
-
         // ✅ Only reset hydration memory when actual user identity changes
         if (prevUserId !== nextUserId) {
           hydratedUserRef.current = null;
@@ -651,7 +649,14 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
           event === "USER_UPDATED" ||
           event === "PASSWORD_RECOVERY"
         ) {
-          void loadAll(event === "SIGNED_OUT" ? "boot" : "refresh");
+          if (event === "SIGNED_OUT") {
+            currentUserIdRef.current = null;
+            void loadAll("boot");
+            return;
+          }
+
+          currentUserIdRef.current = nextUserId;
+          void loadAll("refresh");
         }
       }
     );

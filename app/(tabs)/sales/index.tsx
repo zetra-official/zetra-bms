@@ -16,6 +16,7 @@ import {
   TextInput,
   View,
   Vibration,
+  Image,
   useWindowDimensions,
 } from "react-native";
 
@@ -56,6 +57,7 @@ type ProductRow = {
   cost_price?: number | null;
   stock_qty?: number | null;
   barcode?: string | null;
+  image_url?: string | null;
 
   is_precision_product?: boolean | null;
   precision_pack_size?: number | null;
@@ -392,11 +394,30 @@ function ScannerFabIcon({ size = 24, color = "#E5E7EB" }: { size?: number; color
 ========================= */
 export default function SalesHomeScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ barcode?: string; _ts?: string }>();
+  const params = useLocalSearchParams<{
+  barcode?: string;
+  _ts?: string;
+
+  // Store Orders mode
+  orderMode?: string;
+  reservationMode?: string;
+  orderType?: string;
+  orderOrgId?: string;
+  orderStoreId?: string;
+  orderStoreName?: string;
+}>();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
 
   const { activeOrgId, activeOrgName, activeStoreId, activeStoreName, activeRole } = useOrg();
+
+const reservationMode =
+  String(params?.reservationMode ?? "") === "1" ||
+  String(params?.orderMode ?? "") === "1";
+const reservationOrderType =
+  String(params?.orderType ?? "RESERVATION").trim().toUpperCase() === "PRE_ORDER"
+    ? "PRE_ORDER"
+    : "RESERVATION";
 
   const netInfo = useNetInfo();
   const isOnline = !!(netInfo.isConnected && netInfo.isInternetReachable !== false);
@@ -408,9 +429,16 @@ export default function SalesHomeScreen() {
 
   const [query, setQuery] = useState("");
   const [products, setProducts] = useState<ProductRow[]>([]);
+  const productsCountRef = useRef(0);
+
+useEffect(() => {
+  productsCountRef.current = products.length;
+}, [products.length]);
   const [cart, setCart] = useState<CartItem[]>([]);
 
   const CART_KEY = (storeId: string) => `sales_cart_${storeId}`;
+  const cartHydratedRef = useRef(false);
+  const cartLastStoreRef = useRef<string>("");
   const realtimeChannelRef = useRef<RealtimeChannel | null>(null);
   const refreshTimerRef = useRef<any>(null);
   const lastRealtimeRefreshAtRef = useRef<number>(0);
@@ -483,23 +511,26 @@ export default function SalesHomeScreen() {
 const restorePersistedCart = useCallback(async () => {
     const sid = String(activeStoreId ?? "").trim();
 
+    cartHydratedRef.current = false;
+
     if (!sid || isCashier) {
       setCart([]);
+      cartLastStoreRef.current = sid;
+      cartHydratedRef.current = true;
       return;
     }
 
     try {
       const raw = await AsyncStorage.getItem(CART_KEY(sid));
+      const parsed = raw ? JSON.parse(raw) : [];
 
-      if (!raw) {
-        setCart([]);
-        return;
-      }
-
-      const parsed = JSON.parse(raw);
       setCart(Array.isArray(parsed) ? parsed : []);
+      cartLastStoreRef.current = sid;
     } catch {
       setCart([]);
+      cartLastStoreRef.current = sid;
+    } finally {
+      cartHydratedRef.current = true;
     }
   }, [activeStoreId, isCashier]);
 
@@ -516,6 +547,8 @@ const restorePersistedCart = useCallback(async () => {
   useEffect(() => {
     const sid = String(activeStoreId ?? "").trim();
     if (!sid || isCashier) return;
+    if (!cartHydratedRef.current) return;
+    if (cartLastStoreRef.current !== sid) return;
 
     void AsyncStorage.setItem(CART_KEY(sid), JSON.stringify(cart));
   }, [activeStoreId, isCashier, cart]);
@@ -534,56 +567,10 @@ const restorePersistedCart = useCallback(async () => {
     return currentRole === "owner" || currentRole === "admin" || currentRole === "staff";
   }, [currentRole]);
 
-  const isOwner = useMemo(() => currentRole === "owner", [currentRole]);
   const isOwnerOrAdmin = useMemo(
     () => currentRole === "owner" || currentRole === "admin",
     [currentRole]
   );
-
-  const [staffExpenseAllowed, setStaffExpenseAllowed] = useState(false);
-  const [staffExpenseLoading, setStaffExpenseLoading] = useState(false);
-
-  const canOpenExpenses = useMemo(() => {
-    if (isOwnerOrAdmin) return true;
-    if (currentRole === "staff" && staffExpenseAllowed) return true;
-    return false;
-  }, [currentRole, isOwnerOrAdmin, staffExpenseAllowed]);
-
-  const loadStaffExpensePermission = useCallback(async () => {
-    if (!activeStoreId || currentRole !== "staff") {
-      setStaffExpenseAllowed(false);
-      setStaffExpenseLoading(false);
-      return;
-    }
-
-    setStaffExpenseLoading(true);
-
-    try {
-      const { data, error } = await supabase
-        .from("stores")
-        .select("staff_can_manage_expense")
-        .eq("id", activeStoreId)
-        .maybeSingle();
-
-      if (error) throw error;
-      setStaffExpenseAllowed(!!data?.staff_can_manage_expense);
-    } catch {
-      try {
-        const { data, error } = await supabase
-          .from("stores")
-          .select("allow_staff_expense")
-          .eq("id", activeStoreId)
-          .maybeSingle();
-
-        if (error) throw error;
-        setStaffExpenseAllowed(!!data?.allow_staff_expense);
-      } catch {
-        setStaffExpenseAllowed(false);
-      }
-    } finally {
-      setStaffExpenseLoading(false);
-    }
-  }, [activeStoreId, currentRole]);
 
   const loadOpenShift = useCallback(async () => {
     if (!isCashier || !activeStoreId) {
@@ -738,6 +725,19 @@ const [modalErr, setModalErr] = useState<string | null>(null);
 
 const [sellModeOpen, setSellModeOpen] = useState(false);
 const [sellModeProduct, setSellModeProduct] = useState<ProductRow | null>(null);
+
+const [productPreviewOpen, setProductPreviewOpen] = useState(false);
+const [previewProduct, setPreviewProduct] = useState<ProductRow | null>(null);
+
+const openProductPreview = useCallback((p: ProductRow) => {
+  setPreviewProduct(p);
+  setProductPreviewOpen(true);
+}, []);
+
+const closeProductPreview = useCallback(() => {
+  setProductPreviewOpen(false);
+  setPreviewProduct(null);
+}, []);
 
   const openPriceModal = useCallback((p: ProductRow) => {
     setModalErr(null);
@@ -956,9 +956,10 @@ const dec = useCallback((key: string) => {
 }, []);
 
 const clearCart = useCallback(() => {
+  const sid = String(activeStoreId ?? "").trim();
+
   setCart([]);
 
-  const sid = String(activeStoreId ?? "").trim();
   if (sid) {
     void AsyncStorage.removeItem(CART_KEY(sid));
   }
@@ -1028,105 +1029,103 @@ const removeItem = useCallback((key: string) => {
   /* =========================
      Load products
   ========================= */
-  const loadProducts = useCallback(
-    async (mode: "boot" | "refresh") => {
-      setErr(null);
-      if (mode === "boot") setLoading(true);
-      if (mode === "refresh") setRefreshing(true);
+const loadProducts = useCallback(
+  async (mode: "boot" | "refresh") => {
+    setErr(null);
+    if (mode === "boot") setLoading(true);
+    if (mode === "refresh") setRefreshing(true);
 
-      try {
-        if (isCashier) {
-          setProducts([]);
-          setSource("NONE");
-          setLastSync(null);
-          return;
-        }
+    try {
+      if (isCashier) {
+        setProducts([]);
+        setSource("NONE");
+        setLastSync(null);
+        return;
+      }
 
-        if (!activeStoreId) {
-          setProducts([]);
-          setErr("No active store selected.");
-          setSource("NONE");
-          setLastSync(null);
-          return;
-        }
+      if (!activeStoreId) {
+        setProducts([]);
+        setErr("No active store selected.");
+        setSource("NONE");
+        setLastSync(null);
+        return;
+      }
 
+      // CACHE isitumike kama tuko online.
+      // Itumike tu offline au boot wakati hakuna internet.
+      if (isOffline) {
         try {
           const cached = await loadSalesProductsCache(activeStoreId);
           if (cached.rows.length > 0) {
             setProducts(cached.rows as any);
             setSource("CACHED");
             setLastSync(cached.lastSync);
+            return;
           }
         } catch {}
 
-        if (isOffline) return;
-
-        const { data, error } = await supabase.rpc("get_store_sale_items", {
-          p_store_id: activeStoreId,
-        });
-        if (error) throw error;
-
-        const rows = (data ?? []) as Array<{
-          product_id: string;
-          name: string | null;
-          sku: string | null;
-          category: string | null;
-          unit: string | null;
-          selling_price: number | null;
-          cost_price: number | null;
-          qty: number | null;
-          barcode?: string | null;
-is_precision_product?: boolean | null;
-precision_pack_size?: number | null;
-precision_base_unit?: string | null;
-precision_sell_mode?: string | null;
-precision_allow_box_sales?: boolean | null;
-precision_allow_unit_sales?: boolean | null;
-        }>;
-
-        const list: ProductRow[] = rows
-          .filter((r) => Number(r.qty ?? 0) > 0)
-          .map((r) => ({
-            id: r.product_id,
-            name: (r.name ?? "").trim() || "Product",
-            sku: r.sku ?? null,
-            category: r.category ?? null,
-            unit: r.unit ?? null,
-            selling_price: r.selling_price ?? null,
-            cost_price: r.cost_price ?? null,
-            stock_qty: r.qty ?? null,
-            barcode: (r as any).barcode ?? null,
-is_precision_product: Boolean((r as any).is_precision_product),
-precision_pack_size: (r as any).precision_pack_size ?? null,
-precision_base_unit: (r as any).precision_base_unit ?? null,
-precision_sell_mode: (r as any).precision_sell_mode ?? null,
-precision_allow_box_sales: (r as any).precision_allow_box_sales ?? null,
-precision_allow_unit_sales: (r as any).precision_allow_unit_sales ?? null,
-          }));
-
-        list.sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""));
-        setProducts(list);
-
-        try {
-          const syncIso = await saveSalesProductsCache(activeStoreId, list as any);
-          setSource("LIVE");
-          setLastSync(syncIso);
-        } catch {
-          setSource("LIVE");
-        }
-      } catch (e: any) {
-        setErr(e?.message ?? "Failed to load products");
-        if (products.length === 0) {
-          setProducts([]);
-          setSource("NONE");
-        }
-      } finally {
-        if (mode === "boot") setLoading(false);
-        if (mode === "refresh") setRefreshing(false);
+        setProducts([]);
+        setSource("NONE");
+        setLastSync(null);
+        return;
       }
-    },
-    [activeStoreId, isCashier, isOffline, products.length]
-  );
+
+      // ONLINE: soma LIVE moja kwa moja Supabase.
+      const { data, error } = await supabase.rpc("get_store_sale_items", {
+        p_store_id: activeStoreId,
+      });
+
+      if (error) throw error;
+
+      const rows = (data ?? []) as any[];
+
+      const list: ProductRow[] = rows
+        .filter((r) => Number(r.qty ?? 0) > 0)
+        .map((r) => ({
+          id: String(r.product_id),
+          name: String(r.name ?? "").trim() || "Product",
+          sku: r.sku ?? null,
+          category: r.category ?? null,
+          unit: r.unit ?? null,
+          selling_price: r.selling_price ?? null,
+          cost_price: r.cost_price ?? null,
+          stock_qty: r.qty ?? null,
+          barcode: r.barcode ?? null,
+          image_url: r.image_url ?? null,
+
+          is_precision_product: Boolean(r.is_precision_product),
+          precision_pack_size: r.precision_pack_size ?? null,
+          precision_base_unit: r.precision_base_unit ?? null,
+          precision_sell_mode: r.precision_sell_mode ?? null,
+          precision_allow_box_sales: r.precision_allow_box_sales ?? null,
+          precision_allow_unit_sales: r.precision_allow_unit_sales ?? null,
+        }));
+
+      list.sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""));
+
+      setProducts(list);
+      setSource("LIVE");
+
+      try {
+        const syncIso = await saveSalesProductsCache(activeStoreId, list as any);
+        setLastSync(syncIso);
+      } catch {
+        setLastSync(new Date().toISOString());
+      }
+    } catch (e: any) {
+      setErr(e?.message ?? "Failed to load products");
+
+      if (productsCountRef.current === 0) {
+        setProducts([]);
+        setSource("NONE");
+      }
+    } finally {
+      if (mode === "boot") setLoading(false);
+      if (mode === "refresh") setRefreshing(false);
+    }
+  },
+  [activeStoreId, isCashier, isOffline]
+);
 
   const triggerRealtimeRefresh = useCallback(() => {
     if (isCashier) return;
@@ -1147,9 +1146,7 @@ precision_allow_unit_sales: (r as any).precision_allow_unit_sales ?? null,
     }, 250);
   }, [isCashier, loadProducts]);
 
-  useEffect(() => {
-    void loadStaffExpensePermission();
-  }, [loadStaffExpensePermission]);
+ 
 
   useEffect(() => {
     const currentStoreId = String(activeStoreId ?? "").trim();
@@ -1158,7 +1155,6 @@ precision_allow_unit_sales: (r as any).precision_allow_unit_sales ?? null,
       lastResetCashierModeRef.current === null || lastResetCashierModeRef.current !== isCashier;
 
     if (shouldResetForStoreChange || shouldResetForModeChange) {
-      setCart([]);
       setQuery("");
       setRecentScannedIds([]);
       lastResetStoreIdRef.current = currentStoreId;
@@ -1184,6 +1180,7 @@ precision_allow_unit_sales: (r as any).precision_allow_unit_sales ?? null,
     void (async () => {
       try {
         await syncSalesQueueOnce(activeStoreId);
+await loadProducts("refresh");
       } catch {
       } finally {
         const n = await countPending(activeStoreId);
@@ -1430,6 +1427,7 @@ channel.subscribe();
             cost_price: row.cost_price ?? null,
             stock_qty: row.qty ?? null,
             barcode: raw,
+image_url: row.image_url ?? null,
           };
 
           setProducts((prev) => {
@@ -1601,15 +1599,21 @@ channel.subscribe();
     const payload = encodeURIComponent(JSON.stringify(cart));
     router.push({
       pathname: "/(tabs)/sales/checkout",
-      params: {
-        storeId: activeStoreId,
-        storeName: activeStoreName ?? "",
-        cart: payload,
-      },
+   params: {
+  storeId: activeStoreId,
+  storeName: activeStoreName ?? "",
+  cart: payload,
+  ...(reservationMode
+    ? {
+        reservationMode: "1",
+        orderType: reservationOrderType,
+      }
+    : {}),
+},
     });
 
     // Do not clear cart here. User may press Back from checkout and must find items preserved.
-  }, [activeStoreId, activeStoreName, canSellDirect, cart, router]);
+  }, [activeStoreId, activeStoreName, canSellDirect, cart, router, reservationMode, reservationOrderType]);
 
   const goCashierCheckout = useCallback(() => {
     setErr(null);
@@ -1783,8 +1787,7 @@ const cartHasItems = cart.length > 0 && cartTotalAmount > 0;
   const CashierFilterChip = ({
     label,
     value,
-  }: {
-    label: string;
+  }: {label: string;
     value: "PENDING" | "ACCEPTED" | "COMPLETED" | "ALL";
   }) => {
     const active = cashierFilter === value;
@@ -1814,7 +1817,7 @@ const cartHasItems = cart.length > 0 && cartTotalAmount > 0;
   ========================= */
 const TopBar = useMemo(() => {
   return (
-    <View style={{ gap: 8 }}>
+    <View style={{ gap: isDesktopWeb ? 4 : 8 }}>
       <View
         style={{
           flexDirection: "row",
@@ -1825,10 +1828,13 @@ const TopBar = useMemo(() => {
       >
         <View style={{ flex: 1, gap: 2 }}>
           <Text style={{ fontSize: 28, fontWeight: "900", color: theme.colors.text }}>
-            Sales
+            {isDesktopWeb ? "Point of Sale" : "Sales"}
           </Text>
 
-          <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }} numberOfLines={1}>
+          <Text
+            style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}
+            numberOfLines={1}
+          >
             {headerSubtitle}
           </Text>
 
@@ -1836,111 +1842,53 @@ const TopBar = useMemo(() => {
             {todayLabel}
           </Text>
 
-          <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }} numberOfLines={1}>
+          <Text
+            style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}
+            numberOfLines={1}
+          >
             {statusLine}
           </Text>
         </View>
 
-        <Pressable
-          onPress={() => router.push("/(tabs)/sales/history")}
-          hitSlop={10}
-          style={({ pressed }) => ({
-            minWidth: 96,
-            minHeight: 62,
-            paddingHorizontal: 14,
-            paddingVertical: 10,
-            borderRadius: 20,
-            borderWidth: 1.4,
-            borderColor: "rgba(15,23,42,0.12)",
-            backgroundColor: "#FFFFFF",
-            opacity: pressed ? 0.9 : 1,
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 4,
-            shadowColor: "#0F172A",
-            shadowOpacity: 0.12,
-            shadowRadius: 14,
-            shadowOffset: { width: 0, height: 8 },
-            elevation: 4,
-          })}
-        >
-          <SafeIcon name="time-outline" size={14} color={theme.colors.text} />
-          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 11 }}>
-            History
-          </Text>
-        </Pressable>
-      </View>
-
-      {!isCashier && canOpenExpenses ? (
-        <View style={{ flexDirection: "row", gap: 10 }}>
+        {!isDesktopWeb ? (
           <Pressable
-            onPress={() => router.push("/(tabs)/sales/expenses")}
+            onPress={() => router.push("/(tabs)/sales/history")}
             hitSlop={10}
             style={({ pressed }) => ({
-              flex: 1,
-              minHeight: 64,
+              minWidth: 96,
+              minHeight: 62,
+              paddingHorizontal: 14,
+              paddingVertical: 10,
               borderRadius: 20,
+              borderWidth: 1.4,
+              borderColor: "rgba(15,23,42,0.12)",
+              backgroundColor: "#FFFFFF",
+              opacity: pressed ? 0.9 : 1,
               alignItems: "center",
               justifyContent: "center",
-              borderWidth: 1.4,
-              borderColor: "rgba(239,68,68,0.22)",
-              backgroundColor: "#FFF7F7",
-              opacity: pressed ? 0.9 : 1,
-              shadowColor: "#991B1B",
-              shadowOpacity: 0.1,
+              gap: 4,
+              shadowColor: "#0F172A",
+              shadowOpacity: 0.12,
               shadowRadius: 14,
               shadowOffset: { width: 0, height: 8 },
               elevation: 4,
             })}
           >
-            <Text style={{ color: "#991B1B", fontWeight: "900", fontSize: 15 }}>
-              {staffExpenseLoading && currentRole === "staff" ? "Expenses..." : "Expenses"}
-            </Text>
-            <Text style={{ color: "#64748B", fontWeight: "800", fontSize: 10, marginTop: 3 }}>
-              Track business costs
+            <SafeIcon name="time-outline" size={14} color={theme.colors.text} />
+            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 11 }}>
+              History
             </Text>
           </Pressable>
+        ) : null}
+      </View>
 
-          {isOwner ? (
-            <Pressable
-              onPress={() => router.push("/(tabs)/sales/profit")}
-              hitSlop={10}
-              style={({ pressed }) => ({
-                flex: 1,
-                minHeight: 64,
-                borderRadius: 20,
-                alignItems: "center",
-                justifyContent: "center",
-                borderWidth: 1.4,
-                borderColor: "rgba(16,185,129,0.28)",
-                backgroundColor: "#ECFDF5",
-                opacity: pressed ? 0.9 : 1,
-                shadowColor: "#047857",
-                shadowOpacity: 0.12,
-                shadowRadius: 14,
-                shadowOffset: { width: 0, height: 8 },
-                elevation: 4,
-              })}
-            >
-              <Text style={{ color: "#047857", fontWeight: "900", fontSize: 15 }}>
-                Profit
-              </Text>
-              <Text style={{ color: "#64748B", fontWeight: "800", fontSize: 10, marginTop: 3 }}>
-                Owner earnings
-              </Text>
-            </Pressable>
-          ) : null}
-        </View>
-      ) : null}
+      {/* Expenses na Profit zimeondolewa hapa ili Sales ibaki POS safi.
+          Expenses sasa iko kwenye bottom tab yake. Profit ibaki Finance. */}
     </View>
   );
 }, [
   headerSubtitle,
-  isCashier,
-  isOwner,
-  canOpenExpenses,
-  currentRole,
-  staffExpenseLoading,
+  isDesktopWeb,
   router,
   statusLine,
   todayLabel,
@@ -2552,16 +2500,25 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
             marginBottom: 8,
           }}
         >
-          <Card
-            style={{
-              paddingVertical: isDesktopWeb ? 12 : 11,
-              paddingHorizontal: isDesktopWeb ? 14 : 12,
-              minHeight: undefined,
-              borderWidth: 1.2,
-              borderColor: qty > 0 ? "#10B981" : "rgba(15,23,42,0.08)",
-              backgroundColor: qty > 0 ? "#ECFDF5" : "#FFFFFF",
-            }}
-          >
+  <Pressable
+  onPress={() => openProductPreview(item)}
+  onLongPress={() => openProductPreview(item)}
+  delayLongPress={350}
+  style={({ pressed }) => ({
+    opacity: pressed ? 0.96 : 1,
+    transform: pressed ? [{ scale: 0.997 }] : [{ scale: 1 }],
+  })}
+>
+<Card
+  style={{
+    paddingVertical: isDesktopWeb ? 12 : 11,
+    paddingHorizontal: isDesktopWeb ? 14 : 12,
+    minHeight: undefined,
+    borderWidth: 1.2,
+    borderColor: qty > 0 ? "#10B981" : "rgba(15,23,42,0.08)",
+    backgroundColor: qty > 0 ? "#ECFDF5" : "#FFFFFF",
+  }}
+>
             <View
               style={{
                 flexDirection: "row",
@@ -2569,6 +2526,19 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
                 gap: 10,
               }}
             >
+              {item.image_url ? (
+                <Image
+                  source={{ uri: item.image_url }}
+                  style={{
+                    width: 46,
+                    height: 46,
+                    borderRadius: 14,
+                    backgroundColor: "#E2E8F0",
+                  }}
+                  resizeMode="cover"
+                />
+              ) : null}
+
               <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
                 <Text
                   style={{
@@ -2735,6 +2705,7 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
               )}
             </View>
           </Card>
+        </Pressable>
         </View>
       );
     },
@@ -2747,6 +2718,7 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
       inc,
       isDesktopWeb,
       openPriceModal,
+      openProductPreview,
       openQtyEditor,
       removeItem,
     ]
@@ -3225,6 +3197,190 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
   </View>
 </Modal>
 
+<Modal
+  visible={productPreviewOpen}
+  transparent
+  animationType="fade"
+  presentationStyle="overFullScreen"
+  statusBarTranslucent
+  hardwareAccelerated
+  onRequestClose={closeProductPreview}
+>
+  <View
+    style={{
+      flex: 1,
+      backgroundColor: "rgba(15,23,42,0.30)",
+      justifyContent: "flex-end",
+      paddingHorizontal: 14,
+      paddingBottom: Math.max(insets.bottom + 18, 24),
+    }}
+  >
+    <Pressable
+      onPress={closeProductPreview}
+      style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
+    />
+
+  <View
+  style={{
+    width: "100%",
+    maxWidth: isDesktopWeb ? 920 : undefined,
+    maxHeight: isDesktopWeb ? "88%" : "82%",
+    alignSelf: "center",
+    borderRadius: 28,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "rgba(15,23,42,0.10)",
+    padding: isDesktopWeb ? 20 : 18,
+    gap: 12,
+    shadowColor: "#0F172A",
+    shadowOpacity: 0.18,
+    shadowRadius: 28,
+    shadowOffset: { width: 0, height: 18 },
+    elevation: 18,
+  }}
+>
+      <View
+        style={{
+          alignSelf: "center",
+          width: 54,
+          height: 6,
+          borderRadius: 999,
+          backgroundColor: "rgba(15,23,42,0.18)",
+          marginBottom: 4,
+        }}
+      />
+
+   <ScrollView
+  showsVerticalScrollIndicator={false}
+  contentContainerStyle={{
+    gap: isDesktopWeb ? 18 : 12,
+  }}
+>
+<View
+  style={{
+    flexDirection: isDesktopWeb ? "row" : "column",
+    gap: isDesktopWeb ? 18 : 12,
+    alignItems: "stretch",
+  }}
+>
+  {previewProduct?.image_url ? (
+    <View
+      style={{
+        width: isDesktopWeb ? 360 : "100%",
+        minWidth: isDesktopWeb ? 360 : undefined,
+        height: isDesktopWeb ? 360 : 220,
+        borderRadius: 24,
+        backgroundColor: "#E2E8F0",
+        overflow: "hidden",
+        borderWidth: 1,
+        borderColor: "rgba(15,23,42,0.08)",
+      }}
+    >
+      <Image
+        source={{ uri: previewProduct.image_url }}
+        style={{
+          width: "100%",
+          height: "100%",
+        }}
+        resizeMode={isDesktopWeb ? "contain" : "cover"}
+      />
+    </View>
+  ) : null}
+
+  <View style={{ flex: 1, minWidth: 0, gap: 12 }}>
+    <Text style={{ color: "#0F172A", fontWeight: "900", fontSize: 22 }}>
+      Product Details
+    </Text>
+
+      <Text style={{ color: "#0F172A", fontWeight: "900", fontSize: 18 }}>
+        {previewProduct?.name ?? "—"}
+      </Text>
+
+      <View style={{ height: 1, backgroundColor: "rgba(15,23,42,0.10)" }} />
+
+      {[
+        ["SKU", previewProduct?.sku ?? "—"],
+        ["Category", previewProduct?.category ?? "—"],
+        ["Barcode", previewProduct?.barcode ?? "—"],
+        ["Unit", previewProduct?.unit ?? "—"],
+        ["Stock", fmtQty(previewProduct?.stock_qty ?? 0)],
+        ["Selling Price", fmt(Number(previewProduct?.selling_price ?? 0))],
+        ...(isOwnerOrAdmin
+          ? [["Cost Price", fmt(Number(previewProduct?.cost_price ?? 0))]]
+          : []),
+        ["Precision Product", previewProduct?.is_precision_product ? "YES" : "NO"],
+        ["Pack Size", previewProduct?.precision_pack_size ? fmtQty(previewProduct.precision_pack_size) : "—"],
+        ["Base Unit", previewProduct?.precision_base_unit ?? "—"],
+].map(([label, value]) => (
+    <View
+      key={label}
+      style={{
+        flexDirection: "row",
+        justifyContent: "space-between",
+        gap: 12,
+      }}
+    >
+      <Text style={{ color: "#64748B", fontWeight: "900", flex: 1 }}>
+        {label}
+      </Text>
+      <Text
+        style={{
+          color: "#0F172A",
+          fontWeight: "900",
+          flex: 1.4,
+          textAlign: "right",
+        }}
+      >
+        {value}
+      </Text>
+    </View>
+  ))}
+  </View>
+</View>
+</ScrollView>
+
+<View style={{ flexDirection: "row", gap: 10, marginTop: 6 }}>
+        <Pressable
+          onPress={closeProductPreview}
+          style={({ pressed }) => ({
+            flex: 1,
+            minHeight: 50,
+            borderRadius: 999,
+            borderWidth: 1,
+            borderColor: "rgba(15,23,42,0.12)",
+            backgroundColor: "#F8FAFC",
+            alignItems: "center",
+            justifyContent: "center",
+            opacity: pressed ? 0.9 : 1,
+          })}
+        >
+          <Text style={{ color: "#0F172A", fontWeight: "900" }}>Close</Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() => {
+            if (previewProduct) addAuto(previewProduct);
+            closeProductPreview();
+          }}
+          style={({ pressed }) => ({
+            flex: 1,
+            minHeight: 50,
+            borderRadius: 999,
+            borderWidth: 1,
+            borderColor: "#10B981",
+            backgroundColor: "#ECFDF5",
+            alignItems: "center",
+            justifyContent: "center",
+            opacity: pressed ? 0.9 : 1,
+          })}
+        >
+          <Text style={{ color: "#047857", fontWeight: "900" }}>Add to Cart</Text>
+        </Pressable>
+      </View>
+    </View>
+  </View>
+</Modal>
+
 <PriceModal
         visible={priceModalOpen}
         productName={selected?.name ?? "—"}
@@ -3259,7 +3415,7 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
           onPress={closeQtyEditor}
           style={{
             flex: 1,
-            backgroundColor: "rgba(0,0,0,0.78)",
+            backgroundColor: "rgba(15,23,42,0.28)",
             padding: 18,
           }}
         >
@@ -3269,26 +3425,26 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
             keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0}
           >
             <Pressable onPress={() => {}} style={{ width: "100%", maxWidth: 520, alignSelf: "center" }}>
-              <Card
-                style={{
-                  gap: 12,
-                  backgroundColor: "rgba(16,18,24,0.98)",
-                  borderColor: "rgba(255,255,255,0.10)",
-                  padding: 18,
-                }}
-              >
-                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
+            <Card
+  style={{
+    gap: 12,
+    backgroundColor: "#FFFFFF",
+    borderColor: "rgba(15,23,42,0.10)",
+    padding: 18,
+  }}
+>
+                <Text style={{ color: "#0F172A", fontWeight: "900", fontSize: 18 }}>
                   Set Quantity
                 </Text>
 
-                <Text style={{ color: theme.colors.muted, fontWeight: "800" }} numberOfLines={1}>
+                <Text style={{ color: "#64748B", fontWeight: "800" }} numberOfLines={1}>
                   Product:{" "}
                   <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
                     {qtyEditorName}
                   </Text>
                 </Text>
 
-                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Qty</Text>
+                <Text style={{ color: "#64748B", fontWeight: "800" }}>Qty</Text>
 
                 <TextInput
                   value={qtyEditorDraft}
@@ -3297,7 +3453,7 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
                     setQtyEditorDraft(t);
                   }}
                   placeholder="mf: 1.5"
-                  placeholderTextColor="rgba(255,255,255,0.35)"
+                  placeholderTextColor="#94A3B8"
                   keyboardType="decimal-pad"
                   returnKeyType="done"
                   blurOnSubmit
@@ -3306,10 +3462,10 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
                     borderWidth: 1,
                     borderColor: theme.colors.border,
                     borderRadius: theme.radius.lg,
-                    backgroundColor: "rgba(255,255,255,0.05)",
+                    backgroundColor: "#F8FAFC",
                     paddingHorizontal: 14,
                     paddingVertical: 12,
-                    color: theme.colors.text,
+                    color: "#0F172A",
                     fontWeight: "900",
                     fontSize: 16,
                   }}
@@ -3401,20 +3557,20 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
         <View
           style={{
             flex: 1,
-            backgroundColor: "rgba(0,0,0,0.78)",
+            backgroundColor: "rgba(15,23,42,0.28)",
             padding: 18,
             justifyContent: "center",
           }}
         >
           <View style={{ width: "100%", maxWidth: 520, alignSelf: "center" }}>
-            <Card
-              style={{
-                gap: 12,
-                backgroundColor: "rgba(16,18,24,0.98)",
-                borderColor: "rgba(255,255,255,0.10)",
-                padding: 18,
-              }}
-            >
+           <Card
+  style={{
+    gap: 12,
+    backgroundColor: "#FFFFFF",
+    borderColor: "rgba(15,23,42,0.10)",
+    padding: 18,
+  }}
+>
               <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 20 }}>
                 Open New Shift
               </Text>

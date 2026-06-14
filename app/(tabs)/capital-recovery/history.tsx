@@ -381,12 +381,19 @@ export default function CapitalRecoveryHistoryScreen() {
         <View
           style={{
             flex: 1,
-            backgroundColor: "rgba(0,0,0,0.72)",
+            backgroundColor: "rgba(15,23,42,0.35)",
             justifyContent: "center",
             padding: 16,
           }}
         >
-          <Card style={{ gap: 12, borderRadius: 22, backgroundColor: "#10141c" }}>
+          <Card
+  style={{
+    gap: 12,
+    borderRadius: 26,
+    borderColor: "rgba(147,197,253,0.55)",
+    backgroundColor: "#FFFFFF",
+  }}
+>
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18 }}>
               Edit Record
             </Text>
@@ -402,8 +409,8 @@ export default function CapitalRecoveryHistoryScreen() {
                 fontWeight: "900",
                 borderRadius: 16,
                 borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.12)",
-                backgroundColor: "rgba(255,255,255,0.06)",
+                borderColor: "rgba(147,197,253,0.45)",
+                backgroundColor: "#F8FAFC",
                 paddingHorizontal: 12,
                 paddingVertical: 12,
               }}
@@ -422,8 +429,8 @@ export default function CapitalRecoveryHistoryScreen() {
                 textAlignVertical: "top",
                 borderRadius: 16,
                 borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.12)",
-                backgroundColor: "rgba(255,255,255,0.06)",
+                borderColor: "rgba(147,197,253,0.45)",
+                backgroundColor: "#F8FAFC",
                 paddingHorizontal: 12,
                 paddingVertical: 12,
               }}
@@ -437,7 +444,7 @@ export default function CapitalRecoveryHistoryScreen() {
                   padding: 14,
                   borderRadius: 16,
                   borderWidth: 1,
-                  borderColor: "rgba(255,255,255,0.12)",
+                  borderColor: "rgba(147,197,253,0.45)",
                   alignItems: "center",
                 }}
               >
@@ -508,7 +515,7 @@ export default function CapitalRecoveryHistoryScreen() {
                 fontWeight: "900",
                 borderRadius: 16,
                 borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.12)",
+                borderColor: "rgba(147,197,253,0.45)",
                 backgroundColor: "#F8FAFC",
                 paddingHorizontal: 12,
                 paddingVertical: 12,
@@ -531,8 +538,8 @@ export default function CapitalRecoveryHistoryScreen() {
                 fontWeight: "900",
                 borderRadius: 16,
                 borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.12)",
-                backgroundColor: "rgba(255,255,255,0.06)",
+                borderColor: "rgba(147,197,253,0.45)",
+                backgroundColor: "#F8FAFC",
                 paddingHorizontal: 12,
                 paddingVertical: 12,
               }}

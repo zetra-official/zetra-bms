@@ -128,20 +128,41 @@ export default function RegisterScreen() {
       return Alert.alert("Register Failed", error.message);
     }
 
-    const session = data?.session ?? null;
-    const user = data?.user ?? null;
+const session = data?.session ?? null;
+const user = data?.user ?? null;
 
-    setLoading(false);
+setLoading(false);
 
-    if (!user?.id) {
-      return Alert.alert("Register Failed", "Account haikuweza kuundwa vizuri.");
-    }
+if (!user?.id) {
+  return Alert.alert("Register Failed", "Account haikuweza kuundwa vizuri.");
+}
 
-    // Email confirmation ikiwa OFF, user aende kwanza referral step, kisha onboarding.
-    if (session) {
-      router.replace("/(onboarding)/referral");
-      return;
-    }
+// ✅ reset onboarding referral state kwa account mpya
+try {
+  const { kv } = await import("@/src/storage/kv");
+
+  try {
+    await (kv as any)?.remove?.("zetra_onboarding_referral_done_v1");
+  } catch {}
+
+  try {
+    await (kv as any)?.remove?.("zetra_onboarding_referral_code_v1");
+  } catch {}
+
+  try {
+    await (kv as any)?.delete?.("zetra_onboarding_referral_done_v1");
+  } catch {}
+
+  try {
+    await (kv as any)?.delete?.("zetra_onboarding_referral_code_v1");
+  } catch {}
+} catch {}
+
+// Email confirmation ikiwa OFF, user aende kwanza referral step
+if (session) {
+  router.replace("/(onboarding)/referral");
+  return;
+}
 
     // fallback salama endapo backend itarudisha user bila session
     Alert.alert(

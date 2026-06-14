@@ -222,6 +222,32 @@ export default function StaffCommissionScreen() {
     });
   }, [rows, q]);
 
+  const performanceInsight = useMemo(() => {
+    const ranked = [...rows]
+      .map((r) => ({
+        row: r,
+        sales: toNum(r.total_sales),
+        count: Math.trunc(toNum(r.sales_count)),
+        commission: toNum(r.remaining_commission),
+      }))
+      .sort((a, b) => {
+        if (b.sales !== a.sales) return b.sales - a.sales;
+        return b.count - a.count;
+      });
+
+    const top = ranked.find((x) => x.sales > 0 || x.count > 0) ?? null;
+    const lowest =
+      ranked
+        .filter((x) => x.row.role?.toLowerCase() === "staff")
+        .reverse()
+        .find((x) => x.sales > 0 || x.count > 0) ?? null;
+
+    return {
+      top,
+      lowest: lowest && top && lowest.row.membership_id !== top.row.membership_id ? lowest : null,
+    };
+  }, [rows]);
+
   const savePercent = useCallback(
     async (membershipId: string) => {
       if (!canManage) {
@@ -442,6 +468,74 @@ Alert.alert("Success", "Commission rate saved.");
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 20, marginTop: 6 }}>
             {fmtMoney(rows.reduce((a, r) => a + toNum(r.remaining_commission), 0))}
           </Text>
+        </View>
+
+        <View
+          style={{
+            borderWidth: 1,
+            borderColor: "rgba(37,99,235,0.18)",
+            borderRadius: 22,
+            backgroundColor: "#FFFFFF",
+            padding: 16,
+            gap: 12,
+          }}
+        >
+          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 17 }}>
+            Top Staff Performance
+          </Text>
+
+          {performanceInsight.top ? (
+            <>
+              <View
+                style={{
+                  borderWidth: 1,
+                  borderColor: "rgba(52,211,153,0.24)",
+                  borderRadius: 18,
+                  backgroundColor: "rgba(52,211,153,0.08)",
+                  padding: 12,
+                }}
+              >
+                <Text style={{ color: UI.emerald, fontWeight: "900", fontSize: 12 }}>
+                  BEST PERFORMER THIS MONTH
+                </Text>
+                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16, marginTop: 6 }}>
+                  {performanceInsight.top.row.email ?? `User: ${shortId(String(performanceInsight.top.row.user_id ?? ""))}`}
+                </Text>
+                <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 6 }}>
+                  Sales: {fmtMoney(performanceInsight.top.sales)} • Receipts: {performanceInsight.top.count}
+                </Text>
+                <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 4 }}>
+                  Remaining Commission: {fmtMoney(performanceInsight.top.commission)}
+                </Text>
+              </View>
+
+              {performanceInsight.lowest ? (
+                <View
+                  style={{
+                    borderWidth: 1,
+                    borderColor: "rgba(251,113,133,0.22)",
+                    borderRadius: 18,
+                    backgroundColor: "rgba(251,113,133,0.06)",
+                    padding: 12,
+                  }}
+                >
+                  <Text style={{ color: UI.danger, fontWeight: "900", fontSize: 12 }}>
+                    NEEDS FOLLOW UP
+                  </Text>
+                  <Text style={{ color: UI.text, fontWeight: "900", marginTop: 6 }}>
+                    {performanceInsight.lowest.row.email ?? `User: ${shortId(String(performanceInsight.lowest.row.user_id ?? ""))}`}
+                  </Text>
+                  <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 6 }}>
+                    Sales: {fmtMoney(performanceInsight.lowest.sales)} • Receipts: {performanceInsight.lowest.count}
+                  </Text>
+                </View>
+              ) : null}
+            </>
+          ) : (
+            <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 20 }}>
+              Bado hakuna mauzo ya staff ya mwezi huu ya kutosha kufanya ranking.
+            </Text>
+          )}
         </View>
 
         <Pressable

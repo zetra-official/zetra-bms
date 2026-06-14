@@ -3,6 +3,7 @@ import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   Platform,
   Pressable,
   RefreshControl,
@@ -173,6 +174,11 @@ export default function OrgSwitcherScreen() {
   const [showAll, setShowAll] = useState(false);
   const [q, setQ] = useState("");
 
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [renameOrg, setRenameOrg] = useState<OrgItem | null>(null);
+  const [renameName, setRenameName] = useState("");
+  const [renaming, setRenaming] = useState(false);
+
   const typedOrgs = (orgs ?? []) as OrgItem[];
 
   const filteredOrgs = useMemo(() => {
@@ -341,7 +347,63 @@ export default function OrgSwitcherScreen() {
       setCreating(false);
     }
   };
+const openRenameOrg = (org: OrgItem) => {
+    if (org.role !== "owner") {
+      Alert.alert("Not allowed", "Owner pekee ndiye anaweza kubadili jina la organization.");
+      return;
+    }
 
+    setRenameOrg(org);
+    setRenameName(clean(org.organization_name));
+    setRenameOpen(true);
+  };
+
+  const closeRenameOrg = () => {
+    if (renaming) return;
+    setRenameOpen(false);
+    setRenameOrg(null);
+    setRenameName("");
+  };
+
+  const onRenameOrg = async () => {
+    const org = renameOrg;
+    const newName = clean(renameName);
+
+    if (!org) return;
+
+    if (org.role !== "owner") {
+      Alert.alert("Not allowed", "Owner pekee ndiye anaweza kubadili jina la organization.");
+      return;
+    }
+
+    if (!newName) {
+      Alert.alert("Required", "Weka jina jipya la organization.");
+      return;
+    }
+
+    if (normName(newName) === normName(org.organization_name)) {
+      closeRenameOrg();
+      return;
+    }
+
+    setRenaming(true);
+    try {
+      const { error } = await supabase
+        .from("organizations")
+        .update({ name: newName })
+        .eq("id", org.organization_id);
+
+      if (error) throw error;
+
+      await refresh();
+      closeRenameOrg();
+      Alert.alert("Success ✅", "Jina la organization limebadilishwa.");
+    } catch (e: any) {
+      Alert.alert("Failed", clean(e?.message) || "Failed to rename organization");
+    } finally {
+      setRenaming(false);
+    }
+  };
   const topRightBusy = loading || refreshing || creating;
 
   return (
@@ -569,9 +631,16 @@ export default function OrgSwitcherScreen() {
                 const list = g.list;
                 const activeInGroup = list.some((x) => x.organization_id === activeOrgId);
                 const count = list.length;
+                const ownerOrg = list.find((x) => x.role === "owner") ?? null;
 
                 return (
-                 <Pressable key={g.key} onPress={() => { void onPressGroup(list); }} disabled={topRightBusy}> 
+                  <Pressable
+                    key={g.key}
+                    onPress={() => {
+                      void onPressGroup(list);
+                    }}
+                    disabled={topRightBusy}
+                  > 
                     <Card
                       style={{
                         marginBottom: 12,
@@ -618,6 +687,28 @@ export default function OrgSwitcherScreen() {
                             <Badge text={`ROLE: ${roleLabel(g.role).toUpperCase()}`} variant="muted" />
                             {count > 1 ? <Badge text={`${count} ITEMS`} variant="muted" /> : null}
                             {activeInGroup ? <Badge text="ACTIVE" variant="active" /> : null}
+
+                            {ownerOrg ? (
+                              <Pressable
+                                onPress={(e: any) => {
+                                  e?.stopPropagation?.();
+                                  openRenameOrg(ownerOrg);
+                                }}
+                                hitSlop={8}
+                                style={{
+                                  paddingHorizontal: 10,
+                                  paddingVertical: 6,
+                                  borderRadius: 999,
+                                  borderWidth: 1,
+                                  borderColor: UI.border,
+                                  backgroundColor: "rgba(255,255,255,0.04)",
+                                }}
+                              >
+                                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
+                                  ✎ RENAME
+                                </Text>
+                              </Pressable>
+                            ) : null}
                           </View>
                         </View>
 
@@ -715,6 +806,28 @@ export default function OrgSwitcherScreen() {
                             >
                               <Badge text={`ROLE: ${roleLabel(o.role).toUpperCase()}`} variant="muted" />
                               {active ? <Badge text="ACTIVE" variant="active" /> : null}
+
+                              {o.role === "owner" ? (
+                                <Pressable
+                                  onPress={(e: any) => {
+                                    e?.stopPropagation?.();
+                                    openRenameOrg(o);
+                                  }}
+                                  hitSlop={8}
+                                  style={{
+                                    paddingHorizontal: 10,
+                                    paddingVertical: 6,
+                                    borderRadius: 999,
+                                    borderWidth: 1,
+                                    borderColor: UI.border,
+                                    backgroundColor: "rgba(255,255,255,0.04)",
+                                  }}
+                                >
+                                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
+                                    ✎ RENAME
+                                  </Text>
+                                </Pressable>
+                              ) : null}
                             </View>
                           </View>
 
@@ -755,6 +868,87 @@ export default function OrgSwitcherScreen() {
           </View>
         </View>
       </View>
+      <Modal visible={renameOpen} transparent animationType="fade" onRequestClose={closeRenameOrg}>
+  <View
+    style={{
+      flex: 1,
+      backgroundColor: "rgba(15,23,42,0.45)",
+      justifyContent: "center",
+      padding: 18,
+    }}
+  >
+    <View
+      style={{
+        width: "100%",
+        maxWidth: 520,
+        alignSelf: "center",
+        borderRadius: 22,
+        backgroundColor: UI.card,
+        borderWidth: 1,
+        borderColor: UI.border,
+        padding: 18,
+        gap: 12,
+      }}
+    >
+      <Text style={{ color: UI.text, fontWeight: "900", fontSize: 20 }}>
+        Rename Organization
+      </Text>
+
+      <Text style={{ color: UI.muted, fontWeight: "700" }}>
+        Badili jina la biashara / organization yako.
+      </Text>
+
+      <TextInput
+        value={renameName}
+        onChangeText={setRenameName}
+        placeholder="New organization name"
+        placeholderTextColor={UI.faint}
+        style={{
+          borderWidth: 1,
+          borderColor: UI.border,
+          borderRadius: 14,
+          padding: 14,
+          color: UI.text,
+          fontWeight: "900",
+        }}
+        autoCapitalize="words"
+      />
+
+      <View style={{ flexDirection: "row", gap: 10, justifyContent: "flex-end" }}>
+        <Pressable
+          onPress={closeRenameOrg}
+          disabled={renaming}
+          style={{
+            paddingHorizontal: 14,
+            paddingVertical: 10,
+            borderRadius: 14,
+            borderWidth: 1,
+            borderColor: UI.border,
+            opacity: renaming ? 0.6 : 1,
+          }}
+        >
+          <Text style={{ color: UI.muted, fontWeight: "900" }}>Cancel</Text>
+        </Pressable>
+
+        <Pressable
+          onPress={onRenameOrg}
+          disabled={renaming}
+          style={{
+            paddingHorizontal: 16,
+            paddingVertical: 10,
+            borderRadius: 14,
+            backgroundColor: UI.primary,
+            opacity: renaming ? 0.6 : 1,
+          }}
+        >
+          <Text style={{ color: "white", fontWeight: "900" }}>
+            {renaming ? "Saving..." : "Save"}
+          </Text>
+        </Pressable>
+      </View>
+    </View>
+  </View>
+</Modal>
     </Screen>
   );
 }

@@ -101,6 +101,13 @@ type StaffAttributionRow = {
   stores?: StaffAttributionStoreRow[];
 };
 
+type CheckoutCustomerSuggestion = {
+  id: string;
+  full_name: string | null;
+  phone: string | null;
+  normalized_phone: string | null;
+};
+
 function one(v: string | string[] | undefined) {
   return Array.isArray(v) ? v[0] : v;
 }
@@ -298,7 +305,21 @@ function InputBox(props: {
     />
   );
 }
-
+function checkoutCardStyle(accent: string, bg: string = "#FFFFFF") {
+  return {
+    gap: 12,
+    borderWidth: 1,
+    borderLeftWidth: 5,
+    borderLeftColor: accent,
+    borderColor: "rgba(15,23,42,0.08)",
+    backgroundColor: bg,
+    shadowColor: "#0F172A",
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 4,
+  };
+}
 export default function CheckoutScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
@@ -308,6 +329,12 @@ export default function CheckoutScreen() {
     storeName?: string | string[];
     cart?: string | string[];
     cashierMode?: string | string[];
+reservationMode?: string | string[];
+orderMode?: string | string[];
+orderType?: string | string[];
+orderOrgId?: string | string[];
+orderStoreId?: string | string[];
+orderStoreName?: string | string[];
   }>();
 
   const netInfo = useNetInfo();
@@ -346,6 +373,15 @@ export default function CheckoutScreen() {
   }, [storeId]);
   const storeNameParam = String(one(params.storeName) ?? "").trim();
   const cashierMode = one(params.cashierMode) === "1";
+const reservationMode =
+  one(params.reservationMode) === "1" || one(params.orderMode) === "1";
+
+const reservationOrderType =
+  String(one(params.orderType) ?? "RESERVATION").trim().toUpperCase() === "PRE_ORDER"
+    ? "PRE_ORDER"
+    : "RESERVATION";
+
+const reservationOrgId = String(one(params.orderOrgId) ?? orgId).trim();
 
   const cart: CartItem[] = useMemo(() => {
     try {
@@ -509,6 +545,9 @@ export default function CheckoutScreen() {
 
   const [customerName, setCustomerName] = useState<string>("");
   const [customerPhone, setCustomerPhone] = useState<string>("");
+  const [customerOptions, setCustomerOptions] = useState<CheckoutCustomerSuggestion[]>([]);
+  const [customerSuggestionsOpen, setCustomerSuggestionsOpen] = useState(false);
+  const [customerSearchFocused, setCustomerSearchFocused] = useState<"name" | "phone" | null>(null);
 
  const [staffOptions, setStaffOptions] = useState<StaffAttributionRow[]>([]);
 const [myStaffMembershipId, setMyStaffMembershipId] = useState<string>("");
@@ -596,7 +635,39 @@ const [staffDropdownOpen, setStaffDropdownOpen] = useState(false);
     () => method === "CREDIT" && (Number.isFinite(paidAmount) ? paidAmount : 0) > 0,
     [method, paidAmount]
   );
+useEffect(() => {
+    let alive = true;
 
+    async function loadCheckoutCustomers() {
+      try {
+        if (!storeId || cashierMode) {
+          if (alive) setCustomerOptions([]);
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from("customers")
+          .select("id, full_name, phone, normalized_phone")
+          .eq("store_id", storeId)
+          .order("updated_at", { ascending: false })
+          .limit(300);
+
+        if (error) throw error;
+
+        if (alive) {
+          setCustomerOptions((data ?? []) as CheckoutCustomerSuggestion[]);
+        }
+      } catch {
+        if (alive) setCustomerOptions([]);
+      }
+    }
+
+    void loadCheckoutCustomers();
+
+    return () => {
+      alive = false;
+    };
+  }, [storeId, cashierMode]);
   const rpcPaymentMethod: PayMethod = useMemo(() => {
     if (method === "SPLIT") {
       return "CASH";
@@ -681,8 +752,8 @@ const [staffDropdownOpen, setStaffDropdownOpen] = useState(false);
         setMyStaffMembershipId(myMembership);
         setCurrentActorMembershipId(currentMembership);
 
-        if (role === "staff" && (myMembership || currentMembership)) {
-          setSoldByMembershipId(myMembership || currentMembership);
+        if (role === "staff") {
+          setSoldByMembershipId((prev) => prev || myMembership || currentMembership || "");
         }
       } catch {
         if (!alive) return;
@@ -752,15 +823,12 @@ const [staffDropdownOpen, setStaffDropdownOpen] = useState(false);
   const effectiveSoldByMembershipId = useMemo(() => {
     const role = String(activeRole ?? "").trim().toLowerCase();
 
-    // STAFF: attribution ni ya staff mwenyewe moja kwa moja
     if (role === "staff") {
-      return myStaffMembershipId || soldByMembershipId || "";
+      return soldByMembershipId || myStaffMembershipId || currentActorMembershipId || "";
     }
 
-    // OWNER / ADMIN / CASHIER:
-    // attribution itumwe tu kama wamechagua staff fulani
     return soldByMembershipId || "";
-  }, [activeRole, myStaffMembershipId, soldByMembershipId]);
+  }, [activeRole, soldByMembershipId, myStaffMembershipId, currentActorMembershipId]);
 
   const selectedSoldByLabel = useMemo(() => {
     if (!effectiveSoldByMembershipId) return "No staff selected";
@@ -768,8 +836,39 @@ const [staffDropdownOpen, setStaffDropdownOpen] = useState(false);
     const found = staffOptions.find(
       (r) => String(r.membership_id ?? "") === String(effectiveSoldByMembershipId ?? "")
     );
+
     return pickStaffEmail(found) ?? "Selected staff";
   }, [staffOptions, effectiveSoldByMembershipId]);
+
+  const customerQuery = useMemo(() => {
+    const byName = String(customerName ?? "").trim().toLowerCase();
+    const byPhone = String(customerPhone ?? "").trim().toLowerCase();
+
+    if (customerSearchFocused === "phone") return byPhone;
+    return byName || byPhone;
+  }, [customerName, customerPhone, customerSearchFocused]);
+
+  const filteredCustomerOptions = useMemo(() => {
+    const q = customerQuery.trim().toLowerCase();
+    if (!q || q.length < 1) return [];
+
+    return customerOptions
+      .filter((c: CheckoutCustomerSuggestion) => {
+        const name = String(c.full_name ?? "").toLowerCase();
+        const phone = String(c.phone ?? "").toLowerCase();
+        const normalized = String(c.normalized_phone ?? "").toLowerCase();
+
+        return name.includes(q) || phone.includes(q) || normalized.includes(q);
+      })
+      .slice(0, 8);
+  }, [customerOptions, customerQuery]);
+
+  const selectCheckoutCustomer = useCallback((c: CheckoutCustomerSuggestion) => {
+    setCustomerName(String(c.full_name ?? "").trim());
+    setCustomerPhone(String(c.phone ?? c.normalized_phone ?? "").trim());
+    setCustomerSuggestionsOpen(false);
+    setCustomerSearchFocused(null);
+  }, []);
 
   const invalidReason = useMemo(() => {
     if (!canSell) return "No permission to sell.";
@@ -786,11 +885,19 @@ const [staffDropdownOpen, setStaffDropdownOpen] = useState(false);
       if (!openCashierShiftId) return "Cashier hana OPEN shift kwa store hii.";
     }
 
-    if (cashierMode) {
-      if (isOffline) return "Cashier handoff requires online connection.";
-      return null;
-    }
+  if (cashierMode) {
+  if (isOffline) return "Cashier handoff requires online connection.";
+  return null;
+}
 
+if (reservationMode) {
+  if (isOffline) return "Reservation/Pre Order requires online connection.";
+  if (!customerName.trim()) return "Enter customer name for reservation/pre-order.";
+  if (!Number.isFinite(paidAmount)) return "Enter a valid deposit/paid amount.";
+  if (paidAmount < 0) return "Deposit cannot be negative.";
+  if (paidAmount > grandTotal) return "Deposit cannot exceed total.";
+  return null;
+}
     
 
     if (!Number.isFinite(paidAmount)) return "Enter a valid paid amount.";
@@ -855,10 +962,13 @@ const [staffDropdownOpen, setStaffDropdownOpen] = useState(false);
     activeRole,
     openCashierShiftId,
     effectiveSoldByMembershipId,
-    isSplit,
-    splitCashAmount,
-    splitMobileAmount,
-    splitBankAmount,
+  isSplit,
+splitCashAmount,
+splitMobileAmount,
+splitBankAmount,
+reservationMode,
+reservationOrderType,
+orgId,
   ]);
 
   const preflightCheckStock = useCallback(async () => {
@@ -1010,7 +1120,96 @@ const [staffDropdownOpen, setStaffDropdownOpen] = useState(false);
       return;
     }
 
-    if (isOffline) {
+    if (reservationMode) {
+  setSaving(true);
+  try {
+    await preflightCheckStock();
+
+    const items = checkoutCart.map((c) => ({
+      product_id: c.product_id,
+      name: c.name ?? "Product",
+      sku: c.sku ?? null,
+      qty: Number(Number(c.qty).toFixed(3)),
+      unit: c.unit ?? null,
+      unit_price: getAdjustedUnitPrice(c),
+      line_total: getAdjustedLineTotal(c),
+    }));
+
+    const productLabel = items
+      .map((x) => `${x.name} x ${x.qty}`)
+      .join(", ");
+
+    const paymentLines =
+      `ORDER_PAYMENT: METHOD=${rpcPaymentMethod} | PAID=${Number(paidAmount || 0)} | BALANCE=${Number(balance || 0)}\n` +
+      `CHANNEL: ${rpcChannel || "-"} | REF: ${rpcReference || "-"}\n`;
+
+    const finalNote = buildNoteWithDiscount({
+      note: `${paymentLines}ITEMS_JSON: ${JSON.stringify(items)}\n${note || ""}`,
+      discountText,
+      discountAmount: discount.amount,
+      subtotal: subtotalAmount,
+    });
+
+    const { error } = await supabase.rpc("create_store_order_v1", {
+      p_org_id: reservationOrgId,
+      p_store_id: storeId,
+      p_order_type: reservationOrderType,
+      p_customer_name: customerName.trim(),
+      p_customer_phone: customerPhone.trim() || null,
+      p_product_name: productLabel || "Reserved items",
+      p_total_amount: grandTotal,
+      p_paid_amount: Number(paidAmount || 0),
+      p_note: finalNote,
+    } as any);
+
+    if (error) throw error;
+
+    await clearPersistedSalesCart();
+
+    const successMsg =
+      reservationOrderType === "PRE_ORDER"
+        ? "Pre Order imehifadhiwa vizuri."
+        : "Reservation imehifadhiwa vizuri.";
+
+    if (Platform.OS === "web") {
+      setWebBanner({ type: "success", text: successMsg });
+      setTimeout(() => {
+        router.replace({
+  pathname: "/stores/orders",
+  params: {
+    orgId: reservationOrgId,
+    storeId,
+    storeName: headerStoreName,
+  },
+} as any);
+      }, 650);
+    } else {
+      Alert.alert("Success ✅", successMsg, [
+        {
+          text: "OK",
+          onPress: () =>
+  router.replace({
+    pathname: "/stores/orders",
+    params: {
+      orgId: reservationOrgId,
+      storeId,
+      storeName: headerStoreName,
+    },
+  } as any),
+        },
+      ]);
+    }
+  } catch (e: any) {
+    const msg = e?.message ?? "Failed to save reservation/pre-order.";
+    if (Platform.OS === "web") setWebBanner({ type: "error", text: msg });
+    else Alert.alert("Failed", msg);
+  } finally {
+    setSaving(false);
+  }
+  return;
+}
+
+if (isOffline) {
       try {
         const clientSaleId = makeId();
 
@@ -1315,6 +1514,10 @@ p_customer_full_name: customerName.trim() || null,
     splitCashAmount,
     splitMobileAmount,
     splitBankAmount,
+reservationMode,
+reservationOrderType,
+reservationOrgId,
+headerStoreName,
   ]);
 
   const cartTotalLabel = useMemo(() => {
@@ -1339,11 +1542,11 @@ p_customer_full_name: customerName.trim() || null,
   }, [cashierMode, isOffline, rpcPaymentMethod]);
 
   const summaryCard = (
-    <Card style={{ gap: 10 }}>
+    <Card style={checkoutCardStyle("#3B82F6", "#F8FBFF")}>
       <View style={{ flexDirection: "row", alignItems: "center" }}>
         <View style={{ flex: 1 }}>
           <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-            Order Summary
+            🧾 Order Summary
           </Text>
           <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 2 }}>
             {cartTotalLabel}
@@ -1357,9 +1560,16 @@ p_customer_full_name: customerName.trim() || null,
             borderWidth: 1,
             borderColor: "rgba(52,211,153,0.22)",
             backgroundColor: "rgba(52,211,153,0.10)",
+            maxWidth: 150,
           }}
         >
-          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{prettyTotal}</Text>
+          <Text
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            style={{ color: theme.colors.text, fontWeight: "900" }}
+          >
+            {prettyTotal}
+          </Text>
         </View>
       </View>
 
@@ -1466,53 +1676,27 @@ p_customer_full_name: customerName.trim() || null,
       <View
         style={{
           flexDirection: "row",
-          gap: 10,
+          gap: 8,
+          alignItems: "stretch",
         }}
       >
-        <View
-          style={{
-            flex: 1,
-            padding: 12,
-            borderRadius: 16,
-            borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.08)",
-            backgroundColor: "rgba(255,255,255,0.04)",
-          }}
-        >
+        <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Subtotal</Text>
-          <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>
+          <Text numberOfLines={1} adjustsFontSizeToFit style={{ color: theme.colors.text, fontWeight: "900" }}>
             {prettySubtotal}
           </Text>
         </View>
 
-        <View
-          style={{
-            flex: 1,
-            padding: 12,
-            borderRadius: 16,
-            borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.08)",
-            backgroundColor: "rgba(255,255,255,0.04)",
-          }}
-        >
+        <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Discount</Text>
-          <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>
+          <Text numberOfLines={1} adjustsFontSizeToFit style={{ color: theme.colors.text, fontWeight: "900" }}>
             {prettyDiscount}
           </Text>
         </View>
 
-        <View
-          style={{
-            flex: 1,
-            padding: 12,
-            borderRadius: 16,
-            borderWidth: 1,
-            borderColor: "rgba(52,211,153,0.20)",
-            backgroundColor: "rgba(52,211,153,0.08)",
-          }}
-        >
+        <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Total</Text>
-          <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>
+          <Text numberOfLines={1} adjustsFontSizeToFit style={{ color: theme.colors.text, fontWeight: "900" }}>
             {prettyTotal}
           </Text>
         </View>
@@ -1521,9 +1705,9 @@ p_customer_full_name: customerName.trim() || null,
   );
 
   const discountNoteCard = (
-    <Card style={{ gap: 10 }}>
+    <Card style={checkoutCardStyle("#F59E0B", "#FFFBEB")}>
       <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-        Discount & Note
+        🎯 Discount & Note
       </Text>
 
       <View>
@@ -1563,91 +1747,106 @@ p_customer_full_name: customerName.trim() || null,
 
 const staffAttributionCard =
     !cashierMode ? (
-      <Card style={{ gap: 10 }}>
+      <Card style={checkoutCardStyle("#8B5CF6", "#FAF5FF")}>
         <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-          Staff Attribution
+          👥 Staff Attribution
         </Text>
 
-        {String(activeRole ?? "").trim().toLowerCase() === "staff" ? (
-          <>
-            <Text style={{ color: theme.colors.muted, fontWeight: "800", lineHeight: 20 }}>
-              Sale hii itahesabiwa kwenye account yako ya staff moja kwa moja.
-            </Text>
+        <Text style={{ color: theme.colors.muted, fontWeight: "800", lineHeight: 20 }}>
+          {String(activeRole ?? "").trim().toLowerCase() === "staff"
+            ? "Kwa default sale hii itahesabiwa kwako. Kama staff mwingine ndiye amefanya sale, mchague hapa."
+            : "Chagua staff kama unataka sale hii ihesabiwe kwa staff fulani. Usipochagua, sale itaendelea kawaida bila staff commission attribution."}
+        </Text>
 
-            <View
+        <View style={{ gap: 8 }}>
+          <Pressable
+            onPress={() => setStaffDropdownOpen((v) => !v)}
+            style={{
+              borderWidth: 1,
+              borderColor: staffDropdownOpen
+                ? "rgba(52,211,153,0.30)"
+                : theme.colors.border,
+              backgroundColor: staffDropdownOpen
+                ? "rgba(52,211,153,0.10)"
+                : "rgba(255,255,255,0.04)",
+              borderRadius: 16,
+              paddingVertical: 12,
+              paddingHorizontal: 12,
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 10,
+            }}
+          >
+            <Text
+              numberOfLines={1}
               style={{
-                borderWidth: 1,
-                borderColor: "rgba(52,211,153,0.20)",
-                backgroundColor: "rgba(52,211,153,0.08)",
-                borderRadius: 16,
-                padding: 12,
+                flex: 1,
+                color: effectiveSoldByMembershipId ? theme.colors.emerald : theme.colors.text,
+                fontWeight: "900",
               }}
             >
-              <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                Sold By Staff
-              </Text>
-              <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 6 }}>
-                {selectedSoldByLabel}
-              </Text>
-            </View>
-          </>
-        ) : (
-          <>
-            <Text style={{ color: theme.colors.muted, fontWeight: "800", lineHeight: 20 }}>
-              Chagua staff kama unataka sale hii ihesabiwe kwa staff fulani. Usipochagua, sale itaendelea kawaida bila staff commission attribution.
+              {effectiveSoldByMembershipId ? selectedSoldByLabel : "No staff attribution"}
             </Text>
 
+            <SafeIcon
+              name={staffDropdownOpen ? "chevron-up" : "chevron-down"}
+              size={18}
+              color={theme.colors.muted}
+            />
+          </Pressable>
+
+          {staffDropdownOpen ? (
             <View style={{ gap: 8 }}>
-              <Pressable
-                onPress={() => setStaffDropdownOpen((v) => !v)}
-                style={{
-                  borderWidth: 1,
-                  borderColor: staffDropdownOpen
-                    ? "rgba(52,211,153,0.30)"
-                    : theme.colors.border,
-                  backgroundColor: staffDropdownOpen
-                    ? "rgba(52,211,153,0.10)"
-                    : "rgba(255,255,255,0.04)",
-                  borderRadius: 16,
-                  paddingVertical: 12,
-                  paddingHorizontal: 12,
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: 10,
-                }}
-              >
-                <Text
-                  numberOfLines={1}
+              {String(activeRole ?? "").trim().toLowerCase() !== "staff" ? (
+                <Pressable
+                  onPress={() => {
+                    setSoldByMembershipId("");
+                    setStaffDropdownOpen(false);
+                  }}
                   style={{
-                    flex: 1,
-                    color: soldByMembershipId ? theme.colors.emerald : theme.colors.text,
-                    fontWeight: "900",
+                    borderWidth: 1,
+                    borderColor: !soldByMembershipId
+                      ? "rgba(52,211,153,0.30)"
+                      : theme.colors.border,
+                    backgroundColor: !soldByMembershipId
+                      ? "rgba(52,211,153,0.10)"
+                      : "rgba(255,255,255,0.04)",
+                    borderRadius: 16,
+                    paddingVertical: 12,
+                    paddingHorizontal: 12,
                   }}
                 >
-                  {soldByMembershipId ? selectedSoldByLabel : "No staff attribution"}
-                </Text>
+                  <Text
+                    style={{
+                      color: !soldByMembershipId ? theme.colors.emerald : theme.colors.text,
+                      fontWeight: "900",
+                    }}
+                  >
+                    No staff attribution
+                  </Text>
+                </Pressable>
+              ) : null}
 
-                <SafeIcon
-                  name={staffDropdownOpen ? "chevron-up" : "chevron-down"}
-                  size={18}
-                  color={theme.colors.muted}
-                />
-              </Pressable>
+              {staffOptions.map((row) => {
+                const membershipId = String(row.membership_id ?? "");
+                const label =
+                  pickStaffEmail(row) ?? `Membership ${membershipId.slice(0, 8)}...`;
+                const active = effectiveSoldByMembershipId === membershipId;
 
-              {staffDropdownOpen ? (
-                <View style={{ gap: 8 }}>
+                return (
                   <Pressable
+                    key={membershipId}
                     onPress={() => {
-                      setSoldByMembershipId("");
+                      setSoldByMembershipId(membershipId);
                       setStaffDropdownOpen(false);
                     }}
                     style={{
                       borderWidth: 1,
-                      borderColor: !soldByMembershipId
+                      borderColor: active
                         ? "rgba(52,211,153,0.30)"
                         : theme.colors.border,
-                      backgroundColor: !soldByMembershipId
+                      backgroundColor: active
                         ? "rgba(52,211,153,0.10)"
                         : "rgba(255,255,255,0.04)",
                       borderRadius: 16,
@@ -1656,71 +1855,32 @@ const staffAttributionCard =
                     }}
                   >
                     <Text
+                      numberOfLines={1}
                       style={{
-                        color: !soldByMembershipId ? theme.colors.emerald : theme.colors.text,
+                        color: active ? theme.colors.emerald : theme.colors.text,
                         fontWeight: "900",
                       }}
                     >
-                      No staff attribution
+                      {label}
                     </Text>
                   </Pressable>
+                );
+              })}
 
-                  {staffOptions.map((row) => {
-                    const membershipId = String(row.membership_id ?? "");
-                    const label =
-                      pickStaffEmail(row) ?? `Membership ${membershipId.slice(0, 8)}...`;
-                    const active = soldByMembershipId === membershipId;
-
-                    return (
-                      <Pressable
-                        key={membershipId}
-                        onPress={() => {
-                          setSoldByMembershipId(membershipId);
-                          setStaffDropdownOpen(false);
-                        }}
-                        style={{
-                          borderWidth: 1,
-                          borderColor: active
-                            ? "rgba(52,211,153,0.30)"
-                            : theme.colors.border,
-                          backgroundColor: active
-                            ? "rgba(52,211,153,0.10)"
-                            : "rgba(255,255,255,0.04)",
-                          borderRadius: 16,
-                          paddingVertical: 12,
-                          paddingHorizontal: 12,
-                        }}
-                      >
-                        <Text
-                          numberOfLines={1}
-                          style={{
-                            color: active ? theme.colors.emerald : theme.colors.text,
-                            fontWeight: "900",
-                          }}
-                        >
-                          {label}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-
-                  {staffOptions.length === 0 ? (
-                    <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                      Hakuna staff waliosajiliwa kwenye organization hii kwa sasa.
-                    </Text>
-                  ) : null}
-                </View>
+              {staffOptions.length === 0 ? (
+                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                  Hakuna staff waliosajiliwa kwenye store hii kwa sasa.
+                </Text>
               ) : null}
             </View>
-          </>
-        )}
+          ) : null}
+        </View>
       </Card>
     ) : null;
-
   const paymentCard = !cashierMode ? (
-    <Card style={{ gap: 12 }}>
+    <Card style={checkoutCardStyle("#10B981", "#F0FDF4")}>
       <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-        Payment
+        💳 Payment
       </Text>
 
      <View
@@ -1971,39 +2131,112 @@ const staffAttributionCard =
 
   const customerCard =
     !cashierMode ? (
-      <Card style={{ gap: 10 }}>
+      <Card style={checkoutCardStyle("#06B6D4", "#ECFEFF")}>
         <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-          Customer Tracking
+          👤 Customer Tracking
         </Text>
 
         <View>
           <FieldLabel>Customer Name {isCredit ? "*" : "(optional)"}</FieldLabel>
-          <InputBox
+          <TextInput
             value={customerName}
-            onChangeText={setCustomerName}
+            onFocus={() => {
+              setCustomerSearchFocused("name");
+              setCustomerSuggestionsOpen(true);
+            }}
+            onChangeText={(v) => {
+              setCustomerName(v);
+              setCustomerSearchFocused("name");
+              setCustomerSuggestionsOpen(true);
+            }}
             placeholder="mf: Juma Ali"
+            placeholderTextColor="rgba(255,255,255,0.35)"
             keyboardType="default"
+            style={{
+              color: theme.colors.text,
+              fontWeight: "800",
+              borderWidth: 1,
+              borderColor: theme.colors.border,
+              backgroundColor: "rgba(255,255,255,0.06)",
+              borderRadius: 16,
+              paddingHorizontal: 12,
+              paddingVertical: 10,
+            }}
           />
         </View>
 
         <View>
           <FieldLabel>Customer Phone (optional but recommended)</FieldLabel>
-          <InputBox
+          <TextInput
             value={customerPhone}
-            onChangeText={setCustomerPhone}
+            onFocus={() => {
+              setCustomerSearchFocused("phone");
+              setCustomerSuggestionsOpen(true);
+            }}
+            onChangeText={(v) => {
+              setCustomerPhone(v);
+              setCustomerSearchFocused("phone");
+              setCustomerSuggestionsOpen(true);
+            }}
             placeholder="mf: 0712xxxxxx"
+            placeholderTextColor="rgba(255,255,255,0.35)"
             keyboardType="phone-pad"
+            style={{
+              color: theme.colors.text,
+              fontWeight: "800",
+              borderWidth: 1,
+              borderColor: theme.colors.border,
+              backgroundColor: "rgba(255,255,255,0.06)",
+              borderRadius: 16,
+              paddingHorizontal: 12,
+              paddingVertical: 10,
+            }}
           />
         </View>
 
+        {customerSuggestionsOpen && filteredCustomerOptions.length > 0 ? (
+          <View style={{ gap: 8 }}>
+            {filteredCustomerOptions.map((c) => {
+              const name = String(c.full_name ?? "").trim() || "Customer";
+              const phone = String(c.phone ?? c.normalized_phone ?? "").trim() || "—";
+
+              return (
+                <Pressable
+                  key={c.id}
+                  onPress={() => selectCheckoutCustomer(c)}
+                  style={({ pressed }) => ({
+                    borderWidth: 1,
+                    borderColor: "rgba(52,211,153,0.22)",
+                    backgroundColor: "rgba(52,211,153,0.08)",
+                    borderRadius: 16,
+                    paddingVertical: 10,
+                    paddingHorizontal: 12,
+                    opacity: pressed ? 0.9 : 1,
+                  })}
+                >
+                  <Text style={{ color: theme.colors.text, fontWeight: "900" }} numberOfLines={1}>
+                    {name}
+                  </Text>
+                  <Text
+                    style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 2 }}
+                    numberOfLines={1}
+                  >
+                    {phone}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : null}
+
         <Text style={{ color: theme.colors.faint, fontWeight: "800" }}>
-          Tip: Ukiweka namba ya mteja, ZETRA itamtengenezea customer profile ya store hii na kuweka purchase history yake.
+          Tip: Anza kuandika jina au namba ya mteja; ukimchagua, jina na simu vitaingia automatically na sale itaunganishwa kwenye CRM file yake.
         </Text>
       </Card>
     ) : null;
 
   const actionCard = (
-    <Card style={{ gap: 10 }}>
+    <Card style={checkoutCardStyle("#2563EB", "#EFF6FF")}>
       <Button
         title={
           saving
@@ -2012,9 +2245,13 @@ const staffAttributionCard =
               : "Creating..."
             : cashierMode
               ? "Send to Cashiers"
-              : isOffline
-                ? "Save Offline"
-                : "Confirm Sale"
+            : reservationMode
+  ? reservationOrderType === "PRE_ORDER"
+    ? "Save Pre Order"
+    : "Save Reservation"
+  : isOffline
+    ? "Save Offline"
+    : "Confirm Sale"
         }
         onPress={confirm}
         disabled={saving || !!invalidReason}
@@ -2060,7 +2297,7 @@ const staffAttributionCard =
               borderRadius: 22,
               borderWidth: 1,
               borderColor: theme.colors.border,
-              backgroundColor: "#10141c",
+              backgroundColor: "#FFFFFF",
               padding: 16,
               gap: 12,
             }}
@@ -2078,8 +2315,8 @@ const staffAttributionCard =
                 padding: 12,
                 borderRadius: 16,
                 borderWidth: 1,
-                borderColor: "rgba(255,255,255,0.08)",
-                backgroundColor: "rgba(255,255,255,0.04)",
+        borderColor: "rgba(15,23,42,0.10)",
+backgroundColor: "rgba(241,245,249,0.72)",
                 gap: 4,
               }}
             >
@@ -2198,9 +2435,12 @@ const staffAttributionCard =
       </Modal>
 
       <View
-        style={{
-          flex: 1,
-          gap: 14,
+  style={{
+    flex: 1,
+    gap: isDesktopWeb ? 18 : 14,
+    backgroundColor: isDesktopWeb ? "#F8FAFC" : undefined,
+    padding: isDesktopWeb ? 14 : 0,
+    borderRadius: isDesktopWeb ? 28 : 0,
           width: "100%",
           maxWidth: isDesktopWeb ? desktopShellWidth : 980,
           alignSelf: "center",
@@ -2233,7 +2473,13 @@ const staffAttributionCard =
 
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 26, fontWeight: "900", color: theme.colors.text }}>
-              {cashierMode ? "Cashier Handoff" : "Checkout"}
+              {cashierMode
+  ? "Cashier Handoff"
+  : reservationMode
+    ? reservationOrderType === "PRE_ORDER"
+      ? "Pre Order Checkout"
+      : "Reservation Checkout"
+    : "Checkout"}
             </Text>
             <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
               Store: {headerStoreName}
@@ -2341,20 +2587,34 @@ const staffAttributionCard =
               {summaryCard}
             </View>
 
-            <View
-              style={{
-                width: desktopRightPaneWidth,
-                minWidth: 0,
-                flex: 1,
-                gap: 14,
-              }}
-            >
-              {discountNoteCard}
-              {staffAttributionCard}
-              {paymentCard}
-              {customerCard}
-              {actionCard}
-            </View>
+  <View
+  style={{
+    width: desktopRightPaneWidth,
+    minWidth: 0,
+    flex: 1,
+    gap: 14,
+  }}
+>
+  <View
+    style={{
+      flexDirection: "row",
+      gap: 14,
+      alignItems: "flex-start",
+      width: "100%",
+    }}
+  >
+    <View style={{ flex: 1, minWidth: 0, gap: 14 }}>
+      {discountNoteCard}
+      {staffAttributionCard}
+    </View>
+
+    <View style={{ flex: 1, minWidth: 0, gap: 14 }}>
+      {paymentCard}
+      {customerCard}
+      {actionCard}
+    </View>
+  </View>
+</View>
           </View>
         ) : (
           <>

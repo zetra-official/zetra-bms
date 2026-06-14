@@ -45,6 +45,8 @@ function webIconFallback(name: keyof typeof Ionicons.glyphMap) {
       return "$";
     case "chatbubbles-outline":
       return "M";
+     case "people-circle-outline":
+  return "BC"; 
     case "logo-whatsapp":
       return "W";
     case "business-outline":
@@ -149,6 +151,8 @@ function getPageGlyph(name: keyof typeof Ionicons.glyphMap) {
       return "$";
     case "chatbubbles-outline":
       return "M";
+      case "people-circle-outline":
+  return "BC";
     case "logo-whatsapp":
       return "W";
     case "business-outline":
@@ -856,11 +860,23 @@ soft="rgba(239,68,68,0.12)"
         />
       </PremiumSectionCard>
 
-      <SectionTitle label="Communication" />
-      <PremiumSectionCard accent="#06B6D4" glow="rgba(6,182,212,0.13)">
-        <Row
-          icon="chatbubbles-outline"
-          title="Meeting Room"
+     <SectionTitle label="Communication" />
+<PremiumSectionCard accent="#06B6D4" glow="rgba(6,182,212,0.13)">
+  <Row
+    icon="people-circle-outline"
+    title="Business Club"
+    subtitle="Open market, posts, business networking, and customer engagement"
+    badge="CLUB"
+    onPress={() => router.push("/(tabs)/club")}
+    accent="#0F766E"
+    soft="rgba(15,118,110,0.13)"
+  />
+
+  <Divider />
+
+  <Row
+    icon="chatbubbles-outline"
+    title="Meeting Room"
           subtitle="Create rooms, invite members, and collaborate in real time"
           badge="LIVE"
           onPress={() => router.push("/(tabs)/settings/meeting-room")}

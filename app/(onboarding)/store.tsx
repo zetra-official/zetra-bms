@@ -9,7 +9,6 @@ import { kv } from "@/src/storage/kv";
 import { Screen } from "@/src/ui/Screen";
 import { Card } from "@/src/ui/Card";
 import { Button } from "@/src/ui/Button";
-import { UI } from "@/src/ui/theme";
 
 function clean(s: any) {
   return String(s ?? "").trim();
@@ -41,6 +40,7 @@ async function ensureSession() {
   }
   return { session: null as any, error: null as any };
 }
+
 async function getSavedReferralCode() {
   try {
     if ((kv as any)?.getString) {
@@ -78,6 +78,20 @@ async function clearSavedReferralCode() {
     }
   } catch {}
 }
+
+const LIGHT = {
+  bg: "#EAF2FA",
+  card: "#FFFFFF",
+  text: "#0F172A",
+  muted: "#64748B",
+  faint: "#94A3B8",
+  border: "rgba(15,23,42,0.10)",
+  soft: "#F8FAFC",
+  emerald: "#059669",
+  emeraldSoft: "#ECFDF5",
+  blue: "#0B63CE",
+};
+
 export default function FirstStoreOnboardingScreen() {
   const router = useRouter();
   const org = useOrg();
@@ -109,7 +123,6 @@ export default function FirstStoreOnboardingScreen() {
     if (!orgName) return Alert.alert("Missing", "Business name is missing.");
     if (!firstStore) return Alert.alert("Missing", "Store name is required.");
 
-    // ✅ Must be authenticated (RLS + created_by)
     const { session, error: sessErr } = await ensureSession();
     if (sessErr) return Alert.alert("Imeshindikana", sessErr.message);
     if (!session) return Alert.alert("Imeshindikana", "Not authenticated");
@@ -117,7 +130,6 @@ export default function FirstStoreOnboardingScreen() {
     setLoading(true);
 
     try {
-      // 1) create org + first store
       const { error } = await supabase.rpc("create_org_with_store", {
         p_org_name: orgName,
         p_first_store_name: firstStore,
@@ -128,9 +140,8 @@ export default function FirstStoreOnboardingScreen() {
         return Alert.alert("Imeshindikana", error.message);
       }
 
-      // 2) refresh OrgContext (loads orgs/stores)
       await org.refresh();
-// 2.5) link referral code to this newly registered user (optional)
+
       try {
         const savedReferralCode = upper(await getSavedReferralCode());
         const authUserId = clean(session?.user?.id);
@@ -168,7 +179,7 @@ export default function FirstStoreOnboardingScreen() {
       } finally {
         await clearSavedReferralCode();
       }
-      // 3) find orgId by name (DB stores UPPERCASE per katiba trigger)
+
       const { data: orgs, error: orgErr } = await supabase.rpc("get_my_orgs");
       if (orgErr) console.log("get_my_orgs error:", orgErr);
 
@@ -179,7 +190,6 @@ export default function FirstStoreOnboardingScreen() {
 
       const orgId = clean(match?.organization_id);
 
-      // 4) Set timezone using RPC (ONBOARDING-ONLY) + KV cache
       if (orgId) {
         try {
           const { error: tzErr } = await supabase.rpc("set_org_timezone_once", {
@@ -203,7 +213,6 @@ export default function FirstStoreOnboardingScreen() {
         }
       }
 
-      // ✅ go dashboard
       router.replace("/(tabs)");
     } finally {
       setLoading(false);
@@ -213,55 +222,72 @@ export default function FirstStoreOnboardingScreen() {
   const canCreate = Boolean(clean(storeName) && !loading);
 
   return (
-    <Screen scroll>
-      {/* Header */}
+    <Screen
+      scroll
+      style={{ backgroundColor: LIGHT.bg } as any}
+      contentStyle={{ backgroundColor: LIGHT.bg } as any}
+    >
       <View style={{ marginTop: 6 }}>
-        <Text style={{ color: UI.text, fontWeight: "900", fontSize: 26 }}>
+        <Text style={{ color: LIGHT.text, fontWeight: "900", fontSize: 26 }}>
           First Store Setup
         </Text>
-        <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 6, lineHeight: 18 }}>
+        <Text style={{ color: LIGHT.muted, fontWeight: "800", marginTop: 6, lineHeight: 20 }}>
           Tengeneza store ya kwanza ya biashara yako.
         </Text>
       </View>
 
-      {/* Summary Card */}
       <View style={{ marginTop: 14 }}>
-        <Card>
-          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
+        <Card
+          style={{
+            backgroundColor: LIGHT.card,
+            borderColor: LIGHT.border,
+            borderWidth: 1,
+            borderRadius: 26,
+            shadowColor: "#0F172A",
+            shadowOpacity: 0.10,
+            shadowRadius: 18,
+            shadowOffset: { width: 0, height: 10 },
+            elevation: 4,
+          }}
+        >
+          <Text style={{ color: LIGHT.text, fontWeight: "900", fontSize: 14 }}>
             Summary
           </Text>
 
           <View style={{ marginTop: 12 }}>
-            <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>Business</Text>
-            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14, marginTop: 4 }}>
+            <Text style={{ color: LIGHT.muted, fontWeight: "800", fontSize: 12 }}>Business</Text>
+            <Text style={{ color: LIGHT.text, fontWeight: "900", fontSize: 14, marginTop: 4 }}>
               {businessName || "—"}
             </Text>
           </View>
 
           <View style={{ marginTop: 12 }}>
-            <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>Timezone</Text>
-            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14, marginTop: 4 }}>
+            <Text style={{ color: LIGHT.muted, fontWeight: "800", fontSize: 12 }}>Timezone</Text>
+            <Text style={{ color: LIGHT.text, fontWeight: "900", fontSize: 14, marginTop: 4 }}>
               {timezone || "Africa/Dar_es_Salaam"}
             </Text>
-            <Text
-              style={{
-                color: "rgba(255,255,255,0.60)",
-                fontWeight: "800",
-                fontSize: 12,
-                marginTop: 6,
-                lineHeight: 16,
-              }}
-            >
+            <Text style={{ color: LIGHT.muted, fontWeight: "800", fontSize: 12, marginTop: 6, lineHeight: 16 }}>
               Timezone itawekwa kwenye DB mara moja tu (onboarding-only). Baadaye itakuwa locked.
             </Text>
           </View>
         </Card>
       </View>
 
-      {/* Store Card */}
       <View style={{ marginTop: 12 }}>
-        <Card>
-          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
+        <Card
+          style={{
+            backgroundColor: LIGHT.card,
+            borderColor: LIGHT.border,
+            borderWidth: 1,
+            borderRadius: 26,
+            shadowColor: "#0F172A",
+            shadowOpacity: 0.10,
+            shadowRadius: 18,
+            shadowOffset: { width: 0, height: 10 },
+            elevation: 4,
+          }}
+        >
+          <Text style={{ color: LIGHT.text, fontWeight: "900", fontSize: 14 }}>
             Store name
           </Text>
 
@@ -269,8 +295,8 @@ export default function FirstStoreOnboardingScreen() {
             style={{
               marginTop: 10,
               borderWidth: 1,
-              borderColor: "rgba(255,255,255,0.12)",
-              backgroundColor: "rgba(255,255,255,0.04)",
+              borderColor: LIGHT.border,
+              backgroundColor: LIGHT.soft,
               borderRadius: 18,
               paddingHorizontal: 12,
               paddingVertical: 10,
@@ -280,10 +306,10 @@ export default function FirstStoreOnboardingScreen() {
               value={storeName}
               onChangeText={setStoreName}
               placeholder="e.g. SMART MEN"
-              placeholderTextColor="rgba(255,255,255,0.40)"
+              placeholderTextColor={LIGHT.faint}
               autoCapitalize="words"
               style={{
-                color: UI.text,
+                color: LIGHT.text,
                 fontWeight: "900",
                 fontSize: 14,
                 paddingVertical: 0,
@@ -291,21 +317,12 @@ export default function FirstStoreOnboardingScreen() {
             />
           </View>
 
-          <Text
-            style={{
-              color: "rgba(255,255,255,0.65)",
-              fontWeight: "800",
-              fontSize: 12,
-              marginTop: 10,
-              lineHeight: 16,
-            }}
-          >
+          <Text style={{ color: LIGHT.muted, fontWeight: "800", fontSize: 12, marginTop: 10, lineHeight: 16 }}>
             Tip: Tumia jina fupi na rahisi (mfano: SMART MEN, JOFU SIDO, SOWETO BRANCH).
           </Text>
         </Card>
       </View>
 
-      {/* Actions */}
       <View style={{ marginTop: 14 }}>
         <Button
           title={loading ? "Creating..." : "Create Business & Store"}
