@@ -420,7 +420,7 @@ export default function ExpensesScreen() {
   const { width } = useWindowDimensions();
   const isDesktopWeb = Platform.OS === "web" && width >= 900;
   
-  const { activeOrgId, activeOrgName, activeRole, activeStoreId, activeStoreName } = useOrg();
+  const { activeOrgId, activeOrgName, activeRole, activeStoreId, activeStoreName, stores } = useOrg();
 
   const money = useOrgMoneyPrefs(String(activeOrgId || ""));
   const fmt = useCallback((n: number) => money.fmt(n), [money]);
@@ -432,14 +432,39 @@ export default function ExpensesScreen() {
   const [staffExpenseAllowed, setStaffExpenseAllowed] = useState(false);
   const [staffExpenseLoading, setStaffExpenseLoading] = useState(false);
 
-  const canCreate = useMemo(() => {
-    if (!activeStoreId) return false;
-    if (isOwnerOrAdmin) return true;
-    if (isStaffView && staffExpenseAllowed) return true;
-    return false;
-  }, [activeStoreId, isOwnerOrAdmin, isStaffView, staffExpenseAllowed]);
+ const activeStoreRow = useMemo(() => {
+  const sid = String(activeStoreId ?? "").trim();
 
-  const showSummaryOnly = isStaffView && !staffExpenseAllowed;
+  return ((stores ?? []) as any[]).find((s: any) => {
+    return (
+      String(s?.id ?? "").trim() === sid ||
+      String(s?.store_id ?? "").trim() === sid
+    );
+  }) as any;
+}, [stores, activeStoreId]);
+
+const activeStoreDbId = useMemo(() => {
+  return String(activeStoreRow?.id ?? activeStoreRow?.store_id ?? activeStoreId ?? "").trim();
+}, [activeStoreRow, activeStoreId]);
+
+const localStaffExpenseAllowed = useMemo(() => {
+  return (
+    !!activeStoreRow?.staff_can_manage_expense ||
+    !!activeStoreRow?.allow_staff_expense
+  );
+}, [activeStoreRow]);
+
+const canCreate = useMemo(() => {
+  if (!activeStoreId) return false;
+  if (isOwnerOrAdmin) return true;
+
+  // Staff aone form. Ruhusa ya mwisho itathibitishwa na create_expense_v2 RPC.
+  if (isStaffView) return true;
+
+  return false;
+}, [activeStoreId, isOwnerOrAdmin, isStaffView]);
+
+  const showSummaryOnly = false;
 
   const [loading, setLoading] = useState(false);
   const [savingExpense, setSavingExpense] = useState(false);
@@ -479,39 +504,39 @@ const [rangeFilter, setRangeFilter] = useState<RangeFilter>("MONTH");
 
   const paymentMethodLabel = useMemo(() => paymentMethod.trim() || "CASH", [paymentMethod]);
 
-  const loadStaffExpensePermission = useCallback(async () => {
-    if (!activeStoreId || !isStaffView) {
-      setStaffExpenseAllowed(false);
-      return;
-    }
+const loadStaffExpensePermission = useCallback(async () => {
+  if (!activeStoreDbId || !isStaffView) {
+    setStaffExpenseAllowed(false);
+    setStaffExpenseLoading(false);
+    return;
+  }
 
-    setStaffExpenseLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from("stores")
-        .select("staff_can_manage_expense")
-        .eq("id", activeStoreId)
-        .maybeSingle();
+  if (localStaffExpenseAllowed) {
+    setStaffExpenseAllowed(true);
+    setStaffExpenseLoading(false);
+    return;
+  }
 
-      if (error) throw error;
-      setStaffExpenseAllowed(!!data?.staff_can_manage_expense);
-    } catch {
-      try {
-        const { data, error } = await supabase
-          .from("stores")
-          .select("allow_staff_expense")
-          .eq("id", activeStoreId)
-          .maybeSingle();
+  setStaffExpenseLoading(true);
 
-        if (error) throw error;
-        setStaffExpenseAllowed(!!data?.allow_staff_expense);
-      } catch {
-        setStaffExpenseAllowed(false);
-      }
-    } finally {
-      setStaffExpenseLoading(false);
-    }
-  }, [activeStoreId, isStaffView]);
+  try {
+    const { data, error } = await supabase
+      .from("stores")
+      .select("staff_can_manage_expense, allow_staff_expense")
+      .eq("id", activeStoreDbId)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    setStaffExpenseAllowed(
+      !!data?.staff_can_manage_expense || !!data?.allow_staff_expense
+    );
+  } catch {
+    setStaffExpenseAllowed(false);
+  } finally {
+    setStaffExpenseLoading(false);
+  }
+}, [activeStoreDbId, isStaffView, localStaffExpenseAllowed]);
 
   const ranges = useMemo(() => {
     const now = new Date();
@@ -658,7 +683,10 @@ useEffect(() => {
   useEffect(() => {
     void loadAll();
   }, [loadAll]);
-
+const openExpenseForm = useCallback(() => {
+  if (!canCreate || loading) return;
+  setExpenseFormOpen(true);
+}, [canCreate, loading]);
 const resetExpenseForm = useCallback(() => {
     setEditingExpenseId(null);
     setAmount("");
@@ -795,51 +823,56 @@ setExpenseFormOpen(false);
     resetExpenseForm,
   ]);
 
-  const deleteExpense = useCallback(
-    (r: ExpenseRow) => {
-      Alert.alert(
-        "Delete Expense",
-        "Una uhakika unataka kufuta expense hii?",
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Delete",
-            style: "destructive",
-            onPress: async () => {
-              if (loading) return;
+const deleteExpense = useCallback(
+    async (r: ExpenseRow) => {
+      if (loading) return;
 
-              setLoading(true);
-              setError(null);
+      const runDelete = async () => {
+        setLoading(true);
+        setError(null);
 
-              try {
-                const res = await withTimeout(
-                  supabase.rpc("delete_expense_v2", {
-                    p_expense_id: r.id,
-                  }),
-                  12_000,
-                  "delete_expense_v2"
-                );
+        try {
+          const res = await withTimeout(
+            supabase.rpc("delete_expense_v2", {
+              p_expense_id: r.id,
+            }),
+            12_000,
+            "delete_expense_v2"
+          );
 
-                const e = (res as any)?.error;
-                if (e) throw e;
+          const e = (res as any)?.error;
+          if (e) throw e;
 
-                if (editingExpenseId === r.id) {
-                  resetExpenseForm();
-                }
+          if (editingExpenseId === r.id) {
+            resetExpenseForm();
+          }
 
-                await loadAll();
-                Alert.alert("Deleted", "Expense imefutwa.");
-              } catch (err: any) {
-                const msg = prettyRpcError(err);
-                setError(msg);
-                Alert.alert("Failed", msg);
-              } finally {
-                setLoading(false);
-              }
-            },
-          },
-        ]
-      );
+          await loadAll();
+          Alert.alert("Deleted", "Expense imefutwa.");
+        } catch (err: any) {
+          const msg = prettyRpcError(err);
+          setError(msg);
+          Alert.alert("Failed", msg);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      if (Platform.OS === "web") {
+        const ok = window.confirm("Una uhakika unataka kufuta expense hii?");
+        if (!ok) return;
+        await runDelete();
+        return;
+      }
+
+      Alert.alert("Delete Expense", "Una uhakika unataka kufuta expense hii?", [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: runDelete,
+        },
+      ]);
     },
     [editingExpenseId, loadAll, loading, resetExpenseForm]
   );
@@ -1088,7 +1121,13 @@ const rowsHtml = filteredRows
               </View>
 
               <Pressable
-                onPress={() => router.back()}
+                onPress={() => {
+  if (router.canGoBack()) {
+    router.back();
+  } else {
+    router.replace("/(tabs)/stores");
+  }
+}}
                 hitSlop={10}
                 style={({ pressed }) => ({
                   width: 48,
@@ -1305,7 +1344,13 @@ minHeight: 64,
             </View>
 
             <Pressable
-              onPress={() => router.back()}
+              onPress={() => {
+  if (router.canGoBack()) {
+    router.back();
+  } else {
+    router.replace("/(tabs)/stores");
+  }
+}}
               hitSlop={10}
               style={({ pressed }) => ({
                 width: 40,
@@ -1500,12 +1545,18 @@ minHeight: 64,
           />
 
   <Pressable
-            onPress={() => setExpenseFormOpen(true)}
-            disabled={!canCreate}
+            onPress={openExpenseForm}
+            onPressIn={openExpenseForm}
+            // @ts-ignore - web click fallback
+            onClick={openExpenseForm}
+            disabled={!canCreate || staffExpenseLoading || loading}
             style={({ pressed }) => ({
               borderRadius: 26,
               opacity: !canCreate ? 0.55 : pressed ? 0.94 : 1,
               transform: pressed ? [{ scale: 0.992 }] : [{ scale: 1 }],
+              ...(Platform.OS === "web"
+                ? ({ cursor: canCreate ? "pointer" : "not-allowed" } as any)
+                : {}),
             })}
           >
             <Card
@@ -1829,6 +1880,8 @@ minHeight: 64,
                     <View style={{ flexDirection: "row", gap: 8 }}>
                       <Pressable
                         onPress={() => startEditExpense(r)}
+                        // @ts-ignore - web click fallback
+                        onClick={() => startEditExpense(r)}
                         disabled={loading}
                         style={({ pressed }) => ({
                           flex: 1,
@@ -1848,7 +1901,7 @@ minHeight: 64,
                       </Pressable>
 
                       <Pressable
-                        onPress={() => deleteExpense(r)}
+                        onPress={() => void deleteExpense(r)}
                         disabled={loading}
                         style={({ pressed }) => ({
                           flex: 1,
@@ -1917,9 +1970,10 @@ minHeight: 64,
     style={{ flex: 1 }}
   >
     <View
-      style={{
-        flex: 1,
-        backgroundColor: "rgba(15,23,42,0.45)",
+    style={{
+          flex: 1,
+          backgroundColor: "rgba(15,23,42,0.45)",
+          zIndex: 99999,
         justifyContent: isDesktopWeb ? "center" : "flex-end",
         paddingHorizontal: isDesktopWeb ? 24 : 14,
         paddingTop: 18,
@@ -2046,7 +2100,7 @@ minHeight: 64,
         >
           <Pressable
             onPress={saveExpense}
-            disabled={savingExpense || staffExpenseLoading || !canCreate}
+            disabled={savingExpense || !canCreate}
             style={({ pressed }) => ({
               minHeight: 48,
               borderRadius: 16,
@@ -2055,7 +2109,7 @@ minHeight: 64,
               backgroundColor: theme.colors.emeraldSoft,
               alignItems: "center",
               justifyContent: "center",
-              opacity: savingExpense || staffExpenseLoading || !canCreate ? 0.5 : pressed ? 0.92 : 1,
+              opacity: savingExpense || !canCreate ? 0.5 : pressed ? 0.92 : 1,
             })}
           >
             <Text style={{ color: theme.colors.text, fontWeight: "900" }}>

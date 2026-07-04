@@ -171,6 +171,7 @@ export default function CapitalRecoveryHistoryScreen() {
   const [editRow, setEditRow] = useState<Row | null>(null);
   const [editAmount, setEditAmount] = useState("");
   const [editNote, setEditNote] = useState("");
+  const [editType, setEditType] = useState<Row["entry_type"]>("INCOME");
   const [savingEdit, setSavingEdit] = useState(false);
 
   const applyRange = useCallback((k: RangeKey) => {
@@ -274,23 +275,18 @@ export default function CapitalRecoveryHistoryScreen() {
   }, [rows]);
 
   const canEditRow = useCallback(
-    (item: Row) => {
-      const createdDate = toIsoDateLocal(new Date(item.created_at));
-      const isToday = createdDate === today;
-      if (!isToday) return false;
-
+    (_item: Row) => {
       const role = roleLower;
-      if (role === "owner" || role === "admin") return true;
-
-      return clean(item.created_by) !== "";
+      return role === "owner" || role === "admin";
     },
-    [roleLower, today]
+    [roleLower]
   );
 
   const openEdit = useCallback((item: Row) => {
     setEditRow(item);
     setEditAmount(String(Math.round(toNum(item.amount))));
     setEditNote(clean(item.note));
+    setEditType(item.entry_type);
     setEditOpen(true);
   }, []);
 
@@ -308,8 +304,9 @@ export default function CapitalRecoveryHistoryScreen() {
     try {
       const { error } = await supabase.rpc("edit_capital_recovery_entry_v1", {
         p_entry_id: editRow.id,
+        p_entry_type: editType,
         p_amount: amount,
-        p_note: editNote,
+        p_note: clean(editNote) || null,
       });
 
       if (error) throw error;
@@ -322,7 +319,7 @@ export default function CapitalRecoveryHistoryScreen() {
     } finally {
       setSavingEdit(false);
     }
-  }, [editAmount, editNote, editRow, load]);
+  }, [editAmount, editNote, editType, editRow, load]);
 
   const displayRows = useMemo(() => {
     return rows.map((item) => {
@@ -397,7 +394,33 @@ export default function CapitalRecoveryHistoryScreen() {
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18 }}>
               Edit Record
             </Text>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              {(["ASSET", "COST", "INCOME"] as Row["entry_type"][]).map((t) => {
+                const active = editType === t;
+                const color = t === "INCOME" ? UI.emerald : t === "COST" ? UI.danger : UI.text;
 
+                return (
+                  <Pressable
+                    key={t}
+                    onPress={() => setEditType(t)}
+                    disabled={savingEdit}
+                    style={{
+                      flex: 1,
+                      paddingVertical: 11,
+                      borderRadius: 999,
+                      borderWidth: 1,
+                      borderColor: active ? color : "rgba(147,197,253,0.45)",
+                      backgroundColor: active ? "rgba(16,185,129,0.10)" : "#F8FAFC",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Text style={{ color: active ? color : UI.text, fontWeight: "900" }}>
+                      {t}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
             <TextInput
               value={editAmount}
               onChangeText={setEditAmount}

@@ -288,36 +288,80 @@ function InputBox(props: {
       value={props.value}
       onChangeText={props.onChangeText}
       placeholder={props.placeholder}
-      placeholderTextColor="rgba(255,255,255,0.35)"
+      placeholderTextColor="rgba(15,23,42,0.36)"
       keyboardType={props.keyboardType}
       multiline={props.multiline}
       style={{
         color: theme.colors.text,
         fontWeight: "800",
         borderWidth: 1,
-        borderColor: theme.colors.border,
-        backgroundColor: "rgba(255,255,255,0.06)",
-        borderRadius: 16,
+        borderColor: "rgba(15,23,42,0.10)",
+        backgroundColor: "rgba(255,255,255,0.78)",
+        borderRadius: 14,
         paddingHorizontal: 12,
-        paddingVertical: props.multiline ? 12 : 10,
-        minHeight: props.multiline ? 90 : undefined,
+        paddingVertical: props.multiline ? 10 : 9,
+        minHeight: props.multiline ? 66 : undefined,
       }}
     />
   );
 }
-function checkoutCardStyle(accent: string, bg: string = "#FFFFFF") {
+
+function CheckoutMiniTile({
+  label,
+  value,
+  highlight = false,
+}: {
+  label: string;
+  value: string;
+  highlight?: boolean;
+}) {
+  return (
+    <View
+      style={{
+        flex: 1,
+        minWidth: 0,
+        paddingVertical: 9,
+        paddingHorizontal: 10,
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: highlight ? "rgba(52,211,153,0.24)" : "rgba(15,23,42,0.08)",
+        backgroundColor: highlight ? "rgba(52,211,153,0.09)" : "rgba(255,255,255,0.58)",
+      }}
+    >
+      <Text style={{ color: theme.colors.muted, fontWeight: "900", fontSize: 11 }}>
+        {label}
+      </Text>
+      <Text
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.72}
+        style={{
+          color: highlight ? theme.colors.emerald : theme.colors.text,
+          fontWeight: "900",
+          marginTop: 3,
+          fontSize: 13,
+        }}
+      >
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+function checkoutCardStyle(accent: string, bg: string = "#FFFFFF", compact = false) {
   return {
-    gap: 12,
+    gap: compact ? 10 : 12,
+    padding: compact ? 14 : undefined,
     borderWidth: 1,
     borderLeftWidth: 5,
     borderLeftColor: accent,
     borderColor: "rgba(15,23,42,0.08)",
     backgroundColor: bg,
     shadowColor: "#0F172A",
-    shadowOpacity: 0.08,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 4,
+    shadowOpacity: 0.07,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 3,
   };
 }
 export default function CheckoutScreen() {
@@ -436,21 +480,20 @@ const reservationOrgId = String(one(params.orderOrgId) ?? orgId).trim();
 
   const desktopShellWidth = useMemo(() => {
     if (!isDesktopWeb) return 0;
-    if (width >= 1700) return 1500;
-    if (width >= 1500) return 1400;
-    if (width >= 1360) return 1280;
+    if (width >= 1700) return 1540;
+    if (width >= 1500) return 1440;
+    if (width >= 1360) return 1300;
     return 1180;
   }, [isDesktopWeb, width]);
 
   const desktopSummaryWidth = useMemo(() => {
     if (!isDesktopWeb) return 0;
-    if (width >= 1700) return 420;
-    if (width >= 1500) return 390;
-    if (width >= 1360) return 360;
-    return 320;
+    if (width >= 1500) return 430;
+    if (width >= 1360) return 400;
+    return 370;
   }, [isDesktopWeb, width]);
 
-  const desktopRightPaneWidth = useMemo(() => {
+  const desktopMainWidth = useMemo(() => {
     if (!isDesktopWeb) return 0;
     return Math.max(0, desktopShellWidth - desktopSummaryWidth - 20);
   }, [isDesktopWeb, desktopShellWidth, desktopSummaryWidth]);
@@ -1705,7 +1748,7 @@ headerStoreName,
   );
 
   const discountNoteCard = (
-    <Card style={checkoutCardStyle("#F59E0B", "#FFFBEB")}>
+    <Card style={checkoutCardStyle("#F59E0B", "#FFFBEB", isDesktopWeb)}>
       <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
         🎯 Discount & Note
       </Text>
@@ -1718,15 +1761,12 @@ headerStoreName,
           placeholder="mf: 10% au 5000 au 5k"
           keyboardType="default"
         />
-        <Text style={{ color: theme.colors.faint, fontWeight: "800", marginTop: 8 }}>
-          Tip: Ukiweka discount, total itashuka moja kwa moja.
-        </Text>
-        <Text style={{ color: theme.colors.faint, fontWeight: "800", marginTop: 4 }}>
-          Pia unaweza kubonyeza alama ya + kwenye kila item kuongeza bei kwa kila qty.
+        <Text style={{ color: theme.colors.faint, fontWeight: "800", marginTop: 8, lineHeight: 17 }}>
+          Tip: Discount hupunguza total. Alama ya + kwenye item huongeza markup kwa kila qty.
         </Text>
       </View>
 
-      <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
+      <View style={{ height: 1, backgroundColor: "rgba(15,23,42,0.06)" }} />
 
       <View>
         <FieldLabel>Note (optional)</FieldLabel>
@@ -1747,15 +1787,15 @@ headerStoreName,
 
 const staffAttributionCard =
     !cashierMode ? (
-      <Card style={checkoutCardStyle("#8B5CF6", "#FAF5FF")}>
+      <Card style={checkoutCardStyle("#8B5CF6", "#FAF5FF", isDesktopWeb)}>
         <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
           👥 Staff Attribution
         </Text>
 
-        <Text style={{ color: theme.colors.muted, fontWeight: "800", lineHeight: 20 }}>
+        <Text style={{ color: theme.colors.muted, fontWeight: "800", lineHeight: 18, fontSize: 12 }}>
           {String(activeRole ?? "").trim().toLowerCase() === "staff"
-            ? "Kwa default sale hii itahesabiwa kwako. Kama staff mwingine ndiye amefanya sale, mchague hapa."
-            : "Chagua staff kama unataka sale hii ihesabiwe kwa staff fulani. Usipochagua, sale itaendelea kawaida bila staff commission attribution."}
+            ? "Default sale itahesabiwa kwako. Badilisha tu kama staff mwingine ndiye amefanya sale."
+            : "Chagua staff kwa commission attribution. Ukiacha wazi, sale itaendelea kawaida."}
         </Text>
 
         <View style={{ gap: 8 }}>
@@ -1878,88 +1918,76 @@ const staffAttributionCard =
       </Card>
     ) : null;
   const paymentCard = !cashierMode ? (
-    <Card style={checkoutCardStyle("#10B981", "#F0FDF4")}>
-      <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-        💳 Payment
-      </Text>
-
-     <View
-        style={{
-          flexDirection: "row",
-          flexWrap: isDesktopWeb ? "wrap" : "nowrap",
-          gap: 8,
-          justifyContent: "space-between",
-          alignItems: "stretch",
-        }}
-      >
-        <MethodChip
-          label="Cash"
-          active={method === "CASH"}
-          onPress={() => onSetMethod("CASH")}
-          compact={isDesktopWeb}
-        />
-        <MethodChip
-          label="Mobile"
-          active={method === "MOBILE"}
-          onPress={() => onSetMethod("MOBILE")}
-          compact={isDesktopWeb}
-        />
-        <MethodChip
-          label="Bank"
-          active={method === "BANK"}
-          onPress={() => onSetMethod("BANK")}
-          compact={isDesktopWeb}
-        />
-        <MethodChip
-          label="Split"
-          active={method === "SPLIT"}
-          onPress={() => onSetMethod("SPLIT")}
-          compact={isDesktopWeb}
-        />
-
-        <MethodChip
-          label="Credit"
-          active={method === "CREDIT"}
-          onPress={() => onSetMethod("CREDIT")}
-          compact={isDesktopWeb}
-        />
+    <Card style={checkoutCardStyle("#10B981", "#F0FDF4", isDesktopWeb)}>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+          💳 Payment
+        </Text>
+        <Text style={{ color: theme.colors.emerald, fontWeight: "900", fontSize: 12 }}>
+          {method}
+        </Text>
       </View>
 
-      <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
+      <View
+        style={{
+          flexDirection: "row",
+          flexWrap: "wrap",
+          gap: 8,
+          justifyContent: "space-between",
+        }}
+      >
+        {[
+          ["Cash", "CASH"],
+          ["Mobile", "MOBILE"],
+          ["Bank", "BANK"],
+          ["Split", "SPLIT"],
+          ["Credit", "CREDIT"],
+        ].map(([label, value]) => (
+          <MethodChip
+            key={value}
+            label={label}
+            active={method === value}
+            onPress={() => onSetMethod(value as CheckoutMethod)}
+            compact={isDesktopWeb}
+          />
+        ))}
+      </View>
 
       {method === "SPLIT" ? (
-        <View style={{ gap: 10 }}>
-          <View>
-            <FieldLabel>Cash Paid ({displayCurrency})</FieldLabel>
-            <InputBox
-              value={splitCashStr}
-              onChangeText={(v) => setSplitCashStr(normalizeMoneyInput(v))}
-              placeholder="mf: 300000"
-              keyboardType="numeric"
-            />
+        <View style={{ gap: 8 }}>
+          <View style={{ flexDirection: isDesktopWeb ? "row" : "column", gap: 8 }}>
+            <View style={{ flex: 1 }}>
+              <FieldLabel>Cash ({displayCurrency})</FieldLabel>
+              <InputBox
+                value={splitCashStr}
+                onChangeText={(v) => setSplitCashStr(normalizeMoneyInput(v))}
+                placeholder="300000"
+                keyboardType="numeric"
+              />
+            </View>
+
+            <View style={{ flex: 1 }}>
+              <FieldLabel>Mobile ({displayCurrency})</FieldLabel>
+              <InputBox
+                value={splitMobileStr}
+                onChangeText={(v) => setSplitMobileStr(normalizeMoneyInput(v))}
+                placeholder="250000"
+                keyboardType="numeric"
+              />
+            </View>
+
+            <View style={{ flex: 1 }}>
+              <FieldLabel>Bank ({displayCurrency})</FieldLabel>
+              <InputBox
+                value={splitBankStr}
+                onChangeText={(v) => setSplitBankStr(normalizeMoneyInput(v))}
+                placeholder="50000"
+                keyboardType="numeric"
+              />
+            </View>
           </View>
 
-          <View>
-            <FieldLabel>Mobile Paid ({displayCurrency})</FieldLabel>
-            <InputBox
-              value={splitMobileStr}
-              onChangeText={(v) => setSplitMobileStr(normalizeMoneyInput(v))}
-              placeholder="mf: 250000"
-              keyboardType="numeric"
-            />
-          </View>
-
-          <View>
-            <FieldLabel>Bank Paid ({displayCurrency})</FieldLabel>
-            <InputBox
-              value={splitBankStr}
-              onChangeText={(v) => setSplitBankStr(normalizeMoneyInput(v))}
-              placeholder="mf: 50000"
-              keyboardType="numeric"
-            />
-          </View>
-
-          <Text style={{ color: theme.colors.faint, fontWeight: "800" }}>
+          <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 12 }}>
             Split total lazima ilingane na sale total.
           </Text>
         </View>
@@ -1969,93 +1997,35 @@ const staffAttributionCard =
           <InputBox
             value={paidStr}
             onChangeText={onPaidChange}
-            placeholder="mf: 120000"
+            placeholder="120000"
             keyboardType="numeric"
           />
-          <Text style={{ color: theme.colors.faint, fontWeight: "800", marginTop: 8 }}>
+          <Text style={{ color: theme.colors.faint, fontWeight: "800", marginTop: 6, fontSize: 12 }}>
             {method === "CREDIT"
-              ? "Unaweza kuweka 0 hadi total (partial payment)."
-              : "Kwa non-credit, lazima ulipe full total."}
+              ? "Credit inaruhusu 0 au partial payment."
+              : "Non-credit lazima ilipwe full total."}
           </Text>
         </View>
       )}
 
-      <View
-        style={{
-          flexDirection: "row",
-          gap: 10,
-        }}
-      >
-        <View
-          style={{
-            flex: 1,
-            padding: 12,
-            borderRadius: 16,
-            borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.08)",
-            backgroundColor: "rgba(255,255,255,0.04)",
-          }}
-        >
-          <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Total</Text>
-          <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>
-            {prettyTotal}
-          </Text>
-        </View>
-
-        <View
-          style={{
-            flex: 1,
-            padding: 12,
-            borderRadius: 16,
-            borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.08)",
-            backgroundColor: "rgba(255,255,255,0.04)",
-          }}
-        >
-          <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Paid</Text>
-          <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>
-            {prettyPaid}
-          </Text>
-        </View>
-
-        <View
-          style={{
-            flex: 1,
-            padding: 12,
-            borderRadius: 16,
-            borderWidth: 1,
-            borderColor: isCredit ? "rgba(52,211,153,0.20)" : "rgba(255,255,255,0.08)",
-            backgroundColor: isCredit ? "rgba(52,211,153,0.08)" : "rgba(255,255,255,0.04)",
-          }}
-        >
-          <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Balance</Text>
-          <Text
-            style={{
-              color: isCredit ? theme.colors.emerald : theme.colors.text,
-              fontWeight: "900",
-              marginTop: 4,
-            }}
-          >
-            {prettyBal}
-          </Text>
-        </View>
+      <View style={{ flexDirection: "row", gap: 8 }}>
+        <CheckoutMiniTile label="Total" value={prettyTotal} />
+        <CheckoutMiniTile label="Paid" value={prettyPaid} />
+        <CheckoutMiniTile label="Balance" value={prettyBal} highlight={isCredit || balance > 0} />
       </View>
 
       {method === "CREDIT" ? (
         <>
-          <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
-
-          <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>
-            CREDIT MODE: ukiweka Paid &gt; 0, chagua Paid Via (mali uliyopokea leo).
+          <Text style={{ color: theme.colors.faint, fontWeight: "900", fontSize: 12 }}>
+            CREDIT MODE: ukiweka Paid zaidi ya 0, chagua njia ya pesa iliyopokelewa.
           </Text>
 
           <View
             style={{
               flexDirection: "row",
-              flexWrap: isDesktopWeb ? "wrap" : "nowrap",
+              flexWrap: "wrap",
               gap: 8,
               opacity: showPaidVia ? 1 : 0.55,
-              justifyContent: "space-between",
             }}
           >
             <MethodChip
@@ -2091,14 +2061,11 @@ const staffAttributionCard =
       ) : null}
 
       {showChannelRef ? (
-        <>
-          <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
-          <View style={{ gap: 10 }}>
-            <View>
+        <View style={{ gap: 8 }}>
+          <View style={{ flexDirection: isDesktopWeb ? "row" : "column", gap: 8 }}>
+            <View style={{ flex: 1 }}>
               <FieldLabel>
-                {rpcPaymentMethod === "MOBILE"
-                  ? "Mobile Channel (e.g. M-PESA / TIGO-PESA)"
-                  : "Bank Channel (e.g. NMB / CRDB)"}
+                {rpcPaymentMethod === "MOBILE" ? "Mobile Channel" : "Bank Channel"}
               </FieldLabel>
               <InputBox
                 value={channel}
@@ -2108,22 +2075,22 @@ const staffAttributionCard =
               />
             </View>
 
-            <View>
+            <View style={{ flex: 1 }}>
               <FieldLabel>Reference / Transaction ID</FieldLabel>
               <InputBox
                 value={reference}
                 onChangeText={setReference}
-                placeholder="mf: TXN12345"
+                placeholder="TXN12345"
                 keyboardType="default"
               />
             </View>
           </View>
-        </>
+        </View>
       ) : null}
 
       {isOffline ? (
-        <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-          OFFLINE: mobile/bank reference haitahitajika sasa; sale itasave offline na itasync.
+        <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
+          OFFLINE: sale itasave offline na itasync mtandao ukirudi.
         </Text>
       ) : null}
     </Card>
@@ -2131,7 +2098,7 @@ const staffAttributionCard =
 
   const customerCard =
     !cashierMode ? (
-      <Card style={checkoutCardStyle("#06B6D4", "#ECFEFF")}>
+      <Card style={checkoutCardStyle("#06B6D4", "#ECFEFF", isDesktopWeb)}>
         <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
           👤 Customer Tracking
         </Text>
@@ -2229,14 +2196,14 @@ const staffAttributionCard =
           </View>
         ) : null}
 
-        <Text style={{ color: theme.colors.faint, fontWeight: "800" }}>
-          Tip: Anza kuandika jina au namba ya mteja; ukimchagua, jina na simu vitaingia automatically na sale itaunganishwa kwenye CRM file yake.
+        <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 12, lineHeight: 17 }}>
+          Tip: Ukimchagua mteja, sale itaunganishwa automatically kwenye CRM file yake.
         </Text>
       </Card>
     ) : null;
 
   const actionCard = (
-    <Card style={checkoutCardStyle("#2563EB", "#EFF6FF")}>
+    <Card style={checkoutCardStyle("#2563EB", "#EFF6FF", isDesktopWeb)}>
       <Button
         title={
           saving
@@ -2587,34 +2554,34 @@ backgroundColor: "rgba(241,245,249,0.72)",
               {summaryCard}
             </View>
 
-  <View
-  style={{
-    width: desktopRightPaneWidth,
-    minWidth: 0,
-    flex: 1,
-    gap: 14,
-  }}
->
-  <View
-    style={{
-      flexDirection: "row",
-      gap: 14,
-      alignItems: "flex-start",
-      width: "100%",
-    }}
-  >
-    <View style={{ flex: 1, minWidth: 0, gap: 14 }}>
-      {discountNoteCard}
-      {staffAttributionCard}
-    </View>
+            <View
+              style={{
+                width: desktopMainWidth,
+                minWidth: 0,
+                flex: 1,
+                gap: 14,
+              }}
+            >
+              <View
+                style={{
+                  flexDirection: "row",
+                  gap: 14,
+                  alignItems: "flex-start",
+                  width: "100%",
+                }}
+              >
+                <View style={{ flex: 0.95, minWidth: 0, gap: 14 }}>
+                  {paymentCard}
+                  {actionCard}
+                </View>
 
-    <View style={{ flex: 1, minWidth: 0, gap: 14 }}>
-      {paymentCard}
-      {customerCard}
-      {actionCard}
-    </View>
-  </View>
-</View>
+                <View style={{ flex: 1.05, minWidth: 0, gap: 14 }}>
+                  {discountNoteCard}
+                  {customerCard}
+                  {staffAttributionCard}
+                </View>
+              </View>
+            </View>
           </View>
         ) : (
           <>

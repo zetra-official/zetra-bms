@@ -1,6 +1,6 @@
 // app/(tabs)/stores/adjust.tsx
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Keyboard,
@@ -138,6 +138,8 @@ const [precisionStockMode, setPrecisionStockMode] = useState<"UNIT" | "BOX">("BO
   const [expiryDate, setExpiryDate] = useState<string>("");
   const [expiryAlertDays, setExpiryAlertDays] = useState<number>(30);
 const [saving, setSaving] = useState(false);
+const submitLockRef = useRef(false);
+const lastSubmitKeyRef = useRef<string>("");
 const [showOptionalDetails, setShowOptionalDetails] = useState(false);
 
 const isPrecisionRetailStore = isPrecisionRetailType(activeStoreType);
@@ -531,7 +533,7 @@ setPrecisionMeta({
   ]);
 
   const submit = useCallback(async () => {
-    if (saving) return;
+    if (saving || submitLockRef.current) return;
 
     if (!activeStoreId) {
       Alert.alert("Missing", "No active store selected.");
@@ -602,6 +604,29 @@ setPrecisionMeta({
       }
     }
 
+    const submitKey = JSON.stringify({
+      storeId: activeStoreId,
+      productId,
+      mode,
+      amount: Math.abs(decimalAmount),
+      expiryDate: mode === "ADD" ? expiryDate.trim() : "",
+      expiryAlertDays: mode === "ADD" && expiryDate.trim() ? expiryAlertDays : null,
+      supplierName: mode === "ADD" ? supplierName.trim() : "",
+      supplierInvoiceNo: mode === "ADD" ? supplierInvoiceNo.trim() : "",
+      reason: reason.trim(),
+      precisionStockMode: precisionMeta.is_precision_product ? precisionStockMode : "UNIT",
+    });
+
+    if (lastSubmitKeyRef.current === submitKey) {
+      Alert.alert(
+        "Already Saved",
+        "Stock update hii imeshatumwa. Badilisha quantity au taarifa nyingine kama unataka kusave upya."
+      );
+      return;
+    }
+
+    submitLockRef.current = true;
+    lastSubmitKeyRef.current = submitKey;
     setSaving(true);
 
     try {
@@ -652,8 +677,10 @@ p_precision_stock_mode: precisionMeta.is_precision_product ? precisionStockMode 
 
       router.back();
     } catch (err: any) {
+      lastSubmitKeyRef.current = "";
       Alert.alert("Failed", err?.message ?? "Unknown error");
     } finally {
+      submitLockRef.current = false;
       setSaving(false);
     }
   }, [

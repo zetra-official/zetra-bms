@@ -75,7 +75,12 @@ type ExpenseRow = {
   category: string | null;
   note: string | null;
 };
-
+type GoodsPurchasedSummary = {
+  total_goods_purchased: number;
+  purchase_orders: number;
+  total_items_purchased: number;
+  supplier_outstanding: number;
+};
 type CapitalRecoveryRow = {
   id: string;
   entry_type: "ASSET" | "COST" | "INCOME";
@@ -157,7 +162,15 @@ function toNum(v: any): number {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 }
+function pct(n: number) {
+  if (!Number.isFinite(n)) return "0%";
+  return `${n.toFixed(1)}%`;
+}
 
+function signedMoney(fmtMoney: (n: number) => string, n: number) {
+  if (n < 0) return `-${fmtMoney(Math.abs(n))}`;
+  return fmtMoney(n);
+}
 function labelForRange(r: RangeKey) {
   if (r === "month") return "This Month";
   if (r === "year") return "This Year";
@@ -567,6 +580,46 @@ async function loadSaleItemsMap(
 
   return {};
 }
+async function getGoodsPurchasedSummary(
+  storeId: string,
+  fromISO: string,
+  toISO: string
+): Promise<GoodsPurchasedSummary> {
+  const sid = String(storeId ?? "").trim();
+
+  const empty: GoodsPurchasedSummary = {
+    total_goods_purchased: 0,
+    purchase_orders: 0,
+    total_items_purchased: 0,
+    supplier_outstanding: 0,
+  };
+
+  if (!sid) return empty;
+
+  try {
+    const { data, error } = await supabase.rpc(
+      "get_business_statement_goods_summary_v1",
+      {
+        p_store_id: sid,
+        p_from: fromISO,
+        p_to: toISO,
+      } as any
+    );
+
+    if (error) throw error;
+
+    const row = Array.isArray(data) ? data[0] : data;
+
+    return {
+      total_goods_purchased: toNum(row?.total_goods_purchased ?? 0),
+      purchase_orders: toNum(row?.purchase_orders ?? 0),
+      total_items_purchased: toNum(row?.total_items_purchased ?? 0),
+      supplier_outstanding: toNum(row?.supplier_outstanding ?? 0),
+    };
+  } catch {
+    return empty;
+  }
+}
 export default function BusinessStatementScreen() {
   const router = useRouter();
   const { activeOrgId, activeOrgName, activeStoreId, activeStoreName, activeRole } =
@@ -606,6 +659,13 @@ const [capitalRows, setCapitalRows] = useState<CapitalRecoveryRow[]>([]);
     total_balance: 0,
   });
 const [saleItemsBySaleId, setSaleItemsBySaleId] = useState<Record<string, SaleItemLine[]>>({});
+const [goodsPurchasedSummary, setGoodsPurchasedSummary] =
+  useState<GoodsPurchasedSummary>({
+    total_goods_purchased: 0,
+    purchase_orders: 0,
+    total_items_purchased: 0,
+    supplier_outstanding: 0,
+  });
   const [profitSummary, setProfitSummary] = useState<ProfitSummary>({
     net: 0,
     sales: null,
@@ -621,10 +681,10 @@ const [saleItemsBySaleId, setSaleItemsBySaleId] = useState<Record<string, SaleIt
     payments: 0,
   });
 
- const canView = useMemo(() => {
-    const r = String(activeRole ?? "").toLowerCase();
-    return r === "owner" || r === "admin";
-  }, [activeRole]);
+const canView = useMemo(() => {
+  const r = String(activeRole ?? "").trim().toLowerCase();
+  return r === "owner";
+}, [activeRole]);
 
   const resolvedRange = useMemo(() => {
     if (range === "month") {
@@ -687,44 +747,60 @@ const [saleItemsBySaleId, setSaleItemsBySaleId] = useState<Record<string, SaleIt
           p_store_id: activeStoreId,
         });
         if (access.error) throw access.error;
+const [
+  salesRes,
+  payRes,
+  profitRes,
+  creditCollectionsRes,
+  expensesRes,
+  capitalRes,
+  goodsPurchasedRes,
+] = await Promise.all([
+  supabase.rpc("get_sales_v2", {
+    p_store_id: activeStoreId,
+    p_from: finalRange.from,
+    p_to: finalRange.to,
+  } as any),
 
-        const [salesRes, payRes, profitRes, creditCollectionsRes, expensesRes, capitalRes] =
-          await Promise.all([
-            supabase.rpc("get_sales_v2", {
-              p_store_id: activeStoreId,
-              p_from: finalRange.from,
-              p_to: finalRange.to,
-            } as any),
-            supabase.rpc("get_sales_payment_summary_v1", {
-              p_store_id: activeStoreId,
-              p_from: finalRange.from,
-              p_to: finalRange.to,
-            } as any),
-            supabase.rpc("get_store_net_profit_v2", {
-              p_store_id: activeStoreId,
-              p_from: finalRange.from,
-              p_to: finalRange.to,
-            } as any),
-            getCreditCollectionsSummary(
-              String(activeOrgId ?? "").trim(),
-              String(activeStoreId ?? "").trim(),
-              finalRange.from,
-              finalRange.to
-            ),
-            supabase
-              .from("expenses")
-              .select("*")
-              .eq("store_id", activeStoreId)
-              .gte("spent_at", finalRange.from)
-              .lte("spent_at", finalRange.to)
-              .order("spent_at", { ascending: false }),
+  supabase.rpc("get_sales_payment_summary_v1", {
+    p_store_id: activeStoreId,
+    p_from: finalRange.from,
+    p_to: finalRange.to,
+  } as any),
 
-            supabase.rpc("get_capital_recovery_history_v2", {
-              p_store_id: activeStoreId,
-              p_limit: 500,
-            }),
-          ]);
+  supabase.rpc("get_store_net_profit_v2", {
+    p_store_id: activeStoreId,
+    p_from: finalRange.from,
+    p_to: finalRange.to,
+  } as any),
 
+  getCreditCollectionsSummary(
+    String(activeOrgId ?? "").trim(),
+    String(activeStoreId ?? "").trim(),
+    finalRange.from,
+    finalRange.to
+  ),
+
+  supabase
+    .from("expenses")
+    .select("*")
+    .eq("store_id", activeStoreId)
+    .gte("spent_at", finalRange.from)
+    .lte("spent_at", finalRange.to)
+    .order("spent_at", { ascending: false }),
+
+  supabase.rpc("get_capital_recovery_history_v2", {
+    p_store_id: activeStoreId,
+    p_limit: 500,
+  }),
+
+  getGoodsPurchasedSummary(
+    String(activeStoreId ?? "").trim(),
+    finalRange.from,
+    finalRange.to
+  ),
+
+]);
         if (salesRes.error) throw salesRes.error;
         if (payRes.error) throw payRes.error;
         if (profitRes.error) throw profitRes.error;
@@ -823,6 +899,7 @@ sales.sort((a, b) => {
 setSaleItemsBySaleId(saleItemsMap);
 setExpenseRows(expenses);
         setCapitalRows(capital);
+        setGoodsPurchasedSummary(goodsPurchasedRes);
         setCreditCollections(creditCollectionsRes);
         setProfitSummary({
           net: toNum(profitRow?.net_profit ?? profitRow?.net ?? 0),
@@ -830,8 +907,7 @@ setExpenseRows(expenses);
             profitRow?.sales_total != null ? toNum(profitRow.sales_total) : null,
           expenses:
             profitRow?.expenses_total != null ? toNum(profitRow.expenses_total) : null,
-        });
-        setPaymentSummary({
+        });setPaymentSummary({
           cash_total: mergedCash,
           mobile_total: mergedMobile,
           bank_total: mergedBank,
@@ -849,6 +925,12 @@ setExpenseRows(expenses);
         setSaleItemsBySaleId({});
         setExpenseRows([]);
         setCapitalRows([]);
+        setGoodsPurchasedSummary({
+  total_goods_purchased: 0,
+  purchase_orders: 0,
+  total_items_purchased: 0,
+  supplier_outstanding: 0,
+});
         setPaymentSummary({
           cash_total: 0,
           mobile_total: 0,
@@ -929,20 +1011,61 @@ setExpenseRows(expenses);
 
   const expenseCount = expenseRows.length;
 
-  const totalExpenses = useMemo(() => {
-    if (profitSummary.expenses != null) {
-      return toNum(profitSummary.expenses);
-    }
-    return expenseRows.reduce((a, r) => a + toNum(r.amount ?? 0), 0);
-  }, [expenseRows, profitSummary.expenses]);
+const expensesFromRows = useMemo(() => {
+  return expenseRows.reduce((a, r) => a + toNum(r.amount ?? 0), 0);
+}, [expenseRows]);
 
-  const netProfit = useMemo(() => {
-    if (profitSummary.net != null) {
-      return toNum(profitSummary.net);
-    }
-    return toNum(paymentSummary.total_sales) - toNum(totalExpenses);
-  }, [paymentSummary.total_sales, profitSummary.net, totalExpenses]);
+const grossProfit = useMemo(() => {
+  return toNum(profitSummary.net ?? 0);
+}, [profitSummary.net]);
 
+const totalExpenses = useMemo(() => {
+  const rpcExpenses = toNum(profitSummary.expenses ?? 0);
+
+  // Ikiwa expenses zipo kwenye rows lakini RPC imerudisha 0,
+  // tumia rows ili PDF na summary zisipishane.
+  if (expensesFromRows > 0 && rpcExpenses <= 0) {
+    return expensesFromRows;
+  }
+
+  return rpcExpenses > 0 ? rpcExpenses : expensesFromRows;
+}, [expensesFromRows, profitSummary.expenses]);
+
+const netProfit = useMemo(() => {
+  return grossProfit - totalExpenses;
+}, [grossProfit, totalExpenses]);
+const profitMargin = useMemo(() => {
+  const sales = toNum(paymentSummary.total_sales);
+  if (sales <= 0) return 0;
+  return (netProfit / sales) * 100;
+}, [netProfit, paymentSummary.total_sales]);
+
+const expenseRatio = useMemo(() => {
+  const sales = toNum(paymentSummary.total_sales);
+  if (sales <= 0) return 0;
+  return (totalExpenses / sales) * 100;
+}, [paymentSummary.total_sales, totalExpenses]);
+
+const averageSaleValue = useMemo(() => {
+  if (salesCount <= 0) return 0;
+  return toNum(paymentSummary.total_sales) / salesCount;
+}, [paymentSummary.total_sales, salesCount]);
+
+const purchaseDifference = useMemo(() => {
+  return toNum(paymentSummary.total_sales) - toNum(goodsPurchasedSummary.total_goods_purchased);
+}, [paymentSummary.total_sales, goodsPurchasedSummary.total_goods_purchased]);
+
+const purchaseStatusLabel = useMemo(() => {
+  const purchased = toNum(goodsPurchasedSummary.total_goods_purchased);
+  const supplierDebt = toNum(goodsPurchasedSummary.supplier_outstanding);
+
+  if (purchased <= 0) return "No Purchase";
+  if (supplierDebt > 0) return "Purchased • Outstanding";
+  return "Purchased • Fully Paid";
+}, [
+  goodsPurchasedSummary.total_goods_purchased,
+  goodsPurchasedSummary.supplier_outstanding,
+]);
   const capitalSummary = useMemo(() => {
     const asset = capitalRows
       .filter((r) => r.entry_type === "ASSET")
@@ -1084,14 +1207,24 @@ setExpenseRows(expenses);
       table-layout: fixed;
       margin-top: 8px;
     }
+.info-table td,
+.summary-table td {
+  border: 1px solid #cbd5e1;
+  padding: 7px;
+  vertical-align: top;
+  word-break: break-word;
+}
 
-    .info-table td,
-    .summary-table td {
-      border: 1px solid #cbd5e1;
-      padding: 7px;
-      vertical-align: top;
-      word-break: break-word;
-    }
+.summary-table {
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.summary-table tr,
+.summary-table td {
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
 
     .data-table th,
     .data-table td {
@@ -1208,17 +1341,46 @@ setExpenseRows(expenses);
       </tr>
     </table>
 
-    <div class="section-title">Statement Summary</div>
-    <div class="grid">
-      <div class="box"><div class="label">Total Sales</div><div class="value">${escapeHtml(fmtMoney(paymentSummary.total_sales))}</div></div>
-      <div class="box"><div class="label">Total Expenses</div><div class="value">${escapeHtml(fmtMoney(totalExpenses))}</div></div>
-      <div class="box"><div class="label">Outstanding</div><div class="value">${escapeHtml(fmtMoney(paymentSummary.total_balance))}</div></div>
-    </div>
+  <div class="section-title">Statement Summary</div>
+<div class="grid">
+  <div class="box"><div class="label">Total Sales</div><div class="value">${escapeHtml(fmtMoney(paymentSummary.total_sales))}</div></div>
+  <div class="box"><div class="label">Gross Profit</div><div class="value">${escapeHtml(fmtMoney(grossProfit))}</div></div>
+  <div class="box"><div class="label">Total Expenses</div><div class="value">${escapeHtml(fmtMoney(totalExpenses))}</div></div>
+</div>
 
-    <div class="profit">
-      <div class="profit-label">Net Profit</div>
-      <div class="profit-value">${escapeHtml(fmtMoney(netProfit))}</div>
-    </div>
+<div class="grid">
+  <div class="box"><div class="label">Customer Outstanding Balance</div><div class="value">${escapeHtml(fmtMoney(paymentSummary.total_balance))}</div></div>
+  <div class="box"><div class="label">Sales Count</div><div class="value">${escapeHtml(String(salesCount))}</div></div>
+  <div class="box"><div class="label">Total Qty Sold</div><div class="value">${escapeHtml(String(totalQty))}</div></div>
+</div>
+
+<div class="profit">
+  <div class="profit-label">Net Profit</div>
+  <div class="profit-value">${escapeHtml(fmtMoney(netProfit))}</div>
+  <div class="muted" style="margin-top:4px;">
+    Gross Profit ${escapeHtml(fmtMoney(grossProfit))} − Expenses ${escapeHtml(fmtMoney(totalExpenses))}
+  </div>
+</div>
+
+<div class="section-title">OWNER EXECUTIVE DASHBOARD</div>
+<div class="grid">
+  <div class="box"><div class="label">Profit Margin</div><div class="value">${escapeHtml(pct(profitMargin))}</div></div>
+  <div class="box"><div class="label">Expense Ratio</div><div class="value">${escapeHtml(pct(expenseRatio))}</div></div>
+  <div class="box"><div class="label">Average Sale Value</div><div class="value">${escapeHtml(fmtMoney(averageSaleValue))}</div></div>
+</div>
+
+<div class="section-title">Stock / Goods Purchased</div>
+<div class="grid">
+  <div class="box"><div class="label">Total Goods Purchased</div><div class="value">${escapeHtml(fmtMoney(goodsPurchasedSummary.total_goods_purchased))}</div></div>
+  <div class="box"><div class="label">Purchase Orders</div><div class="value">${escapeHtml(String(goodsPurchasedSummary.purchase_orders))}</div></div>
+  <div class="box"><div class="label">Total Items Purchased</div><div class="value">${escapeHtml(String(goodsPurchasedSummary.total_items_purchased))}</div></div>
+</div>
+
+<div class="grid">
+  <div class="box"><div class="label">Supplier Outstanding Balance</div><div class="value">${escapeHtml(fmtMoney(goodsPurchasedSummary.supplier_outstanding))}</div></div>
+  <div class="box"><div class="label">Stock Investment Difference</div><div class="value">${escapeHtml(signedMoney(fmtMoney, purchaseDifference))}</div></div>
+<div class="box"><div class="label">Purchase Status</div><div class="value">${escapeHtml(purchaseStatusLabel)}</div></div>
+</div>
 
     <div class="section-title">Payment Breakdown</div>
     <div class="grid">
@@ -1303,9 +1465,53 @@ setExpenseRows(expenses);
         }
       </tbody>
     </table>
-
+<div class="section-title">Business Insights</div>
+<table class="summary-table">
+  <tr>
+    <td>
+      <b>Profit Position</b><br/>
+      ${
+        netProfit >= 0
+          ? `Business is profitable in this period. Net profit after expenses is ${escapeHtml(fmtMoney(netProfit))}, with profit margin of ${escapeHtml(pct(profitMargin))}.`
+          : `Business made a loss in this period. Loss after expenses is ${escapeHtml(fmtMoney(Math.abs(netProfit)))}. Review pricing, stock cost, and expenses.`
+      }
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <b>Expense Control</b><br/>
+      Expenses recorded are ${escapeHtml(fmtMoney(totalExpenses))}. Expense ratio is ${escapeHtml(pct(expenseRatio))}. ${
+        expenseRatio > 20
+          ? "Expenses are high compared to sales; review spending carefully."
+          : "Expenses are within a controlled range for this period."
+      }
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <b>Credit / Outstanding</b><br/>
+      ${
+        paymentSummary.total_balance > 0
+          ? `Customer outstanding balance is ${escapeHtml(fmtMoney(paymentSummary.total_balance))}. Follow up collections to protect cash flow.`
+          : `No customer outstanding balance found in this period.`
+      }
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <b>Goods Purchased / Supplier Debt</b><br/>
+      Goods purchased are ${escapeHtml(fmtMoney(goodsPurchasedSummary.total_goods_purchased))}. Supplier outstanding balance is ${escapeHtml(fmtMoney(goodsPurchasedSummary.supplier_outstanding))}. Status: ${escapeHtml(purchaseStatusLabel)}.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <b>Business Health Note</b><br/>
+      Average sale value is ${escapeHtml(fmtMoney(averageSaleValue))}. Stock investment difference is ${escapeHtml(signedMoney(fmtMoney, purchaseDifference))}. Use this report to compare sales, purchases, expenses, profit, and debts before making new buying decisions.
+    </td>
+  </tr>
+</table>
     <div class="footer">
-      Generated by ZETRA BMS • Business Statement • Sales + Expenses + Profit + Balance
+      Confidential Business Report • Generated by ZETRA BMS • For Business Owner Only
     </div>
   </div>
 </body>
@@ -1315,15 +1521,25 @@ setExpenseRows(expenses);
     activeOrgName,
     activeRole,
     activeStoreName,
-    capitalSummary.cost,
-    capitalSummary.income,
-    capitalSummary.net,
-    expenseCount,
-   expenseRows,
+  averageSaleValue,
+capitalSummary.cost,
+capitalSummary.income,
+capitalSummary.net,
+expenseCount,
+expenseRatio,
+expenseRows,
 fmtMoney,
 getSaleItemsText,
+grossProfit,
+goodsPurchasedSummary.purchase_orders,
+goodsPurchasedSummary.supplier_outstanding,
+goodsPurchasedSummary.total_goods_purchased,
+goodsPurchasedSummary.total_items_purchased,
 netProfit,
-    paymentSummary.bank_total,
+profitMargin,
+purchaseDifference,
+purchaseStatusLabel,
+paymentSummary.bank_total,
     paymentSummary.cash_total,
     paymentSummary.credit_collected_total,
     paymentSummary.grand_paid_total,
@@ -1552,23 +1768,72 @@ netProfit,
             <MetricCard title="TOTAL EXPENSES" amount={fmtMoney(totalExpenses)} />
           </View>
 
-          <View style={{ flexDirection: "row", gap: 10 }}>
-            <MetricCard
-              title="NET PROFIT"
-              amount={fmtMoney(netProfit)}
-              subtitle="Sales - Expenses"
-            />
-            <MetricCard
-              title="OUTSTANDING"
-              amount={fmtMoney(paymentSummary.total_balance)}
-              subtitle="Balance / mikopo"
-            />
-          </View>
+         <View style={{ flexDirection: "row", gap: 10 }}>
+  <MetricCard
+    title="GROSS PROFIT"
+    amount={fmtMoney(grossProfit)}
+    subtitle="Before expenses"
+  />
+  <MetricCard
+    title="NET PROFIT"
+    amount={fmtMoney(netProfit)}
+    subtitle="Gross Profit - Expenses"
+  />
+</View>
+<View style={{ flexDirection: "row", gap: 10 }}>
+  <MetricCard title="PROFIT MARGIN" amount={pct(profitMargin)} />
+  <MetricCard title="EXPENSE RATIO" amount={pct(expenseRatio)} />
+</View>
+
+<View style={{ flexDirection: "row", gap: 10 }}>
+  <MetricCard title="AVERAGE SALE VALUE" amount={fmtMoney(averageSaleValue)} />
+  <MetricCard
+    title="STOCK INVESTMENT DIFFERENCE"
+    amount={signedMoney(fmtMoney, purchaseDifference)}
+    subtitle="Sales - Goods Purchased"
+  />
+</View>
+<View style={{ flexDirection: "row", gap: 10 }}>
+  <MetricCard
+    title="CUSTOMER OUTSTANDING BALANCE"
+    amount={fmtMoney(paymentSummary.total_balance)}
+    subtitle="Balance / mikopo ya wateja"
+  />
+  <MetricCard title="EXPENSE COUNT" amount={String(expenseCount)} />
+</View>
 
           <View style={{ flexDirection: "row", gap: 10 }}>
-            <MetricCard title="SALES COUNT" amount={String(salesCount)} />
-            <MetricCard title="EXPENSE COUNT" amount={String(expenseCount)} />
-          </View>
+  <MetricCard title="SALES COUNT" amount={String(salesCount)} />
+  <MetricCard title="TOTAL QTY SOLD" amount={String(totalQty)} />
+</View>
+
+<Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>
+  Stock / Goods Purchased
+</Text>
+
+<View style={{ flexDirection: "row", gap: 10 }}>
+  <MetricCard
+    title="TOTAL GOODS PURCHASED"
+    amount={fmtMoney(goodsPurchasedSummary.total_goods_purchased)}
+    subtitle="Bidhaa zilizonunuliwa"
+  />
+  <MetricCard
+    title="PURCHASE ORDERS"
+    amount={String(goodsPurchasedSummary.purchase_orders)}
+  />
+</View>
+
+<View style={{ flexDirection: "row", gap: 10 }}>
+  <MetricCard
+    title="TOTAL ITEMS PURCHASED"
+    amount={String(goodsPurchasedSummary.total_items_purchased)}
+  />
+  <MetricCard
+    title="SUPPLIER OUTSTANDING BALANCE"
+    amount={fmtMoney(goodsPurchasedSummary.supplier_outstanding)}
+    subtitle="Deni la mzigo / supplier"
+  />
+</View>
 
           <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>
             Capital Recovery Statement

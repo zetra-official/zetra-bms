@@ -151,7 +151,7 @@ async function fetchActiveOrgPlanInfo(
 
 export default function OrgSwitcherScreen() {
   const router = useRouter();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
 
   const isWeb = Platform.OS === "web";
   const isDesktopWeb = isWeb && width >= 1100;
@@ -596,12 +596,19 @@ const openRenameOrg = (org: OrgItem) => {
             </View>
 
             <ScrollView
-              style={{ flex: 1 }}
-              contentContainerStyle={{ paddingBottom: 18 }}
-              showsVerticalScrollIndicator={false}
+              style={{
+                flex: 1,
+                height: isDesktopWeb ? Math.max(420, height - 185) : undefined,
+                maxHeight: isDesktopWeb ? Math.max(420, height - 185) : undefined,
+                ...(Platform.OS === "web" ? ({ overflowY: "auto" } as any) : {}),
+              }}
+              contentContainerStyle={{ paddingBottom: isDesktopWeb ? 80 : 18 }}
+              showsVerticalScrollIndicator
               nestedScrollEnabled
               refreshControl={
-                <RefreshControl refreshing={!!refreshing} onRefresh={refresh} tintColor={UI.muted} />
+                Platform.OS === "web" ? undefined : (
+                  <RefreshControl refreshing={!!refreshing} onRefresh={refresh} tintColor={UI.muted} />
+                )
               }
             >
           {loading ? (
@@ -711,7 +718,30 @@ const openRenameOrg = (org: OrgItem) => {
                             ) : null}
                           </View>
                         </View>
-
+{ownerOrg ? (
+  <Pressable
+    onPress={(e: any) => {
+      e?.stopPropagation?.();
+      router.push({
+        pathname: "/organization-profile" as any,
+        params: { orgId: ownerOrg.organization_id },
+      });
+    }}
+    hitSlop={8}
+    style={{
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: UI.border,
+      backgroundColor: "rgba(52,211,153,0.10)",
+    }}
+  >
+    <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
+      🏢 PROFILE
+    </Text>
+  </Pressable>
+) : null}
                         <View
                           style={{
                             minWidth: isDesktopWeb ? 120 : 36,
@@ -830,7 +860,30 @@ const openRenameOrg = (org: OrgItem) => {
                               ) : null}
                             </View>
                           </View>
-
+{o.role === "owner" ? (
+  <Pressable
+    onPress={(e: any) => {
+      e?.stopPropagation?.();
+      router.push({
+        pathname: "/organization-profile" as any,
+        params: { orgId: o.organization_id },
+      });
+    }}
+    hitSlop={8}
+    style={{
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: UI.border,
+      backgroundColor: "rgba(52,211,153,0.10)",
+    }}
+  >
+    <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
+      🏢 PROFILE
+    </Text>
+  </Pressable>
+) : null}
                           <View
                             style={{
                               minWidth: isDesktopWeb ? 120 : 36,

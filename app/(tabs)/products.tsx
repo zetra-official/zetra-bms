@@ -1007,7 +1007,13 @@ if (isCapitalRecoveryStore && !scopedStoreId) return;
       Alert.alert("Invalid", "Cost Price iwe namba (>= 0) au uiache wazi.");
       return;
     }
-
+if (!isCapitalRecoveryStore && cp !== null && sp !== null && sp < cp) {
+  Alert.alert(
+    "Bei si sahihi",
+    "Selling Price uliyoweka ni ndogo kuliko Cost Price. Hii italeta hasara. Weka Selling Price kubwa kuliko au sawa na Cost Price."
+  );
+  return;
+}
     if (isCapitalRecoveryStore) {
       if (sp === null) {
         Alert.alert("Missing", "Weka Selling Price kwa Capital Recovery product.");
@@ -1182,7 +1188,13 @@ if (isCapitalRecoveryStore && !scopedStoreId) return;
       Alert.alert("Invalid", "Cost Price iwe namba (>= 0) au uiache wazi.");
       return;
     }
-
+if (!isCapitalRecoveryStore && cp !== null && sp !== null && sp < cp) {
+  Alert.alert(
+    "Bei si sahihi",
+    "Selling Price uliyoweka ni ndogo kuliko Cost Price. Hii italeta hasara. Weka Selling Price kubwa kuliko au sawa na Cost Price."
+  );
+  return;
+}
     if (isCapitalRecoveryStore) {
       if (sp === null) {
         Alert.alert("Missing", "Weka Selling Price kwa Capital Recovery product.");

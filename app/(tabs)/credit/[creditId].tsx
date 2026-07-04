@@ -40,7 +40,9 @@ function looksLikeUuid(s: string) {
     s
   );
 }
-
+function cryptoRandomFallback() {
+  return `${Date.now()}_${Math.floor(Math.random() * 1e9)}`;
+}
 function extractSaleId(t: { sale_id?: string | null; reference?: string | null; note?: string | null }) {
   const direct = String(t.sale_id ?? "").trim();
   if (looksLikeUuid(direct)) return direct;
@@ -108,7 +110,21 @@ export default function CreditDetailScreen() {
     },
     [router]
   );
+  const openPaymentReceipt = useCallback(
+    (paymentId: string) => {
+      const pid = String(paymentId ?? "").trim();
+      if (!pid || !accountId) return;
 
+      router.push({
+        pathname: "/(tabs)/credit/payment-receipt",
+        params: {
+          creditId: accountId,
+          paymentId: pid,
+        },
+      } as any);
+    },
+    [router, accountId]
+  );
   const loadAccess = useCallback(async () => {
     try {
       if (!activeStoreId) {
@@ -216,13 +232,47 @@ export default function CreditDetailScreen() {
         };
       });
 
-      mapped.sort((a, b) => {
+      const saleIdsToCheck = Array.from(
+        new Set(
+          mapped
+            .filter((x) => String(x.kind).toUpperCase() === "SALE")
+            .map((x) => extractSaleId(x))
+            .filter((x): x is string => !!x)
+        )
+      );
+
+      let existingSaleIds = new Set<string>();
+
+      if (saleIdsToCheck.length > 0) {
+        const { data: existingSales } = await supabase
+          .from("sales")
+          .select("id")
+          .in("id", saleIdsToCheck);
+
+        existingSaleIds = new Set(
+          ((existingSales ?? []) as any[]).map((x) => String(x.id))
+        );
+      }
+
+      const cleanMapped = mapped.filter((x) => {
+        const kind = String(x.kind).toUpperCase();
+        if (kind !== "SALE") return true;
+
+        const sid = extractSaleId(x);
+
+        // Kama ni SALE lakini receipt/sale imefutwa, isiendelee kuonekana kwenye credit detail.
+        if (sid && !existingSaleIds.has(sid)) return false;
+
+        return true;
+      });
+
+      cleanMapped.sort((a, b) => {
         const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
         const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
         return tb - ta;
       });
 
-      setTxns(mapped);
+      setTxns(cleanMapped);
     } catch (e: any) {
       setAccount(null);
       setTxns([]);
@@ -452,6 +502,7 @@ export default function CreditDetailScreen() {
 
               const saleIdForReceipt = isSale ? extractSaleId(t) : null;
               const canOpenReceipt = isSale && !!saleIdForReceipt;
+              const canOpenPaymentReceipt = isPayment && !!t.id;
 
               return (
                 <View
@@ -504,6 +555,24 @@ export default function CreditDetailScreen() {
                       </Text>
                     </Pressable>
                   ) : null}
+
+                  {canOpenPaymentReceipt ? (
+                    <Pressable
+                      onPress={() => openPaymentReceipt(t.id)}
+                      hitSlop={10}
+                      style={{ marginTop: 8, alignSelf: "flex-start" }}
+                    >
+                      <Text
+                        style={{
+                          color: theme.colors.emerald,
+                          fontWeight: "900",
+                          textDecorationLine: "underline",
+                        }}
+                      >
+                        Open Payment Receipt →
+                      </Text>
+                    </Pressable>
+                  ) : null}
                 </View>
               );
             })
@@ -530,7 +599,18 @@ export default function CreditDetailScreen() {
           {payments.length === 0 ? (
             <Text style={{ color: theme.colors.muted }}>No payments yet.</Text>
           ) : (
-            payments.map((p) => <PaymentRow key={p.id} payment={p} />)
+            payments.map((p) => (
+              <Pressable
+                key={p.id}
+                onPress={() => openPaymentReceipt(p.id)}
+                hitSlop={10}
+                style={({ pressed }) => ({
+                  opacity: pressed ? 0.88 : 1,
+                })}
+              >
+                <PaymentRow payment={p} />
+              </Pressable>
+            ))
           )}
         </Card>
 
@@ -558,8 +638,4 @@ export default function CreditDetailScreen() {
       </View>
     </Screen>
   );
-}
-
-function cryptoRandomFallback() {
-  return `${Date.now()}_${Math.floor(Math.random() * 1e9)}`;
 }

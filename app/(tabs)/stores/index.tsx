@@ -2084,7 +2084,33 @@ fontSize: 11.5,
             Saving movement setting...
           </Text>
         ) : null}
-
+<Pressable
+  onPress={() => {
+    router.push({
+      pathname: "/store-profile" as any,
+      params: {
+        storeId,
+        storeName: item.store_name,
+      },
+    });
+  }}
+  style={({ pressed }) => ({
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: BORDER_SOFT,
+    backgroundColor: "#ECFDF5",
+    paddingVertical: 11,
+    paddingHorizontal: 13,
+    opacity: pressed ? 0.92 : 1,
+  })}
+>
+  <Text style={{ color: TEXT, fontWeight: "900", fontSize: 14 }}>
+    🏪 Store Profile
+  </Text>
+  <Text style={{ color: MUTED, fontWeight: "800", marginTop: 4, fontSize: 12 }}>
+    Location, phone, WhatsApp, bank account na Lipa Namba ya store hii
+  </Text>
+</Pressable>
         <Pressable
           onPress={() => {
             // @ts-ignore

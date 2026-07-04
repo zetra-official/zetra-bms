@@ -33,11 +33,19 @@ type StoreOrderRow = {
   created_at?: string | null;
 };
 
+type PaymentHistoryLine = {
+  amount: number;
+  method: string;
+  reference: string | null;
+  at: string | null;
+};
+
 type ParsedOrderNote = {
   cleanNote: string | null;
   itemsText: string | null;
   paymentText: string | null;
   discountText: string | null;
+  payments: PaymentHistoryLine[];
 };
 
 type CustomerFile = {
@@ -72,7 +80,20 @@ function shortDate(v?: string | null) {
     return "—";
   }
 }
-
+function shortDateTime(v?: string | null) {
+  if (!v) return "—";
+  try {
+    return new Intl.DateTimeFormat("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date(v));
+  } catch {
+    return String(v);
+  }
+}
 function normalizePhone(v?: string | null) {
   return String(v ?? "").replace(/\s+/g, "").trim();
 }
@@ -84,15 +105,46 @@ function isCompletedOrder(r: StoreOrderRow) {
 
 function parseOrderNote(note?: string | null): ParsedOrderNote {
   const raw = String(note ?? "").trim();
-  if (!raw) return { cleanNote: null, itemsText: null, paymentText: null, discountText: null };
+  if (!raw) {
+  return {
+    cleanNote: null,
+    itemsText: null,
+    paymentText: null,
+    discountText: null,
+    payments: [],
+  };
+}
 
-  let itemsText: string | null = null;
-  let paymentText: string | null = null;
-  let discountText: string | null = null;
+ let itemsText: string | null = null;
+let paymentText: string | null = null;
+let discountText: string | null = null;
+const payments: PaymentHistoryLine[] = [];
 
   const paymentMatch = raw.match(/ORDER_PAYMENT:\s*([^\n]+)/i);
   if (paymentMatch?.[1]) paymentText = paymentMatch[1].replace(/\s*\|\s*/g, " • ").trim();
+const paymentLines = raw.matchAll(
+  /(ORDER_PAYMENT|PRE_ORDER_PAYMENT|PAYMENT_HISTORY):\s*([^\n]+)/gi
+);
 
+for (const m of paymentLines) {
+  const line = String(m?.[2] ?? "");
+
+  const paidMatch = line.match(/PAID\s*=\s*([0-9.]+)/i);
+  const methodMatch = line.match(/METHOD\s*=\s*([^|•]+)/i);
+  const refMatch = line.match(/REF\s*=\s*([^|•]+)/i);
+  const atMatch = line.match(/AT\s*=\s*([^|•]+)/i);
+
+  const amount = Number(paidMatch?.[1] ?? 0);
+
+  if (amount > 0) {
+    payments.push({
+      amount,
+      method: String(methodMatch?.[1] ?? "CASH").trim(),
+      reference: refMatch?.[1] ? String(refMatch[1]).trim() : null,
+      at: atMatch?.[1] ? String(atMatch[1]).trim() : null,
+    });
+  }
+}
   const discountMatch = raw.match(/DISCOUNT:\s*"([^"]*)"\s*\|\s*DISCOUNT_AMOUNT:\s*([0-9.]+)/i);
   if (discountMatch?.[1]) {
     const label = discountMatch[1] === "—" ? "Discount" : discountMatch[1];
@@ -122,7 +174,7 @@ function parseOrderNote(note?: string | null): ParsedOrderNote {
     .replace(/DISCOUNT:[\s\S]*$/gi, "")
     .trim();
 
-  return { cleanNote: cleaned || null, itemsText, paymentText, discountText };
+  return { cleanNote: cleaned || null, itemsText, paymentText, discountText, payments };
 }
 
 function MiniPill({
@@ -434,7 +486,7 @@ const loadOrders = useCallback(async () => {
         p_amount: amount,
         p_method: payMethod || "CASH",
         p_reference: payReference.trim() || null,
-        p_note: null,
+        p_note: `PAYMENT_HISTORY: METHOD=${payMethod || "CASH"} | PAID=${amount} | REF=${payReference.trim() || "-"} | AT=${new Date().toISOString()}`,
       });
 
       if (error) throw error;
@@ -608,11 +660,52 @@ const loadOrders = useCallback(async () => {
           {completed ? "PICKED UP" : String(r.status || "ACTIVE").toUpperCase()} • {paidStatus}
         </Text>
 
-        {parsed.paymentText ? (
-          <Text style={{ color: MUTED, fontWeight: "800", lineHeight: 18 }}>
-            Payment: {parsed.paymentText}
-          </Text>
-        ) : null}
+   {parsed.paymentText ? (
+  <Text style={{ color: MUTED, fontWeight: "800", lineHeight: 18 }}>
+    Payment: {parsed.paymentText}
+  </Text>
+) : null}
+
+{parsed.payments.length > 0 ? (
+  <View
+    style={{
+      borderWidth: 1,
+      borderColor: BORDER,
+      backgroundColor: "#FFFFFF",
+      borderRadius: 12,
+      padding: 10,
+      gap: 6,
+      marginTop: 4,
+    }}
+  >
+    <Text style={{ color: TEXT, fontWeight: "900" }}>Payment History</Text>
+
+    {parsed.payments.map((p, idx) => (
+      <View
+        key={`${r.id}-pay-${idx}`}
+        style={{
+          borderTopWidth: idx === 0 ? 0 : 1,
+          borderTopColor: BORDER,
+          paddingTop: idx === 0 ? 0 : 6,
+          gap: 2,
+        }}
+      >
+        <Text style={{ color: TEXT, fontWeight: "900" }}>
+          {idx + 1}. {money(p.amount)}
+        </Text>
+
+        <Text style={{ color: MUTED, fontWeight: "800", lineHeight: 18 }}>
+          Method: {p.method}
+          {p.reference && p.reference !== "-" ? ` • Ref: ${p.reference}` : ""}
+        </Text>
+
+        <Text style={{ color: FAINT, fontWeight: "800", fontSize: 12 }}>
+          {shortDateTime(p.at || r.created_at)}
+        </Text>
+      </View>
+    ))}
+  </View>
+) : null}
 
         {parsed.discountText ? (
           <Text style={{ color: "#047857", fontWeight: "900", lineHeight: 18 }}>

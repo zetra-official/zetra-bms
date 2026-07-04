@@ -2,7 +2,7 @@
 import { theme } from "@/src/ui/theme";
 import { Tabs, useRouter } from "expo-router";
 import React from "react";
-import { Platform, Text, View, useWindowDimensions } from "react-native";
+import { Platform, Pressable, Text, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 function TabLabel({
@@ -82,8 +82,8 @@ function MoreGridIcon({
   return (
     <View
       style={{
-        width: 28,
-        height: 28,
+        width: mobileWeb ? 28 : 22,
+        height: mobileWeb ? 28 : 22,
         alignItems: "center",
         justifyContent: "center",
       }}
@@ -126,7 +126,7 @@ function MoreGridIcon({
 export default function TabsLayout() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { activeRole, activeOrgName, activeStoreId, activeStoreName, stores } = useOrg();
+  const { activeRole, activeOrgId, activeOrgName, activeStoreId, activeStoreName, stores } = useOrg();
 
   const role = String(activeRole ?? "").trim().toLowerCase();
   const isCashier = role === "cashier";
@@ -173,7 +173,7 @@ export default function TabsLayout() {
               borderRightWidth: 1,
               borderTopWidth: 0,
              width: 172,
-paddingTop: Math.max(insets.top + 132, 146),
+paddingTop: Math.max(insets.top + 188, 204),
 paddingBottom: Math.max(insets.bottom + 12, 16),
 paddingHorizontal: 8,
               shadowOpacity: 0,
@@ -193,11 +193,13 @@ paddingHorizontal: 8,
 
       tabBarItemStyle: useLeftSidebarWeb
   ? {
+      width: "100%",
+      alignSelf: "stretch",
       minHeight: 44,
       borderRadius: 13,
       marginVertical: 2,
       paddingHorizontal: 10,
-      justifyContent: "center",
+      justifyContent: "flex-start",
       alignItems: "center",
       flexDirection: "row",
     }
@@ -213,7 +215,8 @@ paddingHorizontal: 8,
         tabBarActiveBackgroundColor: useLeftSidebarWeb ? "rgba(59,130,246,0.22)" : "transparent",
 tabBarIconStyle: useLeftSidebarWeb
   ? {
-      width: 26,
+      width: 28,
+      minWidth: 28,
       marginRight: 8,
       alignItems: "center",
       justifyContent: "center",
@@ -231,7 +234,7 @@ tabBarIconStyle: useLeftSidebarWeb
           <View style={{ flex: 1, backgroundColor: theme.colors.tabBarBg }}>
             {useLeftSidebarWeb ? (
               <View
-                pointerEvents="none"
+                pointerEvents="box-none"
                 style={{
                   position: "absolute",
                   top: Math.max(insets.top + 14, 22),
@@ -326,6 +329,37 @@ height: 70,
                     </View>
                   </View>
                 </View>
+
+                {activeOrgId && activeStoreId ? (
+                  <Pressable
+                    pointerEvents="auto"
+                    onPress={() => router.push("/stores/items-overview" as any)}
+                    style={({ pressed }) => ({
+                      marginTop: 8,
+                      minHeight: 38,
+                      borderRadius: 13,
+                      borderWidth: 1,
+                      borderColor: "rgba(59,130,246,0.34)",
+                      backgroundColor: pressed
+                        ? "rgba(59,130,246,0.30)"
+                        : "rgba(59,130,246,0.18)",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      paddingHorizontal: 10,
+                    })}
+                  >
+                    <Text
+                      style={{
+                        color: "#FFFFFF",
+                        fontWeight: "900",
+                        fontSize: 12,
+                      }}
+                      numberOfLines={1}
+                    >
+                      Items Overview
+                    </Text>
+                  </Pressable>
+                ) : null}
               </View>
             ) : null}
           </View>
@@ -387,8 +421,16 @@ height: 70,
 
       <Tabs.Screen
         name="stores"
+        listeners={{
+          tabPress: (e) => {
+            if (isCashier) return;
+            e.preventDefault();
+            router.replace("/(tabs)/stores" as any);
+          },
+        }}
         options={{
           title: "Stores",
+          href: isCashier ? null : "/(tabs)/stores",
           tabBarItemStyle: isCashier ? hidden : undefined,
           tabBarLabel: ({ color }) => (
             <TabLabel text="Stores" color={color} mobileWeb={isMobileWeb} />

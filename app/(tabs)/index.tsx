@@ -2029,6 +2029,11 @@ function CompactStockValueCardHomePreview() {
 
   if (isDesktopWeb) return null;
 
+  const roleLower = String(orgAny?.activeRole ?? "").trim().toLowerCase();
+  const canViewStockAction = roleLower === "owner";
+
+  if (!canViewStockAction) return null;
+
   const orgId: string = String(
     orgAny?.activeOrgId ??
       orgAny?.activeOrganizationId ??
@@ -4210,8 +4215,12 @@ const goIncomingStock = useCallback(() => {
   const orgId = String(activeOrgId ?? "").trim();
   const storeId = String(activeStoreId ?? "").trim();
   const roleLower = String(activeRole ?? "").trim().toLowerCase();
-  const isOwner = roleLower === "owner";
-  const canSeeCapitalSecrets = isOwner;
+ const isOwner = roleLower === "owner";
+const canSeeCapitalSecrets = isOwner;
+
+// Owner pekee ndiye anaona Stock Action secrets.
+// Admin, staff, cashier hawazioni kabisa.
+const canViewStockAction = isOwner;
 
   const moneyPrefs = useOrgMoneyPrefs(orgId);
   const moneyRefreshRef = useRef<null | (() => Promise<any> | any)>(null);
@@ -4821,96 +4830,101 @@ void loadDesktopNotifications();
                 </Text>
               </Pressable>
 
-              <Pressable
-                onPress={goStockValue}
-                // @ts-ignore
-                onClick={goStockValue}
-                hitSlop={10}
-                style={({ pressed }) => ({
-                  borderRadius: 20,
-                  borderWidth: 1,
-                  borderColor: "rgba(79,140,255,0.28)",
-                  backgroundColor: "rgba(79,140,255,0.10)",
-                  paddingVertical: 16,
-                  paddingHorizontal: 16,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  opacity: pressed ? 0.92 : 1,
-                  transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
-                })}
-              >
-                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
-                  Open Stock Value
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={goBusinessPosition}
-                // @ts-ignore
-                onClick={goBusinessPosition}
-                hitSlop={10}
-                style={({ pressed }) => ({
-                  borderRadius: 20,
-                  borderWidth: 1,
-                  borderColor: "rgba(239,68,68,0.28)",
-                  backgroundColor: "#FFF5F5",
-                  paddingVertical: 16,
-                  paddingHorizontal: 16,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  opacity: pressed ? 0.92 : 1,
-                  transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
-                })}
-              >
-                <Text style={{ color: "#991B1B", fontWeight: "900", fontSize: 15 }}>
-                  Business Position
-                </Text>
-              </Pressable>
+             {canViewStockAction ? (
+                <>
+                  <Pressable
+                    onPress={goStockValue}
+                    // @ts-ignore
+                    onClick={goStockValue}
+                    hitSlop={10}
+                    style={({ pressed }) => ({
+                      borderRadius: 20,
+                      borderWidth: 1,
+                      borderColor: "rgba(79,140,255,0.28)",
+                      backgroundColor: "rgba(79,140,255,0.10)",
+                      paddingVertical: 16,
+                      paddingHorizontal: 16,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      opacity: pressed ? 0.92 : 1,
+                      transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
+                    })}
+                  >
+                    <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
+                      Open Stock Value
+                    </Text>
+                  </Pressable>
 
-              <Pressable
-                onPress={goBusinessDebts}
-                // @ts-ignore
-                onClick={goBusinessDebts}
-                hitSlop={10}
-                style={({ pressed }) => ({
-                  borderRadius: 20,
-                  borderWidth: 1,
-                  borderColor: "rgba(245,158,11,0.26)",
-                  backgroundColor: "#FFF7ED",
-                  paddingVertical: 16,
-                  paddingHorizontal: 16,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  opacity: pressed ? 0.92 : 1,
-                  transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
-                })}
-              >
-                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
-                  Business Debts
-                </Text>
-              </Pressable>
+                  <Pressable
+                    onPress={goBusinessPosition}
+                    // @ts-ignore
+                    onClick={goBusinessPosition}
+                    hitSlop={10}
+                    style={({ pressed }) => ({
+                      borderRadius: 20,
+                      borderWidth: 1,
+                      borderColor: "rgba(239,68,68,0.28)",
+                      backgroundColor: "#FFF5F5",
+                      paddingVertical: 16,
+                      paddingHorizontal: 16,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      opacity: pressed ? 0.92 : 1,
+                      transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
+                    })}
+                  >
+                    <Text style={{ color: "#991B1B", fontWeight: "900", fontSize: 15 }}>
+                      Business Position
+                    </Text>
+                  </Pressable>
 
-              <Pressable
-                onPress={goIncomingStock}
-                // @ts-ignore
-                onClick={goIncomingStock}
-                hitSlop={10}
-                style={({ pressed }) => ({
-                  borderRadius: 20,
-                  borderWidth: 1,
-                  borderColor: "rgba(20,184,166,0.30)",
-                  backgroundColor: "#ECFDF5",
-                  paddingVertical: 16,
-                  paddingHorizontal: 16,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  opacity: pressed ? 0.92 : 1,
-                  transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
-                })}
-              >
-                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
-                  Incoming Stock
-                </Text>
-              </Pressable>
+                  <Pressable
+                    onPress={goBusinessDebts}
+                    // @ts-ignore
+                    onClick={goBusinessDebts}
+                    hitSlop={10}
+                    style={({ pressed }) => ({
+                      borderRadius: 20,
+                      borderWidth: 1,
+                      borderColor: "rgba(245,158,11,0.26)",
+                      backgroundColor: "#FFF7ED",
+                      paddingVertical: 16,
+                      paddingHorizontal: 16,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      opacity: pressed ? 0.92 : 1,
+                      transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
+                    })}
+                  >
+                    <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
+                      Business Debts
+                    </Text>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={goIncomingStock}
+                    // @ts-ignore
+                    onClick={goIncomingStock}
+                    hitSlop={10}
+                    style={({ pressed }) => ({
+                      borderRadius: 20,
+                      borderWidth: 1,
+                      borderColor: "rgba(20,184,166,0.30)",
+                      backgroundColor: "#ECFDF5",
+                      paddingVertical: 16,
+                      paddingHorizontal: 16,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      opacity: pressed ? 0.92 : 1,
+                      transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
+                    })}
+                  >
+                    <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
+                      Incoming Stock
+                    </Text>
+                  </Pressable>
+                </>
+              ) : null}
             </View>
           </Card>
         </>
@@ -5082,15 +5096,16 @@ void loadDesktopNotifications();
           }
           right={
             <>
-            <WebSafeHomeActions
-  width={width}
-  onOpenAI={goAI}
-  onOpenOrgSwitcher={goOrgSwitcher}
-  onOpenLive={goLive}
-  onOpenStock={goStockValue}
-  onOpenBusinessPosition={goBusinessPosition}
-  onOpenBusinessDebts={goBusinessDebts}
-  onOpenIncomingStock={goIncomingStock}
+            {canViewStockAction ? (
+              <WebSafeHomeActions
+                width={width}
+                onOpenAI={goAI}
+                onOpenOrgSwitcher={goOrgSwitcher}
+                onOpenLive={goLive}
+                onOpenStock={goStockValue}
+                onOpenBusinessPosition={goBusinessPosition}
+                onOpenBusinessDebts={goBusinessDebts}
+                onOpenIncomingStock={goIncomingStock}
                 onOpenFinance={() => {
                   const dates = rangeToDates("today");
                   router.push({
@@ -5105,6 +5120,7 @@ void loadDesktopNotifications();
                   } as any);
                 }}
               />
+            ) : null}
 
               <View style={{ height: 14 }} />
 
@@ -5139,84 +5155,75 @@ void loadDesktopNotifications();
 <StoreGuard>
   <CompactFinanceCardHomePreview />
 
-  <Pressable
-    onPress={goBusinessPosition}
-    hitSlop={10}
-    style={({ pressed }) => ({
-      marginTop: 14,
-      borderRadius: 22,
-      borderWidth: 1,
-    borderColor: "rgba(239,68,68,0.28)",
-backgroundColor: "#FFF5F5",
-      padding: 16,
-      opacity: pressed ? 0.92 : 1,
-    })}
-  >
-   <Text
-  style={{
-    color: "#991B1B",
-    fontWeight: "900",
-    fontSize: 16,
-  }}
->
-  Business Position
-</Text>
+  {canViewStockAction ? (
+    <>
+      <Pressable
+        onPress={goBusinessPosition}
+        hitSlop={10}
+        style={({ pressed }) => ({
+          marginTop: 14,
+          borderRadius: 22,
+          borderWidth: 1,
+          borderColor: "rgba(239,68,68,0.28)",
+          backgroundColor: "#FFF5F5",
+          padding: 16,
+          opacity: pressed ? 0.92 : 1,
+        })}
+      >
+        <Text style={{ color: "#991B1B", fontWeight: "900", fontSize: 16 }}>
+          Business Position
+        </Text>
 
-<Text
-  style={{
-    color: "#7F1D1D",
-    fontWeight: "800",
-    marginTop: 4,
-    lineHeight: 20,
-  }}
->
-  Mikopo (Loans), fedha zilizotolewa na hali halisi ya biashara yako.
-</Text>
-  </Pressable>
+        <Text style={{ color: "#7F1D1D", fontWeight: "800", marginTop: 4, lineHeight: 20 }}>
+          Mikopo (Loans), fedha zilizotolewa na hali halisi ya biashara yako.
+        </Text>
+      </Pressable>
 
-  <Pressable
-    onPress={goBusinessDebts}
-    hitSlop={10}
-    style={({ pressed }) => ({
-      marginTop: 14,
-      borderRadius: 22,
-      borderWidth: 1,
-      borderColor: "rgba(245,158,11,0.26)",
-      backgroundColor: "#FFF7ED",
-      padding: 16,
-      opacity: pressed ? 0.92 : 1,
-    })}
-  >
-    <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-      Business Debts
-    </Text>
-    <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 4, lineHeight: 20 }}>
-      Madeni ya biashara, supplier/bank debts, na comparison dhidi ya stock value
-    </Text>
-  </Pressable>
+      <Pressable
+        onPress={goBusinessDebts}
+        hitSlop={10}
+        style={({ pressed }) => ({
+          marginTop: 14,
+          borderRadius: 22,
+          borderWidth: 1,
+          borderColor: "rgba(245,158,11,0.26)",
+          backgroundColor: "#FFF7ED",
+          padding: 16,
+          opacity: pressed ? 0.92 : 1,
+        })}
+      >
+        <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
+          Business Debts
+        </Text>
+        <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 4, lineHeight: 20 }}>
+          Madeni ya biashara, supplier/bank debts, na comparison dhidi ya stock value
+        </Text>
+      </Pressable>
 
-  <Pressable
-    onPress={goIncomingStock}
-    hitSlop={10}
-    style={({ pressed }) => ({
-      marginTop: 14,
-      borderRadius: 22,
-      borderWidth: 1,
-      borderColor: "rgba(20,184,166,0.30)",
-      backgroundColor: "#ECFDF5",
-      padding: 16,
-      opacity: pressed ? 0.92 : 1,
-    })}
-  >
-    <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-      Incoming Stock
-    </Text>
-    <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 4, lineHeight: 20 }}>
-      Mzigo uliopo njiani, supplier orders, malipo ya mzigo, na goods in transit
-    </Text>
-  </Pressable>
+      <Pressable
+        onPress={goIncomingStock}
+        hitSlop={10}
+        style={({ pressed }) => ({
+          marginTop: 14,
+          borderRadius: 22,
+          borderWidth: 1,
+          borderColor: "rgba(20,184,166,0.30)",
+          backgroundColor: "#ECFDF5",
+          padding: 16,
+          opacity: pressed ? 0.92 : 1,
+        })}
+      >
+        <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
+          Incoming Stock
+        </Text>
+        <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 4, lineHeight: 20 }}>
+          Mzigo uliopo njiani, supplier orders, malipo ya mzigo, na goods in transit
+        </Text>
+      </Pressable>
 
-  <CompactStockValueCardHomePreview />
+      <CompactStockValueCardHomePreview />
+    </>
+  ) : null}
 </StoreGuard>
         </>
       )}

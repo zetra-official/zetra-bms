@@ -30,7 +30,9 @@ function shortId(id: string) {
   if (!s) return "—";
   return s.replace(/-/g, "").slice(0, 8).toUpperCase();
 }
-
+function clean(x: any) {
+  return String(x ?? "").trim();
+}
 function parseDiscountFromNote(note: string | null | undefined) {
   const raw = String(note ?? "");
   const idx = raw.indexOf("DISCOUNT:");
@@ -75,6 +77,11 @@ function stripDiscountTag(note: string | null | undefined) {
       if (!line) return false;
       if (/^CASHIER_HANDOFF_ID\s*:/i.test(line)) return false;
       if (/^SPLIT_PAYMENT\s*:/i.test(line)) return false;
+
+      // Zuia customer details zisijirudie kwenye Note kwa sababu tayari zipo juu.
+      if (/^(customer|mteja)\s*:/i.test(line)) return false;
+      if (/^(phone|simu|namba)\s*:/i.test(line)) return false;
+
       return true;
     })
     .join("\n")
@@ -149,6 +156,24 @@ function isSameDayDar(input?: string | null) {
   const nowKey = darDateKey(new Date().toISOString());
   if (!saleKey || !nowKey) return false;
   return saleKey === nowKey;
+}
+function addDaysLabel(input: string | null | undefined, days: number) {
+  if (!input) return "—";
+
+  const d = new Date(input);
+  if (!Number.isFinite(d.getTime())) return "—";
+
+  d.setDate(d.getDate() + days);
+
+  try {
+    return d.toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "2-digit",
+    });
+  } catch {
+    return d.toDateString();
+  }
 }
 function downloadHtmlPdfOnWeb(html: string) {
   if (Platform.OS !== "web" || typeof document === "undefined") return false;
@@ -225,7 +250,34 @@ type SaleDetail = {
     line_total?: number | null;
   }>;
 };
+type OrgProfile = {
+  business_name?: string | null;
+  logo_url?: string | null;
+  tin?: string | null;
+  vrn?: string | null;
+  registration_no?: string | null;
+  email?: string | null;
+  website?: string | null;
+  tagline?: string | null;
+  receipt_footer?: string | null;
+};
 
+type StoreProfile = {
+  store_display_name?: string | null;
+  phone?: string | null;
+  whatsapp?: string | null;
+  email?: string | null;
+  region?: string | null;
+  city?: string | null;
+  address?: string | null;
+  map_link?: string | null;
+  bank_name?: string | null;
+  account_name?: string | null;
+  account_number?: string | null;
+  mobile_money_name?: string | null;
+  mobile_money_number?: string | null;
+  payment_instructions?: string | null;
+};
 function MetaBlock({
   label,
   value,
@@ -301,7 +353,7 @@ export default function ReceiptScreen() {
   const saleId = (one(params.saleId) ?? "").trim();
   const { width } = useWindowDimensions();
 
-  const { activeOrgId, activeOrgName, activeStoreName, activeRole } = useOrg() as any;
+  const { activeOrgId, activeOrgName, activeStoreId, activeStoreName, activeRole } = useOrg() as any;
 
   const money = useOrgMoneyPrefs(activeOrgId);
   const fmtMoney = useCallback((n: number) => money.fmt(Number(n || 0)), [money]);
@@ -309,8 +361,10 @@ export default function ReceiptScreen() {
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [detail, setDetail] = useState<SaleDetail | null>(null);
-  const [showMoreOptions, setShowMoreOptions] = useState(false);
+const [detail, setDetail] = useState<SaleDetail | null>(null);
+const [orgProfile, setOrgProfile] = useState<OrgProfile | null>(null);
+const [storeProfile, setStoreProfile] = useState<StoreProfile | null>(null);
+const [showMoreOptions, setShowMoreOptions] = useState(false);
   const [showShareOptions, setShowShareOptions] = useState(false);
 
   const isDesktopWeb = Platform.OS === "web" && width >= 1180;
@@ -351,7 +405,48 @@ export default function ReceiptScreen() {
   useEffect(() => {
     void load();
   }, [load]);
+useEffect(() => {
+  let alive = true;
 
+  async function loadProfiles() {
+    try {
+      if (activeOrgId) {
+        const { data } = await supabase
+          .from("organization_profiles")
+          .select("*")
+          .eq("organization_id", activeOrgId)
+          .maybeSingle();
+
+        if (alive) setOrgProfile((data ?? null) as any);
+      } else {
+        setOrgProfile(null);
+      }
+
+      if (activeStoreId) {
+        const { data } = await supabase
+          .from("store_profiles")
+          .select("*")
+          .eq("store_id", activeStoreId)
+          .maybeSingle();
+
+        if (alive) setStoreProfile((data ?? null) as any);
+      } else {
+        setStoreProfile(null);
+      }
+    } catch {
+      if (alive) {
+        setOrgProfile(null);
+        setStoreProfile(null);
+      }
+    }
+  }
+
+  void loadProfiles();
+
+  return () => {
+    alive = false;
+  };
+}, [activeOrgId, activeStoreId]);
   const receiptNo = useMemo(() => shortId(saleId), [saleId]);
 
   const when = useMemo(() => {
@@ -521,25 +616,61 @@ const canDeleteReceipt = isOwner || (dbCanEditSameDay && uiSameDayGuard);
       ]
     );
   }, [saleId, canDeleteReceipt, deleting, router]);
+const businessDisplayName = clean(orgProfile?.business_name) || activeOrgName || "—";
+const storeDisplayName = clean(storeProfile?.store_display_name) || activeStoreName || "—";
 
+const orgTin = clean(orgProfile?.tin);
+const orgVrn = clean(orgProfile?.vrn);
+const orgRegNo = clean(orgProfile?.registration_no);
+const orgEmail = clean(orgProfile?.email);
+const orgWebsite = clean(orgProfile?.website);
+const orgTagline = clean(orgProfile?.tagline);
+const receiptFooterText =
+  clean(orgProfile?.receipt_footer) || "Thank you for shopping with us.";
+
+const storePhone = clean(storeProfile?.phone);
+const storeWhatsapp = clean(storeProfile?.whatsapp);
+const storeEmail = clean(storeProfile?.email);
+const storeRegion = clean(storeProfile?.region);
+const storeCity = clean(storeProfile?.city);
+const storeAddress = clean(storeProfile?.address);
+
+const storeBankName = clean(storeProfile?.bank_name);
+const storeAccountName = clean(storeProfile?.account_name);
+const storeAccountNumber = clean(storeProfile?.account_number);
+const storeMobileMoneyName = clean(storeProfile?.mobile_money_name);
+const storeMobileMoneyNumber = clean(storeProfile?.mobile_money_number);
+const storePaymentInstructions = clean(storeProfile?.payment_instructions);
+const documentType = isCredit ? "Credit Sale" : splitPaymentMeta ? "Split Payment Sale" : "Cash Sale";
+const dueDateLabel = isCredit ? addDaysLabel(detail?.created_at, 7) : "—";
+// Public receipt QR removed for now.
   const shareReceipt = useCallback(async () => {
     if (!saleId) return;
 
-    const org = activeOrgName ?? "—";
-    const store = activeStoreName ?? "—";
+   const org = businessDisplayName;
+const store = storeDisplayName;
 
     const header = [
-     "🧾 ZETRA BMS INVOICE RECEIPT",
+      "🧾 INVOICE RECEIPT",
+      `Receipt No: ${receiptNo}`,
+      `Business: ${org}`,
+      orgTagline ? `Slogan: ${orgTagline}` : null,
+      orgTin ? `TIN: ${orgTin}` : null,
+      orgVrn ? `VRN: ${orgVrn}` : null,
+      orgRegNo ? `Reg No: ${orgRegNo}` : null,
+      "",
       `Store: ${store}`,
-      `No. ${receiptNo}`,
+      storePhone ? `Phone: ${storePhone}` : null,
+      storeWhatsapp ? `WhatsApp: ${storeWhatsapp}` : null,
+      storeAddress || storeCity || storeRegion
+        ? `Location: ${[storeAddress, storeCity, storeRegion].filter(Boolean).join(", ")}`
+        : null,
+      "",
+      `Date: ${when}`,
+      `Sold By: ${soldByLabel}`,
       `Payment: ${paymentTitle}`,
       channelLabel ? `Channel: ${channelLabel}` : null,
       referenceLabel ? `Reference: ${referenceLabel}` : null,
-      "",
-      `Business: ${org}`,
-      `Store: ${store}`,
-      `When: ${when}`,
-      `Sold By: ${soldByLabel}`,
       "",
     ].filter(Boolean) as string[];
 if (splitPaymentMeta) {
@@ -582,10 +713,11 @@ if (splitPaymentMeta) {
     }
 
     if (isCredit) {
-      if (!discountMeta) moneyBlock.push(`TOTAL: ${fmtMoney(computedTotal)}`);
+      if (!discountMeta) moneyBlock.push(`TOTAL SALE: ${fmtMoney(computedTotal)}`);
       moneyBlock.push("");
-      moneyBlock.push(`PAID: ${fmtMoney(paidAmount)}`);
-      moneyBlock.push(`DUE (CREDIT): ${fmtMoney(dueAmount)}`);
+      moneyBlock.push(`TOTAL PAID: ${fmtMoney(paidAmount)}`);
+      moneyBlock.push(`OUTSTANDING BALANCE: ${fmtMoney(dueAmount)}`);
+      moneyBlock.push(`DUE DATE: ${dueDateLabel}`);
       moneyBlock.push(`STATUS: ${dueAmount > 0 ? "OUTSTANDING" : "CLEARED"}`);
       moneyBlock.push("");
     }
@@ -595,7 +727,7 @@ if (splitPaymentMeta) {
       cleanNote ? "" : null,
       cleanNote ? `NOTE: ${cleanNote}` : null,
       "",
-      "Thank you for shopping with us 🙏",
+      `${receiptFooterText} 🙏`,
     ].filter(Boolean) as string[];
 
     const message = [...header, ...body, ...moneyBlock, ...footer].join("\n");
@@ -605,15 +737,14 @@ if (splitPaymentMeta) {
     } catch {}
   }, [
     saleId,
-    activeOrgName,
-    activeStoreName,
+    businessDisplayName,
+    storeDisplayName,
     receiptNo,
     paymentTitle,
     channelLabel,
     referenceLabel,
     when,
     soldByLabel,
-    isCredit,
     customerName,
     customerPhone,
     items,
@@ -622,9 +753,27 @@ if (splitPaymentMeta) {
     discountMeta,
     splitPaymentMeta,
     cleanNote,
+    isCredit,
     paidAmount,
     dueAmount,
     fmtMoney,
+    orgTin,
+    orgVrn,
+    orgRegNo,
+    orgTagline,
+    receiptFooterText,
+    storePhone,
+    storeWhatsapp,
+    storeRegion,
+    storeCity,
+    storeAddress,
+    storeBankName,
+    storeAccountName,
+    storeAccountNumber,
+    storeMobileMoneyName,
+    storeMobileMoneyNumber,
+    storePaymentInstructions,
+    dueDateLabel,
   ]);
 
 const shareReceiptPdf = useCallback(async () => {
@@ -637,8 +786,8 @@ const shareReceiptPdf = useCallback(async () => {
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;");
 
-  const org = activeOrgName ?? "—";
-  const store = activeStoreName ?? "—";
+ const org = businessDisplayName;
+const store = storeDisplayName;
 
   const statusLabel = isCredit ? (dueAmount > 0 ? "OUTSTANDING" : "CLEARED") : "PAID";
 
@@ -694,15 +843,66 @@ const shareReceiptPdf = useCallback(async () => {
   const creditRows = isCredit
     ? `
       <tr>
-        <td><b>Paid</b></td>
+        <td><b>Total Paid</b></td>
         <td class="right">${esc(fmtMoney(paidAmount))}</td>
       </tr>
       <tr>
-        <td><b>Due / Credit</b></td>
+        <td><b>Outstanding Balance</b></td>
         <td class="right">${esc(fmtMoney(dueAmount))}</td>
+      </tr>
+      <tr>
+        <td><b>Due Date</b></td>
+        <td class="right">${esc(dueDateLabel)}</td>
       </tr>
     `
     : "";
+
+const logoUrl = clean(orgProfile?.logo_url);
+  const orgIdentityHtml = [
+    orgTin ? `TIN: ${esc(orgTin)}` : "",
+    orgVrn ? `VRN: ${esc(orgVrn)}` : "",
+    orgRegNo ? `Reg No: ${esc(orgRegNo)}` : "",
+    orgEmail ? `Email: ${esc(orgEmail)}` : "",
+    orgWebsite ? `Website: ${esc(orgWebsite)}` : "",
+  ].filter(Boolean).join(" &nbsp;•&nbsp; ");
+
+  const storeLocationText = [storeAddress, storeCity, storeRegion].filter(Boolean).join(", ");
+  const storeContactHtml = [
+    storePhone ? `Phone: ${esc(storePhone)}` : "",
+    storeWhatsapp ? `WhatsApp: ${esc(storeWhatsapp)}` : "",
+    storeEmail ? `Email: ${esc(storeEmail)}` : "",
+    storeLocationText ? `Location: ${esc(storeLocationText)}` : "",
+  ].filter(Boolean).join("<br/>");
+
+  const paymentDetailsHtml =
+    storeBankName ||
+    storeAccountName ||
+    storeAccountNumber ||
+    storeMobileMoneyName ||
+    storeMobileMoneyNumber ||
+    storePaymentInstructions
+      ? `
+        <div class="section-title">Payment Details</div>
+        <table class="info-table compact">
+          <tr>
+            <td>
+              <span class="label">Bank</span>
+              <div class="strong">${esc([storeBankName, storeAccountName].filter(Boolean).join(" • ") || "—")}</div>
+              ${storeAccountNumber ? `<div class="muted">Account No: ${esc(storeAccountNumber)}</div>` : ""}
+            </td>
+            <td>
+              <span class="label">Mobile Money</span>
+              <div class="strong">${esc(storeMobileMoneyName || "—")}</div>
+              ${storeMobileMoneyNumber ? `<div class="muted">Lipa / Pay No: ${esc(storeMobileMoneyNumber)}</div>` : ""}
+            </td>
+            <td>
+              <span class="label">Instructions</span>
+              <div>${esc(storePaymentInstructions || "—")}</div>
+            </td>
+          </tr>
+        </table>
+      `
+      : "";
 
   const html = `
 <!doctype html>
@@ -721,16 +921,18 @@ const shareReceiptPdf = useCallback(async () => {
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
-
-    html,
-    body {
+img {
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+}
+    html, body {
       margin: 0 !important;
       padding: 0 !important;
       background: #ffffff;
       color: #111827;
       font-family: Arial, Helvetica, sans-serif;
-      font-size: 10.5px;
-      line-height: 1.32;
+      font-size: 10px;
+      line-height: 1.35;
     }
 
     .page {
@@ -738,39 +940,82 @@ const shareReceiptPdf = useCallback(async () => {
       background: #ffffff;
     }
 
-    .header {
+    .topbar {
       display: table;
       width: 100%;
       border-bottom: 2px solid #111827;
-      padding-bottom: 8px;
+      padding-bottom: 10px;
       margin-bottom: 10px;
     }
 
-    .brand,
-    .meta {
+    .brand {
       display: table-cell;
       vertical-align: top;
+      width: 62%;
     }
 
+.doc-meta {
+  display: table-cell;
+  vertical-align: top;
+  width: 38%;
+  text-align: right;
+  color: #111827;
+  font-size: 9.5px;
+  line-height: 1.45;
+}
+
+    .logo-wrap {
+      width: 92px;
+      height: 92px;
+      border: 1px solid #94a3b8;
+      border-radius: 16px;
+      overflow: hidden;
+      display: inline-block;
+      vertical-align: top;
+      margin-right: 14px;
+      background: #f8fafc;
+    }
+
+ .logo-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+
+  image-rendering: auto;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+
+  filter: none;
+  opacity: 1;
+}
+
+    .brand-info {
+      display: inline-block;
+      vertical-align: top;
+      max-width: 72%;
+      padding-top: 2px;
+    }
+/* Public receipt QR removed */
     .brand-title {
-      font-size: 18px;
+      font-size: 21px;
       font-weight: 900;
       letter-spacing: 0.2px;
+      text-transform: uppercase;
+      color: #0f172a;
     }
+.brand-sub {
+  margin-top: 3px;
+  font-size: 9.5px;
+  font-weight: 800;
+  color: #111827;
+}
 
-    .brand-sub {
-      margin-top: 3px;
-      font-size: 10px;
-      font-weight: 800;
-      color: #475569;
-    }
-
-    .meta {
-      text-align: right;
-      font-size: 9.5px;
-      color: #334155;
-      line-height: 1.45;
-      width: 38%;
+    .doc-title {
+      font-size: 18px;
+      font-weight: 900;
+      color: #0f172a;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
     }
 
     .badge {
@@ -779,189 +1024,242 @@ const shareReceiptPdf = useCallback(async () => {
       background: #ecfdf5;
       color: #047857;
       border-radius: 999px;
-      padding: 4px 8px;
+      padding: 4px 9px;
       font-weight: 900;
-      margin-top: 4px;
+      margin-top: 5px;
+      font-size: 9px;
     }
 
-    .info-table,
-    .data-table,
-    .summary-table {
+    .section-title {
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+      color: #0f172a;
+      margin: 11px 0 5px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid #94a3b8;
+      letter-spacing: 0.2px;
+    }
+
+    .info-table, .data-table, .summary-table {
       width: 100%;
       border-collapse: collapse;
       table-layout: fixed;
-      margin-top: 8px;
+      margin-top: 6px;
     }
 
-    .info-table td,
-    .summary-table td {
-      border: 1px solid #cbd5e1;
+    .info-table td, .summary-table td {
+      border: 1px solid #94a3b8;
       padding: 7px;
       vertical-align: top;
       word-break: break-word;
     }
 
-    .data-table th,
-    .data-table td {
-      border: 1px solid #cbd5e1;
-      padding: 5px;
+    .info-table.compact td {
+      padding: 6px;
+    }
+
+    .data-table th, .data-table td {
+      border: 1px solid #94a3b8;
+      padding: 6px;
       text-align: left;
       vertical-align: top;
       word-break: break-word;
     }
 
-    .data-table th {
-      background: #f1f5f9;
-      font-size: 8.5px;
-      font-weight: 900;
-      text-transform: uppercase;
-    }
+   .data-table th {
+  background: #f1f5f9;
+  font-size: 8.5px;
+  font-weight: 900;
+  text-transform: uppercase;
+  color: #111827;
+}
 
     .data-table td {
       font-size: 9px;
     }
 
-    .section-title {
-      font-size: 12px;
+.label {
+  display: block;
+  color: #111827;
+  font-weight: 900;
+  font-size: 8.5px;
+  text-transform: uppercase;
+  margin-bottom: 3px;
+}
+
+    .strong {
       font-weight: 900;
-      text-transform: uppercase;
-      margin: 13px 0 6px;
-      border-bottom: 1px solid #cbd5e1;
-      padding-bottom: 4px;
+      color: #111827;
     }
+
+ .muted {
+  color: #111827;
+  font-weight: 700;
+}
 
     .right {
       text-align: right;
       white-space: nowrap;
     }
 
-    .muted {
-      color: #64748b;
-      font-weight: 700;
-    }
-
     .note {
-      border: 1px solid #cbd5e1;
+      border: 1px solid #94a3b8;
       background: #f8fafc;
       padding: 8px;
+      margin-top: 8px;
+      font-size: 9px;
+    }
+
+    .summary-wrap {
+      display: table;
+      width: 100%;
       margin-top: 10px;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .summary-left {
+      display: table-cell;
+      width: 56%;
+      vertical-align: top;
+      padding-right: 10px;
+    }
+
+    .summary-right {
+      display: table-cell;
+      width: 44%;
+      vertical-align: top;
     }
 
     .total-box {
-      page-break-inside: avoid;
-      break-inside: avoid;
-      margin-top: 12px;
       border: 1.5px solid #10b981;
       background: #ecfdf5;
-      padding: 10px;
+      padding: 11px;
+      text-align: right;
     }
 
     .total-label {
       color: #047857;
       font-weight: 900;
-      font-size: 10px;
+      font-size: 9px;
       text-transform: uppercase;
     }
 
     .total-value {
-      font-size: 20px;
+      font-size: 22px;
       font-weight: 900;
       margin-top: 3px;
+      color: #0f172a;
     }
 
- .sign-section {
-  display: table;
-  width: 100%;
-  table-layout: fixed;
-  border-spacing: 8px 0;
-  margin-top: 14px;
-  page-break-inside: avoid;
-  break-inside: avoid;
-}
+    .sign-section {
+      display: table;
+      width: 100%;
+      table-layout: fixed;
+      border-spacing: 8px 0;
+      margin-top: 13px;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
 
-.sign-box {
-  display: table-cell;
-  border: 1px solid #cbd5e1;
-  padding: 10px;
-  vertical-align: bottom;
-  min-height: 70px;
-}
+    .sign-box {
+      display: table-cell;
+      border: 1px solid #94a3b8;
+      padding: 9px;
+      vertical-align: bottom;
+      height: 58px;
+      font-size: 9px;
+    }
 
-.sign-line {
-  border-top: 1px solid #111827;
-  margin-top: 24px;
-  margin-bottom: 7px;
-}
+    .sign-line {
+      border-top: 1px solid #111827;
+      margin-top: 20px;
+      margin-bottom: 6px;
+    }
 
-.terms {
-  margin-top: 10px;
-  border: 1px solid #cbd5e1;
-  background: #f8fafc;
-  padding: 8px;
-  font-size: 9px;
-  color: #334155;
-  font-weight: 700;
-  line-height: 1.35;
-}
+    .terms {
+      margin-top: 9px;
+      border: 1px solid #94a3b8;
+      background: #f8fafc;
+      padding: 7px;
+      font-size: 8.8px;
+      color: #334155;
+      font-weight: 700;
+    }
 
-.footer {
-  margin-top: 10px;
-  padding-top: 8px;
-  border-top: 1px solid #e5e7eb;
-  color: #64748b;
-  text-align: center;
-  font-size: 9px;
-  font-weight: 800;
-}
+    .footer {
+      margin-top: 9px;
+      padding-top: 7px;
+      border-top: 1px solid #cbd5e1;
+      color: #64748b;
+      text-align: center;
+      font-size: 8.8px;
+      font-weight: 800;
+    }
   </style>
 </head>
 
 <body>
   <div class="page">
-    <div class="header">
+    <div class="topbar">
       <div class="brand">
-        <div class="brand-title">Invoice Receipt</div>
-        <div class="brand-sub">Receipt No: ${esc(receiptNo)}</div>
+        ${logoUrl ? `<span class="logo-wrap"><img
+  src="${esc(logoUrl)}"
+  crossorigin="anonymous"
+/></span>` : ""}
+        <span class="brand-info">
+          <div class="brand-title">${esc(org)}</div>
+          ${orgTagline ? `<div class="brand-sub">${esc(orgTagline)}</div>` : ""}
+          ${orgIdentityHtml ? `<div class="brand-sub">${orgIdentityHtml}</div>` : ""}
+          ${storeContactHtml ? `<div class="brand-sub">${storeContactHtml}</div>` : ""}
+        </span>
       </div>
 
-      <div class="meta">
-        <b>Business:</b> ${esc(org)}<br/>
+      <div class="doc-meta">
+        <div class="doc-title">Invoice Receipt</div>
+        <b>No:</b> ${esc(receiptNo)}<br/>
+        <b>Document Type:</b> ${esc(documentType)}<br/>
+        <b>Date:</b> ${esc(when)}<br/>
+        ${isCredit ? `<b>Due Date:</b> ${esc(dueDateLabel)}<br/>` : ""}
         <b>Store:</b> ${esc(store)}<br/>
-        <b>Generated:</b> ${esc(new Date().toLocaleString())}<br/>
-        <span class="badge">${esc(paymentTitle)} • ${esc(statusLabel)}</span>
+        <span class="badge">${esc(paymentTitle)} • ${esc(statusLabel)}</span><br/>
+        <!-- Public receipt QR removed -->
       </div>
     </div>
 
+    <div class="section-title">Sale Information</div>
     <table class="info-table">
       <tr>
-        <td><b>Business</b><br/>${esc(org)}</td>
-        <td><b>Store</b><br/>${esc(store)}</td>
-        <td><b>Date / Time</b><br/>${esc(when)}</td>
-      </tr>
-      <tr>
-        <td><b>Sold By</b><br/>${esc(soldByLabel)}</td>
-        <td><b>Customer</b><br/>${esc(customerName || "—")}</td>
-        <td><b>Customer Phone</b><br/>${esc(customerPhone || "—")}</td>
-      </tr>
-      <tr>
-        <td><b>Payment</b><br/>${esc(paymentTitle)}</td>
-        <td><b>Channel</b><br/>${esc(channelLabel || "—")}</td>
-        <td><b>Reference</b><br/>${esc(referenceLabel || "—")}</td>
+        <td>
+          <span class="label">Sold By</span>
+          <div class="strong">${esc(soldByLabel)}</div>
+        </td>
+        <td>
+          <span class="label">Customer</span>
+          <div class="strong">${esc(customerName || "Walk-in Customer")}</div>
+          ${customerPhone ? `<div class="muted">Phone: ${esc(customerPhone)}</div>` : ""}
+        </td>
+        <td>
+          <span class="label">Payment</span>
+          <div class="strong">${esc(paymentTitle)}</div>
+          ${channelLabel ? `<div class="muted">Channel: ${esc(channelLabel)}</div>` : ""}
+          ${referenceLabel ? `<div class="muted">Ref: ${esc(referenceLabel)}</div>` : ""}
+        </td>
       </tr>
     </table>
 
     ${splitHtml}
 
     <div class="section-title">Items (${items.length}) • Qty (${computedQty})</div>
-
     <table class="data-table">
       <thead>
         <tr>
           <th style="width:5%">#</th>
-          <th style="width:43%">Item</th>
-          <th style="width:9%" class="right">Qty</th>
+          <th style="width:45%">Item</th>
+          <th style="width:10%" class="right">Qty</th>
           <th style="width:20%" class="right">Unit Price</th>
-          <th style="width:23%" class="right">Total</th>
+          <th style="width:20%" class="right">Total</th>
         </tr>
       </thead>
       <tbody>${rowsHtml}</tbody>
@@ -969,47 +1267,72 @@ const shareReceiptPdf = useCallback(async () => {
 
     ${cleanNote ? `<div class="note"><b>Note:</b><br/>${esc(cleanNote)}</div>` : ""}
 
-    <div class="section-title">Payment Summary</div>
+    <div class="summary-wrap">
+      <div class="summary-left">
+        <div class="section-title">Payment Summary</div>
+        <table class="summary-table">
+          ${discountRows}
+          ${creditRows}
+          ${
+            !isCredit
+              ? `
+                <tr>
+                  <td><b>Total Paid</b></td>
+                  <td class="right">${esc(fmtMoney(computedTotal))}</td>
+                </tr>
+              `
+              : ""
+          }
+          <tr>
+            <td><b>Status</b></td>
+            <td class="right"><b>${esc(statusLabel)}</b></td>
+          </tr>
+        </table>
+      </div>
 
-    <table class="summary-table">
-      ${discountRows}
-      ${creditRows}
-      <tr>
-        <td><b>Status</b></td>
-        <td class="right"><b>${esc(statusLabel)}</b></td>
-      </tr>
-    </table>
-
-    <div class="total-box">
-      <div class="total-label">${isCredit ? "Total Sale" : "Total Money In"}</div>
-      <div class="total-value">${esc(fmtMoney(computedTotal))}</div>
+      <div class="summary-right">
+        <div class="total-box">
+          <div class="total-label">${isCredit ? "Total Sale" : "Total Amount"}</div>
+          <div class="total-value">${esc(fmtMoney(computedTotal))}</div>
+        </div>
+      </div>
     </div>
 
     <div class="sign-section">
-  <div class="sign-box">
-    <div class="sign-line"></div>
-    <b>Prepared By</b><br/>
-    <span>${esc(soldByLabel)}</span>
-  </div>
+      <div class="sign-box">
+        <div class="sign-line"></div>
+        <b>Prepared By</b><br/>
+        <span>${esc(soldByLabel)}</span>
+      </div>
 
-  <div class="sign-box">
-    <div class="sign-line"></div>
-    <b>Customer Signature</b><br/>
-    <span>${esc(customerName || "Customer")}</span>
-  </div>
+      <div class="sign-box">
+        <div class="sign-line"></div>
+        <b>Customer Signature</b><br/>
+        <span>${esc(customerName || "Customer")}</span>
+      </div>
 
-  <div class="sign-box">
-    <div class="sign-line"></div>
-    <b>Business Stamp / Signature</b><br/>
-    <span>${esc(store)}</span>
-  </div>
-</div>
+      <div class="sign-box">
+        <div class="sign-line"></div>
+        <b>Business Stamp / Signature</b><br/>
+        <span>${esc(store)}</span>
+      </div>
+    </div>
 
-<div class="terms">
-  <b>Terms:</b> Please keep this receipt for reference. Goods received in good condition unless otherwise stated.
-</div>
+    ${paymentDetailsHtml}
 
-<div class="footer">Generated by ZETRA BMS • Thank you for shopping with us.</div>
+    <div class="terms">
+      <b>Terms:</b> Please keep this receipt for reference. Goods received in good condition unless otherwise stated.
+    </div>
+
+    <div class="footer">
+      ${esc(receiptFooterText)}
+      ${
+        storePhone || storeWhatsapp
+          ? ` • Contact: ${esc([storePhone, storeWhatsapp].filter(Boolean).join(" / "))}`
+          : ""
+      }
+      • Powered by ZETRA BMS
+    </div>
   </div>
 </body>
 </html>
@@ -1033,8 +1356,9 @@ const shareReceiptPdf = useCallback(async () => {
   }
 }, [
   saleId,
-  activeOrgName,
-  activeStoreName,
+  orgProfile?.logo_url,
+  businessDisplayName,
+  storeDisplayName,
   receiptNo,
   items,
   fmtMoney,
@@ -1053,6 +1377,25 @@ const shareReceiptPdf = useCallback(async () => {
   isCredit,
   paidAmount,
   dueAmount,
+  orgTin,
+  orgVrn,
+  orgRegNo,
+  orgTagline,
+  receiptFooterText,
+  storePhone,
+  storeWhatsapp,
+  storeRegion,
+  storeCity,
+  storeAddress,
+  storeBankName,
+  storeAccountName,
+  storeAccountNumber,
+  storeMobileMoneyName,
+  storeMobileMoneyNumber,
+  storePaymentInstructions,
+  documentType,
+  dueDateLabel,
+ 
 ]);
   const headerCard = (
     <Card
@@ -1071,8 +1414,8 @@ const shareReceiptPdf = useCallback(async () => {
           gap: 10,
         }}
       >
-        <MetaBlock label="Business" value={activeOrgName ?? "—"} />
-        <MetaBlock label="Store" value={activeStoreName ?? "—"} />
+        <MetaBlock label="Business" value={businessDisplayName} />
+        <MetaBlock label="Store" value={storeDisplayName} />
       </View>
 
       <View
