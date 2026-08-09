@@ -52,7 +52,13 @@ export default function StaffPerformanceScreen() {
   const router = useRouter();
   const { activeOrgId, activeOrgName, activeRole } = useOrg();
 
-  const canManage = activeRole === "owner" || activeRole === "admin";
+  const role = String(activeRole ?? "")
+  .trim()
+  .toLowerCase();
+
+const canManage =
+  role === "owner" ||
+  role === "admin";
 
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -104,29 +110,57 @@ export default function StaffPerformanceScreen() {
     }
   }, [loadData]);
 
-  const ranked = useMemo(() => {
-    const needle = q.trim().toLowerCase();
+const allRanked = useMemo(() => {
+  return rows
+    .map((r) => ({
+      ...r,
+      totalSalesNum: Math.max(0, toNum(r.total_sales)),
+      salesCountNum: Math.max(0, Math.trunc(toNum(r.sales_count))),
+      remainingCommissionNum: Math.max(
+        0,
+        toNum(r.remaining_commission)
+      ),
+    }))
+    .sort((a, b) => {
+      if (b.totalSalesNum !== a.totalSalesNum) {
+        return b.totalSalesNum - a.totalSalesNum;
+      }
 
-    return rows
-      .map((r) => ({
-        ...r,
-        totalSalesNum: toNum(r.total_sales),
-        salesCountNum: toNum(r.sales_count),
-        remainingCommissionNum: toNum(r.remaining_commission),
-      }))
-      .filter((r) => {
-        if (!needle) return true;
-        const hay = `${r.email ?? ""} ${r.membership_id ?? ""} ${r.user_id ?? ""}`.toLowerCase();
-        return hay.includes(needle);
-      })
-      .sort((a, b) => {
-        if (b.totalSalesNum !== a.totalSalesNum) return b.totalSalesNum - a.totalSalesNum;
-        return b.salesCountNum - a.salesCountNum;
-      });
-  }, [rows, q]);
+      return b.salesCountNum - a.salesCountNum;
+    });
+}, [rows]);
 
-  const best = ranked[0] ?? null;
-  const followUp = ranked.length > 1 ? ranked[ranked.length - 1] : null;
+const ranked = useMemo(() => {
+  const needle = q.trim().toLowerCase();
+
+  if (!needle) return allRanked;
+
+  return allRanked.filter((r) => {
+    const hay =
+      `${r.email ?? ""} ${r.membership_id ?? ""} ${r.user_id ?? ""}`
+        .toLowerCase();
+
+    return hay.includes(needle);
+  });
+}, [allRanked, q]);
+
+const best = useMemo(() => {
+  return (
+    allRanked.find(
+      (r) => r.totalSalesNum > 0 || r.salesCountNum > 0
+    ) ?? null
+  );
+}, [allRanked]);
+
+const followUp = useMemo(() => {
+  const activeStaff = allRanked.filter(
+    (r) => r.totalSalesNum > 0 || r.salesCountNum > 0
+  );
+
+  if (activeStaff.length <= 1) return null;
+
+  return activeStaff[activeStaff.length - 1];
+}, [allRanked]);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: UI.bg0 }} edges={["top"]}>
@@ -185,14 +219,14 @@ export default function StaffPerformanceScreen() {
         />
 
         <View style={{ borderWidth: 1, borderColor: UI.border, borderRadius: 22, backgroundColor: UI.card, padding: 16, gap: 12 }}>
-          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18 }}>
-            Monthly Highlights
-          </Text>
+         <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18 }}>
+  Performance Highlights
+</Text>
 
           {best ? (
             <View style={{ borderWidth: 1, borderColor: "rgba(52,211,153,0.25)", borderRadius: 18, backgroundColor: "rgba(52,211,153,0.08)", padding: 14, gap: 6 }}>
               <Text style={{ color: UI.emerald, fontWeight: "900", fontSize: 12 }}>
-                BEST PERFORMER THIS MONTH
+                TOP PERFORMER
               </Text>
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
                 {best.email ?? `User: ${shortId(best.user_id)}`}
@@ -279,8 +313,8 @@ export default function StaffPerformanceScreen() {
             </Text>
 
             <Text style={{ color: UI.muted, fontWeight: "900" }}>
-              Receipts: {r.salesCountNum} • Remaining Commission:{" "}
-              {formatTZS(r.remainingCommissionNum)}
+         Receipts: {r.salesCountNum} • Unpaid Commission:{" "}
+{formatTZS(r.remainingCommissionNum)}
             </Text>
         <Text style={{ color: UI.faint, fontWeight: "800", marginTop: 4 }}>
       Tap to open full staff report ›

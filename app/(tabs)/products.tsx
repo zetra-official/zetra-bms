@@ -367,10 +367,18 @@ const productStoreScope =
   const [editImageUploading, setEditImageUploading] = useState(false);
 
   const [permission, requestPermission] = useCameraPermissions();
-  const [scanOpen, setScanOpen] = useState(false);
-  const [scanBusy, setScanBusy] = useState(false);
-  const [keyboardSpace, setKeyboardSpace] = useState(0);
+const [scanOpen, setScanOpen] = useState(false);
+const [scanBusy, setScanBusy] = useState(false);
+const [keyboardSpace, setKeyboardSpace] = useState(0);
+
 const [productSearch, setProductSearch] = useState("");
+
+// Performance:
+// Usirender Product Catalog yote kwa wakati mmoja.
+// Hii inapunguza cards + remote images zinazokuwa mounted simultaneously.
+const PRODUCTS_PAGE_SIZE = 20;
+const [visibleProductCount, setVisibleProductCount] =
+  useState(PRODUCTS_PAGE_SIZE);
 
 const [precisionPackQty, setPrecisionPackQty] = useState("");
 const [precisionPackCost, setPrecisionPackCost] = useState("");
@@ -1326,51 +1334,83 @@ const remove = useCallback(
   [activeOrgId, productStoreScope, canManage, load]
 );
 
-  const visibleRows = useMemo(() => {
-    const normalizeSearchText = (value: any) =>
-      String(value ?? "")
-        .toLowerCase()
-        .trim()
-        .replace(/[^\p{L}\p{N}]+/gu, " ")
-        .replace(/\s+/g, " ");
+const visibleRows = useMemo(() => {
+  const normalizeSearchText = (value: any) =>
+    String(value ?? "")
+      .toLowerCase()
+      .trim()
+      .replace(/[^\p{L}\p{N}]+/gu, " ")
+      .replace(/\s+/g, " ");
 
-    const normalizeCompactText = (value: any) =>
-      normalizeSearchText(value).replace(/\s+/g, "");
+  const normalizeCompactText = (value: any) =>
+    normalizeSearchText(value).replace(/\s+/g, "");
 
-    const q = normalizeSearchText(productSearch);
-    const qCompact = normalizeCompactText(productSearch);
+  const q = normalizeSearchText(productSearch);
+  const qCompact = normalizeCompactText(productSearch);
 
-    const activeRows = rows.filter((r) => r.is_active !== false);
+  const activeRows = rows.filter((r) => r.is_active !== false);
 
-    if (!q && !qCompact) return activeRows;
+  if (!q && !qCompact) return activeRows;
 
-    return activeRows
-      .map((r) => {
-        const fields = [r.name, r.sku, r.unit, r.category, r.barcode];
+  return activeRows
+    .map((r) => {
+      const fields = [r.name, r.sku, r.unit, r.category, r.barcode];
 
-        const fieldTexts = fields.map((v) => normalizeSearchText(v));
-        const fieldCompacts = fields.map((v) => normalizeCompactText(v));
+      const fieldTexts = fields.map((v) => normalizeSearchText(v));
+      const fieldCompacts = fields.map((v) => normalizeCompactText(v));
 
-        const exactField = fieldTexts.some((v) => v === q) || fieldCompacts.some((v) => v === qCompact);
-        const startsField = fieldTexts.some((v) => v.startsWith(q)) || fieldCompacts.some((v) => v.startsWith(qCompact));
-        const containsField = fieldTexts.some((v) => v.includes(q)) || fieldCompacts.some((v) => v.includes(qCompact));
+      const exactField =
+        fieldTexts.some((v) => v === q) ||
+        fieldCompacts.some((v) => v === qCompact);
 
-        let score = 0;
-        if (exactField) score = 300;
-        else if (startsField) score = 200;
-        else if (containsField) score = 100;
+      const startsField =
+        fieldTexts.some((v) => v.startsWith(q)) ||
+        fieldCompacts.some((v) => v.startsWith(qCompact));
 
-        return { row: r, score };
-      })
-      .filter((x) => x.score > 0)
-      .sort((a, b) => {
-        if (b.score !== a.score) return b.score - a.score;
-        return String(a.row.name ?? "").localeCompare(String(b.row.name ?? ""));
-      })
-      .map((x) => x.row);
-  }, [productSearch, rows]);
+      const containsField =
+        fieldTexts.some((v) => v.includes(q)) ||
+        fieldCompacts.some((v) => v.includes(qCompact));
 
-  const solidInputStyle = {
+      let score = 0;
+
+      if (exactField) score = 300;
+      else if (startsField) score = 200;
+      else if (containsField) score = 100;
+
+      return { row: r, score };
+    })
+    .filter((x) => x.score > 0)
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+
+      return String(a.row.name ?? "").localeCompare(
+        String(b.row.name ?? "")
+      );
+    })
+    .map((x) => x.row);
+}, [productSearch, rows]);
+
+// Search mpya, organization mpya au store mpya ikibadilika,
+// rudisha catalog kwenye page ya kwanza ili isibebe items nyingi.
+useEffect(() => {
+  setVisibleProductCount(PRODUCTS_PAGE_SIZE);
+}, [productSearch, activeOrgId, productStoreScope]);
+
+// Hizi tu ndizo products zitakazokuwa mounted/rendered kwenye UI.
+// visibleRows bado ina products zote kwa ajili ya search na count.
+const renderedRows = useMemo(() => {
+  return visibleRows.slice(0, visibleProductCount);
+}, [visibleRows, visibleProductCount]);
+
+const hasMoreProducts = visibleProductCount < visibleRows.length;
+
+const loadMoreProducts = useCallback(() => {
+  setVisibleProductCount((current) =>
+    Math.min(current + PRODUCTS_PAGE_SIZE, visibleRows.length)
+  );
+}, [visibleRows.length]);
+
+const solidInputStyle = {
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: theme.radius.lg,
@@ -1617,11 +1657,22 @@ const remove = useCallback(
               })}
             >
               {imageUrl ? (
-                <Image
-                  source={{ uri: imageUrl }}
-                  style={{ width: 62, height: 62, borderRadius: 18, backgroundColor: "#E2E8F0" }}
-                  resizeMode="cover"
-                />
+              <Image
+  source={{ uri: imageUrl }}
+  style={{
+    width: 62,
+    height: 62,
+    borderRadius: 18,
+    backgroundColor: "#E2E8F0",
+  }}
+  resizeMode="cover"
+  resizeMethod={
+    Platform.OS === "android" ? "resize" : undefined
+  }
+  fadeDuration={
+    Platform.OS === "android" ? 0 : undefined
+  }
+/>
               ) : (
                 <View
                   style={{
@@ -2018,156 +2069,320 @@ const remove = useCallback(
   </Text>
 </View>
 
-      {visibleRows.length === 0 ? (
-        <Card>
-          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-            {productSearch.trim()
-  ? "No matching products"
-  : isCapitalRecoveryStore
-  ? "No income products yet"
-  : "No products yet"}
-          </Text>
-          <Text style={{ color: theme.colors.muted, fontWeight: "700", marginTop: 6 }}>
-           {productSearch.trim()
-  ? "Badili neno la search au futa search kuona bidhaa zote."
-  : canManage
-  ? isCapitalRecoveryStore
-    ? "Ongeza bidhaa ya income juu kisha Refresh."
-    : "Ongeza product juu kisha Refresh."
-  : "Muombe owner aongeze au abadili products."}
-          </Text>
-        </Card>
-      ) : (
-        visibleRows.map((p) => {
-          const sp = Number(p.selling_price ?? 0);
-          const cp = Number(p.cost_price ?? NaN);
-          const bc = String(p.barcode ?? "").trim();
+{visibleRows.length === 0 ? (
+  <Card>
+    <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+      {productSearch.trim()
+        ? "No matching products"
+        : isCapitalRecoveryStore
+        ? "No income products yet"
+        : "No products yet"}
+    </Text>
+
+    <Text
+      style={{
+        color: theme.colors.muted,
+        fontWeight: "700",
+        marginTop: 6,
+      }}
+    >
+      {productSearch.trim()
+        ? "Badili neno la search au futa search kuona bidhaa zote."
+        : canManage
+        ? isCapitalRecoveryStore
+          ? "Ongeza bidhaa ya income juu kisha Refresh."
+          : "Ongeza product juu kisha Refresh."
+        : "Muombe owner aongeze au abadili products."}
+    </Text>
+  </Card>
+) : (
+  <>
+    {renderedRows.map((p) => {
+      const sp = Number(p.selling_price ?? 0);
+      const cp = Number(p.cost_price ?? NaN);
+      const bc = String(p.barcode ?? "").trim();
 
       return (
-  <View
-    key={p.id}
-    style={{
-  borderWidth: 1,
-  borderColor: "rgba(148,163,184,0.22)",
-  borderRadius: 24,
-  backgroundColor: "#FFFFFF",
-  padding: 18,
-  marginBottom: 12,
-  shadowColor: "#0F172A",
-  shadowOpacity: 0.08,
-  shadowRadius: 14,
-  shadowOffset: { width: 0, height: 8 },
-  elevation: 3,
-}}
-            >
-              <View style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
-                {p.image_url ? (
-                  <Image
-                    source={{ uri: p.image_url }}
-                    style={{
-                      width: 64,
-                      height: 64,
-                      borderRadius: 18,
-                      backgroundColor: "#E2E8F0",
-                    }}
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <View
-                    style={{
-                      width: 64,
-                      height: 64,
-                      borderRadius: 18,
-                      backgroundColor: "#F1F5F9",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      borderWidth: 1,
-                      borderColor: "rgba(148,163,184,0.22)",
-                    }}
-                  >
-                    <WebSafeIcon name="cube-outline" size={26} color={theme.colors.muted} />
-                  </View>
-                )}
+        <View
+          key={p.id}
+          style={{
+            borderWidth: 1,
+            borderColor: "rgba(148,163,184,0.22)",
+            borderRadius: 24,
+            backgroundColor: "#FFFFFF",
+            padding: 18,
+            marginBottom: 12,
 
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-                    {p.name}
-                  </Text>
-                  <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 4 }}>
-                    {p.image_url ? "Image attached" : "No image"}
-                  </Text>
-                </View>
+            // Web/iOS inaweza kubaki na shadow nzuri.
+            // Android tunapunguza expensive shadow rendering.
+            shadowColor: "#0F172A",
+            shadowOpacity: Platform.OS === "android" ? 0 : 0.08,
+            shadowRadius: Platform.OS === "android" ? 0 : 14,
+            shadowOffset: { width: 0, height: 8 },
+            elevation: Platform.OS === "android" ? 1 : 3,
+          }}
+        >
+          <View
+            style={{
+              flexDirection: "row",
+              gap: 12,
+              alignItems: "center",
+            }}
+          >
+            {p.image_url ? (
+              <Image
+                source={{ uri: p.image_url }}
+                style={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: 18,
+                  backgroundColor: "#E2E8F0",
+                }}
+                resizeMode="cover"
+
+                // Muhimu hasa Android:
+                // image kubwa ipunguzwe kwa matumizi ya thumbnail.
+                resizeMethod={
+                  Platform.OS === "android" ? "resize" : undefined
+                }
+
+                // Ondoa fade animation ya kila remote image Android.
+                fadeDuration={
+                  Platform.OS === "android" ? 0 : undefined
+                }
+              />
+            ) : (
+              <View
+                style={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: 18,
+                  backgroundColor: "#F1F5F9",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderWidth: 1,
+                  borderColor: "rgba(148,163,184,0.22)",
+                }}
+              >
+                <WebSafeIcon
+                  name="cube-outline"
+                  size={26}
+                  color={theme.colors.muted}
+                />
               </View>
+            )}
 
-              {!isCapitalRecoveryStore && (
-                <>
-                  <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-                    SKU: <Text style={{ color: theme.colors.text }}>{p.sku ?? "—"}</Text>
-                    {"   "}•{"   "}
-                    Unit: <Text style={{ color: theme.colors.text }}>{p.unit ?? "—"}</Text>
-                  </Text>
-
-                  <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-                    Category: <Text style={{ color: theme.colors.text }}>{p.category ?? "—"}</Text>
-                  </Text>
-
-                  <Text style={{ color: theme.colors.muted, fontWeight: "900", marginTop: 8 }}>
-                    Barcode: <Text style={{ color: theme.colors.text }}>{bc ? bc : "—"}</Text>
-                  </Text>
-                </>
-              )}
-
-              {isCapitalRecoveryStore && (
-                <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-                  Category: <Text style={{ color: theme.colors.text }}>{p.category ?? "—"}</Text>
-                </Text>
-              )}
-
-              <Text style={{ color: theme.colors.muted, fontWeight: "900", marginTop: 8 }}>
-                Selling Price: <Text style={{ color: theme.colors.text }}>{sp > 0 ? money.fmt(sp) : "—"}</Text>
+            <View style={{ flex: 1 }}>
+              <Text
+                style={{
+                  color: theme.colors.text,
+                  fontWeight: "900",
+                  fontSize: 16,
+                }}
+              >
+                {p.name}
               </Text>
 
-              {canSeeCost && (
-                <Text style={{ color: theme.colors.muted, fontWeight: "900", marginTop: 6 }}>
-                  Cost Price:{" "}
-                  <Text style={{ color: theme.colors.text }}>
-                    {Number.isFinite(cp) ? money.fmt(cp) : "—"}
-                  </Text>
-                </Text>
-              )}
-
-              {canManage && (
-                <View style={{ flexDirection: "row", gap: 10, marginTop: 16 }}>
-                  <View style={{ flex: 1 }}>
-                    <Button title="Edit" variant="primary" onPress={() => openEdit(p)} disabled={loading} />
-                  </View>
-<View style={{ flex: 1 }}>
-  <Pressable
-    onPress={() => void remove(p.id, p.name)}
-    disabled={loading}
-    style={({ pressed }) => ({
-      minHeight: 52,
-      borderRadius: 14,
-      borderWidth: 1,
-      borderColor: "rgba(148,163,184,0.45)",
-      backgroundColor: pressed ? "#F1F5F9" : "#FFFFFF",
-      alignItems: "center",
-      justifyContent: "center",
-      opacity: loading ? 0.5 : 1,
-      cursor: Platform.OS === "web" ? "pointer" : undefined,
-    })}
-  >
-    <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 15 }}>
-      Delete
-    </Text>
-  </Pressable>
-</View>
-                </View>
-              )}
+              <Text
+                style={{
+                  color: theme.colors.muted,
+                  fontWeight: "800",
+                  marginTop: 4,
+                }}
+              >
+                {p.image_url ? "Image attached" : "No image"}
+              </Text>
             </View>
-          );
-        })
-      )}
+          </View>
+
+          {!isCapitalRecoveryStore && (
+            <>
+              <Text
+                style={{
+                  color: theme.colors.muted,
+                  fontWeight: "800",
+                  marginTop: 6,
+                }}
+              >
+                SKU:{" "}
+                <Text style={{ color: theme.colors.text }}>
+                  {p.sku ?? "—"}
+                </Text>
+                {"   "}•{"   "}
+                Unit:{" "}
+                <Text style={{ color: theme.colors.text }}>
+                  {p.unit ?? "—"}
+                </Text>
+              </Text>
+
+              <Text
+                style={{
+                  color: theme.colors.muted,
+                  fontWeight: "800",
+                  marginTop: 6,
+                }}
+              >
+                Category:{" "}
+                <Text style={{ color: theme.colors.text }}>
+                  {p.category ?? "—"}
+                </Text>
+              </Text>
+
+              <Text
+                style={{
+                  color: theme.colors.muted,
+                  fontWeight: "900",
+                  marginTop: 8,
+                }}
+              >
+                Barcode:{" "}
+                <Text style={{ color: theme.colors.text }}>
+                  {bc ? bc : "—"}
+                </Text>
+              </Text>
+            </>
+          )}
+
+          {isCapitalRecoveryStore && (
+            <Text
+              style={{
+                color: theme.colors.muted,
+                fontWeight: "800",
+                marginTop: 6,
+              }}
+            >
+              Category:{" "}
+              <Text style={{ color: theme.colors.text }}>
+                {p.category ?? "—"}
+              </Text>
+            </Text>
+          )}
+
+          <Text
+            style={{
+              color: theme.colors.muted,
+              fontWeight: "900",
+              marginTop: 8,
+            }}
+          >
+            Selling Price:{" "}
+            <Text style={{ color: theme.colors.text }}>
+              {sp > 0 ? money.fmt(sp) : "—"}
+            </Text>
+          </Text>
+
+          {canSeeCost && (
+            <Text
+              style={{
+                color: theme.colors.muted,
+                fontWeight: "900",
+                marginTop: 6,
+              }}
+            >
+              Cost Price:{" "}
+              <Text style={{ color: theme.colors.text }}>
+                {Number.isFinite(cp) ? money.fmt(cp) : "—"}
+              </Text>
+            </Text>
+          )}
+
+          {canManage && (
+            <View
+              style={{
+                flexDirection: "row",
+                gap: 10,
+                marginTop: 16,
+              }}
+            >
+              <View style={{ flex: 1 }}>
+                <Button
+                  title="Edit"
+                  variant="primary"
+                  onPress={() => openEdit(p)}
+                  disabled={loading}
+                />
+              </View>
+
+              <View style={{ flex: 1 }}>
+                <Pressable
+                  onPress={() => void remove(p.id, p.name)}
+                  disabled={loading}
+                  style={({ pressed }) => ({
+                    minHeight: 52,
+                    borderRadius: 14,
+                    borderWidth: 1,
+                    borderColor: "rgba(148,163,184,0.45)",
+                    backgroundColor: pressed
+                      ? "#F1F5F9"
+                      : "#FFFFFF",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    opacity: loading ? 0.5 : 1,
+                    cursor:
+                      Platform.OS === "web"
+                        ? "pointer"
+                        : undefined,
+                  })}
+                >
+                  <Text
+                    style={{
+                      color: theme.colors.text,
+                      fontWeight: "900",
+                      fontSize: 15,
+                    }}
+                  >
+                    Delete
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          )}
+        </View>
+      );
+    })}
+
+    {hasMoreProducts && (
+      <Pressable
+        onPress={loadMoreProducts}
+        style={({ pressed }) => ({
+          minHeight: 58,
+          borderRadius: 18,
+          borderWidth: 1,
+          borderColor: theme.colors.emeraldBorder,
+          backgroundColor: pressed
+            ? "rgba(16,185,129,0.16)"
+            : "rgba(16,185,129,0.08)",
+          alignItems: "center",
+          justifyContent: "center",
+          paddingHorizontal: 16,
+          marginTop: 2,
+          marginBottom: 14,
+        })}
+      >
+        <Text
+          style={{
+            color: theme.colors.text,
+            fontWeight: "900",
+            fontSize: 15,
+          }}
+        >
+          Load More Products
+        </Text>
+
+        <Text
+          style={{
+            color: theme.colors.muted,
+            fontWeight: "800",
+            fontSize: 12,
+            marginTop: 3,
+          }}
+        >
+          Showing {renderedRows.length} of {visibleRows.length}
+        </Text>
+      </Pressable>
+    )}
+  </>
+)}
 
      <View style={{ height: keyboardSpace }} />
 
@@ -2311,11 +2526,22 @@ backgroundColor: pressed ? "#E2E8F0" : "#F8FAFC",
                     })}
                   >
                     {editImageUrl ? (
-                      <Image
-                        source={{ uri: editImageUrl }}
-                        style={{ width: 64, height: 64, borderRadius: 18, backgroundColor: "#E2E8F0" }}
-                        resizeMode="cover"
-                      />
+                    <Image
+  source={{ uri: editImageUrl }}
+  style={{
+    width: 64,
+    height: 64,
+    borderRadius: 18,
+    backgroundColor: "#E2E8F0",
+  }}
+  resizeMode="cover"
+  resizeMethod={
+    Platform.OS === "android" ? "resize" : undefined
+  }
+  fadeDuration={
+    Platform.OS === "android" ? 0 : undefined
+  }
+/>
                     ) : (
                       <View
                         style={{

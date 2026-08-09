@@ -1,8 +1,21 @@
 ﻿import { useOrg } from "@/src/context/OrgContext";
+import { supabase } from "@/src/supabase/supabaseClient";
 import { theme } from "@/src/ui/theme";
-import { Tabs, useRouter } from "expo-router";
-import React from "react";
-import { Platform, Pressable, Text, View, useWindowDimensions } from "react-native";
+import { Tabs, useFocusEffect, useRouter } from "expo-router";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import {
+  Platform,
+  Pressable,
+  Text,
+  View,
+  useWindowDimensions,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 function TabLabel({
@@ -122,7 +135,439 @@ function MoreGridIcon({
     </View>
   );
 }
+type SidebarSubscriptionRow = {
+  plan_code?: string | null;
+  plan_name?: string | null;
+  status?: string | null;
+  expires_at?: string | null;
+  end_at?: string | null;
+  [k: string]: any;
+};
 
+function cleanSubscriptionValue(v: any) {
+  return String(v ?? "").trim();
+}
+
+function parseSidebarSubscriptionDate(value: any): Date | null {
+  const raw = cleanSubscriptionValue(value);
+
+  if (!raw) return null;
+
+  const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+
+  if (match) {
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const day = Number(match[3]);
+
+    const d = new Date(year, month - 1, day);
+
+    if (!Number.isNaN(d.getTime())) {
+      return d;
+    }
+  }
+
+  const parsed = new Date(raw);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  return new Date(
+    parsed.getFullYear(),
+    parsed.getMonth(),
+    parsed.getDate()
+  );
+}
+
+function getSidebarSubscriptionDaysLeft(value: any): number | null {
+  const expiry = parseSidebarSubscriptionDate(value);
+
+  if (!expiry) return null;
+
+  const today = new Date();
+
+  const todayUTC = Date.UTC(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate()
+  );
+
+  const expiryUTC = Date.UTC(
+    expiry.getFullYear(),
+    expiry.getMonth(),
+    expiry.getDate()
+  );
+
+  return Math.round(
+    (expiryUTC - todayUTC) / (24 * 60 * 60 * 1000)
+  );
+}
+
+function formatSidebarSubscriptionDate(value: any) {
+  const d = parseSidebarSubscriptionDate(value);
+
+  if (!d) return "—";
+
+  try {
+    return d.toLocaleDateString(undefined, {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  } catch {
+    return cleanSubscriptionValue(value).slice(0, 10) || "—";
+  }
+}
+
+function DesktopSidebarSubscriptionCard({
+  orgId,
+  role,
+}: {
+  orgId?: string | null;
+  role?: string | null;
+}) {
+  const router = useRouter();
+
+  const cleanOrgId = cleanSubscriptionValue(orgId);
+  const roleLower = cleanSubscriptionValue(role).toLowerCase();
+
+  const canManageSubscription =
+    roleLower === "owner" || roleLower === "admin";
+
+  const [loading, setLoading] = useState(false);
+
+  const [subscription, setSubscription] =
+    useState<SidebarSubscriptionRow | null>(null);
+
+  const [loadFailed, setLoadFailed] = useState(false);
+
+  const requestRef = useRef(0);
+
+  const loadSubscription = useCallback(async () => {
+    if (!cleanOrgId || !canManageSubscription) {
+      setSubscription(null);
+      setLoadFailed(false);
+      return;
+    }
+
+    const requestId = ++requestRef.current;
+
+    setLoading(true);
+    setLoadFailed(false);
+
+    try {
+      const { data, error } = await supabase.rpc(
+        "get_my_subscription",
+        {
+          p_org_id: cleanOrgId,
+        } as any
+      );
+
+      if (error) {
+        throw error;
+      }
+
+      if (requestId !== requestRef.current) {
+        return;
+      }
+
+      const row = Array.isArray(data)
+        ? data[0] ?? null
+        : data ?? null;
+
+      setSubscription(
+        row
+          ? (row as SidebarSubscriptionRow)
+          : null
+      );
+
+      setLoadFailed(false);
+    } catch (e) {
+      if (requestId !== requestRef.current) {
+        return;
+      }
+
+      /*
+       * MUHIMU:
+       * Tusifiche component ikiwa RPC imefail.
+       * Tutaonyesha status fallback.
+       */
+      setSubscription(null);
+      setLoadFailed(true);
+    } finally {
+      if (requestId === requestRef.current) {
+        setLoading(false);
+      }
+    }
+  }, [cleanOrgId, canManageSubscription]);
+
+  /*
+   * Layout ni persistent.
+   * useEffect inahakikisha subscription
+   * inapakiwa mara activeOrgId/role inapobadilika,
+   * hata kama layout yenyewe haijapata focus event mpya.
+   */
+  useEffect(() => {
+    void loadSubscription();
+  }, [loadSubscription]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadSubscription();
+    }, [loadSubscription])
+  );
+
+  const planCode = useMemo(() => {
+    return cleanSubscriptionValue(
+      subscription?.plan_code ??
+        subscription?.plan_name ??
+        subscription?.plan ??
+        subscription?.code ??
+        ""
+    ).toUpperCase();
+  }, [subscription]);
+
+  const status = useMemo(() => {
+    return cleanSubscriptionValue(
+      subscription?.status ??
+        subscription?.subscription_status ??
+        ""
+    ).toUpperCase();
+  }, [subscription]);
+
+  const expiryRaw = useMemo(() => {
+    return (
+      subscription?.expires_at ??
+      subscription?.end_at ??
+      subscription?.subscription_end ??
+      subscription?.expiry_date ??
+      ""
+    );
+  }, [subscription]);
+
+  const daysLeft = useMemo(
+    () => getSidebarSubscriptionDaysLeft(expiryRaw),
+    [expiryRaw]
+  );
+
+  const expiryLabel = useMemo(
+    () => formatSidebarSubscriptionDate(expiryRaw),
+    [expiryRaw]
+  );
+
+  if (!cleanOrgId || !canManageSubscription) {
+    return null;
+  }
+
+  const normalizedPlan =
+    planCode ||
+    (
+      subscription
+        ? "SUBSCRIPTION"
+        : loadFailed
+          ? "ACCOUNT"
+          : "FREE"
+    );
+
+  const normalizedStatus =
+    status ||
+    (
+      loadFailed
+        ? "CHECK BILLING"
+        : subscription
+          ? "ACTIVE"
+          : "FREE"
+    );
+
+  const isFree =
+    normalizedPlan === "FREE" ||
+    normalizedStatus === "FREE";
+
+  const isExpired =
+    normalizedStatus === "EXPIRED" ||
+    (
+      !isFree &&
+      daysLeft !== null &&
+      daysLeft < 0
+    );
+
+  const expiresToday =
+    !isFree &&
+    !isExpired &&
+    daysLeft === 0;
+
+  const critical =
+    !isFree &&
+    !isExpired &&
+    daysLeft !== null &&
+    daysLeft >= 1 &&
+    daysLeft <= 7;
+
+  const warning =
+    !isFree &&
+    !isExpired &&
+    daysLeft !== null &&
+    daysLeft >= 8 &&
+    daysLeft <= 14;
+
+  const colors = isExpired
+    ? {
+        strong: "#FCA5A5",
+        muted: "#FECACA",
+        badgeBg: "#B91C1C",
+        line: "rgba(248,113,113,0.30)",
+      }
+    : expiresToday || critical
+      ? {
+          strong: "#FCA5A5",
+          muted: "#FECACA",
+          badgeBg: "#DC2626",
+          line: "rgba(248,113,113,0.28)",
+        }
+      : warning
+        ? {
+            strong: "#FDA4AF",
+            muted: "#FECDD3",
+            badgeBg: "#EF4444",
+            line: "rgba(251,113,133,0.26)",
+          }
+        : isFree
+          ? {
+              strong: "#BFDBFE",
+              muted: "#DBEAFE",
+              badgeBg: "#2563EB",
+              line: "rgba(96,165,250,0.25)",
+            }
+          : {
+              strong: "#A7F3D0",
+              muted: "#D1FAE5",
+              badgeBg: "#059669",
+              line: "rgba(52,211,153,0.24)",
+            };
+
+  const remainingLabel = loading
+    ? "..."
+    : loadFailed
+      ? "BILLING"
+      : isFree
+        ? "FREE"
+        : isExpired
+          ? "EXPIRED"
+          : expiresToday
+            ? "TODAY"
+            : daysLeft === 1
+              ? "1 DAY"
+              : daysLeft !== null
+                ? `${daysLeft} DAYS`
+                : normalizedStatus || "ACTIVE";
+
+  const subtitle = loading
+    ? "Checking subscription..."
+    : loadFailed
+      ? "Tap to check Subscription & Billing"
+      : isFree
+        ? "Free plan • Upgrade available"
+        : isExpired
+          ? expiryRaw
+            ? `Expired ${expiryLabel}`
+            : "Subscription expired"
+          : expiresToday
+            ? `Expires today • ${expiryLabel}`
+            : daysLeft !== null
+              ? critical || warning
+                ? `Renew before ${expiryLabel}`
+                : `Expires ${expiryLabel}`
+              : normalizedStatus || "Subscription active";
+
+  const openSubscription = () => {
+    router.push(
+      "/(tabs)/settings/subscription" as any
+    );
+  };
+
+  return (
+    <Pressable
+      pointerEvents="auto"
+      onPress={openSubscription}
+      style={({ pressed }) => ({
+        marginTop: 6,
+        paddingTop: 7,
+        paddingBottom: 1,
+
+        borderTopWidth: 1,
+        borderTopColor: colors.line,
+
+        opacity: pressed ? 0.82 : 1,
+
+        gap: 4,
+      })}
+    >
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 6,
+        }}
+      >
+        <View
+          style={{
+            flex: 1,
+            minWidth: 0,
+          }}
+        >
+          <Text
+            style={{
+              color: colors.strong,
+              fontWeight: "900",
+              fontSize: 9.5,
+            }}
+            numberOfLines={1}
+          >
+            {normalizedPlan}
+            {normalizedStatus &&
+            normalizedStatus !== normalizedPlan
+              ? ` • ${normalizedStatus}`
+              : ""}
+          </Text>
+        </View>
+
+        <View
+          style={{
+            paddingHorizontal: 7,
+            paddingVertical: 3,
+
+            borderRadius: 999,
+
+            backgroundColor: colors.badgeBg,
+          }}
+        >
+          <Text
+            style={{
+              color: "#FFFFFF",
+              fontWeight: "900",
+              fontSize: 7.5,
+            }}
+            numberOfLines={1}
+          >
+            {remainingLabel}
+          </Text>
+        </View>
+      </View>
+
+      <Text
+        style={{
+          color: colors.muted,
+          fontWeight: "800",
+          fontSize: 8.5,
+        }}
+        numberOfLines={1}
+      >
+        {subtitle}
+      </Text>
+    </Pressable>
+  );
+}
 export default function TabsLayout() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -173,7 +618,7 @@ export default function TabsLayout() {
               borderRightWidth: 1,
               borderTopWidth: 0,
              width: 172,
-paddingTop: Math.max(insets.top + 188, 204),
+paddingTop: Math.max(insets.top + 226, 242),
 paddingBottom: Math.max(insets.bottom + 12, 16),
 paddingHorizontal: 8,
               shadowOpacity: 0,
@@ -298,7 +743,6 @@ height: 70,
                     style={{
                       flexDirection: "row",
                       alignItems: "center",
-                      flexWrap: "wrap",
                       gap: 6,
                     }}
                   >
@@ -306,7 +750,9 @@ height: 70,
                       style={{
                         color: "rgba(255,255,255,0.78)",
                         fontWeight: "800",
-                        fontSize: 11,
+                        fontSize: 10,
+                        flex: 1,
+                        minWidth: 0,
                       }}
                       numberOfLines={1}
                     >
@@ -315,51 +761,94 @@ height: 70,
 
                     <View
                       style={{
-                        paddingHorizontal: 8,
-                        paddingVertical: 4,
+                        paddingHorizontal: 7,
+                        paddingVertical: 3,
                         borderRadius: 999,
                         backgroundColor: "rgba(59,130,246,0.18)",
                         borderWidth: 1,
                         borderColor: "rgba(59,130,246,0.28)",
                       }}
                     >
-                      <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 9 }}>
+                      <Text
+                        style={{
+                          color: "#FFFFFF",
+                          fontWeight: "900",
+                          fontSize: 8,
+                        }}
+                        numberOfLines={1}
+                      >
                         {sidebarRole}
                       </Text>
                     </View>
                   </View>
+
+                  <DesktopSidebarSubscriptionCard
+                    orgId={activeOrgId}
+                    role={activeRole}
+                  />
                 </View>
 
-                {activeOrgId && activeStoreId ? (
-                  <Pressable
-                    pointerEvents="auto"
-                    onPress={() => router.push("/stores/items-overview" as any)}
-                    style={({ pressed }) => ({
-                      marginTop: 8,
-                      minHeight: 38,
-                      borderRadius: 13,
-                      borderWidth: 1,
-                      borderColor: "rgba(59,130,246,0.34)",
-                      backgroundColor: pressed
-                        ? "rgba(59,130,246,0.30)"
-                        : "rgba(59,130,246,0.18)",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      paddingHorizontal: 10,
-                    })}
-                  >
-                    <Text
-                      style={{
-                        color: "#FFFFFF",
-                        fontWeight: "900",
-                        fontSize: 12,
-                      }}
-                      numberOfLines={1}
-                    >
-                      Items Overview
-                    </Text>
-                  </Pressable>
-                ) : null}
+       {activeOrgId && activeStoreId ? (
+  <Pressable
+    pointerEvents="auto"
+    onPress={() =>
+      router.push("/stores/items-overview" as any)
+    }
+    style={({ pressed }) => ({
+      marginTop: 8,
+
+      width: "100%",
+      minHeight: 44,
+
+      flexDirection: "row",
+      alignItems: "center",
+
+      paddingHorizontal: 10,
+
+      borderRadius: 13,
+
+      backgroundColor: pressed
+        ? "rgba(59,130,246,0.22)"
+        : "transparent",
+
+      opacity: pressed ? 0.94 : 1,
+    })}
+  >
+    <View
+      style={{
+        width: 28,
+        minWidth: 28,
+        marginRight: 8,
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <Text
+        style={{
+          fontSize: 17,
+          includeFontPadding: false,
+        }}
+      >
+        📦
+      </Text>
+    </View>
+
+    <Text
+      style={{
+        color: "rgba(255,255,255,0.68)",
+        fontWeight: "900",
+        fontSize: 12,
+        lineHeight: 14,
+        textAlign: "left",
+        flexShrink: 1,
+      }}
+      numberOfLines={1}
+    >
+      Items Overview
+    </Text>
+  </Pressable>
+) : null}
+               
               </View>
             ) : null}
           </View>
@@ -419,27 +908,20 @@ height: 70,
         }}
       />
 
-      <Tabs.Screen
-        name="stores"
-        listeners={{
-          tabPress: (e) => {
-            if (isCashier) return;
-            e.preventDefault();
-            router.replace("/(tabs)/stores" as any);
-          },
-        }}
-        options={{
-          title: "Stores",
-          href: isCashier ? null : "/(tabs)/stores",
-          tabBarItemStyle: isCashier ? hidden : undefined,
-          tabBarLabel: ({ color }) => (
-            <TabLabel text="Stores" color={color} mobileWeb={isMobileWeb} />
-          ),
-          tabBarIcon: ({ color }) => (
-            <WebTabIcon emoji="🏬" color={color} mobileWeb={isMobileWeb} />
-          ),
-        }}
-      />
+     <Tabs.Screen
+  name="stores"
+  options={{
+    title: "Stores",
+    href: isCashier ? null : undefined,
+    tabBarItemStyle: isCashier ? hidden : undefined,
+    tabBarLabel: ({ color }) => (
+      <TabLabel text="Stores" color={color} mobileWeb={isMobileWeb} />
+    ),
+    tabBarIcon: ({ color }) => (
+      <WebTabIcon emoji="🏬" color={color} mobileWeb={isMobileWeb} />
+    ),
+  }}
+/>
 
       <Tabs.Screen
         name="products"
@@ -518,18 +1000,39 @@ height: 70,
 
       <Tabs.Screen name="club" options={{ href: null, tabBarItemStyle: hidden }} />
 
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: "More",
-          tabBarLabel: ({ color }) => (
-            <TabLabel text="More" color={color} mobileWeb={isMobileWeb} />
-          ),
-          tabBarIcon: ({ color }) => (
-            <MoreGridIcon color={color} mobileWeb={isMobileWeb} />
-          ),
-        }}
+  <Tabs.Screen
+  name="settings"
+  listeners={{
+    tabPress: (e) => {
+      e.preventDefault();
+
+      // More lazima kila mara ifungue More Home,
+      // hata kama user yupo ndani ya:
+      // settings/subscription
+      // settings/regional
+      // settings/account-privacy
+      // settings/organization
+      // n.k.
+      router.replace("/(tabs)/settings" as any);
+    },
+  }}
+  options={{
+    title: "More",
+    tabBarLabel: ({ color }) => (
+      <TabLabel
+        text="More"
+        color={color}
+        mobileWeb={isMobileWeb}
       />
+    ),
+    tabBarIcon: ({ color }) => (
+      <MoreGridIcon
+        color={color}
+        mobileWeb={isMobileWeb}
+      />
+    ),
+  }}
+/>
 
       <Tabs.Screen name="customers" options={{ href: null }} />
       <Tabs.Screen name="customers/index" options={{ href: null }} />

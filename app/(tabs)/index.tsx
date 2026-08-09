@@ -173,6 +173,17 @@ type CapitalRecoveryTodayReport = {
   net: number;
 };
 
+type HomeSubscriptionRow = {
+  plan_code?: string | null;
+  plan_name?: string | null;
+  status?: string | null;
+  expires_at?: string | null;
+  end_at?: string | null;
+  started_at?: string | null;
+  start_at?: string | null;
+  [k: string]: any;
+};
+
 const AUTO_REFRESH_MS = 20_000;
 
 const HOME_CARD_TEXT = "#FFFFFF";
@@ -407,6 +418,79 @@ function extractScalarValue(x: any): number {
 
 function clean(v: any) {
   return String(v ?? "").trim();
+}
+
+function parseSubscriptionDateLocal(value: any): Date | null {
+  const raw = clean(value);
+  if (!raw) return null;
+
+  // Prefer YYYY-MM-DD from DB so timezone does not shift the expiry day.
+  const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+
+  if (match) {
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const day = Number(match[3]);
+
+    const d = new Date(year, month - 1, day);
+
+    if (!Number.isNaN(d.getTime())) {
+      return d;
+    }
+  }
+
+  const parsed = new Date(raw);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  return new Date(
+    parsed.getFullYear(),
+    parsed.getMonth(),
+    parsed.getDate()
+  );
+}
+
+function getSubscriptionDaysLeft(value: any): number | null {
+  const expiry = parseSubscriptionDateLocal(value);
+
+  if (!expiry) return null;
+
+  const today = new Date();
+
+  // Compare calendar dates, not hours.
+  const todayUTC = Date.UTC(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate()
+  );
+
+  const expiryUTC = Date.UTC(
+    expiry.getFullYear(),
+    expiry.getMonth(),
+    expiry.getDate()
+  );
+
+  return Math.round(
+    (expiryUTC - todayUTC) / (24 * 60 * 60 * 1000)
+  );
+}
+
+function fmtSubscriptionHomeDate(value: any) {
+  const d = parseSubscriptionDateLocal(value);
+
+  if (!d) return "—";
+
+  try {
+    return d.toLocaleDateString(undefined, {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  } catch {
+    return clean(value).slice(0, 10) || "—";
+  }
 }
 
 function clampInt(n: any, fallback = 0) {
@@ -658,6 +742,328 @@ function HeaderHero({
   );
 }
 
+function SubscriptionExpiryHomeStrip({
+  reloadKey = 0,
+}: {
+  reloadKey?: number;
+}) {
+  const router = useRouter();
+
+  const {
+    activeOrgId,
+    activeRole,
+  } = useOrg();
+
+  const orgId = clean(activeOrgId);
+
+  const roleLower = clean(activeRole).toLowerCase();
+
+  // Billing CTA ibaki Owner/Admin pekee,
+  // sawa na Subscription & Billing screen.
+  const canManageSubscription =
+    roleLower === "owner" || roleLower === "admin";
+
+  const [loading, setLoading] = useState(false);
+  const [subscription, setSubscription] =
+    useState<HomeSubscriptionRow | null>(null);
+
+  const requestSeqRef = useRef(0);
+
+  const loadSubscription = useCallback(async () => {
+    if (!orgId || !canManageSubscription) {
+      setSubscription(null);
+      return;
+    }
+
+    const seq = ++requestSeqRef.current;
+
+    setLoading(true);
+
+    try {
+      const { data, error } = await supabase.rpc(
+        "get_my_subscription",
+        {
+          p_org_id: orgId,
+        }
+      );
+
+      if (error) throw error;
+
+      if (seq !== requestSeqRef.current) return;
+
+      const row = Array.isArray(data)
+        ? data?.[0]
+        : data;
+
+      setSubscription(
+        row ? (row as HomeSubscriptionRow) : null
+      );
+    } catch {
+      if (seq !== requestSeqRef.current) return;
+
+      // Subscription banner is supplementary.
+      // Do not disturb Home Dashboard if billing RPC temporarily fails.
+      setSubscription(null);
+    } finally {
+      if (seq === requestSeqRef.current) {
+        setLoading(false);
+      }
+    }
+  }, [orgId, canManageSubscription]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadSubscription();
+    }, [loadSubscription, reloadKey])
+  );
+
+  const planCode = useMemo(() => {
+    return clean(
+      subscription?.plan_code ||
+        subscription?.plan_name
+    ).toUpperCase();
+  }, [subscription]);
+
+  const status = useMemo(() => {
+    return clean(subscription?.status).toUpperCase();
+  }, [subscription]);
+
+  const expiryRaw = useMemo(() => {
+    return (
+      subscription?.expires_at ||
+      subscription?.end_at ||
+      ""
+    );
+  }, [subscription]);
+
+  const daysLeft = useMemo(
+    () => getSubscriptionDaysLeft(expiryRaw),
+    [expiryRaw]
+  );
+
+  const expiryLabel = useMemo(
+    () => fmtSubscriptionHomeDate(expiryRaw),
+    [expiryRaw]
+  );
+
+  if (!canManageSubscription || !orgId) {
+    return null;
+  }
+
+  // Keep Home clean while first request is loading.
+  if (loading && !subscription) {
+    return null;
+  }
+
+  // FREE/no-expiry plans do not need expiry warning strip.
+  if (
+    !subscription ||
+    !planCode ||
+    planCode === "FREE" ||
+    daysLeft === null
+  ) {
+    return null;
+  }
+
+  const isExpired = daysLeft < 0;
+  const expiresToday = daysLeft === 0;
+  const critical = daysLeft >= 0 && daysLeft <= 7;
+  const warning = daysLeft >= 8 && daysLeft <= 14;
+
+  // User requested red warning when roughly 1–2 weeks remain.
+  const colors = isExpired
+    ? {
+        bg: "#FEE2E2",
+        border: "rgba(185,28,28,0.55)",
+        strong: "#991B1B",
+        muted: "#7F1D1D",
+        badgeBg: "#B91C1C",
+        badgeText: "#FFFFFF",
+      }
+    : critical
+    ? {
+        bg: "#FEF2F2",
+        border: "rgba(220,38,38,0.50)",
+        strong: "#B91C1C",
+        muted: "#991B1B",
+        badgeBg: "#DC2626",
+        badgeText: "#FFFFFF",
+      }
+    : warning
+    ? {
+        bg: "#FFF1F2",
+        border: "rgba(239,68,68,0.40)",
+        strong: "#B91C1C",
+        muted: "#9F1239",
+        badgeBg: "#EF4444",
+        badgeText: "#FFFFFF",
+      }
+    : {
+        bg: "#ECFDF5",
+        border: "rgba(16,185,129,0.35)",
+        strong: "#065F46",
+        muted: "#047857",
+        badgeBg: "#059669",
+        badgeText: "#FFFFFF",
+      };
+
+  const remainingLabel = isExpired
+    ? "EXPIRED"
+    : expiresToday
+    ? "EXPIRES TODAY"
+    : daysLeft === 1
+    ? "1 DAY LEFT"
+    : `${daysLeft} DAYS LEFT`;
+
+  const subtitle = isExpired
+    ? `Expired ${expiryLabel}`
+    : warning || critical || expiresToday
+    ? `Renew before ${expiryLabel}`
+    : `Active • Expires ${expiryLabel}`;
+
+  const openSubscription = () => {
+    router.push(
+      "/(tabs)/settings/subscription" as any
+    );
+  };
+
+  return (
+    <View style={{ marginTop: 10 }}>
+      <Pressable
+        onPress={openSubscription}
+        // @ts-ignore - web click fallback
+        onClick={openSubscription}
+        hitSlop={8}
+        style={({ pressed }) => ({
+          minHeight: 68,
+          borderRadius: 20,
+          borderWidth: 1,
+          borderColor: colors.border,
+          backgroundColor: colors.bg,
+          paddingHorizontal: 14,
+          paddingVertical: 12,
+          opacity: pressed ? 0.92 : 1,
+          transform: pressed
+            ? [{ scale: 0.997 }]
+            : [{ scale: 1 }],
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 12,
+        })}
+      >
+        <View
+          style={{
+            width: 42,
+            height: 42,
+            borderRadius: 14,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor:
+              warning ||
+              critical ||
+              isExpired ||
+              expiresToday
+                ? "rgba(239,68,68,0.10)"
+                : "rgba(16,185,129,0.10)",
+          }}
+        >
+          <SafeIcon
+            name={
+              warning ||
+              critical ||
+              isExpired ||
+              expiresToday
+                ? "warning-outline"
+                : "hourglass-outline"
+            }
+            size={19}
+            color={colors.strong}
+          />
+        </View>
+
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            <Text
+              style={{
+                color: colors.strong,
+                fontWeight: "900",
+                fontSize: 14,
+                flexShrink: 1,
+              }}
+              numberOfLines={1}
+            >
+              {planCode}
+            </Text>
+
+            {!!status && (
+              <Text
+                style={{
+                  color: colors.muted,
+                  fontWeight: "900",
+                  fontSize: 10,
+                }}
+                numberOfLines={1}
+              >
+                {status}
+              </Text>
+            )}
+          </View>
+
+          <Text
+            style={{
+              color: colors.muted,
+              fontWeight: "800",
+              fontSize: 11,
+              marginTop: 4,
+            }}
+            numberOfLines={1}
+          >
+            {subtitle}
+          </Text>
+        </View>
+
+        <View
+          style={{
+            paddingHorizontal: 10,
+            paddingVertical: 7,
+            borderRadius: 999,
+            backgroundColor: colors.badgeBg,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Text
+            style={{
+              color: colors.badgeText,
+              fontWeight: "900",
+              fontSize: 10,
+            }}
+            numberOfLines={1}
+          >
+            {remainingLabel}
+          </Text>
+        </View>
+
+        <Text
+          style={{
+            color: colors.strong,
+            fontWeight: "900",
+            fontSize: 18,
+          }}
+        >
+          ›
+        </Text>
+      </Pressable>
+    </View>
+  );
+}
+
 function PremiumMetricCard({
   title,
   subtitle,
@@ -823,6 +1229,8 @@ function CompactNotificationsHomeCard() {
   const [error, setError] = useState<string | null>(null);
   const [rows, setRows] = useState<NotifRow[]>([]);
 
+  const loadBusyRef = useRef(false);
+
   const storeNameById = useMemo(() => {
     const map: Record<string, string> = {};
     for (const s of stores ?? []) {
@@ -832,6 +1240,9 @@ function CompactNotificationsHomeCard() {
   }, [stores]);
 
   const load = useCallback(async () => {
+    if (loadBusyRef.current) return;
+
+    loadBusyRef.current = true;
     setLoading(true);
     setError(null);
 
@@ -842,18 +1253,16 @@ function CompactNotificationsHomeCard() {
       });
 
       if (e) throw e;
+
       setRows((data ?? []) as NotifRow[]);
     } catch (err: any) {
       setError(err?.message ?? "Failed to load notifications");
       setRows([]);
     } finally {
+      loadBusyRef.current = false;
       setLoading(false);
     }
   }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   useFocusEffect(
     useCallback(() => {
@@ -1596,23 +2005,12 @@ function CompactFinanceCardHomePreview() {
     ]
   );
 
-  useEffect(() => {
-    void load();
-  }, [orgId, storeId, load]);
-
   useFocusEffect(
     useCallback(() => {
       if (isDesktopWeb) return;
       if (!orgId || !storeId) return;
+
       void load();
-    }, [isDesktopWeb, orgId, storeId, load])
-  );
-
-  useFocusEffect(
-    useCallback(() => {
-      if (isDesktopWeb) return;
-      if (!orgId || !storeId) return;
-      void load({ silent: true });
     }, [isDesktopWeb, orgId, storeId, load])
   );
   useAutoRefresh(() => {
@@ -1972,14 +2370,11 @@ function CompactClubRevenueCardHomePreview({ onOpen }: { onOpen: () => void }) {
     }
   }, [range, storeId]);
 
-  useEffect(() => {
-    void load();
-  }, [storeId, load]);
-
   useFocusEffect(
     useCallback(() => {
       if (isDesktopWeb) return;
       if (!storeId) return;
+
       void load();
     }, [isDesktopWeb, storeId, load])
   );
@@ -2160,14 +2555,11 @@ function CompactStockValueCardHomePreview() {
     }
   }, [orgId, storeId, range, loadForStore]);
 
- useEffect(() => {
-    void load();
-  }, [orgId, storeId, load]);
-
   useFocusEffect(
     useCallback(() => {
       if (isDesktopWeb) return;
       if (!orgId || !storeId) return;
+
       void load();
     }, [isDesktopWeb, orgId, storeId, load])
   );
@@ -3809,14 +4201,11 @@ function CapitalRecoveryReportsCard({
     }
   }, [storeId]);
 
-  useEffect(() => {
-    void load();
-  }, [load, reloadKey]);
-useFocusEffect(
-  useCallback(() => {
-    void load();
-  }, [load])
-);
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load, reloadKey])
+  );
   const fmt = useCallback(
     (n: number) =>
       formatMoney(n, {
@@ -4130,6 +4519,7 @@ const [desktopNotifTotal, setDesktopNotifTotal] = useState(0);
 
   const desktopLoadBusyRef = useRef(false);
   const desktopLoadSeqRef = useRef(0);
+  const desktopNotifBusyRef = useRef(false);
 
   const goOrgSwitcher = useCallback(() => {
     router.push("/org-switcher");
@@ -4306,6 +4696,9 @@ const canViewStockAction = isOwner;
   }, [refresh, activeStoreId, isOnline, loadCapitalRecoverySummary]);
 const loadDesktopNotifications = useCallback(async () => {
   if (!isDesktopWeb) return;
+  if (desktopNotifBusyRef.current) return;
+
+  desktopNotifBusyRef.current = true;
 
   try {
     const { data, error } = await supabase.rpc("get_my_notifications", {
@@ -4316,11 +4709,16 @@ const loadDesktopNotifications = useCallback(async () => {
     if (error) throw error;
 
     const rows = Array.isArray(data) ? data : [];
+
     setDesktopNotifTotal(rows.length);
-    setDesktopNotifUnread(rows.filter((r: any) => !r?.is_read).length);
+    setDesktopNotifUnread(
+      rows.filter((r: any) => !r?.is_read).length
+    );
   } catch {
     setDesktopNotifTotal(0);
     setDesktopNotifUnread(0);
+  } finally {
+    desktopNotifBusyRef.current = false;
   }
 }, [isDesktopWeb]);
   const desktopLoad = useCallback(async () => {
@@ -4566,16 +4964,16 @@ void loadDesktopNotifications();
     }, [activeStoreId, isOnline])
   );
 
-  useEffect(() => {
-    if (!isCapitalRecoveryStore) return;
-    void loadCapitalRecoverySummary();
-  }, [isCapitalRecoveryStore, activeStoreId, capitalRecoveryTick, loadCapitalRecoverySummary]);
-
   useFocusEffect(
     useCallback(() => {
       if (!isCapitalRecoveryStore) return;
+
       void loadCapitalRecoverySummary();
-    }, [isCapitalRecoveryStore, loadCapitalRecoverySummary])
+    }, [
+      isCapitalRecoveryStore,
+      loadCapitalRecoverySummary,
+      capitalRecoveryTick,
+    ])
   );
 
   useEffect(() => {
@@ -4638,9 +5036,14 @@ void loadDesktopNotifications();
         />
       ) : null}
 
-    {!isCashier && !isDesktopWeb && !isCapitalRecoveryStore ? (
+{!isCashier && !isDesktopWeb && !isCapitalRecoveryStore ? (
   <>
+    <SubscriptionExpiryHomeStrip
+      reloadKey={dashTick}
+    />
+
     <CompactNotificationsHomeCard />
+
     <ZetraAiCard onOpen={goAI} />
   </>
 ) : null}
