@@ -208,15 +208,29 @@ export default function CommissionHistoryScreen() {
     });
   }, [rows, q]);
 
-  const totalAmount = useMemo(
-    () => rows.reduce((a, r) => a + toNum(r.commission_amount), 0),
-    [rows]
-  );
+ const totalCashedOut = useMemo(
+  () => rows.reduce((a, r) => a + toNum(r.paid_amount), 0),
+  [rows]
+);
 
-  const totalPaid = useMemo(
-    () => rows.reduce((a, r) => a + toNum(r.paid_amount), 0),
-    [rows]
-  );
+const confirmedPaid = useMemo(
+  () =>
+    rows.reduce((sum, r) => {
+      const status = String(r.status ?? "").trim().toUpperCase();
+
+      if (
+        status === "PAID" ||
+        status === "SENT" ||
+        status === "RECEIVED" ||
+        status === "CONFIRMED"
+      ) {
+        return sum + toNum(r.paid_amount);
+      }
+
+      return sum;
+    }, 0),
+  [rows]
+);
 
   if (!canManage) {
     return (
@@ -329,36 +343,60 @@ export default function CommissionHistoryScreen() {
             </View>
 
             <View
-              style={{
-                flex: 1,
-                borderWidth: 1,
-                borderColor: UI.border,
-                borderRadius: 18,
-                backgroundColor: UI.softCard,
-                padding: 12,
-              }}
-            >
-              <Text style={{ color: UI.muted, fontWeight: "800" }}>Total Amount</Text>
-              <Text style={{ color: UI.text, fontWeight: "900", marginTop: 6 }}>
-                {fmtMoney(totalAmount)}
-              </Text>
-            </View>
+  style={{
+    flex: 1,
+    borderWidth: 1,
+    borderColor: UI.border,
+    borderRadius: 18,
+    backgroundColor: UI.softCard,
+    padding: 12,
+  }}
+>
+  <Text style={{ color: UI.muted, fontWeight: "800" }}>
+    Total Cashed Out
+  </Text>
 
-            <View
-              style={{
-                flex: 1,
-                borderWidth: 1,
-                borderColor: "rgba(52,211,153,0.20)",
-                borderRadius: 18,
-                backgroundColor: "rgba(52,211,153,0.08)",
-                padding: 12,
-              }}
-            >
-              <Text style={{ color: UI.muted, fontWeight: "800" }}>Paid/Confirmed</Text>
-              <Text style={{ color: UI.text, fontWeight: "900", marginTop: 6 }}>
-                {fmtMoney(totalPaid)}
-              </Text>
-            </View>
+  <Text
+    style={{
+      color: UI.text,
+      fontWeight: "900",
+      marginTop: 6,
+    }}
+    numberOfLines={1}
+    adjustsFontSizeToFit
+    minimumFontScale={0.72}
+  >
+    {fmtMoney(totalCashedOut)}
+  </Text>
+</View>
+
+<View
+  style={{
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "rgba(52,211,153,0.20)",
+    borderRadius: 18,
+    backgroundColor: "rgba(52,211,153,0.08)",
+    padding: 12,
+  }}
+>
+  <Text style={{ color: UI.muted, fontWeight: "800" }}>
+    Successful Payouts
+  </Text>
+
+  <Text
+    style={{
+      color: UI.text,
+      fontWeight: "900",
+      marginTop: 6,
+    }}
+    numberOfLines={1}
+    adjustsFontSizeToFit
+    minimumFontScale={0.72}
+  >
+    {fmtMoney(confirmedPaid)}
+  </Text>
+</View>
           </View>
         </View>
 
@@ -503,10 +541,22 @@ export default function CommissionHistoryScreen() {
                       padding: 12,
                     }}
                   >
-                    <Text style={{ color: UI.muted, fontWeight: "800" }}>Amount</Text>
-                    <Text style={{ color: UI.text, fontWeight: "900", marginTop: 6 }}>
-                      {fmtMoney(toNum(r.commission_amount))}
-                    </Text>
+                   <Text style={{ color: UI.muted, fontWeight: "800" }}>
+  Commission Earned
+</Text>
+
+<Text
+  style={{
+    color: UI.text,
+    fontWeight: "900",
+    marginTop: 6,
+  }}
+  numberOfLines={1}
+  adjustsFontSizeToFit
+  minimumFontScale={0.72}
+>
+  {fmtMoney(toNum(r.commission_amount))}
+</Text>
                   </View>
 
                   <View

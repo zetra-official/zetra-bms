@@ -212,7 +212,20 @@ function notificationItemsOf(row: any) {
 
   return arr;
 }
+function hasRealProductName(it: any) {
+  const name = firstNonEmpty(
+    it?.product_name,
+    it?.name,
+    it?.item_name,
+    it?.product?.name
+  );
 
+  if (!name) return false;
+
+  const normalized = name.toLowerCase();
+
+  return normalized !== "unknown product" && normalized !== "product";
+}
 function itemQtyOf(it: any) {
   return clampInt(
     it?.qty ??
@@ -508,60 +521,96 @@ const [movementItemsById, setMovementItemsById] = useState<Record<string, any[]>
     return () => {
       alive = false;
     };
-  }, [rows, productMeta]);
+  }, [rows]);
 useEffect(() => {
   let alive = true;
 
+  // ✅ Only ask movement RPC for old/incomplete notifications.
+  // Notifications ambazo tayari zina product name hazihitaji fallback query.
   const movementIds = Array.from(
-    new Set((rows ?? []).map((r) => clean(r.ref_movement_id)).filter(Boolean))
+    new Set(
+      (rows ?? [])
+        .filter((r) => {
+          const movementId = clean(r.ref_movement_id);
+          if (!movementId) return false;
+
+          const items = notificationItemsOf(r);
+
+          if (items.length === 0) return true;
+
+          return !items.some((it: any) => hasRealProductName(it));
+        })
+        .map((r) => clean(r.ref_movement_id))
+        .filter(Boolean)
+    )
   );
 
-  const missing = movementIds.filter((id) => !movementItemsById[id]);
-  if (missing.length === 0) return;
+  const missing = movementIds.filter(
+    (id) => !Object.prototype.hasOwnProperty.call(movementItemsById, id)
+  );
+
+  if (missing.length === 0) {
+    return () => {
+      alive = false;
+    };
+  }
 
   (async () => {
     try {
-      const { data, error } = await supabase.rpc("get_notification_movement_items_v1", {
-        p_movement_ids: missing,
-      } as any);
+      const { data, error } = await supabase.rpc(
+        "get_notification_movement_items_v1",
+        {
+          p_movement_ids: missing,
+        } as any
+      );
 
       if (error) throw error;
 
       const next: Record<string, any[]> = {};
 
+      // ✅ Cache even movements that return zero rows.
+      // This prevents requesting the same movement repeatedly.
+      for (const mid of missing) {
+        next[mid] = [];
+      }
+
       for (const row of (data ?? []) as any[]) {
         const mid = clean(row?.movement_id);
         if (!mid) continue;
 
-        next[mid] = [
-          {
-            product_id: clean(row?.product_id),
-            product_name: clean(row?.product_name) || "Unknown Product",
-            name: clean(row?.product_name) || "Unknown Product",
-            sku: clean(row?.sku),
-            barcode: clean(row?.barcode),
-            category: clean(row?.category),
-            unit: clean(row?.unit),
-            selling_price: row?.selling_price ?? null,
-            qty: Math.abs(Number(row?.qty ?? 0)),
-            source: "stock_movements_rpc",
-            mode: clean(row?.mode),
-          },
-        ];
+        const item = {
+          product_id: clean(row?.product_id),
+          product_name: clean(row?.product_name) || "Unknown Product",
+          name: clean(row?.product_name) || "Unknown Product",
+          sku: clean(row?.sku),
+          barcode: clean(row?.barcode),
+          category: clean(row?.category),
+          unit: clean(row?.unit),
+          selling_price: row?.selling_price ?? null,
+          qty: Math.abs(Number(row?.qty ?? 0)),
+          source: "stock_movements_rpc",
+          mode: clean(row?.mode),
+        };
+
+        // ✅ Do not overwrite another product from the same movement.
+        next[mid].push(item);
       }
 
       if (!alive) return;
-      setMovementItemsById((prev) => ({ ...prev, ...next }));
+
+      setMovementItemsById((prev) => ({
+        ...prev,
+        ...next,
+      }));
     } catch {
-      // non-blocking
+      // fallback is supplementary; notification screen must remain usable
     }
   })();
-
 
   return () => {
     alive = false;
   };
-}, [rows, movementItemsById]);
+}, [rows]);
   /** ✅ Group notifications into one "receipt" per movement_id */
   const receipts: Receipt[] = useMemo(() => {
     const map = new Map<string, Receipt>();

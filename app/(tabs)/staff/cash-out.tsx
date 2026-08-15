@@ -103,14 +103,14 @@ function payoutStatusMeta(row: StaffCashoutRow) {
 
   if (hasProfile && paid > 0 && remaining <= 0) {
     return {
-      label: "PAID",
-      color: UI.warning,
-      borderColor: "rgba(245,158,11,0.25)",
-      backgroundColor: "rgba(245,158,11,0.10)",
+      label: "SETTLED",
+      color: UI.emerald,
+      borderColor: "rgba(52,211,153,0.30)",
+      backgroundColor: "rgba(52,211,153,0.10)",
     };
   }
 
-  if (hasProfile) {
+  if (hasProfile && remaining > 0) {
     return {
       label: "READY",
       color: UI.emerald,
@@ -192,26 +192,56 @@ export default function StaffCommissionCashOutScreen() {
 
         setRows(nextRows);
 
-        setAmountDrafts((prev) => {
-          const next = { ...prev };
+        /*
+         * CASH-OUT BALANCE:
+         * Backend ndiyo source of truth.
+         *
+         * remaining_commission sasa ni cumulative balance
+         * ambayo haikatwi na kubadilika kwa mwezi.
+         *
+         * Tunajaza amount ya default kutoka remaining
+         * kila dashboard inapofanya fresh load.
+         */
+        setAmountDrafts(() => {
+          const next: Record<string, string> = {};
+
           for (const row of nextRows) {
-            const key = String(row.membership_id ?? "");
+            const key = String(row.membership_id ?? "").trim();
+
             if (!key) continue;
-            if (prev[key] == null) {
-              const remaining = Math.max(0, Math.round(toNum(row.remaining_commission)));
-              next[key] = remaining > 0 ? String(remaining) : "";
-            }
+
+            const remaining = Math.max(
+              0,
+              Math.round(toNum(row.remaining_commission))
+            );
+
+            next[key] =
+              remaining > 0
+                ? String(remaining)
+                : "";
           }
+
           return next;
         });
 
+        /*
+         * Notes zisipotee kwenye ordinary refresh.
+         * Tunahifadhi draft ambayo owner/admin bado
+         * hajaituma.
+         */
         setNoteDrafts((prev) => {
           const next = { ...prev };
+
           for (const row of nextRows) {
-            const key = String(row.membership_id ?? "");
+            const key = String(row.membership_id ?? "").trim();
+
             if (!key) continue;
-            if (prev[key] == null) next[key] = "";
+
+            if (next[key] == null) {
+              next[key] = "";
+            }
           }
+
           return next;
         });
       } catch (err: any) {
@@ -304,19 +334,27 @@ export default function StaffCommissionCashOutScreen() {
 
         if (e) throw e;
 
-        Alert.alert("Success", "Commission cash-out saved successfully.");
+        Alert.alert(
+          "Cash Out Saved ✅",
+          "Malipo ya commission yamehifadhiwa. Remaining balance imerekebishwa na kumbukumbu ya cash-out imeongezwa kwenye history."
+        );
 
-        setAmountDrafts((prev) => ({
-          ...prev,
-          [membershipId]: "",
-        }));
+        /*
+         * Reload immediately kutoka backend.
+         * Hii ndiyo itarudisha cumulative remaining
+         * baada ya cash-out.
+         */
+        await loadData({ silent: true });
 
+        /*
+         * Reference/note ya transaction iliyokwisha
+         * kuhifadhiwa kwenye payout history sasa
+         * inaweza kusafishwa kwenye input.
+         */
         setNoteDrafts((prev) => ({
           ...prev,
           [membershipId]: "",
         }));
-
-        await loadData({ silent: true });
       } catch (err: any) {
         Alert.alert("Failed", err?.message ?? "Failed to create commission cash-out");
       } finally {
@@ -398,9 +436,9 @@ export default function StaffCommissionCashOutScreen() {
             <Text style={{ fontSize: 26, fontWeight: "900", color: UI.text }}>
               Commission Cash Out
             </Text>
-            <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 4 }}>
-              Pay staff commission and reduce remaining balance
-            </Text>
+           <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 4 }}>
+  Pay accumulated staff commission and reduce unpaid balance
+</Text>
           </View>
         </View>
 
@@ -446,16 +484,19 @@ export default function StaffCommissionCashOutScreen() {
                 padding: 12,
               }}
             >
-              <Text style={{ color: UI.muted, fontWeight: "800" }}>Remaining</Text>
+              <Text style={{ color: UI.muted, fontWeight: "800" }}>
+  Total Unpaid
+</Text>
               <Text style={{ color: UI.text, fontWeight: "900", marginTop: 6 }}>
                 {fmtMoney(totalRemaining)}
               </Text>
             </View>
           </View>
 
-          <Text style={{ color: UI.faint, fontWeight: "800", lineHeight: 20 }}>
-            Cash-out itapunguza remaining commission ya staff husika na itaingia kwenye history.
-          </Text>
+         <Text style={{ color: UI.faint, fontWeight: "800", lineHeight: 20 }}>
+  Commission ambayo haijalipwa itaendelea kubebwa mbele bila kufutwa mwezi unapobadilika.
+  Cash-out ndiyo inapunguza balance, na kila malipo yanahifadhiwa kwenye history.
+</Text>
         </View>
 
         <View style={{ flexDirection: "row", gap: 10 }}>
@@ -514,7 +555,7 @@ export default function StaffCommissionCashOutScreen() {
         <TextInput
           value={q}
           onChangeText={setQ}
-          placeholder="Tafuta kwa email / membership / payout / reference..."
+          placeholder="Tafuta kwa email / membership / payout account..."
           placeholderTextColor="rgba(255,255,255,0.35)"
           style={{
             borderWidth: 1,
@@ -689,7 +730,9 @@ export default function StaffCommissionCashOutScreen() {
                       padding: 12,
                     }}
                   >
-                    <Text style={{ color: UI.muted, fontWeight: "800" }}>Accrued</Text>
+                    <Text style={{ color: UI.muted, fontWeight: "800" }}>
+  Accumulated
+</Text>
                     <Text style={{ color: UI.text, fontWeight: "900", marginTop: 6 }}>
                       {fmtMoney(accrued)}
                     </Text>
@@ -705,7 +748,9 @@ export default function StaffCommissionCashOutScreen() {
                       padding: 12,
                     }}
                   >
-                    <Text style={{ color: UI.muted, fontWeight: "800" }}>Paid</Text>
+                    <Text style={{ color: UI.muted, fontWeight: "800" }}>
+  Paid / Cashed Out
+</Text>
                     <Text style={{ color: UI.text, fontWeight: "900", marginTop: 6 }}>
                       {fmtMoney(paid)}
                     </Text>
@@ -721,7 +766,9 @@ export default function StaffCommissionCashOutScreen() {
                       padding: 12,
                     }}
                   >
-                    <Text style={{ color: UI.muted, fontWeight: "800" }}>Remaining</Text>
+                    <Text style={{ color: UI.muted, fontWeight: "800" }}>
+  Unpaid Balance
+</Text>
                     <Text style={{ color: UI.text, fontWeight: "900", marginTop: 6 }}>
                       {fmtMoney(remaining)}
                     </Text>
@@ -729,9 +776,9 @@ export default function StaffCommissionCashOutScreen() {
                 </View>
 
                 <View>
-                  <Text style={{ color: UI.muted, fontWeight: "800", marginBottom: 6 }}>
-                    Cash Out Amount
-                  </Text>
+              <Text style={{ color: UI.muted, fontWeight: "800", marginBottom: 6 }}>
+  Amount to Cash Out
+</Text>
                   <TextInput
                     value={amountDraft}
                     onChangeText={(v) =>
@@ -820,11 +867,28 @@ export default function StaffCommissionCashOutScreen() {
                   </Text>
                 ) : null}
 
-                {remaining <= 0 ? (
-                  <Text style={{ color: UI.faint, fontWeight: "800", lineHeight: 20 }}>
-                    Commission ya mwezi huu imelipwa tayari. Cash-out mpya itasoma tena commission mpya itakapoingia.
-                  </Text>
-                ) : null}
+              {remaining <= 0 ? (
+  <Text
+    style={{
+      color: UI.emerald,
+      fontWeight: "800",
+      lineHeight: 20,
+    }}
+  >
+    Staff huyu hana unpaid commission kwa sasa. Commission mpya itaendelea
+    kuongezeka kutokana na mauzo mapya bila kutegemea mwisho wa mwezi.
+  </Text>
+) : (
+  <Text
+    style={{
+      color: UI.faint,
+      fontWeight: "800",
+      lineHeight: 20,
+    }}
+  >
+    Unpaid commission hii itaendelea kubebwa mbele mpaka itakapofanyiwa cash-out.
+  </Text>
+)}
               </View>
             );
           })
