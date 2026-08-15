@@ -335,9 +335,10 @@ export default function LoginScreen() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [sendingReset, setSendingReset] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
+const [loading, setLoading] = useState(false);
+const [sendingReset, setSendingReset] = useState(false);
+const [resendingVerification, setResendingVerification] = useState(false);
+const [showPassword, setShowPassword] = useState(false);
   const [biometricReady, setBiometricReady] = useState(false);
   const [biometricEmail, setBiometricEmail] = useState("");
   const [biometricLoading, setBiometricLoading] = useState(false);
@@ -393,24 +394,99 @@ export default function LoginScreen() {
     }
 
     setSendingReset(true);
+
     try {
+      const redirectTo =
+        Platform.OS === "web"
+          ? `${window.location.origin}/reset-password`
+          : "zetrabmsclean://reset-password";
+
       const { error } = await supabase.auth.resetPasswordForEmail(e, {
-        redirectTo: "zetrabmsclean://reset-password",
+        redirectTo,
       });
 
       if (error) throw error;
 
       Alert.alert(
         "Reset email sent",
-        "Tumejaribu kutuma email ya kubadili password. Fungua email yako, bonyeza link, kisha rudi kwenye app kuweka password mpya."
+        "Email ya kubadili password imetumwa. Fungua email yako, bonyeza link ya reset, kisha weka password mpya."
       );
     } catch (err: any) {
-      Alert.alert("Reset Failed", err?.message ?? "Failed to send reset email.");
+      Alert.alert(
+        "Reset Failed",
+        err?.message ?? "Failed to send reset email."
+      );
     } finally {
       setSendingReset(false);
     }
   };
+  const onResendVerification = async () => {
+    const e = emailTrimmed.toLowerCase();
 
+    if (!e) {
+      Alert.alert(
+        "Email required",
+        "Andika email yako kwanza, kisha bonyeza Resend Verification Email."
+      );
+      return;
+    }
+
+    if (!e.includes("@") || !e.includes(".")) {
+      Alert.alert(
+        "Invalid Email",
+        "Tafadhali andika email address sahihi."
+      );
+      return;
+    }
+
+    if (resendingVerification) return;
+
+    setResendingVerification(true);
+
+    try {
+      const emailRedirectTo =
+        Platform.OS === "web"
+          ? `${window.location.origin}/login`
+          : "zetrabmsclean://login";
+
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: e,
+        options: {
+          emailRedirectTo,
+        },
+      });
+
+      if (error) throw error;
+
+      Alert.alert(
+        "Verification email sent",
+        `Tumetuma verification email nyingine kwenda:\n\n${e}\n\nFungua inbox yako na bonyeza Verify Account. Kama huioni, angalia Spam/Junk pia.`
+      );
+    } catch (err: any) {
+      const msg =
+        err?.message ?? "Imeshindikana kutuma verification email.";
+
+      const lower = String(msg).toLowerCase();
+
+      if (
+        lower.includes("rate limit") ||
+        lower.includes("rate_limit") ||
+        lower.includes("too many") ||
+        lower.includes("security purposes")
+      ) {
+        Alert.alert(
+          "Please wait",
+          "Umetuma verification email mara nyingi kwa muda mfupi. Subiri kidogo kisha ujaribu tena."
+        );
+        return;
+      }
+
+      Alert.alert("Verification Failed", msg);
+    } finally {
+      setResendingVerification(false);
+    }
+  };
   const offerEnableBiometric = async (loginEmail: string, loginPassword: string) => {
     if (Platform.OS === "web") return;
 
@@ -540,6 +616,54 @@ export default function LoginScreen() {
         return;
       }
 
+      const { data: myOrgs, error: myOrgsError } = await supabase.rpc(
+        "get_my_orgs"
+      );
+
+      if (myOrgsError) {
+        console.log("get_my_orgs login check error:", myOrgsError);
+
+        throw new Error(
+          "Imeshindikana kuthibitisha business account yako. Tafadhali jaribu tena."
+        );
+      }
+
+      const hasOrganization =
+        Array.isArray(myOrgs) && myOrgs.length > 0;
+
+      if (!hasOrganization) {
+        try {
+          const { kv } = await import("@/src/storage/kv");
+
+          try {
+            await (kv as any)?.remove?.(
+              "zetra_onboarding_referral_done_v1"
+            );
+          } catch {}
+
+          try {
+            await (kv as any)?.remove?.(
+              "zetra_onboarding_referral_code_v1"
+            );
+          } catch {}
+
+          try {
+            await (kv as any)?.delete?.(
+              "zetra_onboarding_referral_done_v1"
+            );
+          } catch {}
+
+          try {
+            await (kv as any)?.delete?.(
+              "zetra_onboarding_referral_code_v1"
+            );
+          } catch {}
+        } catch {}
+
+        router.replace("/(onboarding)/referral");
+        return;
+      }
+
       if (!override?.skipBiometricOffer) {
         await offerEnableBiometric(e, p);
       }
@@ -571,7 +695,21 @@ export default function LoginScreen() {
       ) {
         Alert.alert(
           "Verify your email",
-          "Email yako bado haijaverify. Fungua email yako kwanza, verify account, kisha login."
+          "Email yako bado haijaverify. Fungua email uliyotumiwa na ZETRA BMS na bonyeza Verify Account. Kama hujapokea email, unaweza kuituma tena.",
+          [
+            {
+              text: "Cancel",
+              style: "cancel",
+            },
+            {
+              text: resendingVerification
+                ? "Sending..."
+                : "Resend Email",
+              onPress: () => {
+                void onResendVerification();
+              },
+            },
+          ]
         );
         return;
       }

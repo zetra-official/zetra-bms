@@ -47,13 +47,20 @@ function isEmailVerified(user: any) {
 function isAuthRoute(segs: string[]) {
   const a = segs?.[0];
   const b = segs?.[1];
+
   return (
     a === "(auth)" ||
     a === "login" ||
     a === "register" ||
     a === "reset-password" ||
+    a === "email-verified" ||
     (a === "(auth)" &&
-      (b === "login" || b === "register" || b === "reset-password"))
+      (
+        b === "login" ||
+        b === "register" ||
+        b === "reset-password" ||
+        b === "email-verified"
+      ))
   );
 }
 
@@ -269,13 +276,25 @@ function AuthGate() {
       return a === "reset-password" || (a === "(auth)" && b === "reset-password");
     };
 
-    const routes = {
-      login: "/login",
-      resetPassword:
-        Platform.OS === "web" ? "/reset-password" : "/(auth)/reset-password",
-      onboarding: "/(onboarding)/referral",
-      home: "/(tabs)",
+    const isEmailVerifiedRoute = (segs: string[]) => {
+      const a = segs?.[0];
+      const b = segs?.[1];
+
+      return (
+        a === "email-verified" ||
+        (a === "(auth)" && b === "email-verified")
+      );
     };
+
+  const routes = {
+  login: "/login",
+  resetPassword:
+    Platform.OS === "web" ? "/reset-password" : "/(auth)/reset-password",
+  emailVerified:
+    Platform.OS === "web" ? "/email-verified" : "/(auth)/email-verified",
+  onboarding: "/(onboarding)/referral",
+  home: "/(tabs)",
+};
 
     const boot = async () => {
       const initialResult = await applySupabaseSessionFromInitialUrl();
@@ -285,6 +304,7 @@ function AuthGate() {
       const currentSegs = segmentsRef.current;
       const inAuth = isInAuth(currentSegs);
       const inResetPassword = isResetPasswordRoute(currentSegs);
+      const inEmailVerified = isEmailVerifiedRoute(currentSegs);
 
       if (
         initialResult.handled &&
@@ -315,6 +335,12 @@ function AuthGate() {
       }
 
       if (inResetPassword) {
+        setHasSession(true);
+        setReady(true);
+        return;
+      }
+
+      if (inEmailVerified) {
         setHasSession(true);
         setReady(true);
         return;
@@ -434,7 +460,18 @@ function AuthGate() {
       return a === "reset-password" || (a === "(auth)" && b === "reset-password");
     };
 
+    const isEmailVerifiedRoute = (segs: string[]) => {
+      const a = segs?.[0];
+      const b = segs?.[1];
+
+      return (
+        a === "email-verified" ||
+        (a === "(auth)" && b === "email-verified")
+      );
+    };
+
     if (isResetPasswordRoute(currentSegs)) return;
+    if (isEmailVerifiedRoute(currentSegs)) return;
     if (orgLoading) return;
 
     const inAuth = isInAuth(currentSegs);

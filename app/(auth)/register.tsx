@@ -85,7 +85,6 @@ export default function RegisterScreen() {
   const router = useRouter();
 
   const [email, setEmail] = useState("");
-  const [confirmEmail, setConfirmEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
@@ -93,33 +92,47 @@ export default function RegisterScreen() {
   const [showConfirm, setShowConfirm] = useState(false);
 
   const emailTrimmed = useMemo(() => email.trim(), [email]);
-  const confirmEmailTrimmed = useMemo(() => confirmEmail.trim(), [confirmEmail]);
 
   const onRegister = async () => {
-    const e = emailTrimmed;
-    const ce = confirmEmailTrimmed;
+    const e = emailTrimmed.toLowerCase();
     const p = password;
 
-    if (!e) return Alert.alert("Missing", "Email is required.");
-    if (!ce) return Alert.alert("Missing", "Confirm Email is required.");
-    if (e.toLowerCase() !== ce.toLowerCase()) {
-      return Alert.alert("Mismatch", "Email and confirm email do not match.");
+    if (!e) {
+      return Alert.alert("Missing", "Email is required.");
     }
-    if (!p) return Alert.alert("Missing", "Password is required.");
+
+    if (!e.includes("@") || !e.includes(".")) {
+      return Alert.alert(
+        "Invalid Email",
+        "Tafadhali tumia email address sahihi."
+      );
+    }
+
+    if (!p) {
+      return Alert.alert("Missing", "Password is required.");
+    }
+
     if (p.length < 6) {
       return Alert.alert("Weak password", "Use at least 6 characters.");
     }
+
     if (p !== confirm) {
-      return Alert.alert("Mismatch", "Password and confirm do not match.");
+      return Alert.alert(
+        "Mismatch",
+        "Password and confirm password do not match."
+      );
     }
 
     setLoading(true);
+
+    const emailRedirectTo =
+  "https://regal-sunburst-e3cee8.netlify.app/verified.html";
 
     const { data, error } = await supabase.auth.signUp({
       email: e,
       password: p,
       options: {
-        emailRedirectTo: "zetrabmsclean://login",
+        emailRedirectTo,
       },
     });
 
@@ -128,48 +141,80 @@ export default function RegisterScreen() {
       return Alert.alert("Register Failed", error.message);
     }
 
-const session = data?.session ?? null;
-const user = data?.user ?? null;
+    const session = data?.session ?? null;
+    const user = data?.user ?? null;
 
-setLoading(false);
+    setLoading(false);
 
-if (!user?.id) {
-  return Alert.alert("Register Failed", "Account haikuweza kuundwa vizuri.");
-}
+    if (!user?.id) {
+      return Alert.alert(
+        "Register Failed",
+        "Account haikuweza kuundwa vizuri."
+      );
+    }
 
-// ✅ reset onboarding referral state kwa account mpya
-try {
-  const { kv } = await import("@/src/storage/kv");
+    // ✅ reset onboarding referral state kwa account mpya
+    try {
+      const { kv } = await import("@/src/storage/kv");
 
-  try {
-    await (kv as any)?.remove?.("zetra_onboarding_referral_done_v1");
-  } catch {}
+      try {
+        await (kv as any)?.remove?.("zetra_onboarding_referral_done_v1");
+      } catch {}
 
-  try {
-    await (kv as any)?.remove?.("zetra_onboarding_referral_code_v1");
-  } catch {}
+      try {
+        await (kv as any)?.remove?.("zetra_onboarding_referral_code_v1");
+      } catch {}
 
-  try {
-    await (kv as any)?.delete?.("zetra_onboarding_referral_done_v1");
-  } catch {}
+      try {
+        await (kv as any)?.delete?.("zetra_onboarding_referral_done_v1");
+      } catch {}
 
-  try {
-    await (kv as any)?.delete?.("zetra_onboarding_referral_code_v1");
-  } catch {}
-} catch {}
+      try {
+        await (kv as any)?.delete?.("zetra_onboarding_referral_code_v1");
+      } catch {}
+    } catch {}
 
-// Email confirmation ikiwa OFF, user aende kwanza referral step
-if (session) {
-  router.replace("/(onboarding)/referral");
-  return;
-}
+    // ✅ Safety fallback:
+    // Ikiwa Confirm Email itakuwa OFF siku nyingine,
+    // session inaweza kurudi moja kwa moja.
+    if (session) {
+      router.replace("/(onboarding)/referral");
+      return;
+    }
 
-    // fallback salama endapo backend itarudisha user bila session
-    Alert.alert(
-      "Continue to login",
-      "Account imeundwa. Tafadhali login kuendelea na onboarding."
+ // ✅ Confirm Email iko ON:
+// Account imeundwa na verification email imetumwa.
+Alert.alert(
+  "Verification email sent",
+  `Account yako ya ZETRA BMS imeundwa kwa mafanikio.
+
+Verification link imetumwa kwenye:
+
+${e}
+
+HATUA INAYOFUATA
+
+1. Fungua email yako na bonyeza "Verify Account".
+
+2. Baada ya verification, browser itafungua ukurasa wa mwisho. Ufunge ukurasa huo.
+
+3. Rudi ZETRA BMS na Login kwa email na password ulizotumia kujisajili.
+
+Baada ya Login utaendelea na Business Setup.
+
+Hujaona email? Angalia Spam/Junk folder.`,
+  [
+    {
+      text: "GO TO LOGIN",
+      onPress: () => {
+        router.replace("/(auth)/login");
+      },
+    },
+  ],
+      {
+        cancelable: false,
+      }
     );
-    router.replace("/(auth)/login");
   };
 
   const content = (
@@ -294,7 +339,7 @@ if (session) {
                   maxWidth: 340,
                 }}
               >
-                Start your business journey with ZETRA BMS and continue directly to business setup.
+                Create your secure ZETRA BMS account. Tutathibitisha email yako kabla ya kuendelea na business setup.
               </Text>
 
              <FieldLabel>Email</FieldLabel>
@@ -306,17 +351,6 @@ if (session) {
                 placeholder="you@example.com"
               />
 
-              <View style={{ height: 16 }} />
-
-              <FieldLabel>Confirm Email</FieldLabel>
-              <GlassInput
-                value={confirmEmail}
-                onChangeText={setConfirmEmail}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                placeholder="Repeat your email"
-              />
-
               <Text
                 style={{
                   color: "rgba(255,255,255,0.48)",
@@ -324,9 +358,11 @@ if (session) {
                   marginBottom: 16,
                   fontSize: 12,
                   fontWeight: "700",
+                  lineHeight: 18,
                 }}
               >
-                Tumia email sahihi kwa ajili ya password reset baadaye.
+                Tutatuma verification link kwenye email hii. Hakikisha ni email
+                sahihi unayoweza kufungua.
               </Text>
 
               <FieldLabel>Password</FieldLabel> 
@@ -398,7 +434,7 @@ if (session) {
                     lineHeight: 20,
                   }}
                 >
-                  After creating your account, utaingia moja kwa moja kwenye onboarding ya business setup. Hakikisha email umeiandika sawa kwa sababu itatumika kusaidia password reset baadaye.
+                  Baada ya kubonyeza Create account, tutatuma verification link kwenye email yako. Fungua email hiyo na uthibitishe account, kisha rudi ZETRA BMS na Login kuendelea na business setup.
                 </Text>
               </View>
 
@@ -478,4 +514,4 @@ if (session) {
       {content}
     </TouchableWithoutFeedback>
   );
-}
+  }

@@ -53,3 +53,5 @@ yarn-error.*
 .env.*
 !.env.example
 .env*.local
+# Local Netlify folder
+.netlify
