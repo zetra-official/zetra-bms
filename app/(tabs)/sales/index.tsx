@@ -86,6 +86,16 @@ type CartItem = {
 
 type SalesRole = "owner" | "admin" | "staff" | "cashier";
 
+type SalesMode = "DIRECT" | "CASHIER";
+
+function normalizeSalesMode(v: any): SalesMode {
+  const mode = String(v ?? "DIRECT").trim().toUpperCase();
+
+  if (mode === "CASHIER") return "CASHIER";
+
+  return "DIRECT";
+}
+
 type CashierHandoffStatus = "PENDING" | "ACCEPTED" | "COMPLETED" | string;
 
 type CashierHandoffRow = {
@@ -423,11 +433,14 @@ const reservationOrderType =
   const isOnline = !!(netInfo.isConnected && netInfo.isInternetReachable !== false);
   const isOffline = !isOnline;
 
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
+const [loading, setLoading] = useState(true);
+const [refreshing, setRefreshing] = useState(false);
+const [err, setErr] = useState<string | null>(null);
 
-  const [query, setQuery] = useState("");
+const [salesMode, setSalesMode] = useState<SalesMode>("DIRECT");
+const [salesModeLoading, setSalesModeLoading] = useState(false);
+
+const [query, setQuery] = useState("");
   const [products, setProducts] = useState<ProductRow[]>([]);
   const productsCountRef = useRef(0);
 
@@ -506,8 +519,48 @@ useEffect(() => {
     } catch {}
   }, []);
 
-  const currentRole = useMemo(() => normalizeRole(activeRole), [activeRole]);
-  const isCashier = useMemo(() => currentRole === "cashier", [currentRole]);
+const currentRole = useMemo(() => normalizeRole(activeRole), [activeRole]);
+const isCashier = useMemo(() => currentRole === "cashier", [currentRole]);
+
+const loadSalesMode = useCallback(async () => {
+  const sid = String(activeStoreId ?? "").trim();
+
+  if (!sid) {
+    setSalesMode("DIRECT");
+    return;
+  }
+
+  setSalesModeLoading(true);
+
+  try {
+    const { data, error } = await supabase
+      .from("stores")
+      .select("sales_mode")
+      .eq("id", sid)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    setSalesMode(normalizeSalesMode(data?.sales_mode));
+  } catch {
+    // Database ikiwa bado haina sales_mode,
+    // DIRECT ndiyo fallback salama.
+    setSalesMode("DIRECT");
+  } finally {
+    setSalesModeLoading(false);
+  }
+}, [activeStoreId]);
+
+useEffect(() => {
+  void loadSalesMode();
+}, [loadSalesMode]);
+
+useFocusEffect(
+  useCallback(() => {
+    void loadSalesMode();
+  }, [loadSalesMode])
+);
+
 const restorePersistedCart = useCallback(async () => {
     const sid = String(activeStoreId ?? "").trim();
 
@@ -563,11 +616,14 @@ const restorePersistedCart = useCallback(async () => {
     return currentRole === "owner" || currentRole === "admin" || currentRole === "staff";
   }, [currentRole]);
 
-  const canUseCashierHandoff = useMemo(() => {
-    return currentRole === "owner" || currentRole === "admin" || currentRole === "staff";
-  }, [currentRole]);
+const canUseCashierHandoff = useMemo(() => {
+  return currentRole === "owner" || currentRole === "admin" || currentRole === "staff";
+}, [currentRole]);
 
-  const isOwnerOrAdmin = useMemo(
+const isDirectSalesMode = salesMode === "DIRECT";
+const isCashierSalesMode = salesMode === "CASHIER";
+
+const isOwnerOrAdmin = useMemo(
     () => currentRole === "owner" || currentRole === "admin",
     [currentRole]
   );
@@ -1213,16 +1269,24 @@ await loadProducts("refresh");
     void loadOpenShift();
   }, [isCashier, activeStoreId, loadOpenShift]);
 
-  useFocusEffect(
-    useCallback(() => {
-      if (isCashier) {
-        void refreshCashierSurface();
-      } else {
-        void loadProducts("refresh");
-      }
-      return () => {};
-    }, [isCashier, loadProducts, refreshCashierSurface])
-  );
+useFocusEffect(
+  useCallback(() => {
+    void loadSalesMode();
+
+    if (isCashier) {
+      void refreshCashierSurface();
+    } else {
+      void loadProducts("refresh");
+    }
+
+    return () => {};
+  }, [
+    isCashier,
+    loadProducts,
+    refreshCashierSurface,
+    loadSalesMode,
+  ])
+);
 
   useEffect(() => {
     if (realtimeChannelRef.current) {
@@ -1585,12 +1649,15 @@ image_url: row.image_url ?? null,
   /* =========================
      Navigation
   ========================= */
-  const goCheckout = useCallback(() => {
-    setErr(null);
+const goCheckout = useCallback(() => {
+  setErr(null);
 
-    if (!activeStoreId) return setErr("No active store selected.");
-    if (!canSellDirect) return setErr("No permission to sell directly.");
-    if (cart.length === 0) return setErr("Cart is empty.");
+  if (!activeStoreId) return setErr("No active store selected.");
+  if (!canSellDirect) return setErr("No permission to sell directly.");
+  if (!isDirectSalesMode) {
+    return setErr("Store hii iko Cashier Mode. Tumia Cashiers kukamilisha mauzo.");
+  }
+  if (cart.length === 0) return setErr("Cart is empty.");
 
     if (cart.some((c) => !Number.isFinite(c.unit_price) || c.unit_price <= 0)) {
       return setErr("Kuna bidhaa kwenye cart haina bei sahihi.");
@@ -1613,14 +1680,26 @@ image_url: row.image_url ?? null,
     });
 
     // Do not clear cart here. User may press Back from checkout and must find items preserved.
-  }, [activeStoreId, activeStoreName, canSellDirect, cart, router, reservationMode, reservationOrderType]);
+  }, [
+  activeStoreId,
+  activeStoreName,
+  canSellDirect,
+  cart,
+  router,
+  reservationMode,
+  reservationOrderType,
+  isDirectSalesMode,
+]);
 
-  const goCashierCheckout = useCallback(() => {
-    setErr(null);
+const goCashierCheckout = useCallback(() => {
+  setErr(null);
 
-    if (!activeStoreId) return setErr("No active store selected.");
-    if (!canUseCashierHandoff) return setErr("No permission to send order to cashiers.");
-    if (cart.length === 0) return setErr("Cart is empty.");
+  if (!activeStoreId) return setErr("No active store selected.");
+  if (!canUseCashierHandoff) return setErr("No permission to send order to cashiers.");
+  if (!isCashierSalesMode) {
+    return setErr("Store hii iko Direct Sales Mode. Tumia Complete Sale.");
+  }
+  if (cart.length === 0) return setErr("Cart is empty.");
 
     if (cart.some((c) => !Number.isFinite(c.unit_price) || c.unit_price <= 0)) {
       return setErr("Kuna bidhaa kwenye cart haina bei sahihi.");
@@ -1638,7 +1717,14 @@ image_url: row.image_url ?? null,
     });
 
     // Do not clear cart here. User may press Back from checkout and must find items preserved.
-  }, [activeStoreId, activeStoreName, canUseCashierHandoff, cart, router]);
+  }, [
+  activeStoreId,
+  activeStoreName,
+  canUseCashierHandoff,
+  cart,
+  router,
+  isCashierSalesMode,
+]);
 
   const goScan = useCallback(() => {
     setErr(null);
@@ -1691,9 +1777,23 @@ image_url: row.image_url ?? null,
     return null;
   }, [canSellDirect, isCashier]);
 
-  const checkoutDisabled = useMemo(() => {
-    return !activeStoreId || cart.length === 0 || !canSellDirect || isCashier;
-  }, [activeStoreId, cart.length, canSellDirect, isCashier]);
+const checkoutDisabled = useMemo(() => {
+  return (
+    !activeStoreId ||
+    cart.length === 0 ||
+    !canSellDirect ||
+    isCashier ||
+    !isDirectSalesMode ||
+    salesModeLoading
+  );
+}, [
+  activeStoreId,
+  cart.length,
+  canSellDirect,
+  isCashier,
+  isDirectSalesMode,
+  salesModeLoading,
+]);
 const cartHasItems = cart.length > 0 && cartTotalAmount > 0;
 
   const cartAccent = useMemo(() => {
@@ -1713,9 +1813,23 @@ const cartHasItems = cart.length > 0 && cartTotalAmount > 0;
       text: "#047857",
     };
   }, [cartHasItems]);
-  const cashierDisabled = useMemo(() => {
-    return !activeStoreId || cart.length === 0 || !canUseCashierHandoff || isCashier;
-  }, [activeStoreId, cart.length, canUseCashierHandoff, isCashier]);
+ const cashierDisabled = useMemo(() => {
+  return (
+    !activeStoreId ||
+    cart.length === 0 ||
+    !canUseCashierHandoff ||
+    isCashier ||
+    !isCashierSalesMode ||
+    salesModeLoading
+  );
+}, [
+  activeStoreId,
+  cart.length,
+  canUseCashierHandoff,
+  isCashier,
+  isCashierSalesMode,
+  salesModeLoading,
+]);
 
   const getStockQty = useCallback((p: ProductRow): number | null => {
     const n = Number(p.stock_qty);
@@ -1930,69 +2044,93 @@ const TopBar = useMemo(() => {
         )}
 
         <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
-          <Pressable
-            onPress={goCheckout}
-            disabled={checkoutDisabled}
-            style={({ pressed }) => [
-              {
-                paddingVertical: 9,
-                paddingHorizontal: 12,
-                borderRadius: theme.radius.pill,
-                borderWidth: 1,
-                borderColor: checkoutDisabled
-                  ? "rgba(148,163,184,0.25)"
-                  : "#059669",
-                backgroundColor: checkoutDisabled
-                  ? "#F1F5F9"
-                  : "#10B981",
-                alignItems: "center",
-                justifyContent: "center",
-                opacity: checkoutDisabled ? 0.55 : pressed ? 0.92 : 1,
-                transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
-                flexDirection: "row",
-                gap: 6,
-                flex: 1,
-              },
-            ]}
-          >
-            <SafeIcon name="check-circle" size={16} color={theme.colors.text} />
-            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>
-              Complete Sale
-            </Text>
-          </Pressable>
+{!isCashier && isDirectSalesMode ? (
+  <Pressable
+    onPress={goCheckout}
+    disabled={checkoutDisabled}
+    style={({ pressed }) => [
+      {
+        paddingVertical: 9,
+        paddingHorizontal: 12,
+        borderRadius: theme.radius.pill,
+        borderWidth: 1,
+        borderColor: checkoutDisabled
+          ? "rgba(148,163,184,0.25)"
+          : "#059669",
+        backgroundColor: checkoutDisabled
+          ? "#F1F5F9"
+          : "#10B981",
+        alignItems: "center",
+        justifyContent: "center",
+        opacity: checkoutDisabled ? 0.55 : pressed ? 0.92 : 1,
+        transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
+        flexDirection: "row",
+        gap: 6,
+        flex: 1,
+      },
+    ]}
+  >
+    <SafeIcon
+      name="check-circle"
+      size={16}
+      color={theme.colors.text}
+    />
 
-          {!isCashier ? (
-            <Pressable
-              onPress={goCashierCheckout}
-              disabled={cashierDisabled}
-              style={({ pressed }) => [
-                {
-                  paddingVertical: 12,
-                  paddingHorizontal: 16,
-                  borderRadius: theme.radius.pill,
-                  borderWidth: 1,
-                  borderColor: cashierDisabled
-                    ? "rgba(148,163,184,0.25)"
-                    : "#0EA5E9",
-                  backgroundColor: cashierDisabled
-                    ? "#F1F5F9"
-                    : "#E0F2FE",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  opacity: cashierDisabled ? 0.55 : pressed ? 0.92 : 1,
-                  transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
-                  flexDirection: "row",
-                  gap: 8,
-                  flex: 1,
-                },
-              ]}
-            >
-              <SafeIcon name="cash-outline" size={16} color={theme.colors.text} />
-              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>
-                Cashiers
-              </Text>
-            </Pressable>
-          ) : null}
+    <Text
+      style={{
+        color: theme.colors.text,
+        fontWeight: "900",
+        fontSize: 12,
+      }}
+    >
+      Complete Sale
+    </Text>
+  </Pressable>
+) : null}
+
+{!isCashier && isCashierSalesMode ? (
+  <Pressable
+    onPress={goCashierCheckout}
+    disabled={cashierDisabled}
+    style={({ pressed }) => [
+      {
+        paddingVertical: 9,
+        paddingHorizontal: 12,
+        borderRadius: theme.radius.pill,
+        borderWidth: 1,
+        borderColor: cashierDisabled
+          ? "rgba(148,163,184,0.25)"
+          : "#0EA5E9",
+        backgroundColor: cashierDisabled
+          ? "#F1F5F9"
+          : "#E0F2FE",
+        alignItems: "center",
+        justifyContent: "center",
+        opacity: cashierDisabled ? 0.55 : pressed ? 0.92 : 1,
+        transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
+        flexDirection: "row",
+        gap: 6,
+        flex: 1,
+      },
+    ]}
+  >
+    <SafeIcon
+      name="cash-outline"
+      size={16}
+      color={theme.colors.text}
+    />
+
+    <Text
+      style={{
+        color: theme.colors.text,
+        fontWeight: "900",
+        fontSize: 12,
+      }}
+    >
+      Cashiers
+    </Text>
+  </Pressable>
+) : null}
 
           <Pressable
             onPress={goScan}
@@ -2061,27 +2199,29 @@ const TopBar = useMemo(() => {
         )}
       </Card>
     );
-  }, [
-    cartTotalLines,
-    cartCount,
-    fmt,
-    cartTotalAmount,
-    cartAccent,
-    err,
-    headerBlockedReason,
-    goCheckout,
-    checkoutDisabled,
-    isCashier,
-    goCashierCheckout,
-    cashierDisabled,
-    goScan,
-    activeStoreId,
-    canSellDirect,
-    clearCart,
-    cart.length,
-    query,
-    loading,
-  ]);
+}, [
+  cartTotalLines,
+  cartCount,
+  fmt,
+  cartTotalAmount,
+  cartAccent,
+  err,
+  headerBlockedReason,
+  goCheckout,
+  checkoutDisabled,
+  isCashier,
+  isDirectSalesMode,
+  isCashierSalesMode,
+  goCashierCheckout,
+  cashierDisabled,
+  goScan,
+  activeStoreId,
+  canSellDirect,
+  clearCart,
+  cart.length,
+  query,
+  loading,
+]);
 
   const DesktopCheckoutPanel = useMemo(() => {
     if (isCashier || !isDesktopWeb) return null;

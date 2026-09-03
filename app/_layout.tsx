@@ -24,8 +24,14 @@ import {
 } from "@expo/vector-icons";
 import { useFonts } from "expo-font";
 import React, { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Platform, View } from "react-native";
+import {
+  ActivityIndicator,
+  Platform,
+  View,
+} from "react-native";
 import { StatusBar } from "expo-status-bar";
+
+const INTERNAL_BILLING_EMAIL = "zetraofficialtz@gmail.com";
 
 function cleanBarcode(raw: any) {
   const s = String(raw ?? "").trim();
@@ -79,37 +85,121 @@ function isOnboardingRoute(segs: string[]) {
 }
 
 async function getValidSession() {
-  const {
-    data: { session },
-    error,
-  } = await supabase.auth.getSession();
+  console.log("AUTH DEBUG: before getSession");
 
-  const jwtExpired =
-    !!error && /jwt\s*expired/i.test(String(error.message ?? ""));
+  const sessionResult = await Promise.race([
+    supabase.auth.getSession(),
 
-  const isExpiredByTime =
-    !!session?.expires_at && session.expires_at * 1000 <= Date.now() + 5000;
+    new Promise<any>((resolve) => {
+      setTimeout(() => {
+        resolve({
+          data: {
+            session: null,
+          },
+          error: new Error(
+            "getSession timed out after 5000ms"
+          ),
+          __timedOut: true,
+        });
+      }, 5000);
+    }),
+  ]);
 
-  if (jwtExpired || isExpiredByTime) {
-    const { data: refreshed, error: refreshError } =
-      await supabase.auth.refreshSession();
+  console.log(
+    "AUTH DEBUG: after getSession",
+    sessionResult
+  );
 
-    if (refreshError) {
-      return { session: null, error: refreshError };
-    }
+  const session =
+    sessionResult?.data?.session ?? null;
 
-    return { session: refreshed.session ?? null, error: null };
+  const error =
+    sessionResult?.error ?? null;
+
+  if (sessionResult?.__timedOut) {
+    return {
+      session: null,
+      error,
+    };
   }
 
-  return { session: session ?? null, error: error ?? null };
+  const jwtExpired =
+    !!error &&
+    /jwt\s*expired/i.test(
+      String(error?.message ?? "")
+    );
+
+  const isExpiredByTime =
+    !!session?.expires_at &&
+    session.expires_at * 1000 <=
+      Date.now() + 5000;
+
+  if (
+    jwtExpired ||
+    isExpiredByTime
+  ) {
+    console.log(
+      "AUTH DEBUG: before refreshSession"
+    );
+
+    const refreshResult =
+      await Promise.race([
+        supabase.auth.refreshSession(),
+
+        new Promise<any>(
+          (resolve) => {
+            setTimeout(() => {
+              resolve({
+                data: {
+                  session: null,
+                },
+                error: new Error(
+                  "refreshSession timed out after 5000ms"
+                ),
+                __timedOut: true,
+              });
+            }, 5000);
+          }
+        ),
+      ]);
+
+    console.log(
+      "AUTH DEBUG: after refreshSession",
+      refreshResult
+    );
+
+    if (
+      refreshResult?.error
+    ) {
+      return {
+        session: null,
+        error: refreshResult.error,
+      };
+    }
+
+    return {
+      session:
+        refreshResult?.data?.session ??
+        null,
+      error: null,
+    };
+  }
+
+  return {
+    session,
+    error,
+  };
 }
 
 function AuthGate() {
   const router = useRouter();
   const segments = useSegments();
   const segmentsRef = useRef<string[]>([]);
-  const [ready, setReady] = useState(false);
-  const [hasSession, setHasSession] = useState<boolean | null>(null);
+ const [ready, setReady] = useState(false);
+const [hasSession, setHasSession] = useState<boolean | null>(null);
+const [isOfficeUser, setIsOfficeUser] = useState(false);
+
+const [bootStage, setBootStage] = useState("START");
 
   const webScanBufferRef = useRef("");
   const webScanLastAtRef = useRef(0);
@@ -189,6 +279,7 @@ function AuthGate() {
 
       if (!ready) return;
       if (hasSession !== true) return;
+      if (isOfficeUser) return;
       if (orgBusy) return;
       if (isInAuth || isInOnboarding) return;
 
@@ -263,7 +354,7 @@ function AuthGate() {
       window.removeEventListener("keydown", onKeyDown, true);
       resetWebScanBuffer();
     };
-  }, [router, ready, hasSession, orgBusy]);
+  }, [router, ready, hasSession, isOfficeUser, orgBusy]);
 
   useEffect(() => {
     let alive = true;
@@ -294,73 +385,232 @@ function AuthGate() {
     Platform.OS === "web" ? "/email-verified" : "/(auth)/email-verified",
   onboarding: "/(onboarding)/referral",
   home: "/(tabs)",
+  office: "/office",
 };
 
-    const boot = async () => {
-      const initialResult = await applySupabaseSessionFromInitialUrl();
+const boot = async () => {
+  setBootStage("INITIAL_URL");
 
-      if (!alive) return;
+  let initialResult: any = {
+    handled: false,
+    ok: true,
+    type: null,
+  };
 
-      const currentSegs = segmentsRef.current;
-      const inAuth = isInAuth(currentSegs);
-      const inResetPassword = isResetPasswordRoute(currentSegs);
-      const inEmailVerified = isEmailVerifiedRoute(currentSegs);
+  try {
+    initialResult = await Promise.race([
+      applySupabaseSessionFromInitialUrl(),
 
-      if (
-        initialResult.handled &&
-        String(initialResult.type ?? "").toLowerCase() === "recovery"
-      ) {
-        router.replace(routes.resetPassword as any);
-        setReady(true);
-        return;
-      }
+      new Promise<any>((resolve) => {
+        setTimeout(() => {
+          resolve({
+            handled: false,
+            ok: true,
+            type: null,
+            timedOut: true,
+          });
+        }, 1500);
+      }),
+    ]);
+  } catch (e) {
+    console.log(
+      "Initial auth URL processing skipped:",
+      e
+    );
 
-      const { session, error } = await getValidSession();
-
-      if (!alive) return;
-
-      if (error) {
-        setReady(true);
-        return;
-      }
-
-      if (!session) {
-        setHasSession(false);
-
-        if (!inAuth) {
-          router.replace(routes.login as any);
-        }
-        setReady(true);
-        return;
-      }
-
-      if (inResetPassword) {
-        setHasSession(true);
-        setReady(true);
-        return;
-      }
-
-      if (inEmailVerified) {
-        setHasSession(true);
-        setReady(true);
-        return;
-      }
-
-      const verified = isEmailVerified(session.user);
-
-      if (!verified) {
-        setHasSession(false);
-
-        if (!inAuth) {
-          router.replace(routes.login as any);
-        }
-        setReady(true);
-        return;
-      }
-
-      setHasSession(true);
-      setReady(true);
+    initialResult = {
+      handled: false,
+      ok: true,
+      type: null,
     };
+  }
+
+  if (!alive) return;
+
+  setBootStage("INITIAL_URL_DONE");
+
+  const currentSegs = segmentsRef.current;
+
+  const inAuth = isInAuth(currentSegs);
+
+  const inResetPassword =
+    isResetPasswordRoute(currentSegs);
+
+  const inEmailVerified =
+    isEmailVerifiedRoute(currentSegs);
+
+  if (
+    initialResult?.handled &&
+    String(initialResult?.type ?? "").toLowerCase() ===
+      "recovery"
+  ) {
+    setBootStage("RECOVERY_ROUTE");
+    setHasSession(true);
+    setReady(true);
+
+    router.replace(
+      routes.resetPassword as any
+    );
+
+    return;
+  }
+
+  setBootStage("GET_SESSION");
+
+let sessionResult: {
+  session: any;
+  error: any;
+};
+
+try {
+  sessionResult = await Promise.race([
+    getValidSession(),
+
+    new Promise<{
+      session: null;
+      error: Error;
+    }>((resolve) => {
+      setTimeout(() => {
+        resolve({
+          session: null,
+          error: new Error(
+            "Supabase session check timed out"
+          ),
+        });
+      }, 8000);
+    }),
+  ]);
+} catch (e: any) {
+  sessionResult = {
+    session: null,
+    error:
+      e instanceof Error
+        ? e
+        : new Error(
+            String(
+              e?.message ??
+                "Session check failed"
+            )
+          ),
+  };
+}
+
+  if (!alive) return;
+
+  setBootStage("SESSION_RETURNED");
+
+  const { session, error } =
+    sessionResult;
+
+  if (error && !session) {
+    console.log(
+      "Auth boot session error:",
+      error
+    );
+
+    setBootStage("SESSION_ERROR");
+    setHasSession(false);
+    setIsOfficeUser(false);
+    setReady(true);
+
+    if (!inAuth) {
+      router.replace(
+        routes.login as any
+      );
+    }
+
+    return;
+  }
+
+  if (!session) {
+    setBootStage("NO_SESSION");
+    setHasSession(false);
+    setIsOfficeUser(false);
+    setReady(true);
+
+    if (!inAuth) {
+      router.replace(
+        routes.login as any
+      );
+    }
+
+    return;
+  }
+
+  setBootStage("SESSION_FOUND");
+
+  if (inResetPassword) {
+    setHasSession(true);
+    setReady(true);
+    setBootStage("RESET_READY");
+    return;
+  }
+
+  if (inEmailVerified) {
+    setHasSession(true);
+    setReady(true);
+    setBootStage(
+      "EMAIL_VERIFIED_READY"
+    );
+    return;
+  }
+
+  const verified =
+    isEmailVerified(session.user);
+
+  if (!verified) {
+    setBootStage("EMAIL_NOT_VERIFIED");
+    setHasSession(false);
+    setIsOfficeUser(false);
+    setReady(true);
+
+    if (!inAuth) {
+      router.replace(
+        routes.login as any
+      );
+    }
+
+    return;
+  }
+
+  setBootStage("EMAIL_VERIFIED");
+
+  const email = String(
+    session.user?.email ?? ""
+  )
+    .trim()
+    .toLowerCase();
+
+  const officeUser =
+    email === INTERNAL_BILLING_EMAIL;
+
+  setHasSession(true);
+  setIsOfficeUser(officeUser);
+
+  if (officeUser) {
+    setBootStage("OFFICE_READY");
+
+    /*
+     * IMPORTANT:
+     * Unlock Root Stack first,
+     * then navigate to Office.
+     */
+    setReady(true);
+
+    setTimeout(() => {
+      if (!alive) return;
+
+      router.replace(
+        routes.office as any
+      );
+    }, 0);
+
+    return;
+  }
+
+  setBootStage("NORMAL_USER_READY");
+  setReady(true);
+};
 
     void boot();
 
@@ -377,28 +627,56 @@ function AuthGate() {
 
         if (event === "SIGNED_OUT") {
           setHasSession(false);
+          setIsOfficeUser(false);
           setReady(true);
 
           if (!inAuth) {
             router.replace(routes.login as any);
           }
+
           return;
         }
 
-        if (event === "TOKEN_REFRESHED") {
-          setHasSession(!!session);
-          return;
-        }
+      if (event === "TOKEN_REFRESHED") {
+  if (!session) {
+    setHasSession(false);
+    setIsOfficeUser(false);
+    return;
+  }
 
-        if (!session) {
-          setHasSession(false);
-          setReady(true);
+  const email = String(session.user?.email ?? "")
+    .trim()
+    .toLowerCase();
 
-          if (!inAuth) {
-            router.replace(routes.login as any);
-          }
-          return;
-        }
+  const officeUser =
+    email === INTERNAL_BILLING_EMAIL;
+
+  setHasSession(true);
+  setIsOfficeUser(officeUser);
+
+  /*
+   * IMPORTANT:
+   * TOKEN_REFRESHED should update auth state only.
+   * It must NOT force navigation back to /office,
+   * because the office user may currently be inside:
+   *
+   * /office/customers
+   * /office/...
+   */
+  return;
+}
+
+      if (!session) {
+  setHasSession(false);
+  setIsOfficeUser(false);
+  setReady(true);
+
+  if (!inAuth) {
+    router.replace(routes.login as any);
+  }
+
+  return;
+}
 
         if (inResetPassword) return;
 
@@ -406,16 +684,42 @@ function AuthGate() {
 
         if (!verified) {
           setHasSession(false);
+          setIsOfficeUser(false);
           setReady(true);
 
           if (!inAuth) {
             router.replace(routes.login as any);
           }
+
           return;
         }
 
-        setHasSession(true);
-        setReady(true);
+        const email = String(session.user?.email ?? "")
+          .trim()
+          .toLowerCase();
+
+     const officeUser =
+  email === INTERNAL_BILLING_EMAIL;
+
+setHasSession(true);
+setIsOfficeUser(officeUser);
+setReady(true);
+
+if (officeUser) {
+  const currentSegs =
+    segmentsRef.current ?? [];
+
+  const alreadyInOffice =
+    currentSegs?.[0] === "office";
+
+  if (!alreadyInOffice) {
+    router.replace(
+      routes.office as any
+    );
+  }
+
+  return;
+}
       }
     );
 
@@ -435,8 +739,20 @@ function AuthGate() {
 
       if (!recovered.session) return;
 
+      const email = String(recovered.session.user?.email ?? "")
+        .trim()
+        .toLowerCase();
+
+      const officeUser = email === INTERNAL_BILLING_EMAIL;
+
       setHasSession(true);
-      router.replace(routes.home as any);
+      setIsOfficeUser(officeUser);
+
+      router.replace(
+        officeUser
+          ? (routes.office as any)
+          : (routes.home as any)
+      );
     });
 
     return () => {
@@ -472,6 +788,16 @@ function AuthGate() {
 
     if (isResetPasswordRoute(currentSegs)) return;
     if (isEmailVerifiedRoute(currentSegs)) return;
+
+    const isOfficeRoute = currentSegs?.[0] === "office";
+
+    if (isOfficeUser) {
+      if (!isOfficeRoute) {
+        router.replace("/office" as any);
+      }
+      return;
+    }
+
     if (orgLoading) return;
 
     const inAuth = isInAuth(currentSegs);
@@ -488,7 +814,7 @@ function AuthGate() {
     if (inAuth || inOnboarding) {
       router.replace("/(tabs)" as any);
     }
-  }, [ready, hasSession, orgLoading, orgs, router]);
+  }, [ready, hasSession, isOfficeUser, orgLoading, orgs, router]);
 
   useEffect(() => {
     return () => {
@@ -499,25 +825,34 @@ function AuthGate() {
     };
   }, []);
 
-  if (
+if (
   !ready ||
   !fontsLoaded ||
-  (Platform.OS !== "web" && hasSession === true && orgLoading)
+  (
+    Platform.OS !== "web" &&
+    hasSession === true &&
+    !isOfficeUser &&
+    orgLoading
+  )
 ) {
-    return (
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: theme.colors.background,
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <StatusBar style="light" backgroundColor={theme.colors.background} />
-        <ActivityIndicator />
-      </View>
-    );
-  }
+  return (
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: theme.colors.background,
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <StatusBar
+        style="light"
+        backgroundColor={theme.colors.background}
+      />
+
+      <ActivityIndicator />
+    </View>
+  );
+}
 
   return (
     <>
@@ -536,7 +871,7 @@ function AuthGate() {
 export default function RootLayout() {
   return (
     <OrgProvider>
-      <AuthGate />
+      <AuthGate  />
     </OrgProvider>
   );
 }

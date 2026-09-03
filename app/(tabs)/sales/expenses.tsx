@@ -38,8 +38,12 @@ type ExpenseRow = {
   organization_id: string;
   store_id: string;
   amount: number;
+
   category: string | null;
+  category_name?: string | null;
+
   note: string | null;
+  
   payment_method?: string | null;
   expense_date: string; // yyyy-mm-dd
   created_at: string;
@@ -53,7 +57,12 @@ type Summary = {
   total: number;
   count: number;
 };
-type RangeFilter = "TODAY" | "WEEK" | "MONTH";
+type RangeFilter =
+  | "TODAY"
+  | "WEEK"
+  | "MONTH"
+  | "LAST_MONTH"
+  | "CUSTOM";
 
 function isoDateOnly(d: Date) {
   const yyyy = d.getFullYear();
@@ -84,7 +93,18 @@ function startOfMonth(d: Date) {
   x.setHours(0, 0, 0, 0);
   return x;
 }
+function endOfMonth(d: Date) {
+  const x = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
 
+function isValidDateYMD(v: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+
+  const d = new Date(`${v}T00:00:00`);
+  return !Number.isNaN(d.getTime());
+}
 function withTimeout<T>(p: PromiseLike<T>, ms: number, label: string): Promise<T> {
   return new Promise((resolve, reject) => {
     const t = setTimeout(() => reject(new Error(`${label} timed out (${ms}ms)`)), ms);
@@ -475,6 +495,13 @@ const canCreate = useMemo(() => {
   const [week, setWeek] = useState<Summary>({ total: 0, count: 0 });
   const [month, setMonth] = useState<Summary>({ total: 0, count: 0 });
 const [rangeFilter, setRangeFilter] = useState<RangeFilter>("MONTH");
+const [customFromInput, setCustomFromInput] = useState("");
+const [customToInput, setCustomToInput] = useState("");
+
+const [customRange, setCustomRange] = useState<{
+  from: string;
+  to: string;
+} | null>(null);
   const [expenseFormOpen, setExpenseFormOpen] = useState(false);
   const [amount, setAmount] = useState<string>("");
   const [category, setCategory] = useState<string>("");
@@ -486,6 +513,17 @@ const [rangeFilter, setRangeFilter] = useState<RangeFilter>("MONTH");
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const liftAnim = useRef(new Animated.Value(10)).current;
+  const expenseFormScrollRef = useRef<ScrollView | null>(null);
+  const paymentSectionYRef = useRef(0);
+
+  const scrollExpenseFormAfterCategory = useCallback(() => {
+    setTimeout(() => {
+      expenseFormScrollRef.current?.scrollTo({
+        y: Math.max(0, paymentSectionYRef.current - 18),
+        animated: true,
+      });
+    }, 160);
+  }, []);
 
   useEffect(() => {
     Animated.parallel([
@@ -538,29 +576,61 @@ const loadStaffExpensePermission = useCallback(async () => {
   }
 }, [activeStoreDbId, isStaffView, localStaffExpenseAllowed]);
 
-  const ranges = useMemo(() => {
-    const now = new Date();
-    const todayDate = new Date(now);
-    todayDate.setHours(0, 0, 0, 0);
+const ranges = useMemo(() => {
+  const now = new Date();
 
-    const tomorrow = addDays(todayDate, 1);
+  const todayDate = new Date(now);
+  todayDate.setHours(0, 0, 0, 0);
 
-    const tFrom = isoDateOnly(todayDate);
-    const tTo = isoDateOnly(tomorrow);
+  const todayYMD = isoDateOnly(todayDate);
 
-    const wFrom = isoDateOnly(startOfWeekMonday(todayDate));
-    const wTo = isoDateOnly(tomorrow);
+  const previousMonthDate = new Date(
+    todayDate.getFullYear(),
+    todayDate.getMonth() - 1,
+    1
+  );
 
-    const mFrom = isoDateOnly(startOfMonth(todayDate));
-    const mTo = isoDateOnly(tomorrow);
+  return {
+    today: {
+      from: todayYMD,
+      to: todayYMD,
+    },
 
-    return {
-      today: { from: tFrom, to: tTo },
-      week: { from: wFrom, to: wTo },
-      month: { from: mFrom, to: mTo },
-    };
-  }, []);
+    week: {
+      from: isoDateOnly(startOfWeekMonday(todayDate)),
+      to: todayYMD,
+    },
 
+    month: {
+      from: isoDateOnly(startOfMonth(todayDate)),
+      to: todayYMD,
+    },
+
+    lastMonth: {
+      from: isoDateOnly(startOfMonth(previousMonthDate)),
+      to: isoDateOnly(endOfMonth(previousMonthDate)),
+    },
+  };
+}, []);
+const selectedExpenseRange = useMemo(() => {
+  if (rangeFilter === "TODAY") {
+    return ranges.today;
+  }
+
+  if (rangeFilter === "WEEK") {
+    return ranges.week;
+  }
+
+  if (rangeFilter === "LAST_MONTH") {
+    return ranges.lastMonth;
+  }
+
+  if (rangeFilter === "CUSTOM" && customRange) {
+    return customRange;
+  }
+
+  return ranges.month;
+}, [rangeFilter, ranges, customRange]);
   const loadSummary = useCallback(async () => {
     if (!activeStoreId) {
       setToday({ total: 0, count: 0 });
@@ -608,43 +678,55 @@ const loadStaffExpensePermission = useCallback(async () => {
     return;
   }
 
-  const res = await withTimeout(
-    supabase.rpc("get_expenses_v2", {
-      p_store_id: activeStoreId,
-      p_from: ranges.month.from,
-      p_to: ranges.month.to,
-    }),
-    12_000,
-    "get_expenses_v2"
-  );
+  const PAGE_SIZE = 200;
 
-  const data = (res as any)?.data;
-  const e = (res as any)?.error;
-  if (e) throw e;
+  let offset = 0;
+  const allRows: ExpenseRow[] = [];
 
-  const rpcRows = ((data ?? []) as any[]) as ExpenseRow[];
-  const ids = rpcRows.map((x) => x.id).filter(Boolean);
-
-  let categoryMap = new Map<string, string | null>();
-
-  if (ids.length > 0) {
-    const { data: directRows } = await supabase
-      .from("expenses")
-      .select("id, category")
-      .in("id", ids);
-
-    categoryMap = new Map(
-      ((directRows ?? []) as any[]).map((x) => [String(x.id), x.category ?? null])
+  while (true) {
+    const res = await withTimeout(
+      supabase.rpc("get_expenses_v2", {
+        p_store_id: activeStoreId,
+        p_from: selectedExpenseRange.from,
+        p_to: selectedExpenseRange.to,
+        p_limit: PAGE_SIZE,
+        p_offset: offset,
+      }),
+      12_000,
+      "get_expenses_v2"
     );
+
+    const data = (res as any)?.data;
+    const e = (res as any)?.error;
+
+    if (e) throw e;
+
+    const pageRows = ((data ?? []) as any[]).map((r) => ({
+      ...r,
+
+      // get_expenses_v2 returns category_name.
+      // UI yetu inatumia category.
+      category:
+        String(r?.category_name ?? "").trim() ||
+        String(r?.category ?? "").trim() ||
+        null,
+    })) as ExpenseRow[];
+
+    allRows.push(...pageRows);
+
+    if (pageRows.length < PAGE_SIZE) {
+      break;
+    }
+
+    offset += PAGE_SIZE;
   }
 
-  setRows(
-    rpcRows.map((r) => ({
-      ...r,
-      category: categoryMap.get(String(r.id)) ?? r.category ?? null,
-    }))
-  );
-}, [activeStoreId, ranges.month.from, ranges.month.to]);
+  setRows(allRows);
+}, [
+  activeStoreId,
+  selectedExpenseRange.from,
+  selectedExpenseRange.to,
+]);
 
   const loadAll = useCallback(async () => {
     if (!activeStoreId) {
@@ -768,33 +850,7 @@ if (e) throw e;
  * Force category into expenses table.
  * Hii inasaidia kama RPC ime-save amount/note lakini category imebaki null.
  */
-try {
-  if (isEditing && editingExpenseId) {
-    await supabase
-      .from("expenses")
-      .update({ category: cat })
-      .eq("id", editingExpenseId);
-  } else {
-    const { data: latest } = await supabase
-      .from("expenses")
-      .select("id")
-      .eq("store_id", activeStoreId)
-      .eq("amount", n)
-      .eq("expense_date", ranges.today.from)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
 
-    if (latest?.id) {
-      await supabase
-        .from("expenses")
-        .update({ category: cat })
-        .eq("id", latest.id);
-    }
-  }
-} catch {
-  // RPC imefanikiwa; hii fallback isizuie saving.
-}
 
 resetExpenseForm();
 setExpenseFormOpen(false);
@@ -877,15 +933,8 @@ const deleteExpense = useCallback(
     [editingExpenseId, loadAll, loading, resetExpenseForm]
   );
 const filteredRows = useMemo(() => {
-  const from =
-    rangeFilter === "TODAY"
-      ? ranges.today.from
-      : rangeFilter === "WEEK"
-      ? ranges.week.from
-      : ranges.month.from;
-
-  return rows.filter((r) => String(r.expense_date ?? "") >= from);
-}, [rows, rangeFilter, ranges]);
+  return rows;
+}, [rows]);
 
 const categoryBreakdown = useMemo(() => {
   const map = new Map<string, { total: number; count: number }>();
@@ -948,7 +997,11 @@ const exportExpensePdf = useCallback(async () => {
         ? "Today"
         : rangeFilter === "WEEK"
         ? "This Week"
-        : "This Month";
+        : rangeFilter === "MONTH"
+        ? "This Month"
+        : rangeFilter === "LAST_MONTH"
+        ? "Last Month"
+        : `${selectedExpenseRange.from} to ${selectedExpenseRange.to}`;
 
     const esc = (v: any) =>
       String(v ?? "")
@@ -1072,7 +1125,16 @@ const rowsHtml = filteredRows
   } catch (e: any) {
     Alert.alert("PDF Failed", e?.message ?? "Imeshindikana kutengeneza PDF.");
   }
-}, [activeOrgName, activeStoreName, categoryBreakdown, filteredRows, fmt, rangeFilter, printHtmlPdfOnWeb]);
+}, [
+  activeOrgName,
+  activeStoreName,
+  categoryBreakdown,
+  filteredRows,
+  fmt,
+  rangeFilter,
+  selectedExpenseRange,
+  printHtmlPdfOnWeb,
+]);
   const quickCategories = useMemo(
     () => ["Rent", "Transport", "WiFi", "Electricity", "Office", "Fuel"],
     []
@@ -1640,13 +1702,29 @@ minHeight: 64,
           </Pressable>
 
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-  {(["TODAY", "WEEK", "MONTH"] as RangeFilter[]).map((x) => (
+  {(["TODAY", "WEEK", "MONTH", "LAST_MONTH", "CUSTOM"] as RangeFilter[]).map((x) => (
     <PillChip
       key={x}
-      label={x === "TODAY" ? "Today" : x === "WEEK" ? "Week" : "Month"}
+      label={
+        x === "TODAY"
+          ? "Today"
+          : x === "WEEK"
+          ? "Week"
+          : x === "MONTH"
+          ? "This Month"
+          : x === "LAST_MONTH"
+          ? "Last Month"
+          : "Custom"
+      }
       active={rangeFilter === x}
       onPress={() => setRangeFilter(x)}
-      icon={x === "TODAY" ? "sunny-outline" : x === "WEEK" ? "calendar-outline" : "stats-chart-outline"}
+      icon={
+        x === "TODAY"
+          ? "sunny-outline"
+          : x === "WEEK"
+          ? "calendar-outline"
+          : "stats-chart-outline"
+      }
     />
   ))}
 
@@ -1678,8 +1756,124 @@ minHeight: 64,
   </Pressable>
 </View>
 
-          {sectionTitle("Category Breakdown")}
+{rangeFilter === "CUSTOM" && (
+  <Card
+    style={{
+      padding: 14,
+      gap: 10,
+      borderRadius: 18,
+      backgroundColor: "#FFFFFF",
+    }}
+  >
+    <Text
+      style={{
+        color: theme.colors.text,
+        fontWeight: "900",
+        fontSize: 14,
+      }}
+    >
+      Custom Date Range
+    </Text>
 
+    <View
+      style={{
+        flexDirection: isDesktopWeb ? "row" : "column",
+        gap: 10,
+      }}
+    >
+      <View style={{ flex: 1 }}>
+        <InputLabel>From</InputLabel>
+
+        <TextInput
+          value={customFromInput}
+          onChangeText={setCustomFromInput}
+          placeholder="2026-08-01"
+          placeholderTextColor="#94A3B8"
+          style={{
+            minHeight: 46,
+            borderWidth: 1,
+            borderColor: theme.colors.border,
+            borderRadius: 14,
+            paddingHorizontal: 12,
+            color: theme.colors.text,
+            fontWeight: "800",
+            backgroundColor: "#FFFFFF",
+          }}
+        />
+      </View>
+
+      <View style={{ flex: 1 }}>
+        <InputLabel>To</InputLabel>
+
+        <TextInput
+          value={customToInput}
+          onChangeText={setCustomToInput}
+          placeholder="2026-08-31"
+          placeholderTextColor="#94A3B8"
+          style={{
+            minHeight: 46,
+            borderWidth: 1,
+            borderColor: theme.colors.border,
+            borderRadius: 14,
+            paddingHorizontal: 12,
+            color: theme.colors.text,
+            fontWeight: "800",
+            backgroundColor: "#FFFFFF",
+          }}
+        />
+      </View>
+    </View>
+
+    <Pressable
+      onPress={() => {
+        const from = customFromInput.trim();
+        const to = customToInput.trim();
+
+        if (!isValidDateYMD(from) || !isValidDateYMD(to)) {
+          Alert.alert(
+            "Invalid Date",
+            "Tumia format ya YYYY-MM-DD. Mfano: 2026-08-01"
+          );
+          return;
+        }
+
+        if (from > to) {
+          Alert.alert(
+            "Invalid Range",
+            "From date haiwezi kuwa baada ya To date."
+          );
+          return;
+        }
+
+        setCustomRange({
+          from,
+          to,
+        });
+      }}
+      style={({ pressed }) => ({
+        minHeight: 46,
+        borderRadius: 14,
+        backgroundColor: theme.colors.emeraldSoft,
+        borderWidth: 1,
+        borderColor: theme.colors.emeraldBorder,
+        alignItems: "center",
+        justifyContent: "center",
+        opacity: pressed ? 0.9 : 1,
+      })}
+    >
+      <Text
+        style={{
+          color: theme.colors.text,
+          fontWeight: "900",
+        }}
+      >
+        Apply Date Range
+      </Text>
+    </Pressable>
+  </Card>
+)}
+
+          {sectionTitle("Category Breakdown")}
           {categoryBreakdown.length === 0 ? (
             <Card style={{ padding: 14, borderRadius: 18, backgroundColor: "#FFFFFF" }}>
               <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
@@ -1717,7 +1911,19 @@ minHeight: 64,
             </Card>
           )}
 
-          {sectionTitle(`Recent (${rangeFilter === "TODAY" ? "Today" : rangeFilter === "WEEK" ? "This Week" : "This Month"}) (${filteredRows.length})`)}
+          {sectionTitle(
+            `Recent (${
+              rangeFilter === "TODAY"
+                ? "Today"
+                : rangeFilter === "WEEK"
+                ? "This Week"
+                : rangeFilter === "MONTH"
+                ? "This Month"
+                : rangeFilter === "LAST_MONTH"
+                ? "Last Month"
+                : `${selectedExpenseRange.from} → ${selectedExpenseRange.to}`
+            }) (${filteredRows.length})`
+          )}
 
           {filteredRows.length === 0 ? (
             <Card
@@ -1965,7 +2171,7 @@ minHeight: 64,
   }}
 >
   <KeyboardAvoidingView
-    behavior={Platform.OS === "ios" ? "padding" : undefined}
+    behavior={Platform.OS === "ios" ? "padding" : "height"}
     keyboardVerticalOffset={Platform.OS === "ios" ? 10 : 0}
     style={{ flex: 1 }}
   >
@@ -2015,12 +2221,15 @@ minHeight: 64,
         </View>
 
         <ScrollView
-          keyboardShouldPersistTaps="always"
-          showsVerticalScrollIndicator={false}
+          ref={expenseFormScrollRef}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+          nestedScrollEnabled
+          showsVerticalScrollIndicator
           contentContainerStyle={{
             gap: 10,
             paddingHorizontal: 14,
-            paddingBottom: 14,
+            paddingBottom: 28,
           }}
         >
           <InputShell icon="cash-outline">
@@ -2040,6 +2249,8 @@ minHeight: 64,
             <TextInput
               value={category}
               onChangeText={setCategory}
+              onSubmitEditing={scrollExpenseFormAfterCategory}
+              returnKeyType="next"
               placeholder="mf: Rent / Transport / WiFi"
               placeholderTextColor="#CBD5E1"
               style={{ color: theme.colors.text, fontWeight: "800", fontSize: 14, minHeight: 34 }}
@@ -2052,13 +2263,21 @@ minHeight: 64,
                 key={x}
                 label={x}
                 active={category.trim().toLowerCase() === x.toLowerCase()}
-                onPress={() => setCategory(x)}
+                onPress={() => {
+                  setCategory(x);
+                  scrollExpenseFormAfterCategory();
+                }}
                 icon="sparkles-outline"
               />
             ))}
           </View>
 
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+          <View
+            onLayout={(event) => {
+              paymentSectionYRef.current = event.nativeEvent.layout.y;
+            }}
+            style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}
+          >
             {paymentMethods.map((m) => (
               <PillChip
                 key={m}
@@ -2075,6 +2294,13 @@ minHeight: 64,
             <TextInput
               value={note}
               onChangeText={setNote}
+              onFocus={() => {
+                setTimeout(() => {
+                  expenseFormScrollRef.current?.scrollToEnd({
+                    animated: true,
+                  });
+                }, 250);
+              }}
               placeholder="mf: Office water, electricity..."
               placeholderTextColor="#CBD5E1"
               multiline

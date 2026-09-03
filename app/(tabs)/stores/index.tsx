@@ -52,7 +52,21 @@ type StoreProductPreviewRow = {
   qty: number;
 };
 
-type StoreType = "STANDARD" | "CAPITAL_RECOVERY" | "FIELD_PROCUREMENT" | "PRECISION_RETAIL";
+type StoreType =
+  | "STANDARD"
+  | "CAPITAL_RECOVERY"
+  | "FIELD_PROCUREMENT"
+  | "PRECISION_RETAIL";
+
+type SalesMode = "DIRECT" | "CASHIER";
+
+function normalizeSalesMode(v: any): SalesMode {
+  const mode = String(v ?? "DIRECT").trim().toUpperCase();
+
+  if (mode === "CASHIER") return "CASHIER";
+
+  return "DIRECT";
+}
 
 function normalizeStoreType(v: any): StoreType {
   const t = String(v ?? "STANDARD").trim().toUpperCase();
@@ -787,7 +801,132 @@ const MOBILE_SIDE_PAD = 12;
     },
     [canManage, loadMovementFlags, refresh]
   );
+  // =========================
+  // ✅ SALES MODE
+  // DIRECT  = Complete Sale
+  // CASHIER = Cashiers
+  // =========================
+  const [salesModeByStoreId, setSalesModeByStoreId] = useState<
+    Record<string, SalesMode>
+  >({});
 
+  const [salesModeLoading, setSalesModeLoading] = useState(false);
+
+  const [salesModeSaving, setSalesModeSaving] = useState<
+    Record<string, boolean>
+  >({});
+
+  const loadSalesModes = useCallback(async () => {
+if (!activeOrgId) {
+  setSalesModeByStoreId({});
+  return;
+}
+
+    const ids = (list ?? [])
+      .map((s: any) => String(s?.store_id ?? "").trim())
+      .filter(Boolean);
+
+    if (ids.length === 0) {
+      setSalesModeByStoreId({});
+      return;
+    }
+
+    setSalesModeLoading(true);
+
+    try {
+      const { data, error: e } = await supabase
+        .from("stores")
+        .select("id, sales_mode")
+        .in("id", ids);
+
+      if (e) throw e;
+
+      const map: Record<string, SalesMode> = {};
+
+      for (const r of data ?? []) {
+        map[String(r.id)] = normalizeSalesMode(r?.sales_mode);
+      }
+
+      setSalesModeByStoreId(map);
+    } catch {
+      // ✅ Database ikiwa bado haina sales_mode,
+      // stores zote zinaendelea kama DIRECT bila kuvunja screen.
+      const fallback: Record<string, SalesMode> = {};
+
+      for (const id of ids) {
+        fallback[id] = "DIRECT";
+      }
+
+      setSalesModeByStoreId(fallback);
+    } finally {
+      setSalesModeLoading(false);
+    }
+  }, [activeOrgId, list]);
+
+  useEffect(() => {
+    void loadSalesModes();
+  }, [loadSalesModes]);
+
+  const toggleStoreSalesMode = useCallback(
+    async (storeId: string, cashierEnabled: boolean) => {
+      if (!canManage) {
+        Alert.alert("No Access", "Owner/Admin only.");
+        return;
+      }
+
+      const sid = String(storeId ?? "").trim();
+
+      if (!sid) return;
+
+      const previousMode = normalizeSalesMode(
+        salesModeByStoreId?.[sid] ?? "DIRECT"
+      );
+
+      const nextMode: SalesMode = cashierEnabled ? "CASHIER" : "DIRECT";
+
+      setSalesModeSaving((prev) => ({
+        ...prev,
+        [sid]: true,
+      }));
+
+      // optimistic UI
+      setSalesModeByStoreId((prev) => ({
+        ...prev,
+        [sid]: nextMode,
+      }));
+
+      try {
+        const { error: e } = await supabase
+          .from("stores")
+          .update({
+            sales_mode: nextMode,
+          } as any)
+          .eq("id", sid);
+
+        if (e) throw e;
+
+        await loadSalesModes();
+      } catch (err: any) {
+        // revert ikiwa save imeshindikana
+        setSalesModeByStoreId((prev) => ({
+          ...prev,
+          [sid]: previousMode,
+        }));
+
+        Alert.alert(
+          "Sales Mode",
+          err?.message ??
+            "Sales Mode bado haijaweza kuhifadhiwa. Database support itaongezwa baada ya kukamilisha Sales UI."
+        );
+      } finally {
+        setSalesModeSaving((prev) => ({
+          ...prev,
+          [sid]: false,
+        }));
+      }
+    },
+    [canManage, salesModeByStoreId, loadSalesModes]
+  );
   // =========================
   // Staff choices (kept)
   // =========================
@@ -953,71 +1092,75 @@ const loadStoreProductsPreview = useCallback(async (storeId: string) => {
     }
   }, [actionsOpenByStoreId, productsLoadingByStoreId, loadStoreProductsPreview]);
 
-  const saveRenameStore = useCallback(async () => {
-    if (!canManage) {
-      Alert.alert("No Access", "Owner/Admin only.");
-      return;
+const saveRenameStore = useCallback(async () => {
+  if (!canManage) {
+    Alert.alert("No Access", "Owner/Admin only.");
+    return;
+  }
+
+  const orgId = String(activeOrgId ?? "").trim();
+  const sid = String(renameStoreId ?? "").trim();
+  const nextName = String(renameValue ?? "").trim();
+
+  if (!orgId) {
+    Alert.alert("Missing", "Organization haijapatikana.");
+    return;
+  }
+
+  if (!sid) {
+    Alert.alert("Missing", "Store haijapatikana.");
+    return;
+  }
+
+  if (!nextName) {
+    Alert.alert("Missing", "Weka jina jipya la store.");
+    return;
+  }
+
+  setRenameSaving(true);
+
+  try {
+    const { error: e } = await supabase.rpc("rename_store_v1", {
+      p_org_id: orgId,
+      p_store_id: sid,
+      p_new_name: nextName,
+    });
+
+    if (e) throw e;
+
+    await refresh();
+    await loadManagers();
+    await loadCreditFlags();
+    await loadExpenseFlags();
+    await loadMovementFlags();
+    await loadSalesModes();
+
+    if (sid === String(activeStoreId ?? "").trim()) {
+      await setActiveStoreId(sid);
     }
 
-    const orgId = String(activeOrgId ?? "").trim();
-    const sid = String(renameStoreId ?? "").trim();
-    const nextName = String(renameValue ?? "").trim();
-
-    if (!orgId) {
-      Alert.alert("Missing", "Organization haijapatikana.");
-      return;
-    }
-
-    if (!sid) {
-      Alert.alert("Missing", "Store haijapatikana.");
-      return;
-    }
-
-    if (!nextName) {
-      Alert.alert("Missing", "Weka jina jipya la store.");
-      return;
-    }
-
-    setRenameSaving(true);
-    try {
-      const { error: e } = await supabase.rpc("rename_store_v1", {
-        p_org_id: orgId,
-        p_store_id: sid,
-        p_new_name: nextName,
-      });
-
-      if (e) throw e;
-
-      await refresh();
-      await loadManagers();
-      await loadCreditFlags();
-      await loadExpenseFlags();
-      await loadMovementFlags();
-
-      if (sid === String(activeStoreId ?? "").trim()) {
-        await setActiveStoreId(sid);
-      }
-
-      Alert.alert("Success ✅", "Store name updated successfully.");
-      closeRename();
-    } catch (err: any) {
-      Alert.alert("Rename failed", err?.message ?? "Unknown error");
-    } finally {
-      setRenameSaving(false);
-    }
-  }, [
-    canManage,
-    activeOrgId,
-    renameStoreId,
-    renameValue,
-    activeStoreId,
-    setActiveStoreId,
-    refresh,
-    loadManagers,
-    loadCreditFlags,
-    loadMovementFlags,
-    closeRename,
-  ]);
+    Alert.alert("Success ✅", "Store name updated successfully.");
+    closeRename();
+  } catch (err: any) {
+    Alert.alert("Rename failed", err?.message ?? "Unknown error");
+  } finally {
+    setRenameSaving(false);
+  }
+}, [
+  canManage,
+  activeOrgId,
+  renameStoreId,
+  renameValue,
+  activeStoreId,
+  setActiveStoreId,
+  refresh,
+  loadManagers,
+  loadCreditFlags,
+  loadExpenseFlags,
+  loadMovementFlags,
+  loadSalesModes,
+  closeRename,
+]);
 
   const closeStoreNow = useCallback(async () => {
     if (!canManage) {
@@ -1061,14 +1204,14 @@ const loadStoreProductsPreview = useCallback(async (storeId: string) => {
       if (e) throw e;
 
       const wasActive = sid === String(activeStoreId ?? "").trim();
+await refresh();
+await loadManagers();
+await loadCreditFlags();
+await loadExpenseFlags();
+await loadMovementFlags();
+await loadSalesModes();
 
-      await refresh();
-      await loadManagers();
-      await loadCreditFlags();
-      await loadExpenseFlags();
-      await loadMovementFlags();
-
-      if (wasActive) {
+if (wasActive) {
         const nextActive = (list ?? []).find((s: any) => {
           const id = String(s?.store_id ?? "").trim();
           return id && id !== sid && (typeof s?.is_allowed === "boolean" ? s.is_allowed : true);
@@ -1086,22 +1229,24 @@ const loadStoreProductsPreview = useCallback(async (storeId: string) => {
     } finally {
       setCloseSaving(false);
     }
-  }, [
-    canManage,
-    activeOrgId,
-    closeStoreId,
-    closeStoreName,
-    closeConfirmText,
-    activeRole,
-    activeStoreId,
-    list,
-    setActiveStoreId,
-    refresh,
-    loadManagers,
-    loadCreditFlags,
-    loadMovementFlags,
-    closeCloseStore,
-  ]);
+}, [
+  canManage,
+  activeOrgId,
+  closeStoreId,
+  closeStoreName,
+  closeConfirmText,
+  activeRole,
+  activeStoreId,
+  list,
+  setActiveStoreId,
+  refresh,
+  loadManagers,
+  loadCreditFlags,
+  loadExpenseFlags,
+  loadMovementFlags,
+  loadSalesModes,
+  closeCloseStore,
+]);
 
   const filteredChoices = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -1152,14 +1297,15 @@ const loadStoreProductsPreview = useCallback(async (storeId: string) => {
     Alert.alert("Selected ✅", `Active store: ${storeName}`);
   };
 
-  const onRefreshAll = async () => {
-    await refresh();
-    await loadOrgSubscriptionLock();
-    await loadManagers();
-    await loadCreditFlags();
-    await loadExpenseFlags();
-    await loadMovementFlags();
-  };
+const onRefreshAll = async () => {
+  await refresh();
+  await loadOrgSubscriptionLock();
+  await loadManagers();
+  await loadCreditFlags();
+  await loadExpenseFlags();
+  await loadMovementFlags();
+  await loadSalesModes();
+};
 
   const openMovement = useCallback(() => {
     if (!activeStoreId) {
@@ -1177,13 +1323,14 @@ const loadStoreProductsPreview = useCallback(async (storeId: string) => {
   }, [activeStoreId, activeStoreName, router]);
 
   const Header = useMemo(() => {
-    const busy =
-      loading ||
-      refreshing ||
-      mgrLoading ||
-      creditFlagLoading ||
-      expenseFlagLoading ||
-      movementFlagLoading;
+  const busy =
+  loading ||
+  refreshing ||
+  mgrLoading ||
+  creditFlagLoading ||
+  expenseFlagLoading ||
+  movementFlagLoading ||
+  salesModeLoading;
 
     return (
       <View style={{ gap: 16 }}>
@@ -1659,9 +1806,10 @@ const loadStoreProductsPreview = useCallback(async (storeId: string) => {
     isDesktopWeb,
     loading,
     mgrLoading,
-    creditFlagLoading,
-    expenseFlagLoading,
-    movementFlagLoading,
+   creditFlagLoading,
+expenseFlagLoading,
+movementFlagLoading,
+salesModeLoading,
     onRefreshAll,
     refreshing,
     router,
@@ -1683,13 +1831,14 @@ const loadStoreProductsPreview = useCallback(async (storeId: string) => {
         numColumns={desktopColumns}
         keyExtractor={(item: any) => item.store_id}
         onRefresh={onRefreshAll}
-        refreshing={!!(
-          refreshing ||
-          mgrLoading ||
-          creditFlagLoading ||
-          expenseFlagLoading ||
-          movementFlagLoading
-        )}
+refreshing={!!(
+  refreshing ||
+  mgrLoading ||
+  creditFlagLoading ||
+  expenseFlagLoading ||
+  movementFlagLoading ||
+  salesModeLoading
+)}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           <View
@@ -1722,10 +1871,25 @@ const loadStoreProductsPreview = useCallback(async (storeId: string) => {
         renderItem={({ item }: { item: any }) => {
         const storeId = String(item.store_id);
 const rawIsActive = storeId === activeStoreId;
+
 const storeType = normalizeStoreType(item?.store_type);
+
 const isCapitalRecovery = storeType === "CAPITAL_RECOVERY";
 const isFieldProcurement = storeType === "FIELD_PROCUREMENT";
 const isPrecisionRetail = storeType === "PRECISION_RETAIL";
+
+const supportsSalesMode =
+  storeType === "STANDARD" ||
+  storeType === "PRECISION_RETAIL";
+
+const storeSalesMode = normalizeSalesMode(
+  salesModeByStoreId?.[storeId] ?? "DIRECT"
+);
+
+const cashierModeEnabled = storeSalesMode === "CASHIER";
+
+const salesModeIsSaving =
+  !!salesModeSaving?.[storeId];
 
 
           // ✅ lock flags from v2 (default allowed if missing)
@@ -2024,15 +2188,66 @@ fontSize: 11.5,
       </View>
     </Pressable>
 
-    {actionsOpen ? (
-      <View
-        style={{
-          gap: 8,
-          paddingTop: 2,
-        }}
-      >
+{actionsOpen ? (
+  <View
+    style={{
+      gap: 8,
+      paddingTop: 2,
+    }}
+  >
+    {supportsSalesMode ? (
+      <>
         <CompactSettingRow
-          title="Staff credit"
+          title="Cashier Mode"
+          subtitle={
+            cashierModeEnabled
+              ? "Cashiers ndiyo watatumika kukamilisha mauzo katika store hii"
+              : "Mauzo yatakamilishwa moja kwa moja kupitia Complete Sale"
+          }
+          value={cashierModeEnabled}
+          onValueChange={(v) =>
+            toggleStoreSalesMode(storeId, v)
+          }
+          disabled={salesModeIsSaving}
+          borderColor={
+            cashierModeEnabled
+              ? "rgba(5,150,105,0.35)"
+              : BORDER_SOFT
+          }
+          backgroundColor={
+            cashierModeEnabled
+              ? "#ECFDF5"
+              : "#F8FAFC"
+          }
+          textColor={TEXT}
+          mutedColor={MUTED}
+        />
+
+        {salesModeIsSaving ? (
+          <Text
+            style={{
+              color: FAINT,
+              marginTop: -4,
+              fontWeight: "800",
+              fontSize: 11.5,
+            }}
+          >
+            Saving sales mode...
+          </Text>
+        ) : null}
+
+        <View
+          style={{
+            height: 1,
+            backgroundColor: BORDER_SOFT,
+            marginVertical: 2,
+          }}
+        />
+      </>
+    ) : null}
+
+    <CompactSettingRow
+      title="Staff credit"
           subtitle="Staff arekodi na aone credit ya store hii"
           value={staffCreditEnabled}
           onValueChange={(v) => toggleStoreCredit(storeId, v)}

@@ -30,9 +30,11 @@ function shortId(id: string) {
   if (!s) return "—";
   return s.replace(/-/g, "").slice(0, 8).toUpperCase();
 }
+
 function clean(x: any) {
   return String(x ?? "").trim();
 }
+
 function parseDiscountFromNote(note: string | null | undefined) {
   const raw = String(note ?? "");
   const idx = raw.indexOf("DISCOUNT:");
@@ -54,7 +56,9 @@ function parseDiscountFromNote(note: string | null | undefined) {
   return {
     discountText: discountText || "—",
     discountAmount: Math.max(0, Math.round(okAmt)),
-    subtotal: Number.isFinite(okSub) ? Math.max(0, Math.round(okSub)) : null,
+    subtotal: Number.isFinite(okSub)
+      ? Math.max(0, Math.round(okSub))
+      : null,
     tag,
   };
 }
@@ -75,10 +79,22 @@ function stripDiscountTag(note: string | null | undefined) {
     .map((x) => x.trim())
     .filter((line) => {
       if (!line) return false;
+
       if (/^CASHIER_HANDOFF_ID\s*:/i.test(line)) return false;
       if (/^SPLIT_PAYMENT\s*:/i.test(line)) return false;
+      if (/^CREDIT_PAYMENT\s*:/i.test(line)) return false;
+      if (/^CREDIT\s*:/i.test(line)) return false;
 
-      // Zuia customer details zisijirudie kwenye Note kwa sababu tayari zipo juu.
+      if (/^SOLD_BY_MEMBERSHIP_ID\s*:/i.test(line)) return false;
+      if (/^CASHIER_MEMBERSHIP_ID\s*:/i.test(line)) return false;
+
+      if (/^HANDOFF_CUSTOMER_NAME\s*:/i.test(line)) return false;
+      if (/^HANDOFF_CUSTOMER_PHONE\s*:/i.test(line)) return false;
+
+      if (/^HANDOFF_SOLD_BY_MEMBERSHIP_ID\s*:/i.test(line)) {
+        return false;
+      }
+
       if (/^(customer|mteja)\s*:/i.test(line)) return false;
       if (/^(phone|simu|namba)\s*:/i.test(line)) return false;
 
@@ -89,9 +105,15 @@ function stripDiscountTag(note: string | null | undefined) {
 
   return cleaned || null;
 }
-function parseSplitPaymentFromNote(note: string | null | undefined) {
+
+function parseSplitPaymentFromNote(
+  note: string | null | undefined
+) {
   const raw = String(note ?? "");
-  const m = raw.match(/SPLIT_PAYMENT:\s*CASH=([0-9]+)\s*\|\s*MOBILE=([0-9]+)\s*\|\s*BANK=([0-9]+)/i);
+
+  const m = raw.match(
+    /SPLIT_PAYMENT:\s*CASH=([0-9]+)\s*\|\s*MOBILE=([0-9]+)\s*\|\s*BANK=([0-9]+)/i
+  );
 
   if (!m) return null;
 
@@ -100,18 +122,66 @@ function parseSplitPaymentFromNote(note: string | null | undefined) {
   const bank = Number(m[3] ?? 0);
 
   return {
-    cash: Number.isFinite(cash) ? Math.max(0, Math.round(cash)) : 0,
-    mobile: Number.isFinite(mobile) ? Math.max(0, Math.round(mobile)) : 0,
-    bank: Number.isFinite(bank) ? Math.max(0, Math.round(bank)) : 0,
+    cash: Number.isFinite(cash)
+      ? Math.max(0, Math.round(cash))
+      : 0,
+
+    mobile: Number.isFinite(mobile)
+      ? Math.max(0, Math.round(mobile))
+      : 0,
+
+    bank: Number.isFinite(bank)
+      ? Math.max(0, Math.round(bank))
+      : 0,
   };
 }
-function parseCustomerFromNote(note: string | null | undefined) {
+
+function parseCreditPaymentFromNote(
+  note: string | null | undefined
+) {
   const raw = String(note ?? "");
-  if (!raw.trim()) return { name: null as string | null, phone: null as string | null };
 
-  const clean = stripDiscountTag(raw) ?? "";
+  const m = raw.match(
+    /CREDIT_PAYMENT:\s*PAID=([0-9]+(?:\.[0-9]+)?)\s*\|\s*BALANCE=([0-9]+(?:\.[0-9]+)?)\s*\|\s*PAID_VIA=([A-Z]+)/i
+  );
 
-  const lines = String(clean)
+  if (!m) return null;
+
+  const paid = Number(m[1] ?? 0);
+  const balance = Number(m[2] ?? 0);
+
+  const paidVia = String(m[3] ?? "")
+    .trim()
+    .toUpperCase();
+
+  return {
+    paid: Number.isFinite(paid)
+      ? Math.max(0, paid)
+      : 0,
+
+    balance: Number.isFinite(balance)
+      ? Math.max(0, balance)
+      : 0,
+
+    paidVia: paidVia || "NONE",
+  };
+}
+
+function parseCustomerFromNote(
+  note: string | null | undefined
+) {
+  const raw = String(note ?? "");
+
+  if (!raw.trim()) {
+    return {
+      name: null as string | null,
+      phone: null as string | null,
+    };
+  }
+
+  const cleanNoteValue = stripDiscountTag(raw) ?? "";
+
+  const lines = String(cleanNoteValue)
     .split("\n")
     .map((x) => x.trim())
     .filter(Boolean);
@@ -120,21 +190,37 @@ function parseCustomerFromNote(note: string | null | undefined) {
   let phone: string | null = null;
 
   for (const line of lines) {
-    const m1 = line.match(/^(customer|mteja)\s*:\s*(.+)$/i);
-    if (m1?.[2] && !name) name = String(m1[2]).trim();
+    const m1 = line.match(
+      /^(customer|mteja)\s*:\s*(.+)$/i
+    );
 
-    const m2 = line.match(/^(phone|simu|namba)\s*:\s*(.+)$/i);
-    if (m2?.[2] && !phone) phone = String(m2[2]).trim();
+    if (m1?.[2] && !name) {
+      name = String(m1[2]).trim();
+    }
+
+    const m2 = line.match(
+      /^(phone|simu|namba)\s*:\s*(.+)$/i
+    );
+
+    if (m2?.[2] && !phone) {
+      phone = String(m2[2]).trim();
+    }
   }
 
-  return { name: name || null, phone: phone || null };
+  return {
+    name: name || null,
+    phone: phone || null,
+  };
 }
 
 function darDateKey(input?: string | null) {
   if (!input) return null;
 
   const d = new Date(input);
-  if (!Number.isFinite(d.getTime())) return null;
+
+  if (!Number.isFinite(d.getTime())) {
+    return null;
+  }
 
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Africa/Dar_es_Salaam",
@@ -143,25 +229,50 @@ function darDateKey(input?: string | null) {
     day: "2-digit",
   }).formatToParts(d);
 
-  const year = parts.find((p) => p.type === "year")?.value;
-  const month = parts.find((p) => p.type === "month")?.value;
-  const day = parts.find((p) => p.type === "day")?.value;
+  const year = parts.find(
+    (p) => p.type === "year"
+  )?.value;
 
-  if (!year || !month || !day) return null;
+  const month = parts.find(
+    (p) => p.type === "month"
+  )?.value;
+
+  const day = parts.find(
+    (p) => p.type === "day"
+  )?.value;
+
+  if (!year || !month || !day) {
+    return null;
+  }
+
   return `${year}-${month}-${day}`;
 }
 
 function isSameDayDar(input?: string | null) {
   const saleKey = darDateKey(input);
-  const nowKey = darDateKey(new Date().toISOString());
-  if (!saleKey || !nowKey) return false;
+
+  const nowKey = darDateKey(
+    new Date().toISOString()
+  );
+
+  if (!saleKey || !nowKey) {
+    return false;
+  }
+
   return saleKey === nowKey;
 }
-function addDaysLabel(input: string | null | undefined, days: number) {
+
+function addDaysLabel(
+  input: string | null | undefined,
+  days: number
+) {
   if (!input) return "—";
 
   const d = new Date(input);
-  if (!Number.isFinite(d.getTime())) return "—";
+
+  if (!Number.isFinite(d.getTime())) {
+    return "—";
+  }
 
   d.setDate(d.getDate() + days);
 
@@ -175,10 +286,17 @@ function addDaysLabel(input: string | null | undefined, days: number) {
     return d.toDateString();
   }
 }
+
 function downloadHtmlPdfOnWeb(html: string) {
-  if (Platform.OS !== "web" || typeof document === "undefined") return false;
+  if (
+    Platform.OS !== "web" ||
+    typeof document === "undefined"
+  ) {
+    return false;
+  }
 
   const iframe = document.createElement("iframe");
+
   iframe.style.position = "fixed";
   iframe.style.right = "0";
   iframe.style.bottom = "0";
@@ -190,6 +308,7 @@ function downloadHtmlPdfOnWeb(html: string) {
   document.body.appendChild(iframe);
 
   const doc = iframe.contentWindow?.document;
+
   if (!doc) {
     document.body.removeChild(iframe);
     return false;
@@ -213,10 +332,10 @@ function downloadHtmlPdfOnWeb(html: string) {
   return true;
 }
 
-
 type SaleDetail = {
   sale_id?: string;
   id?: string;
+
   created_at?: string;
 
   payment_method?: string | null;
@@ -232,52 +351,96 @@ type SaleDetail = {
   customer_phone?: string | null;
 
   created_by?: string | null;
+
   sold_by_name?: string | null;
   sold_by_role?: string | null;
 
   edited_at?: string | null;
   edited_by?: string | null;
   edited_by_name?: string | null;
+
   edit_count?: number | null;
+
   can_edit_same_day?: boolean | null;
 
   items?: Array<{
     product_id: string;
+
     product_name?: string | null;
+
     sku?: string | null;
+
     qty: number;
+
     unit_price?: number | null;
+
     line_total?: number | null;
   }>;
 };
+
+type SaleCashierMeta = {
+  handoff_id?: string | null;
+
+  sold_by_membership_id?: string | null;
+  sold_by_email?: string | null;
+
+  cashier_membership_id?: string | null;
+  cashier_email?: string | null;
+
+  customer_name?: string | null;
+  customer_phone?: string | null;
+};
+
 type OrgProfile = {
   business_name?: string | null;
+
   logo_url?: string | null;
+
   tin?: string | null;
+
   vrn?: string | null;
+
   registration_no?: string | null;
+
   email?: string | null;
+
   website?: string | null;
+
   tagline?: string | null;
+
   receipt_footer?: string | null;
 };
 
 type StoreProfile = {
   store_display_name?: string | null;
+
   phone?: string | null;
+
   whatsapp?: string | null;
+
   email?: string | null;
+
   region?: string | null;
+
   city?: string | null;
+
   address?: string | null;
+
   map_link?: string | null;
+
   bank_name?: string | null;
+
   account_name?: string | null;
+
   account_number?: string | null;
+
   mobile_money_name?: string | null;
+
   mobile_money_number?: string | null;
+
   payment_instructions?: string | null;
 };
+
 function MetaBlock({
   label,
   value,
@@ -290,17 +453,38 @@ function MetaBlock({
       style={{
         flex: 1,
         minWidth: 0,
+
         paddingVertical: 8,
         paddingHorizontal: 10,
+
         borderRadius: 14,
+
         borderWidth: 1,
-        borderColor: "rgba(255,255,255,0.07)",
-        backgroundColor: "rgba(255,255,255,0.03)",
+
+        borderColor:
+          "rgba(255,255,255,0.07)",
+
+        backgroundColor:
+          "rgba(255,255,255,0.03)",
       }}
     >
-      <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}>{label}</Text>
       <Text
-        style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4, fontSize: 13 }}
+        style={{
+          color: theme.colors.muted,
+          fontWeight: "800",
+          fontSize: 11,
+        }}
+      >
+        {label}
+      </Text>
+
+      <Text
+        style={{
+          color: theme.colors.text,
+          fontWeight: "900",
+          marginTop: 4,
+          fontSize: 13,
+        }}
         numberOfLines={2}
       >
         {value || "—"}
@@ -323,15 +507,33 @@ function MoneyTile({
       style={{
         flex: 1,
         minWidth: 0,
+
         paddingVertical: 10,
         paddingHorizontal: 12,
+
         borderRadius: 16,
+
         borderWidth: 1,
-        borderColor: highlight ? "rgba(52,211,153,0.26)" : "rgba(255,255,255,0.07)",
-        backgroundColor: highlight ? "rgba(52,211,153,0.08)" : "rgba(255,255,255,0.03)",
+
+        borderColor: highlight
+          ? "rgba(52,211,153,0.26)"
+          : "rgba(255,255,255,0.07)",
+
+        backgroundColor: highlight
+          ? "rgba(52,211,153,0.08)"
+          : "rgba(255,255,255,0.03)",
       }}
     >
-      <Text style={{ color: theme.colors.muted, fontWeight: "900", fontSize: 11 }}>{label}</Text>
+      <Text
+        style={{
+          color: theme.colors.muted,
+          fontWeight: "900",
+          fontSize: 11,
+        }}
+      >
+        {label}
+      </Text>
+
       <Text
         style={{
           color: theme.colors.text,
@@ -349,53 +551,128 @@ function MoneyTile({
 
 export default function ReceiptScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ saleId?: string | string[] }>();
-  const saleId = (one(params.saleId) ?? "").trim();
+
+  const params =
+    useLocalSearchParams<{
+      saleId?: string | string[];
+    }>();
+
+  const saleId = (
+    one(params.saleId) ?? ""
+  ).trim();
+
   const { width } = useWindowDimensions();
 
-  const { activeOrgId, activeOrgName, activeStoreId, activeStoreName, activeRole } = useOrg() as any;
+  const {
+    activeOrgId,
+    activeOrgName,
+    activeStoreId,
+    activeStoreName,
+    activeRole,
+  } = useOrg() as any;
 
-  const money = useOrgMoneyPrefs(activeOrgId);
-  const fmtMoney = useCallback((n: number) => money.fmt(Number(n || 0)), [money]);
+  const money =
+    useOrgMoneyPrefs(activeOrgId);
 
-  const [loading, setLoading] = useState(true);
-  const [deleting, setDeleting] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-const [detail, setDetail] = useState<SaleDetail | null>(null);
-const [orgProfile, setOrgProfile] = useState<OrgProfile | null>(null);
-const [storeProfile, setStoreProfile] = useState<StoreProfile | null>(null);
-const [showMoreOptions, setShowMoreOptions] = useState(false);
-  const [showShareOptions, setShowShareOptions] = useState(false);
+  const fmtMoney = useCallback(
+    (n: number) =>
+      money.fmt(Number(n || 0)),
+    [money]
+  );
 
-  const isDesktopWeb = Platform.OS === "web" && width >= 1180;
-  const isWideWeb = Platform.OS === "web" && width >= 900;
+  const [loading, setLoading] =
+    useState(true);
+
+  const [deleting, setDeleting] =
+    useState(false);
+
+  const [err, setErr] =
+    useState<string | null>(null);
+
+  const [detail, setDetail] =
+    useState<SaleDetail | null>(null);
+
+  const [cashierMeta, setCashierMeta] =
+    useState<SaleCashierMeta | null>(null);
+
+  const [orgProfile, setOrgProfile] =
+    useState<OrgProfile | null>(null);
+
+  const [storeProfile, setStoreProfile] =
+    useState<StoreProfile | null>(null);
+
+  const [
+    showMoreOptions,
+    setShowMoreOptions,
+  ] = useState(false);
+
+  const [
+    showShareOptions,
+    setShowShareOptions,
+  ] = useState(false);
+
+  const isDesktopWeb =
+    Platform.OS === "web" &&
+    width >= 1180;
+
+  const isWideWeb =
+    Platform.OS === "web" &&
+    width >= 900;
 
   const load = useCallback(async () => {
     setErr(null);
+
     setLoading(true);
 
     try {
-      if (!saleId) throw new Error("Missing saleId");
+      if (!saleId) {
+        throw new Error("Missing saleId");
+      }
 
-      const res = await supabase.rpc("get_sale_detail", { p_sale_id: saleId } as any);
-      if (res.error) throw res.error;
+      const res = await supabase.rpc(
+        "get_sale_detail",
+        {
+          p_sale_id: saleId,
+        } as any
+      );
 
-      const d = Array.isArray(res.data) ? (res.data[0] ?? null) : res.data;
+      if (res.error) {
+        throw res.error;
+      }
+
+      const d = Array.isArray(res.data)
+        ? res.data[0] ?? null
+        : res.data;
 
       setDetail(
         d
           ? ({
               ...d,
-              edited_at: d?.edited_at ?? null,
-              edited_by: d?.edited_by ?? null,
-              edited_by_name: d?.edited_by_name ?? null,
-              edit_count: d?.edit_count ?? 0,
-              can_edit_same_day: d?.can_edit_same_day ?? false,
+
+              edited_at:
+                d?.edited_at ?? null,
+
+              edited_by:
+                d?.edited_by ?? null,
+
+              edited_by_name:
+                d?.edited_by_name ?? null,
+
+              edit_count:
+                d?.edit_count ?? 0,
+
+              can_edit_same_day:
+                d?.can_edit_same_day ??
+                false,
             } as any)
           : null
       );
     } catch (e: any) {
-      setErr(e?.message ?? "Failed to load receipt");
+      setErr(
+        e?.message ??
+          "Failed to load receipt"
+      );
+
       setDetail(null);
     } finally {
       setLoading(false);
@@ -405,511 +682,1500 @@ const [showMoreOptions, setShowMoreOptions] = useState(false);
   useEffect(() => {
     void load();
   }, [load]);
-useEffect(() => {
-  let alive = true;
 
-  async function loadProfiles() {
-    try {
-      if (activeOrgId) {
-        const { data } = await supabase
-          .from("organization_profiles")
-          .select("*")
-          .eq("organization_id", activeOrgId)
-          .maybeSingle();
+  useEffect(() => {
+    let alive = true;
 
-        if (alive) setOrgProfile((data ?? null) as any);
-      } else {
-        setOrgProfile(null);
-      }
+    async function loadCashierMeta() {
+      try {
+        if (!saleId) {
+          if (alive) {
+            setCashierMeta(null);
+          }
 
-      if (activeStoreId) {
-        const { data } = await supabase
-          .from("store_profiles")
-          .select("*")
-          .eq("store_id", activeStoreId)
-          .maybeSingle();
+          return;
+        }
 
-        if (alive) setStoreProfile((data ?? null) as any);
-      } else {
-        setStoreProfile(null);
-      }
-    } catch {
-      if (alive) {
-        setOrgProfile(null);
-        setStoreProfile(null);
+        const {
+          data,
+          error,
+        } = await supabase.rpc(
+          "get_sale_cashier_handoff_meta_v1",
+          {
+            p_sale_id: saleId,
+          } as any
+        );
+
+        if (error) {
+          throw error;
+        }
+
+        const row = Array.isArray(data)
+          ? data[0] ?? null
+          : data;
+
+        if (alive) {
+          setCashierMeta(
+            (row ?? null) as
+              | SaleCashierMeta
+              | null
+          );
+        }
+      } catch {
+        if (alive) {
+          setCashierMeta(null);
+        }
       }
     }
-  }
 
-  void loadProfiles();
+    void loadCashierMeta();
 
-  return () => {
-    alive = false;
-  };
-}, [activeOrgId, activeStoreId]);
-  const receiptNo = useMemo(() => shortId(saleId), [saleId]);
+    return () => {
+      alive = false;
+    };
+  }, [saleId]);
+
+  useEffect(() => {
+    let alive = true;
+
+    async function loadProfiles() {
+      try {
+        if (activeOrgId) {
+          const { data } =
+            await supabase
+              .from(
+                "organization_profiles"
+              )
+              .select("*")
+              .eq(
+                "organization_id",
+                activeOrgId
+              )
+              .maybeSingle();
+
+          if (alive) {
+            setOrgProfile(
+              (data ?? null) as any
+            );
+          }
+        } else {
+          setOrgProfile(null);
+        }
+
+        if (activeStoreId) {
+          const { data } =
+            await supabase
+              .from("store_profiles")
+              .select("*")
+              .eq(
+                "store_id",
+                activeStoreId
+              )
+              .maybeSingle();
+
+          if (alive) {
+            setStoreProfile(
+              (data ?? null) as any
+            );
+          }
+        } else {
+          setStoreProfile(null);
+        }
+      } catch {
+        if (alive) {
+          setOrgProfile(null);
+          setStoreProfile(null);
+        }
+      }
+    }
+
+    void loadProfiles();
+
+    return () => {
+      alive = false;
+    };
+  }, [
+    activeOrgId,
+    activeStoreId,
+  ]);
+
+  const receiptNo = useMemo(
+    () => shortId(saleId),
+    [saleId]
+  );
 
   const when = useMemo(() => {
     const t = detail?.created_at;
+
     if (!t) return "—";
+
     try {
-      return new Date(t).toLocaleString();
+      return new Date(
+        t
+      ).toLocaleString();
     } catch {
       return String(t);
     }
   }, [detail?.created_at]);
 
-  const items = detail?.items ?? [];
+  const items =
+    detail?.items ?? [];
 
-  const computedTotal = useMemo(() => {
-    const dbTotal = Number(detail?.total_amount ?? NaN);
-    if (Number.isFinite(dbTotal)) return dbTotal;
-    return items.reduce((a, it) => a + Number(it.line_total ?? 0), 0);
-  }, [detail?.total_amount, items]);
-
-  const computedQty = useMemo(
-    () => items.reduce((a, it) => a + Number(it.qty ?? 0), 0),
-    [items]
-  );
-
-const payLabel = (detail?.payment_method ?? "CASH").toUpperCase();
-  const channelLabel = (detail?.payment_channel ?? "").trim();
-  const referenceLabel = (detail?.reference ?? "").trim();
-
-  const discountMeta = useMemo(() => parseDiscountFromNote(detail?.note), [detail?.note]);
-  const splitPaymentMeta = useMemo(() => parseSplitPaymentFromNote(detail?.note), [detail?.note]);
-  const cleanNote = useMemo(() => stripDiscountTag(detail?.note), [detail?.note]);
-
-  const isCredit = useMemo(() => payLabel === "CREDIT", [payLabel]);
-
-  const parsedCustomer = useMemo(() => parseCustomerFromNote(detail?.note), [detail?.note]);
-
-  const customerName = useMemo(() => {
-    const n = String(detail?.customer_full_name ?? "").trim();
-    return n || parsedCustomer.name;
-  }, [detail?.customer_full_name, parsedCustomer.name]);
-
-  const customerPhone = useMemo(() => {
-    const p = String(detail?.customer_phone ?? "").trim();
-    return p || parsedCustomer.phone;
-  }, [detail?.customer_phone, parsedCustomer.phone]);
-
-  const soldByLabel = useMemo(() => {
-    const name = String(detail?.sold_by_name ?? "").trim();
-    const role = String(detail?.sold_by_role ?? "").trim();
-
-    if (name && role) return `${role.toUpperCase()} • ${name}`;
-    if (name) return name;
-
-    const r = (activeRole ?? "staff").toUpperCase();
-    return `${r} (You)`;
-  }, [detail?.sold_by_name, detail?.sold_by_role, activeRole]);
-
-const isOwner = String(activeRole ?? "").toLowerCase() === "owner";
-
-const dbCanEditSameDay = !!detail?.can_edit_same_day;
-const uiSameDayGuard = useMemo(() => isSameDayDar(detail?.created_at), [detail?.created_at]);
-
-// Staff/admin: same-day only.
-// Owner: anaweza ku-edit/delete hata receipt ya zamani.
-const canEditReceipt = isOwner || (dbCanEditSameDay && uiSameDayGuard);
-const canDeleteReceipt = isOwner || (dbCanEditSameDay && uiSameDayGuard);
-
-  const editCountLabel = useMemo(() => {
-    const n = Number(detail?.edit_count ?? 0);
-    return Number.isFinite(n) ? Math.max(0, Math.trunc(n)) : 0;
-  }, [detail?.edit_count]);
-
-  const editedByLabel = useMemo(() => {
-    const name = String(detail?.edited_by_name ?? "").trim();
-    const raw = String(detail?.edited_by ?? "").trim();
-
-    if (name) return name;
-    if (raw) return raw;
-    return "—";
-  }, [detail?.edited_by_name, detail?.edited_by]);
-
-  const editedAtLabel = useMemo(() => {
-    const t = String(detail?.edited_at ?? "").trim();
-    if (!t) return "—";
-    try {
-      return new Date(t).toLocaleString();
-    } catch {
-      return t;
-    }
-  }, [detail?.edited_at]);
-
-  const paidAmount = useMemo(() => {
-    if (!isCredit) return computedTotal;
-    const p = Number(detail?.paid_amount ?? NaN);
-    if (!Number.isFinite(p)) return 0;
-    return Math.max(0, Math.min(computedTotal, p));
-  }, [isCredit, detail?.paid_amount, computedTotal]);
-
-  const dueAmount = useMemo(() => {
-    if (!isCredit) return 0;
-    return Math.max(0, computedTotal - Math.max(0, paidAmount));
-  }, [isCredit, computedTotal, paidAmount]);
-
-  const paymentTitle = useMemo(
-    () => (splitPaymentMeta ? "SPLIT" : isCredit ? "CREDIT" : payLabel),
-    [splitPaymentMeta, isCredit, payLabel]
-  );
-
-  const deleteSameDay = useCallback(async () => {
-    if (!saleId) return;
-
-    if (!canDeleteReceipt) {
-      Alert.alert(
-        "Delete closed",
-        "Risiti hii haiwezi kufutwa. Staff/Admin wanaweza kufuta za leo tu. Owner pekee anaweza kufuta risiti za zamani."
+  const computedTotal =
+    useMemo(() => {
+      const dbTotal = Number(
+        detail?.total_amount ?? NaN
       );
-      return;
-    }
 
-    if (deleting) return;
-
-    const runDelete = async () => {
-      try {
-        setDeleting(true);
-
-        const { data, error } = await supabase.rpc("delete_sale_same_day_v1", {
-          p_sale_id: saleId,
-        } as any);
-
-        if (error) throw error;
-
-        const row = Array.isArray(data) ? data[0] : data;
-        const restoredQty = Number(row?.restored_qty ?? 0);
-
-        Alert.alert("Deleted", `Receipt imefutwa vizuri. Stock restored: ${restoredQty}.`);
-
-        router.replace("/(tabs)/sales/history");
-      } catch (e: any) {
-        Alert.alert("Delete failed", e?.message ?? "Failed to delete same-day receipt");
-      } finally {
-        setDeleting(false);
+      if (
+        Number.isFinite(dbTotal)
+      ) {
+        return dbTotal;
       }
-    };
 
-    if (Platform.OS === "web") {
-      const ok = window.confirm(
-        "Delete Same Day\n\nUkifuta risiti hii, items zote zitarudi store na sale itaondoka kabisa. Uko sure?"
+      return items.reduce(
+        (a, it) =>
+          a +
+          Number(
+            it.line_total ?? 0
+          ),
+        0
       );
+    }, [
+      detail?.total_amount,
+      items,
+    ]);
 
-      if (!ok) return;
-
-      await runDelete();
-      return;
-    }
-
-    Alert.alert(
-      "Delete Same Day",
-      "Ukifuta risiti hii, items zote zitarudi store na sale itaondoka kabisa. Uko sure?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: runDelete,
-        },
-      ]
+  const computedQty =
+    useMemo(
+      () =>
+        items.reduce(
+          (a, it) =>
+            a +
+            Number(it.qty ?? 0),
+          0
+        ),
+      [items]
     );
-  }, [saleId, canDeleteReceipt, deleting, router]);
-const businessDisplayName = clean(orgProfile?.business_name) || activeOrgName || "—";
-const storeDisplayName = clean(storeProfile?.store_display_name) || activeStoreName || "—";
 
-const orgTin = clean(orgProfile?.tin);
-const orgVrn = clean(orgProfile?.vrn);
-const orgRegNo = clean(orgProfile?.registration_no);
-const orgEmail = clean(orgProfile?.email);
-const orgWebsite = clean(orgProfile?.website);
-const orgTagline = clean(orgProfile?.tagline);
-const receiptFooterText =
-  clean(orgProfile?.receipt_footer) || "Thank you for shopping with us.";
+  const payLabel = (
+    detail?.payment_method ??
+    "CASH"
+  ).toUpperCase();
 
-const storePhone = clean(storeProfile?.phone);
-const storeWhatsapp = clean(storeProfile?.whatsapp);
-const storeEmail = clean(storeProfile?.email);
-const storeRegion = clean(storeProfile?.region);
-const storeCity = clean(storeProfile?.city);
-const storeAddress = clean(storeProfile?.address);
+  const channelLabel = (
+    detail?.payment_channel ?? ""
+  ).trim();
 
-const storeBankName = clean(storeProfile?.bank_name);
-const storeAccountName = clean(storeProfile?.account_name);
-const storeAccountNumber = clean(storeProfile?.account_number);
-const storeMobileMoneyName = clean(storeProfile?.mobile_money_name);
-const storeMobileMoneyNumber = clean(storeProfile?.mobile_money_number);
-const storePaymentInstructions = clean(storeProfile?.payment_instructions);
-const documentType = isCredit ? "Credit Sale" : splitPaymentMeta ? "Split Payment Sale" : "Cash Sale";
-const dueDateLabel = isCredit ? addDaysLabel(detail?.created_at, 7) : "—";
-// Public receipt QR removed for now.
-  const shareReceipt = useCallback(async () => {
-    if (!saleId) return;
+  const referenceLabel = (
+    detail?.reference ?? ""
+  ).trim();
 
-   const org = businessDisplayName;
-const store = storeDisplayName;
+  const discountMeta = useMemo(
+    () =>
+      parseDiscountFromNote(
+        detail?.note
+      ),
+    [detail?.note]
+  );
 
-    const header = [
-      "🧾 INVOICE RECEIPT",
-      `Receipt No: ${receiptNo}`,
-      `Business: ${org}`,
-      orgTagline ? `Slogan: ${orgTagline}` : null,
-      orgTin ? `TIN: ${orgTin}` : null,
-      orgVrn ? `VRN: ${orgVrn}` : null,
-      orgRegNo ? `Reg No: ${orgRegNo}` : null,
-      "",
-      `Store: ${store}`,
-      storePhone ? `Phone: ${storePhone}` : null,
-      storeWhatsapp ? `WhatsApp: ${storeWhatsapp}` : null,
-      storeAddress || storeCity || storeRegion
-        ? `Location: ${[storeAddress, storeCity, storeRegion].filter(Boolean).join(", ")}`
-        : null,
-      "",
-      `Date: ${when}`,
-      `Sold By: ${soldByLabel}`,
-      `Payment: ${paymentTitle}`,
-      channelLabel ? `Channel: ${channelLabel}` : null,
-      referenceLabel ? `Reference: ${referenceLabel}` : null,
-      "",
-    ].filter(Boolean) as string[];
-if (splitPaymentMeta) {
-      header.push(`Cash Paid: ${fmtMoney(splitPaymentMeta.cash)}`);
-      header.push(`Mobile Paid: ${fmtMoney(splitPaymentMeta.mobile)}`);
-      header.push(`Bank Paid: ${fmtMoney(splitPaymentMeta.bank)}`);
-      header.push("");
-    }
-    if (customerName || customerPhone) {
-      header.push(`Customer: ${customerName || "—"}`);
-      if (customerPhone) header.push(`Phone: ${customerPhone}`);
-      header.push("");
-    }
+  const splitPaymentMeta =
+    useMemo(
+      () =>
+        parseSplitPaymentFromNote(
+          detail?.note
+        ),
+      [detail?.note]
+    );
 
-    const body =
-      items.length === 0
-        ? ["Items: —", ""]
-        : [
-            `Items (${items.length}) • Qty (${computedQty})`,
-            ...items.map((it) => {
-              const unitPrice = Number(it.unit_price ?? 0);
-              const lineTotal = Number(it.line_total ?? unitPrice * Number(it.qty ?? 0));
-              const name = it.product_name ?? "Product";
-              const sku = it.sku ? ` (SKU: ${it.sku})` : "";
-              return `- ${name}${sku} | ${it.qty} × ${fmtMoney(unitPrice)} = ${fmtMoney(lineTotal)}`;
-            }),
-            "",
-          ];
+  const creditPaymentMeta =
+    useMemo(
+      () =>
+        parseCreditPaymentFromNote(
+          detail?.note
+        ),
+      [detail?.note]
+    );
 
-    const moneyBlock: string[] = [];
+  const cleanNote = useMemo(
+    () =>
+      stripDiscountTag(
+        detail?.note
+      ),
+    [detail?.note]
+  );
 
-    if (discountMeta) {
-      const subtotal = discountMeta.subtotal;
-      if (typeof subtotal === "number") moneyBlock.push(`SUBTOTAL: ${fmtMoney(subtotal)}`);
-      moneyBlock.push(
-        `DISCOUNT: -${fmtMoney(discountMeta.discountAmount)} (${discountMeta.discountText})`
+  const isCredit = useMemo(
+    () =>
+      payLabel === "CREDIT" ||
+      !!creditPaymentMeta,
+    [
+      payLabel,
+      creditPaymentMeta,
+    ]
+  );
+
+  const parsedCustomer =
+    useMemo(
+      () =>
+        parseCustomerFromNote(
+          detail?.note
+        ),
+      [detail?.note]
+    );
+
+  const customerName =
+    useMemo(() => {
+      const saleName = String(
+        detail?.customer_full_name ??
+          ""
+      ).trim();
+
+      const handoffName = String(
+        cashierMeta?.customer_name ??
+          ""
+      ).trim();
+
+      return (
+        saleName ||
+        handoffName ||
+        parsedCustomer.name
       );
-      moneyBlock.push(`TOTAL (AFTER DISCOUNT): ${fmtMoney(computedTotal)}`);
-      moneyBlock.push("");
-    }
+    }, [
+      detail?.customer_full_name,
+      cashierMeta?.customer_name,
+      parsedCustomer.name,
+    ]);
 
-    if (isCredit) {
-      if (!discountMeta) moneyBlock.push(`TOTAL SALE: ${fmtMoney(computedTotal)}`);
-      moneyBlock.push("");
-      moneyBlock.push(`TOTAL PAID: ${fmtMoney(paidAmount)}`);
-      moneyBlock.push(`OUTSTANDING BALANCE: ${fmtMoney(dueAmount)}`);
-      moneyBlock.push(`DUE DATE: ${dueDateLabel}`);
-      moneyBlock.push(`STATUS: ${dueAmount > 0 ? "OUTSTANDING" : "CLEARED"}`);
-      moneyBlock.push("");
-    }
+  const customerPhone =
+    useMemo(() => {
+      const salePhone = String(
+        detail?.customer_phone ?? ""
+      ).trim();
 
-    const footer = [
-      !discountMeta && !isCredit ? `TOTAL MONEY IN: ${fmtMoney(computedTotal)}` : null,
-      cleanNote ? "" : null,
-      cleanNote ? `NOTE: ${cleanNote}` : null,
-      "",
-      `${receiptFooterText} 🙏`,
-    ].filter(Boolean) as string[];
+      const handoffPhone = String(
+        cashierMeta?.customer_phone ??
+          ""
+      ).trim();
 
-    const message = [...header, ...body, ...moneyBlock, ...footer].join("\n");
+      return (
+        salePhone ||
+        handoffPhone ||
+        parsedCustomer.phone
+      );
+    }, [
+      detail?.customer_phone,
+      cashierMeta?.customer_phone,
+      parsedCustomer.phone,
+    ]);
 
-    try {
-      await Share.share({ message });
-    } catch {}
-  }, [
-    saleId,
-    businessDisplayName,
-    storeDisplayName,
-    receiptNo,
-    paymentTitle,
-    channelLabel,
-    referenceLabel,
-    when,
-    soldByLabel,
-    customerName,
-    customerPhone,
-    items,
-    computedQty,
-    computedTotal,
-    discountMeta,
-    splitPaymentMeta,
-    cleanNote,
-    isCredit,
-    paidAmount,
-    dueAmount,
-    fmtMoney,
-    orgTin,
-    orgVrn,
-    orgRegNo,
-    orgTagline,
-    receiptFooterText,
-    storePhone,
-    storeWhatsapp,
-    storeRegion,
-    storeCity,
-    storeAddress,
-    storeBankName,
-    storeAccountName,
-    storeAccountNumber,
-    storeMobileMoneyName,
-    storeMobileMoneyNumber,
-    storePaymentInstructions,
-    dueDateLabel,
-  ]);
+  const soldByLabel =
+    useMemo(() => {
+      const name = String(
+        detail?.sold_by_name ?? ""
+      ).trim();
 
-const shareReceiptPdf = useCallback(async () => {
-  if (!saleId) return;
+      const role = String(
+        detail?.sold_by_role ?? ""
+      ).trim();
 
-  const esc = (v: any) =>
-    String(v ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
+      const handoffSoldBy =
+        String(
+          cashierMeta?.sold_by_email ??
+            ""
+        ).trim();
 
- const org = businessDisplayName;
-const store = storeDisplayName;
+      if (name && role) {
+        return `${role.toUpperCase()} • ${name}`;
+      }
 
-  const statusLabel = isCredit ? (dueAmount > 0 ? "OUTSTANDING" : "CLEARED") : "PAID";
+      if (name) {
+        return name;
+      }
 
-  const rowsHtml =
-    items.length === 0
-      ? `<tr><td colspan="5">No items found.</td></tr>`
-      : items
-          .map((it, idx) => {
-            const qty = Number(it.qty ?? 0);
-            const unitPrice = Number(it.unit_price ?? 0);
-            const lineTotal = Number(it.line_total ?? unitPrice * qty);
+      if (handoffSoldBy) {
+        return `STAFF • ${handoffSoldBy}`;
+      }
 
-            return `
-              <tr>
-                <td>${idx + 1}</td>
-                <td>
-                  <b>${esc(it.product_name ?? "Product")}</b><br/>
-                  <span class="muted">SKU: ${esc(it.sku ?? "—")}</span>
-                </td>
-                <td class="right">${esc(qty)}</td>
-                <td class="right">${esc(fmtMoney(unitPrice))}</td>
-                <td class="right">${esc(fmtMoney(lineTotal))}</td>
-              </tr>
-            `;
-          })
-          .join("");
+      const r = (
+        activeRole ?? "staff"
+      ).toUpperCase();
 
-  const splitHtml = splitPaymentMeta
-    ? `
-      <table class="info-table" style="margin-top:8px;">
-        <tr>
-          <td><b>Cash Paid</b><br/>${esc(fmtMoney(splitPaymentMeta.cash))}</td>
-          <td><b>Mobile Paid</b><br/>${esc(fmtMoney(splitPaymentMeta.mobile))}</td>
-          <td><b>Bank Paid</b><br/>${esc(fmtMoney(splitPaymentMeta.bank))}</td>
-        </tr>
-      </table>
-    `
-    : "";
+      return `${r} (You)`;
+    }, [
+      detail?.sold_by_name,
+      detail?.sold_by_role,
+      cashierMeta?.sold_by_email,
+      activeRole,
+    ]);
 
-  const discountRows = discountMeta
-    ? `
-      <tr>
-        <td><b>Subtotal</b></td>
-        <td class="right">${esc(fmtMoney(discountMeta.subtotal ?? computedTotal))}</td>
-      </tr>
-      <tr>
-        <td><b>Discount (${esc(discountMeta.discountText)})</b></td>
-        <td class="right">-${esc(fmtMoney(discountMeta.discountAmount))}</td>
-      </tr>
-    `
-    : "";
+  const cashierLabel =
+    useMemo(() => {
+      const email = String(
+        cashierMeta?.cashier_email ??
+          ""
+      ).trim();
 
-  const creditRows = isCredit
-    ? `
-      <tr>
-        <td><b>Total Paid</b></td>
-        <td class="right">${esc(fmtMoney(paidAmount))}</td>
-      </tr>
-      <tr>
-        <td><b>Outstanding Balance</b></td>
-        <td class="right">${esc(fmtMoney(dueAmount))}</td>
-      </tr>
-      <tr>
-        <td><b>Due Date</b></td>
-        <td class="right">${esc(dueDateLabel)}</td>
-      </tr>
-    `
-    : "";
+      return email || null;
+    }, [
+      cashierMeta?.cashier_email,
+    ]);
 
-const logoUrl = clean(orgProfile?.logo_url);
-  const orgIdentityHtml = [
-    orgTin ? `TIN: ${esc(orgTin)}` : "",
-    orgVrn ? `VRN: ${esc(orgVrn)}` : "",
-    orgRegNo ? `Reg No: ${esc(orgRegNo)}` : "",
-    orgEmail ? `Email: ${esc(orgEmail)}` : "",
-    orgWebsite ? `Website: ${esc(orgWebsite)}` : "",
-  ].filter(Boolean).join(" &nbsp;•&nbsp; ");
+  const isOwner =
+    String(
+      activeRole ?? ""
+    ).toLowerCase() ===
+    "owner";
 
-  const storeLocationText = [storeAddress, storeCity, storeRegion].filter(Boolean).join(", ");
-  const storeContactHtml = [
-    storePhone ? `Phone: ${esc(storePhone)}` : "",
-    storeWhatsapp ? `WhatsApp: ${esc(storeWhatsapp)}` : "",
-    storeEmail ? `Email: ${esc(storeEmail)}` : "",
-    storeLocationText ? `Location: ${esc(storeLocationText)}` : "",
-  ].filter(Boolean).join("<br/>");
+  const dbCanEditSameDay =
+    !!detail?.can_edit_same_day;
 
-  const paymentDetailsHtml =
-    storeBankName ||
-    storeAccountName ||
-    storeAccountNumber ||
-    storeMobileMoneyName ||
-    storeMobileMoneyNumber ||
-    storePaymentInstructions
-      ? `
-        <div class="section-title">Payment Details</div>
-        <table class="info-table compact">
-          <tr>
-            <td>
-              <span class="label">Bank</span>
-              <div class="strong">${esc([storeBankName, storeAccountName].filter(Boolean).join(" • ") || "—")}</div>
-              ${storeAccountNumber ? `<div class="muted">Account No: ${esc(storeAccountNumber)}</div>` : ""}
-            </td>
-            <td>
-              <span class="label">Mobile Money</span>
-              <div class="strong">${esc(storeMobileMoneyName || "—")}</div>
-              ${storeMobileMoneyNumber ? `<div class="muted">Lipa / Pay No: ${esc(storeMobileMoneyNumber)}</div>` : ""}
-            </td>
-            <td>
-              <span class="label">Instructions</span>
-              <div>${esc(storePaymentInstructions || "—")}</div>
-            </td>
-          </tr>
-        </table>
-      `
-      : "";
+  const uiSameDayGuard =
+    useMemo(
+      () =>
+        isSameDayDar(
+          detail?.created_at
+        ),
+      [detail?.created_at]
+    );
 
-  const html = `
+  const canEditReceipt =
+    isOwner ||
+    (dbCanEditSameDay &&
+      uiSameDayGuard);
+
+  const canDeleteReceipt =
+    isOwner ||
+    (dbCanEditSameDay &&
+      uiSameDayGuard);
+
+  const editCountLabel =
+    useMemo(() => {
+      const n = Number(
+        detail?.edit_count ?? 0
+      );
+
+      return Number.isFinite(n)
+        ? Math.max(
+            0,
+            Math.trunc(n)
+          )
+        : 0;
+    }, [
+      detail?.edit_count,
+    ]);
+
+  const editedByLabel =
+    useMemo(() => {
+      const name = String(
+        detail?.edited_by_name ?? ""
+      ).trim();
+
+      const raw = String(
+        detail?.edited_by ?? ""
+      ).trim();
+
+      if (name) return name;
+      if (raw) return raw;
+
+      return "—";
+    }, [
+      detail?.edited_by_name,
+      detail?.edited_by,
+    ]);
+
+  const editedAtLabel =
+    useMemo(() => {
+      const t = String(
+        detail?.edited_at ?? ""
+      ).trim();
+
+      if (!t) return "—";
+
+      try {
+        return new Date(
+          t
+        ).toLocaleString();
+      } catch {
+        return t;
+      }
+    }, [
+      detail?.edited_at,
+    ]);
+
+  const paidAmount =
+    useMemo(() => {
+      if (!isCredit) {
+        return computedTotal;
+      }
+
+      if (creditPaymentMeta) {
+        return Math.max(
+          0,
+          Math.min(
+            computedTotal,
+            Number(
+              creditPaymentMeta.paid ??
+                0
+            )
+          )
+        );
+      }
+
+      const p = Number(
+        detail?.paid_amount ?? NaN
+      );
+
+      if (
+        !Number.isFinite(p)
+      ) {
+        return 0;
+      }
+
+      return Math.max(
+        0,
+        Math.min(
+          computedTotal,
+          p
+        )
+      );
+    }, [
+      isCredit,
+      creditPaymentMeta,
+      detail?.paid_amount,
+      computedTotal,
+    ]);
+
+  const dueAmount =
+    useMemo(() => {
+      if (!isCredit) {
+        return 0;
+      }
+
+      if (creditPaymentMeta) {
+        return Math.max(
+          0,
+          Number(
+            creditPaymentMeta.balance ??
+              0
+          )
+        );
+      }
+
+      return Math.max(
+        0,
+        computedTotal -
+          Math.max(
+            0,
+            paidAmount
+          )
+      );
+    }, [
+      isCredit,
+      creditPaymentMeta,
+      computedTotal,
+      paidAmount,
+    ]);
+
+  const paymentTitle =
+    useMemo(() => {
+      if (splitPaymentMeta) {
+        return "SPLIT";
+      }
+
+      if (isCredit) {
+        return "CREDIT";
+      }
+
+      return payLabel;
+    }, [
+      splitPaymentMeta,
+      isCredit,
+      payLabel,
+    ]);
+
+  const creditPaidViaLabel =
+    useMemo(() => {
+      if (!creditPaymentMeta) {
+        return null;
+      }
+
+      const via = String(
+        creditPaymentMeta.paidVia ??
+          ""
+      )
+        .trim()
+        .toUpperCase();
+
+      if (
+        !via ||
+        via === "NONE"
+      ) {
+        return null;
+      }
+
+      return via;
+    }, [
+      creditPaymentMeta,
+    ]);
+
+  const deleteSameDay =
+    useCallback(async () => {
+      if (!saleId) return;
+
+      if (!canDeleteReceipt) {
+        Alert.alert(
+          "Delete closed",
+          "Risiti hii haiwezi kufutwa. Staff/Admin wanaweza kufuta za leo tu. Owner pekee anaweza kufuta risiti za zamani."
+        );
+
+        return;
+      }
+
+      if (deleting) {
+        return;
+      }
+
+      const runDelete =
+        async () => {
+          try {
+            setDeleting(true);
+
+            const {
+              data,
+              error,
+            } =
+              await supabase.rpc(
+                "delete_sale_same_day_v1",
+                {
+                  p_sale_id:
+                    saleId,
+                } as any
+              );
+
+            if (error) {
+              throw error;
+            }
+
+            const row =
+              Array.isArray(data)
+                ? data[0]
+                : data;
+
+            const restoredQty =
+              Number(
+                row?.restored_qty ??
+                  0
+              );
+
+            Alert.alert(
+              "Deleted",
+              `Receipt imefutwa vizuri. Stock restored: ${restoredQty}.`
+            );
+
+            router.replace(
+              "/(tabs)/sales/history"
+            );
+          } catch (e: any) {
+            Alert.alert(
+              "Delete failed",
+              e?.message ??
+                "Failed to delete same-day receipt"
+            );
+          } finally {
+            setDeleting(false);
+          }
+        };
+
+      if (
+        Platform.OS === "web"
+      ) {
+        const ok =
+          window.confirm(
+            "Delete Same Day\n\nUkifuta risiti hii, items zote zitarudi store na sale itaondoka kabisa. Uko sure?"
+          );
+
+        if (!ok) return;
+
+        await runDelete();
+
+        return;
+      }
+
+      Alert.alert(
+        "Delete Same Day",
+        "Ukifuta risiti hii, items zote zitarudi store na sale itaondoka kabisa. Uko sure?",
+        [
+          {
+            text: "Cancel",
+            style: "cancel",
+          },
+          {
+            text: "Delete",
+            style:
+              "destructive",
+            onPress:
+              runDelete,
+          },
+        ]
+      );
+    }, [
+      saleId,
+      canDeleteReceipt,
+      deleting,
+      router,
+    ]);
+
+  const businessDisplayName =
+    clean(
+      orgProfile?.business_name
+    ) ||
+    activeOrgName ||
+    "—";
+
+  const storeDisplayName =
+    clean(
+      storeProfile?.store_display_name
+    ) ||
+    activeStoreName ||
+    "—";
+
+  const orgTin =
+    clean(orgProfile?.tin);
+
+  const orgVrn =
+    clean(orgProfile?.vrn);
+
+  const orgRegNo =
+    clean(
+      orgProfile?.registration_no
+    );
+
+  const orgEmail =
+    clean(orgProfile?.email);
+
+  const orgWebsite =
+    clean(orgProfile?.website);
+
+  const orgTagline =
+    clean(orgProfile?.tagline);
+
+  const receiptFooterText =
+    clean(
+      orgProfile?.receipt_footer
+    ) ||
+    "Thank you for shopping with us.";
+
+  const storePhone =
+    clean(storeProfile?.phone);
+
+  const storeWhatsapp =
+    clean(storeProfile?.whatsapp);
+
+  const storeEmail =
+    clean(storeProfile?.email);
+
+  const storeRegion =
+    clean(storeProfile?.region);
+
+  const storeCity =
+    clean(storeProfile?.city);
+
+  const storeAddress =
+    clean(storeProfile?.address);
+
+  const storeBankName =
+    clean(
+      storeProfile?.bank_name
+    );
+
+  const storeAccountName =
+    clean(
+      storeProfile?.account_name
+    );
+
+  const storeAccountNumber =
+    clean(
+      storeProfile?.account_number
+    );
+
+  const storeMobileMoneyName =
+    clean(
+      storeProfile?.mobile_money_name
+    );
+
+  const storeMobileMoneyNumber =
+    clean(
+      storeProfile?.mobile_money_number
+    );
+
+  const storePaymentInstructions =
+    clean(
+      storeProfile?.payment_instructions
+    );
+
+  const documentType =
+    isCredit
+      ? "Credit Sale"
+      : splitPaymentMeta
+        ? "Split Payment Sale"
+        : "Cash Sale";
+
+  const dueDateLabel =
+    isCredit
+      ? addDaysLabel(
+          detail?.created_at,
+          7
+        )
+      : "—";
+
+  const shareReceipt =
+    useCallback(async () => {
+      if (!saleId) return;
+
+      const org =
+        businessDisplayName;
+
+      const store =
+        storeDisplayName;
+
+      const header = [
+        "🧾 INVOICE RECEIPT",
+
+        `Receipt No: ${receiptNo}`,
+
+        `Business: ${org}`,
+
+        orgTagline
+          ? `Slogan: ${orgTagline}`
+          : null,
+
+        orgTin
+          ? `TIN: ${orgTin}`
+          : null,
+
+        orgVrn
+          ? `VRN: ${orgVrn}`
+          : null,
+
+        orgRegNo
+          ? `Reg No: ${orgRegNo}`
+          : null,
+
+        "",
+
+        `Store: ${store}`,
+
+        storePhone
+          ? `Phone: ${storePhone}`
+          : null,
+
+        storeWhatsapp
+          ? `WhatsApp: ${storeWhatsapp}`
+          : null,
+
+        storeAddress ||
+        storeCity ||
+        storeRegion
+          ? `Location: ${[
+              storeAddress,
+              storeCity,
+              storeRegion,
+            ]
+              .filter(
+                Boolean
+              )
+              .join(", ")}`
+          : null,
+
+        "",
+
+        `Date: ${when}`,
+
+        `Sold By: ${soldByLabel}`,
+
+        cashierLabel
+          ? `Received By / Cashier: ${cashierLabel}`
+          : null,
+
+        `Payment: ${paymentTitle}`,
+
+        isCredit &&
+        creditPaidViaLabel
+          ? `Paid Via: ${creditPaidViaLabel}`
+          : null,
+
+        channelLabel
+          ? `Channel: ${channelLabel}`
+          : null,
+
+        referenceLabel
+          ? `Reference: ${referenceLabel}`
+          : null,
+
+        "",
+      ].filter(
+        Boolean
+      ) as string[];
+
+      if (
+        splitPaymentMeta
+      ) {
+        header.push(
+          `Cash Paid: ${fmtMoney(
+            splitPaymentMeta.cash
+          )}`
+        );
+
+        header.push(
+          `Mobile Paid: ${fmtMoney(
+            splitPaymentMeta.mobile
+          )}`
+        );
+
+        header.push(
+          `Bank Paid: ${fmtMoney(
+            splitPaymentMeta.bank
+          )}`
+        );
+
+        header.push("");
+      }
+
+      if (
+        customerName ||
+        customerPhone
+      ) {
+        header.push(
+          `Customer: ${
+            customerName || "—"
+          }`
+        );
+
+        if (
+          customerPhone
+        ) {
+          header.push(
+            `Phone: ${customerPhone}`
+          );
+        }
+
+        header.push("");
+      }
+
+      const body =
+        items.length === 0
+          ? [
+              "Items: —",
+              "",
+            ]
+          : [
+              `Items (${items.length}) • Qty (${computedQty})`,
+
+              ...items.map(
+                (it) => {
+                  const unitPrice =
+                    Number(
+                      it.unit_price ??
+                        0
+                    );
+
+                  const lineTotal =
+                    Number(
+                      it.line_total ??
+                        unitPrice *
+                          Number(
+                            it.qty ??
+                              0
+                          )
+                    );
+
+                  const name =
+                    it.product_name ??
+                    "Product";
+
+                  const sku =
+                    it.sku
+                      ? ` (SKU: ${it.sku})`
+                      : "";
+
+                  return `- ${name}${sku} | ${it.qty} × ${fmtMoney(
+                    unitPrice
+                  )} = ${fmtMoney(
+                    lineTotal
+                  )}`;
+                }
+              ),
+
+              "",
+            ];
+
+      const moneyBlock:
+        string[] = [];
+
+      if (discountMeta) {
+        const subtotal =
+          discountMeta.subtotal;
+
+        if (
+          typeof subtotal ===
+          "number"
+        ) {
+          moneyBlock.push(
+            `SUBTOTAL: ${fmtMoney(
+              subtotal
+            )}`
+          );
+        }
+
+        moneyBlock.push(
+          `DISCOUNT: -${fmtMoney(
+            discountMeta.discountAmount
+          )} (${discountMeta.discountText})`
+        );
+
+        moneyBlock.push(
+          `TOTAL (AFTER DISCOUNT): ${fmtMoney(
+            computedTotal
+          )}`
+        );
+
+        moneyBlock.push("");
+      }
+
+      if (isCredit) {
+        if (!discountMeta) {
+          moneyBlock.push(
+            `TOTAL SALE: ${fmtMoney(
+              computedTotal
+            )}`
+          );
+        }
+
+        moneyBlock.push("");
+
+        moneyBlock.push(
+          `TOTAL PAID: ${fmtMoney(
+            paidAmount
+          )}`
+        );
+
+        moneyBlock.push(
+          `OUTSTANDING BALANCE: ${fmtMoney(
+            dueAmount
+          )}`
+        );
+
+        moneyBlock.push(
+          `DUE DATE: ${dueDateLabel}`
+        );
+
+        moneyBlock.push(
+          `STATUS: ${
+            dueAmount > 0
+              ? "OUTSTANDING"
+              : "CLEARED"
+          }`
+        );
+
+        moneyBlock.push("");
+      }
+
+      const footer = [
+        !discountMeta &&
+        !isCredit
+          ? `TOTAL MONEY IN: ${fmtMoney(
+              computedTotal
+            )}`
+          : null,
+
+        cleanNote
+          ? ""
+          : null,
+
+        cleanNote
+          ? `NOTE: ${cleanNote}`
+          : null,
+
+        "",
+
+        `${receiptFooterText} 🙏`,
+      ].filter(
+        Boolean
+      ) as string[];
+
+      const message = [
+        ...header,
+        ...body,
+        ...moneyBlock,
+        ...footer,
+      ].join("\n");
+
+      try {
+        await Share.share({
+          message,
+        });
+      } catch {}
+    }, [
+      saleId,
+      businessDisplayName,
+      storeDisplayName,
+      receiptNo,
+      paymentTitle,
+      channelLabel,
+      referenceLabel,
+      when,
+      soldByLabel,
+      cashierLabel,
+      customerName,
+      customerPhone,
+      items,
+      computedQty,
+      computedTotal,
+      discountMeta,
+      splitPaymentMeta,
+      creditPaymentMeta,
+      creditPaidViaLabel,
+      cleanNote,
+      isCredit,
+      paidAmount,
+      dueAmount,
+      fmtMoney,
+      orgTin,
+      orgVrn,
+      orgRegNo,
+      orgTagline,
+      receiptFooterText,
+      storePhone,
+      storeWhatsapp,
+      storeRegion,
+      storeCity,
+      storeAddress,
+      storeBankName,
+      storeAccountName,
+      storeAccountNumber,
+      storeMobileMoneyName,
+      storeMobileMoneyNumber,
+      storePaymentInstructions,
+      dueDateLabel,
+    ]);
+
+  const shareReceiptPdf =
+    useCallback(async () => {
+      if (!saleId) return;
+
+      const esc = (
+        v: any
+      ) =>
+        String(v ?? "")
+          .replace(
+            /&/g,
+            "&amp;"
+          )
+          .replace(
+            /</g,
+            "&lt;"
+          )
+          .replace(
+            />/g,
+            "&gt;"
+          )
+          .replace(
+            /"/g,
+            "&quot;"
+          );
+
+      const org =
+        businessDisplayName;
+
+      const store =
+        storeDisplayName;
+
+      const statusLabel =
+        isCredit
+          ? dueAmount > 0
+            ? "OUTSTANDING"
+            : "CLEARED"
+          : "PAID";
+
+      const rowsHtml =
+        items.length === 0
+          ? `<tr><td colspan="5">No items found.</td></tr>`
+          : items
+              .map(
+                (
+                  it,
+                  idx
+                ) => {
+                  const qty =
+                    Number(
+                      it.qty ??
+                        0
+                    );
+
+                  const unitPrice =
+                    Number(
+                      it.unit_price ??
+                        0
+                    );
+
+                  const lineTotal =
+                    Number(
+                      it.line_total ??
+                        unitPrice *
+                          qty
+                    );
+
+                  return `
+<tr>
+  <td>${idx + 1}</td>
+
+  <td>
+    <b>${esc(
+      it.product_name ??
+        "Product"
+    )}</b>
+
+    <br/>
+
+    <span class="muted">
+      SKU: ${esc(
+        it.sku ?? "—"
+      )}
+    </span>
+  </td>
+
+  <td class="right">
+    ${esc(qty)}
+  </td>
+
+  <td class="right">
+    ${esc(
+      fmtMoney(
+        unitPrice
+      )
+    )}
+  </td>
+
+  <td class="right">
+    ${esc(
+      fmtMoney(
+        lineTotal
+      )
+    )}
+  </td>
+</tr>
+`;
+                }
+              )
+              .join("");
+
+      const splitHtml =
+        splitPaymentMeta
+          ? `
+<table
+  class="info-table"
+  style="margin-top:8px;"
+>
+  <tr>
+    <td>
+      <b>Cash Paid</b>
+      <br/>
+      ${esc(
+        fmtMoney(
+          splitPaymentMeta.cash
+        )
+      )}
+    </td>
+
+    <td>
+      <b>Mobile Paid</b>
+      <br/>
+      ${esc(
+        fmtMoney(
+          splitPaymentMeta.mobile
+        )
+      )}
+    </td>
+
+    <td>
+      <b>Bank Paid</b>
+      <br/>
+      ${esc(
+        fmtMoney(
+          splitPaymentMeta.bank
+        )
+      )}
+    </td>
+  </tr>
+</table>
+`
+          : "";
+
+      const discountRows =
+        discountMeta
+          ? `
+<tr>
+  <td>
+    <b>Subtotal</b>
+  </td>
+
+  <td class="right">
+    ${esc(
+      fmtMoney(
+        discountMeta.subtotal ??
+          computedTotal
+      )
+    )}
+  </td>
+</tr>
+
+<tr>
+  <td>
+    <b>
+      Discount (${esc(
+        discountMeta.discountText
+      )})
+    </b>
+  </td>
+
+  <td class="right">
+    -${esc(
+      fmtMoney(
+        discountMeta.discountAmount
+      )
+    )}
+  </td>
+</tr>
+`
+          : "";
+
+      const creditRows =
+        isCredit
+          ? `
+<tr>
+  <td>
+    <b>Total Paid</b>
+  </td>
+
+  <td class="right">
+    ${esc(
+      fmtMoney(
+        paidAmount
+      )
+    )}
+  </td>
+</tr>
+
+<tr>
+  <td>
+    <b>
+      Outstanding Balance
+    </b>
+  </td>
+
+  <td class="right">
+    ${esc(
+      fmtMoney(
+        dueAmount
+      )
+    )}
+  </td>
+</tr>
+
+<tr>
+  <td>
+    <b>Due Date</b>
+  </td>
+
+  <td class="right">
+    ${esc(
+      dueDateLabel
+    )}
+  </td>
+</tr>
+`
+          : "";
+
+      const logoUrl =
+        clean(
+          orgProfile?.logo_url
+        );
+
+      const orgIdentityHtml =
+        [
+          orgTin
+            ? `TIN: ${esc(
+                orgTin
+              )}`
+            : "",
+
+          orgVrn
+            ? `VRN: ${esc(
+                orgVrn
+              )}`
+            : "",
+
+          orgRegNo
+            ? `Reg No: ${esc(
+                orgRegNo
+              )}`
+            : "",
+
+          orgEmail
+            ? `Email: ${esc(
+                orgEmail
+              )}`
+            : "",
+
+          orgWebsite
+            ? `Website: ${esc(
+                orgWebsite
+              )}`
+            : "",
+        ]
+          .filter(Boolean)
+          .join(
+            " &nbsp;•&nbsp; "
+          );
+
+      const storeLocationText =
+        [
+          storeAddress,
+          storeCity,
+          storeRegion,
+        ]
+          .filter(Boolean)
+          .join(", ");
+
+      const storeContactHtml =
+        [
+          storePhone
+            ? `Phone: ${esc(
+                storePhone
+              )}`
+            : "",
+
+          storeWhatsapp
+            ? `WhatsApp: ${esc(
+                storeWhatsapp
+              )}`
+            : "",
+
+          storeEmail
+            ? `Email: ${esc(
+                storeEmail
+              )}`
+            : "",
+
+          storeLocationText
+            ? `Location: ${esc(
+                storeLocationText
+              )}`
+            : "",
+        ]
+          .filter(Boolean)
+          .join("<br/>");
+
+      const paymentDetailsHtml =
+        storeBankName ||
+        storeAccountName ||
+        storeAccountNumber ||
+        storeMobileMoneyName ||
+        storeMobileMoneyNumber ||
+        storePaymentInstructions
+          ? `
+<div class="section-title">
+  Payment Details
+</div>
+
+<table class="info-table compact">
+  <tr>
+    <td>
+      <span class="label">
+        Bank
+      </span>
+
+      <div class="strong">
+        ${esc(
+          [
+            storeBankName,
+            storeAccountName,
+          ]
+            .filter(Boolean)
+            .join(" • ") ||
+            "—"
+        )}
+      </div>
+
+      ${
+        storeAccountNumber
+          ? `
+<div class="muted">
+  Account No: ${esc(
+    storeAccountNumber
+  )}
+</div>
+`
+          : ""
+      }
+    </td>
+
+    <td>
+      <span class="label">
+        Mobile Money
+      </span>
+
+      <div class="strong">
+        ${esc(
+          storeMobileMoneyName ||
+            "—"
+        )}
+      </div>
+
+      ${
+        storeMobileMoneyNumber
+          ? `
+<div class="muted">
+  Lipa / Pay No: ${esc(
+    storeMobileMoneyNumber
+  )}
+</div>
+`
+          : ""
+      }
+    </td>
+
+    <td>
+      <span class="label">
+        Instructions
+      </span>
+
+      <div>
+        ${esc(
+          storePaymentInstructions ||
+            "—"
+        )}
+      </div>
+    </td>
+  </tr>
+</table>
+`
+          : "";
+
+      const html = `
 <!doctype html>
+
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Invoice Receipt ${esc(receiptNo)}</title>
+
+  <title>
+    Invoice Receipt ${esc(
+      receiptNo
+    )}
+  </title>
+
   <style>
     @page {
       size: A4 portrait;
@@ -921,16 +2187,25 @@ const logoUrl = clean(orgProfile?.logo_url);
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
-img {
-  -webkit-print-color-adjust: exact !important;
-  print-color-adjust: exact !important;
-}
-    html, body {
+
+    img {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    html,
+    body {
       margin: 0 !important;
       padding: 0 !important;
+
       background: #ffffff;
       color: #111827;
-      font-family: Arial, Helvetica, sans-serif;
+
+      font-family:
+        Arial,
+        Helvetica,
+        sans-serif;
+
       font-size: 10px;
       line-height: 1.35;
     }
@@ -943,887 +2218,2536 @@ img {
     .topbar {
       display: table;
       width: 100%;
-      border-bottom: 2px solid #111827;
+
+      border-bottom:
+        2px solid #111827;
+
       padding-bottom: 10px;
       margin-bottom: 10px;
     }
 
     .brand {
       display: table-cell;
+
       vertical-align: top;
+
       width: 62%;
     }
 
-.doc-meta {
-  display: table-cell;
-  vertical-align: top;
-  width: 38%;
-  text-align: right;
-  color: #111827;
-  font-size: 9.5px;
-  line-height: 1.45;
-}
+    .doc-meta {
+      display: table-cell;
+
+      vertical-align: top;
+
+      width: 38%;
+
+      text-align: right;
+
+      color: #111827;
+
+      font-size: 9.5px;
+
+      line-height: 1.45;
+    }
 
     .logo-wrap {
       width: 92px;
       height: 92px;
-      border: 1px solid #94a3b8;
+
+      border:
+        1px solid #94a3b8;
+
       border-radius: 16px;
+
       overflow: hidden;
+
       display: inline-block;
+
       vertical-align: top;
+
       margin-right: 14px;
+
       background: #f8fafc;
     }
 
- .logo-wrap img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
+    .logo-wrap img {
+      width: 100%;
+      height: 100%;
 
-  image-rendering: auto;
-  -webkit-print-color-adjust: exact;
-  print-color-adjust: exact;
+      object-fit: contain;
 
-  filter: none;
-  opacity: 1;
-}
+      image-rendering: auto;
+
+      -webkit-print-color-adjust:
+        exact;
+
+      print-color-adjust:
+        exact;
+
+      filter: none;
+      opacity: 1;
+    }
 
     .brand-info {
       display: inline-block;
+
       vertical-align: top;
+
       max-width: 72%;
+
       padding-top: 2px;
     }
-/* Public receipt QR removed */
+
     .brand-title {
       font-size: 21px;
       font-weight: 900;
+
       letter-spacing: 0.2px;
-      text-transform: uppercase;
+
+      text-transform:
+        uppercase;
+
       color: #0f172a;
     }
-.brand-sub {
-  margin-top: 3px;
-  font-size: 9.5px;
-  font-weight: 800;
-  color: #111827;
-}
+
+    .brand-sub {
+      margin-top: 3px;
+
+      font-size: 9.5px;
+
+      font-weight: 800;
+
+      color: #111827;
+    }
 
     .doc-title {
       font-size: 18px;
       font-weight: 900;
+
       color: #0f172a;
-      text-transform: uppercase;
-      letter-spacing: 0.3px;
+
+      text-transform:
+        uppercase;
+
+      letter-spacing:
+        0.3px;
     }
 
     .badge {
-      display: inline-block;
-      border: 1px solid #10b981;
-      background: #ecfdf5;
-      color: #047857;
-      border-radius: 999px;
-      padding: 4px 9px;
+      display:
+        inline-block;
+
+      border:
+        1px solid #10b981;
+
+      background:
+        #ecfdf5;
+
+      color:
+        #047857;
+
+      border-radius:
+        999px;
+
+      padding:
+        4px 9px;
+
       font-weight: 900;
-      margin-top: 5px;
-      font-size: 9px;
+
+      margin-top:
+        5px;
+
+      font-size:
+        9px;
     }
 
     .section-title {
-      font-size: 11px;
-      font-weight: 900;
-      text-transform: uppercase;
-      color: #0f172a;
-      margin: 11px 0 5px;
-      padding-bottom: 4px;
-      border-bottom: 1px solid #94a3b8;
-      letter-spacing: 0.2px;
+      font-size:
+        11px;
+
+      font-weight:
+        900;
+
+      text-transform:
+        uppercase;
+
+      color:
+        #0f172a;
+
+      margin:
+        11px 0 5px;
+
+      padding-bottom:
+        4px;
+
+      border-bottom:
+        1px solid #94a3b8;
+
+      letter-spacing:
+        0.2px;
     }
 
-    .info-table, .data-table, .summary-table {
-      width: 100%;
-      border-collapse: collapse;
-      table-layout: fixed;
-      margin-top: 6px;
+    .info-table,
+    .data-table,
+    .summary-table {
+      width:
+        100%;
+
+      border-collapse:
+        collapse;
+
+      table-layout:
+        fixed;
+
+      margin-top:
+        6px;
     }
 
-    .info-table td, .summary-table td {
-      border: 1px solid #94a3b8;
-      padding: 7px;
-      vertical-align: top;
-      word-break: break-word;
+    .info-table td,
+    .summary-table td {
+      border:
+        1px solid #94a3b8;
+
+      padding:
+        7px;
+
+      vertical-align:
+        top;
+
+      word-break:
+        break-word;
     }
 
     .info-table.compact td {
-      padding: 6px;
+      padding:
+        6px;
     }
 
-    .data-table th, .data-table td {
-      border: 1px solid #94a3b8;
-      padding: 6px;
-      text-align: left;
-      vertical-align: top;
-      word-break: break-word;
+    .data-table th,
+    .data-table td {
+      border:
+        1px solid #94a3b8;
+
+      padding:
+        6px;
+
+      text-align:
+        left;
+
+      vertical-align:
+        top;
+
+      word-break:
+        break-word;
     }
 
-   .data-table th {
-  background: #f1f5f9;
-  font-size: 8.5px;
-  font-weight: 900;
-  text-transform: uppercase;
-  color: #111827;
-}
+    .data-table th {
+      background:
+        #f1f5f9;
+
+      font-size:
+        8.5px;
+
+      font-weight:
+        900;
+
+      text-transform:
+        uppercase;
+
+      color:
+        #111827;
+    }
 
     .data-table td {
-      font-size: 9px;
+      font-size:
+        9px;
     }
 
-.label {
-  display: block;
-  color: #111827;
-  font-weight: 900;
-  font-size: 8.5px;
-  text-transform: uppercase;
-  margin-bottom: 3px;
-}
+    .label {
+      display:
+        block;
+
+      color:
+        #111827;
+
+      font-weight:
+        900;
+
+      font-size:
+        8.5px;
+
+      text-transform:
+        uppercase;
+
+      margin-bottom:
+        3px;
+    }
 
     .strong {
-      font-weight: 900;
-      color: #111827;
+      font-weight:
+        900;
+
+      color:
+        #111827;
     }
 
- .muted {
-  color: #111827;
-  font-weight: 700;
-}
+    .muted {
+      color:
+        #111827;
+
+      font-weight:
+        700;
+    }
 
     .right {
-      text-align: right;
-      white-space: nowrap;
+      text-align:
+        right;
+
+      white-space:
+        nowrap;
     }
 
     .note {
-      border: 1px solid #94a3b8;
-      background: #f8fafc;
-      padding: 8px;
-      margin-top: 8px;
-      font-size: 9px;
+      border:
+        1px solid #94a3b8;
+
+      background:
+        #f8fafc;
+
+      padding:
+        8px;
+
+      margin-top:
+        8px;
+
+      font-size:
+        9px;
     }
 
     .summary-wrap {
-      display: table;
-      width: 100%;
-      margin-top: 10px;
-      page-break-inside: avoid;
-      break-inside: avoid;
+      display:
+        table;
+
+      width:
+        100%;
+
+      margin-top:
+        10px;
+
+      page-break-inside:
+        avoid;
+
+      break-inside:
+        avoid;
     }
 
     .summary-left {
-      display: table-cell;
-      width: 56%;
-      vertical-align: top;
-      padding-right: 10px;
+      display:
+        table-cell;
+
+      width:
+        56%;
+
+      vertical-align:
+        top;
+
+      padding-right:
+        10px;
     }
 
     .summary-right {
-      display: table-cell;
-      width: 44%;
-      vertical-align: top;
+      display:
+        table-cell;
+
+      width:
+        44%;
+
+      vertical-align:
+        top;
     }
 
     .total-box {
-      border: 1.5px solid #10b981;
-      background: #ecfdf5;
-      padding: 11px;
-      text-align: right;
+      border:
+        1.5px solid #10b981;
+
+      background:
+        #ecfdf5;
+
+      padding:
+        11px;
+
+      text-align:
+        right;
     }
 
     .total-label {
-      color: #047857;
-      font-weight: 900;
-      font-size: 9px;
-      text-transform: uppercase;
+      color:
+        #047857;
+
+      font-weight:
+        900;
+
+      font-size:
+        9px;
+
+      text-transform:
+        uppercase;
     }
 
     .total-value {
-      font-size: 22px;
-      font-weight: 900;
-      margin-top: 3px;
-      color: #0f172a;
+      font-size:
+        22px;
+
+      font-weight:
+        900;
+
+      margin-top:
+        3px;
+
+      color:
+        #0f172a;
     }
 
     .sign-section {
-      display: table;
-      width: 100%;
-      table-layout: fixed;
-      border-spacing: 8px 0;
-      margin-top: 13px;
-      page-break-inside: avoid;
-      break-inside: avoid;
+      display:
+        table;
+
+      width:
+        100%;
+
+      table-layout:
+        fixed;
+
+      border-spacing:
+        8px 0;
+
+      margin-top:
+        13px;
+
+      page-break-inside:
+        avoid;
+
+      break-inside:
+        avoid;
     }
 
     .sign-box {
-      display: table-cell;
-      border: 1px solid #94a3b8;
-      padding: 9px;
-      vertical-align: bottom;
-      height: 58px;
-      font-size: 9px;
+      display:
+        table-cell;
+
+      border:
+        1px solid #94a3b8;
+
+      padding:
+        9px;
+
+      vertical-align:
+        bottom;
+
+      height:
+        58px;
+
+      font-size:
+        9px;
     }
 
     .sign-line {
-      border-top: 1px solid #111827;
-      margin-top: 20px;
-      margin-bottom: 6px;
+      border-top:
+        1px solid #111827;
+
+      margin-top:
+        20px;
+
+      margin-bottom:
+        6px;
     }
 
     .terms {
-      margin-top: 9px;
-      border: 1px solid #94a3b8;
-      background: #f8fafc;
-      padding: 7px;
-      font-size: 8.8px;
-      color: #334155;
-      font-weight: 700;
+      margin-top:
+        9px;
+
+      border:
+        1px solid #94a3b8;
+
+      background:
+        #f8fafc;
+
+      padding:
+        7px;
+
+      font-size:
+        8.8px;
+
+      color:
+        #334155;
+
+      font-weight:
+        700;
     }
 
     .footer {
-      margin-top: 9px;
-      padding-top: 7px;
-      border-top: 1px solid #cbd5e1;
-      color: #64748b;
-      text-align: center;
-      font-size: 8.8px;
-      font-weight: 800;
+      margin-top:
+        9px;
+
+      padding-top:
+        7px;
+
+      border-top:
+        1px solid #cbd5e1;
+
+      color:
+        #64748b;
+
+      text-align:
+        center;
+
+      font-size:
+        8.8px;
+
+      font-weight:
+        800;
     }
   </style>
 </head>
 
 <body>
   <div class="page">
+
     <div class="topbar">
+
       <div class="brand">
-        ${logoUrl ? `<span class="logo-wrap"><img
-  src="${esc(logoUrl)}"
-  crossorigin="anonymous"
-/></span>` : ""}
+
+        ${
+          logoUrl
+            ? `
+<span class="logo-wrap">
+  <img
+    src="${esc(
+      logoUrl
+    )}"
+    crossorigin="anonymous"
+  />
+</span>
+`
+            : ""
+        }
+
         <span class="brand-info">
-          <div class="brand-title">${esc(org)}</div>
-          ${orgTagline ? `<div class="brand-sub">${esc(orgTagline)}</div>` : ""}
-          ${orgIdentityHtml ? `<div class="brand-sub">${orgIdentityHtml}</div>` : ""}
-          ${storeContactHtml ? `<div class="brand-sub">${storeContactHtml}</div>` : ""}
+
+          <div class="brand-title">
+            ${esc(org)}
+          </div>
+
+          ${
+            orgTagline
+              ? `
+<div class="brand-sub">
+  ${esc(
+    orgTagline
+  )}
+</div>
+`
+              : ""
+          }
+
+          ${
+            orgIdentityHtml
+              ? `
+<div class="brand-sub">
+  ${orgIdentityHtml}
+</div>
+`
+              : ""
+          }
+
+          ${
+            storeContactHtml
+              ? `
+<div class="brand-sub">
+  ${storeContactHtml}
+</div>
+`
+              : ""
+          }
+
         </span>
+
       </div>
 
       <div class="doc-meta">
-        <div class="doc-title">Invoice Receipt</div>
-        <b>No:</b> ${esc(receiptNo)}<br/>
-        <b>Document Type:</b> ${esc(documentType)}<br/>
-        <b>Date:</b> ${esc(when)}<br/>
-        ${isCredit ? `<b>Due Date:</b> ${esc(dueDateLabel)}<br/>` : ""}
-        <b>Store:</b> ${esc(store)}<br/>
-        <span class="badge">${esc(paymentTitle)} • ${esc(statusLabel)}</span><br/>
-        <!-- Public receipt QR removed -->
+
+        <div class="doc-title">
+          Invoice Receipt
+        </div>
+
+        <b>No:</b>
+        ${esc(
+          receiptNo
+        )}
+        <br/>
+
+        <b>
+          Document Type:
+        </b>
+
+        ${esc(
+          documentType
+        )}
+
+        <br/>
+
+        <b>Date:</b>
+
+        ${esc(when)}
+
+        <br/>
+
+        ${
+          isCredit
+            ? `
+<b>
+  Due Date:
+</b>
+
+${esc(
+  dueDateLabel
+)}
+
+<br/>
+`
+            : ""
+        }
+
+        <b>Store:</b>
+
+        ${esc(store)}
+
+        <br/>
+
+        <span class="badge">
+
+          ${esc(
+            paymentTitle
+          )}
+
+          •
+
+          ${esc(
+            statusLabel
+          )}
+
+        </span>
+
+        <br/>
+
       </div>
+
     </div>
 
-    <div class="section-title">Sale Information</div>
+    <div class="section-title">
+      Sale Information
+    </div>
+
     <table class="info-table">
+
       <tr>
+
         <td>
-          <span class="label">Sold By</span>
-          <div class="strong">${esc(soldByLabel)}</div>
+
+          <span class="label">
+            Sold By / Staff
+          </span>
+
+          <div class="strong">
+            ${esc(
+              soldByLabel
+            )}
+          </div>
+
         </td>
+
         <td>
-          <span class="label">Customer</span>
-          <div class="strong">${esc(customerName || "Walk-in Customer")}</div>
-          ${customerPhone ? `<div class="muted">Phone: ${esc(customerPhone)}</div>` : ""}
+
+          <span class="label">
+            Received By / Cashier
+          </span>
+
+          <div class="strong">
+            ${esc(
+              cashierLabel ||
+                "—"
+            )}
+          </div>
+
         </td>
+
         <td>
-          <span class="label">Payment</span>
-          <div class="strong">${esc(paymentTitle)}</div>
-          ${channelLabel ? `<div class="muted">Channel: ${esc(channelLabel)}</div>` : ""}
-          ${referenceLabel ? `<div class="muted">Ref: ${esc(referenceLabel)}</div>` : ""}
+
+          <span class="label">
+            Customer
+          </span>
+
+          <div class="strong">
+
+            ${esc(
+              customerName ||
+                "Walk-in Customer"
+            )}
+
+          </div>
+
+          ${
+            customerPhone
+              ? `
+<div class="muted">
+  Phone: ${esc(
+    customerPhone
+  )}
+</div>
+`
+              : ""
+          }
+
         </td>
+
+        <td>
+
+          <span class="label">
+            Payment
+          </span>
+
+          <div class="strong">
+            ${esc(
+              paymentTitle
+            )}
+          </div>
+
+          ${
+            isCredit &&
+            creditPaidViaLabel
+              ? `
+<div class="muted">
+  Paid Via:
+  ${esc(
+    creditPaidViaLabel
+  )}
+</div>
+`
+              : ""
+          }
+
+          ${
+            channelLabel
+              ? `
+<div class="muted">
+  Channel:
+  ${esc(
+    channelLabel
+  )}
+</div>
+`
+              : ""
+          }
+
+          ${
+            referenceLabel
+              ? `
+<div class="muted">
+  Ref:
+  ${esc(
+    referenceLabel
+  )}
+</div>
+`
+              : ""
+          }
+
+        </td>
+
       </tr>
+
     </table>
 
     ${splitHtml}
 
-    <div class="section-title">Items (${items.length}) • Qty (${computedQty})</div>
+    <div class="section-title">
+      Items (${items.length})
+      •
+      Qty (${computedQty})
+    </div>
+
     <table class="data-table">
+
       <thead>
+
         <tr>
-          <th style="width:5%">#</th>
-          <th style="width:45%">Item</th>
-          <th style="width:10%" class="right">Qty</th>
-          <th style="width:20%" class="right">Unit Price</th>
-          <th style="width:20%" class="right">Total</th>
+
+          <th style="width:5%">
+            #
+          </th>
+
+          <th style="width:45%">
+            Item
+          </th>
+
+          <th
+            style="width:10%"
+            class="right"
+          >
+            Qty
+          </th>
+
+          <th
+            style="width:20%"
+            class="right"
+          >
+            Unit Price
+          </th>
+
+          <th
+            style="width:20%"
+            class="right"
+          >
+            Total
+          </th>
+
         </tr>
+
       </thead>
-      <tbody>${rowsHtml}</tbody>
+
+      <tbody>
+        ${rowsHtml}
+      </tbody>
+
     </table>
 
-    ${cleanNote ? `<div class="note"><b>Note:</b><br/>${esc(cleanNote)}</div>` : ""}
+    ${
+      cleanNote
+        ? `
+<div class="note">
+
+  <b>
+    Note:
+  </b>
+
+  <br/>
+
+  ${esc(
+    cleanNote
+  )}
+
+</div>
+`
+        : ""
+    }
 
     <div class="summary-wrap">
+
       <div class="summary-left">
-        <div class="section-title">Payment Summary</div>
+
+        <div class="section-title">
+          Payment Summary
+        </div>
+
         <table class="summary-table">
+
           ${discountRows}
+
           ${creditRows}
+
           ${
             !isCredit
               ? `
-                <tr>
-                  <td><b>Total Paid</b></td>
-                  <td class="right">${esc(fmtMoney(computedTotal))}</td>
-                </tr>
-              `
+<tr>
+
+  <td>
+    <b>
+      Total Paid
+    </b>
+  </td>
+
+  <td class="right">
+    ${esc(
+      fmtMoney(
+        computedTotal
+      )
+    )}
+  </td>
+
+</tr>
+`
               : ""
           }
+
           <tr>
-            <td><b>Status</b></td>
-            <td class="right"><b>${esc(statusLabel)}</b></td>
+
+            <td>
+              <b>
+                Status
+              </b>
+            </td>
+
+            <td class="right">
+              <b>
+                ${esc(
+                  statusLabel
+                )}
+              </b>
+            </td>
+
           </tr>
+
         </table>
+
       </div>
 
       <div class="summary-right">
+
         <div class="total-box">
-          <div class="total-label">${isCredit ? "Total Sale" : "Total Amount"}</div>
-          <div class="total-value">${esc(fmtMoney(computedTotal))}</div>
+
+          <div class="total-label">
+
+            ${
+              isCredit
+                ? "Total Sale"
+                : "Total Amount"
+            }
+
+          </div>
+
+          <div class="total-value">
+
+            ${esc(
+              fmtMoney(
+                computedTotal
+              )
+            )}
+
+          </div>
+
         </div>
+
       </div>
+
     </div>
 
     <div class="sign-section">
+
       <div class="sign-box">
-        <div class="sign-line"></div>
-        <b>Prepared By</b><br/>
-        <span>${esc(soldByLabel)}</span>
+
+        <div class="sign-line">
+        </div>
+
+        <b>
+          Sold By / Staff
+        </b>
+
+        <br/>
+
+        <span>
+          ${esc(
+            soldByLabel
+          )}
+        </span>
+
+      </div>
+
+      ${
+        cashierLabel
+          ? `
+<div class="sign-box">
+
+  <div class="sign-line">
+  </div>
+
+  <b>
+    Received By / Cashier
+  </b>
+
+  <br/>
+
+  <span>
+    ${esc(
+      cashierLabel
+    )}
+  </span>
+
+</div>
+`
+          : ""
+      }
+
+      <div class="sign-box">
+
+        <div class="sign-line">
+        </div>
+
+        <b>
+          Customer Signature
+        </b>
+
+        <br/>
+
+        <span>
+
+          ${esc(
+            customerName ||
+              "Customer"
+          )}
+
+        </span>
+
       </div>
 
       <div class="sign-box">
-        <div class="sign-line"></div>
-        <b>Customer Signature</b><br/>
-        <span>${esc(customerName || "Customer")}</span>
+
+        <div class="sign-line">
+        </div>
+
+        <b>
+          Business Stamp / Signature
+        </b>
+
+        <br/>
+
+        <span>
+          ${esc(store)}
+        </span>
+
       </div>
 
-      <div class="sign-box">
-        <div class="sign-line"></div>
-        <b>Business Stamp / Signature</b><br/>
-        <span>${esc(store)}</span>
-      </div>
     </div>
 
     ${paymentDetailsHtml}
 
     <div class="terms">
-      <b>Terms:</b> Please keep this receipt for reference. Goods received in good condition unless otherwise stated.
+
+      <b>
+        Terms:
+      </b>
+
+      Please keep this receipt for reference.
+      Goods received in good condition unless otherwise stated.
+
     </div>
 
     <div class="footer">
-      ${esc(receiptFooterText)}
+
+      ${esc(
+        receiptFooterText
+      )}
+
       ${
-        storePhone || storeWhatsapp
-          ? ` • Contact: ${esc([storePhone, storeWhatsapp].filter(Boolean).join(" / "))}`
+        storePhone ||
+        storeWhatsapp
+          ? `
+• Contact:
+${esc(
+  [
+    storePhone,
+    storeWhatsapp,
+  ]
+    .filter(Boolean)
+    .join(" / ")
+)}
+`
           : ""
       }
+
       • Powered by ZETRA BMS
+
     </div>
+
   </div>
 </body>
+
 </html>
 `;
 
-  try {
-    if (downloadHtmlPdfOnWeb(html)) return;
+      try {
+        if (
+          downloadHtmlPdfOnWeb(
+            html
+          )
+        ) {
+          return;
+        }
 
-    const file = await Print.printToFileAsync({ html });
+        const file =
+          await Print.printToFileAsync(
+            {
+              html,
+            }
+          );
 
-    if (await Sharing.isAvailableAsync()) {
-      await Sharing.shareAsync(file.uri, {
-        mimeType: "application/pdf",
-        dialogTitle: "Share Invoice Receipt PDF",
-      });
-    } else {
-      await Print.printAsync({ uri: file.uri });
-    }
-  } catch (e: any) {
-    Alert.alert("PDF failed", e?.message ?? "Failed to create PDF invoice receipt.");
-  }
-}, [
-  saleId,
-  orgProfile?.logo_url,
-  businessDisplayName,
-  storeDisplayName,
-  receiptNo,
-  items,
-  fmtMoney,
-  computedTotal,
-  computedQty,
-  when,
-  paymentTitle,
-  soldByLabel,
-  customerName,
-  customerPhone,
-  channelLabel,
-  referenceLabel,
-  splitPaymentMeta,
-  discountMeta,
-  cleanNote,
-  isCredit,
-  paidAmount,
-  dueAmount,
-  orgTin,
-  orgVrn,
-  orgRegNo,
-  orgTagline,
-  receiptFooterText,
-  storePhone,
-  storeWhatsapp,
-  storeRegion,
-  storeCity,
-  storeAddress,
-  storeBankName,
-  storeAccountName,
-  storeAccountNumber,
-  storeMobileMoneyName,
-  storeMobileMoneyNumber,
-  storePaymentInstructions,
-  documentType,
-  dueDateLabel,
- 
-]);
+        if (
+          await Sharing.isAvailableAsync()
+        ) {
+          await Sharing.shareAsync(
+            file.uri,
+            {
+              mimeType:
+                "application/pdf",
+
+              dialogTitle:
+                "Share Invoice Receipt PDF",
+            }
+          );
+        } else {
+          await Print.printAsync({
+            uri: file.uri,
+          });
+        }
+      } catch (e: any) {
+        Alert.alert(
+          "PDF failed",
+          e?.message ??
+            "Failed to create PDF invoice receipt."
+        );
+      }
+    }, [
+      saleId,
+
+      orgProfile?.logo_url,
+
+      businessDisplayName,
+      storeDisplayName,
+
+      receiptNo,
+
+      items,
+
+      fmtMoney,
+
+      computedTotal,
+      computedQty,
+
+      when,
+
+      paymentTitle,
+
+      soldByLabel,
+      cashierLabel,
+
+      customerName,
+      customerPhone,
+
+      channelLabel,
+      referenceLabel,
+
+      splitPaymentMeta,
+      discountMeta,
+      creditPaymentMeta,
+      creditPaidViaLabel,
+
+      cleanNote,
+
+      isCredit,
+
+      paidAmount,
+      dueAmount,
+
+      orgTin,
+      orgVrn,
+      orgRegNo,
+      orgEmail,
+      orgWebsite,
+      orgTagline,
+
+      receiptFooterText,
+
+      storePhone,
+      storeWhatsapp,
+      storeEmail,
+      storeRegion,
+      storeCity,
+      storeAddress,
+
+      storeBankName,
+      storeAccountName,
+      storeAccountNumber,
+
+      storeMobileMoneyName,
+      storeMobileMoneyNumber,
+
+      storePaymentInstructions,
+
+      documentType,
+      dueDateLabel,
+    ]);
+
   const headerCard = (
     <Card
       style={{
         gap: 10,
         padding: 12,
+
         borderWidth: 1,
-        borderColor: isCredit ? "rgba(251,191,36,0.18)" : "rgba(52,211,153,0.18)",
-        backgroundColor: "rgba(255,255,255,0.03)",
+
+        borderColor: isCredit
+          ? "rgba(251,191,36,0.18)"
+          : "rgba(52,211,153,0.18)",
+
+        backgroundColor:
+          "rgba(255,255,255,0.03)",
       }}
     >
       <View
         style={{
-          flexDirection: isWideWeb ? "row" : "column",
-          justifyContent: "space-between",
+          flexDirection:
+            isWideWeb
+              ? "row"
+              : "column",
+
+          justifyContent:
+            "space-between",
+
           gap: 10,
         }}
       >
-        <MetaBlock label="Business" value={businessDisplayName} />
-        <MetaBlock label="Store" value={storeDisplayName} />
+        <MetaBlock
+          label="Business"
+          value={
+            businessDisplayName
+          }
+        />
+
+        <MetaBlock
+          label="Store"
+          value={
+            storeDisplayName
+          }
+        />
       </View>
 
       <View
         style={{
-          flexDirection: isWideWeb ? "row" : "column",
-          justifyContent: "space-between",
+          flexDirection:
+            isWideWeb
+              ? "row"
+              : "column",
+
+          justifyContent:
+            "space-between",
+
           gap: 10,
         }}
       >
-        <MetaBlock label="When" value={when} />
-        <MetaBlock label="Sold By" value={soldByLabel} />
+        <MetaBlock
+          label="When"
+          value={when}
+        />
+
+        <MetaBlock
+          label="Sold By / Staff"
+          value={soldByLabel}
+        />
       </View>
 
-      {(channelLabel || referenceLabel) && (
+      {!!cashierLabel && (
         <View
           style={{
-            flexDirection: isWideWeb ? "row" : "column",
-            justifyContent: "space-between",
+            flexDirection:
+              isWideWeb
+                ? "row"
+                : "column",
+
+            justifyContent:
+              "space-between",
+
             gap: 10,
           }}
         >
-          <MetaBlock label="Channel" value={channelLabel || "—"} />
-          <MetaBlock label="Reference" value={referenceLabel || "—"} />
+          <MetaBlock
+            label="Received By / Cashier"
+            value={
+              cashierLabel
+            }
+          />
+
+          <MetaBlock
+            label="Payment"
+            value={
+              isCredit &&
+              creditPaidViaLabel
+                ? `CREDIT • Paid Via ${creditPaidViaLabel}`
+                : paymentTitle
+            }
+          />
         </View>
       )}
 
-      {(isCredit || !!customerName || !!customerPhone) && (
+      {(channelLabel ||
+        referenceLabel) && (
         <View
           style={{
-            paddingVertical: 8,
-            paddingHorizontal: 10,
-            borderRadius: 14,
-            borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.07)",
-            backgroundColor: "rgba(255,255,255,0.03)",
+            flexDirection:
+              isWideWeb
+                ? "row"
+                : "column",
+
+            justifyContent:
+              "space-between",
+
+            gap: 10,
           }}
         >
-          <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
+          <MetaBlock
+            label="Channel"
+            value={
+              channelLabel ||
+              "—"
+            }
+          />
+
+          <MetaBlock
+            label="Reference"
+            value={
+              referenceLabel ||
+              "—"
+            }
+          />
+        </View>
+      )}
+
+      {(isCredit ||
+        !!customerName ||
+        !!customerPhone) && (
+        <View
+          style={{
+            paddingVertical:
+              8,
+
+            paddingHorizontal:
+              10,
+
+            borderRadius:
+              14,
+
+            borderWidth:
+              1,
+
+            borderColor:
+              "rgba(255,255,255,0.07)",
+
+            backgroundColor:
+              "rgba(255,255,255,0.03)",
+          }}
+        >
+          <Text
+            style={{
+              color:
+                theme.colors.muted,
+
+              fontWeight:
+                "800",
+
+              fontSize:
+                12,
+            }}
+          >
             Customer
           </Text>
-          <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 6 }}>
-            {customerName || "—"}
+
+          <Text
+            style={{
+              color:
+                theme.colors.text,
+
+              fontWeight:
+                "900",
+
+              marginTop:
+                6,
+            }}
+          >
+            {customerName ||
+              "—"}
           </Text>
+
           {!!customerPhone && (
-            <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-              Phone: {customerPhone}
+            <Text
+              style={{
+                color:
+                  theme.colors.muted,
+
+                fontWeight:
+                  "800",
+
+                marginTop:
+                  6,
+              }}
+            >
+              Phone:{" "}
+              {customerPhone}
             </Text>
           )}
         </View>
       )}
 
-      {(editCountLabel > 0 || dbCanEditSameDay || uiSameDayGuard) && (
+      {(editCountLabel >
+        0 ||
+        dbCanEditSameDay ||
+        uiSameDayGuard) && (
         <View
           style={{
-            paddingVertical: 8,
-            paddingHorizontal: 10,
-            borderRadius: 14,
-            borderWidth: 1,
-            borderColor: canEditReceipt ? "rgba(52,211,153,0.24)" : "rgba(255,255,255,0.07)",
-            backgroundColor: canEditReceipt ? "rgba(52,211,153,0.08)" : "rgba(255,255,255,0.03)",
+            paddingVertical:
+              8,
+
+            paddingHorizontal:
+              10,
+
+            borderRadius:
+              14,
+
+            borderWidth:
+              1,
+
+            borderColor:
+              canEditReceipt
+                ? "rgba(52,211,153,0.24)"
+                : "rgba(255,255,255,0.07)",
+
+            backgroundColor:
+              canEditReceipt
+                ? "rgba(52,211,153,0.08)"
+                : "rgba(255,255,255,0.03)",
           }}
         >
-          <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}>
+          <Text
+            style={{
+              color:
+                theme.colors.muted,
+
+              fontWeight:
+                "800",
+
+              fontSize:
+                11,
+            }}
+          >
             Edit Status
           </Text>
 
-          <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4, fontSize: 13 }}>
+          <Text
+            style={{
+              color:
+                theme.colors.text,
+
+              fontWeight:
+                "900",
+
+              marginTop:
+                4,
+
+              fontSize:
+                13,
+            }}
+          >
             {canEditReceipt
-  ? isOwner
-    ? "Owner edit/delete allowed"
-    : "Same-day edit allowed"
-  : "Edit window closed"}
+              ? isOwner
+                ? "Owner edit/delete allowed"
+                : "Same-day edit allowed"
+              : "Edit window closed"}
           </Text>
 
           {!uiSameDayGuard ? (
-            <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>
-              Local guard: receipt si ya leo kwa timezone ya Africa/Dar_es_Salaam.
+            <Text
+              style={{
+                color:
+                  theme.colors.muted,
+
+                fontWeight:
+                  "800",
+
+                marginTop:
+                  8,
+              }}
+            >
+              Local guard:
+              receipt si ya leo
+              kwa timezone ya
+              Africa/Dar_es_Salaam.
             </Text>
           ) : null}
 
-          
-
-          {editCountLabel > 0 && (
+          {editCountLabel >
+            0 && (
             <>
-              <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>
-                Edited by: <Text style={{ color: theme.colors.text }}>{editedByLabel}</Text>
+              <Text
+                style={{
+                  color:
+                    theme
+                      .colors
+                      .muted,
+
+                  fontWeight:
+                    "800",
+
+                  marginTop:
+                    8,
+                }}
+              >
+                Edited by:{" "}
+
+                <Text
+                  style={{
+                    color:
+                      theme
+                        .colors
+                        .text,
+                  }}
+                >
+                  {
+                    editedByLabel
+                  }
+                </Text>
               </Text>
-              <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 4 }}>
-                Edited at: <Text style={{ color: theme.colors.text }}>{editedAtLabel}</Text>
+
+              <Text
+                style={{
+                  color:
+                    theme
+                      .colors
+                      .muted,
+
+                  fontWeight:
+                    "800",
+
+                  marginTop:
+                    4,
+                }}
+              >
+                Edited at:{" "}
+
+                <Text
+                  style={{
+                    color:
+                      theme
+                        .colors
+                        .text,
+                  }}
+                >
+                  {
+                    editedAtLabel
+                  }
+                </Text>
               </Text>
-              <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 4 }}>
-                Edit count: <Text style={{ color: theme.colors.text }}>{editCountLabel}</Text>
+
+              <Text
+                style={{
+                  color:
+                    theme
+                      .colors
+                      .muted,
+
+                  fontWeight:
+                    "800",
+
+                  marginTop:
+                    4,
+                }}
+              >
+                Edit count:{" "}
+
+                <Text
+                  style={{
+                    color:
+                      theme
+                        .colors
+                        .text,
+                  }}
+                >
+                  {
+                    editCountLabel
+                  }
+                </Text>
               </Text>
             </>
           )}
         </View>
       )}
 
-      {!!cleanNote && cleanNote.trim() && (
-        <View
-          style={{
-            paddingVertical: 8,
-            paddingHorizontal: 10,
-            borderRadius: 14,
-            borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.07)",
-            backgroundColor: "rgba(255,255,255,0.03)",
-          }}
-        >
-          <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
-            Note
-          </Text>
-          <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 6 }}>
-            {cleanNote}
-          </Text>
-        </View>
-      )}
+      {!!cleanNote &&
+        cleanNote.trim() && (
+          <View
+            style={{
+              paddingVertical:
+                8,
+
+              paddingHorizontal:
+                10,
+
+              borderRadius:
+                14,
+
+              borderWidth:
+                1,
+
+              borderColor:
+                "rgba(255,255,255,0.07)",
+
+              backgroundColor:
+                "rgba(255,255,255,0.03)",
+            }}
+          >
+            <Text
+              style={{
+                color:
+                  theme.colors.muted,
+
+                fontWeight:
+                  "800",
+
+                fontSize:
+                  12,
+              }}
+            >
+              Note
+            </Text>
+
+            <Text
+              style={{
+                color:
+                  theme.colors.text,
+
+                fontWeight:
+                  "900",
+
+                marginTop:
+                  6,
+              }}
+            >
+              {cleanNote}
+            </Text>
+          </View>
+        )}
     </Card>
   );
 
   const itemsCard = (
-    <Card style={{ gap: 8, padding: 12 }}>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
-        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14 }}>
-          Items ({items.length})
+    <Card
+      style={{
+        gap: 8,
+        padding: 12,
+      }}
+    >
+      <View
+        style={{
+          flexDirection:
+            "row",
+
+          justifyContent:
+            "space-between",
+
+          gap: 10,
+        }}
+      >
+        <Text
+          style={{
+            color:
+              theme.colors.text,
+
+            fontWeight:
+              "900",
+
+            fontSize:
+              14,
+          }}
+        >
+          Items (
+          {items.length})
         </Text>
-        <Text style={{ color: theme.colors.muted, fontWeight: "900", fontSize: 12 }}>Qty ({computedQty})</Text>
+
+        <Text
+          style={{
+            color:
+              theme.colors.muted,
+
+            fontWeight:
+              "900",
+
+            fontSize:
+              12,
+          }}
+        >
+          Qty (
+          {computedQty})
+        </Text>
       </View>
 
-      {items.length === 0 ? (
-        <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>No items found.</Text>
+      {items.length ===
+      0 ? (
+        <Text
+          style={{
+            color:
+              theme.colors.muted,
+
+            fontWeight:
+              "800",
+          }}
+        >
+          No items found.
+        </Text>
       ) : (
-        items.map((it, idx) => {
-          const unitPrice = Number(it.unit_price ?? 0);
-          const lineTotal = Number(it.line_total ?? unitPrice * Number(it.qty ?? 0));
+        items.map(
+          (it, idx) => {
+            const unitPrice =
+              Number(
+                it.unit_price ??
+                  0
+              );
 
-          return (
-            <View
-              key={`${it.product_id}-${idx}`}
-              style={{
-                flexDirection: "row",
-                justifyContent: "space-between",
-                alignItems: "center",
-                gap: 10,
-                paddingVertical: 9,
-                borderTopWidth: idx === 0 ? 0 : 1,
-                borderTopColor: "rgba(255,255,255,0.05)",
-              }}
-            >
-              <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
-                <Text
-                  style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}
-                  numberOfLines={1}
-                >
-                  {it.product_name ?? "Product"}
-                </Text>
+            const lineTotal =
+              Number(
+                it.line_total ??
+                  unitPrice *
+                    Number(
+                      it.qty ??
+                        0
+                    )
+              );
 
-                <Text
-                  style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}
-                  numberOfLines={1}
-                >
-                  SKU: {it.sku ?? "—"}
-                </Text>
-
-                <Text style={{ color: theme.colors.muted, fontWeight: "900", fontSize: 11 }}>
-                  {Number(it.qty ?? 0)} × {fmtMoney(unitPrice)}
-                </Text>
-              </View>
-
+            return (
               <View
+                key={`${it.product_id}-${idx}`}
                 style={{
-                  minWidth: isDesktopWeb ? 140 : 96,
-                  alignItems: "flex-end",
-                  justifyContent: "center",
+                  flexDirection:
+                    "row",
+
+                  justifyContent:
+                    "space-between",
+
+                  alignItems:
+                    "center",
+
+                  gap: 10,
+
+                  paddingVertical:
+                    9,
+
+                  borderTopWidth:
+                    idx === 0
+                      ? 0
+                      : 1,
+
+                  borderTopColor:
+                    "rgba(255,255,255,0.05)",
                 }}
               >
-                <Text
-                  style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}
-                  numberOfLines={1}
+                <View
+                  style={{
+                    flex: 1,
+                    minWidth:
+                      0,
+                    gap: 3,
+                  }}
                 >
-                  {fmtMoney(lineTotal)}
-                </Text>
+                  <Text
+                    style={{
+                      color:
+                        theme
+                          .colors
+                          .text,
+
+                      fontWeight:
+                        "900",
+
+                      fontSize:
+                        13,
+                    }}
+                    numberOfLines={
+                      1
+                    }
+                  >
+                    {it.product_name ??
+                      "Product"}
+                  </Text>
+
+                  <Text
+                    style={{
+                      color:
+                        theme
+                          .colors
+                          .muted,
+
+                      fontWeight:
+                        "800",
+
+                      fontSize:
+                        11,
+                    }}
+                    numberOfLines={
+                      1
+                    }
+                  >
+                    SKU:{" "}
+                    {it.sku ??
+                      "—"}
+                  </Text>
+
+                  <Text
+                    style={{
+                      color:
+                        theme
+                          .colors
+                          .muted,
+
+                      fontWeight:
+                        "900",
+
+                      fontSize:
+                        11,
+                    }}
+                  >
+                    {Number(
+                      it.qty ??
+                        0
+                    )}{" "}
+                    ×{" "}
+                    {fmtMoney(
+                      unitPrice
+                    )}
+                  </Text>
+                </View>
+
+                <View
+                  style={{
+                    minWidth:
+                      isDesktopWeb
+                        ? 140
+                        : 96,
+
+                    alignItems:
+                      "flex-end",
+
+                    justifyContent:
+                      "center",
+                  }}
+                >
+                  <Text
+                    style={{
+                      color:
+                        theme
+                          .colors
+                          .text,
+
+                      fontWeight:
+                        "900",
+
+                      fontSize:
+                        13,
+                    }}
+                    numberOfLines={
+                      1
+                    }
+                  >
+                    {fmtMoney(
+                      lineTotal
+                    )}
+                  </Text>
+                </View>
               </View>
-            </View>
-          );
-        })
+            );
+          }
+        )
       )}
     </Card>
   );
 
-const totalsCard = (
-    <Card style={{ gap: 10, padding: 12 }}>
+  const totalsCard = (
+    <Card
+      style={{
+        gap: 10,
+        padding: 12,
+      }}
+    >
       <View
         style={{
-          flexDirection: isWideWeb ? "row" : "column",
+          flexDirection:
+            isWideWeb
+              ? "row"
+              : "column",
+
           gap: 10,
         }}
       >
         {splitPaymentMeta ? (
           <>
-            <MoneyTile label="Cash Paid" value={fmtMoney(splitPaymentMeta.cash)} />
-            <MoneyTile label="Mobile Paid" value={fmtMoney(splitPaymentMeta.mobile)} />
-            <MoneyTile label="Bank Paid" value={fmtMoney(splitPaymentMeta.bank)} />
+            <MoneyTile
+              label="Cash Paid"
+              value={fmtMoney(
+                splitPaymentMeta.cash
+              )}
+            />
+
+            <MoneyTile
+              label="Mobile Paid"
+              value={fmtMoney(
+                splitPaymentMeta.mobile
+              )}
+            />
+
+            <MoneyTile
+              label="Bank Paid"
+              value={fmtMoney(
+                splitPaymentMeta.bank
+              )}
+            />
+
             <MoneyTile
               label="Total Paid"
               value={fmtMoney(
-                splitPaymentMeta.cash + splitPaymentMeta.mobile + splitPaymentMeta.bank
+                splitPaymentMeta.cash +
+                  splitPaymentMeta.mobile +
+                  splitPaymentMeta.bank
+              )}
+              highlight
+            />
+          </>
+        ) : isCredit ? (
+          <>
+            {discountMeta ? (
+              <>
+                <MoneyTile
+                  label="Subtotal"
+                  value={fmtMoney(
+                    discountMeta.subtotal ??
+                      computedTotal
+                  )}
+                />
+
+                <MoneyTile
+                  label={`Discount (${discountMeta.discountText})`}
+                  value={`-${fmtMoney(
+                    discountMeta.discountAmount
+                  )}`}
+                />
+              </>
+            ) : null}
+
+            <MoneyTile
+              label="Total"
+              value={fmtMoney(
+                computedTotal
+              )}
+            />
+
+            <MoneyTile
+              label="Paid"
+              value={fmtMoney(
+                paidAmount
+              )}
+            />
+
+            <MoneyTile
+              label="Due (Credit)"
+              value={fmtMoney(
+                dueAmount
               )}
               highlight
             />
           </>
         ) : discountMeta ? (
           <>
-            <MoneyTile label="Subtotal" value={fmtMoney(discountMeta.subtotal ?? computedTotal)} />
+            <MoneyTile
+              label="Subtotal"
+              value={fmtMoney(
+                discountMeta.subtotal ??
+                  computedTotal
+              )}
+            />
+
             <MoneyTile
               label={`Discount (${discountMeta.discountText})`}
-              value={`-${fmtMoney(discountMeta.discountAmount)}`}
+              value={`-${fmtMoney(
+                discountMeta.discountAmount
+              )}`}
             />
-            <MoneyTile label="Total After Discount" value={fmtMoney(computedTotal)} highlight />
-          </>
-        ) : isCredit ? (
-          <>
-            <MoneyTile label="Total" value={fmtMoney(computedTotal)} />
-            <MoneyTile label="Paid" value={fmtMoney(paidAmount)} />
-            <MoneyTile label="Due (Credit)" value={fmtMoney(dueAmount)} highlight />
+
+            <MoneyTile
+              label="Total After Discount"
+              value={fmtMoney(
+                computedTotal
+              )}
+              highlight
+            />
           </>
         ) : (
-          <MoneyTile label="Total Money In" value={fmtMoney(computedTotal)} highlight />
+          <MoneyTile
+            label="Total Money In"
+            value={fmtMoney(
+              computedTotal
+            )}
+            highlight
+          />
         )}
       </View>
 
       {isCredit ? (
         <View
           style={{
-            paddingVertical: 8,
-            paddingHorizontal: 10,
-            borderRadius: 14,
-            borderWidth: 1,
-            borderColor: dueAmount > 0 ? "rgba(251,191,36,0.24)" : "rgba(52,211,153,0.24)",
-            backgroundColor: dueAmount > 0 ? "rgba(251,191,36,0.08)" : "rgba(52,211,153,0.08)",
+            paddingVertical:
+              8,
+
+            paddingHorizontal:
+              10,
+
+            borderRadius:
+              14,
+
+            borderWidth:
+              1,
+
+            borderColor:
+              dueAmount > 0
+                ? "rgba(251,191,36,0.24)"
+                : "rgba(52,211,153,0.24)",
+
+            backgroundColor:
+              dueAmount > 0
+                ? "rgba(251,191,36,0.08)"
+                : "rgba(52,211,153,0.08)",
           }}
         >
-          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>
-            Status: {dueAmount > 0 ? "OUTSTANDING" : "CLEARED"}
+          <Text
+            style={{
+              color:
+                theme.colors.text,
+
+              fontWeight:
+                "900",
+
+              fontSize:
+                12,
+            }}
+          >
+            Status:{" "}
+            {dueAmount >
+            0
+              ? "OUTSTANDING"
+              : "CLEARED"}
           </Text>
         </View>
       ) : null}
 
       <Pressable
-        onPress={() => setShowShareOptions((v) => !v)}
-        style={({ pressed }) => ({
-          minHeight: 46,
-          borderRadius: 16,
-          borderWidth: 1,
-          borderColor: "rgba(52,211,153,0.26)",
-          backgroundColor: "rgba(52,211,153,0.10)",
-          alignItems: "center",
-          justifyContent: "center",
-          paddingHorizontal: 14,
-          opacity: pressed ? 0.92 : 1,
+        onPress={() =>
+          setShowShareOptions(
+            (v) => !v
+          )
+        }
+        style={({
+          pressed,
+        }) => ({
+          minHeight:
+            46,
+
+          borderRadius:
+            16,
+
+          borderWidth:
+            1,
+
+          borderColor:
+            "rgba(52,211,153,0.26)",
+
+          backgroundColor:
+            "rgba(52,211,153,0.10)",
+
+          alignItems:
+            "center",
+
+          justifyContent:
+            "center",
+
+          paddingHorizontal:
+            14,
+
+          opacity:
+            pressed
+              ? 0.92
+              : 1,
         })}
       >
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}>
-       <Text style={{ color: theme.colors.emerald, fontWeight: "900", fontSize: 16 }}>
-  Share
-</Text>
-<Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}>
-  Share Invoice Receipt
-</Text>
+        <View
+          style={{
+            flexDirection:
+              "row",
+
+            alignItems:
+              "center",
+
+            justifyContent:
+              "center",
+
+            gap: 8,
+          }}
+        >
+          <Text
+            style={{
+              color:
+                theme.colors.emerald,
+
+              fontWeight:
+                "900",
+
+              fontSize:
+                16,
+            }}
+          >
+            Share
+          </Text>
+
+          <Text
+            style={{
+              color:
+                theme.colors.text,
+
+              fontWeight:
+                "900",
+
+              fontSize:
+                13,
+            }}
+          >
+            Share Invoice Receipt
+          </Text>
         </View>
       </Pressable>
 
       {showShareOptions ? (
-        <View style={{ gap: 8 }}>
+        <View
+          style={{
+            gap: 8,
+          }}
+        >
           <Pressable
-            onPress={() => void shareReceipt()}
-            style={({ pressed }) => ({
-              minHeight: 40,
-              borderRadius: 14,
-              borderWidth: 1,
-              borderColor: "rgba(52,211,153,0.20)",
-              backgroundColor: "rgba(52,211,153,0.07)",
-              alignItems: "center",
-              justifyContent: "center",
-              paddingHorizontal: 12,
-              opacity: pressed ? 0.92 : 1,
+            onPress={() =>
+              void shareReceipt()
+            }
+            style={({
+              pressed,
+            }) => ({
+              minHeight:
+                40,
+
+              borderRadius:
+                14,
+
+              borderWidth:
+                1,
+
+              borderColor:
+                "rgba(52,211,153,0.20)",
+
+              backgroundColor:
+                "rgba(52,211,153,0.07)",
+
+              alignItems:
+                "center",
+
+              justifyContent:
+                "center",
+
+              paddingHorizontal:
+                12,
+
+              opacity:
+                pressed
+                  ? 0.92
+                  : 1,
             })}
           >
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}>
-             <Text style={{ color: theme.colors.emerald, fontWeight: "900", fontSize: 14 }}>
-  TXT
-</Text>
-<Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>
-  Share as Text
-</Text>
+            <View
+              style={{
+                flexDirection:
+                  "row",
+
+                alignItems:
+                  "center",
+
+                justifyContent:
+                  "center",
+
+                gap: 8,
+              }}
+            >
+              <Text
+                style={{
+                  color:
+                    theme
+                      .colors
+                      .emerald,
+
+                  fontWeight:
+                    "900",
+
+                  fontSize:
+                    14,
+                }}
+              >
+                TXT
+              </Text>
+
+              <Text
+                style={{
+                  color:
+                    theme
+                      .colors
+                      .text,
+
+                  fontWeight:
+                    "900",
+
+                  fontSize:
+                    12,
+                }}
+              >
+                Share as Text
+              </Text>
             </View>
           </Pressable>
 
           <Pressable
-            onPress={() => void shareReceiptPdf()}
-            style={({ pressed }) => ({
-              minHeight: 40,
-              borderRadius: 14,
-              borderWidth: 1,
-              borderColor: "rgba(52,211,153,0.20)",
-              backgroundColor: "rgba(52,211,153,0.07)",
-              alignItems: "center",
-              justifyContent: "center",
-              paddingHorizontal: 12,
-              opacity: pressed ? 0.92 : 1,
+            onPress={() =>
+              void shareReceiptPdf()
+            }
+            style={({
+              pressed,
+            }) => ({
+              minHeight:
+                40,
+
+              borderRadius:
+                14,
+
+              borderWidth:
+                1,
+
+              borderColor:
+                "rgba(52,211,153,0.20)",
+
+              backgroundColor:
+                "rgba(52,211,153,0.07)",
+
+              alignItems:
+                "center",
+
+              justifyContent:
+                "center",
+
+              paddingHorizontal:
+                12,
+
+              opacity:
+                pressed
+                  ? 0.92
+                  : 1,
             })}
           >
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}>
-           <Text style={{ color: theme.colors.emerald, fontWeight: "900", fontSize: 14 }}>
-  PDF
-</Text>
-<Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>
-  Share / Download PDF
-</Text>
+            <View
+              style={{
+                flexDirection:
+                  "row",
+
+                alignItems:
+                  "center",
+
+                justifyContent:
+                  "center",
+
+                gap: 8,
+              }}
+            >
+              <Text
+                style={{
+                  color:
+                    theme
+                      .colors
+                      .emerald,
+
+                  fontWeight:
+                    "900",
+
+                  fontSize:
+                    14,
+                }}
+              >
+                PDF
+              </Text>
+
+              <Text
+                style={{
+                  color:
+                    theme
+                      .colors
+                      .text,
+
+                  fontWeight:
+                    "900",
+
+                  fontSize:
+                    12,
+                }}
+              >
+                Share / Download PDF
+              </Text>
             </View>
           </Pressable>
         </View>
       ) : null}
 
       <Pressable
-        onPress={() => setShowMoreOptions((v) => !v)}
-        style={({ pressed }) => ({
-          minHeight: 42,
-          borderRadius: 16,
-          borderWidth: 1,
-          borderColor: "rgba(255,255,255,0.08)",
-          backgroundColor: "rgba(255,255,255,0.04)",
-          alignItems: "center",
-          justifyContent: "center",
-          paddingHorizontal: 14,
-          opacity: pressed ? 0.92 : 1,
+        onPress={() =>
+          setShowMoreOptions(
+            (v) => !v
+          )
+        }
+        style={({
+          pressed,
+        }) => ({
+          minHeight:
+            42,
+
+          borderRadius:
+            16,
+
+          borderWidth:
+            1,
+
+          borderColor:
+            "rgba(255,255,255,0.08)",
+
+          backgroundColor:
+            "rgba(255,255,255,0.04)",
+
+          alignItems:
+            "center",
+
+          justifyContent:
+            "center",
+
+          paddingHorizontal:
+            14,
+
+          opacity:
+            pressed
+              ? 0.92
+              : 1,
         })}
       >
-        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}>
-          {showMoreOptions ? "Hide Options" : "More Options"}
+        <Text
+          style={{
+            color:
+              theme.colors.text,
+
+            fontWeight:
+              "900",
+
+            fontSize:
+              13,
+          }}
+        >
+          {showMoreOptions
+            ? "Hide Options"
+            : "More Options"}
         </Text>
       </Pressable>
 
       {showMoreOptions ? (
-        <View style={{ gap: 8 }}>
-          {canEditReceipt || canDeleteReceipt ? (
+        <View
+          style={{
+            gap: 8,
+          }}
+        >
+          {canEditReceipt ||
+          canDeleteReceipt ? (
             <>
               <Pressable
                 onPress={() =>
-                  router.push({
-                    pathname: "/(tabs)/sales/edit-receipt",
-                    params: { saleId },
-                  } as any)
+                  router.push(
+                    {
+                      pathname:
+                        "/(tabs)/sales/edit-receipt",
+
+                      params:
+                        {
+                          saleId,
+                        },
+                    } as any
+                  )
                 }
-                style={({ pressed }) => ({
-                  minHeight: 40,
-                  borderRadius: 14,
-                  borderWidth: 1,
-                  borderColor: "rgba(52,211,153,0.20)",
-                  backgroundColor: "rgba(52,211,153,0.07)",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  paddingHorizontal: 12,
-                  opacity: pressed ? 0.92 : 1,
+                style={({
+                  pressed,
+                }) => ({
+                  minHeight:
+                    40,
+
+                  borderRadius:
+                    14,
+
+                  borderWidth:
+                    1,
+
+                  borderColor:
+                    "rgba(52,211,153,0.20)",
+
+                  backgroundColor:
+                    "rgba(52,211,153,0.07)",
+
+                  alignItems:
+                    "center",
+
+                  justifyContent:
+                    "center",
+
+                  paddingHorizontal:
+                    12,
+
+                  opacity:
+                    pressed
+                      ? 0.92
+                      : 1,
                 })}
               >
-                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>
-                  {isOwner ? "Edit Receipt" : "Edit Same Day"}
+                <Text
+                  style={{
+                    color:
+                      theme
+                        .colors
+                        .text,
+
+                    fontWeight:
+                      "900",
+
+                    fontSize:
+                      12,
+                  }}
+                >
+                  {isOwner
+                    ? "Edit Receipt"
+                    : "Edit Same Day"}
                 </Text>
               </Pressable>
 
               <Pressable
-                onPress={deleteSameDay}
-                disabled={deleting}
-                style={({ pressed }) => ({
-                  minHeight: 40,
-                  borderRadius: 14,
-                  borderWidth: 1,
-                  borderColor: "rgba(255,255,255,0.08)",
-                  backgroundColor: "rgba(255,255,255,0.04)",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  paddingHorizontal: 12,
-                  opacity: deleting ? 0.55 : pressed ? 0.92 : 1,
+                onPress={
+                  deleteSameDay
+                }
+                disabled={
+                  deleting
+                }
+                style={({
+                  pressed,
+                }) => ({
+                  minHeight:
+                    40,
+
+                  borderRadius:
+                    14,
+
+                  borderWidth:
+                    1,
+
+                  borderColor:
+                    "rgba(255,255,255,0.08)",
+
+                  backgroundColor:
+                    "rgba(255,255,255,0.04)",
+
+                  alignItems:
+                    "center",
+
+                  justifyContent:
+                    "center",
+
+                  paddingHorizontal:
+                    12,
+
+                  opacity:
+                    deleting
+                      ? 0.55
+                      : pressed
+                        ? 0.92
+                        : 1,
                 })}
               >
-                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>
-                  {deleting ? "Deleting..." : isOwner ? "Delete Receipt" : "Delete Same Day"}
+                <Text
+                  style={{
+                    color:
+                      theme
+                        .colors
+                        .text,
+
+                    fontWeight:
+                      "900",
+
+                    fontSize:
+                      12,
+                  }}
+                >
+                  {deleting
+                    ? "Deleting..."
+                    : isOwner
+                      ? "Delete Receipt"
+                      : "Delete Same Day"}
                 </Text>
               </Pressable>
             </>
           ) : null}
 
           <Pressable
-            onPress={() => router.replace("/(tabs)/sales/history")}
-            style={({ pressed }) => ({
-              minHeight: 40,
-              borderRadius: 14,
-              borderWidth: 1,
-              borderColor: "rgba(255,255,255,0.08)",
-              backgroundColor: "rgba(255,255,255,0.04)",
-              alignItems: "center",
-              justifyContent: "center",
-              paddingHorizontal: 12,
-              opacity: pressed ? 0.92 : 1,
+            onPress={() =>
+              router.replace(
+                "/(tabs)/sales/history"
+              )
+            }
+            style={({
+              pressed,
+            }) => ({
+              minHeight:
+                40,
+
+              borderRadius:
+                14,
+
+              borderWidth:
+                1,
+
+              borderColor:
+                "rgba(255,255,255,0.08)",
+
+              backgroundColor:
+                "rgba(255,255,255,0.04)",
+
+              alignItems:
+                "center",
+
+              justifyContent:
+                "center",
+
+              paddingHorizontal:
+                12,
+
+              opacity:
+                pressed
+                  ? 0.92
+                  : 1,
             })}
           >
-            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>
+            <Text
+              style={{
+                color:
+                  theme.colors.text,
+
+                fontWeight:
+                  "900",
+
+                fontSize:
+                  12,
+              }}
+            >
               Back to History
             </Text>
           </Pressable>
@@ -1831,55 +4755,147 @@ const totalsCard = (
       ) : null}
 
       <Pressable
-        onPress={() => router.back()}
-        style={({ pressed }) => ({
-          minHeight: 42,
-          borderRadius: 16,
-          borderWidth: 1,
-          borderColor: "rgba(255,255,255,0.08)",
-          backgroundColor: "rgba(255,255,255,0.04)",
-          alignItems: "center",
-          justifyContent: "center",
-          paddingHorizontal: 14,
-          opacity: pressed ? 0.92 : 1,
+        onPress={() =>
+          router.back()
+        }
+        style={({
+          pressed,
+        }) => ({
+          minHeight:
+            42,
+
+          borderRadius:
+            16,
+
+          borderWidth:
+            1,
+
+          borderColor:
+            "rgba(255,255,255,0.08)",
+
+          backgroundColor:
+            "rgba(255,255,255,0.04)",
+
+          alignItems:
+            "center",
+
+          justifyContent:
+            "center",
+
+          paddingHorizontal:
+            14,
+
+          opacity:
+            pressed
+              ? 0.92
+              : 1,
         })}
       >
-        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}>
+        <Text
+          style={{
+            color:
+              theme.colors.text,
+
+            fontWeight:
+              "900",
+
+            fontSize:
+              13,
+          }}
+        >
           Back
         </Text>
       </Pressable>
     </Card>
   );
 
-return (
-    <Screen scroll bottomPad={150}>
-      <View style={{ flex: 1, gap: 12 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+  return (
+    <Screen
+      scroll
+      bottomPad={150}
+    >
+      <View
+        style={{
+          flex: 1,
+          gap: 12,
+        }}
+      >
+        <View
+          style={{
+            flexDirection:
+              "row",
+
+            alignItems:
+              "center",
+
+            gap: 10,
+          }}
+        >
           <Pressable
-            onPress={() => router.back()}
+            onPress={() =>
+              router.back()
+            }
             style={{
-              width: 40,
-              height: 40,
-              borderRadius: 999,
-              alignItems: "center",
-              justifyContent: "center",
-              borderWidth: 1,
-              borderColor: theme.colors.border,
-              backgroundColor: "rgba(255,255,255,0.05)",
+              width:
+                40,
+
+              height:
+                40,
+
+              borderRadius:
+                999,
+
+              alignItems:
+                "center",
+
+              justifyContent:
+                "center",
+
+              borderWidth:
+                1,
+
+              borderColor:
+                theme.colors.border,
+
+              backgroundColor:
+                "rgba(255,255,255,0.05)",
             }}
           >
-            <Text style={{ color: theme.colors.emerald, fontWeight: "900", fontSize: 24 }}>
-  ‹
-</Text>
-          </Pressable>
-
-          <View style={{ flex: 1, minWidth: 0 }}>
             <Text
               style={{
-                fontSize: 24,
-                fontWeight: "900",
-                color: theme.colors.text,
-                marginTop: 2,
+                color:
+                  theme.colors.emerald,
+
+                fontWeight:
+                  "900",
+
+                fontSize:
+                  24,
+              }}
+            >
+              ‹
+            </Text>
+          </Pressable>
+
+          <View
+            style={{
+              flex: 1,
+              minWidth: 0,
+            }}
+          >
+            <Text
+              style={{
+                fontSize:
+                  24,
+
+                fontWeight:
+                  "900",
+
+                color:
+                  theme.colors.text,
+
+                marginTop:
+                  2,
               }}
             >
               Invoice Receipt
@@ -1887,32 +4903,64 @@ return (
 
             <Text
               style={{
-                color: theme.colors.muted,
-                fontWeight: "800",
-                fontSize: 12,
-                marginTop: 2,
+                color:
+                  theme.colors.muted,
+
+                fontWeight:
+                  "800",
+
+                fontSize:
+                  12,
+
+                marginTop:
+                  2,
               }}
-              numberOfLines={1}
+              numberOfLines={
+                1
+              }
             >
-              No. {receiptNo}
+              No.{" "}
+              {receiptNo}
             </Text>
           </View>
 
           <View
             style={{
-              paddingHorizontal: 11,
-              paddingVertical: 7,
-              borderRadius: theme.radius.pill,
-              borderWidth: 1,
-              borderColor: isCredit ? "rgba(251,191,36,0.35)" : "rgba(52,211,153,0.35)",
-              backgroundColor: isCredit ? "rgba(251,191,36,0.10)" : "rgba(52,211,153,0.10)",
+              paddingHorizontal:
+                11,
+
+              paddingVertical:
+                7,
+
+              borderRadius:
+                theme.radius.pill,
+
+              borderWidth:
+                1,
+
+              borderColor:
+                isCredit
+                  ? "rgba(251,191,36,0.35)"
+                  : "rgba(52,211,153,0.35)",
+
+              backgroundColor:
+                isCredit
+                  ? "rgba(251,191,36,0.10)"
+                  : "rgba(52,211,153,0.10)",
             }}
           >
             <Text
               style={{
-                color: isCredit ? "rgba(251,191,36,1)" : theme.colors.emerald,
-                fontWeight: "900",
-                fontSize: 12,
+                color:
+                  isCredit
+                    ? "rgba(251,191,36,1)"
+                    : theme.colors.emerald,
+
+                fontWeight:
+                  "900",
+
+                fontSize:
+                  12,
               }}
             >
               {paymentTitle}
@@ -1921,31 +4969,99 @@ return (
         </View>
 
         {loading ? (
-          <View style={{ paddingTop: 18, alignItems: "center" }}>
+          <View
+            style={{
+              paddingTop:
+                18,
+
+              alignItems:
+                "center",
+            }}
+          >
             <ActivityIndicator />
-            <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>
+
+            <Text
+              style={{
+                color:
+                  theme.colors.muted,
+
+                fontWeight:
+                  "800",
+
+                marginTop:
+                  8,
+              }}
+            >
               Loading receipt...
             </Text>
           </View>
         ) : err ? (
-          <Card style={{ gap: 10 }}>
-            <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{err}</Text>
+          <Card
+            style={{
+              gap: 10,
+            }}
+          >
+            <Text
+              style={{
+                color:
+                  theme.colors.danger,
+
+                fontWeight:
+                  "900",
+              }}
+            >
+              {err}
+            </Text>
 
             <Pressable
-              onPress={load}
-              style={({ pressed }) => ({
-                minHeight: 46,
-                borderRadius: 16,
-                borderWidth: 1,
-                borderColor: "rgba(52,211,153,0.26)",
-                backgroundColor: "rgba(52,211,153,0.10)",
-                alignItems: "center",
-                justifyContent: "center",
-                paddingHorizontal: 14,
-                opacity: pressed ? 0.92 : 1,
+              onPress={
+                load
+              }
+              style={({
+                pressed,
+              }) => ({
+                minHeight:
+                  46,
+
+                borderRadius:
+                  16,
+
+                borderWidth:
+                  1,
+
+                borderColor:
+                  "rgba(52,211,153,0.26)",
+
+                backgroundColor:
+                  "rgba(52,211,153,0.10)",
+
+                alignItems:
+                  "center",
+
+                justifyContent:
+                  "center",
+
+                paddingHorizontal:
+                  14,
+
+                opacity:
+                  pressed
+                    ? 0.92
+                    : 1,
               })}
             >
-              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}>
+              <Text
+                style={{
+                  color:
+                    theme.colors.text,
+
+                  fontWeight:
+                    "900",
+
+                  fontSize:
+                    13,
+                }}
+              >
                 Retry
               </Text>
             </Pressable>
@@ -1953,24 +5069,53 @@ return (
         ) : isDesktopWeb ? (
           <View
             style={{
-              flexDirection: "row",
-              alignItems: "flex-start",
+              flexDirection:
+                "row",
+
+              alignItems:
+                "flex-start",
+
               gap: 16,
             }}
           >
-            <View style={{ flex: 1.15, minWidth: 0, gap: 12 }}>
+            <View
+              style={{
+                flex:
+                  1.15,
+
+                minWidth:
+                  0,
+
+                gap:
+                  12,
+              }}
+            >
               {headerCard}
+
               {itemsCard}
             </View>
 
-            <View style={{ width: 340, minWidth: 340, gap: 12 }}>
+            <View
+              style={{
+                width:
+                  340,
+
+                minWidth:
+                  340,
+
+                gap:
+                  12,
+              }}
+            >
               {totalsCard}
             </View>
           </View>
         ) : (
           <>
             {headerCard}
+
             {itemsCard}
+
             {totalsCard}
           </>
         )}

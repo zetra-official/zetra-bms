@@ -11,7 +11,7 @@ import React, {
 } from "react";
 import { kv, KV_KEYS } from "../storage/kv";
 import { supabase } from "../supabase/supabaseClient";
-
+const INTERNAL_BILLING_EMAIL = "zetraofficialtz@gmail.com";
 /**
  * KATIBA (DORA v1):
  * - DB is source of truth
@@ -32,7 +32,7 @@ export type MyStoreRow = {
   store_id: string;
   store_name: string;
   organization_id: string;
-  store_type?: "STANDARD" | "CAPITAL_RECOVERY";
+  store_type?: "STANDARD" | "CAPITAL_RECOVERY" | "FIELD_PROCUREMENT";
 
   // ✅ PLAN LOCK (V2)
   is_allowed?: boolean; // default true if missing
@@ -57,7 +57,11 @@ export type OrgState = {
   // active store selection
   activeStoreId: string | null;
   activeStoreName: string | null;
-  activeStoreType: "STANDARD" | "CAPITAL_RECOVERY" | null;
+  activeStoreType:
+  | "STANDARD"
+  | "CAPITAL_RECOVERY"
+  | "FIELD_PROCUREMENT"
+  | null;
 
   // actions
   refresh: () => Promise<void>;
@@ -113,7 +117,10 @@ async function rpcFirstWorkingStores(): Promise<MyStoreRow[]> {
     store_id: clean(r?.store_id ?? r?.id),
     store_name: clean(r?.store_name ?? r?.name),
     organization_id: clean(r?.organization_id),
-    store_type: (r?.store_type ?? "STANDARD") as "STANDARD" | "CAPITAL_RECOVERY",
+    store_type: (r?.store_type ?? "STANDARD") as
+  | "STANDARD"
+  | "CAPITAL_RECOVERY"
+  | "FIELD_PROCUREMENT",
     is_allowed:
       typeof r?.is_allowed === "boolean" ? r.is_allowed : true,
     lock_reason: clean(r?.lock_reason) ? String(r.lock_reason) : null,
@@ -335,7 +342,11 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
     return {
       storeId: store?.store_id ?? null,
       storeName: store?.store_name ?? null,
-      storeType: (store?.store_type ?? null) as "STANDARD" | "CAPITAL_RECOVERY" | null,
+      storeType: (store?.store_type ?? null) as
+  | "STANDARD"
+  | "CAPITAL_RECOVERY"
+  | "FIELD_PROCUREMENT"
+  | null,
     };
   }, [stores, deriveActive.orgId, activeStoreId]);
 
@@ -436,6 +447,31 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
         }
 
         currentUserIdRef.current = session.user.id;
+
+        // =========================================================
+        // ZETRA OFFICE ACCOUNT
+        // Office is NOT an organization/store workspace user.
+        // Do not load get_my_orgs / get_my_stores / workspace KV.
+        // =========================================================
+        const sessionEmail = clean(session.user?.email).toLowerCase();
+        const isOfficeUser = sessionEmail === INTERNAL_BILLING_EMAIL;
+
+        if (isOfficeUser) {
+          hydratedUserRef.current = session.user.id;
+
+          setOrgs([]);
+          setStores([]);
+
+          _setActiveOrgId(null);
+          _setActiveStoreId(null);
+
+          activeOrgIdRef.current = null;
+          activeStoreIdRef.current = null;
+
+          setError(null);
+
+          return;
+        }
 
         // hydrate only after we know exactly which authenticated user is active
         if (mode === "boot") {
@@ -651,11 +687,49 @@ export function OrgProvider({ children }: { children: React.ReactNode }) {
         ) {
           if (event === "SIGNED_OUT") {
             currentUserIdRef.current = null;
+            hydratedUserRef.current = null;
+
+            setOrgs([]);
+            setStores([]);
+
+            _setActiveOrgId(null);
+            _setActiveStoreId(null);
+
+            activeOrgIdRef.current = null;
+            activeStoreIdRef.current = null;
+
+            setError(null);
+
             void loadAll("boot");
             return;
           }
 
+          const nextEmail = clean(_session?.user?.email).toLowerCase();
+          const nextIsOfficeUser =
+            nextEmail === INTERNAL_BILLING_EMAIL;
+
           currentUserIdRef.current = nextUserId;
+
+          if (nextIsOfficeUser) {
+            hydratedUserRef.current = nextUserId;
+
+            setOrgs([]);
+            setStores([]);
+
+            _setActiveOrgId(null);
+            _setActiveStoreId(null);
+
+            activeOrgIdRef.current = null;
+            activeStoreIdRef.current = null;
+
+            setError(null);
+
+            setLoading(false);
+            setRefreshing(false);
+
+            return;
+          }
+
           void loadAll("refresh");
         }
       }

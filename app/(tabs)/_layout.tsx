@@ -18,6 +18,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+const INTERNAL_BILLING_EMAIL = "zetraofficialtz@gmail.com";
+
 function TabLabel({
   text,
   color,
@@ -573,6 +575,50 @@ export default function TabsLayout() {
   const insets = useSafeAreaInsets();
   const { activeRole, activeOrgId, activeOrgName, activeStoreId, activeStoreName, stores } = useOrg();
 
+  const [sessionEmail, setSessionEmail] = useState("");
+  const [checkingOfficeAccount, setCheckingOfficeAccount] = useState(true);
+
+  const isOfficeAccount =
+    String(sessionEmail ?? "").trim().toLowerCase() === INTERNAL_BILLING_EMAIL;
+
+  useEffect(() => {
+    let alive = true;
+
+    const checkOfficeAccount = async () => {
+      try {
+        const { data, error } = await supabase.auth.getUser();
+
+        if (!alive) return;
+
+        if (error) {
+          setSessionEmail("");
+          setCheckingOfficeAccount(false);
+          return;
+        }
+
+        const email = String(data?.user?.email ?? "").trim().toLowerCase();
+
+        setSessionEmail(email);
+        setCheckingOfficeAccount(false);
+
+        if (email === INTERNAL_BILLING_EMAIL) {
+          router.replace("/office" as any);
+        }
+      } catch {
+        if (!alive) return;
+
+        setSessionEmail("");
+        setCheckingOfficeAccount(false);
+      }
+    };
+
+    void checkOfficeAccount();
+
+    return () => {
+      alive = false;
+    };
+  }, [router]);
+
   const role = String(activeRole ?? "").trim().toLowerCase();
   const isCashier = role === "cashier";
 
@@ -602,6 +648,28 @@ export default function TabsLayout() {
   const sidebarTitle = String(activeOrgName ?? "ZETRA BMS").trim() || "ZETRA BMS";
   const sidebarStore = String(activeStoreName ?? "No active store").trim() || "No active store";
   const sidebarRole = role ? role.toUpperCase() : "USER";
+
+  if (checkingOfficeAccount) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: theme.colors.background,
+        }}
+      />
+    );
+  }
+
+  if (isOfficeAccount) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: theme.colors.background,
+        }}
+      />
+    );
+  }
 
   return (
     <Tabs

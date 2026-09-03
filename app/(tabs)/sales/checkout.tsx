@@ -683,10 +683,10 @@ useEffect(() => {
 
     async function loadCheckoutCustomers() {
       try {
-        if (!storeId || cashierMode) {
-          if (alive) setCustomerOptions([]);
-          return;
-        }
+      if (!storeId) {
+  if (alive) setCustomerOptions([]);
+  return;
+}
 
         const { data, error } = await supabase
           .from("customers")
@@ -710,7 +710,7 @@ useEffect(() => {
     return () => {
       alive = false;
     };
-  }, [storeId, cashierMode]);
+  }, [storeId]);
   const rpcPaymentMethod: PayMethod = useMemo(() => {
     if (method === "SPLIT") {
       return "CASH";
@@ -739,15 +739,15 @@ useEffect(() => {
 
     async function loadStaffAttributionOptions() {
       try {
-        if (!orgId || !storeId || cashierMode) {
-          if (alive) {
-            setStaffOptions([]);
-            setMyStaffMembershipId("");
-            setCurrentActorMembershipId("");
-            setSoldByMembershipId("");
-          }
-          return;
-        }
+if (!orgId || !storeId) {
+  if (alive) {
+    setStaffOptions([]);
+    setMyStaffMembershipId("");
+    setCurrentActorMembershipId("");
+    setSoldByMembershipId("");
+  }
+  return;
+}
 
         const [{ data: authData }, rpcRes] = await Promise.all([
           supabase.auth.getUser(),
@@ -841,7 +841,7 @@ useEffect(() => {
     return () => {
       alive = false;
     };
-  }, [storeId, activeRole, activeMembershipId, orgId, cashierMode]);
+  }, [storeId, activeRole, activeMembershipId, orgId]);
 
   useEffect(() => {
     if (cashierMode) return;
@@ -1111,12 +1111,17 @@ orgId,
     if (cashierMode) {
       setSaving(true);
       try {
-        const finalNote = buildNoteWithDiscount({
-          note: `${note || ""}`,
-          discountText,
-          discountAmount: discount.amount,
-          subtotal: subtotalAmount,
-        });
+const handoffMetaLines =
+  `HANDOFF_CUSTOMER_NAME: ${customerName.trim() || "-"}\n` +
+  `HANDOFF_CUSTOMER_PHONE: ${customerPhone.trim() || "-"}\n` +
+  `HANDOFF_SOLD_BY_MEMBERSHIP_ID: ${effectiveSoldByMembershipId || "-"}\n`;
+
+const finalNote = buildNoteWithDiscount({
+  note: `${handoffMetaLines}${note || ""}`,
+  discountText,
+  discountAmount: discount.amount,
+  subtotal: subtotalAmount,
+});
 
         const items = checkoutCart.map((c) => ({
           product_id: c.product_id,
@@ -1128,18 +1133,23 @@ orgId,
           line_total: getAdjustedLineTotal(c),
         }));
 
-        const { data, error } = await supabase.rpc("create_cashier_handoff_v2", {
-          p_store_id: storeId,
-          p_items: items,
-          p_subtotal: subtotalAmount,
-          p_discount_amount: discount.amount,
-          p_total: grandTotal,
-          p_note: finalNote,
-        });
+const { data, error } = await supabase.rpc("create_cashier_handoff_v2", {
+  p_store_id: storeId,
+  p_items: items,
+  p_subtotal: subtotalAmount,
+  p_discount_amount: discount.amount,
+  p_total: grandTotal,
+  p_note: finalNote,
+  p_sold_by_membership_id: effectiveSoldByMembershipId || null,
+  p_customer_name: customerName.trim() || null,
+  p_customer_phone: customerPhone.trim() || null,
+});
 
-        if (error) throw error;
+if (error) throw error;
 
-        const successMsg = `Order imetumwa kwa cashier queue ya store hii. Handoff ID: ${String(data ?? "").slice(0, 8)}...`;
+await clearPersistedSalesCart();
+
+const successMsg = `Order imetumwa kwa cashier queue ya store hii. Handoff ID: ${String(data ?? "").slice(0, 8)}...`;
 
         if (Platform.OS === "web") {
           setWebBanner({ type: "success", text: successMsg });
@@ -1159,8 +1169,7 @@ orgId,
         }
       } finally {
         setSaving(false);
-      }
-      return;
+      }return;
     }
 
     if (reservationMode) {
@@ -1785,8 +1794,7 @@ headerStoreName,
     </Card>
   );
 
-const staffAttributionCard =
-    !cashierMode ? (
+const staffAttributionCard = (
       <Card style={checkoutCardStyle("#8B5CF6", "#FAF5FF", isDesktopWeb)}>
         <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
           👥 Staff Attribution
@@ -1915,8 +1923,8 @@ const staffAttributionCard =
             </View>
           ) : null}
         </View>
-      </Card>
-    ) : null;
+       </Card>
+    );
   const paymentCard = !cashierMode ? (
     <Card style={checkoutCardStyle("#10B981", "#F0FDF4", isDesktopWeb)}>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
@@ -2096,15 +2104,16 @@ const staffAttributionCard =
     </Card>
   ) : null;
 
-  const customerCard =
-    !cashierMode ? (
+  const customerCard = (
       <Card style={checkoutCardStyle("#06B6D4", "#ECFEFF", isDesktopWeb)}>
         <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
           👤 Customer Tracking
         </Text>
 
         <View>
-          <FieldLabel>Customer Name {isCredit ? "*" : "(optional)"}</FieldLabel>
+          <FieldLabel>
+  Customer Name {cashierMode ? "(optional)" : isCredit ? "*" : "(optional)"}
+</FieldLabel>
           <TextInput
             value={customerName}
             onFocus={() => {
@@ -2200,7 +2209,7 @@ const staffAttributionCard =
           Tip: Ukimchagua mteja, sale itaunganishwa automatically kwenye CRM file yake.
         </Text>
       </Card>
-    ) : null;
+    );
 
   const actionCard = (
     <Card style={checkoutCardStyle("#2563EB", "#EFF6FF", isDesktopWeb)}>

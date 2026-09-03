@@ -372,7 +372,11 @@ const [scanBusy, setScanBusy] = useState(false);
 const [keyboardSpace, setKeyboardSpace] = useState(0);
 
 const [productSearch, setProductSearch] = useState("");
-
+// Category autocomplete / dropdown
+const [storeCategories, setStoreCategories] = useState<string[]>([]);
+const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
+const [editCategoryDropdownOpen, setEditCategoryDropdownOpen] = useState(false);
+const [categoriesLoading, setCategoriesLoading] = useState(false);
 // Performance:
 // Usirender Product Catalog yote kwa wakati mmoja.
 // Hii inapunguza cards + remote images zinazokuwa mounted simultaneously.
@@ -692,7 +696,61 @@ const uploadProductImage = useCallback(
     },
     [closeScan, scanBusy, scanOpen]
   );
+const loadStoreCategories = useCallback(async () => {
+  if (!activeOrgId || !scopedStoreId) {
+    setStoreCategories([]);
+    return;
+  }
 
+  setCategoriesLoading(true);
+
+  try {
+    // Hii query ni maalum kwa category suggestions.
+    // Product Catalog yako bado inaendelea kutumia productStoreScope yake kama kawaida.
+    const { data, error: categoryError } = await supabase.rpc(
+      canManage ? "get_products_manage" : "get_products",
+      {
+        p_org_id: activeOrgId,
+        p_store_id: scopedStoreId,
+      }
+    );
+
+    if (categoryError) throw categoryError;
+
+    const categoryMap = new Map<string, string>();
+
+    ((data ?? []) as ProductRow[]).forEach((product) => {
+      const rawCategory = String(product?.category ?? "").trim();
+
+      if (!rawCategory) return;
+
+      const normalized = rawCategory
+        .toLowerCase()
+        .replace(/\s+/g, " ")
+        .trim();
+
+      if (!normalized) return;
+
+      // Duplicate categories zinaondolewa bila kuharibu spelling ya original.
+      if (!categoryMap.has(normalized)) {
+        categoryMap.set(normalized, rawCategory);
+      }
+    });
+
+    const nextCategories = Array.from(categoryMap.values()).sort((a, b) =>
+      a.localeCompare(b, undefined, {
+        sensitivity: "base",
+      })
+    );
+
+    setStoreCategories(nextCategories);
+  } catch (err) {
+    console.warn("Failed to load store categories:", err);
+    setStoreCategories([]);
+  } finally {
+    setCategoriesLoading(false);
+  }
+}, [activeOrgId, scopedStoreId, canManage]);
 const load = useCallback(async () => {
   if (!activeOrgId) {
     setRows([]);
@@ -732,9 +790,10 @@ const load = useCallback(async () => {
   }
 }, [activeOrgId, canManage, isCapitalRecoveryStore, productStoreScope, scopedStoreId]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+useEffect(() => {
+  void load();
+  void loadStoreCategories();
+}, [load, loadStoreCategories]);
 
   useEffect(() => {
     if (!canManage) return;
@@ -978,6 +1037,7 @@ setEditCostPrice(p.cost_price != null ? String(Number(p.cost_price)) : "");
     setEditSku("");
     setEditUnit("");
     setEditCategory("");
+    setEditCategoryDropdownOpen(false);
     setEditSellingPrice("");
     setEditCostPrice("");
     setEditBarcode("");
@@ -1122,10 +1182,11 @@ p_image_url: imageUrl.trim() || null,
       removeWebLocalStorage(productDraftKey);
 
       setName("");
-      setSku("");
-      setUnit("");
-      setCategory("");
-      setSellingPrice("");
+setSku("");
+setUnit("");
+setCategory("");
+setCategoryDropdownOpen(false);
+setSellingPrice("");
       setCostPrice("");
       setBarcode("");
       setImageUrl("");
@@ -1135,6 +1196,8 @@ p_image_url: imageUrl.trim() || null,
       setPrecisionUnit("");
 
 await load();
+await loadStoreCategories();
+
       Alert.alert(
         "Success ✅",
         isCapitalRecoveryStore
@@ -1158,7 +1221,8 @@ await load();
     costPrice,
     isCapitalRecoveryStore,
     load,
-    name,
+loadStoreCategories,
+name,
     sellingPrice,
     sku,
     unit,
@@ -1252,9 +1316,10 @@ p_image_url: editImageUrl.trim() || null,
 });
       if (e) throw e;
 
-      closeEdit();
-      await load();
-      Alert.alert("Success ✅", "Product updated");
+     closeEdit();
+await load();
+await loadStoreCategories();
+Alert.alert("Success ✅", "Product updated");
     } catch (err: any) {
       Alert.alert("Plan Limit", getProductLimitFriendlyMessage(err));
     } finally {
@@ -1276,8 +1341,9 @@ p_image_url: editImageUrl.trim() || null,
     editImageUrl,
     isCapitalRecoveryStore,
     isPrecisionRetailStore,
-    load,
-    editPrecisionPackQty,
+  load,
+loadStoreCategories,
+editPrecisionPackQty,
     editPrecisionUnit,
   ]);
 
@@ -1302,6 +1368,8 @@ const remove = useCallback(
         if (e) throw e;
 
         await load();
+        await loadStoreCategories();
+
         Alert.alert("Success ✅", "Product deleted/archived safely");
       } catch (err: any) {
         Alert.alert("Failed", err?.message ?? "Unknown error");
@@ -1331,7 +1399,7 @@ const remove = useCallback(
       { cancelable: true }
     );
   },
-  [activeOrgId, productStoreScope, canManage, load]
+  [activeOrgId, productStoreScope, canManage, load, loadStoreCategories]
 );
 
 const visibleRows = useMemo(() => {
@@ -1409,7 +1477,29 @@ const loadMoreProducts = useCallback(() => {
     Math.min(current + PRODUCTS_PAGE_SIZE, visibleRows.length)
   );
 }, [visibleRows.length]);
+const filteredCategorySuggestions = useMemo(() => {
+  const q = category.trim().toLowerCase();
 
+  if (!q) {
+    return storeCategories;
+  }
+
+  return storeCategories.filter((item) =>
+    item.toLowerCase().includes(q)
+  );
+}, [category, storeCategories]);
+
+const filteredEditCategorySuggestions = useMemo(() => {
+  const q = editCategory.trim().toLowerCase();
+
+  if (!q) {
+    return storeCategories;
+  }
+
+  return storeCategories.filter((item) =>
+    item.toLowerCase().includes(q)
+  );
+}, [editCategory, storeCategories]);
 const solidInputStyle = {
     borderWidth: 1,
     borderColor: theme.colors.border,
@@ -1620,22 +1710,164 @@ const solidInputStyle = {
             </View>
           )}
 
-          <TextInput
-            value={category}
-            onChangeText={setCategory}
-            placeholder="Category (optional)"
-            placeholderTextColor={theme.colors.faint}
+         <View style={{ position: "relative", zIndex: 30 }}>
+  <View
+    style={{
+      flexDirection: "row",
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: categoryDropdownOpen
+        ? theme.colors.emeraldBorder
+        : theme.colors.border,
+      borderRadius: theme.radius.lg,
+      backgroundColor: "#FFFFFF",
+      paddingRight: 12,
+    }}
+  >
+    <TextInput
+      value={category}
+      onChangeText={(text) => {
+        setCategory(text);
+        setCategoryDropdownOpen(true);
+      }}
+      onFocus={() => {
+        setCategoryDropdownOpen(true);
+
+        // Refresh categories unapofungua field.
+        if (!categoriesLoading) {
+          void loadStoreCategories();
+        }
+      }}
+      placeholder="Category (optional)"
+      placeholderTextColor={theme.colors.faint}
+      autoCorrect={false}
+      style={{
+        flex: 1,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+        color: theme.colors.text,
+        fontWeight: "800",
+      }}
+    />
+
+    <Pressable
+      onPress={() => {
+        setCategoryDropdownOpen((current) => !current);
+
+        if (!categoryDropdownOpen && !categoriesLoading) {
+          void loadStoreCategories();
+        }
+      }}
+      hitSlop={8}
+      style={{
+        width: 34,
+        height: 34,
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <WebSafeIcon
+        name={categoryDropdownOpen ? "chevron-up" : "chevron-down"}
+        size={20}
+        color={theme.colors.muted}
+      />
+    </Pressable>
+  </View>
+
+  {categoryDropdownOpen && (
+    <View
+      style={{
+        marginTop: 6,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+        borderRadius: 16,
+        backgroundColor: "#FFFFFF",
+        overflow: "hidden",
+
+        shadowColor: "#0F172A",
+        shadowOpacity: Platform.OS === "android" ? 0 : 0.12,
+        shadowRadius: Platform.OS === "android" ? 0 : 14,
+        shadowOffset: { width: 0, height: 8 },
+        elevation: 6,
+      }}
+    >
+      {categoriesLoading ? (
+        <View
+          style={{
+            paddingHorizontal: 14,
+            paddingVertical: 14,
+          }}
+        >
+          <Text
             style={{
-              borderWidth: 1,
-              borderColor: theme.colors.border,
-              borderRadius: theme.radius.lg,
-              backgroundColor: "#FFFFFF",
-              paddingHorizontal: 14,
-              paddingVertical: 12,
-              color: theme.colors.text,
+              color: theme.colors.muted,
               fontWeight: "800",
             }}
-          />
+          >
+            Loading categories...
+          </Text>
+        </View>
+      ) : filteredCategorySuggestions.length > 0 ? (
+        <ScrollView
+          style={{
+            maxHeight: 220,
+          }}
+          keyboardShouldPersistTaps="always"
+          nestedScrollEnabled
+          showsVerticalScrollIndicator
+        >
+          {filteredCategorySuggestions.map((item, index) => (
+            <Pressable
+              key={`${item}-${index}`}
+              onPress={() => {
+                setCategory(item);
+                setCategoryDropdownOpen(false);
+              }}
+              style={({ pressed }) => ({
+                paddingHorizontal: 14,
+                paddingVertical: 13,
+                backgroundColor: pressed
+                  ? "rgba(16,185,129,0.10)"
+                  : "#FFFFFF",
+                borderBottomWidth:
+                  index < filteredCategorySuggestions.length - 1 ? 1 : 0,
+                borderBottomColor: "rgba(148,163,184,0.16)",
+              })}
+            >
+              <Text
+                style={{
+                  color: theme.colors.text,
+                  fontWeight: "800",
+                }}
+              >
+                {item}
+              </Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      ) : (
+        <View
+          style={{
+            paddingHorizontal: 14,
+            paddingVertical: 14,
+          }}
+        >
+          <Text
+            style={{
+              color: theme.colors.muted,
+              fontWeight: "800",
+              lineHeight: 20,
+            }}
+          >
+            {category.trim()
+              ? `"${category.trim()}" haipo bado. Endelea kuandika kuitengeneza kama category mpya.`
+              : "Hakuna category iliyopatikana kwenye store hii bado."}
+          </Text>
+        </View>
+      )}
+    </View>
+  )}
+</View>
 
           <View style={{ gap: 8 }}>
             <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Product Image (optional)</Text>
@@ -2498,13 +2730,162 @@ backgroundColor: pressed ? "#E2E8F0" : "#F8FAFC",
                   </View>
                 )}
 
-                <TextInput
-                  value={editCategory}
-                  onChangeText={setEditCategory}
-                  placeholder="Category (optional)"
-                  placeholderTextColor={theme.colors.faint}
-                  style={solidInputStyle}
-                />
+              <View style={{ position: "relative", zIndex: 30 }}>
+  <View
+    style={{
+      flexDirection: "row",
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: editCategoryDropdownOpen
+        ? theme.colors.emeraldBorder
+        : theme.colors.border,
+      borderRadius: theme.radius.lg,
+      backgroundColor: "#FFFFFF",
+      paddingRight: 12,
+    }}
+  >
+    <TextInput
+      value={editCategory}
+      onChangeText={(text) => {
+        setEditCategory(text);
+        setEditCategoryDropdownOpen(true);
+      }}
+      onFocus={() => {
+        setEditCategoryDropdownOpen(true);
+
+        if (!categoriesLoading) {
+          void loadStoreCategories();
+        }
+      }}
+      placeholder="Category (optional)"
+      placeholderTextColor={theme.colors.faint}
+      autoCorrect={false}
+      style={{
+        flex: 1,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+        color: theme.colors.text,
+        fontWeight: "800",
+      }}
+    />
+
+    <Pressable
+      onPress={() => {
+        setEditCategoryDropdownOpen((current) => !current);
+
+        if (!editCategoryDropdownOpen && !categoriesLoading) {
+          void loadStoreCategories();
+        }
+      }}
+      hitSlop={8}
+      style={{
+        width: 34,
+        height: 34,
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <WebSafeIcon
+        name={
+          editCategoryDropdownOpen
+            ? "chevron-up"
+            : "chevron-down"
+        }
+        size={20}
+        color={theme.colors.muted}
+      />
+    </Pressable>
+  </View>
+
+  {editCategoryDropdownOpen && (
+    <View
+      style={{
+        marginTop: 6,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+        borderRadius: 16,
+        backgroundColor: "#FFFFFF",
+        overflow: "hidden",
+        elevation: 6,
+      }}
+    >
+      {categoriesLoading ? (
+        <View
+          style={{
+            paddingHorizontal: 14,
+            paddingVertical: 14,
+          }}
+        >
+          <Text
+            style={{
+              color: theme.colors.muted,
+              fontWeight: "800",
+            }}
+          >
+            Loading categories...
+          </Text>
+        </View>
+      ) : filteredEditCategorySuggestions.length > 0 ? (
+        <ScrollView
+          style={{ maxHeight: 190 }}
+          keyboardShouldPersistTaps="always"
+          nestedScrollEnabled
+          showsVerticalScrollIndicator
+        >
+          {filteredEditCategorySuggestions.map((item, index) => (
+            <Pressable
+              key={`${item}-${index}`}
+              onPress={() => {
+                setEditCategory(item);
+                setEditCategoryDropdownOpen(false);
+              }}
+              style={({ pressed }) => ({
+                paddingHorizontal: 14,
+                paddingVertical: 13,
+                backgroundColor: pressed
+                  ? "rgba(16,185,129,0.10)"
+                  : "#FFFFFF",
+                borderBottomWidth:
+                  index <
+                  filteredEditCategorySuggestions.length - 1
+                    ? 1
+                    : 0,
+                borderBottomColor: "rgba(148,163,184,0.16)",
+              })}
+            >
+              <Text
+                style={{
+                  color: theme.colors.text,
+                  fontWeight: "800",
+                }}
+              >
+                {item}
+              </Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      ) : (
+        <View
+          style={{
+            paddingHorizontal: 14,
+            paddingVertical: 14,
+          }}
+        >
+          <Text
+            style={{
+              color: theme.colors.muted,
+              fontWeight: "800",
+            }}
+          >
+            {editCategory.trim()
+              ? `"${editCategory.trim()}" haipo bado. Unaweza kuitumia kama category mpya.`
+              : "Hakuna category iliyopatikana kwenye store hii bado."}
+          </Text>
+        </View>
+      )}
+    </View>
+  )}
+</View>
 
                 <View style={{ gap: 8 }}>
                   <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Product Image</Text>
