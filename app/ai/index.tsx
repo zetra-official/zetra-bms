@@ -879,7 +879,40 @@ async function waitForActiveSession(timeoutMs = 4000, stepMs = 250) {
     error: "Not authenticated",
   };
 }
+async function getWorkerAuthHeaders(args?: {
+  json?: boolean;
+  orgId?: string | null;
+}): Promise<Record<string, string>> {
+  const auth = await waitForActiveSession();
 
+  const accessToken = clean(
+    auth?.session?.access_token
+  );
+
+  if (!auth.ok || !accessToken) {
+    throw new Error(
+      "Authentication required. Please sign in again."
+    );
+  }
+
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${accessToken}`,
+    Accept: "application/json",
+  };
+
+  if (args?.json !== false) {
+    headers["Content-Type"] =
+      "application/json";
+  }
+
+  const orgId = clean(args?.orgId);
+
+  if (orgId) {
+    headers["x-zetra-org-id"] = orgId;
+  }
+
+  return headers;
+}
 async function safeRpcOne(name: string, args: Record<string, any>) {
   try {
     const auth = await waitForActiveSession();
@@ -3824,23 +3857,48 @@ setInput("...");
          type: "audio/m4a",
         } as any
       );
+const orgId =
+  clean(org.activeOrgId);
 
+if (!orgId) {
+  throw new Error(
+    "Organization is required for transcription."
+  );
+}
+
+form.append(
+  "orgId",
+  orgId
+);
+
+form.append(
+  "activeOrgId",
+  orgId
+);
       const url = `${AI_WORKER_URL}/transcribe`;
 
       const abort = new AbortController();
       netAbortRef.current = abort;
 
-     const out = await fetchJsonWithRetry(
+     const authHeaders =
+  await getWorkerAuthHeaders({
+    json: false,
+    orgId,
+  });
+
+const out = await fetchJsonWithRetry(
   url,
   {
     method: "POST",
-    headers: {
-      "x-zetra-role": clean(org.activeRole),
-    },
+    headers: authHeaders,
     body: form,
     signal: abort.signal,
   },
-  { timeoutMs: 20_000, retries: 0, tag: "transcribe" }
+  {
+    timeoutMs: 60_000,
+    retries: 0,
+    tag: "transcribe",
+  }
 );
 
       const data: any = out.data;
@@ -4281,16 +4339,26 @@ const callWorkerChat = useCallback(
     };
 
     const url = `${AI_WORKER_URL}/v1/chat`;
-    const out = await fetchJsonWithRetry(
-      url,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify(payload),
-        signal,
-      },
-      { timeoutMs: DEFAULT_TIMEOUT_MS, retries: DEFAULT_RETRIES, tag: "chat" }
-    );
+const authHeaders =
+  await getWorkerAuthHeaders({
+    json: true,
+    orgId: org.activeOrgId,
+  });
+
+const out = await fetchJsonWithRetry(
+  url,
+  {
+    method: "POST",
+    headers: authHeaders,
+    body: JSON.stringify(payload),
+    signal,
+  },
+  {
+    timeoutMs: DEFAULT_TIMEOUT_MS,
+    retries: DEFAULT_RETRIES,
+    tag: "chat",
+  }
+);
 
     const data: any = out.data;
 
@@ -4645,16 +4713,26 @@ if (
       };
 
       const url = `${AI_WORKER_URL}/vision`;
-      const out = await fetchJsonWithRetry(
-        url,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Accept: "application/json" },
-          body: JSON.stringify(payload),
-          signal,
-        },
-        { timeoutMs: 40_000, retries: 2, tag: "vision" }
-      );
+    const authHeaders =
+  await getWorkerAuthHeaders({
+    json: true,
+    orgId: org.activeOrgId,
+  });
+
+const out = await fetchJsonWithRetry(
+  url,
+  {
+    method: "POST",
+    headers: authHeaders,
+    body: JSON.stringify(payload),
+    signal,
+  },
+  {
+    timeoutMs: 40_000,
+    retries: 2,
+    tag: "vision",
+  }
+);
 
       const data: any = out.data;
 
@@ -4691,31 +4769,74 @@ if (
       if (!requireWorkerUrlOrAlert()) throw new Error("Worker URL missing");
 
       const url = `${AI_WORKER_URL}/image`;
-      const out = await fetchJsonWithRetry(
-        url,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          body: JSON.stringify({
-            prompt,
-            context: {
-              ...aiContext,
-              orgId: org.activeOrgId ?? null,
-              orgName: org.activeOrgName ?? null,
-              storeId: org.activeStoreId ?? null,
-              storeName: org.activeStoreName ?? null,
-              role: org.activeRole ?? null,
-              planCode: currentPlanLabel,
-              module: "ZETRA_BMS_AI",
-            },
-          }),
-          signal,
-        },
-        { timeoutMs: 60_000, retries: 2, tag: "image" }
-      );
+    const authHeaders =
+  await getWorkerAuthHeaders({
+    json: true,
+    orgId: org.activeOrgId,
+  });
+
+const out = await fetchJsonWithRetry(
+  url,
+  {
+    method: "POST",
+    headers: authHeaders,
+    body: JSON.stringify({
+      prompt,
+
+      orgId:
+        org.activeOrgId ?? null,
+
+      activeOrgId:
+        org.activeOrgId ?? null,
+
+      context: {
+        ...aiContext,
+
+        orgId:
+          org.activeOrgId ?? null,
+
+        activeOrgId:
+          org.activeOrgId ?? null,
+
+        orgName:
+          org.activeOrgName ?? null,
+
+        activeOrgName:
+          org.activeOrgName ?? null,
+
+        storeId:
+          org.activeStoreId ?? null,
+
+        activeStoreId:
+          org.activeStoreId ?? null,
+
+        storeName:
+          org.activeStoreName ?? null,
+
+        activeStoreName:
+          org.activeStoreName ?? null,
+
+        role:
+          org.activeRole ?? null,
+
+        activeRole:
+          org.activeRole ?? null,
+
+        planCode:
+          currentPlanLabel,
+
+        module:
+          "ZETRA_BMS_AI",
+      },
+    }),
+    signal,
+  },
+  {
+    timeoutMs: 60_000,
+    retries: 2,
+    tag: "image",
+  }
+);
 
       const data: any = out.data;
 
@@ -4906,39 +5027,7 @@ function buildTopProductsFromSalesRows(rows: any[]): InjectedTopProductRow[] {
     }
   }, [org.activeOrgId]);
 
-  const consumeAiCredits = useCallback(
-    async (credits: number): Promise<{ ok: boolean; error: string }> => {
-      const orgId = clean(org.activeOrgId);
-      if (!orgId) return { ok: false, error: "Missing orgId" };const n = Number(credits);
-      if (!Number.isFinite(n) || n <= 0) {
-        return { ok: false, error: "Invalid credits amount" };
-      }
-
-      try {
-        const { error } = await supabase.rpc("ai_consume_credits", {
-          p_org_id: orgId,
-          p_credits: n,
-        });
-
-        if (error) {
-          return {
-            ok: false,
-            error: clean(error.message) || "Failed to consume AI credits",
-          };
-        }
-await loadAiBalance();
-          await loadBusinessSnapshot();
-          await loadTasksFollowupSummary();
-        return { ok: true, error: "" };
-      } catch (e: any) {
-        return {
-          ok: false,
-          error: clean(e?.message) || "Failed to consume AI credits",
-        };
-      }
-    },
-   [loadAiBalance, loadBusinessSnapshot, loadTasksFollowupSummary, org.activeOrgId]
-  );
+  
 
   const stopGenerating = useCallback(() => {
     activeReqTokenRef.current = `STOP_${uid()}`;
@@ -4982,11 +5071,16 @@ await loadAiBalance();
 }) {
   const resMeta: any = args.res?.meta ?? null;
 
-  applyAssistantMetaToMessage(args.botId, resMeta);
+applyAssistantMetaToMessage(
+  args.botId,
+  resMeta
+);
 
-  const creditResult = await consumeAiCredits(1);
+// Worker ndiye authoritative credit consumer.
+// App inarefresh balance tu baada ya response.
+await loadAiBalance();
 
-  let footerNote = creditResult.ok ? "" : args.creditFailureNote;
+let footerNote = "";
 
   if (aiEnabled && clean(org.activeOrgId) && Array.isArray(resMeta?.actions) && resMeta.actions.length) {
     const result = await createTasksFromAiActions({
@@ -5073,11 +5167,9 @@ await loadAiBalance();
 
         if (reqToken !== activeReqTokenRef.current) return;
 
-        const creditResult = await consumeAiCredits(1);
+ await loadAiBalance();
 
-        const reply = creditResult.ok
-          ? "✅ Image generated"
-          : "✅ Image generated\n\n⚠️ AI image imetoka lakini credit deduction imeshindikana.";
+const reply = "✅ Image generated";
 
         setMessages((prev) =>
           prev.map((m) =>
@@ -5127,20 +5219,19 @@ await loadAiBalance();
         scrollToLatest(false, true);
       }
     },
-    [
-      callWorkerImageGenerate,
-      consumeAiCredits,
-      currentPlanLabel,
-      ownerOnlyReason,
-      patchMessageText,
-      requireAi,
-      scrollToLatest,
-      startTypingDots,
-      stopTyping,
-      stopTypingDots,
-      thinking,
-      typeOutChatGPTLike,
-    ]
+   [
+  callWorkerImageGenerate,
+  currentPlanLabel,
+  ownerOnlyReason,
+  patchMessageText,
+  requireAi,
+  scrollToLatest,
+  startTypingDots,
+  stopTyping,
+  stopTypingDots,
+  thinking,
+  typeOutChatGPTLike,
+]
   );
 
   const send = useCallback(async () => {
@@ -5250,11 +5341,9 @@ setTimeout(() => {
 
         if (reqToken !== activeReqTokenRef.current) return;
 
-        const creditResult = await consumeAiCredits(1);
+await loadAiBalance();
 
-        const reply = creditResult.ok
-  ? "✅ Image generated"
-  : "✅ Image generated\n\n⚠️ AI image imetoka lakini credit deduction imeshindikana.";
+const reply = "✅ Image generated";
 
 setMessages((prev) =>
   prev.map((m) =>
@@ -5327,9 +5416,8 @@ return;
     callWorkerChat,
     callWorkerImageGenerate,
     callWorkerVision,
-    consumeAiCredits,
-    currentPlanLabel,
-    finalizeAssistantResponse,
+currentPlanLabel,
+finalizeAssistantResponse,
     input,
     loadBusinessSnapshot,
     org.activeOrgId,
@@ -5389,11 +5477,9 @@ return;
 
         if (reqToken !== activeReqTokenRef.current) return;
 
-        const creditResult = await consumeAiCredits(1);
+       await loadAiBalance();
 
-        const reply = creditResult.ok
-  ? "✅ Image generated"
-  : "✅ Image generated\n\n⚠️ Retry image imetoka lakini credit deduction imeshindikana.";
+const reply = "✅ Image generated";
 
 setMessages((prev) =>
   prev.map((m) =>
@@ -5466,9 +5552,8 @@ return;
     aiEnabled,
     callWorkerChat,
     callWorkerImageGenerate,
-    callWorkerVision,
-    consumeAiCredits,
-    currentPlanLabel,
+ callWorkerVision,
+currentPlanLabel,
     finalizeAssistantResponse,
     org.activeOrgId,
     org.activeStoreId,

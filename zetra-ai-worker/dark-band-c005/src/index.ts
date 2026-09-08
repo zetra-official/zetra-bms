@@ -102,6 +102,28 @@ type ForecastPoint = {
   margin: number;
 };
 
+type VerifiedAiAccess = {
+  ok: boolean;
+  status: number;
+  code: string;
+  error: string;
+
+  userId: string;
+  orgId: string;
+  role: "owner" | "";
+
+  planCode: string;
+  planName: string;
+  subscriptionStatus: string;
+  aiEnabled: boolean;
+
+  creditsMonthly: number;
+  creditsUsed: number;
+  creditsRemaining: number;
+
+  accessToken: string;
+};
+
 function clean(x: unknown) {
   return String(x ?? "").trim();
 }
@@ -120,8 +142,10 @@ function json(data: unknown, init: ResponseInit = {}) {
 function corsHeaders(origin: string | null) {
   return {
     "Access-Control-Allow-Origin": origin ?? "*",
-    "Access-Control-Allow-Headers": "content-type, authorization, x-zetra-role",
+    "Access-Control-Allow-Headers":
+      "content-type, authorization, x-zetra-role, x-zetra-org-id",
     "Access-Control-Allow-Methods": "POST, OPTIONS, GET",
+    "Vary": "Origin",
   };
 }
 
@@ -156,97 +180,36 @@ function normalizeRoleHint(x: any): AiRoleKey | null {
   return ok[v] ?? null;
 }
 
-function normalizeUserRole(x: any) {
-  return clean(x).toLowerCase();
-}
-
-function ownerOnlyError(origin: string | null) {
-  return withCors(
-    json(
-      {
-        ok: false,
-        error: "AI is available only for organization owner.",
-        code: "OWNER_ONLY_AI",
-      },
-      { status: 403 }
-    ),
-    origin
-  );
-}
-
-function ensureOwnerRole(roleRaw: any) {
-  return normalizeUserRole(roleRaw) === "owner";
-}
-
 function buildRoleInstructions(role: AiRoleKey) {
   if (role === "ENGINEERING") {
-    return `
-ROLE: ENGINEERING (Senior Engineer)
-- Be precise, technical, and structured.
-- Prefer step-by-step debugging, root-cause analysis, and safe fixes.
-- Ask for the exact error/log if missing.
-- Provide code examples only when needed.
-`.trim();
+    return ` ROLE: ENGINEERING (Senior Engineer) - Be precise, technical, and structured. - Prefer step-by-step debugging, root-cause analysis, and safe fixes. - Ask for the exact error/log if missing. - Provide code examples only when needed. `.trim();
   }
 
   if (role === "MATH") {
-    return `
-ROLE: MATH (Mathematics Tutor)
-- Explain clearly with correct steps.
-- Define variables, show working, then final answer.
-- If information is missing, ask the minimum needed.
-`.trim();
+    return ` ROLE: MATH (Mathematics Tutor) - Explain clearly with correct steps. - Define variables, show working, then final answer. - If information is missing, ask the minimum needed. `.trim();
   }
 
   if (role === "HEALTH") {
-    return `
-ROLE: HEALTH (General Health Information)
-- Provide general health information only (not diagnosis or prescription).
-- Encourage seeking a qualified clinician for urgent/severe symptoms.
-- Keep it practical: what it could mean, safe next steps, red flags.
-- Avoid overly graphic details.
-`.trim();
+    return ` ROLE: HEALTH (General Health Information) - Provide general health information only (not diagnosis or prescription). - Encourage seeking a qualified clinician for urgent/severe symptoms. - Keep it practical: what it could mean, safe next steps, red flags. - Avoid overly graphic details. `.trim();
   }
 
   if (role === "LEGAL") {
-    return `
-ROLE: LEGAL (General Legal Information)
-- Provide general legal info and best practices (not legal advice).
-- Ask jurisdiction if needed, but still give general guidance.
-- Be structured: risks, options, documentation.
-`.trim();
+    return ` ROLE: LEGAL (General Legal Information) - Provide general legal info and best practices (not legal advice). - Ask jurisdiction if needed, but still give general guidance. - Be structured: risks, options, documentation. `.trim();
   }
 
   if (role === "FINANCE") {
-    return `
-ROLE: FINANCE (Finance & Accounting Advisor)
-- Give practical finance guidance: budgeting, cashflow, pricing, margins, bookkeeping.
-- Use clear assumptions; if numbers missing, ask for key inputs.
-`.trim();
+    return ` ROLE: FINANCE (Finance & Accounting Advisor) - Give practical finance guidance: budgeting, cashflow, pricing, margins, bookkeeping. - Use clear assumptions; if numbers missing, ask for key inputs. `.trim();
   }
 
   if (role === "MARKETING") {
-    return `
-ROLE: MARKETING (Marketing Strategist)
-- Give actionable marketing plans, creatives, targeting, and measurement.
-- Focus on conversion, retention, and brand positioning.
-`.trim();
+    return ` ROLE: MARKETING (Marketing Strategist) - Give actionable marketing plans, creatives, targeting, and measurement. - Focus on conversion, retention, and brand positioning. `.trim();
   }
 
   if (role === "ZETRA_BMS") {
-    return `
-ROLE: ZETRA_BMS (ZETRA Product Coach)
-- Guide user inside ZETRA BMS step-by-step.
-- Ask which screen/module they are on if unclear.
-- Provide clear workflows and safe operations.
-`.trim();
+    return ` ROLE: ZETRA_BMS (ZETRA Product Coach) - Guide user inside ZETRA BMS step-by-step. - Ask which screen/module they are on if unclear. - Provide clear workflows and safe operations. `.trim();
   }
 
-  return `
-ROLE: GENERAL (Helpful Assistant)
-- Be helpful, structured, and practical.
-- If uncertain, ask a short clarification.
-`.trim();
+  return ` ROLE: GENERAL (Helpful Assistant) - Be helpful, structured, and practical. - If uncertain, ask a short clarification. `.trim();
 }
 
 function buildZetraInstructions(lang: "sw" | "en" | "auto", role: AiRoleKey) {
@@ -257,56 +220,13 @@ function buildZetraInstructions(lang: "sw" | "en" | "auto", role: AiRoleKey) {
       ? "Respond fully in English."
       : "Respond in the same language(s) used by the user (AUTO). If the user mixes languages, you may mix too.";
 
-  const globalLanguagePolicy = `
-GLOBAL LANGUAGE POLICY (CRITICAL):
-- You support ALL human languages (worldwide).
-- NEVER claim you only speak one language.
-- AUTO mode: reply in the same language(s) the user used.
-- If user explicitly requests a reply language, follow it.
-`.trim();
+  const globalLanguagePolicy = ` GLOBAL LANGUAGE POLICY (CRITICAL): - You support ALL human languages (worldwide). - NEVER claim you only speak one language. - AUTO mode: reply in the same language(s) the user used. - If user explicitly requests a reply language, follow it. `.trim();
 
-  const safetyPolicy = `
-SAFETY (CRITICAL):
-- Do not provide instructions for self-harm, suicide, violence, or illegal wrongdoing.
-- For health topics: general info only; encourage professional help for urgent/severe symptoms.
-- Never reveal secrets, API keys, or private data.
-`.trim();
+  const safetyPolicy = ` SAFETY (CRITICAL): - Do not provide instructions for self-harm, suicide, violence, or illegal wrongdoing. - For health topics: general info only; encourage professional help for urgent/severe symptoms. - Never reveal secrets, API keys, or private data. `.trim();
 
-  const stopConversationPolicy = `
-STOP / CLOSING BEHAVIOR (CRITICAL):
-- If the user indicates they are done / have no question / don't need help now:
-  - Reply with ONE short acknowledgement only.
-  - Do NOT ask follow-up questions.
-  - Do NOT suggest other topics.
-`.trim();
+  const stopConversationPolicy = ` STOP / CLOSING BEHAVIOR (CRITICAL): - If the user indicates they are done / have no question / don't need help now: - Reply with ONE short acknowledgement only. - Do NOT ask follow-up questions. - Do NOT suggest other topics. `.trim();
 
-  const roleBlock = buildRoleInstructions(role);
-
-  return `
-You are ZETRA AI — Elite Multi-Role Intelligence System.
-
-CORE BEHAVIOR:
-- Be natural and adaptive.
-- Understand the user's likely goal, not just exact keywords.
-- Infer intent from wording, business context, and recent history.
-- Be detailed when needed, concise when appropriate.
-- Suggest next steps only if helpful or when user is solving something.
-- Do NOT force structured templates.
-- When the user sends an image, analyze the visible content directly.
-- Do not say you cannot see/analyze the image if image input is present.
-- Describe what is visible first, then answer the user's requested task.
-- If the image is unclear, say exactly what is unclear and give the best possible partial answer.
-LANGUAGE:
-${langLine}
-
-${globalLanguagePolicy}
-
-${safetyPolicy}
-
-${stopConversationPolicy}
-
-${roleBlock}
-`.trim();
+  return ` You are ZETRA AI — Elite Multi-Role Intelligence System. CORE BEHAVIOR: - Be natural and adaptive. - Understand the user's likely goal, not just exact keywords. - Infer intent from wording, business context, and recent history. - Be detailed when needed, concise when appropriate. - Suggest next steps only if helpful or when user is solving something. - Do NOT force structured templates. - When the user sends an image, analyze the visible content directly. - Do not say you cannot see/analyze the image if image input is present. - Describe what is visible first, then answer the user's requested task. - If the image is unclear, say exactly what is unclear and give the best possible partial answer. LANGUAGE: ${langLine} ${globalLanguagePolicy} ${safetyPolicy} ${stopConversationPolicy} ${buildRoleInstructions(role)} `.trim();
 }
 
 function extractChatCompletionText(data: any): string {
@@ -314,7 +234,11 @@ function extractChatCompletionText(data: any): string {
 }
 
 function extractOpenAiErrorMessage(parsed: any, raw: string) {
-  const msg = clean(parsed?.error?.message) || clean(parsed?.message) || clean(parsed?.error) || "";
+  const msg =
+    clean(parsed?.error?.message) ||
+    clean(parsed?.message) ||
+    clean(parsed?.error) ||
+    "";
   return msg || safeSlice(raw, 600);
 }
 
@@ -324,7 +248,7 @@ function isAbortOrTimeoutError(e: any) {
   return name.includes("abort") || msg.includes("aborted") || msg.includes("timeout");
 }
 
-async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number) {
+async function fetchWithTimeout( url: string, init: RequestInit, timeoutMs: number ) {
   const controller = new AbortController();
   const t = setTimeout(() => controller.abort(), Math.max(2000, timeoutMs));
 
@@ -335,7 +259,7 @@ async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: numbe
   }
 }
 
-async function readJsonSafe(res: Response): Promise<{ ok: boolean; parsed: any; raw: string }> {
+async function readJsonSafe( res: Response ): Promise<{ ok: boolean; parsed: any; raw: string }> {
   const raw = await res.text();
 
   try {
@@ -344,6 +268,460 @@ async function readJsonSafe(res: Response): Promise<{ ok: boolean; parsed: any; 
   } catch {
     return { ok: false, parsed: null, raw };
   }
+}
+
+/* ============================================================================ SECURITY / AUTH / SUBSCRIPTION / AI CREDITS ========================================================================== */
+
+function getBearerToken(request: Request) {
+  const auth = clean(request.headers.get("Authorization"));
+  const m = auth.match(/^Bearer\s+(.+)$/i);
+  return clean(m?.[1]);
+}
+
+function supabaseBase(env: Env) {
+  return clean(env.SUPABASE_URL).replace(/\/+$/, "");
+}
+
+async function supabaseRequest( env: Env, path: string, init: RequestInit = {}, accessToken?: string ) {
+  const base = supabaseBase(env);
+  const serviceRoleKey = clean(env.SUPABASE_SERVICE_ROLE_KEY);
+
+  if (!base || !serviceRoleKey) {
+    throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+  }
+
+  const headers = new Headers(init.headers);
+  headers.set("apikey", serviceRoleKey);
+  headers.set(
+    "Authorization",
+    `Bearer ${clean(accessToken) || serviceRoleKey}`
+  );
+
+  if (!headers.has("Content-Type") && !(init.body instanceof FormData)) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  return fetchWithTimeout(
+    `${base}${path}`,
+    {
+      ...init,
+      headers,
+    },
+    20_000
+  );
+}
+
+async function verifySupabaseUser( request: Request, env: Env ): Promise<{
+  ok: boolean;
+  userId: string;
+  accessToken: string;
+  error: string;
+}> {
+  const accessToken = getBearerToken(request);
+
+  if (!accessToken) {
+    return {
+      ok: false,
+      userId: "",
+      accessToken: "",
+      error: "Missing Authorization Bearer token",
+    };
+  }
+
+  try {
+    const res = await supabaseRequest(
+      env,
+      "/auth/v1/user",
+      { method: "GET" },
+      accessToken
+    );
+
+    const { parsed, raw } = await readJsonSafe(res);
+
+    if (!res.ok) {
+      return {
+        ok: false,
+        userId: "",
+        accessToken: "",
+        error:
+          clean(parsed?.message) ||
+          clean(parsed?.error_description) ||
+          clean(parsed?.error) ||
+          safeSlice(raw, 300) ||
+          "Invalid Supabase session",
+      };
+    }
+
+    const userId = clean(parsed?.id);
+
+    if (!userId) {
+      return {
+        ok: false,
+        userId: "",
+        accessToken: "",
+        error: "Authenticated user ID missing",
+      };
+    }
+
+    return {
+      ok: true,
+      userId,
+      accessToken,
+      error: "",
+    };
+  } catch (e: any) {
+    return {
+      ok: false,
+      userId: "",
+      accessToken: "",
+      error: clean(e?.message) || "Failed to verify Supabase user",
+    };
+  }
+}
+
+async function rpcWithUserToken( env: Env, rpcName: string, body: Record<string, any>, accessToken: string ) {
+  const res = await supabaseRequest(
+    env,
+    `/rest/v1/rpc/${rpcName}`,
+    {
+      method: "POST",
+      body: JSON.stringify(body),
+    },
+    accessToken
+  );
+
+  const { parsed, raw } = await readJsonSafe(res);
+
+  return {
+    ok: res.ok,
+    status: res.status,
+    data: parsed,
+    raw,
+    error:
+      !res.ok
+        ? clean(parsed?.message) ||
+          clean(parsed?.error) ||
+          safeSlice(raw, 500)
+        : "",
+  };
+}
+
+function aiAccessFail( status: number, code: string, error: string, orgId = "" ): VerifiedAiAccess {
+  return {
+    ok: false,
+    status,
+    code,
+    error,
+    userId: "",
+    orgId,
+    role: "",
+    planCode: "",
+    planName: "",
+    subscriptionStatus: "",
+    aiEnabled: false,
+    creditsMonthly: 0,
+    creditsUsed: 0,
+    creditsRemaining: 0,
+    accessToken: "",
+  };
+}
+
+async function verifyAiAccess( request: Request, env: Env, ctx: ReqBody["context"] ): Promise<VerifiedAiAccess> {
+  const orgId = clean(ctx?.orgId ?? ctx?.activeOrgId);
+
+  if (!orgId) {
+    return aiAccessFail(
+      400,
+      "ORG_REQUIRED",
+      "Organization is required.",
+      orgId
+    );
+  }
+
+  const auth = await verifySupabaseUser(request, env);
+
+  if (!auth.ok) {
+    return aiAccessFail(
+      401,
+      "AUTH_REQUIRED",
+      auth.error || "Authentication required.",
+      orgId
+    );
+  }
+
+  // IMPORTANT:
+  // We do NOT trust context.activeRole. The DB decides whether this JWT user
+  // is an active owner through _is_owner_in_org().
+  const ownerRpc = await rpcWithUserToken(
+    env,
+    "_is_owner_in_org",
+    { p_org_id: orgId },
+    auth.accessToken
+  );
+
+  if (!ownerRpc.ok) {
+    return aiAccessFail(
+      ownerRpc.status || 403,
+      "OWNER_CHECK_FAILED",
+      ownerRpc.error || "Unable to verify organization owner.",
+      orgId
+    );
+  }
+
+  const isOwner =
+    ownerRpc.data === true ||
+    (Array.isArray(ownerRpc.data) && ownerRpc.data[0] === true);
+
+  if (!isOwner) {
+    return aiAccessFail(
+      403,
+      "OWNER_ONLY_AI",
+      "ZETRA AI is currently available only to the active organization owner.",
+      orgId
+    );
+  }
+
+  const subscriptionRpc = await rpcWithUserToken(
+    env,
+    "get_my_subscription",
+    { p_org_id: orgId },
+    auth.accessToken
+  );
+
+  if (!subscriptionRpc.ok) {
+    return aiAccessFail(
+      subscriptionRpc.status || 403,
+      "SUBSCRIPTION_CHECK_FAILED",
+      subscriptionRpc.error || "Unable to verify subscription.",
+      orgId
+    );
+  }
+
+  const sub = Array.isArray(subscriptionRpc.data)
+    ? subscriptionRpc.data[0]
+    : subscriptionRpc.data;
+
+  if (!sub) {
+    return aiAccessFail(
+      403,
+      "NO_SUBSCRIPTION",
+      "No subscription was found for this organization.",
+      orgId
+    );
+  }
+
+  const planCode = clean(sub?.plan_code ?? "FREE").toUpperCase();
+  const planName = clean(sub?.plan_name ?? planCode);
+  const subscriptionStatus = clean(sub?.status).toUpperCase();
+  const aiEnabled = sub?.ai_enabled === true;
+
+  if (subscriptionStatus !== "ACTIVE" || !aiEnabled) {
+    return {
+      ...aiAccessFail(
+        403,
+        "AI_NOT_INCLUDED",
+        "AI is not enabled on the active subscription.",
+        orgId
+      ),
+      userId: auth.userId,
+      role: "owner",
+      planCode,
+      planName,
+      subscriptionStatus,
+      aiEnabled,
+      accessToken: auth.accessToken,
+    };
+  }
+
+  const balanceRpc = await rpcWithUserToken(
+    env,
+    "ai_get_balance",
+    { p_org_id: orgId },
+    auth.accessToken
+  );
+
+  if (!balanceRpc.ok) {
+    return aiAccessFail(
+      balanceRpc.status || 403,
+      "AI_BALANCE_FAILED",
+      balanceRpc.error || "Unable to read AI balance.",
+      orgId
+    );
+  }
+
+  const balance = Array.isArray(balanceRpc.data)
+    ? balanceRpc.data[0]
+    : balanceRpc.data;
+
+  const creditsMonthly =
+    Number(balance?.credits_monthly ?? sub?.ai_credits_monthly ?? 0) || 0;
+  const creditsUsed = Number(balance?.credits_used ?? 0) || 0;
+  const creditsRemaining = Number(balance?.credits_remaining ?? 0) || 0;
+
+  return {
+    ok: true,
+    status: 200,
+    code: "OK",
+    error: "",
+    userId: auth.userId,
+    orgId,
+    role: "owner",
+    planCode,
+    planName,
+    subscriptionStatus,
+    aiEnabled: true,
+    creditsMonthly,
+    creditsUsed,
+    creditsRemaining,
+    accessToken: auth.accessToken,
+  };
+}
+
+function ensureOpenAiCredits( access: VerifiedAiAccess, creditsNeeded = 1 ): { ok: boolean; status: number; code: string; error: string } {
+  if (!access.ok) {
+    return {
+      ok: false,
+      status: access.status,
+      code: access.code,
+      error: access.error,
+    };
+  }
+
+  if (access.creditsRemaining < creditsNeeded) {
+    return {
+      ok: false,
+      status: 429,
+      code: "AI_CREDITS_EXHAUSTED",
+      error: "Monthly AI credits have been exhausted.",
+    };
+  }
+
+  return { ok: true, status: 200, code: "OK", error: "" };
+}
+
+async function consumeAiCredit( env: Env, access: VerifiedAiAccess, credits = 1, meta?: Record<string, any> ) {
+  if (!access.ok || !access.accessToken || !access.orgId) {
+    return {
+      ok: false,
+      remaining: access.creditsRemaining,
+      error: "AI access not verified",
+    };
+  }
+
+  const rpc = await rpcWithUserToken(
+    env,
+    "ai_consume_credits",
+    {
+      p_org_id: access.orgId,
+      p_credits: credits,
+      p_meta: meta ?? {},
+    },
+    access.accessToken
+  );
+
+  if (!rpc.ok) {
+    return {
+      ok: false,
+      remaining: access.creditsRemaining,
+      error: rpc.error || "Failed to consume AI credit",
+    };
+  }
+
+  const rawRemaining = Array.isArray(rpc.data)
+    ? rpc.data[0]
+    : rpc.data;
+
+  const remainingValue =
+    typeof rawRemaining === "object" && rawRemaining !== null
+      ? rawRemaining?.ai_consume_credits ??
+        rawRemaining?.remaining ??
+        access.creditsRemaining - credits
+      : rawRemaining;
+
+  const remaining = Math.max(0, Number(remainingValue) || 0);
+
+  return {
+    ok: true,
+    remaining,
+    error: "",
+  };
+}
+
+async function verifyStoreBelongsToOrg( env: Env, storeId: string, orgId: string ): Promise<{ ok: boolean; error: string }> {
+  const sid = clean(storeId);
+  const oid = clean(orgId);
+
+  if (!sid || !oid) {
+    return { ok: false, error: "Missing store or organization." };
+  }
+
+  try {
+    const path =
+      `/rest/v1/stores` +
+      `?select=id` +
+      `&id=eq.${encodeURIComponent(sid)}` +
+      `&organization_id=eq.${encodeURIComponent(oid)}` +
+      `&limit=1`;
+
+    // Service role is used only for this server-side integrity lookup.
+    // It is NOT treated as the user's identity.
+    const res = await supabaseRequest(env, path, { method: "GET" });
+    const { parsed, raw } = await readJsonSafe(res);
+
+    if (!res.ok) {
+      return {
+        ok: false,
+        error:
+          clean(parsed?.message) ||
+          clean(parsed?.error) ||
+          safeSlice(raw, 300) ||
+          "Store verification failed.",
+      };
+    }
+
+    const row = Array.isArray(parsed) ? parsed[0] : null;
+    if (!row?.id) {
+      return {
+        ok: false,
+        error: "Store does not belong to the selected organization.",
+      };
+    }
+
+    return { ok: true, error: "" };
+  } catch (e: any) {
+    return {
+      ok: false,
+      error: clean(e?.message) || "Store verification failed.",
+    };
+  }
+}
+
+function accessErrorResponse( access: Pick<VerifiedAiAccess, "status" | "code" | "error">, origin: string | null ) {
+  return withCors(
+    json(
+      {
+        ok: false,
+        error: access.error,
+        code: access.code,
+      },
+      { status: access.status || 403 }
+    ),
+    origin
+  );
+}
+
+function creditsErrorResponse( gate: { status: number; code: string; error: string }, origin: string | null ) {
+  return withCors(
+    json(
+      {
+        ok: false,
+        error: gate.error,
+        code: gate.code,
+      },
+      { status: gate.status }
+    ),
+    origin
+  );
 }
 
 function buildCtxLines(ctx: ReqBody["context"]) {
@@ -376,19 +754,20 @@ function buildInjectedDataLines(ctx: ReqBody["context"]) {
 
   if (c.forceUseRealBusinessData) lines.push("forceUseRealBusinessData: true");
   if (c.forceUseRealProductNames) lines.push("forceUseRealProductNames: true");
-  if (c.disallowGenericProductAdvice) lines.push("disallowGenericProductAdvice: true");
+  if (c.disallowGenericProductAdvice)
+    lines.push("disallowGenericProductAdvice: true");
 
   const topProducts = Array.isArray(c.topProducts) ? c.topProducts : [];
-  const lowStockItems = Array.isArray(c.lowStockItems) ? c.lowStockItems : [];
+  const lowStockItems = Array.isArray(c.lowStockItems)
+    ? c.lowStockItems
+    : [];
   const slowItems = Array.isArray(c.slowItems) ? c.slowItems : [];
 
   if (topProducts.length) {
     lines.push("TOP PRODUCTS (REAL DATA):");
     for (const p of topProducts.slice(0, 8)) {
       lines.push(
-        `- ${clean(p?.product_name) || "Unknown Product"} | sku=${clean(p?.sku) || "N/A"} | qty=${num(
-          p?.qty_sold
-        )} | sales=${num(p?.sales_amount)} | profit=${num(p?.profit_amount)}`
+        `- ${clean(p?.product_name) || "Unknown Product"} | sku=${ clean(p?.sku) || "N/A" } | qty=${num(p?.qty_sold)} | sales=${num( p?.sales_amount )} | profit=${num(p?.profit_amount)}`
       );
     }
   }
@@ -397,9 +776,7 @@ function buildInjectedDataLines(ctx: ReqBody["context"]) {
     lines.push("LOW STOCK ITEMS (REAL DATA):");
     for (const p of lowStockItems.slice(0, 8)) {
       lines.push(
-        `- ${clean(p?.product_name) || "Unknown Product"} | sku=${clean(p?.sku) || "N/A"} | stock=${num(
-          p?.stock_qty
-        )} | threshold=${num(p?.threshold_qty)} | status=${clean(p?.stock_status) || "LOW"}`
+        `- ${clean(p?.product_name) || "Unknown Product"} | sku=${ clean(p?.sku) || "N/A" } | stock=${num(p?.stock_qty)} | threshold=${num( p?.threshold_qty )} | status=${clean(p?.stock_status) || "LOW"}`
       );
     }
   }
@@ -408,9 +785,7 @@ function buildInjectedDataLines(ctx: ReqBody["context"]) {
     lines.push("SLOW / DEAD STOCK ITEMS (REAL DATA):");
     for (const p of slowItems.slice(0, 8)) {
       lines.push(
-        `- ${clean(p?.product_name) || "Unknown Product"} | sku=${clean(p?.sku) || "N/A"} | stock=${num(
-          p?.stock_qty
-        )} | days_without_sale=${num(p?.days_without_sale)}`
+        `- ${clean(p?.product_name) || "Unknown Product"} | sku=${ clean(p?.sku) || "N/A" } | stock=${num(p?.stock_qty)} | days_without_sale=${num( p?.days_without_sale )}`
       );
     }
   }
@@ -436,7 +811,8 @@ function hasInjectedBusinessSnapshot(ctx: ReqBody["context"]) {
   if (!snap || typeof snap !== "object") return false;
 
   const hasTop = Array.isArray(c?.topProducts) && c.topProducts.length > 0;
-  const hasLow = Array.isArray(c?.lowStockItems) && c.lowStockItems.length > 0;
+  const hasLow =
+    Array.isArray(c?.lowStockItems) && c.lowStockItems.length > 0;
   const hasSlow = Array.isArray(c?.slowItems) && c.slowItems.length > 0;
 
   const hasCoreNumbers =
@@ -451,26 +827,17 @@ function hasInjectedBusinessSnapshot(ctx: ReqBody["context"]) {
 function buildDataDrivenRules(ctx: ReqBody["context"]) {
   const c: any = ctx ?? {};
   const topProducts = Array.isArray(c.topProducts) ? c.topProducts : [];
-  const lowStockItems = Array.isArray(c.lowStockItems) ? c.lowStockItems : [];
+  const lowStockItems = Array.isArray(c.lowStockItems)
+    ? c.lowStockItems
+    : [];
   const slowItems = Array.isArray(c.slowItems) ? c.slowItems : [];
 
-  const hasInjectedProducts = topProducts.length || lowStockItems.length || slowItems.length;
+  const hasInjectedProducts =
+    topProducts.length || lowStockItems.length || slowItems.length;
 
   if (!hasInjectedProducts) return "";
 
-  return `
-DATA-DRIVEN PRODUCT RULES (CRITICAL):
-- You have REAL injected business product data from ZETRA BMS.
-- You MUST use the injected product names directly when answering.
-- You MUST NOT answer with generic examples or generic retail theory if injected data already exists.
-- If user asks:
-  - about low stock -> use LOW STOCK ITEMS first
-  - about slow/idle products -> use SLOW / DEAD STOCK ITEMS first
-  - about top/best products -> use TOP PRODUCTS first
-  - about profit leak -> connect answer to margin, COGS, expenses, and real products when available
-- If a requested category has no injected items, say clearly that category has no injected data instead of inventing.
-- Never say “I cannot see product-level data” when injected product data is present in context.
-`.trim();
+  return ` DATA-DRIVEN PRODUCT RULES (CRITICAL): - You have REAL injected business product data from ZETRA BMS. - You MUST use the injected product names directly when answering. - You MUST NOT answer with generic examples or generic retail theory if injected data already exists. - If user asks: - about low stock -> use LOW STOCK ITEMS first - about slow/idle products -> use SLOW / DEAD STOCK ITEMS first - about top/best products -> use TOP PRODUCTS first - about profit leak -> connect answer to margin, COGS, expenses, and real products when available - If a requested category has no injected items, say clearly that category has no injected data instead of inventing. - Never say “I cannot see product-level data” when injected product data is present in context. `.trim();
 }
 
 function detectDirectProductQuestion(text: string) {
@@ -531,7 +898,7 @@ function detectDirectProductQuestion(text: string) {
   };
 }
 
-function formatInjectedProductLine(p: any, mode: "TOP" | "LOW" | "SLOW") {
+function formatInjectedProductLine( p: any, mode: "TOP" | "LOW" | "SLOW" ) {
   const name = clean(p?.product_name) || "Unknown Product";
   const sku = clean(p?.sku);
   const stock = num(p?.stock_qty);
@@ -543,29 +910,30 @@ function formatInjectedProductLine(p: any, mode: "TOP" | "LOW" | "SLOW") {
   const status = clean(p?.stock_status) || "LOW";
 
   if (mode === "TOP") {
-    return `• ${name}${sku ? ` (SKU: ${sku})` : ""} — qty sold: ${qtySold}, sales: ${fmtMoney(
-      salesAmount
-    )}, profit: ${fmtMoney(profitAmount)}`;
+    return `• ${name}${sku ? ` (SKU: ${sku})` : ""} — qty sold: ${qtySold}, sales: ${fmtMoney( salesAmount )}, profit: ${fmtMoney(profitAmount)}`;
   }
 
   if (mode === "LOW") {
-    return `• ${name}${sku ? ` (SKU: ${sku})` : ""} — stock: ${stock}, threshold: ${threshold}, status: ${status}`;
+    return `• ${name}${ sku ? ` (SKU: ${sku})` : "" } — stock: ${stock}, threshold: ${threshold}, status: ${status}`;
   }
 
-  return `• ${name}${sku ? ` (SKU: ${sku})` : ""} — stock: ${stock}, no sale days: ${days}`;
+  return `• ${name}${ sku ? ` (SKU: ${sku})` : "" } — stock: ${stock}, no sale days: ${days}`;
 }
 
-function buildFullCombinedDataReply(text: string, ctx: ReqBody["context"]) {
+function buildFullCombinedDataReply( text: string, ctx: ReqBody["context"] ) {
   const c: any = ctx ?? {};
 
   const topProducts = Array.isArray(c?.topProducts) ? c.topProducts : [];
-  const lowStockItems = Array.isArray(c?.lowStockItems) ? c.lowStockItems : [];
+  const lowStockItems = Array.isArray(c?.lowStockItems)
+    ? c.lowStockItems
+    : [];
   const slowItems = Array.isArray(c?.slowItems) ? c.slowItems : [];
   const snapshot = c?.businessSnapshot ?? null;
 
   const q = detectDirectProductQuestion(text);
 
-  const hasAnyInjected = topProducts.length || lowStockItems.length || slowItems.length;
+  const hasAnyInjected =
+    topProducts.length || lowStockItems.length || slowItems.length;
   if (!hasAnyInjected) return "";
 
   const asksAnythingProduct =
@@ -656,26 +1024,34 @@ function buildFullCombinedDataReply(text: string, ctx: ReqBody["context"]) {
     lines.push("");
   }
 
-  if (q.asksSteps || (q.asksTopProducts && q.asksSlowItems) || q.asksProfitLeak) {
+  if (
+    q.asksSteps ||
+    (q.asksTopProducts && q.asksSlowItems) ||
+    q.asksProfitLeak
+  ) {
     lines.push("HATUA ZA HARAKA:");
     lines.push("• Linda stock ya top products zisije kuisha.");
     lines.push("• Punguza reorder ya slow/dead stock kwanza.");
     lines.push("• Tumia bundle ya top product + slow item kusukuma movement.");
     lines.push("• Kagua supplier cost ya top products kwanza.");
-    lines.push("• Rekebisha price/margin ya bidhaa zinazobeba mauzo lakini faida ndogo.");
+    lines.push(
+      "• Rekebisha price/margin ya bidhaa zinazobeba mauzo lakini faida ndogo."
+    );
   }
 
   return lines.join("\n").trim();
 }
 
-function buildInjectedSnapshotReply(text: string, ctx: ReqBody["context"]) {
+function buildInjectedSnapshotReply( text: string, ctx: ReqBody["context"] ) {
   const c: any = ctx ?? {};
   const snapshot = c?.businessSnapshot ?? null;
 
   if (!snapshot || typeof snapshot !== "object") return "";
 
   const topProducts = Array.isArray(c?.topProducts) ? c.topProducts : [];
-  const lowStockItems = Array.isArray(c?.lowStockItems) ? c.lowStockItems : [];
+  const lowStockItems = Array.isArray(c?.lowStockItems)
+    ? c.lowStockItems
+    : [];
   const slowItems = Array.isArray(c?.slowItems) ? c.slowItems : [];
 
   const salesTotal = num(snapshot?.sales_total);
@@ -693,7 +1069,6 @@ function buildInjectedSnapshotReply(text: string, ctx: ReqBody["context"]) {
   const trendPct = num(forecast?.trend_pct);
 
   const intent = detectBusinessIntent(text);
-
   const t = clean(text).toLowerCase();
 
   const wantsGeneralAnalysis =
@@ -715,11 +1090,15 @@ function buildInjectedSnapshotReply(text: string, ctx: ReqBody["context"]) {
 
   if (wantsForecast) {
     const lines: string[] = [];
-    lines.push(`Hii ndiyo sales view ya ${clean(snapshot?.store_name) || "store hii"} sasa hivi:`);
+    lines.push(
+      `Hii ndiyo sales view ya ${ clean(snapshot?.store_name) || "store hii" } sasa hivi:`
+    );
     lines.push("");
     lines.push("CRITICAL RISKS:");
     if (lowStockItems.length) {
-      lines.push(`• Kuna ${lowStockItems.length} bidhaa low stock zinazoweza kukata sales momentum.`);
+      lines.push(
+        `• Kuna ${lowStockItems.length} bidhaa low stock zinazoweza kukata sales momentum.`
+      );
     } else if (trendLabel === "DECLINING") {
       lines.push("• Trend ya mauzo inaonyesha kushuka.");
     } else {
@@ -731,7 +1110,7 @@ function buildInjectedSnapshotReply(text: string, ctx: ReqBody["context"]) {
     if (topProducts.length) {
       const p = topProducts[0];
       lines.push(
-        `• ${clean(p?.product_name) || "Top product"} ndiyo strongest mover sasa — sukuma hii kwanza.`
+        `• ${ clean(p?.product_name) || "Top product" } ndiyo strongest mover sasa — sukuma hii kwanza.`
       );
     }
     lines.push(`• Average order value ya sasa ni ${fmtMoney(avgOrderValue)}.`);
@@ -745,21 +1124,35 @@ function buildInjectedSnapshotReply(text: string, ctx: ReqBody["context"]) {
     } else {
       lines.push(`Trend: mauzo yapo stable (${fmtPercent(trendPct)}).`);
     }
-    if (projectedOrders > 0) lines.push(`Projected Orders (next day): ${projectedOrders.toLocaleString("en-US")}`);
-    if (projectedSales > 0) lines.push(`Projected Sales (next day): ${fmtMoney(projectedSales)}`);
+
+    if (projectedOrders > 0) {
+      lines.push(
+        `Projected Orders (next day): ${projectedOrders.toLocaleString( "en-US" )}`
+      );
+    }
+    if (projectedSales > 0) {
+      lines.push(`Projected Sales (next day): ${fmtMoney(projectedSales)}`);
+    }
 
     lines.push("");
     lines.push("ACTIONS:");
     lines.push("• Linda top products zako zisikose stock.");
-    if (lowStockItems.length) lines.push("• Restock bidhaa muhimu kabla momentum haijakatika.");
-    if (trendLabel === "INCREASING") lines.push("• Andaa stock na timu kutumia momentum.");
-    if (trendLabel === "DECLINING") lines.push("• Rekebisha stock, pricing, na customer flow leo.");
+    if (lowStockItems.length)
+      lines.push("• Restock bidhaa muhimu kabla momentum haijakatika.");
+    if (trendLabel === "INCREASING")
+      lines.push("• Andaa stock na timu kutumia momentum.");
+    if (trendLabel === "DECLINING")
+      lines.push("• Rekebisha stock, pricing, na customer flow leo.");
 
     return stabilizeReplyText(lines.join("\n"), {
       actions: [
         "Linda top products zako zisikose stock.",
-        lowStockItems.length ? "Restock bidhaa muhimu kabla momentum haijakatika." : "",
-        trendLabel === "INCREASING" ? "Andaa stock na timu kutumia momentum." : "",
+        lowStockItems.length
+          ? "Restock bidhaa muhimu kabla momentum haijakatika."
+          : "",
+        trendLabel === "INCREASING"
+          ? "Andaa stock na timu kutumia momentum."
+          : "",
       ].filter(Boolean),
       forceNextMove: true,
     });
@@ -767,7 +1160,9 @@ function buildInjectedSnapshotReply(text: string, ctx: ReqBody["context"]) {
 
   if (wantsCoach) {
     const lines: string[] = [];
-    lines.push(`Hapa kuna business coach ya ${clean(snapshot?.store_name) || "store hii"} kwa sasa:`);
+    lines.push(
+      `Hapa kuna business coach ya ${ clean(snapshot?.store_name) || "store hii" } kwa sasa:`
+    );
     lines.push("");
     lines.push("Summary:");
     lines.push(`• Sales: ${fmtMoney(salesTotal)}`);
@@ -780,54 +1175,84 @@ function buildInjectedSnapshotReply(text: string, ctx: ReqBody["context"]) {
     lines.push("");
     lines.push("Mambo 2 Yako Strong:");
     if (topProducts.length) {
-      lines.push(`• ${clean(topProducts[0]?.product_name)} inaonekana kuwa strongest contributor kwa sasa.`);
+      lines.push(
+        `• ${clean( topProducts[0]?.product_name )} inaonekana kuwa strongest contributor kwa sasa.`
+      );
     } else {
-      lines.push("• Biashara imeonyesha movement ya mauzo kwenye snapshot ya sasa.");
+      lines.push(
+        "• Biashara imeonyesha movement ya mauzo kwenye snapshot ya sasa."
+      );
     }
+
     if (profitTotal > 0) {
-      lines.push("• Uko kwenye profit chanya, hivyo msingi wa biashara bado upo vizuri.");
+      lines.push(
+        "• Uko kwenye profit chanya, hivyo msingi wa biashara bado upo vizuri."
+      );
     } else {
-      lines.push("• Una nafasi ya kurekebisha performance kabla hali haijawa mbaya zaidi.");
+      lines.push(
+        "• Una nafasi ya kurekebisha performance kabla hali haijawa mbaya zaidi."
+      );
     }
 
     lines.push("");
     lines.push("Mambo 2 Yanahitaji Attention:");
     if (topProducts.length > 1) {
-      lines.push(`• ${clean(topProducts[1]?.product_name)} inaonekana kuwa sehemu dhaifu kwenye efficiency ya profit.`);
+      lines.push(
+        `• ${clean( topProducts[1]?.product_name )} inaonekana kuwa sehemu dhaifu kwenye efficiency ya profit.`
+      );
     } else if (marginPct < 12) {
       lines.push("• Margin ya biashara iko chini kuliko comfort zone.");
     } else {
-      lines.push("• Pricing/cost discipline bado vinahitaji kufuatiliwa karibu.");
+      lines.push(
+        "• Pricing/cost discipline bado vinahitaji kufuatiliwa karibu."
+      );
     }
 
     if (lowStockItems.length) {
-      lines.push(`• Kuna ${lowStockItems.length} bidhaa low stock ambazo zinaweza kukata mauzo ukichelewa restock.`);
+      lines.push(
+        `• Kuna ${lowStockItems.length} bidhaa low stock ambazo zinaweza kukata mauzo ukichelewa restock.`
+      );
     } else if (slowItems.length) {
-      lines.push(`• Kuna ${slowItems.length} bidhaa slow/dead stock zinazofunga cash.`);
+      lines.push(
+        `• Kuna ${slowItems.length} bidhaa slow/dead stock zinazofunga cash.`
+      );
     } else if (expensesTotal > 0) {
-      lines.push(`• Expenses za ${fmtMoney(expensesTotal)} zinahitaji uhalali wa moja kwa moja.`);
+      lines.push(
+        `• Expenses za ${fmtMoney( expensesTotal )} zinahitaji uhalali wa moja kwa moja.`
+      );
     }
 
     lines.push("");
     lines.push("ACTIONS:");
     lines.push("• Kagua bidhaa zenye margin ndogo na uboreshe markup.");
-    if (lowStockItems.length) lines.push("• Restock bidhaa muhimu kabla sales momentum haijakatika.");
-    if (slowItems.length) lines.push("• Fanya promo au markdown kwa dead stock ili kufungua cash.");
-    if (expensesTotal > 0) lines.push("• Pitia expense kubwa na kata zisizo za lazima.");
+    if (lowStockItems.length)
+      lines.push("• Restock bidhaa muhimu kabla sales momentum haijakatika.");
+    if (slowItems.length)
+      lines.push("• Fanya promo au markdown kwa dead stock ili kufungua cash.");
+    if (expensesTotal > 0)
+      lines.push("• Pitia expense kubwa na kata zisizo za lazima.");
 
     return stabilizeReplyText(lines.join("\n"), {
       actions: [
         "Kagua bidhaa zenye margin ndogo na uboreshe markup.",
-        lowStockItems.length ? "Restock bidhaa muhimu kabla sales momentum haijakatika." : "",
-        slowItems.length ? "Fanya promo au markdown kwa dead stock ili kufungua cash." : "",
-        expensesTotal > 0 ? "Pitia expense kubwa na kata zisizo za lazima." : "",
+        lowStockItems.length
+          ? "Restock bidhaa muhimu kabla sales momentum haijakatika."
+          : "",
+        slowItems.length
+          ? "Fanya promo au markdown kwa dead stock ili kufungua cash."
+          : "",
+        expensesTotal > 0
+          ? "Pitia expense kubwa na kata zisizo za lazima."
+          : "",
       ].filter(Boolean),
       forceNextMove: true,
     });
   }
 
   const lines: string[] = [];
-  lines.push(`Hapa kuna analysis ya biashara yako ya leo kwa ${clean(snapshot?.store_name) || "store hii"}:`);
+  lines.push(
+    `Hapa kuna analysis ya biashara yako ya leo kwa ${ clean(snapshot?.store_name) || "store hii" }:`
+  );
   lines.push("");
   lines.push("Sales: " + fmtMoney(salesTotal));
   lines.push("COGS: " + fmtMoney(cogsTotal));
@@ -848,17 +1273,23 @@ function buildInjectedSnapshotReply(text: string, ctx: ReqBody["context"]) {
   }
 
   if (expensesTotal > 0) {
-    lines.push(`• Expenses za ${fmtMoney(expensesTotal)} zinakata profit moja kwa moja.`);
+    lines.push(
+      `• Expenses za ${fmtMoney(expensesTotal)} zinakata profit moja kwa moja.`
+    );
   }
 
   if (lowStockItems.length) {
-    lines.push(`• Kuna ${lowStockItems.length} bidhaa low stock zinazohitaji uangalizi.`);
+    lines.push(
+      `• Kuna ${lowStockItems.length} bidhaa low stock zinazohitaji uangalizi.`
+    );
   }
 
   lines.push("");
   lines.push("IDEAS:");
   if (topProducts.length) {
-    lines.push(`• Sukuma ${clean(topProducts[0]?.product_name)} zaidi kwa sababu ndiyo strongest mover.`);
+    lines.push(
+      `• Sukuma ${clean( topProducts[0]?.product_name )} zaidi kwa sababu ndiyo strongest mover.`
+    );
   }
   if (slowItems.length) {
     lines.push("• Punguza cash iliyokwama kwenye bidhaa slow/dead stock.");
@@ -871,39 +1302,58 @@ function buildInjectedSnapshotReply(text: string, ctx: ReqBody["context"]) {
   lines.push("ACTIONS:");
   lines.push("• Linda top products zisikose stock.");
   if (lowStockItems.length) lines.push("• Restock bidhaa muhimu mapema.");
-  if (slowItems.length) lines.push("• Fanya promo/markdown ya bidhaa slow moving.");
+  if (slowItems.length)
+    lines.push("• Fanya promo/markdown ya bidhaa slow moving.");
   if (expensesTotal > 0) lines.push("• Pitia expenses kubwa za leo.");
 
   return stabilizeReplyText(lines.join("\n"), {
     warnings: [
-      marginPct < 10 ? "Margin yako ni ndogo sana." : marginPct < 20 ? "Margin iko medium — inaweza kuboreshwa." : "Margin iko vizuri sana.",
-      expensesTotal > 0 ? `Expenses za ${fmtMoney(expensesTotal)} zinakata profit moja kwa moja.` : "",
-      lowStockItems.length ? `Kuna ${lowStockItems.length} bidhaa low stock zinazohitaji uangalizi.` : "",
+      marginPct < 10
+        ? "Margin yako ni ndogo sana."
+        : marginPct < 20
+        ? "Margin iko medium — inaweza kuboreshwa."
+        : "Margin iko vizuri sana.",
+      expensesTotal > 0
+        ? `Expenses za ${fmtMoney( expensesTotal )} zinakata profit moja kwa moja.`
+        : "",
+      lowStockItems.length
+        ? `Kuna ${lowStockItems.length} bidhaa low stock zinazohitaji uangalizi.`
+        : "",
     ].filter(Boolean),
     actions: [
       "Linda top products zisikose stock.",
       lowStockItems.length ? "Restock bidhaa muhimu mapema." : "",
-      slowItems.length ? "Fanya promo/markdown ya bidhaa slow moving." : "",
+      slowItems.length
+        ? "Fanya promo/markdown ya bidhaa slow moving."
+        : "",
       expensesTotal > 0 ? "Pitia expenses kubwa za leo." : "",
     ].filter(Boolean),
     forceNextMove: true,
   });
 }
 
-function buildDirectProductDataReply(text: string, ctx: ReqBody["context"]) {
+function buildDirectProductDataReply( text: string, ctx: ReqBody["context"] ) {
   const c: any = ctx ?? {};
 
   const topProducts = Array.isArray(c?.topProducts) ? c.topProducts : [];
-  const lowStockItems = Array.isArray(c?.lowStockItems) ? c.lowStockItems : [];
+  const lowStockItems = Array.isArray(c?.lowStockItems)
+    ? c.lowStockItems
+    : [];
   const slowItems = Array.isArray(c?.slowItems) ? c.slowItems : [];
   const snapshot = c?.businessSnapshot ?? null;
 
   const q = detectDirectProductQuestion(text);
 
-  const hasAnyInjected = topProducts.length || lowStockItems.length || slowItems.length;
+  const hasAnyInjected =
+    topProducts.length || lowStockItems.length || slowItems.length;
   if (!hasAnyInjected) return "";
 
-  if (q.asksLowStock && !q.asksSlowItems && !q.asksTopProducts && !q.asksProfitLeak) {
+  if (
+    q.asksLowStock &&
+    !q.asksSlowItems &&
+    !q.asksTopProducts &&
+    !q.asksProfitLeak
+  ) {
     if (!lowStockItems.length) {
       return "Kwa data ya sasa iliyoinjectiwa kutoka ZETRA BMS, sijaona bidhaa zilizo kwenye LOW STOCK list kwa sasa.";
     }
@@ -911,7 +1361,9 @@ function buildDirectProductDataReply(text: string, ctx: ReqBody["context"]) {
     return [
       "Hizi ndizo bidhaa zako ziko low stock kwa data halisi ya sasa:",
       "",
-      ...lowStockItems.slice(0, 12).map((p: any) => formatInjectedProductLine(p, "LOW")),
+      ...lowStockItems
+        .slice(0, 12)
+        .map((p: any) => formatInjectedProductLine(p, "LOW")),
       "",
       "Hatua ya haraka:",
       "• Refill bidhaa zenye stock ndogo kuliko threshold kwanza",
@@ -919,7 +1371,12 @@ function buildDirectProductDataReply(text: string, ctx: ReqBody["context"]) {
     ].join("\n");
   }
 
-  if (q.asksSlowItems && !q.asksLowStock && !q.asksTopProducts && !q.asksProfitLeak) {
+  if (
+    q.asksSlowItems &&
+    !q.asksLowStock &&
+    !q.asksTopProducts &&
+    !q.asksProfitLeak
+  ) {
     if (!slowItems.length) {
       return "Kwa data ya sasa iliyoinjectiwa kutoka ZETRA BMS, sijaona bidhaa kwenye slow/dead stock list kwa sasa.";
     }
@@ -927,7 +1384,9 @@ function buildDirectProductDataReply(text: string, ctx: ReqBody["context"]) {
     return [
       "Hizi ndizo bidhaa zako slow moving / dead stock kwa data halisi ya sasa:",
       "",
-      ...slowItems.slice(0, 12).map((p: any) => formatInjectedProductLine(p, "SLOW")),
+      ...slowItems
+        .slice(0, 12)
+        .map((p: any) => formatInjectedProductLine(p, "SLOW")),
       "",
       "Hatua ya haraka:",
       "• Punguza reorder ya bidhaa hizi kwanza",
@@ -936,7 +1395,12 @@ function buildDirectProductDataReply(text: string, ctx: ReqBody["context"]) {
     ].join("\n");
   }
 
-  if (q.asksTopProducts && !q.asksSlowItems && !q.asksLowStock && !q.asksProfitLeak) {
+  if (
+    q.asksTopProducts &&
+    !q.asksSlowItems &&
+    !q.asksLowStock &&
+    !q.asksProfitLeak
+  ) {
     if (!topProducts.length) {
       return "Kwa data ya sasa iliyoinjectiwa kutoka ZETRA BMS, sijaona top products list yenye product-level details kwa sasa.";
     }
@@ -944,7 +1408,9 @@ function buildDirectProductDataReply(text: string, ctx: ReqBody["context"]) {
     return [
       "Hizi ndizo top products zako kwa data halisi ya sasa:",
       "",
-      ...topProducts.slice(0, 12).map((p: any) => formatInjectedProductLine(p, "TOP")),
+      ...topProducts
+        .slice(0, 12)
+        .map((p: any) => formatInjectedProductLine(p, "TOP")),
       "",
       "Hatua ya haraka:",
       "• Linda stock ya bidhaa hizi zisije kuisha",
@@ -955,19 +1421,31 @@ function buildDirectProductDataReply(text: string, ctx: ReqBody["context"]) {
 
   if (q.asksTopProducts && q.asksSlowItems) {
     const topLines = topProducts.length
-      ? topProducts.slice(0, 5).map((p: any) => formatInjectedProductLine(p, "TOP"))
+      ? topProducts
+          .slice(0, 5)
+          .map((p: any) => formatInjectedProductLine(p, "TOP"))
       : ["• Hakuna top products zilizoinjectiwa kwa sasa"];
 
     const slowLines = slowItems.length
-      ? slowItems.slice(0, 5).map((p: any) => formatInjectedProductLine(p, "SLOW"))
+      ? slowItems
+          .slice(0, 5)
+          .map((p: any) => formatInjectedProductLine(p, "SLOW"))
       : ["• Hakuna slow/dead stock items zilizoinjectiwa kwa sasa"];
 
     const actions: string[] = [];
     actions.push("1. Linda availability ya top products zako kwanza.");
-    actions.push("2. Usiongeze buying ya slow items mpaka zilizopo zipungue.");
-    actions.push("3. Tumia bundle: top product + slow item ili kusukuma slow stock.");
-    actions.push("4. Kagua pricing ya slow items kama bei imebana movement.");
-    actions.push("5. Toa display/promo ya haraka kwa slow items zenye stock kubwa.");
+    actions.push(
+      "2. Usiongeze buying ya slow items mpaka zilizopo zipungue."
+    );
+    actions.push(
+      "3. Tumia bundle: top product + slow item ili kusukuma slow stock."
+    );
+    actions.push(
+      "4. Kagua pricing ya slow items kama bei imebana movement."
+    );
+    actions.push(
+      "5. Toa display/promo ya haraka kwa slow items zenye stock kubwa."
+    );
 
     return [
       "Hapa kuna mchanganuo wa real products zako za top vs slow moving:",
@@ -987,31 +1465,40 @@ function buildDirectProductDataReply(text: string, ctx: ReqBody["context"]) {
     const salesTotal = num(snapshot?.sales_total);
     const cogsTotal = num(snapshot?.cogs_total);
     const expensesTotal = num(snapshot?.expenses_total);
-    const profitTotal = num(snapshot?.profit_total);
     const marginPct = num(snapshot?.margin_pct);
 
     const lines: string[] = [];
-    lines.push("Hapa kuna leak ya profit kwa kutumia data halisi ya sasa:");
+    lines.push(
+      "Hapa kuna leak ya profit kwa kutumia data halisi ya sasa:"
+    );
 
     if (marginPct < 10) {
       lines.push(`• Margin iko chini: ${fmtPercent(marginPct)}`);
     }
 
     if (salesTotal > 0 && cogsTotal > salesTotal * 0.8) {
-      lines.push(`• COGS imebana sana faida: sales ${fmtMoney(salesTotal)} vs COGS ${fmtMoney(cogsTotal)}`);
+      lines.push(
+        `• COGS imebana sana faida: sales ${fmtMoney( salesTotal )} vs COGS ${fmtMoney(cogsTotal)}`
+      );
     }
 
     if (salesTotal > 0 && expensesTotal > salesTotal * 0.2) {
-      lines.push(`• Expenses ni nzito dhidi ya sales: ${fmtMoney(expensesTotal)}`);
+      lines.push(
+        `• Expenses ni nzito dhidi ya sales: ${fmtMoney(expensesTotal)}`
+      );
     }
 
     if (topProducts.length) {
       lines.push("");
-      lines.push("Bidhaa za kwanza za kukaguliwa kwa pricing/cost/margin:");
+      lines.push(
+        "Bidhaa za kwanza za kukaguliwa kwa pricing/cost/margin:"
+      );
       for (const p of topProducts.slice(0, 5)) {
         lines.push(formatInjectedProductLine(p, "TOP"));
       }
-      lines.push("• Kumbuka: top product si leak moja kwa moja; leak inathibitishwa na margin/cost/expense pressure.");
+      lines.push(
+        "• Kumbuka: top product si leak moja kwa moja; leak inathibitishwa na margin/cost/expense pressure."
+      );
     }
 
     if (slowItems.length) {
@@ -1033,8 +1520,12 @@ function buildDirectProductDataReply(text: string, ctx: ReqBody["context"]) {
     lines.push("");
     lines.push("Hatua ya haraka:");
     lines.push("• Kagua supplier cost ya top products kwanza");
-    lines.push("• Rekebisha price/margin ya top movers kama margin ni ndogo");
-    lines.push("• Punguza buying ya slow items zinazokaa bila kuuzwa");
+    lines.push(
+      "• Rekebisha price/margin ya top movers kama margin ni ndogo"
+    );
+    lines.push(
+      "• Punguza buying ya slow items zinazokaa bila kuuzwa"
+    );
     lines.push("• Restock low-stock winners ili usikate mauzo");
 
     return lines.join("\n");
@@ -1043,9 +1534,14 @@ function buildDirectProductDataReply(text: string, ctx: ReqBody["context"]) {
   return "";
 }
 
-type SlashCommandKey = "/heal" | "/finance" | "/stock" | "/profit" | "/debug";
+type SlashCommandKey =
+  | "/heal"
+  | "/finance"
+  | "/stock"
+  | "/profit"
+  | "/debug";
 
-function detectSlashCommand(raw: string): { command: SlashCommandKey | null; rest: string } {
+function detectSlashCommand( raw: string ): { command: SlashCommandKey | null; rest: string } {
   const src = clean(raw);
   if (!src.startsWith("/")) return { command: null, rest: src };
 
@@ -1062,7 +1558,7 @@ function detectSlashCommand(raw: string): { command: SlashCommandKey | null; res
   return { command: null, rest: src };
 }
 
-function roleHintFromSlashCommand(command: SlashCommandKey | null): AiRoleKey | null {
+function roleHintFromSlashCommand( command: SlashCommandKey | null ): AiRoleKey | null {
   if (command === "/heal") return "HEALTH";
   if (command === "/finance") return "FINANCE";
   if (command === "/debug") return "ENGINEERING";
@@ -1071,7 +1567,7 @@ function roleHintFromSlashCommand(command: SlashCommandKey | null): AiRoleKey | 
   return null;
 }
 
-function normalizeCommandUserText(command: SlashCommandKey | null, rest: string) {
+function normalizeCommandUserText( command: SlashCommandKey | null, rest: string ) {
   const body = clean(rest);
 
   if (command === "/heal") {
@@ -1097,53 +1593,31 @@ function normalizeCommandUserText(command: SlashCommandKey | null, rest: string)
   return body;
 }
 
-function buildSlashCommandSystemBlock(command: SlashCommandKey | null) {
+function buildSlashCommandSystemBlock( command: SlashCommandKey | null ) {
   if (command === "/heal") {
-    return `
-SLASH COMMAND MODE: /heal
-- Route this request as HEALTH mode directly.
-- Jibu kwa lugha rahisi, practical, na ya tahadhari.
-- General health information only.
-- Ukipewa dalili, eleza possible meaning, red flags, na hatua salama za kuchukua.
-`.trim();
+    return ` SLASH COMMAND MODE: /heal - Route this request as HEALTH mode directly. - Jibu kwa lugha rahisi, practical, na ya tahadhari. - General health information only. - Ukipewa dalili, eleza possible meaning, red flags, na hatua salama za kuchukua. `.trim();
   }
 
   if (command === "/finance") {
-    return `
-SLASH COMMAND MODE: /finance
-- Route this request as FINANCE mode directly.
-- Focus on cashflow, margins, pricing, budgeting, and business decisions.
-`.trim();
+    return ` SLASH COMMAND MODE: /finance - Route this request as FINANCE mode directly. - Focus on cashflow, margins, pricing, budgeting, and business decisions. `.trim();
   }
 
   if (command === "/debug") {
-    return `
-SLASH COMMAND MODE: /debug
-- Route this request as ENGINEERING mode directly.
-- Focus on root cause, logs, exact failure path, and safe fixes.
-`.trim();
+    return ` SLASH COMMAND MODE: /debug - Route this request as ENGINEERING mode directly. - Focus on root cause, logs, exact failure path, and safe fixes. `.trim();
   }
 
   if (command === "/stock") {
-    return `
-SLASH COMMAND MODE: /stock
-- Route this request as ZETRA_BMS stock intelligence mode.
-- Focus on low stock, dead stock, display risk, restock urgency, and movement.
-`.trim();
+    return ` SLASH COMMAND MODE: /stock - Route this request as ZETRA_BMS stock intelligence mode. - Focus on low stock, dead stock, display risk, restock urgency, and movement. `.trim();
   }
 
   if (command === "/profit") {
-    return `
-SLASH COMMAND MODE: /profit
-- Route this request as ZETRA_BMS profit intelligence mode.
-- Focus on margin, COGS, expenses, profit leaks, and corrective actions.
-`.trim();
+    return ` SLASH COMMAND MODE: /profit - Route this request as ZETRA_BMS profit intelligence mode. - Focus on margin, COGS, expenses, profit leaks, and corrective actions. `.trim();
   }
 
   return "";
 }
 
-function buildVisionPriorityRules(text: string, images: string[], ctx: ReqBody["context"]) {
+function buildVisionPriorityRules( text: string, images: string[], ctx: ReqBody["context"] ) {
   if (!Array.isArray(images) || images.length === 0) return "";
 
   const c: any = ctx ?? {};
@@ -1167,23 +1641,15 @@ function buildVisionPriorityRules(text: string, images: string[], ctx: ReqBody["
     (Array.isArray(c?.lowStockItems) && c.lowStockItems.length > 0) ||
     (Array.isArray(c?.slowItems) && c.slowItems.length > 0);
 
-  return `
-VISION PRIORITY RULES (CRITICAL):
-- An image is attached in this request.
-- The visible image is PRIMARY evidence.
-- First describe what is actually visible in the image.
-- Then answer the user's question using the image first.
-- Use injected business/product/store data only as secondary supporting context.
-- Never ignore the image and jump straight to generic business summary.
-${asksStockOrDisplay ? "- If user asks stock/display risk, inspect visible arrangement, emptiness, crowding, accessibility, shelf/display quality, and obvious stock signals from the image." : ""}
-${hasInjectedProducts ? "- If injected product/store data exists, use it only to cross-check or strengthen the image-based answer, not to replace the image analysis." : ""}
-- If the image is unclear, say exactly what is unclear, then give the best partial answer.
-`.trim();
+  return ` VISION PRIORITY RULES (CRITICAL): - An image is attached in this request. - The visible image is PRIMARY evidence. - First describe what is actually visible in the image. - Then answer the user's question using the image first. - Use injected business/product/store data only as secondary supporting context. - Never ignore the image and jump straight to generic business summary. ${ asksStockOrDisplay ? "- If user asks stock/display risk, inspect visible arrangement, emptiness, crowding, accessibility, shelf/display quality, and obvious stock signals from the image." : "" } ${ hasInjectedProducts ? "- If injected product/store data exists, use it only to cross-check or strengthen the image-based answer, not to replace the image analysis." : "" } - If the image is unclear, say exactly what is unclear, then give the best partial answer. `.trim();
 }
 
 function normalizeHistory(history?: ReqMsg[]) {
   const h = Array.isArray(history) ? history : [];
-  const out: Array<{ role: "user" | "assistant"; content: string }> = [];
+  const out: Array<{
+    role: "user" | "assistant";
+    content: string;
+  }> = [];
 
   for (const m of h) {
     const r = m?.role === "assistant" ? "assistant" : "user";
@@ -1195,29 +1661,12 @@ function normalizeHistory(history?: ReqMsg[]) {
   return out.slice(-20);
 }
 
-function tokenizeText(text: string) {
-  return clean(text)
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}\s/%-]/gu, " ")
-    .split(/\s+/)
-    .filter(Boolean);
-}
-
 function hasAnyPhrase(text: string, phrases: string[]) {
   const t = clean(text).toLowerCase();
   return phrases.some((p) => t.includes(clean(p).toLowerCase()));
 }
 
-function countPhraseHits(text: string, phrases: string[]) {
-  const t = clean(text).toLowerCase();
-  let hits = 0;
-  for (const p of phrases) {
-    if (t.includes(clean(p).toLowerCase())) hits++;
-  }
-  return hits;
-}
-
-function detectBusinessAnalysisRequest(text: string, ctx: ReqBody["context"], history: Array<{ role: "user" | "assistant"; content: string }>) {
+function detectBusinessAnalysisRequest( text: string, ctx: ReqBody["context"], _history: Array<{ role: "user" | "assistant"; content: string; }> ) {
   const t = clean(text).toLowerCase();
   const c: any = ctx ?? {};
   const activeStoreId = clean(c?.activeStoreId || c?.storeId);
@@ -1249,23 +1698,40 @@ function detectBusinessAnalysisRequest(text: string, ctx: ReqBody["context"], hi
   ]);
 }
 
-function heuristicRole(text: string, ctx: ReqBody["context"]): AiRoleKey {
+function heuristicRole( text: string, ctx: ReqBody["context"] ): AiRoleKey {
   const t = clean(text).toLowerCase();
   const hasOrg = !!clean(ctx?.orgId ?? ctx?.activeOrgId);
 
   const mathHit =
-    /\b(percentage|percent|asilimia|equation|integral|derivative|algebra|trigon|calculus|hesabu|suluhisha)\b/.test(t) ||
-    /[\d]+\s*[%]/.test(t);
+    /\b(percentage|percent|asilimia|equation|integral|derivative|algebra|trigon|calculus|hesabu|suluhisha)\b/.test(
+      t
+    ) || /[\d]+\s*[%]/.test(t);
 
-  const healthHit = /\b(headache|kizunguzungu|maumivu|homa|fever|pain|dizzy|nausea|dalili|clinic|hospital)\b/.test(t);
-  const legalHit = /\b(contract|agreement|law|legal|sheria|kesi|court|lawsuit|breach|terms)\b/.test(t);
-  const financeHit = /\b(profit|margin|cashflow|budget|faida|hasara|bei|gharama|mtaji|mapato|expense)\b/.test(t);
-  const marketingHit = /\b(marketing|campaign|instagram|tiktok|ads|branding|wateja|mauzo|promotion|promo)\b/.test(t);
+  const healthHit =
+    /\b(headache|kizunguzungu|maumivu|homa|fever|pain|dizzy|nausea|dalili|clinic|hospital)\b/.test(
+      t
+    );
+  const legalHit =
+    /\b(contract|agreement|law|legal|sheria|kesi|court|lawsuit|breach|terms)\b/.test(
+      t
+    );
+  const financeHit =
+    /\b(profit|margin|cashflow|budget|faida|hasara|bei|gharama|mtaji|mapato|expense)\b/.test(
+      t
+    );
+  const marketingHit =
+    /\b(marketing|campaign|instagram|tiktok|ads|branding|wateja|mauzo|promotion|promo)\b/.test(
+      t
+    );
   const engHit =
-    /\b(error|bug|crash|expo|router|supabase|sql|typescript|react|api|deploy|build|logs|worker|wrangler)\b/.test(t);
+    /\b(error|bug|crash|expo|router|supabase|sql|typescript|react|api|deploy|build|logs|worker|wrangler)\b/.test(
+      t
+    );
 
   const bmsHit =
-    /\b(zetra|bms|dashboard|home|screen|skrini|module|moduli|tab|settings|profile)\b/.test(t) ||
+    /\b(zetra|bms|dashboard|home|screen|skrini|module|moduli|tab|settings|profile)\b/.test(
+      t
+    ) ||
     hasAnyPhrase(t, [
       "store hii",
       "duka hili",
@@ -1293,7 +1759,9 @@ function isClosingMessage(raw: string) {
   if (!t) return false;
 
   if (
-    /^(sawa|poa|ok(ay)?|asante|thank(s)?)(\s+(mkuu|boss|bro|dad|sir))?[\s.!]*$/.test(t) ||
+    /^(sawa|poa|ok(ay)?|asante|thank(s)?)(\s+(mkuu|boss|bro|dad|sir))?[\s.!]*$/.test(
+      t
+    ) ||
     /^(bye|goodbye|see you|ttyl|later)[\s.!]*$/.test(t)
   ) {
     return true;
@@ -1307,7 +1775,11 @@ function isClosingMessage(raw: string) {
     return true;
   }
 
-  if (/\b(no\s+question|no\s+questions|no\s+thanks|i'?m\s+good|i\s+am\s+good|nothing\s+else|not\s+now)\b/.test(t)) {
+  if (
+    /\b(no\s+question|no\s+questions|no\s+thanks|i'?m\s+good|i\s+am\s+good|nothing\s+else|not\s+now)\b/.test(
+      t
+    )
+  ) {
     return true;
   }
 
@@ -1321,7 +1793,9 @@ function closingReply(lang: "sw" | "en" | "auto") {
 
 function fmtMoney(n: number) {
   const v = Number(n) || 0;
-  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(Math.round(v));
+  return new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: 0,
+  }).format(Math.round(v));
 }
 
 function fmtPercent(n: number) {
@@ -1338,11 +1812,7 @@ function normalizeStableHeadingKey(line: string) {
     .trim();
 }
 
-function buildNextMoveLine(args: {
-  actions?: string[];
-  ideas?: string[];
-  warnings?: string[];
-}) {
+function buildNextMoveLine(args: { actions?: string[]; ideas?: string[]; warnings?: string[]; }) {
   const firstAction = clean(args.actions?.[0]);
   if (firstAction) return firstAction;
 
@@ -1355,15 +1825,7 @@ function buildNextMoveLine(args: {
   return "";
 }
 
-function stabilizeReplyText(
-  raw: string,
-  opts?: {
-    actions?: string[];
-    ideas?: string[];
-    warnings?: string[];
-    forceNextMove?: boolean;
-  }
-) {
+function stabilizeReplyText( raw: string, opts?: { actions?: string[]; ideas?: string[]; warnings?: string[]; forceNextMove?: boolean; } ) {
   const src = String(raw ?? "").replace(/\r\n/g, "\n").trim();
   if (!src) return "";
 
@@ -1423,20 +1885,65 @@ function stabilizeReplyText(
   return text.replace(/\n{3,}/g, "\n\n").trim();
 }
 
-function detectWorkerRoute(text: string, ctx: ReqBody["context"], hasImages = false): { route: WorkerRoute; confidence: number; reason: string } {
+function detectWorkerRoute( text: string, ctx: ReqBody["context"], hasImages = false ): { route: WorkerRoute; confidence: number; reason: string } {
   const t = clean(text).toLowerCase();
   const appRoute = clean((ctx as any)?.appRoute).toUpperCase();
 
-  if (hasImages) return { route: "VISION_ANALYSIS", confidence: 1, reason: "image_present" };
+  if (hasImages)
+    return {
+      route: "VISION_ANALYSIS",
+      confidence: 1,
+      reason: "image_present",
+    };
 
-  if (appRoute === "GENERAL_CHAT") return { route: "GENERAL_CHAT", confidence: 1, reason: "app_route" };
-  if (appRoute === "DEFINITION_EXPLANATION") return { route: "DEFINITION_EXPLANATION", confidence: 1, reason: "app_route" };
-  if (appRoute === "WRITING_ASSIST") return { route: "WRITING_ASSIST", confidence: 1, reason: "app_route" };
-  if (appRoute === "BUSINESS_ANALYSIS") return { route: "BUSINESS_ANALYSIS", confidence: 1, reason: "app_route" };
-  if (appRoute === "BUSINESS_FORECAST") return { route: "BUSINESS_FORECAST", confidence: 1, reason: "app_route" };
-  if (appRoute === "BUSINESS_COACH") return { route: "BUSINESS_COACH", confidence: 1, reason: "app_route" };
-  if (appRoute === "TASK_FOLLOWUP") return { route: "TASK_FOLLOWUP", confidence: 1, reason: "app_route" };
-  if (appRoute === "CALCULATION_ONLY") return { route: "CALCULATION_ONLY", confidence: 1, reason: "app_route" };
+  if (appRoute === "GENERAL_CHAT")
+    return {
+      route: "GENERAL_CHAT",
+      confidence: 1,
+      reason: "app_route",
+    };
+  if (appRoute === "DEFINITION_EXPLANATION")
+    return {
+      route: "DEFINITION_EXPLANATION",
+      confidence: 1,
+      reason: "app_route",
+    };
+  if (appRoute === "WRITING_ASSIST")
+    return {
+      route: "WRITING_ASSIST",
+      confidence: 1,
+      reason: "app_route",
+    };
+  if (appRoute === "BUSINESS_ANALYSIS")
+    return {
+      route: "BUSINESS_ANALYSIS",
+      confidence: 1,
+      reason: "app_route",
+    };
+  if (appRoute === "BUSINESS_FORECAST")
+    return {
+      route: "BUSINESS_FORECAST",
+      confidence: 1,
+      reason: "app_route",
+    };
+  if (appRoute === "BUSINESS_COACH")
+    return {
+      route: "BUSINESS_COACH",
+      confidence: 1,
+      reason: "app_route",
+    };
+  if (appRoute === "TASK_FOLLOWUP")
+    return {
+      route: "TASK_FOLLOWUP",
+      confidence: 1,
+      reason: "app_route",
+    };
+  if (appRoute === "CALCULATION_ONLY")
+    return {
+      route: "CALCULATION_ONLY",
+      confidence: 1,
+      reason: "app_route",
+    };
 
   if (
     hasAnyPhrase(t, [
@@ -1449,7 +1956,11 @@ function detectWorkerRoute(text: string, ctx: ReqBody["context"], hasImages = fa
       "eleza maana ya",
     ])
   ) {
-    return { route: "DEFINITION_EXPLANATION", confidence: 0.92, reason: "definition_request" };
+    return {
+      route: "DEFINITION_EXPLANATION",
+      confidence: 0.92,
+      reason: "definition_request",
+    };
   }
 
   if (
@@ -1465,7 +1976,11 @@ function detectWorkerRoute(text: string, ctx: ReqBody["context"], hasImages = fa
       "boresha maandishi",
     ])
   ) {
-    return { route: "WRITING_ASSIST", confidence: 0.9, reason: "writing_request" };
+    return {
+      route: "WRITING_ASSIST",
+      confidence: 0.9,
+      reason: "writing_request",
+    };
   }
 
   if (
@@ -1478,7 +1993,11 @@ function detectWorkerRoute(text: string, ctx: ReqBody["context"], hasImages = fa
       "trend ya",
     ])
   ) {
-    return { route: "BUSINESS_FORECAST", confidence: 0.9, reason: "forecast_request" };
+    return {
+      route: "BUSINESS_FORECAST",
+      confidence: 0.9,
+      reason: "forecast_request",
+    };
   }
 
   if (
@@ -1491,7 +2010,11 @@ function detectWorkerRoute(text: string, ctx: ReqBody["context"], hasImages = fa
       "how can i improve profit",
     ])
   ) {
-    return { route: "BUSINESS_COACH", confidence: 0.88, reason: "coach_request" };
+    return {
+      route: "BUSINESS_COACH",
+      confidence: 0.88,
+      reason: "coach_request",
+    };
   }
 
   if (
@@ -1507,7 +2030,11 @@ function detectWorkerRoute(text: string, ctx: ReqBody["context"], hasImages = fa
       "stock ya store",
     ])
   ) {
-    return { route: "BUSINESS_ANALYSIS", confidence: 0.88, reason: "business_request" };
+    return {
+      route: "BUSINESS_ANALYSIS",
+      confidence: 0.88,
+      reason: "business_request",
+    };
   }
 
   if (
@@ -1520,47 +2047,68 @@ function detectWorkerRoute(text: string, ctx: ReqBody["context"], hasImages = fa
       "tasks zangu",
     ])
   ) {
-    return { route: "TASK_FOLLOWUP", confidence: 0.88, reason: "task_request" };
+    return {
+      route: "TASK_FOLLOWUP",
+      confidence: 0.88,
+      reason: "task_request",
+    };
   }
 
-  if (/\d/.test(t) && hasAnyPhrase(t, ["margin", "markup", "roi", "break even", "breakeven", "profit", "asilimia"])) {
-    return { route: "CALCULATION_ONLY", confidence: 0.82, reason: "calculation_request" };
+  if (
+    /\d/.test(t) &&
+    hasAnyPhrase(t, [
+      "margin",
+      "markup",
+      "roi",
+      "break even",
+      "breakeven",
+      "profit",
+      "asilimia",
+    ])
+  ) {
+    return {
+      route: "CALCULATION_ONLY",
+      confidence: 0.82,
+      reason: "calculation_request",
+    };
   }
 
-  return { route: "GENERAL_CHAT", confidence: 0.6, reason: "default_general" };
+  return {
+    route: "GENERAL_CHAT",
+    confidence: 0.6,
+    reason: "default_general",
+  };
 }
 
 function detectBusinessIntent(text: string): AnalysisIntent {
   const t = clean(text).toLowerCase();
 
-  const wantsForecast =
-    hasAnyPhrase(t, [
-      "forecast",
-      "utabiri",
-      "prediction",
-      "smart prediction",
-      "siku 7 zijazo",
-      "wiki ijayo",
-      "next day",
-      "next 7 days",
-      "kesho",
-      "tomorrow",
-      "projected",
-      "projection",
-    ]);
+  const wantsForecast = hasAnyPhrase(t, [
+    "forecast",
+    "utabiri",
+    "prediction",
+    "smart prediction",
+    "siku 7 zijazo",
+    "wiki ijayo",
+    "next day",
+    "next 7 days",
+    "kesho",
+    "tomorrow",
+    "projected",
+    "projection",
+  ]);
 
-  const wantsCoach =
-    hasAnyPhrase(t, [
-      "profit coach",
-      "coach",
-      "nishauri",
-      "nifundishe",
-      "niongoze kwenye profit",
-      "boresha faida",
-      "how can i improve profit",
-      "increase profit",
-      "ongeza faida",
-    ]);
+  const wantsCoach = hasAnyPhrase(t, [
+    "profit coach",
+    "coach",
+    "nishauri",
+    "nifundishe",
+    "niongoze kwenye profit",
+    "boresha faida",
+    "how can i improve profit",
+    "increase profit",
+    "ongeza faida",
+  ]);
 
   if (wantsForecast) return "FORECAST";
   if (wantsCoach) return "COACH";
@@ -1580,7 +2128,7 @@ function detectSlashModeCommand(text: string) {
   return null;
 }
 
-function buildSlashModeReply(cmd: "HEALTH" | "PROFIT" | "STOCK" | "FORECAST", lang: "sw" | "en" | "auto") {
+function buildSlashModeReply( cmd: "HEALTH" | "PROFIT" | "STOCK" | "FORECAST", lang: "sw" | "en" | "auto" ) {
   if (cmd === "HEALTH") {
     if (lang === "en") {
       return (
@@ -1646,22 +2194,7 @@ function buildVisionBusinessGuard(text: string) {
 
   if (!asksStockDisplay) return "";
 
-  return `
-BUSINESS IMAGE GUARD (CRITICAL):
-- The user is asking about STOCK / DISPLAY / MERCHANDISING risk from the image.
-- First determine what is actually visible in the image.
-- If the image is NOT a store/shop/product/display scene:
-  - say that clearly first,
-  - do NOT switch into unrelated domains like mechanic safety, vehicle workshop safety, or generic workplace hazard analysis,
-  - do NOT invent stock/display conclusions from a non-store image.
-- If the image IS a store/product/display scene:
-  - focus on visible shelf gaps, empty facing, clutter, poor arrangement, weak visibility, overstock clutter, accessibility, display quality, and customer shopping flow.
-- Always answer in this order:
-  1. What the image actually shows
-  2. Whether it is valid for stock/display analysis
-  3. Business risks visible (only if relevant)
-  4. Short next actions
-`.trim();
+  return ` BUSINESS IMAGE GUARD (CRITICAL): - The user is asking about STOCK / DISPLAY / MERCHANDISING risk from the image. - First determine what is actually visible in the image. - If the image is NOT a store/shop/product/display scene: - say that clearly first, - do NOT switch into unrelated domains like mechanic safety, vehicle workshop safety, or generic workplace hazard analysis, - do NOT invent stock/display conclusions from a non-store image. - If the image IS a store/product/display scene: - focus on visible shelf gaps, empty facing, clutter, poor arrangement, weak visibility, overstock clutter, accessibility, display quality, and customer shopping flow. - Always answer in this order: 1. What the image actually shows 2. Whether it is valid for stock/display analysis 3. Business risks visible (only if relevant) 4. Short next actions `.trim();
 }
 
 function avg(nums: number[]) {
@@ -1670,19 +2203,34 @@ function avg(nums: number[]) {
 }
 
 function toUtcDayStartIso(d: Date) {
-  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 0, 0, 0, 0)).toISOString();
+  return new Date(
+    Date.UTC(
+      d.getUTCFullYear(),
+      d.getUTCMonth(),
+      d.getUTCDate(),
+      0,
+      0,
+      0,
+      0
+    )
+  ).toISOString();
 }
 
 function toUtcNextDayStartIso(d: Date) {
-  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1, 0, 0, 0, 0)).toISOString();
+  return new Date(
+    Date.UTC(
+      d.getUTCFullYear(),
+      d.getUTCMonth(),
+      d.getUTCDate() + 1,
+      0,
+      0,
+      0,
+      0
+    )
+  ).toISOString();
 }
 
-async function getStoreBusinessSnapshotByRange(
-  env: Env,
-  storeId: string,
-  fromIso: string,
-  toIso: string
-): Promise<{
+async function getStoreBusinessSnapshotByRange( env: Env, storeId: string, fromIso: string, toIso: string, accessToken: string ): Promise<{
   ok: boolean;
   salesTotal: number;
   cogsTotal: number;
@@ -1693,23 +2241,6 @@ async function getStoreBusinessSnapshotByRange(
   moneyIn: number;
   error: string;
 }> {
-  const supabaseUrl = clean(env.SUPABASE_URL);
-  const serviceRoleKey = clean(env.SUPABASE_SERVICE_ROLE_KEY);
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    return {
-      ok: false,
-      salesTotal: 0,
-      cogsTotal: 0,
-      expensesTotal: 0,
-      netProfit: 0,
-      ordersCount: 0,
-      avgOrder: 0,
-      moneyIn: 0,
-      error: "Missing Supabase envs",
-    };
-  }
-
   if (!clean(storeId)) {
     return {
       ok: false,
@@ -1724,29 +2255,33 @@ async function getStoreBusinessSnapshotByRange(
     };
   }
 
+  if (!clean(accessToken)) {
+    return {
+      ok: false,
+      salesTotal: 0,
+      cogsTotal: 0,
+      expensesTotal: 0,
+      netProfit: 0,
+      ordersCount: 0,
+      avgOrder: 0,
+      moneyIn: 0,
+      error: "Missing authenticated user token",
+    };
+  }
+
   try {
-    const res = await fetch(`${supabaseUrl}/rest/v1/rpc/get_store_net_profit_v2`, {
-      method: "POST",
-      headers: {
-        apikey: serviceRoleKey,
-        Authorization: `Bearer ${serviceRoleKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    const rpc = await rpcWithUserToken(
+      env,
+      "get_store_net_profit_v2",
+      {
         p_store_id: storeId,
         p_from: fromIso,
         p_to: toIso,
-      }),
-    });
+      },
+      accessToken
+    );
 
-    const raw = await res.text();
-    let parsed: SnapshotRow | SnapshotRow[] | null = null;
-
-    try {
-      parsed = raw ? JSON.parse(raw) : null;
-    } catch {}
-
-    if (!res.ok) {
+    if (!rpc.ok) {
       return {
         ok: false,
         salesTotal: 0,
@@ -1756,10 +2291,11 @@ async function getStoreBusinessSnapshotByRange(
         ordersCount: 0,
         avgOrder: 0,
         moneyIn: 0,
-        error: clean((parsed as any)?.message) || clean((parsed as any)?.error) || safeSlice(raw, 400),
+        error: rpc.error || "Snapshot RPC failed",
       };
     }
 
+    const parsed = rpc.data as SnapshotRow | SnapshotRow[] | null;
     const row = (Array.isArray(parsed) ? parsed[0] : parsed) ?? {};
 
     const salesTotal = Number(row.sales_total ?? 0) || 0;
@@ -1796,34 +2332,56 @@ async function getStoreBusinessSnapshotByRange(
   }
 }
 
-async function getTodayStoreBusinessSnapshot(
-  env: Env,
-  storeId: string
-): Promise<{
-  ok: boolean;
-  salesTotal: number;
-  cogsTotal: number;
-  expensesTotal: number;
-  netProfit: number;
-  ordersCount: number;
-  avgOrder: number;
-  moneyIn: number;
-  error: string;
-}> {
+async function getTodayStoreBusinessSnapshot( env: Env, storeId: string, accessToken: string ) {
   const now = new Date();
-  return getStoreBusinessSnapshotByRange(env, storeId, toUtcDayStartIso(now), now.toISOString());
+  return getStoreBusinessSnapshotByRange(
+    env,
+    storeId,
+    toUtcDayStartIso(now),
+    now.toISOString(),
+    accessToken
+  );
 }
 
-async function getRecentDailySnapshots(env: Env, storeId: string, days = 7): Promise<ForecastPoint[]> {
-  const out: ForecastPoint[] = [];
+async function getRecentDailySnapshots( env: Env, storeId: string, accessToken: string, days = 7 ): Promise<ForecastPoint[]> {
   const today = new Date();
 
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate(), 0, 0, 0, 0));
+  const ranges = Array.from({ length: days }, (_, index) => {
+    const i = days - 1 - index;
+    const d = new Date(
+      Date.UTC(
+        today.getUTCFullYear(),
+        today.getUTCMonth(),
+        today.getUTCDate(),
+        0,
+        0,
+        0,
+        0
+      )
+    );
     d.setUTCDate(d.getUTCDate() - i);
+    return {
+      d,
+      from: toUtcDayStartIso(d),
+      to: toUtcNextDayStartIso(d),
+    };
+  });
 
-    const snap = await getStoreBusinessSnapshotByRange(env, storeId, toUtcDayStartIso(d), toUtcNextDayStartIso(d));
+  // Parallelized to avoid seven sequential RPC waits.
+  const snapshots = await Promise.all(
+    ranges.map((r) =>
+      getStoreBusinessSnapshotByRange(
+        env,
+        storeId,
+        r.from,
+        r.to,
+        accessToken
+      )
+    )
+  );
 
+  return ranges.map((r, idx) => {
+    const snap = snapshots[idx];
     const sales = snap.ok ? snap.salesTotal : 0;
     const cogs = snap.ok ? snap.cogsTotal : 0;
     const expenses = snap.ok ? snap.expensesTotal : 0;
@@ -1831,10 +2389,10 @@ async function getRecentDailySnapshots(env: Env, storeId: string, days = 7): Pro
     const orders = snap.ok ? snap.ordersCount : 0;
     const margin = sales > 0 ? (profit / sales) * 100 : 0;
 
-    const dd = String(d.getUTCDate()).padStart(2, "0");
-    const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+    const dd = String(r.d.getUTCDate()).padStart(2, "0");
+    const mm = String(r.d.getUTCMonth() + 1).padStart(2, "0");
 
-    out.push({
+    return {
       label: `${dd}/${mm}`,
       sales,
       cogs,
@@ -1842,10 +2400,8 @@ async function getRecentDailySnapshots(env: Env, storeId: string, days = 7): Pro
       profit,
       orders,
       margin,
-    });
-  }
-
-  return out;
+    };
+  });
 }
 
 function buildForecastBlock(points: ForecastPoint[]): string {
@@ -1863,7 +2419,10 @@ function buildForecastBlock(points: ForecastPoint[]): string {
   const prev = points.slice(0, -1);
 
   const prevSalesAvg = avg(prev.map((p) => p.sales));
-  const salesTrendPct = prevSalesAvg > 0 ? ((last.sales - prevSalesAvg) / prevSalesAvg) * 100 : 0;
+  const salesTrendPct =
+    prevSalesAvg > 0
+      ? ((last.sales - prevSalesAvg) / prevSalesAvg) * 100
+      : 0;
 
   const trendText =
     salesTrendPct > 8
@@ -1872,38 +2431,61 @@ function buildForecastBlock(points: ForecastPoint[]): string {
       ? `Trend: mauzo yanashuka (${fmtPercent(salesTrendPct)})`
       : `Trend: mauzo yako yapo stable (${fmtPercent(salesTrendPct)})`;
 
-  const projectedSales = Math.max(0, Math.round((salesAvg + last.sales) / 2));
-  const projectedProfit = Math.max(0, Math.round(profitAvg * 0.6 + last.profit * 0.4));
-  const projectedOrders = Math.max(0, Math.round(ordersAvg * 0.6 + last.orders * 0.4));
+  const projectedSales = Math.max(
+    0,
+    Math.round((salesAvg + last.sales) / 2)
+  );
+  const projectedProfit = Math.max(
+    0,
+    Math.round(profitAvg * 0.6 + last.profit * 0.4)
+  );
+  const projectedOrders = Math.max(
+    0,
+    Math.round(ordersAvg * 0.6 + last.orders * 0.4)
+  );
 
   const risks: string[] = [];
   const tips: string[] = [];
 
-  const lastCogsRate = last.sales > 0 ? (last.cogs / last.sales) * 100 : 0;
-  const lastExpenseRate = last.sales > 0 ? (last.expenses / last.sales) * 100 : 0;
+  const lastCogsRate =
+    last.sales > 0 ? (last.cogs / last.sales) * 100 : 0;
+  const lastExpenseRate =
+    last.sales > 0 ? (last.expenses / last.sales) * 100 : 0;
 
   if (salesTrendPct < -8) {
-    risks.push("• Forecast inaonyesha mauzo yanaweza kushuka kama trend hii ikiendelea.");
-    tips.push("• Fanya push ya bidhaa zinazoenda haraka ndani ya saa/chache zijazo.");
+    risks.push(
+      "• Forecast inaonyesha mauzo yanaweza kushuka kama trend hii ikiendelea."
+    );
+    tips.push(
+      "• Fanya push ya bidhaa zinazoenda haraka ndani ya saa/chache zijazo."
+    );
   }
 
   if (lastCogsRate > 80) {
     risks.push("• COGS ratio yako ni kubwa sana.");
-    tips.push("• Jadili supplier cost au punguza discount zisizo za lazima.");
+    tips.push(
+      "• Jadili supplier cost au punguza discount zisizo za lazima."
+    );
   }
 
   if (lastExpenseRate > 20) {
     risks.push("• Expenses ratio yako ni nzito dhidi ya sales.");
-    tips.push("• Punguza matumizi yasiyo ya lazima kabla ya closing.");
+    tips.push(
+      "• Punguza matumizi yasiyo ya lazima kabla ya closing."
+    );
   }
 
-  const riskBlock = risks.length ? `\n\nPREDICTION RISKS:\n${risks.join("\n")}` : "";
-  const tipBlock = tips.length ? `\n\nSMART PREDICTIONS:\n${tips.join("\n")}` : "";
+  const riskBlock = risks.length
+    ? `\n\nPREDICTION RISKS:\n${risks.join("\n")}`
+    : "";
+  const tipBlock = tips.length
+    ? `\n\nSMART PREDICTIONS:\n${tips.join("\n")}`
+    : "";
 
   return (
     `\n\nFORECAST:\n` +
     `${trendText}\n` +
-    `Projected Orders (next day): ${projectedOrders.toLocaleString("en-US")}\n` +
+    `Projected Orders (next day): ${projectedOrders.toLocaleString( "en-US" )}\n` +
     `Projected Sales (next day): ${fmtMoney(projectedSales)}\n` +
     `Projected Profit (next day): ${fmtMoney(projectedProfit)}` +
     riskBlock +
@@ -1911,24 +2493,22 @@ function buildForecastBlock(points: ForecastPoint[]): string {
   );
 }
 
-function buildAutopilotAlerts(args: {
-  margin: number;
-  salesTotal: number;
-  cogsTotal: number;
-  expensesTotal: number;
-  ordersCount: number;
-  trendPct?: number;
-}): AutopilotAlert[] {
+function buildAutopilotAlerts(args: { margin: number; salesTotal: number; cogsTotal: number; expensesTotal: number; ordersCount: number; trendPct?: number; }): AutopilotAlert[] {
   const alerts: AutopilotAlert[] = [];
 
-  const cogsRate = args.salesTotal > 0 ? (args.cogsTotal / args.salesTotal) * 100 : 0;
-  const expenseRate = args.salesTotal > 0 ? (args.expensesTotal / args.salesTotal) * 100 : 0;
+  const cogsRate =
+    args.salesTotal > 0 ? (args.cogsTotal / args.salesTotal) * 100 : 0;
+  const expenseRate =
+    args.salesTotal > 0
+      ? (args.expensesTotal / args.salesTotal) * 100
+      : 0;
 
   if (args.margin < 10) {
     alerts.push({
       level: "critical",
       title: "Low Margin Risk",
-      message: "Profit margin yako iko chini ya 10%. Kagua pricing, supplier cost, au unnecessary discount.",
+      message:
+        "Profit margin yako iko chini ya 10%. Kagua pricing, supplier cost, au unnecessary discount.",
     });
   }
 
@@ -1936,7 +2516,8 @@ function buildAutopilotAlerts(args: {
     alerts.push({
       level: "warning",
       title: "High COGS Ratio",
-      message: "COGS yako imezidi 80% ya sales. Hii inabana faida moja kwa moja.",
+      message:
+        "COGS yako imezidi 80% ya sales. Hii inabana faida moja kwa moja.",
     });
   }
 
@@ -1944,7 +2525,8 @@ function buildAutopilotAlerts(args: {
     alerts.push({
       level: "warning",
       title: "Heavy Expense Load",
-      message: "Expenses zako ni nzito ukilinganisha na sales. Punguza matumizi yasiyo ya lazima.",
+      message:
+        "Expenses zako ni nzito ukilinganisha na sales. Punguza matumizi yasiyo ya lazima.",
     });
   }
 
@@ -1952,7 +2534,8 @@ function buildAutopilotAlerts(args: {
     alerts.push({
       level: "critical",
       title: "No Orders Today",
-      message: "Hakuna mauzo yaliyorekodiwa leo. Fanya promotion ya haraka au customer push.",
+      message:
+        "Hakuna mauzo yaliyorekodiwa leo. Fanya promotion ya haraka au customer push.",
     });
   }
 
@@ -1960,7 +2543,8 @@ function buildAutopilotAlerts(args: {
     alerts.push({
       level: "warning",
       title: "Sales Trend Dropping",
-      message: "Trend ya mauzo inaonyesha kushuka. Chukua hatua mapema kabla sales hazijazidi kuporomoka.",
+      message:
+        "Trend ya mauzo inaonyesha kushuka. Chukua hatua mapema kabla sales hazijazidi kuporomoka.",
     });
   }
 
@@ -1968,52 +2552,42 @@ function buildAutopilotAlerts(args: {
     alerts.push({
       level: "info",
       title: "Business Stable",
-      message: "Hakuna red flag kubwa kwa sasa. Endelea kufuatilia performance kila siku.",
+      message:
+        "Hakuna red flag kubwa kwa sasa. Endelea kufuatilia performance kila siku.",
     });
   }
 
   return alerts;
 }
 
-async function classifyRole(
-  env: Env,
-  text: string,
-  ctxLines: string[],
-  history: Array<{ role: "user" | "assistant"; content: string }>,
-  timeoutMs = 18_000
-): Promise<{ role: AiRoleKey; confidence: number; reason: string }> {
+async function classifyRole( env: Env, text: string, ctxLines: string[], history: Array<{ role: "user" | "assistant"; content: string; }>, timeoutMs = 18_000 ): Promise<{
+  role: AiRoleKey;
+  confidence: number;
+  reason: string;
+}> {
   const OPENAI_API_KEY = clean(env.OPENAI_API_KEY);
-  const model = clean(env.OPENAI_CLASSIFIER_MODEL) || "gpt-4o-mini";
+  const model =
+    clean(env.OPENAI_CLASSIFIER_MODEL) || "gpt-4o-mini";
 
-  if (!OPENAI_API_KEY) return { role: "GENERAL", confidence: 0, reason: "missing_api_key" };
+  if (!OPENAI_API_KEY) {
+    return {
+      role: "GENERAL",
+      confidence: 0,
+      reason: "missing_api_key",
+    };
+  }
 
-  const sys = `
-You are a strict JSON classifier for routing user requests to a role.
+  const sys = ` You are a strict JSON classifier for routing user requests to a role. Return ONLY valid minified JSON (no markdown) in shape: {"role":"ENGINEERING|MATH|HEALTH|LEGAL|FINANCE|MARKETING|ZETRA_BMS|GENERAL","confidence":0-1,"reason":"short"} Rules: - ENGINEERING for software/app/dev/debugging/logs/errors. - MATH for calculations/steps. - HEALTH for symptoms/health questions (general info only). - LEGAL for law/contract/compliance. - FINANCE for accounting/pricing/margins/budgeting. - MARKETING for ads/campaigns/branding/strategy. - ZETRA_BMS when user asks how to do something inside ZETRA BMS. - Otherwise GENERAL. - Confidence 0..1, reason <= 10 words. `.trim();
 
-Return ONLY valid minified JSON (no markdown) in shape:
-{"role":"ENGINEERING|MATH|HEALTH|LEGAL|FINANCE|MARKETING|ZETRA_BMS|GENERAL","confidence":0-1,"reason":"short"}
-
-Rules:
-- ENGINEERING for software/app/dev/debugging/logs/errors.
-- MATH for calculations/steps.
-- HEALTH for symptoms/health questions (general info only).
-- LEGAL for law/contract/compliance.
-- FINANCE for accounting/pricing/margins/budgeting.
-- MARKETING for ads/campaigns/branding/strategy.
-- ZETRA_BMS when user asks how to do something inside ZETRA BMS.
-- Otherwise GENERAL.
-- Confidence 0..1, reason <= 10 words.
-`.trim();
-
-  const ctxBlock = ctxLines.length ? `Context:\n- ${ctxLines.join("\n- ")}` : "Context: (none)";
+  const ctxBlock = ctxLines.length
+    ? `Context:\n- ${ctxLines.join("\n- ")}`
+    : "Context: (none)";
   const histBlock = history.length
-    ? `Recent history:\n${history
-        .slice(-6)
-        .map((m) => `${m.role.toUpperCase()}: ${safeSlice(m.content, 240)}`)
-        .join("\n")}`
+    ? `Recent history:\n${history .slice(-6) .map( (m) => `${m.role.toUpperCase()}: ${safeSlice(m.content, 240)}` ) .join("\n")}`
     : "Recent history: (none)";
 
-  const user = `${ctxBlock}\n\n${histBlock}\n\nUser message:\n${text}`.trim();
+  const user =
+    `${ctxBlock}\n\n${histBlock}\n\nUser message:\n${text}`.trim();
 
   const body = {
     model,
@@ -2025,9 +2599,8 @@ Rules:
     max_tokens: 120,
   };
 
-  const url = "https://api.openai.com/v1/chat/completions";
   const res = await fetchWithTimeout(
-    url,
+    "https://api.openai.com/v1/chat/completions",
     {
       method: "POST",
       headers: {
@@ -2042,7 +2615,11 @@ Rules:
   const { parsed, raw } = await readJsonSafe(res);
   if (!res.ok) {
     const msg = extractOpenAiErrorMessage(parsed, raw);
-    return { role: "GENERAL", confidence: 0, reason: `classifier_http_${res.status}:${safeSlice(msg, 60)}` };
+    return {
+      role: "GENERAL",
+      confidence: 0,
+      reason: `classifier_http_${res.status}:${safeSlice(msg, 60)}`,
+    };
   }
 
   const txt = extractChatCompletionText(parsed);
@@ -2064,24 +2641,33 @@ Rules:
     };
 
     const role = ok[r] ?? "GENERAL";
-    const confidence = Math.max(0, Math.min(1, Number(out?.confidence ?? 0)));
+    const confidence = Math.max(
+      0,
+      Math.min(1, Number(out?.confidence ?? 0))
+    );
     const reason = safeSlice(clean(out?.reason) || "ok", 60);
+
     return { role, confidence, reason };
   } catch {
-    return { role: "GENERAL", confidence: 0.2, reason: "classifier_parse_failed" };
+    return {
+      role: "GENERAL",
+      confidence: 0.2,
+      reason: "classifier_parse_failed",
+    };
   }
 }
 
-async function openaiChatCompletions(
-  env: Env,
-  messages: Array<{ role: "system" | "user" | "assistant"; content: any }>,
-  timeoutMs = 32_000
-) {
+async function openaiChatCompletions( env: Env, messages: Array<{ role: "system" | "user" | "assistant"; content: any; }>, timeoutMs = 32_000 ) {
   const OPENAI_API_KEY = clean(env.OPENAI_API_KEY);
   const model = clean(env.OPENAI_MODEL) || "gpt-4o-mini";
 
   if (!OPENAI_API_KEY) {
-    return { ok: false as const, status: 500, text: "", error: "Missing OPENAI_API_KEY" };
+    return {
+      ok: false as const,
+      status: 500,
+      text: "",
+      error: "Missing OPENAI_API_KEY",
+    };
   }
 
   const body = {
@@ -2091,9 +2677,8 @@ async function openaiChatCompletions(
     max_tokens: 1200,
   };
 
-  const url = "https://api.openai.com/v1/chat/completions";
   const res = await fetchWithTimeout(
-    url,
+    "https://api.openai.com/v1/chat/completions",
     {
       method: "POST",
       headers: {
@@ -2108,75 +2693,102 @@ async function openaiChatCompletions(
   const { parsed, raw } = await readJsonSafe(res);
   if (!res.ok) {
     const msg = extractOpenAiErrorMessage(parsed, raw);
-    return { ok: false as const, status: res.status, text: "", error: msg };
+    return {
+      ok: false as const,
+      status: res.status,
+      text: "",
+      error: msg,
+    };
   }
 
   const text = extractChatCompletionText(parsed);
-  return { ok: true as const, status: 200, text, error: "" };
+  return {
+    ok: true as const,
+    status: 200,
+    text,
+    error: "",
+  };
 }
 
-function buildMessages(
-  sys: string,
-  ctxLines: string[],
-  injectedLines: string[],
-  history: Array<{ role: "user" | "assistant"; content: string }>,
-  userText: string
-) {
-  const ctxBlock = ctxLines.length ? `Context:\n- ${ctxLines.join("\n- ")}` : "";
-  const injectedBlock = injectedLines.length ? injectedLines.join("\n") : "";
-  const msgs: Array<{ role: "system" | "user" | "assistant"; content: any }> = [];
+function buildMessages( sys: string, ctxLines: string[], injectedLines: string[], history: Array<{ role: "user" | "assistant"; content: string; }>, userText: string ) {
+  const ctxBlock = ctxLines.length
+    ? `Context:\n- ${ctxLines.join("\n- ")}`
+    : "";
+  const injectedBlock = injectedLines.length
+    ? injectedLines.join("\n")
+    : "";
+  const msgs: Array<{
+    role: "system" | "user" | "assistant";
+    content: any;
+  }> = [];
 
   msgs.push({ role: "system", content: sys });
   if (ctxBlock) msgs.push({ role: "system", content: ctxBlock });
-  if (injectedBlock) msgs.push({ role: "system", content: injectedBlock });
+  if (injectedBlock)
+    msgs.push({ role: "system", content: injectedBlock });
 
-  for (const m of history) msgs.push({ role: m.role, content: m.content });
+  for (const m of history) {
+    msgs.push({ role: m.role, content: m.content });
+  }
+
   msgs.push({ role: "user", content: userText });
-
   return msgs;
 }
 
-function buildVisionMessages(
-  sys: string,
-  ctxLines: string[],
-  injectedLines: string[],
-  history: Array<{ role: "user" | "assistant"; content: string }>,
-  userText: string,
-  images: string[]
-) {
-  const ctxBlock = ctxLines.length ? `Context:\n- ${ctxLines.join("\n- ")}` : "";
-  const injectedBlock = injectedLines.length ? injectedLines.join("\n") : "";
-  const msgs: Array<{ role: "system" | "user" | "assistant"; content: any }> = [];
+function buildVisionMessages( sys: string, ctxLines: string[], injectedLines: string[], history: Array<{ role: "user" | "assistant"; content: string; }>, userText: string, images: string[] ) {
+  const ctxBlock = ctxLines.length
+    ? `Context:\n- ${ctxLines.join("\n- ")}`
+    : "";
+  const injectedBlock = injectedLines.length
+    ? injectedLines.join("\n")
+    : "";
+  const msgs: Array<{
+    role: "system" | "user" | "assistant";
+    content: any;
+  }> = [];
 
   msgs.push({ role: "system", content: sys });
   if (ctxBlock) msgs.push({ role: "system", content: ctxBlock });
-  if (injectedBlock) msgs.push({ role: "system", content: injectedBlock });
+  if (injectedBlock)
+    msgs.push({ role: "system", content: injectedBlock });
 
   for (const m of history) {
     msgs.push({ role: m.role, content: m.content });
   }
 
   const content: any[] = [];
-  if (clean(userText)) content.push({ type: "text", text: userText });
+  if (clean(userText)) {
+    content.push({ type: "text", text: userText });
+  }
 
   for (const img of images) {
     const u = clean(img);
     if (!u) continue;
-    content.push({ type: "image_url", image_url: { url: u } });
+    content.push({
+      type: "image_url",
+      image_url: { url: u },
+    });
   }
 
   msgs.push({ role: "user", content });
   return msgs;
 }
 
-async function openaiImageGenerate(env: Env, prompt: string, timeoutMs = 60_000) {
+async function openaiImageGenerate( env: Env, prompt: string, timeoutMs = 60_000 ) {
   const OPENAI_API_KEY = clean(env.OPENAI_API_KEY);
-  if (!OPENAI_API_KEY) return { ok: false as const, status: 500, url: "", error: "Missing OPENAI_API_KEY" };
+
+  if (!OPENAI_API_KEY) {
+    return {
+      ok: false as const,
+      status: 500,
+      url: "",
+      error: "Missing OPENAI_API_KEY",
+    };
+  }
 
   const model = clean(env.OPENAI_IMAGE_MODEL) || "gpt-image-1";
   const size = clean(env.OPENAI_IMAGE_SIZE) || "1024x1024";
-
- const isDalle = model === "dall-e-2" || model === "dall-e-3";
+  const isDalle = model === "dall-e-2" || model === "dall-e-3";
 
   const body: any = isDalle
     ? {
@@ -2192,9 +2804,8 @@ async function openaiImageGenerate(env: Env, prompt: string, timeoutMs = 60_000)
         output_format: "png",
       };
 
-  const url = "https://api.openai.com/v1/images/generations";
   const res = await fetchWithTimeout(
-    url,
+    "https://api.openai.com/v1/images/generations",
     {
       method: "POST",
       headers: {
@@ -2209,7 +2820,12 @@ async function openaiImageGenerate(env: Env, prompt: string, timeoutMs = 60_000)
   const { parsed, raw } = await readJsonSafe(res);
   if (!res.ok) {
     const msg = extractOpenAiErrorMessage(parsed, raw);
-    return { ok: false as const, status: res.status, url: "", error: msg };
+    return {
+      ok: false as const,
+      status: res.status,
+      url: "",
+      error: msg,
+    };
   }
 
   const first = parsed?.data?.[0] ?? null;
@@ -2224,13 +2840,22 @@ async function openaiImageGenerate(env: Env, prompt: string, timeoutMs = 60_000)
         ? "image/webp"
         : "image/png");
 
-    const dataUrl = `data:${mime};base64,${b64}`;
-    return { ok: true as const, status: 200, url: dataUrl, error: "" };
+    return {
+      ok: true as const,
+      status: 200,
+      url: `data:${mime};base64,${b64}`,
+      error: "",
+    };
   }
 
   const u = clean(first?.url);
   if (u) {
-    return { ok: true as const, status: 200, url: u, error: "" };
+    return {
+      ok: true as const,
+      status: 200,
+      url: u,
+      error: "",
+    };
   }
 
   return {
@@ -2241,19 +2866,27 @@ async function openaiImageGenerate(env: Env, prompt: string, timeoutMs = 60_000)
   };
 }
 
-async function openaiTranscribe(env: Env, file: File, timeoutMs = 55_000) {
+async function openaiTranscribe( env: Env, file: File, timeoutMs = 55_000 ) {
   const OPENAI_API_KEY = clean(env.OPENAI_API_KEY);
-  if (!OPENAI_API_KEY) return { ok: false as const, status: 500, text: "", error: "Missing OPENAI_API_KEY" };
 
-  const model = clean(env.OPENAI_TRANSCRIBE_MODEL) || "whisper-1";
+  if (!OPENAI_API_KEY) {
+    return {
+      ok: false as const,
+      status: 500,
+      text: "",
+      error: "Missing OPENAI_API_KEY",
+    };
+  }
+
+  const model =
+    clean(env.OPENAI_TRANSCRIBE_MODEL) || "whisper-1";
 
   const form = new FormData();
   form.append("model", model);
   form.append("file", file, file.name || "audio.m4a");
 
-  const url = "https://api.openai.com/v1/audio/transcriptions";
   const res = await fetchWithTimeout(
-    url,
+    "https://api.openai.com/v1/audio/transcriptions",
     {
       method: "POST",
       headers: {
@@ -2267,46 +2900,84 @@ async function openaiTranscribe(env: Env, file: File, timeoutMs = 55_000) {
   const { parsed, raw } = await readJsonSafe(res);
   if (!res.ok) {
     const msg = extractOpenAiErrorMessage(parsed, raw);
-    return { ok: false as const, status: res.status, text: "", error: msg };
+    return {
+      ok: false as const,
+      status: res.status,
+      text: "",
+      error: msg,
+    };
   }
 
   const text = clean(parsed?.text);
-  if (!text) return { ok: false as const, status: 500, text: "", error: "No transcription text returned" };
-  return { ok: true as const, status: 200, text, error: "" };
+  if (!text) {
+    return {
+      ok: false as const,
+      status: 500,
+      text: "",
+      error: "No transcription text returned",
+    };
+  }
+
+  return {
+    ok: true as const,
+    status: 200,
+    text,
+    error: "",
+  };
 }
 
-async function resolveRole(
-  env: Env,
-  text: string,
-  ctx: ReqBody["context"],
-  ctxLines: string[],
-  history: Array<{ role: "user" | "assistant"; content: string }>,
-  roleHintRaw: any
-): Promise<{ role: AiRoleKey; roleMeta: any }> {
+async function resolveRole( env: Env, text: string, ctx: ReqBody["context"], ctxLines: string[], history: Array<{ role: "user" | "assistant"; content: string; }>, roleHintRaw: any ): Promise<{
+  role: AiRoleKey;
+  roleMeta: any;
+}> {
   const roleHint = normalizeRoleHint(roleHintRaw);
   if (roleHint) {
-    return { role: roleHint, roleMeta: { source: "roleHint", confidence: 1, reason: "app_override" } };
+    return {
+      role: roleHint,
+      roleMeta: {
+        source: "roleHint",
+        confidence: 1,
+        reason: "app_override",
+      },
+    };
   }
 
   try {
-    const classified = await classifyRole(env, text, ctxLines, history);
+    const classified = await classifyRole(
+      env,
+      text,
+      ctxLines,
+      history
+    );
+
     let role = classified.role;
-    let roleMeta: any = { source: "classifier", confidence: classified.confidence, reason: classified.reason };
+    let roleMeta: any = {
+      source: "classifier",
+      confidence: classified.confidence,
+      reason: classified.reason,
+    };
 
     if (classified.confidence < 0.45) {
       role = heuristicRole(text, ctx);
-      roleMeta = { source: "heuristic", confidence: 0.45, reason: "low_confidence_classifier" };
+      roleMeta = {
+        source: "heuristic",
+        confidence: 0.45,
+        reason: "low_confidence_classifier",
+      };
     }
 
     return { role, roleMeta };
   } catch (e: any) {
     const role = heuristicRole(text, ctx);
+
     return {
       role,
       roleMeta: {
         source: "heuristic",
         confidence: 0.35,
-        reason: isAbortOrTimeoutError(e) ? "classifier_timeout" : "classifier_error",
+        reason: isAbortOrTimeoutError(e)
+          ? "classifier_timeout"
+          : "classifier_error",
       },
     };
   }
@@ -2327,7 +2998,13 @@ export default {
     const path = getPath(request);
 
     if (request.method === "OPTIONS") {
-      return withCors(new Response(null, { status: 204, headers: corsHeaders(origin) }), origin);
+      return withCors(
+        new Response(null, {
+          status: 204,
+          headers: corsHeaders(origin),
+        }),
+        origin
+      );
     }
 
     if (request.method === "GET") {
@@ -2336,47 +3013,83 @@ export default {
           json({
             ok: true,
             service: "zetra-ai-worker",
-            version: "stable-full-v2-recovered-b1",
+            version: "stable-full-v3-secure-auth-credits",
             time: new Date().toISOString(),
           }),
           origin
         );
       }
 
-      return withCors(json({ ok: false, error: "Not found" }, { status: 404 }), origin);
+      return withCors(
+        json({ ok: false, error: "Not found" }, { status: 404 }),
+        origin
+      );
     }
 
     if (request.method !== "POST") {
-      return withCors(json({ ok: false, error: "Method not allowed" }, { status: 405 }), origin);
+      return withCors(
+        json(
+          { ok: false, error: "Method not allowed" },
+          { status: 405 }
+        ),
+        origin
+      );
     }
 
-    // ----------------------------
+    // -------------------------------------------------------------------------
     // (1) CHAT: /v1/chat (and backward compatible POST /)
-    // ----------------------------
+    // -------------------------------------------------------------------------
     if (path === "/v1/chat" || path === "/") {
       let body: ReqBody | null = null;
 
       try {
         body = (await request.json()) as ReqBody;
       } catch {
-        return withCors(json({ ok: false, error: "Invalid JSON body" }, { status: 400 }), origin);
-      }
-
-      if (!ensureOwnerRole(body?.context?.activeRole)) {
-        return ownerOnlyError(origin);
+        return withCors(
+          json(
+            { ok: false, error: "Invalid JSON body" },
+            { status: 400 }
+          ),
+          origin
+        );
       }
 
       const rawText = clean(body?.text);
       if (!rawText) {
-        return withCors(json({ ok: false, error: "Missing text" }, { status: 400 }), origin);
+        return withCors(
+          json(
+            { ok: false, error: "Missing text" },
+            { status: 400 }
+          ),
+          origin
+        );
       }
 
-      const slash = detectSlashCommand(rawText);
-      const text = normalizeCommandUserText(slash.command, slash.rest) || rawText;
+      const rawCtx = body?.context ?? {};
+      const aiAccess = await verifyAiAccess(request, env, rawCtx);
 
-      const mode: "AUTO" | "SW" | "EN" = body?.mode ?? "AUTO";
+      if (!aiAccess.ok) {
+        return accessErrorResponse(aiAccess, origin);
+      }
+
+      // Never trust role/org identity from client.
+      const ctx: ReqBody["context"] = {
+        ...rawCtx,
+        orgId: aiAccess.orgId,
+        activeOrgId: aiAccess.orgId,
+        activeRole: aiAccess.role,
+      };
+
+      const slash = detectSlashCommand(rawText);
+      const text =
+        normalizeCommandUserText(slash.command, slash.rest) ||
+        rawText;
+
+      const mode: "AUTO" | "SW" | "EN" =
+        body?.mode ?? "AUTO";
       const lang = pickLang(mode);
 
+      // Local deterministic reply: entitlement required, OpenAI credit NOT used.
       if (isClosingMessage(text)) {
         return withCors(
           json({
@@ -2384,7 +3097,16 @@ export default {
             reply: closingReply(lang),
             meta: {
               role: "GENERAL",
-              roleMeta: { source: "closing_guard", confidence: 1, reason: "user_closed" },
+              roleMeta: {
+                source: "closing_guard",
+                confidence: 1,
+                reason: "user_closed",
+              },
+              subscription: {
+                planCode: aiAccess.planCode,
+                planName: aiAccess.planName,
+                creditsRemaining: aiAccess.creditsRemaining,
+              },
               mode,
               locale: body?.locale ?? null,
               language: body?.language ?? null,
@@ -2395,6 +3117,8 @@ export default {
       }
 
       const slashCmd = detectSlashModeCommand(text);
+
+      // Local deterministic reply: entitlement required, OpenAI credit NOT used.
       if (slashCmd) {
         const reply = buildSlashModeReply(slashCmd, lang);
 
@@ -2406,7 +3130,9 @@ export default {
               role:
                 slashCmd === "HEALTH"
                   ? "HEALTH"
-                  : slashCmd === "PROFIT" || slashCmd === "STOCK" || slashCmd === "FORECAST"
+                  : slashCmd === "PROFIT" ||
+                    slashCmd === "STOCK" ||
+                    slashCmd === "FORECAST"
                   ? "ZETRA_BMS"
                   : "GENERAL",
               roleMeta: {
@@ -2420,6 +3146,11 @@ export default {
                   : slashCmd === "PROFIT"
                   ? "COACH"
                   : "ANALYSIS",
+              subscription: {
+                planCode: aiAccess.planCode,
+                planName: aiAccess.planName,
+                creditsRemaining: aiAccess.creditsRemaining,
+              },
               mode,
               locale: body?.locale ?? null,
               language: body?.language ?? null,
@@ -2429,17 +3160,51 @@ export default {
         );
       }
 
-      const ctx = body?.context ?? {};
       const ctxLines = buildCtxLines(ctx);
       const injectedLines = buildInjectedDataLines(ctx);
       const history = normalizeHistory(body?.history);
       const workerRoute = detectWorkerRoute(text, ctx, false);
 
-      const activeStoreId = clean((ctx as any)?.activeStoreId || (ctx as any)?.storeId);
-      const activeStoreName = clean((ctx as any)?.activeStoreName || (ctx as any)?.storeName || "Store");
-      const activeOrgName = clean((ctx as any)?.activeOrgName || (ctx as any)?.orgName || "Organization");
+      const activeStoreId = clean(
+        (ctx as any)?.activeStoreId || (ctx as any)?.storeId
+      );
+      const activeStoreName = clean(
+        (ctx as any)?.activeStoreName ||
+          (ctx as any)?.storeName ||
+          "Store"
+      );
+      const activeOrgName = clean(
+        (ctx as any)?.activeOrgName ||
+          (ctx as any)?.orgName ||
+          "Organization"
+      );
 
-      const combinedInjectedReply = buildFullCombinedDataReply(text, ctx);
+      if (activeStoreId) {
+        const storeCheck = await verifyStoreBelongsToOrg(
+          env,
+          activeStoreId,
+          aiAccess.orgId
+        );
+
+        if (!storeCheck.ok) {
+          return withCors(
+            json(
+              {
+                ok: false,
+                error: storeCheck.error,
+                code: "STORE_ORG_MISMATCH",
+              },
+              { status: 403 }
+            ),
+            origin
+          );
+        }
+      }
+
+      const combinedInjectedReply =
+        buildFullCombinedDataReply(text, ctx);
+
+      // Local deterministic reply: OpenAI credit NOT used.
       if (combinedInjectedReply) {
         return withCors(
           json({
@@ -2450,9 +3215,15 @@ export default {
               roleMeta: {
                 source: "combined_injected_product_data",
                 confidence: 1,
-                reason: "multi_intent_real_product_data_answered_directly",
+                reason:
+                  "multi_intent_real_product_data_answered_directly",
               },
               analysisIntent: detectBusinessIntent(text),
+              subscription: {
+                planCode: aiAccess.planCode,
+                planName: aiAccess.planName,
+                creditsRemaining: aiAccess.creditsRemaining,
+              },
               mode,
               locale: body?.locale ?? null,
               language: body?.language ?? null,
@@ -2462,7 +3233,10 @@ export default {
         );
       }
 
-      const directInjectedReply = buildDirectProductDataReply(text, ctx);
+      const directInjectedReply =
+        buildDirectProductDataReply(text, ctx);
+
+      // Local deterministic reply: OpenAI credit NOT used.
       if (directInjectedReply) {
         return withCors(
           json({
@@ -2476,6 +3250,11 @@ export default {
                 reason: "real_product_data_answered_directly",
               },
               analysisIntent: detectBusinessIntent(text),
+              subscription: {
+                planCode: aiAccess.planCode,
+                planName: aiAccess.planName,
+                creditsRemaining: aiAccess.creditsRemaining,
+              },
               mode,
               locale: body?.locale ?? null,
               language: body?.language ?? null,
@@ -2492,6 +3271,7 @@ export default {
           ? buildInjectedSnapshotReply(text, ctx)
           : "";
 
+      // Local deterministic reply: OpenAI credit NOT used.
       if (injectedSnapshotReply) {
         return withCors(
           json({
@@ -2502,9 +3282,15 @@ export default {
               roleMeta: {
                 source: "injected_business_snapshot",
                 confidence: 1,
-                reason: "analysis_answered_from_app_snapshot",
+                reason:
+                  "analysis_answered_from_app_snapshot",
               },
               analysisIntent: detectBusinessIntent(text),
+              subscription: {
+                planCode: aiAccess.planCode,
+                planName: aiAccess.planName,
+                creditsRemaining: aiAccess.creditsRemaining,
+              },
               mode,
               locale: body?.locale ?? null,
               language: body?.language ?? null,
@@ -2520,8 +3306,14 @@ export default {
           workerRoute.route === "BUSINESS_COACH") &&
         detectBusinessAnalysisRequest(text, ctx, history);
 
+      // Live DB deterministic business analysis: OpenAI credit NOT used.
       if (wantsBusinessAnalysis && activeStoreId) {
-        const snap = await getTodayStoreBusinessSnapshot(env, activeStoreId);
+        const snap = await getTodayStoreBusinessSnapshot(
+          env,
+          activeStoreId,
+          aiAccess.accessToken
+        );
+
         const businessIntent = detectBusinessIntent(text);
 
         if (snap.ok) {
@@ -2529,60 +3321,120 @@ export default {
           const ideas: string[] = [];
           const actions: string[] = [];
 
-          const margin = snap.salesTotal > 0 ? (snap.netProfit / snap.salesTotal) * 100 : 0;
+          const margin =
+            snap.salesTotal > 0
+              ? (snap.netProfit / snap.salesTotal) * 100
+              : 0;
 
           if (margin < 10) {
-            warnings.push("⚠️ Margin yako ni ndogo sana (High Risk)");
+            warnings.push(
+              "⚠️ Margin yako ni ndogo sana (High Risk)"
+            );
             ideas.push("💡 Punguza buying cost kwa supplier");
             ideas.push("💡 Ongeza bei ya kuuza (price adjustment)");
-            actions.push("👉 Angalia bidhaa top 5 zinazouzwa zaidi — ongeza margin kidogo");
-            actions.push("👉 Jaribu supplier mwingine mwenye cost nafuu");
+            actions.push(
+              "👉 Angalia bidhaa top 5 zinazouzwa zaidi — ongeza margin kidogo"
+            );
+            actions.push(
+              "👉 Jaribu supplier mwingine mwenye cost nafuu"
+            );
           } else if (margin >= 10 && margin < 20) {
-            warnings.push("📌 Margin iko medium — inaweza kuboreshwa");
+            warnings.push(
+              "📌 Margin iko medium — inaweza kuboreshwa"
+            );
             ideas.push("💡 Optimize pricing strategy");
             ideas.push("💡 Reduce unnecessary expenses");
-            actions.push("👉 Punguza gharama zisizo muhimu leo");
+            actions.push(
+              "👉 Punguza gharama zisizo muhimu leo"
+            );
           } else {
             warnings.push("✅ Margin iko vizuri sana");
-            ideas.push("💡 Scale biashara (ongeza stock & marketing)");
+            ideas.push(
+              "💡 Scale biashara (ongeza stock & marketing)"
+            );
             actions.push("👉 Ongeza bidhaa zinazouza sana");
           }
 
-          if (snap.expensesTotal > snap.salesTotal * 0.3) {
+          if (
+            snap.salesTotal > 0 &&
+            snap.expensesTotal > snap.salesTotal * 0.3
+          ) {
             warnings.push("⚠️ Expenses zako ni kubwa sana");
-            actions.push("👉 Punguza matumizi ya pesa yasiyo ya lazima");
+            actions.push(
+              "👉 Punguza matumizi ya pesa yasiyo ya lazima"
+            );
           }
 
           if (snap.cogsTotal === 0) {
-            warnings.push("⚠️ COGS ni 0 — hakikisha sale_items zina cost sahihi");
-          } else if (snap.salesTotal > 0 && snap.cogsTotal > snap.salesTotal * 0.8) {
-            warnings.push("⚠️ COGS yako ni kubwa sana ukilinganisha na sales");
-            ideas.push("💡 Kagua supplier cost na pricing ya bidhaa");
+            warnings.push(
+              "⚠️ COGS ni 0 — hakikisha sale_items zina cost sahihi"
+            );
+          } else if (
+            snap.salesTotal > 0 &&
+            snap.cogsTotal > snap.salesTotal * 0.8
+          ) {
+            warnings.push(
+              "⚠️ COGS yako ni kubwa sana ukilinganisha na sales"
+            );
+            ideas.push(
+              "💡 Kagua supplier cost na pricing ya bidhaa"
+            );
           }
 
           if (snap.ordersCount <= 0) {
-            warnings.push("⚠️ Hakuna mauzo yaliyorekodiwa leo");
-            ideas.push("💡 Fanya promotion au offer ya haraka");
-            actions.push("👉 Tuma tangazo WhatsApp kwa wateja wako");
+            warnings.push(
+              "⚠️ Hakuna mauzo yaliyorekodiwa leo"
+            );
+            ideas.push(
+              "💡 Fanya promotion au offer ya haraka"
+            );
+            actions.push(
+              "👉 Tuma tangazo WhatsApp kwa wateja wako"
+            );
           }
 
           let forecastBlock = "";
           let trendPct = 0;
 
           try {
-            const forecastSeries = await getRecentDailySnapshots(env, activeStoreId, 7);
+            const forecastSeries =
+              await getRecentDailySnapshots(
+                env,
+                activeStoreId,
+                aiAccess.accessToken,
+                7
+              );
 
-            const last = forecastSeries[forecastSeries.length - 1];
+            const last =
+              forecastSeries[forecastSeries.length - 1];
             const prev = forecastSeries.slice(0, -1);
-            const prevSalesAvg = avg(prev.map((p) => p.sales));
-            trendPct = prevSalesAvg > 0 ? ((last.sales - prevSalesAvg) / prevSalesAvg) * 100 : 0;
+            const prevSalesAvg = avg(
+              prev.map((p) => p.sales)
+            );
+            trendPct =
+              last && prevSalesAvg > 0
+                ? ((last.sales - prevSalesAvg) /
+                    prevSalesAvg) *
+                  100
+                : 0;
 
-            forecastBlock = buildForecastBlock(forecastSeries);
+            forecastBlock =
+              buildForecastBlock(forecastSeries);
           } catch {}
 
+          const stripEmoji = (x: string) =>
+            clean(x)
+              .replace(/^•\s*/, "")
+              .replace(
+                /^[⚠️📌✅👉💡🚀🔍🧠📈📉➡️🏁💰🧾🛒💵📊]+\s*/,
+                ""
+              );
+
           const insightsBlock =
-            warnings.length || ideas.length || actions.length
-              ? `\n\nINSIGHTS:\n${warnings.map((x) => `• ${clean(x).replace(/^•\s*/, "").replace(/^[⚠️📌✅👉💡🚀🔍🧠📈📉➡️🏁💰🧾🛒💵📊]+\s*/, "")}`).join("\n")}\n\nIDEAS:\n${ideas.map((x) => `• ${clean(x).replace(/^•\s*/, "").replace(/^[⚠️📌✅👉💡🚀🔍🧠📈📉➡️🏁💰🧾🛒💵📊]+\s*/, "")}`).join("\n")}\n\nACTIONS:\n${actions.map((x) => `• ${clean(x).replace(/^•\s*/, "").replace(/^[⚠️📌✅👉💡🚀🔍🧠📈📉➡️🏁💰🧾🛒💵📊]+\s*/, "")}`).join("\n")}`
+            warnings.length ||
+            ideas.length ||
+            actions.length
+              ? `\n\nINSIGHTS:\n${warnings .map((x) => `• ${stripEmoji(x)}`) .join("\n")}\n\nIDEAS:\n${ideas .map((x) => `• ${stripEmoji(x)}`) .join("\n")}\n\nACTIONS:\n${actions .map((x) => `• ${stripEmoji(x)}`) .join("\n")}`
               : "";
 
           const autopilotAlerts = buildAutopilotAlerts({
@@ -2602,11 +3454,11 @@ export default {
               : `Hapa kuna analysis ya biashara yako ya leo kwa store "${activeStoreName}" ndani ya "${activeOrgName}":\n\n`;
 
           const baseSummary =
-            `Sales (jumla ya kipindi): ${fmtMoney(snap.salesTotal)}\n` +
-            `COGS (jumla ya kipindi): ${fmtMoney(snap.cogsTotal)}\n` +
-            `Expenses (jumla ya kipindi): ${fmtMoney(snap.expensesTotal)}\n` +
-            `Profit (jumla ya kipindi): ${fmtMoney(snap.netProfit)}\n\n` +
-            `🧾 Orders: ${snap.ordersCount.toLocaleString("en-US")}\n` +
+            `Sales (jumla ya kipindi): ${fmtMoney( snap.salesTotal )}\n` +
+            `COGS (jumla ya kipindi): ${fmtMoney( snap.cogsTotal )}\n` +
+            `Expenses (jumla ya kipindi): ${fmtMoney( snap.expensesTotal )}\n` +
+            `Profit (jumla ya kipindi): ${fmtMoney( snap.netProfit )}\n\n` +
+            `🧾 Orders: ${snap.ordersCount.toLocaleString( "en-US" )}\n` +
             `🛒 Avg/Order: ${fmtMoney(snap.avgOrder)}\n` +
             `💵 Money In: ${fmtMoney(snap.moneyIn)}\n\n` +
             `📊 Margin: ${fmtPercent(margin)}`;
@@ -2617,7 +3469,11 @@ export default {
               : "";
 
           const reply = stabilizeReplyText(
-            headerText + baseSummary + coachIntro + insightsBlock + forecastBlock,
+            headerText +
+              baseSummary +
+              coachIntro +
+              insightsBlock +
+              forecastBlock,
             {
               warnings,
               ideas,
@@ -2635,10 +3491,17 @@ export default {
                 roleMeta: {
                   source: "live_store_snapshot",
                   confidence: 1,
-                  reason: "smart_business_intent_detected",
+                  reason:
+                    "smart_business_intent_detected",
                 },
                 analysisIntent: businessIntent,
                 autopilotAlerts,
+                subscription: {
+                  planCode: aiAccess.planCode,
+                  planName: aiAccess.planName,
+                  creditsRemaining:
+                    aiAccess.creditsRemaining,
+                },
                 mode,
                 locale: body?.locale ?? null,
                 language: body?.language ?? null,
@@ -2653,7 +3516,7 @@ export default {
             ok: true,
             reply:
               `Nimeshindwa kusoma live business data ya leo kwa store "${activeStoreName}".\n\n` +
-              `Sababu: ${snap.error || "Unknown snapshot error"}\n\n` +
+              `Sababu: ${ snap.error || "Unknown snapshot error" }\n\n` +
               `Hii ina maana snapshot fetch imegoma, siyo kwamba analysis logic haipo.`,
             meta: {
               role: "ZETRA_BMS",
@@ -2661,6 +3524,11 @@ export default {
                 source: "live_store_snapshot_error",
                 confidence: 1,
                 reason: "snapshot_failed",
+              },
+              subscription: {
+                planCode: aiAccess.planCode,
+                planName: aiAccess.planName,
+                creditsRemaining: aiAccess.creditsRemaining,
               },
               mode,
               locale: body?.locale ?? null,
@@ -2671,17 +3539,33 @@ export default {
         );
       }
 
-      const commandRoleHint = roleHintFromSlashCommand(slash.command);
-      const rr = await resolveRole(env, text, ctx, ctxLines, history, commandRoleHint ?? body?.roleHint);
+      // From this point onward, OpenAI will be used.
+      const creditGate = ensureOpenAiCredits(aiAccess, 1);
+      if (!creditGate.ok) {
+        return creditsErrorResponse(creditGate, origin);
+      }
+
+      const commandRoleHint =
+        roleHintFromSlashCommand(slash.command);
+
+      const rr = await resolveRole(
+        env,
+        text,
+        ctx,
+        ctxLines,
+        history,
+        commandRoleHint ?? body?.roleHint
+      );
+
       const role = rr.role;
       const roleMeta = rr.roleMeta;
-
       const effectiveRoute = workerRoute.route;
 
       const routeSystemBlock =
         effectiveRoute === "GENERAL_CHAT"
           ? "ROUTE MODE: GENERAL_CHAT\n- Answer naturally.\n- Do not force business analysis."
-          : effectiveRoute === "DEFINITION_EXPLANATION"
+          : effectiveRoute ===
+            "DEFINITION_EXPLANATION"
           ? "ROUTE MODE: DEFINITION_EXPLANATION\n- Explain the concept directly.\n- Do not switch into live business analysis unless explicitly requested."
           : effectiveRoute === "WRITING_ASSIST"
           ? "ROUTE MODE: WRITING_ASSIST\n- Help write/rewrite/summarize clearly.\n- Do not force business reporting."
@@ -2698,18 +3582,21 @@ export default {
           : "";
 
       const appSystemPrompt = clean(body?.systemPrompt);
-      const slashSystemBlock = buildSlashCommandSystemBlock(slash.command);
-      const dataDrivenRules = buildDataDrivenRules(ctx);
+      const slashSystemBlock =
+        buildSlashCommandSystemBlock(slash.command);
+      const dataDrivenRules =
+        buildDataDrivenRules(ctx);
 
-     const hasInjectedProducts =
+      const hasInjectedProducts =
         (workerRoute.route === "BUSINESS_ANALYSIS" ||
           workerRoute.route === "BUSINESS_FORECAST" ||
           workerRoute.route === "BUSINESS_COACH") &&
-        (
-          (Array.isArray((ctx as any)?.topProducts) && (ctx as any).topProducts.length > 0) ||
-          (Array.isArray((ctx as any)?.lowStockItems) && (ctx as any).lowStockItems.length > 0) ||
-          (Array.isArray((ctx as any)?.slowItems) && (ctx as any).slowItems.length > 0)
-        );
+        ((Array.isArray((ctx as any)?.topProducts) &&
+          (ctx as any).topProducts.length > 0) ||
+          (Array.isArray((ctx as any)?.lowStockItems) &&
+            (ctx as any).lowStockItems.length > 0) ||
+          (Array.isArray((ctx as any)?.slowItems) &&
+            (ctx as any).slowItems.length > 0));
 
       const sys = [
         buildZetraInstructions(lang, role),
@@ -2718,23 +3605,35 @@ export default {
         appSystemPrompt,
         dataDrivenRules,
         hasInjectedProducts
-          ? `
-STRICT FALLBACK RULE:
-- Injected product data exists in this request.
-- Never say you cannot access product-level, inventory, stock, or sales detail directly.
-- Use injected data first.
-- If a category is empty, say that exact injected category is empty.
-`
+          ? ` STRICT FALLBACK RULE: - Injected product data exists in this request. - Never say you cannot access product-level, inventory, stock, or sales detail directly. - Use injected data first. - If a category is empty, say that exact injected category is empty. `
           : "",
       ]
         .filter(Boolean)
         .join("\n\n");
 
-      const messages = buildMessages(sys, ctxLines, injectedLines, history, text);
+      const messages = buildMessages(
+        sys,
+        ctxLines,
+        injectedLines,
+        history,
+        text
+      );
 
-      let out = await openaiChatCompletions(env, messages, 32_000);
-      if (!out.ok && /timeout|aborted/i.test(out.error)) {
-        out = await openaiChatCompletions(env, messages, 36_000);
+      let out = await openaiChatCompletions(
+        env,
+        messages,
+        32_000
+      );
+
+      if (
+        !out.ok &&
+        /timeout|aborted/i.test(out.error)
+      ) {
+        out = await openaiChatCompletions(
+          env,
+          messages,
+          36_000
+        );
       }
 
       if (!out.ok) {
@@ -2751,6 +3650,32 @@ STRICT FALLBACK RULE:
         );
       }
 
+      // One ZETRA AI credit per successful OpenAI-backed interaction.
+      const credit = await consumeAiCredit(
+        env,
+        aiAccess,
+        1,
+        {
+          type: "CHAT",
+          route: effectiveRoute,
+          aiRole: role,
+        }
+      );
+
+      if (!credit.ok) {
+        return withCors(
+          json(
+            {
+              ok: false,
+              error: credit.error,
+              code: "AI_CREDIT_CONSUME_FAILED",
+            },
+            { status: 409 }
+          ),
+          origin
+        );
+      }
+
       return withCors(
         json({
           ok: true,
@@ -2758,6 +3683,11 @@ STRICT FALLBACK RULE:
           meta: {
             role,
             roleMeta,
+            subscription: {
+              planCode: aiAccess.planCode,
+              planName: aiAccess.planName,
+              creditsRemaining: credit.remaining,
+            },
             mode,
             locale: body?.locale ?? null,
             language: body?.language ?? null,
@@ -2767,42 +3697,117 @@ STRICT FALLBACK RULE:
       );
     }
 
-    // ----------------------------
+    // -------------------------------------------------------------------------
     // (2) VISION: /vision
-    // ----------------------------
+    // -------------------------------------------------------------------------
     if (path === "/vision") {
       let body: VisionBody | null = null;
 
       try {
         body = (await request.json()) as VisionBody;
       } catch {
-        return withCors(json({ ok: false, error: "Invalid JSON body" }, { status: 400 }), origin);
-      }
-
-      if (!ensureOwnerRole(body?.meta?.context?.activeRole)) {
-        return ownerOnlyError(origin);
+        return withCors(
+          json(
+            { ok: false, error: "Invalid JSON body" },
+            { status: 400 }
+          ),
+          origin
+        );
       }
 
       const rawMessage = clean(body?.message);
-      const images = Array.isArray(body?.images) ? body.images.map((x) => clean(x)).filter(Boolean) : [];
+      const images = Array.isArray(body?.images)
+        ? body.images.map((x) => clean(x)).filter(Boolean)
+        : [];
       const meta = body?.meta ?? {};
+
+      if (!rawMessage && images.length === 0) {
+        return withCors(
+          json(
+            { ok: false, error: "Missing message/images" },
+            { status: 400 }
+          ),
+          origin
+        );
+      }
+
+      const rawCtx = meta?.context ?? {};
+      const aiAccess = await verifyAiAccess(
+        request,
+        env,
+        rawCtx
+      );
+
+      if (!aiAccess.ok) {
+        return accessErrorResponse(aiAccess, origin);
+      }
+
+      const ctx: ReqBody["context"] = {
+        ...rawCtx,
+        orgId: aiAccess.orgId,
+        activeOrgId: aiAccess.orgId,
+        activeRole: aiAccess.role,
+      };
+
+      const activeStoreId = clean(
+        (ctx as any)?.activeStoreId ||
+          (ctx as any)?.storeId
+      );
+
+      if (activeStoreId) {
+        const storeCheck = await verifyStoreBelongsToOrg(
+          env,
+          activeStoreId,
+          aiAccess.orgId
+        );
+
+        if (!storeCheck.ok) {
+          return withCors(
+            json(
+              {
+                ok: false,
+                error: storeCheck.error,
+                code: "STORE_ORG_MISMATCH",
+              },
+              { status: 403 }
+            ),
+            origin
+          );
+        }
+      }
+
       const slash = detectSlashCommand(rawMessage);
-      const message = normalizeCommandUserText(slash.command, slash.rest) || rawMessage;
+      const message =
+        normalizeCommandUserText(
+          slash.command,
+          slash.rest
+        ) || rawMessage;
+
       const mode = meta?.mode ?? "AUTO";
       const lang = pickLang(mode);
 
-      if (!message && images.length === 0) {
-        return withCors(json({ ok: false, error: "Missing message/images" }, { status: 400 }), origin);
-      }
-
-      if (message && images.length === 0 && isClosingMessage(message)) {
+      // Local closing response does not use OpenAI.
+      if (
+        message &&
+        images.length === 0 &&
+        isClosingMessage(message)
+      ) {
         return withCors(
           json({
             ok: true,
             reply: closingReply(lang),
             meta: {
               role: "GENERAL",
-              roleMeta: { source: "closing_guard", confidence: 1, reason: "user_closed" },
+              roleMeta: {
+                source: "closing_guard",
+                confidence: 1,
+                reason: "user_closed",
+              },
+              subscription: {
+                planCode: aiAccess.planCode,
+                planName: aiAccess.planName,
+                creditsRemaining: aiAccess.creditsRemaining,
+              },
               mode,
               locale: meta?.locale ?? null,
               language: meta?.language ?? null,
@@ -2812,14 +3817,30 @@ STRICT FALLBACK RULE:
         );
       }
 
-      const ctx = meta?.context ?? {};
+      // Vision path below uses OpenAI (classifier and/or vision).
+      const creditGate = ensureOpenAiCredits(
+        aiAccess,
+        1
+      );
+
+      if (!creditGate.ok) {
+        return creditsErrorResponse(creditGate, origin);
+      }
+
       const ctxLines = buildCtxLines(ctx);
-      const injectedLines = buildInjectedDataLines(ctx);
+      const injectedLines =
+        buildInjectedDataLines(ctx);
       const history = normalizeHistory(meta?.history);
 
-      const visionRoute = detectWorkerRoute(message || rawMessage || "", ctx, images.length > 0);
+      const visionRoute = detectWorkerRoute(
+        message || rawMessage || "",
+        ctx,
+        images.length > 0
+      );
 
-      const commandRoleHint = roleHintFromSlashCommand(slash.command);
+      const commandRoleHint =
+        roleHintFromSlashCommand(slash.command);
+
       const rr = await resolveRole(
         env,
         message || rawMessage || "(vision)",
@@ -2828,6 +3849,7 @@ STRICT FALLBACK RULE:
         history,
         commandRoleHint ?? meta?.roleHint
       );
+
       const role = rr.role;
       const roleMeta = rr.roleMeta;
 
@@ -2836,22 +3858,32 @@ STRICT FALLBACK RULE:
           ? "ROUTE MODE: VISION_ANALYSIS\n- Analyze the image first.\n- Do not replace image reasoning with unrelated business reporting."
           : "ROUTE MODE: GENERAL_CHAT";
 
-      const appSystemPrompt = clean(meta?.systemPrompt);
-      const slashSystemBlock = buildSlashCommandSystemBlock(slash.command);
-      const dataDrivenRules = buildDataDrivenRules(ctx);
-      const visionPriorityRules = buildVisionPriorityRules(message, images, ctx);
-      const visionBusinessGuard = buildVisionBusinessGuard(message);
+      const appSystemPrompt =
+        clean(meta?.systemPrompt);
+      const slashSystemBlock =
+        buildSlashCommandSystemBlock(slash.command);
+      const dataDrivenRules =
+        buildDataDrivenRules(ctx);
+      const visionPriorityRules =
+        buildVisionPriorityRules(
+          message,
+          images,
+          ctx
+        );
+      const visionBusinessGuard =
+        buildVisionBusinessGuard(message);
 
-     const hasInjectedProducts =
+      const hasInjectedProducts =
         (visionRoute.route === "BUSINESS_ANALYSIS" ||
           visionRoute.route === "BUSINESS_FORECAST" ||
           visionRoute.route === "BUSINESS_COACH" ||
           visionRoute.route === "VISION_ANALYSIS") &&
-        (
-          (Array.isArray((ctx as any)?.topProducts) && (ctx as any).topProducts.length > 0) ||
-          (Array.isArray((ctx as any)?.lowStockItems) && (ctx as any).lowStockItems.length > 0) ||
-          (Array.isArray((ctx as any)?.slowItems) && (ctx as any).slowItems.length > 0)
-        );
+        ((Array.isArray((ctx as any)?.topProducts) &&
+          (ctx as any).topProducts.length > 0) ||
+          (Array.isArray((ctx as any)?.lowStockItems) &&
+            (ctx as any).lowStockItems.length > 0) ||
+          (Array.isArray((ctx as any)?.slowItems) &&
+            (ctx as any).slowItems.length > 0));
 
       const sys = [
         buildZetraInstructions(lang, role),
@@ -2862,20 +3894,17 @@ STRICT FALLBACK RULE:
         dataDrivenRules,
         visionBusinessGuard,
         hasInjectedProducts
-          ? `
-STRICT FALLBACK RULE:
-- Injected product data exists in this request.
-- Never say you cannot access product-level, inventory, stock, or sales detail directly.
-- Use injected data only AFTER checking the image first.
-- If a category is empty, say that exact injected category is empty.
-- Do not replace image analysis with generic stock summary.
-`
+          ? ` STRICT FALLBACK RULE: - Injected product data exists in this request. - Never say you cannot access product-level, inventory, stock, or sales detail directly. - Use injected data only AFTER checking the image first. - If a category is empty, say that exact injected category is empty. - Do not replace image analysis with generic stock summary. `
           : "",
       ]
         .filter(Boolean)
         .join("\n\n");
 
-      const visionModel = clean(env.OPENAI_VISION_MODEL) || clean(env.OPENAI_MODEL) || "gpt-4o-mini";
+      const visionModel =
+        clean(env.OPENAI_VISION_MODEL) ||
+        clean(env.OPENAI_MODEL) ||
+        "gpt-4o-mini";
+
       const messages = buildVisionMessages(
         sys,
         ctxLines,
@@ -2885,9 +3914,20 @@ STRICT FALLBACK RULE:
         images
       );
 
-      const OPENAI_API_KEY = clean(env.OPENAI_API_KEY);
+      const OPENAI_API_KEY =
+        clean(env.OPENAI_API_KEY);
+
       if (!OPENAI_API_KEY) {
-        return withCors(json({ ok: false, error: "Missing OPENAI_API_KEY" }, { status: 500 }), origin);
+        return withCors(
+          json(
+            {
+              ok: false,
+              error: "Missing OPENAI_API_KEY",
+            },
+            { status: 500 }
+          ),
+          origin
+        );
       }
 
       const bodyOut = {
@@ -2897,9 +3937,8 @@ STRICT FALLBACK RULE:
         max_tokens: 1200,
       };
 
-      const url = "https://api.openai.com/v1/chat/completions";
       const res = await fetchWithTimeout(
-        url,
+        "https://api.openai.com/v1/chat/completions",
         {
           method: "POST",
           headers: {
@@ -2911,16 +3950,55 @@ STRICT FALLBACK RULE:
         42_000
       );
 
-      const { parsed, raw } = await readJsonSafe(res);
+      const { parsed, raw } =
+        await readJsonSafe(res);
+
       if (!res.ok) {
-        const msg = extractOpenAiErrorMessage(parsed, raw);
+        const msg =
+          extractOpenAiErrorMessage(parsed, raw);
+
         return withCors(
-          json({ ok: false, error: msg, meta: { role, roleMeta } }, { status: res.status || 500 }),
+          json(
+            {
+              ok: false,
+              error: msg,
+              meta: { role, roleMeta },
+            },
+            { status: res.status || 500 }
+          ),
           origin
         );
       }
 
-      const reply = stabilizeReplyText(extractChatCompletionText(parsed) || "");
+      const reply = stabilizeReplyText(
+        extractChatCompletionText(parsed) || ""
+      );
+
+      const credit = await consumeAiCredit(
+        env,
+        aiAccess,
+        1,
+        {
+          type: "VISION",
+          route: visionRoute.route,
+          aiRole: role,
+          imageCount: images.length,
+        }
+      );
+
+      if (!credit.ok) {
+        return withCors(
+          json(
+            {
+              ok: false,
+              error: credit.error,
+              code: "AI_CREDIT_CONSUME_FAILED",
+            },
+            { status: 409 }
+          ),
+          origin
+        );
+      }
 
       return withCors(
         json({
@@ -2929,6 +4007,11 @@ STRICT FALLBACK RULE:
           meta: {
             role,
             roleMeta,
+            subscription: {
+              planCode: aiAccess.planCode,
+              planName: aiAccess.planName,
+              creditsRemaining: credit.remaining,
+            },
             mode,
             locale: meta?.locale ?? null,
             language: meta?.language ?? null,
@@ -2938,29 +4021,69 @@ STRICT FALLBACK RULE:
       );
     }
 
-    // ----------------------------
+    // -------------------------------------------------------------------------
     // (3) IMAGE: /image
-    // ----------------------------
+    // -------------------------------------------------------------------------
     if (path === "/image") {
       let body: any = null;
 
       try {
         body = await request.json();
       } catch {
-        return withCors(json({ ok: false, error: "Invalid JSON body" }, { status: 400 }), origin);
-      }
-
-      if (!ensureOwnerRole(body?.context?.activeRole ?? body?.activeRole)) {
-        return ownerOnlyError(origin);
+        return withCors(
+          json(
+            { ok: false, error: "Invalid JSON body" },
+            { status: 400 }
+          ),
+          origin
+        );
       }
 
       const prompt = clean(body?.prompt);
       if (!prompt) {
-        return withCors(json({ ok: false, error: "Missing prompt" }, { status: 400 }), origin);
+        return withCors(
+          json(
+            { ok: false, error: "Missing prompt" },
+            { status: 400 }
+          ),
+          origin
+        );
       }
 
-      const out = await openaiImageGenerate(env, prompt, 70_000);
-      const imageModel = clean(env.OPENAI_IMAGE_MODEL) || "gpt-image-1";
+      const rawCtx =
+        body?.context ??
+        ({
+          orgId: body?.orgId,
+          activeOrgId: body?.activeOrgId,
+        } as ReqBody["context"]);
+
+      const aiAccess = await verifyAiAccess(
+        request,
+        env,
+        rawCtx
+      );
+
+      if (!aiAccess.ok) {
+        return accessErrorResponse(aiAccess, origin);
+      }
+
+      const creditGate = ensureOpenAiCredits(
+        aiAccess,
+        1
+      );
+
+      if (!creditGate.ok) {
+        return creditsErrorResponse(creditGate, origin);
+      }
+
+      const out = await openaiImageGenerate(
+        env,
+        prompt,
+        70_000
+      );
+      const imageModel =
+        clean(env.OPENAI_IMAGE_MODEL) ||
+        "gpt-image-1";
 
       if (!out.ok) {
         return withCors(
@@ -2970,10 +4093,35 @@ STRICT FALLBACK RULE:
               error: out.error,
               debug: {
                 imageModel,
-                workerversion: "stable-full-v2-recovered-b1",
+                workerversion:
+                  "stable-full-v3-secure-auth-credits",
               },
             },
             { status: out.status || 500 }
+          ),
+          origin
+        );
+      }
+
+      const credit = await consumeAiCredit(
+        env,
+        aiAccess,
+        1,
+        {
+          type: "IMAGE",
+          model: imageModel,
+        }
+      );
+
+      if (!credit.ok) {
+        return withCors(
+          json(
+            {
+              ok: false,
+              error: credit.error,
+              code: "AI_CREDIT_CONSUME_FAILED",
+            },
+            { status: 409 }
           ),
           origin
         );
@@ -2983,50 +4131,155 @@ STRICT FALLBACK RULE:
         json({
           ok: true,
           url: out.url,
+          meta: {
+            subscription: {
+              planCode: aiAccess.planCode,
+              planName: aiAccess.planName,
+              creditsRemaining: credit.remaining,
+            },
+          },
           debug: {
             imageModel,
-            workerversion: "stable-full-v2-recovered-b1",
+            workerversion:
+              "stable-full-v3-secure-auth-credits",
           },
         }),
         origin
       );
     }
 
-    // ----------------------------
+    // -------------------------------------------------------------------------
     // (4) TRANSCRIBE: /transcribe
-    // ----------------------------
+    // -------------------------------------------------------------------------
     if (path === "/transcribe") {
-      const roleHeader = request.headers.get("x-zetra-role");
-      if (!ensureOwnerRole(roleHeader)) {
-        return ownerOnlyError(origin);
-      }
-
       let form: FormData | null = null;
 
       try {
         form = await request.formData();
       } catch {
-        return withCors(json({ ok: false, error: "Expected multipart/form-data" }, { status: 400 }), origin);
+        return withCors(
+          json(
+            {
+              ok: false,
+              error: "Expected multipart/form-data",
+            },
+            { status: 400 }
+          ),
+          origin
+        );
       }
 
       const f = form.get("file");
       if (!f || !(f instanceof File)) {
-        return withCors(json({ ok: false, error: "Missing file" }, { status: 400 }), origin);
+        return withCors(
+          json(
+            { ok: false, error: "Missing file" },
+            { status: 400 }
+          ),
+          origin
+        );
+      }
+
+      const orgId =
+        clean(request.headers.get("x-zetra-org-id")) ||
+        clean(form.get("orgId")) ||
+        clean(form.get("activeOrgId"));
+
+      const aiAccess = await verifyAiAccess(
+        request,
+        env,
+        {
+          orgId,
+          activeOrgId: orgId,
+        }
+      );
+
+      if (!aiAccess.ok) {
+        return accessErrorResponse(aiAccess, origin);
+      }
+
+      const creditGate = ensureOpenAiCredits(
+        aiAccess,
+        1
+      );
+
+      if (!creditGate.ok) {
+        return creditsErrorResponse(creditGate, origin);
       }
 
       const maxBytes = 16 * 1024 * 1024;
       if ((f as File).size > maxBytes) {
-        return withCors(json({ ok: false, error: "Audio too large (max 16MB)" }, { status: 413 }), origin);
+        return withCors(
+          json(
+            {
+              ok: false,
+              error: "Audio too large (max 16MB)",
+            },
+            { status: 413 }
+          ),
+          origin
+        );
       }
 
-      const out = await openaiTranscribe(env, f as File, 60_000);
+      const out = await openaiTranscribe(
+        env,
+        f as File,
+        60_000
+      );
+
       if (!out.ok) {
-        return withCors(json({ ok: false, error: out.error }, { status: out.status || 500 }), origin);
+        return withCors(
+          json(
+            { ok: false, error: out.error },
+            { status: out.status || 500 }
+          ),
+          origin
+        );
       }
 
-      return withCors(json({ ok: true, text: out.text }), origin);
+      const credit = await consumeAiCredit(
+        env,
+        aiAccess,
+        1,
+        {
+          type: "TRANSCRIBE",
+          bytes: (f as File).size,
+        }
+      );
+
+      if (!credit.ok) {
+        return withCors(
+          json(
+            {
+              ok: false,
+              error: credit.error,
+              code: "AI_CREDIT_CONSUME_FAILED",
+            },
+            { status: 409 }
+          ),
+          origin
+        );
+      }
+
+      return withCors(
+        json({
+          ok: true,
+          text: out.text,
+          meta: {
+            subscription: {
+              planCode: aiAccess.planCode,
+              planName: aiAccess.planName,
+              creditsRemaining: credit.remaining,
+            },
+          },
+        }),
+        origin
+      );
     }
 
-    return withCors(json({ ok: false, error: "Not found" }, { status: 404 }), origin);
+    return withCors(
+      json({ ok: false, error: "Not found" }, { status: 404 }),
+      origin
+    );
   },
 };
