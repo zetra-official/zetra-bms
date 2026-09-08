@@ -647,78 +647,47 @@ async function consumeAiCredit( env: Env, access: VerifiedAiAccess, credits = 1,
   };
 }
 
-async function verifyStoreBelongsToOrg(
-  env: Env,
-  storeId: string,
-  orgId: string,
-  accessToken: string
-): Promise<{ ok: boolean; error: string }> {
+async function verifyStoreBelongsToOrg( env: Env, storeId: string, orgId: string ): Promise<{ ok: boolean; error: string }> {
   const sid = clean(storeId);
   const oid = clean(orgId);
-  const token = clean(accessToken);
 
   if (!sid || !oid) {
-    return {
-      ok: false,
-      error: "Missing store or organization.",
-    };
-  }
-
-  if (!token) {
-    return {
-      ok: false,
-      error: "Authentication required for store verification.",
-    };
+    return { ok: false, error: "Missing store or organization." };
   }
 
   try {
-    let storesRpc = await rpcWithUserToken(
-      env,
-      "get_my_stores_v2",
-      {},
-      token
-    );
+    const path =
+      `/rest/v1/stores` +
+      `?select=id` +
+      `&id=eq.${encodeURIComponent(sid)}` +
+      `&organization_id=eq.${encodeURIComponent(oid)}` +
+      `&limit=1`;
 
-    if (!storesRpc.ok) {
-      storesRpc = await rpcWithUserToken(
-        env,
-        "get_my_stores",
-        {},
-        token
-      );
-    }
+    // Service role is used only for this server-side integrity lookup.
+    // It is NOT treated as the user's identity.
+    const res = await supabaseRequest(env, path, { method: "GET" });
+    const { parsed, raw } = await readJsonSafe(res);
 
-    if (!storesRpc.ok) {
+    if (!res.ok) {
       return {
         ok: false,
-        error: storesRpc.error || "Unable to verify store.",
+        error:
+          clean(parsed?.message) ||
+          clean(parsed?.error) ||
+          safeSlice(raw, 300) ||
+          "Store verification failed.",
       };
     }
 
-    const rows = Array.isArray(storesRpc.data)
-      ? storesRpc.data
-      : storesRpc.data
-      ? [storesRpc.data]
-      : [];
-
-    const matched = rows.find((row: any) => {
-      const rowStoreId = clean(row?.store_id ?? row?.id);
-      const rowOrgId = clean(row?.organization_id ?? row?.org_id);
-
-      return rowStoreId === sid && rowOrgId === oid;
-    });
-
-    if (!matched) {
+    const row = Array.isArray(parsed) ? parsed[0] : null;
+    if (!row?.id) {
       return {
         ok: false,
         error: "Store does not belong to the selected organization.",
       };
     }
 
-    return {
-      ok: true,
-      error: "",
-    };
+    return { ok: true, error: "" };
   } catch (e: any) {
     return {
       ok: false,
@@ -726,6 +695,7 @@ async function verifyStoreBelongsToOrg(
     };
   }
 }
+
 function accessErrorResponse( access: Pick<VerifiedAiAccess, "status" | "code" | "error">, origin: string | null ) {
   return withCors(
     json(
@@ -3213,8 +3183,7 @@ export default {
         const storeCheck = await verifyStoreBelongsToOrg(
           env,
           activeStoreId,
-          aiAccess.orgId,
-          aiAccess.accessToken
+          aiAccess.orgId
         );
 
         if (!storeCheck.ok) {
@@ -3789,8 +3758,7 @@ export default {
         const storeCheck = await verifyStoreBelongsToOrg(
           env,
           activeStoreId,
-          aiAccess.orgId,
-          aiAccess.accessToken
+          aiAccess.orgId
         );
 
         if (!storeCheck.ok) {
