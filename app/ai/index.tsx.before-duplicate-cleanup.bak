@@ -36,9 +36,7 @@ import { useOrg } from "@/src/context/OrgContext";
 import { Card } from "@/src/ui/Card";
 import { Screen } from "@/src/ui/Screen";
 import { UI } from "@/src/ui/theme";
-import {
-  executeBusinessIntent,
-} from "@/src/ai/business/businessBridge";
+
 import {
   getAiSubscriptionSnapshotForOrg,
   isProActiveForOrg,
@@ -2093,7 +2091,9 @@ function buildCoachDeterministicReply(snapshot: BusinessInjectionSnapshot | null
     lines.push(`2. Uko kwenye profit chanya, hivyo msingi wa biashara bado upo vizuri.`);
   } else {
     lines.push("2. Bado una data ya kutosha kuona maeneo ya kuboresha kabla hali haijakuwa mbaya zaidi.");
-  }lines.push("");
+  }
+
+  lines.push("");
   lines.push("## ⚠️ Mambo 2 Yanahitaji Attention");
 
   if (weakest) {
@@ -2679,19 +2679,6 @@ function buildZetraSystemPrompt(args: {
     "- Use business/store data only when the question clearly requires it.",
     "- If data is missing, say what is missing instead of inventing.",
     "- Be natural, focused, and truthful.",
-    "",
-    "LANGUAGE QUALITY RULES:",
-    "- Write the final answer naturally, like a skilled human business adviser, not like a database report.",
-    "- Follow the user's language. If the user writes in Kiswahili, answer in fluent natural Kiswahili.",
-    "- For Kiswahili, prefer clear Tanzanian business language and avoid awkward literal translations.",
-    "- Prefer 'faida ghafi' instead of 'faida bruto'.",
-    "- Prefer 'faida halisi' instead of unexplained 'net profit' when speaking Kiswahili.",
-    "- Prefer 'gharama za bidhaa zilizouzwa' and optionally add '(COGS)' once when useful.",
-    "- Do not mix English jargon into Kiswahili unnecessarily.",
-    "- If a technical English term is useful, explain it naturally the first time.",
-    "- Explain what the verified numbers mean; do not merely repeat them.",
-    "- Separate verified facts from interpretation and recommendations.",
-    "- Never invent a reason for a change when the data only proves that the change occurred.",
     "",
     "CURRENT APP CONTEXT:",
     `- Organization: ${orgName}`,
@@ -3835,7 +3822,9 @@ useEffect(() => {
   const pickAndAttachImage = useCallback(async () => {
     if (!requireAi(ownerOnlyReason || `AI haipatikani kwenye ${currentPlanLabel}. Upgrade ili kutumia image/vision tools.`)) {
       return;
-    }try {
+    }
+
+    try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) {
         Alert.alert("Permission required", "Ruhusu Photos/Media ili ku-attach picha.");
@@ -4169,6 +4158,16 @@ const callWorkerChat = useCallback(
       throw new Error("Worker URL missing");
     }
 
+    /*
+     * ============================================================
+     * STEP 1 — EXISTING LOCAL ROUTING
+     * ============================================================
+     *
+     * Hii tunaiweka kama fallback.
+     * Haifutwi mpaka semantic architecture ithibitishwe stable.
+     * ============================================================
+     */
+
     const localRoute = detectAppRoute(text, false);
 
     let route:
@@ -4199,41 +4198,30 @@ const callWorkerChat = useCallback(
     const businessCalcBypass =
       detectBusinessCalcBypass(text);
 
-    let semanticIntent: any = null;
+    /*
+     * ============================================================
+     * STEP 2 — SEMANTIC CLASSIFICATION
+     * ============================================================
+     *
+     * Tunaita OpenAI semantic classifier kwa messages ambazo
+     * zinaweza kuwa business question au normal/general question.
+     *
+     * Obvious writing/calculation/task requests hazihitaji
+     * semantic business classifier.
+     * ============================================================
+     */
 
+    let semanticIntent: any = null;
     let semanticSource:
       | "WORKER"
-      | "LOCAL_FALLBACK" =
-      "LOCAL_FALLBACK";
+      | "LOCAL_FALLBACK" = "LOCAL_FALLBACK";
 
-const shouldRunSemanticClassifier =
-  localRoute === "GENERAL_CHAT" ||
-  localRoute === "DEFINITION_EXPLANATION" ||
-  localRoute === "WRITING_ASSIST" ||
-  localRoute === "BUSINESS_ANALYSIS" ||
-  localRoute === "BUSINESS_FORECAST" ||
-  localRoute === "BUSINESS_COACH";
-console.log(
-  "\n========== ZETRA ROUTING DEBUG =========="
-);
-console.log("QUESTION:", text);
-console.log("LOCAL ROUTE:", localRoute);
-console.log("DETECTED INTENT:", detectedIntent);
-console.log(
-  "SHOULD RUN SEMANTIC:",
-  shouldRunSemanticClassifier
-);
-console.log(
-  "ACTIVE ORG:",
-  clean(org.activeOrgId) || "MISSING"
-);
-console.log(
-  "ACTIVE STORE:",
-  clean(org.activeStoreId) || "MISSING"
-);
-console.log(
-  "=========================================\n"
-);
+    const shouldRunSemanticClassifier =
+      localRoute === "GENERAL_CHAT" ||
+      localRoute === "BUSINESS_ANALYSIS" ||
+      localRoute === "BUSINESS_FORECAST" ||
+      localRoute === "BUSINESS_COACH";
+
     if (shouldRunSemanticClassifier) {
       try {
         const auth =
@@ -4246,21 +4234,7 @@ console.log(
 
         const organizationId =
           clean(org.activeOrgId);
-console.log(
-  "\n========== ZETRA SEMANTIC AUTH DEBUG =========="
-);
-console.log("AUTH OK:", auth.ok);
-console.log(
-  "HAS ACCESS TOKEN:",
-  Boolean(accessToken)
-);
-console.log(
-  "ORGANIZATION ID:",
-  organizationId || "MISSING"
-);
-console.log(
-  "===============================================\n"
-);
+
         if (
           auth.ok &&
           accessToken &&
@@ -4270,6 +4244,11 @@ console.log(
             getBusinessDateForTimezone(
               "Africa/Dar_es_Salaam"
             );
+
+          /*
+           * semanticIntentClient version yako ya sasa
+           * inapokea headers.
+           */
 
           const semanticHeaders =
             await getWorkerAuthHeaders({
@@ -4298,6 +4277,7 @@ console.log(
                   .map((item) => ({
                     role:
                       item.role,
+
                     content:
                       clean(item.text),
                   })),
@@ -4330,58 +4310,45 @@ console.log(
                   "Africa/Dar_es_Salaam",
               },
             });
-if (!semanticResult.ok) {
-  console.log(
-    "\n========== ZETRA SEMANTIC REQUEST FAILED =========="
-  );
+
+         if (semanticResult.ok) {
+  semanticIntent = semanticResult.intent;
+  semanticSource = "WORKER";
 
   console.log(
-    "QUESTION:",
-    text
+    "\n========== ZETRA SEMANTIC DEBUG =========="
+  );
+  console.log("QUESTION:", text);
+  console.log("SEMANTIC SOURCE:", semanticSource);
+  console.log(
+    "SEMANTIC INTENT:",
+    JSON.stringify(semanticIntent, null, 2)
+  );
+  console.log(
+    "==========================================\n"
   );
 
-  console.log(
-    "RESULT:",
-    JSON.stringify(
-      semanticResult,
-      null,
-      2
-    )
-  );
+  if (
+    semanticIntent?.isBusinessQuery === true
+  ) {
+    route =
+      mapSemanticIntentToAppRoute(
+        semanticIntent
+      );
 
-  console.log(
-    "===================================================\n"
-  );
+    detectedIntent =
+      mapSemanticDomainToLegacyBusinessIntent(
+        semanticIntent
+      );
+  }
 }
-          if (semanticResult.ok) {
-            semanticIntent =
-              semanticResult.intent;
 
-            semanticSource =
-              "WORKER";
-
-            console.log(
-              "\n========== ZETRA SEMANTIC DEBUG =========="
-            );
-            console.log(
-              "QUESTION:",
-              text
-            );
-            console.log(
-              "SEMANTIC SOURCE:",
-              semanticSource
-            );
-            console.log(
-              "SEMANTIC INTENT:",
-              JSON.stringify(
-                semanticIntent,
-                null,
-                2
-              )
-            );
-            console.log(
-              "==========================================\n"
-            );
+            /*
+             * OpenAI ndiye anaamua semantic meaning.
+             *
+             * Tunabadilisha legacy route only kama semantic
+             * classifier amesema kweli ni business question.
+             */
 
             if (
               semanticIntent
@@ -4400,375 +4367,26 @@ if (!semanticResult.ok) {
             }
           }
         }
-      } catch (semanticError) {
-        console.log(
-          "\n========== ZETRA SEMANTIC ERROR =========="
-        );
-        console.log(
-          "QUESTION:",
-          text
-        );
-        console.log(
-          "ERROR:",
-          semanticError
-        );
-        console.log(
-          "==========================================\n"
-        );
+     } catch (semanticError) {
+  console.log(
+    "\n========== ZETRA SEMANTIC ERROR =========="
+  );
+  console.log("QUESTION:", text);
+  console.log("ERROR:", semanticError);
+  console.log(
+    "==========================================\n"
+  );
 
-        semanticIntent = null;
-        semanticSource =
-          "LOCAL_FALLBACK";
-      }
+  semanticIntent = null;
+  semanticSource = "LOCAL_FALLBACK";
+}
     }
-    /**
-     * ========================================================================
-     * CANONICAL BUSINESS INTELLIGENCE
-     * ========================================================================
-     *
-     * OpenAI/semantic layer understands the user's business question.
-     * ZETRA canonical engine determines the verified business numbers.
-     *
-     * Source of truth:
-     * ai_daily_store_snapshots_v1
-     *   -> snapshotRepository
-     *   -> businessQueryService
-     *   -> metricsEngine
-     *   -> businessBridge
-     * ========================================================================
+
+    /*
+     * ============================================================
+     * STEP 3 — SYSTEM PROMPT
+     * ============================================================
      */
-
-    let canonicalBusinessResult: any = null;
-    let canonicalBusinessContext = "";
-
-    if (
-      semanticSource === "WORKER" &&
-      semanticIntent?.isBusinessQuery === true
-    ) {
-      const organizationId =
-        clean(org.activeOrgId);
-
-      const businessDate =
-        getBusinessDateForTimezone(
-          "Africa/Dar_es_Salaam"
-        );
-
-      if (organizationId) {
-        try {
-          canonicalBusinessResult =
-            await executeBusinessIntent({
-              intent:
-                semanticIntent,
-
-              context: {
-                organizationId,
-
-                storeId:
-                  org.activeStoreId ??
-                  null,
-
-                businessDate,
-              },
-            });
-
-          console.log(
-            "\n========== ZETRA CANONICAL BUSINESS DEBUG =========="
-          );
-
-          console.log(
-            "QUESTION:",
-            text
-          );
-
-          console.log(
-            "BUSINESS DATE:",
-            businessDate
-          );
-
-          console.log(
-            "ORGANIZATION ID:",
-            organizationId
-          );
-
-          console.log(
-            "STORE ID:",
-            org.activeStoreId ??
-              null
-          );
-
-          console.log(
-            "CANONICAL RESULT:",
-            JSON.stringify(
-              canonicalBusinessResult,
-              null,
-              2
-            )
-          );
-
-          console.log(
-            "=====================================================\n"
-          );
-
-          if (
-            canonicalBusinessResult?.status ===
-            "SUCCESS"
-          ) {
-            if (
-              canonicalBusinessResult.resultType ===
-                "PERIOD" &&
-              canonicalBusinessResult.periodResult
-                ?.metrics
-            ) {
-              const metrics =
-                canonicalBusinessResult
-                  .periodResult.metrics;
-
-              canonicalBusinessContext = [
-                "VERIFIED ZETRA BUSINESS DATA:",
-                "Source: ai_daily_store_snapshots_v1",
-                "Data status: VERIFIED",
-                `Requested period: ${clean(
-                  metrics.fromDate
-                )} to ${clean(
-                  metrics.toDate
-                )}`,
-                `Latest snapshot date: ${clean(
-                  metrics.latestSnapshotDate
-                )}`,
-                `Days with snapshots: ${num(
-                  metrics.daysWithSnapshots
-                )}`,
-                `Stores represented: ${num(
-                  metrics.storesCount
-                )}`,
-                "",
-                "FINANCIAL METRICS:",
-                `- Sales total: ${num(
-                  metrics.salesTotal
-                )}`,
-                `- COGS total: ${num(
-                  metrics.cogsTotal
-                )}`,
-                `- Expenses total: ${num(
-                  metrics.expensesTotal
-                )}`,
-                `- Gross profit: ${num(
-                  metrics.grossProfit
-                )}`,
-                `- Net profit: ${num(
-                  metrics.netProfit
-                )}`,
-                `- Orders count: ${num(
-                  metrics.ordersCount
-                )}`,
-                `- Average order value: ${num(
-                  metrics.averageOrderValue
-                )}`,
-                `- Gross margin percent: ${num(
-                  metrics.grossMarginPercent
-                )}`,
-                `- Net margin percent: ${num(
-                  metrics.netMarginPercent
-                )}`,
-                "",
-                "DATA QUALITY:",
-                `- COGS coverage percent: ${num(
-                  metrics.cogsCoveragePercent
-                )}`,
-                `- COGS items counted: ${num(
-                  metrics.cogsItemsCount
-                )}`,
-                `- COGS missing items: ${num(
-                  metrics.cogsMissingItemsCount
-                )}`,
-                "",
-                "INVENTORY POSITION:",
-                `- Stock quantity: ${num(
-                  metrics.stockQty
-                )}`,
-                `- Reserved quantity: ${num(
-                  metrics.reservedQty
-                )}`,
-                `- Available stock quantity: ${num(
-                  metrics.availableStockQty
-                )}`,
-                `- Products in stock: ${num(
-                  metrics.productsInStock
-                )}`,
-                `- Out of stock products: ${num(
-                  metrics.outOfStockProducts
-                )}`,
-                `- Low stock products: ${num(
-                  metrics.lowStockProducts
-                )}`,
-                "",
-                "STRICT RESPONSE RULES:",
-                "- These numbers are canonical verified ZETRA data.",
-                "- Use these numbers when answering the user's business question.",
-                "- Never replace these values with guessed or generic business claims.",
-                "- Do not claim the business is doing well or badly unless supported by these metrics.",
-                "- If giving analysis, clearly distinguish verified facts from recommendations.",
-                "- Inventory values represent the latest available inventory position and must not be summed across dates.",
-              ].join("\n");
-            } else if (
-              canonicalBusinessResult.resultType ===
-                "COMPARISON" &&
-              canonicalBusinessResult
-                .comparisonResult
-            ) {
-              canonicalBusinessContext = [
-                "VERIFIED ZETRA BUSINESS COMPARISON:",
-                "Source: ai_daily_store_snapshots_v1",
-                "Data status: VERIFIED",
-                `Business date: ${businessDate}`,
-                `Period preset: ${clean(semanticIntent?.periodPreset)}`,
-                `Comparison mode: ${clean(semanticIntent?.comparisonMode)}`,
-                `Resolved current period: ${clean(canonicalBusinessResult?.periods?.current?.fromDate)} to ${clean(canonicalBusinessResult?.periods?.current?.toDate)}`,
-                `Resolved comparison period: ${clean(canonicalBusinessResult?.periods?.previous?.fromDate)} to ${clean(canonicalBusinessResult?.periods?.previous?.toDate)}`,
-                semanticIntent?.periodPreset === "THIS_WEEK" ? "- PERIOD STATUS: The current week is in progress. Treat the current range as WEEK-TO-DATE, not as a completed full week." : "",
-                semanticIntent?.periodPreset === "THIS_MONTH" ? "- PERIOD STATUS: The current month is in progress. Treat the current range as MONTH-TO-DATE, not as a completed full month." : "",
-                semanticIntent?.periodPreset === "THIS_YEAR" ? "- PERIOD STATUS: The current year is in progress. Treat the current range as YEAR-TO-DATE, not as a completed full year." : "",
-                semanticIntent?.periodPreset === "THIS_WEEK" && semanticIntent?.comparisonMode === "PREVIOUS_WEEK" ? "- COMPARISON BASIS: The current range is week-to-date because the current week is still in progress. The comparison range is the COMPLETE previous business week, Monday through Sunday. State the exact resolved dates for both periods so the user can see that the current week is partial and the previous week is complete. Never describe the previous range as equivalent elapsed days." : "",
-                semanticIntent?.periodPreset === "THIS_MONTH" && semanticIntent?.comparisonMode === "PREVIOUS_MONTH" ? "- COMPARISON BASIS: Compare month-to-date with the equivalent elapsed portion of the previous month. Do not describe the previous range as the entire previous month." : "",
-                semanticIntent?.periodPreset === "THIS_YEAR" && semanticIntent?.comparisonMode === "PREVIOUS_YEAR" ? "- COMPARISON BASIS: Compare year-to-date with the equivalent elapsed portion of the previous year. Do not describe the previous range as the entire previous year." : "",
-                JSON.stringify(
-                  canonicalBusinessResult
-                    .comparisonResult,
-                  null,
-                  2
-                ),
-                "",
-                "STRICT RESPONSE RULES:",
-                "- Analyze only the verified comparison above.",
-                "- Do not invent missing business values, products, categories, customer behavior, competitors, stock conditions, or causes.",
-                "- Clearly explain important changes and direction.",
-                "- METRIC SEMANTICS: ordersCount means the number of completed sales transactions/receipts, NOT customer purchase orders. In Swahili, prefer \"Idadi ya mauzo\" or \"Idadi ya miamala ya mauzo\"; never translate this metric as \"agizo\" or \"maagizo\".",
-                "- METRIC SEMANTICS: averageOrderValue means average sales value per completed sales transaction. In Swahili, prefer \"Wastani wa thamani ya mauzo kwa muamala\" or a natural equivalent; never call it \"Thamani ya kawaida ya agizo\".",
-                "- CAUSALITY RULE: A change in sales, profit, expenses, transaction count, or average transaction value does not by itself prove why the change happened. Never attribute a change to stock shortage, competition, marketing, customer demand, seasonality, product mix, or any other cause unless that cause is explicitly supported by the verified comparison data.",
-                "- You MAY explain direct arithmetic relationships supported by the figures, for example that higher recorded expenses reduced the profit retained when the supplied figures demonstrate that relationship.",
-                "- INVENTORY RULE: Never interpret a zero historical inventory value as proof that historical stock was zero when the comparison indicates NO_BASELINE, HISTORICAL_UNAVAILABLE, unavailable inventory, or otherwise lacks a verified historical inventory baseline.",
-                "- Never name or describe a specific product or product category unless that product/category is explicitly present in the verified comparison data.",
-                "- If the verified metrics show WHAT changed but do not establish WHY, say that the available data shows the change but does not establish the cause.",
-                "- Recommendations about an unverified cause must be framed as something to investigate, not as a diagnosed problem.",
-                "- PARTIAL-PERIOD FAIRNESS: When the current period is still in progress and the comparison period is a completed full period, explicitly say that the periods have different lengths and the comparison is not like-for-like.",
-                "- PARTIAL-PERIOD INTERPRETATION: Never present a percentage difference between an in-progress partial period and a completed full period as proof that business performance has declined or improved by that percentage.",
-                "- PARTIAL-PERIOD WORDING: Use language such as hadi sasa / so far for the current period and make clear that its final result can still change.",
-                "- FAIR COMPARISON OPTION: When useful, briefly mention that equivalent elapsed days provide a fairer performance comparison; do not replace the verified ranges unless the user actually asks for that comparison.",
-                "- RESPONSE PRIORITY: Lead with the business conclusion and the period-comparison caveat, then use only the 3 or 4 metrics that best support the conclusion.",
-                "- RESPONSE LENGTH: Default to a concise synthesized answer of about 2 to 4 short paragraphs. Do not enumerate every available metric unless the user explicitly asks for a full breakdown or detailed report.",
-                "- SYNTHESIS RULE: Prefer explaining what the verified figures mean over repeating current value, previous value, absolute change, and percentage for every metric.",
-              ].join("\n");
-            } else if (
-              canonicalBusinessResult.resultType ===
-                "STORE_RANKING" &&
-              canonicalBusinessResult
-                .storeRankingResult
-            ) {
-              canonicalBusinessContext = [
-                "VERIFIED ZETRA STORE COMPARISON:",
-                "Source: ai_daily_store_snapshots_v1",
-                "Data status: VERIFIED",
-                JSON.stringify(
-                  canonicalBusinessResult
-                    .storeRankingResult,
-                  null,
-                  2
-                ),
-                "",
-                "STRICT RESPONSE RULES:",
-                "- Rank stores only from the verified data above.",
-                "- Do not invent store performance.",
-              ].join("\n");
-            } else if (
-              canonicalBusinessResult.resultType ===
-                "LATEST_STORE" &&
-              canonicalBusinessResult
-                .latestStoreResult
-                ?.snapshot
-            ) {
-              canonicalBusinessContext = [
-                "VERIFIED ZETRA BUSINESS DATA:",
-                "Source: ai_daily_store_snapshots_v1",
-                "Data status: VERIFIED FALLBACK",
-                "IMPORTANT: The requested date had no canonical snapshot.",
-                `Actual snapshot date: ${clean(
-                  canonicalBusinessResult
-                    .latestStoreResult
-                    .snapshot
-                    .snapshotDate
-                )}`,
-                JSON.stringify(
-                  canonicalBusinessResult
-                    .latestStoreResult
-                    .snapshot,
-                  null,
-                  2
-                ),
-                "",
-                "STRICT RESPONSE RULES:",
-                "- Tell the user that this is the latest verified snapshot, not necessarily today's data.",
-                "- Never present this snapshot as belonging to the requested date.",
-                "- Do not invent missing business values.",
-              ].join("\n");
-            }
-          } else {
-            canonicalBusinessContext = [
-              "ZETRA VERIFIED BUSINESS DATA STATUS:",
-              `Status: ${clean(
-                canonicalBusinessResult?.status
-              )}`,
-              `Code: ${clean(
-                canonicalBusinessResult?.code
-              )}`,
-              `Message: ${clean(
-                canonicalBusinessResult?.message
-              )}`,
-              "",
-              "STRICT RESPONSE RULE:",
-              "Verified canonical business data is unavailable for this request. Do not invent sales, profit, expenses, orders, stock, trends, or claims that the business is doing well or badly.",
-            ].join("\n");
-          }
-        } catch (canonicalError: any) {
-          console.log(
-            "\n========== ZETRA CANONICAL BUSINESS ERROR =========="
-          );
-
-          console.log(
-            "QUESTION:",
-            text
-          );
-
-          console.log(
-            "ERROR:",
-            canonicalError
-          );
-
-          console.log(
-            "====================================================\n"
-          );
-
-          canonicalBusinessResult =
-            null;
-
-          canonicalBusinessContext = [
-            "ZETRA VERIFIED BUSINESS DATA STATUS:",
-            "Status: ERROR",
-            `Message: ${clean(
-              canonicalError?.message
-            )}`,
-            "",
-            "STRICT RESPONSE RULE:",
-            "Canonical business data could not be verified. Do not invent business numbers or performance claims.",
-          ].join("\n");
-        }
-      }
-    }
-
-    const hasCanonicalVerifiedBusinessData =
-      semanticSource === "WORKER" &&
-      semanticIntent?.isBusinessQuery === true &&
-      canonicalBusinessResult?.status === "SUCCESS" &&
-      !!clean(canonicalBusinessContext);
 
     const systemPromptBase =
       buildZetraSystemPrompt({
@@ -4800,7 +4418,7 @@ if (!semanticResult.ok) {
       "TASK_FOLLOWUP";
 
     const injectedBusinessContext =
-      allowBusinessContext && !hasCanonicalVerifiedBusinessData
+      allowBusinessContext
         ? buildBusinessContextBlock(
             businessSnapshot,
             detectedIntent
@@ -4808,7 +4426,7 @@ if (!semanticResult.ok) {
         : "";
 
     const productIntelligenceBlock =
-      allowBusinessContext && !hasCanonicalVerifiedBusinessData
+      allowBusinessContext
         ? buildProductIntelligenceBlock(
             businessSnapshot
           )
@@ -4856,13 +4474,18 @@ if (!semanticResult.ok) {
     const systemPrompt = [
       systemPromptBase,
       semanticContextBlock,
-      canonicalBusinessContext,
       injectedBusinessContext,
       productIntelligenceBlock,
       tasksFollowupBlock,
     ]
       .filter(Boolean)
       .join("\n\n");
+
+    /*
+     * ============================================================
+     * STEP 4 — TASK FOLLOW-UP
+     * ============================================================
+     */
 
     const taskIntent =
       detectTaskFollowupIntent(
@@ -4932,6 +4555,12 @@ if (!semanticResult.ok) {
       };
     }
 
+    /*
+     * ============================================================
+     * STEP 5 — EXISTING BUSINESS FALLBACK ENGINE
+     * ============================================================
+     */
+
     if (
       (
         route ===
@@ -4967,15 +4596,369 @@ if (!semanticResult.ok) {
       };
     }
 
-      const payload = {
+    if (
+      businessSnapshot &&
+      !businessCalcBypass &&
+      (
+        route ===
+          "BUSINESS_ANALYSIS" ||
+        route ===
+          "BUSINESS_FORECAST" ||
+        route ===
+          "BUSINESS_COACH"
+      )
+    ) {
+      if (
+        analysisFollowupMode
+      ) {
+        return {
+          text:
+            buildAnalysisFollowupReply(
+              businessSnapshot
+            ),
+
+          meta: {
+            analysisIntent:
+              "ANALYSIS",
+
+            semanticIntent,
+
+            semanticSource,
+
+            autopilotAlerts: [
+              businessSnapshot
+                .low_stock_items
+                ?.length
+                ? {
+                    level:
+                      "warning",
+                    title:
+                      "Restock Risk",
+                    message: `${businessSnapshot.low_stock_items.length} bidhaa zinahitaji uangalizi wa stock.`,
+                  }
+                : null,
+
+              businessSnapshot
+                .dead_stock_items
+                ?.length
+                ? {
+                    level:
+                      "info",
+                    title:
+                      "Dead Stock Attention",
+                    message: `${businessSnapshot.dead_stock_items.length} bidhaa zina cash iliyokwama.`,
+                  }
+                : null,
+            ].filter(Boolean),
+
+            actions:
+              buildDeterministicActions(
+                businessSnapshot,
+                "COACH"
+              ),
+
+            hideActionsBlock:
+              true,
+          },
+        };
+      }
+
+      if (
+        pureDecisionMode
+      ) {
+        return {
+          text:
+            buildPureDecisionReply(
+              businessSnapshot,
+              text
+            ),
+
+          meta: {
+            analysisIntent:
+              "COACH",
+
+            semanticIntent,
+
+            semanticSource,
+
+            autopilotAlerts: [],
+
+            actions: [],
+          },
+        };
+      }
+
+      if (
+        detectedIntent ===
+          "INVENTORY" ||
+        detectedIntent ===
+          "PRODUCT"
+      ) {
+        const localText =
+          buildInventoryDeterministicReply(
+            businessSnapshot,
+            detectedIntent
+          );
+
+        return {
+          text:
+            localText,
+
+          meta: {
+            analysisIntent:
+              "ANALYSIS",
+
+            semanticIntent,
+
+            semanticSource,
+
+            autopilotAlerts: [
+              businessSnapshot
+                .low_stock_items
+                ?.length
+                ? {
+                    level:
+                      "warning",
+                    title:
+                      "Low Stock Detected",
+                    message: `${businessSnapshot.low_stock_items.length} bidhaa zinaonekana kuwa low stock.`,
+                  }
+                : null,
+
+              businessSnapshot
+                .dead_stock_items
+                ?.length
+                ? {
+                    level:
+                      "info",
+                    title:
+                      "Slow / Dead Stock",
+                    message: `${businessSnapshot.dead_stock_items.length} bidhaa zina mwendo mdogo au hazijauza.`,
+                  }
+                : null,
+            ].filter(Boolean),
+
+            actions:
+              buildDeterministicActions(
+                businessSnapshot,
+                detectedIntent
+              ),
+
+            hideActionsBlock:
+              true,
+          },
+        };
+      }
+
+      if (
+        detectedIntent ===
+        "PROFIT"
+      ) {
+        return {
+          text:
+            buildProfitDeterministicReply(
+              businessSnapshot,
+              "PROFIT"
+            ),
+
+          meta: {
+            analysisIntent:
+              "COACH",
+
+            semanticIntent,
+
+            semanticSource,
+
+            autopilotAlerts: [
+              num(
+                businessSnapshot
+                  .margin_pct
+              ) < 10
+                ? {
+                    level:
+                      "warning",
+                    title:
+                      "Low Margin",
+                    message:
+                      `Margin ya sasa iko ${num(
+                        businessSnapshot
+                          .margin_pct
+                      ).toFixed(
+                        1
+                      )}%.`,
+                  }
+                : null,
+
+              num(
+                businessSnapshot
+                  .expenses_total
+              ) > 0
+                ? {
+                    level:
+                      "info",
+                    title:
+                      "Expenses Included",
+                    message:
+                      `Expenses za snapshot hii ni ${fmtMoney(
+                        businessSnapshot
+                          .expenses_total
+                      )}.`,
+                  }
+                : null,
+            ].filter(Boolean),
+
+            actions:
+              buildDeterministicActions(
+                businessSnapshot,
+                "PROFIT"
+              ),
+
+            hideActionsBlock:
+              true,
+          },
+        };
+      }
+
+      if (
+        detectedIntent ===
+        "SALES"
+      ) {
+        return {
+          text:
+            buildProfitDeterministicReply(
+              businessSnapshot,
+              "SALES"
+            ),
+
+          meta: {
+            analysisIntent:
+              "FORECAST",
+
+            semanticIntent,
+
+            semanticSource,
+
+            autopilotAlerts: [
+              businessSnapshot
+                .forecast
+                ?.trend_label ===
+              "DECLINING"
+                ? {
+                    level:
+                      "warning",
+                    title:
+                      "Declining Trend",
+                    message:
+                      "Forecast inaonyesha trend ya kushuka.",
+                  }
+                : null,
+
+              businessSnapshot
+                .forecast
+                ?.trend_label ===
+              "INCREASING"
+                ? {
+                    level:
+                      "info",
+                    title:
+                      "Increasing Trend",
+                    message:
+                      "Forecast inaonyesha trend ya kupanda.",
+                  }
+                : null,
+            ].filter(Boolean),
+
+            actions:
+              buildDeterministicActions(
+                businessSnapshot,
+                "SALES"
+              ),
+
+            hideActionsBlock:
+              true,
+          },
+        };
+      }
+
+      if (
+        hasLooseKeyword(text, [
+          "coach",
+          "ushauri",
+          "nifanye nini",
+          "hatua gani",
+          "next move",
+          "what should i do",
+          "nipe ushauri",
+          "naomba ushauri",
+        ])
+      ) {
+        return {
+          text:
+            buildCoachDeterministicReply(
+              businessSnapshot
+            ),
+
+          meta: {
+            analysisIntent:
+              "COACH",
+
+            semanticIntent,
+
+            semanticSource,
+
+            autopilotAlerts: [
+              businessSnapshot
+                .low_stock_items
+                ?.length
+                ? {
+                    level:
+                      "warning",
+                    title:
+                      "Restock Risk",
+                    message: `${businessSnapshot.low_stock_items.length} bidhaa zinahitaji uangalizi wa stock.`,
+                  }
+                : null,
+
+              businessSnapshot
+                .dead_stock_items
+                ?.length
+                ? {
+                    level:
+                      "info",
+                    title:
+                      "Dead Stock Attention",
+                    message: `${businessSnapshot.dead_stock_items.length} bidhaa zina cash iliyokwama.`,
+                  }
+                : null,
+            ].filter(Boolean),
+
+            actions:
+              buildDeterministicActions(
+                businessSnapshot,
+                "COACH"
+              ),
+
+            hideActionsBlock:
+              true,
+          },
+        };
+      }
+    }
+
+    /*
+     * ============================================================
+     * STEP 6 — NORMAL EXISTING ZETRA AI CHAT
+     * ============================================================
+     */
+
+    const payload = {
       text,
 
       mode,
 
       history,
 
-      roleHint:
-        "AUTO",
+      roleHint: "AUTO",
 
       systemPrompt,
 
@@ -5008,14 +4991,12 @@ if (!semanticResult.ok) {
         module:
           "ZETRA_BMS_AI",
 
-        appRoute: route,
+        appRoute:
+          route,
 
         semanticIntent,
 
         semanticSource,
-
-        canonicalBusinessVerified:
-          hasCanonicalVerifiedBusinessData,
 
         businessIntent:
           allowBusinessContext
@@ -5023,7 +5004,7 @@ if (!semanticResult.ok) {
             : "GENERAL",
 
         businessSnapshot:
-          allowBusinessContext && !hasCanonicalVerifiedBusinessData
+          allowBusinessContext
             ? businessSnapshot
             : null,
 
@@ -5048,34 +5029,34 @@ if (!semanticResult.ok) {
             : "",
 
         topProducts:
-          allowBusinessContext && !hasCanonicalVerifiedBusinessData
+          allowBusinessContext
             ? businessSnapshot
                 ?.top_products ??
               []
             : [],
 
         lowStockItems:
-          allowBusinessContext && !hasCanonicalVerifiedBusinessData
+          allowBusinessContext
             ? businessSnapshot
                 ?.low_stock_items ??
               []
             : [],
 
         slowItems:
-          allowBusinessContext && !hasCanonicalVerifiedBusinessData
+          allowBusinessContext
             ? businessSnapshot
                 ?.dead_stock_items ??
               []
             : [],
 
         forceUseRealBusinessData:
-          allowBusinessContext && !hasCanonicalVerifiedBusinessData,
+          allowBusinessContext,
 
         forceUseRealProductNames:
-          allowBusinessContext && !hasCanonicalVerifiedBusinessData,
+          allowBusinessContext,
 
         disallowGenericProductAdvice:
-          allowBusinessContext && !hasCanonicalVerifiedBusinessData,
+          allowBusinessContext,
       },
     };
 
@@ -5093,8 +5074,7 @@ if (!semanticResult.ok) {
       await fetchJsonWithRetry(
         url,
         {
-          method:
-            "POST",
+          method: "POST",
 
           headers:
             authHeaders,
@@ -5127,12 +5107,15 @@ if (!semanticResult.ok) {
         clean(data?.message) ||
         clean(out.textBody);
 
-      throw new Error(
+      const msg =
         body
           ? `Chat request failed (${out.status})\n${safeClip(
               body
             )}\n\n[debug] url=${url}`
-          : `Chat request failed (${out.status})\n\n[debug] url=${url}`
+          : `Chat request failed (${out.status})\n\n[debug] url=${url}`;
+
+      throw new Error(
+        msg
       );
     }
 
@@ -5142,12 +5125,15 @@ if (!semanticResult.ok) {
         clean(data?.message) ||
         clean(out.textBody);
 
-      throw new Error(
+      const msg =
         body
           ? `Chat failed\n${safeClip(
               body
             )}\n\n[debug] url=${url}`
-          : `Chat failed\n\n[debug] url=${url}`
+          : `Chat failed\n\n[debug] url=${url}`;
+
+      throw new Error(
+        msg
       );
     }
 
@@ -5191,7 +5177,7 @@ if (!semanticResult.ok) {
       const analysisFollowupMode = detectAnalysisFollowupIntent(text);
       const businessCalcBypass = detectBusinessCalcBypass(text);
 
-    const systemPromptBase = buildZetraSystemPrompt({
+      const systemPromptBase = buildZetraSystemPrompt({
         orgName: org.activeOrgName,
         storeName: org.activeStoreName,
         role: org.activeRole,
@@ -6015,7 +6001,9 @@ const reply = "✅ Image generated";
   thinking,
   typeOutChatGPTLike,
 ]
-  );const send = useCallback(async () => {
+  );
+
+  const send = useCallback(async () => {
     if (!requireAi(ownerOnlyReason || `AI haipatikani kwenye ${currentPlanLabel}. Upgrade ili kuendelea.`)) return;
 
     const text = clean(input);
@@ -7425,7 +7413,8 @@ shadowOpacity: Platform.OS === "android" ? 0.14 : 0.10,
         shadowRadius: 18,
         shadowOffset: { width: 0, height: 10 },
         elevation: 10,
-      }}>
+      }}
+    >
       {AttachRow}
 
       <View

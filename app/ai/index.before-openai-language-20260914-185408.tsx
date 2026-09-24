@@ -2680,19 +2680,6 @@ function buildZetraSystemPrompt(args: {
     "- If data is missing, say what is missing instead of inventing.",
     "- Be natural, focused, and truthful.",
     "",
-    "LANGUAGE QUALITY RULES:",
-    "- Write the final answer naturally, like a skilled human business adviser, not like a database report.",
-    "- Follow the user's language. If the user writes in Kiswahili, answer in fluent natural Kiswahili.",
-    "- For Kiswahili, prefer clear Tanzanian business language and avoid awkward literal translations.",
-    "- Prefer 'faida ghafi' instead of 'faida bruto'.",
-    "- Prefer 'faida halisi' instead of unexplained 'net profit' when speaking Kiswahili.",
-    "- Prefer 'gharama za bidhaa zilizouzwa' and optionally add '(COGS)' once when useful.",
-    "- Do not mix English jargon into Kiswahili unnecessarily.",
-    "- If a technical English term is useful, explain it naturally the first time.",
-    "- Explain what the verified numbers mean; do not merely repeat them.",
-    "- Separate verified facts from interpretation and recommendations.",
-    "- Never invent a reason for a change when the data only proves that the change occurred.",
-    "",
     "CURRENT APP CONTEXT:",
     `- Organization: ${orgName}`,
     `- Store: ${storeName}`,
@@ -4620,17 +4607,6 @@ if (!semanticResult.ok) {
                 "VERIFIED ZETRA BUSINESS COMPARISON:",
                 "Source: ai_daily_store_snapshots_v1",
                 "Data status: VERIFIED",
-                `Business date: ${businessDate}`,
-                `Period preset: ${clean(semanticIntent?.periodPreset)}`,
-                `Comparison mode: ${clean(semanticIntent?.comparisonMode)}`,
-                `Resolved current period: ${clean(canonicalBusinessResult?.periods?.current?.fromDate)} to ${clean(canonicalBusinessResult?.periods?.current?.toDate)}`,
-                `Resolved comparison period: ${clean(canonicalBusinessResult?.periods?.previous?.fromDate)} to ${clean(canonicalBusinessResult?.periods?.previous?.toDate)}`,
-                semanticIntent?.periodPreset === "THIS_WEEK" ? "- PERIOD STATUS: The current week is in progress. Treat the current range as WEEK-TO-DATE, not as a completed full week." : "",
-                semanticIntent?.periodPreset === "THIS_MONTH" ? "- PERIOD STATUS: The current month is in progress. Treat the current range as MONTH-TO-DATE, not as a completed full month." : "",
-                semanticIntent?.periodPreset === "THIS_YEAR" ? "- PERIOD STATUS: The current year is in progress. Treat the current range as YEAR-TO-DATE, not as a completed full year." : "",
-                semanticIntent?.periodPreset === "THIS_WEEK" && semanticIntent?.comparisonMode === "PREVIOUS_WEEK" ? "- COMPARISON BASIS: The current range is week-to-date because the current week is still in progress. The comparison range is the COMPLETE previous business week, Monday through Sunday. State the exact resolved dates for both periods so the user can see that the current week is partial and the previous week is complete. Never describe the previous range as equivalent elapsed days." : "",
-                semanticIntent?.periodPreset === "THIS_MONTH" && semanticIntent?.comparisonMode === "PREVIOUS_MONTH" ? "- COMPARISON BASIS: Compare month-to-date with the equivalent elapsed portion of the previous month. Do not describe the previous range as the entire previous month." : "",
-                semanticIntent?.periodPreset === "THIS_YEAR" && semanticIntent?.comparisonMode === "PREVIOUS_YEAR" ? "- COMPARISON BASIS: Compare year-to-date with the equivalent elapsed portion of the previous year. Do not describe the previous range as the entire previous year." : "",
                 JSON.stringify(
                   canonicalBusinessResult
                     .comparisonResult,
@@ -4640,23 +4616,8 @@ if (!semanticResult.ok) {
                 "",
                 "STRICT RESPONSE RULES:",
                 "- Analyze only the verified comparison above.",
-                "- Do not invent missing business values, products, categories, customer behavior, competitors, stock conditions, or causes.",
+                "- Do not invent missing business values.",
                 "- Clearly explain important changes and direction.",
-                "- METRIC SEMANTICS: ordersCount means the number of completed sales transactions/receipts, NOT customer purchase orders. In Swahili, prefer \"Idadi ya mauzo\" or \"Idadi ya miamala ya mauzo\"; never translate this metric as \"agizo\" or \"maagizo\".",
-                "- METRIC SEMANTICS: averageOrderValue means average sales value per completed sales transaction. In Swahili, prefer \"Wastani wa thamani ya mauzo kwa muamala\" or a natural equivalent; never call it \"Thamani ya kawaida ya agizo\".",
-                "- CAUSALITY RULE: A change in sales, profit, expenses, transaction count, or average transaction value does not by itself prove why the change happened. Never attribute a change to stock shortage, competition, marketing, customer demand, seasonality, product mix, or any other cause unless that cause is explicitly supported by the verified comparison data.",
-                "- You MAY explain direct arithmetic relationships supported by the figures, for example that higher recorded expenses reduced the profit retained when the supplied figures demonstrate that relationship.",
-                "- INVENTORY RULE: Never interpret a zero historical inventory value as proof that historical stock was zero when the comparison indicates NO_BASELINE, HISTORICAL_UNAVAILABLE, unavailable inventory, or otherwise lacks a verified historical inventory baseline.",
-                "- Never name or describe a specific product or product category unless that product/category is explicitly present in the verified comparison data.",
-                "- If the verified metrics show WHAT changed but do not establish WHY, say that the available data shows the change but does not establish the cause.",
-                "- Recommendations about an unverified cause must be framed as something to investigate, not as a diagnosed problem.",
-                "- PARTIAL-PERIOD FAIRNESS: When the current period is still in progress and the comparison period is a completed full period, explicitly say that the periods have different lengths and the comparison is not like-for-like.",
-                "- PARTIAL-PERIOD INTERPRETATION: Never present a percentage difference between an in-progress partial period and a completed full period as proof that business performance has declined or improved by that percentage.",
-                "- PARTIAL-PERIOD WORDING: Use language such as hadi sasa / so far for the current period and make clear that its final result can still change.",
-                "- FAIR COMPARISON OPTION: When useful, briefly mention that equivalent elapsed days provide a fairer performance comparison; do not replace the verified ranges unless the user actually asks for that comparison.",
-                "- RESPONSE PRIORITY: Lead with the business conclusion and the period-comparison caveat, then use only the 3 or 4 metrics that best support the conclusion.",
-                "- RESPONSE LENGTH: Default to a concise synthesized answer of about 2 to 4 short paragraphs. Do not enumerate every available metric unless the user explicitly asks for a full breakdown or detailed report.",
-                "- SYNTHESIS RULE: Prefer explaining what the verified figures mean over repeating current value, previous value, absolute change, and percentage for every metric.",
               ].join("\n");
             } else if (
               canonicalBusinessResult.resultType ===
@@ -4763,13 +4724,6 @@ if (!semanticResult.ok) {
         }
       }
     }
-
-    const hasCanonicalVerifiedBusinessData =
-      semanticSource === "WORKER" &&
-      semanticIntent?.isBusinessQuery === true &&
-      canonicalBusinessResult?.status === "SUCCESS" &&
-      !!clean(canonicalBusinessContext);
-
     const systemPromptBase =
       buildZetraSystemPrompt({
         orgName:
@@ -4800,7 +4754,7 @@ if (!semanticResult.ok) {
       "TASK_FOLLOWUP";
 
     const injectedBusinessContext =
-      allowBusinessContext && !hasCanonicalVerifiedBusinessData
+      allowBusinessContext
         ? buildBusinessContextBlock(
             businessSnapshot,
             detectedIntent
@@ -4808,7 +4762,7 @@ if (!semanticResult.ok) {
         : "";
 
     const productIntelligenceBlock =
-      allowBusinessContext && !hasCanonicalVerifiedBusinessData
+      allowBusinessContext
         ? buildProductIntelligenceBlock(
             businessSnapshot
           )
@@ -4967,7 +4921,354 @@ if (!semanticResult.ok) {
       };
     }
 
-      const payload = {
+  if (
+  businessSnapshot &&
+  !businessCalcBypass &&
+  !(
+    semanticSource === "WORKER" &&
+    semanticIntent?.isBusinessQuery === true &&
+    canonicalBusinessResult?.status === "SUCCESS"
+  ) &&
+  (
+    route ===
+      "BUSINESS_ANALYSIS" ||
+    route ===
+      "BUSINESS_FORECAST" ||
+    route ===
+      "BUSINESS_COACH"
+  )
+) {
+      if (analysisFollowupMode) {
+        return {
+          text:
+            buildAnalysisFollowupReply(
+              businessSnapshot
+            ),
+
+          meta: {
+            analysisIntent:
+              "ANALYSIS",
+
+            semanticIntent,
+
+            semanticSource,
+
+            autopilotAlerts: [
+              businessSnapshot
+                .low_stock_items
+                ?.length
+                ? {
+                    level:
+                      "warning",
+                    title:
+                      "Restock Risk",
+                    message: `${businessSnapshot.low_stock_items.length} bidhaa zinahitaji uangalizi wa stock.`,
+                  }
+                : null,
+
+              businessSnapshot
+                .dead_stock_items
+                ?.length
+                ? {
+                    level:
+                      "info",
+                    title:
+                      "Dead Stock Attention",
+                    message: `${businessSnapshot.dead_stock_items.length} bidhaa zina cash iliyokwama.`,
+                  }
+                : null,
+            ].filter(Boolean),
+
+            actions:
+              buildDeterministicActions(
+                businessSnapshot,
+                "COACH"
+              ),
+
+            hideActionsBlock:
+              true,
+          },
+        };
+      }
+
+      if (pureDecisionMode) {
+        return {
+          text:
+            buildPureDecisionReply(
+              businessSnapshot,
+              text
+            ),
+
+          meta: {
+            analysisIntent:
+              "COACH",
+
+            semanticIntent,
+
+            semanticSource,
+
+            autopilotAlerts: [],
+
+            actions: [],
+          },
+        };
+      }
+
+      if (
+        detectedIntent ===
+          "INVENTORY" ||
+        detectedIntent ===
+          "PRODUCT"
+      ) {
+        return {
+          text:
+            buildInventoryDeterministicReply(
+              businessSnapshot,
+              detectedIntent
+            ),
+
+          meta: {
+            analysisIntent:
+              "ANALYSIS",
+
+            semanticIntent,
+
+            semanticSource,
+
+            autopilotAlerts: [
+              businessSnapshot
+                .low_stock_items
+                ?.length
+                ? {
+                    level:
+                      "warning",
+                    title:
+                      "Low Stock Detected",
+                    message: `${businessSnapshot.low_stock_items.length} bidhaa zinaonekana kuwa low stock.`,
+                  }
+                : null,
+
+              businessSnapshot
+                .dead_stock_items
+                ?.length
+                ? {
+                    level:
+                      "info",
+                    title:
+                      "Slow / Dead Stock",
+                    message: `${businessSnapshot.dead_stock_items.length} bidhaa zina mwendo mdogo au hazijauza.`,
+                  }
+                : null,
+            ].filter(Boolean),
+
+            actions:
+              buildDeterministicActions(
+                businessSnapshot,
+                detectedIntent
+              ),
+
+            hideActionsBlock:
+              true,
+          },
+        };
+      }
+
+      if (
+        detectedIntent ===
+        "PROFIT"
+      ) {
+        return {
+          text:
+            buildProfitDeterministicReply(
+              businessSnapshot,
+              "PROFIT"
+            ),
+
+          meta: {
+            analysisIntent:
+              "COACH",
+
+            semanticIntent,
+
+            semanticSource,
+
+            autopilotAlerts: [
+              num(
+                businessSnapshot
+                  .margin_pct
+              ) < 10
+                ? {
+                    level:
+                      "warning",
+                    title:
+                      "Low Margin",
+                    message:
+                      `Margin ya sasa iko ${num(
+                        businessSnapshot
+                          .margin_pct
+                      ).toFixed(
+                        1
+                      )}%.`,
+                  }
+                : null,
+
+              num(
+                businessSnapshot
+                  .expenses_total
+              ) > 0
+                ? {
+                    level:
+                      "info",
+                    title:
+                      "Expenses Included",
+                    message:
+                      `Expenses za snapshot hii ni ${fmtMoney(
+                        businessSnapshot
+                          .expenses_total
+                      )}.`,
+                  }
+                : null,
+            ].filter(Boolean),
+
+            actions:
+              buildDeterministicActions(
+                businessSnapshot,
+                "PROFIT"
+              ),
+
+            hideActionsBlock:
+              true,
+          },
+        };
+      }
+
+      if (
+        detectedIntent ===
+        "SALES"
+      ) {
+        return {
+          text:
+            buildProfitDeterministicReply(
+              businessSnapshot,
+              "SALES"
+            ),
+
+          meta: {
+            analysisIntent:
+              "FORECAST",
+
+            semanticIntent,
+
+            semanticSource,
+
+            autopilotAlerts: [
+              businessSnapshot
+                .forecast
+                ?.trend_label ===
+              "DECLINING"
+                ? {
+                    level:
+                      "warning",
+                    title:
+                      "Declining Trend",
+                    message:
+                      "Forecast inaonyesha trend ya kushuka.",
+                  }
+                : null,
+
+              businessSnapshot
+                .forecast
+                ?.trend_label ===
+              "INCREASING"
+                ? {
+                    level:
+                      "info",
+                    title:
+                      "Increasing Trend",
+                    message:
+                      "Forecast inaonyesha trend ya kupanda.",
+                  }
+                : null,
+            ].filter(Boolean),
+
+            actions:
+              buildDeterministicActions(
+                businessSnapshot,
+                "SALES"
+              ),
+
+            hideActionsBlock:
+              true,
+          },
+        };
+      }
+
+      if (
+        hasLooseKeyword(text, [
+          "coach",
+          "ushauri",
+          "nifanye nini",
+          "hatua gani",
+          "next move",
+          "what should i do",
+          "nipe ushauri",
+          "naomba ushauri",
+        ])
+      ) {
+        return {
+          text:
+            buildCoachDeterministicReply(
+              businessSnapshot
+            ),
+
+          meta: {
+            analysisIntent:
+              "COACH",
+
+            semanticIntent,
+
+            semanticSource,
+
+            autopilotAlerts: [
+              businessSnapshot
+                .low_stock_items
+                ?.length
+                ? {
+                    level:
+                      "warning",
+                    title:
+                      "Restock Risk",
+                    message: `${businessSnapshot.low_stock_items.length} bidhaa zinahitaji uangalizi wa stock.`,
+                  }
+                : null,
+
+              businessSnapshot
+                .dead_stock_items
+                ?.length
+                ? {
+                    level:
+                      "info",
+                    title:
+                      "Dead Stock Attention",
+                    message: `${businessSnapshot.dead_stock_items.length} bidhaa zina cash iliyokwama.`,
+                  }
+                : null,
+            ].filter(Boolean),
+
+            actions:
+              buildDeterministicActions(
+                businessSnapshot,
+                "COACH"
+              ),
+
+            hideActionsBlock:
+              true,
+          },
+        };
+      }
+    }
+
+    const payload = {
       text,
 
       mode,
@@ -5008,14 +5309,12 @@ if (!semanticResult.ok) {
         module:
           "ZETRA_BMS_AI",
 
-        appRoute: route,
+        appRoute:
+          route,
 
         semanticIntent,
 
         semanticSource,
-
-        canonicalBusinessVerified:
-          hasCanonicalVerifiedBusinessData,
 
         businessIntent:
           allowBusinessContext
@@ -5023,7 +5322,7 @@ if (!semanticResult.ok) {
             : "GENERAL",
 
         businessSnapshot:
-          allowBusinessContext && !hasCanonicalVerifiedBusinessData
+          allowBusinessContext
             ? businessSnapshot
             : null,
 
@@ -5048,34 +5347,34 @@ if (!semanticResult.ok) {
             : "",
 
         topProducts:
-          allowBusinessContext && !hasCanonicalVerifiedBusinessData
+          allowBusinessContext
             ? businessSnapshot
                 ?.top_products ??
               []
             : [],
 
         lowStockItems:
-          allowBusinessContext && !hasCanonicalVerifiedBusinessData
+          allowBusinessContext
             ? businessSnapshot
                 ?.low_stock_items ??
               []
             : [],
 
         slowItems:
-          allowBusinessContext && !hasCanonicalVerifiedBusinessData
+          allowBusinessContext
             ? businessSnapshot
                 ?.dead_stock_items ??
               []
             : [],
 
         forceUseRealBusinessData:
-          allowBusinessContext && !hasCanonicalVerifiedBusinessData,
+          allowBusinessContext,
 
         forceUseRealProductNames:
-          allowBusinessContext && !hasCanonicalVerifiedBusinessData,
+          allowBusinessContext,
 
         disallowGenericProductAdvice:
-          allowBusinessContext && !hasCanonicalVerifiedBusinessData,
+          allowBusinessContext,
       },
     };
 
@@ -5191,7 +5490,7 @@ if (!semanticResult.ok) {
       const analysisFollowupMode = detectAnalysisFollowupIntent(text);
       const businessCalcBypass = detectBusinessCalcBypass(text);
 
-    const systemPromptBase = buildZetraSystemPrompt({
+      const systemPromptBase = buildZetraSystemPrompt({
         orgName: org.activeOrgName,
         storeName: org.activeStoreName,
         role: org.activeRole,

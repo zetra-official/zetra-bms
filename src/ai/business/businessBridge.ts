@@ -1,0 +1,1510 @@
+// src/ai/business/businessBridge.ts
+
+/**
+ * ============================================================================
+ * ZETRA AI — BUSINESS BRIDGE
+ * ============================================================================
+ *
+ * Stable gateway between:
+ *
+ * EXISTING ZETRA AI
+ *        ↓
+ * Semantic Intelligence
+ *        ↓
+ * businessBridge.ts
+ *        ↓
+ * businessQueryService.ts
+ *        ↓
+ * snapshotRepository.ts + metricsEngine.ts
+ *        ↓
+ * ai_daily_store_snapshots_v1
+ *
+ * PRINCIPLE:
+ * - OpenAI understands language.
+ * - ZETRA determines verified business numbers.
+ * - This bridge executes structured business intent.
+ * - No raw sales / expense / inventory queries here.
+ * ============================================================================
+ */
+
+import {
+  compareOrganizationPeriods,
+  compareStorePeriods,
+  getLatestAvailableStorePerformance,
+  getOrganizationDayPerformance,
+  getOrganizationPeriodPerformance,
+  getOrganizationStoreRanking,
+  getStoreDayPerformance,
+  getStorePeriodPerformance,
+  type ZetraAiBusinessComparisonResult,
+  type ZetraAiBusinessPeriodResult,
+  type ZetraAiLatestStoreResult,
+  type ZetraAiStoreRankingResult,
+} from "./businessQueryService";
+
+import type {
+  ZetraAiComparisonMode,
+  ZetraAiSemanticBusinessIntent,
+} from "./types";
+
+import type {
+  ZetraAiStoreRankingMetric,
+} from "./metricsEngine";
+
+/**
+ * ============================================================================
+ * TYPES
+ * ============================================================================
+ */
+
+export type ZetraAiBusinessBridgeStatus =
+  | "SUCCESS"
+  | "NOT_BUSINESS_QUERY"
+  | "UNSUPPORTED_INTENT"
+  | "MISSING_CONTEXT"
+  | "NO_DATA"
+  | "ERROR";
+
+export type ZetraAiBusinessBridgeResultType =
+  | "PERIOD"
+  | "COMPARISON"
+  | "STORE_RANKING"
+  | "LATEST_STORE"
+  | null;
+
+export interface ZetraAiBusinessBridgeContext {
+  organizationId: string;
+
+  /**
+   * Active store.
+   *
+   * Null means organization-wide scope may be used.
+   */
+  storeId?: string | null;
+
+  /**
+   * Current LOCAL business date.
+   *
+   * YYYY-MM-DD.
+   *
+   * IMPORTANT:
+   * Caller should resolve this from the actual store/org timezone.
+   */
+  businessDate: string;
+}
+
+export interface ZetraAiResolvedDateRange {
+  fromDate: string;
+  toDate: string;
+}
+
+export interface ZetraAiResolvedBusinessPeriods {
+  current: ZetraAiResolvedDateRange;
+
+  previous: ZetraAiResolvedDateRange | null;
+}
+
+export interface ZetraAiBusinessBridgeResult {
+  status: ZetraAiBusinessBridgeStatus;
+
+  resultType: ZetraAiBusinessBridgeResultType;
+
+  code: string;
+
+  /**
+   * Developer/debug explanation.
+   *
+   * Do not expose blindly as a customer-facing reply.
+   */
+  message: string;
+
+  intent: ZetraAiSemanticBusinessIntent;
+
+  periods: ZetraAiResolvedBusinessPeriods | null;
+
+  periodResult: ZetraAiBusinessPeriodResult | null;
+
+  comparisonResult:
+    | ZetraAiBusinessComparisonResult
+    | null;
+
+  storeRankingResult:
+    | ZetraAiStoreRankingResult
+    | null;
+
+  latestStoreResult:
+    | ZetraAiLatestStoreResult
+    | null;
+}
+
+/**
+ * ============================================================================
+ * BASIC HELPERS
+ * ============================================================================
+ */
+
+function clean(value: unknown): string {
+  return String(value ?? "").trim();
+}
+
+function isIsoDate(value: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(
+    clean(value)
+  );
+}
+
+function parseIsoDate(value: string): {
+  year: number;
+  month: number;
+  day: number;
+} {
+  const src = clean(value);
+
+  if (!isIsoDate(src)) {
+    throw new Error(
+      `[ZETRA_AI_BUSINESS_BRIDGE] Invalid ISO date: ${src}`
+    );
+  }
+
+  const [year, month, day] =
+    src.split("-").map(Number);
+
+  return {
+    year,
+    month,
+    day,
+  };
+}
+
+/**
+ * We manipulate business DATE values using UTC internally.
+ *
+ * This avoids device timezone changing YYYY-MM-DD.
+ */
+function dateToUtc(value: string): Date {
+  const {
+    year,
+    month,
+    day,
+  } = parseIsoDate(value);
+
+  return new Date(
+    Date.UTC(
+      year,
+      month - 1,
+      day,
+      12,
+      0,
+      0,
+      0
+    )
+  );
+}
+
+function utcToIsoDate(date: Date): string {
+  const year =
+    date.getUTCFullYear();
+
+  const month = String(
+    date.getUTCMonth() + 1
+  ).padStart(2, "0");
+
+  const day = String(
+    date.getUTCDate()
+  ).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function addDays(
+  date: string,
+  days: number
+): string {
+  const d = dateToUtc(date);
+
+  d.setUTCDate(
+    d.getUTCDate() + days
+  );
+
+  return utcToIsoDate(d);
+}
+
+function addMonths(
+  date: string,
+  months: number
+): string {
+  const {
+    year,
+    month,
+    day,
+  } = parseIsoDate(date);
+
+  const d = new Date(
+    Date.UTC(
+      year,
+      month - 1 + months,
+      1,
+      12,
+      0,
+      0,
+      0
+    )
+  );
+
+  /**
+   * Keep requested day where possible.
+   * Clamp automatically to the last valid day of target month.
+   */
+  const targetYear =
+    d.getUTCFullYear();
+
+  const targetMonth =
+    d.getUTCMonth();
+
+  const lastDayOfTargetMonth =
+    new Date(
+      Date.UTC(
+        targetYear,
+        targetMonth + 1,
+        0,
+        12,
+        0,
+        0,
+        0
+      )
+    ).getUTCDate();
+
+  d.setUTCDate(
+    Math.min(
+      day,
+      lastDayOfTargetMonth
+    )
+  );
+
+  return utcToIsoDate(d);
+}
+
+function addYears(
+  date: string,
+  years: number
+): string {
+  const {
+    year,
+    month,
+    day,
+  } = parseIsoDate(date);
+
+  const targetYear =
+    year + years;
+
+  const lastDayOfTargetMonth =
+    new Date(
+      Date.UTC(
+        targetYear,
+        month,
+        0,
+        12,
+        0,
+        0,
+        0
+      )
+    ).getUTCDate();
+
+  const d = new Date(
+    Date.UTC(
+      targetYear,
+      month - 1,
+      Math.min(
+        day,
+        lastDayOfTargetMonth
+      ),
+      12,
+      0,
+      0,
+      0
+    )
+  );
+
+  return utcToIsoDate(d);
+}
+
+function startOfMonth(
+  date: string
+): string {
+  const {
+    year,
+    month,
+  } = parseIsoDate(date);
+
+  return `${year}-${String(
+    month
+  ).padStart(2, "0")}-01`;
+}
+
+function startOfYear(
+  date: string
+): string {
+  const {
+    year,
+  } = parseIsoDate(date);
+
+  return `${year}-01-01`;
+}
+
+/**
+ * Week starts Monday.
+ */
+function startOfWeekMonday(
+  date: string
+): string {
+  const d =
+    dateToUtc(date);
+
+  const weekday =
+    d.getUTCDay();
+
+  /**
+   * Sunday = 0
+   * Monday = 1
+   *
+   * Convert to:
+   * Monday => 0 days backwards
+   * Tuesday => 1
+   * Sunday => 6
+   */
+  const daysSinceMonday =
+    weekday === 0
+      ? 6
+      : weekday - 1;
+
+  return addDays(
+    date,
+    -daysSinceMonday
+  );
+}
+
+function daysBetweenInclusive(
+  fromDate: string,
+  toDate: string
+): number {
+  const from =
+    dateToUtc(
+      fromDate
+    ).getTime();
+
+  const to =
+    dateToUtc(
+      toDate
+    ).getTime();
+
+  return (
+    Math.floor(
+      (to - from) /
+        (24 * 60 * 60 * 1000)
+    ) + 1
+  );
+}
+
+function previousEquivalentRange(
+  range: ZetraAiResolvedDateRange
+): ZetraAiResolvedDateRange {
+  const days =
+    daysBetweenInclusive(
+      range.fromDate,
+      range.toDate
+    );
+
+  const previousToDate =
+    addDays(
+      range.fromDate,
+      -1
+    );
+
+  const previousFromDate =
+    addDays(
+      previousToDate,
+      -(days - 1)
+    );
+
+  return {
+    fromDate:
+      previousFromDate,
+
+    toDate:
+      previousToDate,
+  };
+}
+
+function emptyResult(params: {
+  status: ZetraAiBusinessBridgeStatus;
+  code: string;
+  message: string;
+  intent: ZetraAiSemanticBusinessIntent;
+  periods?: ZetraAiResolvedBusinessPeriods | null;
+}): ZetraAiBusinessBridgeResult {
+  return {
+    status:
+      params.status,
+
+    resultType: null,
+
+    code:
+      params.code,
+
+    message:
+      params.message,
+
+    intent:
+      params.intent,
+
+    periods:
+      params.periods ?? null,
+
+    periodResult: null,
+
+    comparisonResult: null,
+
+    storeRankingResult: null,
+
+    latestStoreResult: null,
+  };
+}
+
+/**
+ * ============================================================================
+ * CURRENT PERIOD RESOLUTION
+ * ============================================================================
+ */
+
+export function resolveBusinessPeriod(
+  intent: ZetraAiSemanticBusinessIntent,
+  businessDate: string
+): ZetraAiResolvedDateRange | null {
+  const today =
+    clean(businessDate);
+
+  if (!isIsoDate(today)) {
+    throw new Error(
+      "[ZETRA_AI_BUSINESS_BRIDGE] businessDate must use YYYY-MM-DD."
+    );
+  }
+
+  switch (intent.periodPreset) {
+    case "TODAY":
+      return {
+        fromDate: today,
+        toDate: today,
+      };
+
+    case "YESTERDAY": {
+      const yesterday =
+        addDays(
+          today,
+          -1
+        );
+
+      return {
+        fromDate:
+          yesterday,
+
+        toDate:
+          yesterday,
+      };
+    }
+
+    case "THIS_WEEK":
+      return {
+        fromDate:
+          startOfWeekMonday(
+            today
+          ),
+
+        toDate:
+          today,
+      };
+
+    case "LAST_7_DAYS":
+      return {
+        fromDate:
+          addDays(
+            today,
+            -6
+          ),
+
+        toDate:
+          today,
+      };
+
+    case "THIS_MONTH":
+      return {
+        fromDate:
+          startOfMonth(
+            today
+          ),
+
+        toDate:
+          today,
+      };
+
+    case "LAST_30_DAYS":
+      return {
+        fromDate:
+          addDays(
+            today,
+            -29
+          ),
+
+        toDate:
+          today,
+      };
+
+    case "ROLLING_DAYS": {
+      const days =
+        Number(
+          intent.rollingDays
+        );
+
+      if (
+        !Number.isInteger(days) ||
+        days < 1 ||
+        days > 3650
+      ) {
+        return null;
+      }
+
+      return {
+        fromDate:
+          addDays(
+            today,
+            -(days - 1)
+          ),
+
+        toDate:
+          today,
+      };
+    }
+
+    case "THIS_YEAR":
+      return {
+        fromDate:
+          startOfYear(
+            today
+          ),
+
+        toDate:
+          today,
+      };
+
+    case "CUSTOM": {
+      const fromDate =
+        clean(
+          intent.customFromDate
+        );
+
+      const toDate =
+        clean(
+          intent.customToDate
+        );
+
+      if (
+        !isIsoDate(fromDate) ||
+        !isIsoDate(toDate)
+      ) {
+        return null;
+      }
+
+      if (
+        fromDate > toDate
+      ) {
+        return null;
+      }
+
+      return {
+        fromDate,
+        toDate,
+      };
+    }
+
+    /**
+     * Semantic layer should normally turn
+     * UNSPECIFIED into a useful default before calling the bridge.
+     *
+     * But for safety, TODAY is a sensible business default.
+     */
+    case "UNSPECIFIED":
+      return {
+        fromDate: today,
+        toDate: today,
+      };
+
+    default:
+      return null;
+  }
+}
+
+/**
+ * ============================================================================
+ * PREVIOUS / COMPARISON PERIOD RESOLUTION
+ * ============================================================================
+ */
+
+function resolvePreviousPeriod(
+  current: ZetraAiResolvedDateRange,
+  comparisonMode: ZetraAiComparisonMode
+): ZetraAiResolvedDateRange | null {
+  switch (comparisonMode) {
+    case "NONE":
+      return null;
+
+    case "PREVIOUS_DAY": {
+      /**
+       * For one-day queries:
+       * today -> yesterday.
+       *
+       * For wider periods:
+       * use equivalent immediately preceding period.
+       */
+      if (
+        current.fromDate ===
+        current.toDate
+      ) {
+        const date =
+          addDays(
+            current.fromDate,
+            -1
+          );
+
+        return {
+          fromDate: date,
+          toDate: date,
+        };
+      }
+
+      return previousEquivalentRange(
+        current
+      );
+    }
+
+    case "PREVIOUS_PERIOD":
+      return previousEquivalentRange(
+        current
+      );
+
+    case "PREVIOUS_WEEK": {
+      const previousWeekStart =
+        addDays(
+          startOfWeekMonday(
+            current.fromDate
+          ),
+          -7
+        );
+
+      return {
+        fromDate:
+          previousWeekStart,
+
+        toDate:
+          addDays(
+            previousWeekStart,
+            6
+          ),
+      };
+    }
+
+    case "PREVIOUS_MONTH":
+      return {
+        fromDate:
+          addMonths(
+            current.fromDate,
+            -1
+          ),
+
+        toDate:
+          addMonths(
+            current.toDate,
+            -1
+          ),
+      };
+
+    case "PREVIOUS_YEAR":
+      return {
+        fromDate:
+          addYears(
+            current.fromDate,
+            -1
+          ),
+
+        toDate:
+          addYears(
+            current.toDate,
+            -1
+          ),
+      };
+
+    /**
+     * Current semantic contract does not yet contain
+     * a separate previous custom date range.
+     *
+     * Never invent one.
+     */
+    case "CUSTOM":
+      return null;
+
+    default:
+      return null;
+  }
+}
+
+export function resolveBusinessPeriods(
+  intent: ZetraAiSemanticBusinessIntent,
+  businessDate: string
+): ZetraAiResolvedBusinessPeriods | null {
+  const current =
+    resolveBusinessPeriod(
+      intent,
+      businessDate
+    );
+
+  if (!current) {
+    return null;
+  }
+
+  const previous =
+    resolvePreviousPeriod(
+      current,
+      intent.comparisonMode
+    );
+
+  return {
+    current,
+    previous,
+  };
+}
+
+/**
+ * ============================================================================
+ * INTENT HELPERS
+ * ============================================================================
+ */
+
+function requiresComparison(
+  intent: ZetraAiSemanticBusinessIntent
+): boolean {
+  return (
+    intent.intent ===
+      "PERIOD_COMPARISON" ||
+    intent.comparisonMode !==
+      "NONE"
+  );
+}
+
+/**
+ * STORE_COMPARISON is organization-wide because
+ * multiple stores must be loaded.
+ */
+function requiresStoreRanking(
+  intent: ZetraAiSemanticBusinessIntent
+): boolean {
+  return (
+    intent.intent ===
+    "STORE_COMPARISON"
+  );
+}
+
+function rankingMetricFromIntent(
+  intent: ZetraAiSemanticBusinessIntent
+): ZetraAiStoreRankingMetric {
+  switch (intent.intent) {
+    case "SALES_SUMMARY":
+      return "sales";
+
+    case "PROFIT_SUMMARY":
+    case "PROFIT_LEAK":
+    case "BUSINESS_COACH":
+      return "netProfit";
+
+    default:
+      break;
+  }
+
+  switch (intent.domain) {
+    case "SALES":
+      return "sales";
+
+    case "PROFIT":
+      return "netProfit";
+
+    default:
+      return "netProfit";
+  }
+}
+
+/**
+ * ============================================================================
+ * DATA PRESENCE
+ * ============================================================================
+ */
+
+function periodHasData(
+  result: ZetraAiBusinessPeriodResult
+): boolean {
+  return (
+    result.metrics.hasData &&
+    result.snapshots.length > 0
+  );
+}
+
+function comparisonHasData(
+  result: ZetraAiBusinessComparisonResult
+): boolean {
+  return (
+    result.comparison.current.hasData ||
+    result.comparison.previous.hasData
+  );
+}
+
+/**
+ * ============================================================================
+ * MAIN EXECUTOR
+ * ============================================================================
+ */
+
+export async function executeBusinessIntent(params: {
+  intent: ZetraAiSemanticBusinessIntent;
+  context: ZetraAiBusinessBridgeContext;
+}): Promise<ZetraAiBusinessBridgeResult> {
+  const {
+    intent,
+  } = params;
+
+  const organizationId =
+    clean(
+      params.context
+        .organizationId
+    );
+
+  const storeId =
+    clean(
+      params.context.storeId ??
+        ""
+    ) || null;
+
+  const businessDate =
+    clean(
+      params.context.businessDate
+    );
+
+  /**
+   * --------------------------------------------------------------------------
+   * NON-BUSINESS QUERY
+   * --------------------------------------------------------------------------
+   */
+
+  if (!intent.isBusinessQuery) {
+    return emptyResult({
+      status:
+        "NOT_BUSINESS_QUERY",
+
+      code:
+        "NOT_BUSINESS_QUERY",
+
+      message:
+        "Semantic layer classified this message as non-business.",
+
+      intent,
+    });
+  }
+
+  /**
+   * --------------------------------------------------------------------------
+   * TENANT CONTEXT
+   * --------------------------------------------------------------------------
+   */
+
+  if (!organizationId) {
+    return emptyResult({
+      status:
+        "MISSING_CONTEXT",
+
+      code:
+        "MISSING_ORGANIZATION",
+
+      message:
+        "An active organization is required for business intelligence.",
+
+      intent,
+    });
+  }
+
+  if (
+    !isIsoDate(
+      businessDate
+    )
+  ) {
+    return emptyResult({
+      status:
+        "MISSING_CONTEXT",
+
+      code:
+        "INVALID_BUSINESS_DATE",
+
+      message:
+        "A valid local business date is required.",
+
+      intent,
+    });
+  }
+
+  /**
+   * --------------------------------------------------------------------------
+   * PERIOD RESOLUTION
+   * --------------------------------------------------------------------------
+   */
+
+  const periods =
+    resolveBusinessPeriods(
+      intent,
+      businessDate
+    );
+
+  if (!periods) {
+    return emptyResult({
+      status:
+        "UNSUPPORTED_INTENT",
+
+      code:
+        "UNRESOLVED_PERIOD",
+
+      message:
+        "The requested business period could not be resolved safely.",
+
+      intent,
+    });
+  }
+
+  try {
+    /**
+     * ========================================================================
+     * STORE COMPARISON / RANKING
+     * ========================================================================
+     *
+     * Example:
+     * "Ni store gani inanipa faida zaidi?"
+     * "Linganisha maduka yangu wiki hii."
+     * ========================================================================
+     */
+
+    if (
+      requiresStoreRanking(
+        intent
+      )
+    ) {
+      const metric =
+        rankingMetricFromIntent(
+          intent
+        );
+
+      const result =
+        await getOrganizationStoreRanking({
+          organizationId,
+
+          fromDate:
+            periods.current
+              .fromDate,
+
+          toDate:
+            periods.current
+              .toDate,
+
+          metric,
+        });
+
+      if (
+        result.stores.length ===
+        0
+      ) {
+        return emptyResult({
+          status:
+            "NO_DATA",
+
+          code:
+            "NO_STORE_COMPARISON_DATA",
+
+          message:
+            "No canonical store snapshots were available for store comparison.",
+
+          intent,
+          periods,
+        });
+      }
+
+      return {
+        status:
+          "SUCCESS",
+
+        resultType:
+          "STORE_RANKING",
+
+        code:
+          "STORE_COMPARISON_READY",
+
+        message:
+          "Verified store comparison data is ready.",
+
+        intent,
+        periods,
+
+        periodResult:
+          null,
+
+        comparisonResult:
+          null,
+
+        storeRankingResult:
+          result,
+
+        latestStoreResult:
+          null,
+      };
+    }
+
+    /**
+     * ========================================================================
+     * PERIOD COMPARISON
+     * ========================================================================
+     */
+
+    if (
+      requiresComparison(
+        intent
+      )
+    ) {
+      if (!periods.previous) {
+        return emptyResult({
+          status:
+            "UNSUPPORTED_INTENT",
+
+          code:
+            "COMPARISON_PERIOD_UNRESOLVED",
+
+          message:
+            "The requested comparison period could not be resolved safely.",
+
+          intent,
+          periods,
+        });
+      }
+
+      /**
+       * Active store -> compare that store.
+       */
+      if (storeId) {
+        const result =
+          await compareStorePeriods({
+            organizationId,
+            storeId,
+
+            current: {
+              fromDate:
+                periods.current
+                  .fromDate,
+
+              toDate:
+                periods.current
+                  .toDate,
+            },
+
+            previous: {
+              fromDate:
+                periods.previous
+                  .fromDate,
+
+              toDate:
+                periods.previous
+                  .toDate,
+            },
+          });
+
+        if (
+          !comparisonHasData(
+            result
+          )
+        ) {
+          return emptyResult({
+            status:
+              "NO_DATA",
+
+            code:
+              "NO_STORE_COMPARISON_DATA",
+
+            message:
+              "No canonical store snapshots were available for either comparison period.",
+
+            intent,
+            periods,
+          });
+        }
+
+        return {
+          status:
+            "SUCCESS",
+
+          resultType:
+            "COMPARISON",
+
+          code:
+            "STORE_PERIOD_COMPARISON_READY",
+
+          message:
+            "Verified store period comparison is ready.",
+
+          intent,
+          periods,
+
+          periodResult:
+            null,
+
+          comparisonResult:
+            result,
+
+          storeRankingResult:
+            null,
+
+          latestStoreResult:
+            null,
+        };
+      }
+
+      /**
+       * No active store -> organization-wide comparison.
+       */
+      const result =
+        await compareOrganizationPeriods({
+          organizationId,
+
+          current: {
+            fromDate:
+              periods.current
+                .fromDate,
+
+            toDate:
+              periods.current
+                .toDate,
+          },
+
+          previous: {
+            fromDate:
+              periods.previous
+                .fromDate,
+
+            toDate:
+              periods.previous
+                .toDate,
+          },
+        });
+
+      if (
+        !comparisonHasData(
+          result
+        )
+      ) {
+        return emptyResult({
+          status:
+            "NO_DATA",
+
+          code:
+            "NO_ORGANIZATION_COMPARISON_DATA",
+
+          message:
+            "No canonical organization snapshots were available for either comparison period.",
+
+          intent,
+          periods,
+        });
+      }
+
+      return {
+        status:
+          "SUCCESS",
+
+        resultType:
+          "COMPARISON",
+
+        code:
+          "ORGANIZATION_PERIOD_COMPARISON_READY",
+
+        message:
+          "Verified organization period comparison is ready.",
+
+        intent,
+        periods,
+
+        periodResult:
+          null,
+
+        comparisonResult:
+          result,
+
+        storeRankingResult:
+          null,
+
+        latestStoreResult:
+          null,
+      };
+    }
+
+    /**
+     * ========================================================================
+     * NORMAL STORE PERIOD QUERY
+     * ========================================================================
+     */
+
+    if (storeId) {
+      const isSingleDay =
+        periods.current
+          .fromDate ===
+        periods.current
+          .toDate;
+
+      const result =
+        isSingleDay
+          ? await getStoreDayPerformance({
+              organizationId,
+              storeId,
+
+              date:
+                periods.current
+                  .fromDate,
+            })
+          : await getStorePeriodPerformance({
+              organizationId,
+              storeId,
+
+              fromDate:
+                periods.current
+                  .fromDate,
+
+              toDate:
+                periods.current
+                  .toDate,
+            });
+
+      if (
+        periodHasData(
+          result
+        )
+      ) {
+        return {
+          status:
+            "SUCCESS",
+
+          resultType:
+            "PERIOD",
+
+          code:
+            "STORE_PERIOD_READY",
+
+          message:
+            "Verified store business metrics are ready.",
+
+          intent,
+          periods,
+
+          periodResult:
+            result,
+
+          comparisonResult:
+            null,
+
+          storeRankingResult:
+            null,
+
+          latestStoreResult:
+            null,
+        };
+      }
+
+      /**
+       * ======================================================================
+       * SINGLE-DAY FALLBACK
+       * ======================================================================
+       *
+       * If today's requested snapshot is missing, retrieve the latest verified
+       * snapshot on or before that date.
+       *
+       * IMPORTANT:
+       * The actual snapshot date remains visible.
+       * We NEVER pretend old data belongs to today.
+       * ======================================================================
+       */
+
+      if (isSingleDay) {
+        const latest =
+          await getLatestAvailableStorePerformance({
+            organizationId,
+            storeId,
+
+            onOrBeforeDate:
+              periods.current
+                .toDate,
+          });
+
+        if (
+          latest.snapshot
+        ) {
+          return {
+            status:
+              "SUCCESS",
+
+            resultType:
+              "LATEST_STORE",
+
+            code:
+              "LATEST_STORE_FALLBACK_READY",
+
+            message:
+              "Requested-day snapshot was unavailable; latest verified snapshot was found.",
+
+            intent,
+            periods,
+
+            periodResult:
+              null,
+
+            comparisonResult:
+              null,
+
+            storeRankingResult:
+              null,
+
+            latestStoreResult:
+              latest,
+          };
+        }
+      }
+
+      return emptyResult({
+        status:
+          "NO_DATA",
+
+        code:
+          "NO_STORE_PERIOD_DATA",
+
+        message:
+          "No canonical store snapshots were available for the requested period.",
+
+        intent,
+        periods,
+      });
+    }
+
+    /**
+     * ========================================================================
+     * NORMAL ORGANIZATION PERIOD QUERY
+     * ========================================================================
+     */
+
+    const isSingleDay =
+      periods.current.fromDate ===
+      periods.current.toDate;
+
+    const result =
+      isSingleDay
+        ? await getOrganizationDayPerformance({
+            organizationId,
+
+            date:
+              periods.current
+                .fromDate,
+          })
+        : await getOrganizationPeriodPerformance({
+            organizationId,
+
+            fromDate:
+              periods.current
+                .fromDate,
+
+            toDate:
+              periods.current
+                .toDate,
+          });
+
+    if (
+      !periodHasData(
+        result
+      )
+    ) {
+      return emptyResult({
+        status:
+          "NO_DATA",
+
+        code:
+          "NO_ORGANIZATION_PERIOD_DATA",
+
+        message:
+          "No canonical organization snapshots were available for the requested period.",
+
+        intent,
+        periods,
+      });
+    }
+
+    return {
+      status:
+        "SUCCESS",
+
+      resultType:
+        "PERIOD",
+
+      code:
+        "ORGANIZATION_PERIOD_READY",
+
+      message:
+        "Verified organization business metrics are ready.",
+
+      intent,
+      periods,
+
+      periodResult:
+        result,
+
+      comparisonResult:
+        null,
+
+      storeRankingResult:
+        null,
+
+      latestStoreResult:
+        null,
+    };
+  } catch (error: any) {
+    return emptyResult({
+      status:
+        "ERROR",
+
+      code:
+        "BUSINESS_BRIDGE_ERROR",
+
+      message:
+        clean(
+          error?.message
+        ) ||
+        "Unknown business bridge error.",
+
+      intent,
+      periods,
+    });
+  }
+}
+
+/**
+ * ============================================================================
+ * EXPORT
+ * ============================================================================
+ */
+
+export const zetraAiBusinessBridge = {
+  resolveBusinessPeriod,
+  resolveBusinessPeriods,
+  executeBusinessIntent,
+} as const;

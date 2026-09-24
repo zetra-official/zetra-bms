@@ -4620,17 +4620,6 @@ if (!semanticResult.ok) {
                 "VERIFIED ZETRA BUSINESS COMPARISON:",
                 "Source: ai_daily_store_snapshots_v1",
                 "Data status: VERIFIED",
-                `Business date: ${businessDate}`,
-                `Period preset: ${clean(semanticIntent?.periodPreset)}`,
-                `Comparison mode: ${clean(semanticIntent?.comparisonMode)}`,
-                `Resolved current period: ${clean(canonicalBusinessResult?.periods?.current?.fromDate)} to ${clean(canonicalBusinessResult?.periods?.current?.toDate)}`,
-                `Resolved comparison period: ${clean(canonicalBusinessResult?.periods?.previous?.fromDate)} to ${clean(canonicalBusinessResult?.periods?.previous?.toDate)}`,
-                semanticIntent?.periodPreset === "THIS_WEEK" ? "- PERIOD STATUS: The current week is in progress. Treat the current range as WEEK-TO-DATE, not as a completed full week." : "",
-                semanticIntent?.periodPreset === "THIS_MONTH" ? "- PERIOD STATUS: The current month is in progress. Treat the current range as MONTH-TO-DATE, not as a completed full month." : "",
-                semanticIntent?.periodPreset === "THIS_YEAR" ? "- PERIOD STATUS: The current year is in progress. Treat the current range as YEAR-TO-DATE, not as a completed full year." : "",
-                semanticIntent?.periodPreset === "THIS_WEEK" && semanticIntent?.comparisonMode === "PREVIOUS_WEEK" ? "- COMPARISON BASIS: The current range is week-to-date because the current week is still in progress. The comparison range is the COMPLETE previous business week, Monday through Sunday. State the exact resolved dates for both periods so the user can see that the current week is partial and the previous week is complete. Never describe the previous range as equivalent elapsed days." : "",
-                semanticIntent?.periodPreset === "THIS_MONTH" && semanticIntent?.comparisonMode === "PREVIOUS_MONTH" ? "- COMPARISON BASIS: Compare month-to-date with the equivalent elapsed portion of the previous month. Do not describe the previous range as the entire previous month." : "",
-                semanticIntent?.periodPreset === "THIS_YEAR" && semanticIntent?.comparisonMode === "PREVIOUS_YEAR" ? "- COMPARISON BASIS: Compare year-to-date with the equivalent elapsed portion of the previous year. Do not describe the previous range as the entire previous year." : "",
                 JSON.stringify(
                   canonicalBusinessResult
                     .comparisonResult,
@@ -4650,13 +4639,6 @@ if (!semanticResult.ok) {
                 "- Never name or describe a specific product or product category unless that product/category is explicitly present in the verified comparison data.",
                 "- If the verified metrics show WHAT changed but do not establish WHY, say that the available data shows the change but does not establish the cause.",
                 "- Recommendations about an unverified cause must be framed as something to investigate, not as a diagnosed problem.",
-                "- PARTIAL-PERIOD FAIRNESS: When the current period is still in progress and the comparison period is a completed full period, explicitly say that the periods have different lengths and the comparison is not like-for-like.",
-                "- PARTIAL-PERIOD INTERPRETATION: Never present a percentage difference between an in-progress partial period and a completed full period as proof that business performance has declined or improved by that percentage.",
-                "- PARTIAL-PERIOD WORDING: Use language such as hadi sasa / so far for the current period and make clear that its final result can still change.",
-                "- FAIR COMPARISON OPTION: When useful, briefly mention that equivalent elapsed days provide a fairer performance comparison; do not replace the verified ranges unless the user actually asks for that comparison.",
-                "- RESPONSE PRIORITY: Lead with the business conclusion and the period-comparison caveat, then use only the 3 or 4 metrics that best support the conclusion.",
-                "- RESPONSE LENGTH: Default to a concise synthesized answer of about 2 to 4 short paragraphs. Do not enumerate every available metric unless the user explicitly asks for a full breakdown or detailed report.",
-                "- SYNTHESIS RULE: Prefer explaining what the verified figures mean over repeating current value, previous value, absolute change, and percentage for every metric.",
               ].join("\n");
             } else if (
               canonicalBusinessResult.resultType ===
@@ -5048,21 +5030,21 @@ if (!semanticResult.ok) {
             : "",
 
         topProducts:
-          allowBusinessContext && !hasCanonicalVerifiedBusinessData
+          allowBusinessContext
             ? businessSnapshot
                 ?.top_products ??
               []
             : [],
 
         lowStockItems:
-          allowBusinessContext && !hasCanonicalVerifiedBusinessData
+          allowBusinessContext
             ? businessSnapshot
                 ?.low_stock_items ??
               []
             : [],
 
         slowItems:
-          allowBusinessContext && !hasCanonicalVerifiedBusinessData
+          allowBusinessContext
             ? businessSnapshot
                 ?.dead_stock_items ??
               []

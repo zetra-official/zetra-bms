@@ -1,0 +1,81 @@
+    JSON.stringify(semanticIntent, null, 2)
+  );
+  console.log(
+    "==========================================\n"
+  );
+
+  if (
+    semanticIntent?.isBusinessQuery === true
+  ) {
+    route =
+      mapSemanticIntentToAppRoute(
+        semanticIntent
+      );
+
+    detectedIntent =
+      mapSemanticDomainToLegacyBusinessIntent(
+        semanticIntent
+      );
+  }
+}
+
+            /*
+             * OpenAI ndiye anaamua semantic meaning.
+             *
+             * Tunabadilisha legacy route only kama semantic
+             * classifier amesema kweli ni business question.
+             */
+
+            if (
+              semanticIntent
+                ?.isBusinessQuery ===
+              true
+            ) {
+              route =
+                mapSemanticIntentToAppRoute(
+                  semanticIntent
+                );
+
+              detectedIntent =
+                mapSemanticDomainToLegacyBusinessIntent(
+                  semanticIntent
+                );
+            }
+          }
+        }
+     } catch (semanticError) {
+  console.log(
+    "\n========== ZETRA SEMANTIC ERROR =========="
+  );
+  console.log("QUESTION:", text);
+  console.log("ERROR:", semanticError);
+  console.log(
+    "==========================================\n"
+  );
+
+  semanticIntent = null;
+  semanticSource = "LOCAL_FALLBACK";
+}
+    }
+
+    /*
+     * ============================================================
+     * STEP 3 — SYSTEM PROMPT
+     * ============================================================
+     */
+
+    const systemPromptBase =
+      buildZetraSystemPrompt({
+        orgName:
+          org.activeOrgName,
+
+        storeName:
+          org.activeStoreName,
+
+        role:
+          org.activeRole,
+
+        planCode:
+          currentPlanLabel,
+
+        route,

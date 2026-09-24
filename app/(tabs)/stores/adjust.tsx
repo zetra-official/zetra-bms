@@ -143,10 +143,20 @@ const lastSubmitKeyRef = useRef<string>("");
 const [showOptionalDetails, setShowOptionalDetails] = useState(false);
 
 const isPrecisionRetailStore = isPrecisionRetailType(activeStoreType);
-const productStoreScope = isPrecisionRetailStore ? activeStoreId : null;
 const canQuickEditProduct = canAdjust;
 
 const [productDetails, setProductDetails] = useState<any | null>(null);
+
+// Muhimu:
+// Quick Edit lazima ihifadhi scope halisi ya product.
+// Product ya organization ibaki store_id = null.
+// Product ya store ibaki na store_id yake.
+// Hii inazuia Inventory Edit kuhamisha product kwenda scope nyingine.
+const productStoreScope: string | null =
+  productDetails?.store_id != null
+    ? String(productDetails.store_id)
+    : null;
+
 const [quickEditOpen, setQuickEditOpen] = useState(false);
 const [quickEditSaving, setQuickEditSaving] = useState(false);
 
@@ -897,7 +907,7 @@ const content = (
               value={expiryDate}
               onChangeText={setExpiryDate}
               placeholder="YYYY-MM-DD"
-              placeholderTextColor="rgba(255,255,255,0.35)"
+              placeholderTextColor={theme.colors.muted}
               editable={!isCapitalRecoveryStore && !saving}
               autoCapitalize="none"
               autoCorrect={false}

@@ -352,13 +352,8 @@ INVENTORY DATA QUALITY (CRITICAL):
 
 PERIOD COMPARISON RULES:
 
-- PERIOD STATUS HAS PRIORITY OVER PERFORMANCE JUDGMENT. Always inspect the supplied canonical period dates, period preset, comparison mode, PERIOD STATUS, and COMPARISON BASIS before describing performance.
-- If the canonical context says the current week, month, or year is still in progress, explicitly say so at the beginning of the answer. Never describe an in-progress period as if it were complete.
-- When an in-progress current period is compared with an equivalent elapsed previous period, explicitly describe the comparison as period-to-date versus the equivalent elapsed portion of the previous period. For example: week-to-date versus the same elapsed days of the previous week.
-- Do not tell the user they must wait for the current period to finish. A period-to-date comparison is valid when equivalent elapsed periods are being compared; simply clarify that the final result can still change before the current period closes.
-- Never call a short period-to-date decline alarming, dangerous, terrible, frightening, a crisis, or a long-term negative trend unless verified longer-term data supports that judgment.
-- Lead with the business conclusion, not with a list of metrics. For an in-progress period, qualify that conclusion with words equivalent to "so far", "to date", or "hadi sasa".
-- For completed comparable periods, state which period performed better overall when the verified figures support that conclusion. For an in-progress comparison, state only which side is ahead or behind SO FAR; do not imply a final period outcome.
+- Lead with the business conclusion, not with a list of metrics.
+- In the opening sentence, state which period performed better overall and the main verified reason visible in the figures.
 - For a normal comparison question, select only the 3 to 4 metrics that best explain the business outcome. Usually prioritize net profit, sales, completed sales transactions, and one especially relevant driver such as expenses, average sale value, or margin.
 - Do NOT enumerate every available metric merely because it exists in the supplied data.
 - Give a full metric-by-metric breakdown only when the user explicitly asks for full details, all figures, a report, or a detailed breakdown.

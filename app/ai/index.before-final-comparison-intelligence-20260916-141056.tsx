@@ -4650,13 +4650,6 @@ if (!semanticResult.ok) {
                 "- Never name or describe a specific product or product category unless that product/category is explicitly present in the verified comparison data.",
                 "- If the verified metrics show WHAT changed but do not establish WHY, say that the available data shows the change but does not establish the cause.",
                 "- Recommendations about an unverified cause must be framed as something to investigate, not as a diagnosed problem.",
-                "- PARTIAL-PERIOD FAIRNESS: When the current period is still in progress and the comparison period is a completed full period, explicitly say that the periods have different lengths and the comparison is not like-for-like.",
-                "- PARTIAL-PERIOD INTERPRETATION: Never present a percentage difference between an in-progress partial period and a completed full period as proof that business performance has declined or improved by that percentage.",
-                "- PARTIAL-PERIOD WORDING: Use language such as hadi sasa / so far for the current period and make clear that its final result can still change.",
-                "- FAIR COMPARISON OPTION: When useful, briefly mention that equivalent elapsed days provide a fairer performance comparison; do not replace the verified ranges unless the user actually asks for that comparison.",
-                "- RESPONSE PRIORITY: Lead with the business conclusion and the period-comparison caveat, then use only the 3 or 4 metrics that best support the conclusion.",
-                "- RESPONSE LENGTH: Default to a concise synthesized answer of about 2 to 4 short paragraphs. Do not enumerate every available metric unless the user explicitly asks for a full breakdown or detailed report.",
-                "- SYNTHESIS RULE: Prefer explaining what the verified figures mean over repeating current value, previous value, absolute change, and percentage for every metric.",
               ].join("\n");
             } else if (
               canonicalBusinessResult.resultType ===

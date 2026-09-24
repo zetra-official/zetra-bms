@@ -1,0 +1,468 @@
+// src/ai/business/types.ts
+
+/**
+ * ============================================================================
+ * ZETRA AI — BUSINESS INTELLIGENCE TYPES
+ * ============================================================================
+ *
+ * Purpose:
+ * Shared contracts for the ZETRA AI Business Intelligence Layer.
+ *
+ * IMPORTANT:
+ * - No Supabase calls here.
+ * - No OpenAI calls here.
+ * - No UI logic here.
+ * - No business calculations here.
+ *
+ * This file is intentionally dependency-free so it can be reused by:
+ * - ZETRA AI app
+ * - Business Bridge
+ * - Snapshot Intelligence
+ * - Future CRM / Credit / Customer / Stock intelligence modules
+ * ============================================================================
+ */
+
+export type ZetraAiBusinessDomain =
+  | "PERFORMANCE"
+  | "SALES"
+  | "PROFIT"
+  | "EXPENSES"
+  | "INVENTORY"
+  | "PRODUCTS"
+  | "CUSTOMERS"
+  | "CRM"
+  | "CREDIT"
+  | "CASHFLOW"
+  | "FORECAST"
+  | "GENERAL_BUSINESS";
+
+export type ZetraAiBusinessIntent =
+  | "BUSINESS_OVERVIEW"
+  | "BUSINESS_HEALTH"
+  | "SALES_SUMMARY"
+  | "PROFIT_SUMMARY"
+  | "EXPENSE_SUMMARY"
+  | "INVENTORY_SUMMARY"
+  | "TOP_PRODUCTS"
+  | "LOW_STOCK"
+  | "OUT_OF_STOCK"
+  | "SLOW_MOVING"
+  | "PERIOD_COMPARISON"
+  | "STORE_COMPARISON"
+  | "TREND_ANALYSIS"
+  | "FORECAST"
+  | "BUSINESS_COACH"
+  | "PROFIT_LEAK"
+  | "CUSTOMER_ANALYSIS"
+  | "CRM_ANALYSIS"
+  | "CREDIT_ANALYSIS"
+  | "CASHFLOW_ANALYSIS"
+  | "UNKNOWN";
+
+export type ZetraAiPeriodPreset =
+  | "TODAY"
+  | "YESTERDAY"
+  | "THIS_WEEK"
+  | "LAST_7_DAYS"
+  | "THIS_MONTH"
+  | "LAST_30_DAYS"
+  | "THIS_YEAR"
+  | "CUSTOM"
+  | "UNSPECIFIED";
+
+export type ZetraAiComparisonMode =
+  | "NONE"
+  | "PREVIOUS_DAY"
+  | "PREVIOUS_PERIOD"
+  | "PREVIOUS_WEEK"
+  | "PREVIOUS_MONTH"
+  | "PREVIOUS_YEAR"
+  | "CUSTOM";
+
+export type ZetraAiTrendDirection =
+  | "UP"
+  | "DOWN"
+  | "STABLE"
+  | "UNKNOWN";
+
+export type ZetraAiRiskLevel =
+  | "INFO"
+  | "LOW"
+  | "MEDIUM"
+  | "HIGH"
+  | "CRITICAL";
+
+export type ZetraAiConfidence =
+  | "LOW"
+  | "MEDIUM"
+  | "HIGH";
+
+export interface ZetraAiBusinessScope {
+  organizationId: string;
+
+  storeId: string | null;
+  storeName?: string | null;
+
+  timezone: string;
+
+  role?: string | null;
+}
+
+export interface ZetraAiDateRange {
+  preset: ZetraAiPeriodPreset;
+
+  fromDate: string;
+  toDate: string;
+
+  timezone: string;
+}
+
+export interface ZetraAiComparisonRange {
+  mode: ZetraAiComparisonMode;
+
+  fromDate: string | null;
+  toDate: string | null;
+}
+
+export interface ZetraAiBusinessQuery {
+  /**
+   * Original natural-language question.
+   *
+   * Example:
+   * "Leo biashara yangu imeendaje ukilinganisha na jana?"
+   */
+  originalText: string;
+
+  domain: ZetraAiBusinessDomain;
+
+  intent: ZetraAiBusinessIntent;
+
+  scope: ZetraAiBusinessScope;
+
+  period: ZetraAiDateRange;
+
+  comparison: ZetraAiComparisonRange;
+
+  /**
+   * Semantic confidence returned by the language intelligence layer.
+   */
+  confidence: number;
+
+  /**
+   * Optional explanation useful for debugging/observability.
+   * Never use this as financial truth.
+   */
+  reasoning?: string | null;
+}
+
+/**
+ * ============================================================================
+ * CANONICAL DAILY SNAPSHOT
+ * ============================================================================
+ *
+ * Mirrors the verified daily business snapshot foundation.
+ *
+ * Numbers here must come from ZETRA business data.
+ * They must never be invented by the LLM.
+ * ============================================================================
+ */
+
+export interface ZetraAiDailyStoreSnapshot {
+  organizationId: string;
+  storeId: string;
+
+  snapshotDate: string;
+  timezone: string;
+
+  salesTotal: number;
+  ordersCount: number;
+
+  cogsTotal: number;
+
+  cogsItemsCount: number;
+  cogsMissingItemsCount: number;
+  cogsCoveragePercent: number;
+
+  expensesTotal: number;
+  expensesCount: number;
+
+  grossProfit: number;
+  netProfit: number;
+
+  stockQty: number;
+  reservedQty: number;
+  availableStockQty: number;
+
+  productsInStock: number;
+  outOfStockProducts: number;
+  lowStockProducts: number;
+
+  engineVersion?: string | null;
+
+  generatedAt?: string | null;
+  updatedAt?: string | null;
+}
+
+/**
+ * Raw database shape.
+ *
+ * Supabase/Postgres returns snake_case.
+ * Business intelligence uses camelCase internally.
+ */
+export interface ZetraAiDailyStoreSnapshotDbRow {
+  organization_id: string;
+  store_id: string;
+
+  snapshot_date: string;
+  timezone: string;
+
+  sales_total: number | string | null;
+  orders_count: number | string | null;
+
+  cogs_total: number | string | null;
+
+  cogs_items_count: number | string | null;
+  cogs_missing_items_count: number | string | null;
+  cogs_coverage_percent: number | string | null;
+
+  expenses_total: number | string | null;
+  expenses_count: number | string | null;
+
+  gross_profit: number | string | null;
+  net_profit: number | string | null;
+
+  stock_qty: number | string | null;
+  reserved_qty: number | string | null;
+  available_stock_qty: number | string | null;
+
+  products_in_stock: number | string | null;
+  out_of_stock_products: number | string | null;
+  low_stock_products: number | string | null;
+
+  engine_version?: string | null;
+
+  generated_at?: string | null;
+  updated_at?: string | null;
+}
+
+/**
+ * ============================================================================
+ * AGGREGATED METRICS
+ * ============================================================================
+ */
+
+export interface ZetraAiBusinessMetrics {
+  salesTotal: number;
+  ordersCount: number;
+
+  cogsTotal: number;
+  expensesTotal: number;
+
+  grossProfit: number;
+  netProfit: number;
+
+  averageOrderValue: number;
+
+  grossMarginPercent: number;
+  netMarginPercent: number;
+
+  cogsCoveragePercent: number;
+
+  stockQty: number;
+  reservedQty: number;
+  availableStockQty: number;
+
+  productsInStock: number;
+  outOfStockProducts: number;
+  lowStockProducts: number;
+}
+
+export interface ZetraAiMetricChange {
+  current: number;
+  previous: number;
+
+  absoluteChange: number;
+  percentChange: number | null;
+
+  trend: ZetraAiTrendDirection;
+}
+
+export interface ZetraAiBusinessComparison {
+  sales: ZetraAiMetricChange;
+  orders: ZetraAiMetricChange;
+
+  cogs: ZetraAiMetricChange;
+  expenses: ZetraAiMetricChange;
+
+  grossProfit: ZetraAiMetricChange;
+  netProfit: ZetraAiMetricChange;
+
+  averageOrderValue: ZetraAiMetricChange;
+}
+
+/**
+ * ============================================================================
+ * BUSINESS INTELLIGENCE OUTPUT
+ * ============================================================================
+ */
+
+export interface ZetraAiBusinessInsight {
+  id: string;
+
+  domain: ZetraAiBusinessDomain;
+
+  level: ZetraAiRiskLevel;
+
+  title: string;
+  message: string;
+
+  /**
+   * Optional verified numeric evidence.
+   */
+  evidence?: Record<string, number | string | null>;
+}
+
+export interface ZetraAiBusinessAction {
+  id: string;
+
+  priority: number;
+
+  domain: ZetraAiBusinessDomain;
+
+  title: string;
+  instruction: string;
+}
+
+export interface ZetraAiBusinessTrendPoint {
+  date: string;
+
+  sales: number;
+  orders: number;
+
+  cogs: number;
+  expenses: number;
+
+  grossProfit: number;
+  netProfit: number;
+}
+
+/**
+ * Complete verified business intelligence package.
+ *
+ * This is what the language model should receive instead of being
+ * allowed to query operational business tables freely.
+ */
+export interface ZetraAiBusinessIntelligence {
+  scope: ZetraAiBusinessScope;
+
+  period: ZetraAiDateRange;
+
+  comparisonPeriod?: ZetraAiComparisonRange | null;
+
+  metrics: ZetraAiBusinessMetrics;
+
+  comparison?: ZetraAiBusinessComparison | null;
+
+  trend: ZetraAiBusinessTrendPoint[];
+
+  insights: ZetraAiBusinessInsight[];
+
+  actions: ZetraAiBusinessAction[];
+
+  /**
+   * Canonical source metadata.
+   */
+  source: {
+    engine: "AI_DAILY_STORE_SNAPSHOTS_V1";
+    verified: true;
+
+    snapshotCount: number;
+
+    generatedAt: string;
+  };
+}
+
+/**
+ * ============================================================================
+ * BUSINESS BRIDGE RESULT
+ * ============================================================================
+ *
+ * The bridge should fail explicitly rather than silently supplying fake
+ * or incomplete business numbers to OpenAI.
+ * ============================================================================
+ */
+
+export type ZetraAiBusinessBridgeResult =
+  | {
+      ok: true;
+
+      query: ZetraAiBusinessQuery;
+
+      intelligence: ZetraAiBusinessIntelligence;
+    }
+  | {
+      ok: false;
+
+      code:
+        | "NOT_BUSINESS_QUERY"
+        | "STORE_REQUIRED"
+        | "UNAUTHORIZED"
+        | "INVALID_PERIOD"
+        | "NO_SNAPSHOT_DATA"
+        | "DATA_ENGINE_ERROR"
+        | "UNSUPPORTED_INTENT";
+
+      error: string;
+
+      query?: ZetraAiBusinessQuery | null;
+    };
+
+/**
+ * ============================================================================
+ * LANGUAGE → BUSINESS INTENT CONTRACT
+ * ============================================================================
+ *
+ * OpenAI can understand language.
+ * It cannot decide financial truth.
+ *
+ * Example:
+ *
+ * User:
+ * "Leo hali yangu ikoje ukilinganisha jana?"
+ *
+ * Language layer:
+ * {
+ *   domain: "PERFORMANCE",
+ *   intent: "PERIOD_COMPARISON",
+ *   periodPreset: "TODAY",
+ *   comparisonMode: "PREVIOUS_DAY"
+ * }
+ *
+ * Business engine then retrieves the verified numbers.
+ * ============================================================================
+ */
+
+export interface ZetraAiSemanticBusinessIntent {
+  isBusinessQuery: boolean;
+
+  domain: ZetraAiBusinessDomain;
+
+  intent: ZetraAiBusinessIntent;
+
+  periodPreset: ZetraAiPeriodPreset;
+
+  comparisonMode: ZetraAiComparisonMode;
+
+  /**
+   * Only populated when user explicitly specifies dates.
+   */
+  customFromDate?: string | null;
+  customToDate?: string | null;
+
+  confidence: number;
+
+  /**
+   * Short machine/debug explanation.
+   */
+  reason?: string | null;
+}

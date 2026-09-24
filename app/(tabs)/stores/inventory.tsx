@@ -3,7 +3,18 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNetInfo } from "@react-native-community/netinfo";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Image, Keyboard, Platform, Pressable, Text, TextInput, View, Vibration } from "react-native";
+import {
+  Alert,
+  FlatList,
+  Image,
+  Keyboard,
+  Platform,
+  Pressable,
+  Text,
+  TextInput,
+  View,
+  Vibration,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import { useOrg } from "../../../src/context/OrgContext";
@@ -908,7 +919,328 @@ export default function StoreInventoryScreen() {
     }
     router.push("/(tabs)/stores/scan");
   }, [activeStoreId, isCapitalRecoveryStore, router, storeOrgMismatch]);
+  const renderInventoryItem = useCallback(
+    ({ item: r }: { item: InventoryRow }) => {
+      const thr = Number(thrByProductId?.[r.product_id] ?? 0);
+      const isLow = !isOffline && thr > 0 && Number(r.qty ?? 0) <= thr;
 
+      const expiry = expiryByProductId?.[r.product_id] ?? null;
+      const expiryStatus = expiry?.expiry_status ?? null;
+      const expiryDaysLeft =
+        expiry?.nearest_expiry_days_left == null
+          ? null
+          : Number(expiry.nearest_expiry_days_left);
+      const expiryDate = expiry?.nearest_expiry_date ?? null;
+      const expiryUi = expiryTone(expiryStatus);
+
+      // Calculate once per rendered product card.
+      const precisionQty = getPrecisionQtyLabels(r);
+
+      return (
+        <Pressable
+          android_ripple={{ color: "transparent" }}
+          style={({ pressed }) => [
+            {
+              borderWidth: 1,
+              borderColor: isLow
+                ? "rgba(245,158,11,0.55)"
+                : theme.colors.border,
+              borderRadius: theme.radius.xl,
+              backgroundColor: theme.colors.card,
+              padding: 16,
+              opacity: pressed ? 0.96 : 1,
+              marginBottom: 12,
+            },
+          ]}
+        >
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              gap: 10,
+            }}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                flex: 1,
+                gap: 12,
+                alignItems: "center",
+              }}
+            >
+              {r.image_url ? (
+                <Image
+                  source={{ uri: r.image_url }}
+                  style={{
+                    width: 66,
+                    height: 66,
+                    borderRadius: 18,
+                    backgroundColor: "#E2E8F0",
+                  }}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View
+                  style={{
+                    width: 66,
+                    height: 66,
+                    borderRadius: 18,
+                    backgroundColor: "#F1F5F9",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderWidth: 1,
+                    borderColor: "rgba(148,163,184,0.28)",
+                  }}
+                >
+                  <Ionicons
+                    name="cube-outline"
+                    size={28}
+                    color={theme.colors.muted}
+                  />
+                </View>
+              )}
+
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={{
+                    color: theme.colors.text,
+                    fontWeight: "900",
+                    fontSize: 16,
+                  }}
+                >
+                  {r.product_name}
+                </Text>
+
+                <Text
+                  style={{
+                    color: theme.colors.muted,
+                    fontWeight: "800",
+                    marginTop: 6,
+                  }}
+                >
+                  SKU:{" "}
+                  <Text style={{ color: theme.colors.text }}>
+                    {r.sku ?? "—"}
+                  </Text>
+                  {"   "}|{"   "}
+                  Unit:{" "}
+                  <Text style={{ color: theme.colors.text }}>
+                    {r.unit ?? "—"}
+                  </Text>
+                </Text>
+
+                <Text
+                  style={{
+                    color: theme.colors.muted,
+                    fontWeight: "800",
+                    marginTop: 6,
+                  }}
+                >
+                  Category:{" "}
+                  <Text style={{ color: theme.colors.text }}>
+                    {r.category ?? "—"}
+                  </Text>
+
+                  {r.barcode ? (
+                    <>
+                      {"   "}•{"   "}
+                      <Text style={{ color: theme.colors.text }}>
+                        {r.barcode}
+                      </Text>
+                    </>
+                  ) : null}
+                </Text>
+              </View>
+            </View>
+
+            {isLow ? (
+              <View
+                style={{
+                  alignSelf: "flex-start",
+                  paddingHorizontal: 10,
+                  paddingVertical: 6,
+                  borderRadius: theme.radius.pill,
+                  borderWidth: 1,
+                  borderColor: "rgba(245,158,11,0.45)",
+                  backgroundColor: "rgba(245,158,11,0.12)",
+                }}
+              >
+                <Text
+                  style={{
+                    color: theme.colors.text,
+                    fontWeight: "900",
+                    fontSize: 12,
+                  }}
+                >
+                  LOW STOCK
+                </Text>
+              </View>
+            ) : null}
+          </View>
+
+          <View
+            style={{
+              marginTop: 10,
+              flexDirection: "row",
+              gap: 10,
+            }}
+          >
+            <View
+              style={{
+                borderWidth: 1,
+                borderColor: "rgba(52,211,153,0.35)",
+                borderRadius: 999,
+                backgroundColor: "rgba(52, 211, 153, 0.10)",
+                width: 118,
+                height: 118,
+                alignItems: "center",
+                justifyContent: "center",
+                paddingHorizontal: 10,
+              }}
+            >
+              {precisionQty ? (
+                <>
+                  <Text
+                    style={{
+                      color: theme.colors.emerald,
+                      fontWeight: "900",
+                      fontSize: 14,
+                      textAlign: "center",
+                    }}
+                  >
+                    {precisionQty.packLabel}
+                  </Text>
+
+                  <Text
+                    style={{
+                      color: theme.colors.text,
+                      fontWeight: "900",
+                      fontSize: 12,
+                      marginTop: 5,
+                      textAlign: "center",
+                    }}
+                  >
+                    {precisionQty.baseLabel}
+                  </Text>
+                </>
+              ) : (
+                <Text
+                  style={{
+                    color: theme.colors.emerald,
+                    fontWeight: "900",
+                    fontSize: 16,
+                    textAlign: "center",
+                  }}
+                >
+                  QTY: {fmtQty(r.qty)}
+                </Text>
+              )}
+
+              <Text
+                style={{
+                  color: theme.colors.muted,
+                  fontWeight: "800",
+                  marginTop: 6,
+                  textAlign: "center",
+                }}
+              >
+                Alert {"\u2264"} {isOffline ? "—" : String(thr)}
+              </Text>
+            </View>
+
+            <View style={{ flex: 1, gap: 10 }}>
+              <Button
+                title="Alert Level"
+                variant="secondary"
+                onPress={() => {
+                  if (isOffline) {
+                    Alert.alert(
+                      "Offline",
+                      "Huwezi kubadili Alert Level bila mtandao."
+                    );
+                    return;
+                  }
+
+                  router.push({
+                    pathname: "/(tabs)/stores/inventory/low-stock" as any,
+                    params: {
+                      storeId: activeStoreId,
+                      storeName: activeStoreName ?? "",
+                      productId: r.product_id,
+                      productName: r.product_name,
+                      currentQty: fmtQty(r.qty),
+                    },
+                  } as any);
+                }}
+                disabled={loading || !activeStoreId || isOffline}
+              />
+
+              <View
+                style={{
+                  borderWidth: 1,
+                  borderColor: expiryUi.borderColor,
+                  borderRadius: theme.radius.lg,
+                  backgroundColor: expiryUi.backgroundColor,
+                  paddingHorizontal: 12,
+                  paddingVertical: 10,
+                  minHeight: 56,
+                  justifyContent: "center",
+                }}
+              >
+                <Text
+                  style={{
+                    color: expiryUi.textColor,
+                    fontWeight: "900",
+                    fontSize: 13,
+                  }}
+                >
+                  {expiryLabel(
+                    expiryDaysLeft,
+                    expiryStatus,
+                    expiryDate
+                  )}
+                </Text>
+
+                <Text
+                  style={{
+                    color: expiryUi.subColor,
+                    fontWeight: "800",
+                    fontSize: 11,
+                    marginTop: 4,
+                  }}
+                  numberOfLines={1}
+                >
+                  {expiryDate
+                    ? fmtExpiryDate(expiryDate)
+                    : "No expiry tracked"}
+                </Text>
+              </View>
+
+              {canAdjust ? (
+                <Button
+                  title="Adjust Stock"
+                  variant="secondary"
+                  onPress={() => openAdjust(r)}
+                  disabled={loading || isOffline}
+                />
+              ) : null}
+            </View>
+          </View>
+        </Pressable>
+      );
+    },
+    [
+      activeStoreId,
+      activeStoreName,
+      canAdjust,
+      expiryByProductId,
+      isOffline,
+      loading,
+      openAdjust,
+      router,
+      thrByProductId,
+    ]
+  );
   const StatusLine = useMemo(() => {
     const mode = isOffline ? "OFFLINE" : "ONLINE";
 
@@ -926,8 +1258,8 @@ export default function StoreInventoryScreen() {
     return `${mode} • Source: ${src} • Last sync: ${fmtLocal(lastSyncedAt)}`;
   }, [isOffline, source, lastSyncedAt, rows.length]);
 
-  return (
-    <Screen scroll>
+  const InventoryHeader = (
+    <View>
       {isOffline ? (
         <View
           style={{
@@ -946,26 +1278,55 @@ export default function StoreInventoryScreen() {
         </View>
       ) : null}
 
-      <Text style={{ fontSize: 26, fontWeight: "900", color: theme.colors.text }}>
+      <Text
+        style={{
+          fontSize: 26,
+          fontWeight: "900",
+          color: theme.colors.text,
+        }}
+      >
         {isCapitalRecoveryStore ? "Inventory Disabled" : "Inventory"}
       </Text>
 
       <Card style={{ gap: 10 }}>
-        <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Organization</Text>
-        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
+        <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+          Organization
+        </Text>
+
+        <Text
+          style={{
+            color: theme.colors.text,
+            fontWeight: "900",
+            fontSize: 18,
+          }}
+        >
           {activeOrgName ?? "—"}
         </Text>
 
-        <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 2 }}>
+        <Text
+          style={{
+            color: theme.colors.muted,
+            fontWeight: "800",
+            marginTop: 2,
+          }}
+        >
           Active Store
         </Text>
+
         <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
           {activeStoreName ?? "—"}
         </Text>
 
-        <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 2 }}>
+        <Text
+          style={{
+            color: theme.colors.muted,
+            fontWeight: "800",
+            marginTop: 2,
+          }}
+        >
           Role
         </Text>
+
         <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
           {activeRole ?? "—"}
         </Text>
@@ -974,29 +1335,64 @@ export default function StoreInventoryScreen() {
           style={{
             marginTop: 6,
             borderWidth: 1,
-            borderColor: isCapitalRecoveryStore ? theme.colors.emeraldBorder : theme.colors.border,
+            borderColor: isCapitalRecoveryStore
+              ? theme.colors.emeraldBorder
+              : theme.colors.border,
             borderRadius: theme.radius.xl,
-            backgroundColor: isCapitalRecoveryStore ? theme.colors.emeraldSoft : theme.colors.card,
+            backgroundColor: isCapitalRecoveryStore
+              ? theme.colors.emeraldSoft
+              : theme.colors.card,
             padding: 14,
           }}
         >
-          <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Status</Text>
-          <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 6 }}>
-            {isCapitalRecoveryStore ? "Capital Recovery store haitumii inventory." : StatusLine}
+          <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>
+            Status
+          </Text>
+
+          <Text
+            style={{
+              color: theme.colors.text,
+              fontWeight: "900",
+              marginTop: 6,
+            }}
+          >
+            {isCapitalRecoveryStore
+              ? "Capital Recovery store haitumii inventory."
+              : StatusLine}
           </Text>
 
           {isCapitalRecoveryStore ? (
-            <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>
-              Bidhaa za Capital Recovery hutumika kwenye income flow tu, si inventory/stock tracking.
+            <Text
+              style={{
+                color: theme.colors.muted,
+                fontWeight: "800",
+                marginTop: 8,
+              }}
+            >
+              Bidhaa za Capital Recovery hutumika kwenye income flow tu, si
+              inventory/stock tracking.
             </Text>
           ) : isOffline ? (
-            <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>
+            <Text
+              style={{
+                color: theme.colors.muted,
+                fontWeight: "800",
+                marginTop: 8,
+              }}
+            >
               Ukiwa OFFLINE, app itaonyesha “last known cache” bila kukwama.
             </Text>
           ) : null}
         </View>
 
-        <View style={{ flexDirection: "row", gap: 10, marginTop: 6, alignItems: "center" }}>
+        <View
+          style={{
+            flexDirection: "row",
+            gap: 10,
+            marginTop: 6,
+            alignItems: "center",
+          }}
+        >
           <View style={{ flex: 1 }}>
             <Button
               title={loading ? "Loading..." : "Refresh"}
@@ -1010,7 +1406,11 @@ export default function StoreInventoryScreen() {
             <Button
               title="History"
               onPress={openHistory}
-              disabled={loading || !activeStoreId || isCapitalRecoveryStore}
+              disabled={
+                loading ||
+                !activeStoreId ||
+                isCapitalRecoveryStore
+              }
               variant="secondary"
             />
           </View>
@@ -1028,25 +1428,41 @@ export default function StoreInventoryScreen() {
                 borderWidth: 1,
                 borderColor: theme.colors.emeraldBorder,
                 backgroundColor: theme.colors.emeraldSoft,
-                opacity: !activeStoreId || isCapitalRecoveryStore ? 0.5 : pressed ? 0.92 : 1,
-                transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
+                opacity:
+                  !activeStoreId || isCapitalRecoveryStore
+                    ? 0.5
+                    : pressed
+                      ? 0.92
+                      : 1,
+                transform: pressed
+                  ? [{ scale: 0.995 }]
+                  : [{ scale: 1 }],
                 shadowColor: "#000",
-                shadowOpacity: !activeStoreId || isCapitalRecoveryStore ? 0 : 0.25,
+                shadowOpacity:
+                  !activeStoreId || isCapitalRecoveryStore ? 0 : 0.25,
                 shadowRadius: 10,
                 shadowOffset: { width: 0, height: 6 },
-                elevation: !activeStoreId || isCapitalRecoveryStore ? 0 : 8,
+                elevation:
+                  !activeStoreId || isCapitalRecoveryStore ? 0 : 8,
               },
             ]}
           >
             <View style={{ marginLeft: 1, marginTop: 1 }}>
-              <ScannerFabIcon size={28} color={theme.colors.text} />
+              <ScannerFabIcon
+                size={28}
+                color={theme.colors.text}
+              />
             </View>
           </Pressable>
         </View>
 
-        
-
-        <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 4 }}>
+        <Text
+          style={{
+            color: theme.colors.muted,
+            fontWeight: "800",
+            marginTop: 4,
+          }}
+        >
           {isCapitalRecoveryStore
             ? "Capital Recovery hutumia Products + Workspace, si inventory refresh."
             : "Tip: Inventory inajirefresh kimya kimya bila UI kuonyesha kuchezacheza."}
@@ -1060,18 +1476,37 @@ export default function StoreInventoryScreen() {
             backgroundColor: theme.colors.dangerSoft,
           }}
         >
-          <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{error}</Text>
+          <Text
+            style={{
+              color: theme.colors.danger,
+              fontWeight: "900",
+            }}
+          >
+            {error}
+          </Text>
 
-          {storeOrgMismatch && (
-            <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>
+          {storeOrgMismatch ? (
+            <Text
+              style={{
+                color: theme.colors.muted,
+                fontWeight: "800",
+                marginTop: 8,
+              }}
+            >
               Nenda Stores → chagua store ya org hii kisha urudi Inventory.
             </Text>
-          )}
+          ) : null}
         </Card>
       )}
 
       <Card style={{ gap: 10 }}>
-        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+        <Text
+          style={{
+            color: theme.colors.text,
+            fontWeight: "900",
+            fontSize: 16,
+          }}
+        >
           {isCapitalRecoveryStore ? "Inventory Disabled" : "Search"}
         </Text>
 
@@ -1102,7 +1537,8 @@ export default function StoreInventoryScreen() {
 
         {isCapitalRecoveryStore ? (
           <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-            Capital Recovery store haitumii inventory, stock alert, au stock adjustment.
+            Capital Recovery store haitumii inventory, stock alert, au stock
+            adjustment.
           </Text>
         ) : !canAdjust ? (
           <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
@@ -1115,266 +1551,82 @@ export default function StoreInventoryScreen() {
         ) : null}
       </Card>
 
-      <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>
-        {isCapitalRecoveryStore ? "Inventory Not Used" : `Items (${filtered.length})`}
+      <Text
+        style={{
+          fontWeight: "900",
+          fontSize: 16,
+          color: theme.colors.text,
+          marginBottom: 10,
+        }}
+      >
+        {isCapitalRecoveryStore
+          ? "Inventory Not Used"
+          : `Items (${filtered.length})`}
       </Text>
+    </View>
+  );
 
+  return (
+    <Screen>
       {isCapitalRecoveryStore ? (
-        <Card>
-          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-            Inventory disabled for Capital Recovery
-          </Text>
-          <Text style={{ color: theme.colors.muted, fontWeight: "700", marginTop: 6 }}>
-            Tumia Products + Capital Recovery Workspace kwa income entries. Inventory haitumiki kwenye mode hii.
-          </Text>
-        </Card>
-      ) : filtered.length === 0 ? (
-        <Card>
-          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-            No inventory rows
-          </Text>
-          <Text style={{ color: theme.colors.muted, fontWeight: "700", marginTop: 6 }}>
-            Bonyeza "Refresh" au hakikisha ume-select active store.
-          </Text>
-        </Card>
+        <FlatList
+          data={[]}
+          renderItem={() => null}
+          ListHeaderComponent={InventoryHeader}
+          ListEmptyComponent={
+            <Card>
+              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+                Inventory disabled for Capital Recovery
+              </Text>
+
+              <Text
+                style={{
+                  color: theme.colors.muted,
+                  fontWeight: "700",
+                  marginTop: 6,
+                }}
+              >
+                Tumia Products + Capital Recovery Workspace kwa income entries.
+                Inventory haitumiki kwenye mode hii.
+              </Text>
+            </Card>
+          }
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ paddingBottom: 32 }}
+        />
       ) : (
-        filtered.map((r) => {
-          const thr = Number(thrByProductId?.[r.product_id] ?? 0);
-          const isLow = !isOffline && thr > 0 && Number(r.qty ?? 0) <= thr;
+        <FlatList
+          data={filtered}
+          keyExtractor={(item) => item.product_id}
+          renderItem={renderInventoryItem}
+          ListHeaderComponent={InventoryHeader}
+          ListEmptyComponent={
+            <Card>
+              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+                No inventory rows
+              </Text>
 
-          const expiry = expiryByProductId?.[r.product_id] ?? null;
-          const expiryStatus = expiry?.expiry_status ?? null;
-          const expiryDaysLeft =
-            expiry?.nearest_expiry_days_left == null
-              ? null
-              : Number(expiry.nearest_expiry_days_left);
-          const expiryDate = expiry?.nearest_expiry_date ?? null;
-          const expiryUi = expiryTone(expiryStatus);
-
-          return (
-            <Pressable
-              key={r.product_id}
-              android_ripple={{ color: "transparent" }}
-              style={({ pressed }) => [
-                {
-                  borderWidth: 1,
-                  borderColor: isLow ? "rgba(245,158,11,0.55)" : theme.colors.border,
-                  borderRadius: theme.radius.xl,
-                  backgroundColor: theme.colors.card,
-                  padding: 16,
-                  opacity: pressed ? 0.96 : 1,
-                  marginBottom: 12,
-                },
-              ]}
-            >
-              <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
-                <View style={{ flexDirection: "row", flex: 1, gap: 12, alignItems: "center" }}>
-                  {r.image_url ? (
-                    <Image
-                      source={{ uri: r.image_url }}
-                      style={{
-                        width: 66,
-                        height: 66,
-                        borderRadius: 18,
-                        backgroundColor: "#E2E8F0",
-                      }}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <View
-                      style={{
-                        width: 66,
-                        height: 66,
-                        borderRadius: 18,
-                        backgroundColor: "#F1F5F9",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        borderWidth: 1,
-                        borderColor: "rgba(148,163,184,0.28)",
-                      }}
-                    >
-                      <Ionicons name="cube-outline" size={28} color={theme.colors.muted} />
-                    </View>
-                  )}
-
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-                      {r.product_name}
-                    </Text>
-
-                  <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-                    SKU: <Text style={{ color: theme.colors.text }}>{r.sku ?? "—"}</Text>
-                    {"   "}|{"   "}
-                    Unit: <Text style={{ color: theme.colors.text }}>{r.unit ?? "—"}</Text>
-                  </Text>
-
-                  <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-                    Category:{" "}
-                    <Text style={{ color: theme.colors.text }}>{r.category ?? "—"}</Text>
-                    {r.barcode ? (
-                      <>
-                        {"   "}•{"   "}
-                        <Text style={{ color: theme.colors.text }}>{r.barcode}</Text>
-                      </>
-                    ) : null}
-                  </Text>
-                </View>
-                </View>
-
-                {isLow ? (
-                  <View
-                    style={{
-                      alignSelf: "flex-start",
-                      paddingHorizontal: 10,
-                      paddingVertical: 6,
-                      borderRadius: theme.radius.pill,
-                      borderWidth: 1,
-                      borderColor: "rgba(245,158,11,0.45)",
-                      backgroundColor: "rgba(245,158,11,0.12)",
-                    }}
-                  >
-                    <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>
-                      LOW STOCK
-                    </Text>
-                  </View>
-                ) : null}
-              </View>
-
-              <View style={{ marginTop: 10, flexDirection: "row", gap: 10 }}>
-                <View
-                  style={{
-                    borderWidth: 1,
-                    borderColor: "rgba(52,211,153,0.35)",
-                    borderRadius: 999,
-                    backgroundColor: "rgba(52, 211, 153, 0.10)",
-                    width: 118,
-                    height: 118,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    paddingHorizontal: 10,
-                  }}
-                >
-                  {getPrecisionQtyLabels(r) ? (
-                    <>
-                      <Text
-                        style={{
-                          color: theme.colors.emerald,
-                          fontWeight: "900",
-                          fontSize: 14,
-                          textAlign: "center",
-                        }}
-                      >
-                        {getPrecisionQtyLabels(r)?.packLabel}
-                      </Text>
-
-                      <Text
-                        style={{
-                          color: theme.colors.text,
-                          fontWeight: "900",
-                          fontSize: 12,
-                          marginTop: 5,
-                          textAlign: "center",
-                        }}
-                      >
-                        {getPrecisionQtyLabels(r)?.baseLabel}
-                      </Text>
-                    </>
-                  ) : (
-                    <Text
-                      style={{
-                        color: theme.colors.emerald,
-                        fontWeight: "900",
-                        fontSize: 16,
-                        textAlign: "center",
-                      }}
-                    >
-                      QTY: {fmtQty(r.qty)}
-                    </Text>
-                  )}
-
-                  <Text
-                    style={{
-                      color: theme.colors.muted,
-                      fontWeight: "800",
-                      marginTop: 6,
-                      textAlign: "center",
-                    }}
-                  >
-                    Alert {"\u2264"} {isOffline ? "—" : String(thr)}
-                  </Text>
-                </View>
-
-                <View style={{ flex: 1, gap: 10 }}>
-                  <Button
-                    title="Alert Level"
-                    variant="secondary"
-                    onPress={() => {
-                      if (isOffline) {
-                        Alert.alert("Offline", "Huwezi kubadili Alert Level bila mtandao.");
-                        return;
-                      }
-                      router.push({
-                        pathname: "/(tabs)/stores/inventory/low-stock" as any,
-                        params: {
-                          storeId: activeStoreId,
-                          storeName: activeStoreName ?? "",
-                          productId: r.product_id,
-                          productName: r.product_name,
-                          currentQty: fmtQty(r.qty),
-                        },
-                      } as any);
-                    }}
-                    disabled={loading || !activeStoreId || isOffline}
-                  />
-
-                  <View
-                    style={{
-                      borderWidth: 1,
-                      borderColor: expiryUi.borderColor,
-                      borderRadius: theme.radius.lg,
-                      backgroundColor: expiryUi.backgroundColor,
-                      paddingHorizontal: 12,
-                      paddingVertical: 10,
-                      minHeight: 56,
-                      justifyContent: "center",
-                    }}
-                  >
-                    <Text
-                      style={{
-                        color: expiryUi.textColor,
-                        fontWeight: "900",
-                        fontSize: 13,
-                      }}
-                    >
-                      {expiryLabel(expiryDaysLeft, expiryStatus, expiryDate)}
-                    </Text>
-
-                    <Text
-                      style={{
-                        color: expiryUi.subColor,
-                        fontWeight: "800",
-                        fontSize: 11,
-                        marginTop: 4,
-                      }}
-                      numberOfLines={1}
-                    >
-                      {expiryDate ? fmtExpiryDate(expiryDate) : "No expiry tracked"}
-                    </Text>
-                  </View>
-
-                  {canAdjust && (
-                    <Button
-                      title="Adjust Stock"
-                      variant="secondary"
-                      onPress={() => openAdjust(r)}
-                      disabled={loading || isOffline}
-                    />
-                  )}
-                </View>
-              </View>
-            </Pressable>
-          );
-        })
+              <Text
+                style={{
+                  color: theme.colors.muted,
+                  fontWeight: "700",
+                  marginTop: 6,
+                }}
+              >
+                Bonyeza "Refresh" au hakikisha ume-select active store.
+              </Text>
+            </Card>
+          }
+          initialNumToRender={8}
+          maxToRenderPerBatch={6}
+          updateCellsBatchingPeriod={50}
+          windowSize={5}
+          removeClippedSubviews={Platform.OS === "android"}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 32 }}
+        />
       )}
     </Screen>
   );

@@ -110,7 +110,7 @@ const [customTo, setCustomTo] = useState(ymd(new Date()));
     setErr(null);
 
     try {
-      const { data, error } = await supabase.rpc("get_chapchap_sales_summary_v1", {
+      const { data, error } = await supabase.rpc("get_chapchap_sales_summary_v2", {
         p_org_id: orgId,
         p_store_id: storeId,
         p_from_date: range.from,

@@ -37,9 +37,11 @@ type PaymentSummary = {
 };
 
 type ProfitSummary = {
+  sales: number;
+  cogs: number;
+  gross: number;
+  expenses: number;
   net: number;
-  sales: number | null;
-  expenses: number | null;
 };
 
 type CollectionBreakdown = {
@@ -49,6 +51,18 @@ type CollectionBreakdown = {
   other: number;
   total: number;
   payments: number;
+};
+
+type ChannelBreakdown = {
+  cash: number;
+  bank: number;
+  mobile: number;
+  other: number;
+  total: number;
+};
+
+type ExpenseChannelBreakdown = ChannelBreakdown & {
+  count: number;
 };
 
 type StatementRow = {
@@ -167,6 +181,15 @@ function pct(n: number) {
   return `${n.toFixed(1)}%`;
 }
 
+function isoToLocalDateInputValue(iso?: string | null) {
+  if (!iso) return "";
+
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t)) return "";
+
+  return toDateInputValue(new Date(t));
+}
+
 function signedMoney(fmtMoney: (n: number) => string, n: number) {
   if (n < 0) return `-${fmtMoney(Math.abs(n))}`;
   return fmtMoney(n);
@@ -185,8 +208,8 @@ function summaryLabelForRange(
   if (range === "year") return "This Year";
   if (!resolvedRange) return "Custom Range";
 
-  const from = resolvedRange.from ? resolvedRange.from.slice(0, 10) : "—";
-  const to = resolvedRange.to ? resolvedRange.to.slice(0, 10) : "—";
+  const from = isoToLocalDateInputValue(resolvedRange.from) || "—";
+  const to = isoToLocalDateInputValue(resolvedRange.to) || "—";
   return `Custom (${from} → ${to})`;
 }
 
@@ -393,7 +416,7 @@ async function getCreditCollectionsSummary(
       else out.other += amt;
     }
 
-    out.total = out.cash + out.bank + out.mobile;
+    out.total = out.cash + out.bank + out.mobile + out.other;
     return out;
   }
 
@@ -406,6 +429,101 @@ async function getCreditCollectionsSummary(
     total: 0,
     payments: 0,
   };
+}
+
+async function getSalesChannelSummary(
+  orgId: string,
+  storeId: string,
+  fromISO: string,
+  toISO: string
+): Promise<ChannelBreakdown> {
+  const empty: ChannelBreakdown = {
+    cash: 0,
+    bank: 0,
+    mobile: 0,
+    other: 0,
+    total: 0,
+  };
+
+  if (!orgId || !storeId) return empty;
+
+  const { data, error } = await supabase.rpc("get_sales_channel_summary_v3", {
+    p_org_id: orgId,
+    p_from: fromISO,
+    p_to: toISO,
+    p_store_id: storeId,
+  } as any);
+
+  if (error) throw error;
+
+  const out: ChannelBreakdown = { ...empty };
+
+  for (const r of (Array.isArray(data) ? data : []) as any[]) {
+    const channel = String(r?.channel ?? "")
+      .trim()
+      .toUpperCase();
+
+    const amount = toNum(r?.revenue ?? 0);
+
+    if (channel === "CASH") out.cash += amount;
+    else if (channel === "BANK") out.bank += amount;
+    else if (channel === "MOBILE") out.mobile += amount;
+    else if (channel !== "CREDIT") out.other += amount;
+  }
+
+  out.total = out.cash + out.bank + out.mobile + out.other;
+  return out;
+}
+
+async function getExpenseChannelSummary(
+  storeId: string,
+  fromISO: string,
+  toISO: string
+): Promise<ExpenseChannelBreakdown> {
+  const empty: ExpenseChannelBreakdown = {
+    cash: 0,
+    bank: 0,
+    mobile: 0,
+    other: 0,
+    total: 0,
+    count: 0,
+  };
+
+  if (!storeId) return empty;
+
+  const fromDate = isoToLocalDateInputValue(fromISO);
+  const toDate = isoToLocalDateInputValue(toISO);
+
+  if (!fromDate || !toDate) return empty;
+
+  const { data, error } = await supabase.rpc("get_expense_channel_summary_v2", {
+    p_store_id: storeId,
+    p_from: fromDate,
+    p_to: toDate,
+  } as any);
+
+  if (error) throw error;
+
+  const out: ExpenseChannelBreakdown = { ...empty };
+
+  for (const r of (Array.isArray(data) ? data : []) as any[]) {
+    const channel = String(r?.channel ?? "")
+      .trim()
+      .toUpperCase();
+
+    const amount = toNum(r?.amount ?? 0);
+    const count = toNum(r?.count ?? 0);
+
+    out.count += count;
+
+    if (channel === "CASH") out.cash += amount;
+    else if (channel === "BANK") out.bank += amount;
+    else if (channel === "MOBILE") out.mobile += amount;
+    else out.other += amount;
+  }
+
+  out.total = out.cash + out.bank + out.mobile + out.other;
+  return out;
 }
 
 function buildStatementRef(
@@ -424,8 +542,10 @@ function buildStatementRef(
     .slice(0, 6)
     .toUpperCase();
   const rangeCode = String(range ?? "CUSTOM").toUpperCase();
-  const from = fromIso ? fromIso.slice(0, 10).replace(/-/g, "") : "FROM";
-  const to = toIso ? toIso.slice(0, 10).replace(/-/g, "") : "TO";
+  const fromDate = isoToLocalDateInputValue(fromIso);
+  const toDate = isoToLocalDateInputValue(toIso);
+  const from = fromDate ? fromDate.replace(/-/g, "") : "FROM";
+  const to = toDate ? toDate.replace(/-/g, "") : "TO";
   return `BST-${org}-${store}-${rangeCode}-${from}-${to}`;
 }
 function printHtmlPdfOnWeb(html: string) {
@@ -598,7 +718,7 @@ async function getGoodsPurchasedSummary(
 
   try {
     const { data, error } = await supabase.rpc(
-      "get_business_statement_goods_summary_v1",
+      "get_business_statement_goods_summary_v2",
       {
         p_store_id: sid,
         p_from: fromISO,
@@ -667,9 +787,11 @@ const [goodsPurchasedSummary, setGoodsPurchasedSummary] =
     supplier_outstanding: 0,
   });
   const [profitSummary, setProfitSummary] = useState<ProfitSummary>({
+    sales: 0,
+    cogs: 0,
+    gross: 0,
+    expenses: 0,
     net: 0,
-    sales: null,
-    expenses: null,
   });
 
   const [creditCollections, setCreditCollections] = useState<CollectionBreakdown>({
@@ -680,6 +802,24 @@ const [goodsPurchasedSummary, setGoodsPurchasedSummary] =
     total: 0,
     payments: 0,
   });
+
+  const [salesChannels, setSalesChannels] = useState<ChannelBreakdown>({
+    cash: 0,
+    bank: 0,
+    mobile: 0,
+    other: 0,
+    total: 0,
+  });
+
+  const [expenseChannels, setExpenseChannels] =
+    useState<ExpenseChannelBreakdown>({
+      cash: 0,
+      bank: 0,
+      mobile: 0,
+      other: 0,
+      total: 0,
+      count: 0,
+    });
 
 const canView = useMemo(() => {
   const r = String(activeRole ?? "").trim().toLowerCase();
@@ -752,6 +892,8 @@ const [
   payRes,
   profitRes,
   creditCollectionsRes,
+  salesChannelsRes,
+  expenseChannelsRes,
   expensesRes,
   capitalRes,
   goodsPurchasedRes,
@@ -781,17 +923,31 @@ const [
     finalRange.to
   ),
 
+  getSalesChannelSummary(
+    String(activeOrgId ?? "").trim(),
+    String(activeStoreId ?? "").trim(),
+    finalRange.from,
+    finalRange.to
+  ),
+
+  getExpenseChannelSummary(
+    String(activeStoreId ?? "").trim(),
+    finalRange.from,
+    finalRange.to
+  ),
+
   supabase
     .from("expenses")
     .select("*")
     .eq("store_id", activeStoreId)
-    .gte("spent_at", finalRange.from)
-    .lte("spent_at", finalRange.to)
-    .order("spent_at", { ascending: false }),
+    .gte("expense_date", isoToLocalDateInputValue(finalRange.from))
+    .lte("expense_date", isoToLocalDateInputValue(finalRange.to))
+    .order("expense_date", { ascending: false }),
 
-  supabase.rpc("get_capital_recovery_history_v2", {
+  supabase.rpc("get_business_statement_capital_recovery_v1", {
     p_store_id: activeStoreId,
-    p_limit: 500,
+    p_from: finalRange.from,
+    p_to: finalRange.to,
   }),
 
   getGoodsPurchasedSummary(
@@ -807,28 +963,16 @@ const [
 
         let rawExpenses: AnyRow[] = [];
         if (expensesRes.error) {
-          const fallbackByExpenseDate = await supabase
+          const fallbackByCreatedAt = await supabase
             .from("expenses")
             .select("*")
             .eq("store_id", activeStoreId)
-            .gte("expense_date", finalRange.from.slice(0, 10))
-            .lte("expense_date", finalRange.to.slice(0, 10))
-            .order("expense_date", { ascending: false });
+            .gte("created_at", finalRange.from)
+            .lte("created_at", finalRange.to)
+            .order("created_at", { ascending: false });
 
-          if (!fallbackByExpenseDate.error) {
-            rawExpenses = (fallbackByExpenseDate.data ?? []) as AnyRow[];
-          } else {
-            const fallbackByCreatedAt = await supabase
-              .from("expenses")
-              .select("*")
-              .eq("store_id", activeStoreId)
-              .gte("created_at", finalRange.from)
-              .lte("created_at", finalRange.to)
-              .order("created_at", { ascending: false });
-
-            if (fallbackByCreatedAt.error) throw fallbackByCreatedAt.error;
-            rawExpenses = (fallbackByCreatedAt.data ?? []) as AnyRow[];
-          }
+          if (fallbackByCreatedAt.error) throw fallbackByCreatedAt.error;
+          rawExpenses = (fallbackByCreatedAt.data ?? []) as AnyRow[];
         } else {
           rawExpenses = (expensesRes.data ?? []) as AnyRow[];
         }
@@ -877,12 +1021,12 @@ sales.sort((a, b) => {
             created_role: String(r?.created_role ?? "").trim() || null,
             created_by_name: String(r?.created_by_name ?? "").trim() || null,
           }))
-          .filter((r) => {
-            const t = Date.parse(r.created_at);
-            if (!Number.isFinite(t)) return false;
-            return t >= Date.parse(finalRange.from) && t <= Date.parse(finalRange.to);
-          })
-          .filter((r) => r.entry_type === "ASSET" || r.entry_type === "COST" || r.entry_type === "INCOME")
+          .filter(
+            (r) =>
+              r.entry_type === "ASSET" ||
+              r.entry_type === "COST" ||
+              r.entry_type === "INCOME"
+          )
           .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at));
 
         const mergedCash = toNum(payRow?.v_cash_total ?? payRow?.cash_total ?? 0);
@@ -895,28 +1039,43 @@ sales.sort((a, b) => {
             0
         );
 
+        const salePaymentsTotal = toNum(
+          payRow?.v_grand_paid_total ??
+            payRow?.grand_paid_total ??
+            mergedCash + mergedMobile + mergedBank
+        );
+
+        const totalCashReceived =
+          salePaymentsTotal + mergedCreditCollected;
+
        setSalesRows(sales);
 setSaleItemsBySaleId(saleItemsMap);
 setExpenseRows(expenses);
         setCapitalRows(capital);
         setGoodsPurchasedSummary(goodsPurchasedRes);
         setCreditCollections(creditCollectionsRes);
+        setSalesChannels(salesChannelsRes);
+        setExpenseChannels(expenseChannelsRes);
+
+        const rpcSales = toNum(profitRow?.sales_total ?? 0);
+        const rpcCogs = toNum(profitRow?.cogs_total ?? 0);
+        const rpcExpenses = toNum(profitRow?.expenses_total ?? 0);
+
         setProfitSummary({
-          net: toNum(profitRow?.net_profit ?? profitRow?.net ?? 0),
-          sales:
-            profitRow?.sales_total != null ? toNum(profitRow.sales_total) : null,
-          expenses:
-            profitRow?.expenses_total != null ? toNum(profitRow.expenses_total) : null,
+          sales: rpcSales,
+          cogs: rpcCogs,
+          gross: rpcSales - rpcCogs,
+          expenses: rpcExpenses,
+          net: toNum(
+            profitRow?.net_profit ??
+              (rpcSales - rpcCogs - rpcExpenses)
+          ),
         });setPaymentSummary({
           cash_total: mergedCash,
           mobile_total: mergedMobile,
           bank_total: mergedBank,
           credit_collected_total: mergedCreditCollected,
-          grand_paid_total: toNum(
-            payRow?.v_grand_paid_total ??
-              payRow?.grand_paid_total ??
-              mergedCash + mergedMobile + mergedBank
-          ),
+          grand_paid_total: totalCashReceived,
           total_sales: toNum(payRow?.v_total_sales ?? payRow?.total_sales ?? 0),
           total_balance: toNum(payRow?.v_total_balance ?? payRow?.total_balance ?? 0),
         });
@@ -941,9 +1100,11 @@ setExpenseRows(expenses);
           total_balance: 0,
         });
         setProfitSummary({
+          sales: 0,
+          cogs: 0,
+          gross: 0,
+          expenses: 0,
           net: 0,
-          sales: null,
-          expenses: null,
         });
         setCreditCollections({
           cash: 0,
@@ -952,6 +1113,22 @@ setExpenseRows(expenses);
           other: 0,
           total: 0,
           payments: 0,
+        });
+                setSalesChannels({
+          cash: 0,
+          bank: 0,
+          mobile: 0,
+          other: 0,
+          total: 0,
+        });
+
+        setExpenseChannels({
+          cash: 0,
+          bank: 0,
+          mobile: 0,
+          other: 0,
+          total: 0,
+          count: 0,
         });
         setErr(e?.message ?? "Failed to load business statement");
       } finally {
@@ -1015,45 +1192,96 @@ const expensesFromRows = useMemo(() => {
   return expenseRows.reduce((a, r) => a + toNum(r.amount ?? 0), 0);
 }, [expenseRows]);
 
+const totalCogs = useMemo(() => {
+  return toNum(profitSummary.cogs);
+}, [profitSummary.cogs]);
+
 const grossProfit = useMemo(() => {
-  return toNum(profitSummary.net ?? 0);
-}, [profitSummary.net]);
+  return toNum(profitSummary.gross);
+}, [profitSummary.gross]);
 
 const totalExpenses = useMemo(() => {
-  const rpcExpenses = toNum(profitSummary.expenses ?? 0);
-
-  // Ikiwa expenses zipo kwenye rows lakini RPC imerudisha 0,
-  // tumia rows ili PDF na summary zisipishane.
-  if (expensesFromRows > 0 && rpcExpenses <= 0) {
-    return expensesFromRows;
-  }
-
-  return rpcExpenses > 0 ? rpcExpenses : expensesFromRows;
-}, [expensesFromRows, profitSummary.expenses]);
+  return toNum(profitSummary.expenses);
+}, [profitSummary.expenses]);
 
 const netProfit = useMemo(() => {
-  return grossProfit - totalExpenses;
-}, [grossProfit, totalExpenses]);
+  return toNum(profitSummary.net);
+}, [profitSummary.net]);
+
+const totalSales = useMemo(() => {
+  return toNum(profitSummary.sales);
+}, [profitSummary.sales]);
+
 const profitMargin = useMemo(() => {
-  const sales = toNum(paymentSummary.total_sales);
-  if (sales <= 0) return 0;
-  return (netProfit / sales) * 100;
-}, [netProfit, paymentSummary.total_sales]);
+  if (totalSales <= 0) return 0;
+  return (netProfit / totalSales) * 100;
+}, [netProfit, totalSales]);
 
 const expenseRatio = useMemo(() => {
-  const sales = toNum(paymentSummary.total_sales);
-  if (sales <= 0) return 0;
-  return (totalExpenses / sales) * 100;
-}, [paymentSummary.total_sales, totalExpenses]);
+  if (totalSales <= 0) return 0;
+  return (totalExpenses / totalSales) * 100;
+}, [totalExpenses, totalSales]);
 
 const averageSaleValue = useMemo(() => {
   if (salesCount <= 0) return 0;
-  return toNum(paymentSummary.total_sales) / salesCount;
-}, [paymentSummary.total_sales, salesCount]);
+  return totalSales / salesCount;
+}, [salesCount, totalSales]);
+
+const grossMoneyReceived = useMemo(() => {
+  return salesChannels.total + creditCollections.total;
+}, [salesChannels.total, creditCollections.total]);
+
+const netCashIn = useMemo(() => {
+  return Math.max(
+    0,
+    salesChannels.cash + creditCollections.cash - expenseChannels.cash
+  );
+}, [
+  salesChannels.cash,
+  creditCollections.cash,
+  expenseChannels.cash,
+]);
+
+const netBankIn = useMemo(() => {
+  return Math.max(
+    0,
+    salesChannels.bank + creditCollections.bank - expenseChannels.bank
+  );
+}, [
+  salesChannels.bank,
+  creditCollections.bank,
+  expenseChannels.bank,
+]);
+
+const netMobileIn = useMemo(() => {
+  return Math.max(
+    0,
+    salesChannels.mobile + creditCollections.mobile - expenseChannels.mobile
+  );
+}, [
+  salesChannels.mobile,
+  creditCollections.mobile,
+  expenseChannels.mobile,
+]);
+
+const netOtherIn = useMemo(() => {
+  return Math.max(
+    0,
+    salesChannels.other + creditCollections.other - expenseChannels.other
+  );
+}, [
+  salesChannels.other,
+  creditCollections.other,
+  expenseChannels.other,
+]);
+
+const netMoneyIn = useMemo(() => {
+  return netCashIn + netBankIn + netMobileIn + netOtherIn;
+}, [netBankIn, netCashIn, netMobileIn, netOtherIn]);
 
 const purchaseDifference = useMemo(() => {
-  return toNum(paymentSummary.total_sales) - toNum(goodsPurchasedSummary.total_goods_purchased);
-}, [paymentSummary.total_sales, goodsPurchasedSummary.total_goods_purchased]);
+  return totalSales - toNum(goodsPurchasedSummary.total_goods_purchased);
+}, [totalSales, goodsPurchasedSummary.total_goods_purchased]);
 
 const purchaseStatusLabel = useMemo(() => {
   const purchased = toNum(goodsPurchasedSummary.total_goods_purchased);
@@ -1343,8 +1571,12 @@ const purchaseStatusLabel = useMemo(() => {
 
   <div class="section-title">Statement Summary</div>
 <div class="grid">
-  <div class="box"><div class="label">Total Sales</div><div class="value">${escapeHtml(fmtMoney(paymentSummary.total_sales))}</div></div>
+  <div class="box"><div class="label">Total Sales</div><div class="value">${escapeHtml(fmtMoney(totalSales))}</div></div>
+  <div class="box"><div class="label">COGS</div><div class="value">${escapeHtml(fmtMoney(totalCogs))}</div></div>
   <div class="box"><div class="label">Gross Profit</div><div class="value">${escapeHtml(fmtMoney(grossProfit))}</div></div>
+</div>
+
+<div class="grid">
   <div class="box"><div class="label">Total Expenses</div><div class="value">${escapeHtml(fmtMoney(totalExpenses))}</div></div>
 </div>
 
@@ -1377,22 +1609,61 @@ const purchaseStatusLabel = useMemo(() => {
 </div>
 
 <div class="grid">
-  <div class="box"><div class="label">Supplier Outstanding Balance</div><div class="value">${escapeHtml(fmtMoney(goodsPurchasedSummary.supplier_outstanding))}</div></div>
+  <div class="box"><div class="label">Outstanding on Period Purchases</div><div class="value">${escapeHtml(fmtMoney(goodsPurchasedSummary.supplier_outstanding))}</div></div>
   <div class="box"><div class="label">Stock Investment Difference</div><div class="value">${escapeHtml(signedMoney(fmtMoney, purchaseDifference))}</div></div>
 <div class="box"><div class="label">Purchase Status</div><div class="value">${escapeHtml(purchaseStatusLabel)}</div></div>
 </div>
 
-    <div class="section-title">Payment Breakdown</div>
+    <div class="section-title">Sales Payments</div>
     <div class="grid">
-      <div class="box"><div class="label">Cash</div><div class="value">${escapeHtml(fmtMoney(paymentSummary.cash_total))}</div></div>
-      <div class="box"><div class="label">Mobile</div><div class="value">${escapeHtml(fmtMoney(paymentSummary.mobile_total))}</div></div>
-      <div class="box"><div class="label">Bank</div><div class="value">${escapeHtml(fmtMoney(paymentSummary.bank_total))}</div></div>
+      <div class="box"><div class="label">Cash Sales</div><div class="value">${escapeHtml(fmtMoney(salesChannels.cash))}</div></div>
+      <div class="box"><div class="label">Mobile Sales</div><div class="value">${escapeHtml(fmtMoney(salesChannels.mobile))}</div></div>
+      <div class="box"><div class="label">Bank Sales</div><div class="value">${escapeHtml(fmtMoney(salesChannels.bank))}</div></div>
     </div>
 
     <div class="grid">
-      <div class="box"><div class="label">Credit Collected</div><div class="value">${escapeHtml(fmtMoney(paymentSummary.credit_collected_total))}</div></div>
-      <div class="box"><div class="label">Grand Paid In</div><div class="value">${escapeHtml(fmtMoney(paymentSummary.grand_paid_total))}</div></div>
-      <div class="box"><div class="label">Expense Count</div><div class="value">${escapeHtml(String(expenseCount))}</div></div>
+      <div class="box"><div class="label">Other Sales</div><div class="value">${escapeHtml(fmtMoney(salesChannels.other))}</div></div>
+      <div class="box"><div class="label">Total Sales Paid</div><div class="value">${escapeHtml(fmtMoney(salesChannels.total))}</div></div>
+      <div class="box"><div class="label">Period Outstanding Credit</div><div class="value">${escapeHtml(fmtMoney(paymentSummary.total_balance))}</div></div>
+    </div>
+
+    <div class="section-title">Credit Collections</div>
+    <div class="grid">
+      <div class="box"><div class="label">Cash Collections</div><div class="value">${escapeHtml(fmtMoney(creditCollections.cash))}</div></div>
+      <div class="box"><div class="label">Mobile Collections</div><div class="value">${escapeHtml(fmtMoney(creditCollections.mobile))}</div></div>
+      <div class="box"><div class="label">Bank Collections</div><div class="value">${escapeHtml(fmtMoney(creditCollections.bank))}</div></div>
+    </div>
+
+    <div class="grid">
+      <div class="box"><div class="label">Other Collections</div><div class="value">${escapeHtml(fmtMoney(creditCollections.other))}</div></div>
+      <div class="box"><div class="label">Total Credit Collections</div><div class="value">${escapeHtml(fmtMoney(creditCollections.total))}</div></div>
+      <div class="box"><div class="label">Gross Money Received</div><div class="value">${escapeHtml(fmtMoney(grossMoneyReceived))}</div></div>
+    </div>
+
+    <div class="section-title">Expenses By Payment Channel</div>
+    <div class="grid">
+      <div class="box"><div class="label">Cash Expenses</div><div class="value">${escapeHtml(fmtMoney(expenseChannels.cash))}</div></div>
+      <div class="box"><div class="label">Mobile Expenses</div><div class="value">${escapeHtml(fmtMoney(expenseChannels.mobile))}</div></div>
+      <div class="box"><div class="label">Bank Expenses</div><div class="value">${escapeHtml(fmtMoney(expenseChannels.bank))}</div></div>
+    </div>
+
+    <div class="grid">
+      <div class="box"><div class="label">Other Expenses</div><div class="value">${escapeHtml(fmtMoney(expenseChannels.other))}</div></div>
+      <div class="box"><div class="label">Total Expenses</div><div class="value">${escapeHtml(fmtMoney(expenseChannels.total))}</div></div>
+      <div class="box"><div class="label">Expense Count</div><div class="value">${escapeHtml(String(expenseChannels.count))}</div></div>
+    </div>
+
+    <div class="section-title">Money In After Expenses</div>
+    <div class="grid">
+      <div class="box"><div class="label">Cash In</div><div class="value">${escapeHtml(fmtMoney(netCashIn))}</div></div>
+      <div class="box"><div class="label">Mobile In</div><div class="value">${escapeHtml(fmtMoney(netMobileIn))}</div></div>
+      <div class="box"><div class="label">Bank In</div><div class="value">${escapeHtml(fmtMoney(netBankIn))}</div></div>
+    </div>
+
+    <div class="grid">
+      <div class="box"><div class="label">Other In</div><div class="value">${escapeHtml(fmtMoney(netOtherIn))}</div></div>
+      <div class="box"><div class="label">Total Money In</div><div class="value">${escapeHtml(fmtMoney(netMoneyIn))}</div></div>
+      <div class="box"><div class="label">Total Qty Sold</div><div class="value">${escapeHtml(String(totalQty))}</div></div>
     </div>
 
     <div class="section-title">Capital Recovery</div>
@@ -1500,7 +1771,7 @@ const purchaseStatusLabel = useMemo(() => {
   <tr>
     <td>
       <b>Goods Purchased / Supplier Debt</b><br/>
-      Goods purchased are ${escapeHtml(fmtMoney(goodsPurchasedSummary.total_goods_purchased))}. Supplier outstanding balance is ${escapeHtml(fmtMoney(goodsPurchasedSummary.supplier_outstanding))}. Status: ${escapeHtml(purchaseStatusLabel)}.
+      Goods purchased in this period are ${escapeHtml(fmtMoney(goodsPurchasedSummary.total_goods_purchased))}. Current unpaid balance on those purchase orders is ${escapeHtml(fmtMoney(goodsPurchasedSummary.supplier_outstanding))}. Status: ${escapeHtml(purchaseStatusLabel)}.
     </td>
   </tr>
   <tr>
@@ -1531,6 +1802,7 @@ expenseRows,
 fmtMoney,
 getSaleItemsText,
 grossProfit,
+totalCogs,
 goodsPurchasedSummary.purchase_orders,
 goodsPurchasedSummary.supplier_outstanding,
 goodsPurchasedSummary.total_goods_purchased,
@@ -1545,7 +1817,7 @@ paymentSummary.bank_total,
     paymentSummary.grand_paid_total,
     paymentSummary.mobile_total,
     paymentSummary.total_balance,
-    paymentSummary.total_sales,
+    totalSales,
     range,
     rangeTextForPdf,
     salesCount,
@@ -1553,6 +1825,28 @@ paymentSummary.bank_total,
     statementRef,
     totalExpenses,
     totalQty,
+    creditCollections.bank,
+    creditCollections.cash,
+    creditCollections.mobile,
+    creditCollections.other,
+    creditCollections.total,
+    expenseChannels.bank,
+    expenseChannels.cash,
+    expenseChannels.count,
+    expenseChannels.mobile,
+    expenseChannels.other,
+    expenseChannels.total,
+    grossMoneyReceived,
+    netBankIn,
+    netCashIn,
+    netMobileIn,
+    netMoneyIn,
+    netOtherIn,
+    salesChannels.bank,
+    salesChannels.cash,
+    salesChannels.mobile,
+    salesChannels.other,
+    salesChannels.total,
   ]);
 
   const handleSharePdf = useCallback(async () => {
@@ -1764,16 +2058,20 @@ paymentSummary.bank_total,
           </Text>
 
           <View style={{ flexDirection: "row", gap: 10 }}>
-            <MetricCard title="TOTAL SALES" amount={fmtMoney(paymentSummary.total_sales)} />
-            <MetricCard title="TOTAL EXPENSES" amount={fmtMoney(totalExpenses)} />
+            <MetricCard title="TOTAL SALES" amount={fmtMoney(totalSales)} />
+            <MetricCard title="COGS" amount={fmtMoney(totalCogs)} subtitle="Cost of Goods Sold" />
           </View>
 
          <View style={{ flexDirection: "row", gap: 10 }}>
   <MetricCard
     title="GROSS PROFIT"
     amount={fmtMoney(grossProfit)}
-    subtitle="Before expenses"
+    subtitle="Sales - COGS"
   />
+  <MetricCard title="TOTAL EXPENSES" amount={fmtMoney(totalExpenses)} />
+</View>
+
+<View style={{ flexDirection: "row", gap: 10 }}>
   <MetricCard
     title="NET PROFIT"
     amount={fmtMoney(netProfit)}
@@ -1829,9 +2127,9 @@ paymentSummary.bank_total,
     amount={String(goodsPurchasedSummary.total_items_purchased)}
   />
   <MetricCard
-    title="SUPPLIER OUTSTANDING BALANCE"
+    title="OUTSTANDING ON PERIOD PURCHASES"
     amount={fmtMoney(goodsPurchasedSummary.supplier_outstanding)}
-    subtitle="Deni la mzigo / supplier"
+    subtitle="Current unpaid balance on purchases in this period"
   />
 </View>
 
@@ -1858,25 +2156,158 @@ paymentSummary.bank_total,
           <MetricCard title="RECOVERY RECORDS" amount={String(capitalSummary.count)} />
 
           <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>
-            Payment Breakdown
+            Sales Payments
           </Text>
 
           <View style={{ flexDirection: "row", gap: 10 }}>
-            <MetricCard title="Cash" amount={fmtMoney(paymentSummary.cash_total)} />
-            <MetricCard title="Mobile" amount={fmtMoney(paymentSummary.mobile_total)} />
-          </View>
-
-          <View style={{ flexDirection: "row", gap: 10 }}>
-            <MetricCard title="Bank" amount={fmtMoney(paymentSummary.bank_total)} />
             <MetricCard
-              title="Credit Collected"
-              amount={fmtMoney(paymentSummary.credit_collected_total)}
+              title="CASH SALES"
+              amount={fmtMoney(salesChannels.cash)}
+              subtitle="Paid sales before expenses"
+            />
+            <MetricCard
+              title="MOBILE SALES"
+              amount={fmtMoney(salesChannels.mobile)}
+              subtitle="Paid sales before expenses"
             />
           </View>
 
           <View style={{ flexDirection: "row", gap: 10 }}>
-            <MetricCard title="Grand Paid In" amount={fmtMoney(paymentSummary.grand_paid_total)} />
-            <MetricCard title="Total Qty Sold" amount={String(totalQty)} />
+            <MetricCard
+              title="BANK SALES"
+              amount={fmtMoney(salesChannels.bank)}
+              subtitle="Paid sales before expenses"
+            />
+            <MetricCard
+              title="OTHER SALES"
+              amount={fmtMoney(salesChannels.other)}
+              subtitle="Paid sales before expenses"
+            />
+          </View>
+
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <MetricCard
+              title="TOTAL SALES PAID"
+              amount={fmtMoney(salesChannels.total)}
+              subtitle="Cash + Mobile + Bank + Other"
+            />
+            <MetricCard
+              title="PERIOD OUTSTANDING CREDIT"
+              amount={fmtMoney(paymentSummary.total_balance)}
+              subtitle="Credit balance from sales in this period"
+            />
+          </View>
+
+          <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>
+            Credit Collections
+          </Text>
+
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <MetricCard
+              title="CASH COLLECTIONS"
+              amount={fmtMoney(creditCollections.cash)}
+            />
+            <MetricCard
+              title="MOBILE COLLECTIONS"
+              amount={fmtMoney(creditCollections.mobile)}
+            />
+          </View>
+
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <MetricCard
+              title="BANK COLLECTIONS"
+              amount={fmtMoney(creditCollections.bank)}
+            />
+            <MetricCard
+              title="OTHER COLLECTIONS"
+              amount={fmtMoney(creditCollections.other)}
+            />
+          </View>
+
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <MetricCard
+              title="TOTAL CREDIT COLLECTIONS"
+              amount={fmtMoney(creditCollections.total)}
+              subtitle={`${creditCollections.payments} payment(s) received`}
+            />
+            <MetricCard
+              title="GROSS MONEY RECEIVED"
+              amount={fmtMoney(grossMoneyReceived)}
+              subtitle="Sales paid + Credit collections"
+            />
+          </View>
+
+          <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>
+            Expenses By Payment Channel
+          </Text>
+
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <MetricCard
+              title="CASH EXPENSES"
+              amount={fmtMoney(expenseChannels.cash)}
+            />
+            <MetricCard
+              title="MOBILE EXPENSES"
+              amount={fmtMoney(expenseChannels.mobile)}
+            />
+          </View>
+
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <MetricCard
+              title="BANK EXPENSES"
+              amount={fmtMoney(expenseChannels.bank)}
+            />
+            <MetricCard
+              title="OTHER EXPENSES"
+              amount={fmtMoney(expenseChannels.other)}
+            />
+          </View>
+
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <MetricCard
+              title="TOTAL EXPENSES"
+              amount={fmtMoney(expenseChannels.total)}
+              subtitle={`${expenseChannels.count} expense(s)`}
+            />
+          </View>
+
+          <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>
+            Money In After Expenses
+          </Text>
+
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <MetricCard
+              title="CASH IN"
+              amount={fmtMoney(netCashIn)}
+              subtitle="Sales + collections - cash expenses"
+            />
+            <MetricCard
+              title="MOBILE IN"
+              amount={fmtMoney(netMobileIn)}
+              subtitle="Sales + collections - mobile expenses"
+            />
+          </View>
+
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <MetricCard
+              title="BANK IN"
+              amount={fmtMoney(netBankIn)}
+              subtitle="Sales + collections - bank expenses"
+            />
+            <MetricCard
+              title="OTHER IN"
+              amount={fmtMoney(netOtherIn)}
+              subtitle="Sales + collections - other expenses"
+            />
+          </View>
+
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <MetricCard
+              title="TOTAL MONEY IN"
+              amount={fmtMoney(netMoneyIn)}
+              subtitle="After expenses by payment channel"
+            />
+            <MetricCard title="TOTAL QTY SOLD" amount={String(totalQty)} />
           </View>
 
           <Card style={{ gap: 10 }}>

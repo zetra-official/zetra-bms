@@ -1,4 +1,4 @@
-import { handleBusinessIntentEndpoint } from "./businessIntentEndpoint.ts";
+﻿import { handleBusinessIntentEndpoint } from "./businessIntentEndpoint.ts";
 export interface Env {
   OPENAI_API_KEY: string;
   SUPABASE_URL: string;
@@ -314,74 +314,35 @@ When responding about business performance:
 
 1. Start with the direct conclusion when possible.
 2. Explain what the verified figures mean.
-3. Explain WHY only when the supplied evidence supports that explanation.
-4. Give practical recommendations only when they are useful and supported by the available facts.
+3. Then explain WHY the result matters.
+4. Give practical recommendations only when they are useful.
 
 VERIFIED DATA RULES:
 
 - ZETRA business data supplied in context is authoritative.
 - Never invent business figures.
 - Never replace supplied figures with your own estimates.
-- Never silently change dates, totals, percentages, sales counts, COGS, expenses, gross profit, or net profit.
+- Never silently change dates, totals, percentages, orders, COGS, expenses,
+  gross profit, or net profit.
 - Never claim a figure is verified unless it is actually supplied by ZETRA context.
 - Clearly distinguish FACTS from INTERPRETATION.
-- Never present a possible cause as if it were a verified cause.
-- If the supplied data does not establish WHY something happened, say what the figures show and clearly state that the exact cause cannot be confirmed from the available data.
-- Do not invent explanations such as stock shortages, weak marketing, customer loss, seasonality, supplier problems, price changes, or market changes unless ZETRA context provides evidence for them.
-- Never invent or name a specific product, product category, customer segment, supplier, competitor, location, or stock condition unless that exact entity or condition is explicitly supported by the supplied ZETRA context.
-- Recommendations based on an unverified possible cause must be framed as something to investigate or check, never as a diagnosed fact.
 
-ZETRA BUSINESS METRIC MEANINGS (CRITICAL):
+If comparing periods:
 
-- ordersCount represents the NUMBER OF COMPLETED SALES TRANSACTIONS recorded by ZETRA BMS for the period.
-- In Swahili, describe ordersCount naturally as "Idadi ya Mauzo" or "miamala ya mauzo", depending on the sentence.
-- NEVER translate ordersCount as "agizo", "maagizo", or imply that it means customer purchase orders.
-- averageOrderValue represents the average monetary value of a completed sale.
-- In Swahili, describe averageOrderValue as "Wastani wa Thamani ya Mauzo" or naturally as "wastani wa thamani ya kila mauzo".
-- Do not describe averageOrderValue as "wastani kwa agizo".
-- salesTotal means the monetary value of sales, while ordersCount means the number of completed sales transactions. Keep these concepts distinct.
-
-INVENTORY DATA QUALITY (CRITICAL):
-
-- Never interpret a historical stock value of 0 as proof that the business had no stock unless the context explicitly confirms that historical inventory data is verified.
-- HISTORICAL_UNAVAILABLE means historical inventory is unknown, not zero.
-- NO_BASELINE means there is no reliable comparison baseline; it does NOT mean the previous value was actually zero.
-- If historical inventory is unavailable, omit stock comparison conclusions for that historical period.
-- Never use unavailable historical inventory to explain changes in sales, profit, or transaction count.
-- Current verified inventory may be discussed as the current position, but it must not be projected backward into historical periods.
-
-PERIOD COMPARISON RULES:
-
-- PERIOD STATUS HAS PRIORITY OVER PERFORMANCE JUDGMENT. Always inspect the supplied canonical period dates, period preset, comparison mode, PERIOD STATUS, and COMPARISON BASIS before describing performance.
-- If the canonical context says the current week, month, or year is still in progress, explicitly say so at the beginning of the answer. Never describe an in-progress period as if it were complete.
-- When an in-progress current period is compared with an equivalent elapsed previous period, explicitly describe the comparison as period-to-date versus the equivalent elapsed portion of the previous period. For example: week-to-date versus the same elapsed days of the previous week.
-- Do not tell the user they must wait for the current period to finish. A period-to-date comparison is valid when equivalent elapsed periods are being compared; simply clarify that the final result can still change before the current period closes.
-- Never call a short period-to-date decline alarming, dangerous, terrible, frightening, a crisis, or a long-term negative trend unless verified longer-term data supports that judgment.
-- Lead with the business conclusion, not with a list of metrics. For an in-progress period, qualify that conclusion with words equivalent to "so far", "to date", or "hadi sasa".
-- For completed comparable periods, state which period performed better overall when the verified figures support that conclusion. For an in-progress comparison, state only which side is ahead or behind SO FAR; do not imply a final period outcome.
-- For a normal comparison question, select only the 3 to 4 metrics that best explain the business outcome. Usually prioritize net profit, sales, completed sales transactions, and one especially relevant driver such as expenses, average sale value, or margin.
-- Do NOT enumerate every available metric merely because it exists in the supplied data.
-- Give a full metric-by-metric breakdown only when the user explicitly asks for full details, all figures, a report, or a detailed breakdown.
-- Distinguish revenue performance from profitability. Higher sales do not automatically mean better profit, and lower sales do not automatically mean worse margins.
-- Synthesize related figures into business insight. For example, if both completed sales transactions and average sale value declined alongside total sales, explain that sales weakened through both fewer transactions and lower value per transaction.
-- When expenses materially increased while net profit declined, you may state that the higher recorded expenses reduced retained profit because that relationship is demonstrated by the supplied figures.
-- Explain WHY only when the verified figures establish that relationship.
-- Never invent the underlying cause of a change. If the figures show WHAT changed but not WHY it happened, say that the exact cause is not established by the available data.
-- Recommendations must follow from verified findings. When the cause is unknown, recommend what should be investigated rather than presenting an unverified diagnosis.
+- State clearly which period performed better.
+- Mention the most important differences.
+- Explain the business reason in natural language.
+- Do not simply repeat every number mechanically.
+- Focus on the numbers that actually explain the conclusion.
 
 WRITING STYLE:
 
-- Sound like an intelligent business adviser interpreting verified ZETRA data, not a system reading database fields.
-- Conclusion first; supporting evidence second; practical meaning third.
-- Prefer synthesis over enumeration.
-- For a simple business question, keep the default response concise: normally 2 to 4 short paragraphs or an equivalently compact structure.
-- Do not create long numbered lists of metrics unless the user asks for a detailed report or a full breakdown.
-- Do not repeat the same percentage, amount, and interpretation in separate sentences when one clear sentence can communicate them.
-- Use clear everyday business language while preserving technical terms where they improve precision.
-- Avoid unnecessary headings. Use a short heading only when it materially improves readability.
-- Keep the answer proportional to the user's question.
-- End after the useful conclusion or next practical focus; do not pad the answer with generic business advice.
-- When verified data cannot establish the cause, say so briefly and confidently instead of filling the gap with speculation.
+- Sound natural, intelligent, and confident.
+- Do not sound like a database dump.
+- Do not sound like machine-generated translation.
+- Avoid unnecessary headings when a short natural explanation is better.
+- Use headings only when they genuinely improve readability.
+- Keep the answer proportional to the question.
 `;
 
   const safetyPolicy = `
@@ -1188,7 +1149,7 @@ function buildFullCombinedDataReply( text: string, ctx: ReqBody["context"] ) {
         lines.push(formatInjectedProductLine(p, "LOW"));
       }
     } else {
-      lines.push("• Kwa sasa hakuna bidhaa zilizo kwenye orodha ya bidhaa zinazokaribia kuisha.");
+      lines.push("• Hakuna low stock items zilizoinjectiwa kwa sasa.");
     }
     lines.push("");
   }
@@ -1200,7 +1161,7 @@ function buildFullCombinedDataReply( text: string, ctx: ReqBody["context"] ) {
         lines.push(formatInjectedProductLine(p, "SLOW"));
       }
     } else {
-      lines.push("• Kwa sasa hakuna bidhaa zilizobainika kuwa zinauzwa kwa mwendo mdogo au ambazo hazijauzwa kwa muda.");
+      lines.push("• Hakuna slow/dead stock items zilizoinjectiwa kwa sasa.");
     }
     lines.push("");
   }
@@ -1212,7 +1173,7 @@ function buildFullCombinedDataReply( text: string, ctx: ReqBody["context"] ) {
         lines.push(formatInjectedProductLine(p, "TOP"));
       }
     } else {
-      lines.push("• Kwa sasa hakuna orodha ya bidhaa zinazofanya vizuri zaidi iliyopatikana.");
+      lines.push("• Hakuna top products zilizoinjectiwa kwa sasa.");
     }
     lines.push("");
   }
@@ -1232,20 +1193,20 @@ function buildFullCombinedDataReply( text: string, ctx: ReqBody["context"] ) {
     lines.push(`• Margin: ${fmtPercent(marginPct)}`);
 
     if (marginPct < 10) {
-      lines.push("• Tatizo kubwa linaonekana kuwa kwenye kiwango kidogo cha faida kinachobaki baada ya mauzo.");
+      lines.push("• Leak kubwa iko kwenye margin ya jumla ya biashara kuwa ndogo sana.");
     }
 
     if (salesTotal > 0 && cogsTotal > salesTotal * 0.8) {
-      lines.push("• Gharama za bidhaa zilizouzwa (COGS) ni kubwa ukilinganisha na mauzo ya kipindi hiki, jambo linalobana faida.");
+      lines.push("• Leak kubwa iko kwenye COGS ya biashara kuwa kubwa sana dhidi ya sales za kipindi hiki.");
     }
 
     if (salesTotal > 0 && expensesTotal > salesTotal * 0.2) {
-      lines.push("• Matumizi pia ni makubwa ukilinganisha na mauzo ya kipindi hiki, hivyo yanapunguza faida inayobaki.");
+      lines.push("• Leak nyingine iko kwenye expenses za biashara kuwa nzito dhidi ya sales za kipindi hiki.");
     }
 
     if (topProducts.length) {
       lines.push("");
-      lines.push("Bidhaa za kwanza kukaguliwa kwenye bei ya kuuza na gharama yake:");
+      lines.push("Bidhaa za kwanza kukaguliwa kwa pricing/cost:");
       for (const p of topProducts.slice(0, 5)) {
         lines.push(formatInjectedProductLine(p, "TOP"));
       }
@@ -1253,7 +1214,7 @@ function buildFullCombinedDataReply( text: string, ctx: ReqBody["context"] ) {
 
     if (slowItems.length) {
       lines.push("");
-      lines.push("Bidhaa zinazofunga mtaji kwa sababu hazitembei vizuri:");
+      lines.push("Bidhaa zinazofunga cash bila movement:");
       for (const p of slowItems.slice(0, 5)) {
         lines.push(formatInjectedProductLine(p, "SLOW"));
       }
@@ -1268,12 +1229,12 @@ function buildFullCombinedDataReply( text: string, ctx: ReqBody["context"] ) {
     q.asksProfitLeak
   ) {
     lines.push("HATUA ZA HARAKA:");
-    lines.push("• Hakikisha bidhaa zinazouza zaidi hazikosi stock.");
-    lines.push("• Punguza kuagiza tena bidhaa ambazo zinauzwa kwa mwendo mdogo au hazitembei.");
-    lines.push("• Unganisha bidhaa inayouza vizuri na bidhaa inayotembea polepole ili kusaidia kuongeza mauzo yake.");
-    lines.push("• Kagua kwanza gharama za ununuzi kwa bidhaa zinazouza zaidi.");
+    lines.push("• Linda stock ya top products zisije kuisha.");
+    lines.push("• Punguza reorder ya slow/dead stock kwanza.");
+    lines.push("• Tumia bundle ya top product + slow item kusukuma movement.");
+    lines.push("• Kagua supplier cost ya top products kwanza.");
     lines.push(
-      "• Rekebisha bei au kiwango cha faida kwa bidhaa zinazobeba mauzo lakini zinaacha faida ndogo."
+      "• Rekebisha price/margin ya bidhaa zinazobeba mauzo lakini faida ndogo."
     );
   }
 
@@ -1329,10 +1290,10 @@ function buildInjectedSnapshotReply( text: string, ctx: ReqBody["context"] ) {
   if (wantsForecast) {
     const lines: string[] = [];
     lines.push(
-      `Hii ndiyo hali ya mauzo ya ${ clean(snapshot?.store_name) || "store hii" } sasa hivi:`
+      `Hii ndiyo sales view ya ${ clean(snapshot?.store_name) || "store hii" } sasa hivi:`
     );
     lines.push("");
-    lines.push("HATARI MUHIMU:");
+    lines.push("CRITICAL RISKS:");
     if (lowStockItems.length) {
       lines.push(
         `• Kuna ${lowStockItems.length} bidhaa low stock zinazoweza kukata sales momentum.`
@@ -1344,52 +1305,52 @@ function buildInjectedSnapshotReply( text: string, ctx: ReqBody["context"] ) {
     }
 
     lines.push("");
-    lines.push("FURSA ZA MAPATO:");
+    lines.push("MONEY OPPORTUNITIES:");
     if (topProducts.length) {
       const p = topProducts[0];
       lines.push(
         `• ${ clean(p?.product_name) || "Top product" } ndiyo strongest mover sasa — sukuma hii kwanza.`
       );
     }
-    lines.push(`• Wastani wa thamani ya kila agizo kwa sasa ni ${fmtMoney(avgOrderValue)}.`);
+    lines.push(`• Average order value ya sasa ni ${fmtMoney(avgOrderValue)}.`);
 
     lines.push("");
     lines.push("FORECAST:");
     if (trendLabel === "INCREASING") {
-      lines.push(`Mwelekeo: mauzo yanaongezeka (${fmtPercent(trendPct)}).`);
+      lines.push(`Trend: mauzo yanaongezeka (${fmtPercent(trendPct)}).`);
     } else if (trendLabel === "DECLINING") {
-      lines.push(`Mwelekeo: mauzo yanashuka (${fmtPercent(trendPct)}).`);
+      lines.push(`Trend: mauzo yanashuka (${fmtPercent(trendPct)}).`);
     } else {
-      lines.push(`Mwelekeo: mauzo yako tulivu (${fmtPercent(trendPct)}).`);
+      lines.push(`Trend: mauzo yapo stable (${fmtPercent(trendPct)}).`);
     }
 
     if (projectedOrders > 0) {
       lines.push(
-        `Makadirio ya maagizo ya siku inayofuata: ${projectedOrders.toLocaleString( "en-US" )}`
+        `Projected Orders (next day): ${projectedOrders.toLocaleString( "en-US" )}`
       );
     }
     if (projectedSales > 0) {
-      lines.push(`Makadirio ya mauzo ya siku inayofuata: ${fmtMoney(projectedSales)}`);
+      lines.push(`Projected Sales (next day): ${fmtMoney(projectedSales)}`);
     }
 
     lines.push("");
-    lines.push("HATUA:");
-    lines.push("• Hakikisha bidhaa zinazouza zaidi hazikosi stock.");
+    lines.push("ACTIONS:");
+    lines.push("• Linda top products zako zisikose stock.");
     if (lowStockItems.length)
-      lines.push("• Ongeza stock ya bidhaa muhimu mapema ili mauzo yasiathirike.");
+      lines.push("• Restock bidhaa muhimu kabla momentum haijakatika.");
     if (trendLabel === "INCREASING")
-      lines.push("• Andaa stock na timu vizuri ili kutumia ongezeko la mauzo.");
+      lines.push("• Andaa stock na timu kutumia momentum.");
     if (trendLabel === "DECLINING")
-      lines.push("• Kagua stock, bei, na namna wateja wanavyohudumiwa leo.");
+      lines.push("• Rekebisha stock, pricing, na customer flow leo.");
 
     return stabilizeReplyText(lines.join("\n"), {
       actions: [
-        "Hakikisha bidhaa zinazouza zaidi hazikosi stock.",
+        "Linda top products zako zisikose stock.",
         lowStockItems.length
-          ? "Ongeza stock ya bidhaa muhimu mapema ili mauzo yasiathirike."
+          ? "Restock bidhaa muhimu kabla momentum haijakatika."
           : "",
         trendLabel === "INCREASING"
-          ? "Andaa stock na timu vizuri ili kutumia ongezeko la mauzo."
+          ? "Andaa stock na timu kutumia momentum."
           : "",
       ].filter(Boolean),
       forceNextMove: true,
@@ -1399,10 +1360,10 @@ function buildInjectedSnapshotReply( text: string, ctx: ReqBody["context"] ) {
   if (wantsCoach) {
     const lines: string[] = [];
     lines.push(
-      `Huu ni ushauri wa biashara kwa ${ clean(snapshot?.store_name) || "store hii" } kwa sasa:`
+      `Hapa kuna business coach ya ${ clean(snapshot?.store_name) || "store hii" } kwa sasa:`
     );
     lines.push("");
-    lines.push("Muhtasari:");
+    lines.push("Summary:");
     lines.push(`• Sales: ${fmtMoney(salesTotal)}`);
     lines.push(`• Profit: ${fmtMoney(profitTotal)}`);
     lines.push(`• Margin: ${fmtPercent(marginPct)}`);
@@ -1411,10 +1372,10 @@ function buildInjectedSnapshotReply( text: string, ctx: ReqBody["context"] ) {
     lines.push(`• Dead stock: ${slowItems.length}`);
 
     lines.push("");
-    lines.push("Mambo mawili yanayofanya vizuri:");
+    lines.push("Mambo 2 Yako Strong:");
     if (topProducts.length) {
       lines.push(
-        `• ${clean( topProducts[0]?.product_name )} ndiyo inaonekana kuchangia zaidi kwa sasa.`
+        `• ${clean( topProducts[0]?.product_name )} inaonekana kuwa strongest contributor kwa sasa.`
       );
     } else {
       lines.push(
@@ -1424,63 +1385,63 @@ function buildInjectedSnapshotReply( text: string, ctx: ReqBody["context"] ) {
 
     if (profitTotal > 0) {
       lines.push(
-        "• Biashara ina faida chanya, hivyo msingi wake bado uko katika hali nzuri."
+        "• Uko kwenye profit chanya, hivyo msingi wa biashara bado upo vizuri."
       );
     } else {
       lines.push(
-        "• Bado kuna nafasi ya kuboresha utendaji kabla hali haijawa mbaya zaidi."
+        "• Una nafasi ya kurekebisha performance kabla hali haijawa mbaya zaidi."
       );
     }
 
     lines.push("");
-    lines.push("Mambo mawili yanayohitaji uangalizi:");
+    lines.push("Mambo 2 Yanahitaji Attention:");
     if (topProducts.length > 1) {
       lines.push(
         `• ${clean( topProducts[1]?.product_name )} inaonekana kuwa sehemu dhaifu kwenye efficiency ya profit.`
       );
     } else if (marginPct < 12) {
-      lines.push("• Kiwango cha faida ya biashara kiko chini ya kiwango kinachofaa.");
+      lines.push("• Margin ya biashara iko chini kuliko comfort zone.");
     } else {
       lines.push(
-        "• Udhibiti wa bei na gharama bado unahitaji kufuatiliwa kwa karibu."
+        "• Pricing/cost discipline bado vinahitaji kufuatiliwa karibu."
       );
     }
 
     if (lowStockItems.length) {
       lines.push(
-        `• Kuna ${lowStockItems.length} bidhaa zinazokaribia kuisha ambazo zinaweza kuathiri mauzo usipoongeza stock mapema.`
+        `• Kuna ${lowStockItems.length} bidhaa low stock ambazo zinaweza kukata mauzo ukichelewa restock.`
       );
     } else if (slowItems.length) {
       lines.push(
-        `• Kuna ${slowItems.length} bidhaa zinazotembea polepole au kutouzwa kabisa, hivyo zinafunga mtaji.`
+        `• Kuna ${slowItems.length} bidhaa slow/dead stock zinazofunga cash.`
       );
     } else if (expensesTotal > 0) {
       lines.push(
-        `• Matumizi ya ${fmtMoney( expensesTotal )} yanahitaji kukaguliwa kwa karibu.`
+        `• Expenses za ${fmtMoney( expensesTotal )} zinahitaji uhalali wa moja kwa moja.`
       );
     }
 
     lines.push("");
-    lines.push("HATUA:");
-    lines.push("• Kagua bidhaa zenye kiwango kidogo cha faida na uboreshe bei yake inapohitajika.");
+    lines.push("ACTIONS:");
+    lines.push("• Kagua bidhaa zenye margin ndogo na uboreshe markup.");
     if (lowStockItems.length)
       lines.push("• Restock bidhaa muhimu kabla sales momentum haijakatika.");
     if (slowItems.length)
-      lines.push("• Fanya ofa au punguzo kwa bidhaa zisizotembea ili kufungua mtaji uliokwama.");
+      lines.push("• Fanya promo au markdown kwa dead stock ili kufungua cash.");
     if (expensesTotal > 0)
-      lines.push("• Pitia matumizi makubwa na punguza yasiyo ya lazima.");
+      lines.push("• Pitia expense kubwa na kata zisizo za lazima.");
 
     return stabilizeReplyText(lines.join("\n"), {
       actions: [
-        "Kagua bidhaa zenye kiwango kidogo cha faida na uboreshe bei yake inapohitajika.",
+        "Kagua bidhaa zenye margin ndogo na uboreshe markup.",
         lowStockItems.length
           ? "Restock bidhaa muhimu kabla sales momentum haijakatika."
           : "",
         slowItems.length
-          ? "Fanya ofa au punguzo kwa bidhaa zisizotembea ili kufungua mtaji uliokwama."
+          ? "Fanya promo au markdown kwa dead stock ili kufungua cash."
           : "",
         expensesTotal > 0
-          ? "Pitia matumizi makubwa na punguza yasiyo ya lazima."
+          ? "Pitia expense kubwa na kata zisizo za lazima."
           : "",
       ].filter(Boolean),
       forceNextMove: true,
@@ -1489,82 +1450,82 @@ function buildInjectedSnapshotReply( text: string, ctx: ReqBody["context"] ) {
 
   const lines: string[] = [];
   lines.push(
-    `Huu ni uchambuzi wa biashara yako wa leo kwa ${ clean(snapshot?.store_name) || "store hii" }:`
+    `Hapa kuna analysis ya biashara yako ya leo kwa ${ clean(snapshot?.store_name) || "store hii" }:`
   );
   lines.push("");
   lines.push("Sales: " + fmtMoney(salesTotal));
   lines.push("COGS: " + fmtMoney(cogsTotal));
   lines.push("Expenses: " + fmtMoney(expensesTotal));
   lines.push("Profit: " + fmtMoney(profitTotal));
-  lines.push("Maagizo: " + ordersCount.toLocaleString("en-US"));
-  lines.push("Wastani kwa agizo: " + fmtMoney(avgOrderValue));
+  lines.push("Orders: " + ordersCount.toLocaleString("en-US"));
+  lines.push("Avg/Order: " + fmtMoney(avgOrderValue));
   lines.push("Margin: " + fmtPercent(marginPct));
 
   lines.push("");
-  lines.push("UCHAMBUZI:");
+  lines.push("INSIGHTS:");
   if (marginPct < 10) {
-    lines.push("• Kiwango chako cha faida ni kidogo sana.");
+    lines.push("• Margin yako ni ndogo sana.");
   } else if (marginPct < 20) {
-    lines.push("• Kiwango cha faida kiko cha wastani na bado kinaweza kuboreshwa.");
+    lines.push("• Margin iko medium — inaweza kuboreshwa.");
   } else {
-    lines.push("• Kiwango cha faida kiko vizuri.");
+    lines.push("• Margin iko vizuri sana.");
   }
 
   if (expensesTotal > 0) {
     lines.push(
-      `• Matumizi ya ${fmtMoney(expensesTotal)} yanapunguza faida moja kwa moja.`
+      `• Expenses za ${fmtMoney(expensesTotal)} zinakata profit moja kwa moja.`
     );
   }
 
   if (lowStockItems.length) {
     lines.push(
-      `• Kuna ${lowStockItems.length} bidhaa zinazokaribia kuisha na zinahitaji kuongezewa stock.`
+      `• Kuna ${lowStockItems.length} bidhaa low stock zinazohitaji uangalizi.`
     );
   }
 
   lines.push("");
-  lines.push("MAWAZO:");
+  lines.push("IDEAS:");
   if (topProducts.length) {
     lines.push(
-      `• Sukuma ${clean( topProducts[0]?.product_name )} zaidi kwa sababu ndiyo bidhaa inayofanya vizuri zaidi.`
+      `• Sukuma ${clean( topProducts[0]?.product_name )} zaidi kwa sababu ndiyo strongest mover.`
     );
   }
   if (slowItems.length) {
-    lines.push("• Punguza mtaji uliokwama kwenye bidhaa zinazotembea polepole au zisizouzwa.");
+    lines.push("• Punguza cash iliyokwama kwenye bidhaa slow/dead stock.");
   }
   if (expensesTotal > 0) {
     lines.push("• Punguza matumizi yasiyo ya lazima.");
   }
 
   lines.push("");
-  lines.push("HATUA:");
+  lines.push("ACTIONS:");
   lines.push("• Linda top products zisikose stock.");
-  if (lowStockItems.length) lines.push("• Ongeza stock ya bidhaa muhimu mapema.");
+  if (lowStockItems.length) lines.push("• Restock bidhaa muhimu mapema.");
   if (slowItems.length)
-    lines.push("• Fanya ofa au punguzo kwa bidhaa zinazotembea polepole.");
-  if (expensesTotal > 0) lines.push("• Pitia matumizi makubwa ya leo.");
+    lines.push("• Fanya promo/markdown ya bidhaa slow moving.");
+  if (expensesTotal > 0) lines.push("• Pitia expenses kubwa za leo.");
 
   return stabilizeReplyText(lines.join("\n"), {
     warnings: [
       marginPct < 10
-        ? "Kiwango chako cha faida ni kidogo sana."
+        ? "Margin yako ni ndogo sana."
         : marginPct < 20
-        ? "Kiwango cha faida kiko cha wastani na bado kinaweza kuboreshwa."
-        : "Kiwango cha faida kiko vizuri.",
+        ? "Margin iko medium — inaweza kuboreshwa."
+        : "Margin iko vizuri sana.",
       expensesTotal > 0
-        ? `Matumizi ya ${fmtMoney( expensesTotal )} yanapunguza faida moja kwa moja.`
+        ? `Expenses za ${fmtMoney( expensesTotal )} zinakata profit moja kwa moja.`
         : "",
       lowStockItems.length
-        ? `Kuna ${lowStockItems.length} bidhaa zinazokaribia kuisha na zinahitaji kuongezewa stock.`
+        ? `Kuna ${lowStockItems.length} bidhaa low stock zinazohitaji uangalizi.`
         : "",
     ].filter(Boolean),
     actions: [
       "Linda top products zisikose stock.",
-      lowStockItems.length ? "Ongeza stock ya bidhaa muhimu mapema." : "",
+      lowStockItems.length ? "Restock bidhaa muhimu mapema." : "",
       slowItems.length
-        ? "Fanya ofa au punguzo kwa bidhaa zinazotembea polepole."
+        ? "Fanya promo/markdown ya bidhaa slow moving."
         : "",
-      expensesTotal > 0 ? "Pitia matumizi makubwa ya leo." : "",
+      expensesTotal > 0 ? "Pitia expenses kubwa za leo." : "",
     ].filter(Boolean),
     forceNextMove: true,
   });
@@ -1597,15 +1558,15 @@ function buildDirectProductDataReply( text: string, ctx: ReqBody["context"] ) {
     }
 
     return [
-      "Hizi ndizo bidhaa zinazokaribia kuisha kwa mujibu wa data halisi ya sasa:",
+      "Hizi ndizo bidhaa zako ziko low stock kwa data halisi ya sasa:",
       "",
       ...lowStockItems
         .slice(0, 12)
         .map((p: any) => formatInjectedProductLine(p, "LOW")),
       "",
       "Hatua ya haraka:",
-      "• Ongeza kwanza stock ya bidhaa ambazo kiwango chake kimeshuka chini ya kiwango kilichowekwa",
-      "• Bidhaa zilizoisha kabisa zipewe kipaumbele cha kwanza wakati wa kuongeza stock",
+      "• Refill bidhaa zenye stock ndogo kuliko threshold kwanza",
+      "• Zenye status OUT ziwe priority ya kwanza kurestock",
     ].join("\n");
   }
 
@@ -1620,16 +1581,16 @@ function buildDirectProductDataReply( text: string, ctx: ReqBody["context"] ) {
     }
 
     return [
-      "Hizi ndizo bidhaa zinazotembea polepole au ambazo hazijauzwa kwa muda, kwa mujibu wa data halisi ya sasa:",
+      "Hizi ndizo bidhaa zako slow moving / dead stock kwa data halisi ya sasa:",
       "",
       ...slowItems
         .slice(0, 12)
         .map((p: any) => formatInjectedProductLine(p, "SLOW")),
       "",
       "Hatua ya haraka:",
-      "• Punguza kuagiza tena bidhaa hizi kwanza",
-      "• Fikiria ofa au kuziunganisha na bidhaa nyingine ili kuongeza mauzo yake",
-      "• Kagua kama bei au mpangilio wa bidhaa unahitaji kubadilishwa",
+      "• Punguza reorder ya bidhaa hizi kwanza",
+      "• Fikiria offer/bundle kwa bidhaa hizi ili zitembee",
+      "• Kagua kama pricing au display yake inahitaji kubadilishwa",
     ].join("\n");
   }
 
@@ -1644,16 +1605,16 @@ function buildDirectProductDataReply( text: string, ctx: ReqBody["context"] ) {
     }
 
     return [
-      "Hizi ndizo bidhaa zinazofanya vizuri zaidi kwa mujibu wa data halisi ya sasa:",
+      "Hizi ndizo top products zako kwa data halisi ya sasa:",
       "",
       ...topProducts
         .slice(0, 12)
         .map((p: any) => formatInjectedProductLine(p, "TOP")),
       "",
       "Hatua ya haraka:",
-      "• Hakikisha bidhaa hizi hazikosi stock",
-      "• Kagua kiwango cha faida cha bidhaa hizi kwa sababu ndizo zinazobeba sehemu kubwa ya mauzo",
-      "• Tumia bidhaa hizi kama msingi wa ofa au vifurushi vya mauzo",
+      "• Linda stock ya bidhaa hizi zisije kuisha",
+      "• Kagua margin ya bidhaa hizi kwa sababu ndizo zinabeba mauzo zaidi",
+      "• Tumia bidhaa hizi kama anchor ya bundles/offers",
     ].join("\n");
   }
 
@@ -1671,22 +1632,22 @@ function buildDirectProductDataReply( text: string, ctx: ReqBody["context"] ) {
       : ["• Hakuna slow/dead stock items zilizoinjectiwa kwa sasa"];
 
     const actions: string[] = [];
-    actions.push("1. Hakikisha kwanza bidhaa zinazouza zaidi zinapatikana muda wote.");
+    actions.push("1. Linda availability ya top products zako kwanza.");
     actions.push(
-      "2. Usiongeze ununuzi wa bidhaa zinazotembea polepole mpaka stock iliyopo ipungue."
+      "2. Usiongeze buying ya slow items mpaka zilizopo zipungue."
     );
     actions.push(
       "3. Tumia bundle: top product + slow item ili kusukuma slow stock."
     );
     actions.push(
-      "4. Kagua bei za bidhaa zinazotembea polepole ili kuona kama bei ndiyo inayozuia mauzo."
+      "4. Kagua pricing ya slow items kama bei imebana movement."
     );
     actions.push(
-      "5. Boresha mpangilio au fanya ofa ya haraka kwa bidhaa zinazotembea polepole zenye stock kubwa."
+      "5. Toa display/promo ya haraka kwa slow items zenye stock kubwa."
     );
 
     return [
-      "Huu ni mchanganuo wa bidhaa zako zinazofanya vizuri zaidi ukilinganisha na zinazotembea polepole:",
+      "Hapa kuna mchanganuo wa real products zako za top vs slow moving:",
       "",
       "TOP PRODUCTS:",
       ...topLines,
@@ -1694,7 +1655,7 @@ function buildDirectProductDataReply( text: string, ctx: ReqBody["context"] ) {
       "SLOW / DEAD STOCK:",
       ...slowLines,
       "",
-      "Hatua tano za haraka:",
+      "Hatua 5 za haraka:",
       ...actions.map((x) => `• ${x}`),
     ].join("\n");
   }
@@ -1707,41 +1668,41 @@ function buildDirectProductDataReply( text: string, ctx: ReqBody["context"] ) {
 
     const lines: string[] = [];
     lines.push(
-      "Haya ndiyo maeneo yanayoweza kupunguza faida kwa kutumia data halisi ya sasa:"
+      "Hapa kuna leak ya profit kwa kutumia data halisi ya sasa:"
     );
 
     if (marginPct < 10) {
-      lines.push(`• Kiwango cha faida kiko chini: ${fmtPercent(marginPct)}`);
+      lines.push(`• Margin iko chini: ${fmtPercent(marginPct)}`);
     }
 
     if (salesTotal > 0 && cogsTotal > salesTotal * 0.8) {
       lines.push(
-        `• COGS inabana faida kwa kiwango kikubwa: sales ${fmtMoney( salesTotal )} vs COGS ${fmtMoney(cogsTotal)}`
+        `• COGS imebana sana faida: sales ${fmtMoney( salesTotal )} vs COGS ${fmtMoney(cogsTotal)}`
       );
     }
 
     if (salesTotal > 0 && expensesTotal > salesTotal * 0.2) {
       lines.push(
-        `• Matumizi ni makubwa ukilinganisha na mauzo: ${fmtMoney(expensesTotal)}`
+        `• Expenses ni nzito dhidi ya sales: ${fmtMoney(expensesTotal)}`
       );
     }
 
     if (topProducts.length) {
       lines.push("");
       lines.push(
-        "Bidhaa za kwanza kukaguliwa kwenye bei, gharama na kiwango cha faida:"
+        "Bidhaa za kwanza za kukaguliwa kwa pricing/cost/margin:"
       );
       for (const p of topProducts.slice(0, 5)) {
         lines.push(formatInjectedProductLine(p, "TOP"));
       }
       lines.push(
-        "• Kumbuka: bidhaa inayouza zaidi si tatizo moja kwa moja; tatizo la faida linathibitishwa kwa kuangalia kiwango cha faida, gharama na matumizi."
+        "• Kumbuka: top product si leak moja kwa moja; leak inathibitishwa na margin/cost/expense pressure."
       );
     }
 
     if (slowItems.length) {
       lines.push("");
-      lines.push("Bidhaa zinazofunga mtaji kwa sababu hazitembei vizuri:");
+      lines.push("Bidhaa zinazofunga cash bila movement:");
       for (const p of slowItems.slice(0, 5)) {
         lines.push(formatInjectedProductLine(p, "SLOW"));
       }
@@ -1749,7 +1710,7 @@ function buildDirectProductDataReply( text: string, ctx: ReqBody["context"] ) {
 
     if (lowStockItems.length) {
       lines.push("");
-      lines.push("Bidhaa zenye hatari ya kuisha stock:");
+      lines.push("Bidhaa zenye risk ya stock interruption:");
       for (const p of lowStockItems.slice(0, 5)) {
         lines.push(formatInjectedProductLine(p, "LOW"));
       }
@@ -1757,14 +1718,14 @@ function buildDirectProductDataReply( text: string, ctx: ReqBody["context"] ) {
 
     lines.push("");
     lines.push("Hatua ya haraka:");
-    lines.push("• Kagua kwanza gharama za ununuzi kwa bidhaa zinazouza zaidi");
+    lines.push("• Kagua supplier cost ya top products kwanza");
     lines.push(
-      "• Rekebisha bei ya bidhaa zinazouza zaidi ikiwa kiwango cha faida ni kidogo"
+      "• Rekebisha price/margin ya top movers kama margin ni ndogo"
     );
     lines.push(
-      "• Punguza ununuzi wa bidhaa zinazokaa muda mrefu bila kuuzwa"
+      "• Punguza buying ya slow items zinazokaa bila kuuzwa"
     );
-    lines.push("• Ongeza stock ya bidhaa zinazouza vizuri kabla hazijaisha");
+    lines.push("• Restock low-stock winners ili usikate mauzo");
 
     return lines.join("\n");
   }
@@ -2074,15 +2035,15 @@ function stabilizeReplyText( raw: string, opts?: { actions?: string[]; ideas?: s
     const key = normalizeStableHeadingKey(line);
 
     if (key === "INSIGHTS") {
-      out.push("UCHAMBUZI:");
+      out.push("INSIGHTS:");
       continue;
     }
     if (key === "IDEAS") {
-      out.push("MAWAZO:");
+      out.push("IDEAS:");
       continue;
     }
     if (key === "ACTIONS") {
-      out.push("HATUA:");
+      out.push("ACTIONS:");
       continue;
     }
     if (key === "FORECAST" || key === "FORECAST BASED ON LAST 7 DAYS") {
@@ -2098,7 +2059,7 @@ function stabilizeReplyText( raw: string, opts?: { actions?: string[]; ideas?: s
       continue;
     }
     if (key === "NEXT MOVE") {
-      out.push("HATUA INAYOFUATA:");
+      out.push("NEXT MOVE:");
       continue;
     }
 
@@ -2107,7 +2068,7 @@ function stabilizeReplyText( raw: string, opts?: { actions?: string[]; ideas?: s
 
   let text = out.join("\n").replace(/\n{3,}/g, "\n\n").trim();
 
-  const hasNextMove = /(^|\n)HATUA INAYOFUATA:\s*(\n|$)/i.test(text);
+  const hasNextMove = /(^|\n)NEXT MOVE:\s*(\n|$)/i.test(text);
   if (!hasNextMove && opts?.forceNextMove) {
     const nextMove = buildNextMoveLine({
       actions: opts.actions,
@@ -2116,7 +2077,7 @@ function stabilizeReplyText( raw: string, opts?: { actions?: string[]; ideas?: s
     });
 
     if (nextMove) {
-      text = `${text}\n\nHATUA INAYOFUATA:\n• ${nextMove}`.trim();
+      text = `${text}\n\nNEXT MOVE:\n• ${nextMove}`.trim();
     }
   }
 
@@ -2380,7 +2341,7 @@ function buildSlashModeReply( cmd: "HEALTH" | "PROFIT" | "STOCK" | "FORECAST", l
     }
 
     return (
-      "Hali ya msaada wa afya imewashwa.\n\n" +
+      "Health mode imewashwa.\n\n" +
       "Sasa unaweza kuuliza moja kwa moja tatizo la afya, mfano:\n" +
       "• Kichwa kinauma sana\n" +
       "• Tumbo linauma\n" +
@@ -2392,18 +2353,18 @@ function buildSlashModeReply( cmd: "HEALTH" | "PROFIT" | "STOCK" | "FORECAST", l
   if (cmd === "PROFIT") {
     return lang === "en"
       ? "Profit mode is active. Ask about profit leaks, margin, COGS, expenses, or what to do next."
-      : "Hali ya uchambuzi wa faida imewashwa. Uliza kuhusu profit leak, margin, COGS, expenses, au hatua za kuchukua sasa.";
+      : "Profit mode imewashwa. Uliza kuhusu profit leak, margin, COGS, expenses, au hatua za kuchukua sasa.";
   }
 
   if (cmd === "STOCK") {
     return lang === "en"
       ? "Stock mode is active. Ask about low stock, dead stock, restock priorities, or display risk."
-      : "Hali ya uchambuzi wa stock imewashwa. Uliza kuhusu low stock, dead stock, restock priority, au display risk.";
+      : "Stock mode imewashwa. Uliza kuhusu low stock, dead stock, restock priority, au display risk.";
   }
 
   return lang === "en"
     ? "Forecast mode is active. Ask about trend, next-day projection, or next 7 days outlook."
-    : "Hali ya utabiri wa biashara imewashwa. Uliza kuhusu trend, projection ya kesho, au outlook ya siku 7 zijazo.";
+    : "Forecast mode imewashwa. Uliza kuhusu trend, projection ya kesho, au outlook ya siku 7 zijazo.";
 }
 
 function buildVisionBusinessGuard(text: string) {
@@ -2664,9 +2625,9 @@ function buildForecastBlock(points: ForecastPoint[]): string {
 
   const trendText =
     salesTrendPct > 8
-      ? `Mwelekeo: mauzo yanaongezeka (${fmtPercent(salesTrendPct)})`
+      ? `Trend: mauzo yanaongezeka (${fmtPercent(salesTrendPct)})`
       : salesTrendPct < -8
-      ? `Mwelekeo: mauzo yanashuka (${fmtPercent(salesTrendPct)})`
+      ? `Trend: mauzo yanashuka (${fmtPercent(salesTrendPct)})`
       : `Trend: mauzo yako yapo stable (${fmtPercent(salesTrendPct)})`;
 
   const projectedSales = Math.max(
@@ -2723,8 +2684,8 @@ function buildForecastBlock(points: ForecastPoint[]): string {
   return (
     `\n\nFORECAST:\n` +
     `${trendText}\n` +
-    `Makadirio ya maagizo ya siku inayofuata: ${projectedOrders.toLocaleString( "en-US" )}\n` +
-    `Makadirio ya mauzo ya siku inayofuata: ${fmtMoney(projectedSales)}\n` +
+    `Projected Orders (next day): ${projectedOrders.toLocaleString( "en-US" )}\n` +
+    `Projected Sales (next day): ${fmtMoney(projectedSales)}\n` +
     `Projected Profit (next day): ${fmtMoney(projectedProfit)}` +
     riskBlock +
     tipBlock
@@ -3568,13 +3529,8 @@ export default {
         }
       }
 
-      const canonicalBusinessVerified =
-        (ctx as any)?.canonicalBusinessVerified === true;
-
       const combinedInjectedReply =
-        canonicalBusinessVerified
-          ? ""
-          : buildFullCombinedDataReply(text, ctx);
+        buildFullCombinedDataReply(text, ctx);
 
       // Local deterministic reply: OpenAI credit NOT used.
       if (combinedInjectedReply) {
@@ -3606,9 +3562,7 @@ export default {
       }
 
       const directInjectedReply =
-        canonicalBusinessVerified
-          ? ""
-          : buildDirectProductDataReply(text, ctx);
+        buildDirectProductDataReply(text, ctx);
 
       // Local deterministic reply: OpenAI credit NOT used.
       if (directInjectedReply) {
@@ -3639,9 +3593,7 @@ export default {
       }
 
       const injectedSnapshotReply =
-        canonicalBusinessVerified
-          ? ""
-          : workerRoute.route === "BUSINESS_ANALYSIS" ||
+        workerRoute.route === "BUSINESS_ANALYSIS" ||
         workerRoute.route === "BUSINESS_FORECAST" ||
         workerRoute.route === "BUSINESS_COACH"
           ? buildInjectedSnapshotReply(text, ctx)
@@ -3677,7 +3629,6 @@ export default {
       }
 
       const wantsBusinessAnalysis =
-        !canonicalBusinessVerified &&
         (workerRoute.route === "BUSINESS_ANALYSIS" ||
           workerRoute.route === "BUSINESS_FORECAST" ||
           workerRoute.route === "BUSINESS_COACH") &&
@@ -3705,29 +3656,29 @@ export default {
 
           if (margin < 10) {
             warnings.push(
-              "⚠️ Kiwango chako cha faida ni kidogo sana na kinahitaji uangalizi wa haraka"
+              "⚠️ Margin yako ni ndogo sana (High Risk)"
             );
-            ideas.push("💡 Punguza gharama ya ununuzi kwa kujadiliana na msambazaji");
-            ideas.push("💡 Rekebisha bei ya kuuza inapohitajika");
+            ideas.push("💡 Punguza buying cost kwa supplier");
+            ideas.push("💡 Ongeza bei ya kuuza (price adjustment)");
             actions.push(
-              "👉 Kagua bidhaa tano zinazouzwa zaidi na uone kama kiwango cha faida kinaweza kuboreshwa"
+              "👉 Angalia bidhaa top 5 zinazouzwa zaidi — ongeza margin kidogo"
             );
             actions.push(
-              "👉 Linganisha na msambazaji mwingine mwenye gharama nafuu"
+              "👉 Jaribu supplier mwingine mwenye cost nafuu"
             );
           } else if (margin >= 10 && margin < 20) {
             warnings.push(
-              "📌 Kiwango cha faida kiko cha wastani na kinaweza kuboreshwa"
+              "📌 Margin iko medium — inaweza kuboreshwa"
             );
-            ideas.push("💡 Boresha mpangilio wa bei");
-            ideas.push("💡 Punguza matumizi yasiyo ya lazima");
+            ideas.push("💡 Optimize pricing strategy");
+            ideas.push("💡 Reduce unnecessary expenses");
             actions.push(
               "👉 Punguza gharama zisizo muhimu leo"
             );
           } else {
             warnings.push("✅ Margin iko vizuri sana");
             ideas.push(
-              "💡 Panua biashara kwa kuongeza stock na juhudi za masoko kwa uangalifu"
+              "💡 Scale biashara (ongeza stock & marketing)"
             );
             actions.push("👉 Ongeza bidhaa zinazouza sana");
           }
@@ -3736,7 +3687,7 @@ export default {
             snap.salesTotal > 0 &&
             snap.expensesTotal > snap.salesTotal * 0.3
           ) {
-            warnings.push("⚠️ Matumizi yako ni makubwa sana");
+            warnings.push("⚠️ Expenses zako ni kubwa sana");
             actions.push(
               "👉 Punguza matumizi ya pesa yasiyo ya lazima"
             );
@@ -3751,10 +3702,10 @@ export default {
             snap.cogsTotal > snap.salesTotal * 0.8
           ) {
             warnings.push(
-              "⚠️ COGS ni kubwa sana ukilinganisha na mauzo"
+              "⚠️ COGS yako ni kubwa sana ukilinganisha na sales"
             );
             ideas.push(
-              "💡 Kagua gharama za ununuzi na bei za bidhaa"
+              "💡 Kagua supplier cost na pricing ya bidhaa"
             );
           }
 
@@ -3763,7 +3714,7 @@ export default {
               "⚠️ Hakuna mauzo yaliyorekodiwa leo"
             );
             ideas.push(
-              "💡 Fanya ofa au kampeni ya haraka"
+              "💡 Fanya promotion au offer ya haraka"
             );
             actions.push(
               "👉 Tuma tangazo WhatsApp kwa wateja wako"
@@ -3811,7 +3762,7 @@ export default {
             warnings.length ||
             ideas.length ||
             actions.length
-              ? `\n\nUCHAMBUZI:\n${warnings .map((x) => `• ${stripEmoji(x)}`) .join("\n")}\n\nMAWAZO:\n${ideas .map((x) => `• ${stripEmoji(x)}`) .join("\n")}\n\nHATUA:\n${actions .map((x) => `• ${stripEmoji(x)}`) .join("\n")}`
+              ? `\n\nINSIGHTS:\n${warnings .map((x) => `• ${stripEmoji(x)}`) .join("\n")}\n\nIDEAS:\n${ideas .map((x) => `• ${stripEmoji(x)}`) .join("\n")}\n\nACTIONS:\n${actions .map((x) => `• ${stripEmoji(x)}`) .join("\n")}`
               : "";
 
           const autopilotAlerts = buildAutopilotAlerts({
@@ -3825,24 +3776,24 @@ export default {
 
           const headerText =
             businessIntent === "FORECAST"
-              ? `Huu ni utabiri wa biashara yako kwa duka "${activeStoreName}" ndani ya "${activeOrgName}":\n\n`
+              ? `Hapa kuna forecast ya biashara yako kwa store "${activeStoreName}" ndani ya "${activeOrgName}":\n\n`
               : businessIntent === "COACH"
-              ? `Huu ni ushauri wa kuongeza faida kwa duka "${activeStoreName}" ndani ya "${activeOrgName}":\n\n`
-              : `Huu ni uchambuzi wa biashara yako wa leo kwa store "${activeStoreName}" ndani ya "${activeOrgName}":\n\n`;
+              ? `Hapa kuna profit coach ya biashara yako kwa store "${activeStoreName}" ndani ya "${activeOrgName}":\n\n`
+              : `Hapa kuna analysis ya biashara yako ya leo kwa store "${activeStoreName}" ndani ya "${activeOrgName}":\n\n`;
 
           const baseSummary =
-            `Mauzo (jumla ya kipindi): ${fmtMoney( snap.salesTotal )}\n` +
+            `Sales (jumla ya kipindi): ${fmtMoney( snap.salesTotal )}\n` +
             `COGS (jumla ya kipindi): ${fmtMoney( snap.cogsTotal )}\n` +
-            `Matumizi (jumla ya kipindi): ${fmtMoney( snap.expensesTotal )}\n` +
-            `Faida (jumla ya kipindi): ${fmtMoney( snap.netProfit )}\n\n` +
-            `🧾 Maagizo: ${snap.ordersCount.toLocaleString( "en-US" )}\n` +
-            `🛒 Wastani kwa agizo: ${fmtMoney(snap.avgOrder)}\n` +
-            `💵 Fedha iliyoingia: ${fmtMoney(snap.moneyIn)}\n\n` +
+            `Expenses (jumla ya kipindi): ${fmtMoney( snap.expensesTotal )}\n` +
+            `Profit (jumla ya kipindi): ${fmtMoney( snap.netProfit )}\n\n` +
+            `🧾 Orders: ${snap.ordersCount.toLocaleString( "en-US" )}\n` +
+            `🛒 Avg/Order: ${fmtMoney(snap.avgOrder)}\n` +
+            `💵 Money In: ${fmtMoney(snap.moneyIn)}\n\n` +
             `📊 Margin: ${fmtPercent(margin)}`;
 
           const coachIntro =
             businessIntent === "COACH"
-              ? `\n\n🧠 USHAURI:\nLengo hapa ni kuongeza faida, kupunguza gharama, na kulinda kiwango kizuri cha faida ya biashara yako.\n`
+              ? `\n\n🧠 COACH NOTE:\nLengo letu hapa ni kuongeza faida, kupunguza cost, na kulinda margin ya biashara yako.\n`
               : "";
 
           const reply = stabilizeReplyText(

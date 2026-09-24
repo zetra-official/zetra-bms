@@ -17,7 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
 
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { useOrg } from "../../src/context/OrgContext";
 import { supabase } from "../../src/supabase/supabaseClient";
 import { Button } from "../../src/ui/Button";
@@ -50,6 +50,7 @@ type ProductRow = {
   precision_allow_box_sales?: boolean | null;
   precision_allow_unit_sales?: boolean | null;
 };
+
 const PRODUCT_PRICE_DECIMALS = 6;
 const PRODUCT_DRAFT_VERSION = "v1";
 
@@ -312,6 +313,8 @@ function ScannerFabIcon({ size = 28, color = "#E5E7EB" }: { size?: number; color
 }
 
 export default function ProductsTabScreen() {
+  const router = useRouter();
+
   const {
   activeOrgId,
   activeOrgName,
@@ -372,6 +375,7 @@ const [scanBusy, setScanBusy] = useState(false);
 const [keyboardSpace, setKeyboardSpace] = useState(0);
 
 const [productSearch, setProductSearch] = useState("");
+
 // Category autocomplete / dropdown
 const [storeCategories, setStoreCategories] = useState<string[]>([]);
 const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
@@ -396,6 +400,9 @@ const [editPrecisionUnit, setEditPrecisionUnit] = useState("");
 
 const [precisionCalcOpen, setPrecisionCalcOpen] = useState(false);
 const [editPrecisionCalcOpen, setEditPrecisionCalcOpen] = useState(false);
+
+
+
 
 const productDraftKey = useMemo(
   () =>
@@ -857,30 +864,41 @@ useEffect(() => {
     precisionCalcOpen,
   ]);
 
-  useFocusEffect(
-    useCallback(() => {
-      if (isCapitalRecoveryStore) {
-        setActiveScanScope("GLOBAL");
-        return () => {
-          setActiveScanScope("GLOBAL");
-        };
-      }
+ useFocusEffect(
+  useCallback(() => {
+    // Product data inaweza kubadilishwa kutoka Catalog/Import screen.
+    // Kila Products tab inapopata focus, soma database upya.
+    void load();
+    void loadStoreCategories();
 
-      setActiveScanScope("PRODUCTS");
-
-      const unsub = subscribeScanBarcode(
-        (barcode) => {
-          handleProductsScopedScan(barcode);
-        },
-        { scope: "PRODUCTS" }
-      );
+    if (isCapitalRecoveryStore) {
+      setActiveScanScope("GLOBAL");
 
       return () => {
-        unsub();
         setActiveScanScope("GLOBAL");
       };
-    }, [handleProductsScopedScan, isCapitalRecoveryStore])
-  );
+    }
+
+    setActiveScanScope("PRODUCTS");
+
+    const unsub = subscribeScanBarcode(
+      (barcode) => {
+        handleProductsScopedScan(barcode);
+      },
+      { scope: "PRODUCTS" }
+    );
+
+    return () => {
+      unsub();
+      setActiveScanScope("GLOBAL");
+    };
+  }, [
+    handleProductsScopedScan,
+    isCapitalRecoveryStore,
+    load,
+    loadStoreCategories,
+  ])
+);
 
   useEffect(() => {
     const showSub = Keyboard.addListener("keyboardDidShow", (e) => {
@@ -1477,6 +1495,8 @@ const loadMoreProducts = useCallback(() => {
     Math.min(current + PRODUCTS_PAGE_SIZE, visibleRows.length)
   );
 }, [visibleRows.length]);
+
+
 const filteredCategorySuggestions = useMemo(() => {
   const q = category.trim().toLowerCase();
 
@@ -1623,7 +1643,11 @@ const solidInputStyle = {
       opacity: loading ? 0.55 : pressed ? 0.88 : 1,
     })}
   >
-    <WebSafeIcon name="refresh" size={22} color={theme.colors.text} />
+    <WebSafeIcon
+      name="refresh"
+      size={22}
+      color={theme.colors.text}
+    />
   </Pressable>
 </View>
       </Card>
@@ -2292,13 +2316,127 @@ const solidInputStyle = {
         </Card>
       )}
 
-     <View style={{ marginTop: 4, gap: 4 }}>
-  <Text style={{ fontWeight: "900", fontSize: 20, color: theme.colors.text }}>
-    {isCapitalRecoveryStore ? "Income Products" : "Product Catalog"}
-  </Text>
-  <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-    {visibleRows.length} active item{visibleRows.length === 1 ? "" : "s"}
-  </Text>
+
+     <View style={{ marginTop: 4, gap: 12 }}>
+  <View style={{ gap: 4 }}>
+    <Text
+      style={{
+        fontWeight: "900",
+        fontSize: 20,
+        color: theme.colors.text,
+      }}
+    >
+      {isCapitalRecoveryStore ? "Income Products" : "My Products"}
+    </Text>
+
+    <Text
+      style={{
+        color: theme.colors.muted,
+        fontWeight: "800",
+      }}
+    >
+      {visibleRows.length} active item{visibleRows.length === 1 ? "" : "s"}
+    </Text>
+  </View>
+
+  {canManage && !isCapitalRecoveryStore && (
+    <Pressable
+      onPress={() => router.push("/catalog" as any)}
+      style={({ pressed }) => ({
+        width: "100%",
+        borderRadius: 22,
+        borderWidth: 1.5,
+        borderColor: theme.colors.emeraldBorder,
+        backgroundColor: pressed
+          ? "rgba(16,185,129,0.14)"
+          : "rgba(16,185,129,0.08)",
+        paddingHorizontal: 16,
+        paddingVertical: 16,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 14,
+
+        shadowColor: "#059669",
+        shadowOpacity: Platform.OS === "android" ? 0 : 0.10,
+        shadowRadius: Platform.OS === "android" ? 0 : 14,
+        shadowOffset: { width: 0, height: 7 },
+        elevation: Platform.OS === "android" ? 2 : 3,
+
+        opacity: pressed ? 0.92 : 1,
+      })}
+    >
+      <View
+        style={{
+          width: 52,
+          height: 52,
+          borderRadius: 16,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: "#059669",
+        }}
+      >
+        <Ionicons
+          name="albums-outline"
+          size={25}
+          color="#FFFFFF"
+        />
+      </View>
+
+      <View style={{ flex: 1 }}>
+        <Text
+          style={{
+            color: theme.colors.text,
+            fontWeight: "900",
+            fontSize: 17,
+          }}
+        >
+          Product Catalog
+        </Text>
+
+        <Text
+          style={{
+            color: theme.colors.muted,
+            fontWeight: "800",
+            fontSize: 13,
+            lineHeight: 19,
+            marginTop: 3,
+          }}
+        >
+          Import, share & manage product catalogs
+        </Text>
+
+        <Text
+          style={{
+            color: "#059669",
+            fontWeight: "900",
+            fontSize: 12,
+            marginTop: 7,
+          }}
+        >
+          Global • Share • Import Code
+        </Text>
+      </View>
+
+      <View
+        style={{
+          width: 38,
+          height: 38,
+          borderRadius: 999,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: "#FFFFFF",
+          borderWidth: 1,
+          borderColor: "rgba(16,185,129,0.24)",
+        }}
+      >
+        <Ionicons
+          name="chevron-forward"
+          size={20}
+          color="#059669"
+        />
+      </View>
+    </Pressable>
+  )}
 </View>
 
 {visibleRows.length === 0 ? (
@@ -2334,10 +2472,12 @@ const solidInputStyle = {
       const cp = Number(p.cost_price ?? NaN);
       const bc = String(p.barcode ?? "").trim();
 
-      return (
-        <View
-          key={p.id}
-          style={{
+
+
+    return (
+  <View
+    key={p.id}
+    style={{
             borderWidth: 1,
             borderColor: "rgba(148,163,184,0.22)",
             borderRadius: 24,

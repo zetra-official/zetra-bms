@@ -221,45 +221,52 @@ const canMove = useMemo(() => {
   const [toStoreId, setToStoreId] = useState<string>("");
   const [transferStores, setTransferStores] = useState<any[]>([]);
 
-  const loadTransferStores = useCallback(async () => {
-    if (!activeOrgId || isCapitalRecoveryStore) {
-      setTransferStores([]);
-      return;
-    }
+const loadTransferStores = useCallback(async () => {
+  if (!fromStoreId || isCapitalRecoveryStore) {
+    setTransferStores([]);
+    return;
+  }
 
-    try {
-      const { data, error: e } = await supabase
-        .from("stores")
-        .select("id, name, store_name, organization_id, store_type, is_active")
-        .eq("organization_id", activeOrgId)
-        .eq("is_active", true);
+  try {
+    const { data, error: e } = await supabase.rpc(
+      "get_stock_transfer_destinations_v1",
+      {
+        p_from_store_id: fromStoreId,
+      }
+    );
 
-      if (e) throw e;
+    if (e) throw e;
 
-      setTransferStores(
-        ((data ?? []) as any[]).map((s) => ({
-          ...s,
-          store_id: String(s.id),
-          store_name: String(s.store_name ?? s.name ?? "Store"),
-        }))
-      );
-    } catch {
-      setTransferStores([]);
-    }
-  }, [activeOrgId, isCapitalRecoveryStore]);
+    const next = ((data ?? []) as any[]).map((s) => ({
+      ...s,
+      store_id: String(s.store_id ?? ""),
+      store_name: String(s.store_name ?? "Store"),
+    }));
+
+    setTransferStores(next);
+  } catch (err: any) {
+    setTransferStores([]);
+
+    Alert.alert(
+      "Failed to load stores",
+      err?.message ?? "Imeshindikana kupata destination stores."
+    );
+  }
+}, [fromStoreId, isCapitalRecoveryStore]);
 
   useEffect(() => {
     void loadTransferStores();
   }, [loadTransferStores]);
 
-  const toStoreName = useMemo(() => {
-    if (!toStoreId) return "—";
+const toStoreName = useMemo(() => {
+  if (!toStoreId) return "—";
 
-    const source = transferStores.length > 0 ? transferStores : withinOrgStores;
-    const s = source.find((x: any) => String(x.store_id) === String(toStoreId));
+  const s = transferStores.find(
+    (x: any) => String(x.store_id) === String(toStoreId)
+  );
 
-    return s?.store_name ?? "—";
-  }, [toStoreId, transferStores, withinOrgStores]);
+  return s?.store_name ?? "—";
+}, [toStoreId, transferStores]);
 
   // Inventory
   const [loading, setLoading] = useState(false);
@@ -901,10 +908,11 @@ if (isCapitalRecoveryStore) {
     loadInventory,
   ]);
 
-  const toStores = useMemo(() => {
-    const source = transferStores.length > 0 ? transferStores : withinOrgStores;
-    return source.filter((s: any) => String(s.store_id) !== String(fromStoreId));
-  }, [transferStores, withinOrgStores, fromStoreId]);
+const toStores = useMemo(() => {
+  return transferStores.filter(
+    (s: any) => String(s.store_id) !== String(fromStoreId)
+  );
+}, [transferStores, fromStoreId]);
 
   const processedByLabel = useMemo(() => {
     const em = norm(actorEmail);
