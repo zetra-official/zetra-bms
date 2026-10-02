@@ -463,6 +463,9 @@ export interface ZetraAiSemanticBusinessIntent {
   /** Exact rolling-day window requested by the user. */
   rollingDays?: number | null;
 
+  /** Customer/entity text extracted semantically from customer-specific questions. */
+  customerQuery?: string | null;
+
   confidence: number;
 
   /**

@@ -2,6 +2,7 @@
 import { supabase } from "@/src/supabase/supabaseClient";
 import { theme } from "@/src/ui/theme";
 import { Tabs, useFocusEffect, useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import React, {
   useCallback,
   useEffect,
@@ -10,6 +11,7 @@ import React, {
   useState,
 } from "react";
 import {
+  Image,
   Platform,
   Pressable,
   Text,
@@ -133,6 +135,278 @@ function MoreGridIcon({
             </View>
           ))}
         </View>
+      </View>
+    </View>
+  );
+}
+type MobileBankingTabBarProps = {
+  state: any;
+  navigation: any;
+  bottomInset: number;
+};
+
+function MobileBankingTabBar({
+  state,
+  navigation,
+  bottomInset,
+}: MobileBankingTabBarProps) {
+  const activeRouteName = String(
+    state?.routes?.[state?.index]?.name ?? ""
+  );
+
+  const isActive = React.useCallback(
+    (names: string[]) =>
+      names.some(
+        (name) =>
+          activeRouteName === name ||
+          activeRouteName.startsWith(`${name}/`)
+      ),
+    [activeRouteName]
+  );
+
+  const go = React.useCallback(
+    (name: string) => {
+      navigation.navigate(name);
+    },
+    [navigation]
+  );
+
+  const handleSellPress = React.useCallback(() => {
+    const currentSalesState =
+      state?.routes?.[state?.index]?.state;
+
+    const currentSalesRouteName = String(
+      currentSalesState?.routes?.[
+        currentSalesState?.index
+      ]?.name ?? ""
+    );
+
+    const isReceiptScreen =
+      activeRouteName === "sales" &&
+      currentSalesRouteName === "receipt";
+
+    if (isReceiptScreen) {
+      navigation.navigate("sales", {
+        screen: "index",
+      });
+
+      return;
+    }
+
+    if (activeRouteName === "sales") {
+      return;
+    }
+
+    navigation.navigate("sales");
+  }, [
+    activeRouteName,
+    navigation,
+    state,
+  ]);
+
+  const normalItems = [
+    {
+      key: "home",
+      label: "Home",
+      icon: "home-outline",
+      activeIcon: "home",
+      active: isActive(["index"]),
+      onPress: () => go("index"),
+    },
+    {
+      key: "products",
+      label: "Product",
+      icon: "cube-outline",
+      activeIcon: "cube",
+      active: isActive(["products"]),
+      onPress: () => go("products"),
+    },
+    {
+      key: "stores",
+      label: "Stores",
+      icon: "storefront-outline",
+      activeIcon: "storefront",
+      active: isActive(["stores"]),
+      onPress: () => go("stores"),
+    },
+    {
+      key: "more",
+      label: "More",
+      icon: "grid-outline",
+      activeIcon: "grid",
+      active: isActive(["settings"]),
+      onPress: () => go("settings"),
+    },
+  ];
+
+  const renderNormalItem = (item: (typeof normalItems)[number]) => {
+    const activeColor = "#FFFFFF";
+    const inactiveColor = "rgba(255,255,255,0.58)";
+    const color = item.active ? activeColor : inactiveColor;
+
+    return (
+      <Pressable
+        key={item.key}
+        onPress={item.onPress}
+        {...(Platform.OS === "web"
+          ? ({ onClick: item.onPress } as any)
+          : {})}
+        accessibilityRole="button"
+        accessibilityLabel={item.label}
+        style={({ pressed }) => ({
+          flex: 1,
+          minWidth: 0,
+          height: 54,
+          alignItems: "center",
+          justifyContent: "center",
+          opacity: pressed ? 0.72 : 1,
+        })}
+      >
+        <View
+          style={{
+            minWidth: 31,
+            height: 25,
+            paddingHorizontal: 5,
+            borderRadius: 9,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: item.active
+              ? "rgba(59,130,246,0.22)"
+              : "transparent",
+            borderWidth: item.active ? 1 : 0,
+            borderColor: item.active
+              ? "rgba(147,197,253,0.22)"
+              : "transparent",
+          }}
+        >
+          <Ionicons
+            name={
+              (item.active ? item.activeIcon : item.icon) as React.ComponentProps<
+                typeof Ionicons
+              >["name"]
+            }
+            size={item.active ? 21 : 20}
+            color={color}
+          />
+        </View>
+
+        <Text
+          numberOfLines={1}
+          allowFontScaling={false}
+          style={{
+            marginTop: 1,
+            color,
+            fontSize: 9,
+            lineHeight: 11,
+            fontWeight: item.active ? "900" : "700",
+            textAlign: "center",
+            includeFontPadding: false,
+          }}
+        >
+          {item.label}
+        </Text>
+      </Pressable>
+    );
+  };
+
+  const salesActive = isActive(["sales"]);
+
+  return (
+    <View
+      pointerEvents="box-none"
+      style={{
+        backgroundColor: "transparent",
+        paddingTop: 13,
+      }}
+    >
+      <View
+        style={{
+          minHeight: 58 + Math.max(bottomInset, 2),
+          paddingBottom: Math.max(bottomInset, 2),
+          paddingHorizontal: 4,
+          backgroundColor: "#071A33",
+          borderTopLeftRadius: 24,
+          borderTopRightRadius: 24,
+          flexDirection: "row",
+          alignItems: "center",
+          shadowColor: "#000000",
+          shadowOpacity: 0.16,
+          shadowRadius: 12,
+          shadowOffset: {
+            width: 0,
+            height: -3,
+          },
+          elevation: 18,
+        }}
+      >
+        {renderNormalItem(normalItems[0])}
+        {renderNormalItem(normalItems[1])}
+
+        <View
+          pointerEvents="box-none"
+          style={{
+            flex: 1.12,
+            minWidth: 0,
+            height: 58,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Pressable
+            onPress={handleSellPress}
+            accessibilityRole="button"
+            accessibilityLabel="SELL"
+            style={({ pressed }) => ({
+              position: "absolute",
+              top: -24,
+              width: 62,
+              height: 62,
+              borderRadius: 31,
+              backgroundColor: salesActive ? "#15803D" : "#16A34A",
+              borderWidth: 5,
+              borderColor: "#F7FAFC",
+              alignItems: "center",
+              justifyContent: "center",
+              shadowColor: "#000000",
+              shadowOpacity: 0.24,
+              shadowRadius: 8,
+              shadowOffset: {
+                width: 0,
+                height: 4,
+              },
+              elevation: 20,
+              transform: [
+                {
+                  scale: pressed ? 0.96 : 1,
+                },
+              ],
+            })}
+          >
+            <Ionicons
+              name={salesActive ? "cart" : "cart-outline"}
+              size={20}
+              color="#FFFFFF"
+            />
+
+            <Text
+              allowFontScaling={false}
+              style={{
+                marginTop: 0,
+                color: "#FFFFFF",
+                fontSize: 9,
+                lineHeight: 11,
+                fontWeight: "900",
+                letterSpacing: 0.5,
+                includeFontPadding: false,
+              }}
+            >
+              SELL
+            </Text>
+          </Pressable>
+        </View>
+
+        {renderNormalItem(normalItems[2])}
+        {renderNormalItem(normalItems[3])}
       </View>
     </View>
   );
@@ -572,6 +846,40 @@ function DesktopSidebarSubscriptionCard({
 }
 export default function TabsLayout() {
   const router = useRouter();
+
+  React.useEffect(() => {
+    if (Platform.OS !== "web") return;
+
+    const handler = (event: any) => {
+      const x = Number(event?.clientX ?? 0);
+      const y = Number(event?.clientY ?? 0);
+
+      const el = document.elementFromPoint(x, y) as HTMLElement | null;
+
+      console.log("[ZETRA WEB HIT TEST]", {
+        x,
+        y,
+        tag: el?.tagName,
+        text: el?.innerText?.slice?.(0, 80),
+        className: el?.className,
+        pointerEvents: el
+          ? window.getComputedStyle(el).pointerEvents
+          : null,
+        position: el
+          ? window.getComputedStyle(el).position
+          : null,
+        zIndex: el
+          ? window.getComputedStyle(el).zIndex
+          : null,
+      });
+    };
+
+    window.addEventListener("pointerdown", handler, true);
+
+    return () => {
+      window.removeEventListener("pointerdown", handler, true);
+    };
+  }, []);
   const insets = useSafeAreaInsets();
   const { activeRole, activeOrgId, activeOrgName, activeStoreId, activeStoreName, stores } = useOrg();
 
@@ -649,6 +957,59 @@ export default function TabsLayout() {
   const sidebarStore = String(activeStoreName ?? "No active store").trim() || "No active store";
   const sidebarRole = role ? role.toUpperCase() : "USER";
 
+  const [sidebarOrganizationLogoUrl, setSidebarOrganizationLogoUrl] =
+    useState<string | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      let alive = true;
+
+      async function loadSidebarOrganizationLogo() {
+        if (!useLeftSidebarWeb) return;
+
+        const orgId = String(activeOrgId ?? "").trim();
+
+        if (!orgId) {
+          if (alive) setSidebarOrganizationLogoUrl(null);
+          return;
+        }
+
+        try {
+          const { data, error } = await supabase
+            .from("organization_profiles")
+            .select("logo_url")
+            .eq("organization_id", orgId)
+            .maybeSingle();
+
+          if (error) throw error;
+
+          const logoUrl = String(data?.logo_url ?? "").trim();
+
+          if (alive) {
+            setSidebarOrganizationLogoUrl(
+              logoUrl || null
+            );
+          }
+        } catch (error) {
+          console.warn(
+            "Desktop sidebar organization logo failed:",
+            error
+          );
+
+          if (alive) {
+            setSidebarOrganizationLogoUrl(null);
+          }
+        }
+      }
+
+      void loadSidebarOrganizationLogo();
+
+      return () => {
+        alive = false;
+      };
+    }, [activeOrgId, useLeftSidebarWeb])
+  );
+
   if (checkingOfficeAccount) {
     return (
       <View
@@ -671,13 +1032,751 @@ export default function TabsLayout() {
     );
   }
 
-  return (
+  const desktopSidebar = useLeftSidebarWeb
+    ? (props: any) => {
+        const activeRoute =
+          props?.state?.routes?.[props?.state?.index];
+
+        const activeRouteName = String(
+          activeRoute?.name ?? ""
+        );
+
+        const activeNestedState =
+          activeRoute?.state;
+
+        const activeNestedRouteName = String(
+          activeNestedState?.routes?.[
+            activeNestedState?.index
+          ]?.name ?? ""
+        );
+
+        const isInventoryRoute =
+          activeRouteName === "stores" &&
+          (
+            activeNestedRouteName === "inventory" ||
+            activeNestedRouteName.startsWith("inventory/")
+          );
+
+        const isStoresHomeRoute =
+          activeRouteName === "stores" &&
+          (
+            activeNestedRouteName === "" ||
+            activeNestedRouteName === "index"
+          );
+
+        const DesktopNavItem = ({
+          label,
+          icon,
+          routeName,
+          onPress,
+          hidden: itemHidden = false,
+          badge,
+          activeOverride,
+        }: {
+          label: string;
+          icon: keyof typeof Ionicons.glyphMap;
+          routeName?: string;
+          onPress?: () => void;
+          hidden?: boolean;
+          badge?: string;
+          activeOverride?: boolean;
+        }) => {
+          if (itemHidden) return null;
+
+          const routeActive =
+            routeName != null &&
+            (
+              activeRouteName === routeName ||
+              activeRouteName.startsWith(`${routeName}/`)
+            );
+
+          const active =
+            activeOverride !== undefined
+              ? activeOverride
+              : routeActive;
+
+          return (
+            <Pressable
+              onPress={() => {
+                if (onPress) {
+                  onPress();
+                  return;
+                }
+
+                if (routeName) {
+                  props.navigation.navigate(routeName);
+                }
+              }}
+              style={({ hovered, pressed }: any) => ({
+                minHeight: 31,
+                borderRadius: 7,
+                paddingHorizontal: 7,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: hovered ? 8 : 7,
+
+                backgroundColor: active
+                  ? "#2563EB"
+                  : hovered || pressed
+                    ? "rgba(255,255,255,0.105)"
+                    : "transparent",
+
+                transform: [
+                  {
+                    translateX: hovered
+                      ? 4
+                      : pressed
+                        ? 2
+                        : 0,
+                  },
+                  {
+                    scale: hovered
+                      ? 1.018
+                      : pressed
+                        ? 0.995
+                        : 1,
+                  },
+                ],
+
+                ...(hovered
+                  ? {
+                      shadowColor: "#000000",
+                      shadowOpacity: 0.16,
+                      shadowRadius: 7,
+                      shadowOffset: {
+                        width: 0,
+                        height: 3,
+                      },
+                    }
+                  : {}),
+              })}
+            >
+              {({ hovered, pressed }: any) => (
+                <>
+                  <Ionicons
+                    name={icon}
+                    size={
+                      hovered
+                        ? 15.5
+                        : pressed
+                          ? 14.5
+                          : 14
+                    }
+                    color={
+                      active
+                        ? "#FFFFFF"
+                        : hovered
+                          ? "#FFFFFF"
+                          : "rgba(255,255,255,0.76)"
+                    }
+                  />
+
+                  <Text
+                    numberOfLines={1}
+                    style={{
+                      flex: 1,
+                      minWidth: 0,
+                      color:
+                        active || hovered
+                          ? "#FFFFFF"
+                          : "rgba(255,255,255,0.84)",
+                      fontSize: hovered ? 10 : 9.5,
+                      fontWeight:
+                        active || hovered
+                          ? "900"
+                          : "700",
+                      letterSpacing: hovered
+                        ? 0.08
+                        : 0,
+                    }}
+                  >
+                    {label}
+                  </Text>
+
+                  {!!badge ? (
+                    <View
+                      style={{
+                        minWidth: hovered ? 25 : 24,
+                        height: hovered ? 15 : 14,
+                        paddingHorizontal: 4,
+                        borderRadius: 7,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        backgroundColor: "#22C55E",
+                        transform: [
+                          {
+                            scale: hovered
+                              ? 1.04
+                              : 1,
+                          },
+                        ],
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: "#FFFFFF",
+                          fontSize: 6.5,
+                          fontWeight: "900",
+                        }}
+                      >
+                        {badge}
+                      </Text>
+                    </View>
+                  ) : null}
+                </>
+              )}
+            </Pressable>
+          );
+        };
+
+        const DesktopWorkspaceCard = ({
+          label,
+          value,
+          icon,
+        }: {
+          label: string;
+          value: string;
+          icon: keyof typeof Ionicons.glyphMap;
+        }) => (
+          <View
+            style={{
+              minHeight: 37,
+              borderRadius: 7,
+              borderWidth: 1,
+              borderColor: "rgba(255,255,255,0.10)",
+              backgroundColor: "rgba(255,255,255,0.035)",
+              paddingHorizontal: 7,
+              paddingVertical: 5,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 6,
+            }}
+          >
+            <Ionicons
+              name={icon}
+              size={12}
+              color="rgba(255,255,255,0.62)"
+            />
+
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text
+                numberOfLines={1}
+                style={{
+                  color: "rgba(255,255,255,0.44)",
+                  fontSize: 6,
+                  fontWeight: "800",
+                  textTransform: "uppercase",
+                }}
+              >
+                {label}
+              </Text>
+
+              <Text
+                numberOfLines={1}
+                style={{
+                  color: "#FFFFFF",
+                  fontSize: 8,
+                  fontWeight: "800",
+                  marginTop: 1,
+                }}
+              >
+                {value}
+              </Text>
+            </View>
+
+            <Ionicons
+              name="chevron-down"
+              size={9}
+              color="rgba(255,255,255,0.45)"
+            />
+          </View>
+        );
+
+        return (
+          <View
+            style={{
+              width: 150,
+              height: "100%",
+              backgroundColor: "#0B1F3A",
+              borderRightWidth: 1,
+              borderRightColor: "rgba(255,255,255,0.08)",
+              paddingTop: Math.max(insets.top + 10, 14),
+              paddingBottom: Math.max(insets.bottom + 8, 10),
+              paddingHorizontal: 8,
+            }}
+          >
+            {/* ZETRA BRAND */}
+            <View
+              style={{
+                paddingHorizontal: 4,
+                marginBottom: 9,
+              }}
+            >
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
+                <View
+                  style={{
+                    width: 22,
+                    height: 22,
+                    borderRadius: 6,
+                    backgroundColor: "#2563EB",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: "#FFFFFF",
+                      fontSize: 14,
+                      fontWeight: "900",
+                      fontStyle: "italic",
+                    }}
+                  >
+                    Z
+                  </Text>
+                </View>
+
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text
+                    numberOfLines={1}
+                    style={{
+                      color: "#FFFFFF",
+                      fontSize: 13,
+                      fontWeight: "900",
+                      letterSpacing: 0.1,
+                    }}
+                  >
+                    ZETRA BMS
+                  </Text>
+
+                  <Text
+                    numberOfLines={1}
+                    style={{
+                      color: "rgba(255,255,255,0.50)",
+                      fontSize: 6.5,
+                      fontWeight: "700",
+                      marginTop: 1,
+                    }}
+                  >
+                    Business Management System
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* MAIN DESKTOP NAVIGATION */}
+            <View style={{ gap: 1 }}>
+              <DesktopNavItem
+                label="Home"
+                icon="home-outline"
+                routeName="index"
+              />
+
+              <DesktopNavItem
+                label="POS / Sell"
+                icon="cart-outline"
+                routeName="sales"
+                hidden={isSpecialStore}
+                onPress={() => {
+                  router.replace("/(tabs)/sales" as any);
+                }}
+              />
+
+              <DesktopNavItem
+                label="Products"
+                icon="pricetag-outline"
+                routeName="products"
+                hidden={isCashier || isFieldProcurementStore}
+              />
+
+              <DesktopNavItem
+                label="Inventory"
+                icon="layers-outline"
+                hidden={isCashier || isFieldProcurementStore}
+                activeOverride={isInventoryRoute}
+                onPress={() => {
+                  router.push("/(tabs)/stores/inventory" as any);
+                }}
+              />
+
+              <DesktopNavItem
+                label="Customers (CRM)"
+                icon="people-outline"
+                hidden={isCashier || isSpecialStore}
+                onPress={() => {
+                  router.push("/customers" as any);
+                }}
+              />
+
+              <DesktopNavItem
+                label="Credit"
+                icon="card-outline"
+                routeName="credit"
+                hidden={isCashier || isSpecialStore}
+              />
+
+              <DesktopNavItem
+                label="Expenses"
+                icon="receipt-outline"
+                routeName="expenses"
+                hidden={isCashier || isSpecialStore}
+                onPress={() => {
+                  router.push("/(tabs)/expenses" as any);
+                }}
+              />
+
+              <DesktopNavItem
+                label="Finance"
+                icon="stats-chart-outline"
+                hidden={isCashier || isSpecialStore}
+                onPress={() => {
+                  router.push("/finance/live" as any);
+                }}
+              />
+
+              <DesktopNavItem
+                label="Reports"
+                icon="bar-chart-outline"
+                hidden={isCashier || isSpecialStore}
+                onPress={() => {
+                  router.push({
+                    pathname: "/finance/history",
+                    params: {
+                      mode: "SALES",
+                      scope: "STORE",
+                      range: "today",
+                    },
+                  } as any);
+                }}
+              />
+
+              <DesktopNavItem
+                label="Stores"
+                icon="storefront-outline"
+                routeName="stores"
+                hidden={isCashier}
+                activeOverride={isStoresHomeRoute}
+                onPress={() => {
+                  router.replace("/(tabs)/stores" as any);
+                }}
+              />
+
+              <DesktopNavItem
+                label="AI Assistant"
+                icon="sparkles-outline"
+                badge="NEW"
+                hidden={isCashier || isSpecialStore}
+                onPress={() => {
+                  router.push("/ai" as any);
+                }}
+              />
+
+              <DesktopNavItem
+                label="More"
+                icon="grid-outline"
+                routeName="settings"
+                onPress={() => {
+                  router.replace("/(tabs)/settings" as any);
+                }}
+              />
+            </View>
+
+            {/* DAILY BUSINESS SHORTCUTS */}
+            {!isCashier && !isSpecialStore ? (
+              <View
+                style={{
+                  marginTop: 7,
+                  paddingTop: 7,
+                  borderTopWidth: 1,
+                  borderTopColor: "rgba(255,255,255,0.09)",
+                  gap: 4,
+                }}
+              >
+                <Text
+                  style={{
+                    color: "rgba(255,255,255,0.48)",
+                    fontSize: 7,
+                    fontWeight: "900",
+                    letterSpacing: 0.6,
+                    paddingHorizontal: 7,
+                    marginBottom: 1,
+                  }}
+                  numberOfLines={1}
+                >
+                  BUSINESS SHORTCUTS
+                </Text>
+
+                <Pressable
+                  onPress={() => {
+                    router.push("/finance/business-position" as any);
+                  }}
+                  style={({ pressed }) => ({
+                    minHeight: 32,
+                    borderRadius: 8,
+                    paddingHorizontal: 7,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 6,
+                    backgroundColor: pressed
+                      ? "rgba(59,130,246,0.20)"
+                      : "rgba(255,255,255,0.045)",
+                    borderWidth: 1,
+                    borderColor: "rgba(255,255,255,0.07)",
+                  })}
+                >
+                  <Ionicons
+                    name="analytics-outline"
+                    size={15}
+                    color="#60A5FA"
+                  />
+
+                  <Text
+                    style={{
+                      flex: 1,
+                      color: "#FFFFFF",
+                      fontSize: 9,
+                      fontWeight: "800",
+                    }}
+                    numberOfLines={1}
+                  >
+                    Business Position
+                  </Text>
+
+                  <Ionicons
+                    name="chevron-forward"
+                    size={11}
+                    color="rgba(255,255,255,0.42)"
+                  />
+                </Pressable>
+
+                <Pressable
+                  onPress={() => {
+                    router.push("/finance/business-debts" as any);
+                  }}
+                  style={({ pressed }) => ({
+                    minHeight: 32,
+                    borderRadius: 8,
+                    paddingHorizontal: 7,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 6,
+                    backgroundColor: pressed
+                      ? "rgba(239,68,68,0.16)"
+                      : "rgba(255,255,255,0.045)",
+                    borderWidth: 1,
+                    borderColor: "rgba(255,255,255,0.07)",
+                  })}
+                >
+                  <Ionicons
+                    name="wallet-outline"
+                    size={15}
+                    color="#FCA5A5"
+                  />
+
+                  <Text
+                    style={{
+                      flex: 1,
+                      color: "#FFFFFF",
+                      fontSize: 9,
+                      fontWeight: "800",
+                    }}
+                    numberOfLines={1}
+                  >
+                    Business Debts
+                  </Text>
+
+                  <Ionicons
+                    name="chevron-forward"
+                    size={11}
+                    color="rgba(255,255,255,0.42)"
+                  />
+                </Pressable>
+
+                <Pressable
+                  onPress={() => {
+                    router.push("/stocks/inbound" as any);
+                  }}
+                  style={({ pressed }) => ({
+                    minHeight: 32,
+                    borderRadius: 8,
+                    paddingHorizontal: 7,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 6,
+                    backgroundColor: pressed
+                      ? "rgba(16,185,129,0.16)"
+                      : "rgba(255,255,255,0.045)",
+                    borderWidth: 1,
+                    borderColor: "rgba(255,255,255,0.07)",
+                  })}
+                >
+                  <Ionicons
+                    name="download-outline"
+                    size={15}
+                    color="#6EE7B7"
+                  />
+
+                  <Text
+                    style={{
+                      flex: 1,
+                      color: "#FFFFFF",
+                      fontSize: 9,
+                      fontWeight: "800",
+                    }}
+                    numberOfLines={1}
+                  >
+                    Incoming Stock
+                  </Text>
+
+                  <Ionicons
+                    name="chevron-forward"
+                    size={11}
+                    color="rgba(255,255,255,0.42)"
+                  />
+                </Pressable>
+              </View>
+            ) : null}
+
+            <View style={{ flex: 1, minHeight: 6 }} />
+
+            {/* ORGANIZATION + STORE */}
+            {!isCashier ? (
+              <View style={{ gap: 5 }}>
+                <DesktopWorkspaceCard
+                  label="Current Organization"
+                  value={sidebarTitle}
+                  icon="business-outline"
+                />
+
+                <DesktopWorkspaceCard
+                  label="Current Store"
+                  value={sidebarStore}
+                  icon="storefront-outline"
+                />
+              </View>
+            ) : null}
+
+            {/* USER FOOTER / BUSINESS PROFILE */}
+            <Pressable
+              onPress={() => {
+                const orgId = String(activeOrgId ?? "").trim();
+
+                if (!orgId) return;
+
+                router.push({
+                  pathname: "/organization-profile",
+                  params: { orgId },
+                } as any);
+              }}
+              style={({ pressed }) => ({
+                marginTop: 7,
+                borderTopWidth: 1,
+                borderTopColor: "rgba(255,255,255,0.09)",
+                paddingTop: 7,
+                paddingHorizontal: 3,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 7,
+                opacity: pressed ? 0.76 : 1,
+              })}
+            >
+              <View
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 16,
+                  overflow: "hidden",
+                  backgroundColor: "rgba(96,165,250,0.20)",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderWidth: 1,
+                  borderColor: "rgba(255,255,255,0.16)",
+                }}
+              >
+                {sidebarOrganizationLogoUrl ? (
+                  <Image
+                    source={{ uri: sidebarOrganizationLogoUrl }}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                    }}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <Ionicons
+                    name="business"
+                    size={16}
+                    color="#BFDBFE"
+                  />
+                )}
+              </View>
+
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text
+                  numberOfLines={1}
+                  style={{
+                    color: "#FFFFFF",
+                    fontSize: 8,
+                    fontWeight: "900",
+                  }}
+                >
+                  {sidebarTitle}
+                </Text>
+
+                <Text
+                  numberOfLines={1}
+                  style={{
+                    color: "rgba(255,255,255,0.52)",
+                    fontSize: 6.5,
+                    fontWeight: "700",
+                    marginTop: 1,
+                  }}
+                >
+                  {sidebarRole}
+                </Text>
+              </View>
+
+              <Ionicons
+                name="settings-outline"
+                size={12}
+                color="rgba(255,255,255,0.60)"
+              />
+            </Pressable>
+          </View>
+        );
+      }
+    : undefined;
+return (
     <Tabs
+      tabBar={
+        useLeftSidebarWeb
+          ? desktopSidebar
+          : !isSpecialStore && !isCashier
+            ? (props) => (
+                <MobileBankingTabBar
+                  state={props.state}
+                  navigation={props.navigation}
+                  bottomInset={insets.bottom}
+                />
+              )
+            : undefined
+      }
       screenOptions={{
         headerShown: false,
         tabBarPosition: useLeftSidebarWeb ? "left" : "bottom",
         tabBarLabelPosition: useLeftSidebarWeb ? "beside-icon" : "below-icon",
         sceneStyle: { backgroundColor: theme.colors.background },
+
+        // MOBILE WEB ONLY:
+        // Do not keep inactive tab screens actively rendering/fetching.
+        // Android and Desktop Web retain their existing behaviour.
+        lazy: isMobileWeb ? true : undefined,
+        freezeOnBlur: isMobileWeb ? true : undefined,
 
         tabBarStyle: useLeftSidebarWeb
           ? {
@@ -685,10 +1784,10 @@ export default function TabsLayout() {
               borderRightColor: "rgba(255,255,255,0.12)",
               borderRightWidth: 1,
               borderTopWidth: 0,
-             width: 172,
-paddingTop: Math.max(insets.top + 226, 242),
-paddingBottom: Math.max(insets.bottom + 12, 16),
-paddingHorizontal: 8,
+             width: 100,
+              paddingTop: Math.max(insets.top + 140, 150),
+              paddingBottom: Math.max(insets.bottom + 12, 14),
+              paddingHorizontal: 5,
               shadowOpacity: 0,
               elevation: 0,
             }
@@ -708,10 +1807,10 @@ paddingHorizontal: 8,
   ? {
       width: "100%",
       alignSelf: "stretch",
-      minHeight: 44,
-      borderRadius: 13,
-      marginVertical: 2,
-      paddingHorizontal: 10,
+      minHeight: 42,
+      borderRadius: 8,
+      marginVertical: 1,
+      paddingHorizontal: 5,
       justifyContent: "flex-start",
       alignItems: "center",
       flexDirection: "row",
@@ -728,9 +1827,9 @@ paddingHorizontal: 8,
         tabBarActiveBackgroundColor: useLeftSidebarWeb ? "rgba(59,130,246,0.22)" : "transparent",
 tabBarIconStyle: useLeftSidebarWeb
   ? {
-      width: 28,
-      minWidth: 28,
-      marginRight: 8,
+      width: 20,
+      minWidth: 20,
+      marginRight: 5,
       alignItems: "center",
       justifyContent: "center",
     }
@@ -738,8 +1837,8 @@ tabBarIconStyle: useLeftSidebarWeb
 
         tabBarLabelStyle: useLeftSidebarWeb
           ? {
-              fontWeight: "900",
-              fontSize: 12,
+              fontWeight: "700",
+              fontSize: 10,
               textAlign: "left",
             }
           : undefined,
@@ -750,14 +1849,19 @@ tabBarIconStyle: useLeftSidebarWeb
                 pointerEvents="box-none"
                 style={{
                   position: "absolute",
-                  top: Math.max(insets.top + 14, 22),
-left: 8,
-right: 8,
-gap: 5,
+                  top: Math.max(insets.top + 18, 24),
+left: 6,
+                  right: 6,
+                  gap: 3,
                 }}
               >
                 <Text
-                  style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 15 }}
+                  style={{
+                    color: "#FFFFFF",
+                    fontWeight: "900",
+                    fontSize: 15,
+                    letterSpacing: 0.1,
+                  }}
                   numberOfLines={1}
                 >
                   ZETRA BMS
@@ -765,25 +1869,26 @@ gap: 5,
 
                 <Text
                   style={{
-                    color: "rgba(255,255,255,0.70)",
-                    fontWeight: "800",
-                    fontSize: 11,
+                    color: "rgba(255,255,255,0.68)",
+                    fontWeight: "700",
+                    fontSize: 7,
+                    letterSpacing: 0,
                   }}
                   numberOfLines={1}
                 >
-                  Business Command Center
+                  Business Management System
                 </Text>
 
                 <View
                   style={{
-                  marginTop: 8,
-borderRadius: 15,
-borderWidth: 1,
-borderColor: "rgba(255,255,255,0.10)",
-backgroundColor: "rgba(255,255,255,0.06)",
-paddingVertical: 9,
-paddingHorizontal: 9,
-gap: 5,
+                  marginTop: 7,
+                    borderRadius: 10,
+                    borderWidth: 1,
+                    borderColor: "rgba(255,255,255,0.12)",
+                    backgroundColor: "rgba(255,255,255,0.055)",
+                    paddingVertical: 7,
+                    paddingHorizontal: 6,
+                    gap: 4,
 overflow: "hidden",
                   }}
                 >
@@ -855,67 +1960,6 @@ height: 70,
                     role={activeRole}
                   />
                 </View>
-
-       {activeOrgId && activeStoreId ? (
-  <Pressable
-    pointerEvents="auto"
-    onPress={() =>
-      router.push("/stores/items-overview" as any)
-    }
-    style={({ pressed }) => ({
-      marginTop: 8,
-
-      width: "100%",
-      minHeight: 44,
-
-      flexDirection: "row",
-      alignItems: "center",
-
-      paddingHorizontal: 10,
-
-      borderRadius: 13,
-
-      backgroundColor: pressed
-        ? "rgba(59,130,246,0.22)"
-        : "transparent",
-
-      opacity: pressed ? 0.94 : 1,
-    })}
-  >
-    <View
-      style={{
-        width: 28,
-        minWidth: 28,
-        marginRight: 8,
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <Text
-        style={{
-          fontSize: 17,
-          includeFontPadding: false,
-        }}
-      >
-        📦
-      </Text>
-    </View>
-
-    <Text
-      style={{
-        color: "rgba(255,255,255,0.68)",
-        fontWeight: "900",
-        fontSize: 12,
-        lineHeight: 14,
-        textAlign: "left",
-        flexShrink: 1,
-      }}
-      numberOfLines={1}
-    >
-      Items Overview
-    </Text>
-  </Pressable>
-) : null}
                
               </View>
             ) : null}
@@ -929,9 +1973,9 @@ height: 70,
       <Tabs.Screen
         name="index"
         options={{
-          title: useLeftSidebarWeb ? "Dashboard" : "Home",
+          title: "Home",
           tabBarLabel: ({ color }) => (
-            <TabLabel text={useLeftSidebarWeb ? "Dashboard" : "Home"} color={color} mobileWeb={isMobileWeb} />
+            <TabLabel text="Home" color={color} mobileWeb={isMobileWeb} />
           ),
           tabBarIcon: ({ color }) => (
             <WebTabIcon emoji="📊" color={color} mobileWeb={isMobileWeb} />
@@ -953,7 +1997,7 @@ height: 70,
           href: isSpecialStore ? null : undefined,
           tabBarItemStyle: isSpecialStore ? hidden : undefined,
           tabBarLabel: ({ color }) => (
-            <TabLabel text={useLeftSidebarWeb ? "POS" : "Sales"} color={color} mobileWeb={isMobileWeb} />
+            <TabLabel text={useLeftSidebarWeb ? "POS / Sell" : "Sales"} color={color} mobileWeb={isMobileWeb} />
           ),
           tabBarIcon: ({ color }) => (
             <WebTabIcon emoji="🛒" color={color} mobileWeb={isMobileWeb} />
@@ -1113,3 +2157,9 @@ height: 70,
     </Tabs>
   );
 }
+
+
+
+
+
+

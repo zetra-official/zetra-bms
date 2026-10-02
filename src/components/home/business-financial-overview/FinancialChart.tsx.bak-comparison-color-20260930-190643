@@ -1,0 +1,1650 @@
+﻿import React, {
+  useMemo,
+} from "react";
+
+import {
+  Text,
+  View,
+} from "react-native";
+
+import Svg, {
+  Circle,
+  Line,
+  Path,
+  Rect,
+  Text as SvgText,
+} from "react-native-svg";
+
+import type {
+  FinancialBucketResult,
+  FinancialMetric,
+} from "./financialDataEngine";
+
+export type FinancialChartMode =
+  | "DONUT"
+  | "TREND"
+  | "BARS";
+
+export type FinancialTrendMetric =
+  | "SALES"
+  | "EXPENSES"
+  | "NET_PROFIT";
+
+type Props = {
+  mode: FinancialChartMode;
+  metric?: FinancialTrendMetric;
+  total: FinancialMetric;
+  buckets: FinancialBucketResult[];
+
+  /*
+   * Optional comparison series.
+   *
+   * Compact Home chart does not provide this,
+   * therefore its current behavior remains unchanged.
+   *
+   * Premium Full View may provide the verified
+   * previous-period buckets.
+   */
+  previousBuckets?: FinancialBucketResult[];
+
+  width?: number;
+  height?: number;
+};
+
+const SALES_COLOR =
+  "#2563EB";
+
+const EXPENSE_COLOR =
+  "#F59E0B";
+
+const PROFIT_COLOR =
+  "#16A34A";
+
+const LOSS_COLOR =
+  "#DC2626";
+
+const GRID_COLOR =
+  "#E2E8F0";
+
+const TEXT_COLOR =
+  "#334155";
+
+function finite(
+  value: unknown
+) {
+  const parsed =
+    Number(value ?? 0);
+
+  return Number.isFinite(parsed)
+    ? parsed
+    : 0;
+}
+
+function moneyCompact(
+  value: number
+) {
+  const amount =
+    Math.abs(finite(value));
+
+  if (amount >= 1_000_000_000) {
+    return `${(
+      amount /
+      1_000_000_000
+    ).toFixed(1)}B`;
+  }
+
+  if (amount >= 1_000_000) {
+    return `${(
+      amount /
+      1_000_000
+    ).toFixed(1)}M`;
+  }
+
+  if (amount >= 1_000) {
+    return `${(
+      amount /
+      1_000
+    ).toFixed(1)}K`;
+  }
+
+  return Math.round(
+    amount
+  ).toLocaleString("en-US");
+}
+
+function moneyFull(
+  value: number
+) {
+  try {
+    return `TSh ${Math.round(
+      finite(value)
+    ).toLocaleString("en-US")}`;
+  } catch {
+    return `TSh ${Math.round(
+      finite(value)
+    )}`;
+  }
+}
+
+function polarPoint(
+  cx: number,
+  cy: number,
+  radius: number,
+  angle: number
+) {
+  const radians =
+    ((angle - 90) *
+      Math.PI) /
+    180;
+
+  return {
+    x:
+      cx +
+      radius *
+        Math.cos(radians),
+    y:
+      cy +
+      radius *
+        Math.sin(radians),
+  };
+}
+
+function donutArc(
+  cx: number,
+  cy: number,
+  radius: number,
+  startAngle: number,
+  endAngle: number
+) {
+  const start =
+    polarPoint(
+      cx,
+      cy,
+      radius,
+      endAngle
+    );
+
+  const end =
+    polarPoint(
+      cx,
+      cy,
+      radius,
+      startAngle
+    );
+
+  const largeArc =
+    endAngle -
+      startAngle <=
+    180
+      ? 0
+      : 1;
+
+  return [
+    "M",
+    start.x,
+    start.y,
+    "A",
+    radius,
+    radius,
+    0,
+    largeArc,
+    0,
+    end.x,
+    end.y,
+  ].join(" ");
+}
+
+function DonutChart({
+  total,
+  width,
+  height,
+}: {
+  total: FinancialMetric;
+  width: number;
+  height: number;
+}) {
+  /*
+   * Donut is a financial composition view.
+   *
+   * We deliberately use absolute magnitudes
+   * for visual proportions. Negative profit
+   * is rendered as Loss using red.
+   */
+  const profit =
+    finite(
+      total.netProfit
+    );
+
+  const values = [
+    {
+      key: "sales",
+      label: "Sales",
+      value: Math.max(
+        0,
+        finite(total.sales)
+      ),
+      color: SALES_COLOR,
+    },
+    {
+      key: "expenses",
+      label: "Expenses",
+      value: Math.max(
+        0,
+        finite(
+          total.expenses
+        )
+      ),
+      color: EXPENSE_COLOR,
+    },
+    {
+      key: "profit",
+      label:
+        profit < 0
+          ? "Loss"
+          : "Net Profit",
+      value: Math.abs(
+        profit
+      ),
+      color:
+        profit < 0
+          ? LOSS_COLOR
+          : PROFIT_COLOR,
+    },
+  ];
+
+  const sum =
+    values.reduce(
+      (acc, item) =>
+        acc +
+        item.value,
+      0
+    );
+
+  const cx =
+    width / 2;
+
+  const cy =
+    height / 2;
+
+  const radius =
+    Math.min(
+      width,
+      height
+    ) * 0.36;
+
+  const strokeWidth =
+    Math.max(
+      18,
+      radius * 0.24
+    );
+
+  let angle = 0;
+
+  return (
+    <View
+      style={{
+        width,
+        height,
+        alignItems:
+          "center",
+        justifyContent:
+          "center",
+      }}
+    >
+      <Svg
+        width={width}
+        height={height}
+      >
+        <Circle
+          cx={cx}
+          cy={cy}
+          r={radius}
+          fill="none"
+          stroke="#EEF2F7"
+          strokeWidth={
+            strokeWidth
+          }
+        />
+
+        {sum > 0 &&
+          values.map(
+            (item) => {
+              if (
+                item.value <= 0
+              ) {
+                return null;
+              }
+
+              const sweep =
+                (item.value /
+                  sum) *
+                360;
+
+              const gap =
+                Math.min(
+                  2.5,
+                  sweep * 0.12
+                );
+
+              const start =
+                angle +
+                gap / 2;
+
+              const end =
+                angle +
+                sweep -
+                gap / 2;
+
+              angle +=
+                sweep;
+
+              if (
+                end <= start
+              ) {
+                return null;
+              }
+
+              return (
+                <Path
+                  key={
+                    item.key
+                  }
+                  d={donutArc(
+                    cx,
+                    cy,
+                    radius,
+                    start,
+                    end
+                  )}
+                  fill="none"
+                  stroke={
+                    item.color
+                  }
+                  strokeWidth={
+                    strokeWidth
+                  }
+                  strokeLinecap="round"
+                />
+              );
+            }
+          )}
+
+        <SvgText
+          x={cx}
+          y={cy - 7}
+          textAnchor="middle"
+          fontSize="9"
+          fontWeight="800"
+          fill="#64748B"
+        >
+          BUSINESS
+        </SvgText>
+
+        <SvgText
+          x={cx}
+          y={cy + 10}
+          textAnchor="middle"
+          fontSize="13"
+          fontWeight="900"
+          fill="#0F172A"
+        >
+          OVERVIEW
+        </SvgText>
+      </Svg>
+    </View>
+  );
+}
+
+function TrendChart({
+  buckets,
+  previousBuckets = [],
+  width,
+  height,
+  metric = "SALES",
+}: {
+  buckets: FinancialBucketResult[];
+  previousBuckets?: FinancialBucketResult[];
+  width: number;
+  height: number;
+  metric?: FinancialTrendMetric;
+}) {
+  /*
+   * Professional finance chart layout.
+   *
+   * Left space is deliberately larger so financial
+   * values never collide with the plot.
+   *
+   * Bottom space is reserved for the time axis.
+   */
+  const [hoveredIndex, setHoveredIndex] =
+    React.useState<number | null>(null);
+
+  const [
+    hoveredPreviousIndex,
+    setHoveredPreviousIndex,
+  ] = React.useState<number | null>(null);
+
+  const hoveredIsPrevious =
+    hoveredPreviousIndex !== null;
+
+  const activeHoveredIndex =
+    hoveredIsPrevious
+      ? hoveredPreviousIndex
+      : hoveredIndex;
+
+  const hoveredBucket =
+    activeHoveredIndex !== null
+      ? (
+          hoveredIsPrevious
+            ? previousBuckets[
+                activeHoveredIndex
+              ]
+            : buckets[
+                activeHoveredIndex
+              ]
+        ) ?? null
+      : null;
+
+  const left = 58;
+  const right = 12;
+  const top = 18;
+  const bottom = 38;
+
+  const plotWidth = Math.max(
+    1,
+    width - left - right
+  );
+
+  const plotHeight = Math.max(
+    1,
+    height - top - bottom
+  );
+
+  const metricKey:
+    | "sales"
+    | "expenses"
+    | "netProfit" =
+    metric === "EXPENSES"
+      ? "expenses"
+      : metric === "NET_PROFIT"
+        ? "netProfit"
+        : "sales";
+
+  const metricColor =
+    metric === "EXPENSES"
+      ? EXPENSE_COLOR
+      : metric === "NET_PROFIT"
+        ? PROFIT_COLOR
+        : SALES_COLOR;
+
+  const values = buckets.map(
+    (bucket) =>
+      finite(bucket[metricKey])
+  );
+
+  const previousValues =
+    previousBuckets.map(
+      (bucket) =>
+        finite(bucket[metricKey])
+    );
+
+  const scaleValues = [
+    ...values,
+    ...previousValues,
+  ];
+
+  /*
+   * Financial charts always retain zero.
+   * Net Profit is allowed to cross below zero.
+   */
+  const minValue = Math.min(
+    0,
+    ...scaleValues
+  );
+
+  const maxValue = Math.max(
+    0,
+    ...scaleValues
+  );
+
+  const rawRange =
+    maxValue - minValue;
+
+  const range = Math.max(
+    1,
+    rawRange
+  );
+
+  /*
+   * Give both ends breathing room.
+   */
+  const scalePadding =
+    range * 0.1;
+
+  const scaleMin =
+    minValue < 0
+      ? minValue - scalePadding
+      : 0;
+
+  const scaleMax = Math.max(
+    1,
+    maxValue + scalePadding
+  );
+
+  const scaleRange = Math.max(
+    1,
+    scaleMax - scaleMin
+  );
+
+  const xAt = (
+    index: number
+  ) => {
+    if (buckets.length <= 1) {
+      return left + plotWidth / 2;
+    }
+
+    return (
+      left +
+      (index /
+        (buckets.length - 1)) *
+        plotWidth
+    );
+  };
+
+  const yAt = (
+    value: number
+  ) =>
+    top +
+    ((scaleMax - finite(value)) /
+      scaleRange) *
+      plotHeight;
+
+  const makePath = () =>
+    buckets
+      .map((bucket, index) => {
+        const x = xAt(index);
+        const y = yAt(
+          bucket[metricKey]
+        );
+
+        return `${
+          index === 0 ? "M" : "L"
+        } ${x} ${y}`;
+      })
+      .join(" ");
+
+  const makePreviousPath = () =>
+    previousBuckets
+      .map((bucket, index) => {
+        /*
+         * Previous buckets are aligned by position
+         * with the current comparison buckets.
+         */
+        const denominator =
+          Math.max(
+            1,
+            previousBuckets.length - 1
+          );
+
+        const x =
+          previousBuckets.length <= 1
+            ? left + plotWidth / 2
+            : left +
+              (index / denominator) *
+                plotWidth;
+
+        const y = yAt(
+          bucket[metricKey]
+        );
+
+        return `${
+          index === 0 ? "M" : "L"
+        } ${x} ${y}`;
+      })
+      .join(" ");
+
+  const zeroY = yAt(0);
+
+  const makeAreaPath = () => {
+    if (!buckets.length) {
+      return "";
+    }
+
+    const firstX = xAt(0);
+    const lastX = xAt(
+      buckets.length - 1
+    );
+
+    const baselineY =
+      Math.max(
+        top,
+        Math.min(
+          top + plotHeight,
+          zeroY
+        )
+      );
+
+    return [
+      `M ${firstX} ${baselineY}`,
+      ...buckets.map(
+        (bucket, index) =>
+          `L ${xAt(index)} ${yAt(
+            bucket[metricKey]
+          )}`
+      ),
+      `L ${lastX} ${baselineY}`,
+      "Z",
+    ].join(" ");
+  };
+
+  /*
+   * Five readable Y-axis levels.
+   */
+  const gridRatios = [
+    0,
+    0.25,
+    0.5,
+    0.75,
+    1,
+  ];
+
+  /*
+   * For 12-month view every month remains visible.
+   * Short labels keep the axis compact.
+   */
+  const shouldShowXLabel = (
+    index: number
+  ) => {
+    if (buckets.length <= 12) {
+      return true;
+    }
+
+    const step = Math.ceil(
+      buckets.length / 8
+    );
+
+    return (
+      index % step === 0 ||
+      index === buckets.length - 1
+    );
+  };
+
+  return (
+    <Svg
+      width={width}
+      height={height}
+    >
+      {/* Y GRID + Y VALUES */}
+      {gridRatios.map(
+        (ratio) => {
+          const y =
+            top +
+            plotHeight * ratio;
+
+          const value =
+            scaleMax -
+            scaleRange * ratio;
+
+          return (
+            <React.Fragment
+              key={`grid-${ratio}`}
+            >
+              <Line
+                x1={left}
+                x2={width - right}
+                y1={y}
+                y2={y}
+                stroke={GRID_COLOR}
+                strokeWidth="1"
+              />
+
+              <SvgText
+                x={left - 8}
+                y={y + 3}
+                textAnchor="end"
+                fontSize="11"
+                fontWeight="800"
+                fill={TEXT_COLOR}
+              >
+                {value < 0
+                  ? `-${moneyCompact(
+                      Math.abs(value)
+                    )}`
+                  : moneyCompact(value)}
+              </SvgText>
+            </React.Fragment>
+          );
+        }
+      )}
+
+      {/* LEFT Y AXIS */}
+      <Line
+        x1={left}
+        x2={left}
+        y1={top}
+        y2={top + plotHeight}
+        stroke="#CBD5E1"
+        strokeWidth="1"
+      />
+
+      {/* BOTTOM X AXIS */}
+      <Line
+        x1={left}
+        x2={width - right}
+        y1={top + plotHeight}
+        y2={top + plotHeight}
+        stroke="#CBD5E1"
+        strokeWidth="1"
+      />
+
+      {/* STRONG ZERO LINE FOR PROFIT/LOSS */}
+      {scaleMin < 0 && (
+        <Line
+          x1={left}
+          x2={width - right}
+          y1={zeroY}
+          y2={zeroY}
+          stroke="#94A3B8"
+          strokeWidth="1.25"
+        />
+      )}
+
+      {buckets.length > 0 && (
+        <>
+          {/* SUBTLE CURRENT-PERIOD AREA INTELLIGENCE */}
+          <Path
+            d={makeAreaPath()}
+            fill={metricColor}
+            opacity="0.08"
+            stroke="none"
+            pointerEvents="none"
+          />
+
+          {/* PREVIOUS PERIOD COMPARISON */}
+          {previousBuckets.length > 0 && (
+            <Path
+              d={makePreviousPath()}
+              fill="none"
+              stroke={metricColor}
+              strokeWidth="2.4"
+              strokeDasharray="8 6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity="0.52"
+              pointerEvents="none"
+            />
+          )}
+
+          {/* INTERACTIVE PREVIOUS PERIOD POINTS */}
+          {previousBuckets.map(
+            (bucket, index) => {
+              const denominator =
+                Math.max(
+                  1,
+                  previousBuckets.length - 1
+                );
+
+              const x =
+                previousBuckets.length <= 1
+                  ? left + plotWidth / 2
+                  : left +
+                    (index / denominator) *
+                      plotWidth;
+
+              const value =
+                finite(
+                  bucket[metricKey]
+                );
+
+              const y =
+                yAt(value);
+
+              const pointColor =
+                metric === "NET_PROFIT" &&
+                value < 0
+                  ? LOSS_COLOR
+                  : metricColor;
+
+              const active =
+                hoveredPreviousIndex ===
+                index;
+
+              return (
+                <React.Fragment
+                  key={`previous-${bucket.key}-${index}`}
+                >
+                  <Circle
+                    cx={x}
+                    cy={y}
+                    r="13"
+                    fill="transparent"
+                    onMouseEnter={() => {
+                      setHoveredIndex(null);
+                      setHoveredPreviousIndex(
+                        index
+                      );
+                    }}
+                    onMouseLeave={() =>
+                      setHoveredPreviousIndex(
+                        null
+                      )
+                    }
+                    onPress={() => {
+                      setHoveredIndex(null);
+                      setHoveredPreviousIndex(
+                        index
+                      );
+                    }}
+                  />
+
+                  <Circle
+                    cx={x}
+                    cy={y}
+                    r={active ? "5.5" : "4"}
+                    fill="#FFFFFF"
+                    stroke={pointColor}
+                    strokeWidth={
+                      active ? "2.8" : "2"
+                    }
+                    opacity={
+                      active ? "1" : "0.68"
+                    }
+                    pointerEvents="none"
+                  />
+
+                  <Circle
+                    cx={x}
+                    cy={y}
+                    r="1.8"
+                    fill={pointColor}
+                    opacity="0.82"
+                    pointerEvents="none"
+                  />
+                </React.Fragment>
+              );
+            }
+          )}
+
+          {/* CURRENT PERIOD */}
+          <Path
+            d={makePath()}
+            fill="none"
+            stroke={metricColor}
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+
+          {buckets.map(
+            (bucket, index) => {
+              const value = finite(
+                bucket[metricKey]
+              );
+
+              const x =
+                xAt(index);
+
+              const y =
+                yAt(value);
+
+              const pointColor =
+                metric ===
+                  "NET_PROFIT" &&
+                value < 0
+                  ? LOSS_COLOR
+                  : metricColor;
+
+              return (
+                <React.Fragment
+                  key={bucket.key}
+                >
+                  {/* Vertical guide */}
+                  <Line
+                    x1={x}
+                    x2={x}
+                    y1={
+                      top +
+                      plotHeight
+                    }
+                    y2={
+                      top +
+                      plotHeight +
+                      4
+                    }
+                    stroke="#CBD5E1"
+                    strokeWidth="1"
+                  />
+
+                  {/* Interactive hit target */}
+                  <Circle
+                    cx={x}
+                    cy={y}
+                    r="13"
+                    fill="transparent"
+                    onMouseEnter={() => {
+                      setHoveredPreviousIndex(
+                        null
+                      );
+                      setHoveredIndex(index);
+                    }}
+                    onMouseLeave={() =>
+                      setHoveredIndex(null)
+                    }
+                    onPress={() =>
+                      setHoveredIndex(index)
+                    }
+                  />
+
+                  {/* Data point */}
+                  <Circle
+                    cx={x}
+                    cy={y}
+                    r={
+                      hoveredIndex === index
+                        ? "6"
+                        : "5"
+                    }
+                    fill="#FFFFFF"
+                    stroke={pointColor}
+                    strokeWidth={
+                      hoveredIndex === index
+                        ? "3"
+                        : "2.5"
+                    }
+                    pointerEvents="none"
+                  />
+
+                  <Circle
+                    cx={x}
+                    cy={y}
+                    r="2"
+                    fill={pointColor}
+                  />
+
+                  {/* X-axis period label */}
+                  {shouldShowXLabel(
+                    index
+                  ) && (
+                    <SvgText
+                      x={x}
+                      y={
+                        top +
+                        plotHeight +
+                        17
+                      }
+                      textAnchor="middle"
+                      fontSize="10.5"
+                      fontWeight="800"
+                      fill={TEXT_COLOR}
+                    >
+                      {
+                        bucket.shortLabel
+                      }
+                    </SvgText>
+                  )}
+                </React.Fragment>
+              );
+            }
+          )}
+        </>
+      )}
+
+      {/* PROFESSIONAL FINANCIAL TOOLTIP */}
+      {hoveredBucket &&
+        activeHoveredIndex !== null && (() => {
+          const denominator =
+            hoveredIsPrevious
+              ? Math.max(
+                  1,
+                  previousBuckets.length - 1
+                )
+              : Math.max(
+                  1,
+                  buckets.length - 1
+                );
+
+          const pointX =
+            hoveredIsPrevious
+              ? previousBuckets.length <= 1
+                ? left + plotWidth / 2
+                : left +
+                  (
+                    activeHoveredIndex /
+                    denominator
+                  ) *
+                    plotWidth
+              : xAt(
+                  activeHoveredIndex
+                );
+
+          const pointY =
+            yAt(
+              hoveredBucket[
+                metricKey
+              ]
+            );
+
+          const tooltipWidth = 184;
+          const tooltipHeight = 102;
+
+          const tooltipX =
+            pointX >
+            width -
+              tooltipWidth -
+              14
+              ? pointX -
+                tooltipWidth -
+                12
+              : pointX + 12;
+
+          const tooltipY =
+            Math.max(
+              6,
+              Math.min(
+                height -
+                  tooltipHeight -
+                  6,
+                pointY -
+                  tooltipHeight /
+                    2
+              )
+            );
+
+          const profit =
+            finite(
+              hoveredBucket.netProfit
+            );
+
+          return (
+            <React.Fragment>
+              {/* Subtle tooltip depth */}
+              <Rect
+                x={tooltipX + 2}
+                y={tooltipY + 4}
+                width={tooltipWidth}
+                height={tooltipHeight}
+                rx="11"
+                fill="#020617"
+                opacity="0.16"
+                pointerEvents="none"
+              />
+
+              {/* Premium tooltip surface */}
+              <Rect
+                x={tooltipX}
+                y={tooltipY}
+                width={tooltipWidth}
+                height={tooltipHeight}
+                rx="11"
+                fill="#0F172A"
+                stroke="#334155"
+                strokeWidth="1"
+                opacity="0.985"
+                pointerEvents="none"
+              />
+
+              {/* Period heading */}
+              <SvgText
+                x={tooltipX + 12}
+                y={tooltipY + 20}
+                fontSize="11.5"
+                fontWeight="900"
+                fill="#FFFFFF"
+                pointerEvents="none"
+              >
+                {hoveredIsPrevious
+                  ? `Previous • ${hoveredBucket.label}`
+                  : hoveredBucket.label}
+              </SvgText>
+
+              {/* Header divider */}
+              <Rect
+                x={tooltipX + 12}
+                y={tooltipY + 29}
+                width={tooltipWidth - 24}
+                height="1"
+                fill="#334155"
+                opacity="0.9"
+                pointerEvents="none"
+              />
+
+              {/* Sales */}
+              <Rect
+                x={tooltipX + 12}
+                y={tooltipY + 41}
+                width="6"
+                height="6"
+                rx="3"
+                fill="#3B82F6"
+                pointerEvents="none"
+              />
+
+              <SvgText
+                x={tooltipX + 25}
+                y={tooltipY + 48}
+                fontSize="10"
+                fontWeight="800"
+                fill="#E2E8F0"
+                pointerEvents="none"
+              >
+                {`Sales  ${moneyCompact(
+                  hoveredBucket.sales
+                )}`}
+              </SvgText>
+
+              {/* Expenses */}
+              <Rect
+                x={tooltipX + 12}
+                y={tooltipY + 61}
+                width="6"
+                height="6"
+                rx="3"
+                fill="#F59E0B"
+                pointerEvents="none"
+              />
+
+              <SvgText
+                x={tooltipX + 25}
+                y={tooltipY + 68}
+                fontSize="10"
+                fontWeight="800"
+                fill="#FBBF24"
+                pointerEvents="none"
+              >
+                {`Expenses  ${moneyCompact(
+                  hoveredBucket.expenses
+                )}`}
+              </SvgText>
+
+              {/* Net Profit / Loss */}
+              <Rect
+                x={tooltipX + 12}
+                y={tooltipY + 81}
+                width="6"
+                height="6"
+                rx="3"
+                fill={
+                  profit < 0
+                    ? LOSS_COLOR
+                    : PROFIT_COLOR
+                }
+                pointerEvents="none"
+              />
+
+              <SvgText
+                x={tooltipX + 25}
+                y={tooltipY + 88}
+                fontSize="10"
+                fontWeight="900"
+                fill={
+                  profit < 0
+                    ? LOSS_COLOR
+                    : "#4ADE80"
+                }
+                pointerEvents="none"
+              >
+                {profit < 0
+                  ? `Loss  ${moneyCompact(
+                      Math.abs(profit)
+                    )}`
+                  : `Net Profit  ${moneyCompact(
+                      profit
+                    )}`}
+              </SvgText>
+            </React.Fragment>
+          );
+        })()}
+    </Svg>
+  );
+}
+
+function BarsChart({
+  buckets,
+  width,
+  height,
+}: {
+  buckets: FinancialBucketResult[];
+  width: number;
+  height: number;
+}) {
+  const left = 36;
+  const right = 10;
+  const top = 14;
+  const bottom = 34;
+
+  const plotWidth =
+    Math.max(
+      1,
+      width -
+        left -
+        right
+    );
+
+  const plotHeight =
+    Math.max(
+      1,
+      height -
+        top -
+        bottom
+    );
+
+  const values =
+    buckets.flatMap(
+      (bucket) => [
+        finite(
+          bucket.sales
+        ),
+        finite(
+          bucket.expenses
+        ),
+        Math.abs(
+          finite(
+            bucket.netProfit
+          )
+        ),
+      ]
+    );
+
+  const max =
+    Math.max(
+      1,
+      ...values
+    );
+
+  const groupWidth =
+    plotWidth /
+    Math.max(
+      1,
+      buckets.length
+    );
+
+  const barWidth =
+    Math.max(
+      3,
+      Math.min(
+        14,
+        groupWidth /
+          5
+      )
+    );
+
+  const barHeight = (
+    value: number
+  ) =>
+    (Math.abs(
+      finite(value)
+    ) /
+      max) *
+    plotHeight;
+
+  return (
+    <Svg
+      width={width}
+      height={height}
+    >
+      {[0, 0.25, 0.5, 0.75, 1].map(
+        (ratio) => {
+          const y =
+            top +
+            plotHeight *
+              ratio;
+
+          return (
+            <Line
+              key={
+                ratio
+              }
+              x1={left}
+              x2={
+                width -
+                right
+              }
+              y1={y}
+              y2={y}
+              stroke={
+                GRID_COLOR
+              }
+              strokeWidth="1"
+            />
+          );
+        }
+      )}
+
+      {buckets.map(
+        (
+          bucket,
+          index
+        ) => {
+          const center =
+            left +
+            groupWidth *
+              index +
+            groupWidth /
+              2;
+
+          const salesH =
+            barHeight(
+              bucket.sales
+            );
+
+          const expenseH =
+            barHeight(
+              bucket.expenses
+            );
+
+          const profitH =
+            barHeight(
+              bucket.netProfit
+            );
+
+          return (
+            <React.Fragment
+              key={
+                bucket.key
+              }
+            >
+              <Rect
+                x={
+                  center -
+                  barWidth *
+                    1.6
+                }
+                y={
+                  top +
+                  plotHeight -
+                  salesH
+                }
+                width={
+                  barWidth
+                }
+                height={
+                  salesH
+                }
+                rx="2"
+                fill={
+                  SALES_COLOR
+                }
+              />
+
+              <Rect
+                x={
+                  center -
+                  barWidth /
+                    2
+                }
+                y={
+                  top +
+                  plotHeight -
+                  expenseH
+                }
+                width={
+                  barWidth
+                }
+                height={
+                  expenseH
+                }
+                rx="2"
+                fill={
+                  EXPENSE_COLOR
+                }
+              />
+
+              <Rect
+                x={
+                  center +
+                  barWidth *
+                    0.6
+                }
+                y={
+                  top +
+                  plotHeight -
+                  profitH
+                }
+                width={
+                  barWidth
+                }
+                height={
+                  profitH
+                }
+                rx="2"
+                fill={
+                  bucket.netProfit <
+                  0
+                    ? LOSS_COLOR
+                    : PROFIT_COLOR
+                }
+              />
+
+              <SvgText
+                x={center}
+                y={
+                  height -
+                  9
+                }
+                textAnchor="middle"
+                fontSize="10.5"
+                fontWeight="800"
+                fill={
+                  TEXT_COLOR
+                }
+              >
+                {
+                  bucket.shortLabel
+                }
+              </SvgText>
+            </React.Fragment>
+          );
+        }
+      )}
+    </Svg>
+  );
+}
+
+export default function FinancialChart({
+  mode,
+  metric = "SALES",
+  total,
+  buckets,
+  previousBuckets = [],
+  width = 310,
+  height = 190,
+}: Props) {
+  const safeBuckets =
+    useMemo(
+      () =>
+        Array.isArray(
+          buckets
+        )
+          ? buckets
+          : [],
+      [buckets]
+    );
+
+  if (mode === "TREND") {
+    return (
+      <TrendChart
+        buckets={
+          safeBuckets
+        }
+        previousBuckets={
+          Array.isArray(
+            previousBuckets
+          )
+            ? previousBuckets
+            : []
+        }
+        width={width}
+        height={height}
+        metric={metric}
+      />
+    );
+  }
+
+  if (mode === "BARS") {
+    return (
+      <BarsChart
+        buckets={
+          safeBuckets
+        }
+        width={width}
+        height={height}
+      />
+    );
+  }
+
+  return (
+    <DonutChart
+      total={total}
+      width={width}
+      height={height}
+    />
+  );
+}
+
+export function FinancialChartLegend({
+  total,
+}: {
+  total: FinancialMetric;
+}) {
+  const profitIsLoss =
+    finite(
+      total.netProfit
+    ) < 0;
+
+  const items = [
+    {
+      label: "Sales",
+      value:
+        total.sales,
+      color:
+        SALES_COLOR,
+    },
+    {
+      label: "Expenses",
+      value:
+        total.expenses,
+      color:
+        EXPENSE_COLOR,
+    },
+    {
+      label:
+        profitIsLoss
+          ? "Loss"
+          : "Net Profit",
+      value:
+        total.netProfit,
+      color:
+        profitIsLoss
+          ? LOSS_COLOR
+          : PROFIT_COLOR,
+    },
+  ];
+
+  return (
+    <View
+      style={{
+        flexDirection:
+          "row",
+        gap: 8,
+        width: "100%",
+      }}
+    >
+      {items.map(
+        (item) => (
+          <View
+            key={
+              item.label
+            }
+            style={{
+              flex: 1,
+              minWidth: 0,
+              borderWidth: 1,
+              borderColor:
+                "#E2E8F0",
+              borderRadius:
+                10,
+              paddingHorizontal:
+                8,
+              paddingVertical:
+                7,
+              backgroundColor:
+                "#FFFFFF",
+            }}
+          >
+            <View
+              style={{
+                flexDirection:
+                  "row",
+                alignItems:
+                  "center",
+                gap: 5,
+              }}
+            >
+              <View
+                style={{
+                  width: 7,
+                  height: 7,
+                  borderRadius:
+                    999,
+                  backgroundColor:
+                    item.color,
+                }}
+              />
+
+              <Text
+                numberOfLines={
+                  1
+                }
+                style={{
+                  color:
+                    "#64748B",
+                  fontSize: 9,
+                  fontWeight:
+                    "700",
+                }}
+              >
+                {
+                  item.label
+                }
+              </Text>
+            </View>
+
+            <Text
+              numberOfLines={
+                1
+              }
+              style={{
+                marginTop: 3,
+                color:
+                  item.label ===
+                    "Loss"
+                    ? LOSS_COLOR
+                    : "#0F172A",
+                fontSize: 10,
+                fontWeight:
+                  "800",
+              }}
+            >
+              {moneyFull(
+                item.value
+              )}
+            </Text>
+          </View>
+        )
+      )}
+    </View>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+
+

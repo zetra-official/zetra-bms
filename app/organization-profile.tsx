@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from "expo-router";
+﻿import { useLocalSearchParams, useRouter } from "expo-router";
 
 import * as ImagePicker from "expo-image-picker";
 import React, { useEffect, useState } from "react";
@@ -277,8 +277,13 @@ Alert.alert("Saved ✅", "Business profile imehifadhiwa.", [
                 />
 
                 <View style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
-                  <View
-                    style={{
+                                    <Pressable
+                    onPress={pickAndUploadLogo}
+                    disabled={uploadingLogo}
+                    hitSlop={6}
+                    accessibilityRole="button"
+                    accessibilityLabel="Change or upload business logo"
+                    style={({ pressed }) => ({
                       width: 88,
                       height: 88,
                       borderRadius: 22,
@@ -288,19 +293,97 @@ Alert.alert("Saved ✅", "Business profile imehifadhiwa.", [
                       alignItems: "center",
                       justifyContent: "center",
                       overflow: "hidden",
-                    }}
+                      opacity: uploadingLogo
+                        ? 0.55
+                        : pressed
+                          ? 0.84
+                          : 1,
+                      transform: [
+                        {
+                          scale:
+                            !uploadingLogo && pressed
+                              ? 0.97
+                              : 1,
+                        },
+                      ],
+                    })}
                   >
                     {logoUrl ? (
-                      <Image source={{ uri: logoUrl }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
+                      <>
+                        <Image
+                          source={{ uri: logoUrl }}
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                          }}
+                          resizeMode="cover"
+                        />
+
+                        <View
+                          pointerEvents="none"
+                          style={{
+                            position: "absolute",
+                            left: 7,
+                            right: 7,
+                            bottom: 7,
+                            paddingVertical: 3,
+                            borderRadius: 999,
+                            backgroundColor: "rgba(15,23,42,0.72)",
+                            alignItems: "center",
+                          }}
+                        >
+                          <Text
+                            style={{
+                              color: "#FFFFFF",
+                              fontWeight: "900",
+                              fontSize: 8,
+                            }}
+                          >
+                            Change
+                          </Text>
+                        </View>
+                      </>
                     ) : (
-                      <Text style={{ color: UI.faint, fontWeight: "900", fontSize: 12 }}>LOGO</Text>
+                      <View
+                        pointerEvents="none"
+                        style={{
+                          alignItems: "center",
+                          justifyContent: "center",
+                          paddingHorizontal: 8,
+                        }}
+                      >
+                        <Text
+                          style={{
+                            color: UI.text,
+                            fontWeight: "900",
+                            fontSize: 10,
+                            textAlign: "center",
+                          }}
+                        >
+                          Upload Logo
+                        </Text>
+
+                        <Text
+                          style={{
+                            color: UI.faint,
+                            fontWeight: "700",
+                            fontSize: 8,
+                            marginTop: 3,
+                            textAlign: "center",
+                          }}
+                        >
+                          Tap to select
+                        </Text>
+                      </View>
                     )}
-                  </View>
+                  </Pressable>
 
                   <View style={{ flex: 1, gap: 8 }}>
                     <Text style={{ color: UI.text, fontWeight: "900" }}>Logo ya kampuni</Text>
                     <Text style={{ color: UI.faint, fontWeight: "700", fontSize: 12, lineHeight: 17 }}>
-                      Upload picha ya logo. Itatumika kwenye invoice/receipt.
+                      {logoUrl
+                        ? "Gusa picha ya logo au Change Logo kubadilisha picha."
+                        : "Upload picha ya logo. Itatumika kwenye invoice/receipt."}
                     </Text>
 
                     <Pressable
@@ -317,7 +400,11 @@ Alert.alert("Saved ✅", "Business profile imehifadhiwa.", [
                       }}
                     >
                       <Text style={{ color: UI.text, fontWeight: "900" }}>
-                        {uploadingLogo ? "Ina-upload..." : "Upload Logo"}
+                        {uploadingLogo
+                          ? "Ina-upload..."
+                          : logoUrl
+                            ? "Change Logo"
+                            : "Upload Logo"}
                       </Text>
                     </Pressable>
                   </View>

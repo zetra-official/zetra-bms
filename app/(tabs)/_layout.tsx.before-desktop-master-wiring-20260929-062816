@@ -1,0 +1,1807 @@
+﻿import { useOrg } from "@/src/context/OrgContext";
+import { supabase } from "@/src/supabase/supabaseClient";
+import { theme } from "@/src/ui/theme";
+import { Tabs, useFocusEffect, useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import {
+  Platform,
+  Pressable,
+  Text,
+  View,
+  useWindowDimensions,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+const INTERNAL_BILLING_EMAIL = "zetraofficialtz@gmail.com";
+
+function TabLabel({
+  text,
+  color,
+  mobileWeb = false,
+}: {
+  text: string;
+  color: string;
+  mobileWeb?: boolean;
+}) {
+  return (
+    <Text
+      style={{
+        color,
+        fontWeight: "900",
+        fontSize: mobileWeb ? 9.8 : 11.8,
+lineHeight: mobileWeb ? 12 : 14,
+        textAlign: mobileWeb ? "center" : "left",
+        includeFontPadding: false,
+        width: mobileWeb ? "100%" : undefined,
+flexShrink: 1,
+        letterSpacing: mobileWeb ? -0.45 : 0,
+      }}
+      numberOfLines={1}
+      adjustsFontSizeToFit
+      minimumFontScale={0.78}
+      allowFontScaling={false}
+    >
+      {text}
+    </Text>
+  );
+}
+
+function WebTabIcon({
+  emoji,
+  color,
+  mobileWeb = false,
+}: {
+  emoji: string;
+  color: string;
+  mobileWeb?: boolean;
+}) {
+  return (
+    <View
+      style={{
+      width: mobileWeb ? 27 : 22,
+height: mobileWeb ? 22 : 22,
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <Text
+        style={{
+          fontSize: mobileWeb ? 20 : 17,
+          color,
+          textAlign: "center",
+          includeFontPadding: false,
+        }}
+      >
+        {emoji}
+      </Text>
+    </View>
+  );
+}
+
+function MoreGridIcon({
+  color,
+  mobileWeb = false,
+}: {
+  color: string;
+  mobileWeb?: boolean;
+}) {
+  const box = mobileWeb ? 5 : 5.6;
+  const gap = mobileWeb ? 1.8 : 2.2;
+
+  return (
+    <View
+      style={{
+        width: mobileWeb ? 28 : 22,
+        height: mobileWeb ? 28 : 22,
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <View
+        style={{
+          width: mobileWeb ? 23 : 26,
+          height: mobileWeb ? 23 : 26,
+          borderRadius: 7,
+          borderWidth: 1,
+          borderColor: "rgba(255,255,255,0.20)",
+          backgroundColor: "rgba(255,255,255,0.08)",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <View style={{ flexDirection: "row", gap }}>
+          {[0, 1, 2].map((col) => (
+            <View key={col} style={{ gap }}>
+              {[0, 1, 2].map((row) => (
+                <View
+                  key={`${col}-${row}`}
+                  style={{
+                    width: box,
+                    height: box,
+                    borderRadius: 1.8,
+                    backgroundColor: color,
+                    opacity: 0.9,
+                  }}
+                />
+              ))}
+            </View>
+          ))}
+        </View>
+      </View>
+    </View>
+  );
+}
+type MobileBankingTabBarProps = {
+  state: any;
+  navigation: any;
+  bottomInset: number;
+};
+
+function MobileBankingTabBar({
+  state,
+  navigation,
+  bottomInset,
+}: MobileBankingTabBarProps) {
+  const activeRouteName = String(
+    state?.routes?.[state?.index]?.name ?? ""
+  );
+
+  const isActive = React.useCallback(
+    (names: string[]) =>
+      names.some(
+        (name) =>
+          activeRouteName === name ||
+          activeRouteName.startsWith(`${name}/`)
+      ),
+    [activeRouteName]
+  );
+
+  const go = React.useCallback(
+    (name: string) => {
+      navigation.navigate(name);
+    },
+    [navigation]
+  );
+
+  const handleSellPress = React.useCallback(() => {
+    const currentSalesState =
+      state?.routes?.[state?.index]?.state;
+
+    const currentSalesRouteName = String(
+      currentSalesState?.routes?.[
+        currentSalesState?.index
+      ]?.name ?? ""
+    );
+
+    const isReceiptScreen =
+      activeRouteName === "sales" &&
+      currentSalesRouteName === "receipt";
+
+    if (isReceiptScreen) {
+      navigation.navigate("sales", {
+        screen: "index",
+      });
+
+      return;
+    }
+
+    if (activeRouteName === "sales") {
+      return;
+    }
+
+    navigation.navigate("sales");
+  }, [
+    activeRouteName,
+    navigation,
+    state,
+  ]);
+
+  const normalItems = [
+    {
+      key: "home",
+      label: "Home",
+      icon: "home-outline",
+      activeIcon: "home",
+      active: isActive(["index"]),
+      onPress: () => go("index"),
+    },
+    {
+      key: "products",
+      label: "Product",
+      icon: "cube-outline",
+      activeIcon: "cube",
+      active: isActive(["products"]),
+      onPress: () => go("products"),
+    },
+    {
+      key: "stores",
+      label: "Stores",
+      icon: "storefront-outline",
+      activeIcon: "storefront",
+      active: isActive(["stores"]),
+      onPress: () => go("stores"),
+    },
+    {
+      key: "more",
+      label: "More",
+      icon: "grid-outline",
+      activeIcon: "grid",
+      active: isActive(["settings"]),
+      onPress: () => go("settings"),
+    },
+  ];
+
+  const renderNormalItem = (item: (typeof normalItems)[number]) => {
+    const activeColor = "#FFFFFF";
+    const inactiveColor = "rgba(255,255,255,0.58)";
+    const color = item.active ? activeColor : inactiveColor;
+
+    return (
+      <Pressable
+        key={item.key}
+        onPress={item.onPress}
+        accessibilityRole="button"
+        accessibilityLabel={item.label}
+        style={({ pressed }) => ({
+          flex: 1,
+          minWidth: 0,
+          height: 54,
+          alignItems: "center",
+          justifyContent: "center",
+          opacity: pressed ? 0.72 : 1,
+        })}
+      >
+        <View
+          style={{
+            minWidth: 31,
+            height: 25,
+            paddingHorizontal: 5,
+            borderRadius: 9,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: item.active
+              ? "rgba(59,130,246,0.22)"
+              : "transparent",
+            borderWidth: item.active ? 1 : 0,
+            borderColor: item.active
+              ? "rgba(147,197,253,0.22)"
+              : "transparent",
+          }}
+        >
+          <Ionicons
+            name={
+              (item.active ? item.activeIcon : item.icon) as React.ComponentProps<
+                typeof Ionicons
+              >["name"]
+            }
+            size={item.active ? 21 : 20}
+            color={color}
+          />
+        </View>
+
+        <Text
+          numberOfLines={1}
+          allowFontScaling={false}
+          style={{
+            marginTop: 1,
+            color,
+            fontSize: 9,
+            lineHeight: 11,
+            fontWeight: item.active ? "900" : "700",
+            textAlign: "center",
+            includeFontPadding: false,
+          }}
+        >
+          {item.label}
+        </Text>
+      </Pressable>
+    );
+  };
+
+  const salesActive = isActive(["sales"]);
+
+  return (
+    <View
+      pointerEvents="box-none"
+      style={{
+        backgroundColor: "transparent",
+        paddingTop: 13,
+      }}
+    >
+      <View
+        style={{
+          minHeight: 58 + Math.max(bottomInset, 2),
+          paddingBottom: Math.max(bottomInset, 2),
+          paddingHorizontal: 4,
+          backgroundColor: "#071A33",
+          borderTopLeftRadius: 24,
+          borderTopRightRadius: 24,
+          flexDirection: "row",
+          alignItems: "center",
+          shadowColor: "#000000",
+          shadowOpacity: 0.16,
+          shadowRadius: 12,
+          shadowOffset: {
+            width: 0,
+            height: -3,
+          },
+          elevation: 18,
+        }}
+      >
+        {renderNormalItem(normalItems[0])}
+        {renderNormalItem(normalItems[1])}
+
+        <View
+          pointerEvents="box-none"
+          style={{
+            flex: 1.12,
+            minWidth: 0,
+            height: 58,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Pressable
+            onPress={handleSellPress}
+            accessibilityRole="button"
+            accessibilityLabel="SELL"
+            style={({ pressed }) => ({
+              position: "absolute",
+              top: -24,
+              width: 62,
+              height: 62,
+              borderRadius: 31,
+              backgroundColor: salesActive ? "#15803D" : "#16A34A",
+              borderWidth: 5,
+              borderColor: "#F7FAFC",
+              alignItems: "center",
+              justifyContent: "center",
+              shadowColor: "#000000",
+              shadowOpacity: 0.24,
+              shadowRadius: 8,
+              shadowOffset: {
+                width: 0,
+                height: 4,
+              },
+              elevation: 20,
+              transform: [
+                {
+                  scale: pressed ? 0.96 : 1,
+                },
+              ],
+            })}
+          >
+            <Ionicons
+              name={salesActive ? "cart" : "cart-outline"}
+              size={20}
+              color="#FFFFFF"
+            />
+
+            <Text
+              allowFontScaling={false}
+              style={{
+                marginTop: 0,
+                color: "#FFFFFF",
+                fontSize: 9,
+                lineHeight: 11,
+                fontWeight: "900",
+                letterSpacing: 0.5,
+                includeFontPadding: false,
+              }}
+            >
+              SELL
+            </Text>
+          </Pressable>
+        </View>
+
+        {renderNormalItem(normalItems[2])}
+        {renderNormalItem(normalItems[3])}
+      </View>
+    </View>
+  );
+}
+type SidebarSubscriptionRow = {
+  plan_code?: string | null;
+  plan_name?: string | null;
+  status?: string | null;
+  expires_at?: string | null;
+  end_at?: string | null;
+  [k: string]: any;
+};
+
+function cleanSubscriptionValue(v: any) {
+  return String(v ?? "").trim();
+}
+
+function parseSidebarSubscriptionDate(value: any): Date | null {
+  const raw = cleanSubscriptionValue(value);
+
+  if (!raw) return null;
+
+  const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+
+  if (match) {
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const day = Number(match[3]);
+
+    const d = new Date(year, month - 1, day);
+
+    if (!Number.isNaN(d.getTime())) {
+      return d;
+    }
+  }
+
+  const parsed = new Date(raw);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  return new Date(
+    parsed.getFullYear(),
+    parsed.getMonth(),
+    parsed.getDate()
+  );
+}
+
+function getSidebarSubscriptionDaysLeft(value: any): number | null {
+  const expiry = parseSidebarSubscriptionDate(value);
+
+  if (!expiry) return null;
+
+  const today = new Date();
+
+  const todayUTC = Date.UTC(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate()
+  );
+
+  const expiryUTC = Date.UTC(
+    expiry.getFullYear(),
+    expiry.getMonth(),
+    expiry.getDate()
+  );
+
+  return Math.round(
+    (expiryUTC - todayUTC) / (24 * 60 * 60 * 1000)
+  );
+}
+
+function formatSidebarSubscriptionDate(value: any) {
+  const d = parseSidebarSubscriptionDate(value);
+
+  if (!d) return "—";
+
+  try {
+    return d.toLocaleDateString(undefined, {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  } catch {
+    return cleanSubscriptionValue(value).slice(0, 10) || "—";
+  }
+}
+
+function DesktopSidebarSubscriptionCard({
+  orgId,
+  role,
+}: {
+  orgId?: string | null;
+  role?: string | null;
+}) {
+  const router = useRouter();
+
+  const cleanOrgId = cleanSubscriptionValue(orgId);
+  const roleLower = cleanSubscriptionValue(role).toLowerCase();
+
+  const canManageSubscription =
+    roleLower === "owner" || roleLower === "admin";
+
+  const [loading, setLoading] = useState(false);
+
+  const [subscription, setSubscription] =
+    useState<SidebarSubscriptionRow | null>(null);
+
+  const [loadFailed, setLoadFailed] = useState(false);
+
+  const requestRef = useRef(0);
+
+  const loadSubscription = useCallback(async () => {
+    if (!cleanOrgId || !canManageSubscription) {
+      setSubscription(null);
+      setLoadFailed(false);
+      return;
+    }
+
+    const requestId = ++requestRef.current;
+
+    setLoading(true);
+    setLoadFailed(false);
+
+    try {
+      const { data, error } = await supabase.rpc(
+        "get_my_subscription",
+        {
+          p_org_id: cleanOrgId,
+        } as any
+      );
+
+      if (error) {
+        throw error;
+      }
+
+      if (requestId !== requestRef.current) {
+        return;
+      }
+
+      const row = Array.isArray(data)
+        ? data[0] ?? null
+        : data ?? null;
+
+      setSubscription(
+        row
+          ? (row as SidebarSubscriptionRow)
+          : null
+      );
+
+      setLoadFailed(false);
+    } catch (e) {
+      if (requestId !== requestRef.current) {
+        return;
+      }
+
+      /*
+       * MUHIMU:
+       * Tusifiche component ikiwa RPC imefail.
+       * Tutaonyesha status fallback.
+       */
+      setSubscription(null);
+      setLoadFailed(true);
+    } finally {
+      if (requestId === requestRef.current) {
+        setLoading(false);
+      }
+    }
+  }, [cleanOrgId, canManageSubscription]);
+
+  /*
+   * Layout ni persistent.
+   * useEffect inahakikisha subscription
+   * inapakiwa mara activeOrgId/role inapobadilika,
+   * hata kama layout yenyewe haijapata focus event mpya.
+   */
+  useEffect(() => {
+    void loadSubscription();
+  }, [loadSubscription]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadSubscription();
+    }, [loadSubscription])
+  );
+
+  const planCode = useMemo(() => {
+    return cleanSubscriptionValue(
+      subscription?.plan_code ??
+        subscription?.plan_name ??
+        subscription?.plan ??
+        subscription?.code ??
+        ""
+    ).toUpperCase();
+  }, [subscription]);
+
+  const status = useMemo(() => {
+    return cleanSubscriptionValue(
+      subscription?.status ??
+        subscription?.subscription_status ??
+        ""
+    ).toUpperCase();
+  }, [subscription]);
+
+  const expiryRaw = useMemo(() => {
+    return (
+      subscription?.expires_at ??
+      subscription?.end_at ??
+      subscription?.subscription_end ??
+      subscription?.expiry_date ??
+      ""
+    );
+  }, [subscription]);
+
+  const daysLeft = useMemo(
+    () => getSidebarSubscriptionDaysLeft(expiryRaw),
+    [expiryRaw]
+  );
+
+  const expiryLabel = useMemo(
+    () => formatSidebarSubscriptionDate(expiryRaw),
+    [expiryRaw]
+  );
+
+  if (!cleanOrgId || !canManageSubscription) {
+    return null;
+  }
+
+  const normalizedPlan =
+    planCode ||
+    (
+      subscription
+        ? "SUBSCRIPTION"
+        : loadFailed
+          ? "ACCOUNT"
+          : "FREE"
+    );
+
+  const normalizedStatus =
+    status ||
+    (
+      loadFailed
+        ? "CHECK BILLING"
+        : subscription
+          ? "ACTIVE"
+          : "FREE"
+    );
+
+  const isFree =
+    normalizedPlan === "FREE" ||
+    normalizedStatus === "FREE";
+
+  const isExpired =
+    normalizedStatus === "EXPIRED" ||
+    (
+      !isFree &&
+      daysLeft !== null &&
+      daysLeft < 0
+    );
+
+  const expiresToday =
+    !isFree &&
+    !isExpired &&
+    daysLeft === 0;
+
+  const critical =
+    !isFree &&
+    !isExpired &&
+    daysLeft !== null &&
+    daysLeft >= 1 &&
+    daysLeft <= 7;
+
+  const warning =
+    !isFree &&
+    !isExpired &&
+    daysLeft !== null &&
+    daysLeft >= 8 &&
+    daysLeft <= 14;
+
+  const colors = isExpired
+    ? {
+        strong: "#FCA5A5",
+        muted: "#FECACA",
+        badgeBg: "#B91C1C",
+        line: "rgba(248,113,113,0.30)",
+      }
+    : expiresToday || critical
+      ? {
+          strong: "#FCA5A5",
+          muted: "#FECACA",
+          badgeBg: "#DC2626",
+          line: "rgba(248,113,113,0.28)",
+        }
+      : warning
+        ? {
+            strong: "#FDA4AF",
+            muted: "#FECDD3",
+            badgeBg: "#EF4444",
+            line: "rgba(251,113,133,0.26)",
+          }
+        : isFree
+          ? {
+              strong: "#BFDBFE",
+              muted: "#DBEAFE",
+              badgeBg: "#2563EB",
+              line: "rgba(96,165,250,0.25)",
+            }
+          : {
+              strong: "#A7F3D0",
+              muted: "#D1FAE5",
+              badgeBg: "#059669",
+              line: "rgba(52,211,153,0.24)",
+            };
+
+  const remainingLabel = loading
+    ? "..."
+    : loadFailed
+      ? "BILLING"
+      : isFree
+        ? "FREE"
+        : isExpired
+          ? "EXPIRED"
+          : expiresToday
+            ? "TODAY"
+            : daysLeft === 1
+              ? "1 DAY"
+              : daysLeft !== null
+                ? `${daysLeft} DAYS`
+                : normalizedStatus || "ACTIVE";
+
+  const subtitle = loading
+    ? "Checking subscription..."
+    : loadFailed
+      ? "Tap to check Subscription & Billing"
+      : isFree
+        ? "Free plan • Upgrade available"
+        : isExpired
+          ? expiryRaw
+            ? `Expired ${expiryLabel}`
+            : "Subscription expired"
+          : expiresToday
+            ? `Expires today • ${expiryLabel}`
+            : daysLeft !== null
+              ? critical || warning
+                ? `Renew before ${expiryLabel}`
+                : `Expires ${expiryLabel}`
+              : normalizedStatus || "Subscription active";
+
+  const openSubscription = () => {
+    router.push(
+      "/(tabs)/settings/subscription" as any
+    );
+  };
+
+  return (
+    <Pressable
+      pointerEvents="auto"
+      onPress={openSubscription}
+      style={({ pressed }) => ({
+        marginTop: 6,
+        paddingTop: 7,
+        paddingBottom: 1,
+
+        borderTopWidth: 1,
+        borderTopColor: colors.line,
+
+        opacity: pressed ? 0.82 : 1,
+
+        gap: 4,
+      })}
+    >
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 6,
+        }}
+      >
+        <View
+          style={{
+            flex: 1,
+            minWidth: 0,
+          }}
+        >
+          <Text
+            style={{
+              color: colors.strong,
+              fontWeight: "900",
+              fontSize: 9.5,
+            }}
+            numberOfLines={1}
+          >
+            {normalizedPlan}
+            {normalizedStatus &&
+            normalizedStatus !== normalizedPlan
+              ? ` • ${normalizedStatus}`
+              : ""}
+          </Text>
+        </View>
+
+        <View
+          style={{
+            paddingHorizontal: 7,
+            paddingVertical: 3,
+
+            borderRadius: 999,
+
+            backgroundColor: colors.badgeBg,
+          }}
+        >
+          <Text
+            style={{
+              color: "#FFFFFF",
+              fontWeight: "900",
+              fontSize: 7.5,
+            }}
+            numberOfLines={1}
+          >
+            {remainingLabel}
+          </Text>
+        </View>
+      </View>
+
+      <Text
+        style={{
+          color: colors.muted,
+          fontWeight: "800",
+          fontSize: 8.5,
+        }}
+        numberOfLines={1}
+      >
+        {subtitle}
+      </Text>
+    </Pressable>
+  );
+}
+export default function TabsLayout() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { activeRole, activeOrgId, activeOrgName, activeStoreId, activeStoreName, stores } = useOrg();
+
+  const [sessionEmail, setSessionEmail] = useState("");
+  const [checkingOfficeAccount, setCheckingOfficeAccount] = useState(true);
+
+  const isOfficeAccount =
+    String(sessionEmail ?? "").trim().toLowerCase() === INTERNAL_BILLING_EMAIL;
+
+  useEffect(() => {
+    let alive = true;
+
+    const checkOfficeAccount = async () => {
+      try {
+        const { data, error } = await supabase.auth.getUser();
+
+        if (!alive) return;
+
+        if (error) {
+          setSessionEmail("");
+          setCheckingOfficeAccount(false);
+          return;
+        }
+
+        const email = String(data?.user?.email ?? "").trim().toLowerCase();
+
+        setSessionEmail(email);
+        setCheckingOfficeAccount(false);
+
+        if (email === INTERNAL_BILLING_EMAIL) {
+          router.replace("/office" as any);
+        }
+      } catch {
+        if (!alive) return;
+
+        setSessionEmail("");
+        setCheckingOfficeAccount(false);
+      }
+    };
+
+    void checkOfficeAccount();
+
+    return () => {
+      alive = false;
+    };
+  }, [router]);
+
+  const role = String(activeRole ?? "").trim().toLowerCase();
+  const isCashier = role === "cashier";
+
+  const activeStoreType = React.useMemo(() => {
+    const row = (stores ?? []).find(
+      (s: any) => String(s?.store_id ?? "") === String(activeStoreId ?? "")
+    );
+    const t = String((row as any)?.store_type ?? "STANDARD").trim().toUpperCase();
+
+    if (t === "CAPITAL_RECOVERY") return "CAPITAL_RECOVERY";
+    if (t === "FIELD_PROCUREMENT") return "FIELD_PROCUREMENT";
+    return "STANDARD";
+  }, [stores, activeStoreId]);
+
+  const isCapitalRecoveryStore = activeStoreType === "CAPITAL_RECOVERY";
+  const isFieldProcurementStore = activeStoreType === "FIELD_PROCUREMENT";
+  const isSpecialStore = isCapitalRecoveryStore || isFieldProcurementStore;
+
+  const isWeb = Platform.OS === "web";
+  const { width } = useWindowDimensions();
+  const rawMobileWeb = isWeb && width < 900;
+  const useLeftSidebarWeb = isWeb && !rawMobileWeb;
+  const isMobileWeb = !useLeftSidebarWeb;
+
+  const hidden = { display: "none" as const };
+
+  const sidebarTitle = String(activeOrgName ?? "ZETRA BMS").trim() || "ZETRA BMS";
+  const sidebarStore = String(activeStoreName ?? "No active store").trim() || "No active store";
+  const sidebarRole = role ? role.toUpperCase() : "USER";
+
+  if (checkingOfficeAccount) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: theme.colors.background,
+        }}
+      />
+    );
+  }
+
+  if (isOfficeAccount) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: theme.colors.background,
+        }}
+      />
+    );
+  }
+
+  const desktopSidebar = useLeftSidebarWeb
+    ? (props: any) => {
+        const activeRoute =
+          props?.state?.routes?.[props?.state?.index];
+
+        const activeRouteName = String(
+          activeRoute?.name ?? ""
+        );
+
+        const activeNestedState =
+          activeRoute?.state;
+
+        const activeNestedRouteName = String(
+          activeNestedState?.routes?.[
+            activeNestedState?.index
+          ]?.name ?? ""
+        );
+
+        const isInventoryRoute =
+          activeRouteName === "stores" &&
+          (
+            activeNestedRouteName === "inventory" ||
+            activeNestedRouteName.startsWith("inventory/")
+          );
+
+        const isStoresHomeRoute =
+          activeRouteName === "stores" &&
+          (
+            activeNestedRouteName === "" ||
+            activeNestedRouteName === "index"
+          );
+
+        const DesktopNavItem = ({
+          label,
+          icon,
+          routeName,
+          onPress,
+          hidden: itemHidden = false,
+          badge,
+          activeOverride,
+        }: {
+          label: string;
+          icon: keyof typeof Ionicons.glyphMap;
+          routeName?: string;
+          onPress?: () => void;
+          hidden?: boolean;
+          badge?: string;
+          activeOverride?: boolean;
+        }) => {
+          if (itemHidden) return null;
+
+          const routeActive =
+            routeName != null &&
+            (
+              activeRouteName === routeName ||
+              activeRouteName.startsWith(`${routeName}/`)
+            );
+
+          const active =
+            activeOverride !== undefined
+              ? activeOverride
+              : routeActive;
+
+          return (
+            <Pressable
+              onPress={() => {
+                if (onPress) {
+                  onPress();
+                  return;
+                }
+
+                if (routeName) {
+                  props.navigation.navigate(routeName);
+                }
+              }}
+              style={({ hovered, pressed }: any) => ({
+                minHeight: 31,
+                borderRadius: 7,
+                paddingHorizontal: 7,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 7,
+
+                backgroundColor: active
+                  ? "#2563EB"
+                  : hovered || pressed
+                    ? "rgba(255,255,255,0.08)"
+                    : "transparent",
+              })}
+            >
+              <Ionicons
+                name={icon}
+                size={14}
+                color={
+                  active
+                    ? "#FFFFFF"
+                    : "rgba(255,255,255,0.76)"
+                }
+              />
+
+              <Text
+                numberOfLines={1}
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  color: active
+                    ? "#FFFFFF"
+                    : "rgba(255,255,255,0.84)",
+                  fontSize: 9.5,
+                  fontWeight: active ? "900" : "700",
+                }}
+              >
+                {label}
+              </Text>
+
+              {!!badge ? (
+                <View
+                  style={{
+                    minWidth: 24,
+                    height: 14,
+                    paddingHorizontal: 4,
+                    borderRadius: 7,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: "#22C55E",
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: "#FFFFFF",
+                      fontSize: 6.5,
+                      fontWeight: "900",
+                    }}
+                  >
+                    {badge}
+                  </Text>
+                </View>
+              ) : null}
+            </Pressable>
+          );
+        };
+
+        const DesktopWorkspaceCard = ({
+          label,
+          value,
+          icon,
+        }: {
+          label: string;
+          value: string;
+          icon: keyof typeof Ionicons.glyphMap;
+        }) => (
+          <View
+            style={{
+              minHeight: 37,
+              borderRadius: 7,
+              borderWidth: 1,
+              borderColor: "rgba(255,255,255,0.10)",
+              backgroundColor: "rgba(255,255,255,0.035)",
+              paddingHorizontal: 7,
+              paddingVertical: 5,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 6,
+            }}
+          >
+            <Ionicons
+              name={icon}
+              size={12}
+              color="rgba(255,255,255,0.62)"
+            />
+
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text
+                numberOfLines={1}
+                style={{
+                  color: "rgba(255,255,255,0.44)",
+                  fontSize: 6,
+                  fontWeight: "800",
+                  textTransform: "uppercase",
+                }}
+              >
+                {label}
+              </Text>
+
+              <Text
+                numberOfLines={1}
+                style={{
+                  color: "#FFFFFF",
+                  fontSize: 8,
+                  fontWeight: "800",
+                  marginTop: 1,
+                }}
+              >
+                {value}
+              </Text>
+            </View>
+
+            <Ionicons
+              name="chevron-down"
+              size={9}
+              color="rgba(255,255,255,0.45)"
+            />
+          </View>
+        );
+
+        return (
+          <View
+            style={{
+              width: 150,
+              height: "100%",
+              backgroundColor: "#0B1F3A",
+              borderRightWidth: 1,
+              borderRightColor: "rgba(255,255,255,0.08)",
+              paddingTop: Math.max(insets.top + 10, 14),
+              paddingBottom: Math.max(insets.bottom + 8, 10),
+              paddingHorizontal: 8,
+            }}
+          >
+            {/* ZETRA BRAND */}
+            <View
+              style={{
+                paddingHorizontal: 4,
+                marginBottom: 9,
+              }}
+            >
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
+                <View
+                  style={{
+                    width: 22,
+                    height: 22,
+                    borderRadius: 6,
+                    backgroundColor: "#2563EB",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: "#FFFFFF",
+                      fontSize: 14,
+                      fontWeight: "900",
+                      fontStyle: "italic",
+                    }}
+                  >
+                    Z
+                  </Text>
+                </View>
+
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text
+                    numberOfLines={1}
+                    style={{
+                      color: "#FFFFFF",
+                      fontSize: 13,
+                      fontWeight: "900",
+                      letterSpacing: 0.1,
+                    }}
+                  >
+                    ZETRA BMS
+                  </Text>
+
+                  <Text
+                    numberOfLines={1}
+                    style={{
+                      color: "rgba(255,255,255,0.50)",
+                      fontSize: 6.5,
+                      fontWeight: "700",
+                      marginTop: 1,
+                    }}
+                  >
+                    Business Management System
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* MAIN DESKTOP NAVIGATION */}
+            <View style={{ gap: 1 }}>
+              <DesktopNavItem
+                label="Home"
+                icon="home-outline"
+                routeName="index"
+              />
+
+              <DesktopNavItem
+                label="POS / Sell"
+                icon="cart-outline"
+                routeName="sales"
+                hidden={isSpecialStore}
+                onPress={() => {
+                  router.replace("/(tabs)/sales" as any);
+                }}
+              />
+
+              <DesktopNavItem
+                label="Products"
+                icon="pricetag-outline"
+                routeName="products"
+                hidden={isCashier || isFieldProcurementStore}
+              />
+
+              <DesktopNavItem
+                label="Inventory"
+                icon="layers-outline"
+                hidden={isCashier || isFieldProcurementStore}
+                activeOverride={isInventoryRoute}
+                onPress={() => {
+                  router.push("/(tabs)/stores/inventory" as any);
+                }}
+              />
+
+              <DesktopNavItem
+                label="Customers (CRM)"
+                icon="people-outline"
+                hidden={isCashier || isSpecialStore}
+              />
+
+              <DesktopNavItem
+                label="Credit"
+                icon="card-outline"
+                routeName="credit"
+                hidden={isCashier || isSpecialStore}
+              />
+
+              <DesktopNavItem
+                label="Expenses"
+                icon="receipt-outline"
+                routeName="expenses"
+                hidden={isCashier || isSpecialStore}
+              />
+
+              <DesktopNavItem
+                label="Finance"
+                icon="stats-chart-outline"
+                hidden={isCashier || isSpecialStore}
+              />
+
+              <DesktopNavItem
+                label="Reports"
+                icon="bar-chart-outline"
+                hidden={isCashier || isSpecialStore}
+              />
+
+              <DesktopNavItem
+                label="Stores"
+                icon="storefront-outline"
+                routeName="stores"
+                hidden={isCashier}
+                activeOverride={isStoresHomeRoute}
+                onPress={() => {
+                  router.replace("/(tabs)/stores" as any);
+                }}
+              />
+
+              <DesktopNavItem
+                label="AI Assistant"
+                icon="sparkles-outline"
+                badge="NEW"
+                hidden={isCashier || isSpecialStore}
+              />
+
+              <DesktopNavItem
+                label="More"
+                icon="grid-outline"
+                routeName="settings"
+                onPress={() => {
+                  router.replace("/(tabs)/settings" as any);
+                }}
+              />
+            </View>
+
+            <View style={{ flex: 1, minHeight: 6 }} />
+
+            {/* ORGANIZATION + STORE */}
+            {!isCashier ? (
+              <View style={{ gap: 5 }}>
+                <DesktopWorkspaceCard
+                  label="Current Organization"
+                  value={sidebarTitle}
+                  icon="business-outline"
+                />
+
+                <DesktopWorkspaceCard
+                  label="Current Store"
+                  value={sidebarStore}
+                  icon="storefront-outline"
+                />
+              </View>
+            ) : null}
+
+            {/* USER FOOTER */}
+            <View
+              style={{
+                marginTop: 7,
+                borderTopWidth: 1,
+                borderTopColor: "rgba(255,255,255,0.09)",
+                paddingTop: 7,
+                paddingHorizontal: 3,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <View
+                style={{
+                  width: 24,
+                  height: 24,
+                  borderRadius: 12,
+                  backgroundColor: "rgba(96,165,250,0.20)",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Ionicons
+                  name="person"
+                  size={12}
+                  color="#BFDBFE"
+                />
+              </View>
+
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text
+                  numberOfLines={1}
+                  style={{
+                    color: "#FFFFFF",
+                    fontSize: 8,
+                    fontWeight: "900",
+                  }}
+                >
+                  {sidebarTitle}
+                </Text>
+
+                <Text
+                  numberOfLines={1}
+                  style={{
+                    color: "rgba(255,255,255,0.52)",
+                    fontSize: 6.5,
+                    fontWeight: "700",
+                    marginTop: 1,
+                  }}
+                >
+                  {sidebarRole}
+                </Text>
+              </View>
+
+              <Ionicons
+                name="settings-outline"
+                size={12}
+                color="rgba(255,255,255,0.60)"
+              />
+            </View>
+          </View>
+        );
+      }
+    : undefined;
+return (
+    <Tabs
+      tabBar={
+        useLeftSidebarWeb
+          ? desktopSidebar
+          : !isSpecialStore && !isCashier
+            ? (props) => (
+                <MobileBankingTabBar
+                  state={props.state}
+                  navigation={props.navigation}
+                  bottomInset={insets.bottom}
+                />
+              )
+            : undefined
+      }
+      screenOptions={{
+        headerShown: false,
+        tabBarPosition: useLeftSidebarWeb ? "left" : "bottom",
+        tabBarLabelPosition: useLeftSidebarWeb ? "beside-icon" : "below-icon",
+        sceneStyle: { backgroundColor: theme.colors.background },
+
+        tabBarStyle: useLeftSidebarWeb
+          ? {
+              backgroundColor: theme.colors.tabBarBg,
+              borderRightColor: "rgba(255,255,255,0.12)",
+              borderRightWidth: 1,
+              borderTopWidth: 0,
+             width: 100,
+              paddingTop: Math.max(insets.top + 140, 150),
+              paddingBottom: Math.max(insets.bottom + 12, 14),
+              paddingHorizontal: 5,
+              shadowOpacity: 0,
+              elevation: 0,
+            }
+          : {
+              backgroundColor: theme.colors.tabBarBg,
+              borderTopColor: "rgba(255,255,255,0.12)",
+              borderTopWidth: 1,
+              height: 56 + Math.max(insets.bottom, 2),
+              paddingBottom: Math.max(insets.bottom, 2),
+              paddingTop: 1,
+              paddingHorizontal: 2,
+              shadowOpacity: 0,
+              elevation: 0,
+            },
+
+      tabBarItemStyle: useLeftSidebarWeb
+  ? {
+      width: "100%",
+      alignSelf: "stretch",
+      minHeight: 42,
+      borderRadius: 8,
+      marginVertical: 1,
+      paddingHorizontal: 5,
+      justifyContent: "flex-start",
+      alignItems: "center",
+      flexDirection: "row",
+    }
+          : {
+              minHeight: 50,
+              paddingTop: 0,
+              paddingBottom: 0,
+              paddingHorizontal: 0,
+              marginHorizontal: 0,
+              borderRadius: theme.radius.md,
+            },
+
+        tabBarActiveBackgroundColor: useLeftSidebarWeb ? "rgba(59,130,246,0.22)" : "transparent",
+tabBarIconStyle: useLeftSidebarWeb
+  ? {
+      width: 20,
+      minWidth: 20,
+      marginRight: 5,
+      alignItems: "center",
+      justifyContent: "center",
+    }
+  : undefined,
+
+        tabBarLabelStyle: useLeftSidebarWeb
+          ? {
+              fontWeight: "700",
+              fontSize: 10,
+              textAlign: "left",
+            }
+          : undefined,
+        tabBarBackground: () => (
+          <View style={{ flex: 1, backgroundColor: theme.colors.tabBarBg }}>
+            {useLeftSidebarWeb ? (
+              <View
+                pointerEvents="box-none"
+                style={{
+                  position: "absolute",
+                  top: Math.max(insets.top + 18, 24),
+left: 6,
+                  right: 6,
+                  gap: 3,
+                }}
+              >
+                <Text
+                  style={{
+                    color: "#FFFFFF",
+                    fontWeight: "900",
+                    fontSize: 15,
+                    letterSpacing: 0.1,
+                  }}
+                  numberOfLines={1}
+                >
+                  ZETRA BMS
+                </Text>
+
+                <Text
+                  style={{
+                    color: "rgba(255,255,255,0.68)",
+                    fontWeight: "700",
+                    fontSize: 7,
+                    letterSpacing: 0,
+                  }}
+                  numberOfLines={1}
+                >
+                  Business Management System
+                </Text>
+
+                <View
+                  style={{
+                  marginTop: 7,
+                    borderRadius: 10,
+                    borderWidth: 1,
+                    borderColor: "rgba(255,255,255,0.12)",
+                    backgroundColor: "rgba(255,255,255,0.055)",
+                    paddingVertical: 7,
+                    paddingHorizontal: 6,
+                    gap: 4,
+overflow: "hidden",
+                  }}
+                >
+                  <View
+                    pointerEvents="none"
+                    style={{
+                      position: "absolute",
+                     top: -18,
+right: -18,
+width: 70,
+height: 70,
+                      borderRadius: 999,
+                      backgroundColor: "rgba(59,130,246,0.14)",
+                    }}
+                  />
+
+                  <Text
+                    style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 13 }}
+                    numberOfLines={1}
+                  >
+                    {sidebarTitle}
+                  </Text>
+
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: "rgba(255,255,255,0.78)",
+                        fontWeight: "800",
+                        fontSize: 10,
+                        flex: 1,
+                        minWidth: 0,
+                      }}
+                      numberOfLines={1}
+                    >
+                      {sidebarStore}
+                    </Text>
+
+                    <View
+                      style={{
+                        paddingHorizontal: 7,
+                        paddingVertical: 3,
+                        borderRadius: 999,
+                        backgroundColor: "rgba(59,130,246,0.18)",
+                        borderWidth: 1,
+                        borderColor: "rgba(59,130,246,0.28)",
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: "#FFFFFF",
+                          fontWeight: "900",
+                          fontSize: 8,
+                        }}
+                        numberOfLines={1}
+                      >
+                        {sidebarRole}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <DesktopSidebarSubscriptionCard
+                    orgId={activeOrgId}
+                    role={activeRole}
+                  />
+                </View>
+               
+              </View>
+            ) : null}
+          </View>
+        ),
+
+        tabBarActiveTintColor: "#FFFFFF",
+        tabBarInactiveTintColor: "rgba(255,255,255,0.68)",
+      }}
+    >
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: "Home",
+          tabBarLabel: ({ color }) => (
+            <TabLabel text="Home" color={color} mobileWeb={isMobileWeb} />
+          ),
+          tabBarIcon: ({ color }) => (
+            <WebTabIcon emoji="📊" color={color} mobileWeb={isMobileWeb} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="sales"
+        listeners={{
+          tabPress: (e) => {
+            if (isSpecialStore) return;
+            e.preventDefault();
+            router.replace("/(tabs)/sales" as any);
+          },
+        }}
+        options={{
+          title: useLeftSidebarWeb ? "Point of Sale" : "Sales",
+          href: isSpecialStore ? null : undefined,
+          tabBarItemStyle: isSpecialStore ? hidden : undefined,
+          tabBarLabel: ({ color }) => (
+            <TabLabel text={useLeftSidebarWeb ? "POS / Sell" : "Sales"} color={color} mobileWeb={isMobileWeb} />
+          ),
+          tabBarIcon: ({ color }) => (
+            <WebTabIcon emoji="🛒" color={color} mobileWeb={isMobileWeb} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="expenses"
+        options={{
+          title: "Expenses",
+          href: isCashier || isSpecialStore ? null : "/(tabs)/expenses",
+          tabBarItemStyle: isCashier || isSpecialStore ? hidden : undefined,
+          tabBarLabel: ({ color }) => (
+            <TabLabel text="Expenses" color={color} mobileWeb={isMobileWeb} />
+          ),
+          tabBarIcon: ({ color }) => (
+            <WebTabIcon emoji="💸" color={color} mobileWeb={isMobileWeb} />
+          ),
+        }}
+      />
+
+     <Tabs.Screen
+  name="stores"
+  options={{
+    title: "Stores",
+    href: isCashier ? null : undefined,
+    tabBarItemStyle: isCashier ? hidden : undefined,
+    tabBarLabel: ({ color }) => (
+      <TabLabel text="Stores" color={color} mobileWeb={isMobileWeb} />
+    ),
+    tabBarIcon: ({ color }) => (
+      <WebTabIcon emoji="🏬" color={color} mobileWeb={isMobileWeb} />
+    ),
+  }}
+/>
+
+      <Tabs.Screen
+        name="products"
+        options={{
+          title: "Products",
+          tabBarItemStyle: isCashier || isFieldProcurementStore ? hidden : undefined,
+          href: isFieldProcurementStore ? null : undefined,
+          tabBarLabel: ({ color }) => (
+            <TabLabel text="Product" color={color} mobileWeb={isMobileWeb} />
+          ),
+          tabBarIcon: ({ color }) => (
+            <WebTabIcon emoji="🏷️" color={color} mobileWeb={isMobileWeb} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="credit"
+        options={{
+          title: "Credit",
+          tabBarItemStyle: isCashier || isSpecialStore ? hidden : undefined,
+          href: isSpecialStore ? null : undefined,
+          tabBarLabel: ({ color }) => (
+            <TabLabel text="Credit" color={color} mobileWeb={isMobileWeb} />
+          ),
+          tabBarIcon: ({ color }) => (
+            <WebTabIcon emoji="💳" color={color} mobileWeb={isMobileWeb} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="capital-recovery/workspace"
+        options={{
+          title: "Recovery",
+          href: isCapitalRecoveryStore && !isCashier ? "/capital-recovery/workspace" : null,
+          tabBarItemStyle: !isCapitalRecoveryStore || isCashier ? hidden : undefined,
+          tabBarLabel: ({ color }) => (
+            <TabLabel text="Recovery" color={color} mobileWeb={isMobileWeb} />
+          ),
+          tabBarIcon: ({ color }) => (
+            <WebTabIcon emoji="💼" color={color} mobileWeb={isMobileWeb} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="field-procurement/workspace"
+        options={{
+          title: "Field",
+          href: isFieldProcurementStore && !isCashier ? "/field-procurement/workspace" : null,
+          tabBarItemStyle: !isFieldProcurementStore || isCashier ? hidden : undefined,
+          tabBarLabel: ({ color }) => (
+            <TabLabel text="Field" color={color} mobileWeb={isMobileWeb} />
+          ),
+          tabBarIcon: ({ color }) => (
+            <WebTabIcon emoji="🧭" color={color} mobileWeb={isMobileWeb} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="field-procurement/history"
+        options={{
+          title: "History",
+          href: isFieldProcurementStore && !isCashier ? "/field-procurement/history" : null,
+          tabBarItemStyle: !isFieldProcurementStore || isCashier ? hidden : undefined,
+          tabBarLabel: ({ color }) => (
+            <TabLabel text="History" color={color} mobileWeb={isMobileWeb} />
+          ),
+          tabBarIcon: ({ color }) => (
+            <WebTabIcon emoji="📜" color={color} mobileWeb={isMobileWeb} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen name="club" options={{ href: null, tabBarItemStyle: hidden }} />
+
+  <Tabs.Screen
+  name="settings"
+  listeners={{
+    tabPress: (e) => {
+      e.preventDefault();
+
+      // More lazima kila mara ifungue More Home,
+      // hata kama user yupo ndani ya:
+      // settings/subscription
+      // settings/regional
+      // settings/account-privacy
+      // settings/organization
+      // n.k.
+      router.replace("/(tabs)/settings" as any);
+    },
+  }}
+  options={{
+    title: "More",
+    tabBarLabel: ({ color }) => (
+      <TabLabel
+        text="More"
+        color={color}
+        mobileWeb={isMobileWeb}
+      />
+    ),
+    tabBarIcon: ({ color }) => (
+      <MoreGridIcon
+        color={color}
+        mobileWeb={isMobileWeb}
+      />
+    ),
+  }}
+/>
+
+      <Tabs.Screen name="customers" options={{ href: null }} />
+      <Tabs.Screen name="customers/index" options={{ href: null }} />
+      <Tabs.Screen name="customers/[id]" options={{ href: null }} />
+      <Tabs.Screen name="customers/insights" options={{ href: null }} />
+      <Tabs.Screen name="staff" options={{ href: null }} />
+      <Tabs.Screen name="sales/history" options={{ href: null }} />
+      <Tabs.Screen name="sales/profit" options={{ href: null }} />
+      <Tabs.Screen name="capital-recovery/history" options={{ href: null }} />
+    </Tabs>
+  );
+}
+
+
+

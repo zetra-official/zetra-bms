@@ -320,7 +320,15 @@ export default function StoreInventoryScreen() {
     [activeRole, isCapitalRecoveryStore]
   );
 
-  const rawIsOnline = !!(netInfo.isConnected && netInfo.isInternetReachable !== false);
+  const rawIsOnline =
+    Platform.OS === "web"
+      ? typeof navigator !== "undefined"
+        ? navigator.onLine
+        : netInfo.isConnected !== false
+      : !!(
+          netInfo.isConnected &&
+          netInfo.isInternetReachable !== false
+        );
 
   const [stableIsOnline, setStableIsOnline] = useState<boolean>(rawIsOnline);
   const netDebounceRef = useRef<any>(null);
@@ -919,6 +927,11 @@ export default function StoreInventoryScreen() {
     }
     router.push("/(tabs)/stores/scan");
   }, [activeStoreId, isCapitalRecoveryStore, router, storeOrgMismatch]);
+  const isDesktopWeb =
+    Platform.OS === "web" &&
+    typeof window !== "undefined" &&
+    window.innerWidth >= 900;
+
   const renderInventoryItem = useCallback(
     ({ item: r }: { item: InventoryRow }) => {
       const thr = Number(thrByProductId?.[r.product_id] ?? 0);
@@ -945,11 +958,11 @@ export default function StoreInventoryScreen() {
               borderColor: isLow
                 ? "rgba(245,158,11,0.55)"
                 : theme.colors.border,
-              borderRadius: theme.radius.xl,
+              borderRadius: isDesktopWeb ? 14 : theme.radius.xl,
               backgroundColor: theme.colors.card,
-              padding: 16,
+              padding: isDesktopWeb ? 12 : 16,
               opacity: pressed ? 0.96 : 1,
-              marginBottom: 12,
+              marginBottom: isDesktopWeb ? 8 : 12,
             },
           ]}
         >
@@ -972,9 +985,9 @@ export default function StoreInventoryScreen() {
                 <Image
                   source={{ uri: r.image_url }}
                   style={{
-                    width: 66,
-                    height: 66,
-                    borderRadius: 18,
+                    width: isDesktopWeb ? 52 : 66,
+                    height: isDesktopWeb ? 52 : 66,
+                    borderRadius: isDesktopWeb ? 12 : 18,
                     backgroundColor: "#E2E8F0",
                   }}
                   resizeMode="cover"
@@ -982,9 +995,9 @@ export default function StoreInventoryScreen() {
               ) : (
                 <View
                   style={{
-                    width: 66,
-                    height: 66,
-                    borderRadius: 18,
+                    width: isDesktopWeb ? 52 : 66,
+                    height: isDesktopWeb ? 52 : 66,
+                    borderRadius: isDesktopWeb ? 12 : 18,
                     backgroundColor: "#F1F5F9",
                     alignItems: "center",
                     justifyContent: "center",
@@ -1005,7 +1018,7 @@ export default function StoreInventoryScreen() {
                   style={{
                     color: theme.colors.text,
                     fontWeight: "900",
-                    fontSize: 16,
+                    fontSize: isDesktopWeb ? 14 : 16,
                   }}
                 >
                   {r.product_name}
@@ -1080,19 +1093,20 @@ export default function StoreInventoryScreen() {
 
           <View
             style={{
-              marginTop: 10,
+              marginTop: isDesktopWeb ? 8 : 10,
               flexDirection: "row",
-              gap: 10,
+              gap: isDesktopWeb ? 14 : 10,
+              alignItems: isDesktopWeb ? "center" : undefined,
             }}
           >
             <View
               style={{
                 borderWidth: 1,
                 borderColor: "rgba(52,211,153,0.35)",
-                borderRadius: 999,
+                borderRadius: isDesktopWeb ? 12 : 999,
                 backgroundColor: "rgba(52, 211, 153, 0.10)",
-                width: 118,
-                height: 118,
+                width: isDesktopWeb ? 112 : 118,
+                height: isDesktopWeb ? 72 : 118,
                 alignItems: "center",
                 justifyContent: "center",
                 paddingHorizontal: 10,
@@ -1148,7 +1162,7 @@ export default function StoreInventoryScreen() {
               </Text>
             </View>
 
-            <View style={{ flex: 1, gap: 10 }}>
+            <View style={{ flex: 1, gap: isDesktopWeb ? 8 : 10, flexDirection: isDesktopWeb ? "row" : "column", alignItems: isDesktopWeb ? "center" : undefined }}>
               <Button
                 title="Alert Level"
                 variant="secondary"
@@ -1181,9 +1195,9 @@ export default function StoreInventoryScreen() {
                   borderColor: expiryUi.borderColor,
                   borderRadius: theme.radius.lg,
                   backgroundColor: expiryUi.backgroundColor,
-                  paddingHorizontal: 12,
-                  paddingVertical: 10,
-                  minHeight: 56,
+                  paddingHorizontal: isDesktopWeb ? 10 : 12,
+                  paddingVertical: isDesktopWeb ? 7 : 10,
+                  minHeight: isDesktopWeb ? 44 : 56,
                   justifyContent: "center",
                 }}
               >
@@ -1260,215 +1274,514 @@ export default function StoreInventoryScreen() {
 
   const InventoryHeader = (
     <View>
-      {isOffline ? (
-        <View
-          style={{
-            borderWidth: 1,
-            borderColor: "rgba(245,158,11,0.45)",
-            backgroundColor: "rgba(245,158,11,0.10)",
-            paddingVertical: 10,
-            paddingHorizontal: 12,
-            borderRadius: theme.radius.lg,
-            marginBottom: 8,
-          }}
-        >
-          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-            OFFLINE • Mtandao haupatikani (data ya mwisho inaweza kuonekana)
-          </Text>
-        </View>
-      ) : null}
+      {isDesktopWeb ? (
+        <>
+          {isOffline ? (
+            <View
+              style={{
+                borderWidth: 1,
+                borderColor: "rgba(245,158,11,0.45)",
+                backgroundColor: "rgba(245,158,11,0.10)",
+                paddingVertical: 7,
+                paddingHorizontal: 10,
+                borderRadius: 10,
+                marginBottom: 8,
+              }}
+            >
+              <Text
+                style={{
+                  color: theme.colors.text,
+                  fontWeight: "900",
+                  fontSize: 12,
+                }}
+              >
+                OFFLINE • Mtandao haupatikani (data ya mwisho inaweza kuonekana)
+              </Text>
+            </View>
+          ) : null}
 
-      <Text
-        style={{
-          fontSize: 26,
-          fontWeight: "900",
-          color: theme.colors.text,
-        }}
-      >
-        {isCapitalRecoveryStore ? "Inventory Disabled" : "Inventory"}
-      </Text>
+          <View
+            style={{
+              borderWidth: 1,
+              borderColor: theme.colors.border,
+              borderRadius: 14,
+              backgroundColor: theme.colors.card,
+              paddingHorizontal: 14,
+              paddingVertical: 11,
+              marginBottom: 8,
+            }}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 14,
+              }}
+            >
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text
+                  style={{
+                    color: theme.colors.text,
+                    fontWeight: "900",
+                    fontSize: 20,
+                  }}
+                >
+                  {isCapitalRecoveryStore ? "Inventory Disabled" : "Inventory"}
+                </Text>
 
-      <Card style={{ gap: 10 }}>
-        <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-          Organization
-        </Text>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: 7,
+                    marginTop: 6,
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: theme.colors.muted,
+                      fontWeight: "800",
+                      fontSize: 11,
+                    }}
+                  >
+                    ORGANIZATION
+                  </Text>
 
-        <Text
-          style={{
-            color: theme.colors.text,
-            fontWeight: "900",
-            fontSize: 18,
-          }}
-        >
-          {activeOrgName ?? "—"}
-        </Text>
+                  <Text
+                    style={{
+                      color: theme.colors.text,
+                      fontWeight: "900",
+                      fontSize: 12,
+                    }}
+                  >
+                    {activeOrgName ?? "—"}
+                  </Text>
 
-        <Text
-          style={{
-            color: theme.colors.muted,
-            fontWeight: "800",
-            marginTop: 2,
-          }}
-        >
-          Active Store
-        </Text>
+                  <Text style={{ color: theme.colors.muted }}>•</Text>
 
-        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-          {activeStoreName ?? "—"}
-        </Text>
+                  <Text
+                    style={{
+                      color: theme.colors.muted,
+                      fontWeight: "800",
+                      fontSize: 11,
+                    }}
+                  >
+                    STORE
+                  </Text>
 
-        <Text
-          style={{
-            color: theme.colors.muted,
-            fontWeight: "800",
-            marginTop: 2,
-          }}
-        >
-          Role
-        </Text>
+                  <Text
+                    style={{
+                      color: theme.colors.text,
+                      fontWeight: "900",
+                      fontSize: 12,
+                    }}
+                  >
+                    {activeStoreName ?? "—"}
+                  </Text>
 
-        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-          {activeRole ?? "—"}
-        </Text>
+                  <Text style={{ color: theme.colors.muted }}>•</Text>
 
-        <View
-          style={{
-            marginTop: 6,
-            borderWidth: 1,
-            borderColor: isCapitalRecoveryStore
-              ? theme.colors.emeraldBorder
-              : theme.colors.border,
-            borderRadius: theme.radius.xl,
-            backgroundColor: isCapitalRecoveryStore
-              ? theme.colors.emeraldSoft
-              : theme.colors.card,
-            padding: 14,
-          }}
-        >
-          <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>
-            Status
-          </Text>
+                  <Text
+                    style={{
+                      color: theme.colors.muted,
+                      fontWeight: "800",
+                      fontSize: 11,
+                    }}
+                  >
+                    ROLE
+                  </Text>
+
+                  <Text
+                    style={{
+                      color: theme.colors.text,
+                      fontWeight: "900",
+                      fontSize: 12,
+                      textTransform: "capitalize",
+                    }}
+                  >
+                    {activeRole ?? "—"}
+                  </Text>
+                </View>
+              </View>
+
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 7,
+                }}
+              >
+                <Pressable
+                  onPress={() => loadLive({ silent: false })}
+                  disabled={loading || isCapitalRecoveryStore}
+                  style={({ pressed }) => ({
+                    height: 36,
+                    paddingHorizontal: 15,
+                    borderRadius: 10,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: theme.colors.emerald,
+                    opacity:
+                      loading || isCapitalRecoveryStore
+                        ? 0.5
+                        : pressed
+                          ? 0.88
+                          : 1,
+                  })}
+                >
+                  <Text
+                    style={{
+                      color: "#FFFFFF",
+                      fontWeight: "900",
+                      fontSize: 12,
+                    }}
+                  >
+                    {loading ? "Loading..." : "Refresh"}
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={openHistory}
+                  disabled={
+                    loading ||
+                    !activeStoreId ||
+                    isCapitalRecoveryStore
+                  }
+                  style={({ pressed }) => ({
+                    height: 36,
+                    paddingHorizontal: 15,
+                    borderRadius: 10,
+                    borderWidth: 1,
+                    borderColor: theme.colors.border,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: theme.colors.card,
+                    opacity:
+                      loading ||
+                      !activeStoreId ||
+                      isCapitalRecoveryStore
+                        ? 0.5
+                        : pressed
+                          ? 0.82
+                          : 1,
+                  })}
+                >
+                  <Text
+                    style={{
+                      color: theme.colors.text,
+                      fontWeight: "900",
+                      fontSize: 12,
+                    }}
+                  >
+                    History
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={goScan}
+                  disabled={!activeStoreId || isCapitalRecoveryStore}
+                  hitSlop={8}
+                  style={({ pressed }) => ({
+                    width: 36,
+                    height: 36,
+                    borderRadius: 10,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderWidth: 1,
+                    borderColor: theme.colors.emeraldBorder,
+                    backgroundColor: theme.colors.emeraldSoft,
+                    opacity:
+                      !activeStoreId || isCapitalRecoveryStore
+                        ? 0.5
+                        : pressed
+                          ? 0.86
+                          : 1,
+                  })}
+                >
+                  <ScannerFabIcon
+                    size={19}
+                    color={theme.colors.text}
+                  />
+                </Pressable>
+              </View>
+            </View>
+
+            <View
+              style={{
+                marginTop: 9,
+                paddingTop: 8,
+                borderTopWidth: 1,
+                borderTopColor: theme.colors.border,
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12,
+              }}
+            >
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 7,
+                  flex: 1,
+                  minWidth: 0,
+                }}
+              >
+                <View
+                  style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: 999,
+                    backgroundColor: isOffline
+                      ? "#F59E0B"
+                      : "#22C55E",
+                  }}
+                />
+
+                <Text
+                  numberOfLines={1}
+                  style={{
+                    color: theme.colors.text,
+                    fontWeight: "900",
+                    fontSize: 11,
+                    flexShrink: 1,
+                  }}
+                >
+                  {isCapitalRecoveryStore
+                    ? "Capital Recovery store haitumii inventory."
+                    : StatusLine}
+                </Text>
+              </View>
+
+              {!isCapitalRecoveryStore ? (
+                <Text
+                  numberOfLines={1}
+                  style={{
+                    color: theme.colors.muted,
+                    fontWeight: "800",
+                    fontSize: 10,
+                  }}
+                >
+                  Auto-refresh active
+                </Text>
+              ) : null}
+            </View>
+          </View>
+        </>
+      ) : (
+        <>
+          {isOffline ? (
+            <View
+              style={{
+                borderWidth: 1,
+                borderColor: "rgba(245,158,11,0.45)",
+                backgroundColor: "rgba(245,158,11,0.10)",
+                paddingVertical: 10,
+                paddingHorizontal: 12,
+                borderRadius: theme.radius.lg,
+                marginBottom: 8,
+              }}
+            >
+              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+                OFFLINE • Mtandao haupatikani (data ya mwisho inaweza kuonekana)
+              </Text>
+            </View>
+          ) : null}
 
           <Text
             style={{
-              color: theme.colors.text,
+              fontSize: 26,
               fontWeight: "900",
-              marginTop: 6,
+              color: theme.colors.text,
             }}
           >
-            {isCapitalRecoveryStore
-              ? "Capital Recovery store haitumii inventory."
-              : StatusLine}
+            {isCapitalRecoveryStore ? "Inventory Disabled" : "Inventory"}
           </Text>
 
-          {isCapitalRecoveryStore ? (
+          <Card style={{ gap: 10 }}>
+            <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+              Organization
+            </Text>
+
+            <Text
+              style={{
+                color: theme.colors.text,
+                fontWeight: "900",
+                fontSize: 18,
+              }}
+            >
+              {activeOrgName ?? "—"}
+            </Text>
+
             <Text
               style={{
                 color: theme.colors.muted,
                 fontWeight: "800",
-                marginTop: 8,
+                marginTop: 2,
               }}
             >
-              Bidhaa za Capital Recovery hutumika kwenye income flow tu, si
-              inventory/stock tracking.
+              Active Store
             </Text>
-          ) : isOffline ? (
+
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+              {activeStoreName ?? "—"}
+            </Text>
+
             <Text
               style={{
                 color: theme.colors.muted,
                 fontWeight: "800",
-                marginTop: 8,
+                marginTop: 2,
               }}
             >
-              Ukiwa OFFLINE, app itaonyesha “last known cache” bila kukwama.
+              Role
             </Text>
-          ) : null}
-        </View>
 
-        <View
-          style={{
-            flexDirection: "row",
-            gap: 10,
-            marginTop: 6,
-            alignItems: "center",
-          }}
-        >
-          <View style={{ flex: 1 }}>
-            <Button
-              title={loading ? "Loading..." : "Refresh"}
-              onPress={() => loadLive({ silent: false })}
-              disabled={loading || isCapitalRecoveryStore}
-              variant="primary"
-            />
-          </View>
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+              {activeRole ?? "—"}
+            </Text>
 
-          <View style={{ flex: 1 }}>
-            <Button
-              title="History"
-              onPress={openHistory}
-              disabled={
-                loading ||
-                !activeStoreId ||
-                isCapitalRecoveryStore
-              }
-              variant="secondary"
-            />
-          </View>
-
-          <Pressable
-            onPress={goScan}
-            hitSlop={10}
-            style={({ pressed }) => [
-              {
-                width: 62,
-                height: 62,
-                borderRadius: 999,
-                alignItems: "center",
-                justifyContent: "center",
+            <View
+              style={{
+                marginTop: 6,
                 borderWidth: 1,
-                borderColor: theme.colors.emeraldBorder,
-                backgroundColor: theme.colors.emeraldSoft,
-                opacity:
-                  !activeStoreId || isCapitalRecoveryStore
-                    ? 0.5
-                    : pressed
-                      ? 0.92
-                      : 1,
-                transform: pressed
-                  ? [{ scale: 0.995 }]
-                  : [{ scale: 1 }],
-                shadowColor: "#000",
-                shadowOpacity:
-                  !activeStoreId || isCapitalRecoveryStore ? 0 : 0.25,
-                shadowRadius: 10,
-                shadowOffset: { width: 0, height: 6 },
-                elevation:
-                  !activeStoreId || isCapitalRecoveryStore ? 0 : 8,
-              },
-            ]}
-          >
-            <View style={{ marginLeft: 1, marginTop: 1 }}>
-              <ScannerFabIcon
-                size={28}
-                color={theme.colors.text}
-              />
+                borderColor: isCapitalRecoveryStore
+                  ? theme.colors.emeraldBorder
+                  : theme.colors.border,
+                borderRadius: theme.radius.xl,
+                backgroundColor: isCapitalRecoveryStore
+                  ? theme.colors.emeraldSoft
+                  : theme.colors.card,
+                padding: 14,
+              }}
+            >
+              <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>
+                Status
+              </Text>
+
+              <Text
+                style={{
+                  color: theme.colors.text,
+                  fontWeight: "900",
+                  marginTop: 6,
+                }}
+              >
+                {isCapitalRecoveryStore
+                  ? "Capital Recovery store haitumii inventory."
+                  : StatusLine}
+              </Text>
+
+              {isCapitalRecoveryStore ? (
+                <Text
+                  style={{
+                    color: theme.colors.muted,
+                    fontWeight: "800",
+                    marginTop: 8,
+                  }}
+                >
+                  Bidhaa za Capital Recovery hutumika kwenye income flow tu, si
+                  inventory/stock tracking.
+                </Text>
+              ) : isOffline ? (
+                <Text
+                  style={{
+                    color: theme.colors.muted,
+                    fontWeight: "800",
+                    marginTop: 8,
+                  }}
+                >
+                  Ukiwa OFFLINE, app itaonyesha “last known cache” bila kukwama.
+                </Text>
+              ) : null}
             </View>
-          </Pressable>
-        </View>
 
-        <Text
-          style={{
-            color: theme.colors.muted,
-            fontWeight: "800",
-            marginTop: 4,
-          }}
-        >
-          {isCapitalRecoveryStore
-            ? "Capital Recovery hutumia Products + Workspace, si inventory refresh."
-            : "Tip: Inventory inajirefresh kimya kimya bila UI kuonyesha kuchezacheza."}
-        </Text>
-      </Card>
+            <View
+              style={{
+                flexDirection: "row",
+                gap: 10,
+                marginTop: 6,
+                alignItems: "center",
+              }}
+            >
+              <View style={{ flex: 1 }}>
+                <Button
+                  title={loading ? "Loading..." : "Refresh"}
+                  onPress={() => loadLive({ silent: false })}
+                  disabled={loading || isCapitalRecoveryStore}
+                  variant="primary"
+                />
+              </View>
 
+              <View style={{ flex: 1 }}>
+                <Button
+                  title="History"
+                  onPress={openHistory}
+                  disabled={
+                    loading ||
+                    !activeStoreId ||
+                    isCapitalRecoveryStore
+                  }
+                  variant="secondary"
+                />
+              </View>
+
+              <Pressable
+                onPress={goScan}
+                hitSlop={10}
+                style={({ pressed }) => [
+                  {
+                    width: 62,
+                    height: 62,
+                    borderRadius: 999,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderWidth: 1,
+                    borderColor: theme.colors.emeraldBorder,
+                    backgroundColor: theme.colors.emeraldSoft,
+                    opacity:
+                      !activeStoreId || isCapitalRecoveryStore
+                        ? 0.5
+                        : pressed
+                          ? 0.92
+                          : 1,
+                    transform: pressed
+                      ? [{ scale: 0.995 }]
+                      : [{ scale: 1 }],
+                    shadowColor: "#000",
+                    shadowOpacity:
+                      !activeStoreId || isCapitalRecoveryStore ? 0 : 0.25,
+                    shadowRadius: 10,
+                    shadowOffset: { width: 0, height: 6 },
+                    elevation:
+                      !activeStoreId || isCapitalRecoveryStore ? 0 : 8,
+                  },
+                ]}
+              >
+                <View style={{ marginLeft: 1, marginTop: 1 }}>
+                  <ScannerFabIcon
+                    size={28}
+                    color={theme.colors.text}
+                  />
+                </View>
+              </Pressable>
+            </View>
+
+            <Text
+              style={{
+                color: theme.colors.muted,
+                fontWeight: "800",
+                marginTop: 4,
+              }}
+            >
+              {isCapitalRecoveryStore
+                ? "Capital Recovery hutumia Products + Workspace, si inventory refresh."
+                : "Tip: Inventory inajirefresh kimya kimya bila UI kuonyesha kuchezacheza."}
+            </Text>
+          </Card>
+        </>
+      )}
       {!!error && (
         <Card
           style={{
@@ -1499,12 +1812,12 @@ export default function StoreInventoryScreen() {
         </Card>
       )}
 
-      <Card style={{ gap: 10 }}>
+      <Card style={{ gap: isDesktopWeb ? 6 : 10, padding: isDesktopWeb ? 10 : undefined }}>
         <Text
           style={{
             color: theme.colors.text,
             fontWeight: "900",
-            fontSize: 16,
+            fontSize: isDesktopWeb ? 13 : 16,
           }}
         >
           {isCapitalRecoveryStore ? "Inventory Disabled" : "Search"}
@@ -1528,7 +1841,7 @@ export default function StoreInventoryScreen() {
             borderRadius: theme.radius.lg,
             backgroundColor: "rgba(255,255,255,0.05)",
             paddingHorizontal: 14,
-            paddingVertical: 12,
+            paddingVertical: isDesktopWeb ? 9 : 12,
             color: theme.colors.text,
             fontWeight: "800",
             opacity: isCapitalRecoveryStore ? 0.6 : 1,
@@ -1593,7 +1906,7 @@ export default function StoreInventoryScreen() {
           }
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ paddingBottom: 32 }}
+          contentContainerStyle={{ paddingBottom: 32, width: "100%", maxWidth: isDesktopWeb ? 1380 : undefined, alignSelf: "center" }}
         />
       ) : (
         <FlatList
@@ -1625,7 +1938,7 @@ export default function StoreInventoryScreen() {
           removeClippedSubviews={Platform.OS === "android"}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 32 }}
+          contentContainerStyle={{ paddingBottom: 32, width: "100%", maxWidth: isDesktopWeb ? 1380 : undefined, alignSelf: "center" }}
         />
       )}
     </Screen>

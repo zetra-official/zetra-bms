@@ -1,0 +1,1210 @@
+﻿import React, {
+  useMemo,
+} from "react";
+
+import {
+  Text,
+  View,
+} from "react-native";
+
+import Svg, {
+  Circle,
+  Line,
+  Path,
+  Rect,
+  Text as SvgText,
+} from "react-native-svg";
+
+import type {
+  FinancialBucketResult,
+  FinancialMetric,
+} from "./financialDataEngine";
+
+export type FinancialChartMode =
+  | "DONUT"
+  | "TREND"
+  | "BARS";
+
+type Props = {
+  mode: FinancialChartMode;
+  total: FinancialMetric;
+  buckets: FinancialBucketResult[];
+  width?: number;
+  height?: number;
+};
+
+const SALES_COLOR =
+  "#2563EB";
+
+const EXPENSE_COLOR =
+  "#F59E0B";
+
+const PROFIT_COLOR =
+  "#16A34A";
+
+const LOSS_COLOR =
+  "#DC2626";
+
+const GRID_COLOR =
+  "#E2E8F0";
+
+const TEXT_COLOR =
+  "#64748B";
+
+function finite(
+  value: unknown
+) {
+  const parsed =
+    Number(value ?? 0);
+
+  return Number.isFinite(parsed)
+    ? parsed
+    : 0;
+}
+
+function moneyCompact(
+  value: number
+) {
+  const amount =
+    Math.abs(finite(value));
+
+  if (amount >= 1_000_000_000) {
+    return `${(
+      amount /
+      1_000_000_000
+    ).toFixed(1)}B`;
+  }
+
+  if (amount >= 1_000_000) {
+    return `${(
+      amount /
+      1_000_000
+    ).toFixed(1)}M`;
+  }
+
+  if (amount >= 1_000) {
+    return `${(
+      amount /
+      1_000
+    ).toFixed(1)}K`;
+  }
+
+  return Math.round(
+    amount
+  ).toLocaleString("en-US");
+}
+
+function moneyFull(
+  value: number
+) {
+  try {
+    return `TSh ${Math.round(
+      finite(value)
+    ).toLocaleString("en-US")}`;
+  } catch {
+    return `TSh ${Math.round(
+      finite(value)
+    )}`;
+  }
+}
+
+function polarPoint(
+  cx: number,
+  cy: number,
+  radius: number,
+  angle: number
+) {
+  const radians =
+    ((angle - 90) *
+      Math.PI) /
+    180;
+
+  return {
+    x:
+      cx +
+      radius *
+        Math.cos(radians),
+    y:
+      cy +
+      radius *
+        Math.sin(radians),
+  };
+}
+
+function donutArc(
+  cx: number,
+  cy: number,
+  radius: number,
+  startAngle: number,
+  endAngle: number
+) {
+  const start =
+    polarPoint(
+      cx,
+      cy,
+      radius,
+      endAngle
+    );
+
+  const end =
+    polarPoint(
+      cx,
+      cy,
+      radius,
+      startAngle
+    );
+
+  const largeArc =
+    endAngle -
+      startAngle <=
+    180
+      ? 0
+      : 1;
+
+  return [
+    "M",
+    start.x,
+    start.y,
+    "A",
+    radius,
+    radius,
+    0,
+    largeArc,
+    0,
+    end.x,
+    end.y,
+  ].join(" ");
+}
+
+function DonutChart({
+  total,
+  width,
+  height,
+}: {
+  total: FinancialMetric;
+  width: number;
+  height: number;
+}) {
+  /*
+   * Donut is a financial composition view.
+   *
+   * We deliberately use absolute magnitudes
+   * for visual proportions. Negative profit
+   * is rendered as Loss using red.
+   */
+  const profit =
+    finite(
+      total.netProfit
+    );
+
+  const values = [
+    {
+      key: "sales",
+      label: "Sales",
+      value: Math.max(
+        0,
+        finite(total.sales)
+      ),
+      color: SALES_COLOR,
+    },
+    {
+      key: "expenses",
+      label: "Expenses",
+      value: Math.max(
+        0,
+        finite(
+          total.expenses
+        )
+      ),
+      color: EXPENSE_COLOR,
+    },
+    {
+      key: "profit",
+      label:
+        profit < 0
+          ? "Loss"
+          : "Net Profit",
+      value: Math.abs(
+        profit
+      ),
+      color:
+        profit < 0
+          ? LOSS_COLOR
+          : PROFIT_COLOR,
+    },
+  ];
+
+  const sum =
+    values.reduce(
+      (acc, item) =>
+        acc +
+        item.value,
+      0
+    );
+
+  const cx =
+    width / 2;
+
+  const cy =
+    height / 2;
+
+  const radius =
+    Math.min(
+      width,
+      height
+    ) * 0.36;
+
+  const strokeWidth =
+    Math.max(
+      18,
+      radius * 0.24
+    );
+
+  let angle = 0;
+
+  return (
+    <View
+      style={{
+        width,
+        height,
+        alignItems:
+          "center",
+        justifyContent:
+          "center",
+      }}
+    >
+      <Svg
+        width={width}
+        height={height}
+      >
+        <Circle
+          cx={cx}
+          cy={cy}
+          r={radius}
+          fill="none"
+          stroke="#EEF2F7"
+          strokeWidth={
+            strokeWidth
+          }
+        />
+
+        {sum > 0 &&
+          values.map(
+            (item) => {
+              if (
+                item.value <= 0
+              ) {
+                return null;
+              }
+
+              const sweep =
+                (item.value /
+                  sum) *
+                360;
+
+              const gap =
+                Math.min(
+                  2.5,
+                  sweep * 0.12
+                );
+
+              const start =
+                angle +
+                gap / 2;
+
+              const end =
+                angle +
+                sweep -
+                gap / 2;
+
+              angle +=
+                sweep;
+
+              if (
+                end <= start
+              ) {
+                return null;
+              }
+
+              return (
+                <Path
+                  key={
+                    item.key
+                  }
+                  d={donutArc(
+                    cx,
+                    cy,
+                    radius,
+                    start,
+                    end
+                  )}
+                  fill="none"
+                  stroke={
+                    item.color
+                  }
+                  strokeWidth={
+                    strokeWidth
+                  }
+                  strokeLinecap="round"
+                />
+              );
+            }
+          )}
+
+        <SvgText
+          x={cx}
+          y={cy - 7}
+          textAnchor="middle"
+          fontSize="9"
+          fontWeight="800"
+          fill="#64748B"
+        >
+          BUSINESS
+        </SvgText>
+
+        <SvgText
+          x={cx}
+          y={cy + 10}
+          textAnchor="middle"
+          fontSize="13"
+          fontWeight="900"
+          fill="#0F172A"
+        >
+          OVERVIEW
+        </SvgText>
+      </Svg>
+    </View>
+  );
+}
+
+function TrendChart({
+  buckets,
+  width,
+  height,
+}: {
+  buckets: FinancialBucketResult[];
+  width: number;
+  height: number;
+}) {
+  /*
+   * Professional single-series financial trend.
+   *
+   * The active series is intentionally controlled
+   * inside the chart for now so this renderer can
+   * be polished independently before the external
+   * metric selector is connected.
+   */
+  const activeMetric:
+    | "sales"
+    | "expenses"
+    | "netProfit" = "sales";
+
+  const metricConfig = {
+    sales: {
+      label: "Sales",
+      color: SALES_COLOR,
+    },
+    expenses: {
+      label: "Expenses",
+      color: EXPENSE_COLOR,
+    },
+    netProfit: {
+      label: "Net Profit",
+      color: PROFIT_COLOR,
+    },
+  } as const;
+
+  const config =
+    metricConfig[activeMetric];
+
+  const left = 54;
+  const right = 14;
+  const top = 18;
+  const bottom = 34;
+
+  const plotWidth =
+    Math.max(
+      1,
+      width -
+        left -
+        right
+    );
+
+  const plotHeight =
+    Math.max(
+      1,
+      height -
+        top -
+        bottom
+    );
+
+  const values =
+    buckets.map(
+      (bucket) =>
+        finite(
+          bucket[
+            activeMetric
+          ]
+        )
+    );
+
+  const rawMin =
+    Math.min(
+      0,
+      ...values
+    );
+
+  const rawMax =
+    Math.max(
+      1,
+      ...values
+    );
+
+  const rawRange =
+    Math.max(
+      1,
+      rawMax -
+        rawMin
+    );
+
+  /*
+   * Give the chart breathing room above the
+   * highest point so it never touches the roof.
+   */
+  const padding =
+    rawRange * 0.12;
+
+  const minValue =
+    rawMin < 0
+      ? rawMin - padding
+      : 0;
+
+  const maxValue =
+    rawMax + padding;
+
+  const range =
+    Math.max(
+      1,
+      maxValue -
+        minValue
+    );
+
+  const xAt = (
+    index: number
+  ) => {
+    if (
+      buckets.length <= 1
+    ) {
+      return (
+        left +
+        plotWidth / 2
+      );
+    }
+
+    return (
+      left +
+      (index /
+        (buckets.length -
+          1)) *
+        plotWidth
+    );
+  };
+
+  const yAt = (
+    value: number
+  ) =>
+    top +
+    ((maxValue -
+      finite(value)) /
+      range) *
+      plotHeight;
+
+  const linePath =
+    buckets
+      .map(
+        (
+          bucket,
+          index
+        ) => {
+          const x =
+            xAt(index);
+
+          const y =
+            yAt(
+              bucket[
+                activeMetric
+              ]
+            );
+
+          return `${
+            index === 0
+              ? "M"
+              : "L"
+          } ${x} ${y}`;
+        }
+      )
+      .join(" ");
+
+  const baselineY =
+    yAt(
+      minValue < 0
+        ? 0
+        : minValue
+    );
+
+  const areaPath =
+    buckets.length > 0
+      ? [
+          linePath,
+          `L ${xAt(
+            buckets.length -
+              1
+          )} ${baselineY}`,
+          `L ${xAt(
+            0
+          )} ${baselineY}`,
+          "Z",
+        ].join(" ")
+      : "";
+
+  const gridRatios = [
+    0,
+    0.25,
+    0.5,
+    0.75,
+    1,
+  ];
+
+  const labelForRatio = (
+    ratio: number
+  ) =>
+    maxValue -
+    range * ratio;
+
+  const seriesColor =
+    activeMetric ===
+      "netProfit" &&
+    values.some(
+      (value) =>
+        value < 0
+    )
+      ? PROFIT_COLOR
+      : config.color;
+
+  return (
+    <View
+      style={{
+        width,
+        height,
+        position: "relative",
+      }}
+    >
+      <Svg
+        width={width}
+        height={height}
+      >
+        {gridRatios.map(
+          (ratio) => {
+            const y =
+              top +
+              plotHeight *
+                ratio;
+
+            const value =
+              labelForRatio(
+                ratio
+              );
+
+            return (
+              <React.Fragment
+                key={ratio}
+              >
+                <Line
+                  x1={left}
+                  x2={
+                    width -
+                    right
+                  }
+                  y1={y}
+                  y2={y}
+                  stroke={
+                    GRID_COLOR
+                  }
+                  strokeWidth="1"
+                />
+
+                <SvgText
+                  x={
+                    left -
+                    7
+                  }
+                  y={y + 3}
+                  textAnchor="end"
+                  fontSize="8"
+                  fontWeight="700"
+                  fill={
+                    TEXT_COLOR
+                  }
+                >
+                  {value < 0
+                    ? `-${moneyCompact(
+                        value
+                      )}`
+                    : moneyCompact(
+                        value
+                      )}
+                </SvgText>
+              </React.Fragment>
+            );
+          }
+        )}
+
+        {minValue <
+          0 && (
+          <Line
+            x1={left}
+            x2={
+              width -
+              right
+            }
+            y1={yAt(0)}
+            y2={yAt(0)}
+            stroke="#94A3B8"
+            strokeWidth="1"
+          />
+        )}
+
+        {buckets.length >
+          0 && (
+          <>
+            <Path
+              d={areaPath}
+              fill={
+                seriesColor
+              }
+              fillOpacity="0.09"
+              stroke="none"
+            />
+
+            <Path
+              d={linePath}
+              fill="none"
+              stroke={
+                seriesColor
+              }
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+
+            {buckets.map(
+              (
+                bucket,
+                index
+              ) => {
+                const value =
+                  finite(
+                    bucket[
+                      activeMetric
+                    ]
+                  );
+
+                const pointColor =
+                  activeMetric ===
+                    "netProfit" &&
+                  value < 0
+                    ? LOSS_COLOR
+                    : seriesColor;
+
+                return (
+                  <React.Fragment
+                    key={
+                      bucket.key
+                    }
+                  >
+                    <Circle
+                      cx={xAt(
+                        index
+                      )}
+                      cy={yAt(
+                        value
+                      )}
+                      r="5.5"
+                      fill="#FFFFFF"
+                      stroke={
+                        pointColor
+                      }
+                      strokeWidth="2.5"
+                    />
+
+                    <Circle
+                      cx={xAt(
+                        index
+                      )}
+                      cy={yAt(
+                        value
+                      )}
+                      r="2.2"
+                      fill={
+                        pointColor
+                      }
+                    />
+
+                    <SvgText
+                      x={xAt(
+                        index
+                      )}
+                      y={
+                        height -
+                        8
+                      }
+                      textAnchor="middle"
+                      fontSize="8.5"
+                      fontWeight="700"
+                      fill={
+                        TEXT_COLOR
+                      }
+                    >
+                      {
+                        bucket.shortLabel
+                      }
+                    </SvgText>
+                  </React.Fragment>
+                );
+              }
+            )}
+          </>
+        )}
+      </Svg>
+    </View>
+  );
+}
+function BarsChart({
+  buckets,
+  width,
+  height,
+}: {
+  buckets: FinancialBucketResult[];
+  width: number;
+  height: number;
+}) {
+  const left = 36;
+  const right = 10;
+  const top = 14;
+  const bottom = 34;
+
+  const plotWidth =
+    Math.max(
+      1,
+      width -
+        left -
+        right
+    );
+
+  const plotHeight =
+    Math.max(
+      1,
+      height -
+        top -
+        bottom
+    );
+
+  const values =
+    buckets.flatMap(
+      (bucket) => [
+        finite(
+          bucket.sales
+        ),
+        finite(
+          bucket.expenses
+        ),
+        Math.abs(
+          finite(
+            bucket.netProfit
+          )
+        ),
+      ]
+    );
+
+  const max =
+    Math.max(
+      1,
+      ...values
+    );
+
+  const groupWidth =
+    plotWidth /
+    Math.max(
+      1,
+      buckets.length
+    );
+
+  const barWidth =
+    Math.max(
+      3,
+      Math.min(
+        14,
+        groupWidth /
+          5
+      )
+    );
+
+  const barHeight = (
+    value: number
+  ) =>
+    (Math.abs(
+      finite(value)
+    ) /
+      max) *
+    plotHeight;
+
+  return (
+    <Svg
+      width={width}
+      height={height}
+    >
+      {[0, 0.25, 0.5, 0.75, 1].map(
+        (ratio) => {
+          const y =
+            top +
+            plotHeight *
+              ratio;
+
+          return (
+            <Line
+              key={
+                ratio
+              }
+              x1={left}
+              x2={
+                width -
+                right
+              }
+              y1={y}
+              y2={y}
+              stroke={
+                GRID_COLOR
+              }
+              strokeWidth="1"
+            />
+          );
+        }
+      )}
+
+      {buckets.map(
+        (
+          bucket,
+          index
+        ) => {
+          const center =
+            left +
+            groupWidth *
+              index +
+            groupWidth /
+              2;
+
+          const salesH =
+            barHeight(
+              bucket.sales
+            );
+
+          const expenseH =
+            barHeight(
+              bucket.expenses
+            );
+
+          const profitH =
+            barHeight(
+              bucket.netProfit
+            );
+
+          return (
+            <React.Fragment
+              key={
+                bucket.key
+              }
+            >
+              <Rect
+                x={
+                  center -
+                  barWidth *
+                    1.6
+                }
+                y={
+                  top +
+                  plotHeight -
+                  salesH
+                }
+                width={
+                  barWidth
+                }
+                height={
+                  salesH
+                }
+                rx="2"
+                fill={
+                  SALES_COLOR
+                }
+              />
+
+              <Rect
+                x={
+                  center -
+                  barWidth /
+                    2
+                }
+                y={
+                  top +
+                  plotHeight -
+                  expenseH
+                }
+                width={
+                  barWidth
+                }
+                height={
+                  expenseH
+                }
+                rx="2"
+                fill={
+                  EXPENSE_COLOR
+                }
+              />
+
+              <Rect
+                x={
+                  center +
+                  barWidth *
+                    0.6
+                }
+                y={
+                  top +
+                  plotHeight -
+                  profitH
+                }
+                width={
+                  barWidth
+                }
+                height={
+                  profitH
+                }
+                rx="2"
+                fill={
+                  bucket.netProfit <
+                  0
+                    ? LOSS_COLOR
+                    : PROFIT_COLOR
+                }
+              />
+
+              <SvgText
+                x={center}
+                y={
+                  height -
+                  9
+                }
+                textAnchor="middle"
+                fontSize="9"
+                fontWeight="700"
+                fill={
+                  TEXT_COLOR
+                }
+              >
+                {
+                  bucket.shortLabel
+                }
+              </SvgText>
+            </React.Fragment>
+          );
+        }
+      )}
+    </Svg>
+  );
+}
+
+export default function FinancialChart({
+  mode,
+  total,
+  buckets,
+  width = 310,
+  height = 190,
+}: Props) {
+  const safeBuckets =
+    useMemo(
+      () =>
+        Array.isArray(
+          buckets
+        )
+          ? buckets
+          : [],
+      [buckets]
+    );
+
+  if (mode === "TREND") {
+    return (
+      <TrendChart
+        buckets={
+          safeBuckets
+        }
+        width={width}
+        height={height}
+      />
+    );
+  }
+
+  if (mode === "BARS") {
+    return (
+      <BarsChart
+        buckets={
+          safeBuckets
+        }
+        width={width}
+        height={height}
+      />
+    );
+  }
+
+  return (
+    <DonutChart
+      total={total}
+      width={width}
+      height={height}
+    />
+  );
+}
+
+export function FinancialChartLegend({
+  total,
+}: {
+  total: FinancialMetric;
+}) {
+  const profitIsLoss =
+    finite(
+      total.netProfit
+    ) < 0;
+
+  const items = [
+    {
+      label: "Sales",
+      value:
+        total.sales,
+      color:
+        SALES_COLOR,
+    },
+    {
+      label: "Expenses",
+      value:
+        total.expenses,
+      color:
+        EXPENSE_COLOR,
+    },
+    {
+      label:
+        profitIsLoss
+          ? "Loss"
+          : "Net Profit",
+      value:
+        total.netProfit,
+      color:
+        profitIsLoss
+          ? LOSS_COLOR
+          : PROFIT_COLOR,
+    },
+  ];
+
+  return (
+    <View
+      style={{
+        flexDirection:
+          "row",
+        gap: 8,
+        width: "100%",
+      }}
+    >
+      {items.map(
+        (item) => (
+          <View
+            key={
+              item.label
+            }
+            style={{
+              flex: 1,
+              minWidth: 0,
+              borderWidth: 1,
+              borderColor:
+                "#E2E8F0",
+              borderRadius:
+                10,
+              paddingHorizontal:
+                8,
+              paddingVertical:
+                7,
+              backgroundColor:
+                "#FFFFFF",
+            }}
+          >
+            <View
+              style={{
+                flexDirection:
+                  "row",
+                alignItems:
+                  "center",
+                gap: 5,
+              }}
+            >
+              <View
+                style={{
+                  width: 7,
+                  height: 7,
+                  borderRadius:
+                    999,
+                  backgroundColor:
+                    item.color,
+                }}
+              />
+
+              <Text
+                numberOfLines={
+                  1
+                }
+                style={{
+                  color:
+                    "#64748B",
+                  fontSize: 9,
+                  fontWeight:
+                    "700",
+                }}
+              >
+                {
+                  item.label
+                }
+              </Text>
+            </View>
+
+            <Text
+              numberOfLines={
+                1
+              }
+              style={{
+                marginTop: 3,
+                color:
+                  item.label ===
+                    "Loss"
+                    ? LOSS_COLOR
+                    : "#0F172A",
+                fontSize: 10,
+                fontWeight:
+                  "800",
+              }}
+            >
+              {moneyFull(
+                item.value
+              )}
+            </Text>
+          </View>
+        )
+      )}
+    </View>
+  );
+}
+
+

@@ -1,0 +1,616 @@
+
+========== HEADER HERO : 687-744 ==========
+  687: function HeaderHero({
+  688:   activeOrgName,
+  689:   activeStoreName,
+  690:   isCashier,
+  691: }: {
+  692:   activeOrgName?: string | null;
+  693:   activeStoreName?: string | null;
+  694:   isCashier: boolean;
+  695: }) {
+  696:   const orgLabel = String(activeOrgName ?? "Workspace").trim() || "Workspace";
+  697:   const storeLabel = String(activeStoreName ?? "No active store").trim() || "No active store";
+  698: 
+  699:   return (
+  700:     <View style={{ marginBottom: 6 }}>
+  701:       <Text style={{ fontSize: 30, fontWeight: "900", color: UI.text, letterSpacing: 0.2 }}>
+  702:         ZETRA BMS
+  703:       </Text>
+  704: 
+  705:       <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 4, fontSize: 16 }}>
+  706:         {isCashier ? "Cashier Dashboard" : "Business Command Center"}
+  707:       </Text>
+  708: 
+  709:       <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
+  710:         <View
+  711:           style={{
+  712:             paddingHorizontal: 10,
+  713:             paddingVertical: 6,
+  714:             borderRadius: 999,
+  715:             borderWidth: 1,
+  716:             borderColor: "rgba(255,255,255,0.10)",
+  717:             backgroundColor: "rgba(255,255,255,0.04)",
+  718:           }}
+  719:         >
+  720:           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }} numberOfLines={1}>
+  721:             {orgLabel}
+  722:           </Text>
+  723:         </View>
+  724: 
+  725:         <View
+  726:           style={{
+  727:             paddingHorizontal: 10,
+  728:             paddingVertical: 6,
+  729:             borderRadius: 999,
+  730:             borderWidth: 1,
+  731:             borderColor: "rgba(79,140,255,0.22)",
+  732:             backgroundColor: "transparent",
+  733:             maxWidth: "55%",
+  734:           }}
+  735:         >
+  736:           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }} numberOfLines={1}>
+  737:             {storeLabel}
+  738:           </Text>
+  739:         </View>
+  740:       </View>
+  741:     </View>
+  742:   );
+  743: }
+  744: 
+
+========== SUBSCRIPTION PRESENTATION : 924-1219 ==========
+  924:   const openSubscription = () => {
+  925:     router.push(
+  926:       "/(tabs)/settings/subscription" as any
+  927:     );
+  928:   };
+  929: 
+  930:   return (
+  931:     <View style={{ marginTop: 10 }}>
+  932:       <Pressable
+  933:         onPress={openSubscription}
+  934:         // @ts-ignore - web click fallback
+  935:         onClick={openSubscription}
+  936:         hitSlop={8}
+  937:         style={({ pressed }) => ({
+  938:           minHeight: 68,
+  939:           borderRadius: 20,
+  940:           borderWidth: 1,
+  941:           borderColor: colors.border,
+  942:           backgroundColor: colors.bg,
+  943:           paddingHorizontal: 14,
+  944:           paddingVertical: 12,
+  945:           opacity: pressed ? 0.92 : 1,
+  946:           transform: pressed
+  947:             ? [{ scale: 0.997 }]
+  948:             : [{ scale: 1 }],
+  949:           flexDirection: "row",
+  950:           alignItems: "center",
+  951:           gap: 12,
+  952:         })}
+  953:       >
+  954:         <View
+  955:           style={{
+  956:             width: 42,
+  957:             height: 42,
+  958:             borderRadius: 14,
+  959:             alignItems: "center",
+  960:             justifyContent: "center",
+  961:             backgroundColor:
+  962:               warning ||
+  963:               critical ||
+  964:               isExpired ||
+  965:               expiresToday
+  966:                 ? "rgba(239,68,68,0.10)"
+  967:                 : "rgba(16,185,129,0.10)",
+  968:           }}
+  969:         >
+  970:           <SafeIcon
+  971:             name={
+  972:               warning ||
+  973:               critical ||
+  974:               isExpired ||
+  975:               expiresToday
+  976:                 ? "warning-outline"
+  977:                 : "hourglass-outline"
+  978:             }
+  979:             size={19}
+  980:             color={colors.strong}
+  981:           />
+  982:         </View>
+  983: 
+  984:         <View style={{ flex: 1, minWidth: 0 }}>
+  985:           <View
+  986:             style={{
+  987:               flexDirection: "row",
+  988:               alignItems: "center",
+  989:               gap: 8,
+  990:             }}
+  991:           >
+  992:             <Text
+  993:               style={{
+  994:                 color: colors.strong,
+  995:                 fontWeight: "900",
+  996:                 fontSize: 14,
+  997:                 flexShrink: 1,
+  998:               }}
+  999:               numberOfLines={1}
+ 1000:             >
+ 1001:               {planCode}
+ 1002:             </Text>
+ 1003: 
+ 1004:             {!!status && (
+ 1005:               <Text
+ 1006:                 style={{
+ 1007:                   color: colors.muted,
+ 1008:                   fontWeight: "900",
+ 1009:                   fontSize: 10,
+ 1010:                 }}
+ 1011:                 numberOfLines={1}
+ 1012:               >
+ 1013:                 {status}
+ 1014:               </Text>
+ 1015:             )}
+ 1016:           </View>
+ 1017: 
+ 1018:           <Text
+ 1019:             style={{
+ 1020:               color: colors.muted,
+ 1021:               fontWeight: "800",
+ 1022:               fontSize: 11,
+ 1023:               marginTop: 4,
+ 1024:             }}
+ 1025:             numberOfLines={1}
+ 1026:           >
+ 1027:             {subtitle}
+ 1028:           </Text>
+ 1029:         </View>
+ 1030: 
+ 1031:         <View
+ 1032:           style={{
+ 1033:             paddingHorizontal: 10,
+ 1034:             paddingVertical: 7,
+ 1035:             borderRadius: 999,
+ 1036:             backgroundColor: colors.badgeBg,
+ 1037:             alignItems: "center",
+ 1038:             justifyContent: "center",
+ 1039:           }}
+ 1040:         >
+ 1041:           <Text
+ 1042:             style={{
+ 1043:               color: colors.badgeText,
+ 1044:               fontWeight: "900",
+ 1045:               fontSize: 10,
+ 1046:             }}
+ 1047:             numberOfLines={1}
+ 1048:           >
+ 1049:             {remainingLabel}
+ 1050:           </Text>
+ 1051:         </View>
+ 1052: 
+ 1053:         <Text
+ 1054:           style={{
+ 1055:             color: colors.strong,
+ 1056:             fontWeight: "900",
+ 1057:             fontSize: 18,
+ 1058:           }}
+ 1059:         >
+ 1060:           ›
+ 1061:         </Text>
+ 1062:       </Pressable>
+ 1063:     </View>
+ 1064:   );
+ 1065: }
+ 1066: 
+ 1067: function PremiumMetricCard({
+ 1068:   title,
+ 1069:   subtitle,
+ 1070:   iconName,
+ 1071:   loading,
+ 1072:   badgeText,
+ 1073:   children,
+ 1074:   ctaLabel,
+ 1075:   onPress,
+ 1076:   footerRight,
+ 1077:   error,
+ 1078:   mobileWebLite = false,
+ 1079:   tone = "finance",
+ 1080: }: {
+ 1081:   title: string;
+ 1082:   subtitle: string;
+ 1083:   iconName: keyof typeof Ionicons.glyphMap;
+ 1084:   loading?: boolean;
+ 1085:   badgeText?: string;
+ 1086:   children: React.ReactNode;
+ 1087:   ctaLabel: string;
+ 1088:   onPress: () => void;
+ 1089:   footerRight?: React.ReactNode;
+ 1090:   error?: string | null;
+ 1091:   mobileWebLite?: boolean;
+ 1092:   tone?: keyof typeof HOME_PALETTE;
+ 1093: }) {
+ 1094:   const p = HOME_PALETTE[tone];
+ 1095: 
+ 1096:   return (
+ 1097:     <View style={{ paddingTop: 14 }}>
+ 1098:       <View
+ 1099:         style={{
+ 1100:           gap: 14,
+ 1101:           borderRadius: 22,
+ 1102:           borderWidth: 1,
+ 1103:           borderColor: p.border,
+ 1104:           backgroundColor: p.bg,
+ 1105:           overflow: "hidden",
+ 1106:           padding: 16,
+ 1107:         }}
+ 1108:       >
+ 1109:         
+ 1110: 
+ 1111:         <View
+ 1112:           pointerEvents="none"
+ 1113:           style={{
+ 1114:             position: "absolute",
+ 1115:             left: 0,
+ 1116:             right: 0,
+ 1117:             top: 0,
+ 1118:             height: 1,
+ 1119:             backgroundColor: UI.borderSoft,
+ 1120:           }}
+ 1121:         />
+ 1122: 
+ 1123:         <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+ 1124:           <View
+ 1125:             style={{
+ 1126:               width: 48,
+ 1127:               height: 48,
+ 1128:               borderRadius: 16,
+ 1129:               alignItems: "center",
+ 1130:               justifyContent: "center",
+ 1131:               borderWidth: 1,
+ 1132:               borderColor: "rgba(79,140,255,0.32)",
+ 1133:               backgroundColor: p.soft,
+ 1134:             }}
+ 1135:           >
+ 1136:             <SafeIcon
+ 1137:   name={loading ? "ellipsis-horizontal" : iconName}
+ 1138:   size={20}
+ 1139:   color={p.accent}
+ 1140: />
+ 1141:           </View>
+ 1142: 
+ 1143:           <View style={{ flex: 1, minWidth: 0 }}>
+ 1144:             <Text style={{ color: HOME_CARD_TEXT, fontWeight: "900", fontSize: 16 }} numberOfLines={1}>
+ 1145:               {title}
+ 1146:             </Text>
+ 1147:             <Text style={{ color: HOME_CARD_MUTED, fontWeight: "800", marginTop: 2 }} numberOfLines={1}>
+ 1148:               {subtitle}
+ 1149:             </Text>
+ 1150:           </View>
+ 1151: 
+ 1152:           {badgeText ? (
+ 1153:             <View
+ 1154:               style={{
+ 1155:                 paddingHorizontal: 10,
+ 1156:                 paddingVertical: 6,
+ 1157:                 borderRadius: 999,
+ 1158:                 borderWidth: 1,
+ 1159:                 borderColor: "rgba(79,140,255,0.28)",
+ 1160:                 backgroundColor: "rgba(79,140,255,0.10)",
+ 1161:               }}
+ 1162:             >
+ 1163:               <Text style={{ color: HOME_CARD_TEXT, fontWeight: "900", fontSize: 11 }}>{badgeText}</Text>
+ 1164:             </View>
+ 1165:           ) : null}
+ 1166:         </View>
+ 1167: 
+ 1168:         {!!error && (
+ 1169:           <Card
+ 1170:             style={{
+ 1171:               borderColor: "rgba(201,74,74,0.35)",
+ 1172:               backgroundColor: "rgba(201,74,74,0.10)",
+ 1173:               borderRadius: 18,
+ 1174:               padding: 12,
+ 1175:             }}
+ 1176:           >
+ 1177:             <Text style={{ color: UI.danger, fontWeight: "900" }}>{error}</Text>
+ 1178:           </Card>
+ 1179:         )}
+ 1180: 
+ 1181:         <HomeCardToneContext.Provider
+ 1182:           value={{
+ 1183:             text: HOME_CARD_TEXT,
+ 1184:             muted: HOME_CARD_MUTED,
+ 1185:             faint: HOME_CARD_FAINT,
+ 1186:           }}
+ 1187:         >
+ 1188:           {children}
+ 1189:         </HomeCardToneContext.Provider>
+ 1190: 
+ 1191:         <View style={{ height: 1, backgroundColor: UI.borderSoft }} />
+ 1192: 
+ 1193:         <Pressable
+ 1194:           onPress={onPress}
+ 1195:           // @ts-ignore - web click fallback
+ 1196:           onClick={onPress}
+ 1197:           hitSlop={10}
+ 1198:           style={({ pressed }) => ({
+ 1199:             borderRadius: 18,
+ 1200:             borderWidth: 1,
+ 1201:             borderColor: UI.primaryBorder,
+ 1202:             backgroundColor: p.soft,
+ 1203:             paddingVertical: 15,
+ 1204:             paddingHorizontal: 16,
+ 1205:             flexDirection: "row",
+ 1206:             alignItems: "center",
+ 1207:             justifyContent: "center",
+ 1208:             gap: 10,
+ 1209:             opacity: pressed ? 0.92 : 1,
+ 1210:           })}
+ 1211:         >
+ 1212:           <Text style={{ color: HOME_CARD_TEXT, fontWeight: "900", fontSize: 15 }}>{ctaLabel}</Text>
+ 1213:           {footerRight ? footerRight : <Text style={{ color: UI.faint, fontWeight: "900", fontSize: 16 }}>›</Text>}
+ 1214:         </Pressable>
+ 1215:       </View>
+ 1216:     </View>
+ 1217:   );
+ 1218: }
+ 1219: 
+
+========== MOBILE BUSINESS TOOLS : 2971-3083 ==========
+ 2971: function MobileBusinessTools({
+ 2972:   isOwner,
+ 2973:   onOpenBusinessPosition,
+ 2974:   onOpenBusinessDebts,
+ 2975:   onOpenIncomingStock,
+ 2976:   onOpenStock,
+ 2977: }: {
+ 2978:   isOwner: boolean;
+ 2979:   onOpenBusinessPosition: () => void;
+ 2980:   onOpenBusinessDebts: () => void;
+ 2981:   onOpenIncomingStock: () => void;
+ 2982:   onOpenStock: () => void;
+ 2983: }) {
+ 2984:   if (!isOwner) return null;
+ 2985: 
+ 2986:   return (
+ 2987:     <View style={{ marginTop: 14 }}>
+ 2988:       <View
+ 2989:         style={{
+ 2990:           flexDirection: "row",
+ 2991:           alignItems: "flex-end",
+ 2992:           marginBottom: 10,
+ 2993:           paddingHorizontal: 2,
+ 2994:         }}
+ 2995:       >
+ 2996:         <View style={{ flex: 1 }}>
+ 2997:           <Text
+ 2998:             style={{
+ 2999:               color: "#0F172A",
+ 3000:               fontWeight: "900",
+ 3001:               fontSize: 17,
+ 3002:             }}
+ 3003:           >
+ 3004:             Business Tools
+ 3005:           </Text>
+ 3006: 
+ 3007:           <Text
+ 3008:             style={{
+ 3009:               color: "#94A3B8",
+ 3010:               fontWeight: "700",
+ 3011:               fontSize: 10,
+ 3012:               marginTop: 2,
+ 3013:             }}
+ 3014:           >
+ 3015:             Position, debts, incoming stock na inventory value
+ 3016:           </Text>
+ 3017:         </View>
+ 3018: 
+ 3019:         <View
+ 3020:           style={{
+ 3021:             paddingHorizontal: 9,
+ 3022:             paddingVertical: 5,
+ 3023:             borderRadius: 999,
+ 3024:             backgroundColor: "#F1F5F9",
+ 3025:           }}
+ 3026:         >
+ 3027:           <Text
+ 3028:             style={{
+ 3029:               color: "#64748B",
+ 3030:               fontWeight: "900",
+ 3031:               fontSize: 9,
+ 3032:               letterSpacing: 0.5,
+ 3033:             }}
+ 3034:           >
+ 3035:             OWNER
+ 3036:           </Text>
+ 3037:         </View>
+ 3038:       </View>
+ 3039: 
+ 3040:       <View
+ 3041:         style={{
+ 3042:           flexDirection: "row",
+ 3043:           flexWrap: "wrap",
+ 3044:           justifyContent: "space-between",
+ 3045:           rowGap: 10,
+ 3046:         }}
+ 3047:       >
+ 3048:         <MobileHomeActionTile
+ 3049:           label="Business Position"
+ 3050:           hint="Loans, issued money na hali ya biashara"
+ 3051:           icon="analytics-outline"
+ 3052:           tone="red"
+ 3053:           onPress={onOpenBusinessPosition}
+ 3054:         />
+ 3055: 
+ 3056:         <MobileHomeActionTile
+ 3057:           label="Business Debts"
+ 3058:           hint="Supplier, bank debts na obligations"
+ 3059:           icon="wallet-outline"
+ 3060:           tone="amber"
+ 3061:           onPress={onOpenBusinessDebts}
+ 3062:         />
+ 3063: 
+ 3064:         <MobileHomeActionTile
+ 3065:           label="Incoming Stock"
+ 3066:           hint="Supplier orders na goods in transit"
+ 3067:           icon="boat-outline"
+ 3068:           tone="green"
+ 3069:           onPress={onOpenIncomingStock}
+ 3070:         />
+ 3071: 
+ 3072:         <MobileHomeActionTile
+ 3073:           label="Stock Value"
+ 3074:           hint="Inventory value na stock history"
+ 3075:           icon="cube-outline"
+ 3076:           tone="blue"
+ 3077:           onPress={onOpenStock}
+ 3078:         />
+ 3079:       </View>
+ 3080:     </View>
+ 3081:   );
+ 3082: }
+ 3083: 
+
+========== MOBILE QUICK ACCESS : 3084-3224 ==========
+ 3084: function MobileQuickAccess({
+ 3085:   onProducts,
+ 3086:   onCustomers,
+ 3087:   onExpenses,
+ 3088:   onReports,
+ 3089:   onStores,
+ 3090:   onCredit,
+ 3091: }: {
+ 3092:   onProducts: () => void;
+ 3093:   onCustomers: () => void;
+ 3094:   onExpenses: () => void;
+ 3095:   onReports: () => void;
+ 3096:   onStores: () => void;
+ 3097:   onCredit: () => void;
+ 3098: }) {
+ 3099:   const items = [
+ 3100:     {
+ 3101:       key: "products",
+ 3102:       label: "Bidhaa",
+ 3103:       icon: "cube-outline" as const,
+ 3104:       onPress: onProducts,
+ 3105:     },
+ 3106:     {
+ 3107:       key: "customers",
+ 3108:       label: "Wateja / CRM",
+ 3109:       icon: "people-outline" as const,
+ 3110:       onPress: onCustomers,
+ 3111:     },
+ 3112:     {
+ 3113:       key: "expenses",
+ 3114:       label: "Matumizi",
+ 3115:       icon: "receipt-outline" as const,
+ 3116:       onPress: onExpenses,
+ 3117:     },
+ 3118:     {
+ 3119:       key: "reports",
+ 3120:       label: "Ripoti",
+ 3121:       icon: "bar-chart-outline" as const,
+ 3122:       onPress: onReports,
+ 3123:     },
+ 3124:     {
+ 3125:       key: "stores",
+ 3126:       label: "Stores",
+ 3127:       icon: "storefront-outline" as const,
+ 3128:       onPress: onStores,
+ 3129:     },
+ 3130:     {
+ 3131:       key: "credit",
+ 3132:       label: "Credit",
+ 3133:       icon: "card-outline" as const,
+ 3134:       onPress: onCredit,
+ 3135:     },
+ 3136:   ];
+ 3137: 
+ 3138:   return (
+ 3139:     <View
+ 3140:       style={{
+ 3141:         marginTop: 14,
+ 3142:         borderRadius: 24,
+ 3143:         borderWidth: 1,
+ 3144:         borderColor: "rgba(148,163,184,0.16)",
+ 3145:         backgroundColor: "#FFFFFF",
+ 3146:         padding: 14,
+ 3147:       }}
+ 3148:     >
+ 3149:       <Text
+ 3150:         style={{
+ 3151:           color: "#0F172A",
+ 3152:           fontWeight: "900",
+ 3153:           fontSize: 17,
+ 3154:         }}
+ 3155:       >
+ 3156:         Quick Access
+ 3157:       </Text>
+ 3158: 
+ 3159:       <Text
+ 3160:         style={{
+ 3161:           color: "#94A3B8",
+ 3162:           fontWeight: "700",
+ 3163:           fontSize: 10,
+ 3164:           marginTop: 2,
+ 3165:           marginBottom: 14,
+ 3166:         }}
+ 3167:       >
+ 3168:         Fungua maeneo muhimu ya biashara kwa haraka
+ 3169:       </Text>
+ 3170: 
+ 3171:       <View
+ 3172:         style={{
+ 3173:           flexDirection: "row",
+ 3174:           flexWrap: "wrap",
+ 3175:           justifyContent: "space-between",
+ 3176:           rowGap: 16,
+ 3177:         }}
+ 3178:       >
+ 3179:         {items.map((item) => (
+ 3180:           <Pressable
+ 3181:             key={item.key}
+ 3182:             onPress={item.onPress}
+ 3183:             hitSlop={6}
+ 3184:             style={({ pressed }) => ({
+ 3185:               width: "31%",
+ 3186:               alignItems: "center",
+ 3187:               opacity: pressed ? 0.72 : 1,
+ 3188:             })}
+ 3189:           >
+ 3190:             <View
+ 3191:               style={{
+ 3192:                 width: 48,
+ 3193:                 height: 48,
+ 3194:                 borderRadius: 16,
+ 3195:                 backgroundColor: "#F1F5F9",
+ 3196:                 alignItems: "center",
+ 3197:                 justifyContent: "center",
+ 3198:               }}
+ 3199:             >
+ 3200:               <SafeIcon
+ 3201:                 name={item.icon}
+ 3202:                 size={21}
+ 3203:                 color="#2563EB"
+ 3204:               />
+ 3205:             </View>
+ 3206: 
+ 3207:             <Text
+ 3208:               style={{
+ 3209:                 color: "#334155",
+ 3210:                 fontWeight: "900",
+ 3211:                 fontSize: 10,
+ 3212:                 marginTop: 7,
+ 3213:                 textAlign: "center",
+ 3214:               }}
+ 3215:               numberOfLines={1}
+ 3216:             >
+ 3217:               {item.label}
+ 3218:             </Text>
+ 3219:           </Pressable>
+ 3220:         ))}
+ 3221:       </View>
+ 3222:     </View>
+ 3223:   );
+ 3224: }

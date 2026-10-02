@@ -350,8 +350,8 @@ function CheckoutMiniTile({
 
 function checkoutCardStyle(accent: string, bg: string = "#FFFFFF", compact = false) {
   return {
-    gap: compact ? 10 : 12,
-    padding: compact ? 14 : undefined,
+    gap: compact ? 7 : 12,
+    padding: compact ? 10 : undefined,
     borderWidth: 1,
     borderLeftWidth: 5,
     borderLeftColor: accent,
@@ -1594,7 +1594,7 @@ headerStoreName,
   }, [cashierMode, isOffline, rpcPaymentMethod]);
 
   const summaryCard = (
-    <Card style={checkoutCardStyle("#3B82F6", "#F8FBFF")}>
+    <Card style={checkoutCardStyle("#3B82F6", "#F8FBFF", isDesktopWeb)}>
       <View style={{ flexDirection: "row", alignItems: "center" }}>
         <View style={{ flex: 1 }}>
           <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
@@ -2253,7 +2253,7 @@ const staffAttributionCard = (
       : 0;
 
   return (
-    <Screen scroll bottomPad={240}>
+    <Screen scroll bottomPad={isDesktopWeb ? 16 : 240}>
       <Modal
         visible={adjustModalVisible}
         transparent
@@ -2265,7 +2265,7 @@ const staffAttributionCard = (
             flex: 1,
             backgroundColor: "rgba(0,0,0,0.55)",
             justifyContent: "center",
-            padding: 16,
+            padding: isDesktopWeb ? 24 : 16,
           }}
         >
           <View
@@ -2274,8 +2274,11 @@ const staffAttributionCard = (
               borderWidth: 1,
               borderColor: theme.colors.border,
               backgroundColor: "#FFFFFF",
-              padding: 16,
-              gap: 12,
+              width: isDesktopWeb ? "100%" : undefined,
+              maxWidth: isDesktopWeb ? 640 : undefined,
+              alignSelf: isDesktopWeb ? "center" : undefined,
+              padding: isDesktopWeb ? 18 : 16,
+              gap: isDesktopWeb ? 10 : 12,
             }}
           >
             <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
@@ -2314,7 +2317,7 @@ backgroundColor: "rgba(241,245,249,0.72)",
               />
             </View>
 
-            <View style={{ gap: 8 }}>
+            <View style={{ flexDirection: isDesktopWeb ? "row" : "column", gap: 8 }}>
               <Pressable
                 onPress={() => setAdjustApplyToAll(false)}
                 style={({ pressed }) => ({
@@ -2329,7 +2332,8 @@ backgroundColor: "rgba(241,245,249,0.72)",
                   paddingVertical: 12,
                   paddingHorizontal: 12,
                   opacity: pressed ? 0.92 : 1,
-                })}
+                flex: isDesktopWeb ? 1 : undefined,
+                  })}
               >
                 <Text
                   style={{
@@ -2355,7 +2359,8 @@ backgroundColor: "rgba(241,245,249,0.72)",
                   paddingVertical: 12,
                   paddingHorizontal: 12,
                   opacity: pressed ? 0.92 : 1,
-                })}
+                flex: isDesktopWeb ? 1 : undefined,
+                  })}
               >
                 <Text
                   style={{
@@ -2413,9 +2418,9 @@ backgroundColor: "rgba(241,245,249,0.72)",
       <View
   style={{
     flex: 1,
-    gap: isDesktopWeb ? 18 : 14,
+    gap: isDesktopWeb ? 12 : 14,
     backgroundColor: isDesktopWeb ? "#F8FAFC" : undefined,
-    padding: isDesktopWeb ? 14 : 0,
+    padding: isDesktopWeb ? 10 : 0,
     borderRadius: isDesktopWeb ? 28 : 0,
           width: "100%",
           maxWidth: isDesktopWeb ? desktopShellWidth : 980,
@@ -2548,48 +2553,47 @@ backgroundColor: "rgba(241,245,249,0.72)",
             style={{
               flexDirection: "row",
               alignItems: "flex-start",
-              gap: 20,
+              gap: 12,
               width: "100%",
             }}
           >
             <View
               style={{
-                width: desktopSummaryWidth,
-                minWidth: desktopSummaryWidth,
-                maxWidth: desktopSummaryWidth,
-                flexShrink: 0,
+                flex: 1.08,
+                minWidth: 0,
+                gap: 8,
               }}
             >
               {summaryCard}
+
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "flex-start",
+                  gap: 8,
+                  width: "100%",
+                }}
+              >
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  {discountNoteCard}
+                </View>
+
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  {customerCard}
+                </View>
+              </View>
             </View>
 
             <View
               style={{
-                width: desktopMainWidth,
+                flex: 0.92,
                 minWidth: 0,
-                flex: 1,
-                gap: 14,
+                gap: 8,
               }}
             >
-              <View
-                style={{
-                  flexDirection: "row",
-                  gap: 14,
-                  alignItems: "flex-start",
-                  width: "100%",
-                }}
-              >
-                <View style={{ flex: 0.95, minWidth: 0, gap: 14 }}>
-                  {paymentCard}
-                  {actionCard}
-                </View>
-
-                <View style={{ flex: 1.05, minWidth: 0, gap: 14 }}>
-                  {discountNoteCard}
-                  {customerCard}
-                  {staffAttributionCard}
-                </View>
-              </View>
+              {paymentCard}
+              {staffAttributionCard}
+              {actionCard}
             </View>
           </View>
         ) : (
@@ -2603,7 +2607,7 @@ backgroundColor: "rgba(241,245,249,0.72)",
           </>
         )}
 
-        <View style={{ height: 24 }} />
+        <View style={{ height: isDesktopWeb ? 10 : 24 }} />
       </View>
     </Screen>
   );

@@ -4660,6 +4660,184 @@ if (!semanticResult.ok) {
               ].join("\n");
             } else if (
               canonicalBusinessResult.resultType ===
+                "CRM_CUSTOMER_360" &&
+              canonicalBusinessResult.crmCustomer360Result
+            ) {
+              const customer360 =
+                canonicalBusinessResult.crmCustomer360Result;
+
+              canonicalBusinessContext = [
+                "VERIFIED ZETRA CUSTOMER 360 DATA:",
+                "Source: get_ai_crm_customer_360_v1 via ZETRA CRM Customer 360 Engine",
+                "Data status: VERIFIED",
+                `Resolved period: ${clean(canonicalBusinessResult?.periods?.current?.fromDate)} to ${clean(canonicalBusinessResult?.periods?.current?.toDate)}`,
+                JSON.stringify(customer360, null, 2),
+                "",
+                "STRICT CUSTOMER 360 RESPONSE RULES:",
+                "- Use ONLY the verified Customer 360 data above for claims about this customer's purchases, receipts, products, revenue, discounts, historical cost, gross profit, seller, store, payment details, and purchase history.",
+                "- customer.customerId is the canonical verified customer identity. Never merge or replace this identity using a similar name or phone number.",
+                "- Never assign anonymous sales to this customer by inference.",
+                "- Never invent a product. Mention a product only when it is explicitly present in the verified Customer 360 receipt items or product summary.",
+                "- A product name recovered from the current product catalog is linked by verified productId, but it is NOT guaranteed to be the exact historical product name used at the time of sale unless the data explicitly says the name came from a historical item snapshot.",
+                "- Never invent a receipt, sale, quantity, selling price, discount, payment method, seller, store, date, historical cost, or profit.",
+                "- Receipt final amount must come from the verified receipt final amount. Do not reconstruct or guess a different final receipt value.",
+                "- Sale-level discounts must be respected exactly as supplied. Never subtract the same discount twice.",
+                "- Historical item cost must use the verified historical unit cost supplied by Customer 360. Never substitute current product cost, current inventory cost, estimated cost, or an inferred cost.",
+                "- Report an exact gross profit only when the supplied Customer 360 data says profit is fully verified and the corresponding gross-profit value is available.",
+                "- If profit is not fully verified because one or more historical item costs are missing, explicitly state that exact gross profit cannot be verified from the available historical cost data. Never fill the missing cost with a current or estimated value.",
+                "- seller information represents the verified seller attribution supplied by Customer 360. Never treat created_by or another user field as the seller unless the verified Customer 360 data explicitly identifies that person as the seller.",
+                "- Store information must come from the verified Customer 360 receipt/store data.",
+                "- Returned receipts may be limited by receiptLimit. Do not treat the number of receipt objects returned as the customer's complete purchase count when the verified period or historical summary provides a larger aggregate count.",
+                "- Use periodSummary for claims about the resolved requested period and historicalSummary only for verified historical/as-of claims. Never silently mix the two scopes.",
+                "- Do not infer motives, preferences, satisfaction, loyalty, reasons for buying, or future behavior from transaction history alone.",
+                "- Do not claim a trend, improvement, decline, or behavioral change unless verified comparison data explicitly supports that conclusion.",
+                "- Credit ledger information is not automatically part of Customer 360. Never invent or merge customer debt, repayments, or credit history into this result unless separately supplied by the verified Credit Engine.",
+                "- If the requested detail is absent from the verified Customer 360 data, say that it is not verified in the available data instead of guessing.",
+                "- Answer the user's exact customer question directly and concisely, using the canonical verified customer name when available.",
+                "- Clearly distinguish verified facts from interpretation or recommendations.",
+              ].join("\n");
+            } else if (
+              canonicalBusinessResult.resultType ===
+                "CRM" &&
+              canonicalBusinessResult.crmResult
+            ) {
+              canonicalBusinessContext = [
+                "VERIFIED ZETRA CRM DATA:",
+                "Source: get_ai_crm_intelligence_v1 via ZETRA CRM Engine",
+                "Data status: VERIFIED",
+                `Resolved period: ${clean(canonicalBusinessResult?.periods?.current?.fromDate)} to ${clean(canonicalBusinessResult?.periods?.current?.toDate)}`,
+                JSON.stringify(canonicalBusinessResult.crmResult, null, 2),
+                "",
+                "STRICT CRM RESPONSE RULES:",
+                "- Use ONLY the verified CRM data above for numerical customer claims.",
+                "- Customer metrics use verified identified COMPLETED sales only. Anonymous sales must never be assigned to customers by inference.",
+                "- activeIdentifiedCustomers means verified identified customers active in the resolved period, not all real customers.",
+                "- newCustomers means customers whose first VERIFIED purchase in ZETRA records falls inside the resolved period.",
+                "- returningCustomers means customers with a verified purchase before the period and another verified purchase during the period.",
+                "- Repeat customer and returning customer are different concepts. Never use them interchangeably.",
+                "- historicalValue is verified historical customer spend, NOT predictive customer lifetime value.",
+                "- Never merge customers across stores by phone or name unless verified identity explicitly establishes it.",
+                "- Never merge customers by name alone.",
+                "- transactionIdentityCoveragePercent and revenueIdentityCoveragePercent are different measures.",
+                "- Inactivity must use the explicit verified inactivity threshold.",
+                "- Top customers may be named only when present in verified topCustomers data.",
+                "- Never invent customer behavior, motives, preferences, reasons for inactivity, or future value.",
+                "- Clearly distinguish verified facts from recommendations.",
+              ].join("\n");
+            } else if (
+              canonicalBusinessResult.resultType ===
+                "CRM_COMPARISON" &&
+              canonicalBusinessResult.crmComparisonResult
+            ) {
+              canonicalBusinessContext = [
+                "VERIFIED ZETRA CRM COMPARISON:",
+                "Source: get_ai_crm_intelligence_v1 via ZETRA CRM Engine",
+                "Data status: VERIFIED",
+                `Resolved current period: ${clean(canonicalBusinessResult?.periods?.current?.fromDate)} to ${clean(canonicalBusinessResult?.periods?.current?.toDate)}`,
+                `Resolved comparison period: ${clean(canonicalBusinessResult?.periods?.previous?.fromDate)} to ${clean(canonicalBusinessResult?.periods?.previous?.toDate)}`,
+                JSON.stringify(canonicalBusinessResult.crmComparisonResult, null, 2),
+                "",
+                "STRICT CRM COMPARISON RULES:",
+                "- Compare customer metrics only from the verified CRM comparison above.",
+                "- Customer counts and values represent verified identified customer activity only.",
+                "- Anonymous sales must never be attributed to customers.",
+                "- Do not confuse new customers, returning customers, lifetime repeat customers, and repeat purchasers within a period.",
+                "- NO_BASELINE must never be presented as a normal percentage increase or decrease.",
+                "- Historical customer value is verified historical spend, not predictive CLV.",
+                "- Never invent reasons why customer activity changed; verified data may establish WHAT changed without establishing WHY.",
+                "- Consider identity coverage differences before making strong customer-trend conclusions.",
+                "- Clearly distinguish verified facts from recommendations.",
+              ].join("\n");
+            } else if (
+              canonicalBusinessResult.resultType ===
+                "CREDIT" &&
+              canonicalBusinessResult.creditResult
+            ) {
+              canonicalBusinessContext = [
+                "VERIFIED ZETRA CREDIT DATA:",
+                "Source: get_ai_credit_intelligence_v1 via ZETRA Credit Engine",
+                "Data status: VERIFIED",
+                `Resolved period: ${clean(canonicalBusinessResult?.periods?.current?.fromDate)} to ${clean(canonicalBusinessResult?.periods?.current?.toDate)}`,
+                JSON.stringify(
+                  canonicalBusinessResult.creditResult,
+                  null,
+                  2
+                ),
+                "",
+                "STRICT CREDIT RESPONSE RULES:",
+                "- Use only the verified credit data above for numerical claims.",
+                "- outstandingBalance is the CURRENT positive customer debt exposure. Do not describe it as debt created during the requested period.",
+                "- customerCreditBalance represents customer overpayments or advance credit. Never present it as negative customer debt.",
+                "- creditIssued and collections are PERIOD ACTIVITY for the resolved requested period.",
+                "- collectionToIssuedRatePercent is period collections divided by period credit issued. It is NOT a cohort recovery rate because collections may relate to credit issued before this period.",
+                "- Never claim a customer is overdue unless capabilities.supportsOverdue is true and verified overdue information is explicitly supplied.",
+                "- If supportsOverdue is false, explain the limitation when the user specifically asks about overdue debt.",
+                "- Top debtors may be named only when they appear in topDebtors above.",
+                "- Never invent due dates, repayment promises, customer behavior, causes of non-payment, or collection history.",
+                "- Negative-balance accounts are customer credit/overpayment positions, not negative outstanding debt.",
+                "- Clearly distinguish verified facts from recommendations.",
+                "- Default to a concise synthesized answer unless the user asks for a detailed breakdown.",
+              ].join("\n");
+            } else if (
+              canonicalBusinessResult.resultType ===
+                "CREDIT_CUSTOMER_HISTORY" &&
+              canonicalBusinessResult.creditCustomerHistoryResult
+            ) {
+              const creditHistory =
+                canonicalBusinessResult.creditCustomerHistoryResult;
+
+              canonicalBusinessContext = [
+                "VERIFIED ZETRA CUSTOMER CREDIT HISTORY:",
+                "Source: get_ai_credit_customer_history_v1 via ZETRA Credit Engine",
+                "Data status: VERIFIED",
+                JSON.stringify(creditHistory, null, 2),
+                "",
+                "STRICT CUSTOMER CREDIT HISTORY RULES:",
+                "- Use ONLY the verified customer credit history above for customer-specific payment, credit-sale, balance, and transaction claims.",
+                "- customer.customerName is the canonical verified customer name. Prefer it in the final answer even if the user typed the name differently.",
+                "- latestPayment is the ONLY verified source for claims about the customer's most recent payment. Do not substitute last activity, latestCreditSale, or period-level collections.",
+                "- For the latest payment amount use latestPayment.amount; for its date/time use latestPayment.createdAt; for its payment channel use latestPayment.method.",
+                "- latestCreditSale is the ONLY verified source for claims about the customer's most recent credit sale.",
+                "- currentBalance is the customer's CURRENT ledger balance. Do not claim that this balance has remained unchanged since an earlier date unless the verified transaction history proves that statement.",
+                "- transactions are canonical ledger entries ordered from newest to older. PAYMENT and SALE must never be confused.",
+                "- Never infer that there was no payment from period-level credit summary data when customer history is available.",
+                "- If status is NOT_FOUND, say that no verified customer match was found. Do not invent an identity, transaction, payment, or balance.",
+                "- If status is AMBIGUOUS, say that more than one possible customer match exists and ask for a clearer identifier such as the exact name or phone number. Do not choose one silently.",
+                "- Never add titles, attributes, or descriptions such as marehemu/deceased/late unless that information was explicitly supplied by the user and is relevant.",
+                "- Never invent payment dates, payment amounts, payment methods, credit sales, balances, repayment promises, or reasons for payment/non-payment.",
+                "- Answer the user's exact customer-history question directly and concisely.",
+              ].join("\n");
+            } else if (
+              canonicalBusinessResult.resultType ===
+                "CREDIT_COMPARISON" &&
+              canonicalBusinessResult.creditComparisonResult
+            ) {
+              canonicalBusinessContext = [
+                "VERIFIED ZETRA CREDIT COMPARISON:",
+                "Source: get_ai_credit_intelligence_v1 via ZETRA Credit Engine",
+                "Data status: VERIFIED",
+                `Resolved current period: ${clean(canonicalBusinessResult?.periods?.current?.fromDate)} to ${clean(canonicalBusinessResult?.periods?.current?.toDate)}`,
+                `Resolved comparison period: ${clean(canonicalBusinessResult?.periods?.previous?.fromDate)} to ${clean(canonicalBusinessResult?.periods?.previous?.toDate)}`,
+                JSON.stringify(
+                  canonicalBusinessResult.creditComparisonResult,
+                  null,
+                  2
+                ),
+                "",
+                "STRICT CREDIT COMPARISON RULES:",
+                "- Compare period activity only from the verified data above.",
+                "- creditIssued, collections, creditSalesCount, paymentsCount, and netCreditMovement may be interpreted as activity within their resolved periods.",
+                "- Do NOT interpret outstandingBalance or debtorsCount as verified historical end-of-period positions. The canonical credit source provides a current position, not historical balance snapshots.",
+                "- Do not say outstanding debt increased or decreased between historical periods merely because the comparison object contains current-position fields.",
+                "- collectionToIssuedRatePercent is NOT a cohort recovery rate.",
+                "- Never claim overdue amounts, overdue customers, or due dates unless supportsOverdue is true and verified overdue data is explicitly supplied.",
+                "- Never invent reasons why credit issued or collections changed.",
+                "- If the figures show WHAT changed but not WHY, state that the data does not establish the cause.",
+                "- If one period is incomplete, make that limitation clear before interpreting differences.",
+                "- Default to a concise synthesized answer using the most relevant verified credit metrics.",
+              ].join("\n");
+            } else if (
+              canonicalBusinessResult.resultType ===
                 "STORE_RANKING" &&
               canonicalBusinessResult
                 .storeRankingResult

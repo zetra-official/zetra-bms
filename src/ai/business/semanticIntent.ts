@@ -81,6 +81,7 @@ export interface ZetraAiSemanticIntentModelResponse {
 
 
   rollingDays?: unknown;
+  customerQuery?: unknown;
   confidence?: unknown;
   reason?: unknown;
 }
@@ -451,6 +452,16 @@ User asks where profit/money is being lost.
 CUSTOMER_ANALYSIS:
 User asks for customer-related business analysis.
 
+CUSTOMER IDENTITY RULES:
+- For a question about one specific customer, use domain = CUSTOMERS, intent = CUSTOMER_ANALYSIS, and put the customer's name, phone, or explicit identifier in customerQuery.
+- Example: "Furaha alinunua bidhaa gani?" => customerQuery = "Furaha".
+- Example: "Mteja Furaha ameniletea faida kiasi gani?" => customerQuery = "Furaha".
+- Example: "Historia ya manunuzi ya Furaha" => customerQuery = "Furaha".
+- If the current message says yeye, huyo, huyu, he, she, or that customer, use Recent conversation only when it clearly identifies exactly one customer; return that customer's textual identifier in customerQuery.
+- Never invent a customer identity. If the referenced customer is ambiguous, customerQuery = null.
+- General customer analysis that is not about one identifiable customer must use customerQuery = null.
+- customerQuery is semantic text only, not a verified customer ID.
+
 CRM_ANALYSIS:
 User asks about CRM relationships/follow-up/customer engagement.
 
@@ -794,6 +805,14 @@ export function normalizeSemanticBusinessIntent(
     | number
     | null = null;
 
+  const customerQuery =
+    ((domain === "CREDIT" &&
+      intent === "CREDIT_ANALYSIS") ||
+      ((domain === "CUSTOMERS" || domain === "CRM") &&
+        (intent === "CUSTOMER_ANALYSIS" || intent === "CRM_ANALYSIS")))
+      ? (clean(input?.customerQuery) || null)
+      : null;
+
   if (
     periodPreset === "ROLLING_DAYS"
   ) {
@@ -847,6 +866,7 @@ export function normalizeSemanticBusinessIntent(
     customToDate,
 
     rollingDays,
+    customerQuery,
     confidence,
 
     reason,
@@ -1140,10 +1160,10 @@ export function resolveSpecialistBusinessEngine(
       return "PRODUCT_INTELLIGENCE";
 
     case "CUSTOMER_ANALYSIS":
-      return "CUSTOMER_INTELLIGENCE";
-
     case "CRM_ANALYSIS":
       return "CRM_INTELLIGENCE";
+
+
 
     case "CREDIT_ANALYSIS":
       return "CREDIT_INTELLIGENCE";

@@ -1,4 +1,4 @@
-import SafeIcon from "@/src/ui/SafeIcon";
+﻿import SafeIcon from "@/src/ui/SafeIcon";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -2229,20 +2229,148 @@ const TopBar = useMemo(() => {
     return (
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 24 }}
+        contentContainerStyle={{ paddingBottom: 18 }}
         style={{ flex: 1 }}
       >
-        <View style={{ gap: 12 }}>
+        <View style={{ gap: 10 }}>
           {QuickBar}
 
-          <Card style={{ gap: 10, padding: 14 }}>
-            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-              Current Cart
-            </Text>
+          <Card
+            style={{
+              gap: 10,
+              padding: 16,
+              borderRadius: 16,
+              backgroundColor: "#FFFFFF",
+              borderWidth: 1,
+              borderColor: "rgba(15,23,42,0.08)",
+            }}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 10,
+              }}
+            >
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text
+                  style={{
+                    color: "#0F172A",
+                    fontWeight: "900",
+                    fontSize: 17,
+                  }}
+                >
+                  Current Cart
+                </Text>
 
-            <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
-              {cartTotalLines} line(s) • {cartCount} qty • {fmt(cartTotalAmount)}
-            </Text>
+                <Text
+                  style={{
+                    color: "#64748B",
+                    fontWeight: "700",
+                    fontSize: 11,
+                    marginTop: 3,
+                  }}
+                >
+                  Review selected products before checkout.
+                </Text>
+              </View>
+
+              <View
+                style={{
+                  paddingHorizontal: 10,
+                  paddingVertical: 6,
+                  borderRadius: 999,
+                  backgroundColor: "#F1F5F9",
+                  borderWidth: 1,
+                  borderColor: "rgba(15,23,42,0.06)",
+                }}
+              >
+                <Text
+                  style={{
+                    color: "#475569",
+                    fontWeight: "900",
+                    fontSize: 10,
+                  }}
+                >
+                  {cartTotalLines} ITEMS
+                </Text>
+              </View>
+            </View>
+
+            <View
+              style={{
+                flexDirection: "row",
+                gap: 8,
+              }}
+            >
+              <View
+                style={{
+                  flex: 1,
+                  paddingVertical: 9,
+                  paddingHorizontal: 10,
+                  borderRadius: 12,
+                  backgroundColor: "#F8FAFC",
+                  borderWidth: 1,
+                  borderColor: "rgba(15,23,42,0.06)",
+                }}
+              >
+                <Text
+                  style={{
+                    color: "#94A3B8",
+                    fontWeight: "800",
+                    fontSize: 9,
+                  }}
+                >
+                  QTY
+                </Text>
+
+                <Text
+                  style={{
+                    color: "#0F172A",
+                    fontWeight: "900",
+                    fontSize: 14,
+                    marginTop: 2,
+                  }}
+                >
+                  {cartCount}
+                </Text>
+              </View>
+
+              <View
+                style={{
+                  flex: 1.45,
+                  paddingVertical: 9,
+                  paddingHorizontal: 10,
+                  borderRadius: 12,
+                  backgroundColor: "#ECFDF5",
+                  borderWidth: 1,
+                  borderColor: "rgba(16,185,129,0.18)",
+                }}
+              >
+                <Text
+                  style={{
+                    color: "#059669",
+                    fontWeight: "800",
+                    fontSize: 9,
+                  }}
+                >
+                  CART TOTAL
+                </Text>
+
+                <Text
+                  style={{
+                    color: "#047857",
+                    fontWeight: "900",
+                    fontSize: 14,
+                    marginTop: 2,
+                  }}
+                  numberOfLines={1}
+                >
+                  {fmt(cartTotalAmount)}
+                </Text>
+              </View>
+            </View>
 
             {cart.length === 0 ? (
               <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
@@ -2255,91 +2383,194 @@ const TopBar = useMemo(() => {
                     key={getCartKey(item)}
                     style={{
                       borderWidth: 1,
-                      borderColor: theme.colors.border,
-                      backgroundColor: "rgba(255,255,255,0.04)",
-                      borderRadius: 16,
-                      padding: 12,
-                      gap: 8,
+                      borderColor: "rgba(15,23,42,0.08)",
+                      backgroundColor: "#FFFFFF",
+                      borderRadius: 14,
+                      padding: 11,
+                      gap: 9,
                     }}
                   >
-                    <View style={{ gap: 3 }}>
-                      <Text
-                        style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14 }}
-                        numberOfLines={1}
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "flex-start",
+                        justifyContent: "space-between",
+                        gap: 10,
+                      }}
+                    >
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <Text
+                          style={{
+                            color: "#0F172A",
+                            fontWeight: "900",
+                            fontSize: 13,
+                          }}
+                          numberOfLines={1}
+                        >
+                          {item.name}
+                        </Text>
+
+                        <Text
+                          style={{
+                            color: "#64748B",
+                            fontWeight: "700",
+                            fontSize: 10,
+                            marginTop: 3,
+                          }}
+                          numberOfLines={2}
+                        >
+                          {getCartDisplayUnit(item)}: {fmtQty(getCartDisplayQty(item))}
+                          {" • "}Stock qty: {fmtQty(item.qty)}
+                          {" • "}Unit: {fmt(item.unit_price)}
+                        </Text>
+                      </View>
+
+                      <View
+                        style={{
+                          alignItems: "flex-end",
+                          minWidth: 82,
+                        }}
                       >
-                        {item.name}
-                      </Text>
-                      <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
-                        {getCartDisplayUnit(item)}: {fmtQty(getCartDisplayQty(item))} • Stock qty: {fmtQty(item.qty)} • Unit: {fmt(item.unit_price)} • Total: {fmt(item.line_total)}
-                      </Text>
+                        <Text
+                          style={{
+                            color: "#94A3B8",
+                            fontWeight: "800",
+                            fontSize: 8,
+                          }}
+                        >
+                          TOTAL
+                        </Text>
+
+                        <Text
+                          style={{
+                            color: "#0F172A",
+                            fontWeight: "900",
+                            fontSize: 12,
+                            marginTop: 2,
+                          }}
+                          numberOfLines={1}
+                        >
+                          {fmt(item.line_total)}
+                        </Text>
+                      </View>
                     </View>
 
-                    <View style={{ flexDirection: "row", gap: 8 }}>
+                    <View
+                      style={{
+                        height: 1,
+                        backgroundColor: "rgba(15,23,42,0.06)",
+                      }}
+                    />
+
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 7,
+                      }}
+                    >
                       <Pressable
                         onPress={() => dec(getCartKey(item))}
                         style={({ pressed }) => ({
-                          flex: 1,
-                          paddingVertical: 10,
-                          borderRadius: theme.radius.pill,
+                          width: 42,
+                          height: 34,
+                          borderRadius: 10,
                           borderWidth: 1,
-                          borderColor: theme.colors.border,
-                          backgroundColor: "rgba(255,255,255,0.06)",
+                          borderColor: "rgba(15,23,42,0.08)",
+                          backgroundColor: "#F8FAFC",
                           alignItems: "center",
-                          opacity: pressed ? 0.92 : 1,
+                          justifyContent: "center",
+                          opacity: pressed ? 0.82 : 1,
                         })}
                       >
-                        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>−</Text>
+                        <Text
+                          style={{
+                            color: "#475569",
+                            fontWeight: "900",
+                            fontSize: 16,
+                          }}
+                        >
+                          −
+                        </Text>
                       </Pressable>
 
                       <Pressable
                         onPress={() => openQtyEditor(item)}
                         style={({ pressed }) => ({
-                          minWidth: 72,
-                          paddingVertical: 10,
-                          paddingHorizontal: 14,
-                          borderRadius: theme.radius.pill,
+                          flex: 1,
+                          height: 34,
+                          borderRadius: 10,
                           borderWidth: 1,
-                          borderColor: theme.colors.emeraldBorder,
-                          backgroundColor: "rgba(16,185,129,0.10)",
+                          borderColor: "rgba(16,185,129,0.20)",
+                          backgroundColor: "#ECFDF5",
                           alignItems: "center",
                           justifyContent: "center",
-                          opacity: pressed ? 0.92 : 1,
+                          opacity: pressed ? 0.82 : 1,
                         })}
                       >
-                        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{item.qty}</Text>
+                        <Text
+                          style={{
+                            color: "#047857",
+                            fontWeight: "900",
+                            fontSize: 13,
+                          }}
+                        >
+                          {item.qty}
+                        </Text>
                       </Pressable>
 
                       <Pressable
                         onPress={() => inc(getCartKey(item))}
                         style={({ pressed }) => ({
-                          flex: 1,
-                          paddingVertical: 10,
-                          borderRadius: theme.radius.pill,
+                          width: 42,
+                          height: 34,
+                          borderRadius: 10,
                           borderWidth: 1,
-                          borderColor: theme.colors.emeraldBorder,
-                          backgroundColor: theme.colors.emeraldSoft,
+                          borderColor: "rgba(16,185,129,0.20)",
+                          backgroundColor: "#ECFDF5",
                           alignItems: "center",
-                          opacity: pressed ? 0.92 : 1,
+                          justifyContent: "center",
+                          opacity: pressed ? 0.82 : 1,
                         })}
                       >
-                        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>+</Text>
+                        <Text
+                          style={{
+                            color: "#047857",
+                            fontWeight: "900",
+                            fontSize: 16,
+                          }}
+                        >
+                          +
+                        </Text>
+                      </Pressable>
+
+                      <Pressable
+                        onPress={() =>
+                          removeItem(getCartKey(item))
+                        }
+                        style={({ pressed }) => ({
+                          height: 34,
+                          paddingHorizontal: 10,
+                          borderRadius: 10,
+                          borderWidth: 1,
+                          borderColor: "rgba(239,68,68,0.14)",
+                          backgroundColor: "#FEF2F2",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          opacity: pressed ? 0.82 : 1,
+                        })}
+                      >
+                        <Text
+                          style={{
+                            color: "#B91C1C",
+                            fontWeight: "900",
+                            fontSize: 10,
+                          }}
+                        >
+                          Remove
+                        </Text>
                       </Pressable>
                     </View>
-
-                    <Pressable
-                      onPress={() => removeItem(getCartKey(item))}
-                      style={({ pressed }) => ({
-                        paddingVertical: 10,
-                        borderRadius: theme.radius.pill,
-                        borderWidth: 1,
-                        borderColor: theme.colors.border,
-                        backgroundColor: "rgba(255,255,255,0.06)",
-                        alignItems: "center",
-                        opacity: pressed ? 0.92 : 1,
-                      })}
-                    >
-                      <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Remove</Text>
-                    </Pressable>
                   </View>
                 ))}
               </View>
@@ -2651,9 +2882,9 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
 >
 <Card
   style={{
-    paddingVertical: isDesktopWeb ? 12 : 11,
-    paddingHorizontal: isDesktopWeb ? 14 : 12,
-    minHeight: undefined,
+    paddingVertical: isDesktopWeb ? 14 : 11,
+    paddingHorizontal: isDesktopWeb ? 15 : 12,
+    minHeight: isDesktopWeb ? 78 : undefined,
     borderWidth: 1.2,
     borderColor: qty > 0 ? "#10B981" : "rgba(15,23,42,0.08)",
     backgroundColor: qty > 0 ? "#ECFDF5" : "#FFFFFF",
@@ -3056,9 +3287,11 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
           style={{
             flex: 1,
             flexDirection: "row",
-            gap: 16,
-            paddingHorizontal: 16,
-            paddingBottom: Math.max(insets.bottom + 16, 20),
+            gap: 14,
+            paddingHorizontal: 18,
+            paddingTop: 2,
+            paddingBottom: Math.max(insets.bottom + 14, 18),
+            backgroundColor: "#F6F8FC",
           }}
         >
           <View style={{ flex: 1.45, minWidth: 0 }}>
@@ -3086,20 +3319,29 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
                 paddingTop: 4,
               }}
               ListHeaderComponent={
-                <View style={{ paddingBottom: 12 }}>
-                  <Card style={{ padding: 12, gap: 8 }}>
-                    <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-                      Product Catalog
-                    </Text>
-                    <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
-                      Chagua bidhaa nyingi kwa haraka kwenye desktop workspace.
-                    </Text>
+                <View style={{ paddingTop: 12, paddingBottom: 12 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 14, marginBottom: 10 }}>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={{ color: "#0F172A", fontWeight: "900", fontSize: 18 }}>
+                        Product Catalog
+                      </Text>
+                      <Text style={{ color: "#64748B", fontWeight: "700", fontSize: 11, marginTop: 3 }} numberOfLines={1}>
+                        Search, select and add products to the active sale.
+                      </Text>
+                    </View>
+                    <View style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, backgroundColor: "#F1F5F9", borderWidth: 1, borderColor: "rgba(15,23,42,0.06)" }}>
+                      <Text style={{ color: "#475569", fontSize: 10, fontWeight: "900" }}>
+                        {filtered.length} PRODUCTS
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={{ borderRadius: 12, backgroundColor: "#F8FAFC", borderWidth: 1, borderColor: "rgba(15,23,42,0.08)", paddingHorizontal: 2 }}>
                     <Input
                       value={query}
                       onChangeText={setQuery}
-                      placeholder="Search name / SKU / category / barcode..."
+                      placeholder="Search product, SKU, category or barcode..."
                     />
-                  </Card>
+                  </View>
                 </View>
               }
               ListEmptyComponent={
@@ -3114,7 +3356,7 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
             />
           </View>
 
-          <View style={{ width: 390, minWidth: 390 }}>
+          <View style={{ width: 360, minWidth: 360, maxWidth: 380 }}>
             {DesktopCheckoutPanel}
           </View>
         </View>

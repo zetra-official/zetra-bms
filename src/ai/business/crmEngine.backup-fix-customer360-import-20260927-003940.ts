@@ -1,0 +1,1727 @@
+// src/ai/business/crmEngine.ts
+
+/**
+ * ============================================================================
+ * ZETRA AI â€” CRM ENGINE
+ * ============================================================================
+ *
+ * Purpose:
+ * Transform verified canonical CRM intelligence into deterministic,
+ * business-ready customer metrics and period comparisons.
+ *
+ * Source:
+ *   crmRepository.ts
+ *        â”‚
+ *        â–¼
+ *   get_ai_crm_intelligence_v1
+ *
+ * Canonical principles:
+ * - ZETRA determines the numbers.
+ * - Only verified customer identity is used for customer metrics.
+ * - Anonymous sales are never assigned to customers by inference.
+ * - Customer identity V1 is customers.id.
+ * - Same phone/name does NOT automatically mean same customer.
+ * - Historical customer value is verified historical spend,
+ *   NOT predictive CLV.
+ * - Inactivity always preserves its explicit threshold.
+ * - Historical identity coverage limitations must remain visible.
+ *
+ * Responsibilities:
+ * - Preserve canonical CRM figures.
+ * - Calculate safe derived customer indicators.
+ * - Compare CRM periods.
+ * - Calculate customer composition ratios.
+ * - Calculate identity coverage gaps.
+ * - Preserve top-customer rankings from canonical source.
+ * - Preserve canonical capabilities and data-quality warnings.
+ *
+ * This module DOES NOT:
+ * - Query Supabase directly.
+ * - Call OpenAI.
+ * - Interpret natural language.
+ * - Search or resolve customer identity.
+ * - Merge customers by phone or name.
+ * - Assign anonymous sales to customers.
+ * - Use customers.total_orders / total_spent / last_seen_at.
+ * - Invent predictive CLV.
+ * - Invent customer history outside verified ZETRA data.
+ * ============================================================================
+ */
+
+import type {
+  ZetraAiCrmDataQuality,
+  ZetraAiCrmHistoricalTopCustomer,
+  ZetraAiCrmIdentityCoverage,
+  ZetraAiCrmIntelligence,
+  ZetraAiCrmCustomer360,
+  ZetraAiCrmCustomer360ProductSummary,
+  ZetraAiCrmCustomer360Receipt,
+  ZetraAiCrmTopCustomer,
+} from "./crmRepository";
+
+/**
+ * ============================================================================
+ * TYPES
+ * ============================================================================
+ */
+
+export type ZetraAiCrmTrendDirection =
+  | "UP"
+  | "DOWN"
+  | "FLAT"
+  | "NO_BASELINE";
+
+export type ZetraAiCrmMetricKey =
+  | "activeIdentifiedCustomers"
+  | "newCustomers"
+  | "returningCustomers"
+  | "lifetimeRepeatCustomersActiveInPeriod"
+  | "repeatPurchasersWithinPeriod"
+  | "identifiedOrders"
+  | "identifiedRevenue"
+  | "averageOrderValue"
+  | "averageSpendPerActiveCustomer"
+  | "averagePurchasesPerActiveCustomer"
+  | "transactionIdentityCoveragePercent"
+  | "revenueIdentityCoveragePercent"
+  | "inactiveCustomers";
+
+export interface ZetraAiCrmMetricComparison {
+  metric: ZetraAiCrmMetricKey;
+
+  currentValue: number;
+  previousValue: number;
+
+  absoluteChange: number;
+
+  /**
+   * Null means percentage change cannot be calculated
+   * because previous value is zero while current value
+   * is non-zero.
+   */
+  percentageChange: number | null;
+
+  direction: ZetraAiCrmTrendDirection;
+}
+
+export interface ZetraAiCrmCustomerComposition {
+  /**
+   * Share of active identified customers whose first
+   * verified purchase in the requested scope falls
+   * inside the requested period.
+   */
+  newCustomerSharePercent: number;
+
+  /**
+   * Share of active identified customers whose first
+   * verified purchase predates the requested period.
+   */
+  returningCustomerSharePercent: number;
+
+  /**
+   * Share of active identified customers that have
+   * at least two verified historical purchases as-of
+   * the period end.
+   */
+  lifetimeRepeatCustomerSharePercent: number;
+
+  /**
+   * Share of active identified customers that purchased
+   * at least twice inside the requested period.
+   */
+  periodRepeatPurchaserSharePercent: number;
+}
+
+export interface ZetraAiCrmIdentityCoverageAnalysis {
+  totalCompletedSales: number;
+
+  identifiedSales: number;
+  unidentifiedSales: number;
+
+  transactionIdentityCoveragePercent: number | null;
+  transactionIdentityGapPercent: number | null;
+
+  totalRevenue: number;
+
+  identifiedRevenue: number;
+  unidentifiedRevenue: number;
+
+  revenueIdentityCoveragePercent: number | null;
+  revenueIdentityGapPercent: number | null;
+}
+
+export interface ZetraAiCrmDerivedMetrics {
+  activeIdentifiedCustomers: number;
+
+  newCustomers: number;
+  returningCustomers: number;
+
+  lifetimeRepeatCustomersActiveInPeriod: number;
+  repeatPurchasersWithinPeriod: number;
+
+  identifiedOrders: number;
+  identifiedRevenue: number;
+
+  averageOrderValue: number | null;
+  averageSpendPerActiveCustomer: number | null;
+  averagePurchasesPerActiveCustomer: number | null;
+
+  inactiveCustomers: number;
+  inactivityThresholdDays: number;
+
+  customerComposition: ZetraAiCrmCustomerComposition;
+
+  identityCoverage: ZetraAiCrmIdentityCoverageAnalysis;
+}
+
+export interface ZetraAiCrmAnalysis {
+  intelligence: ZetraAiCrmIntelligence;
+
+  metrics: ZetraAiCrmDerivedMetrics;
+
+  topCustomersByPeriodSpend: ZetraAiCrmTopCustomer[];
+
+  topCustomersByPeriodPurchaseCount: ZetraAiCrmTopCustomer[];
+
+  topCustomersByHistoricalValue:
+    ZetraAiCrmHistoricalTopCustomer[];
+
+  capabilities: ZetraAiCrmIntelligence["capabilities"];
+
+  dataQuality: ZetraAiCrmDataQuality;
+}
+
+export interface ZetraAiCrmPeriodComparison {
+  current: ZetraAiCrmAnalysis;
+  previous: ZetraAiCrmAnalysis;
+
+  activeIdentifiedCustomers:
+    ZetraAiCrmMetricComparison;
+
+  newCustomers:
+    ZetraAiCrmMetricComparison;
+
+  returningCustomers:
+    ZetraAiCrmMetricComparison;
+
+  lifetimeRepeatCustomersActiveInPeriod:
+    ZetraAiCrmMetricComparison;
+
+  repeatPurchasersWithinPeriod:
+    ZetraAiCrmMetricComparison;
+
+  identifiedOrders:
+    ZetraAiCrmMetricComparison;
+
+  identifiedRevenue:
+    ZetraAiCrmMetricComparison;
+
+  averageOrderValue:
+    ZetraAiCrmMetricComparison;
+
+  averageSpendPerActiveCustomer:
+    ZetraAiCrmMetricComparison;
+
+  averagePurchasesPerActiveCustomer:
+    ZetraAiCrmMetricComparison;
+
+  transactionIdentityCoveragePercent:
+    ZetraAiCrmMetricComparison;
+
+  revenueIdentityCoveragePercent:
+    ZetraAiCrmMetricComparison;
+
+  inactiveCustomers:
+    ZetraAiCrmMetricComparison;
+}
+
+/**
+ * ============================================================================
+ * NUMBER HELPERS
+ * ============================================================================
+ */
+
+function finite(
+  value: unknown
+): number {
+  const n =
+    typeof value === "number"
+      ? value
+      : typeof value === "string"
+        ? Number(value)
+        : 0;
+
+  return Number.isFinite(n)
+    ? n
+    : 0;
+}
+
+function round(
+  value: number,
+  decimals = 2
+): number {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+
+  const factor =
+    10 ** decimals;
+
+  return (
+    Math.round(
+      (value + Number.EPSILON) *
+        factor
+    ) / factor
+  );
+}
+
+function safeDivide(
+  numerator: number,
+  denominator: number
+): number {
+  const safeNumerator =
+    finite(numerator);
+
+  const safeDenominator =
+    finite(denominator);
+
+  if (safeDenominator === 0) {
+    return 0;
+  }
+
+  return (
+    safeNumerator /
+    safeDenominator
+  );
+}
+
+function percent(
+  numerator: number,
+  denominator: number
+): number {
+  return round(
+    safeDivide(
+      numerator,
+      denominator
+    ) * 100,
+    2
+  );
+}
+
+function nullablePercentGap(
+  coveragePercent: number | null
+): number | null {
+  if (
+    coveragePercent === null ||
+    coveragePercent === undefined
+  ) {
+    return null;
+  }
+
+  return round(
+    100 -
+      finite(
+        coveragePercent
+      ),
+    2
+  );
+}
+
+/**
+ * ============================================================================
+ * COMPARISON HELPERS
+ * ============================================================================
+ */
+
+export function calculateCrmPercentageChange(
+  currentValue: number,
+  previousValue: number
+): number | null {
+  const current =
+    finite(
+      currentValue
+    );
+
+  const previous =
+    finite(
+      previousValue
+    );
+
+  if (previous === 0) {
+    if (current === 0) {
+      return 0;
+    }
+
+    return null;
+  }
+
+  return round(
+    (
+      (current - previous) /
+      Math.abs(previous)
+    ) * 100,
+    2
+  );
+}
+
+export function detectCrmTrendDirection(
+  currentValue: number,
+  previousValue: number
+): ZetraAiCrmTrendDirection {
+  const current =
+    finite(
+      currentValue
+    );
+
+  const previous =
+    finite(
+      previousValue
+    );
+
+  if (
+    previous === 0 &&
+    current !== 0
+  ) {
+    return "NO_BASELINE";
+  }
+
+  const delta =
+    round(
+      current - previous,
+      8
+    );
+
+  if (delta > 0) {
+    return "UP";
+  }
+
+  if (delta < 0) {
+    return "DOWN";
+  }
+
+  return "FLAT";
+}
+
+export function compareCrmMetric(
+  metric: ZetraAiCrmMetricKey,
+  currentValue: number,
+  previousValue: number
+): ZetraAiCrmMetricComparison {
+  const current =
+    finite(
+      currentValue
+    );
+
+  const previous =
+    finite(
+      previousValue
+    );
+
+  return {
+    metric,
+
+    currentValue:
+      round(
+        current,
+        2
+      ),
+
+    previousValue:
+      round(
+        previous,
+        2
+      ),
+
+    absoluteChange:
+      round(
+        current - previous,
+        2
+      ),
+
+    percentageChange:
+      calculateCrmPercentageChange(
+        current,
+        previous
+      ),
+
+    direction:
+      detectCrmTrendDirection(
+        current,
+        previous
+      ),
+  };
+}
+
+/**
+ * ============================================================================
+ * CUSTOMER COMPOSITION
+ * ============================================================================
+ */
+
+export function buildCrmCustomerComposition(
+  intelligence: ZetraAiCrmIntelligence
+): ZetraAiCrmCustomerComposition {
+  const summary =
+    intelligence.periodSummary;
+
+  const active =
+    Math.max(
+      finite(
+        summary.activeIdentifiedCustomers
+      ),
+      0
+    );
+
+  const newCustomers =
+    Math.max(
+      finite(
+        summary.newCustomers
+      ),
+      0
+    );
+
+  const returningCustomers =
+    Math.max(
+      finite(
+        summary.returningCustomers
+      ),
+      0
+    );
+
+  const lifetimeRepeat =
+    Math.max(
+      finite(
+        summary
+          .lifetimeRepeatCustomersActiveInPeriod
+      ),
+      0
+    );
+
+  const periodRepeat =
+    Math.max(
+      finite(
+        summary.repeatPurchasersWithinPeriod
+      ),
+      0
+    );
+
+  return {
+    newCustomerSharePercent:
+      active > 0
+        ? percent(
+            newCustomers,
+            active
+          )
+        : 0,
+
+    returningCustomerSharePercent:
+      active > 0
+        ? percent(
+            returningCustomers,
+            active
+          )
+        : 0,
+
+    lifetimeRepeatCustomerSharePercent:
+      active > 0
+        ? percent(
+            lifetimeRepeat,
+            active
+          )
+        : 0,
+
+    periodRepeatPurchaserSharePercent:
+      active > 0
+        ? percent(
+            periodRepeat,
+            active
+          )
+        : 0,
+  };
+}
+
+/**
+ * ============================================================================
+ * IDENTITY COVERAGE
+ * ============================================================================
+ */
+
+export function buildCrmIdentityCoverageAnalysis(
+  coverage: ZetraAiCrmIdentityCoverage
+): ZetraAiCrmIdentityCoverageAnalysis {
+  const totalCompletedSales =
+    Math.max(
+      finite(
+        coverage.totalCompletedSales
+      ),
+      0
+    );
+
+  const identifiedSales =
+    Math.max(
+      finite(
+        coverage.identifiedSales
+      ),
+      0
+    );
+
+  const unidentifiedSales =
+    Math.max(
+      finite(
+        coverage.unidentifiedSales
+      ),
+      0
+    );
+
+  const totalRevenue =
+    finite(
+      coverage.totalRevenue
+    );
+
+  const identifiedRevenue =
+    finite(
+      coverage.identifiedRevenue
+    );
+
+  const unidentifiedRevenue =
+    finite(
+      coverage.unidentifiedRevenue
+    );
+
+  const transactionCoverage =
+    coverage
+      .transactionIdentityCoveragePercent ==
+    null
+      ? null
+      : round(
+          finite(
+            coverage
+              .transactionIdentityCoveragePercent
+          ),
+          2
+        );
+
+  const revenueCoverage =
+    coverage
+      .revenueIdentityCoveragePercent ==
+    null
+      ? null
+      : round(
+          finite(
+            coverage
+              .revenueIdentityCoveragePercent
+          ),
+          2
+        );
+
+  return {
+    totalCompletedSales:
+      round(
+        totalCompletedSales,
+        0
+      ),
+
+    identifiedSales:
+      round(
+        identifiedSales,
+        0
+      ),
+
+    unidentifiedSales:
+      round(
+        unidentifiedSales,
+        0
+      ),
+
+    transactionIdentityCoveragePercent:
+      transactionCoverage,
+
+    transactionIdentityGapPercent:
+      nullablePercentGap(
+        transactionCoverage
+      ),
+
+    totalRevenue:
+      round(
+        totalRevenue,
+        2
+      ),
+
+    identifiedRevenue:
+      round(
+        identifiedRevenue,
+        2
+      ),
+
+    unidentifiedRevenue:
+      round(
+        unidentifiedRevenue,
+        2
+      ),
+
+    revenueIdentityCoveragePercent:
+      revenueCoverage,
+
+    revenueIdentityGapPercent:
+      nullablePercentGap(
+        revenueCoverage
+      ),
+  };
+}
+
+/**
+ * ============================================================================
+ * DERIVED CRM METRICS
+ * ============================================================================
+ */
+
+export function buildCrmDerivedMetrics(
+  intelligence: ZetraAiCrmIntelligence
+): ZetraAiCrmDerivedMetrics {
+  const summary =
+    intelligence.periodSummary;
+
+  const inactivity =
+    intelligence.inactivity;
+
+  return {
+    activeIdentifiedCustomers:
+      round(
+        Math.max(
+          finite(
+            summary.activeIdentifiedCustomers
+          ),
+          0
+        ),
+        0
+      ),
+
+    newCustomers:
+      round(
+        Math.max(
+          finite(
+            summary.newCustomers
+          ),
+          0
+        ),
+        0
+      ),
+
+    returningCustomers:
+      round(
+        Math.max(
+          finite(
+            summary.returningCustomers
+          ),
+          0
+        ),
+        0
+      ),
+
+    lifetimeRepeatCustomersActiveInPeriod:
+      round(
+        Math.max(
+          finite(
+            summary
+              .lifetimeRepeatCustomersActiveInPeriod
+          ),
+          0
+        ),
+        0
+      ),
+
+    repeatPurchasersWithinPeriod:
+      round(
+        Math.max(
+          finite(
+            summary
+              .repeatPurchasersWithinPeriod
+          ),
+          0
+        ),
+        0
+      ),
+
+    identifiedOrders:
+      round(
+        Math.max(
+          finite(
+            summary.identifiedOrders
+          ),
+          0
+        ),
+        0
+      ),
+
+    identifiedRevenue:
+      round(
+        finite(
+          summary.identifiedRevenue
+        ),
+        2
+      ),
+
+    averageOrderValue:
+      summary.averageOrderValue == null
+        ? null
+        : round(
+            finite(
+              summary.averageOrderValue
+            ),
+            2
+          ),
+
+    averageSpendPerActiveCustomer:
+      summary
+        .averageSpendPerActiveCustomer ==
+      null
+        ? null
+        : round(
+            finite(
+              summary
+                .averageSpendPerActiveCustomer
+            ),
+            2
+          ),
+
+    averagePurchasesPerActiveCustomer:
+      summary
+        .averagePurchasesPerActiveCustomer ==
+      null
+        ? null
+        : round(
+            finite(
+              summary
+                .averagePurchasesPerActiveCustomer
+            ),
+            2
+          ),
+
+    inactiveCustomers:
+      round(
+        Math.max(
+          finite(
+            inactivity.inactiveCustomers
+          ),
+          0
+        ),
+        0
+      ),
+
+    inactivityThresholdDays:
+      round(
+        Math.max(
+          finite(
+            inactivity.thresholdDays
+          ),
+          0
+        ),
+        0
+      ),
+
+    customerComposition:
+      buildCrmCustomerComposition(
+        intelligence
+      ),
+
+    identityCoverage:
+      buildCrmIdentityCoverageAnalysis(
+        intelligence.identityCoverage
+      ),
+  };
+}
+
+/**
+ * ============================================================================
+ * CRM ANALYSIS
+ * ============================================================================
+ */
+
+export function buildCrmAnalysis(
+  intelligence: ZetraAiCrmIntelligence
+): ZetraAiCrmAnalysis {
+  return {
+    intelligence,
+
+    metrics:
+      buildCrmDerivedMetrics(
+        intelligence
+      ),
+
+    topCustomersByPeriodSpend:
+      intelligence.topCustomers
+        .byPeriodSpend,
+
+    topCustomersByPeriodPurchaseCount:
+      intelligence.topCustomers
+        .byPeriodPurchaseCount,
+
+    topCustomersByHistoricalValue:
+      intelligence.topCustomers
+        .byHistoricalValue,
+
+    capabilities:
+      intelligence.capabilities,
+
+    dataQuality:
+      intelligence.dataQuality,
+  };
+}
+
+/**
+ * ============================================================================
+ * PERIOD COMPARISON
+ * ============================================================================
+ */
+
+export function compareCrmPeriods(
+  currentIntelligence:
+    ZetraAiCrmIntelligence,
+  ZetraAiCrmCustomer360,
+  ZetraAiCrmCustomer360ProductSummary,
+  ZetraAiCrmCustomer360Receipt,
+
+  previousIntelligence:
+    ZetraAiCrmIntelligence
+): ZetraAiCrmPeriodComparison {
+  const current =
+    buildCrmAnalysis(
+      currentIntelligence
+    );
+
+  const previous =
+    buildCrmAnalysis(
+      previousIntelligence
+    );
+
+  return {
+    current,
+    previous,
+
+    activeIdentifiedCustomers:
+      compareCrmMetric(
+        "activeIdentifiedCustomers",
+        current.metrics
+          .activeIdentifiedCustomers,
+        previous.metrics
+          .activeIdentifiedCustomers
+      ),
+
+    newCustomers:
+      compareCrmMetric(
+        "newCustomers",
+        current.metrics
+          .newCustomers,
+        previous.metrics
+          .newCustomers
+      ),
+
+    returningCustomers:
+      compareCrmMetric(
+        "returningCustomers",
+        current.metrics
+          .returningCustomers,
+        previous.metrics
+          .returningCustomers
+      ),
+
+    lifetimeRepeatCustomersActiveInPeriod:
+      compareCrmMetric(
+        "lifetimeRepeatCustomersActiveInPeriod",
+        current.metrics
+          .lifetimeRepeatCustomersActiveInPeriod,
+        previous.metrics
+          .lifetimeRepeatCustomersActiveInPeriod
+      ),
+
+    repeatPurchasersWithinPeriod:
+      compareCrmMetric(
+        "repeatPurchasersWithinPeriod",
+        current.metrics
+          .repeatPurchasersWithinPeriod,
+        previous.metrics
+          .repeatPurchasersWithinPeriod
+      ),
+
+    identifiedOrders:
+      compareCrmMetric(
+        "identifiedOrders",
+        current.metrics
+          .identifiedOrders,
+        previous.metrics
+          .identifiedOrders
+      ),
+
+    identifiedRevenue:
+      compareCrmMetric(
+        "identifiedRevenue",
+        current.metrics
+          .identifiedRevenue,
+        previous.metrics
+          .identifiedRevenue
+      ),
+
+    averageOrderValue:
+      compareCrmMetric(
+        "averageOrderValue",
+        current.metrics
+          .averageOrderValue ??
+          0,
+        previous.metrics
+          .averageOrderValue ??
+          0
+      ),
+
+    averageSpendPerActiveCustomer:
+      compareCrmMetric(
+        "averageSpendPerActiveCustomer",
+        current.metrics
+          .averageSpendPerActiveCustomer ??
+          0,
+        previous.metrics
+          .averageSpendPerActiveCustomer ??
+          0
+      ),
+
+    averagePurchasesPerActiveCustomer:
+      compareCrmMetric(
+        "averagePurchasesPerActiveCustomer",
+        current.metrics
+          .averagePurchasesPerActiveCustomer ??
+          0,
+        previous.metrics
+          .averagePurchasesPerActiveCustomer ??
+          0
+      ),
+
+    transactionIdentityCoveragePercent:
+      compareCrmMetric(
+        "transactionIdentityCoveragePercent",
+        current.metrics
+          .identityCoverage
+          .transactionIdentityCoveragePercent ??
+          0,
+        previous.metrics
+          .identityCoverage
+          .transactionIdentityCoveragePercent ??
+          0
+      ),
+
+    revenueIdentityCoveragePercent:
+      compareCrmMetric(
+        "revenueIdentityCoveragePercent",
+        current.metrics
+          .identityCoverage
+          .revenueIdentityCoveragePercent ??
+          0,
+        previous.metrics
+          .identityCoverage
+          .revenueIdentityCoveragePercent ??
+          0
+      ),
+
+    inactiveCustomers:
+      compareCrmMetric(
+        "inactiveCustomers",
+        current.metrics
+          .inactiveCustomers,
+        previous.metrics
+          .inactiveCustomers
+      ),
+  };
+}
+
+/**
+ * ============================================================================
+ * CAPABILITY HELPERS
+ * ============================================================================
+ */
+
+export function canAnalyzePredictiveCrmClv(
+  intelligence: ZetraAiCrmIntelligence
+): boolean {
+  return (
+    intelligence.capabilities
+      .supportsPredictiveClv === true
+  );
+}
+
+export function getCrmPredictiveClvLimitation(
+  intelligence: ZetraAiCrmIntelligence
+): string | null {
+  if (
+    canAnalyzePredictiveCrmClv(
+      intelligence
+    )
+  ) {
+    return null;
+  }
+
+  return (
+    "Predictive customer lifetime value is not available. " +
+    "Verified historical customer value can be used instead."
+  );
+}
+
+export function canAutomaticallyMergeCrmCustomersAcrossStores(
+  intelligence: ZetraAiCrmIntelligence
+): boolean {
+  return (
+    intelligence.capabilities
+      .supportsAutomaticCrossStoreIdentityMerge ===
+    true
+  );
+}
+
+/**
+ * ============================================================================
+ * DATA QUALITY HELPERS
+ * ============================================================================
+ */
+
+export function hasCrmHistoricalCoverageWarning(
+  intelligence: ZetraAiCrmIntelligence
+): boolean {
+  return (
+    intelligence.dataQuality
+      .historicalIdentityCoverageIsComplete !==
+    true
+  );
+}
+
+export function getCrmHistoricalCoverageNote(
+  intelligence: ZetraAiCrmIntelligence
+): string | null {
+  if (
+    !hasCrmHistoricalCoverageWarning(
+      intelligence
+    )
+  ) {
+    return null;
+  }
+
+  return (
+    intelligence.dataQuality
+      .historicalCoverageNote ||
+    "Verified customer identity history is incomplete."
+  );
+}
+
+export function hasCrmAnonymousSales(
+  intelligence: ZetraAiCrmIntelligence
+): boolean {
+  return (
+    finite(
+      intelligence.identityCoverage
+        .unidentifiedSales
+    ) > 0
+  );
+}
+
+export function hasCrmIdentityCoverageWarning(
+  intelligence: ZetraAiCrmIntelligence
+): boolean {
+  const coverage =
+    intelligence.identityCoverage;
+
+  return (
+    finite(
+      coverage.unidentifiedSales
+    ) > 0 ||
+    (
+      coverage
+        .transactionIdentityCoveragePercent !==
+        null &&
+      finite(
+        coverage
+          .transactionIdentityCoveragePercent
+      ) < 100
+    )
+  );
+}
+
+/**
+ * ============================================================================
+ * CANONICAL SEMANTIC HELPERS
+ * ============================================================================
+ */
+
+export function getCrmCustomerHistorySemantics(
+  intelligence: ZetraAiCrmIntelligence
+): {
+  firstPurchaseLabel: string;
+  historicalValueLabel: string;
+  inactivityLabel: string;
+} {
+  return {
+    firstPurchaseLabel:
+      "First verified purchase in ZETRA records",
+
+    historicalValueLabel:
+      "Verified historical customer spend",
+
+    inactivityLabel:
+      `No verified purchase within the last ${Math.max(
+        finite(
+          intelligence.inactivity
+            .thresholdDays
+        ),
+        0
+      )} days`,
+  };
+}
+
+
+/**
+ * ============================================================================
+ * CRM CUSTOMER 360 ENGINE
+ * ============================================================================
+ *
+ * Deterministic only:
+ * - No Supabase.
+ * - No OpenAI.
+ * - No customer identity inference.
+ * - No current-cost fallback.
+ * - No invented product history.
+ * ============================================================================
+ */
+
+export interface ZetraAiCrmCustomer360Analysis {
+  customerId: string;
+  customerName: string;
+  phone: string | null;
+
+  period: {
+    purchaseCount: number;
+    revenue: number;
+    discountAmount: number;
+    averageOrderValue: number;
+
+    verifiedHistoricalCogs: number;
+    grossProfit: number | null;
+
+    profitFullyVerified: boolean;
+    costCoveragePercent: number;
+    missingCostItems: number;
+  };
+
+  historical: {
+    purchaseCount: number;
+    verifiedHistoricalSpend: number;
+    firstVerifiedPurchaseAt: string | null;
+    lastVerifiedPurchaseAt: string | null;
+
+    verifiedHistoricalCogs: number;
+    grossProfit: number | null;
+
+    profitFullyVerified: boolean;
+    costCoveragePercent: number;
+    missingCostItems: number;
+  };
+
+  receiptCountReturned: number;
+  productCountReturned: number;
+
+  receipts: ZetraAiCrmCustomer360Receipt[];
+  products: ZetraAiCrmCustomer360ProductSummary[];
+
+  topProductByQuantity:
+    | ZetraAiCrmCustomer360ProductSummary
+    | null;
+
+  topProductByPurchaseFrequency:
+    | ZetraAiCrmCustomer360ProductSummary
+    | null;
+
+  latestReceipt:
+    | ZetraAiCrmCustomer360Receipt
+    | null;
+
+  hasDiscountedReceipts: boolean;
+  totalReturnedReceiptDiscount: number;
+
+  sellerDisplayNames: string[];
+  storeNames: string[];
+
+  warnings: string[];
+}
+
+function crmCustomer360Number(
+  value: unknown
+): number {
+  const parsed =
+    Number(value);
+
+  return Number.isFinite(parsed)
+    ? parsed
+    : 0;
+}
+
+function crmCustomer360UniqueStrings(
+  values: Array<
+    string | null | undefined
+  >
+): string[] {
+  const seen =
+    new Set<string>();
+
+  const result:
+    string[] = [];
+
+  for (const value of values) {
+    const normalized =
+      String(
+        value ?? ""
+      ).trim();
+
+    if (
+      !normalized ||
+      seen.has(normalized)
+    ) {
+      continue;
+    }
+
+    seen.add(normalized);
+    result.push(normalized);
+  }
+
+  return result;
+}
+
+function crmCustomer360LatestReceipt(
+  receipts:
+    ZetraAiCrmCustomer360Receipt[]
+): ZetraAiCrmCustomer360Receipt | null {
+  if (receipts.length === 0) {
+    return null;
+  }
+
+  return [...receipts].sort(
+    (a, b) => {
+      const aTime =
+        a.soldAt
+          ? Date.parse(a.soldAt)
+          : 0;
+
+      const bTime =
+        b.soldAt
+          ? Date.parse(b.soldAt)
+          : 0;
+
+      return bTime - aTime;
+    }
+  )[0] ?? null;
+}
+
+function crmCustomer360TopProductByQuantity(
+  products:
+    ZetraAiCrmCustomer360ProductSummary[]
+): ZetraAiCrmCustomer360ProductSummary | null {
+  if (products.length === 0) {
+    return null;
+  }
+
+  return [...products].sort(
+    (a, b) =>
+      crmCustomer360Number(
+        b.qtyBought
+      ) -
+        crmCustomer360Number(
+          a.qtyBought
+        ) ||
+      crmCustomer360Number(
+        b.purchaseCount
+      ) -
+        crmCustomer360Number(
+          a.purchaseCount
+        ) ||
+      String(
+        a.productId
+      ).localeCompare(
+        String(
+          b.productId
+        )
+      )
+  )[0] ?? null;
+}
+
+function crmCustomer360TopProductByFrequency(
+  products:
+    ZetraAiCrmCustomer360ProductSummary[]
+): ZetraAiCrmCustomer360ProductSummary | null {
+  if (products.length === 0) {
+    return null;
+  }
+
+  return [...products].sort(
+    (a, b) =>
+      crmCustomer360Number(
+        b.purchaseCount
+      ) -
+        crmCustomer360Number(
+          a.purchaseCount
+        ) ||
+      crmCustomer360Number(
+        b.qtyBought
+      ) -
+        crmCustomer360Number(
+          a.qtyBought
+        ) ||
+      String(
+        a.productId
+      ).localeCompare(
+        String(
+          b.productId
+        )
+      )
+  )[0] ?? null;
+}
+
+export function buildCrmCustomer360Analysis(
+  intelligence:
+    ZetraAiCrmCustomer360
+): ZetraAiCrmCustomer360Analysis {
+  const receipts =
+    Array.isArray(
+      intelligence.receipts
+    )
+      ? intelligence.receipts
+      : [];
+
+  const products =
+    Array.isArray(
+      intelligence.productSummary
+    )
+      ? intelligence.productSummary
+      : [];
+
+  const warnings:
+    string[] = [];
+
+  if (
+    intelligence.periodSummary
+      .profitFullyVerified !== true
+  ) {
+    warnings.push(
+      "Period gross profit is not fully verified because one or more historical item costs are missing."
+    );
+  }
+
+  if (
+    intelligence.historicalSummary
+      .profitFullyVerified !== true
+  ) {
+    warnings.push(
+      "Historical gross profit is not fully verified because one or more historical item costs are missing."
+    );
+  }
+
+  if (
+    intelligence.dataQuality
+      .historicalProductNameSnapshotGuaranteed !==
+    true
+  ) {
+    warnings.push(
+      "Some product names may come from the current product catalog because historical product-name snapshots are not guaranteed."
+    );
+  }
+
+  if (
+    intelligence.dataQuality
+      .currentProductCostFallbackAllowed ===
+    true
+  ) {
+    warnings.push(
+      "Unexpected data-quality state: current product cost fallback is enabled."
+    );
+  }
+
+  if (
+    intelligence.dataQuality
+      .anonymousSalesAttributedToCustomer ===
+    true
+  ) {
+    warnings.push(
+      "Unexpected identity state: anonymous sales were attributed to this customer."
+    );
+  }
+
+  if (
+    intelligence.dataQuality
+      .nameOrPhoneIdentityInference ===
+    true
+  ) {
+    warnings.push(
+      "Unexpected identity state: customer history includes name/phone identity inference."
+    );
+  }
+
+  const discountedReceipts =
+    receipts.filter(
+      (receipt) =>
+        crmCustomer360Number(
+          receipt.discount.amount
+        ) > 0
+    );
+
+  const totalReturnedReceiptDiscount =
+    discountedReceipts.reduce(
+      (sum, receipt) =>
+        sum +
+        crmCustomer360Number(
+          receipt.discount.amount
+        ),
+      0
+    );
+
+  return {
+    customerId:
+      intelligence.customer.id,
+
+    customerName:
+      intelligence.customer.name,
+
+    phone:
+      intelligence.customer.phone,
+
+    period: {
+      purchaseCount:
+        crmCustomer360Number(
+          intelligence.periodSummary
+            .purchaseCount
+        ),
+
+      revenue:
+        crmCustomer360Number(
+          intelligence.periodSummary
+            .revenue
+        ),
+
+      discountAmount:
+        crmCustomer360Number(
+          intelligence.periodSummary
+            .discountAmount
+        ),
+
+      averageOrderValue:
+        crmCustomer360Number(
+          intelligence.periodSummary
+            .averageOrderValue
+        ),
+
+      verifiedHistoricalCogs:
+        crmCustomer360Number(
+          intelligence.periodSummary
+            .verifiedHistoricalCogs
+        ),
+
+      grossProfit:
+        intelligence.periodSummary
+          .grossProfit,
+
+      profitFullyVerified:
+        intelligence.periodSummary
+          .profitFullyVerified === true,
+
+      costCoveragePercent:
+        crmCustomer360Number(
+          intelligence.periodSummary
+            .costCoveragePercent
+        ),
+
+      missingCostItems:
+        crmCustomer360Number(
+          intelligence.periodSummary
+            .missingCostItems
+        ),
+    },
+
+    historical: {
+      purchaseCount:
+        crmCustomer360Number(
+          intelligence.historicalSummary
+            .purchaseCount
+        ),
+
+      verifiedHistoricalSpend:
+        crmCustomer360Number(
+          intelligence.historicalSummary
+            .verifiedHistoricalSpend
+        ),
+
+      firstVerifiedPurchaseAt:
+        intelligence.historicalSummary
+          .firstVerifiedPurchaseAt,
+
+      lastVerifiedPurchaseAt:
+        intelligence.historicalSummary
+          .lastVerifiedPurchaseAt,
+
+      verifiedHistoricalCogs:
+        crmCustomer360Number(
+          intelligence.historicalSummary
+            .verifiedHistoricalCogs
+        ),
+
+      grossProfit:
+        intelligence.historicalSummary
+          .grossProfit,
+
+      profitFullyVerified:
+        intelligence.historicalSummary
+          .profitFullyVerified === true,
+
+      costCoveragePercent:
+        crmCustomer360Number(
+          intelligence.historicalSummary
+            .costCoveragePercent
+        ),
+
+      missingCostItems:
+        crmCustomer360Number(
+          intelligence.historicalSummary
+            .missingCostItems
+        ),
+    },
+
+    receiptCountReturned:
+      receipts.length,
+
+    productCountReturned:
+      products.length,
+
+    receipts,
+    products,
+
+    topProductByQuantity:
+      crmCustomer360TopProductByQuantity(
+        products
+      ),
+
+    topProductByPurchaseFrequency:
+      crmCustomer360TopProductByFrequency(
+        products
+      ),
+
+    latestReceipt:
+      crmCustomer360LatestReceipt(
+        receipts
+      ),
+
+    hasDiscountedReceipts:
+      discountedReceipts.length > 0,
+
+    totalReturnedReceiptDiscount,
+
+    sellerDisplayNames:
+      crmCustomer360UniqueStrings(
+        receipts.map(
+          (receipt) =>
+            receipt.seller
+              .displayName
+        )
+      ),
+
+    storeNames:
+      crmCustomer360UniqueStrings(
+        receipts.map(
+          (receipt) =>
+            receipt.store.name
+        )
+      ),
+
+    warnings,
+  };
+}
+
+export function canReportCrmCustomer360PeriodProfit(
+  intelligence:
+    ZetraAiCrmCustomer360
+): boolean {
+  return (
+    intelligence.periodSummary
+      .profitFullyVerified === true &&
+    intelligence.periodSummary
+      .grossProfit !== null
+  );
+}
+
+export function canReportCrmCustomer360HistoricalProfit(
+  intelligence:
+    ZetraAiCrmCustomer360
+): boolean {
+  return (
+    intelligence.historicalSummary
+      .profitFullyVerified === true &&
+    intelligence.historicalSummary
+      .grossProfit !== null
+  );
+}
+
+export function getCrmCustomer360ProfitLimitation(
+  intelligence:
+    ZetraAiCrmCustomer360,
+  scope:
+    | "PERIOD"
+    | "HISTORICAL" = "PERIOD"
+): string | null {
+  const summary =
+    scope === "HISTORICAL"
+      ? intelligence.historicalSummary
+      : intelligence.periodSummary;
+
+  if (
+    summary.profitFullyVerified ===
+      true &&
+    summary.grossProfit !== null
+  ) {
+    return null;
+  }
+
+  return (
+    "Exact gross profit is unavailable because historical unit cost is missing for " +
+    Math.max(
+      crmCustomer360Number(
+        summary.missingCostItems
+      ),
+      0
+    ) +
+    " item(s). ZETRA does not substitute current product cost for missing historical cost."
+  );
+}
+/**
+ * ============================================================================
+ * ENGINE EXPORT
+ * ============================================================================
+ */
+
+export const zetraAiCrmEngine = {
+  calculateCrmPercentageChange,
+  detectCrmTrendDirection,
+  compareCrmMetric,
+
+  buildCrmCustomerComposition,
+  buildCrmIdentityCoverageAnalysis,
+  buildCrmDerivedMetrics,
+  buildCrmAnalysis,
+
+  compareCrmPeriods,
+
+  canAnalyzePredictiveCrmClv,
+  getCrmPredictiveClvLimitation,
+
+  canAutomaticallyMergeCrmCustomersAcrossStores,
+
+  hasCrmHistoricalCoverageWarning,
+  getCrmHistoricalCoverageNote,
+
+  hasCrmAnonymousSales,
+  hasCrmIdentityCoverageWarning,
+
+  getCrmCustomerHistorySemantics,
+
+  buildCrmCustomer360Analysis,
+  canReportCrmCustomer360PeriodProfit,
+  canReportCrmCustomer360HistoricalProfit,
+  getCrmCustomer360ProfitLimitation,
+} as const;

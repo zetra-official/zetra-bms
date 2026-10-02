@@ -2,7 +2,7 @@
 
 /**
  * ============================================================================
- * ZETRA AI — BUSINESS QUERY SERVICE
+ * ZETRA AI â€” BUSINESS QUERY SERVICE
  * ============================================================================
  *
  * Purpose:
@@ -15,15 +15,15 @@
  * Architecture:
  *
  * Existing ZETRA AI / Business Bridge
- *                │
- *                ▼
+ *                â”‚
+ *                â–¼
  *      businessQueryService.ts
- *                │
- *        ┌───────┴────────┐
- *        ▼                ▼
+ *                â”‚
+ *        â”Œâ”€â”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”€â”€â”
+ *        â–¼                â–¼
  * snapshotRepository   metricsEngine
- *        │
- *        ▼
+ *        â”‚
+ *        â–¼
  * ai_daily_store_snapshots_v1
  *
  * Responsibilities:
@@ -61,6 +61,33 @@ import {
   type ZetraAiStorePerformance,
   type ZetraAiStoreRankingMetric,
 } from "./metricsEngine";
+
+import {
+  getCreditCustomerHistory,
+  getCreditIntelligence,
+  type ZetraAiCreditCustomerHistory,
+} from "./creditRepository";
+
+import {
+  buildCreditAnalysis,
+  compareCreditPeriods,
+  type ZetraAiCreditAnalysis,
+  type ZetraAiCreditPeriodComparison,
+} from "./creditEngine";
+
+import {
+  getCrmIntelligence,
+  getCrmCustomer360,
+} from "./crmRepository";
+
+import {
+  buildCrmAnalysis,
+  compareCrmPeriods,
+  buildCrmCustomer360Analysis,
+  type ZetraAiCrmAnalysis,
+  type ZetraAiCrmPeriodComparison,
+  type ZetraAiCrmCustomer360Analysis,
+} from "./crmEngine";
 
 import type {
   ZetraAiDailyStoreSnapshot,
@@ -221,7 +248,7 @@ function normalizeRange(
 
 /**
  * ============================================================================
- * STORE — SINGLE DAY
+ * STORE â€” SINGLE DAY
  * ============================================================================
  */
 
@@ -278,7 +305,7 @@ export async function getStoreDayPerformance(params: {
 
 /**
  * ============================================================================
- * STORE — PERIOD
+ * STORE â€” PERIOD
  * ============================================================================
  */
 
@@ -334,7 +361,7 @@ export async function getStorePeriodPerformance(
 
 /**
  * ============================================================================
- * ORGANIZATION — SINGLE DAY
+ * ORGANIZATION â€” SINGLE DAY
  * ============================================================================
  */
 
@@ -387,7 +414,7 @@ export async function getOrganizationDayPerformance(params: {
 
 /**
  * ============================================================================
- * ORGANIZATION — PERIOD
+ * ORGANIZATION â€” PERIOD
  * ============================================================================
  */
 
@@ -433,7 +460,7 @@ export async function getOrganizationPeriodPerformance(
 
 /**
  * ============================================================================
- * STORE — PERIOD COMPARISON
+ * STORE â€” PERIOD COMPARISON
  * ============================================================================
  */
 
@@ -514,7 +541,7 @@ export async function compareStorePeriods(
 
 /**
  * ============================================================================
- * ORGANIZATION — PERIOD COMPARISON
+ * ORGANIZATION â€” PERIOD COMPARISON
  * ============================================================================
  */
 
@@ -581,7 +608,7 @@ export async function compareOrganizationPeriods(
 
 /**
  * ============================================================================
- * ORGANIZATION — STORE RANKING
+ * ORGANIZATION â€” STORE RANKING
  * ============================================================================
  *
  * Examples:
@@ -727,6 +754,184 @@ export async function getLatestAvailableStorePerformance(params: {
 
 /**
  * ============================================================================
+ * CREDIT INTELLIGENCE
+ * ============================================================================
+ */
+
+export async function getCreditPeriodAnalysis(params: {
+  organizationId: string;
+  storeId?: string | null;
+  fromDate: string;
+  toDate: string;
+  topLimit?: number | null;
+}): Promise<ZetraAiCreditAnalysis> {
+  const intelligence = await getCreditIntelligence({
+    organizationId: params.organizationId,
+    storeId: params.storeId ?? null,
+    fromDate: params.fromDate,
+    toDate: params.toDate,
+    topLimit: params.topLimit ?? null,
+  });
+
+  return buildCreditAnalysis(intelligence);
+}
+
+export async function compareCreditPeriodAnalysis(params: {
+  organizationId: string;
+  storeId?: string | null;
+  current: ZetraAiDateRange;
+  previous: ZetraAiDateRange;
+  topLimit?: number | null;
+}): Promise<ZetraAiCreditPeriodComparison> {
+  const [current, previous] = await Promise.all([
+    getCreditIntelligence({
+      organizationId: params.organizationId,
+      storeId: params.storeId ?? null,
+      fromDate: params.current.fromDate,
+      toDate: params.current.toDate,
+      topLimit: params.topLimit ?? null,
+    }),
+    getCreditIntelligence({
+      organizationId: params.organizationId,
+      storeId: params.storeId ?? null,
+      fromDate: params.previous.fromDate,
+      toDate: params.previous.toDate,
+      topLimit: params.topLimit ?? null,
+    }),
+  ]);
+
+  return compareCreditPeriods(current, previous);
+}
+
+/**
+ * ============================================================================
+ * CUSTOMER CREDIT HISTORY
+ * ============================================================================
+ */
+
+export async function getCreditCustomerHistoryAnalysis(params: {
+  organizationId: string;
+  customerQuery: string;
+  storeId?: string | null;
+  limit?: number | null;
+}): Promise<ZetraAiCreditCustomerHistory> {
+  const organizationId = clean(params.organizationId);
+  const customerQuery = clean(params.customerQuery);
+  const storeId = clean(params.storeId ?? "") || null;
+
+  assertRequired(organizationId, "organizationId");
+  assertRequired(customerQuery, "customerQuery");
+
+  return getCreditCustomerHistory({
+    organizationId,
+    customerQuery,
+    storeId,
+    limit: params.limit ?? null,
+  });
+}
+
+/**
+ * ============================================================================
+ * CRM INTELLIGENCE
+ * ============================================================================
+ */
+
+export async function getCrmPeriodAnalysis(params: {
+  organizationId: string;
+  storeId?: string | null;
+  fromDate: string;
+  toDate: string;
+  topLimit?: number | null;
+  inactiveDays?: number | null;
+}): Promise<ZetraAiCrmAnalysis> {
+  const intelligence = await getCrmIntelligence({
+    organizationId: params.organizationId,
+    storeId: params.storeId ?? null,
+    fromDate: params.fromDate,
+    toDate: params.toDate,
+    topLimit: params.topLimit ?? null,
+    inactiveDays: params.inactiveDays ?? null,
+  });
+
+  return buildCrmAnalysis(intelligence);
+}
+
+export async function compareCrmPeriodAnalysis(params: {
+  organizationId: string;
+  storeId?: string | null;
+  current: ZetraAiDateRange;
+  previous: ZetraAiDateRange;
+  topLimit?: number | null;
+  inactiveDays?: number | null;
+}): Promise<ZetraAiCrmPeriodComparison> {
+  const [current, previous] = await Promise.all([
+    getCrmIntelligence({
+      organizationId: params.organizationId,
+      storeId: params.storeId ?? null,
+      fromDate: params.current.fromDate,
+      toDate: params.current.toDate,
+      topLimit: params.topLimit ?? null,
+      inactiveDays: params.inactiveDays ?? null,
+    }),
+    getCrmIntelligence({
+      organizationId: params.organizationId,
+      storeId: params.storeId ?? null,
+      fromDate: params.previous.fromDate,
+      toDate: params.previous.toDate,
+      topLimit: params.topLimit ?? null,
+      inactiveDays: params.inactiveDays ?? null,
+    }),
+  ]);
+
+  return compareCrmPeriods(current, previous);
+}
+
+
+/**
+ * ============================================================================
+ * CRM CUSTOMER 360
+ * ============================================================================
+ *
+ * Verified customer transaction intelligence only.
+ * Customer identity is customers.id; no phone/name identity inference here.
+ * ============================================================================
+ */
+
+export async function getCrmCustomer360Analysis(params: {
+  organizationId: string;
+  customerId: string;
+  storeId?: string | null;
+  fromDate: string;
+  toDate: string;
+  receiptLimit?: number | null;
+}): Promise<ZetraAiCrmCustomer360Analysis> {
+  const intelligence =
+    await getCrmCustomer360({
+      organizationId:
+        params.organizationId,
+
+      customerId:
+        params.customerId,
+
+      storeId:
+        params.storeId ?? null,
+
+      fromDate:
+        params.fromDate,
+
+      toDate:
+        params.toDate,
+
+      receiptLimit:
+        params.receiptLimit ?? null,
+    });
+
+  return buildCrmCustomer360Analysis(
+    intelligence
+  );
+}
+/**
+ * ============================================================================
  * QUERY SERVICE EXPORT
  * ============================================================================
  */
@@ -744,4 +949,12 @@ export const zetraAiBusinessQueryService = {
   getOrganizationStoreRanking,
 
   getLatestAvailableStorePerformance,
+
+  getCreditPeriodAnalysis,
+  compareCreditPeriodAnalysis,
+  getCreditCustomerHistoryAnalysis,
+
+  getCrmPeriodAnalysis,
+  compareCrmPeriodAnalysis,
+  getCrmCustomer360Analysis,
 } as const;

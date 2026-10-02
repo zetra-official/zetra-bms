@@ -1,0 +1,677 @@
+// src/ai/business/creditCustomerResolver.ts
+
+/**
+ * ============================================================================
+ * ZETRA AI — CREDIT CUSTOMER RESOLVER
+ * ============================================================================
+ *
+ * Purpose:
+ * Resolve a user-supplied customer query into VERIFIED credit-account
+ * candidates before customer-specific credit history is requested.
+ *
+ * Canonical RPC:
+ *
+ *   public.get_ai_credit_customer_candidates_v1(...)
+ *
+ * Canonical data behind the RPC:
+ *
+ *   public.credit_accounts_v2
+ *   public.stores
+ *
+ * Architecture:
+ *
+ *   User wording / typo
+ *          │
+ *          ▼
+ *   Semantic customerQuery
+ *          │
+ *          ▼
+ *   Credit Customer Resolver
+ *          │
+ *          ▼
+ *   Verified scoped candidates
+ *          │
+ *          ▼
+ *   Identity decision
+ *          │
+ *          ▼
+ *   Canonical Credit Customer History
+ *
+ * IMPORTANT:
+ * - This module does NOT read raw credit tables.
+ * - This module does NOT calculate balances.
+ * - This module does NOT read transaction history.
+ * - This module does NOT call OpenAI.
+ * - pg_trgm is used by PostgreSQL only to retrieve plausible candidates.
+ * - A fuzzy candidate is NOT automatically a verified customer identity.
+ * - Database authorization remains OWNER-ONLY.
+ * ============================================================================
+ */
+
+import { supabase } from "@/src/supabase/supabaseClient";
+
+/**
+ * ============================================================================
+ * TYPES
+ * ============================================================================
+ */
+
+export interface ZetraAiCreditCustomerCandidate {
+  creditAccountId: string;
+
+  customerName: string;
+  phone: string | null;
+
+  storeId: string;
+  storeName: string;
+
+  /**
+   * Ranking produced by the canonical RPC.
+   *
+   * 1 = exact normalized name
+   * 2 = exact compact name
+   * 3 = exact normalized phone
+   * 4 = stored name contains query
+   * 5 = query contains stored name
+   * 6 = fuzzy pg_trgm candidate
+   */
+  matchRank: number;
+
+  /**
+   * PostgreSQL pg_trgm similarity score.
+   *
+   * This is candidate-retrieval evidence only.
+   * It must not by itself be treated as proof of identity.
+   */
+  similarityScore: number;
+}
+
+export interface ZetraAiCreditCustomerCandidatesResult {
+  engineVersion: string;
+
+  query: string;
+
+  organizationId: string;
+  storeId: string | null;
+
+  candidateCount: number;
+
+  candidates: ZetraAiCreditCustomerCandidate[];
+
+  generatedAt: string | null;
+}
+
+/**
+ * Resolution state intentionally remains separate from
+ * customer credit history.
+ */
+export type ZetraAiCreditCustomerResolutionStatus =
+  | "RESOLVED"
+  | "NOT_FOUND"
+  | "AMBIGUOUS";
+
+export interface ZetraAiCreditCustomerResolution {
+  status: ZetraAiCreditCustomerResolutionStatus;
+
+  originalQuery: string;
+
+  /**
+   * Present only when identity has been safely resolved.
+   */
+  customer: ZetraAiCreditCustomerCandidate | null;
+
+  /**
+   * Candidates retained for audit/debugging and ambiguity handling.
+   */
+  candidates: ZetraAiCreditCustomerCandidate[];
+
+  /**
+   * Human/machine-readable reason for the decision.
+   */
+  reason: string;
+
+  generatedAt: string | null;
+}
+
+/**
+ * ============================================================================
+ * HELPERS
+ * ============================================================================
+ */
+
+function clean(value: unknown): string {
+  return String(
+    value ?? ""
+  ).trim();
+}
+
+function safeNumber(
+  value: unknown,
+  fallback = 0
+): number {
+  if (
+    typeof value === "number" &&
+    Number.isFinite(value)
+  ) {
+    return value;
+  }
+
+  if (
+    typeof value === "string"
+  ) {
+    const parsed =
+      Number(value);
+
+    if (
+      Number.isFinite(parsed)
+    ) {
+      return parsed;
+    }
+  }
+
+  return fallback;
+}
+
+function assertRequired(
+  value: string,
+  fieldName: string
+): void {
+  if (!value) {
+    throw new Error(
+      `[ZETRA_AI_CREDIT_CUSTOMER_RESOLVER] ${fieldName} is required.`
+    );
+  }
+}
+
+function normalizeCandidateLimit(
+  value?: number | null
+): number {
+  const parsed =
+    Number(value);
+
+  if (
+    !Number.isFinite(parsed)
+  ) {
+    return 5;
+  }
+
+  return Math.max(
+    1,
+    Math.min(
+      10,
+      Math.trunc(parsed)
+    )
+  );
+}
+
+/**
+ * ============================================================================
+ * CANDIDATE MAPPER
+ * ============================================================================
+ */
+
+function mapCandidate(
+  value: unknown
+): ZetraAiCreditCustomerCandidate | null {
+  if (
+    !value ||
+    typeof value !== "object"
+  ) {
+    return null;
+  }
+
+  const row =
+    value as Record<
+      string,
+      unknown
+    >;
+
+  const creditAccountId =
+    clean(
+      row.creditAccountId
+    );
+
+  const customerName =
+    clean(
+      row.customerName
+    );
+
+  const storeId =
+    clean(
+      row.storeId
+    );
+
+  const storeName =
+    clean(
+      row.storeName
+    );
+
+  if (
+    !creditAccountId ||
+    !customerName ||
+    !storeId
+  ) {
+    return null;
+  }
+
+  return {
+    creditAccountId,
+
+    customerName,
+
+    phone:
+      clean(
+        row.phone
+      ) ||
+      null,
+
+    storeId,
+
+    storeName,
+
+    matchRank:
+      safeNumber(
+        row.matchRank,
+        999
+      ),
+
+    similarityScore:
+      safeNumber(
+        row.similarityScore,
+        0
+      ),
+  };
+}
+
+function mapCandidatesResult(
+  raw: unknown,
+  fallback: {
+    organizationId: string;
+    customerQuery: string;
+    storeId: string | null;
+  }
+): ZetraAiCreditCustomerCandidatesResult {
+  const root:
+    Record<string, unknown> =
+      raw &&
+      typeof raw === "object"
+        ? (
+            raw as Record<
+              string,
+              unknown
+            >
+          )
+        : {};
+
+  const rawCandidates =
+    Array.isArray(
+      root.candidates
+    )
+      ? root.candidates
+      : [];
+
+  const candidates =
+    rawCandidates
+      .map(
+        (
+          value: unknown
+        ) =>
+          mapCandidate(
+            value
+          )
+      )
+      .filter(
+        (
+          value
+        ): value is ZetraAiCreditCustomerCandidate =>
+          value !== null
+      );
+
+  return {
+    engineVersion:
+      clean(
+        root.engineVersion
+      ) ||
+      "CREDIT_CUSTOMER_RESOLVER_V1",
+
+    query:
+      clean(
+        root.query
+      ) ||
+      fallback.customerQuery,
+
+    organizationId:
+      clean(
+        root.organizationId
+      ) ||
+      fallback.organizationId,
+
+    storeId:
+      clean(
+        root.storeId
+      ) ||
+      fallback.storeId,
+
+    /*
+     * Use successfully mapped candidates as the canonical
+     * application-side count.
+     */
+    candidateCount:
+      candidates.length,
+
+    candidates,
+
+    generatedAt:
+      clean(
+        root.generatedAt
+      ) ||
+      null,
+  };
+}
+
+/**
+ * ============================================================================
+ * CANDIDATE REPOSITORY
+ * ============================================================================
+ */
+
+export async function getCreditCustomerCandidates(
+  params: {
+    organizationId: string;
+    customerQuery: string;
+    storeId?: string | null;
+    limit?: number | null;
+  }
+): Promise<ZetraAiCreditCustomerCandidatesResult> {
+  const organizationId =
+    clean(
+      params.organizationId
+    );
+
+  const customerQuery =
+    clean(
+      params.customerQuery
+    );
+
+  const storeId =
+    clean(
+      params.storeId ?? ""
+    ) ||
+    null;
+
+  assertRequired(
+    organizationId,
+    "organizationId"
+  );
+
+  assertRequired(
+    customerQuery,
+    "customerQuery"
+  );
+
+  const limit =
+    normalizeCandidateLimit(
+      params.limit
+    );
+
+  const {
+    data,
+    error,
+  } = await supabase.rpc(
+    "get_ai_credit_customer_candidates_v1",
+    {
+      p_org_id:
+        organizationId,
+
+      p_customer_query:
+        customerQuery,
+
+      p_store_id:
+        storeId,
+
+      p_limit:
+        limit,
+    } as any
+  );
+
+  console.log("========== CREDIT CUSTOMER CANDIDATE DEBUG ==========");
+  console.log("QUERY:", customerQuery);
+  console.log("ORG:", organizationId);
+  console.log("STORE:", storeId);
+  console.log("RAW RPC DATA:", JSON.stringify(data, null, 2));
+  console.log("RPC ERROR:", error?.message ?? null);
+  console.log("=====================================================");
+
+  if (error) {
+    throw new Error(
+      `[ZETRA_AI_CREDIT_CUSTOMER_RESOLVER] Failed to load verified customer candidates: ${error.message}`
+    );
+  }
+
+  if (
+    data === null ||
+    data === undefined
+  ) {
+    throw new Error(
+      "[ZETRA_AI_CREDIT_CUSTOMER_RESOLVER] Candidate RPC returned no data."
+    );
+  }
+
+  return mapCandidatesResult(
+    data,
+    {
+      organizationId,
+      customerQuery,
+      storeId,
+    }
+  );
+}
+
+/**
+ * ============================================================================
+ * SAFE IDENTITY RESOLUTION
+ * ============================================================================
+ *
+ * IMPORTANT:
+ *
+ * We automatically resolve only deterministic matches:
+ *
+ * matchRank 1:
+ *   exact normalized customer name
+ *
+ * matchRank 2:
+ *   exact compact customer name
+ *
+ * matchRank 3:
+ *   exact normalized phone
+ *
+ * Fuzzy pg_trgm matches (rank 6) are NOT silently promoted to
+ * verified identity here.
+ *
+ * This means:
+ *
+ *   "Marry-Makambako"
+ *      → may resolve directly if exact.
+ *
+ *   "Merry-Makambako"
+ *      → candidate may be Marry-Makambako,
+ *        but candidate retrieval alone does not prove identity.
+ *
+ * A later semantic verification layer may resolve typo candidates
+ * against this finite VERIFIED candidate set.
+ * ============================================================================
+ */
+
+export function resolveCreditCustomerDeterministically(
+  result: ZetraAiCreditCustomerCandidatesResult
+): ZetraAiCreditCustomerResolution {
+  const candidates =
+    result.candidates;
+
+  if (
+    candidates.length === 0
+  ) {
+    return {
+      status:
+        "NOT_FOUND",
+
+      originalQuery:
+        result.query,
+
+      customer:
+        null,
+
+      candidates:
+        [],
+
+      reason:
+        "No verified credit-account candidate matched the supplied customer query.",
+
+      generatedAt:
+        result.generatedAt,
+    };
+  }
+
+  /*
+   * Exact deterministic matches only.
+   */
+  const exactCandidates =
+    candidates.filter(
+      (candidate) =>
+        candidate.matchRank >= 1 &&
+        candidate.matchRank <= 3
+    );
+
+  if (
+    exactCandidates.length === 1
+  ) {
+    return {
+      status:
+        "RESOLVED",
+
+      originalQuery:
+        result.query,
+
+      customer:
+        exactCandidates[0],
+
+      candidates,
+
+      reason:
+        "Customer identity was verified by an exact canonical account match.",
+
+      generatedAt:
+        result.generatedAt,
+    };
+  }
+
+  if (
+    exactCandidates.length > 1
+  ) {
+    return {
+      status:
+        "AMBIGUOUS",
+
+      originalQuery:
+        result.query,
+
+      customer:
+        null,
+
+      candidates:
+        exactCandidates,
+
+      reason:
+        "Multiple exact credit-account candidates matched the supplied customer query.",
+
+      generatedAt:
+        result.generatedAt,
+    };
+  }
+
+  /*
+   * High-confidence typo resolution.
+   *
+   * pg_trgm only proposes candidates. ZETRA resolves a fuzzy identity
+   * only when the best scoped candidate is strong AND clearly separated
+   * from the next candidate. Weak or competing matches remain ambiguous.
+   */
+  const rankedCandidates = [...candidates].sort((a, b) => {
+    if (a.matchRank !== b.matchRank) {
+      return a.matchRank - b.matchRank;
+    }
+
+    return b.similarityScore - a.similarityScore;
+  });
+
+  const bestCandidate = rankedCandidates[0];
+  const secondCandidate = rankedCandidates[1] ?? null;
+
+  const bestScore = bestCandidate?.similarityScore ?? 0;
+  const secondScore = secondCandidate?.similarityScore ?? 0;
+  const scoreGap = bestScore - secondScore;
+
+  const strongUniqueFuzzyMatch =
+    bestCandidate !== undefined &&
+    bestCandidate.matchRank === 6 &&
+    (
+      (secondCandidate === null && bestScore >= 0.40) ||
+      (secondCandidate !== null && bestScore >= 0.72 && scoreGap >= 0.15)
+    );
+
+  if (strongUniqueFuzzyMatch) {
+    return {
+      status: "RESOLVED",
+      originalQuery: result.query,
+      customer: bestCandidate,
+      candidates: rankedCandidates,
+      reason: "Customer identity was resolved from a strong uniquely-leading verified fuzzy candidate.",
+      generatedAt: result.generatedAt,
+    };
+  }
+
+  return {
+    status: "AMBIGUOUS",
+    originalQuery: result.query,
+    customer: null,
+    candidates: rankedCandidates,
+    reason: "Customer candidates were found, but no candidate was strong and uniquely leading enough to verify identity safely.",
+    generatedAt: result.generatedAt,
+  };
+}
+
+/**
+ * ============================================================================
+ * CONVENIENCE ENTRY POINT
+ * ============================================================================
+ */
+
+export async function resolveCreditCustomer(
+  params: {
+    organizationId: string;
+    customerQuery: string;
+    storeId?: string | null;
+    limit?: number | null;
+  }
+): Promise<ZetraAiCreditCustomerResolution> {
+  const candidates =
+    await getCreditCustomerCandidates(
+      params
+    );
+
+  return resolveCreditCustomerDeterministically(
+    candidates
+  );
+}
+
+/**
+ * ============================================================================
+ * MODULE EXPORT
+ * ============================================================================
+ */
+
+export const zetraAiCreditCustomerResolver = {
+  getCreditCustomerCandidates,
+  resolveCreditCustomerDeterministically,
+  resolveCreditCustomer,
+} as const;

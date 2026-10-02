@@ -1,3 +1,5 @@
+import { resolveCreditCustomer } from "./creditCustomerResolver";
+import { resolveCrmCustomer } from "./crmCustomerResolver";
 // src/ai/business/businessBridge.ts
 
 /**
@@ -36,11 +38,32 @@ import {
   getOrganizationStoreRanking,
   getStoreDayPerformance,
   getStorePeriodPerformance,
+  getCreditPeriodAnalysis,
+  getCreditCustomerHistoryAnalysis,
+  compareCreditPeriodAnalysis,
+  getCrmPeriodAnalysis,
+  getCrmCustomer360Analysis,
+  compareCrmPeriodAnalysis,
   type ZetraAiBusinessComparisonResult,
   type ZetraAiBusinessPeriodResult,
   type ZetraAiLatestStoreResult,
   type ZetraAiStoreRankingResult,
 } from "./businessQueryService";
+
+import type {
+  ZetraAiCreditAnalysis,
+  ZetraAiCreditPeriodComparison,
+} from "./creditEngine";
+
+import type {
+  ZetraAiCreditCustomerHistory,
+} from "./creditRepository";
+
+import type {
+  ZetraAiCrmAnalysis,
+  ZetraAiCrmPeriodComparison,
+  ZetraAiCrmCustomer360Analysis,
+} from "./crmEngine";
 
 import type {
   ZetraAiComparisonMode,
@@ -70,6 +93,12 @@ export type ZetraAiBusinessBridgeResultType =
   | "COMPARISON"
   | "STORE_RANKING"
   | "LATEST_STORE"
+  | "CREDIT"
+  | "CREDIT_COMPARISON"
+  | "CREDIT_CUSTOMER_HISTORY"
+  | "CRM"
+  | "CRM_COMPARISON"
+  | "CRM_CUSTOMER_360"
   | null;
 
 export interface ZetraAiBusinessBridgeContext {
@@ -134,6 +163,30 @@ export interface ZetraAiBusinessBridgeResult {
 
   latestStoreResult:
     | ZetraAiLatestStoreResult
+    | null;
+
+  creditResult:
+    | ZetraAiCreditAnalysis
+    | null;
+
+  creditComparisonResult:
+    | ZetraAiCreditPeriodComparison
+    | null;
+
+  creditCustomerHistoryResult:
+    | ZetraAiCreditCustomerHistory
+    | null;
+
+  crmResult:
+    | ZetraAiCrmAnalysis
+    | null;
+
+  crmComparisonResult:
+    | ZetraAiCrmPeriodComparison
+    | null;
+
+  crmCustomer360Result?:
+    | ZetraAiCrmCustomer360Analysis
     | null;
 }
 
@@ -467,6 +520,13 @@ function emptyResult(params: {
     storeRankingResult: null,
 
     latestStoreResult: null,
+
+    creditResult: null,
+
+    creditComparisonResult: null,
+    creditCustomerHistoryResult: null,
+    crmResult: null,
+    crmComparisonResult: null,
   };
 }
 
@@ -985,6 +1045,275 @@ export async function executeBusinessIntent(params: {
   try {
     /**
      * ========================================================================
+     * CRM INTELLIGENCE SPECIALIST ENGINE
+     * ========================================================================
+     */
+    if (
+      intent.intent === "CRM_ANALYSIS" ||
+      intent.intent === "CUSTOMER_ANALYSIS" ||
+      intent.domain === "CRM" ||
+      intent.domain === "CUSTOMERS"
+    ) {
+      const customerQuery = clean(intent.customerQuery);
+
+      if (customerQuery) {
+        const resolution = await resolveCrmCustomer({
+          organizationId,
+          customerQuery,
+          storeId: null,
+          limit: 5,
+        });
+
+        if (resolution.status !== "RESOLVED" || !resolution.customer) {
+          return emptyResult({
+            status: "UNSUPPORTED_INTENT",
+            code: resolution.status === "NOT_FOUND" ? "CRM_CUSTOMER_NOT_FOUND" : "CRM_CUSTOMER_AMBIGUOUS",
+            message: resolution.status === "NOT_FOUND" ? "Customer could not be found in verified CRM records." : "Customer identity could not be verified safely. Please provide the exact customer name or phone number.",
+            intent,
+            periods,
+          });
+        }
+
+        const result = await getCrmCustomer360Analysis({
+          organizationId,
+          customerId: resolution.customer.customerId,
+          storeId,
+          fromDate: periods.current.fromDate,
+          toDate: periods.current.toDate,
+          receiptLimit: 50,
+        });
+
+        return {
+          ...emptyResult({ status: "SUCCESS", code: "CRM_CUSTOMER_360_READY", message: "Verified Customer 360 intelligence is ready.", intent, periods }),
+          resultType: "CRM_CUSTOMER_360",
+          crmCustomer360Result: result,
+        };
+      }
+      if (requiresComparison(intent)) {
+        if (!periods.previous) {
+          return emptyResult({
+            status: "UNSUPPORTED_INTENT",
+            code: "CRM_COMPARISON_PERIOD_UNAVAILABLE",
+            message: "A verified previous period could not be resolved for CRM comparison.",
+            intent,
+            periods,
+          });
+        }
+
+        const result = await compareCrmPeriodAnalysis({
+          organizationId,
+          storeId,
+          current: periods.current,
+          previous: periods.previous,
+        });
+
+        return {
+          status: "SUCCESS",
+          resultType: "CRM_COMPARISON",
+          code: "CRM_PERIOD_COMPARISON_READY",
+          message: "Verified CRM period comparison is ready.",
+          intent,
+          periods,
+          periodResult: null,
+          comparisonResult: null,
+          storeRankingResult: null,
+          latestStoreResult: null,
+          creditResult: null,
+          creditComparisonResult: null,
+          creditCustomerHistoryResult: null,
+          crmResult: null,
+          crmComparisonResult: result,
+        };
+      }
+
+      const result = await getCrmPeriodAnalysis({
+        organizationId,
+        storeId,
+        fromDate: periods.current.fromDate,
+        toDate: periods.current.toDate,
+      });
+
+      return {
+        status: "SUCCESS",
+        resultType: "CRM",
+        code: "CRM_ANALYSIS_READY",
+        message: "Verified CRM intelligence is ready.",
+        intent,
+        periods,
+        periodResult: null,
+        comparisonResult: null,
+        storeRankingResult: null,
+        latestStoreResult: null,
+        creditResult: null,
+        creditComparisonResult: null,
+        creditCustomerHistoryResult: null,
+        crmResult: result,
+        crmComparisonResult: null,
+      };
+    }
+
+    /**
+     * ========================================================================
+     * CREDIT INTELLIGENCE SPECIALIST ENGINE
+     * ========================================================================
+     *
+     * Credit queries must be handled before the generic snapshot engine.
+     * The canonical credit RPC remains the source of verified credit numbers.
+     * ========================================================================
+     */
+    if (
+      intent.intent === "CREDIT_ANALYSIS" ||
+      intent.domain === "CREDIT"
+    ) {
+      const customerQuery = clean(intent.customerQuery);
+
+      if (customerQuery) {
+        const resolution = await resolveCreditCustomer({
+          organizationId,
+          storeId: null,
+          customerQuery,
+          limit: 5,
+        });
+
+        let verifiedCustomerQuery = customerQuery;
+
+        if (resolution.status === "RESOLVED" && resolution.customer) {
+          verifiedCustomerQuery = resolution.customer.customerName;
+        } else if (
+          resolution.status === "AMBIGUOUS" &&
+          resolution.candidates.length === 1
+        ) {
+          const candidate = resolution.candidates[0];
+
+          if (candidate.matchRank === 6 && candidate.similarityScore >= 0.72) {
+            verifiedCustomerQuery = candidate.customerName;
+          } else {
+            return emptyResult({
+              status: "UNSUPPORTED_INTENT",
+              code: "CREDIT_CUSTOMER_AMBIGUOUS",
+              message: "Customer identity could not be verified safely. Please provide the exact customer name or phone number.",
+              intent,
+              periods,
+            });
+          }
+        } else if (resolution.status === "NOT_FOUND") {
+          return emptyResult({
+            status: "UNSUPPORTED_INTENT",
+            code: "CREDIT_CUSTOMER_NOT_FOUND",
+            message: `No verified credit customer candidate matched "${customerQuery}". Ask for a fuller name or phone number. Do not invent identity.`,
+            intent,
+            periods,
+          });
+        } else {
+          return emptyResult({
+            status: "UNSUPPORTED_INTENT",
+            code: "CREDIT_CUSTOMER_AMBIGUOUS",
+            message: `Multiple verified credit customers matched "${customerQuery}". Ask the user which customer they mean. Candidates: ${resolution.candidates.map((candidate, index) => `${index + 1}. ${candidate.customerName}${candidate.phone ? ` (${candidate.phone})` : ""}`).join("; ")}. Do not choose a customer silently.`, 
+            intent,
+            periods,
+          });
+        }
+
+        const result = await getCreditCustomerHistoryAnalysis({
+          organizationId,
+          storeId: null,
+          customerQuery: verifiedCustomerQuery,
+          limit: 100,
+        });
+
+        return {
+          status: "SUCCESS",
+          resultType: "CREDIT_CUSTOMER_HISTORY",
+          code: "CREDIT_CUSTOMER_HISTORY_READY",
+          message: "Verified customer credit history is ready.",
+          intent,
+          periods,
+          periodResult: null,
+          comparisonResult: null,
+          storeRankingResult: null,
+          latestStoreResult: null,
+          creditResult: null,
+          creditComparisonResult: null,
+          creditCustomerHistoryResult: result,
+          crmResult: null,
+          crmComparisonResult: null,
+        };
+      }
+      if (
+        requiresComparison(intent)
+      ) {
+        if (!periods.previous) {
+          return emptyResult({
+            status: "UNSUPPORTED_INTENT",
+            code: "CREDIT_COMPARISON_PERIOD_UNAVAILABLE",
+            message: "A verified previous period could not be resolved for credit comparison.",
+            intent,
+            periods,
+          });
+        }
+
+        const result =
+          await compareCreditPeriodAnalysis({
+            organizationId,
+            storeId,
+            current: {
+              fromDate: periods.current.fromDate,
+              toDate: periods.current.toDate,
+            },
+            previous: {
+              fromDate: periods.previous.fromDate,
+              toDate: periods.previous.toDate,
+            },
+          });
+
+        return {
+          status: "SUCCESS",
+          resultType: "CREDIT_COMPARISON",
+          code: "CREDIT_PERIOD_COMPARISON_READY",
+          message: "Verified credit period comparison is ready.",
+          intent,
+          periods,
+          periodResult: null,
+          comparisonResult: null,
+          storeRankingResult: null,
+          latestStoreResult: null,
+          creditResult: null,
+          creditComparisonResult: result,
+          creditCustomerHistoryResult: null,
+          crmResult: null,
+          crmComparisonResult: null,
+        };
+      }
+
+      const result =
+        await getCreditPeriodAnalysis({
+          organizationId,
+          storeId,
+          fromDate: periods.current.fromDate,
+          toDate: periods.current.toDate,
+        });
+
+      return {
+        status: "SUCCESS",
+        resultType: "CREDIT",
+        code: "CREDIT_ANALYSIS_READY",
+        message: "Verified credit intelligence is ready.",
+        intent,
+        periods,
+        periodResult: null,
+        comparisonResult: null,
+        storeRankingResult: null,
+        latestStoreResult: null,
+        creditResult: result,
+        creditComparisonResult: null,
+        creditCustomerHistoryResult: null,
+        crmResult: null,
+        crmComparisonResult: null,
+      };
+    }
+
+    /**
+     * ========================================================================
      * STORE COMPARISON / RANKING
      * ========================================================================
      *
@@ -1065,6 +1394,13 @@ export async function executeBusinessIntent(params: {
 
         latestStoreResult:
           null,
+
+        creditResult: null,
+
+        creditComparisonResult: null,
+        creditCustomerHistoryResult: null,
+        crmResult: null,
+        crmComparisonResult: null,
       };
     }
 
@@ -1171,7 +1507,23 @@ export async function executeBusinessIntent(params: {
             null,
 
           latestStoreResult:
+
             null,
+
+
+          creditResult: null,
+
+
+          creditComparisonResult: null,
+
+
+          creditCustomerHistoryResult: null,
+
+
+          crmResult: null,
+
+
+          crmComparisonResult: null,
         };
       }
 
@@ -1250,6 +1602,13 @@ export async function executeBusinessIntent(params: {
 
         latestStoreResult:
           null,
+
+        creditResult: null,
+
+        creditComparisonResult: null,
+        creditCustomerHistoryResult: null,
+        crmResult: null,
+        crmComparisonResult: null,
       };
     }
 
@@ -1320,7 +1679,23 @@ export async function executeBusinessIntent(params: {
             null,
 
           latestStoreResult:
+
             null,
+
+
+          creditResult: null,
+
+
+          creditComparisonResult: null,
+
+
+          creditCustomerHistoryResult: null,
+
+
+          crmResult: null,
+
+
+          crmComparisonResult: null,
         };
       }
 
@@ -1379,6 +1754,16 @@ export async function executeBusinessIntent(params: {
 
             latestStoreResult:
               latest,
+
+            creditResult: null,
+
+            creditComparisonResult: null,
+
+            creditCustomerHistoryResult: null,
+
+            crmResult: null,
+
+            crmComparisonResult: null,
           };
         }
       }
@@ -1475,7 +1860,23 @@ export async function executeBusinessIntent(params: {
         null,
 
       latestStoreResult:
+
         null,
+
+
+      creditResult: null,
+
+
+      creditComparisonResult: null,
+
+
+      creditCustomerHistoryResult: null,
+
+
+      crmResult: null,
+
+
+      crmComparisonResult: null,
     };
   } catch (error: any) {
     return emptyResult({

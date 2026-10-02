@@ -1,4 +1,4 @@
-// app/(tabs)/stores/index.tsx
+﻿// app/(tabs)/stores/index.tsx
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
@@ -1433,21 +1433,23 @@ const onRefreshAll = async () => {
 
         <View
           style={{
-            flexDirection: isDesktopWeb ? "row" : "column",
-            gap: 14,
+            flexDirection: "column",
+            gap: isDesktopWeb ? 12 : 14,
             alignItems: "stretch",
+            width: "100%",
           }}
         >
         <View
           style={{
-            gap: 12,
-            flex: isDesktopWeb ? 1.2 : undefined,
-            borderRadius: 28,
+            gap: isDesktopWeb ? 8 : 12,
+            flex: undefined,
+            width: "100%",
+            borderRadius: isDesktopWeb ? 18 : 28,
             borderWidth: 1,
             borderColor: "rgba(5,150,105,0.24)",
             backgroundColor: "#F8FFFC",
-            paddingVertical: 22,
-            paddingHorizontal: 22,
+            paddingVertical: isDesktopWeb ? 14 : 22,
+            paddingHorizontal: isDesktopWeb ? 16 : 22,
             shadowColor: "#059669",
             shadowOpacity: 0.10,
             shadowRadius: 16,
@@ -1519,14 +1521,26 @@ const onRefreshAll = async () => {
 
          <View
   style={{
-    gap: 12,
-    flex: isDesktopWeb ? 0.9 : undefined,
-    minHeight: isDesktopWeb ? 220 : undefined,
+    gap: isDesktopWeb ? 8 : 12,
+    flex: isDesktopWeb ? undefined : 0.9,
+    minHeight: isDesktopWeb ? undefined : 220,
+    flexDirection: "column",
+    alignItems: "stretch",
+    width: "100%",
   }}
 >
   <Text style={{ color: FAINT, fontWeight: "900", fontSize: 11, letterSpacing: 0.8 }}>
     QUICK ACTIONS
   </Text>
+
+  <View
+    style={{
+      flexDirection: isDesktopWeb ? "row" : "column",
+      gap: isDesktopWeb ? 8 : 12,
+      alignItems: "stretch",
+      width: "100%",
+    }}
+  >
 
   <Pressable
     onPress={() => {
@@ -1543,12 +1557,14 @@ const onRefreshAll = async () => {
       router.push("/(tabs)/stores/inventory");
     }}
     style={({ pressed }) => ({
-      borderRadius: 24,
+      flex: isDesktopWeb ? 1 : undefined,
+      minWidth: 0,
+      borderRadius: isDesktopWeb ? 14 : 24,
       borderWidth: 1,
       borderColor: "rgba(37,99,235,0.55)",
       backgroundColor: "#0B4FB3",
-      paddingVertical: 18,
-      paddingHorizontal: 18,
+      paddingVertical: isDesktopWeb ? 12 : 18,
+      paddingHorizontal: isDesktopWeb ? 12 : 18,
       opacity: isActivePremiumType ? 0.55 : pressed ? 0.92 : 1,
       shadowColor: "#0B4FB3",
       shadowOpacity: 0.24,
@@ -1557,10 +1573,10 @@ const onRefreshAll = async () => {
       elevation: 4,
     })}
   >
-    <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 19 }}>
+    <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: isDesktopWeb ? 14.5 : 19 }}>
       Open Inventory
     </Text>
-    <Text style={{ color: "rgba(255,255,255,0.82)", fontWeight: "900", marginTop: 6, fontSize: 13, lineHeight: 19 }}>
+    <Text style={{ color: "rgba(255,255,255,0.82)", fontWeight: isDesktopWeb ? "600" : "900", marginTop: isDesktopWeb ? 5 : 6, fontSize: isDesktopWeb ? 12.5 : 13, lineHeight: isDesktopWeb ? 18 : 19 }}>
       {isActivePremiumType
         ? "Inventory imezimwa kwa store type hii"
         : "Fungua inventory ya active store"}
@@ -1581,12 +1597,14 @@ const onRefreshAll = async () => {
       openMovement();
     }}
     style={({ pressed }) => ({
-      borderRadius: 24,
+      flex: isDesktopWeb ? 1 : undefined,
+      minWidth: 0,
+      borderRadius: isDesktopWeb ? 14 : 24,
       borderWidth: 1,
       borderColor: "rgba(124,58,237,0.55)",
       backgroundColor: "#5B21B6",
-      paddingVertical: 18,
-      paddingHorizontal: 18,
+      paddingVertical: isDesktopWeb ? 12 : 18,
+      paddingHorizontal: isDesktopWeb ? 12 : 18,
       opacity: isActivePremiumType ? 0.55 : pressed ? 0.92 : 1,
       shadowColor: "#5B21B6",
       shadowOpacity: 0.24,
@@ -1595,10 +1613,10 @@ const onRefreshAll = async () => {
       elevation: 4,
     })}
   >
-    <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 19 }}>
+    <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: isDesktopWeb ? 14.5 : 19 }}>
       Stock Movement
     </Text>
-    <Text style={{ color: "rgba(255,255,255,0.82)", fontWeight: "900", marginTop: 6, fontSize: 13, lineHeight: 19 }}>
+    <Text style={{ color: "rgba(255,255,255,0.82)", fontWeight: isDesktopWeb ? "600" : "900", marginTop: isDesktopWeb ? 5 : 6, fontSize: isDesktopWeb ? 12.5 : 13, lineHeight: isDesktopWeb ? 18 : 19 }}>
       {isActivePremiumType
         ? "Movement imezimwa kwa store type hii"
         : "Hamisha stock kutoka active store"}
@@ -1615,12 +1633,14 @@ const onRefreshAll = async () => {
       router.push("/stores/suppliers" as any);
     }}
     style={({ pressed }) => ({
-      borderRadius: 24,
+      flex: isDesktopWeb ? 1 : undefined,
+      minWidth: 0,
+      borderRadius: isDesktopWeb ? 14 : 24,
       borderWidth: 1,
       borderColor: "rgba(5,150,105,0.60)",
       backgroundColor: "#047857",
-      paddingVertical: 18,
-      paddingHorizontal: 18,
+      paddingVertical: isDesktopWeb ? 12 : 18,
+      paddingHorizontal: isDesktopWeb ? 12 : 18,
       opacity: pressed ? 0.92 : 1,
       shadowColor: "#047857",
       shadowOpacity: 0.24,
@@ -1629,10 +1649,10 @@ const onRefreshAll = async () => {
       elevation: 4,
     })}
   >
-    <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 19 }}>
+    <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: isDesktopWeb ? 14.5 : 19 }}>
       Supplier History
     </Text>
-    <Text style={{ color: "rgba(255,255,255,0.82)", fontWeight: "900", marginTop: 6, fontSize: 13, lineHeight: 19 }}>
+    <Text style={{ color: "rgba(255,255,255,0.82)", fontWeight: isDesktopWeb ? "600" : "900", marginTop: isDesktopWeb ? 5 : 6, fontSize: isDesktopWeb ? 12.5 : 13, lineHeight: isDesktopWeb ? 18 : 19 }}>
       Angalia suppliers, mzigo waliouleta, invoice/ref na historia ya stock
     </Text>
   </Pressable>
@@ -1658,12 +1678,14 @@ const onRefreshAll = async () => {
       });
     }}
     style={({ pressed }) => ({
-      borderRadius: 24,
+      flex: isDesktopWeb ? 1 : undefined,
+      minWidth: 0,
+      borderRadius: isDesktopWeb ? 14 : 24,
       borderWidth: 1,
       borderColor: "rgba(236,72,153,0.60)",
       backgroundColor: "#BE185D",
-      paddingVertical: 18,
-      paddingHorizontal: 18,
+      paddingVertical: isDesktopWeb ? 12 : 18,
+      paddingHorizontal: isDesktopWeb ? 12 : 18,
       opacity: pressed ? 0.92 : 1,
       shadowColor: "#BE185D",
       shadowOpacity: 0.24,
@@ -1672,10 +1694,10 @@ const onRefreshAll = async () => {
       elevation: 4,
     })}
   >
-    <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 19 }}>
+    <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: isDesktopWeb ? 14.5 : 19 }}>
   Sold Items
 </Text>
-    <Text style={{ color: "rgba(255,255,255,0.82)", fontWeight: "900", marginTop: 6, fontSize: 13, lineHeight: 19 }}>
+    <Text style={{ color: "rgba(255,255,255,0.82)", fontWeight: isDesktopWeb ? "600" : "900", marginTop: isDesktopWeb ? 5 : 6, fontSize: isDesktopWeb ? 12.5 : 13, lineHeight: isDesktopWeb ? 18 : 19 }}>
       Bidhaa zilizouzwa leo, jana, wiki au tarehe maalum
     </Text>
   </Pressable>
@@ -1702,12 +1724,14 @@ const onRefreshAll = async () => {
       });
     }}
     style={({ pressed }) => ({
-      borderRadius: 24,
+      flex: isDesktopWeb ? 1 : undefined,
+      minWidth: 0,
+      borderRadius: isDesktopWeb ? 14 : 24,
       borderWidth: 1,
       borderColor: "rgba(245,158,11,0.60)",
       backgroundColor: "#B45309",
-      paddingVertical: 18,
-      paddingHorizontal: 18,
+      paddingVertical: isDesktopWeb ? 12 : 18,
+      paddingHorizontal: isDesktopWeb ? 12 : 18,
       opacity: pressed ? 0.92 : 1,
       shadowColor: "#B45309",
       shadowOpacity: 0.24,
@@ -1716,10 +1740,10 @@ const onRefreshAll = async () => {
       elevation: 4,
     })}
   >
-    <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 19 }}>
+    <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: isDesktopWeb ? 14.5 : 19 }}>
       Items Overview
     </Text>
-    <Text style={{ color: "rgba(255,255,255,0.82)", fontWeight: "900", marginTop: 6, fontSize: 13, lineHeight: 19 }}>
+    <Text style={{ color: "rgba(255,255,255,0.82)", fontWeight: isDesktopWeb ? "600" : "900", marginTop: isDesktopWeb ? 5 : 6, fontSize: isDesktopWeb ? 12.5 : 13, lineHeight: isDesktopWeb ? 18 : 19 }}>
       Angalia bidhaa, picha, quantity na bei kwa store au organization
     </Text>
   </Pressable>
@@ -1747,12 +1771,14 @@ const onRefreshAll = async () => {
       });
     }}
     style={({ pressed }) => ({
-      borderRadius: 24,
+      flex: isDesktopWeb ? 1 : undefined,
+      minWidth: 0,
+      borderRadius: isDesktopWeb ? 14 : 24,
       borderWidth: 1,
       borderColor: "rgba(14,165,233,0.60)",
       backgroundColor: "#0369A1",
-      paddingVertical: 18,
-      paddingHorizontal: 18,
+      paddingVertical: isDesktopWeb ? 12 : 18,
+      paddingHorizontal: isDesktopWeb ? 12 : 18,
       opacity: pressed ? 0.92 : 1,
       shadowColor: "#0369A1",
       shadowOpacity: 0.24,
@@ -1761,13 +1787,14 @@ const onRefreshAll = async () => {
       elevation: 4,
     })}
   >
-    <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 19 }}>
+    <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: isDesktopWeb ? 14.5 : 19 }}>
       Orders
     </Text>
-    <Text style={{ color: "rgba(255,255,255,0.82)", fontWeight: "900", marginTop: 6, fontSize: 13, lineHeight: 19 }}>
+    <Text style={{ color: "rgba(255,255,255,0.82)", fontWeight: isDesktopWeb ? "600" : "900", marginTop: isDesktopWeb ? 5 : 6, fontSize: isDesktopWeb ? 12.5 : 13, lineHeight: isDesktopWeb ? 18 : 19 }}>
       Reservations na Pre Orders kwa active store hii
     </Text>
   </Pressable>
+  </View>
 
   <Text style={{ color: MUTED, fontWeight: "800", lineHeight: 18 }}>
     Stores zilizofungwa (LOCKED) zitaonekana hapa, lakini haziwezi kuwa ACTIVE mpaka
@@ -1942,9 +1969,9 @@ const salesModeIsSaving =
                 style={({ pressed }) => ({
                   borderWidth: cardIsActive ? 2.2 : 1.2,
                   borderColor: cardIsActive ? visual.border : visual.border,
-                  borderRadius: 24,
+                  borderRadius: isDesktopWeb ? 18 : 24,
                   backgroundColor: cardIsActive ? visual.activeBg : visual.bg,
-                  padding: isDesktopWeb ? 18 : 14,
+                  padding: isDesktopWeb ? 14 : 14,
                   opacity: pressed ? Math.max(0.9, opacity - 0.03) : opacity,
                   transform: pressed ? [{ scale: 0.996 }] : [{ scale: 1 }],
                   shadowColor: visual.accent,
@@ -1968,7 +1995,7 @@ const salesModeIsSaving =
                         style={{
                           fontWeight: "900",
                           color: visual.text,
-                          fontSize: isWeb ? 18 : 17,
+                          fontSize: isDesktopWeb ? 16.5 : isWeb ? 18 : 17,
                           letterSpacing: 0.2,
                         }}
                         numberOfLines={1}
@@ -2152,16 +2179,16 @@ fontSize: 11.5,
 ) : null}
 
 {canManage && isAllowed ? (
-  <View style={{ marginTop: 10, gap: 10 }}>
+  <View style={{ marginTop: isDesktopWeb ? 7 : 10, gap: isDesktopWeb ? 7 : 10 }}>
     <Pressable
       onPress={() => toggleStoreActions(storeId)}
       style={({ pressed }) => ({
-        borderRadius: 16,
+        borderRadius: isDesktopWeb ? 12 : 16,
         borderWidth: 1,
         borderColor: actionsOpen ? "rgba(16,185,129,0.24)" : BORDER_SOFT,
         backgroundColor: actionsOpen ? "#DDF8EE" : "#F1F6FF",
-        paddingVertical: 11,
-        paddingHorizontal: 14,
+        paddingVertical: isDesktopWeb ? 8 : 11,
+        paddingHorizontal: isDesktopWeb ? 11 : 14,
         opacity: pressed ? 0.92 : 1,
       })}
     >

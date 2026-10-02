@@ -6,6 +6,7 @@ import {
   Alert,
   Animated,
   AppState,
+  Image,
   Platform,
   Pressable,
   RefreshControl,
@@ -26,6 +27,8 @@ import { Screen } from "../../src/ui/Screen";
 import { StoreGuard } from "../../src/ui/StoreGuard";
 import { UI } from "../../src/ui/theme";
 import { formatMoney, useOrgMoneyPrefs } from "../../src/ui/money";
+import BusinessFinancialOverview from "../../src/components/home/business-financial-overview/BusinessFinancialOverview";
+import SalesPerformanceWorkspace from "../../src/components/home/sales-performance-v2/SalesPerformanceWorkspace";
 
 type RangeKey = "today" | "7d" | "30d";
 
@@ -480,7 +483,7 @@ function getSubscriptionDaysLeft(value: any): number | null {
 function fmtSubscriptionHomeDate(value: any) {
   const d = parseSubscriptionDateLocal(value);
 
-  if (!d) return "—";
+  if (!d) return "-";
 
   try {
     return d.toLocaleDateString(undefined, {
@@ -489,7 +492,7 @@ function fmtSubscriptionHomeDate(value: any) {
       year: "numeric",
     });
   } catch {
-    return clean(value).slice(0, 10) || "—";
+    return clean(value).slice(0, 10) || "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â";
   }
 }
 
@@ -525,9 +528,9 @@ function webIconFallback(name: keyof typeof Ionicons.glyphMap) {
     case "ellipsis-horizontal":
       return "...";
     case "heart":
-      return "♥";
+      return "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¾ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¥";
     case "heart-outline":
-      return "♡";
+      return "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¾ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡";
     case "chatbubble-outline":
       return "C";
     case "paper-plane-outline":
@@ -549,7 +552,7 @@ function webIconFallback(name: keyof typeof Ionicons.glyphMap) {
     case "chevron-down":
       return "v";
     default:
-      return "•";
+      return "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢";
   }
 }
 
@@ -562,35 +565,6 @@ function SafeIcon({
   size?: number;
   color: string;
 }) {
-  if (Platform.OS === "web") {
-    const label = webIconFallback(name);
-
-    return (
-      <View
-        style={{
-          minWidth: size + 10,
-          height: size + 10,
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <Text
-          style={{
-            color,
-            fontSize: Math.max(12, size - 2),
-            lineHeight: Math.max(14, size),
-            fontWeight: "900",
-            textAlign: "center",
-            includeFontPadding: false,
-          }}
-          numberOfLines={1}
-        >
-          {label}
-        </Text>
-      </View>
-    );
-  }
-
   return <Ionicons name={name} size={size} color={color} />;
 }
 
@@ -645,7 +619,7 @@ function useAutoRefresh(cb: () => void, enabled: boolean, ms: number) {
   cbRef.current = cb;
 
   useEffect(() => {
-    // ✅ WEB HOTFIX:
+    // ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ WEB HOTFIX:
     // Browser static export imekuwa ikipata request-storm / page freeze.
     // Auto refresh ibaki MOBILE only.
     if (!enabled || Platform.OS === "web") return;
@@ -688,60 +662,237 @@ function HeaderHero({
   activeOrgName,
   activeStoreName,
   isCashier,
+  onOpenOrgSwitcher,
+  organizationLogoUrl,
+  onOpenBusinessProfile,
 }: {
   activeOrgName?: string | null;
   activeStoreName?: string | null;
   isCashier: boolean;
+  onOpenOrgSwitcher?: () => void;
+  organizationLogoUrl?: string | null;
+  onOpenBusinessProfile?: () => void;
 }) {
-  const orgLabel = String(activeOrgName ?? "Workspace").trim() || "Workspace";
-  const storeLabel = String(activeStoreName ?? "No active store").trim() || "No active store";
+  const orgLabel =
+    String(activeOrgName ?? "Workspace").trim() || "Workspace";
+
+  const storeLabel =
+    String(activeStoreName ?? "No active store").trim() ||
+    "No active store";
+
+  const headerDateLabel = new Intl.DateTimeFormat(
+    "en",
+    {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }
+  )
+    .format(new Date())
+    .toUpperCase();
 
   return (
-    <View style={{ marginBottom: 6 }}>
-      <Text style={{ fontSize: 30, fontWeight: "900", color: UI.text, letterSpacing: 0.2 }}>
-        ZETRA BMS
-      </Text>
+    <View style={{ marginBottom: 0 }}>
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+        }}
+      >
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text
+            style={{
+              fontSize: 19,
+              fontWeight: "900",
+              color: UI.text,
+              letterSpacing: 0.1,
+            }}
+            numberOfLines={1}
+          >
+            ZETRA BMS
+          </Text>
 
-      <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 4, fontSize: 16 }}>
-        {isCashier ? "Cashier Dashboard" : "Business Command Center"}
-      </Text>
-
-      <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
-        <View
-          style={{
-            paddingHorizontal: 10,
-            paddingVertical: 6,
-            borderRadius: 999,
-            borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.10)",
-            backgroundColor: "rgba(255,255,255,0.04)",
-          }}
-        >
-          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }} numberOfLines={1}>
-            {orgLabel}
+          <Text
+            style={{
+              color: UI.muted,
+              fontWeight: "800",
+              marginTop: 1,
+              fontSize: 10,
+            }}
+            numberOfLines={1}
+          >
+            {isCashier
+              ? "Cashier Dashboard"
+              : "Business Command Center"}
           </Text>
         </View>
 
         <View
           style={{
-            paddingHorizontal: 10,
-            paddingVertical: 6,
-            borderRadius: 999,
-            borderWidth: 1,
-            borderColor: "rgba(79,140,255,0.22)",
-            backgroundColor: "transparent",
-            maxWidth: "55%",
+            alignItems: "flex-end",
+            marginLeft: 10,
+            transform: [{ translateY: 8 }],
           }}
         >
-          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }} numberOfLines={1}>
-            {storeLabel}
-          </Text>
+          <Pressable
+            onPress={onOpenBusinessProfile}
+            disabled={!onOpenBusinessProfile}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Open Business Profile"
+            style={({ pressed }) => ({
+              width: 48,
+              height: 48,
+              borderRadius: 999,
+              alignItems: "center",
+              justifyContent: "center",
+              overflow: "hidden",
+              backgroundColor: "#EFF6FF",
+              borderWidth: 1,
+              borderColor: "rgba(37,99,235,0.14)",
+              shadowColor: "#0F172A",
+              shadowOpacity: 0.10,
+              shadowRadius: 5,
+              shadowOffset: {
+                width: 0,
+                height: 2,
+              },
+              elevation: 2,
+              opacity:
+                onOpenBusinessProfile && pressed
+                  ? 0.84
+                  : 1,
+              transform: [
+                {
+                  scale:
+                    onOpenBusinessProfile && pressed
+                      ? 0.97
+                      : 1,
+                },
+              ],
+            })}
+          >
+            {organizationLogoUrl ? (
+              <Image
+                source={{ uri: organizationLogoUrl }}
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 999,
+                }}
+                resizeMode="cover"
+              />
+            ) : (
+              <SafeIcon
+                name="person-outline"
+                size={20}
+                color="#2563EB"
+              />
+            )}
+          </Pressable>
+
+          {!isCashier ? (
+            <Text
+              style={{
+                color: "#64748B",
+                fontWeight: "900",
+                fontSize: 8,
+                letterSpacing: 0.35,
+                marginTop: 2,
+              }}
+              numberOfLines={1}
+            >
+              {headerDateLabel}
+            </Text>
+          ) : null}
         </View>
+      </View>
+
+      <View
+        style={{
+          flexDirection: "row",
+          gap: 5,
+          marginTop: 2,
+        }}
+      >
+        {onOpenOrgSwitcher && !isCashier ? (
+          <Pressable
+            onPress={onOpenOrgSwitcher}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Switch Organization or Workspace"
+            style={({ pressed }) => ({
+              width: "54%",
+              maxWidth: 220,
+              minWidth: 0,
+              paddingHorizontal: 9,
+              paddingVertical: 4,
+              borderRadius: 999,
+              borderWidth: 1,
+              borderColor: "rgba(37,99,235,0.16)",
+              backgroundColor: pressed ? "#DBEAFE" : "#F8FAFC",
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 5,
+              opacity: pressed ? 0.92 : 1,
+            })}
+          >
+            <SafeIcon
+              name="swap-horizontal"
+              size={11}
+              color="#2563EB"
+            />
+
+            <Text
+              style={{
+                flex: 1,
+                minWidth: 0,
+                color: UI.text,
+                fontWeight: "900",
+                fontSize: 9,
+              }}
+              numberOfLines={1}
+            >
+              {orgLabel}
+            </Text>
+
+            <SafeIcon
+              name="chevron-down"
+              size={10}
+              color="#64748B"
+            />
+          </Pressable>
+        ) : (
+          <View
+            style={{
+              flex: 1,
+              minWidth: 0,
+              paddingHorizontal: 9,
+              paddingVertical: 4,
+              borderRadius: 999,
+              borderWidth: 1,
+              borderColor: "rgba(148,163,184,0.16)",
+              backgroundColor: "#F8FAFC",
+            }}
+          >
+            <Text
+              style={{
+                color: UI.text,
+                fontWeight: "900",
+                fontSize: 9,
+              }}
+              numberOfLines={1}
+            >
+              {orgLabel}
+            </Text>
+          </View>
+        )}
+
+
       </View>
     </View>
   );
 }
-
 function SubscriptionExpiryHomeStrip({
   reloadKey = 0,
 }: {
@@ -870,7 +1021,7 @@ function SubscriptionExpiryHomeStrip({
   const critical = daysLeft >= 0 && daysLeft <= 7;
   const warning = daysLeft >= 8 && daysLeft <= 14;
 
-  // User requested red warning when roughly 1–2 weeks remain.
+  // User requested red warning when roughly 1ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œ2 weeks remain.
   const colors = isExpired
     ? {
         bg: "#FEE2E2",
@@ -919,7 +1070,7 @@ function SubscriptionExpiryHomeStrip({
     ? `Expired ${expiryLabel}`
     : warning || critical || expiresToday
     ? `Renew before ${expiryLabel}`
-    : `Active • Expires ${expiryLabel}`;
+    : `Active | Expires ${expiryLabel}`;
 
   const openSubscription = () => {
     router.push(
@@ -928,34 +1079,31 @@ function SubscriptionExpiryHomeStrip({
   };
 
   return (
-    <View style={{ marginTop: 10 }}>
+    <View style={{ marginTop: 5 }}>
       <Pressable
         onPress={openSubscription}
         // @ts-ignore - web click fallback
         onClick={openSubscription}
-        hitSlop={8}
+        hitSlop={6}
         style={({ pressed }) => ({
-          minHeight: 68,
-          borderRadius: 20,
+          minHeight: 42,
+          borderRadius: 14,
           borderWidth: 1,
           borderColor: colors.border,
           backgroundColor: colors.bg,
-          paddingHorizontal: 14,
-          paddingVertical: 12,
-          opacity: pressed ? 0.92 : 1,
-          transform: pressed
-            ? [{ scale: 0.997 }]
-            : [{ scale: 1 }],
+          paddingHorizontal: 10,
+          paddingVertical: 6,
+          opacity: pressed ? 0.90 : 1,
           flexDirection: "row",
           alignItems: "center",
-          gap: 12,
+          gap: 8,
         })}
       >
         <View
           style={{
-            width: 42,
-            height: 42,
-            borderRadius: 14,
+            width: 30,
+            height: 30,
+            borderRadius: 10,
             alignItems: "center",
             justifyContent: "center",
             backgroundColor:
@@ -976,7 +1124,7 @@ function SubscriptionExpiryHomeStrip({
                 ? "warning-outline"
                 : "hourglass-outline"
             }
-            size={19}
+            size={14}
             color={colors.strong}
           />
         </View>
@@ -986,14 +1134,14 @@ function SubscriptionExpiryHomeStrip({
             style={{
               flexDirection: "row",
               alignItems: "center",
-              gap: 8,
+              gap: 6,
             }}
           >
             <Text
               style={{
                 color: colors.strong,
                 fontWeight: "900",
-                fontSize: 14,
+                fontSize: 11,
                 flexShrink: 1,
               }}
               numberOfLines={1}
@@ -1006,7 +1154,7 @@ function SubscriptionExpiryHomeStrip({
                 style={{
                   color: colors.muted,
                   fontWeight: "900",
-                  fontSize: 10,
+                  fontSize: 8,
                 }}
                 numberOfLines={1}
               >
@@ -1019,8 +1167,8 @@ function SubscriptionExpiryHomeStrip({
             style={{
               color: colors.muted,
               fontWeight: "800",
-              fontSize: 11,
-              marginTop: 4,
+              fontSize: 8,
+              marginTop: 1,
             }}
             numberOfLines={1}
           >
@@ -1030,19 +1178,17 @@ function SubscriptionExpiryHomeStrip({
 
         <View
           style={{
-            paddingHorizontal: 10,
-            paddingVertical: 7,
+            paddingHorizontal: 7,
+            paddingVertical: 4,
             borderRadius: 999,
             backgroundColor: colors.badgeBg,
-            alignItems: "center",
-            justifyContent: "center",
           }}
         >
           <Text
             style={{
               color: colors.badgeText,
               fontWeight: "900",
-              fontSize: 10,
+              fontSize: 8,
             }}
             numberOfLines={1}
           >
@@ -1050,15 +1196,11 @@ function SubscriptionExpiryHomeStrip({
           </Text>
         </View>
 
-        <Text
-          style={{
-            color: colors.strong,
-            fontWeight: "900",
-            fontSize: 18,
-          }}
-        >
-          ›
-        </Text>
+        <SafeIcon
+          name="chevron-forward"
+          size={13}
+          color={colors.strong}
+        />
       </Pressable>
     </View>
   );
@@ -1210,14 +1352,14 @@ function PremiumMetricCard({
           })}
         >
           <Text style={{ color: HOME_CARD_TEXT, fontWeight: "900", fontSize: 15 }}>{ctaLabel}</Text>
-          {footerRight ? footerRight : <Text style={{ color: UI.faint, fontWeight: "900", fontSize: 16 }}>›</Text>}
+          {footerRight ? footerRight : <Text style={{ color: UI.faint, fontWeight: "900", fontSize: 16 }}>ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âº</Text>}
         </Pressable>
       </View>
     </View>
   );
 }
 
-function CompactNotificationsHomeCard() {
+function CompactNotificationsHomeCard({ compactHub = false }: { compactHub?: boolean }) {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const { activeStoreId, activeStoreName, stores } = useOrg();
@@ -1336,155 +1478,387 @@ function CompactNotificationsHomeCard() {
     router.push("/notifications");
   }, [router]);
 
-  return (
-    <View style={{ paddingTop: 14 }}>
+  if (compactHub) {
+    return (
       <Pressable
         onPress={openNotifications}
-        hitSlop={10}
+        hitSlop={7}
+        accessibilityRole="button"
+        accessibilityLabel="Notifications"
         style={({ pressed }) => ({
-          opacity: pressed ? 0.97 : 1,
-          transform: pressed ? [{ scale: 0.997 }] : [{ scale: 1 }],
+          width: 62,
+          alignItems: "center",
+          opacity: pressed ? 0.82 : 1,
         })}
       >
         <View
           style={{
-            gap: 10,
-            padding: 14,
-            borderRadius: 20,
+            width: 36,
+            height: 36,
+            borderRadius: 999,
             borderWidth: 1,
-            borderColor: HOME_PALETTE.notification.border,
-            backgroundColor: HOME_PALETTE.notification.bg,
-            overflow: "hidden",
+            borderColor: "rgba(59,130,246,0.18)",
+                    backgroundColor: "#EFF6FF",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    shadowColor: "#3B82F6",
+                    shadowOpacity: 0.16,
+                    shadowRadius: 6,
+                    shadowOffset: { width: 0, height: 2 },
+                    elevation: 2,
           }}
         >
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <SafeIcon
+            name={unreadCount > 0 ? "notifications" : "notifications-outline"}
+            size={15}
+                    color="#3B82F6"
+          />
+
+          {unreadCount > 0 ? (
             <View
               style={{
-                width: 42,
-                height: 42,
-                borderRadius: 14,
+                position: "absolute",
+                right: -7,
+                top: -7,
+                minWidth: 18,
+                height: 18,
+                paddingHorizontal: 4,
+                borderRadius: 999,
+                backgroundColor: "#EF4444",
+                borderWidth: 2,
+                borderColor: "#FFFFFF",
                 alignItems: "center",
                 justifyContent: "center",
-                borderWidth: 1,
-                borderColor: HOME_PALETTE.notification.border,
-                backgroundColor: HOME_PALETTE.notification.soft,
               }}
             >
-             <SafeIcon
-  name={unreadCount > 0 ? "notifications" : "notifications-outline"}
-  size={18}
-  color={HOME_PALETTE.notification.accent}
-/>
-            </View>
-
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={{ color: HOME_CARD_TEXT, fontWeight: "900", fontSize: 16 }} numberOfLines={1}>
-                Notifications
-              </Text>
               <Text
-                style={{ color: HOME_CARD_MUTED, fontWeight: "800", fontSize: 12, marginTop: 2 }}
-                numberOfLines={1}
+                style={{
+                  color: "#FFFFFF",
+                  fontWeight: "900",
+                  fontSize: 8,
+                }}
               >
-                Alerts, movements, stock entries
+                {unreadCount > 99 ? "99+" : unreadCount}
               </Text>
             </View>
+          ) : null}
+        </View>
 
+        <Text
+          style={{
+            color: "#0F172A",
+            fontWeight: "900",
+            fontSize: 10,
+            marginTop: 2,
+          }}
+          numberOfLines={1}
+        >
+          Notifications
+        </Text>
+
+        <Text
+          style={{
+            color: error ? "#B91C1C" : "#94A3B8",
+            fontWeight: "800",
+            fontSize: 8,
+          }}
+          numberOfLines={1}
+        >
+          {error
+            ? "Sync issue"
+            : loading
+            ? "Checking..."
+            : unreadCount > 0
+            ? `${unreadCount} unread`
+            : "All caught up"}
+        </Text>
+      </Pressable>
+    );
+  }
+
+  return (
+    <View style={{ paddingTop: 5 }}>
+      <Pressable
+        onPress={openNotifications}
+        hitSlop={8}
+        style={({ pressed }) => ({
+          minHeight: 50,
+          borderRadius: 16,
+          borderWidth: 1,
+          borderColor: "rgba(37,99,235,0.12)",
+          backgroundColor: "#FFFFFF",
+          paddingHorizontal: 12,
+          paddingVertical: 9,
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 10,
+          opacity: pressed ? 0.92 : 1,
+          transform: [{ scale: pressed ? 0.995 : 1 }],
+        })}
+      >
+        <View
+          style={{
+            width: 34,
+            height: 34,
+            borderRadius: 13,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "#EFF6FF",
+            borderWidth: 1,
+            borderColor: "rgba(37,99,235,0.12)",
+          }}
+        >
+          <SafeIcon
+            name={unreadCount > 0 ? "notifications" : "notifications-outline"}
+            size={16}
+            color="#2563EB"
+          />
+
+          {unreadCount > 0 ? (
             <View
               style={{
-                minWidth: 40,
-                paddingHorizontal: 10,
-                paddingVertical: 5,
+                position: "absolute",
+                right: -5,
+                top: -5,
+                minWidth: 18,
+                height: 18,
+                paddingHorizontal: 4,
                 borderRadius: 999,
-                borderWidth: 1,
-                borderColor: HOME_PALETTE.notification.border,
-                backgroundColor: HOME_PALETTE.notification.soft,
+                backgroundColor: "#EF4444",
+                borderWidth: 2,
+                borderColor: "#FFFFFF",
                 alignItems: "center",
+                justifyContent: "center",
               }}
             >
-              <Text style={{ color: HOME_CARD_TEXT, fontWeight: "900", fontSize: 11 }}>
-                {loading ? "..." : unreadCount}
-              </Text>
-            </View>
-          </View>
-
-          {!!error && (
-            <Card
-              style={{
-                borderColor: "rgba(201,74,74,0.35)",
-                backgroundColor: "rgba(201,74,74,0.10)",
-                borderRadius: 16,
-                padding: 10,
-              }}
-            >
-              <Text style={{ color: UI.danger, fontWeight: "900", fontSize: 12 }}>
-                {error}
-              </Text>
-            </Card>
-          )}
-
-          <View style={{ flexDirection: "row", gap: 10 }}>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: HOME_CARD_MUTED, fontWeight: "800", fontSize: 11 }}>Unread</Text>
-              <Text style={{ color: HOME_CARD_TEXT, fontWeight: "900", fontSize: 18, marginTop: 2 }}>
-                {unreadCount}
-              </Text>
-            </View>
-
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: HOME_CARD_MUTED, fontWeight: "800", fontSize: 11 }}>This Store</Text>
-              <Text style={{ color: HOME_CARD_TEXT, fontWeight: "900", fontSize: 18, marginTop: 2 }}>
-                {activeStoreUnread}
-              </Text>
               <Text
-                style={{ color: HOME_CARD_FAINT, fontWeight: "800", fontSize: 11, marginTop: 2 }}
-                numberOfLines={1}
+                style={{
+                  color: "#FFFFFF",
+                  fontWeight: "900",
+                  fontSize: 8,
+                }}
               >
-                {activeStoreName ?? "Active store only"}
+                {unreadCount > 99 ? "99+" : unreadCount}
               </Text>
             </View>
+          ) : null}
+        </View>
 
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: HOME_CARD_MUTED, fontWeight: "800", fontSize: 11 }}>Receipts</Text>
-              <Text style={{ color: HOME_CARD_TEXT, fontWeight: "900", fontSize: 18, marginTop: 2 }}>
-                {receipts.length}
-              </Text>
-              <Text
-                style={{ color: HOME_CARD_FAINT, fontWeight: "800", fontSize: 11, marginTop: 2 }}
-                numberOfLines={1}
-              >
-                recently loaded
-              </Text>
-            </View>
-          </View>
-
-          <Pressable
-            onPress={openNotifications}
-            hitSlop={10}
-            style={({ pressed }) => ({
-              flexDirection: "row",
-              alignItems: "center",
-              opacity: pressed ? 0.92 : 1,
-              paddingTop: 2,
-            })}
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text
+            style={{
+              color: "#0F172A",
+              fontWeight: "900",
+              fontSize: 13,
+            }}
+            numberOfLines={1}
           >
-            <Text style={{ color: HOME_CARD_TEXT, fontWeight: "900", fontSize: 13 }}>
-              Open Notification Center
-            </Text>
-            <View style={{ flex: 1 }} />
-            <Text style={{ color: HOME_CARD_MUTED, fontWeight: "900", fontSize: 16 }}>›</Text>
-          </Pressable>
+            Notifications
+          </Text>
+
+          <Text
+            style={{
+              color: error ? "#B91C1C" : "#64748B",
+              fontWeight: "700",
+              fontSize: 10,
+              marginTop: 2,
+            }}
+            numberOfLines={1}
+          >
+            {error
+              ? "Notification sync unavailable"
+              : loading
+              ? "Checking latest alerts..."
+              : unreadCount > 0
+              ? `${unreadCount} unread ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ ${activeStoreUnread} this store`
+              : receipts.length > 0
+              ? `${receipts.length} recent notifications`
+              : "You're all caught up"}
+          </Text>
+        </View>
+
+        <View
+          style={{
+            width: 28,
+            height: 28,
+            borderRadius: 999,
+            backgroundColor: "#F8FAFC",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <SafeIcon
+            name="chevron-forward"
+            size={16}
+            color="#64748B"
+          />
         </View>
       </Pressable>
     </View>
   );
 }
 
+function MobileWebFinanceShortcut() {
+  const router = useRouter();
+  const { width } = useWindowDimensions();
+
+  const isNarrow = width < 360;
+
+  const openFinance = useCallback(() => {
+    router.push("/finance/live" as any);
+  }, [router]);
+
+  return (
+    <View
+      style={{
+        marginBottom: 6,
+        borderRadius: 20,
+        backgroundColor: "#FFFFFF",
+        borderWidth: 1,
+        borderColor: "#E8EEF5",
+        paddingHorizontal: 12,
+        paddingTop: 8,
+        paddingBottom: 8,
+        overflow: "hidden",
+      }}
+    >
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 3,
+        }}
+      >
+        <View>
+          <Text
+            style={{
+              color: "#64748B",
+              fontSize: 10,
+              fontWeight: "800",
+              letterSpacing: 0.7,
+            }}
+          >
+            BUSINESS HUB
+          </Text>
+
+          <Text
+            style={{
+              color: "#0F172A",
+              fontSize: 18,
+              fontWeight: "900",
+              marginTop: 1,
+            }}
+          >
+            FINANCE
+          </Text>
+        </View>
+
+        <View
+          style={{
+            borderRadius: 999,
+            backgroundColor: "#ECFDF5",
+            paddingHorizontal: 9,
+            paddingVertical: 5,
+          }}
+        >
+          <Text
+            style={{
+              color: "#047857",
+              fontSize: 9,
+              fontWeight: "900",
+              letterSpacing: 0.5,
+            }}
+          >
+            LIVE
+          </Text>
+        </View>
+      </View>
+
+      <Pressable
+        onPress={openFinance}
+        {...({ onClick: openFinance } as any)}
+        accessibilityRole="button"
+        style={({ pressed }) => ({
+          minHeight: isNarrow ? 88 : 94,
+          borderRadius: 18,
+          backgroundColor: pressed ? "#F1F5F9" : "#F8FAFC",
+          borderWidth: 1,
+          borderColor: "#E2E8F0",
+          alignItems: "center",
+          justifyContent: "center",
+          paddingHorizontal: 18,
+          paddingVertical: 8,
+        })}
+      >
+        <View
+          pointerEvents="none"
+          style={{
+            width: isNarrow ? 48 : 52,
+            height: isNarrow ? 48 : 52,
+            borderRadius: 999,
+            backgroundColor: "#FFFFFF",
+            borderWidth: 1,
+            borderColor: "#DCE7F1",
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: 5,
+          }}
+        >
+          <Ionicons
+            name="stats-chart-outline"
+            size={isNarrow ? 20 : 22}
+            color="#0F766E"
+          />
+        </View>
+
+        <Text
+          pointerEvents="none"
+          style={{
+            color: "#0F172A",
+            fontSize: 12.5,
+            fontWeight: "900",
+            textAlign: "center",
+          }}
+        >
+          Business Finance
+        </Text>
+
+        <Text
+          pointerEvents="none"
+          style={{
+            color: "#64748B",
+            fontSize: 10,
+            fontWeight: "700",
+            textAlign: "center",
+            marginTop: 3,
+          }}
+        >
+          Tap to view sales, expenses and profit
+        </Text>
+
+        <Text
+          pointerEvents="none"
+          style={{
+            color: "#2563EB",
+            fontSize: 11,
+            fontWeight: "900",
+            marginTop: 4,
+          }}
+        >
+          View Details â†’
+        </Text>
+      </Pressable>
+    </View>
+  );
+}
 function CompactFinanceCardHomePreview() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const org = useOrg();
   const isDesktopWeb = isDesktopWebEnv(width);
   const isMobileWeb = isMobileWebEnv(width);
+  const isNarrowHome = width < 360;
 
   if (isDesktopWeb) return null;
 
@@ -1834,7 +2208,7 @@ function CompactFinanceCardHomePreview() {
       if (!silent) setLoading(true);
       setErr(null);
 
-      // ✅ reset preview state before each fresh load
+      // ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ reset preview state before each fresh load
       // this prevents stale profit/sales/expenses from a previous successful request
       setSalesRow({
         total: 0,
@@ -2018,277 +2392,477 @@ function CompactFinanceCardHomePreview() {
     void load({ silent: true });
   }, !!orgId && !!storeId, AUTO_REFRESH_MS);
 
-  const financeTitle = isStaffView
-    ? canStaffSeeExpenseFinance
-      ? "Finance"
-      : "Sales Summary"
-    : "Finance";
+  const fmtHomeMoney = useCallback(
+    (n: number) =>
+      formatMoney(n, {
+        currency: displayCurrency,
+        locale: displayLocale,
+      }).replace(/\s+/g, " "),
+    [displayCurrency, displayLocale]
+  );
 
-  const financeSubtitle = `Store: ${storeName}`;
+  const expenseBreakdownTotal =
+    toNum(expenseByChannel.cash) +
+    toNum(expenseByChannel.bank) +
+    toNum(expenseByChannel.mobile);
 
-  const financeCtaLabel = isStaffView
-    ? canStaffSeeExpenseFinance
-      ? "Open Expenses"
-      : "Open Sales Summary"
-    : "Open Finance";
+  const effectiveExpenseTotal =
+    isStaffView && canStaffSeeExpenseFinance
+      ? Math.max(toNum(expRow.total), expenseBreakdownTotal)
+      : toNum(expRow.total);
 
-  const financeError =
-    isStaffView
-      ? canStaffSeeExpenseFinance
-        ? null
-        : null
-      : err;
+  const availableCashNum = subtractFloor(
+    pay.cash + collections.cash,
+    expenseByChannel.cash
+  );
 
-  const body = useMemo(() => {
-    const fmtMoney = (n: number) =>
-      formatMoney(n, { currency: displayCurrency, locale: displayLocale }).replace(/\s+/g, " ");
+  const availableBankNum = subtractFloor(
+    pay.bank + collections.bank,
+    expenseByChannel.bank
+  );
 
-    const expenseBreakdownTotal =
-      toNum(expenseByChannel.cash) +
-      toNum(expenseByChannel.bank) +
-      toNum(expenseByChannel.mobile);
+  const availableMobileNum = subtractFloor(
+    pay.mobile + collections.mobile,
+    expenseByChannel.mobile
+  );
 
-    const effectiveExpenseTotal =
-      isStaffView && canStaffSeeExpenseFinance
-        ? Math.max(toNum(expRow.total), expenseBreakdownTotal)
-        : toNum(expRow.total);
+  const totalMoneyInNum =
+    availableCashNum +
+    availableBankNum +
+    availableMobileNum;
 
-    const totalSales = fmtMoney(salesRow.total);
-    const totalExpenses = fmtMoney(effectiveExpenseTotal);
-    const netProfit = isOwner ? fmtMoney(profitRow.net) : "—";
+  const openFinance = useCallback(() => {
+    if (isStaffView && canStaffSeeExpenseFinance) {
+      router.push("/(tabs)/sales/expenses" as any);
+      return;
+    }
 
-    const orders = String(salesRow.orders ?? 0);
-    const avg =
-      salesRow.orders > 0 ? fmtMoney(salesRow.total / Math.max(1, salesRow.orders)) : "—";
+    const dates = rangeToDates("today");
 
-    const availableCashNum = subtractFloor(pay.cash + collections.cash, expenseByChannel.cash);
-    const availableBankNum = subtractFloor(pay.bank + collections.bank, expenseByChannel.bank);
-    const availableMobileNum = subtractFloor(
-      pay.mobile + collections.mobile,
-      expenseByChannel.mobile
-    );
+    router.push({
+      pathname: "/finance/history",
+      params: {
+        mode: "SALES",
+        scope: "STORE",
+        range: "today",
+        from: dates.from,
+        to: dates.to,
+      } as any,
+    } as any);
+  }, [router, isStaffView, canStaffSeeExpenseFinance]);
 
-    const totalMoneyInNum = availableCashNum + availableBankNum + availableMobileNum;
-    const totalMoneyIn = fmtMoney(totalMoneyInNum);
-
-    const rowStyle = isMobileWeb
-      ? ({ flexDirection: "row", flexWrap: "wrap", gap: 12 } as const)
-      : ({ flexDirection: "row", gap: 12 } as const);
-
-    const cellStyle = isMobileWeb
-      ? ({ flexBasis: "47%" } as const)
-      : ({ flex: 1 } as const);
-
-    return (
-      <View style={{ gap: 10, paddingTop: 2 }}>
-        {isStaffView ? (
-          canStaffSeeExpenseFinance ? (
-            <>
-              <View style={rowStyle}>
-                <View style={cellStyle}>
-                  <MiniStat
-                    label="Sales"
-                    value={totalSales}
-                    hint="today"
-                    multilineValue={isMobileWeb}
-                  />
-                </View>
-                <View style={cellStyle}>
-                  <MiniStat
-                    label="Expenses"
-                    value={totalExpenses}
-                    hint="today"
-                    multilineValue={isMobileWeb}
-                  />
-                </View>
-                <View style={cellStyle}>
-                  <MiniStat
-                    label="Money In"
-                    value={totalMoneyIn}
-                    hint="after expenses"
-                    multilineValue={isMobileWeb}
-                  />
-                </View>
-              </View>
-
-              <View style={rowStyle}>
-                <View style={cellStyle}>
-                  <MiniStat label="Orders" value={orders} hint="completed" />
-                </View>
-                <View style={cellStyle}>
-                  <MiniStat
-                    label="Avg/Order"
-                    value={avg.toString().replace(/\s+/g, " ")}
-                    multilineValue={isMobileWeb}
-                  />
-                </View>
-                <View style={cellStyle}>
-                  <MiniStat label="Access" value="Expense Enabled" hint="staff finance view" />
-                </View>
-              </View>
-            </>
-          ) : (
-            <>
-              <View style={rowStyle}>
-                <View style={cellStyle}>
-                  <MiniStat
-                    label="Sales"
-                    value={totalSales}
-                    hint="today"
-                    multilineValue={isMobileWeb}
-                  />
-                </View>
-                <View style={cellStyle}>
-                  <MiniStat
-                    label="Money In"
-                    value={totalMoneyIn}
-                    hint="today"
-                    multilineValue={isMobileWeb}
-                  />
-                </View>
-                <View style={cellStyle}>
-                  <MiniStat label="Orders" value={orders} hint="completed" />
-                </View>
-              </View>
-
-              <View style={rowStyle}>
-                <View style={cellStyle}>
-                  <MiniStat
-                    label="Avg/Order"
-                    value={avg.toString().replace(/\s+/g, " ")}
-                    multilineValue={isMobileWeb}
-                  />
-                </View>
-                <View style={cellStyle}>
-                  <MiniStat label="Store View" value="Active" hint="sales summary" />
-                </View>
-                <View style={cellStyle}>
-                  <MiniStat label="Access" value="Standard" hint="staff view" />
-                </View>
-              </View>
-            </>
-          )
-        ) : (
-          <>
-            <View style={rowStyle}>
-              <View style={cellStyle}>
-                <MiniStat
-                  label="Sales"
-                  value={totalSales}
-                  hint="today"
-                  multilineValue={isMobileWeb}
-                />
-              </View>
-              <View style={cellStyle}>
-                <MiniStat
-                  label="Expenses"
-                  value={totalExpenses}
-                  hint="today"
-                  multilineValue={isMobileWeb}
-                />
-              </View>
-              <View style={cellStyle}>
-                <MiniStat
-                  label="Net Profit"
-                  value={netProfit}
-                  hint={isOwner ? "after expenses" : "owner-only"}
-                  multilineValue={isMobileWeb}
-                />
-              </View>
-            </View>
-
-            <View style={rowStyle}>
-              <View style={cellStyle}>
-                <MiniStat label="Orders" value={orders} />
-              </View>
-              <View style={cellStyle}>
-                <MiniStat
-                  label="Avg/Order"
-                  value={avg.toString().replace(/\s+/g, " ")}
-                  multilineValue={isMobileWeb}
-                />
-              </View>
-              <View style={cellStyle}>
-                <MiniStat
-                  label="Money In"
-                  value={totalMoneyIn}
-                  hint="after expenses"
-                  multilineValue={isMobileWeb}
-                />
-              </View>
-            </View>
-          </>
-        )}
-      </View>
-    );
-  }, [
-    salesRow,
-    expRow,
-    profitRow,
-    pay,
-    collections,
-    expenseByChannel,
-    displayCurrency,
-    displayLocale,
-    isOwner,
-    isStaffView,
-    canStaffSeeExpenseFinance,
-    isMobileWeb,
-  ]);
-
+  const hubActions = useMemo(
+    () => [
+      {
+        key: "credit",
+        label: "Credit",
+        hint: "Customers",
+        icon: "people-outline",
+        color: "#F97316",
+        softColor: "#FFF7ED",
+        borderColor: "rgba(249,115,22,0.20)",
+        shadowColor: "#F97316",
+        onPress: () => router.push("/(tabs)/credit" as any),
+      },
+    ],
+    [router]
+  );
   return (
-   <PremiumMetricCard
-      title={financeTitle}
-      subtitle={financeSubtitle}
-      iconName="bar-chart-outline"
-      loading={loading || staffExpenseLoading}
-      badgeText={
-        isOwnerOrAdmin
-          ? "LIVE"
-          : canStaffSeeExpenseFinance
-          ? "EXPENSE"
-          : "STORE"
-      }
-      error={financeError}
-      ctaLabel={financeCtaLabel}
-      mobileWebLite={isMobileWeb}
-      tone="finance"
-      onPress={() => {
-        if (isStaffView) {
-          if (canStaffSeeExpenseFinance) {
-            router.push("/(tabs)/sales/expenses" as any);
-            return;
-          }
+    <View style={{ marginTop: 8 }}>
+      <View
+        style={{
+          borderRadius: 24,
+          borderWidth: 1,
+          borderColor: "rgba(37,99,235,0.12)",
+          backgroundColor: "#FFFFFF",
+          paddingHorizontal: 12,
+          paddingTop: 10,
+          paddingBottom: 10,
+          overflow: "hidden",
+        }}
+      >
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            marginBottom: 4,
+          }}
+        >
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text
+              style={{
+                color: "#64748B",
+                fontSize: 11,
+                fontWeight: "900",
+                letterSpacing: 0.8,
+              }}
+            >
+              BUSINESS HUB
+            </Text>
 
-          const dates = rangeToDates("today");
-          router.push({
-            pathname: "/finance/history",
-            params: {
-              mode: "SALES",
-              scope: "STORE",
-              range: "today",
-              from: dates.from,
-              to: dates.to,
-            } as any,
-          } as any);
-          return;
-        }
+            <Text
+              style={{
+                color: "#0F172A",
+                fontSize: 14,
+                fontWeight: "900",
+                marginTop: 1,
+              }}
+              numberOfLines={1}
+            >
+              {storeName}
+            </Text>
+          </View>
 
-        const dates = rangeToDates("today");
-        router.push({
-          pathname: "/finance/history",
-          params: {
-            mode: "SALES",
-            scope: "STORE",
-            range: "today",
-            from: dates.from,
-            to: dates.to,
-          } as any,
-        } as any);
-      }}
-    >
-      {body}
-    </PremiumMetricCard>
+          <View
+            style={{
+              paddingHorizontal: 8,
+              paddingVertical: 4,
+              borderRadius: 999,
+              borderWidth: 1,
+              borderColor: "rgba(16,185,129,0.20)",
+              backgroundColor: "rgba(16,185,129,0.07)",
+            }}
+          >
+            <Text
+              style={{
+                color: "#047857",
+                fontWeight: "900",
+                fontSize: 8,
+                letterSpacing: 0.4,
+              }}
+            >
+              {loading || staffExpenseLoading ? "SYNCING" : "LIVE"}
+            </Text>
+          </View>
+        </View>
+
+        <View
+          style={{
+            height: isNarrowHome ? 164 : 174,
+            position: "relative",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <View
+            pointerEvents="none"
+            style={{
+              position: "absolute",
+              width: isNarrowHome ? 148 : 160,
+              height: isNarrowHome ? 148 : 160,
+              borderRadius: 999,
+              borderWidth: 1,
+              borderColor: "rgba(45,212,191,0.20)",
+              backgroundColor: "rgba(240,253,250,0.72)",
+            }}
+          />
+
+          <Pressable
+            onPress={openFinance}
+            hitSlop={8}
+            style={({ pressed }) => ({
+              width: isNarrowHome ? 120 : 130,
+              height: isNarrowHome ? 120 : 130,
+              borderRadius: 999,
+              borderWidth: isNarrowHome ? 4 : 5,
+              borderColor: "rgba(20,184,166,0.18)",
+              backgroundColor: "#FFFFFF",
+              alignItems: "center",
+              justifyContent: "center",
+              paddingHorizontal: 12,
+              shadowColor: "#2563EB",
+              shadowOpacity: 0.10,
+              shadowRadius: 12,
+              shadowOffset: { width: 0, height: 5 },
+              elevation: 4,
+              opacity: pressed ? 0.94 : 1,
+              transform: [{ scale: pressed ? 0.985 : 1 }],
+            })}
+          >
+            <Text
+              style={{
+                color: "#64748B",
+                fontWeight: "900",
+                fontSize: 10,
+                letterSpacing: 0.8,
+              }}
+            >
+              TODAY'S SALES
+            </Text>
+
+            <Text
+              style={{
+                color: "#0F172A",
+                fontWeight: "900",
+                fontSize: isNarrowHome ? 18 : 20,
+                marginTop: 3,
+                textAlign: "center",
+              }}
+              numberOfLines={2}
+              adjustsFontSizeToFit
+              minimumFontScale={0.58}
+            >
+              {loading ? "..." : fmtHomeMoney(salesRow.total)}
+            </Text>
+
+            <Text
+              style={{
+                color: "#64748B",
+                fontWeight: "800",
+                fontSize: 10,
+                marginTop: 2,
+              }}
+            >
+              {salesRow.orders ?? 0} orders
+            </Text>
+
+            <View
+              style={{
+                marginTop: 4,
+                paddingHorizontal: 8,
+                paddingVertical: 3,
+                borderRadius: 999,
+                backgroundColor: "#EFF6FF",
+              }}
+            >
+              <Text
+                style={{
+                  color: "#2563EB",
+                  fontWeight: "900",
+                  fontSize: 10,
+                }}
+              >
+                View Details
+              </Text>
+            </View>
+          </Pressable>
+
+          <View
+            style={{
+              position: "absolute",
+              top: 1,
+              left: 0,
+              right: 0,
+              flexDirection: "row",
+              justifyContent: "space-between",
+              paddingHorizontal: 2,
+            }}
+          >
+            <CompactNotificationsHomeCard compactHub />
+
+            {hubActions.slice(0, 1).map((action) => (
+              <Pressable
+                key={action.key}
+                onPress={action.onPress}
+                hitSlop={7}
+                style={({ pressed }) => ({
+                  width: 62,
+                  alignItems: "center",
+                  opacity: pressed ? 0.82 : 1,
+                })}
+              >
+                <View
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 999,
+                    borderWidth: 1,
+                    borderColor: action.borderColor,
+                    backgroundColor: action.softColor,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    shadowColor: action.shadowColor,
+                    shadowOpacity: 0.16,
+                    shadowRadius: 6,
+                    shadowOffset: { width: 0, height: 2 },
+                    elevation: 2,
+                  }}
+                >
+                  <SafeIcon
+                    name={
+                      action.icon as React.ComponentProps<
+                        typeof Ionicons
+                      >["name"]
+                    }
+                    size={15}
+                    color={action.color}
+                  />
+                </View>
+
+                <Text
+                  style={{
+                    color: "#0F172A",
+                    fontWeight: "900",
+                    fontSize: 10,
+                    marginTop: 2,
+                  }}
+                  numberOfLines={1}
+                >
+                  {action.label}
+                </Text>
+
+                <Text
+                  style={{
+                    color: "#94A3B8",
+                    fontWeight: "800",
+                    fontSize: 8,
+                  }}
+                  numberOfLines={1}
+                >
+                  {action.hint}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+
+        </View>
+
+        <View
+          style={{
+            flexDirection: "row",
+            gap: 5,
+            marginTop: 0,
+          }}
+        >
+          <View
+            style={{
+              flex: 1,
+              borderRadius: 10,
+              backgroundColor: "#F8FAFC",
+              paddingVertical: 5,
+              paddingHorizontal: 6,
+            }}
+          >
+            <Text
+              style={{
+                color: "#94A3B8",
+                fontWeight: "900",
+                fontSize: 8,
+              }}
+            >
+              MONEY IN
+            </Text>
+
+            <Text
+              style={{
+                color: "#0F172A",
+                fontWeight: "900",
+                fontSize: 11,
+                marginTop: 2,
+              }}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.62}
+            >
+              {fmtHomeMoney(totalMoneyInNum)}
+            </Text>
+          </View>
+
+          <View
+            style={{
+              flex: 1,
+              borderRadius: 10,
+              backgroundColor: "#F8FAFC",
+              paddingVertical: 5,
+              paddingHorizontal: 6,
+            }}
+          >
+            <Text
+              style={{
+                color: "#94A3B8",
+                fontWeight: "900",
+                fontSize: 8,
+              }}
+            >
+              EXPENSES
+            </Text>
+
+            <Text
+              style={{
+                color: "#0F172A",
+                fontWeight: "900",
+                fontSize: 11,
+                marginTop: 2,
+              }}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.62}
+            >
+              {isStaffView && !canStaffSeeExpenseFinance
+                ? "Restricted"
+                : fmtHomeMoney(effectiveExpenseTotal)}
+            </Text>
+          </View>
+
+          <View
+            style={{
+              flex: 1,
+              borderRadius: 10,
+              backgroundColor: "#F8FAFC",
+              paddingVertical: 5,
+              paddingHorizontal: 6,
+            }}
+          >
+            <Text
+              style={{
+                color: "#94A3B8",
+                fontWeight: "900",
+                fontSize: 8,
+              }}
+              numberOfLines={1}
+            >
+              {isOwner ? "NET PROFIT" : "AVG / ORDER"}
+            </Text>
+
+            <Text
+              style={{
+                color: "#0F172A",
+                fontWeight: "900",
+                fontSize: 11,
+                marginTop: 2,
+              }}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.62}
+            >
+              {isOwner
+                ? fmtHomeMoney(profitRow.net)
+                : salesRow.orders > 0
+                ? fmtHomeMoney(
+                    salesRow.total / Math.max(1, salesRow.orders)
+                  )
+                : "ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â"}
+            </Text>
+          </View>
+        </View>
+
+        {!!(!isStaffView ? err : null) ? (
+          <View
+            style={{
+              marginTop: 6,
+              borderRadius: 10,
+              borderWidth: 1,
+              borderColor: "rgba(239,68,68,0.18)",
+              backgroundColor: "#FEF2F2",
+              paddingHorizontal: 8,
+              paddingVertical: 6,
+            }}
+          >
+            <Text
+              style={{
+                color: "#B91C1C",
+                fontWeight: "800",
+                fontSize: 9,
+              }}
+              numberOfLines={2}
+            >
+              {!isStaffView ? err : null}
+            </Text>
+          </View>
+        ) : null}
+      </View>
+    </View>
   );
 }
 
@@ -2604,10 +3178,492 @@ function CompactStockValueCardHomePreview() {
   );
 }
 
+function MobileHomeActionTile({
+  label,
+  hint,
+  icon,
+  onPress,
+  tone = "blue",
+}: {
+  label: string;
+  hint: string;
+  icon: React.ComponentProps<typeof Ionicons>["name"];
+  onPress: () => void;
+  tone?: "blue" | "red" | "amber" | "green" | "slate";
+}) {
+  const tones = {
+    blue: {
+      bg: "#EFF6FF",
+      border: "rgba(37,99,235,0.14)",
+      iconBg: "#DBEAFE",
+      icon: "#2563EB",
+    },
+    red: {
+      bg: "#FFF7F7",
+      border: "rgba(239,68,68,0.14)",
+      iconBg: "#FEE2E2",
+      icon: "#DC2626",
+    },
+    amber: {
+      bg: "#FFFBEB",
+      border: "rgba(245,158,11,0.16)",
+      iconBg: "#FEF3C7",
+      icon: "#D97706",
+    },
+    green: {
+      bg: "#ECFDF5",
+      border: "rgba(16,185,129,0.16)",
+      iconBg: "#D1FAE5",
+      icon: "#059669",
+    },
+    slate: {
+      bg: "#F8FAFC",
+      border: "rgba(100,116,139,0.14)",
+      iconBg: "#E2E8F0",
+      icon: "#475569",
+    },
+  } as const;
+
+  const palette = tones[tone];
+
+  return (
+    <Pressable
+      onPress={onPress}
+      hitSlop={6}
+      style={({ pressed }) => ({
+        width: "48.5%",
+        minHeight: 104,
+        borderRadius: 22,
+        borderWidth: 1,
+        borderColor: palette.border,
+        backgroundColor: palette.bg,
+        padding: 14,
+        opacity: pressed ? 0.84 : 1,
+        transform: [{ scale: pressed ? 0.985 : 1 }],
+      })}
+    >
+      <View
+        style={{
+          width: 38,
+          height: 38,
+          borderRadius: 13,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: palette.iconBg,
+        }}
+      >
+        <SafeIcon name={icon} size={19} color={palette.icon} />
+      </View>
+
+      <Text
+        style={{
+          color: "#0F172A",
+          fontWeight: "900",
+          fontSize: 13,
+          marginTop: 10,
+        }}
+        numberOfLines={1}
+      >
+        {label}
+      </Text>
+
+      <Text
+        style={{
+          color: "#64748B",
+          fontWeight: "700",
+          fontSize: 10,
+          lineHeight: 14,
+          marginTop: 3,
+        }}
+        numberOfLines={2}
+      >
+        {hint}
+      </Text>
+    </Pressable>
+  );
+}
+
+// PREMIUM POLISH PASS 1 ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â TYPOGRAPHY
+function MobileBusinessTools({
+  isOwner,
+  onOpenBusinessPosition,
+  onOpenBusinessDebts,
+  onOpenIncomingStock,
+  onOpenStock,
+}: {
+  isOwner: boolean;
+  onOpenBusinessPosition: () => void;
+  onOpenBusinessDebts: () => void;
+  onOpenIncomingStock: () => void;
+  onOpenStock: () => void;
+}) {
+  if (!isOwner) return null;
+
+  const items = [
+    {
+      key: "position",
+      label: "Position",
+      icon: "analytics-outline" as const,
+      color: "#0F766E",
+      softColor: "#F0FDFA",
+      borderColor: "rgba(15,118,110,0.13)",
+      shadowColor: "#14B8A6",
+      onPress: onOpenBusinessPosition,
+    },
+    {
+      key: "debts",
+      label: "Debts",
+      icon: "wallet-outline" as const,
+      color: "#C2410C",
+      softColor: "#FFF7ED",
+      borderColor: "rgba(194,65,12,0.13)",
+      shadowColor: "#F97316",
+      onPress: onOpenBusinessDebts,
+    },
+    {
+      key: "incoming",
+      label: "Incoming",
+      icon: "boat-outline" as const,
+      color: "#0369A1",
+      softColor: "#F0F9FF",
+      borderColor: "rgba(3,105,161,0.13)",
+      shadowColor: "#38BDF8",
+      onPress: onOpenIncomingStock,
+    },
+    {
+      key: "stock-value",
+      label: "Stock Value",
+      icon: "cube-outline" as const,
+      color: "#4F46E5",
+      softColor: "#EEF2FF",
+      borderColor: "rgba(79,70,229,0.13)",
+      shadowColor: "#6366F1",
+      onPress: onOpenStock,
+    },
+  ];
+
+  return (
+    <View
+      style={{
+        marginTop: 5,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: "rgba(148,163,184,0.14)",
+        backgroundColor: "#FFFFFF",
+        paddingHorizontal: 8,
+        paddingVertical: 5,
+      }}
+    >
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          marginBottom: 4,
+        }}
+      >
+        <Text
+          style={{
+            flex: 1,
+            color: "#0F172A",
+            fontWeight: "900",
+            fontSize: 12,
+          }}
+        >
+          Business Tools
+        </Text>
+
+        <Text
+          style={{
+            color: "#94A3B8",
+            fontWeight: "900",
+            fontSize: 9,
+            letterSpacing: 0.4,
+          }}
+        >
+          OWNER
+        </Text>
+      </View>
+
+      <View
+        style={{
+          flexDirection: "row",
+          justifyContent: "space-between",
+        }}
+      >
+        {items.map((item) => (
+          <Pressable
+            key={item.key}
+            onPress={item.onPress}
+            hitSlop={5}
+            style={({ pressed }) => ({
+              width: "24%",
+              alignItems: "center",
+              opacity: pressed ? 0.84 : 1,
+              transform: [
+                { scale: pressed ? 0.97 : 1 },
+              ],
+            })}
+          >
+            <View
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 9,
+                borderWidth: 1,
+                borderColor: item.borderColor,
+                backgroundColor: item.softColor,
+                alignItems: "center",
+                justifyContent: "center",
+                shadowColor: item.shadowColor,
+                shadowOpacity: 0.08,
+                shadowRadius: 3,
+                shadowOffset: { width: 0, height: 1 },
+                elevation: 1,
+              }}
+            >
+              <SafeIcon
+                name={item.icon}
+                size={13}
+                color={item.color}
+              />
+            </View>
+
+            <Text
+              style={{
+                color: "#475569",
+                fontWeight: "900",
+                fontSize: 8.5,
+                lineHeight: 11,
+                marginTop: 3,
+                textAlign: "center",
+              }}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.80}
+            >
+              {item.label}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+    </View>
+  );
+}
+function MobileQuickAccess({
+  onProducts,
+  onCustomers,
+  onExpenses,
+  onReports,
+  onStores,
+  onCredit,
+}: {
+  onProducts: () => void;
+  onCustomers: () => void;
+  onExpenses: () => void;
+  onReports: () => void;
+  onStores: () => void;
+  onCredit: () => void;
+}) {
+  const primaryItems = [
+    {
+      key: "products",
+      label: "Products",
+      icon: "cube-outline" as const,
+      color: "#2563EB",
+      softColor: "#EFF6FF",
+      borderColor: "rgba(37,99,235,0.12)",
+      shadowColor: "#3B82F6",
+      onPress: onProducts,
+    },
+    {
+      key: "customers",
+      label: "CRM",
+      icon: "people-outline" as const,
+      color: "#059669",
+      softColor: "#ECFDF5",
+      borderColor: "rgba(5,150,105,0.14)",
+      shadowColor: "#10B981",
+      onPress: onCustomers,
+    },
+    {
+      key: "expenses",
+      label: "Expenses",
+      icon: "receipt-outline" as const,
+      color: "#E11D48",
+      softColor: "#FFF1F2",
+      borderColor: "rgba(225,29,72,0.13)",
+      shadowColor: "#FB7185",
+      onPress: onExpenses,
+    },
+    {
+      key: "reports",
+      label: "Reports",
+      icon: "bar-chart-outline" as const,
+      color: "#D97706",
+      softColor: "#FFFBEB",
+      borderColor: "rgba(217,119,6,0.15)",
+      shadowColor: "#F59E0B",
+      onPress: onReports,
+    },
+  ];
+
+  const secondaryItems = [
+    {
+      key: "stores",
+      label: "Stores",
+      icon: "storefront-outline" as const,
+      onPress: onStores,
+    },
+    {
+      key: "credit",
+      label: "Credit",
+      icon: "card-outline" as const,
+      onPress: onCredit,
+    },
+  ];
+
+  return (
+    <View
+      style={{
+        marginTop: 5,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: "rgba(148,163,184,0.14)",
+        backgroundColor: "#FFFFFF",
+        paddingHorizontal: 9,
+        paddingVertical: 6,
+      }}
+    >
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          marginBottom: 4,
+        }}
+      >
+        <Text
+          style={{
+            flex: 1,
+            color: "#0F172A",
+            fontWeight: "900",
+            fontSize: 12,
+          }}
+        >
+          Quick Access
+        </Text>
+
+        <View style={{ flexDirection: "row", gap: 5 }}>
+          {secondaryItems.map((item) => (
+            <Pressable
+              key={item.key}
+              onPress={item.onPress}
+              hitSlop={5}
+              style={({ pressed }) => ({
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 3,
+                paddingHorizontal: 5,
+                paddingVertical: 3,
+                borderRadius: 999,
+                backgroundColor: pressed
+                  ? "#E2E8F0"
+                  : "#F1F5F9",
+                opacity: pressed ? 0.88 : 1,
+                transform: [
+                  { scale: pressed ? 0.97 : 1 },
+                ],
+              })}
+            >
+              <SafeIcon
+                name={item.icon}
+                size={10}
+                color="#64748B"
+              />
+
+              <Text
+                style={{
+                  color: "#64748B",
+                  fontWeight: "900",
+                  fontSize: 8,
+                }}
+              >
+                {item.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
+
+      <View
+        style={{
+          flexDirection: "row",
+          justifyContent: "space-between",
+        }}
+      >
+        {primaryItems.map((item) => (
+          <Pressable
+            key={item.key}
+            onPress={item.onPress}
+            hitSlop={5}
+            style={({ pressed }) => ({
+              width: "24%",
+              alignItems: "center",
+              opacity: pressed ? 0.84 : 1,
+              transform: [
+                { scale: pressed ? 0.97 : 1 },
+              ],
+            })}
+          >
+            <View
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 10,
+                borderWidth: 1,
+                borderColor: item.borderColor,
+                backgroundColor: item.softColor,
+                alignItems: "center",
+                justifyContent: "center",
+                shadowColor: item.shadowColor,
+                shadowOpacity: 0.10,
+                shadowRadius: 4,
+                shadowOffset: { width: 0, height: 2 },
+                elevation: 1,
+              }}
+            >
+              <SafeIcon
+                name={item.icon}
+                size={14}
+                color={item.color}
+              />
+            </View>
+
+            <Text
+              style={{
+                color: "#334155",
+                fontWeight: "900",
+                fontSize: 9,
+                lineHeight: 12,
+                marginTop: 3,
+                textAlign: "center",
+              }}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.82}
+            >
+              {item.label}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+    </View>
+  );
+}
 function ZetraAiCard({ onOpen }: { onOpen: () => void }) {
   const { width } = useWindowDimensions();
   const isDesktopWeb = isDesktopWebEnv(width);
   const isMobileWeb = isMobileWebEnv(width);
+  const isNarrowAi = width < 360;
 
   const tips = useMemo(
     () => [
@@ -2706,115 +3762,156 @@ function ZetraAiCard({ onOpen }: { onOpen: () => void }) {
   };
 
   return (
-    <View style={{ paddingTop: 14 }}>
+    <View style={{ paddingTop: 5 }}>
       <Pressable
         onPress={onOpen}
-        hitSlop={10}
+        hitSlop={8}
         style={({ pressed }) => ({
-          opacity: pressed ? 0.97 : 1,
-          transform: pressed ? [{ scale: 0.997 }] : [{ scale: 1 }],
+          minHeight: 78,
+          borderRadius: 19,
+          paddingHorizontal: 12,
+          paddingVertical: 10,
+          flexDirection: "row",
+          alignItems: "center",
+          gap: isNarrowAi ? 7 : 10,
+          backgroundColor: "#0F766E",
+          borderWidth: 1,
+          borderColor: "rgba(167,243,208,0.30)",
+          shadowColor: "#0F766E",
+          shadowOpacity: 0.18,
+          shadowRadius: 12,
+          shadowOffset: { width: 0, height: 6 },
+          elevation: 4,
+          opacity: pressed ? 0.96 : 1,
+          transform: [
+            { scale: pressed ? 0.992 : 1 },
+          ],
         })}
       >
         <View
           style={{
-            padding: 0,
-            overflow: "hidden",
-            borderRadius: 22,
+            width: isNarrowAi ? 40 : 46,
+            height: isNarrowAi ? 40 : 46,
+            borderRadius: isNarrowAi ? 12 : 14,
+            backgroundColor: "rgba(255,255,255,0.13)",
             borderWidth: 1,
-            borderColor: HOME_PALETTE.ai.border,
-            backgroundColor: HOME_PALETTE.ai.bg,
+            borderColor: "rgba(209,250,229,0.30)",
+            alignItems: "center",
+            justifyContent: "center",
           }}
         >
-          <View style={{ position: "relative" }}>
-            
-            <View
-              pointerEvents="none"
+          <Text
+            style={{
+              color: "#FFFFFF",
+              fontWeight: "900",
+              fontSize: 14,
+            }}
+          >
+            AI
+          </Text>
+        </View>
+
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 5,
+            }}
+          >
+            <Text
               style={{
-                position: "absolute",
-                left: 0,
-                right: 0,
-                top: 0,
-                height: 1,
-                backgroundColor: UI.borderSoft,
+                color: "#FFFFFF",
+                fontWeight: "900",
+                fontSize: 14,
               }}
-            />
+              numberOfLines={1}
+            >
+              ZETRA AI
+            </Text>
 
-            <View style={{ padding: 14, gap: 10 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                <View style={{ position: "relative" }}>
-                  
-                  <View
-                    style={{
-                     width: 42,
-height: 38,
-                      borderRadius: 999,
-                      borderWidth: 1,
-                      borderColor: "rgba(16,185,129,0.36)",
-                      backgroundColor: "rgba(79,140,255,0.14)",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <Text style={{ color: HOME_CARD_TEXT, fontWeight: "900", fontSize: 14 }}>AI</Text>
-                  </View>
-                  
-                </View>
+            <View
+              style={{
+                paddingHorizontal: 7,
+                paddingVertical: 2,
+                borderRadius: 999,
+                backgroundColor: "rgba(209,250,229,0.15)",
+                borderWidth: 1,
+                borderColor: "rgba(209,250,229,0.18)",
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 4,
+              }}
+            >
+              <View
+                style={{
+                  width: 5,
+                  height: 5,
+                  borderRadius: 999,
+                  backgroundColor: "#A7F3D0",
+                }}
+              />
 
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={{ color: HOME_CARD_TEXT, fontWeight: "900", fontSize: 16 }} numberOfLines={1}>
-                    ZETRA AI
-                  </Text>
-                  <Text style={{ color: HOME_CARD_MUTED, fontWeight: "800", marginTop: 3 }} numberOfLines={1}>
-                    Business Intelligence Engine
-                  </Text>
-                </View>
-
-                <View
-                  style={{
-                    paddingHorizontal: 10,
-                    paddingVertical: 6,
-                    borderRadius: 999,
-                    borderWidth: 1,
-                    borderColor: "rgba(79,140,255,0.26)",
-                    backgroundColor: "rgba(79,140,255,0.10)",
-                  }}
-                >
-                  <Text style={{ color: HOME_CARD_TEXT, fontWeight: "900", fontSize: 11, letterSpacing: 0.3 }}>
-                    LIVE • COPILOT
-                  </Text>
-                </View>
-              </View>
-
-              <View style={{ height: 1, backgroundColor: UI.borderSoft, marginVertical: -2 }} />
-
-              <View style={{ gap: 6 }}>
-                <Text style={{ color: HOME_CARD_FAINT, fontWeight: "900", fontSize: 12, letterSpacing: 0.4 }}>
-                  SMART INSIGHT
-                </Text>
-
-              <Animated.Text
-  style={{ opacity: fade, color: HOME_CARD_TEXT, fontWeight: "900", fontSize: 13, lineHeight: 18 }}
-  numberOfLines={1}
->
-              
-                  {preview}
-                </Animated.Text>
-
-                <Text style={{ color: HOME_CARD_MUTED, fontWeight: "800" }} numberOfLines={1}>
-                  SW/EN auto • mwongozo wa kutumia ZETRA BMS • maamuzi ya biashara
-                </Text>
-              </View>
-
-              <View style={{ flexDirection: "row", gap: 10, paddingTop: 2 }}>
-                <CtaButton title="Ask AI" kind="primary" onPress={onOpen} />
-                <CtaButton title="View Insights" kind="ghost" onPress={onOpen} />
-              </View>
-
-        <Text style={{ color: HOME_CARD_FAINT, fontWeight: "800", fontSize: 11 }} numberOfLines={1}>
-  Smart tips • Business guidance • Fast decisions
-</Text>
+              <Text
+                style={{
+                  color: "#D1FAE5",
+                  fontWeight: "900",
+                  fontSize: 8,
+                  letterSpacing: 0.35,
+                }}
+              >
+                {isNarrowAi ? "LIVE" : "LIVE MONITORING"}
+              </Text>
             </View>
           </View>
+
+          <Animated.Text
+            style={{
+              opacity: fade,
+              color: "rgba(255,255,255,0.86)",
+              fontWeight: "700",
+              fontSize: 10,
+              lineHeight: 14,
+              marginTop: 4,
+            }}
+            numberOfLines={2}
+          >
+            {preview}
+          </Animated.Text>
+        </View>
+
+        <View
+          style={{
+            paddingHorizontal: 10,
+            height: 32,
+            borderRadius: 999,
+            backgroundColor: "#FFFFFF",
+            alignItems: "center",
+            justifyContent: "center",
+            flexDirection: "row",
+            gap: 4,
+            shadowColor: "#052E2B",
+            shadowOpacity: 0.10,
+            shadowRadius: 4,
+            shadowOffset: { width: 0, height: 2 },
+            elevation: 1,
+          }}
+        >
+          <Text
+            style={{
+              color: "#0F766E",
+              fontWeight: "900",
+              fontSize: 10,
+            }}
+          >
+            Ask AI
+          </Text>
+
+          <SafeIcon
+            name="arrow-forward"
+            size={12}
+            color="#0F766E"
+          />
         </View>
       </Pressable>
     </View>
@@ -2870,15 +3967,15 @@ function CashierQuickHome() {
       </Text>
 
       <Text style={{ color: UI.faint, fontWeight: "800" }}>
-        Organization: <Text style={{ color: UI.text, fontWeight: "900" }}>{activeOrgName ?? "—"}</Text>
+        Organization: <Text style={{ color: UI.text, fontWeight: "900" }}>{activeOrgName ?? "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â"}</Text>
       </Text>
 
       <Text style={{ color: UI.faint, fontWeight: "800" }}>
-        Role: <Text style={{ color: UI.text, fontWeight: "900" }}>{activeRole ?? "—"}</Text>
+        Role: <Text style={{ color: UI.text, fontWeight: "900" }}>{activeRole ?? "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â"}</Text>
       </Text>
 
       <Text style={{ color: UI.faint, fontWeight: "800" }}>
-        Active Store: <Text style={{ color: UI.text, fontWeight: "900" }}>{activeStoreName ?? "—"}</Text>
+        Active Store: <Text style={{ color: UI.text, fontWeight: "900" }}>{activeStoreName ?? "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â"}</Text>
       </Text>
 
       {!!handoffError && (
@@ -2969,9 +4066,9 @@ function WorkspaceCard({
 }) {
   const { width } = useWindowDimensions();
   const isMobileWeb = isMobileWebEnv(width);
-  const roleLabel = String(activeRole ?? "—").trim() || "—";
-  const orgLabel = String(activeOrgName ?? "—").trim() || "—";
-  const storeLabel = String(activeStoreName ?? "—").trim() || "—";
+  const roleLabel = String(activeRole ?? "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â").trim() || "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â";
+  const orgLabel = String(activeOrgName ?? "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â").trim() || "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â";
+  const storeLabel = String(activeStoreName ?? "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â").trim() || "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â";
 
   return (
     <View style={{ marginTop: 14 }}>
@@ -3561,7 +4658,7 @@ backgroundColor:
     letterSpacing: 0.3,
   }}
 >
-  {netAfterExpenses < 0 ? "⚠ RISK WARNING" : "SMART READING"}
+  {netAfterExpenses < 0 ? "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â  RISK WARNING" : "SMART READING"}
 </Text>
         <Text style={{ color: DESKTOP_PANEL_MUTED, fontWeight: "800", lineHeight: 20 }}>
           {insightText}
@@ -3942,7 +5039,7 @@ function CapitalRecoverySummaryCard({
         <MiniStat label="Entries" value={String(summary.entries_count ?? 0)} />
         <MiniStat
           label="Last Entry"
-          value={summary.last_entry_at ? fmtLocal(summary.last_entry_at) : "—"}
+          value={summary.last_entry_at ? fmtLocal(summary.last_entry_at) : "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â"}
           multilineValue
         />
       </View>
@@ -4007,8 +5104,8 @@ function CapitalRecoveryActionHero({
         </Text>
 
         <View style={{ flexDirection: "row", gap: 12 }}>
-          <MiniStat label="Organization" value={String(activeOrgName ?? "—")} />
-          <MiniStat label="Recovery Store" value={String(activeStoreName ?? "—")} />
+          <MiniStat label="Organization" value={String(activeOrgName ?? "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â")} />
+          <MiniStat label="Recovery Store" value={String(activeStoreName ?? "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â")} />
         </View>
       </Card>
     </View>
@@ -4293,7 +5390,7 @@ function CapitalRecoveryReportsCard({
 />
 </View>
 
-{/* 🔽 TODAY NET POSITION */}
+{/* ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â°ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â½ TODAY NET POSITION */}
 <View
   style={{
     borderWidth: 1,
@@ -4401,6 +5498,1700 @@ function CapitalRecoveryReportsCard({
      
      
 
+function DesktopMasterHome({
+  width,
+  height,
+  activeOrgName,
+  activeStoreName,
+  activeRole,
+  organizationLogoUrl,
+    financialStoreIds,
+  organizationId,    salesPerformanceStoreId,
+sales,
+  expenses,
+  moneyIn,
+  profit,
+  orders,
+  stockValue,
+  isOwner,
+  loading,
+  notificationUnread,
+  notificationTotal,
+  salesPerformanceMode,
+  salesPerformanceCompare,
+  salesPerformancePoints,
+  salesPerformanceTotal,
+  salesPerformancePreviousTotal,
+  salesPerformanceLoading,
+  salesPerformanceError,
+  onChangeSalesPerformanceMode,
+  onToggleSalesPerformanceCompare,
+  formatValue,
+  onOpenOrgSwitcher,
+  onOpenBusinessProfile,
+  onOpenNotifications,
+  onOpenAI,
+  onOpenSales,
+  onOpenProducts,
+  onOpenExpenses,
+  onOpenStores,
+  onOpenStock,
+  onOpenCustomers,
+  onOpenCredit,
+  onOpenReports,
+  onOpenBusinessStatement,
+}: {
+  width: number;
+  height: number;
+  activeOrgName?: string | null;
+  activeStoreName?: string | null;
+  activeRole?: string | null;
+  organizationLogoUrl?: string | null;
+    financialStoreIds: string[];
+  organizationId?: string | null;
+    salesPerformanceStoreId?: string | null;
+sales: number;
+  expenses: number;
+  moneyIn: number;
+  profit: number;
+  orders: number;
+  stockValue: number;
+  isOwner: boolean;
+  loading: boolean;
+  notificationUnread: number;
+  notificationTotal: number;
+
+  salesPerformanceMode:
+    | "Daily"
+    | "Weekly"
+    | "Monthly";
+
+  salesPerformanceCompare: boolean;
+
+  salesPerformancePoints: Array<{
+    key: string;
+    label: string;
+    value: number;
+    previousValue: number;
+  }>;
+
+  salesPerformanceTotal: number;
+  salesPerformancePreviousTotal: number;
+  salesPerformanceLoading: boolean;
+  salesPerformanceError: string | null;
+
+  onChangeSalesPerformanceMode: (
+    mode: "Daily" | "Weekly" | "Monthly"
+  ) => void;
+
+  onToggleSalesPerformanceCompare: () => void;
+
+  formatValue: (n: number) => string;
+  onOpenOrgSwitcher: () => void;
+  onOpenBusinessProfile: () => void;
+  onOpenNotifications: () => void;
+  onOpenAI: () => void;
+  onOpenSales: () => void;
+  onOpenProducts: () => void;
+  onOpenExpenses: () => void;
+  onOpenStores: () => void;
+  onOpenStock: () => void;
+  onOpenCustomers: () => void;
+  onOpenCredit: () => void;
+  onOpenReports: () => void;
+  onOpenBusinessStatement: () => void;
+}) {
+  const [desktopBusinessHour, setDesktopBusinessHour] =
+    React.useState<number | null>(null);
+
+  const loadDesktopServerTime = React.useCallback(async () => {
+    try {
+      const { data, error } = await supabase.rpc(
+        "get_server_time_v1"
+      );
+
+      if (error) {
+        console.warn(
+          "Desktop server time failed:",
+          error.message
+        );
+        return;
+      }
+
+      const row = Array.isArray(data)
+        ? data[0]
+        : data;
+
+      const hour = Number(
+        row?.business_hour
+      );
+
+      if (
+        Number.isFinite(hour) &&
+        hour >= 0 &&
+        hour <= 23
+      ) {
+        setDesktopBusinessHour(
+          Math.trunc(hour)
+        );
+      }
+    } catch (error) {
+      console.warn(
+        "Desktop server time failed:",
+        error
+      );
+    }
+  }, []);
+
+  React.useEffect(() => {
+    void loadDesktopServerTime();
+
+    const timer = setInterval(() => {
+      void loadDesktopServerTime();
+    }, 5 * 60 * 1000);
+
+    return () => {
+      clearInterval(timer);
+    };
+  }, [loadDesktopServerTime]);
+
+  const desktopGreeting = React.useMemo(() => {
+    const hour = desktopBusinessHour;
+
+    if (hour === null) {
+      return {
+        text: "Welcome!",
+        icon: "time-outline" as const,
+        color: "#64748B",
+      };
+    }
+
+    if (hour >= 5 && hour < 12) {
+      return {
+        text: "Good morning!",
+        icon: "sunny" as const,
+        color: "#FBBF24",
+      };
+    }
+
+    if (hour >= 12 && hour < 17) {
+      return {
+        text: "Good afternoon!",
+        icon: "partly-sunny" as const,
+        color: "#F59E0B",
+      };
+    }
+
+    if (hour >= 17 && hour < 21) {
+      return {
+        text: "Good evening!",
+        icon: "partly-sunny-outline" as const,
+        color: "#F97316",
+      };
+    }
+
+    return {
+      text: "Good night!",
+      icon: "moon" as const,
+      color: "#6366F1",
+    };
+  }, [desktopBusinessHour]);
+
+  const orgLabel =
+    String(activeOrgName ?? "").trim() || "Organization";
+
+  const storeLabel =
+    String(activeStoreName ?? "").trim() || "No active store";
+
+  const roleLabel =
+    String(activeRole ?? "").trim() || "User";
+
+  const todayYmd = useMemo(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+  }, []);
+
+  const [desktopSelectedDate, setDesktopSelectedDate] =
+    useState(todayYmd);
+
+  const desktopSelectedDateLabel = useMemo(() => {
+    const [yearText, monthText, dayText] =
+      desktopSelectedDate.split("-");
+
+    const year = Number(yearText);
+    const month = Number(monthText);
+    const day = Number(dayText);
+
+    const date = new Date(
+      year,
+      month - 1,
+      day
+    );
+
+    if (Number.isNaN(date.getTime())) {
+      return "Today";
+    }
+
+    const formatted = date.toLocaleDateString(
+      "en-GB",
+      {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      }
+    );
+
+    return desktopSelectedDate === todayYmd
+      ? `Today • ${formatted}`
+      : formatted;
+  }, [desktopSelectedDate, todayYmd]);
+
+  const [desktopCalendarOpen, setDesktopCalendarOpen] =
+    useState(false);
+
+  const [desktopCalendarMonth, setDesktopCalendarMonth] =
+    useState(() => {
+      const [yearText, monthText] = todayYmd.split("-");
+
+      return new Date(
+        Number(yearText),
+        Number(monthText) - 1,
+        1
+      );
+    });
+
+  const openDesktopDatePicker = useCallback(() => {
+    const [yearText, monthText] =
+      desktopSelectedDate.split("-");
+
+    setDesktopCalendarMonth(
+      new Date(
+        Number(yearText),
+        Number(monthText) - 1,
+        1
+      )
+    );
+
+    setDesktopCalendarOpen((current) => !current);
+  }, [desktopSelectedDate]);
+
+  const desktopCalendarTitle = useMemo(
+    () =>
+      desktopCalendarMonth.toLocaleDateString(
+        "en-GB",
+        {
+          month: "long",
+          year: "numeric",
+        }
+      ),
+    [desktopCalendarMonth]
+  );
+
+  const desktopCalendarDays = useMemo(() => {
+    const year = desktopCalendarMonth.getFullYear();
+    const month = desktopCalendarMonth.getMonth();
+
+    const firstDay = new Date(year, month, 1);
+
+    // Monday = 0 ... Sunday = 6
+    const leadingDays =
+      (firstDay.getDay() + 6) % 7;
+
+    const daysInMonth =
+      new Date(year, month + 1, 0).getDate();
+
+    const cells: Array<{
+      key: string;
+      day: number | null;
+      ymd: string | null;
+    }> = [];
+
+    for (let index = 0; index < leadingDays; index += 1) {
+      cells.push({
+        key: `empty-${index}`,
+        day: null,
+        ymd: null,
+      });
+    }
+
+    for (let day = 1; day <= daysInMonth; day += 1) {
+      const monthText =
+        String(month + 1).padStart(2, "0");
+
+      const dayText =
+        String(day).padStart(2, "0");
+
+      cells.push({
+        key: `${year}-${monthText}-${dayText}`,
+        day,
+        ymd: `${year}-${monthText}-${dayText}`,
+      });
+    }
+
+    while (cells.length % 7 !== 0) {
+      cells.push({
+        key: `tail-${cells.length}`,
+        day: null,
+        ymd: null,
+      });
+    }
+
+    return cells;
+  }, [desktopCalendarMonth]);
+
+  const moveDesktopCalendarMonth = useCallback(
+    (offset: number) => {
+      setDesktopCalendarMonth((current) => {
+        return new Date(
+          current.getFullYear(),
+          current.getMonth() + offset,
+          1
+        );
+      });
+    },
+    []
+  );
+
+  const selectDesktopCalendarDate = useCallback(
+    (ymd: string) => {
+      setDesktopSelectedDate(ymd);
+      setDesktopCalendarOpen(false);
+    },
+    []
+  );
+
+  const selectDesktopToday = useCallback(() => {
+    setDesktopSelectedDate(todayYmd);
+
+    const [yearText, monthText] =
+      todayYmd.split("-");
+
+    setDesktopCalendarMonth(
+      new Date(
+        Number(yearText),
+        Number(monthText) - 1,
+        1
+      )
+    );
+
+    setDesktopCalendarOpen(false);
+  }, [todayYmd]);
+
+  const contentWide = width >= 1120;
+
+  /*
+   * Desktop-only viewport density.
+   * Keeps the command center inside one laptop/desktop screen.
+   */
+  const desktopCompact = height < 760;
+  const desktopTight = height < 850;
+
+  const desktopOuterGap = desktopCompact ? 4 : desktopTight ? 5 : 7;
+  const desktopSectionGap = desktopCompact ? 4 : desktopTight ? 5 : 7;
+
+  const desktopTopBarHeight = desktopCompact ? 42 : desktopTight ? 46 : 50;
+  const desktopGreetingHeight = desktopCompact ? 42 : desktopTight ? 48 : 54;
+
+  const desktopKpiHeight = desktopCompact ? 62 : desktopTight ? 68 : 76;
+  const desktopActionHeight = desktopCompact ? 44 : desktopTight ? 48 : 54;
+
+  const desktopSalesHeight = desktopCompact ? 188 : desktopTight ? 210 : 236;
+  const desktopChartHeight = desktopCompact ? 72 : desktopTight ? 86 : 100;
+
+  const desktopBottomHeight = desktopCompact ? 88 : desktopTight ? 100 : 112;
+  const desktopAiWidth = width < 1280 ? 278 : width < 1440 ? 300 : 320;
+
+  const ActionCard = ({
+    title,
+    icon,
+    color,
+    soft,
+    onPress,
+  }: {
+    title: string;
+    icon: React.ComponentProps<typeof Ionicons>["name"];
+    color: string;
+    soft: string;
+    onPress?: () => void;
+  }) => (
+    <Pressable
+      onPress={onPress}
+      disabled={!onPress}
+      style={({ pressed }) => ({
+        flex: 1,
+        minWidth: 118,
+        minHeight: desktopActionHeight,
+        borderRadius: 13,
+        borderWidth: 1,
+        borderColor: "rgba(15,23,42,0.07)",
+        backgroundColor: soft,
+        paddingHorizontal: 12,
+        paddingVertical: 11,
+        justifyContent: "center",
+        opacity: pressed ? 0.86 : 1,
+      })}
+    >
+      <Ionicons name={icon} size={23} color={color} />
+
+      <Text
+        style={{
+          color: "#0F172A",
+          fontWeight: "900",
+          fontSize: 12,
+          marginTop: 8,
+        }}
+        numberOfLines={1}
+      >
+        {title}
+      </Text>
+    </Pressable>
+  );
+
+  const KpiCard = ({
+    title,
+    value,
+    icon,
+    soft,
+    iconColor,
+    onPress,
+    hint,
+    primaryAction = false,
+    actionLabel,
+  }: {
+    title: string;
+    value: string;
+    icon: React.ComponentProps<typeof Ionicons>["name"];
+    soft: string;
+    iconColor: string;
+    onPress?: () => void;
+    hint?: string;
+      primaryAction?: boolean;
+    actionLabel?: string;
+  }) => (
+    <Pressable
+      onPress={onPress}
+      disabled={!onPress}
+      style={({ pressed }) => ({
+        flex: 1,
+        minWidth: 135,
+        minHeight: desktopKpiHeight,
+        borderRadius: 12,
+        borderWidth: primaryAction ? 1.5 : 1,
+        borderColor: primaryAction
+          ? pressed
+            ? "rgba(22,163,74,0.46)"
+            : "rgba(22,163,74,0.30)"
+          : "rgba(15,23,42,0.07)",
+        backgroundColor: primaryAction
+          ? pressed
+            ? "#ECFDF3"
+            : "#F0FDF4"
+          : soft,
+        paddingHorizontal: 10,
+        paddingVertical: 8,
+        overflow: "hidden",
+        shadowColor: primaryAction
+          ? "#16A34A"
+          : "#000000",
+        shadowOpacity: primaryAction
+          ? pressed
+            ? 0.10
+            : 0.06
+          : 0,
+        shadowRadius: primaryAction ? 8 : 0,
+        shadowOffset: {
+          width: 0,
+          height: primaryAction ? 3 : 0,
+        },
+        elevation: primaryAction ? 2 : 0,
+        opacity: pressed ? 0.94 : 1,
+        transform: [
+          {
+            scale:
+              pressed && primaryAction
+                ? 0.992
+                : 1,
+          },
+        ],
+      })}
+    >
+      {primaryAction ? (
+        <View
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 12,
+            right: 12,
+            height: 3,
+            borderBottomLeftRadius: 999,
+            borderBottomRightRadius: 999,
+            backgroundColor: "#16A34A",
+            opacity: 0.88,
+          }}
+        />
+      ) : null}
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 10,
+        }}
+      >
+        <View
+          style={{
+            width: 34,
+            height: 34,
+            borderRadius: 10,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: primaryAction
+              ? "#DCFCE7"
+              : "#FFFFFF",
+            borderWidth: primaryAction ? 1 : 0,
+            borderColor: primaryAction
+              ? "rgba(22,163,74,0.18)"
+              : "transparent",
+          }}
+        >
+          <Ionicons
+            name={icon}
+            size={19}
+            color={iconColor}
+          />
+        </View>
+
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text
+            style={{
+              color: "#334155",
+              fontWeight: "900",
+              fontSize: 11,
+            }}
+            numberOfLines={1}
+          >
+            {title}
+          </Text>
+
+          <Text
+            style={{
+              color: "#0F172A",
+              fontWeight: "900",
+              fontSize: desktopCompact ? 15 : desktopTight ? 16 : 17,
+              marginTop: 2,
+            }}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.48}
+          >
+            {value}
+          </Text>
+        </View>
+      </View>
+
+      <View
+        style={{
+          marginTop: desktopCompact ? 4 : 6,
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 6,
+        }}
+      >
+        <Text
+          style={{
+            flex: 1,
+            minWidth: 0,
+            color: primaryAction
+              ? "#475569"
+              : "#64748B",
+            fontWeight: "700",
+            fontSize: 9,
+          }}
+          numberOfLines={1}
+        >
+          {hint || " "}
+        </Text>
+
+        {primaryAction && actionLabel ? (
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 3,
+              paddingHorizontal: 7,
+              paddingVertical: 3,
+              borderRadius: 999,
+              backgroundColor: "#DCFCE7",
+            }}
+          >
+            <Text
+              style={{
+                color: "#15803D",
+                fontWeight: "900",
+                fontSize: 8.5,
+              }}
+              numberOfLines={1}
+            >
+              {actionLabel}
+            </Text>
+
+            <Ionicons
+              name="arrow-forward"
+              size={10}
+              color="#15803D"
+            />
+          </View>
+        ) : null}
+      </View>
+    </Pressable>
+  );
+
+  const InsightRow = ({
+    icon,
+    iconColor,
+    soft,
+    title,
+    subtitle,
+    onPress,
+  }: {
+    icon: React.ComponentProps<typeof Ionicons>["name"];
+    iconColor: string;
+    soft: string;
+    title: string;
+    subtitle: string;
+    onPress?: () => void;
+  }) => (
+    <Pressable
+      onPress={onPress}
+      disabled={!onPress}
+      style={({ pressed }) => ({
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 11,
+        paddingVertical: 11,
+        borderBottomWidth: 1,
+        borderBottomColor: "#EEF2F7",
+        opacity: pressed ? 0.8 : 1,
+      })}
+    >
+      <View
+        style={{
+          width: 38,
+          height: 38,
+          borderRadius: 19,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: soft,
+        }}
+      >
+        <Ionicons
+          name={icon}
+          size={19}
+          color={iconColor}
+        />
+      </View>
+
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text
+          style={{
+            color: "#0F172A",
+            fontWeight: "900",
+            fontSize: 11.5,
+          }}
+          numberOfLines={2}
+        >
+          {title}
+        </Text>
+
+        <Text
+          style={{
+            color: "#64748B",
+            fontWeight: "700",
+            fontSize: 9.5,
+            marginTop: 3,
+          }}
+          numberOfLines={2}
+        >
+          {subtitle}
+        </Text>
+      </View>
+
+      {onPress ? (
+        <Ionicons
+          name="chevron-forward"
+          size={16}
+          color="#64748B"
+        />
+      ) : null}
+    </Pressable>
+  );
+
+  return (
+    <View
+      style={{
+        width: "100%",
+        maxWidth: 1600,
+        height: "100%",
+        maxHeight: height,
+        alignSelf: "center",
+        gap: desktopOuterGap,
+        overflow: "hidden",
+      }}
+    >
+      {/* MASTER REFERENCE TOP BAR */}
+      <View
+        style={{
+          height: desktopTopBarHeight,
+          minHeight: desktopTopBarHeight,
+          borderRadius: 12,
+          borderWidth: 1,
+          borderColor: "rgba(15,23,42,0.07)",
+          backgroundColor: "#FFFFFF",
+          paddingHorizontal: 12,
+          paddingVertical: 8,
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 10,
+        }}
+      >
+        <Pressable
+          onPress={onOpenOrgSwitcher}
+          style={({ pressed }) => ({
+            width: 220,
+            minHeight: 40,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 9,
+            paddingHorizontal: 12,
+            borderRadius: 11,
+            borderWidth: 1,
+            borderColor: "#DDE5EF",
+            backgroundColor: pressed ? "#EFF6FF" : "#FFFFFF",
+          })}
+        >
+          <Ionicons
+            name="business"
+            size={18}
+            color="#2563EB"
+          />
+
+          <Text
+            style={{
+              color: "#0F172A",
+              fontWeight: "900",
+              fontSize: 11.5,
+              flex: 1,
+            }}
+            numberOfLines={1}
+          >
+            {orgLabel}
+          </Text>
+
+          <Ionicons
+            name="chevron-down"
+            size={14}
+            color="#64748B"
+          />
+        </Pressable>
+
+        <Pressable
+          onPress={onOpenStores}
+          style={({ pressed }) => ({
+            width: 220,
+            minHeight: 40,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 9,
+            paddingHorizontal: 12,
+            borderRadius: 11,
+            borderWidth: 1,
+            borderColor: "#DDE5EF",
+            backgroundColor: pressed ? "#F5F3FF" : "#FFFFFF",
+          })}
+        >
+          <Ionicons
+            name="storefront"
+            size={18}
+            color="#7C3AED"
+          />
+
+          <Text
+            style={{
+              color: "#0F172A",
+              fontWeight: "900",
+              fontSize: 11.5,
+              flex: 1,
+            }}
+            numberOfLines={1}
+          >
+            {storeLabel}
+          </Text>
+
+          <Ionicons
+            name="chevron-down"
+            size={14}
+            color="#64748B"
+          />
+        </Pressable>
+
+        <View
+          style={{
+            flex: 1,
+            minWidth: 180,
+            minHeight: 40,
+            borderRadius: 11,
+            backgroundColor: "#F1F5F9",
+            flexDirection: "row",
+            alignItems: "center",
+            paddingHorizontal: 13,
+            gap: 9,
+          }}
+        >
+          <Ionicons
+            name="search-outline"
+            size={18}
+            color="#475569"
+          />
+
+          <Text
+            style={{
+              color: "#64748B",
+              fontWeight: "700",
+              fontSize: 11,
+            }}
+            numberOfLines={1}
+          >
+            Search products, customers, receipts...
+          </Text>
+        </View>
+
+        <Pressable
+          onPress={onOpenNotifications}
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Ionicons
+            name="notifications-outline"
+            size={21}
+            color="#0F172A"
+          />
+
+          {notificationUnread > 0 ? (
+            <View
+              style={{
+                position: "absolute",
+                top: 1,
+                right: 0,
+                minWidth: 17,
+                height: 17,
+                borderRadius: 9,
+                paddingHorizontal: 4,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: "#DC2626",
+              }}
+            >
+              <Text
+                style={{
+                  color: "#FFFFFF",
+                  fontWeight: "900",
+                  fontSize: 8,
+                }}
+              >
+                {notificationUnread > 99
+                  ? "99+"
+                  : notificationUnread}
+              </Text>
+            </View>
+          ) : null}
+        </Pressable>
+
+        <View
+          style={{
+            width: 1,
+            height: 28,
+            backgroundColor: "#E2E8F0",
+          }}
+        />
+
+        <Pressable
+          onPress={onOpenBusinessProfile}
+          style={({ pressed }) => ({
+            minWidth: 150,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 9,
+            paddingHorizontal: 5,
+            paddingVertical: 4,
+            borderRadius: 11,
+            backgroundColor: pressed
+              ? "#F1F5F9"
+              : "transparent",
+          })}
+        >
+          <View
+            style={{
+              width: 60,
+              height: 60,
+              borderRadius: 30,
+              backgroundColor: "#DBEAFE",
+              alignItems: "center",
+              justifyContent: "center",
+              overflow: "hidden",
+              borderWidth: 1,
+              borderColor: "#BFDBFE",
+            }}
+          >
+            {organizationLogoUrl ? (
+              <Image
+                source={{ uri: organizationLogoUrl }}
+                resizeMode="cover"
+                style={{
+                  width: "100%",
+                  height: "100%",
+                }}
+              />
+            ) : (
+              <Ionicons
+                name="business"
+                size={28}
+                color="#2563EB"
+              />
+            )}
+          </View>
+
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text
+              style={{
+                color: "#0F172A",
+                fontWeight: "900",
+                fontSize: 10.5,
+              }}
+              numberOfLines={1}
+            >
+              {orgLabel}
+            </Text>
+
+            <Text
+              style={{
+                color: "#64748B",
+                fontWeight: "700",
+                fontSize: 9,
+                marginTop: 1,
+              }}
+              numberOfLines={1}
+            >
+              {roleLabel}
+            </Text>
+          </View>
+
+          <Ionicons
+            name="chevron-down"
+            size={14}
+            color="#64748B"
+          />
+        </Pressable>
+      </View>
+
+      {/* GREETING / DATE */}
+      <View
+        style={{
+          height: desktopGreetingHeight,
+          paddingHorizontal: 2,
+          paddingVertical: desktopCompact ? 2 : 4,
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 11,
+          position: "relative",
+          zIndex: 1000,
+          overflow: "visible",
+        }}
+      >
+        <Ionicons
+          name={desktopGreeting.icon}
+          size={desktopCompact ? 27 : 32}
+          color={desktopGreeting.color}
+        />
+
+        <View style={{ flex: 1 }}>
+          <Text
+            style={{
+              color: "#0F172A",
+              fontWeight: "900",
+              fontSize: 28,
+            }}
+          >
+            {desktopGreeting.text}
+          </Text>
+        </View>
+
+        <View
+          style={{
+            position: "relative",
+            zIndex: 1000,
+          }}
+        >
+          <Pressable
+            onPress={openDesktopDatePicker}
+            style={({ pressed }) => ({
+              minWidth: 190,
+              minHeight: 43,
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor:
+                desktopCalendarOpen || pressed
+                  ? "#93C5FD"
+                  : "#DDE5EF",
+              backgroundColor:
+                desktopCalendarOpen || pressed
+                  ? "#EFF6FF"
+                  : "#FFFFFF",
+              paddingHorizontal: 14,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 9,
+            })}
+          >
+            <Ionicons
+              name="calendar-outline"
+              size={18}
+              color="#334155"
+            />
+
+            <Text
+              style={{
+                color: "#0F172A",
+                fontWeight: "900",
+                fontSize: 11,
+                flex: 1,
+              }}
+              numberOfLines={1}
+            >
+              {desktopSelectedDateLabel}
+            </Text>
+
+            <Ionicons
+              name={
+                desktopCalendarOpen
+                  ? "chevron-up"
+                  : "chevron-down"
+              }
+              size={14}
+              color="#64748B"
+            />
+          </Pressable>
+
+          {desktopCalendarOpen ? (
+            <View
+              style={{
+                position: "absolute",
+                top: 49,
+                right: 0,
+                width: 292,
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: "#DDE5EF",
+                backgroundColor: "#FFFFFF",
+                padding: 14,
+                shadowColor: "#0F172A",
+                shadowOpacity: 0.16,
+                shadowRadius: 18,
+                shadowOffset: {
+                  width: 0,
+                  height: 8,
+                },
+                elevation: 12,
+                zIndex: 2000,
+              }}
+            >
+              {/* MONTH HEADER */}
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  marginBottom: 13,
+                }}
+              >
+                <Pressable
+                  onPress={() =>
+                    moveDesktopCalendarMonth(-1)
+                  }
+                  style={({ pressed }) => ({
+                    width: 32,
+                    height: 32,
+                    borderRadius: 9,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: pressed
+                      ? "#F1F5F9"
+                      : "#FFFFFF",
+                  })}
+                >
+                  <Ionicons
+                    name="chevron-back"
+                    size={17}
+                    color="#334155"
+                  />
+                </Pressable>
+
+                <Text
+                  style={{
+                    flex: 1,
+                    textAlign: "center",
+                    color: "#0F172A",
+                    fontSize: 13,
+                    fontWeight: "900",
+                  }}
+                >
+                  {desktopCalendarTitle}
+                </Text>
+
+                <Pressable
+                  onPress={() =>
+                    moveDesktopCalendarMonth(1)
+                  }
+                  style={({ pressed }) => ({
+                    width: 32,
+                    height: 32,
+                    borderRadius: 9,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: pressed
+                      ? "#F1F5F9"
+                      : "#FFFFFF",
+                  })}
+                >
+                  <Ionicons
+                    name="chevron-forward"
+                    size={17}
+                    color="#334155"
+                  />
+                </Pressable>
+              </View>
+
+              {/* WEEK DAYS */}
+              <View
+                style={{
+                  flexDirection: "row",
+                  marginBottom: 5,
+                }}
+              >
+                {[
+                  "Mo",
+                  "Tu",
+                  "We",
+                  "Th",
+                  "Fr",
+                  "Sa",
+                  "Su",
+                ].map((label) => (
+                  <View
+                    key={label}
+                    style={{
+                      width: `${100 / 7}%`,
+                      alignItems: "center",
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: "#94A3B8",
+                        fontSize: 9,
+                        fontWeight: "900",
+                      }}
+                    >
+                      {label}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+
+              {/* DATE GRID */}
+              <View
+                style={{
+                  flexDirection: "row",
+                  flexWrap: "wrap",
+                }}
+              >
+                {desktopCalendarDays.map((cell) => {
+                  const selected =
+                    cell.ymd === desktopSelectedDate;
+
+                  const isToday =
+                    cell.ymd === todayYmd;
+
+                  return (
+                    <View
+                      key={cell.key}
+                      style={{
+                        width: `${100 / 7}%`,
+                        height: 34,
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      {cell.day ? (
+                        <Pressable
+                          onPress={() =>
+                            cell.ymd &&
+                            selectDesktopCalendarDate(
+                              cell.ymd
+                            )
+                          }
+                          style={({ pressed }) => ({
+                            width: 29,
+                            height: 29,
+                            borderRadius: 9,
+                            alignItems: "center",
+                            justifyContent: "center",
+                            backgroundColor: selected
+                              ? "#2563EB"
+                              : pressed
+                                ? "#EFF6FF"
+                                : "transparent",
+                            borderWidth:
+                              !selected && isToday
+                                ? 1
+                                : 0,
+                            borderColor: "#93C5FD",
+                          })}
+                        >
+                          <Text
+                            style={{
+                              color: selected
+                                ? "#FFFFFF"
+                                : "#334155",
+                              fontSize: 10.5,
+                              fontWeight:
+                                selected || isToday
+                                  ? "900"
+                                  : "700",
+                            }}
+                          >
+                            {cell.day}
+                          </Text>
+                        </Pressable>
+                      ) : null}
+                    </View>
+                  );
+                })}
+              </View>
+
+              {/* FOOTER */}
+              <View
+                style={{
+                  marginTop: 9,
+                  paddingTop: 10,
+                  borderTopWidth: 1,
+                  borderTopColor: "#EEF2F7",
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <Text
+                  style={{
+                    color: "#64748B",
+                    fontSize: 9.5,
+                    fontWeight: "700",
+                  }}
+                >
+                  Select dashboard date
+                </Text>
+
+                <Pressable
+                  onPress={selectDesktopToday}
+                  style={({ pressed }) => ({
+                    paddingHorizontal: 12,
+                    height: 30,
+                    borderRadius: 9,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: pressed
+                      ? "#DBEAFE"
+                      : "#EFF6FF",
+                  })}
+                >
+                  <Text
+                    style={{
+                      color: "#2563EB",
+                      fontSize: 10,
+                      fontWeight: "900",
+                    }}
+                  >
+                    Today
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          ) : null}
+        </View>
+      </View>
+
+      {/* DESKTOP BODY */}
+      <View
+        style={{
+          flexDirection: contentWide ? "row" : "column",
+          alignItems: "stretch",
+          gap: desktopSectionGap,
+          overflow: "visible",
+          position: "relative",
+          zIndex: 1,
+        }}
+      >
+        {/* MAIN COLUMN */}
+        <View
+          style={{
+            flex: 1,
+            minWidth: 0,
+            width: contentWide ? undefined : "100%",
+
+            gap: desktopSectionGap,
+            overflow: "visible",
+          }}
+        >
+          {/* KPI ROW */}
+          <View
+            style={{
+              flexDirection: "row",
+              flexWrap: "nowrap",
+              gap: desktopCompact ? 5 : 7,
+            }}
+          >
+            <KpiCard
+              title="Today's Sales"
+              value={formatValue(sales)}
+              icon="cart"
+              soft="#ECFDF3"
+              iconColor="#16A34A"
+              onPress={onOpenSales}
+              hint={`${orders} completed orders`}
+              primaryAction
+              actionLabel="Open POS"
+            />
+
+            <KpiCard
+              title="Money In"
+              value={formatValue(moneyIn)}
+              icon="wallet"
+              soft="#EFF6FF"
+              iconColor="#2563EB"
+              onPress={onOpenReports}
+              hint="after expenses"
+            />
+
+            <KpiCard
+              title="Expenses"
+              value={formatValue(expenses)}
+              icon="receipt"
+              soft="#FFF1F2"
+              iconColor="#E11D48"
+              onPress={onOpenExpenses}
+              hint="today"
+            />
+
+            <KpiCard
+              title="Net Profit"
+              value={
+                isOwner
+                  ? formatValue(profit)
+                  : "Owner only"
+              }
+              icon="bar-chart"
+              soft="#F5F3FF"
+              iconColor="#7C3AED"
+              onPress={onOpenBusinessStatement}
+              hint={isOwner ? "owner view" : "restricted"}
+            />
+          </View>
+
+          {/* SALES PERFORMANCE V2 - DESKTOP BUSINESS PERFORMANCE WORKSPACE */}
+          {salesPerformanceStoreId ? (
+            <SalesPerformanceWorkspace
+              storeId={salesPerformanceStoreId}
+              organizationId={organizationId ?? null}
+              formatValue={formatValue}
+              onOpenCRM={onOpenCustomers}
+            />
+          ) : (
+            <View
+              style={{
+                minHeight: 220,
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: "rgba(15,23,42,0.08)",
+                backgroundColor: "#FFFFFF",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: 24,
+              }}
+            >
+              <Ionicons
+                name="storefront-outline"
+                size={26}
+                color="#94A3B8"
+              />
+
+              <Text
+                style={{
+                  color: "#64748B",
+                  fontWeight: "800",
+                  fontSize: 11,
+                  marginTop: 9,
+                }}
+              >
+                Select an active business and store to view Sales Performance.
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* RIGHT RAIL: ZETRA AI + FINANCIAL OVERVIEW */}
+        <View
+          style={{
+            width: contentWide ? desktopAiWidth : "100%",
+            minWidth: contentWide ? desktopAiWidth : 0,
+            flexShrink: 0,
+            gap: desktopSectionGap,
+          }}
+        >
+        {/* ZETRA AI RAIL */}
+        <View
+          style={{
+            width: "100%",
+            borderRadius: 17,
+            borderWidth: 1,
+            borderColor: "rgba(16,185,129,0.22)",
+            backgroundColor: "#ECFDF5",
+            padding: 13,
+            gap: 11,
+          }}
+        >
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 9,
+            }}
+          >
+            <View
+              style={{
+                width: 42,
+                height: 42,
+                borderRadius: 14,
+                backgroundColor: "#D1FAE5",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Ionicons
+                name="sparkles"
+                size={22}
+                color="#059669"
+              />
+            </View>
+
+            <View style={{ flex: 1 }}>
+              <Text
+                style={{
+                  color: "#064E3B",
+                  fontWeight: "900",
+                  fontSize: 19,
+                }}
+              >
+                ZETRA AI
+              </Text>
+
+              <Text
+                style={{
+                  color: "#047857",
+                  fontWeight: "700",
+                  fontSize: 9.5,
+                  marginTop: 1,
+                }}
+              >
+                Your Business Assistant
+              </Text>
+            </View>
+
+            <View
+              style={{
+                paddingHorizontal: 9,
+                paddingVertical: 5,
+                borderRadius: 999,
+                backgroundColor: "#10B981",
+              }}
+            >
+              <Text
+                style={{
+                  color: "#FFFFFF",
+                  fontWeight: "900",
+                  fontSize: 8.5,
+                }}
+              >
+                LIVE
+              </Text>
+            </View>
+
+            <Ionicons
+              name="ellipsis-vertical"
+              size={18}
+              color="#047857"
+            />
+          </View>
+
+
+
+          <Pressable
+            onPress={onOpenAI}
+            style={({ pressed }) => ({
+              minHeight: desktopCompact ? 56 : 64,
+              borderRadius: 14,
+              borderWidth: 1,
+              borderColor: "rgba(37,99,235,0.16)",
+              backgroundColor: pressed
+                ? "#DBEAFE"
+                : "#EFF6FF",
+              padding: 13,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 10,
+            })}
+          >
+            <Ionicons
+              name="chatbubble-ellipses-outline"
+              size={22}
+              color="#2563EB"
+            />
+
+            <View style={{ flex: 1 }}>
+              <Text
+                style={{
+                  color: "#1D4ED8",
+                  fontWeight: "900",
+                  fontSize: 13,
+                }}
+              >
+                Ask ZETRA AI
+              </Text>
+
+              <Text
+                style={{
+                  color: "#475569",
+                  fontWeight: "700",
+                  fontSize: 9.5,
+                  lineHeight: 14,
+                  marginTop: 3,
+                }}
+              >
+                Ask about sales, stock, customers, profit and trends.
+              </Text>
+            </View>
+
+            <Ionicons
+              name="chevron-forward"
+              size={18}
+              color="#2563EB"
+            />
+          </Pressable>
+
+          <View
+            style={{
+              flexDirection: "row",
+              gap: 7,
+            }}
+          >
+            {[
+              {
+                title: "Summarize Today",
+                icon: "document-text-outline" as const,
+                color: "#2563EB",
+              },
+              {
+                title: "Low Stock Alert",
+                icon: "cube-outline" as const,
+                color: "#D97706",
+              },
+              {
+                title: "Top Products",
+                icon: "bar-chart-outline" as const,
+                color: "#0F766E",
+              },
+            ].map((item) => (
+              <Pressable
+                key={item.title}
+                onPress={onOpenAI}
+                style={({ pressed }) => ({
+                  flex: 1,
+                  minHeight: desktopCompact ? 54 : 64,
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: "#DDE5EF",
+                  backgroundColor: pressed
+                    ? "#F8FAFC"
+                    : "#FFFFFF",
+                  paddingHorizontal: 7,
+                  paddingVertical: 8,
+                  alignItems: "center",
+                  justifyContent: "center",
+                })}
+              >
+                <Ionicons
+                  name={item.icon}
+                  size={20}
+                  color={item.color}
+                />
+
+                <Text
+                  style={{
+                    color: "#0F172A",
+                    fontWeight: "900",
+                    fontSize: 9.5,
+                    lineHeight: 12,
+                    marginTop: 6,
+                    textAlign: "center",
+                    width: "100%",
+                  }}
+                  numberOfLines={2}
+                >
+                  {item.title}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+</View>
+      
+          <BusinessFinancialOverview
+            storeIds={financialStoreIds}
+            enabled={isOwner}
+          />
+        </View>
+</View>
+
+      {loading ? (
+        <Text
+          style={{
+            color: "#64748B",
+            fontWeight: "800",
+            fontSize: 9.5,
+            textAlign: "right",
+          }}
+        >
+          Refreshing dashboard...
+        </Text>
+      ) : null}
+    </View>
+  );
+}
 function WebDesktopShell({
   width: _width,
   left,
@@ -4442,7 +7233,7 @@ function WebDesktopShell({
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
 
 const {
   refreshing,
@@ -4462,6 +7253,86 @@ const {
   const [dashTick, setDashTick] = useState(0);
   const [capitalRecoveryTick, setCapitalRecoveryTick] = useState(0);
   const [pulling, setPulling] = useState(false);
+
+
+  const [organizationLogoUrl, setOrganizationLogoUrl] =
+    useState<string | null>(null);
+  useFocusEffect(
+    useCallback(() => {
+      let alive = true;
+
+      async function loadOrganizationLogo() {
+        const id = String(activeOrgId ?? "").trim();
+
+        if (!id) {
+          if (alive) setOrganizationLogoUrl(null);
+          return;
+        }
+
+        try {
+          const { data, error: logoError } = await supabase
+            .from("organization_profiles")
+            .select("logo_url")
+            .eq("organization_id", id)
+            .maybeSingle();
+
+          if (logoError) throw logoError;
+          if (!alive) return;
+
+          setOrganizationLogoUrl(
+            String(data?.logo_url ?? "").trim() || null
+          );
+        } catch (logoError) {
+          console.warn(
+            "Home organization logo load failed:",
+            logoError
+          );
+
+          if (alive) {
+            setOrganizationLogoUrl(null);
+          }
+        }
+      }
+
+      void loadOrganizationLogo();
+
+      return () => {
+        alive = false;
+      };
+    }, [activeOrgId])
+  );
+  type DesktopSalesPerformanceMode =
+    | "Daily"
+    | "Weekly"
+    | "Monthly";
+
+  type DesktopSalesPerformancePoint = {
+    key: string;
+    label: string;
+    value: number;
+    previousValue: number;
+  };
+
+  const [desktopSalesPerformanceMode, setDesktopSalesPerformanceMode] =
+    useState<DesktopSalesPerformanceMode>("Daily");
+
+  const [desktopSalesPerformanceCompare, setDesktopSalesPerformanceCompare] =
+    useState(false);
+
+  const [desktopSalesPerformancePoints, setDesktopSalesPerformancePoints] =
+    useState<DesktopSalesPerformancePoint[]>([]);
+
+  const [desktopSalesPerformanceTotal, setDesktopSalesPerformanceTotal] =
+    useState(0);
+
+  const [desktopSalesPerformancePreviousTotal, setDesktopSalesPerformancePreviousTotal] =
+    useState(0);
+
+  const [desktopSalesPerformanceLoading, setDesktopSalesPerformanceLoading] =
+    useState(false);
+
+  const [desktopSalesPerformanceError, setDesktopSalesPerformanceError] =
+    useState<string | null>(null);
 
   const [desktopLoading, setDesktopLoading] = useState(false);
   const [desktopFinanceErr, setDesktopFinanceErr] = useState<string | null>(null);
@@ -4524,6 +7395,22 @@ const [desktopNotifTotal, setDesktopNotifTotal] = useState(0);
   const goOrgSwitcher = useCallback(() => {
     router.push("/org-switcher");
   }, [router]);
+  const goBusinessProfile = useCallback(() => {
+    const orgId = clean(activeOrgId);
+
+    if (!orgId) {
+      Alert.alert(
+        "Missing organization",
+        "Organization haijapatikana."
+      );
+      return;
+    }
+
+    router.push({
+      pathname: "/organization-profile",
+      params: { orgId },
+    } as any);
+  }, [router, activeOrgId]);
 
   
 
@@ -4721,6 +7608,398 @@ const loadDesktopNotifications = useCallback(async () => {
     desktopNotifBusyRef.current = false;
   }
 }, [isDesktopWeb]);
+  const loadDesktopSalesPerformance = useCallback(async () => {
+    if (!isDesktopWeb) return;
+    if (isCapitalRecoveryStore) return;
+    if (!storeId) return;
+
+    setDesktopSalesPerformanceLoading(true);
+    setDesktopSalesPerformanceError(null);
+
+    try {
+      const now = new Date();
+
+      const startOfDay = (d: Date) =>
+        new Date(
+          d.getFullYear(),
+          d.getMonth(),
+          d.getDate(),
+          0,
+          0,
+          0,
+          0
+        );
+
+      const addDays = (d: Date, days: number) =>
+        new Date(
+          d.getFullYear(),
+          d.getMonth(),
+          d.getDate() + days,
+          d.getHours(),
+          d.getMinutes(),
+          d.getSeconds(),
+          d.getMilliseconds()
+        );
+
+      const toISO = (d: Date) => d.toISOString();
+
+      const saleAmount = (row: any) =>
+        toNum(
+          row?.total_amount ??
+            row?.total ??
+            row?.amount ??
+            row?.grand_total ??
+            row?.paid_amount ??
+            row?.revenue ??
+            0
+        );
+
+      const saleDate = (row: any) => {
+        const raw =
+          row?.sold_at ??
+          row?.created_at ??
+          row?.sale_date ??
+          row?.date ??
+          null;
+
+        if (!raw) return null;
+
+        const parsed = new Date(raw);
+
+        return Number.isNaN(parsed.getTime())
+          ? null
+          : parsed;
+      };
+
+      const isValidSale = (row: any) => {
+        const status = String(row?.status ?? "")
+          .trim()
+          .toLowerCase();
+
+        return !(
+          status === "cancelled" ||
+          status === "canceled" ||
+          status === "void"
+        );
+      };
+
+      let currentFrom: Date;
+      let currentTo: Date;
+      let previousFrom: Date;
+      let previousTo: Date;
+
+      if (desktopSalesPerformanceMode === "Daily") {
+        currentFrom = startOfDay(now);
+        currentTo = addDays(currentFrom, 1);
+
+        previousFrom = addDays(currentFrom, -1);
+        previousTo = currentFrom;
+      }
+      else if (desktopSalesPerformanceMode === "Weekly") {
+        const jsDay = now.getDay();
+        const mondayOffset =
+          jsDay === 0
+            ? -6
+            : 1 - jsDay;
+
+        currentFrom = startOfDay(
+          addDays(now, mondayOffset)
+        );
+
+        currentTo = addDays(currentFrom, 7);
+
+        previousFrom = addDays(currentFrom, -7);
+        previousTo = currentFrom;
+      }
+      else {
+        currentFrom = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          1,
+          0,
+          0,
+          0,
+          0
+        );
+
+        currentTo = new Date(
+          now.getFullYear(),
+          now.getMonth() + 1,
+          1,
+          0,
+          0,
+          0,
+          0
+        );
+
+        previousFrom = new Date(
+          now.getFullYear(),
+          now.getMonth() - 1,
+          1,
+          0,
+          0,
+          0,
+          0
+        );
+
+        previousTo = currentFrom;
+      }
+
+      const [currentRes, previousRes] =
+        await Promise.all([
+          supabase.rpc("get_sales_v3", {
+            p_store_id: storeId,
+            p_from: toISO(currentFrom),
+            p_to: toISO(currentTo),
+          } as any),
+
+          supabase.rpc("get_sales_v3", {
+            p_store_id: storeId,
+            p_from: toISO(previousFrom),
+            p_to: toISO(previousTo),
+          } as any),
+        ]);
+
+      if (currentRes.error) throw currentRes.error;
+      if (previousRes.error) throw previousRes.error;
+
+      const currentRows =
+        (Array.isArray(currentRes.data)
+          ? currentRes.data
+          : []
+        ).filter(isValidSale);
+
+      const previousRows =
+        (Array.isArray(previousRes.data)
+          ? previousRes.data
+          : []
+        ).filter(isValidSale);
+
+      const sumRows = (rows: any[]) =>
+        rows.reduce(
+          (total, row) =>
+            total + saleAmount(row),
+          0
+        );
+
+      let points: DesktopSalesPerformancePoint[] = [];
+
+      if (desktopSalesPerformanceMode === "Daily") {
+        const slots = [
+          { key: "00", label: "12 AM", from: 0, to: 4 },
+          { key: "04", label: "4 AM", from: 4, to: 8 },
+          { key: "08", label: "8 AM", from: 8, to: 12 },
+          { key: "12", label: "12 PM", from: 12, to: 16 },
+          { key: "16", label: "4 PM", from: 16, to: 20 },
+          { key: "20", label: "8 PM", from: 20, to: 24 },
+        ];
+
+        points = slots.map((slot) => {
+          const currentValue = currentRows.reduce(
+            (total: number, row: any) => {
+              const d = saleDate(row);
+              if (!d) return total;
+
+              const hour = d.getHours();
+
+              return hour >= slot.from &&
+                hour < slot.to
+                ? total + saleAmount(row)
+                : total;
+            },
+            0
+          );
+
+          const previousValue = previousRows.reduce(
+            (total: number, row: any) => {
+              const d = saleDate(row);
+              if (!d) return total;
+
+              const hour = d.getHours();
+
+              return hour >= slot.from &&
+                hour < slot.to
+                ? total + saleAmount(row)
+                : total;
+            },
+            0
+          );
+
+          return {
+            key: slot.key,
+            label: slot.label,
+            value: currentValue,
+            previousValue,
+          };
+        });
+      }
+      else if (desktopSalesPerformanceMode === "Weekly") {
+        const labels = [
+          "Mon",
+          "Tue",
+          "Wed",
+          "Thu",
+          "Fri",
+          "Sat",
+          "Sun",
+        ];
+
+        points = labels.map((label, index) => {
+          const currentDay = addDays(
+            currentFrom,
+            index
+          );
+
+          const previousDay = addDays(
+            previousFrom,
+            index
+          );
+
+          const currentKey =
+            currentDay.toDateString();
+
+          const previousKey =
+            previousDay.toDateString();
+
+          return {
+            key: label,
+            label,
+            value: currentRows.reduce(
+              (total: number, row: any) => {
+                const d = saleDate(row);
+
+                return d &&
+                  d.toDateString() === currentKey
+                  ? total + saleAmount(row)
+                  : total;
+              },
+              0
+            ),
+            previousValue: previousRows.reduce(
+              (total: number, row: any) => {
+                const d = saleDate(row);
+
+                return d &&
+                  d.toDateString() === previousKey
+                  ? total + saleAmount(row)
+                  : total;
+              },
+              0
+            ),
+          };
+        });
+      }
+      else {
+        const monthEnd = new Date(
+          currentTo.getTime() - 1
+        );
+
+        const daysInMonth =
+          monthEnd.getDate();
+
+        const weekCount =
+          Math.ceil(daysInMonth / 7);
+
+        points = Array.from(
+          { length: weekCount },
+          (_, index) => {
+            const currentWeekFrom =
+              addDays(
+                currentFrom,
+                index * 7
+              );
+
+            const currentWeekTo =
+              addDays(
+                currentWeekFrom,
+                7
+              );
+
+            const previousWeekFrom =
+              addDays(
+                previousFrom,
+                index * 7
+              );
+
+            const previousWeekTo =
+              addDays(
+                previousWeekFrom,
+                7
+              );
+
+            const sumBetween = (
+              rows: any[],
+              fromDate: Date,
+              toDate: Date
+            ) =>
+              rows.reduce(
+                (total: number, row: any) => {
+                  const d = saleDate(row);
+
+                  return d &&
+                    d >= fromDate &&
+                    d < toDate
+                    ? total + saleAmount(row)
+                    : total;
+                },
+                0
+              );
+
+            return {
+              key: `W${index + 1}`,
+              label: `W${index + 1}`,
+              value: sumBetween(
+                currentRows,
+                currentWeekFrom,
+                currentWeekTo
+              ),
+              previousValue: sumBetween(
+                previousRows,
+                previousWeekFrom,
+                previousWeekTo
+              ),
+            };
+          }
+        );
+      }
+
+      setDesktopSalesPerformancePoints(points);
+
+      setDesktopSalesPerformanceTotal(
+        sumRows(currentRows)
+      );
+
+      setDesktopSalesPerformancePreviousTotal(
+        sumRows(previousRows)
+      );
+    }
+    catch (error) {
+      console.warn(
+        "Desktop Sales Performance load failed:",
+        error
+      );
+
+      setDesktopSalesPerformancePoints([]);
+      setDesktopSalesPerformanceTotal(0);
+      setDesktopSalesPerformancePreviousTotal(0);
+
+      setDesktopSalesPerformanceError(
+        "Sales Performance data unavailable."
+      );
+    }
+    finally {
+      setDesktopSalesPerformanceLoading(false);
+    }
+  }, [
+    isDesktopWeb,
+    isCapitalRecoveryStore,
+    storeId,
+    desktopSalesPerformanceMode,
+  ]);
+
+  // Sales Performance V2 owns current/previous get_sales_v3 requests.
+
+
   const desktopLoad = useCallback(async () => {
     // WEB SAFE MODE HOTFIX:
     // Desktop browser Home imekuwa ikipata freeze / page unresponsive.
@@ -4956,6 +8235,145 @@ const loadDesktopNotifications = useCallback(async () => {
 void loadDesktopNotifications();
   }, [isWebLiteHome, isDesktopWeb, isCapitalRecoveryStore, orgId, storeId, desktopLoad, loadDesktopNotifications]);
 
+
+  useEffect(() => {
+    if (!isDesktopWeb) return;
+    if (isWebLiteHome) return;
+    if (isCapitalRecoveryStore) return;
+    if (!orgId || !storeId) return;
+
+    let disposed = false;
+    let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const scheduleDashboardRefresh = () => {
+      if (disposed) return;
+
+      if (refreshTimer) {
+        clearTimeout(refreshTimer);
+      }
+
+      // One completed sale may produce several database changes.
+      // Debounce them into one verified dashboard reload.
+      refreshTimer = setTimeout(() => {
+        refreshTimer = null;
+
+        if (disposed) return;
+
+        console.log(
+          "[ZETRA HOME][REALTIME] debounce complete -> desktopLoad()"
+        );
+
+        void desktopLoad();
+      }, 350);
+    };
+
+    const channel = supabase.channel(
+      `desktop-home-live:${orgId}:${storeId}`
+    );
+
+
+    channel.on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "expenses",
+      },
+      (payload: any) => {
+        const rowStoreId = String(
+          payload?.new?.store_id ??
+          payload?.old?.store_id ??
+          ""
+        ).trim();
+
+        console.log(
+          "[ZETRA HOME][EXPENSE REALTIME] event received",
+          {
+            eventType: payload?.eventType,
+            rowStoreId,
+            activeStoreId: storeId,
+            newRow: payload?.new,
+            oldRow: payload?.old,
+          }
+        );
+
+        // Ignore expense changes belonging to another store.
+        // DELETE may not expose store_id, so refresh safely when absent.
+        if (rowStoreId && rowStoreId !== storeId) {
+          console.log(
+            "[ZETRA HOME][EXPENSE REALTIME] ignored - different store"
+          );
+          return;
+        }
+
+        console.log(
+          "[ZETRA HOME][EXPENSE REALTIME] scheduling dashboard refresh"
+        );
+
+        scheduleDashboardRefresh();
+      }
+    );
+    channel.on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "sales",
+      },
+      (payload: any) => {
+        const rowStoreId = String(
+          payload?.new?.store_id ??
+          payload?.old?.store_id ??
+          ""
+        ).trim();
+
+        // Some DELETE payloads may not expose store_id depending
+        // on replica identity. Refresh safely in that case.
+        if (rowStoreId && rowStoreId !== storeId) {
+          return;
+        }
+
+        console.log(
+          "[DESKTOP HOME REALTIME] SALES EVENT",
+          payload?.eventType ?? "UNKNOWN",
+          payload?.new?.store_id ?? payload?.old?.store_id ?? "NO_STORE_ID"
+        );
+
+        scheduleDashboardRefresh();
+      }
+    );
+
+    channel.subscribe((status) => {
+      console.log(
+        "[DESKTOP HOME REALTIME] STATUS:",
+        status,
+        "ORG:",
+        orgId,
+        "STORE:",
+        storeId
+      );
+    });
+
+    return () => {
+      disposed = true;
+
+      if (refreshTimer) {
+        clearTimeout(refreshTimer);
+        refreshTimer = null;
+      }
+
+      try {
+        supabase.removeChannel(channel);
+      } catch {}
+    };
+  }, [
+    isDesktopWeb,
+    isWebLiteHome,
+    isCapitalRecoveryStore,
+    orgId,
+    storeId,
+    desktopLoad,
+  ]);
   useFocusEffect(
     useCallback(() => {
       if (Platform.OS === "web") return;
@@ -5016,36 +8434,56 @@ void loadDesktopNotifications();
         );
   return (
     <Screen
-      scroll
+      scroll={isCashier || isCapitalRecoveryStore}
       refreshControl={homeRefreshControl as any}
-      contentStyle={{
-        paddingTop: isDesktopWeb ? Math.max(insets.top, 18) + 10 : topPad,
-        paddingHorizontal: isDesktopWeb ? 22 : 16,
-        paddingBottom: bottomPad,
-      }}
+      contentStyle={
+        isDesktopWeb
+          ? {
+              flex: 1,
+              minHeight: 0,
+              paddingTop: Math.max(insets.top, 18) + 10,
+              paddingHorizontal: 22,
+              paddingBottom: bottomPad,
+              overflow: "hidden",
+            }
+          : {
+              paddingHorizontal: 16,
+              flex: 1,
+              minHeight: 0,
+            }
+      }
     >
       {!isDesktopWeb ? (
         <HeaderHero
           activeOrgName={activeOrgName}
           activeStoreName={
             isCapitalRecoveryStore
-              ? `${activeStoreName ?? "Store"} • CAPITAL RECOVERY`
+              ? `${activeStoreName ?? "Store"} ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ CAPITAL RECOVERY`
               : activeStoreName
           }
           isCashier={isCashier}
+          onOpenOrgSwitcher={
+            !isCashier && !isCapitalRecoveryStore
+              ? goOrgSwitcher
+              : undefined
+          }
+          organizationLogoUrl={
+            !isCashier && !isCapitalRecoveryStore
+              ? organizationLogoUrl
+              : undefined
+          }
+          onOpenBusinessProfile={
+            !isCashier && !isCapitalRecoveryStore
+              ? goBusinessProfile
+              : undefined
+          }
         />
       ) : null}
 
 {!isCashier && !isDesktopWeb && !isCapitalRecoveryStore ? (
-  <>
-    <SubscriptionExpiryHomeStrip
-      reloadKey={dashTick}
-    />
-
-    <CompactNotificationsHomeCard />
-
-    <ZetraAiCard onOpen={goAI} />
-  </>
+  <SubscriptionExpiryHomeStrip
+    reloadKey={dashTick}
+  />
 ) : null}
 
       {!!error && !String(error).toLowerCase().includes("not allowed") && (
@@ -5087,250 +8525,43 @@ void loadDesktopNotifications();
           </StoreGuard>
         </>
       ) : isWebLiteHome ? (
-        <>
-          <WorkspaceCard
-            activeOrgName={activeOrgName}
-            activeRole={activeRole}
-            activeStoreName={activeStoreName}
-            activeStoreId={activeStoreId}
-            onOpen={goOrgSwitcher}
+        <StoreGuard>
+          <View style={{ flex: 1, minHeight: 0 }}>
+            <MobileWebFinanceShortcut />
+
+          <MobileQuickAccess
+            onProducts={() => router.push("/(tabs)/products" as any)}
+            onCustomers={() => router.push("/customers" as any)}
+            onExpenses={() => router.push("/(tabs)/expenses" as any)}
+            onReports={() => {
+              const dates = rangeToDates("today");
+
+              router.push({
+                pathname: "/finance/history",
+                params: {
+                  mode: "SALES",
+                  scope: "STORE",
+                  range: "today",
+                  from: dates.from,
+                  to: dates.to,
+                } as any,
+              } as any);
+            }}
+            onStores={() => router.push("/(tabs)/stores" as any)}
+            onCredit={() => router.push("/(tabs)/credit" as any)}
           />
 
-          <Card
-            style={{
-              marginTop: 14,
-              gap: 16,
-              borderRadius: 24,
-              borderColor: "rgba(79,140,255,0.26)",
-              backgroundColor: UI.card,
-              padding: 18,
-            }}
-          >
-            <View style={{ gap: 6 }}>
-              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 22 }}>
-                Quick Actions
-              </Text>
+          <MobileBusinessTools
+            isOwner={canViewStockAction}
+            onOpenBusinessPosition={goBusinessPosition}
+            onOpenBusinessDebts={goBusinessDebts}
+            onOpenIncomingStock={goIncomingStock}
+            onOpenStock={goStockValue}
+          />
 
-              <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22, fontSize: 13 }}>
-                Fungua maeneo muhimu ya kazi kwa haraka kutoka Home.
-              </Text>
-            </View>
-
-            <View style={{ gap: 10 }}>
-              <Pressable
-                onPress={goAI}
-                // @ts-ignore
-                onClick={goAI}
-                hitSlop={10}
-                style={({ pressed }) => ({
-                  borderRadius: 20,
-                  borderWidth: 1,
-                  borderColor: "rgba(79,140,255,0.28)",
-                  backgroundColor: "rgba(79,140,255,0.10)",
-                  paddingVertical: 16,
-                  paddingHorizontal: 16,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  opacity: pressed ? 0.92 : 1,
-                  transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
-                })}
-              >
-                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
-                  Open AI
-                </Text>
-              </Pressable>
-
-              <Pressable
-                onPress={goOrgSwitcher}
-                // @ts-ignore
-                onClick={goOrgSwitcher}
-                hitSlop={10}
-                style={({ pressed }) => ({
-                  borderRadius: 20,
-                  borderWidth: 1,
-                  borderColor: "rgba(79,140,255,0.28)",
-                  backgroundColor: "rgba(79,140,255,0.10)",
-                  paddingVertical: 16,
-                  paddingHorizontal: 16,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  opacity: pressed ? 0.92 : 1,
-                  transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
-                })}
-              >
-                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
-                  Switch Workspace
-                </Text>
-              </Pressable>
-
-              <Pressable
-                onPress={goLive}
-                // @ts-ignore
-                onClick={goLive}
-                hitSlop={10}
-                style={({ pressed }) => ({
-                  borderRadius: 20,
-                  borderWidth: 1,
-                  borderColor: "rgba(79,140,255,0.28)",
-                  backgroundColor: "rgba(79,140,255,0.10)",
-                  paddingVertical: 16,
-                  paddingHorizontal: 16,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  opacity: pressed ? 0.92 : 1,
-                  transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
-                })}
-              >
-                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
-                  Open Live
-                </Text>
-              </Pressable>
-
-              <Pressable
-                onPress={() => {
-                  const dates = rangeToDates("today");
-                  router.push({
-                    pathname: "/finance/history",
-                    params: {
-                      mode: "SALES",
-                      scope: "STORE",
-                      range: "today",
-                      from: dates.from,
-                      to: dates.to,
-                    } as any,
-                  } as any);
-                }}
-                // @ts-ignore
-                onClick={() => {
-                  const dates = rangeToDates("today");
-                  router.push({
-                    pathname: "/finance/history",
-                    params: {
-                      mode: "SALES",
-                      scope: "STORE",
-                      range: "today",
-                      from: dates.from,
-                      to: dates.to,
-                    } as any,
-                  } as any);
-                }}
-                hitSlop={10}
-                style={({ pressed }) => ({
-                  borderRadius: 20,
-                  borderWidth: 1,
-                  borderColor: "rgba(79,140,255,0.28)",
-                  backgroundColor: "rgba(79,140,255,0.10)",
-                  paddingVertical: 16,
-                  paddingHorizontal: 16,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  opacity: pressed ? 0.92 : 1,
-                  transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
-                })}
-              >
-                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
-                  Open Finance
-                </Text>
-              </Pressable>
-
-             {canViewStockAction ? (
-                <>
-                  <Pressable
-                    onPress={goStockValue}
-                    // @ts-ignore
-                    onClick={goStockValue}
-                    hitSlop={10}
-                    style={({ pressed }) => ({
-                      borderRadius: 20,
-                      borderWidth: 1,
-                      borderColor: "rgba(79,140,255,0.28)",
-                      backgroundColor: "rgba(79,140,255,0.10)",
-                      paddingVertical: 16,
-                      paddingHorizontal: 16,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      opacity: pressed ? 0.92 : 1,
-                      transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
-                    })}
-                  >
-                    <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
-                      Open Stock Value
-                    </Text>
-                  </Pressable>
-
-                  <Pressable
-                    onPress={goBusinessPosition}
-                    // @ts-ignore
-                    onClick={goBusinessPosition}
-                    hitSlop={10}
-                    style={({ pressed }) => ({
-                      borderRadius: 20,
-                      borderWidth: 1,
-                      borderColor: "rgba(239,68,68,0.28)",
-                      backgroundColor: "#FFF5F5",
-                      paddingVertical: 16,
-                      paddingHorizontal: 16,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      opacity: pressed ? 0.92 : 1,
-                      transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
-                    })}
-                  >
-                    <Text style={{ color: "#991B1B", fontWeight: "900", fontSize: 15 }}>
-                      Business Position
-                    </Text>
-                  </Pressable>
-
-                  <Pressable
-                    onPress={goBusinessDebts}
-                    // @ts-ignore
-                    onClick={goBusinessDebts}
-                    hitSlop={10}
-                    style={({ pressed }) => ({
-                      borderRadius: 20,
-                      borderWidth: 1,
-                      borderColor: "rgba(245,158,11,0.26)",
-                      backgroundColor: "#FFF7ED",
-                      paddingVertical: 16,
-                      paddingHorizontal: 16,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      opacity: pressed ? 0.92 : 1,
-                      transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
-                    })}
-                  >
-                    <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
-                      Business Debts
-                    </Text>
-                  </Pressable>
-
-                  <Pressable
-                    onPress={goIncomingStock}
-                    // @ts-ignore
-                    onClick={goIncomingStock}
-                    hitSlop={10}
-                    style={({ pressed }) => ({
-                      borderRadius: 20,
-                      borderWidth: 1,
-                      borderColor: "rgba(20,184,166,0.30)",
-                      backgroundColor: "#ECFDF5",
-                      paddingVertical: 16,
-                      paddingHorizontal: 16,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      opacity: pressed ? 0.92 : 1,
-                      transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
-                    })}
-                  >
-                    <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
-                      Incoming Stock
-                    </Text>
-                  </Pressable>
-                </>
-              ) : null}
-            </View>
-          </Card>
-        </>
+            <ZetraAiCard onOpen={goAI} />
+          </View>
+        </StoreGuard>
       ) : isCashier ? (
         <>
           <WorkspaceCard
@@ -5343,293 +8574,185 @@ void loadDesktopNotifications();
           <CashierQuickHome />
         </>
       ) : isDesktopWeb ? (
-        <WebDesktopShell
+        <DesktopMasterHome
           width={width}
-          left={
-            <>
-              <HeaderHero
-                activeOrgName={activeOrgName}
-                activeStoreName={activeStoreName}
-                isCashier={isCashier}
-              />
-
-              <WorkspaceCard
-                activeOrgName={activeOrgName}
-                activeRole={activeRole}
-                activeStoreName={activeStoreName}
-                activeStoreId={activeStoreId}
-                onOpen={goOrgSwitcher}
-              />
-
-              <DesktopKpiStrip
-                sales={desktopFmtMoney(desktopSales.total)}
-                expenses={desktopFmtMoney(desktopExpenses.total)}
-                profit={isOwner ? desktopFmtMoney(desktopProfit.net) : "Owner only"}
-                orders={String(desktopSales.orders)}
-                moneyIn={desktopFmtMoney(
-                  subtractFloor(desktopPay.cash + desktopCollections.cash, desktopExpenseByChannel.cash) +
-                    subtractFloor(desktopPay.bank + desktopCollections.bank, desktopExpenseByChannel.bank) +
-                    subtractFloor(desktopPay.mobile + desktopCollections.mobile, desktopExpenseByChannel.mobile)
-                )}
-                stockValue={desktopFmtMoney(desktopStockValue)}
-                isOwner={isOwner}
-                onOpenSales={goSalesHistoryToday}
-                onOpenExpenses={goExpenses}
-                onOpenFinance={() => {
-                  const dates = rangeToDates("today");
-                  router.push({
-                    pathname: "/finance/history",
-                    params: {
-                      mode: "SALES",
-                      scope: "STORE",
-                      range: "today",
-                      from: dates.from,
-                      to: dates.to,
-                    } as any,
-                  } as any);
-                }}
-                onOpenStock={() => router.push("/stocks/history" as any)}
-              />
-
-              <DesktopDashboardChart
-                sales={desktopSales.total}
-                expenses={desktopExpenses.total}
-                moneyIn={
-                  subtractFloor(desktopPay.cash + desktopCollections.cash, desktopExpenseByChannel.cash) +
-                  subtractFloor(desktopPay.bank + desktopCollections.bank, desktopExpenseByChannel.bank) +
-                  subtractFloor(desktopPay.mobile + desktopCollections.mobile, desktopExpenseByChannel.mobile)
-                }
-                stockValue={desktopStockValue}
-                profit={isOwner ? desktopProfit.net : 0}
-                loading={desktopLoading}
-                formatValue={desktopFmtMoney}
-              />
-<DesktopBusinessHealthCard
-                sales={desktopSales.total}
-                expenses={desktopExpenses.total}
-                moneyIn={
-                  subtractFloor(desktopPay.cash + desktopCollections.cash, desktopExpenseByChannel.cash) +
-                  subtractFloor(desktopPay.bank + desktopCollections.bank, desktopExpenseByChannel.bank) +
-                  subtractFloor(desktopPay.mobile + desktopCollections.mobile, desktopExpenseByChannel.mobile)
-                }
-                stockValue={desktopStockValue}
-                profit={isOwner ? desktopProfit.net : 0}
-                isOwner={isOwner}
-                formatValue={desktopFmtMoney}
-              />
-
-              <DesktopCommandFocusCard
-                sales={desktopSales.total}
-                expenses={desktopExpenses.total}
-                moneyIn={
-                  subtractFloor(desktopPay.cash + desktopCollections.cash, desktopExpenseByChannel.cash) +
-                  subtractFloor(desktopPay.bank + desktopCollections.bank, desktopExpenseByChannel.bank) +
-                  subtractFloor(desktopPay.mobile + desktopCollections.mobile, desktopExpenseByChannel.mobile)
-                }
-                stockValue={desktopStockValue}
-                profit={isOwner ? desktopProfit.net : 0}
-                formatValue={desktopFmtMoney}
-                onOpenSales={goSalesHistoryToday}
-                onOpenExpenses={goExpenses}
-                onOpenFinance={() => {
-                  const dates = rangeToDates("today");
-                  router.push({
-                    pathname: "/finance/history",
-                    params: {
-                      mode: "SALES",
-                      scope: "STORE",
-                      range: "today",
-                      from: dates.from,
-                      to: dates.to,
-                    } as any,
-                  } as any);
-                }}
-                onOpenStock={() => router.push("/stocks/history" as any)}
-              />
-              <Card
-                style={{
-                  marginTop: 14,
-                  gap: 12,
-                  borderRadius: 22,
-                  borderColor: "rgba(79,140,255,0.26)",
-                  backgroundColor: UI.card,
-                }}
-              >
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 22, flex: 1 }}>
-                    Dashboard Command Summary
-                  </Text>
-
-                  <View
-                    style={{
-                      paddingHorizontal: 10,
-                      paddingVertical: 6,
-                      borderRadius: 999,
-                      borderWidth: 1,
-                      borderColor: "rgba(79,140,255,0.28)",
-                      backgroundColor: "rgba(79,140,255,0.10)",
-                    }}
-                  >
-                    <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }}>
-                      DESKTOP
-                    </Text>
-                  </View>
-                </View>
-
-                <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22 }}>
-                  Muhtasari wa browser dashboard: mauzo, expenses, stock value, profit, na vitendo vya haraka kwa usimamizi wa biashara.
-                </Text>
-
-                {!!desktopFinanceErr ? (
-                  <Card
-                    style={{
-                      borderColor: "rgba(201,74,74,0.35)",
-                      backgroundColor: "rgba(201,74,74,0.10)",
-                      borderRadius: 18,
-                      padding: 12,
-                    }}
-                  >
-                    <Text style={{ color: UI.danger, fontWeight: "900" }}>{desktopFinanceErr}</Text>
-                  </Card>
-                ) : null}
-
-                
-              </Card>
-            </>
+          height={height}
+          activeOrgName={activeOrgName}
+          activeStoreName={activeStoreName}
+          activeRole={activeRole}
+          financialStoreIds={
+            activeStoreId
+              ? [String(activeStoreId)]
+              : []
           }
-          right={
-            <>
-            {canViewStockAction ? (
-              <WebSafeHomeActions
-                width={width}
-                onOpenAI={goAI}
-                onOpenOrgSwitcher={goOrgSwitcher}
-                onOpenLive={goLive}
-                onOpenStock={goStockValue}
-                onOpenBusinessPosition={goBusinessPosition}
-                onOpenBusinessDebts={goBusinessDebts}
-                onOpenIncomingStock={goIncomingStock}
-                onOpenFinance={() => {
-                  const dates = rangeToDates("today");
-                  router.push({
-                    pathname: "/finance/history",
-                    params: {
-                      mode: "SALES",
-                      scope: "STORE",
-                      range: "today",
-                      from: dates.from,
-                      to: dates.to,
-                    } as any,
-                  } as any);
-                }}
-              />
-            ) : null}
-
-              <View style={{ height: 14 }} />
-
-              <DesktopSignalCard
-                title="Notifications"
-                badge={`${desktopNotifUnread} UNREAD`}
-                body={`${desktopNotifTotal} notifications loaded. Fuatilia alerts, stock movements, receipts, na matukio muhimu ya biashara.`}
-                onPress={() => router.push("/notifications" as any)}
-              />
-
-              <View style={{ height: 14 }} />
-
-              <DesktopSignalCard
-                title="AI Insights"
-                badge="COPILOT"
-                body="Pata mwongozo wa biashara, bidhaa, staff, na maamuzi ya kila siku kwa mtazamo wa haraka na wa kitaalamu."
-                onPress={goAI}
-              />
-            </>
+          organizationId={
+            activeOrgId
+              ? String(activeOrgId)
+              : null
           }
-        />
-      ) : (
-        <>
-         <WorkspaceCard
-  activeOrgName={activeOrgName}
-  activeRole={activeRole}
-  activeStoreName={activeStoreName}
-  activeStoreId={activeStoreId}
-  onOpen={goOrgSwitcher}
-/>
+              salesPerformanceStoreId={storeId || null}
+              organizationLogoUrl={organizationLogoUrl}
+          sales={desktopSales.total}
+          expenses={desktopExpenses.total}
+          moneyIn={
+            subtractFloor(desktopPay.cash + desktopCollections.cash, desktopExpenseByChannel.cash) +
+            subtractFloor(desktopPay.bank + desktopCollections.bank, desktopExpenseByChannel.bank) +
+            subtractFloor(desktopPay.mobile + desktopCollections.mobile, desktopExpenseByChannel.mobile)
+          }
+          profit={isOwner ? desktopProfit.net : 0}
+          orders={desktopSales.orders}
+          stockValue={desktopStockValue}
+          isOwner={isOwner}
+          loading={desktopLoading}
+          notificationUnread={desktopNotifUnread}
+          notificationTotal={desktopNotifTotal}
 
-<StoreGuard>
-  <CompactFinanceCardHomePreview />
+          salesPerformanceMode={
+            desktopSalesPerformanceMode
+          }
+          salesPerformanceCompare={
+            desktopSalesPerformanceCompare
+          }
+          salesPerformancePoints={
+            desktopSalesPerformancePoints
+          }
+          salesPerformanceTotal={
+            desktopSalesPerformanceTotal
+          }
+          salesPerformancePreviousTotal={
+            desktopSalesPerformancePreviousTotal
+          }
+          salesPerformanceLoading={
+            desktopSalesPerformanceLoading
+          }
+          salesPerformanceError={
+            desktopSalesPerformanceError
+          }
 
-  {canViewStockAction ? (
-    <>
-      <Pressable
-        onPress={goBusinessPosition}
-        hitSlop={10}
-        style={({ pressed }) => ({
-          marginTop: 14,
-          borderRadius: 22,
-          borderWidth: 1,
-          borderColor: "rgba(239,68,68,0.28)",
-          backgroundColor: "#FFF5F5",
-          padding: 16,
-          opacity: pressed ? 0.92 : 1,
-        })}
-      >
-        <Text style={{ color: "#991B1B", fontWeight: "900", fontSize: 16 }}>
-          Business Position
-        </Text>
+          onChangeSalesPerformanceMode={
+            setDesktopSalesPerformanceMode
+          }
 
-        <Text style={{ color: "#7F1D1D", fontWeight: "800", marginTop: 4, lineHeight: 20 }}>
-          Mikopo (Loans), fedha zilizotolewa na hali halisi ya biashara yako.
-        </Text>
-      </Pressable>
+          onToggleSalesPerformanceCompare={() =>
+            setDesktopSalesPerformanceCompare(
+              (current) => !current
+            )
+          }
 
-      <Pressable
-        onPress={goBusinessDebts}
-        hitSlop={10}
-        style={({ pressed }) => ({
-          marginTop: 14,
-          borderRadius: 22,
-          borderWidth: 1,
-          borderColor: "rgba(245,158,11,0.26)",
-          backgroundColor: "#FFF7ED",
-          padding: 16,
-          opacity: pressed ? 0.92 : 1,
-        })}
-      >
-        <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-          Business Debts
-        </Text>
-        <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 4, lineHeight: 20 }}>
-          Madeni ya biashara, supplier/bank debts, na comparison dhidi ya stock value
-        </Text>
-      </Pressable>
+          formatValue={desktopFmtMoney}
+          onOpenOrgSwitcher={goOrgSwitcher}
+          onOpenBusinessProfile={goBusinessProfile}
+          onOpenNotifications={() =>
+            router.push("/notifications" as any)
+          }
+          onOpenAI={goAI}
+          onOpenSales={() =>
+            router.push("/(tabs)/sales" as any)
+          }
+          onOpenProducts={() =>
+            router.push("/(tabs)/products" as any)
+          }
+          onOpenExpenses={() =>
+            router.push("/(tabs)/expenses" as any)
+          }
+          onOpenStores={() =>
+            router.push("/(tabs)/stores" as any)
+          }
+          onOpenStock={goStockValue}
+          onOpenCustomers={() =>
+            router.push("/customers" as any)
+          }
+          onOpenCredit={() =>
+            router.push("/(tabs)/credit" as any)
+          }
+          onOpenReports={() => {
+            const dates = rangeToDates("today");
 
-      <Pressable
-        onPress={goIncomingStock}
-        hitSlop={10}
-        style={({ pressed }) => ({
-          marginTop: 14,
-          borderRadius: 22,
-          borderWidth: 1,
-          borderColor: "rgba(20,184,166,0.30)",
-          backgroundColor: "#ECFDF5",
-          padding: 16,
-          opacity: pressed ? 0.92 : 1,
-        })}
-      >
-        <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-          Incoming Stock
-        </Text>
-        <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 4, lineHeight: 20 }}>
-          Mzigo uliopo njiani, supplier orders, malipo ya mzigo, na goods in transit
-        </Text>
-      </Pressable>
+            router.push({
+              pathname: "/finance/history",
+              params: {
+                mode: "SALES",
+                scope: "STORE",
+                range: "today",
+                from: dates.from,
+                to: dates.to,
+              } as any,
+            } as any);
+          }}
+          onOpenBusinessStatement={() =>
+            router.push(
+              "/settings/business-statement" as any
+            )
+          }
+        />      ) : (
+        <StoreGuard>
+          <View style={{ flex: 1, minHeight: 0 }}>
+            <CompactFinanceCardHomePreview />
 
-      <CompactStockValueCardHomePreview />
-    </>
-  ) : null}
-</StoreGuard>
-        </>
+          <MobileQuickAccess
+            onProducts={() => router.push("/(tabs)/products" as any)}
+            onCustomers={() => router.push("/customers" as any)}
+            onExpenses={() => router.push("/(tabs)/expenses" as any)}
+            onReports={() => {
+              const dates = rangeToDates("today");
+
+              router.push({
+                pathname: "/finance/history",
+                params: {
+                  mode: "SALES",
+                  scope: "STORE",
+                  range: "today",
+                  from: dates.from,
+                  to: dates.to,
+                } as any,
+              } as any);
+            }}
+            onStores={() => router.push("/(tabs)/stores" as any)}
+            onCredit={() => router.push("/(tabs)/credit" as any)}
+          />
+
+          <MobileBusinessTools
+            isOwner={canViewStockAction}
+            onOpenBusinessPosition={goBusinessPosition}
+            onOpenBusinessDebts={goBusinessDebts}
+            onOpenIncomingStock={goIncomingStock}
+            onOpenStock={goStockValue}
+          />
+
+            <View style={{ flex: 1, minHeight: 0 }} />
+            <ZetraAiCard onOpen={goAI} />
+          </View>
+        </StoreGuard>
       )}
     </Screen>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

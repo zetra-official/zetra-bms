@@ -1,4 +1,4 @@
-// app/(tabs)/products.tsx
+﻿// app/(tabs)/products.tsx
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
@@ -12,6 +12,7 @@ import {
   Image,
   TextInput,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { CameraView, useCameraPermissions } from "expo-camera";
@@ -313,6 +314,8 @@ function ScannerFabIcon({ size = 28, color = "#E5E7EB" }: { size?: number; color
 }
 
 export default function ProductsTabScreen() {
+  const { width } = useWindowDimensions();
+  const isDesktopWeb = Platform.OS === "web" && width >= 900;
   const router = useRouter();
 
   const {
@@ -375,6 +378,10 @@ const [scanBusy, setScanBusy] = useState(false);
 const [keyboardSpace, setKeyboardSpace] = useState(0);
 
 const [productSearch, setProductSearch] = useState("");
+
+/* PRODUCTS TABLE POLISH 5C */
+const [desktopActionProductId, setDesktopActionProductId] =
+  useState<string | null>(null);
 
 // Category autocomplete / dropdown
 const [storeCategories, setStoreCategories] = useState<string[]>([]);
@@ -1534,7 +1541,7 @@ const solidInputStyle = {
   return (
     <Screen scroll>
       <View style={{ gap: 6 }}>
-  <Text style={{ fontSize: 30, fontWeight: "900", color: theme.colors.text }}>
+  <Text style={{ fontSize: isDesktopWeb ? 25 : 30, fontWeight: "900", color: theme.colors.text }}>
     Products
   </Text>
   <Text style={{ color: theme.colors.muted, fontWeight: "800", lineHeight: 22 }}>
@@ -1542,15 +1549,301 @@ const solidInputStyle = {
   </Text>
 </View>
 
+      {/* PRODUCTS DESKTOP HEADER 5A V2 */}
+      {isDesktopWeb ? (
+        <View style={{ gap: 8 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "stretch",
+              gap: 10,
+              width: "100%",
+            }}
+          >
+            {/* ORGANIZATION / STORE */}
+            <View
+              style={{
+                flex: 1.25,
+                minWidth: 0,
+                minHeight: 68,
+                borderWidth: 1,
+                borderColor: "rgba(148,163,184,0.24)",
+                borderRadius: 11,
+                backgroundColor: "#FFFFFF",
+                paddingHorizontal: 13,
+                paddingVertical: 9,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 11,
+              }}
+            >
+              <View
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 10,
+                  backgroundColor: "rgba(16,185,129,0.10)",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <WebSafeIcon
+                  name="business-outline"
+                  size={19}
+                  color="#059669"
+                />
+              </View>
+
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text
+                  style={{
+                    color: theme.colors.muted,
+                    fontWeight: "900",
+                    fontSize: 9,
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Organization
+                </Text>
+
+                <Text
+                  style={{
+                    color: theme.colors.text,
+                    fontWeight: "900",
+                    fontSize: 13,
+                    marginTop: 2,
+                  }}
+                  numberOfLines={1}
+                >
+                  {activeOrgName ?? "—"}
+                </Text>
+
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 7,
+                    marginTop: 4,
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: theme.colors.muted,
+                      fontWeight: "800",
+                      fontSize: 10,
+                    }}
+                    numberOfLines={1}
+                  >
+                    {activeStoreName ?? "—"}
+                  </Text>
+
+                  <View
+                    style={{
+                      width: 3,
+                      height: 3,
+                      borderRadius: 2,
+                      backgroundColor: "#94A3B8",
+                    }}
+                  />
+
+                  <Text
+                    style={{
+                      color: theme.colors.muted,
+                      fontWeight: "800",
+                      fontSize: 10,
+                    }}
+                    numberOfLines={1}
+                  >
+                    {activeRole ?? "—"}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* PRODUCT MODE */}
+            <View
+              style={{
+                flex: 0.85,
+                minWidth: 260,
+                minHeight: 68,
+                borderWidth: 1,
+                borderColor:
+                  isCapitalRecoveryStore || isPrecisionRetailStore
+                    ? theme.colors.emeraldBorder
+                    : "rgba(148,163,184,0.24)",
+                borderRadius: 11,
+                backgroundColor:
+                  isCapitalRecoveryStore || isPrecisionRetailStore
+                    ? "rgba(16,185,129,0.055)"
+                    : "#FFFFFF",
+                paddingHorizontal: 13,
+                paddingVertical: 9,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 11,
+              }}
+            >
+              <View
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 10,
+                  backgroundColor: "rgba(245,158,11,0.11)",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <WebSafeIcon
+                  name="cube-outline"
+                  size={19}
+                  color="#D97706"
+                />
+              </View>
+
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text
+                  style={{
+                    color: theme.colors.muted,
+                    fontWeight: "900",
+                    fontSize: 9,
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Product Mode
+                </Text>
+
+                <Text
+                  style={{
+                    color: theme.colors.text,
+                    fontWeight: "900",
+                    fontSize: 12,
+                    marginTop: 3,
+                  }}
+                  numberOfLines={1}
+                >
+                  {isCapitalRecoveryStore
+                    ? "Capital Recovery Product Mode"
+                    : isPrecisionRetailStore
+                    ? "Precision Retail Product Mode"
+                    : "Standard Product Mode"}
+                </Text>
+
+                <Text
+                  style={{
+                    color: theme.colors.muted,
+                    fontWeight: "700",
+                    fontSize: 9,
+                    marginTop: 3,
+                  }}
+                  numberOfLines={1}
+                >
+                  {isCapitalRecoveryStore
+                    ? "Income-focused products"
+                    : isPrecisionRetailStore
+                    ? "Pack-to-unit precision products"
+                    : "Standard inventory products"}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* SEARCH / REFRESH */}
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 8,
+              width: "100%",
+            }}
+          >
+            <View
+              style={{
+                flex: 1,
+                height: 40,
+                borderWidth: 1,
+                borderColor: "rgba(148,163,184,0.28)",
+                borderRadius: 9,
+                backgroundColor: "#FFFFFF",
+                paddingHorizontal: 11,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+              <WebSafeIcon
+                name="search"
+                size={17}
+                color={theme.colors.muted}
+              />
+
+              <TextInput
+                value={productSearch}
+                onChangeText={setProductSearch}
+                placeholder="Search name, SKU, category..."
+                placeholderTextColor={theme.colors.faint}
+                autoCorrect={false}
+                autoCapitalize="none"
+                style={{
+                  flex: 1,
+                  color: theme.colors.text,
+                  fontWeight: "800",
+                  fontSize: 11,
+                  paddingVertical: 7,
+                  outlineStyle: "none" as any,
+                }}
+              />
+
+              {!!productSearch.trim() && (
+                <Pressable
+                  onPress={() => setProductSearch("")}
+                  hitSlop={8}
+                >
+                  <WebSafeIcon
+                    name="close-circle"
+                    size={18}
+                    color={theme.colors.muted}
+                  />
+                </Pressable>
+              )}
+            </View>
+
+            <Pressable
+              onPress={load}
+              disabled={loading}
+              style={({ pressed }) => ({
+                width: 40,
+                height: 40,
+                borderRadius: 9,
+                alignItems: "center",
+                justifyContent: "center",
+                borderWidth: 1,
+                borderColor: "rgba(148,163,184,0.28)",
+                backgroundColor: pressed
+                  ? "#F1F5F9"
+                  : "#FFFFFF",
+                opacity: loading ? 0.55 : 1,
+              })}
+            >
+              <WebSafeIcon
+                name="refresh"
+                size={19}
+                color={theme.colors.text}
+              />
+            </Pressable>
+          </View>
+        </View>
+      ) : (
+        <>
       <Card
   style={{
-    gap: 12,
+    gap: isDesktopWeb ? 7 : 12,
+    padding: isDesktopWeb ? 12 : undefined,
     borderColor: "rgba(148,163,184,0.22)",
     backgroundColor: "#FFFFFF",
   }}
 >
         <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Organization</Text>
-        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
+        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: isDesktopWeb ? 15 : 18 }}>
           {activeOrgName ?? "—"}
         </Text>
 
@@ -1561,8 +1854,9 @@ const solidInputStyle = {
         <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{activeRole ?? "—"}</Text>
 <Card
   style={{
-    marginTop: 8,
-    borderRadius: 22,
+    marginTop: isDesktopWeb ? 4 : 8,
+    padding: isDesktopWeb ? 10 : undefined,
+    borderRadius: isDesktopWeb ? 14 : 22,
     borderColor: isCapitalRecoveryStore || isPrecisionRetailStore
       ? theme.colors.emeraldBorder
       : "rgba(148,163,184,0.20)",
@@ -1602,7 +1896,7 @@ const solidInputStyle = {
         borderRadius: theme.radius.lg,
         backgroundColor: "rgba(16,185,129,0.10)",
         paddingHorizontal: 14,
-        minHeight: 54,
+        minHeight: isDesktopWeb ? 44 : 54,
       }}
     >
       <WebSafeIcon name="search" size={18} color={theme.colors.muted} />
@@ -1617,7 +1911,7 @@ const solidInputStyle = {
           flex: 1,
           color: theme.colors.text,
           fontWeight: "900",
-          paddingVertical: 12,
+          paddingVertical: isDesktopWeb ? 8 : 12,
         }}
       />
       {!!productSearch.trim() && (
@@ -1632,8 +1926,8 @@ const solidInputStyle = {
     onPress={load}
     disabled={loading}
     style={({ pressed }) => ({
-      width: 58,
-      height: 54,
+      width: isDesktopWeb ? 46 : 58,
+      height: isDesktopWeb ? 44 : 54,
       borderRadius: theme.radius.lg,
       alignItems: "center",
       justifyContent: "center",
@@ -1652,6 +1946,9 @@ const solidInputStyle = {
 </View>
       </Card>
 
+
+        </>
+      )}
       {!!error && (
         <Card
           style={{
@@ -1666,7 +1963,8 @@ const solidInputStyle = {
       {canManage && (
         <Card
   style={{
-    gap: 12,
+    gap: isDesktopWeb ? 9 : 12,
+    padding: isDesktopWeb ? 14 : undefined,
     borderColor: "rgba(148,163,184,0.22)",
     backgroundColor: "#FFFFFF",
   }}
@@ -1686,14 +1984,29 @@ const solidInputStyle = {
               borderRadius: theme.radius.lg,
               backgroundColor: "#FFFFFF",
               paddingHorizontal: 14,
-              paddingVertical: 12,
+              paddingVertical: isDesktopWeb ? 8 : 12,
               color: theme.colors.text,
               fontWeight: "800",
             }}
           />
 
-          {!isCapitalRecoveryStore && (
-            <View style={{ flexDirection: "row", gap: 10 }}>
+                    {/* DESKTOP PRODUCT IDENTITY GRID 4B */}
+          <View
+            style={{
+              flexDirection: isDesktopWeb ? "row" : "column",
+              alignItems: "flex-start",
+              gap: isDesktopWeb ? 8 : 12,
+              width: "100%",
+            }}
+          >
+            <View
+              style={{
+                flex: isDesktopWeb ? 1.15 : undefined,
+                minWidth: 0,
+                width: isDesktopWeb ? undefined : "100%",
+              }}
+            >{!isCapitalRecoveryStore && (
+            <View style={{ flexDirection: "row", gap: isDesktopWeb ? 8 : 10 }}>
               <View style={{ flex: 1 }}>
                 <TextInput
                   value={sku}
@@ -1706,7 +2019,7 @@ const solidInputStyle = {
                     borderRadius: theme.radius.lg,
                     backgroundColor: "#FFFFFF",
                     paddingHorizontal: 14,
-                    paddingVertical: 12,
+                    paddingVertical: isDesktopWeb ? 9 : 12,
                     color: theme.colors.text,
                     fontWeight: "800",
                   }}
@@ -1725,7 +2038,7 @@ const solidInputStyle = {
                     borderRadius: theme.radius.lg,
                     backgroundColor: "#FFFFFF",
                     paddingHorizontal: 14,
-                    paddingVertical: 12,
+                    paddingVertical: isDesktopWeb ? 9 : 12,
                     color: theme.colors.text,
                     fontWeight: "800",
                   }}
@@ -1733,8 +2046,17 @@ const solidInputStyle = {
               </View>
             </View>
           )}
+            </View>
 
-         <View style={{ position: "relative", zIndex: 30 }}>
+            <View
+              style={{
+                flex: isDesktopWeb ? 0.85 : undefined,
+                minWidth: 0,
+                width: isDesktopWeb ? undefined : "100%",
+                position: "relative",
+                zIndex: 30,
+              }}
+            ><View style={{ position: "relative", zIndex: 30 }}>
   <View
     style={{
       flexDirection: "row",
@@ -1768,7 +2090,7 @@ const solidInputStyle = {
       style={{
         flex: 1,
         paddingHorizontal: 14,
-        paddingVertical: 12,
+        paddingVertical: isDesktopWeb ? 9 : 12,
         color: theme.colors.text,
         fontWeight: "800",
       }}
@@ -1784,8 +2106,8 @@ const solidInputStyle = {
       }}
       hitSlop={8}
       style={{
-        width: 34,
-        height: 34,
+        width: isDesktopWeb ? 32 : 34,
+        height: isDesktopWeb ? 32 : 34,
         alignItems: "center",
         justifyContent: "center",
       }}
@@ -1834,7 +2156,7 @@ const solidInputStyle = {
       ) : filteredCategorySuggestions.length > 0 ? (
         <ScrollView
           style={{
-            maxHeight: 220,
+            maxHeight: isDesktopWeb ? 180 : 220,
           }}
           keyboardShouldPersistTaps="always"
           nestedScrollEnabled
@@ -1892,15 +2214,25 @@ const solidInputStyle = {
     </View>
   )}
 </View>
-
-          <View style={{ gap: 8 }}>
+            </View>
+          </View>
+{/* DESKTOP ADD PRODUCT LOWER GRID */}
+          <View
+            style={{
+              flexDirection: isDesktopWeb ? "row" : "column",
+              alignItems: "stretch",
+              gap: isDesktopWeb ? 12 : 8,
+              width: "100%",
+            }}
+          >
+<View style={{ flex: 1, minWidth: 0, gap: 8 }}>
             <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Product Image (optional)</Text>
 
             <Pressable
               onPress={() => chooseImageSource("add")}
               disabled={imageUploading || loading}
               style={({ pressed }) => ({
-                minHeight: 86,
+                minHeight: isDesktopWeb ? 70 : 86,
                 borderRadius: 22,
                 borderWidth: 1,
                 borderColor: imageUrl ? theme.colors.emeraldBorder : theme.colors.border,
@@ -1962,7 +2294,7 @@ const solidInputStyle = {
           </View>
 
           {!isCapitalRecoveryStore && (
-            <View style={{ gap: 8 }}>
+            <View style={{ flex: 1, minWidth: 0, gap: 8 }}>
               <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Barcode (optional)</Text>
 
             <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
@@ -1978,7 +2310,7 @@ const solidInputStyle = {
                     borderRadius: theme.radius.lg,
                     backgroundColor: "#FFFFFF",
                     paddingHorizontal: 14,
-                    paddingVertical: 12,
+                    paddingVertical: isDesktopWeb ? 8 : 12,
                     color: theme.colors.text,
                     fontWeight: "900",
                   }}
@@ -1989,8 +2321,8 @@ const solidInputStyle = {
                 onPress={openScan}
                 disabled={loading}
                 style={({ pressed }) => ({
-                  width: 62,
-                  height: 62,
+                  width: isDesktopWeb ? 42 : 62,
+                  height: isDesktopWeb ? 42 : 62,
                   borderRadius: 999,
                   alignItems: "center",
                   justifyContent: "center",
@@ -2034,7 +2366,9 @@ const solidInputStyle = {
             </View>
           )}
 
-       {isPrecisionRetailStore && canSeeCost && (
+                 </View>
+
+{isPrecisionRetailStore && canSeeCost && (
   <Card
     style={{
       gap: 10,
@@ -2150,6 +2484,14 @@ const solidInputStyle = {
             </Card>
           )}
 
+        <View
+          style={{
+            flexDirection: isDesktopWeb ? "row" : "column",
+            gap: isDesktopWeb ? 12 : 8,
+            width: "100%",
+          }}
+        >
+          <View style={{ flex: 1, minWidth: 0 }}>
         {canSeeCost && (
             <TextInput
               value={costPrice}
@@ -2163,14 +2505,16 @@ const solidInputStyle = {
                 borderRadius: theme.radius.lg,
                 backgroundColor: "#FFFFFF",
                 paddingHorizontal: 14,
-                paddingVertical: 12,
+                paddingVertical: isDesktopWeb ? 8 : 12,
                 color: theme.colors.text,
                 fontWeight: "800",
               }}
             />
           )}
+          </View>
 
-          <TextInput
+          <View style={{ flex: 1, minWidth: 0 }}>
+<TextInput
             value={sellingPrice}
             onChangeText={(t) => setSellingPrice(normalizeDecimalInput(t))}
             placeholder={isCapitalRecoveryStore ? "Selling Price" : "Selling Price (optional)"}
@@ -2182,17 +2526,19 @@ const solidInputStyle = {
               borderRadius: theme.radius.lg,
               backgroundColor: "#FFFFFF",
               paddingHorizontal: 14,
-              paddingVertical: 12,
+              paddingVertical: isDesktopWeb ? 8 : 12,
               color: theme.colors.text,
               fontWeight: "800",
             }}
           />
+          </View>
+        </View>
 
        <Pressable
   onPress={add}
   disabled={loading}
   style={({ pressed }) => ({
-    minHeight: 58,
+    minHeight: isDesktopWeb ? 46 : 58,
     borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
@@ -2317,6 +2663,562 @@ const solidInputStyle = {
       )}
 
 
+      {/* PRODUCTS DESKTOP TABLE 5B */}
+      {isDesktopWeb ? (
+        <View style={{ marginTop: 2, gap: 8 }}>
+
+          {/* DESKTOP PRODUCTS TITLE / CATALOG */}
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+            }}
+          >
+            <View style={{ gap: 2 }}>
+              <Text
+                style={{
+                  color: theme.colors.text,
+                  fontWeight: "900",
+                  fontSize: 18,
+                }}
+              >
+                {isCapitalRecoveryStore
+                  ? `Income Products (${visibleRows.length})`
+                  : `My Products (${visibleRows.length})`}
+              </Text>
+
+              <Text
+                style={{
+                  color: theme.colors.muted,
+                  fontWeight: "700",
+                  fontSize: 10,
+                }}
+              >
+                {visibleRows.length} active item
+                {visibleRows.length === 1 ? "" : "s"}
+              </Text>
+            </View>
+
+            {canManage && !isCapitalRecoveryStore && (
+              <Pressable
+                onPress={() => router.push("/catalog" as any)}
+                style={({ pressed }) => ({
+                  height: 34,
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: "rgba(148,163,184,0.28)",
+                  backgroundColor: pressed
+                    ? "#F1F5F9"
+                    : "#FFFFFF",
+                  paddingHorizontal: 11,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                })}
+              >
+                <WebSafeIcon
+                  name="albums-outline"
+                  size={15}
+                  color="#059669"
+                />
+
+                <Text
+                  style={{
+                    color: theme.colors.text,
+                    fontWeight: "900",
+                    fontSize: 10,
+                  }}
+                >
+                  Product Catalog
+                </Text>
+              </Pressable>
+            )}
+          </View>
+
+          {visibleRows.length === 0 ? (
+            <View
+              style={{
+                borderWidth: 1,
+                borderColor: "rgba(148,163,184,0.24)",
+                borderRadius: 10,
+                backgroundColor: "#FFFFFF",
+                paddingHorizontal: 14,
+                paddingVertical: 16,
+              }}
+            >
+              <Text
+                style={{
+                  color: theme.colors.text,
+                  fontWeight: "900",
+                  fontSize: 12,
+                }}
+              >
+                {productSearch.trim()
+                  ? "No matching products"
+                  : isCapitalRecoveryStore
+                  ? "No income products yet"
+                  : "No products yet"}
+              </Text>
+
+              <Text
+                style={{
+                  color: theme.colors.muted,
+                  fontWeight: "700",
+                  fontSize: 10,
+                  marginTop: 4,
+                }}
+              >
+                {productSearch.trim()
+                  ? "Change or clear the search to see other products."
+                  : canManage
+                  ? "Add a product above, then refresh."
+                  : "Ask the owner to add or update products."}
+              </Text>
+            </View>
+          ) : (
+            <View
+              style={{
+                borderWidth: 1,
+                borderColor: "rgba(148,163,184,0.24)",
+                borderRadius: 10,
+                backgroundColor: "#FFFFFF",
+                overflow: "hidden",
+              }}
+            >
+
+              {/* TABLE HEADER */}
+              <View
+                style={{
+                  minHeight: 34,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  paddingHorizontal: 10,
+                  backgroundColor: "#F8FAFC",
+                  borderBottomWidth: 1,
+                  borderBottomColor: "rgba(148,163,184,0.22)",
+                }}
+              >
+                <Text
+                  style={{
+                    width: 48,
+                    color: theme.colors.muted,
+                    fontWeight: "900",
+                    fontSize: 10,
+                  }}
+                >
+                  Image
+                </Text>
+
+                <Text
+                  style={{
+                    flex: 1.55,
+                    color: theme.colors.muted,
+                    fontWeight: "900",
+                    fontSize: 10,
+                  }}
+                >
+                  Name
+                </Text>
+
+                {!isCapitalRecoveryStore && (
+                  <Text
+                    style={{
+                      flex: 0.8,
+                      color: theme.colors.muted,
+                      fontWeight: "900",
+                      fontSize: 10,
+                    }}
+                  >
+                    SKU
+                  </Text>
+                )}
+
+                <Text
+                  style={{
+                    flex: 0.9,
+                    color: theme.colors.muted,
+                    fontWeight: "900",
+                    fontSize: 10,
+                  }}
+                >
+                  Category
+                </Text>
+
+                {!isCapitalRecoveryStore && (
+                  <Text
+                    style={{
+                      flex: 0.6,
+                      color: theme.colors.muted,
+                      fontWeight: "900",
+                      fontSize: 10,
+                    }}
+                  >
+                    Unit
+                  </Text>
+                )}
+
+                {canSeeCost && (
+                  <Text
+                    style={{
+                      flex: 0.85,
+                      color: theme.colors.muted,
+                      fontWeight: "900",
+                      fontSize: 10,
+                      textAlign: "right",
+                    }}
+                  >
+                    Cost Price
+                  </Text>
+                )}
+
+                <Text
+                  style={{
+                    flex: 0.85,
+                    color: theme.colors.muted,
+                    fontWeight: "900",
+                    fontSize: 10,
+                    textAlign: "right",
+                  }}
+                >
+                  Selling Price
+                </Text>
+
+                {canManage && (
+                  <Text
+                    style={{
+                      width: 122,
+                      color: theme.colors.muted,
+                      fontWeight: "900",
+                      fontSize: 10,
+                      textAlign: "center",
+                    }}
+                  >
+                    Actions
+                  </Text>
+                )}
+              </View>
+
+              {/* TABLE ROWS */}
+              {renderedRows.map((p, rowIndex) => {
+                const sp = Number(p.selling_price ?? 0);
+                const cp = Number(p.cost_price ?? NaN);
+
+                return (
+                  <View
+                    key={p.id}
+                    style={{
+                      minHeight: 50,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      paddingHorizontal: 10,
+                      borderBottomWidth:
+                        rowIndex < renderedRows.length - 1
+                          ? 1
+                          : 0,
+                      borderBottomColor:
+                        "rgba(148,163,184,0.16)",
+                      backgroundColor: "#FFFFFF",
+                    }}
+                  >
+
+                    {/* IMAGE */}
+                    <View
+                      style={{
+                        width: 48,
+                        alignItems: "flex-start",
+                        justifyContent: "center",
+                      }}
+                    >
+                      {p.image_url ? (
+                        <Image
+                          source={{ uri: p.image_url }}
+                          style={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: 6,
+                            backgroundColor: "#E2E8F0",
+                          }}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <View
+                          style={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: 6,
+                            backgroundColor: "#F1F5F9",
+                            borderWidth: 1,
+                            borderColor:
+                              "rgba(148,163,184,0.22)",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <WebSafeIcon
+                            name="cube-outline"
+                            size={15}
+                            color={theme.colors.muted}
+                          />
+                        </View>
+                      )}
+                    </View>
+
+                    {/* NAME */}
+                    <View
+                      style={{
+                        flex: 1.55,
+                        minWidth: 0,
+                        paddingRight: 7,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: theme.colors.text,
+                          fontWeight: "900",
+                          fontSize: 11,
+                        }}
+                        numberOfLines={1}
+                      >
+                        {p.name}
+                      </Text>
+                    </View>
+
+                    {/* SKU */}
+                    {!isCapitalRecoveryStore && (
+                      <Text
+                        style={{
+                          flex: 0.8,
+                          color: theme.colors.muted,
+                          fontWeight: "800",
+                          fontSize: 11,
+                          paddingRight: 6,
+                        }}
+                        numberOfLines={1}
+                      >
+                        {p.sku ?? "—"}
+                      </Text>
+                    )}
+
+                    {/* CATEGORY */}
+                    <Text
+                      style={{
+                        flex: 0.9,
+                        color: theme.colors.muted,
+                        fontWeight: "800",
+                        fontSize: 11,
+                        paddingRight: 6,
+                      }}
+                      numberOfLines={1}
+                    >
+                      {p.category ?? "—"}
+                    </Text>
+
+                    {/* UNIT */}
+                    {!isCapitalRecoveryStore && (
+                      <Text
+                        style={{
+                          flex: 0.6,
+                          color: theme.colors.muted,
+                          fontWeight: "800",
+                          fontSize: 11,
+                          paddingRight: 6,
+                        }}
+                        numberOfLines={1}
+                      >
+                        {p.unit ?? "—"}
+                      </Text>
+                    )}
+
+                    {/* COST */}
+                    {canSeeCost && (
+                      <Text
+                        style={{
+                          flex: 0.85,
+                          color: theme.colors.text,
+                          fontWeight: "800",
+                          fontSize: 11,
+                          textAlign: "right",
+                          paddingLeft: 4,
+                        }}
+                        numberOfLines={1}
+                      >
+                        {Number.isFinite(cp)
+                          ? money.fmt(cp)
+                          : "—"}
+                      </Text>
+                    )}
+
+                    {/* SELLING */}
+                    <Text
+                      style={{
+                        flex: 0.85,
+                        color: theme.colors.text,
+                        fontWeight: "900",
+                        fontSize: 11,
+                        textAlign: "right",
+                        paddingLeft: 4,
+                      }}
+                      numberOfLines={1}
+                    >
+                      {sp > 0 ? money.fmt(sp) : "—"}
+                    </Text>
+
+                    {/* ACTIONS */}
+                    {canManage && (
+                      <View
+                        style={{
+                          width: 122,
+                          flexDirection: "row",
+                          alignItems: "center",
+                          justifyContent: "flex-end",
+                          gap: 5,
+                          paddingLeft: 8,
+                        }}
+                      >
+                        {desktopActionProductId === p.id ? (
+                          <>
+                            <Pressable
+                              onPress={() => {
+                                setDesktopActionProductId(null);
+                                openEdit(p);
+                              }}
+                              disabled={loading}
+                              style={({ pressed }) => ({
+                                flex: 1,
+                                height: 30,
+                                borderRadius: 6,
+                                backgroundColor: pressed
+                                  ? "#1D4ED8"
+                                  : "#2563EB",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                opacity: loading ? 0.5 : 1,
+                              })}
+                            >
+                              <Text
+                                style={{
+                                  color: "#FFFFFF",
+                                  fontWeight: "900",
+                                  fontSize: 10,
+                                }}
+                              >
+                                Edit
+                              </Text>
+                            </Pressable>
+
+                            <Pressable
+                              onPress={() => {
+                                setDesktopActionProductId(null);
+                                void remove(p.id, p.name);
+                              }}
+                              disabled={loading}
+                              style={({ pressed }) => ({
+                                flex: 1,
+                                height: 30,
+                                borderRadius: 6,
+                                borderWidth: 1,
+                                borderColor: "#FCA5A5",
+                                backgroundColor: pressed
+                                  ? "#FEF2F2"
+                                  : "#FFFFFF",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                opacity: loading ? 0.5 : 1,
+                              })}
+                            >
+                              <Text
+                                style={{
+                                  color: "#B91C1C",
+                                  fontWeight: "900",
+                                  fontSize: 10,
+                                }}
+                              >
+                                Delete
+                              </Text>
+                            </Pressable>
+                          </>
+                        ) : (
+                          <Pressable
+                            onPress={() =>
+                              setDesktopActionProductId(p.id)
+                            }
+                            disabled={loading}
+                            style={({ pressed }) => ({
+                              width: 86,
+                              height: 30,
+                              borderRadius: 7,
+                              borderWidth: 1,
+                              borderColor: "rgba(37,99,235,0.24)",
+                              backgroundColor: pressed
+                                ? "#EFF6FF"
+                                : "#FFFFFF",
+                              flexDirection: "row",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: 5,
+                              opacity: loading ? 0.5 : 1,
+                            })}
+                          >
+                            <Text
+                              style={{
+                                color: "#1D4ED8",
+                                fontWeight: "900",
+                                fontSize: 10,
+                              }}
+                            >
+                              Actions
+                            </Text>
+
+                            <WebSafeIcon
+                              name="chevron-down"
+                              size={13}
+                              color="#1D4ED8"
+                            />
+                          </Pressable>
+                        )}
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+          )}
+
+          {/* LOAD MORE */}
+          {hasMoreProducts && (
+            <Pressable
+              onPress={loadMoreProducts}
+              style={({ pressed }) => ({
+                minHeight: 36,
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: theme.colors.emeraldBorder,
+                backgroundColor: pressed
+                  ? "rgba(16,185,129,0.12)"
+                  : "rgba(16,185,129,0.06)",
+                alignItems: "center",
+                justifyContent: "center",
+                paddingHorizontal: 12,
+              })}
+            >
+              <Text
+                style={{
+                  color: theme.colors.text,
+                  fontWeight: "900",
+                  fontSize: 11,
+                }}
+              >
+                Load More Products · Showing{" "}
+                {renderedRows.length} of {visibleRows.length}
+              </Text>
+            </Pressable>
+          )}
+        </View>
+      ) : (
+        <>
      <View style={{ marginTop: 4, gap: 12 }}>
   <View style={{ gap: 4 }}>
     <Text
@@ -2387,7 +3289,7 @@ const solidInputStyle = {
           style={{
             color: theme.colors.text,
             fontWeight: "900",
-            fontSize: 17,
+            fontSize: 18,
           }}
         >
           Product Catalog
@@ -2756,479 +3658,832 @@ const solidInputStyle = {
   </>
 )}
 
+
+        </>
+      )}
      <View style={{ height: keyboardSpace }} />
 
-      <Modal
-        visible={editOpen}
-        animationType="fade"
-        transparent
-        presentationStyle="overFullScreen"
-        statusBarTranslucent
-        onRequestClose={closeEdit}
+      {/* PRODUCTS DESKTOP EDIT MODAL 5D */}
+<Modal
+  visible={editOpen}
+  animationType="fade"
+  transparent
+  presentationStyle="overFullScreen"
+  statusBarTranslucent
+  onRequestClose={closeEdit}
+>
+  <KeyboardAvoidingView
+    style={{ flex: 1 }}
+    behavior={Platform.OS === "ios" ? "padding" : "height"}
+    keyboardVerticalOffset={0}
+  >
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: "rgba(15,23,42,0.34)",
+        paddingHorizontal: isDesktopWeb ? 24 : 16,
+        paddingTop: isDesktopWeb ? 18 : 28,
+        paddingBottom: 18,
+        justifyContent: "center",
+        alignItems: isDesktopWeb ? "center" : undefined,
+      }}
+    >
+      <View
+        style={{
+          width: "100%",
+          maxWidth: isDesktopWeb ? 820 : undefined,
+          maxHeight: isDesktopWeb ? "90%" : "88%",
+          borderWidth: 1,
+          borderColor: "rgba(15,23,42,0.12)",
+          borderRadius: isDesktopWeb ? 14 : 28,
+          backgroundColor: "#FFFFFF",
+          overflow: "hidden",
+          shadowColor: "#000",
+          shadowOpacity: isDesktopWeb ? 0.18 : 0.35,
+          shadowRadius: isDesktopWeb ? 18 : 24,
+          shadowOffset: {
+            width: 0,
+            height: isDesktopWeb ? 8 : 12,
+          },
+          elevation: isDesktopWeb ? 10 : 18,
+        }}
       >
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={0}
+        {/* HEADER */}
+        <View
+          style={{
+            paddingHorizontal: isDesktopWeb ? 18 : 16,
+            paddingTop: isDesktopWeb ? 12 : 16,
+            paddingBottom: isDesktopWeb ? 11 : 14,
+            borderBottomWidth: 1,
+            borderBottomColor: "rgba(15,23,42,0.10)",
+            backgroundColor: "#FFFFFF",
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
         >
+          <View style={{ gap: isDesktopWeb ? 2 : 0 }}>
+            <Text
+              style={{
+                color: theme.colors.text,
+                fontWeight: "900",
+                fontSize: isDesktopWeb ? 17 : 20,
+              }}
+            >
+              Edit Product
+            </Text>
+
+            {isDesktopWeb && (
+              <Text
+                style={{
+                  color: theme.colors.muted,
+                  fontWeight: "700",
+                  fontSize: 11,
+                }}
+              >
+                Update product information
+              </Text>
+            )}
+          </View>
+
+          <Pressable
+            onPress={closeEdit}
+            hitSlop={10}
+            style={({ pressed }) => ({
+              width: isDesktopWeb ? 32 : 44,
+              height: isDesktopWeb ? 32 : 44,
+              borderRadius: 999,
+              alignItems: "center",
+              justifyContent: "center",
+              borderWidth: 1,
+              borderColor: "rgba(15,23,42,0.12)",
+              backgroundColor: pressed
+                ? "#E2E8F0"
+                : "#F8FAFC",
+            })}
+          >
+            <Ionicons
+              name="close"
+              size={isDesktopWeb ? 18 : 22}
+              color={theme.colors.text}
+            />
+          </Pressable>
+        </View>
+
+        {/* BODY */}
+        <ScrollView
+          style={{
+            flexGrow: 0,
+            maxHeight: isDesktopWeb ? 610 : undefined,
+          }}
+          contentContainerStyle={{
+            padding: 16,
+            paddingBottom: isDesktopWeb ? 16 : 22,
+            gap: isDesktopWeb ? 9 : 12,
+          }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={isDesktopWeb}
+        >
+          {/* PRODUCT NAME */}
+          <TextInput
+            value={editName}
+            onChangeText={setEditName}
+            placeholder="Product name"
+            placeholderTextColor={theme.colors.faint}
+            style={[
+              solidInputStyle,
+              isDesktopWeb && {
+                paddingHorizontal: 12,
+                paddingVertical: 9,
+                borderRadius: 8,
+                fontSize: 13,
+              },
+            ]}
+          />
+
+          {/* SKU + UNIT */}
+          {!isCapitalRecoveryStore && (
+            <View
+              style={{
+                flexDirection: "row",
+                gap: isDesktopWeb ? 8 : 10,
+              }}
+            >
+              <View style={{ flex: 1 }}>
+                <TextInput
+                  value={editSku}
+                  onChangeText={setEditSku}
+                  placeholder="SKU (optional)"
+                  placeholderTextColor={theme.colors.faint}
+                  style={[
+                    solidInputStyle,
+                    isDesktopWeb && {
+                      paddingHorizontal: 12,
+                      paddingVertical: 9,
+                      borderRadius: 8,
+                      fontSize: 13,
+                    },
+                  ]}
+                />
+              </View>
+
+              <View style={{ flex: 1 }}>
+                <TextInput
+                  value={editUnit}
+                  onChangeText={setEditUnit}
+                  placeholder="Unit / UOM (optional)"
+                  placeholderTextColor={theme.colors.faint}
+                  style={[
+                    solidInputStyle,
+                    isDesktopWeb && {
+                      paddingHorizontal: 12,
+                      paddingVertical: 9,
+                      borderRadius: 8,
+                      fontSize: 13,
+                    },
+                  ]}
+                />
+              </View>
+            </View>
+          )}
+
+          {/* CATEGORY */}
           <View
             style={{
-              flex: 1,
-              backgroundColor: "rgba(15,23,42,0.34)",
-              paddingHorizontal: 16,
-              paddingTop: 28,
-              paddingBottom: 18,
-              justifyContent: "center",
+              position: "relative",
+              zIndex: 30,
             }}
           >
             <View
               style={{
-                width: "100%",
-                maxHeight: "88%",
+                flexDirection: "row",
+                alignItems: "center",
                 borderWidth: 1,
-               borderColor: "rgba(15,23,42,0.12)",
-borderRadius: 28,
-backgroundColor: "#FFFFFF",
-                overflow: "hidden",
-                shadowColor: "#000",
-                shadowOpacity: 0.35,
-                shadowRadius: 24,
-                shadowOffset: { width: 0, height: 12 },
-                elevation: 18,
+                borderColor: editCategoryDropdownOpen
+                  ? theme.colors.emeraldBorder
+                  : theme.colors.border,
+                borderRadius: isDesktopWeb
+                  ? 8
+                  : theme.radius.lg,
+                backgroundColor: "#FFFFFF",
+                paddingRight: isDesktopWeb ? 8 : 12,
               }}
             >
-              <View
+              <TextInput
+                value={editCategory}
+                onChangeText={(text) => {
+                  setEditCategory(text);
+                  setEditCategoryDropdownOpen(true);
+                }}
+                onFocus={() => {
+                  setEditCategoryDropdownOpen(true);
+
+                  if (!categoriesLoading) {
+                    void loadStoreCategories();
+                  }
+                }}
+                placeholder="Category (optional)"
+                placeholderTextColor={theme.colors.faint}
+                autoCorrect={false}
                 style={{
-                  paddingHorizontal: 16,
-                  paddingTop: 16,
-                  paddingBottom: 14,
-                  borderBottomWidth: 1,
-              borderBottomColor: "rgba(15,23,42,0.10)",
-backgroundColor: "#FFFFFF",
-                  flexDirection: "row",
+                  flex: 1,
+                  paddingHorizontal: isDesktopWeb ? 12 : 14,
+                  paddingVertical: isDesktopWeb ? 9 : 12,
+                  color: theme.colors.text,
+                  fontWeight: "800",
+                  fontSize: isDesktopWeb ? 13 : undefined,
+                }}
+              />
+
+              <Pressable
+                onPress={() => {
+                  setEditCategoryDropdownOpen(
+                    (current) => !current
+                  );
+
+                  if (
+                    !editCategoryDropdownOpen &&
+                    !categoriesLoading
+                  ) {
+                    void loadStoreCategories();
+                  }
+                }}
+                hitSlop={8}
+                style={{
+                  width: isDesktopWeb ? 30 : 34,
+                  height: isDesktopWeb ? 30 : 34,
                   alignItems: "center",
-                  justifyContent: "space-between",
+                  justifyContent: "center",
                 }}
               >
-                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 20 }}>
-                  Edit Product
-                </Text>
-
-                <Pressable
-                  onPress={closeEdit}
-                  hitSlop={10}
-                  style={({ pressed }) => ({
-                    width: 44,
-                    height: 44,
-                    borderRadius: 999,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderWidth: 1,
-                   borderColor: "rgba(15,23,42,0.12)",
-backgroundColor: pressed ? "#E2E8F0" : "#F8FAFC",
-                  })}
-                >
-                  <Ionicons name="close" size={22} color={theme.colors.text} />
-                </Pressable>
-              </View>
-
-              <ScrollView
-                style={{ flexGrow: 0 }}
-                contentContainerStyle={{ padding: 16, paddingBottom: 22, gap: 12 }}
-                keyboardShouldPersistTaps="handled"
-                showsVerticalScrollIndicator={false}
-              >
-                <TextInput
-                  value={editName}
-                  onChangeText={setEditName}
-                  placeholder="Product name"
-                  placeholderTextColor={theme.colors.faint}
-                  style={solidInputStyle}
+                <WebSafeIcon
+                  name={
+                    editCategoryDropdownOpen
+                      ? "chevron-up"
+                      : "chevron-down"
+                  }
+                  size={isDesktopWeb ? 17 : 20}
+                  color={theme.colors.muted}
                 />
+              </Pressable>
+            </View>
 
-                {!isCapitalRecoveryStore && (
-                  <View style={{ flexDirection: "row", gap: 10 }}>
-                    <View style={{ flex: 1 }}>
-                      <TextInput
-                        value={editSku}
-                        onChangeText={setEditSku}
-                        placeholder="SKU (optional)"
-                        placeholderTextColor={theme.colors.faint}
-                        style={solidInputStyle}
-                      />
-                    </View>
+            {editCategoryDropdownOpen && (
+              <View
+                style={{
+                  marginTop: 6,
+                  borderWidth: 1,
+                  borderColor: theme.colors.border,
+                  borderRadius: isDesktopWeb ? 8 : 16,
+                  backgroundColor: "#FFFFFF",
+                  overflow: "hidden",
+                  elevation: 6,
+                }}
+              >
+                {categoriesLoading ? (
+                  <View
+                    style={{
+                      paddingHorizontal: 14,
+                      paddingVertical: isDesktopWeb ? 10 : 14,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: theme.colors.muted,
+                        fontWeight: "800",
+                        fontSize: isDesktopWeb ? 12 : undefined,
+                      }}
+                    >
+                      Loading categories...
+                    </Text>
+                  </View>
+                ) : filteredEditCategorySuggestions.length > 0 ? (
+                  <ScrollView
+                    style={{
+                      maxHeight: isDesktopWeb ? 150 : 190,
+                    }}
+                    keyboardShouldPersistTaps="always"
+                    nestedScrollEnabled
+                    showsVerticalScrollIndicator
+                  >
+                    {filteredEditCategorySuggestions.map(
+                      (item, index) => (
+                        <Pressable
+                          key={`${item}-${index}`}
+                          onPress={() => {
+                            setEditCategory(item);
+                            setEditCategoryDropdownOpen(false);
+                          }}
+                          style={({ pressed }) => ({
+                            paddingHorizontal: 14,
+                            paddingVertical: isDesktopWeb
+                              ? 9
+                              : 13,
+                            backgroundColor: pressed
+                              ? "rgba(16,185,129,0.10)"
+                              : "#FFFFFF",
+                            borderBottomWidth:
+                              index <
+                              filteredEditCategorySuggestions.length -
+                                1
+                                ? 1
+                                : 0,
+                            borderBottomColor:
+                              "rgba(148,163,184,0.16)",
+                          })}
+                        >
+                          <Text
+                            style={{
+                              color: theme.colors.text,
+                              fontWeight: "800",
+                              fontSize: isDesktopWeb
+                                ? 12
+                                : undefined,
+                            }}
+                          >
+                            {item}
+                          </Text>
+                        </Pressable>
+                      )
+                    )}
+                  </ScrollView>
+                ) : (
+                  <View
+                    style={{
+                      paddingHorizontal: 14,
+                      paddingVertical: isDesktopWeb ? 10 : 14,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: theme.colors.muted,
+                        fontWeight: "800",
+                        fontSize: isDesktopWeb
+                          ? 12
+                          : undefined,
+                      }}
+                    >
+                      {editCategory.trim()
+                        ? `"${editCategory.trim()}" haipo bado. Unaweza kuitumia kama category mpya.`
+                        : "Hakuna category iliyopatikana kwenye store hii bado."}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
 
-                    <View style={{ flex: 1 }}>
-                      <TextInput
-                        value={editUnit}
-                        onChangeText={setEditUnit}
-                        placeholder="Unit / UOM (optional)"
-                        placeholderTextColor={theme.colors.faint}
-                        style={solidInputStyle}
-                      />
-                    </View>
+          {/* IMAGE + BARCODE */}
+          <View
+            style={{
+              flexDirection: isDesktopWeb
+                ? "row"
+                : "column",
+              gap: isDesktopWeb ? 10 : 12,
+              alignItems: isDesktopWeb
+                ? "flex-start"
+                : "stretch",
+            }}
+          >
+            <View
+              style={{
+                flex: isDesktopWeb ? 1 : undefined,
+                width: isDesktopWeb ? undefined : "100%",
+                gap: isDesktopWeb ? 5 : 8,
+              }}
+            >
+              <Text
+                style={{
+                  color: theme.colors.muted,
+                  fontWeight: "900",
+                  fontSize: isDesktopWeb ? 11 : undefined,
+                }}
+              >
+                Product Image
+              </Text>
+
+              <Pressable
+                onPress={() => chooseImageSource("edit")}
+                disabled={editImageUploading || loading}
+                style={({ pressed }) => ({
+                  minHeight: isDesktopWeb ? 62 : 88,
+                  borderRadius: isDesktopWeb ? 9 : 22,
+                  borderWidth: 1,
+                  borderColor: editImageUrl
+                    ? theme.colors.emeraldBorder
+                    : theme.colors.border,
+                  backgroundColor: editImageUrl
+                    ? "#ECFDF5"
+                    : "#F8FAFC",
+                  padding: isDesktopWeb ? 8 : 12,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: isDesktopWeb ? 9 : 12,
+                  opacity:
+                    editImageUploading || loading
+                      ? 0.6
+                      : pressed
+                      ? 0.9
+                      : 1,
+                })}
+              >
+                {editImageUrl ? (
+                  <Image
+                    source={{ uri: editImageUrl }}
+                    style={{
+                      width: isDesktopWeb ? 44 : 64,
+                      height: isDesktopWeb ? 44 : 64,
+                      borderRadius: isDesktopWeb ? 8 : 18,
+                      backgroundColor: "#E2E8F0",
+                    }}
+                    resizeMode="cover"
+                    resizeMethod={
+                      Platform.OS === "android"
+                        ? "resize"
+                        : undefined
+                    }
+                    fadeDuration={
+                      Platform.OS === "android"
+                        ? 0
+                        : undefined
+                    }
+                  />
+                ) : (
+                  <View
+                    style={{
+                      width: isDesktopWeb ? 44 : 64,
+                      height: isDesktopWeb ? 44 : 64,
+                      borderRadius: isDesktopWeb ? 8 : 18,
+                      backgroundColor:
+                        "rgba(16,185,129,0.10)",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Ionicons
+                      name="image-outline"
+                      size={isDesktopWeb ? 21 : 28}
+                      color={theme.colors.text}
+                    />
                   </View>
                 )}
 
-              <View style={{ position: "relative", zIndex: 30 }}>
-  <View
-    style={{
-      flexDirection: "row",
-      alignItems: "center",
-      borderWidth: 1,
-      borderColor: editCategoryDropdownOpen
-        ? theme.colors.emeraldBorder
-        : theme.colors.border,
-      borderRadius: theme.radius.lg,
-      backgroundColor: "#FFFFFF",
-      paddingRight: 12,
-    }}
-  >
-    <TextInput
-      value={editCategory}
-      onChangeText={(text) => {
-        setEditCategory(text);
-        setEditCategoryDropdownOpen(true);
-      }}
-      onFocus={() => {
-        setEditCategoryDropdownOpen(true);
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={{
+                      color: theme.colors.text,
+                      fontWeight: "900",
+                      fontSize: isDesktopWeb
+                        ? 12
+                        : undefined,
+                    }}
+                  >
+                    {editImageUploading
+                      ? "Uploading image..."
+                      : editImageUrl
+                      ? "Change product image"
+                      : "Add product image"}
+                  </Text>
 
-        if (!categoriesLoading) {
-          void loadStoreCategories();
-        }
-      }}
-      placeholder="Category (optional)"
-      placeholderTextColor={theme.colors.faint}
-      autoCorrect={false}
-      style={{
-        flex: 1,
-        paddingHorizontal: 14,
-        paddingVertical: 12,
-        color: theme.colors.text,
-        fontWeight: "800",
-      }}
-    />
+                  <Text
+                    style={{
+                      color: theme.colors.muted,
+                      fontWeight: "800",
+                      marginTop: isDesktopWeb ? 2 : 4,
+                      fontSize: isDesktopWeb
+                        ? 10
+                        : undefined,
+                    }}
+                  >
+                    Camera au Gallery/File
+                  </Text>
+                </View>
+              </Pressable>
 
-    <Pressable
-      onPress={() => {
-        setEditCategoryDropdownOpen((current) => !current);
+              {!!editImageUrl && (
+                <Pressable
+                  onPress={() => setEditImageUrl("")}
+                  disabled={loading}
+                >
+                  <Text
+                    style={{
+                      color: "#B91C1C",
+                      fontWeight: "900",
+                      fontSize: isDesktopWeb
+                        ? 10
+                        : undefined,
+                    }}
+                  >
+                    Remove image
+                  </Text>
+                </Pressable>
+              )}
+            </View>
 
-        if (!editCategoryDropdownOpen && !categoriesLoading) {
-          void loadStoreCategories();
-        }
-      }}
-      hitSlop={8}
-      style={{
-        width: 34,
-        height: 34,
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <WebSafeIcon
-        name={
-          editCategoryDropdownOpen
-            ? "chevron-up"
-            : "chevron-down"
-        }
-        size={20}
-        color={theme.colors.muted}
-      />
-    </Pressable>
-  </View>
+            {!isCapitalRecoveryStore && (
+              <View
+                style={{
+                  flex: isDesktopWeb ? 1 : undefined,
+                  width: isDesktopWeb
+                    ? undefined
+                    : "100%",
+                  paddingTop: isDesktopWeb ? 20 : 0,
+                }}
+              >
+                <TextInput
+                  value={editBarcode}
+                  onChangeText={(t) =>
+                    setEditBarcode(cleanBarcode(t))
+                  }
+                  placeholder="Barcode (optional)"
+                  placeholderTextColor={theme.colors.faint}
+                  style={[
+                    solidInputStyle,
+                    isDesktopWeb && {
+                      paddingHorizontal: 12,
+                      paddingVertical: 9,
+                      borderRadius: 8,
+                      fontSize: 13,
+                    },
+                  ]}
+                />
+              </View>
+            )}
+          </View>
 
-  {editCategoryDropdownOpen && (
-    <View
-      style={{
-        marginTop: 6,
-        borderWidth: 1,
-        borderColor: theme.colors.border,
-        borderRadius: 16,
-        backgroundColor: "#FFFFFF",
-        overflow: "hidden",
-        elevation: 6,
-      }}
-    >
-      {categoriesLoading ? (
-        <View
-          style={{
-            paddingHorizontal: 14,
-            paddingVertical: 14,
-          }}
-        >
-          <Text
-            style={{
-              color: theme.colors.muted,
-              fontWeight: "800",
-            }}
-          >
-            Loading categories...
-          </Text>
-        </View>
-      ) : filteredEditCategorySuggestions.length > 0 ? (
-        <ScrollView
-          style={{ maxHeight: 190 }}
-          keyboardShouldPersistTaps="always"
-          nestedScrollEnabled
-          showsVerticalScrollIndicator
-        >
-          {filteredEditCategorySuggestions.map((item, index) => (
-            <Pressable
-              key={`${item}-${index}`}
-              onPress={() => {
-                setEditCategory(item);
-                setEditCategoryDropdownOpen(false);
+          {/* PRECISION RETAIL */}
+          {isPrecisionRetailStore && canSeeCost && (
+            <Card
+              style={{
+                gap: isDesktopWeb ? 8 : 10,
+                padding: isDesktopWeb ? 11 : undefined,
+                borderRadius: isDesktopWeb ? 10 : undefined,
+                borderColor: "rgba(52,211,153,0.28)",
+                backgroundColor: "rgba(52,211,153,0.08)",
               }}
-              style={({ pressed }) => ({
-                paddingHorizontal: 14,
-                paddingVertical: 13,
-                backgroundColor: pressed
-                  ? "rgba(16,185,129,0.10)"
-                  : "#FFFFFF",
-                borderBottomWidth:
-                  index <
-                  filteredEditCategorySuggestions.length - 1
-                    ? 1
-                    : 0,
-                borderBottomColor: "rgba(148,163,184,0.16)",
-              })}
             >
               <Text
                 style={{
                   color: theme.colors.text,
-                  fontWeight: "800",
+                  fontWeight: "900",
+                  fontSize: isDesktopWeb ? 13 : 15,
                 }}
               >
-                {item}
+                Unit & Pack Calculator
               </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
-      ) : (
-        <View
-          style={{
-            paddingHorizontal: 14,
-            paddingVertical: 14,
-          }}
-        >
-          <Text
-            style={{
-              color: theme.colors.muted,
-              fontWeight: "800",
-            }}
-          >
-            {editCategory.trim()
-              ? `"${editCategory.trim()}" haipo bado. Unaweza kuitumia kama category mpya.`
-              : "Hakuna category iliyopatikana kwenye store hii bado."}
-          </Text>
-        </View>
-      )}
-    </View>
-  )}
-</View>
 
-                <View style={{ gap: 8 }}>
-                  <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Product Image</Text>
+              <Text
+                style={{
+                  color: theme.colors.muted,
+                  fontWeight: "800",
+                  lineHeight: isDesktopWeb ? 16 : 19,
+                  fontSize: isDesktopWeb ? 11 : undefined,
+                }}
+              >
+                Badili pack size, unit ya ndani, cost ya pack na
+                selling ya pack. Mfumo utahesabu bei ya unit moja
+                automatic.
+              </Text>
 
-                  <Pressable
-                    onPress={() => chooseImageSource("edit")}
-                    disabled={editImageUploading || loading}
-                    style={({ pressed }) => ({
-                      minHeight: 88,
-                      borderRadius: 22,
-                      borderWidth: 1,
-                      borderColor: editImageUrl ? theme.colors.emeraldBorder : theme.colors.border,
-                      backgroundColor: editImageUrl ? "#ECFDF5" : "#F8FAFC",
-                      padding: 12,
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 12,
-                      opacity: editImageUploading || loading ? 0.6 : pressed ? 0.9 : 1,
-                    })}
-                  >
-                    {editImageUrl ? (
-                    <Image
-  source={{ uri: editImageUrl }}
-  style={{
-    width: 64,
-    height: 64,
-    borderRadius: 18,
-    backgroundColor: "#E2E8F0",
-  }}
-  resizeMode="cover"
-  resizeMethod={
-    Platform.OS === "android" ? "resize" : undefined
-  }
-  fadeDuration={
-    Platform.OS === "android" ? 0 : undefined
-  }
-/>
-                    ) : (
-                      <View
-                        style={{
-                          width: 64,
-                          height: 64,
-                          borderRadius: 18,
-                          backgroundColor: "rgba(16,185,129,0.10)",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <Ionicons name="image-outline" size={28} color={theme.colors.text} />
-                      </View>
-                    )}
-
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                        {editImageUploading ? "Uploading image..." : editImageUrl ? "Change product image" : "Add product image"}
-                      </Text>
-                      <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 4 }}>
-                        Camera au Gallery/File
-                      </Text>
-                    </View>
-                  </Pressable>
-
-                  {!!editImageUrl && (
-                    <Pressable onPress={() => setEditImageUrl("")} disabled={loading}>
-                      <Text style={{ color: "#B91C1C", fontWeight: "900" }}>Remove image</Text>
-                    </Pressable>
-                  )}
-                </View>
-
-                {!isCapitalRecoveryStore && (
+              <View
+                style={{
+                  flexDirection: "row",
+                  gap: isDesktopWeb ? 8 : 10,
+                }}
+              >
+                <View style={{ flex: 1.15 }}>
                   <TextInput
-                    value={editBarcode}
-                    onChangeText={(t) => setEditBarcode(cleanBarcode(t))}
-                    placeholder="Barcode (optional)"
-                    placeholderTextColor={theme.colors.faint}
-                    style={solidInputStyle}
-                  />
-                )}
-
-                {isPrecisionRetailStore && canSeeCost && (
-                  <Card
-                    style={{
-                      gap: 10,
-                      borderColor: "rgba(52,211,153,0.28)",
-                      backgroundColor: "rgba(52,211,153,0.08)",
-                    }}
-                  >
-                    <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 15 }}>
-                      Unit & Pack Calculator
-                    </Text>
-
-                    <Text style={{ color: theme.colors.muted, fontWeight: "800", lineHeight: 19 }}>
-                      Badili pack size, unit ya ndani, cost ya pack na selling ya pack. Mfumo utahesabu bei ya unit moja automatic.
-                    </Text>
-
-                   <View style={{ flexDirection: "row", gap: 10 }}>
-  <View style={{ flex: 1.15 }}>
-    <TextInput
-      value={editPrecisionPackQty}
-      onChangeText={(t) => setEditPrecisionPackQty(normalizeDecimalInput(t))}
-      placeholder="Pack size e.g. 100"
-      keyboardType="numeric"
-      placeholderTextColor={theme.colors.faint}
-      style={[
-        solidInputStyle,
-        {
-          fontSize: 13,
-          backgroundColor: "#FFFFFF",
-        },
-      ]}
-    />
-  </View>
-
-  <View style={{ flex: 1 }}>
-    <TextInput
-      value={editPrecisionUnit}
-      onChangeText={setEditPrecisionUnit}
-      placeholder="Unit e.g. capsule"
-      placeholderTextColor={theme.colors.faint}
-      style={[
-        solidInputStyle,
-        {
-          fontSize: 13,
-          backgroundColor: "#ECFDF5",
-          borderColor: theme.colors.emeraldBorder,
-          color: theme.colors.text,
-          fontWeight: "900",
-        },
-      ]}
-    />
-  </View>
-</View>
-
-                    <TextInput
-                      value={editPrecisionPackCost}
-                      onChangeText={(t) => setEditPrecisionPackCost(normalizeDecimalInput(t))}
-                      placeholder="Buying/Cost price ya box/pack"
-                      keyboardType="numeric"
-                      placeholderTextColor={theme.colors.faint}
-                      style={solidInputStyle}
-                    />
-
-                    <TextInput
-                      value={editPrecisionPackSelling}
-                      onChangeText={(t) => setEditPrecisionPackSelling(normalizeDecimalInput(t))}
-                      placeholder="Selling price ya box/pack"
-                      keyboardType="numeric"
-                      placeholderTextColor={theme.colors.faint}
-                      style={solidInputStyle}
-                    />
-
-                    <Button
-                      title="Calculate Per Unit Price"
-                      onPress={applyEditPrecisionFormula}
-                      disabled={loading}
-                      variant="secondary"
-                    />
-
-                    <Text style={{ color: theme.colors.faint, fontWeight: "800" }}>
-                      Baada ya calculate, Cost Price na Selling Price chini zitabadilishwa kama bei ya unit moja.
-                    </Text>
-                  </Card>
-                )}
-
-                {canSeeCost && (
-                  <TextInput
-                    value={editCostPrice}
-                    onChangeText={(t) => setEditCostPrice(normalizeDecimalInput(t))}
-                    placeholder="Cost Price (optional)"
+                    value={editPrecisionPackQty}
+                    onChangeText={(t) =>
+                      setEditPrecisionPackQty(
+                        normalizeDecimalInput(t)
+                      )
+                    }
+                    placeholder="Pack size e.g. 100"
                     keyboardType="numeric"
                     placeholderTextColor={theme.colors.faint}
-                    style={solidInputStyle}
+                    style={[
+                      solidInputStyle,
+                      {
+                        fontSize: 13,
+                        backgroundColor: "#FFFFFF",
+                      },
+                      isDesktopWeb && {
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        borderRadius: 8,
+                      },
+                    ]}
                   />
-                )}
+                </View>
 
+                <View style={{ flex: 1 }}>
+                  <TextInput
+                    value={editPrecisionUnit}
+                    onChangeText={setEditPrecisionUnit}
+                    placeholder="Unit e.g. capsule"
+                    placeholderTextColor={theme.colors.faint}
+                    style={[
+                      solidInputStyle,
+                      {
+                        fontSize: 13,
+                        backgroundColor: "#ECFDF5",
+                        borderColor: theme.colors.emeraldBorder,
+                        color: theme.colors.text,
+                        fontWeight: "900",
+                      },
+                      isDesktopWeb && {
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        borderRadius: 8,
+                      },
+                    ]}
+                  />
+                </View>
+              </View>
+
+              <View
+                style={{
+                  flexDirection: isDesktopWeb
+                    ? "row"
+                    : "column",
+                  gap: isDesktopWeb ? 8 : 10,
+                }}
+              >
+                <View style={{ flex: 1 }}>
+                  <TextInput
+                    value={editPrecisionPackCost}
+                    onChangeText={(t) =>
+                      setEditPrecisionPackCost(
+                        normalizeDecimalInput(t)
+                      )
+                    }
+                    placeholder="Buying/Cost price ya box/pack"
+                    keyboardType="numeric"
+                    placeholderTextColor={theme.colors.faint}
+                    style={[
+                      solidInputStyle,
+                      isDesktopWeb && {
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        borderRadius: 8,
+                        fontSize: 12,
+                      },
+                    ]}
+                  />
+                </View>
+
+                <View style={{ flex: 1 }}>
+                  <TextInput
+                    value={editPrecisionPackSelling}
+                    onChangeText={(t) =>
+                      setEditPrecisionPackSelling(
+                        normalizeDecimalInput(t)
+                      )
+                    }
+                    placeholder="Selling price ya box/pack"
+                    keyboardType="numeric"
+                    placeholderTextColor={theme.colors.faint}
+                    style={[
+                      solidInputStyle,
+                      isDesktopWeb && {
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        borderRadius: 8,
+                        fontSize: 12,
+                      },
+                    ]}
+                  />
+                </View>
+              </View>
+
+              <Button
+                title="Calculate Per Unit Price"
+                onPress={applyEditPrecisionFormula}
+                disabled={loading}
+                variant="secondary"
+              />
+
+              <Text
+                style={{
+                  color: theme.colors.faint,
+                  fontWeight: "800",
+                  fontSize: isDesktopWeb ? 10 : undefined,
+                }}
+              >
+                Baada ya calculate, Cost Price na Selling Price
+                chini zitabadilishwa kama bei ya unit moja.
+              </Text>
+            </Card>
+          )}
+
+          {/* COST + SELLING PRICE */}
+          <View
+            style={{
+              flexDirection:
+                isDesktopWeb && canSeeCost
+                  ? "row"
+                  : "column",
+              gap: isDesktopWeb ? 8 : 12,
+            }}
+          >
+            {canSeeCost && (
+              <View style={{ flex: 1 }}>
                 <TextInput
-                  value={editSellingPrice}
-                  onChangeText={(t) => setEditSellingPrice(normalizeDecimalInput(t))}
-                  placeholder={isCapitalRecoveryStore ? "Selling Price" : "Selling Price (optional)"}
+                  value={editCostPrice}
+                  onChangeText={(t) =>
+                    setEditCostPrice(
+                      normalizeDecimalInput(t)
+                    )
+                  }
+                  placeholder="Cost Price (optional)"
                   keyboardType="numeric"
                   placeholderTextColor={theme.colors.faint}
-                  style={solidInputStyle}
+                  style={[
+                    solidInputStyle,
+                    isDesktopWeb && {
+                      paddingHorizontal: 12,
+                      paddingVertical: 9,
+                      borderRadius: 8,
+                      fontSize: 13,
+                    },
+                  ]}
                 />
+              </View>
+            )}
 
-                <View style={{ flexDirection: "row", gap: 10, marginTop: 6 }}>
-                  <View style={{ flex: 1 }}>
-                    <Button title="Cancel" variant="secondary" onPress={closeEdit} disabled={loading} />
-                  </View>
-
-                  <View style={{ flex: 1 }}>
-                    <Button
-                      title={loading ? "Saving..." : "Save Changes"}
-                      variant="primary"
-                      onPress={saveEdit}
-                      disabled={loading}
-                    />
-                  </View>
-                </View>
-              </ScrollView>
+            <View style={{ flex: 1 }}>
+              <TextInput
+                value={editSellingPrice}
+                onChangeText={(t) =>
+                  setEditSellingPrice(
+                    normalizeDecimalInput(t)
+                  )
+                }
+                placeholder={
+                  isCapitalRecoveryStore
+                    ? "Selling Price"
+                    : "Selling Price (optional)"
+                }
+                keyboardType="numeric"
+                placeholderTextColor={theme.colors.faint}
+                style={[
+                  solidInputStyle,
+                  isDesktopWeb && {
+                    paddingHorizontal: 12,
+                    paddingVertical: 9,
+                    borderRadius: 8,
+                    fontSize: 13,
+                  },
+                ]}
+              />
             </View>
           </View>
-        </KeyboardAvoidingView>
-      </Modal>
+
+          {/* ACTIONS */}
+          <View
+            style={{
+              flexDirection: "row",
+              gap: isDesktopWeb ? 8 : 10,
+              marginTop: isDesktopWeb ? 3 : 6,
+              justifyContent: isDesktopWeb
+                ? "flex-end"
+                : undefined,
+            }}
+          >
+            <View
+              style={{
+                flex: isDesktopWeb ? undefined : 1,
+                width: isDesktopWeb ? 130 : undefined,
+              }}
+            >
+              <Button
+                title="Cancel"
+                variant="secondary"
+                onPress={closeEdit}
+                disabled={loading}
+              />
+            </View>
+
+            <View
+              style={{
+                flex: isDesktopWeb ? undefined : 1,
+                width: isDesktopWeb ? 170 : undefined,
+              }}
+            >
+              <Button
+                title={loading ? "Saving..." : "Save Changes"}
+                variant="primary"
+                onPress={saveEdit}
+                disabled={loading}
+              />
+            </View>
+          </View>
+        </ScrollView>
+      </View>
+    </View>
+  </KeyboardAvoidingView>
+</Modal>
     </Screen>
   );
 }

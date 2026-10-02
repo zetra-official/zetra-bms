@@ -219,6 +219,7 @@ function normalizeHistory(
 
     const text =
       clean(
+        (item as any)?.content ??
         (item as any)?.text
       );
 

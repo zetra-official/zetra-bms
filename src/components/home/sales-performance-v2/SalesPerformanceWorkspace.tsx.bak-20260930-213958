@@ -1,0 +1,1399 @@
+﻿import React from "react";
+import {
+  ActivityIndicator,
+  Pressable,
+  Text,
+  View,
+} from "react-native";
+
+import SalesPerformanceChart from "./SalesPerformanceChart";
+
+import {
+  formatSalesPerformanceRange,
+  resolveSalesPerformancePeriods,
+  type SalesPerformanceMode,
+} from "./periodEngine";
+
+import {
+  loadSalesPerformance,
+  type SalesPerformanceResult,
+} from "./salesPerformanceDataEngine";
+
+import {
+  loadSalesIntelligence,
+  type SalesIntelligenceResult,
+} from "./salesIntelligenceEngine";
+
+type Props = {
+  orgId: string;
+  storeId: string;
+  formatMoney?: (value: number) => string;
+};
+
+const BLUE = "#2563EB";
+const BLUE_SOFT = "#EFF6FF";
+const GREEN = "#16A34A";
+const GREEN_SOFT = "#F0FDF4";
+const RED = "#DC2626";
+const RED_SOFT = "#FEF2F2";
+const AMBER = "#D97706";
+const PURPLE = "#7C3AED";
+const TEXT = "#0F172A";
+const MUTED = "#64748B";
+const BORDER = "#E2E8F0";
+const PANEL = "#FFFFFF";
+const SOFT = "#F8FAFC";
+
+function finite(value: unknown): number {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function defaultMoney(value: number): string {
+  return `TSh ${Math.round(
+    finite(value)
+  ).toLocaleString("en-US")}`;
+}
+
+function percentLabel(
+  value: number | null
+): string {
+  if (value == null) {
+    return "—";
+  }
+
+  const sign =
+    value > 0
+      ? "+"
+      : "";
+
+  return `${sign}${value.toFixed(1)}%`;
+}
+
+function ModeButton({
+  active,
+  label,
+  onPress,
+}: {
+  active: boolean;
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => ({
+        paddingHorizontal: 16,
+        paddingVertical: 9,
+        borderRadius: 9,
+        backgroundColor:
+          active
+            ? BLUE
+            : pressed
+              ? "#E2E8F0"
+              : "transparent",
+      })}
+    >
+      <Text
+        style={{
+          fontSize: 12,
+          fontWeight: "800",
+          color:
+            active
+              ? "#FFFFFF"
+              : MUTED,
+        }}
+      >
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+function MetricCard({
+  label,
+  value,
+  subtext,
+  positive,
+  negative,
+}: {
+  label: string;
+  value: string;
+  subtext?: string;
+  positive?: boolean;
+  negative?: boolean;
+}) {
+  return (
+    <View
+      style={{
+        flex: 1,
+        minWidth: 145,
+        paddingHorizontal: 15,
+        paddingVertical: 13,
+        borderRightWidth: 1,
+        borderRightColor: BORDER,
+      }}
+    >
+      <Text
+        style={{
+          color: MUTED,
+          fontSize: 10,
+          fontWeight: "800",
+          marginBottom: 5,
+        }}
+      >
+        {label}
+      </Text>
+
+      <Text
+        numberOfLines={1}
+        style={{
+          color: TEXT,
+          fontSize: 18,
+          fontWeight: "900",
+        }}
+      >
+        {value}
+      </Text>
+
+      {!!subtext && (
+        <Text
+          style={{
+            color:
+              negative
+                ? RED
+                : positive
+                  ? GREEN
+                  : MUTED,
+            fontSize: 10,
+            fontWeight: "800",
+            marginTop: 4,
+          }}
+        >
+          {subtext}
+        </Text>
+      )}
+    </View>
+  );
+}
+
+function PaymentPanel({
+  intelligence,
+  money,
+}: {
+  intelligence: SalesIntelligenceResult;
+  money: (value: number) => string;
+}) {
+  const items =
+    intelligence.paymentBreakdown.items ?? [];
+
+  return (
+    <View
+      style={{
+        flex: 1,
+        minWidth: 250,
+        backgroundColor: PANEL,
+        borderWidth: 1,
+        borderColor: BORDER,
+        borderRadius: 14,
+        padding: 16,
+      }}
+    >
+      <Text
+        style={{
+          color: TEXT,
+          fontSize: 14,
+          fontWeight: "900",
+        }}
+      >
+        Sales by Payment Method
+      </Text>
+
+      <Text
+        style={{
+          color: MUTED,
+          fontSize: 10,
+          marginTop: 3,
+          marginBottom: 14,
+        }}
+      >
+        Verified payment mix for this period
+      </Text>
+
+      {items.length === 0 ? (
+        <Text
+          style={{
+            color: MUTED,
+            fontSize: 12,
+          }}
+        >
+          No payment data for this period.
+        </Text>
+      ) : (
+        items.map((item) => (
+          <View
+            key={item.key}
+            style={{
+              marginBottom: 11,
+            }}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 10,
+              }}
+            >
+              <Text
+                style={{
+                  color: TEXT,
+                  fontSize: 11,
+                  fontWeight: "800",
+                }}
+              >
+                {item.label}
+              </Text>
+
+              <Text
+                style={{
+                  color: TEXT,
+                  fontSize: 11,
+                  fontWeight: "900",
+                }}
+              >
+                {money(item.revenue)}
+              </Text>
+            </View>
+
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 8,
+                marginTop: 6,
+              }}
+            >
+              <View
+                style={{
+                  flex: 1,
+                  height: 6,
+                  borderRadius: 999,
+                  backgroundColor: "#E2E8F0",
+                  overflow: "hidden",
+                }}
+              >
+                <View
+                  style={{
+                    width: `${Math.max(
+                      0,
+                      Math.min(
+                        100,
+                        finite(item.percent)
+                      )
+                    )}%`,
+                    height: "100%",
+                    borderRadius: 999,
+                    backgroundColor: BLUE,
+                  }}
+                />
+              </View>
+
+              <Text
+                style={{
+                  width: 46,
+                  textAlign: "right",
+                  color: MUTED,
+                  fontSize: 10,
+                  fontWeight: "800",
+                }}
+              >
+                {finite(item.percent).toFixed(1)}%
+              </Text>
+            </View>
+          </View>
+        ))
+      )}
+    </View>
+  );
+}
+
+function TopProductsPanel({
+  intelligence,
+  money,
+}: {
+  intelligence: SalesIntelligenceResult;
+  money: (value: number) => string;
+}) {
+  const products =
+    intelligence.topProducts ?? [];
+
+  const maxRevenue = Math.max(
+    1,
+    ...products.map((item) =>
+      finite(item.revenue)
+    )
+  );
+
+  return (
+    <View
+      style={{
+        flex: 1.12,
+        minWidth: 290,
+        backgroundColor: PANEL,
+        borderWidth: 1,
+        borderColor: BORDER,
+        borderRadius: 14,
+        padding: 16,
+      }}
+    >
+      <Text
+        style={{
+          color: TEXT,
+          fontSize: 14,
+          fontWeight: "900",
+        }}
+      >
+        Top Selling Products
+      </Text>
+
+      <Text
+        style={{
+          color: MUTED,
+          fontSize: 10,
+          marginTop: 3,
+          marginBottom: 13,
+        }}
+      >
+        Ranked by verified sales revenue
+      </Text>
+
+      {products.length === 0 ? (
+        <Text
+          style={{
+            color: MUTED,
+            fontSize: 12,
+          }}
+        >
+          No product sales for this period.
+        </Text>
+      ) : (
+        products.map((item, index) => {
+          const width =
+            Math.max(
+              4,
+              Math.min(
+                100,
+                (finite(item.revenue) /
+                  maxRevenue) *
+                  100
+              )
+            );
+
+          return (
+            <View
+              key={
+                item.productId ||
+                `${item.productName}-${index}`
+              }
+              style={{
+                marginBottom: 11,
+              }}
+            >
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 9,
+                }}
+              >
+                <View
+                  style={{
+                    width: 22,
+                    height: 22,
+                    borderRadius: 7,
+                    backgroundColor: BLUE_SOFT,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: BLUE,
+                      fontSize: 10,
+                      fontWeight: "900",
+                    }}
+                  >
+                    {index + 1}
+                  </Text>
+                </View>
+
+                <View
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                  }}
+                >
+                  <Text
+                    numberOfLines={1}
+                    style={{
+                      color: TEXT,
+                      fontSize: 11,
+                      fontWeight: "900",
+                    }}
+                  >
+                    {item.productName}
+                  </Text>
+
+                  <Text
+                    style={{
+                      color: MUTED,
+                      fontSize: 9,
+                      marginTop: 2,
+                    }}
+                  >
+                    {finite(item.qtySold).toLocaleString(
+                      "en-US"
+                    )}{" "}
+                    sold
+                  </Text>
+                </View>
+
+                <Text
+                  style={{
+                    color: TEXT,
+                    fontSize: 10,
+                    fontWeight: "900",
+                  }}
+                >
+                  {money(item.revenue)}
+                </Text>
+              </View>
+
+              <View
+                style={{
+                  marginLeft: 31,
+                  marginTop: 6,
+                  height: 5,
+                  borderRadius: 999,
+                  backgroundColor: "#E2E8F0",
+                  overflow: "hidden",
+                }}
+              >
+                <View
+                  style={{
+                    width: `${width}%`,
+                    height: "100%",
+                    backgroundColor: BLUE,
+                    borderRadius: 999,
+                  }}
+                />
+              </View>
+            </View>
+          );
+        })
+      )}
+    </View>
+  );
+}
+
+function InsightPanel({
+  performance,
+  intelligence,
+  money,
+}: {
+  performance: SalesPerformanceResult;
+  intelligence: SalesIntelligenceResult;
+  money: (value: number) => string;
+}) {
+  const percent =
+    performance.difference.percent;
+
+  const peak =
+    intelligence.peakSalesTime;
+
+  const top =
+    intelligence.topProducts?.[0] ??
+    null;
+
+  return (
+    <View
+      style={{
+        flex: 0.9,
+        minWidth: 240,
+        backgroundColor: PANEL,
+        borderWidth: 1,
+        borderColor: BORDER,
+        borderRadius: 14,
+        padding: 16,
+      }}
+    >
+      <Text
+        style={{
+          color: TEXT,
+          fontSize: 14,
+          fontWeight: "900",
+        }}
+      >
+        Performance Insights
+      </Text>
+
+      <Text
+        style={{
+          color: MUTED,
+          fontSize: 10,
+          marginTop: 3,
+          marginBottom: 13,
+        }}
+      >
+        Live facts from the selected period
+      </Text>
+
+      <View
+        style={{
+          backgroundColor:
+            performance.difference.amount >= 0
+              ? GREEN_SOFT
+              : RED_SOFT,
+          borderRadius: 10,
+          padding: 11,
+          marginBottom: 9,
+        }}
+      >
+        <Text
+          style={{
+            color:
+              performance.difference.amount >= 0
+                ? GREEN
+                : RED,
+            fontSize: 11,
+            fontWeight: "900",
+          }}
+        >
+          Sales{" "}
+          {performance.difference.amount >= 0
+            ? "increased"
+            : "decreased"}{" "}
+          {percentLabel(
+            percent == null
+              ? null
+              : Math.abs(percent)
+          )}
+        </Text>
+
+        <Text
+          style={{
+            color: MUTED,
+            fontSize: 9,
+            marginTop: 3,
+          }}
+        >
+          Difference:{" "}
+          {money(
+            Math.abs(
+              performance.difference.amount
+            )
+          )}
+        </Text>
+      </View>
+
+      {top && (
+        <View
+          style={{
+            backgroundColor: "#FFF7ED",
+            borderRadius: 10,
+            padding: 11,
+            marginBottom: 9,
+          }}
+        >
+          <Text
+            numberOfLines={2}
+            style={{
+              color: AMBER,
+              fontSize: 11,
+              fontWeight: "900",
+            }}
+          >
+            {top.productName} is your top product
+          </Text>
+
+          <Text
+            style={{
+              color: MUTED,
+              fontSize: 9,
+              marginTop: 3,
+            }}
+          >
+            {money(top.revenue)} in sales
+          </Text>
+        </View>
+      )}
+
+      {peak && (
+        <View
+          style={{
+            backgroundColor: "#F5F3FF",
+            borderRadius: 10,
+            padding: 11,
+          }}
+        >
+          <Text
+            style={{
+              color: PURPLE,
+              fontSize: 11,
+              fontWeight: "900",
+            }}
+          >
+            Peak sales: {peak.label}
+          </Text>
+
+          <Text
+            style={{
+              color: MUTED,
+              fontSize: 9,
+              marginTop: 3,
+            }}
+          >
+            {money(peak.sales)} across{" "}
+            {peak.orders.toLocaleString(
+              "en-US"
+            )}{" "}
+            orders
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+export default function SalesPerformanceWorkspace({
+  orgId,
+  storeId,
+  formatMoney,
+}: Props) {
+  const money =
+    formatMoney ?? defaultMoney;
+
+  const [mode, setMode] =
+    React.useState<SalesPerformanceMode>(
+      "DAILY"
+    );
+
+  const [compare, setCompare] =
+    React.useState(true);
+
+  const [performance, setPerformance] =
+    React.useState<SalesPerformanceResult | null>(
+      null
+    );
+
+  const [intelligence, setIntelligence] =
+    React.useState<SalesIntelligenceResult | null>(
+      null
+    );
+
+  const [loading, setLoading] =
+    React.useState(false);
+
+  const [errorText, setErrorText] =
+    React.useState("");
+
+  const requestRef =
+    React.useRef(0);
+
+  const load = React.useCallback(
+    async () => {
+      const cleanOrgId =
+        String(orgId || "").trim();
+
+      const cleanStoreId =
+        String(storeId || "").trim();
+
+      if (
+        !cleanOrgId ||
+        !cleanStoreId
+      ) {
+        setPerformance(null);
+        setIntelligence(null);
+        setErrorText("");
+        return;
+      }
+
+      const requestId =
+        ++requestRef.current;
+
+      setLoading(true);
+      setErrorText("");
+
+      try {
+        /*
+         * Stage 1:
+         * exactly TWO get_sales_v3 requests:
+         * current + previous.
+         */
+        const nextPerformance =
+          await loadSalesPerformance({
+            storeId: cleanStoreId,
+            mode,
+          });
+
+        if (
+          requestId !==
+          requestRef.current
+        ) {
+          return;
+        }
+
+        setPerformance(
+          nextPerformance
+        );
+
+        /*
+         * Stage 2:
+         * payment mix + top products.
+         *
+         * Peak time can still use the already
+         * bucketed performance points without
+         * introducing another Home-level query.
+         */
+        const peakRows =
+          nextPerformance.currentPoints.map(
+            (point, index) => {
+              const periods =
+                resolveSalesPerformancePeriods(
+                  mode
+                );
+
+              const bucket =
+                periods.currentBuckets[
+                  index
+                ];
+
+              return {
+                soldAt:
+                  bucket?.from.toISOString() ??
+                  new Date().toISOString(),
+                totalAmount:
+                  finite(point.sales),
+              };
+            }
+          );
+
+        const nextIntelligence =
+          await loadSalesIntelligence({
+            orgId: cleanOrgId,
+            storeId: cleanStoreId,
+            range:
+              nextPerformance.currentRange,
+            currentSalesRows:
+              peakRows,
+          });
+
+        if (
+          requestId !==
+          requestRef.current
+        ) {
+          return;
+        }
+
+        setIntelligence(
+          nextIntelligence
+        );
+      } catch (error: any) {
+        if (
+          requestId !==
+          requestRef.current
+        ) {
+          return;
+        }
+
+        setErrorText(
+          error?.message
+            ? String(error.message)
+            : "Unable to load Sales Performance."
+        );
+      } finally {
+        if (
+          requestId ===
+          requestRef.current
+        ) {
+          setLoading(false);
+        }
+      }
+    },
+    [
+      orgId,
+      storeId,
+      mode,
+    ]
+  );
+
+  React.useEffect(() => {
+    load();
+
+    return () => {
+      requestRef.current += 1;
+    };
+  }, [load]);
+
+  const periods =
+    React.useMemo(
+      () =>
+        resolveSalesPerformancePeriods(
+          mode
+        ),
+      [mode]
+    );
+
+  const rangeLabel =
+    formatSalesPerformanceRange(
+      performance?.currentRange ??
+        periods.current
+    );
+
+  const differencePositive =
+    finite(
+      performance?.difference.amount
+    ) >= 0;
+
+  return (
+    <View
+      style={{
+        width: "100%",
+        backgroundColor: PANEL,
+        borderWidth: 1,
+        borderColor: BORDER,
+        borderRadius: 18,
+        overflow: "hidden",
+      }}
+    >
+      <View
+        style={{
+          paddingHorizontal: 20,
+          paddingTop: 18,
+          paddingBottom: 14,
+          borderBottomWidth: 1,
+          borderBottomColor: BORDER,
+        }}
+      >
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent:
+              "space-between",
+            gap: 16,
+            flexWrap: "wrap",
+          }}
+        >
+          <View>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 9,
+              }}
+            >
+              <View
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: 9,
+                  backgroundColor:
+                    BLUE_SOFT,
+                  alignItems: "center",
+                  justifyContent:
+                    "center",
+                }}
+              >
+                <Text
+                  style={{
+                    color: BLUE,
+                    fontSize: 17,
+                    fontWeight: "900",
+                  }}
+                >
+                  ↗
+                </Text>
+              </View>
+
+              <Text
+                style={{
+                  color: TEXT,
+                  fontSize: 20,
+                  fontWeight: "900",
+                }}
+              >
+                Sales Performance
+              </Text>
+            </View>
+
+            <Text
+              style={{
+                color: MUTED,
+                fontSize: 11,
+                marginTop: 5,
+              }}
+            >
+              Visualize your sales trends and compare performance over time
+            </Text>
+          </View>
+
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 12,
+              flexWrap: "wrap",
+            }}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                backgroundColor: SOFT,
+                borderRadius: 10,
+                padding: 3,
+                borderWidth: 1,
+                borderColor: BORDER,
+              }}
+            >
+              <ModeButton
+                label="Daily"
+                active={
+                  mode === "DAILY"
+                }
+                onPress={() =>
+                  setMode("DAILY")
+                }
+              />
+
+              <ModeButton
+                label="Weekly"
+                active={
+                  mode === "WEEKLY"
+                }
+                onPress={() =>
+                  setMode("WEEKLY")
+                }
+              />
+
+              <ModeButton
+                label="Monthly"
+                active={
+                  mode === "MONTHLY"
+                }
+                onPress={() =>
+                  setMode("MONTHLY")
+                }
+              />
+            </View>
+
+            <Pressable
+              onPress={() =>
+                setCompare(
+                  (value) => !value
+                )
+              }
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+              <Text
+                style={{
+                  color: TEXT,
+                  fontSize: 11,
+                  fontWeight: "800",
+                }}
+              >
+                Compare
+              </Text>
+
+              <View
+                style={{
+                  width: 36,
+                  height: 20,
+                  borderRadius: 999,
+                  padding: 2,
+                  backgroundColor:
+                    compare
+                      ? BLUE
+                      : "#CBD5E1",
+                  alignItems:
+                    compare
+                      ? "flex-end"
+                      : "flex-start",
+                }}
+              >
+                <View
+                  style={{
+                    width: 16,
+                    height: 16,
+                    borderRadius: 999,
+                    backgroundColor:
+                      "#FFFFFF",
+                  }}
+                />
+              </View>
+            </Pressable>
+
+            <View
+              style={{
+                minHeight: 36,
+                paddingHorizontal: 12,
+                borderRadius: 9,
+                borderWidth: 1,
+                borderColor: BORDER,
+                backgroundColor: PANEL,
+                justifyContent:
+                  "center",
+              }}
+            >
+              <Text
+                style={{
+                  color: TEXT,
+                  fontSize: 10,
+                  fontWeight: "800",
+                }}
+              >
+                {rangeLabel}
+              </Text>
+            </View>
+          </View>
+        </View>
+      </View>
+
+      {loading &&
+      !performance ? (
+        <View
+          style={{
+            minHeight: 420,
+            alignItems: "center",
+            justifyContent:
+              "center",
+          }}
+        >
+          <ActivityIndicator
+            size="large"
+            color={BLUE}
+          />
+
+          <Text
+            style={{
+              color: MUTED,
+              marginTop: 12,
+              fontSize: 12,
+              fontWeight: "700",
+            }}
+          >
+            Loading verified sales performance...
+          </Text>
+        </View>
+      ) : errorText &&
+        !performance ? (
+        <View
+          style={{
+            minHeight: 300,
+            alignItems: "center",
+            justifyContent:
+              "center",
+            padding: 30,
+          }}
+        >
+          <Text
+            style={{
+              color: RED,
+              fontSize: 13,
+              fontWeight: "900",
+            }}
+          >
+            Sales Performance unavailable
+          </Text>
+
+          <Text
+            style={{
+              color: MUTED,
+              fontSize: 11,
+              marginTop: 7,
+              textAlign: "center",
+            }}
+          >
+            {errorText}
+          </Text>
+
+          <Pressable
+            onPress={load}
+            style={{
+              marginTop: 14,
+              paddingHorizontal: 16,
+              paddingVertical: 9,
+              borderRadius: 9,
+              backgroundColor: BLUE,
+            }}
+          >
+            <Text
+              style={{
+                color: "#FFFFFF",
+                fontSize: 11,
+                fontWeight: "900",
+              }}
+            >
+              Retry
+            </Text>
+          </Pressable>
+        </View>
+      ) : performance ? (
+        <>
+          <View
+            style={{
+              flexDirection: "row",
+              flexWrap: "wrap",
+              borderBottomWidth: 1,
+              borderBottomColor: BORDER,
+            }}
+          >
+            <MetricCard
+              label="TOTAL SALES"
+              value={money(
+                performance.current.sales
+              )}
+              subtext={
+                performance.difference
+                  .percent == null
+                  ? "No previous baseline"
+                  : `${percentLabel(
+                      performance.difference
+                        .percent
+                    )} vs previous`
+              }
+              positive={
+                differencePositive
+              }
+              negative={
+                !differencePositive
+              }
+            />
+
+            <MetricCard
+              label="PREVIOUS PERIOD"
+              value={money(
+                performance.previous.sales
+              )}
+              subtext={
+                compare
+                  ? "Comparison enabled"
+                  : "Comparison hidden"
+              }
+            />
+
+            <MetricCard
+              label="DIFFERENCE"
+              value={`${performance.difference.amount >= 0 ? "+" : "-"}${money(
+                Math.abs(
+                  performance.difference
+                    .amount
+                )
+              )}`}
+              subtext={percentLabel(
+                performance.difference
+                  .percent
+              )}
+              positive={
+                differencePositive
+              }
+              negative={
+                !differencePositive
+              }
+            />
+
+            <MetricCard
+              label="ORDERS"
+              value={performance.current.orders.toLocaleString(
+                "en-US"
+              )}
+              subtext={`${performance.current.quantity.toLocaleString(
+                "en-US"
+              )} units sold`}
+            />
+
+            <MetricCard
+              label="AVERAGE ORDER VALUE"
+              value={money(
+                performance.current
+                  .averageOrderValue
+              )}
+              subtext="Verified completed sales"
+            />
+          </View>
+
+          <View
+            style={{
+              paddingHorizontal: 18,
+              paddingTop: 18,
+              paddingBottom: 10,
+            }}
+          >
+            <SalesPerformanceChart
+              currentPoints={
+                performance.currentPoints
+              }
+              previousPoints={
+                performance.previousPoints
+              }
+              compare={compare}
+              width={980}
+              height={330}
+              formatMoney={money}
+            />
+          </View>
+
+          <View
+            style={{
+              flexDirection: "row",
+              flexWrap: "wrap",
+              gap: 12,
+              paddingHorizontal: 18,
+              paddingTop: 8,
+              paddingBottom: 18,
+              backgroundColor: SOFT,
+            }}
+          >
+            {intelligence ? (
+              <>
+                <PaymentPanel
+                  intelligence={
+                    intelligence
+                  }
+                  money={money}
+                />
+
+                <TopProductsPanel
+                  intelligence={
+                    intelligence
+                  }
+                  money={money}
+                />
+
+                <InsightPanel
+                  performance={
+                    performance
+                  }
+                  intelligence={
+                    intelligence
+                  }
+                  money={money}
+                />
+              </>
+            ) : (
+              <View
+                style={{
+                  width: "100%",
+                  minHeight: 120,
+                  alignItems: "center",
+                  justifyContent:
+                    "center",
+                }}
+              >
+                <ActivityIndicator
+                  color={BLUE}
+                />
+
+                <Text
+                  style={{
+                    color: MUTED,
+                    fontSize: 11,
+                    marginTop: 8,
+                  }}
+                >
+                  Loading sales intelligence...
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {intelligence && (
+            <View
+              style={{
+                marginHorizontal: 18,
+                marginBottom: 18,
+                paddingHorizontal: 16,
+                paddingVertical: 13,
+                borderWidth: 1,
+                borderColor: "#DDD6FE",
+                borderRadius: 13,
+                backgroundColor:
+                  "#FAF5FF",
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 12,
+                flexWrap: "wrap",
+              }}
+            >
+              <View
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: 9,
+                  backgroundColor:
+                    "#EDE9FE",
+                  alignItems: "center",
+                  justifyContent:
+                    "center",
+                }}
+              >
+                <Text
+                  style={{
+                    color: PURPLE,
+                    fontWeight: "900",
+                  }}
+                >
+                  i
+                </Text>
+              </View>
+
+              <View
+                style={{
+                  flex: 1,
+                  minWidth: 220,
+                }}
+              >
+                <Text
+                  style={{
+                    color: TEXT,
+                    fontSize: 11,
+                    fontWeight: "900",
+                  }}
+                >
+                  Insights & Recommendations
+                </Text>
+
+                <Text
+                  style={{
+                    color: MUTED,
+                    fontSize: 10,
+                    marginTop: 2,
+                  }}
+                >
+                  Verified sales movement, top products and peak activity are shown above. No estimated sales are used.
+                </Text>
+              </View>
+
+              {loading && (
+                <Text
+                  style={{
+                    color: BLUE,
+                    fontSize: 10,
+                    fontWeight: "800",
+                  }}
+                >
+                  Refreshing...
+                </Text>
+              )}
+            </View>
+          )}
+        </>
+      ) : null}
+    </View>
+  );
+}

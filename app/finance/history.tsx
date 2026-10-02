@@ -72,7 +72,30 @@ type ProfitSummary = {
   net: number;
   orders: number;
 };
-
+type ExpenseDetailRow = {
+  id: string;
+  store_id: string | null;
+  category: string;
+  description: string;
+  amount: number;
+  payment_method: string;
+  expense_date: string;
+  recorded_by_email: string | null;
+  recorded_by_role: string | null;
+};
+type ProductProfitRow = {
+  product_id: string;
+  product_name: string;
+  sku: string | null;
+  category: string | null;
+  unit: string | null;
+  qty_sold: number;
+  revenue: number;
+  estimated_cost: number;
+  gross_profit: number;
+  profit_margin_pct: number;
+  sales_count: number;
+};
 type StockRow = {
   bucket: StockBucket;
   product_id: string;
@@ -368,22 +391,35 @@ function Metric({
   value,
   hint,
   wide = false,
+  onPress,
 }: {
   label: string;
   value: string;
   hint?: string;
   wide?: boolean;
+  onPress?: () => void;
 }) {
-  return (
-    <View
-      style={[
-        styles.metric,
-        wide && styles.metricWide,
-      ]}
-    >
-      <Text style={styles.metricLabel}>
-        {label}
-      </Text>
+  const content = (
+    <>
+      <View style={styles.metricTop}>
+        <Text style={styles.metricLabel}>
+          {label}
+        </Text>
+
+      {!!onPress && (
+  <View style={styles.metricAction}>
+    <Text style={styles.metricActionText}>
+      VIEW DETAILS
+    </Text>
+
+    <SafeIcon
+      name="chevron-forward"
+      size={15}
+      color="#2563EB"
+    />
+  </View>
+)}
+      </View>
 
       <Text
         numberOfLines={1}
@@ -398,6 +434,32 @@ function Metric({
           {hint}
         </Text>
       )}
+    </>
+  );
+
+  if (onPress) {
+    return (
+      <Pressable
+        onPress={onPress}
+        style={({ pressed }) => [
+          styles.metric,
+          wide && styles.metricWide,
+          pressed && styles.metricPressed,
+        ]}
+      >
+        {content}
+      </Pressable>
+    );
+  }
+
+  return (
+    <View
+      style={[
+        styles.metric,
+        wide && styles.metricWide,
+      ]}
+    >
+      {content}
     </View>
   );
 }
@@ -538,6 +600,30 @@ const [quickRange, setQuickRangeSelected] =
 
 const [expandedStock, setExpandedStock] =
   useState<Partial<Record<StockBucket, boolean>>>({});
+
+const [showExpenseDetails, setShowExpenseDetails] =
+  useState(false);
+
+const [expenseDetails, setExpenseDetails] =
+  useState<ExpenseDetailRow[]>([]);
+
+const [expenseDetailsLoading, setExpenseDetailsLoading] =
+  useState(false);
+
+const [expenseDetailsError, setExpenseDetailsError] =
+  useState("");
+
+const [showProductProfit, setShowProductProfit] =
+  useState(false);
+
+const [productProfitRows, setProductProfitRows] =
+  useState<ProductProfitRow[]>([]);
+
+const [productProfitLoading, setProductProfitLoading] =
+  useState(false);
+
+const [productProfitError, setProductProfitError] =
+  useState("");
 
 const compact = width < 720;
 
@@ -967,7 +1053,359 @@ const compact = width < 720;
       },
       []
     );
+  const expenseDetailsForStore =
+    useCallback(
+      async (
+        storeId: string,
+        fromDate: string,
+        toDate: string
+      ) => {
+        const {
+          data,
+          error,
+        } = await supabase.rpc(
+          "get_expenses_v2",
+          {
+            p_store_id: storeId,
+            p_from: fromDate,
+            p_to: toDate,
+            p_limit: 5000,
+            p_offset: 0,
+          } as any
+        );
 
+        if (error) {
+          throw error;
+        }
+
+        return (
+          (data ?? []) as any[]
+        ).map(
+          (r): ExpenseDetailRow => ({
+            id: String(
+              r.id ??
+                r.expense_id ??
+                `${storeId}-${r.expense_date ?? ""}-${r.amount ?? 0}`
+            ),
+            store_id:
+              r.store_id ??
+              storeId,
+            category: String(
+              r.category ??
+                r.expense_category ??
+                "Expense"
+            ),
+            description: String(
+              r.description ??
+                r.note ??
+                r.notes ??
+                "—"
+            ),
+            amount: n(
+              r.amount
+            ),
+            payment_method: String(
+              r.payment_method ??
+                r.channel ??
+                "OTHER"
+            ),
+            expense_date: String(
+              r.expense_date ??
+                r.created_at ??
+                ""
+            ),
+            recorded_by_email:
+              r.recorded_by_email ??
+              null,
+            recorded_by_role:
+              r.recorded_by_role ??
+              null,
+          })
+        );
+      },
+      []
+    );
+
+  const openExpenseDetails =
+    useCallback(async () => {
+      if (!canSeeExpenses) {
+        return;
+      }
+
+      const ids =
+        targetStoreIds(
+          scope,
+          selectedStoreId
+        );
+
+      if (!ids.length) {
+        setExpenseDetailsError(
+          "No store available for this selection."
+        );
+        setExpenseDetails([]);
+        setShowExpenseDetails(true);
+        return;
+      }
+
+      setShowExpenseDetails(true);
+      setExpenseDetailsLoading(true);
+      setExpenseDetailsError("");
+
+      try {
+        const parts =
+          await Promise.all(
+            ids.map((sid) =>
+              expenseDetailsForStore(
+                sid,
+                fromYMD,
+                toYMD
+              )
+            )
+          );
+
+        const merged =
+          parts
+            .flat()
+            .sort((a, b) =>
+              String(
+                b.expense_date
+              ).localeCompare(
+                String(
+                  a.expense_date
+                )
+              )
+            );
+
+        setExpenseDetails(
+          merged
+        );
+      } catch (e) {
+        setExpenseDetails([]);
+        setExpenseDetailsError(
+          cleanError(e)
+        );
+      } finally {
+        setExpenseDetailsLoading(
+          false
+        );
+      }
+    }, [
+      canSeeExpenses,
+      targetStoreIds,
+      scope,
+      selectedStoreId,
+      expenseDetailsForStore,
+      fromYMD,
+      toYMD,
+    ]);
+
+    
+
+  const productProfitForStore =
+    useCallback(
+      async (
+        storeId: string,
+        fromISO: string,
+        toISO: string
+      ) => {
+        const {
+          data,
+          error,
+        } = await supabase.rpc(
+          "get_product_profit_report_v3",
+          {
+            p_store_id: storeId,
+            p_from: fromISO,
+            p_to: toISO,
+            p_limit: 5000,
+          } as any
+        );
+
+        if (error) {
+          throw error;
+        }
+
+        return (
+          (data ?? []) as any[]
+        ).map(
+          (r): ProductProfitRow => ({
+            product_id: String(
+              r.product_id ?? ""
+            ),
+            product_name: String(
+              r.product_name ??
+                "Unknown Product"
+            ),
+            sku:
+              r.sku == null
+                ? null
+                : String(r.sku),
+            category:
+              r.category == null
+                ? null
+                : String(r.category),
+            unit:
+              r.unit == null
+                ? null
+                : String(r.unit),
+            qty_sold: n(
+              r.qty_sold
+            ),
+            revenue: n(
+              r.revenue
+            ),
+            estimated_cost: n(
+              r.estimated_cost
+            ),
+            gross_profit: n(
+              r.gross_profit
+            ),
+            profit_margin_pct: n(
+              r.profit_margin_pct
+            ),
+            sales_count: i(
+              r.sales_count
+            ),
+          })
+        );
+      },
+      []
+    );
+
+  const openProductProfit =
+    useCallback(async () => {
+      if (!isOwner) {
+        return;
+      }
+
+      const ids =
+        targetStoreIds(
+          scope,
+          selectedStoreId
+        );
+
+      if (!ids.length) {
+        setProductProfitError(
+          "No store available for this selection."
+        );
+        setProductProfitRows([]);
+        setShowProductProfit(true);
+        return;
+      }
+
+      setShowProductProfit(true);
+      setProductProfitLoading(true);
+      setProductProfitError("");
+
+      try {
+   const fromISO =
+  `${fromYMD}T00:00:00.000Z`;
+
+const toDate =
+  new Date(
+    `${toYMD}T00:00:00.000Z`
+  );
+
+toDate.setUTCDate(
+  toDate.getUTCDate() + 1
+);
+
+const toISO =
+  toDate.toISOString();
+
+        const parts =
+          await Promise.all(
+            ids.map((sid) =>
+              productProfitForStore(
+                sid,
+                fromISO,
+                toISO
+              )
+            )
+          );
+
+        const merged = new Map<
+          string,
+          ProductProfitRow
+        >();
+
+        for (const row of parts.flat()) {
+          const key =
+            row.product_id ||
+            `${row.product_name}|${row.sku ?? ""}`;
+
+          const existing =
+            merged.get(key);
+
+          if (!existing) {
+            merged.set(key, {
+              ...row,
+            });
+            continue;
+          }
+
+          existing.qty_sold +=
+            row.qty_sold;
+
+          existing.revenue +=
+            row.revenue;
+
+          existing.estimated_cost +=
+            row.estimated_cost;
+
+          existing.gross_profit +=
+            row.gross_profit;
+
+          existing.sales_count +=
+            row.sales_count;
+
+          existing.profit_margin_pct =
+            existing.revenue > 0
+              ? (
+                  existing.gross_profit /
+                  existing.revenue
+                ) * 100
+              : 0;
+        }
+
+        const rows =
+          Array.from(
+            merged.values()
+          ).sort(
+            (a, b) =>
+              b.gross_profit -
+                a.gross_profit ||
+              b.revenue -
+                a.revenue ||
+              a.product_name.localeCompare(
+                b.product_name
+              )
+          );
+
+        setProductProfitRows(
+          rows
+        );
+      } catch (e) {
+        setProductProfitRows([]);
+        setProductProfitError(
+          cleanError(e)
+        );
+      } finally {
+        setProductProfitLoading(
+          false
+        );
+      }
+    }, [
+      isOwner,
+      targetStoreIds,
+      scope,
+      selectedStoreId,
+      productProfitForStore,
+      fromYMD,
+      toYMD,
+    ]);
+
+ 
   const creditBalanceForStore =
     useCallback(
       async (
@@ -1169,8 +1607,7 @@ const compact = width < 720;
     useCallback(
       async (
         wantedScope: Scope,
-        wantedStoreId:
-          string | null,
+        wantedStoreId: string | null,
         fromDate: string,
         toDate: string,
         includeSecondary = true
@@ -1200,29 +1637,119 @@ const compact = width < 720;
           nextDayISO(toDate);
 
         /*
-         * SALES
-         * Canonical sales data is always loaded,
-         * regardless of which finance section
-         * the user is viewing.
+         * IMPORTANT:
+         * These finance groups do not depend on
+         * each other, so start them together.
          */
-        const salesParts =
-          await Promise.all(
-            ids.map(
-              (sid) =>
-                salesForStore(
-                  sid,
-                  fromISO,
-                  toISO
-                )
+
+        const salesPromise =
+          Promise.all(
+            ids.map((sid) =>
+              salesForStore(
+                sid,
+                fromISO,
+                toISO
+              )
             )
           );
 
+        const paymentsPromise =
+          paymentsForScope(
+            wantedScope,
+            wantedStoreId,
+            fromISO,
+            toISO
+          );
+
+        const collectionsPromise =
+          collectionsForScope(
+            wantedScope,
+            wantedStoreId,
+            fromISO,
+            toISO
+          );
+
+        const expensesPromise =
+          canSeeExpenses
+            ? Promise.all(
+                ids.map(
+                  async (sid) => {
+                    const [
+                      summary,
+                      channels,
+                    ] =
+                      await Promise.all([
+                        expenseForStore(
+                          sid,
+                          fromDate,
+                          toDate
+                        ),
+                        expenseChannelsForStore(
+                          sid,
+                          fromDate,
+                          toDate
+                        ),
+                      ]);
+
+                    return {
+                      summary,
+                      channels,
+                    };
+                  }
+                )
+              )
+            : Promise.resolve([]);
+
+        const creditPromise =
+          Promise.all(
+            ids.map((sid) =>
+              creditBalanceForStore(
+                sid
+              )
+            )
+          );
+
+        const profitPromise =
+          isOwner
+            ? Promise.all(
+                ids.map((sid) =>
+                  profitForStore(
+                    sid,
+                    fromISO,
+                    toDate
+                  )
+                )
+              )
+            : Promise.resolve([]);
+
+        /*
+         * Wait for CORE Finance only.
+         *
+         * All requests above have already started
+         * at the same time.
+         */
+        const [
+          salesParts,
+          payments,
+          collections,
+          expenseParts,
+          creditParts,
+          profitParts,
+        ] = await Promise.all([
+          salesPromise,
+          paymentsPromise,
+          collectionsPromise,
+          expensesPromise,
+          creditPromise,
+          profitPromise,
+        ]);
+
+        /*
+         * SALES
+         */
         const sales =
           salesParts.reduce<SalesSummary>(
-            (
-              a,
-              b
-            ) => ({
+            (a, b) => ({
               total:
                 a.total +
                 b.total,
@@ -1245,31 +1772,6 @@ const compact = width < 720;
           );
 
         /*
-         * PAYMENT CHANNELS + CREDIT COLLECTIONS
-         *
-         * No frontend split-payment parser here.
-         * get_sales_channel_summary_v3 already
-         * handles sale_payments and split notes.
-         */
-        const [
-          payments,
-          collections,
-        ] = await Promise.all([
-          paymentsForScope(
-            wantedScope,
-            wantedStoreId,
-            fromISO,
-            toISO
-          ),
-          collectionsForScope(
-            wantedScope,
-            wantedStoreId,
-            fromISO,
-            toISO
-          ),
-        ]);
-
-        /*
          * EXPENSES
          */
         let expenses:
@@ -1281,56 +1783,21 @@ const compact = width < 720;
           },
         };
 
-        if (
-          canSeeExpenses
-        ) {
-          const expenseParts =
-            await Promise.all(
-              ids.map(
-                async (
-                  sid
-                ) => {
-                  const [
-                    summary,
-                    channels,
-                  ] =
-                    await Promise.all(
-                      [
-                        expenseForStore(
-                          sid,
-                          fromDate,
-                          toDate
-                        ),
-                        expenseChannelsForStore(
-                          sid,
-                          fromDate,
-                          toDate
-                        ),
-                      ]
-                    );
-
-                  return {
-                    summary,
-                    channels,
-                  };
-                }
-              )
-            );
-
+        if (canSeeExpenses) {
           expenses =
             expenseParts.reduce<ExpenseSummary>(
               (
                 a,
-                b
+                b: any
               ) => ({
                 total:
                   a.total +
-                  b.summary
-                    .total,
+                  b.summary.total,
+
                 count:
                   a.count +
-                  b.summary
-                    .count,
+                  b.summary.count,
+
                 channels:
                   addChannels(
                     a.channels,
@@ -1349,70 +1816,48 @@ const compact = width < 720;
 
         /*
          * OUTSTANDING CREDIT
-         * This is current balance, not a historical
-         * date-range value.
          */
-        const creditParts =
-          await Promise.all(
-            ids.map(
-              (sid) =>
-                creditBalanceForStore(
-                  sid
-                )
-            )
-          );
-
         const outstandingCredit =
           creditParts.reduce(
-            (
-              a,
-              b
-            ) => a + b,
+            (a, b) =>
+              a + b,
             0
           );
 
         /*
          * OWNER PROFIT
+         *
+         * Keep get_store_net_profit_v2 as the
+         * canonical Finance profitability source.
          */
         let profit:
           ProfitSummary | null =
           null;
 
         if (isOwner) {
-          const profitParts =
-            await Promise.all(
-              ids.map(
-                (sid) =>
-                  profitForStore(
-                    sid,
-                    fromISO,
-                    toDate
-                  )
-              )
-            );
-
           profit =
             (
               profitParts.filter(
                 Boolean
               ) as ProfitSummary[]
             ).reduce<ProfitSummary>(
-              (
-                a,
-                b
-              ) => ({
+              (a, b) => ({
                 sales:
                   a.sales +
                   b.sales,
+
                 cogs:
                   a.cogs +
                   b.cogs,
+
                 expenses:
                   a.expenses +
                   b.expenses,
+
                 net:
                   a.net +
                   b.net,
+
                 orders:
                   a.orders +
                   b.orders,
@@ -1430,24 +1875,32 @@ const compact = width < 720;
         /*
          * INVENTORY INTELLIGENCE
          *
-         * Stock intelligence is secondary to the verified
-         * Finance totals. If this RPC fails, the core
-         * Finance page must still render normally.
+         * Secondary data remains isolated.
+         * Failure here must never break Finance.
          */
-        let stock: StockRow[] = [];
+        let stock:
+          StockRow[] = [];
 
         if (includeSecondary) {
-          const result = await Promise.allSettled([
-            stockForScope(
-              wantedScope,
-              wantedStoreId,
-              fromISO,
-              toISO
-            ),
-          ]);
+          try {
+            stock =
+              await stockForScope(
+                wantedScope,
+                wantedStoreId,
+                fromISO,
+                toISO
+              );
+          } catch (
+            stockError
+          ) {
+            console.warn(
+              "Finance stock intelligence failed:",
+              cleanError(
+                stockError
+              )
+            );
 
-          if (result[0].status === "fulfilled") {
-            stock = result[0].value as StockRow[];
+            stock = [];
           }
         }
 
@@ -1466,7 +1919,6 @@ const compact = width < 720;
         targetStoreIds,
         salesForStore,
         paymentsForScope,
-        collectionsForScope,
         canSeeExpenses,
         expenseForStore,
         expenseChannelsForStore,
@@ -1535,69 +1987,90 @@ const compact = width < 720;
 
         try {
           /*
-           * CURRENT PERIOD
-           */
-          const current =
-            await buildSnapshot(
-              scope,
-              selectedStoreId,
-              fromYMD,
-              toYMD,
-              true
-            );
+ * CURRENT PERIOD
+ *
+ * Finance kuu ndiyo priority.
+ * Mara current snapshot ikipatikana,
+ * ionyeshwe immediately bila kusubiri
+ * previous-period comparison.
+ */
+const current =
+  await buildSnapshot(
+    scope,
+    selectedStoreId,
+    fromYMD,
+    toYMD,
+    true
+  );
 
-          /*
-           * PREVIOUS EQUIVALENT PERIOD
-           */
-          const from =
-            parseYMD(
-              fromYMD
-            )!;
+setSnapshot(current);
 
-          const to =
-            parseYMD(
-              toYMD
-            )!;
+/*
+ * Main Finance data is now ready.
+ * Previous-period data is secondary
+ * and is used only for Performance.
+ */
+if (!asRefresh) {
+  setLoading(false);
+}
 
-          const days =
-            Math.floor(
-              (
-                to.getTime() -
-                from.getTime()
-              ) /
-                86400000
-            ) + 1;
+/*
+ * PREVIOUS EQUIVALENT PERIOD
+ */
+const from =
+  parseYMD(fromYMD)!;
 
-          const previousTo =
-            addDaysYMD(
-              fromYMD,
-              -1
-            );
+const to =
+  parseYMD(toYMD)!;
 
-          const previousFrom =
-            addDaysYMD(
-              previousTo,
-              -(
-                days - 1
-              )
-            );
+const days =
+  Math.floor(
+    (
+      to.getTime() -
+      from.getTime()
+    ) /
+      86400000
+  ) + 1;
 
-          const prev =
-            await buildSnapshot(
-              scope,
-              selectedStoreId,
-              previousFrom,
-              previousTo,
-              false
-            );
+const previousTo =
+  addDaysYMD(
+    fromYMD,
+    -1
+  );
 
-          setSnapshot(
-            current
-          );
+const previousFrom =
+  addDaysYMD(
+    previousTo,
+    -(days - 1)
+  );
 
-          setPrevious(
-            prev
-          );
+/*
+ * Clear old comparison first so we never
+ * show Performance from the previous selection.
+ */
+setPrevious(null);
+
+try {
+  const prev =
+    await buildSnapshot(
+      scope,
+      selectedStoreId,
+      previousFrom,
+      previousTo,
+      false
+    );
+
+  setPrevious(prev);
+} catch (previousError) {
+  /*
+   * Previous-period comparison must never
+   * block or break the current Finance page.
+   */
+  console.warn(
+    "Finance previous-period comparison failed:",
+    cleanError(previousError)
+  );
+}
         } catch (e) {
           setErrorText(
             cleanError(e)
@@ -1661,6 +2134,8 @@ const setQuickRange =
 
       // Period mpya inaanza ikiwa collapsed.
       setExpandedStock({});
+      setShowExpenseDetails(false);
+setShowProductProfit(false);
     },
     []
   );
@@ -1670,6 +2145,8 @@ const changeFromDate =
     setQuickRangeSelected(null);
     setFromYMD(value);
     setExpandedStock({});
+    setShowExpenseDetails(false);
+setShowProductProfit(false);
   }, []);
 
 const changeToDate =
@@ -1677,6 +2154,8 @@ const changeToDate =
     setQuickRangeSelected(null);
     setToYMD(value);
     setExpandedStock({});
+    setShowExpenseDetails(false);
+setShowProductProfit(false);
   }, []);
 
 const toggleStockGroup =
@@ -2321,6 +2800,12 @@ const toggleStockGroup =
                       .expenses
                       .total
                   )}
+                  hint={`${snapshot.expenses.count} ${
+                    snapshot.expenses.count === 1
+                      ? "expense"
+                      : "expenses"
+                  } · Tap for details`}
+                  onPress={openExpenseDetails}
                 />
               )}
 
@@ -2355,6 +2840,138 @@ const toggleStockGroup =
                 hint="Current balance"
               />
             </View>
+
+            {showExpenseDetails && canSeeExpenses && (
+              <Card style={styles.drillCard}>
+                <View style={styles.drillHeader}>
+                  <View style={styles.drillHeaderCopy}>
+                    <Text style={styles.drillEyebrow}>
+                      EXPENSE DETAILS
+                    </Text>
+
+                    <Text style={styles.drillTitle}>
+                      Expenses Breakdown
+                    </Text>
+
+                    <Text style={styles.drillSubtitle}>
+                      {fromYMD} → {toYMD}
+                      {" · "}
+                      {scope === "ALL"
+                        ? "All stores"
+                        : selectedStoreName}
+                    </Text>
+                  </View>
+
+                  <Pressable
+                    onPress={() =>
+                      setShowExpenseDetails(false)
+                    }
+                    style={styles.drillClose}
+                  >
+                    <SafeIcon
+                      name="close"
+                      size={18}
+                      color="#475569"
+                    />
+                  </Pressable>
+                </View>
+
+                <View style={styles.drillSummary}>
+                  <View style={styles.drillSummaryItem}>
+                    <Text style={styles.drillSummaryLabel}>
+                      Total Expenses
+                    </Text>
+
+                    <Text style={styles.drillSummaryValue}>
+                      {money(
+                        snapshot.expenses.total
+                      )}
+                    </Text>
+                  </View>
+
+                  <View style={styles.drillSummaryItem}>
+                    <Text style={styles.drillSummaryLabel}>
+                      Entries
+                    </Text>
+
+                    <Text style={styles.drillSummaryValue}>
+                      {snapshot.expenses.count}
+                    </Text>
+                  </View>
+                </View>
+
+                {expenseDetailsLoading ? (
+                  <View style={styles.drillLoading}>
+                    <ActivityIndicator size="small" />
+
+                    <Text style={styles.drillLoadingText}>
+                      Loading expense details…
+                    </Text>
+                  </View>
+                ) : Boolean(expenseDetailsError) ? (
+                  <View style={styles.drillError}>
+                    <Text style={styles.drillErrorText}>
+                      {expenseDetailsError}
+                    </Text>
+                  </View>
+                ) : expenseDetails.length === 0 ? (
+                  <Text style={styles.drillEmpty}>
+                    No expense entries found for this period.
+                  </Text>
+                ) : (
+                  <View style={styles.drillRows}>
+                    {expenseDetails.map((r, index) => (
+                      <View
+                        key={`${r.id}-${index}`}
+                        style={[
+                          styles.drillRow,
+                          index ===
+                            expenseDetails.length - 1 &&
+                            styles.drillRowLast,
+                        ]}
+                      >
+                        <View style={styles.drillRowMain}>
+                          <Text
+                            numberOfLines={1}
+                            style={styles.drillRowTitle}
+                          >
+                            {r.category}
+                          </Text>
+
+                          <Text
+                            numberOfLines={2}
+                            style={styles.drillRowDescription}
+                          >
+                            {r.description}
+                          </Text>
+
+                          <Text style={styles.drillRowMeta}>
+                            {r.expense_date || "—"}
+                            {" · "}
+                            {r.payment_method
+                              .replace(/_/g, " ")
+                              .toUpperCase()}
+                          </Text>
+
+                          {!!r.recorded_by_email && (
+                            <Text style={styles.drillRowMeta}>
+                              Recorded by {r.recorded_by_email}
+                              {r.recorded_by_role
+                                ? ` · ${r.recorded_by_role}`
+                                : ""}
+                            </Text>
+                          )}
+                        </View>
+
+                        <Text style={styles.drillRowAmount}>
+                          {money(r.amount)}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </Card>
+            )}
 
             {/* MONEY FLOW */}
             <SectionTitle
@@ -2576,73 +3193,292 @@ const toggleStockGroup =
                   </View>
                 </>
               )}
-            </Card>            {/* PROFITABILITY */}
-            {isOwner &&
-              snapshot.profit && (
-                <>
-                  <SectionTitle
-                    title="Profitability"
-                    subtitle="Owner-only profitability for this period."
-                  />
+            </Card>           {/* PROFITABILITY */}
+{isOwner &&
+  snapshot.profit && (
+    <>
+      <SectionTitle
+        title="Profitability"
+        subtitle="Owner-only profitability for this period."
+      />
 
-                  <Card>
-                    <View style={styles.compactMoneyGrid}>
-                      <View style={styles.compactMoneyCell}>
-                        <Text style={styles.compactMoneyLabel}>
-                          Sales
-                        </Text>
-                        <Text
-                          numberOfLines={1}
-                          adjustsFontSizeToFit
-                          style={styles.compactMoneyValue}
-                        >
-                          {money(snapshot.profit.sales)}
-                        </Text>
-                      </View>
+      <Card>
+        <View style={styles.compactMoneyGrid}>
+          <View style={styles.compactMoneyCell}>
+            <Text style={styles.compactMoneyLabel}>
+              Sales
+            </Text>
+            <Text
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              style={styles.compactMoneyValue}
+            >
+              {money(snapshot.profit.sales)}
+            </Text>
+          </View>
 
-                      <View style={styles.compactMoneyCell}>
-                        <Text style={styles.compactMoneyLabel}>
-                          COGS
-                        </Text>
-                        <Text
-                          numberOfLines={1}
-                          adjustsFontSizeToFit
-                          style={styles.compactMoneyValue}
-                        >
-                          {money(snapshot.profit.cogs)}
-                        </Text>
-                      </View>
+          <View style={styles.compactMoneyCell}>
+            <Text style={styles.compactMoneyLabel}>
+              COGS
+            </Text>
+            <Text
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              style={styles.compactMoneyValue}
+            >
+              {money(snapshot.profit.cogs)}
+            </Text>
+          </View>
 
-                      <View style={styles.compactMoneyCell}>
-                        <Text style={styles.compactMoneyLabel}>
-                          Gross Profit
-                        </Text>
-                        <Text
-                          numberOfLines={1}
-                          adjustsFontSizeToFit
-                          style={styles.compactMoneyValue}
-                        >
-                          {money(grossProfit)}
-                        </Text>
-                      </View>
+          <View style={styles.compactMoneyCell}>
+            <Text style={styles.compactMoneyLabel}>
+              Gross Profit
+            </Text>
+            <Text
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              style={styles.compactMoneyValue}
+            >
+              {money(grossProfit)}
+            </Text>
+          </View>
 
-                      <View style={styles.compactMoneyCell}>
-                        <Text style={styles.compactMoneyLabel}>
-                          Net Profit
+          <View style={styles.compactMoneyCell}>
+            <Text style={styles.compactMoneyLabel}>
+              Net Profit
+            </Text>
+            <Text
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              style={styles.compactMoneyValue}
+            >
+              {money(snapshot.profit.net)}
+            </Text>
+          </View>
+        </View>
+
+       <View style={styles.divider} />
+
+<Pressable
+  onPress={
+    showProductProfit
+      ? () => setShowProductProfit(false)
+      : openProductProfit
+  }
+  style={({ pressed }) => [
+    styles.productProfitEntry,
+    showProductProfit &&
+      styles.productProfitEntryActive,
+    pressed &&
+      styles.productProfitEntryPressed,
+  ]}
+>
+  <View style={styles.productProfitEntryIcon}>
+    <SafeIcon
+      name="stats-chart"
+      size={20}
+      color="#2563EB"
+    />
+  </View>
+
+  <View style={styles.productProfitEntryCopy}>
+    <Text style={styles.productProfitEntryTitle}>
+      Product Profit
+    </Text>
+
+    <Text style={styles.productProfitEntrySubtitle}>
+      See profit, revenue, COGS and margin for each product sold.
+    </Text>
+
+    <Text style={styles.productProfitEntryAction}>
+      {showProductProfit
+        ? "Hide breakdown"
+        : "View product breakdown"}
+    </Text>
+  </View>
+
+  <SafeIcon
+    name={
+      showProductProfit
+        ? "chevron-up"
+        : "chevron-forward"
+    }
+    size={20}
+    color="#2563EB"
+  />
+</Pressable>
+      </Card>
+
+      {showProductProfit && (
+        <Card style={styles.drillCard}>
+          <View style={styles.drillHeader}>
+            <View style={styles.drillHeaderCopy}>
+              <Text style={styles.drillEyebrow}>
+                PRODUCT PROFIT
+              </Text>
+
+              <Text style={styles.drillTitle}>
+                Product Profit Breakdown
+              </Text>
+
+              <Text style={styles.drillSubtitle}>
+                {fromYMD} → {toYMD}
+                {" · "}
+                {scope === "ALL"
+                  ? "All stores"
+                  : selectedStoreName}
+              </Text>
+            </View>
+
+            <Pressable
+              onPress={() =>
+                setShowProductProfit(false)
+              }
+              style={styles.drillClose}
+            >
+              <SafeIcon
+                name="close"
+                size={18}
+                color="#475569"
+              />
+            </Pressable>
+          </View>
+
+          <View style={styles.drillSummary}>
+            <View style={styles.drillSummaryItem}>
+              <Text style={styles.drillSummaryLabel}>
+                Gross Profit
+              </Text>
+
+              <Text style={styles.drillSummaryValue}>
+                {money(
+                  productProfitRows.reduce(
+                    (sum, r) =>
+                      sum +
+                      r.gross_profit,
+                    0
+                  )
+                )}
+              </Text>
+            </View>
+
+            <View style={styles.drillSummaryItem}>
+              <Text style={styles.drillSummaryLabel}>
+                Products
+              </Text>
+
+              <Text style={styles.drillSummaryValue}>
+                {productProfitRows.length}
+              </Text>
+            </View>
+          </View>
+
+          {productProfitLoading ? (
+            <View style={styles.drillLoading}>
+              <ActivityIndicator size="small" />
+
+              <Text style={styles.drillLoadingText}>
+                Loading product profit…
+              </Text>
+            </View>
+          ) : Boolean(productProfitError) ? (
+            <View style={styles.drillError}>
+              <Text style={styles.drillErrorText}>
+                {productProfitError}
+              </Text>
+            </View>
+          ) : productProfitRows.length === 0 ? (
+            <Text style={styles.drillEmpty}>
+              No product sales found for this period.
+            </Text>
+          ) : (
+            <View style={styles.drillRows}>
+              {productProfitRows.map(
+                (r, index) => (
+                  <View
+                    key={`${r.product_id}-${index}`}
+                    style={[
+                      styles.drillRow,
+                      index ===
+                        productProfitRows.length -
+                          1 &&
+                        styles.drillRowLast,
+                    ]}
+                  >
+                    <View style={styles.drillRowMain}>
+                      <Text
+                        numberOfLines={2}
+                        style={styles.drillRowTitle}
+                      >
+                        {r.product_name}
+                      </Text>
+
+                      <Text style={styles.drillRowDescription}>
+                        Qty Sold: {r.qty_sold}
+                        {r.unit
+                          ? ` ${r.unit}`
+                          : ""}
+                        {" · "}
+                        Sales: {r.sales_count}
+                      </Text>
+
+                      <Text style={styles.drillRowMeta}>
+                        Revenue: {money(r.revenue)}
+                      </Text>
+
+                      <Text style={styles.drillRowMeta}>
+                        COGS: {money(r.estimated_cost)}
+                      </Text>
+
+                      <Text style={styles.drillRowMeta}>
+                        Margin:{" "}
+                        {r.profit_margin_pct.toFixed(
+                          2
+                        )}
+                        %
+                      </Text>
+
+                      {(r.sku ||
+                        r.category) && (
+                        <Text style={styles.drillRowMeta}>
+                          {r.sku
+                            ? `SKU: ${r.sku}`
+                            : ""}
+                          {r.sku &&
+                          r.category
+                            ? " · "
+                            : ""}
+                          {r.category ??
+                            ""}
                         </Text>
-                        <Text
-                          numberOfLines={1}
-                          adjustsFontSizeToFit
-                          style={styles.compactMoneyValue}
-                        >
-                          {money(snapshot.profit.net)}
-                        </Text>
-                      </View>
+                      )}
                     </View>
-                  </Card>
-                </>
-              )}
 
+                 <Text
+  style={[
+    styles.drillRowAmount,
+    r.gross_profit > 0
+      ? styles.productProfitPositive
+      : r.gross_profit < 0
+      ? styles.productProfitNegative
+      : styles.productProfitNeutral,
+  ]}
+>
+  {money(
+    r.gross_profit
+  )}
+</Text>
+                  </View>
+                )
+              )}
+            </View>
+          )}
+        </Card>
+      )}
+    </>
+  )}
+
+{/* PERFORMANCE */}
             {/* PERFORMANCE */}
             <SectionTitle
               title="Performance"
@@ -3373,6 +4209,94 @@ const styles =
       flexBasis: 300,
     },
 
+    metricPressed: {
+      opacity: 0.82,
+      transform: [{ scale: 0.99 }],
+      borderColor: "#BFDBFE",
+      backgroundColor: "#F8FBFF",
+    },
+
+    metricTop: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 8,
+    },
+metricAction: {
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 2,
+  paddingHorizontal: 7,
+  paddingVertical: 4,
+  borderRadius: 999,
+  backgroundColor: "#EFF6FF",
+},
+
+metricActionText: {
+  fontSize: 8,
+  lineHeight: 11,
+  fontWeight: "900",
+  letterSpacing: 0.4,
+  color: "#2563EB",
+},
+
+productProfitEntry: {
+  minHeight: 86,
+  flexDirection: "row",
+  alignItems: "center",
+  gap: 12,
+  padding: 14,
+  borderRadius: 15,
+  borderWidth: 1,
+  borderColor: "#DBEAFE",
+  backgroundColor: "#F8FBFF",
+},
+
+productProfitEntryActive: {
+  borderColor: "#93C5FD",
+  backgroundColor: "#EFF6FF",
+},
+
+productProfitEntryPressed: {
+  opacity: 0.82,
+  transform: [{ scale: 0.995 }],
+},
+
+productProfitEntryIcon: {
+  width: 42,
+  height: 42,
+  borderRadius: 13,
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: "#DBEAFE",
+},
+
+productProfitEntryCopy: {
+  flex: 1,
+  minWidth: 0,
+},
+
+productProfitEntryTitle: {
+  fontSize: 14,
+  lineHeight: 19,
+  fontWeight: "900",
+  color: "#0F172A",
+},
+
+productProfitEntrySubtitle: {
+  marginTop: 2,
+  fontSize: 11,
+  lineHeight: 16,
+  color: "#64748B",
+},
+
+productProfitEntryAction: {
+  marginTop: 6,
+  fontSize: 11,
+  lineHeight: 16,
+  fontWeight: "800",
+  color: "#2563EB",
+},
     metricLabel: {
       fontSize: 11,
       lineHeight: 16,
@@ -3399,7 +4323,188 @@ const styles =
       color:
         "#64748B",
     },
+    drillCard: {
+      borderColor: "#BFDBFE",
+      backgroundColor: "#F8FBFF",
+    },
 
+    drillHeader: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      justifyContent: "space-between",
+      gap: 12,
+    },
+
+    drillHeaderCopy: {
+      flex: 1,
+    },
+
+    drillEyebrow: {
+      fontSize: 10,
+      lineHeight: 15,
+      letterSpacing: 1,
+      fontWeight: "900",
+      color: "#2563EB",
+    },
+
+    drillTitle: {
+      marginTop: 3,
+      fontSize: 17,
+      lineHeight: 23,
+      fontWeight: "800",
+      color: "#0F172A",
+    },
+
+    drillSubtitle: {
+      marginTop: 3,
+      fontSize: 11,
+      lineHeight: 17,
+      color: "#64748B",
+    },
+
+    drillClose: {
+      width: 34,
+      height: 34,
+      borderRadius: 11,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "#FFFFFF",
+      borderWidth: 1,
+      borderColor: "#E2E8F0",
+    },
+
+    drillSummary: {
+      flexDirection: "row",
+      gap: 10,
+      marginTop: 14,
+    },
+
+    drillSummaryItem: {
+      flex: 1,
+      minWidth: 120,
+      borderRadius: 14,
+      padding: 12,
+      backgroundColor: "#FFFFFF",
+      borderWidth: 1,
+      borderColor: "#DBEAFE",
+    },
+
+    drillSummaryLabel: {
+      fontSize: 10,
+      lineHeight: 15,
+      fontWeight: "700",
+      color: "#64748B",
+    },
+
+    drillSummaryValue: {
+      marginTop: 4,
+      fontSize: 16,
+      lineHeight: 22,
+      fontWeight: "800",
+      color: "#0F172A",
+    },
+
+    drillLoading: {
+      minHeight: 90,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 9,
+    },
+
+    drillLoadingText: {
+      fontSize: 12,
+      color: "#64748B",
+    },
+
+    drillError: {
+      marginTop: 14,
+      padding: 12,
+      borderRadius: 12,
+      backgroundColor: "#FEF2F2",
+      borderWidth: 1,
+      borderColor: "#FECACA",
+    },
+
+    drillErrorText: {
+      fontSize: 12,
+      lineHeight: 18,
+      fontWeight: "700",
+      color: "#B91C1C",
+    },
+
+    drillEmpty: {
+      marginTop: 16,
+      paddingVertical: 16,
+      textAlign: "center",
+      fontSize: 12,
+      color: "#64748B",
+    },
+
+    drillRows: {
+      marginTop: 14,
+      borderTopWidth: 1,
+      borderTopColor: "#DBEAFE",
+    },
+
+    drillRow: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: 12,
+      paddingVertical: 13,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: "#CBD5E1",
+    },
+
+    drillRowLast: {
+      borderBottomWidth: 0,
+    },
+
+    drillRowMain: {
+      flex: 1,
+      minWidth: 0,
+    },
+
+    drillRowTitle: {
+      fontSize: 13,
+      lineHeight: 18,
+      fontWeight: "800",
+      color: "#0F172A",
+    },
+
+    drillRowDescription: {
+      marginTop: 2,
+      fontSize: 11,
+      lineHeight: 17,
+      color: "#475569",
+    },
+
+    drillRowMeta: {
+      marginTop: 4,
+      fontSize: 10,
+      lineHeight: 15,
+      color: "#64748B",
+    },
+
+    drillRowAmount: {
+      fontSize: 13,
+      lineHeight: 18,
+      fontWeight: "900",
+      color: "#B91C1C",
+      textAlign: "right",
+    },
+productProfitPositive: {
+  color: "#15803D",
+},
+
+productProfitNegative: {
+  color: "#B91C1C",
+},
+
+productProfitNeutral: {
+  color: "#475569",
+},
+  
     divider: {
       height: 1,
       backgroundColor:

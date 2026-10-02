@@ -1,4 +1,4 @@
-﻿// src/ai/worker/businessIntentClassifier.ts
+// src/ai/worker/businessIntentClassifier.ts
 
 /**
  * ============================================================================
@@ -118,6 +118,9 @@ export interface WorkerSemanticBusinessIntent {
   customToDate: string | null;
 
   rollingDays: number | null;
+
+  /** Customer name/query extracted semantically for customer-specific credit questions. */
+  customerQuery: string | null;
 
   confidence: number;
 
@@ -414,6 +417,8 @@ export function createWorkerNonBusinessIntent(
 
     rollingDays: null,
 
+    customerQuery: null,
+
     confidence:
       0,
 
@@ -521,6 +526,13 @@ export function normalizeWorkerSemanticBusinessIntent(
 
   let rollingDays: number | null = null;
 
+  const customerQuery =
+    ((domain === "CREDIT" && intent === "CREDIT_ANALYSIS") ||
+      ((domain === "CUSTOMERS" || domain === "CRM") &&
+        (intent === "CUSTOMER_ANALYSIS" || intent === "CRM_ANALYSIS")))
+      ? (clean(raw?.customerQuery) || null)
+      : null;
+
   if (periodPreset === "ROLLING_DAYS") {
     const n = Number(raw?.rollingDays);
 
@@ -573,6 +585,8 @@ export function normalizeWorkerSemanticBusinessIntent(
     customToDate,
 
     rollingDays,
+
+    customerQuery,
 
     confidence,
 
@@ -1139,7 +1153,76 @@ Meaning:
 
 domain = CREDIT
 intent = CREDIT_ANALYSIS
+customerQuery = null
 
+CUSTOMER-SPECIFIC CREDIT QUESTIONS:
+
+When a CREDIT question refers to a specific customer, extract the customer name or identifying text into customerQuery.
+customerQuery is a semantic lookup query only. It is NOT a verified database customer name.
+Preserve the customer wording/name from the user as closely as possible.
+Do NOT invent, expand, translate, or attach attributes/titles to the customer name.
+Do NOT infer words such as deceased, late, marehemu, company, shop, or location unless the user explicitly included them as part of the identifying query.
+Minor spelling mistakes, missing letters, spacing differences, or hyphen differences MUST NOT prevent extraction.
+The downstream canonical customer resolver is responsible for matching customerQuery against verified ZETRA customer records.
+If no specific customer is referenced, customerQuery MUST be null.
+
+CONVERSATIONAL CUSTOMER REFERENCES:
+Use Recent conversation to resolve natural follow-up references to a specific customer when the reference is clear from context.
+Examples include: "huyo", "yule", "huyo wa kwanza", "namba moja", "wa pili", "huyo mwenye salio la 940,000", "huyo niliyemtaja", "na yeye", and equivalent natural wording in Swahili or English.
+When the current message clearly refers to one customer identified in Recent conversation, set domain = CREDIT, intent = CREDIT_ANALYSIS, and set customerQuery to that customer identifying text from the conversation.
+For ordinal references such as "namba moja", "wa kwanza", "number one", or "the second one", resolve the reference against the most recent relevant customer list in Recent conversation.
+Do NOT put pronouns or ordinal phrases such as "huyo", "yule", or "namba moja" into customerQuery when the referenced customer can be resolved from conversation context; use the referenced customer name or identifying text instead.
+Resolve references semantically from meaning and conversation context, not by requiring exact keywords.
+If the conversation does not identify one customer unambiguously, do NOT guess the identity; customerQuery MUST remain null.
+Conversation context may identify which customer the user means, but it must NEVER be used as verified evidence for payment amounts, payment dates, balances, or transaction facts. Those facts must come from downstream canonical ZETRA data.
+
+"Niorodheshee watu ninaowadai." followed by "Huyo namba moja mara ya mwisho alilipa lini?"
+
+Meaning of the follow-up:
+
+domain = CREDIT
+intent = CREDIT_ANALYSIS
+customerQuery = the first customer name from the most recent debtor list in Recent conversation
+
+"Mara ya mwisho Merry-Makambako alilipa lini?"
+
+Meaning:
+
+domain = CREDIT
+intent = CREDIT_ANALYSIS
+customerQuery = "Merry-Makambako"
+
+"Mary Makambako anadaiwa kiasi gani?"
+
+Meaning:
+
+domain = CREDIT
+intent = CREDIT_ANALYSIS
+customerQuery = "Mary Makambako"
+
+"Mara ya mwisho huyu Marry-Makambako alifanya malipo lini?"
+
+Meaning:
+
+domain = CREDIT
+intent = CREDIT_ANALYSIS
+customerQuery = "Marry-Makambako"
+
+
+CUSTOMER-SPECIFIC CRM / CUSTOMER QUESTIONS:
+
+When a CUSTOMER or CRM question refers to one specific customer, use domain = CUSTOMERS, intent = CUSTOMER_ANALYSIS, and extract the customer's name, phone, or explicit identifying text into customerQuery.
+customerQuery is semantic lookup text only, never a verified customer ID. Never invent customer identity.
+If no specific customer is referenced, customerQuery MUST be null.
+For a clear follow-up such as yeye, huyo, huyu, he, she, or that customer, use Recent conversation only when it identifies exactly one customer, and put that customer's textual identifier in customerQuery.
+If the identity is ambiguous, customerQuery MUST remain null.
+
+Example:
+Furaha alinunua bidhaa gani mwezi huu?
+domain = CUSTOMERS
+intent = CUSTOMER_ANALYSIS
+periodPreset = THIS_MONTH
+customerQuery = Furaha
 
 "Mteja gani ameacha kununua?"
 
@@ -1777,6 +1860,19 @@ const BUSINESS_INTENT_JSON_SCHEMA = {
         ],
       },
 
+      customerQuery: {
+        anyOf: [
+          {
+            type:
+              "string",
+          },
+          {
+            type:
+              "null",
+          },
+        ],
+      },
+
       confidence: {
         type:
           "number",
@@ -1811,6 +1907,7 @@ const BUSINESS_INTENT_JSON_SCHEMA = {
       "customFromDate",
       "customToDate",
       "rollingDays",
+      "customerQuery",
       "confidence",
       "reason",
     ],
@@ -2363,6 +2460,7 @@ Return ONLY one JSON object with exactly these fields:
   "customFromDate": string|null,
   "customToDate": string|null,
   "rollingDays": number|null,
+  "customerQuery": string|null,
   "confidence": number,
   "reason": string|null
 }

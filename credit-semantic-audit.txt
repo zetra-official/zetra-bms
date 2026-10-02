@@ -1,0 +1,407 @@
+﻿// src/ai/worker/businessIntentClassifier.ts
+
+/**
+ * ============================================================================
+ * ZETRA AI WORKER Ã¢â‚¬â€ BUSINESS INTENT CLASSIFIER
+ * ============================================================================
+ *
+ * PURPOSE
+ *
+ * Server-side semantic classifier for ZETRA AI Business Intelligence.
+ *
+ * FLOW
+ *
+ * Natural language
+ *      Ã¢â€ â€œ
+ * OpenAI
+ *      Ã¢â€ â€œ
+ * Strict semantic business intent
+ *      Ã¢â€ â€œ
+ * /v1/business/intent
+ *      Ã¢â€ â€œ
+ * Mobile/Web Business Bridge
+ *
+ * CRITICAL RULE
+ *
+ * This module understands LANGUAGE only.
+ *
+ * It MUST NEVER:
+ * - calculate sales
+ * - calculate profit
+ * - calculate COGS
+ * - calculate expenses
+ * - invent inventory numbers
+ * - query business tables
+ * - decide financial truth
+ *
+ * Verified business numbers remain the responsibility of ZETRA's
+ * canonical business intelligence engine.
+ * ============================================================================
+ */
+
+/**
+ * ============================================================================
+ * CONTRACT TYPES
+ * ============================================================================
+ */
+
+export type WorkerBusinessDomain =
+  | "PERFORMANCE"
+  | "SALES"
+  | "PROFIT"
+  | "EXPENSES"
+  | "INVENTORY"
+  | "PRODUCTS"
+  | "CUSTOMERS"
+  | "CRM"
+  | "CREDIT"
+  | "CASHFLOW"
+  | "FORECAST"
+  | "GENERAL_BUSINESS";
+
+export type WorkerBusinessIntent =
+  | "BUSINESS_OVERVIEW"
+  | "BUSINESS_HEALTH"
+  | "SALES_SUMMARY"
+  | "PROFIT_SUMMARY"
+  | "EXPENSE_SUMMARY"
+  | "INVENTORY_SUMMARY"
+  | "TOP_PRODUCTS"
+  | "LOW_STOCK"
+  | "OUT_OF_STOCK"
+  | "SLOW_MOVING"
+  | "PERIOD_COMPARISON"
+  | "STORE_COMPARISON"
+  | "TREND_ANALYSIS"
+  | "FORECAST"
+  | "BUSINESS_COACH"
+  | "PROFIT_LEAK"
+  | "CUSTOMER_ANALYSIS"
+  | "CRM_ANALYSIS"
+  | "CREDIT_ANALYSIS"
+  | "CASHFLOW_ANALYSIS"
+  | "UNKNOWN";
+
+export type WorkerPeriodPreset =
+  | "TODAY"
+  | "YESTERDAY"
+  | "THIS_WEEK"
+  | "LAST_7_DAYS"
+  | "THIS_MONTH"
+  | "LAST_30_DAYS"
+  | "ROLLING_DAYS"
+  | "THIS_YEAR"
+  | "CUSTOM"
+  | "UNSPECIFIED";
+
+export type WorkerComparisonMode =
+  | "NONE"
+  | "PREVIOUS_DAY"
+  | "PREVIOUS_PERIOD"
+  | "PREVIOUS_WEEK"
+  | "PREVIOUS_MONTH"
+  | "PREVIOUS_YEAR"
+  | "CUSTOM";
+
+export interface WorkerSemanticBusinessIntent {
+  isBusinessQuery: boolean;
+
+  domain: WorkerBusinessDomain;
+
+  intent: WorkerBusinessIntent;
+
+  periodPreset: WorkerPeriodPreset;
+
+  comparisonMode: WorkerComparisonMode;
+
+  customFromDate: string | null;
+  customToDate: string | null;
+
+  rollingDays: number | null;
+
+  confidence: number;
+
+  reason: string | null;
+}
+
+export interface BusinessIntentHistoryItem {
+  role: "user" | "assistant";
+  text: string;
+}
+
+export interface BusinessIntentClassifierInput {
+  text: string;
+
+  businessDate?: string | null;
+
+  timezone?: string | null;
+
+  organizationName?: string | null;
+
+  storeName?: string | null;
+===== NORMALIZER =====
+          "model_non_business"
+      ),
+
+      confidence,
+    };
+  }
+
+  const rawDomain =
+    upper(
+      raw?.domain
+    );
+
+  const rawIntent =
+    upper(
+      raw?.intent
+    );
+
+  const rawPeriod =
+    upper(
+      raw?.periodPreset
+    );
+
+  const rawComparison =
+    upper(
+      raw?.comparisonMode
+    );
+
+  const domain:
+    WorkerBusinessDomain =
+    isAllowed(
+      rawDomain,
+      BUSINESS_DOMAINS
+    )
+      ? rawDomain
+      : "GENERAL_BUSINESS";
+
+  const intent:
+    WorkerBusinessIntent =
+    isAllowed(
+      rawIntent,
+      BUSINESS_INTENTS
+    )
+      ? rawIntent
+      : "BUSINESS_OVERVIEW";
+
+  const periodPreset:
+    WorkerPeriodPreset =
+    isAllowed(
+      rawPeriod,
+      PERIOD_PRESETS
+    )
+      ? rawPeriod
+      : "UNSPECIFIED";
+
+  const comparisonMode:
+    WorkerComparisonMode =
+    isAllowed(
+      rawComparison,
+      COMPARISON_MODES
+    )
+      ? rawComparison
+      : "NONE";
+
+  let customFromDate:
+    string | null =
+    null;
+
+  let customToDate:
+    string | null =
+    null;
+
+  let rollingDays: number | null = null;
+
+  if (periodPreset === "ROLLING_DAYS") {
+    const n = Number(raw?.rollingDays);
+
+    rollingDays =
+      Number.isInteger(n) &&
+      n >= 1 &&
+      n <= 3650
+        ? n
+        : null;
+  }
+
+  if (
+    periodPreset ===
+    "CUSTOM"
+  ) {
+    const from =
+      clean(
+        raw?.customFromDate
+      );
+
+    const to =
+      clean(
+        raw?.customToDate
+      );
+
+    customFromDate =
+      isIsoDate(from)
+        ? from
+        : null;
+
+    customToDate =
+      isIsoDate(to)
+        ? to
+        : null;
+  }
+
+  return {
+    isBusinessQuery: true,
+
+    domain,
+
+    intent,
+
+    periodPreset,
+
+    comparisonMode,
+
+    customFromDate,
+
+    customToDate,
+
+    rollingDays,
+
+    confidence,
+
+    reason,
+  };
+}
+
+/**
+ * ============================================================================
+ * VALIDATION
+ * ============================================================================
+ */
+
+export function validateWorkerSemanticBusinessIntent(
+  semantic:
+    WorkerSemanticBusinessIntent
+===== SCHEMA =====
+        type:
+          "boolean",
+      },
+
+      domain: {
+        type:
+          "string",
+
+        enum:
+          BUSINESS_DOMAINS,
+      },
+
+      intent: {
+        type:
+          "string",
+
+        enum:
+          BUSINESS_INTENTS,
+      },
+
+      periodPreset: {
+        type:
+          "string",
+
+        enum:
+          PERIOD_PRESETS,
+      },
+
+      comparisonMode: {
+        type:
+          "string",
+
+        enum:
+          COMPARISON_MODES,
+      },
+
+      customFromDate: {
+        anyOf: [
+          {
+            type:
+              "string",
+          },
+          {
+            type:
+              "null",
+          },
+        ],
+      },
+
+      customToDate: {
+        anyOf: [
+          {
+            type:
+              "string",
+          },
+          {
+            type:
+              "null",
+          },
+        ],
+      },
+
+      rollingDays: {
+        anyOf: [
+          {
+            type:
+              "integer",
+            minimum:
+              1,
+            maximum:
+              3650,
+          },
+          {
+            type:
+              "null",
+          },
+        ],
+      },
+
+      confidence: {
+        type:
+          "number",
+
+        minimum:
+          0,
+
+        maximum:
+          1,
+      },
+
+      reason: {
+        anyOf: [
+          {
+            type:
+              "string",
+          },
+          {
+            type:
+              "null",
+          },
+        ],
+      },
+    },
+
+    required: [
+      "isBusinessQuery",
+      "domain",
+      "intent",
+      "periodPreset",
+      "comparisonMode",
+      "customFromDate",
+      "customToDate",
+      "rollingDays",
+      "confidence",
+      "reason",
+    ],
+  },
+} as const;
+
+/**
+ * ============================================================================
+===== CLIENT =====
+

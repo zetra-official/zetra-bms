@@ -1,17 +1,24 @@
-// app/(tabs)/stores/movement.tsx
+﻿// app/(tabs)/stores/movement.tsx
 import { useNetInfo } from "@react-native-community/netinfo";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLocalSearchParams,
+  useRouter } from "expo-router";
+import React,
+  { useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState } from "react";
 import {
   Alert,
   Keyboard,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   Share,
   Text,
   TextInput,
-  View,
+  View
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import * as Print from "expo-print";
@@ -121,7 +128,12 @@ export default function StoreMovementScreen() {
   } = useOrg();
 
   // Stable online/offline
-  const rawIsOnline = !!(netInfo.isConnected && netInfo.isInternetReachable !== false);
+  const rawIsOnline =
+    Platform.OS === "web"
+      ? typeof navigator !== "undefined"
+        ? navigator.onLine !== false
+        : true
+      : !!(netInfo.isConnected && netInfo.isInternetReachable !== false);
   const [stableIsOnline, setStableIsOnline] = useState<boolean>(rawIsOnline);
   const netDebounceRef = useRef<any>(null);
 
@@ -136,6 +148,11 @@ export default function StoreMovementScreen() {
   }, [rawIsOnline]);
 
   const isOffline = !stableIsOnline;
+
+  const isDesktopWeb =
+    Platform.OS === "web" &&
+    typeof window !== "undefined" &&
+    window.innerWidth >= 900;
 
   const fromStoreId = useMemo(() => {
     return norm(params.fromStoreId) || norm(activeStoreId) || "";
@@ -1146,7 +1163,7 @@ const toStores = useMemo(() => {
         </View>
       ) : null}
 
-      <Text style={{ fontSize: 26, fontWeight: "900", color: theme.colors.text }}>
+      <Text style={{ fontSize: isDesktopWeb ? 20 : 26, fontWeight: "900", color: theme.colors.text }}>
   {isCapitalRecoveryStore ? "Movement Disabled" : "Stock Movement"}
 </Text>
 
@@ -1212,8 +1229,8 @@ const toStores = useMemo(() => {
       ) : null}
 
       {/* Receipt History = CARD ONLY */}
-      <Card style={{ gap: 10 }}>
-        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+      <Card style={{ gap: isDesktopWeb ? 5 : 10, padding: isDesktopWeb ? 10 : undefined }}>
+        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: isDesktopWeb ? 14 : 16 }}>
           Receipt History
         </Text>
 
@@ -1249,9 +1266,9 @@ variant="primary"
       </Card>
 
       {/* Header card */}
-      <Card style={{ gap: 10 }}>
+      <Card style={{ gap: isDesktopWeb ? 5 : 10, padding: isDesktopWeb ? 10 : undefined }}>
         <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Organization</Text>
-        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
+        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: isDesktopWeb ? 15 : 18 }}>
           {activeOrgName ?? "—"}
         </Text>
 
@@ -1260,12 +1277,12 @@ variant="primary"
           {activeRole ?? "—"}
         </Text>
 
-      <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 2 }}>FROM</Text>
+      <Text style={{ color: theme.colors.muted, fontWeight: "900", marginTop: isDesktopWeb ? 1 : 2, fontSize: isDesktopWeb ? 11 : undefined, letterSpacing: isDesktopWeb ? 0.7 : undefined }}>FROM</Text>
 <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
   {fromStoreName || "—"}
 </Text>
 
-<Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 2 }}>TO</Text>
+<Text style={{ color: theme.colors.muted, fontWeight: "900", marginTop: isDesktopWeb ? 1 : 2, fontSize: isDesktopWeb ? 11 : undefined, letterSpacing: isDesktopWeb ? 0.7 : undefined }}>TO</Text>
 <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
   {toStoreName || "—"}
 </Text>
@@ -1276,9 +1293,9 @@ variant="primary"
       marginTop: 6,
       borderWidth: 1,
       borderColor: theme.colors.emeraldBorder,
-      borderRadius: theme.radius.xl,
+      borderRadius: isDesktopWeb ? 12 : theme.radius.xl,
       backgroundColor: theme.colors.emeraldSoft,
-      padding: 14,
+      padding: isDesktopWeb ? 10 : 14,
     }}
   >
     <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
@@ -1295,9 +1312,9 @@ variant="primary"
     marginTop: 6,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: theme.radius.xl,
+    borderRadius: isDesktopWeb ? 12 : theme.radius.xl,
     backgroundColor: theme.colors.card,
-    padding: 14,
+    padding: isDesktopWeb ? 10 : 14,
   }}
 >
           <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Permission</Text>
@@ -1320,7 +1337,7 @@ variant="primary"
           ) : null}
         </View>
 
-        <View style={{ flexDirection: "row", gap: 10, marginTop: 6 }}>
+        <View style={{ flexDirection: "row", gap: isDesktopWeb ? 8 : 10, marginTop: isDesktopWeb ? 3 : 6 }}>
           <View style={{ flex: 1 }}>
           <Button
   title={loading ? "Loading..." : "Refresh Inventory"}
@@ -1347,8 +1364,8 @@ variant="primary"
       )}
 
      {/* TO Store picker */}
-<Card style={{ gap: 10 }}>
-  <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+<Card style={{ gap: isDesktopWeb ? 7 : 10, padding: isDesktopWeb ? 12 : undefined }}>
+  <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: isDesktopWeb ? 14 : 16 }}>
     {isCapitalRecoveryStore ? "TO Store Disabled" : "Choose TO store"}
   </Text>
 
@@ -1371,16 +1388,16 @@ variant="primary"
             onPress={() => pickToStore(id)}
             style={{
               borderWidth: 1,
-              borderColor: active ? "rgba(52,211,153,0.55)" : theme.colors.border,
-              backgroundColor: theme.colors.surface2,
-              borderRadius: theme.radius.xl,
-              paddingVertical: 10,
-              paddingHorizontal: 12,
-              minWidth: 180,
+              borderColor: active ? theme.colors.emerald : theme.colors.border,
+              backgroundColor: active ? theme.colors.emeraldSoft : theme.colors.surface2,
+              borderRadius: isDesktopWeb ? 12 : theme.radius.xl,
+              paddingVertical: isDesktopWeb ? 8 : 10,
+              paddingHorizontal: isDesktopWeb ? 10 : 12,
+              minWidth: isDesktopWeb ? 190 : 180,
             }}
           >
-            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{s.store_name}</Text>
-            <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
+            <Text style={{ color: isDesktopWeb && active ? theme.colors.emerald : theme.colors.text, fontWeight: "900" }}>{s.store_name}</Text>
+            <Text style={{ color: active ? theme.colors.emerald : theme.colors.muted, fontWeight: "900", marginTop: isDesktopWeb ? 3 : 6 }}>
               {active ? "Selected ✓" : "Tap to select"}
             </Text>
           </Pressable>
@@ -1391,9 +1408,9 @@ variant="primary"
 </Card>
 
       {/* Move summary + button */}
-      <Card style={{ gap: 10 }}>
+      <Card style={{ gap: isDesktopWeb ? 6 : 10, padding: isDesktopWeb ? 10 : undefined }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: isDesktopWeb ? 14 : 16 }}>
             Ready to Move
           </Text>
 
@@ -1402,8 +1419,8 @@ variant="primary"
             disabled={loading || selectedCount === 0}
             style={{
               opacity: loading || selectedCount === 0 ? 0.5 : 1,
-              paddingHorizontal: 10,
-              paddingVertical: 8,
+              paddingHorizontal: isDesktopWeb ? 9 : 10,
+              paddingVertical: isDesktopWeb ? 6 : 8,
               borderRadius: theme.radius.lg,
               borderWidth: 1,
               borderColor: theme.colors.border,
@@ -1440,8 +1457,8 @@ variant="primary"
       </Card>
 
       {/* Product picker */}
-      <Card style={{ gap: 10 }}>
-        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+      <Card style={{ gap: isDesktopWeb ? 6 : 10, padding: isDesktopWeb ? 10 : undefined }}>
+        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: isDesktopWeb ? 14 : 16 }}>
           {isCapitalRecoveryStore ? "Inventory Picker Disabled" : "Choose products (FROM inventory)"}
         </Text>
 
@@ -1464,7 +1481,7 @@ variant="primary"
                 borderRadius: theme.radius.lg,
                 backgroundColor: "rgba(255,255,255,0.05)",
                 paddingHorizontal: 14,
-                paddingVertical: 12,
+                paddingVertical: isDesktopWeb ? 8 : 12,
                 color: theme.colors.text,
                 fontWeight: "800",
               }}
@@ -1486,18 +1503,18 @@ variant="primary"
                     style={{
                       borderWidth: 1,
                       borderColor: isSelected ? "rgba(52,211,153,0.55)" : theme.colors.border,
-                      borderRadius: theme.radius.xl,
-                      backgroundColor: theme.colors.card,
-                      padding: 14,
+                      borderRadius: isDesktopWeb ? 10 : theme.radius.xl,
+                      backgroundColor: isDesktopWeb && isSelected ? theme.colors.emeraldSoft : theme.colors.card,
+                      padding: isDesktopWeb ? 8 : 14,
                     }}
                   >
-                    <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
-                      <View style={{ flex: 1, paddingRight: 12 }}>
+                    <View style={{ flexDirection: "row", alignItems: isDesktopWeb ? "center" : "flex-start" }}>
+                      <View style={{ flex: 1, paddingRight: isDesktopWeb ? 18 : 12 }}>
                         <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
                           {r.product_name}
                         </Text>
 
-                        <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
+                        <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: isDesktopWeb ? 3 : 6 }}>
                           SKU: <Text style={{ color: theme.colors.text }}>{r.sku ?? "—"}</Text>
                           {"   "}|{"   "}
                           QTY: <Text style={{ color: theme.colors.text }}>{r.qty}</Text>
@@ -1505,7 +1522,7 @@ variant="primary"
 
                         <Text
                           style={{
-                            marginTop: 8,
+                            marginTop: isDesktopWeb ? 3 : 8,
                             fontWeight: "900",
                             color: isSelected ? theme.colors.emerald : theme.colors.faint,
                           }}
@@ -1514,8 +1531,8 @@ variant="primary"
                         </Text>
                       </View>
 
-                      <View style={{ width: 110 }}>
-                        <Text style={{ color: theme.colors.muted, fontWeight: "900", marginBottom: 8 }}>
+                      <View style={{ width: isDesktopWeb ? 120 : 110 }}>
+                        <Text style={{ color: theme.colors.muted, fontWeight: "900", marginBottom: isDesktopWeb ? 4 : 8 }}>
                           Qty
                         </Text>
 
@@ -1531,7 +1548,7 @@ keyboardType="decimal-pad"
                             borderRadius: theme.radius.lg,
                             backgroundColor: "rgba(255,255,255,0.05)",
                             paddingHorizontal: 12,
-                            paddingVertical: 10,
+                            paddingVertical: isDesktopWeb ? 7 : 10,
                             color: theme.colors.text,
                             fontWeight: "900",
                             textAlign: "center",
@@ -1542,12 +1559,12 @@ keyboardType="decimal-pad"
                           <Pressable
                             onPress={() => setInlineQty(pid, "")}
                             style={{
-                              marginTop: 10,
+                              marginTop: isDesktopWeb ? 5 : 10,
                               borderWidth: 1,
                               borderColor: theme.colors.border,
                               borderRadius: theme.radius.lg,
                               backgroundColor: theme.colors.surface2,
-                              paddingVertical: 8,
+                              paddingVertical: isDesktopWeb ? 6 : 8,
                               alignItems: "center",
                             }}
                           >
