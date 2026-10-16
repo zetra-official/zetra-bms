@@ -1,3 +1,5 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 import { supabase } from "@/src/supabase/supabaseClient";
 import { Card } from "@/src/ui/Card";
 import { Screen } from "@/src/ui/Screen";
@@ -65,6 +67,8 @@ const PAYMENT_METHODS = [
 type PayMethod = (typeof PAYMENT_METHODS)[number]["key"];
 
 export default function CustomerOrderDetailScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{
@@ -240,20 +244,20 @@ export default function CustomerOrderDetailScreen() {
 
       const saleId = clean(data);
 
-      Alert.alert("Order", "Imeconfirmiwa ✅ na imeingia kwenye SALES", [
+      Alert.alert(uiText("Order"), uiText("Imeconfirmiwa ✅ na imeingia kwenye SALES"), [
         {
-          text: "OPEN RECEIPT",
+          text: uiText("OPEN RECEIPT"),
           onPress: () => {
             if (saleId) openReceiptBySaleId(saleId);
           },
         },
-        { text: "OK" },
+        { text: uiText("OK") },
       ]);
 
       // ✅ refresh order meta after confirm
       void load();
     } catch (e: any) {
-      Alert.alert("Confirm", e?.message ?? "Failed to confirm order");
+      Alert.alert(uiText("Confirm"), e?.message ?? uiText("Failed to confirm order"));
     } finally {
       setConfirmBusy(false);
     }
@@ -269,19 +273,19 @@ export default function CustomerOrderDetailScreen() {
         }}
       >
         <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-          {clean(item.product_name) || "Item"}
+          {clean(item.product_name) || uiText("Item")}
         </Text>
 
         <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-          Qty: {String(item.qty)} • Price: {fmt(Number(item.unit_price) || 0)}
+          {uiText("Qty:")}{String(item.qty)} {uiText("• Price:")}{fmt(Number(item.unit_price) || 0)}
         </Text>
 
         <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 8 }}>
-          Line total: {fmt(Number(item.line_total) || 0)}
+          {uiText("Line total:")}{fmt(Number(item.line_total) || 0)}
         </Text>
       </Card>
     ),
-    [fmt]
+    [fmt, uiText]
   );
 
   const saleIdFromMeta = clean(meta.sale_id);
@@ -319,18 +323,18 @@ export default function CustomerOrderDetailScreen() {
                   </View>
 
                   <View>
-                    <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>Order Details</Text>
+                    <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>{uiText("Order Details")}</Text>
 
                     <Text style={{ color: theme.colors.faint, fontWeight: "900", fontSize: 12 }}>
-                      Store: {storeName} • Order: {orderId ? orderId.slice(0, 8) + "…" : "—"}
+                      {uiText("Store:")}{(clean(params?.storeName) || uiText("Store"))} {uiText("• Order:")}{orderId ? orderId.slice(0, 8) + "…" : "—"}
                       {storeId ? ` • ${storeId.slice(0, 8)}…` : ""}
                     </Text>
 
                     {/* ✅ removed "Currency: ..." */}
                     <Text style={{ color: theme.colors.faint, fontWeight: "900", fontSize: 12, marginTop: 4 }}>
-                      Status: {status}
-                      {isLocked ? " • LOCKED" : ""}
-                      {saleIdFromMeta ? " • SALE ✅" : ""}
+                      {uiText("Status:")}{uiText(status)}
+                      {isLocked ? uiText(" • LOCKED") : ""}
+                      {saleIdFromMeta ? uiText(" • SALE ✅") : ""}
                     </Text>
                   </View>
                 </View>
@@ -350,27 +354,26 @@ export default function CustomerOrderDetailScreen() {
                     },
                   ]}
                 >
-                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Back</Text>
+                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Back")}</Text>
                 </Pressable>
               </View>
             </Card>
-S
             {!!err && (
               <Card style={{ backgroundColor: theme.colors.dangerSoft, borderColor: theme.colors.dangerBorder }}>
-                <Text style={{ color: theme.colors, fontWeight: "900" }}>{err}</Text>
+                <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{systemText(err)}</Text>
               </Card>
             )}
 
             <Card style={{ padding: 12, backgroundColor: theme.colors.surface2, borderColor: theme.colors.borderSoft }}>
-              <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>Summary</Text>
+              <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>{uiText("Summary")}</Text>
               <View style={{ marginTop: 8, gap: 6 }}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Total qty</Text>
+                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Total qty")}</Text>
                   <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{String(totalQty)}</Text>
                 </View>
 
                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Subtotal</Text>
+                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Subtotal")}</Text>
                   <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
                     {fmt(subtotal)}
                   </Text>
@@ -381,12 +384,10 @@ S
             {/* ✅ Confirm & Payment (Staff flow) */}
             <Card style={{ padding: 14, gap: 10 }}>
               <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14 }}>
-                Confirm & Payment
-              </Text>
+                {uiText("Confirm & Payment")}</Text>
 
               <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 12, lineHeight: 16 }}>
-                Ukiconfirm, order hii itaingia kwenye SALES na itaonekana kwenye reports kama mauzo ya kawaida.
-              </Text>
+                {uiText("Ukiconfirm, order hii itaingia kwenye SALES na itaonekana kwenye reports kama mauzo ya kawaida.")}</Text>
 
               {saleIdFromMeta ? (
                 <>
@@ -401,10 +402,9 @@ S
                     }}
                   >
                     <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                      Tayari imeingia SALES ✅
-                    </Text>
+                      {uiText("Tayari imeingia SALES ✅")}</Text>
                     <Text style={{ color: theme.colors.faint, fontWeight: "900", marginTop: 6 }}>
-                      Sale: {saleIdFromMeta.slice(0, 8)}…
+                      {uiText("Sale:")}{saleIdFromMeta.slice(0, 8)}…
                     </Text>
                   </View>
 
@@ -427,7 +427,7 @@ S
                     ]}
                   >
                     <Ionicons name="document-text-outline" size={18} color={theme.colors.emerald} />
-                    <Text style={{ color: theme.colors.text, fontWeight: "900" }}>OPEN RECEIPT</Text>
+                    <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("OPEN RECEIPT")}</Text>
                   </Pressable>
                 </>
               ) : (
@@ -448,7 +448,7 @@ S
                             m.key === payMethod ? theme.colors.emeraldSoft : "rgba(255,255,255,0.06)",
                         }}
                       >
-                        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{m.label}</Text>
+                        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText(m.label)}</Text>
                       </Pressable>
                     ))}
                   </View>
@@ -456,7 +456,7 @@ S
                   <TextInput
                     value={paidAmount}
                     onChangeText={setPaidAmount}
-                    placeholder="Paid amount (optional, default = total)"
+                    placeholder={uiText("Paid amount (optional, default = total)")}
                     keyboardType="numeric"
                     placeholderTextColor={theme.colors.muted}
                     style={{
@@ -474,7 +474,7 @@ S
                   <TextInput
                     value={payRef}
                     onChangeText={setPayRef}
-                    placeholder="Reference (optional) e.g M-Pesa ref / Bank ref"
+                    placeholder={uiText("Reference (optional) e.g M-Pesa ref / Bank ref")}
                     placeholderTextColor={theme.colors.muted}
                     style={{
                       height: 44,
@@ -493,13 +493,11 @@ S
                       if (!canConfirm) return;
 
                       Alert.alert(
-                        "Confirm Order",
-                        `Confirm hii order ianze kuhesabiwa kama SALE?\n\nMethod: ${payMethod}\nPaid: ${
-                          clean(paidAmount) ? fmt(toNum(paidAmount)) : "(default = total)"
-                        }\nRef: ${clean(payRef) || "—"}`,
+                        uiText("Confirm Order"),
+                        uiText("Confirm hii order ianze kuhesabiwa kama SALE?\n\nMethod: {p0}\nPaid: {p1}\nRef: {p2}", {p0: (payMethod), p1: (clean(paidAmount) ? fmt(toNum(paidAmount)) : "(default = total)"), p2: (clean(payRef) || "—")}),
                         [
-                          { text: "Cancel", style: "cancel" },
-                          { text: "CONFIRM", onPress: confirmAndCreateSale },
+                          { text: uiText("Cancel"), style: "cancel" },
+                          { text: uiText("CONFIRM"), onPress: confirmAndCreateSale },
                         ]
                       );
                     }}
@@ -521,22 +519,20 @@ S
                   >
                     <Ionicons name="checkmark-circle-outline" size={18} color={theme.colors.emerald} />
                     <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                      {confirmBusy ? "Confirming..." : "CONFIRM → CREATE SALE"}
+                      {confirmBusy ? uiText("Confirming...") : uiText("CONFIRM → CREATE SALE")}
                     </Text>
                   </Pressable>
 
                   <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 12, lineHeight: 16 }}>
-                    NOTE: Kama order ina item yoyote bila product_id, DB itazuia confirm (usalama).
-                  </Text>
+                    {uiText("NOTE: Kama order ina item yoyote bila product_id, DB itazuia confirm (usalama).")}</Text>
                 </>
               )}
             </Card>
 
             <Card style={{ padding: 12 }}>
-              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Status</Text>
+              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Status")}</Text>
               <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-                Hii ni taarifa ya order. Staff wa store ndio watathibitisha, kuandaa, na ku-deliver.
-              </Text>
+                {uiText("Hii ni taarifa ya order. Staff wa store ndio watathibitisha, kuandaa, na ku-deliver.")}</Text>
 
               <Pressable
                 onPress={load}
@@ -556,15 +552,14 @@ S
                   },
                 ]}
               >
-                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Refresh status</Text>
+                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Refresh status")}</Text>
               </Pressable>
 
               {loading && (
                 <View style={{ paddingTop: 12, alignItems: "center" }}>
                   <ActivityIndicator />
                   <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>
-                    Loading...
-                  </Text>
+                    {uiText("Loading...")}</Text>
                 </View>
               )}
             </Card>
@@ -573,10 +568,9 @@ S
         ListEmptyComponent={
           loading ? null : (
             <Card style={{ padding: 14 }}>
-              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>No item-lines</Text>
+              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>{uiText("No item-lines")}</Text>
               <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-                Hii order haina item-lines.
-              </Text>
+                {uiText("Hii order haina item-lines.")}</Text>
 
               <Pressable
                 onPress={load}
@@ -596,7 +590,7 @@ S
                   },
                 ]}
               >
-                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Reload</Text>
+                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Reload")}</Text>
               </Pressable>
             </Card>
           )

@@ -1,4 +1,6 @@
-﻿import React from "react";
+﻿import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
+import React from "react";
 
 import {
   Modal,
@@ -205,6 +207,7 @@ function IntelligenceCard({
   inverseChange?: boolean;
   valueIsPercent?: boolean;
 }) {
+ const uiText = useCommonText();
   return (
     <View
       style={{
@@ -293,7 +296,7 @@ function IntelligenceCard({
             fontWeight: "700",
           }}
         >
-          Previous:{" "}
+          {uiText("Previous:")}{" "}
           {signedMoney(
             previousValue
           )}
@@ -307,8 +310,7 @@ function IntelligenceCard({
             fontWeight: "700",
           }}
         >
-          Verified current period
-        </Text>
+          {uiText("Verified current period")}</Text>
       )}
     </View>
   );
@@ -325,6 +327,7 @@ function PeriodInsightCard({
     | null;
   accent: string;
 }) {
+ const uiText = useCommonText();
   return (
     <View
       style={{
@@ -388,7 +391,7 @@ function PeriodInsightCard({
         }}
       >
         {bucket?.label ??
-          "Not available"}
+          uiText("Not available")}
       </Text>
 
       <Text
@@ -405,14 +408,12 @@ function PeriodInsightCard({
         }}
       >
         {bucket
-          ? `Net ${
-              bucket.netProfit < 0
+          ? uiText("Net {p0}: {p1}", {p0: (bucket.netProfit < 0
                 ? "Loss"
-                : "Profit"
-            }: ${signedMoney(
+                : "Profit"), p1: (signedMoney(
               bucket.netProfit
-            )}`
-          : "No verified period data"}
+            ))})
+          : uiText("No verified period data")}
       </Text>
     </View>
   );
@@ -524,6 +525,8 @@ export default function FinancialOverviewFullView({
   loading = false,
   errorText = "",
 }: Props) {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const { width, height } =
     useWindowDimensions();
 
@@ -674,8 +677,7 @@ export default function FinancialOverviewFullView({
                     fontWeight: "900",
                   }}
                 >
-                  Business Financial Overview
-                </Text>
+                  {uiText("Business Financial Overview")}</Text>
 
                 <View
                   style={{
@@ -692,8 +694,7 @@ export default function FinancialOverviewFullView({
                       fontWeight: "900",
                     }}
                   >
-                    VERIFIED FINANCE
-                  </Text>
+                    {uiText("VERIFIED FINANCE")}</Text>
                 </View>
               </View>
 
@@ -818,7 +819,7 @@ export default function FinancialOverviewFullView({
                           fontWeight: "900",
                         }}
                       >
-                        {option.label}
+                        {uiText(option.label)}
                       </Text>
                     </Pressable>
                   );
@@ -844,8 +845,7 @@ export default function FinancialOverviewFullView({
                     fontWeight: "900",
                   }}
                 >
-                  Select Custom Date Range
-                </Text>
+                  {uiText("Select Custom Date Range")}</Text>
 
                 <Text
                   style={{
@@ -855,8 +855,7 @@ export default function FinancialOverviewFullView({
                     fontWeight: "700",
                   }}
                 >
-                  Choose the exact start and end dates, then apply the range.
-                </Text>
+                  {uiText("Choose the exact start and end dates, then apply the range.")}</Text>
 
                 <View
                   style={{
@@ -881,8 +880,7 @@ export default function FinancialOverviewFullView({
                         fontWeight: "900",
                       }}
                     >
-                      FROM DATE
-                    </Text>
+                      {uiText("FROM DATE")}</Text>
 
                     <TextInput
                       value={
@@ -893,7 +891,7 @@ export default function FinancialOverviewFullView({
                       }
                       placeholder="YYYY-MM-DD"
                       placeholderTextColor="#94A3B8"
-                      accessibilityLabel="Custom range start date"
+                      accessibilityLabel={uiText("Custom range start date")}
                       {...({
                         type: "date",
                       } as any)}
@@ -927,8 +925,7 @@ export default function FinancialOverviewFullView({
                         fontWeight: "900",
                       }}
                     >
-                      TO DATE
-                    </Text>
+                      {uiText("TO DATE")}</Text>
 
                     <TextInput
                       value={
@@ -939,7 +936,7 @@ export default function FinancialOverviewFullView({
                       }
                       placeholder="YYYY-MM-DD"
                       placeholderTextColor="#94A3B8"
-                      accessibilityLabel="Custom range end date"
+                      accessibilityLabel={uiText("Custom range end date")}
                       {...({
                         type: "date",
                       } as any)}
@@ -964,7 +961,7 @@ export default function FinancialOverviewFullView({
                       onApplyCustomRange
                     }
                     accessibilityRole="button"
-                    accessibilityLabel="Apply custom financial date range"
+                    accessibilityLabel={uiText("Apply custom financial date range")}
                     style={{
                       height: 38,
                       paddingHorizontal: 18,
@@ -981,8 +978,7 @@ export default function FinancialOverviewFullView({
                         fontWeight: "900",
                       }}
                     >
-                      Apply Range
-                    </Text>
+                      {uiText("Apply Range")}</Text>
                   </Pressable>
                 </View>
 
@@ -995,7 +991,7 @@ export default function FinancialOverviewFullView({
                       fontWeight: "800",
                     }}
                   >
-                    {customRangeError}
+                    {systemText(customRangeError)}
                   </Text>
                 ) : null}
               </View>
@@ -1011,24 +1007,24 @@ export default function FinancialOverviewFullView({
               }}
             >
               <MetricCard
-                label="Sales"
+                label={uiText("Sales")}
                 value={result.total.sales}
                 color="#2563EB"
-                subtitle="Verified sales in selected period"
+                subtitle={uiText("Verified sales in selected period")}
               />
 
               <MetricCard
-                label="Expenses"
+                label={uiText("Expenses")}
                 value={result.total.expenses}
                 color="#F59E0B"
-                subtitle="Verified expenses in selected period"
+                subtitle={uiText("Verified expenses in selected period")}
               />
 
               <MetricCard
                 label={
                   netProfitNegative
-                    ? "Net Loss"
-                    : "Net Profit"
+                    ? uiText("Net Loss")
+                    : uiText("Net Profit")
                 }
                 value={result.total.netProfit}
                 color={
@@ -1038,8 +1034,8 @@ export default function FinancialOverviewFullView({
                 }
                 subtitle={
                   netProfitNegative
-                    ? "Verified loss in selected period"
-                    : "Verified net profit in selected period"
+                    ? uiText("Verified loss in selected period")
+                    : uiText("Verified net profit in selected period")
                 }
               />
             </View>
@@ -1069,8 +1065,7 @@ export default function FinancialOverviewFullView({
                         fontWeight: "900",
                       }}
                     >
-                      Performance Intelligence
-                    </Text>
+                      {uiText("Performance Intelligence")}</Text>
 
                     <Text
                       style={{
@@ -1080,8 +1075,7 @@ export default function FinancialOverviewFullView({
                         fontWeight: "700",
                       }}
                     >
-                      Current period compared with the previous equivalent period
-                    </Text>
+                      {uiText("Current period compared with the previous equivalent period")}</Text>
                   </View>
 
                   <View
@@ -1103,8 +1097,7 @@ export default function FinancialOverviewFullView({
                         fontWeight: "900",
                       }}
                     >
-                      VERIFIED COMPARISON
-                    </Text>
+                      {uiText("VERIFIED COMPARISON")}</Text>
                   </View>
                 </View>
 
@@ -1116,7 +1109,7 @@ export default function FinancialOverviewFullView({
                   }}
                 >
                   <IntelligenceCard
-                    label="Sales Growth"
+                    label={uiText("Sales Growth")}
                     value={
                       comparison.current
                         .total.sales
@@ -1133,7 +1126,7 @@ export default function FinancialOverviewFullView({
                   />
 
                   <IntelligenceCard
-                    label="Expense Change"
+                    label={uiText("Expense Change")}
                     value={
                       comparison.current
                         .total.expenses
@@ -1155,8 +1148,8 @@ export default function FinancialOverviewFullView({
                       comparison.current
                         .total.netProfit <
                       0
-                        ? "Net Loss"
-                        : "Net Profit"
+                        ? uiText("Net Loss")
+                        : uiText("Net Profit")
                     }
                     value={
                       comparison.current
@@ -1180,7 +1173,7 @@ export default function FinancialOverviewFullView({
                   />
 
                   <IntelligenceCard
-                    label="Profit Margin"
+                    label={uiText("Profit Margin")}
                     value={
                       comparison.insight
                         .profitMargin ?? 0
@@ -1198,7 +1191,7 @@ export default function FinancialOverviewFullView({
                   }}
                 >
                   <PeriodInsightCard
-                    title="Best Period"
+                    title={uiText("Best Period")}
                     bucket={
                       comparison.insight
                         .bestPeriod
@@ -1207,7 +1200,7 @@ export default function FinancialOverviewFullView({
                   />
 
                   <PeriodInsightCard
-                    title="Weakest Period"
+                    title={uiText("Weakest Period")}
                     bucket={
                       comparison.insight
                         .weakestPeriod
@@ -1260,8 +1253,7 @@ export default function FinancialOverviewFullView({
                       letterSpacing: -0.2,
                     }}
                   >
-                    Financial Performance
-                  </Text>
+                    {uiText("Financial Performance")}</Text>
 
                   <Text
                     style={{
@@ -1271,8 +1263,7 @@ export default function FinancialOverviewFullView({
                       fontWeight: "700",
                     }}
                   >
-                    Interactive verified financial trend
-                  </Text>
+                    {uiText("Interactive verified financial trend")}</Text>
                 </View>
 
                 <View
@@ -1342,7 +1333,7 @@ export default function FinancialOverviewFullView({
                               fontWeight: "900",
                             }}
                           >
-                            {option.label}
+                            {uiText(option.label)}
                           </Text>
                         </Pressable>
                       );
@@ -1386,8 +1377,7 @@ export default function FinancialOverviewFullView({
                         fontWeight: "900",
                       }}
                     >
-                      Selected Period
-                    </Text>
+                      {uiText("Selected Period")}</Text>
                   </View>
 
                   <View
@@ -1431,8 +1421,7 @@ export default function FinancialOverviewFullView({
                         fontWeight: "900",
                       }}
                     >
-                      Previous Equivalent Period
-                    </Text>
+                      {uiText("Previous Equivalent Period")}</Text>
                   </View>
                 </View>
               ) : null}
@@ -1453,8 +1442,7 @@ export default function FinancialOverviewFullView({
                       fontWeight: "800",
                     }}
                   >
-                    Loading verified finance data...
-                  </Text>
+                    {uiText("Loading verified finance data...")}</Text>
                 </View>
               ) : errorText ? (
                 <View
@@ -1518,8 +1506,7 @@ export default function FinancialOverviewFullView({
                 textAlign: "center",
               }}
             >
-              ZETRA Business Financial Intelligence
-            </Text>
+              {uiText("ZETRA Business Financial Intelligence")}</Text>
           </View>
         </View>
       </View>

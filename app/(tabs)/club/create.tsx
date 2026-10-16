@@ -1,3 +1,5 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/(tabs)/club/create.tsx
 import { useOrg } from "@/src/context/OrgContext";
 import { supabase } from "@/src/supabase/supabaseClient";
@@ -284,6 +286,8 @@ function extractPostIdFromRpcData(data: any): string | null {
 }
 
 export default function ClubCreatePostScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -333,7 +337,7 @@ export default function ClubCreatePostScreen() {
 
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert("Permission", "Ruhusa ya kuchagua picha inahitajika.");
+      Alert.alert(uiText("Permission"), uiText("Ruhusa ya kuchagua picha inahitajika."));
       return;
     }
 
@@ -429,7 +433,7 @@ export default function ClubCreatePostScreen() {
 
   const openPicker = useCallback(() => {
     if (!activeStoreId) {
-      Alert.alert("Store Required", "Tafadhali activate store kwanza.");
+      Alert.alert(uiText("Store Required"), uiText("Tafadhali activate store kwanza."));
       return;
     }
     setQ("");
@@ -453,11 +457,11 @@ export default function ClubCreatePostScreen() {
     const productId = clean(selectedProductId);
 
     if (!orgId) {
-      Alert.alert("Org Required", "Tafadhali chagua org kwanza.");
+      Alert.alert(uiText("Org Required"), uiText("Tafadhali chagua org kwanza."));
       return;
     }
     if (!storeId) {
-      Alert.alert("Store Required", "Tafadhali chagua/activate store kwanza kabla ya kupost.");
+      Alert.alert(uiText("Store Required"), uiText("Tafadhali chagua/activate store kwanza kabla ya kupost."));
       return;
     }
     const hasProduct = !!productId;
@@ -465,7 +469,7 @@ export default function ClubCreatePostScreen() {
     const hasImage = !!clean(localUri);
 
     if (!hasProduct && !hasCaption && !hasImage) {
-      Alert.alert("Nothing to Post", "Weka angalau picha, caption, au product kabla ya kupost.");
+      Alert.alert(uiText("Nothing to Post"), uiText("Weka angalau picha, caption, au product kabla ya kupost."));
       return;
     }
 
@@ -503,7 +507,7 @@ export default function ClubCreatePostScreen() {
       // PATCH C1: normalize post id regardless of scalar/object/rows return
       const postId = extractPostIdFromRpcData(res?.data);
 
-      Alert.alert("Success", "Post imewekwa kwenye ZETRA Business Club ✅");
+      Alert.alert(uiText("Success"), uiText("Post imewekwa kwenye ZETRA Business Club ✅"));
 
       router.replace({
         pathname: "/(tabs)/club" as any,
@@ -519,7 +523,7 @@ export default function ClubCreatePostScreen() {
       }
 
       setErr(msg);
-      Alert.alert("Post Failed", msg);
+      Alert.alert(uiText("Post Failed"), msg);
     } finally {
       setSaving(false);
     }
@@ -586,7 +590,7 @@ export default function ClubCreatePostScreen() {
               </View>
 
               <View style={{ flex: 1 }}>
-                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Active Store</Text>
+                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Active Store")}</Text>
                 <Text style={{ color: theme.colors.muted, fontWeight: "900", marginTop: 2 }}>
                   {activeStoreName ?? "—"}
                 </Text>
@@ -600,15 +604,14 @@ export default function ClubCreatePostScreen() {
             {!activeStoreId ? (
               // FIX: use theme.colors.danger (not dangerText)
               <Text style={{ color: theme.colors.danger, fontWeight: "900", marginTop: 10 }}>
-                Hakuna store iliyochaguliwa. Rudi uchague/activate store kwanza.
-              </Text>
+                {uiText("Hakuna store iliyochaguliwa. Rudi uchague/activate store kwanza.")}</Text>
             ) : null}
           </Card>
 
           {/* Product block */}
           <Card>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Bidhaa (Product)</Text>
+              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Bidhaa (Product)")}</Text>
 
               {!!selectedProductId && (
                 <Pressable
@@ -620,14 +623,14 @@ export default function ClubCreatePostScreen() {
                   }}
                   hitSlop={10}
                 >
-                  <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Clear</Text>
+                  <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>{uiText("Clear")}</Text>
                 </Pressable>
               )}
             </View>
 
             {!!prodErr ? (
               // FIX: use theme.colors.danger (not dangerText)
-              <Text style={{ marginTop: 8, color: theme.colors.danger, fontWeight: "900" }}>{prodErr}</Text>
+              <Text style={{ marginTop: 8, color: theme.colors.danger, fontWeight: "900" }}>{systemText(prodErr)}</Text>
             ) : null}
 
             <Pressable
@@ -649,7 +652,7 @@ export default function ClubCreatePostScreen() {
             >
               <Ionicons name="pricetag-outline" size={18} color={theme.colors.emerald} />
               <Text style={{ fontWeight: "900", color: theme.colors.text }}>
-                {prodLoading ? "Loading products..." : selectedName ? "Change Product" : "Chagua Bidhaa (hiari)"}
+                {prodLoading ? uiText("Loading products...") : selectedName ? uiText("Change Product") : uiText("Chagua Bidhaa (hiari)")}
               </Text>
             </Pressable>
 
@@ -657,30 +660,28 @@ export default function ClubCreatePostScreen() {
               <View style={{ marginTop: 10, gap: 4 }}>
                 <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>{selectedName}</Text>
                 {!!selectedSku && (
-                  <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>SKU: {selectedSku}</Text>
+                  <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>{uiText("SKU:")}{selectedSku}</Text>
                 )}
                 <Text style={{ color: theme.colors.emerald, fontWeight: "900", fontSize: 16 }}>
                   {fmtMoneyTZS(selectedPrice, currency)}
                 </Text>
                 <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                  Bei hii inatoka DB (products.selling_price) na inasnap-shot kwenye post.
-                </Text>
+                  {uiText("Bei hii inatoka DB (products.selling_price) na inasnap-shot kwenye post.")}</Text>
               </View>
             )}
 
             {!selectedName ? (
               <Text style={{ marginTop: 10, color: theme.colors.faint, fontWeight: "900" }}>
-                Product ni hiari. Unaweza kupost picha pekee, caption pekee, au product pamoja na vingine.
-              </Text>
+                {uiText("Product ni hiari. Unaweza kupost picha pekee, caption pekee, au product pamoja na vingine.")}</Text>
             ) : null}
           </Card>
 
           <Card>
-            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Ujumbe (Caption) — hiari</Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Ujumbe (Caption) — hiari")}</Text>
             <TextInput
               value={caption}
               onChangeText={setCaption}
-              placeholder="Andika tangazo la biashara yako..."
+              placeholder={uiText("Andika tangazo la biashara yako...")}
               placeholderTextColor={theme.colors.faint}
               multiline
               style={{
@@ -697,11 +698,11 @@ export default function ClubCreatePostScreen() {
 
           <Card>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Picha (Feed + HQ) — hiari</Text>
+              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Picha (Feed + HQ) — hiari")}</Text>
 
               {!!localUri && (
                 <Pressable onPress={removeImage} hitSlop={10}>
-                  <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Remove</Text>
+                  <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>{uiText("Remove")}</Text>
                 </Pressable>
               )}
             </View>
@@ -723,7 +724,7 @@ export default function ClubCreatePostScreen() {
                 }}
               >
                 <Ionicons name="image-outline" size={18} color={theme.colors.emerald} />
-                <Text style={{ fontWeight: "900", color: theme.colors.text }}>Chagua Picha</Text>
+                <Text style={{ fontWeight: "900", color: theme.colors.text }}>{uiText("Chagua Picha")}</Text>
               </Pressable>
             ) : (
               <View style={{ marginTop: 10, gap: 8 }}>
@@ -742,8 +743,8 @@ export default function ClubCreatePostScreen() {
 
                 <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
                   {uploading
-                    ? "Kuandaa sizes + Uploading picha..."
-                    : "Perf Standard: FEED (1080px, ~<=0.45MB) + HQ (1600px, <=2MB). Feed itakuwa smooth hata uki-scroll chini sana."}
+                    ? uiText("Kuandaa sizes + Uploading picha...")
+                    : uiText("Perf Standard: FEED (1080px, ~<=0.45MB) + HQ (1600px, <=2MB). Feed itakuwa smooth hata uki-scroll chini sana.")}
                 </Text>
               </View>
             )}
@@ -752,18 +753,17 @@ export default function ClubCreatePostScreen() {
           <Button
             title={
               uploading
-                ? "Uploading..."
+                ? uiText("Uploading...")
                 : saving
-                ? "Posting..."
-                : "Post Now"
+                ? uiText("Posting...")
+                : uiText("Post Now")
             }
             onPress={submit}
             disabled={!canSubmit}
           />
 
           <Text style={{ color: theme.colors.faint, fontWeight: "800", textAlign: "center" }}>
-            Unaweza kupost picha pekee, caption pekee, product pekee, au mchanganyiko wa vyote.
-          </Text>
+            {uiText("Unaweza kupost picha pekee, caption pekee, product pekee, au mchanganyiko wa vyote.")}</Text>
         </View>
 
         {/* ✅ Upgrade Modal (HEAVY + READABLE) */}
@@ -835,11 +835,9 @@ export default function ClubCreatePostScreen() {
 
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
-                      Upgrade Required
-                    </Text>
+                      {uiText("Upgrade Required")}</Text>
                     <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 4, lineHeight: 20 }}>
-                      Posting kwenye Business Club inahitaji plan ya kulipia.
-                    </Text>
+                      {uiText("Posting kwenye Business Club inahitaji plan ya kulipia.")}</Text>
                   </View>
                 </View>
               </View>
@@ -897,9 +895,9 @@ export default function ClubCreatePostScreen() {
                 ) : null}
 
                 <View style={{ marginTop: 14, gap: 10 }}>
-                  <Button title="OK, Sawa" onPress={() => setUpgradeOpen(false)} />
+                  <Button title={uiText("OK, Sawa")} onPress={() => setUpgradeOpen(false)} />
                   <Button
-                    title="Back to Feed"
+                    title={uiText("Back to Feed")}
                     variant="secondary"
                     onPress={() => {
                       setUpgradeOpen(false);
@@ -953,7 +951,7 @@ export default function ClubCreatePostScreen() {
                 }}
               >
                 <View style={{ padding: 12, borderBottomWidth: 1, borderBottomColor: theme.colors.borderSoft }}>
-                  <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>Chagua Bidhaa</Text>
+                  <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>{uiText("Chagua Bidhaa")}</Text>
 
                   <View
                     style={{
@@ -972,7 +970,7 @@ export default function ClubCreatePostScreen() {
                     <TextInput
                       value={q}
                       onChangeText={setQ}
-                      placeholder="Search name or SKU..."
+                      placeholder={uiText("Search name or SKU...")}
                       placeholderTextColor={theme.colors.faint}
                       style={{ flex: 1, color: theme.colors.text, fontWeight: "800" }}
                     />
@@ -1023,14 +1021,14 @@ export default function ClubCreatePostScreen() {
                   ListEmptyComponent={
                     <View style={{ padding: 14 }}>
                       <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>
-                        {prodLoading ? "Loading..." : "No products found."}
+                        {prodLoading ? uiText("Loading...") : uiText("No products found.")}
                       </Text>
                     </View>
                   }
                 />
 
                 <View style={{ padding: 12, borderTopWidth: 1, borderTopColor: theme.colors.borderSoft }}>
-                  <Button title="Close" variant="secondary" onPress={() => setProductOpen(false)} />
+                  <Button title={uiText("Close")} variant="secondary" onPress={() => setProductOpen(false)} />
                 </View>
               </Pressable>
             </Pressable>

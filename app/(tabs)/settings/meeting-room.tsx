@@ -1,3 +1,5 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -273,6 +275,7 @@ function SmallRoomCard({
   row: RoomRow;
   onPress: () => void;
 }) {
+ const uiText = useCommonText();
   return (
     <Pressable onPress={onPress}>
       {({ pressed }) => (
@@ -319,8 +322,7 @@ backgroundColor: MR.card2,
                 }}
                 numberOfLines={1}
               >
-                {clean(row.organization_name) || "Unknown Organization"} • {niceRole(row.my_role)} • {row.members_count} members
-              </Text>
+                {clean(row.organization_name) || uiText("Unknown Organization")} • {niceRole(row.my_role)} • {row.members_count} {uiText("members")}</Text>
             </View>
 
             <Text style={{ color: MR.faint, fontWeight: "800", fontSize: 11 }}>
@@ -332,7 +334,7 @@ backgroundColor: MR.card2,
             style={{ color: UI.muted, fontWeight: "800", lineHeight: 18 }}
             numberOfLines={2}
           >
-            {clean(row.last_message_preview) || clean(row.description) || "No activity yet."}
+            {clean(row.last_message_preview) || clean(row.description) || uiText("No activity yet.")}
           </Text>
         </View>
       )}
@@ -341,6 +343,8 @@ backgroundColor: MR.card2,
 }
 
 export default function MeetingRoomScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
   const org = useOrg();
 
@@ -470,7 +474,7 @@ export default function MeetingRoomScreen() {
 
   const openCreate = useCallback(() => {
     if (!canCreateRoom) {
-      Alert.alert("Not allowed", "Only Owner/Admin can create meeting rooms.");
+      Alert.alert(uiText("Not allowed"), uiText("Only Owner/Admin can create meeting rooms."));
       return;
     }
 
@@ -507,9 +511,9 @@ export default function MeetingRoomScreen() {
         if (error) throw error;
 
         await load();
-        Alert.alert("Accepted", "Invitation imekubaliwa successfully.");
+        Alert.alert(uiText("Accepted"), uiText("Invitation imekubaliwa successfully."));
       } catch (e: any) {
-        Alert.alert("Accept failed", e?.message ?? "Failed to accept invite.");
+        Alert.alert(uiText("Accept failed"), e?.message ?? uiText("Failed to accept invite."));
       } finally {
         setAcceptingId(null);
       }
@@ -543,10 +547,9 @@ backgroundColor: MR.card,
 
         <View style={{ flex: 1 }}>
           <Text style={{ color: MR.text, fontWeight: "900", fontSize: 24 }}>
-            Meeting Room
-          </Text>
+            {uiText("Meeting Room")}</Text>
           <Text style={{ color: MR.muted, fontWeight: "800", marginTop: 4 }}>
-            {orgName} • {role}
+            {clean((org.activeOrgName || uiText("No organization")))} • {role}
           </Text>
         </View>
 
@@ -603,8 +606,7 @@ backgroundColor: MR.card,
 
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={{ color: MR.text, fontWeight: "900", fontSize: 17 }}>
-                Organization Communication Hub
-              </Text>
+                {uiText("Organization Communication Hub")}</Text>
               <Text
                 style={{
                   color: MR.muted,
@@ -613,20 +615,19 @@ backgroundColor: MR.card,
                   marginTop: 4,
                 }}
               >
-                Create rooms, invite ZETRA users, share updates, and coordinate operational work across your joined rooms.
-              </Text>
+                {uiText("Create rooms, invite ZETRA users, share updates, and coordinate operational work across your joined rooms.")}</Text>
             </View>
           </View>
 
           <View style={{ flexDirection: "row", gap: 10 }}>
             <StatPill
               icon="business-outline"
-              label="Organization"
+              label={uiText("Organization")}
               value={orgName || "—"}
             />
             <StatPill
               icon="storefront-outline"
-              label="Active Store"
+              label={uiText("Active Store")}
               value={store || "—"}
             />
           </View>
@@ -634,15 +635,15 @@ backgroundColor: MR.card,
           <View style={{ flexDirection: "row", gap: 10 }}>
             <StatPill
               icon="albums-outline"
-              label="My Active Rooms"
+              label={uiText("My Active Rooms")}
               value={String(activeRooms.length)}
-              hint={archivedRooms.length > 0 ? `${archivedRooms.length} archived` : "live rooms"}
+              hint={archivedRooms.length > 0 ? uiText("{p0} archived", {p0: (archivedRooms.length)}) : uiText("live rooms")}
             />
             <StatPill
               icon="mail-open-outline"
-              label="Pending Invites"
+              label={uiText("Pending Invites")}
               value={String(invites.length)}
-              hint="linked to ZETRA accounts"
+              hint={uiText("linked to ZETRA accounts")}
             />
           </View>
         </Card>
@@ -658,11 +659,10 @@ backgroundColor: MR.card,
             }}
           >
             <Text style={{ color: UI.danger, fontWeight: "900" }}>
-              {err}
+              {systemText(err)}
             </Text>
             <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 20 }}>
-              Baadhi ya SQL readers zime-load, lakini kuna sehemu bado inahitaji kufungwa kwenye hatua inayofuata.
-            </Text>
+              {uiText("Baadhi ya SQL readers zime-load, lakini kuna sehemu bado inahitaji kufungwa kwenye hatua inayofuata.")}</Text>
           </Card>
         </View>
       ) : null}
@@ -670,12 +670,11 @@ backgroundColor: MR.card,
       <View style={{ marginTop: 14 }}>
         <Card style={{ gap: 12 }}>
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
-            Quick Start
-          </Text>
+            {uiText("Quick Start")}</Text>
 
           <ActionButton
-            title="Create Meeting Room"
-            subtitle="Start a new room for staff, suppliers, customers, leadership, or any ZETRA users"
+            title={uiText("Create Meeting Room")}
+            subtitle={uiText("Start a new room for staff, suppliers, customers, leadership, or any ZETRA users")}
             icon="add-circle-outline"
             primary
             rightText={canCreateRoom ? "READY" : "LOCKED"}
@@ -683,16 +682,16 @@ backgroundColor: MR.card,
           />
 
           <ActionButton
-            title="Open My Rooms"
-            subtitle="View all rooms you belong to across joined organizations/rooms"
+            title={uiText("Open My Rooms")}
+            subtitle={uiText("View all rooms you belong to across joined organizations/rooms")}
             icon="albums-outline"
             rightText={String(activeRooms.length)}
             onPress={openRooms}
           />
 
           <ActionButton
-            title="Invitations"
-            subtitle="Manage invited people, ZETRA-account participants, and membership flow"
+            title={uiText("Invitations")}
+            subtitle={uiText("Manage invited people, ZETRA-account participants, and membership flow")}
             icon="mail-open-outline"
             rightText={String(invites.length)}
             onPress={openInvites}
@@ -704,14 +703,12 @@ backgroundColor: MR.card,
         <Card style={{ gap: 12 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15, flex: 1 }}>
-              My Pending Invites
-            </Text>
+              {uiText("My Pending Invites")}</Text>
           </View>
 
           {invites.length === 0 ? (
             <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 20 }}>
-              No pending invites for your account right now.
-            </Text>
+              {uiText("No pending invites for your account right now.")}</Text>
           ) : (
             invites.map((inv, idx) => {
               const inviteId = clean(inv.invite_id || inv.id);
@@ -729,7 +726,7 @@ backgroundColor: MR.card2,
                   }}
                 >
                   <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-                    {clean(inv.room_name) || "Meeting Room"}
+                    {clean(inv.room_name) || uiText("Meeting Room")}
                   </Text>
 
                   <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
@@ -758,8 +755,7 @@ backgroundColor: MR.card2,
                       <ActivityIndicator />
                     ) : (
                       <Text style={{ color: UI.text, fontWeight: "900" }}>
-                        Accept Invite
-                      </Text>
+                        {uiText("Accept Invite")}</Text>
                     )}
                   </Pressable>
                 </View>
@@ -773,8 +769,7 @@ backgroundColor: MR.card2,
         <Card style={{ gap: 12 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15, flex: 1 }}>
-              Recent Rooms Preview
-            </Text>
+              {uiText("Recent Rooms Preview")}</Text>
 
             {activeRooms.length > 0 ? (
               <Pressable onPress={openRooms}>
@@ -787,8 +782,7 @@ backgroundColor: MR.card2,
                       opacity: pressed ? 0.85 : 1,
                     }}
                   >
-                    View all
-                  </Text>
+                    {uiText("View all")}</Text>
                 )}
               </Pressable>
             ) : null}
@@ -816,11 +810,9 @@ backgroundColor: MR.card2,
               }}
             >
               <Text style={{ color: UI.text, fontWeight: "900" }}>
-                No rooms yet
-              </Text>
+                {uiText("No rooms yet")}</Text>
               <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 20 }}>
-                Start with one room like Leadership, Suppliers, Wafanyakazi, Sales Team, au Stock Requests.
-              </Text>
+                {uiText("Start with one room like Leadership, Suppliers, Wafanyakazi, Sales Team, au Stock Requests.")}</Text>
             </View>
           )}
         </Card>
@@ -829,24 +821,18 @@ backgroundColor: MR.card2,
       <View style={{ marginTop: 14 }}>
         <Card style={{ gap: 10 }}>
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
-            What this will support
-          </Text>
+            {uiText("What this will support")}</Text>
 
           <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 21 }}>
-            • Unlimited meeting rooms inside one organization.
-          </Text>
+            {uiText("• Unlimited meeting rooms inside one organization.")}</Text>
           <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 21 }}>
-            • Room names like Leadership, Suppliers, Stock Requests, Customer Care, Wafanyakazi, or Project Teams.
-          </Text>
+            {uiText("• Room names like Leadership, Suppliers, Stock Requests, Customer Care, Wafanyakazi, or Project Teams.")}</Text>
           <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 21 }}>
-            • Invite any person mwenye akaunti ya ZETRA, then chat inside app like a business-focused group.
-          </Text>
+            {uiText("• Invite any person mwenye akaunti ya ZETRA, then chat inside app like a business-focused group.")}</Text>
           <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 21 }}>
-            • Messages, replies, updates, operational coordination, and proof sharing.
-          </Text>
+            {uiText("• Messages, replies, updates, operational coordination, and proof sharing.")}</Text>
           <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 21 }}>
-            • Future support for images, pinned messages, announcements, and stronger permissions.
-          </Text>
+            {uiText("• Future support for images, pinned messages, announcements, and stronger permissions.")}</Text>
         </Card>
       </View>
 

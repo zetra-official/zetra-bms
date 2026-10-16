@@ -1,3 +1,5 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/stocks/history.tsx
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from "react-native";
@@ -219,6 +221,8 @@ function MiniStat({ label, value, hint }: { label: string; value: string; hint?:
 }
 
 export default function StockHistoryScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
   const org = useOrg();
 
@@ -274,6 +278,8 @@ export default function StockHistoryScreen() {
     return Array.from(new Set(ids));
   }, [org.stores, orgId]);
 
+  const storeIdsKey = JSON.stringify(storeIdsInOrg);
+
   const rpcTryScalar = useCallback(async (fnNames: string[], args: Record<string, any>) => {
     let lastErr: any = null;
     for (const fn of fnNames) {
@@ -294,6 +300,7 @@ async function loadStockInItems(args: {
   scope: "STORE" | "ALL";
   fromYMD: string;
   toYMD: string;
+  includeTransferIn: boolean;
 }): Promise<StockInItemRow[]> {
   const ids =
     args.scope === "STORE"
@@ -307,11 +314,12 @@ async function loadStockInItems(args: {
   const allRows: StockInItemRow[] = [];
 
   for (const sid of ids) {
-    const { data, error } = await supabase.rpc("get_stock_in_items_v1", {
+    const { data, error } = await supabase.rpc("get_stock_in_items_v2", {
       p_org_id: args.orgId,
       p_store_id: sid,
       p_date_from: args.fromYMD,
       p_date_to: args.toYMD,
+      p_include_transfer_in: args.includeTransferIn,
     } as any);
 
     if (error) throw error;
@@ -328,35 +336,6 @@ async function loadStockInItems(args: {
     return tb - ta;
   });
 }
-  const loadForStore = useCallback(
-    async (sid: string, fromYMD: string, toYMD: string): Promise<FinRow> => {
-      const onVal = await rpcTryScalar(["get_stock_on_hand_value_v1"], {
-        p_org_id: orgId,
-        p_store_id: sid,
-      });
-
-      const stockInRows = await loadStockInItems({
-        orgId,
-        storeId: sid,
-        storeIds: [sid],
-        scope: "STORE",
-        fromYMD,
-        toYMD,
-      });
-
-      const inVal = stockInRows.reduce((sum, x) => sum + toNum(x.total_value), 0);
-
-      return {
-        org_id: orgId,
-        store_id: sid,
-        date_from: fromYMD,
-        date_to: toYMD,
-        stock_on_hand_value: onVal,
-        stock_in_value: inVal,
-      };
-    },
-    [orgId, rpcTryScalar]
-  );
 
  const [quickRange, setQuickRange] = useState<"today" | "7d" | "30d" | "custom">("today");
 
@@ -405,20 +384,28 @@ async function loadStockInItems(args: {
 
     try {
       if (!canAll || isStaff || scope === "STORE") {
-        const [r, items] = await Promise.all([
-          loadForStore(storeId, dateFrom, dateTo),
+        const [onVal, items] = await Promise.all([
+          rpcTryScalar(["get_stock_on_hand_value_v1"], { p_org_id: orgId, p_store_id: storeId }),
           loadStockInItems({
             orgId,
             storeId,
             storeIds: storeIdsInOrg,
             scope: "STORE",
+            includeTransferIn: true,
             fromYMD: dateFrom,
             toYMD: dateTo,
           }),
         ]);
 
         if (rid !== reqRef.current) return;
-        setRow(r);
+        setRow({
+          org_id: orgId,
+          store_id: storeId,
+          date_from: dateFrom,
+          date_to: dateTo,
+          stock_on_hand_value: onVal,
+          stock_in_value: items.reduce((sum, x) => sum + toNum(x.total_value), 0),
+        });
         setStockInItems(items);
         return;
       }
@@ -430,20 +417,21 @@ async function loadStockInItems(args: {
         return;
       }
 
-      const [results, items] = await Promise.all([
-        Promise.all(ids.map((sid) => loadForStore(sid, dateFrom, dateTo))),
+      const [onHandValues, items] = await Promise.all([
+        Promise.all(ids.map((sid) => rpcTryScalar(["get_stock_on_hand_value_v1"], { p_org_id: orgId, p_store_id: sid }))),
         loadStockInItems({
           orgId,
           storeId: null,
           storeIds: ids,
           scope: "ALL",
+          includeTransferIn: false,
           fromYMD: dateFrom,
           toYMD: dateTo,
         }),
       ]);
 
-      const sumOn = results.reduce((a: number, r: FinRow) => a + toNum(r.stock_on_hand_value), 0);
-      const sumIn = results.reduce((a: number, r: FinRow) => a + toNum(r.stock_in_value), 0);
+      const sumOn = onHandValues.reduce((a: number, value) => a + toNum(value), 0);
+      const sumIn = items.reduce((a: number, item) => a + toNum(item.total_value), 0);
 
       if (rid !== reqRef.current) return;
       setRow({
@@ -463,13 +451,22 @@ async function loadStockInItems(args: {
     } finally {
       if (rid === reqRef.current) setLoading(false);
     }
-  }, [orgId, dateFrom, dateTo, scope, storeId, canAll, isStaff, storeIdsInOrg, loadForStore]);
+  }, [orgId, dateFrom, dateTo, scope, storeId, canAll, isStaff, storeIdsKey, rpcTryScalar]);
 
   React.useEffect(() => {
-    if (!orgId) return;
-    if (scope === "STORE" && !storeId) return;
+    if (!orgId || (scope === "STORE" && !storeId)) {
+      reqRef.current += 1;
+      setLoading(false);
+      setRow(null);
+      setStockInItems([]);
+      return;
+    }
 
     void run();
+
+    return () => {
+      reqRef.current += 1;
+    };
   }, [orgId, storeId, scope, dateFrom, dateTo, run]);
 
   const subtitle = isStaff
@@ -499,29 +496,66 @@ async function loadStockInItems(args: {
   return (
     <Screen>
       <ScrollView contentContainerStyle={{ paddingTop: 16, paddingHorizontal: 16, paddingBottom: 24 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-          <Pressable
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "flex-start",
+            gap: 10,
+          }}
+        >          <Pressable
             onPress={() => router.back()}
             hitSlop={10}
             style={({ pressed }) => ({
-              paddingHorizontal: 12,
-              paddingVertical: 10,
+              minHeight: 44,
+              paddingHorizontal: 14,
+              paddingVertical: 11,
               borderRadius: 999,
               borderWidth: 1,
-              borderColor: "rgba(255,255,255,0.12)",
-              backgroundColor: "rgba(255,255,255,0.06)",
-              opacity: pressed ? 0.92 : 1,
+              borderColor: "rgba(148,163,184,0.16)",
+              backgroundColor: "rgba(255,255,255,0.72)",
+              alignItems: "center",
+              justifyContent: "center",
+              opacity: pressed ? 0.88 : 1,
             })}
           >
-            <Text style={{ color: UI.text, fontWeight: "900" }}>Back</Text>
+            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>{uiText("Back")}</Text>
           </Pressable>
 
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18 }} numberOfLines={1}>
-              Stock Value Search
-            </Text>
-            <Text style={{ color: UI.muted, fontWeight: "800" }} numberOfLines={1}>
-              {subtitle}
+          <View
+            style={{
+              flex: 1,
+              minWidth: 0,
+              paddingTop: 2,
+              alignItems: "center",
+            }}
+          >
+            <Text
+              style={{
+                color: UI.text,
+                fontWeight: "900",
+                fontSize: 20,
+                lineHeight: 24,
+                textAlign: "center",
+              }}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.78}
+            >
+              {uiText("Stock Value Search")}</Text>
+
+            <Text
+              style={{
+                color: UI.muted,
+                fontWeight: "800",
+                fontSize: 12,
+                lineHeight: 16,
+                textAlign: "center",
+                marginTop: 2,
+                width: "100%",
+              }}
+              numberOfLines={2}
+            >
+              {(isStaff ? uiText("Store: {p0}", {p0: (storeName)}) : (scope === "STORE" ? uiText("Store: {p0}", {p0: (storeName)}) : uiText("Org: {p0} (ALL)", {p0: (orgName)})))}
             </Text>
           </View>
 
@@ -529,16 +563,19 @@ async function loadStockInItems(args: {
             onPress={() => void run()}
             hitSlop={10}
             style={({ pressed }) => ({
-              paddingHorizontal: 12,
-              paddingVertical: 10,
+              minHeight: 44,
+              paddingHorizontal: 16,
+              paddingVertical: 11,
               borderRadius: 999,
               borderWidth: 1,
-              borderColor: "rgba(42,168,118,0.35)",
-              backgroundColor: "rgba(42,168,118,0.10)",
-              opacity: pressed ? 0.92 : 1,
+              borderColor: "rgba(16,185,129,0.35)",
+              backgroundColor: "rgba(16,185,129,0.16)",
+              alignItems: "center",
+              justifyContent: "center",
+              opacity: pressed ? 0.88 : 1,
             })}
           >
-            <Text style={{ color: UI.text, fontWeight: "900" }}>{loading ? "..." : "Search"}</Text>
+            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>{loading ? "..." : uiText("Search")}</Text>
           </Pressable>
         </View>
 
@@ -547,18 +584,17 @@ async function loadStockInItems(args: {
         <Card style={{ gap: 10 }}>
           {canAll && !isStaff ? (
             <View style={{ flexDirection: "row", gap: 10 }}>
-              <SmallChip active={scope === "STORE"} label="STORE" onPress={() => setScope("STORE")} />
-              <SmallChip active={scope === "ALL"} label="ALL" onPress={() => setScope("ALL")} />
+              <SmallChip active={scope === "STORE"} label={uiText("STORE")} onPress={() => setScope("STORE")} />
+              <SmallChip active={scope === "ALL"} label={uiText("ALL")} onPress={() => setScope("ALL")} />
             </View>
           ) : null}
 
           <Text style={{ color: UI.faint, fontWeight: "900", fontSize: 12, letterSpacing: 0.4 }}>
-            DATE RANGE (YYYY-MM-DD)
-          </Text>
+            {uiText("DATE RANGE (YYYY-MM-DD)")}</Text>
 
           <View style={{ flexDirection: "row", gap: 10 }}>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: UI.muted, fontWeight: "800", marginBottom: 6 }}>From</Text>
+              <Text style={{ color: UI.muted, fontWeight: "800", marginBottom: 6 }}>{uiText("From")}</Text>
               <TextInput
                 value={dateFrom}
                 onChangeText={onChangeFrom}
@@ -567,11 +603,11 @@ async function loadStockInItems(args: {
                 autoCapitalize="none"
                 style={{
                   borderWidth: 1,
-                  borderColor: "rgba(255,255,255,0.12)",
-                  backgroundColor: "rgba(255,255,255,0.06)",
+                  borderColor: "rgba(148,163,184,0.26)",
+                  backgroundColor: "rgba(255,255,255,0.76)",
                   borderRadius: 14,
-                  paddingHorizontal: 12,
-                  paddingVertical: 10,
+                  paddingHorizontal: 14,
+                  paddingVertical: 12,
                   color: UI.text,
                   fontWeight: "900",
                 }}
@@ -579,7 +615,7 @@ async function loadStockInItems(args: {
             </View>
 
             <View style={{ flex: 1 }}>
-              <Text style={{ color: UI.muted, fontWeight: "800", marginBottom: 6 }}>To</Text>
+              <Text style={{ color: UI.muted, fontWeight: "800", marginBottom: 6 }}>{uiText("To")}</Text>
               <TextInput
                 value={dateTo}
                 onChangeText={onChangeTo}
@@ -588,11 +624,11 @@ async function loadStockInItems(args: {
                 autoCapitalize="none"
                 style={{
                   borderWidth: 1,
-                  borderColor: "rgba(255,255,255,0.12)",
-                  backgroundColor: "rgba(255,255,255,0.06)",
+                  borderColor: "rgba(148,163,184,0.26)",
+                  backgroundColor: "rgba(255,255,255,0.76)",
                   borderRadius: 14,
-                  paddingHorizontal: 12,
-                  paddingVertical: 10,
+                  paddingHorizontal: 14,
+                  paddingVertical: 12,
                   color: UI.text,
                   fontWeight: "900",
                 }}
@@ -601,9 +637,9 @@ async function loadStockInItems(args: {
           </View>
 
           <View style={{ flexDirection: "row", gap: 10, marginTop: 10 }}>
-          <SmallChip active={quickRange === "today"} label="Today" onPress={() => applyQuick("today")} />
-<SmallChip active={quickRange === "7d"} label="7 Days" onPress={() => applyQuick("7d")} />
-<SmallChip active={quickRange === "30d"} label="30 Days" onPress={() => applyQuick("30d")} />
+          <SmallChip active={quickRange === "today"} label={uiText("Today")} onPress={() => applyQuick("today")} />
+<SmallChip active={quickRange === "7d"} label={uiText("7 Days")} onPress={() => applyQuick("7d")} />
+<SmallChip active={quickRange === "30d"} label={uiText("30 Days")} onPress={() => applyQuick("30d")} />
           </View>
 
           {!!err && (
@@ -615,31 +651,66 @@ async function loadStockInItems(args: {
                 padding: 12,
               }}
             >
-              <Text style={{ color: UI.danger, fontWeight: "900" }}>{err}</Text>
+              <Text style={{ color: UI.danger, fontWeight: "900" }}>{systemText(err)}</Text>
             </Card>
           )}
         </Card>
 
         <Card style={{ gap: 10 }}>
-          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>Results</Text>
+          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>{uiText("Results")}</Text>
 
           {loading ? (
             <View style={{ paddingVertical: 18 }}>
               <ActivityIndicator />
             </View>
           ) : (
-            <View style={{ flexDirection: "row", gap: 12 }}>
-              <MiniStat label="On Hand Value" value={onHand} hint="current stock" />
-              <MiniStat label="Stock In Value" value={stockIn} hint="received (+)" />
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <View
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  padding: 14,
+                  borderRadius: 16,
+                  backgroundColor: "rgba(16,185,129,0.08)",
+                  borderWidth: 1,
+                  borderColor: "rgba(16,185,129,0.12)",
+                }}
+              >
+                <MiniStat label={uiText("On Hand Value")} value={onHand} hint={uiText("current stock")} />
+              </View>
+
+              <View
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  padding: 14,
+                  borderRadius: 16,
+                  backgroundColor: "rgba(37,99,235,0.07)",
+                  borderWidth: 1,
+                  borderColor: "rgba(37,99,235,0.10)",
+                }}
+              >
+                <MiniStat label={uiText("Stock In Value")} value={stockIn} hint={uiText("received (+)")} />
+              </View>
             </View>
           )}
 
-          <View style={{ height: 1, backgroundColor: "rgba(255,255,255,0.08)", marginTop: 10 }} />
-
-          <Text style={{ color: UI.muted, fontWeight: "800" }}>
-            Range: <Text style={{ color: UI.text, fontWeight: "900" }}>{dateFrom}</Text> →{" "}
-            <Text style={{ color: UI.text, fontWeight: "900" }}>{dateTo}</Text>
-          </Text>
+          <View
+            style={{
+              marginTop: 2,
+              paddingHorizontal: 12,
+              paddingVertical: 12,
+              borderRadius: 14,
+              backgroundColor: "rgba(148,163,184,0.08)",
+              borderWidth: 1,
+              borderColor: "rgba(148,163,184,0.12)",
+            }}
+          >
+            <Text style={{ color: UI.muted, fontWeight: "800" }}>
+              {uiText("Range:")}<Text style={{ color: UI.text, fontWeight: "900" }}>{dateFrom}</Text> →{" "}
+              <Text style={{ color: UI.text, fontWeight: "900" }}>{dateTo}</Text>
+            </Text>
+          </View>
         </Card>
 
         <View style={{ height: 12 }} />
@@ -648,11 +719,9 @@ async function loadStockInItems(args: {
   <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 10 }}>
     <View style={{ flex: 1, minWidth: 0 }}>
       <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18 }}>
-        Stock In Items
-      </Text>
+        {uiText("Stock In Items")}</Text>
       <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 4 }}>
-        Bidhaa zilizoingia ndani ya range uliyochagua.
-      </Text>
+        {uiText("Bidhaa zilizoingia ndani ya range uliyochagua.")}</Text>
     </View>
 
     <View
@@ -666,8 +735,7 @@ async function loadStockInItems(args: {
       }}
     >
       <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
-        {stockInItems.length} items
-      </Text>
+        {stockInItems.length} {uiText("items")}</Text>
     </View>
   </View>
 
@@ -683,8 +751,8 @@ async function loadStockInItems(args: {
         borderColor: "rgba(37,99,235,0.18)",
       }}
     >
-      <MiniStat label="Total Qty In" value={String(stockInItemsQty)} />
-      <MiniStat label="Items Value" value={stockInItemsTotalLabel} />
+      <MiniStat label={uiText("Total Qty In")} value={String(stockInItemsQty)} />
+      <MiniStat label={uiText("Items Value")} value={stockInItemsTotalLabel} />
     </View>
   ) : null}
 
@@ -703,8 +771,7 @@ async function loadStockInItems(args: {
       }}
     >
       <Text style={{ color: UI.faint, fontWeight: "900" }}>
-        Hakuna bidhaa zilizoingia kwenye range hii.
-      </Text>
+        {uiText("Hakuna bidhaa zilizoingia kwenye range hii.")}</Text>
     </View>
   ) : (
     <View style={{ gap: 12 }}>
@@ -751,15 +818,15 @@ async function loadStockInItems(args: {
                   {item.product_name}
                 </Text>
                 <Text style={{ color: UI.faint, fontWeight: "800", marginTop: 3, fontSize: 12 }}>
-                  Date: {dt}
+                  {uiText("Date:")}{dt}
                 </Text>
               </View>
             </View>
 
             <View style={{ flexDirection: "row", gap: 10 }}>
-              <MiniStat label="Qty In" value={String(item.qty)} />
-              <MiniStat label="Unit Cost" value={unitCost} />
-              <MiniStat label="Total Value" value={itemTotal} />
+              <MiniStat label={uiText("Qty In")} value={String(item.qty)} />
+              <MiniStat label={uiText("Unit Cost")} value={unitCost} />
+              <MiniStat label={uiText("Total Value")} value={itemTotal} />
             </View>
           </View>
         );

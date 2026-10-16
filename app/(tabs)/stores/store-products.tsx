@@ -1,3 +1,4 @@
+import {useCommonText} from "@/src/i18n/useCommonText";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -30,6 +31,7 @@ type StoreProductRow = {
 };
 
 export default function StoreProductsScreen() {
+ const uiText=useCommonText();
   const router = useRouter();
   const { activeOrgId } = useOrg();
   const params = useLocalSearchParams<{ storeId?: string; storeName?: string }>();
@@ -124,7 +126,7 @@ return {
         setRestockCount(0);
       }
     } catch (err: any) {
-      Alert.alert("Failed", err?.message ?? "Imeshindikana kupakia products za store hii.");
+      Alert.alert(uiText("Failed"), err?.message ?? uiText("Imeshindikana kupakia products za store hii."));
       setRows([]);
     } finally {
       setLoading(false);
@@ -186,7 +188,7 @@ return {
                   opacity: pressed ? 0.92 : 1,
                 })}
               >
-                <Text style={{ color: TEXT, fontWeight: "900", fontSize: 12.5 }}>← Back</Text>
+                <Text style={{ color: TEXT, fontWeight: "900", fontSize: 12.5 }}>{uiText("← Back")}</Text>
               </Pressable>
 
               <Pressable
@@ -201,43 +203,41 @@ return {
                   opacity: pressed ? 0.92 : 1,
                 })}
               >
-                <Text style={{ color: TEXT, fontWeight: "900", fontSize: 12.5 }}>Refresh</Text>
+                <Text style={{ color: TEXT, fontWeight: "900", fontSize: 12.5 }}>{uiText("Refresh")}</Text>
               </Pressable>
             </View>
 
             <Card style={{ gap: 12 }}>
               <Text style={{ color: FAINT, fontWeight: "900", fontSize: 10.5, letterSpacing: 1 }}>
-                STORE PRODUCTS
-              </Text>
+                {uiText("STORE PRODUCTS")}</Text>
 
               <View style={{ gap: 5 }}>
                 <Text style={{ color: TEXT, fontWeight: "900", fontSize: 22, letterSpacing: 0.2 }} numberOfLines={2}>
-                  {storeName || "Store Products"}
+                  {storeName || uiText("Store Products")}
                 </Text>
 
                 <Text style={{ color: MUTED, fontWeight: "800", lineHeight: 19, fontSize: 12.5 }}>
-                  View-only page for products available in this store.
-                </Text>
+                  {uiText("View-only page for products available in this store.")}</Text>
               </View>
 
               <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
                 <View style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, borderWidth: 1, borderColor: "rgba(16,185,129,0.28)", backgroundColor: "rgba(16,185,129,0.10)" }}>
-                  <Text style={{ color: EMERALD, fontWeight: "900", fontSize: 11.5 }}>{rows.length} Products</Text>
+                  <Text style={{ color: EMERALD, fontWeight: "900", fontSize: 11.5 }}>{rows.length} {uiText("Products")}</Text>
                 </View>
 
                 <View style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, borderWidth: 1, borderColor: BORDER_SOFT,  }}>
-                  <Text style={{ color: TEXT, fontWeight: "900", fontSize: 11.5 }}>Total Qty {totalQty}</Text>
+                  <Text style={{ color: TEXT, fontWeight: "900", fontSize: 11.5 }}>{uiText("Total Qty")}{totalQty}</Text>
                 </View>
 
                 <View style={{ paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, borderWidth: 1, borderColor: BORDER_SOFT,  }}>
-                  <Text style={{ color: TEXT, fontWeight: "900", fontSize: 11.5 }}>Low Stock {lowStockCount}</Text>
+                  <Text style={{ color: TEXT, fontWeight: "900", fontSize: 11.5 }}>{uiText("Low Stock")}{lowStockCount}</Text>
                 </View>
               </View>
 
               <Pressable
                 onPress={() => {
                   if (!activeOrgId || !storeId) {
-                    Alert.alert("Missing store", "Store au organization haijapatikana.");
+                    Alert.alert(uiText("Missing store"), uiText("Store au organization haijapatikana."));
                     return;
                   }
 
@@ -258,20 +258,18 @@ return {
                 <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={{ color: TEXT, fontWeight: "900", fontSize: 14.5 }}>
-                      Restock Assistant & Place Order
-                    </Text>
+                      {uiText("Restock Assistant & Place Order")}</Text>
 
                     <Text style={{ color: MUTED, fontWeight: "800", fontSize: 11.5, marginTop: 5, lineHeight: 17 }}>
                       {restockCount > 0
-                        ? `${restockCount} product(s) need restock. Open to create order.`
-                        : "No low-stock products right now."}
+                        ? uiText("{p0} product(s) need restock. Open to create order.", {p0: (restockCount)})
+                        : uiText("No low-stock products right now.")}
                     </Text>
                   </View>
 
                   <View style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, borderWidth: 1, borderColor: restockCount > 0 ? "rgba(16,185,129,0.35)" : BORDER_SOFT, backgroundColor: restockCount > 0 ? "rgba(16,185,129,0.14)" : "rgba(255,255,255,0.06)" }}>
                     <Text style={{ color: restockCount > 0 ? EMERALD : TEXT, fontWeight: "900", fontSize: 11.5 }}>
-                      Open →
-                    </Text>
+                      {uiText("Open →")}</Text>
                   </View>
                 </View>
               </Pressable>
@@ -279,7 +277,7 @@ return {
               <Pressable
                 onPress={() => {
                   if (!activeOrgId || !storeId) {
-                    Alert.alert("Missing store", "Store au organization haijapatikana.");
+                    Alert.alert(uiText("Missing store"), uiText("Store au organization haijapatikana."));
                     return;
                   }
 
@@ -300,16 +298,14 @@ return {
                 <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
                   <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={{ color: TEXT, fontWeight: "900", fontSize: 14.5 }}>
-                      Price Catalog PDF
-                    </Text>
+                      {uiText("Price Catalog PDF")}</Text>
 
                     <Text style={{ color: MUTED, fontWeight: "800", fontSize: 11.5, marginTop: 5, lineHeight: 17 }}>
-                      Select products and share selling-price list as PDF.
-                    </Text>
+                      {uiText("Select products and share selling-price list as PDF.")}</Text>
                   </View>
 
                   <View style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, borderWidth: 1, borderColor: "rgba(59,130,246,0.35)", backgroundColor: "rgba(59,130,246,0.14)" }}>
-                    <Text style={{ color: "#93C5FD", fontWeight: "900", fontSize: 11.5 }}>Open →</Text>
+                    <Text style={{ color: "#93C5FD", fontWeight: "900", fontSize: 11.5 }}>{uiText("Open →")}</Text>
                   </View>
                 </View>
               </Pressable>
@@ -318,7 +314,7 @@ return {
                 <TextInput
                   value={query}
                   onChangeText={setQuery}
-                  placeholder="Search product or SKU..."
+                  placeholder={uiText("Search product or SKU...")}
                   placeholderTextColor="rgba(234,242,255,0.35)"
                   style={{ color: TEXT, fontWeight: "800", fontSize: 13, paddingVertical: 10 }}
                 />
@@ -331,18 +327,17 @@ return {
             <View style={{ paddingTop: 24, alignItems: "center" }}>
               <ActivityIndicator />
               <Text style={{ color: MUTED, fontWeight: "800", marginTop: 10 }}>
-                Loading store products...
-              </Text>
+                {uiText("Loading store products...")}</Text>
             </View>
           ) : (
             <Card>
               <Text style={{ color: TEXT, fontWeight: "900", fontSize: 15 }}>
-                {rows.length === 0 ? "No products found" : "No matching products"}
+                {rows.length === 0 ? uiText("No products found") : uiText("No matching products")}
               </Text>
               <Text style={{ color: MUTED, fontWeight: "800", marginTop: 6, lineHeight: 20 }}>
                 {rows.length === 0
-                  ? "Hakuna bidhaa zilizopatikana kwenye store hii."
-                  : "Hakuna bidhaa zinazolingana na utafutaji wako."}
+                  ? uiText("Hakuna bidhaa zilizopatikana kwenye store hii.")
+                  : uiText("Hakuna bidhaa zinazolingana na utafutaji wako.")}
               </Text>
             </Card>
           )
@@ -360,19 +355,19 @@ return {
                 </Text>
 
                 <Text style={{ color: MUTED, fontWeight: "800", marginTop: 4, fontSize: 11.5 }} numberOfLines={1}>
-  SKU: {item.sku || "—"} {item.unit ? ` | Unit: ${item.unit}` : ""}
+  {uiText("SKU:")}{item.sku || "—"} {item.unit ? uiText(" | Unit: {p0}", {p0: (item.unit)}) : ""}
 </Text>
 
 {item.isPrecision ? (
   <Text style={{ color: EMERALD, fontWeight: "900", marginTop: 4, fontSize: 11.5 }} numberOfLines={1}>
-    {item.unit || "Box"}: {Number(item.packQty ?? 0).toFixed(2)} | {item.baseUnit || "Units"}: {Number(item.baseUnitQty ?? item.qty)}
+    {item.unit || uiText("Box")}: {Number(item.packQty ?? 0).toFixed(2)} | {item.baseUnit || uiText("Units")}: {Number(item.baseUnitQty ?? item.qty)}
   </Text>
 ) : null}
               </View>
 
               <View style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, borderWidth: 1, borderColor: Number(item.qty || 0) <= 5 ? "rgba(239,68,68,0.30)" : BORDER_SOFT, backgroundColor: Number(item.qty || 0) <= 5 ? "rgba(239,68,68,0.10)" : "rgba(255,255,255,0.06)" }}>
                 <Text style={{ color: Number(item.qty || 0) <= 5 ? "#F87171" : TEXT, fontWeight: "900", fontSize: 11.5 }}>
-                  Qty {item.qty}
+                  {uiText("Qty")}{item.qty}
                 </Text>
               </View>
             </View>
@@ -382,8 +377,7 @@ return {
           filteredRows.length > 0 ? (
             <View style={{ paddingTop: 6 }}>
               <Text style={{ color: MUTED, fontWeight: "800", fontSize: 11.5, textAlign: "center" }}>
-                Showing {filteredRows.length} of {rows.length} products
-              </Text>
+                {uiText("Showing")}{filteredRows.length} {uiText("of")}{rows.length} {uiText("products")}</Text>
             </View>
           ) : null
         }

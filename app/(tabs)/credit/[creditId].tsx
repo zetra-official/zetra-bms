@@ -1,3 +1,4 @@
+import {useCommonText} from "@/src/i18n/useCommonText";
 import { useOrg } from "@/src/context/OrgContext";
 import { useOrgMoneyPrefs } from "@/src/ui/money";
 import { supabase } from "@/src/supabase/supabaseClient";
@@ -9,8 +10,8 @@ import SafeIcon from "@/src/ui/SafeIcon";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
-import AddPaymentSheet from "./_components/AddPaymentSheet";
-import PaymentRow, { Payment } from "./_components/PaymentRow";
+import AddPaymentSheet from "@/src/components/credit/AddPaymentSheet";
+import PaymentRow, { Payment } from "@/src/components/credit/PaymentRow";
 
 type AccountRow = {
   account_id: string;
@@ -61,6 +62,7 @@ function extractSaleId(t: { sale_id?: string | null; reference?: string | null; 
 }
 
 export default function CreditDetailScreen() {
+ const uiText=useCommonText();
   const router = useRouter();
   const params = useLocalSearchParams<{ creditId: string }>();
   const accountId = String(params.creditId || "");
@@ -354,11 +356,9 @@ export default function CreditDetailScreen() {
 
             <View style={{ flex: 1 }}>
               <Text style={{ color: theme.colors.text, fontSize: 24, fontWeight: "900" }}>
-                Credit Detail
-              </Text>
+                {uiText("Credit Detail")}</Text>
               <Text style={{ color: theme.colors.muted, marginTop: 4 }}>
-                Transactions + taarifa za mteja.
-              </Text>
+                {uiText("Transactions + taarifa za mteja.")}</Text>
             </View>
           </View>
         </View>
@@ -382,16 +382,16 @@ export default function CreditDetailScreen() {
             elevation: 3,
           }}
         >
-          <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Summary</Text>
+          <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Summary")}</Text>
 
           <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
-            {custName}
+            {(account?.customer_name ?? uiText("Customer"))}
           </Text>
 
           {custPhone ? (
             <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{custPhone}</Text>
           ) : (
-            <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>No phone</Text>
+            <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("No phone")}</Text>
           )}
 
           <View
@@ -405,7 +405,7 @@ export default function CreditDetailScreen() {
               backgroundColor: "rgba(16,185,129,0.08)",
             }}
           >
-            <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Balance</Text>
+            <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>{uiText("Balance")}</Text>
             <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
               {money.fmt(balance)}
             </Text>
@@ -427,11 +427,9 @@ export default function CreditDetailScreen() {
               }}
             >
               <Text style={{ color: theme.colors.emerald, fontWeight: "900", fontSize: 16 }}>
-                Account Cleared 🔒
-              </Text>
+                {uiText("Account Cleared 🔒")}</Text>
               <Text style={{ color: theme.colors.muted, marginTop: 6, textAlign: "center" }}>
-                Balance ni 0. Malipo mapya hayaruhusiwi kwenye account hii.
-              </Text>
+                {uiText("Balance ni 0. Malipo mapya hayaruhusiwi kwenye account hii.")}</Text>
             </View>
           ) : null}
 
@@ -456,13 +454,12 @@ export default function CreditDetailScreen() {
             })}
           >
             <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 16 }}>
-              {isCleared ? "Account Cleared 🔒" : "Add Payment"}
+              {isCleared ? uiText("Account Cleared 🔒") : uiText("Add Payment")}
             </Text>
           </Pressable>
 
           <Text style={{ color: theme.colors.faint, fontSize: 12 }}>
-            {canManageCredit ? "Staff (Allowed) / Owner/Admin" : "Staff"} • Credit v2 • Transactions
-          </Text>
+            {canManageCredit ? uiText("Staff (Allowed) / Owner/Admin") : uiText("Staff")} {uiText("• Credit v2 • Transactions")}</Text>
         </Card>
 
         <Card
@@ -480,15 +477,14 @@ export default function CreditDetailScreen() {
         >
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
             <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-              Recent Transactions
-            </Text>
+              {uiText("Recent Transactions")}</Text>
             <Pressable onPress={load} style={{ paddingVertical: 6, paddingHorizontal: 10 }}>
-              <Text style={{ color: theme.colors.emerald, fontWeight: "900" }}>Refresh</Text>
+              <Text style={{ color: theme.colors.emerald, fontWeight: "900" }}>{uiText("Refresh")}</Text>
             </Pressable>
           </View>
 
           {txnsWithRunning.length === 0 ? (
-            <Text style={{ color: theme.colors.muted }}>No transactions yet.</Text>
+            <Text style={{ color: theme.colors.muted }}>{uiText("No transactions yet.")}</Text>
           ) : (
             txnsWithRunning.map((t) => {
               const kind = String(t.kind).toUpperCase();
@@ -519,7 +515,7 @@ export default function CreditDetailScreen() {
                   </View>
 
                   <Text style={{ color: theme.colors.muted, marginTop: 4, fontWeight: "900" }}>
-                    Running:{" "}
+                    {uiText("Running:")}{" "}
                     <Text style={{ color: theme.colors.text }}>{money.fmt(t.running_after)}</Text>
                   </Text>
 
@@ -551,8 +547,7 @@ export default function CreditDetailScreen() {
                           textDecorationLine: "underline",
                         }}
                       >
-                        Open Receipt →
-                      </Text>
+                        {uiText("Open Receipt →")}</Text>
                     </Pressable>
                   ) : null}
 
@@ -569,8 +564,7 @@ export default function CreditDetailScreen() {
                           textDecorationLine: "underline",
                         }}
                       >
-                        Open Payment Receipt →
-                      </Text>
+                        {uiText("Open Payment Receipt →")}</Text>
                     </Pressable>
                   ) : null}
                 </View>
@@ -593,11 +587,10 @@ export default function CreditDetailScreen() {
           }}
         >
           <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-            Payments
-          </Text>
+            {uiText("Payments")}</Text>
 
           {payments.length === 0 ? (
-            <Text style={{ color: theme.colors.muted }}>No payments yet.</Text>
+            <Text style={{ color: theme.colors.muted }}>{uiText("No payments yet.")}</Text>
           ) : (
             payments.map((p) => (
               <Pressable

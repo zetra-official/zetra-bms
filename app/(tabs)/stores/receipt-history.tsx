@@ -1,3 +1,4 @@
+﻿import {useCommonText} from "@/src/i18n/useCommonText";
 // app/(tabs)/stores/receipt-history.tsx
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -125,6 +126,7 @@ function eatDayRange(input: string): { start: string; end: string } | null {
 }
 
 export default function ReceiptHistoryScreen() {
+ const uiText=useCommonText();
   const router = useRouter();
   const params = useLocalSearchParams<{ orgId?: string; orgName?: string; actorEmail?: string }>();
 
@@ -222,7 +224,7 @@ export default function ReceiptHistoryScreen() {
   const load = useCallback(
     async (reset: boolean) => {
       if (!orgId) {
-        Alert.alert("Missing", "No orgId provided.");
+        Alert.alert(uiText("Missing"), uiText("No orgId provided."));
         return;
       }
 
@@ -255,7 +257,7 @@ export default function ReceiptHistoryScreen() {
           setPage((p) => p + 1);
         }
       } catch (e: any) {
-        Alert.alert("Failed", e?.message ?? "Failed to load receipts");
+        Alert.alert(uiText("Failed"), e?.message ?? uiText("Failed to load receipts"));
       } finally {
         setLoading(false);
       }
@@ -375,9 +377,9 @@ export default function ReceiptHistoryScreen() {
     if (!selectedReceipt) return;
     try {
       await Clipboard.setStringAsync(buildReceiptText(selectedReceipt));
-      Alert.alert("Copied ✅", "Receipt ime-copy (unaweza ku-paste WhatsApp/Email).");
+      Alert.alert(uiText("Copied ✅"), uiText("Receipt ime-copy (unaweza ku-paste WhatsApp/Email)."));
     } catch {
-      Alert.alert("Failed", "Imeshindikana ku-copy receipt.");
+      Alert.alert(uiText("Failed"), uiText("Imeshindikana ku-copy receipt."));
     }
   }, [selectedReceipt, buildReceiptText]);
 
@@ -410,9 +412,9 @@ export default function ReceiptHistoryScreen() {
               maxWidth: 520,
               alignSelf: "stretch",
               borderRadius: theme.radius.xl,
-              backgroundColor: "rgba(15,18,24,0.98)",
+              backgroundColor: "#FFFFFF",
               borderWidth: 1,
-              borderColor: "rgba(52,211,153,0.45)",
+              borderColor: "rgba(148,163,184,0.30)",
               padding: 14,
               maxHeight: "85%",
               minHeight: 240,
@@ -426,78 +428,76 @@ export default function ReceiptHistoryScreen() {
               showsVerticalScrollIndicator
               keyboardShouldPersistTaps="handled"
             >
-              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
-                Transfer Receipt 🧾
-              </Text>
+              <Text style={{ color: "#0F172A", fontWeight: "900", fontSize: 18 }}>
+                {uiText("Transfer Receipt 🧾")}</Text>
 
               {selectedReceipt ? (
                 <>
-                  <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 10 }}>
-                    Date/Time (EAT):{" "}
-                    <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+                  <Text style={{ color: "#64748B", fontWeight: "800", marginTop: 10 }}>
+                    {uiText("Date/Time (EAT):")}{" "}
+                    <Text style={{ color: "#0F172A", fontWeight: "900" }}>
                       {fmtEAT(selectedReceipt.createdAt)}
                     </Text>
                   </Text>
 
-                  <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-                    FROM:{" "}
-                    <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+                  <Text style={{ color: "#64748B", fontWeight: "800", marginTop: 6 }}>
+                    {uiText("FROM:")}{" "}
+                    <Text style={{ color: "#0F172A", fontWeight: "900" }}>
                       {selectedReceipt.fromStoreName}
                     </Text>
                     {"  "}→{"  "}
-                    TO:{" "}
-                    <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+                    {uiText("TO:")}{" "}
+                    <Text style={{ color: "#0F172A", fontWeight: "900" }}>
                       {selectedReceipt.toStoreName}
                     </Text>
                   </Text>
 
                   {/* ✅ Source */}
-                  <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-                    Source:{" "}
-                    <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+                  <Text style={{ color: "#64748B", fontWeight: "800", marginTop: 6 }}>
+                    {uiText("Source:")}{" "}
+                    <Text style={{ color: "#0F172A", fontWeight: "900" }}>
                       {selectedReceipt.sourceLabel}
                     </Text>
                   </Text>
 
-                  <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-                    Processed by:{" "}
-                    <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+                  <Text style={{ color: "#64748B", fontWeight: "800", marginTop: 6 }}>
+                    {uiText("Processed by:")}{" "}
+                    <Text style={{ color: "#0F172A", fontWeight: "900" }}>
                       {selectedReceipt.actorEmail ? selectedReceipt.actorEmail : selectedReceipt.actorName}
                     </Text>{" "}
-                    <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>
+                    <Text style={{ color: "#94A3B8", fontWeight: "900" }}>
                       ({selectedReceipt.actorRole})
                     </Text>
                   </Text>
 
                   {selectedReceipt.reportReceiptId ? (
-                    <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>
-                      Receipt ID:{" "}
-                      <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+                    <Text style={{ color: "#64748B", fontWeight: "800", marginTop: 8 }}>
+                      {uiText("Receipt ID:")}{" "}
+                      <Text style={{ color: "#0F172A", fontWeight: "900" }}>
                         {selectedReceipt.reportReceiptId}
                       </Text>
                     </Text>
                   ) : null}
 
-                  <Text style={{ color: theme.colors.muted, fontWeight: "900", marginTop: 12 }}>
-                    Items ({selectedReceipt.totalItems}) • Total Qty {selectedReceipt.totalQty}
+                  <Text style={{ color: "#64748B", fontWeight: "900", marginTop: 12 }}>
+                    {uiText("Items ({p0}) • Total Qty {p1}", {p0: selectedReceipt.totalItems, p1: selectedReceipt.totalQty})}
                   </Text>
 
                   <View style={{ marginTop: 8, gap: 6 }}>
                     {selectedReceipt.items.map((it) => (
-                      <Text key={it.product_id} style={{ color: theme.colors.text, fontWeight: "900" }}>
+                      <Text key={it.product_id} style={{ color: "#0F172A", fontWeight: "900" }}>
                         • {it.product_name} — {it.qty}
                       </Text>
                     ))}
                   </View>
 
-                  <Text style={{ color: theme.colors.muted, fontWeight: "900", marginTop: 12 }}>
-                    Movement IDs
-                  </Text>
+                  <Text style={{ color: "#64748B", fontWeight: "900", marginTop: 12 }}>
+                    {uiText("Movement IDs")}</Text>
 
                   <View style={{ marginTop: 8, gap: 6 }}>
                     {(showAllMovementIds ? selectedReceipt.movementIds : selectedReceipt.movementIds.slice(0, 3)).map(
                       (id, idx) => (
-                        <Text key={`${id}-${idx}`} style={{ color: theme.colors.text, fontWeight: "800" }}>
+                        <Text key={`${id}-${idx}`} style={{ color: "#0F172A", fontWeight: "800" }}>
                           {id}
                         </Text>
                       )
@@ -513,12 +513,12 @@ export default function ReceiptHistoryScreen() {
                           paddingVertical: 8,
                           borderRadius: theme.radius.lg,
                           borderWidth: 1,
-                          borderColor: theme.colors.border,
-                          backgroundColor: theme.colors.surface2,
+                          borderColor: "#E2E8F0",
+                          backgroundColor: "#F8FAFC",
                         }}
                       >
-                        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                          {showAllMovementIds ? "Hide IDs" : `Show all (${selectedReceipt.movementIds.length})`}
+                        <Text style={{ color: "#0F172A", fontWeight: "900" }}>
+                          {showAllMovementIds ? uiText("Hide IDs") : uiText("Show all ({p0})", {p0: (selectedReceipt.movementIds.length)})}
                         </Text>
                       </Pressable>
                     ) : null}
@@ -526,21 +526,20 @@ export default function ReceiptHistoryScreen() {
 
                   <View style={{ flexDirection: "row", gap: 10, marginTop: 14 }}>
                     <View style={{ flex: 1 }}>
-                      <Button title="Share Receipt" onPress={shareReceipt} variant="primary" />
+                      <Button title={uiText("Share Receipt")} onPress={shareReceipt} variant="primary" />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Button title="Copy" onPress={copyReceipt} variant="secondary" />
+                      <Button title={uiText("Copy")} onPress={copyReceipt} variant="secondary" />
                     </View>
                   </View>
 
                   <View style={{ marginTop: 10 }}>
-                    <Button title="Close" onPress={() => setModalOpen(false)} variant="secondary" />
+                    <Button title={uiText("Close")} onPress={() => setModalOpen(false)} variant="secondary" />
                   </View>
                 </>
               ) : (
-                <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>
-                  No receipt loaded.
-                </Text>
+                <Text style={{ color: "#64748B", fontWeight: "800", marginTop: 8 }}>
+                  {uiText("No receipt loaded.")}</Text>
               )}
             </ScrollView>
           </Pressable>
@@ -550,8 +549,7 @@ export default function ReceiptHistoryScreen() {
       {/* Header */}
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
         <Text style={{ fontSize: 26, fontWeight: "900", color: theme.colors.text }}>
-          Receipt History
-        </Text>
+          {uiText("Receipt History")}</Text>
 
         <Pressable
           onPress={() => router.back()}
@@ -564,28 +562,27 @@ export default function ReceiptHistoryScreen() {
             backgroundColor: theme.colors.surface2,
           }}
         >
-          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Back</Text>
+          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Back")}</Text>
         </Pressable>
       </View>
 
       <Card style={{ gap: 10 }}>
-        <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Organization</Text>
+        <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Organization")}</Text>
         <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
           {orgName}
         </Text>
 
         <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 6 }}>
-          Search by date
-        </Text>
+          {uiText("Search by date")}</Text>
         <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-          Andika: <Text style={{ color: theme.colors.text }}>2026-02-24</Text> au{" "}
+          {uiText("Andika:")}<Text style={{ color: theme.colors.text }}>2026-02-24</Text> {uiText("au")}{" "}
           <Text style={{ color: theme.colors.text }}>24/02/2026</Text>
         </Text>
 
         <TextInput
           value={dateQuery}
           onChangeText={setDateQuery}
-          placeholder="YYYY-MM-DD or DD/MM/YYYY"
+          placeholder={uiText("YYYY-MM-DD or DD/MM/YYYY")}
           placeholderTextColor="rgba(255,255,255,0.35)"
           style={{
             borderWidth: 1,
@@ -602,7 +599,7 @@ export default function ReceiptHistoryScreen() {
         <View style={{ flexDirection: "row", gap: 10 }}>
           <View style={{ flex: 1 }}>
             <Button
-              title="Search"
+              title={uiText("Search")}
               onPress={() => {
                 const v = norm(dateQuery);
                 if (!v) {
@@ -611,7 +608,7 @@ export default function ReceiptHistoryScreen() {
                 }
                 const ok = eatDayRange(v);
                 if (!ok) {
-                  Alert.alert("Invalid date", "Tumia format: YYYY-MM-DD au DD/MM/YYYY");
+                  Alert.alert(uiText("Invalid date"), uiText("Tumia format: YYYY-MM-DD au DD/MM/YYYY"));
                   return;
                 }
                 setActiveDateFilter(v);
@@ -622,7 +619,7 @@ export default function ReceiptHistoryScreen() {
           </View>
           <View style={{ flex: 1 }}>
             <Button
-              title="Clear Filter"
+              title={uiText("Clear Filter")}
               onPress={() => {
                 setDateQuery("");
                 setActiveDateFilter("");
@@ -636,13 +633,11 @@ export default function ReceiptHistoryScreen() {
 
       <Card style={{ gap: 10 }}>
         <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-          Receipts
-        </Text>
+          {uiText("Receipts")}</Text>
 
         {rows.length === 0 ? (
           <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-            Hakuna risiti (au bado haijaloadi).
-          </Text>
+            {uiText("Hakuna risiti (au bado haijaloadi).")}</Text>
         ) : (
           rows.map((r: any) => {
             const createdAt = r.created_at ?? "";
@@ -673,15 +668,15 @@ export default function ReceiptHistoryScreen() {
                 }}
               >
                 <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                  {fmtEAT(createdAt)} • {totalItems} items • Qty {totalQty}
+                  {fmtEAT(createdAt)} • {totalItems} {uiText("items • Qty")}{totalQty}
                 </Text>
 
                 <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-                  From: {fromNm} → {toNm}
+                  {uiText("From:")}{fromNm} → {toNm}
                 </Text>
 
                 <Text style={{ color: theme.colors.faint, fontWeight: "900", marginTop: 6 }}>
-                  By: {by}
+                  {uiText("By:")}{by}
                 </Text>
               </Pressable>
             );
@@ -691,7 +686,7 @@ export default function ReceiptHistoryScreen() {
         <View style={{ flexDirection: "row", gap: 10, marginTop: 4 }}>
           <View style={{ flex: 1 }}>
             <Button
-              title={loading ? "Loading..." : "Refresh"}
+              title={loading ? uiText("Loading...") : uiText("Refresh")}
               onPress={() => load(true)}
               disabled={loading}
               variant="primary"
@@ -699,7 +694,7 @@ export default function ReceiptHistoryScreen() {
           </View>
           <View style={{ flex: 1 }}>
             <Button
-              title="More"
+              title={uiText("More")}
               onPress={() => load(false)}
               disabled={loading || rows.length < PAGE_SIZE}
               variant="secondary"

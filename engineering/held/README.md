@@ -1,0 +1,1 @@
+Preserved Codex implementations, NOT ACTIVATED. No client imports, routes, privileged credentials, migration runner or financial posting activation. SQL/private database captures remain outside this repository. These sources require separate contract/security approval before activation.

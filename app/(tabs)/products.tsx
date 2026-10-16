@@ -1,3 +1,7 @@
+import {indexCatalog, searchCatalog} from "@/src/search/catalogSearch";
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
+// MOBILE_PRODUCT_COMPACT_V3
 ﻿// app/(tabs)/products.tsx
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -18,7 +22,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
 
-import { useFocusEffect, useRouter } from "expo-router";
+import {
+  useFocusEffect,
+  useLocalSearchParams,
+  useRouter,
+} from "expo-router";
 import { useOrg } from "../../src/context/OrgContext";
 import { supabase } from "../../src/supabase/supabaseClient";
 import { Button } from "../../src/ui/Button";
@@ -314,6 +322,8 @@ function ScannerFabIcon({ size = 28, color = "#E5E7EB" }: { size?: number; color
 }
 
 export default function ProductsTabScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const { width } = useWindowDimensions();
   const isDesktopWeb = Platform.OS === "web" && width >= 900;
   const router = useRouter();
@@ -348,6 +358,8 @@ const productStoreScope =
 
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState<ProductRow[]>([]);
+  // SMART_PRODUCT_SEARCH_ALL_V1
+  const [productSearchFocused, setProductSearchFocused] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [name, setName] = useState("");
@@ -378,6 +390,48 @@ const [scanBusy, setScanBusy] = useState(false);
 const [keyboardSpace, setKeyboardSpace] = useState(0);
 
 const [productSearch, setProductSearch] = useState("");
+
+// ==========================================================
+// DESKTOP GLOBAL SEARCH DEEP FOCUS
+// Desktop Web only.
+// Android and Mobile Web behavior remain unchanged.
+// ==========================================================
+const productRouteParams = useLocalSearchParams<{
+  focusProductId?: string | string[];
+  focusProductName?: string | string[];
+}>();
+
+const focusProductId = useMemo(() => {
+  const raw = productRouteParams.focusProductId;
+
+  return String(
+    Array.isArray(raw)
+      ? raw[0] ?? ""
+      : raw ?? ""
+  ).trim();
+}, [productRouteParams.focusProductId]);
+
+const focusProductName = useMemo(() => {
+  const raw = productRouteParams.focusProductName;
+
+  return String(
+    Array.isArray(raw)
+      ? raw[0] ?? ""
+      : raw ?? ""
+  ).trim();
+}, [productRouteParams.focusProductName]);
+
+const [highlightedProductId, setHighlightedProductId] =
+  useState<string | null>(null);
+
+const desktopProductsScrollRef =
+  useRef<ScrollView | null>(null);
+
+const desktopProductRowYRef =
+  useRef<Record<string, number>>({});
+
+const desktopFocusHandledRef =
+  useRef("");
 
 /* PRODUCTS TABLE POLISH 5C */
 const [desktopActionProductId, setDesktopActionProductId] =
@@ -429,7 +483,7 @@ const draftHydratedRef = useRef(false);
 const uploadProductImageFile = useCallback(
   async (file: any, mode: "add" | "edit") => {
     if (!activeOrgId) {
-      Alert.alert("Missing", "No active organization.");
+      Alert.alert(uiText("Missing"), uiText("No active organization."));
       return;
     }
 
@@ -460,7 +514,7 @@ const uploadProductImageFile = useCallback(
 
       setUrl(publicUrl);
     } catch (e: any) {
-      Alert.alert("Image Upload Failed", e?.message ?? "Failed to upload product image.");
+      Alert.alert(uiText("Image Upload Failed"), e?.message ?? uiText("Failed to upload product image."));
     } finally {
       setBusy(false);
     }
@@ -471,7 +525,7 @@ const uploadProductImageFile = useCallback(
 const uploadProductImage = useCallback(
     async (uri: string, mode: "add" | "edit") => {
       if (!activeOrgId) {
-        Alert.alert("Missing", "No active organization.");
+        Alert.alert(uiText("Missing"), uiText("No active organization."));
         return;
       }
 
@@ -512,7 +566,7 @@ const uploadProductImage = useCallback(
 
         setUrl(publicUrl);
       } catch (e: any) {
-        Alert.alert("Image Upload Failed", e?.message ?? "Failed to upload product image.");
+        Alert.alert(uiText("Image Upload Failed"), e?.message ?? uiText("Failed to upload product image."));
       } finally {
         setBusy(false);
       }
@@ -567,7 +621,7 @@ const uploadProductImage = useCallback(
 
       const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
       if (!permissionResult.granted) {
-        Alert.alert("Camera Permission", "Ruhusa ya camera inahitajika kupiga picha ya bidhaa.");
+        Alert.alert(uiText("Camera Permission"), uiText("Ruhusa ya camera inahitajika kupiga picha ya bidhaa."));
         return;
       }
 
@@ -593,18 +647,18 @@ const uploadProductImage = useCallback(
           return;
         }
 
-        Alert.alert("Product Image", "Chagua namna ya kuweka picha ya bidhaa.", [
-          { text: "Camera", onPress: () => void pickWebProductImage(mode, true) },
-          { text: "Gallery / File", onPress: () => void pickWebProductImage(mode, false) },
-          { text: "Cancel", style: "cancel" },
+        Alert.alert(uiText("Product Image"), uiText("Chagua namna ya kuweka picha ya bidhaa."), [
+          { text: uiText("Camera"), onPress: () => void pickWebProductImage(mode, true) },
+          { text: uiText("Gallery / File"), onPress: () => void pickWebProductImage(mode, false) },
+          { text: uiText("Cancel"), style: "cancel" },
         ]);
         return;
       }
 
-      Alert.alert("Product Image", "Chagua namna ya kuweka picha ya bidhaa.", [
-        { text: "Camera", onPress: () => void takeProductPhoto(mode) },
-        { text: "Gallery / File", onPress: () => void pickProductImage(mode) },
-        { text: "Cancel", style: "cancel" },
+      Alert.alert(uiText("Product Image"), uiText("Chagua namna ya kuweka picha ya bidhaa."), [
+        { text: uiText("Camera"), onPress: () => void takeProductPhoto(mode) },
+        { text: uiText("Gallery / File"), onPress: () => void pickProductImage(mode) },
+        { text: uiText("Cancel"), style: "cancel" },
       ]);
     },
     [pickProductImage, pickWebProductImage, takeProductPhoto]
@@ -631,12 +685,12 @@ const uploadProductImage = useCallback(
 
   const openScan = useCallback(async () => {
     if (!canManage) {
-      Alert.alert("No Access", "Owner only.");
+      Alert.alert(uiText("No Access"), uiText("Owner only."));
       return;
     }
 
     if (isCapitalRecoveryStore) {
-      Alert.alert("Not Needed", "Barcode haitumiki kwenye Capital Recovery products.");
+      Alert.alert(uiText("Not Needed"), uiText("Barcode haitumiki kwenye Capital Recovery products."));
       return;
     }
 
@@ -644,7 +698,7 @@ const uploadProductImage = useCallback(
       if (!permission?.granted) {
         const res = await requestPermission();
         if (!res.granted) {
-          Alert.alert("Camera Permission", "Ruhusa ya camera inahitajika ili kuscan barcode.");
+          Alert.alert(uiText("Camera Permission"), uiText("Ruhusa ya camera inahitajika ili kuscan barcode."));
           return;
         }
       }
@@ -652,7 +706,7 @@ const uploadProductImage = useCallback(
       setScanBusy(false);
       setScanOpen(true);
     } catch {
-      Alert.alert("Camera", "Imeshindikana kuomba ruhusa ya camera.");
+      Alert.alert(uiText("Camera"), uiText("Imeshindikana kuomba ruhusa ya camera."));
     }
   }, [canManage, isCapitalRecoveryStore, permission?.granted, requestPermission]);
 
@@ -983,17 +1037,17 @@ useEffect(() => {
   const packSelling = Number(normalizeDecimalInput(precisionPackSelling));
 
   if (!Number.isFinite(packQty) || packQty <= 0) {
-    Alert.alert("Missing", "Weka Pack Size / Quantity, mfano 100.");
+    Alert.alert(uiText("Missing"), uiText("Weka Pack Size / Quantity, mfano 100."));
     return;
   }
 
   if (!Number.isFinite(packCost) || packCost < 0) {
-    Alert.alert("Missing", "Weka Buying/Cost Price ya box/pack.");
+    Alert.alert(uiText("Missing"), uiText("Weka Buying/Cost Price ya box/pack."));
     return;
   }
 
   if (!Number.isFinite(packSelling) || packSelling <= 0) {
-    Alert.alert("Missing", "Weka Selling Price ya box/pack.");
+    Alert.alert(uiText("Missing"), uiText("Weka Selling Price ya box/pack."));
     return;
   }
 
@@ -1014,17 +1068,17 @@ const applyEditPrecisionFormula = useCallback(() => {
   const packSelling = Number(normalizeDecimalInput(editPrecisionPackSelling));
 
   if (!Number.isFinite(packQty) || packQty <= 0) {
-    Alert.alert("Missing", "Weka Pack Size / Quantity, mfano 100.");
+    Alert.alert(uiText("Missing"), uiText("Weka Pack Size / Quantity, mfano 100."));
     return;
   }
 
   if (!Number.isFinite(packCost) || packCost < 0) {
-    Alert.alert("Missing", "Weka Buying/Cost Price ya box/pack.");
+    Alert.alert(uiText("Missing"), uiText("Weka Buying/Cost Price ya box/pack."));
     return;
   }
 
   if (!Number.isFinite(packSelling) || packSelling <= 0) {
-    Alert.alert("Missing", "Weka Selling Price ya box/pack.");
+    Alert.alert(uiText("Missing"), uiText("Weka Selling Price ya box/pack."));
     return;
   }
 
@@ -1080,48 +1134,48 @@ if (isCapitalRecoveryStore && !scopedStoreId) return;
 
     const n = name.trim();
     if (!n) {
-      Alert.alert("Missing", "Weka product name.");
+      Alert.alert(uiText("Missing"), uiText("Weka product name."));
       return;
     }
 
     if (!canManage) {
-      Alert.alert("No Access", "Owner only.");
+      Alert.alert(uiText("No Access"), uiText("Owner only."));
       return;
     }
 
     const sp = parsePositiveNumberOrNull(sellingPrice);
     if (sellingPrice.trim() && sp === null) {
-      Alert.alert("Invalid", "Selling Price iwe namba (> 0) au uiache wazi.");
+      Alert.alert(uiText("Invalid"), uiText("Selling Price iwe namba (> 0) au uiache wazi."));
       return;
     }
 
     const cp = parseZeroOrPositiveNumberOrNull(costPrice);
     if (!isCapitalRecoveryStore && costPrice.trim() && cp === null) {
-      Alert.alert("Invalid", "Cost Price iwe namba (>= 0) au uiache wazi.");
+      Alert.alert(uiText("Invalid"), uiText("Cost Price iwe namba (>= 0) au uiache wazi."));
       return;
     }
 if (!isCapitalRecoveryStore && cp !== null && sp !== null && sp < cp) {
   Alert.alert(
-    "Bei si sahihi",
-    "Selling Price uliyoweka ni ndogo kuliko Cost Price. Hii italeta hasara. Weka Selling Price kubwa kuliko au sawa na Cost Price."
+    uiText("Bei si sahihi"),
+    uiText("Selling Price uliyoweka ni ndogo kuliko Cost Price. Hii italeta hasara. Weka Selling Price kubwa kuliko au sawa na Cost Price.")
   );
   return;
 }
     if (isCapitalRecoveryStore) {
       if (sp === null) {
-        Alert.alert("Missing", "Weka Selling Price kwa Capital Recovery product.");
+        Alert.alert(uiText("Missing"), uiText("Weka Selling Price kwa Capital Recovery product."));
         return;
       }
     } else {
       if (sp === null && cp === null) {
-        Alert.alert("Missing", "Weka angalau Cost Price au Selling Price (hata moja).");
+        Alert.alert(uiText("Missing"), uiText("Weka angalau Cost Price au Selling Price (hata moja)."));
         return;
       }
     }
 
     const bc = cleanBarcode(barcode);
     if (!isCapitalRecoveryStore && bc && bc.length < 6) {
-      Alert.alert("Invalid", "Barcode inaonekana fupi sana. Hakikisha ume-scan sahihi.");
+      Alert.alert(uiText("Invalid"), uiText("Barcode inaonekana fupi sana. Hakikisha ume-scan sahihi."));
       return;
     }
 
@@ -1165,10 +1219,10 @@ if (!isCapitalRecoveryStore && cp !== null && sp !== null && sp < cp) {
           return;
         }
 
-        Alert.alert("Duplicate Product", msg, [
-          { text: "Cancel", style: "cancel" },
+        Alert.alert(uiText("Duplicate Product"), msg, [
+          { text: uiText("Cancel"), style: "cancel" },
           {
-            text: "Save Anyway",
+            text: uiText("Save Anyway"),
             style: "destructive",
             onPress: () => void add(true),
           },
@@ -1223,16 +1277,27 @@ setSellingPrice("");
 await load();
 await loadStoreCategories();
 
-      Alert.alert(
-        "Success ✅",
+      const productAddedMessage =
         isCapitalRecoveryStore
           ? "Income product added"
           : bc
           ? "Product added (barcode saved)"
-          : "Product added"
-      );
+          : "Product added";
+
+      if (Platform.OS === "web") {
+        window.alert(uiText("Success ✅")+"\n\n"+uiText(productAddedMessage));
+      } else {
+        Alert.alert(uiText("Success ✅"), uiText(productAddedMessage));
+      }
     } catch (err: any) {
-      Alert.alert("Plan Limit", getProductLimitFriendlyMessage(err));
+      const productSaveError =
+        getProductLimitFriendlyMessage(err);
+
+      if (Platform.OS === "web") {
+        window.alert(uiText("Product Save Failed ❌")+"\n\n"+systemText(productSaveError));
+      } else {
+        Alert.alert(uiText("Plan Limit"), systemText(productSaveError));
+      }
     } finally {
       setLoading(false);
     }
@@ -1264,49 +1329,49 @@ rows,
 if (isCapitalRecoveryStore && !scopedStoreId) return;
 
     if (!canManage) {
-      Alert.alert("No Access", "Owner only.");
+      Alert.alert(uiText("No Access"), uiText("Owner only."));
       return;
     }
 
     const n = editName.trim();
     if (!n) {
-      Alert.alert("Missing", "Weka product name.");
+      Alert.alert(uiText("Missing"), uiText("Weka product name."));
       return;
     }
 
     const sp = parsePositiveNumberOrNull(editSellingPrice);
     if (editSellingPrice.trim() && sp === null) {
-      Alert.alert("Invalid", "Selling Price iwe namba (> 0) au uiache wazi.");
+      Alert.alert(uiText("Invalid"), uiText("Selling Price iwe namba (> 0) au uiache wazi."));
       return;
     }
 
     const cp = parseZeroOrPositiveNumberOrNull(editCostPrice);
     if (!isCapitalRecoveryStore && editCostPrice.trim() && cp === null) {
-      Alert.alert("Invalid", "Cost Price iwe namba (>= 0) au uiache wazi.");
+      Alert.alert(uiText("Invalid"), uiText("Cost Price iwe namba (>= 0) au uiache wazi."));
       return;
     }
 if (!isCapitalRecoveryStore && cp !== null && sp !== null && sp < cp) {
   Alert.alert(
-    "Bei si sahihi",
-    "Selling Price uliyoweka ni ndogo kuliko Cost Price. Hii italeta hasara. Weka Selling Price kubwa kuliko au sawa na Cost Price."
+    uiText("Bei si sahihi"),
+    uiText("Selling Price uliyoweka ni ndogo kuliko Cost Price. Hii italeta hasara. Weka Selling Price kubwa kuliko au sawa na Cost Price.")
   );
   return;
 }
     if (isCapitalRecoveryStore) {
       if (sp === null) {
-        Alert.alert("Missing", "Weka Selling Price kwa Capital Recovery product.");
+        Alert.alert(uiText("Missing"), uiText("Weka Selling Price kwa Capital Recovery product."));
         return;
       }
     } else {
       if (sp === null && cp === null) {
-        Alert.alert("Missing", "Weka angalau Cost Price au Selling Price (hata moja).");
+        Alert.alert(uiText("Missing"), uiText("Weka angalau Cost Price au Selling Price (hata moja)."));
         return;
       }
     }
 
     const bc = cleanBarcode(editBarcode);
     if (!isCapitalRecoveryStore && bc && bc.length < 6) {
-      Alert.alert("Invalid", "Barcode inaonekana fupi sana. Hakikisha umeweka sahihi.");
+      Alert.alert(uiText("Invalid"), uiText("Barcode inaonekana fupi sana. Hakikisha umeweka sahihi."));
       return;
     }
 
@@ -1344,9 +1409,20 @@ p_image_url: editImageUrl.trim() || null,
      closeEdit();
 await load();
 await loadStoreCategories();
-Alert.alert("Success ✅", "Product updated");
+if (Platform.OS === "web") {
+  window.alert(uiText("Success ✅")+"\n\n"+uiText("Product updated"));
+} else {
+  Alert.alert(uiText("Success ✅"), uiText("Product updated"));
+}
     } catch (err: any) {
-      Alert.alert("Plan Limit", getProductLimitFriendlyMessage(err));
+      const productUpdateError =
+        getProductLimitFriendlyMessage(err);
+
+      if (Platform.OS === "web") {
+        window.alert(uiText("Product Update Failed ❌")+"\n\n"+systemText(productUpdateError));
+      } else {
+        Alert.alert(uiText("Plan Limit"), systemText(productUpdateError));
+      }
     } finally {
       setLoading(false);
     }}, [
@@ -1377,7 +1453,7 @@ const remove = useCallback(
     if (!activeOrgId) return;
 
     if (!canManage) {
-      Alert.alert("No Access", "Owner only.");
+      Alert.alert(uiText("No Access"), uiText("Owner only."));
       return;
     }
 
@@ -1395,28 +1471,39 @@ const remove = useCallback(
         await load();
         await loadStoreCategories();
 
-        Alert.alert("Success ✅", "Product deleted/archived safely");
+        if (Platform.OS === "web") {
+          window.alert(uiText("Success ✅")+"\n\n"+uiText("Product deleted/archived safely"));
+        } else {
+          Alert.alert(uiText("Success ✅"), uiText("Product deleted/archived safely"));
+        }
       } catch (err: any) {
-        Alert.alert("Failed", err?.message ?? "Unknown error");
+        const deleteError =
+          err?.message ?? "Unknown error";
+
+        if (Platform.OS === "web") {
+          window.alert(uiText("Delete Failed ❌")+"\n\n"+systemText(deleteError));
+        } else {
+          Alert.alert(uiText("Failed"), systemText(deleteError));
+        }
       } finally {
         setLoading(false);
       }
     };
 
     if (Platform.OS === "web") {
-      const ok = window.confirm(`Delete Product?\n\n${productName}`);
+      const ok = window.confirm(uiText("Delete Product?\n\n{p0}", {p0: productName}));
       if (!ok) return;
       await doDelete();
       return;
     }
 
     Alert.alert(
-      "Delete Product?",
+      uiText("Delete Product?"),
       productName,
       [
-        { text: "Cancel", style: "cancel" },
+        { text: uiText("Cancel"), style: "cancel" },
         {
-          text: "Delete",
+          text: uiText("Delete"),
           style: "destructive",
           onPress: () => void doDelete(),
         },
@@ -1427,61 +1514,8 @@ const remove = useCallback(
   [activeOrgId, productStoreScope, canManage, load, loadStoreCategories]
 );
 
-const visibleRows = useMemo(() => {
-  const normalizeSearchText = (value: any) =>
-    String(value ?? "")
-      .toLowerCase()
-      .trim()
-      .replace(/[^\p{L}\p{N}]+/gu, " ")
-      .replace(/\s+/g, " ");
-
-  const normalizeCompactText = (value: any) =>
-    normalizeSearchText(value).replace(/\s+/g, "");
-
-  const q = normalizeSearchText(productSearch);
-  const qCompact = normalizeCompactText(productSearch);
-
-  const activeRows = rows.filter((r) => r.is_active !== false);
-
-  if (!q && !qCompact) return activeRows;
-
-  return activeRows
-    .map((r) => {
-      const fields = [r.name, r.sku, r.unit, r.category, r.barcode];
-
-      const fieldTexts = fields.map((v) => normalizeSearchText(v));
-      const fieldCompacts = fields.map((v) => normalizeCompactText(v));
-
-      const exactField =
-        fieldTexts.some((v) => v === q) ||
-        fieldCompacts.some((v) => v === qCompact);
-
-      const startsField =
-        fieldTexts.some((v) => v.startsWith(q)) ||
-        fieldCompacts.some((v) => v.startsWith(qCompact));
-
-      const containsField =
-        fieldTexts.some((v) => v.includes(q)) ||
-        fieldCompacts.some((v) => v.includes(qCompact));
-
-      let score = 0;
-
-      if (exactField) score = 300;
-      else if (startsField) score = 200;
-      else if (containsField) score = 100;
-
-      return { row: r, score };
-    })
-    .filter((x) => x.score > 0)
-    .sort((a, b) => {
-      if (b.score !== a.score) return b.score - a.score;
-
-      return String(a.row.name ?? "").localeCompare(
-        String(b.row.name ?? "")
-      );
-    })
-    .map((x) => x.row);
-}, [productSearch, rows]);
+const catalogSearchIndex = useMemo(() => indexCatalog(rows), [rows]);
+const visibleRows = useMemo(() => searchCatalog(catalogSearchIndex, productSearch), [catalogSearchIndex, productSearch]);
 
 // Search mpya, organization mpya au store mpya ikibadilika,
 // rudisha catalog kwenye page ya kwanza ili isibebe items nyingi.
@@ -1504,6 +1538,126 @@ const loadMoreProducts = useCallback(() => {
 }, [visibleRows.length]);
 
 
+// ==========================================================
+// DESKTOP GLOBAL SEARCH -> EXACT PRODUCT ENGINE
+// ==========================================================
+useEffect(() => {
+  if (!isDesktopWeb) return;
+  if (!focusProductId) return;
+
+  const exactProduct =
+    rows.find(
+      (row) =>
+        String(row.id) === focusProductId
+    );
+
+  if (!exactProduct) {
+    return;
+  }
+
+  const focusKey =
+    `${focusProductId}:${focusProductName}`;
+
+  if (
+    desktopFocusHandledRef.current !== focusKey
+  ) {
+    desktopFocusHandledRef.current =
+      focusKey;
+
+    const targetSearch =
+      focusProductName ||
+      String(exactProduct.name ?? "").trim();
+
+    if (
+      targetSearch &&
+      productSearch !== targetSearch
+    ) {
+      setProductSearch(targetSearch);
+    }
+
+    setHighlightedProductId(
+      focusProductId
+    );
+  }
+}, [
+  isDesktopWeb,
+  focusProductId,
+  focusProductName,
+  rows,
+  productSearch,
+]);
+
+useEffect(() => {
+  if (!isDesktopWeb) return;
+  if (!focusProductId) return;
+
+  const targetIndex =
+    visibleRows.findIndex(
+      (row) =>
+        String(row.id) === focusProductId
+    );
+
+  if (targetIndex < 0) {
+    return;
+  }
+
+  const requiredCount =
+    Math.min(
+      visibleRows.length,
+      Math.max(
+        PRODUCTS_PAGE_SIZE,
+        targetIndex + 1
+      )
+    );
+
+  if (
+    visibleProductCount <
+    requiredCount
+  ) {
+    setVisibleProductCount(
+      requiredCount
+    );
+
+    return;
+  }
+
+  const scrollTimer =
+    setTimeout(() => {
+      const rowY =
+        desktopProductRowYRef.current[
+          focusProductId
+        ];
+
+      if (
+        typeof rowY === "number"
+      ) {
+        desktopProductsScrollRef.current?.scrollTo({
+          y: Math.max(0, rowY - 6),
+          animated: true,
+        });
+      }
+    }, 180);
+
+  const highlightTimer =
+    setTimeout(() => {
+      setHighlightedProductId(
+        (current) =>
+          current === focusProductId
+            ? null
+            : current
+      );
+    }, 4200);
+
+  return () => {
+    clearTimeout(scrollTimer);
+    clearTimeout(highlightTimer);
+  };
+}, [
+  isDesktopWeb,
+  focusProductId,
+  visibleRows,
+  visibleProductCount,
+]);
 const filteredCategorySuggestions = useMemo(() => {
   const q = category.trim().toLowerCase();
 
@@ -1542,11 +1696,9 @@ const solidInputStyle = {
     <Screen scroll>
       <View style={{ gap: 6 }}>
   <Text style={{ fontSize: isDesktopWeb ? 25 : 30, fontWeight: "900", color: theme.colors.text }}>
-    Products
-  </Text>
+    {uiText("Products")}</Text>
   <Text style={{ color: theme.colors.muted, fontWeight: "800", lineHeight: 22 }}>
-    Manage catalog, barcode, pricing, units, and store-ready products.
-  </Text>
+    {uiText("Manage catalog, barcode, pricing, units, and store-ready products.")}</Text>
 </View>
 
       {/* PRODUCTS DESKTOP HEADER 5A V2 */}
@@ -1554,6 +1706,7 @@ const solidInputStyle = {
         <View style={{ gap: 8 }}>
           <View
             style={{
+                display: (productSearchFocused || productSearch.trim().length > 0) ? "none" : "flex",
               flexDirection: "row",
               alignItems: "stretch",
               gap: 10,
@@ -1603,8 +1756,7 @@ const solidInputStyle = {
                     textTransform: "uppercase",
                   }}
                 >
-                  Organization
-                </Text>
+                  {uiText("Organization")}</Text>
 
                 <Text
                   style={{
@@ -1709,8 +1861,7 @@ const solidInputStyle = {
                     textTransform: "uppercase",
                   }}
                 >
-                  Product Mode
-                </Text>
+                  {uiText("Product Mode")}</Text>
 
                 <Text
                   style={{
@@ -1722,10 +1873,10 @@ const solidInputStyle = {
                   numberOfLines={1}
                 >
                   {isCapitalRecoveryStore
-                    ? "Capital Recovery Product Mode"
+                    ? uiText("Capital Recovery Product Mode")
                     : isPrecisionRetailStore
-                    ? "Precision Retail Product Mode"
-                    : "Standard Product Mode"}
+                    ? uiText("Precision Retail Product Mode")
+                    : uiText("Standard Product Mode")}
                 </Text>
 
                 <Text
@@ -1738,10 +1889,10 @@ const solidInputStyle = {
                   numberOfLines={1}
                 >
                   {isCapitalRecoveryStore
-                    ? "Income-focused products"
+                    ? uiText("Income-focused products")
                     : isPrecisionRetailStore
-                    ? "Pack-to-unit precision products"
-                    : "Standard inventory products"}
+                    ? uiText("Pack-to-unit precision products")
+                    : uiText("Standard inventory products")}
                 </Text>
               </View>
             </View>
@@ -1779,7 +1930,9 @@ const solidInputStyle = {
               <TextInput
                 value={productSearch}
                 onChangeText={setProductSearch}
-                placeholder="Search name, SKU, category..."
+                onFocus={() => setProductSearchFocused(true)}
+                onBlur={() => setProductSearchFocused(false)}
+                placeholder={uiText("Search name, SKU, category...")}
                 placeholderTextColor={theme.colors.faint}
                 autoCorrect={false}
                 autoCapitalize="none"
@@ -1834,57 +1987,157 @@ const solidInputStyle = {
         </View>
       ) : (
         <>
+      {/* PRODUCT_ORG_COMPACT_V1 */}
       <Card
-  style={{
-    gap: isDesktopWeb ? 7 : 12,
-    padding: isDesktopWeb ? 12 : undefined,
-    borderColor: "rgba(148,163,184,0.22)",
-    backgroundColor: "#FFFFFF",
-  }}
->
-        <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Organization</Text>
-        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: isDesktopWeb ? 15 : 18 }}>
-          {activeOrgName ?? "—"}
-        </Text>
-
-        <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>Active Store</Text>
-        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{activeStoreName ?? "—"}</Text>
-
-        <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>Role</Text>
-        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{activeRole ?? "—"}</Text>
-<Card
-  style={{
-    marginTop: isDesktopWeb ? 4 : 8,
-    padding: isDesktopWeb ? 10 : undefined,
-    borderRadius: isDesktopWeb ? 14 : 22,
-    borderColor: isCapitalRecoveryStore || isPrecisionRetailStore
-      ? theme.colors.emeraldBorder
-      : "rgba(148,163,184,0.20)",
-    backgroundColor: isCapitalRecoveryStore || isPrecisionRetailStore
-      ? "rgba(16,185,129,0.08)"
-      : "rgba(241,245,249,0.72)",
-    shadowOpacity: 0.08,
-    shadowRadius: 14,
-    elevation: 3,
-  }}
->
-          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-           {isCapitalRecoveryStore
-  ? "Capital Recovery Product Mode"
-  : isPrecisionRetailStore
-  ? "Precision Retail Product Mode"
-  : "Standard Product Mode"}
+        style={{
+          width: "100%",
+          minWidth: 0,
+          alignSelf: "stretch",
+          paddingHorizontal: 16,
+          paddingVertical: 14,
+          gap: 11,
+          borderRadius: 20,
+          borderWidth: 1,
+          borderColor: "rgba(148,163,184,0.22)",
+          backgroundColor: "#FFFFFF",
+        }}
+      >
+        <View style={{ display: (productSearchFocused || productSearch.trim().length > 0) ? "none" : "flex", gap: 11 }}>
+        <View style={{ minWidth: 0, gap: 3 }}>
+          <Text
+            style={{
+              color: theme.colors.muted,
+              fontSize: 11,
+              fontWeight: "800",
+            }}
+          >
+            {uiText("Organization")}</Text>
+          <Text
+            style={{
+              color: theme.colors.text,
+              fontSize: 17,
+              lineHeight: 23,
+              fontWeight: "900",
+              flexShrink: 1,
+            }}
+          >
+            {activeOrgName ?? uiText("Not selected")}
           </Text>
-          <Text style={{ color: theme.colors.muted, fontWeight: "700", marginTop: 6 }}>
+        </View>
+
+        <View
+          style={{
+            flexDirection: "row",
+            flexWrap: "wrap",
+            alignItems: "flex-start",
+            gap: 12,
+            minWidth: 0,
+          }}
+        >
+          <View style={{ flex: 1, minWidth: 148, gap: 3 }}>
+            <Text
+              style={{
+                color: theme.colors.muted,
+                fontWeight: "800",
+                fontSize: 11,
+              }}
+            >
+              {uiText("Active Store")}</Text>
+            <Text
+              style={{
+                color: theme.colors.text,
+                fontWeight: "800",
+                fontSize: 14,
+                lineHeight: 20,
+                flexShrink: 1,
+              }}
+            >
+              {activeStoreName ?? uiText("Not selected")}
+            </Text>
+          </View>
+
+          <View
+            style={{
+              minWidth: 78,
+              maxWidth: 120,
+              gap: 3,
+            }}
+          >
+            <Text
+              style={{
+                color: theme.colors.muted,
+                fontWeight: "800",
+                fontSize: 11,
+              }}
+            >
+              {uiText("Role")}</Text>
+            <Text
+              style={{
+                color: theme.colors.text,
+                fontWeight: "800",
+                fontSize: 14,
+                lineHeight: 20,
+                flexShrink: 1,
+              }}
+            >
+              {activeRole ?? "-"}
+            </Text>
+          </View>
+        </View>
+
+        <View
+          style={{
+            minWidth: 0,
+            paddingHorizontal: 12,
+            paddingVertical: 10,
+            gap: 4,
+            borderRadius: 14,
+            borderWidth: 1,
+            borderColor:
+              isCapitalRecoveryStore || isPrecisionRetailStore
+                ? theme.colors.emeraldBorder
+                : "rgba(148,163,184,0.20)",
+            backgroundColor:
+              isCapitalRecoveryStore || isPrecisionRetailStore
+                ? "rgba(16,185,129,0.07)"
+                : "#F8FAFC",
+          }}
+        >
+          <Text
+            style={{
+              color: theme.colors.text,
+              fontSize: 14,
+              lineHeight: 20,
+              fontWeight: "900",
+              flexShrink: 1,
+            }}
+          >
             {isCapitalRecoveryStore
-  ? "Hapa unaweka bidhaa za kuuza kwa income tu. Barcode, cost, unit, na inventory-style product fields hazitumiki kwenye mode hii."
-  : isPrecisionRetailStore
-  ? "Hapa unaweka bidhaa zinazouzwa kwa pack, box, carton, dozen au jumla na kuzigawa kwenye unit ndogo kama tablet, piece, bottle, capsule au kipimo kingine. Mfumo utahesabu cost/selling ya unit moja automatic."
-  : "Hapa unaweka bidhaa za kawaida za biashara, zikiwemo cost, barcode, na details nyingine."}
+              ? uiText("Capital Recovery Product Mode")
+              : isPrecisionRetailStore
+              ? uiText("Precision Retail Product Mode")
+              : uiText("Standard Product Mode")}
           </Text>
-        </Card>
 
-        <View style={{ flexDirection: "row", gap: 10, marginTop: 10, alignItems: "center" }}>
+          <Text
+            style={{
+              color: theme.colors.muted,
+              fontSize: 12,
+              lineHeight: 18,
+              fontWeight: "600",
+              flexShrink: 1,
+            }}
+          >
+            {isCapitalRecoveryStore
+              ? uiText("Sajili bidhaa za mapato. Taarifa za stock, barcode na gharama hazitumiki kwenye mode hii.")
+              : isPrecisionRetailStore
+              ? uiText("Sajili bidhaa kwa pakiti au jumla na ufuatilie vipimo vidogo kwa bei na gharama sahihi.")
+              : uiText("Sajili bidhaa za kawaida pamoja na bei, gharama, barcode na taarifa nyingine.")}
+          </Text>
+        </View>
+
+        </View>
+        <View style={{ flexDirection: "row", gap: 10, marginTop: 2, alignItems: "center" }}>
   <View style={{ flex: 1 }}>
     <View
       style={{
@@ -1903,7 +2156,9 @@ const solidInputStyle = {
       <TextInput
         value={productSearch}
         onChangeText={setProductSearch}
-        placeholder="Search name, SKU, category..."
+        onFocus={() => setProductSearchFocused(true)}
+        onBlur={() => setProductSearchFocused(false)}
+        placeholder={uiText("Search name, SKU, category...")}
         placeholderTextColor={theme.colors.faint}
         autoCorrect={false}
         autoCapitalize="none"
@@ -1956,27 +2211,44 @@ const solidInputStyle = {
             backgroundColor: theme.colors.dangerSoft,
           }}
         >
-          <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{error}</Text>
+          <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{systemText(error)}</Text>
         </Card>
       )}
 
-      {canManage && (
+      {canManage && !(productSearchFocused || productSearch.trim().length > 0) && (
         <Card
   style={{
-    gap: isDesktopWeb ? 9 : 12,
-    padding: isDesktopWeb ? 14 : undefined,
+    width: "100%",
+    minWidth: 0,
+    alignSelf: "stretch",
+    gap: isDesktopWeb ? 12 : 16,
+    paddingHorizontal: isDesktopWeb ? 16 : 16,
+    paddingVertical: isDesktopWeb ? 16 : 20,
+    borderRadius: isDesktopWeb ? 18 : 24,
+    borderWidth: 1,
     borderColor: "rgba(148,163,184,0.22)",
     backgroundColor: "#FFFFFF",
+    marginTop: isDesktopWeb ? 0 : 10,
+    marginBottom: isDesktopWeb ? 12 : 18,
   }}
 >
-          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-            {isCapitalRecoveryStore ? "Add Income Product" : "Add Product"}
+          <Text
+            style={{
+              color: theme.colors.text,
+              fontWeight: "900",
+              fontSize: isDesktopWeb ? 16 : 18,
+              lineHeight: isDesktopWeb ? 23 : 26,
+              marginBottom: isDesktopWeb ? 2 : 4,
+              flexShrink: 1,
+            }}
+          >
+            {isCapitalRecoveryStore ? uiText("Add Income Product") : uiText("Add Product")}
           </Text>
 
           <TextInput
             value={name}
             onChangeText={setName}
-            placeholder="Product name"
+            placeholder={uiText("Product name")}
             placeholderTextColor={theme.colors.faint}
             style={{
               borderWidth: 1,
@@ -2011,7 +2283,7 @@ const solidInputStyle = {
                 <TextInput
                   value={sku}
                   onChangeText={setSku}
-                  placeholder="SKU (optional)"
+                  placeholder={uiText("SKU (optional)")}
                   placeholderTextColor={theme.colors.faint}
                   style={{
                     borderWidth: 1,
@@ -2030,7 +2302,7 @@ const solidInputStyle = {
                 <TextInput
                   value={unit}
                   onChangeText={setUnit}
-                  placeholder="Unit (optional)"
+                  placeholder={uiText("Unit (optional)")}
                   placeholderTextColor={theme.colors.faint}
                   style={{
                     borderWidth: 1,
@@ -2084,7 +2356,7 @@ const solidInputStyle = {
           void loadStoreCategories();
         }
       }}
-      placeholder="Category (optional)"
+      placeholder={uiText("Category (optional)")}
       placeholderTextColor={theme.colors.faint}
       autoCorrect={false}
       style={{
@@ -2150,8 +2422,7 @@ const solidInputStyle = {
               fontWeight: "800",
             }}
           >
-            Loading categories...
-          </Text>
+            {uiText("Loading categories...")}</Text>
         </View>
       ) : filteredCategorySuggestions.length > 0 ? (
         <ScrollView
@@ -2206,8 +2477,8 @@ const solidInputStyle = {
             }}
           >
             {category.trim()
-              ? `"${category.trim()}" haipo bado. Endelea kuandika kuitengeneza kama category mpya.`
-              : "Hakuna category iliyopatikana kwenye store hii bado."}
+              ? uiText("\"{p0}\" haipo bado. Endelea kuandika kuitengeneza kama category mpya.", {p0: (category.trim())})
+              : uiText("Hakuna category iliyopatikana kwenye store hii bado.")}
           </Text>
         </View>
       )}
@@ -2226,7 +2497,7 @@ const solidInputStyle = {
             }}
           >
 <View style={{ flex: 1, minWidth: 0, gap: 8 }}>
-            <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Product Image (optional)</Text>
+            <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>{uiText("Product Image (optional)")}</Text>
 
             <Pressable
               onPress={() => chooseImageSource("add")}
@@ -2278,31 +2549,30 @@ const solidInputStyle = {
 
               <View style={{ flex: 1 }}>
                 <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                  {imageUploading ? "Uploading image..." : imageUrl ? "Product image selected" : "Add product photo"}
+                  {imageUploading ? uiText("Uploading image...") : imageUrl ? uiText("Product image selected") : uiText("Add product photo")}
                 </Text>
                 <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 4 }}>
-                  Camera au Gallery/File
-                </Text>
+                  {uiText("Camera au Gallery/File")}</Text>
               </View>
             </Pressable>
 
             {!!imageUrl && (
               <Pressable onPress={() => setImageUrl("")} disabled={loading}>
-                <Text style={{ color: "#B91C1C", fontWeight: "900" }}>Remove image</Text>
+                <Text style={{ color: "#B91C1C", fontWeight: "900" }}>{uiText("Remove image")}</Text>
               </Pressable>
             )}
           </View>
 
           {!isCapitalRecoveryStore && (
             <View style={{ flex: 1, minWidth: 0, gap: 8 }}>
-              <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Barcode (optional)</Text>
+              <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>{uiText("Barcode (optional)")}</Text>
 
             <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
               <View style={{ flex: 1 }}>
                 <TextInput
                   value={barcode}
                   onChangeText={(t) => setBarcode(cleanBarcode(t))}
-                  placeholder="Scan or type barcode"
+                  placeholder={uiText("Scan or type barcode")}
                   placeholderTextColor={theme.colors.faint}
                   style={{
                     borderWidth: 1,
@@ -2361,8 +2631,7 @@ const solidInputStyle = {
             </View>
 
             <Text style={{ color: theme.colors.faint, fontWeight: "800" }}>
-                Tip: Scan barcode ili iwe fast kama supermarket.
-              </Text>
+                {uiText("Tip: Scan barcode ili iwe fast kama supermarket.")}</Text>
             </View>
           )}
 
@@ -2391,11 +2660,9 @@ const solidInputStyle = {
     >
             <View style={{ flex: 1 }}>
   <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 15 }}>
-    Unit & Pack Calculator
-  </Text>
+    {uiText("Unit & Pack Calculator")}</Text>
   <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 3 }}>
-    Auto calculate unit cost/selling
-  </Text>
+    {uiText("Auto calculate unit cost/selling")}</Text>
 </View>
 
 <WebSafeIcon
@@ -2409,16 +2676,14 @@ const solidInputStyle = {
   <>
 
 <Text style={{ color: theme.colors.muted, fontWeight: "800", lineHeight: 19 }}>
-  Mfano: Box, carton, dozen, sack au pack inaweza kugawanywa kwenye unit ndogo.
-  Mfumo utapata cost/selling ya unit moja automatic.
-</Text>
+  {uiText("Mfano: Box, carton, dozen, sack au pack inaweza kugawanywa kwenye unit ndogo. Mfumo utapata cost/selling ya unit moja automatic.")}</Text>
 
           <View style={{ flexDirection: "row", gap: 10 }}>
   <View style={{ flex: 1.15 }}>
     <TextInput
       value={precisionPackQty}
       onChangeText={(t) => setPrecisionPackQty(normalizeDecimalInput(t))}
-      placeholder="Pack size e.g. 100"
+      placeholder={uiText("Pack size e.g. 100")}
       keyboardType="numeric"
       placeholderTextColor={theme.colors.faint}
       style={[
@@ -2435,7 +2700,7 @@ const solidInputStyle = {
     <TextInput
       value={precisionUnit}
       onChangeText={setPrecisionUnit}
-      placeholder="Unit e.g. tablet"
+      placeholder={uiText("Unit e.g. tablet")}
       placeholderTextColor={theme.colors.faint}
       style={[
         solidInputStyle,
@@ -2454,7 +2719,7 @@ const solidInputStyle = {
               <TextInput
                 value={precisionPackCost}
                 onChangeText={(t) => setPrecisionPackCost(normalizeDecimalInput(t))}
-                placeholder="Buying/Cost price ya box/pack"
+                placeholder={uiText("Buying/Cost price ya box/pack")}
                 keyboardType="numeric"
                 placeholderTextColor={theme.colors.faint}
                 style={solidInputStyle}
@@ -2463,22 +2728,21 @@ const solidInputStyle = {
               <TextInput
                 value={precisionPackSelling}
                 onChangeText={(t) => setPrecisionPackSelling(normalizeDecimalInput(t))}
-                placeholder="Selling price ya box/pack"
+                placeholder={uiText("Selling price ya box/pack")}
                 keyboardType="numeric"
                 placeholderTextColor={theme.colors.faint}
                 style={solidInputStyle}
               />
 
               <Button
-                title="Calculate Per Unit Price"
+                title={uiText("Calculate Per Unit Price")}
                 onPress={applyPrecisionFormula}
                 disabled={loading}
                 variant="secondary"
               />
 
               <Text style={{ color: theme.colors.faint, fontWeight: "800" }}>
-  Baada ya calculate, Cost Price na Selling Price chini zitajazwa kama bei ya unit moja.
-</Text>
+  {uiText("Baada ya calculate, Cost Price na Selling Price chini zitajazwa kama bei ya unit moja.")}</Text>
 </>
 )}
             </Card>
@@ -2496,7 +2760,7 @@ const solidInputStyle = {
             <TextInput
               value={costPrice}
               onChangeText={(t) => setCostPrice(normalizeDecimalInput(t))}
-              placeholder="Cost Price (optional)"
+              placeholder={uiText("Cost Price (optional)")}
               keyboardType="numeric"
               placeholderTextColor={theme.colors.faint}
               style={{
@@ -2517,7 +2781,7 @@ const solidInputStyle = {
 <TextInput
             value={sellingPrice}
             onChangeText={(t) => setSellingPrice(normalizeDecimalInput(t))}
-            placeholder={isCapitalRecoveryStore ? "Selling Price" : "Selling Price (optional)"}
+            placeholder={isCapitalRecoveryStore ? uiText("Selling Price") : uiText("Selling Price (optional)")}
             keyboardType="numeric"
             placeholderTextColor={theme.colors.faint}
             style={{
@@ -2552,14 +2816,9 @@ const solidInputStyle = {
   })}
 >
   <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 16 }}>
-    {loading ? "Saving..." : isCapitalRecoveryStore ? "Add Income Product" : "Add Product"}
+    {loading ? uiText("Saving...") : isCapitalRecoveryStore ? uiText("Add Income Product") : uiText("Add Product")}
   </Text>
 </Pressable>
-          {!isCapitalRecoveryStore && (
-            <Text style={{ color: theme.colors.faint, fontWeight: "800", marginTop: 2 }}>
-              FREE plan ina limit ya products. Ukifika mwisho, utaombwa u-upgrade.
-            </Text>
-          )}
 
           <Modal
             visible={scanOpen}
@@ -2572,7 +2831,7 @@ const solidInputStyle = {
             <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.82)" }}>
               <View style={{ padding: 16, paddingTop: 18, gap: 10 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                  <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>Scan Barcode</Text>
+                  <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>{uiText("Scan Barcode")}</Text>
 
                   <Pressable
                     onPress={closeScan}
@@ -2593,8 +2852,7 @@ const solidInputStyle = {
                 </View>
 
                 <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                  Elekeza camera kwenye barcode. Itajaza moja kwa moja.
-                </Text>
+                  {uiText("Elekeza camera kwenye barcode. Itajaza moja kwa moja.")}</Text>
               </View>
 
               <View style={{ flex: 1, paddingHorizontal: 16, paddingBottom: 18 }}>
@@ -2647,14 +2905,13 @@ const solidInputStyle = {
 
                 <View style={{ marginTop: 12, gap: 10 }}>
                   <Card style={{ gap: 6 }}>
-                    <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Last scanned</Text>
+                    <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Last scanned")}</Text>
                     <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{barcode ? barcode : "—"}</Text>
                     <Text style={{ color: theme.colors.faint, fontWeight: "800" }}>
-                      Ukiscan, modal itajifunga na barcode itaingia kwenye form.
-                    </Text>
+                      {uiText("Ukiscan, modal itajifunga na barcode itaingia kwenye form.")}</Text>
                   </Card>
 
-                  <Button title="Close" onPress={closeScan} variant="secondary" />
+                  <Button title={uiText("Close")} onPress={closeScan} variant="secondary" />
                 </View>
               </View>
             </View>
@@ -2685,8 +2942,8 @@ const solidInputStyle = {
                 }}
               >
                 {isCapitalRecoveryStore
-                  ? `Income Products (${visibleRows.length})`
-                  : `My Products (${visibleRows.length})`}
+                  ? uiText("Income Products ({p0})", {p0: (visibleRows.length)})
+                  : uiText("My Products ({p0})", {p0: (visibleRows.length)})}
               </Text>
 
               <Text
@@ -2696,44 +2953,178 @@ const solidInputStyle = {
                   fontSize: 10,
                 }}
               >
-                {visibleRows.length} active item
-                {visibleRows.length === 1 ? "" : "s"}
+                {uiText(visibleRows.length === 1 ? "{p0} active item" : "{p0} active items", {p0: visibleRows.length})}
               </Text>
             </View>
 
-            {canManage && !isCapitalRecoveryStore && (
+            {canManage && !isCapitalRecoveryStore && !(productSearchFocused || productSearch.trim().length > 0) && (
               <Pressable
                 onPress={() => router.push("/catalog" as any)}
                 style={({ pressed }) => ({
-                  height: 34,
-                  borderRadius: 8,
+                  width: 340,
+                  minHeight: 58,
+                  borderRadius: 12,
                   borderWidth: 1,
-                  borderColor: "rgba(148,163,184,0.28)",
+                  borderColor: pressed
+                    ? "rgba(5,150,105,0.38)"
+                    : "rgba(5,150,105,0.22)",
                   backgroundColor: pressed
-                    ? "#F1F5F9"
-                    : "#FFFFFF",
-                  paddingHorizontal: 11,
+                    ? "#ECFDF5"
+                    : "#F8FFFC",
+                  paddingHorizontal: 10,
+                  paddingVertical: 8,
                   flexDirection: "row",
                   alignItems: "center",
-                  justifyContent: "center",
-                  gap: 6,
+                  gap: 10,
+                  opacity: pressed ? 0.94 : 1,
+                  shadowColor: "#059669",
+                  shadowOpacity: 0.06,
+                  shadowRadius: 10,
+                  shadowOffset: {
+                    width: 0,
+                    height: 4,
+                  },
                 })}
               >
-                <WebSafeIcon
-                  name="albums-outline"
-                  size={15}
-                  color="#059669"
-                />
-
-                <Text
+                <View
                   style={{
-                    color: theme.colors.text,
-                    fontWeight: "900",
-                    fontSize: 10,
+                    width: 38,
+                    height: 38,
+                    borderRadius: 10,
+                    backgroundColor: "#059669",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
                   }}
                 >
-                  Product Catalog
-                </Text>
+                  <View
+                    style={{
+                      position: "relative",
+                      width: 24,
+                      height: 24,
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <WebSafeIcon
+                      name="grid-outline"
+                      size={19}
+                      color="#FFFFFF"
+                    />
+
+                    <View
+                      style={{
+                        position: "absolute",
+                        right: -3,
+                        bottom: -3,
+                        width: 12,
+                        height: 12,
+                        borderRadius: 999,
+                        backgroundColor: "#D1FAE5",
+                        borderWidth: 1.5,
+                        borderColor: "#059669",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <WebSafeIcon
+                        name="search"
+                        size={7}
+                        color="#047857"
+                      />
+                    </View>
+                  </View>
+                </View>
+
+                <View
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                  }}
+                >
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 7,
+                      minWidth: 0,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: "#0F172A",
+                        fontWeight: "900",
+                        fontSize: 12.5,
+                      }}
+                      numberOfLines={1}
+                    >
+                      {uiText("Product Catalog")}</Text>
+
+                    <View
+                      style={{
+                        borderRadius: 999,
+                        backgroundColor: "#D1FAE5",
+                        borderWidth: 1,
+                        borderColor: "rgba(5,150,105,0.18)",
+                        paddingHorizontal: 6,
+                        paddingVertical: 2,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: "#047857",
+                          fontWeight: "900",
+                          fontSize: 7.5,
+                          letterSpacing: 0.35,
+                        }}
+                      >
+                        {uiText("GLOBAL LIBRARY")}</Text>
+                    </View>
+                  </View>
+
+                  <Text
+                    style={{
+                      color: "#64748B",
+                      fontWeight: "700",
+                      fontSize: 9.5,
+                      marginTop: 2,
+                    }}
+                    numberOfLines={1}
+                  >
+                    {uiText("Search • Import • Share")}</Text>
+                </View>
+
+                <View
+                  style={{
+                    minWidth: 54,
+                    height: 30,
+                    borderRadius: 8,
+                    backgroundColor: "#FFFFFF",
+                    borderWidth: 1,
+                    borderColor: "rgba(5,150,105,0.20)",
+                    paddingHorizontal: 8,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 3,
+                    flexShrink: 0,
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: "#047857",
+                      fontWeight: "900",
+                      fontSize: 9.5,
+                    }}
+                  >
+                    {uiText("Open")}</Text>
+
+                  <WebSafeIcon
+                    name="arrow-forward"
+                    size={12}
+                    color="#059669"
+                  />
+                </View>
               </Pressable>
             )}
           </View>
@@ -2757,10 +3148,10 @@ const solidInputStyle = {
                 }}
               >
                 {productSearch.trim()
-                  ? "No matching products"
+                  ? uiText("No matching products")
                   : isCapitalRecoveryStore
-                  ? "No income products yet"
-                  : "No products yet"}
+                  ? uiText("No income products yet")
+                  : uiText("No products yet")}
               </Text>
 
               <Text
@@ -2772,10 +3163,10 @@ const solidInputStyle = {
                 }}
               >
                 {productSearch.trim()
-                  ? "Change or clear the search to see other products."
+                  ? uiText("Change or clear the search to see other products.")
                   : canManage
-                  ? "Add a product above, then refresh."
-                  : "Ask the owner to add or update products."}
+                  ? uiText("Add a product above, then refresh.")
+                  : uiText("Ask the owner to add or update products.")}
               </Text>
             </View>
           ) : (
@@ -2796,40 +3187,38 @@ const solidInputStyle = {
                   flexDirection: "row",
                   alignItems: "center",
                   paddingHorizontal: 10,
-                  backgroundColor: "#F8FAFC",
+                  backgroundColor: "#F1F5F9",
                   borderBottomWidth: 1,
                   borderBottomColor: "rgba(148,163,184,0.22)",
                 }}
               >
                 <Text
                   style={{
-                    width: 48,
-                    color: theme.colors.muted,
+                    width: 52,
+                    color: "#0F766E",
                     fontWeight: "900",
-                    fontSize: 10,
+                    fontSize: 12,
                   }}
                 >
-                  Image
-                </Text>
+                  {uiText("Image")}</Text>
 
                 <Text
                   style={{
                     flex: 1.55,
-                    color: theme.colors.muted,
+                    color: "#0F172A",
                     fontWeight: "900",
-                    fontSize: 10,
+                    fontSize: 12,
                   }}
                 >
-                  Name
-                </Text>
+                  {uiText("Name")}</Text>
 
                 {!isCapitalRecoveryStore && (
                   <Text
                     style={{
                       flex: 0.8,
-                      color: theme.colors.muted,
+                      color: "#2563EB",
                       fontWeight: "900",
-                      fontSize: 10,
+                      fontSize: 12,
                     }}
                   >
                     SKU
@@ -2839,69 +3228,78 @@ const solidInputStyle = {
                 <Text
                   style={{
                     flex: 0.9,
-                    color: theme.colors.muted,
+                    color: "#4F46E5",
                     fontWeight: "900",
-                    fontSize: 10,
+                    fontSize: 12,
                   }}
                 >
-                  Category
-                </Text>
+                  {uiText("Category")}</Text>
 
                 {!isCapitalRecoveryStore && (
                   <Text
                     style={{
                       flex: 0.6,
-                      color: theme.colors.muted,
+                      color: "#0369A1",
                       fontWeight: "900",
-                      fontSize: 10,
+                      fontSize: 12,
                     }}
                   >
-                    Unit
-                  </Text>
+                    {uiText("Unit")}</Text>
                 )}
 
                 {canSeeCost && (
                   <Text
                     style={{
                       flex: 0.85,
-                      color: theme.colors.muted,
+                      color: "#B45309",
                       fontWeight: "900",
-                      fontSize: 10,
+                      fontSize: 12,
                       textAlign: "right",
                     }}
                   >
-                    Cost Price
-                  </Text>
+                    {uiText("Cost Price")}</Text>
                 )}
 
                 <Text
                   style={{
                     flex: 0.85,
-                    color: theme.colors.muted,
+                    color: "#047857",
                     fontWeight: "900",
-                    fontSize: 10,
+                    fontSize: 12,
                     textAlign: "right",
                   }}
                 >
-                  Selling Price
-                </Text>
+                  {uiText("Selling Price")}</Text>
 
                 {canManage && (
                   <Text
                     style={{
                       width: 122,
-                      color: theme.colors.muted,
+                      color: "#1D4ED8",
                       fontWeight: "900",
-                      fontSize: 10,
+                      fontSize: 12,
                       textAlign: "center",
                     }}
                   >
-                    Actions
-                  </Text>
+                    {uiText("Actions")}</Text>
                 )}
               </View>
 
               {/* TABLE ROWS */}
+              {/* DESKTOP SCROLLABLE PRODUCT ROWS */}
+              <ScrollView
+                ref={desktopProductsScrollRef}
+                nestedScrollEnabled
+                showsVerticalScrollIndicator
+                keyboardShouldPersistTaps="always"
+                style={{
+                  maxHeight: 560,
+                  minHeight: 0,
+                }}
+                contentContainerStyle={{
+                  flexGrow: 0,
+                }}
+              >
               {renderedRows.map((p, rowIndex) => {
                 const sp = Number(p.selling_price ?? 0);
                 const cp = Number(p.cost_price ?? NaN);
@@ -2909,8 +3307,13 @@ const solidInputStyle = {
                 return (
                   <View
                     key={p.id}
+                    onLayout={(event) => {
+                      desktopProductRowYRef.current[
+                        String(p.id)
+                      ] = event.nativeEvent.layout.y;
+                    }}
                     style={{
-                      minHeight: 50,
+                      minHeight: 56,
                       flexDirection: "row",
                       alignItems: "center",
                       paddingHorizontal: 10,
@@ -2919,15 +3322,25 @@ const solidInputStyle = {
                           ? 1
                           : 0,
                       borderBottomColor:
-                        "rgba(148,163,184,0.16)",
-                      backgroundColor: "#FFFFFF",
+                        highlightedProductId === String(p.id)
+                          ? "#10B981"
+                          : "rgba(148,163,184,0.16)",
+                      backgroundColor:
+                        highlightedProductId === String(p.id)
+                          ? "#ECFDF5"
+                          : "#FFFFFF",
+                      borderLeftWidth:
+                        highlightedProductId === String(p.id)
+                          ? 4
+                          : 0,
+                      borderLeftColor: "#10B981",
                     }}
                   >
 
                     {/* IMAGE */}
                     <View
                       style={{
-                        width: 48,
+                        width: 52,
                         alignItems: "flex-start",
                         justifyContent: "center",
                       }}
@@ -2936,9 +3349,9 @@ const solidInputStyle = {
                         <Image
                           source={{ uri: p.image_url }}
                           style={{
-                            width: 32,
-                            height: 32,
-                            borderRadius: 6,
+                            width: 38,
+                            height: 38,
+                            borderRadius: 7,
                             backgroundColor: "#E2E8F0",
                           }}
                           resizeMode="cover"
@@ -2946,9 +3359,9 @@ const solidInputStyle = {
                       ) : (
                         <View
                           style={{
-                            width: 32,
-                            height: 32,
-                            borderRadius: 6,
+                            width: 38,
+                            height: 38,
+                            borderRadius: 7,
                             backgroundColor: "#F1F5F9",
                             borderWidth: 1,
                             borderColor:
@@ -2976,9 +3389,9 @@ const solidInputStyle = {
                     >
                       <Text
                         style={{
-                          color: theme.colors.text,
+                          color: "#0F172A",
                           fontWeight: "900",
-                          fontSize: 11,
+                          fontSize: 13,
                         }}
                         numberOfLines={1}
                       >
@@ -2991,9 +3404,9 @@ const solidInputStyle = {
                       <Text
                         style={{
                           flex: 0.8,
-                          color: theme.colors.muted,
+                          color: "#2563EB",
                           fontWeight: "800",
-                          fontSize: 11,
+                          fontSize: 13,
                           paddingRight: 6,
                         }}
                         numberOfLines={1}
@@ -3006,9 +3419,9 @@ const solidInputStyle = {
                     <Text
                       style={{
                         flex: 0.9,
-                        color: theme.colors.muted,
+                        color: "#4F46E5",
                         fontWeight: "800",
-                        fontSize: 11,
+                        fontSize: 13,
                         paddingRight: 6,
                       }}
                       numberOfLines={1}
@@ -3021,9 +3434,9 @@ const solidInputStyle = {
                       <Text
                         style={{
                           flex: 0.6,
-                          color: theme.colors.muted,
+                          color: "#0369A1",
                           fontWeight: "800",
-                          fontSize: 11,
+                          fontSize: 13,
                           paddingRight: 6,
                         }}
                         numberOfLines={1}
@@ -3037,9 +3450,9 @@ const solidInputStyle = {
                       <Text
                         style={{
                           flex: 0.85,
-                          color: theme.colors.text,
+                          color: "#92400E",
                           fontWeight: "800",
-                          fontSize: 11,
+                          fontSize: 13,
                           textAlign: "right",
                           paddingLeft: 4,
                         }}
@@ -3055,9 +3468,9 @@ const solidInputStyle = {
                     <Text
                       style={{
                         flex: 0.85,
-                        color: theme.colors.text,
+                        color: "#047857",
                         fontWeight: "900",
-                        fontSize: 11,
+                        fontSize: 13,
                         textAlign: "right",
                         paddingLeft: 4,
                       }}
@@ -3105,8 +3518,7 @@ const solidInputStyle = {
                                   fontSize: 10,
                                 }}
                               >
-                                Edit
-                              </Text>
+                                {uiText("Edit")}</Text>
                             </Pressable>
 
                             <Pressable
@@ -3136,8 +3548,7 @@ const solidInputStyle = {
                                   fontSize: 10,
                                 }}
                               >
-                                Delete
-                              </Text>
+                                {uiText("Delete")}</Text>
                             </Pressable>
                           </>
                         ) : (
@@ -3169,8 +3580,7 @@ const solidInputStyle = {
                                 fontSize: 10,
                               }}
                             >
-                              Actions
-                            </Text>
+                              {uiText("Actions")}</Text>
 
                             <WebSafeIcon
                               name="chevron-down"
@@ -3184,6 +3594,7 @@ const solidInputStyle = {
                   </View>
                 );
               })}
+              </ScrollView>
             </View>
           )}
 
@@ -3211,8 +3622,8 @@ const solidInputStyle = {
                   fontSize: 11,
                 }}
               >
-                Load More Products · Showing{" "}
-                {renderedRows.length} of {visibleRows.length}
+                {uiText("Load More Products · Showing")}{" "}
+                {renderedRows.length} {uiText("of")}{visibleRows.length}
               </Text>
             </Pressable>
           )}
@@ -3228,7 +3639,7 @@ const solidInputStyle = {
         color: theme.colors.text,
       }}
     >
-      {isCapitalRecoveryStore ? "Income Products" : "My Products"}
+      {isCapitalRecoveryStore ? uiText("Income Products") : uiText("My Products")}
     </Text>
 
     <Text
@@ -3237,7 +3648,7 @@ const solidInputStyle = {
         fontWeight: "800",
       }}
     >
-      {visibleRows.length} active item{visibleRows.length === 1 ? "" : "s"}
+      {uiText(visibleRows.length === 1 ? "{p0} active item" : "{p0} active items", {p0: visibleRows.length})}
     </Text>
   </View>
 
@@ -3292,8 +3703,7 @@ const solidInputStyle = {
             fontSize: 18,
           }}
         >
-          Product Catalog
-        </Text>
+          {uiText("Product Catalog")}</Text>
 
         <Text
           style={{
@@ -3304,8 +3714,7 @@ const solidInputStyle = {
             marginTop: 3,
           }}
         >
-          Import, share & manage product catalogs
-        </Text>
+          {uiText("Import, share & manage product catalogs")}</Text>
 
         <Text
           style={{
@@ -3315,8 +3724,7 @@ const solidInputStyle = {
             marginTop: 7,
           }}
         >
-          Global • Share • Import Code
-        </Text>
+          {uiText("Global • Share • Import Code")}</Text>
       </View>
 
       <View
@@ -3345,10 +3753,10 @@ const solidInputStyle = {
   <Card>
     <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
       {productSearch.trim()
-        ? "No matching products"
+        ? uiText("No matching products")
         : isCapitalRecoveryStore
-        ? "No income products yet"
-        : "No products yet"}
+        ? uiText("No income products yet")
+        : uiText("No products yet")}
     </Text>
 
     <Text
@@ -3359,12 +3767,12 @@ const solidInputStyle = {
       }}
     >
       {productSearch.trim()
-        ? "Badili neno la search au futa search kuona bidhaa zote."
+        ? uiText("Badili neno la search au futa search kuona bidhaa zote.")
         : canManage
         ? isCapitalRecoveryStore
-          ? "Ongeza bidhaa ya income juu kisha Refresh."
-          : "Ongeza product juu kisha Refresh."
-        : "Muombe owner aongeze au abadili products."}
+          ? uiText("Ongeza bidhaa ya income juu kisha Refresh.")
+          : uiText("Ongeza product juu kisha Refresh.")
+        : uiText("Muombe owner aongeze au abadili products.")}
     </Text>
   </Card>
 ) : (
@@ -3382,10 +3790,10 @@ const solidInputStyle = {
     style={{
             borderWidth: 1,
             borderColor: "rgba(148,163,184,0.22)",
-            borderRadius: 24,
+            borderRadius: 18,
             backgroundColor: "#FFFFFF",
-            padding: 18,
-            marginBottom: 12,
+            padding: 12,
+            marginBottom: 8,
 
             // Web/iOS inaweza kubaki na shadow nzuri.
             // Android tunapunguza expensive shadow rendering.
@@ -3398,18 +3806,14 @@ const solidInputStyle = {
         >
           <View
             style={{
-              flexDirection: "row",
-              gap: 12,
-              alignItems: "center",
+              flexDirection: "row", gap: 9, alignItems: "center",
             }}
           >
             {p.image_url ? (
               <Image
                 source={{ uri: p.image_url }}
                 style={{
-                  width: 64,
-                  height: 64,
-                  borderRadius: 18,
+                  width: 50, height: 50, borderRadius: 12,
                   backgroundColor: "#E2E8F0",
                 }}
                 resizeMode="cover"
@@ -3428,9 +3832,7 @@ const solidInputStyle = {
             ) : (
               <View
                 style={{
-                  width: 64,
-                  height: 64,
-                  borderRadius: 18,
+                  width: 50, height: 50, borderRadius: 12,
                   backgroundColor: "#F1F5F9",
                   alignItems: "center",
                   justifyContent: "center",
@@ -3451,7 +3853,7 @@ const solidInputStyle = {
                 style={{
                   color: theme.colors.text,
                   fontWeight: "900",
-                  fontSize: 16,
+                  fontSize: 15,
                 }}
               >
                 {p.name}
@@ -3461,10 +3863,10 @@ const solidInputStyle = {
                 style={{
                   color: theme.colors.muted,
                   fontWeight: "800",
-                  marginTop: 4,
+                  marginTop: 1,
                 }}
               >
-                {p.image_url ? "Image attached" : "No image"}
+                {p.image_url ? uiText("Image attached") : uiText("No image")}
               </Text>
             </View>
           </View>
@@ -3475,28 +3877,28 @@ const solidInputStyle = {
                 style={{
                   color: theme.colors.muted,
                   fontWeight: "800",
-                  marginTop: 6,
+                  marginTop: 2,
                 }}
               >
-                SKU:{" "}
+                {uiText("SKU:")}{" "}
                 <Text style={{ color: theme.colors.text }}>
                   {p.sku ?? "—"}
                 </Text>
                 {"   "}•{"   "}
-                Unit:{" "}
+                {uiText("Unit:")}{" "}
                 <Text style={{ color: theme.colors.text }}>
                   {p.unit ?? "—"}
                 </Text>
               </Text>
 
-              <Text
+              <View style={{ flexDirection: "row", flexWrap: "wrap", columnGap: 12, rowGap: 2 }}><Text
                 style={{
                   color: theme.colors.muted,
                   fontWeight: "800",
-                  marginTop: 6,
+                  marginTop: 2,
                 }}
               >
-                Category:{" "}
+                {uiText("Category:")}{" "}
                 <Text style={{ color: theme.colors.text }}>
                   {p.category ?? "—"}
                 </Text>
@@ -3506,14 +3908,14 @@ const solidInputStyle = {
                 style={{
                   color: theme.colors.muted,
                   fontWeight: "900",
-                  marginTop: 8,
+                  marginTop: 4,
                 }}
               >
-                Barcode:{" "}
+                {uiText("Barcode:")}{" "}
                 <Text style={{ color: theme.colors.text }}>
                   {bc ? bc : "—"}
                 </Text>
-              </Text>
+              </Text></View>
             </>
           )}
 
@@ -3522,24 +3924,24 @@ const solidInputStyle = {
               style={{
                 color: theme.colors.muted,
                 fontWeight: "800",
-                marginTop: 6,
+                marginTop: 2,
               }}
             >
-              Category:{" "}
+              {uiText("Category:")}{" "}
               <Text style={{ color: theme.colors.text }}>
                 {p.category ?? "—"}
               </Text>
             </Text>
           )}
 
-          <Text
+          <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: 14, rowGap: 3 }}><Text
             style={{
               color: theme.colors.muted,
               fontWeight: "900",
-              marginTop: 8,
+              marginTop: 4,
             }}
           >
-            Selling Price:{" "}
+            {uiText("Selling Price:")}{" "}
             <Text style={{ color: theme.colors.text }}>
               {sp > 0 ? money.fmt(sp) : "—"}
             </Text>
@@ -3550,31 +3952,40 @@ const solidInputStyle = {
               style={{
                 color: theme.colors.muted,
                 fontWeight: "900",
-                marginTop: 6,
+                marginTop: 2,
               }}
             >
-              Cost Price:{" "}
+              {uiText("Cost Price:")}{" "}
               <Text style={{ color: theme.colors.text }}>
                 {Number.isFinite(cp) ? money.fmt(cp) : "—"}
               </Text>
             </Text>
-          )}
+          )}</View>
 
           {canManage && (
             <View
               style={{
                 flexDirection: "row",
                 gap: 10,
-                marginTop: 16,
+                marginTop: 8,
               }}
             >
               <View style={{ flex: 1 }}>
-                <Button
-                  title="Edit"
-                  variant="primary"
-                  onPress={() => openEdit(p)}
-                  disabled={loading}
-                />
+                <Pressable
+    onPress={() => openEdit(p)}
+    disabled={loading}
+    style={({ pressed }) => ({
+      minHeight: 44,
+      borderRadius: 12,
+      backgroundColor: pressed ? "#0755AA" : "#0963BD",
+      alignItems: "center",
+      justifyContent: "center",
+      opacity: loading ? 0.5 : 1,
+    })}
+  >
+    <Text style={{ color: "#FFFFFF", fontWeight: "800", fontSize: 13 }}>
+      {uiText("Edit")}</Text>
+  </Pressable>
               </View>
 
               <View style={{ flex: 1 }}>
@@ -3582,7 +3993,7 @@ const solidInputStyle = {
                   onPress={() => void remove(p.id, p.name)}
                   disabled={loading}
                   style={({ pressed }) => ({
-                    minHeight: 52,
+                    minHeight: 44,
                     borderRadius: 14,
                     borderWidth: 1,
                     borderColor: "rgba(148,163,184,0.45)",
@@ -3602,11 +4013,10 @@ const solidInputStyle = {
                     style={{
                       color: theme.colors.text,
                       fontWeight: "900",
-                      fontSize: 15,
+                      fontSize: 13,
                     }}
                   >
-                    Delete
-                  </Text>
+                    {uiText("Delete")}</Text>
                 </Pressable>
               </View>
             </View>
@@ -3640,8 +4050,7 @@ const solidInputStyle = {
             fontSize: 15,
           }}
         >
-          Load More Products
-        </Text>
+          {uiText("Load More Products")}</Text>
 
         <Text
           style={{
@@ -3651,7 +4060,7 @@ const solidInputStyle = {
             marginTop: 3,
           }}
         >
-          Showing {renderedRows.length} of {visibleRows.length}
+          {uiText("Showing")}{renderedRows.length} {uiText("of")}{visibleRows.length}
         </Text>
       </Pressable>
     )}
@@ -3730,8 +4139,7 @@ const solidInputStyle = {
                 fontSize: isDesktopWeb ? 17 : 20,
               }}
             >
-              Edit Product
-            </Text>
+              {uiText("Edit Product")}</Text>
 
             {isDesktopWeb && (
               <Text
@@ -3741,8 +4149,7 @@ const solidInputStyle = {
                   fontSize: 11,
                 }}
               >
-                Update product information
-              </Text>
+                {uiText("Update product information")}</Text>
             )}
           </View>
 
@@ -3788,7 +4195,7 @@ const solidInputStyle = {
           <TextInput
             value={editName}
             onChangeText={setEditName}
-            placeholder="Product name"
+            placeholder={uiText("Product name")}
             placeholderTextColor={theme.colors.faint}
             style={[
               solidInputStyle,
@@ -3813,7 +4220,7 @@ const solidInputStyle = {
                 <TextInput
                   value={editSku}
                   onChangeText={setEditSku}
-                  placeholder="SKU (optional)"
+                  placeholder={uiText("SKU (optional)")}
                   placeholderTextColor={theme.colors.faint}
                   style={[
                     solidInputStyle,
@@ -3831,7 +4238,7 @@ const solidInputStyle = {
                 <TextInput
                   value={editUnit}
                   onChangeText={setEditUnit}
-                  placeholder="Unit / UOM (optional)"
+                  placeholder={uiText("Unit / UOM (optional)")}
                   placeholderTextColor={theme.colors.faint}
                   style={[
                     solidInputStyle,
@@ -3882,7 +4289,7 @@ const solidInputStyle = {
                     void loadStoreCategories();
                   }
                 }}
-                placeholder="Category (optional)"
+                placeholder={uiText("Category (optional)")}
                 placeholderTextColor={theme.colors.faint}
                 autoCorrect={false}
                 style={{
@@ -3954,8 +4361,7 @@ const solidInputStyle = {
                         fontSize: isDesktopWeb ? 12 : undefined,
                       }}
                     >
-                      Loading categories...
-                    </Text>
+                      {uiText("Loading categories...")}</Text>
                   </View>
                 ) : filteredEditCategorySuggestions.length > 0 ? (
                   <ScrollView
@@ -4024,8 +4430,8 @@ const solidInputStyle = {
                       }}
                     >
                       {editCategory.trim()
-                        ? `"${editCategory.trim()}" haipo bado. Unaweza kuitumia kama category mpya.`
-                        : "Hakuna category iliyopatikana kwenye store hii bado."}
+                        ? uiText("\"{p0}\" haipo bado. Unaweza kuitumia kama category mpya.", {p0: (editCategory.trim())})
+                        : uiText("Hakuna category iliyopatikana kwenye store hii bado.")}
                     </Text>
                   </View>
                 )}
@@ -4059,8 +4465,7 @@ const solidInputStyle = {
                   fontSize: isDesktopWeb ? 11 : undefined,
                 }}
               >
-                Product Image
-              </Text>
+                {uiText("Product Image")}</Text>
 
               <Pressable
                 onPress={() => chooseImageSource("edit")}
@@ -4139,10 +4544,10 @@ const solidInputStyle = {
                     }}
                   >
                     {editImageUploading
-                      ? "Uploading image..."
+                      ? uiText("Uploading image...")
                       : editImageUrl
-                      ? "Change product image"
-                      : "Add product image"}
+                      ? uiText("Change product image")
+                      : uiText("Add product image")}
                   </Text>
 
                   <Text
@@ -4155,8 +4560,7 @@ const solidInputStyle = {
                         : undefined,
                     }}
                   >
-                    Camera au Gallery/File
-                  </Text>
+                    {uiText("Camera au Gallery/File")}</Text>
                 </View>
               </Pressable>
 
@@ -4174,8 +4578,7 @@ const solidInputStyle = {
                         : undefined,
                     }}
                   >
-                    Remove image
-                  </Text>
+                    {uiText("Remove image")}</Text>
                 </Pressable>
               )}
             </View>
@@ -4195,7 +4598,7 @@ const solidInputStyle = {
                   onChangeText={(t) =>
                     setEditBarcode(cleanBarcode(t))
                   }
-                  placeholder="Barcode (optional)"
+                  placeholder={uiText("Barcode (optional)")}
                   placeholderTextColor={theme.colors.faint}
                   style={[
                     solidInputStyle,
@@ -4229,8 +4632,7 @@ const solidInputStyle = {
                   fontSize: isDesktopWeb ? 13 : 15,
                 }}
               >
-                Unit & Pack Calculator
-              </Text>
+                {uiText("Unit & Pack Calculator")}</Text>
 
               <Text
                 style={{
@@ -4240,10 +4642,7 @@ const solidInputStyle = {
                   fontSize: isDesktopWeb ? 11 : undefined,
                 }}
               >
-                Badili pack size, unit ya ndani, cost ya pack na
-                selling ya pack. Mfumo utahesabu bei ya unit moja
-                automatic.
-              </Text>
+                {uiText("Badili pack size, unit ya ndani, cost ya pack na selling ya pack. Mfumo utahesabu bei ya unit moja automatic.")}</Text>
 
               <View
                 style={{
@@ -4259,7 +4658,7 @@ const solidInputStyle = {
                         normalizeDecimalInput(t)
                       )
                     }
-                    placeholder="Pack size e.g. 100"
+                    placeholder={uiText("Pack size e.g. 100")}
                     keyboardType="numeric"
                     placeholderTextColor={theme.colors.faint}
                     style={[
@@ -4281,7 +4680,7 @@ const solidInputStyle = {
                   <TextInput
                     value={editPrecisionUnit}
                     onChangeText={setEditPrecisionUnit}
-                    placeholder="Unit e.g. capsule"
+                    placeholder={uiText("Unit e.g. capsule")}
                     placeholderTextColor={theme.colors.faint}
                     style={[
                       solidInputStyle,
@@ -4318,7 +4717,7 @@ const solidInputStyle = {
                         normalizeDecimalInput(t)
                       )
                     }
-                    placeholder="Buying/Cost price ya box/pack"
+                    placeholder={uiText("Buying/Cost price ya box/pack")}
                     keyboardType="numeric"
                     placeholderTextColor={theme.colors.faint}
                     style={[
@@ -4341,7 +4740,7 @@ const solidInputStyle = {
                         normalizeDecimalInput(t)
                       )
                     }
-                    placeholder="Selling price ya box/pack"
+                    placeholder={uiText("Selling price ya box/pack")}
                     keyboardType="numeric"
                     placeholderTextColor={theme.colors.faint}
                     style={[
@@ -4358,7 +4757,7 @@ const solidInputStyle = {
               </View>
 
               <Button
-                title="Calculate Per Unit Price"
+                title={uiText("Calculate Per Unit Price")}
                 onPress={applyEditPrecisionFormula}
                 disabled={loading}
                 variant="secondary"
@@ -4371,9 +4770,7 @@ const solidInputStyle = {
                   fontSize: isDesktopWeb ? 10 : undefined,
                 }}
               >
-                Baada ya calculate, Cost Price na Selling Price
-                chini zitabadilishwa kama bei ya unit moja.
-              </Text>
+                {uiText("Baada ya calculate, Cost Price na Selling Price chini zitabadilishwa kama bei ya unit moja.")}</Text>
             </Card>
           )}
 
@@ -4396,7 +4793,7 @@ const solidInputStyle = {
                       normalizeDecimalInput(t)
                     )
                   }
-                  placeholder="Cost Price (optional)"
+                  placeholder={uiText("Cost Price (optional)")}
                   keyboardType="numeric"
                   placeholderTextColor={theme.colors.faint}
                   style={[
@@ -4422,8 +4819,8 @@ const solidInputStyle = {
                 }
                 placeholder={
                   isCapitalRecoveryStore
-                    ? "Selling Price"
-                    : "Selling Price (optional)"
+                    ? uiText("Selling Price")
+                    : uiText("Selling Price (optional)")
                 }
                 keyboardType="numeric"
                 placeholderTextColor={theme.colors.faint}
@@ -4458,7 +4855,7 @@ const solidInputStyle = {
               }}
             >
               <Button
-                title="Cancel"
+                title={uiText("Cancel")}
                 variant="secondary"
                 onPress={closeEdit}
                 disabled={loading}
@@ -4472,7 +4869,7 @@ const solidInputStyle = {
               }}
             >
               <Button
-                title={loading ? "Saving..." : "Save Changes"}
+                title={loading ? uiText("Saving...") : uiText("Save Changes")}
                 variant="primary"
                 onPress={saveEdit}
                 disabled={loading}

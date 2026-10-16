@@ -1,3 +1,5 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/(tabs)/staff/commission-history.tsx
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
@@ -117,6 +119,8 @@ function payoutLabel(row: CommissionHistoryRow) {
 }
 
 export default function CommissionHistoryScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
   const { activeOrgId, activeOrgName, activeRole } = useOrg();
 
@@ -247,11 +251,9 @@ const confirmedPaid = useMemo(
             }}
           >
             <Text style={{ color: UI.danger, fontWeight: "900", fontSize: 18 }}>
-              No Access
-            </Text>
+              {uiText("No Access")}</Text>
             <Text style={{ color: UI.text, fontWeight: "800", lineHeight: 22 }}>
-              Hii screen ni ya Owner/Admin tu.
-            </Text>
+              {uiText("Hii screen ni ya Owner/Admin tu.")}</Text>
 
             <Pressable
               onPress={() => router.back()}
@@ -265,7 +267,7 @@ const confirmedPaid = useMemo(
                 alignItems: "center",
               }}
             >
-              <Text style={{ color: UI.text, fontWeight: "900" }}>Back</Text>
+              <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Back")}</Text>
             </Pressable>
           </View>
         </View>
@@ -302,11 +304,9 @@ const confirmedPaid = useMemo(
 
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 26, fontWeight: "900", color: UI.text }}>
-              Commission History
-            </Text>
+              {uiText("Commission History")}</Text>
             <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 4 }}>
-              Full payout history for staff commissions
-            </Text>
+              {uiText("Full payout history for staff commissions")}</Text>
           </View>
         </View>
 
@@ -320,7 +320,7 @@ const confirmedPaid = useMemo(
             gap: 10,
           }}
         >
-          <Text style={{ color: UI.muted, fontWeight: "800" }}>Organization</Text>
+          <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("Organization")}</Text>
           <Text style={{ fontSize: 18, fontWeight: "900", color: UI.text }}>
             {activeOrgName ?? "—"}
           </Text>
@@ -336,7 +336,7 @@ const confirmedPaid = useMemo(
                 padding: 12,
               }}
             >
-              <Text style={{ color: UI.muted, fontWeight: "800" }}>Records</Text>
+              <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("Records")}</Text>
               <Text style={{ color: UI.text, fontWeight: "900", marginTop: 6 }}>
                 {rows.length}
               </Text>
@@ -353,8 +353,7 @@ const confirmedPaid = useMemo(
   }}
 >
   <Text style={{ color: UI.muted, fontWeight: "800" }}>
-    Total Cashed Out
-  </Text>
+    {uiText("Total Cashed Out")}</Text>
 
   <Text
     style={{
@@ -381,8 +380,7 @@ const confirmedPaid = useMemo(
   }}
 >
   <Text style={{ color: UI.muted, fontWeight: "800" }}>
-    Successful Payouts
-  </Text>
+    {uiText("Successful Payouts")}</Text>
 
   <Text
     style={{
@@ -410,7 +408,7 @@ const confirmedPaid = useMemo(
               padding: 12,
             }}
           >
-            <Text style={{ color: UI.danger, fontWeight: "900" }}>{error}</Text>
+            <Text style={{ color: UI.danger, fontWeight: "900" }}>{systemText(error)}</Text>
           </View>
         ) : null}
 
@@ -428,14 +426,14 @@ const confirmedPaid = useMemo(
           }}
         >
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-            {loading ? "Loading..." : "Refresh History"}
+            {loading ? uiText("Loading...") : uiText("Refresh History")}
           </Text>
         </Pressable>
 
         <TextInput
           value={q}
           onChangeText={setQ}
-          placeholder="Tafuta kwa email / status / reference / muamala / payout..."
+          placeholder={uiText("Tafuta kwa email / status / reference / muamala / payout...")}
           placeholderTextColor={UI.faint}
           style={{
             borderWidth: 1,
@@ -460,11 +458,9 @@ const confirmedPaid = useMemo(
             }}
           >
             <Text style={{ fontWeight: "900", color: UI.text }}>
-              No commission history found
-            </Text>
+              {uiText("No commission history found")}</Text>
             <Text style={{ marginTop: 6, color: UI.muted, fontWeight: "700", lineHeight: 20 }}>
-              Bado hakuna records za commission history.
-            </Text>
+              {uiText("Bado hakuna records za commission history.")}</Text>
           </View>
         ) : (
           filtered.map((r) => {
@@ -502,10 +498,10 @@ const confirmedPaid = useMemo(
 
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: UI.text, fontWeight: "900" }}>
-                      {email ?? `User: ${shortId(String(r.user_id ?? ""))}`}
+                      {email ?? uiText("User: {p0}", {p0: (shortId(String(r.user_id ?? "")))})}
                     </Text>
                     <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 4 }}>
-                      Membership: {shortId(String(r.membership_id ?? ""))}
+                      {uiText("Membership:")}{shortId(String(r.membership_id ?? ""))}
                     </Text>
                   </View>
 
@@ -525,7 +521,7 @@ const confirmedPaid = useMemo(
                         fontWeight: "900",
                       }}
                     >
-                      {status}
+                      {uiText(status)}
                     </Text>
                   </View>
                 </View>
@@ -542,8 +538,7 @@ const confirmedPaid = useMemo(
                     }}
                   >
                    <Text style={{ color: UI.muted, fontWeight: "800" }}>
-  Commission Earned
-</Text>
+  {uiText("Commission Earned")}</Text>
 
 <Text
   style={{
@@ -569,7 +564,7 @@ const confirmedPaid = useMemo(
                       padding: 12,
                     }}
                   >
-                    <Text style={{ color: UI.muted, fontWeight: "800" }}>Payout</Text>
+                    <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("Payout")}</Text>
                     <Text style={{ color: UI.text, fontWeight: "900", marginTop: 6 }}>
                       {payoutLabel(r)}
                     </Text>
@@ -587,7 +582,7 @@ const confirmedPaid = useMemo(
                       padding: 12,
                     }}
                   >
-                    <Text style={{ color: UI.muted, fontWeight: "800" }}>Paid Amount</Text>
+                    <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("Paid Amount")}</Text>
                     <Text style={{ color: UI.text, fontWeight: "900", marginTop: 6 }}>
                       {fmtMoney(toNum(r.paid_amount))}
                     </Text>
@@ -603,7 +598,7 @@ const confirmedPaid = useMemo(
                       padding: 12,
                     }}
                   >
-                    <Text style={{ color: UI.muted, fontWeight: "800" }}>Remaining</Text>
+                    <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("Remaining")}</Text>
                     <Text style={{ color: UI.text, fontWeight: "900", marginTop: 6 }}>
                       {fmtMoney(toNum(r.remaining_amount))}
                     </Text>
@@ -620,29 +615,26 @@ const confirmedPaid = useMemo(
                     gap: 8,
                   }}
                 >
-                  <Text style={{ color: UI.muted, fontWeight: "800" }}>Period</Text>
+                  <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("Period")}</Text>
                   <Text style={{ color: UI.text, fontWeight: "900" }}>
                     {String(r.period_key ?? "").trim() || "—"}
                   </Text>
 
-                  <Text style={{ color: UI.muted, fontWeight: "800" }}>Reference</Text>
+                  <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("Reference")}</Text>
                   <Text style={{ color: UI.text, fontWeight: "900" }}>
                     {String(r.reference ?? "").trim() || "—"}
                   </Text>
 
                   <Text style={{ color: UI.muted, fontWeight: "800" }}>
-                    Transaction Message / Note
-                  </Text>
+                    {uiText("Transaction Message / Note")}</Text>
                   <Text style={{ color: UI.text, fontWeight: "800", lineHeight: 20 }}>
                     {String(r.note ?? "").trim() || "—"}
                   </Text>
 
                   <Text style={{ color: UI.faint, fontWeight: "800", lineHeight: 20 }}>
-                    Hii inaweza kuwa message yote ya muamala iliyobandikwa wakati wa cash-out au
-                    reference code ya malipo.
-                  </Text>
+                    {uiText("Hii inaweza kuwa message yote ya muamala iliyobandikwa wakati wa cash-out au reference code ya malipo.")}</Text>
 
-                  <Text style={{ color: UI.muted, fontWeight: "800" }}>Received Note</Text>
+                  <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("Received Note")}</Text>
                   <Text style={{ color: UI.text, fontWeight: "800", lineHeight: 20 }}>
                     {String(r.received_note ?? "").trim() || "—"}
                   </Text>
@@ -659,17 +651,17 @@ const confirmedPaid = useMemo(
                   }}
                 >
                   <Text style={{ color: UI.muted, fontWeight: "800" }}>
-                    Created At:{" "}
+                    {uiText("Created At:")}{" "}
                     <Text style={{ color: UI.text }}>{fmtDateTime(r.created_at)}</Text>
                   </Text>
 
                   <Text style={{ color: UI.muted, fontWeight: "800" }}>
-                    Sent At:{" "}
+                    {uiText("Sent At:")}{" "}
                     <Text style={{ color: UI.text }}>{fmtDateTime(r.sent_at)}</Text>
                   </Text>
 
                   <Text style={{ color: UI.muted, fontWeight: "800" }}>
-                    Received At:{" "}
+                    {uiText("Received At:")}{" "}
                     <Text style={{ color: UI.text }}>{fmtDateTime(r.received_at)}</Text>
                   </Text>
                 </View>

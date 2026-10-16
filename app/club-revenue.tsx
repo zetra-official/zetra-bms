@@ -1,3 +1,5 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/club-revenue.tsx
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -249,6 +251,8 @@ function BreakList({
 }
 
 function ClubRevenueFullCard() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const orgAny = useOrg() as any;
 
   const storeId: string = String(
@@ -364,10 +368,9 @@ function ClubRevenueFullCard() {
       <View style={{ flexDirection: "row", alignItems: "center" }}>
         <View style={{ flex: 1 }}>
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-            Club Revenue Dashboard
-          </Text>
+            {uiText("Club Revenue Dashboard")}</Text>
           <Text style={{ color: UI.muted, fontWeight: "700", marginTop: 2 }}>
-            Store: {storeName}
+            {uiText("Store:")}{(String(((orgAny?.activeStoreName ?? orgAny?.activeStore?.name) ?? uiText("Store"))).trim() || uiText("Store"))}
           </Text>
         </View>
 
@@ -384,14 +387,14 @@ function ClubRevenueFullCard() {
             opacity: pressed ? 0.92 : 1,
           })}
         >
-          <Text style={{ color: UI.text, fontWeight: "900" }}>{loading ? "..." : "Reload"}</Text>
+          <Text style={{ color: UI.text, fontWeight: "900" }}>{loading ? "..." : uiText("Reload")}</Text>
         </Pressable>
       </View>
 
       <View style={{ flexDirection: "row", gap: 10 }}>
-        <Pill k="today" label="Today" />
-        <Pill k="7d" label="7 Days" />
-        <Pill k="30d" label="30 Days" />
+        <Pill k="today" label={uiText("Today")} />
+        <Pill k="7d" label={uiText("7 Days")} />
+        <Pill k="30d" label={uiText("30 Days")} />
       </View>
 
       {!!err && (
@@ -403,16 +406,16 @@ function ClubRevenueFullCard() {
             padding: 12,
           }}
         >
-          <Text style={{ color: UI.danger, fontWeight: "900" }}>{err}</Text>
+          <Text style={{ color: UI.danger, fontWeight: "900" }}>{systemText(err)}</Text>
         </Card>
       )}
 
       {/* A) Quick KPIs */}
       <View style={{ flexDirection: "row", gap: 12, paddingTop: 4 }}>
-        <MiniStat label="Conversion" value={pct(conversion)} hint={`${delivered}/${total} delivered`} />
-        <MiniStat label="Pending risk" value={pendingRisk} hint={`${pending} pending`} />
+        <MiniStat label={uiText("Conversion")} value={pct(conversion)} hint={uiText("{p0}/{p1} delivered", {p0: (delivered), p1: (total)})} />
+        <MiniStat label={uiText("Pending risk")} value={pendingRisk} hint={uiText("{p0} pending", {p0: (pending)})} />
         <MiniStat
-          label="Paid orders"
+          label={uiText("Paid orders")}
           value={String(row?.paid_orders ?? 0)}
           hint={fmtMoney(Number(row?.paid_revenue ?? 0), currency)}
         />
@@ -422,37 +425,37 @@ function ClubRevenueFullCard() {
 
       {/* Base rows */}
       <View style={{ gap: 8 }}>
-        <Row label="Revenue (DELIVERED)" value={fmtMoney(Number(row?.revenue || 0), currency)} />
-        <Row label="Delivered orders" value={String(row?.delivered_orders ?? 0)} />
+        <Row label={uiText("Revenue (DELIVERED)")} value={fmtMoney(Number(row?.revenue || 0), currency)} />
+        <Row label={uiText("Delivered orders")} value={String(row?.delivered_orders ?? 0)} />
         <Divider />
-        <Row label="Total orders" value={String(row?.total_orders ?? 0)} />
-        <Row label="Pending" value={String(row?.pending_orders ?? 0)} />
-        <Row label="Confirmed" value={String(row?.confirmed_orders ?? 0)} />
-        <Row label="Ready" value={String(row?.ready_orders ?? 0)} />
-        <Row label="Cancelled" value={String(row?.cancelled_orders ?? 0)} />
+        <Row label={uiText("Total orders")} value={String(row?.total_orders ?? 0)} />
+        <Row label={uiText("Pending")} value={String(row?.pending_orders ?? 0)} />
+        <Row label={uiText("Confirmed")} value={String(row?.confirmed_orders ?? 0)} />
+        <Row label={uiText("Ready")} value={String(row?.ready_orders ?? 0)} />
+        <Row label={uiText("Cancelled")} value={String(row?.cancelled_orders ?? 0)} />
         <Divider />
-        <Row label="Avg order value" value={fmtMoney(Number(row?.avg_order_value || 0), currency)} />
+        <Row label={uiText("Avg order value")} value={fmtMoney(Number(row?.avg_order_value || 0), currency)} />
       </View>
 
       {/* B) Payment breakdown */}
       <Divider />
-      <Text style={{ color: UI.text, fontWeight: "900" }}>Payments (DELIVERED)</Text>
+      <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Payments (DELIVERED)")}</Text>
       <View style={{ gap: 8 }}>
-        <Row label="Paid revenue" value={fmtMoney(Number(row?.paid_revenue ?? 0), currency)} />
+        <Row label={uiText("Paid revenue")} value={fmtMoney(Number(row?.paid_revenue ?? 0), currency)} />
         <Row
-          label="Awaiting revenue"
+          label={uiText("Awaiting revenue")}
           value={fmtMoney(Number(row?.awaiting_revenue ?? 0), currency)}
         />
-        <Row label="Paid orders" value={String(row?.paid_orders ?? 0)} />
-        <Row label="Awaiting orders" value={String(row?.awaiting_orders ?? 0)} />
+        <Row label={uiText("Paid orders")} value={String(row?.paid_orders ?? 0)} />
+        <Row label={uiText("Awaiting orders")} value={String(row?.awaiting_orders ?? 0)} />
       </View>
 
-      <BreakList title="By method" currency={currency} data={row?.by_method ?? {}} />
-      <BreakList title="By channel" currency={currency} data={row?.by_channel ?? {}} />
+      <BreakList title={uiText("By method")} currency={currency} data={row?.by_method ?? {}} />
+      <BreakList title={uiText("By channel")} currency={currency} data={row?.by_channel ?? {}} />
 
       {/* C) Top lists */}
       <Divider />
-      <Text style={{ color: UI.text, fontWeight: "900" }}>Top products</Text>
+      <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Top products")}</Text>
       {topProducts.length ? (
         <View style={{ gap: 8 }}>
           {topProducts.map((p) => (
@@ -461,7 +464,7 @@ function ClubRevenueFullCard() {
               style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}
             >
               <Text style={{ color: UI.text, fontWeight: "800", flex: 1 }} numberOfLines={1}>
-                {p.product_name ?? "Unknown product"}
+                {p.product_name ?? uiText("Unknown product")}
               </Text>
               <Text style={{ color: UI.muted, fontWeight: "900" }}>
                 {fmtMoney(Number(p.revenue || 0), currency)} • {Number(p.qty || 0)}
@@ -470,12 +473,12 @@ function ClubRevenueFullCard() {
           ))}
         </View>
       ) : (
-        <Text style={{ color: UI.muted, fontWeight: "800" }}>No data</Text>
+        <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("No data")}</Text>
       )}
 
       <View style={{ height: 10 }} />
 
-      <Text style={{ color: UI.text, fontWeight: "900" }}>Top posts</Text>
+      <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Top posts")}</Text>
       {topPosts.length ? (
         <View style={{ gap: 8 }}>
           {topPosts.map((p) => (
@@ -484,7 +487,7 @@ function ClubRevenueFullCard() {
               style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}
             >
               <Text style={{ color: UI.text, fontWeight: "800", flex: 1 }} numberOfLines={1}>
-                {p.post_caption ?? "Post"}
+                {p.post_caption ?? uiText("Post")}
               </Text>
               <Text style={{ color: UI.muted, fontWeight: "900" }}>
                 {fmtMoney(Number(p.revenue || 0), currency)} • {Number(p.orders || 0)}
@@ -493,13 +496,13 @@ function ClubRevenueFullCard() {
           ))}
         </View>
       ) : (
-        <Text style={{ color: UI.muted, fontWeight: "800" }}>No data</Text>
+        <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("No data")}</Text>
       )}
 
       {loading && (
         <View style={{ paddingTop: 8, alignItems: "center" }}>
           <ActivityIndicator />
-          <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 8 }}>Loading...</Text>
+          <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 8 }}>{uiText("Loading...")}</Text>
         </View>
       )}
     </Card>
@@ -507,6 +510,7 @@ function ClubRevenueFullCard() {
 }
 
 export default function ClubRevenueScreen() {
+ const uiText = useCommonText();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -539,16 +543,14 @@ export default function ClubRevenueScreen() {
                 opacity: pressed ? 0.92 : 1,
               })}
             >
-              <Text style={{ color: UI.text, fontWeight: "900" }}>‹ Back</Text>
+              <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("‹ Back")}</Text>
             </Pressable>
 
             <View style={{ flex: 1 }}>
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18 }}>
-                Club Revenue
-              </Text>
+                {uiText("Club Revenue")}</Text>
               <Text style={{ color: UI.muted, fontWeight: "700", marginTop: 2 }}>
-                Full dashboard
-              </Text>
+                {uiText("Full dashboard")}</Text>
             </View>
           </View>
 

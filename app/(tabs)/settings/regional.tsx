@@ -1,3 +1,6 @@
+import { useCommonText } from "@/src/i18n/useCommonText";
+import { UserLanguagePicker } from "@/src/i18n/LanguageProvider";
+import { PersonalCurrencyPicker } from "@/src/i18n/PersonalCurrencyPicker";
 // app/(tabs)/settings/regional.tsx
 import React, { useCallback, useMemo, useState } from "react";
 import {
@@ -219,6 +222,7 @@ function guessLangLabelFromLocale(locale: string) {
 }
 
 export default function RegionalSettings() {
+  const uiText = useCommonText();
   const router = useRouter();
 
   const goBackSafe = useCallback(() => {
@@ -241,7 +245,7 @@ export default function RegionalSettings() {
 
   const guard = (actionName: string, fn: () => void) => {
     if (!canEdit) {
-      Alert.alert("Not allowed", `Only Owner/Admin can change ${actionName}.`);
+      Alert.alert(uiText("Not allowed"), uiText("Only Owner/Admin can change {p0}.", {p0: (actionName)}));
       return;
     }
     fn();
@@ -364,30 +368,30 @@ export default function RegionalSettings() {
       const nextTz = clean(nextTzRaw);
 
       if (!orgId) {
-        Alert.alert("No org", "Organization haijapatikana.");
+        Alert.alert(uiText("No org"), uiText("Organization haijapatikana."));
         return;
       }
 
       if (!nextTz) {
-        Alert.alert("Timezone", "Timezone haiwezi kuwa empty.");
+        Alert.alert(uiText("Timezone"), uiText("Timezone haiwezi kuwa empty."));
         return;
       }
 
       if (!isValidTimeZone(nextTz)) {
         Alert.alert(
-          "Invalid timezone",
-          `Hii timezone haijatambulika:\n\n${nextTz}\n\nMfano sahihi: Africa/Dar_es_Salaam, America/New_York`
+          uiText("Invalid timezone"),
+          uiText("Hii timezone haijatambulika:\n\n{p0}\n\nMfano sahihi: Africa/Dar_es_Salaam, America/New_York", {p0: (nextTz)})
         );
         return;
       }
 
       if (!canEdit) {
-        Alert.alert("Not allowed", "Only Owner/Admin can change timezone.");
+        Alert.alert(uiText("Not allowed"), uiText("Only Owner/Admin can change timezone."));
         return;
       }
 
       if (clean(nextTz) === clean(tz)) {
-        Alert.alert("No changes", "Timezone ipo tayari kwenye value hiyo.");
+        Alert.alert(uiText("No changes"), uiText("Timezone ipo tayari kwenye value hiyo."));
         return;
       }
 
@@ -396,13 +400,13 @@ export default function RegionalSettings() {
         // ✅ Option 1: RPC only (RLS-first). No direct table update fallback.
         const { error: rpcErr } = await supabase.rpc("set_org_timezone", {
           p_org_id: orgId,
-          p_timezone: nextTz,
+          p_tz_name: nextTz,
         });
 
         if (rpcErr) {
           Alert.alert(
-            "Timezone blocked",
-            "Timezone haikuweza ku-save kwa sababu RPC `set_org_timezone` haipo au haina permission.\n\nTunahitaji kuweka/kuruhusu RPC hiyo kwenye DB (RLS-first)."
+            uiText("Timezone blocked"),
+            uiText("Timezone haikuweza ku-save kwa sababu RPC `set_org_timezone` haipo au haina permission.\n\nTunahitaji kuweka/kuruhusu RPC hiyo kwenye DB (RLS-first).")
           );
           return;
         }
@@ -414,11 +418,11 @@ export default function RegionalSettings() {
         } catch {}
 
         Alert.alert(
-          "Timezone updated ✅",
-          `Org timezone: ${nextTz}\n\nHii itaathiri reports, daily closing, na date cutoffs.`
+          uiText("Timezone updated ✅"),
+          uiText("Org timezone: {p0}\n\nHii itaathiri reports, daily closing, na date cutoffs.", {p0: (nextTz)})
         );
       } catch (e: any) {
-        Alert.alert("Timezone", e?.message ?? "Failed to save timezone");
+        Alert.alert(uiText("Timezone"), e?.message ?? uiText("Failed to save timezone"));
       } finally {
         setTzLoading(false);
       }
@@ -441,7 +445,7 @@ export default function RegionalSettings() {
 
   const openTzPicker = useCallback(() => {
     if (!canEdit) {
-      Alert.alert("Not allowed", "Only Owner/Admin can change timezone.");
+      Alert.alert(uiText("Not allowed"), uiText("Only Owner/Admin can change timezone."));
       return;
     }
     setTzSearch("");
@@ -459,12 +463,12 @@ export default function RegionalSettings() {
       if (!nextTz) return;
 
       Alert.alert(
-        "Confirm timezone change",
-        `Unataka kubadilisha timezone kuwa:\n\n${nextTz}\n\n⚠️ Itaathiri reports, daily closing, na date cutoffs.`,
+        uiText("Confirm timezone change"),
+        uiText("Unataka kubadilisha timezone kuwa:\n\n{p0}\n\n⚠️ Itaathiri reports, daily closing, na date cutoffs.", {p0: (nextTz)}),
         [
-          { text: "Cancel", style: "cancel" },
+          { text: uiText("Cancel"), style: "cancel" },
           {
-            text: "YES, CHANGE",
+            text: uiText("YES, CHANGE"),
             style: "destructive",
             onPress: async () => {
               setTzOpen(false);
@@ -515,11 +519,11 @@ export default function RegionalSettings() {
   const saveDateFormat = useCallback(
     async (next: DateFmtKey) => {
       if (!orgId) {
-        Alert.alert("No org", "Organization haijapatikana.");
+        Alert.alert(uiText("No org"), uiText("Organization haijapatikana."));
         return;
       }
       if (!canEdit) {
-        Alert.alert("Not allowed", "Only Owner/Admin can change date format.");
+        Alert.alert(uiText("Not allowed"), uiText("Only Owner/Admin can change date format."));
         return;
       }
 
@@ -530,8 +534,8 @@ export default function RegionalSettings() {
       } catch {}
 
       Alert.alert(
-        "Date format saved ✅",
-        `Selected: ${DATE_FORMATS.find((x) => x.key === next)?.label}`
+        uiText("Date format saved ✅"),
+        uiText("Selected: {p0}", {p0: (DATE_FORMATS.find((x) => x.key === next)?.label ?? "")})
       );
     },
     [orgId, canEdit]
@@ -580,11 +584,11 @@ export default function RegionalSettings() {
   const saveNumberFormat = useCallback(
     async (next: NumFmtKey) => {
       if (!orgId) {
-        Alert.alert("No org", "Organization haijapatikana.");
+        Alert.alert(uiText("No org"), uiText("Organization haijapatikana."));
         return;
       }
       if (!canEdit) {
-        Alert.alert("Not allowed", "Only Owner/Admin can change number format.");
+        Alert.alert(uiText("Not allowed"), uiText("Only Owner/Admin can change number format."));
         return;
       }
 
@@ -603,8 +607,8 @@ export default function RegionalSettings() {
       } catch {}
 
       Alert.alert(
-        "Number format saved ✅",
-        `Selected: ${cfg.label}\n\nThis will affect how money & numbers display in the app.`
+        uiText("Number format saved ✅"),
+        uiText("Selected: {p0}\n\nThis will affect how money & numbers display in the app.", {p0: (cfg.label)})
       );
     },
     [orgId, canEdit]
@@ -653,8 +657,7 @@ export default function RegionalSettings() {
 
         <View style={{ flex: 1 }}>
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 20 }}>
-            Regional Settings
-          </Text>
+            {uiText("Regional Settings")}</Text>
           <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 4 }}>
             {headerSubtitle}
           </Text>
@@ -664,70 +667,23 @@ export default function RegionalSettings() {
       <View style={{ marginTop: 14 }}>
         <Card>
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-            Localization (Global-ready)
-          </Text>
+            {uiText("Localization (Global-ready)")}</Text>
           <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 6 }}>
-            These settings control how ZETRA displays language, money, dates, and numbers.
-          </Text>
+            {uiText("These settings control how ZETRA displays language, money, dates, and numbers.")}</Text>
 
           <Divider />
 
           {/* 🌍 Language */}
           <View style={{ marginTop: 2 }}>
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14, marginBottom: 6 }}>
-              🌍 Language
-            </Text>
+              {uiText("🌍 Language")}</Text>
 
             <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginBottom: 10 }}>
-              Drives AI + UI language using org locale. (Owner/Admin only)
-            </Text>
+              {uiText("Personal interface language. Does not change business currency or organization number format.")}</Text>
 
-            <LanguagePickerAll
-              value={orgLocale}
-              disabled={!canEdit}
-              onChange={(locale) => {
-                guard("Language", async () => {
-                  if (!orgId) {
-                    Alert.alert("No org", "Organization haijapatikana.");
-                    return;
-                  }
+            <UserLanguagePicker />
+            <PersonalCurrencyPicker businessCurrency={currencyCode} />
 
-                  const next = clean(locale) || "en-US";
-
-                  try {
-                    await kv.setOrgLocale(orgId, next);
-                  } catch {}
-
-                  setOrgLocale(next);
-
-                  Alert.alert(
-                    "Language saved ✅",
-                    `Selected: ${guessLangLabelFromLocale(next)}\nLocale: ${next}\n\nAI + UI will follow this.`
-                  );
-                });
-              }}
-              title="Language (Global)"
-              hint="Select any language (global)"
-            />
-
-            <View style={{ marginTop: 10 }}>
-              <Text style={{ color: "rgba(255,255,255,0.60)", fontWeight: "800", fontSize: 12 }}>
-                Current: {languageSubtitle}
-              </Text>
-            </View>
-
-            {!canEdit ? (
-              <Text
-                style={{
-                  color: "rgba(255,255,255,0.55)",
-                  fontWeight: "800",
-                  fontSize: 12,
-                  marginTop: 10,
-                }}
-              >
-                Staff cannot change language. Owner/Admin only.
-              </Text>
-            ) : null}
           </View>
 
           <Divider />
@@ -735,34 +691,17 @@ export default function RegionalSettings() {
           {/* 💱 Currency */}
           <View style={{ marginTop: 2 }}>
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14, marginBottom: 6 }}>
-              💱 Currency
-            </Text>
+              {uiText("💱 Currency")}</Text>
 
             <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginBottom: 10 }}>
-              Choose any currency in the world. This is org-level (accounting consistency).
+              {uiText("Business currency is protected. Display preferences do not change recorded amounts.")}
             </Text>
 
             <CurrencyPickerAll
               value={currencyCode}
-              disabled={!canEdit}
-              onChange={(code) => {
-                guard("Currency", async () => {
-                  if (!orgId) {
-                    Alert.alert("No org", "Organization haijapatikana.");
-                    return;
-                  }
-
-                  const v = upper(code);
-                  setCurrencyCode(v || "TZS");
-
-                  try {
-                    await kv.setOrgCurrency(orgId, v || null);
-                  } catch {}
-
-                  Alert.alert("Currency selected", `Selected: ${v}`);
-                });
-              }}
-              title="Currency (Global)"
+              disabled
+              onChange={() => {}}
+              title={uiText("Business base currency")}
             />
 
             {!canEdit ? (
@@ -774,8 +713,7 @@ export default function RegionalSettings() {
                   marginTop: 10,
                 }}
               >
-                Staff cannot change currency. Owner/Admin only.
-              </Text>
+                {uiText("Staff cannot change currency. Owner/Admin only.")}</Text>
             ) : null}
           </View>
 
@@ -784,13 +722,10 @@ export default function RegionalSettings() {
           {/* 🌐 Timezone */}
           <View style={{ marginTop: 2 }}>
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14, marginBottom: 6 }}>
-              🌐 Timezone
-            </Text>
+              {uiText("🌐 Timezone")}</Text>
 
             <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginBottom: 10 }}>
-              Controls reports, daily closing, and date cutoffs (org-level). You can change it anytime
-              (confirmation required).
-            </Text>
+              {uiText("Controls reports, daily closing, and date cutoffs (org-level). You can change it anytime (confirmation required).")}</Text>
 
             <Pressable
               onPress={() => guard("Timezone", openTzPicker)}
@@ -842,7 +777,7 @@ export default function RegionalSettings() {
                     style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}
                     numberOfLines={1}
                   >
-                    {canEdit ? "Tap to change (confirm)" : "Owner/Admin only"}
+                    {canEdit ? uiText("Tap to change (confirm)") : uiText("Owner/Admin only")}
                   </Text>
                 </View>
               </View>
@@ -863,8 +798,7 @@ export default function RegionalSettings() {
                   marginTop: 10,
                 }}
               >
-                Staff cannot change timezone. Owner/Admin only.
-              </Text>
+                {uiText("Staff cannot change timezone. Owner/Admin only.")}</Text>
             ) : null}
           </View>
 
@@ -873,7 +807,7 @@ export default function RegionalSettings() {
           {/* 📅 Date Format */}
           <Item
             emoji="📅"
-            title="Date Format"
+            title={uiText("Date Format")}
             subtitle={dateSubtitle}
             icon="chevron-forward"
             onPress={openDatePicker}
@@ -884,7 +818,7 @@ export default function RegionalSettings() {
           {/* 🔢 Number Format */}
           <Item
             emoji="🔢"
-            title="Number Format"
+            title={uiText("Number Format")}
             subtitle={numSubtitle}
             icon="chevron-forward"
             onPress={openNumPicker}
@@ -902,11 +836,9 @@ export default function RegionalSettings() {
               }}
             >
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
-                Permission rule
-              </Text>
+                {uiText("Permission rule")}</Text>
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 4 }}>
-                Owner/Admin only • Timezone change requires confirmation.
-              </Text>
+                {uiText("Owner/Admin only • Timezone change requires confirmation.")}</Text>
             </View>
           </View>
         </Card>
@@ -934,22 +866,20 @@ export default function RegionalSettings() {
           >
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-                Change Timezone
-              </Text>
+                {uiText("Change Timezone")}</Text>
               <Pressable onPress={closeTzPicker} hitSlop={10}>
                 <Ionicons name="close" size={22} color={UI.text} />
               </Pressable>
             </View>
 
             <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 6 }}>
-              Chagua timezone yoyote (mfano Kuwait: Asia/Kuwait). Ukisave, app itauliza uthibitishe.
-            </Text>
+              {uiText("Chagua timezone yoyote (mfano Kuwait: Asia/Kuwait). Ukisave, app itauliza uthibitishe.")}</Text>
 
             <View style={{ marginTop: 12, gap: 10 }}>
               <TextInput
                 value={tzSearch}
                 onChangeText={setTzSearch}
-                placeholder="Search quick zones (e.g. Africa, Kuwait, New_York)"
+                placeholder={uiText("Search quick zones (e.g. Africa, Kuwait, New_York)")}
                 placeholderTextColor="rgba(255,255,255,0.45)"
                 style={{
                   height: 46,
@@ -966,7 +896,7 @@ export default function RegionalSettings() {
               <TextInput
                 value={tzManual}
                 onChangeText={setTzManual}
-                placeholder="Manual timezone (e.g. Asia/Kuwait)"
+                placeholder={uiText("Manual timezone (e.g. Asia/Kuwait)")}
                 placeholderTextColor="rgba(255,255,255,0.45)"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -1000,13 +930,12 @@ export default function RegionalSettings() {
                 ]}
               >
                 <Ionicons name="save-outline" size={18} color="rgba(16,185,129,1)" />
-                <Text style={{ color: UI.text, fontWeight: "900" }}>SAVE TIMEZONE</Text>
+                <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("SAVE TIMEZONE")}</Text>
               </Pressable>
 
               <View style={{ marginTop: 6 }}>
                 <Text style={{ color: UI.text, fontWeight: "900", marginBottom: 8 }}>
-                  Quick picks
-                </Text>
+                  {uiText("Quick picks")}</Text>
 
                 <View
                   style={{
@@ -1048,8 +977,7 @@ export default function RegionalSettings() {
                                 marginTop: 4,
                               }}
                             >
-                              Current ✅
-                            </Text>
+                              {uiText("Current ✅")}</Text>
                           ) : null}
                         </Pressable>
                       );
@@ -1066,8 +994,7 @@ export default function RegionalSettings() {
                     lineHeight: 16,
                   }}
                 >
-                  TIP: Andika timezone yoyote ya IANA (mfano: Europe/Rome, Asia/Seoul, America/Mexico_City).
-                </Text>
+                  {uiText("TIP: Andika timezone yoyote ya IANA (mfano: Europe/Rome, Asia/Seoul, America/Mexico_City).")}</Text>
               </View>
             </View>
           </View>
@@ -1096,16 +1023,14 @@ export default function RegionalSettings() {
           >
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-                Date Format
-              </Text>
+                {uiText("Date Format")}</Text>
               <Pressable onPress={closeDatePicker} hitSlop={10}>
                 <Ionicons name="close" size={22} color={UI.text} />
               </Pressable>
             </View>
 
             <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 6 }}>
-              Hii ni display-only (haitabadilisha DB). Inaathiri jinsi tarehe zinavyoonekana kwenye UI.
-            </Text>
+              {uiText("Hii ni display-only (haitabadilisha DB). Inaathiri jinsi tarehe zinavyoonekana kwenye UI.")}</Text>
 
             <View style={{ marginTop: 12 }}>
               {DATE_FORMATS.map((x) => {
@@ -1137,7 +1062,7 @@ export default function RegionalSettings() {
                       {x.label} {active ? "✅" : ""}
                     </Text>
                     <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 6 }}>
-                      Example: {preview}
+                      {uiText("Example:")}{preview}
                     </Text>
                   </Pressable>
                 );
@@ -1169,16 +1094,14 @@ export default function RegionalSettings() {
           >
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-                Number Format
-              </Text>
+                {uiText("Number Format")}</Text>
               <Pressable onPress={closeNumPicker} hitSlop={10}>
                 <Ionicons name="close" size={22} color={UI.text} />
               </Pressable>
             </View>
 
             <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 6 }}>
-              Hii ina-control separators (comma/dot/space). Pia ita-drive money formatting kupitia locale.
-            </Text>
+              {uiText("Hii ina-control separators (comma/dot/space). Pia ita-drive money formatting kupitia locale.")}</Text>
 
             <View style={{ marginTop: 12 }}>
               {NUMBER_FORMATS.map((x) => {
@@ -1210,7 +1133,7 @@ export default function RegionalSettings() {
                       {x.label} {active ? "✅" : ""}
                     </Text>
                     <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 6 }}>
-                      Example: {preview}  •  Locale: {x.locale}
+                      {uiText("Example:")}{preview}  {uiText("• Locale:")}{x.locale}
                     </Text>
                   </Pressable>
                 );
@@ -1218,8 +1141,7 @@ export default function RegionalSettings() {
             </View>
 
             <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 8 }}>
-              NOTE: “1 234,56” kwenye baadhi ya simu inaweza kuonekana kama space special. Ni normal.
-            </Text>
+              {uiText("NOTE: “1 234,56” kwenye baadhi ya simu inaweza kuonekana kama space special. Ni normal.")}</Text>
           </View>
         </View>
       </Modal>

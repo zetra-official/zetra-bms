@@ -1,6 +1,13 @@
+import {useCommonText} from "@/src/i18n/useCommonText";
 import { useRouter } from "expo-router";
-import React, { useMemo, useState } from "react";
-import { Alert, Text, TextInput, View } from "react-native";
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 
 import { Screen } from "@/src/ui/Screen";
 import { Card } from "@/src/ui/Card";
@@ -30,12 +37,54 @@ const LIGHT = {
 };
 
 export default function OnboardingReferralScreen() {
+ const uiText = useCommonText();
   const router = useRouter();
 
   const [code, setCode] = useState("");
   const [checking, setChecking] = useState(false);
+  const [entryGateReady, setEntryGateReady] = useState(false);
 
   const normalizedCode = useMemo(() => upper(code), [code]);
+
+  useEffect(() => {
+    let alive = true;
+
+    const runEntryGate = async () => {
+      try {
+        const { data, error } = await supabase.rpc("get_my_orgs");
+
+        if (!alive) return;
+
+        if (error) {
+          console.log("referral entry gate get_my_orgs error:", error);
+          setEntryGateReady(true);
+          return;
+        }
+
+        const hasOrganization =
+          Array.isArray(data) && data.length > 0;
+
+        if (hasOrganization) {
+          router.replace("/(tabs)" as any);
+          return;
+        }
+
+        setEntryGateReady(true);
+      } catch (error) {
+        console.log("referral entry gate error:", error);
+
+        if (alive) {
+          setEntryGateReady(true);
+        }
+      }
+    };
+
+    void runEntryGate();
+
+    return () => {
+      alive = false;
+    };
+  }, [router]);
 
   async function saveReferralCode(value: string) {
     try {
@@ -108,11 +157,11 @@ export default function OnboardingReferralScreen() {
     const referralCode = normalizedCode;
 
     if (!referralCode) {
-      return Alert.alert("Missing", "Weka ZGP code au bonyeza Skip.");
+      return Alert.alert(uiText("Missing"), uiText("Weka ZGP code au bonyeza Skip."));
     }
 
     if (!referralCode.startsWith("ZGP-")) {
-      return Alert.alert("Invalid code", "Referral code lazima ianze na ZGP-");
+      return Alert.alert(uiText("Invalid code"), uiText("Referral code lazima ianze na ZGP-"));
     }
 
     setChecking(true);
@@ -122,15 +171,15 @@ export default function OnboardingReferralScreen() {
       });
 
       if (error) {
-        return Alert.alert("Validation failed", error.message);
+        return Alert.alert(uiText("Validation failed"), error.message);
       }
 
       const row = Array.isArray(data) ? data[0] : data;
 
       if (!row?.referral_id) {
         return Alert.alert(
-          "Invalid code",
-          "Hiyo ZGP code haijapatikana au partner si ACTIVE."
+          uiText("Invalid code"),
+          uiText("Hiyo ZGP code haijapatikana au partner si ACTIVE.")
         );
       }
 
@@ -142,6 +191,76 @@ export default function OnboardingReferralScreen() {
     }
   }
 
+  if (!entryGateReady) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: LIGHT.bg,
+          alignItems: "center",
+          justifyContent: "center",
+          paddingHorizontal: 28,
+        }}
+      >
+        <View
+          style={{
+            width: 82,
+            height: 82,
+            borderRadius: 24,
+            backgroundColor: LIGHT.emerald,
+            alignItems: "center",
+            justifyContent: "center",
+            shadowColor: "#0F172A",
+            shadowOpacity: 0.12,
+            shadowRadius: 18,
+            shadowOffset: { width: 0, height: 10 },
+            elevation: 5,
+          }}
+        >
+          <Text
+            style={{
+              color: "#FFFFFF",
+              fontSize: 30,
+              fontWeight: "900",
+              letterSpacing: 1,
+            }}
+          >
+            Z
+          </Text>
+        </View>
+
+        <Text
+          style={{
+            marginTop: 20,
+            color: LIGHT.text,
+            fontSize: 22,
+            fontWeight: "900",
+            letterSpacing: 0.4,
+          }}
+        >
+          ZETRA
+        </Text>
+
+        <ActivityIndicator
+          size="small"
+          color={LIGHT.emerald}
+          style={{ marginTop: 18 }}
+        />
+
+        <Text
+          style={{
+            marginTop: 12,
+            color: LIGHT.muted,
+            fontSize: 13,
+            fontWeight: "700",
+            textAlign: "center",
+          }}
+        >
+          {uiText("Preparing your workspace...")}</Text>
+      </View>
+    );
+  }
+
   return (
     <Screen
       scroll
@@ -150,8 +269,7 @@ export default function OnboardingReferralScreen() {
     >
       <View style={{ marginTop: 6 }}>
         <Text style={{ color: LIGHT.text, fontWeight: "900", fontSize: 26 }}>
-          Referral Code
-        </Text>
+          {uiText("Referral Code")}</Text>
 
         <Text
           style={{
@@ -161,9 +279,7 @@ export default function OnboardingReferralScreen() {
             lineHeight: 20,
           }}
         >
-          Ukiwa umesaidiwa na Growth Partner, weka code yake hapa. Ukiwa huna,
-          unaweza kuendelea kwa Skip.
-        </Text>
+          {uiText("Ukiwa umesaidiwa na Growth Partner, weka code yake hapa. Ukiwa huna, unaweza kuendelea kwa Skip.")}</Text>
       </View>
 
       <View style={{ marginTop: 14 }}>
@@ -200,13 +316,11 @@ export default function OnboardingReferralScreen() {
                 letterSpacing: 0.5,
               }}
             >
-              OPTIONAL PARTNER CODE
-            </Text>
+              {uiText("OPTIONAL PARTNER CODE")}</Text>
           </View>
 
           <Text style={{ color: LIGHT.text, fontWeight: "900", fontSize: 14 }}>
-            ZGP Code (optional)
-          </Text>
+            {uiText("ZGP Code (optional)")}</Text>
 
           <View
             style={{
@@ -222,7 +336,7 @@ export default function OnboardingReferralScreen() {
             <TextInput
               value={code}
               onChangeText={setCode}
-              placeholder="e.g. ZGP-42D0D8"
+              placeholder={uiText("e.g. ZGP-42D0D8")}
               placeholderTextColor={LIGHT.faint}
               autoCapitalize="characters"
               autoCorrect={false}
@@ -245,15 +359,13 @@ export default function OnboardingReferralScreen() {
               lineHeight: 17,
             }}
           >
-            Ukijaza code halali, account yako itaunganishwa na Growth Partner
-            aliyekusaidia. Ukiskip, utaendelea bila referral.
-          </Text>
+            {uiText("Ukijaza code halali, account yako itaunganishwa na Growth Partner aliyekusaidia. Ukiskip, utaendelea bila referral.")}</Text>
         </Card>
       </View>
 
       <View style={{ marginTop: 14 }}>
         <Button
-          title={checking ? "Checking..." : "Continue"}
+          title={checking ? uiText("Checking...") : uiText("Continue")}
           onPress={onContinue}
           disabled={checking}
         />
@@ -261,7 +373,7 @@ export default function OnboardingReferralScreen() {
 
       <View style={{ marginTop: 10 }}>
         <Button
-          title={checking ? "Please wait..." : "Skip"}
+          title={checking ? uiText("Please wait...") : uiText("Skip")}
           onPress={onSkip}
           disabled={checking}
           variant="secondary"

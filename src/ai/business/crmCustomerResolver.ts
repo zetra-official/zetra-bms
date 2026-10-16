@@ -434,14 +434,6 @@ export async function getCrmCustomerCandidates(
     } as any
   );
 
-  console.log("========== CREDIT CUSTOMER CANDIDATE DEBUG ==========");
-  console.log("QUERY:", customerQuery);
-  console.log("ORG:", organizationId);
-  console.log("STORE:", storeId);
-  console.log("RAW RPC DATA:", JSON.stringify(data, null, 2));
-  console.log("RPC ERROR:", error?.message ?? null);
-  console.log("=====================================================");
-
   if (error) {
     throw new Error(
       `[ZETRA_AI_CRM_CUSTOMER_RESOLVER] Failed to load verified customer candidates: ${error.message}`
@@ -457,7 +449,7 @@ export async function getCrmCustomerCandidates(
     );
   }
 
-  return mapCandidatesResult(
+  const result = mapCandidatesResult(
     data,
     {
       organizationId,
@@ -465,6 +457,11 @@ export async function getCrmCustomerCandidates(
       storeId,
     }
   );
+  if (result.organizationId !== organizationId ||
+      (storeId !== null && (result.storeId !== storeId || result.candidates.some(c => c.storeId !== storeId)))) {
+    throw new Error("Customer candidate scope does not match the requested organization/store");
+  }
+  return result;
 }
 
 /**

@@ -1,3 +1,5 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -59,6 +61,8 @@ function formatDateTime(ts?: string | null) {
 }
 
 export default function MeetingRoomInvitesScreen() {
+ const systemText = useSystemMessageText();
+ const uiText = useCommonText();
   const router = useRouter();
   const org = useOrg();
 
@@ -135,13 +139,13 @@ export default function MeetingRoomInvitesScreen() {
         await loadInvites();
 
         Alert.alert(
-          "Accepted",
-          "Invitation imekubaliwa successfully. Room sasa itaonekana kwenye My Rooms."
+          uiText("Accepted"),
+          uiText("Invitation imekubaliwa successfully. Room sasa itaonekana kwenye My Rooms.")
         );
       } catch (e: any) {
         Alert.alert(
-          "Accept failed",
-          e?.message ?? "Failed to accept invitation."
+          uiText("Accept failed"),
+          e?.message ?? uiText("Failed to accept invitation.")
         );
       } finally {
         setAcceptingId(null);
@@ -191,7 +195,7 @@ export default function MeetingRoomInvitesScreen() {
               style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}
               numberOfLines={1}
             >
-              {clean(item.room_name) || "Meeting Room"}
+              {clean(item.room_name) || uiText("Meeting Room")}
             </Text>
 
             <Text
@@ -212,12 +216,12 @@ export default function MeetingRoomInvitesScreen() {
           style={{ color: UI.faint, fontWeight: "800", fontSize: 12 }}
           numberOfLines={1}
         >
-          {clean(item.email) || "No email"}
+          {clean(item.email) || uiText("No email")}
         </Text>
 
         {!!clean(item.created_at) ? (
           <Text style={{ color: UI.faint, fontWeight: "700", fontSize: 11 }}>
-            Invited: {formatDateTime(item.created_at)}
+            {uiText("Invited:")}{formatDateTime(item.created_at)}
           </Text>
         ) : null}
 
@@ -241,8 +245,7 @@ export default function MeetingRoomInvitesScreen() {
               <ActivityIndicator />
             ) : (
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 13 }}>
-                Accept Invite
-              </Text>
+                {uiText("Accept Invite")}</Text>
             )}
           </Pressable>
 
@@ -262,8 +265,7 @@ export default function MeetingRoomInvitesScreen() {
             })}
           >
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 13 }}>
-              Open Room
-            </Text>
+              {uiText("Open Room")}</Text>
           </Pressable>
         </View>
       </Card>
@@ -302,13 +304,12 @@ export default function MeetingRoomInvitesScreen() {
             style={{ color: UI.text, fontWeight: "900", fontSize: 22 }}
             numberOfLines={1}
           >
-            Meeting Room Invites
-          </Text>
+            {uiText("Meeting Room Invites")}</Text>
           <Text
             style={{ color: UI.muted, fontWeight: "800", marginTop: 4 }}
             numberOfLines={1}
           >
-            {orgName} • {role}
+            {clean((org.activeOrgName || uiText("No organization")))} • {role}
           </Text>
         </View>
 
@@ -336,11 +337,9 @@ export default function MeetingRoomInvitesScreen() {
 
       <Card style={{ marginBottom: 14, gap: 8 }}>
         <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
-          My Pending Invites
-        </Text>
+          {uiText("My Pending Invites")}</Text>
         <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 20 }}>
-          Hapa utaona invitations zote za meeting rooms ambazo bado hujazikubali.
-        </Text>
+          {uiText("Hapa utaona invitations zote za meeting rooms ambazo bado hujazikubali.")}</Text>
       </Card>
 
       {error ? (
@@ -351,7 +350,7 @@ export default function MeetingRoomInvitesScreen() {
             backgroundColor: "rgba(201,74,74,0.10)",
           }}
         >
-          <Text style={{ color: UI.danger, fontWeight: "900" }}>{error}</Text>
+          <Text style={{ color: UI.danger, fontWeight: "900" }}>{systemText(error)}</Text>
         </Card>
       ) : null}
 
@@ -362,8 +361,7 @@ export default function MeetingRoomInvitesScreen() {
       ) : invites.length === 0 ? (
         <Card>
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
-            No pending invites
-          </Text>
+            {uiText("No pending invites")}</Text>
           <Text
             style={{
               color: UI.muted,
@@ -372,8 +370,7 @@ export default function MeetingRoomInvitesScreen() {
               marginTop: 8,
             }}
           >
-            Hakuna pending meeting-room invites kwa account yako sasa hivi.
-          </Text>
+            {uiText("Hakuna pending meeting-room invites kwa account yako sasa hivi.")}</Text>
         </Card>
       ) : (
         <FlatList

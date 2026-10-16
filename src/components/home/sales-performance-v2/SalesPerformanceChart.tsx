@@ -1,3 +1,4 @@
+import {useCommonText} from "@/src/i18n/useCommonText";
 ﻿import React from "react";
 import {
   Pressable,
@@ -143,6 +144,7 @@ export default function SalesPerformanceChart({
   height = 300,
   formatMoney,
 }: Props) {
+ const uiText = useCommonText();
   const [hovered, setHovered] =
     React.useState<HoveredPoint>(null);
 
@@ -600,8 +602,7 @@ export default function SalesPerformanceChart({
                   fontSize: 10,
                 }}
               >
-                Current
-              </Text>
+                {uiText("Current")}</Text>
             </View>
 
             <Text
@@ -658,8 +659,7 @@ export default function SalesPerformanceChart({
                     fontSize: 10,
                   }}
                 >
-                  Previous
-                </Text>
+                  {uiText("Previous")}</Text>
               </View>
 
               <Text
@@ -712,8 +712,7 @@ export default function SalesPerformanceChart({
               fontWeight: "700",
             }}
           >
-            Current Period
-          </Text>
+            {uiText("Current Period")}</Text>
         </View>
 
         {compare ? (
@@ -742,8 +741,7 @@ export default function SalesPerformanceChart({
                 fontWeight: "700",
               }}
             >
-              Previous Period
-            </Text>
+              {uiText("Previous Period")}</Text>
           </View>
         ) : null}
       </View>

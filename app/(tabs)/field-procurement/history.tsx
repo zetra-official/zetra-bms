@@ -1,3 +1,4 @@
+import {useCommonText} from "@/src/i18n/useCommonText";
 import { useFocusEffect } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import { Modal, Pressable, ScrollView, Text, View } from "react-native";
@@ -13,6 +14,7 @@ type Purpose = "TARGET" | "OPERATIONAL";
 type FilterKey = "TODAY" | "OPEN" | "CLOSED" | "ALL";
 
 type CycleRow = {
+  _uiMissingTitle?: boolean;
   cycle_id: string;
   title: string;
   status: string;
@@ -121,6 +123,7 @@ function StatBox({ label, value, hint }: { label: string; value: string; hint: s
 }
 
 function TxnCard({ r }: { r: TxnRow }) {
+ const uiText = useCommonText();
   const type = clean(r.type).toUpperCase();
   const isAllocate = type === "ALLOCATE";
   const isTarget = r.purpose === "TARGET";
@@ -142,22 +145,22 @@ function TxnCard({ r }: { r: TxnRow }) {
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={{ color: FP.text, fontWeight: "900", fontSize: 16 }}>{fmt(r.amount)}</Text>
           <Text style={{ color: FP.faint, marginTop: 6, fontWeight: "800" }}>
-            {r.category || "GENERAL"}
+            {r.category || uiText("GENERAL")}
           </Text>
         </View>
 
         <Text style={{ color: isAllocate ? FP.text : isTarget ? FP.emerald : FP.warning, fontWeight: "900" }}>
-          {isAllocate ? "ALLOCATE" : isTarget ? "TARGET" : "OPERATIONAL"}
+          {isAllocate ? uiText("ALLOCATE") : isTarget ? uiText("TARGET") : uiText("OPERATIONAL")}
         </Text>
       </View>
 
       <Text style={{ color: FP.faint, marginTop: 8, fontWeight: "800" }}>
-        Agent: {r.agent_email || "—"}
+        {uiText("Agent:")}{r.agent_email || "—"}
       </Text>
 
       {!!r.item_name && (
         <Text style={{ color: FP.text, marginTop: 8, fontWeight: "900", lineHeight: 20 }}>
-          Item: {r.item_name}
+          {uiText("Item:")}{r.item_name}
           {r.quantity > 0 && r.unit ? ` • ${r.quantity} ${r.unit}` : ""}
           {r.actual_unit_price > 0 ? ` • ${fmt(r.actual_unit_price)} / ${r.unit || "unit"}` : ""}
         </Text>
@@ -177,6 +180,7 @@ function TxnCard({ r }: { r: TxnRow }) {
 }
 
 export default function FieldHistoryScreen() {
+ const uiText = useCommonText();
   const { activeStoreId } = useOrg();
 
   const [loading, setLoading] = useState(false);
@@ -205,6 +209,7 @@ export default function FieldHistoryScreen() {
         .map((c: any) => ({
           cycle_id: clean(c?.cycle_id ?? c?.id),
           title: clean(c?.title) || "Field Cycle",
+          _uiMissingTitle: !clean(c?.title),
           status: clean(c?.status) || "OPEN",
           target_amount: toNum(c?.target_amount),
           total_allocated: toNum(c?.total_allocated),
@@ -354,11 +359,11 @@ export default function FieldHistoryScreen() {
           <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={{ color: FP.text, fontWeight: "900", fontSize: 24 }} numberOfLines={2}>
-                {selectedCycle.title}
+                {selectedCycle._uiMissingTitle ? uiText("Field Cycle") : selectedCycle.title}
               </Text>
               <Text style={{ color: FP.muted, fontWeight: "800", marginTop: 8, lineHeight: 20 }}>
-                Opened: {fmtDate(selectedCycle.opened_at)}
-                {selectedCycle.closed_at ? `\nClosed: ${fmtDate(selectedCycle.closed_at)}` : "\nActive now"}
+                {uiText("Opened:")}{fmtDate(selectedCycle.opened_at)}
+                {selectedCycle.closed_at ? uiText("\nClosed: {p0}", {p0: (fmtDate(selectedCycle.closed_at))}) : uiText("\nActive now")}
               </Text>
             </View>
 
@@ -386,7 +391,7 @@ export default function FieldHistoryScreen() {
                   fontSize: 12,
                 }}
               >
-                {clean(selectedCycle.status).toUpperCase() === "OPEN" ? "ACTIVE" : "CLOSED"}
+                {clean(selectedCycle.status).toUpperCase() === "OPEN" ? uiText("ACTIVE") : uiText("CLOSED")}
               </Text>
             </View>
           </View>
@@ -398,38 +403,35 @@ export default function FieldHistoryScreen() {
           )}
 
           <View style={{ flexDirection: "row", gap: 12 }}>
-            <StatBox label="TARGET FUND" value={fmt(selectedCycle.target_amount)} hint="field budget" />
-            <StatBox label="REMAINING" value={fmt(selectedCycle.field_remaining)} hint="not allocated" />
+            <StatBox label={uiText("TARGET FUND")} value={fmt(selectedCycle.target_amount)} hint={uiText("field budget")} />
+            <StatBox label={uiText("REMAINING")} value={fmt(selectedCycle.field_remaining)} hint={uiText("not allocated")} />
           </View>
 
           <View style={{ flexDirection: "row", gap: 12 }}>
-            <StatBox label="ALLOCATED" value={fmt(selectedCycle.total_allocated)} hint="to agents" />
-            <StatBox label="AGENT BALANCE" value={fmt(selectedCycle.agent_wallet_balance)} hint="with agents" />
+            <StatBox label={uiText("ALLOCATED")} value={fmt(selectedCycle.total_allocated)} hint={uiText("to agents")} />
+            <StatBox label={uiText("AGENT BALANCE")} value={fmt(selectedCycle.agent_wallet_balance)} hint={uiText("with agents")} />
           </View>
 
           <View style={{ flexDirection: "row", gap: 12 }}>
-            <StatBox label="TARGET USED" value={fmt(totalTarget)} hint="main purpose" />
-            <StatBox label="OPERATIONAL" value={fmt(totalOperational)} hint="field costs" />
+            <StatBox label={uiText("TARGET USED")} value={fmt(totalTarget)} hint={uiText("main purpose")} />
+            <StatBox label={uiText("OPERATIONAL")} value={fmt(totalOperational)} hint={uiText("field costs")} />
           </View>
 
           <View style={{ flexDirection: "row", gap: 12 }}>
-            <StatBox label="TOTAL SPENT" value={fmt(totalSpent)} hint="all spending" />
-            <StatBox label="RECORDS" value={String(cycleRows.length)} hint="cycle items" />
+            <StatBox label={uiText("TOTAL SPENT")} value={fmt(totalSpent)} hint={uiText("all spending")} />
+            <StatBox label={uiText("RECORDS")} value={String(cycleRows.length)} hint={uiText("cycle items")} />
           </View>
         </Card>
 
         <Card style={{ marginTop: 16, borderRadius: 24, borderColor: "rgba(16,185,129,0.22)", backgroundColor: "rgba(16,185,129,0.06)" }}>
           <Text style={{ color: FP.emerald, fontWeight: "900", fontSize: 19 }}>
-            Field Stock / Mzigo Uliokusanywa
-          </Text>
+            {uiText("Field Stock / Mzigo Uliokusanywa")}</Text>
           <Text style={{ color: FP.muted, marginTop: 6, fontWeight: "800", lineHeight: 20 }}>
-            Mzigo wa cycle hii pekee.
-          </Text>
+            {uiText("Mzigo wa cycle hii pekee.")}</Text>
 
           {cycleStockRows.length === 0 ? (
             <Text style={{ color: FP.faint, marginTop: 12, fontWeight: "800" }}>
-              Hakuna mzigo uliorekodiwa kwenye field hii.
-            </Text>
+              {uiText("Hakuna mzigo uliorekodiwa kwenye field hii.")}</Text>
           ) : (
             cycleStockRows.map((s) => (
               <Card
@@ -446,7 +448,7 @@ export default function FieldHistoryScreen() {
                   {s.total_quantity} {s.unit}
                 </Text>
                 <Text style={{ color: FP.muted, fontWeight: "800", marginTop: 6 }}>
-                  Cost: {fmt(s.total_amount)} • Avg: {fmt(s.avg_unit_price)} / {s.unit}
+                  {uiText("Cost:")}{fmt(s.total_amount)} {uiText("• Avg:")}{fmt(s.avg_unit_price)} / {s.unit}
                 </Text>
               </Card>
             ))
@@ -455,10 +457,10 @@ export default function FieldHistoryScreen() {
 
         <Card style={{ marginTop: 16, borderRadius: 24, borderColor: "rgba(59,130,246,0.22)", backgroundColor: "rgba(59,130,246,0.06)" }}>
           <Text style={{ color: FP.text, fontWeight: "900", fontSize: 19 }}>
-            Money Given to Agents — {fmt(selectedCycle.total_allocated)}
+            {uiText("Money Given to Agents —")}{fmt(selectedCycle.total_allocated)}
           </Text>
           {allocationRows.length === 0 ? (
-            <Text style={{ color: FP.faint, marginTop: 12, fontWeight: "800" }}>Hakuna allocation.</Text>
+            <Text style={{ color: FP.faint, marginTop: 12, fontWeight: "800" }}>{uiText("Hakuna allocation.")}</Text>
           ) : (
             allocationRows.map((r) => <TxnCard key={r.id} r={r} />)
           )}
@@ -466,10 +468,10 @@ export default function FieldHistoryScreen() {
 
         <Card style={{ marginTop: 16, borderRadius: 24, borderColor: "rgba(16,185,129,0.22)", backgroundColor: "rgba(16,185,129,0.06)" }}>
           <Text style={{ color: FP.emerald, fontWeight: "900", fontSize: 19 }}>
-            Target Spending — {fmt(totalTarget)}
+            {uiText("Target Spending —")}{fmt(totalTarget)}
           </Text>
           {targetRows.length === 0 ? (
-            <Text style={{ color: FP.faint, marginTop: 12, fontWeight: "800" }}>Hakuna target spending.</Text>
+            <Text style={{ color: FP.faint, marginTop: 12, fontWeight: "800" }}>{uiText("Hakuna target spending.")}</Text>
           ) : (
             targetRows.map((r) => <TxnCard key={r.id} r={r} />)
           )}
@@ -477,10 +479,10 @@ export default function FieldHistoryScreen() {
 
         <Card style={{ marginTop: 16, borderRadius: 24, borderColor: "rgba(245,158,11,0.22)", backgroundColor: "rgba(245,158,11,0.06)" }}>
           <Text style={{ color: FP.warning, fontWeight: "900", fontSize: 19 }}>
-            Operational Spending — {fmt(totalOperational)}
+            {uiText("Operational Spending —")}{fmt(totalOperational)}
           </Text>
           {operationalRows.length === 0 ? (
-            <Text style={{ color: FP.faint, marginTop: 12, fontWeight: "800" }}>Hakuna operational spending.</Text>
+            <Text style={{ color: FP.faint, marginTop: 12, fontWeight: "800" }}>{uiText("Hakuna operational spending.")}</Text>
           ) : (
             operationalRows.map((r) => <TxnCard key={r.id} r={r} />)
           )}
@@ -501,10 +503,9 @@ export default function FieldHistoryScreen() {
     >
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: 120 }}>
         <StoreGuard>
-          <Text style={{ color: FP.text, fontWeight: "900", fontSize: 31 }}>Field Reports</Text>
+          <Text style={{ color: FP.text, fontWeight: "900", fontSize: 31 }}>{uiText("Field Reports")}</Text>
           <Text style={{ color: FP.muted, marginTop: 8, fontWeight: "800", lineHeight: 22 }}>
-            Chagua report kufungua hesabu kamili ya field moja bila kuchanganya taarifa.
-          </Text>
+            {uiText("Chagua report kufungua hesabu kamili ya field moja bila kuchanganya taarifa.")}</Text>
 
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 16 }}>
             {[
@@ -543,7 +544,7 @@ export default function FieldHistoryScreen() {
           )}
 
           {loading ? (
-            <Text style={{ marginTop: 20, color: FP.faint, fontWeight: "800" }}>Loading reports...</Text>
+            <Text style={{ marginTop: 20, color: FP.faint, fontWeight: "800" }}>{uiText("Loading reports...")}</Text>
           ) : displayedCycles.length === 0 ? (
             <Card
               style={{
@@ -558,7 +559,7 @@ export default function FieldHistoryScreen() {
                 elevation: 3,
               }}
             >
-              <Text style={{ color: FP.text, fontWeight: "900" }}>Hakuna report kwenye filter hii.</Text>
+              <Text style={{ color: FP.text, fontWeight: "900" }}>{uiText("Hakuna report kwenye filter hii.")}</Text>
             </Card>
           ) : (
             <View style={{ gap: 12, marginTop: 16 }}>
@@ -587,7 +588,7 @@ export default function FieldHistoryScreen() {
                     <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
                       <View style={{ flex: 1 }}>
                         <Text style={{ color: FP.text, fontWeight: "900", fontSize: 20 }} numberOfLines={1}>
-                          {c.title}
+                          {c._uiMissingTitle ? uiText("Field Cycle") : c.title}
                         </Text>
                         <Text style={{ color: FP.muted, fontWeight: "800", marginTop: 8 }}>
                           {fmtDate(c.opened_at)}
@@ -595,23 +596,22 @@ export default function FieldHistoryScreen() {
                       </View>
 
                       <Text style={{ color: isOpen ? FP.emerald : FP.faint, fontWeight: "900" }}>
-                        {isOpen ? "ACTIVE" : "CLOSED"}
+                        {isOpen ? uiText("ACTIVE") : uiText("CLOSED")}
                       </Text>
                     </View>
 
                     <View style={{ flexDirection: "row", gap: 12, marginTop: 14 }}>
-                      <StatBox label="ALLOCATED" value={fmt(c.total_allocated)} hint="given out" />
-                      <StatBox label="SPENT" value={fmt(c.total_spent)} hint="used" />
+                      <StatBox label={uiText("ALLOCATED")} value={fmt(c.total_allocated)} hint={uiText("given out")} />
+                      <StatBox label={uiText("SPENT")} value={fmt(c.total_spent)} hint={uiText("used")} />
                     </View>
 
                     <View style={{ flexDirection: "row", gap: 12, marginTop: 12 }}>
-                      <StatBox label="BALANCE" value={fmt(c.agent_wallet_balance)} hint="agents" />
-                      <StatBox label="RECORDS" value={String(reportRowsCount)} hint="tap to view" />
+                      <StatBox label={uiText("BALANCE")} value={fmt(c.agent_wallet_balance)} hint={uiText("agents")} />
+                      <StatBox label={uiText("RECORDS")} value={String(reportRowsCount)} hint={uiText("tap to view")} />
                     </View>
 
                     <Text style={{ color: FP.emerald, fontWeight: "900", marginTop: 14 }}>
-                      Open full report →
-                    </Text>
+                      {uiText("Open full report →")}</Text>
                   </Pressable>
                 );
               })}
@@ -643,7 +643,7 @@ export default function FieldHistoryScreen() {
                     opacity: pressed ? 0.9 : 1,
                   })}
                 >
-                  <Text style={{ color: FP.text, fontWeight: "900" }}>← Back to Reports</Text>
+                  <Text style={{ color: FP.text, fontWeight: "900" }}>{uiText("← Back to Reports")}</Text>
                 </Pressable>
 
                 <ReportBody />

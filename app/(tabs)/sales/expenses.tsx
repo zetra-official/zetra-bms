@@ -1,3 +1,8 @@
+import {paymentMethodKey} from "@/src/i18n/presentation";
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useLanguage} from "@/src/i18n/LanguageProvider";
+import {useCommonText} from "@/src/i18n/useCommonText";
+import { uniqueRecords } from "../../../src/business/recordIntegrity";
 // app/(tabs)/sales/expenses.tsx
 
 import { useRouter } from "expo-router";
@@ -192,6 +197,7 @@ function AppIcon({
   size?: number;
   color?: string;
 }) {
+  const uiText=useCommonText();
   const glyph =
     name === "chevron-back" ? "‹" :
     name === "eye-outline" ? "VIEW" :
@@ -215,12 +221,12 @@ function AppIcon({
     <Text
       style={{
         color,
-        fontSize: Math.max(10, size - 3),
+        fontSize: glyph === "VIEW" || glyph === "PAY" ? Math.min(14, Math.max(10, size - 3)) : Math.max(10, size - 3),
         fontWeight: "900",
         lineHeight: size + 4,
       }}
     >
-      {glyph}
+      {glyph === "VIEW" || glyph === "PAY" ? uiText(glyph === "VIEW" ? "View" : "Pay") : glyph}
     </Text>
   );
 }
@@ -322,6 +328,7 @@ function SummaryMiniCard({
   icon: AppIconName;
   accent?: "emerald" | "blue" | "violet";
 }) {
+ const uiText = useCommonText();
   const accentMap =
     accent === "blue"
       ? {
@@ -385,7 +392,7 @@ function SummaryMiniCard({
           {value}
         </Text>
         <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 4, fontSize: 11 }}>
-          Count: <Text style={{ color: theme.colors.text }}>{count}</Text>
+          {uiText("Count:")}<Text style={{ color: theme.colors.text }}>{count}</Text>
         </Text>
       </View>
     </View>
@@ -436,6 +443,9 @@ minHeight: 64,
 }
 
 export default function ExpensesScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
+ const {language}=useLanguage();
   const router = useRouter();
   const { width } = useWindowDimensions();
   const isDesktopWeb = Platform.OS === "web" && width >= 900;
@@ -488,6 +498,7 @@ const canCreate = useMemo(() => {
 
   const [loading, setLoading] = useState(false);
   const [savingExpense, setSavingExpense] = useState(false);
+  const expenseSaveInFlight = useRef(false);
   const [rows, setRows] = useState<ExpenseRow[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -560,14 +571,14 @@ const loadStaffExpensePermission = useCallback(async () => {
   try {
     const { data, error } = await supabase
       .from("stores")
-      .select("staff_can_manage_expense, allow_staff_expense")
+      .select("staff_can_manage_expense")
       .eq("id", activeStoreDbId)
       .maybeSingle();
 
     if (error) throw error;
 
     setStaffExpenseAllowed(
-      !!data?.staff_can_manage_expense || !!data?.allow_staff_expense
+      data?.staff_can_manage_expense === true
     );
   } catch {
     setStaffExpenseAllowed(false);
@@ -712,7 +723,12 @@ const selectedExpenseRange = useMemo(() => {
         null,
     })) as ExpenseRow[];
 
-    allRows.push(...pageRows);
+    const previousCount = allRows.length;
+    const merged = uniqueRecords([...allRows, ...pageRows], "id");
+    if (pageRows.length && merged.length === previousCount) {
+      throw new Error("Expense pagination repeated a page; report is incomplete");
+    }
+    allRows.splice(0, allRows.length, ...merged);
 
     if (pageRows.length < PAGE_SIZE) {
       break;
@@ -790,34 +806,35 @@ const resetExpenseForm = useCallback(() => {
 
   const saveExpense = useCallback(async () => {
     if (!activeStoreId) {
-      Alert.alert("Missing", "No active store selected.");
+      Alert.alert(uiText("Missing"), uiText("No active store selected."));
       return;
     }
 
     if (!canCreate) {
       Alert.alert(
-        "No Access",
-        "Huna ruhusa ya kurekodi expense kwenye store hii. Owner awezeshe Staff expense kwenye store husika."
+        uiText("No Access"),
+        uiText("Huna ruhusa ya kurekodi expense kwenye store hii. Owner awezeshe Staff expense kwenye store husika.")
       );
       return;
     }
 
-    if (savingExpense) return;
+    if (expenseSaveInFlight.current) return;
 
     const raw = amount.trim();
     const n = Number(raw);
 
-    if (!raw || Number.isNaN(n) || n <= 0) {
-      Alert.alert("Invalid Amount", "Weka kiasi sahihi (namba > 0).");
+    if (!raw || !Number.isFinite(n) || n <= 0) {
+      Alert.alert(uiText("Invalid Amount"), uiText("Weka kiasi sahihi (namba > 0)."));
       return;
     }
 
     const cat = category.trim();
     if (!cat) {
-      Alert.alert("Category Required", "Weka category ya matumizi (mf. Rent, Transport...).");
+      Alert.alert(uiText("Category Required"), uiText("Weka category ya matumizi (mf. Rent, Transport...)."));
       return;
     }
 
+    expenseSaveInFlight.current = true;
     setSavingExpense(true);
     setError(null);
 
@@ -856,12 +873,13 @@ resetExpenseForm();
 setExpenseFormOpen(false);
 
       await loadAll();
-      Alert.alert("Saved", isEditing ? "Expense imebadilishwa." : "Expense imeongezwa.");
+      Alert.alert(uiText("Saved"), isEditing ? uiText("Expense imebadilishwa.") : uiText("Expense imeongezwa."));
     } catch (err: any) {
       const msg = prettyRpcError(err);
       setError(msg);
-      Alert.alert("Failed", msg);
+      Alert.alert(uiText("Failed"), msg);
     } finally {
+      expenseSaveInFlight.current = false;
       setSavingExpense(false);
     }
   }, [
@@ -904,27 +922,27 @@ const deleteExpense = useCallback(
           }
 
           await loadAll();
-          Alert.alert("Deleted", "Expense imefutwa.");
+          Alert.alert(uiText("Deleted"), uiText("Expense imefutwa."));
         } catch (err: any) {
           const msg = prettyRpcError(err);
           setError(msg);
-          Alert.alert("Failed", msg);
+          Alert.alert(uiText("Failed"), msg);
         } finally {
           setLoading(false);
         }
       };
 
       if (Platform.OS === "web") {
-        const ok = window.confirm("Una uhakika unataka kufuta expense hii?");
+        const ok = window.confirm(uiText("Una uhakika unataka kufuta expense hii?"));
         if (!ok) return;
         await runDelete();
         return;
       }
 
-      Alert.alert("Delete Expense", "Una uhakika unataka kufuta expense hii?", [
-        { text: "Cancel", style: "cancel" },
+      Alert.alert(uiText("Delete Expense"), uiText("Una uhakika unataka kufuta expense hii?"), [
+        { text: uiText("Cancel"), style: "cancel" },
         {
-          text: "Delete",
+          text: uiText("Delete"),
           style: "destructive",
           onPress: runDelete,
         },
@@ -994,13 +1012,13 @@ const exportExpensePdf = useCallback(async () => {
   try {
     const periodLabel =
       rangeFilter === "TODAY"
-        ? "Today"
+        ? uiText("Today")
         : rangeFilter === "WEEK"
-        ? "This Week"
+        ? uiText("This Week")
         : rangeFilter === "MONTH"
-        ? "This Month"
+        ? uiText("This Month")
         : rangeFilter === "LAST_MONTH"
-        ? "Last Month"
+        ? uiText("Last Month")
         : `${selectedExpenseRange.from} to ${selectedExpenseRange.to}`;
 
     const esc = (v: any) =>
@@ -1021,8 +1039,8 @@ const rowsHtml = filteredRows
       <tr>
         <td>${i + 1}</td>
         <td>${esc(r.expense_date)}</td>
-        <td>${esc(r.category || "Uncategorized")}</td>
-        <td>${esc(method === "OTHER" ? "-" : method)}</td>
+        <td>${esc(r.category || uiText("Uncategorized"))}</td>
+        <td>${esc(method === "OTHER" ? "-" : method === "CASH" ? uiText("Cash") : method === "BANK" ? uiText("Bank") : uiText("Mobile Money"))}</td>
         <td>${esc(note || "-")}</td>
         <td class="amount">${esc(fmt(Number(r.amount ?? 0)))}</td>
       </tr>
@@ -1044,7 +1062,7 @@ const rowsHtml = filteredRows
 
     const html = `
       <!doctype html>
-      <html>
+      <html lang="${language}" dir="${language==='ar'?'rtl':'ltr'}">
         <head>
           <meta charset="utf-8" />
           <style>
@@ -1058,7 +1076,7 @@ const rowsHtml = filteredRows
             .label { font-size: 10px; font-weight: 800; color: #64748B; text-transform: uppercase; margin-bottom: 5px; }
             .value { font-size: 15px; font-weight: 900; }
             table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-            th { text-align: left; background: #ECFDF5; color: #064E3B; padding: 9px; font-size: 11px; border: 1px solid #A7F3D0; }
+            th { text-align: start; background: #ECFDF5; color: #064E3B; padding: 9px; font-size: 11px; border: 1px solid #A7F3D0; }
             td { padding: 9px; border: 1px solid #E5E7EB; vertical-align: top; }
             .amount { text-align: right; font-weight: 900; color: #B91C1C; white-space: nowrap; }
             .section { font-size: 14px; font-weight: 900; margin-top: 18px; }
@@ -1069,43 +1087,43 @@ const rowsHtml = filteredRows
         <body>
           <div class="header">
             <div class="brand">ZETRA BMS</div>
-            <div class="title">Expense Report</div>
+            <div class="title">${esc(uiText("Expense Report"))}</div>
           </div>
 
           <div class="grid">
-            <div class="box"><div class="label">Organization</div><div class="value">${esc(activeOrgName || "—")}</div></div>
-            <div class="box"><div class="label">Store</div><div class="value">${esc(activeStoreName || "—")}</div></div>
-            <div class="box"><div class="label">Period</div><div class="value">${esc(periodLabel)}</div></div>
+            <div class="box"><div class="label">${esc(uiText("Organization"))}</div><div class="value">${esc(activeOrgName || "—")}</div></div>
+            <div class="box"><div class="label">${esc(uiText("Store"))}</div><div class="value">${esc(activeStoreName || "—")}</div></div>
+            <div class="box"><div class="label">${esc(uiText("Period"))}</div><div class="value">${esc(periodLabel)}</div></div>
           </div>
 
           <div class="grid">
-            <div class="box"><div class="label">Total Expenses</div><div class="value">${esc(fmt(total))}</div></div>
-            <div class="box"><div class="label">Records</div><div class="value">${esc(filteredRows.length)}</div></div>
-            <div class="box"><div class="label">Categories</div><div class="value">${esc(categoryBreakdown.length)}</div></div>
+            <div class="box"><div class="label">${esc(uiText("Total Expenses"))}</div><div class="value">${esc(fmt(total))}</div></div>
+            <div class="box"><div class="label">${esc(uiText("Records"))}</div><div class="value">${esc(filteredRows.length)}</div></div>
+            <div class="box"><div class="label">${esc(uiText("Categories"))}</div><div class="value">${esc(categoryBreakdown.length)}</div></div>
           </div>
 
-          <div class="section">Category Breakdown</div>
+          <div class="section">${esc(uiText("Category Breakdown"))}</div>
           <table>
-            <thead><tr><th>Category</th><th>Count</th><th>Total</th></tr></thead>
-            <tbody>${breakdownHtml || `<tr><td colspan="3">No category breakdown.</td></tr>`}</tbody>
+            <thead><tr><th>${esc(uiText("Category"))}</th><th>${esc(uiText("Count"))}</th><th>${esc(uiText("Total"))}</th></tr></thead>
+            <tbody>${breakdownHtml || `<tr><td colspan="3">${esc(uiText("No category breakdown."))}</td></tr>`}</tbody>
           </table>
 
-          <div class="section">Expense Records</div>
+          <div class="section">${esc(uiText("Expense Records"))}</div>
           <table>
            <thead>
   <tr>
     <th>#</th>
-    <th>Date</th>
-    <th>Category</th>
-    <th>Method</th>
-    <th>Note</th>
-    <th>Amount</th>
+    <th>${esc(uiText("Date"))}</th>
+    <th>${esc(uiText("Category"))}</th>
+    <th>${esc(uiText("Method"))}</th>
+    <th>${esc(uiText("Note"))}</th>
+    <th>${esc(uiText("Amount"))}</th>
   </tr>
 </thead>
-<tbody>${rowsHtml || `<tr><td colspan="6">No expenses found.</td></tr>`}</tbody>
+<tbody>${rowsHtml || `<tr><td colspan="6">${esc(uiText("No expenses found."))}</td></tr>`}</tbody>
           </table>
 
-          <div class="footer">Generated by ZETRA BMS</div>
+          <div class="footer">${esc(uiText("Generated by ZETRA BMS"))}</div>
         </body>
       </html>
     `;
@@ -1117,13 +1135,13 @@ const rowsHtml = filteredRows
     if (await Sharing.isAvailableAsync()) {
       await Sharing.shareAsync(uri, {
         mimeType: "application/pdf",
-        dialogTitle: `Expense Report - ${periodLabel}`,
+        dialogTitle: `${uiText("Expense Report")} - ${periodLabel}`,
       });
     } else {
       await Print.printAsync({ uri });
     }
   } catch (e: any) {
-    Alert.alert("PDF Failed", e?.message ?? "Imeshindikana kutengeneza PDF.");
+    Alert.alert(uiText("PDF Failed"), e?.message ?? uiText("Imeshindikana kutengeneza PDF."));
   }
 }, [
   activeOrgName,
@@ -1134,6 +1152,8 @@ const rowsHtml = filteredRows
   rangeFilter,
   selectedExpenseRange,
   printHtmlPdfOnWeb,
+  uiText,
+  language,
 ]);
   const quickCategories = useMemo(
     () => ["Rent", "Transport", "WiFi", "Electricity", "Office", "Fuel"],
@@ -1169,8 +1189,7 @@ const rowsHtml = filteredRows
                     letterSpacing: -0.6,
                   }}
                 >
-                  Store Spending
-                </Text>
+                  {uiText("Store Spending")}</Text>
                 <Text
                   style={{
                     color: theme.colors.muted,
@@ -1178,8 +1197,7 @@ const rowsHtml = filteredRows
                     marginTop: 2,
                   }}
                 >
-                  View ya muhtasari wa matumizi ya store yako.
-                </Text>
+                  {uiText("View ya muhtasari wa matumizi ya store yako.")}</Text>
               </View>
 
               <Pressable
@@ -1217,8 +1235,7 @@ const rowsHtml = filteredRows
             >
               <View>
                 <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
-                  Organization
-                </Text>
+                  {uiText("Organization")}</Text>
                 <Text
                   style={{
                     color: theme.colors.text,
@@ -1244,8 +1261,7 @@ const rowsHtml = filteredRows
                   }}
                 >
                   <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
-                    Active Store
-                  </Text>
+                    {uiText("Active Store")}</Text>
                   <Text
                     style={{ color: theme.colors.text, fontWeight: "900", marginTop: 6 }}
                     numberOfLines={1}
@@ -1265,8 +1281,7 @@ const rowsHtml = filteredRows
                   }}
                 >
                   <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
-                    Role
-                  </Text>
+                    {uiText("Role")}</Text>
                   <Text
                     style={{
                       color: theme.colors.text,
@@ -1275,7 +1290,7 @@ const rowsHtml = filteredRows
                       textTransform: "capitalize",
                     }}
                   >
-                    {activeRole ?? "—"}
+                    {uiText(String(activeRole ?? "—").toUpperCase())}
                   </Text>
                 </View>
               </View>
@@ -1296,8 +1311,7 @@ minHeight: 64,
               >
                 <AppIcon name="eye-outline" size={16} color={theme.colors.emerald} />
                 <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>
-                  Hapa unaona muhtasari wa matumizi tu
-                </Text>
+                  {uiText("Hapa unaona muhtasari wa matumizi tu")}</Text>
               </View>
             </Card>
 
@@ -1312,24 +1326,24 @@ minHeight: 64,
                 <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
                   <AppIcon name="alert-circle-outline" size={18} color={theme.colors.danger} />
                   <Text style={{ color: theme.colors.danger, fontWeight: "900", flex: 1 }}>
-                    {error}
+                    {systemText(error)}
                   </Text>
                 </View>
               </Card>
             )}
 
-            {sectionTitle("Summary")}
+            {sectionTitle(uiText("Summary"))}
 
             <View style={{ flexDirection: "row", gap: 10 }}>
               <SummaryMiniCard
-                title="Today"
+                title={uiText("Today")}
                 value={fmt(today.total)}
                 count={today.count}
                 icon="sunny-outline"
                 accent="emerald"
               />
               <SummaryMiniCard
-                title="Week"
+                title={uiText("Week")}
                 value={fmt(week.total)}
                 count={week.count}
                 icon="calendar-outline"
@@ -1338,7 +1352,7 @@ minHeight: 64,
             </View>
 
             <SummaryMiniCard
-              title="This Month"
+              title={uiText("This Month")}
               value={fmt(month.total)}
               count={month.count}
               icon="stats-chart-outline"
@@ -1354,12 +1368,9 @@ minHeight: 64,
               }}
             >
               <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-                Management Only
-              </Text>
+                {uiText("Management Only")}</Text>
               <Text style={{ color: theme.colors.muted, fontWeight: "800", lineHeight: 20 }}>
-                Kuongeza au kubadilisha expense kunafanywa na owner/admin. Wewe unaendelea kuona
-                muhtasari wa matumizi ya store yako kwa urahisi.
-              </Text>
+                {uiText("Kuongeza au kubadilisha expense kunafanywa na owner/admin. Wewe unaendelea kuona muhtasari wa matumizi ya store yako kwa urahisi.")}</Text>
             </Card>
           </Animated.View>
       </Screen>
@@ -1392,8 +1403,7 @@ minHeight: 64,
                   letterSpacing: -0.6,
                 }}
               >
-                Expenses
-              </Text>
+                {uiText("Expenses")}</Text>
               <Text
                 style={{
                   color: theme.colors.muted,
@@ -1401,8 +1411,7 @@ minHeight: 64,
                   marginTop: 4,
                 }}
               >
-                Track store spending with a cleaner premium layout.
-              </Text>
+                {uiText("Track store spending with a cleaner premium layout.")}</Text>
             </View>
 
             <Pressable
@@ -1448,8 +1457,7 @@ minHeight: 64,
               <View style={{ flex: 1, gap: 10 }}>
                 <View>
                   <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
-                    Organization
-                  </Text>
+                    {uiText("Organization")}</Text>
                   <Text
                     style={{
                       color: theme.colors.text,
@@ -1475,8 +1483,7 @@ minHeight: 64,
                     }}
                   >
                     <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
-                      Active Store
-                    </Text>
+                      {uiText("Active Store")}</Text>
                     <Text
                       style={{ color: theme.colors.text, fontWeight: "900", marginTop: 6 }}
                       numberOfLines={1}
@@ -1496,8 +1503,7 @@ minHeight: 64,
                     }}
                   >
                     <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
-                      Role
-                    </Text>
+                      {uiText("Role")}</Text>
                     <Text
                       style={{
                         color: theme.colors.text,
@@ -1506,7 +1512,7 @@ minHeight: 64,
                         textTransform: "capitalize",
                       }}
                     >
-                      {activeRole ?? "—"}
+                      {uiText(String(activeRole ?? "—").toUpperCase())}
                     </Text>
                   </View>
                 </View>
@@ -1530,7 +1536,7 @@ minHeight: 64,
               >
                 <AppIcon name="wallet-outline" size={16} color={theme.colors.emerald} />
                 <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                  {isStaffView ? "Staff expense enabled for this store" : "Ready to record expense"}
+                  {isStaffView ? uiText("Staff expense enabled for this store") : uiText("Ready to record expense")}
                 </Text>
               </View>
 
@@ -1571,7 +1577,7 @@ minHeight: 64,
               <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
                 <AppIcon name="alert-circle-outline" size={18} color={theme.colors.danger} />
                 <Text style={{ color: theme.colors.danger, fontWeight: "900", flex: 1 }}>
-                  {error}
+                  {systemText(error)}
                 </Text>
               </View>
             </Card>
@@ -1579,18 +1585,18 @@ minHeight: 64,
 
           
 
-            {sectionTitle("Summary")}
+            {sectionTitle(uiText("Summary"))}
 
           <View style={{ flexDirection: "row", gap: 8 }}>
             <SummaryMiniCard
-              title="Today"
+              title={uiText("Today")}
               value={fmt(today.total)}
               count={today.count}
               icon="sunny-outline"
               accent="emerald"
             />
             <SummaryMiniCard
-              title="Week"
+              title={uiText("Week")}
               value={fmt(week.total)}
               count={week.count}
               icon="calendar-outline"
@@ -1599,7 +1605,7 @@ minHeight: 64,
           </View>
 
           <SummaryMiniCard
-            title="This Month"
+            title={uiText("This Month")}
             value={fmt(month.total)}
             count={month.count}
             icon="stats-chart-outline"
@@ -1668,8 +1674,7 @@ minHeight: 64,
 
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text style={{ color: "#064E3B", fontWeight: "900", fontSize: 20 }}>
-                    Add Expense
-                  </Text>
+                    {uiText("Add Expense")}</Text>
                   <Text
                     style={{
                       color: "#047857",
@@ -1679,8 +1684,7 @@ minHeight: 64,
                       lineHeight: 17,
                     }}
                   >
-                    Record business cost quickly: rent, transport, WiFi, fuel, office and more.
-                  </Text>
+                    {uiText("Record business cost quickly: rent, transport, WiFi, fuel, office and more.")}</Text>
                 </View>
 
                 <View
@@ -1694,8 +1698,7 @@ minHeight: 64,
                   }}
                 >
                   <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 13 }}>
-                    + Add
-                  </Text>
+                    {uiText("+ Add")}</Text>
                 </View>
               </View>
             </Card>
@@ -1707,14 +1710,14 @@ minHeight: 64,
       key={x}
       label={
         x === "TODAY"
-          ? "Today"
+          ? uiText("Today")
           : x === "WEEK"
-          ? "Week"
+          ? uiText("Week")
           : x === "MONTH"
-          ? "This Month"
+          ? uiText("This Month")
           : x === "LAST_MONTH"
-          ? "Last Month"
-          : "Custom"
+          ? uiText("Last Month")
+          : uiText("Custom")
       }
       active={rangeFilter === x}
       onPress={() => setRangeFilter(x)}
@@ -1751,8 +1754,7 @@ minHeight: 64,
   >
     <AppIcon name="download-outline" size={15} color={theme.colors.emerald} />
     <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}>
-      Export PDF
-    </Text>
+      {uiText("Export PDF")}</Text>
   </Pressable>
 </View>
 
@@ -1772,8 +1774,7 @@ minHeight: 64,
         fontSize: 14,
       }}
     >
-      Custom Date Range
-    </Text>
+      {uiText("Custom Date Range")}</Text>
 
     <View
       style={{
@@ -1782,7 +1783,7 @@ minHeight: 64,
       }}
     >
       <View style={{ flex: 1 }}>
-        <InputLabel>From</InputLabel>
+        <InputLabel>{uiText("From")}</InputLabel>
 
         <TextInput
           value={customFromInput}
@@ -1803,7 +1804,7 @@ minHeight: 64,
       </View>
 
       <View style={{ flex: 1 }}>
-        <InputLabel>To</InputLabel>
+        <InputLabel>{uiText("To")}</InputLabel>
 
         <TextInput
           value={customToInput}
@@ -1831,16 +1832,16 @@ minHeight: 64,
 
         if (!isValidDateYMD(from) || !isValidDateYMD(to)) {
           Alert.alert(
-            "Invalid Date",
-            "Tumia format ya YYYY-MM-DD. Mfano: 2026-08-01"
+            uiText("Invalid Date"),
+            uiText("Tumia format ya YYYY-MM-DD. Mfano: 2026-08-01")
           );
           return;
         }
 
         if (from > to) {
           Alert.alert(
-            "Invalid Range",
-            "From date haiwezi kuwa baada ya To date."
+            uiText("Invalid Range"),
+            uiText("From date haiwezi kuwa baada ya To date.")
           );
           return;
         }
@@ -1867,18 +1868,16 @@ minHeight: 64,
           fontWeight: "900",
         }}
       >
-        Apply Date Range
-      </Text>
+        {uiText("Apply Date Range")}</Text>
     </Pressable>
   </Card>
 )}
 
-          {sectionTitle("Category Breakdown")}
+          {sectionTitle(uiText("Category Breakdown"))}
           {categoryBreakdown.length === 0 ? (
             <Card style={{ padding: 14, borderRadius: 18, backgroundColor: "#FFFFFF" }}>
               <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                Hakuna breakdown bado kwenye filter hii.
-              </Text>
+                {uiText("Hakuna breakdown bado kwenye filter hii.")}</Text>
             </Card>
           ) : (
             <Card style={{ gap: 10, padding: 12, borderRadius: 18, backgroundColor: "#FFFFFF" }}>
@@ -1900,7 +1899,7 @@ minHeight: 64,
                       {x.category}
                     </Text>
                     <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}>
-                      {x.count} record{x.count === 1 ? "" : "s"}
+                      {uiText(x.count === 1 ? "{p0} record" : "{p0} records", {p0: x.count})}
                     </Text>
                   </View>
                   <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>
@@ -1912,17 +1911,7 @@ minHeight: 64,
           )}
 
           {sectionTitle(
-            `Recent (${
-              rangeFilter === "TODAY"
-                ? "Today"
-                : rangeFilter === "WEEK"
-                ? "This Week"
-                : rangeFilter === "MONTH"
-                ? "This Month"
-                : rangeFilter === "LAST_MONTH"
-                ? "Last Month"
-                : `${selectedExpenseRange.from} → ${selectedExpenseRange.to}`
-            }) (${filteredRows.length})`
+            uiText("Recent ({period}) ({count})", {period: rangeFilter === "TODAY" ? uiText("Today") : rangeFilter === "WEEK" ? uiText("This Week") : rangeFilter === "MONTH" ? uiText("This Month") : rangeFilter === "LAST_MONTH" ? uiText("Last Month") : `${selectedExpenseRange.from} → ${selectedExpenseRange.to}`, count: filteredRows.length})
           )}
 
           {filteredRows.length === 0 ? (
@@ -1950,11 +1939,9 @@ minHeight: 64,
               </View>
 
               <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14 }}>
-                No expenses yet
-              </Text>
+                {uiText("No expenses yet")}</Text>
               <Text style={{ color: theme.colors.muted, fontWeight: "700" }}>
-                Anza ku-record matumizi kwa kutumia form hapo juu.
-              </Text>
+                {uiText("Anza ku-record matumizi kwa kutumia form hapo juu.")}</Text>
             </Card>
           ) : (
             filteredRows.map((r, idx) =>{
@@ -1995,7 +1982,7 @@ minHeight: 64,
                           }}
                           numberOfLines={1}
                         >
-                          {r.category ?? "Expense"}
+                          {r.category ?? uiText("Expense")}
                         </Text>
 
                         <View
@@ -2025,7 +2012,7 @@ minHeight: 64,
                               color={theme.colors.muted}
                             />
                             <Text style={{ color: theme.colors.text, fontWeight: "800", fontSize: 11 }}>
-                              {method === "OTHER" ? "—" : method}
+                              {method === "OTHER" ? "—" : uiText(paymentMethodKey(method))}
                             </Text>
                           </View>
 
@@ -2055,7 +2042,7 @@ minHeight: 64,
                             }}
                           >
                             <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 11 }}>
-                              By: {r.recorded_by_email || r.recorded_by_role || "User"}
+                              {uiText("By:")}{r.recorded_by_email || r.recorded_by_role || uiText("User")}
                             </Text>
                           </View>
                         </View>
@@ -2091,7 +2078,7 @@ minHeight: 64,
                         disabled={loading}
                         style={({ pressed }) => ({
                           flex: 1,
-                          minHeight: 38,
+                          minHeight: 48,
                           borderRadius: 14,
                           borderWidth: 1,
                           borderColor: theme.colors.emeraldBorder,
@@ -2102,8 +2089,7 @@ minHeight: 64,
                         })}
                       >
                         <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>
-                          Edit
-                        </Text>
+                          {uiText("Edit")}</Text>
                       </Pressable>
 
                       <Pressable
@@ -2111,7 +2097,7 @@ minHeight: 64,
                         disabled={loading}
                         style={({ pressed }) => ({
                           flex: 1,
-                          minHeight: 38,
+                          minHeight: 48,
                           borderRadius: 14,
                           borderWidth: 1,
                           borderColor: theme.colors.dangerBorder,
@@ -2122,8 +2108,7 @@ minHeight: 64,
                         })}
                       >
                         <Text style={{ color: theme.colors.danger, fontWeight: "900", fontSize: 12 }}>
-                          Delete
-                        </Text>
+                          {uiText("Delete")}</Text>
                       </Pressable>
                     </View>
 
@@ -2138,8 +2123,7 @@ minHeight: 64,
                         }}
                       >
                         <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}>
-                          NOTE
-                        </Text>
+                          {uiText("NOTE")}</Text>
                         <Text
                           style={{
                             color: theme.colors.text,
@@ -2188,7 +2172,7 @@ minHeight: 64,
     >
       <Pressable
         onPress={() => {
-          if (savingExpense) return;
+          if (expenseSaveInFlight.current) return;
           resetExpenseForm();
           setExpenseFormOpen(false);
         }}
@@ -2216,7 +2200,7 @@ minHeight: 64,
       >
         <View style={{ padding: 14, paddingBottom: 8 }}>
           <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
-            {isEditing ? "Edit Expense" : "Add Expense"}
+            {isEditing ? uiText("Edit Expense") : uiText("Add Expense")}
           </Text>
         </View>
 
@@ -2233,26 +2217,26 @@ minHeight: 64,
           }}
         >
           <InputShell icon="cash-outline">
-            <InputLabel>Amount</InputLabel>
+            <InputLabel>{uiText("Amount")}</InputLabel>
             <TextInput
               value={amount}
               onChangeText={(t) => setAmount(sanitizeAmountInput(t))}
-              placeholder="mf: 12000"
-              placeholderTextColor="#CBD5E1"
+              placeholder={uiText("mf: 12000")}
+              placeholderTextColor="#64748B"
               keyboardType="numeric"
               style={{ color: theme.colors.text, fontWeight: "800", fontSize: 14, minHeight: 34 }}
             />
           </InputShell>
 
           <InputShell icon="pricetag-outline">
-            <InputLabel>Category</InputLabel>
+            <InputLabel>{uiText("Category")}</InputLabel>
             <TextInput
               value={category}
               onChangeText={setCategory}
               onSubmitEditing={scrollExpenseFormAfterCategory}
               returnKeyType="next"
-              placeholder="mf: Rent / Transport / WiFi"
-              placeholderTextColor="#CBD5E1"
+              placeholder={uiText("mf: Rent / Transport / WiFi")}
+              placeholderTextColor="#64748B"
               style={{ color: theme.colors.text, fontWeight: "800", fontSize: 14, minHeight: 34 }}
             />
           </InputShell>
@@ -2281,7 +2265,7 @@ minHeight: 64,
             {paymentMethods.map((m) => (
               <PillChip
                 key={m}
-                label={m}
+                label={uiText(paymentMethodKey(m))}
                 active={paymentMethodLabel === m}
                 onPress={() => setPaymentMethod(m)}
                 icon={paymentMethodIcon(m)}
@@ -2290,7 +2274,7 @@ minHeight: 64,
           </View>
 
           <InputShell icon="document-text-outline">
-            <InputLabel>Note (optional)</InputLabel>
+            <InputLabel>{uiText("Note (optional)")}</InputLabel>
             <TextInput
               value={note}
               onChangeText={setNote}
@@ -2301,8 +2285,8 @@ minHeight: 64,
                   });
                 }, 250);
               }}
-              placeholder="mf: Office water, electricity..."
-              placeholderTextColor="#CBD5E1"
+              placeholder={uiText("mf: Office water, electricity...")}
+              placeholderTextColor="#64748B"
               multiline
               style={{
                 color: theme.colors.text,
@@ -2339,13 +2323,13 @@ minHeight: 64,
             })}
           >
             <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-              {savingExpense ? "Saving..." : isEditing ? "Update Expense" : "Save Expense"}
+              {savingExpense ? uiText("Saving...") : isEditing ? uiText("Update Expense") : uiText("Save Expense")}
             </Text>
           </Pressable>
 
           <Pressable
             onPress={() => {
-              if (savingExpense) return;
+              if (expenseSaveInFlight.current) return;
               resetExpenseForm();
               setExpenseFormOpen(false);
             }}
@@ -2362,8 +2346,7 @@ minHeight: 64,
             })}
           >
             <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-              Cancel
-            </Text>
+              {uiText("Cancel")}</Text>
           </Pressable>
         </View>
       </Card>

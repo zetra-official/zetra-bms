@@ -1,0 +1,18 @@
+import React, {createContext,useContext,useEffect,useMemo,useRef,useState} from 'react';
+import {Pressable,Text,View} from 'react-native';
+import {kv} from '../storage/kv';
+import {Language,MessageKey,direction,languages,languageNames,resolveLanguage,translate} from './catalog';
+const KEY='zetra_user_language_v1';
+const DISPLAY_KEY='zetra_user_display_currency_v1';
+type State={language:Language;displayCurrency:string|null;t:(key:MessageKey)=>string;setLanguage:(language:Language)=>void;setDisplayCurrency:(currency:string|null)=>void};
+const Context=createContext<State>({language:'en',displayCurrency:null,t:key=>translate('en',key),setLanguage:()=>{},setDisplayCurrency:()=>{}});
+export function LanguageProvider({children}:{children:React.ReactNode}) {
+ const [language,setValue]=useState<Language>('en');const changed=useRef(false);
+ const [displayCurrency,setDisplayValue]=useState<string|null>(null);const currencyChanged=useRef(false);
+ useEffect(()=>{let alive=true;void kv.getString(KEY).then(value=>{if(alive&&!changed.current)setValue(resolveLanguage(value))});return()=>{alive=false}},[]);
+ useEffect(()=>{let alive=true;void kv.getString(DISPLAY_KEY).then(value=>{if(alive&&!currencyChanged.current&&value&&/^[A-Z]{3}$/.test(value))setDisplayValue(value)});return()=>{alive=false}},[]);
+ const state=useMemo<State>(()=>({language,displayCurrency,t:key=>translate(language,key),setLanguage:next=>{changed.current=true;const validated=resolveLanguage(next);setValue(validated);void kv.setString(KEY,validated)},setDisplayCurrency:next=>{const validated=next?.trim().toUpperCase()||null;if(validated&&!/^[A-Z]{3}$/.test(validated))return;currencyChanged.current=true;setDisplayValue(validated);void kv.setString(DISPLAY_KEY,validated)}}),[language,displayCurrency]);
+ return <Context.Provider value={state}><View style={{flex:1,direction:direction(language)}}>{children}</View></Context.Provider>;
+}
+export function useLanguage(){return useContext(Context)}
+export function UserLanguagePicker(){const {language,setLanguage}=useLanguage();return <View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>{languages.map(code=><Pressable key={code} accessibilityRole="button" accessibilityLabel={languageNames[code]} accessibilityState={{selected:language===code}} onPress={()=>setLanguage(code)} style={{minHeight:44,padding:12,borderWidth:1,borderColor:language===code?'#16a34a':'#64748b',borderRadius:8}}><Text style={{color:'#ffffff',textAlign:code==='ar'?'right':'left'}}>{languageNames[code]}</Text></Pressable>)}</View>}

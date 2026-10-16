@@ -1,4 +1,8 @@
-﻿// app/(tabs)/index.tsx
+import {useLanguage} from "@/src/i18n/LanguageProvider";
+import {localizedSearchResult} from "@/src/i18n/presentation";
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+﻿import {useCommonText} from "@/src/i18n/useCommonText";
+// app/(tabs)/index.tsx
 import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -673,6 +677,7 @@ function HeaderHero({
   organizationLogoUrl?: string | null;
   onOpenBusinessProfile?: () => void;
 }) {
+ const uiText = useCommonText();
   const orgLabel =
     String(activeOrgName ?? "Workspace").trim() || "Workspace";
 
@@ -722,8 +727,8 @@ function HeaderHero({
             numberOfLines={1}
           >
             {isCashier
-              ? "Cashier Dashboard"
-              : "Business Command Center"}
+              ? uiText("Cashier Dashboard")
+              : uiText("Business Command Center")}
           </Text>
         </View>
 
@@ -739,7 +744,7 @@ function HeaderHero({
             disabled={!onOpenBusinessProfile}
             hitSlop={8}
             accessibilityRole="button"
-            accessibilityLabel="Open Business Profile"
+            accessibilityLabel={uiText("Open Business Profile")}
             style={({ pressed }) => ({
               width: 48,
               height: 48,
@@ -820,7 +825,7 @@ function HeaderHero({
             onPress={onOpenOrgSwitcher}
             hitSlop={8}
             accessibilityRole="button"
-            accessibilityLabel="Switch Organization or Workspace"
+            accessibilityLabel={uiText("Switch Organization or Workspace")}
             style={({ pressed }) => ({
               width: "54%",
               maxWidth: 220,
@@ -853,7 +858,7 @@ function HeaderHero({
               }}
               numberOfLines={1}
             >
-              {orgLabel}
+              {(String((activeOrgName ?? uiText("Workspace"))).trim() || uiText("Workspace"))}
             </Text>
 
             <SafeIcon
@@ -883,7 +888,7 @@ function HeaderHero({
               }}
               numberOfLines={1}
             >
-              {orgLabel}
+              {(String((activeOrgName ?? uiText("Workspace"))).trim() || uiText("Workspace"))}
             </Text>
           </View>
         )}
@@ -895,9 +900,12 @@ function HeaderHero({
 }
 function SubscriptionExpiryHomeStrip({
   reloadKey = 0,
+  compact = false,
 }: {
   reloadKey?: number;
+  compact?: boolean;
 }) {
+ const uiText=useCommonText();
   const router = useRouter();
 
   const {
@@ -1079,20 +1087,26 @@ function SubscriptionExpiryHomeStrip({
   };
 
   return (
-    <View style={{ marginTop: 5 }}>
+    <View
+      style={{
+        marginTop: compact ? 0 : 5,
+        width: compact ? 310 : undefined,
+        flexShrink: compact ? 0 : undefined,
+      }}
+    >
       <Pressable
         onPress={openSubscription}
         // @ts-ignore - web click fallback
         onClick={openSubscription}
         hitSlop={6}
         style={({ pressed }) => ({
-          minHeight: 42,
-          borderRadius: 14,
+          minHeight: compact ? 38 : 42,
+          borderRadius: compact ? 12 : 14,
           borderWidth: 1,
           borderColor: colors.border,
           backgroundColor: colors.bg,
-          paddingHorizontal: 10,
-          paddingVertical: 6,
+          paddingHorizontal: compact ? 9 : 10,
+          paddingVertical: compact ? 4 : 6,
           opacity: pressed ? 0.90 : 1,
           flexDirection: "row",
           alignItems: "center",
@@ -1101,9 +1115,9 @@ function SubscriptionExpiryHomeStrip({
       >
         <View
           style={{
-            width: 30,
-            height: 30,
-            borderRadius: 10,
+            width: compact ? 28 : 30,
+            height: compact ? 28 : 30,
+            borderRadius: compact ? 9 : 10,
             alignItems: "center",
             justifyContent: "center",
             backgroundColor:
@@ -1172,7 +1186,7 @@ function SubscriptionExpiryHomeStrip({
             }}
             numberOfLines={1}
           >
-            {subtitle}
+            {(isExpired ? uiText("Expired {p0}", {p0: (expiryLabel)}) : (warning || critical || expiresToday ? uiText("Renew before {p0}", {p0: (expiryLabel)}) : uiText("Active | Expires {p0}", {p0: (expiryLabel)})))}
           </Text>
         </View>
 
@@ -1192,7 +1206,7 @@ function SubscriptionExpiryHomeStrip({
             }}
             numberOfLines={1}
           >
-            {remainingLabel}
+            {(isExpired ? uiText("EXPIRED") : (expiresToday ? uiText("EXPIRES TODAY") : (daysLeft === 1 ? uiText("1 DAY LEFT") : uiText("{p0} DAYS LEFT", {p0: (daysLeft)}))))}
           </Text>
         </View>
 
@@ -1233,6 +1247,7 @@ function PremiumMetricCard({
   mobileWebLite?: boolean;
   tone?: keyof typeof HOME_PALETTE;
 }) {
+ const systemText = useSystemMessageText();
   const p = HOME_PALETTE[tone];
 
   return (
@@ -1316,7 +1331,7 @@ function PremiumMetricCard({
               padding: 12,
             }}
           >
-            <Text style={{ color: UI.danger, fontWeight: "900" }}>{error}</Text>
+            <Text style={{ color: UI.danger, fontWeight: "900" }}>{systemText(error)}</Text>
           </Card>
         )}
 
@@ -1352,7 +1367,7 @@ function PremiumMetricCard({
           })}
         >
           <Text style={{ color: HOME_CARD_TEXT, fontWeight: "900", fontSize: 15 }}>{ctaLabel}</Text>
-          {footerRight ? footerRight : <Text style={{ color: UI.faint, fontWeight: "900", fontSize: 16 }}>ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âº</Text>}
+          {footerRight ? footerRight : <Text style={{ color: UI.faint, fontWeight: "900", fontSize: 16 }}>›</Text>}
         </Pressable>
       </View>
     </View>
@@ -1360,6 +1375,7 @@ function PremiumMetricCard({
 }
 
 function CompactNotificationsHomeCard({ compactHub = false }: { compactHub?: boolean }) {
+ const uiText = useCommonText();
   const router = useRouter();
   const { width } = useWindowDimensions();
   const { activeStoreId, activeStoreName, stores } = useOrg();
@@ -1484,7 +1500,7 @@ function CompactNotificationsHomeCard({ compactHub = false }: { compactHub?: boo
         onPress={openNotifications}
         hitSlop={7}
         accessibilityRole="button"
-        accessibilityLabel="Notifications"
+        accessibilityLabel={uiText("Notifications")}
         style={({ pressed }) => ({
           width: 62,
           alignItems: "center",
@@ -1553,8 +1569,7 @@ function CompactNotificationsHomeCard({ compactHub = false }: { compactHub?: boo
           }}
           numberOfLines={1}
         >
-          Notifications
-        </Text>
+          {uiText("Notifications")}</Text>
 
         <Text
           style={{
@@ -1565,12 +1580,12 @@ function CompactNotificationsHomeCard({ compactHub = false }: { compactHub?: boo
           numberOfLines={1}
         >
           {error
-            ? "Sync issue"
+            ? uiText("Sync issue")
             : loading
-            ? "Checking..."
+            ? uiText("Checking...")
             : unreadCount > 0
-            ? `${unreadCount} unread`
-            : "All caught up"}
+            ? uiText("{p0} unread", {p0: (unreadCount)})
+            : uiText("All caught up")}
         </Text>
       </Pressable>
     );
@@ -1653,8 +1668,7 @@ function CompactNotificationsHomeCard({ compactHub = false }: { compactHub?: boo
             }}
             numberOfLines={1}
           >
-            Notifications
-          </Text>
+            {uiText("Notifications")}</Text>
 
           <Text
             style={{
@@ -1666,14 +1680,14 @@ function CompactNotificationsHomeCard({ compactHub = false }: { compactHub?: boo
             numberOfLines={1}
           >
             {error
-              ? "Notification sync unavailable"
+              ? uiText("Notification sync unavailable")
               : loading
-              ? "Checking latest alerts..."
+              ? uiText("Checking latest alerts...")
               : unreadCount > 0
-              ? `${unreadCount} unread ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ ${activeStoreUnread} this store`
+              ? uiText("{p0} unread ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ {p1} this store", {p0: (unreadCount), p1: (activeStoreUnread)})
               : receipts.length > 0
-              ? `${receipts.length} recent notifications`
-              : "You're all caught up"}
+              ? uiText("{p0} recent notifications", {p0: (receipts.length)})
+              : uiText("You're all caught up")}
           </Text>
         </View>
 
@@ -1699,6 +1713,7 @@ function CompactNotificationsHomeCard({ compactHub = false }: { compactHub?: boo
 }
 
 function MobileWebFinanceShortcut() {
+ const uiText = useCommonText();
   const router = useRouter();
   const { width } = useWindowDimensions();
 
@@ -1739,8 +1754,7 @@ function MobileWebFinanceShortcut() {
               letterSpacing: 0.7,
             }}
           >
-            BUSINESS HUB
-          </Text>
+            {uiText("BUSINESS HUB")}</Text>
 
           <Text
             style={{
@@ -1750,8 +1764,7 @@ function MobileWebFinanceShortcut() {
               marginTop: 1,
             }}
           >
-            FINANCE
-          </Text>
+            {uiText("FINANCE")}</Text>
         </View>
 
         <View
@@ -1770,8 +1783,7 @@ function MobileWebFinanceShortcut() {
               letterSpacing: 0.5,
             }}
           >
-            LIVE
-          </Text>
+            {uiText("LIVE")}</Text>
         </View>
       </View>
 
@@ -1821,8 +1833,7 @@ function MobileWebFinanceShortcut() {
             textAlign: "center",
           }}
         >
-          Business Finance
-        </Text>
+          {uiText("Business Finance")}</Text>
 
         <Text
           pointerEvents="none"
@@ -1834,8 +1845,7 @@ function MobileWebFinanceShortcut() {
             marginTop: 3,
           }}
         >
-          Tap to view sales, expenses and profit
-        </Text>
+          {uiText("Tap to view sales, expenses and profit")}</Text>
 
         <Text
           pointerEvents="none"
@@ -1846,13 +1856,14 @@ function MobileWebFinanceShortcut() {
             marginTop: 4,
           }}
         >
-          View Details â†’
-        </Text>
+          {uiText("View Details →")}</Text>
       </Pressable>
     </View>
   );
 }
 function CompactFinanceCardHomePreview() {
+ const systemText = useSystemMessageText();
+ const uiText = useCommonText();
   const router = useRouter();
   const { width } = useWindowDimensions();
   const org = useOrg();
@@ -2455,8 +2466,8 @@ function CompactFinanceCardHomePreview() {
     () => [
       {
         key: "credit",
-        label: "Credit",
-        hint: "Customers",
+        label: uiText("Credit"),
+        hint: uiText("Customers"),
         icon: "people-outline",
         color: "#F97316",
         softColor: "#FFF7ED",
@@ -2465,7 +2476,7 @@ function CompactFinanceCardHomePreview() {
         onPress: () => router.push("/(tabs)/credit" as any),
       },
     ],
-    [router]
+    [router, uiText]
   );
   return (
     <View style={{ marginTop: 8 }}>
@@ -2497,8 +2508,7 @@ function CompactFinanceCardHomePreview() {
                 letterSpacing: 0.8,
               }}
             >
-              BUSINESS HUB
-            </Text>
+              {uiText("BUSINESS HUB")}</Text>
 
             <Text
               style={{
@@ -2509,7 +2519,7 @@ function CompactFinanceCardHomePreview() {
               }}
               numberOfLines={1}
             >
-              {storeName}
+              {(String((org.activeStoreName ?? uiText("Store"))).trim() || uiText("Store"))}
             </Text>
           </View>
 
@@ -2531,7 +2541,7 @@ function CompactFinanceCardHomePreview() {
                 letterSpacing: 0.4,
               }}
             >
-              {loading || staffExpenseLoading ? "SYNCING" : "LIVE"}
+              {loading || staffExpenseLoading ? uiText("SYNCING") : uiText("LIVE")}
             </Text>
           </View>
         </View>
@@ -2587,8 +2597,7 @@ function CompactFinanceCardHomePreview() {
                 letterSpacing: 0.8,
               }}
             >
-              TODAY'S SALES
-            </Text>
+              {uiText("TODAY'S SALES")}</Text>
 
             <Text
               style={{
@@ -2613,8 +2622,7 @@ function CompactFinanceCardHomePreview() {
                 marginTop: 2,
               }}
             >
-              {salesRow.orders ?? 0} orders
-            </Text>
+              {salesRow.orders ?? 0} {uiText("orders")}</Text>
 
             <View
               style={{
@@ -2632,8 +2640,7 @@ function CompactFinanceCardHomePreview() {
                   fontSize: 10,
                 }}
               >
-                View Details
-              </Text>
+                {uiText("View Details")}</Text>
             </View>
           </Pressable>
 
@@ -2741,8 +2748,7 @@ function CompactFinanceCardHomePreview() {
                 fontSize: 8,
               }}
             >
-              MONEY IN
-            </Text>
+              {uiText("MONEY IN")}</Text>
 
             <Text
               style={{
@@ -2775,8 +2781,7 @@ function CompactFinanceCardHomePreview() {
                 fontSize: 8,
               }}
             >
-              EXPENSES
-            </Text>
+              {uiText("EXPENSES")}</Text>
 
             <Text
               style={{
@@ -2790,7 +2795,7 @@ function CompactFinanceCardHomePreview() {
               minimumFontScale={0.62}
             >
               {isStaffView && !canStaffSeeExpenseFinance
-                ? "Restricted"
+                ? uiText("Restricted")
                 : fmtHomeMoney(effectiveExpenseTotal)}
             </Text>
           </View>
@@ -2812,7 +2817,7 @@ function CompactFinanceCardHomePreview() {
               }}
               numberOfLines={1}
             >
-              {isOwner ? "NET PROFIT" : "AVG / ORDER"}
+              {isOwner ? uiText("NET PROFIT") : uiText("AVG / ORDER")}
             </Text>
 
             <Text
@@ -2832,7 +2837,7 @@ function CompactFinanceCardHomePreview() {
                 ? fmtHomeMoney(
                     salesRow.total / Math.max(1, salesRow.orders)
                   )
-                : "ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â"}
+                : uiText("ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â")}
             </Text>
           </View>
         </View>
@@ -2857,7 +2862,7 @@ function CompactFinanceCardHomePreview() {
               }}
               numberOfLines={2}
             >
-              {!isStaffView ? err : null}
+              {!isStaffView ? systemText(err) : null}
             </Text>
           </View>
         ) : null}
@@ -2867,6 +2872,8 @@ function CompactFinanceCardHomePreview() {
 }
 
 function CompactClubRevenueCardHomePreview({ onOpen }: { onOpen: () => void }) {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const { width } = useWindowDimensions();
   const orgAny = useOrg() as any;
   const isDesktopWeb = isDesktopWebEnv(width);
@@ -2969,27 +2976,29 @@ function CompactClubRevenueCardHomePreview({ onOpen }: { onOpen: () => void }) {
 
   return (
     <PremiumMetricCard
-      title="Club Revenue"
-      subtitle={`Store: ${storeName}`}
+      title={uiText("Club Revenue")}
+      subtitle={uiText("Store: {p0}", {p0: (storeName)})}
       iconName="pulse-outline"
       loading={loading}
       badgeText="LIVE"
-      error={err}
+      error={systemText(err)}
       ctaLabel="Open Club Revenue"
       mobileWebLite={isMobileWeb}
       tone="club"
       onPress={onOpen}
     >
       <View style={{ flexDirection: "row", gap: 12, paddingTop: 2 }}>
-        <MiniStat label="Revenue" value={revenue} />
-        <MiniStat label="Paid" value={paid} />
-        <MiniStat label="Orders" value={String(row?.delivered_orders ?? 0)} hint="delivered" />
+        <MiniStat label={uiText("Revenue")} value={revenue} />
+        <MiniStat label={uiText("Paid")} value={paid} />
+        <MiniStat label={uiText("Orders")} value={String(row?.delivered_orders ?? 0)} hint={uiText("delivered")} />
       </View>
     </PremiumMetricCard>
   );
 }
 
 function CompactStockValueCardHomePreview() {
+ const systemText = useSystemMessageText();
+ const uiText = useCommonText();
   const router = useRouter();
   const { width } = useWindowDimensions();
   const orgAny = useOrg() as any;
@@ -3154,12 +3163,12 @@ function CompactStockValueCardHomePreview() {
 
   return (
     <PremiumMetricCard
-      title="Stock Value"
-      subtitle={`Store: ${storeName}`}
+      title={uiText("Stock Value")}
+      subtitle={uiText("Store: {p0}", {p0: (storeName)})}
       iconName="cube-outline"
       loading={loading}
       badgeText="INVENTORY"
-      error={err}
+      error={systemText(err)}
       ctaLabel="Open Stock History"
       mobileWebLite={isMobileWeb}
       tone="stock"
@@ -3171,8 +3180,8 @@ function CompactStockValueCardHomePreview() {
       }
     >
       <View style={{ flexDirection: "row", gap: 12, paddingTop: 2 }}>
-        <MiniStat label="On Hand Value" value={onHand} hint="current stock" />
-        <MiniStat label="Stock In Value" value={stockIn} hint="received (+)" />
+        <MiniStat label={uiText("On Hand Value")} value={onHand} hint={uiText("current stock")} />
+        <MiniStat label={uiText("Stock In Value")} value={stockIn} hint={uiText("received (+)")} />
       </View>
     </PremiumMetricCard>
   );
@@ -3297,12 +3306,13 @@ function MobileBusinessTools({
   onOpenIncomingStock: () => void;
   onOpenStock: () => void;
 }) {
+ const uiText = useCommonText();
   if (!isOwner) return null;
 
   const items = [
     {
       key: "position",
-      label: "Position",
+      label: uiText("Position"),
       icon: "analytics-outline" as const,
       color: "#0F766E",
       softColor: "#F0FDFA",
@@ -3312,7 +3322,7 @@ function MobileBusinessTools({
     },
     {
       key: "debts",
-      label: "Debts",
+      label: uiText("Debts"),
       icon: "wallet-outline" as const,
       color: "#C2410C",
       softColor: "#FFF7ED",
@@ -3322,7 +3332,7 @@ function MobileBusinessTools({
     },
     {
       key: "incoming",
-      label: "Incoming",
+      label: uiText("Incoming"),
       icon: "boat-outline" as const,
       color: "#0369A1",
       softColor: "#F0F9FF",
@@ -3332,7 +3342,7 @@ function MobileBusinessTools({
     },
     {
       key: "stock-value",
-      label: "Stock Value",
+      label: uiText("Stock Value"),
       icon: "cube-outline" as const,
       color: "#4F46E5",
       softColor: "#EEF2FF",
@@ -3369,8 +3379,7 @@ function MobileBusinessTools({
             fontSize: 12,
           }}
         >
-          Business Tools
-        </Text>
+          {uiText("Business Tools")}</Text>
 
         <Text
           style={{
@@ -3380,8 +3389,7 @@ function MobileBusinessTools({
             letterSpacing: 0.4,
           }}
         >
-          OWNER
-        </Text>
+          {uiText("OWNER")}</Text>
       </View>
 
       <View
@@ -3464,10 +3472,11 @@ function MobileQuickAccess({
   onStores: () => void;
   onCredit: () => void;
 }) {
+ const uiText = useCommonText();
   const primaryItems = [
     {
       key: "products",
-      label: "Products",
+      label: uiText("Products"),
       icon: "cube-outline" as const,
       color: "#2563EB",
       softColor: "#EFF6FF",
@@ -3487,7 +3496,7 @@ function MobileQuickAccess({
     },
     {
       key: "expenses",
-      label: "Expenses",
+      label: uiText("Expenses"),
       icon: "receipt-outline" as const,
       color: "#E11D48",
       softColor: "#FFF1F2",
@@ -3497,7 +3506,7 @@ function MobileQuickAccess({
     },
     {
       key: "reports",
-      label: "Reports",
+      label: uiText("Reports"),
       icon: "bar-chart-outline" as const,
       color: "#D97706",
       softColor: "#FFFBEB",
@@ -3510,13 +3519,13 @@ function MobileQuickAccess({
   const secondaryItems = [
     {
       key: "stores",
-      label: "Stores",
+      label: uiText("Stores"),
       icon: "storefront-outline" as const,
       onPress: onStores,
     },
     {
       key: "credit",
-      label: "Credit",
+      label: uiText("Credit"),
       icon: "card-outline" as const,
       onPress: onCredit,
     },
@@ -3549,8 +3558,7 @@ function MobileQuickAccess({
             fontSize: 12,
           }}
         >
-          Quick Access
-        </Text>
+          {uiText("Quick Access")}</Text>
 
         <View style={{ flexDirection: "row", gap: 5 }}>
           {secondaryItems.map((item) => (
@@ -3660,6 +3668,7 @@ function MobileQuickAccess({
   );
 }
 function ZetraAiCard({ onOpen }: { onOpen: () => void }) {
+ const uiText = useCommonText();
   const { width } = useWindowDimensions();
   const isDesktopWeb = isDesktopWebEnv(width);
   const isMobileWeb = isMobileWebEnv(width);
@@ -3860,7 +3869,7 @@ function ZetraAiCard({ onOpen }: { onOpen: () => void }) {
                   letterSpacing: 0.35,
                 }}
               >
-                {isNarrowAi ? "LIVE" : "LIVE MONITORING"}
+                {isNarrowAi ? uiText("LIVE") : uiText("LIVE MONITORING")}
               </Text>
             </View>
           </View>
@@ -3904,8 +3913,7 @@ function ZetraAiCard({ onOpen }: { onOpen: () => void }) {
               fontSize: 10,
             }}
           >
-            Ask AI
-          </Text>
+            {uiText("Ask AI")}</Text>
 
           <SafeIcon
             name="arrow-forward"
@@ -3919,6 +3927,8 @@ function ZetraAiCard({ onOpen }: { onOpen: () => void }) {
 }
 
 function CashierQuickHome() {
+ const systemText = useSystemMessageText();
+ const uiText = useCommonText();
   const router = useRouter();
   const { refreshing, refresh, activeOrgName, activeRole, activeStoreName } = useOrg();
 
@@ -3963,19 +3973,18 @@ function CashierQuickHome() {
   return (
     <Card style={{ gap: 12, marginTop: 14 }}>
       <Text style={{ color: UI.muted, fontWeight: "800" }}>
-        Cashier Workspace (depends on active org/workspace)
+        {uiText("Cashier Workspace (depends on active org/workspace)")}</Text>
+
+      <Text style={{ color: UI.faint, fontWeight: "800" }}>
+        {uiText("Organization:")}<Text style={{ color: UI.text, fontWeight: "900" }}>{activeOrgName ?? uiText("ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â")}</Text>
       </Text>
 
       <Text style={{ color: UI.faint, fontWeight: "800" }}>
-        Organization: <Text style={{ color: UI.text, fontWeight: "900" }}>{activeOrgName ?? "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â"}</Text>
+        {uiText("Role:")}<Text style={{ color: UI.text, fontWeight: "900" }}>{activeRole ?? uiText("ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â")}</Text>
       </Text>
 
       <Text style={{ color: UI.faint, fontWeight: "800" }}>
-        Role: <Text style={{ color: UI.text, fontWeight: "900" }}>{activeRole ?? "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â"}</Text>
-      </Text>
-
-      <Text style={{ color: UI.faint, fontWeight: "800" }}>
-        Active Store: <Text style={{ color: UI.text, fontWeight: "900" }}>{activeStoreName ?? "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â"}</Text>
+        {uiText("Active Store:")}<Text style={{ color: UI.text, fontWeight: "900" }}>{activeStoreName ?? uiText("ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â")}</Text>
       </Text>
 
       {!!handoffError && (
@@ -3987,7 +3996,7 @@ function CashierQuickHome() {
             padding: 12,
           }}
         >
-          <Text style={{ color: UI.danger, fontWeight: "900" }}>{handoffError}</Text>
+          <Text style={{ color: UI.danger, fontWeight: "900" }}>{systemText(handoffError)}</Text>
         </Card>
       )}
 
@@ -3999,16 +4008,14 @@ function CashierQuickHome() {
         }}
       >
         <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-          Pending Cashier Orders
-        </Text>
+          {uiText("Pending Cashier Orders")}</Text>
 
         <Text style={{ color: UI.text, fontWeight: "900", fontSize: 28 }}>
           {handoffLoading ? "..." : String(handoffCount)}
         </Text>
 
         <Text style={{ color: UI.muted, fontWeight: "800" }}>
-          Hizi ni order zilizotumwa kwenye cashier queue yako.
-        </Text>
+          {uiText("Hizi ni order zilizotumwa kwenye cashier queue yako.")}</Text>
       </Card>
 
       <Pressable
@@ -4027,7 +4034,7 @@ function CashierQuickHome() {
         })}
       >
         <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
-          {refreshing || handoffLoading ? "Refreshing..." : "Refresh Workspace"}
+          {refreshing || handoffLoading ? uiText("Refreshing...") : uiText("Refresh Workspace")}
         </Text>
       </Pressable>
 
@@ -4045,7 +4052,7 @@ function CashierQuickHome() {
           opacity: pressed ? 0.92 : 1,
         })}
       >
-        <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>Open Sales</Text>
+        <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>{uiText("Open Sales")}</Text>
       </Pressable>
     </Card>
   );
@@ -4064,6 +4071,7 @@ function WorkspaceCard({
   activeStoreId?: string | null;
   onOpen: () => void;
 }) {
+ const uiText=useCommonText();
   const { width } = useWindowDimensions();
   const isMobileWeb = isMobileWebEnv(width);
   const roleLabel = String(activeRole ?? "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â").trim() || "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â";
@@ -4123,14 +4131,13 @@ function WorkspaceCard({
                 letterSpacing: 0.8,
               }}
             >
-              CURRENT WORKSPACE
-            </Text>
+              {uiText("CURRENT WORKSPACE")}</Text>
 
             <Text
               style={{ color: HOME_CARD_TEXT, fontWeight: "900", fontSize: 17, marginTop: 2 }}
               numberOfLines={1}
             >
-              {orgLabel}
+              {(String((activeOrgName ?? "—")).trim() || "—")}
             </Text>
           </View>
 
@@ -4154,12 +4161,12 @@ function WorkspaceCard({
           value={{ text: HOME_CARD_TEXT, muted: HOME_CARD_MUTED, faint: HOME_CARD_FAINT }}
         >
         <View style={{ flexDirection: "row", gap: 10 }}>
-          <MiniStat label="Organization" value={orgLabel} />
-          <MiniStat label="Role" value={roleLabel} />
+          <MiniStat label={uiText("Organization")} value={orgLabel} />
+          <MiniStat label={uiText("Role")} value={roleLabel} />
           <MiniStat
-            label="Active Store"
+            label={uiText("Active Store")}
             value={storeLabel}
-            hint={activeStoreId ? "live context" : "not selected"}
+            hint={activeStoreId ? uiText("live context") : uiText("not selected")}
           />
         </View>
 
@@ -4167,8 +4174,7 @@ function WorkspaceCard({
 
         {!activeStoreId ? (
           <Text style={{ color: UI.muted, fontWeight: "800" }}>
-            Hujachagua active store bado. Fungua workspace switcher uchague context sahihi ya kazi.
-          </Text>
+            {uiText("Hujachagua active store bado. Fungua workspace switcher uchague context sahihi ya kazi.")}</Text>
         ) : null}
 
         <Pressable
@@ -4190,8 +4196,7 @@ function WorkspaceCard({
         >
           <SafeIcon name="swap-horizontal" size={17} color={UI.text} />
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-            Switch Org / Workspace
-          </Text>
+            {uiText("Switch Org / Workspace")}</Text>
         </Pressable>
       </View>
     </View>
@@ -4219,6 +4224,7 @@ function WebSafeHomeActions({
   onOpenIncomingStock: () => void;
   width: number;
 }) {
+ const uiText = useCommonText();
   const isWide = width >= 1100;
   const buttonWidth = isWide ? "48.8%" : "100%";
 
@@ -4280,8 +4286,7 @@ function WebSafeHomeActions({
       >
         <View style={{ gap: 6 }}>
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 22 }}>
-            Quick Actions
-          </Text>
+            {uiText("Quick Actions")}</Text>
           <Text
             style={{
               color: "#FFFFFF",
@@ -4290,8 +4295,7 @@ function WebSafeHomeActions({
               fontSize: 13,
             }}
           >
-            Hatua za haraka za kila siku kwa desktop workflow.
-          </Text>
+            {uiText("Hatua za haraka za kila siku kwa desktop workflow.")}</Text>
         </View>
 
         <View
@@ -4302,14 +4306,14 @@ function WebSafeHomeActions({
             gap: 12,
           }}
         >
-          <ActionButton label="Open AI" sublabel="Assistant, ideas, and business guidance" onPress={onOpenAI} />
-          <ActionButton label="Switch Org / Workspace" sublabel="Badili organization au active context" onPress={onOpenOrgSwitcher} />
-          <ActionButton label="Open Finance" sublabel="Sales, expenses, and finance history" onPress={onOpenFinance} />
-          <ActionButton label="Open Live" sublabel="Real-time sales and money movement" onPress={onOpenLive} />
-          <ActionButton label="Stock History" sublabel="Inventory value and stock movement" onPress={onOpenStock} />
-          <ActionButton label="Business Position" sublabel="Loans, issued money, and business position" onPress={onOpenBusinessPosition} />
-          <ActionButton label="Business Debts" sublabel="Supplier, bank debts, and stock comparison" onPress={onOpenBusinessDebts} />
-          <ActionButton label="Incoming Stock" sublabel="Supplier orders and goods in transit" onPress={onOpenIncomingStock} />
+          <ActionButton label={uiText("Open AI")} sublabel="Assistant, ideas, and business guidance" onPress={onOpenAI} />
+          <ActionButton label={uiText("Switch Org / Workspace")} sublabel="Badili organization au active context" onPress={onOpenOrgSwitcher} />
+          <ActionButton label={uiText("Open Finance")} sublabel="Sales, expenses, and finance history" onPress={onOpenFinance} />
+          <ActionButton label={uiText("Open Live")} sublabel="Real-time sales and money movement" onPress={onOpenLive} />
+          <ActionButton label={uiText("Stock History")} sublabel="Inventory value and stock movement" onPress={onOpenStock} />
+          <ActionButton label={uiText("Business Position")} sublabel="Loans, issued money, and business position" onPress={onOpenBusinessPosition} />
+          <ActionButton label={uiText("Business Debts")} sublabel="Supplier, bank debts, and stock comparison" onPress={onOpenBusinessDebts} />
+          <ActionButton label={uiText("Incoming Stock")} sublabel="Supplier orders and goods in transit" onPress={onOpenIncomingStock} />
         </View>
       </View>
     </View>
@@ -4341,6 +4345,7 @@ function DesktopKpiStrip({
   onOpenFinance: () => void;
   onOpenStock: () => void;
 }) {
+ const uiText=useCommonText();
   const Item = ({
     label,
     value,
@@ -4427,8 +4432,7 @@ function DesktopKpiStrip({
                 fontSize: 10,
               }}
             >
-              OPEN
-            </Text>
+              {uiText("OPEN")}</Text>
           </View>
         ) : null}
       </Pressable>
@@ -4445,44 +4449,44 @@ function DesktopKpiStrip({
       }}
     >
       <Item
-        label="Sales Today"
+        label={uiText("Sales Today")}
         value={sales}
-        hint="store performance"
+        hint={uiText("store performance")}
         onPress={onOpenSales}
       />
 
       <Item
-        label="Expenses"
+        label={uiText("Expenses")}
         value={expenses}
-        hint="today"
+        hint={uiText("today")}
         onPress={onOpenExpenses}
       />
 
       <Item
-        label="Orders"
+        label={uiText("Orders")}
         value={orders}
-        hint="completed"
+        hint={uiText("completed")}
         onPress={onOpenSales}
       />
 
       <Item
-        label="Money In"
+        label={uiText("Money In")}
         value={moneyIn}
-        hint="after expenses"
+        hint={uiText("after expenses")}
         onPress={onOpenFinance}
       />
 
       <Item
-        label="Stock Value"
+        label={uiText("Stock Value")}
         value={stockValue}
-        hint="on hand"
+        hint={uiText("on hand")}
         onPress={onOpenStock}
       />
 
       <Item
-        label="Net Profit"
+        label={uiText("Net Profit")}
         value={profit}
-        hint={isOwner ? "owner view" : "owner-only"}
+        hint={isOwner ? uiText("owner view") : uiText("owner-only")}
         onPress={onOpenFinance}
       />
     </View>
@@ -4505,33 +4509,34 @@ function DesktopDashboardChart({
   loading: boolean;
   formatValue: (n: number) => string;
 }) {
+ const uiText = useCommonText();
 const items = [
   {
-    label: "Sales",
+    label: uiText("Sales"),
     value: sales,
     color: "rgba(16,185,129,0.95)",
     soft: "rgba(16,185,129,0.18)",
   },
   {
-    label: "Expenses",
+    label: uiText("Expenses"),
     value: expenses,
     color: "rgba(245,158,11,0.95)",
     soft: "rgba(245,158,11,0.18)",
   },
   {
-    label: "Money In",
+    label: uiText("Money In"),
     value: moneyIn,
     color: "rgba(59,130,246,0.95)",
     soft: "rgba(59,130,246,0.18)",
   },
   {
-    label: "Stock",
+    label: uiText("Stock"),
     value: stockValue,
     color: "rgba(255,255,255,0.95)",
     soft: "rgba(255,255,255,0.16)",
   },
   {
-    label: "Profit",
+    label: uiText("Profit"),
     value: profit,
     color:
       profit < 0
@@ -4565,11 +4570,10 @@ const items = [
     >
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
         <Text style={{ color: DESKTOP_PANEL_TEXT, fontWeight: "900", fontSize: 20, flex: 1 }}>
-          Today Performance Chart
-        </Text>
+          {uiText("Today Performance Chart")}</Text>
 
         <Text style={{ color: DESKTOP_PANEL_FAINT, fontWeight: "900", fontSize: 11 }}>
-          {loading ? "LOADING..." : "LIVE"}
+          {loading ? uiText("LOADING...") : uiText("LIVE")}
         </Text>
       </View>
 
@@ -4658,10 +4662,10 @@ backgroundColor:
     letterSpacing: 0.3,
   }}
 >
-  {netAfterExpenses < 0 ? "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â  RISK WARNING" : "SMART READING"}
+  {netAfterExpenses < 0 ? uiText("ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â  RISK WARNING") : uiText("SMART READING")}
 </Text>
         <Text style={{ color: DESKTOP_PANEL_MUTED, fontWeight: "800", lineHeight: 20 }}>
-          {insightText}
+          {(netAfterExpenses >= 0 ? uiText("Business iko positive leo: sales zimezidi expenses kwa {p0}.", {p0: (formatValue(netAfterExpenses))}) : uiText("Tahadhari: expenses zimezidi sales kwa {p0}.", {p0: (formatValue(Math.abs(netAfterExpenses)))}))}
         </Text>
       </View>
     </View>
@@ -4684,6 +4688,7 @@ function DesktopBusinessHealthCard({
   isOwner: boolean;
   formatValue: (n: number) => string;
 }) {
+ const uiText=useCommonText();
   const net = sales - expenses;
 
   const health = net < 0 ? "RISK" : net >= sales * 0.4 ? "HEALTHY" : "WATCH";
@@ -4722,8 +4727,7 @@ function DesktopBusinessHealthCard({
       >
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
           <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 24, flex: 1 }}>
-            Business Health
-          </Text>
+            {uiText("Business Health")}</Text>
 
           <View
             style={{
@@ -4736,29 +4740,29 @@ function DesktopBusinessHealthCard({
             }}
           >
             <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 12 }}>
-              {health}
+              {uiText(health)}
             </Text>
           </View>
         </View>
 
         <View style={{ flexDirection: "row", gap: 12 }}>
-          <MiniStat label="Sales" value={formatValue(sales)} hint="today" />
-          <MiniStat label="Expenses" value={formatValue(expenses)} hint="today" />
-          <MiniStat label="Money In" value={formatValue(moneyIn)} hint="after expense" />
+          <MiniStat label={uiText("Sales")} value={formatValue(sales)} hint={uiText("today")} />
+          <MiniStat label={uiText("Expenses")} value={formatValue(expenses)} hint={uiText("today")} />
+          <MiniStat label={uiText("Money In")} value={formatValue(moneyIn)} hint={uiText("after expense")} />
         </View>
 
         <View style={{ flexDirection: "row", gap: 12 }}>
-          <MiniStat label="Stock" value={formatValue(stockValue)} hint="on hand" multilineValue />
+          <MiniStat label={uiText("Stock")} value={formatValue(stockValue)} hint={uiText("on hand")} multilineValue />
           <MiniStat
-            label="Net Position"
+            label={uiText("Net Position")}
             value={net >= 0 ? `+ ${formatValue(net)}` : `- ${formatValue(Math.abs(net))}`}
-            hint={net >= 0 ? "positive" : "negative"}
+            hint={net >= 0 ? uiText("positive") : uiText("negative")}
             multilineValue
           />
           <MiniStat
-            label="Profit"
-            value={isOwner ? formatValue(profit) : "Owner"}
-            hint={isOwner ? "owner view" : "restricted"}
+            label={uiText("Profit")}
+            value={isOwner ? formatValue(profit) : uiText("OWNER")}
+            hint={isOwner ? uiText("owner view") : uiText("restricted")}
             multilineValue
           />
         </View>
@@ -4773,10 +4777,9 @@ function DesktopBusinessHealthCard({
           }}
         >
           <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 13, marginBottom: 6 }}>
-            NEXT ACTION
-          </Text>
+            {uiText("NEXT ACTION")}</Text>
           <Text style={{ color: "#FFFFFF", fontWeight: "900", lineHeight: 22 }}>
-            {actionText}
+            {(health === "RISK" ? uiText("Expenses zimezidi nguvu ya mauzo. Chukua hatua haraka kuongeza sales na kudhibiti matumizi.") : (health === "WATCH" ? uiText("Biashara ipo kwenye tahadhari. Angalia matumizi, stock movement, na kuongeza mauzo.") : uiText("Business inaenda vizuri. Endelea kuongeza sales momentum na kulinda profit.")))}
           </Text>
         </View>
       </View>
@@ -4806,6 +4809,7 @@ function DesktopCommandFocusCard({
   onOpenFinance: () => void;
   onOpenStock: () => void;
 }) {
+ const uiText = useCommonText();
   const net = sales - expenses;
   const isRisk = net < 0;
   const isNoSales = sales <= 0;
@@ -4813,26 +4817,26 @@ function DesktopCommandFocusCard({
 
   const actions = [
     {
-      title: isNoSales ? "Push Sales Now" : "Review Sales",
+      title: isNoSales ? uiText("Push Sales Now") : uiText("Review Sales"),
       body: isNoSales
         ? "Hakuna mauzo yaliyoingia leo. Fungua sales history uangalie mwenendo na chukua hatua ya mauzo."
         : "Mauzo yameanza kuingia. Angalia sales history kuthibitisha bidhaa zinazotembea.",
       onPress: onOpenSales,
     },
     {
-      title: isRisk ? "Control Expenses" : "Review Expenses",
+      title: isRisk ? uiText("Control Expenses") : uiText("Review Expenses"),
       body: isRisk
         ? "Expenses zimezidi sales. Kagua matumizi ya leo na punguza gharama zisizo za lazima."
         : "Angalia expenses kuhakikisha matumizi yanaendana na mauzo.",
       onPress: onOpenExpenses,
     },
     {
-      title: "Check Money In",
+      title: uiText("Check Money In"),
       body: `Money In ya sasa ni ${formatValue(moneyIn)}. Hakikisha cash/bank/mobile zinalingana na taarifa.`,
       onPress: onOpenFinance,
     },
     {
-      title: stockPressure ? "Convert Stock to Sales" : "Check Stock Value",
+      title: stockPressure ? uiText("Convert Stock to Sales") : uiText("Check Stock Value"),
       body: stockPressure
         ? `Stock value ipo ${formatValue(stockValue)} lakini sales ni ndogo. Sukuma bidhaa zenye mzunguko wa haraka.`
         : "Angalia stock value na movement ili kujua bidhaa zinazosimama au zinazotembea.",
@@ -4854,8 +4858,7 @@ function DesktopCommandFocusCard({
     >
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
         <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 22, flex: 1 }}>
-          Command Focus
-        </Text>
+          {uiText("Command Focus")}</Text>
 
         <View
           style={{
@@ -4868,15 +4871,15 @@ function DesktopCommandFocusCard({
           }}
         >
           <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 11 }}>
-            {isRisk ? "URGENT" : "TODAY"}
+            {isRisk ? uiText("URGENT") : uiText("TODAY")}
           </Text>
         </View>
       </View>
 
       <Text style={{ color: "rgba(255,255,255,0.88)", fontWeight: "900", lineHeight: 22 }}>
         {isRisk
-          ? "Dashboard inaonyesha tahadhari. Kipaumbele ni kuongeza mauzo, kudhibiti expenses, na kugeuza stock kuwa cash."
-          : "Dashboard iko kwenye hali ya kufuatilia. Endelea kusukuma mauzo, stock movement, na money collection."}
+          ? uiText("Dashboard inaonyesha tahadhari. Kipaumbele ni kuongeza mauzo, kudhibiti expenses, na kugeuza stock kuwa cash.")
+          : uiText("Dashboard iko kwenye hali ya kufuatilia. Endelea kusukuma mauzo, stock movement, na money collection.")}
       </Text>
 
       <View style={{ gap: 10 }}>
@@ -4979,6 +4982,8 @@ function CapitalRecoverySummaryCard({
   summary: CapitalRecoverySummaryRow;
   canSeeCapitalSecrets: boolean;
 }) {
+ const systemText = useSystemMessageText();
+ const uiText = useCommonText();
   const fmt = useCallback(
     (n: number) =>
       formatMoney(n, {
@@ -5000,8 +5005,7 @@ function CapitalRecoverySummaryCard({
 >
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
         <Text style={{ color: UI.text, fontWeight: "900", fontSize: 20, flex: 1 }}>
-          Capital Recovery Summary
-        </Text>
+          {uiText("Capital Recovery Summary")}</Text>
       </View>
 
       {!!error ? (
@@ -5013,33 +5017,33 @@ function CapitalRecoverySummaryCard({
             padding: 12,
           }}
         >
-          <Text style={{ color: UI.danger, fontWeight: "900" }}>{error}</Text>
+          <Text style={{ color: UI.danger, fontWeight: "900" }}>{systemText(error)}</Text>
         </Card>
       ) : null}
 
       <View style={{ flexDirection: "row", gap: 12 }}>
-        <MiniStat label="Income" value={fmt(summary.total_income)} hint="all entries" />
-        <MiniStat label="Cost" value={fmt(summary.total_cost)} hint="operating" />
+        <MiniStat label={uiText("Income")} value={fmt(summary.total_income)} hint={uiText("all entries")} />
+        <MiniStat label={uiText("Cost")} value={fmt(summary.total_cost)} hint={uiText("operating")} />
         {canSeeCapitalSecrets ? (
-          <MiniStat label="Asset" value={fmt(summary.total_asset)} hint="capital target" />
+          <MiniStat label={uiText("Asset")} value={fmt(summary.total_asset)} hint={uiText("capital target")} />
         ) : null}
       </View>
 
       <View style={{ flexDirection: "row", gap: 12 }}>
-        <MiniStat label="Remaining Cost" value={fmt(summary.remaining_cost)} />
+        <MiniStat label={uiText("Remaining Cost")} value={fmt(summary.remaining_cost)} />
         {canSeeCapitalSecrets ? (
-          <MiniStat label="Remaining Asset" value={fmt(summary.remaining_asset)} />
+          <MiniStat label={uiText("Remaining Asset")} value={fmt(summary.remaining_asset)} />
         ) : null}
         {canSeeCapitalSecrets ? (
-          <MiniStat label="Profit" value={fmt(summary.realized_profit)} hint="after cost + asset" />
+          <MiniStat label={uiText("Profit")} value={fmt(summary.realized_profit)} hint={uiText("after cost + asset")} />
         ) : null}
       </View>
 
       <View style={{ flexDirection: "row", gap: 12 }}>
-        <MiniStat label="Entries" value={String(summary.entries_count ?? 0)} />
+        <MiniStat label={uiText("Entries")} value={String(summary.entries_count ?? 0)} />
         <MiniStat
-          label="Last Entry"
-          value={summary.last_entry_at ? fmtLocal(summary.last_entry_at) : "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â"}
+          label={uiText("Last Entry")}
+          value={summary.last_entry_at ? fmtLocal(summary.last_entry_at) : "—"}
           multilineValue
         />
       </View>
@@ -5053,6 +5057,7 @@ function CapitalRecoveryActionHero({
   activeOrgName?: string | null;
   activeStoreName?: string | null;
 }) {
+ const uiText=useCommonText();
   return (
     <View style={{ marginTop: 14 }}>
       <Card
@@ -5091,21 +5096,17 @@ function CapitalRecoveryActionHero({
         />
 
         <Text style={{ color: UI.faint, fontWeight: "900", fontSize: 11, letterSpacing: 0.8 }}>
-          CAPITAL RECOVERY MODE
-        </Text>
+          {uiText("CAPITAL RECOVERY MODE")}</Text>
 
         <Text style={{ color: UI.text, fontWeight: "900", fontSize: 22 }}>
-          Recovery Command Zone
-        </Text>
+          {uiText("Recovery Command Zone")}</Text>
 
         <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22 }}>
-          Hii ni mode maalum ya Capital Recovery. Focus kuu hapa ni Asset, Cost, Income,
-          na ufuatiliaji wa kurejesha mtaji bila kuchanganya na maeneo yasiyo ya recovery.
-        </Text>
+          {uiText("Hii ni mode maalum ya Capital Recovery. Focus kuu hapa ni Asset, Cost, Income, na ufuatiliaji wa kurejesha mtaji bila kuchanganya na maeneo yasiyo ya recovery.")}</Text>
 
         <View style={{ flexDirection: "row", gap: 12 }}>
-          <MiniStat label="Organization" value={String(activeOrgName ?? "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â")} />
-          <MiniStat label="Recovery Store" value={String(activeStoreName ?? "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â")} />
+          <MiniStat label={uiText("Organization")} value={String(activeOrgName ?? "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â")} />
+          <MiniStat label={uiText("Recovery Store")} value={String(activeStoreName ?? "ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â")} />
         </View>
       </Card>
     </View>
@@ -5150,6 +5151,7 @@ function CapitalRecoveryBottomSwitcherCard({
 }: {
   onOpenOrgSwitcher: () => void;
 }) {
+ const uiText = useCommonText();
   return (
     <View style={{ marginTop: 14 }}>
      <Card
@@ -5162,13 +5164,10 @@ function CapitalRecoveryBottomSwitcherCard({
   }}
 >
         <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18 }}>
-          Switch Organization
-        </Text>
+          {uiText("Switch Organization")}</Text>
 
         <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22 }}>
-          Ukiwa bado kwenye dashboard hii unaweza kubadili organization au workspace na kuhamia
-          biashara nyingine moja kwa moja.
-        </Text>
+          {uiText("Ukiwa bado kwenye dashboard hii unaweza kubadili organization au workspace na kuhamia biashara nyingine moja kwa moja.")}</Text>
 
         <Pressable
           onPress={onOpenOrgSwitcher}
@@ -5189,8 +5188,7 @@ function CapitalRecoveryBottomSwitcherCard({
           })}
         >
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
-            Switch Org / Workspace
-          </Text>
+            {uiText("Switch Org / Workspace")}</Text>
         </Pressable>
       </Card>
     </View>
@@ -5206,6 +5204,8 @@ function CapitalRecoveryReportsCard({
   reloadKey?: number;
   canSeeCapitalSecrets: boolean;
 }) {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<CapitalRecoveryHistoryRow[]>([]);
@@ -5339,8 +5339,7 @@ function CapitalRecoveryReportsCard({
       >
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18, flex: 1 }}>
-            Reports
-          </Text>
+            {uiText("Reports")}</Text>
 
           <View
             style={{
@@ -5367,24 +5366,24 @@ function CapitalRecoveryReportsCard({
               padding: 12,
             }}
           >
-            <Text style={{ color: UI.danger, fontWeight: "900" }}>{error}</Text>
+            <Text style={{ color: UI.danger, fontWeight: "900" }}>{systemText(error)}</Text>
           </Card>
         ) : null}
 
         <View style={{ flexDirection: "row", gap: 12 }}>
           {canSeeCapitalSecrets ? (
             <MiniStat
-              label="Asset"
+              label={uiText("Asset")}
               value={String(report.ASSET.count)}
               hint={fmt(report.ASSET.amount)}
             />
           ) : null}
           <MiniStat
-            label="Cost"value={String(report.COST.count)}
+            label={uiText("Cost")}value={String(report.COST.count)}
             hint={fmt(report.COST.amount)}
           />
           <MiniStat
-  label="Income"
+  label={uiText("Income")}
   value={String(report.INCOME.count)}
   hint={fmt(report.INCOME.amount)}
 />
@@ -5408,8 +5407,7 @@ function CapitalRecoveryReportsCard({
   }}
 >
   <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 12 }}>
-    TODAY NET POSITION
-  </Text>
+    {uiText("TODAY NET POSITION")}</Text>
 
   <Text
     style={{
@@ -5424,7 +5422,7 @@ function CapitalRecoveryReportsCard({
   </Text>
 
   <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 12 }}>
-    {todayReport.income - todayReport.cost >= 0 ? "Today profit" : "Today loss"}
+    {todayReport.income - todayReport.cost >= 0 ? uiText("Today profit") : uiText("Today loss")}
   </Text>
 </View>
 
@@ -5439,15 +5437,14 @@ function CapitalRecoveryReportsCard({
   }}
 ></View>
           <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 12 }}>
-            TODAY REPORT
-          </Text>
+            {uiText("TODAY REPORT")}</Text>
 
          <View style={{ flexDirection: "row", gap: 12 }}>
   {canSeeCapitalSecrets ? (
-    <MiniStat label="Today Asset" value={fmt(todayReport.asset)} hint="today" />
+    <MiniStat label={uiText("Today Asset")} value={fmt(todayReport.asset)} hint={uiText("today")} />
   ) : null}
-  <MiniStat label="Today Cost" value={fmt(todayReport.cost)} hint="today" />
-  <MiniStat label="Today Income" value={fmt(todayReport.income)} hint="today" />
+  <MiniStat label={uiText("Today Cost")} value={fmt(todayReport.cost)} hint={uiText("today")} />
+  <MiniStat label={uiText("Today Income")} value={fmt(todayReport.income)} hint={uiText("today")} />
 </View>
 
 <View
@@ -5469,8 +5466,7 @@ function CapitalRecoveryReportsCard({
       fontSize: 12,
     }}
   >
-    TODAY NET POSITION
-  </Text>
+    {uiText("TODAY NET POSITION")}</Text>
 
   <Text
     style={{
@@ -5488,7 +5484,7 @@ function CapitalRecoveryReportsCard({
   </Text>
 
   <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 4 }}>
-    {todayReport.net < 0 ? "Cost imezidi income ya leo" : "Income imezidi cost ya leo"}
+    {todayReport.net < 0 ? uiText("Cost imezidi income ya leo") : uiText("Income imezidi cost ya leo")}
   </Text>
 </View>
 </Card>
@@ -5601,6 +5597,10 @@ sales: number;
   onOpenReports: () => void;
   onOpenBusinessStatement: () => void;
 }) {
+ const uiText=useCommonText();
+ const {language}=useLanguage();
+  const desktopRouter = useRouter();
+
   const [desktopBusinessHour, setDesktopBusinessHour] =
     React.useState<number | null>(null);
 
@@ -5706,6 +5706,362 @@ sales: number;
   const roleLabel =
     String(activeRole ?? "").trim() || "User";
 
+  // ==========================================================
+  // DESKTOP GLOBAL SEARCH
+  // Canonical live sources:
+  // Products  -> get_products_manage / get_products
+  // Customers -> customers
+  // ==========================================================
+
+  type DesktopGlobalSearchResult = {
+    key: string;
+    kind: "PRODUCT" | "CUSTOMER";
+    id: string;
+    title: string;
+    subtitle: string;
+    presentation?: import("@/src/i18n/presentation").SearchPresentation;
+    meta?: string;
+  };
+
+  const [desktopSearchQuery, setDesktopSearchQuery] =
+    useState("");
+
+  const [desktopSearchResults, setDesktopSearchResults] =
+    useState<DesktopGlobalSearchResult[]>([]);
+
+  const [desktopSearchLoading, setDesktopSearchLoading] =
+    useState(false);
+
+  const [desktopSearchFocused, setDesktopSearchFocused] =
+    useState(false);
+
+  const desktopSearchRequestRef = useRef(0);
+
+  useEffect(() => {
+    const q = desktopSearchQuery.trim();
+
+    if (q.length < 2) {
+      desktopSearchRequestRef.current += 1;
+      setDesktopSearchResults([]);
+      setDesktopSearchLoading(false);
+      return;
+    }
+
+    const requestId =
+      ++desktopSearchRequestRef.current;
+
+    const timer = setTimeout(() => {
+      void (async () => {
+        setDesktopSearchLoading(true);
+
+        try {
+          const normalizedQ =
+            q.toLocaleLowerCase();
+
+          const productRpc =
+            isOwner
+              ? "get_products_manage"
+              : "get_products";
+
+          const productPromise =
+            organizationId &&
+            salesPerformanceStoreId
+              ? supabase.rpc(
+                  productRpc,
+                  {
+                    p_org_id:
+                      organizationId,
+                    p_store_id:
+                      salesPerformanceStoreId,
+                  }
+                )
+              : Promise.resolve({
+                  data: [],
+                  error: null,
+                } as any);
+
+          const customerPromise =
+            salesPerformanceStoreId
+              ? supabase
+                  .from("customers")
+                  .select(
+                    "id, full_name, phone, normalized_phone, total_orders, total_spent"
+                  )
+                  .eq(
+                    "store_id",
+                    salesPerformanceStoreId
+                  )
+                  .limit(200)
+              : Promise.resolve({
+                  data: [],
+                  error: null,
+                } as any);
+
+          const [
+            productResponse,
+            customerResponse,
+          ] = await Promise.all([
+            productPromise,
+            customerPromise,
+          ]);
+
+          if (
+            requestId !==
+            desktopSearchRequestRef.current
+          ) {
+            return;
+          }
+
+          const next:
+            DesktopGlobalSearchResult[] = [];
+
+          if (!productResponse?.error) {
+            const products =
+              Array.isArray(
+                productResponse?.data
+              )
+                ? productResponse.data
+                : [];
+
+            products
+              .filter((product: any) => {
+                const haystack = [
+                  product?.name,
+                  product?.product_name,
+                  product?.sku,
+                  product?.category,
+                  product?.barcode,
+                ]
+                  .filter(Boolean)
+                  .join(" ")
+                  .toLocaleLowerCase();
+
+                return haystack.includes(
+                  normalizedQ
+                );
+              })
+              .slice(0, 6)
+              .forEach((product: any) => {
+                const productName =
+                  String(
+                    product?.name ??
+                      product?.product_name ??
+                      "Product"
+                  ).trim();
+
+                const sku =
+                  String(
+                    product?.sku ?? ""
+                  ).trim();
+
+                const category =
+                  String(
+                    product?.category ?? ""
+                  ).trim();
+
+                const stockCandidate =
+                  product?.stock_qty ??
+                  product?.qty_on_hand ??
+                  product?.quantity ??
+                  product?.stock ??
+                  null;
+
+                const stockNumber =
+                  stockCandidate === null ||
+                  stockCandidate === undefined
+                    ? null
+                    : Number(stockCandidate);
+
+                const metaParts: string[] =
+                  [];
+
+                if (category) {
+                  metaParts.push(category);
+                }
+
+                if (
+                  stockNumber !== null &&
+                  Number.isFinite(stockNumber)
+                ) {
+                  metaParts.push(
+                    `Stock: ${stockNumber}`
+                  );
+                }
+
+                const productId =
+                  String(
+                    product?.id ??
+                      product?.product_id ??
+                      ""
+                  ).trim();
+
+                next.push({
+                  key: `PRODUCT:${
+                    productId ||
+                    `${productName}:${sku}`
+                  }`,
+                  kind: "PRODUCT",
+                  id: productId,
+                  presentation:{titleKey:product?.name==null&&product?.product_name==null?"Product":undefined,subtitleKey:sku?undefined:"Product",category,stock:Number.isFinite(stockNumber)?stockNumber:null},
+                  title: productName,
+                  subtitle:
+                    sku
+                      ? `SKU: ${sku}`
+                      : uiText("Product"),
+                  meta:
+                    metaParts.join(" · ") ||
+                    undefined,
+                });
+              });
+          }
+
+          if (!customerResponse?.error) {
+            const customers =
+              Array.isArray(
+                customerResponse?.data
+              )
+                ? customerResponse.data
+                : [];
+
+            customers
+              .filter((customer: any) => {
+                const haystack = [
+                  customer?.full_name,
+                  customer?.phone,
+                  customer?.normalized_phone,
+                ]
+                  .filter(Boolean)
+                  .join(" ")
+                  .toLocaleLowerCase();
+
+                return haystack.includes(
+                  normalizedQ
+                );
+              })
+              .slice(0, 6)
+              .forEach((customer: any) => {
+                const customerId =
+                  String(
+                    customer?.id ?? ""
+                  ).trim();
+
+                const name =
+                  String(
+                    customer?.full_name ??
+                      "Customer"
+                  ).trim();
+
+                const phone =
+                  String(
+                    customer?.phone ??
+                      customer?.normalized_phone ??
+                      ""
+                  ).trim();
+
+                const orders =
+                  Number(
+                    customer?.total_orders ?? 0
+                  );
+
+                next.push({
+                  key: `CUSTOMER:${
+                    customerId || name
+                  }`,
+                  kind: "CUSTOMER",
+                  id: customerId,
+                  presentation:{titleKey:customer?.full_name==null?"Customer":undefined,subtitleKey:phone?undefined:"Customer record",orders},
+                  title: name,
+                  subtitle:
+                    phone ||
+                    "Customer record",
+                  meta:
+                    orders > 0
+                      ? `${orders} ${
+                          orders === 1
+                            ? "order"
+                            : "orders"
+                        }`
+                      : undefined,
+                });
+              });
+          }
+
+          setDesktopSearchResults(next);
+        } catch (error) {
+          console.warn(
+            "Desktop global search failed:",
+            error
+          );
+
+          if (
+            requestId ===
+            desktopSearchRequestRef.current
+          ) {
+            setDesktopSearchResults([]);
+          }
+        } finally {
+          if (
+            requestId ===
+            desktopSearchRequestRef.current
+          ) {
+            setDesktopSearchLoading(false);
+          }
+        }
+      })();
+    }, 350);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [
+    desktopSearchQuery,
+    organizationId,
+    salesPerformanceStoreId,
+    isOwner,
+  ]);
+
+  const openDesktopSearchResult =
+    useCallback(
+      (
+        result:
+          DesktopGlobalSearchResult
+      ) => {
+        setDesktopSearchFocused(false);
+
+        if (
+          result.kind === "CUSTOMER" &&
+          result.id
+        ) {
+          desktopRouter.push({
+            pathname: "/customers/[id]",
+            params: {
+              id: result.id,
+              fromGlobalSearch: "1",
+            },
+          } as any);
+
+          return;
+        }
+
+        if (result.kind === "CUSTOMER") {
+          desktopRouter.push(
+            "/customers" as any
+          );
+          return;
+        }
+
+        desktopRouter.push({
+          pathname: "/(tabs)/products",
+          params: {
+            focusProductId: result.id,
+            focusProductName: result.title,
+          },
+        } as any);
+      },
+      [desktopRouter]
+    );
+
+
   const todayYmd = useMemo(() => {
     const now = new Date();
     const year = now.getFullYear();
@@ -5733,11 +6089,11 @@ sales: number;
     );
 
     if (Number.isNaN(date.getTime())) {
-      return "Today";
+      return uiText("Today");
     }
 
     const formatted = date.toLocaleDateString(
-      "en-GB",
+      language==='en'?'en-GB':language,
       {
         day: "2-digit",
         month: "short",
@@ -5746,9 +6102,9 @@ sales: number;
     );
 
     return desktopSelectedDate === todayYmd
-      ? `Today • ${formatted}`
+      ? uiText("Today • {p0}",{p0:formatted})
       : formatted;
-  }, [desktopSelectedDate, todayYmd]);
+  }, [desktopSelectedDate, todayYmd, language, uiText]);
 
   const [desktopCalendarOpen, setDesktopCalendarOpen] =
     useState(false);
@@ -5782,13 +6138,13 @@ sales: number;
   const desktopCalendarTitle = useMemo(
     () =>
       desktopCalendarMonth.toLocaleDateString(
-        "en-GB",
+        language==='en'?'en-GB':language,
         {
           month: "long",
           year: "numeric",
         }
       ),
-    [desktopCalendarMonth]
+    [desktopCalendarMonth, language]
   );
 
   const desktopCalendarDays = useMemo(() => {
@@ -5903,7 +6259,7 @@ sales: number;
   const desktopChartHeight = desktopCompact ? 72 : desktopTight ? 86 : 100;
 
   const desktopBottomHeight = desktopCompact ? 88 : desktopTight ? 100 : 112;
-  const desktopAiWidth = width < 1280 ? 278 : width < 1440 ? 300 : 320;
+  const desktopAiWidth = width < 1280 ? 220 : width < 1440 ? 260 : 320;
 
   const ActionCard = ({
     title,
@@ -6236,11 +6592,10 @@ sales: number;
       style={{
         width: "100%",
         maxWidth: 1600,
-        height: "100%",
-        maxHeight: height,
+        minHeight: height,
         alignSelf: "center",
         gap: desktopOuterGap,
-        overflow: "hidden",
+        overflow: "visible",
       }}
     >
       {/* MASTER REFERENCE TOP BAR */}
@@ -6257,6 +6612,9 @@ sales: number;
           flexDirection: "row",
           alignItems: "center",
           gap: 10,
+          position: "relative",
+          zIndex: 20000,
+          overflow: "visible",
         }}
       >
         <Pressable
@@ -6289,7 +6647,7 @@ sales: number;
             }}
             numberOfLines={1}
           >
-            {orgLabel}
+            {(String((activeOrgName ?? "")).trim() || uiText("Organization"))}
           </Text>
 
           <Ionicons
@@ -6329,7 +6687,7 @@ sales: number;
             }}
             numberOfLines={1}
           >
-            {storeLabel}
+            {(String((activeStoreName ?? "")).trim() || uiText("No active store"))}
           </Text>
 
           <Ionicons
@@ -6343,33 +6701,310 @@ sales: number;
           style={{
             flex: 1,
             minWidth: 180,
-            minHeight: 40,
-            borderRadius: 11,
-            backgroundColor: "#F1F5F9",
-            flexDirection: "row",
-            alignItems: "center",
-            paddingHorizontal: 13,
-            gap: 9,
+            position: "relative",
+            zIndex: 11000,
           }}
         >
-          <Ionicons
-            name="search-outline"
-            size={18}
-            color="#475569"
-          />
-
-          <Text
+          <View
             style={{
-              color: "#64748B",
-              fontWeight: "700",
-              fontSize: 11,
+              minHeight: 40,
+              borderRadius: 11,
+              borderWidth: 1,
+              borderColor:
+                desktopSearchFocused
+                  ? "#93C5FD"
+                  : "#E2E8F0",
+              backgroundColor: "#F8FAFC",
+              flexDirection: "row",
+              alignItems: "center",
+              paddingHorizontal: 13,
+              gap: 9,
             }}
-            numberOfLines={1}
           >
-            Search products, customers, receipts...
-          </Text>
-        </View>
+            <Ionicons
+              name="search-outline"
+              size={18}
+              color={
+                desktopSearchFocused
+                  ? "#2563EB"
+                  : "#475569"
+              }
+            />
 
+            <TextInput
+              value={desktopSearchQuery}
+              onChangeText={
+                setDesktopSearchQuery
+              }
+              onFocus={() =>
+                setDesktopSearchFocused(true)
+              }
+              placeholder={uiText("Search products, customers...")}
+              placeholderTextColor="#94A3B8"
+              autoCorrect={false}
+              autoCapitalize="none"
+              returnKeyType="search"
+              style={{
+                flex: 1,
+                minWidth: 0,
+                paddingVertical: 0,
+                color: "#0F172A",
+                fontWeight: "700",
+                fontSize: 11,
+                outlineStyle: "none",
+              } as any}
+            />
+
+            {desktopSearchLoading ? (
+              <Text
+                style={{
+                  color: "#64748B",
+                  fontWeight: "800",
+                  fontSize: 9,
+                }}
+              >
+                {uiText("Searching...")}</Text>
+            ) : desktopSearchQuery.length >
+              0 ? (
+              <Pressable
+                hitSlop={8}
+                onPress={() => {
+                  desktopSearchRequestRef.current +=
+                    1;
+                  setDesktopSearchQuery("");
+                  setDesktopSearchResults([]);
+                  setDesktopSearchLoading(false);
+                }}
+              >
+                <Ionicons
+                  name="close-circle"
+                  size={17}
+                  color="#94A3B8"
+                />
+              </Pressable>
+            ) : (
+              <Text
+                style={{
+                  color: "#94A3B8",
+                  fontWeight: "800",
+                  fontSize: 9,
+                }}
+              >
+                {uiText("Products · Customers")}</Text>
+            )}
+          </View>
+
+          {desktopSearchFocused &&
+          desktopSearchQuery.trim().length >=
+            2 ? (
+            <View
+              style={{
+                position: "absolute",
+                top: 46,
+                left: 0,
+                right: 0,
+                maxHeight: 430,
+                borderRadius: 14,
+                borderWidth: 1,
+                borderColor: "#DCE5EF",
+                backgroundColor: "#FFFFFF",
+                shadowColor: "#0F172A",
+                shadowOpacity: 0.12,
+                shadowRadius: 18,
+                shadowOffset: {
+                  width: 0,
+                  height: 8,
+                },
+                elevation: 12,
+                overflow: "hidden",
+                zIndex: 12000,
+              }}
+            >
+              <View
+                style={{
+                  minHeight: 32,
+                  paddingHorizontal: 12,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent:
+                    "space-between",
+                  backgroundColor: "#F8FAFC",
+                  borderBottomWidth: 1,
+                  borderBottomColor: "#EEF2F7",
+                }}
+              >
+                <Text
+                  style={{
+                    color: "#475569",
+                    fontWeight: "900",
+                    fontSize: 9.5,
+                    letterSpacing: 0.3,
+                  }}
+                >
+                  {uiText("GLOBAL SEARCH")}</Text>
+
+                <Text
+                  style={{
+                    color: "#94A3B8",
+                    fontWeight: "800",
+                    fontSize: 9,
+                  }}
+                >
+                  {uiText("Active store")}</Text>
+              </View>
+
+              {!desktopSearchLoading &&
+              desktopSearchResults.length ===
+                0 ? (
+                <View
+                  style={{
+                    paddingHorizontal: 14,
+                    paddingVertical: 18,
+                    alignItems: "center",
+                  }}
+                >
+                  <Ionicons
+                    name="search-outline"
+                    size={22}
+                    color="#CBD5E1"
+                  />
+
+                  <Text
+                    style={{
+                      marginTop: 6,
+                      color: "#64748B",
+                      fontWeight: "800",
+                      fontSize: 10.5,
+                    }}
+                  >
+                    {uiText("No matching records")}</Text>
+                </View>
+              ) : (
+                desktopSearchResults.map(
+                  (result, index) => {
+                    const displayResult=localizedSearchResult(language,result);
+                    const isProduct =
+                      result.kind ===
+                      "PRODUCT";
+
+                    return (
+                      <Pressable
+                        key={result.key}
+                        onPress={() =>
+                          openDesktopSearchResult(
+                            result
+                          )
+                        }
+                        style={({ pressed }) => ({
+                          minHeight: 52,
+                          paddingHorizontal: 12,
+                          paddingVertical: 8,
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: 10,
+                          backgroundColor:
+                            pressed
+                              ? "#F8FAFC"
+                              : "#FFFFFF",
+                          borderBottomWidth:
+                            index <
+                            desktopSearchResults.length -
+                              1
+                              ? 1
+                              : 0,
+                          borderBottomColor:
+                            "#F1F5F9",
+                        })}
+                      >
+                        <View
+                          style={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: 9,
+                            alignItems: "center",
+                            justifyContent:
+                              "center",
+                            backgroundColor:
+                              isProduct
+                                ? "#ECFDF5"
+                                : "#EFF6FF",
+                          }}
+                        >
+                          <Ionicons
+                            name={
+                              isProduct
+                                ? "cube-outline"
+                                : "person-outline"
+                            }
+                            size={16}
+                            color={
+                              isProduct
+                                ? "#059669"
+                                : "#2563EB"
+                            }
+                          />
+                        </View>
+
+                        <View
+                          style={{
+                            flex: 1,
+                            minWidth: 0,
+                          }}
+                        >
+                          <Text
+                            numberOfLines={1}
+                            style={{
+                              color: "#0F172A",
+                              fontWeight: "900",
+                              fontSize: 10.5,
+                            }}
+                          >
+                            {displayResult.title}
+                          </Text>
+
+                          <Text
+                            numberOfLines={1}
+                            style={{
+                              color: "#64748B",
+                              fontWeight: "700",
+                              fontSize: 9,
+                              marginTop: 2,
+                            }}
+                          >
+                            {displayResult.subtitle}
+                          </Text>
+                        </View>
+
+                        {result.meta ? (
+                          <Text
+                            numberOfLines={1}
+                            style={{
+                              maxWidth: 120,
+                              color:
+                                isProduct
+                                  ? "#047857"
+                                  : "#2563EB",
+                              fontWeight: "800",
+                              fontSize: 8.5,
+                            }}
+                          >
+                            {displayResult.meta}
+                          </Text>
+                        ) : null}
+
+                        <Ionicons
+                          name="chevron-forward"
+                          size={14}
+                          color="#94A3B8"
+                        />
+                      </Pressable>
+                    );
+                  }
+                )
+              )}
+            </View>
+          ) : null}
+        </View>
         <Pressable
           onPress={onOpenNotifications}
           style={{
@@ -6479,7 +7114,7 @@ sales: number;
               }}
               numberOfLines={1}
             >
-              {orgLabel}
+              {(String((activeOrgName ?? "")).trim() || uiText("Organization"))}
             </Text>
 
             <Text
@@ -6491,7 +7126,7 @@ sales: number;
               }}
               numberOfLines={1}
             >
-              {roleLabel}
+              {uiText(roleLabel.toUpperCase())}
             </Text>
           </View>
 
@@ -6513,7 +7148,7 @@ sales: number;
           alignItems: "center",
           gap: 11,
           position: "relative",
-          zIndex: 1000,
+          zIndex: 1,
           overflow: "visible",
         }}
       >
@@ -6528,12 +7163,15 @@ sales: number;
             style={{
               color: "#0F172A",
               fontWeight: "900",
-              fontSize: 28,
+              fontSize: desktopCompact ? 24 : 26,
             }}
           >
             {desktopGreeting.text}
           </Text>
         </View>
+
+        {/* DESKTOP SUBSCRIPTION STATUS */}
+        <SubscriptionExpiryHomeStrip compact />
 
         <View
           style={{
@@ -6805,8 +7443,7 @@ sales: number;
                     fontWeight: "700",
                   }}
                 >
-                  Select dashboard date
-                </Text>
+                  {uiText("Select dashboard date")}</Text>
 
                 <Pressable
                   onPress={selectDesktopToday}
@@ -6828,8 +7465,7 @@ sales: number;
                       fontWeight: "900",
                     }}
                   >
-                    Today
-                  </Text>
+                    {uiText("Today")}</Text>
                 </Pressable>
               </View>
             </View>
@@ -6844,8 +7480,7 @@ sales: number;
           alignItems: "stretch",
           gap: desktopSectionGap,
           overflow: "visible",
-          position: "relative",
-          zIndex: 1,
+
         }}
       >
         {/* MAIN COLUMN */}
@@ -6868,49 +7503,49 @@ sales: number;
             }}
           >
             <KpiCard
-              title="Today's Sales"
+              title={uiText("Today's Sales")}
               value={formatValue(sales)}
               icon="cart"
               soft="#ECFDF3"
               iconColor="#16A34A"
               onPress={onOpenSales}
-              hint={`${orders} completed orders`}
+              hint={uiText("{p0} completed orders", {p0: (orders)})}
               primaryAction
-              actionLabel="Open POS"
+              actionLabel={uiText("Open POS")}
             />
 
             <KpiCard
-              title="Money In"
+              title={uiText("Money In")}
               value={formatValue(moneyIn)}
               icon="wallet"
               soft="#EFF6FF"
               iconColor="#2563EB"
               onPress={onOpenReports}
-              hint="after expenses"
+              hint={uiText("after expenses")}
             />
 
             <KpiCard
-              title="Expenses"
+              title={uiText("Expenses")}
               value={formatValue(expenses)}
               icon="receipt"
               soft="#FFF1F2"
               iconColor="#E11D48"
               onPress={onOpenExpenses}
-              hint="today"
+              hint={uiText("today")}
             />
 
             <KpiCard
-              title="Net Profit"
+              title={uiText("Net Profit")}
               value={
                 isOwner
                   ? formatValue(profit)
-                  : "Owner only"
+                  : uiText("Owner only")
               }
               icon="bar-chart"
               soft="#F5F3FF"
               iconColor="#7C3AED"
               onPress={onOpenBusinessStatement}
-              hint={isOwner ? "owner view" : "restricted"}
+              hint={isOwner ? uiText("owner view") : uiText("restricted")}
             />
           </View>
 
@@ -6949,8 +7584,7 @@ sales: number;
                   marginTop: 9,
                 }}
               >
-                Select an active business and store to view Sales Performance.
-              </Text>
+                {uiText("Select an active business and store to view Sales Performance.")}</Text>
             </View>
           )}
         </View>
@@ -7019,8 +7653,7 @@ sales: number;
                   marginTop: 1,
                 }}
               >
-                Your Business Assistant
-              </Text>
+                {uiText("Your Business Assistant")}</Text>
             </View>
 
             <View
@@ -7038,8 +7671,7 @@ sales: number;
                   fontSize: 8.5,
                 }}
               >
-                LIVE
-              </Text>
+                {uiText("LIVE")}</Text>
             </View>
 
             <Ionicons
@@ -7081,8 +7713,7 @@ sales: number;
                   fontSize: 13,
                 }}
               >
-                Ask ZETRA AI
-              </Text>
+                {uiText("Ask ZETRA AI")}</Text>
 
               <Text
                 style={{
@@ -7093,8 +7724,7 @@ sales: number;
                   marginTop: 3,
                 }}
               >
-                Ask about sales, stock, customers, profit and trends.
-              </Text>
+                {uiText("Ask about sales, stock, customers, profit and trends.")}</Text>
             </View>
 
             <Ionicons
@@ -7112,17 +7742,17 @@ sales: number;
           >
             {[
               {
-                title: "Summarize Today",
+                title: uiText("Summarize Today"),
                 icon: "document-text-outline" as const,
                 color: "#2563EB",
               },
               {
-                title: "Low Stock Alert",
+                title: uiText("Low Stock Alert"),
                 icon: "cube-outline" as const,
                 color: "#D97706",
               },
               {
-                title: "Top Products",
+                title: uiText("Top Products"),
                 icon: "bar-chart-outline" as const,
                 color: "#0F766E",
               },
@@ -7186,8 +7816,7 @@ sales: number;
             textAlign: "right",
           }}
         >
-          Refreshing dashboard...
-        </Text>
+          {uiText("Refreshing dashboard...")}</Text>
       ) : null}
     </View>
   );
@@ -7231,6 +7860,8 @@ function WebDesktopShell({
 }
 
 export default function HomeScreen() {
+ const systemText = useSystemMessageText();
+ const uiText = useCommonText();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
@@ -7400,8 +8031,8 @@ const [desktopNotifTotal, setDesktopNotifTotal] = useState(0);
 
     if (!orgId) {
       Alert.alert(
-        "Missing organization",
-        "Organization haijapatikana."
+        uiText("Missing organization"),
+        uiText("Organization haijapatikana.")
       );
       return;
     }
@@ -8268,7 +8899,7 @@ void loadDesktopNotifications();
     };
 
     const channel = supabase.channel(
-      `desktop-home-live:${orgId}:${storeId}`
+      `desktop-home-live:${orgId}:${storeId}:${Date.now().toString(36)}:${Math.random().toString(36).slice(2, 8)}`
     );
 
 
@@ -8434,12 +9065,11 @@ void loadDesktopNotifications();
         );
   return (
     <Screen
-      scroll={isCashier || isCapitalRecoveryStore}
+      scroll={isDesktopWeb || isCashier || isCapitalRecoveryStore}
       refreshControl={homeRefreshControl as any}
       contentStyle={
         isDesktopWeb
           ? {
-              flex: 1,
               minHeight: 0,
               paddingTop: Math.max(insets.top, 18) + 10,
               paddingHorizontal: 22,
@@ -8496,7 +9126,7 @@ void loadDesktopNotifications();
             marginTop: 14,
           }}
         >
-          <Text style={{ color: UI.danger, fontWeight: "900" }}>{error}</Text>
+          <Text style={{ color: UI.danger, fontWeight: "900" }}>{systemText(error)}</Text>
         </Card>
       )}
 

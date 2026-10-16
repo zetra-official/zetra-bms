@@ -1,3 +1,5 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/(tabs)/field-procurement/workspace.tsx
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "expo-router";
@@ -54,6 +56,7 @@ type StaffChoiceRow = {
 };
 
 type ActiveCycleRow = {
+  _uiMissingTitle?: boolean;
   cycle_id: string;
   title: string;
   target_amount: number;
@@ -145,6 +148,8 @@ function MiniStat({ label, value, hint }: { label: string; value: string; hint?:
 }
 
 export default function FieldProcurementWorkspaceScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const { activeOrgId, activeOrgName, activeStoreName, activeStoreId, activeRole, refresh } =
     useOrg();
 
@@ -223,6 +228,7 @@ return;
     const nextCycle: ActiveCycleRow = {
       cycle_id: clean(row?.cycle_id),
       title: clean(row?.title) || "Active Field",
+          _uiMissingTitle: !clean(row?.title),
       target_amount: toNum(row?.target_amount),
       status: clean(row?.status) || "OPEN",
       opened_at: clean(row?.opened_at),
@@ -398,7 +404,7 @@ total_operational_spent: toNum(s?.total_operational_spent ?? s?.operational_spen
       );
     } catch (e: any) {
       setStaffChoices([]);
-      Alert.alert("Failed", clean(e?.message) || "Failed to load staff choices.");
+      Alert.alert(uiText("Failed"), clean(e?.message) || uiText("Failed to load staff choices."));
     } finally {
       setStaffLoading(false);
     }
@@ -445,7 +451,7 @@ const isTargetExpense = expensePurpose === "TARGET";
 
   const openCycleModal = useCallback(() => {
     if (!canManage) {
-      Alert.alert("No Access", "Owner/Admin only.");
+      Alert.alert(uiText("No Access"), uiText("Owner/Admin only."));
       return;
     }
 
@@ -465,13 +471,13 @@ const isTargetExpense = expensePurpose === "TARGET";
 
   const saveOpenCycle = useCallback(async () => {
     if (!storeId) {
-      Alert.alert("Missing Store", "Hakuna active Field Procurement store.");
+      Alert.alert(uiText("Missing Store"), uiText("Hakuna active Field Procurement store."));
       return;
     }
 
     const title = clean(cycleTitle);
     if (!title) {
-      Alert.alert("Missing Title", "Weka jina la field/trip.");
+      Alert.alert(uiText("Missing Title"), uiText("Weka jina la field/trip."));
       return;
     }
 
@@ -491,10 +497,10 @@ const isTargetExpense = expensePurpose === "TARGET";
       await loadActiveCycle();
       await loadWallets();
 
-      Alert.alert("Success ✅", "Field imefunguliwa vizuri.");
+      Alert.alert(uiText("Success ✅"), uiText("Field imefunguliwa vizuri."));
       closeCycleModal();
     } catch (e: any) {
-      Alert.alert("Open Field failed", clean(e?.message) || "Unknown error");
+      Alert.alert(uiText("Open Field failed"), clean(e?.message) || uiText("Unknown error"));
     } finally {
       setSavingCycle(false);
     }
@@ -502,17 +508,17 @@ const isTargetExpense = expensePurpose === "TARGET";
 
   const closeActiveCycle = useCallback(async () => {
     if (!activeCycle?.cycle_id) {
-      Alert.alert("No Active Field", "Hakuna field iliyo wazi.");
+      Alert.alert(uiText("No Active Field"), uiText("Hakuna field iliyo wazi."));
       return;
     }
 
     Alert.alert(
-      "Close Field",
-      "Una uhakika unataka kufunga field hii? Transactions mpya zitaanza kwenye field mpya.",
+      uiText("Close Field"),
+      uiText("Una uhakika unataka kufunga field hii? Transactions mpya zitaanza kwenye field mpya."),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: uiText("Cancel"), style: "cancel" },
         {
-          text: "Close",
+          text: uiText("Close"),
           style: "destructive",
           onPress: async () => {
             setSavingCycle(true);
@@ -527,9 +533,9 @@ const isTargetExpense = expensePurpose === "TARGET";
               await loadActiveCycle();
               await loadWallets();
 
-              Alert.alert("Success ✅", "Field imefungwa vizuri.");
+              Alert.alert(uiText("Success ✅"), uiText("Field imefungwa vizuri."));
             } catch (e: any) {
-              Alert.alert("Close Field failed", clean(e?.message) || "Unknown error");
+              Alert.alert(uiText("Close Field failed"), clean(e?.message) || uiText("Unknown error"));
             } finally {
               setSavingCycle(false);
             }
@@ -541,12 +547,12 @@ const isTargetExpense = expensePurpose === "TARGET";
 
   const openAllocateModal = useCallback(async () => {
     if (!canManage) {
-      Alert.alert("No Access", "Owner/Admin only.");
+      Alert.alert(uiText("No Access"), uiText("Owner/Admin only."));
       return;
     }
 
     if (!activeCycle?.cycle_id) {
-      Alert.alert("Open Field Required", "Fungua field cycle kwanza kabla ya ku-allocate money.");
+      Alert.alert(uiText("Open Field Required"), uiText("Fungua field cycle kwanza kabla ya ku-allocate money."));
       return;
     }
 
@@ -567,19 +573,19 @@ const isTargetExpense = expensePurpose === "TARGET";
 
   const saveAllocation = useCallback(async () => {
     if (!storeId) {
-      Alert.alert("Missing Store", "Hakuna active Field Procurement store.");
+      Alert.alert(uiText("Missing Store"), uiText("Hakuna active Field Procurement store."));
       return;
     }
 
     if (!selectedMembershipId) {
-      Alert.alert("Missing Agent", "Chagua agent kwanza.");
+      Alert.alert(uiText("Missing Agent"), uiText("Chagua agent kwanza."));
       return;
     }
 
     const amountValue = toNum(String(allocateAmount).replace(/,/g, "").trim());
 
     if (amountValue <= 0) {
-      Alert.alert("Invalid Amount", "Weka amount sahihi zaidi ya sifuri.");
+      Alert.alert(uiText("Invalid Amount"), uiText("Weka amount sahihi zaidi ya sifuri."));
       return;
     }
 
@@ -597,10 +603,10 @@ const isTargetExpense = expensePurpose === "TARGET";
       await loadActiveCycle();
       await loadWallets();
 
-      Alert.alert("Success ✅", "Fedha zimewekwa kwenye wallet ya agent.");
+      Alert.alert(uiText("Success ✅"), uiText("Fedha zimewekwa kwenye wallet ya agent."));
       closeAllocateModal();
     } catch (e: any) {
-      Alert.alert("Allocation failed", clean(e?.message) || "Unknown error");
+      Alert.alert(uiText("Allocation failed"), clean(e?.message) || uiText("Unknown error"));
     } finally {
       setAllocating(false);
     }
@@ -617,7 +623,7 @@ const isTargetExpense = expensePurpose === "TARGET";
 
   const openExpenseModal = useCallback(async () => {
     if (!activeCycle?.cycle_id) {
-      Alert.alert("Open Field Required", "Fungua field cycle kwanza kabla ya kurekodi expense.");
+      Alert.alert(uiText("Open Field Required"), uiText("Fungua field cycle kwanza kabla ya kurekodi expense."));
       return;
     }
 
@@ -666,12 +672,12 @@ setExpensePurpose("TARGET");
 
   const saveExpense = useCallback(async () => {
     if (!storeId) {
-      Alert.alert("Missing Store", "Hakuna active Field Procurement store.");
+      Alert.alert(uiText("Missing Store"), uiText("Hakuna active Field Procurement store."));
       return;
     }
 
     if (!expenseMembershipId) {
-      Alert.alert("Missing Agent", "Chagua agent/wallet kwanza.");
+      Alert.alert(uiText("Missing Agent"), uiText("Chagua agent/wallet kwanza."));
       return;
     }
 
@@ -681,28 +687,28 @@ setExpensePurpose("TARGET");
 
     if (expensePurpose === "TARGET") {
       if (!clean(expenseItemName)) {
-        Alert.alert("Missing Item", "Weka jina la mzigo/bidhaa kwanza.");
+        Alert.alert(uiText("Missing Item"), uiText("Weka jina la mzigo/bidhaa kwanza."));
         return;
       }
 
       if (!clean(expenseUnit)) {
-        Alert.alert("Missing Unit", "Chagua kipimo cha mzigo kwanza.");
+        Alert.alert(uiText("Missing Unit"), uiText("Chagua kipimo cha mzigo kwanza."));
         return;
       }
 
       if (quantityValue <= 0) {
-        Alert.alert("Invalid Quantity", "Weka quantity sahihi zaidi ya sifuri.");
+        Alert.alert(uiText("Invalid Quantity"), uiText("Weka quantity sahihi zaidi ya sifuri."));
         return;
       }
 
       if (actualPriceValue <= 0) {
-        Alert.alert("Invalid Price", "Weka bei sahihi kwa kipimo ulichochagua.");
+        Alert.alert(uiText("Invalid Price"), uiText("Weka bei sahihi kwa kipimo ulichochagua."));
         return;
       }
     }
 
     if (amountValue <= 0) {
-      Alert.alert("Invalid Amount", "Weka amount sahihi zaidi ya sifuri.");
+      Alert.alert(uiText("Invalid Amount"), uiText("Weka amount sahihi zaidi ya sifuri."));
       return;
     }
 
@@ -730,10 +736,10 @@ setExpensePurpose("TARGET");
       await loadActiveCycle();
       await loadWallets();
 
-      Alert.alert("Success ✅", "Field expense imehifadhiwa na balance imepungua.");
+      Alert.alert(uiText("Success ✅"), uiText("Field expense imehifadhiwa na balance imepungua."));
       closeExpenseModal();
     } catch (e: any) {
-      Alert.alert("Expense failed", clean(e?.message) || "Unknown error");
+      Alert.alert(uiText("Expense failed"), clean(e?.message) || uiText("Unknown error"));
     } finally {
       setSavingExpense(false);
     }
@@ -763,7 +769,7 @@ setExpensePurpose("TARGET");
     onSelect: (id: string) => void;
   }) => {
     if (staffLoading) {
-      return <Text style={{ color: UI.faint, fontWeight: "800" }}>Loading agents...</Text>;
+      return <Text style={{ color: UI.faint, fontWeight: "800" }}>{uiText("Loading agents...")}</Text>;
     }
 
     if (staffChoices.length === 0) {
@@ -777,8 +783,7 @@ setExpensePurpose("TARGET");
           }}
         >
           <Text style={{ color: UI.faint, fontWeight: "800", lineHeight: 20 }}>
-            Hakuna staff/agent aliyeonekana. Hakikisha agent ameongezwa na kupewa access ya store hii.
-          </Text>
+            {uiText("Hakuna staff/agent aliyeonekana. Hakikisha agent ameongezwa na kupewa access ya store hii.")}</Text>
         </Card>
       );
     }
@@ -803,10 +808,10 @@ setExpensePurpose("TARGET");
               })}
             >
               <Text style={{ color: UI.text, fontWeight: "900" }} numberOfLines={1}>
-                {staff.email ?? "No email"}
+                {staff.email ?? uiText("No email")}
               </Text>
               <Text style={{ color: UI.faint, fontWeight: "800", marginTop: 4 }}>
-                Role: {staff.role}
+                {uiText("Role:")}{staff.role}
               </Text>
             </Pressable>
           );
@@ -874,17 +879,16 @@ backgroundColor: "#F7FFFB",
 
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={{ color: UI.faint, fontWeight: "900", fontSize: 11, letterSpacing: 0.9 }}>
-                  FIELD PROCUREMENT WORKSPACE
-                </Text>
+                  {uiText("FIELD PROCUREMENT WORKSPACE")}</Text>
 
                 <Text style={{ color: UI.text, fontWeight: "900", fontSize: 22, marginTop: 4 }} numberOfLines={1}>
-                  {activeStoreName ?? "Field Procurement Store"}
+                  {activeStoreName ?? uiText("Field Procurement Store")}
                 </Text>
               </View>
             </View>
 
             <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22 }}>
-              Organization: {activeOrgName ?? "—"}
+              {uiText("Organization:")}{activeOrgName ?? "—"}
             </Text>
 
             <Card
@@ -896,13 +900,13 @@ backgroundColor: "#F7FFFB",
               }}
             >
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 17 }}>
-                {cycleLoading ? "Checking Field..." : activeCycle ? activeCycle.title : "No Active Field"}
+                {cycleLoading ? uiText("Checking Field...") : activeCycle ? (activeCycle._uiMissingTitle ? uiText("Active Field") : activeCycle.title) : uiText("No Active Field")}
               </Text>
 
               <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 20 }}>
                 {activeCycle
-                  ? `Target: ${fmt(activeCycle.target_amount)} • Opened: ${fmtLocal(activeCycle.opened_at)}`
-                  : "Fungua field mpya ili allocation na expenses ziingie kwenye cycle sahihi."}
+                  ? uiText("Target: {p0} • Opened: {p1}", {p0: (fmt(activeCycle.target_amount)), p1: (fmtLocal(activeCycle.opened_at))})
+                  : uiText("Fungua field mpya ili allocation na expenses ziingie kwenye cycle sahihi.")}
               </Text>
 
               {!!activeCycle?.note ? (
@@ -927,7 +931,7 @@ backgroundColor: "#F7FFFB",
                     })}
                   >
                     <Text style={{ color: UI.text, fontWeight: "900" }}>
-                      {savingCycle ? "Closing..." : "Close Field"}
+                      {savingCycle ? uiText("Closing...") : uiText("Close Field")}
                     </Text>
                   </Pressable>
                 ) : (
@@ -944,7 +948,7 @@ backgroundColor: "#F7FFFB",
                       opacity: savingCycle ? 0.55 : pressed ? 0.92 : 1,
                     })}
                   >
-                    <Text style={{ color: UI.text, fontWeight: "900" }}>Open Field</Text>
+                    <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Open Field")}</Text>
                   </Pressable>
                 )
               ) : null}
@@ -959,49 +963,47 @@ backgroundColor: "#F7FFFB",
               }}
             >
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 17 }}>
-                Field Wallet Overview
-              </Text>
+                {uiText("Field Wallet Overview")}</Text>
 
               <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 20 }}>
-                Hapa utaona fedha zilizotolewa kwa agents, manunuzi, matumizi, na balance ya kila agent.
-              </Text>
+                {uiText("Hapa utaona fedha zilizotolewa kwa agents, manunuzi, matumizi, na balance ya kila agent.")}</Text>
 
     <View style={{ flexDirection: "row", gap: 12 }}>
   <MiniStat
-    label="Target Fund"
+    label={uiText("Target Fund")}
     value={fmt(cycleSummary?.target_amount ?? activeCycle?.target_amount ?? 0)}
-    hint="field budget"
+    hint={uiText("field budget")}
   />
   <MiniStat
-    label="Field Remaining"
+    label={uiText("Field Remaining")}
     value={fmt(cycleSummary?.field_remaining ?? 0)}
-    hint="not allocated"
+    hint={uiText("not allocated")}
   />
 </View>
 
 <View style={{ flexDirection: "row", gap: 12 }}>
   <MiniStat
-    label="Allocated"
+    label={uiText("Allocated")}
     value={fmt(cycleSummary?.total_allocated ?? totals.allocated)}
-    hint="to agents"
+    hint={uiText("to agents")}
   />
   <MiniStat
-    label="Agent Balance"
+    label={uiText("Agent Balance")}
     value={fmt(cycleSummary?.agent_wallet_balance ?? totals.balance)}
-    hint="with agents"
+    hint={uiText("with agents")}
   />
 </View>
 
 <View style={{ flexDirection: "row", gap: 12 }}>
   <MiniStat
-    label="Target Spent"
+    label={uiText("Target Spent")}
     value={fmt(cycleSummary?.total_target_spent ?? 0)}
-    hint="main purpose"
+    hint={uiText("main purpose")}
   />
   <MiniStat
-    label="Operational"
+    label={uiText("Operational")}
     value={fmt(cycleSummary?.total_operational_spent ?? 0)}
-    hint="field costs"
+    hint={uiText("field costs")}
   />
 </View>
             </Card>
@@ -1022,7 +1024,7 @@ backgroundColor: "#F7FFFB",
                     opacity: pressed ? 0.92 : 1,
                   })}
                 >
-                  <Text style={{ color: UI.text, fontWeight: "900" }}>Allocate Money</Text>
+                  <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Allocate Money")}</Text>
                 </Pressable>
 
                 <Pressable
@@ -1039,7 +1041,7 @@ backgroundColor: "#F7FFFB",
                     opacity: pressed ? 0.92 : 1,
                   })}
                 >
-                  <Text style={{ color: UI.text, fontWeight: "900" }}>Record Expense</Text>
+                  <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Record Expense")}</Text>
                 </Pressable>
               </View>
             ) : (
@@ -1056,7 +1058,7 @@ backgroundColor: "#F7FFFB",
                   opacity: pressed ? 0.92 : 1,
                 })}
               >
-                <Text style={{ color: UI.text, fontWeight: "900" }}>Record Field Expense</Text>
+                <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Record Field Expense")}</Text>
               </Pressable>
             )}
 
@@ -1075,7 +1077,7 @@ backgroundColor: "#F7FFFB",
               })}
             >
               <Text style={{ color: UI.text, fontWeight: "900" }}>
-                {loading || cycleLoading ? "Loading..." : "Refresh"}
+                {loading || cycleLoading ? uiText("Loading...") : uiText("Refresh")}
               </Text>
             </Pressable>
           </Card>
@@ -1090,8 +1092,7 @@ backgroundColor: "#F8FAFF",
             }}
           >
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 20 }}>
-              Agent Wallets
-            </Text>
+              {uiText("Agent Wallets")}</Text>
 
             {!!error ? (
               <Card
@@ -1102,12 +1103,12 @@ backgroundColor: "#F8FAFF",
                   padding: 12,
                 }}
               >
-                <Text style={{ color: UI.danger, fontWeight: "900" }}>{error}</Text>
+                <Text style={{ color: UI.danger, fontWeight: "900" }}>{systemText(error)}</Text>
               </Card>
             ) : null}
 
             {loading ? (
-              <Text style={{ color: UI.faint, fontWeight: "800" }}>Loading wallets...</Text>
+              <Text style={{ color: UI.faint, fontWeight: "800" }}>{uiText("Loading wallets...")}</Text>
             ) : wallets.length === 0 ? (
               <Card
                 style={{
@@ -1118,11 +1119,9 @@ backgroundColor: "#F8FAFF",
                 }}
               >
                 <Text style={{ color: UI.text, fontWeight: "900", lineHeight: 20 }}>
-                  Hakuna wallet bado.
-                </Text>
+                  {uiText("Hakuna wallet bado.")}</Text>
                 <Text style={{ color: UI.faint, fontWeight: "800", marginTop: 6, lineHeight: 20 }}>
-                  Owner/Admin atakapomkabidhi agent fedha, wallet itaonekana hapa.
-                </Text>
+                  {uiText("Owner/Admin atakapomkabidhi agent fedha, wallet itaonekana hapa.")}</Text>
               </Card>
             ) : (
               wallets.map((w) => (
@@ -1141,7 +1140,7 @@ backgroundColor: "#F8FAFF",
                         {w.agent_email}
                       </Text>
                       <Text style={{ color: UI.faint, fontWeight: "800", marginTop: 4 }}>
-                        Role: {w.agent_role}
+                        {uiText("Role:")}{w.agent_role}
                       </Text>
                     </View>
 
@@ -1150,19 +1149,18 @@ backgroundColor: "#F8FAFF",
                         {fmt(w.balance)}
                       </Text>
                       <Text style={{ color: UI.faint, fontWeight: "800", marginTop: 4, fontSize: 12 }}>
-                        Balance
-                      </Text>
+                        {uiText("Balance")}</Text>
                     </View>
                   </View>
 
                   <View style={{ flexDirection: "row", gap: 12 }}>
-                    <MiniStat label="Allocated" value={fmt(w.total_allocated)} />
-                    <MiniStat label="Purchases" value={fmt(w.total_purchases)} />
-                    <MiniStat label="Expenses" value={fmt(w.total_expenses)} />
+                    <MiniStat label={uiText("Allocated")} value={fmt(w.total_allocated)} />
+                    <MiniStat label={uiText("Purchases")} value={fmt(w.total_purchases)} />
+                    <MiniStat label={uiText("Expenses")} value={fmt(w.total_expenses)} />
                   </View>
 
                  <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 12 }}>
-  Last activity: {fmtLocal(w.last_activity_at)}
+  {uiText("Last activity:")}{fmtLocal(w.last_activity_at)}
 </Text>
 
 {agentStocks.filter((s) => s.membership_id === w.membership_id).length > 0 ? (
@@ -1177,8 +1175,7 @@ backgroundColor: "#F8FAFF",
     }}
   >
     <Text style={{ color: UI.emerald, fontWeight: "900", fontSize: 15 }}>
-      Mzigo aliokusanya
-    </Text>
+      {uiText("Mzigo aliokusanya")}</Text>
 
     {agentStocks
       .filter((s) => s.membership_id === w.membership_id)
@@ -1191,7 +1188,7 @@ backgroundColor: "#F8FAFF",
             {s.total_quantity} {s.unit}
           </Text>
           <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 3 }}>
-            Cost: {fmt(s.total_amount)} • Avg: {fmt(s.avg_unit_price)} / {s.unit}
+            {uiText("Cost:")}{fmt(s.total_amount)} {uiText("• Avg:")}{fmt(s.avg_unit_price)} / {s.unit}
           </Text>
         </View>
       ))}
@@ -1224,17 +1221,16 @@ backgroundColor: "#F8FAFF",
                 }}
               >
                 <View style={{ padding: 14, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.10)" }}>
-                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18 }}>Open Field</Text>
+                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18 }}>{uiText("Open Field")}</Text>
                   <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 6, lineHeight: 20 }}>
-                    Fungua field/trip mpya ili hesabu zianze upya kwa cycle hii.
-                  </Text>
+                    {uiText("Fungua field/trip mpya ili hesabu zianze upya kwa cycle hii.")}</Text>
                 </View>
 
                 <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 14, gap: 12 }}>
                   <TextInput
                     value={cycleTitle}
                     onChangeText={setCycleTitle}
-                    placeholder="mfano: Madini Trip April 24"
+                    placeholder={uiText("mfano: Madini Trip April 24")}
                     placeholderTextColor="rgba(234,242,255,0.35)"
                     style={{
                       borderWidth: 1,
@@ -1252,7 +1248,7 @@ backgroundColor: "#F8FAFF",
                   <TextInput
                     value={cycleTargetAmount}
                     onChangeText={(t) => setCycleTargetAmount(t.replace(/[^0-9.]/g, ""))}
-                    placeholder="Target amount mfano: 10000000"
+                    placeholder={uiText("Target amount mfano: 10000000")}
                     placeholderTextColor="rgba(234,242,255,0.35)"
                     keyboardType="numeric"
                     style={{
@@ -1271,7 +1267,7 @@ backgroundColor: "#F8FAFF",
                   <TextInput
                     value={cycleNote}
                     onChangeText={setCycleNote}
-                    placeholder="Note mfano: fedha ya kukusanya mzigo wa wiki hii"
+                    placeholder={uiText("Note mfano: fedha ya kukusanya mzigo wa wiki hii")}
                     placeholderTextColor="rgba(234,242,255,0.35)"
                   multiline
                     style={{
@@ -1304,7 +1300,7 @@ backgroundColor: "#F8FAFF",
                         opacity: savingCycle ? 0.55 : pressed ? 0.92 : 1,
                       })}
                     >
-                      <Text style={{ color: UI.text, fontWeight: "900" }}>Cancel</Text>
+                      <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Cancel")}</Text>
                     </Pressable>
 
                     <Pressable
@@ -1322,7 +1318,7 @@ backgroundColor: "#F8FAFF",
                       })}
                     >
                       <Text style={{ color: UI.text, fontWeight: "900" }}>
-                        {savingCycle ? "Saving..." : "Open"}
+                        {savingCycle ? uiText("Saving...") : uiText("Open")}
                       </Text>
                     </Pressable>
                   </View>
@@ -1353,14 +1349,13 @@ backgroundColor: "#F8FAFF",
                 }}
               >
                 <View style={{ padding: 14, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.10)" }}>
-                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18 }}>Allocate Money</Text>
+                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18 }}>{uiText("Allocate Money")}</Text>
                   <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 6, lineHeight: 20 }}>
-                    Chagua agent na kiasi cha fedha unachomkabidhi kwenye field hii.
-                  </Text>
+                    {uiText("Chagua agent na kiasi cha fedha unachomkabidhi kwenye field hii.")}</Text>
                 </View>
 
                 <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 14, gap: 12 }}>
-                  <Text style={{ color: UI.muted, fontWeight: "900" }}>Select Agent</Text>
+                  <Text style={{ color: UI.muted, fontWeight: "900" }}>{uiText("Select Agent")}</Text>
 
                   {renderAgentSelector({
                     selectedId: selectedMembershipId,
@@ -1370,7 +1365,7 @@ backgroundColor: "#F8FAFF",
                   <TextInput
                     value={allocateAmount}
                     onChangeText={(t) => setAllocateAmount(t.replace(/[^0-9.]/g, ""))}
-                    placeholder="mfano: 500000"
+                    placeholder={uiText("mfano: 500000")}
                     placeholderTextColor="rgba(234,242,255,0.35)"
                     keyboardType="numeric"
                     style={{
@@ -1389,7 +1384,7 @@ backgroundColor: "#F8FAFF",
                   <TextInput
                     value={allocateNote}
                     onChangeText={setAllocateNote}
-                    placeholder="mfano: fedha ya kununua mzigo leo"
+                    placeholder={uiText("mfano: fedha ya kununua mzigo leo")}
                     placeholderTextColor="rgba(234,242,255,0.35)"
                     multiline
                     style={{
@@ -1422,7 +1417,7 @@ backgroundColor: "#F8FAFF",
                         opacity: allocating ? 0.55 : pressed ? 0.92 : 1,
                       })}
                     >
-                      <Text style={{ color: UI.text, fontWeight: "900" }}>Cancel</Text>
+                      <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Cancel")}</Text>
                     </Pressable>
 
                     <Pressable
@@ -1445,7 +1440,7 @@ backgroundColor: "#F8FAFF",
                       })}
                     >
                       <Text style={{ color: UI.text, fontWeight: "900" }}>
-                        {allocating ? "Saving..." : "Allocate"}
+                        {allocating ? uiText("Saving...") : uiText("Allocate")}
                       </Text>
                     </Pressable>
                   </View>
@@ -1476,16 +1471,15 @@ backgroundColor: "#F8FAFF",
                 }}
               >
                 <View style={{ padding: 14, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.10)" }}>
-                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18 }}>Record Expense</Text>
+                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18 }}>{uiText("Record Expense")}</Text>
                   <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 6, lineHeight: 20 }}>
-                    Rekodi matumizi ya field. TARGET ni lengo kuu; OPERATIONAL ni matumizi ya kawaida.
-                  </Text>
+                    {uiText("Rekodi matumizi ya field. TARGET ni lengo kuu; OPERATIONAL ni matumizi ya kawaida.")}</Text>
                 </View>
 
                 <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 14, gap: 12 }}>
                   {canManage ? (
                     <>
-                      <Text style={{ color: UI.muted, fontWeight: "900" }}>Select Agent</Text>
+                      <Text style={{ color: UI.muted, fontWeight: "900" }}>{uiText("Select Agent")}</Text>
                       {renderAgentSelector({
                         selectedId: expenseMembershipId,
                         onSelect: setExpenseMembershipId,
@@ -1493,7 +1487,7 @@ backgroundColor: "#F8FAFF",
                     </>
                   ) : null}
 
-                  <Text style={{ color: UI.muted, fontWeight: "900" }}>Purpose</Text>
+                  <Text style={{ color: UI.muted, fontWeight: "900" }}>{uiText("Purpose")}</Text>
 
                   <View style={{ flexDirection: "row", gap: 10 }}>
                     <Pressable
@@ -1519,14 +1513,13 @@ backgroundColor: "#F8FAFF",
                       })}
                     >
                       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 13 }}>Target</Text>
+  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 13 }}>{uiText("Target")}</Text>
   {expensePurpose === "TARGET" ? (
     <Ionicons name="checkmark-circle" size={18} color={UI.emerald} />
   ) : null}
 </View>
                       <Text style={{ color: UI.faint, fontWeight: "800", marginTop: 4, fontSize: 11 }}>
-                        Lengo kuu
-                      </Text>
+                        {uiText("Lengo kuu")}</Text>
                     </Pressable>
 
                     <Pressable
@@ -1552,18 +1545,17 @@ backgroundColor: "#F8FAFF",
                       })}
                     >
                       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 13 }}>Operational</Text>
+  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 13 }}>{uiText("Operational")}</Text>
   {expensePurpose === "OPERATIONAL" ? (
     <Ionicons name="checkmark-circle" size={18} color={UI.emerald} />
   ) : null}
 </View>
                       <Text style={{ color: UI.faint, fontWeight: "800", marginTop: 4, fontSize: 11 }}>
-                        Nauli/chakula
-                      </Text>
+                        {uiText("Nauli/chakula")}</Text>
                     </Pressable>
                   </View>
 
-                  <Text style={{ color: UI.muted, fontWeight: "900" }}>Category</Text>
+                  <Text style={{ color: UI.muted, fontWeight: "900" }}>{uiText("Category")}</Text>
 
                   <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                     {[
@@ -1603,12 +1595,12 @@ backgroundColor: "#F8FAFF",
                   </View>
 {expensePurpose === "TARGET" ? (
                     <>
-                      <Text style={{ color: UI.muted, fontWeight: "900" }}>Item / Goods</Text>
+                      <Text style={{ color: UI.muted, fontWeight: "900" }}>{uiText("Item / Goods")}</Text>
 
                       <TextInput
                         value={expenseItemName}
                         onChangeText={setExpenseItemName}
-                        placeholder="mfano: Dhahabu / Mahindi / Korosho"
+                        placeholder={uiText("mfano: Dhahabu / Mahindi / Korosho")}
                         placeholderTextColor="rgba(234,242,255,0.35)"
                         style={{
                           borderWidth: 1,
@@ -1624,7 +1616,7 @@ backgroundColor: "#F8FAFF",
                       />
 
                       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-  <Text style={{ color: UI.muted, fontWeight: "900" }}>Unit</Text>
+  <Text style={{ color: UI.muted, fontWeight: "900" }}>{uiText("Unit")}</Text>
 
   <Pressable
     onPress={() => setUnitPickerOpen(true)}
@@ -1639,8 +1631,7 @@ backgroundColor: "#F8FAFF",
     })}
   >
     <Text style={{ color: UI.emerald, fontWeight: "900", fontSize: 12 }}>
-      Set Unit
-    </Text>
+      {uiText("Set Unit")}</Text>
   </Pressable>
 </View>
 
@@ -1677,7 +1668,7 @@ backgroundColor: "#F8FAFF",
                       <TextInput
                         value={expenseQuantity}
                         onChangeText={(t) => setExpenseQuantity(t.replace(/[^0-9.]/g, ""))}
-                        placeholder="Quantity mfano: 5"
+                        placeholder={uiText("Quantity mfano: 5")}
                         placeholderTextColor="rgba(234,242,255,0.35)"
                         keyboardType="numeric"
                         style={{
@@ -1695,7 +1686,7 @@ backgroundColor: "#F8FAFF",
 
                       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
   <Text style={{ color: UI.muted, fontWeight: "900" }}>
-    Price / {expenseUnit || "unit"}
+    {uiText("Price /")}{expenseUnit || uiText("unit")}
   </Text>
 
   <Pressable
@@ -1711,15 +1702,14 @@ backgroundColor: "#F8FAFF",
     })}
   >
     <Text style={{ color: UI.emerald, fontWeight: "900", fontSize: 12 }}>
-      Set Price
-    </Text>
+      {uiText("Set Price")}</Text>
   </Pressable>
 </View>
 
 <TextInput
   value={expenseActualUnitPrice}
                         onChangeText={(t) => setExpenseActualUnitPrice(t.replace(/[^0-9.]/g, ""))}
-                        placeholder="Actual price per unit mfano: 125000"
+                        placeholder={uiText("Actual price per unit mfano: 125000")}
                         placeholderTextColor="rgba(234,242,255,0.35)"
                         keyboardType="numeric"
                         style={{
@@ -1744,8 +1734,7 @@ backgroundColor: "#F8FAFF",
                         }}
                       >
                         <Text style={{ color: UI.faint, fontWeight: "900", fontSize: 12 }}>
-                          AUTO TOTAL
-                        </Text>
+                          {uiText("AUTO TOTAL")}</Text>
                         <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18, marginTop: 4 }}>
                           {fmt(computedTargetAmount)}
                         </Text>
@@ -1759,7 +1748,7 @@ backgroundColor: "#F8FAFF",
                   <TextInput
                     value={expenseAmount}
                     onChangeText={(t) => setExpenseAmount(t.replace(/[^0-9.]/g, ""))}
-                    placeholder="mfano: 20000"
+                    placeholder={uiText("mfano: 20000")}
                     placeholderTextColor="rgba(234,242,255,0.35)"
                     keyboardType="numeric"
                     style={{
@@ -1780,8 +1769,8 @@ backgroundColor: "#F8FAFF",
                     onChangeText={setExpenseNote}
                     placeholder={
                       expensePurpose === "TARGET"
-                        ? "Optional note mfano: bei imebadilika sokoni"
-                        : "mfano: nauli / chakula / malipo ya mzigo"
+                        ? uiText("Optional note mfano: bei imebadilika sokoni")
+                        : uiText("mfano: nauli / chakula / malipo ya mzigo")
                     }
                     placeholderTextColor="rgba(234,242,255,0.35)"
                     multiline
@@ -1822,11 +1811,9 @@ backgroundColor: "#F8FAFF",
                         }}
                       >
                         <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18 }}>
-                          Set Unit
-                        </Text>
+                          {uiText("Set Unit")}</Text>
                         <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 6, lineHeight: 20 }}>
-                          Chagua kipimo kitakachotumika kwenye mzigo huu.
-                        </Text>
+                          {uiText("Chagua kipimo kitakachotumika kwenye mzigo huu.")}</Text>
 
                         <ScrollView contentContainerStyle={{ flexDirection: "row", flexWrap: "wrap", gap: 8, paddingTop: 14 }}>
                           {FIELD_UNIT_PRESETS.map((u) => {
@@ -1889,16 +1876,15 @@ backgroundColor: "#F8FAFF",
                         }}
                       >
                         <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18 }}>
-                          Set Price / {expenseUnit || "unit"}
+                          {uiText("Set Price /")}{expenseUnit || uiText("unit")}
                         </Text>
                         <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 20 }}>
-                          Weka bei ya kununulia kwa kipimo ulichochagua. Baada ya hapo ukiandika quantity, total itajihesabu.
-                        </Text>
+                          {uiText("Weka bei ya kununulia kwa kipimo ulichochagua. Baada ya hapo ukiandika quantity, total itajihesabu.")}</Text>
 
                         <TextInput
                           value={expenseActualUnitPrice}
                           onChangeText={(t) => setExpenseActualUnitPrice(t.replace(/[^0-9.]/g, ""))}
-                          placeholder="mfano: 750"
+                          placeholder={uiText("mfano: 750")}
                           placeholderTextColor="rgba(234,242,255,0.35)"
                           keyboardType="numeric"
                           style={{
@@ -1928,8 +1914,7 @@ backgroundColor: "#F8FAFF",
                           })}
                         >
                           <Text style={{ color: UI.text, fontWeight: "900" }}>
-                            Use This Price
-                          </Text>
+                            {uiText("Use This Price")}</Text>
                         </Pressable>
                       </Pressable>
                     </Pressable>
@@ -1950,7 +1935,7 @@ backgroundColor: "#F8FAFF",
                         opacity: savingExpense ? 0.55 : pressed ? 0.92 : 1,
                       })}
                     >
-                      <Text style={{ color: UI.text, fontWeight: "900" }}>Cancel</Text>
+                      <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Cancel")}</Text>
                     </Pressable>
 
                     <Pressable
@@ -1983,7 +1968,7 @@ backgroundColor: "#F8FAFF",
                       })}
                     >
                       <Text style={{ color: UI.text, fontWeight: "900" }}>
-                        {savingExpense ? "Saving..." : "Save Expense"}
+                        {savingExpense ? uiText("Saving...") : uiText("Save Expense")}
                       </Text>
                     </Pressable>
                   </View>

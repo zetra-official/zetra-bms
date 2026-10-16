@@ -1,3 +1,4 @@
+import {useCommonText} from "@/src/i18n/useCommonText";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -188,6 +189,7 @@ function SubscriptionCard({
 }: {
   item: SubscriptionRow;
 }) {
+ const uiText=useCommonText();
   const state = subscriptionState(item);
   const tone = statusStyle(state);
 
@@ -223,7 +225,7 @@ function SubscriptionCard({
               fontSize: 18,
             }}
           >
-            {clean(item.organization_name) || "Unnamed Organization"}
+            {clean(item.organization_name) || uiText("Unnamed Organization")}
           </Text>
 
           <Text
@@ -234,7 +236,7 @@ function SubscriptionCard({
               marginTop: 5,
             }}
           >
-            {clean(item.owner_email) || "No owner email"}
+            {clean(item.owner_email) || uiText("No owner email")}
           </Text>
         </View>
 
@@ -277,8 +279,7 @@ function SubscriptionCard({
             fontSize: 11,
           }}
         >
-          SUBSCRIPTION
-        </Text>
+          {uiText("SUBSCRIPTION")}</Text>
 
         <Text
           style={{
@@ -288,7 +289,7 @@ function SubscriptionCard({
             marginTop: 7,
           }}
         >
-          {planName} • {upper(item.subscription_status) || "INACTIVE"}
+          {planName} • {upper(item.subscription_status) || uiText("INACTIVE")}
         </Text>
 
         <Text
@@ -298,7 +299,7 @@ function SubscriptionCard({
             marginTop: 9,
           }}
         >
-          Started:{" "}
+          {uiText("Started:")}{" "}
           <Text style={{ color: theme.colors.text }}>
             {fmtDate(item.subscription_start_at)}
           </Text>
@@ -311,7 +312,7 @@ function SubscriptionCard({
             marginTop: 6,
           }}
         >
-          Expires:{" "}
+          {uiText("Expires:")}{" "}
           <Text style={{ color: theme.colors.text }}>
             {fmtDate(item.subscription_end_at)}
           </Text>
@@ -324,7 +325,7 @@ function SubscriptionCard({
             marginTop: 6,
           }}
         >
-          Days left:{" "}
+          {uiText("Days left:")}{" "}
           <Text style={{ color: theme.colors.text }}>
             {item.days_left === null ||
             item.days_left === undefined
@@ -361,8 +362,7 @@ function SubscriptionCard({
               fontSize: 11,
             }}
           >
-            Stores
-          </Text>
+            {uiText("Stores")}</Text>
 
           <Text
             style={{
@@ -395,8 +395,7 @@ function SubscriptionCard({
               fontSize: 11,
             }}
           >
-            Active Stores
-          </Text>
+            {uiText("Active Stores")}</Text>
 
           <Text
             style={{
@@ -415,6 +414,7 @@ function SubscriptionCard({
 }
 
 export default function OfficeSubscriptionsScreen() {
+ const uiText = useCommonText();
   const router = useRouter();
 
   const [rows, setRows] = useState<SubscriptionRow[]>([]);
@@ -439,9 +439,9 @@ export default function OfficeSubscriptionsScreen() {
       );
     } catch (e: any) {
       Alert.alert(
-        "Subscriptions",
+        uiText("Subscriptions"),
         e?.message ??
-          "Imeshindikana kusoma subscriptions."
+          uiText("Imeshindikana kusoma subscriptions.")
       );
     } finally {
       setLoading(false);
@@ -520,8 +520,7 @@ export default function OfficeSubscriptionsScreen() {
             marginTop: 12,
           }}
         >
-          Loading subscriptions...
-        </Text>
+          {uiText("Loading subscriptions...")}</Text>
       </View>
     );
   }
@@ -578,8 +577,7 @@ export default function OfficeSubscriptionsScreen() {
               fontSize: 28,
             }}
           >
-            Subscriptions
-          </Text>
+            {uiText("Subscriptions")}</Text>
 
           <Text
             style={{
@@ -588,8 +586,7 @@ export default function OfficeSubscriptionsScreen() {
               marginTop: 3,
             }}
           >
-            Active, expiring na expired plans
-          </Text>
+            {uiText("Active, expiring na expired plans")}</Text>
         </View>
 
         <Pressable
@@ -640,32 +637,32 @@ export default function OfficeSubscriptionsScreen() {
         }}
       >
         <SummaryCard
-          label="All Customers"
+          label={uiText("All Customers")}
           value={summary.total}
         />
 
         <SummaryCard
-          label="Active"
+          label={uiText("Active")}
           value={summary.active}
         />
 
         <SummaryCard
-          label="Expiring Soon"
+          label={uiText("Expiring Soon")}
           value={summary.expiring}
         />
 
         <SummaryCard
-          label="Expired"
+          label={uiText("Expired")}
           value={summary.expired}
         />
 
         <SummaryCard
-          label="Trial"
+          label={uiText("Trial")}
           value={summary.trial}
         />
 
         <SummaryCard
-          label="Inactive"
+          label={uiText("Inactive")}
           value={summary.inactive}
         />
       </View>
@@ -683,7 +680,7 @@ export default function OfficeSubscriptionsScreen() {
         <TextInput
           value={search}
           onChangeText={setSearch}
-          placeholder="Search organization, email, plan, status..."
+          placeholder={uiText("Search organization, email, plan, status...")}
           placeholderTextColor="#94A3B8"
           autoCapitalize="none"
           autoCorrect={false}
@@ -717,8 +714,7 @@ export default function OfficeSubscriptionsScreen() {
                 fontWeight: "900",
               }}
             >
-              No subscriptions found
-            </Text>
+              {uiText("No subscriptions found")}</Text>
 
             <Text
               style={{
@@ -727,8 +723,7 @@ export default function OfficeSubscriptionsScreen() {
                 marginTop: 7,
               }}
             >
-              Hakuna customer anayelingana na search hiyo.
-            </Text>
+              {uiText("Hakuna customer anayelingana na search hiyo.")}</Text>
           </View>
         ) : (
           filteredRows.map((item) => (

@@ -1,3 +1,5 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/(tabs)/club/[postId]/edit.tsx
 import { useOrg } from "@/src/context/OrgContext";
 import { supabase } from "@/src/supabase/supabaseClient";
@@ -53,6 +55,8 @@ function isMissingRpc(err: any) {
 /* ---------------- screen ---------------- */
 
 export default function ClubEditPostScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { activeStoreId } = useOrg();
@@ -85,7 +89,7 @@ export default function ClubEditPostScreen() {
 
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert("Permission", "Ruhusa ya kuchagua picha inahitajika.");
+      Alert.alert(uiText("Permission"), uiText("Ruhusa ya kuchagua picha inahitajika."));
       return;
     }
 
@@ -200,11 +204,11 @@ export default function ClubEditPostScreen() {
 
   const submit = useCallback(async () => {
     if (!postId) {
-      Alert.alert("Missing Post", "Post ID haipo. Rudi nyuma uingie tena.");
+      Alert.alert(uiText("Missing Post"), uiText("Post ID haipo. Rudi nyuma uingie tena."));
       return;
     }
     if (!activeStoreId) {
-      Alert.alert("Store Required", "Activate store kwanza kabla ya kuendelea.");
+      Alert.alert(uiText("Store Required"), uiText("Activate store kwanza kabla ya kuendelea."));
       return;
     }
     if (!canSubmit) return;
@@ -224,7 +228,7 @@ export default function ClubEditPostScreen() {
 
       await updatePost(clean(caption), finalImage);
 
-      Alert.alert("Success", "Post imebadilishwa ✅");
+      Alert.alert(uiText("Success"), uiText("Post imebadilishwa ✅"));
 
       router.replace({
         pathname: "/(tabs)/club" as any,
@@ -260,15 +264,14 @@ export default function ClubEditPostScreen() {
       <View style={{ gap: 12 }}>
         {!!err && (
           <Card style={{ backgroundColor: theme.colors.dangerSoft, borderColor: theme.colors.dangerBorder }}>
-            <Text style={{ color: theme.colors.dangerText, fontWeight: "900" }}>{err}</Text>
+            <Text style={{ color: theme.colors.dangerText, fontWeight: "900" }}>{systemText(err)}</Text>
           </Card>
         )}
 
         <Card>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
             <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-              Edit Post
-            </Text>
+              {uiText("Edit Post")}</Text>
 
             <Pressable
               onPress={() => router.back()}
@@ -285,21 +288,20 @@ export default function ClubEditPostScreen() {
                 },
               ]}
             >
-              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Back</Text>
+              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Back")}</Text>
             </Pressable>
           </View>
 
           <Text style={{ color: theme.colors.faint, fontWeight: "800", marginTop: 8 }}>
-            Unaweza kubadilisha caption na/au picha.
-          </Text>
+            {uiText("Unaweza kubadilisha caption na/au picha.")}</Text>
         </Card>
 
         <Card>
-          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Caption</Text>
+          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Caption")}</Text>
           <TextInput
             value={caption}
             onChangeText={setCaption}
-            placeholder="Badilisha ujumbe..."
+            placeholder={uiText("Badilisha ujumbe...")}
             placeholderTextColor={theme.colors.faint}
             multiline
             style={{
@@ -316,11 +318,11 @@ export default function ClubEditPostScreen() {
 
         <Card>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Picha</Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Picha")}</Text>
 
             {(!!localUri || !!clean(remoteUrl)) && (
               <Pressable onPress={removeImage} hitSlop={10}>
-                <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Remove</Text>
+                <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>{uiText("Remove")}</Text>
               </Pressable>
             )}
           </View>
@@ -342,7 +344,7 @@ export default function ClubEditPostScreen() {
               }}
             >
               <Ionicons name="image-outline" size={18} color={theme.colors.emerald} />
-              <Text style={{ fontWeight: "900", color: theme.colors.text }}>Chagua Picha</Text>
+              <Text style={{ fontWeight: "900", color: theme.colors.text }}>{uiText("Chagua Picha")}</Text>
             </Pressable>
           ) : (
             <View style={{ marginTop: 10, gap: 8 }}>
@@ -367,7 +369,7 @@ export default function ClubEditPostScreen() {
                   }}
                 >
                   <Ionicons name="swap-horizontal-outline" size={18} color={theme.colors.text} />
-                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Change</Text>
+                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Change")}</Text>
                 </Pressable>
 
                 <Pressable
@@ -386,19 +388,19 @@ export default function ClubEditPostScreen() {
                   }}
                 >
                   <Ionicons name="trash-outline" size={18} color={theme.colors.dangerText} />
-                  <Text style={{ color: theme.colors.dangerText, fontWeight: "900" }}>Remove</Text>
+                  <Text style={{ color: theme.colors.dangerText, fontWeight: "900" }}>{uiText("Remove")}</Text>
                 </Pressable>
               </View>
 
               <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                {uploading ? "Uploading picha..." : localUri ? "Picha mpya itaupload ukisave." : "Picha ya sasa iko tayari."}
+                {uploading ? uiText("Uploading picha...") : localUri ? uiText("Picha mpya itaupload ukisave.") : uiText("Picha ya sasa iko tayari.")}
               </Text>
             </View>
           )}
         </Card>
 
         <Button
-          title={uploading ? "Uploading..." : saving ? "Saving..." : "Save Changes"}
+          title={uploading ? uiText("Uploading...") : saving ? uiText("Saving...") : uiText("Save Changes")}
           onPress={submit}
           disabled={!canSubmit}
         />

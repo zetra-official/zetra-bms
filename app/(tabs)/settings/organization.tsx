@@ -1,3 +1,4 @@
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/(tabs)/settings/organization.tsx
 import React, { useMemo } from "react";
 import { Alert, Pressable, Text, View } from "react-native";
@@ -31,6 +32,7 @@ function Pill({ icon, label }: { icon: keyof typeof Ionicons.glyphMap; label: st
 }
 
 export default function OrganizationSettings() {
+ const uiText=useCommonText();
   const router = useRouter();
 
   const goBackSafe = React.useCallback(() => {
@@ -76,11 +78,9 @@ export default function OrganizationSettings() {
 
         <View style={{ flex: 1 }}>
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 20 }}>
-            Organization
-          </Text>
+            {uiText("Organization")}</Text>
           <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 4 }}>
-            Manage org identity and core setup.
-          </Text>
+            {uiText("Manage org identity and core setup.")}</Text>
         </View>
       </View>
 
@@ -93,11 +93,10 @@ export default function OrganizationSettings() {
       <View style={{ marginTop: 14 }}>
         <Card>
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-            {name}
+            {(org.activeOrgName ?? uiText("No organization"))}
           </Text>
           <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 6 }}>
-            This is your active organization. Regional Settings will apply here.
-          </Text>
+            {uiText("This is your active organization. Regional Settings will apply here.")}</Text>
 
           <View
             style={{
@@ -140,11 +139,9 @@ export default function OrganizationSettings() {
 
             <View style={{ flex: 1 }}>
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-                Regional Settings
-              </Text>
+                {uiText("Regional Settings")}</Text>
               <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 12, marginTop: 2 }}>
-                Language • Currency • Timezone • Date • Number
-              </Text>
+                {uiText("Language • Currency • Timezone • Date • Number")}</Text>
             </View>
 
             <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.55)" />
@@ -155,20 +152,18 @@ export default function OrganizationSettings() {
       <View style={{ marginTop: 12 }}>
         <Card>
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-            Permissions
-          </Text>
+            {uiText("Permissions")}</Text>
           <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 6 }}>
-            Only Owner/Admin should change organization-level settings (accounting consistency).
-          </Text>
+            {uiText("Only Owner/Admin should change organization-level settings (accounting consistency).")}</Text>
 
           <View style={{ marginTop: 12 }}>
             <Pressable
               onPress={() => {
                 if (!canManageOrg) {
-                  Alert.alert("Not allowed", "Only Owner/Admin can manage organization settings.");
+                  Alert.alert(uiText("Not allowed"), uiText("Only Owner/Admin can manage organization settings."));
                   return;
                 }
-                Alert.alert("Coming next", "Organization identity editing will be added next.");
+                Alert.alert(uiText("Coming next"), uiText("Organization identity editing will be added next."));
               }}
               style={({ pressed }) => [
                 {
@@ -188,8 +183,7 @@ export default function OrganizationSettings() {
             >
               <Ionicons name="pencil-outline" size={16} color={UI.text} />
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
-                Edit org info (soon)
-              </Text>
+                {uiText("Edit org info (soon)")}</Text>
             </Pressable>
           </View>
         </Card>

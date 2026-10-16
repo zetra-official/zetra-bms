@@ -25,6 +25,10 @@ export function Button({
 
   return (
     <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      accessibilityState={{ disabled }}
+      focusable={!disabled}
       onPress={onPress}
       disabled={disabled}
       style={({ pressed }) => [
@@ -36,6 +40,9 @@ export function Button({
 
           backgroundColor: isPrimary ? theme.colors.primary : "#FFFFFF",
 
+          minHeight: 48,
+          minWidth: 48,
+          flexShrink: 1,
           paddingVertical: 13,
           paddingHorizontal: 16,
 
@@ -52,6 +59,8 @@ export function Button({
           color: isPrimary ? theme.colors.inverseText : theme.colors.text,
           fontWeight: "700",
           fontSize: 15,
+          textAlign: "center",
+          flexShrink: 1,
         }}
       >
         {title}

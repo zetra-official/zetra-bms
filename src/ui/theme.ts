@@ -15,6 +15,7 @@ export const UI = {
   cardStrong: "#FFFFFF",
 
   surface2: "#F8FAFC",
+  surface: "#F8FAFC", // compatibility alias used by existing cards
   surface3: "#EEF4FB",
 
   glass: "#FFFFFF",
@@ -56,6 +57,7 @@ export const UI = {
 
   // ===== DANGER =====
   danger: "#D92D20",
+  dangerText: "#D92D20", // compatibility alias used by existing error labels
 
   dangerSoft: "#FEF3F2",
   dangerBorder: "#FDA29B",

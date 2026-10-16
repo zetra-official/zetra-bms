@@ -1,3 +1,4 @@
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/ai/tasks/index.tsx
 import React, { useCallback, useMemo, useState } from "react";
 import {
@@ -42,6 +43,7 @@ function badgeColor(priority: TaskRow["priority"]) {
 }
 
 export default function TasksListScreen() {
+ const uiText = useCommonText();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const org = useOrg();
@@ -74,7 +76,7 @@ export default function TasksListScreen() {
       .limit(200);
 
     if (error) {
-      Alert.alert("Tasks", error.message);
+      Alert.alert(uiText("Tasks"), error.message);
       setRows([]);
       setLoading(false);
       return;
@@ -134,8 +136,7 @@ export default function TasksListScreen() {
 
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18 }} numberOfLines={1}>
-              Tasks
-            </Text>
+              {uiText("Tasks")}</Text>
             <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 2 }} numberOfLines={1}>
               {headerSubtitle}
             </Text>
@@ -167,22 +168,20 @@ export default function TasksListScreen() {
       >
         {!orgId ? (
           <Card style={{ padding: 14, borderRadius: 18 }}>
-            <Text style={{ color: UI.text, fontWeight: "900" }}>No active organization</Text>
+            <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("No active organization")}</Text>
             <Text style={{ color: UI.muted, marginTop: 6, fontWeight: "700" }}>
-              Chagua organization kwanza, kisha Tasks zitaonekana hapa.
-            </Text>
+              {uiText("Chagua organization kwanza, kisha Tasks zitaonekana hapa.")}</Text>
           </Card>
         ) : loading ? (
           <View style={{ paddingTop: 24, alignItems: "center" }}>
             <ActivityIndicator />
-            <Text style={{ color: UI.muted, marginTop: 10, fontWeight: "800" }}>Loading tasks…</Text>
+            <Text style={{ color: UI.muted, marginTop: 10, fontWeight: "800" }}>{uiText("Loading tasks…")}</Text>
           </View>
         ) : rows.length === 0 ? (
           <Card style={{ padding: 14, borderRadius: 18 }}>
-            <Text style={{ color: UI.text, fontWeight: "900" }}>Hakuna tasks bado</Text>
+            <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Hakuna tasks bado")}</Text>
             <Text style={{ color: UI.muted, marginTop: 6, fontWeight: "700" }}>
-              Nenda ZETRA AI, uliza swali litakalotoa “ACTIONS” — zitajisave automatically hapa.
-            </Text>
+              {uiText("Nenda ZETRA AI, uliza swali litakalotoa “ACTIONS” — zitajisave automatically hapa.")}</Text>
           </Card>
         ) : (
           <View style={{ gap: 10 }}>
@@ -205,12 +204,12 @@ export default function TasksListScreen() {
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                       <View style={{ flex: 1, minWidth: 0 }}>
                         <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }} numberOfLines={2}>
-                          {clean(t.title) || "Untitled"}
+                          {clean(t.title) || uiText("Untitled")}
                         </Text>
 
                         <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 6 }} numberOfLines={1}>
-                          {stepsCount ? `${stepsCount} steps` : "No steps"} • {clean(t.status) || "OPEN"}
-                          {t.eta ? ` • ETA: ${t.eta}` : ""}
+                          {stepsCount ? uiText("{p0} steps", {p0: (stepsCount)}) : uiText("No steps")} • {clean(t.status) || uiText("OPEN")}
+                          {t.eta ? uiText(" • ETA: {p0}", {p0: (t.eta)}) : ""}
                         </Text>
                       </View>
 
@@ -239,8 +238,7 @@ export default function TasksListScreen() {
         )}
 
         <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 11, marginTop: 14 }}>
-          Note: Tasks hizi ni za organization yako (orgId). Owner/Admin ndio access kamili (kulingana na RLS).
-        </Text>
+          {uiText("Note: Tasks hizi ni za organization yako (orgId). Owner/Admin ndio access kamili (kulingana na RLS).")}</Text>
       </ScrollView>
     </Screen>
   );

@@ -1,3 +1,4 @@
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/settings/subscription.tsx
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -205,6 +206,7 @@ function Field({
 }
 
 export default function SubscriptionScreen() {
+ const uiText=useCommonText();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const org = useOrg();
@@ -282,7 +284,7 @@ export default function SubscriptionScreen() {
       if (hasStarter) setSelectedPlanCode("STARTER");
       else if (rows.length > 0) setSelectedPlanCode(rows[0].code);
     } catch (e: any) {
-      Alert.alert("Load failed", e?.message ?? "Failed to load plans.");
+      Alert.alert(uiText("Load failed"), e?.message ?? uiText("Failed to load plans."));
     } finally {
       setLoading(false);
     }
@@ -304,12 +306,12 @@ export default function SubscriptionScreen() {
 
   const submitPaymentRequest = useCallback(async () => {
     if (!activeOrgId) {
-      Alert.alert("No organization", "Please select an active organization first.");
+      Alert.alert(uiText("No organization"), uiText("Please select an active organization first."));
       return;
     }
 
     if (!selectedPlan) {
-      Alert.alert("No plan selected", "Please choose a plan first.");
+      Alert.alert(uiText("No plan selected"), uiText("Please choose a plan first."));
       return;
     }
 
@@ -318,12 +320,12 @@ export default function SubscriptionScreen() {
     const name = clean(payerName);
 
     if (!phone) {
-      Alert.alert("Phone required", "Enter the phone number used to pay.");
+      Alert.alert(uiText("Phone required"), uiText("Enter the phone number used to pay."));
       return;
     }
 
     if (!ref) {
-      Alert.alert("Reference required", "Enter the transaction/reference ID.");
+      Alert.alert(uiText("Reference required"), uiText("Enter the transaction/reference ID."));
       return;
     }
 
@@ -347,13 +349,13 @@ export default function SubscriptionScreen() {
       setPayerName("");
 
       Alert.alert(
-        "Request submitted",
-        `Your payment request was sent successfully.\n\nPlan: ${selectedPlan.code}\nDuration: ${planMonthsLabel(
+        uiText("Request submitted"),
+        uiText("Your payment request was sent successfully.\n\nPlan: {p0}\nDuration: {p1}\nExpected amount: {p2}\n\nStatus: PENDING", {p0: (selectedPlan.code), p1: (planMonthsLabel(
           selectedMonths
-        )}\nExpected amount: ${formatTzs(expectedAmount)}\n\nStatus: PENDING`
+        )), p2: (formatTzs(expectedAmount))})
       );
     } catch (e: any) {
-      Alert.alert("Submit failed", e?.message ?? "Failed to submit payment request.");
+      Alert.alert(uiText("Submit failed"), e?.message ?? uiText("Failed to submit payment request."));
     } finally {
       setSubmitting(false);
     }
@@ -400,14 +402,13 @@ export default function SubscriptionScreen() {
 
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18 }} numberOfLines={1}>
-              Subscription & Billing
-            </Text>
+              {uiText("Subscription & Billing")}</Text>
             <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 2 }} numberOfLines={1}>
               {activeOrgName} • {String(activeRole).toUpperCase()}
             </Text>
           </View>
 
-          <Pill label="MANUAL" />
+          <Pill label={uiText("MANUAL")} />
         </View>
       </View>
 
@@ -420,43 +421,39 @@ export default function SubscriptionScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Card style={{ padding: 14, borderRadius: 18 }}>
-          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>Current subscription</Text>
+          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>{uiText("Current subscription")}</Text>
 
           <View style={{ marginTop: 10, gap: 6 }}>
             <Text style={{ color: UI.muted, fontWeight: "800" }}>
-              Org: <Text style={{ color: UI.text }}>{activeOrgName}</Text>
+              {uiText("Org:")}<Text style={{ color: UI.text }}>{activeOrgName}</Text>
             </Text>
 
             <Text style={{ color: UI.muted, fontWeight: "800" }}>
-              Role: <Text style={{ color: UI.text }}>{String(activeRole).toUpperCase()}</Text>
+              {uiText("Role:")}<Text style={{ color: UI.text }}>{String(activeRole).toUpperCase()}</Text>
             </Text>
 
             <Text style={{ color: UI.faint, fontWeight: "800", marginTop: 6 }}>
-              Plan limits are DB-driven. Payment requests are submitted manually, then approved by
-              Owner/Admin.
-            </Text>
+              {uiText("Plan limits are DB-driven. Payment requests are submitted manually, then approved by Owner/Admin.")}</Text>
           </View>
         </Card>
 
         <Card style={{ padding: 14, borderRadius: 18 }}>
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-            Choose billing duration
-          </Text>
+            {uiText("Choose billing duration")}</Text>
 
           <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 8 }}>
-            1 • 3 • 6 • 12 months (discounts optional)
-          </Text>
+            {uiText("1 • 3 • 6 • 12 months (discounts optional)")}</Text>
 
           <View style={{ marginTop: 12, gap: 8 }}>
             <View style={{ flexDirection: "row", gap: 8 }}>
               <SmallPlanBtn
-                label="1 month"
+                label={uiText("1 month")}
                 onPress={() => setSelectedMonths(1)}
                 disabled={submitting || loading}
                 selected={selectedMonths === 1}
               />
               <SmallPlanBtn
-                label="3 months • -5%"
+                label={uiText("3 months • -5%")}
                 onPress={() => setSelectedMonths(3)}
                 disabled={submitting || loading}
                 selected={selectedMonths === 3}
@@ -465,13 +462,13 @@ export default function SubscriptionScreen() {
 
             <View style={{ flexDirection: "row", gap: 8 }}>
               <SmallPlanBtn
-                label="6 months • -10%"
+                label={uiText("6 months • -10%")}
                 onPress={() => setSelectedMonths(6)}
                 disabled={submitting || loading}
                 selected={selectedMonths === 6}
               />
               <SmallPlanBtn
-                label="12 months • -20%"
+                label={uiText("12 months • -20%")}
                 onPress={() => setSelectedMonths(12)}
                 disabled={submitting || loading}
                 selected={selectedMonths === 12}
@@ -481,16 +478,15 @@ export default function SubscriptionScreen() {
         </Card>
 
         <Card style={{ padding: 14, borderRadius: 18 }}>
-          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>Choose plan</Text>
+          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>{uiText("Choose plan")}</Text>
           <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 8 }}>
-            Select a plan then activate via mobile payment.
-          </Text>
+            {uiText("Select a plan then activate via mobile payment.")}</Text>
 
           <View style={{ marginTop: 12, gap: 12 }}>
             {loading ? (
               <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                 <ActivityIndicator />
-                <Text style={{ color: UI.muted, fontWeight: "900" }}>Loading plans…</Text>
+                <Text style={{ color: UI.muted, fontWeight: "900" }}>{uiText("Loading plans…")}</Text>
               </View>
             ) : (
               plans.map((p) => {
@@ -523,7 +519,7 @@ export default function SubscriptionScreen() {
                           {p.code} {selected ? "✅" : ""}
                         </Text>
                         <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 4 }}>
-                          Code: {p.code}
+                          {uiText("Code:")}{p.code}
                         </Text>
                       </View>
 
@@ -547,30 +543,29 @@ export default function SubscriptionScreen() {
 
                     <View style={{ marginTop: 12, gap: 6 }}>
                       <Text style={{ color: UI.muted, fontWeight: "800" }}>
-                        Organizations:{" "}
+                        {uiText("Organizations:")}{" "}
                         <Text style={{ color: UI.text }}>
                           {p.code === "BUSINESS" ? 2 : p.code === "EXECUTIVE" ? 4 : 1}
                         </Text>
                       </Text>
 
                       <Text style={{ color: UI.muted, fontWeight: "800" }}>
-                        Stores/Org: <Text style={{ color: UI.text }}>{p.stores_per_org ?? "—"}</Text> •
-                        Staff/Org: <Text style={{ color: UI.text }}>{p.staff_per_org ?? "—"}</Text>
+                        {uiText("Stores/Org:")}<Text style={{ color: UI.text }}>{p.stores_per_org ?? "—"}</Text> {uiText("• Staff/Org:")}<Text style={{ color: UI.text }}>{p.staff_per_org ?? "—"}</Text>
                       </Text>
 
                       <Text style={{ color: UI.muted, fontWeight: "800" }}>
-                        Club Posts/Store/Month:{" "}
+                        {uiText("Club Posts/Store/Month:")}{" "}
                         <Text style={{ color: UI.text }}>
                           {p.business_club_posts_per_month ?? "—"}
                         </Text>
                       </Text>
 
                       <Text style={{ color: UI.muted, fontWeight: "800" }}>
-                        AI:{" "}
+                        {uiText("AI:")}{" "}
                         <Text style={{ color: UI.text }}>
                           {p.ai_enabled
-                            ? `Enabled • Credits/mo: ${p.ai_credits_monthly ?? 0}`
-                            : "Disabled"}
+                            ? uiText("Enabled • Credits/mo: {p0}", {p0: (p.ai_credits_monthly ?? 0)})
+                            : uiText("Disabled")}
                         </Text>
                       </Text>
                     </View>
@@ -582,7 +577,7 @@ export default function SubscriptionScreen() {
         </Card>
 
         <Card style={{ padding: 14, borderRadius: 18 }}>
-          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>Confirm payment</Text>
+          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>{uiText("Confirm payment")}</Text>
 
           <View
             style={{
@@ -595,19 +590,17 @@ export default function SubscriptionScreen() {
               gap: 8,
             }}
           >
-<Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>Pay To</Text>
+<Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>{uiText("Pay To")}</Text>
 <Text style={{ color: UI.text, fontWeight: "900" }}>ZETRA TECHNOLOGIES</Text>
 
-<Text style={{ color: UI.muted, fontWeight: "900", marginTop: 4 }}>Payment Method</Text>
+<Text style={{ color: UI.muted, fontWeight: "900", marginTop: 4 }}>{uiText("Payment Method")}</Text>
 <Text style={{ color: UI.text, fontWeight: "900" }}>VODACOM M-PESA LIPA</Text>
 
-<Text style={{ color: UI.muted, fontWeight: "900", marginTop: 4 }}>Lipa Number</Text>
+<Text style={{ color: UI.muted, fontWeight: "900", marginTop: 4 }}>{uiText("Lipa Number")}</Text>
 <Text style={{ color: UI.text, fontWeight: "900" }}>354098140</Text>
 
             <Text style={{ color: UI.faint, fontWeight: "800", marginTop: 8 }}>
-              Baada ya kulipa, utapata SMS ya muamala. Copy ile
-              “Receipt/Reference/Transaction ID” uiweke hapa chini.
-            </Text>
+              {uiText("Baada ya kulipa, utapata SMS ya muamala. Copy ile “Receipt/Reference/Transaction ID” uiweke hapa chini.")}</Text>
           </View>
 
           <View
@@ -621,19 +614,19 @@ export default function SubscriptionScreen() {
               gap: 8,
             }}
           >
-            <Text style={{ color: UI.muted, fontWeight: "900" }}>Plan</Text>
+            <Text style={{ color: UI.muted, fontWeight: "900" }}>{uiText("Plan")}</Text>
             <Text style={{ color: UI.text, fontWeight: "900" }}>{selectedPlan?.code ?? "—"}</Text>
 
-            <Text style={{ color: UI.muted, fontWeight: "900", marginTop: 4 }}>Duration</Text>
+            <Text style={{ color: UI.muted, fontWeight: "900", marginTop: 4 }}>{uiText("Duration")}</Text>
             <Text style={{ color: UI.text, fontWeight: "900" }}>{planMonthsLabel(selectedMonths)}</Text>
 
-            <Text style={{ color: UI.muted, fontWeight: "900", marginTop: 4 }}>Amount</Text>
+            <Text style={{ color: UI.muted, fontWeight: "900", marginTop: 4 }}>{uiText("Amount")}</Text>
             <Text style={{ color: UI.text, fontWeight: "900" }}>{formatTzs(expectedAmount)}</Text>
           </View>
 
           <View style={{ marginTop: 12, gap: 10 }}>
             <Field
-              label="Phone Number"
+              label={uiText("Phone Number")}
               value={payerPhone}
               onChangeText={setPayerPhone}
               placeholder="0758014675"
@@ -641,14 +634,14 @@ export default function SubscriptionScreen() {
             />
 
             <Field
-              label="Transaction / Reference ID"
+              label={uiText("Transaction / Reference ID")}
               value={transactionRef}
               onChangeText={(v) => setTransactionRef(v.toUpperCase())}
               placeholder="TEUEHHJAL"
             />
 
             <Field
-              label="Payer Name (optional)"
+              label={uiText("Payer Name (optional)")}
               value={payerName}
               onChangeText={setPayerName}
               placeholder="JOFREY JOHN SANGA"
@@ -657,7 +650,7 @@ export default function SubscriptionScreen() {
 
           <View style={{ marginTop: 14, gap: 10 }}>
             <PrimaryButton
-              label={submitting ? "Submitting..." : "CONFIRM & SEND REQUEST"}
+              label={submitting ? uiText("Submitting...") : uiText("CONFIRM & SEND REQUEST")}
               onPress={() => void submitPaymentRequest()}
               disabled={!activeOrgId || loading || submitting || !selectedPlan || !canManage}
             />
@@ -665,20 +658,16 @@ export default function SubscriptionScreen() {
 
           {!canManage ? (
             <Text style={{ color: UI.faint, fontWeight: "800", marginTop: 12 }}>
-              Staff cannot manage subscription. Owner/Admin only.
-            </Text>
+              {uiText("Staff cannot manage subscription. Owner/Admin only.")}</Text>
           ) : null}
 
           <Text style={{ color: UI.faint, fontWeight: "800", marginTop: 12 }}>
-            Note: Kwa sasa tunatumia manual confirm. Ukishaandika ref, request itaingia PENDING
-            mpaka Owner/Admin a-approve.
-          </Text>
+            {uiText("Note: Kwa sasa tunatumia manual confirm. Ukishaandika ref, request itaingia PENDING mpaka Owner/Admin a-approve.")}</Text>
         </Card>
 
         <Card style={{ padding: 14, borderRadius: 18 }}>
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-            Organizations overview
-          </Text>
+            {uiText("Organizations overview")}</Text>
 
           <View style={{ marginTop: 10, gap: 10 }}>
             {(org.orgs ?? []).map((o) => {
@@ -700,7 +689,7 @@ export default function SubscriptionScreen() {
                   </Text>
 
                   <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 4 }}>
-                    role: {o.role}
+                    {uiText("role:")}{o.role}
                   </Text>
                 </View>
               );
@@ -708,8 +697,7 @@ export default function SubscriptionScreen() {
           </View>
 
           <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 11, marginTop: 12 }}>
-            Real billing request flow is now DB-driven. Approval screen comes next.
-          </Text>
+            {uiText("Real billing request flow is now DB-driven. Approval screen comes next.")}</Text>
         </Card>
       </ScrollView>
     </Screen>

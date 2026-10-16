@@ -1,3 +1,5 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/(tabs)/stores/adjust.tsx
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -94,6 +96,8 @@ function localYMD(d = new Date()) {
 }
 
 export default function AdjustStockScreen() {
+ const systemText=useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
   const params = useLocalSearchParams<{
     productId?: string | string[];
@@ -357,8 +361,8 @@ setPrecisionMeta({
 
     if (locked) {
       Alert.alert(
-        "Locked",
-        `Siku ${today} imefungwa. Huwezi kubadili stock kwenye siku iliyolockiwa.`
+        uiText("Locked"),
+        uiText("Siku {p0} imefungwa. Huwezi kubadili stock kwenye siku iliyolockiwa.", {p0: (today)})
       );
       return false;
     }
@@ -372,17 +376,17 @@ setPrecisionMeta({
     const packSelling = Number(normalizeDecimalInput(quickPrecisionPackSelling));
 
     if (!Number.isFinite(packQty) || packQty <= 0) {
-      Alert.alert("Missing", "Weka Pack Size / Quantity, mfano 100.");
+      Alert.alert(uiText("Missing"), uiText("Weka Pack Size / Quantity, mfano 100."));
       return;
     }
 
     if (!Number.isFinite(packCost) || packCost < 0) {
-      Alert.alert("Missing", "Weka Buying/Cost Price ya box/pack.");
+      Alert.alert(uiText("Missing"), uiText("Weka Buying/Cost Price ya box/pack."));
       return;
     }
 
     if (!Number.isFinite(packSelling) || packSelling <= 0) {
-      Alert.alert("Missing", "Weka Selling Price ya box/pack.");
+      Alert.alert(uiText("Missing"), uiText("Weka Selling Price ya box/pack."));
       return;
     }
 
@@ -394,7 +398,7 @@ setPrecisionMeta({
 
   const openQuickEdit = useCallback(() => {
     if (!canQuickEditProduct) {
-      Alert.alert("No Access", "Owner/Admin only.");
+      Alert.alert(uiText("No Access"), uiText("Owner/Admin only."));
       return;
     }
 
@@ -428,30 +432,30 @@ setPrecisionMeta({
 
     const n = quickName.trim();
     if (!n) {
-      Alert.alert("Missing", "Weka product name.");
+      Alert.alert(uiText("Missing"), uiText("Weka product name."));
       return;
     }
 
     const sp = parsePositiveNumberOrNull(quickSellingPrice);
     if (quickSellingPrice.trim() && sp === null) {
-      Alert.alert("Invalid", "Selling Price iwe namba (> 0) au uiache wazi.");
+      Alert.alert(uiText("Invalid"), uiText("Selling Price iwe namba (> 0) au uiache wazi."));
       return;
     }
 
     const cp = parseZeroOrPositiveNumberOrNull(quickCostPrice);
     if (quickCostPrice.trim() && cp === null) {
-      Alert.alert("Invalid", "Cost Price iwe namba (>= 0) au uiache wazi.");
+      Alert.alert(uiText("Invalid"), uiText("Cost Price iwe namba (>= 0) au uiache wazi."));
       return;
     }
 
     if (sp === null && cp === null) {
-      Alert.alert("Missing", "Weka angalau Cost Price au Selling Price.");
+      Alert.alert(uiText("Missing"), uiText("Weka angalau Cost Price au Selling Price."));
       return;
     }
 
     const bc = cleanBarcode(quickBarcode);
     if (bc && bc.length < 6) {
-      Alert.alert("Invalid", "Barcode inaonekana fupi sana.");
+      Alert.alert(uiText("Invalid"), uiText("Barcode inaonekana fupi sana."));
       return;
     }
 
@@ -519,9 +523,20 @@ setPrecisionMeta({
       }));
 
       setQuickEditOpen(false);
-      Alert.alert("Success ✅", "Product details updated.");
+
+      if (Platform.OS === "web" && typeof window !== "undefined") {
+        window.alert(uiText("Success ✅")+"\n\n"+uiText("Product details updated."));
+      } else {
+        Alert.alert(uiText("Success ✅"), uiText("Product details updated."));
+      }
     } catch (err: any) {
-      Alert.alert("Update failed", err?.message ?? "Unknown error");
+      const message = err?.message ?? "Unknown error";
+
+      if (Platform.OS === "web" && typeof window !== "undefined") {
+        window.alert(`Update failed ❌` + "\n\n" + message);
+      } else {
+        Alert.alert(uiText("Update failed"), systemText(message));
+      }
     } finally {
       setQuickEditSaving(false);
     }
@@ -546,22 +561,22 @@ setPrecisionMeta({
     if (saving || submitLockRef.current) return;
 
     if (!activeStoreId) {
-      Alert.alert("Missing", "No active store selected.");
+      Alert.alert(uiText("Missing"), uiText("No active store selected."));
       return;
     }
 
     if (isCapitalRecoveryStore) {
-      Alert.alert("Not Available", "Adjust Stock haitumiki kwa Capital Recovery store.");
+      Alert.alert(uiText("Not Available"), uiText("Adjust Stock haitumiki kwa Capital Recovery store."));
       return;
     }
 
     if (!productId) {
-      Alert.alert("Missing", "Product not found.");
+      Alert.alert(uiText("Missing"), uiText("Product not found."));
       return;
     }
 
     if (!canAdjust) {
-      Alert.alert("No Access", "Owner/Admin only.");
+      Alert.alert(uiText("No Access"), uiText("Owner/Admin only."));
       return;
     }
 
@@ -572,44 +587,44 @@ setPrecisionMeta({
     const trimmedExpiry = (expiryDate ?? "").trim();
 
     if (!trimmed) {
-      Alert.alert("Invalid", "Amount lazima iandikwe.");
+      Alert.alert(uiText("Invalid"), uiText("Amount lazima iandikwe."));
       return;
     }
 
     const n = Number(trimmed);
 
     if (!Number.isFinite(n) || n < 0) {
-      Alert.alert("Invalid", "Amount haiwezi kuwa negative.");
+      Alert.alert(uiText("Invalid"), uiText("Amount haiwezi kuwa negative."));
       return;
     }
 
     const decimalAmount = asDecimal(n);
 
     if (decimalAmount < 0) {
-      Alert.alert("Invalid", "Amount lazima iwe namba halali.");
+      Alert.alert(uiText("Invalid"), uiText("Amount lazima iwe namba halali."));
       return;
     }
 
     if (mode === "ADD" && trimmedExpiry) {
       if (!isValidExpiryInput(trimmedExpiry)) {
-        Alert.alert("Invalid Expiry", "Tumia format sahihi ya expiry date: YYYY-MM-DD");
+        Alert.alert(uiText("Invalid Expiry"), uiText("Tumia format sahihi ya expiry date: YYYY-MM-DD"));
         return;
       }
 
       if (trimmedExpiry < localYMD()) {
-        Alert.alert("Invalid Expiry", "Expiry date haiwezi kuwa ya nyuma.");
+        Alert.alert(uiText("Invalid Expiry"), uiText("Expiry date haiwezi kuwa ya nyuma."));
         return;
       }
     }
 
     if (decimalAmount === 0) {
       if (mode !== "ADD") {
-        Alert.alert("Invalid", "Amount ya 0 inaruhusiwa kwa expiry update tu.");
+        Alert.alert(uiText("Invalid"), uiText("Amount ya 0 inaruhusiwa kwa expiry update tu."));
         return;
       }
 
       if (!trimmedExpiry) {
-        Alert.alert("Invalid", "Weka expiry date kama amount ni 0.");
+        Alert.alert(uiText("Invalid"), uiText("Weka expiry date kama amount ni 0."));
         return;
       }
     }
@@ -629,8 +644,8 @@ setPrecisionMeta({
 
     if (lastSubmitKeyRef.current === submitKey) {
       Alert.alert(
-        "Already Saved",
-        "Stock update hii imeshatumwa. Badilisha quantity au taarifa nyingine kama unataka kusave upya."
+        uiText("Already Saved"),
+        uiText("Stock update hii imeshatumwa. Badilisha quantity au taarifa nyingine kama unataka kusave upya.")
       );
       return;
     }
@@ -670,14 +685,22 @@ p_precision_stock_mode: precisionMeta.is_precision_product ? precisionStockMode 
       const newQty =
         Array.isArray(data) && data.length > 0 ? (data[0] as any)?.new_qty : null;
 
-      Alert.alert(
-        "Success ✅",
+      const successMessage =
         decimalAmount === 0
-          ? "Expiry updated"
-          : newQty === null
-            ? "Stock updated"
-            : `New Qty: ${newQty}`
-      );
+          ? "Expiry updated successfully."
+          : mode === "ADD"
+            ? newQty === null
+              ? "Stock added successfully."
+              : `Stock added successfully.` + "\n" + `New Qty: ${newQty}`
+            : newQty === null
+              ? "Stock reduced successfully."
+              : `Stock reduced successfully.` + "\n" + `New Qty: ${newQty}`;
+
+      if (Platform.OS === "web" && typeof window !== "undefined") {
+        window.alert("Success ✅" + "\n\n" + successMessage);
+      } else {
+        Alert.alert(uiText("Success ✅"), systemText(successMessage));
+      }
 
       setExpiryDate("");
       setExpiryAlertDays(30);
@@ -688,7 +711,14 @@ p_precision_stock_mode: precisionMeta.is_precision_product ? precisionStockMode 
       router.back();
     } catch (err: any) {
       lastSubmitKeyRef.current = "";
-      Alert.alert("Failed", err?.message ?? "Unknown error");
+
+      const message = err?.message ?? "Unknown error";
+
+      if (Platform.OS === "web" && typeof window !== "undefined") {
+        window.alert("Stock update failed ❌`n`n" + message);
+      } else {
+        Alert.alert(uiText("Failed"), systemText(message));
+      }
     } finally {
       submitLockRef.current = false;
       setSaving(false);
@@ -717,33 +747,31 @@ const content = (
     <View style={{ flex: 1, gap: 12 }}>
       <View style={{ gap: 6 }}>
         <Text style={{ fontSize: 28, fontWeight: "900", color: theme.colors.text }}>
-          {isCapitalRecoveryStore ? "Adjust Disabled" : "Adjust Stock"}
+          {isCapitalRecoveryStore ? uiText("Adjust Disabled") : uiText("Adjust Stock")}
         </Text>
 
         <Text style={{ color: theme.colors.muted, fontWeight: "800", lineHeight: 20 }}>
-          {activeStoreName ?? "—"} • {displayName} • Current Qty: {currentQty}
+          {activeStoreName ?? "—"} • {displayName} {uiText("• Current Qty:")}{currentQty}
         </Text>
       </View>
 
       {isCapitalRecoveryStore ? (
         <Card style={{ gap: 8 }}>
           <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-            Capital Recovery store haitumii Adjust Stock.
-          </Text>
+            {uiText("Capital Recovery store haitumii Adjust Stock.")}</Text>
           <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-            Tumia Products + Capital Recovery Workspace. Inventory adjustment imezimwa kwenye mode hii.
-          </Text>
+            {uiText("Tumia Products + Capital Recovery Workspace. Inventory adjustment imezimwa kwenye mode hii.")}</Text>
         </Card>
       ) : null}
 
       <Card style={{ gap: 12 }}>
         <View style={{ gap: 4 }}>
-          <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Product</Text>
+          <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Product")}</Text>
           <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
             {displayName}
           </Text>
           <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-            SKU: {displaySku} • Store: {activeStoreName ?? "—"}
+            {uiText("SKU:")}{displaySku} {uiText("• Store:")}{activeStoreName ?? "—"}
           </Text>
         </View>
 
@@ -763,7 +791,7 @@ const content = (
               opacity: pressed ? 0.92 : isCapitalRecoveryStore ? 0.6 : 1,
             })}
           >
-            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Add Stock</Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Add Stock")}</Text>
           </Pressable>
 
           <Pressable
@@ -788,7 +816,7 @@ const content = (
               opacity: pressed ? 0.92 : isCapitalRecoveryStore ? 0.6 : 1,
             })}
           >
-            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Reduce Stock</Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Reduce Stock")}</Text>
           </Pressable>
         </View>
 
@@ -796,9 +824,9 @@ const content = (
           <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
             {precisionMeta.is_precision_product
               ? precisionStockMode === "BOX"
-                ? `Stock Quantity (${precisionMeta.precision_package_unit ?? "Box/Pack"})`
-                : `Stock Quantity (${precisionMeta.precision_base_unit ?? "Units"})`
-              : "Stock Quantity"}
+                ? uiText("Stock Quantity ({p0})", {p0: (precisionMeta.precision_package_unit ?? "Box/Pack")})
+                : uiText("Stock Quantity ({p0})", {p0: (precisionMeta.precision_base_unit ?? "Units")})
+              : uiText("Stock Quantity")}
           </Text>
 
           {precisionMeta.is_precision_product ? (
@@ -824,7 +852,7 @@ const content = (
                 }}
               >
                 <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-  {precisionMeta.precision_package_unit ?? "Box/Pack"}
+  {precisionMeta.precision_package_unit ?? uiText("Box/Pack")}
 </Text>
               </Pressable>
 
@@ -849,7 +877,7 @@ const content = (
                 }}
               >
                 <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                  {precisionMeta.precision_base_unit ?? "Unit"}
+                  {precisionMeta.precision_base_unit ?? uiText("Unit")}
                 </Text>
               </Pressable>
             </View>
@@ -867,8 +895,8 @@ const content = (
             placeholder={
   precisionMeta.is_precision_product
     ? precisionStockMode === "BOX"
-      ? `mf. 1 ${precisionMeta.precision_package_unit ?? "box"}`
-      : `mf. 100 ${precisionMeta.precision_base_unit ?? "unit"}`
+      ? uiText("mf. 1 {p0}", {p0: (precisionMeta.precision_package_unit ?? "box")})
+      : uiText("mf. 100 {p0}", {p0: (precisionMeta.precision_base_unit ?? "unit")})
     : "0"
 }
             placeholderTextColor="rgba(255,255,255,0.35)"
@@ -890,9 +918,9 @@ const content = (
             <Text style={{ color: theme.colors.muted, fontWeight: "800", lineHeight: 18 }}>
               {precisionMeta.is_precision_product && precisionMeta.precision_pack_size
   ? precisionStockMode === "BOX"
-  ? `Mfano: ukiweka 1 ${precisionMeta.precision_package_unit ?? "box"}, mfumo utaongeza ${precisionMeta.precision_pack_size} ${precisionMeta.precision_base_unit ?? "units"} kwenye stock.`
-  : `Mfano: ukiweka ${precisionMeta.precision_pack_size} ${precisionMeta.precision_base_unit ?? "units"}, ni sawa na 1 ${precisionMeta.precision_package_unit ?? "box"}.`
-  : "Weka 0 kama unabadilisha expiry date tu."}
+  ? uiText("Mfano: ukiweka 1 {p0}, mfumo utaongeza {p1} {p2} kwenye stock.", {p0: (precisionMeta.precision_package_unit ?? "box"), p1: (precisionMeta.precision_pack_size), p2: (precisionMeta.precision_base_unit ?? "units")})
+  : uiText("Mfano: ukiweka {p0} {p1}, ni sawa na 1 {p2}.", {p0: (precisionMeta.precision_pack_size), p1: (precisionMeta.precision_base_unit ?? "units"), p2: (precisionMeta.precision_package_unit ?? "box")})
+  : uiText("Weka 0 kama unabadilisha expiry date tu.")}
             </Text>
           ) : null}
         </View>
@@ -900,8 +928,7 @@ const content = (
         {mode === "ADD" ? (
           <View style={{ gap: 8 }}>
             <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-              Expiry Date (optional)
-            </Text>
+              {uiText("Expiry Date (optional)")}</Text>
 
             <TextInput
               value={expiryDate}
@@ -949,8 +976,7 @@ const content = (
                         fontSize: 12,
                       }}
                     >
-                      {d}d
-                    </Text>
+                      {d}{uiText("d")}</Text>
                   </Pressable>
                 );
               })}
@@ -973,11 +999,9 @@ const content = (
           })}
         >
           <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 15 }}>
-            Edit Product Details
-          </Text>
+            {uiText("Edit Product Details")}</Text>
           <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12, marginTop: 3 }}>
-            Edit product details exactly like Products page before saving stock.
-          </Text>
+            {uiText("Edit product details exactly like Products page before saving stock.")}</Text>
         </Pressable>
 
         <Pressable
@@ -1013,13 +1037,13 @@ const content = (
           >
             <View style={{ flex: 1, gap: 3 }}>
               <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 15 }}>
-                {showOptionalDetails ? "Hide More Stock Details" : "More Stock Details"}
+                {showOptionalDetails ? uiText("Hide More Stock Details") : uiText("More Stock Details")}
               </Text>
 
               <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
                 {showOptionalDetails
-                  ? "Tap to hide supplier, invoice/ref and stock note."
-                  : "Add supplier, invoice/ref and stock note."}
+                  ? uiText("Tap to hide supplier, invoice/ref and stock note.")
+                  : uiText("Add supplier, invoice/ref and stock note.")}
               </Text>
             </View>
 
@@ -1040,13 +1064,11 @@ const content = (
             {mode === "ADD" ? (
               <>
                 <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                  Supplier Name (optional)
-                </Text>
+                  {uiText("Supplier Name (optional)")}</Text>
 
                 {supplierLoading ? (
                   <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                    Loading suppliers...
-                  </Text>
+                    {uiText("Loading suppliers...")}</Text>
                 ) : suppliers.length > 0 ? (
                   <ScrollView
                     horizontal
@@ -1091,7 +1113,7 @@ const content = (
                 <TextInput
                   value={supplierName}
                   onChangeText={setSupplierName}
-                  placeholder="mf. MSD, Duka la dawa..."
+                  placeholder={uiText("mf. MSD, Duka la dawa...")}
                   placeholderTextColor="rgba(255,255,255,0.35)"
                   editable={!isCapitalRecoveryStore && !saving}
                   style={{
@@ -1107,13 +1129,12 @@ const content = (
                 />
 
                 <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                  Supplier Invoice / Ref (optional)
-                </Text>
+                  {uiText("Supplier Invoice / Ref (optional)")}</Text>
 
                 <TextInput
                   value={supplierInvoiceNo}
                   onChangeText={setSupplierInvoiceNo}
-                  placeholder="mf. INV-001, Receipt no..."
+                  placeholder={uiText("mf. INV-001, Receipt no...")}
                   placeholderTextColor="rgba(255,255,255,0.35)"
                   editable={!isCapitalRecoveryStore && !saving}
                   autoCapitalize="characters"
@@ -1132,13 +1153,12 @@ const content = (
             ) : null}
 
             <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-              Stock Note (optional)
-            </Text>
+              {uiText("Stock Note (optional)")}</Text>
 
             <TextInput
               value={reason}
               onChangeText={setReason}
-              placeholder="mf. Damaged, transfer, supplier correction..."
+              placeholder={uiText("mf. Damaged, transfer, supplier correction...")}
               placeholderTextColor="rgba(255,255,255,0.35)"
               multiline
               textAlignVertical="top"
@@ -1162,10 +1182,10 @@ const content = (
           <Button
             title={
               isCapitalRecoveryStore
-                ? "Adjust Disabled"
+                ? uiText("Adjust Disabled")
                 : saving
-                  ? "Saving..."
-                  : "Save Stock Update"
+                  ? uiText("Saving...")
+                  : uiText("Save Stock Update")
             }
             onPress={() => {
               Keyboard.dismiss();
@@ -1176,7 +1196,7 @@ const content = (
           />
 
           <Button
-            title="Back"
+            title={uiText("Back")}
             onPress={() => {
               Keyboard.dismiss();
               router.back();
@@ -1188,12 +1208,10 @@ const content = (
 
         {isCapitalRecoveryStore ? (
           <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-            Capital Recovery store haitumii stock adjustment.
-          </Text>
+            {uiText("Capital Recovery store haitumii stock adjustment.")}</Text>
         ) : !canAdjust ? (
           <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-            Huna ruhusa ya kubadili stock. (Owner/Admin only)
-          </Text>
+            {uiText("Huna ruhusa ya kubadili stock. (Owner/Admin only)")}</Text>
         ) : null}
       </Card>
     </View>
@@ -1258,8 +1276,7 @@ const content = (
                 }}
               >
                 <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 20 }}>
-                  Edit Product
-                </Text>
+                  {uiText("Edit Product")}</Text>
 
                 <Pressable
                   onPress={closeQuickEdit}
@@ -1288,16 +1305,16 @@ const content = (
                   gap: 12,
                 }}
               >
-                <TextInput value={quickName} onChangeText={setQuickName} placeholder="Product name" placeholderTextColor={theme.colors.faint} style={{ borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.lg, backgroundColor: "#FFFFFF", paddingHorizontal: 14, paddingVertical: 12, color: theme.colors.text, fontWeight: "900" }} />
+                <TextInput value={quickName} onChangeText={setQuickName} placeholder={uiText("Product name")} placeholderTextColor={theme.colors.faint} style={{ borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.lg, backgroundColor: "#FFFFFF", paddingHorizontal: 14, paddingVertical: 12, color: theme.colors.text, fontWeight: "900" }} />
 
                 <View style={{ flexDirection: "row", gap: 10 }}>
                   <TextInput value={quickSku} onChangeText={setQuickSku} placeholder="SKU" placeholderTextColor={theme.colors.faint} style={{ flex: 1, borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.lg, backgroundColor: "#FFFFFF", paddingHorizontal: 14, paddingVertical: 12, color: theme.colors.text, fontWeight: "900" }} />
-                  <TextInput value={quickUnit} onChangeText={setQuickUnit} placeholder="Unit" placeholderTextColor={theme.colors.faint} style={{ flex: 1, borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.lg, backgroundColor: "#FFFFFF", paddingHorizontal: 14, paddingVertical: 12, color: theme.colors.text, fontWeight: "900" }} />
+                  <TextInput value={quickUnit} onChangeText={setQuickUnit} placeholder={uiText("Unit")} placeholderTextColor={theme.colors.faint} style={{ flex: 1, borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.lg, backgroundColor: "#FFFFFF", paddingHorizontal: 14, paddingVertical: 12, color: theme.colors.text, fontWeight: "900" }} />
                 </View>
 
-                <TextInput value={quickCategory} onChangeText={setQuickCategory} placeholder="Category" placeholderTextColor={theme.colors.faint} style={{ borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.lg, backgroundColor: "#FFFFFF", paddingHorizontal: 14, paddingVertical: 12, color: theme.colors.text, fontWeight: "900" }} />
+                <TextInput value={quickCategory} onChangeText={setQuickCategory} placeholder={uiText("Category")} placeholderTextColor={theme.colors.faint} style={{ borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.lg, backgroundColor: "#FFFFFF", paddingHorizontal: 14, paddingVertical: 12, color: theme.colors.text, fontWeight: "900" }} />
 
-                <TextInput value={quickBarcode} onChangeText={(t) => setQuickBarcode(cleanBarcode(t))} placeholder="Barcode (optional)" placeholderTextColor={theme.colors.faint} style={{ borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.lg, backgroundColor: "#FFFFFF", paddingHorizontal: 14, paddingVertical: 12, color: theme.colors.text, fontWeight: "900" }} />
+                <TextInput value={quickBarcode} onChangeText={(t) => setQuickBarcode(cleanBarcode(t))} placeholder={uiText("Barcode (optional)")} placeholderTextColor={theme.colors.faint} style={{ borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.lg, backgroundColor: "#FFFFFF", paddingHorizontal: 14, paddingVertical: 12, color: theme.colors.text, fontWeight: "900" }} />
 
                 {isPrecisionRetailStore ? (
                   <Card
@@ -1310,41 +1327,38 @@ const content = (
                     }}
                   >
                     <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 15 }}>
-                      Unit & Pack Calculator
-                    </Text>
+                      {uiText("Unit & Pack Calculator")}</Text>
 
                     <Text style={{ color: theme.colors.muted, fontWeight: "800", lineHeight: 19 }}>
-                      Badili pack size, unit ya ndani, cost ya pack na selling ya pack. Mfumo utahesabu bei ya unit moja automatic.
-                    </Text>
+                      {uiText("Badili pack size, unit ya ndani, cost ya pack na selling ya pack. Mfumo utahesabu bei ya unit moja automatic.")}</Text>
 
                     <View style={{ flexDirection: "row", gap: 10 }}>
-                      <TextInput value={quickPrecisionPackQty} onChangeText={(t) => setQuickPrecisionPackQty(normalizeDecimalInput(t))} placeholder="Pack size e.g. 100" keyboardType="numeric" placeholderTextColor={theme.colors.faint} style={{ flex: 1.15, borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.lg, backgroundColor: "#FFFFFF", paddingHorizontal: 14, paddingVertical: 12, color: theme.colors.text, fontWeight: "900" }} />
+                      <TextInput value={quickPrecisionPackQty} onChangeText={(t) => setQuickPrecisionPackQty(normalizeDecimalInput(t))} placeholder={uiText("Pack size e.g. 100")} keyboardType="numeric" placeholderTextColor={theme.colors.faint} style={{ flex: 1.15, borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.lg, backgroundColor: "#FFFFFF", paddingHorizontal: 14, paddingVertical: 12, color: theme.colors.text, fontWeight: "900" }} />
 
-                      <TextInput value={quickPrecisionUnit} onChangeText={setQuickPrecisionUnit} placeholder="Unit e.g. capsule" placeholderTextColor={theme.colors.faint} style={{ flex: 1, borderWidth: 1, borderColor: theme.colors.emeraldBorder, borderRadius: theme.radius.lg, backgroundColor: "#ECFDF5", paddingHorizontal: 14, paddingVertical: 12, color: theme.colors.text, fontWeight: "900" }} />
+                      <TextInput value={quickPrecisionUnit} onChangeText={setQuickPrecisionUnit} placeholder={uiText("Unit e.g. capsule")} placeholderTextColor={theme.colors.faint} style={{ flex: 1, borderWidth: 1, borderColor: theme.colors.emeraldBorder, borderRadius: theme.radius.lg, backgroundColor: "#ECFDF5", paddingHorizontal: 14, paddingVertical: 12, color: theme.colors.text, fontWeight: "900" }} />
                     </View>
 
-                    <TextInput value={quickPrecisionPackCost} onChangeText={(t) => setQuickPrecisionPackCost(normalizeDecimalInput(t))} placeholder="Buying/Cost price ya box/pack" keyboardType="numeric" placeholderTextColor={theme.colors.faint} style={{ borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.lg, backgroundColor: "#FFFFFF", paddingHorizontal: 14, paddingVertical: 12, color: theme.colors.text, fontWeight: "900" }} />
+                    <TextInput value={quickPrecisionPackCost} onChangeText={(t) => setQuickPrecisionPackCost(normalizeDecimalInput(t))} placeholder={uiText("Buying/Cost price ya box/pack")} keyboardType="numeric" placeholderTextColor={theme.colors.faint} style={{ borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.lg, backgroundColor: "#FFFFFF", paddingHorizontal: 14, paddingVertical: 12, color: theme.colors.text, fontWeight: "900" }} />
 
-                    <TextInput value={quickPrecisionPackSelling} onChangeText={(t) => setQuickPrecisionPackSelling(normalizeDecimalInput(t))} placeholder="Selling price ya box/pack" keyboardType="numeric" placeholderTextColor={theme.colors.faint} style={{ borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.lg, backgroundColor: "#FFFFFF", paddingHorizontal: 14, paddingVertical: 12, color: theme.colors.text, fontWeight: "900" }} />
+                    <TextInput value={quickPrecisionPackSelling} onChangeText={(t) => setQuickPrecisionPackSelling(normalizeDecimalInput(t))} placeholder={uiText("Selling price ya box/pack")} keyboardType="numeric" placeholderTextColor={theme.colors.faint} style={{ borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.lg, backgroundColor: "#FFFFFF", paddingHorizontal: 14, paddingVertical: 12, color: theme.colors.text, fontWeight: "900" }} />
 
-                    <Button title="Calculate Per Unit Price" onPress={applyQuickPrecisionFormula} disabled={quickEditSaving} variant="secondary" />
+                    <Button title={uiText("Calculate Per Unit Price")} onPress={applyQuickPrecisionFormula} disabled={quickEditSaving} variant="secondary" />
 
                     <Text style={{ color: theme.colors.faint, fontWeight: "800" }}>
-                      Baada ya calculate, Cost Price na Selling Price chini zitabadilishwa kama bei ya unit moja.
-                    </Text>
+                      {uiText("Baada ya calculate, Cost Price na Selling Price chini zitabadilishwa kama bei ya unit moja.")}</Text>
                   </Card>
                 ) : null}
 
-                <TextInput value={quickCostPrice} onChangeText={(t) => setQuickCostPrice(normalizeDecimalInput(t))} placeholder="Cost Price" keyboardType="numeric" placeholderTextColor={theme.colors.faint} style={{ borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.lg, backgroundColor: "#FFFFFF", paddingHorizontal: 14, paddingVertical: 12, color: theme.colors.text, fontWeight: "900" }} />
+                <TextInput value={quickCostPrice} onChangeText={(t) => setQuickCostPrice(normalizeDecimalInput(t))} placeholder={uiText("Cost Price")} keyboardType="numeric" placeholderTextColor={theme.colors.faint} style={{ borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.lg, backgroundColor: "#FFFFFF", paddingHorizontal: 14, paddingVertical: 12, color: theme.colors.text, fontWeight: "900" }} />
 
-                <TextInput value={quickSellingPrice} onChangeText={(t) => setQuickSellingPrice(normalizeDecimalInput(t))} placeholder="Selling Price" keyboardType="numeric" placeholderTextColor={theme.colors.faint} style={{ borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.lg, backgroundColor: "#FFFFFF", paddingHorizontal: 14, paddingVertical: 12, color: theme.colors.text, fontWeight: "900" }} />
+                <TextInput value={quickSellingPrice} onChangeText={(t) => setQuickSellingPrice(normalizeDecimalInput(t))} placeholder={uiText("Selling Price")} keyboardType="numeric" placeholderTextColor={theme.colors.faint} style={{ borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radius.lg, backgroundColor: "#FFFFFF", paddingHorizontal: 14, paddingVertical: 12, color: theme.colors.text, fontWeight: "900" }} />
 
                 <View style={{ flexDirection: "row", gap: 10, marginTop: 4 }}>
                   <View style={{ flex: 1 }}>
-                    <Button title="Cancel" variant="secondary" onPress={closeQuickEdit} disabled={quickEditSaving} />
+                    <Button title={uiText("Cancel")} variant="secondary" onPress={closeQuickEdit} disabled={quickEditSaving} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Button title={quickEditSaving ? "Saving..." : "Save Changes"} variant="primary" onPress={saveQuickEdit} disabled={quickEditSaving} />
+                    <Button title={quickEditSaving ? uiText("Saving...") : uiText("Save Changes")} variant="primary" onPress={saveQuickEdit} disabled={quickEditSaving} />
                   </View>
                 </View>
               </ScrollView>

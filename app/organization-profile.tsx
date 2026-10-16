@@ -1,3 +1,4 @@
+import {useCommonText} from "@/src/i18n/useCommonText";
 ﻿import { useLocalSearchParams, useRouter } from "expo-router";
 
 import * as ImagePicker from "expo-image-picker";
@@ -65,6 +66,7 @@ function base64ToArrayBuffer(base64: string): ArrayBuffer {
   return new Uint8Array(bytes).buffer;
 }
 export default function OrganizationProfileScreen() {
+ const uiText = useCommonText();
   const router = useRouter();
   const { orgId } = useLocalSearchParams<{ orgId?: string }>();
 
@@ -113,7 +115,7 @@ export default function OrganizationProfileScreen() {
         setTagline(clean(data?.tagline));
         setReceiptFooter(clean(data?.receipt_footer));
       } catch (e: any) {
-        Alert.alert("Failed", clean(e?.message) || "Failed to load profile");
+        Alert.alert(uiText("Failed"), clean(e?.message) || uiText("Failed to load profile"));
       } finally {
         if (alive) setLoading(false);
       }
@@ -128,14 +130,14 @@ export default function OrganizationProfileScreen() {
   const pickAndUploadLogo = async () => {
     const id = clean(orgId);
     if (!id) {
-      Alert.alert("Missing organization", "Organization haijapatikana.");
+      Alert.alert(uiText("Missing organization"), uiText("Organization haijapatikana."));
       return;
     }
 
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) {
-        Alert.alert("Permission required", "Ruhusu app kuchagua picha kutoka kwenye simu.");
+        Alert.alert(uiText("Permission required"), uiText("Ruhusu app kuchagua picha kutoka kwenye simu."));
         return;
       }
 
@@ -178,12 +180,12 @@ const { error: uploadError } = await supabase.storage
       if (!publicUrl) throw new Error("Logo URL haijapatikana.");
 
       setLogoUrl(publicUrl);
-      Alert.alert("Logo uploaded ✅", "Logo imewekwa. Bonyeza Save Profile kuhifadhi.");
+      Alert.alert(uiText("Logo uploaded ✅"), uiText("Logo imewekwa. Bonyeza Save Profile kuhifadhi."));
     } catch (e: any) {
       Alert.alert(
-        "Logo upload failed",
+        uiText("Logo upload failed"),
         clean(e?.message) ||
-          `Imeshindikana ku-upload logo. Hakikisha bucket "${LOGO_BUCKET}" ipo Supabase Storage.`
+          uiText("Imeshindikana ku-upload logo. Hakikisha bucket \"{p0}\" ipo Supabase Storage.", {p0: (LOGO_BUCKET)})
       );
     } finally {
       setUploadingLogo(false);
@@ -193,7 +195,7 @@ const { error: uploadError } = await supabase.storage
   const onSave = async () => {
     const id = clean(orgId);
     if (!id) {
-      Alert.alert("Missing organization", "Organization haijapatikana.");
+      Alert.alert(uiText("Missing organization"), uiText("Organization haijapatikana."));
       return;
     }
 
@@ -215,14 +217,14 @@ const { error: uploadError } = await supabase.storage
 
      if (error) throw error;
 
-Alert.alert("Saved ✅", "Business profile imehifadhiwa.", [
+Alert.alert(uiText("Saved ✅"), uiText("Business profile imehifadhiwa."), [
   {
-    text: "OK",
+    text: uiText("OK"),
     onPress: () => router.back(),
   },
 ]);
     } catch (e: any) {
-      Alert.alert("Failed", clean(e?.message) || "Failed to save profile");
+      Alert.alert(uiText("Failed"), clean(e?.message) || uiText("Failed to save profile"));
     } finally {
       setSaving(false);
     }
@@ -239,11 +241,9 @@ Alert.alert("Saved ✅", "Business profile imehifadhiwa.", [
           <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 12 }}>
             <View style={{ flex: 1 }}>
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 26 }}>
-                Business Profile
-              </Text>
+                {uiText("Business Profile")}</Text>
               <Text style={{ color: UI.muted, fontWeight: "700", marginTop: 6 }}>
-                Taarifa za kampuni zitakazoonekana kwenye invoice na receipt.
-              </Text>
+                {uiText("Taarifa za kampuni zitakazoonekana kwenye invoice na receipt.")}</Text>
             </View>
 
             <Pressable
@@ -272,8 +272,8 @@ Alert.alert("Saved ✅", "Business profile imehifadhiwa.", [
             >
               <Card style={{ gap: 14 }}>
                 <SectionTitle
-                  title="Organization Details"
-                  subtitle="Jaza taarifa za msingi za kampuni/biashara nzima."
+                  title={uiText("Organization Details")}
+                  subtitle={uiText("Jaza taarifa za msingi za kampuni/biashara nzima.")}
                 />
 
                 <View style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
@@ -282,7 +282,7 @@ Alert.alert("Saved ✅", "Business profile imehifadhiwa.", [
                     disabled={uploadingLogo}
                     hitSlop={6}
                     accessibilityRole="button"
-                    accessibilityLabel="Change or upload business logo"
+                    accessibilityLabel={uiText("Change or upload business logo")}
                     style={({ pressed }) => ({
                       width: 88,
                       height: 88,
@@ -339,8 +339,7 @@ Alert.alert("Saved ✅", "Business profile imehifadhiwa.", [
                               fontSize: 8,
                             }}
                           >
-                            Change
-                          </Text>
+                            {uiText("Change")}</Text>
                         </View>
                       </>
                     ) : (
@@ -360,8 +359,7 @@ Alert.alert("Saved ✅", "Business profile imehifadhiwa.", [
                             textAlign: "center",
                           }}
                         >
-                          Upload Logo
-                        </Text>
+                          {uiText("Upload Logo")}</Text>
 
                         <Text
                           style={{
@@ -372,18 +370,17 @@ Alert.alert("Saved ✅", "Business profile imehifadhiwa.", [
                             textAlign: "center",
                           }}
                         >
-                          Tap to select
-                        </Text>
+                          {uiText("Tap to select")}</Text>
                       </View>
                     )}
                   </Pressable>
 
                   <View style={{ flex: 1, gap: 8 }}>
-                    <Text style={{ color: UI.text, fontWeight: "900" }}>Logo ya kampuni</Text>
+                    <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Logo ya kampuni")}</Text>
                     <Text style={{ color: UI.faint, fontWeight: "700", fontSize: 12, lineHeight: 17 }}>
                       {logoUrl
-                        ? "Gusa picha ya logo au Change Logo kubadilisha picha."
-                        : "Upload picha ya logo. Itatumika kwenye invoice/receipt."}
+                        ? uiText("Gusa picha ya logo au Change Logo kubadilisha picha.")
+                        : uiText("Upload picha ya logo. Itatumika kwenye invoice/receipt.")}
                     </Text>
 
                     <Pressable
@@ -401,24 +398,24 @@ Alert.alert("Saved ✅", "Business profile imehifadhiwa.", [
                     >
                       <Text style={{ color: UI.text, fontWeight: "900" }}>
                         {uploadingLogo
-                          ? "Ina-upload..."
+                          ? uiText("Ina-upload...")
                           : logoUrl
-                            ? "Change Logo"
-                            : "Upload Logo"}
+                            ? uiText("Change Logo")
+                            : uiText("Upload Logo")}
                       </Text>
                     </Pressable>
                   </View>
                 </View>
 
                 <Input
-                  label="Jina la biashara kwenye receipt"
+                  label={uiText("Jina la biashara kwenye receipt")}
                   helper="Mfano: JOFU QUALITY CENTER au ZETRA TECHNOLOGY LIMITED."
                   value={businessName}
                   onChangeText={setBusinessName}
                 />
 
                 <Input
-                  label="Logo URL"
+                  label={uiText("Logo URL")}
                   helper="Hii hujazwa automatically baada ya ku-upload logo. Unaweza pia kuweka link ya logo kama tayari unayo."
                   value={logoUrl}
                   onChangeText={setLogoUrl}
@@ -442,14 +439,14 @@ Alert.alert("Saved ✅", "Business profile imehifadhiwa.", [
                 />
 
                 <Input
-                  label="Namba ya usajili"
+                  label={uiText("Namba ya usajili")}
                   helper="Mfano: BRELA registration number au business license number kama ipo."
                   value={registrationNo}
                   onChangeText={setRegistrationNo}
                 />
 
                 <Input
-                  label="Email ya kampuni"
+                  label={uiText("Email ya kampuni")}
                   helper="Email kuu ya biashara. Mfano: info@company.co.tz."
                   value={email}
                   onChangeText={setEmail}
@@ -458,7 +455,7 @@ Alert.alert("Saved ✅", "Business profile imehifadhiwa.", [
                 />
 
                 <Input
-                  label="Website"
+                  label={uiText("Website")}
                   helper="Mfano: https://zetra.co.tz. Kama huna website, acha wazi."
                   value={website}
                   onChangeText={setWebsite}
@@ -466,14 +463,14 @@ Alert.alert("Saved ✅", "Business profile imehifadhiwa.", [
                 />
 
                 <Input
-                  label="Slogan / Tagline"
+                  label={uiText("Slogan / Tagline")}
                   helper="Mfano: Quality first, trusted always. Hii inaweza kuonekana chini ya jina la biashara."
                   value={tagline}
                   onChangeText={setTagline}
                 />
 
                 <Input
-                  label="Ujumbe wa chini ya receipt"
+                  label={uiText("Ujumbe wa chini ya receipt")}
                   helper="Mfano: Asante kwa kununua kwetu. Karibu tena."
                   value={receiptFooter}
                   onChangeText={setReceiptFooter}
@@ -481,7 +478,7 @@ Alert.alert("Saved ✅", "Business profile imehifadhiwa.", [
                 />
 
                 <Button
-                  title={saving ? "Inahifadhi..." : "Hifadhi Business Profile"}
+                  title={saving ? uiText("Inahifadhi...") : uiText("Hifadhi Business Profile")}
                   onPress={onSave}
                   disabled={saving || uploadingLogo}
                   variant="primary"

@@ -1,4 +1,6 @@
-﻿// app/(tabs)/club/store/[storeId].tsx
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+﻿import {useCommonText} from "@/src/i18n/useCommonText";
+// app/(tabs)/club/store/[storeId].tsx
 
 import { useOrg } from "@/src/context/OrgContext";
 import { supabase } from "@/src/supabase/supabaseClient";
@@ -121,17 +123,19 @@ function normalizeTZ(numRaw: string) {
   return only.replace(/\D/g, "");
 }
 
-async function openUrl(url: string) {
+async function openUrl(url: string, uiText: (source: string) => string) {
   try {
     const can = await Linking.canOpenURL(url);
     if (!can) throw new Error("Cannot open link");
     await Linking.openURL(url);
   } catch {
-    Alert.alert("Open link failed", "Imeshindikana kufungua link kwenye simu hii.");
+    Alert.alert(uiText("Open link failed"), uiText("Imeshindikana kufungua link kwenye simu hii."));
   }
 }
 
 export default function ClubStoreDashboardScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ storeId?: string }>();
@@ -346,7 +350,7 @@ export default function ClubStoreDashboardScreen() {
     const raw = clean(profile?.whatsapp);
     const n = normalizeTZ(raw);
     if (!n) {
-      Alert.alert("WhatsApp", "Store hii haijaweka WhatsApp bado.");
+      Alert.alert("WhatsApp", uiText("Store hii haijaweka WhatsApp bado."));
       return;
     }
 
@@ -358,18 +362,18 @@ export default function ClubStoreDashboardScreen() {
     );
 
     // wa.me format (no plus)
-    await openUrl(`https://wa.me/${n}?text=${msg}`);
+    await openUrl(`https://wa.me/${n}?text=${msg}`, uiText);
   }, [profile?.display_name, profile?.whatsapp]);
 
   const callStorePhone = useCallback(async () => {
     const raw = clean(profile?.phone);
     const n = normalizeTZ(raw);
     if (!n) {
-      Alert.alert("Call", "Store hii haijaweka namba ya simu bado.");
+      Alert.alert(uiText("Call"), uiText("Store hii haijaweka namba ya simu bado."));
       return;
     }
     // tel: prefers plain digits (255...)
-    await openUrl(`tel:${n}`);
+    await openUrl(`tel:${n}`, uiText);
   }, [profile?.phone]);
 
   const openContact = useCallback(() => {
@@ -377,20 +381,20 @@ export default function ClubStoreDashboardScreen() {
     const p = clean(profile?.phone);
 
     if (!w && !p) {
-      Alert.alert("Contact", "Hakuna contact info bado.");
+      Alert.alert(uiText("Contact"), uiText("Hakuna contact info bado."));
       return;
     }
 
-    Alert.alert("Contact", "Chagua action:", [
+    Alert.alert(uiText("Contact"), uiText("Chagua action:"), [
       {
         text: "WhatsApp",
         onPress: () => void openWhatsAppToStore(),
       },
       {
-        text: "Call",
+        text: uiText("Call"),
         onPress: () => void callStorePhone(),
       },
-      { text: "Cancel", style: "cancel" },
+      { text: uiText("Cancel"), style: "cancel" },
     ]);
   }, [callStorePhone, openWhatsAppToStore, profile?.phone, profile?.whatsapp]);
 
@@ -410,7 +414,7 @@ export default function ClubStoreDashboardScreen() {
         params: { threadId, storeId },
       } as any);
     } catch (e: any) {
-      Alert.alert("Message", e?.message ?? "Failed to open inbox thread");
+      Alert.alert(uiText("Message"), e?.message ?? uiText("Failed to open inbox thread"));
     }
   }, [router, storeId]);
 
@@ -560,16 +564,16 @@ export default function ClubStoreDashboardScreen() {
  // ✅ Options menu on long-press
   const openPostOptions = useCallback(
     (item: StorePostRow) => {
-      Alert.alert("Post Options", "Chagua unachotaka kufanya:", [
+      Alert.alert(uiText("Post Options"), uiText("Chagua unachotaka kufanya:"), [
         {
-          text: "View Post",
+          text: uiText("View Post"),
           onPress: () => openPostDetail(item),
         },
         {
-          text: "Order from this Post",
+          text: uiText("Order from this Post"),
           onPress: () => openOrderFromPost(item),
         },
-        { text: "Cancel", style: "cancel" },
+        { text: uiText("Cancel"), style: "cancel" },
       ]);
     },
     [openOrderFromPost, openPostDetail]
@@ -606,14 +610,13 @@ export default function ClubStoreDashboardScreen() {
             <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
               <Ionicons name="image-outline" size={20} color={theme.colors.faint} />
               <Text style={{ color: theme.colors.faint, fontWeight: "900", fontSize: 11, marginTop: 6 }}>
-                No Image
-              </Text>
+                {uiText("No Image")}</Text>
             </View>
           )}
         </Pressable>
       );
     },
-    [openPostDetail, openPostOptions]
+    [openPostDetail, openPostOptions, uiText]
   );
 
   const gridKey = useMemo(() => `grid-${storeId}`, [storeId]);
@@ -642,8 +645,7 @@ export default function ClubStoreDashboardScreen() {
 
               <View>
                 <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-                  Store Dashboard
-                </Text>
+                  {uiText("Store Dashboard")}</Text>
                 <Text style={{ color: theme.colors.faint, fontWeight: "900", fontSize: 12 }}>
                   ZETRA Business Club
                 </Text>
@@ -665,7 +667,7 @@ export default function ClubStoreDashboardScreen() {
                 },
               ]}
             >
-              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Back</Text>
+              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Back")}</Text>
             </Pressable>
           </View>
         </Card>
@@ -674,7 +676,7 @@ export default function ClubStoreDashboardScreen() {
 
         {!!err && (
           <Card style={{ backgroundColor: theme.colors.dangerSoft, borderColor: theme.colors.dangerBorder }}>
-            <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{err}</Text>
+            <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{systemText(err)}</Text>
           </Card>
         )}
 
@@ -684,8 +686,7 @@ export default function ClubStoreDashboardScreen() {
             <View style={{ paddingVertical: 10, alignItems: "center" }}>
               <ActivityIndicator />
               <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>
-                Loading...
-              </Text>
+                {uiText("Loading...")}</Text>
             </View>
           ) : (
             <>
@@ -727,7 +728,7 @@ export default function ClubStoreDashboardScreen() {
                   )}
 
                  <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6, fontSize: 12 }}>
-                        Store ID: {storeId.slice(0, 8)}...{isMyStore ? " • (My active store)" : ""}
+                        {uiText("Store ID:")}{storeId.slice(0, 8)}...{isMyStore ? uiText(" • (My active store)") : ""}
                       </Text>
                 </View>
 
@@ -757,9 +758,9 @@ export default function ClubStoreDashboardScreen() {
 
               {/* Stats row */}
               <View style={{ flexDirection: "row", gap: 10, marginTop: 2 }}>
-                <Stat label="Posts" value={postsCount} />
-                <Stat label="Followers" value={followersCount} />
-                <Stat label="Following" value={followingCount} />
+                <Stat label={uiText("Posts")} value={postsCount} />
+                <Stat label={uiText("Followers")} value={followersCount} />
+                <Stat label={uiText("Following")} value={followingCount} />
               </View>
 
               {/* Quick Contact Actions */}
@@ -807,7 +808,7 @@ export default function ClubStoreDashboardScreen() {
                   ]}
                 >
                   <Ionicons name="call-outline" size={18} color={theme.colors.text} />
-                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Call</Text>
+                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Call")}</Text>
                 </Pressable>
               </View>
 
@@ -843,7 +844,7 @@ export default function ClubStoreDashboardScreen() {
                     color={isFollowing ? theme.colors.emerald : theme.colors.text}
                   />
                   <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                    {isMyStore ? "My Store" : followBusy ? "..." : isFollowing ? "Following" : "Follow"}
+                    {isMyStore ? uiText("My Store") : followBusy ? "..." : isFollowing ? uiText("Following") : uiText("Follow")}
                   </Text>
                 </Pressable>
 
@@ -867,7 +868,7 @@ export default function ClubStoreDashboardScreen() {
                   ]}
                 >
                   <Ionicons name="chatbubble-outline" size={18} color={theme.colors.text} />
-                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Message</Text>
+                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Message")}</Text>
                 </Pressable>
               </View>
 
@@ -892,7 +893,7 @@ export default function ClubStoreDashboardScreen() {
                   ]}
                 >
                   <Ionicons name="information-circle-outline" size={18} color={theme.colors.text} />
-                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Contact</Text>
+                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Contact")}</Text>
                 </Pressable>
 
                 {/* ✅ PUBLIC Order */}
@@ -916,7 +917,7 @@ export default function ClubStoreDashboardScreen() {
                   ]}
                 >
                   <Ionicons name="bag-handle-outline" size={18} color={theme.colors.emerald} />
-                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Order</Text>
+                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Order")}</Text>
                 </Pressable>
               </View>
 
@@ -941,7 +942,7 @@ export default function ClubStoreDashboardScreen() {
                   ]}
                 >
                   <Ionicons name="mail-unread-outline" size={18} color={theme.colors.text} />
-                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Open Store Inbox</Text>
+                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Open Store Inbox")}</Text>
                 </Pressable>
               )}
 
@@ -957,7 +958,7 @@ export default function ClubStoreDashboardScreen() {
               {tab === "POSTS" && (
                 <Card style={{ padding: 12, backgroundColor: theme.colors.surface2, borderColor: theme.colors.borderSoft }}>
                   <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                    <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Posts</Text>
+                    <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Posts")}</Text>
 
                     <Pressable
                       onPress={() => {
@@ -983,31 +984,27 @@ export default function ClubStoreDashboardScreen() {
                       ]}
                     >
                       <Ionicons name="refresh" size={16} color={theme.colors.text} />
-                      <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>Refresh</Text>
+                      <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>{uiText("Refresh")}</Text>
                     </Pressable>
                   </View>
 
                  <Text style={{ color: theme.colors.faint, fontWeight: "900", fontSize: 12, marginTop: 8 }}>
-                        Tip: Long press post kupata "Order from this Post".
-                      </Text>
+                        {uiText("Tip: Long press post kupata \"Order from this Post\".")}</Text>
 
                   {postsLoading ? (
                     <View style={{ paddingVertical: 16, alignItems: "center" }}>
                       <ActivityIndicator />
                       <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>
-                        Loading posts...
-                      </Text>
+                        {uiText("Loading posts...")}</Text>
                     </View>
                   ) : posts.length === 0 ? (
                     <View style={{ paddingTop: 10 }}>
                       <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-                        Hii store bado haina posts.
-                      </Text>
+                        {uiText("Hii store bado haina posts.")}</Text>
 
                       {isOwnerView && (
                        <Text style={{ color: theme.colors.faint, fontWeight: "900", marginTop: 10, fontSize: 12 }}>
-                        OWNER/ADMIN: "Edit Store Profile/Catalog" (A42+). Staff hawataruhusiwa.
-                      </Text>
+                        {uiText("OWNER/ADMIN: \"Edit Store Profile/Catalog\" (A42+). Staff hawataruhusiwa.")}</Text>
                       )}
                     </View>
                   ) : (
@@ -1033,13 +1030,11 @@ export default function ClubStoreDashboardScreen() {
                             <View style={{ paddingVertical: 12, alignItems: "center" }}>
                               <ActivityIndicator />
                               <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>
-                                Loading more...
-                              </Text>
+                                {uiText("Loading more...")}</Text>
                             </View>
                           ) : !postsHasMore ? (
                             <Text style={{ color: theme.colors.faint, fontWeight: "900", textAlign: "center", marginTop: 8 }}>
-                              — End —
-                            </Text>
+                              {uiText("— End —")}</Text>
                           ) : null
                         }
                       />
@@ -1051,11 +1046,11 @@ export default function ClubStoreDashboardScreen() {
               {/* ABOUT */}
               {tab === "ABOUT" && (
                 <Card style={{ padding: 12, backgroundColor: theme.colors.surface2, borderColor: theme.colors.borderSoft }}>
-                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>About</Text>
+                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("About")}</Text>
 
                   <View style={{ gap: 10, marginTop: 10 }}>
-                    <Row label="Category" value={safeStr(category)} />
-                    <Row label="Location" value={safeStr(location)} />
+                    <Row label={uiText("Category")} value={safeStr(category)} />
+                    <Row label={uiText("Location")} value={safeStr(location)} />
 
                     <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
                       <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>WhatsApp</Text>
@@ -1085,7 +1080,7 @@ export default function ClubStoreDashboardScreen() {
                     </View>
 
                     <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-                      <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>Phone</Text>
+                      <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>{uiText("Phone")}</Text>
                       <Pressable
                         onPress={() => void callStorePhone()}
                         hitSlop={10}
@@ -1114,12 +1109,10 @@ export default function ClubStoreDashboardScreen() {
 
                   {isOwnerView ? (
                     <Text style={{ color: theme.colors.faint, fontWeight: "900", marginTop: 12, fontSize: 12 }}>
-                      OWNER/ADMIN: "Edit Store Profile" tutaongeza A42+ (staff hawataruhusiwa).
-                    </Text>
+                      {uiText("OWNER/ADMIN: \"Edit Store Profile\" tutaongeza A42+ (staff hawataruhusiwa).")}</Text>
                   ) : (
                     <Text style={{ color: theme.colors.faint, fontWeight: "900", marginTop: 12, fontSize: 12 }}>
-                      PUBLIC: profile info ni read-only.
-                    </Text>
+                      {uiText("PUBLIC: profile info ni read-only.")}</Text>
                   )}
                 </Card>
               )}
@@ -1127,10 +1120,9 @@ export default function ClubStoreDashboardScreen() {
               {/* PRODUCTS */}
               {tab === "PRODUCTS" && (
                 <Card style={{ padding: 12, backgroundColor: theme.colors.surface2, borderColor: theme.colors.borderSoft }}>
-                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Products</Text>
+                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Products")}</Text>
                   <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-                    Angalia catalog ya store hii hapa.
-                  </Text>
+                    {uiText("Angalia catalog ya store hii hapa.")}</Text>
 
                   <Pressable
                     onPress={() => {
@@ -1157,13 +1149,12 @@ export default function ClubStoreDashboardScreen() {
                     ]}
                   >
                     <Ionicons name="pricetag-outline" size={18} color={theme.colors.emerald} />
-                    <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Open Catalog</Text>
+                    <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Open Catalog")}</Text>
                   </Pressable>
 
                   {!isOwnerView && (
                     <Text style={{ color: theme.colors.faint, fontWeight: "900", marginTop: 10, fontSize: 12 }}>
-                      NOTE: Staff hawaruhusiwi ku-edit catalog.
-                    </Text>
+                      {uiText("NOTE: Staff hawaruhusiwi ku-edit catalog.")}</Text>
                   )}
                 </Card>
               )}
@@ -1171,10 +1162,9 @@ export default function ClubStoreDashboardScreen() {
               {/* ORDERS */}
               {tab === "ORDERS" && (
                 <Card style={{ padding: 12, backgroundColor: theme.colors.surface2, borderColor: theme.colors.borderSoft }}>
-                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Orders</Text>
+                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Orders")}</Text>
                   <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-                    Customer ana-create order kwa "Order" button. Store staff wana-manage orders kwenye Orders panel.
-                  </Text>
+                    {uiText("Customer ana-create order kwa \"Order\" button. Store staff wana-manage orders kwenye Orders panel.")}</Text>
 
                   {isMyStore ? (
                     <View style={{ marginTop: 12, gap: 10 }}>
@@ -1203,7 +1193,7 @@ export default function ClubStoreDashboardScreen() {
                         ]}
                       >
                         <Ionicons name="receipt-outline" size={18} color={theme.colors.text} />
-                        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Manage Store Orders</Text>
+                        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Manage Store Orders")}</Text>
                       </Pressable>
 
                       {/* ✅ IMPORTANT: Keep Order Form reachable even on My Store */}
@@ -1226,14 +1216,13 @@ export default function ClubStoreDashboardScreen() {
                         ]}
                       >
                         <Ionicons name="bag-handle-outline" size={18} color={theme.colors.emerald} />
-                        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Create Order (Form)</Text>
+                        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Create Order (Form)")}</Text>
                       </Pressable>
                     </View>
                   ) : (
                     <View style={{ marginTop: 10, gap: 10 }}>
                       <Text style={{ color: theme.colors.faint, fontWeight: "900", fontSize: 12 }}>
-                        PUBLIC: Kwa sasa management ni ya store staff. Lakini unaweza ku-create oda.
-                      </Text>
+                        {uiText("PUBLIC: Kwa sasa management ni ya store staff. Lakini unaweza ku-create oda.")}</Text>
 
                       <Pressable
                         onPress={openOrders}
@@ -1254,7 +1243,7 @@ export default function ClubStoreDashboardScreen() {
                         ]}
                       >
                         <Ionicons name="bag-handle-outline" size={18} color={theme.colors.emerald} />
-                        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Create Order</Text>
+                        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Create Order")}</Text>
                       </Pressable>
                     </View>
                   )}
@@ -1265,8 +1254,7 @@ export default function ClubStoreDashboardScreen() {
         </Card>
 
         <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 12, lineHeight: 16 }}>
-          NOTE: Staff wanaruhusiwa ku-manage posts/inbox/orders, lakini hawaruhusiwi ku-edit store account/profile/catalog.
-        </Text>
+          {uiText("NOTE: Staff wanaruhusiwa ku-manage posts/inbox/orders, lakini hawaruhusiwi ku-edit store account/profile/catalog.")}</Text>
       </View>
     </Screen>
   );

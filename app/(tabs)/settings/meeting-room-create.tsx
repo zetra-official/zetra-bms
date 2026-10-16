@@ -1,3 +1,4 @@
+import {useCommonText} from "@/src/i18n/useCommonText";
 import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -72,6 +73,7 @@ backgroundColor: MR.card2,
 }
 
 export default function MeetingRoomCreateScreen() {
+ const uiText=useCommonText();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const org = useOrg();
@@ -97,12 +99,12 @@ export default function MeetingRoomCreateScreen() {
 
   const onCreate = useCallback(async () => {
     if (!orgId) {
-      Alert.alert("No organization", "Hakuna organization active kwa sasa.");
+      Alert.alert(uiText("No organization"), uiText("Hakuna organization active kwa sasa."));
       return;
     }
 
     if (!canCreate) {
-      Alert.alert("Not allowed", "Only Owner/Admin can create meeting rooms.");
+      Alert.alert(uiText("Not allowed"), uiText("Only Owner/Admin can create meeting rooms."));
       return;
     }
 
@@ -110,12 +112,12 @@ export default function MeetingRoomCreateScreen() {
     const roomDescription = clean(description);
 
     if (!roomName) {
-      Alert.alert("Room name required", "Andika jina la meeting room kwanza.");
+      Alert.alert(uiText("Room name required"), uiText("Andika jina la meeting room kwanza."));
       return;
     }
 
     if (roomName.length < 2) {
-      Alert.alert("Name too short", "Jina la room liwe angalau herufi 2.");
+      Alert.alert(uiText("Name too short"), uiText("Jina la room liwe angalau herufi 2."));
       return;
     }
 
@@ -140,11 +142,11 @@ export default function MeetingRoomCreateScreen() {
       setDescription("");
 
       Alert.alert(
-        "Meeting Room created ✅",
-        `Room "${roomName}" imeundwa successfully ndani ya ${orgName}.`,
+        uiText("Meeting Room created ✅"),
+        uiText("Room \"{p0}\" imeundwa successfully ndani ya {p1}.", {p0: (roomName), p1: (orgName)}),
         [
           {
-            text: "Open Room",
+            text: uiText("Open Room"),
             onPress: () => {
               router.replace({
                 pathname: "/(tabs)/settings/meeting-room-detail",
@@ -158,7 +160,7 @@ export default function MeetingRoomCreateScreen() {
         ]
       );
     } catch (e: any) {
-      Alert.alert("Create failed", e?.message ?? "Failed to create meeting room.");
+      Alert.alert(uiText("Create failed"), e?.message ?? uiText("Failed to create meeting room."));
     } finally {
       setLoading(false);
     }
@@ -201,13 +203,12 @@ backgroundColor: MR.card,
             style={{ color: MR.text, fontWeight: "900", fontSize: 22 }}
             numberOfLines={1}
           >
-            Create Meeting Room
-          </Text>
+            {uiText("Create Meeting Room")}</Text>
           <Text
             style={{ color: MR.muted, fontWeight: "800", marginTop: 4 }}
             numberOfLines={1}
           >
-            {orgName} • {role || "—"}
+            {clean((org.activeOrgName || uiText("No organization")))} • {role || "—"}
           </Text>
         </View>
       </View>
@@ -246,8 +247,7 @@ backgroundColor: MR.emeraldSoft,
                 style={{ color: MR.text, fontWeight: "900", fontSize: 17 }}
                 numberOfLines={2}
               >
-                New Organization Room
-              </Text>
+                {uiText("New Organization Room")}</Text>
               <Text
                 style={{
                   color: MR.muted,
@@ -257,15 +257,13 @@ backgroundColor: MR.emeraldSoft,
                   lineHeight: 20,
                 }}
               >
-                Tengeneza room mpya kwa ajili ya leadership, suppliers, wafanyakazi,
-                sales team, customer care, au project discussions ndani ya organization.
-              </Text>
+                {uiText("Tengeneza room mpya kwa ajili ya leadership, suppliers, wafanyakazi, sales team, customer care, au project discussions ndani ya organization.")}</Text>
             </View>
           </View>
 
           <View style={{ flexDirection: "row", gap: 10, flexWrap: "wrap" }}>
-            <CountPill label="Organization" value={orgName || "—"} />
-            <CountPill label="Active Store" value={storeName || "—"} />
+            <CountPill label={uiText("Organization")} value={orgName || "—"} />
+            <CountPill label={uiText("Active Store")} value={storeName || "—"} />
           </View>
         </Card>
       </View>
@@ -280,11 +278,9 @@ backgroundColor: MR.emeraldSoft,
             }}
           >
             <Text style={{ color: UI.danger, fontWeight: "900" }}>
-              Not allowed
-            </Text>
+              {uiText("Not allowed")}</Text>
             <Text style={{ color: MR.muted, fontWeight: "800", lineHeight: 20 }}>
-              Meeting rooms can only be created by Owner/Admin.
-            </Text>
+              {uiText("Meeting rooms can only be created by Owner/Admin.")}</Text>
           </Card>
         </View>
       ) : null}
@@ -298,19 +294,17 @@ backgroundColor: MR.emeraldSoft,
           }}
         >
           <Text style={{ color: MR.text, fontWeight: "900", fontSize: 15 }}>
-            Room Details
-          </Text>
+            {uiText("Room Details")}</Text>
 
           <View style={{ gap: 8 }}>
             <Text style={{ color: MR.text, fontWeight: "900", fontSize: 13 }}>
-              Room Name
-            </Text>
+              {uiText("Room Name")}</Text>
 
             <TextInput
               value={name}
               onChangeText={setName}
               editable={!loading && canCreate}
-              placeholder="e.g. Leadership, Suppliers, Sales Team"
+              placeholder={uiText("e.g. Leadership, Suppliers, Sales Team")}
             placeholderTextColor={UI.faint}
               maxLength={80}
               style={{
@@ -334,9 +328,7 @@ backgroundColor: MR.emeraldSoft,
                 lineHeight: 18,
               }}
             >
-              You decide the group purpose here. Example: Wafanyakazi, Suppliers,
-              Leadership, Stock Requests.
-            </Text>
+              {uiText("You decide the group purpose here. Example: Wafanyakazi, Suppliers, Leadership, Stock Requests.")}</Text>
 
             <View style={{ alignItems: "flex-end" }}>
               <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 11 }}>
@@ -347,14 +339,13 @@ backgroundColor: MR.emeraldSoft,
 
           <View style={{ gap: 8 }}>
             <Text style={{ color: MR.text, fontWeight: "900", fontSize: 13 }}>
-              Description
-            </Text>
+              {uiText("Description")}</Text>
 
             <TextInput
               value={description}
               onChangeText={setDescription}
               editable={!loading && canCreate}
-              placeholder="Optional note about what this room will be used for"
+              placeholder={uiText("Optional note about what this room will be used for")}
               placeholderTextColor={MR.faint}
               multiline
               textAlignVertical="top"
@@ -392,18 +383,14 @@ color: MR.text,
           }}
         >
           <Text style={{ color: MR.text, fontWeight: "900", fontSize: 15 }}>
-            What happens next
-          </Text>
+            {uiText("What happens next")}</Text>
 
           <Text style={{ color: MR.muted, fontWeight: "800", lineHeight: 21 }}>
-            • Room will be created inside this organization.
-          </Text>
+            {uiText("• Room will be created inside this organization.")}</Text>
           <Text style={{ color: MR.muted, fontWeight: "800", lineHeight: 21 }}>
-            • You become the first active room member automatically.
-          </Text>
+            {uiText("• You become the first active room member automatically.")}</Text>
           <Text style={{ color: MR.muted, fontWeight: "800", lineHeight: 21 }}>
-            • After opening the room, utaweza ku-invite mtu yeyote mwenye akaunti ya ZETRA hata kama hayupo kwenye organization hiyo.
-          </Text>
+            {uiText("• After opening the room, utaweza ku-invite mtu yeyote mwenye akaunti ya ZETRA hata kama hayupo kwenye organization hiyo.")}</Text>
         </Card>
       </View>
 
@@ -441,7 +428,7 @@ color: MR.text,
               fontSize: 15,
             }}
           >
-            {loading ? "Creating..." : "Create & Open Room"}
+            {loading ? uiText("Creating...") : uiText("Create & Open Room")}
           </Text>
         </Pressable>
 
@@ -460,8 +447,7 @@ color: MR.text,
           })}
         >
           <Text style={{ color: MR.text, fontWeight: "900", fontSize: 14 }}>
-            Cancel
-          </Text>
+            {uiText("Cancel")}</Text>
         </Pressable>
       </View>
     </Screen>

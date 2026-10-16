@@ -1,3 +1,5 @@
+import {useDocumentText} from "@/src/i18n/useDocumentText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -125,6 +127,8 @@ function WebIcon({
 }
 
 export default function CustomersScreen() {
+ const {documentText, documentLocale} = useDocumentText();
+ const uiText=useCommonText();
   const router = useRouter();
   const org: any = useOrg();
 
@@ -233,7 +237,7 @@ export default function CustomersScreen() {
       .join("");
 
     const html = `
-      <html>
+      <html lang="${documentLocale().language}" dir="${documentLocale().direction}">
         <head>
           <style>
             body { font-family: Arial, sans-serif; padding: 28px; color: #101827; }
@@ -249,18 +253,18 @@ export default function CustomersScreen() {
         </head>
         <body>
           <div class="brand">${esc(activeStoreName)}</div>
-          <div class="sub">Customers Statement • Generated: ${esc(prettyDate(new Date().toISOString()))}</div>
+          <div class="sub">${documentText("Customers Statement • Generated:")} ${esc(prettyDate(new Date().toISOString()))}</div>
           <div class="card">
             <table>
               <thead>
                 <tr>
-                  <th>#</th><th>Customer</th><th>Phone</th><th class="right">Orders</th><th class="right">Spent</th><th>Last Seen</th>
+                  <th>#</th><th>${documentText("Customer")}</th><th>${documentText("Phone")}</th><th class="right">${documentText("Orders")}</th><th class="right">${documentText("Spent")}</th><th>${documentText("Last Seen")}</th>
                 </tr>
               </thead>
-              <tbody>${rowsHtml || `<tr><td colspan="6">No customers found.</td></tr>`}</tbody>
+              <tbody>${rowsHtml || `<tr><td colspan="6">${documentText("No customers found.")}</td></tr>`}</tbody>
             </table>
           </div>
-          <div class="footer">Powered by ZETRA BMS • Premium customer records</div>
+          <div class="footer">${documentText("Powered by ZETRA BMS • Premium customer records")}</div>
         </body>
       </html>
     `;
@@ -273,19 +277,19 @@ export default function CustomersScreen() {
     const message = clean(broadcastMessage);
 
     if (!message) {
-      Alert.alert("Message required", "Andika ujumbe kwanza.");
+      Alert.alert(uiText("Message required"), uiText("Andika ujumbe kwanza."));
       return;
     }
 
     if (broadcastRecipients.length === 0) {
-      Alert.alert("No recipients", "Hakuna customer mwenye phone number.");
+      Alert.alert(uiText("No recipients"), uiText("Hakuna customer mwenye phone number."));
       return;
     }
 
     const phone = broadcastRecipients[broadcastIndex];
 
     if (!phone) {
-      Alert.alert("Done", "Ujumbe umetumwa kwa list yote uliyochagua.");
+      Alert.alert(uiText("Done"), uiText("Ujumbe umetumwa kwa list yote uliyochagua."));
       setBroadcastIndex(0);
       setBroadcastOpen(false);
       return;
@@ -316,12 +320,10 @@ export default function CustomersScreen() {
         >
           <CardBox style={{ gap: 12 }}>
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 20 }}>
-              Broadcast Message
-            </Text>
+              {uiText("Broadcast Message")}</Text>
 
             <Text style={{ color: UI.muted, fontWeight: "800" }}>
-              Recipients: {broadcastRecipients.length} customers
-            </Text>
+              {uiText("Recipients:")}{broadcastRecipients.length} {uiText("customers")}</Text>
 
             <View style={{ flexDirection: "row", gap: 10 }}>
               {(["WHATSAPP", "SMS"] as const).map((ch) => (
@@ -339,7 +341,7 @@ export default function CustomersScreen() {
                   }}
                 >
                   <Text style={{ color: UI.text, fontWeight: "900" }}>
-                    {ch === "WHATSAPP" ? "WhatsApp" : "SMS"}
+                    {ch === "WHATSAPP" ? "WhatsApp" : uiText("SMS")}
                   </Text>
                 </Pressable>
               ))}
@@ -348,7 +350,7 @@ export default function CustomersScreen() {
             <TextInput
               value={broadcastMessage}
               onChangeText={setBroadcastMessage}
-              placeholder="Andika ujumbe wa kutuma..."
+              placeholder={uiText("Andika ujumbe wa kutuma...")}
               placeholderTextColor={UI.faint}
               multiline
               style={{
@@ -366,7 +368,7 @@ export default function CustomersScreen() {
             />
 
             <Text style={{ color: UI.muted, fontWeight: "800" }}>
-              Progress: {Math.min(broadcastIndex, broadcastRecipients.length)} /{" "}
+              {uiText("Progress:")}{Math.min(broadcastIndex, broadcastRecipients.length)} /{" "}
               {broadcastRecipients.length}
             </Text>
 
@@ -386,7 +388,7 @@ export default function CustomersScreen() {
                   alignItems: "center",
                 }}
               >
-                <Text style={{ color: UI.text, fontWeight: "900" }}>Cancel</Text>
+                <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Cancel")}</Text>
               </Pressable>
 
               <Pressable
@@ -402,7 +404,7 @@ export default function CustomersScreen() {
                 }}
               >
                 <Text style={{ color: UI.emerald, fontWeight: "900" }}>
-                  {broadcastIndex === 0 ? "Start" : "Send Next"}
+                  {broadcastIndex === 0 ? uiText("Start") : uiText("Send Next")}
                 </Text>
               </Pressable>
             </View>
@@ -439,22 +441,19 @@ export default function CustomersScreen() {
 
           <View style={{ flex: 1 }}>
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 28 }}>
-              Customers
-            </Text>
+              {uiText("Customers")}</Text>
             <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 4 }}>
-              Store: {activeStoreName}
+              {uiText("Store:")}{(clean(org.activeStoreName) || uiText("Active Store"))}
             </Text>
           </View>
         </View>
 
         <CardBox style={{ gap: 10 }}>
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-            Customer Intelligence
-          </Text>
+            {uiText("Customer Intelligence")}</Text>
 
           <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 20 }}>
-            View customer profiles, purchase history, total spend, last visit, and contact actions.
-          </Text>
+            {uiText("View customer profiles, purchase history, total spend, last visit, and contact actions.")}</Text>
 
           <Pressable
             onPress={exportCustomersPdf}
@@ -468,7 +467,7 @@ export default function CustomersScreen() {
               opacity: pressed ? 0.9 : 1,
             })}
           >
-            <Text style={{ color: UI.emerald, fontWeight: "900" }}>Export Customers PDF</Text>
+            <Text style={{ color: UI.emerald, fontWeight: "900" }}>{uiText("Export Customers PDF")}</Text>
           </Pressable>
 
           <Pressable
@@ -484,8 +483,7 @@ export default function CustomersScreen() {
             })}
           >
             <Text style={{ color: UI.emerald, fontWeight: "900" }}>
-              Customer Intelligence Alerts
-            </Text>
+              {uiText("Customer Intelligence Alerts")}</Text>
           </Pressable>
 
           <Pressable
@@ -504,14 +502,13 @@ export default function CustomersScreen() {
             })}
           >
             <Text style={{ color: UI.emerald, fontWeight: "900" }}>
-              Broadcast to Customers
-            </Text>
+              {uiText("Broadcast to Customers")}</Text>
           </Pressable>
 
           <TextInput
             value={search}
             onChangeText={setSearch}
-            placeholder="Search customer name or phone..."
+            placeholder={uiText("Search customer name or phone...")}
             placeholderTextColor={UI.faint}
             style={{
               color: UI.text,
@@ -529,7 +526,7 @@ export default function CustomersScreen() {
         {loading ? (
           <CardBox style={{ alignItems: "center", gap: 10 }}>
             <ActivityIndicator />
-            <Text style={{ color: UI.muted, fontWeight: "800" }}>Loading customers...</Text>
+            <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("Loading customers...")}</Text>
           </CardBox>
         ) : errorText ? (
           <CardBox>
@@ -538,8 +535,7 @@ export default function CustomersScreen() {
         ) : filtered.length === 0 ? (
           <CardBox>
             <Text style={{ color: UI.muted, fontWeight: "900" }}>
-              No customers found for this store yet.
-            </Text>
+              {uiText("No customers found for this store yet.")}</Text>
           </CardBox>
         ) : (
           <View style={{ gap: 10 }}>
@@ -591,7 +587,7 @@ export default function CustomersScreen() {
                           style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}
                           numberOfLines={1}
                         >
-                          {name}
+                          {(clean(c.full_name) || uiText("Customer"))}
                         </Text>
                         <Text
                           style={{ color: UI.muted, fontWeight: "800", marginTop: 3 }}
@@ -615,7 +611,7 @@ export default function CustomersScreen() {
                           borderColor: UI.border,
                         }}
                       >
-                        <Text style={{ color: UI.muted, fontWeight: "900" }}>Orders</Text>
+                        <Text style={{ color: UI.muted, fontWeight: "900" }}>{uiText("Orders")}</Text>
                         <Text style={{ color: UI.text, fontWeight: "900" }}>{orders}</Text>
                       </View>
 
@@ -629,7 +625,7 @@ export default function CustomersScreen() {
                           borderColor: "rgba(5,150,105,0.18)",
                         }}
                       >
-                        <Text style={{ color: UI.muted, fontWeight: "900" }}>Spent</Text>
+                        <Text style={{ color: UI.muted, fontWeight: "900" }}>{uiText("Spent")}</Text>
                         <Text style={{ color: UI.text, fontWeight: "900" }}>{fmt(spent)}</Text>
                       </View>
                     </View>

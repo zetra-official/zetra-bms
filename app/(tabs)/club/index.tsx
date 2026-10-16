@@ -1,3 +1,5 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/(tabs)/club/index.tsx
 import { supabase } from "@/src/supabase/supabaseClient";
 import { Card } from "@/src/ui/Card";
@@ -118,6 +120,7 @@ const FeedPostItem = memo(function FeedPostItem({
   onOpenComments,
   onToggleSave,
 }: FeedItemProps) {
+ const uiText = useCommonText();
   const { width } = useWindowDimensions();
 
   const img = clean(item.image_url) || clean(item.image_hq_url) || "";
@@ -236,8 +239,7 @@ const FeedPostItem = memo(function FeedPostItem({
                       marginTop: 4,
                     }}
                   >
-                    Tap kuona post
-                  </Text>
+                    {uiText("Tap kuona post")}</Text>
                 )}
               </View>
             </Pressable>
@@ -367,18 +369,16 @@ const FeedPostItem = memo(function FeedPostItem({
 
           <View style={{ marginTop: 2, flexDirection: "row", alignItems: "center", gap: 14 }}>
             <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}>
-              {likes} likes
-            </Text>
+              {likes} {uiText("likes")}</Text>
             <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}>
-              {comments} comments
-            </Text>
+              {comments} {uiText("comments")}</Text>
           </View>
 
           {!!caption ? null : null}
 
           <Pressable onPress={() => onOpenComments(item)} hitSlop={10} style={{ marginTop: 6 }}>
             <Text style={{ color: comments > 0 ? theme.colors.muted : theme.colors.faint, fontWeight: "900" }}>
-              {comments > 0 ? `View all ${comments} comments` : "No comments yet"}
+              {comments > 0 ? uiText("View all {p0} comments", {p0: (comments)}) : uiText("No comments yet")}
             </Text>
           </Pressable>
 
@@ -399,6 +399,8 @@ const FeedPostItem = memo(function FeedPostItem({
 /* ---------------- Screen ---------------- */
 
 export default function ClubFeedScreen() {
+ const systemText = useSystemMessageText();
+ const uiText = useCommonText();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const topPad = Math.max(insets.top, 10) + 8;
@@ -779,9 +781,9 @@ export default function ClubFeedScreen() {
           return next;
         });
 
-        Alert.alert("Deleted ✅", "Post imefutwa kwenye Zetra Business Club.");
+        Alert.alert(uiText("Deleted ✅"), uiText("Post imefutwa kwenye Zetra Business Club."));
       } catch (e: any) {
-        Alert.alert("Delete Failed", e?.message ?? "Imeshindikana kufuta post.");
+        Alert.alert(uiText("Delete Failed"), e?.message ?? uiText("Imeshindikana kufuta post."));
       } finally {
         setDeletingPostIds((prev) => ({ ...prev, [postId]: false }));
       }
@@ -796,10 +798,10 @@ export default function ClubFeedScreen() {
       const postId = clean(item.post_id);
       const deleting = !!deletingPostIds[postId];
 
-      Alert.alert(storeName, "Chagua", [
-        { text: "Open Store", onPress: () => openStore(storeId) },
+      Alert.alert(storeName, uiText("Chagua"), [
+        { text: uiText("Open Store"), onPress: () => openStore(storeId) },
         {
-          text: "Zungumza na Muuzaji",
+          text: uiText("Zungumza na Muuzaji"),
           onPress: () => {
             if (!storeId) return;
 
@@ -816,18 +818,18 @@ export default function ClubFeedScreen() {
           },
         },
         {
-          text: deleting ? "Deleting..." : "Delete Post",
+          text: deleting ? uiText("Deleting...") : uiText("Delete Post"),
           style: "destructive",
           onPress: () => {
             if (deleting) return;
 
             Alert.alert(
-              "Delete Post",
-              "Una uhakika unataka kufuta post hii? Ikiwa wewe ni ZETRA Office au mwenye ruhusa, post itaondoka kwenye feed.",
+              uiText("Delete Post"),
+              uiText("Una uhakika unataka kufuta post hii? Ikiwa wewe ni ZETRA Office au mwenye ruhusa, post itaondoka kwenye feed."),
               [
-                { text: "Cancel", style: "cancel" },
+                { text: uiText("Cancel"), style: "cancel" },
                 {
-                  text: "Delete",
+                  text: uiText("Delete"),
                   style: "destructive",
                   onPress: () => {
                     void deleteClubPost(item);
@@ -837,7 +839,7 @@ export default function ClubFeedScreen() {
             );
           },
         },
-        { text: "Cancel", style: "cancel" },
+        { text: uiText("Cancel"), style: "cancel" },
       ]);
     },
     [deleteClubPost, deletingPostIds, openStore, router]
@@ -1007,7 +1009,7 @@ export default function ClubFeedScreen() {
                 }}
               >
                 <Text style={{ fontWeight: "900", fontStyle: "italic" }}>Zetra Business</Text>
-                <Text style={{ fontWeight: "800" }}> Club</Text>
+                <Text style={{ fontWeight: "800" }}> {uiText("Club")}</Text>
               </Text>
               <SafeIcon name="chevron-down" size={14} color={theme.colors.faint} />
             </View>
@@ -1056,7 +1058,7 @@ export default function ClubFeedScreen() {
                     fontSize: 11,
                   }}
                 >
-                  {remainingText}
+                  {uiText(" {p0} posts remaining this month", {p0: (rem)})}
                 </Text>
 
                 <Pressable
@@ -1085,13 +1087,12 @@ export default function ClubFeedScreen() {
               </View>
             ) : (
               <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 11, marginTop: 6 }}>
-                Activate store kuona usage counter.
-              </Text>
+                {uiText("Activate store kuona usage counter.")}</Text>
             )}
 
             {!!usageErr ? (
               <Text style={{ color: theme.colors.danger, fontWeight: "900", fontSize: 10, marginTop: 4 }}>
-                {usageErr}
+                {systemText(usageErr)}
               </Text>
             ) : null}
 
@@ -1117,7 +1118,7 @@ export default function ClubFeedScreen() {
     usage,
     usageErr,
     usageLoading,
-  ]);
+   uiText, systemText]);
 
   const keyExtractor = useCallback((x: FeedPost) => String(x.post_id), []);
 
@@ -1187,15 +1188,14 @@ export default function ClubFeedScreen() {
           loading ? (
             <View style={{ paddingVertical: 18, alignItems: "center" }}>
               <ActivityIndicator />
-              <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 10 }}>Loading feed...</Text>
+              <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 10 }}>{uiText("Loading feed...")}</Text>
             </View>
           ) : (
             <View style={{ paddingHorizontal: theme.spacing.page }}>
               <Card style={{ padding: 14 }}>
-                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>No posts</Text>
+                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>{uiText("No posts")}</Text>
                 <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-                  Hakuna posts kwa sasa. Bonyeza “Create Post”.
-                </Text>
+                  {uiText("Hakuna posts kwa sasa. Bonyeza “Create Post”.")}</Text>
               </Card>
             </View>
           )
@@ -1204,7 +1204,7 @@ export default function ClubFeedScreen() {
           loadingMore ? (
             <View style={{ paddingVertical: 14, alignItems: "center" }}>
               <ActivityIndicator />
-              <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>Loading more...</Text>
+              <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>{uiText("Loading more...")}</Text>
             </View>
           ) : null
         }

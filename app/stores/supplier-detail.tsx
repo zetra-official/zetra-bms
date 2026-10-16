@@ -1,3 +1,4 @@
+import {useCommonText} from "@/src/i18n/useCommonText";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -99,6 +100,7 @@ function isThisMonth(d: Date, now = new Date()) {
 }
 
 export default function SupplierDetailScreen() {
+ const uiText=useCommonText();
   const router = useRouter();
   const params = useLocalSearchParams<{
     supplierId?: string | string[];
@@ -179,7 +181,7 @@ export default function SupplierDetailScreen() {
     } catch (e: any) {
       setRows([]);
       setDebtRows([]);
-      Alert.alert("Failed", e?.message ?? "Failed to load supplier detail");
+      Alert.alert(uiText("Failed"), e?.message ?? uiText("Failed to load supplier detail"));
     } finally {
       setLoading(false);
     }
@@ -202,17 +204,17 @@ export default function SupplierDetailScreen() {
     const cleanName = name.trim();
 
     if (!orgId) {
-      Alert.alert("Missing", "No active organization.");
+      Alert.alert(uiText("Missing"), uiText("No active organization."));
       return;
     }
 
     if (!supplierId) {
-      Alert.alert("Missing", "Supplier haijapatikana.");
+      Alert.alert(uiText("Missing"), uiText("Supplier haijapatikana."));
       return;
     }
 
     if (!cleanName) {
-      Alert.alert("Missing", "Jina la supplier lazima liandikwe.");
+      Alert.alert(uiText("Missing"), uiText("Jina la supplier lazima liandikwe."));
       return;
     }
 
@@ -234,19 +236,19 @@ export default function SupplierDetailScreen() {
 
       if (error) throw error;
 
-      Alert.alert("Success ✅", "Supplier information updated.");
+      Alert.alert(uiText("Success ✅"), uiText("Supplier information updated."));
       await load();
     } catch (e: any) {
-      Alert.alert("Save failed", e?.message ?? "Failed to update supplier");
+      Alert.alert(uiText("Save failed"), e?.message ?? uiText("Failed to update supplier"));
     } finally {
       setSaving(false);
     }
   }, [activeOrgId, address, email, load, name, phone, saving, supplierId]);
 
   const editSupplierLocation = useCallback(() => {
-    Alert.alert("Supplier Location", "Unataka kubadilisha location link?", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Edit Location", onPress: () => setEditingLocation(true) },
+    Alert.alert(uiText("Supplier Location"), uiText("Unataka kubadilisha location link?"), [
+      { text: uiText("Cancel"), style: "cancel" },
+      { text: uiText("Edit Location"), onPress: () => setEditingLocation(true) },
     ]);
   }, []);
 
@@ -254,25 +256,25 @@ export default function SupplierDetailScreen() {
     const link = address.trim();
 
     if (!link) {
-      Alert.alert("No Location", "Weka Google Maps link au location kwanza.");
+      Alert.alert(uiText("No Location"), uiText("Weka Google Maps link au location kwanza."));
       return;
     }
 
     if (!isMapLink(link)) {
-      Alert.alert("Invalid Link", "Weka Google Maps link halali ili iweze kufunguka moja kwa moja.");
+      Alert.alert(uiText("Invalid Link"), uiText("Weka Google Maps link halali ili iweze kufunguka moja kwa moja."));
       return;
     }
 
     try {
       const ok = await Linking.canOpenURL(link);
       if (!ok) {
-        Alert.alert("Cannot Open", "Simu imeshindwa kufungua location link hii.");
+        Alert.alert(uiText("Cannot Open"), uiText("Simu imeshindwa kufungua location link hii."));
         return;
       }
 
       await Linking.openURL(link);
     } catch (e: any) {
-      Alert.alert("Failed", e?.message ?? "Imeshindikana kufungua location.");
+      Alert.alert(uiText("Failed"), e?.message ?? uiText("Imeshindikana kufungua location."));
     }
   }, [address]);
 
@@ -332,24 +334,22 @@ export default function SupplierDetailScreen() {
 
           <View style={{ flex: 1 }}>
             <Text style={{ color: theme.colors.text, fontSize: 26, fontWeight: "900" }}>
-              Supplier Detail
-            </Text>
+              {uiText("Supplier Detail")}</Text>
             <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-              {supplierTitle}
+              {(((name.trim() || supplier?.name) || supplierNameParam) || uiText("Supplier"))}
             </Text>
           </View>
         </View>
 
         <Card style={{ gap: 10 }}>
           <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
-            Supplier Information
-          </Text>
+            {uiText("Supplier Information")}</Text>
 
-          <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Supplier Name</Text>
+          <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>{uiText("Supplier Name")}</Text>
           <TextInput
             value={name}
             onChangeText={setName}
-            placeholder="Supplier name"
+            placeholder={uiText("Supplier name")}
             placeholderTextColor="rgba(255,255,255,0.35)"
             style={{
               color: theme.colors.text,
@@ -363,11 +363,11 @@ export default function SupplierDetailScreen() {
             }}
           />
 
-          <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Phone Number</Text>
+          <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>{uiText("Phone Number")}</Text>
           <TextInput
             value={phone}
             onChangeText={setPhone}
-            placeholder="mf: +255..."
+            placeholder={uiText("mf: +255...")}
             placeholderTextColor="rgba(255,255,255,0.35)"
             keyboardType="phone-pad"
             style={{
@@ -382,7 +382,7 @@ export default function SupplierDetailScreen() {
             }}
           />
 
-          <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Email</Text>
+          <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>{uiText("Email")}</Text>
           <TextInput
             value={email}
             onChangeText={setEmail}
@@ -402,14 +402,14 @@ export default function SupplierDetailScreen() {
             }}
           />
 
-          <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Address / Location</Text>
+          <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>{uiText("Address / Location")}</Text>
 
           {editingLocation ? (
             <>
               <TextInput
                 value={address}
                 onChangeText={setAddress}
-                placeholder="Paste Google Maps link au andika location..."
+                placeholder={uiText("Paste Google Maps link au andika location...")}
                 placeholderTextColor="rgba(255,255,255,0.35)"
                 multiline
                 autoCapitalize="none"
@@ -430,7 +430,7 @@ export default function SupplierDetailScreen() {
 
               {!!address.trim() ? (
                 <Button
-                  title="Done Editing Location"
+                  title={uiText("Done Editing Location")}
                   onPress={() => {
                     Keyboard.dismiss();
                     setEditingLocation(false);
@@ -466,7 +466,7 @@ export default function SupplierDetailScreen() {
               })}
             >
               <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                {isMapLink(address) ? "Open Supplier Location" : "Add Supplier Location"}
+                {isMapLink(address) ? uiText("Open Supplier Location") : uiText("Add Supplier Location")}
               </Text>
 
               <Text
@@ -480,12 +480,12 @@ export default function SupplierDetailScreen() {
               >
                 {address.trim()
                   ? address.trim()
-                  : "Bonyeza hapa kuweka Google Maps link. Ukiweka link, bonyeza kawaida kufungua ramani; hold kubadilisha."}
+                  : uiText("Bonyeza hapa kuweka Google Maps link. Ukiweka link, bonyeza kawaida kufungua ramani; hold kubadilisha.")}
               </Text>
             </Pressable>
           )}
           <Button
-            title={saving ? "Saving..." : "Save Supplier Info"}
+            title={saving ? uiText("Saving...") : uiText("Save Supplier Info")}
             onPress={saveSupplier}
             disabled={saving || loading}
             variant="primary"
@@ -494,20 +494,18 @@ export default function SupplierDetailScreen() {
 
         <Card style={{ gap: 10 }}>
           <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
-            Stock Summary
-          </Text>
+            {uiText("Stock Summary")}</Text>
 
           <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-            Total stock entries: {rows.length}
+            {uiText("Total stock entries:")}{rows.length}
           </Text>
 
           <Text style={{ color: theme.colors.emerald, fontWeight: "900" }}>
-            Total qty added: {totalAdded}
+            {uiText("Total qty added:")}{totalAdded}
           </Text>
 
           <Text style={{ color: theme.colors.muted, fontWeight: "900", marginTop: 6 }}>
-            History Filter
-          </Text>
+            {uiText("History Filter")}</Text>
 
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
             {[
@@ -545,24 +543,20 @@ export default function SupplierDetailScreen() {
           </View>
 
           <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-            Showing: {visibleRows.length} entries
-          </Text>
+            {uiText("Showing:")}{visibleRows.length} {uiText("entries")}</Text>
         </Card>
 
         <Card style={{ gap: 10 }}>
           <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
-            Supplier Debt Summary
-          </Text>
+            {uiText("Supplier Debt Summary")}</Text>
 
           <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-            Hii inaonyesha madeni yote yaliyowekwa kwa supplier huyu kupitia Business Debts.
-          </Text>
+            {uiText("Hii inaonyesha madeni yote yaliyowekwa kwa supplier huyu kupitia Business Debts.")}</Text>
 
           <View style={{ flexDirection: "row", gap: 10 }}>
             <View style={{ flex: 1 }}>
               <Text style={{ color: theme.colors.muted, fontWeight: "900", fontSize: 12 }}>
-                Total Debt
-              </Text>
+                {uiText("Total Debt")}</Text>
               <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
                 {fmt(debtSummary.total)}
               </Text>
@@ -570,8 +564,7 @@ export default function SupplierDetailScreen() {
 
             <View style={{ flex: 1 }}>
               <Text style={{ color: theme.colors.muted, fontWeight: "900", fontSize: 12 }}>
-                Paid
-              </Text>
+                {uiText("Paid")}</Text>
               <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
                 {fmt(debtSummary.paid)}
               </Text>
@@ -579,8 +572,7 @@ export default function SupplierDetailScreen() {
 
             <View style={{ flex: 1 }}>
               <Text style={{ color: theme.colors.muted, fontWeight: "900", fontSize: 12 }}>
-                Balance
-              </Text>
+                {uiText("Balance")}</Text>
               <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
                 {fmt(debtSummary.balance)}
               </Text>
@@ -589,8 +581,7 @@ export default function SupplierDetailScreen() {
 
           {debtRows.length === 0 ? (
             <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>
-              Hakuna business debt iliyounganishwa na supplier huyu bado.
-            </Text>
+              {uiText("Hakuna business debt iliyounganishwa na supplier huyu bado.")}</Text>
           ) : (
             debtRows.map((d) => (
               <View
@@ -609,11 +600,11 @@ export default function SupplierDetailScreen() {
                 </Text>
 
                 <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                  Debt: {fmt(d.principal_amount)} • Paid: {fmt(d.paid_amount)}
+                  {uiText("Debt:")}{fmt(d.principal_amount)} {uiText("• Paid:")}{fmt(d.paid_amount)}
                 </Text>
 
                 <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                  Balance: {fmt(d.balance_amount)}
+                  {uiText("Balance:")}{fmt(d.balance_amount)}
                 </Text>
 
                 <Text style={{ color: theme.colors.emerald, fontWeight: "900", fontSize: 12 }}>
@@ -634,14 +625,12 @@ export default function SupplierDetailScreen() {
           <View style={{ alignItems: "center", paddingTop: 20 }}>
             <ActivityIndicator />
             <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>
-              Loading supplier history...
-            </Text>
+              {uiText("Loading supplier history...")}</Text>
           </View>
         ) : visibleRows.length === 0 ? (
           <Card>
             <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>
-              Hakuna stock history kwenye filter hii.
-            </Text>
+              {uiText("Hakuna stock history kwenye filter hii.")}</Text>
           </Card>
         ) : (
           visibleRows.map((r: any) => (
@@ -649,11 +638,11 @@ export default function SupplierDetailScreen() {
               <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-                    {r.product_name ?? "Product"}
+                    {r.product_name ?? uiText("Product")}
                   </Text>
 
                   <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                    SKU: {r.sku ?? "—"} • Store: {r.store_name ?? "—"}
+                    {uiText("SKU:")}{r.sku ?? "—"} {uiText("• Store:")}{r.store_name ?? "—"}
                   </Text>
                 </View>
 
@@ -674,20 +663,20 @@ export default function SupplierDetailScreen() {
               </View>
 
               <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                Qty: {Number(r.amount ?? 0)}
+                {uiText("Qty:")}{Number(r.amount ?? 0)}
               </Text>
 
               <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                Invoice / Ref: {r.supplier_invoice_no || "—"}
+                {uiText("Invoice / Ref:")}{r.supplier_invoice_no || "—"}
               </Text>
 
               <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                Date: {fmtDate(r.created_at)}
+                {uiText("Date:")}{fmtDate(r.created_at)}
               </Text>
 
               {!!String(r.note ?? "").trim() && (
                 <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                  Note: {String(r.note ?? "").trim()}
+                  {uiText("Note:")}{String(r.note ?? "").trim()}
                 </Text>
               )}
             </Card>

@@ -1,3 +1,5 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/finance/business-debts.tsx
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -185,6 +187,8 @@ function dueText(item: DebtRow) {
 }
 
 export default function BusinessDebtsScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
 
@@ -361,14 +365,14 @@ const [historyRows, setHistoryRows] = useState<DebtPaymentRow[]>([]);
   const onSaveDebt = useCallback(async () => {
     try {
       if (!lender.trim()) {
-        Alert.alert("Required", "Weka jina la mkopeshaji");
+        Alert.alert(uiText("Required"), uiText("Weka jina la mkopeshaji"));
         return;
       }
 
       const amt = Number(amount);
 
       if (!amt || amt <= 0) {
-        Alert.alert("Required", "Weka amount sahihi");
+        Alert.alert(uiText("Required"), uiText("Weka amount sahihi"));
         return;
       }
 
@@ -423,9 +427,9 @@ const [historyRows, setHistoryRows] = useState<DebtPaymentRow[]>([]);
 
       await load();
 
-      Alert.alert("Success", editDebtId ? "Debt updated successfully" : "Debt added successfully");
+      Alert.alert(uiText("Success"), editDebtId ? uiText("Debt updated successfully") : uiText("Debt added successfully"));
     } catch (e: any) {
-      Alert.alert("Error", e?.message ?? "Failed");
+      Alert.alert(uiText("Error"), e?.message ?? uiText("Failed"));
     }
   }, [
     lender,
@@ -445,7 +449,7 @@ const onPayDebt = useCallback(async () => {
 
       const amt = Number(payAmount);
       if (!amt || amt <= 0) {
-        Alert.alert("Required", "Weka kiasi sahihi cha kulipa.");
+        Alert.alert(uiText("Required"), uiText("Weka kiasi sahihi cha kulipa."));
         return;
       }
 
@@ -461,9 +465,9 @@ const onPayDebt = useCallback(async () => {
       setSelectedDebt(null);
       await load();
 
-      Alert.alert("Success", "Malipo ya deni yamehifadhiwa.");
+      Alert.alert(uiText("Success"), uiText("Malipo ya deni yamehifadhiwa."));
     } catch (e: any) {
-      Alert.alert("Error", e?.message ?? "Imeshindikana kuhifadhi malipo.");
+      Alert.alert(uiText("Error"), e?.message ?? uiText("Imeshindikana kuhifadhi malipo."));
     }
   }, [selectedDebt, payAmount, load]);
   const openDebtHistory = useCallback(async (debt: DebtRow) => {
@@ -482,7 +486,7 @@ const onPayDebt = useCallback(async () => {
 
     setHistoryRows((data ?? []) as DebtPaymentRow[]);
   } catch (e: any) {
-    Alert.alert("History Error", e?.message ?? "Failed to load debt history");
+    Alert.alert(uiText("History Error"), e?.message ?? uiText("Failed to load debt history"));
     setHistoryRows([]);
   } finally {
     setHistoryLoading(false);
@@ -615,8 +619,7 @@ const onPayDebt = useCallback(async () => {
             fontSize: 24,
           }}
         >
-          Business Debts
-        </Text>
+          {uiText("Business Debts")}</Text>
 
         <Text
           style={{
@@ -625,15 +628,13 @@ const onPayDebt = useCallback(async () => {
             lineHeight: 22,
           }}
         >
-          Fuatilia madeni ya biashara, malipo, na
-          uhusiano wa debt dhidi ya stock value.
-        </Text>
+          {uiText("Fuatilia madeni ya biashara, malipo, na uhusiano wa debt dhidi ya stock value.")}</Text>
 
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
-          <Stat label="Total Debt" value={fmt(summary.total_debt)} desktop={isDesktopWeb} />
-          <Stat label="Balance" value={fmt(summary.total_balance)} desktop={isDesktopWeb} />
-          <Stat label="Stock Value" value={fmt(summary.stock_value)} desktop={isDesktopWeb} />
-          <Stat label="Difference" value={fmt(summary.debt_vs_stock_difference)} desktop={isDesktopWeb} />
+          <Stat label={uiText("Total Debt")} value={fmt(summary.total_debt)} desktop={isDesktopWeb} />
+          <Stat label={uiText("Balance")} value={fmt(summary.total_balance)} desktop={isDesktopWeb} />
+          <Stat label={uiText("Stock Value")} value={fmt(summary.stock_value)} desktop={isDesktopWeb} />
+          <Stat label={uiText("Difference")} value={fmt(summary.debt_vs_stock_difference)} desktop={isDesktopWeb} />
         </View>
 
         <View
@@ -653,7 +654,7 @@ const onPayDebt = useCallback(async () => {
               fontSize: 13,
             }}
           >
-            {displayRisk.level}
+            {uiText(displayRisk.level)}
           </Text>
 
           <Text
@@ -663,13 +664,13 @@ const onPayDebt = useCallback(async () => {
               lineHeight: 22,
             }}
           >
-            {displayRisk.message}
+            {uiText(displayRisk.message)}
           </Text>
         </View>
 
         {isOwner ? (
           <Button
-            title="Add Debt"
+            title={uiText("Add Debt")}
             onPress={openCreateDebt}
           />
         ) : null}
@@ -686,15 +687,14 @@ const onPayDebt = useCallback(async () => {
           <Text
             style={{ color: UI.danger, fontWeight: "900" }}
           >
-            {error}
+            {systemText(error)}
           </Text>
         </Card>
       ) : null}
 
 <Card style={{ marginTop: 14, gap: 12, borderRadius: 22 }}>
         <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-          Debt List
-        </Text>
+          {uiText("Debt List")}</Text>
 
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
           {[
@@ -727,7 +727,7 @@ const onPayDebt = useCallback(async () => {
         </View>
 
         <TextInput
-          placeholder="Search lender, supplier, store, status..."
+          placeholder={uiText("Search lender, supplier, store, status...")}
           placeholderTextColor={UI.faint}
           value={search}
           onChangeText={setSearch}
@@ -787,15 +787,14 @@ const onPayDebt = useCallback(async () => {
         </View>
 
         <Text style={{ color: UI.muted, fontWeight: "800" }}>
-          Showing {visibleRows.length} of {rows.length} debts
-        </Text>
+          {uiText("Showing")}{visibleRows.length} {uiText("of")}{rows.length} {uiText("debts")}</Text>
       </Card>
 
       <View style={{ marginTop: 14, gap: 14 }}>
   {groupedRows.map((group) => (
           <View key={group.title} style={{ gap: 10 }}>
             <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 12, letterSpacing: 0.5 }}>
-              {group.title.toUpperCase()}
+              {uiText(group.title).toUpperCase()}
             </Text>
 
             <View
@@ -861,7 +860,7 @@ const onPayDebt = useCallback(async () => {
                           {item.lender_name}
                         </Text>
                         <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 3 }} numberOfLines={1}>
-                          {item.store_name || "Organization"} • {dueText(item)}
+                          {item.store_name || uiText("Organization")} • {dueText(item)}
                         </Text>
                       </View>
 
@@ -876,7 +875,7 @@ const onPayDebt = useCallback(async () => {
                         }}
                       >
                         <Text style={{ color: tone.color, fontWeight: "900", fontSize: 11 }}>
-                          {tone.label}
+                          {uiText(tone.label)}
                         </Text>
                       </View>
                     </View>
@@ -892,8 +891,7 @@ const onPayDebt = useCallback(async () => {
                       }}
                     >
                       <Text style={{ color: UI.faint, fontWeight: "900", fontSize: 11 }}>
-                        Balance
-                      </Text>
+                        {uiText("Balance")}</Text>
 
                       <Text style={{ color: UI.text, fontWeight: "900", fontSize: 22 }}>
                         {fmt(item.balance_amount)}
@@ -918,7 +916,7 @@ const onPayDebt = useCallback(async () => {
                       </View>
 
                       <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                        Paid {progress.toFixed(0)}% • Debt: {fmt(item.principal_amount)} • Paid: {fmt(item.paid_amount)}
+                        {uiText("Paid")}{progress.toFixed(0)}{uiText("% • Debt:")}{fmt(item.principal_amount)} {uiText("• Paid:")}{fmt(item.paid_amount)}
                       </Text>
                     </View>
 
@@ -926,7 +924,7 @@ const onPayDebt = useCallback(async () => {
                       <View style={{ gap: 10 }}>
                         {!!item.purpose ? (
                           <Text style={{ color: UI.text, fontWeight: "800", lineHeight: 20 }}>
-                            Purpose: {item.purpose}
+                            {uiText("Purpose:")}{item.purpose}
                           </Text>
                         ) : null}
 
@@ -947,7 +945,7 @@ const onPayDebt = useCallback(async () => {
                               alignItems: "center",
                             }}
                           >
-                            <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>Pay</Text>
+                            <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>{uiText("Pay")}</Text>
                           </Pressable>
 
                           <Pressable
@@ -961,7 +959,7 @@ const onPayDebt = useCallback(async () => {
                               alignItems: "center",
                             }}
                           >
-                            <Text style={{ color: UI.text, fontWeight: "900" }}>Edit</Text>
+                            <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Edit")}</Text>
                           </Pressable>
 
                           <Pressable
@@ -976,14 +974,13 @@ const onPayDebt = useCallback(async () => {
                               alignItems: "center",
                             }}
                           >
-                            <Text style={{ color: UI.emerald, fontWeight: "900" }}>History</Text>
+                            <Text style={{ color: UI.emerald, fontWeight: "900" }}>{uiText("History")}</Text>
                           </Pressable>
                         </View>
                       </View>
                     ) : (
                       <Text style={{ color: UI.emerald, fontWeight: "900", fontSize: 13 }}>
-                        Tap to expand • Pay / Edit / History ›
-                      </Text>
+                        {uiText("Tap to expand • Pay / Edit / History ›")}</Text>
                     )}
 
                     <Text
@@ -993,7 +990,7 @@ const onPayDebt = useCallback(async () => {
                         fontSize: 12,
                       }}
                     >
-                      {item.is_overdue ? "OVERDUE" : "ACTIVE"} • {item.debt_date}
+                      {item.is_overdue ? uiText("OVERDUE") : uiText("ACTIVE")} • {item.debt_date}
                     </Text>
                   </Card>
                 </Pressable>
@@ -1018,8 +1015,7 @@ const onPayDebt = useCallback(async () => {
                 fontSize: 16,
               }}
             >
-              No Debts
-            </Text>
+              {uiText("No Debts")}</Text>
 
             <Text
               style={{
@@ -1028,8 +1024,7 @@ const onPayDebt = useCallback(async () => {
                 marginTop: 8,
               }}
             >
-              Hakuna madeni yaliyowekwa bado.
-            </Text>
+              {uiText("Hakuna madeni yaliyowekwa bado.")}</Text>
           </Card>
         ) : null}
       </View>
@@ -1049,13 +1044,13 @@ const onPayDebt = useCallback(async () => {
                 {selectedDebt?.lender_name}
               </Text>
 
-              <Stat label="Total Debt" value={fmt(selectedDebt?.principal_amount ?? 0)} />
-              <Stat label="Paid" value={fmt(selectedDebt?.paid_amount ?? 0)} />
-              <Stat label="Balance" value={fmt(selectedDebt?.balance_amount ?? 0)} />
+              <Stat label={uiText("Total Debt")} value={fmt(selectedDebt?.principal_amount ?? 0)} />
+              <Stat label={uiText("Paid")} value={fmt(selectedDebt?.paid_amount ?? 0)} />
+              <Stat label={uiText("Balance")} value={fmt(selectedDebt?.balance_amount ?? 0)} />
 
               {!!selectedDebt?.purpose && (
                 <Text style={{ color: UI.text, fontWeight: "900" }}>
-                  Purpose: {selectedDebt.purpose}
+                  {uiText("Purpose:")}{selectedDebt.purpose}
                 </Text>
               )}
 
@@ -1068,7 +1063,7 @@ const onPayDebt = useCallback(async () => {
               {isOwner && Number(selectedDebt?.balance_amount ?? 0) > 0 ? (
                 <>
                   <TextInput
-                    placeholder="Kiasi cha kulipa deni"
+                    placeholder={uiText("Kiasi cha kulipa deni")}
                     placeholderTextColor={UI.faint}
                     keyboardType="numeric"
                     value={payAmount}
@@ -1085,9 +1080,9 @@ const onPayDebt = useCallback(async () => {
                     }}
                   />
 
-                  <Button title="Record Payment" onPress={onPayDebt} />
+                  <Button title={uiText("Record Payment")} onPress={onPayDebt} />
 <Button
-  title="View History"
+  title={uiText("View History")}
   onPress={() => {
     if (selectedDebt) {
       const debt = selectedDebt;
@@ -1098,7 +1093,7 @@ const onPayDebt = useCallback(async () => {
   variant="secondary"
 />
                   <Button
-                    title="Edit Debt"
+                    title={uiText("Edit Debt")}
                     onPress={() => {
                       if (selectedDebt) openEditDebt(selectedDebt);
                     }}
@@ -1118,7 +1113,7 @@ const onPayDebt = useCallback(async () => {
                   justifyContent: "center",
                 }}
               >
-                <Text style={{ color: UI.text, fontWeight: "900" }}>Close</Text>
+                <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Close")}</Text>
               </Pressable>
             </View>
           </ScrollView>
@@ -1156,8 +1151,7 @@ borderTopRightRadius: 28,
               }}
             >
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 22 }}>
-                Debt History
-              </Text>
+                {uiText("Debt History")}</Text>
 
               <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 14 }}>
                 {historyDebt?.lender_name ?? "—"}
@@ -1165,35 +1159,31 @@ borderTopRightRadius: 28,
 
               <Card style={{ gap: 10, borderRadius: 18 }}>
                 <Text style={{ color: UI.faint, fontWeight: "900", fontSize: 11 }}>
-                  DEBT RECORDED
-                </Text>
+                  {uiText("DEBT RECORDED")}</Text>
 
                 <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
                   {fmtDateTime(historyDebt?.created_at ?? historyDebt?.debt_date)}
                 </Text>
 
                 <Text style={{ color: UI.muted, fontWeight: "800" }}>
-                  Original Debt: {fmt(historyDebt?.principal_amount ?? 0)} • Balance:{" "}
+                  {uiText("Original Debt:")}{fmt(historyDebt?.principal_amount ?? 0)} {uiText("• Balance:")}{" "}
                   {fmt(historyDebt?.balance_amount ?? 0)}
                 </Text>
               </Card>
 
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-                Payment Timeline
-              </Text>
+                {uiText("Payment Timeline")}</Text>
 
               {historyLoading ? (
                 <View style={{ alignItems: "center", paddingVertical: 18 }}>
                   <ActivityIndicator />
                   <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 8 }}>
-                    Loading history...
-                  </Text>
+                    {uiText("Loading history...")}</Text>
                 </View>
               ) : historyRows.length === 0 ? (
                 <Card style={{ borderRadius: 18 }}>
                   <Text style={{ color: UI.muted, fontWeight: "900" }}>
-                    Hakuna malipo yaliyorekodiwa bado.
-                  </Text>
+                    {uiText("Hakuna malipo yaliyorekodiwa bado.")}</Text>
                 </Card>
               ) : (
                 historyRows.map((p, index) => (
@@ -1252,7 +1242,7 @@ borderTopRightRadius: 28,
                   justifyContent: "center",
                 }}
               >
-                <Text style={{ color: UI.text, fontWeight: "900" }}>Close</Text>
+                <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Close")}</Text>
               </Pressable>
             </View>
           </ScrollView>
@@ -1298,11 +1288,11 @@ borderTopRightRadius: 28,
                 fontSize: 20,
               }}
             >
-              {editDebtId ? "Edit Business Debt" : "Add Business Debt"}
+              {editDebtId ? uiText("Edit Business Debt") : uiText("Add Business Debt")}
             </Text>
 
             <TextInput
-              placeholder="Lender name"
+              placeholder={uiText("Lender name")}
               placeholderTextColor={UI.faint}
               value={lender}
               onChangeText={(text) => {
@@ -1334,12 +1324,11 @@ borderTopRightRadius: 28,
                 }}
               >
                 <Text style={{ color: UI.text, fontWeight: "900" }}>
-                  Supplier suggestion
-                </Text>
+                  {uiText("Supplier suggestion")}</Text>
                 <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 4 }}>
                   {selectedSupplierId
-                    ? `Selected: ${lender}`
-                    : "Bonyeza hapa kuchagua supplier aliyepo"}
+                    ? uiText("Selected: {p0}", {p0: (lender)})
+                    : uiText("Bonyeza hapa kuchagua supplier aliyepo")}
                 </Text>
               </Pressable>
 
@@ -1368,21 +1357,20 @@ borderTopRightRadius: 28,
                           {s.name}
                         </Text>
                         <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 3 }}>
-                          {s.phone || "No phone"} {s.email ? `• ${s.email}` : ""}
+                          {s.phone || uiText("No phone")} {s.email ? `• ${s.email}` : ""}
                         </Text>
                       </Pressable>
                     );
                   })
                 ) : (
                   <Text style={{ color: UI.muted, fontWeight: "800" }}>
-                    Hakuna supplier suggestion inayofanana.
-                  </Text>
+                    {uiText("Hakuna supplier suggestion inayofanana.")}</Text>
                 )
               ) : null}
             </View>
 
             <TextInput
-              placeholder="Amount"
+              placeholder={uiText("Amount")}
               placeholderTextColor={UI.faint}
               keyboardType="numeric"
               value={amount}
@@ -1400,7 +1388,7 @@ borderTopRightRadius: 28,
             />
 
             <TextInput
-              placeholder="Purpose"
+              placeholder={uiText("Purpose")}
               placeholderTextColor={UI.faint}
               value={purpose}
               onChangeText={setPurpose}
@@ -1417,7 +1405,7 @@ borderTopRightRadius: 28,
             />
 
             <TextInput
-              placeholder="Note"
+              placeholder={uiText("Note")}
               placeholderTextColor={UI.faint}
               value={note}
               onChangeText={setNote}
@@ -1455,8 +1443,7 @@ borderTopRightRadius: 28,
                     fontWeight: "900",
                   }}
                 >
-                  Cancel
-                </Text>
+                  {uiText("Cancel")}</Text>
               </Pressable>
 
               <Pressable
@@ -1476,7 +1463,7 @@ borderTopRightRadius: 28,
                     fontWeight: "900",
                   }}
                 >
-                  {editDebtId ? "Update Debt" : "Save Debt"}
+                  {editDebtId ? uiText("Update Debt") : uiText("Save Debt")}
                 </Text>
               </Pressable>
             </View>

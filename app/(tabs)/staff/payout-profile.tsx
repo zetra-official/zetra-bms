@@ -1,3 +1,5 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import {
@@ -115,6 +117,8 @@ function MethodChip({
 }
 
 export default function StaffPayoutProfileScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
   const { activeOrgId, activeOrgName, activeRole } = useOrg();
 
@@ -233,7 +237,7 @@ export default function StaffPayoutProfileScreen() {
 
   const saveProfile = useCallback(async () => {
     if (invalidReason) {
-      Alert.alert("Blocked", invalidReason);
+      Alert.alert(uiText("Blocked"), invalidReason);
       return;
     }
 
@@ -254,10 +258,10 @@ export default function StaffPayoutProfileScreen() {
       if (e) throw e;
 
       setIsConfigured(true);
-      Alert.alert("Success", "Payout profile saved successfully.");
+      Alert.alert(uiText("Success"), uiText("Payout profile saved successfully."));
       await loadProfile({ silent: true });
     } catch (err: any) {
-      Alert.alert("Failed", err?.message ?? "Failed to save payout profile");
+      Alert.alert(uiText("Failed"), err?.message ?? uiText("Failed to save payout profile"));
     } finally {
       setSaving(false);
     }
@@ -289,11 +293,9 @@ export default function StaffPayoutProfileScreen() {
             }}
           >
             <Text style={{ color: UI.danger, fontWeight: "900", fontSize: 18 }}>
-              No Access
-            </Text>
+              {uiText("No Access")}</Text>
             <Text style={{ color: UI.text, fontWeight: "800", lineHeight: 22 }}>
-              Hii screen ni ya STAFF tu.
-            </Text>
+              {uiText("Hii screen ni ya STAFF tu.")}</Text>
 
             <Pressable
               onPress={() => router.back()}
@@ -307,7 +309,7 @@ export default function StaffPayoutProfileScreen() {
                 alignItems: "center",
               }}
             >
-              <Text style={{ color: UI.text, fontWeight: "900" }}>Back</Text>
+              <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Back")}</Text>
             </Pressable>
           </View>
         </View>
@@ -344,11 +346,9 @@ export default function StaffPayoutProfileScreen() {
 
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 26, fontWeight: "900", color: UI.text }}>
-              Payout Profile
-            </Text>
+              {uiText("Payout Profile")}</Text>
             <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 4 }}>
-              Setup ambapo commission zako zitapokelewa
-            </Text>
+              {uiText("Setup ambapo commission zako zitapokelewa")}</Text>
           </View>
         </View>
 
@@ -362,7 +362,7 @@ export default function StaffPayoutProfileScreen() {
             gap: 10,
           }}
         >
-          <Text style={{ color: UI.muted, fontWeight: "800" }}>Organization</Text>
+          <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("Organization")}</Text>
           <Text style={{ fontSize: 18, fontWeight: "900", color: UI.text }}>
             {activeOrgName ?? "—"}
           </Text>
@@ -384,13 +384,12 @@ export default function StaffPayoutProfileScreen() {
                 fontWeight: "900",
               }}
             >
-              {isConfigured ? "PROFILE CONFIGURED" : "PROFILE NOT CONFIGURED"}
+              {isConfigured ? uiText("PROFILE CONFIGURED") : uiText("PROFILE NOT CONFIGURED")}
             </Text>
           </View>
 
           <Text style={{ color: UI.faint, fontWeight: "800", lineHeight: 20 }}>
-            Owner/Admin akifanya cash out, mfumo utatumia taarifa ulizoweka hapa.
-          </Text>
+            {uiText("Owner/Admin akifanya cash out, mfumo utatumia taarifa ulizoweka hapa.")}</Text>
         </View>
 
         {!!error ? (
@@ -403,7 +402,7 @@ export default function StaffPayoutProfileScreen() {
               padding: 12,
             }}
           >
-            <Text style={{ color: UI.danger, fontWeight: "900" }}>{error}</Text>
+            <Text style={{ color: UI.danger, fontWeight: "900" }}>{systemText(error)}</Text>
           </View>
         ) : null}
 
@@ -418,67 +417,66 @@ export default function StaffPayoutProfileScreen() {
           }}
         >
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-            Payout Method
-          </Text>
+            {uiText("Payout Method")}</Text>
 
           <View style={{ flexDirection: "row", gap: 10 }}>
             <MethodChip
-              label="Mobile Money"
+              label={uiText("Mobile Money")}
               active={paymentMethod === "MOBILE"}
               onPress={() => setPaymentMethod("MOBILE")}
             />
             <MethodChip
-              label="Bank"
+              label={uiText("Bank")}
               active={paymentMethod === "BANK"}
               onPress={() => setPaymentMethod("BANK")}
             />
           </View>
 
           <InputField
-            label="Account Holder Name"
+            label={uiText("Account Holder Name")}
             value={accountHolderName}
             onChangeText={setAccountHolderName}
-            placeholder="mf: Juma Ali"
+            placeholder={uiText("mf: Juma Ali")}
           />
 
           {paymentMethod === "MOBILE" ? (
             <>
               <InputField
-                label="Mobile Network"
+                label={uiText("Mobile Network")}
                 value={mobileNetwork}
                 onChangeText={setMobileNetwork}
-                placeholder="mf: M-PESA / TIGO PESA / AIRTEL MONEY"
+                placeholder={uiText("mf: M-PESA / TIGO PESA / AIRTEL MONEY")}
               />
 
               <InputField
-                label="Mobile Number"
+                label={uiText("Mobile Number")}
                 value={mobileNumber}
                 onChangeText={(v) => setMobileNumber(digitsOnly(v))}
-                placeholder="mf: 0712345678"
+                placeholder={uiText("mf: 0712345678")}
                 keyboardType="phone-pad"
               />
             </>
           ) : (
             <>
               <InputField
-                label="Bank Name"
+                label={uiText("Bank Name")}
                 value={bankName}
                 onChangeText={setBankName}
-                placeholder="mf: CRDB / NMB"
+                placeholder={uiText("mf: CRDB / NMB")}
               />
 
               <InputField
-                label="Bank Account Name"
+                label={uiText("Bank Account Name")}
                 value={bankAccountName}
                 onChangeText={setBankAccountName}
-                placeholder="mf: Juma Ali"
+                placeholder={uiText("mf: Juma Ali")}
               />
 
               <InputField
-                label="Bank Account Number"
+                label={uiText("Bank Account Number")}
                 value={bankAccountNumber}
                 onChangeText={(v) => setBankAccountNumber(digitsOnly(v))}
-                placeholder="mf: 015002345678"
+                placeholder={uiText("mf: 015002345678")}
                 keyboardType="numeric"
               />
             </>
@@ -502,7 +500,7 @@ export default function StaffPayoutProfileScreen() {
             }}
           >
             <Text style={{ color: UI.text, fontWeight: "900" }}>
-              {saving ? "Saving..." : "Save Payout Profile"}
+              {saving ? uiText("Saving...") : uiText("Save Payout Profile")}
             </Text>
           </Pressable>
 

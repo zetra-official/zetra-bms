@@ -1,3 +1,4 @@
+import {useCommonText} from "@/src/i18n/useCommonText";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -47,6 +48,7 @@ function daysSince(raw?: string | null) {
 }
 
 export default function CustomerInsightsScreen() {
+ const uiText=useCommonText();
   const router = useRouter();
   const org: any = useOrg();
 
@@ -139,10 +141,10 @@ export default function CustomerInsightsScreen() {
             gap: 5,
           }}
         >
-          <Text style={{ color: UI.text, fontWeight: "900" }}>{name}</Text>
+          <Text style={{ color: UI.text, fontWeight: "900" }}>{(clean(c.full_name) || uiText("Customer"))}</Text>
           <Text style={{ color: UI.muted, fontWeight: "800" }}>{phone}</Text>
           <Text style={{ color: UI.emerald, fontWeight: "900" }}>
-            {d >= 9999 ? "No recent purchase" : `Last purchase: ${d} day(s) ago`} • {fmt(spent)}
+            {d >= 9999 ? uiText("No recent purchase") : uiText("Last purchase: {p0} day(s) ago", {p0: (d)})} • {fmt(spent)}
           </Text>
         </View>
       </Pressable>
@@ -172,10 +174,9 @@ export default function CustomerInsightsScreen() {
 
           <View style={{ flex: 1 }}>
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 26 }}>
-              Customer Alerts
-            </Text>
+              {uiText("Customer Alerts")}</Text>
             <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 4 }}>
-              Store: {activeStoreName}
+              {uiText("Store:")}{(clean(org.activeStoreName) || uiText("Active Store"))}
             </Text>
           </View>
         </View>
@@ -183,7 +184,7 @@ export default function CustomerInsightsScreen() {
         {loading ? (
           <Card style={{ alignItems: "center", gap: 10, backgroundColor: UI.card }}>
             <ActivityIndicator />
-            <Text style={{ color: UI.muted, fontWeight: "800" }}>Loading insights...</Text>
+            <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("Loading insights...")}</Text>
           </Card>
         ) : errorText ? (
           <Card
@@ -198,14 +199,14 @@ export default function CustomerInsightsScreen() {
           <>
             <View style={{ flexDirection: "row", gap: 10 }}>
               <Card style={{ flex: 1, backgroundColor: UI.card }}>
-                <Text style={{ color: UI.muted, fontWeight: "900" }}>7+ Days</Text>
+                <Text style={{ color: UI.muted, fontWeight: "900" }}>{uiText("7+ Days")}</Text>
                 <Text style={{ color: UI.text, fontWeight: "900", fontSize: 22 }}>
                   {inactive7.length}
                 </Text>
               </Card>
 
               <Card style={{ flex: 1, backgroundColor: UI.card }}>
-                <Text style={{ color: UI.muted, fontWeight: "900" }}>30+ Days</Text>
+                <Text style={{ color: UI.muted, fontWeight: "900" }}>{uiText("30+ Days")}</Text>
                 <Text style={{ color: UI.text, fontWeight: "900", fontSize: 22 }}>
                   {inactive30.length}
                 </Text>
@@ -214,8 +215,7 @@ export default function CustomerInsightsScreen() {
 
             <Card style={{ gap: 10, backgroundColor: UI.card }}>
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 17 }}>
-                Needs Follow-up
-              </Text>
+                {uiText("Needs Follow-up")}</Text>
 
               {(inactive14.length ? inactive14 : inactive7).slice(0, 20).map((c) => (
                 <CustomerLine key={c.id} c={c} />
@@ -223,20 +223,17 @@ export default function CustomerInsightsScreen() {
 
               {inactive7.length === 0 ? (
                 <Text style={{ color: UI.muted, fontWeight: "800" }}>
-                  No inactive customers yet.
-                </Text>
+                  {uiText("No inactive customers yet.")}</Text>
               ) : null}
             </Card>
 
             <Card style={{ gap: 10, backgroundColor: UI.card }}>
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 17 }}>
-                Top Customers
-              </Text>
+                {uiText("Top Customers")}</Text>
 
               {topCustomers.length === 0 ? (
                 <Text style={{ color: UI.muted, fontWeight: "800" }}>
-                  No customer data yet.
-                </Text>
+                  {uiText("No customer data yet.")}</Text>
               ) : (
                 topCustomers.map((c) => <CustomerLine key={c.id} c={c} />)
               )}

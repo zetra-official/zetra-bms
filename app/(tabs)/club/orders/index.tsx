@@ -1,4 +1,6 @@
-﻿import { supabase } from "@/src/supabase/supabaseClient";
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+﻿import {useCommonText} from "@/src/i18n/useCommonText";
+import { supabase } from "@/src/supabase/supabaseClient";
 import { Card } from "@/src/ui/Card";
 import { Screen } from "@/src/ui/Screen";
 import { theme } from "@/src/ui/theme";
@@ -44,6 +46,8 @@ const ORDERS_RPC_CANDIDATES = [
 ] as const;
 
 export default function ClubOrdersListScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const topPad = Math.max(insets.top, 10) + 8;
@@ -180,8 +184,7 @@ export default function ClubOrdersListScreen() {
 
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-                  Orders
-                </Text>
+                  {uiText("Orders")}</Text>
                 <Text style={{ color: theme.colors.faint, fontWeight: "900", fontSize: 12 }} numberOfLines={1}>
                   {subtitle}
                 </Text>
@@ -208,7 +211,7 @@ export default function ClubOrdersListScreen() {
                 ]}
               >
                 <Ionicons name="refresh" size={16} color={theme.colors.text} />
-                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>Refresh</Text>
+                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>{uiText("Refresh")}</Text>
               </Pressable>
 
               <Pressable
@@ -235,7 +238,7 @@ export default function ClubOrdersListScreen() {
 
           {!!rpcUsed && (
             <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 11, marginTop: 10 }}>
-              Orders source: {rpcUsed}
+              {uiText("Orders source:")}{rpcUsed}
             </Text>
           )}
         </Card>
@@ -243,8 +246,7 @@ export default function ClubOrdersListScreen() {
         <Card style={{ padding: 14, gap: 10 }}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
             <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-              Summary
-            </Text>
+              {uiText("Summary")}</Text>
 
             <View style={{ flexDirection: "row", gap: 8 }}>
               <View
@@ -260,7 +262,7 @@ export default function ClubOrdersListScreen() {
                 }}
               >
                 <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>
-                  Total {stats.total}
+                  {uiText("Total")}{stats.total}
                 </Text>
               </View>
 
@@ -277,7 +279,7 @@ export default function ClubOrdersListScreen() {
                 }}
               >
                 <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>
-                  NEW {stats.newCount}
+                  {uiText("NEW")}{stats.newCount}
                 </Text>
               </View>
             </View>
@@ -303,22 +305,21 @@ export default function ClubOrdersListScreen() {
             ]}
           >
             <Ionicons name="add-circle-outline" size={18} color={theme.colors.emerald} />
-            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Create Order</Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Create Order")}</Text>
           </Pressable>
 
           {!!err && (
             <Card style={{ padding: 12, borderColor: theme.colors.dangerBorder, backgroundColor: theme.colors.dangerSoft }}>
-              <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{err}</Text>
+              <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{systemText(err)}</Text>
             </Card>
           )}
         </Card>
 
         <Text style={{ color: theme.colors.faint, fontWeight: "900", paddingHorizontal: 2 }}>
-          Recent Orders
-        </Text>
+          {uiText("Recent Orders")}</Text>
       </View>
     );
-  }, [err, load, openCreate, rpcUsed, router, stats, storeId, subtitle, topPad]);
+  }, [err, load, openCreate, rpcUsed, router, stats, storeId, subtitle, topPad, uiText, systemText]);
 
   const renderItem = useCallback(
     ({ item }: { item: OrderRow }) => {
@@ -361,7 +362,7 @@ export default function ClubOrdersListScreen() {
                     {name}
                   </Text>
                   <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 4 }} numberOfLines={1}>
-                    {phone} • Qty {qty} • TSh {Math.round(amount).toLocaleString("en-TZ")}
+                    {phone} {uiText("• Qty")}{qty} • TSh {Math.round(amount).toLocaleString("en-TZ")}
                   </Text>
                 </View>
               </View>
@@ -391,7 +392,7 @@ export default function ClubOrdersListScreen() {
         </Pressable>
       );
     },
-    [openOrder]
+    [openOrder, uiText]
   );
 
   return (
@@ -410,15 +411,13 @@ export default function ClubOrdersListScreen() {
             <View style={{ paddingVertical: 18, alignItems: "center" }}>
               <ActivityIndicator />
               <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 10 }}>
-                Loading orders...
-              </Text>
+                {uiText("Loading orders...")}</Text>
             </View>
           ) : (
             <Card style={{ padding: 14 }}>
-              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>No orders</Text>
+              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>{uiText("No orders")}</Text>
               <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-                Hakuna order bado. Customer aki-order, itaonekana hapa.
-              </Text>
+                {uiText("Hakuna order bado. Customer aki-order, itaonekana hapa.")}</Text>
             </Card>
           )
         }

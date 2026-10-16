@@ -1,3 +1,5 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/(tabs)/club/store_profile_edit.tsx
 import { useOrg } from "@/src/context/OrgContext";
 import { supabase } from "@/src/supabase/supabaseClient";
@@ -33,6 +35,8 @@ type StoreProfile = {
 };
 
 export default function StoreProfileEditScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { activeStoreId, activeStoreName, activeRole } = useOrg();
@@ -91,17 +95,17 @@ export default function StoreProfileEditScreen() {
 
   const save = useCallback(async () => {
     if (!activeStoreId) {
-      Alert.alert("Store Required", "Activate store kwanza.");
+      Alert.alert(uiText("Store Required"), uiText("Activate store kwanza."));
       return;
     }
     if (!canEdit) {
-      Alert.alert("Not allowed", "Owner/Admin tu ndio wanaweza ku-edit business identity.");
+      Alert.alert(uiText("Not allowed"), uiText("Owner/Admin tu ndio wanaweza ku-edit business identity."));
       return;
     }
 
     const name = clean(displayName);
     if (!name.length) {
-      Alert.alert("Display Name", "Tafadhali weka jina la biashara/store.");
+      Alert.alert(uiText("Display Name"), uiText("Tafadhali weka jina la biashara/store."));
       return;
     }
 
@@ -122,7 +126,7 @@ export default function StoreProfileEditScreen() {
 
       if (error) throw error;
 
-      Alert.alert("Saved", "Business profile imehifadhiwa ✅");
+      Alert.alert(uiText("Saved"), uiText("Business profile imehifadhiwa ✅"));
       router.back();
     } catch (e: any) {
       setErr(e?.message ?? "Save failed");
@@ -154,8 +158,7 @@ export default function StoreProfileEditScreen() {
             }}
           >
             <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-              Edit Business Identity
-            </Text>
+              {uiText("Edit Business Identity")}</Text>
 
             <Pressable
               onPress={() => router.back()}
@@ -173,13 +176,12 @@ export default function StoreProfileEditScreen() {
               ]}
             >
               <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                Back
-              </Text>
+                {uiText("Back")}</Text>
             </Pressable>
           </View>
 
           <Text style={{ color: theme.colors.faint, fontWeight: "800", marginTop: 8 }}>
-            Active store:{" "}
+            {uiText("Active store:")}{" "}
             <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
               {activeStoreName ?? "—"}
             </Text>
@@ -194,7 +196,7 @@ export default function StoreProfileEditScreen() {
             }}
           >
             <Text style={{ color: theme.colors.dangerText, fontWeight: "900" }}>
-              {err}
+              {systemText(err)}
             </Text>
           </Card>
         )}
@@ -204,35 +206,34 @@ export default function StoreProfileEditScreen() {
             <View style={{ paddingVertical: 10, alignItems: "center" }}>
               <ActivityIndicator />
               <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>
-                Loading...
-              </Text>
+                {uiText("Loading...")}</Text>
             </View>
           ) : (
             <>
               <Field
-                label="Display Name"
+                label={uiText("Display Name")}
                 value={displayName}
                 onChange={setDisplayName}
-                placeholder="Mfano: MWANJELWA DUKA JIPYA"
+                placeholder={uiText("Mfano: MWANJELWA DUKA JIPYA")}
               />
               <Field
-                label="Bio"
+                label={uiText("Bio")}
                 value={bio}
                 onChange={setBio}
-                placeholder="Maelezo mafupi ya biashara..."
+                placeholder={uiText("Maelezo mafupi ya biashara...")}
                 multiline
               />
               <Field
-                label="Category"
+                label={uiText("Category")}
                 value={category}
                 onChange={setCategory}
-                placeholder="Mfano: Clothes, Perfume, Shoes"
+                placeholder={uiText("Mfano: Clothes, Perfume, Shoes")}
               />
               <Field
-                label="Location"
+                label={uiText("Location")}
                 value={location}
                 onChange={setLocation}
-                placeholder="Mfano: Mwanjelwa, Mbeya"
+                placeholder={uiText("Mfano: Mwanjelwa, Mbeya")}
               />
               <Field
                 label="WhatsApp"
@@ -241,19 +242,19 @@ export default function StoreProfileEditScreen() {
                 placeholder="2557XXXXXXXX"
               />
               <Field
-                label="Phone"
+                label={uiText("Phone")}
                 value={phone}
                 onChange={setPhone}
                 placeholder="2557XXXXXXXX"
               />
               <Field
-                label="Avatar URL (optional)"
+                label={uiText("Avatar URL (optional)")}
                 value={avatarUrl}
                 onChange={setAvatarUrl}
                 placeholder="https://..."
               />
 
-              <Button title={saving ? "Saving..." : "Save"} onPress={save} disabled={saving} />
+              <Button title={saving ? uiText("Saving...") : uiText("Save")} onPress={save} disabled={saving} />
 
               <Text
                 style={{
@@ -263,9 +264,7 @@ export default function StoreProfileEditScreen() {
                   lineHeight: 16,
                 }}
               >
-                NOTE: Avatar upload ya picha ipo kwenye Profile screen (club/profile.tsx). Hapa ni
-                ku-edit text fields tu.
-              </Text>
+                {uiText("NOTE: Avatar upload ya picha ipo kwenye Profile screen (club/profile.tsx). Hapa ni ku-edit text fields tu.")}</Text>
             </>
           )}
         </Card>

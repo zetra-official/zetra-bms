@@ -1,3 +1,5 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/capital-recovery/history.tsx
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
@@ -71,6 +73,8 @@ function rangeStartDate(range: RangeKey) {
 }
 
 export default function CapitalRecoveryHistoryScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { activeStoreId, activeStoreName, activeOrgName } = useOrg();
@@ -234,15 +238,15 @@ export default function CapitalRecoveryHistoryScreen() {
 
   const onEditPress = useCallback((item: CapitalRecoveryHistoryRow) => {
     Alert.alert(
-      "Edit UI Ready",
-      `Entry ${item.entry_type} imeonekana.\n\nHatua inayofuata ni kufunga RPC ya update ili edit ifanye kazi kweli.`
+      uiText("Edit UI Ready"),
+      uiText("Entry {p0} imeonekana.\n\nHatua inayofuata ni kufunga RPC ya update ili edit ifanye kazi kweli.", {p0: (item.entry_type)})
     );
   }, []);
 
   const onDeletePress = useCallback((item: CapitalRecoveryHistoryRow) => {
     Alert.alert(
-      "Delete UI Ready",
-      `Entry ${item.entry_type} imeonekana.\n\nHatua inayofuata ni kufunga RPC ya delete ili kufuta entry kweli.`
+      uiText("Delete UI Ready"),
+      uiText("Entry {p0} imeonekana.\n\nHatua inayofuata ni kufunga RPC ya delete ili kufuta entry kweli.", {p0: (item.entry_type)})
     );
   }, []);
 
@@ -283,10 +287,9 @@ export default function CapitalRecoveryHistoryScreen() {
 
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 24 }} numberOfLines={1}>
-                Recent History
-              </Text>
+                {uiText("Recent History")}</Text>
               <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 4 }} numberOfLines={1}>
-                {activeOrgName ?? "Organization"} • {activeStoreName ?? "Capital Recovery Store"}
+                {activeOrgName ?? uiText("Organization")} • {activeStoreName ?? uiText("Capital Recovery Store")}
               </Text>
             </View>
 
@@ -303,7 +306,7 @@ export default function CapitalRecoveryHistoryScreen() {
               })}
             >
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }}>
-                {loading ? "LOADING" : "LIVE"}
+                {loading ? uiText("LOADING") : uiText("LIVE")}
               </Text>
             </Pressable>
           </View>
@@ -317,7 +320,7 @@ export default function CapitalRecoveryHistoryScreen() {
                 padding: 12,
               }}
             >
-              <Text style={{ color: UI.danger, fontWeight: "900" }}>{error}</Text>
+              <Text style={{ color: UI.danger, fontWeight: "900" }}>{systemText(error)}</Text>
             </Card>
           ) : null}
 
@@ -330,14 +333,13 @@ export default function CapitalRecoveryHistoryScreen() {
             }}
           >
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 20 }}>
-              Filters
-            </Text>
+              {uiText("Filters")}</Text>
 
             <View style={{ gap: 10 }}>
               <TextInput
                 value={searchText}
                 onChangeText={setSearchText}
-                placeholder="Search note or type..."
+                placeholder={uiText("Search note or type...")}
                 placeholderTextColor="rgba(234,242,255,0.35)"
                 style={{
                   borderWidth: 1,
@@ -353,16 +355,16 @@ export default function CapitalRecoveryHistoryScreen() {
               />
 
               <View style={{ flexDirection: "row", gap: 10 }}>
-                <Pill title="Today" active={range === "today"} onPress={() => setRange("today")} />
-                <Pill title="7 Days" active={range === "7d"} onPress={() => setRange("7d")} />
-                <Pill title="30 Days" active={range === "30d"} onPress={() => setRange("30d")} />
+                <Pill title={uiText("Today")} active={range === "today"} onPress={() => setRange("today")} />
+                <Pill title={uiText("7 Days")} active={range === "7d"} onPress={() => setRange("7d")} />
+                <Pill title={uiText("30 Days")} active={range === "30d"} onPress={() => setRange("30d")} />
               </View>
 
               <View style={{ flexDirection: "row", gap: 10 }}>
-                <Pill title="ALL" active={filterType === "ALL"} onPress={() => setFilterType("ALL")} />
-                <Pill title="ASSET" active={filterType === "ASSET"} onPress={() => setFilterType("ASSET")} />
-                <Pill title="COST" active={filterType === "COST"} onPress={() => setFilterType("COST")} />
-                <Pill title="INCOME" active={filterType === "INCOME"} onPress={() => setFilterType("INCOME")} />
+                <Pill title={uiText("ALL")} active={filterType === "ALL"} onPress={() => setFilterType("ALL")} />
+                <Pill title={uiText("ASSET")} active={filterType === "ASSET"} onPress={() => setFilterType("ASSET")} />
+                <Pill title={uiText("COST")} active={filterType === "COST"} onPress={() => setFilterType("COST")} />
+                <Pill title={uiText("INCOME")} active={filterType === "INCOME"} onPress={() => setFilterType("INCOME")} />
               </View>
             </View>
           </Card>
@@ -376,12 +378,11 @@ export default function CapitalRecoveryHistoryScreen() {
             }}
           >
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 20 }}>
-              Reports
-            </Text>
+              {uiText("Reports")}</Text>
 
             <View style={{ flexDirection: "row", gap: 12 }}>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>Asset Entries</Text>
+                <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>{uiText("Asset Entries")}</Text>
                 <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18, marginTop: 4 }}>
                   {report.ASSET.count}
                 </Text>
@@ -391,7 +392,7 @@ export default function CapitalRecoveryHistoryScreen() {
               </View>
 
               <View style={{ flex: 1 }}>
-                <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>Cost Entries</Text>
+                <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>{uiText("Cost Entries")}</Text>
                 <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18, marginTop: 4 }}>
                   {report.COST.count}
                 </Text>
@@ -401,7 +402,7 @@ export default function CapitalRecoveryHistoryScreen() {
               </View>
 
               <View style={{ flex: 1 }}>
-                <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>Income Entries</Text>
+                <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>{uiText("Income Entries")}</Text>
                 <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18, marginTop: 4 }}>
                   {report.INCOME.count}
                 </Text>
@@ -422,8 +423,7 @@ export default function CapitalRecoveryHistoryScreen() {
           >
             <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 20, flex: 1 }}>
-                Results
-              </Text>
+                {uiText("Results")}</Text>
 
               <View
                 style={{
@@ -455,8 +455,7 @@ export default function CapitalRecoveryHistoryScreen() {
                 }}
               >
                 <Text style={{ color: UI.faint, fontWeight: "800", lineHeight: 20 }}>
-                  Hakuna result kwa filter/search/range uliyochagua.
-                </Text>
+                  {uiText("Hakuna result kwa filter/search/range uliyochagua.")}</Text>
               </Card>
             ) : (
               <View style={{ gap: 10 }}>
@@ -496,7 +495,7 @@ export default function CapitalRecoveryHistoryScreen() {
                       </View>
 
                       <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 20 }}>
-                        {item.note || "No note"}
+                        {item.note || uiText("No note")}
                       </Text>
 
                       <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 12 }}>
@@ -519,8 +518,7 @@ export default function CapitalRecoveryHistoryScreen() {
                           })}
                         >
                           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 13 }}>
-                            Edit
-                          </Text>
+                            {uiText("Edit")}</Text>
                         </Pressable>
 
                         <Pressable
@@ -538,8 +536,7 @@ export default function CapitalRecoveryHistoryScreen() {
                           })}
                         >
                           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 13 }}>
-                            Delete
-                          </Text>
+                            {uiText("Delete")}</Text>
                         </Pressable>
                       </View>
                     </Card>

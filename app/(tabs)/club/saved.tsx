@@ -1,3 +1,5 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 import { getSavedList, removeSaved, SavedPost } from "@/src/club/savedPosts";
 import { Card } from "@/src/ui/Card";
 import { Screen } from "@/src/ui/Screen";
@@ -30,6 +32,8 @@ function fmtTimeAgo(iso?: string | null) {
 }
 
 export default function ClubSavedScreen() {
+ const systemText = useSystemMessageText();
+ const uiText = useCommonText();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -83,10 +87,10 @@ export default function ClubSavedScreen() {
 
   const confirmRemove = useCallback(
     (postId: string) => {
-      Alert.alert("Remove saved?", "Utaondoa post hii kwenye Saved.", [
-        { text: "Cancel", style: "cancel" },
+      Alert.alert(uiText("Remove saved?"), uiText("Utaondoa post hii kwenye Saved."), [
+        { text: uiText("Cancel"), style: "cancel" },
         {
-          text: "Remove",
+          text: uiText("Remove"),
           style: "destructive",
           onPress: async () => {
             await removeSaved(postId);
@@ -131,10 +135,9 @@ export default function ClubSavedScreen() {
             </Pressable>
 
             <View style={{ flex: 1 }}>
-              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>Saved Posts</Text>
+              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>{uiText("Saved Posts")}</Text>
               <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 4, fontSize: 12 }}>
-                Hapa kuna posts ulizobookmark.
-              </Text>
+                {uiText("Hapa kuna posts ulizobookmark.")}</Text>
             </View>
 
             <View
@@ -163,31 +166,30 @@ export default function ClubSavedScreen() {
               padding: 12,
             }}
           >
-            <Text style={{ color: theme.colors.dangerText, fontWeight: "900" }}>{err}</Text>
+            <Text style={{ color: theme.colors.dangerText, fontWeight: "900" }}>{systemText(err)}</Text>
           </Card>
         )}
       </View>
     );
-  }, [err, goBack, items.length, topPad]);
+  }, [err, goBack, items.length, topPad, uiText, systemText]);
 
   const Empty = useMemo(() => {
     if (loading) return null;
     return (
       <Card style={{ padding: 14, marginHorizontal: theme.spacing.page }}>
-        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>No saved posts</Text>
+        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>{uiText("No saved posts")}</Text>
         <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-          Ukiwa kwenye feed, bonyeza icon ya bookmark ku-save post.
-        </Text>
+          {uiText("Ukiwa kwenye feed, bonyeza icon ya bookmark ku-save post.")}</Text>
       </Card>
     );
-  }, [loading]);
+  }, [loading, uiText]);
 
   return (
     <Screen scroll={false} contentStyle={{ paddingTop: 0, paddingHorizontal: 0, paddingBottom: 0 }}>
       {loading ? (
         <View style={{ paddingTop: topPad + 40, alignItems: "center" }}>
           <ActivityIndicator />
-          <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 10 }}>Loading saved...</Text>
+          <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 10 }}>{uiText("Loading saved...")}</Text>
         </View>
       ) : (
         <FlatList

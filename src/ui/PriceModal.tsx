@@ -1,4 +1,5 @@
-﻿// src/ui/PriceModal.tsx
+﻿import {useCommonText} from "@/src/i18n/useCommonText";
+// src/ui/PriceModal.tsx
 import React, { useEffect, useMemo, useRef } from "react";
 import {
   Keyboard,
@@ -56,6 +57,7 @@ function PriceModalImpl({
   onClose,
   onConfirm,
 }: Props) {
+ const uiText=useCommonText();
   const qtyRef = useRef<any>(null);
 
   useEffect(() => {
@@ -145,7 +147,7 @@ function PriceModalImpl({
                 </Text>
 
                 <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                  Product:{" "}
+                  {uiText("Product:")}{" "}
                   <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
                     {safeProductName}
                   </Text>
@@ -154,7 +156,7 @@ function PriceModalImpl({
                 {/* ✅ Show cost if available */}
                 {costPrice != null && (
                   <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>
-                    Cost: {fmt(Math.trunc(Number(costPrice)))}
+                    {uiText("Cost:")}{fmt(Math.trunc(Number(costPrice)))}
                   </Text>
                 )}
 
@@ -165,7 +167,7 @@ function PriceModalImpl({
                   <Input
                     value={price}
                     onChangeText={onChangePrice}
-                    placeholder="mf: 15000"
+                    placeholder={uiText("mf: 15000")}
                     keyboardType="numeric"
                     returnKeyType="next"
                     onSubmitEditing={() => qtyRef.current?.focus?.()}
@@ -178,7 +180,7 @@ function PriceModalImpl({
                     </Text>
                   )}
 
-                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Qty</Text>
+                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Qty")}</Text>
                   <Input
                     ref={qtyRef}
                     value={qty}
@@ -201,7 +203,7 @@ function PriceModalImpl({
 
                 <View style={{ flexDirection: "row", gap: 10, marginTop: 2 }}>
                   <Button
-                    title="Cancel"
+                    title={uiText("Cancel")}
                     onPress={() => {
                       Keyboard.dismiss();
                       onClose();
@@ -210,7 +212,7 @@ function PriceModalImpl({
                     style={{ flex: 1 }}
                   />
                   <Button
-                    title="Add"
+                    title={uiText("Add")}
                     onPress={() => {
                       Keyboard.dismiss();
                       onConfirm();
@@ -221,9 +223,7 @@ function PriceModalImpl({
                 </View>
 
                 <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-                  Tip: Uki-add product ambayo tayari ipo cart, itaongeza qty na itaendelea kutumia
-                  bei ya mwanzo.
-                </Text>
+                  {uiText("Tip: Uki-add product ambayo tayari ipo cart, itaongeza qty na itaendelea kutumia bei ya mwanzo.")}</Text>
               </ScrollView>
             </Card>
           </Pressable>

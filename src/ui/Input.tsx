@@ -1,6 +1,6 @@
 ﻿// src/ui/Input.tsx
 import React, { forwardRef } from "react";
-import { TextInput, TextInputProps } from "react-native";
+import { I18nManager, Platform, TextInput, TextInputProps } from "react-native";
 
 import { theme } from "./theme";
 
@@ -8,14 +8,20 @@ export const Input = forwardRef<TextInput, TextInputProps>(function Input(
   props,
   ref
 ) {
+  const rtl = I18nManager.isRTL || (Platform.OS === "web" && typeof document !== "undefined" && document.documentElement.dir === "rtl");
   return (
     <TextInput
       ref={ref}
       {...props}
-      placeholderTextColor="#8B95A7"
+      accessibilityLabel={props.accessibilityLabel ?? props.placeholder}
+      placeholderTextColor="#64748B"
       selectionColor={theme.colors.primary}
       style={[
         {
+          textAlign: rtl ? "right" : "left",
+          writingDirection: rtl ? "rtl" : "ltr",
+          minHeight: 48,
+          minWidth: 0,
           borderWidth: 1,
           borderColor: "#D7DFEA",
 

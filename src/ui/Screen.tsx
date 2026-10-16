@@ -1,3 +1,4 @@
+import {useCommonText} from "@/src/i18n/useCommonText";
 ﻿// src/ui/Screen.tsx
 import React, { useEffect, useMemo, useState } from "react";
 import {
@@ -42,6 +43,7 @@ export function Screen({
   contentStyle,
   refreshControl,
 }: Props) {
+ const uiText = useCommonText();
   const insets = useSafeAreaInsets();
   const baseBg = theme.colors.background;
   const isWeb = Platform.OS === "web";
@@ -147,11 +149,10 @@ export function Screen({
             fontSize: 12,
           }}
         >
-          OFFLINE • Mtandao haupatikani (data ya mwisho inaweza kuonekana)
-        </Text>
+          {uiText("OFFLINE • Mtandao haupatikani (data ya mwisho inaweza kuonekana)")}</Text>
       </View>
     );
-  }, [isOffline, topContentPad]);
+  }, [isOffline, topContentPad, uiText]);
 
   const bellTop = useMemo(() => {
     return topContentPad + (isOffline ? 44 : 0);

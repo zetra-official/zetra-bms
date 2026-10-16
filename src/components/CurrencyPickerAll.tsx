@@ -16,7 +16,10 @@ import {
   CurrencyMeta,
   loadCurrencyCatalogFast,
   refreshCurrencyCatalog,
+  localizedCurrencyName,
 } from "@/src/services/currencyCatalog";
+import {useLanguage} from "@/src/i18n/LanguageProvider";
+import {currencyMessages} from "@/src/i18n/currencyMessages";
 
 function clean(s: any) {
   return String(s ?? "").trim();
@@ -25,10 +28,10 @@ function upper(s: any) {
   return clean(s).toUpperCase();
 }
 
-function displayLabel(c: CurrencyMeta) {
+function displayLabel(c: CurrencyMeta, locale: string) {
   const sym = clean(c.symbolNative || c.symbol || "");
   const left = sym ? `${sym} ` : "";
-  return `${left}${c.code} • ${c.name}`;
+  return `${left}${c.code} • ${localizedCurrencyName(c.code,locale,c.name)}`;
 }
 
 type PickerProps = {
@@ -41,13 +44,15 @@ type PickerProps = {
 export function CurrencyPickerAll({
   value,
   onChange,
-  title = "Currency",
+  title,
   disabled,
 }: PickerProps) {
+  const {language}=useLanguage();
+  const copy=currencyMessages[language];
   const [open, setOpen] = useState(false);
 
   const [loading, setLoading] = useState(false);
-  const [note, setNote] = useState<string | null>(null);
+  const [note, setNote] = useState<"FAST"|"FULL"|"OFFLINE"|null>(null);
 
   const [all, setAll] = useState<CurrencyMeta[]>([]);
   const [query, setQuery] = useState("");
@@ -65,10 +70,10 @@ export function CurrencyPickerAll({
     if (!q) return all;
     return all.filter((c) => {
       const code = upper(c.code).toLowerCase();
-      const name = clean(c.name).toLowerCase();
+      const name = clean(localizedCurrencyName(c.code,language,c.name)).toLocaleLowerCase(language);
       return code.includes(q) || name.includes(q);
     });
-  }, [all, query]);
+  }, [all, query, language]);
 
   useEffect(() => {
     if (!open) return;
@@ -80,7 +85,7 @@ export function CurrencyPickerAll({
       const fast = await loadCurrencyCatalogFast();
       if (!alive) return;
       setAll(fast);
-      setNote(`${fast.length} currencies available`);
+      setNote("FAST");
 
       // ✅ refresh full list once (download then cache)
       if (refreshedOnceRef.current) return;
@@ -91,10 +96,10 @@ export function CurrencyPickerAll({
         const full = await refreshCurrencyCatalog();
         if (!alive) return;
         setAll(full);
-        setNote(`${full.length} currencies loaded`);
+        setNote("FULL");
       } catch {
         if (!alive) return;
-        setNote("Offline • showing cached/fallback list");
+        setNote("OFFLINE");
       } finally {
         if (alive) setLoading(false);
       }
@@ -141,9 +146,9 @@ export function CurrencyPickerAll({
         </View>
 
         <View style={{ flex: 1 }}>
-          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>{title}</Text>
+          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>{title||copy.currency}</Text>
           <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 2 }}>
-            {selected ? displayLabel(selected) : "Select any currency (global)"}
+            {selected ? displayLabel(selected,language) : copy.any}
           </Text>
         </View>
 
@@ -169,6 +174,7 @@ export function CurrencyPickerAll({
             onPress={() => {}}
             style={{
               borderRadius: 24,
+              direction: language==='ar'?'rtl':'ltr',
               borderWidth: 1,
               borderColor: "rgba(255,255,255,0.12)",
               backgroundColor: UI.background,
@@ -202,10 +208,10 @@ export function CurrencyPickerAll({
 
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-                    Select Currency
+                    {copy.select}
                   </Text>
                   <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 2 }}>
-                    Search by code (USD) or name (Dollar)
+                    {copy.hint}
                   </Text>
                 </View>
 
@@ -213,8 +219,8 @@ export function CurrencyPickerAll({
                   onPress={() => setOpen(false)}
                   style={({ pressed }) => [
                     {
-                      width: 40,
-                      height: 40,
+                      width: 44,
+                      height: 44,
                       borderRadius: 14,
                       alignItems: "center",
                       justifyContent: "center",
@@ -249,7 +255,7 @@ export function CurrencyPickerAll({
                 <TextInput
                   value={query}
                   onChangeText={setQuery}
-                  placeholder="Search currency…"
+                  placeholder={copy.search}
                   placeholderTextColor="rgba(255,255,255,0.40)"
                   style={{
                     flex: 1,
@@ -276,7 +282,7 @@ export function CurrencyPickerAll({
               <View style={{ marginTop: 10, flexDirection: "row", alignItems: "center", gap: 10 }}>
                 {loading ? <ActivityIndicator /> : null}
                 <Text style={{ color: "rgba(255,255,255,0.65)", fontWeight: "800", fontSize: 12 }}>
-                  {note ?? `${all.length} currencies available`}
+                  {note==='OFFLINE'?copy.offline:(note==='FULL'?copy.loaded:copy.available).replace('{count}',new Intl.NumberFormat(language).format(all.length))}
                 </Text>
               </View>
             </View>
@@ -284,6 +290,7 @@ export function CurrencyPickerAll({
             {/* List */}
             <FlatList
               data={filtered}
+              extraData={language}
               keyExtractor={(it) => it.code}
               keyboardShouldPersistTaps="always"
               renderItem={({ item }) => {
@@ -328,13 +335,13 @@ export function CurrencyPickerAll({
 
                       <View style={{ flex: 1 }}>
                         <Text style={{ color: UI.text, fontWeight: "900", fontSize: 13 }}>
-                          {item.name}
+                          {localizedCurrencyName(item.code,language,item.name)}
                         </Text>
                         <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 2 }}>
                           {clean(item.symbolNative || item.symbol)
-                            ? `Symbol: ${item.symbolNative || item.symbol}`
-                            : "Symbol: —"}
-                          {typeof item.decimals === "number" ? ` • Decimals: ${item.decimals}` : ""}
+                            ? `${copy.symbol}: ${item.symbolNative || item.symbol}`
+                            : `${copy.symbol}: —`}
+                          {typeof item.decimals === "number" ? ` • ${copy.digits}: ${item.decimals}` : ""}
                         </Text>
                       </View>
 
@@ -348,7 +355,7 @@ export function CurrencyPickerAll({
               ListEmptyComponent={() => (
                 <View style={{ padding: 16 }}>
                   <Text style={{ color: UI.muted, fontWeight: "800" }}>
-                    No currency found for “{query}”
+                    {copy.empty} “{query}”
                   </Text>
                 </View>
               )}

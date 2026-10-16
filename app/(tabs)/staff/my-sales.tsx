@@ -1,3 +1,5 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/(tabs)/staff/my-sales.tsx
 
 import { useFocusEffect, useRouter } from "expo-router";
@@ -162,6 +164,8 @@ function formatHistoryDate(
 }
 
 export default function MySalesScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
 
   const {
@@ -693,8 +697,7 @@ export default function MySalesScreen() {
                 fontSize: 18,
               }}
             >
-              No Access
-            </Text>
+              {uiText("No Access")}</Text>
 
             <Text
               style={{
@@ -703,9 +706,7 @@ export default function MySalesScreen() {
                 lineHeight: 22,
               }}
             >
-              Hii screen ni ya STAFF
-              tu.
-            </Text>
+              {uiText("Hii screen ni ya STAFF tu.")}</Text>
 
             <Pressable
               onPress={() =>
@@ -730,8 +731,7 @@ export default function MySalesScreen() {
                   fontWeight: "900",
                 }}
               >
-                Back
-              </Text>
+                {uiText("Back")}</Text>
             </Pressable>
           </View>
         </View>
@@ -811,8 +811,7 @@ export default function MySalesScreen() {
                 color: UI.text,
               }}
             >
-              My Sales
-            </Text>
+              {uiText("My Sales")}</Text>
 
             <Text
               style={{
@@ -821,10 +820,7 @@ export default function MySalesScreen() {
                 marginTop: 4,
               }}
             >
-              My sales, accumulated
-              commission and unpaid
-              balance
-            </Text>
+              {uiText("My sales, accumulated commission and unpaid balance")}</Text>
           </View>
         </View>
 
@@ -888,8 +884,7 @@ export default function MySalesScreen() {
                   fontWeight: "800",
                 }}
               >
-                Staff Account
-              </Text>
+                {uiText("Staff Account")}</Text>
 
               <Text
                 style={{
@@ -922,8 +917,7 @@ export default function MySalesScreen() {
                   fontWeight: "900",
                 }}
               >
-                STAFF
-              </Text>
+                {uiText("STAFF")}</Text>
             </View>
           </View>
 
@@ -934,8 +928,7 @@ export default function MySalesScreen() {
                 fontWeight: "800",
               }}
             >
-              Organization
-            </Text>
+              {uiText("Organization")}</Text>
 
             <Text
               style={{
@@ -957,18 +950,7 @@ export default function MySalesScreen() {
               lineHeight: 20,
             }}
           >
-            Commission yako
-            haifutwi mwezi
-            unapobadilika. Kiasi
-            ambacho hakijalipwa
-            kitaendelea kubebwa
-            mbele mpaka owner/admin
-            afanye cash-out. Ukiwekewa
-            rate 0%, sales zitaendelea
-            kurekodiwa lakini
-            commission mpya
-            haitahesabiwa.
-          </Text>
+            {uiText("Commission yako haifutwi mwezi unapobadilika. Kiasi ambacho hakijalipwa kitaendelea kubebwa mbele mpaka owner/admin afanye cash-out. Ukiwekewa rate 0%, sales zitaendelea kurekodiwa lakini commission mpya haitahesabiwa.")}</Text>
         </View>
 
         {/* =====================================================
@@ -1002,8 +984,8 @@ export default function MySalesScreen() {
             }}
           >
             {hasPayoutProfile
-              ? "Payout Profile Ready"
-              : "Payout Profile Missing"}
+              ? uiText("Payout Profile Ready")
+              : uiText("Payout Profile Missing")}
           </Text>
 
           {hasPayoutProfile ? (
@@ -1024,8 +1006,7 @@ export default function MySalesScreen() {
                   fontWeight: "800",
                 }}
               >
-                Account Holder
-              </Text>
+                {uiText("Account Holder")}</Text>
 
               <Text
                 style={{
@@ -1050,8 +1031,7 @@ export default function MySalesScreen() {
                         "800",
                     }}
                   >
-                    Network
-                  </Text>
+                    {uiText("Network")}</Text>
 
                   <Text
                     style={{
@@ -1076,8 +1056,7 @@ export default function MySalesScreen() {
                         "800",
                     }}
                   >
-                    Mobile Number
-                  </Text>
+                    {uiText("Mobile Number")}</Text>
 
                   <Text
                     style={{
@@ -1107,8 +1086,7 @@ export default function MySalesScreen() {
                         "800",
                     }}
                   >
-                    Bank
-                  </Text>
+                    {uiText("Bank")}</Text>
 
                   <Text
                     style={{
@@ -1133,9 +1111,7 @@ export default function MySalesScreen() {
                         "800",
                     }}
                   >
-                    Bank Account
-                    Name
-                  </Text>
+                    {uiText("Bank Account Name")}</Text>
 
                   <Text
                     style={{
@@ -1160,9 +1136,7 @@ export default function MySalesScreen() {
                         "800",
                     }}
                   >
-                    Bank Account
-                    Number
-                  </Text>
+                    {uiText("Bank Account Number")}</Text>
 
                   <Text
                     style={{
@@ -1190,11 +1164,7 @@ export default function MySalesScreen() {
                   lineHeight: 20,
                 }}
               >
-                Bado hujajaza
-                sehemu ya kupokea
-                commission kupitia
-                Mobile Money au Bank.
-              </Text>
+                {uiText("Bado hujajaza sehemu ya kupokea commission kupitia Mobile Money au Bank.")}</Text>
 
               <Pressable
                 onPress={() =>
@@ -1223,9 +1193,7 @@ export default function MySalesScreen() {
                       "900",
                   }}
                 >
-                  Setup Payout
-                  Profile
-                </Text>
+                  {uiText("Setup Payout Profile")}</Text>
               </Pressable>
             </>
           )}
@@ -1264,10 +1232,10 @@ export default function MySalesScreen() {
             }}
           >
             {isSettled
-              ? "Commission Settled"
+              ? uiText("Commission Settled")
               : unpaidBalance > 0
-                ? "Unpaid Commission Balance"
-                : "Commission Status"}
+                ? uiText("Unpaid Commission Balance")
+                : uiText("Commission Status")}
           </Text>
 
           <View
@@ -1281,8 +1249,7 @@ export default function MySalesScreen() {
                 fontWeight: "800",
               }}
             >
-              Accumulated Commission
-            </Text>
+              {uiText("Accumulated Commission")}</Text>
 
             <Text
               style={{
@@ -1308,8 +1275,7 @@ export default function MySalesScreen() {
                 fontWeight: "800",
               }}
             >
-              Total Cashed Out
-            </Text>
+              {uiText("Total Cashed Out")}</Text>
 
             <Text
               style={{
@@ -1335,8 +1301,7 @@ export default function MySalesScreen() {
                 fontWeight: "800",
               }}
             >
-              Unpaid Balance
-            </Text>
+              {uiText("Unpaid Balance")}</Text>
 
             <Text
               style={{
@@ -1361,12 +1326,7 @@ export default function MySalesScreen() {
               lineHeight: 20,
             }}
           >
-            Unpaid balance itaendelea
-            kubebwa mbele mpaka
-            itakapofanyiwa cash-out.
-            Kubadilika kwa mwezi
-            hakutaifuta balance hii.
-          </Text>
+            {uiText("Unpaid balance itaendelea kubebwa mbele mpaka itakapofanyiwa cash-out. Kubadilika kwa mwezi hakutaifuta balance hii.")}</Text>
         </View>
 
         {/* =====================================================
@@ -1391,7 +1351,7 @@ export default function MySalesScreen() {
                 fontWeight: "900",
               }}
             >
-              {error}
+              {systemText(error)}
             </Text>
           </View>
         ) : null}
@@ -1423,8 +1383,7 @@ export default function MySalesScreen() {
                 fontWeight: "800",
               }}
             >
-              My Sales
-            </Text>
+              {uiText("My Sales")}</Text>
 
             <Text
               style={{
@@ -1458,8 +1417,7 @@ export default function MySalesScreen() {
                 fontWeight: "800",
               }}
             >
-              Sales Count
-            </Text>
+              {uiText("Sales Count")}</Text>
 
             <Text
               style={{
@@ -1498,8 +1456,7 @@ export default function MySalesScreen() {
                 fontWeight: "800",
               }}
             >
-              Commission Rate
-            </Text>
+              {uiText("Commission Rate")}</Text>
 
             <Text
               style={{
@@ -1535,8 +1492,7 @@ export default function MySalesScreen() {
                 fontWeight: "800",
               }}
             >
-              Unpaid Balance
-            </Text>
+              {uiText("Unpaid Balance")}</Text>
 
             <Text
               style={{
@@ -1586,8 +1542,8 @@ export default function MySalesScreen() {
             }}
           >
             {loading
-              ? "Loading..."
-              : "Refresh My Sales"}
+              ? uiText("Loading...")
+              : uiText("Refresh My Sales")}
           </Text>
         </Pressable>
 
@@ -1613,8 +1569,7 @@ export default function MySalesScreen() {
               fontSize: 16,
             }}
           >
-            Info
-          </Text>
+            {uiText("Info")}</Text>
 
           <Text
             style={{
@@ -1623,7 +1578,7 @@ export default function MySalesScreen() {
               lineHeight: 20,
             }}
           >
-            Membership:{" "}
+            {uiText("Membership:")}{" "}
             {shortId(
               String(
                 row?.membership_id ??
@@ -1639,7 +1594,7 @@ export default function MySalesScreen() {
               lineHeight: 20,
             }}
           >
-            User:{" "}
+            {uiText("User:")}{" "}
             {shortId(
               String(
                 row?.user_id ?? ""
@@ -1654,17 +1609,7 @@ export default function MySalesScreen() {
               lineHeight: 20,
             }}
           >
-            Commission mpya
-            inaendelea kukusanyika
-            kutokana na mauzo yako.
-            Unpaid commission
-            haifutwi mwisho wa mwezi;
-            inaendelea kubebwa mbele
-            mpaka cash-out ifanyike.
-            Kila cash-out
-            inahifadhiwa kwenye
-            Commission History.
-          </Text>
+            {uiText("Commission mpya inaendelea kukusanyika kutokana na mauzo yako. Unpaid commission haifutwi mwisho wa mwezi; inaendelea kubebwa mbele mpaka cash-out ifanyike. Kila cash-out inahifadhiwa kwenye Commission History.")}</Text>
         </View>
 
         {/* =====================================================
@@ -1697,8 +1642,7 @@ export default function MySalesScreen() {
                 flex: 1,
               }}
             >
-              Commission History
-            </Text>
+              {uiText("Commission History")}</Text>
 
             <View
               style={{
@@ -1733,9 +1677,7 @@ export default function MySalesScreen() {
                 lineHeight: 20,
               }}
             >
-              Hakuna payout history
-              bado.
-            </Text>
+              {uiText("Hakuna payout history bado.")}</Text>
           ) : (
             historyRows.map(
               (h) => {
@@ -1819,8 +1761,7 @@ export default function MySalesScreen() {
                           flex: 1,
                         }}
                       >
-                        Cash-Out Record
-                      </Text>
+                        {uiText("Cash-Out Record")}</Text>
 
                       <View
                         style={{
@@ -1863,8 +1804,7 @@ export default function MySalesScreen() {
                           "800",
                       }}
                     >
-                      Commission at
-                      Cash-Out:{" "}
+                      {uiText("Commission at Cash-Out:")}{" "}
                       {fmtMoney(
                         commission
                       )}
@@ -1878,7 +1818,7 @@ export default function MySalesScreen() {
                           "800",
                       }}
                     >
-                      Paid:{" "}
+                      {uiText("Paid:")}{" "}
                       {fmtMoney(paid)}
                     </Text>
 
@@ -1890,8 +1830,7 @@ export default function MySalesScreen() {
                           "800",
                       }}
                     >
-                      Remaining After
-                      Cash-Out:{" "}
+                      {uiText("Remaining After Cash-Out:")}{" "}
                       {fmtMoney(
                         remaining
                       )}
@@ -1905,7 +1844,7 @@ export default function MySalesScreen() {
                           "800",
                       }}
                     >
-                      Record Period:{" "}
+                      {uiText("Record Period:")}{" "}
                       {String(
                         h.period_key ??
                           ""
@@ -1920,7 +1859,7 @@ export default function MySalesScreen() {
                           "800",
                       }}
                     >
-                      Reference:{" "}
+                      {uiText("Reference:")}{" "}
                       {String(
                         h.reference ??
                           ""
@@ -1935,7 +1874,7 @@ export default function MySalesScreen() {
                           "800",
                       }}
                     >
-                      Destination:{" "}
+                      {uiText("Destination:")}{" "}
                       {method || "—"}
                       {destination
                         ? ` • ${destination}`
@@ -1951,8 +1890,7 @@ export default function MySalesScreen() {
                         lineHeight: 20,
                       }}
                     >
-                      Transaction
-                      Message:{" "}
+                      {uiText("Transaction Message:")}{" "}
                       {String(
                         h.note ?? ""
                       ).trim() || "—"}
@@ -1967,7 +1905,7 @@ export default function MySalesScreen() {
                         lineHeight: 20,
                       }}
                     >
-                      Date:{" "}
+                      {uiText("Date:")}{" "}
                       {formatHistoryDate(
                         h.created_at
                       )}
@@ -2000,8 +1938,7 @@ export default function MySalesScreen() {
                 color: UI.text,
               }}
             >
-              No sales data yet
-            </Text>
+              {uiText("No sales data yet")}</Text>
 
             <Text
               style={{
@@ -2011,10 +1948,7 @@ export default function MySalesScreen() {
                 lineHeight: 20,
               }}
             >
-              Bado hakuna staff
-              sales data iliyohusishwa
-              na membership yako.
-            </Text>
+              {uiText("Bado hakuna staff sales data iliyohusishwa na membership yako.")}</Text>
           </View>
         ) : null}
       </ScrollView>

@@ -1,3 +1,5 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/(tabs)/club/[postId]/comments.tsx
 
 import { supabase } from "@/src/supabase/supabaseClient";
@@ -78,6 +80,8 @@ function hasStoreLink(item: CommentRow) {
 }
 
 export default function ClubCommentsScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { activeStoreId } = useOrg();
@@ -390,8 +394,7 @@ export default function ClubCommentsScreen() {
 
             <View style={{ flex: 1 }}>
               <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 20 }}>
-                Comments
-              </Text>
+                {uiText("Comments")}</Text>
 
               {!!caption && (
                 <Text
@@ -427,7 +430,7 @@ export default function ClubCommentsScreen() {
               },
             ]}
           >
-            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Back</Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Back")}</Text>
           </Pressable>
         </View>
 
@@ -441,12 +444,12 @@ export default function ClubCommentsScreen() {
               borderRadius: 14,
             }}
           >
-            <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{err}</Text>
+            <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{systemText(err)}</Text>
           </View>
         )}
       </View>
     );
-  }, [caption, err, goBack, insets.top]);
+  }, [caption, err, goBack, insets.top, uiText, systemText]);
 
   const renderCommentCard = useCallback(
     (item: CommentRow, depth: number) => {
@@ -582,8 +585,7 @@ export default function ClubCommentsScreen() {
                   style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
                 >
                   <Text style={{ color: theme.colors.muted, fontWeight: "900", fontSize: 12 }}>
-                    Like
-                  </Text>
+                    {uiText("Like")}</Text>
                 </Pressable>
 
                 <Pressable
@@ -592,20 +594,17 @@ export default function ClubCommentsScreen() {
                   style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1 }]}
                 >
                   <Text style={{ color: theme.colors.muted, fontWeight: "900", fontSize: 12 }}>
-                    Reply
-                  </Text>
+                    {uiText("Reply")}</Text>
                 </Pressable>
 
                 {likesCount > 0 ? (
                   <Text style={{ color: theme.colors.faint, fontWeight: "900", fontSize: 12 }}>
-                    {likesCount} likes
-                  </Text>
+                    {likesCount} {uiText("likes")}</Text>
                 ) : null}
 
                 {repliesCount > 0 && depth === 0 ? (
                   <Text style={{ color: theme.colors.faint, fontWeight: "900", fontSize: 12 }}>
-                    {repliesCount} replies
-                  </Text>
+                    {repliesCount} {uiText("replies")}</Text>
                 ) : null}
               </View>
             </View>
@@ -613,7 +612,7 @@ export default function ClubCommentsScreen() {
         </View>
       );
     },
-    [activeStoreName, openReply, openStore, viewerUserId]
+    [activeStoreName, openReply, openStore, viewerUserId, uiText]
   );
 
   const renderThread = useCallback(
@@ -651,14 +650,12 @@ export default function ClubCommentsScreen() {
         }}
       >
         <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-          No comments yet
-        </Text>
+          {uiText("No comments yet")}</Text>
         <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-          Kuwa wa kwanza ku-comment.
-        </Text>
+          {uiText("Kuwa wa kwanza ku-comment.")}</Text>
       </View>
     );
-  }, []);
+  }, [uiText]);
 
   const FooterComposer = useMemo(() => {
     return (
@@ -669,7 +666,7 @@ export default function ClubCommentsScreen() {
         }}
       >
         <Text style={{ color: theme.colors.text, fontWeight: "900", marginBottom: 10 }}>
-          {replyTo ? "Reply" : "Add comment"}
+          {replyTo ? uiText("Reply") : uiText("Add comment")}
         </Text>
 
         {!!replyTo && (
@@ -690,7 +687,7 @@ export default function ClubCommentsScreen() {
           >
             <View style={{ flex: 1 }}>
               <Text style={{ color: theme.colors.emerald, fontWeight: "900", fontSize: 12 }}>
-                Replying to {replyTo.authorName}
+                {uiText("Replying to")}{replyTo.authorName}
               </Text>
               <Text
                 style={{ color: theme.colors.text, fontWeight: "800", marginTop: 2 }}
@@ -728,7 +725,7 @@ export default function ClubCommentsScreen() {
                 listRef.current?.scrollToEnd({ animated: true });
               }, 120);
             }}
-            placeholder={replyTo ? "Andika reply..." : "Andika comment..."}
+            placeholder={replyTo ? uiText("Andika reply...") : uiText("Andika comment...")}
             placeholderTextColor={theme.colors.faint}
             style={{
               color: theme.colors.text,
@@ -759,12 +756,12 @@ export default function ClubCommentsScreen() {
           ]}
         >
           <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-            {sending ? "Sending..." : replyTo ? "Send Reply" : "Send Comment"}
+            {sending ? uiText("Sending...") : replyTo ? uiText("Send Reply") : uiText("Send Comment")}
           </Text>
         </Pressable>
       </View>
     );
-  }, [cancelReply, insets.bottom, replyTo, sendComment, sending, text]);
+  }, [cancelReply, insets.bottom, replyTo, sendComment, sending, text, uiText]);
 
   return (
     <Screen scroll={false} contentStyle={{ paddingHorizontal: 0, paddingTop: 0, paddingBottom: 0 }}>
@@ -798,14 +795,12 @@ export default function ClubCommentsScreen() {
               {loadingMore ? (
                 <View style={{ alignItems: "center", paddingVertical: 12 }}>
                   <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                    Loading more...
-                  </Text>
+                    {uiText("Loading more...")}</Text>
                 </View>
               ) : !hasMore && rows.length > 0 ? (
                 <View style={{ alignItems: "center", paddingVertical: 12 }}>
                   <Text style={{ color: theme.colors.faint, fontWeight: "800" }}>
-                    End of comments
-                  </Text>
+                    {uiText("End of comments")}</Text>
                 </View>
               ) : null}
               {FooterComposer}

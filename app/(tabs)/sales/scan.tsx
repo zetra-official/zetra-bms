@@ -1,3 +1,4 @@
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/(tabs)/sales/scan.tsx
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Pressable, Text, View, Vibration } from "react-native";
@@ -17,6 +18,7 @@ function cleanBarcode(raw: any) {
 }
 
 export default function SalesScanScreen() {
+ const uiText = useCommonText();
   const router = useRouter();
   const [permission, requestPermission] = useCameraPermissions();
   const [busy, setBusy] = useState(false);
@@ -35,12 +37,12 @@ export default function SalesScanScreen() {
       if (granted) return true;
       const res = await requestPermission();
       if (!res.granted) {
-        Alert.alert("Camera Permission", "Ruhusa ya camera inahitajika ili kuscan barcode.");
+        Alert.alert(uiText("Camera Permission"), uiText("Ruhusa ya camera inahitajika ili kuscan barcode."));
         return false;
       }
       return true;
     } catch {
-      Alert.alert("Camera", "Imeshindikana kuomba ruhusa ya camera.");
+      Alert.alert(uiText("Camera"), uiText("Imeshindikana kuomba ruhusa ya camera."));
       return false;
     }
   }, [granted, requestPermission]);
@@ -139,10 +141,9 @@ export default function SalesScanScreen() {
       <View style={{ padding: theme.spacing.page, paddingBottom: 12, gap: 10 }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
           <View style={{ flex: 1, gap: 2 }}>
-            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 22 }}>Scan Barcode</Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 22 }}>{uiText("Scan Barcode")}</Text>
             <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-              Elekeza camera kwenye barcode — itaongeza bidhaa moja kwa moja.
-            </Text>
+              {uiText("Elekeza camera kwenye barcode — itaongeza bidhaa moja kwa moja.")}</Text>
           </View>
 
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
@@ -212,11 +213,9 @@ export default function SalesScanScreen() {
             <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 18 }}>
               <Card style={{ width: "100%", padding: 16, gap: 10 }}>
                 <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-                  Camera permission inahitajika
-                </Text>
+                  {uiText("Camera permission inahitajika")}</Text>
                 <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                  Bonyeza “Grant” kisha uruhusu camera.
-                </Text>
+                  {uiText("Bonyeza “Grant” kisha uruhusu camera.")}</Text>
 
                 <Pressable
                   onPress={ensurePermission}
@@ -233,7 +232,7 @@ export default function SalesScanScreen() {
                     },
                   ]}
                 >
-                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Grant Camera Permission</Text>
+                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Grant Camera Permission")}</Text>
                 </Pressable>
               </Card>
             </View>
@@ -265,13 +264,13 @@ export default function SalesScanScreen() {
           >
             <Card style={{ padding: 12, gap: 6 }}>
               <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                {busy ? "Captured ✅" : "Ready to scan"}
+                {busy ? uiText("Captured ✅") : uiText("Ready to scan")}
               </Text>
               <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                Torch: <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{torchOn ? "ON" : "OFF"}</Text>
+                {uiText("Torch:")}<Text style={{ color: theme.colors.text, fontWeight: "900" }}>{torchOn ? uiText("ON") : uiText("OFF")}</Text>
               </Text>
               <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                Last: <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{last || "—"}</Text>
+                {uiText("Last:")}<Text style={{ color: theme.colors.text, fontWeight: "900" }}>{last || "—"}</Text>
               </Text>
             </Card>
           </View>

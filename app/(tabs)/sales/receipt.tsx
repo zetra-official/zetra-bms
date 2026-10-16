@@ -1,4 +1,8 @@
-﻿import { useOrg } from "@/src/context/OrgContext";
+import {paymentMethodKey} from "@/src/i18n/presentation";
+import {useDocumentText} from "@/src/i18n/useDocumentText";
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+﻿import {useCommonText} from "@/src/i18n/useCommonText";
+import { useOrg } from "@/src/context/OrgContext";
 import { useOrgMoneyPrefs } from "@/src/ui/money";
 import { supabase } from "@/src/supabase/supabaseClient";
 
@@ -287,6 +291,423 @@ function addDaysLabel(
   }
 }
 
+async function shareHtmlPdfOnMobileWeb(
+  html: string,
+  fileName: string, uiText: (source: string) => string
+) {
+  if (
+    Platform.OS !== "web" ||
+    typeof window === "undefined" ||
+    typeof document === "undefined"
+  ) {
+    return false;
+  }
+
+let host: HTMLDivElement | null =
+    null;
+
+  try {
+    const [
+      html2canvasModule,
+      jspdfModule,
+    ] = await Promise.all([
+      import("html2canvas"),
+      import("jspdf/dist/jspdf.es.min.js"),
+    ]);
+
+    const html2canvas =
+      html2canvasModule.default;
+
+    const jsPDF =
+      jspdfModule.jsPDF;
+
+    host =
+      document.createElement(
+        "div"
+      );
+
+    host.style.position =
+      "fixed";
+
+    host.style.left =
+      "-100000px";
+
+    host.style.top =
+      "0";
+
+    host.style.width =
+      "794px";
+
+    host.style.background =
+      "#ffffff";
+
+    host.style.pointerEvents =
+      "none";
+
+    const iframe =
+      document.createElement(
+        "iframe"
+      );
+
+    iframe.style.width =
+      "794px";
+
+    iframe.style.height =
+      "1123px";
+
+    iframe.style.border =
+      "0";
+
+    iframe.style.background =
+      "#ffffff";
+
+    host.appendChild(
+      iframe
+    );
+
+    document.body.appendChild(
+      host
+    );
+
+    const frameDoc =
+      iframe.contentDocument ??
+      iframe.contentWindow?.document;
+
+    if (!frameDoc) {
+      throw new Error(
+        "Unable to prepare invoice PDF."
+      );
+    }
+
+    frameDoc.open();
+    frameDoc.write(html);
+    frameDoc.close();
+
+    await new Promise<void>(
+      (resolve) => {
+        setTimeout(
+          resolve,
+          500
+        );
+      }
+    );
+
+    const images =
+      Array.from(
+        frameDoc.images ?? []
+      );
+
+    if (images.length > 0) {
+      await Promise.all(
+        images.map(
+          (img) =>
+            new Promise<void>(
+              (resolve) => {
+                if (img.complete) {
+                  resolve();
+                  return;
+                }
+
+                let finished =
+                  false;
+
+                const done =
+                  () => {
+                    if (finished) {
+                      return;
+                    }
+
+                    finished =
+                      true;
+
+                    resolve();
+                  };
+
+                img.addEventListener(
+                  "load",
+                  done,
+                  {
+                    once: true,
+                  }
+                );
+
+                img.addEventListener(
+                  "error",
+                  done,
+                  {
+                    once: true,
+                  }
+                );
+
+                setTimeout(
+                  done,
+                  2500
+                );
+              }
+            )
+        )
+      );
+    }
+
+    const page =
+      frameDoc.querySelector(
+        ".page"
+      ) as HTMLElement | null;
+
+    const target =
+      page ??
+      frameDoc.body;
+
+    if (!target) {
+      throw new Error(
+        "Invoice content was not found."
+      );
+    }
+
+    const canvas =
+      await html2canvas(
+        target,
+        {
+          scale: 2,
+          backgroundColor:
+            "#ffffff",
+          useCORS: true,
+          logging: false,
+          windowWidth: 794,
+        }
+      );
+
+    if (
+      !canvas.width ||
+      !canvas.height
+    ) {
+      throw new Error(
+        "Invoice PDF canvas is empty."
+      );
+    }
+
+    const imageData =
+      canvas.toDataURL(
+        "image/jpeg",
+        0.96
+      );
+
+    const pdf =
+      new jsPDF({
+        orientation:
+          "portrait",
+        unit: "mm",
+        format: "a4",
+        compress: true,
+      });
+
+    const pdfWidth =
+      pdf.internal.pageSize
+        .getWidth();
+
+    const pdfHeight =
+      pdf.internal.pageSize
+        .getHeight();
+
+    const imageHeight =
+      (
+        canvas.height *
+        pdfWidth
+      ) /
+      canvas.width;
+
+    let heightLeft =
+      imageHeight;
+
+    let position = 0;
+
+    pdf.addImage(
+      imageData,
+      "JPEG",
+      0,
+      position,
+      pdfWidth,
+      imageHeight,
+      undefined,
+      "FAST"
+    );
+
+    heightLeft -=
+      pdfHeight;
+
+    while (heightLeft > 0) {
+      position =
+        heightLeft -
+        imageHeight;
+
+      pdf.addPage();
+
+      pdf.addImage(
+        imageData,
+        "JPEG",
+        0,
+        position,
+        pdfWidth,
+        imageHeight,
+        undefined,
+        "FAST"
+      );
+
+      heightLeft -=
+        pdfHeight;
+    }
+
+    const blob =
+      pdf.output(
+        "blob"
+      );
+
+    const safeName =
+      (
+        fileName ||
+        "ZETRA-Invoice-Receipt.pdf"
+      )
+        .replace(
+          /[\\/:*?"<>|]+/g,
+          "-"
+        )
+        .replace(
+          /\.pdf$/i,
+          ""
+        ) +
+      ".pdf";
+
+    const file =
+      new File(
+        [blob],
+        safeName,
+        {
+          type:
+            "application/pdf",
+        }
+      );
+
+    const nav =
+      navigator as Navigator & {
+        canShare?: (
+          data?: {
+            files?: File[];
+          }
+        ) => boolean;
+      };
+
+    const canShareFile =
+      typeof navigator.share ===
+        "function" &&
+      (
+        typeof nav.canShare !==
+          "function" ||
+        nav.canShare({
+          files: [file],
+        })
+      );
+
+    if (canShareFile) {
+      try {
+        await (
+          navigator.share as (
+            data?: any
+          ) => Promise<void>
+        )({
+          title:
+            uiText("ZETRA Invoice Receipt"),
+          text:
+            uiText("ZETRA invoice receipt PDF"),
+          files: [file],
+        });
+
+        return true;
+      } catch (
+        shareError: any
+      ) {
+        if (
+          shareError?.name ===
+          "AbortError"
+        ) {
+          return true;
+        }
+
+        console.warn(
+          "Mobile web PDF share failed; using PDF download fallback:",
+          shareError
+        );
+      }
+    }
+
+    /*
+     * Mobile Web fallback:
+     * download the REAL generated PDF.
+     *
+     * We intentionally return true
+     * afterward so Mobile Web never
+     * falls into browser print preview.
+     */
+    const objectUrl =
+      URL.createObjectURL(
+        blob
+      );
+
+    try {
+      const anchor =
+        document.createElement(
+          "a"
+        );
+
+      anchor.href =
+        objectUrl;
+
+      anchor.download =
+        safeName;
+
+      anchor.style.display =
+        "none";
+
+      document.body.appendChild(
+        anchor
+      );
+
+      anchor.click();
+      anchor.remove();
+    } finally {
+      setTimeout(
+        () => {
+          URL.revokeObjectURL(
+            objectUrl
+          );
+        },
+        1500
+      );
+    }
+
+    return true;
+  } catch (error) {
+    console.warn(
+      "Mobile web PDF generation failed:",
+      error
+    );
+
+    /*
+     * Do NOT return false here.
+     * Otherwise Mobile Web would fall
+     * into the old browser print flow.
+     */
+    throw error;
+  } finally {
+    if (
+      host &&
+      host.parentNode
+    ) {
+      host.parentNode.removeChild(
+        host
+      );
+    }
+  }
+}
 function downloadHtmlPdfOnWeb(html: string) {
   if (
     Platform.OS !== "web" ||
@@ -550,6 +971,9 @@ function MoneyTile({
 }
 
 export default function ReceiptScreen() {
+ const {documentText, documentLocale} = useDocumentText();
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
 
   const params =
@@ -1225,8 +1649,8 @@ export default function ReceiptScreen() {
 
       if (!canDeleteReceipt) {
         Alert.alert(
-          "Delete closed",
-          "Risiti hii haiwezi kufutwa. Staff/Admin wanaweza kufuta za leo tu. Owner pekee anaweza kufuta risiti za zamani."
+          uiText("Delete closed"),
+          uiText("Risiti hii haiwezi kufutwa. Staff/Admin wanaweza kufuta za leo tu. Owner pekee anaweza kufuta risiti za zamani.")
         );
 
         return;
@@ -1269,8 +1693,8 @@ export default function ReceiptScreen() {
               );
 
             Alert.alert(
-              "Deleted",
-              `Receipt imefutwa vizuri. Stock restored: ${restoredQty}.`
+              uiText("Deleted"),
+              uiText("Receipt imefutwa vizuri. Stock restored: {p0}.", {p0: (restoredQty)})
             );
 
             router.replace(
@@ -1278,9 +1702,9 @@ export default function ReceiptScreen() {
             );
           } catch (e: any) {
             Alert.alert(
-              "Delete failed",
+              uiText("Delete failed"),
               e?.message ??
-                "Failed to delete same-day receipt"
+                uiText("Failed to delete same-day receipt")
             );
           } finally {
             setDeleting(false);
@@ -1292,7 +1716,7 @@ export default function ReceiptScreen() {
       ) {
         const ok =
           window.confirm(
-            "Delete Same Day\n\nUkifuta risiti hii, items zote zitarudi store na sale itaondoka kabisa. Uko sure?"
+            uiText("Delete Same Day\n\nUkifuta risiti hii, items zote zitarudi store na sale itaondoka kabisa. Uko sure?")
           );
 
         if (!ok) return;
@@ -1303,15 +1727,15 @@ export default function ReceiptScreen() {
       }
 
       Alert.alert(
-        "Delete Same Day",
-        "Ukifuta risiti hii, items zote zitarudi store na sale itaondoka kabisa. Uko sure?",
+        uiText("Delete Same Day"),
+        uiText("Ukifuta risiti hii, items zote zitarudi store na sale itaondoka kabisa. Uko sure?"),
         [
           {
-            text: "Cancel",
+            text: uiText("Cancel"),
             style: "cancel",
           },
           {
-            text: "Delete",
+            text: uiText("Delete"),
             style:
               "destructive",
             onPress:
@@ -1364,7 +1788,7 @@ export default function ReceiptScreen() {
     clean(
       orgProfile?.receipt_footer
     ) ||
-    "Thank you for shopping with us.";
+    uiText("Thank you for shopping with us.");
 
   const storePhone =
     clean(storeProfile?.phone);
@@ -1416,10 +1840,10 @@ export default function ReceiptScreen() {
 
   const documentType =
     isCredit
-      ? "Credit Sale"
+      ? uiText("Credit Sale")
       : splitPaymentMeta
-        ? "Split Payment Sale"
-        : "Cash Sale";
+        ? uiText("Split Payment Sale")
+        : uiText("Cash Sale");
 
   const dueDateLabel =
     isCredit
@@ -1440,14 +1864,14 @@ export default function ReceiptScreen() {
         storeDisplayName;
 
       const header = [
-        "🧾 INVOICE RECEIPT",
+        uiText("🧾 INVOICE RECEIPT"),
 
-        `Receipt No: ${receiptNo}`,
+        uiText("Receipt No: {p0}", {p0: (receiptNo)}),
 
-        `Business: ${org}`,
+        uiText("Business: {p0}", {p0: (org)}),
 
         orgTagline
-          ? `Slogan: ${orgTagline}`
+          ? uiText("Slogan: {p0}", {p0: (orgTagline)})
           : null,
 
         orgTin
@@ -1459,25 +1883,25 @@ export default function ReceiptScreen() {
           : null,
 
         orgRegNo
-          ? `Reg No: ${orgRegNo}`
+          ? uiText("Reg No: {p0}", {p0: (orgRegNo)})
           : null,
 
         "",
 
-        `Store: ${store}`,
+        uiText("Store: {p0}", {p0: (store)}),
 
         storePhone
-          ? `Phone: ${storePhone}`
+          ? uiText("Phone: {p0}", {p0: (storePhone)})
           : null,
 
         storeWhatsapp
-          ? `WhatsApp: ${storeWhatsapp}`
+          ? uiText("WhatsApp: {p0}", {p0: (storeWhatsapp)})
           : null,
 
         storeAddress ||
         storeCity ||
         storeRegion
-          ? `Location: ${[
+          ? uiText("Location: {p0}", {p0: ([
               storeAddress,
               storeCity,
               storeRegion,
@@ -1485,32 +1909,32 @@ export default function ReceiptScreen() {
               .filter(
                 Boolean
               )
-              .join(", ")}`
+              .join(", "))})
           : null,
 
         "",
 
-        `Date: ${when}`,
+        uiText("Date: {p0}", {p0: (when)}),
 
-        `Sold By: ${soldByLabel}`,
+        uiText("Sold By: {p0}", {p0: (soldByLabel)}),
 
         cashierLabel
-          ? `Received By / Cashier: ${cashierLabel}`
+          ? uiText("Received By / Cashier: {p0}", {p0: (cashierLabel)})
           : null,
 
-        `Payment: ${paymentTitle}`,
+        uiText("Payment: {p0}", {p0: (uiText(paymentMethodKey(paymentTitle)))}),
 
         isCredit &&
         creditPaidViaLabel
-          ? `Paid Via: ${creditPaidViaLabel}`
+          ? uiText("Paid Via: {p0}", {p0: (uiText(creditPaidViaLabel))})
           : null,
 
         channelLabel
-          ? `Channel: ${channelLabel}`
+          ? uiText("Channel: {p0}", {p0: (channelLabel)})
           : null,
 
         referenceLabel
-          ? `Reference: ${referenceLabel}`
+          ? uiText("Reference: {p0}", {p0: (referenceLabel)})
           : null,
 
         "",
@@ -1522,21 +1946,21 @@ export default function ReceiptScreen() {
         splitPaymentMeta
       ) {
         header.push(
-          `Cash Paid: ${fmtMoney(
+          uiText("Cash Paid: {p0}", {p0: (fmtMoney(
             splitPaymentMeta.cash
-          )}`
+          ))})
         );
 
         header.push(
-          `Mobile Paid: ${fmtMoney(
+          uiText("Mobile Paid: {p0}", {p0: (fmtMoney(
             splitPaymentMeta.mobile
-          )}`
+          ))})
         );
 
         header.push(
-          `Bank Paid: ${fmtMoney(
+          uiText("Bank Paid: {p0}", {p0: (fmtMoney(
             splitPaymentMeta.bank
-          )}`
+          ))})
         );
 
         header.push("");
@@ -1547,16 +1971,14 @@ export default function ReceiptScreen() {
         customerPhone
       ) {
         header.push(
-          `Customer: ${
-            customerName || "—"
-          }`
+          uiText("Customer: {p0}", {p0: (customerName || "—")})
         );
 
         if (
           customerPhone
         ) {
           header.push(
-            `Phone: ${customerPhone}`
+            uiText("Phone: {p0}", {p0: (customerPhone)})
           );
         }
 
@@ -1566,11 +1988,11 @@ export default function ReceiptScreen() {
       const body =
         items.length === 0
           ? [
-              "Items: —",
+              uiText("Items: —"),
               "",
             ]
           : [
-              `Items (${items.length}) • Qty (${computedQty})`,
+              uiText("Items ({p0}) • Qty ({p1})", {p0: (items.length), p1: (computedQty)}),
 
               ...items.map(
                 (it) => {
@@ -1592,7 +2014,7 @@ export default function ReceiptScreen() {
 
                   const name =
                     it.product_name ??
-                    "Product";
+                    uiText("Product");
 
                   const sku =
                     it.sku
@@ -1622,22 +2044,22 @@ export default function ReceiptScreen() {
           "number"
         ) {
           moneyBlock.push(
-            `SUBTOTAL: ${fmtMoney(
+            uiText("SUBTOTAL: {p0}", {p0: (fmtMoney(
               subtotal
-            )}`
+            ))})
           );
         }
 
         moneyBlock.push(
-          `DISCOUNT: -${fmtMoney(
+          uiText("DISCOUNT: -{p0} ({p1})", {p0: (fmtMoney(
             discountMeta.discountAmount
-          )} (${discountMeta.discountText})`
+          )), p1: (discountMeta.discountText)})
         );
 
         moneyBlock.push(
-          `TOTAL (AFTER DISCOUNT): ${fmtMoney(
+          uiText("TOTAL (AFTER DISCOUNT): {p0}", {p0: (fmtMoney(
             computedTotal
-          )}`
+          ))})
         );
 
         moneyBlock.push("");
@@ -1646,36 +2068,34 @@ export default function ReceiptScreen() {
       if (isCredit) {
         if (!discountMeta) {
           moneyBlock.push(
-            `TOTAL SALE: ${fmtMoney(
+            uiText("TOTAL SALE: {p0}", {p0: (fmtMoney(
               computedTotal
-            )}`
+            ))})
           );
         }
 
         moneyBlock.push("");
 
         moneyBlock.push(
-          `TOTAL PAID: ${fmtMoney(
+          uiText("TOTAL PAID: {p0}", {p0: (fmtMoney(
             paidAmount
-          )}`
+          ))})
         );
 
         moneyBlock.push(
-          `OUTSTANDING BALANCE: ${fmtMoney(
+          uiText("OUTSTANDING BALANCE: {p0}", {p0: (fmtMoney(
             dueAmount
-          )}`
+          ))})
         );
 
         moneyBlock.push(
-          `DUE DATE: ${dueDateLabel}`
+          uiText("DUE DATE: {p0}", {p0: (dueDateLabel)})
         );
 
         moneyBlock.push(
-          `STATUS: ${
-            dueAmount > 0
+          uiText("STATUS: {p0}", {p0: (dueAmount > 0
               ? "OUTSTANDING"
-              : "CLEARED"
-          }`
+              : "CLEARED")})
         );
 
         moneyBlock.push("");
@@ -1684,9 +2104,9 @@ export default function ReceiptScreen() {
       const footer = [
         !discountMeta &&
         !isCredit
-          ? `TOTAL MONEY IN: ${fmtMoney(
+          ? uiText("TOTAL MONEY IN: {p0}", {p0: (fmtMoney(
               computedTotal
-            )}`
+            ))})
           : null,
 
         cleanNote
@@ -1694,7 +2114,7 @@ export default function ReceiptScreen() {
           : null,
 
         cleanNote
-          ? `NOTE: ${cleanNote}`
+          ? uiText("NOTE: {p0}", {p0: (cleanNote)})
           : null,
 
         "",
@@ -1794,13 +2214,13 @@ export default function ReceiptScreen() {
       const statusLabel =
         isCredit
           ? dueAmount > 0
-            ? "OUTSTANDING"
-            : "CLEARED"
-          : "PAID";
+            ? uiText("OUTSTANDING")
+            : uiText("CLEARED")
+          : uiText("PAID");
 
       const rowsHtml =
         items.length === 0
-          ? `<tr><td colspan="5">No items found.</td></tr>`
+          ? `<tr><td colspan="5">${documentText("No items found.")}</td></tr>`
           : items
               .map(
                 (
@@ -1879,7 +2299,7 @@ export default function ReceiptScreen() {
 >
   <tr>
     <td>
-      <b>Cash Paid</b>
+      <b>${documentText("Cash Paid")}</b>
       <br/>
       ${esc(
         fmtMoney(
@@ -1889,7 +2309,7 @@ export default function ReceiptScreen() {
     </td>
 
     <td>
-      <b>Mobile Paid</b>
+      <b>${documentText("Mobile Paid")}</b>
       <br/>
       ${esc(
         fmtMoney(
@@ -1899,7 +2319,7 @@ export default function ReceiptScreen() {
     </td>
 
     <td>
-      <b>Bank Paid</b>
+      <b>${documentText("Bank Paid")}</b>
       <br/>
       ${esc(
         fmtMoney(
@@ -1917,7 +2337,7 @@ export default function ReceiptScreen() {
           ? `
 <tr>
   <td>
-    <b>Subtotal</b>
+    <b>${documentText("Subtotal")}</b>
   </td>
 
   <td class="right">
@@ -1933,7 +2353,7 @@ export default function ReceiptScreen() {
 <tr>
   <td>
     <b>
-      Discount (${esc(
+      ${documentText("Discount (")}${esc(
         discountMeta.discountText
       )})
     </b>
@@ -1955,7 +2375,7 @@ export default function ReceiptScreen() {
           ? `
 <tr>
   <td>
-    <b>Total Paid</b>
+    <b>${documentText("Total Paid")}</b>
   </td>
 
   <td class="right">
@@ -1970,7 +2390,7 @@ export default function ReceiptScreen() {
 <tr>
   <td>
     <b>
-      Outstanding Balance
+      ${documentText("Outstanding Balance")}
     </b>
   </td>
 
@@ -1985,7 +2405,7 @@ export default function ReceiptScreen() {
 
 <tr>
   <td>
-    <b>Due Date</b>
+    <b>${documentText("Due Date")}</b>
   </td>
 
   <td class="right">
@@ -2086,14 +2506,14 @@ export default function ReceiptScreen() {
         storePaymentInstructions
           ? `
 <div class="section-title">
-  Payment Details
+  ${documentText("Payment Details")}
 </div>
 
 <table class="info-table compact">
   <tr>
     <td>
       <span class="label">
-        Bank
+        ${documentText("Bank")}
       </span>
 
       <div class="strong">
@@ -2112,7 +2532,7 @@ export default function ReceiptScreen() {
         storeAccountNumber
           ? `
 <div class="muted">
-  Account No: ${esc(
+  ${documentText("Account No:")} ${esc(
     storeAccountNumber
   )}
 </div>
@@ -2123,7 +2543,7 @@ export default function ReceiptScreen() {
 
     <td>
       <span class="label">
-        Mobile Money
+        ${documentText("Mobile Money")}
       </span>
 
       <div class="strong">
@@ -2137,7 +2557,7 @@ export default function ReceiptScreen() {
         storeMobileMoneyNumber
           ? `
 <div class="muted">
-  Lipa / Pay No: ${esc(
+  ${documentText("Lipa / Pay No:")} ${esc(
     storeMobileMoneyNumber
   )}
 </div>
@@ -2148,7 +2568,7 @@ export default function ReceiptScreen() {
 
     <td>
       <span class="label">
-        Instructions
+        ${documentText("Instructions")}
       </span>
 
       <div>
@@ -2166,12 +2586,12 @@ export default function ReceiptScreen() {
       const html = `
 <!doctype html>
 
-<html>
+<html lang="${documentLocale().language}" dir="${documentLocale().direction}">
 <head>
   <meta charset="utf-8" />
 
   <title>
-    Invoice Receipt ${esc(
+    ${documentText("Invoice Receipt")} ${esc(
       receiptNo
     )}
   </title>
@@ -2777,17 +3197,17 @@ export default function ReceiptScreen() {
       <div class="doc-meta">
 
         <div class="doc-title">
-          Invoice Receipt
+          ${documentText("Invoice Receipt")}
         </div>
 
-        <b>No:</b>
+        <b>${documentText("No:")}</b>
         ${esc(
           receiptNo
         )}
         <br/>
 
         <b>
-          Document Type:
+          ${documentText("Document Type:")}
         </b>
 
         ${esc(
@@ -2796,7 +3216,7 @@ export default function ReceiptScreen() {
 
         <br/>
 
-        <b>Date:</b>
+        <b>${documentText("Date:")}</b>
 
         ${esc(when)}
 
@@ -2806,7 +3226,7 @@ export default function ReceiptScreen() {
           isCredit
             ? `
 <b>
-  Due Date:
+  ${documentText("Due Date:")}
 </b>
 
 ${esc(
@@ -2818,7 +3238,7 @@ ${esc(
             : ""
         }
 
-        <b>Store:</b>
+        <b>${documentText("Store:")}</b>
 
         ${esc(store)}
 
@@ -2826,15 +3246,11 @@ ${esc(
 
         <span class="badge">
 
-          ${esc(
-            paymentTitle
-          )}
+          ${documentText(paymentMethodKey(paymentTitle))}
 
           •
 
-          ${esc(
-            statusLabel
-          )}
+          ${documentText(statusLabel)}
 
         </span>
 
@@ -2845,7 +3261,7 @@ ${esc(
     </div>
 
     <div class="section-title">
-      Sale Information
+      ${documentText("Sale Information")}
     </div>
 
     <table class="info-table">
@@ -2855,7 +3271,7 @@ ${esc(
         <td>
 
           <span class="label">
-            Sold By / Staff
+            ${documentText("Sold By / Staff")}
           </span>
 
           <div class="strong">
@@ -2869,7 +3285,7 @@ ${esc(
         <td>
 
           <span class="label">
-            Received By / Cashier
+            ${documentText("Received By / Cashier")}
           </span>
 
           <div class="strong">
@@ -2884,7 +3300,7 @@ ${esc(
         <td>
 
           <span class="label">
-            Customer
+            ${documentText("Customer")}
           </span>
 
           <div class="strong">
@@ -2900,7 +3316,7 @@ ${esc(
             customerPhone
               ? `
 <div class="muted">
-  Phone: ${esc(
+  ${documentText("Phone:")} ${esc(
     customerPhone
   )}
 </div>
@@ -2913,13 +3329,11 @@ ${esc(
         <td>
 
           <span class="label">
-            Payment
+            ${documentText("Payment")}
           </span>
 
           <div class="strong">
-            ${esc(
-              paymentTitle
-            )}
+            ${documentText(paymentMethodKey(paymentTitle))}
           </div>
 
           ${
@@ -2927,10 +3341,8 @@ ${esc(
             creditPaidViaLabel
               ? `
 <div class="muted">
-  Paid Via:
-  ${esc(
-    creditPaidViaLabel
-  )}
+  ${documentText("Paid Via:")}
+  ${documentText(creditPaidViaLabel)}
 </div>
 `
               : ""
@@ -2940,7 +3352,7 @@ ${esc(
             channelLabel
               ? `
 <div class="muted">
-  Channel:
+  ${documentText("Channel:")}
   ${esc(
     channelLabel
   )}
@@ -2953,7 +3365,7 @@ ${esc(
             referenceLabel
               ? `
 <div class="muted">
-  Ref:
+  ${documentText("Ref:")}
   ${esc(
     referenceLabel
   )}
@@ -2971,9 +3383,7 @@ ${esc(
     ${splitHtml}
 
     <div class="section-title">
-      Items (${items.length})
-      •
-      Qty (${computedQty})
+      ${documentText("Items (")}${items.length}${documentText(") • Qty (")}${computedQty})
     </div>
 
     <table class="data-table">
@@ -2987,28 +3397,28 @@ ${esc(
           </th>
 
           <th style="width:45%">
-            Item
+            ${documentText("Item")}
           </th>
 
           <th
             style="width:10%"
             class="right"
           >
-            Qty
+            ${documentText("Qty")}
           </th>
 
           <th
             style="width:20%"
             class="right"
           >
-            Unit Price
+            ${documentText("Unit Price")}
           </th>
 
           <th
             style="width:20%"
             class="right"
           >
-            Total
+            ${documentText("Total")}
           </th>
 
         </tr>
@@ -3027,7 +3437,7 @@ ${esc(
 <div class="note">
 
   <b>
-    Note:
+    ${documentText("Note:")}
   </b>
 
   <br/>
@@ -3046,7 +3456,7 @@ ${esc(
       <div class="summary-left">
 
         <div class="section-title">
-          Payment Summary
+          ${documentText("Payment Summary")}
         </div>
 
         <table class="summary-table">
@@ -3062,7 +3472,7 @@ ${esc(
 
   <td>
     <b>
-      Total Paid
+      ${documentText("Total Paid")}
     </b>
   </td>
 
@@ -3083,15 +3493,13 @@ ${esc(
 
             <td>
               <b>
-                Status
+                ${documentText("Status")}
               </b>
             </td>
 
             <td class="right">
               <b>
-                ${esc(
-                  statusLabel
-                )}
+                ${documentText(statusLabel)}
               </b>
             </td>
 
@@ -3139,7 +3547,7 @@ ${esc(
         </div>
 
         <b>
-          Sold By / Staff
+          ${documentText("Sold By / Staff")}
         </b>
 
         <br/>
@@ -3161,7 +3569,7 @@ ${esc(
   </div>
 
   <b>
-    Received By / Cashier
+    ${documentText("Received By / Cashier")}
   </b>
 
   <br/>
@@ -3183,7 +3591,7 @@ ${esc(
         </div>
 
         <b>
-          Customer Signature
+          ${documentText("Customer Signature")}
         </b>
 
         <br/>
@@ -3205,7 +3613,7 @@ ${esc(
         </div>
 
         <b>
-          Business Stamp / Signature
+          ${documentText("Business Stamp / Signature")}
         </b>
 
         <br/>
@@ -3223,11 +3631,10 @@ ${esc(
     <div class="terms">
 
       <b>
-        Terms:
+        ${documentText("Terms:")}
       </b>
 
-      Please keep this receipt for reference.
-      Goods received in good condition unless otherwise stated.
+      ${documentText("Please keep this receipt for reference. Goods received in good condition unless otherwise stated.")}
 
     </div>
 
@@ -3254,7 +3661,7 @@ ${esc(
           : ""
       }
 
-      • Powered by ZETRA BMS
+      ${documentText("• Powered by ZETRA BMS")}
 
     </div>
 
@@ -3265,6 +3672,15 @@ ${esc(
 `;
 
       try {
+        if (
+          await shareHtmlPdfOnMobileWeb(
+            html,
+            `ZETRA-Invoice-${receiptNo || saleId || "Receipt"}.pdf`, uiText
+          )
+        ) {
+          return;
+        }
+
         if (
           downloadHtmlPdfOnWeb(
             html
@@ -3300,9 +3716,9 @@ ${esc(
         }
       } catch (e: any) {
         Alert.alert(
-          "PDF failed",
+          uiText("PDF failed"),
           e?.message ??
-            "Failed to create PDF invoice receipt."
+            uiText("Failed to create PDF invoice receipt.")
         );
       }
     }, [
@@ -3406,14 +3822,14 @@ ${esc(
         }}
       >
         <MetaBlock
-          label="Business"
+          label={uiText("Business")}
           value={
             businessDisplayName
           }
         />
 
         <MetaBlock
-          label="Store"
+          label={uiText("Store")}
           value={
             storeDisplayName
           }
@@ -3434,12 +3850,12 @@ ${esc(
         }}
       >
         <MetaBlock
-          label="When"
+          label={uiText("When")}
           value={when}
         />
 
         <MetaBlock
-          label="Sold By / Staff"
+          label={uiText("Sold By / Staff")}
           value={soldByLabel}
         />
       </View>
@@ -3459,18 +3875,18 @@ ${esc(
           }}
         >
           <MetaBlock
-            label="Received By / Cashier"
+            label={uiText("Received By / Cashier")}
             value={
               cashierLabel
             }
           />
 
           <MetaBlock
-            label="Payment"
+            label={uiText("Payment")}
             value={
               isCredit &&
               creditPaidViaLabel
-                ? `CREDIT • Paid Via ${creditPaidViaLabel}`
+                ? uiText("CREDIT • Paid Via {p0}", {p0: uiText(creditPaidViaLabel)})
                 : paymentTitle
             }
           />
@@ -3493,7 +3909,7 @@ ${esc(
           }}
         >
           <MetaBlock
-            label="Channel"
+            label={uiText("Channel")}
             value={
               channelLabel ||
               "—"
@@ -3501,7 +3917,7 @@ ${esc(
           />
 
           <MetaBlock
-            label="Reference"
+            label={uiText("Reference")}
             value={
               referenceLabel ||
               "—"
@@ -3546,8 +3962,7 @@ ${esc(
                 12,
             }}
           >
-            Customer
-          </Text>
+            {uiText("Customer")}</Text>
 
           <Text
             style={{
@@ -3578,7 +3993,7 @@ ${esc(
                   6,
               }}
             >
-              Phone:{" "}
+              {uiText("Phone:")}{" "}
               {customerPhone}
             </Text>
           )}
@@ -3626,8 +4041,7 @@ ${esc(
                 11,
             }}
           >
-            Edit Status
-          </Text>
+            {uiText("Edit Status")}</Text>
 
           <Text
             style={{
@@ -3646,9 +4060,9 @@ ${esc(
           >
             {canEditReceipt
               ? isOwner
-                ? "Owner edit/delete allowed"
-                : "Same-day edit allowed"
-              : "Edit window closed"}
+                ? uiText("Owner edit/delete allowed")
+                : uiText("Same-day edit allowed")
+              : uiText("Edit window closed")}
           </Text>
 
           {!uiSameDayGuard ? (
@@ -3664,11 +4078,7 @@ ${esc(
                   8,
               }}
             >
-              Local guard:
-              receipt si ya leo
-              kwa timezone ya
-              Africa/Dar_es_Salaam.
-            </Text>
+              {uiText("Local guard: receipt si ya leo kwa timezone ya Africa/Dar_es_Salaam.")}</Text>
           ) : null}
 
           {editCountLabel >
@@ -3688,7 +4098,7 @@ ${esc(
                     8,
                 }}
               >
-                Edited by:{" "}
+                {uiText("Edited by:")}{" "}
 
                 <Text
                   style={{
@@ -3718,7 +4128,7 @@ ${esc(
                     4,
                 }}
               >
-                Edited at:{" "}
+                {uiText("Edited at:")}{" "}
 
                 <Text
                   style={{
@@ -3748,7 +4158,7 @@ ${esc(
                     4,
                 }}
               >
-                Edit count:{" "}
+                {uiText("Edit count:")}{" "}
 
                 <Text
                   style={{
@@ -3803,8 +4213,7 @@ ${esc(
                   12,
               }}
             >
-              Note
-            </Text>
+              {uiText("Note")}</Text>
 
             <Text
               style={{
@@ -3854,10 +4263,7 @@ ${esc(
             fontSize:
               14,
           }}
-        >
-          Items (
-          {items.length})
-        </Text>
+        >{uiText("Items ({p0})", {p0: (items.length)})}</Text>
 
         <Text
           style={{
@@ -3870,10 +4276,7 @@ ${esc(
             fontSize:
               12,
           }}
-        >
-          Qty (
-          {computedQty})
-        </Text>
+        >{uiText("Qty ({p0})", {p0: (computedQty)})}</Text>
       </View>
 
       {items.length ===
@@ -3887,8 +4290,7 @@ ${esc(
               "800",
           }}
         >
-          No items found.
-        </Text>
+          {uiText("No items found.")}</Text>
       ) : (
         items.map(
           (it, idx) => {
@@ -3961,7 +4363,7 @@ ${esc(
                     }
                   >
                     {it.product_name ??
-                      "Product"}
+                      uiText("Product")}
                   </Text>
 
                   <Text
@@ -3981,7 +4383,7 @@ ${esc(
                       1
                     }
                   >
-                    SKU:{" "}
+                    {uiText("SKU:")}{" "}
                     {it.sku ??
                       "—"}
                   </Text>
@@ -4075,28 +4477,28 @@ ${esc(
         {splitPaymentMeta ? (
           <>
             <MoneyTile
-              label="Cash Paid"
+              label={uiText("Cash Paid")}
               value={fmtMoney(
                 splitPaymentMeta.cash
               )}
             />
 
             <MoneyTile
-              label="Mobile Paid"
+              label={uiText("Mobile Paid")}
               value={fmtMoney(
                 splitPaymentMeta.mobile
               )}
             />
 
             <MoneyTile
-              label="Bank Paid"
+              label={uiText("Bank Paid")}
               value={fmtMoney(
                 splitPaymentMeta.bank
               )}
             />
 
             <MoneyTile
-              label="Total Paid"
+              label={uiText("Total Paid")}
               value={fmtMoney(
                 splitPaymentMeta.cash +
                   splitPaymentMeta.mobile +
@@ -4110,7 +4512,7 @@ ${esc(
             {discountMeta ? (
               <>
                 <MoneyTile
-                  label="Subtotal"
+                  label={uiText("Subtotal")}
                   value={fmtMoney(
                     discountMeta.subtotal ??
                       computedTotal
@@ -4118,7 +4520,7 @@ ${esc(
                 />
 
                 <MoneyTile
-                  label={`Discount (${discountMeta.discountText})`}
+                  label={uiText("Discount ({p0})", {p0: (discountMeta.discountText)})}
                   value={`-${fmtMoney(
                     discountMeta.discountAmount
                   )}`}
@@ -4127,21 +4529,21 @@ ${esc(
             ) : null}
 
             <MoneyTile
-              label="Total"
+              label={uiText("Total")}
               value={fmtMoney(
                 computedTotal
               )}
             />
 
             <MoneyTile
-              label="Paid"
+              label={uiText("Paid")}
               value={fmtMoney(
                 paidAmount
               )}
             />
 
             <MoneyTile
-              label="Due (Credit)"
+              label={uiText("Due (Credit)")}
               value={fmtMoney(
                 dueAmount
               )}
@@ -4151,7 +4553,7 @@ ${esc(
         ) : discountMeta ? (
           <>
             <MoneyTile
-              label="Subtotal"
+              label={uiText("Subtotal")}
               value={fmtMoney(
                 discountMeta.subtotal ??
                   computedTotal
@@ -4159,14 +4561,14 @@ ${esc(
             />
 
             <MoneyTile
-              label={`Discount (${discountMeta.discountText})`}
+              label={uiText("Discount ({p0})", {p0: (discountMeta.discountText)})}
               value={`-${fmtMoney(
                 discountMeta.discountAmount
               )}`}
             />
 
             <MoneyTile
-              label="Total After Discount"
+              label={uiText("Total After Discount")}
               value={fmtMoney(
                 computedTotal
               )}
@@ -4175,7 +4577,7 @@ ${esc(
           </>
         ) : (
           <MoneyTile
-            label="Total Money In"
+            label={uiText("Total Money In")}
             value={fmtMoney(
               computedTotal
             )}
@@ -4222,11 +4624,11 @@ ${esc(
                 12,
             }}
           >
-            Status:{" "}
+            {uiText("Status:")}{" "}
             {dueAmount >
             0
-              ? "OUTSTANDING"
-              : "CLEARED"}
+              ? uiText("OUTSTANDING")
+              : uiText("CLEARED")}
           </Text>
         </View>
       ) : null}
@@ -4296,8 +4698,7 @@ ${esc(
                 16,
             }}
           >
-            Share
-          </Text>
+            {uiText("Share")}</Text>
 
           <Text
             style={{
@@ -4311,8 +4712,7 @@ ${esc(
                 13,
             }}
           >
-            Share Invoice Receipt
-          </Text>
+            {uiText("Share Invoice Receipt")}</Text>
         </View>
       </Pressable>
 
@@ -4404,8 +4804,7 @@ ${esc(
                     12,
                 }}
               >
-                Share as Text
-              </Text>
+                {uiText("Share as Text")}</Text>
             </View>
           </Pressable>
 
@@ -4491,8 +4890,7 @@ ${esc(
                     12,
                 }}
               >
-                Share / Download PDF
-              </Text>
+                {uiText("Share / Download PDF")}</Text>
             </View>
           </Pressable>
         </View>
@@ -4550,8 +4948,8 @@ ${esc(
           }}
         >
           {showMoreOptions
-            ? "Hide Options"
-            : "More Options"}
+            ? uiText("Hide Options")
+            : uiText("More Options")}
         </Text>
       </Pressable>
 
@@ -4626,8 +5024,8 @@ ${esc(
                   }}
                 >
                   {isOwner
-                    ? "Edit Receipt"
-                    : "Edit Same Day"}
+                    ? uiText("Edit Receipt")
+                    : uiText("Edit Same Day")}
                 </Text>
               </Pressable>
 
@@ -4688,10 +5086,10 @@ ${esc(
                   }}
                 >
                   {deleting
-                    ? "Deleting..."
+                    ? uiText("Deleting...")
                     : isOwner
-                      ? "Delete Receipt"
-                      : "Delete Same Day"}
+                      ? uiText("Delete Receipt")
+                      : uiText("Delete Same Day")}
                 </Text>
               </Pressable>
             </>
@@ -4748,8 +5146,7 @@ ${esc(
                   12,
               }}
             >
-              Back to History
-            </Text>
+              {uiText("Back to History")}</Text>
           </Pressable>
         </View>
       ) : null}
@@ -4803,8 +5200,7 @@ ${esc(
               13,
           }}
         >
-          Back
-        </Text>
+          {uiText("Back")}</Text>
       </Pressable>
     </Card>
   );
@@ -4898,8 +5294,7 @@ ${esc(
                   2,
               }}
             >
-              Invoice Receipt
-            </Text>
+              {uiText("Invoice Receipt")}</Text>
 
             <Text
               style={{
@@ -4919,7 +5314,7 @@ ${esc(
                 1
               }
             >
-              No.{" "}
+              {uiText("No.")}{" "}
               {receiptNo}
             </Text>
           </View>
@@ -4963,7 +5358,7 @@ ${esc(
                   12,
               }}
             >
-              {paymentTitle}
+              {uiText(paymentMethodKey(paymentTitle))}
             </Text>
           </View>
         </View>
@@ -4992,8 +5387,7 @@ ${esc(
                   8,
               }}
             >
-              Loading receipt...
-            </Text>
+              {uiText("Loading receipt...")}</Text>
           </View>
         ) : err ? (
           <Card
@@ -5010,7 +5404,7 @@ ${esc(
                   "900",
               }}
             >
-              {err}
+              {systemText(err)}
             </Text>
 
             <Pressable
@@ -5062,8 +5456,7 @@ ${esc(
                     13,
                 }}
               >
-                Retry
-              </Text>
+                {uiText("Retry")}</Text>
             </Pressable>
           </Card>
         ) : isDesktopWeb ? (

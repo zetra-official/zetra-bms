@@ -1,3 +1,5 @@
+import {useDocumentText} from "@/src/i18n/useDocumentText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/finance/business-position.tsx
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Alert, Platform, Pressable, Text, TextInput, View, useWindowDimensions } from "react-native";
@@ -155,6 +157,8 @@ function getLoanTone(status: string, overdue?: boolean) {
 }
 
 export default function BusinessPositionScreen() {
+ const {documentText, documentLocale} = useDocumentText();
+ const uiText=useCommonText();
   const router = useRouter();
   const { width } = useWindowDimensions();
 
@@ -278,7 +282,7 @@ const [profitPosition, setProfitPosition] = useState<BusinessProfitPositionRow>(
         });
       }
     } catch (e: any) {
-      Alert.alert("Business Position", e?.message ?? "Failed to load loans");
+      Alert.alert(uiText("Business Position"), e?.message ?? uiText("Failed to load loans"));
     } finally {
       setLoading(false);
     }
@@ -407,13 +411,13 @@ const selectLoan = useCallback(
   const createLoan = useCallback(async () => {
     if (!canWrite) return;
     if (!orgId || !storeId) {
-      Alert.alert("Business Loan", "Hakuna active org/store iliyochaguliwa.");
+      Alert.alert(uiText("Business Loan"), uiText("Hakuna active org/store iliyochaguliwa."));
       return;
     }
 
     const n = Number(amount);
     if (!borrowerName.trim() || !Number.isFinite(n) || n <= 0) {
-      Alert.alert("Business Loan", "Weka jina na kiasi sahihi.");
+      Alert.alert(uiText("Business Loan"), uiText("Weka jina na kiasi sahihi."));
       return;
     }
 
@@ -443,9 +447,9 @@ setDueDate("");
 setInterestEnabled(false);
 setInterestRate("");
 await load();
-      Alert.alert("Success", "Mkopo wa biashara umehifadhiwa.");
+      Alert.alert(uiText("Success"), uiText("Mkopo wa biashara umehifadhiwa."));
     } catch (e: any) {
-      Alert.alert("Business Loan", e?.message ?? "Imeshindikana kuhifadhi mkopo.");
+      Alert.alert(uiText("Business Loan"), e?.message ?? uiText("Imeshindikana kuhifadhi mkopo."));
     } finally {
       setSaving(false);
     }
@@ -455,7 +459,7 @@ await load();
     if (!canWrite) return;
     const n = Number(repayAmount);
     if (!repayLoanId || !Number.isFinite(n) || n <= 0 || !storeId) {
-      Alert.alert("Repayment", "Chagua loan na weka kiasi sahihi.");
+      Alert.alert(uiText("Repayment"), uiText("Chagua loan na weka kiasi sahihi."));
       return;
     }
 
@@ -474,9 +478,9 @@ await load();
 setRepayAmount("");
 setLoanPayments([]);
 await load();
-      Alert.alert("Success", "Malipo ya mkopo yamehifadhiwa.");
+      Alert.alert(uiText("Success"), uiText("Malipo ya mkopo yamehifadhiwa."));
     } catch (e: any) {
-      Alert.alert("Repayment", e?.message ?? "Imeshindikana kuhifadhi malipo.");
+      Alert.alert(uiText("Repayment"), e?.message ?? uiText("Imeshindikana kuhifadhi malipo."));
     } finally {
       setSaving(false);
     }
@@ -506,7 +510,7 @@ await load();
         .join("");
 
       const html = `
-        <html>
+        <html lang="${documentLocale().language}" dir="${documentLocale().direction}">
           <head>
             <meta name="viewport" content="width=device-width, initial-scale=1.0" />
             <style>
@@ -524,34 +528,34 @@ await load();
             </style>
           </head>
           <body>
-            <h1>ZETRA BMS - Business Position Report</h1>
-            <div class="muted">Generated: ${new Date().toLocaleString()}</div>
+            <h1>${documentText("ZETRA BMS - Business Position Report")}</h1>
+            <div class="muted">${documentText("Generated:")} ${new Date().toLocaleString()}</div>
 
             <div class="grid">
-              <div class="box"><div class="label">Given Out</div><div class="value">${fmt(summary.total_loans)}</div></div>
-              <div class="box"><div class="label">Repaid</div><div class="value">${fmt(summary.total_repaid)}</div></div>
-              <div class="box"><div class="label">Balance</div><div class="value">${fmt(summary.total_balance)}</div></div>
-              <div class="box"><div class="label">Interest Profit</div><div class="value">${fmt(profitPosition.interest_profit_total)}</div></div>
-              <div class="box"><div class="label">Accrued Interest</div><div class="value">${fmt(profitPosition.accrued_interest_total)}</div></div>
-              <div class="box"><div class="label">Overdue</div><div class="value">${summary.overdue_count}</div></div>
+              <div class="box"><div class="label">${documentText("Given Out")}</div><div class="value">${fmt(summary.total_loans)}</div></div>
+              <div class="box"><div class="label">${documentText("Repaid")}</div><div class="value">${fmt(summary.total_repaid)}</div></div>
+              <div class="box"><div class="label">${documentText("Balance")}</div><div class="value">${fmt(summary.total_balance)}</div></div>
+              <div class="box"><div class="label">${documentText("Interest Profit")}</div><div class="value">${fmt(profitPosition.interest_profit_total)}</div></div>
+              <div class="box"><div class="label">${documentText("Accrued Interest")}</div><div class="value">${fmt(profitPosition.accrued_interest_total)}</div></div>
+              <div class="box"><div class="label">${documentText("Overdue")}</div><div class="value">${summary.overdue_count}</div></div>
             </div>
 
-            <h2>Loans Details</h2>
+            <h2>${documentText("Loans Details")}</h2>
             <table>
               <thead>
                 <tr>
-                  <th>Borrower</th>
-                  <th>Store</th>
-                  <th>Status</th>
-                  <th>Given</th>
-                  <th>Repaid</th>
-                  <th>Balance</th>
-                  <th>Rate</th>
-                  <th>Expected Interest</th>
-                  <th>Interest Paid</th>
+                  <th>${documentText("Borrower")}</th>
+                  <th>${documentText("Store")}</th>
+                  <th>${documentText("Status")}</th>
+                  <th>${documentText("Given")}</th>
+                  <th>${documentText("Repaid")}</th>
+                  <th>${documentText("Balance")}</th>
+                  <th>${documentText("Rate")}</th>
+                  <th>${documentText("Expected Interest")}</th>
+                  <th>${documentText("Interest Paid")}</th>
                 </tr>
               </thead>
-              <tbody>${rows || "<tr><td colspan='9'>No loans found</td></tr>"}</tbody>
+              <tbody>${rows || `<tr><td colspan='9'>${documentText("No loans found")}</td></tr>`}</tbody>
             </table>
           </body>
         </html>
@@ -570,10 +574,10 @@ await load();
           dialogTitle: "Share Business Position PDF",
         });
       } else {
-        Alert.alert("PDF Ready", file.uri);
+        Alert.alert(uiText("PDF Ready"), file.uri);
       }
     } catch (e: any) {
-      Alert.alert("PDF Report", e?.message ?? "Imeshindikana kutengeneza PDF.");
+      Alert.alert(uiText("PDF Report"), e?.message ?? uiText("Imeshindikana kutengeneza PDF."));
     } finally {
       setExportingPdf(false);
     }
@@ -631,11 +635,9 @@ await load();
 
         <View style={{ flex: 1 }}>
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 22 }}>
-            Business Position
-          </Text>
+            {uiText("Business Position")}</Text>
           <Text style={{ color: UI.muted, fontWeight: "800" }}>
-            Loans & money given out
-          </Text>
+            {uiText("Loans & money given out")}</Text>
         </View>
 
         <Pressable
@@ -672,15 +674,15 @@ await load();
       <View style={{ height: 14 }} />
 
       <Card style={{ gap: 12, borderRadius: 22, backgroundColor: "#F7FAFF" }}>
-        <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>Loans Summary</Text>
+        <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>{uiText("Loans Summary")}</Text>
 
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-          <Stat label="Given Out" value={fmt(summary.total_loans)} />
-          <Stat label="Repaid" value={fmt(summary.total_repaid)} />
-          <Stat label="Balance" value={fmt(summary.total_balance)} />
-          <Stat label="Interest Profit" value={fmt(profitPosition.interest_profit_total)} />
-          <Stat label="Accrued Interest" value={fmt(profitPosition.accrued_interest_total)} />
-          <Stat label="Overdue" value={String(summary.overdue_count)} />
+          <Stat label={uiText("Given Out")} value={fmt(summary.total_loans)} />
+          <Stat label={uiText("Repaid")} value={fmt(summary.total_repaid)} />
+          <Stat label={uiText("Balance")} value={fmt(summary.total_balance)} />
+          <Stat label={uiText("Interest Profit")} value={fmt(profitPosition.interest_profit_total)} />
+          <Stat label={uiText("Accrued Interest")} value={fmt(profitPosition.accrued_interest_total)} />
+          <Stat label={uiText("Overdue")} value={String(summary.overdue_count)} />
         </View>
       </Card>
 
@@ -688,8 +690,7 @@ await load();
 
       <Card style={{ gap: 10, borderRadius: 22, backgroundColor: "#F7FAFF" }}>
         <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-          Business Position Controls
-        </Text>
+          {uiText("Business Position Controls")}</Text>
 
         <View style={{ flexDirection: "row", gap: 8 }}>
           {(["OVERVIEW", "LOANS", "REPAYMENTS"] as TabKey[]).map((x) => (
@@ -713,8 +714,7 @@ await load();
 
         {!canWrite ? (
           <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 20 }}>
-            Unaweza kuona business position, lakini kurekodi loans na repayments ni Owner/Admin only.
-          </Text>
+            {uiText("Unaweza kuona business position, lakini kurekodi loans na repayments ni Owner/Admin only.")}</Text>
         ) : null}
       </Card>
 
@@ -726,8 +726,7 @@ await load();
 
           <Card style={{ gap: 12, borderRadius: 22, backgroundColor: "#F7FAFF" }}>
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-              Position Overview
-            </Text>
+              {uiText("Position Overview")}</Text>
 
             <View
               style={{
@@ -750,7 +749,7 @@ await load();
               }}
             >
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-                Exposure Level: {exposureLevel}
+                {uiText("Exposure Level:")}{exposureLevel}
               </Text>
               <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 20 }}>
                 {exposureMessage}
@@ -758,36 +757,34 @@ await load();
             </View>
 
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-              <Stat label="Open" value={String(summary.open_count)} />
-              <Stat label="Partial" value={String(summary.partial_count)} />
-              <Stat label="Paid" value={String(summary.paid_count)} />
-              <Stat label="Active" value={String(activeLoans.length)} />
+              <Stat label={uiText("Open")} value={String(summary.open_count)} />
+              <Stat label={uiText("Partial")} value={String(summary.partial_count)} />
+              <Stat label={uiText("Paid")} value={String(summary.paid_count)} />
+              <Stat label={uiText("Active")} value={String(activeLoans.length)} />
             </View>
 
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-              <Stat label="Recovery Rate" value={`${recoveryRate.toFixed(1)}%`} />
-              <Stat label="Cash Exposure" value={fmt(summary.total_balance)} />
+              <Stat label={uiText("Recovery Rate")} value={`${recoveryRate.toFixed(1)}%`} />
+              <Stat label={uiText("Cash Exposure")} value={fmt(summary.total_balance)} />
               <Stat
-                label="Interest Profit"
+                label={uiText("Interest Profit")}
                 value={fmt(profitPosition.interest_profit_total)}
-                hint="faida halisi ya riba iliyolipwa"
+                hint={uiText("faida halisi ya riba iliyolipwa")}
               />
               <Stat
-                label="Accrued Interest"
+                label={uiText("Accrued Interest")}
                 value={fmt(profitPosition.accrued_interest_total)}
-                hint="riba iliyoiva lakini haijalipwa"
+                hint={uiText("riba iliyoiva lakini haijalipwa")}
               />
               <Stat
-                label="Top Borrower"
+                label={uiText("Top Borrower")}
                 value={topBorrower ? topBorrower.borrower_name : "—"}
-                hint={topBorrower ? fmt(toNum(topBorrower.balance_amount)) : "no active borrower"}
+                hint={topBorrower ? fmt(toNum(topBorrower.balance_amount)) : uiText("no active borrower")}
               />
             </View>
 
             <Text style={{ color: UI.faint, fontWeight: "800", lineHeight: 20 }}>
-              Loans zinazorekodiwa hapa ni fedha iliyotoka kwenye biashara. Principal haichanganywi na sales/cashier.
-              Faida ya riba iliyolipwa inaonekana kama Interest Profit kwa ajili ya business position.
-            </Text>
+              {uiText("Loans zinazorekodiwa hapa ni fedha iliyotoka kwenye biashara. Principal haichanganywi na sales/cashier. Faida ya riba iliyolipwa inaonekana kama Interest Profit kwa ajili ya business position.")}</Text>
           </Card>
         </>
       ) : null}
@@ -800,13 +797,12 @@ await load();
 
               <Card style={{ gap: 10, borderRadius: 22, backgroundColor: "#F7FAFF" }}>
                 <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-                  Record Loan
-                </Text>
+                  {uiText("Record Loan")}</Text>
 
                 <TextInput
                   value={borrowerName}
                   onChangeText={setBorrowerName}
-                  placeholder="Borrower name"
+                  placeholder={uiText("Borrower name")}
                   placeholderTextColor={UI.faint}
                   style={{
                     color: UI.text,
@@ -820,7 +816,7 @@ await load();
                 <TextInput
                   value={borrowerPhone}
                   onChangeText={setBorrowerPhone}
-                  placeholder="Phone optional"
+                  placeholder={uiText("Phone optional")}
                   placeholderTextColor={UI.faint}
                   style={{
                     color: UI.text,
@@ -834,7 +830,7 @@ await load();
                 <TextInput
                   value={amount}
                   onChangeText={setAmount}
-                  placeholder="Amount"
+                  placeholder={uiText("Amount")}
                   keyboardType="numeric"
                   placeholderTextColor={UI.faint}
                   style={{
@@ -849,7 +845,7 @@ await load();
              <TextInput
   value={dueDate}
   onChangeText={setDueDate}
-  placeholder="Due date optional (YYYY-MM-DD)"
+  placeholder={uiText("Due date optional (YYYY-MM-DD)")}
   placeholderTextColor={UI.faint}
   style={{
     color: UI.text,
@@ -871,11 +867,10 @@ await load();
   }}
 >
   <Text style={{ color: UI.text, fontWeight: "900" }}>
-    {interestEnabled ? "Interest Enabled" : "Interest Disabled"}
+    {interestEnabled ? uiText("Interest Enabled") : uiText("Interest Disabled")}
   </Text>
   <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 4 }}>
-    Riba ni optional. Ukiwasha, mfumo utaongeza riba ya mwezi kwenye balance iliyobaki.
-  </Text>
+    {uiText("Riba ni optional. Ukiwasha, mfumo utaongeza riba ya mwezi kwenye balance iliyobaki.")}</Text>
 </Pressable>
 
 {interestEnabled ? (
@@ -883,7 +878,7 @@ await load();
     <TextInput
       value={interestRate}
       onChangeText={setInterestRate}
-      placeholder="Monthly interest % mfano 10"
+      placeholder={uiText("Monthly interest % mfano 10")}
       keyboardType="numeric"
       placeholderTextColor={UI.faint}
       style={{
@@ -906,13 +901,12 @@ await load();
       }}
     >
       <Text style={{ color: UI.text, fontWeight: "900" }}>
-        First Month Preview
-      </Text>
+        {uiText("First Month Preview")}</Text>
       <Text style={{ color: UI.muted, fontWeight: "800" }}>
-        Riba ya mwezi wa kwanza: {fmt(toNum(interestPreview.interest))}
+        {uiText("Riba ya mwezi wa kwanza:")}{fmt(toNum(interestPreview.interest))}
       </Text>
       <Text style={{ color: UI.text, fontWeight: "900" }}>
-        Jumla anayotarajiwa kulipa: {fmt(toNum(interestPreview.total))}
+        {uiText("Jumla anayotarajiwa kulipa:")}{fmt(toNum(interestPreview.total))}
       </Text>
     </View>
   </>
@@ -921,7 +915,7 @@ await load();
                 <TextInput
                   value={borrowerNote}
                   onChangeText={setBorrowerNote}
-                  placeholder="Borrower note optional"
+                  placeholder={uiText("Borrower note optional")}
                   placeholderTextColor={UI.faint}
                   multiline
                   style={{
@@ -948,7 +942,7 @@ await load();
                   }}
                 >
                   <Text style={{ color: UI.text, fontWeight: "900" }}>
-                    {saving ? "Saving..." : "Save Business Loan"}
+                    {saving ? uiText("Saving...") : uiText("Save Business Loan")}
                   </Text>
                 </Pressable>
               </Card>
@@ -959,13 +953,12 @@ await load();
 
           <Card style={{ gap: 10, borderRadius: 22, backgroundColor: "#F7FAFF" }}>
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-              All Loans
-            </Text>
+              {uiText("All Loans")}</Text>
 
             <TextInput
               value={search}
               onChangeText={setSearch}
-              placeholder="Search borrower, phone, store, status"
+              placeholder={uiText("Search borrower, phone, store, status")}
               placeholderTextColor={UI.faint}
               style={{
                 color: UI.text,
@@ -1031,7 +1024,7 @@ await load();
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                     <Text style={{ color: UI.muted, fontWeight: "800", flex: 1 }}>
                       {l.store_name} • {fmtDate(l.loan_date)}
-                      {l.due_date ? ` • Due ${fmtDate(l.due_date)}` : ""}
+                      {l.due_date ? uiText(" • Due {p0}", {p0: (fmtDate(l.due_date))}) : ""}
                     </Text>
 
                     <View
@@ -1051,34 +1044,34 @@ await load();
                           fontSize: 11,
                         }}
                       >
-                        {getLoanTone(l.status, l.is_overdue).label}
+                        {uiText(getLoanTone(l.status, l.is_overdue).label)}
                       </Text>
                     </View>
                   </View>
                   <Text style={{ color: UI.text, fontWeight: "900" }}>
-                    Balance: {fmt(toNum(l.balance_amount))}
+                    {uiText("Balance:")}{fmt(toNum(l.balance_amount))}
                   </Text>
                   <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 12 }}>
-                    Given: {fmt(toNum(l.principal_amount))} • Repaid:{" "}
+                    {uiText("Given:")}{fmt(toNum(l.principal_amount))} {uiText("• Repaid:")}{" "}
                     {fmt(toNum(l.repaid_amount))}
                   </Text>
 
                   {l.interest_enabled ? (
                     <Text style={{ color: "#B45309", fontWeight: "900", fontSize: 12 }}>
-                      Riba: {toNum(l.interest_rate_percent)}% • Expected Interest:{" "}
+                      {uiText("Riba:")}{toNum(l.interest_rate_percent)}{uiText("% • Expected Interest:")}{" "}
                       {fmt(getLoanInterestExpected(l))}
                     </Text>
                   ) : null}
                   {!!l.purpose && (
                     <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                      Purpose: {l.purpose}
+                      {uiText("Purpose:")}{l.purpose}
                     </Text>
                   )}
                 </Pressable>
               ))}
               </View>
             ) : (
-              <Text style={{ color: UI.muted, fontWeight: "800" }}>No loans found.</Text>
+              <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("No loans found.")}</Text>
             )}
           </Card>
         </>
@@ -1090,13 +1083,12 @@ await load();
 
           <Card style={{ gap: 10, borderRadius: 22, backgroundColor: "#F7FAFF" }}>
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-              Select Loan for Repayment
-            </Text>
+              {uiText("Select Loan for Repayment")}</Text>
 
             <TextInput
               value={repaymentSearch}
               onChangeText={setRepaymentSearch}
-              placeholder="Search active borrower, phone, store, status"
+              placeholder={uiText("Search active borrower, phone, store, status")}
               placeholderTextColor={UI.faint}
               style={{
                 color: UI.text,
@@ -1164,7 +1156,7 @@ await load();
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                     <Text style={{ color: UI.muted, fontWeight: "800", flex: 1 }}>
                       {l.store_name} • {fmtDate(l.loan_date)}
-                      {l.due_date ? ` • Due ${fmtDate(l.due_date)}` : ""}
+                      {l.due_date ? uiText(" • Due {p0}", {p0: (fmtDate(l.due_date))}) : ""}
                     </Text>
 
                     <View
@@ -1184,20 +1176,19 @@ await load();
                           fontSize: 11,
                         }}
                       >
-                        {getLoanTone(l.status, l.is_overdue).label}
+                        {uiText(getLoanTone(l.status, l.is_overdue).label)}
                       </Text>
                     </View>
                   </View>
                   <Text style={{ color: UI.text, fontWeight: "900" }}>
-                    Balance: {fmt(toNum(l.balance_amount))}
+                    {uiText("Balance:")}{fmt(toNum(l.balance_amount))}
                   </Text>
                 </Pressable>
               ))}
               </View>
             ) : (
               <Text style={{ color: UI.muted, fontWeight: "800" }}>
-                No active loans match this filter.
-              </Text>
+                {uiText("No active loans match this filter.")}</Text>
             )}
           </Card>
 
@@ -1207,8 +1198,7 @@ await load();
 
               <Card style={{ gap: 10, borderRadius: 22, backgroundColor: "#F7FAFF" }}>
                 <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-                  Record Repayment
-                </Text>
+                  {uiText("Record Repayment")}</Text>
 
                 {selectedLoan ? (
                   <View
@@ -1225,52 +1215,51 @@ await load();
                       {selectedLoan.borrower_name}
                     </Text>
                     <Text style={{ color: UI.muted, fontWeight: "800" }}>
-                      Balance: {fmt(toNum(selectedLoan.balance_amount))}
+                      {uiText("Balance:")}{fmt(toNum(selectedLoan.balance_amount))}
                     </Text>
 
                     <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 12 }}>
-                      Given: {fmt(toNum(selectedLoan.principal_amount))} • Repaid:{" "}
+                      {uiText("Given:")}{fmt(toNum(selectedLoan.principal_amount))} {uiText("• Repaid:")}{" "}
                       {fmt(toNum(selectedLoan.repaid_amount))}
                     </Text>
 
                     {!!selectedLoan.borrower_phone && (
                       <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                        Phone: {selectedLoan.borrower_phone}
+                        {uiText("Phone:")}{selectedLoan.borrower_phone}
                       </Text>
                     )}
 
                     {!!selectedLoan.due_date && (
                       <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                        Due Date: {fmtDate(selectedLoan.due_date)}
+                        {uiText("Due Date:")}{fmtDate(selectedLoan.due_date)}
                       </Text>
                     )}
 
                     {!!selectedLoan.purpose && (
                       <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                        Purpose: {selectedLoan.purpose}
+                        {uiText("Purpose:")}{selectedLoan.purpose}
                       </Text>
                     )}
 
                  {selectedLoan.interest_enabled ? (
   <View style={{ gap: 3 }}>
     <Text style={{ color: "#B45309", fontWeight: "900", fontSize: 12 }}>
-      Riba: {toNum(selectedLoan.interest_rate_percent)}% • Expected Interest:{" "}
+      {uiText("Riba:")}{toNum(selectedLoan.interest_rate_percent)}{uiText("% • Expected Interest:")}{" "}
       {fmt(getLoanInterestExpected(selectedLoan))}
     </Text>
     <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
-      Interest Paid: {fmt(getLoanInterestRecovered(selectedLoan))} • Remaining:{" "}
+      {uiText("Interest Paid:")}{fmt(getLoanInterestRecovered(selectedLoan))} {uiText("• Remaining:")}{" "}
       {fmt(getLoanInterestRemaining(selectedLoan))}
     </Text>
     <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 12 }}>
-      Profit Status: {getLoanProfitStatus(selectedLoan)}
+      {uiText("Profit Status:")}{getLoanProfitStatus(selectedLoan)}
     </Text>
   </View>
 ) : null}
                   </View>
                 ) : (
                   <Text style={{ color: UI.muted, fontWeight: "800" }}>
-                    Chagua active loan hapo juu, kisha weka kiasi cha repayment.
-                  </Text>
+                    {uiText("Chagua active loan hapo juu, kisha weka kiasi cha repayment.")}</Text>
                 )}
 
                 {selectedLoan ? (
@@ -1285,8 +1274,7 @@ await load();
                     }}
                   >
                     <Text style={{ color: UI.text, fontWeight: "900" }}>
-                      Repayment History
-                    </Text>
+                      {uiText("Repayment History")}</Text>
 
                     {paymentsLoading ? (
                       <ActivityIndicator />
@@ -1305,7 +1293,7 @@ await load();
                             {fmt(toNum(p.amount))}
                           </Text>
                         <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-  Principal: {fmt(toNum(p.principal_amount))} • Interest: {fmt(toNum(p.interest_amount))}
+  {uiText("Principal:")}{fmt(toNum(p.principal_amount))} {uiText("• Interest:")}{fmt(toNum(p.interest_amount))}
 </Text>
 <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
   {fmtDate(p.payment_date || p.created_at)}
@@ -1315,8 +1303,7 @@ await load();
                       ))
                     ) : (
                       <Text style={{ color: UI.muted, fontWeight: "800" }}>
-                        No repayments recorded yet.
-                      </Text>
+                        {uiText("No repayments recorded yet.")}</Text>
                     )}
                   </View>
                 ) : null}
@@ -1324,7 +1311,7 @@ await load();
                 <TextInput
                   value={repayAmount}
                   onChangeText={setRepayAmount}
-                  placeholder="Repayment amount"
+                  placeholder={uiText("Repayment amount")}
                   keyboardType="numeric"
                   placeholderTextColor={UI.faint}
                   style={{
@@ -1351,7 +1338,7 @@ await load();
                   }}
                 >
                   <Text style={{ color: UI.text, fontWeight: "900" }}>
-                    {saving ? "Saving..." : "Save Repayment"}
+                    {saving ? uiText("Saving...") : uiText("Save Repayment")}
                   </Text>
                 </Pressable>
               </Card>

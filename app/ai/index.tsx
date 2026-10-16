@@ -1,3 +1,7 @@
+import {useLanguage} from "@/src/i18n/LanguageProvider";
+import {translateOwnedAlert,translateOwnedAlertTitle} from "@/src/i18n/presentation";
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/ai/index.tsx
 
 import { Ionicons as BaseIonicons } from "@expo/vector-icons";
@@ -2881,6 +2885,9 @@ function buildSmartFollowupChips(args: {
   return out.slice(0, 5);
 }
 export default function AiChatScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
+ const {language}=useLanguage();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const org = useOrg();const aiContext = useMemo(() => buildAiContext(org), [
@@ -2949,22 +2956,22 @@ export default function AiChatScreen() {
     try {
       const normalized = normalizeImageUrl(imgPreview.uri);
       if (!normalized) {
-        Alert.alert("Image missing", "Hakuna picha ya ku-save.");
+        Alert.alert(uiText("Image missing"), uiText("Hakuna picha ya ku-save."));
         return;
       }
 
       const perm = await MediaLibrary.requestPermissionsAsync();
       if (perm.status !== "granted") {
-        Alert.alert("Permission required", "Ruhusu gallery/media access ili ku-save picha.");
+        Alert.alert(uiText("Permission required"), uiText("Ruhusu gallery/media access ili ku-save picha."));
         return;
       }
 
       const localUri = await ensureLocalImageFile(normalized);
       await MediaLibrary.saveToLibraryAsync(localUri);
 
-      Alert.alert("Saved", "Picha imehifadhiwa kwenye gallery.");
+      Alert.alert(uiText("Saved"), uiText("Picha imehifadhiwa kwenye gallery."));
     } catch (e: any) {
-      Alert.alert("Save failed", clean(e?.message) || "Imeshindikana ku-save picha.");
+      Alert.alert(uiText("Save failed"), clean(e?.message) || uiText("Imeshindikana ku-save picha."));
     }
   }, [imgPreview.uri]);
 
@@ -2972,7 +2979,7 @@ export default function AiChatScreen() {
     try {
       const normalized = normalizeImageUrl(imgPreview.uri);
       if (!normalized) {
-        Alert.alert("Image missing", "Hakuna picha ya ku-share.");
+        Alert.alert(uiText("Image missing"), uiText("Hakuna picha ya ku-share."));
         return;
       }
 
@@ -2988,7 +2995,7 @@ export default function AiChatScreen() {
         message: localUri,
       });
     } catch (e: any) {
-      Alert.alert("Share failed", clean(e?.message) || "Imeshindikana ku-share picha.");
+      Alert.alert(uiText("Share failed"), clean(e?.message) || uiText("Imeshindikana ku-share picha."));
     }
   }, [imgPreview.uri]);
 
@@ -2996,14 +3003,14 @@ export default function AiChatScreen() {
     try {
       const value = clean(prompt);
       if (!value) {
-        Alert.alert("Prompt missing", "Hakuna prompt ya kukopi.");
+        Alert.alert(uiText("Prompt missing"), uiText("Hakuna prompt ya kukopi."));
         return;
       }
 
       await Clipboard.setStringAsync(value);
-      Alert.alert("Copied", "Prompt imekopiwa.");
+      Alert.alert(uiText("Copied"), uiText("Prompt imekopiwa."));
     } catch (e: any) {
-      Alert.alert("Copy failed", clean(e?.message) || "Imeshindikana kukopi prompt.");
+      Alert.alert(uiText("Copy failed"), clean(e?.message) || uiText("Imeshindikana kukopi prompt."));
     }
   }, []);
 
@@ -3183,7 +3190,7 @@ const scrollToLatest = useCallback((animated = false, force = false) => {
 
       const value = clean(prompt);
       if (!value) {
-        Alert.alert("Prompt missing", "Hakuna prompt ya kutumia tena.");
+        Alert.alert(uiText("Prompt missing"), uiText("Hakuna prompt ya kutumia tena."));
         return;
       }
 
@@ -3823,7 +3830,7 @@ useEffect(() => {
   const requireWorkerUrlOrAlert = useCallback(() => {
     if (!AI_WORKER_URL) {
       Alert.alert(
-        "AI Worker URL missing",
+        uiText("AI Worker URL missing"),
         "Weka EXPO_PUBLIC_AI_WORKER_URL kwenye .env (base URL ya Cloudflare Worker), kisha restart Metro.\n\n" +
           "Mfano:\nhttps://zetra-ai-worker.jofreyjofreysanga.workers.dev"
       );
@@ -3838,7 +3845,7 @@ useEffect(() => {
     }try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) {
-        Alert.alert("Permission required", "Ruhusu Photos/Media ili ku-attach picha.");
+        Alert.alert(uiText("Permission required"), uiText("Ruhusu Photos/Media ili ku-attach picha."));
         return;
       }
 
@@ -3853,7 +3860,7 @@ useEffect(() => {
 
       const asset = res.assets?.[0];
       if (!asset?.uri || !asset?.base64) {
-        Alert.alert("Failed", "Imeshindikana kupata image base64. Jaribu tena.");
+        Alert.alert(uiText("Failed"), uiText("Imeshindikana kupata image base64. Jaribu tena."));
         return;
       }
 
@@ -3873,7 +3880,7 @@ requestAnimationFrame(() => {
         scrollToLatest(false, true);
       });
     } catch (e: any) {
-      Alert.alert("Error", clean(e?.message) || "Image pick error");
+      Alert.alert(uiText("Error"), clean(e?.message) || uiText("Image pick error"));
     }
   }, [currentPlanLabel, ownerOnlyReason, requireAi]);
 
@@ -3891,7 +3898,7 @@ requestAnimationFrame(() => {
 
       const perm = await Audio.requestPermissionsAsync();
       if (!perm.granted) {
-        Alert.alert("Permission required", "Ruhusu Microphone ili AI isikie sauti.");
+        Alert.alert(uiText("Permission required"), uiText("Ruhusu Microphone ili AI isikie sauti."));
         return;
       }
 
@@ -3933,7 +3940,7 @@ requestAnimationFrame(() => {
       setRecording(rec);
       setRecordingOn(true);
     } catch (e: any) {
-      Alert.alert("Mic error", clean(e?.message) || "Failed to start recording");
+      Alert.alert(uiText("Mic error"), clean(e?.message) || uiText("Failed to start recording"));
       setRecording(null);
       setRecordingMs(0);
       setLiveMeter(-160);
@@ -3955,7 +3962,7 @@ setInput("...");
       setLiveMeter(-160);
 
       if (!uri) {
-        Alert.alert("Error", "Recording URI missing.");
+        Alert.alert(uiText("Error"), uiText("Recording URI missing."));
         setTranscribing(false);
         return;
       }
@@ -4018,14 +4025,14 @@ const out = await fetchJsonWithRetry(
       if (!out.ok) {
         const msg =
           clean(data?.error) || clean(data?.message) || clean(out.textBody) || `Transcription failed (${out.status})`;
-        Alert.alert("Transcribe failed", msg);
+        Alert.alert(uiText("Transcribe failed"), systemText(msg));
         setTranscribing(false);
         return;
       }
 
       const text = clean(data?.text);
       if (!text) {
-        Alert.alert("No text", "AI haikupata maneno. Jaribu tena ukikaribia mic.");
+        Alert.alert(uiText("No text"), uiText("AI haikupata maneno. Jaribu tena ukikaribia mic."));
         setTranscribing(false);
         return;
       }
@@ -4132,7 +4139,7 @@ await (async () => {
         scrollToLatest(false, true);
       });
     } catch (e: any) {
-      Alert.alert("Transcribe error", clean(e?.message) || "Unknown transcribe error");
+      Alert.alert(uiText("Transcribe error"), clean(e?.message) || uiText("Unknown transcribe error"));
     } finally {
       setTranscribing(false);
       netAbortRef.current = null;
@@ -6653,7 +6660,7 @@ const TopBar = (
           transform: [{ scale: pressed ? 0.985 : 1 }],
         })}
       >
-        <Text style={{ color: UI.text, fontWeight: "900" }}>Reset</Text>
+        <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Reset")}</Text>
       </Pressable>
     </View>
   </View>
@@ -6707,7 +6714,7 @@ const imagePromptText = !isUser
             color={UI.text}
           />
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }}>
-            {isUser ? "You" : `ZETRA AI • ${intentLabel}`}
+            {isUser ? uiText("You") : `ZETRA AI • ${intentLabel}`}
           </Text>
           {!!msgTime && (
             <>
@@ -6766,7 +6773,7 @@ const imagePromptText = !isUser
           }}
         >
           <Text style={{ color: "#fff", fontWeight: "900", fontSize: 10 }}>
-            IMG {idx + 1}
+            {uiText("IMG")}{idx + 1}
           </Text>
         </View>
       </Pressable>
@@ -6804,14 +6811,13 @@ const imagePromptText = !isUser
             <View style={{ flex: 1 }}>
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 17 }}>
                 {item.analysisIntent === "FORECAST"
-                  ? "🔮 Autopilot Forecast"
+                  ? uiText("🔮 Autopilot Forecast")
                   : item.analysisIntent === "COACH"
-                  ? "💸 Autopilot Profit Coach"
-                  : "✨ Autopilot Business Alerts"}
+                  ? uiText("💸 Autopilot Profit Coach")
+                  : uiText("✨ Autopilot Business Alerts")}
               </Text>
               <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 11, marginTop: 3 }}>
-                Smart highlights generated from this reply
-              </Text>
+                {uiText("Smart highlights generated from this reply")}</Text>
             </View>
           </View>
 
@@ -6851,12 +6857,12 @@ const imagePromptText = !isUser
               >
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                   <Ionicons name={icon as any} size={16} color={UI.text} />
-                  <Text style={{ color: UI.text, fontWeight: "900", flex: 1 }}>{a.title}</Text>
+                  <Text style={{ color: UI.text, fontWeight: "900", flex: 1 }}>{translateOwnedAlertTitle(language,a.title)}</Text>
                 </View>
 
                 {!!clean(a.message) && (
                   <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 6, lineHeight: 20 }}>
-                    {a.message}
+                    {translateOwnedAlert(language,a.message)}
                   </Text>
                 )}
               </View>
@@ -6944,7 +6950,7 @@ const imagePromptText = !isUser
                     })}
                   >
                     <Ionicons name="copy-outline" size={16} color={UI.text} />
-                    <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>Copy Prompt</Text>
+                    <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>{uiText("Copy Prompt")}</Text>
                   </Pressable>
 
                   <Pressable
@@ -6963,7 +6969,7 @@ const imagePromptText = !isUser
                     })}
                   >
                     <Ionicons name="create-outline" size={16} color={UI.text} />
-                    <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>Use Again</Text>
+                    <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>{uiText("Use Again")}</Text>
                   </Pressable>
                 </View>
 
@@ -6983,7 +6989,7 @@ const imagePromptText = !isUser
                   })}
                 >
                   <Ionicons name="refresh-outline" size={16} color={UI.text} />
-                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>Regenerate</Text>
+                  <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>{uiText("Regenerate")}</Text>
                 </Pressable>
               </View>
             )}
@@ -6998,7 +7004,7 @@ const imagePromptText = !isUser
   savePreviewImageToDevice,
   sharePreviewImage,
   useImagePromptAgainFromMessage,
-]);
+ uiText]);
 
 const RetryBanner = useMemo(() => {
     if (!retryCard.visible || !retryCard.payload) return null;
@@ -7036,10 +7042,9 @@ const RetryBanner = useMemo(() => {
             </View>
 
             <View style={{ flex: 1 }}>
-              <Text style={{ color: UI.text, fontWeight: "900" }}>{retryCard.label || "Retry"}</Text>
+              <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText(retryCard.label) || uiText("Retry")}</Text>
               <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 2 }} numberOfLines={2}>
-                Connection ilikatika au request haikukamilika. Gusa hapa ili ku-run tena response ya mwisho.
-              </Text>
+                {uiText("Connection ilikatika au request haikukamilika. Gusa hapa ili ku-run tena response ya mwisho.")}</Text>
             </View>
           </View>
 
@@ -7047,7 +7052,7 @@ const RetryBanner = useMemo(() => {
         </Pressable>
       </View>
     );
-  }, [retryCard.label, retryCard.payload, retryCard.visible, retryLast]);
+  }, [retryCard.label, retryCard.payload, retryCard.visible, retryLast, uiText]);
 
  const AttachRow = useMemo(() => {
     if (!attachedImages.length) return null;
@@ -7086,11 +7091,10 @@ const RetryBanner = useMemo(() => {
 
               <View>
                 <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
-                  Image {idx + 1}
+                  {uiText("Image")}{idx + 1}
                 </Text>
                 <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 11 }}>
-                  Ready to send
-                </Text>
+                  {uiText("Ready to send")}</Text>
               </View>
 
               <Pressable
@@ -7115,7 +7119,7 @@ const RetryBanner = useMemo(() => {
         </View>
       </View>
     );
-  }, [attachedImages, removeAttachedImage]);
+  }, [attachedImages, removeAttachedImage, uiText]);
 
   const canSend = useMemo(() => {
     if (!aiEnabled) return false;
@@ -7165,10 +7169,10 @@ const RetryBanner = useMemo(() => {
               </View>
               <View>
                 <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-                  {ownerOnlyReason ? "Owner Only" : "Upgrade Required"}
+                  {ownerOnlyReason ? uiText("Owner Only") : uiText("Upgrade Required")}
                 </Text>
                 <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 2 }}>
-                  {ownerOnlyReason ? "AI access restricted" : `AI locked (${currentPlanLabel})`}
+                  {ownerOnlyReason ? uiText("AI access restricted") : uiText("AI locked ({p0})", {p0: (currentPlanLabel)})}
                 </Text>
               </View>
             </View>
@@ -7194,8 +7198,8 @@ const RetryBanner = useMemo(() => {
           <View style={{ marginTop: 12 }}>
             <Text style={{ color: UI.text, fontWeight: "900" }}>
               {ownerOnlyReason
-                ? "AI ya ZETRA ni ya OWNER pekee."
-                : `AI haipatikani kwenye kifurushi cha ${currentPlanLabel}.`}
+                ? uiText("AI ya ZETRA ni ya OWNER pekee.")
+                : uiText("AI haipatikani kwenye kifurushi cha {p0}.", {p0: (currentPlanLabel)})}
             </Text>
             <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 8, lineHeight: 20 }}>
               {aiGateReason || defaultAiLockReason}
@@ -7223,7 +7227,7 @@ const RetryBanner = useMemo(() => {
                 })}
               >
                 <Ionicons name="sparkles" size={18} color={UI.text} />
-                <Text style={{ color: UI.text, fontWeight: "900" }}>Upgrade Plan</Text>
+                <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Upgrade Plan")}</Text>
               </Pressable>
             ) : null}
 
@@ -7240,7 +7244,7 @@ const RetryBanner = useMemo(() => {
                 justifyContent: "center",
               })}
             >
-              <Text style={{ color: UI.text, fontWeight: "900" }}>Close</Text>
+              <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Close")}</Text>
             </Pressable>
           </View>
         </Pressable>
@@ -7268,7 +7272,7 @@ const PlusMenu = (
         }}
       >
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>Menu</Text>
+          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>{uiText("Menu")}</Text>
 
           <Pressable
             onPress={() => setPlusOpen(false)}
@@ -7288,7 +7292,7 @@ const PlusMenu = (
           </Pressable>
         </View>
 <View style={{ marginTop: 14 }}>
-  <Text style={{ color: UI.muted, fontWeight: "900", marginBottom: 8 }}>Quick actions</Text>
+  <Text style={{ color: UI.muted, fontWeight: "900", marginBottom: 8 }}>{uiText("Quick actions")}</Text>
 
   <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
     <Pressable
@@ -7313,7 +7317,7 @@ const PlusMenu = (
       })}
     >
       <Ionicons name="image-outline" size={16} color={UI.text} />
-      <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>Attach Image</Text>
+      <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>{uiText("Attach Image")}</Text>
     </Pressable>
 
     {(clean(input) || attachedImages.length > 0) && !thinking ? (
@@ -7337,7 +7341,7 @@ const PlusMenu = (
         })}
       >
         <Ionicons name="close-circle-outline" size={16} color={UI.text} />
-        <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>Clear</Text>
+        <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>{uiText("Clear")}</Text>
       </Pressable>
     ) : null}
   </View>
@@ -7363,13 +7367,13 @@ const PlusMenu = (
             })}
           >
             <Ionicons name="card-outline" size={18} color={UI.text} />
-            <Text style={{ color: UI.text, fontWeight: "900" }}>Subscription</Text>
+            <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Subscription")}</Text>
           </Pressable>
         </View>
 
         {/* MOVED CARDS */}
         <View style={{ marginTop: 14 }}>
-          <Text style={{ color: UI.muted, fontWeight: "900", marginBottom: 8 }}>Current AI Status</Text>
+          <Text style={{ color: UI.muted, fontWeight: "900", marginBottom: 8 }}>{uiText("Current AI Status")}</Text>
 
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
             <View
@@ -7385,7 +7389,7 @@ const PlusMenu = (
               }}
             >
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
-                {aiEnabled ? "AI ON" : "LOCKED"}
+                {aiEnabled ? uiText("AI ON") : uiText("LOCKED")}
               </Text>
             </View>
 
@@ -7402,7 +7406,7 @@ const PlusMenu = (
               }}
             >
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
-                Plan: {currentPlanLabel}
+                {uiText("Plan:")}{currentPlanLabel}
               </Text>
             </View>
 
@@ -7420,7 +7424,7 @@ const PlusMenu = (
                 }}
               >
                 <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
-                  AI: {isOwner ? "OWNER ONLY" : "NO ACCESS"}
+                  {uiText("AI:")}{isOwner ? uiText("OWNER ONLY") : uiText("NO ACCESS")}
                 </Text>
               </View>
             ) : null}
@@ -7439,7 +7443,7 @@ const PlusMenu = (
                 }}
               >
                 <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
-                  Credits: {fmtNum(aiCreditsRemaining)} / {fmtNum(aiCreditsMonthly)}
+                  {uiText("Credits:")}{fmtNum(aiCreditsRemaining)} / {fmtNum(aiCreditsMonthly)}
                 </Text>
               </View>
             ) : null}
@@ -7448,17 +7452,17 @@ const PlusMenu = (
 
         {/* AI LANGUAGE */}
         <View style={{ marginTop: 16 }}>
-          <Text style={{ color: UI.muted, fontWeight: "900", marginBottom: 8 }}>AI Language</Text>
+          <Text style={{ color: UI.muted, fontWeight: "900", marginBottom: 8 }}>{uiText("AI Language")}</Text>
           <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-            <ModePill k="AUTO" label="Auto" />
-            <ModePill k="SW" label="Swahili" />
-            <ModePill k="EN" label="English" />
+            <ModePill k="AUTO" label={uiText("Auto")} />
+            <ModePill k="SW" label={uiText("Swahili")} />
+            <ModePill k="EN" label={uiText("English")} />
           </View>
         </View>
 
         {/* QUICK PROMPTS */}
         <View style={{ marginTop: 16, opacity: aiEnabled ? 1 : 0.55 }}>
-          <Text style={{ color: UI.muted, fontWeight: "900", marginBottom: 8 }}>Quick prompts</Text>
+          <Text style={{ color: UI.muted, fontWeight: "900", marginBottom: 8 }}>{uiText("Quick prompts")}</Text>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
             {quickChips.map((c) => (
               <Pressable
@@ -7480,7 +7484,7 @@ const PlusMenu = (
                 })}
               >
                 <Ionicons name={c.icon as any} size={14} color={UI.text} />
-                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>{c.label}</Text>
+                <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>{uiText(c.label)}</Text>
               </Pressable>
             ))}
           </View>
@@ -7488,7 +7492,7 @@ const PlusMenu = (
 {/* SMART FOLLOW-UP */}
         {aiEnabled && smartFollowupChips.length ? (
           <View style={{ marginTop: 16 }}>
-            <Text style={{ color: UI.muted, fontWeight: "900", marginBottom: 8 }}>Smart follow-up</Text>
+            <Text style={{ color: UI.muted, fontWeight: "900", marginBottom: 8 }}>{uiText("Smart follow-up")}</Text>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
               {smartFollowupChips.map((chip) => (
                 <Pressable
@@ -7508,7 +7512,7 @@ const PlusMenu = (
                   })}
                 >
                   <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
-                    {chip.label}
+                    {uiText(chip.label)}
                   </Text>
                 </Pressable>
               ))}
@@ -7545,7 +7549,7 @@ const PlusMenu = (
             })}
           >
             <Ionicons name="checkbox-outline" size={18} color={UI.text} />
-            <Text style={{ color: UI.text, fontWeight: "900" }}>Open Tasks</Text>
+            <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Open Tasks")}</Text>
           </Pressable>
         </View>
 
@@ -7570,7 +7574,7 @@ const PlusMenu = (
           >
             <Ionicons name="lock-closed-outline" size={18} color={UI.text} />
             <Text style={{ color: UI.text, fontWeight: "900" }}>
-              {ownerOnlyReason ? "AI Owner Only" : "AI Locked — Upgrade"}
+              {ownerOnlyReason ? uiText("AI Owner Only") : uiText("AI Locked — Upgrade")}
             </Text>
           </Pressable>
         ) : null}
@@ -7655,13 +7659,13 @@ borderRadius: 24,
             placeholder={
               aiEnabled
                 ? transcribing
-                  ? "Transcribing voice..."
+                  ? uiText("Transcribing voice...")
                   : attachedImages.length
-                  ? "Eleza picha au uliza AI ichambue..."
-                  : "Uliza ZETRA AI chochote kuhusu biashara yako..."
+                  ? uiText("Eleza picha au uliza AI ichambue...")
+                  : uiText("Uliza ZETRA AI chochote kuhusu biashara yako...")
                 : ownerOnlyReason
-                ? "AI ni ya OWNER pekee"
-                : `AI imezimwa (${currentPlanLabel}) — upgrade ili kutumia`
+                ? uiText("AI ni ya OWNER pekee")
+                : uiText("AI imezimwa ({p0}) — upgrade ili kutumia", {p0: (currentPlanLabel)})
             }
             placeholderTextColor={UI.faint}
             multiline
@@ -7757,8 +7761,7 @@ borderRadius: 24,
       }}
     >
       <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 11, width: 64 }}>
-        Listening...
-      </Text>
+        {uiText("Listening...")}</Text>
 
       <View
         style={{
@@ -7800,17 +7803,16 @@ borderRadius: 24,
           textAlign: "right",
         }}
       >
-        {(recordingMs / 1000).toFixed(1)}s
-      </Text>
+        {(recordingMs / 1000).toFixed(1)}{uiText("s")}</Text>
     </View>
   ) : (
     <>
       <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 11 }}>
         {transcribing
-          ? "🎙️ Voice inachakatwa..."
+          ? uiText("🎙️ Voice inachakatwa...")
           : attachedImages.length
-          ? `🖼️ ${attachedImages.length} image attached`
-          : "✨ AI ready"}
+          ? uiText("🖼️ {p0} image attached", {p0: (attachedImages.length)})
+          : uiText("✨ AI ready")}
       </Text>
 
       <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 11 }}>
@@ -7837,7 +7839,7 @@ borderRadius: 24,
             })}
           >
             <Ionicons name="stop-circle-outline" size={18} color={UI.text} />
-            <Text style={{ color: UI.text, fontWeight: "900" }}>STOP GENERATING</Text>
+            <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("STOP GENERATING")}</Text>
           </Pressable>
         </View>
       ) : !aiEnabled ? (
@@ -7858,7 +7860,7 @@ borderRadius: 24,
           >
             <Ionicons name="lock-closed-outline" size={18} color={UI.text} />
             <Text style={{ color: UI.text, fontWeight: "900" }}>
-              {ownerOnlyReason ? "OWNER ONLY AI" : "UPGRADE TO USE AI"}
+              {ownerOnlyReason ? uiText("OWNER ONLY AI") : uiText("UPGRADE TO USE AI")}
             </Text>
           </Pressable>
         </View>
@@ -7891,7 +7893,7 @@ borderRadius: 24,
           }}
         >
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>Tasks</Text>
+            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>{uiText("Tasks")}</Text>
 
             <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
               <Pressable
@@ -7931,18 +7933,17 @@ borderRadius: 24,
           </View>
 
           <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 6 }}>
-            Org: {org.activeOrgName ?? "—"} • Showing latest tasks saved by AI & manual.
-          </Text>
+            {uiText("Org:")}{org.activeOrgName ?? "—"} {uiText("• Showing latest tasks saved by AI & manual.")}</Text>
 
           {tasksLoading ? (
             <View style={{ paddingTop: 16, alignItems: "center" }}>
               <ActivityIndicator />
-              <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 10 }}>Loading tasks...</Text>
+              <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 10 }}>{uiText("Loading tasks...")}</Text>
             </View>
           ) : tasksError ? (
             <Card style={{ marginTop: 12, padding: 14, borderRadius: 18 }}>
-              <Text style={{ color: UI.text, fontWeight: "900" }}>Could not load tasks</Text>
-              <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 6 }}>{tasksError}</Text>
+              <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Could not load tasks")}</Text>
+              <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 6 }}>{systemText(tasksError)}</Text>
               <Pressable
                 onPress={() => void loadTasks()}
                 style={({ pressed }) => ({
@@ -7956,15 +7957,14 @@ borderRadius: 24,
                   justifyContent: "center",
                 })}
               >
-                <Text style={{ color: UI.text, fontWeight: "900" }}>Retry</Text>
+                <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Retry")}</Text>
               </Pressable>
             </Card>
           ) : tasks.length === 0 ? (
             <Card style={{ marginTop: 12, padding: 14, borderRadius: 18 }}>
-              <Text style={{ color: UI.text, fontWeight: "900" }}>No tasks yet</Text>
+              <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("No tasks yet")}</Text>
               <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 6 }}>
-                Ukiona “✅ Saved to Tasks: N” chini ya jibu la AI — itatokea hapa.
-              </Text>
+                {uiText("Ukiona “✅ Saved to Tasks: N” chini ya jibu la AI — itatokea hapa.")}</Text>
             </Card>
           ) : (
             <FlatList
@@ -7979,7 +7979,7 @@ borderRadius: 24,
                 const steps = Array.isArray(item.steps) ? item.steps : [];
                 return (
                   <Card style={{ padding: 14, borderRadius: 18, marginBottom: 10 }}>
-                    <Text style={{ color: UI.text, fontWeight: "900" }}>{item.title || "Untitled"}</Text>
+                    <Text style={{ color: UI.text, fontWeight: "900" }}>{item.title || uiText("Untitled")}</Text>
 
                     <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
                       <View
@@ -7994,7 +7994,7 @@ borderRadius: 24,
                           justifyContent: "center",
                         }}
                       >
-                        <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 12 }}>status: {st}</Text>
+                        <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 12 }}>{uiText("status:")}{st}</Text>
                       </View>
 
                       <View
@@ -8009,7 +8009,7 @@ borderRadius: 24,
                           justifyContent: "center",
                         }}
                       >
-                        <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 12 }}>priority: {pr}</Text>
+                        <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 12 }}>{uiText("priority:")}{pr}</Text>
                       </View>
 
                       {eta ? (
@@ -8025,14 +8025,14 @@ borderRadius: 24,
                             justifyContent: "center",
                           }}
                         >
-                          <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 12 }}>eta: {eta}</Text>
+                          <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 12 }}>{uiText("eta:")}{eta}</Text>
                         </View>
                       ) : null}
                     </View>
 
                     {steps.length ? (
                       <View style={{ marginTop: 10 }}>
-                        <Text style={{ color: UI.text, fontWeight: "900", marginBottom: 6 }}>Steps</Text>
+                        <Text style={{ color: UI.text, fontWeight: "900", marginBottom: 6 }}>{uiText("Steps")}</Text>
                         {steps.slice(0, 6).map((s, idx) => (
                           <Text key={`${item.id}_s_${idx}`} style={{ color: UI.muted, fontWeight: "800", marginTop: 4 }}>
                             • {clean(s)}
@@ -8040,8 +8040,7 @@ borderRadius: 24,
                         ))}
                         {steps.length > 6 ? (
                           <Text style={{ color: UI.faint, fontWeight: "800", marginTop: 6 }}>
-                            +{steps.length - 6} more...
-                          </Text>
+                            +{steps.length - 6} {uiText("more...")}</Text>
                         ) : null}
                       </View>
                     ) : null}
@@ -8138,7 +8137,7 @@ borderRadius: 24,
               })}
             >
               <Ionicons name="share-social-outline" size={18} color={UI.text} />
-              <Text style={{ color: UI.text, fontWeight: "900" }}>Share</Text>
+              <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Share")}</Text>
             </Pressable>
 
             <Pressable
@@ -8157,7 +8156,7 @@ borderRadius: 24,
               })}
             >
               <Ionicons name="download-outline" size={18} color={UI.text} />
-              <Text style={{ color: UI.text, fontWeight: "900" }}>Save</Text>
+              <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Save")}</Text>
             </Pressable>
           </View>
         )}
@@ -8245,7 +8244,7 @@ const Content = (
               }}
             >
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                <Text style={{ color: UI.text, fontWeight: "900" }}>{toolKey || "Tool"}</Text>
+                <Text style={{ color: UI.text, fontWeight: "900" }}>{toolKey || uiText("Tool")}</Text>
                 <Pressable
                   onPress={closeTool}
                   hitSlop={10}
@@ -8265,16 +8264,15 @@ const Content = (
               </View>
 
               <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 10 }}>
-                Tool sheet placeholder — tutaijaza baadae (Analyze/Research/Image/Agent).
-              </Text>
+                {uiText("Tool sheet placeholder — tutaijaza baadae (Analyze/Research/Image/Agent).")}</Text>
 
               {toolKey === "IMAGE" ? (
                 <View style={{ marginTop: 12 }}>
-                  <Text style={{ color: UI.text, fontWeight: "900" }}>Image Prompt</Text>
+                  <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Image Prompt")}</Text>
                   <TextInput
                     value={imagePrompt}
                     onChangeText={setImagePrompt}
-                    placeholder="Write an image prompt..."
+                    placeholder={uiText("Write an image prompt...")}
                     placeholderTextColor={UI.faint}
                     style={{
                       marginTop: 10,

@@ -35,6 +35,7 @@
  */
 
 import { supabase } from "@/src/supabase/supabaseClient";
+import { businessDateRange } from "@/src/business/businessTime";
 
 /**
  * ============================================================================
@@ -611,6 +612,8 @@ export async function getCreditIntelligence(
     toDate: string;
 
     topLimit?: number | null;
+    /** Resolved store/org timezone; omission preserves the existing Tanzania contract. */
+    businessTimezone?: string;
   }
 ): Promise<ZetraAiCreditIntelligence> {
   const organizationId =
@@ -654,12 +657,14 @@ export async function getCreditIntelligence(
     );
   }
 
-  const fromTimestamp =
+  const explicitRange = params.businessTimezone === undefined ? null :
+    businessDateRange(fromDate, toDate, params.businessTimezone);
+  const fromTimestamp = explicitRange?.fromInclusive ??
     businessDateStartTimestamp(
       fromDate
     );
 
-  const toExclusiveTimestamp =
+  const toExclusiveTimestamp = explicitRange?.toExclusive ??
     businessDateEndExclusiveTimestamp(
       toDate
     );

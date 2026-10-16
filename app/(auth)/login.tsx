@@ -1,3 +1,4 @@
+import {useAuthText} from "@/src/i18n/useAuthText";
 ﻿import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -114,6 +115,7 @@ function GlassInput({
 }
 
 function DesktopBrandPanel() {
+ const tr=useAuthText();
   return (
     <View
       style={{
@@ -218,8 +220,7 @@ function DesktopBrandPanel() {
               marginTop: 4,
             }}
           >
-            Professional business workspace for modern operations.
-          </Text>
+            {tr("Professional business workspace for modern operations.")}</Text>
         </View>
       </View>
 
@@ -235,8 +236,7 @@ function DesktopBrandPanel() {
             maxWidth: 520,
           }}
         >
-          Run your business with confidence.
-        </Text>
+          {tr("Run your business with confidence.")}</Text>
 
         <Text
           style={{
@@ -248,9 +248,7 @@ function DesktopBrandPanel() {
             maxWidth: 520,
           }}
         >
-          ZETRA BMS helps you manage stores, products, sales, finance, and staff
-          operations from one professional workspace.
-        </Text>
+          {tr("ZETRA BMS helps you manage stores, products, sales, finance, and staff operations from one professional workspace.")}</Text>
       </View>
 
       <View style={{ marginTop: 28, gap: 14 }}>
@@ -287,7 +285,7 @@ function DesktopBrandPanel() {
                 marginBottom: 6,
               }}
             >
-              {item.title}
+              {tr(item.title)}
             </Text>
             <Text
               style={{
@@ -297,7 +295,7 @@ function DesktopBrandPanel() {
                 fontSize: 14,
               }}
             >
-              {item.text}
+              {tr(item.text)}
             </Text>
           </View>
         ))}
@@ -317,7 +315,7 @@ function DesktopBrandPanel() {
             }}
           >
             <Text style={{ color: "rgba(255,255,255,0.80)", fontWeight: "900", fontSize: 12 }}>
-              {pill}
+              {tr(pill)}
             </Text>
           </View>
         ))}
@@ -327,6 +325,7 @@ function DesktopBrandPanel() {
 }
 
 export default function LoginScreen() {
+  const tr=useAuthText();
   const router = useRouter();
   useOrg();
   const { width } = useWindowDimensions();
@@ -387,8 +386,8 @@ const [showPassword, setShowPassword] = useState(false);
 
     if (!e) {
       Alert.alert(
-        "Email required",
-        "Andika email yako kwanza, kisha bonyeza Forgot Password."
+        tr("Email required"),
+        tr("Andika email yako kwanza, kisha bonyeza Forgot Password.")
       );
       return;
     }
@@ -408,13 +407,13 @@ const [showPassword, setShowPassword] = useState(false);
       if (error) throw error;
 
       Alert.alert(
-        "Reset email sent",
-        "Email ya kubadili password imetumwa. Fungua email yako, bonyeza link ya reset, kisha weka password mpya."
+        tr("Reset email sent"),
+        tr("Email ya kubadili password imetumwa. Fungua email yako, bonyeza link ya reset, kisha weka password mpya.")
       );
     } catch (err: any) {
       Alert.alert(
-        "Reset Failed",
-        err?.message ?? "Failed to send reset email."
+        tr("Reset Failed"),
+        err?.message ?? tr("Failed to send reset email.")
       );
     } finally {
       setSendingReset(false);
@@ -425,16 +424,16 @@ const [showPassword, setShowPassword] = useState(false);
 
     if (!e) {
       Alert.alert(
-        "Email required",
-        "Andika email yako kwanza, kisha bonyeza Resend Verification Email."
+        tr("Email required"),
+        tr("Andika email yako kwanza, kisha bonyeza Resend Verification Email.")
       );
       return;
     }
 
     if (!e.includes("@") || !e.includes(".")) {
       Alert.alert(
-        "Invalid Email",
-        "Tafadhali andika email address sahihi."
+        tr("Invalid Email"),
+        tr("Tafadhali andika email address sahihi.")
       );
       return;
     }
@@ -460,12 +459,12 @@ const [showPassword, setShowPassword] = useState(false);
       if (error) throw error;
 
       Alert.alert(
-        "Verification email sent",
-        `Tumetuma verification email nyingine kwenda:\n\n${e}\n\nFungua inbox yako na bonyeza Verify Account. Kama huioni, angalia Spam/Junk pia.`
+        tr("Verification email sent"),
+        tr("auth.resendEmailBody", { email: e })
       );
     } catch (err: any) {
       const msg =
-        err?.message ?? "Imeshindikana kutuma verification email.";
+        err?.message ?? tr("Imeshindikana kutuma verification email.");
 
       const lower = String(msg).toLowerCase();
 
@@ -476,13 +475,13 @@ const [showPassword, setShowPassword] = useState(false);
         lower.includes("security purposes")
       ) {
         Alert.alert(
-          "Please wait",
-          "Umetuma verification email mara nyingi kwa muda mfupi. Subiri kidogo kisha ujaribu tena."
+          tr("Please wait"),
+          tr("Umetuma verification email mara nyingi kwa muda mfupi. Subiri kidogo kisha ujaribu tena.")
         );
         return;
       }
 
-      Alert.alert("Verification Failed", msg);
+      Alert.alert(tr("Verification Failed"), msg);
     } finally {
       setResendingVerification(false);
     }
@@ -498,18 +497,18 @@ const [showPassword, setShowPassword] = useState(false);
 
       await new Promise<void>((resolve) => {
         Alert.alert(
-          "Enable Fingerprint Login?",
-          "Unataka kuwezesha login kwa fingerprint/biometric kwenye simu hii? Utaendelea pia kutumia password ya kawaida ukitaka.",
+          tr("Enable Fingerprint Login?"),
+          tr("Unataka kuwezesha login kwa fingerprint/biometric kwenye simu hii? Utaendelea pia kutumia password ya kawaida ukitaka."),
           [
-            { text: "Not now", style: "cancel", onPress: () => resolve() },
+            { text: tr("Not now"), style: "cancel", onPress: () => resolve() },
             {
-              text: "Enable",
+              text: tr("Enable"),
               onPress: async () => {
                 try {
                   const auth = await LocalAuthentication.authenticateAsync({
-                    promptMessage: "Confirm Fingerprint",
-                    fallbackLabel: "Use device passcode",
-                    cancelLabel: "Cancel",
+                    promptMessage: tr("Confirm Fingerprint"),
+                    fallbackLabel: tr("Use device passcode"),
+                    cancelLabel: tr("Cancel"),
                     disableDeviceFallback: false,
                   });
 
@@ -545,12 +544,12 @@ const [showPassword, setShowPassword] = useState(false);
     const p = String(override?.password ?? password);
 
     if (!e) {
-      Alert.alert("Missing", "Email is required.");
+      Alert.alert(tr("Missing"), tr("Email is required."));
       return;
     }
 
     if (!p) {
-      Alert.alert("Missing", "Password is required.");
+      Alert.alert(tr("Missing"), tr("Password is required."));
       return;
     }
 
@@ -586,8 +585,8 @@ const [showPassword, setShowPassword] = useState(false);
         await clearCorruptSupabaseSession();
 
         Alert.alert(
-          "Verify your email",
-          "Email yako bado haijaverify. Fungua email yako, verify account, kisha login."
+          tr("Verify your email"),
+          tr("Email yako bado haijaverify. Fungua email yako, verify account, kisha login.")
         );
         return;
       }
@@ -610,8 +609,8 @@ const [showPassword, setShowPassword] = useState(false);
         await clearCorruptSupabaseSession();
 
         Alert.alert(
-          "Account unavailable",
-          "Account hii imezimwa au imeondolewa. Huwezi kuingia tena."
+          tr("Account unavailable"),
+          tr("Account hii imezimwa au imeondolewa. Huwezi kuingia tena.")
         );
         return;
       }
@@ -670,7 +669,7 @@ const [showPassword, setShowPassword] = useState(false);
 
       router.replace("/(tabs)");
     } catch (err: any) {
-      const msg = err?.message ?? "Unknown login error";
+      const msg = err?.message ?? tr("Unknown login error");
 
       if (isDisabledAccountMessage(msg)) {
         try {
@@ -682,8 +681,8 @@ const [showPassword, setShowPassword] = useState(false);
         await clearCorruptSupabaseSession();
 
         Alert.alert(
-          "Account unavailable",
-          "Account hii imezimwa au imeondolewa. Huwezi kuingia tena."
+          tr("Account unavailable"),
+          tr("Account hii imezimwa au imeondolewa. Huwezi kuingia tena.")
         );
         return;
       }
@@ -694,17 +693,17 @@ const [showPassword, setShowPassword] = useState(false);
         String(msg).toLowerCase().includes("confirm your email")
       ) {
         Alert.alert(
-          "Verify your email",
-          "Email yako bado haijaverify. Fungua email uliyotumiwa na ZETRA BMS na bonyeza Verify Account. Kama hujapokea email, unaweza kuituma tena.",
+          tr("Verify your email"),
+          tr("Email yako bado haijaverify. Fungua email uliyotumiwa na ZETRA BMS na bonyeza Verify Account. Kama hujapokea email, unaweza kuituma tena."),
           [
             {
-              text: "Cancel",
+              text: tr("Cancel"),
               style: "cancel",
             },
             {
               text: resendingVerification
-                ? "Sending..."
-                : "Resend Email",
+                ? tr("Sending...")
+                : tr("Resend Email"),
               onPress: () => {
                 void onResendVerification();
               },
@@ -725,7 +724,7 @@ const [showPassword, setShowPassword] = useState(false);
         } catch {}
       }
 
-      Alert.alert("Login Failed", msg);
+      Alert.alert(tr("Login Failed"), msg);
     } finally {
       loginLockedRef.current = false;
       setLoading(false);
@@ -742,14 +741,14 @@ const [showPassword, setShowPassword] = useState(false);
       const savedPassword = await SecureStore.getItemAsync(BIOMETRIC_PASSWORD_KEY);
 
       if (!savedEmail || !savedPassword) {
-        Alert.alert("Fingerprint Login", "Login kwa fingerprint haijawezeshwa bado.");
+        Alert.alert(tr("Fingerprint Login"), tr("Login kwa fingerprint haijawezeshwa bado."));
         return;
       }
 
       const auth = await LocalAuthentication.authenticateAsync({
-        promptMessage: "Login with Fingerprint",
-        fallbackLabel: "Use device passcode",
-        cancelLabel: "Cancel",
+        promptMessage: tr("Login with Fingerprint"),
+        fallbackLabel: tr("Use device passcode"),
+        cancelLabel: tr("Cancel"),
         disableDeviceFallback: false,
       });
 
@@ -761,14 +760,14 @@ const [showPassword, setShowPassword] = useState(false);
         skipBiometricOffer: true,
       });
     } catch (err: any) {
-      Alert.alert("Fingerprint Login Failed", err?.message ?? "Imeshindikana kuingia.");
+      Alert.alert(tr("Fingerprint Login Failed"), err?.message ?? tr("Imeshindikana kuingia."));
     } finally {
       setBiometricLoading(false);
     }
   };
 
   const content = (
-    <View style={{ flex: 1, backgroundColor: "#061018" }}>
+    <View style={{ flex: 1, backgroundColor: "#061018", overflow: "hidden" }}>
       <View
         pointerEvents="none"
         style={{
@@ -908,8 +907,7 @@ const [showPassword, setShowPassword] = useState(false);
                       letterSpacing: 0.8,
                     }}
                   >
-                    SECURE BUSINESS ACCESS
-                  </Text>
+                    {tr("SECURE BUSINESS ACCESS")}</Text>
                 </View>
               </View>
 
@@ -923,8 +921,7 @@ const [showPassword, setShowPassword] = useState(false);
                   letterSpacing: 0.2,
                 }}
               >
-                Welcome back
-              </Text>
+                {tr("Welcome back")}</Text>
 
               <Text
                 style={{
@@ -936,10 +933,9 @@ const [showPassword, setShowPassword] = useState(false);
                   maxWidth: 360,
                 }}
               >
-                Sign in to continue managing your business with ZETRA BMS.
-              </Text>
+                {tr("Sign in to continue managing your business with ZETRA BMS.")}</Text>
 
-              <FieldLabel>Email</FieldLabel>
+              <FieldLabel>{tr("Email")}</FieldLabel>
               <GlassInput
                 value={email}
                 onChangeText={setEmail}
@@ -950,7 +946,7 @@ const [showPassword, setShowPassword] = useState(false);
 
               <View style={{ height: 16 }} />
 
-              <FieldLabel>Password</FieldLabel>
+              <FieldLabel>{tr("Password")}</FieldLabel>
               <View
                 {...(Platform.OS === "web"
                   ? {
@@ -967,7 +963,7 @@ const [showPassword, setShowPassword] = useState(false);
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
-                  placeholder="Enter your password"
+                  placeholder={tr("Enter your password")}
                   rightSlot={
                     <Pressable
                       onPress={() => setShowPassword((v) => !v)}
@@ -975,7 +971,7 @@ const [showPassword, setShowPassword] = useState(false);
                       style={{ paddingLeft: 12, paddingVertical: 4 }}
                     >
                       <Text style={{ color: "#34D399", fontWeight: "900", fontSize: 14 }}>
-                        {showPassword ? "Hide" : "Show"}
+                        {showPassword ? tr("Hide") : tr("Show")}
                       </Text>
                     </Pressable>
                   }
@@ -992,7 +988,7 @@ const [showPassword, setShowPassword] = useState(false);
                 }}
               >
                 <Text style={{ color: "#34D399", fontWeight: "900", fontSize: 15 }}>
-                  {sendingReset ? "Sending..." : "Forgot Password?"}
+                  {sendingReset ? tr("Sending...") : tr("Forgot Password?")}
                 </Text>
               </Pressable>
 
@@ -1027,7 +1023,7 @@ const [showPassword, setShowPassword] = useState(false);
                     userSelect: Platform.OS === "web" ? ("none" as any) : undefined,
                   }}
                 >
-                  {loading ? "Signing In..." : "Login"}
+                  {loading ? tr("Signing In...") : tr("Login")}
                 </Text>
               </Pressable>
 
@@ -1048,7 +1044,7 @@ const [showPassword, setShowPassword] = useState(false);
                   }}
                 >
                   <Text style={{ color: "#6EE7B7", fontWeight: "900", fontSize: 15 }}>
-                    {biometricLoading ? "Checking Fingerprint..." : "Login with Fingerprint"}
+                    {biometricLoading ? tr("Checking Fingerprint...") : tr("Login with Fingerprint")}
                   </Text>
 
                   {!!biometricEmail ? (
@@ -1082,8 +1078,8 @@ const [showPassword, setShowPassword] = useState(false);
                     textAlign: "center",
                   }}
                 >
-                  Don&apos;t have an account?{" "}
-                  <Text style={{ color: "#6EE7B7", fontWeight: "900" }}>Create account</Text>
+                  {tr("Don&apos;t have an account?")}{" "}
+                  <Text style={{ color: "#6EE7B7", fontWeight: "900" }}>{tr("Create account")}</Text>
                 </Text>
               </Pressable>
 
@@ -1097,8 +1093,7 @@ const [showPassword, setShowPassword] = useState(false);
                   lineHeight: 18,
                 }}
               >
-                Secure sign-in for owners, admins, cashier, supervisor and staff.
-              </Text>
+                {tr("Secure sign-in for owners, admins, cashier, supervisor and staff.")}</Text>
             </View>
           </View>
         </ScrollView>

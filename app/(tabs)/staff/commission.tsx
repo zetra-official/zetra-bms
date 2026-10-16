@@ -1,3 +1,5 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/(tabs)/staff/commission.tsx
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
@@ -124,6 +126,8 @@ function commissionStatusMeta(row: StaffCommissionRow) {
 }
 
 export default function StaffCommissionScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
   const { activeOrgId, activeOrgName, activeRole } = useOrg();
 
@@ -268,7 +272,7 @@ const canManage =
   const savePercent = useCallback(
     async (membershipId: string) => {
       if (!canManage) {
-        Alert.alert("No Access", "Owner/Admin only.");
+        Alert.alert(uiText("No Access"), uiText("Owner/Admin only."));
         return;
       }
 
@@ -293,9 +297,9 @@ setDrafts((prev) => ({
 
 await loadData({ silent: true });
 
-Alert.alert("Success", "Commission rate saved.");
+Alert.alert(uiText("Success"), uiText("Commission rate saved."));
       } catch (err: any) {
-        Alert.alert("Failed", err?.message ?? "Failed to save commission rate");
+        Alert.alert(uiText("Failed"), err?.message ?? uiText("Failed to save commission rate"));
       } finally {
         setSavingMembershipId(null);
       }
@@ -318,11 +322,9 @@ Alert.alert("Success", "Commission rate saved.");
             }}
           >
             <Text style={{ color: UI.danger, fontWeight: "900", fontSize: 18 }}>
-              No Access
-            </Text>
+              {uiText("No Access")}</Text>
             <Text style={{ color: UI.text, fontWeight: "800", lineHeight: 22 }}>
-              Hii screen ni ya Owner/Admin tu.
-            </Text>
+              {uiText("Hii screen ni ya Owner/Admin tu.")}</Text>
 
             <Pressable
               onPress={() => router.back()}
@@ -336,7 +338,7 @@ Alert.alert("Success", "Commission rate saved.");
                 alignItems: "center",
               }}
             >
-              <Text style={{ color: UI.text, fontWeight: "900" }}>Back</Text>
+              <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Back")}</Text>
             </Pressable>
           </View>
         </View>
@@ -373,8 +375,7 @@ Alert.alert("Success", "Commission rate saved.");
 
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 26, fontWeight: "900", color: UI.text }}>
-              Staff Sales & Commission
-            </Text>
+              {uiText("Staff Sales & Commission")}</Text>
           <Text
   style={{
     color: UI.muted,
@@ -382,8 +383,7 @@ Alert.alert("Success", "Commission rate saved.");
     marginTop: 4,
   }}
 >
-  Staff sales, accumulated commissions and unpaid balances
-</Text>
+  {uiText("Staff sales, accumulated commissions and unpaid balances")}</Text>
           </View>
         </View>
 
@@ -397,13 +397,13 @@ Alert.alert("Success", "Commission rate saved.");
             gap: 10,
           }}
         >
-          <Text style={{ color: UI.muted, fontWeight: "800" }}>Organization</Text>
+          <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("Organization")}</Text>
           <Text style={{ fontSize: 18, fontWeight: "900", color: UI.text }}>
             {activeOrgName ?? "—"}
           </Text>
 
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-            <Text style={{ color: UI.muted, fontWeight: "800" }}>Role:</Text>
+            <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("Role:")}</Text>
             <View
               style={{
                 borderWidth: 1,
@@ -427,11 +427,7 @@ Alert.alert("Success", "Commission rate saved.");
     lineHeight: 20,
   }}
 >
-  Mfumo huu unafuatilia mauzo, commission iliyokusanyika na balance ambayo
-  bado haijalipwa kwa kila staff. Unpaid commission itaendelea kubebwa mbele
-  bila ku-reset mwezi unapobadilika, mpaka ifanyiwe cash-out. Ukiweka rate 0%,
-  mauzo yataendelea kurekodiwa lakini commission mpya haitahesabiwa.
-</Text>
+  {uiText("Mfumo huu unafuatilia mauzo, commission iliyokusanyika na balance ambayo bado haijalipwa kwa kila staff. Unpaid commission itaendelea kubebwa mbele bila ku-reset mwezi unapobadilika, mpaka ifanyiwe cash-out. Ukiweka rate 0%, mauzo yataendelea kurekodiwa lakini commission mpya haitahesabiwa.")}</Text>
         </View>
 
         {!!error ? (
@@ -444,7 +440,7 @@ Alert.alert("Success", "Commission rate saved.");
               padding: 12,
             }}
           >
-            <Text style={{ color: UI.danger, fontWeight: "900" }}>{error}</Text>
+            <Text style={{ color: UI.danger, fontWeight: "900" }}>{systemText(error)}</Text>
           </View>
         ) : null}
 
@@ -464,7 +460,7 @@ Alert.alert("Success", "Commission rate saved.");
               padding: 14,
             }}
           >
-            <Text style={{ color: UI.muted, fontWeight: "800" }}>Staff Count</Text>
+            <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("Staff Count")}</Text>
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 22, marginTop: 6 }}>
               {rows.length}
             </Text>
@@ -481,8 +477,7 @@ Alert.alert("Success", "Commission rate saved.");
             }}
           >
             <Text style={{ color: UI.muted, fontWeight: "800" }}>
-  Total Staff Sales
-</Text>
+  {uiText("Total Staff Sales")}</Text>
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18, marginTop: 6 }}>
               {fmtMoney(rows.reduce((a, r) => a + toNum(r.total_sales), 0))}
             </Text>
@@ -499,8 +494,7 @@ Alert.alert("Success", "Commission rate saved.");
           }}
         >
           <Text style={{ color: UI.muted, fontWeight: "800" }}>
-  Total Unpaid Commission
-</Text>
+  {uiText("Total Unpaid Commission")}</Text>
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 20, marginTop: 6 }}>
             {fmtMoney(rows.reduce((a, r) => a + toNum(r.remaining_commission), 0))}
           </Text>
@@ -517,8 +511,7 @@ Alert.alert("Success", "Commission rate saved.");
           }}
         >
         <Text style={{ color: UI.text, fontWeight: "900", fontSize: 17 }}>
-  Staff Performance Overview
-</Text>
+  {uiText("Staff Performance Overview")}</Text>
 
           {performanceInsight.top ? (
             <>
@@ -532,16 +525,15 @@ Alert.alert("Success", "Commission rate saved.");
                 }}
               >
                <Text style={{ color: UI.emerald, fontWeight: "900", fontSize: 12 }}>
-  TOP PERFORMER
-</Text>
+  {uiText("TOP PERFORMER")}</Text>
                 <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16, marginTop: 6 }}>
-                  {performanceInsight.top.row.email ?? `User: ${shortId(String(performanceInsight.top.row.user_id ?? ""))}`}
+                  {performanceInsight.top.row.email ?? uiText("User: {p0}", {p0: (shortId(String(performanceInsight.top.row.user_id ?? "")))})}
                 </Text>
                 <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 6 }}>
-                  Sales: {fmtMoney(performanceInsight.top.sales)} • Receipts: {performanceInsight.top.count}
+                  {uiText("Sales:")}{fmtMoney(performanceInsight.top.sales)} {uiText("• Receipts:")}{performanceInsight.top.count}
                 </Text>
                 <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 4 }}>
-  Unpaid Commission: {fmtMoney(performanceInsight.top.commission)}
+  {uiText("Unpaid Commission:")}{fmtMoney(performanceInsight.top.commission)}
 </Text>
               </View>
 
@@ -556,21 +548,19 @@ Alert.alert("Success", "Commission rate saved.");
                   }}
                 >
                   <Text style={{ color: UI.danger, fontWeight: "900", fontSize: 12 }}>
-                    NEEDS FOLLOW UP
-                  </Text>
+                    {uiText("NEEDS FOLLOW UP")}</Text>
                   <Text style={{ color: UI.text, fontWeight: "900", marginTop: 6 }}>
-                    {performanceInsight.lowest.row.email ?? `User: ${shortId(String(performanceInsight.lowest.row.user_id ?? ""))}`}
+                    {performanceInsight.lowest.row.email ?? uiText("User: {p0}", {p0: (shortId(String(performanceInsight.lowest.row.user_id ?? "")))})}
                   </Text>
                   <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 6 }}>
-                    Sales: {fmtMoney(performanceInsight.lowest.sales)} • Receipts: {performanceInsight.lowest.count}
+                    {uiText("Sales:")}{fmtMoney(performanceInsight.lowest.sales)} {uiText("• Receipts:")}{performanceInsight.lowest.count}
                   </Text>
                 </View>
               ) : null}
             </>
           ) : (
           <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 20 }}>
-  Bado hakuna staff sales za kutosha kufanya performance ranking.
-</Text>
+  {uiText("Bado hakuna staff sales za kutosha kufanya performance ranking.")}</Text>
           )}
         </View>
 <View
@@ -603,8 +593,7 @@ Alert.alert("Success", "Commission rate saved.");
         fontSize: 15,
       }}
     >
-      Cash Out
-    </Text>
+      {uiText("Cash Out")}</Text>
   </Pressable>
 
   <Pressable
@@ -633,8 +622,7 @@ Alert.alert("Success", "Commission rate saved.");
         fontSize: 15,
       }}
     >
-      Cash-Out History
-    </Text>
+      {uiText("Cash-Out History")}</Text>
   </Pressable>
 </View>
         <Pressable
@@ -651,7 +639,7 @@ Alert.alert("Success", "Commission rate saved.");
           }}
         >
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-            {loading ? "Loading..." : "Refresh Commission List"}
+            {loading ? uiText("Loading...") : uiText("Refresh Commission List")}
           </Text>
         </Pressable>
 
@@ -659,7 +647,7 @@ Alert.alert("Success", "Commission rate saved.");
           <TextInput
             value={q}
           onChangeText={setQ}
-          placeholder="Tafuta kwa email / membership / role..."
+          placeholder={uiText("Tafuta kwa email / membership / role...")}
           placeholderTextColor="rgba(255,255,255,0.35)"
           style={{
             borderWidth: 1,
@@ -685,11 +673,9 @@ Alert.alert("Success", "Commission rate saved.");
             }}
           >
             <Text style={{ fontWeight: "900", color: UI.text }}>
-              No staff sales found
-            </Text>
+              {uiText("No staff sales found")}</Text>
           <Text style={{ marginTop: 6, color: UI.muted, fontWeight: "700", lineHeight: 20 }}>
-  Hakuna staff commission data kwa sasa, au mauzo bado hayajahusishwa na staff husika.
-</Text>
+  {uiText("Hakuna staff commission data kwa sasa, au mauzo bado hayajahusishwa na staff husika.")}</Text>
           </View>
         ) : (
           filtered.map((r) => {
@@ -750,10 +736,10 @@ const isSaving = savingMembershipId === membershipId;
 
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: UI.text, fontWeight: "900" }}>
-                      {email ?? `User: ${shortId(String(r.user_id ?? ""))}`}
+                      {email ?? uiText("User: {p0}", {p0: (shortId(String(r.user_id ?? "")))})}
                     </Text>
                     <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 4 }}>
-                      Membership: {shortId(membershipId)}
+                      {uiText("Membership:")}{shortId(membershipId)}
                     </Text>
                   </View>
 
@@ -771,7 +757,7 @@ const isSaving = savingMembershipId === membershipId;
                         }}
                       >
                         <Text style={{ color: meta.color, fontWeight: "900" }}>
-                          {meta.label}
+                          {uiText(meta.label)}
                         </Text>
                       </View>
                     );
@@ -789,7 +775,7 @@ const isSaving = savingMembershipId === membershipId;
                       padding: 12,
                     }}
                   >
-                    <Text style={{ color: UI.muted, fontWeight: "800" }}>Sales</Text>
+                    <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("Sales")}</Text>
                     <Text style={{ color: UI.text, fontWeight: "900", marginTop: 6 }}>
                       {fmtMoney(totalSales)}
                     </Text>
@@ -805,7 +791,7 @@ const isSaving = savingMembershipId === membershipId;
                       padding: 12,
                     }}
                   >
-                    <Text style={{ color: UI.muted, fontWeight: "800" }}>Sales Count</Text>
+                    <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("Sales Count")}</Text>
                     <Text style={{ color: UI.text, fontWeight: "900", marginTop: 6 }}>
                       {salesCount}
                     </Text>
@@ -823,7 +809,7 @@ const isSaving = savingMembershipId === membershipId;
                       padding: 12,
                     }}
                   >
-                    <Text style={{ color: UI.muted, fontWeight: "800" }}>Rate</Text>
+                    <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("Rate")}</Text>
                     <Text style={{ color: UI.text, fontWeight: "900", marginTop: 6 }}>
                       {commissionPercent}%
                     </Text>
@@ -840,8 +826,7 @@ const isSaving = savingMembershipId === membershipId;
                     }}
                   >
                     <Text style={{ color: UI.muted, fontWeight: "800" }}>
-  Accumulated Commission
-</Text>
+  {uiText("Accumulated Commission")}</Text>
                     <Text style={{ color: UI.text, fontWeight: "900", marginTop: 6 }}>
                       {fmtMoney(accruedCommission)}
                     </Text>
@@ -860,8 +845,7 @@ const isSaving = savingMembershipId === membershipId;
                     }}
                   >
                     <Text style={{ color: UI.muted, fontWeight: "800" }}>
-  Total Cashed Out
-</Text>
+  {uiText("Total Cashed Out")}</Text>
                     <Text style={{ color: UI.text, fontWeight: "900", marginTop: 6 }}>
                       {fmtMoney(paidCommission)}
                     </Text>
@@ -878,8 +862,7 @@ const isSaving = savingMembershipId === membershipId;
                     }}
                   >
                     <Text style={{ color: UI.muted, fontWeight: "800" }}>
-  Unpaid Balance
-</Text>
+  {uiText("Unpaid Balance")}</Text>
                     <Text style={{ color: UI.text, fontWeight: "900", marginTop: 6 }}>
                       {fmtMoney(remainingCommission)}
                     </Text>
@@ -907,13 +890,12 @@ const isSaving = savingMembershipId === membershipId;
                       fontSize: 12,
                     }}
                   >
-                    {payoutProfileConfigured ? "PAYOUT PROFILE READY" : "PAYOUT PROFILE MISSING"}
+                    {payoutProfileConfigured ? uiText("PAYOUT PROFILE READY") : uiText("PAYOUT PROFILE MISSING")}
                   </Text>
 
                   {!payoutProfileConfigured ? (
                     <Text style={{ color: UI.text, fontWeight: "900", marginTop: 2 }}>
-                      Staff hajajaza destination ya commission bado.
-                    </Text>
+                      {uiText("Staff hajajaza destination ya commission bado.")}</Text>
                   ) : (
                     <>
                       <Text style={{ color: UI.text, fontWeight: "900", marginTop: 2 }}>
@@ -921,20 +903,19 @@ const isSaving = savingMembershipId === membershipId;
                       </Text>
 
                       <Text style={{ color: UI.muted, fontWeight: "800" }}>
-                        Account Holder
-                      </Text>
+                        {uiText("Account Holder")}</Text>
                       <Text style={{ color: UI.text, fontWeight: "900" }}>
                         {String(r.payout_account_holder_name ?? "").trim() || "—"}
                       </Text>
 
                       {payoutMethod.toUpperCase() === "MOBILE" ? (
                         <>
-                          <Text style={{ color: UI.muted, fontWeight: "800" }}>Network</Text>
+                          <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("Network")}</Text>
                           <Text style={{ color: UI.text, fontWeight: "900" }}>
                             {String(r.payout_mobile_network ?? "").trim() || "—"}
                           </Text>
 
-                          <Text style={{ color: UI.muted, fontWeight: "800" }}>Mobile Number</Text>
+                          <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("Mobile Number")}</Text>
                           <Text style={{ color: UI.text, fontWeight: "900" }}>
                             {String(r.payout_mobile_number ?? "").trim() || "—"}
                           </Text>
@@ -943,17 +924,17 @@ const isSaving = savingMembershipId === membershipId;
 
                       {payoutMethod.toUpperCase() === "BANK" ? (
                         <>
-                          <Text style={{ color: UI.muted, fontWeight: "800" }}>Bank</Text>
+                          <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("Bank")}</Text>
                           <Text style={{ color: UI.text, fontWeight: "900" }}>
                             {String(r.payout_bank_name ?? "").trim() || "—"}
                           </Text>
 
-                          <Text style={{ color: UI.muted, fontWeight: "800" }}>Bank Account Name</Text>
+                          <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("Bank Account Name")}</Text>
                           <Text style={{ color: UI.text, fontWeight: "900" }}>
                             {String(r.payout_bank_account_name ?? "").trim() || "—"}
                           </Text>
 
-                          <Text style={{ color: UI.muted, fontWeight: "800" }}>Bank Account Number</Text>
+                          <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("Bank Account Number")}</Text>
                           <Text style={{ color: UI.text, fontWeight: "900" }}>
                             {String(r.payout_bank_account_number ?? "").trim() || "—"}
                           </Text>
@@ -965,8 +946,7 @@ const isSaving = savingMembershipId === membershipId;
 
                 <View>
                   <Text style={{ color: UI.muted, fontWeight: "800", marginBottom: 6 }}>
-                    Set Commission %
-                  </Text>
+                    {uiText("Set Commission %")}</Text>
 
                   <View style={{ flexDirection: "row", gap: 10 }}>
                     <TextInput
@@ -1010,7 +990,7 @@ const isSaving = savingMembershipId === membershipId;
                       }}
                     >
                       <Text style={{ color: UI.text, fontWeight: "900" }}>
-                        {isSaving ? "Saving..." : "Save"}
+                        {isSaving ? uiText("Saving...") : uiText("Save")}
                       </Text>
                     </Pressable>
                   </View>
@@ -1023,10 +1003,7 @@ const isSaving = savingMembershipId === membershipId;
     lineHeight: 20,
   }}
 >
-  Ukiweka 0%, sales zitaendelea kurekodiwa kawaida lakini commission mpya
-  haitahesabiwa. Commission iliyokwisha kukusanyika na ambayo bado
-  haijalipwa itaendelea kuhifadhiwa mpaka ifanyiwe cash-out.
-</Text>
+  {uiText("Ukiweka 0%, sales zitaendelea kurekodiwa kawaida lakini commission mpya haitahesabiwa. Commission iliyokwisha kukusanyika na ambayo bado haijalipwa itaendelea kuhifadhiwa mpaka ifanyiwe cash-out.")}</Text>
                 </View>
               </View>
             );

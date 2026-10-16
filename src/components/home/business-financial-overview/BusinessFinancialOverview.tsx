@@ -1,4 +1,7 @@
-﻿import React, {
+import {useLanguage} from "@/src/i18n/LanguageProvider";
+import {localizedFinancialResult} from "@/src/i18n/presentation";
+﻿import {useCommonText} from "@/src/i18n/useCommonText";
+import React, {
   useCallback,
   useEffect,
   useMemo,
@@ -137,6 +140,8 @@ export default function BusinessFinancialOverview({
   storeIds,
   enabled = true,
 }: Props) {
+ const uiText=useCommonText();
+ const {language}=useLanguage();
   const [periodMode, setPeriodMode] =
     useState<FinancialPeriodMode>(
       "THIS_MONTH"
@@ -376,9 +381,11 @@ export default function BusinessFinancialOverview({
 
   const rangeLabel =
     formatFinancialRange(
-      selectedRange
+      selectedRange, language==='en'?'en-GB':language
     );
 
+  const displayResult=useMemo(()=>localizedFinancialResult(language,result),[language,result]);
+  const displayComparison=useMemo(()=>comparison?{...comparison,current:localizedFinancialResult(language,comparison.current),previous:localizedFinancialResult(language,comparison.previous),insight:{...comparison.insight,bestPeriod:comparison.insight.bestPeriod?localizedFinancialResult(language,{range:comparison.current.range,total:comparison.current.total,buckets:[comparison.insight.bestPeriod]}).buckets[0]:null,weakestPeriod:comparison.insight.weakestPeriod?localizedFinancialResult(language,{range:comparison.current.range,total:comparison.current.total,buckets:[comparison.insight.weakestPeriod]}).buckets[0]:null}}:null,[language,comparison]);
   const hasStores =
     stableStoreIds.length > 0;
 
@@ -387,10 +394,10 @@ export default function BusinessFinancialOverview({
       style={{
         width: "100%",
         borderWidth: 1,
-        borderColor: "#E2E8F0",
-        borderRadius: 16,
+        borderColor: "#E3EAF3",
+        borderRadius: 15,
         backgroundColor: "#FFFFFF",
-        padding: 14,
+        padding: 13,
         overflow: "hidden",
       }}
     >
@@ -412,19 +419,19 @@ export default function BusinessFinancialOverview({
           <Text numberOfLines={1}
             style={{
               color: "#0F172A",
-              fontSize: 14,
+              fontSize: 13,
               fontWeight: "900",
+              letterSpacing: -0.15,
             }}
           >
-            Business Financial Overview
-          </Text>
+            {uiText("Business Financial Overview")}</Text>
 
           <Text
             numberOfLines={1}
             style={{
-              marginTop: 3,
+              marginTop: 2,
               color: "#64748B",
-              fontSize: 10,
+              fontSize: 9,
               fontWeight: "700",
             }}
           >
@@ -445,9 +452,9 @@ export default function BusinessFinancialOverview({
               setExpanded(true)
             }
             accessibilityRole="button"
-            accessibilityLabel="Open full financial overview"
+            accessibilityLabel={uiText("Open full financial overview")}
             {...({
-              title: "Open Full View",
+              title: uiText("Open Full View"),
             } as any)}
             style={({ pressed }) => ({
               width: 36,
@@ -589,7 +596,7 @@ export default function BusinessFinancialOverview({
                       "800",
                   }}
                 >
-                  {option.label}
+                  {uiText(option.label)}
                 </Text>
               </Pressable>
             );
@@ -615,8 +622,7 @@ export default function BusinessFinancialOverview({
               textAlign: "center",
             }}
           >
-            No store is available for this financial view.
-          </Text>
+            {uiText("No store is available for this financial view.")}</Text>
         </View>
       ) : loading ? (
         <View
@@ -637,8 +643,7 @@ export default function BusinessFinancialOverview({
               fontWeight: "700",
             }}
           >
-            Loading verified finance data...
-          </Text>
+            {uiText("Loading verified finance data...")}</Text>
         </View>
       ) : errorText ? (
         <View
@@ -679,8 +684,7 @@ export default function BusinessFinancialOverview({
                 fontWeight: "900",
               }}
             >
-              Retry
-            </Text>
+              {uiText("Retry")}</Text>
           </Pressable>
         </View>
       ) : (
@@ -714,7 +718,7 @@ export default function BusinessFinancialOverview({
                     }
                     style={{
                       flex: 1,
-                      minHeight: 34,
+                      minHeight: 32,
                       flexDirection: "row",
                       alignItems: "center",
                       justifyContent: "center",
@@ -755,7 +759,7 @@ export default function BusinessFinancialOverview({
                         fontWeight: "900",
                       }}
                     >
-                      {option.label}
+                      {uiText(option.label)}
                     </Text>
                   </Pressable>
                 );
@@ -765,12 +769,12 @@ export default function BusinessFinancialOverview({
 
           <View
             style={{
-              marginTop: 6,
+              marginTop: 7,
               marginHorizontal: 1,
-              paddingTop: 7,
-              paddingBottom: 3,
+              paddingTop: 6,
+              paddingBottom: 2,
               paddingHorizontal: 3,
-              minHeight: 218,
+              minHeight: 214,
               alignItems: "center",
               justifyContent: "center",
               borderRadius: 14,
@@ -791,10 +795,10 @@ export default function BusinessFinancialOverview({
               metric={selectedMetric}
               total={result.total}
               buckets={
-                result.buckets
+                displayResult.buckets
               }
               previousBuckets={
-                comparison?.previous?.buckets ??
+                displayComparison?.previous?.buckets ??
                 []
               }
               width={320}
@@ -811,8 +815,8 @@ export default function BusinessFinancialOverview({
         onClose={() =>
           setExpanded(false)
         }
-        result={result}
-        comparison={comparison}
+        result={displayResult}
+        comparison={displayComparison}
         periodMode={periodMode}
         onPeriodChange={
           setPeriodMode
@@ -832,9 +836,9 @@ export default function BusinessFinancialOverview({
         rangeLabel={
           rangeLabel
         }
-        periodLabel={periodTitle(
+        periodLabel={uiText(periodTitle(
           periodMode
-        )}
+        ))}
         customRangeDraft={
           customRangeDraft
         }

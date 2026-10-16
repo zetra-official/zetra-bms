@@ -1,3 +1,4 @@
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/office/follow-ups.tsx
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -196,6 +197,7 @@ function ActionButton({
 }
 
 export default function OfficeFollowUpsScreen() {
+ const uiText = useCommonText();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -369,8 +371,8 @@ export default function OfficeFollowUpsScreen() {
 
     if (!phone) {
       Alert.alert(
-        "Phone unavailable",
-        "Customer huyu hana namba ya simu iliyohifadhiwa."
+        uiText("Phone unavailable"),
+        uiText("Customer huyu hana namba ya simu iliyohifadhiwa.")
       );
       return;
     }
@@ -379,8 +381,8 @@ export default function OfficeFollowUpsScreen() {
       await Linking.openURL(`tel:${phone}`);
     } catch {
       Alert.alert(
-        "Call failed",
-        "Imeshindikana kufungua phone dialer."
+        uiText("Call failed"),
+        uiText("Imeshindikana kufungua phone dialer.")
       );
     }
   }, []);
@@ -390,8 +392,8 @@ export default function OfficeFollowUpsScreen() {
 
     if (!phone) {
       Alert.alert(
-        "Phone unavailable",
-        "Customer huyu hana namba ya simu iliyohifadhiwa."
+        uiText("Phone unavailable"),
+        uiText("Customer huyu hana namba ya simu iliyohifadhiwa.")
       );
       return;
     }
@@ -412,8 +414,8 @@ export default function OfficeFollowUpsScreen() {
 
       if (!supported) {
         Alert.alert(
-          "WhatsApp unavailable",
-          "WhatsApp link haikuweza kufunguliwa kwenye kifaa hiki."
+          uiText("WhatsApp unavailable"),
+          uiText("WhatsApp link haikuweza kufunguliwa kwenye kifaa hiki.")
         );
         return;
       }
@@ -421,8 +423,8 @@ export default function OfficeFollowUpsScreen() {
       await Linking.openURL(url);
     } catch {
       Alert.alert(
-        "WhatsApp failed",
-        "Imeshindikana kufungua WhatsApp."
+        uiText("WhatsApp failed"),
+        uiText("Imeshindikana kufungua WhatsApp.")
       );
     }
   }, []);
@@ -468,8 +470,7 @@ export default function OfficeFollowUpsScreen() {
               fontSize: 20,
             }}
           >
-            Follow-ups
-          </Text>
+            {uiText("Follow-ups")}</Text>
 
           <Text
             style={{
@@ -478,8 +479,7 @@ export default function OfficeFollowUpsScreen() {
               marginTop: 4,
             }}
           >
-            Subscription renewals & customer follow-up
-          </Text>
+            {uiText("Subscription renewals & customer follow-up")}</Text>
         </View>
 
         <Pressable
@@ -522,8 +522,7 @@ export default function OfficeFollowUpsScreen() {
               fontSize: 15,
             }}
           >
-            Follow-up Overview
-          </Text>
+            {uiText("Follow-up Overview")}</Text>
 
           <Text
             style={{
@@ -534,9 +533,7 @@ export default function OfficeFollowUpsScreen() {
               marginTop: 6,
             }}
           >
-            Customers wenye subscription iliyo-expire au
-            inayokaribia ku-expire ndani ya siku 30.
-          </Text>
+            {uiText("Customers wenye subscription iliyo-expire au inayokaribia ku-expire ndani ya siku 30.")}</Text>
 
           <View
             style={{
@@ -564,8 +561,7 @@ export default function OfficeFollowUpsScreen() {
                   fontSize: 11,
                 }}
               >
-                All
-              </Text>
+                {uiText("All")}</Text>
 
               <Text
                 style={{
@@ -597,8 +593,7 @@ export default function OfficeFollowUpsScreen() {
                   fontSize: 11,
                 }}
               >
-                Expiring
-              </Text>
+                {uiText("Expiring")}</Text>
 
               <Text
                 style={{
@@ -630,8 +625,7 @@ export default function OfficeFollowUpsScreen() {
                   fontSize: 11,
                 }}
               >
-                Expired
-              </Text>
+                {uiText("Expired")}</Text>
 
               <Text
                 style={{
@@ -657,13 +651,12 @@ export default function OfficeFollowUpsScreen() {
               fontSize: 15,
             }}
           >
-            Customer Queue
-          </Text>
+            {uiText("Customer Queue")}</Text>
 
           <TextInput
             value={searchText}
             onChangeText={setSearchText}
-            placeholder="Search name, phone or plan"
+            placeholder={uiText("Search name, phone or plan")}
             placeholderTextColor="rgba(255,255,255,0.40)"
             style={{
               marginTop: 12,
@@ -687,19 +680,19 @@ export default function OfficeFollowUpsScreen() {
             }}
           >
             <FilterPill
-              label="ALL"
+              label={uiText("ALL")}
               active={filter === "ALL"}
               onPress={() => setFilter("ALL")}
             />
 
             <FilterPill
-              label="EXPIRING"
+              label={uiText("EXPIRING")}
               active={filter === "EXPIRING"}
               onPress={() => setFilter("EXPIRING")}
             />
 
             <FilterPill
-              label="EXPIRED"
+              label={uiText("EXPIRED")}
               active={filter === "EXPIRED"}
               onPress={() => setFilter("EXPIRED")}
             />
@@ -721,8 +714,7 @@ export default function OfficeFollowUpsScreen() {
                   marginTop: 10,
                 }}
               >
-                Loading follow-ups…
-              </Text>
+                {uiText("Loading follow-ups…")}</Text>
             </View>
           ) : errorText ? (
             <View
@@ -742,8 +734,7 @@ export default function OfficeFollowUpsScreen() {
                   fontSize: 13,
                 }}
               >
-                Unable to load follow-ups
-              </Text>
+                {uiText("Unable to load follow-ups")}</Text>
 
               <Text
                 style={{
@@ -778,8 +769,7 @@ export default function OfficeFollowUpsScreen() {
                   marginTop: 10,
                 }}
               >
-                No follow-ups right now
-              </Text>
+                {uiText("No follow-ups right now")}</Text>
 
               <Text
                 style={{
@@ -790,8 +780,7 @@ export default function OfficeFollowUpsScreen() {
                   textAlign: "center",
                 }}
               >
-                Hakuna customer kwenye filter hii kwa sasa.
-              </Text>
+                {uiText("Hakuna customer kwenye filter hii kwa sasa.")}</Text>
             </View>
           ) : (
             <View style={{ marginTop: 14, gap: 12 }}>
@@ -836,7 +825,7 @@ export default function OfficeFollowUpsScreen() {
                             marginTop: 5,
                           }}
                         >
-                          {item.phone || "No phone"}
+                          {item.phone || uiText("No phone")}
                         </Text>
                       </View>
 
@@ -857,7 +846,7 @@ export default function OfficeFollowUpsScreen() {
                             fontSize: 10,
                           }}
                         >
-                          {tone.label}
+                          {uiText(tone.label)}
                         </Text>
                       </View>
                     </View>
@@ -875,7 +864,7 @@ export default function OfficeFollowUpsScreen() {
                           fontSize: 12,
                         }}
                       >
-                        Plan:{" "}
+                        {uiText("Plan:")}{" "}
                         <Text style={{ color: UI.text }}>
                           {item.planCode}
                         </Text>
@@ -888,10 +877,9 @@ export default function OfficeFollowUpsScreen() {
                           fontSize: 12,
                         }}
                       >
-                        Duration:{" "}
+                        {uiText("Duration:")}{" "}
                         <Text style={{ color: UI.text }}>
-                          {item.durationMonths} month
-                          {item.durationMonths === 1 ? "" : "s"}
+                          {uiText(item.durationMonths === 1 ? "{p0} month" : "{p0} months", {p0: item.durationMonths})}
                         </Text>
                       </Text>
 
@@ -902,7 +890,7 @@ export default function OfficeFollowUpsScreen() {
                           fontSize: 12,
                         }}
                       >
-                        Expiry date:{" "}
+                        {uiText("Expiry date:")}{" "}
                         <Text style={{ color: UI.text }}>
                           {fmtDate(item.expiresAt)}
                         </Text>
@@ -915,21 +903,17 @@ export default function OfficeFollowUpsScreen() {
                           fontSize: 12,
                         }}
                       >
-                        Follow-up:{" "}
+                        {uiText("Follow-up:")}{" "}
                         <Text style={{ color: UI.text }}>
                           {item.status === "EXPIRED"
-                            ? `${Math.abs(
-                                item.daysRemaining
-                              )} day${
-                                Math.abs(item.daysRemaining) === 1
-                                  ? ""
-                                  : "s"
-                              } expired`
+                            ? Math.abs(item.daysRemaining) === 1
+                              ? uiText("Expired {p0} day ago", {p0: Math.abs(item.daysRemaining)})
+                              : uiText("Expired {p0} days ago", {p0: Math.abs(item.daysRemaining)})
                             : item.daysRemaining === 0
-                            ? "Expires today"
-                            : `${item.daysRemaining} day${
-                                item.daysRemaining === 1 ? "" : "s"
-                              } remaining`}
+                            ? uiText("Expires today")
+                            : item.daysRemaining === 1
+                              ? uiText("{p0} day remaining", {p0: item.daysRemaining})
+                              : uiText("{p0} days remaining", {p0: item.daysRemaining})}
                         </Text>
                       </Text>
                     </View>
@@ -942,7 +926,7 @@ export default function OfficeFollowUpsScreen() {
                       }}
                     >
                       <ActionButton
-                        label="WHATSAPP"
+                        label={uiText("WHATSAPP")}
                         icon="logo-whatsapp"
                         onPress={() =>
                           void openWhatsApp(item.phone)
@@ -950,7 +934,7 @@ export default function OfficeFollowUpsScreen() {
                       />
 
                       <ActionButton
-                        label="CALL"
+                        label={uiText("CALL")}
                         icon="call-outline"
                         onPress={() =>
                           void callCustomer(item.phone)

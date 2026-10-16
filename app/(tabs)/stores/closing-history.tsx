@@ -1,3 +1,5 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/(tabs)/stores/closing-history.tsx
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useFocusEffect } from "@react-navigation/native";
@@ -67,6 +69,8 @@ type HistoryItem = {
 };
 
 export default function ClosingHistoryScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
   const tabBarHeight = useBottomTabBarHeight();
 
@@ -210,8 +214,8 @@ export default function ClosingHistoryScreen() {
         String(msg).toLowerCase().includes("rls")
       ) {
         Alert.alert(
-          "History blocked",
-          "Inaonekana RLS imekataa kusoma snapshot dates. Hii ni sawa. Tukiamua, tutaongeza RPC salama ya “list_snapshot_dates” bila kuharibu lock."
+          uiText("History blocked"),
+          uiText("Inaonekana RLS imekataa kusoma snapshot dates. Hii ni sawa. Tukiamua, tutaongeza RPC salama ya “list_snapshot_dates” bila kuharibu lock.")
         );
       }
     } finally {
@@ -242,7 +246,7 @@ export default function ClosingHistoryScreen() {
                 netPositive ? "+" : ""
               }${fmtInt(net)}`
             : `Date: ${item.date}\nLocked: ${item.locked ? "YES" : "NO"}\n\nSummary haikupatikana (RPC error au data haipo).`;
-          Alert.alert("Closing Summary", msg);
+          Alert.alert(uiText("Closing Summary"), systemText(msg));
         }}
       >
         <Card style={{ gap: 10 }}>
@@ -267,40 +271,39 @@ export default function ClosingHistoryScreen() {
                   fontWeight: "900",
                 }}
               >
-                {item.locked ? "LOCKED ✅" : "UNLOCKED"}
+                {item.locked ? uiText("LOCKED ✅") : uiText("UNLOCKED")}
               </Text>
             </View>
           </View>
 
           {!s ? (
             <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-              Summary haipo (tap kuona details ya error state).
-            </Text>
+              {uiText("Summary haipo (tap kuona details ya error state).")}</Text>
           ) : (
             <>
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Opening</Text>
+                <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>{uiText("Opening")}</Text>
                 <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
                   {fmtInt(s.opening_qty_total)}
                 </Text>
               </View>
 
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>IN</Text>
+                <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>{uiText("IN")}</Text>
                 <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
                   {fmtInt(s.in_qty_total)}
                 </Text>
               </View>
 
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>OUT</Text>
+                <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>{uiText("OUT")}</Text>
                 <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
                   {fmtInt(s.out_qty_total)}
                 </Text>
               </View>
 
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Closing</Text>
+                <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>{uiText("Closing")}</Text>
                 <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
                   {fmtInt(s.closing_qty_total)}
                 </Text>
@@ -323,7 +326,7 @@ export default function ClosingHistoryScreen() {
                     textAlign: "center",
                   }}
                 >
-                  Net: {netPositive ? "+" : ""}
+                  {uiText("Net:")}{netPositive ? "+" : ""}
                   {fmtInt(net)}
                 </Text>
               </View>
@@ -332,7 +335,7 @@ export default function ClosingHistoryScreen() {
         </Card>
       </Pressable>
     );
-  }, [dangerBorder, dangerSoft]);
+  }, [dangerBorder, dangerSoft, uiText]);
 
   const bottomPad = useMemo(() => Math.max(24, tabBarHeight + 24), [tabBarHeight]);
 
@@ -341,8 +344,7 @@ export default function ClosingHistoryScreen() {
       <View style={{ gap: 12 }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
           <Text style={{ fontSize: 24, fontWeight: "900", color: theme.colors.text }}>
-            Closing History
-          </Text>
+            {uiText("Closing History")}</Text>
 
           <Pressable
             onPress={() => router.back()}
@@ -355,35 +357,35 @@ export default function ClosingHistoryScreen() {
               backgroundColor: theme.colors.card,
             }}
           >
-            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Back</Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Back")}</Text>
           </Pressable>
         </View>
 
         <Card style={{ gap: 10 }}>
-          <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Organization</Text>
+          <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Organization")}</Text>
           <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
             {activeOrgName ?? "—"}
           </Text>
 
-          <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Store</Text>
+          <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Store")}</Text>
           <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{activeStoreName ?? "—"}</Text>
 
-          <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Role</Text>
+          <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Role")}</Text>
           <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{roleLabel}</Text>
 
-          <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>Range</Text>
+          <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>{uiText("Range")}</Text>
 
           <View style={{ flexDirection: "row", gap: 10 }}>
             <Pressable onPress={() => setFilter("7d")} style={chipStyle(filter === "7d")}>
-              <Text style={chipTextStyle(filter === "7d")}>Last 7 days</Text>
+              <Text style={chipTextStyle(filter === "7d")}>{uiText("Last 7 days")}</Text>
             </Pressable>
 
             <Pressable onPress={() => setFilter("month")} style={chipStyle(filter === "month")}>
-              <Text style={chipTextStyle(filter === "month")}>This Month</Text>
+              <Text style={chipTextStyle(filter === "month")}>{uiText("This Month")}</Text>
             </Pressable>
 
             <Pressable onPress={() => setFilter("all")} style={chipStyle(filter === "all")}>
-              <Text style={chipTextStyle(filter === "all")}>Last 90</Text>
+              <Text style={chipTextStyle(filter === "all")}>{uiText("Last 90")}</Text>
             </Pressable>
           </View>
 
@@ -398,18 +400,18 @@ export default function ClosingHistoryScreen() {
             }}
           >
             <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>
-              Showing: {dateRange.start} .. {dateRange.end}
+              {uiText("Showing:")}{dateRange.start} .. {dateRange.end}
             </Text>
 
             <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
               {isOwnerOrAdmin
-                ? "Owner/Admin anaona LOCKED status pia."
-                : "Staff anaweza kuona history. (Kama RLS imekataa snapshot dates, tutaongeza RPC salama baadaye.)"}
+                ? uiText("Owner/Admin anaona LOCKED status pia.")
+                : uiText("Staff anaweza kuona history. (Kama RLS imekataa snapshot dates, tutaongeza RPC salama baadaye.)")}
             </Text>
           </View>
 
           <Button
-            title={loading ? "Loading..." : "Refresh"}
+            title={loading ? uiText("Loading...") : uiText("Refresh")}
             onPress={loadHistory}
             disabled={loading}
             variant="secondary"
@@ -419,7 +421,7 @@ export default function ClosingHistoryScreen() {
 
         {!!error && (
           <Card style={{ borderColor: dangerBorder, backgroundColor: dangerSoft }}>
-            <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{error}</Text>
+            <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{systemText(error)}</Text>
           </Card>
         )}
 
@@ -427,39 +429,20 @@ export default function ClosingHistoryScreen() {
           <View style={{ paddingVertical: 18, alignItems: "center" }}>
             <ActivityIndicator />
             <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 10 }}>
-              Loading history...
-            </Text>
+              {uiText("Loading history...")}</Text>
           </View>
         )}
 
         {!loading && items.length === 0 && !error && (
           <Card>
-            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>No history yet</Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("No history yet")}</Text>
             <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-              Hakuna snapshots kwenye range hii. (Tumia Daily Closing → Load Report ili kuona summary.)
-            </Text>
+              {uiText("Hakuna snapshots kwenye range hii. (Tumia Daily Closing → Load Report ili kuona summary.)")}</Text>
           </Card>
         )}
       </View>
     );
-  }, [
-    router,
-    activeOrgName,
-    activeStoreName,
-    roleLabel,
-    chipStyle,
-    chipTextStyle,
-    filter,
-    dateRange.start,
-    dateRange.end,
-    isOwnerOrAdmin,
-    loadHistory,
-    loading,
-    items.length,
-    error,
-    dangerBorder,
-    dangerSoft,
-  ]);
+  }, [router, activeOrgName, activeStoreName, roleLabel, chipStyle, chipTextStyle, filter, dateRange.start, dateRange.end, isOwnerOrAdmin, loadHistory, loading, items.length, error, dangerBorder, dangerSoft, uiText, systemText]);
 
   return (
     <Screen>

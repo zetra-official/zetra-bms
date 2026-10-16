@@ -1,3 +1,5 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 import { supabase } from "@/src/supabase/supabaseClient";
 import { Card } from "@/src/ui/Card";
 import { Screen } from "@/src/ui/Screen";
@@ -99,6 +101,8 @@ function safeDateLabel(iso: string | null | undefined) {
 }
 
 export default function ClubOrdersByStoreScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const topPad = Math.max(insets.top, 10) + 8;
@@ -210,7 +214,7 @@ export default function ClubOrdersByStoreScreen() {
               </View>
 
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>Customer Orders</Text>
+                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>{uiText("Customer Orders")}</Text>
                 <Text style={{ color: theme.colors.faint, fontWeight: "900", fontSize: 12 }} numberOfLines={1}>
                   {subtitle}
                 </Text>
@@ -238,7 +242,7 @@ export default function ClubOrdersByStoreScreen() {
               >
                 <Ionicons name="refresh" size={16} color={theme.colors.text} />
                 <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>
-                  {refreshing ? "..." : "Refresh"}
+                  {refreshing ? "..." : uiText("Refresh")}
                 </Text>
               </Pressable>
 
@@ -267,12 +271,12 @@ export default function ClubOrdersByStoreScreen() {
 
         {!!err && (
           <Card style={{ padding: 12, borderColor: theme.colors.dangerBorder, backgroundColor: theme.colors.dangerSoft }}>
-            <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{err}</Text>
+            <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{systemText(err)}</Text>
           </Card>
         )}
 
         <Card style={{ padding: 14, gap: 10 }}>
-          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Actions</Text>
+          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Actions")}</Text>
 
           <Pressable
             onPress={goCreate}
@@ -294,23 +298,22 @@ export default function ClubOrdersByStoreScreen() {
             ]}
           >
             <Ionicons name="add-circle-outline" size={18} color={theme.colors.emerald} />
-            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Create Order</Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Create Order")}</Text>
           </Pressable>
 
           <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 12, lineHeight: 16 }}>
-            TIP: Hapa ndipo utaona orders zote za wateja kwa store hii (tap kufungua).
-          </Text>
+            {uiText("TIP: Hapa ndipo utaona orders zote za wateja kwa store hii (tap kufungua).")}</Text>
         </Card>
 
         {loading && (
           <View style={{ paddingTop: 8, alignItems: "center" }}>
             <ActivityIndicator />
-            <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>Loading orders...</Text>
+            <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>{uiText("Loading orders...")}</Text>
           </View>
         )}
       </View>
     );
-  }, [err, goCreate, load, loading, refreshing, router, storeIdOk, subtitle, topPad]);
+  }, [err, goCreate, load, loading, refreshing, router, storeIdOk, subtitle, topPad, uiText, systemText]);
 
   const renderItem = useCallback(
     ({ item }: { item: OrderRow }) => {
@@ -335,7 +338,7 @@ export default function ClubOrdersByStoreScreen() {
           <Card style={{ marginBottom: 12, gap: 10 }}>
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
               <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16, flex: 1 }} numberOfLines={1}>
-                Order {id ? id.slice(0, 8) : "—"}
+                {uiText("Order")}{id ? id.slice(0, 8) : "—"}
               </Text>
 
               <View
@@ -348,44 +351,43 @@ export default function ClubOrdersByStoreScreen() {
                   backgroundColor: theme.colors.emeraldSoft,
                 }}
               >
-                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{status}</Text>
+                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText(status)}</Text>
               </View>
             </View>
 
             <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-              Customer: <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{customerName}</Text>
+              {uiText("Customer:")}<Text style={{ color: theme.colors.text, fontWeight: "900" }}>{(clean(item.customer_name) || uiText("Customer"))}</Text>
               {customerPhone ? (
                 <Text style={{ color: theme.colors.faint, fontWeight: "900" }}> • {customerPhone}</Text>
               ) : null}
             </Text>
 
             <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-              When: <Text style={{ color: theme.colors.text }}>{when}</Text>
+              {uiText("When:")}<Text style={{ color: theme.colors.text }}>{when}</Text>
             </Text>
 
             <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
               <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                Total: <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{fmt(total)}</Text>
+                {uiText("Total:")}<Text style={{ color: theme.colors.text, fontWeight: "900" }}>{fmt(total)}</Text>
               </Text>
 
               <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                Paid: <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{fmt(paid)}</Text>
+                {uiText("Paid:")}<Text style={{ color: theme.colors.text, fontWeight: "900" }}>{fmt(paid)}</Text>
               </Text>
             </View>
 
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
               <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>
-                {hasSale ? "Converted to Sale ✅" : "Not yet sale"}
+                {hasSale ? uiText("Converted to Sale ✅") : uiText("Not yet sale")}
               </Text>
               <Text style={{ color: theme.colors.muted, fontWeight: "800", textDecorationLine: "underline" }}>
-                Open
-              </Text>
+                {uiText("Open")}</Text>
             </View>
           </Card>
         </Pressable>
       );
     },
-    [openOrder]
+    [openOrder, uiText]
   );
 
   return (
@@ -403,10 +405,9 @@ export default function ClubOrdersByStoreScreen() {
         ListEmptyComponent={
           loading ? null : (
             <Card style={{ padding: 14 }}>
-              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>No orders</Text>
+              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>{uiText("No orders")}</Text>
               <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-                Hakuna orders bado kwa store hii.
-              </Text>
+                {uiText("Hakuna orders bado kwa store hii.")}</Text>
             </Card>
           )
         }

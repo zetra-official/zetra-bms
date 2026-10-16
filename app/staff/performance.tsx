@@ -1,3 +1,5 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import {
@@ -49,6 +51,8 @@ function shortId(v: string) {
 }
 
 export default function StaffPerformanceScreen() {
+ const systemText = useSystemMessageText();
+ const uiText = useCommonText();
   const router = useRouter();
   const { activeOrgId, activeOrgName, activeRole } = useOrg();
 
@@ -187,24 +191,22 @@ const followUp = useMemo(() => {
 
           <View style={{ flex: 1 }}>
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 28 }}>
-              Performance Insights
-            </Text>
+              {uiText("Performance Insights")}</Text>
             <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 4 }}>
-              {activeOrgName ?? "—"} • Staff performance overview
-            </Text>
+              {activeOrgName ?? "—"} {uiText("• Staff performance overview")}</Text>
           </View>
         </View>
 
         {!!error ? (
           <View style={{ borderWidth: 1, borderColor: "rgba(225,29,72,0.25)", borderRadius: 18, backgroundColor: "rgba(225,29,72,0.06)", padding: 14 }}>
-            <Text style={{ color: UI.danger, fontWeight: "900" }}>{error}</Text>
+            <Text style={{ color: UI.danger, fontWeight: "900" }}>{systemText(error)}</Text>
           </View>
         ) : null}
 
         <TextInput
           value={q}
           onChangeText={setQ}
-          placeholder="Search staff by email / membership..."
+          placeholder={uiText("Search staff by email / membership...")}
           placeholderTextColor={UI.faint}
           style={{
             borderWidth: 1,
@@ -220,37 +222,33 @@ const followUp = useMemo(() => {
 
         <View style={{ borderWidth: 1, borderColor: UI.border, borderRadius: 22, backgroundColor: UI.card, padding: 16, gap: 12 }}>
          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18 }}>
-  Performance Highlights
-</Text>
+  {uiText("Performance Highlights")}</Text>
 
           {best ? (
             <View style={{ borderWidth: 1, borderColor: "rgba(52,211,153,0.25)", borderRadius: 18, backgroundColor: "rgba(52,211,153,0.08)", padding: 14, gap: 6 }}>
               <Text style={{ color: UI.emerald, fontWeight: "900", fontSize: 12 }}>
-                TOP PERFORMER
-              </Text>
+                {uiText("TOP PERFORMER")}</Text>
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-                {best.email ?? `User: ${shortId(best.user_id)}`}
+                {best.email ?? uiText("User: {p0}", {p0: (shortId(best.user_id))})}
               </Text>
               <Text style={{ color: UI.muted, fontWeight: "900" }}>
-                Sales: {formatTZS(best.totalSalesNum)} • Receipts: {best.salesCountNum}
+                {uiText("Sales:")}{formatTZS(best.totalSalesNum)} {uiText("• Receipts:")}{best.salesCountNum}
               </Text>
             </View>
           ) : (
             <Text style={{ color: UI.muted, fontWeight: "800" }}>
-              Bado hakuna sales data ya staff.
-            </Text>
+              {uiText("Bado hakuna sales data ya staff.")}</Text>
           )}
 
           {followUp ? (
             <View style={{ borderWidth: 1, borderColor: "rgba(225,29,72,0.20)", borderRadius: 18, backgroundColor: "rgba(225,29,72,0.06)", padding: 14, gap: 6 }}>
               <Text style={{ color: UI.danger, fontWeight: "900", fontSize: 12 }}>
-                NEEDS FOLLOW UP
-              </Text>
+                {uiText("NEEDS FOLLOW UP")}</Text>
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-                {followUp.email ?? `User: ${shortId(followUp.user_id)}`}
+                {followUp.email ?? uiText("User: {p0}", {p0: (shortId(followUp.user_id))})}
               </Text>
               <Text style={{ color: UI.muted, fontWeight: "900" }}>
-                Sales: {formatTZS(followUp.totalSalesNum)} • Receipts: {followUp.salesCountNum}
+                {uiText("Sales:")}{formatTZS(followUp.totalSalesNum)} {uiText("• Receipts:")}{followUp.salesCountNum}
               </Text>
             </View>
           ) : null}
@@ -270,13 +268,12 @@ const followUp = useMemo(() => {
           }}
         >
           <Text style={{ color: UI.text, fontWeight: "900" }}>
-            {loading ? "Loading..." : "Refresh Performance"}
+            {loading ? uiText("Loading...") : uiText("Refresh Performance")}
           </Text>
         </Pressable>
 
         <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18 }}>
-          Full Staff Ranking
-        </Text>
+          {uiText("Full Staff Ranking")}</Text>
 
        {ranked.map((r, index) => (
   <Pressable
@@ -301,24 +298,23 @@ const followUp = useMemo(() => {
             }}
           >
             <Text style={{ color: UI.emerald, fontWeight: "900", fontSize: 12 }}>
-              RANK #{index + 1}
+              {uiText("RANK #")}{index + 1}
             </Text>
 
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-              {r.email ?? `User: ${shortId(r.user_id)}`}
+              {r.email ?? uiText("User: {p0}", {p0: (shortId(r.user_id))})}
             </Text>
 
             <Text style={{ color: UI.muted, fontWeight: "900" }}>
-              Sales: {formatTZS(r.totalSalesNum)}
+              {uiText("Sales:")}{formatTZS(r.totalSalesNum)}
             </Text>
 
             <Text style={{ color: UI.muted, fontWeight: "900" }}>
-         Receipts: {r.salesCountNum} • Unpaid Commission:{" "}
+         {uiText("Receipts:")}{r.salesCountNum} {uiText("• Unpaid Commission:")}{" "}
 {formatTZS(r.remainingCommissionNum)}
             </Text>
         <Text style={{ color: UI.faint, fontWeight: "800", marginTop: 4 }}>
-      Tap to open full staff report ›
-    </Text>
+      {uiText("Tap to open full staff report ›")}</Text>
   </Pressable>
 ))}
       </ScrollView>

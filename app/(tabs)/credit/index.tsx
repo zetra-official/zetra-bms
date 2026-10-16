@@ -1,3 +1,5 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 import { useOrg } from "@/src/context/OrgContext";
 import { useOrgMoneyPrefs } from "@/src/ui/money";
 import { supabase } from "@/src/supabase/supabaseClient";
@@ -66,6 +68,8 @@ function isClearedBalance(n: number) {
 }
 
 export default function CreditHomeScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
@@ -459,8 +463,7 @@ export default function CreditHomeScreen() {
 
             {isOlder ? (
               <Text style={{ color: theme.colors.danger, fontWeight: "900", fontSize: 12 }}>
-                Risk
-              </Text>
+                {uiText("Risk")}</Text>
             ) : null}
           </View>
 
@@ -489,24 +492,24 @@ export default function CreditHomeScreen() {
               >
                 <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{name}</Text>
+                    <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{(r.customer_name ?? uiText("Customer"))}</Text>
                     <Text style={{ color: theme.colors.faint, marginTop: 4, fontWeight: "800" }}>
-                      {phone}
+                      {(r.phone ?? uiText("No phone"))}
                     </Text>
 
                     <Text style={{ color: theme.colors.muted, marginTop: 6, fontWeight: "900" }}>
-                      Date: <Text style={{ color: theme.colors.text }}>{r.borrow_date}</Text>
+                      {uiText("Date:")}<Text style={{ color: theme.colors.text }}>{r.borrow_date}</Text>
                     </Text>
                   </View>
 
                   <View style={{ alignItems: "flex-end" }}>
-                    <Text style={{ color: theme.colors.muted, fontSize: 12 }}>Borrowed</Text>
+                    <Text style={{ color: theme.colors.muted, fontSize: 12 }}>{uiText("Borrowed")}</Text>
                     <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
                       {money.fmt(Math.max(0, borrowed))}
                     </Text>
 
                     <View style={{ height: 8 }} />
-                    <Text style={{ color: theme.colors.muted, fontSize: 12 }}>Balance</Text>
+                    <Text style={{ color: theme.colors.muted, fontSize: 12 }}>{uiText("Balance")}</Text>
                     <Text
                       style={{
                         color: isOlder ? theme.colors.danger : theme.colors.emerald,
@@ -519,14 +522,14 @@ export default function CreditHomeScreen() {
                 </View>
 
                 <View style={{ height: 10 }} />
-                <Text style={{ color: theme.colors.emerald, fontWeight: "900" }}>Open →</Text>
+                <Text style={{ color: theme.colors.emerald, fontWeight: "900" }}>{uiText("Open →")}</Text>
               </Pressable>
             );
           })}
         </View>
       );
     },
-    [openAccount, money]
+    [openAccount, money, uiText]
   );
 
   const ClearedArchive = useCallback(() => {
@@ -565,10 +568,9 @@ export default function CreditHomeScreen() {
               </View>
 
               <View style={{ gap: 2 }}>
-                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Cleared Archive</Text>
+                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Cleared Archive")}</Text>
                 <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
-                  Records za waliomaliza kulipa (hazifutwi)
-                </Text>
+                  {uiText("Records za waliomaliza kulipa (hazifutwi)")}</Text>
               </View>
             </View>
 
@@ -600,8 +602,7 @@ export default function CreditHomeScreen() {
         {clearedOpen ? (
           count === 0 ? (
             <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-              Hakuna cleared records kwenye range hii.
-            </Text>
+              {uiText("Hakuna cleared records kwenye range hii.")}</Text>
           ) : (
             <View style={{ gap: 10 }}>
               {clearedTimelineRows.map((r, idx) => {
@@ -627,7 +628,7 @@ export default function CreditHomeScreen() {
                     <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
                       <View style={{ flex: 1 }}>
                         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{name}</Text>
+                          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{(r.customer_name ?? uiText("Customer"))}</Text>
 
                           <View
                             style={{
@@ -644,28 +645,27 @@ export default function CreditHomeScreen() {
                           >
                             <SafeIcon name="check-circle" size={14} color={theme.colors.emerald} />
                             <Text style={{ color: theme.colors.muted, fontWeight: "900", fontSize: 12 }}>
-                              CLEARED
-                            </Text>
+                              {uiText("CLEARED")}</Text>
                           </View>
                         </View>
 
                         <Text style={{ color: theme.colors.faint, marginTop: 4, fontWeight: "800" }}>
-                          {phone}
+                          {(r.phone ?? uiText("No phone"))}
                         </Text>
 
                         <Text style={{ color: theme.colors.muted, marginTop: 6, fontWeight: "900" }}>
-                          Date: <Text style={{ color: theme.colors.text }}>{r.borrow_date}</Text>
+                          {uiText("Date:")}<Text style={{ color: theme.colors.text }}>{r.borrow_date}</Text>
                         </Text>
                       </View>
 
                       <View style={{ alignItems: "flex-end" }}>
-                        <Text style={{ color: theme.colors.muted, fontSize: 12 }}>Borrowed</Text>
+                        <Text style={{ color: theme.colors.muted, fontSize: 12 }}>{uiText("Borrowed")}</Text>
                         <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
                           {money.fmt(Math.max(0, borrowed))}
                         </Text>
 
                         <View style={{ height: 8 }} />
-                        <Text style={{ color: theme.colors.muted, fontSize: 12 }}>Balance</Text>
+                        <Text style={{ color: theme.colors.muted, fontSize: 12 }}>{uiText("Balance")}</Text>
                         <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>
                           {money.fmt(Math.max(0, bal))}
                         </Text>
@@ -673,7 +673,7 @@ export default function CreditHomeScreen() {
                     </View>
 
                     <View style={{ height: 10 }} />
-                    <Text style={{ color: theme.colors.emerald, fontWeight: "900" }}>Open →</Text>
+                    <Text style={{ color: theme.colors.emerald, fontWeight: "900" }}>{uiText("Open →")}</Text>
                   </Pressable>
                 );
               })}
@@ -682,17 +682,15 @@ export default function CreditHomeScreen() {
         ) : null}
       </View>
     );
-  }, [clearedTimelineRows, clearedOpen, openAccount, money]);
+  }, [clearedTimelineRows, clearedOpen, openAccount, money, uiText]);
 
   return (
     <Screen scroll bottomPad={isDesktopWeb ? 24 : 160}>
       <View style={{ paddingTop: 6, paddingBottom: 12, gap: 6 }}>
         <Text style={{ color: theme.colors.text, fontSize: 30, fontWeight: "900" }}>
-          Credit
-        </Text>
+          {uiText("Credit")}</Text>
         <Text style={{ color: theme.colors.muted, fontWeight: "800", lineHeight: 22 }}>
-          Manage debtors, payments, balances, and borrow timelines.
-        </Text>
+          {uiText("Manage debtors, payments, balances, and borrow timelines.")}</Text>
       </View>
 
       <View
@@ -737,8 +735,7 @@ export default function CreditHomeScreen() {
 
             <View style={{ flex: 1 }}>
               <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-                Credit Accounts (v2)
-              </Text>
+                {uiText("Credit Accounts (v2)")}</Text>
               <Text style={{ color: theme.colors.faint, fontWeight: "900", marginTop: 4 }}>
                 {headerSubtitle}
               </Text>
@@ -755,14 +752,14 @@ export default function CreditHomeScreen() {
               gap: 6,
             }}
           >
-            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Access</Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Access")}</Text>
             <Text style={{ color: theme.colors.muted, fontWeight: "800", lineHeight: 18 }}>
               {accessText}
             </Text>
           </View>
 
           <View style={{ gap: 10 }}>
-            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Search</Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Search")}</Text>
             <View
               style={{
                 flexDirection: "row",
@@ -780,7 +777,7 @@ export default function CreditHomeScreen() {
               <TextInput
                 value={q}
                 onChangeText={setQ}
-                placeholder="Tafuta jina au simu..."
+                placeholder={uiText("Tafuta jina au simu...")}
                 placeholderTextColor={theme.colors.faint}
                 style={{ flex: 1, color: theme.colors.text, fontWeight: "800" }}
                 autoCorrect={false}
@@ -793,11 +790,11 @@ export default function CreditHomeScreen() {
               ) : null}
             </View>
 
-            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Sort</Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Sort")}</Text>
             <View style={{ flexDirection: "row", gap: 10 }}>
-              <Seg k="BAL_DESC" label="Top Debt" />
-              <Seg k="NAME_ASC" label="Name" />
-              <Seg k="BAL_ASC" label="Low Debt" />
+              <Seg k="BAL_DESC" label={uiText("Top Debt")} />
+              <Seg k="NAME_ASC" label={uiText("Name")} />
+              <Seg k="BAL_ASC" label={uiText("Low Debt")} />
             </View>
           </View>
 
@@ -818,8 +815,7 @@ export default function CreditHomeScreen() {
               })}
             >
               <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-                View Cleared
-              </Text>
+                {uiText("View Cleared")}</Text>
             </Pressable>
 
             <Pressable
@@ -838,8 +834,7 @@ export default function CreditHomeScreen() {
               })}
             >
               <Text style={{ color: theme.colors.emerald, fontWeight: "900", fontSize: 16 }}>
-                Borrow Timeline
-              </Text>
+                {uiText("Borrow Timeline")}</Text>
             </Pressable>
           </View>
 
@@ -861,8 +856,7 @@ export default function CreditHomeScreen() {
             })}
           >
             <Text style={{ color: theme.colors.emerald, fontWeight: "900", fontSize: 16 }}>
-              Refresh
-            </Text>
+              {uiText("Refresh")}</Text>
           </Pressable>
         </Card>
 
@@ -891,10 +885,9 @@ export default function CreditHomeScreen() {
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
             <View style={{ flex: 1 }}>
               <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
-                Debtors List
-              </Text>
+                {uiText("Debtors List")}</Text>
               <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 4 }}>
-                {q ? "Filtered results" : "Active debtors in this store"}
+                {q ? uiText("Filtered results") : uiText("Active debtors in this store")}
               </Text>
             </View>
 
@@ -935,11 +928,10 @@ export default function CreditHomeScreen() {
           ) : filtered.length === 0 && activeStoreId ? (
             <View style={{ paddingVertical: 10 }}>
               <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                {q ? "No match found." : "No active debtors right now."}
+                {q ? uiText("No match found.") : uiText("No active debtors right now.")}
               </Text>
               <Text style={{ color: theme.colors.faint, marginTop: 6 }}>
-                (Waliomaliza wapo kwenye View Cleared.)
-              </Text>
+                {uiText("(Waliomaliza wapo kwenye View Cleared.)")}</Text>
             </View>
           ) : (
             <View
@@ -975,14 +967,14 @@ export default function CreditHomeScreen() {
                   >
                     <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
                       <View style={{ flex: 1 }}>
-                        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{name}</Text>
+                        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{(item.customer_name ?? uiText("Customer"))}</Text>
                         <Text style={{ color: theme.colors.faint, marginTop: 4, fontWeight: "800" }}>
-                          {phone}
+                          {(item.phone ?? uiText("No phone"))}
                         </Text>
                       </View>
 
                       <View style={{ alignItems: "flex-end" }}>
-                        <Text style={{ color: theme.colors.muted, fontSize: 12 }}>Balance</Text>
+                        <Text style={{ color: theme.colors.muted, fontSize: 12 }}>{uiText("Balance")}</Text>
                         <Text style={{ color: theme.colors.emerald, fontWeight: "900" }}>
                           {money.fmt(Math.max(0, bal))}
                         </Text>
@@ -990,7 +982,7 @@ export default function CreditHomeScreen() {
                     </View>
 
                     <View style={{ height: 10 }} />
-                    <Text style={{ color: theme.colors.emerald, fontWeight: "900" }}>Open →</Text>
+                    <Text style={{ color: theme.colors.emerald, fontWeight: "900" }}>{uiText("Open →")}</Text>
                   </Pressable>
                 );
               })}
@@ -1047,10 +1039,9 @@ export default function CreditHomeScreen() {
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                 <View style={{ gap: 2 }}>
                   <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
-                    Borrow Timeline
-                  </Text>
+                    {uiText("Borrow Timeline")}</Text>
                   <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
-                    Store: {activeStoreName ?? "—"}
+                    {uiText("Store:")}{activeStoreName ?? "—"}
                   </Text>
                 </View>
 
@@ -1060,10 +1051,10 @@ export default function CreditHomeScreen() {
               </View>
 
               <View style={{ flexDirection: "row", gap: 10 }}>
-                <RangeChip k="TODAY" label="Today" />
-                <RangeChip k="D7" label="7 Days" />
-                <RangeChip k="D30" label="30 Days" />
-                <RangeChip k="ALL" label="All" />
+                <RangeChip k="TODAY" label={uiText("Today")} />
+                <RangeChip k="D7" label={uiText("7 Days")} />
+                <RangeChip k="D30" label={uiText("30 Days")} />
+                <RangeChip k="ALL" label={uiText("All")} />
               </View>
 
               <View style={{ flexDirection: "row", gap: 10 }}>
@@ -1082,7 +1073,7 @@ export default function CreditHomeScreen() {
                     opacity: pressed ? 0.92 : 1,
                   })}
                 >
-                  <Text style={{ color: theme.colors.emerald, fontWeight: "900" }}>Reload</Text>
+                  <Text style={{ color: theme.colors.emerald, fontWeight: "900" }}>{uiText("Reload")}</Text>
                 </Pressable>
 
                 <Pressable
@@ -1100,7 +1091,7 @@ export default function CreditHomeScreen() {
                     opacity: pressed ? 0.92 : 1,
                   })}
                 >
-                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Close</Text>
+                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Close")}</Text>
                 </Pressable>
               </View>
 
@@ -1114,7 +1105,7 @@ export default function CreditHomeScreen() {
                     borderRadius: theme.radius.xl,
                   }}
                 >
-                  <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{timelineErr}</Text>
+                  <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{systemText(timelineErr)}</Text>
                 </View>
               ) : null}
 
@@ -1134,16 +1125,15 @@ export default function CreditHomeScreen() {
                   >
                     {!activeTimelineRows.length && !timelineErr ? (
                       <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                        Hakuna active records kwenye range hii.
-                      </Text>
+                        {uiText("Hakuna active records kwenye range hii.")}</Text>
                     ) : null}
 
                     {/* ✅ ACTIVE ONLY */}
-                    <TimelineSection title="Today" list={groupMap.Today} />
-                    <TimelineSection title="Yesterday" list={groupMap.Yesterday} />
-                    <TimelineSection title="This Week" list={groupMap["This Week"]} />
-                    <TimelineSection title="This Month" list={groupMap["This Month"]} />
-                    <TimelineSection title="Older" list={groupMap.Older} />
+                    <TimelineSection title={uiText("Today")} list={groupMap.Today} />
+                    <TimelineSection title={uiText("Yesterday")} list={groupMap.Yesterday} />
+                    <TimelineSection title={uiText("This Week")} list={groupMap["This Week"]} />
+                    <TimelineSection title={uiText("This Month")} list={groupMap["This Month"]} />
+                    <TimelineSection title={uiText("Older")} list={groupMap.Older} />
 
                     {/* ✅ ARCHIVE (CLEARED) COLLAPSED */}
                     <ClearedArchive />

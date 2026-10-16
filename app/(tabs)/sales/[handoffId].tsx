@@ -1,3 +1,5 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/(tabs)/sales/[handoffId].tsx
 
 import { Ionicons } from "@expo/vector-icons";
@@ -437,6 +439,8 @@ function MoneyTile({
 }
 
 export default function CashierHandoffDetailScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
 
   const params =
@@ -1090,16 +1094,16 @@ export default function CashierHandoffDetailScreen() {
           }
 
           Alert.alert(
-            "Accepted ✅",
-            "Handoff imekubaliwa. Sasa unaweza kukamilisha mauzo."
+            uiText("Accepted ✅"),
+            uiText("Handoff imekubaliwa. Sasa unaweza kukamilisha mauzo.")
           );
 
           await load();
         } catch (e: any) {
           Alert.alert(
-            "Accept failed",
+            uiText("Accept failed"),
             e?.message ??
-              "Failed to accept handoff"
+              uiText("Failed to accept handoff")
           );
         } finally {
           setSaving(false);
@@ -1123,7 +1127,7 @@ export default function CashierHandoffDetailScreen() {
             invalidReason
           ) {
             Alert.alert(
-              "Blocked",
+              uiText("Blocked"),
               invalidReason
             );
           }
@@ -1221,15 +1225,15 @@ export default function CashierHandoffDetailScreen() {
             ).trim();
 
           Alert.alert(
-            "Completed ✅",
+            uiText("Completed ✅"),
             method ===
               "CREDIT"
               ? balance > 0
-                ? `Sale imekamilika. Credit balance: ${fmtMoney(
+                ? uiText("Sale imekamilika. Credit balance: {p0}", {p0: (fmtMoney(
                     balance
-                  )}`
-                : "Sale imekamilika. Hakuna balance iliyobaki."
-              : "Sale imekamilika na risiti iko tayari."
+                  ))})
+                : uiText("Sale imekamilika. Hakuna balance iliyobaki.")
+              : uiText("Sale imekamilika na risiti iko tayari.")
           );
 
           if (saleId) {
@@ -1248,9 +1252,9 @@ export default function CashierHandoffDetailScreen() {
           await load();
         } catch (e: any) {
           Alert.alert(
-            "Completion failed",
+            uiText("Completion failed"),
             e?.message ??
-              "Failed to complete handoff"
+              uiText("Failed to complete handoff")
           );
         } finally {
           setSaving(false);
@@ -1318,8 +1322,8 @@ export default function CashierHandoffDetailScreen() {
 
       if (!storeId) {
         Alert.alert(
-          "Missing",
-          "Store ya handoff haijapatikana."
+          uiText("Missing"),
+          uiText("Store ya handoff haijapatikana.")
         );
 
         return;
@@ -1472,8 +1476,7 @@ export default function CashierHandoffDetailScreen() {
                     .text,
               }}
             >
-              Cashier Handoff
-            </Text>
+              {uiText("Cashier Handoff")}</Text>
 
             <Text
               style={{
@@ -1486,7 +1489,7 @@ export default function CashierHandoffDetailScreen() {
               }}
             >
               {row?.store_name ??
-                "Store"}{" "}
+                uiText("Store")}{" "}
               •{" "}
               {status ||
                 "—"}
@@ -1519,8 +1522,7 @@ export default function CashierHandoffDetailScreen() {
                   8,
               }}
             >
-              Loading handoff...
-            </Text>
+              {uiText("Loading handoff...")}</Text>
           </View>
         ) : err ? (
           <Card
@@ -1540,16 +1542,16 @@ export default function CashierHandoffDetailScreen() {
             >
               {err ===
               "Invalid handoff route"
-                ? "This route is reserved for cashier handoff only."
-                : err}
+                ? uiText("This route is reserved for cashier handoff only.")
+                : systemText(err)}
             </Text>
 
             <Button
               title={
                 err ===
                 "Invalid handoff route"
-                  ? "Back"
-                  : "Retry"
+                  ? uiText("Back")
+                  : uiText("Retry")
               }
               onPress={
                 err ===
@@ -1573,9 +1575,7 @@ export default function CashierHandoffDetailScreen() {
                   "900",
               }}
             >
-              Handoff
-              haijapatikana.
-            </Text>
+              {uiText("Handoff haijapatikana.")}</Text>
           </Card>
         ) : (
           <>
@@ -1612,8 +1612,7 @@ export default function CashierHandoffDetailScreen() {
                         "800",
                     }}
                   >
-                    Handoff ID
-                  </Text>
+                    {uiText("Handoff ID")}</Text>
 
                   <Text
                     style={{
@@ -1686,7 +1685,7 @@ export default function CashierHandoffDetailScreen() {
                 }}
               >
                 <MoneyTile
-                  label="Items"
+                  label={uiText("Items")}
                   value={String(
                     Number(
                       row.item_count ??
@@ -1696,7 +1695,7 @@ export default function CashierHandoffDetailScreen() {
                 />
 
                 <MoneyTile
-                  label="Subtotal"
+                  label={uiText("Subtotal")}
                   value={fmtMoney(
                     Number(
                       row.subtotal ??
@@ -1706,7 +1705,7 @@ export default function CashierHandoffDetailScreen() {
                 />
 
                 <MoneyTile
-                  label="Total"
+                  label={uiText("Total")}
                   value={fmtMoney(
                     totalAmount
                   )}
@@ -1728,7 +1727,7 @@ export default function CashierHandoffDetailScreen() {
                       "800",
                   }}
                 >
-                  Discount:{" "}
+                  {uiText("Discount:")}{" "}
                   {fmtMoney(
                     Number(
                       row.discount_amount ??
@@ -1748,7 +1747,7 @@ export default function CashierHandoffDetailScreen() {
                     "800",
                 }}
               >
-                Created:{" "}
+                {uiText("Created:")}{" "}
                 {fmtDateTimeLocal(
                   row.created_at
                 )}
@@ -1765,7 +1764,7 @@ export default function CashierHandoffDetailScreen() {
                       "800",
                   }}
                 >
-                  Accepted:{" "}
+                  {uiText("Accepted:")}{" "}
                   {fmtDateTimeLocal(
                     row.accepted_at
                   )}
@@ -1783,7 +1782,7 @@ export default function CashierHandoffDetailScreen() {
                       "800",
                   }}
                 >
-                  Completed:{" "}
+                  {uiText("Completed:")}{" "}
                   {fmtDateTimeLocal(
                     row.completed_at
                   )}
@@ -1817,8 +1816,7 @@ export default function CashierHandoffDetailScreen() {
                     16,
                 }}
               >
-                👤 Sale Information
-              </Text>
+                {uiText("👤 Sale Information")}</Text>
 
               <View>
                 <Text
@@ -1831,8 +1829,7 @@ export default function CashierHandoffDetailScreen() {
                       "800",
                   }}
                 >
-                  Customer
-                </Text>
+                  {uiText("Customer")}</Text>
 
                 <Text
                   style={{
@@ -1851,7 +1848,7 @@ export default function CashierHandoffDetailScreen() {
                     row.customer_name ??
                       ""
                   ).trim() ||
-                    "Walk-in Customer"}
+                    uiText("Walk-in Customer")}
                 </Text>
 
                 {!!String(
@@ -1898,8 +1895,7 @@ export default function CashierHandoffDetailScreen() {
                       "800",
                   }}
                 >
-                  Sold By / Staff
-                </Text>
+                  {uiText("Sold By / Staff")}</Text>
 
                 <Text
                   style={{
@@ -1923,7 +1919,7 @@ export default function CashierHandoffDetailScreen() {
                     row.sold_by_email ??
                       ""
                   ).trim() ||
-                    "No staff attribution"}
+                    uiText("No staff attribution")}
                 </Text>
               </View>
 
@@ -1938,9 +1934,7 @@ export default function CashierHandoffDetailScreen() {
                       "800",
                   }}
                 >
-                  Received By /
-                  Cashier
-                </Text>
+                  {uiText("Received By / Cashier")}</Text>
 
                 <Text
                   style={{
@@ -1998,8 +1992,7 @@ export default function CashierHandoffDetailScreen() {
                       16,
                   }}
                 >
-                  📝 Order Note
-                </Text>
+                  {uiText("📝 Order Note")}</Text>
 
                 <Text
                   style={{
@@ -2044,8 +2037,7 @@ export default function CashierHandoffDetailScreen() {
                     16,
                 }}
               >
-                Shift Discipline
-              </Text>
+                {uiText("Shift Discipline")}</Text>
 
               <Text
                 style={{
@@ -2057,8 +2049,7 @@ export default function CashierHandoffDetailScreen() {
                     "900",
                 }}
               >
-                1. Fungua Shift Opening
-              </Text>
+                {uiText("1. Fungua Shift Opening")}</Text>
 
               <Text
                 style={{
@@ -2070,8 +2061,7 @@ export default function CashierHandoffDetailScreen() {
                     "900",
                 }}
               >
-                2. Kubali handoff
-              </Text>
+                {uiText("2. Kubali handoff")}</Text>
 
               <Text
                 style={{
@@ -2083,8 +2073,7 @@ export default function CashierHandoffDetailScreen() {
                     "900",
                 }}
               >
-                3. Kamilisha sale
-              </Text>
+                {uiText("3. Kamilisha sale")}</Text>
 
               <Text
                 style={{
@@ -2096,8 +2085,7 @@ export default function CashierHandoffDetailScreen() {
                     "900",
                 }}
               >
-                4. Cashier Closing
-              </Text>
+                {uiText("4. Cashier Closing")}</Text>
 
               <View
                 style={{
@@ -2113,7 +2101,7 @@ export default function CashierHandoffDetailScreen() {
                   }}
                 >
                   <Button
-                    title="Shift Opening"
+                    title={uiText("Shift Opening")}
                     onPress={
                       goShiftOpening
                     }
@@ -2127,7 +2115,7 @@ export default function CashierHandoffDetailScreen() {
                   }}
                 >
                   <Button
-                    title="Cashier Closing"
+                    title={uiText("Cashier Closing")}
                     onPress={
                       goCashierClosing
                     }
@@ -2157,8 +2145,7 @@ export default function CashierHandoffDetailScreen() {
                     16,
                 }}
               >
-                Items
-              </Text>
+                {uiText("Items")}</Text>
 
               {items.length ===
               0 ? (
@@ -2172,8 +2159,7 @@ export default function CashierHandoffDetailScreen() {
                       "800",
                   }}
                 >
-                  No items found.
-                </Text>
+                  {uiText("No items found.")}</Text>
               ) : (
                 items.map(
                   (
@@ -2254,12 +2240,12 @@ export default function CashierHandoffDetailScreen() {
                               "800",
                           }}
                         >
-                          SKU:{" "}
+                          {uiText("SKU:")}{" "}
                           {String(
                             it?.sku ??
                               "—"
                           )}{" "}
-                          • Qty:{" "}
+                          {uiText("• Qty:")}{" "}
                           {qty}
                         </Text>
 
@@ -2274,11 +2260,11 @@ export default function CashierHandoffDetailScreen() {
                               "900",
                           }}
                         >
-                          Unit:{" "}
+                          {uiText("Unit:")}{" "}
                           {fmtMoney(
                             unitPrice
                           )}{" "}
-                          • Line:{" "}
+                          {uiText("• Line:")}{" "}
                           {fmtMoney(
                             lineTotal
                           )}
@@ -2312,8 +2298,7 @@ export default function CashierHandoffDetailScreen() {
                       16,
                   }}
                 >
-                  Accept Handoff
-                </Text>
+                  {uiText("Accept Handoff")}</Text>
 
                 <Text
                   style={{
@@ -2325,16 +2310,13 @@ export default function CashierHandoffDetailScreen() {
                       "800",
                   }}
                 >
-                  Ukibonyeza Accept,
-                  handoff hii itawekwa
-                  chini yako.
-                </Text>
+                  {uiText("Ukibonyeza Accept, handoff hii itawekwa chini yako.")}</Text>
 
                 <Button
                   title={
                     saving
-                      ? "Accepting..."
-                      : "Accept Handoff"
+                      ? uiText("Accepting...")
+                      : uiText("Accept Handoff")
                   }
                   onPress={
                     acceptNow
@@ -2369,8 +2351,7 @@ export default function CashierHandoffDetailScreen() {
                       16,
                   }}
                 >
-                  💳 Complete Sale
-                </Text>
+                  {uiText("💳 Complete Sale")}</Text>
 
                 <Text
                   style={{
@@ -2382,8 +2363,7 @@ export default function CashierHandoffDetailScreen() {
                       "800",
                   }}
                 >
-                  Cashier Receiving:
-                  {" "}
+                  {uiText("Cashier Receiving:")}{" "}
                   <Text
                     style={{
                       color:
@@ -2398,7 +2378,7 @@ export default function CashierHandoffDetailScreen() {
                       row.cashier_email ??
                         ""
                     ).trim() ||
-                      "Current Cashier"}
+                      uiText("Current Cashier")}
                   </Text>
                 </Text>
 
@@ -2416,7 +2396,7 @@ export default function CashierHandoffDetailScreen() {
                   }}
                 >
                   <MethodChip
-                    label="Cash"
+                    label={uiText("Cash")}
                     active={
                       method ===
                       "CASH"
@@ -2429,7 +2409,7 @@ export default function CashierHandoffDetailScreen() {
                   />
 
                   <MethodChip
-                    label="Mobile"
+                    label={uiText("Mobile")}
                     active={
                       method ===
                       "MOBILE"
@@ -2442,7 +2422,7 @@ export default function CashierHandoffDetailScreen() {
                   />
 
                   <MethodChip
-                    label="Bank"
+                    label={uiText("Bank")}
                     active={
                       method ===
                       "BANK"
@@ -2455,7 +2435,7 @@ export default function CashierHandoffDetailScreen() {
                   />
 
                   <MethodChip
-                    label="Split"
+                    label={uiText("Split")}
                     active={
                       method ===
                       "SPLIT"
@@ -2468,7 +2448,7 @@ export default function CashierHandoffDetailScreen() {
                   />
 
                   <MethodChip
-                    label="Credit"
+                    label={uiText("Credit")}
                     active={
                       method ===
                       "CREDIT"
@@ -2487,10 +2467,7 @@ export default function CashierHandoffDetailScreen() {
                 "SPLIT" ? (
                   <View>
                     <FieldLabel>
-                      Paid (
-                      {money.currency ||
-                        "TZS"}
-                      )
+                      {uiText("Paid ({p0})", {p0: money.currency || "TZS"})}
                     </FieldLabel>
 
                     <InputBox
@@ -2556,10 +2533,7 @@ export default function CashierHandoffDetailScreen() {
                             6,
                         }}
                       >
-                        Non-credit
-                        lazima ilipwe
-                        full.
-                      </Text>
+                        {uiText("Non-credit lazima ilipwe full.")}</Text>
                     )}
 
                     {method ===
@@ -2578,12 +2552,7 @@ export default function CashierHandoffDetailScreen() {
                             6,
                         }}
                       >
-                        Credit
-                        inaruhusu
-                        Paid = 0
-                        au partial
-                        payment.
-                      </Text>
+                        {uiText("Credit inaruhusu Paid = 0 au partial payment.")}</Text>
                     )}
                   </View>
                 ) : null}
@@ -2595,8 +2564,7 @@ export default function CashierHandoffDetailScreen() {
                   <>
                     <View>
                       <FieldLabel>
-                        Cash Paid
-                      </FieldLabel>
+                        {uiText("Cash Paid")}</FieldLabel>
 
                       <InputBox
                         value={
@@ -2618,8 +2586,7 @@ export default function CashierHandoffDetailScreen() {
 
                     <View>
                       <FieldLabel>
-                        Mobile Paid
-                      </FieldLabel>
+                        {uiText("Mobile Paid")}</FieldLabel>
 
                       <InputBox
                         value={
@@ -2641,8 +2608,7 @@ export default function CashierHandoffDetailScreen() {
 
                     <View>
                       <FieldLabel>
-                        Bank Paid
-                      </FieldLabel>
+                        {uiText("Bank Paid")}</FieldLabel>
 
                       <InputBox
                         value={
@@ -2675,21 +2641,21 @@ export default function CashierHandoffDetailScreen() {
                   }}
                 >
                   <MoneyTile
-                    label="Total"
+                    label={uiText("Total")}
                     value={fmtMoney(
                       totalAmount
                     )}
                   />
 
                   <MoneyTile
-                    label="Paid"
+                    label={uiText("Paid")}
                     value={fmtMoney(
                       paidAmount
                     )}
                   />
 
                   <MoneyTile
-                    label="Balance"
+                    label={uiText("Balance")}
                     value={fmtMoney(
                       balance
                     )}
@@ -2735,8 +2701,7 @@ export default function CashierHandoffDetailScreen() {
                           "800",
                       }}
                     >
-                      Credit Customer
-                    </Text>
+                      {uiText("Credit Customer")}</Text>
 
                     <Text
                       style={{
@@ -2753,7 +2718,7 @@ export default function CashierHandoffDetailScreen() {
                         row.customer_name ??
                           ""
                       ).trim() ||
-                        "Customer name missing"}
+                        uiText("Customer name missing")}
                     </Text>
 
                     {!!String(
@@ -2793,11 +2758,7 @@ export default function CashierHandoffDetailScreen() {
                           "900",
                       }}
                     >
-                      CREDIT MODE:
-                      chagua njia ya
-                      kiasi
-                      kilichopokelewa.
-                    </Text>
+                      {uiText("CREDIT MODE: chagua njia ya kiasi kilichopokelewa.")}</Text>
 
                     <View
                       style={{
@@ -2808,7 +2769,7 @@ export default function CashierHandoffDetailScreen() {
                       }}
                     >
                       <MethodChip
-                        label="Cash"
+                        label={uiText("Cash")}
                         active={
                           creditPaidVia ===
                           "CASH"
@@ -2821,7 +2782,7 @@ export default function CashierHandoffDetailScreen() {
                       />
 
                       <MethodChip
-                        label="Mobile"
+                        label={uiText("Mobile")}
                         active={
                           creditPaidVia ===
                           "MOBILE"
@@ -2834,7 +2795,7 @@ export default function CashierHandoffDetailScreen() {
                       />
 
                       <MethodChip
-                        label="Bank"
+                        label={uiText("Bank")}
                         active={
                           creditPaidVia ===
                           "BANK"
@@ -2857,8 +2818,8 @@ export default function CashierHandoffDetailScreen() {
                       <FieldLabel>
                         {effectiveChannelMethod ===
                         "MOBILE"
-                          ? "Mobile Channel"
-                          : "Bank Channel"}
+                          ? uiText("Mobile Channel")
+                          : uiText("Bank Channel")}
                       </FieldLabel>
 
                       <InputBox
@@ -2880,9 +2841,7 @@ export default function CashierHandoffDetailScreen() {
 
                     <View>
                       <FieldLabel>
-                        Reference /
-                        Transaction ID
-                      </FieldLabel>
+                        {uiText("Reference / Transaction ID")}</FieldLabel>
 
                       <InputBox
                         value={
@@ -2902,9 +2861,7 @@ export default function CashierHandoffDetailScreen() {
 
                 <View>
                   <FieldLabel>
-                    Completion Note
-                    (optional)
-                  </FieldLabel>
+                    {uiText("Completion Note (optional)")}</FieldLabel>
 
                   <InputBox
                     value={
@@ -2913,7 +2870,7 @@ export default function CashierHandoffDetailScreen() {
                     onChangeText={
                       setNote
                     }
-                    placeholder="andika maelezo ya cashier completion..."
+                    placeholder={uiText("andika maelezo ya cashier completion...")}
                     keyboardType="default"
                     multiline
                   />
@@ -2938,11 +2895,11 @@ export default function CashierHandoffDetailScreen() {
                 <Button
                   title={
                     saving
-                      ? "Completing..."
+                      ? uiText("Completing...")
                       : method ===
                           "CREDIT"
-                        ? "Complete Credit Sale"
-                        : "Complete Sale"
+                        ? uiText("Complete Credit Sale")
+                        : uiText("Complete Sale")
                   }
                   onPress={
                     completeNow
@@ -2977,8 +2934,7 @@ export default function CashierHandoffDetailScreen() {
                       16,
                   }}
                 >
-                  Sale Completed
-                </Text>
+                  {uiText("Sale Completed")}</Text>
 
                 <Text
                   style={{
@@ -2990,7 +2946,7 @@ export default function CashierHandoffDetailScreen() {
                       "800",
                   }}
                 >
-                  Sold By:{" "}
+                  {uiText("Sold By:")}{" "}
                   <Text
                     style={{
                       color:
@@ -3005,7 +2961,7 @@ export default function CashierHandoffDetailScreen() {
                       row.sold_by_email ??
                         ""
                     ).trim() ||
-                      "No staff attribution"}
+                      uiText("No staff attribution")}
                   </Text>
                 </Text>
 
@@ -3019,7 +2975,7 @@ export default function CashierHandoffDetailScreen() {
                       "800",
                   }}
                 >
-                  Received By:{" "}
+                  {uiText("Received By:")}{" "}
                   <Text
                     style={{
                       color:
@@ -3052,7 +3008,7 @@ export default function CashierHandoffDetailScreen() {
                     }}
                   >
                     <Button
-                      title="Open Receipt"
+                      title={uiText("Open Receipt")}
                       onPress={
                         openReceipt
                       }
@@ -3072,7 +3028,7 @@ export default function CashierHandoffDetailScreen() {
                     }}
                   >
                     <Button
-                      title="Cashier Closing"
+                      title={uiText("Cashier Closing")}
                       onPress={
                         goCashierClosing
                       }

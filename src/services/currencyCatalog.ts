@@ -15,6 +15,33 @@ const KV_UPDATED_AT = "zetra_currency_catalog_v1_updated_at";
 // ✅ Remote catalog (download once, then cached)
 const SOURCE_URL =
   "https://raw.githubusercontent.com/ourworldincode/currency/main/currencies.json";
+let runtimeCatalog: CurrencyMeta[] | undefined;
+const currencyNames = new Map<string, Intl.DisplayNames>();
+export function localizedCurrencyName(code: string, locale: string, fallback: string = code) {
+  try {
+    if (typeof Intl.DisplayNames !== "function") return fallback;
+    let names = currencyNames.get(locale);
+    if (!names) {
+      if (currencyNames.size >= 8) currencyNames.clear();
+      names = new Intl.DisplayNames([locale], { type: "currency", fallback: "code" });
+      currencyNames.set(locale, names);
+    }
+    return names.of(upper(code)) || fallback;
+  } catch { return fallback; }
+}
+export function getRuntimeCurrencyCatalog(): CurrencyMeta[] {
+  if (runtimeCatalog) return runtimeCatalog;
+  const supported = (Intl as typeof Intl & { supportedValuesOf?: (key: string) => string[] }).supportedValuesOf;
+  if (typeof supported !== "function") return FALLBACK_CURRENCIES;
+  try {
+    runtimeCatalog = sortCurrencies(supported("currency").map(code => {
+      const formatter = new Intl.NumberFormat("en", { style: "currency", currency: code });
+      return { code, name: localizedCurrencyName(code, "en"), decimals: formatter.resolvedOptions().maximumFractionDigits,
+        symbol: formatter.formatToParts(0).find(part => part.type === "currency")?.value };
+    }));
+    return runtimeCatalog;
+  } catch { return FALLBACK_CURRENCIES; }
+}
 
 function clean(s: any) {
   return String(s ?? "").trim();
@@ -61,7 +88,7 @@ function normalizeFromRemote(json: any): CurrencyMeta[] {
 
 // ✅ ultra-light fallback (app stays small)
 export const FALLBACK_CURRENCIES: CurrencyMeta[] = sortCurrencies([
-  { code: "TZS", name: "Tanzanian Shilling", symbol: "TSh", symbolNative: "TSh", decimals: 0 },
+  { code: "TZS", name: "Tanzanian Shilling", symbol: "TSh", symbolNative: "TSh", decimals: 2 },
   { code: "USD", name: "United States Dollar", symbol: "$", symbolNative: "$", decimals: 2 },
   { code: "EUR", name: "Euro", symbol: "€", symbolNative: "€", decimals: 2 },
   { code: "GBP", name: "Pound Sterling", symbol: "£", symbolNative: "£", decimals: 2 },
@@ -118,6 +145,8 @@ export async function fetchRemoteCurrencyCatalog(): Promise<CurrencyMeta[]> {
  * - else fallback (instant)
  */
 export async function loadCurrencyCatalogFast(): Promise<CurrencyMeta[]> {
+  const runtime = getRuntimeCurrencyCatalog();
+  if (runtime !== FALLBACK_CURRENCIES && runtime.length) return runtime;
   const cached = await getCachedCurrencyCatalog();
   return cached && cached.length ? cached : FALLBACK_CURRENCIES;
 }
@@ -127,7 +156,8 @@ export async function loadCurrencyCatalogFast(): Promise<CurrencyMeta[]> {
  * - downloads full list once then caches it
  */
 export async function refreshCurrencyCatalog(): Promise<CurrencyMeta[]> {
-  const list = await fetchRemoteCurrencyCatalog();
+  const runtime = getRuntimeCurrencyCatalog();
+  const list = runtime !== FALLBACK_CURRENCIES && runtime.length ? runtime : await fetchRemoteCurrencyCatalog();
   await setCachedCurrencyCatalog(list);
   return list;
 }

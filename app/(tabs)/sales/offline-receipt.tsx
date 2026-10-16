@@ -1,3 +1,6 @@
+import {paymentMethodKey} from "@/src/i18n/presentation";
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/(tabs)/sales/offline-receipt.tsx
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -51,6 +54,8 @@ type OfflineDetail = {
 };
 
 export default function OfflineReceiptScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
   const params = useLocalSearchParams<{ storeId?: string | string[]; clientSaleId?: string | string[] }>();
 
@@ -161,24 +166,24 @@ export default function OfflineReceiptScreen() {
     const store = activeStoreName ?? "—";
 
     const header = [
-      "🧾 ZETRA BMS OFFLINE RECEIPT",
-      `Receipt #${receiptNo}`,
-      "STATUS: PENDING OFFLINE",
+      uiText("🧾 ZETRA BMS OFFLINE RECEIPT"),
+      uiText("Receipt #{p0}", {p0: (receiptNo)}),
+      uiText("STATUS: PENDING OFFLINE"),
       "",
-      `Business: ${org}`,
-      `Store: ${store}`,
-      `When: ${when}`,
+      uiText("Business: {p0}", {p0: (org)}),
+      uiText("Store: {p0}", {p0: (store)}),
+      uiText("When: {p0}", {p0: (when)}),
       "",
-      `Payment: ${paymentMethod}${paymentChannel ? ` (${paymentChannel})` : ""}`,
-      reference ? `Reference: ${reference}` : null,
+      uiText("Payment: {p0}{p1}", {p0: (paymentMethod), p1: (paymentChannel ? ` (${paymentChannel})` : "")}),
+      reference ? uiText("Reference: {p0}", {p0: (reference)}) : null,
       "",
     ].filter(Boolean) as string[];
 
     const body =
       items.length === 0
-        ? ["Items: —", ""]
+        ? [uiText("Items: —"), ""]
         : [
-            `Items (${items.length}) • Qty (${totalQty})`,
+            uiText("Items ({p0}) • Qty ({p1})", {p0: (items.length), p1: (totalQty)}),
             ...items.map((it: any) => {
               const q = Math.trunc(Number(it?.qty ?? 0));
               const p = Number(it?.unit_price ?? 0);
@@ -192,23 +197,23 @@ export default function OfflineReceiptScreen() {
           ];
 
     const money: string[] = [];
-    money.push(`SUBTOTAL: ${fmtTZS(subtotal)}`);
+    money.push(uiText("SUBTOTAL: {p0}", {p0: (fmtTZS(subtotal))}));
     if (discountAmount > 0) {
       const dLabel =
         discountType === "PERCENT" ? `${discountVal}%` : discountType === "FIXED" ? fmtTZS(discountVal) : "";
-      money.push(`DISCOUNT: -${fmtTZS(discountAmount)} ${dLabel ? `(${dLabel})` : ""}`);
+      money.push(uiText("DISCOUNT: -{p0} {p1}", {p0: (fmtTZS(discountAmount)), p1: (dLabel ? `(${dLabel})` : "")}));
     }
-    money.push(`TOTAL: ${fmtTZS(total)}`);
+    money.push(uiText("TOTAL: {p0}", {p0: (fmtTZS(total))}));
     if (isCredit) {
-      money.push(`PAID: ${fmtTZS(paidAmount)}`);
-      money.push(`DUE (CREDIT): ${fmtTZS(due)}`);
+      money.push(uiText("PAID: {p0}", {p0: (fmtTZS(paidAmount))}));
+      money.push(uiText("DUE (CREDIT): {p0}", {p0: (fmtTZS(due))}));
     }
     money.push("");
 
     const footer = [
-      note ? `NOTE: ${note}` : null,
+      note ? uiText("NOTE: {p0}", {p0: (note)}) : null,
       "",
-      "⚠️ Offline sale — itatokea kwenye receipt ya kawaida baada ya sync (mtandao ukirudi).",
+      uiText("⚠️ Offline sale — itatokea kwenye receipt ya kawaida baada ya sync (mtandao ukirudi)."),
     ].filter(Boolean) as string[];
 
     const message = [...header, ...body, ...money, ...footer].join("\n");
@@ -261,11 +266,9 @@ export default function OfflineReceiptScreen() {
 
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 26, fontWeight: "900", color: theme.colors.text }}>
-              Offline Receipt
-            </Text>
+              {uiText("Offline Receipt")}</Text>
             <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-              Receipt #{receiptNo} • PENDING OFFLINE
-            </Text>
+              {uiText("Receipt #")}{receiptNo} {uiText("• PENDING OFFLINE")}</Text>
           </View>
 
           <View
@@ -278,7 +281,7 @@ export default function OfflineReceiptScreen() {
               backgroundColor: "rgba(245,158,11,0.12)",
             }}
           >
-            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>OFFLINE</Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("OFFLINE")}</Text>
           </View>
         </View>
 
@@ -286,14 +289,13 @@ export default function OfflineReceiptScreen() {
           <View style={{ paddingTop: 18, alignItems: "center" }}>
             <ActivityIndicator />
             <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>
-              Loading offline receipt...
-            </Text>
+              {uiText("Loading offline receipt...")}</Text>
           </View>
         ) : err ? (
           <Card style={{ gap: 10 }}>
-            <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{err}</Text>
-            <Button title="Retry" onPress={load} variant="primary" />
-            <Button title="Back" onPress={() => router.back()} variant="secondary" />
+            <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{systemText(err)}</Text>
+            <Button title={uiText("Retry")} onPress={load} variant="primary" />
+            <Button title={uiText("Back")} onPress={() => router.back()} variant="secondary" />
           </Card>
         ) : (
           <>
@@ -301,13 +303,13 @@ export default function OfflineReceiptScreen() {
             <Card style={{ gap: 10 }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
                 <View style={{ flex: 1, gap: 4 }}>
-                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Business</Text>
+                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Business")}</Text>
                   <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
                     {activeOrgName ?? "—"}
                   </Text>
                 </View>
                 <View style={{ flex: 1, gap: 4 }}>
-                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Store</Text>
+                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Store")}</Text>
                   <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
                     {activeStoreName ?? "—"}
                   </Text>
@@ -316,13 +318,13 @@ export default function OfflineReceiptScreen() {
 
               <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
                 <View style={{ flex: 1, gap: 4 }}>
-                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>When</Text>
+                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("When")}</Text>
                   <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{when}</Text>
                 </View>
                 <View style={{ flex: 1, gap: 4 }}>
-                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Payment</Text>
+                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Payment")}</Text>
                   <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                    {paymentMethod}
+                    {uiText(paymentMethodKey(paymentMethod))}
                     {paymentChannel ? ` • ${paymentChannel}` : ""}
                   </Text>
                 </View>
@@ -330,7 +332,7 @@ export default function OfflineReceiptScreen() {
 
               {!!reference && (
                 <View style={{ marginTop: 2 }}>
-                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Reference</Text>
+                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Reference")}</Text>
                   <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 6 }}>
                     {reference}
                   </Text>
@@ -339,7 +341,7 @@ export default function OfflineReceiptScreen() {
 
               {!!detail?.last_error && (
                 <View style={{ marginTop: 2 }}>
-                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Last Sync Error</Text>
+                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Last Sync Error")}</Text>
                   <Text style={{ color: theme.colors.danger, fontWeight: "900", marginTop: 6 }}>
                     {String(detail.last_error)}
                   </Text>
@@ -350,14 +352,12 @@ export default function OfflineReceiptScreen() {
             {/* Items */}
             <Card style={{ gap: 10 }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-                  Items ({items.length})
-                </Text>
-                <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Qty ({totalQty})</Text>
+                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>{uiText("Items ({p0})", {p0: (items.length)})}</Text>
+                <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>{uiText("Qty ({p0})", {p0: (totalQty)})}</Text>
               </View>
 
               {items.length === 0 ? (
-                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>No items found.</Text>
+                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("No items found.")}</Text>
               ) : (
                 items.map((it: any, idx: number) => {
                   const q = Math.trunc(Number(it?.qty ?? 0));
@@ -382,11 +382,11 @@ export default function OfflineReceiptScreen() {
                     >
                       <View style={{ flex: 1, gap: 5 }}>
                         <Text style={{ color: theme.colors.text, fontWeight: "900" }} numberOfLines={1}>
-                          {name}
+                          {String(((it?.name ?? it?.product_name) ?? uiText("Product")))}
                         </Text>
 
                         <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                          SKU: {sku ?? "—"}{unit ? ` • Unit: ${unit}` : ""}
+                          {uiText("SKU:")}{sku ?? "—"}{unit ? uiText(" • Unit: {p0}", {p0: (unit)}) : ""}
                         </Text>
 
                         <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>
@@ -415,7 +415,7 @@ export default function OfflineReceiptScreen() {
                   backgroundColor: "rgba(52,211,153,0.10)",
                 }}
               >
-                <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Subtotal</Text>
+                <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>{uiText("Subtotal")}</Text>
                 <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
                   {fmtTZS(subtotal)}
                 </Text>
@@ -423,7 +423,7 @@ export default function OfflineReceiptScreen() {
 
               {discountAmount > 0 && (
                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                  <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Discount</Text>
+                  <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>{uiText("Discount")}</Text>
                   <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
                     -{fmtTZS(discountAmount)}
                   </Text>
@@ -431,18 +431,18 @@ export default function OfflineReceiptScreen() {
               )}
 
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Total</Text>
+                <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>{uiText("Total")}</Text>
                 <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{fmtTZS(total)}</Text>
               </View>
 
               {isCredit && (
                 <>
                   <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                    <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Paid</Text>
+                    <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>{uiText("Paid")}</Text>
                     <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{fmtTZS(paidAmount)}</Text>
                   </View>
                   <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                    <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Due (Credit)</Text>
+                    <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>{uiText("Due (Credit)")}</Text>
                     <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{fmtTZS(due)}</Text>
                   </View>
                 </>
@@ -450,18 +450,17 @@ export default function OfflineReceiptScreen() {
 
               {!!note && (
                 <View style={{ marginTop: 6 }}>
-                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Note</Text>
+                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Note")}</Text>
                   <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 6 }}>{note}</Text>
                 </View>
               )}
 
-              <Button title="Share Receipt" onPress={shareReceipt} variant="secondary" />
-              <Button title="Back to History" onPress={() => router.replace("/(tabs)/sales/history")} variant="primary" />
-              <Button title="Back" onPress={() => router.back()} variant="secondary" />
+              <Button title={uiText("Share Receipt")} onPress={shareReceipt} variant="secondary" />
+              <Button title={uiText("Back to History")} onPress={() => router.replace("/(tabs)/sales/history")} variant="primary" />
+              <Button title={uiText("Back")} onPress={() => router.back()} variant="secondary" />
 
               <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                ⚠️ Hii ni receipt ya OFFLINE. Itabadilika kuwa receipt ya kawaida baada ya sync.
-              </Text>
+                {uiText("⚠️ Hii ni receipt ya OFFLINE. Itabadilika kuwa receipt ya kawaida baada ya sync.")}</Text>
             </Card>
           </>
         )}

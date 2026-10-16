@@ -1,3 +1,5 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/finance/history.tsx
 // ZETRA Finance History — Clean V2
 // Rebuilt around one canonical period snapshot.
@@ -399,6 +401,7 @@ function Metric({
   wide?: boolean;
   onPress?: () => void;
 }) {
+ const uiText = useCommonText();
   const content = (
     <>
       <View style={styles.metricTop}>
@@ -409,8 +412,7 @@ function Metric({
       {!!onPress && (
   <View style={styles.metricAction}>
     <Text style={styles.metricActionText}>
-      VIEW DETAILS
-    </Text>
+      {uiText("VIEW DETAILS")}</Text>
 
     <SafeIcon
       name="chevron-forward"
@@ -517,6 +519,8 @@ function TinyPill({
 }
 
 export default function FinanceHistoryScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
   const org = useOrg() as any;
   const { width } = useWindowDimensions();
@@ -2499,8 +2503,7 @@ const toggleStockGroup =
                 styles.title
               }
             >
-              Finance
-            </Text>
+              {uiText("Finance")}</Text>
 
             <Text
               style={
@@ -2509,7 +2512,7 @@ const toggleStockGroup =
             >
               {scope ===
               "ALL"
-                ? "All stores"
+                ? uiText("All stores")
                 : selectedStoreName}
               {" · "}
               {fromYMD}
@@ -2553,16 +2556,14 @@ const toggleStockGroup =
                   styles.eyebrow
                 }
               >
-                PERIOD & SCOPE
-              </Text>
+                {uiText("PERIOD & SCOPE")}</Text>
 
               <Text
                 style={
                   styles.filterTitle
                 }
               >
-                Finance history
-              </Text>
+                {uiText("Finance history")}</Text>
             </View>
 
             {canAll && (
@@ -2654,8 +2655,7 @@ const toggleStockGroup =
                   styles.inputLabel
                 }
               >
-                From
-              </Text>
+                {uiText("From")}</Text>
 
               <TextInput
   value={fromYMD}
@@ -2676,8 +2676,7 @@ const toggleStockGroup =
                   styles.inputLabel
                 }
               >
-                To
-              </Text>
+                {uiText("To")}</Text>
 
               <TextInput
   value={toYMD}
@@ -2733,8 +2732,7 @@ const toggleStockGroup =
                 styles.errorTitle
               }
             >
-              Could not load Finance
-            </Text>
+              {uiText("Could not load Finance")}</Text>
 
             <Text
               style={
@@ -2761,15 +2759,14 @@ const toggleStockGroup =
                 styles.loadingText
               }
             >
-              Loading finance data…
-            </Text>
+              {uiText("Loading finance data…")}</Text>
           </Card>
         ) : (
           <>
             {/* OVERVIEW */}
             <SectionTitle
-              title="Overview"
-              subtitle="The important numbers first."
+              title={uiText("Overview")}
+              subtitle={uiText("The important numbers first.")}
             />
 
             <View
@@ -2778,7 +2775,7 @@ const toggleStockGroup =
               }
             >
               <Metric
-                label="Sales"
+                label={uiText("Sales")}
                 value={money(
                   snapshot.sales
                     .total
@@ -2786,7 +2783,7 @@ const toggleStockGroup =
               />
 
               <Metric
-                label="Money In"
+                label={uiText("Money In")}
                 value={money(
                   moneyIn
                 )}
@@ -2794,17 +2791,15 @@ const toggleStockGroup =
 
               {canSeeExpenses && (
                 <Metric
-                  label="Expenses"
+                  label={uiText("Expenses")}
                   value={money(
                     snapshot
                       .expenses
                       .total
                   )}
-                  hint={`${snapshot.expenses.count} ${
-                    snapshot.expenses.count === 1
+                  hint={uiText("{p0} {p1} · Tap for details", {p0: (snapshot.expenses.count), p1: (snapshot.expenses.count === 1
                       ? "expense"
-                      : "expenses"
-                  } · Tap for details`}
+                      : "expenses")})}
                   onPress={openExpenseDetails}
                 />
               )}
@@ -2812,7 +2807,7 @@ const toggleStockGroup =
               {isOwner &&
                 snapshot.profit && (
                   <Metric
-                    label="Net Profit"
+                    label={uiText("Net Profit")}
                     value={money(
                       snapshot
                         .profit!
@@ -2822,22 +2817,22 @@ const toggleStockGroup =
                 )}
 
               <Metric
-                label="Orders"
+                label={uiText("Orders")}
                 value={String(
                   snapshot.sales
                     .orders
                 )}
-                hint={`Avg ${money(
+                hint={uiText("Avg {p0}", {p0: (money(
                   avgOrder
-                )}`}
+                ))})}
               />
 
               <Metric
-                label="Outstanding Credit"
+                label={uiText("Outstanding Credit")}
                 value={money(
                   snapshot.outstandingCredit
                 )}
-                hint="Current balance"
+                hint={uiText("Current balance")}
               />
             </View>
 
@@ -2846,18 +2841,16 @@ const toggleStockGroup =
                 <View style={styles.drillHeader}>
                   <View style={styles.drillHeaderCopy}>
                     <Text style={styles.drillEyebrow}>
-                      EXPENSE DETAILS
-                    </Text>
+                      {uiText("EXPENSE DETAILS")}</Text>
 
                     <Text style={styles.drillTitle}>
-                      Expenses Breakdown
-                    </Text>
+                      {uiText("Expenses Breakdown")}</Text>
 
                     <Text style={styles.drillSubtitle}>
                       {fromYMD} → {toYMD}
                       {" · "}
                       {scope === "ALL"
-                        ? "All stores"
+                        ? uiText("All stores")
                         : selectedStoreName}
                     </Text>
                   </View>
@@ -2879,8 +2872,7 @@ const toggleStockGroup =
                 <View style={styles.drillSummary}>
                   <View style={styles.drillSummaryItem}>
                     <Text style={styles.drillSummaryLabel}>
-                      Total Expenses
-                    </Text>
+                      {uiText("Total Expenses")}</Text>
 
                     <Text style={styles.drillSummaryValue}>
                       {money(
@@ -2891,8 +2883,7 @@ const toggleStockGroup =
 
                   <View style={styles.drillSummaryItem}>
                     <Text style={styles.drillSummaryLabel}>
-                      Entries
-                    </Text>
+                      {uiText("Entries")}</Text>
 
                     <Text style={styles.drillSummaryValue}>
                       {snapshot.expenses.count}
@@ -2905,19 +2896,17 @@ const toggleStockGroup =
                     <ActivityIndicator size="small" />
 
                     <Text style={styles.drillLoadingText}>
-                      Loading expense details…
-                    </Text>
+                      {uiText("Loading expense details…")}</Text>
                   </View>
                 ) : Boolean(expenseDetailsError) ? (
                   <View style={styles.drillError}>
                     <Text style={styles.drillErrorText}>
-                      {expenseDetailsError}
+                      {systemText(expenseDetailsError)}
                     </Text>
                   </View>
                 ) : expenseDetails.length === 0 ? (
                   <Text style={styles.drillEmpty}>
-                    No expense entries found for this period.
-                  </Text>
+                    {uiText("No expense entries found for this period.")}</Text>
                 ) : (
                   <View style={styles.drillRows}>
                     {expenseDetails.map((r, index) => (
@@ -2955,7 +2944,7 @@ const toggleStockGroup =
 
                           {!!r.recorded_by_email && (
                             <Text style={styles.drillRowMeta}>
-                              Recorded by {r.recorded_by_email}
+                              {uiText("Recorded by")}{r.recorded_by_email}
                               {r.recorded_by_role
                                 ? ` · ${r.recorded_by_role}`
                                 : ""}
@@ -2975,16 +2964,15 @@ const toggleStockGroup =
 
             {/* MONEY FLOW */}
             <SectionTitle
-              title="Money Flow"
-              subtitle="Available inflow after expenses by payment channel."
+              title={uiText("Money Flow")}
+              subtitle={uiText("Available inflow after expenses by payment channel.")}
             />
 
             <Card>
               <View style={styles.compactMoneyGrid}>
                 <View style={styles.compactMoneyCell}>
                   <Text style={styles.compactMoneyLabel}>
-                    Cash
-                  </Text>
+                    {uiText("Cash")}</Text>
                   <Text
                     numberOfLines={1}
                     adjustsFontSizeToFit
@@ -2996,8 +2984,7 @@ const toggleStockGroup =
 
                 <View style={styles.compactMoneyCell}>
                   <Text style={styles.compactMoneyLabel}>
-                    Mobile
-                  </Text>
+                    {uiText("Mobile")}</Text>
                   <Text
                     numberOfLines={1}
                     adjustsFontSizeToFit
@@ -3009,8 +2996,7 @@ const toggleStockGroup =
 
                 <View style={styles.compactMoneyCell}>
                   <Text style={styles.compactMoneyLabel}>
-                    Bank
-                  </Text>
+                    {uiText("Bank")}</Text>
                   <Text
                     numberOfLines={1}
                     adjustsFontSizeToFit
@@ -3022,8 +3008,7 @@ const toggleStockGroup =
 
                 <View style={styles.compactMoneyCell}>
                   <Text style={styles.compactMoneyLabel}>
-                    Other
-                  </Text>
+                    {uiText("Other")}</Text>
                   <Text
                     numberOfLines={1}
                     adjustsFontSizeToFit
@@ -3055,8 +3040,7 @@ const toggleStockGroup =
                       styles.infoLabel
                     }
                   >
-                    Credit Collections
-                  </Text>
+                    {uiText("Credit Collections")}</Text>
 
                   <Text
                     style={
@@ -3085,8 +3069,7 @@ const toggleStockGroup =
                       styles.infoLabel
                     }
                   >
-                    Credit Today
-                  </Text>
+                    {uiText("Credit Today")}</Text>
 
                   <Text
                     style={
@@ -3105,7 +3088,7 @@ const toggleStockGroup =
                       styles.infoHint
                     }
                   >
-                    Outstanding{" "}
+                    {uiText("Outstanding")}{" "}
                     {money(
                       snapshot
                         .outstandingCredit
@@ -3127,8 +3110,7 @@ const toggleStockGroup =
                       styles.miniHeading
                     }
                   >
-                    EXPENSE CHANNELS
-                  </Text>
+                    {uiText("EXPENSE CHANNELS")}</Text>
 
                   <View
                     style={
@@ -3140,7 +3122,7 @@ const toggleStockGroup =
                         styles.channelText
                       }
                     >
-                      Cash{" "}
+                      {uiText("Cash")}{" "}
                       {money(
                         snapshot
                           .expenses
@@ -3154,7 +3136,7 @@ const toggleStockGroup =
                         styles.channelText
                       }
                     >
-                      Mobile{" "}
+                      {uiText("Mobile")}{" "}
                       {money(
                         snapshot
                           .expenses
@@ -3168,7 +3150,7 @@ const toggleStockGroup =
                         styles.channelText
                       }
                     >
-                      Bank{" "}
+                      {uiText("Bank")}{" "}
                       {money(
                         snapshot
                           .expenses
@@ -3182,7 +3164,7 @@ const toggleStockGroup =
                         styles.channelText
                       }
                     >
-                      Other{" "}
+                      {uiText("Other")}{" "}
                       {money(
                         snapshot
                           .expenses
@@ -3198,16 +3180,15 @@ const toggleStockGroup =
   snapshot.profit && (
     <>
       <SectionTitle
-        title="Profitability"
-        subtitle="Owner-only profitability for this period."
+        title={uiText("Profitability")}
+        subtitle={uiText("Owner-only profitability for this period.")}
       />
 
       <Card>
         <View style={styles.compactMoneyGrid}>
           <View style={styles.compactMoneyCell}>
             <Text style={styles.compactMoneyLabel}>
-              Sales
-            </Text>
+              {uiText("Sales")}</Text>
             <Text
               numberOfLines={1}
               adjustsFontSizeToFit
@@ -3219,8 +3200,7 @@ const toggleStockGroup =
 
           <View style={styles.compactMoneyCell}>
             <Text style={styles.compactMoneyLabel}>
-              COGS
-            </Text>
+              {uiText("COGS")}</Text>
             <Text
               numberOfLines={1}
               adjustsFontSizeToFit
@@ -3232,8 +3212,7 @@ const toggleStockGroup =
 
           <View style={styles.compactMoneyCell}>
             <Text style={styles.compactMoneyLabel}>
-              Gross Profit
-            </Text>
+              {uiText("Gross Profit")}</Text>
             <Text
               numberOfLines={1}
               adjustsFontSizeToFit
@@ -3245,8 +3224,7 @@ const toggleStockGroup =
 
           <View style={styles.compactMoneyCell}>
             <Text style={styles.compactMoneyLabel}>
-              Net Profit
-            </Text>
+              {uiText("Net Profit")}</Text>
             <Text
               numberOfLines={1}
               adjustsFontSizeToFit
@@ -3283,17 +3261,15 @@ const toggleStockGroup =
 
   <View style={styles.productProfitEntryCopy}>
     <Text style={styles.productProfitEntryTitle}>
-      Product Profit
-    </Text>
+      {uiText("Product Profit")}</Text>
 
     <Text style={styles.productProfitEntrySubtitle}>
-      See profit, revenue, COGS and margin for each product sold.
-    </Text>
+      {uiText("See profit, revenue, COGS and margin for each product sold.")}</Text>
 
     <Text style={styles.productProfitEntryAction}>
       {showProductProfit
-        ? "Hide breakdown"
-        : "View product breakdown"}
+        ? uiText("Hide breakdown")
+        : uiText("View product breakdown")}
     </Text>
   </View>
 
@@ -3314,18 +3290,16 @@ const toggleStockGroup =
           <View style={styles.drillHeader}>
             <View style={styles.drillHeaderCopy}>
               <Text style={styles.drillEyebrow}>
-                PRODUCT PROFIT
-              </Text>
+                {uiText("PRODUCT PROFIT")}</Text>
 
               <Text style={styles.drillTitle}>
-                Product Profit Breakdown
-              </Text>
+                {uiText("Product Profit Breakdown")}</Text>
 
               <Text style={styles.drillSubtitle}>
                 {fromYMD} → {toYMD}
                 {" · "}
                 {scope === "ALL"
-                  ? "All stores"
+                  ? uiText("All stores")
                   : selectedStoreName}
               </Text>
             </View>
@@ -3347,8 +3321,7 @@ const toggleStockGroup =
           <View style={styles.drillSummary}>
             <View style={styles.drillSummaryItem}>
               <Text style={styles.drillSummaryLabel}>
-                Gross Profit
-              </Text>
+                {uiText("Gross Profit")}</Text>
 
               <Text style={styles.drillSummaryValue}>
                 {money(
@@ -3364,8 +3337,7 @@ const toggleStockGroup =
 
             <View style={styles.drillSummaryItem}>
               <Text style={styles.drillSummaryLabel}>
-                Products
-              </Text>
+                {uiText("Products")}</Text>
 
               <Text style={styles.drillSummaryValue}>
                 {productProfitRows.length}
@@ -3378,19 +3350,17 @@ const toggleStockGroup =
               <ActivityIndicator size="small" />
 
               <Text style={styles.drillLoadingText}>
-                Loading product profit…
-              </Text>
+                {uiText("Loading product profit…")}</Text>
             </View>
           ) : Boolean(productProfitError) ? (
             <View style={styles.drillError}>
               <Text style={styles.drillErrorText}>
-                {productProfitError}
+                {systemText(productProfitError)}
               </Text>
             </View>
           ) : productProfitRows.length === 0 ? (
             <Text style={styles.drillEmpty}>
-              No product sales found for this period.
-            </Text>
+              {uiText("No product sales found for this period.")}</Text>
           ) : (
             <View style={styles.drillRows}>
               {productProfitRows.map(
@@ -3414,24 +3384,24 @@ const toggleStockGroup =
                       </Text>
 
                       <Text style={styles.drillRowDescription}>
-                        Qty Sold: {r.qty_sold}
+                        {uiText("Qty Sold:")}{r.qty_sold}
                         {r.unit
                           ? ` ${r.unit}`
                           : ""}
                         {" · "}
-                        Sales: {r.sales_count}
+                        {uiText("Sales:")}{r.sales_count}
                       </Text>
 
                       <Text style={styles.drillRowMeta}>
-                        Revenue: {money(r.revenue)}
+                        {uiText("Revenue:")}{money(r.revenue)}
                       </Text>
 
                       <Text style={styles.drillRowMeta}>
-                        COGS: {money(r.estimated_cost)}
+                        {uiText("COGS:")}{money(r.estimated_cost)}
                       </Text>
 
                       <Text style={styles.drillRowMeta}>
-                        Margin:{" "}
+                        {uiText("Margin:")}{" "}
                         {r.profit_margin_pct.toFixed(
                           2
                         )}
@@ -3481,10 +3451,8 @@ const toggleStockGroup =
 {/* PERFORMANCE */}
             {/* PERFORMANCE */}
             <SectionTitle
-              title="Performance"
-              subtitle={`vs previous ${selectedPeriodDays} ${
-                selectedPeriodDays === 1 ? "day" : "days"
-              }`}
+              title={uiText("Performance")}
+              subtitle={uiText("vs previous {p0} {p1}", {p0: (selectedPeriodDays), p1: (selectedPeriodDays === 1 ? "day" : "days")})}
             />
 
             <Card>
@@ -3499,8 +3467,7 @@ const toggleStockGroup =
                       styles.compareLabel
                     }
                   >
-                    Sales
-                  </Text>
+                    {uiText("Sales")}</Text>
 
                   <Text
                     style={
@@ -3543,8 +3510,7 @@ const toggleStockGroup =
                         styles.compareLabel
                       }
                     >
-                      Expenses
-                    </Text>
+                      {uiText("Expenses")}</Text>
 
                     <Text
                       style={
@@ -3589,8 +3555,7 @@ const toggleStockGroup =
                           styles.compareLabel
                         }
                       >
-                        Net Profit
-                      </Text>
+                        {uiText("Net Profit")}</Text>
 
                       <Text
                         style={
@@ -3625,8 +3590,8 @@ const toggleStockGroup =
 
             {/* INVENTORY */}
             <SectionTitle
-              title="Inventory Intelligence"
-              subtitle="Movement and stock risk are shown separately."
+              title={uiText("Inventory Intelligence")}
+              subtitle={uiText("Movement and stock risk are shown separately.")}
             />
 
             <Card>
@@ -3662,12 +3627,12 @@ const toggleStockGroup =
                         }
                       >
                         {g.bucket === "FAST_MOVING"
-                          ? "Fast"
+                          ? uiText("Fast")
                           : g.bucket === "SLOW_MOVING"
-                          ? "Slow"
+                          ? uiText("Slow")
                           : g.bucket === "DEAD_STOCK"
-                          ? "No Sales"
-                          : "Stock Risk"}
+                          ? uiText("No Sales")
+                          : uiText("Stock Risk")}
                       </Text>
                     </View>
                   )
@@ -3716,9 +3681,9 @@ const toggleStockGroup =
                         style={styles.miniHeading}
                       >
                         {g.bucket === "DEAD_STOCK"
-                          ? "NO SALES IN PERIOD"
+                          ? uiText("NO SALES IN PERIOD")
                           : g.bucket === "LOW_STOCK"
-                          ? "STOCK RISK"
+                          ? uiText("STOCK RISK")
                           : g.bucket.replace(/_/g, " ")}
                       </Text>
 
@@ -3727,8 +3692,8 @@ const toggleStockGroup =
                       >
                         {g.rows.length}{" "}
                         {g.rows.length === 1
-                          ? "item"
-                          : "items"}
+                          ? uiText("item")
+                          : uiText("items")}
                       </Text>
                     </View>
 
@@ -3749,9 +3714,9 @@ const toggleStockGroup =
 
                         <View style={styles.stockMetaLine}>
   <Text style={styles.stockMeta}>
-    Sold {r.qty_sold}
+    {uiText("Sold")}{r.qty_sold}
     {" · "}
-    On hand {r.stock_on_hand}
+    {uiText("On hand")}{r.stock_on_hand}
     {" · "}
   </Text>
 
@@ -3770,7 +3735,7 @@ const toggleStockGroup =
             styles.stockStatusWarning,
         ]}
       >
-        {status.label}
+        {uiText(status.label)}
       </Text>
     );
   })()}
@@ -3796,8 +3761,8 @@ const toggleStockGroup =
                           style={styles.seeMoreText}
                         >
                           {isExpanded
-                            ? "Show less"
-                            : `See more (${g.rows.length - 3})`}
+                            ? uiText("Show less")
+                            : uiText("See more ({p0})", {p0: (g.rows.length - 3)})}
                         </Text>
 
                         <SafeIcon
@@ -3818,8 +3783,8 @@ const toggleStockGroup =
 
             {/* BUSINESS INSIGHTS */}
             <SectionTitle
-              title="Business Insights"
-              subtitle="Facts and review points from the selected period."
+              title={uiText("Business Insights")}
+              subtitle={uiText("Facts and review points from the selected period.")}
             />
 
             <Card>

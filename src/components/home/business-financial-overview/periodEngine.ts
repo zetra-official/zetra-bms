@@ -189,6 +189,7 @@ function addDaysYMD(
   days: number
 ) {
   const date = parseYMD(ymd);
+  if (!date) throw new Error("Invalid financial date: expected YYYY-MM-DD");
 
   date.setDate(
     date.getDate() + days
@@ -201,6 +202,7 @@ function dayOfMonthLabel(
   ymd: string
 ) {
   const date = parseYMD(ymd);
+  if (!date) throw new Error("Invalid financial date: expected YYYY-MM-DD");
 
   return `${date.getDate()} ${date.toLocaleString(
     "en-US",
@@ -360,7 +362,7 @@ export function buildFinancialBuckets(
 }
 
 export function formatFinancialRange(
-  range: FinancialDateRange
+  range: FinancialDateRange, locale = "en-GB"
 ) {
   const from =
     parseYMD(range.fromYMD);
@@ -374,7 +376,7 @@ export function formatFinancialRange(
 
   const format = (date: Date) =>
     date.toLocaleDateString(
-      "en-GB",
+      locale,
       {
         day: "2-digit",
         month: "short",

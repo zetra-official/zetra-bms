@@ -1,4 +1,6 @@
-﻿// app/(tabs)/staff/assign.tsx
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+﻿import {useCommonText} from "@/src/i18n/useCommonText";
+// app/(tabs)/staff/assign.tsx
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, Text, View } from "react-native";
@@ -62,6 +64,8 @@ function mapAssignErrorMessage(e: any): string {
 }
 
 export default function AssignStaffStoresScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
   const params = useLocalSearchParams<{ membershipId?: string }>();
   const membershipId = clean(params.membershipId?.toString() || "");
@@ -142,12 +146,12 @@ export default function AssignStaffStoresScreen() {
 
   const toggle = async (storeId: string, storeName: string) => {
     if (!canManage) {
-      Alert.alert("No Access", "Owner/Admin only.");
+      Alert.alert(uiText("No Access"), uiText("Owner/Admin only."));
       return;
     }
 
     if (!membershipId) {
-      Alert.alert("Missing membershipId", "Rudi kwenye Staff list kisha ufungue tena.");
+      Alert.alert(uiText("Missing membershipId"), uiText("Rudi kwenye Staff list kisha ufungue tena."));
       return;
     }
 
@@ -165,7 +169,7 @@ export default function AssignStaffStoresScreen() {
         });
         if (delErr) throw delErr;
 
-        Alert.alert("Removed ✅", `${storeName} imeondolewa kwa member.`);
+        Alert.alert(uiText("Removed ✅"), uiText("{p0} imeondolewa kwa member.", {p0: (storeName)}));
       } else {
         if (isCashier) {
           const { error: rpcErr } = await supabase.rpc("assign_cashier_to_store_v2", {
@@ -174,7 +178,7 @@ export default function AssignStaffStoresScreen() {
           });
           if (rpcErr) throw rpcErr;
 
-          Alert.alert("Cashier Assigned ✅", `${storeName} imeongezwa kwa cashier huyu.`);
+          Alert.alert(uiText("Cashier Assigned ✅"), uiText("{p0} imeongezwa kwa cashier huyu.", {p0: (storeName)}));
         } else {
           const { error: rpcErr } = await supabase.rpc("assign_membership_to_store", {
             p_membership_id: membershipId,
@@ -182,7 +186,7 @@ export default function AssignStaffStoresScreen() {
           });
           if (rpcErr) throw rpcErr;
 
-          Alert.alert("Assigned ✅", `${storeName} ime-assign kwa member.`);
+          Alert.alert(uiText("Assigned ✅"), uiText("{p0} ime-assign kwa member.", {p0: (storeName)}));
         }
       }
 
@@ -191,7 +195,7 @@ export default function AssignStaffStoresScreen() {
     } catch (e: any) {
       const msg = mapAssignErrorMessage(e);
       setError(msg);
-      Alert.alert("Action failed", msg);
+      Alert.alert(uiText("Action failed"), msg);
     } finally {
       setLoading(false);
     }
@@ -208,28 +212,27 @@ export default function AssignStaffStoresScreen() {
       }}
     >
       <Text style={{ fontSize: 28, fontWeight: "900", color: "#0F172A" }}>
-        Assign Stores
-      </Text>
+        {uiText("Assign Stores")}</Text>
 
       <Text style={{ color: UI.muted, fontWeight: "700", marginTop: 6 }}>
-        Org:{" "}
+        {uiText("Org:")}{" "}
         <Text style={{ color: UI.text, fontWeight: "900" }}>
           {activeOrgName ?? "—"}
         </Text>
       </Text>
 
       <Card style={{ gap: 10, marginTop: 14 }}>
-        <Text style={{ color: UI.muted, fontWeight: "800" }}>Membership ID</Text>
+        <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("Membership ID")}</Text>
         <Text style={{ color: UI.text, fontWeight: "900" }}>
           {membershipId ? `${membershipId.slice(0, 10)}...` : "—"}
         </Text>
 
-        <Text style={{ color: UI.muted, fontWeight: "800" }}>Member Role</Text>
+        <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("Member Role")}</Text>
         <Text style={{ color: UI.text, fontWeight: "900" }}>
           {(membershipRole || "—").toUpperCase()}
         </Text>
 
-        <Text style={{ color: UI.muted, fontWeight: "800" }}>Your Role</Text>
+        <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("Your Role")}</Text>
         <Text style={{ color: UI.text, fontWeight: "900" }}>
           {(activeRole ?? "—").toUpperCase()}
         </Text>
@@ -243,16 +246,13 @@ export default function AssignStaffStoresScreen() {
             backgroundColor: UI.emeraldSoft,
           }}
         >
-          <Text style={{ color: UI.text, fontWeight: "900" }}>CASHIER ASSIGN RULE</Text>
+          <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("CASHIER ASSIGN RULE")}</Text>
           <Text style={{ marginTop: 6, color: UI.muted, fontWeight: "800" }}>
-            • Cashier anaweza kuassigniwa stores nyingi ndani ya organization.
-          </Text>
+            {uiText("• Cashier anaweza kuassigniwa stores nyingi ndani ya organization.")}</Text>
           <Text style={{ marginTop: 6, color: UI.muted, fontWeight: "800" }}>
-            • Store moja inaweza kuwa na cashiers wengi wa zamu.
-          </Text>
+            {uiText("• Store moja inaweza kuwa na cashiers wengi wa zamu.")}</Text>
           <Text style={{ marginTop: 6, color: UI.muted, fontWeight: "800" }}>
-            • Hii inasaidia shift work, peak hours, supermarket na pharmacy flow.
-          </Text>
+            {uiText("• Hii inasaidia shift work, peak hours, supermarket na pharmacy flow.")}</Text>
         </Card>
       ) : null}
 
@@ -264,13 +264,13 @@ export default function AssignStaffStoresScreen() {
             backgroundColor: "rgba(251,113,133,0.08)",
           }}
         >
-          <Text style={{ color: UI.danger, fontWeight: "900" }}>{error}</Text>
+          <Text style={{ color: UI.danger, fontWeight: "900" }}>{systemText(error)}</Text>
         </Card>
       )}
 
       <View style={{ marginTop: 12 }}>
         <Button
-          title={loading ? "Loading..." : "Refresh Assigned"}
+          title={loading ? uiText("Loading...") : uiText("Refresh Assigned")}
           variant="primary"
           onPress={loadAssigned}
           disabled={loading}
@@ -286,15 +286,13 @@ export default function AssignStaffStoresScreen() {
           marginBottom: 8,
         }}
       >
-        Stores
-      </Text>
+        {uiText("Stores")}</Text>
 
       {orgStores.length === 0 ? (
         <Card>
-          <Text style={{ color: UI.text, fontWeight: "900" }}>No stores found</Text>
+          <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("No stores found")}</Text>
           <Text style={{ marginTop: 6, color: UI.muted, fontWeight: "700" }}>
-            Hakuna stores kwenye org hii (au bado haijaload).
-          </Text>
+            {uiText("Hakuna stores kwenye org hii (au bado haijaload).")}</Text>
         </Card>
       ) : (
         orgStores.map((s) => {
@@ -321,7 +319,7 @@ export default function AssignStaffStoresScreen() {
                     {s.store_name}
                   </Text>
                   <Text style={{ marginTop: 6, color: UI.muted, fontWeight: "700" }}>
-                    Store ID: {s.store_id.slice(0, 8)}...
+                    {uiText("Store ID:")}{s.store_id.slice(0, 8)}...
                   </Text>
                 </View>
 
@@ -341,7 +339,7 @@ export default function AssignStaffStoresScreen() {
                       color: active ? UI.emerald : UI.faint,
                     }}
                   >
-                    {active ? "ASSIGNED" : "NOT"}
+                    {active ? uiText("ASSIGNED") : uiText("NOT")}
                   </Text>
                 </View>
               </View>
@@ -349,7 +347,7 @@ export default function AssignStaffStoresScreen() {
               <View style={{ height: 10 }} />
 
               <Button
-                title={active ? "Remove (Unassign)" : isCashier ? "Assign Cashier" : "Assign"}
+                title={active ? uiText("Remove (Unassign)") : isCashier ? uiText("Assign Cashier") : uiText("Assign")}
                 variant={active ? "secondary" : "primary"}
                 onPress={() => toggle(s.store_id, s.store_name)}
                 disabled={!canManage || loading}
@@ -373,8 +371,7 @@ export default function AssignStaffStoresScreen() {
         }}
       >
         <Text style={{ color: "#0F172A", fontWeight: "900", fontSize: 16 }}>
-          Back
-        </Text>
+          {uiText("Back")}</Text>
       </Pressable>
     </Screen>
   );

@@ -1,3 +1,4 @@
+import {useCommonText} from "@/src/i18n/useCommonText";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Keyboard, Text, TextInput, View } from "react-native";
@@ -8,6 +9,7 @@ import { Screen } from "../../../../src/ui/Screen";
 import { theme } from "../../../../src/ui/theme";
 
 export default function LowStockScreen() {
+ const uiText=useCommonText();
   const router = useRouter();
   const params = useLocalSearchParams<{
     storeId?: string;
@@ -80,7 +82,7 @@ export default function LowStockScreen() {
 
   const save = useCallback(async () => {
     if (!storeId || !productId) {
-      Alert.alert("Missing", "storeId au productId haipo.");
+      Alert.alert(uiText("Missing"), uiText("storeId au productId haipo."));
       return;
     }
 
@@ -115,7 +117,7 @@ export default function LowStockScreen() {
       // ✅ RETURN TO INVENTORY automatically (not just back)
       router.replace("/(tabs)/stores/inventory" as any);
     } catch (e: any) {
-      Alert.alert("Failed", e?.message ?? "Imeshindikana kusave alert level.");
+      Alert.alert(uiText("Failed"), e?.message ?? uiText("Imeshindikana kusave alert level."));
     } finally {
       setSaving(false);
     }
@@ -124,25 +126,22 @@ export default function LowStockScreen() {
   return (
     <Screen scroll>
       <Text style={{ fontSize: 26, fontWeight: "900", color: theme.colors.text }}>
-        Alert Level
-      </Text>
+        {uiText("Alert Level")}</Text>
 
       <Card style={{ gap: 10 }}>
-        <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Store</Text>
+        <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Store")}</Text>
         <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
-          {storeName}
+          {String((params.storeName ?? uiText("Store")))}
         </Text>
 
         <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 2 }}>
-          Product
-        </Text>
+          {uiText("Product")}</Text>
         <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-          {productName}
+          {String((params.productName ?? uiText("Product")))}
         </Text>
 
         <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 2 }}>
-          Current QTY
-        </Text>
+          {uiText("Current QTY")}</Text>
         <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
           {currentQty}
         </Text>
@@ -150,14 +149,10 @@ export default function LowStockScreen() {
 
       <Card style={{ gap: 10 }}>
         <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-          Set Alert Level (Low Stock Threshold)
-        </Text>
+          {uiText("Set Alert Level (Low Stock Threshold)")}</Text>
 
         <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-          Ukiweka mfano <Text style={{ color: theme.colors.text, fontWeight: "900" }}>10</Text>,
-          mfumo utaiona stock ikiwa{" "}
-          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>&le; 10</Text>{" "}
-          kama “LOW STOCK”.
+          {uiText("Example: setting 10 marks stock of ≤ 10 as “LOW STOCK”.")}
         </Text>
 
         <TextInput
@@ -184,7 +179,7 @@ export default function LowStockScreen() {
         <View style={{ flexDirection: "row", gap: 10, marginTop: 6 }}>
           <View style={{ flex: 1 }}>
             <Button
-              title={loading ? "Loading..." : "Reload"}
+              title={loading ? uiText("Loading...") : uiText("Reload")}
               variant="secondary"
               onPress={loadCurrent}
               disabled={loading || saving}
@@ -193,7 +188,7 @@ export default function LowStockScreen() {
 
           <View style={{ flex: 1 }}>
             <Button
-              title={saving ? "Saving..." : "Save"}
+              title={saving ? uiText("Saving...") : uiText("Save")}
               variant="primary"
               onPress={save}
               disabled={!canSave}
@@ -202,9 +197,7 @@ export default function LowStockScreen() {
         </View>
 
         <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-          Tip: Ukiiacha tupu au ukiweka{" "}
-          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>0</Text>, alert
-          itakuwa “OFF”.
+          {uiText("Tip: leave blank or enter 0 to turn the alert OFF.")}
         </Text>
       </Card>
     </Screen>

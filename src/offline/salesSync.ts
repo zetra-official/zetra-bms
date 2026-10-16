@@ -1,5 +1,5 @@
 import { supabase } from "../supabase/supabaseClient";
-import { listQueue, markStatus, removeFromQueue } from "./salesQueue";
+import { listQueue, markStatus, removeFromQueue, claimQueuedSale } from "./salesQueue";
 
 // ✅ A2: Per-store mutex lock to prevent double-sync (history + sales screen effects)
 const inflightByStore = new Map<string, Promise<void>>();
@@ -18,8 +18,10 @@ export async function syncSalesQueueOnce(storeId: string) {
     const q = await listQueue(storeId);
     const pending = q.filter((x) => x.status === "PENDING" || x.status === "FAILED");
 
-    for (const item of pending) {
-      await markStatus(storeId, item.id, { status: "SENDING", last_error: null });
+    for (const candidate of pending) {
+      const item = await claimQueuedSale(storeId, candidate.id);
+      if (!item) continue;
+      let rpcStarted = false;
 
       try {
         const p = item.payload;
@@ -31,6 +33,7 @@ export async function syncSalesQueueOnce(storeId: string) {
           unit_price: Number(it?.unit_price ?? 0),
         }));
 
+        rpcStarted = true;
         const res = await supabase.rpc("create_sale_with_payment_v6", {
           p_store_id: item.store_id,
           p_items: safeItems,
@@ -58,7 +61,10 @@ p_customer_full_name: p.customer_name ?? null,
         const row = Array.isArray(res.data) ? (res.data[0] ?? null) : res.data;
         const saleId: string | null = row?.sale_id ? String(row.sale_id) : null;
 
-        // credit sync (best-effort)
+        if (!saleId) throw new Error("Sale outcome unconfirmed; verify history before retrying");
+        await markStatus(storeId, item.id, { server_sale_id: saleId });
+
+        // Credit remains a separate, unverified transaction; never blindly replay it.
         if (p.is_credit && p.credit_balance > 0) {
           const acc = await supabase.rpc("create_credit_account_v2", {
             p_store_id: item.store_id,
@@ -91,7 +97,7 @@ p_customer_full_name: p.customer_name ?? null,
         await removeFromQueue(storeId, item.id);
       } catch (e: any) {
         await markStatus(storeId, item.id, {
-          status: "FAILED",
+          status: rpcStarted ? "NEEDS_REVIEW" : "FAILED",
           last_error: e?.message ?? "Sync failed",
         });
 

@@ -1,3 +1,4 @@
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/ai/tasks/[id].tsx
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
@@ -37,6 +38,7 @@ function asId(param: unknown): string | null {
 }
 
 export default function TaskDetailScreen() {
+ const uiText=useCommonText();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const org = useOrg();
@@ -147,8 +149,7 @@ export default function TaskDetailScreen() {
 
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18 }} numberOfLines={1}>
-              Task
-            </Text>
+              {uiText("Task")}</Text>
             <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 2 }} numberOfLines={1}>
               {headerSubtitle}
             </Text>
@@ -178,29 +179,29 @@ export default function TaskDetailScreen() {
         {loading ? (
           <View style={{ paddingTop: 30, alignItems: "center" }}>
             <ActivityIndicator />
-            <Text style={{ color: UI.muted, marginTop: 10, fontWeight: "800" }}>Loading…</Text>
+            <Text style={{ color: UI.muted, marginTop: 10, fontWeight: "800" }}>{uiText("Loading…")}</Text>
           </View>
         ) : !row ? (
           <Card style={{ padding: 14, borderRadius: 18 }}>
-            <Text style={{ color: UI.text, fontWeight: "900" }}>Task haijapatikana</Text>
+            <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Task haijapatikana")}</Text>
 
             <Text style={{ color: UI.muted, marginTop: 6, fontWeight: "700" }}>
               {errMsg
                 ? errMsg
-                : "Inawezekana huna ruhusa (RLS) au task imefutwa, au id haikupita vizuri."}
+                : uiText("Inawezekana huna ruhusa (RLS) au task imefutwa, au id haikupita vizuri.")}
             </Text>
 
             {/* Debug block */}
             <View style={{ marginTop: 12 }}>
-              <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 11 }}>Debug:</Text>
+              <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 11 }}>{uiText("Debug:")}</Text>
               <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 11, marginTop: 4 }}>
-                route taskId: {taskId ?? "—"}
+                {uiText("route taskId:")}{taskId ?? "—"}
               </Text>
               <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 11, marginTop: 4 }}>
-                activeOrgId: {clean(org.activeOrgId) || "—"}
+                {uiText("activeOrgId:")}{clean(org.activeOrgId) || "—"}
               </Text>
               <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 11, marginTop: 4 }}>
-                raw params: {clean(JSON.stringify(params))}
+                {uiText("raw params:")}{clean(JSON.stringify(params))}
               </Text>
             </View>
           </Card>
@@ -208,22 +209,22 @@ export default function TaskDetailScreen() {
           <View style={{ gap: 12 }}>
             <Card style={{ padding: 14, borderRadius: 18 }}>
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18 }}>
-                {clean(row.title) || "Untitled"}
+                {clean(row.title) || uiText("Untitled")}
               </Text>
 
               <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 8 }}>
-                Status: {clean(row.status) || "OPEN"}
-                {row.priority ? ` • Priority: ${row.priority}` : ""}
-                {row.eta ? ` • ETA: ${row.eta}` : ""}
+                {uiText("Status:")}{clean(row.status) || uiText("OPEN")}
+                {row.priority ? uiText(" • Priority: {p0}", {p0: (row.priority)}) : ""}
+                {row.eta ? uiText(" • ETA: {p0}", {p0: (row.eta)}) : ""}
               </Text>
 
               <Text style={{ color: UI.faint, fontWeight: "800", marginTop: 8, fontSize: 11 }}>
-                Task ID: {row.id}
+                {uiText("Task ID:")}{row.id}
               </Text>
             </Card>
 
             <Card style={{ padding: 14, borderRadius: 18 }}>
-              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>Steps</Text>
+              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>{uiText("Steps")}</Text>
 
               {Array.isArray(row.steps) && row.steps.length ? (
                 <View style={{ marginTop: 10, gap: 8 }}>
@@ -248,8 +249,7 @@ export default function TaskDetailScreen() {
                 </View>
               ) : (
                 <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 8 }}>
-                  No steps for this task.
-                </Text>
+                  {uiText("No steps for this task.")}</Text>
               )}
             </Card>
           </View>

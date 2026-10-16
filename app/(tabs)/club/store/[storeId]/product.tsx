@@ -1,3 +1,5 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 import { supabase } from "@/src/supabase/supabaseClient";
 import { Card } from "@/src/ui/Card";
 import { Screen } from "@/src/ui/Screen";
@@ -32,6 +34,8 @@ function fmtTZS(n: number) {
 }
 
 export default function StoreCatalogScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ storeId?: string }>();
@@ -96,13 +100,13 @@ export default function StoreCatalogScreen() {
               {fmtTZS(Number(item.price ?? 0))}
             </Text>
             <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6, fontSize: 12 }}>
-              {item.is_available ? "Available" : "Unavailable"}
+              {item.is_available ? uiText("Available") : uiText("Unavailable")}
             </Text>
           </View>
         </View>
       </Card>
     );
-  }, []);
+  }, [uiText]);
 
   const Header = useMemo(() => {
     return (
@@ -125,8 +129,8 @@ export default function StoreCatalogScreen() {
                 <Ionicons name="pricetag-outline" size={18} color={theme.colors.emerald} />
               </View>
               <View>
-                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>Store Catalog</Text>
-                <Text style={{ color: theme.colors.faint, fontWeight: "900", fontSize: 12 }}>Public products list</Text>
+                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>{uiText("Store Catalog")}</Text>
+                <Text style={{ color: theme.colors.faint, fontWeight: "900", fontSize: 12 }}>{uiText("Public products list")}</Text>
               </View>
             </View>
 
@@ -145,19 +149,19 @@ export default function StoreCatalogScreen() {
                 },
               ]}
             >
-              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Back</Text>
+              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Back")}</Text>
             </Pressable>
           </View>
         </Card>
 
         {!!err && (
           <Card style={{ padding: 12, borderColor: theme.colors.dangerBorder, backgroundColor: theme.colors.dangerSoft }}>
-            <Text style={{ color: theme.colors.dangerText, fontWeight: "900" }}>{err}</Text>
+            <Text style={{ color: theme.colors.dangerText, fontWeight: "900" }}>{systemText(err)}</Text>
           </Card>
         )}
       </View>
     );
-  }, [err, router, topPad]);
+  }, [err, router, topPad, uiText, systemText]);
 
   return (
     <Screen scroll={false} contentStyle={{ paddingTop: 0, paddingHorizontal: 0, paddingBottom: 0 }}>
@@ -170,10 +174,9 @@ export default function StoreCatalogScreen() {
         ListEmptyComponent={
           loading ? null : (
             <Card style={{ padding: 14 }}>
-              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>No products</Text>
+              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>{uiText("No products")}</Text>
               <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-                Hii store bado haijaweka bidhaa kwenye catalog.
-              </Text>
+                {uiText("Hii store bado haijaweka bidhaa kwenye catalog.")}</Text>
             </Card>
           )
         }
@@ -181,7 +184,7 @@ export default function StoreCatalogScreen() {
           loading ? (
             <View style={{ paddingVertical: 14, alignItems: "center" }}>
               <ActivityIndicator />
-              <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>Loading...</Text>
+              <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>{uiText("Loading...")}</Text>
             </View>
           ) : null
         }

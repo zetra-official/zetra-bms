@@ -1,3 +1,4 @@
+import { LanguageProvider } from "@/src/i18n/LanguageProvider";
 ﻿import { OrgProvider, useOrg } from "@/src/context/OrgContext";
 import {
   applySupabaseSessionFromInitialUrl,
@@ -748,10 +749,31 @@ if (officeUser) {
       setHasSession(true);
       setIsOfficeUser(officeUser);
 
+      if (officeUser) {
+        router.replace(routes.office as any);
+        return;
+      }
+
+      const { data: callbackOrgs, error: callbackOrgsError } =
+        await supabase.rpc("get_my_orgs");
+
+      if (callbackOrgsError) {
+        console.log(
+          "auth callback get_my_orgs error:",
+          callbackOrgsError
+        );
+
+        router.replace(routes.login as any);
+        return;
+      }
+
+      const hasOrganization =
+        Array.isArray(callbackOrgs) && callbackOrgs.length > 0;
+
       router.replace(
-        officeUser
-          ? (routes.office as any)
-          : (routes.home as any)
+        hasOrganization
+          ? (routes.home as any)
+          : (routes.onboarding as any)
       );
     });
 
@@ -870,8 +892,10 @@ if (
 
 export default function RootLayout() {
   return (
+    <LanguageProvider>
     <OrgProvider>
       <AuthGate  />
     </OrgProvider>
+    </LanguageProvider>
   );
 }

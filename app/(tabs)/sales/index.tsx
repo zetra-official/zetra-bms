@@ -1,6 +1,10 @@
-﻿import SafeIcon from "@/src/ui/SafeIcon";
+import {indexPOS, searchPOS} from "@/src/search/catalogSearch";
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+﻿import {useCommonText} from "@/src/i18n/useCommonText";
+import SafeIcon from "@/src/ui/SafeIcon";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
@@ -403,6 +407,8 @@ function ScannerFabIcon({ size = 24, color = "#E5E7EB" }: { size?: number; color
    Screen
 ========================= */
 export default function SalesHomeScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
   const params = useLocalSearchParams<{
   barcode?: string;
@@ -452,6 +458,7 @@ useEffect(() => {
   const CART_KEY = (storeId: string) => `sales_cart_${storeId}`;
   const cartHydratedRef = useRef(false);
   const cartLastStoreRef = useRef<string>("");
+  const cartRestoreRequestRef = useRef(0);
   const realtimeChannelRef = useRef<RealtimeChannel | null>(null);
   const refreshTimerRef = useRef<any>(null);
   const lastRealtimeRefreshAtRef = useRef<number>(0);
@@ -563,6 +570,7 @@ useFocusEffect(
 
 const restorePersistedCart = useCallback(async () => {
     const sid = String(activeStoreId ?? "").trim();
+    const requestId = ++cartRestoreRequestRef.current;
 
     cartHydratedRef.current = false;
 
@@ -577,27 +585,32 @@ const restorePersistedCart = useCallback(async () => {
       const raw = await AsyncStorage.getItem(CART_KEY(sid));
       const parsed = raw ? JSON.parse(raw) : [];
 
+      if (requestId !== cartRestoreRequestRef.current) return;
       setCart(Array.isArray(parsed) ? parsed : []);
       cartLastStoreRef.current = sid;
     } catch {
+      if (requestId !== cartRestoreRequestRef.current) return;
       setCart([]);
       cartLastStoreRef.current = sid;
     } finally {
-      cartHydratedRef.current = true;
+      if (requestId === cartRestoreRequestRef.current) {
+        cartHydratedRef.current = true;
+      }
     }
   }, [activeStoreId, isCashier]);
-
-  useEffect(() => {
-    void restorePersistedCart();
-  }, [restorePersistedCart]);
 
   useFocusEffect(
     useCallback(() => {
       void restorePersistedCart();
+
+      return () => {
+        cartRestoreRequestRef.current += 1;
+        cartHydratedRef.current = false;
+      };
     }, [restorePersistedCart])
   );
 
-  useEffect(() => {
+useEffect(() => {
     const sid = String(activeStoreId ?? "").trim();
     if (!sid || isCashier) return;
     if (!cartHydratedRef.current) return;
@@ -707,7 +720,7 @@ const isOwnerOrAdmin = useMemo(
 
   const startCashierShift = useCallback(async () => {
     if (!activeStoreId) {
-      Alert.alert("Missing", "No active store selected.");
+      Alert.alert(uiText("Missing"), uiText("No active store selected."));
       return;
     }
 
@@ -715,7 +728,7 @@ const isOwnerOrAdmin = useMemo(
     const openingCash = raw ? Number(raw) : 0;
 
     if (!Number.isFinite(openingCash) || openingCash < 0) {
-      Alert.alert("Opening Cash", "Weka opening cash sahihi. Unaweza kuweka 0.");
+      Alert.alert(uiText("Opening Cash"), uiText("Weka opening cash sahihi. Unaweza kuweka 0."));
       return;
     }
 
@@ -751,10 +764,10 @@ const isOwnerOrAdmin = useMemo(
 
       await refreshCashierSurface();
 
-      Alert.alert("Shift Opened ✅", "Cashier shift imefunguliwa vizuri.");
+      Alert.alert(uiText("Shift Opened ✅"), uiText("Cashier shift imefunguliwa vizuri."));
     } catch (e: any) {
       setShiftErr(e?.message ?? "Failed to open shift");
-      Alert.alert("Shift Opening Failed", e?.message ?? "Failed to open shift");
+      Alert.alert(uiText("Shift Opening Failed"), e?.message ?? uiText("Failed to open shift"));
     } finally {
       setShiftBusy(false);
     }
@@ -1396,18 +1409,9 @@ channel.subscribe();
     return () => clearInterval(timer);
   }, [isCashier, refreshCashierSurface]);
 
+  const posSearchIndex = useMemo(() => indexPOS(products), [products]);
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-
-    const base = !q
-      ? products
-      : products.filter((p) => {
-          const name = (p.name ?? "").toLowerCase();
-          const sku = (p.sku ?? "").toLowerCase();
-          const cat = (p.category ?? "").toLowerCase();
-          const bc = (p.barcode ?? "").toLowerCase();
-          return name.includes(q) || sku.includes(q) || cat.includes(q) || bc.includes(q);
-        });
+    const base = searchPOS(posSearchIndex, query);
 
     if (!recentScannedIds.length) return base;
 
@@ -1423,7 +1427,7 @@ channel.subscribe();
     });
 
     return copy;
-  }, [products, query, recentScannedIds]);
+  }, [posSearchIndex, query, recentScannedIds]);
 
   /* =========================
      Barcode handler
@@ -1942,7 +1946,7 @@ const TopBar = useMemo(() => {
       >
         <View style={{ flex: 1, gap: 2 }}>
           <Text style={{ fontSize: 28, fontWeight: "900", color: theme.colors.text }}>
-            {isDesktopWeb ? "Point of Sale" : "Sales"}
+            {isDesktopWeb ? uiText("Point of Sale") : uiText("Sales")}
           </Text>
 
           <Text
@@ -1990,8 +1994,7 @@ const TopBar = useMemo(() => {
           >
             <SafeIcon name="time-outline" size={14} color={theme.colors.text} />
             <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 11 }}>
-              History
-            </Text>
+              {uiText("History")}</Text>
           </Pressable>
         ) : null}
       </View>
@@ -2000,13 +2003,7 @@ const TopBar = useMemo(() => {
           Expenses sasa iko kwenye bottom tab yake. Profit ibaki Finance. */}
     </View>
   );
-}, [
-  headerSubtitle,
-  isDesktopWeb,
-  router,
-  statusLine,
-  todayLabel,
-]);
+}, [headerSubtitle, isDesktopWeb, router, statusLine, todayLabel, uiText]);
 
   const QuickBar = useMemo(() => {
     return (
@@ -2026,16 +2023,14 @@ const TopBar = useMemo(() => {
         }}
       >
         <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
-          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}>
-            {cartTotalLines} items • {fmtQty(cartCount)} qty
-          </Text>
+          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}>{uiText("{p0} items • {p1} quantity", {p0: (cartTotalLines), p1: (fmtQty(cartCount))})}</Text>
 
           <Text style={{ color: cartAccent.text, fontWeight: "900", fontSize: 14 }}>
             {fmt(cartTotalAmount)}
           </Text>
         </View>
 
-        {!!err && <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{err}</Text>}
+        {!!err && <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{systemText(err)}</Text>}
 
         {!!headerBlockedReason && (
           <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
@@ -2083,8 +2078,7 @@ const TopBar = useMemo(() => {
         fontSize: 12,
       }}
     >
-      Complete Sale
-    </Text>
+      {uiText("Complete Sale")}</Text>
   </Pressable>
 ) : null}
 
@@ -2127,8 +2121,7 @@ const TopBar = useMemo(() => {
         fontSize: 12,
       }}
     >
-      Cashiers
-    </Text>
+      {uiText("Cashiers")}</Text>
   </Pressable>
 ) : null}
 
@@ -2176,8 +2169,7 @@ const TopBar = useMemo(() => {
             ]}
           >
             <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>
-              Clear
-            </Text>
+              {uiText("Clear")}</Text>
           </Pressable>
         </View>
 
@@ -2186,7 +2178,7 @@ const TopBar = useMemo(() => {
             <Input
               value={query}
               onChangeText={setQuery}
-              placeholder="Search name / SKU / category / barcode..."
+              placeholder={uiText("Search name / SKU / category / barcode...")}
               style={{ minHeight: 42, fontSize: 13 }}
             />
           </View>
@@ -2194,34 +2186,11 @@ const TopBar = useMemo(() => {
 
         {loading && !isCashier && (
           <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 2 }}>
-            Loading products...
-          </Text>
+            {uiText("Loading products...")}</Text>
         )}
       </Card>
     );
-}, [
-  cartTotalLines,
-  cartCount,
-  fmt,
-  cartTotalAmount,
-  cartAccent,
-  err,
-  headerBlockedReason,
-  goCheckout,
-  checkoutDisabled,
-  isCashier,
-  isDirectSalesMode,
-  isCashierSalesMode,
-  goCashierCheckout,
-  cashierDisabled,
-  goScan,
-  activeStoreId,
-  canSellDirect,
-  clearCart,
-  cart.length,
-  query,
-  loading,
-]);
+}, [cartTotalLines, cartCount, fmt, cartTotalAmount, cartAccent, err, headerBlockedReason, goCheckout, checkoutDisabled, isCashier, isDirectSalesMode, isCashierSalesMode, goCashierCheckout, cashierDisabled, goScan, activeStoreId, canSellDirect, clearCart, cart.length, query, loading, uiText, systemText]);
 
   const DesktopCheckoutPanel = useMemo(() => {
     if (isCashier || !isDesktopWeb) return null;
@@ -2261,8 +2230,7 @@ const TopBar = useMemo(() => {
                     fontSize: 17,
                   }}
                 >
-                  Current Cart
-                </Text>
+                  {uiText("Current Cart")}</Text>
 
                 <Text
                   style={{
@@ -2272,8 +2240,7 @@ const TopBar = useMemo(() => {
                     marginTop: 3,
                   }}
                 >
-                  Review selected products before checkout.
-                </Text>
+                  {uiText("Review selected products before checkout.")}</Text>
               </View>
 
               <View
@@ -2293,8 +2260,7 @@ const TopBar = useMemo(() => {
                     fontSize: 10,
                   }}
                 >
-                  {cartTotalLines} ITEMS
-                </Text>
+                  {cartTotalLines} {uiText("ITEMS")}</Text>
               </View>
             </View>
 
@@ -2322,8 +2288,7 @@ const TopBar = useMemo(() => {
                     fontSize: 9,
                   }}
                 >
-                  QTY
-                </Text>
+                  {uiText("QTY")}</Text>
 
                 <Text
                   style={{
@@ -2355,8 +2320,7 @@ const TopBar = useMemo(() => {
                     fontSize: 9,
                   }}
                 >
-                  CART TOTAL
-                </Text>
+                  {uiText("CART TOTAL")}</Text>
 
                 <Text
                   style={{
@@ -2374,8 +2338,7 @@ const TopBar = useMemo(() => {
 
             {cart.length === 0 ? (
               <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                Hakuna bidhaa zilizochaguliwa bado.
-              </Text>
+                {uiText("Hakuna bidhaa zilizochaguliwa bado.")}</Text>
             ) : (
               <View style={{ gap: 8 }}>
                 {cart.map((item) => (
@@ -2420,8 +2383,8 @@ const TopBar = useMemo(() => {
                           numberOfLines={2}
                         >
                           {getCartDisplayUnit(item)}: {fmtQty(getCartDisplayQty(item))}
-                          {" • "}Stock qty: {fmtQty(item.qty)}
-                          {" • "}Unit: {fmt(item.unit_price)}
+                          {" • "}{uiText("Stock qty:")}{fmtQty(item.qty)}
+                          {" • "}{uiText("Unit:")}{fmt(item.unit_price)}
                         </Text>
                       </View>
 
@@ -2438,8 +2401,7 @@ const TopBar = useMemo(() => {
                             fontSize: 8,
                           }}
                         >
-                          TOTAL
-                        </Text>
+                          {uiText("TOTAL")}</Text>
 
                         <Text
                           style={{
@@ -2567,8 +2529,7 @@ const TopBar = useMemo(() => {
                             fontSize: 10,
                           }}
                         >
-                          Remove
-                        </Text>
+                          {uiText("Remove")}</Text>
                       </Pressable>
                     </View>
                   </View>
@@ -2579,20 +2540,7 @@ const TopBar = useMemo(() => {
         </View>
       </ScrollView>
     );
-  }, [
-    QuickBar,
-    cart,
-    cartCount,
-    cartTotalAmount,
-    cartTotalLines,
-    dec,
-    fmt,
-    inc,
-    isCashier,
-    isDesktopWeb,
-    openQtyEditor,
-    removeItem,
-  ]);
+  }, [QuickBar, cart, cartCount, cartTotalAmount, cartTotalLines, dec, fmt, inc, isCashier, isDesktopWeb, openQtyEditor, removeItem, uiText]);
 
   const CashierBar = useMemo(() => {
     if (!isCashier) return null;
@@ -2602,11 +2550,9 @@ const TopBar = useMemo(() => {
         <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
           <View style={{ flex: 1, gap: 4 }}>
             <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 17 }}>
-              Cashier Queue
-            </Text>
+              {uiText("Cashier Queue")}</Text>
             <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}>
-              Live queue status ya store uliyoassigniwa.
-            </Text>
+              {uiText("Live queue status ya store uliyoassigniwa.")}</Text>
           </View>
 
           <View
@@ -2621,17 +2567,17 @@ const TopBar = useMemo(() => {
             }}
           >
             <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-              {openShift ? "SHIFT OPEN" : "NO SHIFT"}
+              {openShift ? uiText("SHIFT OPEN") : uiText("NO SHIFT")}
             </Text>
           </View>
         </View>
 
         {!!cashierErr && (
-          <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{cashierErr}</Text>
+          <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{systemText(cashierErr)}</Text>
         )}
 
         {!!shiftErr && (
-          <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{shiftErr}</Text>
+          <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{systemText(shiftErr)}</Text>
         )}
 
         <View style={{ flexDirection: "row", gap: 8 }}>
@@ -2647,8 +2593,7 @@ const TopBar = useMemo(() => {
             }}
           >
             <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}>
-              Pending
-            </Text>
+              {uiText("Pending")}</Text>
             <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4, fontSize: 18 }}>
               {cashierCounts.pending}
             </Text>
@@ -2666,8 +2611,7 @@ const TopBar = useMemo(() => {
             }}
           >
             <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}>
-              Accepted
-            </Text>
+              {uiText("Accepted")}</Text>
             <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4, fontSize: 18 }}>
               {cashierCounts.accepted}
             </Text>
@@ -2685,8 +2629,7 @@ const TopBar = useMemo(() => {
             }}
           >
             <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}>
-              Completed
-            </Text>
+              {uiText("Completed")}</Text>
             <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4, fontSize: 18 }}>
               {cashierCounts.completed}
             </Text>
@@ -2705,13 +2648,13 @@ const TopBar = useMemo(() => {
           }}
         >
           <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14 }}>
-            Active Filter: {cashierFilter}
+            {uiText("Active Filter:")}{cashierFilter}
           </Text>
           <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
-            Showing {activeFilterCount} item(s) • Filter Total: {fmt(cashierTotalAmount)}
+            {uiText("Showing {p0} items • Filter Total: {p1}", {p0: activeFilterCount, p1: fmt(cashierTotalAmount)})}
           </Text>
           <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
-            All Queue Total: {fmt(allQueueTotalAmount)}
+            {uiText("All Queue Total:")}{fmt(allQueueTotalAmount)}
           </Text>
         </View>
 
@@ -2728,19 +2671,17 @@ const TopBar = useMemo(() => {
             }}
           >
             <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-              Shift Status: OPEN ✅
+              {uiText("Shift Status: OPEN ✅")}</Text>
+            <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+              {uiText("Opened:")}{fmtDateTimeLocal(openShift.opened_at)}
             </Text>
             <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-              Opened: {fmtDateTimeLocal(openShift.opened_at)}
-            </Text>
-            <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-              Opening Cash: {fmt(openShift.opening_cash)}
+              {uiText("Opening Cash:")}{fmt(openShift.opening_cash)}
             </Text>
           </View>
         ) : shiftLoading ? (
           <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-            Loading shift status...
-          </Text>
+            {uiText("Loading shift status...")}</Text>
         ) : (
           <View
             style={{
@@ -2753,11 +2694,9 @@ const TopBar = useMemo(() => {
             }}
           >
             <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-              Hakuna shift wazi kwa cashier huyu.
-            </Text>
+              {uiText("Hakuna shift wazi kwa cashier huyu.")}</Text>
             <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-              Fungua shift mpya kabla ya kuendelea na queue.
-            </Text>
+              {uiText("Fungua shift mpya kabla ya kuendelea na queue.")}</Text>
           </View>
         )}
 
@@ -2783,7 +2722,7 @@ const TopBar = useMemo(() => {
             })}
           >
             <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14 }}>
-              {openShift ? "Shift Opening" : "Open New Shift"}
+              {openShift ? uiText("Shift Opening") : uiText("Open New Shift")}
             </Text>
           </Pressable>
 
@@ -2802,16 +2741,15 @@ const TopBar = useMemo(() => {
             })}
           >
             <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14 }}>
-              Cashier Closing
-            </Text>
+              {uiText("Cashier Closing")}</Text>
           </Pressable>
         </View>
 
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-          <CashierFilterChip label={`Pending (${cashierCounts.pending})`} value="PENDING" />
-          <CashierFilterChip label={`Accepted (${cashierCounts.accepted})`} value="ACCEPTED" />
-          <CashierFilterChip label={`Completed (${cashierCounts.completed})`} value="COMPLETED" />
-          <CashierFilterChip label={`All (${cashierCounts.all})`} value="ALL" />
+          <CashierFilterChip label={uiText("Pending ({p0})", {p0: (cashierCounts.pending)})} value="PENDING" />
+          <CashierFilterChip label={uiText("Accepted ({p0})", {p0: (cashierCounts.accepted)})} value="ACCEPTED" />
+          <CashierFilterChip label={uiText("Completed ({p0})", {p0: (cashierCounts.completed)})} value="COMPLETED" />
+          <CashierFilterChip label={uiText("All ({p0})", {p0: (cashierCounts.all)})} value="ALL" />
         </View>
 
         <Pressable
@@ -2828,32 +2766,15 @@ const TopBar = useMemo(() => {
         >
           <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
             {cashierLoading || cashierRefreshing || shiftLoading
-              ? "Refreshing..."
-              : "Refresh Queue"}
+              ? uiText("Refreshing...")
+              : uiText("Refresh Queue")}
           </Text>
         </Pressable>
 
         <View style={{ height: 2 }} />
       </Card>
     );
-  }, [
-    isCashier,
-    cashierErr,
-    shiftErr,
-    cashierCounts,
-    cashierFilter,
-    activeFilterCount,
-    fmt,
-    cashierTotalAmount,
-    allQueueTotalAmount,
-    openShift,
-    shiftLoading,
-    goShiftOpening,
-    goCashierClosing,
-    cashierLoading,
-    cashierRefreshing,
-    refreshCashierSurface,
-  ]);
+  }, [isCashier, cashierErr, shiftErr, cashierCounts, cashierFilter, activeFilterCount, fmt, cashierTotalAmount, allQueueTotalAmount, openShift, shiftLoading, goShiftOpening, goCashierClosing, cashierLoading, cashierRefreshing, refreshCashierSurface, uiText, systemText]);
 
   const renderItem = useCallback(
     ({ item }: { item: ProductRow }) => {
@@ -2930,7 +2851,7 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
                   }}
                   numberOfLines={1}
                 >
-                  SKU: {item.sku ?? "—"}
+                  {uiText("SKU:")}{item.sku ?? "—"}
                   {item.category ? ` • ${item.category}` : ""}
                   {item.barcode ? ` • ${item.barcode}` : ""}
                 </Text>
@@ -2944,7 +2865,7 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
                     }}
                     numberOfLines={1}
                   >
-                    {stockLabel}
+                    {(stockQty === null ? null : (stockQty <= 0 ? uiText("Out of stock") : uiText("Stock: {p0}", {p0: (fmtQty(stockQty))})))}
                     {inCart ? ` • ${getCartDisplayUnit(inCart)}: ${fmtQty(getCartDisplayQty(inCart))}` : ""}
                   </Text>
                 )}
@@ -2954,9 +2875,9 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
                     style={{ color: theme.colors.muted, fontWeight: "900", fontSize: isDesktopWeb ? 11 : 10 }}
                     numberOfLines={1}
                   >
-                    Price: <Text style={{ color: theme.colors.text }}>{fmt(Number(inCart?.unit_price ?? 0))}</Text>
+                    {uiText("Price:")}<Text style={{ color: theme.colors.text }}>{fmt(Number(inCart?.unit_price ?? 0))}</Text>
                     {" • "}
-                    Line: <Text style={{ color: theme.colors.text }}>{fmt(Number(inCart?.line_total ?? 0))}</Text>
+                    {uiText("Line:")}<Text style={{ color: theme.colors.text }}>{fmt(Number(inCart?.line_total ?? 0))}</Text>
                   </Text>
                 )}
               </View>
@@ -2982,8 +2903,7 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
                   ]}
                 >
                   <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>
-                    Add
-                  </Text>
+                    {uiText("Add")}</Text>
                 </Pressable>
               ) : (
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
@@ -3069,8 +2989,7 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
                     ]}
                   >
                     <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 11 }}>
-                      Del
-                    </Text>
+                      {uiText("Del")}</Text>
                   </Pressable>
                 </View>
               )}
@@ -3080,19 +2999,7 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
         </View>
       );
     },
-    [
-      addAuto,
-      cart,
-      dec,
-      fmt,
-      getStockQty,
-      inc,
-      isDesktopWeb,
-      openPriceModal,
-      openProductPreview,
-      openQtyEditor,
-      removeItem,
-    ]
+    [addAuto, cart, dec, fmt, getStockQty, inc, isDesktopWeb, openPriceModal, openProductPreview, openQtyEditor, removeItem, uiText]
   );
 
   const renderCashierItem = useCallback(
@@ -3117,10 +3024,10 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
             <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
               <View style={{ flex: 1 }}>
                 <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-                  {item.store_name || activeStoreName || "Store"}
+                  {item.store_name || activeStoreName || uiText("Store")}
                 </Text>
                 <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 4 }}>
-                  Handoff: {String(item.id).slice(0, 8)}...
+                  {uiText("Handoff:")}{String(item.id).slice(0, 8)}...
                 </Text>
               </View>
 
@@ -3146,19 +3053,19 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
 
             <View style={{ flexDirection: "row", gap: 12 }}>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Items</Text>
+                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Items")}</Text>
                 <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>
                   {itemsCount}
                 </Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Subtotal</Text>
+                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Subtotal")}</Text>
                 <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>
                   {fmt(Number(item.subtotal ?? 0))}
                 </Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Total</Text>
+                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Total")}</Text>
                 <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>
                   {fmt(Number(item.total ?? 0))}
                 </Text>
@@ -3167,7 +3074,7 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
 
             {!!Number(item.discount_amount ?? 0) && (
               <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                Discount: {fmt(Number(item.discount_amount ?? 0))}
+                {uiText("Discount:")}{fmt(Number(item.discount_amount ?? 0))}
               </Text>
             )}
 
@@ -3181,7 +3088,7 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
                   padding: 12,
                 }}
               >
-                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Note</Text>
+                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Note")}</Text>
                 <Text style={{ color: theme.colors.text, fontWeight: "800", marginTop: 6 }}>
                   {String(item.note ?? "").trim()}
                 </Text>
@@ -3190,22 +3097,22 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
 
             <View style={{ gap: 4 }}>
               <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                Created: {createdAt}
+                {uiText("Created:")}{createdAt}
               </Text>
 
               {status === "ACCEPTED" ? (
                 <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                  Accepted: {acceptedAt}
+                  {uiText("Accepted:")}{acceptedAt}
                 </Text>
               ) : null}
 
               {status === "COMPLETED" ? (
                 <>
                   <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                    Accepted: {acceptedAt}
+                    {uiText("Accepted:")}{acceptedAt}
                   </Text>
                   <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                    Completed: {completedAt}
+                    {uiText("Completed:")}{completedAt}
                   </Text>
                 </>
               ) : null}
@@ -3218,13 +3125,12 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
                 textDecorationLine: "underline",
               }}
             >
-              Open details
-            </Text>
+              {uiText("Open details")}</Text>
           </Card>
         </Pressable>
       );
     },
-    [activeStoreName, fmt, goHandoffDetail]
+    [activeStoreName, fmt, goHandoffDetail, uiText]
   );
 
   return (
@@ -3323,23 +3229,20 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
                   <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 14, marginBottom: 10 }}>
                     <View style={{ flex: 1, minWidth: 0 }}>
                       <Text style={{ color: "#0F172A", fontWeight: "900", fontSize: 18 }}>
-                        Product Catalog
-                      </Text>
+                        {uiText("Product Catalog")}</Text>
                       <Text style={{ color: "#64748B", fontWeight: "700", fontSize: 11, marginTop: 3 }} numberOfLines={1}>
-                        Search, select and add products to the active sale.
-                      </Text>
+                        {uiText("Search, select and add products to the active sale.")}</Text>
                     </View>
                     <View style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, backgroundColor: "#F1F5F9", borderWidth: 1, borderColor: "rgba(15,23,42,0.06)" }}>
                       <Text style={{ color: "#475569", fontSize: 10, fontWeight: "900" }}>
-                        {filtered.length} PRODUCTS
-                      </Text>
+                        {filtered.length} {uiText("PRODUCTS")}</Text>
                     </View>
                   </View>
                   <View style={{ borderRadius: 12, backgroundColor: "#F8FAFC", borderWidth: 1, borderColor: "rgba(15,23,42,0.08)", paddingHorizontal: 2 }}>
                     <Input
                       value={query}
                       onChangeText={setQuery}
-                      placeholder="Search product, SKU, category or barcode..."
+                      placeholder={uiText("Search product, SKU, category or barcode...")}
                     />
                   </View>
                 </View>
@@ -3348,15 +3251,104 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
                 !loading ? (
                   <View style={{ paddingTop: 10, alignItems: "center" }}>
                     <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                      No products found.
-                    </Text>
+                      {uiText("No products found.")}</Text>
                   </View>
                 ) : null
               }
             />
           </View>
 
-          <View style={{ width: 360, minWidth: 360, maxWidth: 380 }}>
+          <View
+            style={{
+              width: 360,
+              minWidth: 360,
+              maxWidth: 380,
+              gap: 10,
+            }}
+          >
+            {/* DESKTOP SALES HISTORY ACCESS */}
+            <Pressable
+              onPress={() => router.push("/(tabs)/sales/history")}
+              hitSlop={6}
+              style={({ pressed }) => ({
+                minHeight: 54,
+                borderRadius: 14,
+                borderWidth: 1,
+                borderColor: "#BFDBFE",
+                backgroundColor: pressed ? "#DBEAFE" : "#EFF6FF",
+                paddingHorizontal: 12,
+                paddingVertical: 9,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 10,
+                opacity: pressed ? 0.94 : 1,
+              })}
+            >
+              <View
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: 10,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: "#DBEAFE",
+                  borderWidth: 1,
+                  borderColor: "rgba(37,99,235,0.12)",
+                }}
+              >
+                <Ionicons
+                  name="receipt-outline"
+                  size={18}
+                  color="#2563EB"
+                />
+              </View>
+
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text
+                  style={{
+                    color: "#1E3A8A",
+                    fontWeight: "900",
+                    fontSize: 12.5,
+                  }}
+                >
+                  {uiText("Sales History")}</Text>
+
+                <Text
+                  style={{
+                    color: "#64748B",
+                    fontWeight: "700",
+                    fontSize: 10,
+                    marginTop: 2,
+                  }}
+                  numberOfLines={1}
+                >
+                  {uiText("Receipts & past sales")}</Text>
+              </View>
+
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                <Text
+                  style={{
+                    color: "#2563EB",
+                    fontWeight: "900",
+                    fontSize: 10.5,
+                  }}
+                >
+                  {uiText("Open")}</Text>
+
+                <Ionicons
+                  name="chevron-forward"
+                  size={15}
+                  color="#2563EB"
+                />
+              </View>
+            </Pressable>
+
             {DesktopCheckoutPanel}
           </View>
         </View>
@@ -3378,8 +3370,7 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
             !loading ? (
               <View style={{ paddingTop: 10, alignItems: "center" }}>
                 <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                  No products found.
-                </Text>
+                  {uiText("No products found.")}</Text>
               </View>
             ) : null
           }
@@ -3451,11 +3442,10 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
           textAlign: "center",
         }}
       >
-        Choose Selling Unit
-      </Text>
+        {uiText("Choose Selling Unit")}</Text>
 
       <Text style={{ color: "#64748B", fontWeight: "900", fontSize: 16 }}>
-        {sellModeProduct?.name ?? "Product"}
+        {sellModeProduct?.name ?? uiText("Product")}
       </Text>
 
       <View style={{ height: 1, backgroundColor: "rgba(15,23,42,0.10)" }} />
@@ -3491,7 +3481,7 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
 
         <View style={{ flex: 1 }}>
           <Text style={{ color: "#0F172A", fontWeight: "900", fontSize: 17 }}>
-            Sell by {getPackLabel(sellModeProduct)}
+            {uiText("Sell by")}{getPackLabel(sellModeProduct)}
           </Text>
           <Text style={{ color: "#64748B", fontWeight: "900", marginTop: 4 }}>
             {fmtQty(getPackSize(sellModeProduct))} {getBaseUnitLabel(sellModeProduct)}
@@ -3532,7 +3522,7 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
 
         <View style={{ flex: 1 }}>
           <Text style={{ color: "#0F172A", fontWeight: "900", fontSize: 17 }}>
-            Sell by {getBaseUnitLabel(sellModeProduct)}
+            {uiText("Sell by")}{getBaseUnitLabel(sellModeProduct)}
           </Text>
           <Text style={{ color: "#64748B", fontWeight: "900", marginTop: 4 }}>
             1 {getBaseUnitLabel(sellModeProduct)}
@@ -3572,8 +3562,7 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
         </View>
 
         <Text style={{ color: "#0F172A", fontWeight: "900", fontSize: 17 }}>
-          Cancel
-        </Text>
+          {uiText("Cancel")}</Text>
       </Pressable>
     </View>
   </View>
@@ -3671,8 +3660,7 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
 
   <View style={{ flex: 1, minWidth: 0, gap: 12 }}>
     <Text style={{ color: "#0F172A", fontWeight: "900", fontSize: 22 }}>
-      Product Details
-    </Text>
+      {uiText("Product Details")}</Text>
 
       <Text style={{ color: "#0F172A", fontWeight: "900", fontSize: 18 }}>
         {previewProduct?.name ?? "—"}
@@ -3736,7 +3724,7 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
             opacity: pressed ? 0.9 : 1,
           })}
         >
-          <Text style={{ color: "#0F172A", fontWeight: "900" }}>Close</Text>
+          <Text style={{ color: "#0F172A", fontWeight: "900" }}>{uiText("Close")}</Text>
         </Pressable>
 
         <Pressable
@@ -3756,7 +3744,7 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
             opacity: pressed ? 0.9 : 1,
           })}
         >
-          <Text style={{ color: "#047857", fontWeight: "900" }}>Add to Cart</Text>
+          <Text style={{ color: "#047857", fontWeight: "900" }}>{uiText("Add to Cart")}</Text>
         </Pressable>
       </View>
     </View>
@@ -3771,7 +3759,7 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
         costPrice={selected?.cost_price ?? null}
         currency={displayCurrency}
         locale={displayLocale}
-        error={modalErr}
+        error={systemText(modalErr)}
         onChangePrice={(t: string) => {
           setModalErr(null);
           setPriceDraft(t);
@@ -3816,17 +3804,16 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
   }}
 >
                 <Text style={{ color: "#0F172A", fontWeight: "900", fontSize: 18 }}>
-                  Set Quantity
-                </Text>
+                  {uiText("Set Quantity")}</Text>
 
                 <Text style={{ color: "#64748B", fontWeight: "800" }} numberOfLines={1}>
-                  Product:{" "}
+                  {uiText("Product:")}{" "}
                   <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
                     {qtyEditorName}
                   </Text>
                 </Text>
 
-                <Text style={{ color: "#64748B", fontWeight: "800" }}>Qty</Text>
+                <Text style={{ color: "#64748B", fontWeight: "800" }}>{uiText("Qty")}</Text>
 
                 <TextInput
                   value={qtyEditorDraft}
@@ -3834,7 +3821,7 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
                     setQtyEditorErr(null);
                     setQtyEditorDraft(t);
                   }}
-                  placeholder="mf: 1.5"
+                  placeholder={uiText("mf: 1.5")}
                   placeholderTextColor="#94A3B8"
                   keyboardType="decimal-pad"
                   returnKeyType="done"
@@ -3855,7 +3842,7 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
 
                 {!!qtyEditorErr && (
                   <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>
-                    {qtyEditorErr}
+                    {systemText(qtyEditorErr)}
                   </Text>
                 )}
 
@@ -3876,7 +3863,7 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
                       },
                     ]}
                   >
-                    <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Cancel</Text>
+                    <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Cancel")}</Text>
                   </Pressable>
 
                   <Pressable
@@ -3895,7 +3882,7 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
                       },
                     ]}
                   >
-                    <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Update</Text>
+                    <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Update")}</Text>
                   </Pressable>
                 </View>
 
@@ -3915,7 +3902,7 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
                     },
                   ]}
                 >
-                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Remove</Text>
+                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Remove")}</Text>
                 </Pressable>
 
                 <View style={{ height: 6 }} />
@@ -3954,15 +3941,13 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
   }}
 >
               <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 20 }}>
-                Open New Shift
-              </Text>
+                {uiText("Open New Shift")}</Text>
 
               <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                Kabla cashier hajaanza kupokea malipo, afungue shift yake kwanza.
-              </Text>
+                {uiText("Kabla cashier hajaanza kupokea malipo, afungue shift yake kwanza.")}</Text>
 
               <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                Store:{" "}
+                {uiText("Store:")}{" "}
                 <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
                   {activeStoreName ?? "—"}
                 </Text>
@@ -3970,8 +3955,7 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
 
               <View>
                 <Text style={{ color: theme.colors.muted, fontWeight: "900", marginBottom: 6 }}>
-                  Opening Cash
-                </Text>
+                  {uiText("Opening Cash")}</Text>
 
                 <TextInput
                   value={openingCashDraft}
@@ -3994,22 +3978,21 @@ const cartKey = inCart ? getCartKey(inCart) : item.id;
               </View>
 
               {!!shiftErr && (
-                <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{shiftErr}</Text>
+                <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{systemText(shiftErr)}</Text>
               )}
 
               <Text style={{ color: theme.colors.faint, fontWeight: "800" }}>
-                Unaweza kuweka 0 kama hakuna cash ya kuanzia kwenye drawer.
-              </Text>
+                {uiText("Unaweza kuweka 0 kama hakuna cash ya kuanzia kwenye drawer.")}</Text>
 
               <Button
-                title={shiftBusy ? "Opening..." : "Open Shift"}
+                title={shiftBusy ? uiText("Opening...") : uiText("Open Shift")}
                 onPress={startCashierShift}
                 disabled={shiftBusy}
                 variant="primary"
               />
 
               <Button
-                title="Cancel"
+                title={uiText("Cancel")}
                 onPress={() => setShiftModalOpen(false)}
                 disabled={shiftBusy}
                 variant="secondary"

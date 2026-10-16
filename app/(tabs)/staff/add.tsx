@@ -1,4 +1,5 @@
-﻿import { useLocalSearchParams, useRouter } from "expo-router";
+﻿import {useCommonText} from "@/src/i18n/useCommonText";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
 import { Alert, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -56,7 +57,7 @@ type StaffWithStoresRow = {
   [k: string]: any;
 };
 
-function mapAddStaffErrorMessage(e: any): { title: string; body: string } {
+function mapAddStaffErrorMessage(e: any, uiText: (source: string, params?: Record<string, string>) => string): { title: string; body: string } {
   const msg = clean(e?.message ?? e?.error_description ?? e?.details ?? e);
   const m = msg.toLowerCase();
 
@@ -74,47 +75,43 @@ function mapAddStaffErrorMessage(e: any): { title: string; body: string } {
       "—";
 
     return {
-      title: "Limit Reached",
+      title: uiText("Limit Reached"),
       body:
-        `Umefika limit ya users/staff.\n\n` +
-        `Plan: ${plan}\nUsers/Staff per Org allowed: ${lim}\n\n` +
-        `Ili kuongeza zaidi, tafadhali upgrade plan.`,
+        uiText("Staff limit reached. Plan: {p0}. Users per organization allowed: {p1}. Upgrade your plan to add more staff.", {p0: plan, p1: lim}),
     };
   }
 
   if (m.includes("upgrade_plan") && (m.includes("staff is not allowed") || m.includes("free plan"))) {
     return {
-      title: "Upgrade Required",
+      title: uiText("Upgrade Required"),
       body:
-        "Plan yako haijaruhusu kuongeza mfanyakazi.\n\n" +
-        "✅ FREE plan = Organization 1 + Store 1 + User 1 (Owner tu).\n\n" +
-        "Ili kuongeza mfanyakazi/cashier, tafadhali upgrade kwenda LITE / STARTER / PRO.",
+        uiText("Your plan does not allow adding staff. FREE includes 1 organization, 1 store and 1 user (owner only). Upgrade to LITE / STARTER / PRO to add staff or cashiers."),
     };
   }
 
   if (m.includes("not found") && (m.includes("register") || m.includes("sign up"))) {
     return {
-      title: "User Not Found",
+      title: uiText("User Not Found"),
       body:
-        "Huyu email bado hajaji-register kwenye app.\n\n" +
-        "Mwambie afanye Sign Up kwanza, kisha urudie kuongeza kwa email.",
+        uiText("This email is not registered yet. Ask the person to sign up, then add them again using their email."),
     };
   }
 
   if (m.includes("already belongs to this organization")) {
     return {
-      title: "Already Added",
-      body: "User huyu tayari yupo kwenye organization hii.",
+      title: uiText("Already Added"),
+      body: uiText("This user already belongs to this organization."),
     };
   }
 
   return {
-    title: "Add member failed",
+    title: uiText("Add member failed"),
     body: msg || "Unknown error",
   };
 }
 
 export default function AddStaffScreen() {
+ const uiText=useCommonText();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ orgId?: string }>();
@@ -135,19 +132,19 @@ export default function AddStaffScreen() {
 
   const validate = () => {
     if (!canManage) {
-      Alert.alert("No Access", "Owner/Admin only.");
+      Alert.alert(uiText("No Access"), uiText("Owner/Admin only."));
       return false;
     }
     if (!orgId) {
-      Alert.alert("Missing Org", "No organization selected.");
+      Alert.alert(uiText("Missing Org"), uiText("No organization selected."));
       return false;
     }
     if (!email.trim()) {
-      Alert.alert("Missing Email", "Weka email ya mfanyakazi.");
+      Alert.alert(uiText("Missing Email"), uiText("Weka email ya mfanyakazi."));
       return false;
     }
     if (!isValidEmail(email)) {
-      Alert.alert("Invalid Email", "Email sio sahihi. Tafadhali angalia.");
+      Alert.alert(uiText("Invalid Email"), uiText("Email sio sahihi. Tafadhali angalia."));
       return false;
     }
     return true;
@@ -226,14 +223,14 @@ export default function AddStaffScreen() {
       }
 
       Alert.alert(
-        "Success ✅",
-        `Member ameongezwa.\nEmail: ${safeEmail}\nRole: ${role.toUpperCase()}`
+        uiText("Success ✅"),
+        uiText("Member ameongezwa.\nEmail: {p0}\nRole: {p1}", {p0: (safeEmail), p1: (role.toUpperCase())})
       );
 
       setEmail("");
       setRole(allowedRoles[0] ?? "staff");
     } catch (e: any) {
-      const mapped = mapAddStaffErrorMessage(e);
+      const mapped = mapAddStaffErrorMessage(e, uiText);
       Alert.alert(mapped.title, mapped.body);
     } finally {
       setSaving(false);
@@ -252,11 +249,10 @@ export default function AddStaffScreen() {
         }}
       >
         <Text style={{ fontSize: 22, fontWeight: "900", color: UI.text }}>
-          Ongeza Mfanyakazi
-        </Text>
+          {uiText("Ongeza Mfanyakazi")}</Text>
 
         <Text style={{ color: UI.muted, fontWeight: "700" }}>
-          Org:{" "}
+          {uiText("Org:")}{" "}
           <Text style={{ color: UI.text, fontWeight: "900" }}>
             {activeOrgName ?? "—"}
           </Text>
@@ -270,34 +266,32 @@ export default function AddStaffScreen() {
             }}
           >
             <Text style={{ color: UI.danger, fontWeight: "900" }}>
-              No Access (Owner/Admin only)
-            </Text>
+              {uiText("No Access (Owner/Admin only)")}</Text>
           </Card>
         )}
 
         <Card style={{ gap: 14 }}>
-          <Text style={{ color: UI.muted, fontWeight: "800" }}>Email ya Mfanyakazi</Text>
+          <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("Email ya Mfanyakazi")}</Text>
 
           <Input
             value={email}
             onChangeText={setEmail}
-            placeholder="mfano: staff@jofuquality.com"
+            placeholder={uiText("mfano: staff@jofuquality.com")}
             autoCapitalize="none"
             autoCorrect={false}
             keyboardType="email-address"
           />
 
           <Text style={{ color: UI.muted, fontWeight: "700" }}>
-            * Muhimu: Mfanyakazi/Cashier lazima awe amesha-Register (Sign Up) kwanza.
-          </Text>
+            {uiText("* Muhimu: Mfanyakazi/Cashier lazima awe amesha-Register (Sign Up) kwanza.")}</Text>
 
-          <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 2 }}>Role</Text>
+          <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 2 }}>{uiText("Role")}</Text>
 
           <View style={{ gap: 10 }}>
             <View style={{ flexDirection: "row", gap: 10 }}>
               {allowedRoles.includes("admin") ? (
                 <Button
-                  title="ADMIN"
+                  title={uiText("ADMIN")}
                   variant={role === "admin" ? "primary" : "secondary"}
                   onPress={() => setRole("admin")}
                   disabled={!canManage || saving}
@@ -307,7 +301,7 @@ export default function AddStaffScreen() {
 
               {allowedRoles.includes("staff") ? (
                 <Button
-                  title="STAFF"
+                  title={uiText("STAFF")}
                   variant={role === "staff" ? "primary" : "secondary"}
                   onPress={() => setRole("staff")}
                   disabled={!canManage || saving}
@@ -318,7 +312,7 @@ export default function AddStaffScreen() {
 
             {allowedRoles.includes("cashier") ? (
               <Button
-                title="CASHIER"
+                title={uiText("CASHIER")}
                 variant={role === "cashier" ? "primary" : "secondary"}
                 onPress={() => setRole("cashier")}
                 disabled={!canManage || saving}
@@ -336,24 +330,20 @@ export default function AddStaffScreen() {
               }}
             >
               <Text style={{ color: UI.text, fontWeight: "900" }}>
-                CASHIER RULES
-              </Text>
+                {uiText("CASHIER RULES")}</Text>
               <Text style={{ color: UI.muted, fontWeight: "800" }}>
-                • Cashier ata-assigniwa store moja tu.
-              </Text>
+                {uiText("• Cashier ata-assigniwa store moja tu.")}</Text>
               <Text style={{ color: UI.muted, fontWeight: "800" }}>
-                • Store moja itakuwa na cashier mmoja tu.
-              </Text>
+                {uiText("• Store moja itakuwa na cashier mmoja tu.")}</Text>
               <Text style={{ color: UI.muted, fontWeight: "800" }}>
-                • Kazi kuu ya cashier ni kupokea malipo na kukamilisha mauzo.
-              </Text>
+                {uiText("• Kazi kuu ya cashier ni kupokea malipo na kukamilisha mauzo.")}</Text>
             </Card>
           ) : null}
         </Card>
 
         <View style={{ gap: 12 }}>
           <Button
-            title={saving ? "Saving..." : "Save Staff"}
+            title={saving ? uiText("Saving...") : uiText("Save Staff")}
             variant="primary"
             onPress={onSave}
             disabled={!canManage || saving}
@@ -361,7 +351,7 @@ export default function AddStaffScreen() {
           />
 
           <Button
-            title="Cancel"
+            title={uiText("Cancel")}
             variant="secondary"
             onPress={() => router.back()}
             disabled={saving}

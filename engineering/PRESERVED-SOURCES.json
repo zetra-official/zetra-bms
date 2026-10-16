@@ -1,0 +1,30 @@
+{
+  "additional_held_sources": [
+    {
+      "file": "engineering/held/proforma-preparation/completion-local/ui/client.ts",
+      "source": "C:\\Users\\ZetraAdmin\\.codex\\visualizations\\2026\\10\\12\\01a1315c-d129-7d72-ade1-22efb743232c\\integration-2026-10-14\\proforma-preparation\\completion-local\\ui\\client.ts",
+      "sha256": "1670c9453f09dcff364260c3110de77e91bb9607d78e0b35f5b76470f8388221",
+      "activated": false
+    },
+    {
+      "file": "engineering/held/proforma-preparation/completion-local/ui/labels.ts",
+      "source": "C:\\Users\\ZetraAdmin\\.codex\\visualizations\\2026\\10\\12\\01a1315c-d129-7d72-ade1-22efb743232c\\integration-2026-10-14\\proforma-preparation\\completion-local\\ui\\labels.ts",
+      "sha256": "52da61992ded0fad5ed1b2fd9b5c6086ef737f8b7b8fcd0ae9631710640a161c",
+      "activated": false
+    },
+    {
+      "file": "engineering/held/proforma-preparation/completion-local/ui/ProformaWorkspace.tsx",
+      "source": "C:\\Users\\ZetraAdmin\\.codex\\visualizations\\2026\\10\\12\\01a1315c-d129-7d72-ade1-22efb743232c\\integration-2026-10-14\\proforma-preparation\\completion-local\\ui\\ProformaWorkspace.tsx",
+      "sha256": "dd95443bba42ff1666ad01d3135ca24de5bd16de40d620a21724abccbdd558f0",
+      "activated": false
+    },
+    {
+      "file": "engineering/held/proforma-preparation/cashier-integration-local/ui/CashierProformaActions.tsx",
+      "source": "C:\\Users\\ZetraAdmin\\.codex\\visualizations\\2026\\10\\12\\01a1315c-d129-7d72-ade1-22efb743232c\\integration-2026-10-14\\proforma-preparation\\cashier-integration-local\\ui\\CashierProformaActions.tsx",
+      "sha256": "762b708a449cd5f0df60cb7daa887c686148fafbb9421ea1b8a5135ea0e99166",
+      "activated": false
+    }
+  ],
+  "private_sql_and_database_artifacts": "Remain in original private workspace; not copied, uploaded or executed",
+  "source_lineage_receipt": "C:\\Users\\ZetraAdmin\\.codex\\visualizations\\2026\\10\\12\\01a1315c-d129-7d72-ade1-22efb743232c\\main-project-release\\INTEGRATION-RECEIPT.json"
+}

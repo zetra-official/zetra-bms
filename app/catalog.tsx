@@ -1,3 +1,4 @@
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/catalog.tsx
 
 import { Ionicons } from "@expo/vector-icons";
@@ -159,6 +160,7 @@ function formatDate(value?: string | null) {
 }
 
 export default function CatalogScreen() {
+ const uiText=useCommonText();
   const router = useRouter();
 
   const {
@@ -249,7 +251,7 @@ export default function CatalogScreen() {
 
   const previewCatalogShare = useCallback(async () => {
     if (!canManage) {
-      Alert.alert("No Access", "Owner only.");
+      Alert.alert(uiText("No Access"), uiText("Owner only."));
       return;
     }
 
@@ -257,8 +259,8 @@ export default function CatalogScreen() {
 
     if (!code) {
       Alert.alert(
-        "Enter Code",
-        "Weka Catalog Code uliyopewa."
+        uiText("Enter Code"),
+        uiText("Weka Catalog Code uliyopewa.")
       );
       return;
     }
@@ -312,14 +314,14 @@ export default function CatalogScreen() {
 
   const importCatalogShare = useCallback(async () => {
     if (!canManage) {
-      Alert.alert("No Access", "Owner only.");
+      Alert.alert(uiText("No Access"), uiText("Owner only."));
       return;
     }
 
     if (!activeOrgId) {
       Alert.alert(
-        "Missing",
-        "No active organization."
+        uiText("Missing"),
+        uiText("No active organization.")
       );
       return;
     }
@@ -328,16 +330,16 @@ export default function CatalogScreen() {
 
     if (!code) {
       Alert.alert(
-        "Missing",
-        "Catalog Code haipo."
+        uiText("Missing"),
+        uiText("Catalog Code haipo.")
       );
       return;
     }
 
     if (selectedImportIds.length === 0) {
       Alert.alert(
-        "Select Products",
-        "Chagua angalau product moja ya ku-import."
+        uiText("Select Products"),
+        uiText("Chagua angalau product moja ya ku-import.")
       );
       return;
     }
@@ -384,12 +386,10 @@ export default function CatalogScreen() {
         );
 
         Alert.alert(
-          "Products Imported ✅",
-          `Selected: ${total}\nImported: ${imported}\nSkipped existing: ${skipped}${
-            maxUses > 0
+          uiText("Products Imported ✅"),
+          uiText("Selected: {p0}\nImported: {p1}\nSkipped existing: {p2}{p3}", {p0: (total), p1: (imported), p2: (skipped), p3: (maxUses > 0
               ? `\nCode usage: ${used}/${maxUses}`
-              : ""
-          }`
+              : "")})
         );
 
         setCatalogShareCode("");
@@ -398,7 +398,7 @@ export default function CatalogScreen() {
         setSelectedImportIds([]);
       } catch (error: any) {
         Alert.alert(
-          "Import Failed",
+          uiText("Import Failed"),
           getErrorMessage(error)
         );
       } finally {
@@ -408,9 +408,7 @@ export default function CatalogScreen() {
 
     if (Platform.OS === "web") {
       const ok = window.confirm(
-        `Import ${selectedImportIds.length} selected product${
-          selectedImportIds.length === 1 ? "" : "s"
-        } into ${activeOrgName ?? "this organization"}?`
+        uiText(selectedImportIds.length === 1 ? "Import {p0} selected product into {p1}?" : "Import {p0} selected products into {p1}?", {p0: selectedImportIds.length, p1: activeOrgName ?? uiText("this organization")})
       );
 
       if (!ok) return;
@@ -420,17 +418,15 @@ export default function CatalogScreen() {
     }
 
     Alert.alert(
-      "Import Products?",
-      `Products ${selectedImportIds.length} zitaongezwa kwenye ${
-        activeOrgName ?? "organization"
-      }.`,
+      uiText("Import Products?"),
+      uiText("Products {p0} zitaongezwa kwenye {p1}.", {p0: (selectedImportIds.length), p1: (activeOrgName ?? "organization")}),
       [
         {
-          text: "Cancel",
+          text: uiText("Cancel"),
           style: "cancel",
         },
         {
-          text: "Import",
+          text: uiText("Import"),
           onPress: () => void runImport(),
         },
       ]
@@ -603,22 +599,22 @@ export default function CatalogScreen() {
 
   const generateCatalogShare = useCallback(async () => {
     if (!canManage) {
-      Alert.alert("No Access", "Owner only.");
+      Alert.alert(uiText("No Access"), uiText("Owner only."));
       return;
     }
 
     if (!activeOrgId) {
       Alert.alert(
-        "Missing",
-        "No active organization."
+        uiText("Missing"),
+        uiText("No active organization.")
       );
       return;
     }
 
     if (selectedShareIds.length === 0) {
       Alert.alert(
-        "Select Products",
-        "Chagua angalau product moja."
+        uiText("Select Products"),
+        uiText("Chagua angalau product moja.")
       );
       return;
     }
@@ -661,7 +657,7 @@ export default function CatalogScreen() {
 
     } catch (error: any) {
       Alert.alert(
-        "Generate Failed",
+        uiText("Generate Failed"),
         getErrorMessage(error)
       );
     } finally {
@@ -693,13 +689,13 @@ export default function CatalogScreen() {
       }
 
       Alert.alert(
-        "Code Copied ✅",
-        "Catalog Code imekopiwa. Sasa unaweza kuituma kwa mpokeaji."
+        uiText("Code Copied ✅"),
+        uiText("Catalog Code imekopiwa. Sasa unaweza kuituma kwa mpokeaji.")
       );
     } catch {
       Alert.alert(
-        "Copy Failed",
-        "Imeshindikana kukopi Catalog Code."
+        uiText("Copy Failed"),
+        uiText("Imeshindikana kukopi Catalog Code.")
       );
     }
   }, [generatedShareCode]);
@@ -814,8 +810,7 @@ export default function CatalogScreen() {
               fontSize: 26,
             }}
           >
-            Product Catalog
-          </Text>
+            {uiText("Product Catalog")}</Text>
         </View>
 
         <View
@@ -837,8 +832,7 @@ export default function CatalogScreen() {
               fontSize: 16,
             }}
           >
-            Owner Access Only
-          </Text>
+            {uiText("Owner Access Only")}</Text>
 
           <Text
             style={{
@@ -848,9 +842,7 @@ export default function CatalogScreen() {
               lineHeight: 21,
             }}
           >
-            Catalog import na catalog code generation
-            ni operations za owner.
-          </Text>
+            {uiText("Catalog import na catalog code generation ni operations za owner.")}</Text>
         </View>
       </Screen>
     );
@@ -901,8 +893,7 @@ export default function CatalogScreen() {
               fontSize: 28,
             }}
           >
-            Product Catalog
-          </Text>
+            {uiText("Product Catalog")}</Text>
 
           <Text
             style={{
@@ -912,8 +903,7 @@ export default function CatalogScreen() {
               lineHeight: 19,
             }}
           >
-            Find products or move a catalog securely.
-          </Text>
+            {uiText("Find products or move a catalog securely.")}</Text>
         </View>
       </View>
 
@@ -940,8 +930,7 @@ export default function CatalogScreen() {
             fontSize: 12,
           }}
         >
-          ACTIVE BUSINESS
-        </Text>
+          {uiText("ACTIVE BUSINESS")}</Text>
 
         <Text
           style={{
@@ -961,7 +950,7 @@ export default function CatalogScreen() {
             marginTop: 4,
           }}
         >
-          Store: {activeStoreName ?? "Organization level"}
+          {uiText("Store:")}{activeStoreName ?? uiText("Organization level")}
         </Text>
       </View>
 
@@ -1049,8 +1038,7 @@ export default function CatalogScreen() {
                     fontSize: 18,
                   }}
                 >
-                  ZETRA Global Catalog
-                </Text>
+                  {uiText("ZETRA Global Catalog")}</Text>
 
                 <Text
                   style={{
@@ -1060,16 +1048,14 @@ export default function CatalogScreen() {
                     lineHeight: 20,
                   }}
                 >
-                  Find ready-to-use products from the
-                  ZETRA master catalog.
-                </Text>
+                  {uiText("Find ready-to-use products from the ZETRA master catalog.")}</Text>
               </View>
             </View>
 
             <TextInput
               value={globalSearch}
               onChangeText={setGlobalSearch}
-              placeholder="Search global products..."
+              placeholder={uiText("Search global products...")}
               placeholderTextColor={
                 theme.colors.faint
               }
@@ -1118,8 +1104,7 @@ export default function CatalogScreen() {
                     fontWeight: "900",
                   }}
                 >
-                  Global Catalog
-                </Text>
+                  {uiText("Global Catalog")}</Text>
               </View>
 
               <Text
@@ -1130,11 +1115,7 @@ export default function CatalogScreen() {
                   lineHeight: 20,
                 }}
               >
-                Global master catalog backend ndiyo hatua
-                inayofuata. Private stock, profit, sales,
-                customers na supplier data hazitawekwa
-                kwenye global catalog.
-              </Text>
+                {uiText("Global master catalog backend ndiyo hatua inayofuata. Private stock, profit, sales, customers na supplier data hazitawekwa kwenye global catalog.")}</Text>
             </View>
           </View>
         </View>
@@ -1196,8 +1177,7 @@ export default function CatalogScreen() {
                     fontSize: 19,
                   }}
                 >
-                  Generate Catalog Code
-                </Text>
+                  {uiText("Generate Catalog Code")}</Text>
 
                 <Text
                   style={{
@@ -1207,9 +1187,7 @@ export default function CatalogScreen() {
                     lineHeight: 20,
                   }}
                 >
-                  Chagua bidhaa, ruhusu bei unazotaka,
-                  kisha tengeneza code.
-                </Text>
+                  {uiText("Chagua bidhaa, ruhusu bei unazotaka, kisha tengeneza code.")}</Text>
               </View>
             </View>
 
@@ -1228,9 +1206,7 @@ export default function CatalogScreen() {
                   lineHeight: 20,
                 }}
               >
-                Stock, sales, profit, customers, supplier
-                data na finance history havitashirikishwa.
-              </Text>
+                {uiText("Stock, sales, profit, customers, supplier data na finance history havitashirikishwa.")}</Text>
             </View>
           </View>
 
@@ -1267,8 +1243,7 @@ export default function CatalogScreen() {
                     fontSize: 18,
                   }}
                 >
-                  Code Ready
-                </Text>
+                  {uiText("Code Ready")}</Text>
               </View>
 
                 <View
@@ -1336,8 +1311,7 @@ export default function CatalogScreen() {
                       marginTop: 3,
                     }}
                   >
-                    COPY
-                  </Text>
+                    {uiText("COPY")}</Text>
                 </Pressable>
               </View>
 
@@ -1349,7 +1323,7 @@ export default function CatalogScreen() {
                     marginTop: 10,
                   }}
                 >
-                  Products:{" "}
+                  {uiText("Products:")}{" "}
                   {generatedShareMeta.product_count}
                 </Text>
               )}
@@ -1362,7 +1336,7 @@ export default function CatalogScreen() {
                     marginTop: 5,
                   }}
                 >
-                  Expires:{" "}
+                  {uiText("Expires:")}{" "}
                   {formatDate(
                     generatedShareMeta.expires_at
                   )}
@@ -1400,11 +1374,7 @@ export default function CatalogScreen() {
                       lineHeight: 20,
                     }}
                   >
-                    Copy code hii na umtumie mpokeaji. Ataifungua
-                    ZETRA Product Catalog, achague Enter Code na
-                    ku-paste code hiyo. Kisha ataweza kuona na
-                    ku-import products ulizomruhusu kushiriki.
-                  </Text>
+                    {uiText("Copy code hii na umtumie mpokeaji. Ataifungua ZETRA Product Catalog, achague Enter Code na ku-paste code hiyo. Kisha ataweza kuona na ku-import products ulizomruhusu kushiriki.")}</Text>
                 </View>
               </View>
 
@@ -1440,8 +1410,7 @@ export default function CatalogScreen() {
                     fontSize: 12,
                   }}
                 >
-                  New Code
-                </Text>
+                  {uiText("New Code")}</Text>
               </Pressable>
             </View>
           )}
@@ -1465,8 +1434,7 @@ export default function CatalogScreen() {
                 fontSize: 16,
               }}
             >
-              Price Permissions
-            </Text>
+              {uiText("Price Permissions")}</Text>
 
             <Text
               style={{
@@ -1476,8 +1444,7 @@ export default function CatalogScreen() {
                 lineHeight: 19,
               }}
             >
-              Chagua bei ambazo mpokeaji ataruhusiwa kuona.
-            </Text>
+              {uiText("Chagua bei ambazo mpokeaji ataruhusiwa kuona.")}</Text>
 
             <View
               style={{
@@ -1518,8 +1485,7 @@ export default function CatalogScreen() {
                       fontWeight: "900",
                     }}
                   >
-                    Include Cost Price
-                  </Text>
+                    {uiText("Include Cost Price")}</Text>
 
                   <Text
                     style={{
@@ -1530,8 +1496,7 @@ export default function CatalogScreen() {
                       fontSize: 12,
                     }}
                   >
-                    Sensitive buying price
-                  </Text>
+                    {uiText("Sensitive buying price")}</Text>
                 </View>
 
                 <Ionicons
@@ -1582,8 +1547,7 @@ export default function CatalogScreen() {
                       fontWeight: "900",
                     }}
                   >
-                    Include Selling Price
-                  </Text>
+                    {uiText("Include Selling Price")}</Text>
 
                   <Text
                     style={{
@@ -1594,8 +1558,7 @@ export default function CatalogScreen() {
                       fontSize: 12,
                     }}
                   >
-                    Current selling price
-                  </Text>
+                    {uiText("Current selling price")}</Text>
                 </View>
 
                 <Ionicons
@@ -1634,13 +1597,12 @@ export default function CatalogScreen() {
                 fontSize: 16,
               }}
             >
-              Select Products
-            </Text>
+              {uiText("Select Products")}</Text>
 
             <TextInput
               value={shareSearch}
               onChangeText={setShareSearch}
-              placeholder="Search products..."
+              placeholder={uiText("Search products...")}
               placeholderTextColor={
                 theme.colors.faint
               }
@@ -1678,8 +1640,7 @@ export default function CatalogScreen() {
                     fontSize: 15,
                   }}
                 >
-                  {selectedShareIds.length} selected
-                </Text>
+                  {selectedShareIds.length} {uiText("selected")}</Text>
 
                 <Text
                   style={{
@@ -1690,8 +1651,7 @@ export default function CatalogScreen() {
                     fontSize: 12,
                   }}
                 >
-                  {filteredShareProducts.length} visible
-                </Text>
+                  {filteredShareProducts.length} {uiText("visible")}</Text>
               </View>
 
               <Pressable
@@ -1727,8 +1687,8 @@ export default function CatalogScreen() {
                   }}
                 >
                   {allVisibleShareSelected
-                    ? "Unselect All"
-                    : "Select All"}
+                    ? uiText("Unselect All")
+                    : uiText("Select All")}
                 </Text>
               </Pressable>
             </View>
@@ -1773,10 +1733,10 @@ export default function CatalogScreen() {
                 }}
               >
                 {shareGenerating
-                  ? "Generating Code..."
+                  ? uiText("Generating Code...")
                   : selectedShareIds.length === 0
-                  ? "Select Products First"
-                  : `Generate Code (${selectedShareIds.length})`}
+                  ? uiText("Select Products First")
+                  : uiText("Generate Code ({p0})", {p0: (selectedShareIds.length)})}
               </Text>
             </Pressable>
           </View>
@@ -1800,8 +1760,7 @@ export default function CatalogScreen() {
                   fontWeight: "900",
                 }}
               >
-                Loading products...
-              </Text>
+                {uiText("Loading products...")}</Text>
             </View>
           ) : !!shareProductsError ? (
             <View
@@ -1842,8 +1801,7 @@ export default function CatalogScreen() {
                     fontWeight: "900",
                   }}
                 >
-                  Retry
-                </Text>
+                  {uiText("Retry")}</Text>
               </Pressable>
             </View>
           ) : filteredShareProducts.length === 0 ? (
@@ -1863,8 +1821,7 @@ export default function CatalogScreen() {
                   fontWeight: "900",
                 }}
               >
-                No products found
-              </Text>
+                {uiText("No products found")}</Text>
             </View>
           ) : (
             filteredShareProducts.map((product) => {
@@ -1943,7 +1900,7 @@ export default function CatalogScreen() {
                           marginTop: 5,
                         }}
                       >
-                        Category:{" "}
+                        {uiText("Category:")}{" "}
                         {product.category ?? "—"}
                       </Text>
 
@@ -1954,7 +1911,7 @@ export default function CatalogScreen() {
                           marginTop: 3,
                         }}
                       >
-                        Unit: {product.unit ?? "—"}
+                        {uiText("Unit:")}{product.unit ?? "—"}
                       </Text>
 
                       {shareSellingPrice && (
@@ -1966,7 +1923,7 @@ export default function CatalogScreen() {
                             marginTop: 3,
                           }}
                         >
-                          Selling:{" "}
+                          {uiText("Selling:")}{" "}
                           {product.selling_price != null
                             ? money.fmt(
                                 Number(
@@ -1986,7 +1943,7 @@ export default function CatalogScreen() {
                             marginTop: 3,
                           }}
                         >
-                          Cost:{" "}
+                          {uiText("Cost:")}{" "}
                           {product.cost_price != null
                             ? money.fmt(
                                 Number(
@@ -2044,8 +2001,8 @@ export default function CatalogScreen() {
                 }}
               >
                 {shareGenerating
-                  ? "Generating Code..."
-                  : `Generate Code (${selectedShareIds.length})`}
+                  ? uiText("Generating Code...")
+                  : uiText("Generate Code ({p0})", {p0: (selectedShareIds.length)})}
               </Text>
             </Pressable>
           )}
@@ -2108,8 +2065,7 @@ export default function CatalogScreen() {
                     fontSize: 19,
                   }}
                 >
-                  Enter Catalog Code
-                </Text>
+                  {uiText("Enter Catalog Code")}</Text>
 
                 <Text
                   style={{
@@ -2119,8 +2075,7 @@ export default function CatalogScreen() {
                     lineHeight: 20,
                   }}
                 >
-                  Weka code uliyopewa na biashara nyingine.
-                </Text>
+                  {uiText("Weka code uliyopewa na biashara nyingine.")}</Text>
               </View>
             </View>
 
@@ -2195,8 +2150,8 @@ export default function CatalogScreen() {
                 }}
               >
                 {catalogPreviewLoading
-                  ? "Checking Code..."
-                  : "Continue"}
+                  ? uiText("Checking Code...")
+                  : uiText("Continue")}
               </Text>
             </Pressable>
 
@@ -2262,8 +2217,7 @@ export default function CatalogScreen() {
                       fontSize: 17,
                     }}
                   >
-                    Catalog Verified
-                  </Text>
+                    {uiText("Catalog Verified")}</Text>
                 </View>
 
                 <Text
@@ -2273,7 +2227,7 @@ export default function CatalogScreen() {
                     marginTop: 10,
                   }}
                 >
-                  From:{" "}
+                  {uiText("From:")}{" "}
                   {catalogPreviewRows[0]
                     ?.source_organization_name ??
                     "—"}
@@ -2289,7 +2243,7 @@ export default function CatalogScreen() {
                       marginTop: 4,
                     }}
                   >
-                    Store:{" "}
+                    {uiText("Store:")}{" "}
                     {
                       catalogPreviewRows[0]
                         .source_store_name
@@ -2304,7 +2258,7 @@ export default function CatalogScreen() {
                     marginTop: 4,
                   }}
                 >
-                  Products:{" "}
+                  {uiText("Products:")}{" "}
                   {catalogPreviewRows.length}
                 </Text>
 
@@ -2339,11 +2293,11 @@ export default function CatalogScreen() {
                         fontSize: 12,
                       }}
                     >
-                      Cost:{" "}
+                      {uiText("Cost:")}{" "}
                       {catalogPreviewRows[0]
                         ?.share_cost_price
-                        ? "Shared"
-                        : "Not Shared"}
+                        ? uiText("Shared")
+                        : uiText("Not Shared")}
                     </Text>
                   </View>
 
@@ -2370,11 +2324,11 @@ export default function CatalogScreen() {
                         fontSize: 12,
                       }}
                     >
-                      Selling:{" "}
+                      {uiText("Selling:")}{" "}
                       {catalogPreviewRows[0]
                         ?.share_selling_price
-                        ? "Shared"
-                        : "Not Shared"}
+                        ? uiText("Shared")
+                        : uiText("Not Shared")}
                     </Text>
                   </View>
                 </View>
@@ -2390,7 +2344,7 @@ export default function CatalogScreen() {
                       fontSize: 12,
                     }}
                   >
-                    Expires:{" "}
+                    {uiText("Expires:")}{" "}
                     {formatDate(
                       catalogPreviewRows[0]
                         .expires_at
@@ -2423,8 +2377,7 @@ export default function CatalogScreen() {
                       fontWeight: "900",
                     }}
                   >
-                    {selectedImportIds.length} selected
-                  </Text>
+                    {selectedImportIds.length} {uiText("selected")}</Text>
 
                   <Text
                     style={{
@@ -2434,8 +2387,7 @@ export default function CatalogScreen() {
                       fontSize: 12,
                     }}
                   >
-                    Choose products to import
-                  </Text>
+                    {uiText("Choose products to import")}</Text>
                 </View>
 
                 <Pressable
@@ -2462,8 +2414,8 @@ export default function CatalogScreen() {
                     }}
                   >
                     {allPreviewSelected
-                      ? "Unselect All"
-                      : "Select All"}
+                      ? uiText("Unselect All")
+                      : uiText("Select All")}
                   </Text>
                 </Pressable>
               </View>
@@ -2508,12 +2460,8 @@ export default function CatalogScreen() {
                   }}
                 >
                   {catalogImportLoading
-                    ? "Importing..."
-                    : `Import ${selectedImportIds.length} Product${
-                        selectedImportIds.length === 1
-                          ? ""
-                          : "s"
-                      }`}
+                    ? uiText("Importing...")
+                    : (selectedImportIds.length === 1 ? uiText("Import {p0} product", {p0: selectedImportIds.length}) : uiText("Import {p0} products", {p0: selectedImportIds.length}))}
                 </Text>
               </Pressable>
 
@@ -2602,7 +2550,7 @@ export default function CatalogScreen() {
                             marginTop: 6,
                           }}
                         >
-                          Category:{" "}
+                          {uiText("Category:")}{" "}
                           {product.category ?? "—"}
                         </Text>
 
@@ -2614,7 +2562,7 @@ export default function CatalogScreen() {
                             marginTop: 3,
                           }}
                         >
-                          Unit: {product.unit ?? "—"}
+                          {uiText("Unit:")}{product.unit ?? "—"}
                         </Text>
 
                         {catalogPreviewRows[0]
@@ -2627,7 +2575,7 @@ export default function CatalogScreen() {
                               marginTop: 3,
                             }}
                           >
-                            Cost:{" "}
+                            {uiText("Cost:")}{" "}
                             {product.cost_price != null
                               ? money.fmt(
                                   Number(
@@ -2648,7 +2596,7 @@ export default function CatalogScreen() {
                               marginTop: 3,
                             }}
                           >
-                            Selling:{" "}
+                            {uiText("Selling:")}{" "}
                             {product.selling_price != null
                               ? money.fmt(
                                   Number(
@@ -2702,12 +2650,8 @@ export default function CatalogScreen() {
                   }}
                 >
                   {catalogImportLoading
-                    ? "Importing..."
-                    : `Import ${selectedImportIds.length} Product${
-                        selectedImportIds.length === 1
-                          ? ""
-                          : "s"
-                      }`}
+                    ? uiText("Importing...")
+                    : (selectedImportIds.length === 1 ? uiText("Import {p0} product", {p0: selectedImportIds.length}) : uiText("Import {p0} products", {p0: selectedImportIds.length}))}
                 </Text>
               </Pressable>
             </>

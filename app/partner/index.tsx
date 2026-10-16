@@ -1,3 +1,4 @@
+import {useCommonText} from "@/src/i18n/useCommonText";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
@@ -316,6 +317,7 @@ function StatCard({
 }
 
 export default function PartnerDashboardScreen() {
+ const uiText=useCommonText();
   const router = useRouter();
 
   const [checking, setChecking] = useState(true);
@@ -462,12 +464,12 @@ export default function PartnerDashboardScreen() {
       if (!id) return;
 
       Alert.alert(
-        "Confirm received",
-        "Je, umepokea payout hii kweli?",
+        uiText("Confirm received"),
+        uiText("Je, umepokea payout hii kweli?"),
         [
-          { text: "Cancel", style: "cancel" },
+          { text: uiText("Cancel"), style: "cancel" },
           {
-            text: "CONFIRM",
+            text: uiText("CONFIRM"),
             onPress: async () => {
               setConfirmingPayoutId(id);
               try {
@@ -479,12 +481,12 @@ export default function PartnerDashboardScreen() {
                 if (error) throw error;
 
                 setConfirmReceiptNote("");
-                Alert.alert("Confirmed ✅", "Payout receipt yako imethibitishwa successfully.");
+                Alert.alert(uiText("Confirmed ✅"), uiText("Payout receipt yako imethibitishwa successfully."));
                 await loadPartnerData();
               } catch (e: any) {
                 Alert.alert(
-                  "Confirm failed",
-                  clean(e?.message) || "Failed to confirm payout receipt."
+                  uiText("Confirm failed"),
+                  clean(e?.message) || uiText("Failed to confirm payout receipt.")
                 );
               } finally {
                 setConfirmingPayoutId("");
@@ -504,12 +506,12 @@ export default function PartnerDashboardScreen() {
     const notes = clean(payoutNotesInput);
 
     if (!phone) {
-      Alert.alert("Phone required", "Weka namba ya kupokea payout kwanza.");
+      Alert.alert(uiText("Phone required"), uiText("Weka namba ya kupokea payout kwanza."));
       return;
     }
 
     if (!accountName) {
-      Alert.alert("Receiver name required", "Weka jina la mpokeaji kwanza.");
+      Alert.alert(uiText("Receiver name required"), uiText("Weka jina la mpokeaji kwanza."));
       return;
     }
 
@@ -534,9 +536,9 @@ export default function PartnerDashboardScreen() {
       setPayoutAccountNameInput(clean(row?.payout_account_name || accountName));
       setPayoutNotesInput(clean(row?.payout_notes || notes));
 
-      Alert.alert("Saved ✅", "Payout destination saved successfully.");
+      Alert.alert(uiText("Saved ✅"), uiText("Payout destination saved successfully."));
     } catch (e: any) {
-      Alert.alert("Save failed", clean(e?.message) || "Failed to save payout destination.");
+      Alert.alert(uiText("Save failed"), clean(e?.message) || uiText("Failed to save payout destination."));
     } finally {
       setSavingPayoutProfile(false);
     }
@@ -672,11 +674,9 @@ export default function PartnerDashboardScreen() {
 
         <View style={{ flex: 1 }}>
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 20 }}>
-            Partner Dashboard
-          </Text>
+            {uiText("Partner Dashboard")}</Text>
           <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 4 }}>
-            ZETRA Growth Partner Workspace
-          </Text>
+            {uiText("ZETRA Growth Partner Workspace")}</Text>
         </View>
 
         <Pressable
@@ -705,21 +705,20 @@ export default function PartnerDashboardScreen() {
       <View style={{ marginTop: 12 }}>
         <Card>
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-            Access status
-          </Text>
+            {uiText("Access status")}</Text>
 
           <View style={{ marginTop: 10, gap: 6 }}>
             <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-              Checking partner link:{" "}
+              {uiText("Checking partner link:")}{" "}
               <Text style={{ color: UI.text }}>
-                {checking ? "CHECKING…" : allowed ? "ACTIVE" : "NOT LINKED"}
+                {checking ? uiText("CHECKING…") : allowed ? uiText("ACTIVE") : uiText("NOT LINKED")}
               </Text>
             </Text>
 
             <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-              Dashboard access:{" "}
+              {uiText("Dashboard access:")}{" "}
               <Text style={{ color: UI.text }}>
-                {allowed ? "GRANTED" : checking ? "WAITING…" : "DENIED"}
+                {allowed ? uiText("GRANTED") : checking ? uiText("WAITING…") : uiText("DENIED")}
               </Text>
             </Text>
           </View>
@@ -731,8 +730,7 @@ export default function PartnerDashboardScreen() {
           <Card>
             <ActivityIndicator />
             <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 10 }}>
-              Loading Partner dashboard…
-            </Text>
+              {uiText("Loading Partner dashboard…")}</Text>
           </Card>
         </View>
       ) : errorText ? (
@@ -745,8 +743,7 @@ export default function PartnerDashboardScreen() {
             }}
           >
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-              Partner dashboard not ready
-            </Text>
+              {uiText("Partner dashboard not ready")}</Text>
             <Text
               style={{
                 color: UI.muted,
@@ -774,8 +771,7 @@ export default function PartnerDashboardScreen() {
               >
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-                    Your Partner Profile
-                  </Text>
+                    {uiText("Your Partner Profile")}</Text>
 
                   <Text
                     style={{
@@ -785,8 +781,7 @@ export default function PartnerDashboardScreen() {
                       marginTop: 8,
                     }}
                   >
-                    Referral code
-                  </Text>
+                    {uiText("Referral code")}</Text>
 
                   <Text style={{ color: UI.text, fontWeight: "900", fontSize: 24, marginTop: 4 }}>
                     {clean(summary?.referral_code) || "—"}
@@ -812,15 +807,15 @@ export default function PartnerDashboardScreen() {
 
               <View style={{ marginTop: 12, gap: 6 }}>
                 <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                  Partner ID: <Text style={{ color: UI.text }}>{clean(summary?.partner_id) || "—"}</Text>
+                  {uiText("Partner ID:")}<Text style={{ color: UI.text }}>{clean(summary?.partner_id) || "—"}</Text>
                 </Text>
 
                 <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                  Activated at: <Text style={{ color: UI.text }}>{fmtDateTime(summary?.activated_at)}</Text>
+                  {uiText("Activated at:")}<Text style={{ color: UI.text }}>{fmtDateTime(summary?.activated_at)}</Text>
                 </Text>
 
                 <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                  Created at: <Text style={{ color: UI.text }}>{fmtDateTime(summary?.created_at)}</Text>
+                  {uiText("Created at:")}<Text style={{ color: UI.text }}>{fmtDateTime(summary?.created_at)}</Text>
                 </Text>
               </View>
             </Card>
@@ -829,8 +824,7 @@ export default function PartnerDashboardScreen() {
           <View style={{ marginTop: 12 }}>
             <Card>
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-                Payout Destination
-              </Text>
+                {uiText("Payout Destination")}</Text>
 
               <Text
                 style={{
@@ -841,14 +835,13 @@ export default function PartnerDashboardScreen() {
                   lineHeight: 18,
                 }}
               >
-                Hapa ndipo unaweka namba na jina litakalotumika kupokea payout zako. Office itaona hizi details moja kwa moja wakati wa kurekodi payout.
-              </Text>
+                {uiText("Hapa ndipo unaweka namba na jina litakalotumika kupokea payout zako. Office itaona hizi details moja kwa moja wakati wa kurekodi payout.")}</Text>
 
               <View style={{ marginTop: 12, gap: 10 }}>
                 <TextInput
                   value={payoutMethodInput}
                   onChangeText={(v) => setPayoutMethodInput(upper(v))}
-                  placeholder="Mfano MOBILE_MONEY"
+                  placeholder={uiText("Mfano MOBILE_MONEY")}
                   placeholderTextColor="rgba(255,255,255,0.45)"
                   autoCapitalize="characters"
                   style={{
@@ -866,7 +859,7 @@ export default function PartnerDashboardScreen() {
                 <TextInput
                   value={payoutPhoneInput}
                   onChangeText={setPayoutPhoneInput}
-                  placeholder="Namba ya kupokea payout"
+                  placeholder={uiText("Namba ya kupokea payout")}
                   placeholderTextColor="rgba(255,255,255,0.45)"
                   keyboardType="phone-pad"
                   style={{
@@ -884,7 +877,7 @@ export default function PartnerDashboardScreen() {
                 <TextInput
                   value={payoutAccountNameInput}
                   onChangeText={setPayoutAccountNameInput}
-                  placeholder="Jina la mpokeaji"
+                  placeholder={uiText("Jina la mpokeaji")}
                   placeholderTextColor="rgba(255,255,255,0.45)"
                   style={{
                     minHeight: 52,
@@ -901,7 +894,7 @@ export default function PartnerDashboardScreen() {
                 <TextInput
                   value={payoutNotesInput}
                   onChangeText={setPayoutNotesInput}
-                  placeholder="Notes (optional)"
+                  placeholder={uiText("Notes (optional)")}
                   placeholderTextColor="rgba(255,255,255,0.45)"
                   multiline
                   style={{
@@ -935,7 +928,7 @@ export default function PartnerDashboardScreen() {
                   ]}
                 >
                   <Text style={{ color: UI.text, fontWeight: "900", fontSize: 13 }}>
-                    {savingPayoutProfile ? "SAVING..." : "SAVE PAYOUT DETAILS"}
+                    {savingPayoutProfile ? uiText("SAVING...") : uiText("SAVE PAYOUT DETAILS")}
                   </Text>
                 </Pressable>
 
@@ -950,16 +943,16 @@ export default function PartnerDashboardScreen() {
                   }}
                 >
                   <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                    Current method: <Text style={{ color: UI.text }}>{clean(payoutProfile?.payout_method) || "—"}</Text>
+                    {uiText("Current method:")}<Text style={{ color: UI.text }}>{clean(payoutProfile?.payout_method) || "—"}</Text>
                   </Text>
                   <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                    Current phone: <Text style={{ color: UI.text }}>{clean(payoutProfile?.payout_phone) || "—"}</Text>
+                    {uiText("Current phone:")}<Text style={{ color: UI.text }}>{clean(payoutProfile?.payout_phone) || "—"}</Text>
                   </Text>
                   <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                    Current name: <Text style={{ color: UI.text }}>{clean(payoutProfile?.payout_account_name) || "—"}</Text>
+                    {uiText("Current name:")}<Text style={{ color: UI.text }}>{clean(payoutProfile?.payout_account_name) || "—"}</Text>
                   </Text>
                   <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                    Last updated: <Text style={{ color: UI.text }}>{fmtDateTime(payoutProfile?.payout_updated_at)}</Text>
+                    {uiText("Last updated:")}<Text style={{ color: UI.text }}>{fmtDateTime(payoutProfile?.payout_updated_at)}</Text>
                   </Text>
                 </View>
               </View>
@@ -969,8 +962,7 @@ export default function PartnerDashboardScreen() {
           <View style={{ marginTop: 12 }}>
             <Card>
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-                Monthly Commission Rule
-              </Text>
+                {uiText("Monthly Commission Rule")}</Text>
 
               <View
                 style={{
@@ -984,18 +976,14 @@ export default function PartnerDashboardScreen() {
                 }}
               >
                 <Text style={{ color: UI.text, fontWeight: "900", fontSize: 13 }}>
-                  Month 1 = 25% of monthly charge
-                </Text>
+                  {uiText("Month 1 = 25% of monthly charge")}</Text>
                 <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, lineHeight: 18 }}>
-                  Commission ya kwanza hutolewa kwa mwezi wa kwanza tu, siyo kwa jumla yote ya package.
-                </Text>
+                  {uiText("Commission ya kwanza hutolewa kwa mwezi wa kwanza tu, siyo kwa jumla yote ya package.")}</Text>
 
                 <Text style={{ color: UI.text, fontWeight: "900", fontSize: 13, marginTop: 6 }}>
-                  Month 2 → 12 = 10% of monthly charge
-                </Text>
+                  {uiText("Month 2 → 12 = 10% of monthly charge")}</Text>
                 <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, lineHeight: 18 }}>
-                  Miezi inayofuata hufunguliwa hatua kwa hatua kwa mwezi wake, badala ya kutolewa mkupuo mmoja.
-                </Text>
+                  {uiText("Miezi inayofuata hufunguliwa hatua kwa hatua kwa mwezi wake, badala ya kutolewa mkupuo mmoja.")}</Text>
               </View>
             </Card>
           </View>
@@ -1003,26 +991,25 @@ export default function PartnerDashboardScreen() {
           <View style={{ marginTop: 12 }}>
             <Card>
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-                Performance Overview
-              </Text>
+                {uiText("Performance Overview")}</Text>
 
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 12 }}>
                 <StatCard
-                  label="Total Referrals"
+                  label={uiText("Total Referrals")}
                   value={Number(summary?.total_referrals ?? 0).toLocaleString("en-US")}
                   green
                 />
                 <StatCard
-                  label="Active Referrals"
+                  label={uiText("Active Referrals")}
                   value={Number(summary?.active_referrals ?? 0).toLocaleString("en-US")}
                   green
                 />
                 <StatCard
-                  label="Need Follow-up"
+                  label={uiText("Need Follow-up")}
                   value={Number(summary?.customers_needing_followup ?? 0).toLocaleString("en-US")}
                 />
                 <StatCard
-                  label="Renewals Due Soon"
+                  label={uiText("Renewals Due Soon")}
                   value={Number(summary?.renewals_due_soon ?? 0).toLocaleString("en-US")}
                 />
 
@@ -1038,22 +1025,19 @@ export default function PartnerDashboardScreen() {
                   }}
                 >
                   <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 11 }}>
-                    Total Earned
-                  </Text>
+                    {uiText("Total Earned")}</Text>
                   <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
                     {fmtMoney(summary?.total_earned_tzs ?? 0, "TZS")}
                   </Text>
 
                   <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 11, marginTop: 4 }}>
-                    Total Paid
-                  </Text>
+                    {uiText("Total Paid")}</Text>
                   <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
                     {fmtMoney(summary?.total_paid_tzs ?? 0, "TZS")}
                   </Text>
 
                   <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 11, marginTop: 4 }}>
-                    Ready for payout
-                  </Text>
+                    {uiText("Ready for payout")}</Text>
                   <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
                     {fmtMoney(summary?.total_unpaid_tzs ?? 0, "TZS")}
                   </Text>
@@ -1065,8 +1049,7 @@ export default function PartnerDashboardScreen() {
           <View style={{ marginTop: 12 }}>
             <Card>
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-                Action Center
-              </Text>
+                {uiText("Action Center")}</Text>
 
               <View style={{ marginTop: 12, gap: 10 }}>
                 <View
@@ -1079,12 +1062,9 @@ export default function PartnerDashboardScreen() {
                   }}
                 >
                   <Text style={{ color: UI.text, fontWeight: "900", fontSize: 13 }}>
-                    Customers to follow up
-                  </Text>
+                    {uiText("Customers to follow up")}</Text>
                   <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 8 }}>
-                    {Number(summary?.customers_needing_followup ?? 0).toLocaleString("en-US")} customer(s)
-                    need follow-up.
-                  </Text>
+                    {Number(summary?.customers_needing_followup ?? 0).toLocaleString("en-US")} {uiText("customer(s) need follow-up.")}</Text>
                 </View>
 
                 <View
@@ -1097,12 +1077,9 @@ export default function PartnerDashboardScreen() {
                   }}
                 >
                   <Text style={{ color: UI.text, fontWeight: "900", fontSize: 13 }}>
-                    Renewals due soon
-                  </Text>
+                    {uiText("Renewals due soon")}</Text>
                   <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 8 }}>
-                    {Number(summary?.renewals_due_soon ?? 0).toLocaleString("en-US")} customer(s)
-                    may need renewal follow-up soon.
-                  </Text>
+                    {Number(summary?.renewals_due_soon ?? 0).toLocaleString("en-US")} {uiText("customer(s) may need renewal follow-up soon.")}</Text>
                 </View>
 
                 <View
@@ -1115,31 +1092,30 @@ export default function PartnerDashboardScreen() {
                   }}
                 >
                   <Text style={{ color: UI.text, fontWeight: "900", fontSize: 13 }}>
-                    Commission status overview
-                  </Text>
+                    {uiText("Commission status overview")}</Text>
                   <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 8 }}>
-                    Ready for payout:{" "}
+                    {uiText("Ready for payout:")}{" "}
                     <Text style={{ color: UI.text }}>
                       {unpaidCommissions.length.toLocaleString("en-US")}
                     </Text>
                   </Text>
 
                   <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 8 }}>
-                    Locked upcoming:{" "}
+                    {uiText("Locked upcoming:")}{" "}
                     <Text style={{ color: UI.text }}>
                       {lockedCommissions.length.toLocaleString("en-US")}
                     </Text>
                   </Text>
 
                   <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 4 }}>
-                    Paid records:{" "}
+                    {uiText("Paid records:")}{" "}
                     <Text style={{ color: UI.text }}>
                       {paidCommissions.length.toLocaleString("en-US")}
                     </Text>
                   </Text>
 
                   <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 4 }}>
-                    Live sync: <Text style={{ color: UI.text }}>ON</Text>
+                    {uiText("Live sync:")}<Text style={{ color: UI.text }}>{uiText("ON")}</Text>
                   </Text>
                 </View>
               </View>
@@ -1149,13 +1125,11 @@ export default function PartnerDashboardScreen() {
         <View style={{ marginTop: 12 }}>
             <Card>
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-                Latest Payout Received
-              </Text>
+                {uiText("Latest Payout Received")}</Text>
 
               {!latestPayout ? (
                 <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 12 }}>
-                  Bado hujapokea payout yoyote.
-                </Text>
+                  {uiText("Bado hujapokea payout yoyote.")}</Text>
               ) : (
                 <View
                   style={{
@@ -1173,28 +1147,28 @@ export default function PartnerDashboardScreen() {
                   </Text>
 
                   <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                    Status:{" "}
+                    {uiText("Status:")}{" "}
                     <Text style={{ color: UI.text }}>
                       {payoutTone(latestPayout.payout_status || "").text}
                     </Text>
                   </Text>
 
                   <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                    Method:{" "}
+                    {uiText("Method:")}{" "}
                     <Text style={{ color: UI.text }}>
                       {clean(latestPayout.payout_method) || "—"}
                     </Text>
                   </Text>
 
                   <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                    Reference:{" "}
+                    {uiText("Reference:")}{" "}
                     <Text style={{ color: UI.text }}>
                       {clean(latestPayout.payout_reference) || "—"}
                     </Text>
                   </Text>
 
                   <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                    Paid at:{" "}
+                    {uiText("Paid at:")}{" "}
                     <Text style={{ color: UI.text }}>
                       {fmtDateTime(latestPayout.payout_date)}
                     </Text>
@@ -1212,8 +1186,7 @@ export default function PartnerDashboardScreen() {
                       }}
                     >
                       <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                        Office message
-                      </Text>
+                        {uiText("Office message")}</Text>
                       <Text
                         style={{
                           color: UI.text,
@@ -1240,8 +1213,7 @@ export default function PartnerDashboardScreen() {
                       }}
                     >
                       <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
-                        Ulishathibitisha receipt ya payout hii.
-                      </Text>
+                        {uiText("Ulishathibitisha receipt ya payout hii.")}</Text>
 
                       <Text
                         style={{
@@ -1251,7 +1223,7 @@ export default function PartnerDashboardScreen() {
                           marginTop: 6,
                         }}
                       >
-                        Confirmed at:{" "}
+                        {uiText("Confirmed at:")}{" "}
                         <Text style={{ color: UI.text }}>
                           {fmtDateTime(latestPayout.receiver_confirmed_at)}
                         </Text>
@@ -1266,7 +1238,7 @@ export default function PartnerDashboardScreen() {
                             marginTop: 4,
                           }}
                         >
-                          Note yako:{" "}
+                          {uiText("Note yako:")}{" "}
                           <Text style={{ color: UI.text }}>
                             {clean(latestPayout.receiver_confirmation_note)}
                           </Text>
@@ -1278,7 +1250,7 @@ export default function PartnerDashboardScreen() {
                       <TextInput
                         value={confirmReceiptNote}
                         onChangeText={setConfirmReceiptNote}
-                        placeholder="Optional note, mfano: Nimepokea asante"
+                        placeholder={uiText("Optional note, mfano: Nimepokea asante")}
                         placeholderTextColor="rgba(255,255,255,0.45)"
                         multiline
                         style={{
@@ -1322,8 +1294,8 @@ export default function PartnerDashboardScreen() {
                       >
                         <Text style={{ color: UI.text, fontWeight: "900", fontSize: 13 }}>
                           {confirmingPayoutId === clean(latestPayout.payout_id)
-                            ? "CONFIRMING..."
-                            : "CONFIRM RECEIVED"}
+                            ? uiText("CONFIRMING...")
+                            : uiText("CONFIRM RECEIVED")}
                         </Text>
                       </Pressable>
                     </>
@@ -1336,13 +1308,11 @@ export default function PartnerDashboardScreen() {
           <View style={{ marginTop: 12 }}>
             <Card>
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-                Payout History
-              </Text>
+                {uiText("Payout History")}</Text>
 
               {payouts.length === 0 ? (
                 <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 12 }}>
-                  No payout history yet.
-                </Text>
+                  {uiText("No payout history yet.")}</Text>
               ) : (
                 <View style={{ marginTop: 12, gap: 10 }}>
                   {payouts.map((row, index) => (
@@ -1362,36 +1332,36 @@ export default function PartnerDashboardScreen() {
                       </Text>
 
                       <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                        Status: <Text style={{ color: UI.text }}>{payoutTone(row.payout_status || "").text}</Text>
+                        {uiText("Status:")}<Text style={{ color: UI.text }}>{payoutTone(row.payout_status || "").text}</Text>
                       </Text>
 
                       <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                        Method: <Text style={{ color: UI.text }}>{clean(row.payout_method) || "—"}</Text>
+                        {uiText("Method:")}<Text style={{ color: UI.text }}>{clean(row.payout_method) || "—"}</Text>
                       </Text>
 
                       <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                        Reference: <Text style={{ color: UI.text }}>{clean(row.payout_reference) || "—"}</Text>
+                        {uiText("Reference:")}<Text style={{ color: UI.text }}>{clean(row.payout_reference) || "—"}</Text>
                       </Text>
 
                       <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                        Date: <Text style={{ color: UI.text }}>{fmtDateTime(row.payout_date)}</Text>
+                        {uiText("Date:")}<Text style={{ color: UI.text }}>{fmtDateTime(row.payout_date)}</Text>
                       </Text>
 
                       {!!clean(row.payout_note) ? (
                         <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                          Office message: <Text style={{ color: UI.text }}>{clean(row.payout_note)}</Text>
+                          {uiText("Office message:")}<Text style={{ color: UI.text }}>{clean(row.payout_note)}</Text>
                         </Text>
                       ) : null}
 
                       {!!clean(row.receiver_confirmed_at) ? (
                         <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                          Confirmed at: <Text style={{ color: UI.text }}>{fmtDateTime(row.receiver_confirmed_at)}</Text>
+                          {uiText("Confirmed at:")}<Text style={{ color: UI.text }}>{fmtDateTime(row.receiver_confirmed_at)}</Text>
                         </Text>
                       ) : null}
 
                       {!!clean(row.receiver_confirmation_note) ? (
                         <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                          Your note: <Text style={{ color: UI.text }}>{clean(row.receiver_confirmation_note)}</Text>
+                          {uiText("Your note:")}<Text style={{ color: UI.text }}>{clean(row.receiver_confirmation_note)}</Text>
                         </Text>
                       ) : null}
                     </View>
@@ -1404,13 +1374,11 @@ export default function PartnerDashboardScreen() {
           <View style={{ marginTop: 12 }}>
             <Card>
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-                My Referrals
-              </Text>
+                {uiText("My Referrals")}</Text>
 
               {referrals.length === 0 ? (
                 <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 12 }}>
-                  No referrals yet.
-                </Text>
+                  {uiText("No referrals yet.")}</Text>
               ) : (
                 <View style={{ marginTop: 12, gap: 10 }}>
                   {referrals.map((row, index) => (
@@ -1426,26 +1394,26 @@ export default function PartnerDashboardScreen() {
                       }}
                     >
                       <Text style={{ color: UI.text, fontWeight: "900", fontSize: 13 }}>
-                        {clean(row.referred_email_snapshot) || "Customer"}
+                        {clean(row.referred_email_snapshot) || uiText("Customer")}
                       </Text>
 
                       <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                        Status: <Text style={{ color: UI.text }}>{upper(row.status) || "—"}</Text>
+                        {uiText("Status:")}<Text style={{ color: UI.text }}>{upper(row.status) || "—"}</Text>
                       </Text>
 
                       <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                        Linked at: <Text style={{ color: UI.text }}>{fmtDateTime(row.linked_at)}</Text>
+                        {uiText("Linked at:")}<Text style={{ color: UI.text }}>{fmtDateTime(row.linked_at)}</Text>
                       </Text>
 
                       <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                        Total commission:{" "}
+                        {uiText("Total commission:")}{" "}
                         <Text style={{ color: UI.text }}>
                           {fmtMoney(row.total_commission_tzs ?? 0, "TZS")}
                         </Text>
                       </Text>
 
                       <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                        Ready unpaid commission:{" "}
+                        {uiText("Ready unpaid commission:")}{" "}
                         <Text style={{ color: UI.text }}>
                           {fmtMoney(row.unpaid_commission_tzs ?? 0, "TZS")}
                         </Text>
@@ -1460,13 +1428,11 @@ export default function PartnerDashboardScreen() {
           <View style={{ marginTop: 12 }}>
             <Card>
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-                My Commissions
-              </Text>
+                {uiText("My Commissions")}</Text>
 
               {commissions.length === 0 ? (
                 <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 12 }}>
-                  No commissions yet.
-                </Text>
+                  {uiText("No commissions yet.")}</Text>
               ) : (
                 <View style={{ marginTop: 12, gap: 10 }}>
                   {commissions.map((row, index) => {
@@ -1489,15 +1455,15 @@ export default function PartnerDashboardScreen() {
                         }}
                       >
                         <Text style={{ color: UI.text, fontWeight: "900", fontSize: 13 }}>
-                          {clean(row.referred_email_snapshot) || "Customer commission"}
+                          {clean(row.referred_email_snapshot) || uiText("Customer commission")}
                         </Text>
 
                         <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                          Status: <Text style={{ color: UI.text }}>{tone.text}</Text>
+                          {uiText("Status:")}<Text style={{ color: UI.text }}>{tone.text}</Text>
                         </Text>
 
                         <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                          Global sequence:{" "}
+                          {uiText("Global sequence:")}{" "}
                           <Text style={{ color: UI.text }}>
                             {row.payment_sequence_number ?? "—"}
                           </Text>
@@ -1505,7 +1471,7 @@ export default function PartnerDashboardScreen() {
 
                         {hasCount(row.commission_month_number) ? (
                           <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                            Commission month:{" "}
+                            {uiText("Commission month:")}{" "}
                             <Text style={{ color: UI.text }}>
                               {row.commission_month_number}
                             </Text>
@@ -1514,7 +1480,7 @@ export default function PartnerDashboardScreen() {
 
                         {hasCount(row.months_paid_count) ? (
                           <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                            Months paid in package:{" "}
+                            {uiText("Months paid in package:")}{" "}
                             <Text style={{ color: UI.text }}>
                               {row.months_paid_count}
                             </Text>
@@ -1522,7 +1488,7 @@ export default function PartnerDashboardScreen() {
                         ) : null}
 
                         <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                          Total payment:{" "}
+                          {uiText("Total payment:")}{" "}
                           <Text style={{ color: UI.text }}>
                             {fmtMoney(row.payment_amount_tzs ?? 0, "TZS")}
                           </Text>
@@ -1530,7 +1496,7 @@ export default function PartnerDashboardScreen() {
 
                         {hasMoney(row.monthly_charge_tzs) ? (
                           <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                            Monthly charge base:{" "}
+                            {uiText("Monthly charge base:")}{" "}
                             <Text style={{ color: UI.text }}>
                               {fmtMoney(row.monthly_charge_tzs ?? 0, "TZS")}
                             </Text>
@@ -1538,33 +1504,33 @@ export default function PartnerDashboardScreen() {
                         ) : null}
 
                         <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                          Percent:{" "}
+                          {uiText("Percent:")}{" "}
                           <Text style={{ color: UI.text }}>
                             {row.commission_percent ?? 0}%
                           </Text>
                         </Text>
 
                         <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                          Commission amount:{" "}
+                          {uiText("Commission amount:")}{" "}
                           <Text style={{ color: UI.text }}>
                             {fmtMoney(row.commission_amount_tzs ?? 0, "TZS")}
                           </Text>
                         </Text>
 
                         <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                          Unlock at:{" "}
+                          {uiText("Unlock at:")}{" "}
                           <Text style={{ color: UI.text }}>
-                            {clean(row.unlock_at) ? fmtDateTime(row.unlock_at) : isLocked ? "WAITING RELEASE" : "—"}
+                            {clean(row.unlock_at) ? fmtDateTime(row.unlock_at) : isLocked ? uiText("WAITING RELEASE") : "—"}
                           </Text>
                         </Text>
 
                         <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                          Earned at: <Text style={{ color: UI.text }}>{fmtDateTime(row.earned_at)}</Text>
+                          {uiText("Earned at:")}<Text style={{ color: UI.text }}>{fmtDateTime(row.earned_at)}</Text>
                         </Text>
 
                         {isPaid ? (
                           <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                            Paid at: <Text style={{ color: UI.text }}>{fmtDateTime(row.paid_at)}</Text>
+                            {uiText("Paid at:")}<Text style={{ color: UI.text }}>{fmtDateTime(row.paid_at)}</Text>
                           </Text>
                         ) : null}
 
@@ -1574,7 +1540,7 @@ export default function PartnerDashboardScreen() {
 
                         {!!clean(row.notes) ? (
                           <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                            Engine note: <Text style={{ color: UI.text }}>{clean(row.notes)}</Text>
+                            {uiText("Engine note:")}<Text style={{ color: UI.text }}>{clean(row.notes)}</Text>
                           </Text>
                         ) : null}
                       </View>

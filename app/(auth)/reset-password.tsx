@@ -1,3 +1,4 @@
+import {useAuthText} from "@/src/i18n/useAuthText";
 import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
@@ -84,6 +85,7 @@ function GlassInput({
 }
 
 export default function ResetPasswordScreen() {
+  const tr=useAuthText();
   const router = useRouter();
 
   const [password, setPassword] = useState("");
@@ -95,11 +97,11 @@ export default function ResetPasswordScreen() {
   const [checkingRecovery, setCheckingRecovery] = useState(true);
 
   const passwordStrengthText = useMemo(() => {
-    if (!password) return "Enter a new password";
-    if (password.length < 6) return "Too short";
-    if (password.length < 8) return "Okay";
-    return "Strong enough";
-  }, [password]);
+    if (!password) return tr("Enter a new password");
+    if (password.length < 6) return tr("Too short");
+    if (password.length < 8) return tr("Okay");
+    return tr("Strong enough");
+  }, [password, tr]);
 
   useEffect(() => {
     let alive = true;
@@ -159,24 +161,24 @@ export default function ResetPasswordScreen() {
 
     if (!recoveryReady) {
       Alert.alert(
-        "Invalid reset session",
-        "Link hii haijafunguka vizuri au session ya reset haijapatikana. Fungua email yako tena kisha bonyeza link ya reset upya."
+        tr("Invalid reset session"),
+        tr("Link hii haijafunguka vizuri au session ya reset haijapatikana. Fungua email yako tena kisha bonyeza link ya reset upya.")
       );
       return;
     }
 
     if (!p) {
-      Alert.alert("Missing", "New password is required.");
+      Alert.alert(tr("Missing"), tr("New password is required."));
       return;
     }
 
     if (p.length < 6) {
-      Alert.alert("Weak password", "Use at least 6 characters.");
+      Alert.alert(tr("Weak password"), tr("Use at least 6 characters."));
       return;
     }
 
     if (p !== c) {
-      Alert.alert("Mismatch", "Password and confirm do not match.");
+      Alert.alert(tr("Mismatch"), tr("Password and confirm do not match."));
       return;
     }
 
@@ -189,20 +191,20 @@ export default function ResetPasswordScreen() {
       if (error) throw error;
 
       Alert.alert(
-        "Password updated",
-        "Password yako imebadilishwa successfully. Sasa utaingia kwenye login."
+        tr("Password updated"),
+        tr("Password yako imebadilishwa successfully. Sasa utaingia kwenye login.")
       );
 
       router.replace("/(auth)/login");
     } catch (err: any) {
-      Alert.alert("Update failed", clean(err?.message) || "Failed to update password.");
+      Alert.alert(tr("Update failed"), clean(err?.message) || tr("Failed to update password."));
     } finally {
       setLoading(false);
     }
   };
 
   const content = (
-    <View style={{ flex: 1, backgroundColor: "#061018" }}>
+    <View style={{ flex: 1, backgroundColor: "#061018", overflow: "hidden" }}>
         <View
           pointerEvents="none"
           style={{
@@ -296,8 +298,7 @@ export default function ResetPasswordScreen() {
                     letterSpacing: 0.8,
                   }}
                 >
-                  SECURE PASSWORD RECOVERY
-                </Text>
+                  {tr("SECURE PASSWORD RECOVERY")}</Text>
               </View>
 
               <Text
@@ -310,8 +311,7 @@ export default function ResetPasswordScreen() {
                   letterSpacing: 0.2,
                 }}
               >
-                Reset password
-              </Text>
+                {tr("Reset password")}</Text>
 
               <Text
                 style={{
@@ -323,8 +323,7 @@ export default function ResetPasswordScreen() {
                   maxWidth: 340,
                 }}
               >
-                Weka password mpya kwa account yako ya ZETRA BMS.
-              </Text>
+                {tr("Weka password mpya kwa account yako ya ZETRA BMS.")}</Text>
 
               {checkingRecovery ? (
                 <View
@@ -338,8 +337,7 @@ export default function ResetPasswordScreen() {
                   }}
                 >
                   <Text style={{ color: "rgba(255,255,255,0.90)", fontWeight: "800" }}>
-                    Checking reset session...
-                  </Text>
+                    {tr("Checking reset session...")}</Text>
                 </View>
               ) : recoveryReady ? (
                 <View
@@ -353,8 +351,7 @@ export default function ResetPasswordScreen() {
                   }}
                 >
                   <Text style={{ color: "rgba(255,255,255,0.92)", fontWeight: "800" }}>
-                    Reset session ready ✅
-                  </Text>
+                    {tr("Reset session ready ✅")}</Text>
                 </View>
               ) : (
                 <View
@@ -374,18 +371,16 @@ export default function ResetPasswordScreen() {
                       lineHeight: 20,
                     }}
                   >
-                    Reset session haijapatikana. Rudi kwenye login, bonyeza Forgot Password, kisha
-                    fungua link mpya kutoka email yako.
-                  </Text>
+                    {tr("Reset session haijapatikana. Rudi kwenye login, bonyeza Forgot Password, kisha fungua link mpya kutoka email yako.")}</Text>
                 </View>
               )}
 
-              <FieldLabel>New Password</FieldLabel>
+              <FieldLabel>{tr("New Password")}</FieldLabel>
               <GlassInput
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
-                placeholder="Enter new password"
+                placeholder={tr("Enter new password")}
                 rightSlot={
                   <Pressable
                     onPress={() => setShowPassword((v) => !v)}
@@ -393,7 +388,7 @@ export default function ResetPasswordScreen() {
                     style={{ paddingLeft: 12, paddingVertical: 4 }}
                   >
                     <Text style={{ color: "#34D399", fontWeight: "900", fontSize: 14 }}>
-                      {showPassword ? "Hide" : "Show"}
+                      {showPassword ? tr("Hide") : tr("Show")}
                     </Text>
                   </Pressable>
                 }
@@ -411,12 +406,12 @@ export default function ResetPasswordScreen() {
                 {passwordStrengthText}
               </Text>
 
-              <FieldLabel>Confirm New Password</FieldLabel>
+              <FieldLabel>{tr("Confirm New Password")}</FieldLabel>
               <GlassInput
                 value={confirm}
                 onChangeText={setConfirm}
                 secureTextEntry={!showConfirm}
-                placeholder="Repeat new password"
+                placeholder={tr("Repeat new password")}
                 rightSlot={
                   <Pressable
                     onPress={() => setShowConfirm((v) => !v)}
@@ -424,7 +419,7 @@ export default function ResetPasswordScreen() {
                     style={{ paddingLeft: 12, paddingVertical: 4 }}
                   >
                     <Text style={{ color: "#34D399", fontWeight: "900", fontSize: 14 }}>
-                      {showConfirm ? "Hide" : "Show"}
+                      {showConfirm ? tr("Hide") : tr("Show")}
                     </Text>
                   </Pressable>
                 }
@@ -456,7 +451,7 @@ export default function ResetPasswordScreen() {
                     letterSpacing: 0.2,
                   }}
                 >
-                  {loading ? "Updating..." : "Save New Password"}
+                  {loading ? tr("Updating...") : tr("Save New Password")}
                 </Text>
               </Pressable>
 
@@ -474,7 +469,7 @@ export default function ResetPasswordScreen() {
                     lineHeight: 22,
                   }}
                 >
-                  Back to <Text style={{ color: "#6EE7B7", fontWeight: "900" }}>Login</Text>
+                  {tr("Back to")}<Text style={{ color: "#6EE7B7", fontWeight: "900" }}>{tr("Login")}</Text>
                 </Text>
               </Pressable>
             </View>

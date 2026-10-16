@@ -1,3 +1,4 @@
+import {useCommonText} from "@/src/i18n/useCommonText";
 import { useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -47,6 +48,7 @@ type OrgPlanLimitsRow = {
 };
 
 export default function AddStoreScreen() {
+ const uiText=useCommonText();
   const router = useRouter();
   const { activeOrgId, activeOrgName, activeRole, refresh } = useOrg();
   const { width } = useWindowDimensions();
@@ -67,7 +69,7 @@ export default function AddStoreScreen() {
     () => [
       {
         key: "STANDARD" as StoreType,
-        title: "Standard Retail",
+        title: uiText("Standard Retail"),
         icon: "cube-outline",
         color: "rgba(16,185,129,0.42)",
         bg: "rgba(16,185,129,0.12)",
@@ -91,14 +93,14 @@ export default function AddStoreScreen() {
       },
       {
         key: "PRECISION_RETAIL" as StoreType,
-        title: "Precision Retail",
+        title: uiText("Precision Retail"),
         icon: "flask-outline",
         color: "rgba(168,85,247,0.42)",
         bg: "rgba(168,85,247,0.10)",
         desc: "For pharmacy, chemicals, beauty, food portions, and decimal quantities like 0.5 or 1.25.",
       },
     ],
-    []
+    [uiText]
   );
 
   const guardPlanStoreLimit = async (): Promise<void> => {
@@ -132,18 +134,18 @@ export default function AddStoreScreen() {
 
   const onSave = async () => {
     if (!canCreate) {
-      Alert.alert("No Access", "Owner/Admin only.");
+      Alert.alert(uiText("No Access"), uiText("Owner/Admin only."));
       return;
     }
 
     if (!orgId) {
-      Alert.alert("Missing Org", "No organization selected.");
+      Alert.alert(uiText("Missing Org"), uiText("No organization selected."));
       return;
     }
 
     const storeName = clean(name);
     if (!storeName) {
-      Alert.alert("Missing Store Name", "Weka jina la store.");
+      Alert.alert(uiText("Missing Store Name"), uiText("Weka jina la store."));
       return;
     }
 
@@ -160,7 +162,7 @@ export default function AddStoreScreen() {
 
       if (error) throw error;
 
-      Alert.alert("Success ✅", "Store imeongezwa.");
+      Alert.alert(uiText("Success ✅"), uiText("Store imeongezwa."));
       await refresh();
       router.back();
     } catch (e: any) {
@@ -174,13 +176,13 @@ export default function AddStoreScreen() {
         const lim = msg.match(/allows\s+(\d+)/i)?.[1] || "—";
 
         Alert.alert(
-          "Upgrade Required",
-          `Umefika limit ya stores.\n\nPlan: ${plan}\nStores/Org allowed: ${lim}\n\nIli kuongeza store nyingine, tafadhali upgrade plan.`
+          uiText("Upgrade Required"),
+          uiText("Umefika limit ya stores.\n\nPlan: {p0}\nStores/Org allowed: {p1}\n\nIli kuongeza store nyingine, tafadhali upgrade plan.", {p0: (plan), p1: (lim)})
         );
         return;
       }
 
-      Alert.alert("Add store failed", msg || "Unknown error");
+      Alert.alert(uiText("Add store failed"), msg || uiText("Unknown error"));
     } finally {
       setSaving(false);
     }
@@ -215,19 +217,17 @@ export default function AddStoreScreen() {
                 color: UI.text,
               }}
             >
-              Add Store
-            </Text>
+              {uiText("Add Store")}</Text>
 
             <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 14 }}>
-              Org: <Text style={{ color: UI.text, fontWeight: "900" }}>{activeOrgName ?? "—"}</Text>
+              {uiText("Org:")}<Text style={{ color: UI.text, fontWeight: "900" }}>{activeOrgName ?? "—"}</Text>
             </Text>
           </View>
 
           {!canCreate ? (
             <Card style={{ borderColor: UI.dangerBorder, backgroundColor: UI.dangerSoft }}>
               <Text style={{ color: UI.danger, fontWeight: "900" }}>
-                No Access (Owner/Admin only)
-              </Text>
+                {uiText("No Access (Owner/Admin only)")}</Text>
             </Card>
           ) : null}
 
@@ -238,8 +238,7 @@ export default function AddStoreScreen() {
             }}
           >
             <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 13 }}>
-              Store Type
-            </Text>
+              {uiText("Store Type")}</Text>
 
             <View
               style={{
@@ -294,7 +293,7 @@ export default function AddStoreScreen() {
                             }}
                             numberOfLines={1}
                           >
-                            {item.title}
+                            {uiText(item.title)}
                           </Text>
 
                           {active ? (
@@ -305,8 +304,7 @@ export default function AddStoreScreen() {
                                 fontSize: 11,
                               }}
                             >
-                              SELECTED
-                            </Text>
+                              {uiText("SELECTED")}</Text>
                           ) : null}
                         </View>
 
@@ -320,7 +318,7 @@ export default function AddStoreScreen() {
                           }}
                           numberOfLines={3}
                         >
-                          {item.desc}
+                          {uiText(item.desc)}
                         </Text>
                       </View>
                     </View>
@@ -331,13 +329,12 @@ export default function AddStoreScreen() {
 
             <View style={{ marginTop: 2 }}>
               <Text style={{ color: UI.muted, fontWeight: "900", marginBottom: 8 }}>
-                Store Name
-              </Text>
+                {uiText("Store Name")}</Text>
 
               <Input
                 value={name}
                 onChangeText={setName}
-                placeholder="mfano: SMART MEN"
+                placeholder={uiText("mfano: SMART MEN")}
                 autoCapitalize="characters"
               />
             </View>
@@ -351,7 +348,7 @@ export default function AddStoreScreen() {
           >
             <View style={{ flex: isDesktopWeb ? 1 : undefined }}>
               <Button
-                title={saving ? "Saving..." : "Save Store"}
+                title={saving ? uiText("Saving...") : uiText("Save Store")}
                 variant="primary"
                 onPress={onSave}
                 disabled={!canCreate || saving}
@@ -360,7 +357,7 @@ export default function AddStoreScreen() {
 
             <View style={{ flex: isDesktopWeb ? 1 : undefined }}>
               <Button
-                title="Cancel"
+                title={uiText("Cancel")}
                 variant="secondary"
                 onPress={() => router.back()}
                 disabled={saving}

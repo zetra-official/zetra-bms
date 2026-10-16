@@ -1,3 +1,5 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/(tabs)/club/inbox/[threadId].tsx
 import { supabase } from "@/src/supabase/supabaseClient";
 import { Card } from "@/src/ui/Card";
@@ -35,6 +37,8 @@ function clean(x: any) {
 }
 
 export default function ThreadChatScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const tabBarH = useBottomTabBarHeight();
@@ -193,9 +197,9 @@ export default function ThreadChatScreen() {
               </View>
 
               <View>
-                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>Inbox</Text>
+                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>{uiText("Inbox")}</Text>
                 <Text style={{ color: theme.colors.faint, fontWeight: "900", fontSize: 12 }}>
-                  {senderTypeLoading ? "Checking access..." : senderType === "store" ? "Store reply mode" : "Customer mode"}
+                  {senderTypeLoading ? uiText("Checking access...") : senderType === "store" ? uiText("Store reply mode") : uiText("Customer mode")}
                 </Text>
               </View>
             </View>
@@ -215,19 +219,19 @@ export default function ThreadChatScreen() {
                 },
               ]}
             >
-              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Back</Text>
+              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Back")}</Text>
             </Pressable>
           </View>
         </Card>
 
         {!!err && (
           <Card style={{ padding: 12, borderColor: theme.colors.dangerBorder, backgroundColor: theme.colors.dangerSoft }}>
-            <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{err}</Text>
+            <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{systemText(err)}</Text>
           </Card>
         )}
       </View>
     );
-  }, [err, router, senderType, senderTypeLoading, topPad]);
+  }, [err, router, senderType, senderTypeLoading, topPad, uiText, systemText]);
 
   const renderItem = useCallback(
     ({ item }: { item: Msg }) => {
@@ -248,14 +252,14 @@ export default function ThreadChatScreen() {
             }}
           >
             <Text style={{ color: theme.colors.faint, fontWeight: "900", fontSize: 11, marginBottom: 4 }}>
-              {isStore ? "Store" : "Customer"}
+              {isStore ? uiText("Store") : uiText("Customer")}
             </Text>
             <Text style={{ color: theme.colors.text, fontWeight: "800", lineHeight: 20 }}>{item.body}</Text>
           </View>
         </View>
       );
     },
-    [myUid]
+    [myUid, uiText]
   );
 
   const canSend = useMemo(() => {
@@ -292,11 +296,9 @@ export default function ThreadChatScreen() {
               loading ? null : (
                 <Card style={{ padding: 14 }}>
                   <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-                    No messages
-                  </Text>
+                    {uiText("No messages")}</Text>
                   <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-                    Andika message ya kwanza.
-                  </Text>
+                    {uiText("Andika message ya kwanza.")}</Text>
                 </Card>
               )
             }
@@ -305,8 +307,7 @@ export default function ThreadChatScreen() {
                 <View style={{ paddingVertical: 14, alignItems: "center" }}>
                   <ActivityIndicator />
                   <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>
-                    Loading...
-                  </Text>
+                    {uiText("Loading...")}</Text>
                 </View>
               ) : null
             }
@@ -331,7 +332,7 @@ export default function ThreadChatScreen() {
                 <TextInput
                   value={text}
                   onChangeText={setText}
-                  placeholder="Type a message..."
+                  placeholder={uiText("Type a message...")}
                   placeholderTextColor={theme.colors.muted}
                   multiline
                   textAlignVertical="top"

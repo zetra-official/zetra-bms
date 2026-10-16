@@ -1,3 +1,4 @@
+import {useCommonText} from "@/src/i18n/useCommonText";
 import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, Text, TextInput, View } from "react-native";
@@ -33,6 +34,7 @@ const LIGHT = {
 };
 
 export default function OnboardingBusinessScreen() {
+ const uiText = useCommonText();
   const router = useRouter();
 
   const [checkingGate, setCheckingGate] = useState(true);
@@ -85,15 +87,15 @@ export default function OnboardingBusinessScreen() {
     if (busy) return;
 
     const businessName = clean(name);
-    if (!businessName) return Alert.alert("Missing", "Business name is required.");
+    if (!businessName) return Alert.alert(uiText("Missing"), uiText("Business name is required."));
 
     const nextTz = clean(tz);
-    if (!nextTz) return Alert.alert("Timezone", "Timezone haiwezi kuwa empty.");
+    if (!nextTz) return Alert.alert(uiText("Timezone"), uiText("Timezone haiwezi kuwa empty."));
 
     if (!tzConfirmed) {
       Alert.alert(
-        "Confirm timezone",
-        "Tafadhali thibitisha timezone. Hii itaathiri reports, daily closing, na date cutoffs."
+        uiText("Confirm timezone"),
+        uiText("Tafadhali thibitisha timezone. Hii itaathiri reports, daily closing, na date cutoffs.")
       );
       return;
     }
@@ -152,14 +154,12 @@ export default function OnboardingBusinessScreen() {
         }}
       >
         <Text style={{ color: LIGHT.text, fontWeight: "900", fontSize: 13 }}>
-          ← Back
-        </Text>
+          {uiText("← Back")}</Text>
       </Pressable>
 
       <View style={{ marginTop: 0 }}>
         <Text style={{ color: LIGHT.text, fontWeight: "900", fontSize: 26 }}>
-          Business Setup
-        </Text>
+          {uiText("Business Setup")}</Text>
 
         <Text
           style={{
@@ -169,8 +169,7 @@ export default function OnboardingBusinessScreen() {
             lineHeight: 20,
           }}
         >
-          Weka jina la biashara na timezone ya reports, daily closing, na date cutoffs.
-        </Text>
+          {uiText("Weka jina la biashara na timezone ya reports, daily closing, na date cutoffs.")}</Text>
       </View>
 
       <View style={{ marginTop: 14 }}>
@@ -189,8 +188,7 @@ export default function OnboardingBusinessScreen() {
           }}
         >
           <Text style={{ color: LIGHT.text, fontWeight: "900", fontSize: 14 }}>
-            Business name
-          </Text>
+            {uiText("Business name")}</Text>
 
           <View
             style={{
@@ -206,7 +204,7 @@ export default function OnboardingBusinessScreen() {
             <TextInput
               value={name}
               onChangeText={setName}
-              placeholder="e.g. JOFU QUALITY"
+              placeholder={uiText("e.g. JOFU QUALITY")}
               placeholderTextColor={LIGHT.faint}
               style={{ color: LIGHT.text, fontWeight: "900", fontSize: 14 }}
               autoCapitalize="words"
@@ -214,8 +212,7 @@ export default function OnboardingBusinessScreen() {
           </View>
 
           <Text style={{ color: LIGHT.text, fontWeight: "900", fontSize: 14, marginTop: 14 }}>
-            Business type
-          </Text>
+            {uiText("Business type")}</Text>
 
           <View
             style={{
@@ -231,7 +228,7 @@ export default function OnboardingBusinessScreen() {
             <TextInput
               value={businessType}
               onChangeText={setBusinessType}
-              placeholder="GENERAL / RETAIL / PHARMACY ..."
+              placeholder={uiText("GENERAL / RETAIL / PHARMACY ...")}
               placeholderTextColor={LIGHT.faint}
               style={{ color: LIGHT.text, fontWeight: "900", fontSize: 14 }}
               autoCapitalize="characters"
@@ -242,12 +239,10 @@ export default function OnboardingBusinessScreen() {
           <View style={{ height: 1, backgroundColor: LIGHT.border, marginVertical: 16 }} />
 
           <Text style={{ color: LIGHT.text, fontWeight: "900", fontSize: 14 }}>
-            Timezone (Required)
-          </Text>
+            {uiText("Timezone (Required)")}</Text>
 
           <Text style={{ color: LIGHT.muted, fontWeight: "800", fontSize: 12, marginTop: 6 }}>
-            Controls reports, daily closing, and date cutoffs (org-level).
-          </Text>
+            {uiText("Controls reports, daily closing, and date cutoffs (org-level).")}</Text>
 
           <View style={{ marginTop: 12 }}>
    <TimezonePicker
@@ -256,8 +251,8 @@ export default function OnboardingBusinessScreen() {
     setTz(next);
     setTzConfirmed(false);
   }}
-  title="Timezone"
-  subtitle="Reports • Daily closing • Cutoffs"
+  title={uiText("Timezone")}
+  subtitle={uiText("Reports • Daily closing • Cutoffs")}
 />
 
 <Pressable
@@ -301,8 +296,7 @@ export default function OnboardingBusinessScreen() {
       lineHeight: 19,
     }}
   >
-    I confirm this timezone is correct for reports & daily closing.
-  </Text>
+    {uiText("I confirm this timezone is correct for reports & daily closing.")}</Text>
 </Pressable>
           </View>
         </Card>
@@ -310,7 +304,7 @@ export default function OnboardingBusinessScreen() {
 
       <View style={{ marginTop: 14 }}>
         <Button
-          title={busy ? "Please wait..." : "Continue"}
+          title={busy ? uiText("Please wait...") : uiText("Continue")}
           onPress={onContinue}
           disabled={!canContinue}
         />

@@ -1,3 +1,5 @@
+import {useLanguage} from "@/src/i18n/LanguageProvider";
+import {useCommonText} from "@/src/i18n/useCommonText";
 // src/components/TimezonePicker.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -91,15 +93,17 @@ type Props = {
 export function TimezonePicker({
   value,
   onChange,
-  title = "Timezone",
-  subtitle = "Controls reports, daily closing, and date cutoffs.",
+  title,
+  subtitle,
   requireConfirm = false,
   confirmed = false,
   onConfirmedChange,
-  confirmLabel = "I confirm this timezone is correct for reports & daily closing.",
+  confirmLabel,
   disabled,
   quickZones = DEFAULT_TZ_QUICK,
 }: Props) {
+ const uiText = useCommonText();
+ const {language}=useLanguage();
   const [open, setOpen] = useState(false);
 
   const [query, setQuery] = useState("");
@@ -184,7 +188,7 @@ export function TimezonePicker({
 
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-            {title}
+            {title ?? uiText("Timezone")}
           </Text>
           <Text
             style={{
@@ -256,7 +260,7 @@ export function TimezonePicker({
           </View>
 
           <Text style={{ color: UI.text, fontWeight: "900", flex: 1 }}>
-            {confirmLabel}
+            {confirmLabel ?? uiText("I confirm this timezone is correct for reports & daily closing.")}
           </Text>
         </Pressable>
       ) : null}
@@ -289,6 +293,7 @@ export function TimezonePicker({
         <Pressable
           onPress={() => setOpen(false)}
           style={{
+            direction: language==='ar'?'rtl':'ltr',
             flex: 1,
             backgroundColor: "rgba(0,0,0,0.65)",
             padding: 16,
@@ -332,8 +337,7 @@ export function TimezonePicker({
 
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-                    Select Timezone
-                  </Text>
+                    {uiText("Select Timezone")}</Text>
                   <Text
                     style={{
                       color: UI.muted,
@@ -342,8 +346,7 @@ export function TimezonePicker({
                       marginTop: 2,
                     }}
                   >
-                    Tap a quick pick or type manual (IANA)
-                  </Text>
+                    {uiText("Tap a quick pick or type manual (IANA)")}</Text>
                 </View>
 
                 <Pressable
@@ -386,7 +389,7 @@ export function TimezonePicker({
                 <TextInput
                   value={query}
                   onChangeText={setQuery}
-                  placeholder="Search (e.g. Africa, New_York)…"
+                  placeholder={uiText("Search (e.g. Africa, New_York)…")}
                   placeholderTextColor="rgba(255,255,255,0.40)"
                   style={{
                     flex: 1,
@@ -428,7 +431,7 @@ export function TimezonePicker({
                 <TextInput
                   value={manual}
                   onChangeText={(v) => setManual(v)}
-                  placeholder="Manual timezone (e.g. Africa/Dar_es_Salaam)"
+                  placeholder={uiText("Manual timezone (e.g. Africa/Dar_es_Salaam)")}
                   placeholderTextColor="rgba(255,255,255,0.40)"
                   style={{
                     flex: 1,
@@ -469,8 +472,7 @@ export function TimezonePicker({
                   ]}
                 >
                   <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
-                    SET
-                  </Text>
+                    {uiText("SET")}</Text>
                 </Pressable>
               </View>
 
@@ -484,7 +486,7 @@ export function TimezonePicker({
                 }}
                 numberOfLines={2}
               >
-                {subtitle}
+                {subtitle ?? uiText("Controls reports, daily closing, and date cutoffs.")}
               </Text>
             </View>
 
@@ -551,7 +553,7 @@ export function TimezonePicker({
                             marginTop: 2,
                           }}
                         >
-                          {active ? "Selected ✅" : "Tap to select"}
+                          {active ? uiText("Selected ✅") : uiText("Tap to select")}
                         </Text>
                       </View>
 
@@ -571,7 +573,7 @@ export function TimezonePicker({
               ListEmptyComponent={() => (
                 <View style={{ padding: 16 }}>
                   <Text style={{ color: UI.muted, fontWeight: "800" }}>
-                    No timezone found for “{query}”
+                    {uiText("No timezone found for “{query}”", {query})}
                   </Text>
                 </View>
               )}

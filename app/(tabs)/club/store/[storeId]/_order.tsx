@@ -1,4 +1,6 @@
-﻿import { supabase } from "@/src/supabase/supabaseClient";
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+﻿import {useCommonText} from "@/src/i18n/useCommonText";
+import { supabase } from "@/src/supabase/supabaseClient";
 import { Button } from "@/src/ui/Button";
 import { Card } from "@/src/ui/Card";
 import { Screen } from "@/src/ui/Screen";
@@ -50,6 +52,8 @@ type Preview = {
 type PaymentMethod = "COD" | "CASH" | "MOBILE" | "BANK";
 
 export default function ClubOrderFromPostScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -171,10 +175,10 @@ export default function ClubOrderFromPostScreen() {
         (Array.isArray(data) ? data?.[0]?.order_id : (data as any)?.order_id) ?? null;
 
       Alert.alert(
-        "Order Sent ✅",
+        uiText("Order Sent ✅"),
         method === "COD" || method === "CASH"
-          ? "Order imepokelewa. Malipo yatakuwa wakati wa delivery/pickup."
-          : "Order imepokelewa. Tafadhali hakikisha malipo yamefanyika na reference iko sahihi."
+          ? uiText("Order imepokelewa. Malipo yatakuwa wakati wa delivery/pickup.")
+          : uiText("Order imepokelewa. Tafadhali hakikisha malipo yamefanyika na reference iko sahihi.")
       );
 
       // Forward-only: go back to store page (safe), passing hint
@@ -267,10 +271,9 @@ export default function ClubOrderFromPostScreen() {
 
             <View style={{ flex: 1 }}>
               <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-                Order Form
-              </Text>
+                {uiText("Order Form")}</Text>
               <Text style={{ color: theme.colors.faint, fontWeight: "900", fontSize: 12 }}>
-                {storeName}
+                {(clean(params.storeName) || uiText("Store"))}
               </Text>
             </View>
 
@@ -282,18 +285,17 @@ export default function ClubOrderFromPostScreen() {
 
         {!!err && (
           <Card style={{ backgroundColor: theme.colors.dangerSoft, borderColor: theme.colors.dangerBorder }}>
-            <Text style={{ color: theme.colors.dangerText, fontWeight: "900" }}>{err}</Text>
+            <Text style={{ color: theme.colors.dangerText, fontWeight: "900" }}>{systemText(err)}</Text>
           </Card>
         )}
 
         {/* product preview */}
         <Card>
-          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Product</Text>
+          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Product")}</Text>
 
           {loading ? (
             <Text style={{ marginTop: 8, color: theme.colors.muted, fontWeight: "900" }}>
-              Loading product info...
-            </Text>
+              {uiText("Loading product info...")}</Text>
           ) : preview ? (
             <View style={{ marginTop: 10, gap: 6 }}>
               <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
@@ -304,23 +306,21 @@ export default function ClubOrderFromPostScreen() {
               </Text>
               {!!clean(preview.caption) && (
                 <Text style={{ color: theme.colors.faint, fontWeight: "800" }} numberOfLines={2}>
-                  Post: {preview.caption}
+                  {uiText("Post:")}{preview.caption}
                 </Text>
               )}
               <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                Bei hii inatoka DB (snapshot ya post) — form itatumia bei hiyo.
-              </Text>
+                {uiText("Bei hii inatoka DB (snapshot ya post) — form itatumia bei hiyo.")}</Text>
             </View>
           ) : (
             <Text style={{ marginTop: 8, color: theme.colors.dangerText, fontWeight: "900" }}>
-              Preview haijapatikana.
-            </Text>
+              {uiText("Preview haijapatikana.")}</Text>
           )}
         </Card>
 
         {/* qty + totals */}
         <Card>
-          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Quantity</Text>
+          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Quantity")}</Text>
           <TextInput
             value={qtyText}
             onChangeText={(t) => setQtyText(t.replace(/[^\d]/g, ""))}
@@ -340,7 +340,7 @@ export default function ClubOrderFromPostScreen() {
           />
 
           <View style={{ marginTop: 10, flexDirection: "row", justifyContent: "space-between" }}>
-            <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>Total</Text>
+            <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>{uiText("Total")}</Text>
             <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
               {fmtMoney(total, currency)}
             </Text>
@@ -349,13 +349,13 @@ export default function ClubOrderFromPostScreen() {
 
         {/* customer */}
         <Card>
-          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Customer Details</Text>
+          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Customer Details")}</Text>
 
-          <Text style={{ marginTop: 10, color: theme.colors.faint, fontWeight: "900" }}>Full name *</Text>
+          <Text style={{ marginTop: 10, color: theme.colors.faint, fontWeight: "900" }}>{uiText("Full name *")}</Text>
           <TextInput
             value={customerName}
             onChangeText={setCustomerName}
-            placeholder="Mf: Asha Mohamed"
+            placeholder={uiText("Mf: Asha Mohamed")}
             placeholderTextColor={theme.colors.faint}
             style={{
               marginTop: 6,
@@ -369,7 +369,7 @@ export default function ClubOrderFromPostScreen() {
             }}
           />
 
-          <Text style={{ marginTop: 10, color: theme.colors.faint, fontWeight: "900" }}>Phone</Text>
+          <Text style={{ marginTop: 10, color: theme.colors.faint, fontWeight: "900" }}>{uiText("Phone")}</Text>
           <TextInput
             value={phone}
             onChangeText={setPhone}
@@ -388,11 +388,11 @@ export default function ClubOrderFromPostScreen() {
             }}
           />
 
-          <Text style={{ marginTop: 10, color: theme.colors.faint, fontWeight: "900" }}>Location</Text>
+          <Text style={{ marginTop: 10, color: theme.colors.faint, fontWeight: "900" }}>{uiText("Location")}</Text>
           <TextInput
             value={location}
             onChangeText={setLocation}
-            placeholder="Mf: Soweto / Mbeya"
+            placeholder={uiText("Mf: Soweto / Mbeya")}
             placeholderTextColor={theme.colors.faint}
             style={{
               marginTop: 6,
@@ -406,11 +406,11 @@ export default function ClubOrderFromPostScreen() {
             }}
           />
 
-          <Text style={{ marginTop: 10, color: theme.colors.faint, fontWeight: "900" }}>Note (hiari)</Text>
+          <Text style={{ marginTop: 10, color: theme.colors.faint, fontWeight: "900" }}>{uiText("Note (hiari)")}</Text>
           <TextInput
             value={note}
             onChangeText={setNote}
-            placeholder="Maelekezo ya delivery/pickup..."
+            placeholder={uiText("Maelekezo ya delivery/pickup...")}
             placeholderTextColor={theme.colors.faint}
             multiline
             style={{
@@ -429,27 +429,27 @@ export default function ClubOrderFromPostScreen() {
 
         {/* payment */}
         <Card>
-          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Payment Method</Text>
+          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Payment Method")}</Text>
 
           <View style={{ flexDirection: "row", gap: 10, marginTop: 10 }}>
-            <PaymentChip value="COD" label="COD" icon="bicycle-outline" />
-            <PaymentChip value="CASH" label="CASH" icon="cash-outline" />
+            <PaymentChip value="COD" label={uiText("COD")} icon="bicycle-outline" />
+            <PaymentChip value="CASH" label={uiText("CASH")} icon="cash-outline" />
           </View>
 
           <View style={{ flexDirection: "row", gap: 10, marginTop: 10 }}>
-            <PaymentChip value="MOBILE" label="MOBILE" icon="phone-portrait-outline" />
-            <PaymentChip value="BANK" label="BANK" icon="card-outline" />
+            <PaymentChip value="MOBILE" label={uiText("MOBILE")} icon="phone-portrait-outline" />
+            <PaymentChip value="BANK" label={uiText("BANK")} icon="card-outline" />
           </View>
 
           {(method === "MOBILE" || method === "BANK") && (
             <View style={{ marginTop: 12 }}>
               <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>
-                {method === "MOBILE" ? "Network/Wallet *" : "Bank/Channel *"}
+                {method === "MOBILE" ? uiText("Network/Wallet *") : uiText("Bank/Channel *")}
               </Text>
               <TextInput
                 value={channel}
                 onChangeText={setChannel}
-                placeholder={method === "MOBILE" ? "Mf: M-Pesa / AirtelMoney" : "Mf: CRDB / NMB"}
+                placeholder={method === "MOBILE" ? uiText("Mf: M-Pesa / AirtelMoney") : uiText("Mf: CRDB / NMB")}
                 placeholderTextColor={theme.colors.faint}
                 style={{
                   marginTop: 6,
@@ -464,12 +464,11 @@ export default function ClubOrderFromPostScreen() {
               />
 
               <Text style={{ marginTop: 10, color: theme.colors.faint, fontWeight: "900" }}>
-                Reference / Transaction ID *
-              </Text>
+                {uiText("Reference / Transaction ID *")}</Text>
               <TextInput
                 value={reference}
                 onChangeText={setReference}
-                placeholder="Mf: TXN123456"
+                placeholder={uiText("Mf: TXN123456")}
                 placeholderTextColor={theme.colors.faint}
                 style={{
                   marginTop: 6,
@@ -484,19 +483,17 @@ export default function ClubOrderFromPostScreen() {
               />
 
               <Text style={{ marginTop: 10, color: theme.colors.muted, fontWeight: "800" }}>
-                Hapa tunafunga “confirm flow”: bila channel + reference order haitatuma.
-              </Text>
+                {uiText("Hapa tunafunga “confirm flow”: bila channel + reference order haitatuma.")}</Text>
             </View>
           )}
 
           {method === "COD" && (
             <Text style={{ marginTop: 10, color: theme.colors.muted, fontWeight: "800" }}>
-              COD = Payment wakati wa delivery/pickup.
-            </Text>
+              {uiText("COD = Payment wakati wa delivery/pickup.")}</Text>
           )}
         </Card>
 
-        <Button title={submitting ? "Sending..." : "Send Order"} onPress={submit} disabled={!canSubmit} />
+        <Button title={submitting ? uiText("Sending...") : uiText("Send Order")} onPress={submit} disabled={!canSubmit} />
       </View>
     </Screen>
   );

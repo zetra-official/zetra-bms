@@ -1,3 +1,4 @@
+import {useCommonText} from "@/src/i18n/useCommonText";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -14,6 +15,7 @@ import { theme } from "@/src/ui/theme";
 const INTERNAL_BILLING_EMAIL = "zetraofficialtz@gmail.com";
 
 export default function OfficeScreen() {
+ const uiText=useCommonText();
   const router = useRouter();
 
   const [checkingAccess, setCheckingAccess] = useState(true);
@@ -40,8 +42,8 @@ export default function OfficeScreen() {
 
       if (!ok) {
         Alert.alert(
-          "Restricted",
-          "Hii ni ZETRA Office Dashboard pekee."
+          uiText("Restricted"),
+          uiText("Hii ni ZETRA Office Dashboard pekee.")
         );
 
         router.replace("/(tabs)" as any);
@@ -50,8 +52,8 @@ export default function OfficeScreen() {
       setAllowed(false);
 
       Alert.alert(
-        "Access Error",
-        e?.message ?? "Imeshindikana kuthibitisha Office account."
+        uiText("Access Error"),
+        e?.message ?? uiText("Imeshindikana kuthibitisha Office account.")
       );
 
       router.replace("/login" as any);
@@ -70,8 +72,8 @@ export default function OfficeScreen() {
       router.replace("/login" as any);
     } catch (e: any) {
       Alert.alert(
-        "Sign out failed",
-        e?.message ?? "Imeshindikana kutoka."
+        uiText("Sign out failed"),
+        e?.message ?? uiText("Imeshindikana kutoka.")
       );
     }
   }, [router]);
@@ -94,8 +96,7 @@ export default function OfficeScreen() {
             marginTop: 12,
           }}
         >
-          Checking ZETRA Office access...
-        </Text>
+          {uiText("Checking ZETRA Office access...")}</Text>
       </View>
     );
   }
@@ -141,8 +142,7 @@ export default function OfficeScreen() {
               marginTop: 4,
             }}
           >
-            Customer & Subscription Command Center
-          </Text>
+            {uiText("Customer & Subscription Command Center")}</Text>
         </View>
 
         <Pressable
@@ -165,8 +165,7 @@ export default function OfficeScreen() {
               fontWeight: "900",
             }}
           >
-            Sign Out
-          </Text>
+            {uiText("Sign Out")}</Text>
         </Pressable>
       </View>
 
@@ -187,8 +186,7 @@ export default function OfficeScreen() {
             fontSize: 12,
           }}
         >
-          OFFICE ACCOUNT
-        </Text>
+          {uiText("OFFICE ACCOUNT")}</Text>
 
         <Text
           style={{
@@ -211,32 +209,32 @@ export default function OfficeScreen() {
         }}
       >
      <OfficeCard
-  title="Customers"
-  subtitle="Performance, activity na customer health"
+  title={uiText("Customers")}
+  subtitle={uiText("Performance, activity na customer health")}
   onPress={() =>
     router.push("/office/customers" as any)
   }
 />
 
    <OfficeCard
-  title="Subscriptions"
-  subtitle="Active, expiring na expired plans"
+  title={uiText("Subscriptions")}
+  subtitle={uiText("Active, expiring na expired plans")}
   onPress={() =>
     router.push("/office/subscriptions" as any)
   }
 />
 
      <OfficeCard
-  title="Payment Requests"
-  subtitle="Review subscription payment requests"
+  title={uiText("Payment Requests")}
+  subtitle={uiText("Review subscription payment requests")}
   onPress={() =>
     router.push("/office/payment-requests" as any)
   }
 />
 
    <OfficeCard
-  title="Growth Partners"
-  subtitle="Partners, referrals na commissions"
+  title={uiText("Growth Partners")}
+  subtitle={uiText("Partners, referrals na commissions")}
   onPress={() =>
     router.push({
       pathname: "/office/growth-partners",
@@ -248,16 +246,16 @@ export default function OfficeScreen() {
 />
 
         <OfficeCard
-  title="Follow-ups"
-  subtitle="Customers wanaokaribia ku-expire"
+  title={uiText("Follow-ups")}
+  subtitle={uiText("Customers wanaokaribia ku-expire")}
   onPress={() =>
     router.push("/office/follow-ups" as any)
   }
 />
 
    <OfficeCard
-  title="System Performance"
-  subtitle="Stores, usage na customer activity"
+  title={uiText("System Performance")}
+  subtitle={uiText("Stores, usage na customer activity")}
   onPress={() =>
     router.push("/office/system-performance" as any)
   }
@@ -276,6 +274,7 @@ function OfficeCard({
   subtitle: string;
   onPress: () => void;
 }) {
+ const uiText = useCommonText();
   return (
     <Pressable
       onPress={onPress}
@@ -321,8 +320,7 @@ function OfficeCard({
           marginTop: 14,
         }}
       >
-        Open →
-      </Text>
+        {uiText("Open →")}</Text>
     </Pressable>
   );
 }

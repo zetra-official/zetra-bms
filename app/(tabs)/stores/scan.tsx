@@ -1,3 +1,4 @@
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/(tabs)/stores/scan.tsx
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, Text, View, Vibration } from "react-native";
@@ -18,6 +19,7 @@ function cleanBarcode(raw: any) {
 }
 
 export default function StoreScanScreen() {
+ const uiText=useCommonText();
   const router = useRouter();
   const { activeStoreType } = useOrg();
   const isCapitalRecoveryStore = activeStoreType === "CAPITAL_RECOVERY";
@@ -30,7 +32,7 @@ export default function StoreScanScreen() {
 
   const ensurePermission = useCallback(async () => {
     if (isCapitalRecoveryStore) {
-      Alert.alert("Not Available", "Inventory scan haitumiki kwa Capital Recovery store.");
+      Alert.alert(uiText("Not Available"), uiText("Inventory scan haitumiki kwa Capital Recovery store."));
       return false;
     }
 
@@ -39,13 +41,13 @@ export default function StoreScanScreen() {
 
       const res = await requestPermission();
       if (!res.granted) {
-        Alert.alert("Camera Permission", "Ruhusa ya camera inahitajika ili kuscan barcode.");
+        Alert.alert(uiText("Camera Permission"), uiText("Ruhusa ya camera inahitajika ili kuscan barcode."));
         return false;
       }
 
       return true;
     } catch {
-      Alert.alert("Camera", "Imeshindikana kuomba ruhusa ya camera.");
+      Alert.alert(uiText("Camera"), uiText("Imeshindikana kuomba ruhusa ya camera."));
       return false;
     }
   }, [granted, isCapitalRecoveryStore, requestPermission]);
@@ -115,12 +117,12 @@ export default function StoreScanScreen() {
         >
           <View style={{ gap: 2 }}>
             <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 22 }}>
-              {isCapitalRecoveryStore ? "Scan Disabled" : "Scan Item"}
+              {isCapitalRecoveryStore ? uiText("Scan Disabled") : uiText("Scan Item")}
             </Text>
             <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
               {isCapitalRecoveryStore
-                ? "Capital Recovery store haitumii inventory scan."
-                : "Scan → Inventory itaiweka item juu ili u-Adjust haraka."}
+                ? uiText("Capital Recovery store haitumii inventory scan.")
+                : uiText("Scan → Inventory itaiweka item juu ili u-Adjust haraka.")}
             </Text>
           </View>
 
@@ -166,12 +168,9 @@ export default function StoreScanScreen() {
                 }}
               >
                 <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-                  Scan haipatikani
-                </Text>
+                  {uiText("Scan haipatikani")}</Text>
                 <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                  Capital Recovery store haitumii inventory barcode scan. Tumia Products +
-                  Capital Recovery Workspace.
-                </Text>
+                  {uiText("Capital Recovery store haitumii inventory barcode scan. Tumia Products + Capital Recovery Workspace.")}</Text>
 
                 <Pressable
                   onPress={close}
@@ -188,7 +187,7 @@ export default function StoreScanScreen() {
                     },
                   ]}
                 >
-                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Back</Text>
+                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Back")}</Text>
                 </Pressable>
               </Card>
             </View>
@@ -203,11 +202,9 @@ export default function StoreScanScreen() {
             <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 18 }}>
               <Card style={{ width: "100%", padding: 16, gap: 10 }}>
                 <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-                  Camera permission inahitajika
-                </Text>
+                  {uiText("Camera permission inahitajika")}</Text>
                 <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                  Bonyeza “Grant” kisha uruhusu camera.
-                </Text>
+                  {uiText("Bonyeza “Grant” kisha uruhusu camera.")}</Text>
 
                 <Pressable
                   onPress={ensurePermission}
@@ -225,8 +222,7 @@ export default function StoreScanScreen() {
                   ]}
                 >
                   <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                    Grant Camera Permission
-                  </Text>
+                    {uiText("Grant Camera Permission")}</Text>
                 </Pressable>
               </Card>
             </View>
@@ -260,7 +256,7 @@ export default function StoreScanScreen() {
           >
             <Card style={{ padding: 12, gap: 6 }}>
               <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                {isCapitalRecoveryStore ? "Disabled" : busy ? "Captured ✅" : "Ready"}
+                {isCapitalRecoveryStore ? uiText("Disabled") : busy ? uiText("Captured ✅") : uiText("Ready")}
               </Text>
 
               <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
@@ -268,7 +264,7 @@ export default function StoreScanScreen() {
                   "Inventory scan haipo kwenye Capital Recovery mode."
                 ) : (
                   <>
-                    Last:{" "}
+                    {uiText("Last:")}{" "}
                     <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
                       {last || "—"}
                     </Text>

@@ -1,4 +1,5 @@
-﻿import { supabase } from "@/src/supabase/supabaseClient";
+﻿import {useCommonText} from "@/src/i18n/useCommonText";
+import { supabase } from "@/src/supabase/supabaseClient";
 import { Card } from "@/src/ui/Card";
 import { Screen } from "@/src/ui/Screen";
 import { theme } from "@/src/ui/theme";
@@ -45,6 +46,7 @@ function fmtTZS(n: number) {
 }
 
 export default function CreateClubOrderScreen() {
+ const uiText=useCommonText();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ storeId?: string; storeName?: string }>();
@@ -119,7 +121,7 @@ export default function CreateClubOrderScreen() {
       .filter((x) => x.product_name.length && Number(x.qty) >= 1);
 
     if (!payloadItems.length) {
-      Alert.alert("Order", "Weka angalau item 1 (jina + qty).");
+      Alert.alert(uiText("Order"), uiText("Weka angalau item 1 (jina + qty)."));
       return;
     }
 
@@ -137,9 +139,9 @@ export default function CreateClubOrderScreen() {
 
       const orderId = clean(data);
 
-      Alert.alert("Order", "Order imetumwa ✅", [
+      Alert.alert(uiText("Order"), uiText("Order imetumwa ✅"), [
         {
-          text: "OPEN",
+          text: uiText("OPEN"),
           onPress: () => {
             if (!orderId) {
               router.back();
@@ -155,7 +157,7 @@ export default function CreateClubOrderScreen() {
         },
       ]);
     } catch (e: any) {
-      Alert.alert("Order", e?.message ?? "Failed to create order");
+      Alert.alert(uiText("Order"), e?.message ?? uiText("Failed to create order"));
     } finally {
       setBusy(false);
     }
@@ -183,9 +185,9 @@ export default function CreateClubOrderScreen() {
               </View>
 
               <View>
-                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>Create Order</Text>
+                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>{uiText("Create Order")}</Text>
                 <Text style={{ color: theme.colors.faint, fontWeight: "900", fontSize: 12 }}>
-                  Store: {storeName ? storeName : storeId ? storeId.slice(0, 8) + "..." : "—"}
+                  {uiText("Store:")}{storeName ? storeName : storeId ? storeId.slice(0, 8) + "..." : "—"}
                 </Text>
               </View>
             </View>
@@ -205,13 +207,13 @@ export default function CreateClubOrderScreen() {
                 },
               ]}
             >
-              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Back</Text>
+              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Back")}</Text>
             </Pressable>
           </View>
         </Card>
 
         <Card style={{ padding: 14, gap: 12 }}>
-          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14 }}>Items</Text>
+          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14 }}>{uiText("Items")}</Text>
 
           {items.map((it) => (
             <Card
@@ -219,7 +221,7 @@ export default function CreateClubOrderScreen() {
               style={{ padding: 12, backgroundColor: theme.colors.surface2, borderColor: theme.colors.borderSoft, gap: 10 }}
             >
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>Item #{it.key}</Text>
+                <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>{uiText("Item #")}{it.key}</Text>
 
                 <Pressable
                   onPress={() => removeLine(it.key)}
@@ -236,14 +238,14 @@ export default function CreateClubOrderScreen() {
                     },
                   ]}
                 >
-                  <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>Remove</Text>
+                  <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{uiText("Remove")}</Text>
                 </Pressable>
               </View>
 
               <TextInput
                 value={it.product_name}
                 onChangeText={(v) => updateLine(it.key, { product_name: v })}
-                placeholder="Product name"
+                placeholder={uiText("Product name")}
                 placeholderTextColor={theme.colors.muted}
                 style={{
                   height: 44,
@@ -259,7 +261,7 @@ export default function CreateClubOrderScreen() {
 
               <View style={{ flexDirection: "row", gap: 10 }}>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ color: theme.colors.faint, fontWeight: "900", marginBottom: 6 }}>Qty</Text>
+                  <Text style={{ color: theme.colors.faint, fontWeight: "900", marginBottom: 6 }}>{uiText("Qty")}</Text>
                   <TextInput
                     value={it.qty}
                     onChangeText={(v) => updateLine(it.key, { qty: v })}
@@ -280,7 +282,7 @@ export default function CreateClubOrderScreen() {
                 </View>
 
                 <View style={{ flex: 1 }}>
-                  <Text style={{ color: theme.colors.faint, fontWeight: "900", marginBottom: 6 }}>Price (TZS)</Text>
+                  <Text style={{ color: theme.colors.faint, fontWeight: "900", marginBottom: 6 }}>{uiText("Price (TZS)")}</Text>
                   <TextInput
                     value={it.unit_price}
                     onChangeText={(v) => updateLine(it.key, { unit_price: v })}
@@ -302,7 +304,7 @@ export default function CreateClubOrderScreen() {
               </View>
 
               <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                Line total: {fmtTZS(asMoney(it.unit_price) * asQty(it.qty))}
+                {uiText("Line total:")}{fmtTZS(asMoney(it.unit_price) * asQty(it.qty))}
               </Text>
             </Card>
           ))}
@@ -326,14 +328,14 @@ export default function CreateClubOrderScreen() {
             ]}
           >
             <Ionicons name="add-circle-outline" size={18} color={theme.colors.text} />
-            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Add item</Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Add item")}</Text>
           </Pressable>
 
-          <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 6 }}>Note</Text>
+          <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 6 }}>{uiText("Note")}</Text>
           <TextInput
             value={note}
             onChangeText={setNote}
-            placeholder="Optional note..."
+            placeholder={uiText("Optional note...")}
             placeholderTextColor={theme.colors.muted}
             multiline
             style={{
@@ -350,14 +352,14 @@ export default function CreateClubOrderScreen() {
           />
 
           <Card style={{ padding: 12, backgroundColor: theme.colors.surface2, borderColor: theme.colors.borderSoft }}>
-            <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>Summary</Text>
+            <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>{uiText("Summary")}</Text>
             <View style={{ marginTop: 8, gap: 6 }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Total qty</Text>
+                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Total qty")}</Text>
                 <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{String(totalQty)}</Text>
               </View>
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Subtotal</Text>
+                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Subtotal")}</Text>
                 <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{fmtTZS(subtotal)}</Text>
               </View>
             </View>
@@ -383,12 +385,11 @@ export default function CreateClubOrderScreen() {
             ]}
           >
             <Ionicons name="send-outline" size={18} color={theme.colors.emerald} />
-            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{busy ? "Sending..." : "Submit Order"}</Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{busy ? uiText("Sending...") : uiText("Submit Order")}</Text>
           </Pressable>
 
           <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 12, lineHeight: 16 }}>
-            NOTE: Totals zinahesabiwa DB (trigger + function). Hii inalinda usahihi.
-          </Text>
+            {uiText("NOTE: Totals zinahesabiwa DB (trigger + function). Hii inalinda usahihi.")}</Text>
         </Card>
       </View>
     </Screen>

@@ -1,3 +1,5 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 import { supabase } from "@/src/supabase/supabaseClient";
 import { Card } from "@/src/ui/Card";
 import { Screen } from "@/src/ui/Screen";
@@ -90,6 +92,8 @@ const THREADS_TABLE_CANDIDATES = [
 ] as const;
 
 export default function ClubInboxStoreThreadsScreen() {
+ const systemText = useSystemMessageText();
+ const uiText = useCommonText();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const topPad = Math.max(insets.top, 10) + 8;
@@ -267,11 +271,11 @@ const openOrCreatePostThread = useCallback(async () => {
     }
 
     Alert.alert(
-      "Chat",
-      lastErr?.message ?? "Imeshindikana kufungua au kutengeneza thread ya post hii."
+      uiText("Chat"),
+      lastErr?.message ?? uiText("Imeshindikana kufungua au kutengeneza thread ya post hii.")
     );
   } catch (e: any) {
-    Alert.alert("Chat", e?.message ?? "Failed to open seller chat");
+    Alert.alert(uiText("Chat"), e?.message ?? uiText("Failed to open seller chat"));
   } finally {
     setOpeningPostChat(false);
   }
@@ -313,8 +317,7 @@ const openOrCreatePostThread = useCallback(async () => {
 
               <View style={{ flex: 1 }}>
                 <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-                  Store Inbox
-                </Text>
+                  {uiText("Store Inbox")}</Text>
                 <Text style={{ color: theme.colors.faint, fontWeight: "900", fontSize: 12 }} numberOfLines={1}>
                   {subtitle}
                 </Text>
@@ -342,7 +345,7 @@ const openOrCreatePostThread = useCallback(async () => {
               >
                 <Ionicons name="refresh" size={16} color={theme.colors.text} />
                 <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>
-                  {refreshing ? "..." : "Refresh"}
+                  {refreshing ? "..." : uiText("Refresh")}
                 </Text>
               </Pressable>
 
@@ -370,7 +373,7 @@ const openOrCreatePostThread = useCallback(async () => {
 
           {!!sourceUsed && (
             <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 11, marginTop: 10 }}>
-              Threads source: {sourceUsed}
+              {uiText("Threads source:")}{sourceUsed}
             </Text>
           )}
         </Card>
@@ -378,8 +381,7 @@ const openOrCreatePostThread = useCallback(async () => {
         {!!postId && (
           <Card style={{ padding: 14, gap: 10 }}>
             <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-              Zungumza kuhusu post hii
-            </Text>
+              {uiText("Zungumza kuhusu post hii")}</Text>
 
             {!!postCaption && (
               <Text style={{ color: theme.colors.muted, fontWeight: "800" }} numberOfLines={2}>
@@ -408,7 +410,7 @@ const openOrCreatePostThread = useCallback(async () => {
             >
               <Ionicons name="chatbubble-ellipses-outline" size={18} color={theme.colors.emerald} />
               <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                {openingPostChat ? "Opening..." : "Open Chat for This Post"}
+                {openingPostChat ? uiText("Opening...") : uiText("Open Chat for This Post")}
               </Text>
             </Pressable>
           </Card>
@@ -422,13 +424,12 @@ const openOrCreatePostThread = useCallback(async () => {
               backgroundColor: theme.colors.dangerSoft,
             }}
           >
-            <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{err}</Text>
+            <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{systemText(err)}</Text>
           </Card>
         )}
 
         <Text style={{ color: theme.colors.faint, fontWeight: "900", paddingHorizontal: 2 }}>
-          Conversations
-        </Text>
+          {uiText("Conversations")}</Text>
       </View>
     );
   }, [
@@ -443,7 +444,7 @@ const openOrCreatePostThread = useCallback(async () => {
     sourceUsed,
     subtitle,
     topPad,
-  ]);
+   uiText, systemText]);
 
   const renderItem = useCallback(
     ({ item }: { item: ThreadRow }) => {
@@ -490,7 +491,7 @@ const openOrCreatePostThread = useCallback(async () => {
                     {customerName}
                   </Text>
                   <Text style={{ color: theme.colors.muted, fontWeight: "800" }} numberOfLines={1}>
-                    {customerPhone ? customerPhone : "No phone"}
+                    {customerPhone ? customerPhone : uiText("No phone")}
                   </Text>
                 </View>
               </View>
@@ -536,15 +537,14 @@ const openOrCreatePostThread = useCallback(async () => {
 
               {item.post_id ? (
                 <Text style={{ color: theme.colors.muted, fontWeight: "900", fontSize: 12 }}>
-                  Linked to post
-                </Text>
+                  {uiText("Linked to post")}</Text>
               ) : null}
             </View>
           </Card>
         </Pressable>
       );
     },
-    [openThread]
+    [openThread, uiText]
   );
 
   return (
@@ -564,17 +564,14 @@ const openOrCreatePostThread = useCallback(async () => {
             <View style={{ paddingVertical: 18, alignItems: "center" }}>
               <ActivityIndicator />
               <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 10 }}>
-                Loading conversations...
-              </Text>
+                {uiText("Loading conversations...")}</Text>
             </View>
           ) : (
             <Card style={{ padding: 14 }}>
               <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-                No conversations yet
-              </Text>
+                {uiText("No conversations yet")}</Text>
               <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-                Hakuna chat bado kwa store hii.
-              </Text>
+                {uiText("Hakuna chat bado kwa store hii.")}</Text>
             </Card>
           )
         }

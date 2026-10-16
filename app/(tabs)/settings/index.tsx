@@ -1,3 +1,4 @@
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/(tabs)/settings/index.tsx
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Linking, Platform, Pressable, Text, View, useWindowDimensions } from "react-native";
@@ -391,6 +392,7 @@ function HeroContextCard({
   role: string;
   store: string;
 }) {
+ const uiText=useCommonText();
   return (
     <PremiumSectionCard
       style={{
@@ -428,8 +430,7 @@ function HeroContextCard({
                 letterSpacing: 0.8,
               }}
             >
-              BUSINESS COMMAND CENTER
-            </Text>
+              {uiText("BUSINESS COMMAND CENTER")}</Text>
 
             <Text
               style={{
@@ -467,8 +468,7 @@ function HeroContextCard({
         <View style={{ flexDirection: "row", gap: 10 }}>
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 11 }}>
-              Organization
-            </Text>
+              {uiText("Organization")}</Text>
             <Text
               style={{ color: UI.text, fontWeight: "900", fontSize: 18, marginTop: 4 }}
               numberOfLines={1}
@@ -479,8 +479,7 @@ function HeroContextCard({
 
           <View style={{ flex: 1 }}>
             <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 11 }}>
-              Role
-            </Text>
+              {uiText("Role")}</Text>
             <Text
               style={{ color: UI.text, fontWeight: "900", fontSize: 18, marginTop: 4 }}
               numberOfLines={1}
@@ -491,8 +490,7 @@ function HeroContextCard({
 
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 11 }}>
-              Active Store
-            </Text>
+              {uiText("Active Store")}</Text>
             <Text
               style={{ color: UI.text, fontWeight: "900", fontSize: 18, marginTop: 4 }}
               numberOfLines={1}
@@ -513,6 +511,7 @@ function LogoutCard({
   onLogout: () => void;
   isWeb?: boolean;
 }) {
+ const uiText = useCommonText();
   return (
     <PremiumSectionCard
       style={{
@@ -554,7 +553,7 @@ function LogoutCard({
 
         <View style={{ flex: 1 }}>
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
-            {isWeb ? "Browser Logout" : "Logout"}
+            {isWeb ? uiText("Browser Logout") : uiText("Logout")}
           </Text>
           <Text
             style={{
@@ -564,8 +563,7 @@ function LogoutCard({
               marginTop: 4,
             }}
           >
-            Exit this account on this device
-          </Text>
+            {uiText("Exit this account on this device")}</Text>
         </View>
 
         {Platform.OS === "web" ? (
@@ -579,6 +577,7 @@ function LogoutCard({
 }
 
 export default function MoreHome() {
+ const uiText=useCommonText();
   const router = useRouter();
   const org = useOrg();
   const { width } = useWindowDimensions();
@@ -724,7 +723,7 @@ export default function MoreHome() {
 
       router.replace(loginRoute as any);
     } catch (e: any) {
-      Alert.alert("Logout failed", e?.message ?? "Unknown error");
+      Alert.alert(uiText("Logout failed"), e?.message ?? uiText("Unknown error"));
       setLogoutBusy(false);
     }
    }, [isWeb, loginRoute, logoutBusy, org.activeOrgId, org.activeStoreId, router]);
@@ -737,10 +736,10 @@ export default function MoreHome() {
       return;
     }
 
-    Alert.alert("Logout", "Unataka kutoka kwenye account hii kwenye device hii?", [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert(uiText("Logout"), uiText("Unataka kutoka kwenye account hii kwenye device hii?"), [
+      { text: uiText("Cancel"), style: "cancel" },
       {
-        text: "Logout",
+        text: uiText("Logout"),
         style: "destructive",
         onPress: () => {
           void doLogoutNow();
@@ -762,8 +761,8 @@ export default function MoreHome() {
       await Linking.openURL(url);
     } catch {
       Alert.alert(
-        "Contact Support",
-        "Imeshindikana kufungua WhatsApp. Tafadhali wasiliana na ZETRA Support kupitia +255758014675."
+        uiText("Contact Support"),
+        uiText("Imeshindikana kufungua WhatsApp. Tafadhali wasiliana na ZETRA Support kupitia +255758014675.")
       );
     }
   }, [org.activeOrgName, org.activeRole, org.activeStoreName]);
@@ -772,8 +771,7 @@ export default function MoreHome() {
     <Screen scroll bottomPad={120}>
       <View style={{ paddingTop: 6 }}>
         <Text style={{ color: UI.text, fontWeight: "900", fontSize: 30 }}>
-          More
-        </Text>
+          {uiText("More")}</Text>
 
         <Text
           style={{
@@ -784,23 +782,22 @@ export default function MoreHome() {
             lineHeight: 22,
           }}
         >
-          Executive shortcuts for organization, reports, staff, billing, and preferences.
-        </Text>
+          {uiText("Executive shortcuts for organization, reports, staff, billing, and preferences.")}</Text>
       </View>
 
       <View style={{ marginTop: 14 }}>
         <HeroContextCard orgName={orgName} role={roleLabel} store={storeLabel} />
       </View>
 
-      <SectionTitle label="Operations" />
+      <SectionTitle label={uiText("Operations")} />
       <PremiumSectionCard accent="#2563EB" glow="rgba(37,99,235,0.13)">
         <Row
           icon="document-text-outline"
-          title="Business Statement"
+          title={uiText("Business Statement")}
           subtitle={
             canViewStatement
-              ? "Generate date-range statement: sales, expenses, profit, balances"
-              : "Owner only"
+              ? uiText("Generate date-range statement: sales, expenses, profit, balances")
+              : uiText("Owner only")
           }
           badge={canViewStatement ? "REPORTS" : "LOCKED"}
           disabled={!canViewStatement}
@@ -813,8 +810,8 @@ soft="rgba(37,99,235,0.13)"
 
         <Row
           icon="person-circle-outline"
-          title="Customers"
-          subtitle="View customer profiles, purchase history, call, SMS, and WhatsApp"
+          title={uiText("Customers")}
+          subtitle={uiText("View customer profiles, purchase history, call, SMS, and WhatsApp")}
           badge="CRM"
           onPress={() => router.push("/customers")}
 accent="#7C3AED"
@@ -825,13 +822,13 @@ soft="rgba(124,58,237,0.13)"
 
         <Row
           icon="people-outline"
-          title="Staff Management"
+          title={uiText("Staff Management")}
           subtitle={
             canManageStaff
-              ? "Add staff, assign stores, manage team access, and view staff sales"
+              ? uiText("Add staff, assign stores, manage team access, and view staff sales")
               : org.activeRole === "staff"
-                ? "Open your staff area and view My Sales"
-                : "Owner/Admin manages staff access"
+                ? uiText("Open your staff area and view My Sales")
+                : uiText("Owner/Admin manages staff access")
           }
           badge={
             canManageStaff
@@ -850,8 +847,8 @@ soft="rgba(245,158,11,0.14)"
 
         <Row
           icon="cash-outline"
-          title="Cashier Closing"
-          subtitle={isCashier ? "Close your shift and review cashier totals" : "Cashier only"}
+          title={uiText("Cashier Closing")}
+          subtitle={isCashier ? uiText("Close your shift and review cashier totals") : uiText("Cashier only")}
           badge={isCashier ? "CASHIER" : "LOCKED"}
           disabled={!isCashier}
           onPress={() => router.push("/(tabs)/settings/cashier-closing")}
@@ -860,12 +857,12 @@ soft="rgba(239,68,68,0.12)"
         />
       </PremiumSectionCard>
 
-     <SectionTitle label="Communication" />
+     <SectionTitle label={uiText("Communication")} />
 <PremiumSectionCard accent="#06B6D4" glow="rgba(6,182,212,0.13)">
   <Row
     icon="people-circle-outline"
-    title="Business Club"
-    subtitle="Open market, posts, business networking, and customer engagement"
+    title={uiText("Business Club")}
+    subtitle={uiText("Open market, posts, business networking, and customer engagement")}
     badge="CLUB"
     onPress={() => router.push("/(tabs)/club")}
     accent="#0F766E"
@@ -876,8 +873,8 @@ soft="rgba(239,68,68,0.12)"
 
   <Row
     icon="chatbubbles-outline"
-    title="Meeting Room"
-          subtitle="Create rooms, invite members, and collaborate in real time"
+    title={uiText("Meeting Room")}
+          subtitle={uiText("Create rooms, invite members, and collaborate in real time")}
           badge="LIVE"
           onPress={() => router.push("/(tabs)/settings/meeting-room")}
 accent="#06B6D4"
@@ -888,8 +885,8 @@ soft="rgba(6,182,212,0.13)"
 
         <Row
           icon="logo-whatsapp"
-          title="Contact Support"
-          subtitle="Need help? Chat with ZETRA support on WhatsApp"
+          title={uiText("Contact Support")}
+          subtitle={uiText("Need help? Chat with ZETRA support on WhatsApp")}
           badge="HELP"
           onPress={openZetraSupportWhatsApp}
 accent="#22C55E"
@@ -897,11 +894,11 @@ soft="rgba(34,197,94,0.13)"
         />
       </PremiumSectionCard>
 
-      <SectionTitle label="Organization" />
+      <SectionTitle label={uiText("Organization")} />
       <PremiumSectionCard accent="#8B5CF6" glow="rgba(139,92,246,0.13)">
         <Row
           icon="business-outline"
-          title="Organization"
+          title={uiText("Organization")}
           subtitle={orgSummary}
           badge="WORKSPACE"
           onPress={() => router.push("/(tabs)/settings/organization")}
@@ -913,11 +910,11 @@ soft="rgba(139,92,246,0.13)"
 
         <Row
           icon="card-outline"
-          title="Subscription & Billing"
+          title={uiText("Subscription & Billing")}
           subtitle={
             canManageBilling
-              ? "Manage plan, duration, activation, and subscription control"
-              : "Owner only"
+              ? uiText("Manage plan, duration, activation, and subscription control")
+              : uiText("Owner only")
           }
           badge={canManageBilling ? "OWNER" : "LOCKED"}
           disabled={!canManageBilling}
@@ -927,12 +924,12 @@ soft="rgba(249,115,22,0.13)"
         />
       </PremiumSectionCard>
 
-      <SectionTitle label="Regional & Localization" />
+      <SectionTitle label={uiText("Regional & Localization")} />
       <PremiumSectionCard accent="#0EA5E9" glow="rgba(14,165,233,0.13)">
         <Row
           icon="globe-outline"
-          title="Regional Settings"
-          subtitle="Language • Currency • Timezone • Date • Number"
+          title={uiText("Regional Settings")}
+          subtitle={uiText("Language • Currency • Timezone • Date • Number")}
           badge="GLOBAL"
           onPress={() => router.push("/(tabs)/settings/regional")}
 accent="#0EA5E9"
@@ -942,15 +939,15 @@ soft="rgba(14,165,233,0.13)"
 
       {isGrowthPartner ? (
         <>
-          <SectionTitle label="Growth Partner" />
+          <SectionTitle label={uiText("Growth Partner")} />
           <PremiumSectionCard>
             <Row
               icon="people-outline"
-              title="Partner Dashboard"
+              title={uiText("Partner Dashboard")}
               subtitle={
                 partnerCode
-                  ? `Code: ${partnerCode} • Status: ${partnerStatus || "ACTIVE"}`
-                  : `Status: ${partnerStatus || "ACTIVE"}`
+                  ? uiText("Code: {p0} • Status: {p1}", {p0: (partnerCode), p1: (partnerStatus || "ACTIVE")})
+                  : uiText("Status: {p0}", {p0: (partnerStatus || "ACTIVE")})
               }
               badge={partnerStatus || "PARTNER"}
               onPress={() => router.push("/partner")}
@@ -959,15 +956,15 @@ soft="rgba(14,165,233,0.13)"
         </>
       ) : null}
 
-      <SectionTitle label="Preferences" />
+      <SectionTitle label={uiText("Preferences")} />
       <PremiumSectionCard accent="#A855F7" glow="rgba(168,85,247,0.13)">
         <Row
           icon="sparkles-outline"
-          title="AI Preferences"
-          subtitle="Language, tone, assistant behavior (coming next)"
+          title={uiText("AI Preferences")}
+          subtitle={uiText("Language, tone, assistant behavior (coming next)")}
           badge="NEXT"
           onPress={() =>
-            Alert.alert("Coming next", "AI Preferences itaingia kwenye hatua inayofuata.")
+            Alert.alert(uiText("Coming next"), uiText("AI Preferences itaingia kwenye hatua inayofuata."))
           }
         />
 
@@ -975,30 +972,30 @@ soft="rgba(14,165,233,0.13)"
 
         <Row
           icon="shield-checkmark-outline"
-          title="Security & Privacy"
-          subtitle="Permissions, sensitive data rules (coming next)"
+          title={uiText("Security & Privacy")}
+          subtitle={uiText("Permissions, sensitive data rules (coming next)")}
           badge="NEXT"
           onPress={() =>
             Alert.alert(
-              "Coming next",
-              "Security & Privacy settings tutaongeza baada ya Reports flow kuwa stable."
+              uiText("Coming next"),
+              uiText("Security & Privacy settings tutaongeza baada ya Reports flow kuwa stable.")
             )
           }
         />
       </PremiumSectionCard>
 
-      <SectionTitle label="Account & Privacy" />
+      <SectionTitle label={uiText("Account & Privacy")} />
       <PremiumSectionCard accent="#10B981" glow="rgba(16,185,129,0.13)">
         <Row
           icon="shield-half-outline"
-          title="Account & Privacy"
-          subtitle="Manage account safety, privacy controls, and Danger Zone"
+          title={uiText("Account & Privacy")}
+          subtitle={uiText("Manage account safety, privacy controls, and Danger Zone")}
           badge="SECURE"
           onPress={() => router.push("/(tabs)/settings/account-privacy")}
         />
       </PremiumSectionCard>
 
-      <SectionTitle label="Account" />
+      <SectionTitle label={uiText("Account")} />
       <LogoutCard onLogout={onLogout} isWeb={isDesktopWeb} />
 
       {logoutBusy ? (
@@ -1010,8 +1007,7 @@ soft="rgba(14,165,233,0.13)"
             marginTop: 10,
           }}
         >
-          Logging out...
-        </Text>
+          {uiText("Logging out...")}</Text>
       ) : null}
 
       <View style={{ height: theme.spacing.gap }} />
@@ -1023,8 +1019,7 @@ soft="rgba(14,165,233,0.13)"
           fontSize: 12,
         }}
       >
-        ZETRA • Global-grade foundation
-      </Text>
+        {uiText("ZETRA • Global-grade foundation")}</Text>
     </Screen>
   );
 }

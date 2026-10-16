@@ -1,4 +1,5 @@
-﻿// app/(tabs)/stores/index.tsx
+﻿import {useCommonText} from "@/src/i18n/useCommonText";
+// app/(tabs)/stores/index.tsx
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
@@ -323,6 +324,7 @@ function CompactSettingRow({
 }
 
 export default function StoresTabScreen() {
+ const uiText=useCommonText();
   const router = useRouter();
 
   const {
@@ -582,7 +584,7 @@ const MOBILE_SIDE_PAD = 12;
   const toggleStoreCredit = useCallback(
     async (storeId: string, next: boolean) => {
       if (!canManage) {
-        Alert.alert("No Access", "Owner/Admin only.");
+        Alert.alert(uiText("No Access"), uiText("Owner/Admin only."));
         return;
       }
 
@@ -611,7 +613,7 @@ const MOBILE_SIDE_PAD = 12;
           await loadCreditFlags();
         } catch (err2: any) {
           setCreditFlagByStoreId((p) => ({ ...p, [storeId]: !next }));
-          Alert.alert("Failed", err2?.message ?? err1?.message ?? "Imeshindikana kubadili setting.");
+          Alert.alert(uiText("Failed"), err2?.message ?? err1?.message ?? uiText("Imeshindikana kubadili setting."));
         }
       } finally {
         setCreditFlagSaving((p) => ({ ...p, [storeId]: false }));
@@ -681,7 +683,7 @@ const MOBILE_SIDE_PAD = 12;
   const toggleStoreExpense = useCallback(
     async (storeId: string, next: boolean) => {
       if (!canManage) {
-        Alert.alert("No Access", "Owner/Admin only.");
+        Alert.alert(uiText("No Access"), uiText("Owner/Admin only."));
         return;
       }
 
@@ -711,8 +713,8 @@ const MOBILE_SIDE_PAD = 12;
         } catch (err2: any) {
           setExpenseFlagByStoreId((p) => ({ ...p, [storeId]: !next }));
           Alert.alert(
-            "Failed",
-            err2?.message ?? err1?.message ?? "Imeshindikana kubadili expense setting."
+            uiText("Failed"),
+            err2?.message ?? err1?.message ?? uiText("Imeshindikana kubadili expense setting.")
           );
         }
       } finally {
@@ -773,7 +775,7 @@ const MOBILE_SIDE_PAD = 12;
   const toggleStoreMovement = useCallback(
     async (storeId: string, next: boolean) => {
       if (!canManage) {
-        Alert.alert("No Access", "Owner/Admin only.");
+        Alert.alert(uiText("No Access"), uiText("Owner/Admin only."));
         return;
       }
 
@@ -792,8 +794,8 @@ const MOBILE_SIDE_PAD = 12;
       } catch (err1: any) {
         setMovementFlagByStoreId((p) => ({ ...p, [storeId]: !next }));
         Alert.alert(
-          "Failed",
-          err1?.message ?? "Imeshindikana kubadili movement setting."
+          uiText("Failed"),
+          err1?.message ?? uiText("Imeshindikana kubadili movement setting.")
         );
       } finally {
         setMovementFlagSaving((p) => ({ ...p, [storeId]: false }));
@@ -870,7 +872,7 @@ if (!activeOrgId) {
   const toggleStoreSalesMode = useCallback(
     async (storeId: string, cashierEnabled: boolean) => {
       if (!canManage) {
-        Alert.alert("No Access", "Owner/Admin only.");
+        Alert.alert(uiText("No Access"), uiText("Owner/Admin only."));
         return;
       }
 
@@ -914,9 +916,9 @@ if (!activeOrgId) {
         }));
 
         Alert.alert(
-          "Sales Mode",
+          uiText("Sales Mode"),
           err?.message ??
-            "Sales Mode bado haijaweza kuhifadhiwa. Database support itaongezwa baada ya kukamilisha Sales UI."
+            uiText("Sales Mode bado haijaweza kuhifadhiwa. Database support itaongezwa baada ya kukamilisha Sales UI.")
         );
       } finally {
         setSalesModeSaving((prev) => ({
@@ -990,7 +992,7 @@ if (!activeOrgId) {
 
   const openManage = async (storeId: string, storeName: string) => {
     if (!canManage) {
-      Alert.alert("No Access", "Owner/Admin only.");
+      Alert.alert(uiText("No Access"), uiText("Owner/Admin only."));
       return;
     }
     setManageStoreId(storeId);
@@ -1094,7 +1096,7 @@ const loadStoreProductsPreview = useCallback(async (storeId: string) => {
 
 const saveRenameStore = useCallback(async () => {
   if (!canManage) {
-    Alert.alert("No Access", "Owner/Admin only.");
+    Alert.alert(uiText("No Access"), uiText("Owner/Admin only."));
     return;
   }
 
@@ -1103,17 +1105,17 @@ const saveRenameStore = useCallback(async () => {
   const nextName = String(renameValue ?? "").trim();
 
   if (!orgId) {
-    Alert.alert("Missing", "Organization haijapatikana.");
+    Alert.alert(uiText("Missing"), uiText("Organization haijapatikana."));
     return;
   }
 
   if (!sid) {
-    Alert.alert("Missing", "Store haijapatikana.");
+    Alert.alert(uiText("Missing"), uiText("Store haijapatikana."));
     return;
   }
 
   if (!nextName) {
-    Alert.alert("Missing", "Weka jina jipya la store.");
+    Alert.alert(uiText("Missing"), uiText("Weka jina jipya la store."));
     return;
   }
 
@@ -1139,10 +1141,10 @@ const saveRenameStore = useCallback(async () => {
       await setActiveStoreId(sid);
     }
 
-    Alert.alert("Success ✅", "Store name updated successfully.");
+    Alert.alert(uiText("Success ✅"), uiText("Store name updated successfully."));
     closeRename();
   } catch (err: any) {
-    Alert.alert("Rename failed", err?.message ?? "Unknown error");
+    Alert.alert(uiText("Rename failed"), err?.message ?? uiText("Unknown error"));
   } finally {
     setRenameSaving(false);
   }
@@ -1164,7 +1166,7 @@ const saveRenameStore = useCallback(async () => {
 
   const closeStoreNow = useCallback(async () => {
     if (!canManage) {
-      Alert.alert("No Access", "Owner/Admin only.");
+      Alert.alert(uiText("No Access"), uiText("Owner/Admin only."));
       return;
     }
 
@@ -1174,22 +1176,22 @@ const saveRenameStore = useCallback(async () => {
     const typedName = String(closeConfirmText ?? "").trim();
 
     if (!orgId) {
-      Alert.alert("Missing", "Organization haijapatikana.");
+      Alert.alert(uiText("Missing"), uiText("Organization haijapatikana."));
       return;
     }
 
     if (!sid) {
-      Alert.alert("Missing", "Store haijapatikana.");
+      Alert.alert(uiText("Missing"), uiText("Store haijapatikana."));
       return;
     }
 
     if (!closingName) {
-      Alert.alert("Missing", "Store name haijapatikana.");
+      Alert.alert(uiText("Missing"), uiText("Store name haijapatikana."));
       return;
     }
 
     if (typedName !== closingName) {
-      Alert.alert("Confirmation failed", "Andika jina la store sawa kabisa ili kuendelea.");
+      Alert.alert(uiText("Confirmation failed"), uiText("Andika jina la store sawa kabisa ili kuendelea."));
       return;
     }
 
@@ -1222,10 +1224,10 @@ if (wasActive) {
         }
       }
 
-      Alert.alert("Success ✅", "Store imefungwa vizuri.");
+      Alert.alert(uiText("Success ✅"), uiText("Store imefungwa vizuri."));
       closeCloseStore();
     } catch (err: any) {
-      Alert.alert("Close failed", err?.message ?? "Unknown error");
+      Alert.alert(uiText("Close failed"), err?.message ?? uiText("Unknown error"));
     } finally {
       setCloseSaving(false);
     }
@@ -1260,7 +1262,7 @@ if (wasActive) {
 
   const assign = async (storeId: string, membershipId: string | null, label: string) => {
     if (!canManage) {
-      Alert.alert("No Access", "Owner/Admin only.");
+      Alert.alert(uiText("No Access"), uiText("Owner/Admin only."));
       return;
     }
     if (!storeId) return;
@@ -1273,12 +1275,12 @@ if (wasActive) {
       });
       if (e) throw e;
 
-      Alert.alert("Success ✅", label);
+      Alert.alert(uiText("Success ✅"), label);
       await refresh();
       await loadManagers();
       closeManage();
     } catch (err: any) {
-      Alert.alert("Action failed", err?.message ?? "Unknown error");
+      Alert.alert(uiText("Action failed"), err?.message ?? uiText("Unknown error"));
     } finally {
       setSavingAssign(false);
     }
@@ -1294,7 +1296,7 @@ if (wasActive) {
       return;
     }
     setActiveStoreId(storeId);
-    Alert.alert("Selected ✅", `Active store: ${storeName}`);
+    Alert.alert(uiText("Selected ✅"), uiText("Active store: {p0}", {p0: (storeName)}));
   };
 
 const onRefreshAll = async () => {
@@ -1309,7 +1311,7 @@ const onRefreshAll = async () => {
 
   const openMovement = useCallback(() => {
     if (!activeStoreId) {
-      Alert.alert("Select store", "Chagua store kwanza (Active Store).");
+      Alert.alert(uiText("Select store"), uiText("Chagua store kwanza (Active Store)."));
       return;
     }
     // @ts-ignore
@@ -1344,8 +1346,7 @@ const onRefreshAll = async () => {
         >
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={{ fontSize: isDesktopWeb ? 34 : 26, fontWeight: "900", color: TEXT }}>
-              Stores
-            </Text>
+              {uiText("Stores")}</Text>
 
             <Text
               style={{
@@ -1357,9 +1358,7 @@ const onRefreshAll = async () => {
                 maxWidth: isDesktopWeb ? 760 : undefined,
               }}
             >
-              Simamia stores zako, badili active store, fungua inventory, na dhibiti ruhusa za staff
-              kwa muonekano wa desktop ulio wazi, mpana, na wa biashara halisi.
-            </Text>
+              {uiText("Simamia stores zako, badili active store, fungua inventory, na dhibiti ruhusa za staff kwa muonekano wa desktop ulio wazi, mpana, na wa biashara halisi.")}</Text>
           </View>
 
           <View
@@ -1379,7 +1378,7 @@ const onRefreshAll = async () => {
               }}
             >
               <HeaderActionButton
-                title={busy ? "Refreshing..." : "Refresh"}
+                title={busy ? uiText("Refreshing...") : uiText("Refresh")}
                 icon="refresh"
                 onPress={onRefreshAll}
                 disabled={busy}
@@ -1401,7 +1400,7 @@ const onRefreshAll = async () => {
                 }}
               >
                 <HeaderActionButton
-                  title="Add Store"
+                  title={uiText("Add Store")}
                   icon="add"
                   onPress={() => {
                     // @ts-ignore
@@ -1465,12 +1464,10 @@ const onRefreshAll = async () => {
               letterSpacing: 1,
             }}
           >
-            STORE WORKSPACE
-          </Text>
+            {uiText("STORE WORKSPACE")}</Text>
 
           <Text style={{ color: "rgba(15,23,42,0.66)", fontWeight: "900", marginTop: 2 }}>
-            Organization
-          </Text>
+            {uiText("Organization")}</Text>
 
           <Text style={{ fontSize: 24, fontWeight: "900", color: "#0F172A" }}>
             {activeOrgName ?? "—"}
@@ -1488,8 +1485,7 @@ const onRefreshAll = async () => {
               }}
             >
               <Text style={{ color: "rgba(15,23,42,0.56)", fontWeight: "900", fontSize: 12 }}>
-                Role
-              </Text>
+                {uiText("Role")}</Text>
               <Text style={{ color: "#0F172A", fontWeight: "900", marginTop: 5 }}>
                 {activeRole ?? "—"}
               </Text>
@@ -1506,8 +1502,7 @@ const onRefreshAll = async () => {
               }}
             >
               <Text style={{ color: "rgba(15,23,42,0.56)", fontWeight: "900", fontSize: 12 }}>
-                Active Store
-              </Text>
+                {uiText("Active Store")}</Text>
               <Text style={{ color: "#0F172A", fontWeight: "900", marginTop: 5 }}>
                 {activeStoreName ?? "—"}
               </Text>
@@ -1515,8 +1510,7 @@ const onRefreshAll = async () => {
           </View>
 
           <Text style={{ color: "rgba(15,23,42,0.70)", fontWeight: "800", lineHeight: 20, marginTop: 6 }}>
-            Chagua store sahihi kama active context kabla ya kufanya inventory, movement, au ruhusa za staff.
-          </Text>
+            {uiText("Chagua store sahihi kama active context kabla ya kufanya inventory, movement, au ruhusa za staff.")}</Text>
         </View>
 
          <View
@@ -1530,8 +1524,7 @@ const onRefreshAll = async () => {
   }}
 >
   <Text style={{ color: FAINT, fontWeight: "900", fontSize: 11, letterSpacing: 0.8 }}>
-    QUICK ACTIONS
-  </Text>
+    {uiText("QUICK ACTIONS")}</Text>
 
   <View
     style={{
@@ -1550,7 +1543,7 @@ const onRefreshAll = async () => {
       }
 
       if (isActivePremiumType) {
-        Alert.alert("Not Available", "Inventory haitumiki kwa Capital Recovery store.");
+        Alert.alert(uiText("Not Available"), uiText("Inventory haitumiki kwa Capital Recovery store."));
         return;
       }
       // @ts-ignore
@@ -1574,19 +1567,18 @@ const onRefreshAll = async () => {
     })}
   >
     <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: isDesktopWeb ? 14.5 : 19 }}>
-      Open Inventory
-    </Text>
+      {uiText("Open Inventory")}</Text>
     <Text style={{ color: "rgba(255,255,255,0.82)", fontWeight: isDesktopWeb ? "600" : "900", marginTop: isDesktopWeb ? 5 : 6, fontSize: isDesktopWeb ? 12.5 : 13, lineHeight: isDesktopWeb ? 18 : 19 }}>
       {isActivePremiumType
-        ? "Inventory imezimwa kwa store type hii"
-        : "Fungua inventory ya active store"}
+        ? uiText("Inventory imezimwa kwa store type hii")
+        : uiText("Fungua inventory ya active store")}
     </Text>
   </Pressable>
 
   <Pressable
     onPress={() => {
       if (isActivePremiumType) {
-        Alert.alert("Not Available", "Stock Movement haitumiki kwa Capital Recovery store.");
+        Alert.alert(uiText("Not Available"), uiText("Stock Movement haitumiki kwa Capital Recovery store."));
         return;
       }
       if (orgSubscriptionExpired) {
@@ -1614,12 +1606,11 @@ const onRefreshAll = async () => {
     })}
   >
     <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: isDesktopWeb ? 14.5 : 19 }}>
-      Stock Movement
-    </Text>
+      {uiText("Stock Movement")}</Text>
     <Text style={{ color: "rgba(255,255,255,0.82)", fontWeight: isDesktopWeb ? "600" : "900", marginTop: isDesktopWeb ? 5 : 6, fontSize: isDesktopWeb ? 12.5 : 13, lineHeight: isDesktopWeb ? 18 : 19 }}>
       {isActivePremiumType
-        ? "Movement imezimwa kwa store type hii"
-        : "Hamisha stock kutoka active store"}
+        ? uiText("Movement imezimwa kwa store type hii")
+        : uiText("Hamisha stock kutoka active store")}
     </Text>
   </Pressable>
 
@@ -1650,21 +1641,19 @@ const onRefreshAll = async () => {
     })}
   >
     <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: isDesktopWeb ? 14.5 : 19 }}>
-      Supplier History
-    </Text>
+      {uiText("Supplier History")}</Text>
     <Text style={{ color: "rgba(255,255,255,0.82)", fontWeight: isDesktopWeb ? "600" : "900", marginTop: isDesktopWeb ? 5 : 6, fontSize: isDesktopWeb ? 12.5 : 13, lineHeight: isDesktopWeb ? 18 : 19 }}>
-      Angalia suppliers, mzigo waliouleta, invoice/ref na historia ya stock
-    </Text>
+      {uiText("Angalia suppliers, mzigo waliouleta, invoice/ref na historia ya stock")}</Text>
   </Pressable>
 <Pressable
     onPress={() => {
       if (!activeOrgId) {
-        Alert.alert("Missing organization", "Organization haijapatikana.");
+        Alert.alert(uiText("Missing organization"), uiText("Organization haijapatikana."));
         return;
       }
 
       if (!activeStoreId) {
-        Alert.alert("Select store", "Chagua active store kwanza.");
+        Alert.alert(uiText("Select store"), uiText("Chagua active store kwanza."));
         return;
       }
 
@@ -1695,21 +1684,19 @@ const onRefreshAll = async () => {
     })}
   >
     <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: isDesktopWeb ? 14.5 : 19 }}>
-  Sold Items
-</Text>
+  {uiText("Sold Items")}</Text>
     <Text style={{ color: "rgba(255,255,255,0.82)", fontWeight: isDesktopWeb ? "600" : "900", marginTop: isDesktopWeb ? 5 : 6, fontSize: isDesktopWeb ? 12.5 : 13, lineHeight: isDesktopWeb ? 18 : 19 }}>
-      Bidhaa zilizouzwa leo, jana, wiki au tarehe maalum
-    </Text>
+      {uiText("Bidhaa zilizouzwa leo, jana, wiki au tarehe maalum")}</Text>
   </Pressable>
   <Pressable
     onPress={() => {
       if (!activeOrgId) {
-        Alert.alert("Missing organization", "Organization haijapatikana.");
+        Alert.alert(uiText("Missing organization"), uiText("Organization haijapatikana."));
         return;
       }
 
       if (!activeStoreId) {
-        Alert.alert("Select store", "Chagua active store kwanza.");
+        Alert.alert(uiText("Select store"), uiText("Chagua active store kwanza."));
         return;
       }
 
@@ -1741,22 +1728,20 @@ const onRefreshAll = async () => {
     })}
   >
     <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: isDesktopWeb ? 14.5 : 19 }}>
-      Items Overview
-    </Text>
+      {uiText("Items Overview")}</Text>
     <Text style={{ color: "rgba(255,255,255,0.82)", fontWeight: isDesktopWeb ? "600" : "900", marginTop: isDesktopWeb ? 5 : 6, fontSize: isDesktopWeb ? 12.5 : 13, lineHeight: isDesktopWeb ? 18 : 19 }}>
-      Angalia bidhaa, picha, quantity na bei kwa store au organization
-    </Text>
+      {uiText("Angalia bidhaa, picha, quantity na bei kwa store au organization")}</Text>
   </Pressable>
 
   <Pressable
     onPress={() => {
       if (!activeOrgId) {
-        Alert.alert("Missing organization", "Organization haijapatikana.");
+        Alert.alert(uiText("Missing organization"), uiText("Organization haijapatikana."));
         return;
       }
 
       if (!activeStoreId) {
-        Alert.alert("Select store", "Chagua active store kwanza.");
+        Alert.alert(uiText("Select store"), uiText("Chagua active store kwanza."));
         return;
       }
 
@@ -1788,63 +1773,26 @@ const onRefreshAll = async () => {
     })}
   >
     <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: isDesktopWeb ? 14.5 : 19 }}>
-      Orders
-    </Text>
+      {uiText("Orders")}</Text>
     <Text style={{ color: "rgba(255,255,255,0.82)", fontWeight: isDesktopWeb ? "600" : "900", marginTop: isDesktopWeb ? 5 : 6, fontSize: isDesktopWeb ? 12.5 : 13, lineHeight: isDesktopWeb ? 18 : 19 }}>
-      Reservations na Pre Orders kwa active store hii
-    </Text>
+      {uiText("Reservations na Pre Orders kwa active store hii")}</Text>
   </Pressable>
   </View>
 
   <Text style={{ color: MUTED, fontWeight: "800", lineHeight: 18 }}>
-    Stores zilizofungwa (LOCKED) zitaonekana hapa, lakini haziwezi kuwa ACTIVE mpaka
-    u-upgrade plan.
-  </Text>
+    {uiText("Stores zilizofungwa (LOCKED) zitaonekana hapa, lakini haziwezi kuwa ACTIVE mpaka u-upgrade plan.")}</Text>
 </View>
         </View>
 
         <View style={{ gap: 4 }}>
           <Text style={{ fontWeight: "900", fontSize: 16, color: TEXT }}>
-            Available Stores
-          </Text>
+            {uiText("Available Stores")}</Text>
           <Text style={{ color: MUTED, fontWeight: "800", lineHeight: 18 }}>
-            Desktop view imepangwa ili cards za stores zisibane na kila store ionekane kwa nafasi
-            yake vizuri.
-          </Text>
+            {uiText("Desktop view imepangwa ili cards za stores zisibane na kila store ionekane kwa nafasi yake vizuri.")}</Text>
         </View>
       </View>
     );
-  }, [
-    TEXT,
-    MUTED,
-    FAINT,
-    DANGER,
-    DANGER_BORDER,
-    DANGER_SOFT,
-    BORDER_SOFT,
-    activeOrgName,
-    activeRole,
-    activeOrgId,
-    activeStoreId,
-    activeStoreName,
-    activeStoreType,
-    canManage,
-    error,
-    isDesktopWeb,
-    loading,
-    mgrLoading,
-   creditFlagLoading,
-expenseFlagLoading,
-movementFlagLoading,
-salesModeLoading,
-    onRefreshAll,
-    refreshing,
-    router,
-    openMovement,
-    openUpgrade,
-    orgSubscriptionExpired,
-    radiusXL,
-  ]);
+  }, [TEXT, MUTED, FAINT, DANGER, DANGER_BORDER, DANGER_SOFT, BORDER_SOFT, activeOrgName, activeRole, activeOrgId, activeStoreId, activeStoreName, activeStoreType, canManage, error, isDesktopWeb, loading, mgrLoading, creditFlagLoading, expenseFlagLoading, movementFlagLoading, salesModeLoading, onRefreshAll, refreshing, router, openMovement, openUpgrade, orgSubscriptionExpired, radiusXL, uiText]);
 
   return (
     <Screen
@@ -2025,9 +1973,9 @@ fontSize: 11.5,
                         }}
                         numberOfLines={1}
                       >
-                        Managed by:{" "}
+                        {uiText("Managed by:")}{" "}
                        <Text style={{ color: visual.text, fontWeight: "900" }}>
-  {managedBy}
+  {((mgr?.email ?? "").trim() || uiText("UNASSIGNED"))}
 </Text>
                       </Text>
                     </View>
@@ -2045,8 +1993,7 @@ fontSize: 11.5,
                           }}
                         >
                           <Text style={{ color: EMERALD, fontWeight: "900", fontSize: 11.5 }}>
-                            ACTIVE
-                          </Text>
+                            {uiText("ACTIVE")}</Text>
                         </View>
                       ) : isAllowed ? (
                         <View
@@ -2060,8 +2007,7 @@ fontSize: 11.5,
                           }}
                         >
                           <Text style={{ color: MUTED, fontWeight: "900", fontSize: 11.5 }}>
-                            Tap to activate ›
-                          </Text>
+                            {uiText("Tap to activate ›")}</Text>
                         </View>
                       ) : null}
 
@@ -2098,8 +2044,7 @@ fontSize: 11.5,
                           }}
                         >
                           <Text style={{ color: FAINT, fontWeight: "900", fontSize: 11.5 }}>
-                            LOCKED
-                          </Text>
+                            {uiText("LOCKED")}</Text>
                         </View>
                       ) : null}
                     </View>
@@ -2109,16 +2054,13 @@ fontSize: 11.5,
 
                   {!isAllowed ? (
                     <Text style={{ color: FAINT, fontWeight: "900", fontSize: 12, lineHeight: 18 }}>
-                      🔒 LOCKED — upgrade plan ili u-activate.
-                    </Text>
+                      {uiText("🔒 LOCKED — upgrade plan ili u-activate.")}</Text>
                   ) : !cardIsActive ? (
                     <Text style={{ color: FAINT, fontWeight: "800", fontSize: 12, lineHeight: 18 }}>
-                      Bonyeza kadi hii kuchagua store hii kama Active Store.
-                    </Text>
+                      {uiText("Bonyeza kadi hii kuchagua store hii kama Active Store.")}</Text>
                   ) : (
                    <Text style={{ color: visual.accent, fontWeight: "900", fontSize: 13, lineHeight: 20 }}>
-  ✓ Hii ndiyo Active Store inayotumika sasa.
-</Text>
+  {uiText("✓ Hii ndiyo Active Store inayotumika sasa.")}</Text>
                   )}
                 </View>
 
@@ -2141,11 +2083,9 @@ fontSize: 11.5,
       })}
     >
       <Text style={{ color: TEXT, fontWeight: "900", fontSize: 13.5 }}>
-        Open Capital Recovery Workspace
-      </Text>
+        {uiText("Open Capital Recovery Workspace")}</Text>
       <Text style={{ color: MUTED, fontWeight: "800", marginTop: 3, fontSize: 11.5 }}>
-        Fungua dashboard maalum ya Capital Recovery
-      </Text>
+        {uiText("Fungua dashboard maalum ya Capital Recovery")}</Text>
     </Pressable>
   </View>
 ) : null}
@@ -2169,11 +2109,9 @@ fontSize: 11.5,
       })}
     >
       <Text style={{ color: TEXT, fontWeight: "900", fontSize: 13.5 }}>
-        Open Field Procurement Workspace
-      </Text>
+        {uiText("Open Field Procurement Workspace")}</Text>
       <Text style={{ color: MUTED, fontWeight: "800", marginTop: 3, fontSize: 11.5 }}>
-        Fungua dashboard ya field wallet, manunuzi, matumizi na balance
-      </Text>
+        {uiText("Fungua dashboard ya field wallet, manunuzi, matumizi na balance")}</Text>
     </Pressable>
   </View>
 ) : null}
@@ -2202,11 +2140,9 @@ fontSize: 11.5,
       >
         <View style={{ flex: 1 }}>
           <Text style={{ color: TEXT, fontWeight: "900", fontSize: 14 }}>
-            Store Actions
-          </Text>
+            {uiText("Store Actions")}</Text>
           <Text style={{ color: MUTED, fontWeight: "800", marginTop: 4, fontSize: 12 }}>
-            Settings, products, rename na close store
-          </Text>
+            {uiText("Settings, products, rename na close store")}</Text>
         </View>
 
         <Text style={{ color: actionsOpen ? EMERALD : MUTED, fontWeight: "900", fontSize: 18 }}>
@@ -2225,11 +2161,11 @@ fontSize: 11.5,
     {supportsSalesMode ? (
       <>
         <CompactSettingRow
-          title="Cashier Mode"
+          title={uiText("Cashier Mode")}
           subtitle={
             cashierModeEnabled
-              ? "Cashiers ndiyo watatumika kukamilisha mauzo katika store hii"
-              : "Mauzo yatakamilishwa moja kwa moja kupitia Complete Sale"
+              ? uiText("Cashiers ndiyo watatumika kukamilisha mauzo katika store hii")
+              : uiText("Mauzo yatakamilishwa moja kwa moja kupitia Complete Sale")
           }
           value={cashierModeEnabled}
           onValueChange={(v) =>
@@ -2259,8 +2195,7 @@ fontSize: 11.5,
               fontSize: 11.5,
             }}
           >
-            Saving sales mode...
-          </Text>
+            {uiText("Saving sales mode...")}</Text>
         ) : null}
 
         <View
@@ -2274,8 +2209,8 @@ fontSize: 11.5,
     ) : null}
 
     <CompactSettingRow
-      title="Staff credit"
-          subtitle="Staff arekodi na aone credit ya store hii"
+      title={uiText("Staff credit")}
+          subtitle={uiText("Staff arekodi na aone credit ya store hii")}
           value={staffCreditEnabled}
           onValueChange={(v) => toggleStoreCredit(storeId, v)}
           disabled={creditSaving}
@@ -2287,13 +2222,12 @@ fontSize: 11.5,
 
         {creditSaving ? (
           <Text style={{ color: FAINT, marginTop: -4, fontWeight: "800", fontSize: 11.5 }}>
-            Saving credit setting...
-          </Text>
+            {uiText("Saving credit setting...")}</Text>
         ) : null}
 
         <CompactSettingRow
-          title="Staff expense"
-          subtitle="Ruhusu staff kurekodi expense katika store hii"
+          title={uiText("Staff expense")}
+          subtitle={uiText("Ruhusu staff kurekodi expense katika store hii")}
           value={staffExpenseEnabled}
           onValueChange={(v) => toggleStoreExpense(storeId, v)}
           disabled={expenseSaving}
@@ -2305,13 +2239,12 @@ fontSize: 11.5,
 
         {expenseSaving ? (
           <Text style={{ color: FAINT, marginTop: -4, fontWeight: "800", fontSize: 11.5 }}>
-            Saving expense setting...
-          </Text>
+            {uiText("Saving expense setting...")}</Text>
         ) : null}
 
         <CompactSettingRow
-          title="Stock movement"
-          subtitle="Ruhusu staff kuhamisha stock kutoka store hii"
+          title={uiText("Stock movement")}
+          subtitle={uiText("Ruhusu staff kuhamisha stock kutoka store hii")}
           value={staffMovementEnabled}
           onValueChange={(v) => toggleStoreMovement(storeId, v)}
           disabled={movementSaving}
@@ -2323,8 +2256,7 @@ fontSize: 11.5,
 
         {movementSaving ? (
           <Text style={{ color: FAINT, marginTop: -4, fontWeight: "800", fontSize: 11.5 }}>
-            Saving movement setting...
-          </Text>
+            {uiText("Saving movement setting...")}</Text>
         ) : null}
 <Pressable
   onPress={() => {
@@ -2347,11 +2279,9 @@ fontSize: 11.5,
   })}
 >
   <Text style={{ color: TEXT, fontWeight: "900", fontSize: 14 }}>
-    🏪 Store Profile
-  </Text>
+    {uiText("🏪 Store Profile")}</Text>
   <Text style={{ color: MUTED, fontWeight: "800", marginTop: 4, fontSize: 12 }}>
-    Location, phone, WhatsApp, bank account na Lipa Namba ya store hii
-  </Text>
+    {uiText("Location, phone, WhatsApp, bank account na Lipa Namba ya store hii")}</Text>
 </Pressable>
         <Pressable
           onPress={() => {
@@ -2384,8 +2314,7 @@ fontSize: 11.5,
           >
             <View style={{ flex: 1 }}>
               <Text style={{ color: TEXT, fontWeight: "900", fontSize: 14 }}>
-                Products in this store
-              </Text>
+                {uiText("Products in this store")}</Text>
               <Text
                 style={{
                   color: MUTED,
@@ -2394,8 +2323,7 @@ fontSize: 11.5,
                   fontSize: 12,
                 }}
               >
-                Open full page — view store products only
-              </Text>
+                {uiText("Open full page — view store products only")}</Text>
             </View>
 
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
@@ -2410,7 +2338,7 @@ fontSize: 11.5,
                 }}
               >
                 <Text style={{ color: TEXT, fontWeight: "900", fontSize: 11.5 }}>
-                  {productPreviewLoading ? "..." : `${productPreview.length} items`}
+                  {productPreviewLoading ? "..." : uiText("{p0} items", {p0: (productPreview.length)})}
                 </Text>
               </View>
 
@@ -2434,11 +2362,9 @@ fontSize: 11.5,
           })}
         >
           <Text style={{ color: TEXT, fontWeight: "900", fontSize: 14 }}>
-            Rename Store
-          </Text>
+            {uiText("Rename Store")}</Text>
           <Text style={{ color: MUTED, fontWeight: "800", marginTop: 4, fontSize: 12 }}>
-            Badili jina la store hii
-          </Text>
+            {uiText("Badili jina la store hii")}</Text>
         </Pressable>
 
         <Pressable
@@ -2454,11 +2380,9 @@ fontSize: 11.5,
           })}
         >
           <Text style={{ color: DANGER, fontWeight: "900", fontSize: 14 }}>
-            Close Store
-          </Text>
+            {uiText("Close Store")}</Text>
           <Text style={{ color: MUTED, fontWeight: "800", marginTop: 4, fontSize: 12 }}>
-            Funga store hii na kufungua slot ya store mpya
-          </Text>
+            {uiText("Funga store hii na kufungua slot ya store mpya")}</Text>
         </Pressable>
       </View>
     ) : null}
@@ -2472,13 +2396,13 @@ fontSize: 11.5,
           <View style={{ paddingTop: 10 }}>
             <Card>
               <Text style={{ fontWeight: "900", color: TEXT }}>
-                {activeRole === "staff" ? "No assigned stores loaded" : "No stores found"}
+                {activeRole === "staff" ? uiText("No assigned stores loaded") : uiText("No stores found")}
               </Text>
 
               <Text style={{ color: MUTED, fontWeight: "700", marginTop: 6 }}>
                 {activeRole === "staff"
-                  ? "Store zako bado hazijarudi kutoka mfumo. Hii ni dalili ya store-assignment/RPC issue, siyo kwamba account yako imekosea."
-                  : "Hakuna stores zilizopatikana kwenye organization hii."}
+                  ? uiText("Store zako bado hazijarudi kutoka mfumo. Hii ni dalili ya store-assignment/RPC issue, siyo kwamba account yako imekosea.")
+                  : uiText("Hakuna stores zilizopatikana kwenye organization hii.")}
               </Text>
             </Card>
           </View>
@@ -2516,18 +2440,16 @@ fontSize: 11.5,
           >
             <View style={{ padding: 14, borderBottomWidth: 1, borderBottomColor: BORDER_SOFT }}>
               <Text style={{ color: TEXT, fontWeight: "900", fontSize: 18 }}>
-                Rename Store
-              </Text>
+                {uiText("Rename Store")}</Text>
               <Text style={{ color: MUTED, fontWeight: "800", marginTop: 6, lineHeight: 20 }}>
-                Badili jina la store bila kugusa reports za zamani.
-              </Text>
+                {uiText("Badili jina la store bila kugusa reports za zamani.")}</Text>
             </View>
 
             <View style={{ padding: 14, gap: 12 }}>
               <TextInput
                 value={renameValue}
                 onChangeText={setRenameValue}
-                placeholder="Store name"
+                placeholder={uiText("Store name")}
                 placeholderTextColor={FAINT}
                 style={{
                   borderWidth: 1,
@@ -2544,7 +2466,7 @@ fontSize: 11.5,
               <View style={{ flexDirection: "row", gap: 10 }}>
                 <View style={{ flex: 1 }}>
                   <Button
-                    title="Cancel"
+                    title={uiText("Cancel")}
                     onPress={closeRename}
                     disabled={renameSaving}
                     variant="secondary"
@@ -2553,7 +2475,7 @@ fontSize: 11.5,
 
                 <View style={{ flex: 1 }}>
                   <Button
-                    title={renameSaving ? "Saving..." : "Save Name"}
+                    title={renameSaving ? uiText("Saving...") : uiText("Save Name")}
                     onPress={saveRenameStore}
                     disabled={renameSaving}
                     variant="primary"
@@ -2596,30 +2518,26 @@ fontSize: 11.5,
           >
             <View style={{ padding: 14, borderBottomWidth: 1, borderBottomColor: BORDER_SOFT }}>
               <Text style={{ color: TEXT, fontWeight: "900", fontSize: 18 }}>
-                Close Store
-              </Text>
+                {uiText("Close Store")}</Text>
               <Text style={{ color: MUTED, fontWeight: "800", marginTop: 6, lineHeight: 20 }}>
-                Store ikifungwa, live operational data inaweza kuondolewa lakini reports/snapshots za zamani zibaki salama.
-              </Text>
+                {uiText("Store ikifungwa, live operational data inaweza kuondolewa lakini reports/snapshots za zamani zibaki salama.")}</Text>
             </View>
 
             <View style={{ padding: 14, gap: 12 }}>
               <Card style={{ borderColor: DANGER_BORDER, backgroundColor: DANGER_SOFT }}>
                 <Text style={{ color: TEXT, fontWeight: "900", lineHeight: 20 }}>
-                  Unaenda kufunga store:
-                </Text>
+                  {uiText("Unaenda kufunga store:")}</Text>
                 <Text style={{ color: DANGER, fontWeight: "900", marginTop: 6, fontSize: 16 }}>
                   {closeStoreName || "—"}
                 </Text>
                 <Text style={{ color: MUTED, fontWeight: "800", marginTop: 8, lineHeight: 20 }}>
-                  Ili kuendelea, andika jina la store hii kama uthibitisho. Ukifunga store, slot yake itafunguka kwa store mpya kulingana na plan yako.
-                </Text>
+                  {uiText("Ili kuendelea, andika jina la store hii kama uthibitisho. Ukifunga store, slot yake itafunguka kwa store mpya kulingana na plan yako.")}</Text>
               </Card>
 
               <TextInput
                 value={closeConfirmText}
                 onChangeText={setCloseConfirmText}
-                placeholder="Andika jina la store hapa"
+                placeholder={uiText("Andika jina la store hapa")}
                 placeholderTextColor={FAINT}
                 style={{
                   borderWidth: 1,
@@ -2636,7 +2554,7 @@ fontSize: 11.5,
               <View style={{ flexDirection: "row", gap: 10 }}>
                 <View style={{ flex: 1 }}>
                   <Button
-                    title="Cancel"
+                    title={uiText("Cancel")}
                     onPress={closeCloseStore}
                     disabled={closeSaving}
                     variant="secondary"
@@ -2645,7 +2563,7 @@ fontSize: 11.5,
 
                 <View style={{ flex: 1 }}>
                   <Button
-                    title={closeSaving ? "Closing..." : "Close Store"}
+                    title={closeSaving ? uiText("Closing...") : uiText("Close Store")}
                     onPress={closeStoreNow}
                     disabled={
                       closeSaving ||
@@ -2692,21 +2610,19 @@ fontSize: 11.5,
           >
             <View style={{ padding: 14, borderBottomWidth: 1, borderBottomColor: BORDER_SOFT }}>
               <Text style={{ color: TEXT, fontWeight: "900", fontSize: 18 }}>
-                Upgrade Required
-              </Text>
+                {uiText("Upgrade Required")}</Text>
               <Text style={{ color: MUTED, fontWeight: "800", marginTop: 6, lineHeight: 20 }}>
-                Store hii imefungwa kwenye FREE plan.
-              </Text>
+                {uiText("Store hii imefungwa kwenye FREE plan.")}</Text>
             </View>
 
             <View style={{ padding: 14, gap: 12 }}>
               <Card style={{ borderColor: BORDER_SOFT, backgroundColor: SURFACE2 }}>
                 <Text style={{ color: TEXT, fontWeight: "900", lineHeight: 20 }}>
-                  {upgradeMsg || "LOCKED: Upgrade plan ili u-activate store hii."}
+                  {upgradeMsg || uiText("LOCKED: Upgrade plan ili u-activate store hii.")}
                 </Text>
               </Card>
 
-              <Button title="OK, Sawa" onPress={() => setUpgradeOpen(false)} />
+              <Button title={uiText("OK, Sawa")} onPress={() => setUpgradeOpen(false)} />
             </View>
           </Pressable>
         </Pressable>

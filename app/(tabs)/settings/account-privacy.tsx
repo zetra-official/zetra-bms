@@ -1,5 +1,10 @@
+import {useAccountCopy} from "@/src/i18n/accountLifecycle";
+import {useLanguage} from "@/src/i18n/LanguageProvider";
+import {RELEASE_FEATURES, accountReleaseMessage} from "@/src/release/safety";
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/(tabs)/settings/account-privacy.tsx
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useState, useRef } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -9,6 +14,7 @@ import {
   Pressable,
   Text,
   TextInput,
+  ScrollView,
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -236,6 +242,12 @@ function Row({
 }
 
 export default function AccountPrivacyScreen() {
+ const {language: releaseLanguage}=useLanguage();
+ const blockedAccountMessage=accountReleaseMessage(releaseLanguage);
+ const systemText=useSystemMessageText();
+ const uiText=useCommonText();
+ const accountText=useAccountCopy();
+ const submitting=useRef(false);
   const router = useRouter();
   const org = useOrg();
 
@@ -246,6 +258,7 @@ export default function AccountPrivacyScreen() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [feedback, setFeedback] = useState("");
 
   const goBack = useCallback(() => {
     if (router.canGoBack()) {
@@ -256,42 +269,43 @@ export default function AccountPrivacyScreen() {
   }, [router]);
 
   const closeDeleteModal = useCallback(() => {
-    if (deleting) return;
+    if (submitting.current) return;
     setConfirmOpen(false);
     setDeleteConfirmation("");
   }, [deleting]);
 
   const onDeleteAccount = useCallback(() => {
-    Alert.alert(
-      "Delete Account",
-      "Hii action ni ya mwisho kabisa na haitarudishwa nyuma.\n\nUtaandika DELETE kuthibitisha kufunga account yako.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Continue",
-          style: "destructive",
-          onPress: () => {
-            setDeleteConfirmation("");
-            setConfirmOpen(true);
-          },
-        },
-      ]
-    );
-  }, []);
+    if (!RELEASE_FEATURES.accountLifecycle) {
+      setFeedback(blockedAccountMessage);
+      Alert.alert(accountText("title"), blockedAccountMessage);
+      return;
+    }
+    if (submitting.current) return;
+    setDeleteConfirmation("");
+    setFeedback("");
+    setConfirmOpen(true);
+  }, [blockedAccountMessage, accountText]);
 
   const handleConfirmDelete = useCallback(async () => {
+    if (!RELEASE_FEATURES.accountLifecycle) {
+      setFeedback(blockedAccountMessage);
+      return;
+    }
+    if (submitting.current) return;
     const confirmation = String(deleteConfirmation ?? "").trim();
 
     if (!confirmation) {
-      Alert.alert("Confirmation required", "Andika DELETE kuthibitisha.");
+      setFeedback(accountText("confirm"));
       return;
     }
 
-    if (confirmation.toUpperCase() !== "DELETE") {
-      Alert.alert("Confirmation failed", "Lazima uandike DELETE kuthibitisha.");
+    if (confirmation.toUpperCase() !== "DISABLE") {
+      setFeedback(accountText("confirm"));
       return;
     }
 
+    setFeedback("");
+    submitting.current=true;
     setDeleting(true);
 
     try {
@@ -305,7 +319,8 @@ export default function AccountPrivacyScreen() {
         throw new Error(payload?.message || "Failed to disable account.");
       }
 
-      closeDeleteModal();
+      setConfirmOpen(false);
+      setDeleteConfirmation("");
 
       try {
         await supabase.auth.signOut();
@@ -319,12 +334,13 @@ export default function AccountPrivacyScreen() {
         console.log("clear auth storage ignore:", err);
       }
 
+      router.replace("/(auth)/login");
       Alert.alert(
-        "Account deleted",
-        "Account yako imezimwa successfully. Huwezi kuingia tena.",
+        accountText("done"),
+        accountText("signedout"),
         [
           {
-            text: "OK",
+            text: uiText("OK"),
             onPress: () => {
               router.replace("/(auth)/login");
             },
@@ -334,11 +350,12 @@ export default function AccountPrivacyScreen() {
     } catch (err: any) {
       const msg = err?.message || "Imeshindikana kuzima account kwa sasa.";
       console.log("disable-account client error:", msg, err);
-      Alert.alert("Delete failed", msg);
+      setFeedback(accountText("failed"));
     } finally {
+      submitting.current=false;
       setDeleting(false);
     }
-  }, [closeDeleteModal, deleteConfirmation, router]);
+  }, [deleteConfirmation, router, uiText, systemText, accountText, blockedAccountMessage]);
 
   return (
     <Screen scroll>
@@ -365,10 +382,9 @@ export default function AccountPrivacyScreen() {
 
           <View style={{ flex: 1 }}>
             <Text style={{ color: L.text, fontWeight: "900", fontSize: 22 }}>
-              Account & Privacy
-            </Text>
+              {uiText("Account & Privacy")}</Text>
             <Text style={{ color: L.muted, fontWeight: "800", marginTop: 4 }}>
-              {orgName} • {role} • {store}
+              {(org.activeOrgName ?? uiText("No organization"))} • {role} • {store}
             </Text>
           </View>
         </View>
@@ -401,8 +417,7 @@ export default function AccountPrivacyScreen() {
                       lineHeight: 24,
                     }}
                   >
-                    Privacy & Account Safety
-                  </Text>
+                    {uiText("Privacy & Account Safety")}</Text>
 
                   <Text
                     style={{
@@ -412,21 +427,18 @@ export default function AccountPrivacyScreen() {
                       lineHeight: 20,
                     }}
                   >
-                    Hapa ndipo tunaweka controls nyeti za account, usalama wa taarifa, na
-                    Danger Zone kwa hatua za mwisho za account.
-                  </Text>
+                    {accountText("explain")}</Text>
                 </View>
               </View>
             </View>
           </PremiumCard>
         </View>
 
-        <SectionTitle label="Privacy" />
+        <SectionTitle label={uiText("Privacy")} />
         <PremiumCard>
           <View style={{ padding: 16 }}>
             <Text style={{ color: L.text, fontWeight: "900", fontSize: 15 }}>
-              Current position
-            </Text>
+              {uiText("Current position")}</Text>
 
             <Text
               style={{
@@ -436,9 +448,7 @@ export default function AccountPrivacyScreen() {
                 lineHeight: 20,
               }}
             >
-              Kwa sasa app ina eneo maalum la Account & Privacy ili mtumiaji ajue wazi mahali
-              pa controls nyeti. Hii ni hatua nzuri kabla ya kupeleka app kwa watu.
-            </Text>
+              {accountText("unavailable")}</Text>
 
             <Text
               style={{
@@ -448,19 +458,17 @@ export default function AccountPrivacyScreen() {
                 lineHeight: 20,
               }}
             >
-              Delete Account sasa ipo na uthibitisho wa mwisho wa manual confirmation
-              kabla ya action kufanyika.
-            </Text>
+              {accountText("explain")}</Text>
           </View>
         </PremiumCard>
 
-        <SectionTitle label="Danger Zone" />
+        <SectionTitle label={uiText("Danger Zone")} />
         <PremiumCard style={{ borderColor: L.dangerBorder }}>
           <Row
             icon="warning-outline"
-            title="Delete Account"
-            subtitle="Disable this account after final confirmation"
-            badge="DANGER"
+            title={accountText("title")}
+            subtitle={accountText("explain")}
+            badge={uiText("Warning")}
             danger
             onPress={onDeleteAccount}
           />
@@ -469,8 +477,7 @@ export default function AccountPrivacyScreen() {
 
           <View style={{ padding: 16, paddingTop: 14 }}>
             <Text style={{ color: L.danger, fontWeight: "900", fontSize: 13 }}>
-              Warning
-            </Text>
+              {uiText("Warning")}</Text>
 
             <Text
               style={{
@@ -480,9 +487,7 @@ export default function AccountPrivacyScreen() {
                 lineHeight: 20,
               }}
             >
-              Hili eneo ni la mwisho kabisa. Ukithibitisha kwa kuandika DELETE, account
-              itazimwa mara moja na action hii haiwezi kurudishwa nyuma.
-            </Text>
+              {accountText("explain")}</Text>
           </View>
         </PremiumCard>
 
@@ -521,6 +526,7 @@ export default function AccountPrivacyScreen() {
 
               <View
                 style={{
+                  maxHeight: "90%",
                   borderRadius: 24,
                   borderWidth: 1,
                   borderColor: L.dangerBorder,
@@ -541,8 +547,7 @@ export default function AccountPrivacyScreen() {
                   }}
                 >
                   <Text style={{ color: L.danger, fontWeight: "900", fontSize: 20 }}>
-                    Confirm Delete
-                  </Text>
+                    {accountText("title")}</Text>
 
                   <Pressable
                     onPress={closeDeleteModal}
@@ -563,7 +568,8 @@ export default function AccountPrivacyScreen() {
                   </Pressable>
                 </View>
 
-                <View style={{ padding: 16 }}>
+                <ScrollView contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
+                  {feedback ? <Text accessibilityRole="alert" style={{color:L.danger,marginBottom:12}}>{feedback}</Text> : null}
                   <Text
                     style={{
                       color: L.text,
@@ -572,8 +578,7 @@ export default function AccountPrivacyScreen() {
                       lineHeight: 22,
                     }}
                   >
-                    Andika DELETE kuthibitisha
-                  </Text>
+                    {accountText("confirm")}</Text>
 
                   <Text
                     style={{
@@ -583,9 +588,7 @@ export default function AccountPrivacyScreen() {
                       lineHeight: 20,
                     }}
                   >
-                    Hii ndiyo hatua ya mwisho. Ukiandika DELETE, account yako
-                    itazimwa na hutoweza kuingia tena.
-                  </Text>
+                    {accountText("explain")}</Text>
 
                   <View
                     style={{
@@ -602,7 +605,7 @@ export default function AccountPrivacyScreen() {
                     <TextInput
                       value={deleteConfirmation}
                       onChangeText={(v) => setDeleteConfirmation(String(v ?? "").toUpperCase())}
-                      placeholder="Andika DELETE"
+                      placeholder={accountText("confirm")}
                       placeholderTextColor={L.faint}
                       secureTextEntry={false}
                       editable={!deleting}
@@ -628,8 +631,7 @@ export default function AccountPrivacyScreen() {
                       fontSize: 12,
                     }}
                   >
-                    Ukikosea neno DELETE, action haitafanyika.
-                  </Text>
+                    {accountText("confirm")}</Text>
 
                   <View style={{ flexDirection: "row", gap: 10, marginTop: 18 }}>
                     <View style={{ flex: 1 }}>
@@ -648,8 +650,7 @@ export default function AccountPrivacyScreen() {
                         })}
                       >
                         <Text style={{ color: L.text, fontWeight: "900", fontSize: 15 }}>
-                          Cancel
-                        </Text>
+                          {uiText("Cancel")}</Text>
                       </Pressable>
                     </View>
 
@@ -674,13 +675,12 @@ export default function AccountPrivacyScreen() {
                           <ActivityIndicator color={L.danger} />
                         ) : (
                           <Text style={{ color: L.danger, fontWeight: "900", fontSize: 15 }}>
-                            Delete Now
-                          </Text>
+                            {accountText("title")}</Text>
                         )}
                       </Pressable>
                     </View>
                   </View>
-                </View>
+                </ScrollView>
               </View>
             </View>
           </KeyboardAvoidingView>

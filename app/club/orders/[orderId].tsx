@@ -1,3 +1,5 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 import { supabase } from "@/src/supabase/supabaseClient";
 import { Card } from "@/src/ui/Card";
 import { Screen } from "@/src/ui/Screen";
@@ -51,6 +53,8 @@ function fmtMoney(n: number, currency?: string | null) {
 const FINAL_STATUSES = new Set(["DELIVERED", "CANCELLED"]);
 
 export default function CustomerOrderDetailScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ orderId?: string; storeId?: string; storeName?: string }>();
@@ -132,18 +136,18 @@ export default function CustomerOrderDetailScreen() {
   const renderItem = useCallback(
     ({ item }: { item: ItemRow }) => (
       <Card style={{ padding: 12, backgroundColor: theme.colors.surface2, borderColor: theme.colors.borderSoft }}>
-        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{clean(item.product_name) || "Item"}</Text>
+        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{clean(item.product_name) || uiText("Item")}</Text>
 
         <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-          Qty: {String(item.qty)} • Price: {fmtMoney(Number(item.unit_price) || 0, currency)}
+          {uiText("Qty:")}{String(item.qty)} {uiText("• Price:")}{fmtMoney(Number(item.unit_price) || 0, currency)}
         </Text>
 
         <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 8 }}>
-          Line total: {fmtMoney(Number(item.line_total) || 0, currency)}
+          {uiText("Line total:")}{fmtMoney(Number(item.line_total) || 0, currency)}
         </Text>
       </Card>
     ),
-    [currency]
+    [currency, uiText]
   );
 
   return (
@@ -179,16 +183,16 @@ export default function CustomerOrderDetailScreen() {
                   </View>
 
                   <View>
-                    <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>Order Details</Text>
+                    <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>{uiText("Order Details")}</Text>
 
                     <Text style={{ color: theme.colors.faint, fontWeight: "900", fontSize: 12 }}>
-                      Store: {storeName} • Order: {orderId ? orderId.slice(0, 8) + "…" : "—"}
+                      {uiText("Store:")}{(clean(params?.storeName) || uiText("Store"))} {uiText("• Order:")}{orderId ? orderId.slice(0, 8) + "…" : "—"}
                       {storeId ? ` • ${storeId.slice(0, 8)}…` : ""}
                     </Text>
 
                     <Text style={{ color: theme.colors.faint, fontWeight: "900", fontSize: 12, marginTop: 4 }}>
-                      Status: {status} • Currency: {currency}
-                      {isLocked ? " • LOCKED" : ""}
+                      {uiText("Status:")}{uiText(status)} {uiText("• Currency:")}{currency}
+                      {isLocked ? uiText(" • LOCKED") : ""}
                     </Text>
                   </View>
                 </View>
@@ -208,37 +212,36 @@ export default function CustomerOrderDetailScreen() {
                     },
                   ]}
                 >
-                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Back</Text>
+                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Back")}</Text>
                 </Pressable>
               </View>
             </Card>
 
             {!!err && (
               <Card style={{ backgroundColor: theme.colors.dangerSoft, borderColor: theme.colors.dangerBorder }}>
-                <Text style={{ color: theme.colors.dangerText, fontWeight: "900" }}>{err}</Text>
+                <Text style={{ color: theme.colors.dangerText, fontWeight: "900" }}>{systemText(err)}</Text>
               </Card>
             )}
 
             <Card style={{ padding: 12, backgroundColor: theme.colors.surface2, borderColor: theme.colors.borderSoft }}>
-              <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>Summary</Text>
+              <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>{uiText("Summary")}</Text>
               <View style={{ marginTop: 8, gap: 6 }}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Total qty</Text>
+                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Total qty")}</Text>
                   <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{String(totalQty)}</Text>
                 </View>
 
                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Subtotal</Text>
+                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Subtotal")}</Text>
                   <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{fmtMoney(subtotal, currency)}</Text>
                 </View>
               </View>
             </Card>
 
             <Card style={{ padding: 12 }}>
-              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Status</Text>
+              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Status")}</Text>
               <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-                Hii ni taarifa ya order yako. Staff wa store ndio watathibitisha, kuandaa, na ku-deliver.
-              </Text>
+                {uiText("Hii ni taarifa ya order yako. Staff wa store ndio watathibitisha, kuandaa, na ku-deliver.")}</Text>
 
               <Pressable
                 onPress={load}
@@ -258,13 +261,13 @@ export default function CustomerOrderDetailScreen() {
                   },
                 ]}
               >
-                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Refresh status</Text>
+                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Refresh status")}</Text>
               </Pressable>
 
               {loading && (
                 <View style={{ paddingTop: 12, alignItems: "center" }}>
                   <ActivityIndicator />
-                  <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>Loading...</Text>
+                  <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>{uiText("Loading...")}</Text>
                 </View>
               )}
             </Card>
@@ -273,10 +276,9 @@ export default function CustomerOrderDetailScreen() {
         ListEmptyComponent={
           loading ? null : (
             <Card style={{ padding: 14 }}>
-              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>No item-lines</Text>
+              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>{uiText("No item-lines")}</Text>
               <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-                Hii order haina item-lines.
-              </Text>
+                {uiText("Hii order haina item-lines.")}</Text>
 
               <Pressable
                 onPress={load}
@@ -296,7 +298,7 @@ export default function CustomerOrderDetailScreen() {
                   },
                 ]}
               >
-                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Reload</Text>
+                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Reload")}</Text>
               </Pressable>
             </Card>
           )

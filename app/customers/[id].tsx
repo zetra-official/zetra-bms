@@ -1,3 +1,5 @@
+import {useDocumentText} from "@/src/i18n/useDocumentText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/customers/[id].tsx
 
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -161,6 +163,8 @@ function uriToBlob(uri: string): Promise<Blob> {
 }
 
 export default function CustomerProfileScreen() {
+ const {documentText, documentLocale} = useDocumentText();
+ const uiText=useCommonText();
   const router = useRouter();
 
   const params = useLocalSearchParams<{ id?: string | string[] }>();
@@ -280,8 +284,8 @@ setLoading(false);
 
     if (!digits) {
       Alert.alert(
-        "Invalid phone",
-        "Customer phone is not valid for WhatsApp."
+        uiText("Invalid phone"),
+        uiText("Customer phone is not valid for WhatsApp.")
       );
       return;
     }
@@ -297,8 +301,8 @@ const uploadCustomerAvatar = useCallback(async () => {
 
     if (!permission.granted) {
       Alert.alert(
-        "Permission needed",
-        "Please allow gallery access."
+        uiText("Permission needed"),
+        uiText("Please allow gallery access.")
       );
       return;
     }
@@ -363,13 +367,13 @@ const uploadCustomerAvatar = useCallback(async () => {
     );
 
     Alert.alert(
-      "Success",
-      "Customer profile picture updated."
+      uiText("Success"),
+      uiText("Customer profile picture updated.")
     );
   } catch (e: any) {
     Alert.alert(
-      "Upload failed",
-      e?.message ?? "Failed to upload image."
+      uiText("Upload failed"),
+      e?.message ?? uiText("Failed to upload image.")
     );
   }
 }, [customer]);
@@ -427,7 +431,7 @@ const favoriteProducts = useMemo(() => {
       .join("");
 
     const html = `
-      <html>
+      <html lang="${documentLocale().language}" dir="${documentLocale().direction}">
         <head>
           <style>
             body {
@@ -519,7 +523,7 @@ const favoriteProducts = useMemo(() => {
           <div class="brand">${esc(name)}</div>
 
           <div class="sub">
-            Customer Statement • Generated:
+            ${documentText("Customer Statement • Generated:")}
             ${esc(prettyDate(new Date().toISOString()))}
           </div>
 
@@ -530,24 +534,24 @@ const favoriteProducts = useMemo(() => {
 
             <div class="grid">
               <div class="box">
-                <div class="label">Orders</div>
+                <div class="label">${documentText("Orders")}</div>
                 <div class="value">${orders}</div>
               </div>
 
               <div class="box">
-                <div class="label">Total Spent</div>
+                <div class="label">${documentText("Total Spent")}</div>
                 <div class="value">${esc(fmt(spent))}</div>
               </div>
 
               <div class="box">
-                <div class="label">Last Seen</div>
+                <div class="label">${documentText("Last Seen")}</div>
                 <div class="value">
                   ${esc(prettyDate(customer.last_seen_at))}
                 </div>
               </div>
 
               <div class="box">
-                <div class="label">Highest Sale</div>
+                <div class="label">${documentText("Highest Sale")}</div>
                 <div class="value">${esc(fmt(topSale))}</div>
               </div>
             </div>
@@ -555,28 +559,28 @@ const favoriteProducts = useMemo(() => {
 
           <div class="card">
             <div class="name" style="font-size:18px;">
-              Purchase History
+              ${documentText("Purchase History")}
             </div>
 
             <table>
               <thead>
                 <tr>
-                  <th>Date</th>
-                  <th class="right">Amount</th>
+                  <th>${documentText("Date")}</th>
+                  <th class="right">${documentText("Amount")}</th>
                 </tr>
               </thead>
 
               <tbody>
                 ${
                   rowsHtml ||
-                  `<tr><td colspan="2">No linked sales found.</td></tr>`
+                  `<tr><td colspan="2">${documentText("No linked sales found.")}</td></tr>`
                 }
               </tbody>
             </table>
           </div>
 
           <div class="footer">
-            Powered by ZETRA BMS • Premium business records
+            ${documentText("Powered by ZETRA BMS • Premium business records")}
           </div>
         </body>
       </html>
@@ -628,8 +632,7 @@ const favoriteProducts = useMemo(() => {
                 fontSize: 26,
               }}
             >
-              Customer Profile
-            </Text>
+              {uiText("Customer Profile")}</Text>
 
             <Text
               style={{
@@ -638,8 +641,7 @@ const favoriteProducts = useMemo(() => {
                 marginTop: 4,
               }}
             >
-              View history and contact customer
-            </Text>
+              {uiText("View history and contact customer")}</Text>
           </View>
         </View>
 
@@ -659,8 +661,7 @@ const favoriteProducts = useMemo(() => {
                 fontWeight: "800",
               }}
             >
-              Loading profile...
-            </Text>
+              {uiText("Loading profile...")}</Text>
           </Card>
         ) : errorText ? (
           <Card style={{ backgroundColor: UI.card }}>
@@ -681,8 +682,7 @@ const favoriteProducts = useMemo(() => {
                 fontWeight: "900",
               }}
             >
-              Customer not found.
-            </Text>
+              {uiText("Customer not found.")}</Text>
           </Card>
         ) : (
           <>
@@ -769,7 +769,7 @@ const favoriteProducts = useMemo(() => {
                     }}
                     numberOfLines={2}
                   >
-                    {name}
+                    {(clean(customer?.full_name) || uiText("Customer"))}
                   </Text>
 
                   <Text
@@ -780,7 +780,7 @@ const favoriteProducts = useMemo(() => {
                     }}
                     numberOfLines={1}
                   >
-                    {phone || "No phone"}
+                    {phone || uiText("No phone")}
                   </Text>
                 </View>
               </View>
@@ -803,8 +803,7 @@ const favoriteProducts = useMemo(() => {
                     fontWeight: "900",
                   }}
                 >
-                  Export Customer PDF
-                </Text>
+                  {uiText("Export Customer PDF")}</Text>
               </Pressable>
 
               <View
@@ -840,8 +839,7 @@ const favoriteProducts = useMemo(() => {
                       marginTop: 6,
                     }}
                   >
-                    Call
-                  </Text>
+                    {uiText("Call")}</Text>
                 </Pressable>
 
                 <Pressable
@@ -867,8 +865,7 @@ const favoriteProducts = useMemo(() => {
                       marginTop: 6,
                     }}
                   >
-                    SMS
-                  </Text>
+                    {uiText("SMS")}</Text>
                 </Pressable>
 
                 <Pressable
@@ -902,41 +899,39 @@ const favoriteProducts = useMemo(() => {
 
           <Card style={{ gap: 12, backgroundColor: UI.card }}>
   <Text style={{ color: UI.text, fontWeight: "900", fontSize: 20 }}>
-    Customer Purchase Intelligence
-  </Text>
+    {uiText("Customer Purchase Intelligence")}</Text>
 
   <View style={{ flexDirection: "row", gap: 10 }}>
     <View style={{ flex: 1, padding: 12, borderRadius: 16, backgroundColor: UI.emeraldSoft }}>
-      <Text style={{ color: UI.muted, fontWeight: "900" }}>Total Spent</Text>
+      <Text style={{ color: UI.muted, fontWeight: "900" }}>{uiText("Total Spent")}</Text>
       <Text style={{ color: UI.text, fontWeight: "900", marginTop: 4 }}>
         {fmt(purchaseTotal || spent)}
       </Text>
     </View>
 
     <View style={{ flex: 1, padding: 12, borderRadius: 16, backgroundColor: UI.soft }}>
-      <Text style={{ color: UI.muted, fontWeight: "900" }}>Items Qty</Text>
+      <Text style={{ color: UI.muted, fontWeight: "900" }}>{uiText("Items Qty")}</Text>
       <Text style={{ color: UI.text, fontWeight: "900", marginTop: 4 }}>{totalQty}</Text>
     </View>
   </View>
 
   <View style={{ flexDirection: "row", gap: 10 }}>
     <View style={{ flex: 1, padding: 12, borderRadius: 16, backgroundColor: UI.soft }}>
-      <Text style={{ color: UI.muted, fontWeight: "900" }}>Receipts</Text>
+      <Text style={{ color: UI.muted, fontWeight: "900" }}>{uiText("Receipts")}</Text>
       <Text style={{ color: UI.text, fontWeight: "900", marginTop: 4 }}>{sales.length}</Text>
     </View>
 
     <View style={{ flex: 1, padding: 12, borderRadius: 16, backgroundColor: UI.emeraldSoft }}>
-      <Text style={{ color: UI.muted, fontWeight: "900" }}>Avg / Sale</Text>
+      <Text style={{ color: UI.muted, fontWeight: "900" }}>{uiText("Avg / Sale")}</Text>
       <Text style={{ color: UI.text, fontWeight: "900", marginTop: 4 }}>{fmt(averageSale)}</Text>
     </View>
   </View>
 
   <Text style={{ color: UI.text, fontWeight: "900", fontSize: 17, marginTop: 6 }}>
-    Most Bought Products
-  </Text>
+    {uiText("Most Bought Products")}</Text>
 
   {favoriteProducts.length === 0 ? (
-    <Text style={{ color: UI.muted, fontWeight: "800" }}>No product analytics yet.</Text>
+    <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("No product analytics yet.")}</Text>
   ) : (
     favoriteProducts.map((p, index) => (
       <View
@@ -958,7 +953,7 @@ const favoriteProducts = useMemo(() => {
             {p.name}
           </Text>
           <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 3 }}>
-            Qty {p.qty} • {fmt(p.total)}
+            {uiText("Qty")}{p.qty} • {fmt(p.total)}
           </Text>
         </View>
       </View>
@@ -966,13 +961,11 @@ const favoriteProducts = useMemo(() => {
   )}
 
   <Text style={{ color: UI.text, fontWeight: "900", fontSize: 17, marginTop: 6 }}>
-    Full Purchase Details
-  </Text>
+    {uiText("Full Purchase Details")}</Text>
 
   {purchaseDetails.length === 0 ? (
     <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 20 }}>
-      No linked purchase items found for this customer.
-    </Text>
+      {uiText("No linked purchase items found for this customer.")}</Text>
   ) : (
     purchaseDetails.map((x, index) => (
       <View
@@ -989,10 +982,10 @@ const favoriteProducts = useMemo(() => {
         <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
           <View style={{ flex: 1 }}>
             <Text style={{ color: UI.text, fontWeight: "900" }} numberOfLines={2}>
-              {clean(x.product_name) || "Product"}
+              {clean(x.product_name) || uiText("Product")}
             </Text>
             <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 3 }}>
-              SKU: {clean(x.sku) || "—"}
+              {uiText("SKU:")}{clean(x.sku) || "—"}
             </Text>
           </View>
 
@@ -1003,13 +996,13 @@ const favoriteProducts = useMemo(() => {
 
         <View style={{ flexDirection: "row", gap: 8 }}>
           <Text style={{ color: UI.muted, fontWeight: "800", flex: 1 }}>
-            Qty: {Number(x.qty ?? 0)}
+            {uiText("Qty:")}{Number(x.qty ?? 0)}
           </Text>
           <Text style={{ color: UI.muted, fontWeight: "800", flex: 1 }}>
-            Unit: {fmt(Number(x.unit_price ?? 0))}
+            {uiText("Unit:")}{fmt(Number(x.unit_price ?? 0))}
           </Text>
           <Text style={{ color: UI.muted, fontWeight: "800", flex: 1 }}>
-            {clean(x.payment_method) || "CASH"}
+            {clean(x.payment_method) || uiText("CASH")}
           </Text>
         </View>
 

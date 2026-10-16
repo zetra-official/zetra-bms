@@ -1,3 +1,4 @@
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/office/growth-partners.tsx
 
 import React, {
@@ -384,6 +385,7 @@ function StatBox({
 }
 
 export default function GrowthPartnersScreen() {
+ const uiText=useCommonText();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -717,8 +719,8 @@ export default function GrowthPartnersScreen() {
 
         if (!ok) {
           Alert.alert(
-            "Restricted",
-            "This screen is for ZETRA Office only."
+            uiText("Restricted"),
+            uiText("This screen is for ZETRA Office only.")
           );
 
           router.back();
@@ -730,9 +732,9 @@ export default function GrowthPartnersScreen() {
         setAllowed(false);
 
         Alert.alert(
-          "Restricted",
+          uiText("Restricted"),
           clean(error?.message) ||
-            "Unable to verify Office access."
+            uiText("Unable to verify Office access.")
         );
 
         router.back();
@@ -862,8 +864,8 @@ export default function GrowthPartnersScreen() {
 
       if (!email) {
         Alert.alert(
-          "Email required",
-          "Weka email ya Growth Partner."
+          uiText("Email required"),
+          uiText("Weka email ya Growth Partner.")
         );
 
         return;
@@ -896,16 +898,16 @@ export default function GrowthPartnersScreen() {
         setShowRegisterForm(false);
 
         Alert.alert(
-          "Growth Partner added ✅",
-          "Partner amesajiliwa successfully."
+          uiText("Growth Partner added ✅"),
+          uiText("Partner amesajiliwa successfully.")
         );
 
         await loadPartnersModule();
       } catch (error: any) {
         Alert.alert(
-          "Register failed",
+          uiText("Register failed"),
           clean(error?.message) ||
-            "Failed to register Growth Partner."
+            uiText("Failed to register Growth Partner.")
         );
       } finally {
         setPartnersBusy(false);
@@ -946,16 +948,16 @@ export default function GrowthPartnersScreen() {
         );
 
         Alert.alert(
-          "Activated ✅",
-          "Growth Partner sasa yupo ACTIVE."
+          uiText("Activated ✅"),
+          uiText("Growth Partner sasa yupo ACTIVE.")
         );
 
         await loadPartnersModule();
       } catch (error: any) {
         Alert.alert(
-          "Activation failed",
+          uiText("Activation failed"),
           clean(error?.message) ||
-            "Failed to activate partner."
+            uiText("Failed to activate partner.")
         );
       } finally {
         setPartnersBusy(false);
@@ -990,16 +992,16 @@ export default function GrowthPartnersScreen() {
         );
 
         Alert.alert(
-          "Suspended",
-          "Growth Partner ame-suspend."
+          uiText("Suspended"),
+          uiText("Growth Partner ame-suspend.")
         );
 
         await loadPartnersModule();
       } catch (error: any) {
         Alert.alert(
-          "Suspend failed",
+          uiText("Suspend failed"),
           clean(error?.message) ||
-            "Failed to suspend partner."
+            uiText("Failed to suspend partner.")
         );
       } finally {
         setPartnersBusy(false);
@@ -1026,15 +1028,15 @@ export default function GrowthPartnersScreen() {
           "Growth Partner";
 
         Alert.alert(
-          "Delete Growth Partner",
-          `Unataka kumfuta kabisa ${name}? Referral code yake haitafanya kazi tena.`,
+          uiText("Delete Growth Partner"),
+          uiText("Unataka kumfuta kabisa {p0}? Referral code yake haitafanya kazi tena.", {p0: (name)}),
           [
             {
-              text: "Cancel",
+              text: uiText("Cancel"),
               style: "cancel",
             },
             {
-              text: "DELETE",
+              text: uiText("DELETE"),
               style: "destructive",
               onPress: async () => {
                 setPartnersBusy(true);
@@ -1061,16 +1063,16 @@ export default function GrowthPartnersScreen() {
                   }
 
                   Alert.alert(
-                    "Deleted ✅",
-                    "Growth Partner amefutwa."
+                    uiText("Deleted ✅"),
+                    uiText("Growth Partner amefutwa.")
                   );
 
                   await loadPartnersModule();
                 } catch (error: any) {
                   Alert.alert(
-                    "Delete failed",
+                    uiText("Delete failed"),
                     clean(error?.message) ||
-                      "Failed to delete partner."
+                      uiText("Failed to delete partner.")
                   );
                 } finally {
                   setPartnersBusy(false);
@@ -1163,8 +1165,8 @@ export default function GrowthPartnersScreen() {
     useCallback(async () => {
       if (!selectedPartner?.partner_id) {
         Alert.alert(
-          "Partner required",
-          "Chagua Growth Partner kwanza."
+          uiText("Partner required"),
+          uiText("Chagua Growth Partner kwanza.")
         );
 
         return;
@@ -1174,8 +1176,8 @@ export default function GrowthPartnersScreen() {
         selectedCommissionIds.length === 0
       ) {
         Alert.alert(
-          "Select commissions",
-          "Chagua commission za kulipa."
+          uiText("Select commissions"),
+          uiText("Chagua commission za kulipa.")
         );
 
         return;
@@ -1186,8 +1188,8 @@ export default function GrowthPartnersScreen() {
 
       if (!method) {
         Alert.alert(
-          "Method required",
-          "Weka payout method."
+          uiText("Method required"),
+          uiText("Weka payout method.")
         );
 
         return;
@@ -1206,8 +1208,8 @@ export default function GrowthPartnersScreen() {
         selectedCommissionIds.length
       ) {
         Alert.alert(
-          "Refresh required",
-          "Baadhi ya commission hazipo READY tena."
+          uiText("Refresh required"),
+          uiText("Baadhi ya commission hazipo READY tena.")
         );
 
         return;
@@ -1225,19 +1227,17 @@ export default function GrowthPartnersScreen() {
         );
 
       Alert.alert(
-        "Confirm payout",
-        `Rekodi payout ya ${fmtMoney(
+        uiText("Confirm payout"),
+        uiText("Rekodi payout ya {p0} kwa commission {p1}?", {p0: (fmtMoney(
           totalAmount
-        )} kwa commission ${
-          selectedRows.length
-        }?`,
+        )), p1: (selectedRows.length)}),
         [
           {
-            text: "Cancel",
+            text: uiText("Cancel"),
             style: "cancel",
           },
           {
-            text: "CONFIRM",
+            text: uiText("CONFIRM"),
             onPress: async () => {
               setCreatingPayout(true);
 
@@ -1279,8 +1279,8 @@ export default function GrowthPartnersScreen() {
                 setPayoutNote("");
 
                 Alert.alert(
-                  "Payout recorded ✅",
-                  "Partner payout imehifadhiwa successfully."
+                  uiText("Payout recorded ✅"),
+                  uiText("Partner payout imehifadhiwa successfully.")
                 );
 
                 await Promise.all([
@@ -1289,11 +1289,11 @@ export default function GrowthPartnersScreen() {
                 ]);
               } catch (error: any) {
                 Alert.alert(
-                  "Payout failed",
+                  uiText("Payout failed"),
                   clean(
                     error?.message
                   ) ||
-                    "Failed to create payout."
+                    uiText("Failed to create payout.")
                 );
               } finally {
                 setCreatingPayout(
@@ -1340,8 +1340,7 @@ export default function GrowthPartnersScreen() {
               marginTop: 12,
             }}
           >
-            Loading Growth Partners…
-          </Text>
+            {uiText("Loading Growth Partners…")}</Text>
         </View>
       </Screen>
     );
@@ -1393,8 +1392,7 @@ export default function GrowthPartnersScreen() {
               fontSize: 20,
             }}
           >
-            Growth Partners
-          </Text>
+            {uiText("Growth Partners")}</Text>
 
           <Text
             style={{
@@ -1403,8 +1401,7 @@ export default function GrowthPartnersScreen() {
               marginTop: 4,
             }}
           >
-            Partners, referrals & commissions
-          </Text>
+            {uiText("Partners, referrals & commissions")}</Text>
         </View>
 
         <Pressable
@@ -1463,8 +1460,7 @@ export default function GrowthPartnersScreen() {
                   fontSize: 16,
                 }}
               >
-                Overview
-              </Text>
+                {uiText("Overview")}</Text>
 
               <Text
                 style={{
@@ -1475,9 +1471,7 @@ export default function GrowthPartnersScreen() {
                   marginTop: 5,
                 }}
               >
-                Muhtasari wa Growth Partner
-                network.
-              </Text>
+                {uiText("Muhtasari wa Growth Partner network.")}</Text>
             </View>
           </View>
 
@@ -1497,8 +1491,7 @@ export default function GrowthPartnersScreen() {
                   marginTop: 10,
                 }}
               >
-                Loading…
-              </Text>
+                {uiText("Loading…")}</Text>
             </View>
           ) : partnerErrorText ? (
             <View
@@ -1520,8 +1513,7 @@ export default function GrowthPartnersScreen() {
                   fontSize: 12,
                 }}
               >
-                Unable to load Growth Partners
-              </Text>
+                {uiText("Unable to load Growth Partners")}</Text>
 
               <Text
                 style={{
@@ -1546,7 +1538,7 @@ export default function GrowthPartnersScreen() {
                 }}
               >
                 <StatBox
-                  label="Total Partners"
+                  label={uiText("Total Partners")}
                   value={Number(
                     partnerSummary?.total_partners ??
                       0
@@ -1556,7 +1548,7 @@ export default function GrowthPartnersScreen() {
                 />
 
                 <StatBox
-                  label="Active Partners"
+                  label={uiText("Active Partners")}
                   value={Number(
                     partnerSummary?.active_partners ??
                       0
@@ -1566,7 +1558,7 @@ export default function GrowthPartnersScreen() {
                 />
 
                 <StatBox
-                  label="Total Referrals"
+                  label={uiText("Total Referrals")}
                   value={Number(
                     partnerSummary?.total_referrals ??
                       0
@@ -1576,7 +1568,7 @@ export default function GrowthPartnersScreen() {
                 />
 
                 <StatBox
-                  label="Active Referrals"
+                  label={uiText("Active Referrals")}
                   value={Number(
                     partnerSummary?.active_referrals ??
                       0
@@ -1600,7 +1592,7 @@ export default function GrowthPartnersScreen() {
                 }}
               >
                 <DetailLine
-                  label="Commission Generated"
+                  label={uiText("Commission Generated")}
                   value={fmtMoney(
                     partnerSummary?.total_earned_tzs ??
                       0
@@ -1608,7 +1600,7 @@ export default function GrowthPartnersScreen() {
                 />
 
                 <DetailLine
-                  label="Total Paid"
+                  label={uiText("Total Paid")}
                   value={fmtMoney(
                     partnerSummary?.total_paid_tzs ??
                       0
@@ -1616,7 +1608,7 @@ export default function GrowthPartnersScreen() {
                 />
 
                 <DetailLine
-                  label="Ready Unpaid"
+                  label={uiText("Ready Unpaid")}
                   value={fmtMoney(
                     partnerSummary?.total_unpaid_tzs ??
                       0
@@ -1655,8 +1647,7 @@ export default function GrowthPartnersScreen() {
                   fontSize: 15,
                 }}
               >
-                Growth Partners
-              </Text>
+                {uiText("Growth Partners")}</Text>
 
               <Text
                 style={{
@@ -1666,8 +1657,7 @@ export default function GrowthPartnersScreen() {
                   marginTop: 4,
                 }}
               >
-                Manage registered partners.
-              </Text>
+                {uiText("Manage registered partners.")}</Text>
             </View>
 
             <Pressable
@@ -1726,15 +1716,14 @@ export default function GrowthPartnersScreen() {
                   fontSize: 13,
                 }}
               >
-                Register Growth Partner
-              </Text>
+                {uiText("Register Growth Partner")}</Text>
 
               <TextInput
                 value={partnerEmail}
                 onChangeText={
                   setPartnerEmail
                 }
-                placeholder="Email"
+                placeholder={uiText("Email")}
                 placeholderTextColor="rgba(255,255,255,0.45)"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -1760,7 +1749,7 @@ export default function GrowthPartnersScreen() {
                 onChangeText={
                   setPartnerFullName
                 }
-                placeholder="Full name (optional)"
+                placeholder={uiText("Full name (optional)")}
                 placeholderTextColor="rgba(255,255,255,0.45)"
                 style={{
                   minHeight: 50,
@@ -1781,7 +1770,7 @@ export default function GrowthPartnersScreen() {
                 onChangeText={
                   setPartnerPhone
                 }
-                placeholder="Phone (optional)"
+                placeholder={uiText("Phone (optional)")}
                 placeholderTextColor="rgba(255,255,255,0.45)"
                 keyboardType="phone-pad"
                 style={{
@@ -1803,7 +1792,7 @@ export default function GrowthPartnersScreen() {
                 onChangeText={
                   setPartnerNotes
                 }
-                placeholder="Notes (optional)"
+                placeholder={uiText("Notes (optional)")}
                 placeholderTextColor="rgba(255,255,255,0.45)"
                 multiline
                 style={{
@@ -1832,8 +1821,8 @@ export default function GrowthPartnersScreen() {
                 <ActionButton
                   label={
                     partnersBusy
-                      ? "ADDING..."
-                      : "ADD PARTNER"
+                      ? uiText("ADDING...")
+                      : uiText("ADD PARTNER")
                   }
                   onPress={() =>
                     void registerPartner()
@@ -1858,8 +1847,7 @@ export default function GrowthPartnersScreen() {
                 marginTop: 18,
               }}
             >
-              No Growth Partners yet.
-            </Text>
+              {uiText("No Growth Partners yet.")}</Text>
           ) : null}
 
           {!partnersLoading &&
@@ -1942,7 +1930,7 @@ export default function GrowthPartnersScreen() {
                                 clean(
                                   partner.email_snapshot
                                 ) ||
-                                "Growth Partner"}
+                                uiText("Growth Partner")}
                             </Text>
 
                             <Text
@@ -1977,7 +1965,7 @@ export default function GrowthPartnersScreen() {
                           }}
                         >
                           <DetailLine
-                            label="Referral Code"
+                            label={uiText("Referral Code")}
                             value={
                               clean(
                                 partner.referral_code
@@ -1986,7 +1974,7 @@ export default function GrowthPartnersScreen() {
                           />
 
                           <DetailLine
-                            label="Referrals"
+                            label={uiText("Referrals")}
                             value={Number(
                               partner.total_referrals ??
                                 0
@@ -1996,7 +1984,7 @@ export default function GrowthPartnersScreen() {
                           />
 
                           <DetailLine
-                            label="Commission"
+                            label={uiText("Commission")}
                             value={fmtMoney(
                               partner.total_earned_tzs ??
                                 0
@@ -2004,7 +1992,7 @@ export default function GrowthPartnersScreen() {
                           />
 
                           <DetailLine
-                            label="Ready Unpaid"
+                            label={uiText("Ready Unpaid")}
                             value={fmtMoney(
                               partner.total_unpaid_tzs ??
                                 0
@@ -2021,7 +2009,7 @@ export default function GrowthPartnersScreen() {
                           }}
                         >
                           <ActionButton
-                            label="VIEW DETAILS"
+                            label={uiText("VIEW DETAILS")}
                             onPress={() =>
                               setSelectedPartner(
                                 partner
@@ -2033,7 +2021,7 @@ export default function GrowthPartnersScreen() {
                           />
 
                           <ActionButton
-                            label="DELETE"
+                            label={uiText("DELETE")}
                             danger
                             onPress={() =>
                               deletePartnerPermanently(
@@ -2083,8 +2071,7 @@ export default function GrowthPartnersScreen() {
                     fontSize: 16,
                   }}
                 >
-                  Partner Details
-                </Text>
+                  {uiText("Partner Details")}</Text>
 
                 <Text
                   style={{
@@ -2124,14 +2111,14 @@ export default function GrowthPartnersScreen() {
               }}
             >
               <DetailLine
-                label="Email"
+                label={uiText("Email")}
                 value={
                   selectedPartner.email_snapshot
                 }
               />
 
               <DetailLine
-                label="Phone"
+                label={uiText("Phone")}
                 value={
                   clean(
                     selectedPartner.phone_snapshot
@@ -2140,14 +2127,14 @@ export default function GrowthPartnersScreen() {
               />
 
               <DetailLine
-                label="Referral Code"
+                label={uiText("Referral Code")}
                 value={
                   selectedPartner.referral_code
                 }
               />
 
               <DetailLine
-                label="Total Referrals"
+                label={uiText("Total Referrals")}
                 value={Number(
                   selectedPartner.total_referrals ??
                     0
@@ -2157,7 +2144,7 @@ export default function GrowthPartnersScreen() {
               />
 
               <DetailLine
-                label="Active Referrals"
+                label={uiText("Active Referrals")}
                 value={Number(
                   selectedPartner.active_referrals ??
                     0
@@ -2167,7 +2154,7 @@ export default function GrowthPartnersScreen() {
               />
 
               <DetailLine
-                label="Commission Generated"
+                label={uiText("Commission Generated")}
                 value={fmtMoney(
                   selectedPartner.total_earned_tzs ??
                     0
@@ -2175,7 +2162,7 @@ export default function GrowthPartnersScreen() {
               />
 
               <DetailLine
-                label="Total Paid"
+                label={uiText("Total Paid")}
                 value={fmtMoney(
                   selectedPartner.total_paid_tzs ??
                     0
@@ -2183,7 +2170,7 @@ export default function GrowthPartnersScreen() {
               />
 
               <DetailLine
-                label="Ready Unpaid"
+                label={uiText("Ready Unpaid")}
                 value={fmtMoney(
                   selectedPartner.total_unpaid_tzs ??
                     0
@@ -2191,7 +2178,7 @@ export default function GrowthPartnersScreen() {
               />
 
               <DetailLine
-                label="Created"
+                label={uiText("Created")}
                 value={fmtDateTime(
                   selectedPartner.created_at
                 )}
@@ -2209,8 +2196,8 @@ export default function GrowthPartnersScreen() {
                 label={
                   selectedPartnerStatus ===
                   "ACTIVE"
-                    ? "ACTIVE"
-                    : "ACTIVATE"
+                    ? uiText("ACTIVE")
+                    : uiText("ACTIVATE")
                 }
                 onPress={() =>
                   void activatePartner(
@@ -2228,8 +2215,8 @@ export default function GrowthPartnersScreen() {
                 label={
                   selectedPartnerStatus ===
                   "SUSPENDED"
-                    ? "SUSPENDED"
-                    : "SUSPEND"
+                    ? uiText("SUSPENDED")
+                    : uiText("SUSPEND")
                 }
                 danger
                 onPress={() =>
@@ -2257,8 +2244,7 @@ export default function GrowthPartnersScreen() {
                   fontSize: 14,
                 }}
               >
-                Payout Destination
-              </Text>
+                {uiText("Payout Destination")}</Text>
 
               <View
                 style={{
@@ -2274,7 +2260,7 @@ export default function GrowthPartnersScreen() {
                 }}
               >
                 <DetailLine
-                  label="Method"
+                  label={uiText("Method")}
                   value={
                     clean(
                       selectedPartnerPayoutProfile?.payout_method
@@ -2283,7 +2269,7 @@ export default function GrowthPartnersScreen() {
                 />
 
                 <DetailLine
-                  label="Phone"
+                  label={uiText("Phone")}
                   value={
                     clean(
                       selectedPartnerPayoutProfile?.payout_phone
@@ -2292,7 +2278,7 @@ export default function GrowthPartnersScreen() {
                 />
 
                 <DetailLine
-                  label="Receiver"
+                  label={uiText("Receiver")}
                   value={
                     clean(
                       selectedPartnerPayoutProfile?.payout_account_name
@@ -2301,7 +2287,7 @@ export default function GrowthPartnersScreen() {
                 />
 
                 <DetailLine
-                  label="Updated"
+                  label={uiText("Updated")}
                   value={fmtDateTime(
                     selectedPartnerPayoutProfile?.payout_updated_at
                   )}
@@ -2325,8 +2311,7 @@ export default function GrowthPartnersScreen() {
                     marginTop: 10,
                   }}
                 >
-                  Loading partner details…
-                </Text>
+                  {uiText("Loading partner details…")}</Text>
               </View>
             ) : partnerDetailErrorText ? (
               <View
@@ -2348,8 +2333,7 @@ export default function GrowthPartnersScreen() {
                     fontSize: 12,
                   }}
                 >
-                  Unable to load details
-                </Text>
+                  {uiText("Unable to load details")}</Text>
 
                 <Text
                   style={{
@@ -2394,8 +2378,7 @@ export default function GrowthPartnersScreen() {
                             14,
                         }}
                       >
-                        Commissions
-                      </Text>
+                        {uiText("Commissions")}</Text>
 
                       <Text
                         style={{
@@ -2409,7 +2392,7 @@ export default function GrowthPartnersScreen() {
                             3,
                         }}
                       >
-                        Ready:{" "}
+                        {uiText("Ready:")}{" "}
                         {
                           readyCommissionCount
                         }
@@ -2480,8 +2463,8 @@ export default function GrowthPartnersScreen() {
                       >
                         {
                           showPayoutForm
-                            ? "CLOSE PAYOUT"
-                            : "RECORD PAYOUT"
+                            ? uiText("CLOSE PAYOUT")
+                            : uiText("RECORD PAYOUT")
                         }
                       </Text>
                     </Pressable>
@@ -2513,18 +2496,17 @@ export default function GrowthPartnersScreen() {
                             13,
                         }}
                       >
-                        Create Payout
-                      </Text>
+                        {uiText("Create Payout")}</Text>
 
                       <DetailLine
-                        label="Selected"
+                        label={uiText("Selected")}
                         value={
                           selectedCommissionIds.length
                         }
                       />
 
                       <DetailLine
-                        label="Total"
+                        label={uiText("Total")}
                         value={fmtMoney(
                           selectedPayoutTotal
                         )}
@@ -2573,7 +2555,7 @@ export default function GrowthPartnersScreen() {
                         onChangeText={
                           setPayoutReference
                         }
-                        placeholder="Payout reference (optional)"
+                        placeholder={uiText("Payout reference (optional)")}
                         placeholderTextColor="rgba(255,255,255,0.45)"
                         style={{
                           minHeight:
@@ -2602,7 +2584,7 @@ export default function GrowthPartnersScreen() {
                         onChangeText={
                           setPayoutNote
                         }
-                        placeholder="Payout note (optional)"
+                        placeholder={uiText("Payout note (optional)")}
                         placeholderTextColor="rgba(255,255,255,0.45)"
                         multiline
                         style={{
@@ -2639,8 +2621,8 @@ export default function GrowthPartnersScreen() {
                         <ActionButton
                           label={
                             creatingPayout
-                              ? "SAVING..."
-                              : "CONFIRM PAYOUT"
+                              ? uiText("SAVING...")
+                              : uiText("CONFIRM PAYOUT")
                           }
                           onPress={() =>
                             void createPartnerPayout()
@@ -2667,8 +2649,7 @@ export default function GrowthPartnersScreen() {
                           12,
                       }}
                     >
-                      No commissions yet.
-                    </Text>
+                      {uiText("No commissions yet.")}</Text>
                   ) : (
                     <View
                       style={{
@@ -2764,7 +2745,7 @@ export default function GrowthPartnersScreen() {
                                     {clean(
                                       row.referred_email_snapshot
                                     ) ||
-                                      "Customer"}
+                                      uiText("Customer")}
                                   </Text>
 
                                   <Text
@@ -2784,7 +2765,7 @@ export default function GrowthPartnersScreen() {
                                 </View>
 
                                 <DetailLine
-                                  label="Commission"
+                                  label={uiText("Commission")}
                                   value={fmtMoney(
                                     row.commission_amount_tzs ??
                                       0
@@ -2792,7 +2773,7 @@ export default function GrowthPartnersScreen() {
                                 />
 
                                 <DetailLine
-                                  label="Percent"
+                                  label={uiText("Percent")}
                                   value={`${
                                     row.commission_percent ??
                                     0
@@ -2800,7 +2781,7 @@ export default function GrowthPartnersScreen() {
                                 />
 
                                 <DetailLine
-                                  label="Month"
+                                  label={uiText("Month")}
                                   value={
                                     row.commission_month_number ??
                                     "—"
@@ -2808,7 +2789,7 @@ export default function GrowthPartnersScreen() {
                                 />
 
                                 <DetailLine
-                                  label="Unlock"
+                                  label={uiText("Unlock")}
                                   value={
                                     clean(
                                       row.unlock_at
@@ -2818,7 +2799,7 @@ export default function GrowthPartnersScreen() {
                                         )
                                       : status ===
                                         "LOCKED"
-                                      ? "WAITING RELEASE"
+                                      ? uiText("WAITING RELEASE")
                                       : "—"
                                   }
                                 />
@@ -2837,8 +2818,8 @@ export default function GrowthPartnersScreen() {
                                     }}
                                   >
                                     {selected
-                                      ? "SELECTED"
-                                      : "TAP TO SELECT"}
+                                      ? uiText("SELECTED")
+                                      : uiText("TAP TO SELECT")}
                                   </Text>
                                 ) : null}
                               </View>
@@ -2862,8 +2843,7 @@ export default function GrowthPartnersScreen() {
                       fontSize: 14,
                     }}
                   >
-                    Referrals
-                  </Text>
+                    {uiText("Referrals")}</Text>
 
                   {partnerReferrals.length ===
                   0 ? (
@@ -2877,8 +2857,7 @@ export default function GrowthPartnersScreen() {
                           10,
                       }}
                     >
-                      No referrals yet.
-                    </Text>
+                      {uiText("No referrals yet.")}</Text>
                   ) : (
                     <View
                       style={{
@@ -2919,25 +2898,25 @@ export default function GrowthPartnersScreen() {
                               {clean(
                                 row.referred_email_snapshot
                               ) ||
-                                "Customer"}
+                                uiText("Customer")}
                             </Text>
 
                             <DetailLine
-                              label="Status"
+                              label={uiText("Status")}
                               value={upper(
                                 row.status
                               )}
                             />
 
                             <DetailLine
-                              label="Linked"
+                              label={uiText("Linked")}
                               value={fmtDateTime(
                                 row.linked_at
                               )}
                             />
 
                             <DetailLine
-                              label="Total Commission"
+                              label={uiText("Total Commission")}
                               value={fmtMoney(
                                 row.total_commission_tzs ??
                                   0
@@ -2945,7 +2924,7 @@ export default function GrowthPartnersScreen() {
                             />
 
                             <DetailLine
-                              label="Unpaid"
+                              label={uiText("Unpaid")}
                               value={fmtMoney(
                                 row.unpaid_commission_tzs ??
                                   0
@@ -2970,8 +2949,7 @@ export default function GrowthPartnersScreen() {
                       fontSize: 14,
                     }}
                   >
-                    Payout History
-                  </Text>
+                    {uiText("Payout History")}</Text>
 
                   {partnerPayouts.length ===
                   0 ? (
@@ -2985,8 +2963,7 @@ export default function GrowthPartnersScreen() {
                           10,
                       }}
                     >
-                      No payouts yet.
-                    </Text>
+                      {uiText("No payouts yet.")}</Text>
                   ) : (
                     <View
                       style={{
@@ -3031,14 +3008,14 @@ export default function GrowthPartnersScreen() {
                             </Text>
 
                             <DetailLine
-                              label="Status"
+                              label={uiText("Status")}
                               value={upper(
                                 row.payout_status
                               )}
                             />
 
                             <DetailLine
-                              label="Method"
+                              label={uiText("Method")}
                               value={
                                 clean(
                                   row.payout_method
@@ -3048,7 +3025,7 @@ export default function GrowthPartnersScreen() {
                             />
 
                             <DetailLine
-                              label="Reference"
+                              label={uiText("Reference")}
                               value={
                                 clean(
                                   row.payout_reference
@@ -3058,7 +3035,7 @@ export default function GrowthPartnersScreen() {
                             />
 
                             <DetailLine
-                              label="Date"
+                              label={uiText("Date")}
                               value={fmtDateTime(
                                 row.payout_date
                               )}
@@ -3078,7 +3055,7 @@ export default function GrowthPartnersScreen() {
               }}
             >
               <ActionButton
-                label="CLOSE DETAILS"
+                label={uiText("CLOSE DETAILS")}
                 onPress={() =>
                   setSelectedPartner(null)
                 }

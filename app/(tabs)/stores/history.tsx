@@ -1,3 +1,5 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Pressable, Text, View } from "react-native";
@@ -106,6 +108,8 @@ function localYMD(d = new Date()) {
 type SnapshotStatus = "unknown" | "ok" | "missing";
 
 export default function InventoryHistoryScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
   const { activeOrgName, activeRole, activeStoreId, activeStoreName } = useOrg();
 
@@ -228,12 +232,12 @@ const incoming = rawIncoming.filter(isStockInMovement);
     if (snapshotLoading) return;
 
     if (!activeStoreId) {
-      Alert.alert("Missing", "No active store selected.");
+      Alert.alert(uiText("Missing"), uiText("No active store selected."));
       return;
     }
 
     if (!isOwnerOrAdmin) {
-      Alert.alert("No Access", "Owner/Admin only.");
+      Alert.alert(uiText("No Access"), uiText("Owner/Admin only."));
       return;
     }
 
@@ -253,10 +257,10 @@ const incoming = rawIncoming.filter(isStockInMovement);
 
       if (snapErr) throw snapErr;
 
-      Alert.alert("Emergency Snapshot ✅", `Snapshot created for ${dateStr}`);
+      Alert.alert(uiText("Emergency Snapshot ✅"), uiText("Snapshot created for {p0}", {p0: (dateStr)}));
       await refresh();
     } catch (err: any) {
-      Alert.alert("Snapshot Failed", err?.message ?? "Unknown error");
+      Alert.alert(uiText("Snapshot Failed"), err?.message ?? uiText("Unknown error"));
     } finally {
       setSnapshotLoading(false);
     }
@@ -278,8 +282,7 @@ const incoming = rawIncoming.filter(isStockInMovement);
     <Screen scroll>
       <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 12 }}>
         <Text style={{ fontSize: 26, fontWeight: "900", color: theme.colors.text }}>
-          History
-        </Text>
+          {uiText("History")}</Text>
 
         <Pressable
           onPress={() => router.back()}
@@ -292,22 +295,22 @@ const incoming = rawIncoming.filter(isStockInMovement);
             backgroundColor: theme.colors.card,
           }}
         >
-          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Back</Text>
+          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Back")}</Text>
         </Pressable>
       </View>
 
       <Card style={{ gap: 10 }}>
-        <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Organization</Text>
+        <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Organization")}</Text>
         <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
           {activeOrgName ?? "—"}
         </Text>
 
-        <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Active Store</Text>
+        <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Active Store")}</Text>
         <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
           {activeStoreName ?? "—"}
         </Text>
 
-        <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Role</Text>
+        <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Role")}</Text>
         <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{roleLabel}</Text>
 
         {/* ✅ Auto snapshot status info */}
@@ -317,7 +320,7 @@ const incoming = rawIncoming.filter(isStockInMovement);
 
         {/* ✅ ORDER + STYLE */}
         <Button
-          title={loading ? "Loading..." : "Refresh"}
+          title={loading ? uiText("Loading...") : uiText("Refresh")}
           onPress={refresh}
           disabled={loading}
           variant="primary"
@@ -326,7 +329,7 @@ const incoming = rawIncoming.filter(isStockInMovement);
 
         {/* ✅ MNONO / PROMINENT */}
         <Button
-          title="Daily Closing Report"
+          title={uiText("Daily Closing Report")}
           onPress={() => router.push("/(tabs)/stores/daily-closing")}
           disabled={loading}
           variant="primary"
@@ -337,12 +340,10 @@ const incoming = rawIncoming.filter(isStockInMovement);
         {showEmergencyButton && (
           <>
             <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 10 }}>
-              (Emergency) Tumia hii tu pale ambapo auto snapshot imeshindwa. Mfumo utajaribu
-              ku-snapshot automatically kila siku.
-            </Text>
+              {uiText("(Emergency) Tumia hii tu pale ambapo auto snapshot imeshindwa. Mfumo utajaribu ku-snapshot automatically kila siku.")}</Text>
 
             <Button
-              title={snapshotLoading ? "Generating..." : "Emergency Snapshot (Admin)"}
+              title={snapshotLoading ? uiText("Generating...") : uiText("Emergency Snapshot (Admin)")}
               onPress={generateEmergencySnapshot}
               disabled={snapshotLoading || loading}
               variant="secondary"
@@ -359,20 +360,17 @@ const incoming = rawIncoming.filter(isStockInMovement);
             backgroundColor: theme.colors.dangerSoft,
           }}
         >
-          <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{error}</Text>
+          <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{systemText(error)}</Text>
         </Card>
       )}
 
-      <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>
-        Movements ({rows.length})
-      </Text>
+      <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>{uiText("Movements ({p0})", {p0: (rows.length)})}</Text>
 
       {rows.length === 0 ? (
         <Card>
-          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>No history yet</Text>
+          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("No history yet")}</Text>
           <Text style={{ color: theme.colors.muted, fontWeight: "700", marginTop: 6 }}>
-            Hakuna stock iliyoingia kwenye history hii. Mauzo na stock zilizotoka hazionyeshwi hapa.
-          </Text>
+            {uiText("Hakuna stock iliyoingia kwenye history hii. Mauzo na stock zilizotoka hazionyeshwi hapa.")}</Text>
         </Card>
       ) : (
         rows.map((r) => {
@@ -408,19 +406,19 @@ const incoming = rawIncoming.filter(isStockInMovement);
               </View>
 
               <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                SKU: <Text style={{ color: theme.colors.text }}>{r.sku ?? "—"}</Text>
+                {uiText("SKU:")}<Text style={{ color: theme.colors.text }}>{r.sku ?? "—"}</Text>
                 {"   "}•{"   "}
-                Mode: <Text style={{ color: theme.colors.text }}>{pickMode(r)}</Text>
+                {uiText("Mode:")}<Text style={{ color: theme.colors.text }}>{pickMode(r)}</Text>
               </Text>
 
               {!!r.note && (
                 <Text style={{ color: theme.colors.text, fontWeight: "800" }}>
-                  Note: <Text style={{ color: theme.colors.muted }}>{r.note}</Text>
+                  {uiText("Note:")}<Text style={{ color: theme.colors.muted }}>{r.note}</Text>
                 </Text>
               )}
 
               <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                When: <Text style={{ color: theme.colors.text }}>{fmtWhen(r.created_at)}</Text>
+                {uiText("When:")}<Text style={{ color: theme.colors.text }}>{fmtWhen(r.created_at)}</Text>
               </Text>
             </Card>
           );
@@ -431,7 +429,7 @@ const incoming = rawIncoming.filter(isStockInMovement);
 
       {hasMore && rows.length > 0 && (
         <Button
-          title={loading ? "Loading..." : "Load more"}
+          title={loading ? uiText("Loading...") : uiText("Load more")}
           onPress={loadMore}
           disabled={loading}
           variant="secondary"

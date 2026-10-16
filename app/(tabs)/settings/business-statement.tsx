@@ -1,3 +1,6 @@
+import {useDocumentText} from "@/src/i18n/useDocumentText";
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 import { Ionicons } from "@expo/vector-icons";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
@@ -741,6 +744,9 @@ async function getGoodsPurchasedSummary(
   }
 }
 export default function BusinessStatementScreen() {
+ const {documentText, documentLocale} = useDocumentText();
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
   const { activeOrgId, activeOrgName, activeStoreId, activeStoreName, activeRole } =
     useOrg() as any;
@@ -1287,13 +1293,13 @@ const purchaseStatusLabel = useMemo(() => {
   const purchased = toNum(goodsPurchasedSummary.total_goods_purchased);
   const supplierDebt = toNum(goodsPurchasedSummary.supplier_outstanding);
 
-  if (purchased <= 0) return "No Purchase";
-  if (supplierDebt > 0) return "Purchased • Outstanding";
-  return "Purchased • Fully Paid";
+  if (purchased <= 0) return uiText("No Purchase");
+  if (supplierDebt > 0) return uiText("Purchased • Outstanding");
+  return uiText("Purchased • Fully Paid");
 }, [
   goodsPurchasedSummary.total_goods_purchased,
   goodsPurchasedSummary.supplier_outstanding,
-]);
+ uiText]);
   const capitalSummary = useMemo(() => {
     const asset = capitalRows
       .filter((r) => r.entry_type === "ASSET")
@@ -1350,10 +1356,10 @@ const purchaseStatusLabel = useMemo(() => {
 
     return `
 <!doctype html>
-<html>
+<html lang="${documentLocale().language}" dir="${documentLocale().direction}">
 <head>
   <meta charset="utf-8" />
-  <title>Business Statement ${escapeHtml(statementRef)}</title>
+  <title>${documentText("Business Statement")} ${escapeHtml(statementRef)}</title>
   <style>
     @page { size: A4 portrait; margin: 12mm 10mm; }
 
@@ -1544,147 +1550,147 @@ const purchaseStatusLabel = useMemo(() => {
   <div class="page">
     <div class="header">
       <div class="brand">
-        <div class="brand-title">Business Statement</div>
-        <div class="brand-sub">Statement Ref: ${escapeHtml(statementRef)}</div>
+        <div class="brand-title">${documentText("Business Statement")}</div>
+        <div class="brand-sub">${documentText("Statement Ref:")} ${escapeHtml(statementRef)}</div>
       </div>
 
       <div class="meta">
-        <b>Business:</b> ${escapeHtml(activeOrgName ?? "—")}<br/>
-        <b>Store:</b> ${escapeHtml(activeStoreName ?? "—")}<br/>
-        <b>Generated:</b> ${escapeHtml(new Date().toLocaleString())}<br/>
+        <b>${documentText("Business:")}</b> ${escapeHtml(activeOrgName ?? "—")}<br/>
+        <b>${documentText("Store:")}</b> ${escapeHtml(activeStoreName ?? "—")}<br/>
+        <b>${documentText("Generated:")}</b> ${escapeHtml(new Date().toLocaleString())}<br/>
         <span class="badge">${escapeHtml(labelForRange(range))}</span>
       </div>
     </div>
 
     <table class="info-table">
       <tr>
-        <td><b>Organization</b><br/>${escapeHtml(activeOrgName ?? "—")}</td>
-        <td><b>Store</b><br/>${escapeHtml(activeStoreName ?? "—")}</td>
-        <td><b>Role</b><br/>${escapeHtml(activeRole ?? "—")}</td>
+        <td><b>${documentText("Organization")}</b><br/>${escapeHtml(activeOrgName ?? "—")}</td>
+        <td><b>${documentText("Store")}</b><br/>${escapeHtml(activeStoreName ?? "—")}</td>
+        <td><b>${documentText("Role")}</b><br/>${escapeHtml(activeRole ?? "—")}</td>
       </tr>
       <tr>
-        <td><b>Period</b><br/>${escapeHtml(rangeTextForPdf)}</td>
-        <td><b>Sales Count</b><br/>${escapeHtml(String(salesCount))}</td>
-        <td><b>Total Qty Sold</b><br/>${escapeHtml(String(totalQty))}</td>
+        <td><b>${documentText("Period")}</b><br/>${escapeHtml(rangeTextForPdf)}</td>
+        <td><b>${documentText("Sales Count")}</b><br/>${escapeHtml(String(salesCount))}</td>
+        <td><b>${documentText("Total Qty Sold")}</b><br/>${escapeHtml(String(totalQty))}</td>
       </tr>
     </table>
 
-  <div class="section-title">Statement Summary</div>
+  <div class="section-title">${documentText("Statement Summary")}</div>
 <div class="grid">
-  <div class="box"><div class="label">Total Sales</div><div class="value">${escapeHtml(fmtMoney(totalSales))}</div></div>
-  <div class="box"><div class="label">COGS</div><div class="value">${escapeHtml(fmtMoney(totalCogs))}</div></div>
-  <div class="box"><div class="label">Gross Profit</div><div class="value">${escapeHtml(fmtMoney(grossProfit))}</div></div>
+  <div class="box"><div class="label">${documentText("Total Sales")}</div><div class="value">${escapeHtml(fmtMoney(totalSales))}</div></div>
+  <div class="box"><div class="label">${documentText("COGS")}</div><div class="value">${escapeHtml(fmtMoney(totalCogs))}</div></div>
+  <div class="box"><div class="label">${documentText("Gross Profit")}</div><div class="value">${escapeHtml(fmtMoney(grossProfit))}</div></div>
 </div>
 
 <div class="grid">
-  <div class="box"><div class="label">Total Expenses</div><div class="value">${escapeHtml(fmtMoney(totalExpenses))}</div></div>
+  <div class="box"><div class="label">${documentText("Total Expenses")}</div><div class="value">${escapeHtml(fmtMoney(totalExpenses))}</div></div>
 </div>
 
 <div class="grid">
-  <div class="box"><div class="label">Customer Outstanding Balance</div><div class="value">${escapeHtml(fmtMoney(paymentSummary.total_balance))}</div></div>
-  <div class="box"><div class="label">Sales Count</div><div class="value">${escapeHtml(String(salesCount))}</div></div>
-  <div class="box"><div class="label">Total Qty Sold</div><div class="value">${escapeHtml(String(totalQty))}</div></div>
+  <div class="box"><div class="label">${documentText("Customer Outstanding Balance")}</div><div class="value">${escapeHtml(fmtMoney(paymentSummary.total_balance))}</div></div>
+  <div class="box"><div class="label">${documentText("Sales Count")}</div><div class="value">${escapeHtml(String(salesCount))}</div></div>
+  <div class="box"><div class="label">${documentText("Total Qty Sold")}</div><div class="value">${escapeHtml(String(totalQty))}</div></div>
 </div>
 
 <div class="profit">
-  <div class="profit-label">Net Profit</div>
+  <div class="profit-label">${documentText("Net Profit")}</div>
   <div class="profit-value">${escapeHtml(fmtMoney(netProfit))}</div>
   <div class="muted" style="margin-top:4px;">
-    Gross Profit ${escapeHtml(fmtMoney(grossProfit))} − Expenses ${escapeHtml(fmtMoney(totalExpenses))}
+    ${documentText("Gross Profit")} ${escapeHtml(fmtMoney(grossProfit))} ${documentText("− Expenses")} ${escapeHtml(fmtMoney(totalExpenses))}
   </div>
 </div>
 
-<div class="section-title">OWNER EXECUTIVE DASHBOARD</div>
+<div class="section-title">${documentText("OWNER EXECUTIVE DASHBOARD")}</div>
 <div class="grid">
-  <div class="box"><div class="label">Profit Margin</div><div class="value">${escapeHtml(pct(profitMargin))}</div></div>
-  <div class="box"><div class="label">Expense Ratio</div><div class="value">${escapeHtml(pct(expenseRatio))}</div></div>
-  <div class="box"><div class="label">Average Sale Value</div><div class="value">${escapeHtml(fmtMoney(averageSaleValue))}</div></div>
+  <div class="box"><div class="label">${documentText("Profit Margin")}</div><div class="value">${escapeHtml(pct(profitMargin))}</div></div>
+  <div class="box"><div class="label">${documentText("Expense Ratio")}</div><div class="value">${escapeHtml(pct(expenseRatio))}</div></div>
+  <div class="box"><div class="label">${documentText("Average Sale Value")}</div><div class="value">${escapeHtml(fmtMoney(averageSaleValue))}</div></div>
 </div>
 
-<div class="section-title">Stock / Goods Purchased</div>
+<div class="section-title">${documentText("Stock / Goods Purchased")}</div>
 <div class="grid">
-  <div class="box"><div class="label">Total Goods Purchased</div><div class="value">${escapeHtml(fmtMoney(goodsPurchasedSummary.total_goods_purchased))}</div></div>
-  <div class="box"><div class="label">Purchase Orders</div><div class="value">${escapeHtml(String(goodsPurchasedSummary.purchase_orders))}</div></div>
-  <div class="box"><div class="label">Total Items Purchased</div><div class="value">${escapeHtml(String(goodsPurchasedSummary.total_items_purchased))}</div></div>
+  <div class="box"><div class="label">${documentText("Total Goods Purchased")}</div><div class="value">${escapeHtml(fmtMoney(goodsPurchasedSummary.total_goods_purchased))}</div></div>
+  <div class="box"><div class="label">${documentText("Purchase Orders")}</div><div class="value">${escapeHtml(String(goodsPurchasedSummary.purchase_orders))}</div></div>
+  <div class="box"><div class="label">${documentText("Total Items Purchased")}</div><div class="value">${escapeHtml(String(goodsPurchasedSummary.total_items_purchased))}</div></div>
 </div>
 
 <div class="grid">
-  <div class="box"><div class="label">Outstanding on Period Purchases</div><div class="value">${escapeHtml(fmtMoney(goodsPurchasedSummary.supplier_outstanding))}</div></div>
-  <div class="box"><div class="label">Stock Investment Difference</div><div class="value">${escapeHtml(signedMoney(fmtMoney, purchaseDifference))}</div></div>
-<div class="box"><div class="label">Purchase Status</div><div class="value">${escapeHtml(purchaseStatusLabel)}</div></div>
+  <div class="box"><div class="label">${documentText("Outstanding on Period Purchases")}</div><div class="value">${escapeHtml(fmtMoney(goodsPurchasedSummary.supplier_outstanding))}</div></div>
+  <div class="box"><div class="label">${documentText("Stock Investment Difference")}</div><div class="value">${escapeHtml(signedMoney(fmtMoney, purchaseDifference))}</div></div>
+<div class="box"><div class="label">${documentText("Purchase Status")}</div><div class="value">${escapeHtml(purchaseStatusLabel)}</div></div>
 </div>
 
-    <div class="section-title">Sales Payments</div>
+    <div class="section-title">${documentText("Sales Payments")}</div>
     <div class="grid">
-      <div class="box"><div class="label">Cash Sales</div><div class="value">${escapeHtml(fmtMoney(salesChannels.cash))}</div></div>
-      <div class="box"><div class="label">Mobile Sales</div><div class="value">${escapeHtml(fmtMoney(salesChannels.mobile))}</div></div>
-      <div class="box"><div class="label">Bank Sales</div><div class="value">${escapeHtml(fmtMoney(salesChannels.bank))}</div></div>
+      <div class="box"><div class="label">${documentText("Cash Sales")}</div><div class="value">${escapeHtml(fmtMoney(salesChannels.cash))}</div></div>
+      <div class="box"><div class="label">${documentText("Mobile Sales")}</div><div class="value">${escapeHtml(fmtMoney(salesChannels.mobile))}</div></div>
+      <div class="box"><div class="label">${documentText("Bank Sales")}</div><div class="value">${escapeHtml(fmtMoney(salesChannels.bank))}</div></div>
     </div>
 
     <div class="grid">
-      <div class="box"><div class="label">Other Sales</div><div class="value">${escapeHtml(fmtMoney(salesChannels.other))}</div></div>
-      <div class="box"><div class="label">Total Sales Paid</div><div class="value">${escapeHtml(fmtMoney(salesChannels.total))}</div></div>
-      <div class="box"><div class="label">Period Outstanding Credit</div><div class="value">${escapeHtml(fmtMoney(paymentSummary.total_balance))}</div></div>
+      <div class="box"><div class="label">${documentText("Other Sales")}</div><div class="value">${escapeHtml(fmtMoney(salesChannels.other))}</div></div>
+      <div class="box"><div class="label">${documentText("Total Sales Paid")}</div><div class="value">${escapeHtml(fmtMoney(salesChannels.total))}</div></div>
+      <div class="box"><div class="label">${documentText("Period Outstanding Credit")}</div><div class="value">${escapeHtml(fmtMoney(paymentSummary.total_balance))}</div></div>
     </div>
 
-    <div class="section-title">Credit Collections</div>
+    <div class="section-title">${documentText("Credit Collections")}</div>
     <div class="grid">
-      <div class="box"><div class="label">Cash Collections</div><div class="value">${escapeHtml(fmtMoney(creditCollections.cash))}</div></div>
-      <div class="box"><div class="label">Mobile Collections</div><div class="value">${escapeHtml(fmtMoney(creditCollections.mobile))}</div></div>
-      <div class="box"><div class="label">Bank Collections</div><div class="value">${escapeHtml(fmtMoney(creditCollections.bank))}</div></div>
-    </div>
-
-    <div class="grid">
-      <div class="box"><div class="label">Other Collections</div><div class="value">${escapeHtml(fmtMoney(creditCollections.other))}</div></div>
-      <div class="box"><div class="label">Total Credit Collections</div><div class="value">${escapeHtml(fmtMoney(creditCollections.total))}</div></div>
-      <div class="box"><div class="label">Gross Money Received</div><div class="value">${escapeHtml(fmtMoney(grossMoneyReceived))}</div></div>
-    </div>
-
-    <div class="section-title">Expenses By Payment Channel</div>
-    <div class="grid">
-      <div class="box"><div class="label">Cash Expenses</div><div class="value">${escapeHtml(fmtMoney(expenseChannels.cash))}</div></div>
-      <div class="box"><div class="label">Mobile Expenses</div><div class="value">${escapeHtml(fmtMoney(expenseChannels.mobile))}</div></div>
-      <div class="box"><div class="label">Bank Expenses</div><div class="value">${escapeHtml(fmtMoney(expenseChannels.bank))}</div></div>
+      <div class="box"><div class="label">${documentText("Cash Collections")}</div><div class="value">${escapeHtml(fmtMoney(creditCollections.cash))}</div></div>
+      <div class="box"><div class="label">${documentText("Mobile Collections")}</div><div class="value">${escapeHtml(fmtMoney(creditCollections.mobile))}</div></div>
+      <div class="box"><div class="label">${documentText("Bank Collections")}</div><div class="value">${escapeHtml(fmtMoney(creditCollections.bank))}</div></div>
     </div>
 
     <div class="grid">
-      <div class="box"><div class="label">Other Expenses</div><div class="value">${escapeHtml(fmtMoney(expenseChannels.other))}</div></div>
-      <div class="box"><div class="label">Total Expenses</div><div class="value">${escapeHtml(fmtMoney(expenseChannels.total))}</div></div>
-      <div class="box"><div class="label">Expense Count</div><div class="value">${escapeHtml(String(expenseChannels.count))}</div></div>
+      <div class="box"><div class="label">${documentText("Other Collections")}</div><div class="value">${escapeHtml(fmtMoney(creditCollections.other))}</div></div>
+      <div class="box"><div class="label">${documentText("Total Credit Collections")}</div><div class="value">${escapeHtml(fmtMoney(creditCollections.total))}</div></div>
+      <div class="box"><div class="label">${documentText("Gross Money Received")}</div><div class="value">${escapeHtml(fmtMoney(grossMoneyReceived))}</div></div>
     </div>
 
-    <div class="section-title">Money In After Expenses</div>
+    <div class="section-title">${documentText("Expenses By Payment Channel")}</div>
     <div class="grid">
-      <div class="box"><div class="label">Cash In</div><div class="value">${escapeHtml(fmtMoney(netCashIn))}</div></div>
-      <div class="box"><div class="label">Mobile In</div><div class="value">${escapeHtml(fmtMoney(netMobileIn))}</div></div>
-      <div class="box"><div class="label">Bank In</div><div class="value">${escapeHtml(fmtMoney(netBankIn))}</div></div>
+      <div class="box"><div class="label">${documentText("Cash Expenses")}</div><div class="value">${escapeHtml(fmtMoney(expenseChannels.cash))}</div></div>
+      <div class="box"><div class="label">${documentText("Mobile Expenses")}</div><div class="value">${escapeHtml(fmtMoney(expenseChannels.mobile))}</div></div>
+      <div class="box"><div class="label">${documentText("Bank Expenses")}</div><div class="value">${escapeHtml(fmtMoney(expenseChannels.bank))}</div></div>
     </div>
 
     <div class="grid">
-      <div class="box"><div class="label">Other In</div><div class="value">${escapeHtml(fmtMoney(netOtherIn))}</div></div>
-      <div class="box"><div class="label">Total Money In</div><div class="value">${escapeHtml(fmtMoney(netMoneyIn))}</div></div>
-      <div class="box"><div class="label">Total Qty Sold</div><div class="value">${escapeHtml(String(totalQty))}</div></div>
+      <div class="box"><div class="label">${documentText("Other Expenses")}</div><div class="value">${escapeHtml(fmtMoney(expenseChannels.other))}</div></div>
+      <div class="box"><div class="label">${documentText("Total Expenses")}</div><div class="value">${escapeHtml(fmtMoney(expenseChannels.total))}</div></div>
+      <div class="box"><div class="label">${documentText("Expense Count")}</div><div class="value">${escapeHtml(String(expenseChannels.count))}</div></div>
     </div>
 
-    <div class="section-title">Capital Recovery</div>
+    <div class="section-title">${documentText("Money In After Expenses")}</div>
     <div class="grid">
-      <div class="box"><div class="label">Income</div><div class="value">${escapeHtml(fmtMoney(capitalSummary.income))}</div></div>
-      <div class="box"><div class="label">Cost</div><div class="value">${escapeHtml(fmtMoney(capitalSummary.cost))}</div></div>
-      <div class="box"><div class="label">Net Position</div><div class="value">${escapeHtml(fmtMoney(capitalSummary.net))}</div></div>
+      <div class="box"><div class="label">${documentText("Cash In")}</div><div class="value">${escapeHtml(fmtMoney(netCashIn))}</div></div>
+      <div class="box"><div class="label">${documentText("Mobile In")}</div><div class="value">${escapeHtml(fmtMoney(netMobileIn))}</div></div>
+      <div class="box"><div class="label">${documentText("Bank In")}</div><div class="value">${escapeHtml(fmtMoney(netBankIn))}</div></div>
     </div>
 
-    <div class="section-title">Sales Included</div>
+    <div class="grid">
+      <div class="box"><div class="label">${documentText("Other In")}</div><div class="value">${escapeHtml(fmtMoney(netOtherIn))}</div></div>
+      <div class="box"><div class="label">${documentText("Total Money In")}</div><div class="value">${escapeHtml(fmtMoney(netMoneyIn))}</div></div>
+      <div class="box"><div class="label">${documentText("Total Qty Sold")}</div><div class="value">${escapeHtml(String(totalQty))}</div></div>
+    </div>
+
+    <div class="section-title">${documentText("Capital Recovery")}</div>
+    <div class="grid">
+      <div class="box"><div class="label">${documentText("Income")}</div><div class="value">${escapeHtml(fmtMoney(capitalSummary.income))}</div></div>
+      <div class="box"><div class="label">${documentText("Cost")}</div><div class="value">${escapeHtml(fmtMoney(capitalSummary.cost))}</div></div>
+      <div class="box"><div class="label">${documentText("Net Position")}</div><div class="value">${escapeHtml(fmtMoney(capitalSummary.net))}</div></div>
+    </div>
+
+    <div class="section-title">${documentText("Sales Included")}</div>
     <table class="data-table">
       <thead>
         <tr>
     <th style="width:4%">#</th>
-<th style="width:28%">Products / Items</th>
-<th style="width:10%">Sale Ref</th>
-<th style="width:20%">When</th>
-<th style="width:6%" class="right">Qty</th>
-<th style="width:14%" class="right">Amount</th>
-<th style="width:8%">Method</th>
-<th style="width:10%" class="right">Balance</th>
+<th style="width:28%">${documentText("Products / Items")}</th>
+<th style="width:10%">${documentText("Sale Ref")}</th>
+<th style="width:20%">${documentText("When")}</th>
+<th style="width:6%" class="right">${documentText("Qty")}</th>
+<th style="width:14%" class="right">${documentText("Amount")}</th>
+<th style="width:8%">${documentText("Method")}</th>
+<th style="width:10%" class="right">${documentText("Balance")}</th>
         </tr>
       </thead>
       <tbody>
@@ -1702,21 +1708,21 @@ const purchaseStatusLabel = useMemo(() => {
                 <td class="right">${escapeHtml(fmtMoney(toNum(item.balance_amount ?? 0)))}</td>
               </tr>
             `)
-            .join("") || `<tr><td colspan="8">No sales found for this range.</td></tr>`
+            .join("") || `<tr><td colspan="8">${documentText("No sales found for this range.")}</td></tr>`
         }
       </tbody>
     </table>
 
-    <div class="section-title">Expenses Included</div>
+    <div class="section-title">${documentText("Expenses Included")}</div>
     <table class="data-table">
       <thead>
         <tr>
           <th style="width:5%">#</th>
-          <th style="width:25%">Title</th>
-          <th style="width:18%">Category</th>
-          <th style="width:25%">When</th>
-          <th style="width:17%" class="right">Amount</th>
-          <th style="width:10%">Note</th>
+          <th style="width:25%">${documentText("Title")}</th>
+          <th style="width:18%">${documentText("Category")}</th>
+          <th style="width:25%">${documentText("When")}</th>
+          <th style="width:17%" class="right">${documentText("Amount")}</th>
+          <th style="width:10%">${documentText("Note")}</th>
         </tr>
       </thead>
       <tbody>
@@ -1732,15 +1738,15 @@ const purchaseStatusLabel = useMemo(() => {
                 <td>${escapeHtml(item.note ?? "—")}</td>
               </tr>
             `)
-            .join("") || `<tr><td colspan="6">No expenses found for this range.</td></tr>`
+            .join("") || `<tr><td colspan="6">${documentText("No expenses found for this range.")}</td></tr>`
         }
       </tbody>
     </table>
-<div class="section-title">Business Insights</div>
+<div class="section-title">${documentText("Business Insights")}</div>
 <table class="summary-table">
   <tr>
     <td>
-      <b>Profit Position</b><br/>
+      <b>${documentText("Profit Position")}</b><br/>
       ${
         netProfit >= 0
           ? `Business is profitable in this period. Net profit after expenses is ${escapeHtml(fmtMoney(netProfit))}, with profit margin of ${escapeHtml(pct(profitMargin))}.`
@@ -1750,8 +1756,8 @@ const purchaseStatusLabel = useMemo(() => {
   </tr>
   <tr>
     <td>
-      <b>Expense Control</b><br/>
-      Expenses recorded are ${escapeHtml(fmtMoney(totalExpenses))}. Expense ratio is ${escapeHtml(pct(expenseRatio))}. ${
+      <b>${documentText("Expense Control")}</b><br/>
+      ${documentText("Expenses recorded are")} ${escapeHtml(fmtMoney(totalExpenses))}${documentText(". Expense ratio is")} ${escapeHtml(pct(expenseRatio))}. ${
         expenseRatio > 20
           ? "Expenses are high compared to sales; review spending carefully."
           : "Expenses are within a controlled range for this period."
@@ -1760,7 +1766,7 @@ const purchaseStatusLabel = useMemo(() => {
   </tr>
   <tr>
     <td>
-      <b>Credit / Outstanding</b><br/>
+      <b>${documentText("Credit / Outstanding")}</b><br/>
       ${
         paymentSummary.total_balance > 0
           ? `Customer outstanding balance is ${escapeHtml(fmtMoney(paymentSummary.total_balance))}. Follow up collections to protect cash flow.`
@@ -1770,19 +1776,19 @@ const purchaseStatusLabel = useMemo(() => {
   </tr>
   <tr>
     <td>
-      <b>Goods Purchased / Supplier Debt</b><br/>
-      Goods purchased in this period are ${escapeHtml(fmtMoney(goodsPurchasedSummary.total_goods_purchased))}. Current unpaid balance on those purchase orders is ${escapeHtml(fmtMoney(goodsPurchasedSummary.supplier_outstanding))}. Status: ${escapeHtml(purchaseStatusLabel)}.
+      <b>${documentText("Goods Purchased / Supplier Debt")}</b><br/>
+      ${documentText("Goods purchased in this period are")} ${escapeHtml(fmtMoney(goodsPurchasedSummary.total_goods_purchased))}${documentText(". Current unpaid balance on those purchase orders is")} ${escapeHtml(fmtMoney(goodsPurchasedSummary.supplier_outstanding))}${documentText(". Status:")} ${escapeHtml(purchaseStatusLabel)}.
     </td>
   </tr>
   <tr>
     <td>
-      <b>Business Health Note</b><br/>
-      Average sale value is ${escapeHtml(fmtMoney(averageSaleValue))}. Stock investment difference is ${escapeHtml(signedMoney(fmtMoney, purchaseDifference))}. Use this report to compare sales, purchases, expenses, profit, and debts before making new buying decisions.
+      <b>${documentText("Business Health Note")}</b><br/>
+      ${documentText("Average sale value is")} ${escapeHtml(fmtMoney(averageSaleValue))}${documentText(". Stock investment difference is")} ${escapeHtml(signedMoney(fmtMoney, purchaseDifference))}${documentText(". Use this report to compare sales, purchases, expenses, profit, and debts before making new buying decisions.")}
     </td>
   </tr>
 </table>
     <div class="footer">
-      Confidential Business Report • Generated by ZETRA BMS • For Business Owner Only
+      ${documentText("Confidential Business Report • Generated by ZETRA BMS • For Business Owner Only")}
     </div>
   </div>
 </body>
@@ -1872,7 +1878,7 @@ paymentSummary.bank_total,
         await Print.printAsync({ uri: file.uri });
       }
     } catch (e: any) {
-      Alert.alert("Share failed", e?.message ?? "Imeshindikana kutengeneza au kushare PDF.");
+      Alert.alert(uiText("Share failed"), e?.message ?? uiText("Imeshindikana kutengeneza au kushare PDF."));
     } finally {
       setSharingBusy(false);
     }
@@ -1925,13 +1931,12 @@ paymentSummary.bank_total,
 
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 26, fontWeight: "900", color: theme.colors.text }}>
-                Business Statement
-              </Text>
+                {uiText("Business Statement")}</Text>
               <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                {activeOrgName ?? "—"} • {activeStoreName ?? "No store"} • {activeRole ?? "—"}
+                {activeOrgName ?? "—"} • {activeStoreName ?? uiText("No store")} • {activeRole ?? "—"}
               </Text>
               <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
-                {isOffline ? "OFFLINE" : "ONLINE"}
+                {isOffline ? uiText("OFFLINE") : uiText("ONLINE")}
               </Text>
             </View>
           </View>
@@ -1944,14 +1949,12 @@ paymentSummary.bank_total,
             }}
           >
             <Text style={{ color: theme.colors.danger, fontWeight: "900", fontSize: 16 }}>
-              Access Denied
-            </Text>
+              {uiText("Access Denied")}</Text>
 
             <Text style={{ color: theme.colors.text, fontWeight: "800", lineHeight: 22 }}>
-              Business Statement ni eneo nyeti la kifedha. Kwa sasa inaruhusiwa kwa owner tu.
-            </Text>
+              {uiText("Business Statement ni eneo nyeti la kifedha. Kwa sasa inaruhusiwa kwa owner tu.")}</Text>
 
-            <Button title="Go Back" variant="secondary" onPress={() => router.back()} />
+            <Button title={uiText("Go Back")} variant="secondary" onPress={() => router.back()} />
           </Card>
         </View>
       </Screen>
@@ -1981,31 +1984,30 @@ paymentSummary.bank_total,
 
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 26, fontWeight: "900", color: theme.colors.text }}>
-                Business Statement
-              </Text>
+                {uiText("Business Statement")}</Text>
               <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                {activeOrgName ?? "—"} • {activeStoreName ?? "No store"} • {activeRole ?? "—"}
+                {activeOrgName ?? "—"} • {activeStoreName ?? uiText("No store")} • {activeRole ?? "—"}
               </Text>
               <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
-                {isOffline ? "OFFLINE" : "ONLINE"}
+                {isOffline ? uiText("OFFLINE") : uiText("ONLINE")}
               </Text>
             </View>
           </View>
 
    
           <Card style={{ gap: 10 }}>
-            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Range</Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Range")}</Text>
 
             <View style={{ flexDirection: "row", gap: 10 }}>
-              <SegButton k="month" label="Month" />
-              <SegButton k="year" label="Year" />
-              <SegButton k="custom" label="Custom" />
+              <SegButton k="month" label={uiText("Month")} />
+              <SegButton k="year" label={uiText("Year")} />
+              <SegButton k="custom" label={uiText("Custom")} />
             </View>
 
             {range === "custom" && (
               <View style={{ gap: 10 }}>
                 <View>
-                  <InputLabel>From Date</InputLabel>
+                  <InputLabel>{uiText("From Date")}</InputLabel>
                   <InputBox
                     value={customFrom}
                     onChangeText={setCustomFrom}
@@ -2014,7 +2016,7 @@ paymentSummary.bank_total,
                 </View>
 
                 <View>
-                  <InputLabel>To Date</InputLabel>
+                  <InputLabel>{uiText("To Date")}</InputLabel>
                   <InputBox
                     value={customTo}
                     onChangeText={setCustomTo}
@@ -2029,7 +2031,7 @@ paymentSummary.bank_total,
                 )}
 
                 <Button
-                  title="Apply Custom Range"
+                  title={uiText("Apply Custom Range")}
                   onPress={applyCustomRange}
                   disabled={!!customRangeError}
                   variant="secondary"
@@ -2038,289 +2040,280 @@ paymentSummary.bank_total,
             )}
 
             <Button
-              title={refreshing ? "Refreshing..." : "Refresh Statement"}
+              title={refreshing ? uiText("Refreshing...") : uiText("Refresh Statement")}
               onPress={() => load("refresh")}
               disabled={refreshing || (range === "custom" && !!customRangeError)}
               variant="primary"
             />
 
             {!!err && (
-              <Text style={{ color: theme.colors.danger, fontWeight: "800" }}>{err}</Text>
+              <Text style={{ color: theme.colors.danger, fontWeight: "800" }}>{systemText(err)}</Text>
             )}
           </Card>
 
-          <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>
-            Statement Summary ({summaryLabel})
-          </Text>
+          <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>{uiText("Statement Summary ({p0})", {p0: (summaryLabel)})}</Text>
 
           <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
-            Period: {rangeTextForPdf}
+            {uiText("Period:")}{rangeTextForPdf}
           </Text>
 
           <View style={{ flexDirection: "row", gap: 10 }}>
-            <MetricCard title="TOTAL SALES" amount={fmtMoney(totalSales)} />
-            <MetricCard title="COGS" amount={fmtMoney(totalCogs)} subtitle="Cost of Goods Sold" />
+            <MetricCard title={uiText("TOTAL SALES")} amount={fmtMoney(totalSales)} />
+            <MetricCard title={uiText("COGS")} amount={fmtMoney(totalCogs)} subtitle={uiText("Cost of Goods Sold")} />
           </View>
 
          <View style={{ flexDirection: "row", gap: 10 }}>
   <MetricCard
-    title="GROSS PROFIT"
+    title={uiText("GROSS PROFIT")}
     amount={fmtMoney(grossProfit)}
-    subtitle="Sales - COGS"
+    subtitle={uiText("Sales - COGS")}
   />
-  <MetricCard title="TOTAL EXPENSES" amount={fmtMoney(totalExpenses)} />
+  <MetricCard title={uiText("TOTAL EXPENSES")} amount={fmtMoney(totalExpenses)} />
 </View>
 
 <View style={{ flexDirection: "row", gap: 10 }}>
   <MetricCard
-    title="NET PROFIT"
+    title={uiText("NET PROFIT")}
     amount={fmtMoney(netProfit)}
-    subtitle="Gross Profit - Expenses"
+    subtitle={uiText("Gross Profit - Expenses")}
   />
 </View>
 <View style={{ flexDirection: "row", gap: 10 }}>
-  <MetricCard title="PROFIT MARGIN" amount={pct(profitMargin)} />
-  <MetricCard title="EXPENSE RATIO" amount={pct(expenseRatio)} />
+  <MetricCard title={uiText("PROFIT MARGIN")} amount={pct(profitMargin)} />
+  <MetricCard title={uiText("EXPENSE RATIO")} amount={pct(expenseRatio)} />
 </View>
 
 <View style={{ flexDirection: "row", gap: 10 }}>
-  <MetricCard title="AVERAGE SALE VALUE" amount={fmtMoney(averageSaleValue)} />
+  <MetricCard title={uiText("AVERAGE SALE VALUE")} amount={fmtMoney(averageSaleValue)} />
   <MetricCard
-    title="STOCK INVESTMENT DIFFERENCE"
+    title={uiText("STOCK INVESTMENT DIFFERENCE")}
     amount={signedMoney(fmtMoney, purchaseDifference)}
-    subtitle="Sales - Goods Purchased"
+    subtitle={uiText("Sales - Goods Purchased")}
   />
 </View>
 <View style={{ flexDirection: "row", gap: 10 }}>
   <MetricCard
-    title="CUSTOMER OUTSTANDING BALANCE"
+    title={uiText("CUSTOMER OUTSTANDING BALANCE")}
     amount={fmtMoney(paymentSummary.total_balance)}
-    subtitle="Balance / mikopo ya wateja"
+    subtitle={uiText("Balance / mikopo ya wateja")}
   />
-  <MetricCard title="EXPENSE COUNT" amount={String(expenseCount)} />
+  <MetricCard title={uiText("EXPENSE COUNT")} amount={String(expenseCount)} />
 </View>
 
           <View style={{ flexDirection: "row", gap: 10 }}>
-  <MetricCard title="SALES COUNT" amount={String(salesCount)} />
-  <MetricCard title="TOTAL QTY SOLD" amount={String(totalQty)} />
+  <MetricCard title={uiText("SALES COUNT")} amount={String(salesCount)} />
+  <MetricCard title={uiText("TOTAL QTY SOLD")} amount={String(totalQty)} />
 </View>
 
 <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>
-  Stock / Goods Purchased
-</Text>
+  {uiText("Stock / Goods Purchased")}</Text>
 
 <View style={{ flexDirection: "row", gap: 10 }}>
   <MetricCard
-    title="TOTAL GOODS PURCHASED"
+    title={uiText("TOTAL GOODS PURCHASED")}
     amount={fmtMoney(goodsPurchasedSummary.total_goods_purchased)}
-    subtitle="Bidhaa zilizonunuliwa"
+    subtitle={uiText("Bidhaa zilizonunuliwa")}
   />
   <MetricCard
-    title="PURCHASE ORDERS"
+    title={uiText("PURCHASE ORDERS")}
     amount={String(goodsPurchasedSummary.purchase_orders)}
   />
 </View>
 
 <View style={{ flexDirection: "row", gap: 10 }}>
   <MetricCard
-    title="TOTAL ITEMS PURCHASED"
+    title={uiText("TOTAL ITEMS PURCHASED")}
     amount={String(goodsPurchasedSummary.total_items_purchased)}
   />
   <MetricCard
-    title="OUTSTANDING ON PERIOD PURCHASES"
+    title={uiText("OUTSTANDING ON PERIOD PURCHASES")}
     amount={fmtMoney(goodsPurchasedSummary.supplier_outstanding)}
-    subtitle="Current unpaid balance on purchases in this period"
+    subtitle={uiText("Current unpaid balance on purchases in this period")}
   />
 </View>
 
           <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>
-            Capital Recovery Statement
-          </Text>
+            {uiText("Capital Recovery Statement")}</Text>
 
           <View style={{ flexDirection: "row", gap: 10 }}>
-            <MetricCard title="INCOME" amount={fmtMoney(capitalSummary.income)} />
-            <MetricCard title="COST" amount={fmtMoney(capitalSummary.cost)} />
+            <MetricCard title={uiText("INCOME")} amount={fmtMoney(capitalSummary.income)} />
+            <MetricCard title={uiText("COST")} amount={fmtMoney(capitalSummary.cost)} />
           </View>
 
           <View style={{ flexDirection: "row", gap: 10 }}>
             {String(activeRole ?? "").toLowerCase() === "owner" ? (
-              <MetricCard title="ASSET" amount={fmtMoney(capitalSummary.asset)} />
+              <MetricCard title={uiText("ASSET")} amount={fmtMoney(capitalSummary.asset)} />
             ) : null}
             <MetricCard
-              title="NET POSITION"
+              title={uiText("NET POSITION")}
               amount={`${capitalSummary.net >= 0 ? "+" : "-"} ${fmtMoney(Math.abs(capitalSummary.net))}`}
-              subtitle="Income - Cost"
+              subtitle={uiText("Income - Cost")}
             />
           </View>
 
-          <MetricCard title="RECOVERY RECORDS" amount={String(capitalSummary.count)} />
+          <MetricCard title={uiText("RECOVERY RECORDS")} amount={String(capitalSummary.count)} />
 
           <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>
-            Sales Payments
-          </Text>
+            {uiText("Sales Payments")}</Text>
 
           <View style={{ flexDirection: "row", gap: 10 }}>
             <MetricCard
-              title="CASH SALES"
+              title={uiText("CASH SALES")}
               amount={fmtMoney(salesChannels.cash)}
-              subtitle="Paid sales before expenses"
+              subtitle={uiText("Paid sales before expenses")}
             />
             <MetricCard
-              title="MOBILE SALES"
+              title={uiText("MOBILE SALES")}
               amount={fmtMoney(salesChannels.mobile)}
-              subtitle="Paid sales before expenses"
+              subtitle={uiText("Paid sales before expenses")}
             />
           </View>
 
           <View style={{ flexDirection: "row", gap: 10 }}>
             <MetricCard
-              title="BANK SALES"
+              title={uiText("BANK SALES")}
               amount={fmtMoney(salesChannels.bank)}
-              subtitle="Paid sales before expenses"
+              subtitle={uiText("Paid sales before expenses")}
             />
             <MetricCard
-              title="OTHER SALES"
+              title={uiText("OTHER SALES")}
               amount={fmtMoney(salesChannels.other)}
-              subtitle="Paid sales before expenses"
+              subtitle={uiText("Paid sales before expenses")}
             />
           </View>
 
           <View style={{ flexDirection: "row", gap: 10 }}>
             <MetricCard
-              title="TOTAL SALES PAID"
+              title={uiText("TOTAL SALES PAID")}
               amount={fmtMoney(salesChannels.total)}
-              subtitle="Cash + Mobile + Bank + Other"
+              subtitle={uiText("Cash + Mobile + Bank + Other")}
             />
             <MetricCard
-              title="PERIOD OUTSTANDING CREDIT"
+              title={uiText("PERIOD OUTSTANDING CREDIT")}
               amount={fmtMoney(paymentSummary.total_balance)}
-              subtitle="Credit balance from sales in this period"
+              subtitle={uiText("Credit balance from sales in this period")}
             />
           </View>
 
           <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>
-            Credit Collections
-          </Text>
+            {uiText("Credit Collections")}</Text>
 
           <View style={{ flexDirection: "row", gap: 10 }}>
             <MetricCard
-              title="CASH COLLECTIONS"
+              title={uiText("CASH COLLECTIONS")}
               amount={fmtMoney(creditCollections.cash)}
             />
             <MetricCard
-              title="MOBILE COLLECTIONS"
+              title={uiText("MOBILE COLLECTIONS")}
               amount={fmtMoney(creditCollections.mobile)}
             />
           </View>
 
           <View style={{ flexDirection: "row", gap: 10 }}>
             <MetricCard
-              title="BANK COLLECTIONS"
+              title={uiText("BANK COLLECTIONS")}
               amount={fmtMoney(creditCollections.bank)}
             />
             <MetricCard
-              title="OTHER COLLECTIONS"
+              title={uiText("OTHER COLLECTIONS")}
               amount={fmtMoney(creditCollections.other)}
             />
           </View>
 
           <View style={{ flexDirection: "row", gap: 10 }}>
             <MetricCard
-              title="TOTAL CREDIT COLLECTIONS"
+              title={uiText("TOTAL CREDIT COLLECTIONS")}
               amount={fmtMoney(creditCollections.total)}
-              subtitle={`${creditCollections.payments} payment(s) received`}
+              subtitle={uiText("{p0} payment(s) received", {p0: (creditCollections.payments)})}
             />
             <MetricCard
-              title="GROSS MONEY RECEIVED"
+              title={uiText("GROSS MONEY RECEIVED")}
               amount={fmtMoney(grossMoneyReceived)}
-              subtitle="Sales paid + Credit collections"
+              subtitle={uiText("Sales paid + Credit collections")}
             />
           </View>
 
           <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>
-            Expenses By Payment Channel
-          </Text>
+            {uiText("Expenses By Payment Channel")}</Text>
 
           <View style={{ flexDirection: "row", gap: 10 }}>
             <MetricCard
-              title="CASH EXPENSES"
+              title={uiText("CASH EXPENSES")}
               amount={fmtMoney(expenseChannels.cash)}
             />
             <MetricCard
-              title="MOBILE EXPENSES"
+              title={uiText("MOBILE EXPENSES")}
               amount={fmtMoney(expenseChannels.mobile)}
             />
           </View>
 
           <View style={{ flexDirection: "row", gap: 10 }}>
             <MetricCard
-              title="BANK EXPENSES"
+              title={uiText("BANK EXPENSES")}
               amount={fmtMoney(expenseChannels.bank)}
             />
             <MetricCard
-              title="OTHER EXPENSES"
+              title={uiText("OTHER EXPENSES")}
               amount={fmtMoney(expenseChannels.other)}
             />
           </View>
 
           <View style={{ flexDirection: "row", gap: 10 }}>
             <MetricCard
-              title="TOTAL EXPENSES"
+              title={uiText("TOTAL EXPENSES")}
               amount={fmtMoney(expenseChannels.total)}
-              subtitle={`${expenseChannels.count} expense(s)`}
+              subtitle={uiText("{p0} expense(s)", {p0: (expenseChannels.count)})}
             />
           </View>
 
           <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>
-            Money In After Expenses
-          </Text>
+            {uiText("Money In After Expenses")}</Text>
 
           <View style={{ flexDirection: "row", gap: 10 }}>
             <MetricCard
-              title="CASH IN"
+              title={uiText("CASH IN")}
               amount={fmtMoney(netCashIn)}
-              subtitle="Sales + collections - cash expenses"
+              subtitle={uiText("Sales + collections - cash expenses")}
             />
             <MetricCard
-              title="MOBILE IN"
+              title={uiText("MOBILE IN")}
               amount={fmtMoney(netMobileIn)}
-              subtitle="Sales + collections - mobile expenses"
+              subtitle={uiText("Sales + collections - mobile expenses")}
             />
           </View>
 
           <View style={{ flexDirection: "row", gap: 10 }}>
             <MetricCard
-              title="BANK IN"
+              title={uiText("BANK IN")}
               amount={fmtMoney(netBankIn)}
-              subtitle="Sales + collections - bank expenses"
+              subtitle={uiText("Sales + collections - bank expenses")}
             />
             <MetricCard
-              title="OTHER IN"
+              title={uiText("OTHER IN")}
               amount={fmtMoney(netOtherIn)}
-              subtitle="Sales + collections - other expenses"
+              subtitle={uiText("Sales + collections - other expenses")}
             />
           </View>
 
           <View style={{ flexDirection: "row", gap: 10 }}>
             <MetricCard
-              title="TOTAL MONEY IN"
+              title={uiText("TOTAL MONEY IN")}
               amount={fmtMoney(netMoneyIn)}
-              subtitle="After expenses by payment channel"
+              subtitle={uiText("After expenses by payment channel")}
             />
-            <MetricCard title="TOTAL QTY SOLD" amount={String(totalQty)} />
+            <MetricCard title={uiText("TOTAL QTY SOLD")} amount={String(totalQty)} />
           </View>
 
           <Card style={{ gap: 10 }}>
             <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-              Statement Actions
-            </Text>
+              {uiText("Statement Actions")}</Text>
 
             <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
-              Statement Ref: {statementRef}
+              {uiText("Statement Ref:")}{statementRef}
             </Text>
 
             <Button
-              title={sharingBusy ? "Preparing PDF..." : "Share Statement PDF"}
+              title={sharingBusy ? uiText("Preparing PDF...") : uiText("Share Statement PDF")}
               onPress={() => {
                 void handleSharePdf();
               }}
@@ -2329,20 +2322,16 @@ paymentSummary.bank_total,
             />
 
             <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 12 }}>
-              Hii statement inatoa sales, expenses, net profit, payment breakdown, na outstanding
-              balances kwa period uliyochagua.
-            </Text>
+              {uiText("Hii statement inatoa sales, expenses, net profit, payment breakdown, na outstanding balances kwa period uliyochagua.")}</Text>
           </Card>
 
           <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>
-            Capital Recovery Records
-          </Text>
+            {uiText("Capital Recovery Records")}</Text>
 
           {capitalRows.length === 0 ? (
             <View style={{ paddingTop: 4, alignItems: "center" }}>
               <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                No capital recovery records found.
-              </Text>
+                {uiText("No capital recovery records found.")}</Text>
             </View>
           ) : (
             capitalRows.slice(0, 10).map((item) => {
@@ -2376,7 +2365,7 @@ paymentSummary.bank_total,
                   </Text>
 
                   <Text style={{ color: theme.colors.faint, fontWeight: "800" }}>
-                    Recorded by: {item.created_by_name || item.created_by || "Unknown"}
+                    {uiText("Recorded by:")}{item.created_by_name || item.created_by || uiText("Unknown")}
                   </Text>
                 </Card>
               );
@@ -2384,21 +2373,18 @@ paymentSummary.bank_total,
           )}
 
           <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>
-            Recent Sales In Statement
-          </Text>
+            {uiText("Recent Sales In Statement")}</Text>
 
           {loading ? (
             <View style={{ paddingTop: 10, alignItems: "center" }}>
               <ActivityIndicator />
               <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                Loading statement data...
-              </Text>
+                {uiText("Loading statement data...")}</Text>
             </View>
           ) : salesRows.length === 0 ? (
             <View style={{ paddingTop: 4, alignItems: "center" }}>
               <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                No sales found.
-              </Text>
+                {uiText("No sales found.")}</Text>
             </View>
           ) : (
             salesRows.slice(0, 8).map((item, idx) => {
@@ -2406,27 +2392,27 @@ paymentSummary.bank_total,
               return (
                 <Card key={`${saleId}-${idx}`} style={{ marginBottom: 12, gap: 10 }}>
                   <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-                    Sale {saleId ? saleId.slice(0, 8) : "—"}
+                    {uiText("Sale")}{saleId ? saleId.slice(0, 8) : "—"}
                   </Text>
 
                   <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                    When:{" "}
+                    {uiText("When:")}{" "}
                     <Text style={{ color: theme.colors.text }}>
                       {safeWhenLabel(item.sold_at)}
                     </Text>
                   </Text>
 
                   <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                    Qty: <Text style={{ color: theme.colors.text }}>{toNum(item.total_qty ?? 0)}</Text>
+                    {uiText("Qty:")}<Text style={{ color: theme.colors.text }}>{toNum(item.total_qty ?? 0)}</Text>
                     {"   "}•{"   "}
-                    Amount:{" "}
+                    {uiText("Amount:")}{" "}
                     <Text style={{ color: theme.colors.text }}>
                       {fmtMoney(toNum(item.total_amount ?? 0))}
                     </Text>
                   </Text>
 
                   <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                    Method:{" "}
+                    {uiText("Method:")}{" "}
                     <Text style={{ color: theme.colors.text }}>
                       {String(item.payment_method ?? "—").toUpperCase()}
                     </Text>
@@ -2437,14 +2423,12 @@ paymentSummary.bank_total,
           )}
 
           <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>
-            Recent Expenses In Statement
-          </Text>
+            {uiText("Recent Expenses In Statement")}</Text>
 
           {loading ? null : expenseRows.length === 0 ? (
             <View style={{ paddingTop: 4, alignItems: "center" }}>
               <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                No expenses found.
-              </Text>
+                {uiText("No expenses found.")}</Text>
             </View>
           ) : (
             expenseRows.slice(0, 8).map((item) => (
@@ -2454,20 +2438,20 @@ paymentSummary.bank_total,
                 </Text>
 
                 <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                  Category: <Text style={{ color: theme.colors.text }}>{item.category ?? "—"}</Text>
+                  {uiText("Category:")}<Text style={{ color: theme.colors.text }}>{item.category ?? "—"}</Text>
                 </Text>
 
                 <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                  When: <Text style={{ color: theme.colors.text }}>{safeWhenLabel(item.spent_at)}</Text>
+                  {uiText("When:")}<Text style={{ color: theme.colors.text }}>{safeWhenLabel(item.spent_at)}</Text>
                 </Text>
 
                 <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                  Amount: <Text style={{ color: theme.colors.text }}>{fmtMoney(item.amount)}</Text>
+                  {uiText("Amount:")}<Text style={{ color: theme.colors.text }}>{fmtMoney(item.amount)}</Text>
                 </Text>
 
                 {!!String(item.note ?? "").trim() && (
                   <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                    Note: <Text style={{ color: theme.colors.text }}>{String(item.note ?? "").trim()}</Text>
+                    {uiText("Note:")}<Text style={{ color: theme.colors.text }}>{String(item.note ?? "").trim()}</Text>
                   </Text>
                 )}
               </Card>

@@ -1,7 +1,9 @@
-﻿import SafeIcon from "@/src/ui/SafeIcon";
-import { Audio } from "expo-av";
+import {paymentMethodKey} from "@/src/i18n/presentation";
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+﻿import {useCommonText} from "@/src/i18n/useCommonText";
+import SafeIcon from "@/src/ui/SafeIcon";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Modal,
@@ -19,6 +21,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { useOrg } from "../../../src/context/OrgContext";
 import { enqueueSale, makeId } from "../../../src/offline/salesQueue";
+import { SubmissionGate } from "../../../src/offline/submissionGate";
 import { supabase } from "../../../src/supabase/supabaseClient";
 import { Button } from "../../../src/ui/Button";
 import { Card } from "../../../src/ui/Card";
@@ -55,13 +58,26 @@ type OpenCashierShiftRow = {
   opened_at?: string | null;
   closed_at?: string | null;
 };
-const SALE_SUCCESS_SOUND_URI =
-  "https://assets.mixkit.co/active_storage/sfx/951/951-preview.mp3";
-
 async function playSaleSuccessSoundSafe() {
-  if (Platform.OS === "web") return;
-
   try {
+    if (Platform.OS === "web") {
+      if (typeof window === "undefined") return;
+      const Context = window.AudioContext || (window as any).webkitAudioContext;
+      if (!Context) return;
+      const context = new Context();
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      oscillator.frequency.setValueAtTime(660, context.currentTime);
+      oscillator.frequency.setValueAtTime(880, context.currentTime + 0.1);
+      gain.gain.setValueAtTime(0.12, context.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.2);
+      oscillator.connect(gain); gain.connect(context.destination);
+      oscillator.onended = () => { void context.close(); };
+      oscillator.start(); oscillator.stop(context.currentTime + 0.2);
+      return;
+    }
+
+    const { Audio } = await import("expo-av");
     await Audio.setAudioModeAsync({
       playsInSilentModeIOS: true,
       staysActiveInBackground: false,
@@ -69,7 +85,7 @@ async function playSaleSuccessSoundSafe() {
     });
 
     const { sound } = await Audio.Sound.createAsync(
-      { uri: SALE_SUCCESS_SOUND_URI },
+      require("../../../assets/sounds/sale-success.wav"),
       {
         shouldPlay: true,
         volume: 0.46,
@@ -84,7 +100,7 @@ async function playSaleSuccessSoundSafe() {
       }
     });
   } catch {
-    // sale success sound must never break checkout
+    // Success sound must never break checkout.
   }
 }
 type StaffAttributionStoreRow = {
@@ -365,6 +381,8 @@ function checkoutCardStyle(accent: string, bg: string = "#FFFFFF", compact = fal
   };
 }
 export default function CheckoutScreen() {
+ const systemText=useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
   const { width } = useWindowDimensions();
 
@@ -411,9 +429,7 @@ orderStoreName?: string | string[];
     const sid = String(storeId ?? "").trim();
     if (!sid) return;
 
-    try {
-      await AsyncStorage.removeItem(`sales_cart_${sid}`);
-    } catch {}
+    await AsyncStorage.removeItem(`sales_cart_${sid}`);
   }, [storeId]);
   const storeNameParam = String(one(params.storeName) ?? "").trim();
   const cashierMode = one(params.cashierMode) === "1";
@@ -431,11 +447,30 @@ const reservationOrgId = String(one(params.orderOrgId) ?? orgId).trim();
     try {
       const raw = one(params.cart);
       if (!raw) return [];
-      const decoded = decodeURIComponent(raw);
-      const parsed = JSON.parse(decoded);
-      if (!Array.isArray(parsed)) return [];
+      let source = raw;
+      let parsed: unknown = null;
 
-      return parsed
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          parsed = JSON.parse(source);
+          break;
+        } catch {
+          try {
+            const next = decodeURIComponent(source);
+            if (next === source) break;
+            source = next;
+          } catch {
+            break;
+          }
+        }
+      }
+
+      if (!Array.isArray(parsed)) {
+        console.warn("[ZETRA CHECKOUT] Cart route parsing failed.");
+        return [];
+      }
+
+      const validRows = parsed
         .map((x: any) => {
           const qty = Number(Number(x.qty ?? 0).toFixed(3));
           const unit_price = Number(x.unit_price ?? 0);
@@ -455,25 +490,38 @@ const reservationOrgId = String(one(params.orderOrgId) ?? orgId).trim();
           } as CartItem;
         })
         .filter((x) => x.product_id && Number.isFinite(x.qty) && x.qty > 0);
-    } catch {
+
+      if (validRows.length !== parsed.length) {
+        console.warn(
+          "[ZETRA CHECKOUT] Invalid rows rejected:",
+          parsed.length - validRows.length,
+          "of",
+          parsed.length
+        );
+      }
+
+      return validRows;
+    } catch (error) {
+      console.warn("[ZETRA CHECKOUT] Cart normalization failed.");
       return [];
     }
   }, [params.cart]);
 
-  const [checkoutCart, setCheckoutCart] = useState<CartItem[]>([]);
+  const normalizedCart = useMemo(() => cart.map(c => ({
+    ...c, extra_per_qty: Number(c.extra_per_qty ?? 0) || 0,
+  })), [cart]);
+  const [checkoutCart, setCheckoutCart] = useState<CartItem[]>(() => normalizedCart);
+  const cartSource = useRef(normalizedCart);
   const [adjustModalVisible, setAdjustModalVisible] = useState(false);
   const [adjustTargetIndex, setAdjustTargetIndex] = useState<number | null>(null);
   const [adjustApplyToAll, setAdjustApplyToAll] = useState(false);
   const [adjustValue, setAdjustValue] = useState("");
 
   useEffect(() => {
-    setCheckoutCart(
-      cart.map((c) => ({
-        ...c,
-        extra_per_qty: Number((c as any)?.extra_per_qty ?? 0) || 0,
-      }))
-    );
-  }, [cart]);
+    if (cartSource.current === normalizedCart) return;
+    cartSource.current = normalizedCart;
+    setCheckoutCart(normalizedCart);
+  }, [normalizedCart]);
 
   const isDesktopWeb = Platform.OS === "web" && width >= 1180;
   
@@ -573,11 +621,13 @@ const reservationOrgId = String(one(params.orderOrgId) ?? orgId).trim();
   const headerStoreName = storeNameParam || activeStoreName || "—";
   const mismatch = !!(activeStoreId && storeId && activeStoreId !== storeId);
 
-  const [method, setMethod] = useState<CheckoutMethod>("CASH");
+  const [method, setMethod] = useState<CheckoutMethod>(() =>
+    reservationMode ? "CREDIT" : "CASH"
+  );
   const [paidVia, setPaidVia] = useState<Exclude<PayMethod, "CREDIT">>("CASH");
 
   const [paidStr, setPaidStr] = useState<string>(() =>
-    String(Math.round(grandTotal || subtotalAmount))
+    reservationMode ? "0" : String(Math.round(grandTotal || subtotalAmount))
   );
 
   const [splitCashStr, setSplitCashStr] = useState<string>("");
@@ -599,6 +649,7 @@ const [soldByMembershipId, setSoldByMembershipId] = useState<string>("");
 const [staffDropdownOpen, setStaffDropdownOpen] = useState(false);
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
+  const submission = useRef(new SubmissionGate());
   const [openCashierShiftId, setOpenCashierShiftId] = useState<string | null>(null);
   const [webBanner, setWebBanner] = useState<{
     type: "success" | "error";
@@ -1095,15 +1146,16 @@ orgId,
   );
 
   const confirm = useCallback(async () => {
-    if (saving) return;
-
+    if (saving || !submission.current.begin()) return;
+    setSaving(true);
+    try {
     setWebBanner(null);
 
     if (invalidReason) {
       if (Platform.OS === "web") {
         setWebBanner({ type: "error", text: invalidReason });
       } else {
-        Alert.alert("Blocked", invalidReason);
+        Alert.alert(uiText("Blocked"), invalidReason);
       }
       return;
     }
@@ -1133,6 +1185,7 @@ const finalNote = buildNoteWithDiscount({
           line_total: getAdjustedLineTotal(c),
         }));
 
+submission.current.dispatched();
 const { data, error } = await supabase.rpc("create_cashier_handoff_v2", {
   p_store_id: storeId,
   p_items: items,
@@ -1146,7 +1199,7 @@ const { data, error } = await supabase.rpc("create_cashier_handoff_v2", {
 });
 
 if (error) throw error;
-
+submission.current.committed();
 await clearPersistedSalesCart();
 
 const successMsg = `Order imetumwa kwa cashier queue ya store hii. Handoff ID: ${String(data ?? "").slice(0, 8)}...`;
@@ -1157,15 +1210,17 @@ const successMsg = `Order imetumwa kwa cashier queue ya store hii. Handoff ID: $
             router.replace("/(tabs)/sales" as any);
           }, 650);
         } else {
-          Alert.alert("Sent to Cashiers ✅", successMsg);
+          Alert.alert(uiText("Sent to Cashiers ✅"), systemText(successMsg));
           router.replace("/(tabs)/sales" as any);
         }
       } catch (e: any) {
-        const msg = e?.message ?? "Failed to send order to cashier queue";
+        const msg = submission.current.blocked
+          ? "Order outcome requires review. Check cashier history before retrying."
+          : e?.message ?? "Failed to send order to cashier queue";
         if (Platform.OS === "web") {
           setWebBanner({ type: "error", text: msg });
         } else {
-          Alert.alert("Failed", msg);
+          Alert.alert(uiText("Failed"), systemText(msg));
         }
       } finally {
         setSaving(false);
@@ -1202,6 +1257,7 @@ const successMsg = `Order imetumwa kwa cashier queue ya store hii. Handoff ID: $
       subtotal: subtotalAmount,
     });
 
+    submission.current.dispatched();
     const { error } = await supabase.rpc("create_store_order_v1", {
       p_org_id: reservationOrgId,
       p_store_id: storeId,
@@ -1215,7 +1271,7 @@ const successMsg = `Order imetumwa kwa cashier queue ya store hii. Handoff ID: $
     } as any);
 
     if (error) throw error;
-
+    submission.current.committed();
     await clearPersistedSalesCart();
 
     const successMsg =
@@ -1236,9 +1292,9 @@ const successMsg = `Order imetumwa kwa cashier queue ya store hii. Handoff ID: $
 } as any);
       }, 650);
     } else {
-      Alert.alert("Success ✅", successMsg, [
+      Alert.alert(uiText("Success ✅"), systemText(successMsg), [
         {
-          text: "OK",
+          text: uiText("OK"),
           onPress: () =>
   router.replace({
     pathname: "/stores/orders",
@@ -1252,9 +1308,11 @@ const successMsg = `Order imetumwa kwa cashier queue ya store hii. Handoff ID: $
       ]);
     }
   } catch (e: any) {
-    const msg = e?.message ?? "Failed to save reservation/pre-order.";
+    const msg = submission.current.blocked
+      ? "Order outcome requires review. Check order history before retrying."
+      : e?.message ?? "Failed to save reservation/pre-order.";
     if (Platform.OS === "web") setWebBanner({ type: "error", text: msg });
-    else Alert.alert("Failed", msg);
+    else Alert.alert(uiText("Failed"), systemText(msg));
   } finally {
     setSaving(false);
   }
@@ -1340,6 +1398,8 @@ customer_phone: customerPhone.trim() || null,
           },
         });
 
+        submission.current.committed();
+        await clearPersistedSalesCart();
         const successMsg = "Sale imehifadhiwa. Itasync mtandao ukirudi.";
         void playSaleSuccessSoundSafe();
 
@@ -1349,15 +1409,17 @@ customer_phone: customerPhone.trim() || null,
             router.replace("/(tabs)/sales/history" as any);
           }, 650);
         } else {
-          Alert.alert("Saved Offline ✅", successMsg);
+          Alert.alert(uiText("Saved Offline ✅"), systemText(successMsg));
           router.replace("/(tabs)/sales/history" as any);
         }
       } catch (e: any) {
-        const msg = e?.message ?? "Failed to save offline";
+        const msg = submission.current.committedSale
+          ? "Sale saved offline; cart cleanup failed. Open history before starting another sale."
+          : e?.message ?? "Failed to save offline";
         if (Platform.OS === "web") {
           setWebBanner({ type: "error", text: msg });
         } else {
-          Alert.alert("Failed", msg);
+          Alert.alert(uiText("Failed"), systemText(msg));
         }
       }
       return;
@@ -1416,6 +1478,7 @@ customer_phone: customerPhone.trim() || null,
         }
       }
 
+      submission.current.dispatched();
       const res = await supabase.rpc("create_sale_with_payment_v6", {
         p_store_id: storeId,
         p_items: items,
@@ -1451,6 +1514,8 @@ p_customer_full_name: customerName.trim() || null,
             ? String(row)
             : null;
 
+      if (!saleId) throw new Error("Sale response missing an identifier; verify history before retrying.");
+      submission.current.committed();
       if (saleId && customerPhone.trim()) {
         const attachRes = await supabase.rpc("attach_customer_to_sale", {
           p_sale_id: saleId,
@@ -1487,12 +1552,21 @@ p_customer_full_name: customerName.trim() || null,
         : "Sale created successfully";
 
       await clearPersistedSalesCart();
-      void playSaleSuccessSoundSafe();
+      await playSaleSuccessSoundSafe();
 
       if (Platform.OS === "web") {
         setWebBanner({ type: "success", text: successMsg });
 
-        setTimeout(() => {
+        const confirmed =
+          typeof window === "undefined"
+            ? true
+            : window.confirm(
+                creditRecorded
+                  ? "Sale created (credit recorded v2)\n\nBonyeza OK kufungua receipt."
+                  : "Sale created\n\nBonyeza OK kufungua receipt."
+              );
+
+        if (confirmed) {
           if (saleId) {
             router.replace({
               pathname: "/(tabs)/sales/receipt",
@@ -1501,14 +1575,14 @@ p_customer_full_name: customerName.trim() || null,
           } else {
             router.replace("/(tabs)/sales/history" as any);
           }
-        }, 650);
+        }
       } else {
         Alert.alert(
-          "Success ✅",
-          creditRecorded ? "Sale created (credit recorded v2)" : "Sale created",
+          uiText("Success ✅"),
+          creditRecorded ? uiText("Sale created (credit recorded v2)") : uiText("Sale created"),
           [
             {
-              text: "OK",
+              text: uiText("OK"),
               onPress: () => {
                 if (saleId) {
                   router.replace({
@@ -1524,13 +1598,21 @@ p_customer_full_name: customerName.trim() || null,
         );
       }
     } catch (e: any) {
-      const msg = e?.message ?? "Unknown error";
+      const msg = submission.current.blocked
+        ? (submission.current.committedSale
+          ? "Sale created; a follow-up step failed. Verify history before starting another sale."
+          : "Sale outcome is unconfirmed. Verify history before retrying.")
+        : e?.message ?? "Unknown error";
       if (Platform.OS === "web") {
         setWebBanner({ type: "error", text: msg });
       } else {
-        Alert.alert("Failed", msg);
+        Alert.alert(uiText("Failed"), systemText(msg));
       }
     } finally {
+      setSaving(false);
+    }
+    } finally {
+      submission.current.release();
       setSaving(false);
     }
   }, [
@@ -1574,8 +1656,8 @@ headerStoreName,
 
   const cartTotalLabel = useMemo(() => {
     const itemsCount = checkoutCart.length;
-    return `${itemsCount} item${itemsCount === 1 ? "" : "s"} • ${totalQty} qty`;
-  }, [checkoutCart.length, totalQty]);
+    return uiText(itemsCount === 1 ? "{p0} item • {p1} qty" : "{p0} items • {p1} qty", {p0: itemsCount, p1: totalQty});
+  }, [checkoutCart.length, totalQty, uiText]);
 
   const prettySubtotal = useMemo(() => fmt(subtotalAmount), [fmt, subtotalAmount]);
   const prettyDiscount = useMemo(() => fmt(discount.amount), [fmt, discount.amount]);
@@ -1598,8 +1680,7 @@ headerStoreName,
       <View style={{ flexDirection: "row", alignItems: "center" }}>
         <View style={{ flex: 1 }}>
           <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-            🧾 Order Summary
-          </Text>
+            {uiText("🧾 Order Summary")}</Text>
           <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 2 }}>
             {cartTotalLabel}
           </Text>
@@ -1671,7 +1752,7 @@ headerStoreName,
                     }}
                     numberOfLines={isDesktopWeb ? 3 : 1}
                   >
-                    SKU: {c.sku ?? "—"} • Qty: {c.qty} • Unit: {c.unit ?? "—"}
+                    {uiText("SKU:")}{c.sku ?? "—"} {uiText("• Qty:")}{c.qty} {uiText("• Unit:")}{c.unit ?? "—"}
                   </Text>
                 </View>
 
@@ -1700,22 +1781,19 @@ headerStoreName,
                 style={{ color: theme.colors.faint, fontWeight: "900", lineHeight: 18 }}
                 numberOfLines={isDesktopWeb ? 2 : 1}
               >
-                Unit: {adjustedUnit} • Line: {adjustedLine}
+                {uiText("Unit:")}{adjustedUnit} {uiText("• Line:")}{adjustedLine}
               </Text>
 
               {extra > 0 ? (
-                <Text style={{ color: theme.colors.emerald, fontWeight: "900" }}>
-                  Markup: +{extraLabel} kwa kila qty
-                </Text>
+                <Text style={{ color: theme.colors.emerald, fontWeight: "900" }}>{uiText("Markup: +{p0} per unit", {p0: (extraLabel ?? "")})}</Text>
               ) : (
                 <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                  Hakuna markup bado
-                </Text>
+                  {uiText("Hakuna markup bado")}</Text>
               )}
 
               {extra > 0 ? (
                 <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                  Base Unit: {baseUnit}
+                  {uiText("Base Unit:")}{baseUnit}
                 </Text>
               ) : null}
             </View>
@@ -1733,21 +1811,21 @@ headerStoreName,
         }}
       >
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Subtotal</Text>
+          <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>{uiText("Subtotal")}</Text>
           <Text numberOfLines={1} adjustsFontSizeToFit style={{ color: theme.colors.text, fontWeight: "900" }}>
             {prettySubtotal}
           </Text>
         </View>
 
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Discount</Text>
+          <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>{uiText("Discount")}</Text>
           <Text numberOfLines={1} adjustsFontSizeToFit style={{ color: theme.colors.text, fontWeight: "900" }}>
             {prettyDiscount}
           </Text>
         </View>
 
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Total</Text>
+          <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>{uiText("Total")}</Text>
           <Text numberOfLines={1} adjustsFontSizeToFit style={{ color: theme.colors.text, fontWeight: "900" }}>
             {prettyTotal}
           </Text>
@@ -1759,33 +1837,31 @@ headerStoreName,
   const discountNoteCard = (
     <Card style={checkoutCardStyle("#F59E0B", "#FFFBEB", isDesktopWeb)}>
       <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-        🎯 Discount & Note
-      </Text>
+        {uiText("🎯 Discount & Note")}</Text>
 
       <View>
-        <FieldLabel>Discount (e.g. 10% • 5000 • 5k • 1m)</FieldLabel>
+        <FieldLabel>{uiText("Discount (e.g. 10% • 5000 • 5k • 1m)")}</FieldLabel>
         <InputBox
           value={discountText}
           onChangeText={setDiscountText}
-          placeholder="mf: 10% au 5000 au 5k"
+          placeholder={uiText("mf: 10% au 5000 au 5k")}
           keyboardType="default"
         />
         <Text style={{ color: theme.colors.faint, fontWeight: "800", marginTop: 8, lineHeight: 17 }}>
-          Tip: Discount hupunguza total. Alama ya + kwenye item huongeza markup kwa kila qty.
-        </Text>
+          {uiText("Tip: Discount hupunguza total. Alama ya + kwenye item huongeza markup kwa kila qty.")}</Text>
       </View>
 
       <View style={{ height: 1, backgroundColor: "rgba(15,23,42,0.06)" }} />
 
       <View>
-        <FieldLabel>Note (optional)</FieldLabel>
+        <FieldLabel>{uiText("Note (optional)")}</FieldLabel>
         <InputBox
           value={note}
           onChangeText={setNote}
           placeholder={
             cashierMode
-              ? "andika maelezo ya order kwa cashiers..."
-              : "andika maelezo ya mauzo..."
+              ? uiText("andika maelezo ya order kwa cashiers...")
+              : uiText("andika maelezo ya mauzo...")
           }
           keyboardType="default"
           multiline
@@ -1797,13 +1873,12 @@ headerStoreName,
 const staffAttributionCard = (
       <Card style={checkoutCardStyle("#8B5CF6", "#FAF5FF", isDesktopWeb)}>
         <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-          👥 Staff Attribution
-        </Text>
+          {uiText("👥 Staff Attribution")}</Text>
 
         <Text style={{ color: theme.colors.muted, fontWeight: "800", lineHeight: 18, fontSize: 12 }}>
           {String(activeRole ?? "").trim().toLowerCase() === "staff"
-            ? "Default sale itahesabiwa kwako. Badilisha tu kama staff mwingine ndiye amefanya sale."
-            : "Chagua staff kwa commission attribution. Ukiacha wazi, sale itaendelea kawaida."}
+            ? uiText("Default sale itahesabiwa kwako. Badilisha tu kama staff mwingine ndiye amefanya sale.")
+            : uiText("Chagua staff kwa commission attribution. Ukiacha wazi, sale itaendelea kawaida.")}
         </Text>
 
         <View style={{ gap: 8 }}>
@@ -1834,7 +1909,7 @@ const staffAttributionCard = (
                 fontWeight: "900",
               }}
             >
-              {effectiveSoldByMembershipId ? selectedSoldByLabel : "No staff attribution"}
+              {effectiveSoldByMembershipId ? selectedSoldByLabel : uiText("No staff attribution")}
             </Text>
 
             <SafeIcon
@@ -1871,8 +1946,7 @@ const staffAttributionCard = (
                       fontWeight: "900",
                     }}
                   >
-                    No staff attribution
-                  </Text>
+                    {uiText("No staff attribution")}</Text>
                 </Pressable>
               ) : null}
 
@@ -1909,7 +1983,7 @@ const staffAttributionCard = (
                         fontWeight: "900",
                       }}
                     >
-                      {label}
+                      {(pickStaffEmail(row) ?? uiText("Membership {p0}...", {p0: (membershipId.slice(0, 8))}))}
                     </Text>
                   </Pressable>
                 );
@@ -1917,8 +1991,7 @@ const staffAttributionCard = (
 
               {staffOptions.length === 0 ? (
                 <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                  Hakuna staff waliosajiliwa kwenye store hii kwa sasa.
-                </Text>
+                  {uiText("Hakuna staff waliosajiliwa kwenye store hii kwa sasa.")}</Text>
               ) : null}
             </View>
           ) : null}
@@ -1929,10 +2002,9 @@ const staffAttributionCard = (
     <Card style={checkoutCardStyle("#10B981", "#F0FDF4", isDesktopWeb)}>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
         <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-          💳 Payment
-        </Text>
+          {uiText("💳 Payment")}</Text>
         <Text style={{ color: theme.colors.emerald, fontWeight: "900", fontSize: 12 }}>
-          {method}
+          {uiText(paymentMethodKey(method))}
         </Text>
       </View>
 
@@ -1953,7 +2025,7 @@ const staffAttributionCard = (
         ].map(([label, value]) => (
           <MethodChip
             key={value}
-            label={label}
+            label={uiText(paymentMethodKey(label))}
             active={method === value}
             onPress={() => onSetMethod(value as CheckoutMethod)}
             compact={isDesktopWeb}
@@ -1965,7 +2037,7 @@ const staffAttributionCard = (
         <View style={{ gap: 8 }}>
           <View style={{ flexDirection: isDesktopWeb ? "row" : "column", gap: 8 }}>
             <View style={{ flex: 1 }}>
-              <FieldLabel>Cash ({displayCurrency})</FieldLabel>
+              <FieldLabel>{uiText("Cash ({p0})", {p0: (displayCurrency)})}</FieldLabel>
               <InputBox
                 value={splitCashStr}
                 onChangeText={(v) => setSplitCashStr(normalizeMoneyInput(v))}
@@ -1975,7 +2047,7 @@ const staffAttributionCard = (
             </View>
 
             <View style={{ flex: 1 }}>
-              <FieldLabel>Mobile ({displayCurrency})</FieldLabel>
+              <FieldLabel>{uiText("Mobile ({p0})", {p0: (displayCurrency)})}</FieldLabel>
               <InputBox
                 value={splitMobileStr}
                 onChangeText={(v) => setSplitMobileStr(normalizeMoneyInput(v))}
@@ -1985,7 +2057,7 @@ const staffAttributionCard = (
             </View>
 
             <View style={{ flex: 1 }}>
-              <FieldLabel>Bank ({displayCurrency})</FieldLabel>
+              <FieldLabel>{uiText("Bank ({p0})", {p0: (displayCurrency)})}</FieldLabel>
               <InputBox
                 value={splitBankStr}
                 onChangeText={(v) => setSplitBankStr(normalizeMoneyInput(v))}
@@ -1996,12 +2068,11 @@ const staffAttributionCard = (
           </View>
 
           <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 12 }}>
-            Split total lazima ilingane na sale total.
-          </Text>
+            {uiText("Split total lazima ilingane na sale total.")}</Text>
         </View>
       ) : (
         <View>
-          <FieldLabel>Paid ({displayCurrency})</FieldLabel>
+          <FieldLabel>{uiText("Paid ({p0})", {p0: (displayCurrency)})}</FieldLabel>
           <InputBox
             value={paidStr}
             onChangeText={onPaidChange}
@@ -2010,23 +2081,22 @@ const staffAttributionCard = (
           />
           <Text style={{ color: theme.colors.faint, fontWeight: "800", marginTop: 6, fontSize: 12 }}>
             {method === "CREDIT"
-              ? "Credit inaruhusu 0 au partial payment."
-              : "Non-credit lazima ilipwe full total."}
+              ? uiText("Credit inaruhusu 0 au partial payment.")
+              : uiText("Non-credit lazima ilipwe full total.")}
           </Text>
         </View>
       )}
 
       <View style={{ flexDirection: "row", gap: 8 }}>
-        <CheckoutMiniTile label="Total" value={prettyTotal} />
-        <CheckoutMiniTile label="Paid" value={prettyPaid} />
-        <CheckoutMiniTile label="Balance" value={prettyBal} highlight={isCredit || balance > 0} />
+        <CheckoutMiniTile label={uiText("Total")} value={prettyTotal} />
+        <CheckoutMiniTile label={uiText("Paid")} value={prettyPaid} />
+        <CheckoutMiniTile label={uiText("Balance")} value={prettyBal} highlight={isCredit || balance > 0} />
       </View>
 
       {method === "CREDIT" ? (
         <>
           <Text style={{ color: theme.colors.faint, fontWeight: "900", fontSize: 12 }}>
-            CREDIT MODE: ukiweka Paid zaidi ya 0, chagua njia ya pesa iliyopokelewa.
-          </Text>
+            {uiText("CREDIT MODE: ukiweka Paid zaidi ya 0, chagua njia ya pesa iliyopokelewa.")}</Text>
 
           <View
             style={{
@@ -2037,7 +2107,7 @@ const staffAttributionCard = (
             }}
           >
             <MethodChip
-              label="Cash"
+              label={uiText("Cash")}
               active={paidVia === "CASH"}
               compact={isDesktopWeb}
               onPress={() => {
@@ -2046,7 +2116,7 @@ const staffAttributionCard = (
               }}
             />
             <MethodChip
-              label="Mobile"
+              label={uiText("Mobile")}
               active={paidVia === "MOBILE"}
               compact={isDesktopWeb}
               onPress={() => {
@@ -2056,7 +2126,7 @@ const staffAttributionCard = (
               }}
             />
             <MethodChip
-              label="Bank"
+              label={uiText("Bank")}
               active={paidVia === "BANK"}
               compact={isDesktopWeb}
               onPress={() => {
@@ -2073,7 +2143,7 @@ const staffAttributionCard = (
           <View style={{ flexDirection: isDesktopWeb ? "row" : "column", gap: 8 }}>
             <View style={{ flex: 1 }}>
               <FieldLabel>
-                {rpcPaymentMethod === "MOBILE" ? "Mobile Channel" : "Bank Channel"}
+                {rpcPaymentMethod === "MOBILE" ? uiText("Mobile Channel") : uiText("Bank Channel")}
               </FieldLabel>
               <InputBox
                 value={channel}
@@ -2084,7 +2154,7 @@ const staffAttributionCard = (
             </View>
 
             <View style={{ flex: 1 }}>
-              <FieldLabel>Reference / Transaction ID</FieldLabel>
+              <FieldLabel>{uiText("Reference / Transaction ID")}</FieldLabel>
               <InputBox
                 value={reference}
                 onChangeText={setReference}
@@ -2098,8 +2168,7 @@ const staffAttributionCard = (
 
       {isOffline ? (
         <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
-          OFFLINE: sale itasave offline na itasync mtandao ukirudi.
-        </Text>
+          {uiText("OFFLINE: sale itasave offline na itasync mtandao ukirudi.")}</Text>
       ) : null}
     </Card>
   ) : null;
@@ -2107,12 +2176,11 @@ const staffAttributionCard = (
   const customerCard = (
       <Card style={checkoutCardStyle("#06B6D4", "#ECFEFF", isDesktopWeb)}>
         <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-          👤 Customer Tracking
-        </Text>
+          {uiText("👤 Customer Tracking")}</Text>
 
         <View>
           <FieldLabel>
-  Customer Name {cashierMode ? "(optional)" : isCredit ? "*" : "(optional)"}
+  {uiText("Customer Name")}{cashierMode ? uiText("(optional)") : isCredit ? "*" : uiText("(optional)")}
 </FieldLabel>
           <TextInput
             value={customerName}
@@ -2125,8 +2193,8 @@ const staffAttributionCard = (
               setCustomerSearchFocused("name");
               setCustomerSuggestionsOpen(true);
             }}
-            placeholder="mf: Juma Ali"
-            placeholderTextColor="rgba(255,255,255,0.35)"
+            placeholder={uiText("mf: Juma Ali")}
+            placeholderTextColor="#64748B"
             keyboardType="default"
             style={{
               color: theme.colors.text,
@@ -2142,7 +2210,7 @@ const staffAttributionCard = (
         </View>
 
         <View>
-          <FieldLabel>Customer Phone (optional but recommended)</FieldLabel>
+          <FieldLabel>{uiText("Customer Phone (optional but recommended)")}</FieldLabel>
           <TextInput
             value={customerPhone}
             onFocus={() => {
@@ -2154,8 +2222,8 @@ const staffAttributionCard = (
               setCustomerSearchFocused("phone");
               setCustomerSuggestionsOpen(true);
             }}
-            placeholder="mf: 0712xxxxxx"
-            placeholderTextColor="rgba(255,255,255,0.35)"
+            placeholder={uiText("mf: 0712xxxxxx")}
+            placeholderTextColor="#64748B"
             keyboardType="phone-pad"
             style={{
               color: theme.colors.text,
@@ -2191,7 +2259,7 @@ const staffAttributionCard = (
                   })}
                 >
                   <Text style={{ color: theme.colors.text, fontWeight: "900" }} numberOfLines={1}>
-                    {name}
+                    {(String((c.full_name ?? "")).trim() || uiText("Customer"))}
                   </Text>
                   <Text
                     style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 2 }}
@@ -2206,8 +2274,7 @@ const staffAttributionCard = (
         ) : null}
 
         <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 12, lineHeight: 17 }}>
-          Tip: Ukimchagua mteja, sale itaunganishwa automatically kwenye CRM file yake.
-        </Text>
+          {uiText("Tip: Ukimchagua mteja, sale itaunganishwa automatically kwenye CRM file yake.")}</Text>
       </Card>
     );
 
@@ -2217,23 +2284,23 @@ const staffAttributionCard = (
         title={
           saving
             ? cashierMode
-              ? "Sending..."
-              : "Creating..."
+              ? uiText("Sending...")
+              : uiText("Creating...")
             : cashierMode
-              ? "Send to Cashiers"
+              ? uiText("Send to Cashiers")
             : reservationMode
   ? reservationOrderType === "PRE_ORDER"
-    ? "Save Pre Order"
-    : "Save Reservation"
+    ? uiText("Save Pre Order")
+    : uiText("Save Reservation")
   : isOffline
-    ? "Save Offline"
-    : "Confirm Sale"
+    ? uiText("Save Offline")
+    : uiText("Confirm Sale")
         }
         onPress={confirm}
-        disabled={saving || !!invalidReason}
+        disabled={saving || submission.current.blocked || !!invalidReason}
         variant="primary"
       />
-      <Button title="Back" onPress={() => router.back()} disabled={saving} variant="secondary" />
+      <Button title={uiText("Back")} onPress={() => router.back()} disabled={saving} variant="secondary" />
 
       {!!invalidReason && (
         <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>⚠ {invalidReason}</Text>
@@ -2282,11 +2349,10 @@ const staffAttributionCard = (
             }}
           >
             <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
-              Adjust Price
-            </Text>
+              {uiText("Adjust Price")}</Text>
 
             <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-              {adjustTargetItem?.name ?? "Item"}
+              {adjustTargetItem?.name ?? uiText("Item")}
             </Text>
 
             <View
@@ -2300,19 +2366,17 @@ backgroundColor: "rgba(241,245,249,0.72)",
               }}
             >
               <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>
-                Mode: Add per qty
-              </Text>
+                {uiText("Mode: Add per qty")}</Text>
               <Text style={{ color: theme.colors.faint, fontWeight: "800" }}>
-                Ukiweka 5000 na qty ni 2, line itaongezeka 10000 moja kwa moja.
-              </Text>
+                {uiText("Ukiweka 5000 na qty ni 2, line itaongezeka 10000 moja kwa moja.")}</Text>
             </View>
 
             <View>
-              <FieldLabel>Increase per qty ({displayCurrency})</FieldLabel>
+              <FieldLabel>{uiText("Increase per qty ({p0})", {p0: (displayCurrency)})}</FieldLabel>
               <InputBox
                 value={adjustValue}
                 onChangeText={(v) => setAdjustValue(v.replace(/[^\d]/g, ""))}
-                placeholder="mf: 5000"
+                placeholder={uiText("mf: 5000")}
                 keyboardType="numeric"
               />
             </View>
@@ -2341,8 +2405,7 @@ backgroundColor: "rgba(241,245,249,0.72)",
                     fontWeight: "900",
                   }}
                 >
-                  This item only
-                </Text>
+                  {uiText("This item only")}</Text>
               </Pressable>
 
               <Pressable
@@ -2368,8 +2431,7 @@ backgroundColor: "rgba(241,245,249,0.72)",
                     fontWeight: "900",
                   }}
                 >
-                  Apply to all items
-                </Text>
+                  {uiText("Apply to all items")}</Text>
               </Pressable>
             </View>
 
@@ -2384,20 +2446,17 @@ backgroundColor: "rgba(241,245,249,0.72)",
               }}
             >
               <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                Preview
-              </Text>
+                {uiText("Preview")}</Text>
 
               {adjustApplyToAll ? (
-                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                  Markup ya {fmt(adjustPreviewExtra)} itawekwa kwa kila qty kwenye items zote.
-                </Text>
+                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("A markup of {p0} will apply per unit to all items.", {p0: (fmt(adjustPreviewExtra))})}</Text>
               ) : (
                 <>
                   <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                    Qty: {adjustPreviewQty}
+                    {uiText("Qty:")}{adjustPreviewQty}
                   </Text>
                   <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                    Added to line: {fmt(adjustPreviewLineAdd)}
+                    {uiText("Added to line:")}{fmt(adjustPreviewLineAdd)}
                   </Text>
                 </>
               )}
@@ -2405,10 +2464,10 @@ backgroundColor: "rgba(241,245,249,0.72)",
 
             <View style={{ flexDirection: "row", gap: 10 }}>
               <View style={{ flex: 1 }}>
-                <Button title="Cancel" onPress={closeAdjustModal} variant="secondary" />
+                <Button title={uiText("Cancel")} onPress={closeAdjustModal} variant="secondary" />
               </View>
               <View style={{ flex: 1 }}>
-                <Button title="Apply" onPress={applyAdjustment} variant="primary" />
+                <Button title={uiText("Apply")} onPress={applyAdjustment} variant="primary" />
               </View>
             </View>
           </View>
@@ -2455,16 +2514,16 @@ backgroundColor: "rgba(241,245,249,0.72)",
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 26, fontWeight: "900", color: theme.colors.text }}>
               {cashierMode
-  ? "Cashier Handoff"
+  ? uiText("Cashier Handoff")
   : reservationMode
     ? reservationOrderType === "PRE_ORDER"
-      ? "Pre Order Checkout"
-      : "Reservation Checkout"
-    : "Checkout"}
+      ? uiText("Pre Order Checkout")
+      : uiText("Reservation Checkout")
+    : uiText("Checkout")}
             </Text>
             <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-              Store: {headerStoreName}
-              {isOffline ? "  •  OFFLINE" : "  •  ONLINE"}
+              {uiText("Store:")}{headerStoreName}
+              {isOffline ? uiText("  •  OFFLINE") : uiText("  •  ONLINE")}
             </Text>
           </View>
         </View>
@@ -2492,7 +2551,7 @@ backgroundColor: "rgba(241,245,249,0.72)",
                 fontWeight: "900",
               }}
             >
-              {webBanner.type === "success" ? "Success ✅" : "Failed ❌"}
+              {webBanner.type === "success" ? uiText("Success ✅") : uiText("Failed ❌")}
             </Text>
 
             <Text style={{ color: theme.colors.text, fontWeight: "800" }}>
@@ -2504,38 +2563,29 @@ backgroundColor: "rgba(241,245,249,0.72)",
         {mismatch ? (
           <Card>
             <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>
-              ⚠️ Store mismatch: Active store na store ya checkout ni tofauti.
-              {"\n"}Rudi nyuma → chagua store sahihi → checkout upya.
-            </Text>
+              {uiText("⚠️ Store mismatch: Active store na store ya checkout ni tofauti.")}{"\n"}{uiText("Rudi nyuma → chagua store sahihi → checkout upya.")}</Text>
           </Card>
         ) : null}
 
         {cashierMode ? (
           <Card style={{ gap: 8 }}>
             <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-              Cashier Flow
-            </Text>
+              {uiText("Cashier Flow")}</Text>
             <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-              Hapa order itatumwa kwenye cashier queue ya store hii. Cashier yeyote aliye-assigniwa
-              store hii anaweza kuipokea na kukamilisha malipo.
-            </Text>
+              {uiText("Hapa order itatumwa kwenye cashier queue ya store hii. Cashier yeyote aliye-assigniwa store hii anaweza kuipokea na kukamilisha malipo.")}</Text>
             <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-              • Hii mode inahitaji ONLINE
-            </Text>
+              {uiText("• Hii mode inahitaji ONLINE")}</Text>
             <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-              • Store lazima iwe na cashier angalau mmoja aliye-assigniwa
-            </Text>
+              {uiText("• Store lazima iwe na cashier angalau mmoja aliye-assigniwa")}</Text>
           </Card>
         ) : null}
 
         {!cashierMode && String(activeRole ?? "").trim().toLowerCase() === "cashier" ? (
           <Card style={{ gap: 8 }}>
             <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-              Cashier Shift Link
-            </Text>
+              {uiText("Cashier Shift Link")}</Text>
             <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-              Sale za cashier zitafungwa kwenye OPEN shift ya cashier huyu kwa store hii.
-            </Text>
+              {uiText("Sale za cashier zitafungwa kwenye OPEN shift ya cashier huyu kwa store hii.")}</Text>
             <Text
               style={{
                 color: openCashierShiftId ? theme.colors.emerald : theme.colors.danger,
@@ -2543,8 +2593,8 @@ backgroundColor: "rgba(241,245,249,0.72)",
               }}
             >
               {openCashierShiftId
-                ? `OPEN SHIFT: ${openCashierShiftId.slice(0, 8)}...`
-                : "Hakuna OPEN cashier shift kwa store hii."}
+                ? uiText("OPEN SHIFT: {p0}...", {p0: (openCashierShiftId.slice(0, 8))})
+                : uiText("Hakuna OPEN cashier shift kwa store hii.")}
             </Text>
           </Card>
         ) : null}

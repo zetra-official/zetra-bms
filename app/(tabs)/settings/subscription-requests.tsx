@@ -1,3 +1,5 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/(tabs)/settings/subscription-requests.tsx
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -567,6 +569,8 @@ function FilterPill({
 }
 
 export default function SubscriptionRequestsScreen() {
+ const systemText=useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
   const params = useLocalSearchParams<{ tab?: string }>();
   const insets = useSafeAreaInsets();
@@ -751,7 +755,7 @@ export default function SubscriptionRequestsScreen() {
       setLastMatchRow((data ?? null) as OfficeSmsMatchRow | null);
     } catch (e: any) {
       setLastMatchRow(null);
-      Alert.alert("Match result", e?.message ?? "Failed to load latest match result.");
+      Alert.alert(uiText("Match result"), e?.message ?? uiText("Failed to load latest match result."));
     }
   }, []);
 
@@ -906,14 +910,14 @@ const loadSelectedPartnerPayoutProfile = useCallback(async (partnerId: string) =
     });
     if (error) throw error;
 
-    Alert.alert("Activated ✅", "Partner sasa yupo ACTIVE.");
+    Alert.alert(uiText("Activated ✅"), uiText("Partner sasa yupo ACTIVE."));
     await loadPartnersModule();
     if (selectedPartner?.partner_id === partnerId) {
       await loadSelectedPartnerDetail(partnerId);
       await loadSelectedPartnerPayoutProfile(partnerId);
     }
   } catch (e: any) {
-    Alert.alert("Activation failed", clean(e?.message));
+    Alert.alert(uiText("Activation failed"), clean(e?.message));
   }
 }, [loadPartnersModule, loadSelectedPartnerDetail, selectedPartner?.partner_id]);
 
@@ -926,14 +930,14 @@ const suspendPartner = useCallback(async (partnerId: string) => {
     });
     if (error) throw error;
 
-    Alert.alert("Suspended ⚠️", "Partner ame-suspend.");
+    Alert.alert(uiText("Suspended ⚠️"), uiText("Partner ame-suspend."));
     await loadPartnersModule();
     if (selectedPartner?.partner_id === partnerId) {
       await loadSelectedPartnerDetail(partnerId);
       await loadSelectedPartnerPayoutProfile(partnerId);
     }
   } catch (e: any) {
-    Alert.alert("Suspend failed", clean(e?.message));
+    Alert.alert(uiText("Suspend failed"), clean(e?.message));
   }
 }, [loadPartnersModule, loadSelectedPartnerDetail, loadSelectedPartnerPayoutProfile, selectedPartner?.partner_id]);
 
@@ -942,12 +946,12 @@ const deletePartnerPermanently = useCallback(async (partner: PartnerListRow) => 
   if (!partnerId) return;
 
   Alert.alert(
-    "Delete Growth Partner",
-    `Unataka kumfuta kabisa ${clean(partner.full_name_snapshot) || clean(partner.email_snapshot) || "partner"}?\n\nReferral code yake haitafanya kazi tena na dashboard yake itaondoka.`,
+    uiText("Delete Growth Partner"),
+    uiText("Unataka kumfuta kabisa {p0}?\n\nReferral code yake haitafanya kazi tena na dashboard yake itaondoka.", {p0: (clean(partner.full_name_snapshot) || clean(partner.email_snapshot) || "partner")}),
     [
-      { text: "Cancel", style: "cancel" },
+      { text: uiText("Cancel"), style: "cancel" },
       {
-        text: "Continue",
+        text: uiText("Continue"),
         style: "destructive",
         onPress: async () => {
           try {
@@ -955,7 +959,7 @@ const deletePartnerPermanently = useCallback(async (partner: PartnerListRow) => 
             const enrolled = await LocalAuthentication.isEnrolledAsync();
 
             if (!hasHardware || !enrolled) {
-              Alert.alert("Biometric required", "Fingerprint/biometric haijawekwa kwenye kifaa hiki.");
+              Alert.alert(uiText("Biometric required"), uiText("Fingerprint/biometric haijawekwa kwenye kifaa hiki."));
               return;
             }
 
@@ -966,7 +970,7 @@ const deletePartnerPermanently = useCallback(async (partner: PartnerListRow) => 
             });
 
             if (!result.success) {
-              Alert.alert("Cancelled", "Biometric verification failed.");
+              Alert.alert(uiText("Cancelled"), uiText("Biometric verification failed."));
               return;
             }
 
@@ -986,10 +990,10 @@ const deletePartnerPermanently = useCallback(async (partner: PartnerListRow) => 
               setSelectedPartnerPayoutProfile(null);
             }
 
-            Alert.alert("Deleted ✅", "Growth Partner amefutwa na code yake imezimwa.");
+            Alert.alert(uiText("Deleted ✅"), uiText("Growth Partner amefutwa na code yake imezimwa."));
             await loadPartnersModule();
           } catch (e: any) {
-            Alert.alert("Delete failed", clean(e?.message) || "Failed to delete partner.");
+            Alert.alert(uiText("Delete failed"), clean(e?.message) || uiText("Failed to delete partner."));
           } finally {
             setPartnersBusy(false);
           }
@@ -1006,7 +1010,7 @@ const registerPartner = useCallback(async () => {
   const notes = clean(partnerNotes);
 
   if (!email) {
-    Alert.alert("Email required", "Weka email ya Growth Partner kwanza.");
+    Alert.alert(uiText("Email required"), uiText("Weka email ya Growth Partner kwanza."));
     return;
   }
 
@@ -1027,15 +1031,15 @@ const registerPartner = useCallback(async () => {
     setPartnerNotes("");
 
     Alert.alert(
-      "Growth Partner added ✅",
-      "Partner amesajiliwa successfully na referral code yake imetengenezwa."
+      uiText("Growth Partner added ✅"),
+      uiText("Partner amesajiliwa successfully na referral code yake imetengenezwa.")
     );
 
     await loadPartnersModule();
   } catch (e: any) {
     Alert.alert(
-      "Register failed",
-      clean(e?.message) || "Failed to register Growth Partner."
+      uiText("Register failed"),
+      clean(e?.message) || uiText("Failed to register Growth Partner.")
     );
   } finally {
     setPartnersBusy(false);
@@ -1069,7 +1073,7 @@ const registerPartner = useCallback(async () => {
           setParsedStatus("NO_RESULT");
           setParsedNotes("Parser hakurudisha row.");
           if (!silent) {
-            Alert.alert("Parser", "Payment parser hakurudisha data.");
+            Alert.alert(uiText("Parser"), uiText("Payment parser hakurudisha data."));
           }
           return null;
         }
@@ -1127,7 +1131,7 @@ const registerPartner = useCallback(async () => {
         setParsedStatus("FAILED");
         setParsedNotes(msg);
         if (!silent) {
-          Alert.alert("Parser failed", msg);
+          Alert.alert(uiText("Parser failed"), systemText(msg));
         }
         return null;
       } finally {
@@ -1148,8 +1152,8 @@ const registerPartner = useCallback(async () => {
 
       if (!hasHardware || !enrolled) {
         Alert.alert(
-          "Biometric required",
-          "Fingerprint/biometric haijawekwa kwenye kifaa hiki. Tafadhali weka biometric kwanza."
+          uiText("Biometric required"),
+          uiText("Fingerprint/biometric haijawekwa kwenye kifaa hiki. Tafadhali weka biometric kwanza.")
         );
         router.back();
         return;
@@ -1162,7 +1166,7 @@ const registerPartner = useCallback(async () => {
       });
 
       if (!result.success) {
-        Alert.alert("Access denied", "Biometric verification failed.");
+        Alert.alert(uiText("Access denied"), uiText("Biometric verification failed."));
         router.back();
         return;
       }
@@ -1170,7 +1174,7 @@ const registerPartner = useCallback(async () => {
       setAuthed(true);
       await loadRequests("PENDING");
     } catch {
-      Alert.alert("Access denied", "Biometric verification failed.");
+      Alert.alert(uiText("Access denied"), uiText("Biometric verification failed."));
       router.back();
     }
   }, [loadRequests, router]);
@@ -1187,14 +1191,14 @@ const registerPartner = useCallback(async () => {
       setAllowed(ok);
 
       if (!ok) {
-        Alert.alert("Restricted", "This screen is for ZETRA office billing only.");
+        Alert.alert(uiText("Restricted"), uiText("This screen is for ZETRA office billing only."));
         router.back();
         return;
       }
 
       await runBiometricGate();
     } catch {
-      Alert.alert("Restricted", "Unable to verify internal office access.");
+      Alert.alert(uiText("Restricted"), uiText("Unable to verify internal office access."));
       router.back();
     } finally {
       setCheckingAccess(false);
@@ -1352,7 +1356,7 @@ const registerPartner = useCallback(async () => {
 
         if (error) throw error;
 
-        Alert.alert("Approved ✅", "Subscription request approved successfully.");
+        Alert.alert(uiText("Approved ✅"), uiText("Subscription request approved successfully."));
         isRefreshingRef.current = true;
         try {
           await loadRequests();
@@ -1361,9 +1365,9 @@ const registerPartner = useCallback(async () => {
         }
       } catch (e: any) {
         Alert.alert(
-          "Approve failed",
+          uiText("Approve failed"),
           e?.message ??
-            "Approval failed. SQL-4 office-only hardening/access may still be required."
+            uiText("Approval failed. SQL-4 office-only hardening/access may still be required.")
         );
       } finally {
         setBusyId("");
@@ -1376,7 +1380,7 @@ const registerPartner = useCallback(async () => {
     async (requestId: string) => {
       const reason = clean(rejectReason);
       if (!reason) {
-        Alert.alert("Reason required", "Weka sababu ya kukataa request kwanza.");
+        Alert.alert(uiText("Reason required"), uiText("Weka sababu ya kukataa request kwanza."));
         return;
       }
 
@@ -1392,7 +1396,7 @@ const registerPartner = useCallback(async () => {
 
         setRejectingId("");
         setRejectReason("");
-        Alert.alert("Rejected", "Subscription request rejected successfully.");
+        Alert.alert(uiText("Rejected"), uiText("Subscription request rejected successfully."));
         isRefreshingRef.current = true;
         try {
           await loadRequests();
@@ -1401,9 +1405,9 @@ const registerPartner = useCallback(async () => {
         }
       } catch (e: any) {
         Alert.alert(
-          "Reject failed",
+          uiText("Reject failed"),
           e?.message ??
-            "Reject failed. SQL-4 office-only hardening/access may still be required."
+            uiText("Reject failed. SQL-4 office-only hardening/access may still be required.")
         );
       } finally {
         setBusyId("");
@@ -1419,7 +1423,7 @@ const registerPartner = useCallback(async () => {
       const body = clean(override?.body ?? smsText);
 
       if (!body) {
-        Alert.alert("SMS body required", "Bandika message ya malipo kutoka kwenye simu ya ofisi.");
+        Alert.alert(uiText("SMS body required"), uiText("Bandika message ya malipo kutoka kwenye simu ya ofisi."));
         return "";
       }
 
@@ -1439,20 +1443,20 @@ const registerPartner = useCallback(async () => {
       }
 
       if (!sender) {
-        Alert.alert("Sender required", "Parser hakupata sender phone. Weka namba ya sender wa SMS.");
+        Alert.alert(uiText("Sender required"), uiText("Parser hakupata sender phone. Weka namba ya sender wa SMS."));
         return "";
       }
 
       if (!reference) {
         Alert.alert(
-          "Reference required",
-          "Parser hakupata transaction/reference. Weka reference ya kwenye SMS."
+          uiText("Reference required"),
+          uiText("Parser hakupata transaction/reference. Weka reference ya kwenye SMS.")
         );
         return "";
       }
 
       if (!Number.isFinite(amountNum) || amountNum <= 0) {
-        Alert.alert("Amount required", "Parser hakupata amount sahihi. Weka kiasi halisi cha SMS.");
+        Alert.alert(uiText("Amount required"), uiText("Parser hakupata amount sahihi. Weka kiasi halisi cha SMS."));
         return "";
       }
 
@@ -1477,13 +1481,13 @@ const registerPartner = useCallback(async () => {
         setOfficeListenerStatus("SMS INGESTED • WAITING MANUAL REVIEW");
 
         Alert.alert(
-          "SMS saved ✅",
-          "Office SMS imehifadhiwa. Sasa linganisha na request ya user kwa kutumia jina, namba ya simu, na ushahidi wa muamala."
+          uiText("SMS saved ✅"),
+          uiText("Office SMS imehifadhiwa. Sasa linganisha na request ya user kwa kutumia jina, namba ya simu, na ushahidi wa muamala.")
         );
 
         return smsLogId;
       } catch (e: any) {
-        Alert.alert("Ingest failed", clean(e?.message) || "Failed to ingest office SMS.");
+        Alert.alert(uiText("Ingest failed"), clean(e?.message) || uiText("Failed to ingest office SMS."));
         return "";
       } finally {
         setIngestingSms(false);
@@ -1497,7 +1501,7 @@ const registerPartner = useCallback(async () => {
       const smsLogId = clean(forcedSmsLogId ?? lastSmsLogId);
 
       if (!smsLogId) {
-        Alert.alert("No SMS log", "Ingest office SMS kwanza kabla ya ku-run match.");
+        Alert.alert(uiText("No SMS log"), uiText("Ingest office SMS kwanza kabla ya ku-run match."));
         return "";
       }
 
@@ -1521,13 +1525,13 @@ const registerPartner = useCallback(async () => {
         }
 
         Alert.alert(
-          "Match completed ✅",
-          "Matcher ime-run kwa review tu. Hakuna auto approve wala auto activation."
+          uiText("Match completed ✅"),
+          uiText("Matcher ime-run kwa review tu. Hakuna auto approve wala auto activation.")
         );
 
         return matchId;
       } catch (e: any) {
-        Alert.alert("Match failed", e?.message ?? "Failed to run office SMS V2 matcher.");
+        Alert.alert(uiText("Match failed"), e?.message ?? uiText("Failed to run office SMS V2 matcher."));
         return "";
       } finally {
         setMatchingSms(false);
@@ -1538,7 +1542,7 @@ const registerPartner = useCallback(async () => {
 
   const startOfficeSmsListener = useCallback(async () => {
     if (Platform.OS !== "android") {
-      Alert.alert("Android only", "Office SMS listener inafanya kazi kwenye Android pekee.");
+      Alert.alert(uiText("Android only"), uiText("Office SMS listener inafanya kazi kwenye Android pekee."));
       return;
     }
 
@@ -1550,8 +1554,8 @@ const registerPartner = useCallback(async () => {
         setSmsPermissionGranted(false);
         setOfficeListenerStatus("PERMISSION DENIED");
         Alert.alert(
-          "Permission denied",
-          "Tafadhali ruhusu READ_SMS / RECEIVE_SMS kwenye simu ya office."
+          uiText("Permission denied"),
+          uiText("Tafadhali ruhusu READ_SMS / RECEIVE_SMS kwenye simu ya office.")
         );
         return;
       }
@@ -1615,20 +1619,20 @@ const registerPartner = useCallback(async () => {
 
           setOfficeListenerStarted(false);
           setOfficeListenerStatus(statusText || "LISTENER FAILED");
-          Alert.alert("Office listener", message);
+          Alert.alert(uiText("Office listener"), systemText(message));
         }
       );
 
       setOfficeListenerStarted(true);
       setOfficeListenerStatus("LISTENER ON • MANUAL REVIEW MODE");
       Alert.alert(
-        "Office listener started ✅",
-        "Simu hii sasa inasoma SMS mpya na kuziweka kwa review ya manual tu."
+        uiText("Office listener started ✅"),
+        uiText("Simu hii sasa inasoma SMS mpya na kuziweka kwa review ya manual tu.")
       );
     } catch (e: any) {
       setOfficeListenerStarted(false);
       setOfficeListenerStatus("LISTENER ERROR");
-      Alert.alert("Office listener", e?.message ?? "Failed to start office SMS listener.");
+      Alert.alert(uiText("Office listener"), e?.message ?? uiText("Failed to start office SMS listener."));
     }
   }, [parseSmsFromText]);
 
@@ -1648,40 +1652,40 @@ const registerPartner = useCallback(async () => {
         }}
       >
         <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-          {upper(item.plan_code)} • {item.duration_months} month{item.duration_months > 1 ? "s" : ""}
+          {upper(item.plan_code)} • {uiText(item.duration_months === 1 ? "{p0} month" : "{p0} months", {p0: item.duration_months})}
         </Text>
 
         <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 12, marginTop: 8 }}>
-          Status: <Text style={{ color: UI.text }}>{status}</Text>
+          {uiText("Status:")}<Text style={{ color: UI.text }}>{status}</Text>
         </Text>
 
         <View style={{ marginTop: 10, gap: 6 }}>
           <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-            Organization ID: <Text style={{ color: UI.text }}>{item.organization_id}</Text>
+            {uiText("Organization ID:")}<Text style={{ color: UI.text }}>{item.organization_id}</Text>
           </Text>
 
           <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-            Amount expected: <Text style={{ color: UI.text }}>{fmtMoney(item.expected_amount, "TZS")}</Text>
+            {uiText("Amount expected:")}<Text style={{ color: UI.text }}>{fmtMoney(item.expected_amount, "TZS")}</Text>
           </Text>
 
           <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-            Amount submitted: <Text style={{ color: UI.text }}>{fmtMoney(item.submitted_amount, "TZS")}</Text>
+            {uiText("Amount submitted:")}<Text style={{ color: UI.text }}>{fmtMoney(item.submitted_amount, "TZS")}</Text>
           </Text>
 
           <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-            Phone: <Text style={{ color: UI.text }}>{item.payer_phone || "—"}</Text>
+            {uiText("Phone:")}<Text style={{ color: UI.text }}>{item.payer_phone || "—"}</Text>
           </Text>
 
           <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-            Payer name: <Text style={{ color: UI.text }}>{clean(item.payer_name) || "—"}</Text>
+            {uiText("Payer name:")}<Text style={{ color: UI.text }}>{clean(item.payer_name) || "—"}</Text>
           </Text>
 
           <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-            Reference: <Text style={{ color: UI.text }}>{item.transaction_reference || "—"}</Text>
+            {uiText("Reference:")}<Text style={{ color: UI.text }}>{item.transaction_reference || "—"}</Text>
           </Text>
 
           <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-            RAW SMS: <Text style={{ color: UI.text }}>{clean(item.raw_sms) ? "ATTACHED" : "—"}</Text>
+            {uiText("RAW SMS:")}<Text style={{ color: UI.text }}>{clean(item.raw_sms) ? uiText("ATTACHED") : "—"}</Text>
           </Text>
 
           {clean(item.raw_sms) ? (
@@ -1702,35 +1706,35 @@ const registerPartner = useCallback(async () => {
           ) : null}
 
           <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-            Submitted at: <Text style={{ color: UI.text }}>{fmtDateTime(item.submitted_at)}</Text>
+            {uiText("Submitted at:")}<Text style={{ color: UI.text }}>{fmtDateTime(item.submitted_at)}</Text>
           </Text>
 
           {item.approved_at ? (
             <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-              Approved at: <Text style={{ color: UI.text }}>{fmtDateTime(item.approved_at)}</Text>
+              {uiText("Approved at:")}<Text style={{ color: UI.text }}>{fmtDateTime(item.approved_at)}</Text>
             </Text>
           ) : null}
 
           {item.approved_by ? (
             <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-              Approved by: <Text style={{ color: UI.text }}>{item.approved_by}</Text>
+              {uiText("Approved by:")}<Text style={{ color: UI.text }}>{item.approved_by}</Text>
             </Text>
           ) : null}
 
           {clean(item.admin_note) ? (
             <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-              Admin note: <Text style={{ color: UI.text }}>{clean(item.admin_note)}</Text>
+              {uiText("Admin note:")}<Text style={{ color: UI.text }}>{clean(item.admin_note)}</Text>
             </Text>
           ) : null}
 
           {clean(item.rejection_reason) ? (
             <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-              Rejection reason: <Text style={{ color: UI.text }}>{clean(item.rejection_reason)}</Text>
+              {uiText("Rejection reason:")}<Text style={{ color: UI.text }}>{clean(item.rejection_reason)}</Text>
             </Text>
           ) : null}
 
           <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-            Request ID: <Text style={{ color: UI.text }}>{item.id}</Text>
+            {uiText("Request ID:")}<Text style={{ color: UI.text }}>{item.id}</Text>
           </Text>
         </View>
 
@@ -1740,7 +1744,7 @@ const registerPartner = useCallback(async () => {
               <TextInput
                 value={rejectReason}
                 onChangeText={setRejectReason}
-                placeholder="Reason for rejection"
+                placeholder={uiText("Reason for rejection")}
                 placeholderTextColor="rgba(255,255,255,0.45)"
                 style={{
                   minHeight: 52,
@@ -1756,13 +1760,13 @@ const registerPartner = useCallback(async () => {
 
               <View style={{ flexDirection: "row", gap: 10 }}>
                 <PrimaryButton
-                  label={isBusy ? "Please wait..." : "CONFIRM REJECT"}
+                  label={isBusy ? uiText("Please wait...") : uiText("CONFIRM REJECT")}
                   onPress={() => void rejectRequest(item.id)}
                   danger
                   disabled={isBusy}
                 />
                 <PrimaryButton
-                  label="CANCEL"
+                  label={uiText("CANCEL")}
                   onPress={() => {
                     setRejectingId("");
                     setRejectReason("");
@@ -1774,12 +1778,12 @@ const registerPartner = useCallback(async () => {
           ) : (
             <View style={{ marginTop: 12, flexDirection: "row", gap: 10 }}>
               <PrimaryButton
-                label={isBusy ? "Please wait..." : "APPROVE"}
+                label={isBusy ? uiText("Please wait...") : uiText("APPROVE")}
                 onPress={() => void approveRequest(item.id)}
                 disabled={!!busyId}
               />
               <PrimaryButton
-                label="REJECT"
+                label={uiText("REJECT")}
                 onPress={() => {
                   setRejectingId(item.id);
                   setRejectReason("");
@@ -1854,23 +1858,23 @@ const registerPartner = useCallback(async () => {
   }, []);
 const createPartnerPayout = useCallback(async () => {
   if (!selectedPartner?.partner_id) {
-    Alert.alert("Partner required", "Chagua partner kwanza.");
+    Alert.alert(uiText("Partner required"), uiText("Chagua partner kwanza."));
     return;
   }
 
   if (partnerDetailLoading) {
-    Alert.alert("Please wait", "Partner detail bado inaload. Subiri kwanza.");
+    Alert.alert(uiText("Please wait"), uiText("Partner detail bado inaload. Subiri kwanza."));
     return;
   }
 
   if (selectedCommissionIds.length === 0) {
-    Alert.alert("Select commissions", "Chagua angalau commission moja ya kulipa.");
+    Alert.alert(uiText("Select commissions"), uiText("Chagua angalau commission moja ya kulipa."));
     return;
   }
 
   const method = clean(payoutMethod).toUpperCase();
   if (!method) {
-    Alert.alert("Method required", "Weka payout method.");
+    Alert.alert(uiText("Method required"), uiText("Weka payout method."));
     return;
   }
 
@@ -1880,8 +1884,8 @@ const createPartnerPayout = useCallback(async () => {
 
   if (selectedRows.length !== selectedCommissionIds.length) {
     Alert.alert(
-      "Selection invalid",
-      "Baadhi ya commission ulizochagua si READY tena. Refresh detail kisha jaribu tena."
+      uiText("Selection invalid"),
+      uiText("Baadhi ya commission ulizochagua si READY tena. Refresh detail kisha jaribu tena.")
     );
     return;
   }
@@ -1892,12 +1896,12 @@ const createPartnerPayout = useCallback(async () => {
   );
 
   Alert.alert(
-    "Confirm payout",
-    `Unakaribia kurekodi payout ya ${fmtMoney(totalAmount, "TZS")} kwa commission ${selectedCommissionIds.length}. Uendelee?`,
+    uiText("Confirm payout"),
+    uiText("Unakaribia kurekodi payout ya {p0} kwa commission {p1}. Uendelee?", {p0: (fmtMoney(totalAmount, "TZS")), p1: (selectedCommissionIds.length)}),
     [
-      { text: "Cancel", style: "cancel" },
+      { text: uiText("Cancel"), style: "cancel" },
       {
-        text: "CONFIRM",
+        text: uiText("CONFIRM"),
         onPress: async () => {
           setCreatingPayout(true);
           try {
@@ -1912,8 +1916,8 @@ const createPartnerPayout = useCallback(async () => {
             if (error) throw error;
 
             Alert.alert(
-              "Payout recorded ✅",
-              "Partner payout imehifadhiwa successfully."
+              uiText("Payout recorded ✅"),
+              uiText("Partner payout imehifadhiwa successfully.")
             );
 
             setShowPayoutForm(false);
@@ -1927,8 +1931,8 @@ const createPartnerPayout = useCallback(async () => {
             await loadPartnersModule();
           } catch (e: any) {
             Alert.alert(
-              "Payout failed",
-              clean(e?.message) || "Failed to create partner payout."
+              uiText("Payout failed"),
+              clean(e?.message) || uiText("Failed to create partner payout.")
             );
           } finally {
             setCreatingPayout(false);
@@ -1953,8 +1957,7 @@ const createPartnerPayout = useCallback(async () => {
     <>
       <Card>
         <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-          ZETRA Growth Partners
-        </Text>
+          {uiText("ZETRA Growth Partners")}</Text>
 
         <Text
           style={{
@@ -1965,9 +1968,7 @@ const createPartnerPayout = useCallback(async () => {
             lineHeight: 18,
           }}
         >
-          Hapa Office inasajili Growth Partner kwa email, inaona referral code, performance,
-          monthly commission releases, paid, na unpaid totals.
-        </Text>
+          {uiText("Hapa Office inasajili Growth Partner kwa email, inaona referral code, performance, monthly commission releases, paid, na unpaid totals.")}</Text>
 
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 12 }}>
           <View
@@ -1982,8 +1983,7 @@ const createPartnerPayout = useCallback(async () => {
             }}
           >
             <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 11 }}>
-              Total Partners
-            </Text>
+              {uiText("Total Partners")}</Text>
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18, marginTop: 6 }}>
               {Number(partnerSummary?.total_partners ?? 0).toLocaleString("en-US")}
             </Text>
@@ -2001,8 +2001,7 @@ const createPartnerPayout = useCallback(async () => {
             }}
           >
             <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 11 }}>
-              Active Partners
-            </Text>
+              {uiText("Active Partners")}</Text>
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18, marginTop: 6 }}>
               {Number(partnerSummary?.active_partners ?? 0).toLocaleString("en-US")}
             </Text>
@@ -2020,8 +2019,7 @@ const createPartnerPayout = useCallback(async () => {
             }}
           >
             <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 11 }}>
-              Total Referrals
-            </Text>
+              {uiText("Total Referrals")}</Text>
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18, marginTop: 6 }}>
               {Number(partnerSummary?.total_referrals ?? 0).toLocaleString("en-US")}
             </Text>
@@ -2039,8 +2037,7 @@ const createPartnerPayout = useCallback(async () => {
             }}
           >
             <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 11 }}>
-              Active Referrals
-            </Text>
+              {uiText("Active Referrals")}</Text>
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18, marginTop: 6 }}>
               {Number(partnerSummary?.active_referrals ?? 0).toLocaleString("en-US")}
             </Text>
@@ -2058,22 +2055,19 @@ const createPartnerPayout = useCallback(async () => {
             }}
           >
             <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 11 }}>
-              All Generated
-            </Text>
+              {uiText("All Generated")}</Text>
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
               {fmtMoney(partnerSummary?.total_earned_tzs ?? 0, "TZS")}
             </Text>
 
             <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 11, marginTop: 4 }}>
-              Total Paid
-            </Text>
+              {uiText("Total Paid")}</Text>
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
               {fmtMoney(partnerSummary?.total_paid_tzs ?? 0, "TZS")}
             </Text>
 
             <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 11, marginTop: 4 }}>
-              Ready Unpaid
-            </Text>
+              {uiText("Ready Unpaid")}</Text>
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
               {fmtMoney(partnerSummary?.total_unpaid_tzs ?? 0, "TZS")}
             </Text>
@@ -2084,15 +2078,14 @@ const createPartnerPayout = useCallback(async () => {
       <View style={{ marginTop: 12 }}>
         <Card>
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-            Register Growth Partner
-          </Text>
+            {uiText("Register Growth Partner")}</Text>
 
           <View style={{ marginTop: 12, gap: 10 }}>
             <TextInput
               value={partnerEmail}
               onChangeText={setPartnerEmail}
               
-              placeholder="Email ya Growth Partner"
+              placeholder={uiText("Email ya Growth Partner")}
               placeholderTextColor="rgba(255,255,255,0.45)"
               autoCapitalize="none"
               autoCorrect={false}
@@ -2117,7 +2110,7 @@ const createPartnerPayout = useCallback(async () => {
               value={partnerFullName}
               onChangeText={setPartnerFullName}
               
-              placeholder="Full name (optional)"
+              placeholder={uiText("Full name (optional)")}
               placeholderTextColor="rgba(255,255,255,0.45)"
               returnKeyType="next"
               blurOnSubmit={false}
@@ -2137,7 +2130,7 @@ const createPartnerPayout = useCallback(async () => {
               value={partnerPhone}
               onChangeText={setPartnerPhone}
               
-              placeholder="Phone (optional)"
+              placeholder={uiText("Phone (optional)")}
               placeholderTextColor="rgba(255,255,255,0.45)"
               keyboardType="phone-pad"
               returnKeyType="next"
@@ -2158,7 +2151,7 @@ const createPartnerPayout = useCallback(async () => {
               value={partnerNotes}
               onChangeText={setPartnerNotes}
               
-              placeholder="Notes (optional)"
+              placeholder={uiText("Notes (optional)")}
               placeholderTextColor="rgba(255,255,255,0.45)"
               multiline
               blurOnSubmit={false}
@@ -2178,7 +2171,7 @@ const createPartnerPayout = useCallback(async () => {
 
             <View style={{ flexDirection: "row", gap: 10 }}>
               <PrimaryButton
-                label={partnersBusy ? "ADDING..." : "ADD GROWTH PARTNER"}
+                label={partnersBusy ? uiText("ADDING...") : uiText("ADD GROWTH PARTNER")}
                 onPress={() => void registerPartner()}
                 disabled={partnersBusy || !clean(partnerEmail)}
               />
@@ -2197,8 +2190,7 @@ const createPartnerPayout = useCallback(async () => {
             }}
           >
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-              Partners List
-            </Text>
+              {uiText("Partners List")}</Text>
 
             <Pressable
               onPress={() => {
@@ -2227,8 +2219,7 @@ const createPartnerPayout = useCallback(async () => {
             <View style={{ marginTop: 14 }}>
               <ActivityIndicator />
               <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 10 }}>
-                Loading Growth Partners…
-              </Text>
+                {uiText("Loading Growth Partners…")}</Text>
             </View>
           ) : partnerErrorText ? (
             <View
@@ -2242,16 +2233,14 @@ const createPartnerPayout = useCallback(async () => {
               }}
             >
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
-                Growth Partners backend not ready
-              </Text>
+                {uiText("Growth Partners backend not ready")}</Text>
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 8 }}>
                 {partnerErrorText}
               </Text>
             </View>
           ) : partners.length === 0 ? (
             <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 14 }}>
-              No Growth Partners yet.
-            </Text>
+              {uiText("No Growth Partners yet.")}</Text>
           ) : (
             <View style={{ marginTop: 14, gap: 12 }}>
               {partners.map((item) => (
@@ -2271,19 +2260,19 @@ const createPartnerPayout = useCallback(async () => {
                     }}
                   >
                     <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-                      {clean(item.full_name_snapshot) || clean(item.email_snapshot) || "Growth Partner"}
+                      {clean(item.full_name_snapshot) || clean(item.email_snapshot) || uiText("Growth Partner")}
                     </Text>
 
                     <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                      Email: <Text style={{ color: UI.text }}>{clean(item.email_snapshot) || "—"}</Text>
+                      {uiText("Email:")}<Text style={{ color: UI.text }}>{clean(item.email_snapshot) || "—"}</Text>
                     </Text>
 
                     <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                      Phone: <Text style={{ color: UI.text }}>{clean(item.phone_snapshot) || "—"}</Text>
+                      {uiText("Phone:")}<Text style={{ color: UI.text }}>{clean(item.phone_snapshot) || "—"}</Text>
                     </Text>
 
                     <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                      Code: <Text style={{ color: UI.text }}>{clean(item.referral_code) || "—"}</Text>
+                      {uiText("Code:")}<Text style={{ color: UI.text }}>{clean(item.referral_code) || "—"}</Text>
                     </Text>
 
                     <View style={{ marginTop: 2, flexDirection: "row", alignItems: "center" }}>
@@ -2304,44 +2293,44 @@ const createPartnerPayout = useCallback(async () => {
                     </View>
 
                     <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                      Referrals:{" "}
+                      {uiText("Referrals:")}{" "}
                       <Text style={{ color: UI.text }}>
                         {Number(item.total_referrals ?? 0).toLocaleString("en-US")}
                       </Text>
                     </Text>
 
                     <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                      Active referrals:{" "}
+                      {uiText("Active referrals:")}{" "}
                       <Text style={{ color: UI.text }}>
                         {Number(item.active_referrals ?? 0).toLocaleString("en-US")}
                       </Text>
                     </Text>
 
                     <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                      Earned: <Text style={{ color: UI.text }}>{fmtMoney(item.total_earned_tzs ?? 0, "TZS")}</Text>
+                      {uiText("Earned:")}<Text style={{ color: UI.text }}>{fmtMoney(item.total_earned_tzs ?? 0, "TZS")}</Text>
                     </Text>
 
                     <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                      Paid: <Text style={{ color: UI.text }}>{fmtMoney(item.total_paid_tzs ?? 0, "TZS")}</Text>
+                      {uiText("Paid:")}<Text style={{ color: UI.text }}>{fmtMoney(item.total_paid_tzs ?? 0, "TZS")}</Text>
                     </Text>
 
                     <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                      Unpaid: <Text style={{ color: UI.text }}>{fmtMoney(item.total_unpaid_tzs ?? 0, "TZS")}</Text>
+                      {uiText("Unpaid:")}<Text style={{ color: UI.text }}>{fmtMoney(item.total_unpaid_tzs ?? 0, "TZS")}</Text>
                     </Text>
 
                     <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-  Created: <Text style={{ color: UI.text }}>{fmtDateTime(item.created_at)}</Text>
+  {uiText("Created:")}<Text style={{ color: UI.text }}>{fmtDateTime(item.created_at)}</Text>
 </Text>
 
 <View style={{ flexDirection: "row", gap: 10, marginTop: 8 }}>
   <PrimaryButton
-    label="DETAIL"
+    label={uiText("DETAIL")}
     onPress={() => setSelectedPartner(item)}
     disabled={partnersBusy}
   />
 
   <PrimaryButton
-    label="DELETE"
+    label={uiText("DELETE")}
     danger
     onPress={() => void deletePartnerPermanently(item)}
     disabled={partnersBusy}
@@ -2367,8 +2356,7 @@ const createPartnerPayout = useCallback(async () => {
               }}
             >
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
-                Partner Detail
-              </Text>
+                {uiText("Partner Detail")}</Text>
 
               <View
                 style={{
@@ -2388,11 +2376,11 @@ const createPartnerPayout = useCallback(async () => {
 
             <View style={{ marginTop: 12, gap: 6 }}>
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                Email: <Text style={{ color: UI.text }}>{clean(selectedPartner.email_snapshot)}</Text>
+                {uiText("Email:")}<Text style={{ color: UI.text }}>{clean(selectedPartner.email_snapshot)}</Text>
               </Text>
 
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                Code: <Text style={{ color: UI.text }}>{clean(selectedPartner.referral_code)}</Text>
+                {uiText("Code:")}<Text style={{ color: UI.text }}>{clean(selectedPartner.referral_code)}</Text>
               </Text>
 
               <View style={{ marginTop: 2, flexDirection: "row", alignItems: "center" }}>
@@ -2413,11 +2401,11 @@ const createPartnerPayout = useCallback(async () => {
               </View>
 
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                All generated: <Text style={{ color: UI.text }}>{fmtMoney(selectedPartner.total_earned_tzs ?? 0, "TZS")}</Text>
+                {uiText("All generated:")}<Text style={{ color: UI.text }}>{fmtMoney(selectedPartner.total_earned_tzs ?? 0, "TZS")}</Text>
               </Text>
 
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                Ready unpaid: <Text style={{ color: UI.text }}>{fmtMoney(selectedPartner.total_unpaid_tzs ?? 0, "TZS")}</Text>
+                {uiText("Ready unpaid:")}<Text style={{ color: UI.text }}>{fmtMoney(selectedPartner.total_unpaid_tzs ?? 0, "TZS")}</Text>
               </Text>
             </View>
 
@@ -2433,29 +2421,28 @@ const createPartnerPayout = useCallback(async () => {
               }}
             >
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
-                Preferred payout destination
+                {uiText("Preferred payout destination")}</Text>
+
+              <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                {uiText("Method:")}<Text style={{ color: UI.text }}>{clean(selectedPartnerPayoutProfile?.payout_method) || "—"}</Text>
               </Text>
 
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                Method: <Text style={{ color: UI.text }}>{clean(selectedPartnerPayoutProfile?.payout_method) || "—"}</Text>
+                {uiText("Phone:")}<Text style={{ color: UI.text }}>{clean(selectedPartnerPayoutProfile?.payout_phone) || "—"}</Text>
               </Text>
 
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                Phone: <Text style={{ color: UI.text }}>{clean(selectedPartnerPayoutProfile?.payout_phone) || "—"}</Text>
-              </Text>
-
-              <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                Receiver name: <Text style={{ color: UI.text }}>{clean(selectedPartnerPayoutProfile?.payout_account_name) || "—"}</Text>
+                {uiText("Receiver name:")}<Text style={{ color: UI.text }}>{clean(selectedPartnerPayoutProfile?.payout_account_name) || "—"}</Text>
               </Text>
 
               {!!clean(selectedPartnerPayoutProfile?.payout_notes) ? (
                 <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                  Partner note: <Text style={{ color: UI.text }}>{clean(selectedPartnerPayoutProfile?.payout_notes)}</Text>
+                  {uiText("Partner note:")}<Text style={{ color: UI.text }}>{clean(selectedPartnerPayoutProfile?.payout_notes)}</Text>
                 </Text>
               ) : null}
 
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                Updated at: <Text style={{ color: UI.text }}>{fmtDateTime(selectedPartnerPayoutProfile?.payout_updated_at)}</Text>
+                {uiText("Updated at:")}<Text style={{ color: UI.text }}>{fmtDateTime(selectedPartnerPayoutProfile?.payout_updated_at)}</Text>
               </Text>
             </View>
 
@@ -2470,8 +2457,7 @@ const createPartnerPayout = useCallback(async () => {
               }}
             >
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
-                Monthly commission rule
-              </Text>
+                {uiText("Monthly commission rule")}</Text>
               <Text
                 style={{
                   color: UI.muted,
@@ -2481,19 +2467,17 @@ const createPartnerPayout = useCallback(async () => {
                   marginTop: 6,
                 }}
               >
-                Sequence 1 = 25%. Sequence 2 mpaka 12 = 10% kwa mwezi husika. Office inaona row
-                moja moja ya mwezi badala ya mkupuo usioeleweka.
-              </Text>
+                {uiText("Sequence 1 = 25%. Sequence 2 mpaka 12 = 10% kwa mwezi husika. Office inaona row moja moja ya mwezi badala ya mkupuo usioeleweka.")}</Text>
             </View>
 
             <View style={{ marginTop: 12, flexDirection: "row", gap: 10 }}>
               <PrimaryButton
-                label={selectedPartnerStatus === "ACTIVE" ? "ALREADY ACTIVE" : "ACTIVATE"}
+                label={selectedPartnerStatus === "ACTIVE" ? uiText("ALREADY ACTIVE") : uiText("ACTIVATE")}
                 onPress={() => void activatePartner(selectedPartner.partner_id)}
                 disabled={!partnerCanActivate}
               />
               <PrimaryButton
-                label={selectedPartnerStatus === "SUSPENDED" ? "ALREADY SUSPENDED" : "SUSPEND"}
+                label={selectedPartnerStatus === "SUSPENDED" ? uiText("ALREADY SUSPENDED") : uiText("SUSPEND")}
                 danger
                 onPress={() => void suspendPartner(selectedPartner.partner_id)}
                 disabled={!partnerCanSuspend}
@@ -2502,7 +2486,7 @@ const createPartnerPayout = useCallback(async () => {
 
             <View style={{ marginTop: 10, gap: 8 }}>
               <PrimaryButton
-                label={readyCommissionCount > 0 ? "RECORD PAYOUT" : "NO READY COMMISSIONS"}
+                label={readyCommissionCount > 0 ? uiText("RECORD PAYOUT") : uiText("NO READY COMMISSIONS")}
                 onPress={() => {
                   if (readyCommissionCount === 0) return;
 
@@ -2523,7 +2507,7 @@ const createPartnerPayout = useCallback(async () => {
                 disabled={readyCommissionCount === 0}
               />
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                Ready commissions: <Text style={{ color: UI.text }}>{readyCommissionCount}</Text>
+                {uiText("Ready commissions:")}<Text style={{ color: UI.text }}>{readyCommissionCount}</Text>
               </Text>
             </View>
 
@@ -2540,15 +2524,14 @@ const createPartnerPayout = useCallback(async () => {
                 }}
               >
                 <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-                  Create Payout
+                  {uiText("Create Payout")}</Text>
+
+                <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                  {uiText("Selected commissions:")}<Text style={{ color: UI.text }}>{selectedCommissionIds.length}</Text>
                 </Text>
 
                 <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                  Selected commissions: <Text style={{ color: UI.text }}>{selectedCommissionIds.length}</Text>
-                </Text>
-
-                <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                  Total payout: <Text style={{ color: UI.text }}>{fmtMoney(selectedPayoutTotal, "TZS")}</Text>
+                  {uiText("Total payout:")}<Text style={{ color: UI.text }}>{fmtMoney(selectedPayoutTotal, "TZS")}</Text>
                 </Text>
 
                 <View
@@ -2562,26 +2545,25 @@ const createPartnerPayout = useCallback(async () => {
                   }}
                 >
                   <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
-                    Destination to be used
+                    {uiText("Destination to be used")}</Text>
+
+                  <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                    {uiText("Method:")}<Text style={{ color: UI.text }}>{clean(selectedPartnerPayoutProfile?.payout_method) || payoutMethod || "—"}</Text>
                   </Text>
 
                   <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                    Method: <Text style={{ color: UI.text }}>{clean(selectedPartnerPayoutProfile?.payout_method) || payoutMethod || "—"}</Text>
+                    {uiText("Phone:")}<Text style={{ color: UI.text }}>{clean(selectedPartnerPayoutProfile?.payout_phone) || "—"}</Text>
                   </Text>
 
                   <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                    Phone: <Text style={{ color: UI.text }}>{clean(selectedPartnerPayoutProfile?.payout_phone) || "—"}</Text>
-                  </Text>
-
-                  <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                    Receiver name: <Text style={{ color: UI.text }}>{clean(selectedPartnerPayoutProfile?.payout_account_name) || "—"}</Text>
+                    {uiText("Receiver name:")}<Text style={{ color: UI.text }}>{clean(selectedPartnerPayoutProfile?.payout_account_name) || "—"}</Text>
                   </Text>
                 </View>
 
                 <TextInput
                   value={payoutMethod}
                   onChangeText={(v) => setPayoutMethod(upper(v))}
-                  placeholder="Payout method, mfano MOBILE_MONEY"
+                  placeholder={uiText("Payout method, mfano MOBILE_MONEY")}
                   placeholderTextColor="rgba(255,255,255,0.45)"
                   autoCapitalize="characters"
                   style={{
@@ -2599,7 +2581,7 @@ const createPartnerPayout = useCallback(async () => {
                 <TextInput
                   value={payoutReference}
                   onChangeText={setPayoutReference}
-                  placeholder="Payout reference (optional)"
+                  placeholder={uiText("Payout reference (optional)")}
                   placeholderTextColor="rgba(255,255,255,0.45)"
                   style={{
                     minHeight: 52,
@@ -2616,7 +2598,7 @@ const createPartnerPayout = useCallback(async () => {
                 <TextInput
                   value={payoutNote}
                   onChangeText={setPayoutNote}
-                  placeholder="Payout note (optional)"
+                  placeholder={uiText("Payout note (optional)")}
                   placeholderTextColor="rgba(255,255,255,0.45)"
                   multiline
                   style={{
@@ -2635,7 +2617,7 @@ const createPartnerPayout = useCallback(async () => {
 
                 <View style={{ flexDirection: "row", gap: 10 }}>
                   <PrimaryButton
-                    label={creatingPayout ? "SAVING..." : "CONFIRM PAYOUT"}
+                    label={creatingPayout ? uiText("SAVING...") : uiText("CONFIRM PAYOUT")}
                     onPress={() => void createPartnerPayout()}
                     disabled={
                       creatingPayout ||
@@ -2645,7 +2627,7 @@ const createPartnerPayout = useCallback(async () => {
                     }
                   />
                   <PrimaryButton
-                    label="RESET ALL"
+                    label={uiText("RESET ALL")}
                     danger
                     onPress={() => {
                       const readyIds = unpaidPartnerCommissions
@@ -2666,8 +2648,7 @@ const createPartnerPayout = useCallback(async () => {
               <View style={{ marginTop: 14 }}>
                 <ActivityIndicator />
                 <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 10 }}>
-                  Loading partner detail…
-                </Text>
+                  {uiText("Loading partner detail…")}</Text>
               </View>
             ) : partnerDetailErrorText ? (
               <View
@@ -2681,8 +2662,7 @@ const createPartnerPayout = useCallback(async () => {
                 }}
               >
                 <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
-                  Partner detail not ready
-                </Text>
+                  {uiText("Partner detail not ready")}</Text>
                 <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 8 }}>
                   {partnerDetailErrorText}
                 </Text>
@@ -2691,13 +2671,11 @@ const createPartnerPayout = useCallback(async () => {
               <>
                 <View style={{ marginTop: 14 }}>
                   <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-                    Referrals
-                  </Text>
+                    {uiText("Referrals")}</Text>
 
                   {partnerReferrals.length === 0 ? (
                     <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 8 }}>
-                      No referrals yet.
-                    </Text>
+                      {uiText("No referrals yet.")}</Text>
                   ) : (
                     <View style={{ marginTop: 10, gap: 10 }}>
                       {partnerReferrals.map((row) => (
@@ -2713,19 +2691,19 @@ const createPartnerPayout = useCallback(async () => {
                           }}
                         >
                           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 13 }}>
-                            {clean(row.referred_email_snapshot) || "Customer"}
+                            {clean(row.referred_email_snapshot) || uiText("Customer")}
                           </Text>
                           <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                            Status: <Text style={{ color: UI.text }}>{upper(row.status)}</Text>
+                            {uiText("Status:")}<Text style={{ color: UI.text }}>{upper(row.status)}</Text>
                           </Text>
                           <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                            Linked: <Text style={{ color: UI.text }}>{fmtDateTime(row.linked_at)}</Text>
+                            {uiText("Linked:")}<Text style={{ color: UI.text }}>{fmtDateTime(row.linked_at)}</Text>
                           </Text>
                           <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                            Total commission: <Text style={{ color: UI.text }}>{fmtMoney(row.total_commission_tzs ?? 0, "TZS")}</Text>
+                            {uiText("Total commission:")}<Text style={{ color: UI.text }}>{fmtMoney(row.total_commission_tzs ?? 0, "TZS")}</Text>
                           </Text>
                           <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                            Unpaid: <Text style={{ color: UI.text }}>{fmtMoney(row.unpaid_commission_tzs ?? 0, "TZS")}</Text>
+                            {uiText("Unpaid:")}<Text style={{ color: UI.text }}>{fmtMoney(row.unpaid_commission_tzs ?? 0, "TZS")}</Text>
                           </Text>
                         </View>
                       ))}
@@ -2735,13 +2713,11 @@ const createPartnerPayout = useCallback(async () => {
 
                 <View style={{ marginTop: 16 }}>
                   <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-                    Commissions
-                  </Text>
+                    {uiText("Commissions")}</Text>
 
                   {partnerCommissions.length === 0 ? (
                     <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 8 }}>
-                      No commissions yet.
-                    </Text>
+                      {uiText("No commissions yet.")}</Text>
                   ) : (
                     <View style={{ marginTop: 10, gap: 10 }}>
                       {partnerCommissions.map((row) => {
@@ -2785,86 +2761,83 @@ const createPartnerPayout = useCallback(async () => {
                               }}
                             >
                               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 13 }}>
-                                {clean(row.referred_email_snapshot) || "Customer commission"}
+                                {clean(row.referred_email_snapshot) || uiText("Customer commission")}
                               </Text>
 
                               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                                Status: <Text style={{ color: UI.text }}>{rowStatus || "—"}</Text>
+                                {uiText("Status:")}<Text style={{ color: UI.text }}>{rowStatus || "—"}</Text>
                               </Text>
 
                               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                                Global sequence: <Text style={{ color: UI.text }}>{row.payment_sequence_number ?? "—"}</Text>
+                                {uiText("Global sequence:")}<Text style={{ color: UI.text }}>{row.payment_sequence_number ?? "—"}</Text>
                               </Text>
 
                               {hasCount(row.commission_month_number) ? (
                                 <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                                  Commission month: <Text style={{ color: UI.text }}>{row.commission_month_number}</Text>
+                                  {uiText("Commission month:")}<Text style={{ color: UI.text }}>{row.commission_month_number}</Text>
                                 </Text>
                               ) : null}
 
                               {hasCount(row.months_paid_count) ? (
                                 <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                                  Months paid in package: <Text style={{ color: UI.text }}>{row.months_paid_count}</Text>
+                                  {uiText("Months paid in package:")}<Text style={{ color: UI.text }}>{row.months_paid_count}</Text>
                                 </Text>
                               ) : null}
 
                               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                                Total payment: <Text style={{ color: UI.text }}>{fmtMoney(row.payment_amount_tzs ?? 0, "TZS")}</Text>
+                                {uiText("Total payment:")}<Text style={{ color: UI.text }}>{fmtMoney(row.payment_amount_tzs ?? 0, "TZS")}</Text>
                               </Text>
 
                               {hasMoney(row.monthly_charge_tzs) ? (
                                 <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                                  Monthly charge base: <Text style={{ color: UI.text }}>{fmtMoney(row.monthly_charge_tzs ?? 0, "TZS")}</Text>
+                                  {uiText("Monthly charge base:")}<Text style={{ color: UI.text }}>{fmtMoney(row.monthly_charge_tzs ?? 0, "TZS")}</Text>
                                 </Text>
                               ) : null}
 
                               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                                Commission: <Text style={{ color: UI.text }}>{fmtMoney(row.commission_amount_tzs ?? 0, "TZS")}</Text>
+                                {uiText("Commission:")}<Text style={{ color: UI.text }}>{fmtMoney(row.commission_amount_tzs ?? 0, "TZS")}</Text>
                               </Text>
 
                               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                                Percent: <Text style={{ color: UI.text }}>{row.commission_percent ?? 0}%</Text>
+                                {uiText("Percent:")}<Text style={{ color: UI.text }}>{row.commission_percent ?? 0}%</Text>
                               </Text>
 
                               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                                Unlock at:{" "}
+                                {uiText("Unlock at:")}{" "}
                                 <Text style={{ color: UI.text }}>
-                                  {clean(row.unlock_at) ? fmtDateTime(row.unlock_at) : isLocked ? "WAITING RELEASE" : "—"}
+                                  {clean(row.unlock_at) ? fmtDateTime(row.unlock_at) : isLocked ? uiText("WAITING RELEASE") : "—"}
                                 </Text>
                               </Text>
 
                               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                                Earned at: <Text style={{ color: UI.text }}>{fmtDateTime(row.earned_at)}</Text>
+                                {uiText("Earned at:")}<Text style={{ color: UI.text }}>{fmtDateTime(row.earned_at)}</Text>
                               </Text>
 
                               {isPaid ? (
                                 <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                                  Paid at: <Text style={{ color: UI.text }}>{fmtDateTime(row.paid_at)}</Text>
+                                  {uiText("Paid at:")}<Text style={{ color: UI.text }}>{fmtDateTime(row.paid_at)}</Text>
                                 </Text>
                               ) : null}
 
                               {!!clean(row.notes) ? (
                                 <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                                  Engine note: <Text style={{ color: UI.text }}>{clean(row.notes)}</Text>
+                                  {uiText("Engine note:")}<Text style={{ color: UI.text }}>{clean(row.notes)}</Text>
                                 </Text>
                               ) : null}
 
                               {isSelectable ? (
                                 <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12, marginTop: 4 }}>
-                                  {isSelected ? "SELECTED FOR PAYOUT" : "TAP TO SELECT"}
+                                  {isSelected ? uiText("SELECTED FOR PAYOUT") : uiText("TAP TO SELECT")}
                                 </Text>
                               ) : isPaid ? (
                                 <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 12, marginTop: 4 }}>
-                                  ALREADY PAID
-                                </Text>
+                                  {uiText("ALREADY PAID")}</Text>
                               ) : isLocked ? (
                                 <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 12, marginTop: 4 }}>
-                                  LOCKED UNTIL RELEASE DATE
-                                </Text>
+                                  {uiText("LOCKED UNTIL RELEASE DATE")}</Text>
                               ) : (
                                 <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 12, marginTop: 4 }}>
-                                  NOT READY
-                                </Text>
+                                  {uiText("NOT READY")}</Text>
                               )}
                             </View>
                           </Pressable>
@@ -2876,13 +2849,11 @@ const createPartnerPayout = useCallback(async () => {
 
                 <View style={{ marginTop: 16 }}>
                   <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-                    Payout History
-                  </Text>
+                    {uiText("Payout History")}</Text>
 
                   {partnerPayouts.length === 0 ? (
                     <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 8 }}>
-                      No payouts yet.
-                    </Text>
+                      {uiText("No payouts yet.")}</Text>
                   ) : (
                     <View style={{ marginTop: 10, gap: 10 }}>
                       {partnerPayouts.map((row) => (
@@ -2901,16 +2872,16 @@ const createPartnerPayout = useCallback(async () => {
                             {fmtMoney(row.payout_amount_tzs ?? 0, "TZS")}
                           </Text>
                           <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                            Method: <Text style={{ color: UI.text }}>{clean(row.payout_method) || "—"}</Text>
+                            {uiText("Method:")}<Text style={{ color: UI.text }}>{clean(row.payout_method) || "—"}</Text>
                           </Text>
                           <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                            Status: <Text style={{ color: UI.text }}>{upper(row.payout_status)}</Text>
+                            {uiText("Status:")}<Text style={{ color: UI.text }}>{upper(row.payout_status)}</Text>
                           </Text>
                           <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                            Reference: <Text style={{ color: UI.text }}>{clean(row.payout_reference) || "—"}</Text>
+                            {uiText("Reference:")}<Text style={{ color: UI.text }}>{clean(row.payout_reference) || "—"}</Text>
                           </Text>
                           <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                            Date: <Text style={{ color: UI.text }}>{fmtDateTime(row.payout_date)}</Text>
+                            {uiText("Date:")}<Text style={{ color: UI.text }}>{fmtDateTime(row.payout_date)}</Text>
                           </Text>
                         </View>
                       ))}
@@ -2922,7 +2893,7 @@ const createPartnerPayout = useCallback(async () => {
 
             <View style={{ marginTop: 12 }}>
               <PrimaryButton
-                label="CLOSE"
+                label={uiText("CLOSE")}
                 onPress={() => {
                   setShowPayoutForm(false);
                   setSelectedCommissionIds([]);
@@ -2970,11 +2941,9 @@ const createPartnerPayout = useCallback(async () => {
 
         <View style={{ flex: 1 }}>
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 20 }}>
-            Subscription Requests
-          </Text>
+            {uiText("Subscription Requests")}</Text>
           <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 4 }}>
-            ZETRA Office Billing
-          </Text>
+            {uiText("ZETRA Office Billing")}</Text>
         </View>
 
         <View
@@ -2998,21 +2967,20 @@ const createPartnerPayout = useCallback(async () => {
       <View style={{ marginTop: 12 }}>
         <Card>
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-            Access status
-          </Text>
+            {uiText("Access status")}</Text>
 
           <View style={{ marginTop: 10, gap: 6 }}>
             <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-              Internal account:{" "}
+              {uiText("Internal account:")}{" "}
               <Text style={{ color: UI.text }}>
-                {allowed ? "ALLOWED" : checkingAccess ? "CHECKING…" : "DENIED"}
+                {allowed ? uiText("ALLOWED") : checkingAccess ? uiText("CHECKING…") : uiText("DENIED")}
               </Text>
             </Text>
 
             <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-              Biometric gate:{" "}
+              {uiText("Biometric gate:")}{" "}
               <Text style={{ color: UI.text }}>
-                {authed ? "PASSED" : checkingAccess ? "WAITING…" : "NOT VERIFIED"}
+                {authed ? uiText("PASSED") : checkingAccess ? uiText("WAITING…") : uiText("NOT VERIFIED")}
               </Text>
             </Text>
           </View>
@@ -3022,25 +2990,23 @@ const createPartnerPayout = useCallback(async () => {
       <View style={{ marginTop: 12 }}>
         <Card>
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-            Office Workspace
-          </Text>
+            {uiText("Office Workspace")}</Text>
 
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 12 }}>
             <FilterPill
-              label="REQUESTS"
+              label={uiText("REQUESTS")}
               active={officeTab === "REQUESTS"}
               onPress={() => setOfficeTab("REQUESTS")}
             />
             <FilterPill
-              label="GROWTH PARTNERS"
+              label={uiText("GROWTH PARTNERS")}
               active={officeTab === "PARTNERS"}
               onPress={() => setOfficeTab("PARTNERS")}
             />
           </View>
 
           <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 10 }}>
-            Chagua eneo la kazi la Office: subscription requests au ZETRA Growth Partners.
-          </Text>
+            {uiText("Chagua eneo la kazi la Office: subscription requests au ZETRA Growth Partners.")}</Text>
         </Card>
       </View>
 
@@ -3055,13 +3021,10 @@ const createPartnerPayout = useCallback(async () => {
     <View style={{ marginTop: 12 }}>
       <Card>
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-            Office SMS Live Listener
-          </Text>
+            {uiText("Office SMS Live Listener")}</Text>
 
           <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 8 }}>
-            Simu hii ya office itasikiliza SMS mpya zinazoingia. SMS zitatumika kama ushahidi wa
-            muamala, kisha office itafanya review na comparison manually.
-          </Text>
+            {uiText("Simu hii ya office itasikiliza SMS mpya zinazoingia. SMS zitatumika kama ushahidi wa muamala, kisha office itafanya review na comparison manually.")}</Text>
 
           <View
             style={{
@@ -3075,28 +3038,28 @@ const createPartnerPayout = useCallback(async () => {
             }}
           >
             <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-              Platform: <Text style={{ color: UI.text }}>{Platform.OS.toUpperCase()}</Text>
+              {uiText("Platform:")}<Text style={{ color: UI.text }}>{Platform.OS.toUpperCase()}</Text>
             </Text>
 
             <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-              SMS permission:{" "}
+              {uiText("SMS permission:")}{" "}
               <Text style={{ color: UI.text }}>
-                {smsPermissionGranted ? "GRANTED" : "NOT GRANTED"}
+                {smsPermissionGranted ? uiText("GRANTED") : uiText("NOT GRANTED")}
               </Text>
             </Text>
 
             <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-              Listener status: <Text style={{ color: UI.text }}>{clean(officeListenerStatus) || "OFF"}</Text>
+              {uiText("Listener status:")}<Text style={{ color: UI.text }}>{clean(officeListenerStatus) || uiText("OFF")}</Text>
             </Text>
 
             <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-              Mode: <Text style={{ color: UI.text }}>MANUAL REVIEW ONLY</Text>
+              {uiText("Mode:")}<Text style={{ color: UI.text }}>{uiText("MANUAL REVIEW ONLY")}</Text>
             </Text>
           </View>
 
           <View style={{ marginTop: 12, flexDirection: "row", gap: 10 }}>
             <PrimaryButton
-              label={officeListenerStarted ? "LISTENER ACTIVE" : "START OFFICE LISTENER"}
+              label={officeListenerStarted ? uiText("LISTENER ACTIVE") : uiText("START OFFICE LISTENER")}
               onPress={() => void startOfficeSmsListener()}
               disabled={!authed || officeListenerStarted || Platform.OS !== "android"}
             />
@@ -3107,19 +3070,16 @@ const createPartnerPayout = useCallback(async () => {
       <View style={{ marginTop: 12 }}>
         <Card>
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-            Office SMS Test Console
-          </Text>
+            {uiText("Office SMS Test Console")}</Text>
 
           <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 8 }}>
-            Hapa office ina-review SMS za malipo na kufanya matching manually. Parser/matcher ni
-            helper tu, siyo lazima kwa approval ya mwisho.
-          </Text>
+            {uiText("Hapa office ina-review SMS za malipo na kufanya matching manually. Parser/matcher ni helper tu, siyo lazima kwa approval ya mwisho.")}</Text>
 
           <View style={{ marginTop: 12, gap: 10 }}>
             <TextInput
               value={smsText}
               onChangeText={setSmsText}
-              placeholder="Bandika SMS kamili ya malipo hapa"
+              placeholder={uiText("Bandika SMS kamili ya malipo hapa")}
               placeholderTextColor="rgba(255,255,255,0.45)"
               multiline
               style={{
@@ -3139,7 +3099,7 @@ const createPartnerPayout = useCallback(async () => {
             <TextInput
               value={smsSender}
               onChangeText={setSmsSender}
-              placeholder="Sender phone, mfano 255760663390"
+              placeholder={uiText("Sender phone, mfano 255760663390")}
               placeholderTextColor="rgba(255,255,255,0.45)"
               style={{
                 minHeight: 52,
@@ -3156,7 +3116,7 @@ const createPartnerPayout = useCallback(async () => {
             <TextInput
               value={smsReference}
               onChangeText={(v) => setSmsReference(upper(v))}
-              placeholder="Reference ya SMS, mfano DK45NAH49QM"
+              placeholder={uiText("Reference ya SMS, mfano DK45NAH49QM")}
               placeholderTextColor="rgba(255,255,255,0.45)"
               autoCapitalize="characters"
               style={{
@@ -3174,7 +3134,7 @@ const createPartnerPayout = useCallback(async () => {
             <TextInput
               value={smsAmount}
               onChangeText={setSmsAmount}
-              placeholder="Amount ya SMS, mfano 45000"
+              placeholder={uiText("Amount ya SMS, mfano 45000")}
               placeholderTextColor="rgba(255,255,255,0.45)"
               keyboardType="number-pad"
               style={{
@@ -3200,62 +3160,62 @@ const createPartnerPayout = useCallback(async () => {
               }}
             >
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                Parser status: <Text style={{ color: UI.text }}>{parserReady}</Text>
+                {uiText("Parser status:")}<Text style={{ color: UI.text }}>{uiText(parserReady)}</Text>
               </Text>
 
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                Parse engine status: <Text style={{ color: UI.text }}>{clean(parsedStatus) || "—"}</Text>
+                {uiText("Parse engine status:")}<Text style={{ color: UI.text }}>{clean(parsedStatus) || "—"}</Text>
               </Text>
 
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                Provider family: <Text style={{ color: UI.text }}>{clean(parsedProviderFamily) || "—"}</Text>
+                {uiText("Provider family:")}<Text style={{ color: UI.text }}>{clean(parsedProviderFamily) || "—"}</Text>
               </Text>
 
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                Provider code: <Text style={{ color: UI.text }}>{clean(parsedProviderCode) || "—"}</Text>
+                {uiText("Provider code:")}<Text style={{ color: UI.text }}>{clean(parsedProviderCode) || "—"}</Text>
               </Text>
 
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                Country code: <Text style={{ color: UI.text }}>{clean(parsedCountryCode) || "—"}</Text>
+                {uiText("Country code:")}<Text style={{ color: UI.text }}>{clean(parsedCountryCode) || "—"}</Text>
               </Text>
 
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                Direction: <Text style={{ color: UI.text }}>{clean(parsedDirection) || "—"}</Text>
+                {uiText("Direction:")}<Text style={{ color: UI.text }}>{clean(parsedDirection) || "—"}</Text>
               </Text>
 
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                Currency: <Text style={{ color: UI.text }}>{clean(parsedCurrencyCode) || "—"}</Text>
+                {uiText("Currency:")}<Text style={{ color: UI.text }}>{clean(parsedCurrencyCode) || "—"}</Text>
               </Text>
 
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                Parsed payer name: <Text style={{ color: UI.text }}>{clean(parsedPayerName) || "—"}</Text>
+                {uiText("Parsed payer name:")}<Text style={{ color: UI.text }}>{clean(parsedPayerName) || "—"}</Text>
               </Text>
 
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                Parse confidence: <Text style={{ color: UI.text }}>{clean(parseConfidence) || "—"}</Text>
+                {uiText("Parse confidence:")}<Text style={{ color: UI.text }}>{clean(parseConfidence) || "—"}</Text>
               </Text>
 
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                Parse notes: <Text style={{ color: UI.text }}>{clean(parsedNotes) || "—"}</Text>
+                {uiText("Parse notes:")}<Text style={{ color: UI.text }}>{clean(parsedNotes) || "—"}</Text>
               </Text>
 
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                Payment-like SMS:{" "}
+                {uiText("Payment-like SMS:")}{" "}
                 <Text style={{ color: UI.text }}>
-                  {shouldAutoProcessSms(smsText) ? "YES" : clean(smsText) ? "NO" : "—"}
+                  {shouldAutoProcessSms(smsText) ? uiText("YES") : clean(smsText) ? uiText("NO") : "—"}
                 </Text>
               </Text>
             </View>
 
             <View style={{ flexDirection: "row", gap: 10 }}>
               <PrimaryButton
-                label={parsingSms ? "PARSING..." : "PARSE SMS"}
+                label={parsingSms ? uiText("PARSING...") : uiText("PARSE SMS")}
                 onPress={() => void parseSmsFromText(undefined, false)}
                 disabled={parsingSms || ingestingSms || matchingSms || !clean(smsText)}
               />
 
               <PrimaryButton
-                label={ingestingSms ? "SAVING..." : "INGEST SMS"}
+                label={ingestingSms ? uiText("SAVING...") : uiText("INGEST SMS")}
                 onPress={() => void ingestOfficeSms()}
                 disabled={ingestingSms || matchingSms}
               />
@@ -3263,7 +3223,7 @@ const createPartnerPayout = useCallback(async () => {
 
             <View style={{ flexDirection: "row", gap: 10 }}>
               <PrimaryButton
-                label={matchingSms ? "MATCHING..." : "RUN MATCH"}
+                label={matchingSms ? uiText("MATCHING...") : uiText("RUN MATCH")}
                 onPress={() => void runOfficeSmsMatch()}
                 disabled={!clean(lastSmsLogId) || ingestingSms || matchingSms || parsingSms}
               />
@@ -3282,11 +3242,11 @@ const createPartnerPayout = useCallback(async () => {
             }}
           >
             <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-              Latest SMS Log ID: <Text style={{ color: UI.text }}>{clean(lastSmsLogId) || "—"}</Text>
+              {uiText("Latest SMS Log ID:")}<Text style={{ color: UI.text }}>{clean(lastSmsLogId) || "—"}</Text>
             </Text>
 
             <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-              Latest Match ID: <Text style={{ color: UI.text }}>{clean(lastMatchId) || "—"}</Text>
+              {uiText("Latest Match ID:")}<Text style={{ color: UI.text }}>{clean(lastMatchId) || "—"}</Text>
             </Text>
           </View>
 
@@ -3303,51 +3263,50 @@ const createPartnerPayout = useCallback(async () => {
               }}
             >
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 13 }}>
-                Latest match result
+                {uiText("Latest match result")}</Text>
+
+              <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+                {uiText("Match status:")}<Text style={{ color: UI.text }}>{clean(lastMatchRow.match_status) || "—"}</Text>
               </Text>
 
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                Match status: <Text style={{ color: UI.text }}>{clean(lastMatchRow.match_status) || "—"}</Text>
+                {uiText("Confidence score:")}<Text style={{ color: UI.text }}>{fmtScore(lastMatchRow.confidence_score)}</Text>
               </Text>
 
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                Confidence score: <Text style={{ color: UI.text }}>{fmtScore(lastMatchRow.confidence_score)}</Text>
+                {uiText("Reference match:")}<Text style={{ color: UI.text }}>{fmtBool(lastMatchRow.reference_match)}</Text>
               </Text>
 
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                Reference match: <Text style={{ color: UI.text }}>{fmtBool(lastMatchRow.reference_match)}</Text>
+                {uiText("Amount match:")}<Text style={{ color: UI.text }}>{fmtBool(lastMatchRow.amount_match)}</Text>
               </Text>
 
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                Amount match: <Text style={{ color: UI.text }}>{fmtBool(lastMatchRow.amount_match)}</Text>
+                {uiText("Phone match:")}<Text style={{ color: UI.text }}>{fmtBool(lastMatchRow.phone_match)}</Text>
               </Text>
 
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                Phone match: <Text style={{ color: UI.text }}>{fmtBool(lastMatchRow.phone_match)}</Text>
+                {uiText("Time match:")}<Text style={{ color: UI.text }}>{fmtBool(lastMatchRow.time_match)}</Text>
               </Text>
 
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                Time match: <Text style={{ color: UI.text }}>{fmtBool(lastMatchRow.time_match)}</Text>
+                {uiText("Review required:")}<Text style={{ color: UI.text }}>{fmtBool(lastMatchRow.review_required)}</Text>
               </Text>
 
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                Review required: <Text style={{ color: UI.text }}>{fmtBool(lastMatchRow.review_required)}</Text>
+                {uiText("Auto approved:")}<Text style={{ color: UI.text }}>{fmtBool(lastMatchRow.auto_approved)}</Text>
               </Text>
 
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                Auto approved: <Text style={{ color: UI.text }}>{fmtBool(lastMatchRow.auto_approved)}</Text>
+                {uiText("Request ID:")}<Text style={{ color: UI.text }}>{clean(lastMatchRow.request_id) || "—"}</Text>
               </Text>
 
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                Request ID: <Text style={{ color: UI.text }}>{clean(lastMatchRow.request_id) || "—"}</Text>
+                {uiText("Notes:")}<Text style={{ color: UI.text }}>{clean(lastMatchRow.notes) || "—"}</Text>
               </Text>
 
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                Notes: <Text style={{ color: UI.text }}>{clean(lastMatchRow.notes) || "—"}</Text>
-              </Text>
-
-              <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                Created at: <Text style={{ color: UI.text }}>{fmtDateTime(lastMatchRow.created_at)}</Text>
+                {uiText("Created at:")}<Text style={{ color: UI.text }}>{fmtDateTime(lastMatchRow.created_at)}</Text>
               </Text>
             </View>
           ) : null}
@@ -3357,27 +3316,26 @@ const createPartnerPayout = useCallback(async () => {
       <View style={{ marginTop: 12 }}>
         <Card>
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-            Request history
-          </Text>
+            {uiText("Request history")}</Text>
 
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 12 }}>
             <FilterPill
-              label="PENDING"
+              label={uiText("PENDING")}
               active={filter === "PENDING"}
               onPress={() => setFilter("PENDING")}
             />
             <FilterPill
-              label="APPROVED"
+              label={uiText("APPROVED")}
               active={filter === "APPROVED"}
               onPress={() => setFilter("APPROVED")}
             />
             <FilterPill
-              label="REJECTED"
+              label={uiText("REJECTED")}
               active={filter === "REJECTED"}
               onPress={() => setFilter("REJECTED")}
             />
             <FilterPill
-              label="ALL"
+              label={uiText("ALL")}
               active={filter === "ALL"}
               onPress={() => setFilter("ALL")}
             />
@@ -3392,7 +3350,7 @@ const createPartnerPayout = useCallback(async () => {
             }}
           >
             <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-              Active filter: <Text style={{ color: UI.text }}>{filter}</Text>
+              {uiText("Active filter:")}<Text style={{ color: UI.text }}>{filter}</Text>
             </Text>
 
             <Pressable
@@ -3425,8 +3383,7 @@ const createPartnerPayout = useCallback(async () => {
             <View style={{ marginTop: 14 }}>
               <ActivityIndicator />
               <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 10 }}>
-                Loading requests…
-              </Text>
+                {uiText("Loading requests…")}</Text>
             </View>
           ) : errorText ? (
             <View
@@ -3440,16 +3397,14 @@ const createPartnerPayout = useCallback(async () => {
               }}
             >
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
-                Backend access not ready
-              </Text>
+                {uiText("Backend access not ready")}</Text>
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 8 }}>
                 {errorText}
               </Text>
             </View>
           ) : requests.length === 0 ? (
             <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 14 }}>
-              No {filter.toLowerCase()} requests right now.
-            </Text>
+              {filter === "PENDING" ? uiText("No pending requests right now.") : filter === "APPROVED" ? uiText("No approved requests right now.") : filter === "REJECTED" ? uiText("No rejected requests right now.") : uiText("No requests right now.")}</Text>
           ) : (
             <View style={{ marginTop: 14 }}>
               <FlatList

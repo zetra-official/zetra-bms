@@ -1,3 +1,4 @@
+import {useCommonText} from "@/src/i18n/useCommonText";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -23,6 +24,7 @@ function clean(x: any) {
 }
 
 export default function StoreProfileScreen() {
+ const uiText = useCommonText();
   const router = useRouter();
   const { storeId } = useLocalSearchParams<{ storeId?: string }>();
 
@@ -81,7 +83,7 @@ export default function StoreProfileScreen() {
         setMobileMoneyNumber(clean(data?.mobile_money_number));
         setPaymentInstructions(clean(data?.payment_instructions));
       } catch (e: any) {
-        Alert.alert("Failed", clean(e?.message) || "Failed to load store profile");
+        Alert.alert(uiText("Failed"), clean(e?.message) || uiText("Failed to load store profile"));
       } finally {
         if (alive) setLoading(false);
       }
@@ -96,7 +98,7 @@ export default function StoreProfileScreen() {
   const onSave = async () => {
     const id = clean(storeId);
     if (!id) {
-      Alert.alert("Missing store", "Store haijapatikana.");
+      Alert.alert(uiText("Missing store"), uiText("Store haijapatikana."));
       return;
     }
 
@@ -123,14 +125,14 @@ export default function StoreProfileScreen() {
 
       if (error) throw error;
 
-      Alert.alert("Saved ✅", "Taarifa za store zimehifadhiwa.", [
+      Alert.alert(uiText("Saved ✅"), uiText("Taarifa za store zimehifadhiwa."), [
         {
-          text: "OK",
+          text: uiText("OK"),
           onPress: () => router.back(),
         },
       ]);
     } catch (e: any) {
-      Alert.alert("Failed", clean(e?.message) || "Failed to save store profile");
+      Alert.alert(uiText("Failed"), clean(e?.message) || uiText("Failed to save store profile"));
     } finally {
       setSaving(false);
     }
@@ -147,11 +149,9 @@ export default function StoreProfileScreen() {
           <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 12 }}>
             <View style={{ flex: 1 }}>
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 26 }}>
-                Store Profile
-              </Text>
+                {uiText("Store Profile")}</Text>
               <Text style={{ color: UI.muted, fontWeight: "700", marginTop: 6 }}>
-                Taarifa za tawi/store zitakazoonekana kwenye invoice na receipt.
-              </Text>
+                {uiText("Taarifa za tawi/store zitakazoonekana kwenye invoice na receipt.")}</Text>
             </View>
 
             <Pressable
@@ -179,31 +179,31 @@ export default function StoreProfileScreen() {
               contentContainerStyle={{ paddingBottom: 190 }}
             >
               <Card style={{ gap: 14 }}>
-                <SectionTitle title="Store Details" subtitle="Jaza taarifa za msingi za store/tawi hili." />
+                <SectionTitle title={uiText("Store Details")} subtitle={uiText("Jaza taarifa za msingi za store/tawi hili.")} />
 
-                <Input label="Jina la store kwenye receipt" helper="Mfano: JOFU QUALITY SOWETO au Kariakoo Branch." value={storeDisplayName} onChangeText={setStoreDisplayName} />
-                <Input label="Namba ya simu" helper="Namba ya mawasiliano ya store hii. Mfano: 0755 000 000." value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
-                <Input label="Namba ya WhatsApp" helper="Weka kama ni tofauti na namba ya kawaida. Inaweza kutumika kwenye receipt." value={whatsapp} onChangeText={setWhatsapp} keyboardType="phone-pad" />
-                <Input label="Email ya store" helper="Si lazima. Weka kama store hii ina email yake." value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+                <Input label={uiText("Jina la store kwenye receipt")} helper="Mfano: JOFU QUALITY SOWETO au Kariakoo Branch." value={storeDisplayName} onChangeText={setStoreDisplayName} />
+                <Input label={uiText("Namba ya simu")} helper="Namba ya mawasiliano ya store hii. Mfano: 0755 000 000." value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+                <Input label={uiText("Namba ya WhatsApp")} helper="Weka kama ni tofauti na namba ya kawaida. Inaweza kutumika kwenye receipt." value={whatsapp} onChangeText={setWhatsapp} keyboardType="phone-pad" />
+                <Input label={uiText("Email ya store")} helper="Si lazima. Weka kama store hii ina email yake." value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
 
-                <SectionTitle title="Location" subtitle="Mahali store/tawi hili lilipo." />
+                <SectionTitle title={uiText("Location")} subtitle={uiText("Mahali store/tawi hili lilipo.")} />
 
-                <Input label="Mkoa" helper="Mfano: Mbeya, Dar es Salaam, Arusha." value={region} onChangeText={setRegion} />
-                <Input label="Mji / Eneo" helper="Mfano: Soweto, Kariakoo, Mbezi, Mwanjelwa." value={city} onChangeText={setCity} />
-                <Input label="Anwani kamili" helper="Andika eneo kwa kueleweka. Mfano: Soweto karibu na stand ya daladala." value={address} onChangeText={setAddress} multiline />
-                <Input label="Google Maps link" helper="Si lazima. Weka link ya location kutoka Google Maps kama ipo." value={mapLink} onChangeText={setMapLink} autoCapitalize="none" />
+                <Input label={uiText("Mkoa")} helper="Mfano: Mbeya, Dar es Salaam, Arusha." value={region} onChangeText={setRegion} />
+                <Input label={uiText("Mji / Eneo")} helper="Mfano: Soweto, Kariakoo, Mbezi, Mwanjelwa." value={city} onChangeText={setCity} />
+                <Input label={uiText("Anwani kamili")} helper="Andika eneo kwa kueleweka. Mfano: Soweto karibu na stand ya daladala." value={address} onChangeText={setAddress} multiline />
+                <Input label={uiText("Google Maps link")} helper="Si lazima. Weka link ya location kutoka Google Maps kama ipo." value={mapLink} onChangeText={setMapLink} autoCapitalize="none" />
 
-                <SectionTitle title="Payment Details" subtitle="Taarifa za malipo za store hii." />
+                <SectionTitle title={uiText("Payment Details")} subtitle={uiText("Taarifa za malipo za store hii.")} />
 
-                <Input label="Jina la benki" helper="Mfano: CRDB, NMB, NBC, Equity." value={bankName} onChangeText={setBankName} />
-                <Input label="Jina la account" helper="Jina lililoandikwa kwenye account ya benki." value={accountName} onChangeText={setAccountName} />
-                <Input label="Namba ya account" helper="Namba ya account ya benki ya store hii." value={accountNumber} onChangeText={setAccountNumber} keyboardType="number-pad" />
-                <Input label="Mtandao wa malipo" helper="Mfano: M-Pesa, Tigo Pesa, Airtel Money, HaloPesa." value={mobileMoneyName} onChangeText={setMobileMoneyName} />
-                <Input label="Lipa namba / Namba ya malipo" helper="Weka Lipa Namba, Till Number au namba ya kupokea malipo." value={mobileMoneyNumber} onChangeText={setMobileMoneyNumber} keyboardType="phone-pad" />
-                <Input label="Maelekezo ya malipo" helper="Mfano: Tafadhali lipa kabla ya mzigo kutoka dukani." value={paymentInstructions} onChangeText={setPaymentInstructions} multiline />
+                <Input label={uiText("Jina la benki")} helper="Mfano: CRDB, NMB, NBC, Equity." value={bankName} onChangeText={setBankName} />
+                <Input label={uiText("Jina la account")} helper="Jina lililoandikwa kwenye account ya benki." value={accountName} onChangeText={setAccountName} />
+                <Input label={uiText("Namba ya account")} helper="Namba ya account ya benki ya store hii." value={accountNumber} onChangeText={setAccountNumber} keyboardType="number-pad" />
+                <Input label={uiText("Mtandao wa malipo")} helper="Mfano: M-Pesa, Tigo Pesa, Airtel Money, HaloPesa." value={mobileMoneyName} onChangeText={setMobileMoneyName} />
+                <Input label={uiText("Lipa namba / Namba ya malipo")} helper="Weka Lipa Namba, Till Number au namba ya kupokea malipo." value={mobileMoneyNumber} onChangeText={setMobileMoneyNumber} keyboardType="phone-pad" />
+                <Input label={uiText("Maelekezo ya malipo")} helper="Mfano: Tafadhali lipa kabla ya mzigo kutoka dukani." value={paymentInstructions} onChangeText={setPaymentInstructions} multiline />
 
                 <Button
-                  title={saving ? "Inahifadhi..." : "Hifadhi Store Profile"}
+                  title={saving ? uiText("Inahifadhi...") : uiText("Hifadhi Store Profile")}
                   onPress={onSave}
                   disabled={saving}
                   variant="primary"

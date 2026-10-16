@@ -1,3 +1,5 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, {
   useCallback,
@@ -238,6 +240,8 @@ function formatDisplayDate(
 }
 
 export default function StaffPerformanceDetailScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
 
   const params =
@@ -405,8 +409,8 @@ export default function StaffPerformanceDetailScreen() {
             showValidationAlert
           ) {
             Alert.alert(
-              "Invalid Date",
-              "Weka tarehe sahihi kwa format YYYY-MM-DD."
+              uiText("Invalid Date"),
+              uiText("Weka tarehe sahihi kwa format YYYY-MM-DD.")
             );
           }
 
@@ -423,8 +427,8 @@ export default function StaffPerformanceDetailScreen() {
             showValidationAlert
           ) {
             Alert.alert(
-              "Invalid Range",
-              "Tarehe ya kuanzia haiwezi kuwa baada ya tarehe ya kuishia."
+              uiText("Invalid Range"),
+              uiText("Tarehe ya kuanzia haiwezi kuwa baada ya tarehe ya kuishia.")
             );
           }
 
@@ -611,8 +615,7 @@ export default function StaffPerformanceDetailScreen() {
                 fontSize: 18,
               }}
             >
-              No Access
-            </Text>
+              {uiText("No Access")}</Text>
 
             <Text
               style={{
@@ -623,10 +626,7 @@ export default function StaffPerformanceDetailScreen() {
                 lineHeight: 21,
               }}
             >
-              Hii report ni
-              ya Owner/Admin
-              tu.
-            </Text>
+              {uiText("Hii report ni ya Owner/Admin tu.")}</Text>
 
             <Pressable
               onPress={() =>
@@ -653,8 +653,7 @@ export default function StaffPerformanceDetailScreen() {
                     "900",
                 }}
               >
-                Back
-              </Text>
+                {uiText("Back")}</Text>
             </Pressable>
           </View>
         </View>
@@ -743,8 +742,7 @@ export default function StaffPerformanceDetailScreen() {
                 fontSize: 26,
               }}
             >
-              Staff Report
-            </Text>
+              {uiText("Staff Report")}</Text>
 
             <Text
               style={{
@@ -760,7 +758,7 @@ export default function StaffPerformanceDetailScreen() {
               •{" "}
               {email ||
                 userId ||
-                "Staff"}
+                uiText("Staff")}
             </Text>
           </View>
         </View>
@@ -856,7 +854,7 @@ export default function StaffPerformanceDetailScreen() {
                     null
                   );
                 }}
-                placeholder="From YYYY-MM-DD"
+                placeholder={uiText("From YYYY-MM-DD")}
                 placeholderTextColor={
                   UI.faint
                 }
@@ -892,7 +890,7 @@ export default function StaffPerformanceDetailScreen() {
                     null
                   );
                 }}
-                placeholder="To YYYY-MM-DD"
+                placeholder={uiText("To YYYY-MM-DD")}
                 placeholderTextColor={
                   UI.faint
                 }
@@ -947,9 +945,7 @@ export default function StaffPerformanceDetailScreen() {
                     "900",
                 }}
               >
-                Apply Custom
-                Range
-              </Text>
+                {uiText("Apply Custom Range")}</Text>
             </Pressable>
           </View>
         ) : null}
@@ -974,7 +970,7 @@ export default function StaffPerformanceDetailScreen() {
                   "900",
               }}
             >
-              {error}
+              {systemText(error)}
             </Text>
           </View>
         ) : null}
@@ -1000,8 +996,7 @@ export default function StaffPerformanceDetailScreen() {
               fontSize: 18,
             }}
           >
-            Summary
-          </Text>
+            {uiText("Summary")}</Text>
 
           <Text
             style={{
@@ -1011,7 +1006,7 @@ export default function StaffPerformanceDetailScreen() {
                 "900",
             }}
           >
-            Period:{" "}
+            {uiText("Period:")}{" "}
             {range.from ||
               "—"}{" "}
             →{" "}
@@ -1028,7 +1023,7 @@ export default function StaffPerformanceDetailScreen() {
               fontSize: 20,
             }}
           >
-            Sales:{" "}
+            {uiText("Sales:")}{" "}
             {formatTZS(
               totals.sales
             )}
@@ -1042,7 +1037,7 @@ export default function StaffPerformanceDetailScreen() {
                 "900",
             }}
           >
-            Gross Profit:{" "}
+            {uiText("Gross Profit:")}{" "}
             {formatTZS(
               totals.profit
             )}
@@ -1056,7 +1051,7 @@ export default function StaffPerformanceDetailScreen() {
                 "900",
             }}
           >
-            Commission:{" "}
+            {uiText("Commission:")}{" "}
             {formatTZS(
               totals.commission
             )}
@@ -1070,8 +1065,7 @@ export default function StaffPerformanceDetailScreen() {
                 "900",
             }}
           >
-            Net Profit After
-            Commission:{" "}
+            {uiText("Net Profit After Commission:")}{" "}
             {formatTZS(
               totals.netProfit
             )}
@@ -1085,7 +1079,7 @@ export default function StaffPerformanceDetailScreen() {
                 "900",
             }}
           >
-            Receipts:{" "}
+            {uiText("Receipts:")}{" "}
             {totals.receipts}
           </Text>
         </View>
@@ -1123,8 +1117,8 @@ export default function StaffPerformanceDetailScreen() {
             }}
           >
             {loading
-              ? "Loading..."
-              : "Refresh Report"}
+              ? uiText("Loading...")
+              : uiText("Refresh Report")}
           </Text>
         </Pressable>
 
@@ -1137,8 +1131,7 @@ export default function StaffPerformanceDetailScreen() {
             fontSize: 18,
           }}
         >
-          Sales / Receipts
-        </Text>
+          {uiText("Sales / Receipts")}</Text>
 
         {rows.length ===
         0 ? (
@@ -1161,8 +1154,7 @@ export default function StaffPerformanceDetailScreen() {
                   "900",
               }}
             >
-              No sales found
-            </Text>
+              {uiText("No sales found")}</Text>
 
             <Text
               style={{
@@ -1174,11 +1166,7 @@ export default function StaffPerformanceDetailScreen() {
                 lineHeight: 20,
               }}
             >
-              Hakuna mauzo
-              yaliyopatikana kwa
-              mfanyakazi huyu
-              kwenye range hii.
-            </Text>
+              {uiText("Hakuna mauzo yaliyopatikana kwa mfanyakazi huyu kwenye range hii.")}</Text>
           </View>
         ) : (
           rows.map(
@@ -1238,8 +1226,7 @@ export default function StaffPerformanceDetailScreen() {
                       fontSize: 12,
                     }}
                   >
-                    RECEIPT #
-                    {index +
+                    {uiText("RECEIPT #")}{index +
                       1}
                   </Text>
 
@@ -1266,7 +1253,7 @@ export default function StaffPerformanceDetailScreen() {
                         "900",
                     }}
                   >
-                    Sales:{" "}
+                    {uiText("Sales:")}{" "}
                     {formatTZS(
                       saleAmount
                     )}
@@ -1280,7 +1267,7 @@ export default function StaffPerformanceDetailScreen() {
                         "900",
                     }}
                   >
-                    Gross Profit:{" "}
+                    {uiText("Gross Profit:")}{" "}
                     {formatTZS(
                       grossProfit
                     )}
@@ -1294,7 +1281,7 @@ export default function StaffPerformanceDetailScreen() {
                         "900",
                     }}
                   >
-                    Commission:{" "}
+                    {uiText("Commission:")}{" "}
                     {formatTZS(
                       commission
                     )}
@@ -1308,7 +1295,7 @@ export default function StaffPerformanceDetailScreen() {
                         "900",
                     }}
                   >
-                    Net Profit:{" "}
+                    {uiText("Net Profit:")}{" "}
                     {formatTZS(
                       netProfit
                     )}

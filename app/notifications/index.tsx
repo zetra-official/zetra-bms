@@ -1,3 +1,7 @@
+import {useDocumentText} from "@/src/i18n/useDocumentText";
+import type { ViewStyle } from "react-native";
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+﻿import {useCommonText} from "@/src/i18n/useCommonText";
 // app/notifications/index.tsx
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -11,6 +15,7 @@ import {
   TextInput,
   View,
   Platform,
+  useWindowDimensions,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons as VectorIonicons } from "@expo/vector-icons";
@@ -37,6 +42,7 @@ type NotifRow = {
   actor_user_id: string;
   actor_name: string | null;
   ref_movement_id: string | null;
+  event_id: string;
   created_by: string;
   created_at: string;
   is_read: boolean;
@@ -309,6 +315,9 @@ function compactReceiptSummary(r: Receipt, items: any[]) {
 }
 
 export default function NotificationsCenter() {
+ const {documentText, documentLocale} = useDocumentText();
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
   const { activeStoreId, activeStoreName, stores } = useOrg();
 
@@ -351,6 +360,14 @@ const [movementItemsById, setMovementItemsById] = useState<Record<string, any[]>
   const [modalOpen, setModalOpen] = useState(false);
   const [selected, setSelected] = useState<Receipt | null>(null);
 
+  // Desktop presentation only.
+  // Android and smaller web screens keep the existing layout.
+  const { width: viewportWidth } = useWindowDimensions();
+
+  const isDesktop =
+    Platform.OS === "web" &&
+    viewportWidth >= 1100;
+
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -384,7 +401,7 @@ const [movementItemsById, setMovementItemsById] = useState<Record<string, any[]>
     setError(null);
 
     try {
-      const { data, error: e } = await supabase.rpc("get_my_notifications", {
+      const { data, error: e } = await supabase.rpc("get_my_notifications_v3", {
         p_store_id: pStoreId,
         p_limit: 200,
       });
@@ -616,7 +633,7 @@ useEffect(() => {
     const map = new Map<string, Receipt>();
 
     for (const n of rows ?? []) {
-      const key = n.ref_movement_id ? `mv:${n.ref_movement_id}` : `n:${n.id}`;
+      const key = n.event_id ? `ev:${n.event_id}` : n.ref_movement_id ? `mv:${n.ref_movement_id}` : `n:${n.id}`;
       const itemsArr = notificationItemsOf(n);
 
       const existing = map.get(key);
@@ -980,17 +997,17 @@ const mergedItemsForReceipt = useCallback(
       const movementId = r.movement_id ? r.movement_id : r.key;
 
       const lines: string[] = [];
-      lines.push("ZETRA BMS • Stock Movement Receipt");
+      lines.push(uiText("ZETRA BMS • Stock Movement Receipt"));
       lines.push("----------------------------------");
-      lines.push(`Date/Time (EAT): ${fmtEAT(r.created_at)}`);
-      lines.push(`Type: ${clean(r.event_type) || "—"}`);
-      lines.push(`From: ${from}`);
-      lines.push(`To: ${to}`);
-      lines.push(`Source: ${src}`);
-      lines.push(`Receipt: ${shortId(movementId)}`);
-      lines.push(`Processed by: ${actor}`);
+      lines.push(uiText("Date/Time (EAT): {p0}", {p0: (fmtEAT(r.created_at))}));
+      lines.push(uiText("Type: {p0}", {p0: (clean(r.event_type) || "—")}));
+      lines.push(uiText("From: {p0}", {p0: (from)}));
+      lines.push(uiText("To: {p0}", {p0: (to)}));
+      lines.push(uiText("Source: {p0}", {p0: (src)}));
+      lines.push(uiText("Receipt: {p0}", {p0: (shortId(movementId))}));
+      lines.push(uiText("Processed by: {p0}", {p0: (actor)}));
       lines.push("");
-      lines.push(`Items: ${items.length} | Total Units: ${totalQtyOfItems(items, r.total_units)}`);
+      lines.push(uiText("Items: {p0} | Total Units: {p1}", {p0: (items.length), p1: (totalQtyOfItems(items, r.total_units))}));
       lines.push("");
       lines.push("Items:");
       for (const it of items) {
@@ -1014,11 +1031,11 @@ const mergedItemsForReceipt = useCallback(
         if (sellingPrice) extras.push(`Sell ${formatItemMoney(sellingPrice)}`);
 
         const extraText = extras.length ? ` • ${extras.join(" • ")}` : "";
-        lines.push(`- ${name}${extraText} • Qty ${qty}`);
+        lines.push(uiText("- {p0}{p1} • Qty {p2}", {p0: (name), p1: (extraText), p2: (qty)}));
       }
 
       lines.push("");
-      lines.push(`Receipt Ref: ${shortId(movementId)}`);
+      lines.push(uiText("Receipt Ref: {p0}", {p0: (shortId(movementId))}));
 
       return lines.join("\n");
     },
@@ -1038,9 +1055,9 @@ const mergedItemsForReceipt = useCallback(
     if (!selected) return;
     try {
       await Clipboard.setStringAsync(buildReceiptText(selected));
-      Alert.alert("Copied ✅", "Receipt ime-copy (unaweza ku-paste WhatsApp/Email).");
+      Alert.alert(uiText("Copied ✅"), uiText("Receipt ime-copy (unaweza ku-paste WhatsApp/Email)."));
     } catch {
-      Alert.alert("Failed", "Imeshindikana ku-copy receipt.");
+      Alert.alert(uiText("Failed"), uiText("Imeshindikana ku-copy receipt."));
     }
   }, [buildReceiptText, selected]);
 const shareSelectedPdf = useCallback(async () => {
@@ -1069,9 +1086,9 @@ const shareSelectedPdf = useCallback(async () => {
           <td>
             <strong>${escHtml(name)}</strong>
             ${sku ? `<br/><span>SKU: ${escHtml(sku)}</span>` : ""}
-            ${barcode ? `<br/><span>Barcode: ${escHtml(barcode)}</span>` : ""}
-            ${category ? `<br/><span>Category: ${escHtml(category)}</span>` : ""}
-            ${unit ? `<br/><span>Unit: ${escHtml(unit)}</span>` : ""}
+            ${barcode ? `<br/><span>${documentText("Barcode:")} ${escHtml(barcode)}</span>` : ""}
+            ${category ? `<br/><span>${documentText("Category:")} ${escHtml(category)}</span>` : ""}
+            ${unit ? `<br/><span>${documentText("Unit:")} ${escHtml(unit)}</span>` : ""}
           </td>
           <td>${escHtml(qty)}</td>
         </tr>
@@ -1080,7 +1097,7 @@ const shareSelectedPdf = useCallback(async () => {
     .join("");
 
   const html = `
-    <html>
+    <html lang="${documentLocale().language}" dir="${documentLocale().direction}">
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <style>
@@ -1177,38 +1194,38 @@ const shareSelectedPdf = useCallback(async () => {
       </head>
       <body>
         <div class="top">
-          <h1>Stock Movement Receipt</h1>
-          <div class="sub">Generated by ZETRA BMS</div>
+          <h1>${documentText("Stock Movement Receipt")}</h1>
+          <div class="sub">${documentText("Generated by ZETRA BMS")}</div>
         </div>
 
         <div class="grid">
-          <div class="box"><div class="label">Date / Time (EAT)</div><div class="value blue">${escHtml(fmtEAT(selected.created_at))}</div></div>
-          <div class="box"><div class="label">Type</div><div class="value">${escHtml(prettyTypeLabel(selected.event_type))}</div></div>
-          <div class="box"><div class="label">From</div><div class="value blue">${escHtml(from)}</div></div>
-          <div class="box"><div class="label">To</div><div class="value blue">${escHtml(to)}</div></div>
-          <div class="box"><div class="label">Source</div><div class="value">${escHtml(src)}</div></div>
-          <div class="box"><div class="label">Processed By</div><div class="value">${escHtml(actor)}</div></div>
-          <div class="box"><div class="label">Receipt</div><div class="value blue">${escHtml(shortId(movementId))}</div></div>
-          <div class="box"><div class="label">Reference</div><div class="value">${escHtml(shortId(movementId))}</div></div>
+          <div class="box"><div class="label">${documentText("Date / Time (EAT)")}</div><div class="value blue">${escHtml(fmtEAT(selected.created_at))}</div></div>
+          <div class="box"><div class="label">${documentText("Type")}</div><div class="value">${escHtml(prettyTypeLabel(selected.event_type))}</div></div>
+          <div class="box"><div class="label">${documentText("From")}</div><div class="value blue">${escHtml(from)}</div></div>
+          <div class="box"><div class="label">${documentText("To")}</div><div class="value blue">${escHtml(to)}</div></div>
+          <div class="box"><div class="label">${documentText("Source")}</div><div class="value">${escHtml(src)}</div></div>
+          <div class="box"><div class="label">${documentText("Processed By")}</div><div class="value">${escHtml(actor)}</div></div>
+          <div class="box"><div class="label">${documentText("Receipt")}</div><div class="value blue">${escHtml(shortId(movementId))}</div></div>
+          <div class="box"><div class="label">${documentText("Reference")}</div><div class="value">${escHtml(shortId(movementId))}</div></div>
         </div>
 
         <div class="summary">
-          Products: ${escHtml(items.length)} &nbsp;&nbsp; • &nbsp;&nbsp; Total Units: ${escHtml(totalQtyOfItems(items, selected.total_units))}
+          ${documentText("Products:")} ${escHtml(items.length)} &nbsp;&nbsp; • &nbsp;&nbsp; Total Units: ${escHtml(totalQtyOfItems(items, selected.total_units))}
         </div>
 
         <table>
           <thead>
             <tr>
-              <th>Item Details</th>
-              <th>Qty</th>
+              <th>${documentText("Item Details")}</th>
+              <th>${documentText("Qty")}</th>
             </tr>
           </thead>
           <tbody>
-            ${itemsHtml || `<tr><td colspan="2">No items found.</td></tr>`}
+            ${itemsHtml || `<tr><td colspan="2">${documentText("No items found.")}</td></tr>`}
           </tbody>
         </table>
 
-        <div class="footer">This receipt is system generated by ZETRA BMS.</div>
+        <div class="footer">${documentText("This receipt is system generated by ZETRA BMS.")}</div>
       </body>
     </html>
   `;
@@ -1220,7 +1237,7 @@ const shareSelectedPdf = useCallback(async () => {
       dialogTitle: "Share Notification Receipt PDF",
     });
   } catch (e: any) {
-    Alert.alert("PDF failed", e?.message ?? "Failed to create PDF receipt.");
+    Alert.alert(uiText("PDF failed"), e?.message ?? uiText("Failed to create PDF receipt."));
   }
 }, [actorLabel, mergedItemsForReceipt, routeLabel, selected, sourceLabel]);
   const openReceipt = useCallback(
@@ -1240,13 +1257,27 @@ const shareSelectedPdf = useCallback(async () => {
       }
 
       setSelected(r);
-      setModalOpen(true);
+
+      // Desktop uses a persistent master-detail workspace.
+      // Android and mobile browser keep the existing receipt modal.
+      if (!isDesktop) {
+        setModalOpen(true);
+      }
     },
-    [markReceiptRead]
+    [isDesktop, markReceiptRead]
   );
 
   return (
     <Screen scroll>
+      <View
+        style={{
+          width: "100%",
+          maxWidth: isDesktop ? 1440 : undefined,
+          alignSelf: "center",
+          paddingHorizontal: isDesktop ? 24 : 0,
+          paddingTop: isDesktop ? 8 : 0,
+        }}
+      >
       {/* Receipt modal */}
       <Modal
         visible={modalOpen}
@@ -1327,11 +1358,9 @@ const shareSelectedPdf = useCallback(async () => {
 
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 22 }}>
-                      Receipt
-                    </Text>
+                      {uiText("Receipt")}</Text>
                     <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 2 }}>
-                      Stock movement / stock entry summary
-                    </Text>
+                      {uiText("Stock movement / stock entry summary")}</Text>
                   </View>
                 </View>
               </View>
@@ -1368,8 +1397,7 @@ const shareSelectedPdf = useCallback(async () => {
                           >
                             <View style={{ flex: 1 }}>
                               <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
-                                DATE / TIME (EAT)
-                              </Text>
+                                {uiText("DATE / TIME (EAT)")}</Text>
                               <Text
                                 style={{
                                   color: theme.colors.text,
@@ -1409,14 +1437,12 @@ const shareSelectedPdf = useCallback(async () => {
                             }}
                           >
                             <Text style={{ color: theme.colors.muted, fontWeight: "900", fontSize: 12 }}>
-                              ROUTE
-                            </Text>
+                              {uiText("ROUTE")}</Text>
 
                             <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                               <View style={{ flex: 1 }}>
                                 <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 12 }}>
-                                  FROM
-                                </Text>
+                                  {uiText("FROM")}</Text>
                                 <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 17 }}>
                                   {from}
                                 </Text>
@@ -1426,8 +1452,7 @@ const shareSelectedPdf = useCallback(async () => {
 
                               <View style={{ flex: 1 }}>
                                 <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 12 }}>
-                                  TO
-                                </Text>
+                                  {uiText("TO")}</Text>
                                 <Text
                                   style={{
                                     color: theme.colors.text,
@@ -1454,8 +1479,7 @@ const shareSelectedPdf = useCallback(async () => {
                               }}
                             >
                               <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 11 }}>
-                                SOURCE
-                              </Text>
+                                {uiText("SOURCE")}</Text>
                               <Text
                                 style={{
                                   color: theme.colors.text,
@@ -1479,8 +1503,7 @@ const shareSelectedPdf = useCallback(async () => {
                               }}
                             >
                               <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 11 }}>
-                                PROCESSED BY
-                              </Text>
+                                {uiText("PROCESSED BY")}</Text>
                               <Text
                                 style={{
                                   color: theme.colors.text,
@@ -1500,7 +1523,7 @@ const shareSelectedPdf = useCallback(async () => {
                                   marginTop: 4,
                                 }}
                               >
-                                {actorKind}
+                                {(looksLikeEmail(actor) ? uiText("Email") : uiText("User"))}
                               </Text>
                             </View>
                           </View>
@@ -1516,8 +1539,7 @@ const shareSelectedPdf = useCallback(async () => {
                             }}
                           >
                             <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 11 }}>
-                              RECEIPT SUMMARY
-                            </Text>
+                              {uiText("RECEIPT SUMMARY")}</Text>
 
                             <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
                               {shortId(movementId)}
@@ -1526,8 +1548,7 @@ const shareSelectedPdf = useCallback(async () => {
                             <View style={{ flexDirection: "row", gap: 12 }}>
                               <View style={{ flex: 1 }}>
                                 <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 11 }}>
-                                  PRODUCTS
-                                </Text>
+                                  {uiText("PRODUCTS")}</Text>
                                 <Text
                                   style={{
                                     color: theme.colors.text,
@@ -1542,8 +1563,7 @@ const shareSelectedPdf = useCallback(async () => {
 
                               <View style={{ flex: 1 }}>
                                 <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 11 }}>
-                                  TOTAL UNITS
-                                </Text>
+                                  {uiText("TOTAL UNITS")}</Text>
                                 <Text
                                   style={{
                                     color: theme.colors.text,
@@ -1561,11 +1581,9 @@ const shareSelectedPdf = useCallback(async () => {
 
                         <View style={{ marginTop: 16 }}>
                           <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-                            Items
-                          </Text>
+                            {uiText("Items")}</Text>
                         <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 4 }}>
-  Majina ya bidhaa, idadi na taarifa muhimu za kila product.
-</Text>
+  {uiText("Majina ya bidhaa, idadi na taarifa muhimu za kila product.")}</Text>
                         </View>
 
                         <View style={{ marginTop: 10, gap: 10 }}>
@@ -1580,11 +1598,9 @@ const shareSelectedPdf = useCallback(async () => {
     }}
   >
     <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-      Hakuna product details zilizopatikana kwenye notification hii.
-    </Text>
+      {uiText("Hakuna product details zilizopatikana kwenye notification hii.")}</Text>
     <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-      Hii inaonyesha notification ya zamani au RPC haikutuma items/body.items.
-    </Text>
+      {uiText("Hii inaonyesha notification ya zamani au RPC haikutuma items/body.items.")}</Text>
   </View>
 ) : items.map((it: any, idx: number) => {
                             const name =
@@ -1636,7 +1652,7 @@ const shareSelectedPdf = useCallback(async () => {
                                     }}
                                   >
                                     <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>
-                                      Qty {qty}
+                                      {uiText("Qty")}{qty}
                                     </Text>
                                   </View>
                                 </View>
@@ -1678,8 +1694,7 @@ const shareSelectedPdf = useCallback(async () => {
                           }}
                         >
                           <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 11 }}>
-                            RECEIPT REF
-                          </Text>
+                            {uiText("RECEIPT REF")}</Text>
                           <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16, marginTop: 4 }}>
                             {shortId(movementId)}
                           </Text>
@@ -1699,8 +1714,7 @@ const shareSelectedPdf = useCallback(async () => {
       })}
     >
       <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 15 }}>
-        Share Text
-      </Text>
+        {uiText("Share Text")}</Text>
     </Pressable>
   </View>
 
@@ -1718,8 +1732,7 @@ const shareSelectedPdf = useCallback(async () => {
       })}
     >
       <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 15 }}>
-        Share PDF
-      </Text>
+        {uiText("Share PDF")}</Text>
     </Pressable>
   </View>
 </View>
@@ -1738,8 +1751,7 @@ const shareSelectedPdf = useCallback(async () => {
     })}
   >
     <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 15 }}>
-      Copy Text
-    </Text>
+      {uiText("Copy Text")}</Text>
   </Pressable>
 </View>
 
@@ -1757,8 +1769,7 @@ const shareSelectedPdf = useCallback(async () => {
     })}
   >
     <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 15 }}>
-      Close
-    </Text>
+      {uiText("Close")}</Text>
   </Pressable>
 </View>
                       </>
@@ -1767,8 +1778,7 @@ const shareSelectedPdf = useCallback(async () => {
                 </>
               ) : (
                 <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>
-                  No receipt loaded.
-                </Text>
+                  {uiText("No receipt loaded.")}</Text>
               )}
             </ScrollView>
           </View>
@@ -1784,13 +1794,26 @@ const shareSelectedPdf = useCallback(async () => {
           <Ionicons name="chevron-back" size={22} color={theme.colors.text} />
         </Pressable>
 
-        <Text style={{ fontSize: 22, fontWeight: "900", color: theme.colors.text }}>
-          Notifications
-        </Text>
+        <Text style={{ fontSize: isDesktop ? 28 : 22, fontWeight: "900", color: theme.colors.text }}>
+          {uiText("Notifications")}</Text>
       </View>
 
-      <Card style={{ marginTop: 12, gap: 10 }}>
-        <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Notification Scope</Text>
+      <View
+        style={{
+          flexDirection: isDesktop ? "row" : "column",
+          alignItems: isDesktop ? "flex-start" : "stretch",
+          gap: isDesktop ? 16 : 0,
+          marginTop: 12,
+        }}
+      >
+        <View
+          style={{
+            width: isDesktop ? "34%" : "100%",
+            minWidth: 0,
+          }}
+        >
+          <Card style={{ marginTop: 0, gap: 10 }}>
+            <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>{uiText("Notification Scope")}</Text>
 
         <View
           style={{
@@ -1803,20 +1826,26 @@ const shareSelectedPdf = useCallback(async () => {
           }}
         >
           <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 15 }}>
-            Assigned Stores
-          </Text>
+            {uiText("Assigned Stores")}</Text>
           <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-            Active Store: <Text style={{ color: theme.colors.text }}>{activeStoreName ?? "—"}</Text>
+            {uiText("Active Store:")}<Text style={{ color: theme.colors.text }}>{activeStoreName ?? "—"}</Text>
           </Text>
           <Text style={{ color: theme.colors.faint, fontWeight: "800", marginTop: 6 }}>
-            User ataona notifications zote za stores alizoassigniwa, hata kama hajaziswitch kwa sasa.
-          </Text>
+            {uiText("User ataona notifications zote za stores alizoassigniwa, hata kama hajaziswitch kwa sasa.")}</Text>
         </View>
-      </Card>
+          </Card>
+        </View>
 
-      {/* Search + Date filter */}
-      <Card style={{ marginTop: 12, gap: 10 }}>
-        <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Search & Date</Text>
+        <View
+          style={{
+            flex: isDesktop ? 1 : undefined,
+            width: isDesktop ? undefined : "100%",
+            minWidth: 0,
+          }}
+        >
+          {/* Search + Date filter */}
+          <Card style={{ marginTop: isDesktop ? 0 : 12, gap: 10 }}>
+        <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>{uiText("Search & Date")}</Text>
 
         <View
           style={{
@@ -1835,7 +1864,7 @@ const shareSelectedPdf = useCallback(async () => {
           <TextInput
             value={q}
             onChangeText={setQ}
-            placeholder="Search: store, type, movement id, sku, product..."
+            placeholder={uiText("Search: store, type, movement id, sku, product...")}
             placeholderTextColor={theme.colors.muted}
             style={{
               flex: 1,
@@ -1875,7 +1904,7 @@ const shareSelectedPdf = useCallback(async () => {
                   },
                 ]}
               >
-                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{label}</Text>
+                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{k === "7D" ? uiText("{p0} DAYS", {p0: 7}) : k === "30D" ? uiText("{p0} DAYS", {p0: 30}) : (k === "ALL" ? uiText("All Time") : (k === "TODAY" ? uiText("Today") : k))}</Text>
               </Pressable>
             );
           })}
@@ -1884,7 +1913,7 @@ const shareSelectedPdf = useCallback(async () => {
         {/* Custom date range */}
         <View style={{ flexDirection: "row", gap: 10 }}>
           <View style={{ flex: 1, gap: 6 }}>
-            <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>From</Text>
+            <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>{uiText("From")}</Text>
             <TextInput
               value={dateFrom}
               onChangeText={(v) => {
@@ -1909,7 +1938,7 @@ const shareSelectedPdf = useCallback(async () => {
           </View>
 
           <View style={{ flex: 1, gap: 6 }}>
-            <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>To</Text>
+            <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>{uiText("To")}</Text>
             <TextInput
               value={dateTo}
               onChangeText={(v) => {
@@ -1950,7 +1979,7 @@ const shareSelectedPdf = useCallback(async () => {
               },
             ]}
           >
-            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Clear Filters</Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Clear Filters")}</Text>
           </Pressable>
 
           <Pressable
@@ -1969,11 +1998,13 @@ const shareSelectedPdf = useCallback(async () => {
             ]}
           >
             <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-              {refreshing ? "Refreshing..." : "Refresh"}
+              {refreshing ? uiText("Refreshing...") : uiText("Refresh")}
             </Text>
           </Pressable>
         </View>
-      </Card>
+          </Card>
+        </View>
+      </View>
 
       {/* Loading / Error */}
       {loading ? (
@@ -1988,27 +2019,62 @@ const shareSelectedPdf = useCallback(async () => {
             backgroundColor: theme.colors.dangerSoft,
           }}
         >
-          <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{error}</Text>
+          <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{systemText(error)}</Text>
         </Card>
       ) : null}
 
-      {/* List */}
-      <View style={{ marginTop: 14, marginBottom: 6 }}>
-        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-          Receipts ({filtered.length})
-        </Text>
+      {/* DESKTOP MASTER DETAIL WORKSPACE V2 */}
+      <View
+        style={{
+          flexDirection: isDesktop ? "row" : "column",
+          alignItems: "flex-start",
+          gap: isDesktop ? 18 : 0,
+          width: "100%",
+          height: isDesktop ? ("calc(100vh - 32px)" as ViewStyle["height"]) : undefined,
+          minHeight: isDesktop ? 620 : undefined,
+          overflow: isDesktop ? "hidden" : "visible",
+        }}
+      >
+        <View
+          style={{
+            width: isDesktop ? "40%" : "100%",
+            minWidth: 0,
+            height: isDesktop ? "100%" : undefined,
+            overflow: isDesktop ? "hidden" : "visible",
+          }}
+        >
+          {/* List */}
+      <View
+        style={{
+          marginTop: isDesktop ? 22 : 14,
+          marginBottom: isDesktop ? 10 : 6,
+          paddingTop: isDesktop ? 18 : 0,
+          borderTopWidth: isDesktop ? 1 : 0,
+          borderTopColor: theme.colors.border,
+        }}
+      >
+        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>{uiText("Receipts ({p0})", {p0: (filtered.length)})}</Text>
 
         <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 4 }}>
-          Notifications za stores zote ulizoassigniwa zinaonekana hapa, zikiwa zimegawanywa vizuri.
-        </Text>
+          {uiText("Notifications za stores zote ulizoassigniwa zinaonekana hapa, zikiwa zimegawanywa vizuri.")}</Text>
       </View>
 
-      <View style={{ gap: 12 }}>
+      <ScrollView
+        style={{
+          flex: isDesktop ? 1 : undefined,
+          maxHeight: isDesktop ? ("calc(100vh - 170px)" as ViewStyle["maxHeight"]) : undefined,
+        }}
+        contentContainerStyle={{
+          gap: 12,
+          paddingRight: isDesktop ? 6 : 0,
+          paddingBottom: isDesktop ? 24 : 0,
+        }}
+        showsVerticalScrollIndicator={isDesktop}
+        nestedScrollEnabled
+      >
         {groupedReceipts.currentStore.length > 0 ? (
           <View style={{ gap: 10 }}>
-            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 15 }}>
-              Active Store ({groupedReceipts.currentStore.length})
-            </Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 15 }}>{uiText("Active Store ({p0})", {p0: (groupedReceipts.currentStore.length)})}</Text>
 
             {groupedReceipts.currentStore.map((r) => {
               const targetStore = storeNameById[String(r.store_id)] ?? "Store";
@@ -2046,7 +2112,7 @@ const shareSelectedPdf = useCallback(async () => {
                           style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 4 }}
                           numberOfLines={1}
                         >
-                          {targetStore}
+                          {(storeNameById[String(r.store_id)] ?? uiText("Store"))}
                         </Text>
 
                         <Text
@@ -2066,9 +2132,7 @@ const shareSelectedPdf = useCallback(async () => {
                         <Text
                           style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}
                           numberOfLines={1}
-                        >
-                          {mergedItems.length} product(s) • {clampInt(r.total_units, 0)} pcs
-                        </Text>
+                        >{uiText("{p0} products • {p1} pcs", {p0: (mergedItems.length), p1: (clampInt(r.total_units, 0))})}</Text>
 
                      
 
@@ -2076,7 +2140,7 @@ const shareSelectedPdf = useCallback(async () => {
                           style={{ color: theme.colors.faint, fontWeight: "800", marginTop: 6, fontSize: 12 }}
                           numberOfLines={1}
                         >
-                          Receipt: {mvLabel}
+                          {uiText("Receipt:")}{mvLabel}
                         </Text>
                       </View>
 
@@ -2093,8 +2157,7 @@ const shareSelectedPdf = useCallback(async () => {
                           }}
                         >
                           <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 11 }}>
-                            NEW
-                          </Text>
+                            {uiText("NEW")}</Text>
                         </View>
                       ) : null}
                     </View>
@@ -2107,13 +2170,10 @@ const shareSelectedPdf = useCallback(async () => {
 
         {groupedReceipts.otherStores.length > 0 ? (
           <View style={{ gap: 10 }}>
-            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 15 }}>
-              Other Assigned Stores ({groupedReceipts.otherStores.length})
-            </Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 15 }}>{uiText("Other Assigned Stores ({p0})", {p0: (groupedReceipts.otherStores.length)})}</Text>
 
             <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-              Hizi ni notifications za stores nyingine ulizoassigniwa ndani ya organization hii.
-            </Text>
+              {uiText("Hizi ni notifications za stores nyingine ulizoassigniwa ndani ya organization hii.")}</Text>
 
             {groupedReceipts.otherStores.map((r) => {
               const targetStore = storeNameById[String(r.store_id)] ?? "Store";
@@ -2151,7 +2211,7 @@ const shareSelectedPdf = useCallback(async () => {
                           style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 4 }}
                           numberOfLines={1}
                         >
-                          {targetStore}
+                          {(storeNameById[String(r.store_id)] ?? uiText("Store"))}
                         </Text>
 
                         <Text
@@ -2171,15 +2231,13 @@ const shareSelectedPdf = useCallback(async () => {
                         <Text
                           style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}
                           numberOfLines={1}
-                        >
-                          {mergedItems.length} product(s) • {clampInt(r.total_units, 0)} pcs
-                        </Text>
+                        >{uiText("{p0} products • {p1} pcs", {p0: (mergedItems.length), p1: (clampInt(r.total_units, 0))})}</Text>
 
                         <Text
                           style={{ color: theme.colors.faint, fontWeight: "800", marginTop: 6, fontSize: 12 }}
                           numberOfLines={1}
                         >
-                          Receipt: {mvLabel}
+                          {uiText("Receipt:")}{mvLabel}
                         </Text>
                       </View>
 
@@ -2196,8 +2254,7 @@ const shareSelectedPdf = useCallback(async () => {
                           }}
                         >
                           <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 11 }}>
-                            NEW
-                          </Text>
+                            {uiText("NEW")}</Text>
                         </View>
                       ) : null}
                     </View>
@@ -2216,16 +2273,597 @@ const shareSelectedPdf = useCallback(async () => {
             }}
           >
             <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 15 }}>
-              No notifications found
-            </Text>
+              {uiText("No notifications found")}</Text>
             <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-              Hakuna notifications kwa stores ulizoassigniwa kwa sasa.
-            </Text>
+              {uiText("Hakuna notifications kwa stores ulizoassigniwa kwa sasa.")}</Text>
           </Card>
         ) : null}
-      </View>
+      </ScrollView>
 
-      <View style={{ height: 40 }} />
+              </View>
+
+        {isDesktop ? (
+          <View
+            style={{
+              flex: 1,
+              minWidth: 0,
+              height: "100%",
+              overflow: "hidden",
+            }}
+          >
+            <View
+              style={{
+                borderWidth: 1,
+                borderColor: theme.colors.border,
+                backgroundColor: theme.colors.card,
+                borderRadius: 20,
+                padding: 18,
+                minHeight: 460,
+                height: "100%",
+                overflow: "hidden",
+              }}
+            >
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 12,
+                  paddingBottom: 14,
+                  borderBottomWidth: 1,
+                  borderBottomColor: theme.colors.border,
+                }}
+              >
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text
+                    style={{
+                      color: theme.colors.text,
+                      fontWeight: "900",
+                      fontSize: 20,
+                    }}
+                  >
+                    {uiText("Receipt Details")}</Text>
+
+                  <Text
+                    style={{
+                      color: theme.colors.muted,
+                      fontWeight: "800",
+                      marginTop: 4,
+                    }}
+                  >
+                    {uiText("Full details for the selected business event.")}</Text>
+                </View>
+
+                <View
+                  style={{
+                    width: 42,
+                    height: 42,
+                    borderRadius: 14,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderWidth: 1,
+                    borderColor: theme.colors.emeraldBorder,
+                    backgroundColor: theme.colors.emeraldSoft,
+                  }}
+                >
+                  <Ionicons
+                    name="receipt-outline"
+                    size={20}
+                    color={theme.colors.text}
+                  />
+                </View>
+              </View>
+
+              {selected ? (
+                <ScrollView
+                  style={{
+                    flex: 1,
+                    marginTop: 16,
+                  }}
+                  contentContainerStyle={{
+                    gap: 12,
+                    paddingRight: 6,
+                    paddingBottom: 24,
+                  }}
+                  showsVerticalScrollIndicator
+                  nestedScrollEnabled
+                >
+                  {(() => {
+                    const { from, to } = routeLabel(selected);
+                    const actor = actorLabel(selected);
+                    const src = sourceLabel(selected);
+                    const items = mergedItemsForReceipt(selected);
+                    const movementId =
+                      selected.movement_id
+                        ? selected.movement_id
+                        : selected.key;
+
+                    return (
+                      <>
+                        <View
+                          style={{
+                            borderWidth: 1,
+                            borderColor: theme.colors.emeraldBorder,
+                            backgroundColor: theme.colors.emeraldSoft,
+                            borderRadius: 18,
+                            padding: 16,
+                          }}
+                        >
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "flex-start",
+                              justifyContent: "space-between",
+                              gap: 12,
+                            }}
+                          >
+                            <View style={{ flex: 1, minWidth: 0 }}>
+                              <Text
+                                style={{
+                                  color: theme.colors.text,
+                                  fontWeight: "900",
+                                  fontSize: 20,
+                                }}
+                              >
+                                {receiptActionLabel(selected)}
+                              </Text>
+
+                              <Text
+                                style={{
+                                  color: theme.colors.muted,
+                                  fontWeight: "800",
+                                  marginTop: 5,
+                                }}
+                              >
+                                {prettyDateTimeEAT(selected.created_at)}
+                              </Text>
+                            </View>
+
+                            <View
+                              style={{
+                                paddingHorizontal: 10,
+                                paddingVertical: 6,
+                                borderRadius: 999,
+                                borderWidth: 1,
+                                borderColor: theme.colors.emeraldBorder,
+                                backgroundColor: theme.colors.card,
+                              }}
+                            >
+                              <Text
+                                style={{
+                                  color: theme.colors.text,
+                                  fontWeight: "900",
+                                  fontSize: 11,
+                                }}
+                              >
+                                {prettyTypeLabel(selected.event_type)}
+                              </Text>
+                            </View>
+                          </View>
+                        </View>
+
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            gap: 10,
+                          }}
+                        >
+                          <View
+                            style={{
+                              flex: 1,
+                              borderWidth: 1,
+                              borderColor: theme.colors.border,
+                              borderRadius: 16,
+                              padding: 14,
+                              backgroundColor: theme.colors.surface2,
+                            }}
+                          >
+                            <Text
+                              style={{
+                                color: theme.colors.faint,
+                                fontWeight: "900",
+                                fontSize: 11,
+                              }}
+                            >
+                              {uiText("PRODUCTS")}</Text>
+
+                            <Text
+                              style={{
+                                color: theme.colors.text,
+                                fontWeight: "900",
+                                fontSize: 22,
+                                marginTop: 5,
+                              }}
+                            >
+                              {items.length}
+                            </Text>
+                          </View>
+
+                          <View
+                            style={{
+                              flex: 1,
+                              borderWidth: 1,
+                              borderColor: theme.colors.border,
+                              borderRadius: 16,
+                              padding: 14,
+                              backgroundColor: theme.colors.surface2,
+                            }}
+                          >
+                            <Text
+                              style={{
+                                color: theme.colors.faint,
+                                fontWeight: "900",
+                                fontSize: 11,
+                              }}
+                            >
+                              {uiText("TOTAL UNITS")}</Text>
+
+                            <Text
+                              style={{
+                                color: theme.colors.text,
+                                fontWeight: "900",
+                                fontSize: 22,
+                                marginTop: 5,
+                              }}
+                            >
+                              {totalQtyOfItems(
+                                items,
+                                selected.total_units
+                              )}
+                            </Text>
+                          </View>
+                        </View>
+
+                        <View
+                          style={{
+                            borderWidth: 1,
+                            borderColor: theme.colors.border,
+                            borderRadius: 18,
+                            padding: 14,
+                            gap: 12,
+                          }}
+                        >
+                          <Text
+                            style={{
+                              color: theme.colors.faint,
+                              fontWeight: "900",
+                              fontSize: 11,
+                            }}
+                          >
+                            {uiText("ROUTE")}</Text>
+
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
+                              gap: 12,
+                            }}
+                          >
+                            <View style={{ flex: 1, minWidth: 0 }}>
+                              <Text
+                                style={{
+                                  color: theme.colors.faint,
+                                  fontWeight: "800",
+                                  fontSize: 11,
+                                }}
+                              >
+                                {uiText("FROM")}</Text>
+
+                              <Text
+                                style={{
+                                  color: theme.colors.text,
+                                  fontWeight: "900",
+                                  marginTop: 4,
+                                }}
+                                numberOfLines={2}
+                              >
+                                {from}
+                              </Text>
+                            </View>
+
+                            <Ionicons
+                              name="arrow-forward"
+                              size={18}
+                              color={theme.colors.muted}
+                            />
+
+                            <View style={{ flex: 1, minWidth: 0 }}>
+                              <Text
+                                style={{
+                                  color: theme.colors.faint,
+                                  fontWeight: "800",
+                                  fontSize: 11,
+                                  textAlign: "right",
+                                }}
+                              >
+                                {uiText("TO")}</Text>
+
+                              <Text
+                                style={{
+                                  color: theme.colors.text,
+                                  fontWeight: "900",
+                                  marginTop: 4,
+                                  textAlign: "right",
+                                }}
+                                numberOfLines={2}
+                              >
+                                {to}
+                              </Text>
+                            </View>
+                          </View>
+                        </View>
+
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            gap: 10,
+                          }}
+                        >
+                          <View
+                            style={{
+                              flex: 1,
+                              borderWidth: 1,
+                              borderColor: theme.colors.border,
+                              borderRadius: 16,
+                              padding: 14,
+                            }}
+                          >
+                            <Text
+                              style={{
+                                color: theme.colors.faint,
+                                fontWeight: "900",
+                                fontSize: 11,
+                              }}
+                            >
+                              {uiText("SOURCE")}</Text>
+
+                            <Text
+                              style={{
+                                color: theme.colors.text,
+                                fontWeight: "900",
+                                marginTop: 5,
+                              }}
+                              numberOfLines={2}
+                            >
+                              {src}
+                            </Text>
+                          </View>
+
+                          <View
+                            style={{
+                              flex: 1,
+                              borderWidth: 1,
+                              borderColor: theme.colors.border,
+                              borderRadius: 16,
+                              padding: 14,
+                            }}
+                          >
+                            <Text
+                              style={{
+                                color: theme.colors.faint,
+                                fontWeight: "900",
+                                fontSize: 11,
+                              }}
+                            >
+                              {uiText("PROCESSED BY")}</Text>
+
+                            <Text
+                              style={{
+                                color: theme.colors.text,
+                                fontWeight: "900",
+                                marginTop: 5,
+                              }}
+                              numberOfLines={2}
+                            >
+                              {actor}
+                            </Text>
+                          </View>
+                        </View>
+
+                        <View
+                          style={{
+                            borderWidth: 1,
+                            borderColor: theme.colors.border,
+                            borderRadius: 16,
+                            padding: 14,
+                          }}
+                        >
+                          <Text
+                            style={{
+                              color: theme.colors.faint,
+                              fontWeight: "900",
+                              fontSize: 11,
+                            }}
+                          >
+                            {uiText("RECEIPT REF")}</Text>
+
+                          <Text
+                            style={{
+                              color: theme.colors.text,
+                              fontWeight: "900",
+                              fontSize: 15,
+                              marginTop: 5,
+                            }}
+                          >
+                            {shortId(movementId)}
+                          </Text>
+                        </View>
+
+                        <View
+                          style={{
+                            borderWidth: 1,
+                            borderColor: theme.colors.border,
+                            borderRadius: 18,
+                            overflow: "hidden",
+                          }}
+                        >
+                          <View
+                            style={{
+                              paddingHorizontal: 14,
+                              paddingVertical: 12,
+                              backgroundColor: theme.colors.surface2,
+                              borderBottomWidth: 1,
+                              borderBottomColor: theme.colors.border,
+                            }}
+                          >
+                            <Text
+                              style={{
+                                color: theme.colors.text,
+                                fontWeight: "900",
+                                fontSize: 14,
+                              }}
+                            >{uiText("Products ({p0})", {p0: (items.length)})}</Text>
+                          </View>
+
+                          {items.length > 0 ? (
+                            items.slice(0, 12).map((it: any, idx: number) => {
+                              const productName =
+                                firstNonEmpty(
+                                  it?.product_name,
+                                  it?.name,
+                                  it?.item_name,
+                                  it?.product?.name
+                                ) || "Product";
+
+                              const qty = itemQtyOf(it);
+
+                              return (
+                                <View
+                                  key={`${productName}-${idx}`}
+                                  style={{
+                                    flexDirection: "row",
+                                    alignItems: "center",
+                                    justifyContent: "space-between",
+                                    gap: 12,
+                                    paddingHorizontal: 14,
+                                    paddingVertical: 11,
+                                    borderBottomWidth:
+                                      idx < Math.min(items.length, 12) - 1
+                                        ? 1
+                                        : 0,
+                                    borderBottomColor: theme.colors.border,
+                                  }}
+                                >
+                                  <Text
+                                    style={{
+                                      flex: 1,
+                                      minWidth: 0,
+                                      color: theme.colors.text,
+                                      fontWeight: "800",
+                                    }}
+                                    numberOfLines={2}
+                                  >
+                                    {(firstNonEmpty(
+                                  it?.product_name,
+                                  it?.name,
+                                  it?.item_name,
+                                  it?.product?.name
+                                ) || uiText("Product"))}
+                                  </Text>
+
+                                  <Text
+                                    style={{
+                                      color: theme.colors.text,
+                                      fontWeight: "900",
+                                    }}
+                                  >
+                                    {qty} {uiText("pcs")}</Text>
+                                </View>
+                              );
+                            })
+                          ) : (
+                            <View style={{ padding: 14 }}>
+                              <Text
+                                style={{
+                                  color: theme.colors.muted,
+                                  fontWeight: "800",
+                                }}
+                              >
+                                {uiText("No product details available.")}</Text>
+                            </View>
+                          )}
+
+                          {items.length > 12 ? (
+                            <View
+                              style={{
+                                paddingHorizontal: 14,
+                                paddingVertical: 11,
+                                borderTopWidth: 1,
+                                borderTopColor: theme.colors.border,
+                              }}
+                            >
+                              <Text
+                                style={{
+                                  color: theme.colors.muted,
+                                  fontWeight: "900",
+                                  textAlign: "center",
+                                }}
+                              >
+                                +{items.length - 12} {uiText("more products")}</Text>
+                            </View>
+                          ) : null}
+                        </View>
+                      </>
+                    );
+                  })()}
+                </ScrollView>
+              ) : (
+                <View
+                  style={{
+                    minHeight: 330,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    paddingHorizontal: 30,
+                  }}
+                >
+                  <View
+                    style={{
+                      width: 64,
+                      height: 64,
+                      borderRadius: 20,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderWidth: 1,
+                      borderColor: theme.colors.border,
+                      backgroundColor: theme.colors.surface2,
+                    }}
+                  >
+                    <Ionicons
+                      name="notifications-outline"
+                      size={28}
+                      color={theme.colors.muted}
+                    />
+                  </View>
+
+                  <Text
+                    style={{
+                      color: theme.colors.text,
+                      fontWeight: "900",
+                      fontSize: 17,
+                      marginTop: 16,
+                      textAlign: "center",
+                    }}
+                  >
+                    {uiText("Select a notification")}</Text>
+
+                  <Text
+                    style={{
+                      color: theme.colors.muted,
+                      fontWeight: "800",
+                      marginTop: 7,
+                      textAlign: "center",
+                      lineHeight: 20,
+                    }}
+                  >
+                    {uiText("Click a notification on the left to view its receipt details here.")}</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        ) : null}
+      </View>
+<View style={{ height: 40 }} />
+      </View>
     </Screen>
   );
 }

@@ -1,4 +1,6 @@
-﻿
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+﻿import {useCommonText} from "@/src/i18n/useCommonText";
+
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -273,6 +275,8 @@ function PaymentChip({
 }
 
 export default function SalesHistoryScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
   const params = useLocalSearchParams<{ range?: string }>();
   const insets = useSafeAreaInsets();
@@ -546,7 +550,7 @@ export default function SalesHistoryScreen() {
   const syncNow = useCallback(async () => {
     if (!activeStoreId) return;
     if (!isOnline) {
-      Alert.alert("Offline", "Mtandao haupo. Sync itafanya kazi mtandao ukirudi.");
+      Alert.alert(uiText("Offline"), uiText("Mtandao haupo. Sync itafanya kazi mtandao ukirudi."));
       return;
     }
     if (syncing) return;
@@ -556,9 +560,9 @@ export default function SalesHistoryScreen() {
       await syncSalesQueueOnce(activeStoreId);
       await loadPending();
       await load("refresh");
-      Alert.alert("Sync ✅", "Pending sales zimejaribiwa kusync.");
+      Alert.alert(uiText("Sync ✅"), uiText("Pending sales zimejaribiwa kusync."));
     } catch (e: any) {
-      Alert.alert("Sync Failed", e?.message ?? "Failed to sync pending sales");
+      Alert.alert(uiText("Sync Failed"), e?.message ?? uiText("Failed to sync pending sales"));
     } finally {
       setSyncing(false);
     }
@@ -579,7 +583,7 @@ export default function SalesHistoryScreen() {
         const cid = saleKey.startsWith("PENDING:") ? saleKey.replace("PENDING:", "").trim() : "";
 
         if (!sid || !cid) {
-          Alert.alert("Missing", "Imeshindikana kufungua Offline Receipt (missing ids).");
+          Alert.alert(uiText("Missing"), uiText("Imeshindikana kufungua Offline Receipt (missing ids)."));
           return;
         }
 
@@ -627,9 +631,7 @@ export default function SalesHistoryScreen() {
     if (pendingCountState <= 0) {
       return (
         <Card style={{ gap: 6, padding: 10 }}>
-          <Text style={{ color: theme.colors.muted, fontWeight: "900", fontSize: 12 }}>
-            Offline Queue: 0 pending • {isOffline ? "OFFLINE" : "ONLINE"}
-          </Text>
+          <Text style={{ color: theme.colors.muted, fontWeight: "900", fontSize: 12 }}>{uiText("Offline Queue: 0 pending • {p0}", {p0: (isOffline ? uiText("OFFLINE") : "ONLINE")})}</Text>
         </Card>
       );
     }
@@ -641,8 +643,7 @@ export default function SalesHistoryScreen() {
       <Card style={{ gap: 8, padding: 10 }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
           <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}>
-            Pending Offline Sales
-          </Text>
+            {uiText("Pending Offline Sales")}</Text>
 
           <View
             style={{
@@ -659,9 +660,9 @@ export default function SalesHistoryScreen() {
         </View>
 
         <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}>
-          Qty: <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{pendingTotalQty}</Text>
+          {uiText("Qty:")}<Text style={{ color: theme.colors.text, fontWeight: "900" }}>{pendingTotalQty}</Text>
           {"   "}•{"   "}
-          Amount: <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{fmtMoney(pendingTotalAmt)}</Text>
+          {uiText("Amount:")}<Text style={{ color: theme.colors.text, fontWeight: "900" }}>{fmtMoney(pendingTotalAmt)}</Text>
         </Text>
 
         <Pressable
@@ -680,18 +681,18 @@ export default function SalesHistoryScreen() {
           })}
         >
           <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}>
-            {syncing ? "Syncing..." : isOnline ? "Sync Now" : "Offline"}
+            {syncing ? uiText("Syncing...") : isOnline ? uiText("Sync Now") : uiText("Offline")}
           </Text>
         </Pressable>
 
 <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}>
           {isOnline
-            ? "Ukisync, sales hizi zitaingia DB na zitaonekana kwenye list ya kawaida."
-            : "Mtandao ukirudi, sync itajaribu automatically."}
+            ? uiText("Ukisync, sales hizi zitaingia DB na zitaonekana kwenye list ya kawaida.")
+            : uiText("Mtandao ukirudi, sync itajaribu automatically.")}
         </Text>
       </Card>
     );
-  }, [activeStoreId, isOffline, isOnline, pendingCountState, pendingRows, syncNow, syncing, fmtMoney]);
+  }, [activeStoreId, isOffline, isOnline, pendingCountState, pendingRows, syncNow, syncing, fmtMoney, uiText]);
 
   const customRangeError = useMemo(() => {
     if (range !== "custom") return null;
@@ -728,18 +729,17 @@ export default function SalesHistoryScreen() {
 
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={{ fontSize: 24, fontWeight: "900", color: theme.colors.text }}>
-              History
-            </Text>
+              {uiText("History")}</Text>
             <Text
               style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}
               numberOfLines={1}
             >
-              {activeOrgName ?? "—"} • {activeStoreName ?? "No store"} • {activeRole ?? "—"}
+              {activeOrgName ?? "—"} • {activeStoreName ?? uiText("No store")} • {activeRole ?? "—"}
             </Text>
 
             <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}>
-              {isOffline ? "OFFLINE" : "ONLINE"}
-              {pendingCountState > 0 ? ` • Pending: ${pendingCountState}` : ""}
+              {isOffline ? uiText("OFFLINE") : uiText("ONLINE")}
+              {pendingCountState > 0 ? uiText(" • Pending: {p0}", {p0: (pendingCountState)}) : ""}
             </Text>
           </View>
         </View>
@@ -747,19 +747,19 @@ export default function SalesHistoryScreen() {
         {PendingHeader}
 
         <Card style={{ gap: 8, padding: 10 }}>
-          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}>Range</Text>
+          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}>{uiText("Range")}</Text>
 
           <View style={{ flexDirection: "row", gap: 8 }}>
-            <SegButton k="today" label="Today" />
-            <SegButton k="week" label="Week" />
-            <SegButton k="month" label="Month" />
-            <SegButton k="custom" label="Custom" />
+            <SegButton k="today" label={uiText("Today")} />
+            <SegButton k="week" label={uiText("Week")} />
+            <SegButton k="month" label={uiText("Month")} />
+            <SegButton k="custom" label={uiText("Custom")} />
           </View>
 
           {range === "custom" && (
             <View style={{ gap: 10 }}>
               <View>
-                <InputLabel>From Date</InputLabel>
+                <InputLabel>{uiText("From Date")}</InputLabel>
                 <InputBox
                   value={customFrom}
                   onChangeText={setCustomFrom}
@@ -768,7 +768,7 @@ export default function SalesHistoryScreen() {
               </View>
 
               <View>
-                <InputLabel>To Date</InputLabel>
+                <InputLabel>{uiText("To Date")}</InputLabel>
                 <InputBox
                   value={customTo}
                   onChangeText={setCustomTo}
@@ -798,8 +798,7 @@ export default function SalesHistoryScreen() {
                 })}
               >
                 <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}>
-                  Apply Custom Range
-                </Text>
+                  {uiText("Apply Custom Range")}</Text>
               </Pressable>
             </View>
           )}
@@ -821,22 +820,19 @@ export default function SalesHistoryScreen() {
             })}
           >
             <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}>
-              {refreshing ? "Refreshing..." : "Refresh"}
+              {refreshing ? uiText("Refreshing...") : uiText("Refresh")}
             </Text>
           </Pressable>
 
-          {!!err && <Text style={{ color: theme.colors.danger, fontWeight: "800" }}>{err}</Text>}
+          {!!err && <Text style={{ color: theme.colors.danger, fontWeight: "800" }}>{systemText(err)}</Text>}
         </Card>
 
-        <Text style={{ fontWeight: "900", fontSize: 15, color: theme.colors.text }}>
-          Sales Summary ({labelForRange(range)})
-        </Text>
+        <Text style={{ fontWeight: "900", fontSize: 15, color: theme.colors.text }}>{uiText("Sales Summary ({p0})", {p0: (labelForRange(range))})}</Text>
 
         <View style={{ flexDirection: "row", gap: 8 }}>
           <Card style={{ flex: 1, gap: 4, padding: 10 }}>
             <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}>
-              Sales Count
-            </Text>
+              {uiText("Sales Count")}</Text>
             <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
               {summary.count}
             </Text>
@@ -844,8 +840,7 @@ export default function SalesHistoryScreen() {
 
           <Card style={{ flex: 1, gap: 4, padding: 10 }}>
             <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}>
-              Total Qty
-            </Text>
+              {uiText("Total Qty")}</Text>
             <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
               {summary.totalQty}
             </Text>
@@ -854,40 +849,38 @@ export default function SalesHistoryScreen() {
 
         <Card style={{ gap: 4, padding: 10 }}>
           <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}>
-            TOTAL SALES
-          </Text>
+            {uiText("TOTAL SALES")}</Text>
           <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
             {fmtMoney(paymentSummary.total_sales)}
           </Text>
         </Card>
 
         <Text style={{ fontWeight: "900", fontSize: 15, color: theme.colors.text }}>
-          Payment Breakdown
-        </Text>
+          {uiText("Payment Breakdown")}</Text>
 
         <View style={{ flexDirection: "row", gap: 8 }}>
-          <PaymentChip title="Cash" amount={fmtMoney(paymentSummary.cash_total)} />
-          <PaymentChip title="Mobile" amount={fmtMoney(paymentSummary.mobile_total)} />
+          <PaymentChip title={uiText("Cash")} amount={fmtMoney(paymentSummary.cash_total)} />
+          <PaymentChip title={uiText("Mobile")} amount={fmtMoney(paymentSummary.mobile_total)} />
         </View>
 
         <View style={{ flexDirection: "row", gap: 8 }}>
-          <PaymentChip title="Bank" amount={fmtMoney(paymentSummary.bank_total)} />
+          <PaymentChip title={uiText("Bank")} amount={fmtMoney(paymentSummary.bank_total)} />
           <PaymentChip
-            title="Credit Collected"
+            title={uiText("Credit Collected")}
             amount={fmtMoney(paymentSummary.credit_collected_total)}
           />
         </View>
 
         <View style={{ flexDirection: "row", gap: 8 }}>
           <PaymentChip
-            title="Grand Paid In"
+            title={uiText("Grand Paid In")}
             amount={fmtMoney(paymentSummary.grand_paid_total)}
-            subtitle="Pesa iliyoingia kweli"
+            subtitle={uiText("Pesa iliyoingia kweli")}
           />
           <PaymentChip
-            title="Outstanding"
+            title={uiText("Outstanding")}
             amount={fmtMoney(paymentSummary.total_balance)}
-            subtitle="Mikopo / balance"
+            subtitle={uiText("Mikopo / balance")}
           />
         </View>
 
@@ -895,47 +888,17 @@ export default function SalesHistoryScreen() {
           <View style={{ paddingTop: 10, alignItems: "center" }}>
             <ActivityIndicator />
             <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}>
-              Loading sales...
-            </Text>
+              {uiText("Loading sales...")}</Text>
           </View>
         )}
 
         {pendingRows.length > 0 && (
           <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>
-            Pending (Offline Queue)
-          </Text>
+            {uiText("Pending (Offline Queue)")}</Text>
         )}
       </View>
     );
-  }, [
-    PendingHeader,
-    SegButton,
-    activeOrgName,
-    activeRole,
-    activeStoreName,
-    applyCustomRange,
-    customFrom,
-    customRangeError,
-    customTo,
-    err,
-    fmtMoney,
-    isOffline,
-    load,
-    loading,
-    paymentSummary.bank_total,
-    paymentSummary.cash_total,
-    paymentSummary.credit_collected_total,
-    paymentSummary.grand_paid_total,
-    paymentSummary.total_balance,
-    paymentSummary.total_sales,
-    pendingCountState,
-    pendingRows.length,
-    range,
-    refreshing,
-    router,
-    summary.count,
-    summary.totalQty,
-  ]);
+  }, [PendingHeader, SegButton, activeOrgName, activeRole, activeStoreName, applyCustomRange, customFrom, customRangeError, customTo, err, fmtMoney, isOffline, load, loading, paymentSummary.bank_total, paymentSummary.cash_total, paymentSummary.credit_collected_total, paymentSummary.grand_paid_total, paymentSummary.total_balance, paymentSummary.total_sales, pendingCountState, pendingRows.length, range, refreshing, router, summary.count, summary.totalQty, uiText, systemText]);
 
   const combined = useMemo(() => {
     return [...pendingRows, ...rows];
@@ -992,7 +955,7 @@ export default function SalesHistoryScreen() {
                     style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14, flex: 1 }}
                     numberOfLines={1}
                   >
-                    {title}
+                    {(isPending ? uiText("Queued {p0}", {p0: (saleId.startsWith("PENDING:") ? saleId.replace("PENDING:", "").slice(0, 8) : "—")}) : uiText("Sale {p0}", {p0: (saleId ? saleId.slice(0, 8) : "—")}))}
                   </Text>
 
                   <View
@@ -1006,41 +969,41 @@ export default function SalesHistoryScreen() {
                     }}
                   >
                     <Text style={{ color: chipText, fontWeight: "900", fontSize: 11 }}>
-                      {isPending ? "PENDING OFFLINE" : status}
+                      {isPending ? uiText("PENDING OFFLINE") : status}
                     </Text>
                   </View>
                 </View>
 
                 <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}>
-                  When: <Text style={{ color: theme.colors.text }}>{when}</Text>
+                  {uiText("When:")}<Text style={{ color: theme.colors.text }}>{when}</Text>
                 </Text>
 
                 <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}>
-                  Qty: <Text style={{ color: theme.colors.text }}>{qty}</Text>
+                  {uiText("Qty:")}<Text style={{ color: theme.colors.text }}>{qty}</Text>
                   {"   "}•{"   "}
-                  Amount: <Text style={{ color: theme.colors.text }}>{fmtMoney(amount)}</Text>
+                  {uiText("Amount:")}<Text style={{ color: theme.colors.text }}>{fmtMoney(amount)}</Text>
                 </Text>
 
                 {!isPending && (
                   <>
                     <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}>
-                      Method: <Text style={{ color: theme.colors.text }}>{method || "—"}</Text>
+                      {uiText("Method:")}<Text style={{ color: theme.colors.text }}>{method || "—"}</Text>
                       {channel ? (
                         <Text style={{ color: theme.colors.text }}> • {channel}</Text>
                       ) : null}
                     </Text>
 
                     <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}>
-                      Paid In: <Text style={{ color: theme.colors.text }}>{fmtMoney(paidAmount)}</Text>
+                      {uiText("Paid In:")}<Text style={{ color: theme.colors.text }}>{fmtMoney(paidAmount)}</Text>
                       {"   "}•{"   "}
-                      Balance: <Text style={{ color: theme.colors.text }}>{fmtMoney(balanceAmount)}</Text>
+                      {uiText("Balance:")}<Text style={{ color: theme.colors.text }}>{fmtMoney(balanceAmount)}</Text>
                     </Text>
                   </>
                 )}
 
                 {!!toNum(item.edit_count ?? 0) && !isPending && (
                   <Text style={{ color: theme.colors.emerald, fontWeight: "900" }}>
-                    Edited {toNum(item.edit_count ?? 0)} time(s)
+                    {uiText("Edited {p0} time(s)", {p0: toNum(item.edit_count ?? 0)})}
                   </Text>
                 )}
 
@@ -1052,7 +1015,7 @@ export default function SalesHistoryScreen() {
                     textDecorationLine: "underline",
                   }}
                 >
-                  {isPending ? "Open Offline Receipt" : "Open Receipt"}
+                  {isPending ? uiText("Open Offline Receipt") : uiText("Open Receipt")}
                 </Text>
               </Card>
             </Pressable>
@@ -1061,9 +1024,7 @@ export default function SalesHistoryScreen() {
         ListEmptyComponent={
           !loading ? (
             <View style={{ paddingTop: 16, alignItems: "center" }}>
-              <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}>
-                No sales ({labelForRange(range)}).
-              </Text>
+              <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}>{uiText("No sales ({p0}).", {p0: (labelForRange(range))})}</Text>
             </View>
           ) : null
         }

@@ -1,3 +1,4 @@
+import {useAuthText} from "@/src/i18n/useAuthText";
 import { useRouter } from "expo-router";
 import React from "react";
 import {
@@ -8,6 +9,7 @@ import {
 } from "react-native";
 
 export default function EmailVerifiedScreen() {
+  const tr=useAuthText();
   const router = useRouter();
 
   const goLogin = () => {
@@ -19,6 +21,7 @@ export default function EmailVerifiedScreen() {
       style={{
         flex: 1,
         backgroundColor: "#061018",
+        overflow: "hidden",
         alignItems: "center",
         justifyContent: "center",
         paddingHorizontal: 20,
@@ -89,8 +92,7 @@ export default function EmailVerifiedScreen() {
             marginBottom: 10,
           }}
         >
-          EMAIL VERIFIED
-        </Text>
+          {tr("EMAIL VERIFIED")}</Text>
 
         <Text
           style={{
@@ -101,8 +103,7 @@ export default function EmailVerifiedScreen() {
             textAlign: "center",
           }}
         >
-          Email verified successfully
-        </Text>
+          {tr("Email verified successfully")}</Text>
 
         <Text
           style={{
@@ -114,10 +115,7 @@ export default function EmailVerifiedScreen() {
             marginTop: 14,
           }}
         >
-          Email yako imethibitishwa kwa mafanikio.
-          Sasa unaweza kurudi ZETRA BMS na Login ili kuendelea
-          na business setup yako.
-        </Text>
+          {tr("Email yako imethibitishwa kwa mafanikio. Sasa unaweza kurudi ZETRA BMS na Login ili kuendelea na business setup yako.")}</Text>
 
         <View
           style={{
@@ -139,9 +137,7 @@ export default function EmailVerifiedScreen() {
               textAlign: "center",
             }}
           >
-            Verification imekamilika. Ukilogin kwa mara ya kwanza,
-            ZETRA BMS itakupeleka kwenye Referral na Business Setup.
-          </Text>
+            {tr("Verification imekamilika. Ukilogin kwa mara ya kwanza, ZETRA BMS itakupeleka kwenye Referral na Business Setup.")}</Text>
         </View>
 
         <Pressable
@@ -169,8 +165,7 @@ export default function EmailVerifiedScreen() {
               fontSize: 17,
             }}
           >
-            Continue to Login
-          </Text>
+            {tr("Continue to Login")}</Text>
         </Pressable>
 
         <Text
@@ -183,8 +178,7 @@ export default function EmailVerifiedScreen() {
             lineHeight: 18,
           }}
         >
-          ZETRA BMS • Secure Business Access
-        </Text>
+          {tr("ZETRA BMS • Secure Business Access")}</Text>
       </View>
     </View>
   );

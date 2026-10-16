@@ -400,6 +400,37 @@ export function aggregateSnapshots(
     return createEmptyPeriodMetrics();
   }
 
+  // Canonical snapshots represent one organization/store/day; never double count.
+  const byDay = new Map<string, ZetraAiDailyStoreSnapshot>();
+  const organizations = new Set<string>();
+  for (const row of snapshots) {
+    if (!row.organizationId || !row.storeId || !/^\d{4}-\d{2}-\d{2}$/.test(row.snapshotDate)) {
+      throw new Error("Snapshot scope or date is missing");
+    }
+    const date = Date.parse(row.snapshotDate + "T00:00:00Z");
+    if (!Number.isFinite(date) || new Date(date).toISOString().slice(0, 10) !== row.snapshotDate) {
+      throw new Error("Snapshot date is invalid");
+    }
+    const values = [row.salesTotal, row.cogsTotal, row.expensesTotal, row.grossProfit,
+      row.netProfit, row.ordersCount, row.cogsItemsCount, row.cogsMissingItemsCount,
+      row.stockQty, row.reservedQty, row.availableStockQty, row.productsInStock,
+      row.outOfStockProducts, row.lowStockProducts];
+    if (values.some(value => typeof value !== "number" || !Number.isFinite(value))) {
+      throw new Error("Snapshot financial or inventory values are invalid");
+    }
+    organizations.add(row.organizationId);
+    const id = JSON.stringify([row.organizationId, row.storeId, row.snapshotDate]);
+    const previous = byDay.get(id);
+    const canonical = (value: ZetraAiDailyStoreSnapshot) => JSON.stringify(
+      Object.entries(value).filter(([key]) => !["generatedAt", "updatedAt"].includes(key))
+        .sort(([a], [b]) => a.localeCompare(b)));
+    if (previous && canonical(previous) !== canonical(row)) {
+      throw new Error("Conflicting snapshots for the same store/day require review");
+    }
+    byDay.set(id, row);
+  }
+  if (organizations.size !== 1) throw new Error("Cannot combine different organizations in one report");
+  snapshots = [...byDay.values()];
   const organizationIds = uniqueStrings(
     snapshots.map((row) => row.organizationId)
   );

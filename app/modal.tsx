@@ -1,13 +1,15 @@
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/modal.tsx
 import { useRouter } from "expo-router";
 import React from "react";
-import { Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 
-import { Card } from "@/ui/Card";
-import { Screen } from "@/ui/Screen";
-import { theme } from "@/ui/theme";
+import { Card } from "@/src/ui/Card";
+import { Screen } from "@/src/ui/Screen";
+import { theme } from "@/src/ui/theme";
 
 export default function ModalScreen() {
+ const uiText=useCommonText();
   const router = useRouter();
 
   return (
@@ -15,15 +17,14 @@ export default function ModalScreen() {
       <View style={{ gap: 12 }}>
         <Card>
           <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
-            Modal
-          </Text>
+            {uiText("Modal")}</Text>
 
           <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8, lineHeight: 20 }}>
-            Hii ni modal ya template. Tumei-align na ZETRA UI (Screen/Card/theme) ili isilete errors.
-          </Text>
+            {uiText("Hii ni modal ya template. Tumei-align na ZETRA UI (Screen/Card/theme) ili isilete errors.")}</Text>
 
           <View style={{ marginTop: 14, gap: 10 }}>
-            <View
+            <Pressable
+              accessibilityRole="button"
               style={{
                 height: 44,
                 borderRadius: theme.radius.pill,
@@ -33,12 +34,10 @@ export default function ModalScreen() {
                 alignItems: "center",
                 justifyContent: "center",
               }}
-              // Pressable bila Button ili tusitegemee file nyingine
-              // Ukipenda, tutaiweka Button component ya src/ui/Button
-              onTouchEnd={() => router.back()}
+              onPress={() => router.back()}
             >
-              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Close</Text>
-            </View>
+              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Close")}</Text>
+            </Pressable>
           </View>
         </Card>
       </View>

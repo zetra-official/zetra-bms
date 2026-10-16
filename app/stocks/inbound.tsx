@@ -1,3 +1,6 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useDocumentText} from "@/src/i18n/useDocumentText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -119,6 +122,9 @@ type InboundOrder = {
 };
 
 export default function InboundStockScreen() {
+ const systemText=useSystemMessageText();
+ const {documentText, documentLocale} = useDocumentText();
+ const uiText=useCommonText();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
@@ -306,7 +312,7 @@ const isPrecisionInboundStore = isPrecisionRetailType(storeType);
       setProductSuggestions(products);
 setSupplierSuggestions(suppliers);
     } catch (e: any) {
-      Alert.alert("Suggestions Error", e?.message ?? "Failed to load suggestions");
+      Alert.alert(uiText("Suggestions Error"), e?.message ?? uiText("Failed to load suggestions"));
       setProductSuggestions([]);
       setSupplierSuggestions([]);
     }
@@ -334,7 +340,7 @@ setSupplierSuggestions(suppliers);
   })) as InboundOrder[]
 );
     } catch (e: any) {
-      Alert.alert("Error", e?.message ?? "Failed to load incoming stock");
+      Alert.alert(uiText("Error"), e?.message ?? uiText("Failed to load incoming stock"));
       setRows([]);
     } finally {
       setLoading(false);
@@ -668,17 +674,17 @@ const applyPrecisionFormula = useCallback(() => {
   const packSelling = Number(normalizeDecimalInput(precisionPackSelling));
 
   if (!Number.isFinite(packQty) || packQty <= 0) {
-    Alert.alert("Missing", "Weka Pack Size / Quantity, mfano 100.");
+    Alert.alert(uiText("Missing"), uiText("Weka Pack Size / Quantity, mfano 100."));
     return;
   }
 
   if (!Number.isFinite(packCost) || packCost < 0) {
-    Alert.alert("Missing", "Weka Buying/Cost Price ya box/pack.");
+    Alert.alert(uiText("Missing"), uiText("Weka Buying/Cost Price ya box/pack."));
     return;
   }
 
   if (!Number.isFinite(packSelling) || packSelling <= 0) {
-    Alert.alert("Missing", "Weka Selling Price ya box/pack.");
+    Alert.alert(uiText("Missing"), uiText("Weka Selling Price ya box/pack."));
     return;
   }
 
@@ -711,16 +717,16 @@ const selectProductSuggestion = useCallback((p: ProductSuggestion) => {
 
 const addDraftItem = useCallback(() => {
     if (!itemName.trim()) {
-      Alert.alert("Required", "Weka product/item name.");
+      Alert.alert(uiText("Required"), uiText("Weka product/item name."));
       return;
     }
 if (moneyNum(itemQty) <= 0) {
-  Alert.alert("Required", "Weka quantity sahihi.");
+  Alert.alert(uiText("Required"), uiText("Weka quantity sahihi."));
   return;
 }
 
 if (moneyNum(itemCost) <= 0) {
-  Alert.alert("Required", "Weka cost/unit sahihi ili thamani ya mzigo ihesabiwe vizuri.");
+  Alert.alert(uiText("Required"), uiText("Weka cost/unit sahihi ili thamani ya mzigo ihesabiwe vizuri."));
   return;
 }
 
@@ -762,26 +768,26 @@ setShowProductSuggest(false);
  const createOrder = useCallback(async () => {
     try {
       if (!orgId) {
-        Alert.alert("Missing", "No active organization.");
+        Alert.alert(uiText("Missing"), uiText("No active organization."));
         return;
       }
 
       if (!storeId) {
-        Alert.alert("Missing Store", "Chagua active store kwanza kabla ya kuweka incoming order.");
+        Alert.alert(uiText("Missing Store"), uiText("Chagua active store kwanza kabla ya kuweka incoming order."));
         return;
       }
 
       if (!supplierName.trim()) {
-        Alert.alert("Required", "Weka supplier name.");
+        Alert.alert(uiText("Required"), uiText("Weka supplier name."));
         return;
       }
 
       if (draftItems.length === 0) {
-        Alert.alert("Required", "Ongeza angalau product/item moja kwenye order.");
+        Alert.alert(uiText("Required"), uiText("Ongeza angalau product/item moja kwenye order."));
         return;
       }
 if (moneyNum(paidAmount) > draftItemsTotal) {
-  Alert.alert("Invalid Payment", "Paid amount haiwezi kuzidi total value ya items.");
+  Alert.alert(uiText("Invalid Payment"), uiText("Paid amount haiwezi kuzidi total value ya items."));
   return;
 }
       const { data, error } = await supabase.rpc("create_inbound_stock_order_v1", {
@@ -843,9 +849,9 @@ if (moneyNum(paidAmount) > draftItemsTotal) {
       resetForm();
       await load();
 
-      Alert.alert("Success", "Incoming stock order na items zimehifadhiwa.");
+      Alert.alert(uiText("Success"), uiText("Incoming stock order na items zimehifadhiwa."));
     } catch (e: any) {
-      Alert.alert("Error", e?.message ?? "Failed to create order");
+      Alert.alert(uiText("Error"), e?.message ?? uiText("Failed to create order"));
     }
   }, [
     orgId,
@@ -886,7 +892,7 @@ items.forEach((x) => {
 });
 setReceiveQtyMap(nextMap);
   } catch (e: any) {
-    Alert.alert("Error", e?.message ?? "Failed to load order items");
+    Alert.alert(uiText("Error"), e?.message ?? uiText("Failed to load order items"));
   } finally {
     setDetailLoading(false);
   }
@@ -895,12 +901,12 @@ const receiveSelectedOrder = useCallback(() => {
   if (!selectedOrder) return;
 
   Alert.alert(
-    "Receive Incoming Stock?",
-    `Unataka kuingiza mzigo wa ${selectedOrder.supplier_name || "supplier"} kwenye inventory sasa?`,
+    uiText("Receive Incoming Stock?"),
+    uiText("Unataka kuingiza mzigo wa {p0} kwenye inventory sasa?", {p0: (selectedOrder.supplier_name || "supplier")}),
     [
-      { text: "Cancel", style: "cancel" },
+      { text: uiText("Cancel"), style: "cancel" },
       {
-        text: "Receive",
+        text: uiText("Receive"),
         onPress: async () => {
           setReceivingOrder(true);
 
@@ -923,13 +929,13 @@ const receiveSelectedOrder = useCallback(() => {
             );
 
             Alert.alert(
-              "Success",
-              "Incoming stock imeingia inventory successfully."
+              uiText("Success"),
+              uiText("Incoming stock imeingia inventory successfully.")
             );
           } catch (e: any) {
             Alert.alert(
-              "Error",
-              e?.message ?? "Failed to receive incoming stock"
+              uiText("Error"),
+              e?.message ?? uiText("Failed to receive incoming stock")
             );
           } finally {
             setReceivingOrder(false);
@@ -955,17 +961,17 @@ const saveEditItem = useCallback(async () => {
 
   try {
     if (!editItemName.trim()) {
-      Alert.alert("Required", "Weka jina la bidhaa.");
+      Alert.alert(uiText("Required"), uiText("Weka jina la bidhaa."));
       return;
     }
 
     if (moneyNum(editItemQty) <= 0) {
-      Alert.alert("Required", "Weka quantity sahihi.");
+      Alert.alert(uiText("Required"), uiText("Weka quantity sahihi."));
       return;
     }
 
     if (moneyNum(editItemCost) <= 0) {
-      Alert.alert("Required", "Weka cost/unit sahihi.");
+      Alert.alert(uiText("Required"), uiText("Weka cost/unit sahihi."));
       return;
     }
 
@@ -992,9 +998,9 @@ const saveEditItem = useCallback(async () => {
 
     await load();
 
-    Alert.alert("Success", "Item imebadilishwa successfully.");
+    Alert.alert(uiText("Success"), uiText("Item imebadilishwa successfully."));
   } catch (e: any) {
-    Alert.alert("Edit Error", e?.message ?? "Failed to update item.");
+    Alert.alert(uiText("Edit Error"), e?.message ?? uiText("Failed to update item."));
   }
 }, [
   editingItem,
@@ -1025,14 +1031,14 @@ const receivePartialOrder = useCallback(() => {
     .filter((x) => x.qty > 0);
 
   if (payload.length === 0) {
-    Alert.alert("Required", "Weka qty ya kupokea kwa angalau item moja.");
+    Alert.alert(uiText("Required"), uiText("Weka qty ya kupokea kwa angalau item moja."));
     return;
   }
 
-  Alert.alert("Receive Partial Stock?", "Unataka kuingiza qty ulizoweka kwenye inventory sasa?", [
-    { text: "Cancel", style: "cancel" },
+  Alert.alert(uiText("Receive Partial Stock?"), uiText("Unataka kuingiza qty ulizoweka kwenye inventory sasa?"), [
+    { text: uiText("Cancel"), style: "cancel" },
     {
-      text: "Receive",
+      text: uiText("Receive"),
       onPress: async () => {
         setReceivingOrder(true);
         try {
@@ -1046,9 +1052,9 @@ const receivePartialOrder = useCallback(() => {
           await load();
           await openOrderDetail(selectedOrder);
 
-          Alert.alert("Success", "Partial stock imeingia inventory successfully.");
+          Alert.alert(uiText("Success"), uiText("Partial stock imeingia inventory successfully."));
         } catch (e: any) {
-          Alert.alert("Error", e?.message ?? "Failed to receive partial stock.");
+          Alert.alert(uiText("Error"), e?.message ?? uiText("Failed to receive partial stock."));
         } finally {
           setReceivingOrder(false);
         }
@@ -1192,7 +1198,7 @@ const resolveUserLabels = useCallback(
 const pdfShell = useCallback(
   (title: string, body: string) => `
 <!doctype html>
-<html>
+<html lang="${documentLocale().language}" dir="${documentLocale().direction}">
 <head>
   <meta charset="utf-8" />
   <title>${safeText(title)}</title>
@@ -1364,12 +1370,12 @@ const pdfShell = useCallback(
     <div class="header">
       <div class="brand">
         <div class="brand-title">${safeText(storeName || businessName || "ZETRA BMS")}</div>
-        <div class="brand-sub">Incoming Stock / Goods In Transit Report</div>
+        <div class="brand-sub">${documentText("Incoming Stock / Goods In Transit Report")}</div>
       </div>
       <div class="meta">
-        <b>Business:</b> ${safeText(businessName)}<br/>
-        <b>Store:</b> ${safeText(storeName)}<br/>
-        <b>Generated:</b> ${safeText(reportDate)}
+        <b>${documentText("Business:")}</b> ${safeText(businessName)}<br/>
+        <b>${documentText("Store:")}</b> ${safeText(storeName)}<br/>
+        <b>${documentText("Generated:")}</b> ${safeText(reportDate)}
       </div>
     </div>
 
@@ -1407,29 +1413,29 @@ const exportAllInboundPdf = useCallback(async () => {
     const body = `
       <table class="info-table">
         <tr>
-          <td><b>Filter</b><br/>${safeText(searchText || "All records")}</td>
-          <td><b>Status</b><br/>${safeText(statusFilter)}</td>
-          <td><b>Date Range</b><br/>${safeText(fromDateFilter || "Any")} to ${safeText(toDateFilter || "Any")}</td>
+          <td><b>${documentText("Filter")}</b><br/>${safeText(searchText || "All records")}</td>
+          <td><b>${documentText("Status")}</b><br/>${safeText(statusFilter)}</td>
+          <td><b>${documentText("Date Range")}</b><br/>${safeText(fromDateFilter || "Any")} to ${safeText(toDateFilter || "Any")}</td>
         </tr>
       </table>
 
       <div class="grid">
-        <div class="box"><div class="label">Orders</div><div class="value">${sourceRows.length}</div></div>
-        <div class="box"><div class="label">Goods Value</div><div class="value">${safeText(fmt(sourceRows.reduce((a, x) => a + Number(x.total_goods_value || 0), 0)))}</div></div>
-        <div class="box"><div class="label">Paid</div><div class="value">${safeText(fmt(sourceRows.reduce((a, x) => a + Number(x.total_paid_amount || 0), 0)))}</div></div>
-        <div class="box"><div class="label">Balance</div><div class="value">${safeText(fmt(sourceRows.reduce((a, x) => a + Number(x.total_balance_amount || 0), 0)))}</div></div>
+        <div class="box"><div class="label">${documentText("Orders")}</div><div class="value">${sourceRows.length}</div></div>
+        <div class="box"><div class="label">${documentText("Goods Value")}</div><div class="value">${safeText(fmt(sourceRows.reduce((a, x) => a + Number(x.total_goods_value || 0), 0)))}</div></div>
+        <div class="box"><div class="label">${documentText("Paid")}</div><div class="value">${safeText(fmt(sourceRows.reduce((a, x) => a + Number(x.total_paid_amount || 0), 0)))}</div></div>
+        <div class="box"><div class="label">${documentText("Balance")}</div><div class="value">${safeText(fmt(sourceRows.reduce((a, x) => a + Number(x.total_balance_amount || 0), 0)))}</div></div>
       </div>
 
-      <h2>Incoming Orders</h2>
+      <h2>${documentText("Incoming Orders")}</h2>
       <table>
         <thead>
           <tr>
-            <th>#</th><th>Supplier</th><th>Code</th><th>Status</th>
-            <th>From</th><th>To</th><th>Expected</th>
-            <th>Goods</th><th>Paid</th><th>Balance</th>
+            <th>#</th><th>${documentText("Supplier")}</th><th>${documentText("Code")}</th><th>${documentText("Status")}</th>
+            <th>${documentText("From")}</th><th>${documentText("To")}</th><th>${documentText("Expected")}</th>
+            <th>${documentText("Goods")}</th><th>${documentText("Paid")}</th><th>${documentText("Balance")}</th>
           </tr>
         </thead>
-        <tbody>${rowsHtml || `<tr><td colspan="10">No records found.</td></tr>`}</tbody>
+        <tbody>${rowsHtml || `<tr><td colspan="10">${documentText("No records found.")}</td></tr>`}</tbody>
       </table>
     `;
 
@@ -1456,10 +1462,10 @@ const exportAllInboundPdf = useCallback(async () => {
         UTI: "com.adobe.pdf",
       });
     } else {
-      Alert.alert("PDF Ready", fileUri);
+      Alert.alert(uiText("PDF Ready"), fileUri);
     }
   } catch (e: any) {
-    Alert.alert("PDF Error", e?.message ?? "Failed to export summary PDF.");
+    Alert.alert(uiText("PDF Error"), e?.message ?? uiText("Failed to export summary PDF."));
   }
 }, [
   filteredRows,
@@ -1546,31 +1552,31 @@ const exportSelectedOrderPdf = useCallback(async () => {
    const body = `
       <table class="info-table">
         <tr>
-          <td><b>Supplier</b><br/>${safeText(selectedOrder.supplier_name || "Supplier")}</td>
-          <td><b>Order Code</b><br/>${safeText(selectedOrder.order_code || "No code")}</td>
-          <td><b>Status</b><br/>${safeText((orderMeta as any)?.status || selectedOrder.status)}</td>
+          <td><b>${documentText("Supplier")}</b><br/>${safeText(selectedOrder.supplier_name || "Supplier")}</td>
+          <td><b>${documentText("Order Code")}</b><br/>${safeText(selectedOrder.order_code || "No code")}</td>
+          <td><b>${documentText("Status")}</b><br/>${safeText((orderMeta as any)?.status || selectedOrder.status)}</td>
         </tr>
         <tr>
-          <td><b>From</b><br/>${safeText(selectedOrder.source_city || "—")}, ${safeText(selectedOrder.source_country || "—")}</td>
-          <td><b>To</b><br/>${safeText(selectedOrder.destination_name || "—")}</td>
-          <td><b>Expected Arrival</b><br/>${safeText(friendlyDateOnly(selectedOrder.expected_arrival_date))}</td>
+          <td><b>${documentText("From")}</b><br/>${safeText(selectedOrder.source_city || "—")}, ${safeText(selectedOrder.source_country || "—")}</td>
+          <td><b>${documentText("To")}</b><br/>${safeText(selectedOrder.destination_name || "—")}</td>
+          <td><b>${documentText("Expected Arrival")}</b><br/>${safeText(friendlyDateOnly(selectedOrder.expected_arrival_date))}</td>
         </tr>
       </table>
 
       
 
-      <div class="section-title">Order Items</div>
+      <div class="section-title">${documentText("Order Items")}</div>
       <table class="data-table">
         <thead>
           <tr>
             <th style="width:4%">#</th>
-            <th style="width:28%">Product</th>
-            <th style="width:20%">SKU / Barcode</th>
-            <th style="width:8%">Ordered</th>
-            <th style="width:8%">Received</th>
-            <th style="width:8%">Remain</th>
-            <th style="width:12%">Cost</th>
-            <th style="width:12%">Total</th>
+            <th style="width:28%">${documentText("Product")}</th>
+            <th style="width:20%">${documentText("SKU / Barcode")}</th>
+            <th style="width:8%">${documentText("Ordered")}</th>
+            <th style="width:8%">${documentText("Received")}</th>
+            <th style="width:8%">${documentText("Remain")}</th>
+            <th style="width:12%">${documentText("Cost")}</th>
+            <th style="width:12%">${documentText("Total")}</th>
           </tr>
         </thead>
         <tbody>
@@ -1591,21 +1597,21 @@ const exportSelectedOrderPdf = useCallback(async () => {
                   </tr>
                 `;
               })
-              .join("") || `<tr><td colspan="8">No items found.</td></tr>`
+              .join("") || `<tr><td colspan="8">${documentText("No items found.")}</td></tr>`
           }
         </tbody>
       </table>
 
-      <div class="section-title">Payment History</div>
+      <div class="section-title">${documentText("Payment History")}</div>
       <table class="data-table">
         <thead>
           <tr>
             <th style="width:5%">#</th>
-            <th style="width:22%">Date</th>
-            <th style="width:16%">Method</th>
-            <th style="width:22%">Reference</th>
-            <th style="width:15%">Amount</th>
-            <th style="width:20%">Note</th>
+            <th style="width:22%">${documentText("Date")}</th>
+            <th style="width:16%">${documentText("Method")}</th>
+            <th style="width:22%">${documentText("Reference")}</th>
+            <th style="width:15%">${documentText("Amount")}</th>
+            <th style="width:20%">${documentText("Note")}</th>
           </tr>
         </thead>
         <tbody>
@@ -1623,26 +1629,26 @@ const exportSelectedOrderPdf = useCallback(async () => {
                 </tr>
               `
               )
-              .join("") || `<tr><td colspan="6">No payment history found.</td></tr>`
+              .join("") || `<tr><td colspan="6">${documentText("No payment history found.")}</td></tr>`
           }
         </tbody>
       </table>
 
       <table class="info-table" style="margin-top:14px;">
         <tr>
-          <td><b>Prepared By</b><br/>${safeText(currentUserLabel)}</td>
-          <td><b>Created</b><br/>${safeText(friendlyDate((orderMeta as any)?.created_at || selectedOrder.created_at))}</td>
-          <td><b>Signature / Stamp</b><br/><br/>________________________</td>
+          <td><b>${documentText("Prepared By")}</b><br/>${safeText(currentUserLabel)}</td>
+          <td><b>${documentText("Created")}</b><br/>${safeText(friendlyDate((orderMeta as any)?.created_at || selectedOrder.created_at))}</td>
+          <td><b>${documentText("Signature / Stamp")}</b><br/><br/>________________________</td>
         </tr>
       </table>
 
       <div class="summary-bottom">
-        <div class="section-title">Order Summary</div>
+        <div class="section-title">${documentText("Order Summary")}</div>
         <div class="grid">
-          <div class="box"><div class="label">Goods Value</div><div class="value">${safeText(fmt(selectedOrder.total_goods_value))}</div></div>
-          <div class="box"><div class="label">Paid</div><div class="value">${safeText(fmt(selectedOrder.total_paid_amount))}</div></div>
-          <div class="box"><div class="label">Balance</div><div class="value">${safeText(fmt(selectedOrder.total_balance_amount))}</div></div>
-          <div class="box"><div class="label">Items</div><div class="value">${selectedItems.length}</div></div>
+          <div class="box"><div class="label">${documentText("Goods Value")}</div><div class="value">${safeText(fmt(selectedOrder.total_goods_value))}</div></div>
+          <div class="box"><div class="label">${documentText("Paid")}</div><div class="value">${safeText(fmt(selectedOrder.total_paid_amount))}</div></div>
+          <div class="box"><div class="label">${documentText("Balance")}</div><div class="value">${safeText(fmt(selectedOrder.total_balance_amount))}</div></div>
+          <div class="box"><div class="label">${documentText("Items")}</div><div class="value">${selectedItems.length}</div></div>
         </div>
       </div>
     `;
@@ -1687,10 +1693,10 @@ const exportSelectedOrderPdf = useCallback(async () => {
         UTI: "com.adobe.pdf",
       });
     } else {
-      Alert.alert("PDF Ready", fileUri);
+      Alert.alert(uiText("PDF Ready"), fileUri);
     }
   } catch (e: any) {
-    Alert.alert("PDF Error", e?.message ?? "Failed to export PDF.");
+    Alert.alert(uiText("PDF Error"), e?.message ?? uiText("Failed to export PDF."));
   }
 }, [
   selectedOrder,
@@ -1725,7 +1731,7 @@ const openFullOrderEdit = useCallback(async () => {
   if (!selectedOrder) return;
 
   if (String(selectedOrder.status ?? "").toUpperCase() === "RECEIVED") {
-    Alert.alert("Locked", "Order iliyopokelewa haiwezi ku-edit full details kwa usalama wa inventory.");
+    Alert.alert(uiText("Locked"), uiText("Order iliyopokelewa haiwezi ku-edit full details kwa usalama wa inventory."));
     return;
   }
 
@@ -1754,7 +1760,7 @@ const openFullOrderEdit = useCallback(async () => {
     setFullEditOpen(true);
     void loadSuggestions();
   } catch (e: any) {
-    Alert.alert("Edit Error", e?.message ?? "Failed to open full edit.");
+    Alert.alert(uiText("Edit Error"), e?.message ?? uiText("Failed to open full edit."));
   }
 }, [selectedOrder, resetEditOrderItemForm, loadSuggestions]);
 
@@ -1775,17 +1781,17 @@ const selectEditProductSuggestion = useCallback((p: ProductSuggestion) => {
 
 const addEditNewItem = useCallback(() => {
   if (!editOrderItemName.trim()) {
-    Alert.alert("Required", "Weka product/item name.");
+    Alert.alert(uiText("Required"), uiText("Weka product/item name."));
     return;
   }
 
   if (moneyNum(editOrderItemQty) <= 0) {
-    Alert.alert("Required", "Weka quantity sahihi.");
+    Alert.alert(uiText("Required"), uiText("Weka quantity sahihi."));
     return;
   }
 
   if (moneyNum(editOrderItemCost) <= 0) {
-    Alert.alert("Required", "Weka cost/unit sahihi.");
+    Alert.alert(uiText("Required"), uiText("Weka cost/unit sahihi."));
     return;
   }
 
@@ -1820,7 +1826,7 @@ const saveFullOrderEdit = useCallback(async () => {
   if (!selectedOrder || savingFullEdit) return;
 
   if (!editSupplierName.trim()) {
-    Alert.alert("Required", "Weka supplier name.");
+    Alert.alert(uiText("Required"), uiText("Weka supplier name."));
     return;
   }
 
@@ -1866,9 +1872,9 @@ const saveFullOrderEdit = useCallback(async () => {
     await load();
     await openOrderDetail(selectedOrder);
 
-    Alert.alert("Success", "Incoming order imebadilishwa successfully.");
+    Alert.alert(uiText("Success"), uiText("Incoming order imebadilishwa successfully."));
   } catch (e: any) {
-    Alert.alert("Save Error", e?.message ?? "Failed to save full edit.");
+    Alert.alert(uiText("Save Error"), e?.message ?? uiText("Failed to save full edit."));
   } finally {
     setSavingFullEdit(false);
   }
@@ -1894,8 +1900,8 @@ const deleteSelectedOrder = useCallback(() => {
 
   if (isReceived && deleteReason.trim().length < 10) {
     Alert.alert(
-      "Reason Required",
-      "Order iliyopokelewa haiwezi kufutwa bila sababu ya wazi. Andika reason yenye angalau herufi 10."
+      uiText("Reason Required"),
+      uiText("Order iliyopokelewa haiwezi kufutwa bila sababu ya wazi. Andika reason yenye angalau herufi 10.")
     );
     return;
   }
@@ -1941,9 +1947,9 @@ const deleteSelectedOrder = useCallback(() => {
       setDeleteReason("");
       await load();
 
-      Alert.alert("Deleted", "Incoming order imefutwa na audit imehifadhiwa.");
+      Alert.alert(uiText("Deleted"), uiText("Incoming order imefutwa na audit imehifadhiwa."));
     } catch (e: any) {
-      Alert.alert("Error", e?.message ?? "Failed to delete order");
+      Alert.alert(uiText("Error"), e?.message ?? uiText("Failed to delete order"));
     } finally {
       setDeletingOrder(false);
     }
@@ -1956,7 +1962,7 @@ const deleteSelectedOrder = useCallback(() => {
   if (Platform.OS === "web") {
     const ok =
       typeof window !== "undefined"
-        ? window.confirm(message)
+        ? window.confirm(systemText(message))
         : false;
 
     if (ok) {
@@ -1967,12 +1973,12 @@ const deleteSelectedOrder = useCallback(() => {
   }
 
   Alert.alert(
-    isReceived ? "Strict Delete Confirmation" : "Delete Incoming Order?",
-    message,
+    isReceived ? uiText("Strict Delete Confirmation") : uiText("Delete Incoming Order?"),
+    systemText(message),
     [
-      { text: "Cancel", style: "cancel" },
+      { text: uiText("Cancel"), style: "cancel" },
       {
-        text: "Delete",
+        text: uiText("Delete"),
         style: "destructive",
         onPress: () => {
           void runDelete();
@@ -1998,7 +2004,7 @@ const deleteSelectedOrder = useCallback(() => {
     >
       <View style={{ gap: 14 }}>
         <Pressable onPress={() => router.back()}>
-          <Text style={{ color: UI.primary, fontWeight: "900", fontSize: 15 }}>‹ Back</Text>
+          <Text style={{ color: UI.primary, fontWeight: "900", fontSize: 15 }}>{uiText("‹ Back")}</Text>
         </Pressable>
 
         <Card style={{ borderRadius: 24, gap: 14 }}>
@@ -2013,31 +2019,28 @@ const deleteSelectedOrder = useCallback(() => {
     }}
   >
     <Text style={{ color: UI.text, fontWeight: "900" }}>
-      Active Store: {storeName}
+      {uiText("Active Store:")}{storeName}
     </Text>
     <Text style={{ color: UI.emerald, fontWeight: "900", fontSize: 12 }}>
-      {storeType} STORE
-    </Text>
+      {storeType} {uiText("STORE")}</Text>
   </View>
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 26 }}>
-            Incoming Stock
-          </Text>
+            {uiText("Incoming Stock")}</Text>
 
           <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22 }}>
-            Fuatilia mzigo uliopo njiani kabla haujaingia inventory.
-          </Text>
+            {uiText("Fuatilia mzigo uliopo njiani kabla haujaingia inventory.")}</Text>
 
           <View style={{ flexDirection: "row", gap: 10, flexWrap: "wrap" }}>
-            <Mini label="Orders" value={String(summary.orders)} desktop={isDesktopWeb} />
-            <Mini label="Goods Value" value={fmt(summary.goods)} desktop={isDesktopWeb} />
-            <Mini label="Paid" value={fmt(summary.paid)} desktop={isDesktopWeb} />
-            <Mini label="Balance" value={fmt(summary.balance)} desktop={isDesktopWeb} />
+            <Mini label={uiText("Orders")} value={String(summary.orders)} desktop={isDesktopWeb} />
+            <Mini label={uiText("Goods Value")} value={fmt(summary.goods)} desktop={isDesktopWeb} />
+            <Mini label={uiText("Paid")} value={fmt(summary.paid)} desktop={isDesktopWeb} />
+            <Mini label={uiText("Balance")} value={fmt(summary.balance)} desktop={isDesktopWeb} />
           </View>
 
           <View style={{ gap: 10 }}>
-  <Button title="Add Incoming Order" onPress={() => setOpenAdd(true)} />
+  <Button title={uiText("Add Incoming Order")} onPress={() => setOpenAdd(true)} />
 
-  <Input placeholder="Search supplier / order / destination" value={searchText} onChangeText={setSearchText} />
+  <Input placeholder={uiText("Search supplier / order / destination")} value={searchText} onChangeText={setSearchText} />
 
   <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
     {(["ALL", "IN_TRANSIT", "PARTIAL_RECEIVED", "RECEIVED"] as const).map((s) => (
@@ -2060,10 +2063,10 @@ const deleteSelectedOrder = useCallback(() => {
 
   <View style={{ flexDirection: isDesktopWeb ? "row" : "column", gap: 10 }}>
     <View style={{ flex: 1 }}>
-      <Input placeholder="From date YYYY-MM-DD" value={fromDateFilter} onChangeText={setFromDateFilter} />
+      <Input placeholder={uiText("From date YYYY-MM-DD")} value={fromDateFilter} onChangeText={setFromDateFilter} />
     </View>
     <View style={{ flex: 1 }}>
-      <Input placeholder="To date YYYY-MM-DD" value={toDateFilter} onChangeText={setToDateFilter} />
+      <Input placeholder={uiText("To date YYYY-MM-DD")} value={toDateFilter} onChangeText={setToDateFilter} />
     </View>
   </View>
 
@@ -2083,8 +2086,7 @@ const deleteSelectedOrder = useCallback(() => {
     })}
   >
     <Text style={{ color: UI.text, fontWeight: "900" }}>
-      Export All PDF
-    </Text>
+      {uiText("Export All PDF")}</Text>
   </Pressable>
 </View>
         </Card>
@@ -2093,17 +2095,14 @@ const deleteSelectedOrder = useCallback(() => {
           <Card style={{ alignItems: "center", paddingVertical: 28 }}>
             <ActivityIndicator />
             <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 8 }}>
-              Loading incoming stock...
-            </Text>
+              {uiText("Loading incoming stock...")}</Text>
           </Card>
         ) : rows.length === 0 ? (
           <Card style={{ borderRadius: 22, paddingVertical: 30, alignItems: "center" }}>
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-              No Incoming Stock
-            </Text>
+              {uiText("No Incoming Stock")}</Text>
             <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 8, textAlign: "center" }}>
-              Hakuna mzigo wa njiani uliorekodiwa bado.
-            </Text>
+              {uiText("Hakuna mzigo wa njiani uliorekodiwa bado.")}</Text>
           </Card>
         ) : (
           <View
@@ -2127,10 +2126,10 @@ const deleteSelectedOrder = useCallback(() => {
               <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: UI.text, fontWeight: "900", fontSize: 17 }}>
-                    {item.supplier_name || "Supplier"}
+                    {item.supplier_name || uiText("Supplier")}
                   </Text>
                   <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 3 }}>
-                    {item.order_code || "No code"} • {item.status}
+                    {item.order_code || uiText("No code")} • {item.status}
                   </Text>
                 </View>
 
@@ -2145,7 +2144,7 @@ const deleteSelectedOrder = useCallback(() => {
                   }}
                 >
                 <Text style={{ color: UI.emerald, fontWeight: "900", fontSize: 11 }}>
-  {String(item.status ?? "").toUpperCase() === "RECEIVED" ? "RECEIVED" : "IN TRANSIT"}
+  {String(item.status ?? "").toUpperCase() === "RECEIVED" ? uiText("RECEIVED") : uiText("IN TRANSIT")}
 </Text>
                 </View>
               </View>
@@ -2155,16 +2154,16 @@ const deleteSelectedOrder = useCallback(() => {
               </Text>
 
               <Text style={{ color: UI.muted, fontWeight: "800" }}>
-                Paid: {fmt(item.total_paid_amount)} • Balance: {fmt(item.total_balance_amount)}
+                {uiText("Paid:")}{fmt(item.total_paid_amount)} {uiText("• Balance:")}{fmt(item.total_balance_amount)}
               </Text>
 
               <Text style={{ color: UI.faint, fontWeight: "800" }}>
-                From: {item.source_city || "—"}, {item.source_country || "—"} • To:{" "}
+                {uiText("From:")}{item.source_city || "—"}, {item.source_country || "—"} {uiText("• To:")}{" "}
                 {item.destination_name || "—"}
               </Text>
 
               <Text style={{ color: UI.faint, fontWeight: "800" }}>
-                Expected: {item.expected_arrival_date || "No date"}
+                {uiText("Expected:")}{item.expected_arrival_date || uiText("No date")}
               </Text>
             </Card>
 </Pressable>
@@ -2190,11 +2189,10 @@ const deleteSelectedOrder = useCallback(() => {
               }}
             >
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 22 }}>
-                Add Incoming Order
-              </Text>
+                {uiText("Add Incoming Order")}</Text>
 
               <SuggestInput
-                placeholder="Supplier name"
+                placeholder={uiText("Supplier name")}
                 value={supplierName}
                onChangeText={(v) => {
   setSupplierName(v);
@@ -2215,18 +2213,18 @@ onFocus={() => setShowSupplierSuggest(supplierName.trim().length >= 1)}
                     <SuggestRow
                       key={`${s.supplier_name}-${index}`}
                       title={s.supplier_name}
-                      subtitle={`Phone: ${s.supplier_phone || "—"} • Email: ${s.supplier_email || "—"} • Location: ${s.supplier_location || s.supplier_address || s.destination_name || "—"}`}
+                      subtitle={uiText("Phone: {p0} • Email: {p1} • Location: {p2}", {p0: (s.supplier_phone || "—"), p1: (s.supplier_email || "—"), p2: (s.supplier_location || s.supplier_address || s.destination_name || "—")})}
                       onPress={() => selectSupplierSuggestion(s)}
                     />
                   ))}
                 </SuggestBox>
               ) : null}
-              <Input placeholder="Source country e.g. China" value={sourceCountry} onChangeText={setSourceCountry} />
-              <Input placeholder="Source city e.g. Guangzhou / Dar" value={sourceCity} onChangeText={setSourceCity} />
-              <Input placeholder="Destination e.g. PRO 1 / Mbeya Store" value={destinationName} onChangeText={setDestinationName} />
-              <Input placeholder="Invoice number" value={invoiceNumber} onChangeText={setInvoiceNumber} />
-              <Input placeholder="Tracking number" value={trackingNumber} onChangeText={setTrackingNumber} />
-              <Input placeholder="Expected arrival date YYYY-MM-DD" value={expectedDate} onChangeText={setExpectedDate} />
+              <Input placeholder={uiText("Source country e.g. China")} value={sourceCountry} onChangeText={setSourceCountry} />
+              <Input placeholder={uiText("Source city e.g. Guangzhou / Dar")} value={sourceCity} onChangeText={setSourceCity} />
+              <Input placeholder={uiText("Destination e.g. PRO 1 / Mbeya Store")} value={destinationName} onChangeText={setDestinationName} />
+              <Input placeholder={uiText("Invoice number")} value={invoiceNumber} onChangeText={setInvoiceNumber} />
+              <Input placeholder={uiText("Tracking number")} value={trackingNumber} onChangeText={setTrackingNumber} />
+              <Input placeholder={uiText("Expected arrival date YYYY-MM-DD")} value={expectedDate} onChangeText={setExpectedDate} />
 <Card style={{ borderRadius: 18, gap: 10 }}>
   <Pressable
     onPress={() => setShowItemForm((v) => !v)}
@@ -2239,13 +2237,11 @@ onFocus={() => setShowSupplierSuggest(supplierName.trim().length >= 1)}
     })}
   >
     <View style={{ flex: 1 }}>
-      <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-        Order Items ({draftItems.length})
-      </Text>
+      <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>{uiText("Order Items ({p0})", {p0: (draftItems.length)})}</Text>
       <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 3 }}>
         {draftItems.length > 0
-          ? `${draftItems.length} item(s) added`
-          : "Bonyeza hapa kuongeza bidhaa za mzigo"}
+          ? uiText("{p0} item(s) added", {p0: (draftItems.length)})
+          : uiText("Bonyeza hapa kuongeza bidhaa za mzigo")}
       </Text>
     </View>
 
@@ -2257,7 +2253,7 @@ onFocus={() => setShowSupplierSuggest(supplierName.trim().length >= 1)}
   {showItemForm ? (
     <>
       <SuggestInput
-        placeholder="Product / item name"
+        placeholder={uiText("Product / item name")}
         value={itemName}
       onChangeText={(v) => {
   setItemName(v);
@@ -2275,8 +2271,8 @@ onFocus={() => setShowSupplierSuggest(supplierName.trim().length >= 1)}
           {filteredProductSuggestions.map((p) => (
             <SuggestRow
               key={p.id}
-              title={p.name || "Product"}
-              subtitle={`SKU: ${p.sku || "—"} • Barcode: ${p.barcode || "—"} • Cost: ${fmt(Number(p.cost_price || 0))} • Sell: ${fmt(Number(p.selling_price || 0))}`}
+              title={p.name || uiText("Product")}
+              subtitle={uiText("SKU: {p0} • Barcode: {p1} • Cost: {p2} • Sell: {p3}", {p0: (p.sku || "—"), p1: (p.barcode || "—"), p2: (fmt(Number(p.cost_price || 0))), p3: (fmt(Number(p.selling_price || 0)))})}
               onPress={() => selectProductSuggestion(p)}
             />
           ))}
@@ -2285,11 +2281,11 @@ onFocus={() => setShowSupplierSuggest(supplierName.trim().length >= 1)}
 
       <View style={{ flexDirection: "row", gap: 10 }}>
         <View style={{ flex: 1 }}>
-          <Input placeholder="SKU optional" value={itemSku} onChangeText={setItemSku} />
+          <Input placeholder={uiText("SKU optional")} value={itemSku} onChangeText={setItemSku} />
         </View>
         <View style={{ flex: 1 }}>
           <SuggestInput
-            placeholder="Unit e.g. pcs"
+            placeholder={uiText("Unit e.g. pcs")}
             value={itemUnit}
             onChangeText={(v) => {
               setItemUnit(v);
@@ -2308,7 +2304,7 @@ onFocus={() => setShowSupplierSuggest(supplierName.trim().length >= 1)}
             <SuggestRow
               key={`unit-${unit}`}
               title={unit}
-              subtitle="Saved unit from previous products"
+              subtitle={uiText("Saved unit from previous products")}
               onPress={() => {
                 setItemUnit(unit);
                 setShowUnitSuggest(false);
@@ -2319,7 +2315,7 @@ onFocus={() => setShowSupplierSuggest(supplierName.trim().length >= 1)}
       ) : null}
 
       <SuggestInput
-        placeholder="Category optional"
+        placeholder={uiText("Category optional")}
         value={itemCategory}
         onChangeText={(v) => {
           setItemCategory(v);
@@ -2336,7 +2332,7 @@ onFocus={() => setShowSupplierSuggest(supplierName.trim().length >= 1)}
             <SuggestRow
               key={`category-${category}`}
               title={category}
-              subtitle="Saved category from previous products"
+              subtitle={uiText("Saved category from previous products")}
               onPress={() => {
                 setItemCategory(category);
                 setShowCategorySuggest(false);
@@ -2345,7 +2341,7 @@ onFocus={() => setShowSupplierSuggest(supplierName.trim().length >= 1)}
           ))}
         </SuggestBox>
       ) : null}
-      <Input placeholder="Barcode optional" value={itemBarcode} onChangeText={setItemBarcode} />
+      <Input placeholder={uiText("Barcode optional")} value={itemBarcode} onChangeText={setItemBarcode} />
 
       {isPrecisionInboundStore ? (
         <Card style={{ borderRadius: 18, gap: 10, borderColor: UI.emeraldBorder, backgroundColor: UI.emeraldSoft }}>
@@ -2355,11 +2351,9 @@ onFocus={() => setShowSupplierSuggest(supplierName.trim().length >= 1)}
           >
             <View style={{ flex: 1 }}>
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
-                Unit & Pack Calculator
-              </Text>
+                {uiText("Unit & Pack Calculator")}</Text>
               <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 3 }}>
-                Kwa precision store: calculate cost/selling ya unit moja
-              </Text>
+                {uiText("Kwa precision store: calculate cost/selling ya unit moja")}</Text>
             </View>
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 22 }}>
               {precisionCalcOpen ? "⌃" : "⌄"}
@@ -2369,20 +2363,19 @@ onFocus={() => setShowSupplierSuggest(supplierName.trim().length >= 1)}
           {precisionCalcOpen ? (
             <>
               <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 19 }}>
-                Mfano: Box/carton/pack yenye tablets 100. Mfumo utajaza Qty, Cost/unit na Selling/unit automatic.
-              </Text>
+                {uiText("Mfano: Box/carton/pack yenye tablets 100. Mfumo utajaza Qty, Cost/unit na Selling/unit automatic.")}</Text>
 
               <View style={{ flexDirection: "row", gap: 10 }}>
                 <View style={{ flex: 1.15 }}>
                   <Input
-                    placeholder="Pack size e.g. 100"
+                    placeholder={uiText("Pack size e.g. 100")}
                     value={precisionPackQty}
                     onChangeText={(t) => setPrecisionPackQty(normalizeDecimalInput(t))}
                   />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Input
-                    placeholder="Unit e.g. tablet"
+                    placeholder={uiText("Unit e.g. tablet")}
                     value={precisionUnit}
                     onChangeText={setPrecisionUnit}
                   />
@@ -2390,22 +2383,21 @@ onFocus={() => setShowSupplierSuggest(supplierName.trim().length >= 1)}
               </View>
 
               <Input
-                placeholder="Buying/Cost price ya box/pack"
+                placeholder={uiText("Buying/Cost price ya box/pack")}
                 value={precisionPackCost}
                 onChangeText={(t) => setPrecisionPackCost(normalizeDecimalInput(t))}
               />
 
               <Input
-                placeholder="Selling price ya box/pack"
+                placeholder={uiText("Selling price ya box/pack")}
                 value={precisionPackSelling}
                 onChangeText={(t) => setPrecisionPackSelling(normalizeDecimalInput(t))}
               />
 
-              <Button title="Calculate Per Unit Price" onPress={applyPrecisionFormula} variant="secondary" />
+              <Button title={uiText("Calculate Per Unit Price")} onPress={applyPrecisionFormula} variant="secondary" />
 
               <Text style={{ color: UI.faint, fontWeight: "800" }}>
-                Baada ya calculate, fields za Qty, Cost/unit, Selling/unit na Unit zitajazwa.
-              </Text>
+                {uiText("Baada ya calculate, fields za Qty, Cost/unit, Selling/unit na Unit zitajazwa.")}</Text>
             </>
           ) : null}
         </Card>
@@ -2413,21 +2405,21 @@ onFocus={() => setShowSupplierSuggest(supplierName.trim().length >= 1)}
 
       <View style={{ flexDirection: "row", gap: 10 }}>
         <View style={{ flex: 1 }}>
-          <Input placeholder="Qty" value={itemQty} onChangeText={(t) => setItemQty(normalizeDecimalInput(t))} />
+          <Input placeholder={uiText("Qty")} value={itemQty} onChangeText={(t) => setItemQty(normalizeDecimalInput(t))} />
         </View>
         <View style={{ flex: 1 }}>
-          <Input placeholder="Cost/unit" value={itemCost} onChangeText={(t) => setItemCost(normalizeDecimalInput(t))} />
+          <Input placeholder={uiText("Cost/unit")} value={itemCost} onChangeText={(t) => setItemCost(normalizeDecimalInput(t))} />
         </View>
       </View>
 
       <Input
-        placeholder="Selling price/unit optional"
+        placeholder={uiText("Selling price/unit optional")}
         value={itemSelling}
         onChangeText={(t) => setItemSelling(normalizeDecimalInput(t))}
       />
 
       <Button
-  title={editingDraftIndex === null ? "Add Item to Order" : "Save Item Changes"}
+  title={editingDraftIndex === null ? uiText("Add Item to Order") : uiText("Save Item Changes")}
   onPress={addDraftItem}
   variant="secondary"
 />
@@ -2447,8 +2439,7 @@ onFocus={() => setShowSupplierSuggest(supplierName.trim().length >= 1)}
     })}
   >
     <Text style={{ color: UI.text, fontWeight: "900" }}>
-      Cancel Edit
-    </Text>
+      {uiText("Cancel Edit")}</Text>
   </Pressable>
 ) : null}
     </>
@@ -2466,10 +2457,10 @@ onFocus={() => setShowSupplierSuggest(supplierName.trim().length >= 1)}
     }}
   >
     <Text style={{ color: UI.text, fontWeight: "900" }}>
-      Items Total: {fmt(draftItemsTotal)}
+      {uiText("Items Total:")}{fmt(draftItemsTotal)}
     </Text>
     <Text style={{ color: UI.muted, fontWeight: "800" }}>
-      Paid: {fmt(moneyNum(paidAmount))} • Balance: {fmt(draftBalance)}
+      {uiText("Paid:")}{fmt(moneyNum(paidAmount))} {uiText("• Balance:")}{fmt(draftBalance)}
     </Text>
   </View>
 ) : null}
@@ -2491,7 +2482,7 @@ onFocus={() => setShowSupplierSuggest(supplierName.trim().length >= 1)}
             {i + 1}. {x.product_name}
           </Text>
           <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 4 }}>
-            Qty: {x.quantity} • Cost: {x.unit_cost || "0"} • Sell: {x.selling_price || "—"}
+            {uiText("Qty:")}{x.quantity} {uiText("• Cost:")}{x.unit_cost || "0"} {uiText("• Sell:")}{x.selling_price || "—"}
           </Text>
           <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
           <Pressable
@@ -2508,8 +2499,7 @@ onFocus={() => setShowSupplierSuggest(supplierName.trim().length >= 1)}
   })}
 >
   <Text style={{ color: UI.emerald, fontWeight: "900", fontSize: 12 }}>
-    Edit
-  </Text>
+    {uiText("Edit")}</Text>
 </Pressable>
 
           <Pressable
@@ -2527,8 +2517,7 @@ onFocus={() => setShowSupplierSuggest(supplierName.trim().length >= 1)}
   })}
 >
   <Text style={{ color: UI.danger, fontWeight: "900", fontSize: 12 }}>
-    Remove
-  </Text>
+    {uiText("Remove")}</Text>
 </Pressable>
 </View>
         </View>
@@ -2539,15 +2528,13 @@ onFocus={() => setShowSupplierSuggest(supplierName.trim().length >= 1)}
             
 
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
-  Payment Made
-</Text>
+  {uiText("Payment Made")}</Text>
 <Text style={{ color: UI.muted, fontWeight: "800", marginTop: -6 }}>
-  Weka kiasi kilicholipwa kwa supplier/shipping mpaka sasa.
-</Text>
+  {uiText("Weka kiasi kilicholipwa kwa supplier/shipping mpaka sasa.")}</Text>
 
-<Input placeholder="Paid amount e.g. 1000000" value={paidAmount} onChangeText={setPaidAmount} />
+<Input placeholder={uiText("Paid amount e.g. 1000000")} value={paidAmount} onChangeText={setPaidAmount} />
               <TextInput
-                placeholder="Note"
+                placeholder={uiText("Note")}
                 placeholderTextColor={UI.faint}
                 value={note}
                 onChangeText={setNote}
@@ -2582,7 +2569,7 @@ onFocus={() => setShowSupplierSuggest(supplierName.trim().length >= 1)}
                     transform: [{ scale: pressed ? 0.97 : 1 }],
                   })}
                 >
-                  <Text style={{ color: UI.text, fontWeight: "900" }}>Cancel</Text>
+                  <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Cancel")}</Text>
                 </Pressable>
 
                 <Pressable
@@ -2598,7 +2585,7 @@ onFocus={() => setShowSupplierSuggest(supplierName.trim().length >= 1)}
                     transform: [{ scale: pressed ? 0.97 : 1 }],
                   })}
                 >
-                  <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>Save</Text>
+                  <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>{uiText("Save")}</Text>
                 </Pressable>
               </View>
             </View>
@@ -2631,88 +2618,84 @@ onFocus={() => setShowSupplierSuggest(supplierName.trim().length >= 1)}
         }}
       >
         <Text style={{ color: UI.text, fontWeight: "900", fontSize: 22 }}>
-          Incoming Order Detail
-        </Text>
+          {uiText("Incoming Order Detail")}</Text>
 
         {!!selectedOrder && (
           <>
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18 }}>
-              {selectedOrder.supplier_name || "Supplier"}
+              {selectedOrder.supplier_name || uiText("Supplier")}
             </Text>
 
             <Text style={{ color: UI.muted, fontWeight: "800" }}>
-              {selectedOrder.order_code || "No code"} • {selectedOrder.status}
+              {selectedOrder.order_code || uiText("No code")} • {selectedOrder.status}
             </Text>
 
             <View style={{ flexDirection: "row", gap: 10 }}>
-              <Mini label="Goods" value={fmt(selectedOrder.total_goods_value)} />
-              <Mini label="Paid" value={fmt(selectedOrder.total_paid_amount)} />
+              <Mini label={uiText("Goods")} value={fmt(selectedOrder.total_goods_value)} />
+              <Mini label={uiText("Paid")} value={fmt(selectedOrder.total_paid_amount)} />
             </View>
 
             <View style={{ flexDirection: "row", gap: 10 }}>
-              <Mini label="Balance" value={fmt(selectedOrder.total_balance_amount)} />
-              <Mini label="Items" value={String(selectedItems.length)} />
+              <Mini label={uiText("Balance")} value={fmt(selectedOrder.total_balance_amount)} />
+              <Mini label={uiText("Items")} value={String(selectedItems.length)} />
             </View>
 
             <Text style={{ color: UI.muted, fontWeight: "800" }}>
-              From: {selectedOrder.source_city || "—"}, {selectedOrder.source_country || "—"}
+              {uiText("From:")}{selectedOrder.source_city || "—"}, {selectedOrder.source_country || "—"}
             </Text>
 
             <Text style={{ color: UI.muted, fontWeight: "800" }}>
-              To: {selectedOrder.destination_name || "—"}
+              {uiText("To:")}{selectedOrder.destination_name || "—"}
             </Text>
 
            <Text style={{ color: UI.muted, fontWeight: "800" }}>
-  Expected: {selectedOrder.expected_arrival_date || "No date"}
+  {uiText("Expected:")}{selectedOrder.expected_arrival_date || uiText("No date")}
 </Text>
 
 {selectedOrder?.status !== "RECEIVED" ? (
-  <Button title="Edit Full Order" onPress={openFullOrderEdit} variant="secondary" />
+  <Button title={uiText("Edit Full Order")} onPress={openFullOrderEdit} variant="secondary" />
 ) : null}
           </>
         )}
 
         <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16, marginTop: 6 }}>
-          Order Items
-        </Text>
+          {uiText("Order Items")}</Text>
 
         {detailLoading ? (
           <Card style={{ alignItems: "center", paddingVertical: 22 }}>
             <ActivityIndicator />
             <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 8 }}>
-              Loading items...
-            </Text>
+              {uiText("Loading items...")}</Text>
           </Card>
         ) : selectedItems.length === 0 ? (
           <Card style={{ borderRadius: 18 }}>
             <Text style={{ color: UI.muted, fontWeight: "800" }}>
-              Hakuna items zilizoonekana kwenye order hii.
-            </Text>
+              {uiText("Hakuna items zilizoonekana kwenye order hii.")}</Text>
           </Card>
         ) : (
           selectedItems.map((x, i) => (
             <Card key={x.id} style={{ borderRadius: 18, gap: 8 }}>
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
-                {i + 1}. {x.product_name || "Product"}
+                {i + 1}. {x.product_name || uiText("Product")}
               </Text>
 
               <Text style={{ color: UI.muted, fontWeight: "800" }}>
-                Ordered: {x.qty_ordered} • Received: {x.qty_received || 0} • Remaining:{" "}
+                {uiText("Ordered:")}{x.qty_ordered} {uiText("• Received:")}{x.qty_received || 0} {uiText("• Remaining:")}{" "}
                 {Math.max(0, Number(x.qty_ordered || 0) - Number(x.qty_received || 0))}
               </Text>
 
               <Text style={{ color: UI.muted, fontWeight: "800" }}>
-                Cost: {fmt(x.unit_cost)} • Total: {fmt(x.total_cost)}
+                {uiText("Cost:")}{fmt(x.unit_cost)} {uiText("• Total:")}{fmt(x.total_cost)}
               </Text>
 
               <Text style={{ color: UI.faint, fontWeight: "800" }}>
-                SKU: {x.sku || "—"} • Barcode: {x.barcode || "—"} • Sell: {fmt(x.proposed_sell_price)}
+                {uiText("SKU:")}{x.sku || "—"} {uiText("• Barcode:")}{x.barcode || "—"} {uiText("• Sell:")}{fmt(x.proposed_sell_price)}
               </Text>
 
               {selectedOrder?.status !== "RECEIVED" ? (
                 <View style={{ gap: 8 }}>
                   <TextInput
-                    placeholder="Qty to receive now"
+                    placeholder={uiText("Qty to receive now")}
                     placeholderTextColor={UI.faint}
                     keyboardType="numeric"
                     value={receiveQtyMap[x.id] ?? ""}
@@ -2747,7 +2730,7 @@ onFocus={() => setShowSupplierSuggest(supplierName.trim().length >= 1)}
                       transform: [{ scale: pressed ? 0.97 : 1 }],
                     })}
                   >
-                    <Text style={{ color: UI.text, fontWeight: "900" }}>Edit Item</Text>
+                    <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Edit Item")}</Text>
                   </Pressable>
                 </View>
               ) : null}
@@ -2755,7 +2738,7 @@ onFocus={() => setShowSupplierSuggest(supplierName.trim().length >= 1)}
           ))
         )}
 <TextInput
-  placeholder="Delete reason required for received order"
+  placeholder={uiText("Delete reason required for received order")}
   placeholderTextColor={UI.faint}
   value={deleteReason}
   onChangeText={setDeleteReason}
@@ -2790,8 +2773,7 @@ onFocus={() => setShowSupplierSuggest(supplierName.trim().length >= 1)}
   })}
 >
   <Text style={{ color: UI.text, fontWeight: "900" }}>
-    Export PDF
-  </Text>
+    {uiText("Export PDF")}</Text>
 </Pressable>
       {selectedOrder?.status !== "RECEIVED" && selectedItems.length > 0 ? (
   <Pressable
@@ -2808,7 +2790,7 @@ onFocus={() => setShowSupplierSuggest(supplierName.trim().length >= 1)}
     })}
   >
     <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>
-      {receivingOrder ? "Receiving..." : "Receive Partial Qty"}
+      {receivingOrder ? uiText("Receiving...") : uiText("Receive Partial Qty")}
     </Text>
   </Pressable>
 ) : null}
@@ -2827,8 +2809,7 @@ onFocus={() => setShowSupplierSuggest(supplierName.trim().length >= 1)}
     }}
   >
     <Text style={{ color: UI.text, fontWeight: "900" }}>
-      Close
-    </Text>
+      {uiText("Close")}</Text>
   </Pressable>
 
   {selectedOrder?.status !== "RECEIVED" ? (
@@ -2846,7 +2827,7 @@ onFocus={() => setShowSupplierSuggest(supplierName.trim().length >= 1)}
       }}
     >
       <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>
-        {receivingOrder ? "Receiving..." : "Receive Stock"}
+        {receivingOrder ? uiText("Receiving...") : uiText("Receive Stock")}
       </Text>
     </Pressable>
   ) : (
@@ -2863,8 +2844,7 @@ onFocus={() => setShowSupplierSuggest(supplierName.trim().length >= 1)}
       }}
     >
       <Text style={{ color: UI.emerald, fontWeight: "900" }}>
-        RECEIVED
-      </Text>
+        {uiText("RECEIVED")}</Text>
     </View>
   )}
 
@@ -2882,7 +2862,7 @@ onFocus={() => setShowSupplierSuggest(supplierName.trim().length >= 1)}
     }}
   >
     <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>
-      {deletingOrder ? "Deleting..." : "Delete"}
+      {deletingOrder ? uiText("Deleting...") : uiText("Delete")}
     </Text>
   </Pressable>
 </View>
@@ -2916,19 +2896,18 @@ onFocus={() => setShowSupplierSuggest(supplierName.trim().length >= 1)}
         }}
       >
         <Text style={{ color: UI.text, fontWeight: "900", fontSize: 22 }}>
-          Edit Full Incoming Order
-        </Text>
+          {uiText("Edit Full Incoming Order")}</Text>
 
-        <Input placeholder="Supplier name" value={editSupplierName} onChangeText={setEditSupplierName} />
-        <Input placeholder="Source country" value={editSourceCountry} onChangeText={setEditSourceCountry} />
-        <Input placeholder="Source city" value={editSourceCity} onChangeText={setEditSourceCity} />
-        <Input placeholder="Destination" value={editDestinationName} onChangeText={setEditDestinationName} />
-        <Input placeholder="Invoice number" value={editInvoiceNumber} onChangeText={setEditInvoiceNumber} />
-        <Input placeholder="Tracking number" value={editTrackingNumber} onChangeText={setEditTrackingNumber} />
-        <Input placeholder="Expected arrival date YYYY-MM-DD" value={editExpectedDate} onChangeText={setEditExpectedDate} />
+        <Input placeholder={uiText("Supplier name")} value={editSupplierName} onChangeText={setEditSupplierName} />
+        <Input placeholder={uiText("Source country")} value={editSourceCountry} onChangeText={setEditSourceCountry} />
+        <Input placeholder={uiText("Source city")} value={editSourceCity} onChangeText={setEditSourceCity} />
+        <Input placeholder={uiText("Destination")} value={editDestinationName} onChangeText={setEditDestinationName} />
+        <Input placeholder={uiText("Invoice number")} value={editInvoiceNumber} onChangeText={setEditInvoiceNumber} />
+        <Input placeholder={uiText("Tracking number")} value={editTrackingNumber} onChangeText={setEditTrackingNumber} />
+        <Input placeholder={uiText("Expected arrival date YYYY-MM-DD")} value={editExpectedDate} onChangeText={setEditExpectedDate} />
 
         <TextInput
-          placeholder="Order note"
+          placeholder={uiText("Order note")}
           placeholderTextColor={UI.faint}
           value={editOrderNote}
           onChangeText={setEditOrderNote}
@@ -2949,11 +2928,10 @@ onFocus={() => setShowSupplierSuggest(supplierName.trim().length >= 1)}
 
         <Card style={{ borderRadius: 18, gap: 10 }}>
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-            Add More Items
-          </Text>
+            {uiText("Add More Items")}</Text>
 
           <SuggestInput
-            placeholder="Product / item name"
+            placeholder={uiText("Product / item name")}
             value={editOrderItemName}
             onChangeText={(v) => {
               setEditOrderItemName(v);
@@ -2971,8 +2949,8 @@ onFocus={() => setShowSupplierSuggest(supplierName.trim().length >= 1)}
               {filteredEditProductSuggestions.map((p) => (
                 <SuggestRow
                   key={p.id}
-                  title={p.name || "Product"}
-                  subtitle={`SKU: ${p.sku || "—"} • Barcode: ${p.barcode || "—"} • Cost: ${fmt(Number(p.cost_price || 0))} • Sell: ${fmt(Number(p.selling_price || 0))}`}
+                  title={p.name || uiText("Product")}
+                  subtitle={uiText("SKU: {p0} • Barcode: {p1} • Cost: {p2} • Sell: {p3}", {p0: (p.sku || "—"), p1: (p.barcode || "—"), p2: (fmt(Number(p.cost_price || 0))), p3: (fmt(Number(p.selling_price || 0)))})}
                   onPress={() => selectEditProductSuggestion(p)}
                 />
               ))}
@@ -2981,11 +2959,11 @@ onFocus={() => setShowSupplierSuggest(supplierName.trim().length >= 1)}
 
           <View style={{ flexDirection: "row", gap: 10 }}>
             <View style={{ flex: 1 }}>
-              <Input placeholder="SKU optional" value={editOrderItemSku} onChangeText={setEditOrderItemSku} />
+              <Input placeholder={uiText("SKU optional")} value={editOrderItemSku} onChangeText={setEditOrderItemSku} />
             </View>
             <View style={{ flex: 1 }}>
               <SuggestInput
-                placeholder="Unit e.g. pcs"
+                placeholder={uiText("Unit e.g. pcs")}
                 value={editOrderItemUnit}
                 onChangeText={(v) => {
                   setEditOrderItemUnit(v);
@@ -3002,7 +2980,7 @@ onFocus={() => setShowSupplierSuggest(supplierName.trim().length >= 1)}
                 <SuggestRow
                   key={`edit-unit-${unit}`}
                   title={unit}
-                  subtitle="Saved unit from previous products"
+                  subtitle={uiText("Saved unit from previous products")}
                   onPress={() => {
                     setEditOrderItemUnit(unit);
                     setShowEditUnitSuggest(false);
@@ -3013,7 +2991,7 @@ onFocus={() => setShowSupplierSuggest(supplierName.trim().length >= 1)}
           ) : null}
 
           <SuggestInput
-            placeholder="Category optional"
+            placeholder={uiText("Category optional")}
             value={editOrderItemCategory}
             onChangeText={(v) => {
               setEditOrderItemCategory(v);
@@ -3028,7 +3006,7 @@ onFocus={() => setShowSupplierSuggest(supplierName.trim().length >= 1)}
                 <SuggestRow
                   key={`edit-category-${category}`}
                   title={category}
-                  subtitle="Saved category from previous products"
+                  subtitle={uiText("Saved category from previous products")}
                   onPress={() => {
                     setEditOrderItemCategory(category);
                     setShowEditCategorySuggest(false);
@@ -3037,24 +3015,24 @@ onFocus={() => setShowSupplierSuggest(supplierName.trim().length >= 1)}
               ))}
             </SuggestBox>
           ) : null}
-          <Input placeholder="Barcode optional" value={editOrderItemBarcode} onChangeText={setEditOrderItemBarcode} />
+          <Input placeholder={uiText("Barcode optional")} value={editOrderItemBarcode} onChangeText={setEditOrderItemBarcode} />
 
           <View style={{ flexDirection: "row", gap: 10 }}>
             <View style={{ flex: 1 }}>
-              <Input placeholder="Qty" value={editOrderItemQty} onChangeText={(t) => setEditOrderItemQty(normalizeDecimalInput(t))} />
+              <Input placeholder={uiText("Qty")} value={editOrderItemQty} onChangeText={(t) => setEditOrderItemQty(normalizeDecimalInput(t))} />
             </View>
             <View style={{ flex: 1 }}>
-              <Input placeholder="Cost/unit" value={editOrderItemCost} onChangeText={(t) => setEditOrderItemCost(normalizeDecimalInput(t))} />
+              <Input placeholder={uiText("Cost/unit")} value={editOrderItemCost} onChangeText={(t) => setEditOrderItemCost(normalizeDecimalInput(t))} />
             </View>
           </View>
 
           <Input
-            placeholder="Selling price/unit optional"
+            placeholder={uiText("Selling price/unit optional")}
             value={editOrderItemSelling}
             onChangeText={(t) => setEditOrderItemSelling(normalizeDecimalInput(t))}
           />
 
-          <Button title="Add New Item" onPress={addEditNewItem} variant="secondary" />
+          <Button title={uiText("Add New Item")} onPress={addEditNewItem} variant="secondary" />
 
           {editNewItems.length > 0 ? (
             <View style={{ gap: 8 }}>
@@ -3073,14 +3051,14 @@ onFocus={() => setShowSupplierSuggest(supplierName.trim().length >= 1)}
                     {i + 1}. {x.product_name}
                   </Text>
                   <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 4 }}>
-                    Qty: {x.quantity} • Cost: {x.unit_cost || "0"} • Sell: {x.selling_price || "—"}
+                    {uiText("Qty:")}{x.quantity} {uiText("• Cost:")}{x.unit_cost || "0"} {uiText("• Sell:")}{x.selling_price || "—"}
                   </Text>
 
                   <Pressable
                     onPress={() => setEditNewItems((prev) => prev.filter((_, idx) => idx !== i))}
                     style={{ alignSelf: "flex-start", marginTop: 8 }}
                   >
-                    <Text style={{ color: UI.danger, fontWeight: "900" }}>Remove</Text>
+                    <Text style={{ color: UI.danger, fontWeight: "900" }}>{uiText("Remove")}</Text>
                   </Pressable>
                 </View>
               ))}
@@ -3101,7 +3079,7 @@ onFocus={() => setShowSupplierSuggest(supplierName.trim().length >= 1)}
               justifyContent: "center",
             }}
           >
-            <Text style={{ color: UI.text, fontWeight: "900" }}>Cancel</Text>
+            <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Cancel")}</Text>
           </Pressable>
 
           <Pressable
@@ -3118,7 +3096,7 @@ onFocus={() => setShowSupplierSuggest(supplierName.trim().length >= 1)}
             }}
           >
             <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>
-              {savingFullEdit ? "Saving..." : "Save Changes"}
+              {savingFullEdit ? uiText("Saving...") : uiText("Save Changes")}
             </Text>
           </Pressable>
         </View>
@@ -3152,18 +3130,17 @@ onFocus={() => setShowSupplierSuggest(supplierName.trim().length >= 1)}
         }}
       >
         <Text style={{ color: UI.text, fontWeight: "900", fontSize: 22 }}>
-          Edit Order Item
-        </Text>
+          {uiText("Edit Order Item")}</Text>
 
-        <Input placeholder="Product / item name" value={editItemName} onChangeText={setEditItemName} />
-        <Input placeholder="SKU optional" value={editItemSku} onChangeText={setEditItemSku} />
-        <Input placeholder="Barcode optional" value={editItemBarcode} onChangeText={setEditItemBarcode} />
-        <Input placeholder="Qty ordered" value={editItemQty} onChangeText={setEditItemQty} />
-        <Input placeholder="Cost/unit" value={editItemCost} onChangeText={setEditItemCost} />
-        <Input placeholder="Selling price/unit optional" value={editItemSelling} onChangeText={setEditItemSelling} />
+        <Input placeholder={uiText("Product / item name")} value={editItemName} onChangeText={setEditItemName} />
+        <Input placeholder={uiText("SKU optional")} value={editItemSku} onChangeText={setEditItemSku} />
+        <Input placeholder={uiText("Barcode optional")} value={editItemBarcode} onChangeText={setEditItemBarcode} />
+        <Input placeholder={uiText("Qty ordered")} value={editItemQty} onChangeText={setEditItemQty} />
+        <Input placeholder={uiText("Cost/unit")} value={editItemCost} onChangeText={setEditItemCost} />
+        <Input placeholder={uiText("Selling price/unit optional")} value={editItemSelling} onChangeText={setEditItemSelling} />
 
         <TextInput
-          placeholder="Note"
+          placeholder={uiText("Note")}
           placeholderTextColor={UI.faint}
           value={editItemNote}
           onChangeText={setEditItemNote}
@@ -3197,7 +3174,7 @@ onFocus={() => setShowSupplierSuggest(supplierName.trim().length >= 1)}
               transform: [{ scale: pressed ? 0.97 : 1 }],
             })}
           >
-            <Text style={{ color: UI.text, fontWeight: "900" }}>Cancel</Text>
+            <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Cancel")}</Text>
           </Pressable>
 
           <Pressable
@@ -3213,7 +3190,7 @@ onFocus={() => setShowSupplierSuggest(supplierName.trim().length >= 1)}
               transform: [{ scale: pressed ? 0.97 : 1 }],
             })}
           >
-            <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>Save Edit</Text>
+            <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>{uiText("Save Edit")}</Text>
           </Pressable>
         </View>
       </View>

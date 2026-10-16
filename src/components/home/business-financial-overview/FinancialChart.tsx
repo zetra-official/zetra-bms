@@ -1,11 +1,17 @@
+import {useCommonText} from "@/src/i18n/useCommonText";
 ﻿import React, {
   useMemo,
 } from "react";
 
 import {
+  Platform,
   Text,
   View,
 } from "react-native";
+
+// RN SVG accepts DOM hover handlers on Web; native retains its existing onPress.
+const webHover = (enter: () => void, leave: () => void) =>
+  Platform.OS === "web" ? { onMouseEnter: enter, onMouseLeave: leave } : {};
 
 import Svg, {
   Circle,
@@ -209,6 +215,7 @@ function DonutChart({
   width: number;
   height: number;
 }) {
+ const uiText = useCommonText();
   /*
    * Donut is a financial composition view.
    *
@@ -383,8 +390,7 @@ function DonutChart({
           fontWeight="800"
           fill="#64748B"
         >
-          BUSINESS
-        </SvgText>
+          {uiText("BUSINESS")}</SvgText>
 
         <SvgText
           x={cx}
@@ -394,8 +400,7 @@ function DonutChart({
           fontWeight="900"
           fill="#0F172A"
         >
-          OVERVIEW
-        </SvgText>
+          {uiText("OVERVIEW")}</SvgText>
       </Svg>
     </View>
   );
@@ -416,6 +421,7 @@ function TrendChart({
   metric?: FinancialTrendMetric;
   compact?: boolean;
 }) {
+ const uiText = useCommonText();
   /*
    * Professional finance chart layout.
    *
@@ -749,8 +755,7 @@ function TrendChart({
             fill="#475569"
             pointerEvents="none"
           >
-            Current
-          </SvgText>
+            {uiText("Current")}</SvgText>
 
           <Line
             x1={left + 78}
@@ -772,8 +777,7 @@ function TrendChart({
             fill="#7C3AED"
             pointerEvents="none"
           >
-            Previous
-          </SvgText>
+            {uiText("Previous")}</SvgText>
         </>
       )}
 
@@ -941,17 +945,16 @@ function TrendChart({
                     cy={y}
                     r="13"
                     fill="transparent"
-                    onMouseEnter={() => {
+                    {...webHover(() => {
                       setHoveredIndex(null);
                       setHoveredPreviousIndex(
                         index
                       );
-                    }}
-                    onMouseLeave={() =>
+                    }, () =>
                       setHoveredPreviousIndex(
                         null
                       )
-                    }
+                    )}
                     onPress={() => {
                       setHoveredIndex(null);
                       setHoveredPreviousIndex(
@@ -1066,15 +1069,14 @@ function TrendChart({
                     cy={y}
                     r="13"
                     fill="transparent"
-                    onMouseEnter={() => {
+                    {...webHover(() => {
                       setHoveredPreviousIndex(
                         null
                       );
                       setHoveredIndex(index);
-                    }}
-                    onMouseLeave={() =>
+                    }, () =>
                       setHoveredIndex(null)
-                    }
+                    )}
                     onPress={() =>
                       setHoveredIndex(index)
                     }
@@ -1238,7 +1240,7 @@ function TrendChart({
                 pointerEvents="none"
               >
                 {hoveredIsPrevious
-                  ? `Previous • ${hoveredBucket.label}`
+                  ? uiText("Previous • {p0}", {p0: (hoveredBucket.label)})
                   : hoveredBucket.label}
               </SvgText>
 
@@ -1272,9 +1274,9 @@ function TrendChart({
                 fill="#E2E8F0"
                 pointerEvents="none"
               >
-                {`Sales  ${moneyCompact(
+                {uiText("Sales  {p0}", {p0: (moneyCompact(
                   hoveredBucket.sales
-                )}`}
+                ))})}
               </SvgText>
 
               {/* Expenses */}
@@ -1296,9 +1298,9 @@ function TrendChart({
                 fill="#FBBF24"
                 pointerEvents="none"
               >
-                {`Expenses  ${moneyCompact(
+                {uiText("Expenses  {p0}", {p0: (moneyCompact(
                   hoveredBucket.expenses
-                )}`}
+                ))})}
               </SvgText>
 
               {/* Net Profit / Loss */}
@@ -1329,12 +1331,12 @@ function TrendChart({
                 pointerEvents="none"
               >
                 {profit < 0
-                  ? `Loss  ${moneyCompact(
+                  ? uiText("Loss  {p0}", {p0: (moneyCompact(
                       Math.abs(profit)
-                    )}`
-                  : `Net Profit  ${moneyCompact(
+                    ))})
+                  : uiText("Net Profit  {p0}", {p0: (moneyCompact(
                       profit
-                    )}`}
+                    ))})}
               </SvgText>
             </React.Fragment>
           );
@@ -1653,6 +1655,7 @@ export function FinancialChartLegend({
 }: {
   total: FinancialMetric;
 }) {
+ const uiText = useCommonText();
   const profitIsLoss =
     finite(
       total.netProfit
@@ -1751,7 +1754,7 @@ export function FinancialChartLegend({
                 }}
               >
                 {
-                  item.label
+                  uiText(item.label)
                 }
               </Text>
             </View>

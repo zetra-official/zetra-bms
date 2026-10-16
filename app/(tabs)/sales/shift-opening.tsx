@@ -1,3 +1,5 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -110,6 +112,8 @@ function InputBox(props: {
 }
 
 export default function ShiftOpeningScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
 
   const params = useLocalSearchParams<{
@@ -214,30 +218,30 @@ export default function ShiftOpeningScreen() {
 
   const startShift = useCallback(async () => {
     if (!isCashier) {
-      Alert.alert("Blocked", "Shift Opening ni kwa cashier tu.");
+      Alert.alert(uiText("Blocked"), uiText("Shift Opening ni kwa cashier tu."));
       return;
     }
 
     if (!effectiveStoreId) {
-      Alert.alert("Missing", "No active store selected.");
+      Alert.alert(uiText("Missing"), uiText("No active store selected."));
       return;
     }
 
     if (isOffline) {
-      Alert.alert("Offline", "Fungua shift ukiwa online kwanza.");
+      Alert.alert(uiText("Offline"), uiText("Fungua shift ukiwa online kwanza."));
       return;
     }
 
     if (overdueShift?.shift_id) {
       Alert.alert(
-        "Overdue Shift",
-        "Una shift ya jana bado OPEN. Lazima uende Cashier Closing kwanza kabla ya kufungua shift mpya."
+        uiText("Overdue Shift"),
+        uiText("Una shift ya jana bado OPEN. Lazima uende Cashier Closing kwanza kabla ya kufungua shift mpya.")
       );
       return;
     }
 
     if (openShift?.shift_id) {
-      Alert.alert("Already Open", "Tayari una shift iliyo wazi kwenye store hii.");
+      Alert.alert(uiText("Already Open"), uiText("Tayari una shift iliyo wazi kwenye store hii."));
       return;
     }
 
@@ -245,7 +249,7 @@ export default function ShiftOpeningScreen() {
     const openingCash = raw ? Number(raw) : 0;
 
     if (!Number.isFinite(openingCash) || openingCash < 0) {
-      Alert.alert("Opening Cash", "Weka opening cash sahihi. Unaweza kuweka 0.");
+      Alert.alert(uiText("Opening Cash"), uiText("Weka opening cash sahihi. Unaweza kuweka 0."));
       return;
     }
 
@@ -274,9 +278,9 @@ export default function ShiftOpeningScreen() {
         closed_at: row.closed_at ?? null,
       });
 
-      Alert.alert("Shift Opened ✅", "Cashier shift imefunguliwa vizuri.");
+      Alert.alert(uiText("Shift Opened ✅"), uiText("Cashier shift imefunguliwa vizuri."));
     } catch (e: any) {
-      Alert.alert("Shift Opening Failed", e?.message ?? "Failed to open shift");
+      Alert.alert(uiText("Shift Opening Failed"), e?.message ?? uiText("Failed to open shift"));
     } finally {
       setSaving(false);
     }
@@ -288,7 +292,7 @@ export default function ShiftOpeningScreen() {
 
   const goCashierClosing = useCallback(() => {
     if (!openShift?.shift_id) {
-      Alert.alert("Shift Not Open", "Hakuna shift wazi ya cashier kwenye store hii.");
+      Alert.alert(uiText("Shift Not Open"), uiText("Hakuna shift wazi ya cashier kwenye store hii."));
       return;
     }
     router.push("/(tabs)/settings/cashier-closing" as any);
@@ -316,13 +320,12 @@ export default function ShiftOpeningScreen() {
 
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 26, fontWeight: "900", color: theme.colors.text }}>
-              Shift Opening
-            </Text>
+              {uiText("Shift Opening")}</Text>
             <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-              {activeOrgName ?? "—"} • {effectiveStoreName} • {activeRole ?? "—"}
+              {activeOrgName ?? "—"} • {String(((routeStoreName ?? activeStoreName) ?? uiText("No store"))).trim()} • {activeRole ?? "—"}
             </Text>
             <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
-              {isOffline ? "OFFLINE" : "ONLINE"}
+              {isOffline ? uiText("OFFLINE") : uiText("ONLINE")}
             </Text>
           </View>
         </View>
@@ -330,17 +333,15 @@ export default function ShiftOpeningScreen() {
         {!isCashier && (
           <Card style={{ gap: 8 }}>
             <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>
-              Shift Opening ni kwa cashier tu.
-            </Text>
+              {uiText("Shift Opening ni kwa cashier tu.")}</Text>
             <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-              Hii screen imefungwa kwa cashier role pekee.
-            </Text>
+              {uiText("Hii screen imefungwa kwa cashier role pekee.")}</Text>
           </Card>
         )}
 
         {!!err && (
           <Card style={{ gap: 8 }}>
-            <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{err}</Text>
+            <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{systemText(err)}</Text>
           </Card>
         )}
 
@@ -348,8 +349,7 @@ export default function ShiftOpeningScreen() {
           <View style={{ paddingTop: 18, alignItems: "center" }}>
             <ActivityIndicator />
             <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>
-              Loading shift...
-            </Text>
+              {uiText("Loading shift...")}</Text>
           </View>
         ) : overdueShift ? (
           <Card
@@ -360,30 +360,28 @@ export default function ShiftOpeningScreen() {
             }}
           >
             <Text style={{ color: "#f59e0b", fontWeight: "900", fontSize: 18 }}>
-              OVERDUE SHIFT
-            </Text>
+              {uiText("OVERDUE SHIFT")}</Text>
 
             <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-              Una shift ya siku iliyopita bado OPEN.
-            </Text>
+              {uiText("Una shift ya siku iliyopita bado OPEN.")}</Text>
 
             <View style={{ gap: 6 }}>
               <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                Status:{" "}
+                {uiText("Status:")}{" "}
                 <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
                   {String(overdueShift.status ?? "OPEN").toUpperCase()}
                 </Text>
               </Text>
 
               <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                Opened At:{" "}
+                {uiText("Opened At:")}{" "}
                 <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
                   {fmtDateTimeLocal(overdueShift.opened_at)}
                 </Text>
               </Text>
 
               <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                Opening Cash:{" "}
+                {uiText("Opening Cash:")}{" "}
                 <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
                   {fmtMoney(overdueShift.opening_cash)}
                 </Text>
@@ -391,29 +389,27 @@ export default function ShiftOpeningScreen() {
             </View>
 
             <Text style={{ color: theme.colors.text, fontWeight: "800" }}>
-              Hauwezi kufungua shift mpya mpaka uende Cashier Closing ukafunge shift hii ya zamani.
-            </Text>
+              {uiText("Hauwezi kufungua shift mpya mpaka uende Cashier Closing ukafunge shift hii ya zamani.")}</Text>
 
-            <Button title="Go to Cashier Closing" onPress={goCashierClosing} variant="primary" />
+            <Button title={uiText("Go to Cashier Closing")} onPress={goCashierClosing} variant="primary" />
 
-            <Button title="Back to Sales" onPress={goSalesHome} variant="secondary" />
+            <Button title={uiText("Back to Sales")} onPress={goSalesHome} variant="secondary" />
           </Card>
         ) : openShift ? (
           <Card style={{ gap: 12 }}>
             <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-              Active Shift ✅
-            </Text>
+              {uiText("Active Shift ✅")}</Text>
 
             <View style={{ flexDirection: "row", gap: 10 }}>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Status</Text>
+                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Status")}</Text>
                 <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>
                   {String(openShift.status ?? "OPEN").toUpperCase()}
                 </Text>
               </View>
 
               <View style={{ flex: 1 }}>
-                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Opening Cash</Text>
+                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Opening Cash")}</Text>
                 <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>
                   {fmtMoney(openShift.opening_cash)}
                 </Text>
@@ -422,7 +418,7 @@ export default function ShiftOpeningScreen() {
 
             <View style={{ flexDirection: "row", gap: 10 }}>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Opened At</Text>
+                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Opened At")}</Text>
                 <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>
                   {fmtDateTimeLocal(openShift.opened_at)}
                 </Text>
@@ -439,35 +435,31 @@ export default function ShiftOpeningScreen() {
               }}
             >
               <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                Shift hii ndio itatumika kufuatilia cashier huyu mpaka closing.
-              </Text>
+                {uiText("Shift hii ndio itatumika kufuatilia cashier huyu mpaka closing.")}</Text>
             </View>
 
             <Button
-              title="Go to Cashier Closing"
+              title={uiText("Go to Cashier Closing")}
               onPress={goCashierClosing}
               variant="primary"
             />
 
-            <Button title="Back to Sales" onPress={goSalesHome} variant="secondary" />
+            <Button title={uiText("Back to Sales")} onPress={goSalesHome} variant="secondary" />
           </Card>
         ) : (
           <Card style={{ gap: 12 }}>
             <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-              Open New Shift
-            </Text>
+              {uiText("Open New Shift")}</Text>
 
             <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-              Kila cashier lazima afungue shift yake kwanza. Unaweza kuweka opening cash au ukaweka 0
-              kama hakuna cash ya kuanzia.
-            </Text>
+              {uiText("Kila cashier lazima afungue shift yake kwanza. Unaweza kuweka opening cash au ukaweka 0 kama hakuna cash ya kuanzia.")}</Text>
 
             <View>
-              <InputLabel>Opening Cash</InputLabel>
+              <InputLabel>{uiText("Opening Cash")}</InputLabel>
               <InputBox
                 value={openingCashDraft}
                 onChangeText={(t) => setOpeningCashDraft(normalizeMoneyInput(t))}
-                placeholder="mf: 0"
+                placeholder={uiText("mf: 0")}
                 editable={!saving}
               />
             </View>
@@ -483,22 +475,21 @@ export default function ShiftOpeningScreen() {
               }}
             >
               <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                Opening cash ya sasa: {fmtMoney(toNum(openingCashDraft || 0))}
+                {uiText("Opening cash ya sasa:")}{fmtMoney(toNum(openingCashDraft || 0))}
               </Text>
               <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                Hii ni cash ya kuanzia drawer ya cashier. Mauzo ya cashier yataanza kuhesabiwa kwenye shift hii.
-              </Text>
+                {uiText("Hii ni cash ya kuanzia drawer ya cashier. Mauzo ya cashier yataanza kuhesabiwa kwenye shift hii.")}</Text>
             </View>
 
             <Button
-              title={saving ? "Opening Shift..." : "Open Shift"}
+              title={saving ? uiText("Opening Shift...") : uiText("Open Shift")}
               onPress={startShift}
               disabled={saving || !isCashier || isOffline}
               variant="primary"
             />
 
             <Button
-              title={refreshing ? "Refreshing..." : "Refresh"}
+              title={refreshing ? uiText("Refreshing...") : uiText("Refresh")}
               onPress={() => load("refresh")}
               disabled={refreshing}
               variant="secondary"

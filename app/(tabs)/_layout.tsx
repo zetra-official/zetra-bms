@@ -1,3 +1,5 @@
+import {useCommonText} from "@/src/i18n/useCommonText";
+import { useLanguage } from "@/src/i18n/LanguageProvider";
 ﻿import { useOrg } from "@/src/context/OrgContext";
 import { supabase } from "@/src/supabase/supabaseClient";
 import { theme } from "@/src/ui/theme";
@@ -14,6 +16,7 @@ import {
   Image,
   Platform,
   Pressable,
+  ScrollView,
   Text,
   View,
   useWindowDimensions,
@@ -150,6 +153,7 @@ function MobileBankingTabBar({
   navigation,
   bottomInset,
 }: MobileBankingTabBarProps) {
+ const uiText = useCommonText();
   const activeRouteName = String(
     state?.routes?.[state?.index]?.name ?? ""
   );
@@ -207,7 +211,7 @@ function MobileBankingTabBar({
   const normalItems = [
     {
       key: "home",
-      label: "Home",
+      label: uiText("Home"),
       icon: "home-outline",
       activeIcon: "home",
       active: isActive(["index"]),
@@ -215,7 +219,7 @@ function MobileBankingTabBar({
     },
     {
       key: "products",
-      label: "Product",
+      label: uiText("Product"),
       icon: "cube-outline",
       activeIcon: "cube",
       active: isActive(["products"]),
@@ -223,7 +227,7 @@ function MobileBankingTabBar({
     },
     {
       key: "stores",
-      label: "Stores",
+      label: uiText("Stores"),
       icon: "storefront-outline",
       activeIcon: "storefront",
       active: isActive(["stores"]),
@@ -231,7 +235,7 @@ function MobileBankingTabBar({
     },
     {
       key: "more",
-      label: "More",
+      label: uiText("More"),
       icon: "grid-outline",
       activeIcon: "grid",
       active: isActive(["settings"]),
@@ -355,7 +359,7 @@ function MobileBankingTabBar({
           <Pressable
             onPress={handleSellPress}
             accessibilityRole="button"
-            accessibilityLabel="SELL"
+            accessibilityLabel={uiText("SELL")}
             style={({ pressed }) => ({
               position: "absolute",
               top: -24,
@@ -400,8 +404,7 @@ function MobileBankingTabBar({
                 includeFontPadding: false,
               }}
             >
-              SELL
-            </Text>
+              {uiText("SELL")}</Text>
           </Pressable>
         </View>
 
@@ -503,6 +506,7 @@ function DesktopSidebarSubscriptionCard({
   orgId?: string | null;
   role?: string | null;
 }) {
+ const uiText=useCommonText();
   const router = useRouter();
 
   const cleanOrgId = cleanSubscriptionValue(orgId);
@@ -826,7 +830,7 @@ function DesktopSidebarSubscriptionCard({
             }}
             numberOfLines={1}
           >
-            {remainingLabel}
+            {(loading ? "..." : (loadFailed ? uiText("BILLING") : (isFree ? uiText("FREE") : (isExpired ? uiText("EXPIRED") : (expiresToday ? uiText("TODAY") : (daysLeft === 1 ? uiText("1 DAY") : (daysLeft !== null ? uiText("{p0} DAYS", {p0: (daysLeft)}) : (normalizedStatus || uiText("ACTIVE")))))))))}
           </Text>
         </View>
       </View>
@@ -839,12 +843,14 @@ function DesktopSidebarSubscriptionCard({
         }}
         numberOfLines={1}
       >
-        {subtitle}
+        {(loading ? uiText("Checking subscription...") : (loadFailed ? uiText("Tap to check Subscription & Billing") : (isFree ? uiText("Free plan • Upgrade available") : (isExpired ? (expiryRaw ? uiText("Expired {p0}", {p0: (expiryLabel)}) : uiText("Subscription expired")) : (expiresToday ? uiText("Expires today • {p0}", {p0: (expiryLabel)}) : (daysLeft !== null ? (critical || warning ? uiText("Renew before {p0}", {p0: (expiryLabel)}) : uiText("Expires {p0}", {p0: (expiryLabel)})) : (normalizedStatus || uiText("Subscription active"))))))))}
       </Text>
     </Pressable>
   );
 }
 export default function TabsLayout() {
+ const uiText=useCommonText();
+  const { t } = useLanguage();
   const router = useRouter();
 
   React.useEffect(() => {
@@ -1363,8 +1369,7 @@ export default function TabsLayout() {
                       marginTop: 1,
                     }}
                   >
-                    Business Management System
-                  </Text>
+                    {uiText("Business Management System")}</Text>
                 </View>
               </View>
             </View>
@@ -1372,13 +1377,13 @@ export default function TabsLayout() {
             {/* MAIN DESKTOP NAVIGATION */}
             <View style={{ gap: 1 }}>
               <DesktopNavItem
-                label="Home"
+                label={uiText("Home")}
                 icon="home-outline"
                 routeName="index"
               />
 
               <DesktopNavItem
-                label="POS / Sell"
+                label={uiText("POS / Sell")}
                 icon="cart-outline"
                 routeName="sales"
                 hidden={isSpecialStore}
@@ -1388,14 +1393,14 @@ export default function TabsLayout() {
               />
 
               <DesktopNavItem
-                label="Products"
+                label={uiText("Products")}
                 icon="pricetag-outline"
                 routeName="products"
                 hidden={isCashier || isFieldProcurementStore}
               />
 
               <DesktopNavItem
-                label="Inventory"
+                label={uiText("Inventory")}
                 icon="layers-outline"
                 hidden={isCashier || isFieldProcurementStore}
                 activeOverride={isInventoryRoute}
@@ -1405,7 +1410,7 @@ export default function TabsLayout() {
               />
 
               <DesktopNavItem
-                label="Customers (CRM)"
+                label={uiText("Customers (CRM)")}
                 icon="people-outline"
                 hidden={isCashier || isSpecialStore}
                 onPress={() => {
@@ -1414,14 +1419,14 @@ export default function TabsLayout() {
               />
 
               <DesktopNavItem
-                label="Credit"
+                label={uiText("Credit")}
                 icon="card-outline"
                 routeName="credit"
                 hidden={isCashier || isSpecialStore}
               />
 
               <DesktopNavItem
-                label="Expenses"
+                label={uiText("Expenses")}
                 icon="receipt-outline"
                 routeName="expenses"
                 hidden={isCashier || isSpecialStore}
@@ -1431,7 +1436,7 @@ export default function TabsLayout() {
               />
 
               <DesktopNavItem
-                label="Finance"
+                label={uiText("Finance")}
                 icon="stats-chart-outline"
                 hidden={isCashier || isSpecialStore}
                 onPress={() => {
@@ -1440,7 +1445,7 @@ export default function TabsLayout() {
               />
 
               <DesktopNavItem
-                label="Reports"
+                label={uiText("Reports")}
                 icon="bar-chart-outline"
                 hidden={isCashier || isSpecialStore}
                 onPress={() => {
@@ -1456,7 +1461,7 @@ export default function TabsLayout() {
               />
 
               <DesktopNavItem
-                label="Stores"
+                label={uiText("Stores")}
                 icon="storefront-outline"
                 routeName="stores"
                 hidden={isCashier}
@@ -1467,7 +1472,7 @@ export default function TabsLayout() {
               />
 
               <DesktopNavItem
-                label="AI Assistant"
+                label={uiText("AI Assistant")}
                 icon="sparkles-outline"
                 badge="NEW"
                 hidden={isCashier || isSpecialStore}
@@ -1477,7 +1482,7 @@ export default function TabsLayout() {
               />
 
               <DesktopNavItem
-                label="More"
+                label={uiText("More")}
                 icon="grid-outline"
                 routeName="settings"
                 onPress={() => {
@@ -1486,6 +1491,16 @@ export default function TabsLayout() {
               />
             </View>
 
+            {/* SCROLLABLE LOWER DESKTOP SIDEBAR */}
+            <ScrollView
+              style={{ flex: 1, minHeight: 0 }}
+              contentContainerStyle={{
+                flexGrow: 1,
+                paddingBottom: 8,
+              }}
+              showsVerticalScrollIndicator={true}
+              keyboardShouldPersistTaps="always"
+            >
             {/* DAILY BUSINESS SHORTCUTS */}
             {!isCashier && !isSpecialStore ? (
               <View
@@ -1508,8 +1523,7 @@ export default function TabsLayout() {
                   }}
                   numberOfLines={1}
                 >
-                  BUSINESS SHORTCUTS
-                </Text>
+                  {uiText("BUSINESS SHORTCUTS")}</Text>
 
                 <Pressable
                   onPress={() => {
@@ -1544,8 +1558,7 @@ export default function TabsLayout() {
                     }}
                     numberOfLines={1}
                   >
-                    Business Position
-                  </Text>
+                    {uiText("Business Position")}</Text>
 
                   <Ionicons
                     name="chevron-forward"
@@ -1587,8 +1600,7 @@ export default function TabsLayout() {
                     }}
                     numberOfLines={1}
                   >
-                    Business Debts
-                  </Text>
+                    {uiText("Business Debts")}</Text>
 
                   <Ionicons
                     name="chevron-forward"
@@ -1630,8 +1642,7 @@ export default function TabsLayout() {
                     }}
                     numberOfLines={1}
                   >
-                    Incoming Stock
-                  </Text>
+                    {uiText("Incoming Stock")}</Text>
 
                   <Ionicons
                     name="chevron-forward"
@@ -1648,13 +1659,13 @@ export default function TabsLayout() {
             {!isCashier ? (
               <View style={{ gap: 5 }}>
                 <DesktopWorkspaceCard
-                  label="Current Organization"
+                  label={uiText("Current Organization")}
                   value={sidebarTitle}
                   icon="business-outline"
                 />
 
                 <DesktopWorkspaceCard
-                  label="Current Store"
+                  label={uiText("Current Store")}
                   value={sidebarStore}
                   icon="storefront-outline"
                 />
@@ -1737,7 +1748,7 @@ export default function TabsLayout() {
                     marginTop: 1,
                   }}
                 >
-                  {sidebarRole}
+                  {uiText(sidebarRole.toUpperCase())}
                 </Text>
               </View>
 
@@ -1747,6 +1758,7 @@ export default function TabsLayout() {
                 color="rgba(255,255,255,0.60)"
               />
             </Pressable>
+            </ScrollView>
           </View>
         );
       }
@@ -1876,8 +1888,7 @@ left: 6,
                   }}
                   numberOfLines={1}
                 >
-                  Business Management System
-                </Text>
+                  {uiText("Business Management System")}</Text>
 
                 <View
                   style={{
@@ -1929,7 +1940,7 @@ height: 70,
                       }}
                       numberOfLines={1}
                     >
-                      {sidebarStore}
+                      {(String((activeStoreName ?? uiText("No active store"))).trim() || uiText("No active store"))}
                     </Text>
 
                     <View
@@ -1950,7 +1961,7 @@ height: 70,
                         }}
                         numberOfLines={1}
                       >
-                        {sidebarRole}
+                        {uiText(sidebarRole.toUpperCase())}
                       </Text>
                     </View>
                   </View>
@@ -1973,9 +1984,9 @@ height: 70,
       <Tabs.Screen
         name="index"
         options={{
-          title: "Home",
+          title: t("home"),
           tabBarLabel: ({ color }) => (
-            <TabLabel text="Home" color={color} mobileWeb={isMobileWeb} />
+            <TabLabel text={t("home")} color={color} mobileWeb={isMobileWeb} />
           ),
           tabBarIcon: ({ color }) => (
             <WebTabIcon emoji="📊" color={color} mobileWeb={isMobileWeb} />
@@ -1993,11 +2004,11 @@ height: 70,
           },
         }}
         options={{
-          title: useLeftSidebarWeb ? "Point of Sale" : "Sales",
+          title: useLeftSidebarWeb ? t("pos") : t("sales"),
           href: isSpecialStore ? null : undefined,
           tabBarItemStyle: isSpecialStore ? hidden : undefined,
           tabBarLabel: ({ color }) => (
-            <TabLabel text={useLeftSidebarWeb ? "POS / Sell" : "Sales"} color={color} mobileWeb={isMobileWeb} />
+            <TabLabel text={useLeftSidebarWeb ? t("pos") : t("sales")} color={color} mobileWeb={isMobileWeb} />
           ),
           tabBarIcon: ({ color }) => (
             <WebTabIcon emoji="🛒" color={color} mobileWeb={isMobileWeb} />
@@ -2008,11 +2019,11 @@ height: 70,
       <Tabs.Screen
         name="expenses"
         options={{
-          title: "Expenses",
+          title: t("expenses"),
           href: isCashier || isSpecialStore ? null : "/(tabs)/expenses",
           tabBarItemStyle: isCashier || isSpecialStore ? hidden : undefined,
           tabBarLabel: ({ color }) => (
-            <TabLabel text="Expenses" color={color} mobileWeb={isMobileWeb} />
+            <TabLabel text={t("expenses")} color={color} mobileWeb={isMobileWeb} />
           ),
           tabBarIcon: ({ color }) => (
             <WebTabIcon emoji="💸" color={color} mobileWeb={isMobileWeb} />
@@ -2023,11 +2034,11 @@ height: 70,
      <Tabs.Screen
   name="stores"
   options={{
-    title: "Stores",
+    title: t("stores"),
     href: isCashier ? null : undefined,
     tabBarItemStyle: isCashier ? hidden : undefined,
     tabBarLabel: ({ color }) => (
-      <TabLabel text="Stores" color={color} mobileWeb={isMobileWeb} />
+      <TabLabel text={t("stores")} color={color} mobileWeb={isMobileWeb} />
     ),
     tabBarIcon: ({ color }) => (
       <WebTabIcon emoji="🏬" color={color} mobileWeb={isMobileWeb} />
@@ -2038,7 +2049,7 @@ height: 70,
       <Tabs.Screen
         name="products"
         options={{
-          title: "Products",
+          title: t("products"),
           tabBarItemStyle: isCashier || isFieldProcurementStore ? hidden : undefined,
           href: isFieldProcurementStore ? null : undefined,
           tabBarLabel: ({ color }) => (
@@ -2053,11 +2064,11 @@ height: 70,
       <Tabs.Screen
         name="credit"
         options={{
-          title: "Credit",
+          title: t("credit"),
           tabBarItemStyle: isCashier || isSpecialStore ? hidden : undefined,
           href: isSpecialStore ? null : undefined,
           tabBarLabel: ({ color }) => (
-            <TabLabel text="Credit" color={color} mobileWeb={isMobileWeb} />
+            <TabLabel text={t("credit")} color={color} mobileWeb={isMobileWeb} />
           ),
           tabBarIcon: ({ color }) => (
             <WebTabIcon emoji="💳" color={color} mobileWeb={isMobileWeb} />
@@ -2068,11 +2079,11 @@ height: 70,
       <Tabs.Screen
         name="capital-recovery/workspace"
         options={{
-          title: "Recovery",
+          title: t("recovery"),
           href: isCapitalRecoveryStore && !isCashier ? "/capital-recovery/workspace" : null,
           tabBarItemStyle: !isCapitalRecoveryStore || isCashier ? hidden : undefined,
           tabBarLabel: ({ color }) => (
-            <TabLabel text="Recovery" color={color} mobileWeb={isMobileWeb} />
+            <TabLabel text={t("recovery")} color={color} mobileWeb={isMobileWeb} />
           ),
           tabBarIcon: ({ color }) => (
             <WebTabIcon emoji="💼" color={color} mobileWeb={isMobileWeb} />
@@ -2083,11 +2094,11 @@ height: 70,
       <Tabs.Screen
         name="field-procurement/workspace"
         options={{
-          title: "Field",
+          title: t("field"),
           href: isFieldProcurementStore && !isCashier ? "/field-procurement/workspace" : null,
           tabBarItemStyle: !isFieldProcurementStore || isCashier ? hidden : undefined,
           tabBarLabel: ({ color }) => (
-            <TabLabel text="Field" color={color} mobileWeb={isMobileWeb} />
+            <TabLabel text={t("field")} color={color} mobileWeb={isMobileWeb} />
           ),
           tabBarIcon: ({ color }) => (
             <WebTabIcon emoji="🧭" color={color} mobileWeb={isMobileWeb} />
@@ -2098,11 +2109,11 @@ height: 70,
       <Tabs.Screen
         name="field-procurement/history"
         options={{
-          title: "History",
+          title: t("history"),
           href: isFieldProcurementStore && !isCashier ? "/field-procurement/history" : null,
           tabBarItemStyle: !isFieldProcurementStore || isCashier ? hidden : undefined,
           tabBarLabel: ({ color }) => (
-            <TabLabel text="History" color={color} mobileWeb={isMobileWeb} />
+            <TabLabel text={t("history")} color={color} mobileWeb={isMobileWeb} />
           ),
           tabBarIcon: ({ color }) => (
             <WebTabIcon emoji="📜" color={color} mobileWeb={isMobileWeb} />
@@ -2129,10 +2140,10 @@ height: 70,
     },
   }}
   options={{
-    title: "More",
+    title: t("more"),
     tabBarLabel: ({ color }) => (
       <TabLabel
-        text="More"
+        text={t("more")}
         color={color}
         mobileWeb={isMobileWeb}
       />

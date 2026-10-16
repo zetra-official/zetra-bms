@@ -1,6 +1,6 @@
 [build]
-  command = "npx expo export --platform web"
-  publish = "dist"
+  command = "npm run release:web"
+  publish = "dist/unified-web"
 
 [[redirects]]
   from = "/*"

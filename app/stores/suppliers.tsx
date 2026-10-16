@@ -1,3 +1,4 @@
+import {useCommonText} from "@/src/i18n/useCommonText";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import {
@@ -27,6 +28,7 @@ type SupplierRow = {
 };
 
 export default function SuppliersScreen() {
+ const uiText=useCommonText();
   const router = useRouter();
   const { activeOrgId, activeOrgName } = useOrg() as any;
 
@@ -52,7 +54,7 @@ export default function SuppliersScreen() {
       setRows((data ?? []) as SupplierRow[]);
     } catch (e: any) {
       setRows([]);
-      Alert.alert("Failed", e?.message ?? "Failed to load suppliers");
+      Alert.alert(uiText("Failed"), e?.message ?? uiText("Failed to load suppliers"));
     } finally {
       setLoading(false);
     }
@@ -97,23 +99,20 @@ export default function SuppliersScreen() {
 
           <View style={{ flex: 1 }}>
             <Text style={{ color: theme.colors.text, fontSize: 28, fontWeight: "900" }}>
-              Suppliers
-            </Text>
+              {uiText("Suppliers")}</Text>
             <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-              {activeOrgName ?? "Organization"} • Stock source history
-            </Text>
+              {activeOrgName ?? uiText("Organization")} {uiText("• Stock source history")}</Text>
           </View>
         </View>
 
         <Card style={{ gap: 10 }}>
           <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-            Search Supplier
-          </Text>
+            {uiText("Search Supplier")}</Text>
 
           <TextInput
             value={q}
             onChangeText={setQ}
-            placeholder="Search supplier name, phone, email..."
+            placeholder={uiText("Search supplier name, phone, email...")}
             placeholderTextColor="rgba(255,255,255,0.35)"
             style={{
               color: theme.colors.text,
@@ -128,7 +127,7 @@ export default function SuppliersScreen() {
           />
 
           <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-            Total suppliers: {filtered.length}
+            {uiText("Total suppliers:")}{filtered.length}
           </Text>
         </Card>
 
@@ -136,14 +135,12 @@ export default function SuppliersScreen() {
           <View style={{ alignItems: "center", paddingTop: 20 }}>
             <ActivityIndicator />
             <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>
-              Loading suppliers...
-            </Text>
+              {uiText("Loading suppliers...")}</Text>
           </View>
         ) : filtered.length === 0 ? (
           <Card>
             <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>
-              Hakuna supplier bado. Supplier ataonekana baada ya ku-add stock na kujaza Supplier Name.
-            </Text>
+              {uiText("Hakuna supplier bado. Supplier ataonekana baada ya ku-add stock na kujaza Supplier Name.")}</Text>
           </Card>
         ) : (
           filtered.map((s) => (
@@ -165,12 +162,11 @@ export default function SuppliersScreen() {
                 </Text>
 
                 <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                  Phone: {s.phone || "—"} • Email: {s.email || "—"}
+                  {uiText("Phone:")}{s.phone || "—"} {uiText("• Email:")}{s.email || "—"}
                 </Text>
 
                 <Text style={{ color: theme.colors.emerald, fontWeight: "900" }}>
-                  Open supplier history ›
-                </Text>
+                  {uiText("Open supplier history ›")}</Text>
               </Card>
             </Pressable>
           ))

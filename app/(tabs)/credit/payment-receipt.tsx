@@ -1,3 +1,6 @@
+import {paymentMethodKey} from "@/src/i18n/presentation";
+import {useDocumentText} from "@/src/i18n/useDocumentText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 import { useOrg } from "@/src/context/OrgContext";
 import { supabase } from "@/src/supabase/supabaseClient";
 import { Button } from "@/src/ui/Button";
@@ -79,6 +82,423 @@ function clean(x: any) {
 function cryptoRandomFallback() {
   return `${Date.now()}_${Math.floor(Math.random() * 1e9)}`;
 }
+async function shareHtmlPdfOnMobileWeb(
+  html: string,
+  fileName: string, uiText: (source: string) => string
+) {
+  if (
+    Platform.OS !== "web" ||
+    typeof window === "undefined" ||
+    typeof document === "undefined"
+  ) {
+    return false;
+  }
+
+let host: HTMLDivElement | null =
+    null;
+
+  try {
+    const [
+      html2canvasModule,
+      jspdfModule,
+    ] = await Promise.all([
+      import("html2canvas"),
+      import("jspdf/dist/jspdf.es.min.js"),
+    ]);
+
+    const html2canvas =
+      html2canvasModule.default;
+
+    const jsPDF =
+      jspdfModule.jsPDF;
+
+    host =
+      document.createElement(
+        "div"
+      );
+
+    host.style.position =
+      "fixed";
+
+    host.style.left =
+      "-100000px";
+
+    host.style.top =
+      "0";
+
+    host.style.width =
+      "794px";
+
+    host.style.background =
+      "#ffffff";
+
+    host.style.pointerEvents =
+      "none";
+
+    const iframe =
+      document.createElement(
+        "iframe"
+      );
+
+    iframe.style.width =
+      "794px";
+
+    iframe.style.height =
+      "1123px";
+
+    iframe.style.border =
+      "0";
+
+    iframe.style.background =
+      "#ffffff";
+
+    host.appendChild(
+      iframe
+    );
+
+    document.body.appendChild(
+      host
+    );
+
+    const frameDoc =
+      iframe.contentDocument ??
+      iframe.contentWindow?.document;
+
+    if (!frameDoc) {
+      throw new Error(
+        "Unable to prepare invoice PDF."
+      );
+    }
+
+    frameDoc.open();
+    frameDoc.write(html);
+    frameDoc.close();
+
+    await new Promise<void>(
+      (resolve) => {
+        setTimeout(
+          resolve,
+          500
+        );
+      }
+    );
+
+    const images =
+      Array.from(
+        frameDoc.images ?? []
+      );
+
+    if (images.length > 0) {
+      await Promise.all(
+        images.map(
+          (img) =>
+            new Promise<void>(
+              (resolve) => {
+                if (img.complete) {
+                  resolve();
+                  return;
+                }
+
+                let finished =
+                  false;
+
+                const done =
+                  () => {
+                    if (finished) {
+                      return;
+                    }
+
+                    finished =
+                      true;
+
+                    resolve();
+                  };
+
+                img.addEventListener(
+                  "load",
+                  done,
+                  {
+                    once: true,
+                  }
+                );
+
+                img.addEventListener(
+                  "error",
+                  done,
+                  {
+                    once: true,
+                  }
+                );
+
+                setTimeout(
+                  done,
+                  2500
+                );
+              }
+            )
+        )
+      );
+    }
+
+    const page =
+      frameDoc.querySelector(
+        ".page"
+      ) as HTMLElement | null;
+
+    const target =
+      page ??
+      frameDoc.body;
+
+    if (!target) {
+      throw new Error(
+        "Invoice content was not found."
+      );
+    }
+
+    const canvas =
+      await html2canvas(
+        target,
+        {
+          scale: 2,
+          backgroundColor:
+            "#ffffff",
+          useCORS: true,
+          logging: false,
+          windowWidth: 794,
+        }
+      );
+
+    if (
+      !canvas.width ||
+      !canvas.height
+    ) {
+      throw new Error(
+        "Invoice PDF canvas is empty."
+      );
+    }
+
+    const imageData =
+      canvas.toDataURL(
+        "image/jpeg",
+        0.96
+      );
+
+    const pdf =
+      new jsPDF({
+        orientation:
+          "portrait",
+        unit: "mm",
+        format: "a4",
+        compress: true,
+      });
+
+    const pdfWidth =
+      pdf.internal.pageSize
+        .getWidth();
+
+    const pdfHeight =
+      pdf.internal.pageSize
+        .getHeight();
+
+    const imageHeight =
+      (
+        canvas.height *
+        pdfWidth
+      ) /
+      canvas.width;
+
+    let heightLeft =
+      imageHeight;
+
+    let position = 0;
+
+    pdf.addImage(
+      imageData,
+      "JPEG",
+      0,
+      position,
+      pdfWidth,
+      imageHeight,
+      undefined,
+      "FAST"
+    );
+
+    heightLeft -=
+      pdfHeight;
+
+    while (heightLeft > 0) {
+      position =
+        heightLeft -
+        imageHeight;
+
+      pdf.addPage();
+
+      pdf.addImage(
+        imageData,
+        "JPEG",
+        0,
+        position,
+        pdfWidth,
+        imageHeight,
+        undefined,
+        "FAST"
+      );
+
+      heightLeft -=
+        pdfHeight;
+    }
+
+    const blob =
+      pdf.output(
+        "blob"
+      );
+
+    const safeName =
+      (
+        fileName ||
+        "ZETRA-Invoice-Receipt.pdf"
+      )
+        .replace(
+          /[\\/:*?"<>|]+/g,
+          "-"
+        )
+        .replace(
+          /\.pdf$/i,
+          ""
+        ) +
+      ".pdf";
+
+    const file =
+      new File(
+        [blob],
+        safeName,
+        {
+          type:
+            "application/pdf",
+        }
+      );
+
+    const nav =
+      navigator as Navigator & {
+        canShare?: (
+          data?: {
+            files?: File[];
+          }
+        ) => boolean;
+      };
+
+    const canShareFile =
+      typeof navigator.share ===
+        "function" &&
+      (
+        typeof nav.canShare !==
+          "function" ||
+        nav.canShare({
+          files: [file],
+        })
+      );
+
+    if (canShareFile) {
+      try {
+        await (
+          navigator.share as (
+            data?: any
+          ) => Promise<void>
+        )({
+          title:
+            uiText("ZETRA Invoice Receipt"),
+          text:
+            uiText("ZETRA invoice receipt PDF"),
+          files: [file],
+        });
+
+        return true;
+      } catch (
+        shareError: any
+      ) {
+        if (
+          shareError?.name ===
+          "AbortError"
+        ) {
+          return true;
+        }
+
+        console.warn(
+          "Mobile web PDF share failed; using PDF download fallback:",
+          shareError
+        );
+      }
+    }
+
+    /*
+     * Mobile Web fallback:
+     * download the REAL generated PDF.
+     *
+     * We intentionally return true
+     * afterward so Mobile Web never
+     * falls into browser print preview.
+     */
+    const objectUrl =
+      URL.createObjectURL(
+        blob
+      );
+
+    try {
+      const anchor =
+        document.createElement(
+          "a"
+        );
+
+      anchor.href =
+        objectUrl;
+
+      anchor.download =
+        safeName;
+
+      anchor.style.display =
+        "none";
+
+      document.body.appendChild(
+        anchor
+      );
+
+      anchor.click();
+      anchor.remove();
+    } finally {
+      setTimeout(
+        () => {
+          URL.revokeObjectURL(
+            objectUrl
+          );
+        },
+        1500
+      );
+    }
+
+    return true;
+  } catch (error) {
+    console.warn(
+      "Mobile web PDF generation failed:",
+      error
+    );
+
+    /*
+     * Do NOT return false here.
+     * Otherwise Mobile Web would fall
+     * into the old browser print flow.
+     */
+    throw error;
+  } finally {
+    if (
+      host &&
+      host.parentNode
+    ) {
+      host.parentNode.removeChild(
+        host
+      );
+    }
+  }
+}
 function downloadHtmlPdfOnWeb(html: string) {
   if (Platform.OS !== "web" || typeof document === "undefined") return false;
 
@@ -117,6 +537,8 @@ function downloadHtmlPdfOnWeb(html: string) {
   return true;
 }
 export default function CreditPaymentReceiptScreen() {
+ const {documentText, documentLocale} = useDocumentText();
+ const uiText=useCommonText();
   const router = useRouter();
   const params = useLocalSearchParams<{ creditId?: string; paymentId?: string }>();
 
@@ -326,28 +748,28 @@ useEffect(() => {
 
   const receiptText = [
     "ZETRA BMS",
-    "CREDIT PAYMENT RECEIPT",
+    uiText("CREDIT PAYMENT RECEIPT"),
     "",
-    `Customer: ${account?.customer_name ?? "Customer"}`,
-    `Phone: ${account?.phone ?? "No phone"}`,
-    `Store: ${activeStoreName ?? "—"}`,
-    `Date/Time: ${when}`,
+    uiText("Customer: {p0}", {p0: (account?.customer_name ?? "Customer")}),
+    uiText("Phone: {p0}", {p0: (account?.phone ?? "No phone")}),
+    uiText("Store: {p0}", {p0: (activeStoreName ?? "—")}),
+    uiText("Date/Time: {p0}", {p0: (when)}),
     "",
-    `Debt Before Payment: ${money.fmt(balanceBefore)}`,
-    `Payment Paid: ${money.fmt(amountPaid)}`,
-`Payment Date/Time: ${when}`,
-    `Balance After Payment: ${money.fmt(balanceAfter)}`,
+    uiText("Debt Before Payment: {p0}", {p0: (money.fmt(balanceBefore))}),
+    uiText("Payment Paid: {p0}", {p0: (money.fmt(amountPaid))}),
+uiText("Payment Date/Time: {p0}", {p0: (when)}),
+    uiText("Balance After Payment: {p0}", {p0: (money.fmt(balanceAfter))}),
     "",
-    `Method: ${paymentMethodLabel}`,
-    `Reference: ${paymentReferenceLabel}`,
-    `Payment ID: ${paymentIdLabel.length > 18 ? `${paymentIdLabel.slice(0, 18)}…` : paymentIdLabel}`,
-    `Note: ${paymentNoteLabel}`,
+    uiText("Method: {p0}", {p0: (paymentMethodLabel)}),
+    uiText("Reference: {p0}", {p0: (paymentReferenceLabel)}),
+    uiText("Payment ID: {p0}", {p0: (paymentIdLabel.length > 18 ? `${paymentIdLabel.slice(0, 18)}…` : paymentIdLabel)}),
+    uiText("Note: {p0}", {p0: (paymentNoteLabel)}),
   ].join("\n");
 
   const onShareReceipt = useCallback(async () => {
     try {
       await Share.share({
-        title: "Credit Payment Receipt",
+        title: uiText("Credit Payment Receipt"),
         message: receiptText,
       });
     } catch {}
@@ -371,7 +793,7 @@ const onShareReceiptPdf = useCallback(async () => {
   const orgEmail = clean(orgProfile?.email);
   const orgWebsite = clean(orgProfile?.website);
   const orgTagline = clean(orgProfile?.tagline);
-  const footerText = clean(orgProfile?.receipt_footer) || "Thank you for your payment.";
+  const footerText = clean(orgProfile?.receipt_footer) || uiText("Thank you for your payment.");
 
   const storePhone = clean(storeProfile?.phone);
   const storeWhatsapp = clean(storeProfile?.whatsapp);
@@ -409,7 +831,7 @@ const onShareReceiptPdf = useCallback(async () => {
     .join("<br/>");
 
   const allPaymentsHistoryHtml = `
-  <div class="section-title">All Customer Payments History</div>
+  <div class="section-title">${documentText("All Customer Payments History")}</div>
   <table class="summary-table">
     ${txnsWithRunning
       .filter((t) => String(t.kind).toUpperCase() === "PAYMENT")
@@ -428,7 +850,7 @@ const onShareReceiptPdf = useCallback(async () => {
             </td>
             <td class="right">
               <b>${esc(money.fmt(paid))}</b><br/>
-              <span class="muted">Balance: ${esc(money.fmt(t.running_after))}</span>
+              <span class="muted">${documentText("Balance:")} ${esc(money.fmt(t.running_after))}</span>
             </td>
           </tr>
         `;
@@ -445,31 +867,31 @@ const paymentDetailsHtml =
     storeMobileMoneyNumber ||
     storePaymentInstructions
       ? `
-        <div class="section-title">Payment Details</div>
+        <div class="section-title">${documentText("Payment Details")}</div>
         <table class="info-table compact">
           <tr>
             <td>
-              <span class="label">Bank</span>
+              <span class="label">${documentText("Bank")}</span>
               <div class="strong">${esc(
                 [storeBankName, storeAccountName].filter(Boolean).join(" • ") || "—"
               )}</div>
               ${
                 storeAccountNumber
-                  ? `<div class="muted">Account No: ${esc(storeAccountNumber)}</div>`
+                  ? `<div class="muted">${documentText("Account No:")} ${esc(storeAccountNumber)}</div>`
                   : ""
               }
             </td>
             <td>
-              <span class="label">Mobile Money</span>
+              <span class="label">${documentText("Mobile Money")}</span>
               <div class="strong">${esc(storeMobileMoneyName || "—")}</div>
               ${
                 storeMobileMoneyNumber
-                  ? `<div class="muted">Lipa / Pay No: ${esc(storeMobileMoneyNumber)}</div>`
+                  ? `<div class="muted">${documentText("Lipa / Pay No:")} ${esc(storeMobileMoneyNumber)}</div>`
                   : ""
               }
             </td>
             <td>
-              <span class="label">Instructions</span>
+              <span class="label">${documentText("Instructions")}</span>
               <div>${esc(storePaymentInstructions || "—")}</div>
             </td>
           </tr>
@@ -479,10 +901,10 @@ const paymentDetailsHtml =
 
   const html = `
 <!doctype html>
-<html>
+<html lang="${documentLocale().language}" dir="${documentLocale().direction}">
 <head>
   <meta charset="utf-8" />
-  <title>Credit Payment Receipt ${esc(paymentIdLabel)}</title>
+  <title>${documentText("Credit Payment Receipt")} ${esc(paymentIdLabel)}</title>
   <style>
     @page { size: A4 portrait; margin: 12mm 10mm; }
     * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -694,30 +1116,30 @@ const paymentDetailsHtml =
       </div>
 
       <div class="doc-meta">
-        <div class="doc-title">Credit Payment Receipt</div>
-        <b>Payment ID:</b> ${esc(paymentIdLabel)}<br/>
-        <b>Document Type:</b> Debt Payment<br/>
-        <b>Date:</b> ${esc(when)}<br/>
-        <b>Store:</b> ${esc(storeName)}<br/>
-        <span class="badge">${esc(paymentMethodLabel)} • RECEIVED</span>
+        <div class="doc-title">${documentText("Credit Payment Receipt")}</div>
+        <b>${documentText("Payment ID:")}</b> ${esc(paymentIdLabel)}<br/>
+        <b>${documentText("Document Type:")}</b> ${documentText("Debt Payment")}<br/>
+        <b>${documentText("Date:")}</b> ${esc(when)}<br/>
+        <b>${documentText("Store:")}</b> ${esc(storeName)}<br/>
+        <span class="badge">${esc(paymentMethodLabel)} ${documentText("• RECEIVED")}</span>
       </div>
     </div>
 
-    <div class="section-title">Credit Payment Information</div>
+    <div class="section-title">${documentText("Credit Payment Information")}</div>
     <table class="info-table">
       <tr>
         <td>
-          <span class="label">Customer</span>
+          <span class="label">${documentText("Customer")}</span>
           <div class="strong">${esc(account?.customer_name ?? "Customer")}</div>
-          <div class="muted">Phone: ${esc(account?.phone ?? "No phone")}</div>
+          <div class="muted">${documentText("Phone:")} ${esc(account?.phone ?? "No phone")}</div>
         </td>
         <td>
-          <span class="label">Payment</span>
+          <span class="label">${documentText("Payment")}</span>
           <div class="strong">${esc(paymentMethodLabel)}</div>
-          <div class="muted">Reference: ${esc(paymentReferenceLabel)}</div>
+          <div class="muted">${documentText("Reference:")} ${esc(paymentReferenceLabel)}</div>
         </td>
         <td>
-          <span class="label">Store</span>
+          <span class="label">${documentText("Store")}</span>
           <div class="strong">${esc(storeName)}</div>
         </td>
       </tr>
@@ -725,28 +1147,28 @@ const paymentDetailsHtml =
 
     ${
       paymentNoteLabel && paymentNoteLabel !== "—"
-        ? `<div class="note"><b>Note:</b><br/>${esc(paymentNoteLabel)}</div>`
+        ? `<div class="note"><b>${documentText("Note:")}</b><br/>${esc(paymentNoteLabel)}</div>`
         : ""
     }
 
     <div class="summary-wrap">
       <div class="summary-left">
-        <div class="section-title">Debt Payment Summary</div>
+        <div class="section-title">${documentText("Debt Payment Summary")}</div>
         <table class="summary-table">
           <tr>
-            <td><b>Debt Before Payment</b></td>
+            <td><b>${documentText("Debt Before Payment")}</b></td>
             <td class="right">${esc(money.fmt(balanceBefore))}</td>
           </tr>
         <tr>
-  <td><b>Payment Paid</b></td>
+  <td><b>${documentText("Payment Paid")}</b></td>
   <td class="right">${esc(money.fmt(amountPaid))}</td>
 </tr>
 <tr>
-  <td><b>Payment Date / Time</b></td>
+  <td><b>${documentText("Payment Date / Time")}</b></td>
   <td class="right">${esc(when)}</td>
 </tr>
           <tr>
-            <td><b>Balance After Payment</b></td>
+            <td><b>${documentText("Balance After Payment")}</b></td>
             <td class="right"><b>${esc(money.fmt(balanceAfter))}</b></td>
           </tr>
         </table>
@@ -754,7 +1176,7 @@ const paymentDetailsHtml =
 
       <div class="summary-right">
         <div class="total-box">
-        <div class="total-label">Payment Paid</div>
+        <div class="total-label">${documentText("Payment Paid")}</div>
 <div class="total-value">${esc(money.fmt(amountPaid))}</div>
 <div class="muted" style="margin-top:4px;">${esc(when)}</div>
         </div>
@@ -764,19 +1186,19 @@ const paymentDetailsHtml =
     <div class="sign-section">
       <div class="sign-box">
         <div class="sign-line"></div>
-        <b>Received By</b><br/>
+        <b>${documentText("Received By")}</b><br/>
         <span>${esc(storeName)}</span>
       </div>
 
       <div class="sign-box">
         <div class="sign-line"></div>
-        <b>Customer Signature</b><br/>
+        <b>${documentText("Customer Signature")}</b><br/>
         <span>${esc(account?.customer_name ?? "Customer")}</span>
       </div>
 
       <div class="sign-box">
         <div class="sign-line"></div>
-        <b>Business Stamp / Signature</b><br/>
+        <b>${documentText("Business Stamp / Signature")}</b><br/>
         <span>${esc(storeName)}</span>
       </div>
     </div>
@@ -786,7 +1208,7 @@ const paymentDetailsHtml =
 ${paymentDetailsHtml}
 
 <div class="terms">
-      <b>Terms:</b> Hii ni risiti rasmi ya punguzo la deni la mteja. Tafadhali hifadhi risiti hii kwa kumbukumbu.
+      <b>${documentText("Terms:")}</b> ${documentText("Hii ni risiti rasmi ya punguzo la deni la mteja. Tafadhali hifadhi risiti hii kwa kumbukumbu.")}
     </div>
 
     <div class="footer">
@@ -796,7 +1218,7 @@ ${paymentDetailsHtml}
           ? ` • Contact: ${esc([storePhone, storeWhatsapp].filter(Boolean).join(" / "))}`
           : ""
       }
-      • Powered by ZETRA BMS
+      ${documentText("• Powered by ZETRA BMS")}
     </div>
   </div>
 </body>
@@ -804,6 +1226,15 @@ ${paymentDetailsHtml}
 `;
 
   try {
+    if (
+      await shareHtmlPdfOnMobileWeb(
+        html,
+        `ZETRA-Credit-Payment-${paymentIdLabel || "Receipt"}.pdf`, uiText
+      )
+    ) {
+      return;
+    }
+
     if (downloadHtmlPdfOnWeb(html)) return;
 
     const file = await Print.printToFileAsync({ html });
@@ -817,7 +1248,7 @@ ${paymentDetailsHtml}
       await Print.printAsync({ uri: file.uri });
     }
   } catch (e: any) {
-    Alert.alert("PDF failed", e?.message ?? "Failed to create PDF.");
+    Alert.alert(uiText("PDF failed"), e?.message ?? uiText("Failed to create PDF."));
   }
 }, [
   orgProfile,
@@ -848,7 +1279,7 @@ txnsWithRunning,
   const saveEdit = useCallback(async () => {
     const amt = Number(String(editAmount).replace(/[, ]+/g, ""));
     if (!Number.isFinite(amt) || amt <= 0) {
-      Alert.alert("Invalid", "Weka kiasi sahihi cha malipo.");
+      Alert.alert(uiText("Invalid"), uiText("Weka kiasi sahihi cha malipo."));
       return;
     }
 
@@ -866,9 +1297,9 @@ txnsWithRunning,
 
       setEditOpen(false);
       await load();
-      Alert.alert("Updated", "Payment imebadilishwa vizuri.");
+      Alert.alert(uiText("Updated"), uiText("Payment imebadilishwa vizuri."));
     } catch (e: any) {
-      Alert.alert("Edit failed", e?.message ?? "Failed to edit payment.");
+      Alert.alert(uiText("Edit failed"), e?.message ?? uiText("Failed to edit payment."));
     } finally {
       setSavingEdit(false);
     }
@@ -876,12 +1307,12 @@ txnsWithRunning,
 
   const deletePayment = useCallback(() => {
     Alert.alert(
-      "Delete Payment?",
-      "Ukifuta payment hii, deni la mteja litarudi kuongezeka kulingana na kiasi cha payment.",
+      uiText("Delete Payment?"),
+      uiText("Ukifuta payment hii, deni la mteja litarudi kuongezeka kulingana na kiasi cha payment."),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: uiText("Cancel"), style: "cancel" },
         {
-          text: "Delete",
+          text: uiText("Delete"),
           style: "destructive",
           onPress: async () => {
             try {
@@ -892,13 +1323,13 @@ txnsWithRunning,
 
               if (error) throw error;
 
-              Alert.alert("Deleted", "Payment imefutwa vizuri.");
+              Alert.alert(uiText("Deleted"), uiText("Payment imefutwa vizuri."));
               router.replace({
                 pathname: "/(tabs)/credit/[creditId]",
                 params: { creditId },
               } as any);
             } catch (e: any) {
-              Alert.alert("Delete failed", e?.message ?? "Failed to delete payment.");
+              Alert.alert(uiText("Delete failed"), e?.message ?? uiText("Failed to delete payment."));
             } finally {
               setDeletingPayment(false);
             }
@@ -934,8 +1365,7 @@ txnsWithRunning,
       <Screen>
         <Card>
           <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-            Payment receipt not found.
-          </Text>
+            {uiText("Payment receipt not found.")}</Text>
         </Card>
       </Screen>
     );
@@ -965,11 +1395,9 @@ txnsWithRunning,
 
             <View style={{ flex: 1 }}>
               <Text style={{ color: theme.colors.text, fontSize: 22, fontWeight: "900" }}>
-                Credit Payment Receipt
-              </Text>
+                {uiText("Credit Payment Receipt")}</Text>
               <Text style={{ color: theme.colors.muted, marginTop: 4 }}>
-                Risiti ya punguzo la deni.
-              </Text>
+                {uiText("Risiti ya punguzo la deni.")}</Text>
             </View>
           </View>
         </View>
@@ -1006,8 +1434,7 @@ txnsWithRunning,
                 letterSpacing: 1.2,
               }}
             >
-              CREDIT PAYMENT RECEIPT
-            </Text>
+              {uiText("CREDIT PAYMENT RECEIPT")}</Text>
           </View>
 
           <View
@@ -1026,8 +1453,7 @@ txnsWithRunning,
               }}
             >
               <Text style={{ color: theme.colors.muted, fontWeight: "800", flex: 0.95 }}>
-                Customer
-              </Text>
+                {uiText("Customer")}</Text>
               <Text
                 style={{
                   color: theme.colors.text,
@@ -1036,7 +1462,7 @@ txnsWithRunning,
                   textAlign: "right",
                 }}
               >
-                {account?.customer_name ?? "Customer"}
+                {account?.customer_name ?? uiText("Customer")}
               </Text>
             </View>
 
@@ -1048,8 +1474,7 @@ txnsWithRunning,
               }}
             >
               <Text style={{ color: theme.colors.muted, fontWeight: "800", flex: 0.95 }}>
-                Phone
-              </Text>
+                {uiText("Phone")}</Text>
               <Text
                 style={{
                   color: theme.colors.text,
@@ -1058,7 +1483,7 @@ txnsWithRunning,
                   textAlign: "right",
                 }}
               >
-                {account?.phone ?? "No phone"}
+                {account?.phone ?? uiText("No phone")}
               </Text>
             </View>
 
@@ -1070,8 +1495,7 @@ txnsWithRunning,
               }}
             >
               <Text style={{ color: theme.colors.muted, fontWeight: "800", flex: 0.95 }}>
-                Store
-              </Text>
+                {uiText("Store")}</Text>
               <Text
                 style={{
                   color: theme.colors.text,
@@ -1092,8 +1516,7 @@ txnsWithRunning,
               }}
             >
               <Text style={{ color: theme.colors.muted, fontWeight: "800", flex: 0.95 }}>
-                Date / Time
-              </Text>
+                {uiText("Date / Time")}</Text>
               <Text
                 style={{
                   color: theme.colors.text,
@@ -1114,8 +1537,7 @@ txnsWithRunning,
               }}
             >
               <Text style={{ color: theme.colors.muted, fontWeight: "800", flex: 0.95 }}>
-                Method
-              </Text>
+                {uiText("Method")}</Text>
               <Text
                 style={{
                   color: theme.colors.text,
@@ -1124,7 +1546,7 @@ txnsWithRunning,
                   textAlign: "right",
                 }}
               >
-                {paymentMethodLabel}
+                {uiText(paymentMethodKey(paymentMethodLabel))}
               </Text>
             </View>
 
@@ -1136,8 +1558,7 @@ txnsWithRunning,
               }}
             >
               <Text style={{ color: theme.colors.muted, fontWeight: "800", flex: 0.95 }}>
-                Reference
-              </Text>
+                {uiText("Reference")}</Text>
               <Text
                 style={{
                   color: theme.colors.text,
@@ -1158,8 +1579,7 @@ txnsWithRunning,
               }}
             >
               <Text style={{ color: theme.colors.muted, fontWeight: "800", flex: 0.95 }}>
-                Payment ID
-              </Text>
+                {uiText("Payment ID")}</Text>
               <Text
                 style={{
                   color: theme.colors.text,
@@ -1198,8 +1618,7 @@ txnsWithRunning,
               }}
             >
              <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>
-  Payment Paid
-</Text>
+  {uiText("Payment Paid")}</Text>
               <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
                 {money.fmt(balanceBefore)}
               </Text>
@@ -1222,8 +1641,7 @@ txnsWithRunning,
               }}
             >
               <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>
-                Paid Today
-              </Text>
+                {uiText("Paid Today")}</Text>
             <View style={{ alignItems: "flex-end" }}>
   <Text style={{ color: theme.colors.emerald, fontWeight: "900" }}>
     {money.fmt(amountPaid)}
@@ -1251,8 +1669,7 @@ txnsWithRunning,
               }}
             >
               <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>
-                Balance After Payment
-              </Text>
+                {uiText("Balance After Payment")}</Text>
               <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
                 {money.fmt(balanceAfter)}
               </Text>
@@ -1268,8 +1685,7 @@ txnsWithRunning,
 
           <View style={{ alignItems: "center", gap: 6 }}>
             <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}>
-              THANK YOU
-            </Text>
+              {uiText("THANK YOU")}</Text>
             <Text
               style={{
                 color: theme.colors.muted,
@@ -1279,8 +1695,7 @@ txnsWithRunning,
                 lineHeight: 18,
               }}
             >
-              Hii ni risiti rasmi ya punguzo la deni la mteja.
-            </Text>
+              {uiText("Hii ni risiti rasmi ya punguzo la deni la mteja.")}</Text>
             <Text
               style={{
                 color: theme.colors.faint,
@@ -1289,7 +1704,7 @@ txnsWithRunning,
                 textAlign: "center",
               }}
             >
-              {paymentTxn?.note ? String(paymentTxn.note) : "No extra note"}
+              {paymentTxn?.note ? String(paymentTxn.note) : uiText("No extra note")}
             </Text>
           </View>
         </Card>
@@ -1312,30 +1727,29 @@ txnsWithRunning,
             })}
           >
             <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 16 }}>
-              Share Receipt
-            </Text>
+              {uiText("Share Receipt")}</Text>
           </Pressable>
 
           <Button
-            title="Share as PDF"
+            title={uiText("Share as PDF")}
             onPress={onShareReceiptPdf}
             variant="secondary"
           />
 
           <Button
-            title="Edit Payment"
+            title={uiText("Edit Payment")}
             onPress={openEdit}
             variant="secondary"
           />
 
           <Button
-            title={deletingPayment ? "Deleting..." : "Delete Payment"}
+            title={deletingPayment ? uiText("Deleting...") : uiText("Delete Payment")}
             onPress={deletePayment}
             variant="secondary"
           />
 
           <Button
-            title="Back to Credit Detail"
+            title={uiText("Back to Credit Detail")}
             onPress={() => router.back()}
             variant="secondary"
           />
@@ -1367,14 +1781,13 @@ txnsWithRunning,
             }}
           >
             <Text style={{ color: theme.colors.text, fontSize: 22, fontWeight: "900" }}>
-              Edit Payment
-            </Text>
+              {uiText("Edit Payment")}</Text>
 
             <TextInput
               value={editAmount}
               onChangeText={setEditAmount}
               keyboardType="numeric"
-              placeholder="Amount"
+              placeholder={uiText("Amount")}
               placeholderTextColor={theme.colors.faint}
               style={{
                 borderWidth: 1,
@@ -1417,7 +1830,7 @@ txnsWithRunning,
             <TextInput
               value={editReference}
               onChangeText={setEditReference}
-              placeholder="Reference optional"
+              placeholder={uiText("Reference optional")}
               placeholderTextColor={theme.colors.faint}
               style={{
                 borderWidth: 1,
@@ -1433,7 +1846,7 @@ txnsWithRunning,
             <TextInput
               value={editNote}
               onChangeText={setEditNote}
-              placeholder="Note optional"
+              placeholder={uiText("Note optional")}
               placeholderTextColor={theme.colors.faint}
               multiline
               style={{
@@ -1461,7 +1874,7 @@ txnsWithRunning,
               }}
             >
               <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 16 }}>
-                {savingEdit ? "Saving..." : "Save Changes"}
+                {savingEdit ? uiText("Saving...") : uiText("Save Changes")}
               </Text>
             </Pressable>
 
@@ -1478,8 +1891,7 @@ txnsWithRunning,
               }}
             >
               <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-                Cancel
-              </Text>
+                {uiText("Cancel")}</Text>
             </Pressable>
           </View>
         </View>

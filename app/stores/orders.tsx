@@ -1,5 +1,10 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
+// CLEAN_ORDERS_DASHBOARD_V1
+// MOBILE_COMPACT_V2
 // app/stores/orders.tsx
 import { useOrg } from "@/src/context/OrgContext";
+import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/src/supabase/supabaseClient";
 import { Card } from "@/src/ui/Card";
 import { Screen } from "@/src/ui/Screen";
@@ -8,6 +13,7 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  useWindowDimensions,
   Alert,
   Modal,
   Pressable,
@@ -219,17 +225,37 @@ function MiniPill({
 }
 
 export default function StoreOrdersScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
-  const params = useLocalSearchParams<{ orgId?: string; storeId?: string; storeName?: string }>();
+  const params = useLocalSearchParams<{ orgId?: string; storeId?: string; storeName?: string; category?: string }>();
   const orgCtx: any = useOrg();
 
   const orgId = String(params?.orgId ?? orgCtx?.activeOrgId ?? "").trim();
   const storeId = String(params?.storeId ?? orgCtx?.activeStoreId ?? "").trim();
   const storeName = String(params?.storeName ?? orgCtx?.activeStoreName ?? "Active Store").trim();
 
-  const [tab, setTab] = useState<TabMode>("RESERVATIONS");
+  const category = String(params?.category ?? "").trim().toLowerCase();
+  const isDetail = ["reservations", "pre-orders", "pending", "ready", "completed"].includes(category);
+  const { width: ordersWidth } = useWindowDimensions();
+  const desktopOrders = ordersWidth >= 900;
+
+  const [tab, setTab] = useState<TabMode>(
+    category === "pre-orders" ? "PRE_ORDERS" : "RESERVATIONS"
+  );
+
+  useEffect(() => {
+    setTab(category === "pre-orders" ? "PRE_ORDERS" : "RESERVATIONS");
+  }, [category]);
   const [rows, setRows] = useState<StoreOrderRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [overview, setOverview] = useState<{
+    reservations: StoreOrderRow[];
+    preOrders: StoreOrderRow[];
+  }>({ reservations: [], preOrders: [] });
+  const [overviewLoading, setOverviewLoading] = useState(false);
+  const [overviewError, setOverviewError] = useState<string | null>(null);
+  const overviewRequest = React.useRef(0);
 
   const [payModalOpen, setPayModalOpen] = useState(false);
   const [payTarget, setPayTarget] = useState<StoreOrderRow | null>(null);
@@ -264,6 +290,14 @@ export default function StoreOrdersScreen() {
   });
   const [openCustomers, setOpenCustomers] = useState<Record<string, boolean>>({});
 
+  const [orderSearch, setOrderSearch] = useState("");
+  const [orderPage, setOrderPage] = useState(1);
+
+  useEffect(() => {
+    setOrderSearch("");
+    setOrderPage(1);
+  }, [category, storeId]);
+
   const C: any = (theme as any)?.colors ?? {};
   const TEXT = C?.text ?? "#0F172A";
   const MUTED = C?.muted ?? "#64748B";
@@ -276,7 +310,7 @@ export default function StoreOrdersScreen() {
 
   const goPickProducts = useCallback(() => {
     if (!orgId || !storeId) {
-      Alert.alert("Missing", "Organization au Store haijapatikana.");
+      Alert.alert(uiText("Missing"), uiText("Organization au Store haijapatikana."));
       return;
     }
 
@@ -305,12 +339,69 @@ const loadOrders = useCallback(async () => {
       if (error) throw error;
       setRows(Array.isArray(data) ? (data as StoreOrderRow[]) : []);
     } catch (err: any) {
-      Alert.alert("Failed", err?.message ?? "Imeshindikana kupakia store orders.");
+      Alert.alert(uiText("Failed"), err?.message ?? uiText("Imeshindikana kupakia store orders."));
       setRows([]);
     } finally {
       setLoading(false);
     }
   }, [orgId, storeId, dbType]);
+
+  const loadOverview = useCallback(async () => {
+    const rid = ++overviewRequest.current;
+
+    if (!storeId) {
+      setOverviewLoading(false);
+      setOverviewError("No active store selected.");
+      return;
+    }
+
+    setOverviewLoading(true);
+    setOverviewError(null);
+
+    try {
+      const [a, b] = await Promise.all([
+        supabase.rpc("get_store_orders_v1", {
+          p_org_id: orgId || null,
+          p_store_id: storeId,
+          p_order_type: "RESERVATION",
+        }),
+        supabase.rpc("get_store_orders_v1", {
+          p_org_id: orgId || null,
+          p_store_id: storeId,
+          p_order_type: "PRE_ORDER",
+        }),
+      ]);
+
+      if (a.error) throw a.error;
+      if (b.error) throw b.error;
+      if (rid !== overviewRequest.current) return;
+
+      setOverview({
+        reservations: Array.isArray(a.data) ? a.data as StoreOrderRow[] : [],
+        preOrders: Array.isArray(b.data) ? b.data as StoreOrderRow[] : [],
+      });
+    } catch (e: any) {
+      if (rid !== overviewRequest.current) return;
+      setOverviewError(e?.message ?? "Failed to load overview.");
+    } finally {
+      if (rid === overviewRequest.current) setOverviewLoading(false);
+    }
+  }, [orgId, storeId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (isDetail) return;
+      void loadOverview();
+      return () => { overviewRequest.current += 1; };
+    }, [isDetail, loadOverview])
+  );
+
+  const openCategory = useCallback((slug: string) => {
+    router.push({
+      pathname: "/stores/order-category/[category]",
+      params: { category: slug, orgId, storeId, storeName },
+    } as any);
+  }, [router, orgId, storeId, storeName]);
 
   const openNewOrder = useCallback(() => {
     if (tab === "PRE_ORDERS") {
@@ -361,7 +452,7 @@ const loadOrders = useCallback(async () => {
 
   const savePreOrder = useCallback(async () => {
     if (!orgId || !storeId) {
-      Alert.alert("Missing", "Organization au Store haijapatikana.");
+      Alert.alert(uiText("Missing"), uiText("Organization au Store haijapatikana."));
       return;
     }
 
@@ -371,12 +462,12 @@ const loadOrders = useCallback(async () => {
     const total = Number(String(preTotalAmount || "0").replace(/[^\d]/g, ""));
     const paid = Number(String(prePaidAmount || "0").replace(/[^\d]/g, ""));
 
-    if (!name) return Alert.alert("Missing", "Weka jina la mteja.");
-    if (!phone) return Alert.alert("Missing", "Weka namba ya simu.");
-    if (!product) return Alert.alert("Missing", "Andika bidhaa/design anayohitaji.");
-    if (!Number.isFinite(total) || total <= 0) return Alert.alert("Invalid", "Weka makadirio ya bei.");
-    if (!Number.isFinite(paid) || paid < 0) return Alert.alert("Invalid", "Paid amount si sahihi.");
-    if (paid > total) return Alert.alert("Invalid", "Paid haiwezi kuzidi total.");
+    if (!name) return Alert.alert(uiText("Missing"), uiText("Weka jina la mteja."));
+    if (!phone) return Alert.alert(uiText("Missing"), uiText("Weka namba ya simu."));
+    if (!product) return Alert.alert(uiText("Missing"), uiText("Andika bidhaa/design anayohitaji."));
+    if (!Number.isFinite(total) || total <= 0) return Alert.alert(uiText("Invalid"), uiText("Weka makadirio ya bei."));
+    if (!Number.isFinite(paid) || paid < 0) return Alert.alert(uiText("Invalid"), uiText("Paid amount si sahihi."));
+    if (paid > total) return Alert.alert(uiText("Invalid"), uiText("Paid haiwezi kuzidi total."));
 
     const balance = Math.max(0, total - paid);
     const noteParts = [
@@ -412,9 +503,9 @@ const loadOrders = useCallback(async () => {
       setPreModalOpen(false);
 
       await loadOrders();
-      Alert.alert("Success ✅", "Pre-order imehifadhiwa vizuri.");
+      Alert.alert(uiText("Success ✅"), uiText("Pre-order imehifadhiwa vizuri."));
     } catch (err: any) {
-      Alert.alert("Failed", err?.message ?? "Imeshindikana kuhifadhi pre-order.");
+      Alert.alert(uiText("Failed"), err?.message ?? uiText("Imeshindikana kuhifadhi pre-order."));
     } finally {
       setPreSaving(false);
     }
@@ -435,15 +526,16 @@ const loadOrders = useCallback(async () => {
 
   useFocusEffect(
     useCallback(() => {
+      if (!isDetail) return;
       void loadOrders();
       const t = setTimeout(() => void loadOrders(), 600);
       return () => clearTimeout(t);
-    }, [loadOrders])
+    }, [isDetail, loadOrders])
   );
 
   const openAddPayment = useCallback((order: StoreOrderRow) => {
     if (isCompletedOrder(order)) {
-      Alert.alert("Closed", "Order hii tayari imekamilishwa.");
+      Alert.alert(uiText("Closed"), uiText("Order hii tayari imekamilishwa."));
       return;
     }
 
@@ -470,12 +562,12 @@ const loadOrders = useCallback(async () => {
     const balance = Number(payTarget.balance_amount || 0);
 
     if (!Number.isFinite(amount) || amount <= 0) {
-      Alert.alert("Invalid", "Weka kiasi sahihi cha malipo.");
+      Alert.alert(uiText("Invalid"), uiText("Weka kiasi sahihi cha malipo."));
       return;
     }
 
     if (amount > balance) {
-      Alert.alert("Invalid", "Malipo hayawezi kuzidi balance iliyobaki.");
+      Alert.alert(uiText("Invalid"), uiText("Malipo hayawezi kuzidi balance iliyobaki."));
       return;
     }
 
@@ -493,9 +585,9 @@ const loadOrders = useCallback(async () => {
 
       closeAddPayment();
       await loadOrders();
-      Alert.alert("Success ✅", "Malipo yameongezwa vizuri.");
+      Alert.alert(uiText("Success ✅"), uiText("Malipo yameongezwa vizuri."));
     } catch (err: any) {
-      Alert.alert("Failed", err?.message ?? "Imeshindikana kuongeza malipo.");
+      Alert.alert(uiText("Failed"), err?.message ?? uiText("Imeshindikana kuongeza malipo."));
     } finally {
       setPaySaving(false);
     }
@@ -505,12 +597,12 @@ const loadOrders = useCallback(async () => {
     if (!order?.id) return;
 
     if (isCompletedOrder(order)) {
-      Alert.alert("Already Completed", "Pickup hii tayari imekamilishwa.");
+      Alert.alert(uiText("Already Completed"), uiText("Pickup hii tayari imekamilishwa."));
       return;
     }
 
     if (Number(order.balance_amount || 0) > 0) {
-      Alert.alert("Blocked", "Order bado ina balance. Ongeza malipo kwanza.");
+      Alert.alert(uiText("Blocked"), uiText("Order bado ina balance. Ongeza malipo kwanza."));
       return;
     }
 
@@ -548,7 +640,7 @@ const loadOrders = useCallback(async () => {
 
       await loadOrders();
     } catch (err: any) {
-      Alert.alert("Failed", err?.message ?? "Imeshindikana kukamilisha pickup.");
+      Alert.alert(uiText("Failed"), err?.message ?? uiText("Imeshindikana kukamilisha pickup."));
     } finally {
       setPickupSaving(false);
     }
@@ -620,6 +712,20 @@ const loadOrders = useCallback(async () => {
     [makeCustomerFiles, completedRows]
   );
 
+  const allCustomerFiles = useMemo(
+    () => makeCustomerFiles(rows),
+    [makeCustomerFiles, rows]
+  );
+
+  const reservationOverview = overview.reservations;
+  const overviewCards = [
+    { slug: "reservations", label: "Reservations", data: reservationOverview, bg: "#E8F8F2", color: "#059669" },
+    { slug: "pre-orders", label: "Pre Orders", data: overview.preOrders, bg: "#EEF2FF", color: "#2563EB" },
+    { slug: "pending", label: "Pending Payments", data: reservationOverview.filter(r => !isCompletedOrder(r) && Number(r.balance_amount || 0) > 0), bg: "#FFF4EA", color: "#B45309" },
+    { slug: "ready", label: "Ready for Pickup", data: reservationOverview.filter(r => !isCompletedOrder(r) && Number(r.balance_amount || 0) <= 0), bg: "#EFF8FF", color: "#2563EB" },
+    { slug: "completed", label: "Completed Pickups", data: reservationOverview.filter(isCompletedOrder), bg: "#EAF8F0", color: "#059669" },
+  ];
+
   const renderOrderCompact = (r: StoreOrderRow, orderIndex: number) => {
     const parsed = parseOrderNote(r.note);
     const itemText = parsed.itemsText || r.product_name || "Order item";
@@ -642,27 +748,27 @@ const loadOrders = useCallback(async () => {
         }}
       >
         <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
-          <Text style={{ color: TEXT, fontWeight: "900", flex: 1 }}>Order #{orderIndex + 1}</Text>
+          <Text style={{ color: TEXT, fontWeight: "900", flex: 1 }}>{uiText("Order #")}{orderIndex + 1}</Text>
           <Text style={{ color: FAINT, fontWeight: "900", fontSize: 12 }}>
             {shortDate(r.created_at)}
           </Text>
         </View>
 
-        <Text style={{ color: TEXT, fontWeight: "900", lineHeight: 19 }}>{itemText}</Text>
+        <Text style={{ color: TEXT, fontWeight: "900", lineHeight: 19 }}>{((parsed.itemsText || r.product_name) || uiText("Order item"))}</Text>
 
         <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
           <MiniPill label={money(total)} />
-          <MiniPill label={`Paid ${money(paid)}`} tone="green" />
-          <MiniPill label={`Bal ${money(bal)}`} tone={bal > 0 ? "amber" : "green"} />
+          <MiniPill label={uiText("Paid {p0}", {p0: (money(paid))})} tone="green" />
+          <MiniPill label={uiText("Bal {p0}", {p0: (money(bal))})} tone={bal > 0 ? "amber" : "green"} />
         </View>
 
         <Text style={{ color: FAINT, fontWeight: "900", lineHeight: 18 }}>
-          {completed ? "PICKED UP" : String(r.status || "ACTIVE").toUpperCase()} • {paidStatus}
+          {completed ? uiText("PICKED UP") : uiText(String(r.status || "ACTIVE").toUpperCase())} • {uiText(paidStatus)}
         </Text>
 
    {parsed.paymentText ? (
   <Text style={{ color: MUTED, fontWeight: "800", lineHeight: 18 }}>
-    Payment: {parsed.paymentText}
+    {uiText("Payment:")}{parsed.paymentText}
   </Text>
 ) : null}
 
@@ -678,7 +784,7 @@ const loadOrders = useCallback(async () => {
       marginTop: 4,
     }}
   >
-    <Text style={{ color: TEXT, fontWeight: "900" }}>Payment History</Text>
+    <Text style={{ color: TEXT, fontWeight: "900" }}>{uiText("Payment History")}</Text>
 
     {parsed.payments.map((p, idx) => (
       <View
@@ -695,8 +801,8 @@ const loadOrders = useCallback(async () => {
         </Text>
 
         <Text style={{ color: MUTED, fontWeight: "800", lineHeight: 18 }}>
-          Method: {p.method}
-          {p.reference && p.reference !== "-" ? ` • Ref: ${p.reference}` : ""}
+          {uiText("Method:")}{p.method}
+          {p.reference && p.reference !== "-" ? uiText(" • Ref: {p0}", {p0: (p.reference)}) : ""}
         </Text>
 
         <Text style={{ color: FAINT, fontWeight: "800", fontSize: 12 }}>
@@ -709,13 +815,13 @@ const loadOrders = useCallback(async () => {
 
         {parsed.discountText ? (
           <Text style={{ color: "#047857", fontWeight: "900", lineHeight: 18 }}>
-            Discount: {parsed.discountText}
+            {uiText("Discount:")}{parsed.discountText}
           </Text>
         ) : null}
 
         {parsed.cleanNote ? (
           <Text style={{ color: MUTED, fontWeight: "800", lineHeight: 18 }}>
-            Note: {parsed.cleanNote}
+            {uiText("Note:")}{parsed.cleanNote}
           </Text>
         ) : null}
 
@@ -733,7 +839,7 @@ const loadOrders = useCallback(async () => {
                   paddingVertical: 8,
                 }}
               >
-                <Text style={{ color: EMERALD, fontWeight: "900" }}>Add Payment</Text>
+                <Text style={{ color: EMERALD, fontWeight: "900" }}>{uiText("Add Payment")}</Text>
               </Pressable>
             ) : null}
 
@@ -749,7 +855,7 @@ const loadOrders = useCallback(async () => {
                 paddingVertical: 8,
               }}
             >
-              <Text style={{ color: TEXT, fontWeight: "900" }}>Complete Pickup</Text>
+              <Text style={{ color: TEXT, fontWeight: "900" }}>{uiText("Complete Pickup")}</Text>
             </Pressable>
             ) : null}
           </View>
@@ -765,7 +871,7 @@ const loadOrders = useCallback(async () => {
     files: CustomerFile[],
     tone: "amber" | "green" | "blue"
   ) => {
-    const open = openSections[sectionKey];
+    const open = isDetail || openSections[sectionKey];
 
     const totals = files.reduce(
       (a, f) => {
@@ -776,6 +882,31 @@ const loadOrders = useCallback(async () => {
         return a;
       },
       { orders: 0, total: 0, paid: 0, balance: 0 }
+    );
+
+    const query = orderSearch.trim().toLowerCase();
+    const filteredFiles = files.filter((file) => {
+      if (!query) return true;
+
+      const products = file.orders
+        .map((r) => String(r.product_name ?? ""))
+        .join(" ");
+
+      const searchable = [
+        file.name,
+        file.phone,
+        products,
+      ].join(" ").toLowerCase();
+
+      return searchable.includes(query);
+    });
+
+    const pageSize = 10;
+    const totalPages = Math.max(1, Math.ceil(filteredFiles.length / pageSize));
+    const currentPage = Math.min(orderPage, totalPages);
+    const visibleFiles = filteredFiles.slice(
+      (currentPage - 1) * pageSize,
+      currentPage * pageSize
     );
 
     return (
@@ -792,15 +923,36 @@ const loadOrders = useCallback(async () => {
           <Text style={{ color: MUTED, fontWeight: "800", lineHeight: 19 }}>{subtitle}</Text>
 
           <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-            <MiniPill label={`${totals.orders} Orders`} tone={tone} />
-            <MiniPill label={`Paid ${money(totals.paid)}`} tone="green" />
-            <MiniPill label={`Bal ${money(totals.balance)}`} tone={totals.balance > 0 ? "amber" : "green"} />
+            <MiniPill label={uiText("{p0} Orders", {p0: (totals.orders)})} tone={tone} />
+            <MiniPill label={uiText("Paid {p0}", {p0: (money(totals.paid))})} tone="green" />
+            <MiniPill label={uiText("Bal {p0}", {p0: (money(totals.balance))})} tone={totals.balance > 0 ? "amber" : "green"} />
           </View>
         </Pressable>
 
+        <TextInput
+          value={orderSearch}
+          onChangeText={(value) => {
+            setOrderSearch(value);
+            setOrderPage(1);
+          }}
+          placeholder={uiText("Search customer, phone or product...")}
+          placeholderTextColor={FAINT}
+          autoCapitalize="none"
+          style={{
+            borderWidth: 1,
+            borderColor: BORDER,
+            backgroundColor: "#F8FAFC",
+            borderRadius: 14,
+            paddingHorizontal: 14,
+            paddingVertical: 12,
+            color: TEXT,
+            fontSize: 14,
+          }}
+        />
+
         {open ? (
           <View style={{ gap: 10 }}>
-            {files.length === 0 ? (
+            {filteredFiles.length === 0 ? (
               <View
                 style={{
                   borderWidth: 1,
@@ -810,10 +962,10 @@ const loadOrders = useCallback(async () => {
                   padding: 12,
                 }}
               >
-                <Text style={{ color: MUTED, fontWeight: "800" }}>Hakuna taarifa kwenye sehemu hii.</Text>
+                <Text style={{ color: MUTED, fontWeight: "800" }}>{uiText("Hakuna taarifa kwenye sehemu hii.")}</Text>
               </View>
             ) : (
-              files.map((file, index) => {
+              visibleFiles.map((file, index) => {
                 const customerKey = `${sectionKey}:${file.key}`;
                 const customerOpen = openCustomers[customerKey] ?? false;
 
@@ -836,18 +988,18 @@ const loadOrders = useCallback(async () => {
                       style={{ gap: 7 }}
                     >
                       <Text style={{ color: TEXT, fontWeight: "900", fontSize: 18 }}>
-                        {index + 1}. {file.name}
+                        {(currentPage - 1) * pageSize + index + 1}. {file.name}
                       </Text>
-                      <Text style={{ color: MUTED, fontWeight: "900" }}>Phone: {file.phone}</Text>
+                      <Text style={{ color: MUTED, fontWeight: "900" }}>{uiText("Phone:")}{file.phone}</Text>
 
                       <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-                        <MiniPill label={`${file.orders.length} Orders`} tone={tone} />
-                        <MiniPill label={`Total ${money(file.total)}`} />
-                        <MiniPill label={`Bal ${money(file.balance)}`} tone={file.balance > 0 ? "amber" : "green"} />
+                        <MiniPill label={uiText("{p0} Orders", {p0: (file.orders.length)})} tone={tone} />
+                        <MiniPill label={uiText("Total {p0}", {p0: (money(file.total))})} />
+                        <MiniPill label={uiText("Bal {p0}", {p0: (money(file.balance))})} tone={file.balance > 0 ? "amber" : "green"} />
                       </View>
 
                       <Text style={{ color: FAINT, fontWeight: "900" }}>
-                        {customerOpen ? "Close customer file ▲" : "Open customer file ▼"}
+                        {customerOpen ? uiText("Close customer file ▲") : uiText("Open customer file ▼")}
                       </Text>
                     </Pressable>
 
@@ -860,6 +1012,55 @@ const loadOrders = useCallback(async () => {
                 );
               })
             )}
+
+            {filteredFiles.length > pageSize ? (
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: 10,
+                  paddingTop: 10,
+                  borderTopWidth: 1,
+                  borderTopColor: BORDER,
+                }}
+              >
+                <Text style={{ color: MUTED, fontWeight: "800", fontSize: 12 }}>
+                  {uiText("Page")}{currentPage} {uiText("of")}{totalPages} | {filteredFiles.length} {uiText("customers")}</Text>
+
+                <View style={{ flexDirection: "row", gap: 8 }}>
+                  <Pressable
+                    disabled={currentPage <= 1}
+                    onPress={() => setOrderPage(Math.max(1, currentPage - 1))}
+                    style={{
+                      paddingHorizontal: 14,
+                      paddingVertical: 10,
+                      borderWidth: 1,
+                      borderColor: BORDER,
+                      borderRadius: 10,
+                      opacity: currentPage <= 1 ? 0.4 : 1,
+                    }}
+                  >
+                    <Text style={{ color: TEXT, fontWeight: "900" }}>{uiText("Previous")}</Text>
+                  </Pressable>
+
+                  <Pressable
+                    disabled={currentPage >= totalPages}
+                    onPress={() => setOrderPage(Math.min(totalPages, currentPage + 1))}
+                    style={{
+                      paddingHorizontal: 14,
+                      paddingVertical: 10,
+                      borderRadius: 10,
+                      backgroundColor: "#059669",
+                      opacity: currentPage >= totalPages ? 0.4 : 1,
+                    }}
+                  >
+                    <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>{uiText("Next")}</Text>
+                  </Pressable>
+                </View>
+              </View>
+            ) : null}
           </View>
         ) : null}
       </Card>
@@ -878,16 +1079,16 @@ const loadOrders = useCallback(async () => {
           }}
         >
           <Card style={{ backgroundColor: "#FFFFFF", borderColor: BORDER, gap: 12 }}>
-            <Text style={{ color: TEXT, fontWeight: "900", fontSize: 20 }}>Add Payment</Text>
+            <Text style={{ color: TEXT, fontWeight: "900", fontSize: 20 }}>{uiText("Add Payment")}</Text>
 
             <Text style={{ color: MUTED, fontWeight: "800" }}>
-              Balance: {money(payTarget?.balance_amount)}
+              {uiText("Balance:")}{money(payTarget?.balance_amount)}
             </Text>
 
             <TextInput
               value={payAmount}
               onChangeText={(v) => setPayAmount(v.replace(/[^\d]/g, ""))}
-              placeholder="Amount"
+              placeholder={uiText("Amount")}
               placeholderTextColor={FAINT}
               keyboardType="numeric"
               style={{
@@ -903,7 +1104,7 @@ const loadOrders = useCallback(async () => {
             <TextInput
               value={payMethod}
               onChangeText={setPayMethod}
-              placeholder="Method: CASH / MOBILE / BANK"
+              placeholder={uiText("Method: CASH / MOBILE / BANK")}
               placeholderTextColor={FAINT}
               style={{
                 borderWidth: 1,
@@ -918,7 +1119,7 @@ const loadOrders = useCallback(async () => {
             <TextInput
               value={payReference}
               onChangeText={setPayReference}
-              placeholder="Reference optional"
+              placeholder={uiText("Reference optional")}
               placeholderTextColor={FAINT}
               style={{
                 borderWidth: 1,
@@ -940,7 +1141,7 @@ const loadOrders = useCallback(async () => {
               }}
             >
               <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>
-                {paySaving ? "Saving..." : "Save Payment"}
+                {paySaving ? uiText("Saving...") : uiText("Save Payment")}
               </Text>
             </Pressable>
 
@@ -954,7 +1155,7 @@ const loadOrders = useCallback(async () => {
                 alignItems: "center",
               }}
             >
-              <Text style={{ color: TEXT, fontWeight: "900" }}>Cancel</Text>
+              <Text style={{ color: TEXT, fontWeight: "900" }}>{uiText("Cancel")}</Text>
             </Pressable>
           </Card>
         </View>
@@ -962,12 +1163,11 @@ const loadOrders = useCallback(async () => {
 <Modal visible={preModalOpen} transparent animationType="fade" onRequestClose={closePreOrderModal}>
         <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "center", padding: 18 }}>
           <Card style={{ backgroundColor: "#FFFFFF", borderColor: BORDER, gap: 10 }}>
-            <Text style={{ color: TEXT, fontWeight: "900", fontSize: 20 }}>New Pre Order</Text>
+            <Text style={{ color: TEXT, fontWeight: "900", fontSize: 20 }}>{uiText("New Pre Order")}</Text>
             <Text style={{ color: MUTED, fontWeight: "800" }}>
-              Hii ni kwa mzigo ambao bado haupo dukani. Haitapunguza stock wala kufungua checkout.
-            </Text>
+              {uiText("Hii ni kwa mzigo ambao bado haupo dukani. Haitapunguza stock wala kufungua checkout.")}</Text>
 
-            <TextInput value={preCustomerName} onChangeText={onChangePreCustomerName} placeholder="Customer name" placeholderTextColor={FAINT} style={{ borderWidth: 1, borderColor: BORDER, borderRadius: 16, padding: 12, fontWeight: "900", color: TEXT }} />
+            <TextInput value={preCustomerName} onChangeText={onChangePreCustomerName} placeholder={uiText("Customer name")} placeholderTextColor={FAINT} style={{ borderWidth: 1, borderColor: BORDER, borderRadius: 16, padding: 12, fontWeight: "900", color: TEXT }} />
 
 {preCustomerSuggestions.length > 0 ? (
   <View style={{ borderWidth: 1, borderColor: BORDER, borderRadius: 16, overflow: "hidden" }}>
@@ -984,29 +1184,29 @@ const loadOrders = useCallback(async () => {
         }}
       >
         <Text style={{ color: TEXT, fontWeight: "900" }}>{c.name}</Text>
-        <Text style={{ color: MUTED, fontWeight: "800", marginTop: 2 }}>{c.phone || "No phone"}</Text>
+        <Text style={{ color: MUTED, fontWeight: "800", marginTop: 2 }}>{c.phone || uiText("No phone")}</Text>
       </Pressable>
     ))}
   </View>
 ) : null}
-            <TextInput value={preCustomerPhone} onChangeText={setPreCustomerPhone} placeholder="Phone number" placeholderTextColor={FAINT} keyboardType="phone-pad" style={{ borderWidth: 1, borderColor: BORDER, borderRadius: 16, padding: 12, fontWeight: "900", color: TEXT }} />
-            <TextInput value={preProductName} onChangeText={setPreProductName} placeholder="Bidhaa / design anayohitaji" placeholderTextColor={FAINT} style={{ borderWidth: 1, borderColor: BORDER, borderRadius: 16, padding: 12, fontWeight: "900", color: TEXT }} />
+            <TextInput value={preCustomerPhone} onChangeText={setPreCustomerPhone} placeholder={uiText("Phone number")} placeholderTextColor={FAINT} keyboardType="phone-pad" style={{ borderWidth: 1, borderColor: BORDER, borderRadius: 16, padding: 12, fontWeight: "900", color: TEXT }} />
+            <TextInput value={preProductName} onChangeText={setPreProductName} placeholder={uiText("Bidhaa / design anayohitaji")} placeholderTextColor={FAINT} style={{ borderWidth: 1, borderColor: BORDER, borderRadius: 16, padding: 12, fontWeight: "900", color: TEXT }} />
 
             <View style={{ flexDirection: "row", gap: 8 }}>
-              <TextInput value={preTotalAmount} onChangeText={(v) => setPreTotalAmount(v.replace(/[^\d]/g, ""))} placeholder="Estimated total" placeholderTextColor={FAINT} keyboardType="numeric" style={{ flex: 1, borderWidth: 1, borderColor: BORDER, borderRadius: 16, padding: 12, fontWeight: "900", color: TEXT }} />
-              <TextInput value={prePaidAmount} onChangeText={(v) => setPrePaidAmount(v.replace(/[^\d]/g, ""))} placeholder="Paid" placeholderTextColor={FAINT} keyboardType="numeric" style={{ flex: 1, borderWidth: 1, borderColor: BORDER, borderRadius: 16, padding: 12, fontWeight: "900", color: TEXT }} />
+              <TextInput value={preTotalAmount} onChangeText={(v) => setPreTotalAmount(v.replace(/[^\d]/g, ""))} placeholder={uiText("Estimated total")} placeholderTextColor={FAINT} keyboardType="numeric" style={{ flex: 1, borderWidth: 1, borderColor: BORDER, borderRadius: 16, padding: 12, fontWeight: "900", color: TEXT }} />
+              <TextInput value={prePaidAmount} onChangeText={(v) => setPrePaidAmount(v.replace(/[^\d]/g, ""))} placeholder={uiText("Paid")} placeholderTextColor={FAINT} keyboardType="numeric" style={{ flex: 1, borderWidth: 1, borderColor: BORDER, borderRadius: 16, padding: 12, fontWeight: "900", color: TEXT }} />
             </View>
 
-            <TextInput value={prePaymentMethod} onChangeText={setPrePaymentMethod} placeholder="Method: CASH / MOBILE / BANK" placeholderTextColor={FAINT} style={{ borderWidth: 1, borderColor: BORDER, borderRadius: 16, padding: 12, fontWeight: "900", color: TEXT }} />
-            <TextInput value={preReference} onChangeText={setPreReference} placeholder="Reference optional" placeholderTextColor={FAINT} style={{ borderWidth: 1, borderColor: BORDER, borderRadius: 16, padding: 12, fontWeight: "900", color: TEXT }} />
-            <TextInput value={preNote} onChangeText={setPreNote} placeholder="Note optional" placeholderTextColor={FAINT} multiline style={{ borderWidth: 1, borderColor: BORDER, borderRadius: 16, padding: 12, fontWeight: "900", color: TEXT, minHeight: 70 }} />
+            <TextInput value={prePaymentMethod} onChangeText={setPrePaymentMethod} placeholder={uiText("Method: CASH / MOBILE / BANK")} placeholderTextColor={FAINT} style={{ borderWidth: 1, borderColor: BORDER, borderRadius: 16, padding: 12, fontWeight: "900", color: TEXT }} />
+            <TextInput value={preReference} onChangeText={setPreReference} placeholder={uiText("Reference optional")} placeholderTextColor={FAINT} style={{ borderWidth: 1, borderColor: BORDER, borderRadius: 16, padding: 12, fontWeight: "900", color: TEXT }} />
+            <TextInput value={preNote} onChangeText={setPreNote} placeholder={uiText("Note optional")} placeholderTextColor={FAINT} multiline style={{ borderWidth: 1, borderColor: BORDER, borderRadius: 16, padding: 12, fontWeight: "900", color: TEXT, minHeight: 70 }} />
 
             <Pressable onPress={preSaving ? undefined : savePreOrder} style={{ backgroundColor: preSaving ? "#94A3B8" : EMERALD, borderRadius: 18, paddingVertical: 14, alignItems: "center" }}>
-              <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>{preSaving ? "Saving..." : "Save Pre Order"}</Text>
+              <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>{preSaving ? uiText("Saving...") : uiText("Save Pre Order")}</Text>
             </Pressable>
 
             <Pressable onPress={closePreOrderModal} style={{ borderWidth: 1, borderColor: BORDER, borderRadius: 18, paddingVertical: 14, alignItems: "center" }}>
-              <Text style={{ color: TEXT, fontWeight: "900" }}>Cancel</Text>
+              <Text style={{ color: TEXT, fontWeight: "900" }}>{uiText("Cancel")}</Text>
             </Pressable>
           </Card>
         </View>
@@ -1014,22 +1214,21 @@ const loadOrders = useCallback(async () => {
       <Modal visible={pickupConfirmOpen} transparent animationType="fade" onRequestClose={cancelPickupConfirm}>
         <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "center", padding: 18 }}>
           <Card style={{ backgroundColor: "#FFFFFF", borderColor: BORDER, gap: 12 }}>
-            <Text style={{ color: TEXT, fontWeight: "900", fontSize: 20 }}>Complete Pickup</Text>
+            <Text style={{ color: TEXT, fontWeight: "900", fontSize: 20 }}>{uiText("Complete Pickup")}</Text>
             <Text style={{ color: MUTED, fontWeight: "800", lineHeight: 20 }}>
-              Una uhakika mteja amechukua mzigo huu? Mfumo utaunda sale na order itahamia Completed Pickups.
-            </Text>
+              {uiText("Una uhakika mteja amechukua mzigo huu? Mfumo utaunda sale na order itahamia Completed Pickups.")}</Text>
 
             <Pressable
               onPress={pickupSaving ? undefined : submitCompletePickup}
               style={{ backgroundColor: pickupSaving ? "#94A3B8" : EMERALD, borderRadius: 18, paddingVertical: 14, alignItems: "center" }}
             >
               <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>
-                {pickupSaving ? "Completing..." : "Complete Pickup"}
+                {pickupSaving ? uiText("Completing...") : uiText("Complete Pickup")}
               </Text>
             </Pressable>
 
             <Pressable onPress={cancelPickupConfirm} style={{ borderWidth: 1, borderColor: BORDER, borderRadius: 18, paddingVertical: 14, alignItems: "center" }}>
-              <Text style={{ color: TEXT, fontWeight: "900" }}>Cancel</Text>
+              <Text style={{ color: TEXT, fontWeight: "900" }}>{uiText("Cancel")}</Text>
             </Pressable>
           </Card>
         </View>
@@ -1038,135 +1237,201 @@ const loadOrders = useCallback(async () => {
       <Modal visible={pickupDoneOpen} transparent animationType="fade" onRequestClose={() => setPickupDoneOpen(false)}>
         <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "center", padding: 18 }}>
           <Card style={{ backgroundColor: "#FFFFFF", borderColor: BORDER, gap: 12 }}>
-            <Text style={{ color: TEXT, fontWeight: "900", fontSize: 20 }}>Success ✅</Text>
+            <Text style={{ color: TEXT, fontWeight: "900", fontSize: 20 }}>{uiText("Success ✅")}</Text>
             <Text style={{ color: MUTED, fontWeight: "800", lineHeight: 20 }}>
-              Pickup imekamilishwa na sale imeundwa vizuri.
-            </Text>
+              {uiText("Pickup imekamilishwa na sale imeundwa vizuri.")}</Text>
 
             <Pressable onPress={openPickupReceipt} style={{ backgroundColor: EMERALD, borderRadius: 18, paddingVertical: 14, alignItems: "center" }}>
-              <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>Open Receipt</Text>
+              <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>{uiText("Open Receipt")}</Text>
             </Pressable>
 
             <Pressable onPress={() => setPickupDoneOpen(false)} style={{ borderWidth: 1, borderColor: BORDER, borderRadius: 18, paddingVertical: 14, alignItems: "center" }}>
-              <Text style={{ color: TEXT, fontWeight: "900" }}>OK</Text>
+              <Text style={{ color: TEXT, fontWeight: "900" }}>{uiText("OK")}</Text>
             </Pressable>
           </Card>
         </View>
       </Modal>
 
-      <View style={{ gap: 12 }}>
-        <Pressable
-          onPress={() => router.back()}
-          style={{
-            borderWidth: 1,
-            borderColor: BORDER,
-            backgroundColor: "#FFFFFF",
-            borderRadius: 999,
-            paddingHorizontal: 14,
-            paddingVertical: 9,
-            alignSelf: "flex-start",
-          }}
-        >
-          <Text style={{ color: TEXT, fontWeight: "900" }}>← Back</Text>
+
+      <View style={{ gap: 14, width: "100%", maxWidth: 1440, alignSelf: "center" }}>
+        <Pressable onPress={() => router.back()} style={{ alignSelf: "flex-start", padding: 12 }}>
+          <Text style={{ color: TEXT, fontWeight: "900" }}>{uiText("Back")}</Text>
         </Pressable>
 
-        <Card style={{ gap: 12, backgroundColor: "#FFFFFF", borderColor: BORDER }}>
-          <Text style={{ color: FAINT, fontWeight: "900", letterSpacing: 1, fontSize: 11 }}>
-            STORE ORDERS
+        <Card style={{ backgroundColor: "#FFFFFF", borderColor: BORDER, gap: 8 }}>
+          <Text style={{ color: TEXT, fontSize: 25, fontWeight: "900" }}>
+            {isDetail
+              ? (overviewCards.find((x) => x.slug === category)?.label ?? "Reservations")
+              : uiText("Reservations & Orders")}
           </Text>
-
-          <Text style={{ color: TEXT, fontWeight: "900", fontSize: 26 }}>{storeName}</Text>
-
-          <Text style={{ color: MUTED, fontWeight: "800", lineHeight: 20 }}>
-            Customer files zimepangwa kwa madeni, ready pickup, na completed pickups.
+          <Text style={{ color: MUTED, fontWeight: "800" }}>{String(((params?.storeName ?? orgCtx?.activeStoreName) ?? uiText("Active Store"))).trim()}</Text>
+          <Text style={{ color: MUTED }}>
+            {isDetail
+              ? uiText("Manage customer files and orders in this category.")
+              : uiText("Manage reservations, pre-orders, payments and pickups.")}
           </Text>
-
-          <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-            {(["RESERVATIONS", "PRE_ORDERS"] as TabMode[]).map((t) => (
-              <Pressable
-                key={t}
-                onPress={() => setTab(t)}
-                style={{
-                  borderWidth: 1,
-                  borderColor: tab === t ? "rgba(16,185,129,0.35)" : BORDER,
-                  backgroundColor: tab === t ? "rgba(16,185,129,0.12)" : "#F8FAFC",
-                  borderRadius: 999,
-                  paddingHorizontal: 12,
-                  paddingVertical: 8,
-                }}
-              >
-                <Text style={{ color: tab === t ? EMERALD : TEXT, fontWeight: "900" }}>
-                  {t === "RESERVATIONS" ? "Reservations" : "Pre Orders"}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-
-          <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-            <MiniPill label={`${rows.length} Orders`} />
-            <MiniPill label={`Paid ${money(summary.paid)}`} tone="green" />
-            <MiniPill label={`Balance ${money(summary.balance)}`} tone="amber" />
-          </View>
         </Card>
 
-        <Pressable onPress={openNewOrder}>
-          <Card
-            style={{
-              gap: 8,
-              backgroundColor: "rgba(16,185,129,0.08)",
-              borderColor: "rgba(16,185,129,0.32)",
-            }}
-          >
-            <Text style={{ color: TEXT, fontWeight: "900", fontSize: 18 }}>
-              + New {tab === "RESERVATIONS" ? "Reservation" : "Pre Order"}
-            </Text>
-            <Text style={{ color: TEXT, fontWeight: "900" }}>
-              {tab === "PRE_ORDERS" ? "Save pre-order details →" : "Pick products from Sales →"}
-            </Text>
-            <Text style={{ color: MUTED, fontWeight: "800", lineHeight: 19 }}>
-              {tab === "PRE_ORDERS"
-                ? "Pre-order ni kwa mzigo ambao haupo dukani; haitagusa stock wala checkout."
-                : "Bonyeza hapa kuanzisha reservation kupitia Checkout."}
-            </Text>
-          </Card>
-        </Pressable>
+        {!isDetail ? (
+          <>
+            {overviewLoading ? <ActivityIndicator color={EMERALD} /> : null}
 
-        {loading ? (
-          <Card style={{ backgroundColor: "#FFFFFF", borderColor: BORDER, alignItems: "center" }}>
-            <ActivityIndicator />
-            <Text style={{ color: MUTED, fontWeight: "800", marginTop: 8 }}>Loading...</Text>
-          </Card>
-        ) : rows.length === 0 ? (
-          <Card style={{ backgroundColor: "#FFFFFF", borderColor: BORDER }}>
-            <Text style={{ color: TEXT, fontWeight: "900", fontSize: 18 }}>{title}</Text>
-            <Text style={{ color: MUTED, fontWeight: "800", marginTop: 8 }}>
-              Hakuna {title.toLowerCase()} kwa store hii.
-            </Text>
-          </Card>
+            {overviewError ? (
+              <Card style={{ backgroundColor: "#FFF7ED", borderColor: "#FED7AA", gap: 8 }}>
+                <Text style={{ color: "#9A3412" }}>{systemText(overviewError)}</Text>
+                <Pressable onPress={() => void loadOverview()}>
+                  <Text style={{ color: "#059669", fontWeight: "900" }}>{uiText("Retry")}</Text>
+                </Pressable>
+              </Card>
+            ) : null}
+
+
+            {!overviewLoading && !overviewError ? (
+              <View style={{
+                flexDirection: "row",
+                flexWrap: "wrap",
+                justifyContent: "space-between",
+                gap: 8,
+              }}>
+                {overviewCards.map((card, index) => {
+                  const small = !desktopOrders && index >= 2;
+                  const paid = card.data.reduce((a, r) => a + Number(r.paid_amount || 0), 0);
+                  const balance = card.data.reduce((a, r) => a + Number(r.balance_amount || 0), 0);
+
+                  const fmt = (n: number) => {
+                    if (!small) return money(n);
+                    if (n >= 1000000) return "TSh " + (n / 1000000).toFixed(2) + "M";
+                    if (n >= 1000) return "TSh " + Math.round(n / 1000) + "K";
+                    return money(n);
+                  };
+
+                  const iconNames = ["calendar-outline", "document-text-outline", "time-outline", "cube-outline", "checkmark-circle-outline"] as const;
+
+                  return (
+                    <Pressable
+                      key={card.slug}
+                      onPress={() => openCategory(card.slug)}
+                      style={{
+                        width: desktopOrders ? "19%" : index < 2 ? "48%" : "31%",
+                        minWidth: 0,
+                      }}
+                    >
+                      <View style={{
+                        backgroundColor: card.bg,
+                        borderWidth: 1,
+                        borderColor: BORDER,
+                        borderRadius: 18,
+                        padding: small ? 8 : 11,
+                        minHeight: desktopOrders ? 145 : small ? 135 : 151,
+                        gap: 5,
+                      }}>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                          <View style={{
+                            backgroundColor: "#FFFFFF",
+                            width: small ? 23 : 29,
+                            height: small ? 23 : 29,
+                            borderRadius: 99,
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}>
+                            <Ionicons name={iconNames[index]} size={small ? 14 : 18} color={card.color} />
+                          </View>
+                          <Text numberOfLines={2} style={{
+                            color: TEXT,
+                            flex: 1,
+                            fontWeight: "900",
+                            fontSize: small ? 10 : 12,
+                          }}>{uiText(card.label)}</Text>
+                        </View>
+
+                        <Text style={{ color: TEXT, fontWeight: "900", fontSize: small ? 20 : 25 }}>
+                          {card.data.length}
+                          <Text style={{ color: MUTED, fontSize: 10 }}> {uiText("orders")}</Text>
+                        </Text>
+
+                        <Text style={{ color: MUTED, fontSize: 10 }}>{uiText("Paid")}</Text>
+                        <Text numberOfLines={1} adjustsFontSizeToFit style={{
+                          color: "#047857",
+                          fontWeight: "900",
+                          fontSize: small ? 11 : 12,
+                        }}>{fmt(paid)}</Text>
+
+                        <Text style={{ color: MUTED, fontSize: 10 }}>{uiText("Balance")}</Text>
+                        <Text numberOfLines={1} adjustsFontSizeToFit style={{
+                          color: balance > 0 ? "#B45309" : "#047857",
+                          fontWeight: "900",
+                          fontSize: small ? 11 : 12,
+                        }}>{fmt(balance)}</Text>
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            ) : null}
+
+
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <Pressable onPress={goPickProducts} style={{ flex: 1, minWidth: 0 }}>
+                <View style={{
+                  backgroundColor: "#059669",
+                  borderRadius: 17,
+                  minHeight: 100,
+                  padding: 13,
+                  justifyContent: "center",
+                  gap: 5,
+                }}>
+                  <Ionicons name="add-circle-outline" size={24} color="#FFFFFF" />
+                  <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 14 }}>
+                    {uiText("New Reservation")}</Text>
+                  <Text style={{ color: "#ECFDF5", fontSize: 11 }}>{uiText("From Sales")}</Text>
+                </View>
+              </Pressable>
+
+              <Pressable onPress={() => setPreModalOpen(true)} style={{ flex: 1, minWidth: 0 }}>
+                <View style={{
+                  backgroundColor: "#2563EB",
+                  borderRadius: 17,
+                  minHeight: 100,
+                  padding: 13,
+                  justifyContent: "center",
+                  gap: 5,
+                }}>
+                  <Ionicons name="add-circle-outline" size={24} color="#FFFFFF" />
+                  <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 14 }}>
+                    {uiText("New Order")}</Text>
+                  <Text style={{ color: "#EFF6FF", fontSize: 11 }}>{uiText("Create Pre Order")}</Text>
+                </View>
+              </Pressable>
+            </View>
+
+
+          </>
         ) : (
           <>
-            {renderSection(
-              "PENDING",
-              "Pending Payments",
-              "Wateja ambao bado hawajakamilisha malipo ya mzigo.",
-              pendingFiles,
-              "amber"
-            )}
+            {category === "pre-orders" ? (
+              <Pressable onPress={() => setPreModalOpen(true)}>
+                <Card style={{ backgroundColor: "#E8F8F2", borderColor: "#A7F3D0" }}>
+                  <Text style={{ color: "#047857", fontWeight: "900" }}>{uiText("+ New Pre Order")}</Text>
+                </Card>
+              </Pressable>
+            ) : null}
 
-            {renderSection(
-              "READY",
-              "Ready for Pickup",
-              "Wamelipa full, bado hawajachukua mzigo.",
-              readyFiles,
-              "blue"
-            )}
-
-            {renderSection(
-              "COMPLETED",
-              "Completed Pickups",
-              "Wateja waliolipa na kuchukua mzigo. Fungua kuona history.",
-              completedFiles,
-              "green"
+            {loading ? (
+              <ActivityIndicator color={EMERALD} />
+            ) : rows.length === 0 ? (
+              <Card style={{ backgroundColor: "#FFFFFF", borderColor: BORDER }}>
+                <Text style={{ color: MUTED }}>{uiText("No orders found for this store.")}</Text>
+              </Card>
+            ) : category === "pending" ? (
+              renderSection("PENDING", "Pending Payments", "Outstanding payments.", pendingFiles, "amber")
+            ) : category === "ready" ? (
+              renderSection("READY", "Ready for Pickup", "Fully paid, not picked up.", readyFiles, "blue")
+            ) : category === "completed" ? (
+              renderSection("COMPLETED", "Completed Pickups", "Pickup history.", completedFiles, "green")
+            ) : category === "pre-orders" ? (
+              renderSection("PENDING", "Pre Orders", "Pre-order customer files.", allCustomerFiles, "blue")
+            ) : (
+              renderSection("PENDING", "Reservations", "All reservation customer files.", allCustomerFiles, "green")
             )}
           </>
         )}

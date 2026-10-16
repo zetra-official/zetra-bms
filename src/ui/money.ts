@@ -21,25 +21,29 @@ const DEFAULT_PREFS: MoneyPrefs = {
   locale: "en-TZ",
 };
 
-// Small safe guess for fraction digits (keeps legacy TZS 0-decimals)
+// Preserve the existing TZS display convention; otherwise use runtime currency metadata.
 function guessMaxFractionDigits(currency: string) {
   const c = String(currency || "TZS").trim().toUpperCase();
   if (!c) return 0;
 
-  // Common 0-decimal currencies (safe minimal list)
-  const ZERO = new Set([
-    "TZS",
-    "UGX",
-    "RWF",
-    "BIF",
-    "XAF",
-    "XOF",
-    "JPY",
-    "KRW",
-    "VND",
-  ]);
+  if (c === "TZS") return 0;
+  return getNumberFormatter("en", { style: "currency", currency: c })
+    .resolvedOptions().maximumFractionDigits;
+}
 
-  return ZERO.has(c) ? 0 : 2;
+// Bounded cache shared by reports and lists; no financial values are retained.
+const formatterCache = new Map<string, Intl.NumberFormat>();
+function getNumberFormatter(locale: string, options: Intl.NumberFormatOptions) {
+  const key = JSON.stringify([locale, options]);
+  const existing = formatterCache.get(key);
+  if (existing) return existing;
+  const formatter = new Intl.NumberFormat(locale, options);
+  if (formatterCache.size >= 64) {
+    const oldest = formatterCache.keys().next().value;
+    if (oldest !== undefined) formatterCache.delete(oldest);
+  }
+  formatterCache.set(key, formatter);
+  return formatter;
 }
 
 export async function getOrgMoneyPrefs(orgId: string): Promise<MoneyPrefs> {
@@ -63,14 +67,19 @@ export function useOrgMoneyPrefs(orgId: string) {
 
   const [prefs, setPrefs] = useState<MoneyPrefs>(DEFAULT_PREFS);
   const aliveRef = useRef(true);
+  const scopeRef = useRef(id);
+  const refreshGeneration = useRef(0);
+  scopeRef.current = id;
 
   const refresh = useCallback(async () => {
+    if (scopeRef.current !== id) return;
+    const generation = ++refreshGeneration.current;
     if (!id) {
       setPrefs(DEFAULT_PREFS);
       return;
     }
     const p = await getOrgMoneyPrefs(id);
-    if (!aliveRef.current) return;
+    if (!aliveRef.current || scopeRef.current !== id || generation !== refreshGeneration.current) return;
     setPrefs(p);
   }, [id]);
 
@@ -86,7 +95,11 @@ export function useOrgMoneyPrefs(orgId: string) {
     async (code: string) => {
       if (!id) return;
       const c = String(code || "").trim().toUpperCase();
-      await kv.setOrgCurrency(id, c || null);
+      const current = await getOrgMoneyPrefs(id);
+      // A KV preference is not an accounting migration or evidence of transaction currency.
+      if ((c || DEFAULT_PREFS.currency) !== current.currency) {
+        throw new Error("BUSINESS_CURRENCY_CHANGE_REQUIRES_VERIFIED_CONTRACT");
+      }
       await refresh();
     },
     [id, refresh]
@@ -113,19 +126,19 @@ export function useOrgMoneyPrefs(orgId: string) {
       const showCurrency = override?.showCurrency !== false; // default true
 
       const n = Number(amount);
-      const safeN = Number.isFinite(n) ? n : 0;
-
-      const maxFD = guessMaxFractionDigits(currency);
+      if (!Number.isFinite(n)) return "—";
+      const safeN = n;
 
       try {
+        const maxFD = guessMaxFractionDigits(currency);
         if (!showCurrency) {
-          return new Intl.NumberFormat(locale, {
+          return getNumberFormatter(locale, {
             style: "decimal",
             maximumFractionDigits: maxFD,
           }).format(safeN);
         }
 
-        return new Intl.NumberFormat(locale, {
+        return getNumberFormatter(locale, {
           style: "currency",
           currency,
           maximumFractionDigits: maxFD,
@@ -133,8 +146,8 @@ export function useOrgMoneyPrefs(orgId: string) {
       } catch {
         // fallback (still respects showCurrency)
         return showCurrency
-          ? `${currency} ${String(Math.round(safeN))}`
-          : `${String(Math.round(safeN))}`;
+          ? `${currency} ${String(safeN)}`
+          : String(safeN);
       }
     },
     [prefs.currency, prefs.locale]
@@ -169,26 +182,26 @@ export function formatMoney(
   const showCurrency = opts?.showCurrency !== false; // default true
 
   const n = Number(amount);
-  const safeN = Number.isFinite(n) ? n : 0;
-
-  const maxFD = guessMaxFractionDigits(currency);
+  if (!Number.isFinite(n)) return "—";
+      const safeN = n;
 
   try {
+    const maxFD = guessMaxFractionDigits(currency);
     if (!showCurrency) {
-      return new Intl.NumberFormat(locale, {
+      return getNumberFormatter(locale, {
         style: "decimal",
         maximumFractionDigits: maxFD,
       }).format(safeN);
     }
 
-    return new Intl.NumberFormat(locale, {
+    return getNumberFormatter(locale, {
       style: "currency",
       currency,
       maximumFractionDigits: maxFD,
     }).format(safeN);
   } catch {
     return showCurrency
-      ? `${currency} ${String(Math.round(safeN))}`
-      : `${String(Math.round(safeN))}`;
+      ? `${currency} ${String(safeN)}`
+      : String(safeN);
   }
 }

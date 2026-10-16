@@ -1,3 +1,4 @@
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/office/system-performance.tsx
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -354,6 +355,7 @@ function SectionCard({
 }
 
 export default function SystemPerformanceScreen() {
+ const uiText=useCommonText();
   const router = useRouter();
 
   const [checkingAccess, setCheckingAccess] = useState(true);
@@ -398,8 +400,8 @@ export default function SystemPerformanceScreen() {
 
       if (!ok) {
         Alert.alert(
-          "Restricted",
-          "Hii ni ZETRA Office System Performance pekee."
+          uiText("Restricted"),
+          uiText("Hii ni ZETRA Office System Performance pekee.")
         );
 
         router.replace("/office" as any);
@@ -408,9 +410,9 @@ export default function SystemPerformanceScreen() {
       setAllowed(false);
 
       Alert.alert(
-        "Access Error",
+        uiText("Access Error"),
         clean(e?.message) ||
-          "Imeshindikana kuthibitisha ZETRA Office account."
+          uiText("Imeshindikana kuthibitisha ZETRA Office account.")
       );
 
       router.replace("/login" as any);
@@ -461,24 +463,24 @@ export default function SystemPerformanceScreen() {
 
     if (!isValidDateString(from)) {
       Alert.alert(
-        "Invalid From Date",
-        "Tumia format YYYY-MM-DD. Mfano: 2026-01-01"
+        uiText("Invalid From Date"),
+        uiText("Tumia format YYYY-MM-DD. Mfano: 2026-01-01")
       );
       return;
     }
 
     if (!isValidDateString(to)) {
       Alert.alert(
-        "Invalid To Date",
-        "Tumia format YYYY-MM-DD. Mfano: 2026-12-31"
+        uiText("Invalid To Date"),
+        uiText("Tumia format YYYY-MM-DD. Mfano: 2026-12-31")
       );
       return;
     }
 
     if (from > to) {
       Alert.alert(
-        "Invalid Date Range",
-        "From Date haiwezi kuwa baada ya To Date."
+        uiText("Invalid Date Range"),
+        uiText("From Date haiwezi kuwa baada ya To Date.")
       );
       return;
     }
@@ -652,8 +654,7 @@ export default function SystemPerformanceScreen() {
             marginTop: 12,
           }}
         >
-          Checking Office access...
-        </Text>
+          {uiText("Checking Office access...")}</Text>
       </View>
     );
   }
@@ -718,8 +719,7 @@ export default function SystemPerformanceScreen() {
                 fontSize: 24,
               }}
             >
-              System Performance
-            </Text>
+              {uiText("System Performance")}</Text>
 
             <Text
               style={{
@@ -728,9 +728,7 @@ export default function SystemPerformanceScreen() {
                 marginTop: 4,
               }}
             >
-              ZETRA customers, usage na
-              subscriptions
-            </Text>
+              {uiText("ZETRA customers, usage na subscriptions")}</Text>
           </View>
 
           <Pressable
@@ -773,7 +771,7 @@ export default function SystemPerformanceScreen() {
           }}
         >
           <PeriodButton
-            label="TODAY"
+            label={uiText("TODAY")}
             active={period === "TODAY"}
             onPress={() =>
               selectPreset("TODAY")
@@ -781,7 +779,7 @@ export default function SystemPerformanceScreen() {
           />
 
           <PeriodButton
-            label="7 DAYS"
+            label={uiText("7 DAYS")}
             active={period === "7D"}
             onPress={() =>
               selectPreset("7D")
@@ -789,7 +787,7 @@ export default function SystemPerformanceScreen() {
           />
 
           <PeriodButton
-            label="30 DAYS"
+            label={uiText("30 DAYS")}
             active={period === "30D"}
             onPress={() =>
               selectPreset("30D")
@@ -797,7 +795,7 @@ export default function SystemPerformanceScreen() {
           />
 
           <PeriodButton
-            label="90 DAYS"
+            label={uiText("90 DAYS")}
             active={period === "90D"}
             onPress={() =>
               selectPreset("90D")
@@ -805,7 +803,7 @@ export default function SystemPerformanceScreen() {
           />
 
           <PeriodButton
-            label="DATE RANGE"
+            label={uiText("DATE RANGE")}
             active={period === "CUSTOM"}
             onPress={openCustomRange}
           />
@@ -833,7 +831,7 @@ export default function SystemPerformanceScreen() {
               fontSize: 12,
             }}
           >
-            Activity period:{" "}
+            {uiText("Activity period:")}{" "}
             <Text
               style={{
                 color: theme.colors.text,
@@ -894,8 +892,7 @@ export default function SystemPerformanceScreen() {
                 fontSize: 12,
               }}
             >
-              Change
-            </Text>
+              {uiText("Change")}</Text>
           </Pressable>
         ) : null}
 
@@ -916,8 +913,7 @@ export default function SystemPerformanceScreen() {
                 marginTop: 12,
               }}
             >
-              Loading ZETRA performance...
-            </Text>
+              {uiText("Loading ZETRA performance...")}</Text>
           </View>
         ) : errorText ? (
           <View style={{ marginTop: 18 }}>
@@ -943,9 +939,7 @@ export default function SystemPerformanceScreen() {
                       fontSize: 15,
                     }}
                   >
-                    Performance data
-                    unavailable
-                  </Text>
+                    {uiText("Performance data unavailable")}</Text>
 
                   <Text
                     style={{
@@ -974,8 +968,7 @@ export default function SystemPerformanceScreen() {
                     fontSize: 17,
                   }}
                 >
-                  Platform Overview
-                </Text>
+                  {uiText("Platform Overview")}</Text>
 
                 <Text
                   style={{
@@ -985,9 +978,7 @@ export default function SystemPerformanceScreen() {
                     marginTop: 5,
                   }}
                 >
-                  Muhtasari mkuu wa ZETRA
-                  platform.
-                </Text>
+                  {uiText("Muhtasari mkuu wa ZETRA platform.")}</Text>
 
                 <View
                   style={{
@@ -998,28 +989,28 @@ export default function SystemPerformanceScreen() {
                   }}
                 >
                   <StatCard
-                    title="ORGANIZATIONS"
+                    title={uiText("ORGANIZATIONS")}
                     value={fmtNumber(
                       stats.totalOrganizations
                     )}
                   />
 
                   <StatCard
-                    title="STORES"
+                    title={uiText("STORES")}
                     value={fmtNumber(
                       stats.totalStores
                     )}
                   />
 
                   <StatCard
-                    title="USERS / MEMBERS"
+                    title={uiText("USERS / MEMBERS")}
                     value={fmtNumber(
                       stats.totalMembers
                     )}
                   />
 
                   <StatCard
-                    title="NEW ORGANIZATIONS"
+                    title={uiText("NEW ORGANIZATIONS")}
                     value={fmtNumber(
                       stats.newOrganizations
                     )}
@@ -1039,8 +1030,7 @@ export default function SystemPerformanceScreen() {
                     fontSize: 17,
                   }}
                 >
-                  Customer Status
-                </Text>
+                  {uiText("Customer Status")}</Text>
 
                 <Text
                   style={{
@@ -1050,9 +1040,7 @@ export default function SystemPerformanceScreen() {
                     marginTop: 5,
                   }}
                 >
-                  Organization na member status
-                  ndani ya ZETRA.
-                </Text>
+                  {uiText("Organization na member status ndani ya ZETRA.")}</Text>
 
                 <View
                   style={{
@@ -1063,7 +1051,7 @@ export default function SystemPerformanceScreen() {
                   }}
                 >
                   <StatCard
-                    title="ACTIVE BUSINESSES"
+                    title={uiText("ACTIVE BUSINESSES")}
                     value={fmtNumber(
                       stats.activeOrganizations
                     )}
@@ -1071,7 +1059,7 @@ export default function SystemPerformanceScreen() {
                   />
 
                   <StatCard
-                    title="INACTIVE BUSINESSES"
+                    title={uiText("INACTIVE BUSINESSES")}
                     value={fmtNumber(
                       stats.inactiveOrganizations
                     )}
@@ -1084,7 +1072,7 @@ export default function SystemPerformanceScreen() {
                   />
 
                   <StatCard
-                    title="ACTIVE MEMBERS"
+                    title={uiText("ACTIVE MEMBERS")}
                     value={fmtNumber(
                       stats.activeMembers
                     )}
@@ -1092,7 +1080,7 @@ export default function SystemPerformanceScreen() {
                   />
 
                   <StatCard
-                    title="INACTIVE MEMBERS"
+                    title={uiText("INACTIVE MEMBERS")}
                     value={fmtNumber(
                       stats.inactiveMembers
                     )}
@@ -1115,8 +1103,7 @@ export default function SystemPerformanceScreen() {
                     fontSize: 17,
                   }}
                 >
-                  Store Usage
-                </Text>
+                  {uiText("Store Usage")}</Text>
 
                 <Text
                   style={{
@@ -1127,10 +1114,7 @@ export default function SystemPerformanceScreen() {
                     marginTop: 5,
                   }}
                 >
-                  Store status na matumizi ya
-                  ZETRA ndani ya period
-                  iliyochaguliwa.
-                </Text>
+                  {uiText("Store status na matumizi ya ZETRA ndani ya period iliyochaguliwa.")}</Text>
 
                 <View
                   style={{
@@ -1141,20 +1125,20 @@ export default function SystemPerformanceScreen() {
                   }}
                 >
                   <StatCard
-                    title="ACTIVE STORES"
+                    title={uiText("ACTIVE STORES")}
                     value={fmtNumber(
                       stats.configuredActiveStores
                     )}
-                    subtitle="Configured active"
+                    subtitle={uiText("Configured active")}
                     tone="good"
                   />
 
                   <StatCard
-                    title="INACTIVE STORES"
+                    title={uiText("INACTIVE STORES")}
                     value={fmtNumber(
                       stats.configuredInactiveStores
                     )}
-                    subtitle="Configured inactive"
+                    subtitle={uiText("Configured inactive")}
                     tone={
                       stats.configuredInactiveStores >
                       0
@@ -1164,7 +1148,7 @@ export default function SystemPerformanceScreen() {
                   />
 
                   <StatCard
-                    title="STORES IN USE"
+                    title={uiText("STORES IN USE")}
                     value={fmtNumber(
                       stats.storesWithActivity
                     )}
@@ -1173,7 +1157,7 @@ export default function SystemPerformanceScreen() {
                   />
 
                   <StatCard
-                    title="NO ACTIVITY"
+                    title={uiText("NO ACTIVITY")}
                     value={fmtNumber(
                       stats.storesWithoutActivity
                     )}
@@ -1208,8 +1192,7 @@ export default function SystemPerformanceScreen() {
                         fontSize: 17,
                       }}
                     >
-                      Subscription Performance
-                    </Text>
+                      {uiText("Subscription Performance")}</Text>
 
                     <Text
                       style={{
@@ -1221,10 +1204,7 @@ export default function SystemPerformanceScreen() {
                         marginTop: 5,
                       }}
                     >
-                      Mapato ya ZETRA kutoka
-                      subscription ndani ya period
-                      iliyochaguliwa.
-                    </Text>
+                      {uiText("Mapato ya ZETRA kutoka subscription ndani ya period iliyochaguliwa.")}</Text>
                   </View>
 
                   <Ionicons
@@ -1245,7 +1225,7 @@ export default function SystemPerformanceScreen() {
                   }}
                 >
                   <StatCard
-                    title="APPROVED PAYMENTS"
+                    title={uiText("APPROVED PAYMENTS")}
                     value={fmtNumber(
                       stats.subscriptionPaymentsCount
                     )}
@@ -1254,7 +1234,7 @@ export default function SystemPerformanceScreen() {
                   />
 
                   <StatCard
-                    title="SUBSCRIPTION REVENUE"
+                    title={uiText("SUBSCRIPTION REVENUE")}
                     value={fmtMoney(
                       stats.subscriptionRevenue
                     )}
@@ -1291,8 +1271,7 @@ export default function SystemPerformanceScreen() {
                         fontSize: 15,
                       }}
                     >
-                      ZETRA Office metrics only
-                    </Text>
+                      {uiText("ZETRA Office metrics only")}</Text>
 
                     <Text
                       style={{
@@ -1304,13 +1283,7 @@ export default function SystemPerformanceScreen() {
                         marginTop: 5,
                       }}
                     >
-                      Dashboard hii inaonyesha
-                      customer count, platform usage,
-                      store activity na subscription
-                      performance ya ZETRA. Thamani
-                      za mauzo ya biashara za wateja
-                      hazionyeshwi hapa.
-                    </Text>
+                      {uiText("Dashboard hii inaonyesha customer count, platform usage, store activity na subscription performance ya ZETRA. Thamani za mauzo ya biashara za wateja hazionyeshwi hapa.")}</Text>
                   </View>
                 </View>
               </SectionCard>
@@ -1381,8 +1354,7 @@ export default function SystemPerformanceScreen() {
                     fontSize: 18,
                   }}
                 >
-                  Select Date Range
-                </Text>
+                  {uiText("Select Date Range")}</Text>
 
                 <Text
                   style={{
@@ -1393,9 +1365,7 @@ export default function SystemPerformanceScreen() {
                     marginTop: 3,
                   }}
                 >
-                  Chagua tarehe ya kuanzia na
-                  tarehe ya mwisho.
-                </Text>
+                  {uiText("Chagua tarehe ya kuanzia na tarehe ya mwisho.")}</Text>
               </View>
 
               <Pressable
@@ -1427,8 +1397,7 @@ export default function SystemPerformanceScreen() {
                 marginBottom: 7,
               }}
             >
-              FROM DATE
-            </Text>
+              {uiText("FROM DATE")}</Text>
 
             <TextInput
               value={draftFrom}
@@ -1461,8 +1430,7 @@ export default function SystemPerformanceScreen() {
                 marginBottom: 7,
               }}
             >
-              TO DATE
-            </Text>
+              {uiText("TO DATE")}</Text>
 
             <TextInput
               value={draftTo}
@@ -1495,10 +1463,7 @@ export default function SystemPerformanceScreen() {
                 marginTop: 10,
               }}
             >
-              Format: YYYY-MM-DD. Mfano mwaka
-              mzima: 2025-01-01 mpaka
-              2025-12-31.
-            </Text>
+              {uiText("Format: YYYY-MM-DD. Mfano mwaka mzima: 2025-01-01 mpaka 2025-12-31.")}</Text>
 
             <View
               style={{
@@ -1532,8 +1497,7 @@ export default function SystemPerformanceScreen() {
                     fontWeight: "900",
                   }}
                 >
-                  Cancel
-                </Text>
+                  {uiText("Cancel")}</Text>
               </Pressable>
 
               <Pressable
@@ -1557,8 +1521,7 @@ export default function SystemPerformanceScreen() {
                     fontWeight: "900",
                   }}
                 >
-                  Apply Range
-                </Text>
+                  {uiText("Apply Range")}</Text>
               </Pressable>
             </View>
           </View>

@@ -1,3 +1,5 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -125,6 +127,8 @@ function MiniStat({
 }
 
 export default function CapitalRecoveryWorkspaceScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
@@ -390,26 +394,26 @@ export default function CapitalRecoveryWorkspaceScreen() {
 
   const onSaveEntry = useCallback(async () => {
     if (!storeId) {
-      Alert.alert("Missing Store", "Hakuna active Capital Recovery store.");
+      Alert.alert(uiText("Missing Store"), uiText("Hakuna active Capital Recovery store."));
       return;
     }
 
     if (blockedByLock) {
       Alert.alert(
-        "Locked",
+        uiText("Locked"),
         lockNote
-          ? `Capital Recovery imefungwa. ${lockNote}`
-          : "Capital Recovery imefungwa kwa store hii."
+          ? uiText("Capital Recovery imefungwa. {p0}", {p0: (lockNote)})
+          : uiText("Capital Recovery imefungwa kwa store hii.")
       );
       return;
     }
 
     if (!baseCanSave) {
       Alert.alert(
-        "Invalid Entry",
+        uiText("Invalid Entry"),
         entryMethod === "MANUAL"
-          ? "Weka amount sahihi zaidi ya sifuri."
-          : "Chagua product angalau moja yenye quantity sahihi."
+          ? uiText("Weka amount sahihi zaidi ya sifuri.")
+          : uiText("Chagua product angalau moja yenye quantity sahihi.")
       );
       return;
     }
@@ -450,11 +454,11 @@ export default function CapitalRecoveryWorkspaceScreen() {
       await loadLockStatus();
 
       Alert.alert(
-        "Success ✅",
-        `${entryType} entry imehifadhiwa vizuri (${entryMethod === "MANUAL" ? "manual" : "products"}).`
+        uiText("Success ✅"),
+        uiText("{p0} entry imehifadhiwa vizuri ({p1}).", {p0: (entryType), p1: (entryMethod === "MANUAL" ? "manual" : "products")})
       );
     } catch (e: any) {
-      Alert.alert("Save failed", clean(e?.message) || "Unknown error");
+      Alert.alert(uiText("Save failed"), clean(e?.message) || uiText("Unknown error"));
     } finally {
       setSaving(false);
     }
@@ -681,20 +685,19 @@ export default function CapitalRecoveryWorkspaceScreen() {
                   letterSpacing: 0.9,
                 }}
               >
-                CAPITAL RECOVERY WORKSPACE
-              </Text>
+                {uiText("CAPITAL RECOVERY WORKSPACE")}</Text>
 
               <Text
                 style={{ color: UI.text, fontWeight: "900", fontSize: 22, marginTop: 4 }}
                 numberOfLines={1}
               >
-                {activeStoreName ?? "Capital Recovery Store"}
+                {activeStoreName ?? uiText("Capital Recovery Store")}
               </Text>
             </View>
           </View>
 
           <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 22 }}>
-            Organization: {activeOrgName ?? "—"}
+            {uiText("Organization:")}{activeOrgName ?? "—"}
           </Text>
 
           <Card
@@ -706,12 +709,10 @@ export default function CapitalRecoveryWorkspaceScreen() {
             }}
           >
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 17 }}>
-              Quick Entry
-            </Text>
+              {uiText("Quick Entry")}</Text>
 
             <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 20 }}>
-              Hapa ndipo uta-record Asset, Cost, na Income.
-            </Text>
+              {uiText("Hapa ndipo uta-record Asset, Cost, na Income.")}</Text>
 
             <Card
               style={{
@@ -723,12 +724,12 @@ export default function CapitalRecoveryWorkspaceScreen() {
             >
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 13 }}>
                 {lockLoading
-                  ? "Checking lock status..."
+                  ? uiText("Checking lock status...")
                   : isLocked
                   ? isOwner
-                    ? "Capital Recovery Locked — owner override active"
-                    : "Capital Recovery Locked"
-                  : "Capital Recovery Open"}
+                    ? uiText("Capital Recovery Locked — owner override active")
+                    : uiText("Capital Recovery Locked")
+                  : uiText("Capital Recovery Open")}
               </Text>
 
               <Text style={{ color: UI.faint, fontWeight: "800", lineHeight: 20 }}>
@@ -736,11 +737,11 @@ export default function CapitalRecoveryWorkspaceScreen() {
                   ? lockNote
                     ? lockNote
                     : isOwner
-                    ? "Store hii imefungwa, lakini owner bado anaweza kufanya entry."
-                    : "Store hii imefungwa. Huwezi kuingiza entry kwa sasa."
+                    ? uiText("Store hii imefungwa, lakini owner bado anaweza kufanya entry.")
+                    : uiText("Store hii imefungwa. Huwezi kuingiza entry kwa sasa.")
                   : canSeeAsset
-                  ? "Owner anaweza kurecord Asset, Cost, na Income."
-                  : "Unaweza kurecord Cost na Income tu. Asset imefichwa kwa role yako."}
+                  ? uiText("Owner anaweza kurecord Asset, Cost, na Income.")
+                  : uiText("Unaweza kurecord Cost na Income tu. Asset imefichwa kwa role yako.")}
               </Text>
             </Card>
 
@@ -754,19 +755,19 @@ export default function CapitalRecoveryWorkspaceScreen() {
             >
               {canAddAsset ? (
                 <Pill
-                  title="Add Asset"
+                  title={uiText("Add Asset")}
                   active={entryType === "ASSET"}
                   onPress={() => setEntryType("ASSET")}
                 />
               ) : null}
 
               <Pill
-                title="Add Cost"
+                title={uiText("Add Cost")}
                 active={entryType === "COST"}
                 onPress={() => setEntryType("COST")}
               />
               <Pill
-                title="Add Income"
+                title={uiText("Add Income")}
                 active={entryType === "INCOME"}
                 onPress={() => setEntryType("INCOME")}
               />
@@ -774,7 +775,7 @@ export default function CapitalRecoveryWorkspaceScreen() {
 
             {productModeEnabled && (
               <View style={{ gap: 8 }}>
-                <Text style={{ color: UI.muted, fontWeight: "800" }}>Entry Method</Text>
+                <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("Entry Method")}</Text>
 
                 <View
                   style={{
@@ -784,12 +785,12 @@ export default function CapitalRecoveryWorkspaceScreen() {
                   }}
                 >
                   <Pill
-                    title="Manual"
+                    title={uiText("Manual")}
                     active={entryMethod === "MANUAL"}
                     onPress={() => setEntryMethod("MANUAL")}
                   />
                   <Pill
-                    title="Products"
+                    title={uiText("Products")}
                     active={entryMethod === "PRODUCTS"}
                     onPress={() => setEntryMethod("PRODUCTS")}
                   />
@@ -799,11 +800,11 @@ export default function CapitalRecoveryWorkspaceScreen() {
 
             {entryMethod === "MANUAL" ? (
               <View style={{ gap: 8 }}>
-                <Text style={{ color: UI.muted, fontWeight: "800" }}>Amount (TZS)</Text>
+                <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("Amount (TZS)")}</Text>
                 <TextInput
                   value={amount}
                   onChangeText={setAmount}
-                  placeholder="mfano: 250000"
+                  placeholder={uiText("mfano: 250000")}
                   placeholderTextColor="rgba(234,242,255,0.35)"
                   keyboardType="numeric"
                   style={{
@@ -822,7 +823,7 @@ export default function CapitalRecoveryWorkspaceScreen() {
             ) : (
               <View style={{ gap: 10 }}>
                 <View style={{ gap: 10 }}>
-                  <Text style={{ color: UI.muted, fontWeight: "800" }}>Products & Quantity</Text>
+                  <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("Products & Quantity")}</Text>
 
                   <Card
                     style={{
@@ -835,21 +836,21 @@ export default function CapitalRecoveryWorkspaceScreen() {
                   >
                     <View style={{ flexDirection: "row", gap: 12 }}>
                       <MiniStat
-                        label="Selected"
+                        label={uiText("Selected")}
                         value={String(selectedProductItems.length)}
-                        hint="products"
+                        hint={uiText("products")}
                       />
                       <MiniStat
-                        label="Qty"
+                        label={uiText("Qty")}
                         value={String(
                           selectedProductItems.reduce((sum, item) => sum + toNum(item.quantity), 0)
                         )}
-                        hint="total qty"
+                        hint={uiText("total qty")}
                       />
                       <MiniStat
-                        label="Value"
+                        label={uiText("Value")}
                         value={fmt(productModeTotal)}
-                        hint="live total"
+                        hint={uiText("live total")}
                       />
                     </View>
                   </Card>
@@ -874,8 +875,7 @@ export default function CapitalRecoveryWorkspaceScreen() {
                     })}
                   >
                     <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
-                      Manage Products
-                    </Text>
+                      {uiText("Manage Products")}</Text>
                   </Pressable>
 
                   <Pressable
@@ -891,13 +891,13 @@ export default function CapitalRecoveryWorkspaceScreen() {
                       opacity: productsLoading || eligibleProducts.length === 0 ? 0.45 : pressed ? 0.92 : 1,
                     })}
                   >
-                    <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>Add Product</Text>
+                    <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>{uiText("Add Product")}</Text>
                   </Pressable>
                   </View>
                 </View>
 
                 {productsLoading ? (
-                  <Text style={{ color: UI.faint, fontWeight: "800" }}>Loading products...</Text>
+                  <Text style={{ color: UI.faint, fontWeight: "800" }}>{uiText("Loading products...")}</Text>
                 ) : productItems.length === 0 ? (
                   <Card
                     style={{
@@ -908,8 +908,7 @@ export default function CapitalRecoveryWorkspaceScreen() {
                     }}
                   >
                     <Text style={{ color: UI.faint, fontWeight: "800", lineHeight: 20 }}>
-                      Bofya Add Product kuchagua bidhaa. Ukichagua bidhaa iliyopo tayari, quantity itaongezeka badala ya kutengeneza duplicate.
-                    </Text>
+                      {uiText("Bofya Add Product kuchagua bidhaa. Ukichagua bidhaa iliyopo tayari, quantity itaongezeka badala ya kutengeneza duplicate.")}</Text>
                   </Card>
                 ) : (
                   <View style={{ gap: 10 }}>
@@ -942,13 +941,12 @@ export default function CapitalRecoveryWorkspaceScreen() {
                           >
                             <View style={{ flex: 1, minWidth: 0 }}>
                               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                                Selected Product
-                              </Text>
+                                {uiText("Selected Product")}</Text>
                               <Text
                                 style={{ color: UI.text, fontWeight: "900", fontSize: 16, marginTop: 4 }}
                                 numberOfLines={1}
                               >
-                                {selected ? selected.name : "No product selected"}
+                                {selected ? selected.name : uiText("No product selected")}
                               </Text>
                               <Text
                                 style={{ color: UI.faint, fontWeight: "800", marginTop: 4 }}
@@ -956,9 +954,9 @@ export default function CapitalRecoveryWorkspaceScreen() {
                               >
                                 {selected
                                   ? entryType === "COST"
-                                    ? `Cost ${fmt(toNum(selected.cost_price))}`
-                                    : `Selling ${fmt(toNum(selected.selling_price))}`
-                                  : "No price"}
+                                    ? uiText("Cost {p0}", {p0: (fmt(toNum(selected.cost_price)))})
+                                    : uiText("Selling {p0}", {p0: (fmt(toNum(selected.selling_price)))})
+                                  : uiText("No price")}
                               </Text>
                             </View>
 
@@ -975,19 +973,18 @@ export default function CapitalRecoveryWorkspaceScreen() {
                               })}
                             >
                               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
-                                Change
-                              </Text>
+                                {uiText("Change")}</Text>
                             </Pressable>
                           </View>
 
                           <View style={{ gap: 8 }}>
-                            <Text style={{ color: UI.muted, fontWeight: "800" }}>Quantity</Text>
+                            <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("Quantity")}</Text>
                             <TextInput
                               value={row.quantity}
                               onChangeText={(t) =>
                                 updateProductRow(index, { quantity: t.replace(/[^0-9.]/g, "") })
                               }
-                              placeholder="mfano: 1"
+                              placeholder={uiText("mfano: 1")}
                               placeholderTextColor={UI.faint}
                               keyboardType="numeric"
                               style={{
@@ -1013,7 +1010,7 @@ export default function CapitalRecoveryWorkspaceScreen() {
                             }}
                           >
                             <Text style={{ color: UI.faint, fontWeight: "800", flex: 1 }}>
-                              {selected ? `${selected.name} × ${qty || 0}` : "No product selected"}
+                              {selected ? `${selected.name} × ${qty || 0}` : uiText("No product selected")}
                             </Text>
 
                             <Text style={{ color: UI.text, fontWeight: "900" }}>
@@ -1035,8 +1032,7 @@ export default function CapitalRecoveryWorkspaceScreen() {
                             })}
                           >
                             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
-                              Remove
-                            </Text>
+                              {uiText("Remove")}</Text>
                           </Pressable>
                         </Card>
                       );
@@ -1047,11 +1043,11 @@ export default function CapitalRecoveryWorkspaceScreen() {
             )}
 
             <View style={{ gap: 8 }}>
-              <Text style={{ color: UI.muted, fontWeight: "800" }}>Note / Description</Text>
+              <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("Note / Description")}</Text>
               <TextInput
                 value={note}
                 onChangeText={setNote}
-                placeholder="mfano: kununua mashine / gharama ya kodi / mapato ya biashara"
+                placeholder={uiText("mfano: kununua mashine / gharama ya kodi / mapato ya biashara")}
                 placeholderTextColor="rgba(234,242,255,0.35)"
                 multiline
                 style={{
@@ -1080,24 +1076,24 @@ export default function CapitalRecoveryWorkspaceScreen() {
             }}
           >
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-              {previewTitle}
+              {(entryType === "ASSET" ? uiText("Asset Entry Preview") : (entryType === "COST" ? uiText("Operating Cost Preview") : uiText("Income Entry Preview")))}
             </Text>
 
             <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 20 }}>
-              {previewHint}
+              {(entryType === "ASSET" ? uiText("Hii itaingia upande wa mtaji/asset.") : (entryType === "COST" ? uiText("Hii itaingia upande wa gharama za uendeshaji.") : uiText("Hii itaingia upande wa mapato/income.")))}
             </Text>
 
             <View style={{ flexDirection: "row", gap: 12 }}>
-              <MiniStat label="Entry Type" value={entryType} hint="current selection" />
+              <MiniStat label={uiText("Entry Type")} value={entryType} hint={uiText("current selection")} />
               <MiniStat
-                label="Method"
+                label={uiText("Method")}
                 value={entryMethod}
-                hint={entryMethod === "MANUAL" ? "direct amount" : "product-based"}
+                hint={entryMethod === "MANUAL" ? uiText("direct amount") : uiText("product-based")}
               />
               <MiniStat
-                label="Amount"
+                label={uiText("Amount")}
                 value={canSave ? formattedPreviewAmount : "TSh 0"}
-                hint="preview"
+                hint={uiText("preview")}
               />
             </View>
 
@@ -1112,13 +1108,11 @@ export default function CapitalRecoveryWorkspaceScreen() {
                 }}
               >
                 <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-                  Product Breakdown
-                </Text>
+                  {uiText("Product Breakdown")}</Text>
 
                 {selectedProductItems.length === 0 ? (
                   <Text style={{ color: UI.faint, fontWeight: "800", lineHeight: 20 }}>
-                    Hakuna bidhaa zilizochaguliwa bado.
-                  </Text>
+                    {uiText("Hakuna bidhaa zilizochaguliwa bado.")}</Text>
                 ) : (
                   selectedProductItems.map((item) => (
                     <View
@@ -1148,7 +1142,7 @@ export default function CapitalRecoveryWorkspaceScreen() {
               <Text style={{ color: UI.faint, fontWeight: "800", lineHeight: 20 }}>
                 {clean(note)
                   ? note
-                  : "Hakuna maelezo bado. Weka note fupi ili entry iwe clear."}
+                  : uiText("Hakuna maelezo bado. Weka note fupi ili entry iwe clear.")}
               </Text>
             </Card>
           </Card>
@@ -1176,12 +1170,12 @@ export default function CapitalRecoveryWorkspaceScreen() {
           >
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
               {saving
-                ? "Saving..."
+                ? uiText("Saving...")
                 : blockedByLock
-                ? "Locked"
+                ? uiText("Locked")
                 : entryMethod === "MANUAL"
-                ? "Save Entry"
-                : "Save Product Entry"}
+                ? uiText("Save Entry")
+                : uiText("Save Product Entry")}
             </Text>
           </Pressable>
         </Card>
@@ -1222,8 +1216,7 @@ export default function CapitalRecoveryWorkspaceScreen() {
                 }}
               >
                 <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18 }}>
-                  Select Product
-                </Text>
+                  {uiText("Select Product")}</Text>
 
                 <Pressable
                   onPress={closeProductPicker}
@@ -1246,7 +1239,7 @@ export default function CapitalRecoveryWorkspaceScreen() {
               <TextInput
                 value={pickerSearch}
                 onChangeText={setPickerSearch}
-                placeholder="Search product..."
+                placeholder={uiText("Search product...")}
                 placeholderTextColor="rgba(234,242,255,0.35)"
                 style={{
                   borderWidth: 1,
@@ -1263,8 +1256,8 @@ export default function CapitalRecoveryWorkspaceScreen() {
 
               <Text style={{ color: UI.faint, fontWeight: "800" }}>
                 {entryType === "COST"
-                  ? "Showing products with cost price only."
-                  : "Showing products with selling price only."}
+                  ? uiText("Showing products with cost price only.")
+                  : uiText("Showing products with selling price only.")}
               </Text>
 
               <ScrollView
@@ -1281,8 +1274,7 @@ export default function CapitalRecoveryWorkspaceScreen() {
                     }}
                   >
                     <Text style={{ color: UI.faint, fontWeight: "800", lineHeight: 20 }}>
-                      Hakuna product inayolingana na search/mode hii.
-                    </Text>
+                      {uiText("Hakuna product inayolingana na search/mode hii.")}</Text>
                   </Card>
                 ) : (
                   filteredEligibleProducts.map((product) => (
@@ -1304,8 +1296,8 @@ export default function CapitalRecoveryWorkspaceScreen() {
                       </Text>
                       <Text style={{ color: UI.faint, fontWeight: "800", marginTop: 4 }}>
                         {entryType === "COST"
-                          ? `Cost ${fmt(toNum(product.cost_price))}`
-                          : `Selling ${fmt(toNum(product.selling_price))}`}
+                          ? uiText("Cost {p0}", {p0: (fmt(toNum(product.cost_price)))})
+                          : uiText("Selling {p0}", {p0: (fmt(toNum(product.selling_price)))})}
                       </Text>
                     </Pressable>
                   ))
@@ -1325,8 +1317,7 @@ export default function CapitalRecoveryWorkspaceScreen() {
           }}
         >
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 20 }}>
-            Reports
-          </Text>
+            {uiText("Reports")}</Text>
 
           {!!historyError ? (
             <Card
@@ -1337,26 +1328,26 @@ export default function CapitalRecoveryWorkspaceScreen() {
                 padding: 12,
               }}
             >
-              <Text style={{ color: UI.danger, fontWeight: "900" }}>{historyError}</Text>
+              <Text style={{ color: UI.danger, fontWeight: "900" }}>{systemText(historyError)}</Text>
             </Card>
           ) : null}
 
           <View style={{ flexDirection: "row", gap: 12 }}>
             {canSeeAsset ? (
               <MiniStat
-                label="Asset Entries"
+                label={uiText("Asset Entries")}
                 value={String(report.ASSET.count)}
                 hint={fmt(report.ASSET.amount)}
               />
             ) : null}
 
             <MiniStat
-              label="Cost Entries"
+              label={uiText("Cost Entries")}
               value={String(report.COST.count)}
               hint={fmt(report.COST.amount)}
             />
             <MiniStat
-              label="Income Entries"
+              label={uiText("Income Entries")}
               value={String(report.INCOME.count)}
               hint={fmt(report.INCOME.amount)}
             />
@@ -1364,15 +1355,15 @@ export default function CapitalRecoveryWorkspaceScreen() {
 
           <View style={{ flexDirection: "row", gap: 12 }}>
             <MiniStat
-              label="Latest Entry"
+              label={uiText("Latest Entry")}
               value={latestEntry ? latestEntry.entry_type : "—"}
-              hint={latestEntry ? fmtLocal(latestEntry.created_at) : "no history"}
+              hint={latestEntry ? fmtLocal(latestEntry.created_at) : uiText("no history")}
               multilineValue
             />
             <MiniStat
-              label="Total Records"
+              label={uiText("Total Records")}
               value={historyLoading ? "..." : String(history.length)}
-              hint="history loaded"
+              hint={uiText("history loaded")}
             />
           </View>
 
@@ -1391,8 +1382,7 @@ export default function CapitalRecoveryWorkspaceScreen() {
             })}
           >
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
-              Open Role-Safe History
-            </Text>
+              {uiText("Open Role-Safe History")}</Text>
           </Pressable>
         </Card>
       </StoreGuard>

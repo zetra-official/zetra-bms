@@ -1,6 +1,8 @@
+import {useAuthText} from "@/src/i18n/useAuthText";
 import { useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Keyboard,
   KeyboardAvoidingView,
@@ -82,12 +84,14 @@ function GlassInput({
 }
 
 export default function RegisterScreen() {
+  const tr=useAuthText();
   const router = useRouter();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
+  const [webVerificationEmail, setWebVerificationEmail] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
@@ -98,35 +102,37 @@ export default function RegisterScreen() {
     const p = password;
 
     if (!e) {
-      return Alert.alert("Missing", "Email is required.");
+      return Alert.alert(tr("Missing"), tr("Email is required."));
     }
 
     if (!e.includes("@") || !e.includes(".")) {
       return Alert.alert(
-        "Invalid Email",
-        "Tafadhali tumia email address sahihi."
+        tr("Invalid Email"),
+        tr("Tafadhali tumia email address sahihi.")
       );
     }
 
     if (!p) {
-      return Alert.alert("Missing", "Password is required.");
+      return Alert.alert(tr("Missing"), tr("Password is required."));
     }
 
     if (p.length < 6) {
-      return Alert.alert("Weak password", "Use at least 6 characters.");
+      return Alert.alert(tr("Weak password"), tr("Use at least 6 characters."));
     }
 
     if (p !== confirm) {
       return Alert.alert(
-        "Mismatch",
-        "Password and confirm password do not match."
+        tr("Mismatch"),
+        tr("Password and confirm password do not match.")
       );
     }
 
     setLoading(true);
 
     const emailRedirectTo =
-  "https://regal-sunburst-e3cee8.netlify.app/verified.html";
+      Platform.OS === "web" && typeof window !== "undefined"
+        ? `${window.location.origin}/login`
+        : "https://regal-sunburst-e3cee8.netlify.app/verified.html";
 
     const { data, error } = await supabase.auth.signUp({
       email: e,
@@ -138,7 +144,7 @@ export default function RegisterScreen() {
 
     if (error) {
       setLoading(false);
-      return Alert.alert("Register Failed", error.message);
+      return Alert.alert(tr("Register Failed"), error.message);
     }
 
     const session = data?.session ?? null;
@@ -148,8 +154,8 @@ export default function RegisterScreen() {
 
     if (!user?.id) {
       return Alert.alert(
-        "Register Failed",
-        "Account haikuweza kuundwa vizuri."
+        tr("Register Failed"),
+        tr("Account haikuweza kuundwa vizuri.")
       );
     }
 
@@ -182,35 +188,25 @@ export default function RegisterScreen() {
       return;
     }
 
- // ✅ Confirm Email iko ON:
-// Account imeundwa na verification email imetumwa.
-Alert.alert(
-  "Verification email sent",
-  `Account yako ya ZETRA BMS imeundwa kwa mafanikio.
+    // Confirm Email iko ON:
+    // Web uses an in-page confirmation because browser Alert behavior
+    // is not reliable enough for this critical verification step.
+    if (Platform.OS === "web") {
+      setWebVerificationEmail(e);
+      return;
+    }
 
-Verification link imetumwa kwenye:
-
-${e}
-
-HATUA INAYOFUATA
-
-1. Fungua email yako na bonyeza "Verify Account".
-
-2. Baada ya verification, browser itafungua ukurasa wa mwisho. Ufunge ukurasa huo.
-
-3. Rudi ZETRA BMS na Login kwa email na password ulizotumia kujisajili.
-
-Baada ya Login utaendelea na Business Setup.
-
-Hujaona email? Angalia Spam/Junk folder.`,
-  [
-    {
-      text: "GO TO LOGIN",
-      onPress: () => {
-        router.replace("/(auth)/login");
-      },
-    },
-  ],
+    Alert.alert(
+      tr("Verification email sent"),
+      tr("auth.registrationEmailBody", { email: e }),
+      [
+        {
+          text: tr("GO TO LOGIN"),
+          onPress: () => {
+            router.replace("/(auth)/login");
+          },
+        },
+      ],
       {
         cancelable: false,
       }
@@ -218,7 +214,7 @@ Hujaona email? Angalia Spam/Junk folder.`,
   };
 
   const content = (
-    <View style={{ flex: 1, backgroundColor: "#061018" }}>
+    <View style={{ flex: 1, backgroundColor: "#061018", overflow: "hidden" }}>
         <View
           pointerEvents="none"
           style={{
@@ -312,8 +308,7 @@ Hujaona email? Angalia Spam/Junk folder.`,
                     letterSpacing: 0.8,
                   }}
                 >
-                  START SECURE ACCESS
-                </Text>
+                  {tr("START SECURE ACCESS")}</Text>
               </View>
 
               <Text
@@ -326,8 +321,7 @@ Hujaona email? Angalia Spam/Junk folder.`,
                   letterSpacing: 0.2,
                 }}
               >
-                Create account
-              </Text>
+                {tr("Create account")}</Text>
 
               <Text
                 style={{
@@ -339,10 +333,9 @@ Hujaona email? Angalia Spam/Junk folder.`,
                   maxWidth: 340,
                 }}
               >
-                Create your secure ZETRA BMS account. Tutathibitisha email yako kabla ya kuendelea na business setup.
-              </Text>
+                {tr("Create your secure ZETRA BMS account. Tutathibitisha email yako kabla ya kuendelea na business setup.")}</Text>
 
-             <FieldLabel>Email</FieldLabel>
+             <FieldLabel>{tr("Email")}</FieldLabel>
               <GlassInput
                 value={email}
                 onChangeText={setEmail}
@@ -361,16 +354,14 @@ Hujaona email? Angalia Spam/Junk folder.`,
                   lineHeight: 18,
                 }}
               >
-                Tutatuma verification link kwenye email hii. Hakikisha ni email
-                sahihi unayoweza kufungua.
-              </Text>
+                {tr("Tutatuma verification link kwenye email hii. Hakikisha ni email sahihi unayoweza kufungua.")}</Text>
 
-              <FieldLabel>Password</FieldLabel> 
+              <FieldLabel>{tr("Password")}</FieldLabel> 
               <GlassInput
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
-                placeholder="Create a password"
+                placeholder={tr("Create a password")}
                 rightSlot={
                   <Pressable
                     onPress={() => setShowPassword((v) => !v)}
@@ -378,7 +369,7 @@ Hujaona email? Angalia Spam/Junk folder.`,
                     style={{ paddingLeft: 12, paddingVertical: 4 }}
                   >
                     <Text style={{ color: "#34D399", fontWeight: "900", fontSize: 14 }}>
-                      {showPassword ? "Hide" : "Show"}
+                      {showPassword ? tr("Hide") : tr("Show")}
                     </Text>
                   </Pressable>
                 }
@@ -393,15 +384,14 @@ Hujaona email? Angalia Spam/Junk folder.`,
                   fontWeight: "700",
                 }}
               >
-                Use at least 6 characters.
-              </Text>
+                {tr("Use at least 6 characters.")}</Text>
 
-              <FieldLabel>Confirm Password</FieldLabel>
+              <FieldLabel>{tr("Confirm Password")}</FieldLabel>
               <GlassInput
                 value={confirm}
                 onChangeText={setConfirm}
                 secureTextEntry={!showConfirm}
-                placeholder="Repeat your password"
+                placeholder={tr("Repeat your password")}
                 rightSlot={
                   <Pressable
                     onPress={() => setShowConfirm((v) => !v)}
@@ -409,7 +399,7 @@ Hujaona email? Angalia Spam/Junk folder.`,
                     style={{ paddingLeft: 12, paddingVertical: 4 }}
                   >
                     <Text style={{ color: "#34D399", fontWeight: "900", fontSize: 14 }}>
-                      {showConfirm ? "Hide" : "Show"}
+                      {showConfirm ? tr("Hide") : tr("Show")}
                     </Text>
                   </Pressable>
                 }
@@ -434,10 +424,84 @@ Hujaona email? Angalia Spam/Junk folder.`,
                     lineHeight: 20,
                   }}
                 >
-                  Baada ya kubonyeza Create account, tutatuma verification link kwenye email yako. Fungua email hiyo na uthibitishe account, kisha rudi ZETRA BMS na Login kuendelea na business setup.
-                </Text>
+                  {tr("Baada ya kubonyeza Create account, tutatuma verification link kwenye email yako. Fungua email hiyo na uthibitishe account, kisha rudi ZETRA BMS na Login kuendelea na business setup.")}</Text>
               </View>
 
+              {Platform.OS === "web" && webVerificationEmail ? (
+                <View
+                  style={{
+                    borderWidth: 1,
+                    borderColor: "rgba(52,211,153,0.35)",
+                    backgroundColor: "rgba(16,185,129,0.10)",
+                    borderRadius: 20,
+                    padding: 18,
+                    marginTop: 2,
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: "#6EE7B7",
+                      fontSize: 18,
+                      fontWeight: "900",
+                      marginBottom: 8,
+                    }}
+                  >
+                    {tr("Verification email sent")}</Text>
+
+                  <Text
+                    style={{
+                      color: "rgba(255,255,255,0.88)",
+                      fontSize: 14,
+                      fontWeight: "700",
+                      lineHeight: 21,
+                    }}
+                  >
+                    {tr("Account yako imeundwa. Tumetuma verification link kwenye:")}</Text>
+
+                  <Text
+                    style={{
+                      color: "white",
+                      fontSize: 15,
+                      fontWeight: "900",
+                      marginTop: 8,
+                    }}
+                  >
+                    {webVerificationEmail}
+                  </Text>
+
+                  <Text
+                    style={{
+                      color: "rgba(255,255,255,0.68)",
+                      fontSize: 13,
+                      fontWeight: "700",
+                      lineHeight: 20,
+                      marginTop: 12,
+                    }}
+                  >
+                    {tr("Fungua email yako na bonyeza Verify Account. Kama huioni, angalia Spam/Junk. Baada ya verification unaweza kurudi ZETRA BMS na kuendelea.")}</Text>
+
+                  <Pressable
+                    onPress={() => router.replace("/(auth)/login")}
+                    style={{
+                      backgroundColor: "#22C58B",
+                      borderRadius: 16,
+                      paddingVertical: 14,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      marginTop: 16,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: "#04110C",
+                        fontSize: 15,
+                        fontWeight: "900",
+                      }}
+                    >
+                      {tr("Go to Login")}</Text>
+                  </Pressable>
+                </View>
+              ) : (
               <Pressable
                 onPress={onRegister}
                 disabled={loading}
@@ -456,17 +520,34 @@ Hujaona email? Angalia Spam/Junk folder.`,
                   elevation: 6,
                 }}
               >
-                <Text
+                <View
                   style={{
-                    color: "#04110C",
-                    fontWeight: "900",
-                    fontSize: 17,
-                    letterSpacing: 0.2,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "center",
                   }}
                 >
-                  {loading ? "Creating..." : "Create account"}
-                </Text>
+                  {loading ? (
+                    <ActivityIndicator
+                      size="small"
+                      color="#04110C"
+                      style={{ marginRight: 10 }}
+                    />
+                  ) : null}
+
+                  <Text
+                    style={{
+                      color: "#04110C",
+                      fontWeight: "900",
+                      fontSize: 17,
+                      letterSpacing: 0.2,
+                    }}
+                  >
+                    {loading ? tr("Creating account...") : tr("Create account")}
+                  </Text>
+                </View>
               </Pressable>
+              )}
 
               <Pressable
                 onPress={() => router.replace("/(auth)/login")}
@@ -482,8 +563,8 @@ Hujaona email? Angalia Spam/Junk folder.`,
                     lineHeight: 22,
                   }}
                 >
-                  Already have an account?{" "}
-                  <Text style={{ color: "#6EE7B7", fontWeight: "900" }}>Login</Text>
+                  {tr("Already have an account?")}{" "}
+                  <Text style={{ color: "#6EE7B7", fontWeight: "900" }}>{tr("Login")}</Text>
                 </Text>
               </Pressable>
 
@@ -497,8 +578,7 @@ Hujaona email? Angalia Spam/Junk folder.`,
                   lineHeight: 18,
                 }}
               >
-                Protected account creation for your business workspace.
-              </Text>
+                {tr("Protected account creation for your business workspace.")}</Text>
             </View>
           </ScrollView>
         </KeyboardAvoidingView>

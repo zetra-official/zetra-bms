@@ -1,3 +1,5 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -92,6 +94,7 @@ function formatDateLabel(ts?: string | null) {
 }
 
 function EmptyState({ onCreate }: { onCreate: () => void }) {
+ const uiText = useCommonText();
   return (
     <Card
       style={{
@@ -116,12 +119,10 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
       </View>
 
       <Text style={{ color: MR.text, fontWeight: "900", fontSize: 16 }}>
-        No rooms yet
-      </Text>
+        {uiText("No rooms yet")}</Text>
 
       <Text style={{ color: MR.muted, fontWeight: "800", lineHeight: 20 }}>
-        Hujajiunga na room yoyote bado kwa account hii.
-      </Text>
+        {uiText("Hujajiunga na room yoyote bado kwa account hii.")}</Text>
 
       <Pressable
         onPress={onCreate}
@@ -137,8 +138,7 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
         })}
       >
         <Text style={{ color: MR.text, fontWeight: "900", fontSize: 14 }}>
-          Create Meeting Room
-        </Text>
+          {uiText("Create Meeting Room")}</Text>
       </Pressable>
     </Card>
   );
@@ -151,6 +151,7 @@ function RoomCard({
   room: RoomRow;
   onPress: () => void;
 }) {
+ const uiText = useCommonText();
   const unread = toInt(room.unread_count);
 
   return (
@@ -200,7 +201,7 @@ function RoomCard({
               }}
               numberOfLines={1}
             >
-              {clean(room.room_name) || "Meeting Room"}
+              {clean(room.room_name) || uiText("Meeting Room")}
             </Text>
 
             <Text
@@ -212,9 +213,8 @@ function RoomCard({
               }}
               numberOfLines={1}
             >
-              {clean(room.organization_name) || "Unknown Organization"} •{" "}
-              {niceRole(room.my_role)} • {toInt(room.members_count)} members
-            </Text>
+              {clean(room.organization_name) || uiText("Unknown Organization")} •{" "}
+              {niceRole(room.my_role)} • {toInt(room.members_count)} {uiText("members")}</Text>
 
             <Text
               style={{
@@ -227,7 +227,7 @@ function RoomCard({
             >
               {clean(room.last_message_preview) ||
                 clean(room.description) ||
-                "No activity yet"}
+                uiText("No activity yet")}
             </Text>
           </View>
 
@@ -274,6 +274,8 @@ function RoomCard({
 }
 
 export default function MeetingRoomListScreen() {
+ const systemText = useSystemMessageText();
+ const uiText = useCommonText();
   const router = useRouter();
   const org = useOrg();
 
@@ -408,8 +410,7 @@ export default function MeetingRoomListScreen() {
             }}
             numberOfLines={1}
           >
-            My Rooms
-          </Text>
+            {uiText("My Rooms")}</Text>
 
           <Text
             style={{
@@ -419,7 +420,7 @@ export default function MeetingRoomListScreen() {
             }}
             numberOfLines={1}
           >
-            {orgName} • {role}
+            {clean((org.activeOrgName || uiText("No organization")))} • {role}
           </Text>
         </View>
 
@@ -455,11 +456,8 @@ export default function MeetingRoomListScreen() {
         }}
       >
         <Text style={{ color: MR.text, fontWeight: "900", fontSize: 16 }}>
-          Active Rooms
-        </Text>
-        <Text style={{ color: MR.muted, fontWeight: "800", lineHeight: 20 }}>
-          Umejiunga na room {activeRooms.length} active kwa account hii.
-        </Text>
+          {uiText("Active Rooms")}</Text>
+        <Text style={{ color: MR.muted, fontWeight: "800", lineHeight: 20 }}>{uiText("You have joined {p0} active rooms on this account.", {p0: (activeRooms.length)})}</Text>
       </Card>
 
       {err ? (
@@ -471,10 +469,9 @@ export default function MeetingRoomListScreen() {
             gap: 8,
           }}
         >
-          <Text style={{ color: MR.danger, fontWeight: "900" }}>{err}</Text>
+          <Text style={{ color: MR.danger, fontWeight: "900" }}>{systemText(err)}</Text>
           <Text style={{ color: MR.muted, fontWeight: "800", lineHeight: 20 }}>
-            Reload tena au rudi nyuma kisha fungua page upya.
-          </Text>
+            {uiText("Reload tena au rudi nyuma kisha fungua page upya.")}</Text>
         </Card>
       ) : null}
 

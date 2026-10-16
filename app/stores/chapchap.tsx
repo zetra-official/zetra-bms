@@ -1,3 +1,5 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -53,6 +55,8 @@ function getRange(key: RangeKey) {
 }
 
 export default function SoldItemsScreen() {
+ const systemText = useSystemMessageText();
+ const uiText = useCommonText();
   const router = useRouter();
   const params = useLocalSearchParams();
 
@@ -148,27 +152,24 @@ const [customTo, setCustomTo] = useState(ymd(new Date()));
       >
         <View style={{ gap: 8 }}>
           <Pressable onPress={() => router.back()}>
-            <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>‹ Back</Text>
+            <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>{uiText("‹ Back")}</Text>
           </Pressable>
 
           <Text style={{ color: theme.colors.text, fontSize: 28, fontWeight: "900" }}>
-            Sold Items
-          </Text>
+            {uiText("Sold Items")}</Text>
 
           <Text style={{ color: theme.colors.muted, fontWeight: "800", lineHeight: 20 }}>
-            Bidhaa zilizouzwa kwa active store, zimepangwa kwa makundi yake bila kutoa expenses.
-          </Text>
+            {uiText("Bidhaa zilizouzwa kwa active store, zimepangwa kwa makundi yake bila kutoa expenses.")}</Text>
         </View>
 
         <Card style={{ gap: 10 }}>
           <Text style={{ color: theme.colors.muted, fontWeight: "900", fontSize: 12 }}>
-            STORE
-          </Text>
+            {uiText("STORE")}</Text>
           <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 20 }}>
-            {storeName || "Active Store"}
+            {storeName || uiText("Active Store")}
           </Text>
           <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-            Kipindi: {range.label} · {range.from} mpaka {range.to}
+            {uiText("Kipindi:")}{uiText(range.label)} · {range.from} {uiText("mpaka")}{range.to}
           </Text>
         </Card>
 
@@ -197,12 +198,12 @@ const [customTo, setCustomTo] = useState(ymd(new Date()));
                   }}
                 >
                   {k === "TODAY"
-  ? "Today"
+  ? uiText("Today")
   : k === "YESTERDAY"
-  ? "Yesterday"
+  ? uiText("Yesterday")
   : k === "WEEK"
-  ? "7 Days"
-  : "Custom"}
+  ? uiText("7 Days")
+  : uiText("Custom")}
                 </Text>
               </Pressable>
             );
@@ -212,18 +213,15 @@ const [customTo, setCustomTo] = useState(ymd(new Date()));
     {rangeKey === "CUSTOM" ? (
   <Card style={{ gap: 12 }}>
     <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-      Arrange Date
-    </Text>
+      {uiText("Arrange Date")}</Text>
 
     <Text style={{ color: theme.colors.muted, fontWeight: "800", lineHeight: 20 }}>
-      Andika tarehe kwa mfumo wa YYYY-MM-DD. Mfano: 2026-06-01 mpaka 2026-06-02.
-    </Text>
+      {uiText("Andika tarehe kwa mfumo wa YYYY-MM-DD. Mfano: 2026-06-01 mpaka 2026-06-02.")}</Text>
 
     <View style={{ flexDirection: "row", gap: 10 }}>
       <View style={{ flex: 1 }}>
         <Text style={{ color: theme.colors.muted, fontWeight: "900", marginBottom: 6 }}>
-          From
-        </Text>
+          {uiText("From")}</Text>
         <TextInput
           value={customFrom}
           onChangeText={setCustomFrom}
@@ -244,8 +242,7 @@ const [customTo, setCustomTo] = useState(ymd(new Date()));
 
       <View style={{ flex: 1 }}>
         <Text style={{ color: theme.colors.muted, fontWeight: "900", marginBottom: 6 }}>
-          To
-        </Text>
+          {uiText("To")}</Text>
         <TextInput
           value={customTo}
           onChangeText={setCustomTo}
@@ -277,8 +274,7 @@ const [customTo, setCustomTo] = useState(ymd(new Date()));
       }}
     >
       <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>
-        Apply Date
-      </Text>
+        {uiText("Apply Date")}</Text>
     </Pressable>
   </Card>
 ) : null}
@@ -286,8 +282,7 @@ const [customTo, setCustomTo] = useState(ymd(new Date()));
 <View style={{ flexDirection: "row", gap: 10 }}>
   <Card style={{ flex: 1 }}>
     <Text style={{ color: theme.colors.muted, fontWeight: "900", fontSize: 12 }}>
-      Items Sold
-    </Text>
+      {uiText("Items Sold")}</Text>
     <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 24, marginTop: 6 }}>
       {totalQty}
     </Text>
@@ -295,8 +290,7 @@ const [customTo, setCustomTo] = useState(ymd(new Date()));
 
   <Card style={{ flex: 1 }}>
     <Text style={{ color: theme.colors.muted, fontWeight: "900", fontSize: 12 }}>
-      Sales Value
-    </Text>
+      {uiText("Sales Value")}</Text>
     <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18, marginTop: 8 }}>
       {money(totalValue)}
     </Text>
@@ -305,35 +299,30 @@ const [customTo, setCustomTo] = useState(ymd(new Date()));
 
         <Card style={{ borderColor: "rgba(245,158,11,0.40)", backgroundColor: "rgba(245,158,11,0.10)" }}>
           <Text style={{ color: theme.colors.text, fontWeight: "900", lineHeight: 20 }}>
-            Hii ni thamani ya bidhaa zilizouzwa tu. Haijatoa expenses, matumizi, credit collection wala profit.
-          </Text>
+            {uiText("Hii ni thamani ya bidhaa zilizouzwa tu. Haijatoa expenses, matumizi, credit collection wala profit.")}</Text>
         </Card>
 
         {loading ? (
           <Card style={{ alignItems: "center", gap: 10 }}>
             <ActivityIndicator />
             <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>
-              Loading Sold Items...
-            </Text>
+              {uiText("Loading Sold Items...")}</Text>
           </Card>
         ) : err ? (
           <Card style={{ borderColor: "rgba(239,68,68,0.45)", backgroundColor: "rgba(239,68,68,0.10)" }}>
-            <Text style={{ color: "#FCA5A5", fontWeight: "900" }}>{err}</Text>
+            <Text style={{ color: "#FCA5A5", fontWeight: "900" }}>{systemText(err)}</Text>
             <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8, lineHeight: 20 }}>
-              Kama RPC bado haijawekwa, hatua inayofuata ni kuongeza SQL ya get_chapchap_sales_summary_v1.
-            </Text>
+              {uiText("Kama RPC bado haijawekwa, hatua inayofuata ni kuongeza SQL ya get_chapchap_sales_summary_v1.")}</Text>
           </Card>
         ) : rows.length === 0 ? (
           <Card>
             <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-              Hakuna bidhaa zilizouzwa kwenye kipindi hiki.
-            </Text>
+              {uiText("Hakuna bidhaa zilizouzwa kwenye kipindi hiki.")}</Text>
           </Card>
         ) : (
           <View style={{ gap: 10 }}>
             <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-              Sold Products
-            </Text>
+              {uiText("Sold Products")}</Text>
 
             {rows.map((r, index) => (
               <Card key={`${r.product_id ?? r.product_name}-${index}`} style={{ gap: 8 }}>
@@ -343,7 +332,7 @@ const [customTo, setCustomTo] = useState(ymd(new Date()));
                       {r.product_name}
                     </Text>
                     <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 4 }}>
-                      {r.sku ? `SKU: ${r.sku}` : "No SKU"}
+                      {r.sku ? `SKU: ${r.sku}` : uiText("No SKU")}
                     </Text>
                   </View>
 
@@ -352,8 +341,7 @@ const [customTo, setCustomTo] = useState(ymd(new Date()));
                       {r.quantity_sold}
                     </Text>
                     <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
-                      qty sold
-                    </Text>
+                      {uiText("qty sold")}</Text>
                   </View>
                 </View>
 
@@ -367,8 +355,7 @@ const [customTo, setCustomTo] = useState(ymd(new Date()));
                   }}
                 >
                   <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>
-                    Selling value
-                  </Text>
+                    {uiText("Selling value")}</Text>
                   <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
                     {money(r.sales_value)}
                   </Text>
@@ -390,8 +377,7 @@ const [customTo, setCustomTo] = useState(ymd(new Date()));
           }}
         >
           <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>
-            Refresh Sold Items
-          </Text>
+            {uiText("Refresh Sold Items")}</Text>
         </Pressable>
       </ScrollView>
     </Screen>

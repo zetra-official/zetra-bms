@@ -1,3 +1,4 @@
+import {useCommonText} from "@/src/i18n/useCommonText";
 import React, { useCallback, useMemo, useState } from "react";
 import { Alert, Image, Modal, Pressable, ScrollView, Share, Text, View } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
@@ -418,6 +419,7 @@ function safeMsgFromProps(p: Props): ChatMsg {
 }
 
 export function AiMessageBubble(props: Props) {
+ const uiText=useCommonText();
   const msg = useMemo(() => safeMsgFromProps(props), [props]);
   const isUser = msg.role === "user";
 
@@ -440,22 +442,22 @@ export function AiMessageBubble(props: Props) {
     try {
       const normalized = normalizeImageUri(uri);
       if (!normalized) {
-        Alert.alert("Image missing", "Hakuna picha ya ku-save.");
+        Alert.alert(uiText("Image missing"), uiText("Hakuna picha ya ku-save."));
         return;
       }
 
       const perm = await MediaLibrary.requestPermissionsAsync();
       if (perm.status !== "granted") {
-        Alert.alert("Permission required", "Ruhusu gallery/media access ili ku-save picha.");
+        Alert.alert(uiText("Permission required"), uiText("Ruhusu gallery/media access ili ku-save picha."));
         return;
       }
 
       const localUri = await ensureLocalImageFile(normalized);
       await MediaLibrary.saveToLibraryAsync(localUri);
 
-      Alert.alert("Saved", "Picha imehifadhiwa kwenye gallery.");
+      Alert.alert(uiText("Saved"), uiText("Picha imehifadhiwa kwenye gallery."));
     } catch (e: any) {
-      Alert.alert("Save failed", clean(e?.message) || "Imeshindikana ku-save picha.");
+      Alert.alert(uiText("Save failed"), clean(e?.message) || uiText("Imeshindikana ku-save picha."));
     }
   }, []);
 
@@ -463,7 +465,7 @@ export function AiMessageBubble(props: Props) {
     try {
       const normalized = normalizeImageUri(uri);
       if (!normalized) {
-        Alert.alert("Image missing", "Hakuna picha ya ku-share.");
+        Alert.alert(uiText("Image missing"), uiText("Hakuna picha ya ku-share."));
         return;
       }
 
@@ -479,7 +481,7 @@ export function AiMessageBubble(props: Props) {
         message: localUri,
       });
     } catch (e: any) {
-      Alert.alert("Share failed", clean(e?.message) || "Imeshindikana ku-share picha.");
+      Alert.alert(uiText("Share failed"), clean(e?.message) || uiText("Imeshindikana ku-share picha."));
     }
   }, []);
 
@@ -488,11 +490,11 @@ export function AiMessageBubble(props: Props) {
       const normalized = normalizeImageUri(uri);
       if (!normalized) return;
 
-      Alert.alert("Image actions", "Chagua unachotaka kufanya.", [
-        { text: "Cancel", style: "cancel" },
-        { text: "Open", onPress: () => openViewer(normalized) },
-        { text: "Share", onPress: () => void shareImageFromUri(normalized) },
-        { text: "Save", onPress: () => void saveImageToDevice(normalized) },
+      Alert.alert(uiText("Image actions"), uiText("Chagua unachotaka kufanya."), [
+        { text: uiText("Cancel"), style: "cancel" },
+        { text: uiText("Open"), onPress: () => openViewer(normalized) },
+        { text: uiText("Share"), onPress: () => void shareImageFromUri(normalized) },
+        { text: uiText("Save"), onPress: () => void saveImageToDevice(normalized) },
       ]);
     },
     [openViewer, saveImageToDevice, shareImageFromUri]
@@ -666,7 +668,7 @@ const renderSelectableBlock = useCallback(
                       justifyContent: "center",
                     })}
                   >
-                    <Text style={{ color: UI.text, fontWeight: "900" }}>Open</Text>
+                    <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Open")}</Text>
                   </Pressable>
 
                   <Pressable
@@ -682,7 +684,7 @@ const renderSelectableBlock = useCallback(
                       justifyContent: "center",
                     })}
                   >
-                    <Text style={{ color: UI.text, fontWeight: "900" }}>Share</Text>
+                    <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Share")}</Text>
                   </Pressable>
 
                   <Pressable
@@ -698,7 +700,7 @@ const renderSelectableBlock = useCallback(
                       justifyContent: "center",
                     })}
                   >
-                    <Text style={{ color: UI.text, fontWeight: "900" }}>Save</Text>
+                    <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Save")}</Text>
                   </Pressable>
                 </View>
               </View>
@@ -753,7 +755,7 @@ const renderSelectableBlock = useCallback(
                           style={{ color: UI.muted, fontWeight: "900", fontSize: 12, flex: 1 }}
                           numberOfLines={1}
                         >
-                          {chip.label}
+                          {uiText(chip.label)}
                         </Text>
                       </View>
 
@@ -781,7 +783,7 @@ const renderSelectableBlock = useCallback(
 
                   return (
                     <View
-                      key={`${section.title}_${idx}`}
+                      key={`${uiText(section.title)}_${idx}`}
                       style={{
                         width: "100%",
                         borderWidth: 1,
@@ -795,7 +797,7 @@ const renderSelectableBlock = useCallback(
                     >
                       <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
                         <Text style={{ color: UI.text, fontSize: 17 }}>{section.icon}</Text>
-                        <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>{section.title}</Text>
+                        <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>{uiText(section.title)}</Text>
                       </View>
 
                       {renderSelectableBlock(section.body)}
@@ -818,7 +820,7 @@ const renderSelectableBlock = useCallback(
                   paddingVertical: 12,
                 }}
               >
-                <Text style={{ color: UI.text, fontWeight: "900", marginBottom: 8 }}>🎯 NEXT MOVE</Text>
+                <Text style={{ color: UI.text, fontWeight: "900", marginBottom: 8 }}>{uiText("🎯 NEXT MOVE")}</Text>
 
                 {!!clean(imageUriNext) && (
                   <View style={{ marginBottom: 10 }}>
@@ -864,7 +866,7 @@ const renderSelectableBlock = useCallback(
                           justifyContent: "center",
                         })}
                       >
-                        <Text style={{ color: UI.text, fontWeight: "900" }}>Open</Text>
+                        <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Open")}</Text>
                       </Pressable>
 
                       <Pressable
@@ -880,7 +882,7 @@ const renderSelectableBlock = useCallback(
                           justifyContent: "center",
                         })}
                       >
-                        <Text style={{ color: UI.text, fontWeight: "900" }}>Share</Text>
+                        <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Share")}</Text>
                       </Pressable>
 
                       <Pressable
@@ -896,7 +898,7 @@ const renderSelectableBlock = useCallback(
                           justifyContent: "center",
                         })}
                       >
-                        <Text style={{ color: UI.text, fontWeight: "900" }}>Save</Text>
+                        <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Save")}</Text>
                       </Pressable>
                     </View>
                   </View>
@@ -951,7 +953,7 @@ const renderSelectableBlock = useCallback(
               paddingVertical: 10,
             }}
           >
-            <Text style={{ color: UI.text, fontWeight: "900" }}>Close</Text>
+            <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Close")}</Text>
           </Pressable>
 
           {!!clean(viewer.uri) && (
@@ -987,7 +989,7 @@ const renderSelectableBlock = useCallback(
                 justifyContent: "center",
               })}
             >
-              <Text style={{ color: UI.text, fontWeight: "900" }}>Share</Text>
+              <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Share")}</Text>
             </Pressable>
 
             <Pressable
@@ -1003,7 +1005,7 @@ const renderSelectableBlock = useCallback(
                 justifyContent: "center",
               })}
             >
-              <Text style={{ color: UI.text, fontWeight: "900" }}>Save</Text>
+              <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Save")}</Text>
             </Pressable>
           </View>
         </View>

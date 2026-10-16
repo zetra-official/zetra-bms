@@ -1,3 +1,5 @@
+import {useDocumentText} from "@/src/i18n/useDocumentText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/stores/items-overview.tsx
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -21,42 +23,162 @@ import { theme } from "@/src/ui/theme";
 import { formatMoney, useOrgMoneyPrefs } from "@/src/ui/money";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
-function downloadHtmlPdfOnWeb(html: string) {
-  if (Platform.OS !== "web" || typeof document === "undefined") return false;
+async function downloadHtmlPdfOnWeb(html: string, uiText: ReturnType<typeof useCommonText>): Promise<void> {
+  if (Platform.OS !== "web" || typeof document === "undefined") {
+    throw new Error("Web PDF export is unavailable.");
+  }
+
+  const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+    import("html2canvas"),
+    import("jspdf/dist/jspdf.es.min.js"),
+  ]);
 
   const iframe = document.createElement("iframe");
   iframe.style.position = "fixed";
-  iframe.style.right = "0";
-  iframe.style.bottom = "0";
-  iframe.style.width = "0";
-  iframe.style.height = "0";
+  iframe.style.left = "-10000px";
+  iframe.style.top = "0";
+  iframe.style.width = "1120px";
+  iframe.style.height = "1000px";
   iframe.style.border = "0";
-  iframe.style.visibility = "hidden";
-
   document.body.appendChild(iframe);
 
-  const doc = iframe.contentWindow?.document;
-  if (!doc) {
-    document.body.removeChild(iframe);
-    return false;
-  }
+  try {
+    const doc = iframe.contentDocument;
+    if (!doc) throw new Error("Cannot prepare PDF document.");
 
-  doc.open();
-  doc.write(html);
-  doc.close();
+    doc.open();
+    doc.write(html);
+    doc.close();
 
-  setTimeout(() => {
-    iframe.contentWindow?.focus();
-    iframe.contentWindow?.print();
+    await new Promise<void>((resolve) => {
+      if (doc.readyState === "complete") {
+        resolve();
+      } else {
+        iframe.onload = () => resolve();
+        setTimeout(resolve, 1200);
+      }
+    });
 
-    setTimeout(() => {
+    if (doc.fonts?.ready) {
+      await doc.fonts.ready;
+    }
+
+    const images = Array.from(doc.images);
+    await Promise.all(
+      images.map(
+        (img) =>
+          new Promise<void>((resolve) => {
+            if (img.complete) return resolve();
+            img.onload = () => resolve();
+            img.onerror = () => resolve();
+          })
+      )
+    );
+
+    const body = doc.body;
+    if (!body) throw new Error("PDF content is missing.");
+
+    const canvas = await html2canvas(body, {
+      scale: 1.5,
+      useCORS: true,
+      backgroundColor: "#FFFFFF",
+      logging: false,
+      windowWidth: 1120,
+    });
+
+    if (!canvas.width || !canvas.height) {
+      throw new Error("PDF capture returned an empty page.");
+    }
+
+    const pdf = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: "a4",
+      compress: true,
+    });
+
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 10;
+    const contentWidth = pageWidth - margin * 2;
+    const contentHeight = pageHeight - margin * 2;
+
+    const pixelsPerMm = canvas.width / contentWidth;
+    const pageHeightPx = Math.floor(contentHeight * pixelsPerMm);
+
+    let offset = 0;
+    let page = 0;
+
+    while (offset < canvas.height) {
+      const sliceHeight = Math.min(pageHeightPx, canvas.height - offset);
+      const slice = document.createElement("canvas");
+      slice.width = canvas.width;
+      slice.height = sliceHeight;
+
+      const ctx = slice.getContext("2d");
+      if (!ctx) throw new Error("Cannot render PDF page.");
+
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillRect(0, 0, slice.width, slice.height);
+      ctx.drawImage(
+        canvas,
+        0, offset, canvas.width, sliceHeight,
+        0, 0, canvas.width, sliceHeight
+      );
+
+      if (page > 0) pdf.addPage();
+
+      pdf.addImage(
+        slice.toDataURL("image/jpeg", 0.85),
+        "JPEG",
+        margin,
+        margin,
+        contentWidth,
+        sliceHeight / pixelsPerMm
+      );
+
+      offset += sliceHeight;
+      page++;
+    }
+
+    const blob = pdf.output("blob");
+    const filename = `ZETRA-Items-Overview-${new Date().toISOString().slice(0, 10)}.pdf`;
+    const file = new File([blob], filename, { type: "application/pdf" });
+
+    const nav = navigator as Navigator & {
+      canShare?: (data: ShareData) => boolean;
+    };
+
+    if (
+      typeof nav.share === "function" &&
+      typeof nav.canShare === "function" &&
+      nav.canShare({ files: [file] })
+    ) {
       try {
-        document.body.removeChild(iframe);
-      } catch {}
-    }, 1500);
-  }, 500);
+        await nav.share({
+          files: [file],
+          title: uiText("ZETRA Items Overview"),
+        });
+        return;
+      } catch (error: any) {
+        if (error?.name === "AbortError") return;
+      }
+    }
 
-  return true;
+    const url = URL.createObjectURL(blob);
+    try {
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } finally {
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+    }
+  } finally {
+    iframe.remove();
+  }
 }
 type ScopeMode = "STORE" | "ORG";
 
@@ -107,6 +229,8 @@ type ItemRow = {
 };
 
 export default function ItemsOverviewScreen() {
+ const {documentText, documentLocale} = useDocumentText();
+ const uiText=useCommonText();
   const router = useRouter();
   const params = useLocalSearchParams<{
     orgId?: string;
@@ -275,7 +399,7 @@ const storeChoices = useMemo(() => {
   const loadData = useCallback(
     async (mode: "initial" | "refresh" = "initial") => {
       if (!orgId) {
-        Alert.alert("Missing organization", "Organization haijapatikana.");
+        Alert.alert(uiText("Missing organization"), uiText("Organization haijapatikana."));
         return;
       }
 
@@ -298,7 +422,7 @@ const storeChoices = useMemo(() => {
   const sname = selectedStoreName || startStoreName || "Active Store";
 
   if (!sid) {
-    Alert.alert("Select store", "Chagua store kwanza.");
+    Alert.alert(uiText("Select store"), uiText("Chagua store kwanza."));
     nextRows = [];
   } else {
     nextRows = await loadStoreItems(sid, sname);
@@ -308,7 +432,7 @@ const storeChoices = useMemo(() => {
         nextRows.sort((a, b) => a.name.localeCompare(b.name));
         setRows(nextRows);
       } catch (err: any) {
-        Alert.alert("Failed", err?.message ?? "Imeshindikana kupakia items.");
+        Alert.alert(uiText("Failed"), err?.message ?? uiText("Imeshindikana kupakia items."));
         setRows([]);
       } finally {
         setLoading(false);
@@ -458,14 +582,14 @@ const rowsForPdf = selectMode
 // Kama yupo kwenye Choose Items lakini hajachagua hata moja.
 if (selectMode && rowsForPdf.length === 0) {
   Alert.alert(
-    "No items selected",
-    "Chagua angalau bidhaa moja au bonyeza Done Selecting ili kutoa PDF ya bidhaa zote."
+    uiText("No items selected"),
+    uiText("Chagua angalau bidhaa moja au bonyeza Done Selecting ili kutoa PDF ya bidhaa zote.")
   );
   return;
 }
 
 if (rowsForPdf.length === 0) {
-  Alert.alert("No items", "Hakuna bidhaa za kutoa PDF.");
+  Alert.alert(uiText("No items"), uiText("Hakuna bidhaa za kutoa PDF."));
   return;
 }
 
@@ -563,7 +687,7 @@ const rowsHtml = rowsForPdf
 
     const html = `
       <!doctype html>
-      <html>
+      <html lang="${documentLocale().language}" dir="${documentLocale().direction}">
         <head>
           <meta charset="utf-8" />
           <style>
@@ -636,18 +760,18 @@ const rowsHtml = rowsForPdf
             <div class="doc-area">
               <div class="title">${esc(reportTitle)}</div>
               <div class="muted">${esc(new Date().toLocaleString())}</div>
-              <div class="muted"><b>Store:</b> ${esc(storeTitle)}</div>
+              <div class="muted"><b>${documentText("Store:")}</b> ${esc(storeTitle)}</div>
               <span class="badge">${pdfIsOwnerReport ? "OWNER REPORT" : "CUSTOMER PRICE LIST"}</span>
             </div>
           </div>
 
           <div class="grid ${pdfIsOwnerReport ? "" : "staff"}">
-            <div class="box"><div class="label">Store</div><div class="value">${esc(storeTitle)}</div></div>
-            <div class="box"><div class="label">Items</div><div class="value">${esc(rowsForPdf.length)}</div></div>
-            ${pdfIsOwnerReport ? `<div class="box"><div class="label">Total Qty</div><div class="value">${esc(pdfQty)}</div></div>` : ""}
+            <div class="box"><div class="label">${documentText("Store")}</div><div class="value">${esc(storeTitle)}</div></div>
+            <div class="box"><div class="label">${documentText("Items")}</div><div class="value">${esc(rowsForPdf.length)}</div></div>
+            ${pdfIsOwnerReport ? `<div class="box"><div class="label">${documentText("Total Qty")}</div><div class="value">${esc(pdfQty)}</div></div>` : ""}
             ${
               pdfIsOwnerReport
-                ? `<div class="box"><div class="label">Selling Value</div><div class="value">${esc(formatMoney(pdfSell, money))}</div></div>`
+                ? `<div class="box"><div class="label">${documentText("Selling Value")}</div><div class="value">${esc(formatMoney(pdfSell, money))}</div></div>`
                 : ""
             }
           </div>
@@ -655,8 +779,8 @@ const rowsHtml = rowsForPdf
           ${
             pdfIsOwnerReport
               ? `<div class="grid">
-                   <div class="box"><div class="label">Cost Value</div><div class="value">${esc(formatMoney(pdfCost, money))}</div></div>
-                   <div class="box"><div class="label">Visibility</div><div class="value">Owner Report</div></div>
+                   <div class="box"><div class="label">${documentText("Cost Value")}</div><div class="value">${esc(formatMoney(pdfCost, money))}</div></div>
+                   <div class="box"><div class="label">${documentText("Visibility")}</div><div class="value">${documentText("Owner Report")}</div></div>
                  </div>`
               : ""
           }
@@ -665,12 +789,12 @@ const rowsHtml = rowsForPdf
             <thead>
               <tr>
                 <th style="width:5%">#</th>
-                <th>Item Name</th>
+                <th>${documentText("Item Name")}</th>
                 <th>SKU</th>
-                <th>Unit</th>
-                ${pdfIsOwnerReport ? `<th>Qty</th>` : ""}
-                <th>Sell Price</th>
-                ${pdfIsOwnerReport ? `<th>Sell Total</th><th>Cost Price</th><th>Cost Total</th>` : ""}
+                <th>${documentText("Unit")}</th>
+                ${pdfIsOwnerReport ? `<th>${documentText("Qty")}</th>` : ""}
+                <th>${documentText("Sell Price")}</th>
+                ${pdfIsOwnerReport ? `<th>${documentText("Sell Total")}</th><th>${documentText("Cost Price")}</th><th>${documentText("Cost Total")}</th>` : ""}
               </tr>
             </thead>
             <tbody>
@@ -690,7 +814,10 @@ const rowsHtml = rowsForPdf
       </html>
     `;
 
-   if (downloadHtmlPdfOnWeb(html)) return;
+   if (Platform.OS === "web") {
+  await downloadHtmlPdfOnWeb(html, uiText);
+  return;
+}
 
 const { uri } = await Print.printToFileAsync({ html });
 
@@ -703,7 +830,7 @@ if (await Sharing.isAvailableAsync()) {
   await Print.printAsync({ uri });
 }
   } catch (e: any) {
-    Alert.alert("PDF Failed", e?.message ?? "Imeshindikana kutengeneza PDF.");
+    Alert.alert(uiText("PDF Failed"), e?.message ?? uiText("Imeshindikana kutengeneza PDF."));
   } finally {
     setExportingPdf(false);
   }
@@ -747,7 +874,7 @@ if (await Sharing.isAvailableAsync()) {
                   paddingVertical: 9,
                 }}
               >
-                <Text style={{ color: TEXT, fontWeight: "900" }}>← Back</Text>
+                <Text style={{ color: TEXT, fontWeight: "900" }}>{uiText("← Back")}</Text>
               </Pressable>
 
               <Pressable
@@ -761,23 +888,22 @@ if (await Sharing.isAvailableAsync()) {
                   paddingVertical: 9,
                 }}
               >
-                <Text style={{ color: TEXT, fontWeight: "900" }}>Refresh</Text>
+                <Text style={{ color: TEXT, fontWeight: "900" }}>{uiText("Refresh")}</Text>
               </Pressable>
             </View>
 
             <Card style={{ gap: 12, backgroundColor: "#FFFFFF", borderColor: BORDER }}>
               <Text style={{ color: FAINT, fontWeight: "900", letterSpacing: 1, fontSize: 11 }}>
-                ITEMS OVERVIEW
-              </Text>
+                {uiText("ITEMS OVERVIEW")}</Text>
 
               <Text style={{ color: TEXT, fontWeight: "900", fontSize: 24 }}>
-                {scope === "ORG" ? "Organization Items" : selectedStoreName || "Store Items"}
+                {scope === "ORG" ? uiText("Organization Items") : selectedStoreName || uiText("Store Items")}
               </Text>
 
               <Text style={{ color: MUTED, fontWeight: "800", lineHeight: 20 }}>
                 {isOwner
-  ? "Angalia bidhaa, picha, quantity, selling price na owner-only buying price."
-  : "Angalia bidhaa, picha, quantity na selling price ya store yako."}
+  ? uiText("Angalia bidhaa, picha, quantity, selling price na owner-only buying price.")
+  : uiText("Angalia bidhaa, picha, quantity na selling price ya store yako.")}
               </Text>
 
               <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
@@ -793,8 +919,7 @@ if (await Sharing.isAvailableAsync()) {
                   }}
                 >
                   <Text style={{ color: scope === "STORE" ? EMERALD : TEXT, fontWeight: "900" }}>
-                    Active Store
-                  </Text>
+                    {uiText("Active Store")}</Text>
                 </Pressable>
 
             {!isStaff ? (
@@ -810,8 +935,7 @@ if (await Sharing.isAvailableAsync()) {
     }}
   >
     <Text style={{ color: scope === "ORG" ? EMERALD : TEXT, fontWeight: "900" }}>
-      Organization
-    </Text>
+      {uiText("Organization")}</Text>
   </Pressable>
 ) : null}
               </View>
@@ -847,17 +971,17 @@ if (await Sharing.isAvailableAsync()) {
 
               <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
                 <View style={{ borderWidth: 1, borderColor: BORDER, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 }}>
-                  <Text style={{ color: TEXT, fontWeight: "900" }}>{rows.length} Items</Text>
+                  <Text style={{ color: TEXT, fontWeight: "900" }}>{rows.length} {uiText("Items")}</Text>
                 </View>
 
                 <View style={{ borderWidth: 1, borderColor: BORDER, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 }}>
-                  <Text style={{ color: TEXT, fontWeight: "900" }}>Qty {totalQty}</Text>
+                  <Text style={{ color: TEXT, fontWeight: "900" }}>{uiText("Qty")}{totalQty}</Text>
                 </View>
 
                 {isOwner ? (
                   <View style={{ borderWidth: 1, borderColor: BORDER, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 }}>
                     <Text style={{ color: TEXT, fontWeight: "900" }}>
-                      Sell {formatMoney(totalSellingValue, money)}
+                      {uiText("Sell")}{formatMoney(totalSellingValue, money)}
                     </Text>
                   </View>
                 ) : null}
@@ -865,7 +989,7 @@ if (await Sharing.isAvailableAsync()) {
                 {isOwner ? (
                   <View style={{ borderWidth: 1, borderColor: BORDER, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 }}>
                     <Text style={{ color: TEXT, fontWeight: "900" }}>
-                      Cost {formatMoney(totalCostValue, money)}
+                      {uiText("Cost")}{formatMoney(totalCostValue, money)}
                     </Text>
                   </View>
                 ) : null}
@@ -875,7 +999,7 @@ if (await Sharing.isAvailableAsync()) {
                 <TextInput
                   value={query}
                   onChangeText={setQuery}
-                  placeholder="Search item, SKU or store..."
+                  placeholder={uiText("Search item, SKU or store...")}
                   placeholderTextColor={FAINT}
                   style={{
                     color: TEXT,
@@ -897,27 +1021,47 @@ if (await Sharing.isAvailableAsync()) {
     }}
   >
     <Text style={{ color: selectMode ? EMERALD : TEXT, fontWeight: "900", fontSize: 12 }}>
-      {selectMode ? "Done Selecting" : "Choose Items"}
+      {selectMode ? uiText("Done Selecting") : uiText("Choose Items")}
     </Text>
   </Pressable>
 
   <Pressable
     onPress={() => {
       if (isOwner) {
+        if (Platform.OS === "web") {
+          const answer = window.confirm(
+            uiText("PDF kwa ajili ya mteja?\n\nOK = YES: Customer PDF (bila total quantity, selling total na cost).\n\nCancel = Chagua aina nyingine.")
+          );
+
+          if (answer) {
+            void exportItemsPdf(true);
+            return;
+          }
+
+          const fullReport = window.confirm(
+            uiText("Unataka Full Owner Report?\n\nOK = NO: Full Owner Report.\nCancel = Sitisha.")
+          );
+
+          if (fullReport) {
+            void exportItemsPdf(false);
+          }
+          return;
+        }
+
         Alert.alert(
-          "PDF kwa ajili ya mteja?",
-          "Ukichagua Yes, PDF itaficha total quantity, selling total, cost na visibility kama staff/customer catalog. Ukichagua No, itatoa full owner report.",
+          uiText("PDF kwa ajili ya mteja?"),
+          uiText("Ukichagua Yes, PDF itaficha total quantity, selling total, cost na visibility kama staff/customer catalog. Ukichagua No, itatoa full owner report."),
           [
             {
-              text: "Yes",
+              text: uiText("Yes"),
               onPress: () => void exportItemsPdf(true),
             },
             {
-              text: "No",
+              text: uiText("No"),
               onPress: () => void exportItemsPdf(false),
             },
             {
-              text: "Cancel",
+              text: uiText("Cancel"),
               style: "cancel",
             },
           ]
@@ -940,10 +1084,10 @@ if (await Sharing.isAvailableAsync()) {
   >
     <Text style={{ color: TEXT, fontWeight: "900", fontSize: 12 }}>
       {exportingPdf
-        ? "Creating PDF..."
+        ? uiText("Creating PDF...")
         : selectedPdfCount > 0
-        ? `Export PDF (${selectedPdfCount})`
-        : "Export PDF"}
+        ? uiText("Export PDF ({p0})", {p0: (selectedPdfCount)})
+        : uiText("Export PDF")}
     </Text>
   </Pressable>
 
@@ -960,16 +1104,14 @@ if (await Sharing.isAvailableAsync()) {
       }}
     >
       <Text style={{ color: MUTED, fontWeight: "900", fontSize: 12 }}>
-        Clear
-      </Text>
+        {uiText("Clear")}</Text>
     </Pressable>
   ) : null}
 </View>
 
 {selectMode ? (
   <Text style={{ color: MUTED, fontWeight: "800", lineHeight: 18 }}>
-    Chagua bidhaa unazotaka kwenye PDF. Usipochagua, PDF itatoa bidhaa zote zilizo kwenye list hii.
-  </Text>
+    {uiText("Chagua bidhaa unazotaka kwenye PDF. Usipochagua, PDF itatoa bidhaa zote zilizo kwenye list hii.")}</Text>
 ) : null}
             </Card>
           </View>
@@ -979,17 +1121,14 @@ if (await Sharing.isAvailableAsync()) {
             <View style={{ paddingTop: 24, alignItems: "center" }}>
               <ActivityIndicator />
               <Text style={{ color: MUTED, fontWeight: "800", marginTop: 10 }}>
-                Loading items...
-              </Text>
+                {uiText("Loading items...")}</Text>
             </View>
           ) : (
             <Card style={{ backgroundColor: "#FFFFFF", borderColor: BORDER }}>
               <Text style={{ color: TEXT, fontWeight: "900" }}>
-                No items found
-              </Text>
+                {uiText("No items found")}</Text>
               <Text style={{ color: MUTED, fontWeight: "800", marginTop: 6 }}>
-                Hakuna bidhaa zenye stock kwenye scope hii.
-              </Text>
+                {uiText("Hakuna bidhaa zenye stock kwenye scope hii.")}</Text>
             </Card>
           )
         }
@@ -1092,33 +1231,32 @@ const selectedForPdf = !!selectedPdfItems[itemKey];
               style={{ color: MUTED, fontWeight: "800", marginTop: 4, fontSize: 12, lineHeight: 18 }}
               numberOfLines={expanded ? undefined : 1}
             >
-              SKU: {item.sku || "—"} {item.unit ? ` | Unit: ${item.unit}` : ""}
+              {uiText("SKU:")}{item.sku || "—"} {item.unit ? uiText(" | Unit: {p0}", {p0: (item.unit)}) : ""}
             </Text>
 
             {scope === "ORG" ? (
               <Text style={{ color: FAINT, fontWeight: "800", marginTop: 4, fontSize: 12, lineHeight: 18 }}>
-                Store: {item.storeName || "—"}
+                {uiText("Store:")}{item.storeName || "—"}
               </Text>
             ) : null}
 
             <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
               <Text style={{ color: TEXT, fontWeight: "900", fontSize: 12 }}>
-                Qty {item.qty}
+                {uiText("Qty")}{item.qty}
               </Text>
 
               {item.isLowStock ? ( 
                 <Text style={{ color: "#DC2626", fontWeight: "900", fontSize: 12 }}>
-                  LOW STOCK
-                </Text>
+                  {uiText("LOW STOCK")}</Text>
               ) : null}
 
               <Text style={{ color: EMERALD, fontWeight: "900", fontSize: 12 }}>
-                Sell {formatMoney(item.sellingPrice ?? 0, money)}
+                {uiText("Sell")}{formatMoney(item.sellingPrice ?? 0, money)}
               </Text>
 
               {isOwner ? (
                 <Text style={{ color: "#B45309", fontWeight: "900", fontSize: 12 }}>
-                  Cost {formatMoney(item.costPrice ?? 0, money)}
+                  {uiText("Cost")}{formatMoney(item.costPrice ?? 0, money)}
                 </Text>
               ) : null}
             </View>
@@ -1134,38 +1272,37 @@ const selectedForPdf = !!selectedPdfItems[itemKey];
                 }}
               >
                 <Text style={{ color: TEXT, fontWeight: "900", fontSize: 13 }}>
-                  Full Item Details
+                  {uiText("Full Item Details")}</Text>
+
+                <Text style={{ color: MUTED, fontWeight: "800", lineHeight: 19 }}>
+                  {uiText("Name:")}{item.name}
                 </Text>
 
                 <Text style={{ color: MUTED, fontWeight: "800", lineHeight: 19 }}>
-                  Name: {item.name}
+                  {uiText("SKU:")}{item.sku || "—"}
                 </Text>
 
                 <Text style={{ color: MUTED, fontWeight: "800", lineHeight: 19 }}>
-                  SKU: {item.sku || "—"}
+                  {uiText("Unit:")}{item.unit || "—"}
                 </Text>
 
                 <Text style={{ color: MUTED, fontWeight: "800", lineHeight: 19 }}>
-                  Unit: {item.unit || "—"}
+                  {uiText("Quantity:")}{item.qty}
                 </Text>
 
                 <Text style={{ color: MUTED, fontWeight: "800", lineHeight: 19 }}>
-                  Quantity: {item.qty}
-                </Text>
-
-                <Text style={{ color: MUTED, fontWeight: "800", lineHeight: 19 }}>
-                  Selling Price: {formatMoney(item.sellingPrice ?? 0, money)}
+                  {uiText("Selling Price:")}{formatMoney(item.sellingPrice ?? 0, money)}
                 </Text>
 
                 {isOwner ? (
                   <Text style={{ color: MUTED, fontWeight: "800", lineHeight: 19 }}>
-                    Cost Price: {formatMoney(item.costPrice ?? 0, money)}
+                    {uiText("Cost Price:")}{formatMoney(item.costPrice ?? 0, money)}
                   </Text>
                 ) : null}
 
                 {scope === "ORG" ? (
                   <Text style={{ color: MUTED, fontWeight: "800", lineHeight: 19 }}>
-                    Store: {item.storeName || "—"}
+                    {uiText("Store:")}{item.storeName || "—"}
                   </Text>
                 ) : null}
               </View>
@@ -1179,8 +1316,7 @@ const selectedForPdf = !!selectedPdfItems[itemKey];
         ListFooterComponent={
           filteredRows.length > 0 ? (
             <Text style={{ color: MUTED, fontWeight: "800", textAlign: "center", marginTop: 8 }}>
-              Showing {filteredRows.length} of {rows.length} items
-            </Text>
+              {uiText("Showing")}{filteredRows.length} {uiText("of")}{rows.length} {uiText("items")}</Text>
           ) : null
         }
       />

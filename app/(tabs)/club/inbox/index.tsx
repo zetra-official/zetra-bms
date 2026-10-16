@@ -1,3 +1,4 @@
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/(tabs)/club/inbox/index.tsx
 import { useOrg } from "@/src/context/OrgContext";
 import { Card } from "@/src/ui/Card";
@@ -19,6 +20,7 @@ function safeStr(x: any, fallback = "—") {
 }
 
 export default function ClubInboxEntryScreen() {
+ const uiText=useCommonText();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const topPad = Math.max(insets.top, 10) + 8;
@@ -70,11 +72,9 @@ export default function ClubInboxEntryScreen() {
 
               <View>
                 <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-                  Inbox
-                </Text>
+                  {uiText("Inbox")}</Text>
                 <Text style={{ color: theme.colors.faint, fontWeight: "900", fontSize: 12 }}>
-                  Threads + Orders hub (store-based)
-                </Text>
+                  {uiText("Threads + Orders hub (store-based)")}</Text>
               </View>
             </View>
 
@@ -93,21 +93,21 @@ export default function ClubInboxEntryScreen() {
                 },
               ]}
             >
-              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Back</Text>
+              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Back")}</Text>
             </Pressable>
           </View>
         </Card>
 
         <Card style={{ padding: 14, gap: 10 }}>
           <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>
-            Active Store:{" "}
+            {uiText("Active Store:")}{" "}
             <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
               {safeStr(activeStoreName, "—")}
             </Text>
           </Text>
 
           <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>
-            Role:{" "}
+            {uiText("Role:")}{" "}
             <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
               {safeStr(activeRole, "—").toUpperCase()}
             </Text>
@@ -115,12 +115,10 @@ export default function ClubInboxEntryScreen() {
 
           {!canRedirect ? (
             <Text style={{ color: theme.colors.danger, fontWeight: "900", marginTop: 6 }}>
-              Activate store kwanza (Stores tab), kisha rudi Inbox.
-            </Text>
+              {uiText("Activate store kwanza (Stores tab), kisha rudi Inbox.")}</Text>
           ) : (
             <Text style={{ color: theme.colors.faint, fontWeight: "900", marginTop: 6 }}>
-              Opening store inbox...
-            </Text>
+              {uiText("Opening store inbox...")}</Text>
           )}
 
           {/* Optional helper button (doesn't hurt; just in case replace is blocked by state) */}
@@ -153,8 +151,7 @@ export default function ClubInboxEntryScreen() {
             >
               <Ionicons name="mail-unread-outline" size={18} color={theme.colors.emerald} />
               <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                Open Store Inbox
-              </Text>
+                {uiText("Open Store Inbox")}</Text>
             </Pressable>
           )}
         </Card>

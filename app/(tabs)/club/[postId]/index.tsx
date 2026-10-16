@@ -1,3 +1,4 @@
+import {useCommonText} from "@/src/i18n/useCommonText";
 import { supabase } from "@/src/supabase/supabaseClient";
 import { Card } from "@/src/ui/Card";
 import { Screen } from "@/src/ui/Screen";
@@ -46,6 +47,7 @@ const POST_STATS_RPC_CANDIDATES = [
 ] as const;
 
 export default function ClubPostDetailScreen() {
+ const uiText=useCommonText();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -318,14 +320,14 @@ export default function ClubPostDetailScreen() {
               />
             ) : (
               <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-                <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>No image</Text>
+                <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>{uiText("No image")}</Text>
               </View>
             )}
           </View>
         </Pressable>
       </Modal>
     );
-  }, [fullOpen, imageUrl, insets.bottom, topPad]);
+  }, [fullOpen, imageUrl, insets.bottom, topPad, uiText]);
 
   const LikeLabel = useMemo(() => {
     const n = typeof likesCount === "number" ? likesCount : null;
@@ -442,7 +444,7 @@ export default function ClubPostDetailScreen() {
                 ]}
               >
                 <Ionicons name="business-outline" size={16} color={theme.colors.text} />
-                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>Store</Text>
+                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>{uiText("Store")}</Text>
               </Pressable>
             </View>
           )}
@@ -522,8 +524,7 @@ export default function ClubPostDetailScreen() {
               >
                 <Ionicons name="chatbubble-ellipses-outline" size={16} color={theme.colors.emerald} />
                 <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>
-                  Zungumza na Muuzaji
-                </Text>
+                  {uiText("Zungumza na Muuzaji")}</Text>
               </Pressable>
             )}
           </View>
@@ -562,7 +563,7 @@ export default function ClubPostDetailScreen() {
 
               <View style={{ padding: 12, flexDirection: "row", alignItems: "center", gap: 8 }}>
                 <Ionicons name="expand-outline" size={16} color={theme.colors.muted} />
-                <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Tap to view fullscreen</Text>
+                <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>{uiText("Tap to view fullscreen")}</Text>
               </View>
             </Pressable>
           </Card>
@@ -571,8 +572,7 @@ export default function ClubPostDetailScreen() {
         {!postId ? (
           <Card style={{ backgroundColor: theme.colors.dangerSoft, borderColor: theme.colors.dangerBorder }}>
             <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>
-              Post haijapokelewa vizuri. Rudi kwenye feed uifungue tena.
-            </Text>
+              {uiText("Post haijapokelewa vizuri. Rudi kwenye feed uifungue tena.")}</Text>
           </Card>
         ) : null}
       </View>

@@ -1,3 +1,5 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/(tabs)/sales/profit.tsx
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -169,6 +171,8 @@ function formatMoneyProfessional(raw: string, value: number) {
 }
 
 export default function ProfitScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -514,9 +518,9 @@ export default function ProfitScreen() {
             </View>
 
             <View style={{ gap: 2, flex: 1 }}>
-              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Trend hint</Text>
+              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Trend hint")}</Text>
               <Text style={{ color: theme.colors.muted, fontWeight: "800" }} numberOfLines={1} ellipsizeMode="tail">
-                {labelForRange(view)} {label}
+                {labelForRange(view)} {(view === "today" ? uiText("vs yesterday") : (view === "week" ? uiText("vs previous week") : uiText("vs previous period")))}
               </Text>
             </View>
           </View>
@@ -543,11 +547,11 @@ export default function ProfitScreen() {
         </View>
 
         <Text style={{ color: theme.colors.muted, fontWeight: "800" }} numberOfLines={1}>
-          Previous net: <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{fmt(trend.prevNet)}</Text>
+          {uiText("Previous net:")}<Text style={{ color: theme.colors.text, fontWeight: "900" }}>{fmt(trend.prevNet)}</Text>
         </Text>
       </Card>
     );
-  }, [isOwner, trend, view, fmt]);
+  }, [isOwner, trend, view, fmt, uiText]);
 
   const headerSubtitle = useMemo(() => {
     const org = activeOrgName ?? "—";
@@ -735,8 +739,7 @@ export default function ProfitScreen() {
                 letterSpacing: 0.2,
               }}
             >
-              Profit
-            </Text>
+              {uiText("Profit")}</Text>
             <Text
               style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 13, lineHeight: 18 }}
               numberOfLines={1}
@@ -768,18 +771,17 @@ export default function ProfitScreen() {
 
         {!isOwner ? (
           <Card style={{ borderColor: theme.colors.dangerBorder, backgroundColor: theme.colors.dangerSoft, gap: 10, padding: 14 }}>
-            <Text style={{ color: theme.colors.danger, fontWeight: "900", fontSize: 16 }}>Owner only</Text>
+            <Text style={{ color: theme.colors.danger, fontWeight: "900", fontSize: 16 }}>{uiText("Owner only")}</Text>
             <Text style={{ color: theme.colors.text, fontWeight: "800" }}>
-              Profit inaonekana kwa Owner tu. Admin/Staff hawaruhusiwi kuona faida.
-            </Text>
+              {uiText("Profit inaonekana kwa Owner tu. Admin/Staff hawaruhusiwi kuona faida.")}</Text>
 
-            <Button title="Back" onPress={() => router.back()} variant="secondary" />
+            <Button title={uiText("Back")} onPress={() => router.back()} variant="secondary" />
           </Card>
         ) : (
           <>
             <Card style={{ gap: 10, padding: 14 }}>
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>View</Text>
+                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("View")}</Text>
 
                 <View style={{ flexDirection: "row", gap: 10 }}>
                   <Pressable
@@ -800,7 +802,7 @@ export default function ProfitScreen() {
                     })}
                   >
                     <Ionicons name="time-outline" size={15} color={theme.colors.text} />
-                    <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}>Archive</Text>
+                    <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}>{uiText("Archive")}</Text>
                   </Pressable>
 
                   <Pressable
@@ -822,29 +824,29 @@ export default function ProfitScreen() {
                   >
                     <Ionicons name="refresh" size={15} color={theme.colors.text} />
                     <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}>
-                      {loading ? "Loading..." : "Refresh"}
+                      {loading ? uiText("Loading...") : uiText("Refresh")}
                     </Text>
                   </Pressable>
                 </View>
               </View>
 
               <View style={{ flexDirection: "row", gap: 10 }}>
-                <SegButton k="today" label="Today" />
-                <SegButton k="week" label="This Week" />
-                <SegButton k="month" label="This Month" />
+                <SegButton k="today" label={uiText("Today")} />
+                <SegButton k="week" label={uiText("This Week")} />
+                <SegButton k="month" label={uiText("This Month")} />
               </View>
 
               {loading && (
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                   <ActivityIndicator />
-                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Loading profit...</Text>
+                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Loading profit...")}</Text>
                 </View>
               )}
             </Card>
 
             {!!err && (
               <Card style={{ borderColor: theme.colors.dangerBorder, backgroundColor: theme.colors.dangerSoft, padding: 14 }}>
-                <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{err}</Text>
+                <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{systemText(err)}</Text>
               </Card>
             )}
 
@@ -852,13 +854,11 @@ export default function ProfitScreen() {
               <Animated.View style={{ opacity: animOpacity, transform: [{ translateX: animX }], gap: 10 }}>
                 {TrendHint}
 
-                <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>
-                  Summary ({labelForRange(view)})
-                </Text>
+                <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>{uiText("Summary ({p0})", {p0: (labelForRange(view))})}</Text>
 
                 <Card style={{ gap: 10, padding: 14 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                    <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Net Profit</Text>
+                    <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Net Profit")}</Text>
 
                     <View
                       style={{
@@ -888,30 +888,29 @@ export default function ProfitScreen() {
 
                   <View style={{ flexDirection: "row", gap: 10, marginTop: 4 }}>
                     <MiniCard
-                      title="Sales"
+                      title={uiText("Sales")}
                       value={current.sales === null ? "—" : fmtDisplay(current.sales)}
                       icon="cash-outline"
                     />
                     <MiniCard
-                      title="COGS"
+                      title={uiText("COGS")}
                       value={current.cogs === null ? "—" : fmtDisplay(current.cogs)}
                       icon="pricetag-outline"
                     />
                     <MiniCard
-                      title="Expenses"
+                      title={uiText("Expenses")}
                       value={current.expenses === null ? "—" : fmtDisplay(current.expenses)}
                       icon="remove-circle-outline"
                     />
                   </View>
                 </Card>
 
-                <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>Quick Glance</Text>
+                <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>{uiText("Quick Glance")}</Text>
 
                 <View style={{ flexDirection: "row", gap: 10 }}>
                   <Card style={{ flex: 1, gap: 6, padding: 14 }}>
                     <Text style={{ color: theme.colors.muted, fontWeight: "800" }} numberOfLines={1}>
-                      Today
-                    </Text>
+                      {uiText("Today")}</Text>
                     <MoneyText
                       style={{
                         color: today.net < 0 ? theme.colors.danger : theme.colors.text,
@@ -925,8 +924,7 @@ export default function ProfitScreen() {
 
                   <Card style={{ flex: 1, gap: 6, padding: 14 }}>
                     <Text style={{ color: theme.colors.muted, fontWeight: "800" }} numberOfLines={1}>
-                      This Week
-                    </Text>
+                      {uiText("This Week")}</Text>
                     <MoneyText
                       style={{
                         color: week.net < 0 ? theme.colors.danger : theme.colors.text,
@@ -940,8 +938,7 @@ export default function ProfitScreen() {
 
                   <Card style={{ flex: 1, gap: 6, padding: 14 }}>
                     <Text style={{ color: theme.colors.muted, fontWeight: "800" }} numberOfLines={1}>
-                      This Month
-                    </Text>
+                      {uiText("This Month")}</Text>
                     <MoneyText
                       style={{
                         color: month.net < 0 ? theme.colors.danger : theme.colors.text,
@@ -957,8 +954,7 @@ export default function ProfitScreen() {
 
               <View style={{ paddingTop: 8, paddingBottom: Math.max(18, insets.bottom + 8) }}>
                 <Text style={{ color: theme.colors.muted, fontWeight: "900", letterSpacing: 1, fontSize: 12 }}>
-                  SECURITY
-                </Text>
+                  {uiText("SECURITY")}</Text>
                 <Text
                   style={{
                     color: theme.colors.text,
@@ -968,8 +964,7 @@ export default function ProfitScreen() {
                     lineHeight: 20,
                   }}
                 >
-                  Owner-only profit. Cost data is protected. Database is the source of truth.
-                </Text>
+                  {uiText("Owner-only profit. Cost data is protected. Database is the source of truth.")}</Text>
               </View>
             </View>
 
@@ -999,10 +994,9 @@ export default function ProfitScreen() {
                   >
                     <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
                       <View style={{ gap: 2, flex: 1 }}>
-                        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>Profit Archive</Text>
+                        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>{uiText("Profit Archive")}</Text>
                         <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }} numberOfLines={1}>
-                          Store: {activeStoreName ?? "—"} • Choose a range
-                        </Text>
+                          {uiText("Store:")}{activeStoreName ?? "—"} {uiText("• Choose a range")}</Text>
                       </View>
 
                       <Pressable onPress={closeArchive} hitSlop={10}>
@@ -1011,20 +1005,20 @@ export default function ProfitScreen() {
                     </View>
 
                     <View style={{ flexDirection: "row", gap: 10 }}>
-                      <PresetChip k="THIS_YEAR" label="This Year" />
-                      <PresetChip k="LAST_6_MONTHS" label="6 Months" />
+                      <PresetChip k="THIS_YEAR" label={uiText("This Year")} />
+                      <PresetChip k="LAST_6_MONTHS" label={uiText("6 Months")} />
                     </View>
                     <View style={{ flexDirection: "row", gap: 10 }}>
-                      <PresetChip k="LAST_YEAR" label="Last Year" />
-                      <PresetChip k="CUSTOM" label="Custom" />
+                      <PresetChip k="LAST_YEAR" label={uiText("Last Year")} />
+                      <PresetChip k="CUSTOM" label={uiText("Custom")} />
                     </View>
 
                     <View style={{ gap: 10 }}>
-                      <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Date Range (YYYY-MM-DD)</Text>
+                      <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Date Range (YYYY-MM-DD)")}</Text>
 
                       <View style={{ flexDirection: "row", gap: 10 }}>
                         <View style={{ flex: 1, gap: 6 }}>
-                          <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>From</Text>
+                          <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("From")}</Text>
                           <View
                             style={{
                               borderWidth: 1,
@@ -1052,7 +1046,7 @@ export default function ProfitScreen() {
                         </View>
 
                         <View style={{ flex: 1, gap: 6 }}>
-                          <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>To</Text>
+                          <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("To")}</Text>
                           <View
                             style={{
                               borderWidth: 1,
@@ -1098,7 +1092,7 @@ export default function ProfitScreen() {
                           })}
                         >
                           <Text style={{ color: theme.colors.emerald, fontWeight: "900" }}>
-                            {archiveLoading ? "Generating..." : "Generate Report"}
+                            {archiveLoading ? uiText("Generating...") : uiText("Generate Report")}
                           </Text>
                         </Pressable>
 
@@ -1117,30 +1111,30 @@ export default function ProfitScreen() {
                             opacity: pressed ? 0.92 : 1,
                           })}
                         >
-                          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Close</Text>
+                          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Close")}</Text>
                         </Pressable>
                       </View>
 
                       {!!archiveErr && (
                         <Card style={{ borderColor: theme.colors.dangerBorder, backgroundColor: theme.colors.dangerSoft, padding: 14 }}>
-                          <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{archiveErr}</Text>
+                          <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{systemText(archiveErr)}</Text>
                         </Card>
                       )}
 
                       {archiveLoading ? (
                         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                           <ActivityIndicator />
-                          <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Loading archive...</Text>
+                          <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Loading archive...")}</Text>
                         </View>
                       ) : null}
 
                       {!!archiveResult ? (
                         <View style={{ gap: 10 }}>
-                          <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>Report</Text>
+                          <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>{uiText("Report")}</Text>
 
                           <Card style={{ gap: 10, padding: 14 }}>
                             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                              <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Net Profit</Text>
+                              <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Net Profit")}</Text>
 
                               <View
                                 style={{
@@ -1175,7 +1169,7 @@ export default function ProfitScreen() {
 
                             <View style={{ flexDirection: "row", gap: 10, marginTop: 2 }}>
                               <MiniCard
-                                title="Sales"
+                                title={uiText("Sales")}
                                 value={
                                   archiveResult.summary.sales === null
                                     ? "—"
@@ -1184,7 +1178,7 @@ export default function ProfitScreen() {
                                 icon="cash-outline"
                               />
                               <MiniCard
-                                title="COGS"
+                                title={uiText("COGS")}
                                 value={
                                   archiveResult.summary.cogs === null
                                     ? "—"
@@ -1193,7 +1187,7 @@ export default function ProfitScreen() {
                                 icon="pricetag-outline"
                               />
                               <MiniCard
-                                title="Expenses"
+                                title={uiText("Expenses")}
                                 value={
                                   archiveResult.summary.expenses === null
                                     ? "—"
@@ -1204,8 +1198,7 @@ export default function ProfitScreen() {
                             </View>
 
                             <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-                              Archive Mode = kumbukumbu za muda wote (owner-only). Unaweza kuangalia hata miaka mingi nyuma kwa kuchagua tarehe.
-                            </Text>
+                              {uiText("Archive Mode = kumbukumbu za muda wote (owner-only). Unaweza kuangalia hata miaka mingi nyuma kwa kuchagua tarehe.")}</Text>
                           </Card>
                         </View>
                       ) : null}

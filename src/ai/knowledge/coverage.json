@@ -1,0 +1,15 @@
+{
+  "version": "2026-10-14.1",
+  "curated_guides": 4,
+  "indexed_route_identities": 130,
+  "complete_system_knowledge": false,
+  "database_capture": "PARTIAL",
+  "backend_tools_integrated": false,
+  "source_sha256": {
+    "app/(tabs)/sales/checkout.tsx": "d40dd7771ac7352f04c091c09b1e9e0a7f3e17b2e9ba2fc79e7358d16005453b",
+    "src/offline/salesQueue.ts": "dd978e0f089adfa95951e6e3227c72075a6d83c906cf03688036a58a430d9879",
+    "src/offline/salesSync.ts": "9393dbe357054a4026f8fc51a1e69b51907eec83be3bbc6cfe865a8177a8c324",
+    "src/ai/business/crmCustomerResolver.ts": "d4727a8ae8ef5e9d86d0b467043ab7bd0176cc19e8e4ddfb054a17f06896a3e6",
+    "src/ai/business/metricsEngine.ts": "740ea2fe1f9e6fc38baa08c5d39e326fe3715505060a15515c790e5dff1a4272"
+  }
+}

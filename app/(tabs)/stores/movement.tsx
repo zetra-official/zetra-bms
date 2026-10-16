@@ -1,4 +1,7 @@
-﻿// app/(tabs)/stores/movement.tsx
+import {useDocumentText} from "@/src/i18n/useDocumentText";
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+﻿import {useCommonText} from "@/src/i18n/useCommonText";
+// app/(tabs)/stores/movement.tsx
 import { useNetInfo } from "@react-native-community/netinfo";
 import { useLocalSearchParams,
   useRouter } from "expo-router";
@@ -109,6 +112,9 @@ function escHtml(v: any) {
     .replace(/"/g, "&quot;");
 }
 export default function StoreMovementScreen() {
+ const {documentText, documentLocale} = useDocumentText();
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
   const params = useLocalSearchParams<{
     fromStoreId?: string;
@@ -265,8 +271,8 @@ const loadTransferStores = useCallback(async () => {
     setTransferStores([]);
 
     Alert.alert(
-      "Failed to load stores",
-      err?.message ?? "Imeshindikana kupata destination stores."
+      uiText("Failed to load stores"),
+      err?.message ?? uiText("Imeshindikana kupata destination stores.")
     );
   }
 }, [fromStoreId, isCapitalRecoveryStore]);
@@ -384,7 +390,7 @@ void loadInventory();
     (id: string) => {
       if (!id) return;
       if (String(id) === String(fromStoreId)) {
-        Alert.alert("Not allowed", "TO store haiwezi kuwa sawa na FROM store.");
+        Alert.alert(uiText("Not allowed"), uiText("TO store haiwezi kuwa sawa na FROM store."));
         return;
       }
       setToStoreId(id);
@@ -485,32 +491,32 @@ void loadInventory();
   const buildReceiptText = useCallback((r: Receipt) => {
     const lines: string[] = [];
 
-    lines.push("ZETRA BMS • Stock Transfer Receipt");
+    lines.push(uiText("ZETRA BMS • Stock Transfer Receipt"));
     lines.push("----------------------------------");
-    lines.push(`Date/Time (EAT): ${fmtEAT(r.createdAt)}`);
-    lines.push(`Organization: ${r.organizationName}`);
-    lines.push(`From: ${r.fromStoreName}`);
-    lines.push(`To: ${r.toStoreName}`);
+    lines.push(uiText("Date/Time (EAT): {p0}", {p0: (fmtEAT(r.createdAt))}));
+    lines.push(uiText("Organization: {p0}", {p0: (r.organizationName)}));
+    lines.push(uiText("From: {p0}", {p0: (r.fromStoreName)}));
+    lines.push(uiText("To: {p0}", {p0: (r.toStoreName)}));
 
     const processedBy = r.actorEmail ? r.actorEmail : r.actorName;
-    lines.push(`Processed by: ${processedBy} (${r.actorRole})`);
+    lines.push(uiText("Processed by: {p0} ({p1})", {p0: (processedBy), p1: (r.actorRole)}));
     lines.push("");
 
     if (r.reportReceiptId) {
-      lines.push(`Receipt ID: ${r.reportReceiptId}`);
+      lines.push(uiText("Receipt ID: {p0}", {p0: (r.reportReceiptId)}));
       lines.push("");
     }
 
-    lines.push(`Items: ${r.totalItems} | Total Qty: ${r.totalQty}`);
+    lines.push(uiText("Items: {p0} | Total Qty: {p1}", {p0: (r.totalItems), p1: (r.totalQty)}));
     lines.push("");
     lines.push("Items:");
     for (const it of r.items) {
       const sku = it.sku ? ` • SKU ${it.sku}` : "";
-      lines.push(`- ${it.product_name}${sku} • Qty ${it.qty}`);
+      lines.push(uiText("- {p0}{p1} • Qty {p2}", {p0: (it.product_name), p1: (sku), p2: (it.qty)}));
     }
 
     lines.push("");
-    lines.push("Movement IDs:");
+    lines.push(uiText("Movement IDs:"));
     for (const id of r.movementIds) {
       lines.push(id);
     }
@@ -533,9 +539,9 @@ void loadInventory();
     const text = buildReceiptText(lastReceipt);
     try {
       await Clipboard.setStringAsync(text);
-      Alert.alert("Copied ✅", "Receipt ime-copy (unaweza ku-paste WhatsApp/Email).");
+      Alert.alert(uiText("Copied ✅"), uiText("Receipt ime-copy (unaweza ku-paste WhatsApp/Email)."));
     } catch {
-      Alert.alert("Failed", "Imeshindikana ku-copy receipt.");
+      Alert.alert(uiText("Failed"), uiText("Imeshindikana ku-copy receipt."));
     }
   }, [lastReceipt, buildReceiptText]);
 const onShareReceiptPdf = useCallback(async () => {
@@ -560,7 +566,7 @@ const onShareReceiptPdf = useCallback(async () => {
     .join("");
 
   const html = `
-    <html>
+    <html lang="${documentLocale().language}" dir="${documentLocale().direction}">
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <style>
@@ -680,36 +686,36 @@ const onShareReceiptPdf = useCallback(async () => {
       <body>
         <div class="page">
           <div class="top">
-            <h1>Movement Success ✅</h1>
-            <div class="subtitle">ZETRA BMS • Stock Transfer Receipt</div>
+            <h1>${documentText("Movement Success ✅")}</h1>
+            <div class="subtitle">${documentText("ZETRA BMS • Stock Transfer Receipt")}</div>
           </div>
 
-          <div class="line">Date/Time (EAT): <span class="value">${escHtml(fmtEAT(lastReceipt.createdAt))}</span></div>
-          <div class="line">Organization: <span class="value">${escHtml(lastReceipt.organizationName)}</span></div>
-          <div class="line">FROM: <span class="value">${escHtml(lastReceipt.fromStoreName)}</span> → TO: <span class="value">${escHtml(lastReceipt.toStoreName)}</span></div>
-          <div class="line">Processed by: <span class="value">${escHtml(lastReceipt.actorEmail || lastReceipt.actorName)}</span> (${escHtml(lastReceipt.actorRole)})</div>
-          <div class="line">Receipt ID: <span class="value">${escHtml(lastReceipt.reportReceiptId || "—")}</span></div>
+          <div class="line">${documentText("Date/Time (EAT):")} <span class="value">${escHtml(fmtEAT(lastReceipt.createdAt))}</span></div>
+          <div class="line">${documentText("Organization:")} <span class="value">${escHtml(lastReceipt.organizationName)}</span></div>
+          <div class="line">${documentText("FROM:")} <span class="value">${escHtml(lastReceipt.fromStoreName)}</span> ${documentText("→ TO:")} <span class="value">${escHtml(lastReceipt.toStoreName)}</span></div>
+          <div class="line">${documentText("Processed by:")} <span class="value">${escHtml(lastReceipt.actorEmail || lastReceipt.actorName)}</span> (${escHtml(lastReceipt.actorRole)})</div>
+          <div class="line">${documentText("Receipt ID:")} <span class="value">${escHtml(lastReceipt.reportReceiptId || "—")}</span></div>
 
           <table>
             <thead>
               <tr>
-                <th>Item</th>
-                <th>Qty</th>
+                <th>${documentText("Item")}</th>
+                <th>${documentText("Qty")}</th>
               </tr>
             </thead>
             <tbody>${itemsHtml}</tbody>
           </table>
 
           <div class="box">
-            <div class="box-title">Items (${escHtml(lastReceipt.totalItems)}) • Total Qty ${escHtml(lastReceipt.totalQty)}</div>
+            <div class="box-title">${documentText("Items (")}${escHtml(lastReceipt.totalItems)}${documentText(") • Total Qty")} ${escHtml(lastReceipt.totalQty)}</div>
           </div>
 
           <div class="box">
-            <div class="box-title">Movement IDs</div>
+            <div class="box-title">${documentText("Movement IDs")}</div>
             ${movementHtml || `<div class="id">—</div>`}
           </div>
 
-          <div class="footer">Generated by ZETRA BMS.</div>
+          <div class="footer">${documentText("Generated by ZETRA BMS.")}</div>
         </div>
       </body>
     </html>
@@ -722,57 +728,57 @@ const onShareReceiptPdf = useCallback(async () => {
       dialogTitle: "Share Stock Transfer Receipt PDF",
     });
   } catch (e: any) {
-    Alert.alert("PDF failed", e?.message ?? "Failed to create PDF receipt.");
+    Alert.alert(uiText("PDF failed"), e?.message ?? uiText("Failed to create PDF receipt."));
   }
 }, [lastReceipt]);
   const submit = useCallback(async () => {
     Keyboard.dismiss();
 
     if (isOffline) {
-      Alert.alert("Offline", "Huwezi kufanya movement bila mtandao.");
+      Alert.alert(uiText("Offline"), uiText("Huwezi kufanya movement bila mtandao."));
       return;
     }
 
    if (!activeOrgId) {
-  Alert.alert("Missing", "No active Organization.");
+  Alert.alert(uiText("Missing"), uiText("No active Organization."));
   return;
 }
 
 if (isCapitalRecoveryStore) {
-  Alert.alert("Not Available", "Stock Movement haitumiki kwa Capital Recovery store.");
+  Alert.alert(uiText("Not Available"), uiText("Stock Movement haitumiki kwa Capital Recovery store."));
   return;
 }
 
     if (!fromStoreId) {
-      Alert.alert("Missing", "Chagua FROM store (Active Store) kwanza.");
+      Alert.alert(uiText("Missing"), uiText("Chagua FROM store (Active Store) kwanza."));
       return;
     }
 
     if (storeOrgMismatch) {
-      Alert.alert("Mismatch", "FROM store haifanani na Organization. Tafadhali chagua store tena.");
+      Alert.alert(uiText("Mismatch"), uiText("FROM store haifanani na Organization. Tafadhali chagua store tena."));
       return;
     }
 
     if (!toStoreId) {
-      Alert.alert("Missing", "Chagua TO store.");
+      Alert.alert(uiText("Missing"), uiText("Chagua TO store."));
       return;
     }
 
     if (String(toStoreId) === String(fromStoreId)) {
-      Alert.alert("Invalid", "TO store haiwezi kuwa sawa na FROM store.");
+      Alert.alert(uiText("Invalid"), uiText("TO store haiwezi kuwa sawa na FROM store."));
       return;
     }
 
     if (!canMove) {
       Alert.alert(
-        "No Access",
-        "Huruhusiwi kufanya Stock Movement. Muombe Owner/Admin kuwasha ruhusa kwa store hii."
+        uiText("No Access"),
+        uiText("Huruhusiwi kufanya Stock Movement. Muombe Owner/Admin kuwasha ruhusa kwa store hii.")
       );
       return;
     }
 
     if (selectedCount === 0) {
-      Alert.alert("Missing", "Weka qty angalau item 1 (kwenye list).");
+      Alert.alert(uiText("Missing"), uiText("Weka qty angalau item 1 (kwenye list)."));
       return;
     }
 
@@ -790,13 +796,13 @@ if (isCapitalRecoveryStore) {
       const available = Number(it.available ?? 0);
 
       if (!qtyNum) {
-        Alert.alert("Invalid qty", `Weka quantity sahihi kwa: ${it.product_name} (>= 1).`);
+        Alert.alert(uiText("Invalid qty"), uiText("Weka quantity sahihi kwa: {p0} (>= 1).", {p0: (it.product_name)}));
         return;
       }
       if (qtyNum > available) {
         Alert.alert(
-          "Not enough stock",
-          `${it.product_name}: Stock haitoshi. Available: ${available} | Unajaribu: ${qtyNum}`
+          uiText("Not enough stock"),
+          uiText("{p0}: Stock haitoshi. Available: {p1} | Unajaribu: {p2}", {p0: (it.product_name), p1: (available), p2: (qtyNum)})
         );
         return;
       }
@@ -901,7 +907,7 @@ if (isCapitalRecoveryStore) {
       clearAllSelected();
       await loadInventory();
     } catch (err: any) {
-      Alert.alert("Failed", err?.message ?? "Movement failed.");
+      Alert.alert(uiText("Failed"), err?.message ?? uiText("Movement failed."));
     } finally {
       setLoading(false);
     }
@@ -984,32 +990,31 @@ const toStores = useMemo(() => {
         keyboardShouldPersistTaps="handled"
       >
         <Text style={{ color: "#16A34A", fontWeight: "900", fontSize: 22 }}>
-          Movement Success ✅
-        </Text>
+          {uiText("Movement Success ✅")}</Text>
 
         {lastReceipt ? (
           <>
             <Text style={{ color: "#475569", fontWeight: "800", marginTop: 14 }}>
-              Date/Time (EAT):{" "}
+              {uiText("Date/Time (EAT):")}{" "}
               <Text style={{ color: "#2563EB", fontWeight: "900" }}>
                 {fmtEAT(lastReceipt.createdAt)}
               </Text>
             </Text>
 
             <Text style={{ color: "#475569", fontWeight: "800", marginTop: 8 }}>
-              FROM:{" "}
+              {uiText("FROM:")}{" "}
               <Text style={{ color: "#2563EB", fontWeight: "900" }}>
                 {lastReceipt.fromStoreName}
               </Text>
               {"  "}→{"  "}
-              TO:{" "}
+              {uiText("TO:")}{" "}
               <Text style={{ color: "#2563EB", fontWeight: "900" }}>
                 {lastReceipt.toStoreName}
               </Text>
             </Text>
 
             <Text style={{ color: "#475569", fontWeight: "800", marginTop: 8 }}>
-              Processed by:{" "}
+              {uiText("Processed by:")}{" "}
               <Text style={{ color: "#2563EB", fontWeight: "900" }}>
                 {lastReceipt.actorEmail ? lastReceipt.actorEmail : lastReceipt.actorName}
               </Text>{" "}
@@ -1020,15 +1025,14 @@ const toStores = useMemo(() => {
 
             {lastReceipt.reportReceiptId ? (
               <Text style={{ color: "#475569", fontWeight: "800", marginTop: 10 }}>
-                Receipt ID:{" "}
+                {uiText("Receipt ID:")}{" "}
                 <Text style={{ color: "#2563EB", fontWeight: "900" }}>
                   {lastReceipt.reportReceiptId}
                 </Text>
               </Text>
             ) : (
               <Text style={{ color: "#64748B", fontWeight: "800", marginTop: 10 }}>
-                (Report save haikupatikana — movement bado imefanikiwa)
-              </Text>
+                {uiText("(Report save haikupatikana — movement bado imefanikiwa)")}</Text>
             )}
 
             <View
@@ -1043,7 +1047,7 @@ const toStores = useMemo(() => {
               }}
             >
               <Text style={{ color: "#0F172A", fontWeight: "900", fontSize: 15 }}>
-                Items ({lastReceipt.totalItems}) • Total Qty {lastReceipt.totalQty}
+                {uiText("Items ({p0}) • Total Qty {p1}", {p0: lastReceipt.totalItems, p1: lastReceipt.totalQty})}
               </Text>
 
               {lastReceipt.items.map((it) => (
@@ -1065,8 +1069,7 @@ const toStores = useMemo(() => {
               }}
             >
               <Text style={{ color: "#0F172A", fontWeight: "900", fontSize: 15 }}>
-                Movement IDs
-              </Text>
+                {uiText("Movement IDs")}</Text>
 
               {(showAllMovementIds
                 ? lastReceipt.movementIds
@@ -1092,7 +1095,7 @@ const toStores = useMemo(() => {
                   }}
                 >
                   <Text style={{ color: "#2563EB", fontWeight: "900" }}>
-                    {showAllMovementIds ? "Hide IDs" : `Show all (${lastReceipt.movementIds.length})`}
+                    {showAllMovementIds ? uiText("Hide IDs") : uiText("Show all ({p0})", {p0: (lastReceipt.movementIds.length)})}
                   </Text>
                 </Pressable>
               ) : null}
@@ -1100,7 +1103,7 @@ const toStores = useMemo(() => {
 <View style={{ flexDirection: "row", gap: 10, marginTop: 16 }}>
   <View style={{ flex: 1 }}>
     <Button
-      title="Share Text"
+      title={uiText("Share Text")}
       onPress={onShareReceipt}
       disabled={loading}
       variant="secondary"
@@ -1109,7 +1112,7 @@ const toStores = useMemo(() => {
 
   <View style={{ flex: 1 }}>
     <Button
-      title="Share PDF"
+      title={uiText("Share PDF")}
       onPress={onShareReceiptPdf}
       disabled={loading}
       variant="primary"
@@ -1119,7 +1122,7 @@ const toStores = useMemo(() => {
 
 <View style={{ marginTop: 10 }}>
   <Button
-    title="Copy Text"
+    title={uiText("Copy Text")}
     onPress={onCopyReceipt}
     disabled={loading}
     variant="secondary"
@@ -1128,7 +1131,7 @@ const toStores = useMemo(() => {
 
 <View style={{ marginTop: 10 }}>
   <Button
-    title="Close"
+    title={uiText("Close")}
     onPress={() => setReceiptModalOpen(false)}
     disabled={loading}
     variant="secondary"
@@ -1137,8 +1140,7 @@ const toStores = useMemo(() => {
           </>
         ) : (
           <Text style={{ color: "#475569", fontWeight: "800", marginTop: 8 }}>
-            No receipt loaded.
-          </Text>
+            {uiText("No receipt loaded.")}</Text>
         )}
       </ScrollView>
     </Pressable>
@@ -1158,13 +1160,12 @@ const toStores = useMemo(() => {
           }}
         >
           <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-            OFFLINE • Movement imezimwa (washa data/Wi-Fi)
-          </Text>
+            {uiText("OFFLINE • Movement imezimwa (washa data/Wi-Fi)")}</Text>
         </View>
       ) : null}
 
       <Text style={{ fontSize: isDesktopWeb ? 20 : 26, fontWeight: "900", color: theme.colors.text }}>
-  {isCapitalRecoveryStore ? "Movement Disabled" : "Stock Movement"}
+  {isCapitalRecoveryStore ? uiText("Movement Disabled") : uiText("Stock Movement")}
 </Text>
 
       {/* Last Receipt Summary Card */}
@@ -1176,7 +1177,7 @@ const toStores = useMemo(() => {
             gap: 8,
           }}
         >
-          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Last Receipt</Text>
+          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Last Receipt")}</Text>
 
           <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
             {fmtEAT(lastReceipt.createdAt)} •{" "}
@@ -1189,14 +1190,14 @@ const toStores = useMemo(() => {
           </Text>
 
           <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-            FROM: <Text style={{ color: theme.colors.text }}>{lastReceipt.fromStoreName}</Text>
+            {uiText("FROM:")}<Text style={{ color: theme.colors.text }}>{lastReceipt.fromStoreName}</Text>
             {"   "}→{"   "}
-            TO: <Text style={{ color: theme.colors.text }}>{lastReceipt.toStoreName}</Text>
+            {uiText("TO:")}<Text style={{ color: theme.colors.text }}>{lastReceipt.toStoreName}</Text>
           </Text>
 
           {lastReceipt.reportReceiptId ? (
             <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-              Receipt ID:{" "}
+              {uiText("Receipt ID:")}{" "}
               <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
                 {lastReceipt.reportReceiptId}
               </Text>
@@ -1204,13 +1205,13 @@ const toStores = useMemo(() => {
           ) : null}
 
           <Text style={{ color: theme.colors.muted, fontWeight: "900", marginTop: 4 }}>
-            Items ({lastReceipt.totalItems}) • Total Qty {lastReceipt.totalQty}
+            {uiText("Items ({p0}) • Total Qty {p1}", {p0: lastReceipt.totalItems, p1: lastReceipt.totalQty})}
           </Text>
 
           <View style={{ flexDirection: "row", gap: 10, marginTop: 10 }}>
             <View style={{ flex: 1 }}>
               <Button
-  title="Open Receipt"
+  title={uiText("Open Receipt")}
   onPress={() => setReceiptModalOpen(true)}
   disabled={loading || !lastReceipt}
   variant="primary"
@@ -1218,7 +1219,7 @@ const toStores = useMemo(() => {
             </View>
             <View style={{ flex: 1 }}>
               <Button
-                title="Clear"
+                title={uiText("Clear")}
                 onPress={() => setLastReceipt(null)}
                 disabled={loading}
                 variant="secondary"
@@ -1231,23 +1232,21 @@ const toStores = useMemo(() => {
       {/* Receipt History = CARD ONLY */}
       <Card style={{ gap: isDesktopWeb ? 5 : 10, padding: isDesktopWeb ? 10 : undefined }}>
         <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: isDesktopWeb ? 14 : 16 }}>
-          Receipt History
-        </Text>
+          {uiText("Receipt History")}</Text>
 
         <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-          Fungua history ya transfer receipts na utafute kwa tarehe (search by date).
-        </Text>
+          {uiText("Fungua history ya transfer receipts na utafute kwa tarehe (search by date).")}</Text>
 
         <View style={{ marginTop: 4 }}>
           <Button
-            title="Open Receipt History"
+            title={uiText("Open Receipt History")}
          onPress={() => {
   if (!activeOrgId) {
-    Alert.alert("Missing", "No active Organization.");
+    Alert.alert(uiText("Missing"), uiText("No active Organization."));
     return;
   }
   if (isCapitalRecoveryStore) {
-    Alert.alert("Not Available", "Receipt History ya stock movement haitumiki kwa Capital Recovery store.");
+    Alert.alert(uiText("Not Available"), uiText("Receipt History ya stock movement haitumiki kwa Capital Recovery store."));
     return;
   }
   router.push({
@@ -1267,22 +1266,22 @@ variant="primary"
 
       {/* Header card */}
       <Card style={{ gap: isDesktopWeb ? 5 : 10, padding: isDesktopWeb ? 10 : undefined }}>
-        <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Organization</Text>
+        <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Organization")}</Text>
         <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: isDesktopWeb ? 15 : 18 }}>
           {activeOrgName ?? "—"}
         </Text>
 
-        <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 2 }}>Role</Text>
+        <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 2 }}>{uiText("Role")}</Text>
         <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
           {activeRole ?? "—"}
         </Text>
 
-      <Text style={{ color: theme.colors.muted, fontWeight: "900", marginTop: isDesktopWeb ? 1 : 2, fontSize: isDesktopWeb ? 11 : undefined, letterSpacing: isDesktopWeb ? 0.7 : undefined }}>FROM</Text>
+      <Text style={{ color: theme.colors.muted, fontWeight: "900", marginTop: isDesktopWeb ? 1 : 2, fontSize: isDesktopWeb ? 11 : undefined, letterSpacing: isDesktopWeb ? 0.7 : undefined }}>{uiText("FROM")}</Text>
 <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
   {fromStoreName || "—"}
 </Text>
 
-<Text style={{ color: theme.colors.muted, fontWeight: "900", marginTop: isDesktopWeb ? 1 : 2, fontSize: isDesktopWeb ? 11 : undefined, letterSpacing: isDesktopWeb ? 0.7 : undefined }}>TO</Text>
+<Text style={{ color: theme.colors.muted, fontWeight: "900", marginTop: isDesktopWeb ? 1 : 2, fontSize: isDesktopWeb ? 11 : undefined, letterSpacing: isDesktopWeb ? 0.7 : undefined }}>{uiText("TO")}</Text>
 <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
   {toStoreName || "—"}
 </Text>
@@ -1299,11 +1298,9 @@ variant="primary"
     }}
   >
     <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-      Capital Recovery store haitumii Stock Movement.
-    </Text>
+      {uiText("Capital Recovery store haitumii Stock Movement.")}</Text>
     <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>
-      Tumia Products + Capital Recovery Workspace. Movement ya stock imezimwa kabisa kwenye mode hii.
-    </Text>
+      {uiText("Tumia Products + Capital Recovery Workspace. Movement ya stock imezimwa kabisa kwenye mode hii.")}</Text>
   </View>
 ) : null}
 
@@ -1317,37 +1314,36 @@ variant="primary"
     padding: isDesktopWeb ? 10 : 14,
   }}
 >
-          <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Permission</Text>
+          <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>{uiText("Permission")}</Text>
           <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 6 }}>
   {isCapitalRecoveryStore
-    ? "Disabled for Capital Recovery"
+    ? uiText("Disabled for Capital Recovery")
     : isOwnerAdmin
-      ? "Owner/Admin: allowed"
+      ? uiText("Owner/Admin: allowed")
       : flagLoading
-        ? "Checking staff permission..."
+        ? uiText("Checking staff permission...")
         : staffMovementAllowed
-          ? "Staff: allowed (switch ON)"
-          : "Staff: NOT allowed (switch OFF)"}
+          ? uiText("Staff: allowed (switch ON)")
+          : uiText("Staff: NOT allowed (switch OFF)")}
 </Text>
 
           {!isOwnerAdmin && !flagLoading && !staffMovementAllowed ? (
             <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>
-              Muombe Owner/Admin aende Stores → store yako → awashe “Allow staff stock movement”.
-            </Text>
+              {uiText("Muombe Owner/Admin aende Stores → store yako → awashe “Allow staff stock movement”.")}</Text>
           ) : null}
         </View>
 
         <View style={{ flexDirection: "row", gap: isDesktopWeb ? 8 : 10, marginTop: isDesktopWeb ? 3 : 6 }}>
           <View style={{ flex: 1 }}>
           <Button
-  title={loading ? "Loading..." : "Refresh Inventory"}
+  title={loading ? uiText("Loading...") : uiText("Refresh Inventory")}
   onPress={loadInventory}
   disabled={loading || isOffline || !fromStoreId || isCapitalRecoveryStore}
   variant="primary"
 />
           </View>
           <View style={{ flex: 1 }}>
-            <Button title="Back" onPress={() => router.back()} disabled={loading} variant="secondary" />
+            <Button title={uiText("Back")} onPress={() => router.back()} disabled={loading} variant="secondary" />
           </View>
         </View>
       </Card>
@@ -1359,24 +1355,22 @@ variant="primary"
             backgroundColor: theme.colors.dangerSoft,
           }}
         >
-          <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{error}</Text>
+          <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{systemText(error)}</Text>
         </Card>
       )}
 
      {/* TO Store picker */}
 <Card style={{ gap: isDesktopWeb ? 7 : 10, padding: isDesktopWeb ? 12 : undefined }}>
   <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: isDesktopWeb ? 14 : 16 }}>
-    {isCapitalRecoveryStore ? "TO Store Disabled" : "Choose TO store"}
+    {isCapitalRecoveryStore ? uiText("TO Store Disabled") : uiText("Choose TO store")}
   </Text>
 
   {isCapitalRecoveryStore ? (
     <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-      Capital Recovery store haitumii stock transfer, hivyo TO store selection imezimwa.
-    </Text>
+      {uiText("Capital Recovery store haitumii stock transfer, hivyo TO store selection imezimwa.")}</Text>
   ) : toStores.length === 0 ? (
     <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-      Hakuna store nyingine ndani ya org hii.
-    </Text>
+      {uiText("Hakuna store nyingine ndani ya org hii.")}</Text>
   ) : (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
       {toStores.map((s: any) => {
@@ -1398,7 +1392,7 @@ variant="primary"
           >
             <Text style={{ color: isDesktopWeb && active ? theme.colors.emerald : theme.colors.text, fontWeight: "900" }}>{s.store_name}</Text>
             <Text style={{ color: active ? theme.colors.emerald : theme.colors.muted, fontWeight: "900", marginTop: isDesktopWeb ? 3 : 6 }}>
-              {active ? "Selected ✓" : "Tap to select"}
+              {active ? uiText("Selected ✓") : uiText("Tap to select")}
             </Text>
           </Pressable>
         );
@@ -1411,8 +1405,7 @@ variant="primary"
       <Card style={{ gap: isDesktopWeb ? 6 : 10, padding: isDesktopWeb ? 10 : undefined }}>
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
           <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: isDesktopWeb ? 14 : 16 }}>
-            Ready to Move
-          </Text>
+            {uiText("Ready to Move")}</Text>
 
           <Pressable
             onPress={clearAllSelected}
@@ -1427,22 +1420,22 @@ variant="primary"
               backgroundColor: theme.colors.surface2,
             }}
           >
-            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Clear</Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Clear")}</Text>
           </Pressable>
         </View>
 
         <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-  Selected items:{" "}
+  {uiText("Selected items:")}{" "}
   <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{selectedCount}</Text>
 </Text>
 
 <Button
   title={
     isCapitalRecoveryStore
-      ? "Movement Disabled"
+      ? uiText("Movement Disabled")
       : loading
-        ? "Processing..."
-        : `Move Stock (${selectedCount})`
+        ? uiText("Processing...")
+        : uiText("Move Stock ({p0})", {p0: (selectedCount)})
   }
   onPress={submit}
   disabled={loading || isOffline || !canMove || selectedCount === 0 || isCapitalRecoveryStore}
@@ -1451,27 +1444,25 @@ variant="primary"
 
         {!isOwnerAdmin && !flagLoading && !staffMovementAllowed ? (
           <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-            Staff: Movement imezimwa kwa store hii. Owner/Admin anaweza kuwasha.
-          </Text>
+            {uiText("Staff: Movement imezimwa kwa store hii. Owner/Admin anaweza kuwasha.")}</Text>
         ) : null}
       </Card>
 
       {/* Product picker */}
       <Card style={{ gap: isDesktopWeb ? 6 : 10, padding: isDesktopWeb ? 10 : undefined }}>
         <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: isDesktopWeb ? 14 : 16 }}>
-          {isCapitalRecoveryStore ? "Inventory Picker Disabled" : "Choose products (FROM inventory)"}
+          {isCapitalRecoveryStore ? uiText("Inventory Picker Disabled") : uiText("Choose products (FROM inventory)")}
         </Text>
 
         {isCapitalRecoveryStore ? (
           <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-            Capital Recovery store haitumii inventory picker. Tumia Products + Capital Recovery Workspace.
-          </Text>
+            {uiText("Capital Recovery store haitumii inventory picker. Tumia Products + Capital Recovery Workspace.")}</Text>
         ) : (
           <>
             <TextInput
               value={q}
               onChangeText={setQ}
-              placeholder="Tafuta product / SKU / category..."
+              placeholder={uiText("Tafuta product / SKU / category...")}
               placeholderTextColor="rgba(255,255,255,0.35)"
               returnKeyType="search"
               onSubmitEditing={Keyboard.dismiss}
@@ -1489,8 +1480,290 @@ variant="primary"
 
             {filtered.length === 0 ? (
               <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                Hakuna items. Bonyeza “Refresh Inventory”.
-              </Text>
+                {uiText("Hakuna items. Bonyeza “Refresh Inventory”.")}</Text>
+            ) : isDesktopWeb ? (
+              <View
+                style={{
+                  borderWidth: 1,
+                  borderColor: theme.colors.border,
+                  borderRadius: 10,
+                  overflow: "hidden",
+                  backgroundColor: theme.colors.card,
+                }}
+              >
+                {/* DESKTOP TABLE HEADER */}
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    minHeight: 38,
+                    paddingHorizontal: 12,
+                    backgroundColor: theme.colors.surface2,
+                    borderBottomWidth: 1,
+                    borderBottomColor: theme.colors.border,
+
+
+                  }}
+                >
+                  <Text
+                    style={{
+                      width: 44,
+                      color: theme.colors.muted,
+                      fontWeight: "900",
+                      fontSize: 11,
+                    }}
+                  >
+                    #
+                  </Text>
+
+                  <Text
+                    style={{
+                      flex: 1,
+                      color: "#10B981",
+                      fontWeight: "900",
+                      fontSize: 11,
+                      letterSpacing: 0.3,
+                    }}
+                  >
+                    {uiText("PRODUCT")}</Text>
+
+                  <Text
+                    style={{
+                      width: 180,
+                      color: "#8B5CF6",
+                      fontWeight: "900",
+                      fontSize: 11,
+                      letterSpacing: 0.3,
+                    }}
+                  >
+                    {uiText("CATEGORY")}</Text>
+
+                  <Text
+                    style={{
+                      width: 170,
+                      color: "#0EA5E9",
+                      fontWeight: "900",
+                      fontSize: 11,
+                      letterSpacing: 0.3,
+                    }}
+                  >
+                    SKU
+                  </Text>
+
+                  <Text
+                    style={{
+                      width: 110,
+                      color: "#F59E0B",
+                      fontWeight: "900",
+                      fontSize: 11,
+                      letterSpacing: 0.3,
+                      textAlign: "center",
+                    }}
+                  >
+                    {uiText("IN STOCK")}</Text>
+
+                  <Text
+                    style={{
+                      width: 150,
+                      color: "#2563EB",
+                      fontWeight: "900",
+                      fontSize: 11,
+                      letterSpacing: 0.3,
+                      textAlign: "center",
+                    }}
+                  >
+                    {uiText("QTY TO MOVE")}</Text>
+                </View>
+
+                {/* DESKTOP TABLE ROWS */}
+                {/* DESKTOP SCROLLABLE PRODUCT ROWS */}
+                <ScrollView
+                  nestedScrollEnabled
+                  showsVerticalScrollIndicator
+                  keyboardShouldPersistTaps="always"
+                  style={{
+                    maxHeight: 520,
+                    minHeight: 0,
+                  }}
+                  contentContainerStyle={{
+                    flexGrow: 0,
+                  }}
+                >                {filtered.map((r, index) => {
+                  const pid = String(r.product_id);
+                  const currentQty = selectedMap[pid]?.qty ?? "";
+                  const isSelected = parsePositiveQty(currentQty) > 0;
+
+                  return (
+                    <View
+                      key={pid}
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        minHeight: 54,
+                        paddingHorizontal: 12,
+                        borderBottomWidth:
+                          index < filtered.length - 1 ? 1 : 0,
+                        borderBottomColor: theme.colors.border,
+                        backgroundColor: isSelected
+                          ? "rgba(52,211,153,0.08)"
+                          : theme.colors.card,
+                      }}
+                    >
+                      {/* ROW NUMBER */}
+                      <Text
+                        style={{
+                          width: 44,
+                          color: theme.colors.faint,
+                          fontWeight: "800",
+                          fontSize: 12,
+                        }}
+                      >
+                        {String(index + 1).padStart(2, "0")}
+                      </Text>
+
+                      {/* PRODUCT */}
+                      <View
+                        style={{
+                          flex: 1,
+                          paddingRight: 18,
+                          minWidth: 0,
+                        }}
+                      >
+                        <Text
+                          numberOfLines={1}
+                          style={{
+                            color: theme.colors.text,
+                            fontWeight: "900",
+                            fontSize: 13,
+                          }}
+                        >
+                          {r.product_name}
+                        </Text>
+
+                        {isSelected ? (
+                          <Text
+                            style={{
+                              color: theme.colors.emerald,
+                              fontWeight: "900",
+                              fontSize: 10,
+                              marginTop: 3,
+                            }}
+                          >
+                            {uiText("✓ Selected")}</Text>
+                        ) : null}
+                      </View>
+
+                      {/* CATEGORY */}
+                      <Text
+                        numberOfLines={1}
+                        style={{
+                          width: 180,
+                          paddingRight: 14,
+                          color: "#7C3AED",
+                          fontWeight: "800",
+                          fontSize: 12,
+                        }}
+                      >
+                        {r.category ?? "—"}
+                      </Text>
+
+                      {/* SKU */}
+                      <Text
+                        numberOfLines={1}
+                        style={{
+                          width: 170,
+                          paddingRight: 14,
+                          color: "#0284C7",
+                          fontWeight: "800",
+                          fontSize: 12,
+                        }}
+                      >
+                        {r.sku ?? "—"}
+                      </Text>
+
+                      {/* STOCK */}
+                      <View
+                        style={{
+                          width: 110,
+                          alignItems: "center",
+                        }}
+                      >
+                        <Text
+                          style={{
+                            color: "#D97706",
+                            fontWeight: "900",
+                            fontSize: 13,
+                          }}
+                        >
+                          {r.qty}
+                        </Text>
+                      </View>
+
+                      {/* QTY TO MOVE */}
+                      <View
+                        style={{
+                          width: 150,
+                          flexDirection: "row",
+                          alignItems: "center",
+                          justifyContent: "flex-end",
+                          gap: 6,
+                        }}
+                      >
+                        <TextInput
+                          value={currentQty}
+                          onChangeText={(t) => setInlineQty(pid, t)}
+                          keyboardType="decimal-pad"
+                          placeholder="0"
+                          placeholderTextColor="rgba(255,255,255,0.35)"
+                          style={{
+                            width: isSelected ? 92 : 120,
+                            height: 34,
+                            borderWidth: 1,
+                            borderColor: isSelected
+                              ? "rgba(52,211,153,0.55)"
+                              : theme.colors.border,
+                            borderRadius: 8,
+                            backgroundColor: "rgba(255,255,255,0.05)",
+                            paddingHorizontal: 10,
+                            paddingVertical: 4,
+                            color: theme.colors.text,
+                            fontWeight: "900",
+                            textAlign: "center",
+                          }}
+                        />
+
+                        {isSelected ? (
+                          <Pressable
+                            onPress={() => setInlineQty(pid, "")}
+                            style={({ pressed }) => ({
+                              width: 28,
+                              height: 28,
+                              borderRadius: 7,
+                              borderWidth: 1,
+                              borderColor: theme.colors.border,
+                              backgroundColor: theme.colors.surface2,
+                              alignItems: "center",
+                              justifyContent: "center",
+                              opacity: pressed ? 0.65 : 1,
+                            })}
+                          >
+                            <Text
+                              style={{
+                                color: theme.colors.muted,
+                                fontWeight: "900",
+                                fontSize: 12,
+                              }}
+                            >
+                              ×
+                            </Text>
+                          </Pressable>
+                        ) : null}
+                      </View>
+                    </View>
+                  );
+                })}
+                </ScrollView>
+              </View>
             ) : (
               filtered.slice(0, 40).map((r) => {
                 const pid = String(r.product_id);
@@ -1502,53 +1775,86 @@ variant="primary"
                     key={pid}
                     style={{
                       borderWidth: 1,
-                      borderColor: isSelected ? "rgba(52,211,153,0.55)" : theme.colors.border,
-                      borderRadius: isDesktopWeb ? 10 : theme.radius.xl,
-                      backgroundColor: isDesktopWeb && isSelected ? theme.colors.emeraldSoft : theme.colors.card,
-                      padding: isDesktopWeb ? 8 : 14,
+                      borderColor: isSelected
+                        ? "rgba(52,211,153,0.55)"
+                        : theme.colors.border,
+                      borderRadius: theme.radius.xl,
+                      backgroundColor: theme.colors.card,
+                      padding: 14,
                     }}
                   >
-                    <View style={{ flexDirection: "row", alignItems: isDesktopWeb ? "center" : "flex-start" }}>
-                      <View style={{ flex: 1, paddingRight: isDesktopWeb ? 18 : 12 }}>
-                        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "flex-start",
+                      }}
+                    >
+                      <View style={{ flex: 1, paddingRight: 12 }}>
+                        <Text
+                          style={{
+                            color: theme.colors.text,
+                            fontWeight: "900",
+                          }}
+                        >
                           {r.product_name}
-                        </Text>
-
-                        <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: isDesktopWeb ? 3 : 6 }}>
-                          SKU: <Text style={{ color: theme.colors.text }}>{r.sku ?? "—"}</Text>
-                          {"   "}|{"   "}
-                          QTY: <Text style={{ color: theme.colors.text }}>{r.qty}</Text>
                         </Text>
 
                         <Text
                           style={{
-                            marginTop: isDesktopWeb ? 3 : 8,
-                            fontWeight: "900",
-                            color: isSelected ? theme.colors.emerald : theme.colors.faint,
+                            color: theme.colors.muted,
+                            fontWeight: "800",
+                            marginTop: 6,
                           }}
                         >
-                          {isSelected ? "Selected ✓" : "Type qty to select"}
+                          {uiText("SKU:")}{" "}
+                          <Text style={{ color: theme.colors.text }}>
+                            {r.sku ?? "—"}
+                          </Text>
+                          {"   "}|{"   "}
+                          {uiText("QTY:")}{" "}
+                          <Text style={{ color: theme.colors.text }}>
+                            {r.qty}
+                          </Text>
+                        </Text>
+
+                        <Text
+                          style={{
+                            marginTop: 8,
+                            fontWeight: "900",
+                            color: isSelected
+                              ? theme.colors.emerald
+                              : theme.colors.faint,
+                          }}
+                        >
+                          {isSelected ? uiText("Selected ✓") : uiText("Type qty to select")}
                         </Text>
                       </View>
 
-                      <View style={{ width: isDesktopWeb ? 120 : 110 }}>
-                        <Text style={{ color: theme.colors.muted, fontWeight: "900", marginBottom: isDesktopWeb ? 4 : 8 }}>
-                          Qty
-                        </Text>
+                      <View style={{ width: 110 }}>
+                        <Text
+                          style={{
+                            color: theme.colors.muted,
+                            fontWeight: "900",
+                            marginBottom: 8,
+                          }}
+                        >
+                          {uiText("Qty")}</Text>
 
                         <TextInput
                           value={currentQty}
-                         onChangeText={(t) => setInlineQty(pid, t)}
-keyboardType="decimal-pad"
+                          onChangeText={(t) => setInlineQty(pid, t)}
+                          keyboardType="decimal-pad"
                           placeholder="0"
                           placeholderTextColor="rgba(255,255,255,0.35)"
                           style={{
                             borderWidth: 1,
-                            borderColor: isSelected ? "rgba(156, 166, 163, 0.55)" : theme.colors.border,
+                            borderColor: isSelected
+                              ? "rgba(156, 166, 163, 0.55)"
+                              : theme.colors.border,
                             borderRadius: theme.radius.lg,
                             backgroundColor: "rgba(255,255,255,0.05)",
                             paddingHorizontal: 12,
-                            paddingVertical: isDesktopWeb ? 7 : 10,
+                            paddingVertical: 10,
                             color: theme.colors.text,
                             fontWeight: "900",
                             textAlign: "center",
@@ -1559,18 +1865,22 @@ keyboardType="decimal-pad"
                           <Pressable
                             onPress={() => setInlineQty(pid, "")}
                             style={{
-                              marginTop: isDesktopWeb ? 5 : 10,
+                              marginTop: 10,
                               borderWidth: 1,
                               borderColor: theme.colors.border,
                               borderRadius: theme.radius.lg,
                               backgroundColor: theme.colors.surface2,
-                              paddingVertical: isDesktopWeb ? 6 : 8,
+                              paddingVertical: 8,
                               alignItems: "center",
                             }}
                           >
-                            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                              Clear
-                            </Text>
+                            <Text
+                              style={{
+                                color: theme.colors.text,
+                                fontWeight: "900",
+                              }}
+                            >
+                              {uiText("Clear")}</Text>
                           </Pressable>
                         ) : null}
                       </View>
@@ -1580,11 +1890,6 @@ keyboardType="decimal-pad"
               })
             )}
 
-            {filtered.length > 40 ? (
-              <Text style={{ color: theme.colors.faint, fontWeight: "800" }}>
-                Showing first 40 results. Refine search to narrow down.
-              </Text>
-            ) : null}
           </>
         )}
       </Card>

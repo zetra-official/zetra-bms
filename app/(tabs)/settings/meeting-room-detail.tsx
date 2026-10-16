@@ -1,3 +1,5 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -415,19 +417,19 @@ function safeFileExt(name?: string | null, mimeType?: string | null, kind?: stri
   return "jpg";
 }
 
-async function openExternalUrl(url?: string | null) {
+async function openExternalUrl(url: string | null | undefined, uiText: (source: string) => string) {
   const target = clean(url);
   if (!target) return;
 
   try {
     const supported = await Linking.canOpenURL(target);
     if (!supported) {
-      Alert.alert("Open failed", "Imeshindikana kufungua media link.");
+      Alert.alert(uiText("Open failed"), uiText("Imeshindikana kufungua media link."));
       return;
     }
     await Linking.openURL(target);
   } catch {
-    Alert.alert("Open failed", "Imeshindikana kufungua media.");
+    Alert.alert(uiText("Open failed"), uiText("Imeshindikana kufungua media."));
   }
 }
 function buildPdfViewerUrl(url?: string | null) {
@@ -537,6 +539,7 @@ function MessageTextWithMentions({
   resolvedUri?: string | null;
   onOpenMedia: (item: MessageRow, kind: "IMAGE" | "VIDEO" | "AUDIO" | "PDF" | "DOCUMENT") => void;
 }) {
+ const uiText = useCommonText();
   const messageType = normalizeMessageType(item.message_type);
   const mediaKind = normalizeMediaKind(item.media_kind);
   const mediaUrl = clean(resolvedUri) || clean(item.attachment_url);
@@ -559,8 +562,7 @@ backgroundColor: "#F8FAFC",
         }}
       >
         <Text style={{ color: MR.muted, fontWeight: "900", fontSize: 12 }}>
-          Media expired
-        </Text>
+          {uiText("Media expired")}</Text>
         <Text
           style={{
             color: MR.faint,
@@ -570,8 +572,7 @@ backgroundColor: "#F8FAFC",
             lineHeight: 18,
           }}
         >
-          Hii media imeisha muda wake wa kuonekana.
-        </Text>
+          {uiText("Hii media imeisha muda wake wa kuonekana.")}</Text>
       </View>
     );
   }
@@ -590,8 +591,7 @@ backgroundColor: "#F8FAFC",
         }}
       >
         <Text style={{ color: MR.muted, fontWeight: "900", fontSize: 12 }}>
-          Media unavailable
-        </Text>
+          {uiText("Media unavailable")}</Text>
       </View>
     );
   }
@@ -612,8 +612,7 @@ backgroundColor: "#F8FAFC",
             }}
           >
             <Text style={{ color: UI.emerald, fontWeight: "900", fontSize: 12 }}>
-              Saved on this device
-            </Text>
+              {uiText("Saved on this device")}</Text>
             <Text
               style={{
                 color: MR.faint,
@@ -623,8 +622,7 @@ backgroundColor: "#F8FAFC",
                 lineHeight: 18,
               }}
             >
-              Hii media inasomwa kutoka kwenye simu yako.
-            </Text>
+              {uiText("Hii media inasomwa kutoka kwenye simu yako.")}</Text>
           </View>
         ) : null}
 
@@ -652,8 +650,7 @@ backgroundColor: "#F8FAFC",
               marginTop: 6,
             }}
           >
-            Tap to view image
-          </Text>
+            {uiText("Tap to view image")}</Text>
         </Pressable>
       </View>
     );
@@ -675,8 +672,7 @@ backgroundColor: "#F8FAFC",
             }}
           >
             <Text style={{ color: UI.emerald, fontWeight: "900", fontSize: 12 }}>
-              Saved on this device
-            </Text>
+              {uiText("Saved on this device")}</Text>
             <Text
               style={{
                 color: MR.faint,
@@ -686,8 +682,7 @@ backgroundColor: "#F8FAFC",
                 lineHeight: 18,
               }}
             >
-              Hii media inasomwa kutoka kwenye simu yako.
-            </Text>
+              {uiText("Hii media inasomwa kutoka kwenye simu yako.")}</Text>
           </View>
         ) : null}
 
@@ -752,8 +747,7 @@ backgroundColor: "#F8FAFC",
               marginTop: 6,
             }}
           >
-            Tap to play video
-          </Text>
+            {uiText("Tap to play video")}</Text>
         </Pressable>
       </View>
     );
@@ -775,8 +769,7 @@ backgroundColor: "#F8FAFC",
             }}
           >
             <Text style={{ color: UI.emerald, fontWeight: "900", fontSize: 12 }}>
-              Saved on this device
-            </Text>
+              {uiText("Saved on this device")}</Text>
             <Text
               style={{
                 color: MR.faint,
@@ -786,8 +779,7 @@ backgroundColor: "#F8FAFC",
                 lineHeight: 18,
               }}
             >
-              Hii media inasomwa kutoka kwenye simu yako.
-            </Text>
+              {uiText("Hii media inasomwa kutoka kwenye simu yako.")}</Text>
           </View>
         ) : null}
 
@@ -839,7 +831,7 @@ backgroundColor: "#F8FAFC",
                 }}
                 numberOfLines={1}
               >
-                {mediaKind === "PDF" ? "Tap to open PDF" : "Tap to open document"}
+                {mediaKind === "PDF" ? uiText("Tap to open PDF") : uiText("Tap to open document")}
               </Text>
             </View>
           </View>
@@ -863,8 +855,7 @@ backgroundColor: "#F8FAFC",
           }}
         >
           <Text style={{ color: UI.emerald, fontWeight: "900", fontSize: 12 }}>
-            Saved on this device
-          </Text>
+            {uiText("Saved on this device")}</Text>
           <Text
             style={{
               color: MR.faint,
@@ -874,8 +865,7 @@ backgroundColor: "#F8FAFC",
               lineHeight: 18,
             }}
           >
-            Hii media inasomwa kutoka kwenye simu yako.
-          </Text>
+            {uiText("Hii media inasomwa kutoka kwenye simu yako.")}</Text>
         </View>
       ) : null}
 
@@ -908,8 +898,7 @@ backgroundColor: "#F8FAFC",
 
           <View style={{ flex: 1 }}>
             <Text style={{ color: MR.text, fontWeight: "900", fontSize: 14 }}>
-              Audio attachment
-            </Text>
+              {uiText("Audio attachment")}</Text>
             <Text
               style={{
                 color: MR.faint,
@@ -918,8 +907,7 @@ backgroundColor: "#F8FAFC",
                 marginTop: 4,
               }}
             >
-              Tap to open audio
-            </Text>
+              {uiText("Tap to open audio")}</Text>
           </View>
         </View>
       </Pressable>
@@ -1000,6 +988,8 @@ function SwipeReplyWrapper({
 }
 
 export default function MeetingRoomDetailScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
 
   const goBackSafe = React.useCallback(() => {
@@ -1643,7 +1633,7 @@ export default function MeetingRoomDetailScreen() {
       changed = true;
 
       const sender = displayMemberName(msg.sender_display_name, msg.sender_user_id);
-      Alert.alert("Mention", `${sender} amekutaja kwenye room.`);
+      Alert.alert(uiText("Mention"), uiText("{p0} amekutaja kwenye room.", {p0: (sender)}));
     }
 
     if (changed) {
@@ -1737,7 +1727,7 @@ export default function MeetingRoomDetailScreen() {
   );
 const pickDocumentFromDevice = useCallback(async () => {
     if (!roomId) {
-      Alert.alert("Room missing", "Hakuna room iliyochaguliwa.");
+      Alert.alert(uiText("Room missing"), uiText("Hakuna room iliyochaguliwa."));
       return;
     }
 
@@ -1766,8 +1756,8 @@ const pickDocumentFromDevice = useCallback(async () => {
 
       if (fileSize && sizeMb > MAX_DOCUMENT_SIZE_MB) {
         Alert.alert(
-          "Document too large",
-          `Chagua file isiyozidi ${MAX_DOCUMENT_SIZE_MB} MB. Hii ni ${sizeMb.toFixed(1)} MB.`
+          uiText("Document too large"),
+          uiText("Chagua file isiyozidi {p0} MB. Hii ni {p1} MB.", {p0: (MAX_DOCUMENT_SIZE_MB), p1: (sizeMb.toFixed(1))})
         );
         return;
       }
@@ -1782,13 +1772,13 @@ const pickDocumentFromDevice = useCallback(async () => {
         fileSize,
       });
     } catch (e: any) {
-      Alert.alert("Document picker failed", e?.message ?? "Imeshindikana kuchagua document.");
+      Alert.alert(uiText("Document picker failed"), e?.message ?? uiText("Imeshindikana kuchagua document."));
     }
   }, [roomId]);
 
 const pickMediaFromLibrary = useCallback(async () => {
     if (!roomId) {
-      Alert.alert("Room missing", "Hakuna room iliyochaguliwa.");
+      Alert.alert(uiText("Room missing"), uiText("Hakuna room iliyochaguliwa."));
       return;
     }
 
@@ -1797,7 +1787,7 @@ const pickMediaFromLibrary = useCallback(async () => {
 
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) {
-        Alert.alert("Permission needed", "Ruhusa ya media gallery inahitajika.");
+        Alert.alert(uiText("Permission needed"), uiText("Ruhusa ya media gallery inahitajika."));
         return;
       }
 
@@ -1823,16 +1813,16 @@ const pickMediaFromLibrary = useCallback(async () => {
 
       if (kind === "IMAGE" && fileSize && sizeMb > MAX_IMAGE_SIZE_MB) {
         Alert.alert(
-          "Image too large",
-          `Chagua image isiyozidi ${MAX_IMAGE_SIZE_MB} MB. Hii ni ${sizeMb.toFixed(1)} MB.`
+          uiText("Image too large"),
+          uiText("Chagua image isiyozidi {p0} MB. Hii ni {p1} MB.", {p0: (MAX_IMAGE_SIZE_MB), p1: (sizeMb.toFixed(1))})
         );
         return;
       }
 
       if (kind === "VIDEO" && fileSize && sizeMb > MAX_VIDEO_SIZE_MB) {
         Alert.alert(
-          "Video too large",
-          `Chagua video isiyozidi ${MAX_VIDEO_SIZE_MB} MB na iwe fupi. Hii ni ${sizeMb.toFixed(1)} MB.`
+          uiText("Video too large"),
+          uiText("Chagua video isiyozidi {p0} MB na iwe fupi. Hii ni {p1} MB.", {p0: (MAX_VIDEO_SIZE_MB), p1: (sizeMb.toFixed(1))})
         );
         return;
       }
@@ -1849,7 +1839,7 @@ const pickMediaFromLibrary = useCallback(async () => {
         fileSize,
       });
     } catch (e: any) {
-      Alert.alert("Media picker failed", e?.message ?? "Imeshindikana kuchagua media.");
+      Alert.alert(uiText("Media picker failed"), e?.message ?? uiText("Imeshindikana kuchagua media."));
     } finally {
       setPickingMedia(false);
     }
@@ -1926,7 +1916,7 @@ const pickMediaFromLibrary = useCallback(async () => {
 
   const sendSelectedMedia = useCallback(async () => {
     if (!roomId) {
-      Alert.alert("Room missing", "Hakuna room iliyochaguliwa.");
+      Alert.alert(uiText("Room missing"), uiText("Hakuna room iliyochaguliwa."));
       return;
     }
 
@@ -2047,7 +2037,7 @@ const pickMediaFromLibrary = useCallback(async () => {
         e?.hint ||
         "Failed to send media.";
 
-      Alert.alert("Media send failed", String(details));
+      Alert.alert(uiText("Media send failed"), String(details));
       console.log("MEETING_ROOM_MEDIA_SEND_ERROR", e);
     } finally {
       setUploadingMedia(false);
@@ -2068,7 +2058,7 @@ const pickMediaFromLibrary = useCallback(async () => {
     const msg = clean(text);
 
     if (!roomId) {
-      Alert.alert("Room missing", "Hakuna room iliyochaguliwa.");
+      Alert.alert(uiText("Room missing"), uiText("Hakuna room iliyochaguliwa."));
       return;
     }
 
@@ -2117,7 +2107,7 @@ const pickMediaFromLibrary = useCallback(async () => {
       }, 120);
     } catch (e: any) {
       setMessages((prev) => prev.filter((m) => clean(m.id) !== optimisticId));
-      Alert.alert("Send failed", e?.message ?? "Failed to send message.");
+      Alert.alert(uiText("Send failed"), e?.message ?? uiText("Failed to send message."));
     } finally {
       setSending(false);
     }
@@ -2136,17 +2126,17 @@ const pickMediaFromLibrary = useCallback(async () => {
     const email = clean(inviteEmail).toLowerCase();
 
     if (!roomId) {
-      Alert.alert("Room missing", "Hakuna room iliyochaguliwa.");
+      Alert.alert(uiText("Room missing"), uiText("Hakuna room iliyochaguliwa."));
       return;
     }
 
     if (!canManageMembers) {
-      Alert.alert("Not allowed", "Only room owner/admin can invite members.");
+      Alert.alert(uiText("Not allowed"), uiText("Only room owner/admin can invite members."));
       return;
     }
 
     if (!email || !email.includes("@")) {
-      Alert.alert("Invalid email", "Weka email sahihi ya mwalikwa.");
+      Alert.alert(uiText("Invalid email"), uiText("Weka email sahihi ya mwalikwa."));
       return;
     }
 
@@ -2170,11 +2160,11 @@ const pickMediaFromLibrary = useCallback(async () => {
       await loadPendingInvites();
 
       Alert.alert(
-        "Invite sent",
-        "Invitation imetumwa successfully kwa ZETRA account hiyo."
+        uiText("Invite sent"),
+        uiText("Invitation imetumwa successfully kwa ZETRA account hiyo.")
       );
     } catch (e: any) {
-      Alert.alert("Invite failed", e?.message ?? "Failed to send invite.");
+      Alert.alert(uiText("Invite failed"), e?.message ?? uiText("Failed to send invite."));
     } finally {
       setInviting(false);
     }
@@ -2197,7 +2187,7 @@ const pickMediaFromLibrary = useCallback(async () => {
 
         await loadMessages();
       } catch (e: any) {
-        Alert.alert("Reaction failed", e?.message ?? "Failed to toggle reaction.");
+        Alert.alert(uiText("Reaction failed"), e?.message ?? uiText("Failed to toggle reaction."));
       } finally {
         setReactingId(null);
         setActionMessage(null);
@@ -2216,20 +2206,20 @@ const pickMediaFromLibrary = useCallback(async () => {
       if (textPart) {
         await Clipboard.setStringAsync(textPart);
         setActionMessage(null);
-        Alert.alert("Copied", "Message imenakiliwa.");
+        Alert.alert(uiText("Copied"), uiText("Message imenakiliwa."));
         return;
       }
 
       if (urlPart) {
         await Clipboard.setStringAsync(urlPart);
         setActionMessage(null);
-        Alert.alert("Copied", "File link imenakiliwa.");
+        Alert.alert(uiText("Copied"), uiText("File link imenakiliwa."));
         return;
       }
 
-      Alert.alert("Nothing to copy", "Hakuna content ya kunakili kwenye item hii.");
+      Alert.alert(uiText("Nothing to copy"), uiText("Hakuna content ya kunakili kwenye item hii."));
     } catch {
-      Alert.alert("Copy failed", "Imeshindikana kunakili message.");
+      Alert.alert(uiText("Copy failed"), uiText("Imeshindikana kunakili message."));
     }
   }, [actionMessage]);
 
@@ -2266,13 +2256,13 @@ const pickMediaFromLibrary = useCallback(async () => {
           message: textPart,
         });
       } else {
-        Alert.alert("Nothing to share", "Hakuna content ya kushare kwenye message hii.");
+        Alert.alert(uiText("Nothing to share"), uiText("Hakuna content ya kushare kwenye message hii."));
         return;
       }
 
       setActionMessage(null);
     } catch (e: any) {
-      Alert.alert("Share failed", e?.message ?? "Imeshindikana kushare message.");
+      Alert.alert(uiText("Share failed"), e?.message ?? uiText("Imeshindikana kushare message."));
     }
   }, [actionMessage]);
 
@@ -2444,8 +2434,7 @@ backgroundColor: mine ? MR.bubbleMine : MR.bubbleOther,
                             }}
                             numberOfLines={1}
                           >
-                            Reply
-                          </Text>
+                            {uiText("Reply")}</Text>
                           <Text
                             style={{
                               color: MR.faint,
@@ -2545,7 +2534,7 @@ backgroundColor: mine ? MR.bubbleMine : MR.bubbleOther,
       scrollToMessage,
       openMediaViewer,
       resolveLocalMediaUri,
-    ]
+     uiText]
   );
 
   return (
@@ -2602,7 +2591,7 @@ backgroundColor: MR.inputBg,
               }}
               numberOfLines={1}
             >
-              {roomDescription || "Chat room ndani ya organization hii."}
+              {roomDescription || uiText("Chat room ndani ya organization hii.")}
             </Text>
           </View>
 
@@ -2623,7 +2612,7 @@ backgroundColor: MR.inputBg,
               })}
             >
               <Text style={{ color: MR.text, fontWeight: "900", fontSize: 12 }}>
-                {inviteOpen ? "Close" : "Invite"}
+                {inviteOpen ? uiText("Close") : uiText("Invite")}
               </Text>
             </Pressable>
           ) : null}
@@ -2663,13 +2652,12 @@ backgroundColor: MR.panel,
               }}
             >
               <Text style={{ color: MR.text, fontWeight: "900", fontSize: 14 }}>
-                Invite ZETRA Account
-              </Text>
+                {uiText("Invite ZETRA Account")}</Text>
 
               <TextInput
                 value={inviteEmail}
                 onChangeText={setInviteEmail}
-                placeholder="Email ya ZETRA user"
+                placeholder={uiText("Email ya ZETRA user")}
                 placeholderTextColor="rgba(255,255,255,0.40)"
                 autoCapitalize="none"
                 keyboardType="email-address"
@@ -2706,7 +2694,7 @@ backgroundColor: MR.panel,
                     opacity: pressed ? 0.92 : 1,
                   })}
                 >
-                  <Text style={{ color: MR.text, fontWeight: "900" }}>INTERNAL</Text>
+                  <Text style={{ color: MR.text, fontWeight: "900" }}>{uiText("INTERNAL")}</Text>
                 </Pressable>
 
                 <Pressable
@@ -2729,7 +2717,7 @@ backgroundColor: MR.panel,
                     opacity: pressed ? 0.92 : 1,
                   })}
                 >
-                  <Text style={{ color: MR.text, fontWeight: "900" }}>EXTERNAL</Text>
+                  <Text style={{ color: MR.text, fontWeight: "900" }}>{uiText("EXTERNAL")}</Text>
                 </Pressable>
               </View>
 
@@ -2754,7 +2742,7 @@ backgroundColor: MR.panel,
                     opacity: pressed ? 0.92 : 1,
                   })}
                 >
-                  <Text style={{ color: MR.text, fontWeight: "900" }}>MEMBER</Text>
+                  <Text style={{ color: MR.text, fontWeight: "900" }}>{uiText("MEMBER")}</Text>
                 </Pressable>
 
                 <Pressable
@@ -2777,7 +2765,7 @@ backgroundColor: MR.panel,
                     opacity: pressed ? 0.92 : 1,
                   })}
                 >
-                  <Text style={{ color: MR.text, fontWeight: "900" }}>ADMIN</Text>
+                  <Text style={{ color: MR.text, fontWeight: "900" }}>{uiText("ADMIN")}</Text>
                 </Pressable>
               </View>
 
@@ -2799,8 +2787,7 @@ backgroundColor: MR.panel,
                   <ActivityIndicator />
                 ) : (
                   <Text style={{ color: MR.text, fontWeight: "900", fontSize: 14 }}>
-                    Send Invitation
-                  </Text>
+                    {uiText("Send Invitation")}</Text>
                 )}
               </Pressable>
             </View>
@@ -2823,8 +2810,7 @@ backgroundColor: MR.panel,
                 }}
               >
                 <Text style={{ color: MR.text, fontWeight: "900", fontSize: 13 }}>
-                  Pending Invites
-                </Text>
+                  {uiText("Pending Invites")}</Text>
                 {invitesLoading ? (
                   <ActivityIndicator />
                 ) : (
@@ -2836,8 +2822,7 @@ backgroundColor: MR.panel,
 
               {pendingInvites.length === 0 ? (
                 <Text style={{ color: MR.muted, fontWeight: "800", lineHeight: 20 }}>
-                  Hakuna pending invites kwa room hii sasa hivi.
-                </Text>
+                  {uiText("Hakuna pending invites kwa room hii sasa hivi.")}</Text>
               ) : (
                 pendingInvites.map((inv, idx) => (
                   <View
@@ -2852,7 +2837,7 @@ backgroundColor: MR.panel,
                     }}
                   >
                     <Text style={{ color: MR.text, fontWeight: "900" }}>
-                      {clean(inv.email) || "No email"}
+                      {clean(inv.email) || uiText("No email")}
                     </Text>
                     <Text style={{ color: MR.muted, fontSize: 12, fontWeight: "800" }}>
                       {niceMemberType(inv.member_type)} • {niceRole(inv.role)}
@@ -2879,7 +2864,7 @@ backgroundColor: MR.panel,
               }}
             >
               <Text style={{ color: UI.danger, fontWeight: "900", fontSize: 14 }}>
-                {error}
+                {systemText(error)}
               </Text>
             </View>
           </View>
@@ -2914,8 +2899,7 @@ backgroundColor: MR.panel,
                   marginTop: 10,
                 }}
               >
-                No messages yet
-              </Text>
+                {uiText("No messages yet")}</Text>
               <Text
                 style={{
                   color: MR.muted,
@@ -2925,8 +2909,7 @@ backgroundColor: MR.panel,
                   marginTop: 8,
                 }}
               >
-                Tuma message ya kwanza ndani ya room hii.
-              </Text>
+                {uiText("Tuma message ya kwanza ndani ya room hii.")}</Text>
             </View>
           ) : (
             <FlatList
@@ -2998,7 +2981,7 @@ backgroundColor: MR.panel,
                   }}
                   numberOfLines={1}
                 >
-                  Replying to {replyTo.mine ? "your message" : "message"}
+                  {uiText("Replying to")}{replyTo.mine ? uiText("your message") : uiText("message")}
                 </Text>
                 <Text
                   style={{
@@ -3126,12 +3109,12 @@ backgroundColor: MR.panel,
                     }}
                   >
                     {pendingMedia.kind === "IMAGE"
-                      ? "Image selected"
+                      ? uiText("Image selected")
                       : pendingMedia.kind === "VIDEO"
-                      ? "Video selected"
+                      ? uiText("Video selected")
                       : pendingMedia.kind === "PDF"
-                      ? "PDF selected"
-                      : "Document selected"}
+                      ? uiText("PDF selected")
+                      : uiText("Document selected")}
                   </Text>
 
                   <Text
@@ -3211,8 +3194,7 @@ backgroundColor: MR.panel,
                     fontSize: 12,
                   }}
                 >
-                  Mention member
-                </Text>
+                  {uiText("Mention member")}</Text>
 
                 {membersLoading || typingLoading ? (
                   <ActivityIndicator size="small" />
@@ -3290,7 +3272,7 @@ backgroundColor: "#F8FAFC",
             <TextInput
               value={text}
               onChangeText={handleTextChange}
-              placeholder={replyTo ? "Write reply..." : "Write message..."}
+              placeholder={replyTo ? uiText("Write reply...") : uiText("Write message...")}
               placeholderTextColor="rgba(255,255,255,0.40)"
               multiline
               style={{
@@ -3372,8 +3354,7 @@ backgroundColor: "#F8FAFC",
               }}
             >
               <Text style={{ color: MR.text, fontWeight: "900", fontSize: 16 }}>
-                Attach
-              </Text>
+                {uiText("Attach")}</Text>
 
               <Pressable
                 onPress={async () => {
@@ -3392,8 +3373,7 @@ backgroundColor: "#F8FAFC",
                 })}
               >
                 <Text style={{ color: MR.text, fontWeight: "900" }}>
-                  Photos / Videos
-                </Text>
+                  {uiText("Photos / Videos")}</Text>
               </Pressable>
 
               <Pressable
@@ -3413,8 +3393,7 @@ backgroundColor: MR.panel,
                 })}
               >
                 <Text style={{ color: MR.text, fontWeight: "900" }}>
-                  PDF / Documents
-                </Text>
+                  {uiText("PDF / Documents")}</Text>
               </Pressable>
 
               <Pressable
@@ -3431,7 +3410,7 @@ backgroundColor: MR.panel,
                   opacity: pressed ? 0.9 : 1,
                 })}
               >
-                <Text style={{ color: MR.muted, fontWeight: "900" }}>Cancel</Text>
+                <Text style={{ color: MR.muted, fontWeight: "900" }}>{uiText("Cancel")}</Text>
               </Pressable>
             </Pressable>
           </Pressable>
@@ -3463,20 +3442,20 @@ backgroundColor: MR.panel,
             >
             <Text style={{ color: MR.text, fontWeight: "900", fontSize: 16 }}>
   {viewerKind === "VIDEO"
-    ? "Video"
+    ? uiText("Video")
     : viewerKind === "IMAGE"
-    ? "Image"
+    ? uiText("Image")
     : viewerKind === "PDF"
     ? "PDF"
     : viewerKind === "DOCUMENT"
-    ? "Document"
-    : "Media"}
+    ? uiText("Document")
+    : uiText("Media")}
 </Text>
 
 <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
   {(viewerKind === "PDF" || viewerKind === "DOCUMENT") && viewerUrl ? (
     <Pressable
-      onPress={() => void openExternalUrl(viewerUrl)}
+      onPress={() => void openExternalUrl(viewerUrl, uiText)}
       style={({ pressed }) => ({
         minWidth: 74,
         height: 40,
@@ -3489,8 +3468,7 @@ backgroundColor: MR.panel,
       })}
     >
       <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 12 }}>
-        Open
-      </Text>
+        {uiText("Open")}</Text>
     </Pressable>
   ) : null}
 
@@ -3577,16 +3555,15 @@ backgroundColor: MR.panel,
               marginTop: 12,
             }}
           >
-            Loading PDF preview...
-          </Text>
+            {uiText("Loading PDF preview...")}</Text>
         </View>
       )}
       onError={() => {
         Alert.alert(
-          "Preview failed",
-          "PDF preview imeshindikana kufunguka ndani ya app. Tutafungua link ya file."
+          uiText("Preview failed"),
+          uiText("PDF preview imeshindikana kufunguka ndani ya app. Tutafungua link ya file.")
         );
-        void openExternalUrl(viewerUrl);
+        void openExternalUrl(viewerUrl, uiText);
       }}
     />
   </View>
@@ -3613,8 +3590,7 @@ backgroundColor: MR.panel,
         textAlign: "center",
       }}
     >
-      Document Ready
-    </Text>
+      {uiText("Document Ready")}</Text>
     <Text
       style={{
         color: MR.muted,
@@ -3624,11 +3600,10 @@ backgroundColor: MR.panel,
         lineHeight: 20,
       }}
     >
-      Hii document type bado haina internal preview ya uhakika ndani ya app.
-    </Text>
+      {uiText("Hii document type bado haina internal preview ya uhakika ndani ya app.")}</Text>
 
     <Pressable
-      onPress={() => void openExternalUrl(viewerUrl)}
+      onPress={() => void openExternalUrl(viewerUrl, uiText)}
       style={({ pressed }) => ({
         minHeight: 48,
         minWidth: 180,
@@ -3643,14 +3618,12 @@ backgroundColor: MR.panel,
       })}
     >
       <Text style={{ color: "#FFFFFF", fontWeight: "900" }}>
-        Open Document
-      </Text>
+        {uiText("Open Document")}</Text>
     </Pressable>
   </View>
 ) : (
                 <Text style={{ color: "#FFFFFF", fontWeight: "800" }}>
-                  Audio preview not ready yet
-                </Text>
+                  {uiText("Audio preview not ready yet")}</Text>
               )}
             </View>
           </View>
@@ -3685,8 +3658,7 @@ backgroundColor: MR.panel,
               }}
             >
               <Text style={{ color: MR.text, fontWeight: "900", fontSize: 16 }}>
-                Message Actions
-              </Text>
+                {uiText("Message Actions")}</Text>
 
               <Text
                 style={{
@@ -3751,7 +3723,7 @@ backgroundColor: MR.panel,
                     opacity: pressed ? 0.9 : 1,
                   })}
                 >
-                  <Text style={{ color: MR.text, fontWeight: "900" }}>Open</Text>
+                  <Text style={{ color: MR.text, fontWeight: "900" }}>{uiText("Open")}</Text>
                 </Pressable>
               ) : null}
 
@@ -3768,7 +3740,7 @@ backgroundColor: MR.panel,
                   opacity: pressed ? 0.9 : 1,
                 })}
               >
-                <Text style={{ color: MR.text, fontWeight: "900" }}>Reply</Text>
+                <Text style={{ color: MR.text, fontWeight: "900" }}>{uiText("Reply")}</Text>
               </Pressable>
 
               <Pressable
@@ -3784,7 +3756,7 @@ backgroundColor: MR.panel,
                   opacity: pressed ? 0.9 : 1,
                 })}
               >
-                <Text style={{ color: MR.text, fontWeight: "900" }}>Copy</Text>
+                <Text style={{ color: MR.text, fontWeight: "900" }}>{uiText("Copy")}</Text>
               </Pressable>
 
               <Pressable
@@ -3800,7 +3772,7 @@ backgroundColor: MR.panel,
                   opacity: pressed ? 0.9 : 1,
                 })}
               >
-                <Text style={{ color: MR.text, fontWeight: "900" }}>Share</Text>
+                <Text style={{ color: MR.text, fontWeight: "900" }}>{uiText("Share")}</Text>
               </Pressable>
 
               <Pressable
@@ -3820,7 +3792,7 @@ backgroundColor: MR.panel,
                 })}
               >
                 <Text style={{ color: MR.text, fontWeight: "900" }}>
-                  {actionMessage?.myLoveReacted ? "Unlike ❤️" : "Love ❤️"}
+                  {actionMessage?.myLoveReacted ? uiText("Unlike ❤️") : uiText("Love ❤️")}
                 </Text>
               </Pressable>
 
@@ -3841,7 +3813,7 @@ backgroundColor: MR.panel,
                 })}
               >
                 <Text style={{ color: MR.text, fontWeight: "900" }}>
-                  {actionMessage?.myLikeReacted ? "Remove 👍" : "Like 👍"}
+                  {actionMessage?.myLikeReacted ? uiText("Remove 👍") : uiText("Like 👍")}
                 </Text>
               </Pressable>
 
@@ -3862,7 +3834,7 @@ backgroundColor: MR.panel,
                 })}
               >
                 <Text style={{ color: MR.text, fontWeight: "900" }}>
-                  {actionMessage?.myFireReacted ? "Remove 🔥" : "Fire 🔥"}
+                  {actionMessage?.myFireReacted ? uiText("Remove 🔥") : uiText("Fire 🔥")}
                 </Text>
               </Pressable>
 
@@ -3879,7 +3851,7 @@ backgroundColor: MR.panel,
                   opacity: pressed ? 0.9 : 1,
                 })}
               >
-                <Text style={{ color: MR.muted, fontWeight: "900" }}>Cancel</Text>
+                <Text style={{ color: MR.muted, fontWeight: "900" }}>{uiText("Cancel")}</Text>
               </Pressable>
             </Pressable>
           </Pressable>

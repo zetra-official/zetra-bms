@@ -1,0 +1,73 @@
+# ===============================
+# Dependencies
+# ===============================
+node_modules/
+
+# ===============================
+# Expo
+# ===============================
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# ===============================
+# Native / Keys
+# ===============================
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.pem
+
+# ===============================
+# Debug
+# ===============================
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# ===============================
+# macOS
+# ===============================
+.DS_Store
+
+# ===============================
+# TypeScript
+# ===============================
+*.tsbuildinfo
+
+# ===============================
+# Generated native folders
+# ===============================
+/ios
+/android
+
+# ===============================
+# Environment Files (VERY IMPORTANT)
+# ===============================
+.env
+.env.*
+!.env.example
+.env*.local
+# Local Netlify folder
+.netlify
+
+# Generated Deno / Supabase Edge Functions cache
+supabase/functions/.deno_cache/
+
+# Release-only exclusions; preserved locally, never activated/uploaded.
+engineering/
+.expo*/
+_backups/
+_patch_backups/
+__backup*/
+_backup*/
+_router_backups/
+.z_quarantine_routes/
+.zetra-route-backup/
+dist/
+*.private.*

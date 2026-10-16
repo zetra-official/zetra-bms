@@ -1,3 +1,5 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/(tabs)/staff/cash-out.tsx
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
@@ -128,6 +130,8 @@ function payoutStatusMeta(row: StaffCashoutRow) {
 }
 
 export default function StaffCommissionCashOutScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
   const { activeOrgId, activeOrgName, activeRole } = useOrg();
 
@@ -292,7 +296,7 @@ export default function StaffCommissionCashOutScreen() {
   const cashOutNow = useCallback(
     async (row: StaffCashoutRow) => {
       if (!canManage) {
-        Alert.alert("No Access", "Owner/Admin only.");
+        Alert.alert(uiText("No Access"), uiText("Owner/Admin only."));
         return;
       }
 
@@ -303,22 +307,22 @@ export default function StaffCommissionCashOutScreen() {
       const note = String(noteDrafts[membershipId] ?? "").trim();
 
       if (!membershipId) {
-        Alert.alert("Failed", "Missing membership id.");
+        Alert.alert(uiText("Failed"), uiText("Missing membership id."));
         return;
       }
 
       if (!row.payout_profile_configured) {
-        Alert.alert("Blocked", "Staff huyu bado hajaweka payout profile.");
+        Alert.alert(uiText("Blocked"), uiText("Staff huyu bado hajaweka payout profile."));
         return;
       }
 
       if (!Number.isFinite(amount) || amount <= 0) {
-        Alert.alert("Blocked", "Weka amount sahihi ya cash out.");
+        Alert.alert(uiText("Blocked"), uiText("Weka amount sahihi ya cash out."));
         return;
       }
 
       if (amount > remaining) {
-        Alert.alert("Blocked", "Amount haiwezi kuzidi remaining commission.");
+        Alert.alert(uiText("Blocked"), uiText("Amount haiwezi kuzidi remaining commission."));
         return;
       }
 
@@ -335,8 +339,8 @@ export default function StaffCommissionCashOutScreen() {
         if (e) throw e;
 
         Alert.alert(
-          "Cash Out Saved ✅",
-          "Malipo ya commission yamehifadhiwa. Remaining balance imerekebishwa na kumbukumbu ya cash-out imeongezwa kwenye history."
+          uiText("Cash Out Saved ✅"),
+          uiText("Malipo ya commission yamehifadhiwa. Remaining balance imerekebishwa na kumbukumbu ya cash-out imeongezwa kwenye history.")
         );
 
         /*
@@ -356,7 +360,7 @@ export default function StaffCommissionCashOutScreen() {
           [membershipId]: "",
         }));
       } catch (err: any) {
-        Alert.alert("Failed", err?.message ?? "Failed to create commission cash-out");
+        Alert.alert(uiText("Failed"), err?.message ?? uiText("Failed to create commission cash-out"));
       } finally {
         setSavingMembershipId(null);
       }
@@ -379,11 +383,9 @@ export default function StaffCommissionCashOutScreen() {
             }}
           >
             <Text style={{ color: UI.danger, fontWeight: "900", fontSize: 18 }}>
-              No Access
-            </Text>
+              {uiText("No Access")}</Text>
             <Text style={{ color: UI.text, fontWeight: "800", lineHeight: 22 }}>
-              Hii screen ni ya Owner/Admin tu.
-            </Text>
+              {uiText("Hii screen ni ya Owner/Admin tu.")}</Text>
 
             <Pressable
               onPress={() => router.back()}
@@ -397,7 +399,7 @@ export default function StaffCommissionCashOutScreen() {
                 alignItems: "center",
               }}
             >
-              <Text style={{ color: UI.text, fontWeight: "900" }}>Back</Text>
+              <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Back")}</Text>
             </Pressable>
           </View>
         </View>
@@ -434,11 +436,9 @@ export default function StaffCommissionCashOutScreen() {
 
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 26, fontWeight: "900", color: UI.text }}>
-              Commission Cash Out
-            </Text>
+              {uiText("Commission Cash Out")}</Text>
            <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 4 }}>
-  Pay accumulated staff commission and reduce unpaid balance
-</Text>
+  {uiText("Pay accumulated staff commission and reduce unpaid balance")}</Text>
           </View>
         </View>
 
@@ -452,7 +452,7 @@ export default function StaffCommissionCashOutScreen() {
             gap: 10,
           }}
         >
-          <Text style={{ color: UI.muted, fontWeight: "800" }}>Organization</Text>
+          <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("Organization")}</Text>
           <Text style={{ fontSize: 18, fontWeight: "900", color: UI.text }}>
             {activeOrgName ?? "—"}
           </Text>
@@ -468,7 +468,7 @@ export default function StaffCommissionCashOutScreen() {
                 padding: 12,
               }}
             >
-              <Text style={{ color: UI.muted, fontWeight: "800" }}>Total Paid</Text>
+              <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("Total Paid")}</Text>
               <Text style={{ color: UI.text, fontWeight: "900", marginTop: 6 }}>
                 {fmtMoney(totalPaid)}
               </Text>
@@ -485,8 +485,7 @@ export default function StaffCommissionCashOutScreen() {
               }}
             >
               <Text style={{ color: UI.muted, fontWeight: "800" }}>
-  Total Unpaid
-</Text>
+  {uiText("Total Unpaid")}</Text>
               <Text style={{ color: UI.text, fontWeight: "900", marginTop: 6 }}>
                 {fmtMoney(totalRemaining)}
               </Text>
@@ -494,9 +493,7 @@ export default function StaffCommissionCashOutScreen() {
           </View>
 
          <Text style={{ color: UI.faint, fontWeight: "800", lineHeight: 20 }}>
-  Commission ambayo haijalipwa itaendelea kubebwa mbele bila kufutwa mwezi unapobadilika.
-  Cash-out ndiyo inapunguza balance, na kila malipo yanahifadhiwa kwenye history.
-</Text>
+  {uiText("Commission ambayo haijalipwa itaendelea kubebwa mbele bila kufutwa mwezi unapobadilika. Cash-out ndiyo inapunguza balance, na kila malipo yanahifadhiwa kwenye history.")}</Text>
         </View>
 
         <View style={{ flexDirection: "row", gap: 10 }}>
@@ -515,7 +512,7 @@ export default function StaffCommissionCashOutScreen() {
             }}
           >
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-              {loading ? "Loading..." : "Refresh Cash-Out Dashboard"}
+              {loading ? uiText("Loading...") : uiText("Refresh Cash-Out Dashboard")}
             </Text>
           </Pressable>
 
@@ -533,8 +530,7 @@ export default function StaffCommissionCashOutScreen() {
             }}
           >
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-              History
-            </Text>
+              {uiText("History")}</Text>
           </Pressable>
         </View>
 
@@ -548,14 +544,14 @@ export default function StaffCommissionCashOutScreen() {
               padding: 12,
             }}
           >
-            <Text style={{ color: UI.danger, fontWeight: "900" }}>{error}</Text>
+            <Text style={{ color: UI.danger, fontWeight: "900" }}>{systemText(error)}</Text>
           </View>
         ) : null}
 
         <TextInput
           value={q}
           onChangeText={setQ}
-          placeholder="Tafuta kwa email / membership / payout account..."
+          placeholder={uiText("Tafuta kwa email / membership / payout account...")}
           placeholderTextColor="rgba(255,255,255,0.35)"
           style={{
             borderWidth: 1,
@@ -580,11 +576,9 @@ export default function StaffCommissionCashOutScreen() {
             }}
           >
             <Text style={{ fontWeight: "900", color: UI.text }}>
-              No staff commission data found
-            </Text>
+              {uiText("No staff commission data found")}</Text>
             <Text style={{ marginTop: 6, color: UI.muted, fontWeight: "700", lineHeight: 20 }}>
-              Hakuna data ya cash-out kwa sasa.
-            </Text>
+              {uiText("Hakuna data ya cash-out kwa sasa.")}</Text>
           </View>
         ) : (
           filtered.map((r) => {
@@ -630,10 +624,10 @@ export default function StaffCommissionCashOutScreen() {
 
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: UI.text, fontWeight: "900" }}>
-                      {email ?? `User: ${shortId(String(r.user_id ?? ""))}`}
+                      {email ?? uiText("User: {p0}", {p0: (shortId(String(r.user_id ?? "")))})}
                     </Text>
                     <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 4 }}>
-                      Membership: {shortId(membershipId)}
+                      {uiText("Membership:")}{shortId(membershipId)}
                     </Text>
                   </View>
 
@@ -656,7 +650,7 @@ export default function StaffCommissionCashOutScreen() {
                             fontWeight: "900",
                           }}
                         >
-                          {meta.label}
+                          {uiText(meta.label)}
                         </Text>
                       </View>
                     );
@@ -673,26 +667,25 @@ export default function StaffCommissionCashOutScreen() {
                     gap: 8,
                   }}
                 >
-                  <Text style={{ color: UI.muted, fontWeight: "800" }}>Payout Destination</Text>
+                  <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("Payout Destination")}</Text>
                   <Text style={{ color: UI.text, fontWeight: "900", marginTop: 2 }}>
                     {payoutMethodLabel(r)}
                   </Text>
 
                   <Text style={{ color: UI.muted, fontWeight: "800" }}>
-                    Account Holder
-                  </Text>
+                    {uiText("Account Holder")}</Text>
                   <Text style={{ color: UI.text, fontWeight: "900" }}>
                     {String(r.payout_account_holder_name ?? "").trim() || "—"}
                   </Text>
 
                   {String(r.payout_payment_method ?? "").trim().toUpperCase() === "MOBILE" ? (
                     <>
-                      <Text style={{ color: UI.muted, fontWeight: "800" }}>Network</Text>
+                      <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("Network")}</Text>
                       <Text style={{ color: UI.text, fontWeight: "900" }}>
                         {String(r.payout_mobile_network ?? "").trim() || "—"}
                       </Text>
 
-                      <Text style={{ color: UI.muted, fontWeight: "800" }}>Mobile Number</Text>
+                      <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("Mobile Number")}</Text>
                       <Text style={{ color: UI.text, fontWeight: "900" }}>
                         {String(r.payout_mobile_number ?? "").trim() || "—"}
                       </Text>
@@ -701,17 +694,17 @@ export default function StaffCommissionCashOutScreen() {
 
                   {String(r.payout_payment_method ?? "").trim().toUpperCase() === "BANK" ? (
                     <>
-                      <Text style={{ color: UI.muted, fontWeight: "800" }}>Bank</Text>
+                      <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("Bank")}</Text>
                       <Text style={{ color: UI.text, fontWeight: "900" }}>
                         {String(r.payout_bank_name ?? "").trim() || "—"}
                       </Text>
 
-                      <Text style={{ color: UI.muted, fontWeight: "800" }}>Bank Account Name</Text>
+                      <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("Bank Account Name")}</Text>
                       <Text style={{ color: UI.text, fontWeight: "900" }}>
                         {String(r.payout_bank_account_name ?? "").trim() || "—"}
                       </Text>
 
-                      <Text style={{ color: UI.muted, fontWeight: "800" }}>Bank Account Number</Text>
+                      <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("Bank Account Number")}</Text>
                       <Text style={{ color: UI.text, fontWeight: "900" }}>
                         {String(r.payout_bank_account_number ?? "").trim() || "—"}
                       </Text>
@@ -731,8 +724,7 @@ export default function StaffCommissionCashOutScreen() {
                     }}
                   >
                     <Text style={{ color: UI.muted, fontWeight: "800" }}>
-  Accumulated
-</Text>
+  {uiText("Accumulated")}</Text>
                     <Text style={{ color: UI.text, fontWeight: "900", marginTop: 6 }}>
                       {fmtMoney(accrued)}
                     </Text>
@@ -749,8 +741,7 @@ export default function StaffCommissionCashOutScreen() {
                     }}
                   >
                     <Text style={{ color: UI.muted, fontWeight: "800" }}>
-  Paid / Cashed Out
-</Text>
+  {uiText("Paid / Cashed Out")}</Text>
                     <Text style={{ color: UI.text, fontWeight: "900", marginTop: 6 }}>
                       {fmtMoney(paid)}
                     </Text>
@@ -767,8 +758,7 @@ export default function StaffCommissionCashOutScreen() {
                     }}
                   >
                     <Text style={{ color: UI.muted, fontWeight: "800" }}>
-  Unpaid Balance
-</Text>
+  {uiText("Unpaid Balance")}</Text>
                     <Text style={{ color: UI.text, fontWeight: "900", marginTop: 6 }}>
                       {fmtMoney(remaining)}
                     </Text>
@@ -777,8 +767,7 @@ export default function StaffCommissionCashOutScreen() {
 
                 <View>
               <Text style={{ color: UI.muted, fontWeight: "800", marginBottom: 6 }}>
-  Amount to Cash Out
-</Text>
+  {uiText("Amount to Cash Out")}</Text>
                   <TextInput
                     value={amountDraft}
                     onChangeText={(v) =>
@@ -787,7 +776,7 @@ export default function StaffCommissionCashOutScreen() {
                         [membershipId]: cleanMoneyInput(v),
                       }))
                     }
-                    placeholder="mf: 50000"
+                    placeholder={uiText("mf: 50000")}
                     placeholderTextColor="rgba(255,255,255,0.35)"
                     keyboardType="numeric"
                     style={{
@@ -805,8 +794,7 @@ export default function StaffCommissionCashOutScreen() {
 
                 <View>
                   <Text style={{ color: UI.muted, fontWeight: "800", marginBottom: 6 }}>
-                    Payment Reference / Transaction Message
-                  </Text>
+                    {uiText("Payment Reference / Transaction Message")}</Text>
                   <TextInput
                     value={noteDraft}
                     onChangeText={(v) =>
@@ -815,7 +803,7 @@ export default function StaffCommissionCashOutScreen() {
                         [membershipId]: v,
                       }))
                     }
-                    placeholder="Bandika SMS/message ya muamala wote au andika reference code ya malipo"
+                    placeholder={uiText("Bandika SMS/message ya muamala wote au andika reference code ya malipo")}
                     placeholderTextColor="rgba(255,255,255,0.35)"
                     multiline
                     textAlignVertical="top"
@@ -832,9 +820,7 @@ export default function StaffCommissionCashOutScreen() {
                     }}
                   />
                   <Text style={{ color: UI.faint, fontWeight: "800", marginTop: 8, lineHeight: 20 }}>
-                    Owner/Admin anaweza kubandika message yote ya muamala au reference code ya
-                    malipo ili staff aweze kuilinganisha na fedha iliyoingia kwenye simu au bank.
-                  </Text>
+                    {uiText("Owner/Admin anaweza kubandika message yote ya muamala au reference code ya malipo ili staff aweze kuilinganisha na fedha iliyoingia kwenye simu au bank.")}</Text>
                 </View>
 
                 <Pressable
@@ -857,14 +843,13 @@ export default function StaffCommissionCashOutScreen() {
                   }}
                 >
                   <Text style={{ color: UI.text, fontWeight: "900" }}>
-                    {isSaving ? "Processing..." : "Cash Out Now"}
+                    {isSaving ? uiText("Processing...") : uiText("Cash Out Now")}
                   </Text>
                 </Pressable>
 
                 {!r.payout_profile_configured ? (
                   <Text style={{ color: UI.warning, fontWeight: "800", lineHeight: 20 }}>
-                    Staff huyu bado hajaweka payout profile, hivyo cash out haijawezeshwa.
-                  </Text>
+                    {uiText("Staff huyu bado hajaweka payout profile, hivyo cash out haijawezeshwa.")}</Text>
                 ) : null}
 
               {remaining <= 0 ? (
@@ -875,9 +860,7 @@ export default function StaffCommissionCashOutScreen() {
       lineHeight: 20,
     }}
   >
-    Staff huyu hana unpaid commission kwa sasa. Commission mpya itaendelea
-    kuongezeka kutokana na mauzo mapya bila kutegemea mwisho wa mwezi.
-  </Text>
+    {uiText("Staff huyu hana unpaid commission kwa sasa. Commission mpya itaendelea kuongezeka kutokana na mauzo mapya bila kutegemea mwisho wa mwezi.")}</Text>
 ) : (
   <Text
     style={{
@@ -886,8 +869,7 @@ export default function StaffCommissionCashOutScreen() {
       lineHeight: 20,
     }}
   >
-    Unpaid commission hii itaendelea kubebwa mbele mpaka itakapofanyiwa cash-out.
-  </Text>
+    {uiText("Unpaid commission hii itaendelea kubebwa mbele mpaka itakapofanyiwa cash-out.")}</Text>
 )}
               </View>
             );

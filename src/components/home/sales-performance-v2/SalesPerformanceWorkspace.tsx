@@ -1,4 +1,6 @@
-﻿import { Ionicons } from "@expo/vector-icons";
+import {useLanguage} from "@/src/i18n/LanguageProvider";
+﻿import {useCommonText} from "@/src/i18n/useCommonText";
+import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import {
   ActivityIndicator,
@@ -166,12 +168,14 @@ function MetricCard({
       </View>
 
       <Text
-        numberOfLines={1}
+        numberOfLines={2}
         style={{
           color: valueColor,
           fontWeight: "900",
           fontSize: 18,
           marginTop: 9,
+          flexShrink: 1,
+          flexWrap: "wrap",
         }}
       >
         {value}
@@ -257,6 +261,7 @@ function PerformanceChart({
   previousPoints: SalesPerformancePoint[];
   compare: boolean;
 }) {
+ const uiText = useCommonText();
   const width = 920;
   const height = 255;
 
@@ -375,8 +380,7 @@ function PerformanceChart({
               fontSize: 9,
             }}
           >
-            This period
-          </Text>
+            {uiText("This period")}</Text>
         </View>
 
         {compare ? (
@@ -401,8 +405,7 @@ function PerformanceChart({
                 fontSize: 9,
               }}
             >
-              Previous period
-            </Text>
+              {uiText("Previous period")}</Text>
           </View>
         ) : null}
       </View>
@@ -556,17 +559,22 @@ function IntelligenceCard({
   title: string;
   children: React.ReactNode;
 }) {
+  const compactCard =
+    typeof window !== "undefined" &&
+    window.innerWidth >= 900 &&
+    window.innerHeight < 850;
+
   return (
     <View
       style={{
         flex: 1,
-        minWidth: 190,
-        minHeight: 128,
+        minWidth: compactCard ? 145 : 190,
+        minHeight: compactCard ? 90 : 128,
         borderRadius: 14,
         borderWidth: 1,
         borderColor: "#E8EDF4",
         backgroundColor: "#FFFFFF",
-        padding: 13,
+        padding: compactCard ? 7 : 13,
       }}
     >
       <View
@@ -618,6 +626,8 @@ export default function SalesPerformanceWorkspace({
   refreshKey,
   onOpenCRM,
 }: Props) {
+ const uiText=useCommonText();
+ const {language}=useLanguage();
   const [mode, setMode] =
     React.useState<SalesPerformanceMode>("WEEKLY");
 
@@ -955,9 +965,19 @@ export default function SalesPerformanceWorkspace({
 
   const rangeLabel = result
     ? formatSalesPerformanceRange(
-        result.currentRange
+        result.currentRange, language==='en'?'en-GB':language
       )
     : "";
+
+  const desktopViewportHeight =
+    typeof window !== "undefined"
+      ? window.innerHeight
+      : 900;
+
+  const compactWorkspace =
+    typeof window !== "undefined" &&
+    window.innerWidth >= 900 &&
+    desktopViewportHeight < 850;
 
   return (
     <View
@@ -966,8 +986,8 @@ export default function SalesPerformanceWorkspace({
         borderWidth: 1,
         borderColor: "rgba(15,23,42,0.08)",
         backgroundColor: "#FFFFFF",
-        padding: 16,
-        gap: 14,
+        padding: compactWorkspace ? 8 : 16,
+        gap: compactWorkspace ? 6 : 14,
       }}
     >
       {/* HEADER */}
@@ -1017,8 +1037,7 @@ export default function SalesPerformanceWorkspace({
                   fontSize: 18,
                 }}
               >
-                Sales Performance
-              </Text>
+                {uiText("Sales Performance")}</Text>
 
               <Text
                 style={{
@@ -1028,8 +1047,7 @@ export default function SalesPerformanceWorkspace({
                   marginTop: 2,
                 }}
               >
-                Visualize sales trends and compare performance over time.
-              </Text>
+                {uiText("Visualize sales trends and compare performance over time.")}</Text>
             </View>
           </View>
         </View>
@@ -1051,7 +1069,7 @@ export default function SalesPerformanceWorkspace({
           ).map(([value, label]) => (
             <SegmentButton
               key={value}
-              label={label}
+              label={uiText(label)}
               active={mode === value}
               onPress={() => setMode(value)}
             />
@@ -1097,8 +1115,7 @@ export default function SalesPerformanceWorkspace({
                 fontSize: 10,
               }}
             >
-              Compare
-            </Text>
+              {uiText("Compare")}</Text>
           </Pressable>
 
           <View
@@ -1127,7 +1144,7 @@ export default function SalesPerformanceWorkspace({
                 fontSize: 9,
               }}
             >
-              {rangeLabel || "Current period"}
+              {rangeLabel || uiText("Current period")}
             </Text>
           </View>
         </View>
@@ -1142,21 +1159,21 @@ export default function SalesPerformanceWorkspace({
         }}
       >
         <MetricCard
-          title="Total Sales"
+          title={uiText("Total Sales")}
           value={formatValue(currentSales)}
-          subtitle="selected period"
+          subtitle={uiText("selected period")}
           icon="cash-outline"
           iconColor={BLUE}
           soft={BLUE_SOFT}
         />
 
         <MetricCard
-          title="Previous Period"
+          title={uiText("Previous Period")}
           value={formatValue(previousSales)}
           subtitle={
             compare
-              ? "comparison baseline"
-              : "comparison available"
+              ? uiText("comparison baseline")
+              : uiText("comparison available")
           }
           icon="time-outline"
           iconColor={PURPLE}
@@ -1164,13 +1181,11 @@ export default function SalesPerformanceWorkspace({
         />
 
         <MetricCard
-          title="Difference"
+          title={uiText("Difference")}
           value={`${difference >= 0 ? "+" : "-"}${formatValue(
             Math.abs(difference)
           )}`}
-          subtitle={percentText(
-            differencePercent
-          )}
+          subtitle={differencePercent===null?uiText("New"):percentText(differencePercent)}
           icon={
             positive
               ? "trending-up-outline"
@@ -1188,23 +1203,23 @@ export default function SalesPerformanceWorkspace({
         />
 
         <MetricCard
-          title="Orders"
+          title={uiText("Orders")}
           value={String(
             result?.current.orders ?? 0
           )}
-          subtitle="completed sales"
+          subtitle={uiText("completed sales")}
           icon="receipt-outline"
           iconColor={AMBER}
           soft={AMBER_SOFT}
         />
 
         <MetricCard
-          title="Average Order Value"
+          title={uiText("Average Order Value")}
           value={formatValue(
             result?.current
               .averageOrderValue ?? 0
           )}
-          subtitle="sales ÷ orders"
+          subtitle={uiText("sales ÷ orders")}
           icon="calculator-outline"
           iconColor={PURPLE}
           soft={PURPLE_SOFT}
@@ -1236,8 +1251,7 @@ export default function SalesPerformanceWorkspace({
               fontSize: 10,
             }}
           >
-            Loading live sales performance...
-          </Text>
+            {uiText("Loading live sales performance...")}</Text>
         </View>
       ) : errorText ? (
         <View
@@ -1267,7 +1281,7 @@ export default function SalesPerformanceWorkspace({
               textAlign: "center",
             }}
           >
-            {errorText}
+            {uiText(errorText)}
           </Text>
         </View>
       ) : (
@@ -1282,7 +1296,7 @@ export default function SalesPerformanceWorkspace({
         }}
       >
         <IntelligenceCard
-          title="Sales by Payment Method"
+          title={uiText("Sales by Payment Method")}
           icon="card-outline"
           iconColor={BLUE}
           soft={BLUE_SOFT}
@@ -1534,8 +1548,7 @@ export default function SalesPerformanceWorkspace({
                                 "center",
                             }}
                           >
-                            Total Sales
-                          </Text>
+                            {uiText("Total Sales")}</Text>
                         </View>
                       </View>
                     </View>
@@ -1600,7 +1613,7 @@ export default function SalesPerformanceWorkspace({
                                       "800",
                                   }}
                                 >
-                                  {item.label}
+                                  {uiText(item.label)}
                                 </Text>
 
                                 <View
@@ -1677,15 +1690,13 @@ export default function SalesPerformanceWorkspace({
                   textAlign: "center",
                 }}
               >
-                No verified payment activity
-                for this period.
-              </Text>
+                {uiText("No verified payment activity for this period.")}</Text>
             </View>
           )}
         </IntelligenceCard>
 
         <IntelligenceCard
-          title="Top Selling Products"
+          title={uiText("Top Selling Products")}
           icon="trophy-outline"
           iconColor={AMBER}
           soft={AMBER_SOFT}
@@ -1828,8 +1839,7 @@ export default function SalesPerformanceWorkspace({
                                     minWidth: 0,
                                     color:
                                       "#0F172A",
-                                    fontWeight:
-                                      "850",
+                                    fontWeight: "800",
                                     fontSize: 9.5,
                                   }}
                                 >
@@ -1872,19 +1882,17 @@ export default function SalesPerformanceWorkspace({
                                     width: 42,
                                     color:
                                       "#94A3B8",
-                                    fontWeight:
-                                      "750",
-                                    fontSize: 8,
+                                    fontWeight: "700",
+                                    fontSize: 8.5,
                                   }}
                                 >
-                                  {product.qtySold} sold
-                                </Text>
+                                  {product.qtySold} {uiText("sold")}</Text>
 
                                 {/* PERFORMANCE RAIL */}
                                 <View
                                   style={{
                                     flex: 1,
-                                    height: 6,
+                                    height: 5,
                                     borderRadius:
                                       999,
                                     backgroundColor:
@@ -1933,9 +1941,7 @@ export default function SalesPerformanceWorkspace({
                   textAlign: "center",
                 }}
               >
-                No verified product sales
-                for this period.
-              </Text>
+                {uiText("No verified product sales for this period.")}</Text>
             </View>
           )}
         </IntelligenceCard>
@@ -1944,7 +1950,7 @@ export default function SalesPerformanceWorkspace({
           disabled={!onOpenCRM}
           onPress={onOpenCRM}
           accessibilityRole="button"
-          accessibilityLabel="Open Customer Relationship Management"
+          accessibilityLabel={uiText("Open Customer Relationship Management")}
           style={({ pressed, hovered }: any) => ({
             flex: 1,
             minWidth: 220,
@@ -1963,7 +1969,7 @@ export default function SalesPerformanceWorkspace({
             <View
               style={{
                 flex: 1,
-                borderRadius: 16,
+                borderRadius: 14,
                 borderWidth: 1,
                 borderColor:
                   hovered && onOpenCRM
@@ -1973,7 +1979,7 @@ export default function SalesPerformanceWorkspace({
                   hovered && onOpenCRM
                     ? "#FCFBFF"
                     : "#FFFFFF",
-                padding: 14,
+                padding: 13,
                 shadowColor: "#7C3AED",
                 shadowOpacity:
                   hovered && onOpenCRM
@@ -1999,7 +2005,7 @@ export default function SalesPerformanceWorkspace({
                   alignItems: "center",
                   justifyContent: "space-between",
                   gap: 10,
-                  marginBottom: 12,
+                  marginBottom: 10,
                 }}
               >
                 <View
@@ -2033,11 +2039,10 @@ export default function SalesPerformanceWorkspace({
                     style={{
                       color: "#0F172A",
                       fontWeight: "900",
-                      fontSize: 12,
+                      fontSize: 11.5,
                     }}
                   >
-                    Customer Intelligence (CRM)
-                  </Text>
+                    {uiText("Customer Intelligence (CRM)")}</Text>
                 </View>
 
 
@@ -2067,8 +2072,7 @@ export default function SalesPerformanceWorkspace({
                     textTransform: "uppercase",
                   }}
                 >
-                  Top Customer
-                </Text>
+                  {uiText("Top Customer")}</Text>
 
                 {crmIntelligence.topCustomers
                   .byPeriodSpend?.[0] ? (
@@ -2111,8 +2115,7 @@ export default function SalesPerformanceWorkspace({
                           .byPeriodSpend[0]
                           .periodPurchaseCount
                       }{" "}
-                      purchases
-                    </Text>
+                      {uiText("purchases")}</Text>
                   </>
                 ) : (
                   <Text
@@ -2123,9 +2126,7 @@ export default function SalesPerformanceWorkspace({
                       marginTop: 3,
                     }}
                   >
-                    No verified customer
-                    purchases in this period.
-                  </Text>
+                    {uiText("No verified customer purchases in this period.")}</Text>
                 )}
               </View>
 
@@ -2175,8 +2176,7 @@ export default function SalesPerformanceWorkspace({
                       marginTop: 2,
                     }}
                   >
-                    Returning
-                  </Text>
+                    {uiText("Returning")}</Text>
                 </View>
 
                 <View
@@ -2211,8 +2211,7 @@ export default function SalesPerformanceWorkspace({
                       marginTop: 2,
                     }}
                   >
-                    Inactive 30d
-                  </Text>
+                    {uiText("Inactive 30d")}</Text>
                 </View>
 
                 <View
@@ -2247,8 +2246,7 @@ export default function SalesPerformanceWorkspace({
                       marginTop: 2,
                     }}
                   >
-                    New
-                  </Text>
+                    {uiText("New")}</Text>
                 </View>
               </View>
 
@@ -2261,7 +2259,7 @@ export default function SalesPerformanceWorkspace({
                     lineHeight: 12,
                   }}
                 >
-                  {crmError}
+                  {uiText(crmError)}
                 </Text>
               ) : null}
 
@@ -2291,8 +2289,7 @@ export default function SalesPerformanceWorkspace({
                         letterSpacing: 0.15,
                       }}
                     >
-                      Open CRM
-                    </Text>
+                      {uiText("Open CRM")}</Text>
 
                     <Ionicons
                       name="arrow-forward"
@@ -2323,8 +2320,8 @@ export default function SalesPerformanceWorkspace({
                   textAlign: "center",
                 }}
               >
-                {crmError ||
-                  "No verified customer intelligence for this period."}
+                {crmError ? uiText(crmError) :
+                  uiText("No verified customer intelligence for this period.")}
               </Text>
             </View>
           )}

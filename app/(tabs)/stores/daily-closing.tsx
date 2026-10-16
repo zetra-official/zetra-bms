@@ -1,3 +1,5 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/(tabs)/stores/daily-closing.tsx
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
@@ -64,6 +66,8 @@ type SnapshotState = "unknown" | "ok" | "missing";
 type RangeMode = "day" | "week" | "month";
 
 export default function DailyClosingScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
   const { activeOrgName, activeRole, activeStoreId, activeStoreName } = useOrg();
 
@@ -311,26 +315,26 @@ export default function DailyClosingScreen() {
   const todayYMD = useMemo(() => localYMD(), []);
   const snapStatusMeta = useMemo(() => {
     if (!isOwnerOrAdmin) {
-      return { tone: "muted" as const, title: "Auto snapshots: ON (system)", subtitle: "" };
+      return { tone: "muted" as const, title: uiText("Auto snapshots: ON (system)"), subtitle: "" };
     }
     if (snapCheckLoading) {
-      return { tone: "muted" as const, title: "Checking snapshots...", subtitle: "" };
+      return { tone: "muted" as const, title: uiText("Checking snapshots..."), subtitle: "" };
     }
 
     if (mode === "day") {
       if (isLocked) {
         return {
           tone: "emerald" as const,
-          title: `LOCKED ✅ (${dateStr})`,
-          subtitle: "Siku hii imefungwa. Inventory movements zimesitishwa kwa tarehe hii.",
+          title: uiText("LOCKED ✅ ({p0})", {p0: (dateStr)}),
+          subtitle: uiText("Siku hii imefungwa. Inventory movements zimesitishwa kwa tarehe hii."),
         };
       }
 
       if (snapState === "ok") {
         return {
           tone: "emerald" as const,
-          title: `Snapshot status: OK (${dateStr})`,
-          subtitle: "Daily snapshot ipo tayari.",
+          title: uiText("Snapshot status: OK ({p0})", {p0: (dateStr)}),
+          subtitle: uiText("Daily snapshot ipo tayari."),
         };
       }
       if (snapState === "missing") {
@@ -338,16 +342,16 @@ export default function DailyClosingScreen() {
         return waiting
           ? {
               tone: "muted" as const,
-              title: `Snapshot status: WAITING (${dateStr})`,
-              subtitle: "Hii date bado haijafika. Auto snapshot hu-run usiku (TZ ya org).",
+              title: uiText("Snapshot status: WAITING ({p0})", {p0: (dateStr)}),
+              subtitle: uiText("Hii date bado haijafika. Auto snapshot hu-run usiku (TZ ya org)."),
             }
           : {
               tone: "danger" as const,
-              title: `Snapshot status: MISSING (${dateStr})`,
-              subtitle: "Snapshot haipo kwa date hii (unaweza tumia Emergency Snapshot kama rescue).",
+              title: uiText("Snapshot status: MISSING ({p0})", {p0: (dateStr)}),
+              subtitle: uiText("Snapshot haipo kwa date hii (unaweza tumia Emergency Snapshot kama rescue)."),
             };
       }
-      return { tone: "muted" as const, title: "Snapshot status: Unknown", subtitle: "" };
+      return { tone: "muted" as const, title: uiText("Snapshot status: Unknown"), subtitle: "" };
     }
 
     const start = period?.start ?? "?";
@@ -358,13 +362,13 @@ export default function DailyClosingScreen() {
     if (snapState === "ok") {
       return {
         tone: "emerald" as const,
-        title: `Snapshot status: OK (${start} & ${end})`,
-        subtitle: "Boundary snapshots zote zipo tayari.",
+        title: uiText("Snapshot status: OK ({p0} & {p1})", {p0: (start), p1: (end)}),
+        subtitle: uiText("Boundary snapshots zote zipo tayari."),
       };
     }
 
     if (hasStart === undefined || hasEnd === undefined) {
-      return { tone: "muted" as const, title: `Snapshot status: Unknown (${start} & ${end})`, subtitle: "" };
+      return { tone: "muted" as const, title: uiText("Snapshot status: Unknown ({p0} & {p1})", {p0: (start), p1: (end)}), subtitle: "" };
     }
 
     const endInFuture = end !== "?" && isAfterYMD(end, todayYMD);
@@ -372,16 +376,16 @@ export default function DailyClosingScreen() {
     if (!hasStart && !hasEnd) {
       return {
         tone: "danger" as const,
-        title: `Snapshot status: MISSING (${start} & ${end})`,
-        subtitle: "Start na End snapshots zote hazipo bado.",
+        title: uiText("Snapshot status: MISSING ({p0} & {p1})", {p0: (start), p1: (end)}),
+        subtitle: uiText("Start na End snapshots zote hazipo bado."),
       };
     }
 
     if (!hasStart) {
       return {
         tone: "danger" as const,
-        title: `Snapshot status: MISSING (start ${start})`,
-        subtitle: "Start snapshot haipo — period report haiwezi ku-calc bila start boundary.",
+        title: uiText("Snapshot status: MISSING (start {p0})", {p0: (start)}),
+        subtitle: uiText("Start snapshot haipo — period report haiwezi ku-calc bila start boundary."),
       };
     }
 
@@ -389,17 +393,17 @@ export default function DailyClosingScreen() {
       return endInFuture
         ? {
             tone: "muted" as const,
-            title: `Snapshot status: WAITING (end ${end})`,
-            subtitle: "End-date bado haijafika. Auto snapshot hu-run usiku (TZ ya org) kwenye end-date.",
+            title: uiText("Snapshot status: WAITING (end {p0})", {p0: (end)}),
+            subtitle: uiText("End-date bado haijafika. Auto snapshot hu-run usiku (TZ ya org) kwenye end-date."),
           }
         : {
             tone: "danger" as const,
-            title: `Snapshot status: MISSING (end ${end})`,
-            subtitle: "End snapshot haipo — unaweza tumia Emergency Snapshot kama rescue.",
+            title: uiText("Snapshot status: MISSING (end {p0})", {p0: (end)}),
+            subtitle: uiText("End snapshot haipo — unaweza tumia Emergency Snapshot kama rescue."),
           };
     }
 
-    return { tone: "muted" as const, title: `Snapshot status: Unknown (${start} & ${end})`, subtitle: "" };
+    return { tone: "muted" as const, title: uiText("Snapshot status: Unknown ({p0} & {p1})", {p0: (start), p1: (end)}), subtitle: "" };
   }, [
     isOwnerOrAdmin,
     snapCheckLoading,
@@ -412,23 +416,23 @@ export default function DailyClosingScreen() {
     snapBoundary.hasEnd,
     todayYMD,
     isLocked,
-  ]);
+   uiText]);
 
   const snapStatusTone = snapStatusMeta.tone;
 
   const emergencySnapshot = useCallback(() => {
-    if (!activeStoreId) return Alert.alert("Missing", "No active store selected.");
-    if (!isOwnerOrAdmin) return Alert.alert("No Access", "Owner/Admin only.");
-    if (mode !== "day") return Alert.alert("Day Only", "Emergency Snapshot inatumika kwenye Day mode tu.");
+    if (!activeStoreId) return Alert.alert(uiText("Missing"), uiText("No active store selected."));
+    if (!isOwnerOrAdmin) return Alert.alert(uiText("No Access"), uiText("Owner/Admin only."));
+    if (mode !== "day") return Alert.alert(uiText("Day Only"), uiText("Emergency Snapshot inatumika kwenye Day mode tu."));
     if (snapGenLoading) return;
 
     Alert.alert(
-      "Emergency Snapshot",
-      `Hii itachukua stock ya sasa kwenye inventory na kui-save kama snapshot ya ${dateStr}.\n\nEndelea?`,
+      uiText("Emergency Snapshot"),
+      uiText("Hii itachukua stock ya sasa kwenye inventory na kui-save kama snapshot ya {p0}.\n\nEndelea?", {p0: (dateStr)}),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: uiText("Cancel"), style: "cancel" },
         {
-          text: "Create Snapshot",
+          text: uiText("Create Snapshot"),
           onPress: async () => {
             setSnapGenLoading(true);
             try {
@@ -442,9 +446,9 @@ export default function DailyClosingScreen() {
               await checkSnapshot();
               await load();
 
-              Alert.alert("Snapshot Created ✅", `Snapshot imeundwa. Products captured: ${Number(data ?? 0)}`);
+              Alert.alert(uiText("Snapshot Created ✅"), uiText("Snapshot imeundwa. Products captured: {p0}", {p0: (Number(data ?? 0))}));
             } catch (err: any) {
-              Alert.alert("Snapshot Failed", err?.message ?? "Unknown error");
+              Alert.alert(uiText("Snapshot Failed"), err?.message ?? uiText("Unknown error"));
             } finally {
               setSnapGenLoading(false);
             }
@@ -463,21 +467,21 @@ export default function DailyClosingScreen() {
   ]);
 
   const lockDay = useCallback(() => {
-    if (!activeStoreId) return Alert.alert("Missing", "No active store selected.");
-    if (!isOwnerOrAdmin) return Alert.alert("No Access", "Owner/Admin only.");
-    if (mode !== "day") return Alert.alert("Not allowed", "Lock inaruhusiwa kwenye Day mode tu.");
-    if (isLocked) return Alert.alert("Locked", "Siku hii imefungwa tayari.");
+    if (!activeStoreId) return Alert.alert(uiText("Missing"), uiText("No active store selected."));
+    if (!isOwnerOrAdmin) return Alert.alert(uiText("No Access"), uiText("Owner/Admin only."));
+    if (mode !== "day") return Alert.alert(uiText("Not allowed"), uiText("Lock inaruhusiwa kwenye Day mode tu."));
+    if (isLocked) return Alert.alert(uiText("Locked"), uiText("Siku hii imefungwa tayari."));
     if (lockBusy) return;
 
     if (snapState !== "ok") {
-      Alert.alert("Cannot Lock", "Snapshot haipo OK bado. Hakikisha snapshot ipo (OK) kisha ndio u-lock day.");
+      Alert.alert(uiText("Cannot Lock"), uiText("Snapshot haipo OK bado. Hakikisha snapshot ipo (OK) kisha ndio u-lock day."));
       return;
     }
 
-    Alert.alert("Lock Day", `Ukifunga siku, inventory movements kwa ${dateStr} zitasitishwa.\n\nUna uhakika?`, [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert(uiText("Lock Day"), uiText("Ukifunga siku, inventory movements kwa {p0} zitasitishwa.\n\nUna uhakika?", {p0: (dateStr)}), [
+      { text: uiText("Cancel"), style: "cancel" },
       {
-        text: "Lock Now",
+        text: uiText("Lock Now"),
         style: "default",
         onPress: async () => {
           setLockBusy(true);
@@ -490,10 +494,10 @@ export default function DailyClosingScreen() {
             if (e) throw e;
 
             setIsLocked(true);
-            Alert.alert("Locked ✅", `Siku ${dateStr} imefungwa.`);
+            Alert.alert(uiText("Locked ✅"), uiText("Siku {p0} imefungwa.", {p0: (dateStr)}));
             await checkLock();
           } catch (err: any) {
-            Alert.alert("Lock Failed", err?.message ?? "Unknown error");
+            Alert.alert(uiText("Lock Failed"), err?.message ?? uiText("Unknown error"));
           } finally {
             setLockBusy(false);
           }
@@ -503,16 +507,16 @@ export default function DailyClosingScreen() {
   }, [activeStoreId, isOwnerOrAdmin, mode, isLocked, lockBusy, dateStr, snapState, checkLock]);
 
   const unlockDay = useCallback(() => {
-    if (!activeStoreId) return Alert.alert("Missing", "No active store selected.");
-    if (!isOwnerOrAdmin) return Alert.alert("No Access", "Owner/Admin only.");
-    if (mode !== "day") return Alert.alert("Not allowed", "Unlock inaruhusiwa kwenye Day mode tu.");
-    if (!isLocked) return Alert.alert("Not Locked", "Siku hii haijafungwa.");
+    if (!activeStoreId) return Alert.alert(uiText("Missing"), uiText("No active store selected."));
+    if (!isOwnerOrAdmin) return Alert.alert(uiText("No Access"), uiText("Owner/Admin only."));
+    if (mode !== "day") return Alert.alert(uiText("Not allowed"), uiText("Unlock inaruhusiwa kwenye Day mode tu."));
+    if (!isLocked) return Alert.alert(uiText("Not Locked"), uiText("Siku hii haijafungwa."));
     if (lockBusy) return;
 
-    Alert.alert("Unlock Day", `Hii ni rescue.\n\nUnataka kufungua lock ya ${dateStr}?`, [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert(uiText("Unlock Day"), uiText("Hii ni rescue.\n\nUnataka kufungua lock ya {p0}?", {p0: (dateStr)}), [
+      { text: uiText("Cancel"), style: "cancel" },
       {
-        text: "Unlock",
+        text: uiText("Unlock"),
         style: "destructive",
         onPress: async () => {
           setLockBusy(true);
@@ -524,10 +528,10 @@ export default function DailyClosingScreen() {
             if (e) throw e;
 
             setIsLocked(false);
-            Alert.alert("Unlocked ✅", `Lock ya ${dateStr} imeondolewa.`);
+            Alert.alert(uiText("Unlocked ✅"), uiText("Lock ya {p0} imeondolewa.", {p0: (dateStr)}));
             await checkLock();
           } catch (err: any) {
-            Alert.alert("Unlock Failed", err?.message ?? "Unknown error");
+            Alert.alert(uiText("Unlock Failed"), err?.message ?? uiText("Unknown error"));
           } finally {
             setLockBusy(false);
           }
@@ -595,7 +599,7 @@ export default function DailyClosingScreen() {
               backgroundColor: "rgba(52,211,153,0.08)",
             }}
           >
-            <Text style={{ color: theme.colors.emerald, fontWeight: "900" }}>History</Text>
+            <Text style={{ color: theme.colors.emerald, fontWeight: "900" }}>{uiText("History")}</Text>
           </Pressable>
 
           <Pressable
@@ -609,38 +613,38 @@ export default function DailyClosingScreen() {
               backgroundColor: theme.colors.card,
             }}
           >
-            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Back</Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Back")}</Text>
           </Pressable>
         </View>
       </View>
 
       <Card style={{ gap: 10 }}>
-        <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Organization</Text>
+        <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Organization")}</Text>
         <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>{activeOrgName ?? "—"}</Text>
 
-        <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Store</Text>
+        <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Store")}</Text>
         <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{activeStoreName ?? "—"}</Text>
 
-        <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Role</Text>
+        <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Role")}</Text>
         <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{roleLabel}</Text>
 
-        <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>Range</Text>
+        <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>{uiText("Range")}</Text>
 
         <View style={{ flexDirection: "row", gap: 10 }}>
           <Pressable onPress={pickDay} style={rangeBtnStyle(mode === "day")}>
-            <Text style={rangeBtnTextStyle(mode === "day")}>Day</Text>
+            <Text style={rangeBtnTextStyle(mode === "day")}>{uiText("Day")}</Text>
           </Pressable>
 
           <Pressable onPress={pickWeek} style={rangeBtnStyle(mode === "week")}>
-            <Text style={rangeBtnTextStyle(mode === "week")}>This Week</Text>
+            <Text style={rangeBtnTextStyle(mode === "week")}>{uiText("This Week")}</Text>
           </Pressable>
 
           <Pressable onPress={pickMonth} style={rangeBtnStyle(mode === "month")}>
-            <Text style={rangeBtnTextStyle(mode === "month")}>This Month</Text>
+            <Text style={rangeBtnTextStyle(mode === "month")}>{uiText("This Month")}</Text>
           </Pressable>
         </View>
 
-        <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>{mode === "day" ? "Date" : "Period"}</Text>
+        <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>{mode === "day" ? uiText("Date") : uiText("Period")}</Text>
 
         <View style={{ flexDirection: "row", gap: 10 }}>
           <View
@@ -670,7 +674,7 @@ export default function DailyClosingScreen() {
               backgroundColor: theme.colors.card,
             }}
           >
-            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Yesterday</Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Yesterday")}</Text>
           </Pressable>
 
           <Pressable
@@ -684,11 +688,11 @@ export default function DailyClosingScreen() {
               backgroundColor: theme.colors.card,
             }}
           >
-            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Today</Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Today")}</Text>
           </Pressable>
         </View>
 
-        <Button title={loading ? "Loading..." : "Load Report"} onPress={load} disabled={loading} variant="primary" style={{ marginTop: 6 }} />
+        <Button title={loading ? uiText("Loading...") : uiText("Load Report")} onPress={load} disabled={loading} variant="primary" style={{ marginTop: 6 }} />
 
         <View
           style={{
@@ -728,7 +732,7 @@ export default function DailyClosingScreen() {
 
           {mode === "day" && isOwnerOrAdmin && (
             <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 6 }}>
-              Lock status: {lockChecking ? "checking..." : isLocked ? "LOCKED ✅" : "not locked"}
+              {uiText("Lock status:")}{lockChecking ? uiText("checking...") : isLocked ? uiText("LOCKED ✅") : uiText("not locked")}
             </Text>
           )}
         </View>
@@ -737,7 +741,7 @@ export default function DailyClosingScreen() {
           <View style={{ flexDirection: "row", gap: 10, marginTop: 10 }}>
             <View style={{ flex: 1 }}>
               <Button
-                title={lockBusy ? "Working..." : isLocked ? "Locked ✅" : "Lock Day (Admin)"}
+                title={lockBusy ? uiText("Working...") : isLocked ? uiText("Locked ✅") : uiText("Lock Day (Admin)")}
                 onPress={lockDay}
                 disabled={lockBusy || loading || isLocked || lockChecking}
                 variant="primary"
@@ -746,7 +750,7 @@ export default function DailyClosingScreen() {
 
             <View style={{ flex: 1 }}>
               <Button
-                title={lockBusy ? "Working..." : "Unlock (Rescue)"}
+                title={lockBusy ? uiText("Working...") : uiText("Unlock (Rescue)")}
                 onPress={unlockDay}
                 disabled={lockBusy || loading || !isLocked || lockChecking}
                 variant="secondary"
@@ -757,7 +761,7 @@ export default function DailyClosingScreen() {
 
         {isOwnerOrAdmin && mode === "day" && snapState !== "ok" && !isLocked && (
   <Button
-    title={snapGenLoading ? "Generating..." : "Emergency Snapshot (Admin)"}
+    title={snapGenLoading ? uiText("Generating...") : uiText("Emergency Snapshot (Admin)")}
     onPress={emergencySnapshot}
     disabled={snapGenLoading || loading || snapCheckLoading}
     variant="secondary"
@@ -768,30 +772,30 @@ export default function DailyClosingScreen() {
 
       {!!error && (
         <Card style={{ borderColor: theme.colors.dangerBorder, backgroundColor: theme.colors.dangerSoft }}>
-          <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{error}</Text>
+          <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{systemText(error)}</Text>
         </Card>
       )}
 
-      <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>Summary</Text>
+      <Text style={{ fontWeight: "900", fontSize: 16, color: theme.colors.text }}>{uiText("Summary")}</Text>
 
       <Card style={{ gap: 10 }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-          <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Opening Qty</Text>
+          <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>{uiText("Opening Qty")}</Text>
           <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{fmtInt(opening)}</Text>
         </View>
 
         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-          <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>IN (Added)</Text>
+          <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>{uiText("IN (Added)")}</Text>
           <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{fmtInt(inQty)}</Text>
         </View>
 
         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-          <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>OUT (Reduced)</Text>
+          <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>{uiText("OUT (Reduced)")}</Text>
           <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{fmtInt(outQty)}</Text>
         </View>
 
         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-          <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Closing Qty</Text>
+          <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>{uiText("Closing Qty")}</Text>
           <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{fmtInt(closing)}</Text>
         </View>
 
@@ -813,7 +817,7 @@ export default function DailyClosingScreen() {
               textAlign: "center",
             }}
           >
-            Net Change: {netPositive ? "+" : ""}
+            {uiText("Net Change:")}{netPositive ? "+" : ""}
             {fmtInt(net)}
           </Text>
         </View>

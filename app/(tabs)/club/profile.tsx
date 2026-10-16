@@ -1,3 +1,5 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/(tabs)/club/profile.tsx
 import { useOrg } from "@/src/context/OrgContext";
 import { supabase } from "@/src/supabase/supabaseClient";
@@ -66,6 +68,8 @@ function base64ToUint8Array(base64: string) {
 }
 
 export default function ClubProfileScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -154,7 +158,7 @@ export default function ClubProfileScreen() {
   // ✅ FIX: Inbox button now navigates (not "Coming Soon")
   const goInbox = useCallback(() => {
     if (!activeStoreId) {
-      Alert.alert("Store Required", "Activate store kwanza ndipo uingie Inbox.");
+      Alert.alert(uiText("Store Required"), uiText("Activate store kwanza ndipo uingie Inbox."));
       return;
     }
 
@@ -166,7 +170,7 @@ export default function ClubProfileScreen() {
 
   const goEditInfo = useCallback(() => {
     if (!activeStoreId) {
-      Alert.alert("Store Required", "Activate store kwanza ndipo u-edit Business Identity.");
+      Alert.alert(uiText("Store Required"), uiText("Activate store kwanza ndipo u-edit Business Identity."));
       return;
     }
     router.push("/(tabs)/club/store_profile_edit" as any);
@@ -174,7 +178,7 @@ export default function ClubProfileScreen() {
 
   const pickAvatar = useCallback(async () => {
     if (!activeStoreId) {
-      Alert.alert("Store Required", "Activate store kwanza ndipo uweke avatar ya biashara.");
+      Alert.alert(uiText("Store Required"), uiText("Activate store kwanza ndipo uweke avatar ya biashara."));
       return;
     }
 
@@ -183,7 +187,7 @@ export default function ClubProfileScreen() {
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) {
-        Alert.alert("Permission", "Ruhusa ya kuchagua picha inahitajika.");
+        Alert.alert(uiText("Permission"), uiText("Ruhusa ya kuchagua picha inahitajika."));
         return;
       }
 
@@ -245,7 +249,7 @@ export default function ClubProfileScreen() {
 
   const saveAvatar = useCallback(async () => {
     if (!activeStoreId) {
-      Alert.alert("Store Required", "Activate store kwanza ndipo u-save avatar ya biashara.");
+      Alert.alert(uiText("Store Required"), uiText("Activate store kwanza ndipo u-save avatar ya biashara."));
       return;
     }
     if (!clean(localAvatarUri)) return;
@@ -273,7 +277,7 @@ export default function ClubProfileScreen() {
       setLocalAvatarUri("");
       await loadAll();
 
-      Alert.alert("Success", "Avatar ya biashara imehifadhiwa ✅");
+      Alert.alert(uiText("Success"), uiText("Avatar ya biashara imehifadhiwa ✅"));
     } catch (e: any) {
       setErr(e?.message ?? "Failed to save avatar");
     } finally {
@@ -324,10 +328,9 @@ export default function ClubProfileScreen() {
             </View>
 
             <View style={{ flex: 1 }}>
-              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>Business Identity</Text>
+              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>{uiText("Business Identity")}</Text>
               <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12, marginTop: 4 }}>
-                Hii profile ni ya “biashara/store” uliyoi-activate.
-              </Text>
+                {uiText("Hii profile ni ya “biashara/store” uliyoi-activate.")}</Text>
             </View>
 
             <Pressable
@@ -345,14 +348,14 @@ export default function ClubProfileScreen() {
                 },
               ]}
             >
-              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Back</Text>
+              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Back")}</Text>
             </Pressable>
           </View>
         </Card>
 
         {!!err && (
           <Card style={{ borderColor: theme.colors.dangerBorder, backgroundColor: theme.colors.dangerSoft, padding: 12 }}>
-            <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{err}</Text>
+            <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{systemText(err)}</Text>
           </Card>
         )}
 
@@ -360,7 +363,7 @@ export default function ClubProfileScreen() {
           {loading ? (
             <View style={{ paddingVertical: 10, alignItems: "center" }}>
               <ActivityIndicator />
-              <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>Loading profile...</Text>
+              <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>{uiText("Loading profile...")}</Text>
             </View>
           ) : (
             <>
@@ -408,13 +411,12 @@ export default function ClubProfileScreen() {
                   <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>{identityName}</Text>
 
                   <Text style={{ color: theme.colors.faint, fontWeight: "900", fontSize: 12, marginTop: 4 }}>
-                    Active Store ID: {activeStoreId ? String(activeStoreId).slice(0, 8) + "…" : "—"}
+                    {uiText("Active Store ID:")}{activeStoreId ? String(activeStoreId).slice(0, 8) + "…" : "—"}
                   </Text>
 
                   {!!localAvatarUri && (
                     <Text style={{ color: theme.colors.emerald, fontWeight: "900", fontSize: 12, marginTop: 4 }}>
-                      Avatar mpya imechaguliwa — bonyeza “Save Avatar”
-                    </Text>
+                      {uiText("Avatar mpya imechaguliwa — bonyeza “Save Avatar”")}</Text>
                   )}
                 </View>
 
@@ -458,7 +460,7 @@ export default function ClubProfileScreen() {
                   >
                     <Ionicons name="camera-outline" size={18} color={theme.colors.text} />
                     <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                      {effectiveAvatarUrl ? "Change Photo" : "Add Photo"}
+                      {effectiveAvatarUrl ? uiText("Change Photo") : uiText("Add Photo")}
                     </Text>
                   </Pressable>
                 </View>
@@ -481,14 +483,14 @@ export default function ClubProfileScreen() {
                       },
                     ]}
                   >
-                    <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>Cancel</Text>
+                    <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{uiText("Cancel")}</Text>
                   </Pressable>
                 )}
               </View>
 
               {!!localAvatarUri && (
                 <Button
-                  title={uploading ? "Uploading..." : savingAvatar ? "Saving..." : "Save Avatar"}
+                  title={uploading ? uiText("Uploading...") : savingAvatar ? uiText("Saving...") : uiText("Save Avatar")}
                   onPress={saveAvatar}
                   disabled={!canSaveAvatar}
                 />
@@ -504,26 +506,26 @@ export default function ClubProfileScreen() {
                 }}
               >
                 <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                  Organization:{" "}
+                  {uiText("Organization:")}{" "}
                   <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{safeStr(activeOrgName, "—")}</Text>
                 </Text>
 
                 <Text style={{ color: theme.colors.faint, fontWeight: "800", marginTop: 6 }}>
-                  Store profile display_name (DB):{" "}
+                  {uiText("Store profile display_name (DB):")}{" "}
                   <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
                     {safeStr(storeProfile?.display_name, "—")}
                   </Text>
                 </Text>
 
                 <Text style={{ color: theme.colors.faint, fontWeight: "800", marginTop: 6 }}>
-                  (Legacy) club_profiles display_name:{" "}
+                  {uiText("(Legacy) club_profiles display_name:")}{" "}
                   <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{safeStr(me?.display_name, "—")}</Text>
                 </Text>
               </View>
 
               <View style={{ flexDirection: "row", gap: 10 }}>
                 <View style={{ flex: 1 }}>
-                  <Button title="Inbox" onPress={goInbox} />
+                  <Button title={uiText("Inbox")} onPress={goInbox} />
                 </View>
 
                 <Pressable
@@ -545,14 +547,12 @@ export default function ClubProfileScreen() {
                   ]}
                 >
                   <Ionicons name="create-outline" size={18} color={theme.colors.emerald} />
-                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Edit Info</Text>
+                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Edit Info")}</Text>
                 </Pressable>
               </View>
 
               <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 12, lineHeight: 16 }}>
-                NOTE: Avatar inahifadhiwa kwenye club_store_profiles.avatar_url (A40) na inaupload kwenye storage bucket
-                “club-media”.
-              </Text>
+                {uiText("NOTE: Avatar inahifadhiwa kwenye club_store_profiles.avatar_url (A40) na inaupload kwenye storage bucket “club-media”.")}</Text>
             </>
           )}
         </Card>

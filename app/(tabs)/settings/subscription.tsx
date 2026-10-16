@@ -1,3 +1,4 @@
+import {useCommonText} from "@/src/i18n/useCommonText";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -64,6 +65,7 @@ type PlanRow = {
 };
 
 type DurationRow = {
+  _uiLabelKey?: "1 month" | "3 months" | "6 months" | "12 months";
   months: number;
   label?: string;
   discount_percent?: number;
@@ -534,6 +536,7 @@ function PrimaryButton({
 }
 
 export default function SubscriptionScreen() {
+ const uiText=useCommonText();
   const router = useRouter();
   const org = useOrg();
   const insets = useSafeAreaInsets();
@@ -561,10 +564,10 @@ export default function SubscriptionScreen() {
 
   const [plans, setPlans] = useState<PlanRow[]>([]);
   const [durations, setDurations] = useState<DurationRow[]>([
-    { months: 1, label: "1 month" },
-    { months: 3, label: "3 months", discount_percent: 5 },
-    { months: 6, label: "6 months", discount_percent: 10 },
-    { months: 12, label: "12 months", discount_percent: 20 },
+    { months: 1, label: "1 month", _uiLabelKey: "1 month" },
+    { months: 3, label: "3 months", _uiLabelKey: "3 months", discount_percent: 5 },
+    { months: 6, label: "6 months", _uiLabelKey: "6 months", discount_percent: 10 },
+    { months: 12, label: "12 months", _uiLabelKey: "12 months", discount_percent: 20 },
   ]);
 
   const [selectedPlanCode, setSelectedPlanCode] = useState<string>("");
@@ -1088,7 +1091,7 @@ export default function SubscriptionScreen() {
         ]}
       >
         <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
-          {label || `${months} mo`}
+          {label || uiText("{p0} mo", {p0: (months)})}
           {discountPercent ? ` • -${discountPercent}%` : ""}
         </Text>
       </Pressable>
@@ -1140,12 +1143,12 @@ export default function SubscriptionScreen() {
         >
           <View style={{ flex: 1, paddingRight: 10 }}>
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>
-              {label} {active ? "✅" : ""}
+              {((clean(item.name) || clean(item.code)) || uiText("Plan"))} {active ? "✅" : ""}
             </Text>
 
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 6 }}>
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                Code: {code || "—"}
+                {uiText("Code:")}{code || "—"}
               </Text>
 
               {isCurrentPaid ? (
@@ -1160,8 +1163,7 @@ export default function SubscriptionScreen() {
                   }}
                 >
                   <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }}>
-                    Current
-                  </Text>
+                    {uiText("Current")}</Text>
                 </View>
               ) : null}
 
@@ -1177,8 +1179,7 @@ export default function SubscriptionScreen() {
                   }}
                 >
                   <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }}>
-                    Selected
-                  </Text>
+                    {uiText("Selected")}</Text>
                 </View>
               ) : null}
             </View>
@@ -1195,27 +1196,27 @@ export default function SubscriptionScreen() {
             }}
           >
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
-              {priceMonthly === null ? "—" : `${fmtMoneyTZS(priceMonthly)}/mo`}
+              {priceMonthly === null ? "—" : uiText("{p0}/mo", {p0: (fmtMoneyTZS(priceMonthly))})}
             </Text>
           </View>
         </View>
 
         <View style={{ marginTop: 10, gap: 6 }}>
           <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-            Organizations: {fmtLimit(lim.maxOrgs)}
+            {uiText("Organizations:")}{fmtLimit(lim.maxOrgs)}
           </Text>
 
           <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-            Stores/Org: {fmtLimit(lim.storesPerOrg)} • Staff/Org: {fmtLimit(lim.staffPerOrg)}
+            {uiText("Stores/Org:")}{fmtLimit(lim.storesPerOrg)} {uiText("• Staff/Org:")}{fmtLimit(lim.staffPerOrg)}
           </Text>
 
           <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-            Club Posts/Store/Month: {fmtLimit(lim.postsPerStoreMonth)}
+            {uiText("Club Posts/Store/Month:")}{fmtLimit(lim.postsPerStoreMonth)}
           </Text>
 
           <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-            AI: {lim.aiEnabled ? "Enabled" : "Disabled"}
-            {lim.aiEnabled ? ` • Credits/mo: ${fmtLimit(lim.credits)}` : ""}
+            {uiText("AI:")}{lim.aiEnabled ? uiText("Enabled") : uiText("Disabled")}
+            {lim.aiEnabled ? uiText(" • Credits/mo: {p0}", {p0: (fmtLimit(lim.credits))}) : ""}
           </Text>
 
           {active && priceMonthly !== null ? (
@@ -1230,7 +1231,7 @@ export default function SubscriptionScreen() {
               }}
             >
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
-                Total for {selectedMonths} month{selectedMonths > 1 ? "s" : ""}
+                {selectedMonths === 1 ? uiText("Total for {p0} month", {p0: selectedMonths}) : uiText("Total for {p0} months", {p0: selectedMonths})}
                 {discountPercent ? ` (-${discountPercent}%)` : ""}
               </Text>
               <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 12, marginTop: 6 }}>
@@ -1252,8 +1253,8 @@ export default function SubscriptionScreen() {
       await Linking.openURL(url);
     } catch {
       Alert.alert(
-        "Contact Sales",
-        "Imeshindikana kufungua WhatsApp. Tafadhali wasiliana na ZETRA office moja kwa moja."
+        uiText("Contact Sales"),
+        uiText("Imeshindikana kufungua WhatsApp. Tafadhali wasiliana na ZETRA office moja kwa moja.")
       );
     }
   }, []);
@@ -1293,8 +1294,7 @@ export default function SubscriptionScreen() {
             <View style={{ flex: 1 }}>
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 15 }}>ELITE</Text>
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 4 }}>
-                Unlimited growth • Contact ZETRA Office via WhatsApp
-              </Text>
+                {uiText("Unlimited growth • Contact ZETRA Office via WhatsApp")}</Text>
             </View>
 
             <View
@@ -1307,22 +1307,20 @@ export default function SubscriptionScreen() {
                 backgroundColor: "rgba(16,185,129,0.10)",
               }}
             >
-              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>Contact</Text>
+              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>{uiText("Contact")}</Text>
             </View>
           </View>
 
           <View style={{ marginTop: 10, gap: 6 }}>
             <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-              • Unlimited Organizations • Stores • Staff • Stock
-            </Text>
+              {uiText("• Unlimited Organizations • Stores • Staff • Stock")}</Text>
             <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-              • AI & Analytics zina limit (enterprise policy)
-            </Text>
+              {uiText("• AI & Analytics zina limit (enterprise policy)")}</Text>
           </View>
 
           <View style={{ marginTop: 12 }}>
             <PrimaryButton
-              label="Contact Sales on WhatsApp"
+              label={uiText("Contact Sales on WhatsApp")}
               onPress={openEliteWhatsApp}
             />
           </View>
@@ -1355,8 +1353,7 @@ export default function SubscriptionScreen() {
 
         <View style={{ flex: 1 }}>
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 20 }}>
-            Subscription & Billing
-          </Text>
+            {uiText("Subscription & Billing")}</Text>
           <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 4 }}>
             {headerSubtitle}
           </Text>
@@ -1381,7 +1378,7 @@ export default function SubscriptionScreen() {
                 },
               ]}
             >
-              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>Office</Text>
+              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>{uiText("Office")}</Text>
             </Pressable>
 
             <Pressable
@@ -1401,7 +1398,7 @@ export default function SubscriptionScreen() {
                 },
               ]}
             >
-              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>Partners</Text>
+              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>{uiText("Partners")}</Text>
             </Pressable>
           </View>
         ) : null}
@@ -1436,11 +1433,9 @@ export default function SubscriptionScreen() {
       {!canManage ? (
         <View style={{ marginTop: 12 }}>
           <Card>
-            <Text style={{ color: UI.text, fontWeight: "900" }}>Owner/Admin only</Text>
+            <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Owner/Admin only")}</Text>
             <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 8, lineHeight: 18 }}>
-              Billing/Subscription management ni kwa Owner/Admin tu. Staff wataendelea kutumia mfumo,
-              lakini hawabadilishi plan wala kutuma payment request.
-            </Text>
+              {uiText("Billing/Subscription management ni kwa Owner/Admin tu. Staff wataendelea kutumia mfumo, lakini hawabadilishi plan wala kutuma payment request.")}</Text>
           </Card>
         </View>
       ) : null}
@@ -1448,15 +1443,13 @@ export default function SubscriptionScreen() {
       <View style={{ marginTop: 12 }}>
         <Card>
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-            Current subscription
-          </Text>
+            {uiText("Current subscription")}</Text>
 
           {loading ? (
             <View style={{ marginTop: 12 }}>
               <ActivityIndicator />
               <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 10 }}>
-                Loading subscription…
-              </Text>
+                {uiText("Loading subscription…")}</Text>
             </View>
           ) : (
             <View style={{ marginTop: 10 }}>
@@ -1465,11 +1458,11 @@ export default function SubscriptionScreen() {
               </Text>
 
               <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 6 }}>
-                Starts: {resolvedStartedLabel}
+                {uiText("Starts:")}{resolvedStartedLabel}
               </Text>
 
               <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 6 }}>
-                Server Expires: {resolvedExpiryLabel}
+                {uiText("Server Expires:")}{resolvedExpiryLabel}
               </Text>
 
               <View style={{ marginTop: 10 }}>
@@ -1483,8 +1476,7 @@ export default function SubscriptionScreen() {
                   }}
                 >
                   <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
-                    Plan limits are DB-driven ✅
-                  </Text>
+                    {uiText("Plan limits are DB-driven ✅")}</Text>
                   <Text
                     style={{
                       color: UI.muted,
@@ -1493,8 +1485,7 @@ export default function SubscriptionScreen() {
                       marginTop: 6,
                     }}
                   >
-                    Stores/Staff/AI/Club zina-control kwa org level kupitia public.plans (plan_code).
-                  </Text>
+                    {uiText("Stores/Staff/AI/Club zina-control kwa org level kupitia public.plans (plan_code).")}</Text>
                 </View>
               </View>
             </View>
@@ -1506,8 +1497,7 @@ export default function SubscriptionScreen() {
         <View style={{ marginTop: 12 }}>
           <Card>
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-              Latest payment request
-            </Text>
+              {uiText("Latest payment request")}</Text>
 
             <View
               style={{
@@ -1521,7 +1511,7 @@ export default function SubscriptionScreen() {
               }}
             >
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-                {latestRequestTone.title}
+                {uiText(latestRequestTone.title)}
               </Text>
 
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, lineHeight: 18 }}>
@@ -1529,53 +1519,53 @@ export default function SubscriptionScreen() {
               </Text>
 
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 4 }}>
-                Plan: <Text style={{ color: UI.text }}>{upper(latestRequest.plan_code)}</Text>
+                {uiText("Plan:")}<Text style={{ color: UI.text }}>{upper(latestRequest.plan_code)}</Text>
               </Text>
 
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                Duration:{" "}
+                {uiText("Duration:")}{" "}
                 <Text style={{ color: UI.text }}>
-                  {latestRequest.duration_months} month{latestRequest.duration_months > 1 ? "s" : ""}
+                  {uiText(latestRequest.duration_months === 1 ? "{p0} month" : "{p0} months", {p0: latestRequest.duration_months})}
                 </Text>
               </Text>
 
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                Amount: <Text style={{ color: UI.text }}>{fmtMoneyTZS(latestRequest.expected_amount)}</Text>
+                {uiText("Amount:")}<Text style={{ color: UI.text }}>{fmtMoneyTZS(latestRequest.expected_amount)}</Text>
               </Text>
 
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                Reference:{" "}
+                {uiText("Reference:")}{" "}
                 <Text style={{ color: UI.text }}>
                   {clean(latestRequest.transaction_reference) || "—"}
                 </Text>
               </Text>
 
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                RAW SMS:{" "}
+                {uiText("RAW SMS:")}{" "}
                 <Text style={{ color: UI.text }}>
-                  {clean(latestRequest.raw_sms) ? "ATTACHED" : "—"}
+                  {clean(latestRequest.raw_sms) ? uiText("ATTACHED") : "—"}
                 </Text>
               </Text>
 
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                Submitted at: <Text style={{ color: UI.text }}>{fmtDateTime(latestRequest.submitted_at)}</Text>
+                {uiText("Submitted at:")}<Text style={{ color: UI.text }}>{fmtDateTime(latestRequest.submitted_at)}</Text>
               </Text>
 
               {upper(latestRequest.status) === "APPROVED" ? (
                 <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                  Approved at: <Text style={{ color: UI.text }}>{fmtDateTime(latestRequest.approved_at)}</Text>
+                  {uiText("Approved at:")}<Text style={{ color: UI.text }}>{fmtDateTime(latestRequest.approved_at)}</Text>
                 </Text>
               ) : null}
 
               {clean(latestRequest.admin_note) ? (
                 <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                  Office note: <Text style={{ color: UI.text }}>{clean(latestRequest.admin_note)}</Text>
+                  {uiText("Office note:")}<Text style={{ color: UI.text }}>{clean(latestRequest.admin_note)}</Text>
                 </Text>
               ) : null}
 
               {upper(latestRequest.status) === "REJECTED" && clean(latestRequest.rejection_reason) ? (
                 <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                  Rejection reason:{" "}
+                  {uiText("Rejection reason:")}{" "}
                   <Text style={{ color: UI.text }}>{clean(latestRequest.rejection_reason)}</Text>
                 </Text>
               ) : null}
@@ -1587,18 +1577,16 @@ export default function SubscriptionScreen() {
       <View style={{ marginTop: 12 }}>
         <Card>
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-            Choose billing duration
-          </Text>
+            {uiText("Choose billing duration")}</Text>
           <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 6 }}>
-            1 • 3 • 6 • 12 months (discounts optional)
-          </Text>
+            {uiText("1 • 3 • 6 • 12 months (discounts optional)")}</Text>
 
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 12 }}>
             {durations.map((d, idx) => {
               const months = Number(d.months || 0);
               if (!months) return null;
 
-              const label = clean(d.label) || `${months} month${months > 1 ? "s" : ""}`;
+              const label = d._uiLabelKey ? uiText(d._uiLabelKey) : clean(d.label) || uiText(months === 1 ? "{p0} month" : "{p0} months", {p0: months});
               const disc = getDurationDiscountPercent(d) || undefined;
 
               return (
@@ -1619,17 +1607,14 @@ export default function SubscriptionScreen() {
       <View style={{ marginTop: 12 }}>
         <Card>
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-            Choose plan
-          </Text>
+            {uiText("Choose plan")}</Text>
           <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 6 }}>
-            Select a plan then submit payment request.
-          </Text>
+            {uiText("Select a plan then submit payment request.")}</Text>
 
           <View style={{ marginTop: 12 }}>
             {plans.length === 0 && !loading ? (
               <Text style={{ color: UI.muted, fontWeight: "800" }}>
-                No plans returned. (Check get_public_plans RPC)
-              </Text>
+                {uiText("No plans returned. (Check get_public_plans RPC)")}</Text>
             ) : (
               <View style={{ gap: 0 }}>
                 {plans.map((item, idx) => (
@@ -1677,8 +1662,7 @@ export default function SubscriptionScreen() {
 
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: UI.text, fontWeight: "900", fontSize: 13 }}>
-                    Selected features
-                  </Text>
+                    {uiText("Selected features")}</Text>
                   <Text
                     style={{
                       color: UI.muted,
@@ -1687,16 +1671,14 @@ export default function SubscriptionScreen() {
                       marginTop: 3,
                     }}
                   >
-                    Summary ya limits za plan uliyochagua (DB-driven)
-                  </Text>
+                    {uiText("Summary ya limits za plan uliyochagua (DB-driven)")}</Text>
                 </View>
               </View>
 
               <View style={{ marginTop: 10, gap: 6 }}>
                 {planFeatures.length === 0 ? (
                   <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-                    Select a plan to preview limits.
-                  </Text>
+                    {uiText("Select a plan to preview limits.")}</Text>
                 ) : (
                   planFeatures.map((x, i) => (
                     <Text
@@ -1716,8 +1698,7 @@ export default function SubscriptionScreen() {
       <View style={{ marginTop: 12 }}>
         <Card>
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-            Confirm payment
-          </Text>
+            {uiText("Confirm payment")}</Text>
 
           <View
             style={{
@@ -1730,20 +1711,17 @@ export default function SubscriptionScreen() {
               gap: 8,
             }}
           >
-            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>Pay To</Text>
+            <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>{uiText("Pay To")}</Text>
             <Text style={{ color: UI.text, fontWeight: "900" }}>{PAY_TO_NAME}</Text>
 
-            <Text style={{ color: UI.muted, fontWeight: "900", marginTop: 4 }}>Network</Text>
+            <Text style={{ color: UI.muted, fontWeight: "900", marginTop: 4 }}>{uiText("Network")}</Text>
             <Text style={{ color: UI.text, fontWeight: "900" }}>{PAY_TO_NETWORK}</Text>
 
-           <Text style={{ color: UI.muted, fontWeight: "900", marginTop: 4 }}>Lipa Number</Text>
+           <Text style={{ color: UI.muted, fontWeight: "900", marginTop: 4 }}>{uiText("Lipa Number")}</Text>
 <Text style={{ color: UI.text, fontWeight: "900" }}>{PAY_TO_PHONE}</Text>
 
             <Text style={{ color: UI.faint, fontWeight: "800", marginTop: 8 }}>
-              Baada ya kulipa, bandika SMS nzima ya muamala hapa chini kama ilivyo. Kisha jaza
-              namba ya simu iliyotumika kulipa na jina la mlipaji. Office ndiyo itafanya review na
-              matching manually.
-            </Text>
+              {uiText("Baada ya kulipa, bandika SMS nzima ya muamala hapa chini kama ilivyo. Kisha jaza namba ya simu iliyotumika kulipa na jina la mlipaji. Office ndiyo itafanya review na matching manually.")}</Text>
           </View>
 
           <View
@@ -1757,17 +1735,17 @@ export default function SubscriptionScreen() {
               gap: 8,
             }}
           >
-            <Text style={{ color: UI.muted, fontWeight: "900" }}>Plan</Text>
+            <Text style={{ color: UI.muted, fontWeight: "900" }}>{uiText("Plan")}</Text>
             <Text style={{ color: UI.text, fontWeight: "900" }}>
               {selectedPlan ? getPlanCode(selectedPlan) : "—"}
             </Text>
 
-            <Text style={{ color: UI.muted, fontWeight: "900", marginTop: 4 }}>Duration</Text>
+            <Text style={{ color: UI.muted, fontWeight: "900", marginTop: 4 }}>{uiText("Duration")}</Text>
             <Text style={{ color: UI.text, fontWeight: "900" }}>
-              {selectedMonths} month{selectedMonths > 1 ? "s" : ""}
+              {uiText(selectedMonths === 1 ? "{p0} month" : "{p0} months", {p0: selectedMonths})}
             </Text>
 
-            <Text style={{ color: UI.muted, fontWeight: "900", marginTop: 4 }}>Amount</Text>
+            <Text style={{ color: UI.muted, fontWeight: "900", marginTop: 4 }}>{uiText("Amount")}</Text>
             <Text style={{ color: UI.text, fontWeight: "900" }}>
               {expectedAmount === null ? "—" : fmtMoneyTZS(expectedAmount)}
             </Text>
@@ -1775,36 +1753,36 @@ export default function SubscriptionScreen() {
 
           <View style={{ marginTop: 12, gap: 10 }}>
             <Field
-              label="RAW SMS"
+              label={uiText("RAW SMS")}
               value={rawSms}
               onChangeText={setRawSms}
-              placeholder="Bandika SMS nzima ya muamala hapa kama ilivyo..."
+              placeholder={uiText("Bandika SMS nzima ya muamala hapa kama ilivyo...")}
               multiline
               autoCapitalize="none"
             />
 
             <Field
-              label="Phone Number"
+              label={uiText("Phone Number")}
               value={payerPhone}
               onChangeText={setPayerPhone}
-              placeholder="Andika namba iliyotumika kulipa hapa"
+              placeholder={uiText("Andika namba iliyotumika kulipa hapa")}
               keyboardType="phone-pad"
               autoCapitalize="none"
             />
 
             <Field
-              label="Payer Name"
+              label={uiText("Payer Name")}
               value={payerName}
               onChangeText={setPayerName}
-              placeholder="Andika jina la aliyefanya malipo hapa"
+              placeholder={uiText("Andika jina la aliyefanya malipo hapa")}
               autoCapitalize="words"
             />
 
             <Field
-              label="Transaction Reference (optional)"
+              label={uiText("Transaction Reference (optional)")}
               value={txRef}
               onChangeText={(t) => setTxRef(normalizeTxRef(t))}
-              placeholder="Acha wazi kama hutaki kuijaza"
+              placeholder={uiText("Acha wazi kama hutaki kuijaza")}
               autoCapitalize="characters"
             />
           </View>
@@ -1821,36 +1799,34 @@ export default function SubscriptionScreen() {
             }}
           >
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
-              Final submit payload preview
+              {uiText("Final submit payload preview")}</Text>
+
+            <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
+              {uiText("Phone:")}<Text style={{ color: UI.text }}>{normalizePhone(payerPhone) || "—"}</Text>
             </Text>
 
             <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-              Phone: <Text style={{ color: UI.text }}>{normalizePhone(payerPhone) || "—"}</Text>
-            </Text>
-
-            <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-              Reference:{" "}
+              {uiText("Reference:")}{" "}
               <Text style={{ color: UI.text }}>
                 {normalizeTxRef(txRef) || (orgId ? buildManualRequestRef(orgId) : "—")}
               </Text>
             </Text>
 
             <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-              Name: <Text style={{ color: UI.text }}>{clean(payerName) || "—"}</Text>
+              {uiText("Name:")}<Text style={{ color: UI.text }}>{clean(payerName) || "—"}</Text>
             </Text>
 
             <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
-              RAW SMS: <Text style={{ color: UI.text }}>{clean(rawSms) ? "ATTACHED" : "—"}</Text>
+              {uiText("RAW SMS:")}<Text style={{ color: UI.text }}>{clean(rawSms) ? uiText("ATTACHED") : "—"}</Text>
             </Text>
 
             <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 12, marginTop: 2 }}>
-              User ata-submit SMS kama ilivyo. Office ndiyo itafanya review na matching manually.
-            </Text>
+              {uiText("User ata-submit SMS kama ilivyo. Office ndiyo itafanya review na matching manually.")}</Text>
           </View>
 
           <View style={{ marginTop: 14 }}>
             <PrimaryButton
-              label={busy ? "Submitting..." : "CONFIRM & SEND REQUEST"}
+              label={busy ? uiText("Submitting...") : uiText("CONFIRM & SEND REQUEST")}
               onPress={() => void submitPaymentRequest()}
               disabled={!canManage || busy || loading || !selectedPlan}
             />
@@ -1858,14 +1834,11 @@ export default function SubscriptionScreen() {
 
           {!canManage ? (
             <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 12, marginTop: 12 }}>
-              Billing ni Owner/Admin tu.
-            </Text>
+              {uiText("Billing ni Owner/Admin tu.")}</Text>
           ) : null}
 
           <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 12 }}>
-            Note: Request ikipelekwa, itabaki kwa manual office review. Office italinganisha SMS
-            uliyobandika na muamala ulioingia kwenye simu ya office.
-          </Text>
+            {uiText("Note: Request ikipelekwa, itabaki kwa manual office review. Office italinganisha SMS uliyobandika na muamala ulioingia kwenye simu ya office.")}</Text>
         </Card>
       </View>
 

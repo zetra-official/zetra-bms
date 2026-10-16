@@ -1,3 +1,4 @@
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/(tabs)/stores/inventory/low-stock.tsx
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -27,6 +28,7 @@ function toIntSafe(x: any) {
 }
 
 export default function LowStockScreen() {
+ const uiText=useCommonText();
   const router = useRouter();
   const params = useLocalSearchParams<{
     storeId?: string;
@@ -57,7 +59,7 @@ export default function LowStockScreen() {
 
   const load = useCallback(async () => {
     if (!storeId || !productId) {
-      Alert.alert("Missing", "storeId au productId haipo.");
+      Alert.alert(uiText("Missing"), uiText("storeId au productId haipo."));
       return;
     }
 
@@ -73,7 +75,7 @@ export default function LowStockScreen() {
       const v = toIntSafe(data);
       setThreshold(v > 0 ? String(v) : "");
     } catch (e: any) {
-      Alert.alert("Failed", e?.message ?? "Imeshindikana kusoma alert level.");
+      Alert.alert(uiText("Failed"), e?.message ?? uiText("Imeshindikana kusoma alert level."));
     } finally {
       setLoading(false);
     }
@@ -92,7 +94,7 @@ export default function LowStockScreen() {
     if (!storeId || !productId) return;
 
     if (!canEdit) {
-      Alert.alert("No Access", "Ni Owner/Admin tu anaweza kubadili Alert Level.");
+      Alert.alert(uiText("No Access"), uiText("Ni Owner/Admin tu anaweza kubadili Alert Level."));
       return;
     }
 
@@ -129,7 +131,7 @@ export default function LowStockScreen() {
 
       router.replace("/(tabs)/stores/inventory" as any);
     } catch (e: any) {
-      Alert.alert("Save Failed", e?.message ?? "Imeshindikana kusave alert level.");
+      Alert.alert(uiText("Save Failed"), e?.message ?? uiText("Imeshindikana kusave alert level."));
     } finally {
       setSaving(false);
     }
@@ -150,40 +152,34 @@ export default function LowStockScreen() {
             opacity: pressed ? 0.92 : 1,
           })}
         >
-          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Back</Text>
+          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Back")}</Text>
         </Pressable>
 
         <Text style={{ fontSize: 24, fontWeight: "900", color: theme.colors.text }}>
-          Alert Level
-        </Text>
+          {uiText("Alert Level")}</Text>
       </View>
 
       <Card style={{ gap: 8 }}>
-        <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Store</Text>
+        <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Store")}</Text>
         <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 17 }}>
-          {storeName}
+          {(String((params.storeName ?? uiText("Store"))).trim() || uiText("Store"))}
         </Text>
 
         <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 4 }}>
-          Product
-        </Text>
-        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{productName}</Text>
+          {uiText("Product")}</Text>
+        <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{(String((params.productName ?? uiText("Product"))).trim() || uiText("Product"))}</Text>
 
         <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 4 }}>
-          Current QTY
-        </Text>
+          {uiText("Current QTY")}</Text>
         <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{currentQty}</Text>
       </Card>
 
       <Card style={{ gap: 10 }}>
         <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-          Low Stock Alert
-        </Text>
+          {uiText("Low Stock Alert")}</Text>
 
         <Text style={{ color: theme.colors.muted, fontWeight: "800", lineHeight: 18 }}>
-          Weka kiwango cha chini cha stock. Mfano ukiweka 10, bidhaa itaonekana LOW STOCK
-          ikifika 10 au chini yake.
-        </Text>
+          {uiText("Weka kiwango cha chini cha stock. Mfano ukiweka 10, bidhaa itaonekana LOW STOCK ikifika 10 au chini yake.")}</Text>
 
         <TextInput
           value={threshold}
@@ -212,14 +208,13 @@ export default function LowStockScreen() {
 
         {!canEdit ? (
           <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-            Staff hawezi kubadili Alert Level.
-          </Text>
+            {uiText("Staff hawezi kubadili Alert Level.")}</Text>
         ) : null}
 
         <View style={{ flexDirection: "row", gap: 10 }}>
           <View style={{ flex: 1 }}>
             <Button
-              title={loading ? "Loading..." : "Reload"}
+              title={loading ? uiText("Loading...") : uiText("Reload")}
               variant="secondary"
               onPress={load}
               disabled={loading || saving}
@@ -228,7 +223,7 @@ export default function LowStockScreen() {
 
           <View style={{ flex: 1 }}>
             <Button
-              title={saving ? "Saving..." : "Save"}
+              title={saving ? uiText("Saving...") : uiText("Save")}
               variant="primary"
               onPress={save}
               disabled={saving || loading || !canEdit}

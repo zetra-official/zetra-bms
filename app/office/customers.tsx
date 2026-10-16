@@ -1,3 +1,4 @@
+import {useCommonText} from "@/src/i18n/useCommonText";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -208,6 +209,7 @@ function getSubscriptionTone(status: any) {
 }
 
 export default function OfficeCustomersScreen() {
+ const uiText=useCommonText();
   const router = useRouter();
 
   const [checkingAccess, setCheckingAccess] = useState(true);
@@ -238,8 +240,8 @@ export default function OfficeCustomersScreen() {
 
       if (!ok) {
         Alert.alert(
-          "Restricted",
-          "Hii ni ZETRA Office Customers Dashboard pekee."
+          uiText("Restricted"),
+          uiText("Hii ni ZETRA Office Customers Dashboard pekee.")
         );
 
         router.replace("/office" as any);
@@ -248,8 +250,8 @@ export default function OfficeCustomersScreen() {
       setAllowed(false);
 
       Alert.alert(
-        "Access Error",
-        e?.message ?? "Imeshindikana kuthibitisha Office account."
+        uiText("Access Error"),
+        e?.message ?? uiText("Imeshindikana kuthibitisha Office account.")
       );
 
       router.replace("/login" as any);
@@ -400,8 +402,7 @@ const summary = useMemo(() => {
             marginTop: 12,
           }}
         >
-          Checking Office access...
-        </Text>
+          {uiText("Checking Office access...")}</Text>
       </View>
     );
   }
@@ -462,8 +463,7 @@ const summary = useMemo(() => {
               fontSize: 26,
             }}
           >
-            Customers
-          </Text>
+            {uiText("Customers")}</Text>
 
           <Text
             style={{
@@ -472,8 +472,7 @@ const summary = useMemo(() => {
               marginTop: 3,
             }}
           >
-            Performance, activity na customer health
-          </Text>
+            {uiText("Performance, activity na customer health")}</Text>
         </View>
 
         <Pressable
@@ -512,27 +511,27 @@ const summary = useMemo(() => {
         }}
       >
         <SummaryCard
-          title="Customers"
+          title={uiText("Customers")}
           value={summary.total}
         />
 
         <SummaryCard
-          title="Active Subs"
+          title={uiText("Active Subs")}
           value={summary.activeSubscriptions}
         />
 
         <SummaryCard
-          title="Expired"
+          title={uiText("Expired")}
           value={summary.expiredSubscriptions}
         />
 
  <SummaryCard
-  title="Healthy"
+  title={uiText("Healthy")}
   value={summary.healthyCustomers}
 />
 
 <SummaryCard
-  title="Needs Attention"
+  title={uiText("Needs Attention")}
   value={summary.needsAttention}
 />
       </View>
@@ -550,7 +549,7 @@ const summary = useMemo(() => {
         <TextInput
           value={search}
           onChangeText={setSearch}
-          placeholder="Search organization, email, plan, status..."
+          placeholder={uiText("Search organization, email, plan, status...")}
           placeholderTextColor="#94A3B8"
           autoCapitalize="none"
           autoCorrect={false}
@@ -579,8 +578,7 @@ const summary = useMemo(() => {
               fontWeight: "900",
             }}
           >
-            Customers backend not ready
-          </Text>
+            {uiText("Customers backend not ready")}</Text>
 
           <Text
             style={{
@@ -617,8 +615,7 @@ const summary = useMemo(() => {
                 marginTop: 10,
               }}
             >
-              Loading customers...
-            </Text>
+              {uiText("Loading customers...")}</Text>
           </View>
         ) : filteredCustomers.length === 0 ? (
           <View
@@ -637,8 +634,7 @@ const summary = useMemo(() => {
                 fontSize: 15,
               }}
             >
-              No customers found
-            </Text>
+              {uiText("No customers found")}</Text>
 
             <Text
               style={{
@@ -647,8 +643,7 @@ const summary = useMemo(() => {
                 marginTop: 6,
               }}
             >
-              Hakuna customer anayelingana na filter hii.
-            </Text>
+              {uiText("Hakuna customer anayelingana na filter hii.")}</Text>
           </View>
         ) : (
           filteredCustomers.map((item) => {
@@ -690,7 +685,7 @@ const summary = useMemo(() => {
                       }}
                     >
                       {clean(item.organization_name) ||
-                        "Unnamed Organization"}
+                        uiText("Unnamed Organization")}
                     </Text>
 
                     <Text
@@ -701,7 +696,7 @@ const summary = useMemo(() => {
                         marginTop: 5,
                       }}
                     >
-                      {clean(item.owner_email) || "No owner email"}
+                      {clean(item.owner_email) || uiText("No owner email")}
                     </Text>
                   </View>
 
@@ -722,7 +717,7 @@ const summary = useMemo(() => {
                         fontSize: 10,
                       }}
                     >
-                      {healthTone.label}
+                      {uiText(healthTone.label)}
                     </Text>
                   </View>
                 </View>
@@ -736,27 +731,27 @@ const summary = useMemo(() => {
                   }}
                 >
                <InfoBox
-  label="Stores"
+  label={uiText("Stores")}
   value={numberValue(item.stores_count)}
 />
 
 <InfoBox
-  label="Active Stores"
+  label={uiText("Active Stores")}
   value={numberValue(item.active_stores_count)}
 />
 
 <InfoBox
-  label="Sales 30D"
+  label={uiText("Sales 30D")}
   value={numberValue(item.sales_30d)}
 />
 
 <InfoBox
-  label="Expenses 30D"
+  label={uiText("Expenses 30D")}
   value={numberValue(item.expenses_30d)}
 />
 
 <InfoBox
-  label="Total Activity"
+  label={uiText("Total Activity")}
   value={
     numberValue(item.sales_30d) +
     numberValue(item.expenses_30d)
@@ -764,7 +759,7 @@ const summary = useMemo(() => {
 />
 
 <InfoBox
-  label="Active Days"
+  label={uiText("Active Days")}
   value={
     numberValue(item.sales_active_days_30d) +
     numberValue(item.expense_active_days_30d)
@@ -790,8 +785,7 @@ const summary = useMemo(() => {
                       fontSize: 11,
                     }}
                   >
-                    SUBSCRIPTION
-                  </Text>
+                    {uiText("SUBSCRIPTION")}</Text>
 
                   <Text
                     style={{
@@ -803,8 +797,8 @@ const summary = useMemo(() => {
                   {upper(
   item.subscription_plan_code ||
   item.subscription_plan_name
-) || "FREE"} •{" "}
-{upper(item.subscription_status) || "INACTIVE"}
+) || uiText("FREE")} •{" "}
+{upper(item.subscription_status) || uiText("INACTIVE")}
                   </Text>
 
                   <Text
@@ -814,7 +808,7 @@ const summary = useMemo(() => {
                       fontSize: 12,
                     }}
                   >
-                    Expires:{" "}
+                    {uiText("Expires:")}{" "}
                     <Text
                       style={{
                         color: theme.colors.text,
@@ -838,7 +832,7 @@ const summary = useMemo(() => {
       fontSize: 12,
     }}
   >
-    Days left:{" "}
+    {uiText("Days left:")}{" "}
     <Text
       style={{
         color: theme.colors.text,
@@ -858,7 +852,7 @@ const summary = useMemo(() => {
       fontSize: 12,
     }}
   >
-    Last activity:{" "}
+    {uiText("Last activity:")}{" "}
     <Text
       style={{
         color: theme.colors.text,

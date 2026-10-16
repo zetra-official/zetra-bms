@@ -1,3 +1,4 @@
+import {useCommonText} from "@/src/i18n/useCommonText";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
 import { Alert, Text, TextInput, View } from "react-native";
@@ -93,6 +94,7 @@ const LIGHT = {
 };
 
 export default function FirstStoreOnboardingScreen() {
+ const uiText=useCommonText();
   const router = useRouter();
   const org = useOrg();
 
@@ -120,12 +122,12 @@ export default function FirstStoreOnboardingScreen() {
     const firstStore = clean(storeName);
     const tz = clean(timezone) || "Africa/Dar_es_Salaam";
 
-    if (!orgName) return Alert.alert("Missing", "Business name is missing.");
-    if (!firstStore) return Alert.alert("Missing", "Store name is required.");
+    if (!orgName) return Alert.alert(uiText("Missing"), uiText("Business name is missing."));
+    if (!firstStore) return Alert.alert(uiText("Missing"), uiText("Store name is required."));
 
     const { session, error: sessErr } = await ensureSession();
-    if (sessErr) return Alert.alert("Imeshindikana", sessErr.message);
-    if (!session) return Alert.alert("Imeshindikana", "Not authenticated");
+    if (sessErr) return Alert.alert(uiText("Imeshindikana"), sessErr.message);
+    if (!session) return Alert.alert(uiText("Imeshindikana"), uiText("Not authenticated"));
 
     setLoading(true);
 
@@ -137,7 +139,7 @@ export default function FirstStoreOnboardingScreen() {
 
       if (error) {
         console.log("create_org_with_store error:", error);
-        return Alert.alert("Imeshindikana", error.message);
+        return Alert.alert(uiText("Imeshindikana"), error.message);
       }
 
       await org.refresh();
@@ -229,11 +231,9 @@ export default function FirstStoreOnboardingScreen() {
     >
       <View style={{ marginTop: 6 }}>
         <Text style={{ color: LIGHT.text, fontWeight: "900", fontSize: 26 }}>
-          First Store Setup
-        </Text>
+          {uiText("First Store Setup")}</Text>
         <Text style={{ color: LIGHT.muted, fontWeight: "800", marginTop: 6, lineHeight: 20 }}>
-          Tengeneza store ya kwanza ya biashara yako.
-        </Text>
+          {uiText("Tengeneza store ya kwanza ya biashara yako.")}</Text>
       </View>
 
       <View style={{ marginTop: 14 }}>
@@ -251,24 +251,22 @@ export default function FirstStoreOnboardingScreen() {
           }}
         >
           <Text style={{ color: LIGHT.text, fontWeight: "900", fontSize: 14 }}>
-            Summary
-          </Text>
+            {uiText("Summary")}</Text>
 
           <View style={{ marginTop: 12 }}>
-            <Text style={{ color: LIGHT.muted, fontWeight: "800", fontSize: 12 }}>Business</Text>
+            <Text style={{ color: LIGHT.muted, fontWeight: "800", fontSize: 12 }}>{uiText("Business")}</Text>
             <Text style={{ color: LIGHT.text, fontWeight: "900", fontSize: 14, marginTop: 4 }}>
               {businessName || "—"}
             </Text>
           </View>
 
           <View style={{ marginTop: 12 }}>
-            <Text style={{ color: LIGHT.muted, fontWeight: "800", fontSize: 12 }}>Timezone</Text>
+            <Text style={{ color: LIGHT.muted, fontWeight: "800", fontSize: 12 }}>{uiText("Timezone")}</Text>
             <Text style={{ color: LIGHT.text, fontWeight: "900", fontSize: 14, marginTop: 4 }}>
               {timezone || "Africa/Dar_es_Salaam"}
             </Text>
             <Text style={{ color: LIGHT.muted, fontWeight: "800", fontSize: 12, marginTop: 6, lineHeight: 16 }}>
-              Timezone itawekwa kwenye DB mara moja tu (onboarding-only). Baadaye itakuwa locked.
-            </Text>
+              {uiText("Timezone itawekwa kwenye DB mara moja tu (onboarding-only). Baadaye itakuwa locked.")}</Text>
           </View>
         </Card>
       </View>
@@ -288,8 +286,7 @@ export default function FirstStoreOnboardingScreen() {
           }}
         >
           <Text style={{ color: LIGHT.text, fontWeight: "900", fontSize: 14 }}>
-            Store name
-          </Text>
+            {uiText("Store name")}</Text>
 
           <View
             style={{
@@ -305,7 +302,7 @@ export default function FirstStoreOnboardingScreen() {
             <TextInput
               value={storeName}
               onChangeText={setStoreName}
-              placeholder="e.g. SMART MEN"
+              placeholder={uiText("e.g. SMART MEN")}
               placeholderTextColor={LIGHT.faint}
               autoCapitalize="words"
               style={{
@@ -318,14 +315,13 @@ export default function FirstStoreOnboardingScreen() {
           </View>
 
           <Text style={{ color: LIGHT.muted, fontWeight: "800", fontSize: 12, marginTop: 10, lineHeight: 16 }}>
-            Tip: Tumia jina fupi na rahisi (mfano: SMART MEN, JOFU SIDO, SOWETO BRANCH).
-          </Text>
+            {uiText("Tip: Tumia jina fupi na rahisi (mfano: SMART MEN, JOFU SIDO, SOWETO BRANCH).")}</Text>
         </Card>
       </View>
 
       <View style={{ marginTop: 14 }}>
         <Button
-          title={loading ? "Creating..." : "Create Business & Store"}
+          title={loading ? uiText("Creating...") : uiText("Create Business & Store")}
           onPress={create}
           disabled={!canCreate}
         />
@@ -333,7 +329,7 @@ export default function FirstStoreOnboardingScreen() {
 
       <View style={{ marginTop: 10 }}>
         <Button
-          title="Back"
+          title={uiText("Back")}
           onPress={() => router.back()}
           disabled={loading}
           variant="secondary"

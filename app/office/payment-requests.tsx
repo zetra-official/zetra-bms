@@ -1,3 +1,4 @@
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/(tabs)/settings/subscription-requests.tsx
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -199,6 +200,7 @@ function FilterPill({
 }
 
 export default function SubscriptionRequestsScreen() {
+ const uiText=useCommonText();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -295,8 +297,8 @@ export default function SubscriptionRequestsScreen() {
 
       if (!ok) {
         Alert.alert(
-          "Restricted",
-          "This screen is for ZETRA Office billing only."
+          uiText("Restricted"),
+          uiText("This screen is for ZETRA Office billing only.")
         );
 
         router.replace("/office" as any);
@@ -308,9 +310,9 @@ export default function SubscriptionRequestsScreen() {
       setAllowed(false);
 
       Alert.alert(
-        "Restricted",
+        uiText("Restricted"),
         clean(error?.message) ||
-          "Unable to verify ZETRA Office access."
+          uiText("Unable to verify ZETRA Office access.")
       );
 
       router.replace("/office" as any);
@@ -388,8 +390,8 @@ export default function SubscriptionRequestsScreen() {
         }
 
         Alert.alert(
-          "Approved ✅",
-          "Subscription request approved successfully."
+          uiText("Approved ✅"),
+          uiText("Subscription request approved successfully.")
         );
 
         isRefreshingRef.current = true;
@@ -401,9 +403,9 @@ export default function SubscriptionRequestsScreen() {
         }
       } catch (error: any) {
         Alert.alert(
-          "Approve failed",
+          uiText("Approve failed"),
           clean(error?.message) ||
-            "Subscription request approval failed."
+            uiText("Subscription request approval failed.")
         );
       } finally {
         setBusyId("");
@@ -418,8 +420,8 @@ export default function SubscriptionRequestsScreen() {
 
       if (!reason) {
         Alert.alert(
-          "Reason required",
-          "Weka sababu ya kukataa request kwanza."
+          uiText("Reason required"),
+          uiText("Weka sababu ya kukataa request kwanza.")
         );
         return;
       }
@@ -444,8 +446,8 @@ export default function SubscriptionRequestsScreen() {
         setRejectReason("");
 
         Alert.alert(
-          "Rejected",
-          "Subscription request rejected successfully."
+          uiText("Rejected"),
+          uiText("Subscription request rejected successfully.")
         );
 
         isRefreshingRef.current = true;
@@ -457,9 +459,9 @@ export default function SubscriptionRequestsScreen() {
         }
       } catch (error: any) {
         Alert.alert(
-          "Reject failed",
+          uiText("Reject failed"),
           clean(error?.message) ||
-            "Subscription request rejection failed."
+            uiText("Subscription request rejection failed.")
         );
       } finally {
         setBusyId("");
@@ -511,8 +513,7 @@ export default function SubscriptionRequestsScreen() {
                 marginTop: 4,
               }}
             >
-              {item.duration_months} month
-              {item.duration_months > 1 ? "s" : ""}
+              {uiText(item.duration_months === 1 ? "{p0} month" : "{p0} months", {p0: item.duration_months})}
             </Text>
           </View>
 
@@ -551,7 +552,7 @@ export default function SubscriptionRequestsScreen() {
               fontSize: 12,
             }}
           >
-            Amount:{" "}
+            {uiText("Amount:")}{" "}
             <Text style={{ color: UI.text }}>
               {fmtMoney(item.submitted_amount)}
             </Text>
@@ -564,7 +565,7 @@ export default function SubscriptionRequestsScreen() {
               fontSize: 12,
             }}
           >
-            Expected:{" "}
+            {uiText("Expected:")}{" "}
             <Text style={{ color: UI.text }}>
               {fmtMoney(item.expected_amount)}
             </Text>
@@ -577,7 +578,7 @@ export default function SubscriptionRequestsScreen() {
               fontSize: 12,
             }}
           >
-            Payer:{" "}
+            {uiText("Payer:")}{" "}
             <Text style={{ color: UI.text }}>
               {clean(item.payer_name) || "—"}
             </Text>
@@ -590,7 +591,7 @@ export default function SubscriptionRequestsScreen() {
               fontSize: 12,
             }}
           >
-            Phone:{" "}
+            {uiText("Phone:")}{" "}
             <Text style={{ color: UI.text }}>
               {clean(item.payer_phone) || "—"}
             </Text>
@@ -603,7 +604,7 @@ export default function SubscriptionRequestsScreen() {
               fontSize: 12,
             }}
           >
-            Reference:{" "}
+            {uiText("Reference:")}{" "}
             <Text style={{ color: UI.text }}>
               {clean(item.transaction_reference) || "—"}
             </Text>
@@ -616,7 +617,7 @@ export default function SubscriptionRequestsScreen() {
               fontSize: 12,
             }}
           >
-            Submitted:{" "}
+            {uiText("Submitted:")}{" "}
             <Text style={{ color: UI.text }}>
               {fmtDateTime(item.submitted_at)}
             </Text>
@@ -630,7 +631,7 @@ export default function SubscriptionRequestsScreen() {
                 fontSize: 12,
               }}
             >
-              Approved:{" "}
+              {uiText("Approved:")}{" "}
               <Text style={{ color: UI.text }}>
                 {fmtDateTime(item.approved_at)}
               </Text>
@@ -645,7 +646,7 @@ export default function SubscriptionRequestsScreen() {
                 fontSize: 12,
               }}
             >
-              Rejection reason:{" "}
+              {uiText("Rejection reason:")}{" "}
               <Text style={{ color: UI.text }}>
                 {clean(item.rejection_reason)}
               </Text>
@@ -664,7 +665,7 @@ export default function SubscriptionRequestsScreen() {
               <TextInput
                 value={rejectReason}
                 onChangeText={setRejectReason}
-                placeholder="Reason for rejection"
+                placeholder={uiText("Reason for rejection")}
                 placeholderTextColor="rgba(255,255,255,0.45)"
                 style={{
                   minHeight: 52,
@@ -687,8 +688,8 @@ export default function SubscriptionRequestsScreen() {
                 <PrimaryButton
                   label={
                     isBusy
-                      ? "PLEASE WAIT..."
-                      : "CONFIRM REJECT"
+                      ? uiText("PLEASE WAIT...")
+                      : uiText("CONFIRM REJECT")
                   }
                   onPress={() => {
                     void rejectRequest(item.id);
@@ -698,7 +699,7 @@ export default function SubscriptionRequestsScreen() {
                 />
 
                 <PrimaryButton
-                  label="CANCEL"
+                  label={uiText("CANCEL")}
                   onPress={() => {
                     setRejectingId("");
                     setRejectReason("");
@@ -718,8 +719,8 @@ export default function SubscriptionRequestsScreen() {
               <PrimaryButton
                 label={
                   isBusy
-                    ? "PLEASE WAIT..."
-                    : "APPROVE"
+                    ? uiText("PLEASE WAIT...")
+                    : uiText("APPROVE")
                 }
                 onPress={() => {
                   void approveRequest(item.id);
@@ -728,7 +729,7 @@ export default function SubscriptionRequestsScreen() {
               />
 
               <PrimaryButton
-                label="REJECT"
+                label={uiText("REJECT")}
                 danger
                 onPress={() => {
                   setRejectingId(item.id);
@@ -782,8 +783,7 @@ export default function SubscriptionRequestsScreen() {
               fontSize: 20,
             }}
           >
-            Payment Requests
-          </Text>
+            {uiText("Payment Requests")}</Text>
 
           <Text
             style={{
@@ -792,8 +792,7 @@ export default function SubscriptionRequestsScreen() {
               marginTop: 4,
             }}
           >
-            Subscription payment approvals
-          </Text>
+            {uiText("Subscription payment approvals")}</Text>
         </View>
 
         <View
@@ -815,8 +814,7 @@ export default function SubscriptionRequestsScreen() {
               fontSize: 12,
             }}
           >
-            Office
-          </Text>
+            {uiText("Office")}</Text>
         </View>
       </View>
 
@@ -829,8 +827,7 @@ export default function SubscriptionRequestsScreen() {
               fontSize: 16,
             }}
           >
-            Request History
-          </Text>
+            {uiText("Request History")}</Text>
 
           <Text
             style={{
@@ -841,8 +838,7 @@ export default function SubscriptionRequestsScreen() {
               marginTop: 6,
             }}
           >
-            Review, approve or reject subscription payment requests.
-          </Text>
+            {uiText("Review, approve or reject subscription payment requests.")}</Text>
 
           <View
             style={{
@@ -853,25 +849,25 @@ export default function SubscriptionRequestsScreen() {
             }}
           >
             <FilterPill
-              label="PENDING"
+              label={uiText("PENDING")}
               active={filter === "PENDING"}
               onPress={() => setFilter("PENDING")}
             />
 
             <FilterPill
-              label="APPROVED"
+              label={uiText("APPROVED")}
               active={filter === "APPROVED"}
               onPress={() => setFilter("APPROVED")}
             />
 
             <FilterPill
-              label="REJECTED"
+              label={uiText("REJECTED")}
               active={filter === "REJECTED"}
               onPress={() => setFilter("REJECTED")}
             />
 
             <FilterPill
-              label="ALL"
+              label={uiText("ALL")}
               active={filter === "ALL"}
               onPress={() => setFilter("ALL")}
             />
@@ -892,7 +888,7 @@ export default function SubscriptionRequestsScreen() {
                 fontSize: 12,
               }}
             >
-              Showing:{" "}
+              {uiText("Showing:")}{" "}
               <Text style={{ color: UI.text }}>
                 {filter}
               </Text>
@@ -947,8 +943,7 @@ export default function SubscriptionRequestsScreen() {
                   marginTop: 10,
                 }}
               >
-                Loading requests…
-              </Text>
+                {uiText("Loading requests…")}</Text>
             </View>
           ) : errorText ? (
             <View
@@ -968,8 +963,7 @@ export default function SubscriptionRequestsScreen() {
                   fontSize: 13,
                 }}
               >
-                Unable to load requests
-              </Text>
+                {uiText("Unable to load requests")}</Text>
 
               <Text
                 style={{
@@ -997,8 +991,7 @@ export default function SubscriptionRequestsScreen() {
                   fontSize: 13,
                 }}
               >
-                No {filter.toLowerCase()} requests right now.
-              </Text>
+                {uiText("No")}{filter.toLowerCase()} {uiText("requests right now.")}</Text>
             </View>
           ) : (
             <View style={{ marginTop: 16 }}>

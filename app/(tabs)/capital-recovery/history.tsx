@@ -1,3 +1,5 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/(tabs)/capital-recovery/history.tsx
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -151,6 +153,8 @@ function MiniStat({
 }
 
 export default function CapitalRecoveryHistoryScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const { activeStoreId, activeRole } = useOrg();
 
   const roleLower = clean(activeRole).toLowerCase();
@@ -295,7 +299,7 @@ export default function CapitalRecoveryHistoryScreen() {
 
     const amount = toNum(editAmount);
     if (amount <= 0) {
-      Alert.alert("Invalid amount", "Amount lazima iwe kubwa kuliko 0.");
+      Alert.alert(uiText("Invalid amount"), uiText("Amount lazima iwe kubwa kuliko 0."));
       return;
     }
 
@@ -315,7 +319,7 @@ export default function CapitalRecoveryHistoryScreen() {
       setEditRow(null);
       await load();
     } catch (e: any) {
-      Alert.alert("Edit failed", e?.message ?? "Failed to edit record.");
+      Alert.alert(uiText("Edit failed"), e?.message ?? uiText("Failed to edit record."));
     } finally {
       setSavingEdit(false);
     }
@@ -392,8 +396,7 @@ export default function CapitalRecoveryHistoryScreen() {
   }}
 >
             <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18 }}>
-              Edit Record
-            </Text>
+              {uiText("Edit Record")}</Text>
             <View style={{ flexDirection: "row", gap: 8 }}>
               {(["ASSET", "COST", "INCOME"] as Row["entry_type"][]).map((t) => {
                 const active = editType === t;
@@ -425,7 +428,7 @@ export default function CapitalRecoveryHistoryScreen() {
               value={editAmount}
               onChangeText={setEditAmount}
               keyboardType="numeric"
-              placeholder="Amount"
+              placeholder={uiText("Amount")}
               placeholderTextColor={UI.faint}
               style={{
                 color: UI.text,
@@ -442,7 +445,7 @@ export default function CapitalRecoveryHistoryScreen() {
             <TextInput
               value={editNote}
               onChangeText={setEditNote}
-              placeholder="Note"
+              placeholder={uiText("Note")}
               placeholderTextColor={UI.faint}
               multiline
               style={{
@@ -471,7 +474,7 @@ export default function CapitalRecoveryHistoryScreen() {
                   alignItems: "center",
                 }}
               >
-                <Text style={{ color: UI.text, fontWeight: "900" }}>Cancel</Text>
+                <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Cancel")}</Text>
               </Pressable>
 
               <Pressable
@@ -489,7 +492,7 @@ export default function CapitalRecoveryHistoryScreen() {
                 }}
               >
                 <Text style={{ color: UI.emerald, fontWeight: "900" }}>
-                  {savingEdit ? "Saving..." : "Save"}
+                  {savingEdit ? uiText("Saving...") : uiText("Save")}
                 </Text>
               </Pressable>
             </View>
@@ -497,12 +500,10 @@ export default function CapitalRecoveryHistoryScreen() {
         </View>
       </Modal>
       <Text style={{ color: UI.text, fontWeight: "900", fontSize: 22 }}>
-        Capital Recovery History
-      </Text>
+        {uiText("Capital Recovery History")}</Text>
 
       <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 4 }}>
-        Angalia rekodi kwa siku, wiki, mwezi, au custom date.
-      </Text>
+        {uiText("Angalia rekodi kwa siku, wiki, mwezi, au custom date.")}</Text>
 
       <View style={{ height: 14 }} />
 
@@ -515,16 +516,16 @@ export default function CapitalRecoveryHistoryScreen() {
         }}
       >
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-          <Chip label="Today" active={range === "today"} onPress={() => applyRange("today")} />
-          <Chip label="Yesterday" active={range === "yesterday"} onPress={() => applyRange("yesterday")} />
-          <Chip label="7 Days" active={range === "7d"} onPress={() => applyRange("7d")} />
-          <Chip label="30 Days" active={range === "30d"} onPress={() => applyRange("30d")} />
-          <Chip label="Custom" active={range === "custom"} onPress={() => applyRange("custom")} />
+          <Chip label={uiText("Today")} active={range === "today"} onPress={() => applyRange("today")} />
+          <Chip label={uiText("Yesterday")} active={range === "yesterday"} onPress={() => applyRange("yesterday")} />
+          <Chip label={uiText("7 Days")} active={range === "7d"} onPress={() => applyRange("7d")} />
+          <Chip label={uiText("30 Days")} active={range === "30d"} onPress={() => applyRange("30d")} />
+          <Chip label={uiText("Custom")} active={range === "custom"} onPress={() => applyRange("custom")} />
         </View>
 
         <View style={{ flexDirection: "row", gap: 10 }}>
           <View style={{ flex: 1 }}>
-            <Text style={{ color: UI.muted, fontWeight: "900", marginBottom: 6 }}>From</Text>
+            <Text style={{ color: UI.muted, fontWeight: "900", marginBottom: 6 }}>{uiText("From")}</Text>
             <TextInput
               value={dateFrom}
               onChangeText={(v) => {
@@ -547,7 +548,7 @@ export default function CapitalRecoveryHistoryScreen() {
           </View>
 
           <View style={{ flex: 1 }}>
-            <Text style={{ color: UI.muted, fontWeight: "900", marginBottom: 6 }}>To</Text>
+            <Text style={{ color: UI.muted, fontWeight: "900", marginBottom: 6 }}>{uiText("To")}</Text>
             <TextInput
               value={dateTo}
               onChangeText={(v) => {
@@ -584,12 +585,12 @@ export default function CapitalRecoveryHistoryScreen() {
           })}
         >
           <Text style={{ color: UI.text, fontWeight: "900" }}>
-            {loading ? "Loading..." : "Search"}
+            {loading ? uiText("Loading...") : uiText("Search")}
           </Text>
         </Pressable>
 
         {!!err && (
-          <Text style={{ color: UI.danger, fontWeight: "900" }}>{err}</Text>
+          <Text style={{ color: UI.danger, fontWeight: "900" }}>{systemText(err)}</Text>
         )}
       </Card>
 
@@ -604,13 +605,12 @@ export default function CapitalRecoveryHistoryScreen() {
         }}
       >
         <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18 }}>
-          Range Summary
-        </Text>
+          {uiText("Range Summary")}</Text>
 
         <View style={{ flexDirection: "row", gap: 12 }}>
-          <MiniStat hidden={!canSeeCapitalSecrets} label="Asset" value={fmtMoney(summary.asset)} />
-          <MiniStat label="Cost" value={fmtMoney(summary.cost)} />
-          <MiniStat label="Income" value={fmtMoney(summary.income)} />
+          <MiniStat hidden={!canSeeCapitalSecrets} label={uiText("Asset")} value={fmtMoney(summary.asset)} />
+          <MiniStat label={uiText("Cost")} value={fmtMoney(summary.cost)} />
+          <MiniStat label={uiText("Income")} value={fmtMoney(summary.income)} />
         </View>
 
         <View
@@ -632,19 +632,17 @@ export default function CapitalRecoveryHistoryScreen() {
           }}
         >
           <Text style={{ color: UI.muted, fontWeight: "900", fontSize: 12 }}>
-            DAILY NET CHECK
-          </Text>
+            {uiText("DAILY NET CHECK")}</Text>
           <Text style={{ color: netColor, fontWeight: "900", fontSize: 22 }}>
-            {netLabel}: {netValue}
+            {(netPositive ? uiText("Profit Today") : (netNegative ? uiText("Loss Today") : uiText("Balanced Today")))}: {netValue}
           </Text>
           <Text style={{ color: UI.faint, fontWeight: "800" }}>
-            Income minus Cost kwa range uliyochagua.
-          </Text>
+            {uiText("Income minus Cost kwa range uliyochagua.")}</Text>
         </View>
 
         <Text style={{ color: UI.muted, fontWeight: "800" }}>
-          Records: <Text style={{ color: UI.text, fontWeight: "900" }}>{summary.totalRecords}</Text>{" "}
-          • Range: <Text style={{ color: UI.text, fontWeight: "900" }}>{dateFrom}</Text> →{" "}
+          {uiText("Records:")}<Text style={{ color: UI.text, fontWeight: "900" }}>{summary.totalRecords}</Text>{" "}
+          {uiText("• Range:")}<Text style={{ color: UI.text, fontWeight: "900" }}>{dateFrom}</Text> →{" "}
           <Text style={{ color: UI.text, fontWeight: "900" }}>{dateTo}</Text>
         </Text>
       </Card>
@@ -660,11 +658,9 @@ export default function CapitalRecoveryHistoryScreen() {
           }}
         >
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-            No records found
-          </Text>
+            {uiText("No records found")}</Text>
           <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 6 }}>
-            Hakuna rekodi kwa range hii.
-          </Text>
+            {uiText("Hakuna rekodi kwa range hii.")}</Text>
         </Card>
       ) : (
         displayRows.map((item) => {
@@ -701,11 +697,11 @@ export default function CapitalRecoveryHistoryScreen() {
               </Text>
 
               <Text style={{ color: UI.faint, marginTop: 4, fontWeight: "800" }}>
-                Recorded by: {item.displayRecordedBy}
+                {uiText("Recorded by:")}{item.displayRecordedBy}
               </Text>
 
               <Text style={{ color: UI.faint, fontWeight: "800" }}>
-                Role: {clean(item.created_role || "—").toUpperCase()}
+                {uiText("Role:")}{clean(item.created_role || "—").toUpperCase()}
               </Text>
 
               {canEditRow(item) ? (
@@ -722,7 +718,7 @@ export default function CapitalRecoveryHistoryScreen() {
                     opacity: pressed ? 0.9 : 1,
                   })}
                 >
-                  <Text style={{ color: UI.emerald, fontWeight: "900" }}>Edit</Text>
+                  <Text style={{ color: UI.emerald, fontWeight: "900" }}>{uiText("Edit")}</Text>
                 </Pressable>
               ) : null}
             </Card>

@@ -1,4 +1,7 @@
-﻿// app/(tabs)/stores/inventory.tsx
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
+import { uniqueRecords } from "../../../src/business/recordIntegrity";
+// app/(tabs)/stores/inventory.tsx
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNetInfo } from "@react-native-community/netinfo";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -70,7 +73,7 @@ function cleanBarcode(raw: any) {
 
 function fmtQty(v: any) {
   const n = Number(v ?? 0);
-  if (!Number.isFinite(n)) return "0";
+  if (!Number.isFinite(n)) return "—";
   return n.toFixed(3).replace(/\.?0+$/, "");
 }
 
@@ -298,6 +301,8 @@ function ScannerFabIcon({ size = 28, color = "#E5E7EB" }: { size?: number; color
 }
 
 export default function StoreInventoryScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
   const netInfo = useNetInfo();
 
@@ -607,7 +612,7 @@ export default function StoreInventoryScreen() {
         });
         if (e) throw e;
 
-        const nextRows = (data ?? []) as InventoryRow[];
+        const nextRows = uniqueRecords((data ?? []) as InventoryRow[], "product_id");
         const changed = !sameRows(rowsRef.current, nextRows);
 
         if (changed) {
@@ -617,19 +622,17 @@ export default function StoreInventoryScreen() {
         const nowIso = new Date().toISOString();
         void saveCache(nextRows, nowIso);
 
-        // Visible status updates only for manual/visible refresh
-        if (!silent) {
-          setSource("LIVE");
-          setLastSyncedAt(nowIso);
-        }
+        // Freshness metadata must reflect successful automatic refresh too.
+        setSource("LIVE");
+        setLastSyncedAt(nowIso);
 
         // Thresholds + expiry refresh silently too
         void loadThresholdsForRows(nextRows, { silent: true });
         void loadExpirySummary(nextRows);
       } catch (err: any) {
         if (!silent) {
-          setError(err?.message ?? "Failed to load inventory");
           await loadFromCache();
+          setError(err?.message ?? "Failed to load inventory; cached data may be stale");
         }
       } finally {
         if (!silent) setLoading(false);
@@ -859,19 +862,19 @@ export default function StoreInventoryScreen() {
       if (!activeStoreId) return;
 
       if (isCapitalRecoveryStore) {
-        Alert.alert("Not Available", "Adjust Stock haitumiki kwa Capital Recovery store.");
+        Alert.alert(uiText("Not Available"), uiText("Adjust Stock haitumiki kwa Capital Recovery store."));
         return;
       }
 
       if (!canAdjust) {
-        Alert.alert("No Access", "Owner/Admin only.");
+        Alert.alert(uiText("No Access"), uiText("Owner/Admin only."));
         return;
       }
 
       if (isOffline) {
         Alert.alert(
-          "Offline",
-          "Huwezi kufanya Adjust Stock bila mtandao. Washa data/Wi-Fi kisha jaribu tena."
+          uiText("Offline"),
+          uiText("Huwezi kufanya Adjust Stock bila mtandao. Washa data/Wi-Fi kisha jaribu tena.")
         );
         return;
       }
@@ -893,15 +896,15 @@ export default function StoreInventoryScreen() {
 
   const openHistory = useCallback(() => {
     if (!activeStoreId) {
-      Alert.alert("Missing", "No active store selected.");
+      Alert.alert(uiText("Missing"), uiText("No active store selected."));
       return;
     }
     if (isCapitalRecoveryStore) {
-      Alert.alert("Not Available", "Inventory Scan haitumiki kwa Capital Recovery store.");
+      Alert.alert(uiText("Not Available"), uiText("Inventory Scan haitumiki kwa Capital Recovery store."));
       return;
     }
     if (storeOrgMismatch) {
-      Alert.alert("Mismatch", "Active store haifanani na Organization. Chagua store tena.");
+      Alert.alert(uiText("Mismatch"), uiText("Active store haifanani na Organization. Chagua store tena."));
       return;
     }
     router.push({
@@ -914,15 +917,15 @@ export default function StoreInventoryScreen() {
 
   const goScan = useCallback(() => {
     if (!activeStoreId) {
-      Alert.alert("Missing", "No active store selected.");
+      Alert.alert(uiText("Missing"), uiText("No active store selected."));
       return;
     }
     if (isCapitalRecoveryStore) {
-      Alert.alert("Not Available", "Inventory Scan haitumiki kwa Capital Recovery store.");
+      Alert.alert(uiText("Not Available"), uiText("Inventory Scan haitumiki kwa Capital Recovery store."));
       return;
     }
     if (storeOrgMismatch) {
-      Alert.alert("Mismatch", "Active store haifanani na Organization. Chagua store tena.");
+      Alert.alert(uiText("Mismatch"), uiText("Active store haifanani na Organization. Chagua store tena."));
       return;
     }
     router.push("/(tabs)/stores/scan");
@@ -1031,12 +1034,12 @@ export default function StoreInventoryScreen() {
                     marginTop: 6,
                   }}
                 >
-                  SKU:{" "}
+                  {uiText("SKU:")}{" "}
                   <Text style={{ color: theme.colors.text }}>
                     {r.sku ?? "—"}
                   </Text>
                   {"   "}|{"   "}
-                  Unit:{" "}
+                  {uiText("Unit:")}{" "}
                   <Text style={{ color: theme.colors.text }}>
                     {r.unit ?? "—"}
                   </Text>
@@ -1049,7 +1052,7 @@ export default function StoreInventoryScreen() {
                     marginTop: 6,
                   }}
                 >
-                  Category:{" "}
+                  {uiText("Category:")}{" "}
                   <Text style={{ color: theme.colors.text }}>
                     {r.category ?? "—"}
                   </Text>
@@ -1085,8 +1088,7 @@ export default function StoreInventoryScreen() {
                     fontSize: 12,
                   }}
                 >
-                  LOW STOCK
-                </Text>
+                  {uiText("LOW STOCK")}</Text>
               </View>
             ) : null}
           </View>
@@ -1146,7 +1148,7 @@ export default function StoreInventoryScreen() {
                     textAlign: "center",
                   }}
                 >
-                  QTY: {fmtQty(r.qty)}
+                  {uiText("QTY:")}{fmtQty(r.qty)}
                 </Text>
               )}
 
@@ -1158,19 +1160,19 @@ export default function StoreInventoryScreen() {
                   textAlign: "center",
                 }}
               >
-                Alert {"\u2264"} {isOffline ? "—" : String(thr)}
+                {uiText("Alert")}{"\u2264"} {isOffline ? "—" : String(thr)}
               </Text>
             </View>
 
             <View style={{ flex: 1, gap: isDesktopWeb ? 8 : 10, flexDirection: isDesktopWeb ? "row" : "column", alignItems: isDesktopWeb ? "center" : undefined }}>
               <Button
-                title="Alert Level"
+                title={uiText("Alert Level")}
                 variant="secondary"
                 onPress={() => {
                   if (isOffline) {
                     Alert.alert(
-                      "Offline",
-                      "Huwezi kubadili Alert Level bila mtandao."
+                      uiText("Offline"),
+                      uiText("Huwezi kubadili Alert Level bila mtandao.")
                     );
                     return;
                   }
@@ -1226,13 +1228,13 @@ export default function StoreInventoryScreen() {
                 >
                   {expiryDate
                     ? fmtExpiryDate(expiryDate)
-                    : "No expiry tracked"}
+                    : uiText("No expiry tracked")}
                 </Text>
               </View>
 
               {canAdjust ? (
                 <Button
-                  title="Adjust Stock"
+                  title={uiText("Adjust Stock")}
                   variant="secondary"
                   onPress={() => openAdjust(r)}
                   disabled={loading || isOffline}
@@ -1243,17 +1245,7 @@ export default function StoreInventoryScreen() {
         </Pressable>
       );
     },
-    [
-      activeStoreId,
-      activeStoreName,
-      canAdjust,
-      expiryByProductId,
-      isOffline,
-      loading,
-      openAdjust,
-      router,
-      thrByProductId,
-    ]
+    [activeStoreId, activeStoreName, canAdjust, expiryByProductId, isOffline, loading, openAdjust, router, thrByProductId, uiText]
   );
   const StatusLine = useMemo(() => {
     const mode = isOffline ? "OFFLINE" : "ONLINE";
@@ -1295,8 +1287,7 @@ export default function StoreInventoryScreen() {
                   fontSize: 12,
                 }}
               >
-                OFFLINE • Mtandao haupatikani (data ya mwisho inaweza kuonekana)
-              </Text>
+                {uiText("OFFLINE • Mtandao haupatikani (data ya mwisho inaweza kuonekana)")}</Text>
             </View>
           ) : null}
 
@@ -1327,7 +1318,7 @@ export default function StoreInventoryScreen() {
                     fontSize: 20,
                   }}
                 >
-                  {isCapitalRecoveryStore ? "Inventory Disabled" : "Inventory"}
+                  {isCapitalRecoveryStore ? uiText("Inventory Disabled") : uiText("Inventory")}
                 </Text>
 
                 <View
@@ -1346,8 +1337,7 @@ export default function StoreInventoryScreen() {
                       fontSize: 11,
                     }}
                   >
-                    ORGANIZATION
-                  </Text>
+                    {uiText("ORGANIZATION")}</Text>
 
                   <Text
                     style={{
@@ -1368,8 +1358,7 @@ export default function StoreInventoryScreen() {
                       fontSize: 11,
                     }}
                   >
-                    STORE
-                  </Text>
+                    {uiText("STORE")}</Text>
 
                   <Text
                     style={{
@@ -1390,8 +1379,7 @@ export default function StoreInventoryScreen() {
                       fontSize: 11,
                     }}
                   >
-                    ROLE
-                  </Text>
+                    {uiText("ROLE")}</Text>
 
                   <Text
                     style={{
@@ -1438,7 +1426,7 @@ export default function StoreInventoryScreen() {
                       fontSize: 12,
                     }}
                   >
-                    {loading ? "Loading..." : "Refresh"}
+                    {loading ? uiText("Loading...") : uiText("Refresh")}
                   </Text>
                 </Pressable>
 
@@ -1475,8 +1463,7 @@ export default function StoreInventoryScreen() {
                       fontSize: 12,
                     }}
                   >
-                    History
-                  </Text>
+                    {uiText("History")}</Text>
                 </Pressable>
 
                 <Pressable
@@ -1550,7 +1537,7 @@ export default function StoreInventoryScreen() {
                   }}
                 >
                   {isCapitalRecoveryStore
-                    ? "Capital Recovery store haitumii inventory."
+                    ? uiText("Capital Recovery store haitumii inventory.")
                     : StatusLine}
                 </Text>
               </View>
@@ -1564,8 +1551,7 @@ export default function StoreInventoryScreen() {
                     fontSize: 10,
                   }}
                 >
-                  Auto-refresh active
-                </Text>
+                  {uiText("Auto-refresh active")}</Text>
               ) : null}
             </View>
           </View>
@@ -1585,8 +1571,7 @@ export default function StoreInventoryScreen() {
               }}
             >
               <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                OFFLINE • Mtandao haupatikani (data ya mwisho inaweza kuonekana)
-              </Text>
+                {uiText("OFFLINE • Mtandao haupatikani (data ya mwisho inaweza kuonekana)")}</Text>
             </View>
           ) : null}
 
@@ -1597,13 +1582,12 @@ export default function StoreInventoryScreen() {
               color: theme.colors.text,
             }}
           >
-            {isCapitalRecoveryStore ? "Inventory Disabled" : "Inventory"}
+            {isCapitalRecoveryStore ? uiText("Inventory Disabled") : uiText("Inventory")}
           </Text>
 
           <Card style={{ gap: 10 }}>
             <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-              Organization
-            </Text>
+              {uiText("Organization")}</Text>
 
             <Text
               style={{
@@ -1622,8 +1606,7 @@ export default function StoreInventoryScreen() {
                 marginTop: 2,
               }}
             >
-              Active Store
-            </Text>
+              {uiText("Active Store")}</Text>
 
             <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
               {activeStoreName ?? "—"}
@@ -1636,8 +1619,7 @@ export default function StoreInventoryScreen() {
                 marginTop: 2,
               }}
             >
-              Role
-            </Text>
+              {uiText("Role")}</Text>
 
             <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
               {activeRole ?? "—"}
@@ -1658,8 +1640,7 @@ export default function StoreInventoryScreen() {
               }}
             >
               <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>
-                Status
-              </Text>
+                {uiText("Status")}</Text>
 
               <Text
                 style={{
@@ -1669,7 +1650,7 @@ export default function StoreInventoryScreen() {
                 }}
               >
                 {isCapitalRecoveryStore
-                  ? "Capital Recovery store haitumii inventory."
+                  ? uiText("Capital Recovery store haitumii inventory.")
                   : StatusLine}
               </Text>
 
@@ -1681,9 +1662,7 @@ export default function StoreInventoryScreen() {
                     marginTop: 8,
                   }}
                 >
-                  Bidhaa za Capital Recovery hutumika kwenye income flow tu, si
-                  inventory/stock tracking.
-                </Text>
+                  {uiText("Bidhaa za Capital Recovery hutumika kwenye income flow tu, si inventory/stock tracking.")}</Text>
               ) : isOffline ? (
                 <Text
                   style={{
@@ -1692,8 +1671,7 @@ export default function StoreInventoryScreen() {
                     marginTop: 8,
                   }}
                 >
-                  Ukiwa OFFLINE, app itaonyesha “last known cache” bila kukwama.
-                </Text>
+                  {uiText("Ukiwa OFFLINE, app itaonyesha “last known cache” bila kukwama.")}</Text>
               ) : null}
             </View>
 
@@ -1707,7 +1685,7 @@ export default function StoreInventoryScreen() {
             >
               <View style={{ flex: 1 }}>
                 <Button
-                  title={loading ? "Loading..." : "Refresh"}
+                  title={loading ? uiText("Loading...") : uiText("Refresh")}
                   onPress={() => loadLive({ silent: false })}
                   disabled={loading || isCapitalRecoveryStore}
                   variant="primary"
@@ -1716,7 +1694,7 @@ export default function StoreInventoryScreen() {
 
               <View style={{ flex: 1 }}>
                 <Button
-                  title="History"
+                  title={uiText("History")}
                   onPress={openHistory}
                   disabled={
                     loading ||
@@ -1776,8 +1754,8 @@ export default function StoreInventoryScreen() {
               }}
             >
               {isCapitalRecoveryStore
-                ? "Capital Recovery hutumia Products + Workspace, si inventory refresh."
-                : "Tip: Inventory inajirefresh kimya kimya bila UI kuonyesha kuchezacheza."}
+                ? uiText("Capital Recovery hutumia Products + Workspace, si inventory refresh.")
+                : uiText("Tip: Inventory inajirefresh kimya kimya bila UI kuonyesha kuchezacheza.")}
             </Text>
           </Card>
         </>
@@ -1795,7 +1773,7 @@ export default function StoreInventoryScreen() {
               fontWeight: "900",
             }}
           >
-            {error}
+            {systemText(error)}
           </Text>
 
           {storeOrgMismatch ? (
@@ -1806,8 +1784,7 @@ export default function StoreInventoryScreen() {
                 marginTop: 8,
               }}
             >
-              Nenda Stores → chagua store ya org hii kisha urudi Inventory.
-            </Text>
+              {uiText("Nenda Stores → chagua store ya org hii kisha urudi Inventory.")}</Text>
           ) : null}
         </Card>
       )}
@@ -1820,7 +1797,7 @@ export default function StoreInventoryScreen() {
             fontSize: isDesktopWeb ? 13 : 16,
           }}
         >
-          {isCapitalRecoveryStore ? "Inventory Disabled" : "Search"}
+          {isCapitalRecoveryStore ? uiText("Inventory Disabled") : uiText("Search")}
         </Text>
 
         <TextInput
@@ -1828,8 +1805,8 @@ export default function StoreInventoryScreen() {
           onChangeText={setQ}
           placeholder={
             isCapitalRecoveryStore
-              ? "Inventory haitumiki kwa Capital Recovery"
-              : "Tafuta kwa jina / SKU / category / barcode..."
+              ? uiText("Inventory haitumiki kwa Capital Recovery")
+              : uiText("Tafuta kwa jina / SKU / category / barcode...")
           }
           placeholderTextColor="rgba(255,255,255,0.35)"
           returnKeyType="search"
@@ -1850,17 +1827,13 @@ export default function StoreInventoryScreen() {
 
         {isCapitalRecoveryStore ? (
           <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-            Capital Recovery store haitumii inventory, stock alert, au stock
-            adjustment.
-          </Text>
+            {uiText("Capital Recovery store haitumii inventory, stock alert, au stock adjustment.")}</Text>
         ) : !canAdjust ? (
           <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-            (Read-only) Muombe Owner/Admin kufanya stock adjustment.
-          </Text>
+            {uiText("(Read-only) Muombe Owner/Admin kufanya stock adjustment.")}</Text>
         ) : isOffline ? (
           <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-            Offline: “write actions” (Adjust/Save Alert) zimezimwa kwa usalama.
-          </Text>
+            {uiText("Offline: “write actions” (Adjust/Save Alert) zimezimwa kwa usalama.")}</Text>
         ) : null}
       </Card>
 
@@ -1873,8 +1846,8 @@ export default function StoreInventoryScreen() {
         }}
       >
         {isCapitalRecoveryStore
-          ? "Inventory Not Used"
-          : `Items (${filtered.length})`}
+          ? uiText("Inventory Not Used")
+          : uiText("Items ({p0})", {p0: (filtered.length)})}
       </Text>
     </View>
   );
@@ -1889,8 +1862,7 @@ export default function StoreInventoryScreen() {
           ListEmptyComponent={
             <Card>
               <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                Inventory disabled for Capital Recovery
-              </Text>
+                {uiText("Inventory disabled for Capital Recovery")}</Text>
 
               <Text
                 style={{
@@ -1899,9 +1871,7 @@ export default function StoreInventoryScreen() {
                   marginTop: 6,
                 }}
               >
-                Tumia Products + Capital Recovery Workspace kwa income entries.
-                Inventory haitumiki kwenye mode hii.
-              </Text>
+                {uiText("Tumia Products + Capital Recovery Workspace kwa income entries. Inventory haitumiki kwenye mode hii.")}</Text>
             </Card>
           }
           showsVerticalScrollIndicator={false}
@@ -1917,8 +1887,7 @@ export default function StoreInventoryScreen() {
           ListEmptyComponent={
             <Card>
               <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                No inventory rows
-              </Text>
+                {uiText("No inventory rows")}</Text>
 
               <Text
                 style={{
@@ -1927,8 +1896,7 @@ export default function StoreInventoryScreen() {
                   marginTop: 6,
                 }}
               >
-                Bonyeza "Refresh" au hakikisha ume-select active store.
-              </Text>
+                {uiText("Bonyeza \"Refresh\" au hakikisha ume-select active store.")}</Text>
             </Card>
           }
           initialNumToRender={8}

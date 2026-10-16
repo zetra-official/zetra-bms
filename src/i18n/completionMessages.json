@@ -1,0 +1,380 @@
+[
+  [
+    "Business name is required.",
+    "Jina la biashara linahitajika.",
+    "Le nom de l’entreprise est requis.",
+    "O nome do negócio é obrigatório.",
+    "اسم النشاط التجاري مطلوب.",
+    "El nombre del negocio es obligatorio.",
+    "请输入企业名称。"
+  ],
+  [
+    "Timezone",
+    "Ukanda wa saa",
+    "Fuseau horaire",
+    "Fuso horário",
+    "المنطقة الزمنية",
+    "Zona horaria",
+    "时区"
+  ],
+  [
+    "Timezone haiwezi kuwa empty.",
+    "Ukanda wa saa hauwezi kuwa tupu.",
+    "Le fuseau horaire ne peut pas être vide.",
+    "O fuso horário não pode estar vazio.",
+    "لا يمكن ترك المنطقة الزمنية فارغة.",
+    "La zona horaria no puede estar vacía.",
+    "时区不能为空。"
+  ],
+  [
+    "Confirm timezone",
+    "Thibitisha ukanda wa saa",
+    "Confirmer le fuseau horaire",
+    "Confirmar fuso horário",
+    "تأكيد المنطقة الزمنية",
+    "Confirmar zona horaria",
+    "确认时区"
+  ],
+  [
+    "Tafadhali thibitisha timezone. Hii itaathiri reports, daily closing, na date cutoffs.",
+    "Tafadhali thibitisha ukanda wa saa. Unaathiri ripoti, kufunga siku na mipaka ya tarehe.",
+    "Confirmez le fuseau horaire. Il détermine les rapports, la clôture journalière et les limites de dates.",
+    "Confirme o fuso horário. Afeta os relatórios, o fecho diário e os limites de datas.",
+    "يرجى تأكيد المنطقة الزمنية. فهي تؤثر في التقارير والإقفال اليومي وحدود التواريخ.",
+    "Confirme la zona horaria. Afecta a los informes, el cierre diario y los límites de fechas.",
+    "请确认时区。它会影响报表、每日结账和日期分界。"
+  ],
+  [
+    "← Back",
+    "← Rudi",
+    "← Retour",
+    "← Voltar",
+    "رجوع →",
+    "← Volver",
+    "← 返回"
+  ],
+  [
+    "Business Setup",
+    "Kuanzisha biashara",
+    "Configuration de l’entreprise",
+    "Configuração do negócio",
+    "إعداد النشاط التجاري",
+    "Configuración del negocio",
+    "企业设置"
+  ],
+  [
+    "Weka jina la biashara na timezone ya reports, daily closing, na date cutoffs.",
+    "Weka jina la biashara na ukanda wa saa wa ripoti, kufunga siku na mipaka ya tarehe.",
+    "Saisissez le nom de l’entreprise et le fuseau horaire des rapports, clôtures et limites de dates.",
+    "Indique o nome do negócio e o fuso horário dos relatórios, fechos diários e limites de datas.",
+    "أدخل اسم النشاط والمنطقة الزمنية للتقارير والإقفال اليومي وحدود التواريخ.",
+    "Introduzca el nombre del negocio y la zona horaria de informes, cierres y límites de fechas.",
+    "请输入企业名称以及报表、每日结账和日期分界使用的时区。"
+  ],
+  [
+    "Business name",
+    "Jina la biashara",
+    "Nom de l’entreprise",
+    "Nome do negócio",
+    "اسم النشاط التجاري",
+    "Nombre del negocio",
+    "企业名称"
+  ],
+  [
+    "e.g. JOFU QUALITY",
+    "mf. JOFU QUALITY",
+    "ex. JOFU QUALITY",
+    "ex.: JOFU QUALITY",
+    "مثال: JOFU QUALITY",
+    "p. ej., JOFU QUALITY",
+    "例如：JOFU QUALITY"
+  ],
+  [
+    "Business type",
+    "Aina ya biashara",
+    "Type d’entreprise",
+    "Tipo de negócio",
+    "نوع النشاط التجاري",
+    "Tipo de negocio",
+    "业务类型"
+  ],
+  [
+    "GENERAL / RETAIL / PHARMACY ...",
+    "JUMLA / REJAREJA / DUKA LA DAWA ...",
+    "GÉNÉRAL / COMMERCE / PHARMACIE…",
+    "GERAL / RETALHO / FARMÁCIA…",
+    "عام / تجزئة / صيدلية…",
+    "GENERAL / MINORISTA / FARMACIA…",
+    "通用 / 零售 / 药店…"
+  ],
+  [
+    "Timezone (Required)",
+    "Ukanda wa saa (Lazima)",
+    "Fuseau horaire (obligatoire)",
+    "Fuso horário (obrigatório)",
+    "المنطقة الزمنية (مطلوبة)",
+    "Zona horaria (obligatoria)",
+    "时区（必填）"
+  ],
+  [
+    "Controls reports, daily closing, and date cutoffs (org-level).",
+    "Huongoza ripoti, kufunga siku na mipaka ya tarehe katika shirika.",
+    "Détermine les rapports, clôtures journalières et limites de dates de l’organisation.",
+    "Define os relatórios, fechos diários e limites de datas da organização.",
+    "تحدد تقارير المؤسسة والإقفال اليومي وحدود التواريخ.",
+    "Determina informes, cierres diarios y límites de fechas de la organización.",
+    "控制组织的报表、每日结账和日期分界。"
+  ],
+  [
+    "Reports • Daily closing • Cutoffs",
+    "Ripoti • Kufunga siku • Mipaka ya tarehe",
+    "Rapports • Clôture journalière • Limites",
+    "Relatórios • Fecho diário • Limites",
+    "التقارير • الإقفال اليومي • الحدود",
+    "Informes • Cierre diario • Límites",
+    "报表 • 每日结账 • 分界"
+  ],
+  [
+    "I confirm this timezone is correct for reports & daily closing.",
+    "Nathibitisha ukanda huu wa saa ni sahihi kwa ripoti na kufunga siku.",
+    "Je confirme ce fuseau horaire pour les rapports et la clôture journalière.",
+    "Confirmo este fuso horário para relatórios e fecho diário.",
+    "أؤكد صحة هذه المنطقة الزمنية للتقارير والإقفال اليومي.",
+    "Confirmo esta zona horaria para los informes y el cierre diario.",
+    "我确认此时区适用于报表和每日结账。"
+  ],
+  [
+    "Please wait...",
+    "Tafadhali subiri...",
+    "Veuillez patienter…",
+    "Aguarde…",
+    "يرجى الانتظار…",
+    "Espere…",
+    "请稍候…"
+  ],
+  [
+    "Continue",
+    "Endelea",
+    "Continuer",
+    "Continuar",
+    "متابعة",
+    "Continuar",
+    "继续"
+  ],
+  [
+    "Weka ZGP code au bonyeza Skip.",
+    "Weka msimbo wa ZGP au bonyeza Ruka.",
+    "Saisissez le code ZGP ou appuyez sur Ignorer.",
+    "Introduza o código ZGP ou prima Ignorar.",
+    "أدخل رمز ZGP أو اضغط تخطي.",
+    "Introduzca el código ZGP o pulse Omitir.",
+    "请输入 ZGP 代码或点击跳过。"
+  ],
+  [
+    "Invalid code",
+    "Msimbo si sahihi",
+    "Code invalide",
+    "Código inválido",
+    "رمز غير صالح",
+    "Código no válido",
+    "代码无效"
+  ],
+  [
+    "Referral code lazima ianze na ZGP-",
+    "Msimbo wa rufaa lazima uanze na ZGP-",
+    "Le code de parrainage doit commencer par ZGP-",
+    "O código de referência deve começar por ZGP-",
+    "يجب أن يبدأ رمز الإحالة بـ ZGP-",
+    "El código de referido debe empezar por ZGP-",
+    "推荐码必须以 ZGP- 开头"
+  ],
+  [
+    "Validation failed",
+    "Uthibitishaji umeshindwa",
+    "Échec de la validation",
+    "Falha na validação",
+    "فشل التحقق",
+    "Error de validación",
+    "验证失败"
+  ],
+  [
+    "Hiyo ZGP code haijapatikana au partner si ACTIVE.",
+    "Msimbo huo wa ZGP haujapatikana au mshirika si hai.",
+    "Code ZGP introuvable ou partenaire inactif.",
+    "Código ZGP não encontrado ou parceiro inativo.",
+    "رمز ZGP غير موجود أو الشريك غير نشط.",
+    "No se encontró el código ZGP o el socio está inactivo.",
+    "找不到该 ZGP 代码，或合作伙伴未启用。"
+  ],
+  [
+    "Preparing your workspace...",
+    "Inaandaa eneo lako la kazi...",
+    "Préparation de votre espace…",
+    "A preparar o seu espaço…",
+    "جارٍ إعداد مساحة العمل…",
+    "Preparando su espacio…",
+    "正在准备工作区…"
+  ],
+  [
+    "Referral Code",
+    "Msimbo wa rufaa",
+    "Code de parrainage",
+    "Código de referência",
+    "رمز الإحالة",
+    "Código de referido",
+    "推荐码"
+  ],
+  [
+    "Ukiwa umesaidiwa na Growth Partner, weka code yake hapa. Ukiwa huna, unaweza kuendelea kwa Skip.",
+    "Ikiwa umesaidiwa na Mshirika wa Ukuaji, weka msimbo wake hapa. Usipokuwa nao, unaweza kuruka.",
+    "Si un partenaire de croissance vous a aidé, saisissez son code. Sinon, ignorez cette étape.",
+    "Se um parceiro de crescimento o ajudou, introduza o código dele. Caso contrário, ignore este passo.",
+    "إذا ساعدك شريك نمو، أدخل رمزه هنا. وإلا يمكنك التخطي.",
+    "Si le ayudó un socio de crecimiento, introduzca su código. Si no, puede omitir este paso.",
+    "如果增长合作伙伴曾协助您，请输入其代码；否则可跳过。"
+  ],
+  [
+    "OPTIONAL PARTNER CODE",
+    "MSIMBO WA MSHIRIKA SI LAZIMA",
+    "CODE PARTENAIRE FACULTATIF",
+    "CÓDIGO DE PARCEIRO OPCIONAL",
+    "رمز الشريك اختياري",
+    "CÓDIGO DE SOCIO OPCIONAL",
+    "合作伙伴代码（可选）"
+  ],
+  [
+    "ZGP Code (optional)",
+    "Msimbo wa ZGP (si lazima)",
+    "Code ZGP (facultatif)",
+    "Código ZGP (opcional)",
+    "رمز ZGP (اختياري)",
+    "Código ZGP (opcional)",
+    "ZGP 代码（可选）"
+  ],
+  [
+    "e.g. ZGP-42D0D8",
+    "mf. ZGP-42D0D8",
+    "ex. ZGP-42D0D8",
+    "ex.: ZGP-42D0D8",
+    "مثال: ZGP-42D0D8",
+    "p. ej., ZGP-42D0D8",
+    "例如：ZGP-42D0D8"
+  ],
+  [
+    "Ukijaza code halali, account yako itaunganishwa na Growth Partner aliyekusaidia. Ukiskip, utaendelea bila referral.",
+    "Ukiweka msimbo halali, akaunti yako itaunganishwa na Mshirika wa Ukuaji aliyekusaidia. Ukiruka, utaendelea bila rufaa.",
+    "Un code valide associera votre compte au partenaire qui vous a aidé. Sinon, vous continuerez sans parrainage.",
+    "Um código válido associa a conta ao parceiro que o ajudou. Se ignorar, continua sem referência.",
+    "سيربط الرمز الصالح حسابك بالشريك الذي ساعدك. عند التخطي ستتابع دون إحالة.",
+    "Un código válido vincula su cuenta al socio que le ayudó. Si omite, continuará sin referido.",
+    "有效代码会将您的账户关联到协助您的合作伙伴。跳过则不建立推荐关联。"
+  ],
+  [
+    "Business name is missing.",
+    "Jina la biashara halipo.",
+    "Le nom de l’entreprise est manquant.",
+    "Falta o nome do negócio.",
+    "اسم النشاط التجاري مفقود.",
+    "Falta el nombre del negocio.",
+    "缺少企业名称。"
+  ],
+  [
+    "Store name is required.",
+    "Jina la duka linahitajika.",
+    "Le nom du magasin est requis.",
+    "O nome da loja é obrigatório.",
+    "اسم المتجر مطلوب.",
+    "El nombre de la tienda es obligatorio.",
+    "请输入门店名称。"
+  ],
+  [
+    "Imeshindikana",
+    "Imeshindikana",
+    "Échec",
+    "Falhou",
+    "فشل",
+    "Error",
+    "失败"
+  ],
+  [
+    "Not authenticated",
+    "Hujaingia kwenye akaunti",
+    "Non authentifié",
+    "Não autenticado",
+    "لم يتم تسجيل الدخول",
+    "Sin autenticar",
+    "尚未登录"
+  ],
+  [
+    "First Store Setup",
+    "Kuanzisha duka la kwanza",
+    "Configuration du premier magasin",
+    "Configuração da primeira loja",
+    "إعداد المتجر الأول",
+    "Configuración de la primera tienda",
+    "设置首家门店"
+  ],
+  [
+    "Tengeneza store ya kwanza ya biashara yako.",
+    "Unda duka la kwanza la biashara yako.",
+    "Créez le premier magasin de votre entreprise.",
+    "Crie a primeira loja do seu negócio.",
+    "أنشئ أول متجر لنشاطك التجاري.",
+    "Cree la primera tienda de su negocio.",
+    "为您的企业创建首家门店。"
+  ],
+  [
+    "Summary",
+    "Muhtasari",
+    "Résumé",
+    "Resumo",
+    "ملخص",
+    "Resumen",
+    "摘要"
+  ],
+  [
+    "Business",
+    "Biashara",
+    "Entreprise",
+    "Negócio",
+    "النشاط التجاري",
+    "Negocio",
+    "企业"
+  ],
+  [
+    "Timezone itawekwa kwenye DB mara moja tu (onboarding-only). Baadaye itakuwa locked.",
+    "Ukanda wa saa utawekwa mara moja tu wakati wa kuanzisha. Baadaye utafungwa.",
+    "Le fuseau horaire est défini une seule fois à l’inscription, puis verrouillé.",
+    "O fuso horário é definido uma única vez na configuração inicial e depois bloqueado.",
+    "تُضبط المنطقة الزمنية مرة واحدة أثناء الإعداد الأولي ثم تُقفل.",
+    "La zona horaria se fija una vez durante la configuración inicial y después se bloquea.",
+    "时区仅在初始设置时设定一次，之后将锁定。"
+  ],
+  [
+    "Store name",
+    "Jina la duka",
+    "Nom du magasin",
+    "Nome da loja",
+    "اسم المتجر",
+    "Nombre de la tienda",
+    "门店名称"
+  ],
+  [
+    "e.g. SMART MEN",
+    "mf. SMART MEN",
+    "ex. SMART MEN",
+    "ex.: SMART MEN",
+    "مثال: SMART MEN",
+    "p. ej., SMART MEN",
+    "例如：SMART MEN"
+  ],
+  [
+    "Tip: Tumia jina fupi na rahisi (mfano: SMART MEN, JOFU SIDO, SOWETO BRANCH).",
+    "Dokezo: Tumia jina fupi na rahisi (mfano: SMART MEN, JOFU SIDO, SOWETO BRANCH).",
+    "Conseil : choisissez un nom court et simple (ex. : SMART MEN, JOFU SIDO, SOWETO BRANCH).",
+    "Dica: use um nome curto e simples (ex.: SMART MEN, JOFU SIDO, SOWETO BRANCH).",
+    "نصيحة: استخدم اسمًا قصيرًا وبسيطًا (مثل SMART MEN، JOFU SIDO، SOWETO BRANCH).",
+    "Consejo: use un nombre corto y sencillo (p. ej., SMART MEN, JOFU SIDO, SOWETO BRANCH).",
+    "提示：请使用简短易记的名称（例如 SMART MEN、JOFU SIDO、SOWETO BRANCH）。"
+  ]
+]

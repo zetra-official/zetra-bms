@@ -1,3 +1,6 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
+import { summarizeSales, readStockValue } from "@/src/business/recordIntegrity";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -182,38 +185,7 @@ function subtractFloor(a: number, b: number) {
   return Math.max(0, toNum(a) - toNum(b));
 }
 
-function extractScalarValue(x: any): number {
-  if (x == null) return 0;
-  if (typeof x === "number" || typeof x === "string") return toNum(x);
 
-  if (typeof x === "object" && !Array.isArray(x)) {
-    const known =
-      x?.value ??
-      x?.amount ??
-      x?.total ??
-      x?.sum ??
-      x?.stock_value ??
-      x?.stock_on_hand_value ??
-      x?.on_hand_value ??
-      x?.stock_in_value ??
-      x?.stock_in ??
-      x?.in_value ??
-      x?.received_value;
-
-    if (known != null) return toNum(known);
-
-    const keys = Object.keys(x);
-    if (keys.length === 1) return toNum((x as any)[keys[0]]);
-
-    for (const k of keys) {
-      const v = (x as any)[k];
-      const n = Number(v);
-      if (Number.isFinite(n)) return n;
-    }
-  }
-
-  return 0;
-}
 
 function useAutoRefresh(cb: () => void, enabled: boolean, ms: number) {
   const cbRef = useRef(cb);
@@ -362,6 +334,8 @@ function MetricPill({
 }
 
 export default function FinanceLiveScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
   const org = useOrg();
   const { width } = useWindowDimensions();
@@ -460,29 +434,7 @@ export default function FinanceLiveScreen() {
 
       const list = (Array.isArray(data) ? data : []) as any[];
 
-      const pickAmount = (r: any) => {
-        const candidates = [
-          r?.total_amount,
-          r?.total,
-          r?.amount,
-          r?.grand_total,
-          r?.paid_amount,
-          r?.revenue,
-        ];
-        for (const c of candidates) {
-          const n = Number(c);
-          if (Number.isFinite(n)) return n;
-        }
-        return 0;
-      };
-
-      const isCancelled = (r: any) => {
-        const st = String(r?.status ?? "").toLowerCase().trim();
-        return st === "cancelled" || st === "canceled" || st === "void";
-      };
-
-      const total = list.reduce((acc, r) => acc + toNum(pickAmount(r)), 0);
-      const orders = list.reduce((acc, r) => acc + (isCancelled(r) ? 0 : 1), 0);
+      const { total, orders } = summarizeSales(list);
       const currency = String(list?.[0]?.currency ?? "TZS").trim() || "TZS";
 
       return { total, orders, currency };
@@ -640,8 +592,7 @@ export default function FinanceLiveScreen() {
       } as any);
       if (error) throw error;
 
-      const raw = Array.isArray(data) ? data[0] : data;
-      return extractScalarValue(raw);
+      return readStockValue(data);
     },
     [orgId]
   );
@@ -740,6 +691,7 @@ export default function FinanceLiveScreen() {
     return sortedRows.length ? sortedRows[0].storeId : null;
   }, [sortedRows]);
 
+  const overviewAvailable = !loading && !err && rows.length > 0;
   const totals = useMemo(() => {
     return rows.reduce(
       (acc, row) => {
@@ -838,8 +790,7 @@ export default function FinanceLiveScreen() {
 
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18 }} numberOfLines={1}>
-                Live Finance
-              </Text>
+                {uiText("Live Finance")}</Text>
               <Text style={{ color: UI.muted, fontWeight: "800" }} numberOfLines={1}>
                 {scope === "ALL" ? `PRO • ${currentStoreLabel}` : `${orgName} • ${currentStoreLabel}`}
               </Text>
@@ -873,19 +824,18 @@ export default function FinanceLiveScreen() {
 
         <Card style={{ gap: 12 }}>
           <Text style={{ color: UI.faint, fontWeight: "900", fontSize: 12, letterSpacing: 0.4 }}>
-            LIVE SCOPE
-          </Text>
+            {uiText("LIVE SCOPE")}</Text>
 
           <View style={{ flexDirection: "row", gap: 10 }}>
             <Chip
               active={scope === "STORE"}
-              label="STORE"
+              label={uiText("STORE")}
               onPress={() => setScope("STORE")}
             />
             {canAll ? (
               <Chip
                 active={scope === "ALL"}
-                label="ALL STORES"
+                label={uiText("ALL STORES")}
                 onPress={() => setScope("ALL")}
               />
             ) : null}
@@ -913,7 +863,7 @@ export default function FinanceLiveScreen() {
                 padding: 12,
               }}
             >
-              <Text style={{ color: UI.danger, fontWeight: "900" }}>{err}</Text>
+              <Text style={{ color: UI.danger, fontWeight: "900" }}>{systemText(err)}</Text>
             </Card>
           ) : null}
         </Card>
@@ -922,8 +872,7 @@ export default function FinanceLiveScreen() {
 
         <Card style={{ gap: 12 }}>
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-            Live Overview • Today
-          </Text>
+            {uiText("Live Overview • Today")}</Text>
 
           <View
             style={{
@@ -933,38 +882,36 @@ export default function FinanceLiveScreen() {
             }}
           >
             <View style={{ width: isMobileWeb ? "100%" : overviewColumns === 3 ? "31.8%" : "48.2%" }}>
-              <MiniStat label="Sales" value={fmtMoney(totals.sales)} />
+              <MiniStat label={uiText("Sales")} value={overviewAvailable ? fmtMoney(totals.sales) : "—"} />
             </View>
 
             <View style={{ width: isMobileWeb ? "100%" : overviewColumns === 3 ? "31.8%" : "48.2%" }}>
-              <MiniStat label="Expenses" value={fmtMoney(totals.expenses)} />
+              <MiniStat label={uiText("Expenses")} value={overviewAvailable ? fmtMoney(totals.expenses) : "—"} />
             </View>
 
             <View style={{ width: isMobileWeb ? "100%" : overviewColumns === 3 ? "31.8%" : "48.2%" }}>
-              <MiniStat label="Orders" value={String(totals.orders)} />
+              <MiniStat label={uiText("Orders")} value={overviewAvailable ? String(totals.orders) : "—"} />
             </View>
 
             <View style={{ width: isMobileWeb ? "100%" : overviewColumns === 3 ? "31.8%" : "48.2%" }}>
-              <MiniStat label="Money In" value={fmtMoney(totals.moneyIn)} />
+              <MiniStat label={uiText("Money In")} value={overviewAvailable ? fmtMoney(totals.moneyIn) : "—"} />
             </View>
 
             <View style={{ width: isMobileWeb ? "100%" : overviewColumns === 3 ? "31.8%" : "48.2%" }}>
-              <MiniStat label="Stock Value" value={fmtMoney(totals.stockValue)} />
+              <MiniStat label={uiText("Stock Value")} value={overviewAvailable ? fmtMoney(totals.stockValue) : "—"} />
             </View>
 
             <View style={{ width: isMobileWeb ? "100%" : overviewColumns === 3 ? "31.8%" : "48.2%" }}>
               <MiniStat
-                label="Profit"
-                value={isOwner ? fmtMoney(totals.profit) : "—"}
-                hint={isOwner ? "owner-only" : "owner only"}
+                label={uiText("Profit")}
+                value={overviewAvailable && isOwner ? fmtMoney(totals.profit) : "—"}
+                hint={isOwner ? uiText("owner-only") : uiText("owner only")}
               />
             </View>
           </View>
 
           <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 20 }}>
-            Hapa unaona live snapshot ya leo. ALL STORES inaonyesha aggregate ya organization.
-            STORE inaonyesha store moja moja.
-          </Text>
+            {uiText("Hapa unaona live snapshot ya leo. ALL STORES inaonyesha aggregate ya organization. STORE inaonyesha store moja moja.")}</Text>
 
           {scope === "ALL" && sortedRows.length ? (
             <View
@@ -978,11 +925,11 @@ export default function FinanceLiveScreen() {
               }}
             >
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 13 }}>
-                Top Performer Today: {sortedRows[0].storeName}
+                {uiText("Top Performer Today:")}{sortedRows[0].storeName}
               </Text>
               <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 4 }}>
-                Sales {fmtMoney(sortedRows[0].sales)} • Money In {fmtMoney(sortedRows[0].moneyIn)}
-                {isOwner ? ` • Profit ${fmtMoney(toNum(sortedRows[0].profit))}` : ""}
+                {uiText("Sales")}{fmtMoney(sortedRows[0].sales)} {uiText("• Money In")}{fmtMoney(sortedRows[0].moneyIn)}
+                {isOwner ? uiText(" • Profit {p0}", {p0: (fmtMoney(toNum(sortedRows[0].profit)))}) : ""}
               </Text>
             </View>
           ) : null}
@@ -1046,7 +993,7 @@ export default function FinanceLiveScreen() {
                       {row.storeName}
                     </Text>
                     <Text style={{ color: UI.muted, fontWeight: "800" }} numberOfLines={1}>
-                      {isTopPerformer ? "Top performer right now" : "Live store snapshot"}
+                      {isTopPerformer ? uiText("Top performer right now") : uiText("Live store snapshot")}
                     </Text>
                   </View>
 
@@ -1062,7 +1009,7 @@ export default function FinanceLiveScreen() {
                       }}
                     >
                       <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }}>
-                        TOP #{idx + 1}
+                        {uiText("TOP #")}{idx + 1}
                       </Text>
                     </View>
                   ) : (
@@ -1093,42 +1040,42 @@ backgroundColor: "rgba(241,245,249,0.72)",
                 >
                   <View style={{ minWidth: rowMetricMinWidth, flexGrow: isDesktopWeb ? 1 : 0 }}>
                     <MetricPill
-                      label="Sales"
+                      label={uiText("Sales")}
                       value={fmtMoney(row.sales)}
                       tone={getMetricTone(row.sales, "sales")}
                     />
                   </View>
                   <View style={{ minWidth: rowMetricMinWidth, flexGrow: isDesktopWeb ? 1 : 0 }}>
                     <MetricPill
-                      label="Money In"
+                      label={uiText("Money In")}
                       value={fmtMoney(row.moneyIn)}
                       tone={getMetricTone(row.moneyIn, "moneyIn")}
                     />
                   </View>
                   <View style={{ minWidth: rowMetricMinWidth, flexGrow: isDesktopWeb ? 1 : 0 }}>
                     <MetricPill
-                      label="Expenses"
+                      label={uiText("Expenses")}
                       value={fmtMoney(row.expenses)}
                       tone={getMetricTone(row.expenses, "expenses")}
                     />
                   </View>
                   <View style={{ minWidth: rowMetricMinWidth, flexGrow: isDesktopWeb ? 1 : 0 }}>
                     <MetricPill
-                      label="Stock Value"
+                      label={uiText("Stock Value")}
                       value={fmtMoney(row.stockValue)}
                       tone="neutral"
                     />
                   </View>
                   <View style={{ minWidth: rowMetricMinWidth, flexGrow: isDesktopWeb ? 1 : 0 }}>
                     <MetricPill
-                      label="Orders"
+                      label={uiText("Orders")}
                       value={String(row.orders)}
                       tone="neutral"
                     />
                   </View>
                   <View style={{ minWidth: rowMetricMinWidth, flexGrow: isDesktopWeb ? 1 : 0 }}>
                     <MetricPill
-                      label="Profit"
+                      label={uiText("Profit")}
                       value={isOwner ? fmtMoney(toNum(row.profit)) : "—"}
                       tone={isOwner ? getMetricTone(toNum(row.profit), "profit") : "neutral"}
                     />
@@ -1153,8 +1100,8 @@ backgroundColor: "rgba(241,245,249,0.72)",
                     }}
                   >
                     {isTopPerformer
-                      ? "Store hii inaongoza kwa live performance ya sasa."
-                      : "Open detail kuona finance history ya store hii moja kwa moja."}
+                      ? uiText("Store hii inaongoza kwa live performance ya sasa.")
+                      : uiText("Open detail kuona finance history ya store hii moja kwa moja.")}
                   </Text>
 
                   <Pressable
@@ -1185,8 +1132,7 @@ backgroundColor: "rgba(241,245,249,0.72)",
                     })}
                   >
                     <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }}>
-                      OPEN DETAIL
-                    </Text>
+                      {uiText("OPEN DETAIL")}</Text>
                   </Pressable>
                 </View>
               </Card>
@@ -1202,8 +1148,7 @@ backgroundColor: "rgba(241,245,249,0.72)",
               }}
             >
               <Text style={{ color: UI.muted, fontWeight: "800" }}>
-                No live store data yet.
-              </Text>
+                {uiText("No live store data yet.")}</Text>
             </Card>
           ) : null}
         </View>

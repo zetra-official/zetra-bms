@@ -1,3 +1,4 @@
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/stores/supplier-history.tsx
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -55,6 +56,7 @@ function isThisMonth(d: Date, now = new Date()) {
 }
 
 export default function SupplierHistoryScreen() {
+ const uiText=useCommonText();
   const router = useRouter();
   const params = useLocalSearchParams<{
     supplierId?: string | string[];
@@ -142,18 +144,16 @@ export default function SupplierHistoryScreen() {
 
           <View style={{ flex: 1 }}>
             <Text style={{ color: theme.colors.text, fontSize: 26, fontWeight: "900" }}>
-              Supplier History
-            </Text>
+              {uiText("Supplier History")}</Text>
             <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-              {supplierName}
+              {(String((one(params.supplierName) ?? uiText("Supplier"))).trim() || uiText("Supplier"))}
             </Text>
           </View>
         </View>
 
         <Card style={{ gap: 10 }}>
           <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
-            History Filters
-          </Text>
+            {uiText("History Filters")}</Text>
 
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
             {[
@@ -192,7 +192,7 @@ export default function SupplierHistoryScreen() {
           </View>
 
           <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-            Entries: {visibleRows.length} • Qty: {totalQty}
+            {uiText("Entries:")}{visibleRows.length} {uiText("• Qty:")}{totalQty}
           </Text>
         </Card>
 
@@ -200,14 +200,12 @@ export default function SupplierHistoryScreen() {
           <View style={{ alignItems: "center", paddingTop: 20 }}>
             <ActivityIndicator />
             <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 8 }}>
-              Loading supplier history...
-            </Text>
+              {uiText("Loading supplier history...")}</Text>
           </View>
         ) : visibleRows.length === 0 ? (
           <Card>
             <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>
-              Hakuna stock history kwenye filter hii.
-            </Text>
+              {uiText("Hakuna stock history kwenye filter hii.")}</Text>
           </Card>
         ) : (
           visibleRows.map((r, index) => (
@@ -215,11 +213,11 @@ export default function SupplierHistoryScreen() {
               <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-                    {r.product_name ?? "Product"}
+                    {r.product_name ?? uiText("Product")}
                   </Text>
 
                   <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                    SKU: {r.sku ?? "—"} • Store: {r.store_name ?? "—"}
+                    {uiText("SKU:")}{r.sku ?? "—"} {uiText("• Store:")}{r.store_name ?? "—"}
                   </Text>
                 </View>
 
@@ -240,20 +238,20 @@ export default function SupplierHistoryScreen() {
               </View>
 
               <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                Qty: {Number(r.amount ?? 0)}
+                {uiText("Qty:")}{Number(r.amount ?? 0)}
               </Text>
 
               <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                Invoice / Ref: {r.supplier_invoice_no || "—"}
+                {uiText("Invoice / Ref:")}{r.supplier_invoice_no || "—"}
               </Text>
 
               <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                Date: {fmtDate(r.created_at)}
+                {uiText("Date:")}{fmtDate(r.created_at)}
               </Text>
 
               {!!String(r.note ?? "").trim() && (
                 <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                  Note: {String(r.note ?? "").trim()}
+                  {uiText("Note:")}{String(r.note ?? "").trim()}
                 </Text>
               )}
             </Card>

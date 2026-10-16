@@ -1,4 +1,6 @@
-﻿// app/(tabs)/club/orders/create/index.tsx
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+﻿import {useCommonText} from "@/src/i18n/useCommonText";
+// app/(tabs)/club/orders/create/index.tsx
 import { supabase } from "@/src/supabase/supabaseClient";
 import { Card } from "@/src/ui/Card";
 import { Screen } from "@/src/ui/Screen";
@@ -49,6 +51,8 @@ function asMoney(x: string) {
 }
 
 export default function CreateClubOrderScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -239,7 +243,7 @@ export default function CreateClubOrderScreen() {
     if (fromPost) {
       const first = items?.[0];
       if (!clean(first?.product_name)) {
-        Alert.alert("Order", "Andika angalau item name kabla ya kutuma order.");
+        Alert.alert(uiText("Order"), uiText("Andika angalau item name kabla ya kutuma order."));
         return;
       }
     }
@@ -254,7 +258,7 @@ export default function CreateClubOrderScreen() {
       .filter((x) => x.product_name.length && Number(x.qty) >= 1);
 
     if (!payloadItems.length) {
-      Alert.alert("Order", "Weka angalau item 1 (jina + qty).");
+      Alert.alert(uiText("Order"), uiText("Weka angalau item 1 (jina + qty)."));
       return;
     }
 
@@ -275,9 +279,9 @@ export default function CreateClubOrderScreen() {
 
       const orderId = clean(data);
 
-      Alert.alert("Order", "Order imetumwa ✅", [
+      Alert.alert(uiText("Order"), uiText("Order imetumwa ✅"), [
         {
-          text: "OPEN",
+          text: uiText("OPEN"),
           onPress: () => {
             if (!orderId) return router.back();
 
@@ -288,10 +292,10 @@ export default function CreateClubOrderScreen() {
             } as any);
           },
         },
-        { text: "OK" },
+        { text: uiText("OK") },
       ]);
     } catch (e: any) {
-      Alert.alert("Order", e?.message ?? "Failed to create order");
+      Alert.alert(uiText("Order"), e?.message ?? uiText("Failed to create order"));
     } finally {
       setBusy(false);
     }
@@ -321,9 +325,9 @@ export default function CreateClubOrderScreen() {
               </View>
 
               <View>
-                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>{title}</Text>
+                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>{uiText("Create Order")}</Text>
                 <Text style={{ color: theme.colors.faint, fontWeight: "900", fontSize: 12 }}>
-                  Store: {storeName ? storeName : storeId ? storeId.slice(0, 8) + "…" : "—"}
+                  {uiText("Store:")}{storeName ? storeName : storeId ? storeId.slice(0, 8) + "…" : "—"}
                 </Text>
               </View>
             </View>
@@ -343,7 +347,7 @@ export default function CreateClubOrderScreen() {
                 },
               ]}
             >
-              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Back</Text>
+              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Back")}</Text>
             </Pressable>
           </View>
         </Card>
@@ -354,7 +358,7 @@ export default function CreateClubOrderScreen() {
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                 <Ionicons name="sparkles-outline" size={18} color={theme.colors.emerald} />
-                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Post auto-fill</Text>
+                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Post auto-fill")}</Text>
               </View>
 
               <Pressable
@@ -373,21 +377,21 @@ export default function CreateClubOrderScreen() {
                 ]}
               >
                 <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                  {previewLoading ? "Loading..." : "Refresh"}
+                  {previewLoading ? uiText("Loading...") : uiText("Refresh")}
                 </Text>
               </Pressable>
             </View>
 
             {!!previewErr ? (
               <Text style={{ marginTop: 10, color: theme.colors.danger, fontWeight: "900" }}>
-                {previewErr}
+                {systemText(previewErr)}
               </Text>
             ) : null}
 
             {previewLoading ? (
               <View style={{ marginTop: 10, flexDirection: "row", alignItems: "center", gap: 10 }}>
                 <ActivityIndicator />
-                <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>Loading product + price from post…</Text>
+                <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>{uiText("Loading product + price from post…")}</Text>
               </View>
             ) : null}
           </Card>
@@ -395,12 +399,12 @@ export default function CreateClubOrderScreen() {
 
         {/* ✅ Customer block */}
         <Card style={{ padding: 14, gap: 10 }}>
-          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14 }}>Customer details</Text>
+          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14 }}>{uiText("Customer details")}</Text>
 
           <TextInput
             value={customerName}
             onChangeText={setCustomerName}
-            placeholder="Customer name (required)"
+            placeholder={uiText("Customer name (required)")}
             placeholderTextColor={theme.colors.muted}
             style={{
               height: 44,
@@ -417,7 +421,7 @@ export default function CreateClubOrderScreen() {
           <TextInput
             value={customerPhone}
             onChangeText={setCustomerPhone}
-            placeholder="Phone (required)"
+            placeholder={uiText("Phone (required)")}
             placeholderTextColor={theme.colors.muted}
             keyboardType="phone-pad"
             style={{
@@ -433,13 +437,12 @@ export default function CreateClubOrderScreen() {
           />
 
           <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 12, lineHeight: 16 }}>
-            NOTE: Hizi details zinaenda kwa muuzaji (anaye-receive order) ili athibitishe na kuendelea na malipo.
-          </Text>
+            {uiText("NOTE: Hizi details zinaenda kwa muuzaji (anaye-receive order) ili athibitishe na kuendelea na malipo.")}</Text>
         </Card>
 
         {/* ✅ Items */}
         <Card style={{ padding: 14, gap: 12 }}>
-          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14 }}>Items</Text>
+          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14 }}>{uiText("Items")}</Text>
 
           {items.map((it) => {
             const lockItem =
@@ -458,7 +461,7 @@ export default function CreateClubOrderScreen() {
                 }}
               >
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                  <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>Item #{it.key}</Text>
+                  <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>{uiText("Item #")}{it.key}</Text>
 
                   {!fromPost ? (
                     <Pressable
@@ -476,7 +479,7 @@ export default function CreateClubOrderScreen() {
                         },
                       ]}
                     >
-                      <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>Remove</Text>
+                      <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{uiText("Remove")}</Text>
                     </Pressable>
                   ) : (
                     <View
@@ -489,7 +492,7 @@ export default function CreateClubOrderScreen() {
                         backgroundColor: theme.colors.emeraldSoft,
                       }}
                     >
-                      <Text style={{ color: theme.colors.text, fontWeight: "900" }}>AUTO</Text>
+                      <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("AUTO")}</Text>
                     </View>
                   )}
                 </View>
@@ -498,7 +501,7 @@ export default function CreateClubOrderScreen() {
                   value={it.product_name}
                   onChangeText={(v) => updateLine(it.key, { product_name: v })}
                   editable={!lockItem}
-                  placeholder="Product name"
+                  placeholder={uiText("Product name")}
                   placeholderTextColor={theme.colors.muted}
                   style={{
                     height: 44,
@@ -515,7 +518,7 @@ export default function CreateClubOrderScreen() {
 
                 <View style={{ flexDirection: "row", gap: 10 }}>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ color: theme.colors.faint, fontWeight: "900", marginBottom: 6 }}>Qty</Text>
+                    <Text style={{ color: theme.colors.faint, fontWeight: "900", marginBottom: 6 }}>{uiText("Qty")}</Text>
                     <TextInput
                       value={it.qty}
                       onChangeText={(v) => updateLine(it.key, { qty: v })}
@@ -537,8 +540,7 @@ export default function CreateClubOrderScreen() {
 
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: theme.colors.faint, fontWeight: "900", marginBottom: 6 }}>
-                      Price
-                    </Text>
+                      {uiText("Price")}</Text>
                     <TextInput
                       value={it.unit_price}
                       onChangeText={(v) => updateLine(it.key, { unit_price: v })}
@@ -562,17 +564,15 @@ export default function CreateClubOrderScreen() {
                 </View>
 
                 <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                  Line total: {fmt(asMoney(it.unit_price) * asQty(it.qty))}
+                  {uiText("Line total:")}{fmt(asMoney(it.unit_price) * asQty(it.qty))}
                 </Text>
 
                 {lockItem ? (
                   <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 12, lineHeight: 16 }}>
-                    Product & price zimetoka kwenye post (snapshot). Customer anaweka qty tu.
-                  </Text>
+                    {uiText("Product & price zimetoka kwenye post (snapshot). Customer anaweka qty tu.")}</Text>
                 ) : fromPost && it.key === "1" ? (
                   <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 12, lineHeight: 16 }}>
-                    Post hii haina product ya DB. Andika item manually kisha tuma order kwa seller.
-                  </Text>
+                    {uiText("Post hii haina product ya DB. Andika item manually kisha tuma order kwa seller.")}</Text>
                 ) : null}
               </Card>
             );
@@ -598,15 +598,15 @@ export default function CreateClubOrderScreen() {
               ]}
             >
               <Ionicons name="add-circle-outline" size={18} color={theme.colors.text} />
-              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Add item</Text>
+              <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Add item")}</Text>
             </Pressable>
           ) : null}
 
-          <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 6 }}>Note</Text>
+          <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 6 }}>{uiText("Note")}</Text>
           <TextInput
             value={note}
             onChangeText={setNote}
-            placeholder="Optional note..."
+            placeholder={uiText("Optional note...")}
             placeholderTextColor={theme.colors.muted}
             multiline
             style={{
@@ -623,14 +623,14 @@ export default function CreateClubOrderScreen() {
           />
 
           <Card style={{ padding: 12, backgroundColor: theme.colors.surface2, borderColor: theme.colors.borderSoft }}>
-            <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>Summary</Text>
+            <Text style={{ color: theme.colors.faint, fontWeight: "900" }}>{uiText("Summary")}</Text>
             <View style={{ marginTop: 8, gap: 6 }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Total qty</Text>
+                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Total qty")}</Text>
                 <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{String(totalQty)}</Text>
               </View>
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>Subtotal</Text>
+                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Subtotal")}</Text>
                 <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{fmt(subtotal)}</Text>
               </View>
             </View>
@@ -657,13 +657,12 @@ export default function CreateClubOrderScreen() {
           >
             <Ionicons name="send-outline" size={18} color={theme.colors.emerald} />
             <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-              {busy ? "Sending..." : "Submit Order"}
+              {busy ? uiText("Sending...") : uiText("Submit Order")}
             </Text>
           </Pressable>
 
           <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 12, lineHeight: 16 }}>
-            NOTE: Totals zinahesabiwa UI kwa preview; DB bado inafanya validation/usalama kwenye function.
-          </Text>
+            {uiText("NOTE: Totals zinahesabiwa UI kwa preview; DB bado inafanya validation/usalama kwenye function.")}</Text>
         </Card>
       </View>
     </Screen>

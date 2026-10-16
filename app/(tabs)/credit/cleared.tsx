@@ -1,3 +1,4 @@
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/(tabs)/credit/cleared.tsx
 import { useOrg } from "@/src/context/OrgContext";
 import { supabase } from "@/src/supabase/supabaseClient";
@@ -29,6 +30,7 @@ function fmtTZS(n: number) {
 }
 
 export default function CreditClearedScreen() {
+ const uiText=useCommonText();
   const router = useRouter();
   const { activeStoreId, activeStoreName, activeRole } = useOrg();
 
@@ -133,11 +135,9 @@ export default function CreditClearedScreen() {
 
           <View style={{ flex: 1 }}>
             <Text style={{ color: theme.colors.text, fontSize: 24, fontWeight: "900" }}>
-              Cleared Accounts
-            </Text>
+              {uiText("Cleared Accounts")}</Text>
             <Text style={{ color: theme.colors.muted, marginTop: 4, fontWeight: "800" }}>
-              Credit v2 – Paid Off
-            </Text>
+              {uiText("Credit v2 – Paid Off")}</Text>
           </View>
         </View>
       </View>
@@ -173,8 +173,7 @@ export default function CreditClearedScreen() {
 
           <View style={{ flex: 1 }}>
             <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
-              Cleared Accounts
-            </Text>
+              {uiText("Cleared Accounts")}</Text>
             <Text style={{ color: theme.colors.faint, fontWeight: "900", marginTop: 4 }}>
               {headerSubtitle}
             </Text>
@@ -191,10 +190,9 @@ export default function CreditClearedScreen() {
             gap: 6,
           }}
         >
-          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>Info</Text>
+          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Info")}</Text>
           <Text style={{ color: theme.colors.muted, fontWeight: "800", lineHeight: 18 }}>
-            Hawa ni wateja waliomaliza deni (balance = 0). Unabaki na history yao hapa.
-          </Text>
+            {uiText("Hawa ni wateja waliomaliza deni (balance = 0). Unabaki na history yao hapa.")}</Text>
         </View>
 
         {!activeStoreId ? (
@@ -208,11 +206,9 @@ export default function CreditClearedScreen() {
             }}
           >
             <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>
-              Chagua store kwanza
-            </Text>
+              {uiText("Chagua store kwanza")}</Text>
             <Text style={{ color: theme.colors.danger, marginTop: 4 }}>
-              Activate store kisha list itaonekana hapa.
-            </Text>
+              {uiText("Activate store kisha list itaonekana hapa.")}</Text>
           </View>
         ) : null}
 
@@ -237,11 +233,9 @@ export default function CreditClearedScreen() {
         ) : rows.length === 0 && activeStoreId ? (
           <View style={{ paddingVertical: 10 }}>
             <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-              No cleared accounts yet.
-            </Text>
+              {uiText("No cleared accounts yet.")}</Text>
             <Text style={{ color: theme.colors.faint, marginTop: 6 }}>
-              (Wakitoka kwenye wadaiwa—baada ya malipo kamili—wataonekana hapa.)
-            </Text>
+              {uiText("(Wakitoka kwenye wadaiwa—baada ya malipo kamili—wataonekana hapa.)")}</Text>
           </View>
         ) : (
           <FlatList
@@ -274,14 +268,14 @@ export default function CreditClearedScreen() {
                 >
                   <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
                     <View style={{ flex: 1 }}>
-                      <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{name}</Text>
+                      <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{(item.customer_name ?? uiText("Customer"))}</Text>
                       <Text style={{ color: theme.colors.faint, marginTop: 4, fontWeight: "800" }}>
-                        {phone}
+                        {(item.phone ?? uiText("No phone"))}
                       </Text>
                     </View>
 
                     <View style={{ alignItems: "flex-end" }}>
-                      <Text style={{ color: theme.colors.muted, fontSize: 12 }}>Balance</Text>
+                      <Text style={{ color: theme.colors.muted, fontSize: 12 }}>{uiText("Balance")}</Text>
                       <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
                         {fmtTZS(Math.max(0, bal))}
                       </Text>
@@ -289,7 +283,7 @@ export default function CreditClearedScreen() {
                   </View>
 
                   <View style={{ height: 10 }} />
-                  <Text style={{ color: theme.colors.emerald, fontWeight: "900" }}>Open →</Text>
+                  <Text style={{ color: theme.colors.emerald, fontWeight: "900" }}>{uiText("Open →")}</Text>
                 </Pressable>
               );
             }}
@@ -311,8 +305,7 @@ export default function CreditClearedScreen() {
           })}
         >
           <Text style={{ color: theme.colors.emerald, fontWeight: "900", fontSize: 16 }}>
-            Refresh
-          </Text>
+            {uiText("Refresh")}</Text>
         </Pressable>
       </Card>
     </Screen>

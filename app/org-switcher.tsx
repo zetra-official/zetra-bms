@@ -1,3 +1,4 @@
+import {useCommonText} from "@/src/i18n/useCommonText";
 import { useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
@@ -150,6 +151,7 @@ async function fetchActiveOrgPlanInfo(
 }
 
 export default function OrgSwitcherScreen() {
+ const uiText=useCommonText();
   const router = useRouter();
   const { width, height } = useWindowDimensions();
 
@@ -248,7 +250,7 @@ export default function OrgSwitcherScreen() {
       `Organizations zinazoruhusiwa: ${allowed}\n\n` +
       `Ili kuongeza organization nyingine, tafadhali fanya upgrade.`;
 
-    Alert.alert("Upgrade Required", body, [{ text: "Sawa" }]);
+    Alert.alert(uiText("Upgrade Required"), body, [{ text: uiText("Sawa") }]);
   };
 
   const handleLimitPopup = async (errMsg: string) => {
@@ -288,13 +290,13 @@ export default function OrgSwitcherScreen() {
         existingSameName.find((x) => x.organization_id === activeOrgId) ?? existingSameName[0];
 
       Alert.alert(
-        "Organization already exists",
-        `Organization "${desired}" tayari ipo. Unataka ku-switch badala ya ku-create nyingine?`,
+        uiText("Organization already exists"),
+        uiText("Organization \"{p0}\" tayari ipo. Unataka ku-switch badala ya ku-create nyingine?", {p0: (desired)}),
         [
-          { text: "Cancel", style: "cancel" },
-          { text: "Switch", onPress: () => { void onSwitch(pick.organization_id); } },
+          { text: uiText("Cancel"), style: "cancel" },
+          { text: uiText("Switch"), onPress: () => { void onSwitch(pick.organization_id); } },
           {
-            text: "Create anyway",
+            text: uiText("Create anyway"),
             style: "destructive",
             onPress: async () => {
               setCreating(true);
@@ -306,14 +308,14 @@ export default function OrgSwitcherScreen() {
                 setOrgName("");
                 setStoreName("");
                 setQ("");
-                Alert.alert("Success ✅", "Organization imeundwa");
+                Alert.alert(uiText("Success ✅"), uiText("Organization imeundwa"));
               } catch (e: any) {
                 const msg = clean(e?.message);
                 const lim = parseOrgLimitError(msg);
                 if (lim) {
                   await handleLimitPopup(msg);
                 } else {
-                  Alert.alert("Failed", msg || "Failed to create organization");
+                  Alert.alert(uiText("Failed"), msg || uiText("Failed to create organization"));
                 }
               } finally {
                 setCreating(false);
@@ -334,14 +336,14 @@ export default function OrgSwitcherScreen() {
       setOrgName("");
       setStoreName("");
       setQ("");
-      Alert.alert("Success ✅", "Organization imeundwa");
+      Alert.alert(uiText("Success ✅"), uiText("Organization imeundwa"));
     } catch (e: any) {
       const msg = clean(e?.message);
       const lim = parseOrgLimitError(msg);
       if (lim) {
         await handleLimitPopup(msg);
       } else {
-        Alert.alert("Failed", msg || "Failed to create organization");
+        Alert.alert(uiText("Failed"), msg || uiText("Failed to create organization"));
       }
     } finally {
       setCreating(false);
@@ -349,7 +351,7 @@ export default function OrgSwitcherScreen() {
   };
 const openRenameOrg = (org: OrgItem) => {
     if (org.role !== "owner") {
-      Alert.alert("Not allowed", "Owner pekee ndiye anaweza kubadili jina la organization.");
+      Alert.alert(uiText("Not allowed"), uiText("Owner pekee ndiye anaweza kubadili jina la organization."));
       return;
     }
 
@@ -372,12 +374,12 @@ const openRenameOrg = (org: OrgItem) => {
     if (!org) return;
 
     if (org.role !== "owner") {
-      Alert.alert("Not allowed", "Owner pekee ndiye anaweza kubadili jina la organization.");
+      Alert.alert(uiText("Not allowed"), uiText("Owner pekee ndiye anaweza kubadili jina la organization."));
       return;
     }
 
     if (!newName) {
-      Alert.alert("Required", "Weka jina jipya la organization.");
+      Alert.alert(uiText("Required"), uiText("Weka jina jipya la organization."));
       return;
     }
 
@@ -397,9 +399,9 @@ const openRenameOrg = (org: OrgItem) => {
 
       await refresh();
       closeRenameOrg();
-      Alert.alert("Success ✅", "Jina la organization limebadilishwa.");
+      Alert.alert(uiText("Success ✅"), uiText("Jina la organization limebadilishwa."));
     } catch (e: any) {
-      Alert.alert("Failed", clean(e?.message) || "Failed to rename organization");
+      Alert.alert(uiText("Failed"), clean(e?.message) || uiText("Failed to rename organization"));
     } finally {
       setRenaming(false);
     }
@@ -426,8 +428,7 @@ const openRenameOrg = (org: OrgItem) => {
         >
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: isDesktopWeb ? 34 : 26, fontWeight: "900", color: UI.text }}>
-              Organizations
-            </Text>
+              {uiText("Organizations")}</Text>
 
             <Text
               style={{
@@ -437,8 +438,7 @@ const openRenameOrg = (org: OrgItem) => {
                 fontSize: isDesktopWeb ? 15 : 14,
               }}
             >
-              Switch or create another organization
-            </Text>
+              {uiText("Switch or create another organization")}</Text>
           </View>
 
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
@@ -494,13 +494,12 @@ const openRenameOrg = (org: OrgItem) => {
           >
             <Card style={{ marginTop: 6, gap: 10 }}>
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-                Create Organization
-              </Text>
+                {uiText("Create Organization")}</Text>
 
               <TextInput
                 value={orgName}
                 onChangeText={setOrgName}
-                placeholder="Organization / Business name"
+                placeholder={uiText("Organization / Business name")}
                 placeholderTextColor={UI.faint}
                 style={{
                   borderWidth: 1,
@@ -517,7 +516,7 @@ const openRenameOrg = (org: OrgItem) => {
               <TextInput
                 value={storeName}
                 onChangeText={setStoreName}
-                placeholder="First store name"
+                placeholder={uiText("First store name")}
                 placeholderTextColor={UI.faint}
                 style={{
                   borderWidth: 1,
@@ -532,11 +531,10 @@ const openRenameOrg = (org: OrgItem) => {
               />
 
               <Text style={{ color: UI.muted, fontWeight: "700", marginTop: 2 }}>
-                Tip: Jaza majina yote mawili ndipo “Create & Switch” iwe active.
-              </Text>
+                {uiText("Tip: Jaza majina yote mawili ndipo “Create & Switch” iwe active.")}</Text>
 
               <Button
-                title={creating ? "Creating..." : "Create & Switch"}
+                title={creating ? uiText("Creating...") : uiText("Create & Switch")}
                 onPress={onCreate}
                 disabled={!canCreate}
                 variant="primary"
@@ -555,8 +553,7 @@ const openRenameOrg = (org: OrgItem) => {
               }}
             >
               <Text style={{ color: UI.muted, fontWeight: "800", flex: 1, fontSize: isDesktopWeb ? 15 : 14 }}>
-                Your Organizations
-              </Text>
+                {uiText("Your Organizations")}</Text>
 
               <Pressable
                 onPress={() => setShowAll((v) => !v)}
@@ -570,7 +567,7 @@ const openRenameOrg = (org: OrgItem) => {
                 }}
               >
                 <Text style={{ color: UI.muted, fontWeight: "900" }}>
-                  {showAll ? "Grouped view" : "Show individual"}
+                  {showAll ? uiText("Grouped view") : uiText("Show individual")}
                 </Text>
               </Pressable>
             </View>
@@ -579,7 +576,7 @@ const openRenameOrg = (org: OrgItem) => {
               <TextInput
                 value={q}
                 onChangeText={setQ}
-                placeholder="Search organizations (name or role)..."
+                placeholder={uiText("Search organizations (name or role)...")}
                 placeholderTextColor={UI.faint}
                 style={{
                   borderWidth: 1,
@@ -615,7 +612,7 @@ const openRenameOrg = (org: OrgItem) => {
             <Card style={{ marginTop: 6 }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                 <ActivityIndicator />
-                <Text style={{ color: UI.muted, fontWeight: "800" }}>Loading organizations…</Text>
+                <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("Loading organizations…")}</Text>
               </View>
             </Card>
           ) : null}
@@ -623,12 +620,11 @@ const openRenameOrg = (org: OrgItem) => {
           {!loading && filteredOrgs.length === 0 ? (
             <Card style={{ marginTop: 6 }}>
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-                No organizations found
-              </Text>
+                {uiText("No organizations found")}</Text>
               <Text style={{ color: UI.muted, fontWeight: "700", marginTop: 6 }}>
                 {isNonEmpty(q)
-                  ? "Hakuna kilicholingana na search yako. Jaribu maneno mengine."
-                  : "Bado hujaunda organization. Tumia form ya juu ku-create."}
+                  ? uiText("Hakuna kilicholingana na search yako. Jaribu maneno mengine.")
+                  : uiText("Bado hujaunda organization. Tumia form ya juu ku-create.")}
               </Text>
             </Card>
           ) : null}
@@ -678,8 +674,8 @@ const openRenameOrg = (org: OrgItem) => {
                             numberOfLines={1}
                           >
                             {count > 1
-                              ? `${count} linked memberships in this grouped view`
-                              : "Single organization entry"}
+                              ? uiText("{p0} linked memberships in this grouped view", {p0: (count)})
+                              : uiText("Single organization entry")}
                           </Text>
 
                           <View
@@ -712,8 +708,7 @@ const openRenameOrg = (org: OrgItem) => {
                                 }}
                               >
                                 <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
-                                  ✎ RENAME
-                                </Text>
+                                  {uiText("✎ RENAME")}</Text>
                               </Pressable>
                             ) : null}
                           </View>
@@ -738,8 +733,7 @@ const openRenameOrg = (org: OrgItem) => {
     }}
   >
     <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
-      🏢 PROFILE
-    </Text>
+      {uiText("🏢 PROFILE")}</Text>
   </Pressable>
 ) : null}
                         <View
@@ -763,7 +757,7 @@ const openRenameOrg = (org: OrgItem) => {
                               }}
                             >
                               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
-                                {activeInGroup ? "Open Active" : "Switch"}
+                                {activeInGroup ? uiText("Open Active") : uiText("Switch")}
                               </Text>
                             </View>
                           ) : (
@@ -822,8 +816,7 @@ const openRenameOrg = (org: OrgItem) => {
                               }}
                               numberOfLines={1}
                             >
-                              Ready to open this organization workspace
-                            </Text>
+                              {uiText("Ready to open this organization workspace")}</Text>
 
                             <View
                               style={{
@@ -854,8 +847,7 @@ const openRenameOrg = (org: OrgItem) => {
                                   }}
                                 >
                                   <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
-                                    ✎ RENAME
-                                  </Text>
+                                    {uiText("✎ RENAME")}</Text>
                                 </Pressable>
                               ) : null}
                             </View>
@@ -880,8 +872,7 @@ const openRenameOrg = (org: OrgItem) => {
     }}
   >
     <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
-      🏢 PROFILE
-    </Text>
+      {uiText("🏢 PROFILE")}</Text>
   </Pressable>
 ) : null}
                           <View
@@ -905,7 +896,7 @@ const openRenameOrg = (org: OrgItem) => {
                                 }}
                               >
                                 <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>
-                                  {active ? "Open Active" : "Switch"}
+                                  {active ? uiText("Open Active") : uiText("Switch")}
                                 </Text>
                               </View>
                             ) : (
@@ -944,17 +935,15 @@ const openRenameOrg = (org: OrgItem) => {
       }}
     >
       <Text style={{ color: UI.text, fontWeight: "900", fontSize: 20 }}>
-        Rename Organization
-      </Text>
+        {uiText("Rename Organization")}</Text>
 
       <Text style={{ color: UI.muted, fontWeight: "700" }}>
-        Badili jina la biashara / organization yako.
-      </Text>
+        {uiText("Badili jina la biashara / organization yako.")}</Text>
 
       <TextInput
         value={renameName}
         onChangeText={setRenameName}
-        placeholder="New organization name"
+        placeholder={uiText("New organization name")}
         placeholderTextColor={UI.faint}
         style={{
           borderWidth: 1,
@@ -980,7 +969,7 @@ const openRenameOrg = (org: OrgItem) => {
             opacity: renaming ? 0.6 : 1,
           }}
         >
-          <Text style={{ color: UI.muted, fontWeight: "900" }}>Cancel</Text>
+          <Text style={{ color: UI.muted, fontWeight: "900" }}>{uiText("Cancel")}</Text>
         </Pressable>
 
         <Pressable
@@ -995,7 +984,7 @@ const openRenameOrg = (org: OrgItem) => {
           }}
         >
           <Text style={{ color: "white", fontWeight: "900" }}>
-            {renaming ? "Saving..." : "Save"}
+            {renaming ? uiText("Saving...") : uiText("Save")}
           </Text>
         </Pressable>
       </View>

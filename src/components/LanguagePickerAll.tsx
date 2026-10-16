@@ -1,3 +1,5 @@
+import {useLanguage} from "@/src/i18n/LanguageProvider";
+import {useCommonText} from "@/src/i18n/useCommonText";
 // src/components/LanguagePickerAll.tsx
 import React, { useEffect, useMemo, useState } from "react";
 import {
@@ -73,10 +75,12 @@ type Props = {
 export function LanguagePickerAll({
   value,
   onChange,
-  title = "Language",
+  title,
   disabled,
-  hint = "Select language (drives AI + UI)",
+  hint,
 }: Props) {
+ const uiText = useCommonText();
+ const {language}=useLanguage();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
 
@@ -92,11 +96,11 @@ export function LanguagePickerAll({
     return LANGS.filter((x) => {
       return (
         lower(x.locale).includes(q) ||
-        lower(x.label).includes(q) ||
-        lower(x.subtitle).includes(q)
+        lower(x.label).includes(q) || lower(uiText(x.label)).includes(q) ||
+        lower(x.subtitle).includes(q) || lower(uiText(x.subtitle ?? "")).includes(q)
       );
     });
-  }, [query]);
+  }, [query, uiText]);
 
   useEffect(() => {
     if (!open) setQuery("");
@@ -139,7 +143,7 @@ export function LanguagePickerAll({
 
         <View style={{ flex: 1 }}>
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 14 }}>
-            {title}
+            {title ?? uiText("Language")}
           </Text>
           <Text
             style={{
@@ -150,7 +154,7 @@ export function LanguagePickerAll({
             }}
           >
             {selected
-              ? `${displayTitle(selected)} • Locale: ${selected.locale}`
+              ? uiText("{p0} • Locale: {p1}", {p0: displayTitle({...selected, label: uiText(selected.label)}), p1: selected.locale})
               : hint}
           </Text>
         </View>
@@ -167,6 +171,7 @@ export function LanguagePickerAll({
         <Pressable
           onPress={() => setOpen(false)}
           style={{
+            direction: language==='ar'?'rtl':'ltr',
             flex: 1,
             backgroundColor: "rgba(0,0,0,0.65)",
             padding: 16,
@@ -210,11 +215,9 @@ export function LanguagePickerAll({
 
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-                    Select Language
-                  </Text>
+                    {uiText("Select Language")}</Text>
                   <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 2 }}>
-                    Search by name (Swahili) or locale (sw-TZ)
-                  </Text>
+                    {uiText("Search by name (Swahili) or locale (sw-TZ)")}</Text>
                 </View>
 
                 <Pressable
@@ -257,7 +260,7 @@ export function LanguagePickerAll({
                 <TextInput
                   value={query}
                   onChangeText={setQuery}
-                  placeholder="Search language…"
+                  placeholder={uiText("Search language…")}
                   placeholderTextColor="rgba(255,255,255,0.40)"
                   style={{
                     flex: 1,
@@ -278,8 +281,7 @@ export function LanguagePickerAll({
 
               <View style={{ marginTop: 10 }}>
                 <Text style={{ color: "rgba(255,255,255,0.65)", fontWeight: "800", fontSize: 12 }}>
-                  {filtered.length} languages available
-                </Text>
+                  {filtered.length} {uiText("languages available")}</Text>
               </View>
             </View>
 
@@ -330,11 +332,11 @@ export function LanguagePickerAll({
 
                       <View style={{ flex: 1 }}>
                         <Text style={{ color: UI.text, fontWeight: "900", fontSize: 13 }}>
-                          {item.label}
+                          {uiText(item.label)}
                         </Text>
                         <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 2 }}>
-                          Locale: {item.locale}
-                          {clean(item.subtitle) ? ` • ${item.subtitle}` : ""}
+                          {uiText("Locale:")}{item.locale}
+                          {clean(item.subtitle) ? ` • ${uiText(item.subtitle ?? "")}` : ""}
                         </Text>
                       </View>
 
@@ -348,7 +350,7 @@ export function LanguagePickerAll({
               ListEmptyComponent={() => (
                 <View style={{ padding: 16 }}>
                   <Text style={{ color: UI.muted, fontWeight: "800" }}>
-                    No language found for “{query}”
+                    {uiText("No language found for “{query}”", {query})}
                   </Text>
                 </View>
               )}

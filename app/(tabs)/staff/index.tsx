@@ -1,4 +1,6 @@
-﻿// app/(tabs)/staff/index.tsx
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+﻿import {useCommonText} from "@/src/i18n/useCommonText";
+// app/(tabs)/staff/index.tsx
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import {
@@ -105,6 +107,8 @@ function roleLabel(role: StaffRole | string | null | undefined) {
 }
 
 export default function StaffTabScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
   const { activeOrgId, activeOrgName, activeRole } = useOrg();
 
@@ -193,7 +197,7 @@ export default function StaffTabScreen() {
 
   const openAssign = (membershipId: string) => {
     if (!canManage) {
-      Alert.alert("No Access", "Owner/Admin only.");
+      Alert.alert(uiText("No Access"), uiText("Owner/Admin only."));
       return;
     }
 
@@ -205,7 +209,7 @@ export default function StaffTabScreen() {
 
   const openAdd = () => {
     if (!canManage) {
-      Alert.alert("No Access", "Owner/Admin only.");
+      Alert.alert(uiText("No Access"), uiText("Owner/Admin only."));
       return;
     }
 
@@ -217,7 +221,7 @@ export default function StaffTabScreen() {
 
   const openCommission = () => {
     if (!canManage) {
-      Alert.alert("No Access", "Owner/Admin only.");
+      Alert.alert(uiText("No Access"), uiText("Owner/Admin only."));
       return;
     }
 
@@ -226,7 +230,7 @@ export default function StaffTabScreen() {
 
   const openMySales = () => {
     if (activeRole !== "staff") {
-      Alert.alert("No Access", "Staff only.");
+      Alert.alert(uiText("No Access"), uiText("Staff only."));
       return;
     }
 
@@ -235,7 +239,7 @@ export default function StaffTabScreen() {
 
   const openPayoutProfile = () => {
     if (activeRole !== "staff") {
-      Alert.alert("No Access", "Staff only.");
+      Alert.alert(uiText("No Access"), uiText("Staff only."));
       return;
     }
 
@@ -244,7 +248,7 @@ export default function StaffTabScreen() {
 
   const openCommissionHistory = () => {
     if (activeRole !== "staff") {
-      Alert.alert("No Access", "Staff only.");
+      Alert.alert(uiText("No Access"), uiText("Staff only."));
       return;
     }
 
@@ -253,7 +257,7 @@ export default function StaffTabScreen() {
 
   const openCommissionCashOut = () => {
     if (!canManage) {
-      Alert.alert("No Access", "Owner/Admin only.");
+      Alert.alert(uiText("No Access"), uiText("Owner/Admin only."));
       return;
     }
 
@@ -262,29 +266,29 @@ export default function StaffTabScreen() {
 
   const removeStaff = (r: StaffRow) => {
     if (!canManage) {
-      Alert.alert("No Access", "Owner/Admin only.");
+      Alert.alert(uiText("No Access"), uiText("Owner/Admin only."));
       return;
     }
 
     if (!activeOrgId) {
-      Alert.alert("Missing", "Organization haijapatikana.");
+      Alert.alert(uiText("Missing"), uiText("Organization haijapatikana."));
       return;
     }
 
     if (r.role === "owner") {
-      Alert.alert("Not Allowed", "Owner hawezi kuondolewa kwenye screen hii.");
+      Alert.alert(uiText("Not Allowed"), uiText("Owner hawezi kuondolewa kwenye screen hii."));
       return;
     }
 
     const email = pickEmail(r) ?? shortId(r.user_id);
 
     Alert.alert(
-      "Remove Staff",
-      `Una uhakika unataka kumuondoa ${email}?\n\nAtaondolewa kwenye stores zote na hataweza kuendelea kufanya majukumu yake, lakini history zake za zamani zitabaki salama.`,
+      uiText("Remove Staff"),
+      uiText("Una uhakika unataka kumuondoa {p0}?\n\nAtaondolewa kwenye stores zote na hataweza kuendelea kufanya majukumu yake, lakini history zake za zamani zitabaki salama.", {p0: (email)}),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: uiText("Cancel"), style: "cancel" },
         {
-          text: "Remove",
+          text: uiText("Remove"),
           style: "destructive",
           onPress: async () => {
             setRemovingByMembershipId((p) => ({ ...p, [r.membership_id]: true }));
@@ -299,9 +303,9 @@ export default function StaffTabScreen() {
               if (e) throw e;
 
               await fetchStaff();
-              Alert.alert("Removed ✅", "Staff ameondolewa kikamilifu.");
+              Alert.alert(uiText("Removed ✅"), uiText("Staff ameondolewa kikamilifu."));
             } catch (err: any) {
-              Alert.alert("Failed", err?.message ?? "Imeshindikana kumuondoa staff.");
+              Alert.alert(uiText("Failed"), err?.message ?? uiText("Imeshindikana kumuondoa staff."));
             } finally {
               setRemovingByMembershipId((p) => ({ ...p, [r.membership_id]: false }));
             }
@@ -334,10 +338,8 @@ export default function StaffTabScreen() {
   const info = (r: StaffRow) => {
     const email = pickEmail(r);
     Alert.alert(
-      "Staff Info",
-      `Email: ${email ?? "—"}\nUser: ${r.user_id}\nRole: ${r.role}\nMembership: ${
-        r.membership_id
-      }\nStores: ${(r.stores ?? []).map((s) => s.store_name).join(", ") || "—"}`
+      uiText("Staff Info"),
+      uiText("Email: {p0}\nUser: {p1}\nRole: {p2}\nMembership: {p3}\nStores: {p4}", {p0: (email ?? "—"), p1: (r.user_id), p2: (r.role), p3: (r.membership_id), p4: ((r.stores ?? []).map((s) => s.store_name).join(", ") || "—")})
     );
   };
 
@@ -354,8 +356,7 @@ export default function StaffTabScreen() {
         }}
       >
         <Text style={{ fontSize: 30, fontWeight: "900", color: UI.text, letterSpacing: -0.8 }}>
-          Staff Management
-        </Text>
+          {uiText("Staff Management")}</Text>
 
         <View
           style={{
@@ -367,13 +368,13 @@ export default function StaffTabScreen() {
             gap: 10,
           }}
         >
-          <Text style={{ color: UI.muted, fontWeight: "800" }}>Organization</Text>
+          <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("Organization")}</Text>
           <Text style={{ fontSize: 18, fontWeight: "900", color: UI.text }}>
             {activeOrgName ?? "—"}
           </Text>
 
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-            <Text style={{ color: UI.muted, fontWeight: "800" }}>Role:</Text>
+            <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("Role:")}</Text>
             <View
               style={{
                 borderWidth: 1,
@@ -391,8 +392,7 @@ export default function StaffTabScreen() {
           </View>
 
           <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 20 }}>
-            Owner/Admin anaweza kuongeza staff, ku-assign store, kuweka commission, na kufanya cash out.
-          </Text>
+            {uiText("Owner/Admin anaweza kuongeza staff, ku-assign store, kuweka commission, na kufanya cash out.")}</Text>
         </View>
 
         {!!error && (
@@ -405,7 +405,7 @@ export default function StaffTabScreen() {
               padding: 12,
             }}
           >
-            <Text style={{ color: UI.danger, fontWeight: "900" }}>{error}</Text>
+            <Text style={{ color: UI.danger, fontWeight: "900" }}>{systemText(error)}</Text>
           </View>
         )}
 
@@ -423,8 +423,7 @@ export default function StaffTabScreen() {
               }}
             >
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-                Staff Sales & Commission
-              </Text>
+                {uiText("Staff Sales & Commission")}</Text>
             </Pressable>
 
             <Pressable
@@ -439,8 +438,7 @@ export default function StaffTabScreen() {
               }}
             >
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-                Commission Cash Out
-              </Text>
+                {uiText("Commission Cash Out")}</Text>
             </Pressable>
 
            <Pressable
@@ -460,11 +458,9 @@ export default function StaffTabScreen() {
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-                    Performance Insights
-                  </Text>
+                    {uiText("Performance Insights")}</Text>
                   <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 4 }}>
-                    View best performer and follow-up insights
-                  </Text>
+                    {uiText("View best performer and follow-up insights")}</Text>
                 </View>
 
              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 22 }}>
@@ -489,8 +485,7 @@ export default function StaffTabScreen() {
               }}
             >
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-                My Sales
-              </Text>
+                {uiText("My Sales")}</Text>
             </Pressable>
 
             <Pressable
@@ -505,8 +500,7 @@ export default function StaffTabScreen() {
               }}
             >
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-                Payout Profile
-              </Text>
+                {uiText("Payout Profile")}</Text>
             </Pressable>
 
             <Pressable
@@ -521,8 +515,7 @@ export default function StaffTabScreen() {
               }}
             >
               <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-                Commission History
-              </Text>
+                {uiText("Commission History")}</Text>
             </Pressable>
           </>
         ) : null}
@@ -541,8 +534,7 @@ export default function StaffTabScreen() {
           }}
         >
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-            + Ongeza Mfanyakazi
-          </Text>
+            {uiText("+ Ongeza Mfanyakazi")}</Text>
         </Pressable>
 
         <Pressable
@@ -559,18 +551,17 @@ export default function StaffTabScreen() {
           }}
         >
           <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
-            {loading ? "Loading..." : "Refresh Staff List"}
+            {loading ? uiText("Loading...") : uiText("Refresh Staff List")}
           </Text>
         </Pressable>
 
         <Text style={{ fontWeight: "900", fontSize: 16, color: UI.text }}>
-          Wafanyakazi
-        </Text>
+          {uiText("Wafanyakazi")}</Text>
 
         <TextInput
           value={q}
           onChangeText={setQ}
-          placeholder="Tafuta kwa email / user id / role..."
+          placeholder={uiText("Tafuta kwa email / user id / role...")}
           placeholderTextColor="rgba(255,255,255,0.35)"
           style={{
             borderWidth: 1,
@@ -595,11 +586,9 @@ export default function StaffTabScreen() {
             }}
           >
             <Text style={{ fontWeight: "900", color: UI.text }}>
-              No staff found
-            </Text>
+              {uiText("No staff found")}</Text>
             <Text style={{ marginTop: 6, color: UI.muted, fontWeight: "700" }}>
-              List inajirefresh yenyewe ukifungua. Unaweza pia kudrag juu (pull-to-refresh).
-            </Text>
+              {uiText("List inajirefresh yenyewe ukifungua. Unaweza pia kudrag juu (pull-to-refresh).")}</Text>
           </View>
         ) : (
           filtered.map((r) => {
@@ -640,16 +629,16 @@ export default function StaffTabScreen() {
 
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: UI.text, fontWeight: "900" }}>
-                      {displayTop}
+                      {(email ? email : uiText("User: {p0}", {p0: (shortId(r.user_id))}))}
                     </Text>
 
                     <Text style={{ color: UI.muted, fontWeight: "800", marginTop: 4 }}>
-                      Membership: {shortId(r.membership_id)}
+                      {uiText("Membership:")}{shortId(r.membership_id)}
                     </Text>
 
                     {email ? (
                       <Text style={{ color: UI.faint, fontWeight: "800", marginTop: 4 }}>
-                        User: {shortId(r.user_id)}
+                        {uiText("User:")}{shortId(r.user_id)}
                       </Text>
                     ) : null}
                   </View>
@@ -676,7 +665,7 @@ export default function StaffTabScreen() {
                 </View>
 
                 <View>
-                  <Text style={{ color: UI.muted, fontWeight: "800" }}>Stores</Text>
+                  <Text style={{ color: UI.muted, fontWeight: "800" }}>{uiText("Stores")}</Text>
                   <Text style={{ color: UI.text, fontWeight: "900", marginTop: 4 }}>
                     {storesText}
                   </Text>
@@ -698,8 +687,7 @@ export default function StaffTabScreen() {
                     }}
                   >
                     <Text style={{ color: UI.text, fontWeight: "900" }}>
-                      Assign Store
-                    </Text>
+                      {uiText("Assign Store")}</Text>
                   </Pressable>
 
                   <Pressable
@@ -714,7 +702,7 @@ export default function StaffTabScreen() {
                       alignItems: "center",
                     }}
                   >
-                    <Text style={{ color: UI.text, fontWeight: "900" }}>Info</Text>
+                    <Text style={{ color: UI.text, fontWeight: "900" }}>{uiText("Info")}</Text>
                   </Pressable>
                 </View>
 
@@ -733,14 +721,13 @@ export default function StaffTabScreen() {
                     }}
                   >
                     <Text style={{ color: UI.danger, fontWeight: "900" }}>
-                      {removingByMembershipId[r.membership_id] ? "Removing..." : "Remove Staff"}
+                      {removingByMembershipId[r.membership_id] ? uiText("Removing...") : uiText("Remove Staff")}
                     </Text>
                   </Pressable>
                 ) : null}
 
                 <Text style={{ color: UI.muted, fontWeight: "700", marginTop: 2, lineHeight: 20 }}>
-                  Tip: Bonyeza “Assign Store” kwenye {r.role === "cashier" ? "cashier" : "staff"} card ili uende ku-assign /
-                  ku-unassign (membershipId tayari ✅)
+                  {uiText("Tip: select “Assign Store” on the {p0} card to assign or unassign stores (membershipId ready ✅).", {p0: r.role === "cashier" ? uiText("cashier") : uiText("staff")})}
                 </Text>
               </View>
             );

@@ -248,9 +248,9 @@ export function salesPerformanceToISO(
 }
 
 export function formatSalesPerformanceRange(
-  range: SalesPerformanceRange
+  range: SalesPerformanceRange, locale = "en-GB"
 ): string {
-  const from = range.from.toLocaleDateString("en-GB", {
+  const from = range.from.toLocaleDateString(locale, {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -258,7 +258,7 @@ export function formatSalesPerformanceRange(
 
   const visibleTo = addDays(range.to, -1);
 
-  const to = visibleTo.toLocaleDateString("en-GB", {
+  const to = visibleTo.toLocaleDateString(locale, {
     day: "2-digit",
     month: "short",
     year: "numeric",

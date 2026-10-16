@@ -1,3 +1,5 @@
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
 // app/(tabs)/sales/edit-receipt.tsx
 
 import { useOrg } from "@/src/context/OrgContext";
@@ -126,6 +128,8 @@ type SaleDetail = {
 };
 
 export default function EditReceiptScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
   const router = useRouter();
 
   const params =
@@ -340,8 +344,8 @@ export default function EditReceiptScreen() {
 const loadProducts = useCallback(async () => {
   if (!storeId) {
     Alert.alert(
-      "Products",
-      "Active store haijapatikana."
+      uiText("Products"),
+      uiText("Active store haijapatikana.")
     );
     return;
   }
@@ -381,9 +385,9 @@ const loadProducts = useCallback(async () => {
     setProductOptions(rows);
   } catch (e: any) {
     Alert.alert(
-      "Products",
+      uiText("Products"),
       e?.message ??
-        "Failed to load products"
+        uiText("Failed to load products")
     );
 
     setProductOptions([]);
@@ -396,10 +400,10 @@ const loadProducts = useCallback(async () => {
     useCallback(async () => {
       if (!canEditReceipt) {
         Alert.alert(
-          "Edit not allowed",
+          uiText("Edit not allowed"),
           isOwner
-            ? "Receipt edit haijaruhusiwa."
-            : "Staff/Admin wanaweza ku-edit receipt ya siku hiyo hiyo tu."
+            ? uiText("Receipt edit haijaruhusiwa.")
+            : uiText("Staff/Admin wanaweza ku-edit receipt ya siku hiyo hiyo tu.")
         );
 
         return;
@@ -464,8 +468,8 @@ const addProduct = useCallback(
 
     if (exists) {
       Alert.alert(
-        "Already added",
-        "Product hii tayari ipo kwenye receipt."
+        uiText("Already added"),
+        uiText("Product hii tayari ipo kwenye receipt.")
       );
       return;
     }
@@ -527,8 +531,8 @@ const addProduct = useCallback(
 
         if (items.length <= 1) {
           Alert.alert(
-            "Last item",
-            "Huwezi kuacha receipt bila item. Kama unataka kuondoa item zote, tumia Delete Receipt."
+            uiText("Last item"),
+            uiText("Huwezi kuacha receipt bila item. Kama unataka kuondoa item zote, tumia Delete Receipt.")
           );
 
           return;
@@ -546,7 +550,7 @@ const addProduct = useCallback(
 
         if (Platform.OS === "web") {
           const ok = window.confirm(
-            `Remove ${row?.product_name ?? "item"} from receipt?`
+            uiText("Remove {p0} from receipt?", {p0: row?.product_name ?? uiText("item")})
           );
 
           if (ok) run();
@@ -555,18 +559,16 @@ const addProduct = useCallback(
         }
 
         Alert.alert(
-          "Remove Item",
-          `Unataka kuondoa "${
-            row?.product_name ??
-            "item"
-          }" kwenye receipt hii?`,
+          uiText("Remove Item"),
+          uiText("Unataka kuondoa \"{p0}\" kwenye receipt hii?", {p0: (row?.product_name ??
+            "item")}),
           [
             {
-              text: "Cancel",
+              text: uiText("Cancel"),
               style: "cancel",
             },
             {
-              text: "Remove",
+              text: uiText("Remove"),
               style: "destructive",
               onPress: run,
             },
@@ -661,8 +663,8 @@ const addProduct = useCallback(
     useCallback(() => {
       if (!saleId) {
         Alert.alert(
-          "Missing",
-          "saleId haipo."
+          uiText("Missing"),
+          uiText("saleId haipo.")
         );
 
         return false;
@@ -670,10 +672,10 @@ const addProduct = useCallback(
 
       if (!canEditReceipt) {
         Alert.alert(
-          "Edit closed",
+          uiText("Edit closed"),
           isOwner
-            ? "Receipt hii haiwezi ku-editiwa."
-            : "Staff/Admin wanaweza ku-edit receipt ya siku hiyo hiyo tu."
+            ? uiText("Receipt hii haiwezi ku-editiwa.")
+            : uiText("Staff/Admin wanaweza ku-edit receipt ya siku hiyo hiyo tu.")
         );
 
         return false;
@@ -681,8 +683,8 @@ const addProduct = useCallback(
 
       if (!items.length) {
         Alert.alert(
-          "No items",
-          "Receipt lazima iwe na item angalau moja."
+          uiText("No items"),
+          uiText("Receipt lazima iwe na item angalau moja.")
         );
 
         return false;
@@ -703,8 +705,8 @@ const addProduct = useCallback(
 
         if (!productId) {
           Alert.alert(
-            "Invalid item",
-            "Kuna item haina product_id."
+            uiText("Invalid item"),
+            uiText("Kuna item haina product_id.")
           );
 
           return false;
@@ -712,8 +714,8 @@ const addProduct = useCallback(
 
         if (seen.has(productId)) {
           Alert.alert(
-            "Duplicate item",
-            `"${it.product_name}" ipo zaidi ya mara moja.`
+            uiText("Duplicate item"),
+            uiText("\"{p0}\" ipo zaidi ya mara moja.", {p0: (it.product_name)})
           );
 
           return false;
@@ -723,8 +725,8 @@ const addProduct = useCallback(
 
         if (qty <= 0) {
           Alert.alert(
-            "Invalid quantity",
-            `Qty ya "${it.product_name}" lazima iwe zaidi ya 0.`
+            uiText("Invalid quantity"),
+            uiText("Qty ya \"{p0}\" lazima iwe zaidi ya 0.", {p0: (it.product_name)})
           );
 
           return false;
@@ -732,8 +734,8 @@ const addProduct = useCallback(
 
         if (unit <= 0) {
           Alert.alert(
-            "Invalid price",
-            `Bei ya "${it.product_name}" lazima iwe zaidi ya 0.`
+            uiText("Invalid price"),
+            uiText("Bei ya \"{p0}\" lazima iwe zaidi ya 0.", {p0: (it.product_name)})
           );
 
           return false;
@@ -745,8 +747,8 @@ const addProduct = useCallback(
         computed.totalAmount <= 0
       ) {
         Alert.alert(
-          "Invalid totals",
-          "Receipt total lazima iwe zaidi ya 0."
+          uiText("Invalid totals"),
+          uiText("Receipt total lazima iwe zaidi ya 0.")
         );
 
         return false;
@@ -851,7 +853,7 @@ const addProduct = useCallback(
             Platform.OS === "web"
           ) {
             window.alert(
-              successText
+              systemText(successText)
             );
 
             router.replace({
@@ -867,12 +869,12 @@ const addProduct = useCallback(
           }
 
           Alert.alert(
-            "Success ✅",
-            successText,
+            uiText("Success ✅"),
+            systemText(successText),
             [
               {
                 text:
-                  "Open Receipt",
+                  uiText("Open Receipt"),
 
                 onPress: () => {
                   router.replace({
@@ -890,9 +892,9 @@ const addProduct = useCallback(
           );
         } catch (e: any) {
           Alert.alert(
-            "Edit failed",
+            uiText("Edit failed"),
             e?.message ??
-              "Failed to edit receipt"
+              uiText("Failed to edit receipt")
           );
         } finally {
           setSaving(false);
@@ -905,7 +907,7 @@ const addProduct = useCallback(
 
       if (Platform.OS === "web") {
         const ok =
-          window.confirm(warning);
+          window.confirm(systemText(warning));
 
         if (!ok) return;
 
@@ -915,15 +917,15 @@ const addProduct = useCallback(
       }
 
       Alert.alert(
-        "Confirm Receipt Edit",
-        warning,
+        uiText("Confirm Receipt Edit"),
+        systemText(warning),
         [
           {
-            text: "Cancel",
+            text: uiText("Cancel"),
             style: "cancel",
           },
           {
-            text: "SAVE EDIT",
+            text: uiText("SAVE EDIT"),
             onPress: () => {
               void runSave();
             },
@@ -952,8 +954,8 @@ const addProduct = useCallback(
 
       if (!canDeleteReceipt) {
         Alert.alert(
-          "Delete closed",
-          "Staff/Admin wanaweza kufuta receipt ya siku hiyo hiyo tu."
+          uiText("Delete closed"),
+          uiText("Staff/Admin wanaweza kufuta receipt ya siku hiyo hiyo tu.")
         );
 
         return;
@@ -1000,7 +1002,7 @@ const addProduct = useCallback(
             if (
               Platform.OS === "web"
             ) {
-              window.alert(msg);
+              window.alert(systemText(msg));
 
               router.replace(
                 "/(tabs)/sales/history"
@@ -1010,11 +1012,11 @@ const addProduct = useCallback(
             }
 
             Alert.alert(
-              "Deleted ✅",
-              msg,
+              uiText("Deleted ✅"),
+              systemText(msg),
               [
                 {
-                  text: "OK",
+                  text: uiText("OK"),
                   onPress: () =>
                     router.replace(
                       "/(tabs)/sales/history"
@@ -1024,9 +1026,9 @@ const addProduct = useCallback(
             );
           } catch (e: any) {
             Alert.alert(
-              "Delete failed",
+              uiText("Delete failed"),
               e?.message ??
-                "Failed to delete receipt"
+                uiText("Failed to delete receipt")
             );
           } finally {
             setDeleting(false);
@@ -1044,7 +1046,7 @@ const addProduct = useCallback(
       if (Platform.OS === "web") {
         const ok =
           window.confirm(
-            `${title}\n\n${message}`
+            uiText(title)+"\n\n"+uiText(message)
           );
 
         if (!ok) return;
@@ -1055,15 +1057,15 @@ const addProduct = useCallback(
       }
 
       Alert.alert(
-        title,
-        message,
+        uiText(title),
+        uiText(message),
         [
           {
-            text: "Cancel",
+            text: uiText("Cancel"),
             style: "cancel",
           },
           {
-            text: "DELETE",
+            text: uiText("DELETE"),
             style: "destructive",
             onPress: () => {
               void runDelete();
@@ -1160,8 +1162,7 @@ const addProduct = useCallback(
                     fontSize: 20,
                   }}
                 >
-                  Add Product
-                </Text>
+                  {uiText("Add Product")}</Text>
 
                 <Text
                   style={{
@@ -1174,11 +1175,7 @@ const addProduct = useCallback(
                     marginTop: 3,
                   }}
                 >
-                  Chagua bidhaa
-                  nyingine ya
-                  kuongeza kwenye
-                  receipt.
-                </Text>
+                  {uiText("Chagua bidhaa nyingine ya kuongeza kwenye receipt.")}</Text>
               </View>
 
               <Pressable
@@ -1204,7 +1201,7 @@ const addProduct = useCallback(
               onChangeText={
                 setProductSearch
               }
-              placeholder="Search product name or SKU..."
+              placeholder={uiText("Search product name or SKU...")}
               placeholderTextColor="rgba(15,23,42,0.35)"
               autoFocus
               style={{
@@ -1251,8 +1248,7 @@ const addProduct = useCallback(
                     marginTop: 8,
                   }}
                 >
-                  Loading products...
-                </Text>
+                  {uiText("Loading products...")}</Text>
               </View>
             ) : (
               <ScrollView
@@ -1318,7 +1314,7 @@ const addProduct = useCallback(
               marginTop: 4,
             }}
           >
-            SKU: {p.sku || "—"}
+            {uiText("SKU:")}{p.sku || "—"}
           </Text>
         </View>
 
@@ -1348,7 +1344,7 @@ const addProduct = useCallback(
               fontSize: 11,
             }}
           >
-            Stock: {stockQty}
+            {uiText("Stock:")}{stockQty}
           </Text>
         </View>
       </View>
@@ -1362,7 +1358,7 @@ const addProduct = useCallback(
       >
         {price > 0
           ? fmtMoney(price)
-          : "Price not set"}
+          : uiText("Price not set")}
       </Text>
     </Pressable>
   );
@@ -1385,10 +1381,7 @@ const addProduct = useCallback(
                           20,
                       }}
                     >
-                      Hakuna product
-                      nyingine
-                      iliyopatikana.
-                    </Text>
+                      {uiText("Hakuna product nyingine iliyopatikana.")}</Text>
                   ) : null}
                 </View>
               </ScrollView>
@@ -1463,8 +1456,7 @@ const addProduct = useCallback(
                   theme.colors.text,
               }}
             >
-              Edit Receipt
-            </Text>
+              {uiText("Edit Receipt")}</Text>
 
             <Text
               style={{
@@ -1476,8 +1468,8 @@ const addProduct = useCallback(
               }}
             >
               {isOwner
-                ? "Owner • Full receipt correction"
-                : "Same-day correction"}
+                ? uiText("Owner • Full receipt correction")
+                : uiText("Same-day correction")}
             </Text>
           </View>
         </View>
@@ -1504,9 +1496,7 @@ const addProduct = useCallback(
                 marginTop: 8,
               }}
             >
-              Loading editable
-              receipt...
-            </Text>
+              {uiText("Loading editable receipt...")}</Text>
           </View>
         ) : err ? (
           <Card
@@ -1523,11 +1513,11 @@ const addProduct = useCallback(
                   "900",
               }}
             >
-              {err}
+              {systemText(err)}
             </Text>
 
             <Button
-              title="Retry"
+              title={uiText("Retry")}
               onPress={load}
               variant="primary"
             />
@@ -1543,9 +1533,7 @@ const addProduct = useCallback(
                   "900",
               }}
             >
-              Receipt
-              haikupatikana.
-            </Text>
+              {uiText("Receipt haikupatikana.")}</Text>
           </Card>
         ) : (
           <>
@@ -1577,8 +1565,7 @@ const addProduct = useCallback(
                   fontSize: 16,
                 }}
               >
-                Edit Permission
-              </Text>
+                {uiText("Edit Permission")}</Text>
 
               <Text
                 style={{
@@ -1590,10 +1577,10 @@ const addProduct = useCallback(
                 }}
               >
                 {isOwner
-                  ? "Owner: Full edit allowed — any date"
+                  ? uiText("Owner: Full edit allowed — any date")
                   : canEditReceipt
-                    ? "Same-day edit allowed"
-                    : "Edit window closed"}
+                    ? uiText("Same-day edit allowed")
+                    : uiText("Edit window closed")}
               </Text>
 
               {!isOwner &&
@@ -1608,10 +1595,7 @@ const addProduct = useCallback(
                       "800",
                   }}
                 >
-                  Staff/Admin edit
-                  ni ya receipt ya
-                  leo tu.
-                </Text>
+                  {uiText("Staff/Admin edit ni ya receipt ya leo tu.")}</Text>
               ) : null}
 
               {isOwner &&
@@ -1626,11 +1610,7 @@ const addProduct = useCallback(
                       "800",
                   }}
                 >
-                  Receipt hii ni ya
-                  zamani, lakini
-                  Owner ameruhusiwa
-                  kuirekebisha.
-                </Text>
+                  {uiText("Receipt hii ni ya zamani, lakini Owner ameruhusiwa kuirekebisha.")}</Text>
               ) : null}
 
               {!!detail.edited_at ? (
@@ -1644,7 +1624,7 @@ const addProduct = useCallback(
                       "800",
                   }}
                 >
-                  Last edited:{" "}
+                  {uiText("Last edited:")}{" "}
                   {new Date(
                     detail.edited_at
                   ).toLocaleString()}
@@ -1662,7 +1642,7 @@ const addProduct = useCallback(
                       "800",
                   }}
                 >
-                  Edited by:{" "}
+                  {uiText("Edited by:")}{" "}
                   {
                     detail.edited_by_name
                   }
@@ -1679,7 +1659,7 @@ const addProduct = useCallback(
                     "800",
                 }}
               >
-                Edit count:{" "}
+                {uiText("Edit count:")}{" "}
                 {Number(
                   detail.edit_count ??
                     0
@@ -1722,8 +1702,7 @@ const addProduct = useCallback(
                       fontSize: 18,
                     }}
                   >
-                    Items
-                  </Text>
+                    {uiText("Items")}</Text>
 
                   <Text
                     style={{
@@ -1737,10 +1716,7 @@ const addProduct = useCallback(
                       marginTop: 3,
                     }}
                   >
-                    Increase,
-                    decrease, remove
-                    or add product.
-                  </Text>
+                    {uiText("Increase, decrease, remove or add product.")}</Text>
                 </View>
 
                 <Pressable
@@ -1805,8 +1781,7 @@ const addProduct = useCallback(
                         "900",
                     }}
                   >
-                    Add Item
-                  </Text>
+                    {uiText("Add Item")}</Text>
                 </Pressable>
               </View>
 
@@ -1913,7 +1888,7 @@ const addProduct = useCallback(
                                 3,
                             }}
                           >
-                            SKU:{" "}
+                            {uiText("SKU:")}{" "}
                             {it.sku ||
                               "—"}
                           </Text>
@@ -1955,8 +1930,7 @@ const addProduct = useCallback(
                                   10,
                               }}
                             >
-                              NEW
-                            </Text>
+                              {uiText("NEW")}</Text>
                           </View>
                         ) : null}
                       </View>
@@ -1973,12 +1947,11 @@ const addProduct = useCallback(
                               "800",
                           }}
                         >
-                          Original:
-                          Qty{" "}
+                          {uiText("Original: Qty")}{" "}
                           {
                             original.qty
                           }{" "}
-                          • Price{" "}
+                          {uiText("• Price")}{" "}
                           {fmtMoney(
                             toNum(
                               original.unit_price
@@ -1997,10 +1970,7 @@ const addProduct = useCallback(
                               "800",
                           }}
                         >
-                          New product
-                          added to this
-                          receipt
-                        </Text>
+                          {uiText("New product added to this receipt")}</Text>
                       )}
 
                       <View
@@ -2030,8 +2000,7 @@ const addProduct = useCallback(
                                 6,
                             }}
                           >
-                            Qty
-                          </Text>
+                            {uiText("Qty")}</Text>
 
                           <TextInput
                             editable={
@@ -2110,8 +2079,7 @@ const addProduct = useCallback(
                                 6,
                             }}
                           >
-                            Unit Price
-                          </Text>
+                            {uiText("Unit Price")}</Text>
 
                           <TextInput
                             editable={
@@ -2182,14 +2150,14 @@ const addProduct = useCallback(
                             "900",
                         }}
                       >
-                        Line Total:{" "}
+                        {uiText("Line Total:")}{" "}
                         {fmtMoney(
                           lineTotal
                         )}
                       </Text>
 
                       <Button
-                        title="Remove Item"
+                        title={uiText("Remove Item")}
                         onPress={() =>
                           removeItem(
                             idx
@@ -2224,8 +2192,7 @@ const addProduct = useCallback(
                   fontSize: 16,
                 }}
               >
-                Receipt Note
-              </Text>
+                {uiText("Receipt Note")}</Text>
 
               <TextInput
                 editable={
@@ -2236,7 +2203,7 @@ const addProduct = useCallback(
                   setNote
                 }
                 multiline
-                placeholder="Receipt note..."
+                placeholder={uiText("Receipt note...")}
                 placeholderTextColor="rgba(15,23,42,0.35)"
                 style={{
                   color:
@@ -2281,8 +2248,7 @@ const addProduct = useCallback(
                   marginTop: 6,
                 }}
               >
-                Edit Reason
-              </Text>
+                {uiText("Edit Reason")}</Text>
 
               <TextInput
                 editable={
@@ -2293,7 +2259,7 @@ const addProduct = useCallback(
                   setEditNote
                 }
                 multiline
-                placeholder="Mfano: Customer alinunua qty 3 badala ya qty 1..."
+                placeholder={uiText("Mfano: Customer alinunua qty 3 badala ya qty 1...")}
                 placeholderTextColor="rgba(15,23,42,0.35)"
                 style={{
                   color:
@@ -2342,8 +2308,7 @@ const addProduct = useCallback(
                     "900",
                 }}
               >
-                New Totals
-              </Text>
+                {uiText("New Totals")}</Text>
 
               <Text
                 style={{
@@ -2356,7 +2321,7 @@ const addProduct = useCallback(
                   fontSize: 18,
                 }}
               >
-                Qty:{" "}
+                {uiText("Qty:")}{" "}
                 {computed.totalQty}
               </Text>
 
@@ -2371,7 +2336,7 @@ const addProduct = useCallback(
                   fontSize: 22,
                 }}
               >
-                Total:{" "}
+                {uiText("Total:")}{" "}
                 {fmtMoney(
                   computed.totalAmount
                 )}
@@ -2396,7 +2361,7 @@ const addProduct = useCallback(
                     "800",
                 }}
               >
-                Original Qty:{" "}
+                {uiText("Original Qty:")}{" "}
                 {
                   originalComputed.totalQty
                 }
@@ -2411,7 +2376,7 @@ const addProduct = useCallback(
                     "800",
                 }}
               >
-                Original Total:{" "}
+                {uiText("Original Total:")}{" "}
                 {fmtMoney(
                   originalComputed.totalAmount
                 )}
@@ -2429,14 +2394,7 @@ const addProduct = useCallback(
                   lineHeight: 20,
                 }}
               >
-                Full Edit:
-                quantity na price
-                zinaweza kuongezwa
-                au kupunguzwa.
-                Products zinaweza
-                kuongezwa au
-                kuondolewa.
-              </Text>
+                {uiText("Full Edit: quantity na price zinaweza kuongezwa au kupunguzwa. Products zinaweza kuongezwa au kuondolewa.")}</Text>
             </Card>
 
             {/* SAVE */}
@@ -2444,10 +2402,10 @@ const addProduct = useCallback(
             <Button
               title={
                 saving
-                  ? "Saving..."
+                  ? uiText("Saving...")
                   : isOwner
-                    ? "Save Receipt Edit"
-                    : "Save Same-Day Edit"
+                    ? uiText("Save Receipt Edit")
+                    : uiText("Save Same-Day Edit")
               }
               onPress={
                 saveEdit
@@ -2467,10 +2425,10 @@ const addProduct = useCallback(
             <Button
               title={
                 deleting
-                  ? "Deleting..."
+                  ? uiText("Deleting...")
                   : isOwner
-                    ? "Delete Receipt"
-                    : "Delete Same Day"
+                    ? uiText("Delete Receipt")
+                    : uiText("Delete Same Day")
               }
               onPress={
                 deleteReceipt
@@ -2486,7 +2444,7 @@ const addProduct = useCallback(
             {/* BACK */}
 
             <Button
-              title="Back to Receipt"
+              title={uiText("Back to Receipt")}
               onPress={() =>
                 router.replace({
                   pathname:
