@@ -16,6 +16,9 @@ import {
   supabase,
 } from "@/src/supabase/supabaseClient";
 import { kv } from "@/src/storage/kv";
+import {useLanguage} from '@/src/i18n/LanguageProvider';
+import {proformaText} from '@/src/proforma/labels';
+import {proformaAvailability} from '@/src/proforma/availability';
 
 function isDesktopWebEnv(width?: number) {
   if (Platform.OS !== "web") return false;
@@ -580,6 +583,7 @@ export default function MoreHome() {
  const uiText=useCommonText();
   const router = useRouter();
   const org = useOrg();
+  const {language:proformaLanguage}=useLanguage();
   const { width } = useWindowDimensions();
 
   const isDesktopWeb = isDesktopWebEnv(width);
@@ -791,6 +795,10 @@ export default function MoreHome() {
 
       <SectionTitle label={uiText("Operations")} />
       <PremiumSectionCard accent="#2563EB" glow="rgba(37,99,235,0.13)">
+        {org.activeOrgId&&org.activeStoreId&&['owner','admin','staff','cashier'].includes(org.activeRole??'')&&<>
+          <Row icon="document-text-outline" title={proformaText(proformaLanguage,'invoice')} subtitle={proformaAvailability[proformaLanguage].setup} onPress={()=>router.push('/(tabs)/sales/proforma')} accent="#2563EB" soft="rgba(37,99,235,0.13)"/>
+          <Divider/>
+        </>}
         <Row
           icon="document-text-outline"
           title={uiText("Business Statement")}

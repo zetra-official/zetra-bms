@@ -15,4 +15,14 @@ export function LanguageProvider({children}:{children:React.ReactNode}) {
  return <Context.Provider value={state}><View style={{flex:1,direction:direction(language)}}>{children}</View></Context.Provider>;
 }
 export function useLanguage(){return useContext(Context)}
-export function UserLanguagePicker(){const {language,setLanguage}=useLanguage();return <View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>{languages.map(code=><Pressable key={code} accessibilityRole="button" accessibilityLabel={languageNames[code]} accessibilityState={{selected:language===code}} onPress={()=>setLanguage(code)} style={{minHeight:44,padding:12,borderWidth:1,borderColor:language===code?'#16a34a':'#64748b',borderRadius:8}}><Text style={{color:'#ffffff',textAlign:code==='ar'?'right':'left'}}>{languageNames[code]}</Text></Pressable>)}</View>}
+export const languageButtonColors = {
+ light: {text:'#0f172a',background:'#ffffff',selectedText:'#14532d',selectedBackground:'#dcfce7',border:'#64748b',selectedBorder:'#15803d'},
+ dark: {text:'#f8fafc',background:'#0f172a',selectedText:'#dcfce7',selectedBackground:'#14532d',border:'#94a3b8',selectedBorder:'#4ade80'},
+} as const;
+export function UserLanguagePicker({appearance='light'}:{appearance?:'light'|'dark'}={}) {
+ const {language,setLanguage}=useLanguage();const colors=languageButtonColors[appearance];
+ return <View style={{flexDirection:'row',flexWrap:'wrap',gap:8,maxWidth:'100%'}}>{languages.map(code=>{
+  const selected=language===code;
+  return <Pressable key={code} accessibilityRole="button" accessibilityLabel={languageNames[code]} accessibilityState={{selected}} onPress={()=>setLanguage(code)} style={{minHeight:44,maxWidth:'100%',flexShrink:1,padding:12,borderWidth:1,borderColor:selected?colors.selectedBorder:colors.border,borderRadius:8,backgroundColor:selected?colors.selectedBackground:colors.background}}><Text style={{color:selected?colors.selectedText:colors.text,fontWeight:selected?'700':'500',textAlign:code==='ar'?'right':'left'}}>{languageNames[code]}</Text></Pressable>;
+ })}</View>;
+}

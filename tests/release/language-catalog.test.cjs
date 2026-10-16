@@ -1,0 +1,8 @@
+const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const ts=require('C:/JOFU ZETRA/JOFU/JOFU/JOFU/zetra-bms-clean/node_modules/typescript');
+const ctx={exports:{}};vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/i18n/catalog.ts','utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText,ctx);const i18n=ctx.exports;
+test('supported languages match authoritative website configuration exactly',()=>{const source=fs.readFileSync('C:/Users/ZetraAdmin/zetra-website/i18n/locales.ts','utf8');const found=source.match(/export const locales = \[([^\]]+)\]/)[1].match(/'([^']+)'/g).map(s=>s.slice(1,-1));assert.deepEqual(Array.from(i18n.languages),found)});
+test('all seven navigation dictionaries have identical nonempty keys',()=>{const keys=Object.keys(i18n.dictionaries.en);for(const language of i18n.languages){assert.deepEqual(Object.keys(i18n.dictionaries[language]),keys);for(const key of keys)assert.equal(typeof i18n.translate(language,key),'string')}});
+test('locale resolution accepts regional variants and denies unsupported languages',()=>{assert.equal(i18n.resolveLanguage('zh-CN'),'zh');assert.equal(i18n.resolveLanguage('pt_BR'),'pt');assert.equal(i18n.resolveLanguage('ar-SA'),'ar');assert.equal(i18n.resolveLanguage('de-DE'),'en');assert.equal(i18n.resolveLanguage(null),'en')});
+test('Arabic direction is RTL and other supported languages are LTR',()=>{for(const language of i18n.languages)assert.equal(i18n.direction(language),language==='ar'?'rtl':'ltr')});
+test('catalog fallback returns English without modifying dictionary',()=>{assert.equal(i18n.translate('unknown','save'),'Save');assert.equal(i18n.dictionaries.zh.save,'保存')});

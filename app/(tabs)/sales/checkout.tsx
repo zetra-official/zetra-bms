@@ -335,7 +335,8 @@ function CheckoutMiniTile({
     <View
       style={{
         flex: 1,
-        minWidth: 0,
+        minWidth: 140,
+        flexBasis: 140,
         paddingVertical: 9,
         paddingHorizontal: 10,
         borderRadius: 14,
@@ -348,9 +349,6 @@ function CheckoutMiniTile({
         {label}
       </Text>
       <Text
-        numberOfLines={1}
-        adjustsFontSizeToFit
-        minimumFontScale={0.72}
         style={{
           color: highlight ? theme.colors.emerald : theme.colors.text,
           fontWeight: "900",
@@ -1677,7 +1675,7 @@ headerStoreName,
 
   const summaryCard = (
     <Card style={checkoutCardStyle("#3B82F6", "#F8FBFF", isDesktopWeb)}>
-      <View style={{ flexDirection: "row", alignItems: "center" }}>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
         <View style={{ flex: 1 }}>
           <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
             {uiText("🧾 Order Summary")}</Text>
@@ -1693,12 +1691,11 @@ headerStoreName,
             borderWidth: 1,
             borderColor: "rgba(52,211,153,0.22)",
             backgroundColor: "rgba(52,211,153,0.10)",
-            maxWidth: 150,
+            maxWidth: "100%",
+            flexShrink: 1,
           }}
         >
           <Text
-            numberOfLines={1}
-            adjustsFontSizeToFit
             style={{ color: theme.colors.text, fontWeight: "900" }}
           >
             {prettyTotal}
@@ -1779,7 +1776,6 @@ headerStoreName,
 
               <Text
                 style={{ color: theme.colors.faint, fontWeight: "900", lineHeight: 18 }}
-                numberOfLines={isDesktopWeb ? 2 : 1}
               >
                 {uiText("Unit:")}{adjustedUnit} {uiText("• Line:")}{adjustedLine}
               </Text>
@@ -1806,27 +1802,28 @@ headerStoreName,
       <View
         style={{
           flexDirection: "row",
+          flexWrap: "wrap",
           gap: 8,
           alignItems: "stretch",
         }}
       >
-        <View style={{ flex: 1, minWidth: 0 }}>
+        <View style={{ flex: 1, minWidth: 140, flexBasis: 140 }}>
           <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>{uiText("Subtotal")}</Text>
-          <Text numberOfLines={1} adjustsFontSizeToFit style={{ color: theme.colors.text, fontWeight: "900" }}>
+          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
             {prettySubtotal}
           </Text>
         </View>
 
-        <View style={{ flex: 1, minWidth: 0 }}>
+        <View style={{ flex: 1, minWidth: 140, flexBasis: 140 }}>
           <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>{uiText("Discount")}</Text>
-          <Text numberOfLines={1} adjustsFontSizeToFit style={{ color: theme.colors.text, fontWeight: "900" }}>
+          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
             {prettyDiscount}
           </Text>
         </View>
 
-        <View style={{ flex: 1, minWidth: 0 }}>
+        <View style={{ flex: 1, minWidth: 140, flexBasis: 140 }}>
           <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>{uiText("Total")}</Text>
-          <Text numberOfLines={1} adjustsFontSizeToFit style={{ color: theme.colors.text, fontWeight: "900" }}>
+          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
             {prettyTotal}
           </Text>
         </View>
@@ -2087,7 +2084,7 @@ const staffAttributionCard = (
         </View>
       )}
 
-      <View style={{ flexDirection: "row", gap: 8 }}>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
         <CheckoutMiniTile label={uiText("Total")} value={prettyTotal} />
         <CheckoutMiniTile label={uiText("Paid")} value={prettyPaid} />
         <CheckoutMiniTile label={uiText("Balance")} value={prettyBal} highlight={isCredit || balance > 0} />

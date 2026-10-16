@@ -1,0 +1,12 @@
+const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const ts=require('C:/JOFU ZETRA/JOFU/JOFU/JOFU/zetra-bms-clean/node_modules/typescript');
+const js=ts.transpileModule(fs.readFileSync('src/ui/money.ts','utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
+function load(intl=Intl){const context={exports:{},Intl:intl,require:name=>{assert(['react','@/src/storage/kv'].includes(name));return name==='react'?{}:{kv:{}}}};vm.runInNewContext(js,context);return context.exports;}
+const money=load();
+test('international money respects zero, two, three and four digit currencies',()=>{for(const [currency,amount] of [['JPY',123],['USD',123.45],['CNY',123.45],['EUR',123.45],['KWD',123.456],['BHD',123.456],['CLF',123.4567]]){const expected=new Intl.NumberFormat('en-US',{style:'currency',currency}).format(amount);assert.equal(money.formatMoney(amount,{currency,locale:'en-US'}),expected)}});
+test('legacy TZS display precision remains unchanged',()=>assert.equal(money.formatMoney(123.45,{currency:'TZS',locale:'en-US',showCurrency:false}),'123'));
+test('fallback does not discard fractional value when locale is invalid',()=>assert.equal(money.formatMoney(-123.456,{currency:'KWD',locale:'invalid_locale'}),'KWD -123.456'));
+test('Arabic, Chinese and European locale formatting follows platform Intl',()=>{for(const locale of ['ar-EG','zh-CN','de-DE','fr-FR'])assert.equal(money.formatMoney(1234.56,{currency:'CNY',locale}),new Intl.NumberFormat(locale,{style:'currency',currency:'CNY',maximumFractionDigits:2}).format(1234.56))});
+test('currency formatter preserves unavailable versus real zero',()=>{assert.equal(money.formatMoney(Infinity),'—');assert.equal(money.formatMoney(NaN),'—');assert.notEqual(money.formatMoney(0),'—')});
+test('repeated financial list formatting reuses formatter constructors',()=>{let count=0;const observed={NumberFormat:function(...args){count++;return new Intl.NumberFormat(...args)}};const f=load(observed);for(let i=0;i<1000;i++)f.formatMoney(i/100,{currency:'USD',locale:'en-US'});assert.equal(count,2)});
+test('formatter cache remains bounded across locale variants',()=>{let count=0;const f=load({NumberFormat:function(...args){count++;return new Intl.NumberFormat(...args)}});f.formatMoney(1,{currency:'USD',locale:'en-US'});for(let i=0;i<80;i++)f.formatMoney(1,{currency:'USD',locale:`en-US-x-test${i}`});const before=count;f.formatMoney(1,{currency:'USD',locale:'en-US'});assert(count>before)});

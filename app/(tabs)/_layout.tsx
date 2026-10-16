@@ -2163,6 +2163,7 @@ height: 70,
       <Tabs.Screen name="customers/insights" options={{ href: null }} />
       <Tabs.Screen name="staff" options={{ href: null }} />
       <Tabs.Screen name="sales/history" options={{ href: null }} />
+      <Tabs.Screen name="sales/proforma" options={{ href: null }} />
       <Tabs.Screen name="sales/profit" options={{ href: null }} />
       <Tabs.Screen name="capital-recovery/history" options={{ href: null }} />
     </Tabs>

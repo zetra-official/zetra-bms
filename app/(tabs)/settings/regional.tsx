@@ -681,7 +681,7 @@ export default function RegionalSettings() {
             <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginBottom: 10 }}>
               {uiText("Personal interface language. Does not change business currency or organization number format.")}</Text>
 
-            <UserLanguagePicker />
+            <UserLanguagePicker appearance="light" />
             <PersonalCurrencyPicker businessCurrency={currencyCode} />
 
           </View>
