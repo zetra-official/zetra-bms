@@ -1,3 +1,4 @@
+import { MobileFinanceEntry } from "@/src/finance/MobileFinance";
 import {useLanguage} from "@/src/i18n/LanguageProvider";
 import {localizedSearchResult} from "@/src/i18n/presentation";
 import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
@@ -1713,153 +1714,12 @@ function CompactNotificationsHomeCard({ compactHub = false }: { compactHub?: boo
 }
 
 function MobileWebFinanceShortcut() {
- const uiText = useCommonText();
+  const uiText = useCommonText();
   const router = useRouter();
-  const { width } = useWindowDimensions();
-
-  const isNarrow = width < 360;
-
   const openFinance = useCallback(() => {
     router.push("/finance/live" as any);
   }, [router]);
-
-  return (
-    <View
-      style={{
-        marginBottom: 6,
-        borderRadius: 20,
-        backgroundColor: "#FFFFFF",
-        borderWidth: 1,
-        borderColor: "#E8EEF5",
-        paddingHorizontal: 12,
-        paddingTop: 8,
-        paddingBottom: 8,
-        overflow: "hidden",
-      }}
-    >
-      <View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: 3,
-        }}
-      >
-        <View>
-          <Text
-            style={{
-              color: "#64748B",
-              fontSize: 10,
-              fontWeight: "800",
-              letterSpacing: 0.7,
-            }}
-          >
-            {uiText("BUSINESS HUB")}</Text>
-
-          <Text
-            style={{
-              color: "#0F172A",
-              fontSize: 18,
-              fontWeight: "900",
-              marginTop: 1,
-            }}
-          >
-            {uiText("FINANCE")}</Text>
-        </View>
-
-        <View
-          style={{
-            borderRadius: 999,
-            backgroundColor: "#ECFDF5",
-            paddingHorizontal: 9,
-            paddingVertical: 5,
-          }}
-        >
-          <Text
-            style={{
-              color: "#047857",
-              fontSize: 9,
-              fontWeight: "900",
-              letterSpacing: 0.5,
-            }}
-          >
-            {uiText("LIVE")}</Text>
-        </View>
-      </View>
-
-      <Pressable
-        onPress={openFinance}
-        {...({ onClick: openFinance } as any)}
-        accessibilityRole="button"
-        style={({ pressed }) => ({
-          minHeight: isNarrow ? 88 : 94,
-          borderRadius: 18,
-          backgroundColor: pressed ? "#F1F5F9" : "#F8FAFC",
-          borderWidth: 1,
-          borderColor: "#E2E8F0",
-          alignItems: "center",
-          justifyContent: "center",
-          paddingHorizontal: 18,
-          paddingVertical: 8,
-        })}
-      >
-        <View
-          pointerEvents="none"
-          style={{
-            width: isNarrow ? 48 : 52,
-            height: isNarrow ? 48 : 52,
-            borderRadius: 999,
-            backgroundColor: "#FFFFFF",
-            borderWidth: 1,
-            borderColor: "#DCE7F1",
-            alignItems: "center",
-            justifyContent: "center",
-            marginBottom: 5,
-          }}
-        >
-          <Ionicons
-            name="stats-chart-outline"
-            size={isNarrow ? 20 : 22}
-            color="#0F766E"
-          />
-        </View>
-
-        <Text
-          pointerEvents="none"
-          style={{
-            color: "#0F172A",
-            fontSize: 12.5,
-            fontWeight: "900",
-            textAlign: "center",
-          }}
-        >
-          {uiText("Business Finance")}</Text>
-
-        <Text
-          pointerEvents="none"
-          style={{
-            color: "#64748B",
-            fontSize: 10,
-            fontWeight: "700",
-            textAlign: "center",
-            marginTop: 3,
-          }}
-        >
-          {uiText("Tap to view sales, expenses and profit")}</Text>
-
-        <Text
-          pointerEvents="none"
-          style={{
-            color: "#2563EB",
-            fontSize: 11,
-            fontWeight: "900",
-            marginTop: 4,
-          }}
-        >
-          {uiText("View Details →")}</Text>
-      </Pressable>
-    </View>
-  );
+  return <MobileFinanceEntry text={uiText} onOpen={openFinance} />;
 }
 function CompactFinanceCardHomePreview() {
  const systemText = useSystemMessageText();

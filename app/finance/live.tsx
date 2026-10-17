@@ -20,6 +20,7 @@ import { Screen } from "@/src/ui/Screen";
 import { Card } from "@/src/ui/Card";
 import { UI } from "@/src/ui/theme";
 import { formatMoney, useOrgMoneyPrefs } from "@/src/ui/money";
+import { MobileFinance } from "@/src/finance/MobileFinance";
 
 type ScopeMode = "ALL" | "STORE";
 
@@ -722,6 +723,25 @@ export default function FinanceLiveScreen() {
     scope === "STORE"
       ? storeNameById.get(selectedStoreId) ?? activeStoreName ?? "Store"
       : `All Stores (${storeOptions.length})`;
+
+  if (isMobileWeb) {
+    return <Screen><MobileFinance
+      text={uiText} orgName={orgName} scope={scope} canAll={canAll} isOwner={isOwner}
+      storeOptions={storeOptions} selectedStoreId={selectedStoreId}
+      onScope={setScope} onStore={setSelectedStoreId}
+      onBack={() => router.back()} onRefresh={() => void load()}
+      rows={sortedRows} totals={totals} available={overviewAvailable}
+      loading={loading} error={err ? systemText(err) : null} money={fmtMoney}
+      onDetail={(row) => {
+        const today = rangeToday();
+        router.push({ pathname: "/finance/history", params: {
+          mode: "SALES", scope: "STORE", range: "today",
+          from: today.fromYMD, to: today.toYMD,
+          storeId: row.storeId, storeName: row.storeName,
+        } } as any);
+      }}
+    /></Screen>;
+  }
 
   return (
     <Screen>
