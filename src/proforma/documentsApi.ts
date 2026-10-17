@@ -25,6 +25,7 @@ export function createDocumentService(scope:Scope,port:RpcPort,id:()=>string) {
   };
   const client=new ProformaClient(scope,transport,id);
   return {client,
+    async invoiceFx(detail:DocumentDetail,body:Record<string,unknown>,request:string){const d=checkedDetail(await call('proforma_document_fx_v1',{p_request:request,p_document:detail.document.id,p_expected:detail.revision.revision,p_body:body}));if(d.revision.invoiceFx?.to!==body.currency||d.revision.invoiceFx?.source!==String(body.source).trim())throw new ProformaError('FX_RESPONSE_MISMATCH');return d},
     async context(search='',productIds?:string[],signal?:AbortSignal){const c=await call('proforma_document_context_v1',{p_search:search,p_product_ids:productIds??null},signal) as unknown as DocumentContext;if(c.version!==DOCUMENT_CONTRACT||c.documentReady!==true||c.conversionReady!==false||c.reservationReady!==false||!Array.isArray(c.products)||!Array.isArray(c.customers))throw new ProformaError('BACKEND_CONTRACT_MISMATCH');new Intl.DateTimeFormat('en',{timeZone:c.timeZone}).format(new Date());return c},
     async save(documentId:string,expected:number|null,input:DocumentInput){return await client.run(documentId,expected,'SAVE',input as unknown as Record<string,unknown>) as DocumentDetail},
     async issue(detail:DocumentDetail){return await client.run(detail.document.id,detail.revision.revision,'ISSUE',{}) as DocumentDetail},

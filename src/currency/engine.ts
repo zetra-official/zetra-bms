@@ -1,4 +1,12 @@
 import {convertDisplayDecimal,makeDisplayQuote,type ReferenceRates} from '../services/referenceFx';
+/** Explicit manual invoice quotation only. Never a posting/FX provider rate. */
+export function manualInvoiceAmount(amount:string,rate:string,precision:number):string {
+ if(!/^\d{1,18}(\.\d{1,6})?$/.test(amount)||!/^\d{1,12}(\.\d{1,12})?$/.test(rate)||!Number.isInteger(precision)||precision<0||precision>6)throw Error('INVALID_INVOICE_FX');
+ const [a,af='']=amount.split('.'),[r,rf='']=rate.split('.');const numerator=BigInt(a+af)*BigInt(r+rf)*10n**BigInt(precision),denominator=10n**BigInt(af.length+rf.length);
+ if(BigInt(r+rf)<=0n)throw Error('INVALID_INVOICE_FX');let units=numerator/denominator;if(numerator%denominator*2n>=denominator)units++;
+ const scale=10n**BigInt(precision);if(units/scale>=1000000000000000000n)throw Error('INVOICE_FX_OUT_OF_RANGE');
+ return String(units/scale)+(precision?'.'+String(units%scale).padStart(precision,'0'):'');
+}
 export type CurrencyStatus='ORIGINAL'|'CONVERTED'|'UNVERIFIED_CURRENCY'|'RATE_UNAVAILABLE';
 export type RecordedMoney={amount:string;currency:string|null;organizationId:string;contextRevision:number|null;source:'TRANSACTION_RECORD'|'OWNER_CONFIRMED_CURRENT'|'LEGACY_UNVERIFIED'};
 export type CurrencyView={status:CurrencyStatus;original:Readonly<RecordedMoney>;displayAmount:string;displayCurrency:string|null;rate?:{provider:string;referenceDate:string;retrievedAt:string;sourceSha256:string;numerator:string;denominator:string};rounding:'HALF_AWAY_FROM_ZERO_DISPLAY_ONLY';postingAllowed:false};

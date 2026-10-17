@@ -11,6 +11,8 @@ import {normalText} from './normalCopy';
 import {displayDecimal} from './document';
 import {ProformaExportButton} from './ProformaOrdersPanel';
 import {takeProformaCart} from './checkoutDraft';
+import {InvoiceCurrencyModal} from './InvoiceCurrencyModal';
+import {invoiceFxText} from './invoiceFxCopy';
 import {AccountingCurrencySetup} from './AccountingCurrencySetup';
 import {currencyUx} from './currencyUxCopy';
 import type {PageRow} from './client';
@@ -44,10 +46,10 @@ export function ProformaDocuments({organizationId,storeId,startNew=false}:{organ
   <Text style={{color:'#526777',lineHeight:21}}>{t('notProof')} {n('disabled')}</Text>
   {loading&&<ActivityIndicator/>}{error&&<Text accessibilityRole="alert" style={{color:'#A52B36',lineHeight:21}}>{uncertain?n('retry'):n('failed')}</Text>}
   {context&&<View style={{flexDirection:'row',flexWrap:'wrap',gap:10}}><Button title={t('orders')} disabled={busy||uncertain} onPress={()=>{setEditing(false);setDetail(null)}} variant="secondary"/>{context.canCreate&&<Button title={n('new')} disabled={busy||uncertain||!context.currency} onPress={newDocument}/>}</View>}
-  {context&&<AccountingCurrencySetup key={organizationId+storeId} organizationId={organizationId} role={context.role} current={context.currency} onConfirmed={async()=>{const ctx=await service.context();if(mounted.current){setContext(ctx);setForm(old=>old?{...old,currency:ctx.currency??''}:empty(ctx))}}}/>}
+  {context&&<AccountingCurrencySetup key={organizationId+storeId} organizationId={organizationId} role={context.role} current={context.currency} onConfirmed={async code=>{const ctx=await service.context();if(ctx.currency!==code)throw Error('CONFIRMED_CURRENCY_READBACK_FAILED');if(mounted.current){setContext(ctx);setForm(old=>old?{...old,currency:ctx.currency??''}:empty(ctx))}}}/>}
   {context&&!context.currency&&<Button title={currencyUx(language,'retry')} variant="secondary" disabled={busy} onPress={()=>void action(async()=>{const ctx=await service.context();if(mounted.current)setContext(ctx)})}/>}
   {detail&&!editing&&<Button title={currencyUx(language,'convert')} variant="secondary" onPress={()=>setConverter(true)}/>}
-  <Modal visible={converter} transparent animationType="slide" onRequestClose={()=>setConverter(false)}><View style={{flex:1,backgroundColor:'rgba(0,0,0,0.5)',justifyContent:'center',padding:20}}><View accessibilityViewIsModal style={{...card,maxWidth:520,width:'100%',alignSelf:'center',direction:language==='ar'?'rtl':'ltr'}}><Text style={{fontSize:20,fontWeight:'800',color:'#0F172A'}}>{currencyUx(language,'convert')}</Text><Text style={{color:'#475569',lineHeight:23}}>{currencyUx(language,'blocked')}</Text><Button title={currencyUx(language,'close')} onPress={()=>setConverter(false)}/></View></View></Modal>
+  {detail&&<InvoiceCurrencyModal visible={converter} onClose={()=>setConverter(false)} from={detail.revision.currency} total={detail.revision.total} canConfirm={context?.role==='owner'&&detail.canEdit&&!busy&&!uncertain} onConfirm={async(body,request)=>{const saved=await service.invoiceFx(detail,body as unknown as Record<string,unknown>,request);if(mounted.current){setDetail(saved);setForm(saved.revision.editInput);await refreshHistory()}}}/>}
   {context?.currency&&context.canCreate&&editing&&form&&<View style={card}>
    <Text style={{fontWeight:'800',color:'#0F172A'}}>{form.currency||'—'} · {context.timeZone}</Text><Text style={{color:'#526777',fontSize:12,lineHeight:19}}>{n('pricing')}</Text>
    {field(n('search'),search,setSearch)}
@@ -64,6 +66,7 @@ export function ProformaDocuments({organizationId,storeId,startNew=false}:{organ
   </View>}
   {detail&&!editing&&<View style={card}><Text style={{fontSize:21,fontWeight:'800'}}>{detail.revision.reference}</Text><Text>{t(detail.revision.status==='DRAFT'?'draft':'pending')} · {t('revision')} {detail.revision.revision}</Text><Text>{detail.revision.customer?.name} {detail.revision.customer?.phone}</Text>{detail.revision.items.map(item=><Text key={item.productId}>{item.description} · {item.quantity} × {money(item.unitPrice,detail.revision.currency)}</Text>)}<Text>{t('discount')}: {money(detail.revision.discount,detail.revision.currency)}</Text><Text style={{fontSize:22,fontWeight:'900'}}>{t('total')}: {money(detail.revision.total,detail.revision.currency)}</Text><Text>{t('validity')}: {new Intl.DateTimeFormat(language,{dateStyle:'medium',timeStyle:'short',timeZone:detail.revision.timeZone}).format(new Date(detail.revision.validUntil))}</Text><Text>{detail.revision.notes}</Text>
    {detail.canEdit&&<><Button title={n('edit')} disabled={busy||uncertain} onPress={()=>{setEditing(true);setForm(detail.revision.editInput)}} variant="secondary"/><Button title={uncertain?t('retry'):n('issue')} disabled={busy} onPress={()=>void issue()}/></>}
+   {detail.revision.invoiceFx&&<View style={card}><Text style={{color:'#0F172A',fontWeight:'800'}}>{invoiceFxText(language,'preview')}: {money(detail.revision.invoiceFx.convertedTotal,detail.revision.invoiceFx.to)}</Text><Text style={{color:'#475569',lineHeight:21}}>{invoiceFxText(language,'manual')}</Text><Text style={{color:'#475569'}}>1 {detail.revision.currency} = {detail.revision.invoiceFx.rate} {detail.revision.invoiceFx.to} · {detail.revision.invoiceFx.source} · {detail.revision.invoiceFx.confirmedAt}</Text></View>}
    {!uncertain&&<ProformaExportButton revision={detail.revision}/>}<Text>{n('disabled')}</Text>
   </View>}
   {historyFailed&&<View><Text accessibilityRole="alert">{t('loadFailed')}</Text><Button title={t('retry')} disabled={busy||uncertain} onPress={()=>void refreshHistory()}/></View>}

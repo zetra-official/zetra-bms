@@ -1,4 +1,6 @@
 /** Additive candidate; no route imports, database client or financial side effects. */
+import {manualInvoiceAmount} from '../currency/engine';
+export type InvoiceFx={version:1;mode:'OWNER_CONFIRMED_MANUAL';from:string;to:string;rate:string;source:string;confirmedBy:string;confirmedAt:string;originalTotal:string;convertedTotal:string;precision:number;rounding:'HALF_AWAY_FROM_ZERO';postingAllowed:false};
 export type ProformaStatus = 'DRAFT'|'PENDING'|'ACCEPTED'|'CONVERTED'|'EXPIRED'|'CANCELLED';
 export type ReservationStatus = 'NONE'|'ACTIVE'|'RELEASED'|'EXPIRED'|'CONSUMED';
 export type Decimal = string;
@@ -20,6 +22,7 @@ export type ProformaRevision = {
  business:Identity;items:readonly ProformaItem[];
  subtotal:Decimal;discount:Decimal;tax:Decimal;total:Decimal;
  notes?:string;terms?:string;createdBy:string;convertedSaleId?:string;
+ invoiceFx?:InvoiceFx;
 };
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 export class ProformaError extends Error {constructor(public code:string){super(code);this.name='ProformaError'}}
@@ -30,6 +33,7 @@ export function decimalUnits(value:Decimal):bigint {
 }
 function instant(value:string):number{requireValue(typeof value==='string'&&/^\d{4}-\d{2}-\d{2}T.*(?:Z|[+-]\d{2}:\d{2})$/.test(value)&&Number.isFinite(Date.parse(value)),'INVALID_TIMESTAMP');return Date.parse(value)}
 export function validateRevision(q:ProformaRevision):void {
+ if(q.invoiceFx){const fx=q.invoiceFx;requireValue(fx.version===1&&fx.mode==='OWNER_CONFIRMED_MANUAL'&&fx.from===q.currency&&fx.to!==fx.from&&/^[A-Z]{3}$/.test(fx.to)&&fx.originalTotal===q.total&&fx.source.trim()&&fx.source.length<=200&&UUID.test(fx.confirmedBy)&&fx.postingAllowed===false&&fx.rounding==='HALF_AWAY_FROM_ZERO','INVALID_INVOICE_FX');instant(fx.confirmedAt);requireValue(decimalUnits(manualInvoiceAmount(q.total,fx.rate,fx.precision))===decimalUnits(fx.convertedTotal),'INVALID_INVOICE_FX_TOTAL')}
  for(const id of [q.id,q.organizationId,q.storeId,q.createdBy])requireValue(UUID.test(id),'INVALID_ID');
  requireValue(q.business.organizationId===q.organizationId&&q.business.storeId===q.storeId,'IDENTITY_SCOPE_MISMATCH');
  requireValue(q.business.businessName.trim()&&q.business.storeName.trim(),'BUSINESS_IDENTITY_REQUIRED');

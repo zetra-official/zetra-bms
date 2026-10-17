@@ -1,0 +1,81 @@
+{
+  "status": "AWAITING_EXACT_OWNER_APPROVAL",
+  "project": "dcmhqdckzhbuakvcyjit",
+  "migration": "2026101705",
+  "migrationSha256": "5e008fef97adc78190ccbb1fb28f44bd8b03d1eda117ef97e7887305c722cb7d",
+  "scope": {
+    "newPublicApi": "proforma_document_fx_v1",
+    "newTables": 0,
+    "existingRlsChanges": 0,
+    "existingAccountingAuthorityChanges": 0,
+    "financialPosting": false,
+    "saleConversion": false,
+    "reservations": false,
+    "rateMode": "OWNER_CONFIRMED_MANUAL_QUOTATION_ONLY",
+    "effect": "Append unpaid draft revision with original amounts plus explicit FX snapshot/audit; no historical or financial rewrite",
+    "manualRateAccess": "Active organization Owner in allowed store only; authenticated gateway with server-side deny checks; anon/service_role denied"
+  },
+  "evidence": "C:\\JOFU ZETRA\\JOFU\\JOFU\\JOFU\\zetra-bms-clean\\engineering\\release\\proforma-currency-final",
+  "tests": {
+    "postgres": 22,
+    "nodeRegression": 13,
+    "converterRenderedScenarios": 3,
+    "ownerConfirmationRenderedScenarios": 3,
+    "pdfHtmlLanguages": 7,
+    "pdfRendered": [
+      "en",
+      "ar"
+    ],
+    "typecheckExit": 0,
+    "webBuildExit": 0,
+    "androidJsBuildExit": 0,
+    "production1704ReadOnlyMetadata": "COMMITTED_SECURITY_PASS",
+    "authenticatedProductionWorkflow": "NOT_TESTED",
+    "physicalAndroid": "NOT_TESTED",
+    "physicalMobileBrowser": "NOT_TESTED"
+  },
+  "activation": {
+    "file": "src/proforma/invoiceFx.ts",
+    "preimageSha256": "4ae2bb59ee45fb7ba6ad8478684f97d18af6f04637df399dc6bdd19a2416a51b",
+    "postimageSha256": "b66d2f2f40806cc58d45241f50dca8ec16e79bb64a69acabf3e17be64b0b34c9",
+    "onlyAfter": "COMMITTED_QUOTE_ONLY_API_PASS"
+  },
+  "execution": [
+    "Verify every file hash, target health and fresh backup metadata",
+    "Independent 1704 definition/ACL receipt verification and 1705 absence",
+    "One exclusive attempt receipt then exact additive SQL; never automatic retry",
+    "Independent 1705 read-only receipt/body/ACL check, including after uncertain failure",
+    "Enable exact frontend flag only after verification; keep conversion/reservations disabled",
+    "Build and publish verified Web artifact to existing app.zetra.tz site; verify hosted route",
+    "Verify existing EAS production channel/runtime/native config and publish Android-only compatible OTA",
+    "Authenticated customer workflow only with available authorized test session; mark unavailable NOT TESTED"
+  ],
+  "rollback": {
+    "database": "2026101705-proforma-fx-DISABLE.sql; preserve every quote/revision/audit receipt",
+    "webDeploy": "6ad345c009933f1fa1f58792",
+    "androidGroup": "d50a4369-76a3-4740-ad77-67313be2cb6f",
+    "restoreOldDatabaseOverNewTransactions": false
+  },
+  "files": {
+    "src/currency/engine.ts": "d2a7894fe7dec531014d7bada8f4dcbd4e42c1c168218781016fd7b127312980",
+    "src/proforma/AccountingCurrencySetup.tsx": "aa11c564194d601165fa98a4795e406f6ffa1f32f5810eb0de1fedfeaad3ea7b",
+    "src/proforma/OrganizationAccountingCurrency.tsx": "e6045e9075b2014d2c80e476880f048e21487d463b6b9fd1c0d69b2236e01e8f",
+    "src/proforma/ProformaDocuments.tsx": "2298a1df1723b7e7b2da86cda2b43c267e5881214ee10a8d78bec3cd44b909fb",
+    "src/proforma/currencyUxCopy.ts": "fa44bafadebbb8dad1935f2ddba60a2028987772ecdd983e41ea3d5032719c08",
+    "src/proforma/document.ts": "ead3148f916219948dc18f32eb0d52902e23f5fa00f57228abe6d5888428f015",
+    "src/proforma/documentsApi.ts": "a37084070abdbdfdf0066a6214e5d3389d61fab5f227621fc58dcf0c23915aaa",
+    "src/proforma/model.ts": "955add6ae9c04481fca2120454228c13aeffcc9f04b418e339667f7538ed4bd9",
+    "src/proforma/InvoiceCurrencyModal.tsx": "515e2f107030559b80beacef8710cdf4215dfeec8c17ae66d3cec018ead6f191",
+    "src/proforma/invoiceFx.ts": "4ae2bb59ee45fb7ba6ad8478684f97d18af6f04637df399dc6bdd19a2416a51b",
+    "src/proforma/invoiceFxCopy.ts": "30c6b81ad8145a82689fca13a4684a7aadc43ad628d56a71b4fcb7cf912aa3e1",
+    "scripts/backend/execute_proforma_fx.py": "473aa2fc4cd8fa3afa3c1c22e5bfbf47e9f2fa15ff227a1c67d978059864c465",
+    "scripts/backend/test_proforma_fx.py": "e0b5282589256e8876068451a1935bc909bbbcf802f87bd74ad75753b4d68a20",
+    "scripts/backend/test_proforma_fx_rollback.py": "357dbc97413a3b1144c0f32b4cf19a41efa8f52937d1810d6e8cf2cc8d09cea3",
+    "tests/release/proforma-fx.test.cjs": "c826d5ccc12acefe5387014dcbc2086cc0dac73f7fb42ff91370e41df3afdd26",
+    "tests/release/proforma-final-render.cjs": "d90d500413e7be3541c16fe04f6a3132ae45326d760fd8538657c7414ee4215e",
+    "supabase/backend-review/20261017/2026101705-proforma-fx.CANDIDATE.sql": "5e008fef97adc78190ccbb1fb28f44bd8b03d1eda117ef97e7887305c722cb7d",
+    "supabase/backend-review/20261017/2026101705-proforma-fx-VERIFY.sql": "25056071de93290722fff3740d20c95562d98981e073cb288032e7cd73dd5e47",
+    "supabase/backend-review/20261017/2026101705-proforma-fx-DISABLE.sql": "96947ed5cf6241734f87e0d864ea93d722613680a32f74b0bfa8d78abfc7abad",
+    "supabase/backend-review/20261017/2026101704-proforma-VERIFY.sql": "be07493a45700c02ed5f0b9d0bfa2c9c12d0771d0d6298237b9c4b0cdf5f6a95"
+  }
+}
