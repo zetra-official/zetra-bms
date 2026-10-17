@@ -395,11 +395,14 @@ export default function FinanceLiveScreen() {
   }, [org.stores, orgId, activeStoreId, activeStoreName]);
 
   const visibleStoreIds = useMemo(() => {
-    if (scope === "STORE") {
-      return selectedStoreId ? [selectedStoreId] : activeStoreId ? [activeStoreId] : [];
+    if (scope === "STORE" || !canAll) {
+      const selected = storeOptions.find((s) => s.storeId === selectedStoreId);
+      const active = storeOptions.find((s) => s.storeId === activeStoreId);
+      const store = selected ?? active;
+      return store ? [store.storeId] : [];
     }
     return storeOptions.map((x) => x.storeId);
-  }, [scope, selectedStoreId, activeStoreId, storeOptions]);
+  }, [scope, canAll, selectedStoreId, activeStoreId, storeOptions]);
 
   const storeNameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -418,10 +421,10 @@ export default function FinanceLiveScreen() {
   }, [canAll]);
 
   useEffect(() => {
-    if (!selectedStoreId && activeStoreId) {
+    if (!storeOptions.some((s) => s.storeId === selectedStoreId)) {
       setSelectedStoreId(activeStoreId);
     }
-  }, [selectedStoreId, activeStoreId]);
+  }, [selectedStoreId, activeStoreId, storeOptions]);
 
   const callSalesForStore = useCallback(
     async (sid: string, fromISO: string, toISO: string): Promise<SalesSummary> => {
@@ -434,7 +437,8 @@ export default function FinanceLiveScreen() {
 
       const list = (Array.isArray(data) ? data : []) as any[];
 
-      const { total, orders } = summarizeSales(list);
+      // Canonical get_sales returns sale_id; keep strict identity validation.
+      const { total, orders } = summarizeSales(list, "sale_id");
       const currency = String(list?.[0]?.currency ?? "TZS").trim() || "TZS";
 
       return { total, orders, currency };
@@ -717,7 +721,7 @@ export default function FinanceLiveScreen() {
   const currentStoreLabel =
     scope === "STORE"
       ? storeNameById.get(selectedStoreId) ?? activeStoreName ?? "Store"
-      : `All Stores (${rows.length})`;
+      : `All Stores (${storeOptions.length})`;
 
   return (
     <Screen>

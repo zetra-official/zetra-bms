@@ -15,9 +15,9 @@ export function uniqueRecords<T extends Record<string, any>>(rows: T[], key: str
   }
   return Array.from(seen.values());
 }
-export function summarizeSales(rows: Record<string, any>[]) {
+export function summarizeSales(rows: Record<string, any>[], identityKey = "id") {
   // Existing get_sales screen contract: sale id and ordered amount aliases.
-  const unique = uniqueRecords(rows, "id");
+  const unique = uniqueRecords(rows, identityKey);
   let total = 0, orders = 0;
   const currencies = new Set<string>();
   for (const row of unique) {
