@@ -2306,8 +2306,8 @@ const staffAttributionCard = (
         onOpen={async () => {
           const {data:{session}}=await supabase.auth.getSession();
           if(!session?.user.id)return;
-          stageProformaCart({organizationId:orgId,storeId,actorId:session.user.id},checkoutCart.map(item=>({product_id:item.product_id,name:item.name,qty:item.qty,unit_price:getAdjustedUnitPrice(item)})),{customerName,customerPhone,notes:note,discountType:discount.type==='percent'?'percent':'fixed',discountValue:String(discount.value||0)});
-          router.push({ pathname: "/sales/proforma", params: { storeId,mode:'new' } } as any);
+          const draftId=stageProformaCart({organizationId:orgId,storeId,actorId:session.user.id},checkoutCart.map(item=>({product_id:item.product_id,name:item.name,qty:item.qty,unit_price:getAdjustedUnitPrice(item)})),{customerName,customerPhone,notes:note,discountType:discount.type==='percent'?'percent':'fixed',discountValue:String(discount.value||0),subtotal:String(subtotalAmount),discountAmount:String(discount.amount||0),total:String(grandTotal)});
+          router.push({ pathname: "/sales/proforma", params: { storeId,mode:'new',draftId } } as any);
         }}
       />
       <Button title={uiText("Back")} onPress={() => router.back()} disabled={saving} variant="secondary" />

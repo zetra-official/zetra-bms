@@ -34,7 +34,16 @@ export function formatExact(value:string,language:string):string{
  const nf=new Intl.NumberFormat(language,{maximumFractionDigits:0});
  const separator=new Intl.NumberFormat(language,{minimumFractionDigits:1}).formatToParts(1.1).find(p=>p.type==='decimal')!.value;
  const sign=negative?new Intl.NumberFormat(language).formatToParts(-1).find(p=>p.type==='minusSign')?.value||'-':'';
- return sign+nf.format(BigInt(whole))+(fraction?separator+[...fraction].map(d=>nf.format(Number(d))).join(''):'');
+ // Hermes Intl may reject BigInt. Infer grouping from a safe integer and
+ // group the original digit string; never coerce a business amount to Number.
+ const sample=nf.formatToParts(1234567890123),groups=sample.filter(p=>p.type==='integer'),group=sample.find(p=>p.type==='group')?.value;
+ const primary=groups[groups.length-1]?.value.length||3,secondary=groups[groups.length-2]?.value.length||primary;
+ const digits=whole.replace(/^0+(?=\d)/,''),parts:string[]=[];
+ let end=digits.length,size=primary;
+ const shouldGroup=!!group&&(digits.length>4||nf.formatToParts(1234).some(p=>p.type==='group'));
+ if(shouldGroup){while(end>0){parts.unshift(digits.slice(Math.max(0,end-size),end));end-=size;size=secondary}}else parts.push(digits);
+ const localized=parts.map(part=>[...part].map(d=>nf.format(Number(d))).join('')).join(group??'');
+ return sign+localized+(fraction?separator+[...fraction].map(d=>nf.format(Number(d))).join(''):'');
  }catch{return value}
 }
 export function presentMoney(input:RecordedMoney,displayCurrency:string|null,evidence:ReferenceRates|null,now:Date,maxAgeDays:number,organizationId:string):CurrencyView{

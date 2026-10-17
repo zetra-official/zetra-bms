@@ -1,10 +1,11 @@
 import type {Language} from '../i18n/catalog';
 import {ProformaRevision,validateRevision,decimalUnits,ProformaError} from './model';
 import {invoiceFxText} from './invoiceFxCopy';
+import {formatExact} from '../currency/engine';
 import {proformaText} from './labels';
 const escape=(s:string)=>s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
 /** Presentation only: retain all supplied decimal digits, without binary float rounding. */
-export function displayDecimal(value:string,language:Language):string {decimalUnits(value);const [whole,fraction]=value.split('.');const nf=new Intl.NumberFormat(language,{maximumFractionDigits:0});const decimal=new Intl.NumberFormat(language,{minimumFractionDigits:1}).formatToParts(1.1).find(x=>x.type==='decimal')!.value;return nf.format(BigInt(whole))+(fraction?decimal+fraction.split('').map(d=>nf.format(Number(d))).join(''):'')}
+export function displayDecimal(value:string,language:Language):string {decimalUnits(value);return formatExact(value,language)}
 export function buildProformaHtml(q:ProformaRevision,language:Language):string {
  validateRevision(q);const b=q.business,txt=(key:Parameters<typeof proformaText>[1])=>escape(proformaText(language,key));
  if(b.logoDataUri&&!/^data:image\/(png|jpeg);base64,[A-Za-z0-9+/=]+$/.test(b.logoDataUri))throw new ProformaError('INVALID_LOGO');

@@ -1,6 +1,9 @@
 import type {Language} from '../i18n/catalog';
 const languages:Language[]=['en','sw','fr','pt','ar','es','zh'];
 const copy={
+ checkoutSummary:['Checkout summary','Muhtasari wa Checkout','Récapitulatif de caisse','Resumo do checkout','ملخص الدفع','Resumen de caja','结账摘要'],
+ confirmSale:['Confirm Sale','Thibitisha Mauzo','Confirmer la vente','Confirmar venda','تأكيد البيع','Confirmar venta','确认销售'],
+ checkoutRequired:['Select products in the existing POS, then choose Create Proforma Invoice at Checkout. Your POS cart is preserved.','Chagua bidhaa kwenye POS iliyopo, kisha chagua Unda Ankara ya Proforma kwenye Checkout. Cart ya POS imehifadhiwa.','Sélectionnez les articles dans le point de vente, puis créez le pro forma à la caisse. Votre panier est conservé.','Selecione os artigos no POS e crie o proforma no checkout. O carrinho é preservado.','اختر المنتجات من نقطة البيع ثم أنشئ الفاتورة الأولية عند الدفع. تبقى سلة نقطة البيع محفوظة.','Seleccione productos en el POS y cree la proforma en caja. Su carrito se conserva.','在现有POS中选择商品，然后在结账页创建形式发票。POS购物车保持不变。'],
  new:['New Proforma','Proforma mpya','Nouveau pro forma','Novo proforma','فاتورة أولية جديدة','Nueva proforma','新建形式发票'],
  search:['Search products or customers','Tafuta bidhaa au wateja','Rechercher des produits ou clients','Pesquisar produtos ou clientes','البحث عن المنتجات أو العملاء','Buscar productos o clientes','搜索商品或客户'],
  save:['Save draft','Hifadhi rasimu','Enregistrer le brouillon','Guardar rascunho','حفظ المسودة','Guardar borrador','保存草稿'],
