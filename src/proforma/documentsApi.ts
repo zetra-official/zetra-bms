@@ -5,7 +5,7 @@ export const DOCUMENT_CONTRACT = '2026101704';
 export type Product = {productId:string;description:string;sku:string|null;unit:string|null;unitPrice:string;precision:boolean};
 export type DocumentInput = {currency:string;validDate:string;items:{productId:string;quantity:string;unitPrice:string}[];discountType:'fixed'|'percent';discountValue:string;customer:{id?:string;name?:string;phone?:string};notes:string;terms:string};
 export type DocumentContext = Scope & {version:string;documentReady:boolean;conversionReady:false;reservationReady:false;canCreate:boolean;role:string;actorId:string;membershipId:string;timeZone:string;currency:string|null;currencies:string[];validDate:string;products:Product[];customers:{id:string;name:string;phone:string}[]};
-export type DocumentDetail = Scope & {document:{id:string;organization_id:string;store_id:string};revision:ProformaRevision & {editInput:DocumentInput};canEdit:boolean;conversionReady:false};
+export type DocumentDetail = Scope & {document:{id:string;organization_id:string;store_id:string;status?:ProformaRevision['status'];sale_id?:string};revision:ProformaRevision & {editInput:DocumentInput};canEdit:boolean;conversionReady:false};
 export function createDocumentService(scope:Scope,port:RpcPort,id:()=>string) {
   async function call(name:string,args:Record<string,unknown>,signal?:AbortSignal) {
     if(signal?.aborted)throw new ProformaError('REQUEST_ABORTED');

@@ -1,0 +1,8 @@
+BEGIN READ ONLY;
+SET LOCAL statement_timeout='15s';
+SELECT jsonb_build_object('db',current_database(),'actor',current_user,'readOnly',current_setting('transaction_read_only'),
+ 'baseline',EXISTS(SELECT 1 FROM backend_core.release_receipts WHERE version='2026101704'),
+ 'absent',to_regprocedure('public.proforma_conversion_preview_v1(uuid,uuid,uuid)') IS NULL AND to_regclass('proforma_backend.sale_links') IS NULL,
+ 'untrustedCreate',has_schema_privilege('anon','public','CREATE') OR has_schema_privilege('authenticated','public','CREATE'),
+ 'definitionMismatches',(SELECT count(*) FROM jsonb_to_recordset('[{"identity": "public.attach_customer_to_sale(uuid,uuid,text,text,numeric)", "digest": "9120c743fca972f61b6a3f8fc36cfedf"}, {"identity": "public.create_credit_account_v2(uuid,text,text)", "digest": "7e4d3c1abe446af9720a55bc7965ba88"}, {"identity": "public.create_sale(uuid,jsonb,text,uuid)", "digest": "322c4ec027ce6f43fa73baa6e663b7ea"}, {"identity": "public.create_sale_with_payment_v4(uuid,jsonb,text,text,numeric,text,text,uuid,text,text,text,numeric,text,text,uuid)", "digest": "09c0ee2a16b55a3fcedbe85563d1b897"}, {"identity": "public.create_sale_with_payment_v6(uuid,jsonb,text,text,numeric,text,text,uuid,text,text,text,numeric,text,uuid,uuid,uuid)", "digest": "67eddab421487dc39d00da9f81f4c29e"}, {"identity": "public.get_store_sale_items(uuid)", "digest": "29616231912babcdb2e2c5ba08a33611"}, {"identity": "public.record_credit_sale_v2(uuid,uuid,numeric,text,text)", "digest": "1f3bfeed0ccb99dc0428ae77c7a7606e"}]'::jsonb) e(identity text,digest text) LEFT JOIN pg_proc p ON p.oid=to_regprocedure(e.identity) WHERE p.oid IS NULL OR md5(replace(pg_get_functiondef(p.oid),E'\r','')) IS DISTINCT FROM e.digest)) AS preflight;
+ROLLBACK;

@@ -1,3 +1,6 @@
+import {conversionService,canonicalJson,parseConversionQuote,type ConversionQuote} from '../../../src/proforma/conversion';
+import {conversionText} from '../../../src/proforma/conversionCopy';
+import {useLanguage} from '../../../src/i18n/LanguageProvider';
 import {paymentMethodKey} from "@/src/i18n/presentation";
 import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
 ﻿import {useCommonText} from "@/src/i18n/useCommonText";
@@ -239,7 +242,8 @@ function MethodChip({
   );
 }
 
-function normalizeMoneyInput(raw: string) {
+function normalizeMoneyInput(raw: string, conversion = false) {
+  if(conversion)return String(raw??'').replace(/[, ]+/g,'').trim();
   const digitsOnly = String(raw ?? "").replace(/[^\d]/g, "");
   if (!digitsOnly) return "";
   const stripped = digitsOnly.replace(/^0+(?=\d)/, "");
@@ -390,6 +394,7 @@ export default function CheckoutScreen() {
   const params = useLocalSearchParams<{
     storeId?: string | string[];
     storeName?: string | string[];
+    proformaId?:string;proformaOrg?:string;proformaQuote?:string;
     cart?: string | string[];
     cashierMode?: string | string[];
 reservationMode?: string | string[];
@@ -415,7 +420,12 @@ orderStoreName?: string | string[];
 
   const orgId = String(activeOrgId ?? "").trim();
   const money = useOrgMoneyPrefs(orgId);
-  const displayCurrency = money.currency || "TZS";
+  const {language:conversionLanguage}=useLanguage();
+  const conversionId=String(one(params.proformaId)??'');
+  const conversionQuote=useMemo<ConversionQuote|null>(()=>{return parseConversionQuote(String(one(params.proformaQuote)??''),conversionId)},[params.proformaQuote,conversionId]);
+  const [conversionChecked,setConversionChecked]=useState(false);
+  const conversionAttempt=useRef<{request:string;quote:ConversionQuote;payment:Record<string,unknown>}|null>(null);
+  const displayCurrency = conversionQuote?.currency || money.currency || "TZS";
   const displayLocale = money.locale || "en-TZ";
 
   const fmt = useCallback(
@@ -432,6 +442,8 @@ orderStoreName?: string | string[];
 
     await AsyncStorage.removeItem(`sales_cart_${sid}`);
   }, [storeId]);
+  const conversionApi=useMemo(()=>conversionService(supabase,orgId,storeId),[orgId,storeId]);
+  useEffect(()=>{let live=true;setConversionChecked(false);if(conversionId&&conversionQuote&&String(one(params.proformaOrg))===orgId)void conversionApi.preview(conversionId).then(p=>{if(!live)return;if(p.converted&&p.saleId){router.replace({pathname:'/sales/receipt',params:{saleId:p.saleId}} as any);return}setConversionChecked(canonicalJson(p.quote)===canonicalJson(conversionQuote))}).catch(()=>{});return()=>{live=false}},[conversionApi,conversionId,conversionQuote,params.proformaOrg,orgId,router]);
   const storeNameParam = String(one(params.storeName) ?? "").trim();
   const cashierMode = one(params.cashierMode) === "1";
 const reservationMode =
@@ -608,7 +620,7 @@ const reservationOrgId = String(one(params.orderOrgId) ?? orgId).trim();
     [checkoutCart]
   );
 
-  const [discountText, setDiscountText] = useState<string>("");
+  const [discountText, setDiscountText] = useState<string>(()=>conversionQuote?conversionQuote.discountValue+(conversionQuote.discountType==='percent'?'%':''):"");
   const discount = useMemo(
     () => parseDiscountInput(discountText, subtotalAmount),
     [discountText, subtotalAmount]
@@ -628,7 +640,7 @@ const reservationOrgId = String(one(params.orderOrgId) ?? orgId).trim();
   const [paidVia, setPaidVia] = useState<Exclude<PayMethod, "CREDIT">>("CASH");
 
   const [paidStr, setPaidStr] = useState<string>(() =>
-    reservationMode ? "0" : String(Math.round(grandTotal || subtotalAmount))
+    reservationMode ? "0" : String(conversionId?(grandTotal||subtotalAmount):Math.round(grandTotal || subtotalAmount))
   );
 
   const [splitCashStr, setSplitCashStr] = useState<string>("");
@@ -637,8 +649,8 @@ const reservationOrgId = String(one(params.orderOrgId) ?? orgId).trim();
   const [channel, setChannel] = useState<string>("");
   const [reference, setReference] = useState<string>("");
 
-  const [customerName, setCustomerName] = useState<string>("");
-  const [customerPhone, setCustomerPhone] = useState<string>("");
+  const [customerName, setCustomerName] = useState<string>(()=>conversionQuote?.customer?.name??"");
+  const [customerPhone, setCustomerPhone] = useState<string>(()=>conversionQuote?.customer?.phone??"");
   const [customerOptions, setCustomerOptions] = useState<CheckoutCustomerSuggestion[]>([]);
   const [customerSuggestionsOpen, setCustomerSuggestionsOpen] = useState(false);
   const [customerSearchFocused, setCustomerSearchFocused] = useState<"name" | "phone" | null>(null);
@@ -659,9 +671,23 @@ const [staffDropdownOpen, setStaffDropdownOpen] = useState(false);
     text: string;
   } | null>(null);
 
+  const hydratedConversionRef=useRef('');
+  useEffect(()=>{
+    if(!conversionId){if(hydratedConversionRef.current){hydratedConversionRef.current='';conversionAttempt.current=null;submission.current=new SubmissionGate();setCustomerName('');setCustomerPhone('');setDiscountText('');setNote('');setPaidStr('');setMethod('CASH');setSplitCashStr('');setSplitMobileStr('');setSplitBankStr('');setChannel('');setReference('')}return}
+    if(!conversionQuote)return;
+    const identity=conversionId+canonicalJson(conversionQuote);
+    if(hydratedConversionRef.current===identity)return;
+    hydratedConversionRef.current=identity;
+    conversionAttempt.current=null;submission.current=new SubmissionGate();
+    setCustomerName(conversionQuote.customer?.name??'');setCustomerPhone(conversionQuote.customer?.phone??'');
+    setDiscountText(conversionQuote.discountValue+(conversionQuote.discountType==='percent'?'%':''));
+    setMethod('CASH');setPaidVia('CASH');setPaidStr(conversionQuote.total);
+    setSplitCashStr('');setSplitMobileStr('');setSplitBankStr('');setChannel('');setReference('');setNote('');
+  },[conversionId,conversionQuote]);
+
   const onPaidChange = useCallback((t: string) => {
-    setPaidStr(normalizeMoneyInput(t));
-  }, []);
+    setPaidStr(normalizeMoneyInput(t,!!conversionId));
+  }, [conversionId]);
 
   const onSetMethod = useCallback(
     (m: CheckoutMethod) => {
@@ -689,7 +715,7 @@ const [staffDropdownOpen, setStaffDropdownOpen] = useState(false);
         return;
       }
 
-      setPaidStr(String(Math.round(grandTotal)));
+      setPaidStr(String(conversionId?grandTotal:Math.round(grandTotal)));
       setPaidVia("CASH");
 
       if (m === "CASH") {
@@ -701,7 +727,7 @@ const [staffDropdownOpen, setStaffDropdownOpen] = useState(false);
         if (!channel) setChannel("M-PESA");
       }
     },
-    [grandTotal, channel]
+    [grandTotal, channel, conversionId]
   );
 
   const splitCashAmount = useMemo(() => parseMoney(splitCashStr), [splitCashStr]);
@@ -968,6 +994,7 @@ if (!orgId || !storeId) {
   }, []);
 
   const invalidReason = useMemo(() => {
+    if(conversionId&&(!conversionChecked||!isOnline||!conversionQuote||cashierMode||reservationMode))return conversionText(conversionLanguage,'stale');
     if (!canSell) return "No permission to sell.";
     if (!storeId) return "Missing storeId.";
     if (mismatch) {
@@ -1041,7 +1068,7 @@ if (reservationMode) {
 
     return null;
   }, [
-    canSell,
+    conversionId,conversionChecked,conversionQuote,isOnline,reservationMode,conversionLanguage,canSell,
     storeId,
     mismatch,
     checkoutCart,
@@ -1163,6 +1190,29 @@ orgId,
       return;
     }
 
+    if(conversionId){
+      try{
+        if(!conversionQuote||!conversionChecked||!isOnline||String(one(params.proformaOrg))!==orgId)throw Error(conversionText(conversionLanguage,'stale'));
+        const currentItems=checkoutCart.map(i=>({product_id:i.product_id,qty:i.qty,unit_price:getAdjustedUnitPrice(i)}));
+        const quoteItems=conversionQuote.items.map(i=>({product_id:i.product_id,qty:i.qty,unit_price:i.unit_price}));
+        if(canonicalJson(currentItems)!==canonicalJson(quoteItems)||customerName!==String(conversionQuote.customer?.name??'')||customerPhone!==String(conversionQuote.customer?.phone??'')||discount.type!==conversionQuote.discountType&&Number(conversionQuote.discountValue)!==0||Number(discount.value||0)!==Number(conversionQuote.discountValue))throw Error(conversionText(conversionLanguage,'checkout'));
+        const cashierShift=String(activeRole).toLowerCase()==='cashier'?await getMyOpenCashierShiftId(storeId):null;
+        const payment:Record<string,unknown>={method,paid:isSplit?conversionQuote.total:String(paidAmount),paidVia,channel:isSplit?channel.trim():rpcChannel,reference:isSplit?reference.trim():rpcReference,shiftId:cashierShift,soldByMembershipId:effectiveSoldByMembershipId||null};
+        if(isSplit)Object.assign(payment,{cash:String(splitCashAmount),mobile:String(splitMobileAmount),bank:String(splitBankAmount)});
+        if(conversionAttempt.current&&canonicalJson(conversionAttempt.current.payment)!==canonicalJson(payment))throw Error(conversionText(conversionLanguage,'stale'));
+        conversionAttempt.current??={request:makeId(),quote:conversionQuote,payment};
+        const attempt=conversionAttempt.current;
+        const saleId=await conversionApi.commit(conversionId,attempt.request,attempt.quote,attempt.payment);
+        submission.current.committed();
+        // Conversion uses its own document cart; never clear an unrelated persisted POS cart.
+        await playSaleSuccessSoundSafe();router.replace({pathname:'/(tabs)/sales/receipt',params:{saleId}} as any);
+      }catch(e:any){
+        if(e?.definitive)conversionAttempt.current=null;
+        const message=e?.message??conversionText(conversionLanguage,'stale');
+        if(Platform.OS==='web')setWebBanner({type:'error',text:message});else Alert.alert(uiText('Blocked'),message);
+      }
+      return;
+    }
     if (cashierMode) {
       setSaving(true);
       try {
@@ -1626,7 +1676,7 @@ p_customer_full_name: customerName.trim() || null,
     discountText,
     discount.amount,
     subtotalAmount,
-    checkoutCart,
+    conversionId,conversionQuote,conversionChecked,isOnline,params.proformaOrg,orgId,conversionLanguage,conversionApi,method,paidVia,channel,reference,splitCashAmount,splitMobileAmount,splitBankAmount,checkoutCart,
     storeId,
     grandTotal,
     router,
@@ -1674,12 +1724,13 @@ headerStoreName,
   const showChannelRef = useMemo(() => {
     if (cashierMode) return false;
     if (isOffline) return false;
-    if (method === "SPLIT") return false;
+    if (method === "SPLIT") return !!conversionId&&(splitMobileAmount>0||splitBankAmount>0);
     return rpcPaymentMethod === "MOBILE" || rpcPaymentMethod === "BANK";
-  }, [cashierMode, isOffline, rpcPaymentMethod]);
+  }, [cashierMode, isOffline, rpcPaymentMethod,method,conversionId,splitMobileAmount,splitBankAmount]);
 
   const summaryCard = (
     <Card style={checkoutCardStyle("#3B82F6", "#F8FBFF", isDesktopWeb)}>
+      {!!conversionId&&<Text accessibilityRole="alert" style={{color:conversionChecked?'#334155':'#9a3412',marginBottom:10}}>{conversionText(conversionLanguage,conversionChecked?'checkout':'stale')}</Text>}
       <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
         <View style={{ flex: 1 }}>
           <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
@@ -2042,7 +2093,7 @@ const staffAttributionCard = (
               <FieldLabel>{uiText("Cash ({p0})", {p0: (displayCurrency)})}</FieldLabel>
               <InputBox
                 value={splitCashStr}
-                onChangeText={(v) => setSplitCashStr(normalizeMoneyInput(v))}
+                onChangeText={(v) => setSplitCashStr(normalizeMoneyInput(v,!!conversionId))}
                 placeholder="300000"
                 keyboardType="numeric"
               />
@@ -2052,7 +2103,7 @@ const staffAttributionCard = (
               <FieldLabel>{uiText("Mobile ({p0})", {p0: (displayCurrency)})}</FieldLabel>
               <InputBox
                 value={splitMobileStr}
-                onChangeText={(v) => setSplitMobileStr(normalizeMoneyInput(v))}
+                onChangeText={(v) => setSplitMobileStr(normalizeMoneyInput(v,!!conversionId))}
                 placeholder="250000"
                 keyboardType="numeric"
               />
@@ -2062,7 +2113,7 @@ const staffAttributionCard = (
               <FieldLabel>{uiText("Bank ({p0})", {p0: (displayCurrency)})}</FieldLabel>
               <InputBox
                 value={splitBankStr}
-                onChangeText={(v) => setSplitBankStr(normalizeMoneyInput(v))}
+                onChangeText={(v) => setSplitBankStr(normalizeMoneyInput(v,!!conversionId))}
                 placeholder="50000"
                 keyboardType="numeric"
               />
@@ -2305,7 +2356,7 @@ const staffAttributionCard = (
       <CheckoutProformaAction
         organizationId={orgId || null} storeId={storeId || null}
         storeOrganizationId={orgCtx.stores?.find((row: any) => row.store_id === storeId && row.organization_id === orgId && row.is_allowed !== false)?.organization_id ?? null}
-        role={activeRole ?? null} busy={saving} online={isOnline} hasItems={checkoutCart.length > 0}
+        role={activeRole ?? null} busy={saving} online={isOnline} hasItems={!conversionId&&checkoutCart.length > 0}
         onOpen={async () => {
           const {data:{session}}=await supabase.auth.getSession();
           if(!session?.user.id)return;
