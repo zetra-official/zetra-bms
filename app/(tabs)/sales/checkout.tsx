@@ -28,6 +28,8 @@ import { Card } from "../../../src/ui/Card";
 import { Screen } from "../../../src/ui/Screen";
 import { formatMoney, useOrgMoneyPrefs } from "@/src/ui/money";
 import { theme } from "../../../src/ui/theme";
+import { CheckoutProformaAction } from "../../../src/proforma/CheckoutProformaAction";
+import { stageProformaCart } from "../../../src/proforma/checkoutDraft";
 
 type CartItem = {
   product_id: string;
@@ -2296,6 +2298,17 @@ const staffAttributionCard = (
         onPress={confirm}
         disabled={saving || submission.current.blocked || !!invalidReason}
         variant="primary"
+      />
+      <CheckoutProformaAction
+        organizationId={orgId || null} storeId={storeId || null}
+        storeOrganizationId={orgCtx.stores?.find((row: any) => row.store_id === storeId && row.organization_id === orgId && row.is_allowed !== false)?.organization_id ?? null}
+        role={activeRole ?? null} busy={saving} online={isOnline} hasItems={checkoutCart.length > 0}
+        onOpen={async () => {
+          const {data:{session}}=await supabase.auth.getSession();
+          if(!session?.user.id)return;
+          stageProformaCart({organizationId:orgId,storeId,actorId:session.user.id},checkoutCart.map(item=>({product_id:item.product_id,name:item.name,qty:item.qty,unit_price:getAdjustedUnitPrice(item)})),{customerName,customerPhone,notes:note,discountType:discount.type==='percent'?'percent':'fixed',discountValue:String(discount.value||0)});
+          router.push({ pathname: "/sales/proforma", params: { storeId,mode:'new' } } as any);
+        }}
       />
       <Button title={uiText("Back")} onPress={() => router.back()} disabled={saving} variant="secondary" />
 

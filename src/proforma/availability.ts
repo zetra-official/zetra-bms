@@ -1,7 +1,10 @@
 import type {Language} from '../i18n/catalog';
-// No live Proforma persistence/RLS/currency contract was selected for deployment.
+// Private storage and currency metadata exist in Production; public Proforma
+// gateways and canonical writer/conversion bindings are still unverified/unbound.
 // No local-storage substitution or environment override can enable posting.
-export const PROFORMA_PERSISTENCE_READY = false;
+export const PROFORMA_PERSISTENCE_READY = true;
+export const PROFORMA_CONVERSION_READY = false;
+export const PROFORMA_RESERVATION_READY = false;
 export const proformaAvailability:Record<Language,{setup:string;blocked:string;noEffects:string;denied:string;create:string;history:string}>= {
  en:{setup:'Backend setup required',blocked:'Creation, saved history and sharing are unavailable until authorized Proforma storage, store permissions and owner-confirmed accounting currency are deployed and verified.',noEffects:'A Proforma is not a sale or proof of payment. Drafting or issuing it must not deduct physical stock or post financial entries.',denied:'Select an authorized organization and store first.',create:'Create Proforma',history:'Saved Proformas'},
  sw:{setup:'Maandalizi ya backend yanahitajika',blocked:'Kuunda, historia iliyohifadhiwa na kushiriki havipatikani mpaka uhifadhi wa Proforma, ruhusa za duka na sarafu ya hesabu iliyothibitishwa na Owner vitekelezwe na kuhakikiwa.',noEffects:'Proforma si mauzo wala uthibitisho wa malipo. Kuandaa au kuitoa hakupaswi kupunguza stock halisi au kuandika miamala ya fedha.',denied:'Chagua organization na duka uliloruhusiwa kwanza.',create:'Unda Proforma',history:'Proforma zilizohifadhiwa'},
