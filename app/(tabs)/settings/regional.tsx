@@ -1,3 +1,4 @@
+import { OrganizationAccountingCurrency } from '@/src/proforma/OrganizationAccountingCurrency';
 import { useCommonText } from "@/src/i18n/useCommonText";
 import { UserLanguagePicker } from "@/src/i18n/LanguageProvider";
 import { PersonalCurrencyPicker } from "@/src/i18n/PersonalCurrencyPicker";
@@ -697,24 +698,7 @@ export default function RegionalSettings() {
               {uiText("Business currency is protected. Display preferences do not change recorded amounts.")}
             </Text>
 
-            <CurrencyPickerAll
-              value={currencyCode}
-              disabled
-              onChange={() => {}}
-              title={uiText("Business base currency")}
-            />
-
-            {!canEdit ? (
-              <Text
-                style={{
-                  color: "rgba(255,255,255,0.55)",
-                  fontWeight: "800",
-                  fontSize: 12,
-                  marginTop: 10,
-                }}
-              >
-                {uiText("Staff cannot change currency. Owner/Admin only.")}</Text>
-            ) : null}
+            {orgId&&<OrganizationAccountingCurrency key={orgId} organizationId={orgId} role={org.activeRole??''}/>}
           </View>
 
           <Divider />
