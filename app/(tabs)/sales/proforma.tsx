@@ -9,5 +9,5 @@ export default function ProformaRoute() {
  const requested=Array.isArray(params.storeId)?params.storeId[0]:params.storeId;
  const store=org.stores.find(row=>row.store_id===(requested??org.activeStoreId)&&row.organization_id===org.activeOrgId&&row.is_allowed!==false);
  const authorized=!org.loading&&canOpenProforma({organizationId:org.activeOrgId,storeId:store?.store_id??null,storeOrganizationId:store?.organization_id??null,role:org.activeRole});
- return <Screen style={{backgroundColor:'#FFFFFF'}} contentStyle={{backgroundColor:'#FFFFFF'}}><ProformaEntry key={`${org.activeOrgId}:${store?.store_id}:${org.activeRole}:${params.mode}:${params.draftId}`} organizationId={org.activeOrgId} storeId={store?.store_id??null} authorized={authorized} draftId={params.draftId} startNew={params.mode==='new'} onStartCheckout={()=>router.push('/sales' as any)}/></Screen>;
+ return <Screen style={{backgroundColor:'#FFFFFF'}} contentStyle={{backgroundColor:'#FFFFFF'}}><ProformaEntry key={`${org.activeOrgId}:${store?.store_id}:${org.activeRole}:${params.mode}:${params.draftId}`} organizationId={org.activeOrgId} storeId={store?.store_id??null} authorized={authorized} draftId={params.draftId} startNew={params.mode==='new'} onStartCheckout={()=>router.replace('/sales' as any)}/></Screen>;
 }

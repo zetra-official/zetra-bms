@@ -11,8 +11,8 @@ export async function exportProformaNative(q:ProformaRevision,language:Language)
  return {uri,shared:false};
 }
 /** Real browser print-to-PDF dialog. A returned handle does not prove the user saved a file. */
-export async function printProformaWeb(q:ProformaRevision,language:Language):Promise<void>{
- const html=buildProformaHtml(q,language);if(typeof window==='undefined')throw Error('WEB_UNAVAILABLE');
+export async function printProformaWeb(q:ProformaRevision,language:Language,prepare?:(revision:ProformaRevision)=>Promise<ProformaRevision>):Promise<void>{
+ if(typeof window==='undefined')throw Error('WEB_UNAVAILABLE');
  const preview=window.open('','_blank');if(!preview)throw Error('POPUP_BLOCKED');
- try{preview.opener=null;preview.document.open();preview.document.write(html);preview.document.close();await preview.document.fonts.ready;await Promise.all(Array.from(preview.document.images).map(img=>img.decode().catch(()=>undefined)));preview.focus();preview.print()}catch(error){preview.close();throw error}
+ try{preview.opener=null;const html=buildProformaHtml(prepare?await prepare(q):q,language);preview.document.open();preview.document.write(html);preview.document.close();await preview.document.fonts.ready;await Promise.all(Array.from(preview.document.images).map(img=>img.decode().catch(()=>undefined)));preview.focus();preview.print()}catch(error){preview.close();throw error}
 }

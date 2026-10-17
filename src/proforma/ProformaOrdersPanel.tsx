@@ -1,3 +1,5 @@
+import {withReceiptLogo} from './receiptBranding';
+import {supabase} from '../supabase/supabaseClient';
 import React,{useEffect,useRef,useState} from 'react';
 import {ActivityIndicator,Platform,Pressable,Text,TextInput,View} from 'react-native';
 import {useLanguage} from '../i18n/LanguageProvider';
@@ -16,6 +18,6 @@ export function ProformaOrdersPanel({organizationId,storeId,reader,onSelect}:{or
 }
 export function ProformaExportButton({revision}:{revision:ProformaRevision}){
  const {language}=useLanguage(),[busy,setBusy]=useState(false),[failed,setFailed]=useState(false),gate=useRef(false);
- async function run(){if(gate.current)return;gate.current=true;setBusy(true);setFailed(false);try{if(Platform.OS==='web')await printProformaWeb(revision,language);else await exportProformaNative(revision,language)}catch{setFailed(true)}finally{gate.current=false;setBusy(false)}}
+ async function run(){if(gate.current)return;gate.current=true;setBusy(true);setFailed(false);try{const prepare=(q:ProformaRevision)=>withReceiptLogo(q,supabase,process.env.EXPO_PUBLIC_SUPABASE_URL??'');if(Platform.OS==='web')await printProformaWeb(revision,language,prepare);else {const result=await exportProformaNative(await prepare(revision),language);if(!result.shared)throw Error('SHARING_UNAVAILABLE')}}catch{setFailed(true)}finally{gate.current=false;setBusy(false)}}
  return <View><Pressable accessibilityRole="button" disabled={busy} accessibilityState={{disabled:busy,busy}} onPress={()=>void run()} style={{minHeight:48,padding:14,borderRadius:9,backgroundColor:'#005bbb'}}>{busy?<ActivityIndicator color="#fff"/>:<Text style={{color:'#fff',fontWeight:'700',textAlign:'center'}}>{proformaText(language,'share')}</Text>}</Pressable>{failed&&<Text accessibilityRole="alert">{proformaText(language,'exportFailed')}</Text>}</View>;
 }

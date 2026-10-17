@@ -2,7 +2,7 @@ import {paymentMethodKey} from "@/src/i18n/presentation";
 import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
 ﻿import {useCommonText} from "@/src/i18n/useCommonText";
 import SafeIcon from "@/src/ui/SafeIcon";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
@@ -29,6 +29,7 @@ import { Screen } from "../../../src/ui/Screen";
 import { formatMoney, useOrgMoneyPrefs } from "@/src/ui/money";
 import { theme } from "../../../src/ui/theme";
 import { CheckoutProformaAction } from "../../../src/proforma/CheckoutProformaAction";
+import { takeCompletedDraft, cartSignature } from "../../../src/proforma/savedCart";
 import { stageProformaCart } from "../../../src/proforma/checkoutDraft";
 
 type CartItem = {
@@ -648,6 +649,8 @@ const [currentActorMembershipId, setCurrentActorMembershipId] = useState<string>
 const [soldByMembershipId, setSoldByMembershipId] = useState<string>("");
 const [staffDropdownOpen, setStaffDropdownOpen] = useState(false);
   const [note, setNote] = useState("");
+  const proformaDraftRef=useRef<string|null>(null);
+  useFocusEffect(useCallback(()=>{if(proformaDraftRef.current&&takeCompletedDraft(proformaDraftRef.current)){proformaDraftRef.current=null;setCheckoutCart([]);setCustomerName('');setCustomerPhone('');setDiscountText('');setNote('')}},[]));
   const [saving, setSaving] = useState(false);
   const submission = useRef(new SubmissionGate());
   const [openCashierShiftId, setOpenCashierShiftId] = useState<string | null>(null);
@@ -2306,7 +2309,8 @@ const staffAttributionCard = (
         onOpen={async () => {
           const {data:{session}}=await supabase.auth.getSession();
           if(!session?.user.id)return;
-          const draftId=stageProformaCart({organizationId:orgId,storeId,actorId:session.user.id},checkoutCart.map(item=>({product_id:item.product_id,name:item.name,qty:item.qty,unit_price:getAdjustedUnitPrice(item)})),{customerName,customerPhone,notes:note,discountType:discount.type==='percent'?'percent':'fixed',discountValue:String(discount.value||0),subtotal:String(subtotalAmount),discountAmount:String(discount.amount||0),total:String(grandTotal)});
+          const draftId=stageProformaCart({organizationId:orgId,storeId,actorId:session.user.id},checkoutCart.map(item=>({product_id:item.product_id,name:item.name,qty:item.qty,unit_price:getAdjustedUnitPrice(item)})),{customerName,customerPhone,notes:note,discountType:discount.type==='percent'?'percent':'fixed',discountValue:String(discount.value||0),subtotal:String(subtotalAmount),discountAmount:String(discount.amount||0),total:String(grandTotal),sourceCart:cartSignature(cart)});
+          proformaDraftRef.current=draftId;
           router.push({ pathname: "/sales/proforma", params: { storeId,mode:'new',draftId } } as any);
         }}
       />

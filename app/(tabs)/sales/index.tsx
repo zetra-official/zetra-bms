@@ -1,3 +1,5 @@
+import {consumeSavedCart} from "../../../src/proforma/savedCart";
+import {ProformaOrdersAction} from "../../../src/proforma/ProformaOrdersAction";
 import {indexPOS, searchPOS} from "@/src/search/catalogSearch";
 import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
 ﻿import {useCommonText} from "@/src/i18n/useCommonText";
@@ -582,6 +584,8 @@ const restorePersistedCart = useCallback(async () => {
     }
 
     try {
+      const {data:{session}}=await supabase.auth.getSession();
+      if(session&&orgId)await consumeSavedCart(AsyncStorage,{organizationId:orgId,storeId:sid,actorId:session.user.id});
       const raw = await AsyncStorage.getItem(CART_KEY(sid));
       const parsed = raw ? JSON.parse(raw) : [];
 
@@ -597,7 +601,7 @@ const restorePersistedCart = useCallback(async () => {
         cartHydratedRef.current = true;
       }
     }
-  }, [activeStoreId, isCashier]);
+  }, [activeStoreId, isCashier, orgId]);
 
   useFocusEffect(
     useCallback(() => {
@@ -1999,11 +2003,12 @@ const TopBar = useMemo(() => {
         ) : null}
       </View>
 
+      <ProformaOrdersAction organizationId={orgId} storeId={activeStoreId??null}/>
       {/* Expenses na Profit zimeondolewa hapa ili Sales ibaki POS safi.
           Expenses sasa iko kwenye bottom tab yake. Profit ibaki Finance. */}
     </View>
   );
-}, [headerSubtitle, isDesktopWeb, router, statusLine, todayLabel, uiText]);
+}, [headerSubtitle, isDesktopWeb, router, statusLine, todayLabel, uiText, activeStoreId, orgId]);
 
   const QuickBar = useMemo(() => {
     return (

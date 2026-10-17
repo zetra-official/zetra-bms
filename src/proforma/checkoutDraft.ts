@@ -1,6 +1,6 @@
 /** Ephemeral POS handover only; never persists a document, sale or payment. */
 type Cart = {product_id:string;name:string;qty:number;unit_price:number}[];
-type Metadata={customerName:string;customerPhone:string;notes:string;discountType:'fixed'|'percent';discountValue:string;subtotal?:string;discountAmount?:string;total?:string};
+type Metadata={customerName:string;customerPhone:string;notes:string;discountType:'fixed'|'percent';discountValue:string;subtotal?:string;discountAmount?:string;total?:string;sourceCart?:string};
 type Intent = {organizationId:string;storeId:string;actorId:string;expires:number;items:Cart;metadata?:Metadata;id:string};
 let intent:Intent|null=null;
 let sequence=0;
