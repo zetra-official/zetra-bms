@@ -1,0 +1,16 @@
+{
+  "stagingTransfer": "STOPPED_NOT_EXECUTED",
+  "paidUpgrade": false,
+  "stagingDeployment": "STOPPED",
+  "productionWrites": false,
+  "deployment": false,
+  "gitCheckpoint": "bccdfae",
+  "sourceFilesVerified": 20,
+  "acceptedTestsReused": [
+    94,
+    24
+  ],
+  "typescript": "PASS_ZERO_ERRORS",
+  "android": "PRIOR_PASS_REUSED_NOT_RERUN",
+  "restoreAssurance": "NOT_TESTED"
+}

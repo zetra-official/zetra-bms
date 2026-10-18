@@ -1,0 +1,14 @@
+{
+  "typescript": {
+    "command": "npm run typecheck",
+    "exitCode": 0,
+    "errors": 0
+  },
+  "web": {
+    "command": "npx expo export --platform web --output-dir dist/currency-git-checkpoint-verified",
+    "exitCode": 0,
+    "staticRoutes": 216,
+    "initialSandboxExport": "EPERM writing output; rerun with approved permissions succeeded"
+  },
+  "android": "Prior accepted Hermes export PASS reused; source hashes unchanged; no physical test"
+}
