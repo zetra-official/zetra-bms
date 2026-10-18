@@ -1,5 +1,5 @@
 import {OnboardingCurrencyAcknowledgement} from '@/src/currency/OnboardingCurrencyAcknowledgement';
-import {ATOMIC_CURRENCY_ONBOARDING_ACTIVE,persistentOnboardingIntent,verifyCurrencyOnboardingResult} from '@/src/currency/onboarding';
+import {ATOMIC_CURRENCY_ONBOARDING_ACTIVE,SCOPED_CURRENCY_ONBOARDING_RPC,isSupportedNativeOnboardingCurrency,persistentScopedOnboardingIntent,verifyCurrencyOnboardingResult} from '@/src/currency/onboarding';
 import {useMasterText} from '@/src/currency/masterMessages';
 import {makeId} from '@/src/offline/salesQueue';
 import {useCommonText} from "@/src/i18n/useCommonText";
@@ -123,7 +123,7 @@ export default function FirstStoreOnboardingScreen() {
 
   const selectedCurrency=params.accountingCurrency || "TZS";
   const [currencyAcknowledged,setCurrencyAcknowledged]=useState(false);
-  const currencyBlocked=!ATOMIC_CURRENCY_ONBOARDING_ACTIVE && selectedCurrency!=="TZS";
+  const currencyBlocked=!isSupportedNativeOnboardingCurrency(selectedCurrency);
   const [storeName, setStoreName] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -147,7 +147,7 @@ export default function FirstStoreOnboardingScreen() {
 
     try {
       const { data:created, error } = ATOMIC_CURRENCY_ONBOARDING_ACTIVE
-        ? await supabase.rpc("create_org_with_store_currency_v1",await persistentOnboardingIntent(kv,session.user.id,{businessName:orgName,storeName:firstStore,currency:selectedCurrency,timezone:tz,acknowledged:currencyAcknowledged},makeId))
+        ? await supabase.rpc(SCOPED_CURRENCY_ONBOARDING_RPC,await persistentScopedOnboardingIntent(kv,session.user.id,{businessName:orgName,storeName:firstStore,currency:selectedCurrency,timezone:tz,acknowledged:currencyAcknowledged},makeId))
         : await supabase.rpc("create_org_with_store", {p_org_name:orgName,p_first_store_name:firstStore});
 
       if (error) {
@@ -247,7 +247,7 @@ export default function FirstStoreOnboardingScreen() {
       contentStyle={{ backgroundColor: LIGHT.bg } as any}
     >
       {ATOMIC_CURRENCY_ONBOARDING_ACTIVE&&<OnboardingCurrencyAcknowledgement checked={currencyAcknowledged} onChange={setCurrencyAcknowledged} disabled={loading}/>}
-      <View style={{gap:8,padding:12}}><Text>{currencyText("onboarding")}: {selectedCurrency}</Text><Text>{currencyText(currencyBlocked?"blocked":"provisional")}</Text></View>
+      <View style={{gap:8,padding:12}}><Text>{currencyText("onboarding")}: {selectedCurrency}</Text><Text>{currencyText(currencyBlocked?"blocked":ATOMIC_CURRENCY_ONBOARDING_ACTIVE?"scoped":"provisional")}</Text></View>
       <View style={{ marginTop: 6 }}>
         <Text style={{ color: LIGHT.text, fontWeight: "900", fontSize: 26 }}>
           {uiText("First Store Setup")}</Text>

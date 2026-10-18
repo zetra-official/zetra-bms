@@ -1,0 +1,23 @@
+{
+  "status": "READY_FOR_SCOPED_ACTIVATION_APPROVAL_TZS_BACKEND_ONLY",
+  "fullClientReleaseReady": false,
+  "target": "dcmhqdckzhbuakvcyjit",
+  "migration": "2026101803-tzs-onboarding-gateway.DRAFT.sql",
+  "migrationSha256": "48ce80926f42d2985441162fd9325eca8d8836654ef80f6fb70c138ec65e95c2",
+  "productionExecutionAuthorized": false,
+  "clientActivation": false,
+  "deploymentAuthorized": false,
+  "nonTzsNativeSupported": false,
+  "sources": {
+    "src/currency/onboarding.ts": "14e5ae915126a200ac6ebc2a800c0500c16f3f70d70b8ae73695edf77dca9323",
+    "app/(onboarding)/store.tsx": "7ea833482f84e5735fe146b5eb484020fa9c2fc24fc46c00534358003ac3f6bf",
+    "src/currency/masterMessages.ts": "e4541d2fa9f7cc708f5699cedf7ffe81fd5c3d46dda739836a0a779300f72137"
+  },
+  "newPostgresChecks": 27,
+  "newClientChecks": 27,
+  "typeScriptErrors": 0,
+  "webExport": "PASS",
+  "androidHermesExport": "PASS",
+  "physicalDevices": "NOT TESTED",
+  "realAuthE2E": "NOT TESTED"
+}
