@@ -1,3 +1,4 @@
+import {CurrencyToolsLink} from '@/src/currency/ReportCurrencySelector';
 import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
 import {useCommonText} from "@/src/i18n/useCommonText";
 import { summarizeSales, readStockValue } from "@/src/business/recordIntegrity";
@@ -725,7 +726,7 @@ export default function FinanceLiveScreen() {
       : `All Stores (${storeOptions.length})`;
 
   if (isMobileWeb) {
-    return <Screen><MobileFinance
+    return <Screen><CurrencyToolsLink/><MobileFinance
       text={uiText} orgName={orgName} scope={scope} canAll={canAll} isOwner={isOwner}
       storeOptions={storeOptions} selectedStoreId={selectedStoreId}
       onScope={setScope} onStore={setSelectedStoreId}
@@ -756,6 +757,7 @@ export default function FinanceLiveScreen() {
           alignSelf: "center",
         }}
       >
+        <CurrencyToolsLink/>
         <View
           style={{
             flexDirection: "row",

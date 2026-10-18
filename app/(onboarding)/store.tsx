@@ -1,6 +1,10 @@
+import {OnboardingCurrencyAcknowledgement} from '@/src/currency/OnboardingCurrencyAcknowledgement';
+import {ATOMIC_CURRENCY_ONBOARDING_ACTIVE,persistentOnboardingIntent,verifyCurrencyOnboardingResult} from '@/src/currency/onboarding';
+import {useMasterText} from '@/src/currency/masterMessages';
+import {makeId} from '@/src/offline/salesQueue';
 import {useCommonText} from "@/src/i18n/useCommonText";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useRef } from "react";
 import { Alert, Text, TextInput, View } from "react-native";
 
 import { useOrg } from "@/src/context/OrgContext";
@@ -96,12 +100,15 @@ const LIGHT = {
 export default function FirstStoreOnboardingScreen() {
  const uiText=useCommonText();
   const router = useRouter();
+  const currencyText=useMasterText();
+  const createLock=useRef(false);
   const org = useOrg();
 
   const params = useLocalSearchParams<{
     businessName?: string;
     businessType?: string;
     timezone?: string;
+    accountingCurrency?: string;
   }>();
 
   const businessName = useMemo(
@@ -114,10 +121,14 @@ export default function FirstStoreOnboardingScreen() {
     return decoded || "Africa/Dar_es_Salaam";
   }, [params.timezone]);
 
+  const selectedCurrency=params.accountingCurrency || "TZS";
+  const [currencyAcknowledged,setCurrencyAcknowledged]=useState(false);
+  const currencyBlocked=!ATOMIC_CURRENCY_ONBOARDING_ACTIVE && selectedCurrency!=="TZS";
   const [storeName, setStoreName] = useState("");
   const [loading, setLoading] = useState(false);
 
   const create = async () => {
+    if(createLock.current||currencyBlocked||(ATOMIC_CURRENCY_ONBOARDING_ACTIVE&&!currencyAcknowledged))return;
     const orgName = clean(businessName);
     const firstStore = clean(storeName);
     const tz = clean(timezone) || "Africa/Dar_es_Salaam";
@@ -125,23 +136,26 @@ export default function FirstStoreOnboardingScreen() {
     if (!orgName) return Alert.alert(uiText("Missing"), uiText("Business name is missing."));
     if (!firstStore) return Alert.alert(uiText("Missing"), uiText("Store name is required."));
 
-    const { session, error: sessErr } = await ensureSession();
+    createLock.current=true;
+    let session:any,sessErr:any;
+    try { const result=await ensureSession();session=result.session;sessErr=result.error; } catch {createLock.current=false;return;}
+    if(sessErr||!session)createLock.current=false;
     if (sessErr) return Alert.alert(uiText("Imeshindikana"), sessErr.message);
     if (!session) return Alert.alert(uiText("Imeshindikana"), uiText("Not authenticated"));
 
     setLoading(true);
 
     try {
-      const { error } = await supabase.rpc("create_org_with_store", {
-        p_org_name: orgName,
-        p_first_store_name: firstStore,
-      });
+      const { data:created, error } = ATOMIC_CURRENCY_ONBOARDING_ACTIVE
+        ? await supabase.rpc("create_org_with_store_currency_v1",await persistentOnboardingIntent(kv,session.user.id,{businessName:orgName,storeName:firstStore,currency:selectedCurrency,timezone:tz,acknowledged:currencyAcknowledged},makeId))
+        : await supabase.rpc("create_org_with_store", {p_org_name:orgName,p_first_store_name:firstStore});
 
       if (error) {
         console.log("create_org_with_store error:", error);
         return Alert.alert(uiText("Imeshindikana"), error.message);
       }
 
+      const confirmed=ATOMIC_CURRENCY_ONBOARDING_ACTIVE?verifyCurrencyOnboardingResult(created,selectedCurrency):null;
       await org.refresh();
 
       try {
@@ -190,9 +204,9 @@ export default function FirstStoreOnboardingScreen() {
         ? (orgs as any[]).find((o) => upper(o?.organization_name) === targetName)
         : null;
 
-      const orgId = clean(match?.organization_id);
+      const orgId = confirmed?.organizationId||clean(match?.organization_id);
 
-      if (orgId) {
+      if (orgId && !confirmed) {
         try {
           const { error: tzErr } = await supabase.rpc("set_org_timezone_once", {
             p_org_id: orgId,
@@ -216,12 +230,15 @@ export default function FirstStoreOnboardingScreen() {
       }
 
       router.replace("/(tabs)");
+    } catch (error:any) {
+      Alert.alert(uiText("Imeshindikana"),String(error?.message||error));
     } finally {
       setLoading(false);
+      createLock.current=false;
     }
   };
 
-  const canCreate = Boolean(clean(storeName) && !loading);
+  const canCreate = Boolean(clean(storeName) && !loading && !currencyBlocked && (!ATOMIC_CURRENCY_ONBOARDING_ACTIVE||currencyAcknowledged));
 
   return (
     <Screen
@@ -229,6 +246,8 @@ export default function FirstStoreOnboardingScreen() {
       style={{ backgroundColor: LIGHT.bg } as any}
       contentStyle={{ backgroundColor: LIGHT.bg } as any}
     >
+      {ATOMIC_CURRENCY_ONBOARDING_ACTIVE&&<OnboardingCurrencyAcknowledgement checked={currencyAcknowledged} onChange={setCurrencyAcknowledged} disabled={loading}/>}
+      <View style={{gap:8,padding:12}}><Text>{currencyText("onboarding")}: {selectedCurrency}</Text><Text>{currencyText(currencyBlocked?"blocked":"provisional")}</Text></View>
       <View style={{ marginTop: 6 }}>
         <Text style={{ color: LIGHT.text, fontWeight: "900", fontSize: 26 }}>
           {uiText("First Store Setup")}</Text>

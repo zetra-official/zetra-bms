@@ -1,0 +1,6 @@
+*.private.json
+*.private.stderr
+working-tree-before.patch
+git-status-before.txt
+production_readonly.py
+catalog.sql

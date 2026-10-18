@@ -14,8 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { UI } from "@/src/ui/theme";
 import {
   CurrencyMeta,
-  loadCurrencyCatalogFast,
-  refreshCurrencyCatalog,
+  getRuntimeCurrencyCatalog,
   localizedCurrencyName,
 } from "@/src/services/currencyCatalog";
 import {useLanguage} from "@/src/i18n/LanguageProvider";
@@ -54,10 +53,11 @@ export function CurrencyPickerAll({
   const [loading, setLoading] = useState(false);
   const [note, setNote] = useState<"FAST"|"FULL"|"OFFLINE"|null>(null);
 
-  const [all, setAll] = useState<CurrencyMeta[]>([]);
+  const [all, setAll] = useState<CurrencyMeta[]>(getRuntimeCurrencyCatalog);
   const [query, setQuery] = useState("");
 
-  const refreshedOnceRef = useRef(false);
+  const [search,setSearch]=useState("");
+  useEffect(()=>{const timer=setTimeout(()=>setSearch(query),120);return()=>clearTimeout(timer)},[query]);
 
   const selected = useMemo(() => {
     const v = upper(value);
@@ -66,53 +66,23 @@ export function CurrencyPickerAll({
   }, [value, all]);
 
   const filtered = useMemo(() => {
-    const q = clean(query).toLowerCase();
-    if (!q) return all;
+    const q = clean(search).toLowerCase();
+    if (!q) return [...all].sort((a,b)=>a.code==='TZS'?-1:b.code==='TZS'?1:a.code.localeCompare(b.code));
     return all.filter((c) => {
       const code = upper(c.code).toLowerCase();
       const name = clean(localizedCurrencyName(c.code,language,c.name)).toLocaleLowerCase(language);
-      return code.includes(q) || name.includes(q);
+      return code.includes(q) || name.includes(q) || c.name.toLowerCase().includes(q) || c.countries?.some(country=>country.toLowerCase().includes(q));
     });
-  }, [all, query, language]);
+  }, [all, search, language]);
 
-  useEffect(() => {
-    if (!open) return;
-
-    let alive = true;
-
-    (async () => {
-      // ✅ instant list (cache/fallback)
-      const fast = await loadCurrencyCatalogFast();
-      if (!alive) return;
-      setAll(fast);
-      setNote("FAST");
-
-      // ✅ refresh full list once (download then cache)
-      if (refreshedOnceRef.current) return;
-      refreshedOnceRef.current = true;
-
-      try {
-        setLoading(true);
-        const full = await refreshCurrencyCatalog();
-        if (!alive) return;
-        setAll(full);
-        setNote("FULL");
-      } catch {
-        if (!alive) return;
-        setNote("OFFLINE");
-      } finally {
-        if (alive) setLoading(false);
-      }
-    })();
-
-    return () => {
-      alive = false;
-    };
-  }, [open]);
+  useEffect(()=>{if(!open){setQuery("");setSearch("");return;}setAll(getRuntimeCurrencyCatalog());setLoading(false);setNote("FULL");},[open]);
 
   return (
     <View>
       <Pressable
+        accessibilityRole="button"
+        accessibilityState={{disabled:!!disabled,expanded:open}}
+        accessibilityLabel={title||copy.select}
         disabled={!!disabled}
         onPress={() => setOpen(true)}
         style={({ pressed }) => [
@@ -179,7 +149,11 @@ export function CurrencyPickerAll({
               borderColor: "rgba(255,255,255,0.12)",
               backgroundColor: UI.background,
               overflow: "hidden",
-              maxHeight: "85%",
+              height: "85%",
+              maxHeight: 640,
+              maxWidth: 640,
+              width: "100%",
+              alignSelf: "center",
             }}
           >
             {/* Header */}
@@ -256,7 +230,7 @@ export function CurrencyPickerAll({
                   value={query}
                   onChangeText={setQuery}
                   placeholder={copy.search}
-                  placeholderTextColor="rgba(255,255,255,0.40)"
+                  placeholderTextColor={UI.faint}
                   style={{
                     flex: 1,
                     color: UI.text,
@@ -281,7 +255,7 @@ export function CurrencyPickerAll({
               {/* Status */}
               <View style={{ marginTop: 10, flexDirection: "row", alignItems: "center", gap: 10 }}>
                 {loading ? <ActivityIndicator /> : null}
-                <Text style={{ color: "rgba(255,255,255,0.65)", fontWeight: "800", fontSize: 12 }}>
+                <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }}>
                   {note==='OFFLINE'?copy.offline:(note==='FULL'?copy.loaded:copy.available).replace('{count}',new Intl.NumberFormat(language).format(all.length))}
                 </Text>
               </View>
@@ -289,6 +263,11 @@ export function CurrencyPickerAll({
 
             {/* List */}
             <FlatList
+              style={{flex:1,minHeight:0}}
+              initialNumToRender={12}
+              maxToRenderPerBatch={12}
+              windowSize={5}
+              keyboardDismissMode="on-drag"
               data={filtered}
               extraData={language}
               keyExtractor={(it) => it.code}
@@ -297,6 +276,9 @@ export function CurrencyPickerAll({
                 const active = upper(item.code) === upper(value);
                 return (
                   <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={item.code+" — "+localizedCurrencyName(item.code,language,item.name)}
+                    accessibilityState={{selected:active}}
                     onPress={() => {
                       onChange(item.code);
                       setOpen(false);

@@ -1,3 +1,5 @@
+import {CurrencyPickerAll} from '@/src/components/CurrencyPickerAll';
+import {useMasterText} from '@/src/currency/masterMessages';
 import {useCommonText} from "@/src/i18n/useCommonText";
 import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
@@ -37,6 +39,8 @@ export default function OnboardingBusinessScreen() {
  const uiText = useCommonText();
   const router = useRouter();
 
+  const currencyText=useMasterText();
+  const [accountingCurrency,setAccountingCurrency]=useState<string|null>("TZS");
   const [checkingGate, setCheckingGate] = useState(true);
   const [name, setName] = useState("");
   const [businessType, setBusinessType] = useState("GENERAL");
@@ -108,6 +112,7 @@ export default function OnboardingBusinessScreen() {
           businessName: safeEncode(businessName),
           businessType: safeEncode(businessType),
           timezone: safeEncode(nextTz),
+          accountingCurrency: accountingCurrency || "TZS",
         },
       } as any);
     } finally {
@@ -211,6 +216,7 @@ export default function OnboardingBusinessScreen() {
             />
           </View>
 
+          <View style={{marginTop:14,gap:8}}><CurrencyPickerAll title={currencyText("onboarding")} value={accountingCurrency} onChange={setAccountingCurrency}/><Text style={{color:LIGHT.muted,lineHeight:20}}>{currencyText("provisional")}</Text></View>
           <Text style={{ color: LIGHT.text, fontWeight: "900", fontSize: 14, marginTop: 14 }}>
             {uiText("Business type")}</Text>
 

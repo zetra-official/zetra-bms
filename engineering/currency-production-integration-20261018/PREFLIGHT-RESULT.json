@@ -1,0 +1,12 @@
+{
+  "project": "dcmhqdckzhbuakvcyjit",
+  "targetHealthy": true,
+  "migrationHashVerified": true,
+  "readOnly": "on",
+  "mismatches": [],
+  "publicCreateRisk": false,
+  "requestTablePresent": false,
+  "backupMetadataReceived": true,
+  "migrationExecuted": false,
+  "deployment": false
+}

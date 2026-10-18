@@ -1,0 +1,105 @@
+{
+  "status": "PASS",
+  "count": 14,
+  "scope": "Actual gated acknowledgement RN-Web component; synthetic seven-language context. Loopback only, not full app or physical Android.",
+  "checks": [
+    {
+      "language": "en",
+      "width": 1440,
+      "acknowledgementToggle": true,
+      "noOverflow": true,
+      "pageErrors": []
+    },
+    {
+      "language": "en",
+      "width": 390,
+      "acknowledgementToggle": true,
+      "noOverflow": true,
+      "pageErrors": []
+    },
+    {
+      "language": "sw",
+      "width": 1440,
+      "acknowledgementToggle": true,
+      "noOverflow": true,
+      "pageErrors": []
+    },
+    {
+      "language": "sw",
+      "width": 390,
+      "acknowledgementToggle": true,
+      "noOverflow": true,
+      "pageErrors": []
+    },
+    {
+      "language": "fr",
+      "width": 1440,
+      "acknowledgementToggle": true,
+      "noOverflow": true,
+      "pageErrors": []
+    },
+    {
+      "language": "fr",
+      "width": 390,
+      "acknowledgementToggle": true,
+      "noOverflow": true,
+      "pageErrors": []
+    },
+    {
+      "language": "pt",
+      "width": 1440,
+      "acknowledgementToggle": true,
+      "noOverflow": true,
+      "pageErrors": []
+    },
+    {
+      "language": "pt",
+      "width": 390,
+      "acknowledgementToggle": true,
+      "noOverflow": true,
+      "pageErrors": []
+    },
+    {
+      "language": "ar",
+      "width": 1440,
+      "acknowledgementToggle": true,
+      "noOverflow": true,
+      "pageErrors": []
+    },
+    {
+      "language": "ar",
+      "width": 390,
+      "acknowledgementToggle": true,
+      "noOverflow": true,
+      "pageErrors": []
+    },
+    {
+      "language": "es",
+      "width": 1440,
+      "acknowledgementToggle": true,
+      "noOverflow": true,
+      "pageErrors": []
+    },
+    {
+      "language": "es",
+      "width": 390,
+      "acknowledgementToggle": true,
+      "noOverflow": true,
+      "pageErrors": []
+    },
+    {
+      "language": "zh",
+      "width": 1440,
+      "acknowledgementToggle": true,
+      "noOverflow": true,
+      "pageErrors": []
+    },
+    {
+      "language": "zh",
+      "width": 390,
+      "acknowledgementToggle": true,
+      "noOverflow": true,
+      "pageErrors": []
+    }
+  ]
+}

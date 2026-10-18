@@ -1,3 +1,5 @@
+import {Button} from '@/src/ui/Button';
+import {useMasterText} from '@/src/currency/masterMessages';
 import { OrganizationAccountingCurrency } from '@/src/proforma/OrganizationAccountingCurrency';
 import { useCommonText } from "@/src/i18n/useCommonText";
 import { UserLanguagePicker } from "@/src/i18n/LanguageProvider";
@@ -235,6 +237,7 @@ export default function RegionalSettings() {
   }, [router]);
 
   const org = useOrg();
+  const currencyText=useMasterText();
   const orgId = clean(org.activeOrgId);
   const canEdit = org.activeRole === "owner" || org.activeRole === "admin";
 
@@ -684,6 +687,7 @@ export default function RegionalSettings() {
 
             <UserLanguagePicker appearance="light" />
             <PersonalCurrencyPicker businessCurrency={currencyCode} />
+            <Button title={currencyText("title")} onPress={()=>router.push("/finance/exchange-rates" as any)} variant="secondary"/>
 
           </View>
 

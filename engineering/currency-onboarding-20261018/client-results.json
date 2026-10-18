@@ -1,0 +1,21 @@
+{
+  "status": "PASS",
+  "count": 15,
+  "checks": [
+    "activation remains false",
+    "TZS payload confirmed explicitly",
+    "USD payload confirmed explicitly",
+    "KES payload confirmed explicitly",
+    "UGX payload confirmed explicitly",
+    "owner acknowledgement mandatory",
+    "verified response accepted",
+    "invalid or conflicting backend response rejected 7",
+    "invalid or conflicting backend response rejected 8",
+    "invalid or conflicting backend response rejected 9",
+    "invalid or conflicting backend response rejected 10",
+    "invalid or conflicting backend response rejected 11",
+    "invalid or conflicting backend response rejected 12",
+    "uncertain retry retains exact request",
+    "currency change during uncertain request requires review"
+  ]
+}

@@ -1,0 +1,146 @@
+{
+  "status": "PARTIAL_LOCAL_ONLY_NOT_RELEASE_READY",
+  "recordedAt": "2026-10-18T17:13:47.583805+00:00",
+  "blueprint": {
+    "path": "C:/Users/ZetraAdmin/Documents/ZETRA_GLOBAL_CURRENCY_FX_MASTER_CODEX_BLUEPRINT_2026-10-18-1.md",
+    "sha256": "e5817ddb5001d5269036920a450185746bd2cdcb2c41af0977feff623cb3e6a1"
+  },
+  "modified": {
+    "src/components/CurrencyPickerAll.tsx": {
+      "before": "b42e219a77b313612e7f40a9fc35bec318cfbd41b014b0501db96e9501feaadf",
+      "after": "209335e8b18746ae67bb2277b68ac4be61fc72149ad9c43c668ec5d23c369961",
+      "backup": "engineering/global-currency-20261018/before/src/components/CurrencyPickerAll.tsx"
+    },
+    "src/currency/engine.ts": {
+      "before": "9188c1e1ae2f8b25e89cb939f8e5eeeebd00a479180707ce09d98f24a17e409b",
+      "after": "be3f3faad9266272ceb58ad37a77555f1bb036fdd6760c9bc9f888e0f683ba56",
+      "backup": "engineering/global-currency-20261018/before/src/currency/engine.ts"
+    },
+    "src/proforma/invoiceFx.ts": {
+      "before": "b66d2f2f40806cc58d45241f50dca8ec16e79bb64a69acabf3e17be64b0b34c9",
+      "after": "9e941bf56c5c1afd92150d1b8b1488fd2bcb8c2b9278764e5f432ce5b08570db",
+      "backup": "engineering/global-currency-20261018/before/src/proforma/invoiceFx.ts"
+    },
+    "src/services/currencyCatalog.ts": {
+      "before": "59eca626f9b9353bc353010b97464a9773780bea6b598b30c549b87b72af86ee",
+      "after": "e81673ee80a0b6e5dfffe573ff0d24cb6c7664b52369e3593d91b39660ac4cba",
+      "backup": "engineering/global-currency-20261018/before/src/services/currencyCatalog.ts"
+    },
+    "src/services/referenceFx.ts": {
+      "before": "0f4112cac6f06ca5e1c5bf4021b4288a55c95161f3083edbf782d71e5bf83b7b",
+      "after": "4109fb5c506517ea5a657f0f384613bd4fca3697e56d2f3b1cbfc85fb0506552",
+      "backup": "engineering/global-currency-20261018/before/src/services/referenceFx.ts"
+    },
+    "app/(onboarding)/business.tsx": {
+      "before": "493430b65efacd93b4a511a875b55cde156cdb577b47d042b6f40f8d7773d63a",
+      "after": "5ce1249bb291f31fd6126afa0538c843fadb3b8619376752a4ec79a73b7e3714",
+      "backup": "engineering/global-currency-20261018/before/app/(onboarding)/business.tsx"
+    },
+    "app/(onboarding)/store.tsx": {
+      "before": "060fdca34d63614e9f60f8b5bf8617c9b8e1940ef8125eee8b56f072443417a4",
+      "after": "8417ff2f92a5186415ad099c2acded0a31747d41bc4e702104102e9ac84605ed",
+      "backup": "engineering/global-currency-20261018/before/app/(onboarding)/store.tsx"
+    },
+    "app/finance/live.tsx": {
+      "before": "49bd2c222f337906fb048bd78a4445a5be2e1b95841ae7f843faa883233a4621",
+      "after": "77d9d9759a5ac01204957e0a0f332b89c9d390a89c243093a1af861fb52dafb5",
+      "backup": "engineering/global-currency-20261018/before/app/finance/live.tsx"
+    },
+    "app/(tabs)/settings/business-statement.tsx": {
+      "before": "89d121845950c8e2a19899ac705094bbccaa760da05dba721220e3c5b08bc2d1",
+      "after": "4f0e8ed458b8ebcf95b9bc6e0d101525fea069e9180dbe53c908ec1c803aad95",
+      "backup": "engineering/global-currency-20261018/before/app/(tabs)/settings/business-statement.tsx"
+    },
+    "app/(tabs)/settings/regional.tsx": {
+      "before": "c07f04c532449da9e29130200403b5ff091a81e563443fbb7381ccb083c8aa5d",
+      "after": "831c160d03bf9ce8edac6fcf3f0441578920590db8a16f609217741848c0a695",
+      "backup": "engineering/global-currency-20261018/before/app/(tabs)/settings/regional.tsx"
+    }
+  },
+  "added": {
+    "src/currency/data/catalog.json": "4a18d80f2e2e4d384cd1be351da99e5c4dcd4cd079d6c3820b1bb7c3e7fec7b5",
+    "src/currency/metadata.ts": "7437188a9ce9c7f475cbd7d48c8c2b48924b29620edbaa7d351d99bdcad2d5c4",
+    "src/currency/historical.ts": "eb1584064a94d831cbb09451126b8be46322a6d2ee86cbd84877d27e50f108ed",
+    "src/currency/onboarding.ts": "709f8f5fa9de7b1305ad8fa4186f6a5a89aeadad414b1ae370e9973bf1cb1260",
+    "src/currency/masterMessages.ts": "cfc152813c6a295f2439e6554ccb60e77ea3f1b7c327c8854502d0ad8238e601",
+    "src/currency/FinanceConverter.tsx": "c547bce6463ab23810912daefe32cf150f1ebd5a1c801e32763d99480f3986d7",
+    "src/currency/ReportCurrencySelector.tsx": "8173487d5a7f7ca17a00f96de97b59cde50bcef5d7489ae26931e99dcc2e71b7",
+    "src/services/botReference.ts": "ccb020cbe48115491531d6995505b168e70823af07da0c100d695b6734330de3",
+    "app/finance/exchange-rates.tsx": "b22afdc7c81f9440eabdc0ae16033500b3460255336ff532a5d4c7f700446a01"
+  },
+  "inspectedUnchanged": {
+    "src/proforma/OrganizationAccountingCurrency.tsx": {
+      "before": "e6045e9075b2014d2c80e476880f048e21487d463b6b9fd1c0d69b2236e01e8f",
+      "after": "e6045e9075b2014d2c80e476880f048e21487d463b6b9fd1c0d69b2236e01e8f",
+      "backup": "engineering/global-currency-20261018/before/src/proforma/OrganizationAccountingCurrency.tsx"
+    }
+  },
+  "evidence": {
+    "android-build.log": "818e2cce870953c8daf19f3c5a93fbfa91c04beee4ab9a3666cf23c16484fedf",
+    "ATOMIC-ONBOARDING.DRAFT.sql": "efbb16b84e56d0740b4c13aaf5b5895a570a6ab6d4462eaa49b2105fbc55cecb",
+    "catalog_snapshot.py": "af8b8cb1802beecbef5b1e8ec4ac49f307a333c17f7cf35b9bb449a9201274d8",
+    "compatibility-results.json": "0ea0ccfd99c0b1eca8ce81ac3be04ce1e73651733e4410722b468f582fffe836",
+    "compatibility.cjs": "238692843cb72f6b43a3750bf0cbe327e86884c1a62b9f11c22126d331afc7de",
+    "CURRENCY_DATA_AND_FX_CONTRACTS.md": "afac9c066c071c2dc0436e82e618912416823db7038f1c7fdcd29afe6574fa54",
+    "CURRENCY_OPEN_BLOCKERS.md": "64f48631e382e75d4af58f8d8a5ad88f043ce4c73d14d72c9de830a8ce20ca58",
+    "CURRENCY_TEST_EVIDENCE.md": "6afba9bf0588a424cc6be3d648658c6ade89dbf85fe3c766245b33de3bf0fe4c",
+    "GLOBAL_CURRENCY_IMPLEMENTATION_AUDIT.md": "96ac5137566974136d06b7f1ce8185bc40d15c3e424303d116b0526649ead5c2",
+    "GLOBAL_CURRENCY_MILESTONE_REPORT.md": "926047f22eea0defd5091113b4e1995d86039897ab48db444e782d62f82373d1",
+    "postgres-identity.json": "ec8026e214a4eb1d5ba27d8b6ffbcea0703333eacbf5caa7ed189655fda624d7",
+    "postgres-results.json": "6cfc7820677ca424e581cda02782d5da002a982112732fec0b780f50e71acd19",
+    "postgres-test.log": "9e10429f4d9b02ef70e66dea8bb2486c50d043ace35b9c14dff33645e1d20fa4",
+    "postgres.log": "55be5490681e7a1b6a6f136246c9ec3c19c1ef2df7c199284163521db34a847c",
+    "postgres_test.py": "16936f751aac0076a0d71582abf883353d4b4dce5f857ffe919b191f9546a674",
+    "REFERENCE-SOURCES.json": "49d1c59fa74026833c655e35658c8df65c61c885f7c9ec430971ef580bdbee19",
+    "render.cjs": "807f3a0f453bb5b43b4e6da5e21159bc96af77017837de4a71e26c0486ea385d",
+    "render.log": "57f124e86bfa9413d2ac3c36e7df4537308f5fa83b92c7d94b2e5d097c9b2d67",
+    "rendered-results.json": "8003936139473580a2d6f9b3b8dacb1f20efe4342ca9f03acf3c384b2d9fa4a4",
+    "ROLLBACK.md": "2f84255d1e9a95704cd54efe69e9ab7597e8138f845fe1730a4fc458fddfad9e",
+    "SOURCE-FILES.md": "cb6ef5c0fbbbd0171c0dae9f64f687f615c839332549e84c52416b5ab6209e53",
+    "tests.cjs": "5ef0a243646e56c4fe937051fde6c9c9b9851ce67feada0416b2007772c4fe8d",
+    "typecheck-initial.log": "9e67fbc7b83c8ac7d8a9f710da2a2c66403d3c3f3c73c3768bdc88f5d9d6ec65",
+    "typecheck.log": "9e67fbc7b83c8ac7d8a9f710da2a2c66403d3c3f3c73c3768bdc88f5d9d6ec65",
+    "unit-results.json": "58e7b772326e6d77cb4782437ee9718cc7e0d8d81e29de7b75d5758f7573e34f",
+    "unit-test.log": "b36bb6303dca1cf580e13e7148c5b9d059abb9adde3a1fd7c77ba45b8293e7dd",
+    "web-build.log": "82fcf75ab109cb12e6e00f60a224fadd33e53ccbf0469bf1fc3ef4cb2983480b",
+    "reference/bot.html": "9b2438c65c225e60b70b96a38ac0f979337bff0fdcf48d81a0578e9226573d09",
+    "reference/cldr.xml": "745150ec1408d50e1a272b65654a5dd645f3e60f5cc2898b576f725b28538d1a",
+    "reference/current.xml": "33139b438657d1cee116ba737807ea71d19d6de4b90f799a09c56f0cc6a1b0ff",
+    "reference/ecb-daily.xml": "4422161311c3c02cf2d1571db07bdf9884b3f42fdeb16a4926903236ae6ab42d",
+    "reference/ecb-history.xml": "588db7a2888c39bb5045d62e6f0f6b25635401a70bbffc52186238e62e10ed77",
+    "reference/historical.xml": "98fde2423cdb916dd59dcf5fe96222edad8fa198d865c1c83dbc464b9cc52387",
+    "rendered/ar-1440.png": "6c9352b1e89b543559089762267910bdd53e43b55e205268390976e6429baff8",
+    "rendered/ar-390.png": "d442c58dbbb57269214f217179fa203a274f7c23b25f680772e36d2462f0a1dc",
+    "rendered/debug.png": "d793982c142a0b30d9ef62dc11fe48d4340132526a98e039117e0f140e3b8e5c",
+    "rendered/en-1440.png": "369a9d1564f79083412f7985ad2edb16b7b6de6e4a045e5b0dcd4209e6db698a",
+    "rendered/en-390.png": "21729a07ae4a627540c5039a2d4d8e25dc819195f08a6d02be0ffe901cc48e07",
+    "rendered/es-1440.png": "dc4afe2213e51c53ec3318a16dbd21731a5721e661052a1551e5b866f9fe41be",
+    "rendered/es-390.png": "8af9a70d960e3fdefa898918472be3b7a60ab1961c8b4c04b6bb8c85b626ac6b",
+    "rendered/fr-1440.png": "0ebb980a0bec767c7ca14917aed8ef26a032c2721ac136d14b3adb78ee1e5578",
+    "rendered/fr-390.png": "e5e4e5c75edd90e2cc404b75f280a7784abc9400eb61cdb739be156238a928e3",
+    "rendered/last-body.txt": "4f30dc5cced10c5611ac8685c24430b88ababb0489bd97f33bac977fa6d13bfa",
+    "rendered/pt-1440.png": "80db9ff3de6d4c959fbde910a81af3c38c9de12c5d2cd109dc49c15d4d78e1bf",
+    "rendered/pt-390.png": "dd18ab18fc196e2aecc51f36a6c8a84255ac478ec8826c7a5596daa8bc1982e5",
+    "rendered/sw-1440.png": "71ebb4bed6e99337ed8dcfed917b67f9c61b1910cf671601222e4d618565d9bf",
+    "rendered/sw-390.png": "85a6fc90bb563976ecc991e1beee8f3e0bcea1d5dca79fde9c23bd8f1ad784ba",
+    "rendered/zh-1440.png": "70e0ddcf150eaa2793ae7e6fdbd19b040e871c9845c73d4ae383501a56dd7bdc",
+    "rendered/zh-390.png": "d793982c142a0b30d9ef62dc11fe48d4340132526a98e039117e0f140e3b8e5c",
+    "before/src/components/CurrencyPickerAll.tsx": "b42e219a77b313612e7f40a9fc35bec318cfbd41b014b0501db96e9501feaadf",
+    "before/src/currency/engine.ts": "9188c1e1ae2f8b25e89cb939f8e5eeeebd00a479180707ce09d98f24a17e409b",
+    "before/src/proforma/invoiceFx.ts": "b66d2f2f40806cc58d45241f50dca8ec16e79bb64a69acabf3e17be64b0b34c9",
+    "before/src/proforma/OrganizationAccountingCurrency.tsx": "e6045e9075b2014d2c80e476880f048e21487d463b6b9fd1c0d69b2236e01e8f",
+    "before/src/services/currencyCatalog.ts": "59eca626f9b9353bc353010b97464a9773780bea6b598b30c549b87b72af86ee",
+    "before/src/services/referenceFx.ts": "0f4112cac6f06ca5e1c5bf4021b4288a55c95161f3083edbf782d71e5bf83b7b",
+    "before/app/(onboarding)/business.tsx": "493430b65efacd93b4a511a875b55cde156cdb577b47d042b6f40f8d7773d63a",
+    "before/app/(onboarding)/store.tsx": "060fdca34d63614e9f60f8b5bf8617c9b8e1940ef8125eee8b56f072443417a4",
+    "before/app/finance/live.tsx": "49bd2c222f337906fb048bd78a4445a5be2e1b95841ae7f843faa883233a4621",
+    "before/app/(tabs)/settings/business-statement.tsx": "89d121845950c8e2a19899ac705094bbccaa760da05dba721220e3c5b08bc2d1",
+    "before/app/(tabs)/settings/regional.tsx": "c07f04c532449da9e29130200403b5ff091a81e563443fbb7381ccb083c8aa5d"
+  },
+  "boundaries": {
+    "remoteWrites": false,
+    "deployment": false,
+    "financialActivation": false,
+    "historicalRestatement": false
+  }
+}

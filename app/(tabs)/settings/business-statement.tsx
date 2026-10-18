@@ -1,3 +1,4 @@
+import {ReportCurrencySelector} from '@/src/currency/ReportCurrencySelector';
 import {useDocumentText} from "@/src/i18n/useDocumentText";
 import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
 import {useCommonText} from "@/src/i18n/useCommonText";
@@ -1995,6 +1996,7 @@ paymentSummary.bank_total,
           </View>
 
    
+          <ReportCurrencySelector key={`${activeOrgId??"none"}:${activeStoreId??"all"}`}/>
           <Card style={{ gap: 10 }}>
             <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Range")}</Text>
 

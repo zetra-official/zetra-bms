@@ -1,3 +1,4 @@
+import {isoMinorUnits} from './metadata';
 import {convertDisplayDecimal,makeDisplayQuote,type ReferenceRates} from '../services/referenceFx';
 /** Explicit manual invoice quotation only. Never a posting/FX provider rate. */
 export function manualInvoiceAmount(amount:string,rate:string,precision:number):string {
@@ -16,13 +17,32 @@ export function validateMoney(value:RecordedMoney):void{
  if(value.currency!==null&&!/^[A-Z]{3}$/.test(value.currency))throw Error('INVALID_CURRENCY');
  if(value.contextRevision!==null&&(!Number.isSafeInteger(value.contextRevision)||value.contextRevision<1))throw Error('INVALID_CURRENCY_REVISION');
 }
-export function currencyPrecision(code:string):number{
+export function currencyPrecision(code:string,policy:'ISO_ACCOUNTING'|'LEGACY_PROFORMA'='ISO_ACCOUNTING'):number{
  if(!/^[A-Z]{3}$/.test(code))throw Error('INVALID_CURRENCY');
+ // Preserve the existing 1705 Proforma preview contract until server precision is reconciled.
+ if(policy==='LEGACY_PROFORMA'){
  const supported=(Intl as typeof Intl&{supportedValuesOf?:(key:string)=>string[]}).supportedValuesOf;
  if(!supported||!supported('currency').includes(code))throw Error('CURRENCY_METADATA_UNAVAILABLE');
  const digits=new Intl.NumberFormat('en',{style:'currency',currency:code}).resolvedOptions().maximumFractionDigits;
  if(typeof digits!=='number'||!Number.isSafeInteger(digits)||digits<0||digits>6)throw Error('CURRENCY_METADATA_UNAVAILABLE');
  return digits;
+ }
+ return isoMinorUnits(code);
+}
+/** Locale parsing without Number(amount). Accept ASCII decimals or correctly
+ * grouped locale digits; malformed grouping is never silently stripped. */
+export function parseLocalizedAmount(input:string,locale:string):string{
+ if(input.length>100)throw Error('INVALID_AMOUNT');
+ const inputLocale=locale.startsWith('ar')&&/[٠-٩]/.test(input)?'ar-u-nu-arab':locale;
+ const nf=new Intl.NumberFormat(inputLocale),parts=nf.formatToParts(1234567890123.4),separator=parts.find(p=>p.type==='decimal')?.value||'.',group=parts.find(p=>p.type==='group')?.value;
+ if(decimal.test(input.trim())&&(separator==='.'||group!=='.'||!input.includes('.')))return input.trim();
+ let value=input.trim().replace(/[\u061c\u200e\u200f]/g,'');
+ for(let digit=0;digit<=9;digit++){const local=new Intl.NumberFormat(inputLocale,{useGrouping:false}).format(digit);value=value.split(local).join(String(digit));}
+ const minus=nf.formatToParts(-1).find(p=>p.type==='minusSign')?.value||'-';value=value.replace(minus,'-');
+ const negative=value.startsWith('-');if(negative)value=value.slice(1);const chunks=value.split(separator);if(chunks.length>2)throw Error('INVALID_AMOUNT');
+ let whole=chunks[0];if(group&&whole.includes(group)){const groups=whole.split(group),sample=parts.filter(p=>p.type==='integer'),primary=sample[sample.length-1].value.length,secondary=sample[sample.length-2]?.value.length||primary;
+  if(groups[0].length<1||groups[0].length>secondary||groups[groups.length-1].length!==primary||groups.slice(1,-1).some(x=>x.length!==secondary)||groups.some(x=>!/^\d+$/.test(x)))throw Error('INVALID_AMOUNT');whole=groups.join('');}
+ const result=(negative?'-':'')+whole+(chunks.length===2?'.'+chunks[1]:'');if(!decimal.test(result))throw Error('INVALID_AMOUNT');return result;
 }
 /** No binary-float conversion of amounts, including values beyond 2^53.
  * Original accounting digits are preserved; only converted display is rounded.

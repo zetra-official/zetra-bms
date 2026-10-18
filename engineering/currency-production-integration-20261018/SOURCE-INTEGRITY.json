@@ -1,0 +1,102 @@
+[
+  {
+    "file": "src/components/CurrencyPickerAll.tsx",
+    "expected": "209335e8b18746ae67bb2277b68ac4be61fc72149ad9c43c668ec5d23c369961",
+    "actual": "209335e8b18746ae67bb2277b68ac4be61fc72149ad9c43c668ec5d23c369961"
+  },
+  {
+    "file": "src/currency/engine.ts",
+    "expected": "be3f3faad9266272ceb58ad37a77555f1bb036fdd6760c9bc9f888e0f683ba56",
+    "actual": "be3f3faad9266272ceb58ad37a77555f1bb036fdd6760c9bc9f888e0f683ba56"
+  },
+  {
+    "file": "src/proforma/invoiceFx.ts",
+    "expected": "9e941bf56c5c1afd92150d1b8b1488fd2bcb8c2b9278764e5f432ce5b08570db",
+    "actual": "9e941bf56c5c1afd92150d1b8b1488fd2bcb8c2b9278764e5f432ce5b08570db"
+  },
+  {
+    "file": "src/services/currencyCatalog.ts",
+    "expected": "e81673ee80a0b6e5dfffe573ff0d24cb6c7664b52369e3593d91b39660ac4cba",
+    "actual": "e81673ee80a0b6e5dfffe573ff0d24cb6c7664b52369e3593d91b39660ac4cba"
+  },
+  {
+    "file": "src/services/referenceFx.ts",
+    "expected": "4109fb5c506517ea5a657f0f384613bd4fca3697e56d2f3b1cbfc85fb0506552",
+    "actual": "4109fb5c506517ea5a657f0f384613bd4fca3697e56d2f3b1cbfc85fb0506552"
+  },
+  {
+    "file": "app/(onboarding)/business.tsx",
+    "expected": "5ce1249bb291f31fd6126afa0538c843fadb3b8619376752a4ec79a73b7e3714",
+    "actual": "5ce1249bb291f31fd6126afa0538c843fadb3b8619376752a4ec79a73b7e3714"
+  },
+  {
+    "file": "app/(onboarding)/store.tsx",
+    "expected": "7dbdc8c6109741f2f0f0ab7f3b5123d4065b2ca60536c91e83901a21db280744",
+    "actual": "7dbdc8c6109741f2f0f0ab7f3b5123d4065b2ca60536c91e83901a21db280744"
+  },
+  {
+    "file": "app/finance/live.tsx",
+    "expected": "77d9d9759a5ac01204957e0a0f332b89c9d390a89c243093a1af861fb52dafb5",
+    "actual": "77d9d9759a5ac01204957e0a0f332b89c9d390a89c243093a1af861fb52dafb5"
+  },
+  {
+    "file": "app/(tabs)/settings/business-statement.tsx",
+    "expected": "4f0e8ed458b8ebcf95b9bc6e0d101525fea069e9180dbe53c908ec1c803aad95",
+    "actual": "4f0e8ed458b8ebcf95b9bc6e0d101525fea069e9180dbe53c908ec1c803aad95"
+  },
+  {
+    "file": "app/(tabs)/settings/regional.tsx",
+    "expected": "831c160d03bf9ce8edac6fcf3f0441578920590db8a16f609217741848c0a695",
+    "actual": "831c160d03bf9ce8edac6fcf3f0441578920590db8a16f609217741848c0a695"
+  },
+  {
+    "file": "src/currency/data/catalog.json",
+    "expected": "4a18d80f2e2e4d384cd1be351da99e5c4dcd4cd079d6c3820b1bb7c3e7fec7b5",
+    "actual": "4a18d80f2e2e4d384cd1be351da99e5c4dcd4cd079d6c3820b1bb7c3e7fec7b5"
+  },
+  {
+    "file": "src/currency/metadata.ts",
+    "expected": "7437188a9ce9c7f475cbd7d48c8c2b48924b29620edbaa7d351d99bdcad2d5c4",
+    "actual": "7437188a9ce9c7f475cbd7d48c8c2b48924b29620edbaa7d351d99bdcad2d5c4"
+  },
+  {
+    "file": "src/currency/historical.ts",
+    "expected": "eb1584064a94d831cbb09451126b8be46322a6d2ee86cbd84877d27e50f108ed",
+    "actual": "eb1584064a94d831cbb09451126b8be46322a6d2ee86cbd84877d27e50f108ed"
+  },
+  {
+    "file": "src/currency/onboarding.ts",
+    "expected": "3d33b2b63aae42525f2bb6dbf057411dc795c400cc4cc4965c6f2a0b73937bb6",
+    "actual": "3d33b2b63aae42525f2bb6dbf057411dc795c400cc4cc4965c6f2a0b73937bb6"
+  },
+  {
+    "file": "src/currency/masterMessages.ts",
+    "expected": "cfc152813c6a295f2439e6554ccb60e77ea3f1b7c327c8854502d0ad8238e601",
+    "actual": "cfc152813c6a295f2439e6554ccb60e77ea3f1b7c327c8854502d0ad8238e601"
+  },
+  {
+    "file": "src/currency/FinanceConverter.tsx",
+    "expected": "c547bce6463ab23810912daefe32cf150f1ebd5a1c801e32763d99480f3986d7",
+    "actual": "c547bce6463ab23810912daefe32cf150f1ebd5a1c801e32763d99480f3986d7"
+  },
+  {
+    "file": "src/currency/ReportCurrencySelector.tsx",
+    "expected": "8173487d5a7f7ca17a00f96de97b59cde50bcef5d7489ae26931e99dcc2e71b7",
+    "actual": "8173487d5a7f7ca17a00f96de97b59cde50bcef5d7489ae26931e99dcc2e71b7"
+  },
+  {
+    "file": "src/services/botReference.ts",
+    "expected": "ccb020cbe48115491531d6995505b168e70823af07da0c100d695b6734330de3",
+    "actual": "ccb020cbe48115491531d6995505b168e70823af07da0c100d695b6734330de3"
+  },
+  {
+    "file": "app/finance/exchange-rates.tsx",
+    "expected": "b22afdc7c81f9440eabdc0ae16033500b3460255336ff532a5d4c7f700446a01",
+    "actual": "b22afdc7c81f9440eabdc0ae16033500b3460255336ff532a5d4c7f700446a01"
+  },
+  {
+    "file": "src/currency/OnboardingCurrencyAcknowledgement.tsx",
+    "expected": "335377f563a34555da2a2f0b9c354919abb52d6d9b63bc2c4f0bc04b07e713cc",
+    "actual": "335377f563a34555da2a2f0b9c354919abb52d6d9b63bc2c4f0bc04b07e713cc"
+  }
+]
