@@ -1,0 +1,81 @@
+{
+  "db": "postgres",
+  "memberships": [
+    {
+      "inherit": false,
+      "member": "cli_login_postgres",
+      "role": "postgres",
+      "set": true
+    }
+  ],
+  "readOnly": "on",
+  "role": "postgres",
+  "roles": [
+    {
+      "canLogin": true,
+      "canSetCli": true,
+      "canSetOwner": true,
+      "cliMember": true,
+      "inherit": false,
+      "name": "cli_login_postgres",
+      "ownerMember": true,
+      "ownerUsage": false,
+      "super": false
+    },
+    {
+      "canLogin": false,
+      "canSetCli": false,
+      "canSetOwner": false,
+      "cliMember": false,
+      "inherit": true,
+      "name": "authenticated",
+      "ownerMember": false,
+      "ownerUsage": false,
+      "super": false
+    },
+    {
+      "canLogin": false,
+      "canSetCli": false,
+      "canSetOwner": false,
+      "cliMember": false,
+      "inherit": true,
+      "name": "anon",
+      "ownerMember": false,
+      "ownerUsage": false,
+      "super": false
+    },
+    {
+      "canLogin": false,
+      "canSetCli": false,
+      "canSetOwner": false,
+      "cliMember": false,
+      "inherit": true,
+      "name": "service_role",
+      "ownerMember": false,
+      "ownerUsage": false,
+      "super": false
+    },
+    {
+      "canLogin": true,
+      "canSetCli": false,
+      "canSetOwner": false,
+      "cliMember": false,
+      "inherit": false,
+      "name": "authenticator",
+      "ownerMember": false,
+      "ownerUsage": false,
+      "super": false
+    },
+    {
+      "canLogin": true,
+      "canSetCli": false,
+      "canSetOwner": true,
+      "cliMember": false,
+      "inherit": true,
+      "name": "postgres",
+      "ownerMember": true,
+      "ownerUsage": true,
+      "super": false
+    }
+  ]
+}

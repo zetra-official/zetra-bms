@@ -1,0 +1,12 @@
+{
+  "status": "READY_FOR_NEW_OWNER_APPROVAL",
+  "project": "dcmhqdckzhbuakvcyjit",
+  "migration": "2026101802-atomic-currency-onboarding-ADMIN-BOUNDARY.DRAFT.sql",
+  "sha256": "843db64a95e89240389371fce10a24f4105fb8d39d3e9cdff528600a67079c99",
+  "originalAndPriorCandidatePreserved": true,
+  "functionBodyUnchanged": true,
+  "testsPassed": 37,
+  "productionExecutionAuthorized": false,
+  "deploymentAuthorized": false,
+  "clientActivation": false
+}
