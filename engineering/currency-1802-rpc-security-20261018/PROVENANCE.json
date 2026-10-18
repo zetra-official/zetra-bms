@@ -1,0 +1,12 @@
+{
+  "status": "BLOCKED",
+  "original": "engineering\\currency-onboarding-20261018\\2026101802-atomic-currency-onboarding.DRAFT.sql",
+  "originalSha256": "64ad02ea0bd8783f690ff363f1a2714e565a3a5deb381d8ba8b07c5fcbcb60a4",
+  "corrected": "engineering\\currency-1802-rpc-security-20261018\\2026101802-atomic-currency-onboarding-QUARANTINED.DRAFT.sql",
+  "correctedSha256": "ca693dce747357f98f8ef3a92f71bb9aadcbc3ca689c285a61171833a5b072a2",
+  "functionBodyUnchanged": true,
+  "productionExecution": false,
+  "clientActivation": false,
+  "tests": 28,
+  "liveBlocker": "Existing cli_login_postgres NOINHERIT membership in postgres triggers strict owner-membership guard"
+}

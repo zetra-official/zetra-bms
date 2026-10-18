@@ -1,0 +1,17 @@
+{
+  "database": "postgres",
+  "ownerMembers": [
+    {
+      "inherit": true,
+      "role": "supabase_admin",
+      "superuser": true
+    },
+    {
+      "inherit": false,
+      "role": "cli_login_postgres",
+      "superuser": false
+    }
+  ],
+  "readOnly": "on",
+  "role": "postgres"
+}
