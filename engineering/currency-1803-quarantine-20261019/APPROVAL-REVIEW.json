@@ -1,0 +1,14 @@
+{
+  "status": "READY_FOR_NEW_OWNER_APPROVAL",
+  "project": "dcmhqdckzhbuakvcyjit",
+  "migration": "2026101803-tzs-onboarding-gateway-QUARANTINED.DRAFT.sql",
+  "sha256": "f9ceb3fd153076c9202fe58ac8fa7bd281e11be53af7df7bc37f07232b5e1358",
+  "original1803Preserved": true,
+  "migration1802Preserved": true,
+  "gatewayBodyUnchanged": true,
+  "focusedChecksPassed": 40,
+  "productionExecutionAuthorized": false,
+  "backendApiActivation": false,
+  "clientActivation": false,
+  "deployment": false
+}
