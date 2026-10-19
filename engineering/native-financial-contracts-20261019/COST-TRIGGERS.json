@@ -1,0 +1,6 @@
+[
+  {
+    "name": "set_sale_item_unit_cost()",
+    "definition": "CREATE OR REPLACE FUNCTION public.set_sale_item_unit_cost()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\nAS $function$\r\nbegin\r\n  -- If already provided (rare), keep it. Otherwise snapshot from products.cost_price.\r\n  if new.unit_cost is null then\r\n    select p.cost_price\r\n      into new.unit_cost\r\n    from public.products p\r\n    where p.id = new.product_id;\r\n  end if;\r\n\r\n  return new;\r\nend;\r\n$function$\n"
+  }
+]

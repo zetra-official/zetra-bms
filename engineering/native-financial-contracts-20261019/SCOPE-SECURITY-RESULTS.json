@@ -1,0 +1,14 @@
+{
+  "status": "PASS",
+  "count": 7,
+  "checks": [
+    "missing session denied before financial commit",
+    "unassigned actor denied before financial commit",
+    "cross organization payload denied before financial commit",
+    "cross organization product denied before financial commit",
+    "stale authority revision denied before financial commit",
+    "captured product currency cannot be rewritten",
+    "no orphan permit on authorization failures"
+  ],
+  "scope": "Actual disposable full-schema backend authorization and immutable contexts, synthetic JWT subjects."
+}

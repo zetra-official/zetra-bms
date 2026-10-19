@@ -1,0 +1,15 @@
+{
+  "status": "PASS",
+  "count": 8,
+  "checks": [
+    "original decimal survives durable queue storage",
+    "status transition cannot erase original exact amounts",
+    "idempotency key cannot replace native packet",
+    "review transition preserves native values",
+    "receipt never rounds through binary Number",
+    "legacy numeric queue never silently upgraded to native",
+    "JPY fractional quantity rounds only final native settlement",
+    "legacy receipt keeps prior fractional-total behavior"
+  ],
+  "scope": "Actual queue, exact receipt and packet modules; synthetic AsyncStorage; no backend calls."
+}

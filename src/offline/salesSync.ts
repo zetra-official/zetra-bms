@@ -2,6 +2,7 @@ import { supabase } from "../supabase/supabaseClient";
 import { listQueue, markStatus, removeFromQueue, claimQueuedSale } from "./salesQueue";
 import {readAccountingAuthority,assertLegacyPostingCurrency} from '../currency/accounting';
 import {transactionContext} from '../currency/engine';
+import {NATIVE_SALE_PERSISTENCE_ACTIVE,nativeSaleRequest,verifyNativeSaleOutcome} from './nativeSaleTransport';
 
 // ✅ A2: Per-store mutex lock to prevent double-sync (history + sales screen effects)
 const inflightByStore = new Map<string, Promise<void>>();
@@ -18,9 +19,17 @@ export async function syncSalesQueueOnce(storeId: string) {
 
   const job = (async () => {
     const q = await listQueue(storeId);
-    const pending = q.filter((x) => x.status === "PENDING" || x.status === "FAILED");
+    const pending = q.filter((x) => x.status === "PENDING" || x.status === "FAILED" || (NATIVE_SALE_PERSISTENCE_ACTIVE&&!!x.currency_context&&x.status==='NEEDS_REVIEW'));
 
     for (const candidate of pending) {
+      if(NATIVE_SALE_PERSISTENCE_ACTIVE&&candidate.currency_context&&candidate.status==='NEEDS_REVIEW'){
+        // Recover a committed response through an actor-scoped read, not by
+        // blindly submitting another sale or replaying credit side effects.
+        try{const receipt=await supabase.rpc('get_native_sale_result_v1',{p_store_id:storeId,p_request_id:candidate.client_sale_id});
+          if(!receipt.error&&receipt.data){const saleId=verifyNativeSaleOutcome(candidate,receipt.data);await markStatus(storeId,candidate.id,{server_sale_id:saleId,status:'SYNCED',last_error:null});await removeFromQueue(storeId,candidate.id)}
+        }catch{/* Keep uncertain items intact for explicit reconciliation. */}
+        continue;
+      }
       const item = await claimQueuedSale(storeId, candidate.id);
       if (!item) continue;
       let rpcStarted = false;
@@ -33,9 +42,19 @@ export async function syncSalesQueueOnce(storeId: string) {
           if(scope.error||scope.data?.organization_id!==original.organizationId)throw Error('CURRENCY_TENANT_MISMATCH');
           const current=await readAccountingAuthority(supabase,original.organizationId);
           if(!current||current.currency!==original.currency||current.revision!==original.contextRevision)throw Error('OFFLINE_CURRENCY_REVIEW_REQUIRED');
-          assertLegacyPostingCurrency(current);
+          if(!NATIVE_SALE_PERSISTENCE_ACTIVE)assertLegacyPostingCurrency(current);
           const expected=transactionContext(original.amount,current.currency,current,current.organizationId);
           if(original.source!=='TRANSACTION_RECORD'||original.accountingCurrency!==expected.accountingCurrency||original.exchangeRate!=='1'||original.rateSource!==expected.rateSource||original.displayRateUsed!==false)throw Error('INVALID_OFFLINE_CURRENCY_CONTEXT');
+        }
+        if(NATIVE_SALE_PERSISTENCE_ACTIVE){
+          const args=nativeSaleRequest(item);rpcStarted=true;
+          const result=await supabase.rpc('create_native_sale_v1',args);
+          if(result.error)throw result.error;
+          const saleId=verifyNativeSaleOutcome(item,result.data);
+          // Server transaction already includes credit. Never replay separate
+          // client credit/account writes after this atomic outcome.
+          await markStatus(storeId,item.id,{server_sale_id:saleId,status:'SYNCED',last_error:null});
+          await removeFromQueue(storeId,item.id);continue;
         }
 
         // ✅ IMPORTANT: send SAFE items only -> RPC stability

@@ -1,0 +1,12 @@
+{
+  "status": "PASS",
+  "count": 5,
+  "checks": [
+    "concurrent distinct repayments exactly one committed",
+    "other repayment fails with authoritative balance guard",
+    "KWD debt reconciles exactly zero",
+    "no orphan permit after concurrent failure",
+    "disable rollback retains committed debt and payment history"
+  ],
+  "scope": "Final account-lock path, actual canonical KWD debt ledger, concurrent repayments and disable rollback on disposable full schema. Synthetic Auth."
+}

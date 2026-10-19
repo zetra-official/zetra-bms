@@ -1,0 +1,132 @@
+{
+  "status": "PASS",
+  "checks": [
+    {
+      "width": 390,
+      "language": "en",
+      "render": true,
+      "originalQuantity": true,
+      "originalTotal": true,
+      "noOverflow": true,
+      "pageErrors": 0
+    },
+    {
+      "width": 390,
+      "language": "sw",
+      "render": true,
+      "originalQuantity": true,
+      "originalTotal": true,
+      "noOverflow": true,
+      "pageErrors": 0
+    },
+    {
+      "width": 390,
+      "language": "fr",
+      "render": true,
+      "originalQuantity": true,
+      "originalTotal": true,
+      "noOverflow": true,
+      "pageErrors": 0
+    },
+    {
+      "width": 390,
+      "language": "pt",
+      "render": true,
+      "originalQuantity": true,
+      "originalTotal": true,
+      "noOverflow": true,
+      "pageErrors": 0
+    },
+    {
+      "width": 390,
+      "language": "ar",
+      "render": true,
+      "originalQuantity": true,
+      "originalTotal": true,
+      "noOverflow": true,
+      "pageErrors": 0
+    },
+    {
+      "width": 390,
+      "language": "es",
+      "render": true,
+      "originalQuantity": true,
+      "originalTotal": true,
+      "noOverflow": true,
+      "pageErrors": 0
+    },
+    {
+      "width": 390,
+      "language": "zh",
+      "render": true,
+      "originalQuantity": true,
+      "originalTotal": true,
+      "noOverflow": true,
+      "pageErrors": 0
+    },
+    {
+      "width": 1440,
+      "language": "en",
+      "render": true,
+      "originalQuantity": true,
+      "originalTotal": true,
+      "noOverflow": true,
+      "pageErrors": 0
+    },
+    {
+      "width": 1440,
+      "language": "sw",
+      "render": true,
+      "originalQuantity": true,
+      "originalTotal": true,
+      "noOverflow": true,
+      "pageErrors": 0
+    },
+    {
+      "width": 1440,
+      "language": "fr",
+      "render": true,
+      "originalQuantity": true,
+      "originalTotal": true,
+      "noOverflow": true,
+      "pageErrors": 0
+    },
+    {
+      "width": 1440,
+      "language": "pt",
+      "render": true,
+      "originalQuantity": true,
+      "originalTotal": true,
+      "noOverflow": true,
+      "pageErrors": 0
+    },
+    {
+      "width": 1440,
+      "language": "ar",
+      "render": true,
+      "originalQuantity": true,
+      "originalTotal": true,
+      "noOverflow": true,
+      "pageErrors": 0
+    },
+    {
+      "width": 1440,
+      "language": "es",
+      "render": true,
+      "originalQuantity": true,
+      "originalTotal": true,
+      "noOverflow": true,
+      "pageErrors": 0
+    },
+    {
+      "width": 1440,
+      "language": "zh",
+      "render": true,
+      "originalQuantity": true,
+      "originalTotal": true,
+      "noOverflow": true,
+      "pageErrors": 0
+    }
+  ],
+  "scope": "Actual offline receipt TSX + React Native Web + existing dictionaries; synthetic queue/router/session/layout adapters; headless Edge Desktop/Mobile viewport; PDF pipeline NOT TESTED; not physical Android or live Auth"
+}

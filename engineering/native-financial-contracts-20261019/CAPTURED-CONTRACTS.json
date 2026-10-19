@@ -1,0 +1,58 @@
+[
+  {
+    "identity": "close_cashier_shift_v1(uuid,numeric,text)",
+    "md5": "955bbf15dafeb14e62cf295b44c90f2b"
+  },
+  {
+    "identity": "create_credit_account_v2(uuid,text,text)",
+    "md5": "7e4d3c1abe446af9720a55bc7965ba88"
+  },
+  {
+    "identity": "create_expense_v2(uuid,numeric,text,text,text,date,text)",
+    "md5": "38edad67c083cf61c37b9cce782912e6"
+  },
+  {
+    "identity": "create_sale(uuid,jsonb,text,uuid)",
+    "md5": "322c4ec027ce6f43fa73baa6e663b7ea"
+  },
+  {
+    "identity": "create_sale_with_payment_v4(uuid,jsonb,text,text,numeric,text,text,uuid,text,text,text,numeric,text,text,uuid)",
+    "md5": "09c0ee2a16b55a3fcedbe85563d1b897"
+  },
+  {
+    "identity": "create_sale_with_payment_v5(uuid,jsonb,text,text,numeric,text,text,uuid,text,text,text,numeric,text,text,uuid,uuid)",
+    "md5": "4a4c9e8cd47919d49014b7e9db64a5b8"
+  },
+  {
+    "identity": "create_sale_with_payment_v5(uuid,jsonb,text,text,numeric,text,text,uuid,text,text,text,numeric,text,uuid,uuid,uuid)",
+    "md5": "33603e08a4b2170dadbf7c7c9115ad19"
+  },
+  {
+    "identity": "create_sale_with_payment_v6(uuid,jsonb,text,text,numeric,text,text,uuid,text,text,text,numeric,text,uuid,uuid,uuid)",
+    "md5": "67eddab421487dc39d00da9f81f4c29e"
+  },
+  {
+    "identity": "get_my_latest_cashier_shift_v1(uuid)",
+    "md5": "afe6922ae468f9c22c1a7da012423af1"
+  },
+  {
+    "identity": "get_my_open_cashier_shift_v1(uuid)",
+    "md5": "1ced7a09f3b031b6cd0fbe73423e6c6e"
+  },
+  {
+    "identity": "open_cashier_shift_v1(uuid,numeric)",
+    "md5": "59834caa8b671750aecaab783deb11e6"
+  },
+  {
+    "identity": "record_credit_payment_v2(uuid,uuid,numeric,text,text,text)",
+    "md5": "ec4dc7a8996feca516468255c5d5014f"
+  },
+  {
+    "identity": "record_credit_sale_v2(uuid,uuid,numeric,text,text)",
+    "md5": "1f3bfeed0ccb99dc0428ae77c7a7606e"
+  },
+  {
+    "identity": "require_open_cashier_shift_v1(uuid)",
+    "md5": "b69567c6973f079f8a839c72e966d5e1"
+  }
+]

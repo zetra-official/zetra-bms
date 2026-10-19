@@ -1,0 +1,14 @@
+[
+  {
+    "check": "typescript",
+    "exitCode": 0
+  },
+  {
+    "check": "web",
+    "exitCode": 0
+  },
+  {
+    "check": "android-hermes",
+    "exitCode": 0
+  }
+]

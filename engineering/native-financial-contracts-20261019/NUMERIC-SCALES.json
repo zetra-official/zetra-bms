@@ -1,0 +1,182 @@
+[
+  {
+    "table": "cashier_shifts",
+    "column": "opening_cash",
+    "precision": null,
+    "scale": null
+  },
+  {
+    "table": "cashier_shifts",
+    "column": "drawer_count",
+    "precision": null,
+    "scale": null
+  },
+  {
+    "table": "credit_ledger_v2",
+    "column": "delta",
+    "precision": 14,
+    "scale": 2
+  },
+  {
+    "table": "products",
+    "column": "price",
+    "precision": 12,
+    "scale": 2
+  },
+  {
+    "table": "products",
+    "column": "cost",
+    "precision": 12,
+    "scale": 2
+  },
+  {
+    "table": "products",
+    "column": "cost_price",
+    "precision": null,
+    "scale": null
+  },
+  {
+    "table": "products",
+    "column": "selling_price",
+    "precision": null,
+    "scale": null
+  },
+  {
+    "table": "products",
+    "column": "alert_level",
+    "precision": null,
+    "scale": null
+  },
+  {
+    "table": "products",
+    "column": "min_sell_qty",
+    "precision": 12,
+    "scale": 3
+  },
+  {
+    "table": "products",
+    "column": "max_sell_qty",
+    "precision": 12,
+    "scale": 3
+  },
+  {
+    "table": "products",
+    "column": "purchase_unit_qty",
+    "precision": 18,
+    "scale": 6
+  },
+  {
+    "table": "products",
+    "column": "auto_cost_per_dispense_unit",
+    "precision": 18,
+    "scale": 6
+  },
+  {
+    "table": "products",
+    "column": "auto_sell_per_dispense_unit",
+    "precision": 18,
+    "scale": 6
+  },
+  {
+    "table": "products",
+    "column": "precision_pack_size",
+    "precision": 18,
+    "scale": 6
+  },
+  {
+    "table": "sale_items",
+    "column": "qty",
+    "precision": null,
+    "scale": null
+  },
+  {
+    "table": "sale_items",
+    "column": "unit_price",
+    "precision": null,
+    "scale": null
+  },
+  {
+    "table": "sale_items",
+    "column": "line_total",
+    "precision": null,
+    "scale": null
+  },
+  {
+    "table": "sale_items",
+    "column": "unit_cost_price",
+    "precision": null,
+    "scale": null
+  },
+  {
+    "table": "sale_items",
+    "column": "unit_cost",
+    "precision": null,
+    "scale": null
+  },
+  {
+    "table": "sale_payments",
+    "column": "paid_amount",
+    "precision": null,
+    "scale": null
+  },
+  {
+    "table": "sales",
+    "column": "total_amount",
+    "precision": null,
+    "scale": null
+  },
+  {
+    "table": "sales",
+    "column": "paid_amount",
+    "precision": null,
+    "scale": null
+  },
+  {
+    "table": "sales",
+    "column": "balance_amount",
+    "precision": null,
+    "scale": null
+  },
+  {
+    "table": "sales",
+    "column": "total_qty",
+    "precision": null,
+    "scale": null
+  },
+  {
+    "table": "sales",
+    "column": "amount_paid",
+    "precision": null,
+    "scale": null
+  },
+  {
+    "table": "sales",
+    "column": "balance_due",
+    "precision": null,
+    "scale": null
+  },
+  {
+    "table": "sales",
+    "column": "discount_value",
+    "precision": null,
+    "scale": null
+  },
+  {
+    "table": "sales",
+    "column": "discount_amount",
+    "precision": null,
+    "scale": null
+  },
+  {
+    "table": "sales",
+    "column": "grand_total",
+    "precision": null,
+    "scale": null
+  },
+  {
+    "table": "sales",
+    "column": "subtotal_amount",
+    "precision": null,
+    "scale": null
+  }
+]

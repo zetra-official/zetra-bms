@@ -15,9 +15,8 @@ import { theme } from "../../../src/ui/theme";
 
 import {formatMoney} from "../../../src/ui/money";
 import {useLanguage} from "../../../src/i18n/LanguageProvider";
-import {offlineReceiptTotals} from "../../../src/offline/receiptTotals";
-import {multiplyExact} from "../../../src/currency/engine";
-import {plainPriceAmount} from "../../../src/pos/itemAdjustment";
+import {offlineReceiptTotals,receiptDecimal} from "../../../src/offline/receiptTotals";
+import {multiplyExact,subtractExact} from "../../../src/currency/engine";
 import type {SaleQueueItem} from "../../../src/offline/salesQueue";
 import { getQueuedSaleByClientId } from "../../../src/offline/salesQueue";
 
@@ -46,6 +45,7 @@ type OfflineDetail = {
 
   payload: any;
   currency_context?:SaleQueueItem["currency_context"];
+  native_payload?:SaleQueueItem["native_payload"];
 };
 
 export default function OfflineReceiptScreen() {
@@ -75,7 +75,7 @@ export default function OfflineReceiptScreen() {
       const found: any = await getQueuedSaleByClientId(storeId, clientSaleId);
       if (!found) throw new Error("Queued sale not found (maybe already synced/removed).");
 
-      offlineReceiptTotals(found.payload);
+      offlineReceiptTotals(found.native_payload?{...found.payload,...found.native_payload}:found.payload,found.native_payload?found.currency_context?.currency??undefined:undefined);
       setDetail(found as any);
     } catch (e: any) {
       setErr(e?.message ?? "Failed to load offline receipt");
@@ -101,12 +101,12 @@ export default function OfflineReceiptScreen() {
     }
   }, [detail?.created_at]);
 
-  const payload = detail?.payload ?? null;
+  const payload = useMemo(()=>detail?.payload?(detail.native_payload?{...detail.payload,...detail.native_payload,items:detail.payload.items.map((item:any,index:number)=>({...item,...detail.native_payload?.items[index]}))}:detail.payload):null,[detail]);
   const items = useMemo(() => (Array.isArray(payload?.items) ? payload.items : []), [payload?.items]);
 
-  const totals=useMemo(()=>payload?offlineReceiptTotals(payload):{subtotal:'0',discount:'0',total:'0',quantity:'0'},[payload]);
-  const subtotal=totals.subtotal,discountAmount=Number(totals.discount),total=Number(totals.total),totalQty=totals.quantity;
-  const discountType=String(payload?.discount_type??'').toUpperCase(),discountVal=toNum(payload?.discount_value??0);
+  const totals=useMemo(()=>payload?offlineReceiptTotals(payload,detail?.native_payload?detail.currency_context?.currency??undefined:undefined):{subtotal:'0',discount:'0',total:'0',quantity:'0'},[payload,detail?.native_payload,detail?.currency_context?.currency]);
+  const subtotal=totals.subtotal,discountAmount=Number(totals.discount),total=totals.total,totalQty=totals.quantity;
+  const discountType=String(payload?.discount_type??'').toUpperCase(),discountVal=receiptDecimal(payload?.discount_value??0);
   // Legacy rows have no proven denomination. Never relabel them using today's
   // preference or current business confirmation; display the original digits.
   const originalCurrency=detail?.currency_context?.currency??null;
@@ -116,18 +116,9 @@ export default function OfflineReceiptScreen() {
   const paymentChannel = String(payload?.payment_channel ?? "").trim();
   const reference = String(payload?.reference ?? "").trim();
 
-  const paidAmount = useMemo(() => {
-    const p = toNum(payload?.paid_amount ?? 0);
-    return Math.max(0, Math.min(total, p));
-  }, [payload?.paid_amount, total]);
-
-  const isCredit = useMemo(() => {
-    if (paymentMethod === "CREDIT") return true;
-    // partial payment => credit
-    return paidAmount < total;
-  }, [paymentMethod, paidAmount, total]);
-
-  const due = useMemo(() => (isCredit ? Math.max(0, total - paidAmount) : 0), [isCredit, total, paidAmount]);
+  const paidAmount=useMemo(()=>{const paid=receiptDecimal(payload?.paid_amount??0);return paid.startsWith('-')?'0':subtractExact(total,paid).startsWith('-')?total:paid},[payload?.paid_amount,total]);
+  const isCredit=paymentMethod==='CREDIT'||subtractExact(total,paidAmount)!=='0';
+  const due=isCredit?subtractExact(total,paidAmount):'0';
 
   const note = String(payload?.note ?? "").trim() || null;
 
@@ -155,9 +146,9 @@ export default function OfflineReceiptScreen() {
         : [
             uiText("Items ({p0}) • Qty ({p1})", {p0: (items.length), p1: (totalQty)}),
             ...items.map((it: any) => {
-              const q = Number(it?.qty ?? 0);
-              const p = Number(it?.unit_price ?? 0);
-              const lt = multiplyExact(plainPriceAmount(q),plainPriceAmount(p));
+              const q = receiptDecimal(it?.qty ?? 0);
+              const p = receiptDecimal(it?.unit_price ?? 0);
+              const lt = multiplyExact(q,p);
               const name = String(it?.name ?? it?.product_name ?? "Product");
               const sku = it?.sku ? ` (SKU: ${String(it.sku)})` : "";
               const unit = it?.unit ? ` ${String(it.unit)}` : "";
@@ -331,9 +322,9 @@ export default function OfflineReceiptScreen() {
                 <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("No items found.")}</Text>
               ) : (
                 items.map((it: any, idx: number) => {
-                  const q = Number(it?.qty ?? 0);
-                  const p = Number(it?.unit_price ?? 0);
-                  const lt = multiplyExact(plainPriceAmount(q),plainPriceAmount(p));
+                  const q = receiptDecimal(it?.qty ?? 0);
+                  const p = receiptDecimal(it?.unit_price ?? 0);
+                  const lt = multiplyExact(q,p);
 
                   const name = String(it?.name ?? it?.product_name ?? "Product");
                   const sku = it?.sku ? String(it.sku) : null;

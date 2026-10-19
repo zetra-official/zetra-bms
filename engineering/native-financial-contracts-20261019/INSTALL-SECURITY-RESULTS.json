@@ -1,0 +1,60 @@
+{
+  "status": "PASS",
+  "count": 26,
+  "checks": [
+    "exact final draft checksum",
+    "final full migration installs atomically",
+    "historical financial values unchanged",
+    "rollout starts empty",
+    "anon denied create_native_sale_v1(uuid,uuid,text,integer,jsonb)",
+    "anon denied repay_native_credit_v1(uuid,uuid,text,integer,uuid,numeric,text,text,text)",
+    "anon denied native_cashier_shift_v1(uuid,uuid,text,integer,text,uuid,numeric,text)",
+    "anon denied get_native_sale_result_v1(uuid,uuid)",
+    "authenticated denied create_native_sale_v1(uuid,uuid,text,integer,jsonb)",
+    "authenticated denied repay_native_credit_v1(uuid,uuid,text,integer,uuid,numeric,text,text,text)",
+    "authenticated denied native_cashier_shift_v1(uuid,uuid,text,integer,text,uuid,numeric,text)",
+    "authenticated denied get_native_sale_result_v1(uuid,uuid)",
+    "service_role denied create_native_sale_v1(uuid,uuid,text,integer,jsonb)",
+    "service_role denied repay_native_credit_v1(uuid,uuid,text,integer,uuid,numeric,text,text,text)",
+    "service_role denied native_cashier_shift_v1(uuid,uuid,text,integer,text,uuid,numeric,text)",
+    "service_role denied get_native_sale_result_v1(uuid,uuid)",
+    "coordinated_client denied create_native_sale_v1(uuid,uuid,text,integer,jsonb)",
+    "coordinated_client denied repay_native_credit_v1(uuid,uuid,text,integer,uuid,numeric,text,text,text)",
+    "coordinated_client denied native_cashier_shift_v1(uuid,uuid,text,integer,text,uuid,numeric,text)",
+    "coordinated_client denied get_native_sale_result_v1(uuid,uuid)",
+    "PUBLIC and inherited grants cannot bypass quarantine",
+    "private rollout intents receipts FORCE RLS",
+    "no client policy on private receipts",
+    "administrative ownership preserved",
+    "duplicate migration fails without partial change",
+    "disable rollback preserves historical values"
+  ],
+  "rpcMatrix": {
+    "anon": {
+      "create_native_sale_v1(uuid,uuid,text,integer,jsonb)": "DENIED",
+      "repay_native_credit_v1(uuid,uuid,text,integer,uuid,numeric,text,text,text)": "DENIED",
+      "native_cashier_shift_v1(uuid,uuid,text,integer,text,uuid,numeric,text)": "DENIED",
+      "get_native_sale_result_v1(uuid,uuid)": "DENIED"
+    },
+    "authenticated": {
+      "create_native_sale_v1(uuid,uuid,text,integer,jsonb)": "DENIED",
+      "repay_native_credit_v1(uuid,uuid,text,integer,uuid,numeric,text,text,text)": "DENIED",
+      "native_cashier_shift_v1(uuid,uuid,text,integer,text,uuid,numeric,text)": "DENIED",
+      "get_native_sale_result_v1(uuid,uuid)": "DENIED"
+    },
+    "service_role": {
+      "create_native_sale_v1(uuid,uuid,text,integer,jsonb)": "DENIED",
+      "repay_native_credit_v1(uuid,uuid,text,integer,uuid,numeric,text,text,text)": "DENIED",
+      "native_cashier_shift_v1(uuid,uuid,text,integer,text,uuid,numeric,text)": "DENIED",
+      "get_native_sale_result_v1(uuid,uuid)": "DENIED"
+    },
+    "coordinated_client": {
+      "create_native_sale_v1(uuid,uuid,text,integer,jsonb)": "DENIED",
+      "repay_native_credit_v1(uuid,uuid,text,integer,uuid,numeric,text,text,text)": "DENIED",
+      "native_cashier_shift_v1(uuid,uuid,text,integer,text,uuid,numeric,text)": "DENIED",
+      "get_native_sale_result_v1(uuid,uuid)": "DENIED"
+    }
+  },
+  "sha256": "f9f849d7eb43844d8da92cf3c44bc51d8b9603b2c9d896eb2ab6d6e8aa35f3d4",
+  "scope": "Fresh disposable full-schema installation of exact 1904 then final1905, security and disable rollback. No remote access."
+}

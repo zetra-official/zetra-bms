@@ -1,0 +1,25 @@
+{
+  "status": "PASS",
+  "count": 18,
+  "checks": [
+    "TZS preview reconciles actual canonical PostgreSQL result",
+    "USD preview reconciles actual canonical PostgreSQL result",
+    "KES preview reconciles actual canonical PostgreSQL result",
+    "UGX preview reconciles actual canonical PostgreSQL result",
+    "EUR preview reconciles actual canonical PostgreSQL result",
+    "AED preview reconciles actual canonical PostgreSQL result",
+    "JPY preview reconciles actual canonical PostgreSQL result",
+    "KWD preview reconciles actual canonical PostgreSQL result",
+    "split underallocation by one cent rejected exactly",
+    "unsupported tender precision rejected",
+    "credit cannot be implicitly created by short tender",
+    "all native posting remains disabled in client source",
+    "offline packet retains original org currency revision and request identity",
+    "uncertain or mismatched committed outcome never clears queue",
+    "atomic offline adapter makes no separate credit/account posting calls",
+    "uncertain native result retains review state and never automatically retries",
+    "lost committed response recovered using read-only RPC without repost",
+    "unknown receipt remains reviewable without automatic financial retry"
+  ],
+  "scope": "Actual exact preview/packet/synchronizer; enabled branch tested through isolated bundle transform and fake transport only. Production client flag remains false. Server monetary E2E evidence is NATIVE-RESULTS.json."
+}

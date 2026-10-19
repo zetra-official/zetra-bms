@@ -1,0 +1,15 @@
+[
+  "funding_evidence.apply_return()",
+  "create_transfer_receipt_v1(uuid,uuid,uuid,jsonb,uuid[],text)",
+  "get_my_notification_receipts_v2(uuid,integer)",
+  "get_my_notification_receipts_v3(uuid,integer)",
+  "get_my_unread_notification_receipts_count_v3(uuid)",
+  "get_products_for_receipt_edit_v1(uuid)",
+  "get_public_receipt_v1(uuid)",
+  "get_supplier_debt_history_v1(uuid)",
+  "get_supplier_stock_history_v1(uuid)",
+  "mark_notification_receipt_read_v2(uuid)",
+  "mark_notification_receipt_read_v3(uuid)",
+  "funding_canonical.receipt_capability(uuid,uuid)",
+  "funding_evidence.return_intent(uuid,uuid,uuid,numeric)"
+]

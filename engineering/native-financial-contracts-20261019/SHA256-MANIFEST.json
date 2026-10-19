@@ -1,0 +1,387 @@
+{
+  "status": "LOCAL_ONLY_PARTIAL",
+  "baseCheckpoint": "5b1c604",
+  "sourceFiles": [
+    "src/currency/settlement.ts",
+    "src/offline/nativeSaleTransport.ts",
+    "src/offline/salesQueue.ts",
+    "src/offline/salesSync.ts",
+    "src/offline/receiptTotals.ts",
+    "app/(tabs)/sales/offline-receipt.tsx"
+  ],
+  "files": [
+    {
+      "path": "app/(tabs)/sales/offline-receipt.tsx",
+      "sha256": "a9d737cbdfe9addc5942e523f660aa227ce595ed17da3278ac6056fc42af3db7",
+      "bytes": 19083
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/.gitattributes",
+      "sha256": "8b9c3028d6467ff3be7c793141927841d70f47f52d0590677438f488ca154992",
+      "bytes": 9
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/.gitignore",
+      "sha256": "9e999a7192657604828bb4691164c3b6b2c8c03b53840f43dbd06e570889ffd1",
+      "bytes": 52
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/1905-DISABLE-ROLLBACK.sql",
+      "sha256": "1151ce4e422047801fd4db19b6503431fc81f28cee6424696abaabf4837c7f7e",
+      "bytes": 1095
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/1905-gateways.sql",
+      "sha256": "17c224c5f0d8dca0ec085945dc21911795c96e8def4e072a8e9462f3f7234ebb",
+      "bytes": 17356
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/1905-header.sql",
+      "sha256": "1069b4593f526c6782736053927d3d12b350edd48de825f40d6585cff308848b",
+      "bytes": 6762
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/1905-SHA256.txt",
+      "sha256": "646f662894d9b4b8d803b92a108c1fd1c643dae5657d32beea07b24cccca14be",
+      "bytes": 64
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/2026101905-native-settlement-atomic.DRAFT.sql",
+      "sha256": "f9f849d7eb43844d8da92cf3c44bc51d8b9603b2c9d896eb2ab6d6e8aa35f3d4",
+      "bytes": 40730
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/android-hermes-build.log",
+      "sha256": "0e05706a4a5e9be260fd013dd43f279430ca7746b51a640ecfeb47c84871b96e",
+      "bytes": 3887
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/before/app/(tabs)/sales/offline-receipt.tsx",
+      "sha256": "dcbb3e69dd646eff0206fc0150293956a8b3c5b8757af711ccb1f9c2947f2b17",
+      "bytes": 18759
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/before/src/offline/receiptTotals.ts",
+      "sha256": "00ed8d04a1c39c6c0f9d0b25843e4a4ad6c7e2833d5408e553977d0e04b8148d",
+      "bytes": 1497
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/before/src/offline/salesQueue.ts",
+      "sha256": "4e93397f88940901c699235a1b686d32983a6374c761be66968e60e0c038c25f",
+      "bytes": 8719
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/before/src/offline/salesSync.ts",
+      "sha256": "061e880e27fc6163ca43c099ebc016bdd651c9a07caba51c29ffed4486b09d8d",
+      "bytes": 5377
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/BUILD-RESULTS.json",
+      "sha256": "40ed3fb4b47f066469e4f4a467a690595b491f64c367545c2b3cf65630f6e39b",
+      "bytes": 174
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/build.py",
+      "sha256": "9fe19bd3dcca7304672182d717ede0bbf84c05229ac2fbb2a57098369f9a2187",
+      "bytes": 4946
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/build_checks.py",
+      "sha256": "a6d6bb1a1b2fc327f701e207bfdd512b95db525629450ded5a77cd61d6e35594",
+      "bytes": 1239
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/capture_contracts.py",
+      "sha256": "eaee4fc9f6b04ac1f79262688091d265b312fa40a2572af5c2009bfcdf887905",
+      "bytes": 1786
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/capture_dependencies.py",
+      "sha256": "e1bf68d910bd2fe5649ccec167b21d7b42f5e6f15e35168ebdce175a3dc8248b",
+      "bytes": 1394
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/capture_membership.py",
+      "sha256": "5124d35f7ed60e2c334a886a81e750838b612de2c010d66c0830b9e90d37aa29",
+      "bytes": 689
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/capture_remaining.py",
+      "sha256": "95e518da488f0ad47fd9393262ac214c57dad61089eaf7211101b73be461efc8",
+      "bytes": 1562
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/CAPTURED-CONTRACTS.json",
+      "sha256": "7f5234b854816a1541687ca32bb084276526a5d5abfc6774dc0f45eb9e43f8fa",
+      "bytes": 1982
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/close_cashier_shift_v1.sql",
+      "sha256": "4bf39ebf9a58e210615eabf4dc97c2217273f0266562b4e2ebeb3544b03f9790",
+      "bytes": 2770
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/COST-CASHIER-RESULTS.json",
+      "sha256": "2d7f27a27e8d3aff2d7125e291e089e898f9d8815794424f67a47844a6b9af9a",
+      "bytes": 7932
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/COST-TRIGGERS.json",
+      "sha256": "6b3a9cd51db4514f96c1b7348fffb613bb04a74a67d42f1356cc5906fb2f7ae4",
+      "bytes": 521
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/create_credit_account_v2.sql",
+      "sha256": "f22c063e895cb6eb9e70d68635825e6a15bd46aaa4f0599a15b25c2c8c4033d7",
+      "bytes": 1316
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/create_expense_v2.sql",
+      "sha256": "6767d075fd4473614ddd0fd5b3982055df0655cad2f4f005787e531a82254cef",
+      "bytes": 3368
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/create_sale.sql",
+      "sha256": "40d1052a4b389e62e28e48eb60cb7866dd0d58af31d082c516296c2b2819ce5e",
+      "bytes": 3629
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/create_sale_with_payment_v4.sql",
+      "sha256": "0116e847ee75bd180935cb1cda121d4e40e3fb258b64b98fdc35fe06505047b9",
+      "bytes": 9398
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/create_sale_with_payment_v5.sql",
+      "sha256": "1513eeadaf0db7273fce44d94ecd501a8a7ef996b774e458131c60103d1da304",
+      "bytes": 3782
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/create_sale_with_payment_v6.sql",
+      "sha256": "23c47a08fbc84bfe2b20f0167512bb98b1477b17d6f3c23e04c80fc90105cec8",
+      "bytes": 4077
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/CREDIT-CONCURRENCY-RESULTS.json",
+      "sha256": "4bf0420fb3da92f4a753397a3c32b31f799461e142edfd5667a0eb0e463e9b96",
+      "bytes": 502
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/DEPENDENT-VIEWS.json",
+      "sha256": "24d5b64689a700f48d90ca780aa0dc0febb17615ce6d5f2ab92549c30ae86d32",
+      "bytes": 701
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/DISABLE-HELPERS-RESULTS.json",
+      "sha256": "09f6f93fd519ea168fb613ce14e044b0980d3f2a684f62584b8abde5f01eaa19",
+      "bytes": 326
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/FINAL-DELTA-RESULTS.json",
+      "sha256": "87751bdde202fad155b019800d144dcafbb9cd52e4fa66e6bd50cd0c761854e5",
+      "bytes": 1859
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/get_my_latest_cashier_shift_v1.sql",
+      "sha256": "5026f5aadbaa8616a510c5781c429c1efadf51d30d3ef8002854b424b4dfa022",
+      "bytes": 1846
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/get_my_open_cashier_shift_v1.sql",
+      "sha256": "36cfdff6e997e4dd420a6d2c12fb50a9574b446a50ba502de45e181c2cbe8a6e",
+      "bytes": 1660
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/INSTALL-SECURITY-RESULTS.json",
+      "sha256": "f878d0d80e9504b0302658050dbf2f1557be6e30e0ba4d05f08250e974e3c6f4",
+      "bytes": 3532
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/manifest.py",
+      "sha256": "9e228cedc3113016cd2ffb5bbcace9f8cdfc7b6d690105cf6c0e3e7327d781c6",
+      "bytes": 1023
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/NATIVE-RESULTS.json",
+      "sha256": "4fee68ff8f4bb155936a888f055edf428036171c2f228416ffdd3350b66a6505",
+      "bytes": 9654
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/NUMERIC-SCALES.json",
+      "sha256": "3271af34fb9299d8d100f3c5cc3ac6f5d1d8c96179763592b966f4e334ccd578",
+      "bytes": 3300
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/OFFLINE-EXACT-RESULTS.json",
+      "sha256": "ca7eb6fd808a2fca4755a6410be87c1b7dea028a016f67433459d5dd188cf8db",
+      "bytes": 614
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/offline-exact.test.cjs",
+      "sha256": "c245bd3bf233f33cd92821c94bb8262f79d1636e1c4df32530bcc1d0c2a55ec9",
+      "bytes": 3431
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/open_cashier_shift_v1.sql",
+      "sha256": "d70ad8acc52bbb951325e0c335c8c02a9616428b9659e80a099cb2a5dc152e5a",
+      "bytes": 2909
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/PROCUREMENT-BOUNDARIES.json",
+      "sha256": "fd5141cbe3a625723636f20d740777130089fd5c3b1b82ca481b1816a76240e4",
+      "bytes": 5084
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/receipt-1440-ar.png",
+      "sha256": "1e3edc059e33c002ac5098890eee92f44fb8dd5d92e7c193fd4ed052844081dc",
+      "bytes": 52797
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/receipt-1440-en.png",
+      "sha256": "5975886f75ded13fe3520b8edc34034f0151951db462e03e7a5c4ac334977a54",
+      "bytes": 53771
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/receipt-390-ar.png",
+      "sha256": "5f560bd4c5ee683dacd7eb7c95d4fdb66f3e59f0a0168586d60f49066907a314",
+      "bytes": 46176
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/receipt-390-en.png",
+      "sha256": "6cfac64ba7d750eccfc53954d1ff641d467dd78e4e85a5c8c6f6e51735d0b329",
+      "bytes": 46721
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/record_credit_payment_v2.sql",
+      "sha256": "f6de2c54f05cfe2d65ff55eef62c7b0f6aa55ea2d00d41fbb715af4e9521fa20",
+      "bytes": 1564
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/record_credit_sale_v2.sql",
+      "sha256": "97d3d1cab24648dcaa01fe91878c0d9fb8be601e6da956a6d8341b1711b685ba",
+      "bytes": 1284
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/REMAINING-CONTRACT-NAMES.json",
+      "sha256": "871ef06f6819a66ef742a18956ee211a992b543dbda320f2e338b285cd626c78",
+      "bytes": 638
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/RENDER-RESULTS.json",
+      "sha256": "eaf05c2d07504be93feea00ec5b2f3578c4a6fb5fbbaf3dfa1633d92d4a4aa16",
+      "bytes": 2910
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/render.cjs",
+      "sha256": "1948d341cb6196001be14b41bc53acc399beae026cda4e4f22cf2ae520e90ecd",
+      "bytes": 4809
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/require_open_cashier_shift_v1.sql",
+      "sha256": "f366e4f0d8c7b76eeba108600bcd4bf8b99e398fa2fe352cb6b84b6eef7e3aca",
+      "bytes": 489
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/RESULT.md",
+      "sha256": "865c7ffabfd415994e353a95b02ad4946e082cbcfba62f2f83b7b211adf9cced",
+      "bytes": 11909
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/ROLLBACK.md",
+      "sha256": "f8206a12defcd831c9ad90806e0285e49ada5dfec1dc3861d3ba2c633ab05948",
+      "bytes": 2087
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/SANDBOX-RENDER-ATTEMPT.json",
+      "sha256": "fc685f02ab72e1ebef58b5e194d440c99f2bf9f118a54d0e6eb1ebec7b547072",
+      "bytes": 7427
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/SCOPE-SECURITY-RESULTS.json",
+      "sha256": "ad630bb1aa98671440889502190cee45028fa335d62a11bcccbf45fba9b248a1",
+      "bytes": 586
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/SOURCE-RESULTS.json",
+      "sha256": "5524b02728bd1454a60213edae2ed9fc38086a77ca63225315e73ed5380f8829",
+      "bytes": 1488
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/source.test.cjs",
+      "sha256": "97b2b16fcd93b2449babfefbf5ae12f7c193655b5e5a4c23fd8a7e7a346a4030",
+      "bytes": 6716
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/test_cost_cashier.py",
+      "sha256": "5d09abd6bda2821742ef777e57df9b8ac001ac2cd6ea3f50a90096569f984a8b",
+      "bytes": 7340
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/test_credit_concurrency.py",
+      "sha256": "e1b5fcdc14ac3ec553e45bc735385e9aca4b29aa59c3df73f747abba305c2a91",
+      "bytes": 2925
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/test_disable_helpers.py",
+      "sha256": "81debc2a4c4f0a5cbd676cda3321688171c01e693ba4d57614bc6e841458970d",
+      "bytes": 1090
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/test_final_delta.py",
+      "sha256": "3a054a587986cfb34a19bee9c6c6caf493dbe00b8e433157ca00913bb180736c",
+      "bytes": 3502
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/test_install_security.py",
+      "sha256": "e51139bb92f72d73441479236b6e02950288b11c972f3b2e5a6a3c6ae7ba1f19",
+      "bytes": 3738
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/test_native.py",
+      "sha256": "7e087def8646cb9ee872a34559eb5367fcc01615b8d4204daa7c7f9b9cb5b22c",
+      "bytes": 9772
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/test_scope_security.py",
+      "sha256": "fea2a0d1926b3db077f34ed4e5ffa35b9953f98131f34fd1e7a32cf6b7f93989",
+      "bytes": 2647
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/typescript-build.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/web-build.log",
+      "sha256": "ff7c5a8572fbcc8cb33679276b9fa21c8273c09718e85d34045a5ef50dd1075d",
+      "bytes": 8179
+    },
+    {
+      "path": "src/currency/settlement.ts",
+      "sha256": "eed2416d4d0c76c8f0e8152a330906cda5af4576b1f51055f900832fa2cc0617",
+      "bytes": 2655
+    },
+    {
+      "path": "src/offline/nativeSaleTransport.ts",
+      "sha256": "fdb009caca774a5d9c7e7ab8740831ee228f1d6c05b3a1fd70ad5da362d84f70",
+      "bytes": 3077
+    },
+    {
+      "path": "src/offline/receiptTotals.ts",
+      "sha256": "47c0bb63ad74cac7024356d535d1b4c5fda1f50b19cacfa0124208c870f523e4",
+      "bytes": 2246
+    },
+    {
+      "path": "src/offline/salesQueue.ts",
+      "sha256": "898443710cf04da9ad2fef594288d44ec2fba512c1cc177e9587dac92118b38c",
+      "bytes": 9404
+    },
+    {
+      "path": "src/offline/salesSync.ts",
+      "sha256": "0113895ac4f4fecb1c28ceddf450dc6f3decd5a8ad75085e6267609050bb36a9",
+      "bytes": 6979
+    }
+  ],
+  "productionWrites": 0,
+  "deployment": false,
+  "nativeClientActive": false
+}

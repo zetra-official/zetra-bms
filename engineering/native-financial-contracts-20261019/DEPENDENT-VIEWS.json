@@ -1,0 +1,18 @@
+[
+  {
+    "name": "credit_payments_v2",
+    "depth": 1,
+    "definition": " SELECT store_id,\n    credit_account_id,\n    abs(delta::numeric) AS amount,\n    created_at\n   FROM credit_ledger_v2 cl\n  WHERE delta IS NOT NULL AND delta < 0::numeric;",
+    "owner": "postgres",
+    "options": null,
+    "acl": "{postgres=arwdDxtm/postgres}"
+  },
+  {
+    "name": "credit_sales_v2",
+    "depth": 1,
+    "definition": " SELECT store_id,\n    credit_account_id,\n    delta::numeric AS total_amount,\n    created_at\n   FROM credit_ledger_v2 cl\n  WHERE delta IS NOT NULL AND delta > 0::numeric;",
+    "owner": "postgres",
+    "options": null,
+    "acl": "{postgres=arwdDxtm/postgres}"
+  }
+]

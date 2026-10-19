@@ -1,0 +1,9 @@
+{
+  "status": "PASS",
+  "count": 3,
+  "checks": [
+    "disable removes local test grant backend_core.bind_native_currency_v1()",
+    "disable removes local test grant backend_core.native_financial_policy_v1(uuid)",
+    "disable removes local test grant public.create_native_sale_v1(uuid,uuid,text,integer,jsonb)"
+  ]
+}
