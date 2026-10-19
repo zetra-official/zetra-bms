@@ -1,0 +1,10 @@
+{
+  "status": "PASS",
+  "count": 3,
+  "checks": [
+    "staff cannot Generate Code or grant cost-price sharing",
+    "staff cannot import into business through direct RPC",
+    "unauthenticated Enter Code preview denied"
+  ],
+  "scope": "Disposable PostgreSQL, exact captured Production RPCs; synthetic JWT only"
+}

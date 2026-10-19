@@ -1,0 +1,21 @@
+{
+  "installedPackage": "com.anonymous.zetrabmsclean",
+  "apkSha256": "b09a8622b3fd76507e984c28c399e3230c5e5a61e45b3bf45d3f72a435f75753",
+  "nativeUpdateMetadata": [
+    "          E: meta-data (line=142)\n            A: http://schemas.android.com/apk/res/android:name(0x01010003)=\"expo.modules.updates.ENABLED\" (Raw: \"expo.modules.updates.ENABLED\")\n            A: http://schemas.android.com/apk/res/android:value(0x01010024)=true\n          E: meta-data (line=145)",
+    "          E: meta-data (line=145)\n            A: http://schemas.android.com/apk/res/android:name(0x01010003)=\"expo.modules.updates.EXPO_RUNTIME_VERSION\" (Raw: \"expo.modules.updates.EXPO_RUNTIME_VERSION\")\n            A: http://schemas.android.com/apk/res/android:value(0x01010024)=@0x7f1300a9\n          E: meta-data (line=148)",
+    "          E: meta-data (line=148)\n            A: http://schemas.android.com/apk/res/android:name(0x01010003)=\"expo.modules.updates.EXPO_UPDATES_CHECK_ON_LAUNCH\" (Raw: \"expo.modules.updates.EXPO_UPDATES_CHECK_ON_LAUNCH\")\n            A: http://schemas.android.com/apk/res/android:value(0x01010024)=\"ALWAYS\" (Raw: \"ALWAYS\")\n          E: meta-data (line=151)",
+    "          E: meta-data (line=151)\n            A: http://schemas.android.com/apk/res/android:name(0x01010003)=\"expo.modules.updates.EXPO_UPDATES_LAUNCH_WAIT_MS\" (Raw: \"expo.modules.updates.EXPO_UPDATES_LAUNCH_WAIT_MS\")\n            A: http://schemas.android.com/apk/res/android:value(0x01010024)=0\n          E: meta-data (line=154)",
+    "          E: meta-data (line=154)\n            A: http://schemas.android.com/apk/res/android:name(0x01010003)=\"expo.modules.updates.EXPO_UPDATE_URL\" (Raw: \"expo.modules.updates.EXPO_UPDATE_URL\")\n            A: http://schemas.android.com/apk/res/android:value(0x01010024)=\"https://u.expo.dev/a8536709-2bea-40f4-8dd7-01563bd08c70\" (Raw: \"https://u.expo.dev/a8536709-2bea-40f4-8dd7-01563bd08c70\")\n          E: meta-data (line=157)",
+    "          E: meta-data (line=157)\n            A: http://schemas.android.com/apk/res/android:name(0x01010003)=\"expo.modules.updates.UPDATES_CONFIGURATION_REQUEST_HEADERS_KEY\" (Raw: \"expo.modules.updates.UPDATES_CONFIGURATION_REQUEST_HEADERS_KEY\")\n            A: http://schemas.android.com/apk/res/android:value(0x01010024)=\"{\"expo-channel-name\":\"production\"}\" (Raw: \"{\"expo-channel-name\":\"production\"}\")\n          E: activity (line=161)"
+  ],
+  "embeddedRuntimeVersion": null,
+  "embeddedUpdateId": "85bbb03f-1e44-4973-bc02-e58b0e37c32b",
+  "embeddedSdkVersion": null,
+  "apkModified": false,
+  "appLaunched": false,
+  "deployment": false,
+  "runtimeResource": [
+    "    resource 0x7f1300a9 string/expo_runtime_version\n      () \"1.0.0\"\n    resource 0x7f1300aa string/expo_splash_screen_resize_mode\n      () \"contain\"\n    resource 0x7f1300ab string/expo_splash_screen_status_bar_translucent"
+  ]
+}

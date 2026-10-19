@@ -1,0 +1,16 @@
+{
+  "status": "PASS",
+  "oldPublishedUpdate": "01a14bd2-bbe2-7d84-b0cd-154911b0a21e",
+  "oldPublishedGroup": "9ae993b5-1566-41ea-821c-3cc94dce0151",
+  "sourceModulesCompared": 1722,
+  "changedApplicationSources": [
+    "/app/catalog.tsx"
+  ],
+  "routeContextNormalization": "Exact isolated-source root path only; route keys and all expressions unchanged",
+  "assetHashSetMatchesPublished": true,
+  "dependencySourcesMatchPublishedSourceMap": true,
+  "financialRpcLeak": false,
+  "privateSourceMapPublished": false,
+  "physicalPatchedAppTest": "NOT TESTED; not published/installed",
+  "publication": false
+}

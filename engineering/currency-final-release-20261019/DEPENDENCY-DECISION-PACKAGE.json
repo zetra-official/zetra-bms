@@ -1,0 +1,57 @@
+{
+  "status": "EXACT_CONTRACT_DECISION_REQUIRED_NOT_PRODUCTION_APPROVAL",
+  "sourceCheckpoint": "bcc0ac9",
+  "project": "dcmhqdckzhbuakvcyjit",
+  "evidence": ["PRODUCTION-SETTLEMENT-CAPTURE.json", "PRODUCTION-SETTLEMENT-AUTHORITY-RESULT.json", "OWNER-POLICY-BOUNDARIES.json", "FINAL-PRODUCTION-PACKAGE.DRAFT.json"],
+  "inspection": "Reuse accepted fresh metadata-only inspection of52 relevant functions/25 tables and actual application RPC call paths. No repeated Production transaction reads, schema audit or historical suites.",
+  "decisionRequested": "Authorize local design/implementation of ONE private settlement-binding contract against existing canonical payments and cashier shifts, with explicit Owner-confirmed source-account authority; do not designate Funding Control as treasury and do not activate or backfill anything. Bind original refund/tax evidence under the already-approved refund policy. Exact future SQL/hashes and Production approval remain separate.",
+  "proposedContract": {
+    "kind": "Private authorization/provenance bindings, not a duplicate monetary ledger",
+    "sourceAccounts": "Reference verified Cash/Bank/Mobile account ownership, currency, authorization policy and Owner-confirmed opening snapshot/cutoff or verified external provider. Existing payment labels must never synthesize account identity/balances.",
+    "settlementEvidence": "Canonical source type and immutable payment/refund ID; organization/store; authorized account reference; verified original currency/amount and FX snapshot if approved; original reversal reference; actor and cashier membership/shift where applicable; idempotency request; source confirmation and audit reference.",
+    "atomicity": "Bind evidence in the SAME canonical posting transaction; unique source/request/reversal constraints, row/shift locks and exact decimal reconciliation. No independently successful side posting or client-written bindings.",
+    "historicalPolicy": "No currency/shift/account/tax inference from labels, timestamps, current preferences or present catalog cost. Unknown historical records remain explicitly unverified. No rewriting/backfill without separately evidenced authorization.",
+    "ownership": "Existing sales, credit, expenses, inbound payments and Field Procurement histories remain their respective monetary sources. Funding Control remains Stock Purchase Funding/advances. No new generic balance ledger is designated.",
+    "access": "Private schema, no client grants, server-side owner/store/member checks; explicit rollout allow-list and fail-closed missing binding. Frontend flags alone cannot authorize posting."
+  },
+  "dependencies": [
+    {
+      "id": "TREASURY_SOURCE_BINDING",
+      "actualSources": ["create_sale_with_payment_v4/v5/v6 -> sales/sale_payments", "record_credit_payment_v2 -> credit_ledger_v2", "create_expense_v2 -> expenses"],
+      "missingAuthority": "No verified general Cash/Bank/Mobile account registry/provider or canonical source-account settlement/confirmation contract. Payment method/channel is classification only.",
+      "impact": "Native sale/credit/expense arithmetic can pass locally but source balances, settlement and complete financial reconciliation cannot be certified.",
+      "closureEvidence": "Approved account authority and role policy; atomic canonical payment binding;8-currency exact settlement, failure/retry/concurrency and tenant tests; genuine authorized acceptance."
+    },
+    {
+      "id": "ORIGINAL_REFUND_TAX_ALLOCATION",
+      "actualSources": ["sales", "sale_items.unit_cost", "sale_payments"],
+      "missingAuthority": "Verified immutable original line discount/tax component allocations, refundable paid/quantity history and authorized refund settlement/reversal RPC are unavailable in relevant canonical contracts.",
+      "approvedPolicy": "Reverse original saved values only; sellable returned goods only restocked; cumulative refund cannot exceed remaining quantity/original paid amount; original authorized account/shift. Missing evidence means denial, not zero tax.",
+      "impact": "Customer refund/tax reversal and net-profit certification remain blocked.",
+      "closureEvidence": "Original saved tax/discount allocations or verified tax-service response bound to original sale; atomic/idempotent bounded reversal through existing sources, exact original COGS and stock disposition. No currency-derived tax policy."
+    },
+    {
+      "id": "PROCUREMENT_RECEIPT_SETTLEMENT_LINK",
+      "actualSources": ["receive_inbound_stock_partial_v1", "record_inbound_stock_payment_v1 -> inbound_stock_payments", "business_debts/business_debt_payments", "field_wallets/field_wallet_transactions", "funding_control advances"],
+      "implementedLocally": "1909 exact receipt precision, original cost evidence, locking/idempotency and unsupported native-payment denial PASS;1908 prevents unsafe native stock writers.",
+      "missingAuthority": "Approved receipt-to-purchase-payment/funding/agent-custody settlement attestation and original-currency costing boundary; source_ready still SELECT false.",
+      "impact": "Native supplier settlement, funding settlement and full inventory valuation cannot be activated.",
+      "closureEvidence": "Canonical receipt/event IDs bound once to verified purchase payment/source authority and original-cost snapshot; reconcile custody returns without duplicating wallets or stock deductions."
+    },
+    {
+      "id": "COMPLETE_CASHIER_SHIFT_BINDING",
+      "actualSources": ["cashier_shifts", "get_my_cashier_closing_payment_summary_v1", "close_cashier_shift_v1"],
+      "missingAuthority": "Current summary includes shift-linked sale_payments only; no verified source-account/shift references for debt collections, expenses, refunds and every authorized cash movement.",
+      "impact": "Sale-payment summary is usable, but full drawer/bank/mobile reconciliation and closing discrepancies cannot be certified.",
+      "closureEvidence": "Atomic per-event source/shift binding, shift ownership/lock enforcement, original-currency signed flows and conservation checks. No historical timestamp-based allocation."
+    }
+  ],
+  "otherReleaseGates": [
+    "Original-currency statement/PDF readers locally PASS but inactive; remaining legacy readers and unproven historical denomination must remain explicit/incomplete.",
+    "No fabricated FX: verified dated rate/source or clearly Owner-confirmed manual conversion only; display does not rewrite originals.",
+    "After contracts are complete, genuine authenticated financial Desktop/Mobile and physical Android/PDF/offline acceptance is required; onboarding Auth canary is not that evidence.",
+    "Fresh backup/preimage/ACL/dependency/lock gates and exact1904-1909 or revised package authorization precede any live execution."
+  ],
+  "authorizedNow": "Preserve current local source/drafts/evidence and prepare isolated Catalog release approval. No Production writes, financial activation or deployment.",
+  "fundingControlPromotedToTreasury": false
+}

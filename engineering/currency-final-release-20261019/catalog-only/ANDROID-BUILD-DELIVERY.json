@@ -1,0 +1,51 @@
+{
+  "readOnly": true,
+  "builds": [
+    {
+      "id": "93565533-16d9-4a9b-a7c6-ff904e7fdaea",
+      "status": "FINISHED",
+      "platform": "ANDROID",
+      "distribution": "INTERNAL",
+      "buildProfile": "production-apk",
+      "channel": "production",
+      "appVersion": "1.0.0",
+      "appBuildVersion": "2",
+      "runtimeVersion": "1.0.0",
+      "gitCommitHash": "ee6ea3960090b1e9cb19a0c868b38a95a4fc3354",
+      "createdAt": "2026-04-30T01:16:34.494Z",
+      "completedAt": "2026-04-30T01:37:24.680Z",
+      "artifactKeys": []
+    },
+    {
+      "id": "218f8e3e-e794-46ed-b617-e72bed00841b",
+      "status": "FINISHED",
+      "platform": "ANDROID",
+      "distribution": "INTERNAL",
+      "buildProfile": "production-apk",
+      "channel": "production",
+      "appVersion": "1.0.0",
+      "appBuildVersion": "2",
+      "runtimeVersion": "1.0.0",
+      "gitCommitHash": "c137814427aa866101b2a5bebefb2c9543e53587",
+      "createdAt": "2026-04-12T11:27:55.632Z",
+      "completedAt": "2026-04-12T11:38:05.926Z",
+      "artifactKeys": []
+    },
+    {
+      "id": "0f8312ba-d177-4558-9d6a-5d0fe78ab34c",
+      "status": "FINISHED",
+      "platform": "ANDROID",
+      "distribution": "STORE",
+      "buildProfile": "production",
+      "channel": "production",
+      "appVersion": "1.0.0",
+      "appBuildVersion": "2",
+      "runtimeVersion": "1.0.0",
+      "gitCommitHash": "c137814427aa866101b2a5bebefb2c9543e53587",
+      "createdAt": "2026-04-12T11:00:58.013Z",
+      "completedAt": "2026-04-12T11:12:50.631Z",
+      "artifactKeys": []
+    }
+  ],
+  "publication": false
+}

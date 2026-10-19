@@ -1,0 +1,15 @@
+{
+  "publishedUpdate": "01a14bd2-bbe2-7d84-b0cd-154911b0a21e",
+  "publishedGroup": "9ae993b5-1566-41ea-821c-3cc94dce0151",
+  "runtime": "1.0.0",
+  "channel": "production",
+  "savedHermesMatchesPublishedLaunch": true,
+  "hermesSha256": "fc1e11e0f5afca9bf57afe25580aec75b1dcd943fec0b779369bbd40eb040d2c",
+  "pairedSourceMapSha256": "daaf83ee1f03eff4628c66947ead7f8fd933b48473840ca6020fb64ae3afad08",
+  "sourceMapContentFiles": 244,
+  "assetFiles": 3,
+  "missing": [],
+  "dependencyMismatches": [],
+  "sourceMethod": "Reconstruct application JS/TS from the paired source map of the exact saved published Hermes bundle; verify every raw application asset against published manifest hashes. Dependencies compared against original sourcesContent.",
+  "publicationAuthorized": false
+}

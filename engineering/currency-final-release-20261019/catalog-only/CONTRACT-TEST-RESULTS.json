@@ -1,0 +1,27 @@
+{
+  "status": "PASS",
+  "count": 15,
+  "checks": [
+    "Generate Code retains exactly selected product IDs",
+    "Enter Code preview returns only selected products",
+    "cost and selling prices hidden without source consent",
+    "cross-organization product selection denied",
+    "missing authentication denied",
+    "unassigned actor cannot Generate Code",
+    "unassigned actor cannot import to target",
+    "store from another organization denied",
+    "product not in shared selection denied",
+    "selected import creates only one target product",
+    "imported stock initializes to zero",
+    "code cannot exceed one-use limit",
+    "explicit authorized source cost consent is preserved",
+    "expired code preview denied",
+    "source stock unchanged by sharing and import"
+  ],
+  "scope": "Exact three Production Catalog RPC definitions, disposable synthetic full schema and synthetic JWT; no Production Generate/import writes. Owner114-products Expo evidence retained, not repeated.",
+  "definitionHashes": {
+    "generate_product_catalog_share_v1(uuid,uuid,uuid[],boolean,boolean,integer,integer)": "8a7cea993aa00ca279ede86663e3156ebfecf831b6f2b69c15fabe9f7f7fa86d",
+    "import_product_catalog_share_v1(text,uuid,uuid,uuid[])": "cc303fc75581ff0c32ad7b130d1e64c9a021e32ff2c06577539c79efa4c7f24a",
+    "preview_product_catalog_share_v1(text)": "9ad2d9b88f116ea594b15d655124c33d70edb82e2f3debfc339e80a680816d42"
+  }
+}

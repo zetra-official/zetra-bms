@@ -1,0 +1,61 @@
+{
+  "status": "READY_FOR_OWNER_CATALOG_ONLY_WEB_AND_ANDROID_OTA_APPROVAL",
+  "sourceCheckpoint": "cc03b36",
+  "sourceChange": {
+    "file": "app/catalog.tsx",
+    "sha256": "a6b548a9567803d9db181b4d6f236349b55afddfc115ead7ba9f6d449c1b4914",
+    "change": "Generate Code p_store_id becomes null; same organization and explicitly selected product IDs retained"
+  },
+  "databaseMigrations": [],
+  "productionDataWritesAuthorized": false,
+  "financialActivation": false,
+  "publicationAuthorized": false,
+  "web": {
+    "siteId": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+    "domain": "https://app.zetra.tz",
+    "rollbackDeploy": "6ad49c64c2acd6e0352f242f",
+    "artifactDirectory": "dist/catalog-only-hotfix",
+    "artifactManifest": "ARTIFACT-SHA256.json",
+    "artifactManifestSha256": "7ddd4a71bff9cd69345d8e620ecc3bc4da8a2f83f0366cf87c48d96d2abba4c6",
+    "artifactCount": 271,
+    "workflow": "Existing official Netlify draft/files upload -> synthetic/non-writing hosted smoke -> publish exact ready draft; stop if live baseline drifts"
+  },
+  "android": {
+    "project": "a8536709-2bea-40f4-8dd7-01563bd08c70",
+    "package": "com.anonymous.zetrabmsclean",
+    "channel": "production",
+    "branch": "production",
+    "runtimeVersion": "1.0.0",
+    "installedApkSha256": "b09a8622b3fd76507e984c28c399e3230c5e5a61e45b3bf45d3f72a435f75753",
+    "rollbackGroup": "9ae993b5-1566-41ea-821c-3cc94dce0151",
+    "rollbackUpdate": "01a14bd2-bbe2-7d84-b0cd-154911b0a21e",
+    "artifactDirectory": "dist/catalog-only-android",
+    "artifactManifest": "ANDROID-ARTIFACT-SHA256.json",
+    "artifactManifestSha256": "642e758bd050bb0a9183ee260f57d9a888ebeae06570efe0f232c278f0231b2d",
+    "artifactCount": 48,
+    "sourceManifest": "ANDROID-SOURCE-MANIFEST.json",
+    "sourceManifestSha256": "3b7e1a1a5021cbc4e179e20bbb58a666ae4eb997be91602594f367bddea495fe",
+    "scopeProof": "ANDROID-ISOLATION-RESULTS.json",
+    "publicationCwd": "engineering/currency-final-release-20261019/catalog-only/android-source",
+    "publishCommand": "eas update --channel production --platform android --skip-bundler --input-dir \"C:\\JOFU ZETRA\\JOFU\\JOFU\\JOFU\\zetra-bms-clean\\dist\\catalog-only-android\" --message \"Catalog-only cc03b36\" --non-interactive",
+    "rollbackCommand": "eas update:republish --group 9ae993b5-1566-41ea-821c-3cc94dce0151 --destination-channel production --platform android --non-interactive",
+    "delivery": "Existing APK already supports this Expo Updates URL/channel/runtime. No reinstall/native signing change needed. Online launch checks/downloads in background with zero launch wait; applying the update may require a subsequent full app restart. No claim that APK binaries update themselves."
+  },
+  "evidence": {
+    "acceptedOwnerExpo114Products": "PASS retained, not rerun",
+    "focusedCatalogPostgres": 18,
+    "isolatedWebGuardTypeScriptBuild": "PASS retained",
+    "isolatedAndroidHermes": "PASS",
+    "newPublishedProductionE2E": "NOT TESTED; approval pending",
+    "realCustomerDataModified": false
+  },
+  "releaseSequence": [
+    "Recheck exact artifact/source hashes and unchanged Web/EAS target baselines",
+    "Create Catalog-only Netlify draft; run Desktop/Mobile Catalog/Login smoke with synthetic responses and all write RPCs blocked",
+    "Publish exact Web draft only if gates pass",
+    "Publish exact prebuilt Android artifacts to production/runtime1.0.0",
+    "Observe hosted routes and Owner-controlled Android update adoption/navigation; no automated real import or share-generation writes",
+    "On critical regression stop affected rollout and restore Web deployment / republish exact prior Android group"
+  ],
+  "approvalRequested": "Approve only publication of these hashed Catalog Web artifacts and compatible Android OTA, with listed non-writing smoke checks and rollback. No SQL, Production imports, financial changes or Global Currency deployment."
+}
