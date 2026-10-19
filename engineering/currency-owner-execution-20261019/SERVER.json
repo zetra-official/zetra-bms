@@ -1,0 +1,5 @@
+{
+  "url": "http://127.0.0.1:55624",
+  "pid": 31084,
+  "scope": "Real Supabase Auth + canonical client/controller; local browser storage adapter, no Auth mocks"
+}

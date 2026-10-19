@@ -1,0 +1,7 @@
+{
+  "at": "2026-10-19T07:44:12.123Z",
+  "httpStatus": 401,
+  "code": "42501",
+  "status": "DENIED",
+  "scope": "Real anonymous PostgREST permission check; no Owner session or financial operation"
+}

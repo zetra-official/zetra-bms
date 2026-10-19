@@ -66,6 +66,18 @@ export function formatExact(value:string,language:string):string{
  return sign+localized+(fraction?separator+[...fraction].map(d=>nf.format(Number(d))).join(''):'');
  }catch{return value}
 }
+/** Original recorded amount only. Currency placement comes from Intl, while
+ * digits never pass through Number. Extra unit-price precision is retained;
+ * this formatter does not validate or round a settlement/posting instruction. */
+export function formatCurrencyExact(value:string,currency:string,locale:string,minimumFractionDigits=currencyPrecision(currency)):string{
+ if(!decimal.test(value)||!Number.isInteger(minimumFractionDigits)||minimumFractionDigits<0||minimumFractionDigits>6)throw Error('INVALID_AMOUNT');
+ currencyPrecision(currency);
+ const negative=value.startsWith('-'),[whole,fraction='']=(negative?value.slice(1):value).split('.');
+ const padded=whole+(fraction.length||minimumFractionDigits?'.'+fraction.padEnd(minimumFractionDigits,'0'):'');
+ const digits=formatExact(padded,locale),parts=new Intl.NumberFormat(locale,{style:'currency',currency}).formatToParts(negative?-1:1);
+ let inserted=false;
+ return parts.map(part=>{if(['integer','group','decimal','fraction'].includes(part.type)){if(inserted)return '';inserted=true;return digits}return part.value}).join('');
+}
 export function presentMoney(input:RecordedMoney,displayCurrency:string|null,evidence:ReferenceRates|null,now:Date,maxAgeDays:number,organizationId:string):CurrencyView{
  validateMoney(input);if(input.organizationId!==organizationId)throw Error('CURRENCY_TENANT_MISMATCH');
  if(displayCurrency!==null&&!/^[A-Z]{3}$/.test(displayCurrency))throw Error('INVALID_DISPLAY_CURRENCY');

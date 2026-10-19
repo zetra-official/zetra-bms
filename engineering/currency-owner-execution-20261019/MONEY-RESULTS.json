@@ -1,0 +1,27 @@
+{
+  "status": "PASS",
+  "count": 20,
+  "checks": [
+    "TZS integer convention unchanged",
+    "canonical TZS fractions visible",
+    "fractional supported unit-price scale retained",
+    "existing cart-normalized sub-cent unit prices remain visible",
+    "legacy numeric binary tails do not leak into text",
+    "currency-free totals preserve fractional digits",
+    "SQL numeric above 2^53 never passes through Number",
+    "negative exact stored amounts preserved",
+    "original precision retained beyond settlement units",
+    "TZS exact 0/2/3 precision in all seven languages",
+    "USD exact 0/2/3 precision in all seven languages",
+    "KES exact 0/2/3 precision in all seven languages",
+    "UGX exact 0/2/3 precision in all seven languages",
+    "EUR exact 0/2/3 precision in all seven languages",
+    "JPY exact 0/2/3 precision in all seven languages",
+    "KWD exact 0/2/3 precision in all seven languages",
+    "historical code and original amount survive missing current metadata",
+    "malformed monetary input not silently zeroed",
+    "invalid numeric values remain unavailable",
+    "formatting never converts original currency or value"
+  ],
+  "scope": "Real shared frontend formatter and existing exact engine; storage isolated, no financial posting/native certification or physical-device claim"
+}

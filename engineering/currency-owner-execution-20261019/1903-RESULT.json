@@ -1,0 +1,16 @@
+{
+  "stage": "1903",
+  "project": "dcmhqdckzhbuakvcyjit",
+  "file": "engineering/currency-owner-canary-20261019/2026101903-owner-canary-org-limit.DRAFT.sql",
+  "sha256": "781741d3e5a6a014a2e2a4d21d3d5ef25decbfb608b31ee34cf9fa34fb137b9f",
+  "state": "COMMITTED_AND_VERIFIED",
+  "startedAt": "2026-10-19T07:23:18.444559+00:00",
+  "commandResult": "SUCCESS",
+  "commandEndedAt": "2026-10-19T07:23:26.015952+00:00",
+  "gatewayMd5": "11b9c5bda14151174dae0822850ca455",
+  "serverEnabled": false,
+  "apiExecuteDenied": true,
+  "existingCanonicalAclPreserved": true,
+  "privateTablesProtected": true,
+  "verifiedAt": "2026-10-19T07:23:33.460625+00:00"
+}

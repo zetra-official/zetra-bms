@@ -1,0 +1,65 @@
+{
+  "checks": [
+    {
+      "fingerprint": "643f5beba9d1f63f87622ce0128148bb",
+      "name": "cashier_shifts",
+      "rows": 16
+    },
+    {
+      "fingerprint": "c11d68c02467169c20c293e65e3d95c8",
+      "name": "credit_ledger",
+      "rows": 395
+    },
+    {
+      "fingerprint": "6a2d6927bc3f7f0d520d1f99dd24e62a",
+      "name": "expenses",
+      "rows": 1184
+    },
+    {
+      "fingerprint": "3dcdb9ab108e523c604546ab0a7c15c6",
+      "name": "inventory",
+      "rows": 490
+    },
+    {
+      "fingerprint": "f11a13642a7eda3bbca9ec6aec6c2c43",
+      "name": "memberships",
+      "rows": 41
+    },
+    {
+      "fingerprint": "9082a49ba9b06517ab2ca44637de806d",
+      "name": "organization_subscriptions",
+      "rows": 7
+    },
+    {
+      "fingerprint": "b4b108bf04be306c996fc42638cc8bdc",
+      "name": "organizations",
+      "rows": 6
+    },
+    {
+      "fingerprint": "47d1aee3904f88b76edd9ffc01b6a529",
+      "name": "payments",
+      "rows": 2796
+    },
+    {
+      "fingerprint": "30c37609fcdb83c61cbf3327ea4a9176",
+      "name": "plans",
+      "rows": 7
+    },
+    {
+      "fingerprint": "807a28477cf5cbcdaf42a8182d79cdaa",
+      "name": "sales",
+      "rows": 2730
+    },
+    {
+      "fingerprint": "d6e9cf9baba78c365d443403e4a199f9",
+      "name": "stock_movements",
+      "rows": 4899
+    },
+    {
+      "fingerprint": "bd101d2b3a1ad242f8036826cbd1ebdb",
+      "name": "stores",
+      "rows": 40
+    }
+  ],
+  "oldOrganizationCount": 6
+}

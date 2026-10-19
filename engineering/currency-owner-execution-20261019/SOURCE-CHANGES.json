@@ -1,0 +1,16 @@
+[
+  {
+    "file": "src/currency/engine.ts",
+    "preimageSha256": "be3f3faad9266272ceb58ad37a77555f1bb036fdd6760c9bc9f888e0f683ba56",
+    "sourceSha256": "9fc674fdb215a04e3cfeafb4ae06b6971a7ea4dc194b909cc884de2a07b79be7",
+    "preimageFrom": "HEAD before this continuation; source was clean before formatter correction",
+    "priorEvidenceMatch": true
+  },
+  {
+    "file": "src/ui/money.ts",
+    "preimageSha256": "6e26ecf4bf8ce02e48758eae56f5aacfd6504de22f0cbf13eb782653f0495b2f",
+    "sourceSha256": "5498a25b5c813919ff4aa810aa01fc7d93daf929839f78eee063b93b4f8f96c2",
+    "preimageFrom": "HEAD before this continuation; source was clean before formatter correction",
+    "priorEvidenceMatch": null
+  }
+]

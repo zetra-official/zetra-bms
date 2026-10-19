@@ -1,6 +1,7 @@
 // src/ui/money.ts
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { kv } from "@/src/storage/kv";
+import { formatCurrencyExact, formatExact } from "../currency/engine";
 
 /**
  * ✅ Single source of truth for money formatting in ZETRA.
@@ -22,11 +23,20 @@ const DEFAULT_PREFS: MoneyPrefs = {
 };
 
 // Preserve the existing TZS display convention; otherwise use runtime currency metadata.
-function guessMaxFractionDigits(currency: string) {
+function guessMaxFractionDigits(currency: string, amount: number) {
   const c = String(currency || "TZS").trim().toUpperCase();
   if (!c) return 0;
 
-  if (c === "TZS") return 0;
+  if (c === "TZS") {
+    // Keep the established integer convention, but never hide fractional
+    // canonical prices/totals merely because the business uses TZS.
+    if (Number.isInteger(amount)) return 0;
+    const [coefficient, exponent = "0"] = String(amount).toLowerCase().split("e");
+    const digits = (coefficient.split(".")[1]?.length || 0) - Number(exponent);
+    // Numeric legacy calculations can carry binary tails (0.1 * 3). Keep the
+    // cart adjustment normalizer's 12-place limit; SQL strings stay exact below.
+    return Math.max(2, Math.min(12, digits));
+  }
   return getNumberFormatter("en", { style: "currency", currency: c })
     .resolvedOptions().maximumFractionDigits;
 }
@@ -107,7 +117,7 @@ export function useOrgMoneyPrefs(orgId: string) {
 
   const fmt = useCallback(
     (
-      amount: number,
+      amount: number | string,
       override?: {
         currency?: string | null;
         locale?: string | null;
@@ -125,30 +135,7 @@ export function useOrgMoneyPrefs(orgId: string) {
 
       const showCurrency = override?.showCurrency !== false; // default true
 
-      const n = Number(amount);
-      if (!Number.isFinite(n)) return "—";
-      const safeN = n;
-
-      try {
-        const maxFD = guessMaxFractionDigits(currency);
-        if (!showCurrency) {
-          return getNumberFormatter(locale, {
-            style: "decimal",
-            maximumFractionDigits: maxFD,
-          }).format(safeN);
-        }
-
-        return getNumberFormatter(locale, {
-          style: "currency",
-          currency,
-          maximumFractionDigits: maxFD,
-        }).format(safeN);
-      } catch {
-        // fallback (still respects showCurrency)
-        return showCurrency
-          ? `${currency} ${String(safeN)}`
-          : String(safeN);
-      }
+      return formatMoney(amount, {currency, locale, showCurrency});
     },
     [prefs.currency, prefs.locale]
   );
@@ -168,7 +155,7 @@ export function useOrgMoneyPrefs(orgId: string) {
 
 /** Simple static formatter (used when you already have currency/locale resolved) */
 export function formatMoney(
-  amount: number,
+  amount: number | string,
   opts?: {
     currency?: string | null;
     locale?: string | null;
@@ -181,12 +168,27 @@ export function formatMoney(
   const locale = String(opts?.locale || DEFAULT_PREFS.locale).trim() || DEFAULT_PREFS.locale;
   const showCurrency = opts?.showCurrency !== false; // default true
 
+  if (typeof amount === "string") {
+    // SQL numeric strings retain their original digits, including values beyond
+    // JavaScript's safe integer range. No FX or accounting inference occurs.
+    try {
+      if (!showCurrency) return formatExact(amount, locale);
+      const legacyTzsInteger = currency === "TZS" && /^-?\d+$/.test(amount);
+      return formatCurrencyExact(amount, currency, locale, legacyTzsInteger ? 0 : undefined);
+    } catch {
+      // Preserve historical/uncatalogued recorded currency codes and amounts;
+      // missing current metadata must not erase an original amount.
+      try { return showCurrency ? `${currency} ${formatExact(amount, locale)}` : formatExact(amount, locale); }
+      catch { return "—"; }
+    }
+  }
+
   const n = Number(amount);
   if (!Number.isFinite(n)) return "—";
       const safeN = n;
 
   try {
-    const maxFD = guessMaxFractionDigits(currency);
+    const maxFD = guessMaxFractionDigits(currency, safeN);
     if (!showCurrency) {
       return getNumberFormatter(locale, {
         style: "decimal",

@@ -1,0 +1,6 @@
+*.private.json
+*.private.stderr
+*.private.sql
+acceptance.bundle.js
+ACTIVATION-VERIFIED.json
+__pycache__/

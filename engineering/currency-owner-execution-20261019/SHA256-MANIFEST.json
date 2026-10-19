@@ -1,0 +1,234 @@
+[
+  {
+    "file": "engineering/currency-owner-execution-20261019/.gitattributes",
+    "sha256": "705fd4d6451a31d36b3df7de96f83f30ac976c9b4a6d1e51671d8e2f33e2d0da"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/.gitignore",
+    "sha256": "243e4d5410c4b83b6ec837641329f33146d793d7ac1539843f232bd2e99b12ff"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/1902-ATTEMPT.json",
+    "sha256": "21afde8349d7b9fed70531b622b551510b0b0acb4207276cb6006dc7bf11ad8e"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/1902-backups-exit.json",
+    "sha256": "9448b54d5a8e6815cb9cbb419d905ab182bebdc8eef211b11240b7b6bc5cb89e"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/1902-before-metadata-exit.json",
+    "sha256": "72ebd2f279b929cc2e946ec795e1cda69047f3519adc46ca02d18f6dd52d5758"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/1902-execute-once-exit.json",
+    "sha256": "6f1170c06fbaafff78d1858a3ba925c5515f5ad6eb89213164047f6fffef8077"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/1902-independent-metadata-exit.json",
+    "sha256": "58c673d71d9512a15ffeaa7af10a56084d6824817d29a37d4d8dd3b554315d57"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/1902-RESULT.json",
+    "sha256": "1d6c6c3007f2c874bc27d3392907f58389d2c30a781c9ae655a5207cf222c4a7"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/1903-ATTEMPT.json",
+    "sha256": "b8ab2a48e08ae25324765a73708fea0393e3049939d9de76a3292fc0f23460fd"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/1903-backups-exit.json",
+    "sha256": "43f63f42feb3fc783db6cfe40961abc7a7590b7906069ea68a17aaf21641af36"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/1903-before-metadata-exit.json",
+    "sha256": "c0369ace9cd67e4071677993c50d36740b003bc7503fd21e5264fee934f8e0e8"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/1903-execute-once-exit.json",
+    "sha256": "9e1861c03f9d0b06b5a264e6aa27edeb703c13e179c347a90f8f41de7e819625"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/1903-independent-metadata-exit.json",
+    "sha256": "d390c8b80f393cbdceedb8d2d14b4a44feb5ee348e8e05e3c47cb9ecdfcdc044"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/1903-RESULT.json",
+    "sha256": "3532cc41134c9594cb4e3a877bf4222d8024ed94dfb1ef2f7b5aad2ca13f0efa"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/acceptance.cjs",
+    "sha256": "e7b1c67f49c0a2ce9094f7305fce38e56370c7e439bf49b2488d777ddf19963a"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/android-hermes-build.log",
+    "sha256": "db017ac952612301281fda89779c9dc80069f7e6e42edfd0554c9cbbf0e478f8"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/anon_rpc_check.cjs",
+    "sha256": "c84bad7823418d40de3ab3dea38b4a6d427f4d87300ba58a39d3332c76227847"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/ANON-RPC-RESULT.json",
+    "sha256": "bbbb336201f004ef5357a4652a23a9edfa76b8e9f9803914c523fa1db63d91b6"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/backups-exit.json",
+    "sha256": "23e322650b276f9836c7d82305a8ee055219b4359562ddca8e113ab213c9b7e2"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/build_checks.py",
+    "sha256": "b895be380dceb1b85a7316bdc3c159f7116d7f003d4405f3289ad9ea14e2102c"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/BUILD-RESULTS.json",
+    "sha256": "40ed3fb4b47f066469e4f4a467a690595b491f64c367545c2b3cf65630f6e39b"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/canary_stage.py",
+    "sha256": "3d6a62fa98c1eccf06007fdb4bceffbb467cab85586ef274d43a15479d635a0d"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/CANARY-STATE-READONLY.sql",
+    "sha256": "b09e2d482253bc6a39f185ab62b3922e2a195525f563524cd948aa71fa4beb24"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/execute_stage.py",
+    "sha256": "26fa95e8f60a445cbadd4a504b67ce3bc57a26046b7dffac934161ee610d8874"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/final-disabled-metadata-exit.json",
+    "sha256": "1d5661b1001e73ccab7317acbff6b124e35082eaf96d407d836d5e252be10662"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/FINAL-DISABLED-RESULT.json",
+    "sha256": "2b12d5226afae3c8341812ebe4d4448da1126b3616bde02a5b57e37cb69acae9"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/final-disabled-state-exit.json",
+    "sha256": "343279b221d6ac6bb0cfc45ad8a1de79225addf3c0115661f0e81617309abeb7"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/METADATA-READONLY.sql",
+    "sha256": "8526d4b254ed3ad8dd8636f3273e84ec09cf105514a0c6922cc1dc33816ba7bf"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/MONEY-RESULTS.json",
+    "sha256": "e6ad47c09e3e59acc91fe764f8d1af22631d4c5e226e0317b36eec02ed4996c4"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/money.test.cjs",
+    "sha256": "91b313060a47a15faa42e073d3abd0cd7c3a0d1d0990fc1feaf2e2d145c84e79"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/preflight-catalog-exit.json",
+    "sha256": "845aa3815aa5e605c63d0cd89a10083d0581228286d6ac3a906fbb6706eff02f"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/preflight-core-exit.json",
+    "sha256": "a754d046c66508d45f96e8387acdea51a8afce0a146167b3097db19dc7e9db7d"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/preflight-metadata-exit.json",
+    "sha256": "43d79b3ad4cf0fefeedb7cba850d1cd164534eb8de48841c9cf2355f468e086f"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/PREFLIGHT-RESULT.json",
+    "sha256": "1add9b6b5ab2f7dd231b6c271f363646a48517b50ea51407bc5d267055e6d04f"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/preflight-roles-exit.json",
+    "sha256": "caa91ba2948f7ce51550e0405a366fa76ace2aaa219cbaaac1a4d4eb16a31025"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/preflight.py",
+    "sha256": "f897041e4b11005b700e298d960147075c70204c918efa1602181093773c8968"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/projects-exit.json",
+    "sha256": "9dff1552841e59deffb57562dc9b843c591f0455419c094d6f8d426dee1b8fdf"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/protected_snapshot.py",
+    "sha256": "7921ff629d7e53bdf5fe76a2e1ec0aacd7443436d7012d377b76962268296a4b"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/protected-after-exit.json",
+    "sha256": "e3ae42a40b887cbeeb01e9d9b1a5dcc42a199a52b6a8d5abc7e74def810d0cc9"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/PROTECTED-AFTER-RESULT.json",
+    "sha256": "44f5c155f33ba790735b1ea3de4f3428fe22077baf6fe610f84b8366b905dcec"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/PROTECTED-AFTER.json",
+    "sha256": "cdd698874c7f8b8441bf2e6ad70404663826dd9d1c1f38586c52357d988b61f3"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/protected-before-exit.json",
+    "sha256": "39df7689e2f5a20d197d431d40a9d6435f31c0daa3f04f254946e83ec4100299"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/PROTECTED-BEFORE-RESULT.json",
+    "sha256": "c85402da1d930e8c326da27b96278aefd05a93bffa5c12e6da9308e2a529dbb4"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/PROTECTED-BEFORE.json",
+    "sha256": "cdd698874c7f8b8441bf2e6ad70404663826dd9d1c1f38586c52357d988b61f3"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/PROTECTED-RECORDS-READONLY.sql",
+    "sha256": "2bdd47458133b8dfcd5636f8515275016959e1e8dfeab102cece98425808cef7"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/RESULT.md",
+    "sha256": "bafb11cc43e934881522995e03ef7e58245ea17adb425217c0ecbe1a30dd1fcd"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/ROLLBACK.md",
+    "sha256": "a4ee6009efeb9f61d7e152583814f8b743be8defedd63fb52a0b1a276d1a5a26"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/runtime.py",
+    "sha256": "8888910131c178005bf7406a0732834c7557f6a2d0f3efe6821f7375ba23661e"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/save_source_preimages.py",
+    "sha256": "0aedcef8eb590648e98fbf5aaf58562538c56c748cf8f7c7f024bf795daf59b8"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/SERVER.json",
+    "sha256": "3a34fa309eb54c40d75e59c21cf5d74b7e9baa9c515953501be15dd0eba94d0f"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/SOURCE-CHANGES.json",
+    "sha256": "881a76a3efba16d5fd6aba6b7f6ef46e2423839a76871267a6896ea1631a4db7"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/typescript-build.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/verify_idle.py",
+    "sha256": "19daac9c2196ecd88d00f30ae39f691b27cbbadd41bf488d3516b1b9319cf118"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/web-build.log",
+    "sha256": "c068e81adcc4035313d17cc9d9aee873c5d8582c66427a41d3903b66b73a1fa0"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/before/src/currency/engine.ts",
+    "sha256": "be3f3faad9266272ceb58ad37a77555f1bb036fdd6760c9bc9f888e0f683ba56"
+  },
+  {
+    "file": "engineering/currency-owner-execution-20261019/before/src/ui/money.ts",
+    "sha256": "6e26ecf4bf8ce02e48758eae56f5aacfd6504de22f0cbf13eb782653f0495b2f"
+  },
+  {
+    "file": "src/currency/engine.ts",
+    "sha256": "9fc674fdb215a04e3cfeafb4ae06b6971a7ea4dc194b909cc884de2a07b79be7"
+  },
+  {
+    "file": "src/ui/money.ts",
+    "sha256": "5498a25b5c813919ff4aa810aa01fc7d93daf929839f78eee063b93b4f8f96c2"
+  }
+]
