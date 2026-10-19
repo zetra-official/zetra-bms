@@ -1,0 +1,1139 @@
+{
+  "status": "PASS",
+  "count": 57,
+  "checks": [
+    "database is the exact disposable local cluster",
+    "TZS authenticated canonical sale context",
+    "TZS retry stable",
+    "TZS original currency debt repayment zero",
+    "TZS exact account conservation",
+    "TZS cross organization payload denied",
+    "TZS original report reader preserves currency and actual sale",
+    "TZS UTC report includes exact original expense",
+    "USD authenticated canonical sale context",
+    "USD retry stable",
+    "USD original currency debt repayment zero",
+    "USD exact account conservation",
+    "USD cross organization payload denied",
+    "USD original report reader preserves currency and actual sale",
+    "USD UTC report includes exact original expense",
+    "KES authenticated canonical sale context",
+    "KES retry stable",
+    "KES original currency debt repayment zero",
+    "KES exact account conservation",
+    "KES cross organization payload denied",
+    "KES original report reader preserves currency and actual sale",
+    "KES UTC report includes exact original expense",
+    "UGX authenticated canonical sale context",
+    "UGX retry stable",
+    "UGX original currency debt repayment zero",
+    "UGX exact account conservation",
+    "UGX cross organization payload denied",
+    "UGX original report reader preserves currency and actual sale",
+    "UGX UTC report includes exact original expense",
+    "EUR authenticated canonical sale context",
+    "EUR retry stable",
+    "EUR original currency debt repayment zero",
+    "EUR exact account conservation",
+    "EUR cross organization payload denied",
+    "EUR original report reader preserves currency and actual sale",
+    "EUR UTC report includes exact original expense",
+    "AED authenticated canonical sale context",
+    "AED retry stable",
+    "AED original currency debt repayment zero",
+    "AED exact account conservation",
+    "AED cross organization payload denied",
+    "AED original report reader preserves currency and actual sale",
+    "AED UTC report includes exact original expense",
+    "JPY authenticated canonical sale context",
+    "JPY retry stable",
+    "JPY original currency debt repayment zero",
+    "JPY exact account conservation",
+    "JPY cross organization payload denied",
+    "JPY original report reader preserves currency and actual sale",
+    "JPY UTC report includes exact original expense",
+    "KWD authenticated canonical sale context",
+    "KWD retry stable",
+    "KWD original currency debt repayment zero",
+    "KWD exact account conservation",
+    "KWD cross organization payload denied",
+    "KWD original report reader preserves currency and actual sale",
+    "KWD UTC report includes exact original expense"
+  ],
+  "scenarios": [
+    {
+      "currency": "TZS",
+      "originalSaleTotal": "12.34",
+      "collected": "12.34",
+      "expense": "1.01",
+      "accountBalance": "1023.67",
+      "saleId": "c6c958ce-ffcc-4f12-ac26-9e8a0c45c163",
+      "scope": "LOCAL_SYNTHETIC_ONLY"
+    },
+    {
+      "currency": "USD",
+      "originalSaleTotal": "12.34",
+      "collected": "12.34",
+      "expense": "1.01",
+      "accountBalance": "1023.67",
+      "saleId": "5db59bcb-b640-49ce-b7b0-15fad637b4a5",
+      "scope": "LOCAL_SYNTHETIC_ONLY"
+    },
+    {
+      "currency": "KES",
+      "originalSaleTotal": "12.34",
+      "collected": "12.34",
+      "expense": "1.01",
+      "accountBalance": "1023.67",
+      "saleId": "e6f169cc-3ae2-43e0-b3b9-b71fecaf2f4b",
+      "scope": "LOCAL_SYNTHETIC_ONLY"
+    },
+    {
+      "currency": "UGX",
+      "originalSaleTotal": "12",
+      "collected": "12",
+      "expense": "1",
+      "accountBalance": "1023",
+      "saleId": "02158117-5cbc-401a-8ee0-3111b625b5f5",
+      "scope": "LOCAL_SYNTHETIC_ONLY"
+    },
+    {
+      "currency": "EUR",
+      "originalSaleTotal": "12.34",
+      "collected": "12.34",
+      "expense": "1.01",
+      "accountBalance": "1023.67",
+      "saleId": "22939c19-7e7f-4daf-9634-e29eb3a8ad77",
+      "scope": "LOCAL_SYNTHETIC_ONLY"
+    },
+    {
+      "currency": "AED",
+      "originalSaleTotal": "12.34",
+      "collected": "12.34",
+      "expense": "1.01",
+      "accountBalance": "1023.67",
+      "saleId": "78a50074-4004-4127-a5b9-16b5a63bec22",
+      "scope": "LOCAL_SYNTHETIC_ONLY"
+    },
+    {
+      "currency": "JPY",
+      "originalSaleTotal": "12",
+      "collected": "12",
+      "expense": "1",
+      "accountBalance": "1023",
+      "saleId": "8d5f1d66-eade-4972-bcb0-75789b8605e0",
+      "scope": "LOCAL_SYNTHETIC_ONLY"
+    },
+    {
+      "currency": "KWD",
+      "originalSaleTotal": "12.345",
+      "collected": "12.345",
+      "expense": "1.001",
+      "accountBalance": "1023.689",
+      "saleId": "71f54718-1ad4-4084-aacf-e02dbc7dc447",
+      "scope": "LOCAL_SYNTHETIC_ONLY"
+    }
+  ],
+  "reportInputs": [
+    {
+      "organizationId": "f9e04166-7653-435d-a9cf-32b5487b5130",
+      "storeId": "b09cfd28-d355-4424-8924-3164ca241d1c",
+      "storeName": "LOCAL SYNTHETIC TZS",
+      "language": "en",
+      "from": "2026-10-19",
+      "to": "2026-10-20",
+      "facts": {
+        "SALE": [
+          {
+            "at": "2026-10-19T17:09:47.885448+03:00",
+            "id": "c6c958ce-ffcc-4f12-ac26-9e8a0c45c163",
+            "values": {
+              "paid": "12.34",
+              "total": "12.34",
+              "balance": "0.00",
+              "discount": "0",
+              "rounding": "0",
+              "itemCount": "1"
+            },
+            "context": {
+              "source": "TRANSACTION_RECORD",
+              "version": 1,
+              "currency": "TZS",
+              "rateSource": "SAME_CURRENCY_IDENTITY",
+              "exchangeRate": "1",
+              "organizationId": "f9e04166-7653-435d-a9cf-32b5487b5130",
+              "contextRevision": 1,
+              "displayRateUsed": false,
+              "accountingCurrency": "TZS"
+            }
+          },
+          {
+            "at": "2026-10-19T17:09:48.06273+03:00",
+            "id": "eebfb259-7322-4dba-95c6-b3e50fbb7137",
+            "values": {
+              "paid": "0",
+              "total": "12.34",
+              "balance": "12.34",
+              "discount": "0",
+              "rounding": "0",
+              "itemCount": "1"
+            },
+            "context": {
+              "source": "TRANSACTION_RECORD",
+              "version": 1,
+              "currency": "TZS",
+              "rateSource": "SAME_CURRENCY_IDENTITY",
+              "exchangeRate": "1",
+              "organizationId": "f9e04166-7653-435d-a9cf-32b5487b5130",
+              "contextRevision": 1,
+              "displayRateUsed": false,
+              "accountingCurrency": "TZS"
+            }
+          }
+        ],
+        "COGS": [
+          {
+            "at": "2026-10-19T17:09:47.885448+03:00",
+            "id": "31afccb6-7b79-471b-aa69-16d9c0da5030",
+            "values": {
+              "amount": "105.12",
+              "quantity": "1",
+              "unitCost": "105.12"
+            },
+            "context": {
+              "source": "TRANSACTION_RECORD",
+              "version": 1,
+              "currency": "TZS",
+              "rateSource": "SAME_CURRENCY_IDENTITY",
+              "exchangeRate": "1",
+              "organizationId": "f9e04166-7653-435d-a9cf-32b5487b5130",
+              "contextRevision": 1,
+              "displayRateUsed": false,
+              "accountingCurrency": "TZS"
+            },
+            "parentId": "c6c958ce-ffcc-4f12-ac26-9e8a0c45c163"
+          },
+          {
+            "at": "2026-10-19T17:09:48.06273+03:00",
+            "id": "aad63255-1200-4337-b2e1-560e161e1fce",
+            "values": {
+              "amount": "105.12",
+              "quantity": "1",
+              "unitCost": "105.12"
+            },
+            "context": {
+              "source": "TRANSACTION_RECORD",
+              "version": 1,
+              "currency": "TZS",
+              "rateSource": "SAME_CURRENCY_IDENTITY",
+              "exchangeRate": "1",
+              "organizationId": "f9e04166-7653-435d-a9cf-32b5487b5130",
+              "contextRevision": 1,
+              "displayRateUsed": false,
+              "accountingCurrency": "TZS"
+            },
+            "parentId": "eebfb259-7322-4dba-95c6-b3e50fbb7137"
+          }
+        ],
+        "EXPENSE": [
+          {
+            "at": "2026-10-19",
+            "id": "2ec02912-0aa6-4717-be48-377028373a84",
+            "method": "CASH",
+            "values": {
+              "amount": "1.01"
+            },
+            "context": {
+              "source": "TRANSACTION_RECORD",
+              "version": 1,
+              "currency": "TZS",
+              "rateSource": "SAME_CURRENCY_IDENTITY",
+              "exchangeRate": "1",
+              "organizationId": "f9e04166-7653-435d-a9cf-32b5487b5130",
+              "contextRevision": 1,
+              "displayRateUsed": false,
+              "accountingCurrency": "TZS"
+            },
+            "category": "OTHER"
+          }
+        ]
+      }
+    },
+    {
+      "organizationId": "f970297b-f589-4755-9fc7-ff8dd3cd7d82",
+      "storeId": "22dc0c8a-50f4-497f-8434-5e90b33f9ede",
+      "storeName": "LOCAL SYNTHETIC USD",
+      "language": "en",
+      "from": "2026-10-19",
+      "to": "2026-10-20",
+      "facts": {
+        "SALE": [
+          {
+            "at": "2026-10-19T17:09:49.323419+03:00",
+            "id": "5db59bcb-b640-49ce-b7b0-15fad637b4a5",
+            "values": {
+              "paid": "12.34",
+              "total": "12.34",
+              "balance": "0.00",
+              "discount": "0",
+              "rounding": "0.00",
+              "itemCount": "1"
+            },
+            "context": {
+              "source": "TRANSACTION_RECORD",
+              "version": 1,
+              "currency": "USD",
+              "rateSource": "SAME_CURRENCY_IDENTITY",
+              "exchangeRate": "1",
+              "organizationId": "f970297b-f589-4755-9fc7-ff8dd3cd7d82",
+              "contextRevision": 1,
+              "displayRateUsed": false,
+              "accountingCurrency": "USD"
+            }
+          },
+          {
+            "at": "2026-10-19T17:09:49.50436+03:00",
+            "id": "300843e1-d660-4b8c-994a-da18f72d2999",
+            "values": {
+              "paid": "0",
+              "total": "12.34",
+              "balance": "12.34",
+              "discount": "0",
+              "rounding": "0.00",
+              "itemCount": "1"
+            },
+            "context": {
+              "source": "TRANSACTION_RECORD",
+              "version": 1,
+              "currency": "USD",
+              "rateSource": "SAME_CURRENCY_IDENTITY",
+              "exchangeRate": "1",
+              "organizationId": "f970297b-f589-4755-9fc7-ff8dd3cd7d82",
+              "contextRevision": 1,
+              "displayRateUsed": false,
+              "accountingCurrency": "USD"
+            }
+          }
+        ],
+        "COGS": [
+          {
+            "at": "2026-10-19T17:09:49.323419+03:00",
+            "id": "405e8347-934a-4ad3-9fc7-0a999e7d55ce",
+            "values": {
+              "amount": "105.12",
+              "quantity": "1",
+              "unitCost": "105.12"
+            },
+            "context": {
+              "source": "TRANSACTION_RECORD",
+              "version": 1,
+              "currency": "USD",
+              "rateSource": "SAME_CURRENCY_IDENTITY",
+              "exchangeRate": "1",
+              "organizationId": "f970297b-f589-4755-9fc7-ff8dd3cd7d82",
+              "contextRevision": 1,
+              "displayRateUsed": false,
+              "accountingCurrency": "USD"
+            },
+            "parentId": "5db59bcb-b640-49ce-b7b0-15fad637b4a5"
+          },
+          {
+            "at": "2026-10-19T17:09:49.50436+03:00",
+            "id": "f34e36d9-bd8a-4989-9728-e7a58c94fb95",
+            "values": {
+              "amount": "105.12",
+              "quantity": "1",
+              "unitCost": "105.12"
+            },
+            "context": {
+              "source": "TRANSACTION_RECORD",
+              "version": 1,
+              "currency": "USD",
+              "rateSource": "SAME_CURRENCY_IDENTITY",
+              "exchangeRate": "1",
+              "organizationId": "f970297b-f589-4755-9fc7-ff8dd3cd7d82",
+              "contextRevision": 1,
+              "displayRateUsed": false,
+              "accountingCurrency": "USD"
+            },
+            "parentId": "300843e1-d660-4b8c-994a-da18f72d2999"
+          }
+        ],
+        "EXPENSE": [
+          {
+            "at": "2026-10-19",
+            "id": "d099c32a-cbb6-4445-91cf-3eb82ba12706",
+            "method": "CASH",
+            "values": {
+              "amount": "1.01"
+            },
+            "context": {
+              "source": "TRANSACTION_RECORD",
+              "version": 1,
+              "currency": "USD",
+              "rateSource": "SAME_CURRENCY_IDENTITY",
+              "exchangeRate": "1",
+              "organizationId": "f970297b-f589-4755-9fc7-ff8dd3cd7d82",
+              "contextRevision": 1,
+              "displayRateUsed": false,
+              "accountingCurrency": "USD"
+            },
+            "category": "OTHER"
+          }
+        ]
+      }
+    },
+    {
+      "organizationId": "d2b58d37-aa7b-44f8-adf7-e698b2d46326",
+      "storeId": "06da38fb-2daa-4d7c-8f97-f89b82a066d6",
+      "storeName": "LOCAL SYNTHETIC KES",
+      "language": "en",
+      "from": "2026-10-19",
+      "to": "2026-10-20",
+      "facts": {
+        "SALE": [
+          {
+            "at": "2026-10-19T17:09:50.618081+03:00",
+            "id": "e6f169cc-3ae2-43e0-b3b9-b71fecaf2f4b",
+            "values": {
+              "paid": "12.34",
+              "total": "12.34",
+              "balance": "0.00",
+              "discount": "0",
+              "rounding": "0.00",
+              "itemCount": "1"
+            },
+            "context": {
+              "source": "TRANSACTION_RECORD",
+              "version": 1,
+              "currency": "KES",
+              "rateSource": "SAME_CURRENCY_IDENTITY",
+              "exchangeRate": "1",
+              "organizationId": "d2b58d37-aa7b-44f8-adf7-e698b2d46326",
+              "contextRevision": 1,
+              "displayRateUsed": false,
+              "accountingCurrency": "KES"
+            }
+          },
+          {
+            "at": "2026-10-19T17:09:50.796197+03:00",
+            "id": "6b2f77d0-6355-426c-8aaa-d2c41ef5b94c",
+            "values": {
+              "paid": "0",
+              "total": "12.34",
+              "balance": "12.34",
+              "discount": "0",
+              "rounding": "0.00",
+              "itemCount": "1"
+            },
+            "context": {
+              "source": "TRANSACTION_RECORD",
+              "version": 1,
+              "currency": "KES",
+              "rateSource": "SAME_CURRENCY_IDENTITY",
+              "exchangeRate": "1",
+              "organizationId": "d2b58d37-aa7b-44f8-adf7-e698b2d46326",
+              "contextRevision": 1,
+              "displayRateUsed": false,
+              "accountingCurrency": "KES"
+            }
+          }
+        ],
+        "COGS": [
+          {
+            "at": "2026-10-19T17:09:50.618081+03:00",
+            "id": "6da5b8ab-7801-40c5-aba4-3e78a99e2dfd",
+            "values": {
+              "amount": "105.12",
+              "quantity": "1",
+              "unitCost": "105.12"
+            },
+            "context": {
+              "source": "TRANSACTION_RECORD",
+              "version": 1,
+              "currency": "KES",
+              "rateSource": "SAME_CURRENCY_IDENTITY",
+              "exchangeRate": "1",
+              "organizationId": "d2b58d37-aa7b-44f8-adf7-e698b2d46326",
+              "contextRevision": 1,
+              "displayRateUsed": false,
+              "accountingCurrency": "KES"
+            },
+            "parentId": "e6f169cc-3ae2-43e0-b3b9-b71fecaf2f4b"
+          },
+          {
+            "at": "2026-10-19T17:09:50.796197+03:00",
+            "id": "97187a96-d20a-417e-9cbe-32f6e575abb4",
+            "values": {
+              "amount": "105.12",
+              "quantity": "1",
+              "unitCost": "105.12"
+            },
+            "context": {
+              "source": "TRANSACTION_RECORD",
+              "version": 1,
+              "currency": "KES",
+              "rateSource": "SAME_CURRENCY_IDENTITY",
+              "exchangeRate": "1",
+              "organizationId": "d2b58d37-aa7b-44f8-adf7-e698b2d46326",
+              "contextRevision": 1,
+              "displayRateUsed": false,
+              "accountingCurrency": "KES"
+            },
+            "parentId": "6b2f77d0-6355-426c-8aaa-d2c41ef5b94c"
+          }
+        ],
+        "EXPENSE": [
+          {
+            "at": "2026-10-19",
+            "id": "7928aaad-7b36-4fa3-a692-c8d47f271470",
+            "method": "CASH",
+            "values": {
+              "amount": "1.01"
+            },
+            "context": {
+              "source": "TRANSACTION_RECORD",
+              "version": 1,
+              "currency": "KES",
+              "rateSource": "SAME_CURRENCY_IDENTITY",
+              "exchangeRate": "1",
+              "organizationId": "d2b58d37-aa7b-44f8-adf7-e698b2d46326",
+              "contextRevision": 1,
+              "displayRateUsed": false,
+              "accountingCurrency": "KES"
+            },
+            "category": "OTHER"
+          }
+        ]
+      }
+    },
+    {
+      "organizationId": "a69562e2-8d51-46b0-a6a8-83261d35b3e8",
+      "storeId": "bfa85b82-c80b-4e5c-bc90-b69bec3ad754",
+      "storeName": "LOCAL SYNTHETIC UGX",
+      "language": "en",
+      "from": "2026-10-19",
+      "to": "2026-10-20",
+      "facts": {
+        "SALE": [
+          {
+            "at": "2026-10-19T17:09:51.953016+03:00",
+            "id": "02158117-5cbc-401a-8ee0-3111b625b5f5",
+            "values": {
+              "paid": "12",
+              "total": "12",
+              "balance": "0",
+              "discount": "0",
+              "rounding": "0",
+              "itemCount": "1"
+            },
+            "context": {
+              "source": "TRANSACTION_RECORD",
+              "version": 1,
+              "currency": "UGX",
+              "rateSource": "SAME_CURRENCY_IDENTITY",
+              "exchangeRate": "1",
+              "organizationId": "a69562e2-8d51-46b0-a6a8-83261d35b3e8",
+              "contextRevision": 1,
+              "displayRateUsed": false,
+              "accountingCurrency": "UGX"
+            }
+          },
+          {
+            "at": "2026-10-19T17:09:52.125665+03:00",
+            "id": "2bba3f7e-c4ce-4b47-b782-54ea91c44486",
+            "values": {
+              "paid": "0",
+              "total": "12",
+              "balance": "12",
+              "discount": "0",
+              "rounding": "0",
+              "itemCount": "1"
+            },
+            "context": {
+              "source": "TRANSACTION_RECORD",
+              "version": 1,
+              "currency": "UGX",
+              "rateSource": "SAME_CURRENCY_IDENTITY",
+              "exchangeRate": "1",
+              "organizationId": "a69562e2-8d51-46b0-a6a8-83261d35b3e8",
+              "contextRevision": 1,
+              "displayRateUsed": false,
+              "accountingCurrency": "UGX"
+            }
+          }
+        ],
+        "COGS": [
+          {
+            "at": "2026-10-19T17:09:51.953016+03:00",
+            "id": "c5e333c3-2e76-41d7-8f98-f7f8ea89c91b",
+            "values": {
+              "amount": "105",
+              "quantity": "1",
+              "unitCost": "105"
+            },
+            "context": {
+              "source": "TRANSACTION_RECORD",
+              "version": 1,
+              "currency": "UGX",
+              "rateSource": "SAME_CURRENCY_IDENTITY",
+              "exchangeRate": "1",
+              "organizationId": "a69562e2-8d51-46b0-a6a8-83261d35b3e8",
+              "contextRevision": 1,
+              "displayRateUsed": false,
+              "accountingCurrency": "UGX"
+            },
+            "parentId": "02158117-5cbc-401a-8ee0-3111b625b5f5"
+          },
+          {
+            "at": "2026-10-19T17:09:52.125665+03:00",
+            "id": "421ad05e-b684-4649-9f38-3b9ec9bc7d3c",
+            "values": {
+              "amount": "105",
+              "quantity": "1",
+              "unitCost": "105"
+            },
+            "context": {
+              "source": "TRANSACTION_RECORD",
+              "version": 1,
+              "currency": "UGX",
+              "rateSource": "SAME_CURRENCY_IDENTITY",
+              "exchangeRate": "1",
+              "organizationId": "a69562e2-8d51-46b0-a6a8-83261d35b3e8",
+              "contextRevision": 1,
+              "displayRateUsed": false,
+              "accountingCurrency": "UGX"
+            },
+            "parentId": "2bba3f7e-c4ce-4b47-b782-54ea91c44486"
+          }
+        ],
+        "EXPENSE": [
+          {
+            "at": "2026-10-19",
+            "id": "f1ef09b9-cf5b-44a9-946e-b96e08a314fc",
+            "method": "CASH",
+            "values": {
+              "amount": "1"
+            },
+            "context": {
+              "source": "TRANSACTION_RECORD",
+              "version": 1,
+              "currency": "UGX",
+              "rateSource": "SAME_CURRENCY_IDENTITY",
+              "exchangeRate": "1",
+              "organizationId": "a69562e2-8d51-46b0-a6a8-83261d35b3e8",
+              "contextRevision": 1,
+              "displayRateUsed": false,
+              "accountingCurrency": "UGX"
+            },
+            "category": "OTHER"
+          }
+        ]
+      }
+    },
+    {
+      "organizationId": "cec199bd-33a8-4ec7-8eed-7edf198784ab",
+      "storeId": "91cada23-74de-472b-bff1-eff8a23c7f84",
+      "storeName": "LOCAL SYNTHETIC EUR",
+      "language": "en",
+      "from": "2026-10-19",
+      "to": "2026-10-20",
+      "facts": {
+        "SALE": [
+          {
+            "at": "2026-10-19T17:09:53.31441+03:00",
+            "id": "22939c19-7e7f-4daf-9634-e29eb3a8ad77",
+            "values": {
+              "paid": "12.34",
+              "total": "12.34",
+              "balance": "0.00",
+              "discount": "0",
+              "rounding": "0.00",
+              "itemCount": "1"
+            },
+            "context": {
+              "source": "TRANSACTION_RECORD",
+              "version": 1,
+              "currency": "EUR",
+              "rateSource": "SAME_CURRENCY_IDENTITY",
+              "exchangeRate": "1",
+              "organizationId": "cec199bd-33a8-4ec7-8eed-7edf198784ab",
+              "contextRevision": 1,
+              "displayRateUsed": false,
+              "accountingCurrency": "EUR"
+            }
+          },
+          {
+            "at": "2026-10-19T17:09:53.498815+03:00",
+            "id": "6f6ec2f2-0aef-464a-b560-0297cb5ca725",
+            "values": {
+              "paid": "0",
+              "total": "12.34",
+              "balance": "12.34",
+              "discount": "0",
+              "rounding": "0.00",
+              "itemCount": "1"
+            },
+            "context": {
+              "source": "TRANSACTION_RECORD",
+              "version": 1,
+              "currency": "EUR",
+              "rateSource": "SAME_CURRENCY_IDENTITY",
+              "exchangeRate": "1",
+              "organizationId": "cec199bd-33a8-4ec7-8eed-7edf198784ab",
+              "contextRevision": 1,
+              "displayRateUsed": false,
+              "accountingCurrency": "EUR"
+            }
+          }
+        ],
+        "COGS": [
+          {
+            "at": "2026-10-19T17:09:53.31441+03:00",
+            "id": "5101f7fe-8152-48f3-9080-5efddc3591d9",
+            "values": {
+              "amount": "105.12",
+              "quantity": "1",
+              "unitCost": "105.12"
+            },
+            "context": {
+              "source": "TRANSACTION_RECORD",
+              "version": 1,
+              "currency": "EUR",
+              "rateSource": "SAME_CURRENCY_IDENTITY",
+              "exchangeRate": "1",
+              "organizationId": "cec199bd-33a8-4ec7-8eed-7edf198784ab",
+              "contextRevision": 1,
+              "displayRateUsed": false,
+              "accountingCurrency": "EUR"
+            },
+            "parentId": "22939c19-7e7f-4daf-9634-e29eb3a8ad77"
+          },
+          {
+            "at": "2026-10-19T17:09:53.498815+03:00",
+            "id": "d70ad8d3-b17b-47a8-9bc7-a707eb719a5c",
+            "values": {
+              "amount": "105.12",
+              "quantity": "1",
+              "unitCost": "105.12"
+            },
+            "context": {
+              "source": "TRANSACTION_RECORD",
+              "version": 1,
+              "currency": "EUR",
+              "rateSource": "SAME_CURRENCY_IDENTITY",
+              "exchangeRate": "1",
+              "organizationId": "cec199bd-33a8-4ec7-8eed-7edf198784ab",
+              "contextRevision": 1,
+              "displayRateUsed": false,
+              "accountingCurrency": "EUR"
+            },
+            "parentId": "6f6ec2f2-0aef-464a-b560-0297cb5ca725"
+          }
+        ],
+        "EXPENSE": [
+          {
+            "at": "2026-10-19",
+            "id": "6e2b6320-9c38-49b1-ab21-3f249bf43290",
+            "method": "CASH",
+            "values": {
+              "amount": "1.01"
+            },
+            "context": {
+              "source": "TRANSACTION_RECORD",
+              "version": 1,
+              "currency": "EUR",
+              "rateSource": "SAME_CURRENCY_IDENTITY",
+              "exchangeRate": "1",
+              "organizationId": "cec199bd-33a8-4ec7-8eed-7edf198784ab",
+              "contextRevision": 1,
+              "displayRateUsed": false,
+              "accountingCurrency": "EUR"
+            },
+            "category": "OTHER"
+          }
+        ]
+      }
+    },
+    {
+      "organizationId": "84e1d7ba-2828-48d1-9c38-61e0371d8300",
+      "storeId": "b6db11bf-b28e-42df-b74b-cd0a9827a901",
+      "storeName": "LOCAL SYNTHETIC AED",
+      "language": "en",
+      "from": "2026-10-19",
+      "to": "2026-10-20",
+      "facts": {
+        "SALE": [
+          {
+            "at": "2026-10-19T17:09:54.617321+03:00",
+            "id": "78a50074-4004-4127-a5b9-16b5a63bec22",
+            "values": {
+              "paid": "12.34",
+              "total": "12.34",
+              "balance": "0.00",
+              "discount": "0",
+              "rounding": "0.00",
+              "itemCount": "1"
+            },
+            "context": {
+              "source": "TRANSACTION_RECORD",
+              "version": 1,
+              "currency": "AED",
+              "rateSource": "SAME_CURRENCY_IDENTITY",
+              "exchangeRate": "1",
+              "organizationId": "84e1d7ba-2828-48d1-9c38-61e0371d8300",
+              "contextRevision": 1,
+              "displayRateUsed": false,
+              "accountingCurrency": "AED"
+            }
+          },
+          {
+            "at": "2026-10-19T17:09:54.78599+03:00",
+            "id": "c5d08751-fed3-4002-a675-37729dfe0d1f",
+            "values": {
+              "paid": "0",
+              "total": "12.34",
+              "balance": "12.34",
+              "discount": "0",
+              "rounding": "0.00",
+              "itemCount": "1"
+            },
+            "context": {
+              "source": "TRANSACTION_RECORD",
+              "version": 1,
+              "currency": "AED",
+              "rateSource": "SAME_CURRENCY_IDENTITY",
+              "exchangeRate": "1",
+              "organizationId": "84e1d7ba-2828-48d1-9c38-61e0371d8300",
+              "contextRevision": 1,
+              "displayRateUsed": false,
+              "accountingCurrency": "AED"
+            }
+          }
+        ],
+        "COGS": [
+          {
+            "at": "2026-10-19T17:09:54.617321+03:00",
+            "id": "ffacf649-90e6-4579-badc-754a7712626b",
+            "values": {
+              "amount": "105.12",
+              "quantity": "1",
+              "unitCost": "105.12"
+            },
+            "context": {
+              "source": "TRANSACTION_RECORD",
+              "version": 1,
+              "currency": "AED",
+              "rateSource": "SAME_CURRENCY_IDENTITY",
+              "exchangeRate": "1",
+              "organizationId": "84e1d7ba-2828-48d1-9c38-61e0371d8300",
+              "contextRevision": 1,
+              "displayRateUsed": false,
+              "accountingCurrency": "AED"
+            },
+            "parentId": "78a50074-4004-4127-a5b9-16b5a63bec22"
+          },
+          {
+            "at": "2026-10-19T17:09:54.78599+03:00",
+            "id": "4c3e92e4-bdae-4418-bc46-d51d9f9844b7",
+            "values": {
+              "amount": "105.12",
+              "quantity": "1",
+              "unitCost": "105.12"
+            },
+            "context": {
+              "source": "TRANSACTION_RECORD",
+              "version": 1,
+              "currency": "AED",
+              "rateSource": "SAME_CURRENCY_IDENTITY",
+              "exchangeRate": "1",
+              "organizationId": "84e1d7ba-2828-48d1-9c38-61e0371d8300",
+              "contextRevision": 1,
+              "displayRateUsed": false,
+              "accountingCurrency": "AED"
+            },
+            "parentId": "c5d08751-fed3-4002-a675-37729dfe0d1f"
+          }
+        ],
+        "EXPENSE": [
+          {
+            "at": "2026-10-19",
+            "id": "2f265177-e969-4b7d-a45b-97975cb3837a",
+            "method": "CASH",
+            "values": {
+              "amount": "1.01"
+            },
+            "context": {
+              "source": "TRANSACTION_RECORD",
+              "version": 1,
+              "currency": "AED",
+              "rateSource": "SAME_CURRENCY_IDENTITY",
+              "exchangeRate": "1",
+              "organizationId": "84e1d7ba-2828-48d1-9c38-61e0371d8300",
+              "contextRevision": 1,
+              "displayRateUsed": false,
+              "accountingCurrency": "AED"
+            },
+            "category": "OTHER"
+          }
+        ]
+      }
+    },
+    {
+      "organizationId": "40e00c24-62fd-4fbc-aafe-4e8bc3c968da",
+      "storeId": "189ffb75-e833-41b7-a3d1-d801b40994ec",
+      "storeName": "LOCAL SYNTHETIC JPY",
+      "language": "en",
+      "from": "2026-10-19",
+      "to": "2026-10-20",
+      "facts": {
+        "SALE": [
+          {
+            "at": "2026-10-19T17:09:55.998754+03:00",
+            "id": "8d5f1d66-eade-4972-bcb0-75789b8605e0",
+            "values": {
+              "paid": "12",
+              "total": "12",
+              "balance": "0",
+              "discount": "0",
+              "rounding": "0",
+              "itemCount": "1"
+            },
+            "context": {
+              "source": "TRANSACTION_RECORD",
+              "version": 1,
+              "currency": "JPY",
+              "rateSource": "SAME_CURRENCY_IDENTITY",
+              "exchangeRate": "1",
+              "organizationId": "40e00c24-62fd-4fbc-aafe-4e8bc3c968da",
+              "contextRevision": 1,
+              "displayRateUsed": false,
+              "accountingCurrency": "JPY"
+            }
+          },
+          {
+            "at": "2026-10-19T17:09:56.182482+03:00",
+            "id": "8bdb961b-ff3f-4003-822a-cfa85d1370f2",
+            "values": {
+              "paid": "0",
+              "total": "12",
+              "balance": "12",
+              "discount": "0",
+              "rounding": "0",
+              "itemCount": "1"
+            },
+            "context": {
+              "source": "TRANSACTION_RECORD",
+              "version": 1,
+              "currency": "JPY",
+              "rateSource": "SAME_CURRENCY_IDENTITY",
+              "exchangeRate": "1",
+              "organizationId": "40e00c24-62fd-4fbc-aafe-4e8bc3c968da",
+              "contextRevision": 1,
+              "displayRateUsed": false,
+              "accountingCurrency": "JPY"
+            }
+          }
+        ],
+        "COGS": [
+          {
+            "at": "2026-10-19T17:09:55.998754+03:00",
+            "id": "51c8251c-38fb-4675-b3b2-4fe3e04710b1",
+            "values": {
+              "amount": "105",
+              "quantity": "1",
+              "unitCost": "105"
+            },
+            "context": {
+              "source": "TRANSACTION_RECORD",
+              "version": 1,
+              "currency": "JPY",
+              "rateSource": "SAME_CURRENCY_IDENTITY",
+              "exchangeRate": "1",
+              "organizationId": "40e00c24-62fd-4fbc-aafe-4e8bc3c968da",
+              "contextRevision": 1,
+              "displayRateUsed": false,
+              "accountingCurrency": "JPY"
+            },
+            "parentId": "8d5f1d66-eade-4972-bcb0-75789b8605e0"
+          },
+          {
+            "at": "2026-10-19T17:09:56.182482+03:00",
+            "id": "95ce3fc3-7219-4a26-98e6-d921e639832b",
+            "values": {
+              "amount": "105",
+              "quantity": "1",
+              "unitCost": "105"
+            },
+            "context": {
+              "source": "TRANSACTION_RECORD",
+              "version": 1,
+              "currency": "JPY",
+              "rateSource": "SAME_CURRENCY_IDENTITY",
+              "exchangeRate": "1",
+              "organizationId": "40e00c24-62fd-4fbc-aafe-4e8bc3c968da",
+              "contextRevision": 1,
+              "displayRateUsed": false,
+              "accountingCurrency": "JPY"
+            },
+            "parentId": "8bdb961b-ff3f-4003-822a-cfa85d1370f2"
+          }
+        ],
+        "EXPENSE": [
+          {
+            "at": "2026-10-19",
+            "id": "1ff0510e-114f-4065-aca0-9f2ad92482d9",
+            "method": "CASH",
+            "values": {
+              "amount": "1"
+            },
+            "context": {
+              "source": "TRANSACTION_RECORD",
+              "version": 1,
+              "currency": "JPY",
+              "rateSource": "SAME_CURRENCY_IDENTITY",
+              "exchangeRate": "1",
+              "organizationId": "40e00c24-62fd-4fbc-aafe-4e8bc3c968da",
+              "contextRevision": 1,
+              "displayRateUsed": false,
+              "accountingCurrency": "JPY"
+            },
+            "category": "OTHER"
+          }
+        ]
+      }
+    },
+    {
+      "organizationId": "f6b80b1f-c475-43a4-8632-189d80613fe4",
+      "storeId": "333bbd54-19a6-48b9-8ada-0e352d3a65bd",
+      "storeName": "LOCAL SYNTHETIC KWD",
+      "language": "en",
+      "from": "2026-10-19",
+      "to": "2026-10-20",
+      "facts": {
+        "SALE": [
+          {
+            "at": "2026-10-19T17:09:57.328935+03:00",
+            "id": "71f54718-1ad4-4084-aacf-e02dbc7dc447",
+            "values": {
+              "paid": "12.345",
+              "total": "12.345",
+              "balance": "0.000",
+              "discount": "0",
+              "rounding": "0.000",
+              "itemCount": "1"
+            },
+            "context": {
+              "source": "TRANSACTION_RECORD",
+              "version": 1,
+              "currency": "KWD",
+              "rateSource": "SAME_CURRENCY_IDENTITY",
+              "exchangeRate": "1",
+              "organizationId": "f6b80b1f-c475-43a4-8632-189d80613fe4",
+              "contextRevision": 1,
+              "displayRateUsed": false,
+              "accountingCurrency": "KWD"
+            }
+          },
+          {
+            "at": "2026-10-19T17:09:57.501408+03:00",
+            "id": "4e4398cb-7f0b-4c13-a13e-63e1e189960c",
+            "values": {
+              "paid": "0",
+              "total": "12.345",
+              "balance": "12.345",
+              "discount": "0",
+              "rounding": "0.000",
+              "itemCount": "1"
+            },
+            "context": {
+              "source": "TRANSACTION_RECORD",
+              "version": 1,
+              "currency": "KWD",
+              "rateSource": "SAME_CURRENCY_IDENTITY",
+              "exchangeRate": "1",
+              "organizationId": "f6b80b1f-c475-43a4-8632-189d80613fe4",
+              "contextRevision": 1,
+              "displayRateUsed": false,
+              "accountingCurrency": "KWD"
+            }
+          }
+        ],
+        "COGS": [
+          {
+            "at": "2026-10-19T17:09:57.328935+03:00",
+            "id": "ca63c6ff-c7b0-42ea-9c2a-bfa7ef4e20a3",
+            "values": {
+              "amount": "105.125",
+              "quantity": "1",
+              "unitCost": "105.125"
+            },
+            "context": {
+              "source": "TRANSACTION_RECORD",
+              "version": 1,
+              "currency": "KWD",
+              "rateSource": "SAME_CURRENCY_IDENTITY",
+              "exchangeRate": "1",
+              "organizationId": "f6b80b1f-c475-43a4-8632-189d80613fe4",
+              "contextRevision": 1,
+              "displayRateUsed": false,
+              "accountingCurrency": "KWD"
+            },
+            "parentId": "71f54718-1ad4-4084-aacf-e02dbc7dc447"
+          },
+          {
+            "at": "2026-10-19T17:09:57.501408+03:00",
+            "id": "d067955f-8a55-411b-ab8a-09b30aa221e1",
+            "values": {
+              "amount": "105.125",
+              "quantity": "1",
+              "unitCost": "105.125"
+            },
+            "context": {
+              "source": "TRANSACTION_RECORD",
+              "version": 1,
+              "currency": "KWD",
+              "rateSource": "SAME_CURRENCY_IDENTITY",
+              "exchangeRate": "1",
+              "organizationId": "f6b80b1f-c475-43a4-8632-189d80613fe4",
+              "contextRevision": 1,
+              "displayRateUsed": false,
+              "accountingCurrency": "KWD"
+            },
+            "parentId": "4e4398cb-7f0b-4c13-a13e-63e1e189960c"
+          }
+        ],
+        "EXPENSE": [
+          {
+            "at": "2026-10-19",
+            "id": "77c2384b-707b-43fd-8031-5033d5de0717",
+            "method": "CASH",
+            "values": {
+              "amount": "1.001"
+            },
+            "context": {
+              "source": "TRANSACTION_RECORD",
+              "version": 1,
+              "currency": "KWD",
+              "rateSource": "SAME_CURRENCY_IDENTITY",
+              "exchangeRate": "1",
+              "organizationId": "f6b80b1f-c475-43a4-8632-189d80613fe4",
+              "contextRevision": 1,
+              "displayRateUsed": false,
+              "accountingCurrency": "KWD"
+            },
+            "category": "OTHER"
+          }
+        ]
+      }
+    }
+  ],
+  "actor": "bb2d6dee-773d-4fa7-8fda-1eb85bbad2cd",
+  "request": "855b2e23-57cc-4240-bccd-e98e24f29f85",
+  "financialTarget": "DISPOSABLE_LOCAL_POSTGRESQL",
+  "productionFinancialWrites": false,
+  "authVerification": "Required upstream server GET /auth/v1/user; standalone execution is not Auth proof",
+  "productUIAcceptance": false,
+  "refundPosting": false,
+  "custodyPosting": false
+}

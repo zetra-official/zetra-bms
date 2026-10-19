@@ -1,0 +1,13 @@
+{
+  "status": "PASS",
+  "count": 5,
+  "checks": [
+    "missing Auth denied before local financial execution",
+    "untrusted origin denied",
+    "unexpected Host denied",
+    "forged expired JWT rejected by actual Supabase Auth",
+    "unapproved route unavailable"
+  ],
+  "financialRequestsExecuted": 0,
+  "productionFinancialWrites": false
+}

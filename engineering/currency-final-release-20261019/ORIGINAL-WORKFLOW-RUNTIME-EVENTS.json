@@ -1,0 +1,221 @@
+{
+  "scope": "Actual component / real Auth / synthetic local financial fixtures",
+  "events": [
+    {
+      "at": "2026-10-19T15:55:15.241Z",
+      "actor": "bb2d6dee-773d-4fa7-8fda-1eb85bbad2cd",
+      "rpc": "get_original_refund_sale_v1",
+      "args": {
+        "p_store_id": "b09cfd28-d355-4424-8924-3164ca241d1c",
+        "p_sale_id": "8d5e82ee-cab5-4c9c-872c-78b26d735cef"
+      },
+      "data": {
+        "lines": [
+          {
+            "id": "5f6c9a99-92c2-4222-b58e-337feeef23e1",
+            "name": "SYNTHETIC TZS",
+            "originalNet": "36.01",
+            "originalTax": "1.01",
+            "originalCogs": "315.36",
+            "originalQuantity": "3",
+            "refundedQuantity": "0"
+          }
+        ],
+        "saleId": "8d5e82ee-cab5-4c9c-872c-78b26d735cef",
+        "storeId": "b09cfd28-d355-4424-8924-3164ca241d1c",
+        "currency": "TZS",
+        "eligible": true,
+        "organizationId": "f9e04166-7653-435d-a9cf-32b5487b5130",
+        "sourceReference": "SYNTHETIC_ORIGINAL_INCLUSIVE_TAX_DOCUMENT"
+      },
+      "error": null,
+      "auth": "Real Supabase GET /auth/v1/user",
+      "financialTarget": "DISPOSABLE_LOCAL_POSTGRESQL"
+    },
+    {
+      "at": "2026-10-19T15:55:31.625Z",
+      "actor": "bb2d6dee-773d-4fa7-8fda-1eb85bbad2cd",
+      "rpc": "refund_original_sale_v1",
+      "args": {
+        "p_store_id": "b09cfd28-d355-4424-8924-3164ca241d1c",
+        "p_request_id": "4cde61c0-fc07-4336-b673-46f702d5290b",
+        "p_sale_id": "8d5e82ee-cab5-4c9c-872c-78b26d735cef",
+        "p_line_id": "5f6c9a99-92c2-4222-b58e-337feeef23e1",
+        "p_quantity": "1",
+        "p_sellable": true,
+        "p_shift_id": null,
+        "p_evidence": {
+          "source": "OWNER_CONFIRMED",
+          "reference": "LOCAL-TZS-ORIGINAL-REFUND"
+        }
+      },
+      "data": {
+        "amount": "12.34",
+        "lineId": "5f6c9a99-92c2-4222-b58e-337feeef23e1",
+        "saleId": "8d5e82ee-cab5-4c9c-872c-78b26d735cef",
+        "currency": "TZS",
+        "quantity": "1",
+        "refundId": "c3096aab-4b2a-4226-af18-b246fb9586eb",
+        "sellable": true,
+        "originalSlice": {
+          "net": "12.00",
+          "tax": "0.34",
+          "cogs": "105.120000000000000000",
+          "gross": "12.340000000000000000",
+          "lineId": "5f6c9a99-92c2-4222-b58e-337feeef23e1",
+          "saleId": "8d5e82ee-cab5-4c9c-872c-78b26d735cef",
+          "currency": "TZS",
+          "discount": "0.000000000000000000",
+          "quantity": "1",
+          "rounding": "0.000000000000000000",
+          "refundAmount": "12.34",
+          "postingAllowed": false,
+          "requiredWriter": "ATOMIC_ORIGINAL_PAYMENT_REFUND_AND_SELLABLE_RETURN_WRITER",
+          "sourceReference": "SYNTHETIC_ORIGINAL_INCLUSIVE_TAX_DOCUMENT"
+        },
+        "stockMovementId": "c3096aab-4b2a-4226-af18-b246fb9586eb",
+        "canonicalAccountBinding": true,
+        "externalProviderVerified": false
+      },
+      "error": null,
+      "auth": "Real Supabase GET /auth/v1/user",
+      "financialTarget": "DISPOSABLE_LOCAL_POSTGRESQL"
+    },
+    {
+      "at": "2026-10-19T15:55:32.233Z",
+      "actor": "bb2d6dee-773d-4fa7-8fda-1eb85bbad2cd",
+      "rpc": "get_original_refund_sale_v1",
+      "args": {
+        "p_store_id": "b09cfd28-d355-4424-8924-3164ca241d1c",
+        "p_sale_id": "8d5e82ee-cab5-4c9c-872c-78b26d735cef"
+      },
+      "data": {
+        "lines": [
+          {
+            "id": "5f6c9a99-92c2-4222-b58e-337feeef23e1",
+            "name": "SYNTHETIC TZS",
+            "originalNet": "36.01",
+            "originalTax": "1.01",
+            "originalCogs": "315.36",
+            "originalQuantity": "3",
+            "refundedQuantity": "1"
+          }
+        ],
+        "saleId": "8d5e82ee-cab5-4c9c-872c-78b26d735cef",
+        "storeId": "b09cfd28-d355-4424-8924-3164ca241d1c",
+        "currency": "TZS",
+        "eligible": true,
+        "organizationId": "f9e04166-7653-435d-a9cf-32b5487b5130",
+        "sourceReference": "SYNTHETIC_ORIGINAL_INCLUSIVE_TAX_DOCUMENT"
+      },
+      "error": null,
+      "auth": "Real Supabase GET /auth/v1/user",
+      "financialTarget": "DISPOSABLE_LOCAL_POSTGRESQL"
+    },
+    {
+      "at": "2026-10-19T15:58:06.988Z",
+      "actor": "bb2d6dee-773d-4fa7-8fda-1eb85bbad2cd",
+      "rpc": "refund_original_sale_v1",
+      "args": {
+        "p_store_id": "b09cfd28-d355-4424-8924-3164ca241d1c",
+        "p_request_id": "a41da5ef-1a8c-47b8-a400-f9ad037fbb66",
+        "p_sale_id": "8d5e82ee-cab5-4c9c-872c-78b26d735cef",
+        "p_line_id": "5f6c9a99-92c2-4222-b58e-337feeef23e1",
+        "p_quantity": "1",
+        "p_sellable": true,
+        "p_shift_id": null,
+        "p_evidence": {
+          "source": "OWNER_CONFIRMED",
+          "reference": "LOCAL-TZS-ORIGINAL-REFUND"
+        }
+      },
+      "data": {
+        "amount": "12.34",
+        "lineId": "5f6c9a99-92c2-4222-b58e-337feeef23e1",
+        "saleId": "8d5e82ee-cab5-4c9c-872c-78b26d735cef",
+        "currency": "TZS",
+        "quantity": "1",
+        "refundId": "46d5fe0c-db2d-42ed-8af7-789707f63390",
+        "sellable": true,
+        "originalSlice": {
+          "net": "12.01",
+          "tax": "0.33",
+          "cogs": "105.120000000000000000",
+          "gross": "12.340000000000000000",
+          "lineId": "5f6c9a99-92c2-4222-b58e-337feeef23e1",
+          "saleId": "8d5e82ee-cab5-4c9c-872c-78b26d735cef",
+          "currency": "TZS",
+          "discount": "0.000000000000000000",
+          "quantity": "1",
+          "rounding": "0.000000000000000000",
+          "refundAmount": "12.34",
+          "postingAllowed": false,
+          "requiredWriter": "ATOMIC_ORIGINAL_PAYMENT_REFUND_AND_SELLABLE_RETURN_WRITER",
+          "sourceReference": "SYNTHETIC_ORIGINAL_INCLUSIVE_TAX_DOCUMENT"
+        },
+        "stockMovementId": "46d5fe0c-db2d-42ed-8af7-789707f63390",
+        "canonicalAccountBinding": true,
+        "externalProviderVerified": false
+      },
+      "error": null,
+      "auth": "Real Supabase GET /auth/v1/user",
+      "financialTarget": "DISPOSABLE_LOCAL_POSTGRESQL"
+    },
+    {
+      "at": "2026-10-19T15:58:07.485Z",
+      "actor": "bb2d6dee-773d-4fa7-8fda-1eb85bbad2cd",
+      "rpc": "get_original_refund_sale_v1",
+      "args": {
+        "p_store_id": "b09cfd28-d355-4424-8924-3164ca241d1c",
+        "p_sale_id": "8d5e82ee-cab5-4c9c-872c-78b26d735cef"
+      },
+      "data": {
+        "lines": [
+          {
+            "id": "5f6c9a99-92c2-4222-b58e-337feeef23e1",
+            "name": "SYNTHETIC TZS",
+            "originalNet": "36.01",
+            "originalTax": "1.01",
+            "originalCogs": "315.36",
+            "originalQuantity": "3",
+            "refundedQuantity": "2"
+          }
+        ],
+        "saleId": "8d5e82ee-cab5-4c9c-872c-78b26d735cef",
+        "storeId": "b09cfd28-d355-4424-8924-3164ca241d1c",
+        "currency": "TZS",
+        "eligible": true,
+        "organizationId": "f9e04166-7653-435d-a9cf-32b5487b5130",
+        "sourceReference": "SYNTHETIC_ORIGINAL_INCLUSIVE_TAX_DOCUMENT"
+      },
+      "error": null,
+      "auth": "Real Supabase GET /auth/v1/user",
+      "financialTarget": "DISPOSABLE_LOCAL_POSTGRESQL"
+    },
+    {
+      "at": "2026-10-19T15:58:14.033Z",
+      "actor": "bb2d6dee-773d-4fa7-8fda-1eb85bbad2cd",
+      "rpc": "refund_original_sale_v1",
+      "args": {
+        "p_store_id": "b09cfd28-d355-4424-8924-3164ca241d1c",
+        "p_request_id": "adf3bc26-d0e5-431e-b01f-f2123fe7e460",
+        "p_sale_id": "8d5e82ee-cab5-4c9c-872c-78b26d735cef",
+        "p_line_id": "5f6c9a99-92c2-4222-b58e-337feeef23e1",
+        "p_quantity": "12",
+        "p_sellable": true,
+        "p_shift_id": null,
+        "p_evidence": {
+          "source": "OWNER_CONFIRMED",
+          "reference": "LOCAL-TZS-ORIGINAL-REFUND"
+        }
+      },
+      "data": null,
+      "error": {
+        "message": "REFUND_QUANTITY_EXCEEDS_ORIGINAL"
+      },
+      "auth": "Real Supabase GET /auth/v1/user",
+      "financialTarget": "DISPOSABLE_LOCAL_POSTGRESQL"
+    }
+  ],
+  "productionFinancialWrites": false
+}

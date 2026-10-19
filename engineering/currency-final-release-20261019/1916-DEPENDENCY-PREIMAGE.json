@@ -1,0 +1,5 @@
+{
+  "identity": "backend_core.bound_shift_coverage_v1(uuid)",
+  "md5": "6d1f02385d83f4647ad984a273694af0",
+  "source": "Read-only pg_get_functiondef from the existing disposable local 1912 coverage function; no Production query"
+}

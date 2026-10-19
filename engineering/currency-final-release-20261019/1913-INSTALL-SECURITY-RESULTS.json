@@ -1,0 +1,21 @@
+{
+  "status": "PASS",
+  "count": 12,
+  "checks": [
+    "exact1913 fresh installation commits after1912",
+    "existing TZS/native sales/items/payments/wallet histories unchanged",
+    "no adapter or posting authority activated",
+    "capture_original_sale_evidence_v1 effective denial anon",
+    "capture_original_sale_evidence_v1 effective denial authenticated",
+    "capture_original_sale_evidence_v1 effective denial service_role",
+    "original_refund_slice_v1 effective denial anon",
+    "original_refund_slice_v1 effective denial authenticated",
+    "original_refund_slice_v1 effective denial service_role",
+    "PUBLIC cannot execute",
+    "Funding Control remains advances-only deny boundary",
+    "exact1913 disable works without deleting history"
+  ],
+  "migrationSha256": "20d976692d167f7bfbe490f5935658649be31fe74fbf77e3b292a9ec06f8a2e6",
+  "productionWrites": false,
+  "scope": "Independent disposable exact SQL install and deny-only rollback; no tax adapter or refund writer installed."
+}

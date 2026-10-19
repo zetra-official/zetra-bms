@@ -1,0 +1,5 @@
+{
+  "url": "http://127.0.0.1:55625/",
+  "pid": 12388,
+  "scope": "Real Auth; local canonical SQL; no Production financial writes; persistent until Owner completion"
+}

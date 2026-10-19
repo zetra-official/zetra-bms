@@ -1,0 +1,200 @@
+{
+  "status": "PRE_APPROVAL_HOLD_REQUIRED_ACCEPTANCE_AND_AUTHORITY",
+  "recoveredAt": "2026-10-19T14:57:43.431588+00:00",
+  "gitHead": "be279a3c65da8ff70024491defe5ee54fd1f7d80",
+  "implementationState": "HEAD plus preserved uncommitted 1913 and genuine acceptance artifacts",
+  "productionExecutionAuthorized": false,
+  "deploymentAuthorized": false,
+  "activationAuthorized": false,
+  "migrationOrder": [
+    {
+      "path": "engineering/currency-financial-integration-20261019/2026101904-financial-currency-context.DRAFT.sql",
+      "sha256": "2d72cf83e848d4304e932403bfae0d6b0af6baae1314d4204128ee830ab9b3b4"
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/2026101905-native-settlement-atomic.DRAFT.sql",
+      "sha256": "f9f849d7eb43844d8da92cf3c44bc51d8b9603b2c9d896eb2ab6d6e8aa35f3d4"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/2026101906-native-expense-integrity.DRAFT.sql",
+      "sha256": "45d054fc0564842d7759a09d857c40438aa1f7df032ba530e65987efcde7aa6b"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/2026101907-original-financial-readers.DRAFT.sql",
+      "sha256": "ac4ff6d398f85630f1cd005abdc4ecc74565de1fd347ccf62ffd0aa8620524c5"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/2026101908-native-writer-quarantine.DRAFT.sql",
+      "sha256": "0148160432bec7fe644baff5335779e4766c8ae4215fbeb64be4243d8deeeab0"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/2026101909-canonical-receipt-integrity.DRAFT.sql",
+      "sha256": "8c55f16ffb0dfc9c2236b56170b328ee6b14f0c5070f07be814cf03baf21fe66"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/2026101910-private-settlement-bindings.DRAFT.sql",
+      "sha256": "d949035b97781915db708fdae91d30252f743d1fd1f8caa8cd6eea9f6995d7f2"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/2026101911-private-procurement-bindings.DRAFT.sql",
+      "sha256": "db8f7556b722da8fa9c64b52a2b9c80c3b27d836f35693861db53b3412b0937c"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/2026101912-private-cashier-bindings.DRAFT.sql",
+      "sha256": "c3915c842daf58aa595c547a69b4d4db5c719eda9954f55f596f175a21472cb3"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/2026101913-original-refund-evidence.DRAFT.sql",
+      "sha256": "20d976692d167f7bfbe490f5935658649be31fe74fbf77e3b292a9ec06f8a2e6"
+    }
+  ],
+  "rollbackOrder": [
+    {
+      "path": "engineering/currency-final-release-20261019/1913-DISABLE.sql",
+      "sha256": "ad4704aad017f4d68139e1cd4cf97d384b9d8cf515e6e49b84bd29aa27a0d7d8"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/1910-1912-DISABLE.sql",
+      "sha256": "112b05ee77d0c864a563707cefb6824d2e22eb47a67fc69d7dd33e16b94b2805"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/1907-1909-DISABLE.sql",
+      "sha256": "ffae1a647abe03a08c6777e58f938a48c4afc9fa16f3d102b2523bbe94f49554"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/1906-DISABLE.sql",
+      "sha256": "60055141656ad2a077da41def08916f4b75a494d5b7edbbc6bfad09e001ab537"
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/1905-DISABLE-ROLLBACK.sql",
+      "sha256": "1151ce4e422047801fd4db19b6503431fc81f28cee6424696abaabf4837c7f7e"
+    }
+  ],
+  "sourceFiles": [
+    {
+      "path": "src/currency/originalFacts.ts",
+      "sha256": "7e7937406bf0d922776f56d83ac0808dd702ed9ee0346ec345bcff617c547799"
+    },
+    {
+      "path": "src/currency/originalReport.ts",
+      "sha256": "34328145e7c3451bfca17b619ea1592981361b682246c1c6d60a4ed0622be20b"
+    },
+    {
+      "path": "src/finance/OriginalFinancialStatement.tsx",
+      "sha256": "f596131a28dc2d3735d1e4123613c9476b23fa828b7965ff321d535f83cdafc0"
+    },
+    {
+      "path": "app/finance/live.tsx",
+      "sha256": "e4b81444497c596c75450b3a2ba3b5c153c97b79ecd3f856fd964106f51ae5b5"
+    },
+    {
+      "path": "app/(tabs)/settings/business-statement.tsx",
+      "sha256": "342041574ed48e09818803e0e2a70d09f20e4b51adde9a3c029ebd90c3aac112"
+    },
+    {
+      "path": "src/currency/settlementBindings.ts",
+      "sha256": "7307230a00125229b7210266d4374bf20b387c909f029f13906a99fdcbc19ee9"
+    },
+    {
+      "path": "src/offline/salesQueue.ts",
+      "sha256": "031f0d737105a39b2731e4c2809898a782a67e2952685739fbffd08e6bb348b7"
+    },
+    {
+      "path": "src/offline/salesSync.ts",
+      "sha256": "dad0afa7d1ab4ce8142958e098e8b8d1c55354c813c0952dd55b00971f3af170"
+    }
+  ],
+  "savedPdfArtifacts": [
+    {
+      "path": "output/pdf/currency-local-auth-acceptance/TZS-en.pdf",
+      "sha256": "7825345d55393e0f5944316745582796825f6635464fad232f2b4891f4f244a2"
+    },
+    {
+      "path": "output/pdf/currency-local-auth-acceptance/USD-en.pdf",
+      "sha256": "ad5791a3ac706c6706139518555de66e4eb6fa08d225ed8458704e2b45810581"
+    },
+    {
+      "path": "output/pdf/currency-local-auth-acceptance/KES-en.pdf",
+      "sha256": "807106eeec5e028927c4dcb37f80e5aba62fc938fe6a688e653a9905e0136931"
+    },
+    {
+      "path": "output/pdf/currency-local-auth-acceptance/UGX-en.pdf",
+      "sha256": "984618d0f0cd3c8931a8f80b1c7454b056695571a361d8d452ed93820a90c9e4"
+    },
+    {
+      "path": "output/pdf/currency-local-auth-acceptance/EUR-en.pdf",
+      "sha256": "440e6699cf670413f912514afd1ed5249815260924bf3764073690f6b3e6b70d"
+    },
+    {
+      "path": "output/pdf/currency-local-auth-acceptance/AED-en.pdf",
+      "sha256": "96a3471ae48d0ce31677f0a5653d4c688711a65116474cc67a0300201bc2331d"
+    },
+    {
+      "path": "output/pdf/currency-local-auth-acceptance/JPY-en.pdf",
+      "sha256": "ad9ec498af4a2aa95277057f7f33151e1ec2d80d00cd8b9b231552c26e89f3f8"
+    },
+    {
+      "path": "output/pdf/currency-local-auth-acceptance/KWD-en.pdf",
+      "sha256": "423aabe2b926c3e8cde90aa0fbceea06bb3feb52f8d0d1025bb875c7b5d9339e"
+    },
+    {
+      "path": "output/pdf/currency-local-auth-acceptance/KWD-ar.pdf",
+      "sha256": "3a807c7e4783c6ac50bb096e127266c07d80dc35b7cefb906f55bc4decf33edf"
+    },
+    {
+      "path": "output/pdf/currency-local-auth-acceptance/KWD-zh.pdf",
+      "sha256": "6021bb3e93d030532cbff27c9fba92be0b6ec819592231486199a15260a84219"
+    }
+  ],
+  "savedAcceptance": {
+    "authVerifiedAt": "2026-10-19T14:09:46.234Z",
+    "financialChecks": 57,
+    "target": "DISPOSABLE_LOCAL_POSTGRESQL",
+    "scope": "GENUINE_SUPABASE_AUTH_TO_LOCAL_CANONICAL_SQL_ADAPTER",
+    "freshAuthVerifiedDuringRecovery": false,
+    "productUIAcceptance": false
+  },
+  "evidence": [
+    {
+      "path": "engineering/currency-final-release-20261019/GENUINE-FINANCIAL-AUTH-STATUS.json",
+      "sha256": "13c359bc014a483e1e96a2b3d9867a85ba97ec5a76cc90f030a42196e0add0b8"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/GENUINE-FINANCIAL-ACCEPTANCE.json",
+      "sha256": "271349b278bdff9b28b8b9a487286c829a6c9d3482e3cfa37bda43148ba8e55b"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/GENUINE-LOCAL-FINANCIAL-RESULTS.json",
+      "sha256": "1d9c6e9fedc42e8f0a610759e8d161e756a8967bab2b3bb703ed1553eb909afe"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/GENUINE-LOCAL-PDF-RESULTS.json",
+      "sha256": "bfd5509e8bfb5ce26c32f44b005371c54b996f31cc23bc3c8df1d320083d5b50"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/PDF-STRUCTURE-CHECKS.json",
+      "sha256": "54b8f5cf24a8e4a311aeef4427aec88481589fc584f39d4446d719116ad14045"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/FINANCIAL-ACCEPTANCE-GATE-RESULTS.json",
+      "sha256": "c42aa91f8500db0d127d9fb3558942c27953365769e6d8df44f9d7bf647dc0b0"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/ORIGINAL-REFUND-EVIDENCE-RESULTS.json",
+      "sha256": "f72039b5f002f0002482054994c0eadc7d6f49381f1951211e6c68f72ce68671"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/1913-INSTALL-SECURITY-RESULTS.json",
+      "sha256": "2cca3dacbbf7fee0da6d808e09d6af74c4c7b01ecf76cea47138809386dc7dc3"
+    }
+  ],
+  "blockers": [
+    "Product Desktop/Mobile financial workflow acceptance and physical Android PDF sharing remain unverified; local Auth adapter/PDF rendering do not certify these.",
+    "1913 provides immutable original evidence and refund slices only. No Production tax adapter or atomic original-payment refund/sellable-return writer is installed or certified.",
+    "FIELD_PROCUREMENT wallet writers/returns and original-currency custody cutover remain deny-only; PRECISION_RETAIL receipt lifecycle is not certified.",
+    "Production preflight/backup evidence is historical. Fresh exact target, dependency/preimage/ACL, lock and backup checks are required; restore rehearsal remains unverified."
+  ],
+  "rollout": "Keep all financial client flags off, new RPCs denied and unsupported writers quarantined. No blanket EXECUTE grants.",
+  "productionApprovalGate": "Not yet eligible for full Global Currency Production approval. Resolve required acceptance/authority gates, then obtain exact-package Owner authorization with target, actor, operations, grants, expiry and disable plan.",
+  "preservation": "No Catalog, unrelated source, historical data, Production SQL, infrastructure, Staging or deployment changes."
+}

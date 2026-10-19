@@ -1,0 +1,20 @@
+{
+  "remainingTaskProcesses": [],
+  "productionDeployment": false,
+  "databases": [
+    {
+      "stopped": true,
+      "financialHistoryPreserved": true,
+      "path": "engineering/native-financial-contracts-20261019/disposable-original-product-b1896a59-dd2b-424a-b989-2ae03f51ed49/cluster"
+    },
+    {
+      "stopped": true,
+      "financialHistoryPreserved": true,
+      "path": "engineering/native-financial-contracts-20261019/disposable-original-product-b05607cd-0e83-4775-aa21-9fda9d7239ab"
+    }
+  ],
+  "localRolloutDisabled": true,
+  "adbServerStopped": true,
+  "atUtc": "2026-10-19T16:28:41.7655119Z",
+  "status": "STOPPED"
+}

@@ -1,0 +1,67 @@
+{
+  "status": "PASS",
+  "count": 45,
+  "checks": [
+    "original_refunds FORCE RLS",
+    "original_refunds denies anon",
+    "original_refunds denies authenticated",
+    "original_refunds denies service_role",
+    "original_refund_payments FORCE RLS",
+    "original_refund_payments denies anon",
+    "original_refund_payments denies authenticated",
+    "original_refund_payments denies service_role",
+    "refund_stock_intents FORCE RLS",
+    "refund_stock_intents denies anon",
+    "refund_stock_intents denies authenticated",
+    "refund_stock_intents denies service_role",
+    "bound_field_wallets FORCE RLS",
+    "bound_field_wallets denies anon",
+    "bound_field_wallets denies authenticated",
+    "bound_field_wallets denies service_role",
+    "field_custody_links FORCE RLS",
+    "field_custody_links denies anon",
+    "field_custody_links denies authenticated",
+    "field_custody_links denies service_role",
+    "field_custody_intents FORCE RLS",
+    "field_custody_intents denies anon",
+    "field_custody_intents denies authenticated",
+    "field_custody_intents denies service_role",
+    "refund_original_sale_v1 denies all nonowner execution",
+    "confirm_bound_field_wallet_v1 denies all nonowner execution",
+    "open_bound_field_wallet_v1 denies all nonowner execution",
+    "post_bound_field_custody_v1 denies all nonowner execution",
+    "get_original_refund_sale_v1 denies all nonowner execution",
+    "get_bound_field_custody_v1 denies all nonowner execution",
+    "freeze_original_return_sources_v1 denies all nonowner execution",
+    "guard_bound_wallet_v1 denies all nonowner execution",
+    "check_bound_wallet_v1 denies all nonowner execution",
+    "stamp_bound_field_supplier_v1 denies all nonowner execution",
+    "stamp_bound_wallet_transaction_v1 denies all nonowner execution",
+    "concurrent refunds: exactly one commits",
+    "concurrent loser denied by original quantity",
+    "concurrent quantity and stock refund recorded once",
+    "return stock source immutable",
+    "original sale item immutable after evidence",
+    "original refund fact immutable",
+    "Funding Control source authority remains advances-only deny",
+    "missing original evidence denies historical refund",
+    "deny-only rollback retains original refund facts",
+    "disable removes test-role refund access"
+  ],
+  "scope": "Independent disposable clone; actual concurrent transactions, RLS/ACL and deny-only rollback; synthetic Auth",
+  "productionWrites": false,
+  "migrations": [
+    {
+      "path": "2026101914-atomic-original-refund.DRAFT.sql",
+      "sha256": "be96729eaa6462536b9fb13c760c0e6a2aad609575db4ac9a9d08f0b2c4ff773"
+    },
+    {
+      "path": "2026101915-canonical-field-custody.DRAFT.sql",
+      "sha256": "da1830686c7865175a7177e616880c4f422e53d56cab6bfae2160f1b7a34d7c9"
+    },
+    {
+      "path": "1916-original-workflow-readers.sql",
+      "sha256": "8be061ff253f96aa428c58335eedcc5584eddfa7deb1c854ed24c6dd30d388e9"
+    }
+  ]
+}

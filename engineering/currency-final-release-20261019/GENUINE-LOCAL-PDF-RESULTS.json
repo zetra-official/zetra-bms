@@ -1,0 +1,97 @@
+{
+  "status": "PASS",
+  "count": 10,
+  "documents": [
+    {
+      "currency": "TZS",
+      "language": "en",
+      "file": "output/pdf/currency-local-auth-acceptance/TZS-en.pdf",
+      "actualApplicationHtmlBuilder": true,
+      "realChromiumPdf": true,
+      "input": "Genuine Supabase Auth -> disposable canonical SQL -> original-currency reader",
+      "deployedProductShare": false
+    },
+    {
+      "currency": "USD",
+      "language": "en",
+      "file": "output/pdf/currency-local-auth-acceptance/USD-en.pdf",
+      "actualApplicationHtmlBuilder": true,
+      "realChromiumPdf": true,
+      "input": "Genuine Supabase Auth -> disposable canonical SQL -> original-currency reader",
+      "deployedProductShare": false
+    },
+    {
+      "currency": "KES",
+      "language": "en",
+      "file": "output/pdf/currency-local-auth-acceptance/KES-en.pdf",
+      "actualApplicationHtmlBuilder": true,
+      "realChromiumPdf": true,
+      "input": "Genuine Supabase Auth -> disposable canonical SQL -> original-currency reader",
+      "deployedProductShare": false
+    },
+    {
+      "currency": "UGX",
+      "language": "en",
+      "file": "output/pdf/currency-local-auth-acceptance/UGX-en.pdf",
+      "actualApplicationHtmlBuilder": true,
+      "realChromiumPdf": true,
+      "input": "Genuine Supabase Auth -> disposable canonical SQL -> original-currency reader",
+      "deployedProductShare": false
+    },
+    {
+      "currency": "EUR",
+      "language": "en",
+      "file": "output/pdf/currency-local-auth-acceptance/EUR-en.pdf",
+      "actualApplicationHtmlBuilder": true,
+      "realChromiumPdf": true,
+      "input": "Genuine Supabase Auth -> disposable canonical SQL -> original-currency reader",
+      "deployedProductShare": false
+    },
+    {
+      "currency": "AED",
+      "language": "en",
+      "file": "output/pdf/currency-local-auth-acceptance/AED-en.pdf",
+      "actualApplicationHtmlBuilder": true,
+      "realChromiumPdf": true,
+      "input": "Genuine Supabase Auth -> disposable canonical SQL -> original-currency reader",
+      "deployedProductShare": false
+    },
+    {
+      "currency": "JPY",
+      "language": "en",
+      "file": "output/pdf/currency-local-auth-acceptance/JPY-en.pdf",
+      "actualApplicationHtmlBuilder": true,
+      "realChromiumPdf": true,
+      "input": "Genuine Supabase Auth -> disposable canonical SQL -> original-currency reader",
+      "deployedProductShare": false
+    },
+    {
+      "currency": "KWD",
+      "language": "en",
+      "file": "output/pdf/currency-local-auth-acceptance/KWD-en.pdf",
+      "actualApplicationHtmlBuilder": true,
+      "realChromiumPdf": true,
+      "input": "Genuine Supabase Auth -> disposable canonical SQL -> original-currency reader",
+      "deployedProductShare": false
+    },
+    {
+      "currency": "KWD",
+      "language": "ar",
+      "file": "output/pdf/currency-local-auth-acceptance/KWD-ar.pdf",
+      "actualApplicationHtmlBuilder": true,
+      "realChromiumPdf": true,
+      "input": "Genuine Supabase Auth -> disposable canonical SQL -> original-currency reader",
+      "deployedProductShare": false
+    },
+    {
+      "currency": "KWD",
+      "language": "zh",
+      "file": "output/pdf/currency-local-auth-acceptance/KWD-zh.pdf",
+      "actualApplicationHtmlBuilder": true,
+      "realChromiumPdf": true,
+      "input": "Genuine Supabase Auth -> disposable canonical SQL -> original-currency reader",
+      "deployedProductShare": false
+    }
+  ],
+  "scope": "Actual originalReportHtml + canonical local financial facts after genuine Auth. Real PDF generation; deployed Web/native Expo Print/Share E2E NOT TESTED."
+}

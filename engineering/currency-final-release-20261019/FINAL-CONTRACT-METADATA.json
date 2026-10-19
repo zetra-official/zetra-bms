@@ -1,0 +1,1823 @@
+{
+  "columns": [
+    {
+      "schema": "backend_core",
+      "table": "settlement_bindings",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "default": "clock_timestamp()"
+    },
+    {
+      "schema": "stock_funding",
+      "table": "advances",
+      "column": "organization_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "stock_funding",
+      "table": "advances",
+      "column": "store_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sales",
+      "column": "store_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sales",
+      "column": "sold_by_membership_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sales",
+      "column": "sold_at",
+      "type": "timestamp with time zone",
+      "default": "now()"
+    },
+    {
+      "schema": "public",
+      "table": "sales",
+      "column": "total_amount",
+      "type": "numeric",
+      "default": "0"
+    },
+    {
+      "schema": "public",
+      "table": "sales",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "default": "now()"
+    },
+    {
+      "schema": "public",
+      "table": "sales",
+      "column": "paid_amount",
+      "type": "numeric",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sales",
+      "column": "balance_amount",
+      "type": "numeric",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sales",
+      "column": "total_qty",
+      "type": "numeric",
+      "default": "0"
+    },
+    {
+      "schema": "public",
+      "table": "sales",
+      "column": "created_by",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sales",
+      "column": "customer_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sales",
+      "column": "amount_paid",
+      "type": "numeric",
+      "default": "0"
+    },
+    {
+      "schema": "public",
+      "table": "sales",
+      "column": "balance_due",
+      "type": "numeric",
+      "default": "0"
+    },
+    {
+      "schema": "public",
+      "table": "sales",
+      "column": "discount_value",
+      "type": "numeric",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sales",
+      "column": "discount_amount",
+      "type": "numeric",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sales",
+      "column": "grand_total",
+      "type": "numeric",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sales",
+      "column": "subtotal_amount",
+      "type": "numeric",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sales",
+      "column": "sold_by_membership",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sales",
+      "column": "source_order_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sales",
+      "column": "client_sale_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sales",
+      "column": "cashier_shift_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sales",
+      "column": "edited_at",
+      "type": "timestamp with time zone",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sales",
+      "column": "edited_by",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sales",
+      "column": "edit_count",
+      "type": "integer",
+      "default": "0"
+    },
+    {
+      "schema": "public",
+      "table": "sales",
+      "column": "currency_context",
+      "type": "jsonb",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sales",
+      "column": "settlement_rounding",
+      "type": "numeric",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sale_payments",
+      "column": "id",
+      "type": "uuid",
+      "default": "gen_random_uuid()"
+    },
+    {
+      "schema": "public",
+      "table": "sale_payments",
+      "column": "organization_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sale_payments",
+      "column": "store_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sale_payments",
+      "column": "sale_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sale_payments",
+      "column": "received_by_membership_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sale_payments",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "default": "now()"
+    },
+    {
+      "schema": "public",
+      "table": "sale_payments",
+      "column": "paid_amount",
+      "type": "numeric",
+      "default": "0"
+    },
+    {
+      "schema": "public",
+      "table": "sale_payments",
+      "column": "created_by",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sale_payments",
+      "column": "currency_context",
+      "type": "jsonb",
+      "default": null
+    },
+    {
+      "schema": "backend_core",
+      "table": "settlement_bindings",
+      "column": "source_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "backend_core",
+      "table": "settlement_bindings",
+      "column": "account_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "backend_core",
+      "table": "settlement_bindings",
+      "column": "organization_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "backend_core",
+      "table": "settlement_bindings",
+      "column": "store_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "backend_core",
+      "table": "settlement_bindings",
+      "column": "shift_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "backend_core",
+      "table": "settlement_bindings",
+      "column": "actor_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "backend_core",
+      "table": "settlement_bindings",
+      "column": "request_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "stock_funding",
+      "table": "advances",
+      "column": "id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "stock_funding",
+      "table": "advances",
+      "column": "currency_revision",
+      "type": "integer",
+      "default": null
+    },
+    {
+      "schema": "stock_funding",
+      "table": "advances",
+      "column": "minor_units",
+      "type": "integer",
+      "default": null
+    },
+    {
+      "schema": "stock_funding",
+      "table": "advances",
+      "column": "amount",
+      "type": "numeric",
+      "default": null
+    },
+    {
+      "schema": "stock_funding",
+      "table": "advances",
+      "column": "spent",
+      "type": "numeric",
+      "default": "0"
+    },
+    {
+      "schema": "stock_funding",
+      "table": "advances",
+      "column": "returned",
+      "type": "numeric",
+      "default": "0"
+    },
+    {
+      "schema": "stock_funding",
+      "table": "advances",
+      "column": "source_account",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "stock_funding",
+      "table": "advances",
+      "column": "responsible_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "stock_funding",
+      "table": "advances",
+      "column": "created_by",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "stock_funding",
+      "table": "advances",
+      "column": "occurred_at",
+      "type": "timestamp with time zone",
+      "default": null
+    },
+    {
+      "schema": "stock_funding",
+      "table": "advances",
+      "column": "expected_at",
+      "type": "timestamp with time zone",
+      "default": null
+    },
+    {
+      "schema": "stock_funding",
+      "table": "advances",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "default": "clock_timestamp()"
+    },
+    {
+      "schema": "stock_funding",
+      "table": "advances",
+      "column": "revision",
+      "type": "integer",
+      "default": "1"
+    },
+    {
+      "schema": "funding_control",
+      "table": "movements",
+      "column": "id",
+      "type": "bigint",
+      "default": null
+    },
+    {
+      "schema": "funding_control",
+      "table": "movements",
+      "column": "account",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "funding_control",
+      "table": "movements",
+      "column": "advance",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "funding_control",
+      "table": "movements",
+      "column": "request",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "funding_control",
+      "table": "movements",
+      "column": "actor",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "funding_control",
+      "table": "movements",
+      "column": "delta",
+      "type": "numeric",
+      "default": null
+    },
+    {
+      "schema": "funding_control",
+      "table": "movements",
+      "column": "business_day",
+      "type": "date",
+      "default": null
+    },
+    {
+      "schema": "funding_control",
+      "table": "movements",
+      "column": "auto_approved",
+      "type": "boolean",
+      "default": "false"
+    },
+    {
+      "schema": "funding_control",
+      "table": "movements",
+      "column": "shift_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "funding_control",
+      "table": "movements",
+      "column": "recorded_at",
+      "type": "timestamp with time zone",
+      "default": "clock_timestamp()"
+    },
+    {
+      "schema": "public",
+      "table": "field_wallet_transactions",
+      "column": "id",
+      "type": "uuid",
+      "default": "gen_random_uuid()"
+    },
+    {
+      "schema": "public",
+      "table": "field_wallet_transactions",
+      "column": "wallet_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "field_wallet_transactions",
+      "column": "organization_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "field_wallet_transactions",
+      "column": "store_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "field_wallet_transactions",
+      "column": "membership_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "field_wallet_transactions",
+      "column": "amount",
+      "type": "numeric",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "field_wallet_transactions",
+      "column": "balance_before",
+      "type": "numeric",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "field_wallet_transactions",
+      "column": "balance_after",
+      "type": "numeric",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "field_wallet_transactions",
+      "column": "created_by",
+      "type": "uuid",
+      "default": "auth.uid()"
+    },
+    {
+      "schema": "public",
+      "table": "field_wallet_transactions",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "default": "now()"
+    },
+    {
+      "schema": "public",
+      "table": "field_wallet_transactions",
+      "column": "field_cycle_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "field_wallet_transactions",
+      "column": "quantity",
+      "type": "numeric",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "field_wallet_transactions",
+      "column": "expected_unit_price",
+      "type": "numeric",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "field_wallet_transactions",
+      "column": "actual_unit_price",
+      "type": "numeric",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "field_wallet_transactions",
+      "column": "unit_price_variance",
+      "type": "numeric",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "field_wallet_transactions",
+      "column": "variance_amount",
+      "type": "numeric",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "field_wallets",
+      "column": "id",
+      "type": "uuid",
+      "default": "gen_random_uuid()"
+    },
+    {
+      "schema": "public",
+      "table": "field_wallets",
+      "column": "organization_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "field_wallets",
+      "column": "store_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "field_wallets",
+      "column": "membership_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "field_wallets",
+      "column": "balance",
+      "type": "numeric",
+      "default": "0"
+    },
+    {
+      "schema": "public",
+      "table": "field_wallets",
+      "column": "is_active",
+      "type": "boolean",
+      "default": "true"
+    },
+    {
+      "schema": "public",
+      "table": "field_wallets",
+      "column": "created_by",
+      "type": "uuid",
+      "default": "auth.uid()"
+    },
+    {
+      "schema": "public",
+      "table": "field_wallets",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "default": "now()"
+    },
+    {
+      "schema": "public",
+      "table": "field_wallets",
+      "column": "updated_at",
+      "type": "timestamp with time zone",
+      "default": "now()"
+    },
+    {
+      "schema": "public",
+      "table": "inventory",
+      "column": "store_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "inventory",
+      "column": "product_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "inventory",
+      "column": "qty",
+      "type": "numeric",
+      "default": "0"
+    },
+    {
+      "schema": "public",
+      "table": "inventory",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "default": "now()"
+    },
+    {
+      "schema": "public",
+      "table": "inventory",
+      "column": "updated_at",
+      "type": "timestamp with time zone",
+      "default": "now()"
+    },
+    {
+      "schema": "public",
+      "table": "inventory",
+      "column": "organization_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "inventory",
+      "column": "low_stock_threshold",
+      "type": "integer",
+      "default": "0"
+    },
+    {
+      "schema": "public",
+      "table": "inventory",
+      "column": "reserved_qty",
+      "type": "numeric",
+      "default": "0"
+    },
+    {
+      "schema": "public",
+      "table": "inventory_movements",
+      "column": "id",
+      "type": "uuid",
+      "default": "gen_random_uuid()"
+    },
+    {
+      "schema": "public",
+      "table": "inventory_movements",
+      "column": "organization_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "inventory_movements",
+      "column": "store_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "inventory_movements",
+      "column": "product_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "inventory_movements",
+      "column": "delta",
+      "type": "numeric",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "inventory_movements",
+      "column": "created_by",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "inventory_movements",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "default": "now()"
+    },
+    {
+      "schema": "public",
+      "table": "inventory_movements",
+      "column": "amount",
+      "type": "numeric",
+      "default": "0"
+    },
+    {
+      "schema": "public",
+      "table": "sale_items",
+      "column": "id",
+      "type": "uuid",
+      "default": "gen_random_uuid()"
+    },
+    {
+      "schema": "public",
+      "table": "sale_items",
+      "column": "sale_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sale_items",
+      "column": "product_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sale_items",
+      "column": "qty",
+      "type": "numeric",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sale_items",
+      "column": "unit_price",
+      "type": "numeric",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sale_items",
+      "column": "line_total",
+      "type": "numeric",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sale_items",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "default": "now()"
+    },
+    {
+      "schema": "public",
+      "table": "sale_items",
+      "column": "unit_cost_price",
+      "type": "numeric",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sale_items",
+      "column": "unit_cost",
+      "type": "numeric",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "stock_movements",
+      "column": "id",
+      "type": "uuid",
+      "default": "gen_random_uuid()"
+    },
+    {
+      "schema": "public",
+      "table": "stock_movements",
+      "column": "organization_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "stock_movements",
+      "column": "store_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "stock_movements",
+      "column": "product_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "stock_movements",
+      "column": "amount",
+      "type": "numeric",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "stock_movements",
+      "column": "created_by",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "stock_movements",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "default": "now()"
+    },
+    {
+      "schema": "public",
+      "table": "stock_movements",
+      "column": "supplier_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "stock_movements",
+      "column": "unit_cost",
+      "type": "numeric",
+      "default": "0"
+    },
+    {
+      "schema": "public",
+      "table": "stock_movements",
+      "column": "total_cost",
+      "type": "numeric",
+      "default": "0"
+    },
+    {
+      "schema": "public",
+      "table": "stock_movements",
+      "column": "event_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "funding_evidence",
+      "table": "custody_links",
+      "column": "movement_id",
+      "type": "bigint",
+      "default": null
+    },
+    {
+      "schema": "funding_evidence",
+      "table": "custody_links",
+      "column": "wallet_transaction_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "funding_evidence",
+      "table": "custody_links",
+      "column": "advance_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "funding_evidence",
+      "table": "custody_links",
+      "column": "recorded_at",
+      "type": "timestamp with time zone",
+      "default": "clock_timestamp()"
+    },
+    {
+      "schema": "funding_evidence",
+      "table": "wallet_units",
+      "column": "wallet_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "funding_evidence",
+      "table": "wallet_units",
+      "column": "organization_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "funding_evidence",
+      "table": "wallet_units",
+      "column": "store_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "funding_evidence",
+      "table": "wallet_units",
+      "column": "membership_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "funding_evidence",
+      "table": "wallet_units",
+      "column": "currency_revision",
+      "type": "integer",
+      "default": null
+    },
+    {
+      "schema": "funding_evidence",
+      "table": "wallet_units",
+      "column": "cutover_balance",
+      "type": "numeric",
+      "default": null
+    },
+    {
+      "schema": "funding_evidence",
+      "table": "wallet_units",
+      "column": "history_count",
+      "type": "bigint",
+      "default": null
+    },
+    {
+      "schema": "funding_evidence",
+      "table": "wallet_units",
+      "column": "confirmed_by",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "funding_evidence",
+      "table": "wallet_units",
+      "column": "confirmed_at",
+      "type": "timestamp with time zone",
+      "default": "clock_timestamp()"
+    },
+    {
+      "schema": "public",
+      "table": "sales",
+      "column": "id",
+      "type": "uuid",
+      "default": "gen_random_uuid()"
+    },
+    {
+      "schema": "public",
+      "table": "sales",
+      "column": "organization_id",
+      "type": "uuid",
+      "default": null
+    },
+    {
+      "schema": "stock_funding",
+      "table": "advances",
+      "column": "currency",
+      "type": "text",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sale_payments",
+      "column": "reference",
+      "type": "text",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "field_wallet_transactions",
+      "column": "item_name",
+      "type": "text",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "field_wallet_transactions",
+      "column": "unit",
+      "type": "text",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sales",
+      "column": "customer_phone",
+      "type": "text",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "inventory_movements",
+      "column": "mode",
+      "type": "text",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "inventory_movements",
+      "column": "note",
+      "type": "text",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sales",
+      "column": "status",
+      "type": "text",
+      "default": "'COMPLETED'::text"
+    },
+    {
+      "schema": "public",
+      "table": "field_wallet_transactions",
+      "column": "variance_note",
+      "type": "text",
+      "default": null
+    },
+    {
+      "schema": "stock_funding",
+      "table": "advances",
+      "column": "purpose",
+      "type": "text",
+      "default": null
+    },
+    {
+      "schema": "stock_funding",
+      "table": "advances",
+      "column": "supplier_reference",
+      "type": "text",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sales",
+      "column": "note",
+      "type": "text",
+      "default": null
+    },
+    {
+      "schema": "backend_core",
+      "table": "settlement_bindings",
+      "column": "confirmation_source",
+      "type": "text",
+      "default": null
+    },
+    {
+      "schema": "funding_evidence",
+      "table": "custody_links",
+      "column": "kind",
+      "type": "text",
+      "default": null
+    },
+    {
+      "schema": "stock_funding",
+      "table": "advances",
+      "column": "status",
+      "type": "text",
+      "default": null
+    },
+    {
+      "schema": "backend_core",
+      "table": "settlement_bindings",
+      "column": "evidence_reference",
+      "type": "text",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sales",
+      "column": "source",
+      "type": "text",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sale_payments",
+      "column": "payment_method",
+      "type": "text",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sales",
+      "column": "payment_status",
+      "type": "text",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sales",
+      "column": "payment_method",
+      "type": "text",
+      "default": "'CASH'::text"
+    },
+    {
+      "schema": "funding_evidence",
+      "table": "wallet_units",
+      "column": "currency",
+      "type": "text",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sale_items",
+      "column": "product_name",
+      "type": "text",
+      "default": null
+    },
+    {
+      "schema": "funding_control",
+      "table": "movements",
+      "column": "kind",
+      "type": "text",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sales",
+      "column": "payment_ref",
+      "type": "text",
+      "default": null
+    },
+    {
+      "schema": "backend_core",
+      "table": "settlement_bindings",
+      "column": "source_kind",
+      "type": "text",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sale_payments",
+      "column": "payment_channel",
+      "type": "text",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sale_payments",
+      "column": "note",
+      "type": "text",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "stock_movements",
+      "column": "mode",
+      "type": "text",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sale_payments",
+      "column": "channel",
+      "type": "text",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "stock_movements",
+      "column": "note",
+      "type": "text",
+      "default": null
+    },
+    {
+      "schema": "funding_evidence",
+      "table": "wallet_units",
+      "column": "evidence",
+      "type": "text",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sales",
+      "column": "discount_note",
+      "type": "text",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "field_wallet_transactions",
+      "column": "type",
+      "type": "text",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sales",
+      "column": "discount_type",
+      "type": "text",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "stock_movements",
+      "column": "supplier_name",
+      "type": "text",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "stock_movements",
+      "column": "supplier_invoice_no",
+      "type": "text",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "field_wallet_transactions",
+      "column": "note",
+      "type": "text",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "sales",
+      "column": "edit_note",
+      "type": "text",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "inventory_movements",
+      "column": "reason",
+      "type": "text",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "field_wallet_transactions",
+      "column": "txn_type",
+      "type": "text",
+      "default": null
+    },
+    {
+      "schema": "public",
+      "table": "field_wallet_transactions",
+      "column": "purpose",
+      "type": "text",
+      "default": "'TARGET'::text"
+    },
+    {
+      "schema": "public",
+      "table": "field_wallet_transactions",
+      "column": "category",
+      "type": "text",
+      "default": "'GENERAL'::text"
+    }
+  ],
+  "constraints": [
+    {
+      "table": "field_wallet_transactions",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table": "field_wallets",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table": "inventory_movements",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table": "inventory",
+      "definition": "PRIMARY KEY (store_id, product_id)"
+    },
+    {
+      "table": "sale_items",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table": "sale_payments",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table": "sales",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table": "stock_movements",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table": "field_wallets",
+      "definition": "UNIQUE (store_id, membership_id)"
+    },
+    {
+      "table": "field_wallet_transactions",
+      "definition": "CHECK ((amount >= (0)::numeric))"
+    },
+    {
+      "table": "field_wallet_transactions",
+      "definition": "CHECK ((balance_after >= (0)::numeric))"
+    },
+    {
+      "table": "field_wallet_transactions",
+      "definition": "CHECK ((balance_before >= (0)::numeric))"
+    },
+    {
+      "table": "field_wallet_transactions",
+      "definition": "CHECK ((category = ANY (ARRAY['GENERAL'::text, 'GOODS_PURCHASE'::text, 'TRANSPORT'::text, 'FOOD'::text, 'COMMUNICATION'::text, 'LODGING'::text, 'OTHER'::text])))"
+    },
+    {
+      "table": "field_wallet_transactions",
+      "definition": "CHECK ((purpose = ANY (ARRAY['TARGET'::text, 'OPERATIONAL'::text])))"
+    },
+    {
+      "table": "field_wallet_transactions",
+      "definition": "CHECK ((type = ANY (ARRAY['ALLOCATE'::text, 'PURCHASE'::text, 'EXPENSE'::text, 'ADJUST'::text])))"
+    },
+    {
+      "table": "field_wallets",
+      "definition": "CHECK ((balance >= (0)::numeric))"
+    },
+    {
+      "table": "inventory",
+      "definition": "CHECK (((low_stock_threshold IS NULL) OR (low_stock_threshold >= 0)))"
+    },
+    {
+      "table": "inventory",
+      "definition": "CHECK ((qty >= (0)::numeric))"
+    },
+    {
+      "table": "inventory",
+      "definition": "CHECK ((reserved_qty >= (0)::numeric))"
+    },
+    {
+      "table": "sale_items",
+      "definition": "CHECK ((line_total >= (0)::numeric))"
+    },
+    {
+      "table": "sale_items",
+      "definition": "CHECK ((qty > (0)::numeric))"
+    },
+    {
+      "table": "sale_items",
+      "definition": "CHECK ((unit_price >= (0)::numeric))"
+    },
+    {
+      "table": "sale_payments",
+      "definition": "CHECK ((upper(COALESCE(payment_method, ''::text)) = ANY (ARRAY['CASH'::text, 'BANK'::text, 'MOBILE'::text, 'CREDIT'::text])))"
+    },
+    {
+      "table": "sales",
+      "definition": "CHECK ((status = ANY (ARRAY['COMPLETED'::text, 'VOIDED'::text])))"
+    },
+    {
+      "table": "stock_movements",
+      "definition": "CHECK ((amount > (0)::numeric))"
+    },
+    {
+      "table": "stock_movements",
+      "definition": "CHECK ((mode = ANY (ARRAY['ADD'::text, 'REDUCE'::text])))"
+    },
+    {
+      "table": "field_wallet_transactions",
+      "definition": "FOREIGN KEY (field_cycle_id) REFERENCES field_cycles(id) ON DELETE SET NULL"
+    },
+    {
+      "table": "field_wallet_transactions",
+      "definition": "FOREIGN KEY (membership_id) REFERENCES org_memberships(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "field_wallet_transactions",
+      "definition": "FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "field_wallet_transactions",
+      "definition": "FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "field_wallet_transactions",
+      "definition": "FOREIGN KEY (wallet_id) REFERENCES field_wallets(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "field_wallets",
+      "definition": "FOREIGN KEY (membership_id) REFERENCES org_memberships(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "field_wallets",
+      "definition": "FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "field_wallets",
+      "definition": "FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "inventory",
+      "definition": "FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "inventory",
+      "definition": "FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "sale_items",
+      "definition": "FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT"
+    },
+    {
+      "table": "sale_items",
+      "definition": "FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "sale_payments",
+      "definition": "FOREIGN KEY (created_by) REFERENCES auth.users(id)"
+    },
+    {
+      "table": "sale_payments",
+      "definition": "FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "sale_payments",
+      "definition": "FOREIGN KEY (received_by_membership_id) REFERENCES org_memberships(id) ON DELETE SET NULL"
+    },
+    {
+      "table": "sale_payments",
+      "definition": "FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "sale_payments",
+      "definition": "FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "sales",
+      "definition": "FOREIGN KEY (cashier_shift_id) REFERENCES cashier_shifts(id) ON DELETE SET NULL"
+    },
+    {
+      "table": "sales",
+      "definition": "FOREIGN KEY (created_by) REFERENCES auth.users(id) ON DELETE SET NULL"
+    },
+    {
+      "table": "sales",
+      "definition": "FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "sales",
+      "definition": "FOREIGN KEY (sold_by_membership) REFERENCES org_memberships(id) ON DELETE SET NULL"
+    },
+    {
+      "table": "sales",
+      "definition": "FOREIGN KEY (sold_by_membership_id) REFERENCES org_memberships(id) ON DELETE RESTRICT"
+    },
+    {
+      "table": "sales",
+      "definition": "FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "stock_movements",
+      "definition": "FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "stock_movements",
+      "definition": "FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "stock_movements",
+      "definition": "FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "stock_movements",
+      "definition": "FOREIGN KEY (supplier_id) REFERENCES suppliers(id)"
+    },
+    {
+      "table": "funding_evidence.custody_links",
+      "definition": "FOREIGN KEY (advance_id) REFERENCES stock_funding.advances(id)"
+    },
+    {
+      "table": "sale_payments",
+      "definition": "TRIGGER DEFERRABLE INITIALLY DEFERRED"
+    },
+    {
+      "table": "stock_funding.advances",
+      "definition": "CHECK ((currency_revision > 0))"
+    },
+    {
+      "table": "stock_funding.advances",
+      "definition": "CHECK ((currency ~ '^[A-Z]{3}$'::text))"
+    },
+    {
+      "table": "stock_funding.advances",
+      "definition": "CHECK (((minor_units >= 0) AND (minor_units <= 6)))"
+    },
+    {
+      "table": "stock_funding.advances",
+      "definition": "CHECK (((amount > (0)::numeric) AND (amount < '1000000000000000000000000'::numeric)))"
+    },
+    {
+      "table": "stock_funding.advances",
+      "definition": "CHECK (((length(TRIM(BOTH FROM purpose)) >= 1) AND (length(TRIM(BOTH FROM purpose)) <= 2000)))"
+    },
+    {
+      "table": "stock_funding.advances",
+      "definition": "CHECK ((status = ANY (ARRAY['DRAFT'::text, 'APPROVED'::text, 'FUNDED'::text, 'PARTIALLY_RECONCILED'::text, 'RECONCILED'::text, 'CANCELLED'::text, 'REVERSED'::text])))"
+    },
+    {
+      "table": "stock_funding.advances",
+      "definition": "CHECK (((spent >= (0)::numeric) AND (returned >= (0)::numeric) AND ((spent + returned) <= amount)))"
+    },
+    {
+      "table": "stock_funding.advances",
+      "definition": "CHECK ((amount = round(amount, minor_units)))"
+    },
+    {
+      "table": "stock_funding.advances",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table": "funding_control.movements",
+      "definition": "CHECK (((delta <> (0)::numeric) AND (abs(delta) < '1000000000000000000000000'::numeric)))"
+    },
+    {
+      "table": "funding_control.movements",
+      "definition": "CHECK ((kind = ANY (ARRAY['FUND'::text, 'RETURN'::text, 'REVERSE'::text])))"
+    },
+    {
+      "table": "funding_control.movements",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table": "funding_control.movements",
+      "definition": "UNIQUE (request)"
+    },
+    {
+      "table": "funding_control.movements",
+      "definition": "UNIQUE (advance, kind, request)"
+    },
+    {
+      "table": "funding_control.movements",
+      "definition": "FOREIGN KEY (account) REFERENCES funding_control.accounts(id)"
+    },
+    {
+      "table": "funding_control.movements",
+      "definition": "FOREIGN KEY (advance) REFERENCES stock_funding.advances(id)"
+    },
+    {
+      "table": "funding_evidence.custody_links",
+      "definition": "CHECK ((kind = ANY (ARRAY['FUND'::text, 'RETURN'::text])))"
+    },
+    {
+      "table": "funding_evidence.custody_links",
+      "definition": "PRIMARY KEY (movement_id)"
+    },
+    {
+      "table": "funding_evidence.custody_links",
+      "definition": "UNIQUE (wallet_transaction_id)"
+    },
+    {
+      "table": "funding_evidence.custody_links",
+      "definition": "FOREIGN KEY (movement_id) REFERENCES funding_control.movements(id)"
+    },
+    {
+      "table": "funding_evidence.custody_links",
+      "definition": "FOREIGN KEY (wallet_transaction_id) REFERENCES field_wallet_transactions(id)"
+    },
+    {
+      "table": "funding_evidence.wallet_units",
+      "definition": "CHECK ((currency ~ '^[A-Z]{3}$'::text))"
+    },
+    {
+      "table": "funding_evidence.wallet_units",
+      "definition": "CHECK ((currency_revision > 0))"
+    },
+    {
+      "table": "funding_evidence.wallet_units",
+      "definition": "CHECK (((cutover_balance >= (0)::numeric) AND (cutover_balance < '1000000000000000000000000'::numeric)))"
+    },
+    {
+      "table": "funding_evidence.wallet_units",
+      "definition": "CHECK ((history_count >= 0))"
+    },
+    {
+      "table": "funding_evidence.wallet_units",
+      "definition": "CHECK (((length(TRIM(BOTH FROM evidence)) >= 1) AND (length(TRIM(BOTH FROM evidence)) <= 2000)))"
+    },
+    {
+      "table": "funding_evidence.wallet_units",
+      "definition": "PRIMARY KEY (wallet_id)"
+    },
+    {
+      "table": "funding_evidence.wallet_units",
+      "definition": "FOREIGN KEY (wallet_id) REFERENCES field_wallets(id)"
+    },
+    {
+      "table": "backend_core.settlement_bindings",
+      "definition": "PRIMARY KEY (source_kind, source_id)"
+    },
+    {
+      "table": "backend_core.settlement_bindings",
+      "definition": "FOREIGN KEY (account_id) REFERENCES backend_core.settlement_accounts(id)"
+    },
+    {
+      "table": "backend_core.settlement_bindings",
+      "definition": "FOREIGN KEY (shift_id) REFERENCES cashier_shifts(id)"
+    },
+    {
+      "table": "backend_core.settlement_bindings",
+      "definition": "CHECK ((source_kind = ANY (ARRAY['SALE_PAYMENT'::text, 'COLLECTION'::text, 'EXPENSE'::text, 'SUPPLIER_PAYMENT'::text])))"
+    }
+  ],
+  "functions": [
+    {
+      "identity": "stock_funding.immutable()",
+      "definition": "CREATE OR REPLACE FUNCTION stock_funding.immutable()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'pg_catalog'\nAS $function$\r\n\r\nBEGIN RAISE EXCEPTION 'IMMUTABLE_HISTORY'; END $function$\n"
+    },
+    {
+      "identity": "stock_funding.consume_receipt(uuid,uuid,uuid,numeric,text,uuid)",
+      "definition": "CREATE OR REPLACE FUNCTION stock_funding.consume_receipt(uuid, uuid, uuid, numeric, text, uuid)\n RETURNS void\n LANGUAGE plpgsql\n SET search_path TO 'pg_catalog'\nAS $function$ BEGIN RAISE EXCEPTION 'RECEIPT_ADAPTER_NOT_BOUND'; END $function$\n"
+    },
+    {
+      "identity": "stock_funding.allowed(uuid,uuid,uuid,text)",
+      "definition": "CREATE OR REPLACE FUNCTION stock_funding.allowed(a uuid, o uuid, s uuid, op text)\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'pg_catalog'\nAS $function$ SELECT funding_canonical.scope_role(a,o,s) IS NOT NULL $function$\n"
+    },
+    {
+      "identity": "stock_funding.validate_responsible(uuid,uuid,uuid)",
+      "definition": "CREATE OR REPLACE FUNCTION stock_funding.validate_responsible(o uuid, s uuid, a uuid)\n RETURNS void\n LANGUAGE plpgsql\n SET search_path TO 'pg_catalog'\nAS $function$ BEGIN IF funding_canonical.scope_role(a,o,s) IS NULL THEN RAISE EXCEPTION 'RESPONSIBLE_FORBIDDEN'; END IF;END $function$\n"
+    },
+    {
+      "identity": "stock_funding.actor()",
+      "definition": "CREATE OR REPLACE FUNCTION stock_funding.actor()\n RETURNS uuid\n LANGUAGE sql\n STABLE\n SET search_path TO 'pg_catalog'\nAS $function$ SELECT backend_core.active_subject() $function$\n"
+    },
+    {
+      "identity": "stock_funding.move(uuid,uuid,uuid,text,numeric,text,uuid,timestamp with time zone)",
+      "definition": "CREATE OR REPLACE FUNCTION stock_funding.move(o uuid, s uuid, account_id uuid, c text, d numeric, k text, adv uuid, t timestamp with time zone)\n RETURNS void\n LANGUAGE plpgsql\n SET search_path TO 'pg_catalog'\nAS $function$\r\n\r\nDECLARE req uuid:=nullif(current_setting('funding_canonical.request',true),'')::uuid;\r\n\r\nBEGIN\r\n\r\n IF req IS NULL OR NOT isfinite(t) THEN RAISE EXCEPTION 'CANONICAL_GATEWAY_REQUIRED'; END IF;\r\n\r\n PERFORM funding_control.post(account_id,adv,req,k,abs(d));\r\n\r\n PERFORM funding_canonical.custody_event(adv,k,req);\r\n\r\nEND $function$\n"
+    },
+    {
+      "identity": "stock_funding.command(uuid,uuid,uuid,uuid,text,jsonb,integer)",
+      "definition": "CREATE OR REPLACE FUNCTION stock_funding.command(p_org uuid, p_store uuid, p_request uuid, p_advance uuid, p_action text, p_body jsonb, p_revision integer DEFAULT NULL::integer)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog'\nAS $function$\r\n\r\nDECLARE v_actor uuid; v_old stock_funding.advances%ROWTYPE; v_cached stock_funding.requests%ROWTYPE;\r\n\r\n v_envelope jsonb; v_result jsonb; v_ctx jsonb; v_amount numeric:=0; v_receipt uuid; v_account uuid; v_time timestamptz; v_previous text;\r\n\r\nBEGIN\r\n\r\n v_actor:=stock_funding.actor();\r\n\r\n IF v_actor IS NULL OR p_org IS NULL OR p_store IS NULL OR p_request IS NULL OR p_advance IS NULL OR p_body IS NULL OR jsonb_typeof(p_body)<>'object' THEN RAISE EXCEPTION 'FORBIDDEN'; END IF;\r\n\r\n IF p_action IS NULL OR p_action NOT IN ('CREATE','APPROVE','FUND','RECEIPT','RETURN','CANCEL','REVERSE') OR stock_funding.allowed(v_actor,p_org,p_store,p_action) IS NOT TRUE THEN RAISE EXCEPTION 'FORBIDDEN'; END IF;\r\n\r\n -- Fixed order: organization/request lock, advance row, currency config, account/shift or receipt.\r\n\r\n PERFORM pg_advisory_xact_lock(hashtextextended(p_org::text||p_request::text,0));\r\n\r\n v_envelope:=jsonb_build_object('store',p_store,'advance',p_advance,'action',p_action,'body',p_body,'revision',p_revision);\r\n\r\n SELECT * INTO v_cached FROM stock_funding.requests WHERE organization_id=p_org AND request_id=p_request;\r\n\r\n IF FOUND THEN\r\n\r\n  IF v_cached.actor_id<>v_actor OR v_cached.envelope<>v_envelope THEN RAISE EXCEPTION 'IDEMPOTENCY_CONFLICT'; END IF;\r\n\r\n  RETURN v_cached.result;\r\n\r\n END IF;\r\n\r\n v_time:=(p_body->>'occurredAt')::timestamptz;\r\n\r\n IF v_time IS NULL OR NOT isfinite(v_time) THEN RAISE EXCEPTION 'DATE_REQUIRED'; END IF;\r\n\r\n IF p_action='CREATE' THEN\r\n\r\n  v_ctx:=stock_funding.currency_context(p_org);\r\n\r\n  IF v_ctx IS NULL OR (v_ctx->>'revision')::integer IS NULL OR (v_ctx->>'minorUnits')::integer IS NULL THEN RAISE EXCEPTION 'ACCOUNTING_CURRENCY_UNCONFIRMED'; END IF;\r\n\r\n  IF p_body->>'currency' IS DISTINCT FROM v_ctx->>'currency' THEN RAISE EXCEPTION 'CROSS_CURRENCY_BLOCKED'; END IF;\r\n\r\n  v_amount:=(p_body->>'amount')::numeric;\r\n\r\n  IF v_amount IS NULL OR v_amount<=0 OR v_amount>=1e24 OR v_amount<>round(v_amount,(v_ctx->>'minorUnits')::integer) THEN RAISE EXCEPTION 'INVALID_AMOUNT'; END IF;\r\n\r\n  PERFORM stock_funding.validate_responsible(p_org,p_store,(p_body->>'responsibleId')::uuid);\r\n\r\n  INSERT INTO stock_funding.advances(id,organization_id,store_id,currency,currency_revision,minor_units,amount,source_account,responsible_id,created_by,purpose,supplier_reference,occurred_at,expected_at,status)\r\n\r\n  VALUES(p_advance,p_org,p_store,p_body->>'currency',(v_ctx->>'revision')::integer,(v_ctx->>'minorUnits')::integer,v_amount,(p_body->>'sourceAccountId')::uuid,(p_body->>'responsibleId')::uuid,v_actor,p_body->>'purpose',p_body->>'supplierReference',v_time,(p_body->>'expectedAt')::timestamptz,'DRAFT');\r\n\r\n ELSE\r\n\r\n  SELECT * INTO v_old FROM stock_funding.advances WHERE id=p_advance FOR UPDATE;\r\n\r\n  IF NOT FOUND OR v_old.organization_id<>p_org OR v_old.store_id<>p_store THEN RAISE EXCEPTION 'FORBIDDEN'; END IF;\r\n\r\n  IF p_revision IS DISTINCT FROM v_old.revision THEN RAISE EXCEPTION 'STALE_REVISION'; END IF;\r\n\r\n  v_previous:=v_old.status;\r\n\r\n  IF p_action='APPROVE' THEN\r\n\r\n   IF v_old.status<>'DRAFT' THEN RAISE EXCEPTION 'INVALID_TRANSITION'; END IF;\r\n\r\n   UPDATE stock_funding.advances SET status='APPROVED' WHERE id=p_advance;\r\n\r\n  ELSIF p_action='CANCEL' THEN\r\n\r\n   IF v_old.status NOT IN ('DRAFT','APPROVED') THEN RAISE EXCEPTION 'REVERSAL_REQUIRED'; END IF;\r\n\r\n   UPDATE stock_funding.advances SET status='CANCELLED' WHERE id=p_advance;\r\n\r\n  ELSE\r\n\r\n   v_ctx:=stock_funding.currency_context(p_org);\r\n\r\n   IF v_ctx IS NULL OR (v_ctx->>'currency') IS DISTINCT FROM v_old.currency OR (v_ctx->>'revision')::integer IS DISTINCT FROM v_old.currency_revision THEN RAISE EXCEPTION 'CURRENCY_CONTEXT_CHANGED'; END IF;\r\n\r\n   IF p_body->>'currency' IS DISTINCT FROM v_old.currency THEN RAISE EXCEPTION 'CROSS_CURRENCY_BLOCKED'; END IF;\r\n\r\n   IF p_action='FUND' THEN\r\n\r\n    IF v_old.status<>'APPROVED' THEN RAISE EXCEPTION 'INVALID_TRANSITION'; END IF;\r\n\r\n    v_amount:=v_old.amount;v_account:=v_old.source_account;\r\n\r\n    PERFORM stock_funding.move(p_org,p_store,v_account,v_old.currency,-v_amount,'FUND',p_advance,v_time);\r\n\r\n    UPDATE stock_funding.advances SET status='FUNDED' WHERE id=p_advance;\r\n\r\n   ELSIF p_action IN ('RETURN','RECEIPT') THEN\r\n\r\n    IF v_old.status NOT IN ('FUNDED','PARTIALLY_RECONCILED') THEN RAISE EXCEPTION 'INVALID_TRANSITION'; END IF;\r\n\r\n    v_amount:=(p_body->>'amount')::numeric;\r\n\r\n    IF v_amount IS NULL OR v_amount<=0 OR v_amount>v_old.amount-v_old.spent-v_old.returned OR v_amount<>round(v_amount,v_old.minor_units) THEN RAISE EXCEPTION 'OVER_RECONCILIATION'; END IF;\r\n\r\n    IF p_action='RETURN' THEN\r\n\r\n     PERFORM stock_funding.validate_responsible(p_org,p_store,(p_body->>'returningPersonId')::uuid);\r\n\r\n     v_account:=(p_body->>'destinationAccountId')::uuid;\r\n\r\n     IF v_account IS NULL THEN RAISE EXCEPTION 'ACCOUNT_REQUIRED'; END IF;\r\n\r\n     PERFORM stock_funding.move(p_org,p_store,v_account,v_old.currency,v_amount,'RETURN',p_advance,v_time);\r\n\r\n     UPDATE stock_funding.advances SET returned=returned+v_amount WHERE id=p_advance;\r\n\r\n    ELSE\r\n\r\n     v_receipt:=(p_body->>'receiptId')::uuid;\r\n\r\n     IF v_receipt IS NULL THEN RAISE EXCEPTION 'RECEIPT_REQUIRED'; END IF;\r\n\r\n     PERFORM stock_funding.consume_receipt(p_org,p_store,v_receipt,v_amount,v_old.currency,p_advance);\r\n\r\n     INSERT INTO stock_funding.receipt_links(receipt_id,advance_id,amount) VALUES(v_receipt,p_advance,v_amount);\r\n\r\n     UPDATE stock_funding.advances SET spent=spent+v_amount WHERE id=p_advance;\r\n\r\n    END IF;\r\n\r\n    UPDATE stock_funding.advances SET status=CASE WHEN spent+returned=amount THEN 'RECONCILED' ELSE 'PARTIALLY_RECONCILED' END WHERE id=p_advance;\r\n\r\n   ELSIF p_action='REVERSE' THEN\r\n\r\n    IF v_old.status<>'FUNDED' OR v_old.spent<>0 OR v_old.returned<>0 OR length(trim(coalesce(p_body->>'reason','')))=0 THEN RAISE EXCEPTION 'CONTROLLED_REVERSAL_REQUIRED'; END IF;\r\n\r\n    v_amount:=v_old.amount;v_account:=v_old.source_account;\r\n\r\n    PERFORM stock_funding.move(p_org,p_store,v_account,v_old.currency,v_amount,'REVERSE',p_advance,v_time);\r\n\r\n    UPDATE stock_funding.advances SET status='REVERSED',returned=amount WHERE id=p_advance;\r\n\r\n   END IF;\r\n\r\n  END IF;\r\n\r\n  UPDATE stock_funding.advances SET revision=revision+1 WHERE id=p_advance;\r\n\r\n END IF;\r\n\r\n SELECT jsonb_build_object('id',id,'status',status,'revision',revision,'currency',currency,'amount',amount::text,'spent',spent::text,'returned',returned::text,'outstanding',CASE WHEN status IN ('DRAFT','APPROVED','CANCELLED','REVERSED') THEN '0' ELSE (amount-spent-returned)::text END)\r\n\r\n INTO v_result FROM stock_funding.advances WHERE id=p_advance;\r\n\r\n INSERT INTO stock_funding.events(advance_id,request_id,actor_id,action,amount,account_id,receipt_id,occurred_at,previous_status,next_status,reason,returning_person_id)\r\n\r\n VALUES(p_advance,p_request,v_actor,p_action,v_amount,v_account,v_receipt,v_time,v_previous,v_result->>'status',p_body->>'reason',CASE WHEN p_action='RETURN' THEN (p_body->>'returningPersonId')::uuid END);\r\n\r\n INSERT INTO stock_funding.requests VALUES(p_org,p_request,v_actor,v_envelope,v_result);\r\n\r\n RETURN v_result;\r\n\r\nEND $function$\n"
+    },
+    {
+      "identity": "stock_funding.currency_context(uuid)",
+      "definition": "CREATE OR REPLACE FUNCTION stock_funding.currency_context(o uuid)\n RETURNS jsonb\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'pg_catalog'\nAS $function$ SELECT backend_core.accounting_currency(o) $function$\n"
+    },
+    {
+      "identity": "funding_control.source_ready(uuid)",
+      "definition": "CREATE OR REPLACE FUNCTION funding_control.source_ready(uuid)\n RETURNS boolean\n LANGUAGE sql\n STABLE\n SET search_path TO 'pg_catalog'\nAS $function$ SELECT false $function$\n"
+    },
+    {
+      "identity": "funding_control.member_role(uuid,uuid,uuid)",
+      "definition": "CREATE OR REPLACE FUNCTION funding_control.member_role(a uuid, o uuid, s uuid)\n RETURNS text\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'pg_catalog'\nAS $function$ SELECT funding_canonical.scope_role(a,o,s) $function$\n"
+    },
+    {
+      "identity": "funding_control.can(uuid,uuid,uuid,uuid,text)",
+      "definition": "CREATE OR REPLACE FUNCTION funding_control.can(a uuid, o uuid, s uuid, ac uuid, op text)\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'pg_catalog'\nAS $function$\r\n\r\n SELECT funding_control.member_role(a,o,s) IS NOT NULL AND (funding_control.member_role(a,o,s)='owner' OR EXISTS(SELECT 1 FROM funding_control.permissions p WHERE p.org=o AND p.store=s AND p.account=ac AND p.actor=a AND p.operation=op))\r\n\r\n$function$\n"
+    },
+    {
+      "identity": "funding_control.configure(uuid,text,jsonb)",
+      "definition": "CREATE OR REPLACE FUNCTION funding_control.configure(p_account uuid, p_op text, p_body jsonb)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog'\nAS $function$\r\n\r\nDECLARE a uuid:=stock_funding.actor();ac funding_control.accounts%ROWTYPE;ctx jsonb;role text;target uuid;\r\n\r\nBEGIN\r\n\r\n IF p_op='CREATE_ACCOUNT' THEN\r\n\r\n  IF funding_control.member_role(a,(p_body->>'organizationId')::uuid,(p_body->>'storeId')::uuid) IS DISTINCT FROM 'owner' THEN RAISE EXCEPTION 'OWNER_REQUIRED'; END IF;\r\n\r\n  ctx:=stock_funding.currency_context((p_body->>'organizationId')::uuid);\r\n\r\n  IF ctx IS NULL OR ctx->>'currency' IS DISTINCT FROM p_body->>'currency' THEN RAISE EXCEPTION 'CURRENCY_CONTEXT_CHANGED'; END IF;\r\n\r\n  IF NOT EXISTS(SELECT 1 FROM pg_timezone_names WHERE name=p_body->>'timezone') THEN RAISE EXCEPTION 'INVALID_TIMEZONE'; END IF;\r\n\r\n  IF (p_body->>'opening')::numeric<>round((p_body->>'opening')::numeric,(ctx->>'minorUnits')::integer) THEN RAISE EXCEPTION 'INVALID_AMOUNT'; END IF;\r\n\r\n  INSERT INTO funding_control.accounts(id,org,store,kind,currency,opening,confirmed_by,evidence,timezone) VALUES(p_account,(p_body->>'organizationId')::uuid,(p_body->>'storeId')::uuid,p_body->>'kind',p_body->>'currency',(p_body->>'opening')::numeric,a,p_body->>'evidence',p_body->>'timezone');\r\n\r\n ELSE\r\n\r\n  SELECT * INTO ac FROM funding_control.accounts WHERE id=p_account FOR UPDATE;\r\n\r\n  IF NOT FOUND OR funding_control.member_role(a,ac.org,ac.store) IS DISTINCT FROM 'owner' THEN RAISE EXCEPTION 'OWNER_REQUIRED'; END IF;\r\n\r\n  target:=(p_body->>'actorId')::uuid;\r\n\r\n  IF p_op IN ('GRANT','REVOKE','AUTO_POLICY') AND funding_control.member_role(target,ac.org,ac.store) IS NULL THEN RAISE EXCEPTION 'FORBIDDEN'; END IF;\r\n\r\n  IF p_op='GRANT' THEN\r\n\r\n   INSERT INTO funding_control.permissions VALUES(ac.org,ac.store,ac.id,target,p_body->>'operation',a) ON CONFLICT DO NOTHING;\r\n\r\n  ELSIF p_op='REVOKE' THEN DELETE FROM funding_control.permissions WHERE account=ac.id AND actor=target AND operation=p_body->>'operation';\r\n\r\n  ELSIF p_op='AUTO_POLICY' THEN\r\n\r\n   IF (p_body->>'perTransaction')::numeric<>round((p_body->>'perTransaction')::numeric,(stock_funding.currency_context(ac.org)->>'minorUnits')::integer) OR (p_body->>'perDay')::numeric<>round((p_body->>'perDay')::numeric,(stock_funding.currency_context(ac.org)->>'minorUnits')::integer) THEN RAISE EXCEPTION 'INVALID_AMOUNT'; END IF;\r\n\r\n   INSERT INTO funding_control.auto_policies VALUES(ac.id,target,(p_body->>'enabled')::boolean,(p_body->>'perTransaction')::numeric,(p_body->>'perDay')::numeric,(p_body->>'settleFirst')::boolean,a)\r\n\r\n   ON CONFLICT(account,actor) DO UPDATE SET enabled=excluded.enabled,per_transaction=excluded.per_transaction,per_day=excluded.per_day,settle_first=excluded.settle_first,configured_by=excluded.configured_by;\r\n\r\n  ELSIF p_op='LOCK' THEN UPDATE funding_control.accounts SET locked=true WHERE id=ac.id;\r\n\r\n  ELSE RAISE EXCEPTION 'INVALID_CONFIGURATION'; END IF;\r\n\r\n END IF;\r\n\r\n INSERT INTO funding_control.configuration_audit(actor,operation,account,body) VALUES(a,p_op,p_account,p_body);\r\n\r\nEND $function$\n"
+    },
+    {
+      "identity": "funding_control.approve(uuid,integer)",
+      "definition": "CREATE OR REPLACE FUNCTION funding_control.approve(p_advance uuid, p_revision integer)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog'\nAS $function$\r\n\r\nDECLARE a uuid:=stock_funding.actor();r stock_funding.advances%ROWTYPE;\r\n\r\nBEGIN\r\n\r\n SELECT * INTO r FROM stock_funding.advances WHERE id=p_advance FOR UPDATE;\r\n\r\n IF NOT FOUND OR NOT funding_control.can(a,r.organization_id,r.store_id,r.source_account,'APPROVE') OR a=r.created_by THEN RAISE EXCEPTION 'APPROVAL_FORBIDDEN'; END IF;\r\n\r\n IF r.revision IS DISTINCT FROM p_revision OR r.status<>'DRAFT' THEN RAISE EXCEPTION 'STALE_REVISION'; END IF;\r\n\r\n INSERT INTO funding_control.approvals VALUES(r.id,a,r.revision,clock_timestamp());\r\n\r\nEND $function$\n"
+    },
+    {
+      "identity": "funding_control.require_open_shift(uuid,uuid,uuid)",
+      "definition": "CREATE OR REPLACE FUNCTION funding_control.require_open_shift(a uuid, o uuid, s uuid)\n RETURNS uuid\n LANGUAGE plpgsql\n SET search_path TO 'pg_catalog'\nAS $function$\r\n\r\nDECLARE found_id uuid;count_open integer:=0;shift_row record;\r\n\r\nBEGIN\r\n\r\n IF funding_canonical.scope_role(a,o,s) IS DISTINCT FROM 'cashier' THEN RAISE EXCEPTION 'CASHIER_SHIFT_REQUIRED'; END IF;\r\n\r\n FOR shift_row IN SELECT cs.id FROM public.cashier_shifts cs JOIN public.org_memberships m ON m.id=cs.membership_id\r\n\r\n  WHERE cs.organization_id=o AND cs.store_id=s AND cs.status='OPEN' AND m.user_id=a AND m.organization_id=o AND m.is_active IS TRUE\r\n\r\n  ORDER BY cs.id FOR UPDATE OF cs LOOP count_open:=count_open+1;found_id:=shift_row.id;END LOOP;\r\n\r\n IF count_open<>1 THEN RAISE EXCEPTION 'SHIFT_NOT_OPEN_OR_AMBIGUOUS'; END IF;RETURN found_id;\r\n\r\nEND $function$\n"
+    },
+    {
+      "identity": "funding_control.post(uuid,uuid,uuid,text,numeric)",
+      "definition": "CREATE OR REPLACE FUNCTION funding_control.post(p_account uuid, p_advance uuid, p_request uuid, p_kind text, p_amount numeric)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog'\nAS $function$\r\n\r\nDECLARE a uuid:=stock_funding.actor();ac funding_control.accounts%ROWTYPE;r stock_funding.advances%ROWTYPE;policy funding_control.auto_policies%ROWTYPE;day date;automatic boolean:=false;balance numeric;delta numeric;v_shift uuid;\r\n\r\nBEGIN\r\n\r\n SELECT * INTO r FROM stock_funding.advances WHERE id=p_advance FOR UPDATE;\r\n\r\n SELECT * INTO ac FROM funding_control.accounts WHERE id=p_account FOR UPDATE;\r\n\r\n IF r.id IS NULL OR ac.id IS NULL OR ac.org<>r.organization_id OR ac.store<>r.store_id OR ac.currency<>r.currency OR ac.locked OR p_kind NOT IN ('FUND','RETURN','REVERSE') OR p_kind IS NULL OR p_request IS NULL THEN RAISE EXCEPTION 'ACCOUNT_FORBIDDEN_OR_LOCKED'; END IF;\r\n\r\n IF p_amount IS NULL OR p_amount<=0 OR p_amount>=1e24 OR p_amount<>round(p_amount,r.minor_units) THEN RAISE EXCEPTION 'INVALID_AMOUNT'; END IF;\r\n\r\n IF funding_control.source_ready(ac.id) IS NOT TRUE THEN RAISE EXCEPTION 'SOURCE_CONTRACT_NOT_BOUND'; END IF;\r\n\r\n IF NOT funding_control.can(a,ac.org,ac.store,ac.id,CASE WHEN p_kind='RETURN' THEN 'RETURN' ELSE 'RELEASE' END) THEN RAISE EXCEPTION 'FORBIDDEN'; END IF;\r\n\r\n IF ac.kind='CASH' THEN v_shift:=funding_control.require_open_shift(a,ac.org,ac.store); IF v_shift IS NULL THEN RAISE EXCEPTION 'SHIFT_NOT_OPEN'; END IF; END IF;\r\n\r\n day:=timezone(ac.timezone,clock_timestamp())::date; -- never client date or language preference\r\n\r\n IF p_kind='FUND' THEN\r\n\r\n  IF p_account<>r.source_account OR p_amount<>r.amount OR r.status NOT IN ('DRAFT','APPROVED') THEN RAISE EXCEPTION 'INVALID_TRANSITION'; END IF;\r\n\r\n  IF NOT EXISTS(SELECT 1 FROM funding_control.approvals ap WHERE ap.advance=r.id AND ap.approved_by<>r.created_by AND ap.record_revision=r.revision) THEN\r\n\r\n   SELECT * INTO policy FROM funding_control.auto_policies WHERE account=ac.id AND actor=a;\r\n\r\n   IF NOT FOUND OR NOT policy.enabled OR p_amount>policy.per_transaction THEN RAISE EXCEPTION 'EXPLICIT_APPROVAL_REQUIRED'; END IF;\r\n\r\n   IF policy.settle_first AND EXISTS(SELECT 1 FROM stock_funding.advances x WHERE x.organization_id=r.organization_id AND x.store_id=r.store_id AND x.responsible_id=r.responsible_id AND x.id<>r.id AND x.status IN ('FUNDED','PARTIALLY_RECONCILED')) THEN RAISE EXCEPTION 'OUTSTANDING_ADVANCE_BLOCKED'; END IF;\r\n\r\n   IF coalesce((SELECT sum(-m.delta) FROM funding_control.movements m WHERE m.account=ac.id AND m.actor=a AND m.business_day=day AND m.auto_approved AND m.kind='FUND'),0)+p_amount>policy.per_day THEN RAISE EXCEPTION 'DAILY_LIMIT_EXCEEDED'; END IF;\r\n\r\n   automatic:=true;\r\n\r\n  END IF;\r\n\r\n  delta:=-p_amount;\r\n\r\n ELSIF p_kind='RETURN' THEN\r\n\r\n  IF r.status NOT IN ('FUNDED','PARTIALLY_RECONCILED') OR p_amount>r.amount-r.spent-greatest(r.returned,coalesce((SELECT sum(m.delta) FROM funding_control.movements m WHERE m.advance=r.id AND m.kind='RETURN'),0)) THEN RAISE EXCEPTION 'OVER_RECONCILIATION'; END IF;\r\n\r\n  delta:=p_amount;\r\n\r\n ELSE\r\n\r\n  IF r.status<>'FUNDED' OR r.spent<>0 OR r.returned<>0 OR EXISTS(SELECT 1 FROM funding_control.movements m WHERE m.advance=r.id AND m.kind IN ('RETURN','REVERSE')) OR p_amount<>r.amount OR p_account<>r.source_account THEN RAISE EXCEPTION 'CONTROLLED_REVERSAL_REQUIRED'; END IF;\r\n\r\n  delta:=p_amount;\r\n\r\n END IF;\r\n\r\n balance:=ac.opening+coalesce((SELECT sum(m.delta) FROM funding_control.movements m WHERE m.account=ac.id),0);\r\n\r\n IF balance+delta<0 THEN RAISE EXCEPTION 'INSUFFICIENT_FUNDS'; END IF;\r\n\r\n INSERT INTO funding_control.movements(account,advance,request,actor,delta,kind,business_day,auto_approved,shift_id) VALUES(ac.id,r.id,p_request,a,delta,p_kind,day,automatic,v_shift);\r\n\r\nEND $function$\n"
+    },
+    {
+      "identity": "funding_canonical.scope_role(uuid,uuid,uuid)",
+      "definition": "CREATE OR REPLACE FUNCTION funding_canonical.scope_role(a uuid, o uuid, s uuid)\n RETURNS text\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'pg_catalog'\nAS $function$\r\n\r\n SELECT CASE WHEN count(*)=1 THEN min(m.role) ELSE NULL END FROM public.org_memberships m\r\n\r\n JOIN public.organizations org ON org.id=m.organization_id AND org.is_active IS TRUE\r\n\r\n JOIN public.stores st ON st.organization_id=org.id AND st.id=s AND st.is_active IS TRUE\r\n\r\n WHERE m.user_id=a AND m.organization_id=o AND m.is_active IS TRUE\r\n\r\n AND (m.role IN ('owner','admin') OR (m.role IN ('staff','cashier') AND EXISTS(SELECT 1 FROM public.org_membership_stores ms WHERE ms.membership_id=m.id AND ms.store_id=s)))\r\n\r\n$function$\n"
+    },
+    {
+      "identity": "funding_canonical.read(uuid,uuid)",
+      "definition": "CREATE OR REPLACE FUNCTION funding_canonical.read(o uuid, s uuid)\n RETURNS jsonb\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO 'pg_catalog'\nAS $function$\r\n\r\nDECLARE a uuid:=auth.uid();result jsonb;\r\n\r\nBEGIN\r\n\r\n IF funding_canonical.scope_role(a,o,s) IS NULL THEN RAISE EXCEPTION 'FORBIDDEN'; END IF;\r\n\r\n SELECT jsonb_agg(jsonb_build_object('id',r.id,'organizationId',r.organization_id,'storeId',r.store_id,'currency',r.currency,'currencyRevision',r.currency_revision,\r\n\r\n 'amount',r.amount::text,'spent',r.spent::text,'returned',r.returned::text,'outstanding',CASE WHEN r.status IN ('DRAFT','APPROVED','CANCELLED','REVERSED') THEN '0' ELSE (r.amount-r.spent-r.returned)::text END,\r\n\r\n 'status',r.status,'revision',r.revision,'responsibleName',r.responsible_id::text,'purpose',r.purpose,'sourceName',r.source_account::text,'occurredAt',r.occurred_at) ORDER BY r.created_at,r.id) INTO result\r\n\r\n FROM stock_funding.advances r WHERE r.organization_id=o AND r.store_id=s AND (funding_control.can(a,o,s,r.source_account,'VIEW') OR (r.created_by=a AND funding_control.can(a,o,s,r.source_account,'REQUEST')));\r\n\r\n RETURN coalesce(result,'[]'::jsonb);\r\n\r\nEND $function$\n"
+    },
+    {
+      "identity": "funding_canonical.custody_event(uuid,text,uuid)",
+      "definition": "CREATE OR REPLACE FUNCTION funding_canonical.custody_event(uuid, text, uuid)\n RETURNS void\n LANGUAGE plpgsql\n SET search_path TO 'pg_catalog'\nAS $function$ BEGIN RAISE EXCEPTION 'CUSTODY_WRITE_CONTRACT_NOT_BOUND'; END $function$\n"
+    },
+    {
+      "identity": "funding_canonical.custody_read(uuid,uuid,uuid)",
+      "definition": "CREATE OR REPLACE FUNCTION funding_canonical.custody_read(o uuid, s uuid, person uuid)\n RETURNS jsonb\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO 'pg_catalog'\nAS $function$\r\n\r\nDECLARE a uuid:=auth.uid();role text;result jsonb;\r\n\r\nBEGIN\r\n\r\n role:=funding_canonical.scope_role(a,o,s);\r\n\r\n IF role IS NULL OR (role NOT IN ('owner','admin') AND a<>person) OR funding_canonical.scope_role(person,o,s) IS NULL THEN RAISE EXCEPTION 'FORBIDDEN'; END IF;\r\n\r\n IF NOT EXISTS(SELECT 1 FROM public.stores WHERE id=s AND organization_id=o AND store_type='FIELD_PROCUREMENT') THEN RAISE EXCEPTION 'NOT_FIELD_PROCUREMENT'; END IF;\r\n\r\n SELECT jsonb_agg(jsonb_build_object('walletId',w.id,'membershipId',m.id,'responsibleId',m.user_id,'balance',w.balance::text,'currency',NULL,'currencyVerified',false,'history',coalesce((SELECT jsonb_agg(jsonb_build_object('id',t.id,'type',t.type,'purpose',t.purpose,'amount',t.amount::text,'balanceBefore',t.balance_before::text,'balanceAfter',t.balance_after::text,'createdAt',t.created_at,'itemName',t.item_name,'quantity',t.quantity::text,'currency',NULL,'currencyVerified',false) ORDER BY t.created_at,t.id) FROM public.field_wallet_transactions t WHERE t.wallet_id=w.id AND t.organization_id=o AND t.store_id=s AND t.membership_id=m.id),'[]'::jsonb))) INTO result\r\n\r\n FROM public.field_wallets w JOIN public.org_memberships m ON m.id=w.membership_id\r\n\r\n WHERE w.organization_id=o AND w.store_id=s AND w.is_active IS TRUE AND m.organization_id=o AND m.user_id=person AND m.is_active IS TRUE;\r\n\r\n RETURN coalesce(result,'[]'::jsonb);\r\n\r\nEND $function$\n"
+    },
+    {
+      "identity": "funding_canonical.receipt_capability(uuid,uuid)",
+      "definition": "CREATE OR REPLACE FUNCTION funding_canonical.receipt_capability(o uuid, s uuid)\n RETURNS jsonb\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO 'pg_catalog'\nAS $function$\r\n\r\nDECLARE kind text;\r\n\r\nBEGIN\r\n\r\n IF funding_canonical.scope_role(auth.uid(),o,s) IS NULL THEN RAISE EXCEPTION 'FORBIDDEN'; END IF;\r\n\r\n SELECT store_type INTO kind FROM public.stores WHERE id=s AND organization_id=o;\r\n\r\n RETURN jsonb_build_object('storeType',kind,'settlementAllowed',false,'code',CASE WHEN kind IN ('STANDARD','PRECISION_RETAIL','FIELD_PROCUREMENT') THEN 'CANONICAL_RECEIPT_ATTESTATION_REQUIRED' ELSE 'UNSUPPORTED_STOCK_WORKFLOW' END);\r\n\r\nEND $function$\n"
+    },
+    {
+      "identity": "funding_canonical.positions(uuid,uuid)",
+      "definition": "CREATE OR REPLACE FUNCTION funding_canonical.positions(o uuid, s uuid)\n RETURNS jsonb\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO 'pg_catalog'\nAS $function$\r\n\r\nDECLARE a uuid:=auth.uid();result jsonb;\r\n\r\nBEGIN\r\n\r\n IF funding_canonical.scope_role(a,o,s) IS NULL THEN RAISE EXCEPTION 'FORBIDDEN'; END IF;\r\n\r\n SELECT jsonb_agg(to_jsonb(x)) INTO result FROM (\r\n\r\n SELECT r.currency,sum(CASE WHEN r.status IN ('FUNDED','PARTIALLY_RECONCILED','RECONCILED','REVERSED') THEN r.amount ELSE 0 END)::text AS issued,\r\n\r\n sum(r.spent)::text AS purchased,sum(r.returned)::text AS returned,\r\n\r\n sum(CASE WHEN r.status IN ('FUNDED','PARTIALLY_RECONCILED') THEN r.amount-r.spent-r.returned ELSE 0 END)::text AS outstanding\r\n\r\n FROM stock_funding.advances r WHERE r.organization_id=o AND r.store_id=s AND funding_control.can(a,o,s,r.source_account,'VIEW') GROUP BY r.currency) x;\r\n\r\n RETURN coalesce(result,'[]'::jsonb);\r\n\r\nEND $function$\n"
+    },
+    {
+      "identity": "funding_canonical.command(uuid,uuid,uuid,uuid,text,jsonb,integer)",
+      "definition": "CREATE OR REPLACE FUNCTION funding_canonical.command(o uuid, s uuid, req uuid, adv uuid, op text, body jsonb, revision integer DEFAULT NULL::integer)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog'\nAS $function$\r\n\r\nDECLARE a uuid:=auth.uid();r stock_funding.advances%ROWTYPE;ac funding_control.accounts%ROWTYPE;cached funding_canonical.requests%ROWTYPE;\r\n\r\n envelope jsonb;result jsonb;core_request uuid;core_revision integer:=revision;operation_permission text;account_id uuid;\r\n\r\nBEGIN\r\n\r\n IF a IS NULL OR o IS NULL OR s IS NULL OR req IS NULL OR adv IS NULL OR body IS NULL OR jsonb_typeof(body)<>'object' OR funding_canonical.scope_role(a,o,s) IS NULL THEN RAISE EXCEPTION 'FORBIDDEN'; END IF;\r\n\r\n IF op IS NULL OR op NOT IN ('CREATE','APPROVE','FUND','RECEIPT','RETURN','CANCEL','REVERSE') THEN RAISE EXCEPTION 'FORBIDDEN'; END IF;\r\n\r\n PERFORM pg_advisory_xact_lock(hashtextextended(o::text||req::text,0));\r\n\r\n envelope:=jsonb_build_object('store',s,'advance',adv,'action',op,'body',body,'revision',revision);\r\n\r\n SELECT * INTO cached FROM funding_canonical.requests WHERE org=o AND request=req;\r\n\r\n IF FOUND THEN IF cached.actor<>a OR cached.envelope<>envelope THEN RAISE EXCEPTION 'IDEMPOTENCY_CONFLICT'; END IF;RETURN cached.result;END IF;\r\n\r\n IF op='CREATE' THEN account_id:=(body->>'sourceAccountId')::uuid;\r\n\r\n ELSE\r\n\r\n  SELECT * INTO r FROM stock_funding.advances WHERE id=adv FOR UPDATE;\r\n\r\n  IF NOT FOUND OR r.organization_id<>o OR r.store_id<>s THEN RAISE EXCEPTION 'FORBIDDEN'; END IF;\r\n\r\n  IF r.revision IS DISTINCT FROM revision THEN RAISE EXCEPTION 'STALE_REVISION'; END IF;\r\n\r\n  account_id:=CASE WHEN op='RETURN' THEN (body->>'destinationAccountId')::uuid ELSE r.source_account END;\r\n\r\n END IF;\r\n\r\n SELECT * INTO ac FROM funding_control.accounts WHERE id=account_id;\r\n\r\n IF NOT FOUND OR ac.org<>o OR ac.store<>s THEN RAISE EXCEPTION 'ACCOUNT_FORBIDDEN_OR_LOCKED'; END IF;\r\n\r\n operation_permission:=CASE op WHEN 'CREATE' THEN 'REQUEST' WHEN 'CANCEL' THEN 'REQUEST' WHEN 'APPROVE' THEN 'APPROVE' WHEN 'RETURN' THEN 'RETURN' ELSE 'RELEASE' END;\r\n\r\n IF funding_control.can(a,o,s,ac.id,operation_permission) IS NOT TRUE THEN RAISE EXCEPTION 'FORBIDDEN'; END IF;\r\n\r\n IF op='CANCEL' AND a<>r.created_by AND funding_canonical.scope_role(a,o,s)<>'owner' THEN RAISE EXCEPTION 'FORBIDDEN'; END IF;\r\n\r\n IF op='APPROVE' THEN PERFORM funding_control.approve(adv,revision); END IF;\r\n\r\n -- Original request remains the outer replay identity; private subcommands have stable distinct IDs.\r\n\r\n core_request:=md5(o::text||req::text||':CORE')::uuid;\r\n\r\n IF op='FUND' AND r.status='DRAFT' THEN\r\n\r\n  PERFORM stock_funding.command(o,s,md5(o::text||req::text||':AUTO_APPROVE')::uuid,adv,'APPROVE',body,revision);\r\n\r\n  core_revision:=revision+1;\r\n\r\n END IF;\r\n\r\n PERFORM set_config('funding_canonical.request',req::text,true);\r\n\r\n result:=stock_funding.command(o,s,core_request,adv,op,body,core_revision);\r\n\r\n IF op='APPROVE' THEN UPDATE funding_control.approvals SET record_revision=(result->>'revision')::integer WHERE advance=adv AND approved_by=a; END IF;\r\n\r\n INSERT INTO funding_canonical.requests VALUES(o,req,a,envelope,result);\r\n\r\n RETURN result;\r\n\r\nEND $function$\n"
+    },
+    {
+      "identity": "funding_canonical.cashier_reconciliation(uuid,timestamp with time zone,timestamp with time zone)",
+      "definition": "CREATE OR REPLACE FUNCTION funding_canonical.cashier_reconciliation(shift uuid, from_time timestamp with time zone, to_time timestamp with time zone)\n RETURNS jsonb\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO 'pg_catalog'\nAS $function$\r\n\r\nDECLARE cs public.cashier_shifts%ROWTYPE;pay record;delta numeric;units integer;funding_currency text;\r\n\r\nBEGIN\r\n\r\n SELECT * INTO cs FROM public.cashier_shifts WHERE id=shift;\r\n\r\n IF NOT FOUND OR funding_canonical.scope_role(auth.uid(),cs.organization_id,cs.store_id) IS DISTINCT FROM 'cashier' THEN RAISE EXCEPTION 'FORBIDDEN'; END IF;\r\n\r\n -- Actual captured RPC enforces same cashier membership and strict shift window.\r\n\r\n SELECT * INTO pay FROM public.get_my_cashier_closing_payment_summary_v1(shift,from_time,to_time);\r\n\r\n SELECT count(DISTINCT ac.currency),coalesce(sum(m.delta),0),min(ac.currency) INTO units,delta,funding_currency FROM funding_control.movements m JOIN funding_control.accounts ac ON ac.id=m.account WHERE m.shift_id=shift;\r\n\r\n IF units>1 THEN RAISE EXCEPTION 'CROSS_CURRENCY_BLOCKED'; END IF;\r\n\r\n RETURN jsonb_build_object('shiftId',shift,'opening',cs.opening_cash::text,'canonicalCashReceived',pay.v_cash_total::text,'fundingMovementDelta',delta::text,'baselineExpected',(cs.opening_cash+pay.v_cash_total)::text,'expectedWithFunding',NULL,'fundingCurrency',funding_currency,'baselineCurrencyVerified',false,'integrationStatus','BLOCKED_SHIFT_CURRENCY_CONTEXT','scope','CANONICAL_BASELINE_PLUS_FUNDING_ONLY','sourceBalanceVerified',false);\r\n\r\nEND $function$\n"
+    },
+    {
+      "identity": "funding_evidence.immutable()",
+      "definition": "CREATE OR REPLACE FUNCTION funding_evidence.immutable()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'pg_catalog'\nAS $function$\r\n\r\nBEGIN RAISE EXCEPTION 'IMMUTABLE_EVIDENCE'; END $function$\n"
+    },
+    {
+      "identity": "funding_evidence.writer_bound(text)",
+      "definition": "CREATE OR REPLACE FUNCTION funding_evidence.writer_bound(w text)\n RETURNS boolean\n LANGUAGE sql\n STABLE\n SET search_path TO 'pg_catalog'\nAS $function$ SELECT false $function$\n"
+    },
+    {
+      "identity": "funding_evidence.wallet_writers_bound(uuid)",
+      "definition": "CREATE OR REPLACE FUNCTION funding_evidence.wallet_writers_bound(w uuid)\n RETURNS boolean\n LANGUAGE sql\n STABLE\n SET search_path TO 'pg_catalog'\nAS $function$ SELECT false $function$\n"
+    },
+    {
+      "identity": "funding_evidence.attest(uuid,text,uuid,uuid,uuid,text,integer,numeric,text)",
+      "definition": "CREATE OR REPLACE FUNCTION funding_evidence.attest(movement uuid, writer_name text, request uuid, source_line uuid, event uuid, code text, rev integer, cost numeric, cost_proof text)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog'\nAS $function$\r\n\r\nDECLARE m public.stock_movements%ROWTYPE;ctx jsonb;prior funding_evidence.receipts%ROWTYPE;\r\n\r\nBEGIN\r\n\r\n IF funding_evidence.writer_bound(writer_name) IS NOT TRUE THEN RAISE EXCEPTION 'RECEIPT_WRITER_NOT_BOUND'; END IF;\r\n\r\n SELECT * INTO m FROM public.stock_movements WHERE id=movement FOR UPDATE;\r\n\r\n IF NOT FOUND OR m.mode<>'ADD' OR m.amount<=0 OR m.created_by IS DISTINCT FROM auth.uid() THEN RAISE EXCEPTION 'INVALID_RECEIPT_MOVEMENT'; END IF;\r\n\r\n IF funding_canonical.scope_role(auth.uid(),m.organization_id,m.store_id) IS NULL THEN RAISE EXCEPTION 'FORBIDDEN'; END IF;\r\n\r\n ctx:=stock_funding.currency_context(m.organization_id);\r\n\r\n IF ctx IS NULL OR ctx->>'currency' IS DISTINCT FROM code OR (ctx->>'revision')::integer IS DISTINCT FROM rev THEN RAISE EXCEPTION 'CURRENCY_CONTEXT_CHANGED'; END IF;\r\n\r\n SELECT * INTO prior FROM funding_evidence.receipts WHERE movement_id=movement;\r\n\r\n IF FOUND THEN\r\n\r\n  IF prior.writer=writer_name AND prior.request_id=request AND prior.source_line_id=source_line AND prior.event_id=event AND prior.transaction_currency=code AND prior.currency_revision=rev AND prior.unit_cost=cost AND prior.cost_evidence=cost_proof AND prior.quantity=m.amount AND prior.product_id=m.product_id AND prior.organization_id=m.organization_id AND prior.store_id=m.store_id THEN RETURN; END IF;\r\n\r\n  RAISE EXCEPTION 'ATTESTATION_CONFLICT';\r\n\r\n END IF;\r\n\r\n IF NOT EXISTS(SELECT 1 FROM public.stock_movements x WHERE x.id=movement AND x.xmin=pg_current_xact_id()::text::xid) THEN RAISE EXCEPTION 'RECEIPT_NOT_SAME_TRANSACTION'; END IF;\r\n\r\n IF m.event_id IS NOT NULL AND m.event_id IS DISTINCT FROM event THEN RAISE EXCEPTION 'EVENT_MISMATCH'; END IF;\r\n\r\n INSERT INTO funding_evidence.receipts(movement_id,organization_id,store_id,product_id,writer,request_id,event_id,source_line_id,transaction_currency,accounting_currency,currency_revision,quantity,unit_cost,recognized_cost,cost_method,cost_evidence,actor_id)\r\n\r\n VALUES(m.id,m.organization_id,m.store_id,m.product_id,writer_name,request,event,source_line,code,code,rev,m.amount,cost,m.amount*cost,'CANONICAL_SNAPSHOT',cost_proof,auth.uid());\r\n\r\nEND $function$\n"
+    },
+    {
+      "identity": "funding_evidence.confirm_wallet_units(uuid,text,integer,text)",
+      "definition": "CREATE OR REPLACE FUNCTION funding_evidence.confirm_wallet_units(wallet uuid, code text, rev integer, proof text)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog'\nAS $function$\r\n\r\nDECLARE w public.field_wallets%ROWTYPE;ctx jsonb;prior funding_evidence.wallet_units%ROWTYPE;\r\n\r\nBEGIN\r\n\r\n SELECT * INTO w FROM public.field_wallets WHERE id=wallet FOR UPDATE;\r\n\r\n IF NOT FOUND OR NOT w.is_active OR funding_canonical.scope_role(auth.uid(),w.organization_id,w.store_id) IS DISTINCT FROM 'owner' THEN RAISE EXCEPTION 'OWNER_REQUIRED'; END IF;\r\n\r\n IF funding_evidence.wallet_writers_bound(wallet) IS NOT TRUE THEN RAISE EXCEPTION 'WALLET_WRITERS_NOT_BOUND'; END IF;\r\n\r\n ctx:=stock_funding.currency_context(w.organization_id);\r\n\r\n IF ctx IS NULL OR ctx->>'currency' IS DISTINCT FROM code OR (ctx->>'revision')::integer IS DISTINCT FROM rev THEN RAISE EXCEPTION 'CURRENCY_CONTEXT_CHANGED'; END IF;\r\n\r\n SELECT * INTO prior FROM funding_evidence.wallet_units WHERE wallet_id=wallet;\r\n\r\n IF FOUND THEN\r\n\r\n  IF prior.currency=code AND prior.currency_revision=rev AND prior.evidence=proof AND prior.confirmed_by=auth.uid() AND prior.organization_id=w.organization_id AND prior.store_id=w.store_id AND prior.membership_id=w.membership_id THEN RETURN; END IF;\r\n\r\n  RAISE EXCEPTION 'CONTROLLED_CURRENCY_CHANGE_REQUIRED';\r\n\r\n END IF;\r\n\r\n INSERT INTO funding_evidence.wallet_units(wallet_id,organization_id,store_id,membership_id,currency,currency_revision,cutover_balance,history_count,confirmed_by,evidence)\r\n\r\n SELECT w.id,w.organization_id,w.store_id,w.membership_id,code,rev,w.balance,count(*),auth.uid(),proof FROM public.field_wallet_transactions WHERE wallet_id=w.id;\r\n\r\nEND $function$\n"
+    },
+    {
+      "identity": "funding_evidence.apply_return()",
+      "definition": "CREATE OR REPLACE FUNCTION funding_evidence.apply_return()\n RETURNS void\n LANGUAGE plpgsql\n SET search_path TO 'pg_catalog'\nAS $function$\r\n\r\nBEGIN RAISE EXCEPTION 'CANONICAL_RETURN_NOT_ACTIVATED'; END $function$\n"
+    },
+    {
+      "identity": "funding_evidence.return_intent(uuid,uuid,uuid,numeric)",
+      "definition": "CREATE OR REPLACE FUNCTION funding_evidence.return_intent(advance uuid, wallet uuid, destination uuid, amount numeric)\n RETURNS jsonb\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog'\nAS $function$\r\n\r\nDECLARE a stock_funding.advances%ROWTYPE;w public.field_wallets%ROWTYPE;u funding_evidence.wallet_units%ROWTYPE;ac funding_control.accounts%ROWTYPE;ctx jsonb;\r\n\r\nBEGIN\r\n\r\n SELECT * INTO a FROM stock_funding.advances WHERE id=advance FOR UPDATE;\r\n\r\n IF NOT FOUND OR funding_canonical.scope_role(auth.uid(),a.organization_id,a.store_id) IS NULL THEN RAISE EXCEPTION 'FORBIDDEN'; END IF;\r\n\r\n SELECT * INTO ac FROM funding_control.accounts WHERE id=destination FOR UPDATE;\r\n\r\n IF NOT FOUND OR ac.org<>a.organization_id OR ac.store<>a.store_id OR ac.locked OR funding_control.can(auth.uid(),a.organization_id,a.store_id,destination,'RETURN') IS NOT TRUE THEN RAISE EXCEPTION 'RETURN_ACCOUNT_FORBIDDEN'; END IF;\r\n\r\n -- Match canonical posting lock order: advance -> account -> shift -> wallet.\r\n\r\n IF ac.kind='CASH' THEN PERFORM funding_control.require_open_shift(auth.uid(),a.organization_id,a.store_id); END IF;\r\n\r\n SELECT * INTO w FROM public.field_wallets WHERE id=wallet FOR UPDATE;\r\n\r\n IF NOT FOUND OR NOT w.is_active OR w.organization_id<>a.organization_id OR w.store_id<>a.store_id THEN RAISE EXCEPTION 'CUSTODY_SCOPE_MISMATCH'; END IF;\r\n\r\n IF NOT EXISTS(SELECT 1 FROM public.org_memberships m JOIN public.org_membership_stores ms ON ms.membership_id=m.id WHERE m.id=w.membership_id AND m.organization_id=a.organization_id AND m.user_id=a.responsible_id AND m.is_active AND ms.store_id=a.store_id) THEN RAISE EXCEPTION 'CUSTODIAN_NOT_ACTIVE'; END IF;\r\n\r\n IF NOT EXISTS(SELECT 1 FROM public.stores WHERE id=a.store_id AND store_type='FIELD_PROCUREMENT' AND is_active) THEN RAISE EXCEPTION 'FIELD_STORE_REQUIRED'; END IF;\r\n\r\n IF NOT EXISTS(\r\n\r\n  SELECT 1 FROM funding_evidence.custody_links l\r\n\r\n  JOIN funding_control.movements fm ON fm.id=l.movement_id\r\n\r\n  JOIN public.field_wallet_transactions wt ON wt.id=l.wallet_transaction_id\r\n\r\n  WHERE l.advance_id=a.id AND l.kind='FUND' AND fm.advance=a.id AND fm.kind='FUND'\r\n\r\n   AND fm.account=a.source_account AND fm.delta=-a.amount AND wt.wallet_id=w.id\r\n\r\n   AND wt.organization_id=a.organization_id AND wt.store_id=a.store_id\r\n\r\n   AND wt.membership_id=w.membership_id AND wt.type='ALLOCATE' AND wt.amount=a.amount\r\n\r\n   AND wt.balance_after-wt.balance_before=wt.amount\r\n\r\n ) THEN RAISE EXCEPTION 'FUNDED_CUSTODY_LINK_REQUIRED'; END IF;\r\n\r\n SELECT * INTO u FROM funding_evidence.wallet_units WHERE wallet_id=wallet;\r\n\r\n IF NOT FOUND OR funding_evidence.wallet_writers_bound(wallet) IS NOT TRUE THEN RAISE EXCEPTION 'CUSTODY_CURRENCY_UNCONFIRMED'; END IF;\r\n\r\n ctx:=stock_funding.currency_context(a.organization_id);\r\n\r\n IF ctx IS NULL OR ctx->>'currency' IS DISTINCT FROM a.currency OR (ctx->>'revision')::integer IS DISTINCT FROM a.currency_revision OR ac.currency<>a.currency OR u.currency<>a.currency OR u.currency_revision<>a.currency_revision OR u.organization_id<>w.organization_id OR u.store_id<>w.store_id OR u.membership_id<>w.membership_id THEN RAISE EXCEPTION 'CROSS_CURRENCY_OR_STALE_CONTEXT'; END IF;\r\n\r\n IF amount IS NULL OR NOT(amount>0 AND amount<1e24) OR amount<>round(amount,a.minor_units) OR amount>a.amount-a.spent-a.returned OR amount>w.balance OR a.status NOT IN ('FUNDED','PARTIALLY_RECONCILED') THEN RAISE EXCEPTION 'INVALID_RETURN_AMOUNT_OR_STATE'; END IF;\r\n\r\n RETURN jsonb_build_object('advanceId',a.id,'walletId',w.id,'destinationAccountId',ac.id,'amount',amount::text,'transactionCurrency',a.currency,'accountingCurrency',a.currency,'rate','1','financialPostingActivated',false,'requiredContract','CANONICAL_RETURN_AND_OPEN_CYCLE_BINDING');\r\n\r\nEND $function$\n"
+    },
+    {
+      "identity": "block_inventory_movements_when_day_locked()",
+      "definition": "CREATE OR REPLACE FUNCTION public.block_inventory_movements_when_day_locked()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public', 'pg_temp'\nAS $function$\r\n    DECLARE\r\n      v_date date;\r\n      v_locked boolean;\r\n    BEGIN\r\n      -- use TZ date for Tanzania\r\n      v_date := (NEW.created_at AT TIME ZONE 'Africa/Dar_es_Salaam')::date;\r\n\r\n      SELECT public.is_closing_locked(NEW.store_id, v_date) INTO v_locked;\r\n\r\n      IF v_locked THEN\r\n        RAISE EXCEPTION 'Day is locked (%). No inventory movements allowed.', v_date;\r\n      END IF;\r\n\r\n      RETURN NEW;\r\n    END;\r\n    $function$\n"
+    },
+    {
+      "identity": "allocate_field_wallet_v1(uuid,uuid,numeric,text)",
+      "definition": "CREATE OR REPLACE FUNCTION public.allocate_field_wallet_v1(p_store_id uuid, p_membership_id uuid, p_amount numeric, p_note text DEFAULT NULL::text)\n RETURNS uuid\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\r\ndeclare\r\n  v_org_id uuid;\r\n  v_actor_role text;\r\n  v_wallet_id uuid;\r\n  v_before numeric := 0;\r\n  v_after numeric := 0;\r\n  v_cycle_id uuid;\r\nbegin\r\n  if auth.uid() is null then\r\n    raise exception 'Not authenticated';\r\n  end if;\r\n\r\n  if p_store_id is null then\r\n    raise exception 'p_store_id is required';\r\n  end if;\r\n\r\n  if p_membership_id is null then\r\n    raise exception 'p_membership_id is required';\r\n  end if;\r\n\r\n  if p_amount is null or p_amount <= 0 then\r\n    raise exception 'Amount must be greater than zero';\r\n  end if;\r\n\r\n  select s.organization_id\r\n    into v_org_id\r\n  from public.stores s\r\n  where s.id = p_store_id\r\n    and s.store_type = 'FIELD_PROCUREMENT'\r\n    and coalesce(s.is_active, true) = true;\r\n\r\n  if v_org_id is null then\r\n    raise exception 'Invalid Field Procurement store';\r\n  end if;\r\n\r\n  select m.role\r\n    into v_actor_role\r\n  from public.org_memberships m\r\n  where m.organization_id = v_org_id\r\n    and m.user_id = auth.uid()\r\n    and coalesce(m.is_active, true) = true\r\n  limit 1;\r\n\r\n  if v_actor_role not in ('owner', 'admin') then\r\n    raise exception 'Only owner/admin can allocate field wallet funds';\r\n  end if;\r\n\r\n  select c.id\r\n    into v_cycle_id\r\n  from public.field_cycles c\r\n  where c.store_id = p_store_id\r\n    and c.status = 'OPEN'\r\n  order by c.opened_at desc\r\n  limit 1;\r\n\r\n  if v_cycle_id is null then\r\n    raise exception 'NO_ACTIVE_FIELD: Open a field cycle before allocating money';\r\n  end if;\r\n\r\n  if not exists (\r\n    select 1\r\n    from public.org_memberships m\r\n    join public.org_membership_stores ms on ms.membership_id = m.id\r\n    where m.id = p_membership_id\r\n      and m.organization_id = v_org_id\r\n      and ms.store_id = p_store_id\r\n      and coalesce(m.is_active, true) = true\r\n  ) then\r\n    raise exception 'Target member is not assigned to this store';\r\n  end if;\r\n\r\n  insert into public.field_wallets (\r\n    organization_id,\r\n    store_id,\r\n    membership_id,\r\n    balance,\r\n    created_by,\r\n    is_active\r\n  )\r\n  values (\r\n    v_org_id,\r\n    p_store_id,\r\n    p_membership_id,\r\n    0,\r\n    auth.uid(),\r\n    true\r\n  )\r\n  on conflict (store_id, membership_id)\r\n  do nothing;\r\n\r\n  select w.id, w.balance\r\n    into v_wallet_id, v_before\r\n  from public.field_wallets w\r\n  where w.store_id = p_store_id\r\n    and w.membership_id = p_membership_id\r\n    and w.organization_id = v_org_id\r\n  for update;\r\n\r\n  v_after := coalesce(v_before, 0) + p_amount;\r\n\r\n  update public.field_wallets\r\n  set\r\n    balance = v_after,\r\n    updated_at = now(),\r\n    is_active = true\r\n  where id = v_wallet_id;\r\n\r\n  insert into public.field_wallet_transactions (\r\n    wallet_id,\r\n    organization_id,\r\n    store_id,\r\n    membership_id,\r\n    field_cycle_id,\r\n    type,\r\n    amount,\r\n    balance_before,\r\n    balance_after,\r\n    note,\r\n    created_by\r\n  )\r\n  values (\r\n    v_wallet_id,\r\n    v_org_id,\r\n    p_store_id,\r\n    p_membership_id,\r\n    v_cycle_id,\r\n    'ALLOCATE',\r\n    p_amount,\r\n    coalesce(v_before, 0),\r\n    v_after,\r\n    nullif(trim(coalesce(p_note, '')), ''),\r\n    auth.uid()\r\n  );\r\n\r\n  return v_wallet_id;\r\nend;\r\n$function$\n"
+    },
+    {
+      "identity": "create_inventory_movement_notification_v1()",
+      "definition": "CREATE OR REPLACE FUNCTION public.create_inventory_movement_notification_v1()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\r\ndeclare\r\n  v_title text;\r\n  v_product_name text;\r\n  v_sku text;\r\nbegin\r\n  select p.name, p.sku\r\n  into v_product_name, v_sku\r\n  from public.products p\r\n  where p.id = new.product_id\r\n  limit 1;\r\n\r\n  v_title :=\r\n    case\r\n      when coalesce(new.delta, 0) > 0 then 'New Stock Received'\r\n      else 'Stock Reduced'\r\n    end;\r\n\r\n  insert into public.notifications (\r\n    organization_id,\r\n    store_id,\r\n    source_store_id,\r\n    event_type,\r\n    title,\r\n    body,\r\n    items,\r\n    total_units,\r\n    total_skus,\r\n    actor_user_id,\r\n    actor_name,\r\n    ref_movement_id,\r\n    created_by,\r\n    created_at\r\n  )\r\n  values (\r\n    new.organization_id,\r\n    new.store_id,\r\n    null,\r\n    case when coalesce(new.delta, 0) > 0 then 'STOCK_IN' else 'STOCK_OUT' end,\r\n    v_title,\r\n    jsonb_build_object(\r\n      'source', 'inventory_movements',\r\n      'reason', new.reason,\r\n      'movement_id', new.id\r\n    ),\r\n    jsonb_build_array(\r\n      jsonb_build_object(\r\n        'product_id', new.product_id,\r\n        'product_name', coalesce(v_product_name, 'Product'),\r\n        'sku', v_sku,\r\n        'qty', abs(coalesce(new.delta, 0))\r\n      )\r\n    ),\r\n    abs(coalesce(new.delta, 0)),\r\n    1,\r\n    auth.uid(),\r\n    null,\r\n    new.id,\r\n    auth.uid(),\r\n    now()\r\n  );\r\n\r\n  return new;\r\nend;\r\n$function$\n"
+    },
+    {
+      "identity": "create_notification_from_stock_movement()",
+      "definition": "CREATE OR REPLACE FUNCTION public.create_notification_from_stock_movement()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\nAS $function$\r\nbegin\r\n  insert into public.notifications (\r\n    organization_id,\r\n    store_id,\r\n    source_store_id,\r\n    event_type,\r\n    title,\r\n    body,\r\n    items,\r\n    total_units,\r\n    total_skus,\r\n    actor_user_id,\r\n    actor_name,\r\n    ref_movement_id,\r\n    created_by,\r\n    created_at\r\n  )\r\n  values (\r\n    new.organization_id,\r\n    new.store_id,\r\n    new.store_id,\r\n    case when new.mode = 'ADD' then 'STOCK_IN' else 'STOCK_OUT' end,\r\n    case when new.mode = 'ADD' then 'New Stock Received' else 'Stock Reduced' end,\r\n\r\n    jsonb_build_object(\r\n      'message', coalesce(new.note, 'Stock update'),\r\n      'mode', new.mode,\r\n      'amount', new.amount,\r\n      'product_id', new.product_id\r\n    ),\r\n\r\n    jsonb_build_array(\r\n      jsonb_build_object(\r\n        'product_id', new.product_id,\r\n        'qty', new.amount,\r\n        'mode', new.mode\r\n      )\r\n    ),\r\n    new.amount,\r\n    1,\r\n    new.created_by,\r\n    null,\r\n    new.id,\r\n    new.created_by,\r\n    now()\r\n  );\r\n\r\n  return new;\r\nend;\r\n$function$\n"
+    },
+    {
+      "identity": "create_stock_movement_notification()",
+      "definition": "CREATE OR REPLACE FUNCTION public.create_stock_movement_notification()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\r\ndeclare\r\n  v_product_name text;\r\n  v_sku text;\r\n  v_unit text;\r\n  v_category text;\r\n  v_title text;\r\n  v_event_type text;\r\n  v_qty numeric;\r\n  v_event_id uuid;\r\nbegin\r\n  v_qty := abs(coalesce(new.amount, 0));\r\n\r\n  if v_qty <= 0 or new.product_id is null then\r\n    return new;\r\n  end if;\r\n\r\n  -- Business-event identity:\r\n  -- inbound batch/partial receive -> shared event_id\r\n  -- ordinary movement          -> movement id\r\n  v_event_id := coalesce(new.event_id, new.id);\r\n\r\n  select\r\n    p.name,\r\n    p.sku,\r\n    p.unit,\r\n    p.category\r\n  into\r\n    v_product_name,\r\n    v_sku,\r\n    v_unit,\r\n    v_category\r\n  from public.products p\r\n  where p.id = new.product_id\r\n    and p.organization_id = new.organization_id\r\n  limit 1;\r\n\r\n  if upper(coalesce(new.mode, '')) in (\r\n    'ADD',\r\n    'IN',\r\n    'STOCK_IN',\r\n    'RECEIVE',\r\n    'RECEIVED',\r\n    'PURCHASE',\r\n    'INBOUND'\r\n  ) then\r\n    v_title := 'New Stock Received';\r\n    v_event_type := 'STOCK_IN';\r\n  else\r\n    v_title := 'Stock Reduced';\r\n    v_event_type := 'STOCK_OUT';\r\n  end if;\r\n\r\n  -- Idempotency remains movement-level.\r\n  if exists (\r\n    select 1\r\n    from public.notifications n\r\n    where n.ref_movement_id = new.id\r\n    limit 1\r\n  ) then\r\n    return new;\r\n  end if;\r\n\r\n  insert into public.notifications (\r\n    organization_id,\r\n    store_id,\r\n    source_store_id,\r\n    event_type,\r\n    title,\r\n    body,\r\n    items,\r\n    total_units,\r\n    total_skus,\r\n    actor_user_id,\r\n    actor_name,\r\n    ref_movement_id,\r\n    created_by,\r\n    created_at,\r\n    event_id\r\n  )\r\n  values (\r\n    new.organization_id,\r\n    new.store_id,\r\n    null,\r\n    v_event_type,\r\n    v_title,\r\n\r\n    jsonb_build_object(\r\n      'source', 'stock_movements',\r\n      'mode', new.mode,\r\n      'note', new.note,\r\n      'movement_id', new.id,\r\n      'event_id', v_event_id,\r\n      'product_id', new.product_id,\r\n      'product_name',\r\n        coalesce(\r\n          nullif(v_product_name, ''),\r\n          'Unknown Product'\r\n        )\r\n    ),\r\n\r\n    jsonb_build_array(\r\n      jsonb_build_object(\r\n        'product_id', new.product_id,\r\n        'product_name',\r\n          coalesce(\r\n            nullif(v_product_name, ''),\r\n            'Unknown Product'\r\n          ),\r\n        'name',\r\n          coalesce(\r\n            nullif(v_product_name, ''),\r\n            'Unknown Product'\r\n          ),\r\n        'sku', v_sku,\r\n        'unit', v_unit,\r\n        'category', v_category,\r\n        'qty', v_qty\r\n      )\r\n    ),\r\n\r\n    v_qty,\r\n    1,\r\n    coalesce(new.created_by, auth.uid()),\r\n    null,\r\n    new.id,\r\n    coalesce(new.created_by, auth.uid()),\r\n    coalesce(new.created_at, now()),\r\n    v_event_id\r\n  );\r\n\r\n  return new;\r\nend;\r\n$function$\n"
+    },
+    {
+      "identity": "get_field_wallet_history_by_cycle_v1(uuid,uuid)",
+      "definition": "CREATE OR REPLACE FUNCTION public.get_field_wallet_history_by_cycle_v1(p_store_id uuid, p_cycle_id uuid)\n RETURNS TABLE(id uuid, type text, amount numeric, purpose text, category text, note text, agent_email text, created_at timestamp with time zone)\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\r\nbegin\r\n  if auth.uid() is null then\r\n    raise exception 'Not authenticated';\r\n  end if;\r\n\r\n  return query\r\n  select\r\n    t.id::uuid,\r\n    t.type::text,\r\n    coalesce(t.amount, 0)::numeric,\r\n    coalesce(t.purpose, 'OPERATIONAL')::text,\r\n    coalesce(t.category, 'OTHER')::text,\r\n    t.note::text,\r\n    coalesce(u.email, '')::text,\r\n    t.created_at::timestamptz\r\n  from public.field_wallet_transactions t\r\n  left join public.org_memberships m on m.id = t.membership_id\r\n  left join auth.users u on u.id = m.user_id\r\n  where t.store_id = p_store_id\r\n    and t.field_cycle_id = p_cycle_id\r\n  order by t.created_at desc;\r\nend;\r\n$function$\n"
+    },
+    {
+      "identity": "get_field_wallet_history_v1(uuid)",
+      "definition": "CREATE OR REPLACE FUNCTION public.get_field_wallet_history_v1(p_store_id uuid)\n RETURNS TABLE(id uuid, field_cycle_id uuid, type text, amount numeric, purpose text, category text, note text, agent_email text, created_at timestamp with time zone, item_name text, unit text, quantity numeric, actual_unit_price numeric, normalized_unit text, normalized_quantity numeric)\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\r\ndeclare\r\n  v_membership_id uuid;\r\n  v_role text;\r\n  v_can_manage boolean := false;\r\nbegin\r\n  if auth.uid() is null then\r\n    raise exception 'Not authenticated';\r\n  end if;\r\n\r\n  select m.id, lower(coalesce(m.role, ''))\r\n    into v_membership_id, v_role\r\n  from public.org_memberships m\r\n  join public.stores s on s.organization_id = m.organization_id\r\n  where s.id = p_store_id\r\n    and m.user_id = auth.uid()\r\n    and coalesce(m.is_active, true) = true\r\n  limit 1;\r\n\r\n  if v_membership_id is null then\r\n    raise exception 'No access to this store';\r\n  end if;\r\n\r\n  v_can_manage := v_role in ('owner', 'admin');\r\n\r\n  return query\r\n  select\r\n    t.id::uuid,\r\n    t.field_cycle_id::uuid,\r\n    t.type::text,\r\n    coalesce(t.amount, 0)::numeric,\r\n    coalesce(t.purpose, 'OPERATIONAL')::text,\r\n    coalesce(t.category, 'GENERAL')::text,\r\n    t.note::text,\r\n    coalesce(u.email, '\u2014')::text,\r\n    t.created_at::timestamptz,\r\n\r\n    t.item_name::text,\r\n    t.unit::text,\r\n    coalesce(t.quantity, 0)::numeric,\r\n    coalesce(t.actual_unit_price, 0)::numeric,\r\n\r\n    case\r\n      when lower(coalesce(t.unit, '')) in ('g', 'gram', 'grams') then 'gram'\r\n      when lower(coalesce(t.unit, '')) in ('kg', 'kilogram', 'kilograms') then 'gram'\r\n      when lower(coalesce(t.unit, '')) in ('ton', 'tons', 'tani') then 'kg'\r\n      when lower(coalesce(t.unit, '')) in ('piece', 'pcs', 'pc') then 'piece'\r\n      when lower(coalesce(t.unit, '')) in ('sack', 'bag') then 'sack'\r\n      else lower(coalesce(t.unit, ''))\r\n    end::text,\r\n\r\n    case\r\n      when lower(coalesce(t.unit, '')) in ('g', 'gram', 'grams') then coalesce(t.quantity, 0)\r\n      when lower(coalesce(t.unit, '')) in ('kg', 'kilogram', 'kilograms') then coalesce(t.quantity, 0) * 1000\r\n      when lower(coalesce(t.unit, '')) in ('ton', 'tons', 'tani') then coalesce(t.quantity, 0) * 1000\r\n      else coalesce(t.quantity, 0)\r\n    end::numeric\r\n  from public.field_wallet_transactions t\r\n  left join public.org_memberships m on m.id = t.membership_id\r\n  left join auth.users u on u.id = m.user_id\r\n  where t.store_id = p_store_id\r\n    and (v_can_manage or t.membership_id = v_membership_id)\r\n  order by t.created_at desc\r\n  limit 500;\r\nend;\r\n$function$\n"
+    },
+    {
+      "identity": "get_field_wallet_summary_v1(uuid)",
+      "definition": "CREATE OR REPLACE FUNCTION public.get_field_wallet_summary_v1(p_store_id uuid)\n RETURNS TABLE(wallet_id uuid, organization_id uuid, store_id uuid, membership_id uuid, agent_email text, agent_role text, balance numeric, total_allocated numeric, total_purchases numeric, total_expenses numeric, total_adjustments numeric, last_activity_at timestamp with time zone)\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public', 'auth'\nAS $function$\r\ndeclare\r\n  v_org_id uuid;\r\n  v_actor_membership_id uuid;\r\n  v_actor_role text;\r\n  v_cycle_id uuid;\r\nbegin\r\n  if auth.uid() is null then\r\n    raise exception 'Not authenticated';\r\n  end if;\r\n\r\n  select s.organization_id\r\n  into v_org_id\r\n  from public.stores s\r\n  where s.id = p_store_id\r\n    and s.store_type = 'FIELD_PROCUREMENT'\r\n    and coalesce(s.is_active, true) = true;\r\n\r\n  if v_org_id is null then\r\n    raise exception 'Invalid Field Procurement store';\r\n  end if;\r\n\r\n  select m.id, m.role\r\n  into v_actor_membership_id, v_actor_role\r\n  from public.org_memberships m\r\n  where m.organization_id = v_org_id\r\n    and m.user_id = auth.uid()\r\n    and coalesce(m.is_active, true) = true\r\n  limit 1;\r\n\r\n  if v_actor_membership_id is null then\r\n    raise exception 'Not a member of this organization';\r\n  end if;\r\n\r\n  select c.id\r\n  into v_cycle_id\r\n  from public.field_cycles c\r\n  where c.store_id = p_store_id\r\n    and c.status = 'OPEN'\r\n  order by c.opened_at desc\r\n  limit 1;\r\n\r\n  -- \u2705 No active field = no old wallet summary\r\n  if v_cycle_id is null then\r\n    return;\r\n  end if;\r\n\r\n  return query\r\n  select\r\n    w.id,\r\n    w.organization_id,\r\n    w.store_id,\r\n    w.membership_id,\r\n    coalesce(u.email, '\u2014')::text,\r\n    coalesce(m.role, 'staff')::text,\r\n    coalesce(w.balance, 0)::numeric,\r\n    coalesce(sum(t.amount) filter (where t.type = 'ALLOCATE'), 0)::numeric,\r\n    coalesce(sum(t.amount) filter (where t.type = 'PURCHASE'), 0)::numeric,\r\n    coalesce(sum(t.amount) filter (where t.type = 'EXPENSE'), 0)::numeric,\r\n    coalesce(sum(t.amount) filter (where t.type = 'ADJUST'), 0)::numeric,\r\n    max(t.created_at)\r\n  from public.field_wallets w\r\n  join public.org_memberships m on m.id = w.membership_id\r\n  left join auth.users u on u.id = m.user_id\r\n  join public.field_wallet_transactions t\r\n    on t.wallet_id = w.id\r\n   and t.field_cycle_id = v_cycle_id\r\n  where w.store_id = p_store_id\r\n    and w.organization_id = v_org_id\r\n    and (\r\n      v_actor_role in ('owner', 'admin')\r\n      or w.membership_id = v_actor_membership_id\r\n    )\r\n  group by w.id, w.organization_id, w.store_id, w.membership_id, u.email, m.role, w.balance\r\n  order by max(t.created_at) desc;\r\nend;\r\n$function$\n"
+    },
+    {
+      "identity": "get_inventory_movements(uuid,integer,integer)",
+      "definition": "CREATE OR REPLACE FUNCTION public.get_inventory_movements(p_store_id uuid, p_limit integer DEFAULT 50, p_offset integer DEFAULT 0)\n RETURNS TABLE(id uuid, store_id uuid, product_id uuid, product_name text, sku text, unit text, category text, qty_change integer, mode text, note text, actor_user_id uuid, created_at timestamp with time zone)\n LANGUAGE sql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\r\n  select\r\n    sm.id,\r\n    sm.store_id,\r\n    sm.product_id,\r\n    coalesce(p.name, 'Product') as product_name,\r\n    p.sku,\r\n    p.unit,\r\n    p.category,\r\n    case\r\n      when upper(coalesce(sm.mode, '')) = 'ADD' then abs(coalesce(sm.amount, 0))::integer\r\n      when upper(coalesce(sm.mode, '')) = 'REDUCE' then -abs(coalesce(sm.amount, 0))::integer\r\n      else coalesce(sm.amount, 0)::integer\r\n    end as qty_change,\r\n    case\r\n      when upper(coalesce(sm.mode, '')) = 'ADD' then 'ADD'\r\n      when upper(coalesce(sm.mode, '')) = 'REDUCE' then 'REDUCE'\r\n      else coalesce(sm.mode, 'ADJUST')\r\n    end as mode,\r\n    sm.note,\r\n    sm.created_by as actor_user_id,\r\n    sm.created_at\r\n  from public.stock_movements sm\r\n  left join public.products p\r\n    on p.id = sm.product_id\r\n   and p.organization_id = sm.organization_id\r\n  where sm.store_id = p_store_id\r\n  order by sm.created_at desc\r\n  limit greatest(coalesce(p_limit, 50), 1)\r\n  offset greatest(coalesce(p_offset, 0), 0);\r\n$function$\n"
+    },
+    {
+      "identity": "get_store_inventory_movements(uuid,integer)",
+      "definition": "CREATE OR REPLACE FUNCTION public.get_store_inventory_movements(p_store_id uuid, p_limit integer DEFAULT 50)\n RETURNS TABLE(id uuid, organization_id uuid, store_id uuid, product_id uuid, product_name text, mode text, amount integer, qty_change integer, note text, actor_user_id uuid, created_at timestamp with time zone)\n LANGUAGE sql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\r\n  select\r\n    m.id,\r\n    m.organization_id,\r\n    m.store_id,\r\n    m.product_id,\r\n    p.name as product_name,\r\n    m.mode,\r\n    m.amount,\r\n    m.qty_change,\r\n    m.note,\r\n    m.actor_user_id,\r\n    m.created_at\r\n  from public.inventory_movements m\r\n  left join public.products p on p.id = m.product_id\r\n  where m.store_id = p_store_id\r\n    and exists (\r\n      select 1\r\n      from public.org_memberships om\r\n      where om.user_id = auth.uid()\r\n        and om.organization_id = m.organization_id\r\n        and om.is_active = true\r\n    )\r\n  order by m.created_at desc\r\n  limit greatest(p_limit, 1);\r\n$function$\n"
+    },
+    {
+      "identity": "get_store_inventory_movements(uuid)",
+      "definition": "CREATE OR REPLACE FUNCTION public.get_store_inventory_movements(p_store_id uuid)\n RETURNS TABLE(id uuid, organization_id uuid, store_id uuid, product_id uuid, product_name text, mode text, amount integer, qty_change integer, note text, actor_user_id uuid, actor_email text, created_at timestamp with time zone)\n LANGUAGE sql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\r\n  select\r\n    m.id,\r\n    m.organization_id,          -- \u2705 FIX: was m.org_id\r\n    m.store_id,\r\n    m.product_id,\r\n    p.name as product_name,\r\n    m.mode,\r\n    m.amount,\r\n    m.qty_change,\r\n    m.note,\r\n    m.actor_user_id,\r\n    u.email as actor_email,\r\n    m.created_at\r\n  from public.inventory_movements m\r\n  join public.products p\r\n    on p.id = m.product_id\r\n  left join auth.users u\r\n    on u.id = m.actor_user_id\r\n  where m.store_id = p_store_id\r\n  order by m.created_at desc;\r\n$function$\n"
+    },
+    {
+      "identity": "get_store_inventory_movements(uuid,integer,integer)",
+      "definition": "CREATE OR REPLACE FUNCTION public.get_store_inventory_movements(p_store_id uuid, p_limit integer DEFAULT 50, p_offset integer DEFAULT 0)\n RETURNS TABLE(id uuid, store_id uuid, product_id uuid, product_name text, sku text, unit text, category text, qty_change integer, mode text, note text, actor_user_id uuid, created_at timestamp with time zone)\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\r\nbegin\r\n  if auth.uid() is null then\r\n    raise exception 'Not authenticated';\r\n  end if;\r\n\r\n  if not public.has_store_access(p_store_id) then\r\n    raise exception 'Not authorized for this store';\r\n  end if;\r\n\r\n  return query\r\n  select\r\n    im.id,\r\n    im.store_id,\r\n    im.product_id,\r\n    coalesce(p.name, 'Product') as product_name,\r\n    p.sku,\r\n    p.unit,\r\n    p.category,\r\n    im.qty_change,\r\n    im.mode,\r\n    im.note,\r\n    im.actor_user_id,\r\n    im.created_at\r\n  from public.inventory_movements im\r\n  left join public.products p\r\n    on p.id = im.product_id\r\n  where im.store_id = p_store_id\r\n  order by im.created_at desc\r\n  limit p_limit\r\n  offset p_offset;\r\nend;\r\n$function$\n"
+    },
+    {
+      "identity": "guard_inventory_movements_if_locked()",
+      "definition": "CREATE OR REPLACE FUNCTION public.guard_inventory_movements_if_locked()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\r\ndeclare\r\n  v_store_id uuid;\r\n  v_date_text text;\r\n  v_date date;\r\nbegin\r\n  -- expect store_id to exist\r\n  v_store_id := (to_jsonb(new)->>'store_id')::uuid;\r\n\r\n  -- try movement_date first, else created_at, else current_date\r\n  v_date_text := coalesce(\r\n    to_jsonb(new)->>'movement_date',\r\n    left(to_jsonb(new)->>'created_at', 10)\r\n  );\r\n\r\n  if v_date_text is null or v_date_text = '' then\r\n    v_date := current_date;\r\n  else\r\n    v_date := v_date_text::date;\r\n  end if;\r\n\r\n  if public.is_closing_locked(v_store_id, v_date) then\r\n    raise exception 'This day is locked (%). No movements allowed.', v_date;\r\n  end if;\r\n\r\n  return new;\r\nend;\r\n$function$\n"
+    }
+  ]
+}

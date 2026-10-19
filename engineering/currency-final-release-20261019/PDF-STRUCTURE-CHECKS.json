@@ -1,0 +1,55 @@
+{
+  "status": "PASS",
+  "checks": [
+    {
+      "file": "output\\pdf\\currency-local-auth-acceptance\\AED-en.pdf",
+      "pages": 1,
+      "hasText": true
+    },
+    {
+      "file": "output\\pdf\\currency-local-auth-acceptance\\EUR-en.pdf",
+      "pages": 1,
+      "hasText": true
+    },
+    {
+      "file": "output\\pdf\\currency-local-auth-acceptance\\JPY-en.pdf",
+      "pages": 1,
+      "hasText": true
+    },
+    {
+      "file": "output\\pdf\\currency-local-auth-acceptance\\KES-en.pdf",
+      "pages": 1,
+      "hasText": true
+    },
+    {
+      "file": "output\\pdf\\currency-local-auth-acceptance\\KWD-ar.pdf",
+      "pages": 1,
+      "hasText": true
+    },
+    {
+      "file": "output\\pdf\\currency-local-auth-acceptance\\KWD-en.pdf",
+      "pages": 1,
+      "hasText": true
+    },
+    {
+      "file": "output\\pdf\\currency-local-auth-acceptance\\KWD-zh.pdf",
+      "pages": 1,
+      "hasText": true
+    },
+    {
+      "file": "output\\pdf\\currency-local-auth-acceptance\\TZS-en.pdf",
+      "pages": 1,
+      "hasText": true
+    },
+    {
+      "file": "output\\pdf\\currency-local-auth-acceptance\\UGX-en.pdf",
+      "pages": 1,
+      "hasText": true
+    },
+    {
+      "file": "output\\pdf\\currency-local-auth-acceptance\\USD-en.pdf",
+      "pages": 1,
+      "hasText": true
+    }
+  ]
+}

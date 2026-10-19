@@ -1,0 +1,7 @@
+{
+  "actor": "bb2d6dee-773d-4fa7-8fda-1eb85bbad2cd",
+  "verifiedAt": "2026-10-19T15:25:50.389Z",
+  "verification": "Real Supabase GET /auth/v1/user",
+  "financialTarget": "DISPOSABLE_LOCAL_POSTGRESQL",
+  "productionFinancialWrites": false
+}

@@ -1,0 +1,14 @@
+const fs=require('fs'),path=require('path'),assert=require('assert'),Module=require('module'),esbuild=require('esbuild');
+const{chromium}=require('C:/Users/ZetraAdmin/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const E=__dirname,root=process.cwd(),receipt=JSON.parse(fs.readFileSync(path.join(E,'GENUINE-FINANCIAL-ACCEPTANCE.json')));
+assert.equal(receipt.status,'PASS');assert.equal(receipt.authAcceptance,'GENUINE_SUPABASE_AUTH_TO_LOCAL_CANONICAL_SQL_ADAPTER');assert.equal(receipt.productionFinancialWrites,false);
+(async()=>{let browser;const results=[];try{
+ const compiled=await esbuild.build({entryPoints:[path.join(root,'src/currency/originalReport.ts')],bundle:true,write:false,platform:'node',format:'cjs'}),filename=path.join(E,'generated-original-report.cjs'),m=new Module(filename,module);m.filename=filename;m.paths=module.paths;m._compile(compiled.outputFiles[0].text,filename);const{originalReportHtml}=m.exports;
+ const out=path.join(root,'output/pdf/currency-local-auth-acceptance');fs.mkdirSync(out,{recursive:true});
+ browser=await chromium.launch({headless:true,executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'});
+ const inputs=receipt.reportInputs.map(x=>({...x}));const kwd=inputs.find(x=>x.storeName.endsWith('KWD'));inputs.push({...kwd,language:'ar'},{...kwd,language:'zh'});
+ for(const input of inputs){assert.equal(input.facts.EXPENSE.length,1);assert.equal(input.facts.SALE.length,2);assert.equal(input.facts.COGS.length,2);const code=input.facts.SALE[0].context.currency,name=code+'-'+input.language,html=originalReportHtml(input),page=await browser.newPage({viewport:{width:390,height:844}}),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.route('**/*',r=>r.abort());await page.setContent(html);await page.evaluate(()=>document.fonts.ready);assert.deepEqual(errors,[]);assert(html.includes(input.storeName));assert(html.includes(input.facts.EXPENSE[0].id));
+  await page.pdf({path:path.join(out,name+'.pdf'),format:'A4',printBackground:true});await page.screenshot({path:path.join(out,name+'.png'),fullPage:true});results.push({currency:code,language:input.language,file:path.relative(root,path.join(out,name+'.pdf')).replaceAll('\\','/'),actualApplicationHtmlBuilder:true,realChromiumPdf:true,input:'Genuine Supabase Auth -> disposable canonical SQL -> original-currency reader',deployedProductShare:false});await page.close();
+ }
+ fs.writeFileSync(path.join(E,'GENUINE-LOCAL-PDF-RESULTS.json'),JSON.stringify({status:'PASS',count:results.length,documents:results,scope:'Actual originalReportHtml + canonical local financial facts after genuine Auth. Real PDF generation; deployed Web/native Expo Print/Share E2E NOT TESTED.'},null,2));console.log('PASS '+results.length+' real PDF outputs');
+}finally{if(browser)await browser.close()}})().catch(e=>{console.error(e);process.exitCode=1});

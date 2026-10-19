@@ -1,0 +1,49 @@
+{
+  "files": [
+    {
+      "path": "engineering/currency-final-release-20261019/LATEST-RECOVERED-RELEASE.DRAFT.json",
+      "sha256": "f3962cb0dcfd52e4acb63797efb90f40553c089d4a96c74ce421fb875a14a767"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/LATEST-RECOVERY-RESULT.md",
+      "sha256": "a0b7e3af23dd5d5401df668e413c8c16226e3fef8d86992623bb8ae433baa5a9"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/RECOVERY-INTEGRITY-RESULTS.json",
+      "sha256": "b7d3ce873a7ada2dc03a5519ad90330092bb9da15827d95a87da03415a2885a3"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/recover_latest_release.py",
+      "sha256": "aa64b3b4f42490b61fc42806c003c83c7171e3827ed9c4ab42e2fddbd76a41d8"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/1913-DISABLE.sql",
+      "sha256": "ad4704aad017f4d68139e1cd4cf97d384b9d8cf515e6e49b84bd29aa27a0d7d8"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/genuine_local_financial.py",
+      "sha256": "f1cd4c1a4b76841f75244a08b071afe7d3f67589fc5c04350384ea4f00dee062"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/serve_genuine_financial.cjs",
+      "sha256": "99cf51de538548f6f42bad6808ab07125b332f767b3a0d020e8e510d9b75611a"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/test_1913_install_security.py",
+      "sha256": "3ba9b24496930cf5ccf42ee8518fe19155dc0db972eaac953d07cb4b7202bf93"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/test_original_refund_evidence.py",
+      "sha256": "d265ea1911977bb0d2ece727334943e4e1cc25aefe44dc557df00b27f6f4a92b"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/test_financial_acceptance_gate.py",
+      "sha256": "8ff21221485c89dbc885522798c51488002603f280be5d53d5d5296908d81841"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/render_genuine_financial_documents.cjs",
+      "sha256": "3659bd36fca9bebd360aab62c3ca7a8dbd70629ce61b9fb07b279ce65c03af2d"
+    }
+  ],
+  "scope": "Recovery package, new local runners and verification sources; migration/source/evidence/PDF hashes are pinned inside release package"
+}

@@ -1,0 +1,11 @@
+{
+  "url": "http://127.0.0.1:55625/",
+  "pid": 32784,
+  "workerPid": 7192,
+  "runtimeId": "disposable-original-product-b1896a59-dd2b-424a-b989-2ae03f51ed49",
+  "sourceHashes": {
+    "src/currency/OriginalRefundForm.tsx": "1e4b1e895b00c8d1a7ae5fd217da57d2633b6e4770d4f462485a8db6e6e2d327",
+    "src/currency/originalWorkflow.ts": "5ede7755d958be6c49f68570648935451bd67fe42e9904f2c8482f12a8ac5c54"
+  },
+  "scope": "Real Auth, actual OriginalRefundForm source, disposable synthetic finance only"
+}

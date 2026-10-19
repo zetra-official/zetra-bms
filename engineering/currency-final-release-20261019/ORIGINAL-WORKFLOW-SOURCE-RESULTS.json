@@ -1,0 +1,23 @@
+{
+  "status": "PASS",
+  "count": 16,
+  "checks": [
+    "refund request supplies no tax/rate/currency/amount override",
+    "invalid quantity rejected: 0",
+    "invalid quantity rejected: -1",
+    "invalid quantity rejected: 1e2",
+    "invalid quantity rejected: NaN",
+    "invalid quantity rejected: 1.0001",
+    "invalid quantity rejected: Infinity",
+    "unknown outcome retains exact persisted intent before dispatch",
+    "changed request cannot replace unresolved intent",
+    "changed quantity cannot replace unresolved intent",
+    "wrong-sale response cannot clear pending request",
+    "confirmed exact replay clears pending request",
+    "storage failure denies dispatch",
+    "explicit atomic quantity rejection permits correction",
+    "request conflict preserves unresolved original intent",
+    "cross-actor persisted intent fails closed"
+  ],
+  "scope": "Actual financial request/persistence source; injected in-memory storage and RPC failures; no runtime Auth claim"
+}
