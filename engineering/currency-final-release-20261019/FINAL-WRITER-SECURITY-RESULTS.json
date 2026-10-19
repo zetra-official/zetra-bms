@@ -1,7 +1,9 @@
 {
   "status": "PASS",
-  "count": 45,
+  "count": 49,
   "checks": [
+    "install preserves all existing local TZS/native sale/item/payment/wallet histories",
+    "existing application v6 ACL unchanged by new migrations",
     "original_refunds FORCE RLS",
     "original_refunds denies anon",
     "original_refunds denies authenticated",
@@ -37,6 +39,7 @@
     "check_bound_wallet_v1 denies all nonowner execution",
     "stamp_bound_field_supplier_v1 denies all nonowner execution",
     "stamp_bound_wallet_transaction_v1 denies all nonowner execution",
+    "stamp_bound_field_expense_v1 denies all nonowner execution",
     "concurrent refunds: exactly one commits",
     "concurrent loser denied by original quantity",
     "concurrent quantity and stock refund recorded once",
@@ -46,9 +49,10 @@
     "Funding Control source authority remains advances-only deny",
     "missing original evidence denies historical refund",
     "deny-only rollback retains original refund facts",
-    "disable removes test-role refund access"
+    "disable removes test-role refund access",
+    "legacy TZS v6 behavior passes with rollback-only local fixture grant and rollout disabled"
   ],
-  "scope": "Independent disposable clone; actual concurrent transactions, RLS/ACL and deny-only rollback; synthetic Auth",
+  "scope": "Independent disposable clone; actual concurrent transactions, RLS/ACL, legacy TZS compatibility and deny-only rollback; synthetic Auth",
   "productionWrites": false,
   "migrations": [
     {
@@ -57,11 +61,11 @@
     },
     {
       "path": "2026101915-canonical-field-custody.DRAFT.sql",
-      "sha256": "da1830686c7865175a7177e616880c4f422e53d56cab6bfae2160f1b7a34d7c9"
+      "sha256": "9feb503408eb5d138cef10871aab8e72f8b5f15d9ff5c19a542535ac7dd7e332"
     },
     {
-      "path": "1916-original-workflow-readers.sql",
-      "sha256": "8be061ff253f96aa428c58335eedcc5584eddfa7deb1c854ed24c6dd30d388e9"
+      "path": "2026101916-original-workflow-readers.DRAFT.sql",
+      "sha256": "79377515c998fdd0c3fbac8f086f11f5c5a6d320a0855333559cc33beb620a99"
     }
   ]
 }

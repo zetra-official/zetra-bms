@@ -1,0 +1,45 @@
+{
+  "status": "PASS",
+  "command": "CI=1 npx expo export --platform web --platform android --max-workers 2 --output-dir engineering/currency-final-release-20261019/build-final-current",
+  "exitCode": 0,
+  "scope": "Local production-mode Web static export and Android Hermes bundle. No physical runtime or PDF/share acceptance implied.",
+  "productionDeployment": false,
+  "config": {
+    "path": "metro.config.js",
+    "sha256": "f83c708a5044ddef5539da7558b749dd742e3ff742577c2e6f6a3ba61bb42a18"
+  },
+  "metadata": {
+    "path": "engineering/currency-final-release-20261019/build-final-current/metadata.json",
+    "sha256": "bdd44801bd72f5d899cb921a9165e48af611330e28d650af8b407eca4b7b1fd5"
+  },
+  "androidBundle": {
+    "path": "engineering/currency-final-release-20261019/build-final-current/_expo/static/js/android/entry-95051692982d6ac391049415a088d803.hbc",
+    "sha256": "3e130151522c817506fc98365ec0d52d52033432d63a0e7e3fcf4338e878b83b"
+  },
+  "webBundles": [
+    {
+      "path": "engineering/currency-final-release-20261019/build-final-current/_expo/static/js/web/entry-c2b061b913546bc0828a7b370ec07416.js",
+      "sha256": "6fd7b8089b63f418ae5ab645db7b4c35ded92f74535786e9f4694e92b1d84de6"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/build-final-current/_expo/static/js/web/html2canvas-7ebb6e6ee2857557adcd09acf00e239f.js",
+      "sha256": "7dee8a7f8fac7a860fadae2e225b3ed132d6d43f9933c241dae1dceb2e8b66be"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/build-final-current/_expo/static/js/web/index-8af9db20ba99531c476c8e210121960a.js",
+      "sha256": "053193f6a4835bb1ba40062eb53ee8de4b5f63bb05bf550f990230fe176b3f60"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/build-final-current/_expo/static/js/web/jspdf.es-36a3ff96416df5da10b6f038666ee8e3.js",
+      "sha256": "27ac7998e09e7692dcafe3514edd09eb0fc47f26230cc8fccd92cfa428d62df5"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/build-final-current/_expo/static/js/web/loadBusinessFonts-457972b0d48458bec36db12b0cf030fd.js",
+      "sha256": "daa87115cd1d97948ea0885e401343a546a198bb8fd508cb2bc3449981cc2147"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/build-final-current/_expo/static/js/web/purify-b0724493987dec343202c9e87dd9fdc5.js",
+      "sha256": "fc8931bf0e7c79c4d10ec7bcbebecdec8fc4433433234a36618c825d1c5902d4"
+    }
+  ]
+}

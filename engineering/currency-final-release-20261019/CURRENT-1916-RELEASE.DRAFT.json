@@ -1,0 +1,134 @@
+{
+  "status": "LOCAL_CONTRACT_VERIFIED_ACCEPTANCE_PENDING",
+  "createdAt": "2026-10-19T17:51:09.145981+00:00",
+  "gitHead": "00f48a213123a625c9770f74d90349ab9e27e586",
+  "migrationOrder": [
+    {
+      "path": "engineering/currency-financial-integration-20261019/2026101904-financial-currency-context.DRAFT.sql",
+      "sha256": "2d72cf83e848d4304e932403bfae0d6b0af6baae1314d4204128ee830ab9b3b4"
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/2026101905-native-settlement-atomic.DRAFT.sql",
+      "sha256": "f9f849d7eb43844d8da92cf3c44bc51d8b9603b2c9d896eb2ab6d6e8aa35f3d4"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/2026101906-native-expense-integrity.DRAFT.sql",
+      "sha256": "45d054fc0564842d7759a09d857c40438aa1f7df032ba530e65987efcde7aa6b"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/2026101907-original-financial-readers.DRAFT.sql",
+      "sha256": "ac4ff6d398f85630f1cd005abdc4ecc74565de1fd347ccf62ffd0aa8620524c5"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/2026101908-native-writer-quarantine.DRAFT.sql",
+      "sha256": "0148160432bec7fe644baff5335779e4766c8ae4215fbeb64be4243d8deeeab0"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/2026101909-canonical-receipt-integrity.DRAFT.sql",
+      "sha256": "8c55f16ffb0dfc9c2236b56170b328ee6b14f0c5070f07be814cf03baf21fe66"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/2026101910-private-settlement-bindings.DRAFT.sql",
+      "sha256": "d949035b97781915db708fdae91d30252f743d1fd1f8caa8cd6eea9f6995d7f2"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/2026101911-private-procurement-bindings.DRAFT.sql",
+      "sha256": "db8f7556b722da8fa9c64b52a2b9c80c3b27d836f35693861db53b3412b0937c"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/2026101912-private-cashier-bindings.DRAFT.sql",
+      "sha256": "c3915c842daf58aa595c547a69b4d4db5c719eda9954f55f596f175a21472cb3"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/2026101913-original-refund-evidence.DRAFT.sql",
+      "sha256": "20d976692d167f7bfbe490f5935658649be31fe74fbf77e3b292a9ec06f8a2e6"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/2026101914-atomic-original-refund.DRAFT.sql",
+      "sha256": "be96729eaa6462536b9fb13c760c0e6a2aad609575db4ac9a9d08f0b2c4ff773"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/2026101915-canonical-field-custody.DRAFT.sql",
+      "sha256": "9feb503408eb5d138cef10871aab8e72f8b5f15d9ff5c19a542535ac7dd7e332"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/2026101916-original-workflow-readers.DRAFT.sql",
+      "sha256": "79377515c998fdd0c3fbac8f086f11f5c5a6d320a0855333559cc33beb620a99"
+    }
+  ],
+  "rollbackOrder": [
+    {
+      "path": "engineering/currency-final-release-20261019/1916-DISABLE.sql",
+      "sha256": "12d0ccec94f46e711703f4d21a0a4495ba640552be1a2cbcdeb3066d7bd408ef"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/1915-DISABLE.sql",
+      "sha256": "cfcd917e06b2650de51d123e84965bca09484a9a889b69ab29135e87393284cf"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/1914-DISABLE.sql",
+      "sha256": "5dad1b35fbd373eb498eef0bc47a3c48ddcb28f05635d83e5bd8e603c103ee7b"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/1913-DISABLE.sql",
+      "sha256": "ad4704aad017f4d68139e1cd4cf97d384b9d8cf515e6e49b84bd29aa27a0d7d8"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/1910-1912-DISABLE.sql",
+      "sha256": "112b05ee77d0c864a563707cefb6824d2e22eb47a67fc69d7dd33e16b94b2805"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/1907-1909-DISABLE.sql",
+      "sha256": "ffae1a647abe03a08c6777e58f938a48c4afc9fa16f3d102b2523bbe94f49554"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/1906-DISABLE.sql",
+      "sha256": "60055141656ad2a077da41def08916f4b75a494d5b7edbbc6bfad09e001ab537"
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/1905-DISABLE-ROLLBACK.sql",
+      "sha256": "1151ce4e422047801fd4db19b6503431fc81f28cee6424696abaabf4837c7f7e"
+    }
+  ],
+  "evidence": [
+    {
+      "path": "engineering/currency-final-release-20261019/ATOMIC-REFUND-WRITER-RESULTS.json",
+      "sha256": "25d81607c7b2132ccbb318c971dae4c8044184dda234bdab86a13e7455b7a908"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/FIELD-CUSTODY-WRITER-RESULTS.json",
+      "sha256": "9b4101728f973aa1e5cd0d9eb23bf5a5c0c511b121ece4d5de6d3da5f8d7f861"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/FINAL-WRITER-SECURITY-RESULTS.json",
+      "sha256": "335b0ff57b8231337cbfff2b4c159d0cf11a274393f6264af15893bf027985da"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/ORIGINAL-WORKFLOW-SOURCE-RESULTS.json",
+      "sha256": "74c654c483fabcb887916a95a581dcf07d800a968bb38252f7d051d211dec94b"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/FIELD-CUSTODY-SOURCE-RESULTS.json",
+      "sha256": "bd1e9e0fdb39e214837f2dd20b9b6fef9bb7b7195fd222bc37afd00df69c181c"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/SAVED-RUNTIME-RESUME-RESULTS.json",
+      "sha256": "5f0fff491fda620f31b6d0bc8736906efb518b14513cac945540d842f8155ebf"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/FINAL-PLATFORM-BUILD-RESULTS.json",
+      "sha256": "b3bd8c3ba1acf1d3c5853aca46819c252c9484978f4f5adfec190708bafbf137"
+    }
+  ],
+  "productionExecutionAuthorized": false,
+  "activationAuthorized": false,
+  "deploymentAuthorized": false,
+  "pending": [
+    "Genuine Desktop/Mobile source workflow and PDF acceptance after private Owner sign-in",
+    "Actual connected Android financial/PDF/share runtime acceptance",
+    "Authoritative original-tax snapshot producer verified and bound to the same sale transaction; no inferred historical tax",
+    "Fresh exact-target Production dependency/ACL/backup and restore-readiness checks, then exact scoped Owner approval"
+  ],
+  "rollbackScope": "Deny new execution and disable rollout; preserve financial facts. No destructive downgrade or historical rewrite.",
+  "preservation": "Catalog and unrelated source untouched; migrations 1904\u20131916 are quarantined drafts; activation remains false."
+}

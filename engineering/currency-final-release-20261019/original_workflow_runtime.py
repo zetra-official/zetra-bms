@@ -10,16 +10,37 @@ actor='bb2d6dee-773d-4fa7-8fda-1eb85bbad2cd'
 q=lambda s:"'"+str(s).replace("'","''")+"'"
 auth='SET ROLE coordinated_client;SET request.jwt.claims='+q(json.dumps({'sub':actor}))+';'
 def emit(v):print(json.dumps(v),flush=True)
-l.E=N/('disposable-original-product-'+str(uuid.uuid4()));l.E.mkdir();l.CLUSTER=l.E/'cluster'
+resume_id=sys.argv[2] if len(sys.argv)==3 and sys.argv[1]=='--resume' else None
+if resume_id:
+ assert re.fullmatch(r'disposable-original-product-[0-9a-f-]{36}',resume_id)
+ l.E=N/resume_id;assert l.E.resolve().parent==N.resolve() and l.E.is_dir()
+else:
+ l.E=N/('disposable-original-product-'+str(uuid.uuid4()));l.E.mkdir()
+l.CLUSTER=l.E/'cluster'
 source=N/'disposable-native-v2'
 try:
- assert not (source/'postmaster.pid').exists() and not list((source/'pg_tblspc').iterdir())
- assert not any(p.is_symlink() for p in source.rglob('*'))
- shutil.copytree(source,l.CLUSTER)
+ if not resume_id:
+  assert not (source/'postmaster.pid').exists() and not list((source/'pg_tblspc').iterdir())
+  assert not any(p.is_symlink() for p in source.rglob('*'))
+  shutil.copytree(source,l.CLUSTER)
+ else:
+  assert (l.CLUSTER/'PG_VERSION').read_text().strip()=='17'
+  assert not(l.CLUSTER/'postmaster.pid').exists() and not list((l.CLUSTER/'pg_tblspc').iterdir())
  l.PORT=l.start()
  assert Path(l.sql("SELECT current_setting('data_directory')")[1]).resolve()==l.CLUSTER.resolve()
- l.sql((E/'2026101915-canonical-field-custody.DRAFT.sql').read_text())
- l.sql((E/'2026101916-original-workflow-readers.DRAFT.sql').read_text())
+ if not resume_id:
+  l.sql((E/'2026101915-canonical-field-custody.DRAFT.sql').read_text())
+  l.sql((E/'2026101916-original-workflow-readers.DRAFT.sql').read_text())
+ else:
+  verified=[]
+  for name in ['2026101915-canonical-field-custody.DRAFT.sql','2026101916-original-workflow-readers.DRAFT.sql']:
+   sql=(E/name).read_text()
+   for fn in re.finditer(r'CREATE(?: OR REPLACE)? FUNCTION\s+([\w.]+)\s*\(.*?\bAS\s+(\$[A-Za-z_]*\$)(.*?)\2\s*;',sql,re.S):
+    schema,proc=fn[1].split('.')
+    bodies=json.loads(l.sql("SELECT coalesce(json_agg(prosrc),'[]') FROM pg_proc WHERE pronamespace="+q(schema)+"::regnamespace AND proname="+q(proc))[1])
+    assert len(bodies)==1 and bodies[0].replace('\r','')==fn[3].replace('\r',''),'SAVED_RUNTIME_SOURCE_DRIFT: '+fn[1]
+    verified.append(fn[1])
+  (E/'SAVED-RUNTIME-RESUME-RESULTS.json').write_text(json.dumps({'status':'PASS','runtimeId':resume_id,'verifiedFunctionBodies':verified,'migrationsRepeated':False,'productionWrites':False},indent=2))
  for sig in ['public.get_original_refund_sale_v1(uuid,uuid)','public.refund_original_sale_v1(uuid,uuid,uuid,uuid,numeric,boolean,uuid,jsonb)']:
   l.sql('GRANT EXECUTE ON FUNCTION '+sig+' TO coordinated_client')
  scenarios=[]
