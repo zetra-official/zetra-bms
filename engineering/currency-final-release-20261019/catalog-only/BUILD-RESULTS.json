@@ -1,0 +1,14 @@
+[
+  {
+    "check": "guard",
+    "exitCode": 0
+  },
+  {
+    "check": "typescript",
+    "exitCode": 0
+  },
+  {
+    "check": "web",
+    "exitCode": 0
+  }
+]

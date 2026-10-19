@@ -1,0 +1,11 @@
+{
+  "status": "SOURCE_RESOLVED",
+  "baseDeployment": "6ad49c64c2acd6e0352f242f",
+  "site": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+  "missing": [],
+  "catalogSha256": "a6b548a9567803d9db181b4d6f236349b55afddfc115ead7ba9f6d449c1b4914",
+  "catalogChange": "Only share-generation p_store_id becomes null; original organization and selected product IDs retained",
+  "accepted114Products": "Owner-reported Expo test; not independently rerun",
+  "databaseChanges": [],
+  "deploymentAuthorized": false
+}

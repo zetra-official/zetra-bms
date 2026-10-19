@@ -1,0 +1,27 @@
+{
+  "status": "READY_FOR_OWNER_WEB_RELEASE_APPROVAL",
+  "site": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+  "domain": "https://app.zetra.tz",
+  "previousDeployment": "6ad49c64c2acd6e0352f242f",
+  "sourceChanges": {
+    "app/catalog.tsx": "a6b548a9567803d9db181b4d6f236349b55afddfc115ead7ba9f6d449c1b4914"
+  },
+  "sourcePreimageSha256": "a9112747bbe390c8b106abe68fe54ede77adcdaa90211d1f18f15093eaf6bafe",
+  "scope": "Catalog share only: p_store_id null, organization and selected114-product semantics retained",
+  "acceptedEvidence": "Owner-reported Expo114-products PASS; not rerun",
+  "isolatedBaseline": "Accepted auth/onboarding source manifest of currently deployed6ad49c64c2acd6e0352f242f; all preimages matched",
+  "buildChecks": "Guard/TypeScript/Web PASS",
+  "artifactManifestSha256": "7ddd4a71bff9cd69345d8e620ecc3bc4da8a2f83f0366cf87c48d96d2abba4c6",
+  "artifactFiles": 271,
+  "financialDraftsIncluded": false,
+  "backendMigrations": [],
+  "androidRelease": false,
+  "publicationAuthorized": false,
+  "approvalRequested": [
+    "Create official Netlify Web draft from exactly these artifacts",
+    "Run nondestructive Catalog/Login smoke checks against that draft",
+    "Publish only if checks pass and Production baseline remains unchanged",
+    "Rollback to6ad49c64c2acd6e0352f242f on a critical regression"
+  ],
+  "rollback": "Restore previous verified Netlify deployment; no database changes or data restoration"
+}

@@ -626,7 +626,7 @@ export default function CatalogScreen() {
   "generate_product_catalog_share_v1",
   {
     p_org_id: activeOrgId,
-    p_store_id: activeStoreId ?? null,
+    p_store_id: null,
     p_product_ids: selectedShareIds,
     p_share_cost_price: shareCostPrice,
     p_share_selling_price: shareSellingPrice,
