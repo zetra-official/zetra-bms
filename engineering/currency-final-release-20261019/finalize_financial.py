@@ -1,0 +1,41 @@
+from pathlib import Path
+import json,hashlib,datetime,os
+R=Path.cwd();E=Path(__file__).resolve().parent
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+def row(p):return {'path':p.relative_to(R).as_posix(),'sha256':sha(p)}
+v=json.loads((E/'production-settlement-catalog.private.json').read_text(encoding='utf-8'))['rows'][0]['metadata'];v=json.loads(v) if isinstance(v,str) else v
+assert v['readOnly']=='on' and v['capture']=='SETTLEMENT_AUTHORITY_METADATA_ONLY'
+functions=v['functions'];find=lambda name:next(f for f in functions if f['identity'].split('(')[0].split('.')[-1]==name)
+local=next(r for r in json.loads((E/'CANONICAL-CONTRACTS.json').read_text()) if r['identity'].startswith('receive_inbound_stock_partial_v1('))
+match=local['definition'].replace('\r','')==find('receive_inbound_stock_partial_v1')['definition'].replace('\r','')
+assert match,'PRODUCTION_RECEIPT_PREIMAGE_DRIFT'
+summary=find('get_my_cashier_closing_payment_summary_v1')['definition'];supplier=find('record_inbound_stock_payment_v1')['definition'];debt=find('record_business_debt_payment')['definition']
+columns=lambda t:[x['column'] for x in v['columns'] if x['table']==t and x['schema']=='public']
+proof={'project':'dcmhqdckzhbuakvcyjit','metadataOnly':True,'customerTransactionRecordsRead':False,'productionWrites':False,'receiptCanonicalPreimageMatches':match,
+ 'canonicalSources':[
+ {'path':'POS sales / cash, bank, mobile and split allocation','authority':'public.sales + public.sale_payments via create_sale_with_payment_v4/v5/v6','limit':'Recorded payment classification, not proof of an authoritative cash/bank/mobile account balance.'},
+ {'path':'Customer debt collections','authority':'record_credit_payment_v2 -> credit_ledger_v2','missingShiftId':'shift_id' not in columns('credit_ledger_v2'),'limit':'No verified collection-to-shift/account binding.'},
+ {'path':'Supplier / inbound payments','authority':'record_inbound_stock_payment_v1 -> inbound_stock_payments + order paid/balance totals','hasStoredOrderCurrency':'currency' in columns('inbound_stock_orders'),'hasAccountId':'account_id' in columns('inbound_stock_payments'),'hasShiftId':'shift_id' in columns('inbound_stock_payments'),'limit':'No account/shift settlement or cost provenance guarantee.'},
+ {'path':'Business debt payments','authority':'record_business_debt_payment -> business_debt_payments + business_debts','hasAccountId':'account_id' in columns('business_debt_payments'),'hasShiftId':'shift_id' in columns('business_debt_payments'),'limit':'Not a verified source-account settlement.'},
+ {'path':'Cashier closing','authority':'cashier_shifts + get_my_cashier_closing_payment_summary_v1','summaryReadsSalePayments':'public.sale_payments' in summary,'summaryReadsCreditLedger':'credit_ledger_v2' in summary,'summaryReadsExpenses':'public.expenses' in summary,'summaryReadsRefunds':'refund' in summary.lower(),'limit':'Sale-payment summary is not complete treasury/shift reconciliation.'},
+ {'path':'Field Procurement custody','authority':'field_wallets + field_wallet_transactions via existing wallet RPCs','limit':'Agent procurement custody; not general sales/refund treasury.'},
+ {'path':'Stock Purchase Funding','authority':'funding_control.accounts/movements for advances only','sourceReadyDenyOnly':'SELECT false' in find('source_ready')['definition'],'ownerDecision':'Do not promote to system-wide settlement ledger.'}],
+ 'verifiedRefundTaxReversalContract':False,'refundTaxFinding':'No verified customer refund/original-tax reversal contract was found among relevant canonical Production RPCs. No zero-tax rule inferred.',
+ 'recommendation':'Define one explicit treasury source-account/settlement/shift binding contract against these canonical payment records, with external settlement confirmation and reversal references; separately bind immutable original sale tax allocations. Preserve existing ledgers and keep Funding Control limited to advances. No new treasury ownership is assumed or activated.',
+ 'definitions':[{'identity':f['identity'],'sha256':hashlib.sha256(f['definition'].encode()).hexdigest()} for f in functions]}
+(E/'PRODUCTION-SETTLEMENT-AUTHORITY-RESULT.json').write_text(json.dumps(proof,indent=2),encoding='utf-8')
+policy={'source':'Explicit Owner replies in this conversation','refundPolicy':'Reverse original saved sale/discount/tax/COGS values only; restock only sellable returned goods; refunded amount and quantity cannot exceed original paid/remaining-refundable values; original authorized account/shift settlement. Missing contracts remain disabled.','fundingControl':'Stock Purchase Funding and advances only. Not designated system-wide Cash/Bank/Mobile Money authority.','productionActivationAuthorized':False}
+(E/'OWNER-POLICY-BOUNDARIES.json').write_text(json.dumps(policy,indent=2),encoding='utf-8')
+migrations=[R/'engineering/currency-financial-integration-20261019/2026101904-financial-currency-context.DRAFT.sql',R/'engineering/native-financial-contracts-20261019/2026101905-native-settlement-atomic.DRAFT.sql',E/'2026101906-native-expense-integrity.DRAFT.sql',E/'2026101907-original-financial-readers.DRAFT.sql',E/'2026101908-native-writer-quarantine.DRAFT.sql',E/'2026101909-canonical-receipt-integrity.DRAFT.sql']
+package={'status':'HOLD_EXACT_EXTERNAL_CONTRACT_AND_ACCEPTANCE_BLOCKERS','targetProject':'dcmhqdckzhbuakvcyjit','productionAuthorization':False,'activationAuthorized':False,'deploymentAuthorized':False,'dependencyOrder':[row(p) for p in migrations],'rollbackOrder':[row(E/'1907-1909-DISABLE.sql'),row(E/'1906-DISABLE.sql'),row(R/'engineering/native-financial-contracts-20261019/1905-DISABLE-ROLLBACK.sql')],'newRpcAccess':{'PUBLIC':'DENIED','anon':'DENIED','authenticated':'DENIED','service_role':'DENIED','owner':'Administrative ownership only; no API rollout'},'clientFlags':False,'historicalBackfill':'NONE; unknown historical denomination remains unknown','financialActivation':'NONE','risks':['Seven inbound item numeric columns widened in1909; bounded lock/rewrite preflight required. No narrowing rollback.','Current stock snapshot is not historical receipt valuation.','Full tax/refund-adjusted net income and full cashier/treasury reconciliation are not certified.','Logical SQL disable is not a tested database restore. No fresh backup readiness is claimed.'],'excluded':['Catalog hotfix (independent cc03b36 package)','unrelated dirty source','general treasury ledger creation','refund/tax posting','native supplier settlement','financial client activation','historical rewrites'],'requiredBeforeProduction':['Resolve explicit settlement and original-tax/reversal authority contracts','Genuine authenticated financial and platform acceptance on authorized non-customer test runtime','Fresh target/preimage/ACL/dependencies/backup/lock verification','Exact package Owner approval; none requested to activate incomplete financial paths']}
+(E/'FINAL-PRODUCTION-PACKAGE.DRAFT.json').write_text(json.dumps(package,indent=2),encoding='utf-8')
+sources=[R/'src/currency/originalFacts.ts',R/'src/currency/originalReport.ts',R/'src/finance/OriginalFinancialStatement.tsx',R/'app/finance/live.tsx',R/'app/(tabs)/settings/business-statement.tsx']
+excluded={'catalog-only','__pycache__'};exclude_names={'SHA256-MANIFEST.json','FINAL-SHA256-MANIFEST.json','postgres.log','catalog_readonly.py','prepare_catalog.py','build_catalog.py','finalize_catalog.py'}
+paths=list(sources)
+for root,dirs,names in os.walk(E,followlinks=False):
+ dirs[:]=[d for d in dirs if d not in excluded and not d.startswith('disposable') and not Path(root,d).is_symlink() and not Path(root,d).is_junction()]
+ for name in names:
+  p=Path(root,name)
+  if name not in exclude_names and not name.startswith('CATALOG-') and '.private.' not in name:paths.append(p)
+manifest={'parentFinancialCheckpoint':'32b81a0','independentCatalogCheckpoint':'cc03b36','status':'LOCAL_ONLY_RELEASE_HOLD','files':[row(p) for p in sorted(paths)],'sourceFiles':[row(p) for p in sources],'preservedCatalogSha256':sha(R/'app/catalog.tsx')}
+(E/'FINAL-SHA256-MANIFEST.json').write_text(json.dumps(manifest,indent=2),encoding='utf-8');print(json.dumps({'receiptProductionPreimageVerified':match,'draftMigrations':len(migrations),'sourceFiles':len(sources),'evidenceFiles':len(paths),'productionWrites':False}))

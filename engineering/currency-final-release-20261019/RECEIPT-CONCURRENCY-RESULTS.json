@@ -1,0 +1,20 @@
+{
+  "status": "PASS",
+  "count": 13,
+  "checks": [
+    "concurrent same-key requests both resolve successfully",
+    "concurrent retry returns same receipt",
+    "concurrency creates exactly one stock movement",
+    "different-key concurrent overreceipt only one commits",
+    "received quantity never exceeds ordered",
+    "two legitimate partial receipts retain exact provenance",
+    "zero quantity rejected",
+    "native supplier-payment direct write denied",
+    "spoofed TZS row scope cannot bypass native parent",
+    "native supplier payment remains absent",
+    "legacy TZS payment contract retained",
+    "supplier-payment guard has no client execute",
+    "rollback disable preserves receipt cost evidence"
+  ],
+  "scope": "Actual disposable full-schema PostgreSQL concurrent transactions, synthetic Auth only."
+}

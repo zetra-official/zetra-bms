@@ -1,0 +1,125 @@
+{
+  "columns": [
+    {
+      "column": "id",
+      "type": "uuid",
+      "generated": "NEVER",
+      "expression": null
+    },
+    {
+      "column": "inbound_order_id",
+      "type": "uuid",
+      "generated": "NEVER",
+      "expression": null
+    },
+    {
+      "column": "organization_id",
+      "type": "uuid",
+      "generated": "NEVER",
+      "expression": null
+    },
+    {
+      "column": "product_id",
+      "type": "uuid",
+      "generated": "NEVER",
+      "expression": null
+    },
+    {
+      "column": "product_name",
+      "type": "text",
+      "generated": "NEVER",
+      "expression": null
+    },
+    {
+      "column": "sku",
+      "type": "text",
+      "generated": "NEVER",
+      "expression": null
+    },
+    {
+      "column": "barcode",
+      "type": "text",
+      "generated": "NEVER",
+      "expression": null
+    },
+    {
+      "column": "qty_ordered",
+      "type": "numeric",
+      "generated": "NEVER",
+      "expression": null
+    },
+    {
+      "column": "qty_received",
+      "type": "numeric",
+      "generated": "NEVER",
+      "expression": null
+    },
+    {
+      "column": "damaged_qty",
+      "type": "numeric",
+      "generated": "NEVER",
+      "expression": null
+    },
+    {
+      "column": "missing_qty",
+      "type": "numeric",
+      "generated": "NEVER",
+      "expression": null
+    },
+    {
+      "column": "unit_cost",
+      "type": "numeric",
+      "generated": "NEVER",
+      "expression": null
+    },
+    {
+      "column": "proposed_sell_price",
+      "type": "numeric",
+      "generated": "NEVER",
+      "expression": null
+    },
+    {
+      "column": "total_cost",
+      "type": "numeric",
+      "generated": "NEVER",
+      "expression": null
+    },
+    {
+      "column": "is_new_product",
+      "type": "boolean",
+      "generated": "NEVER",
+      "expression": null
+    },
+    {
+      "column": "note",
+      "type": "text",
+      "generated": "NEVER",
+      "expression": null
+    },
+    {
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "generated": "NEVER",
+      "expression": null
+    },
+    {
+      "column": "updated_at",
+      "type": "timestamp with time zone",
+      "generated": "NEVER",
+      "expression": null
+    },
+    {
+      "column": "unit",
+      "type": "text",
+      "generated": "NEVER",
+      "expression": null
+    },
+    {
+      "column": "category",
+      "type": "text",
+      "generated": "NEVER",
+      "expression": null
+    }
+  ],
+  "views": []
+}

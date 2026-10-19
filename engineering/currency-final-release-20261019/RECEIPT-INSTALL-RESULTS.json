@@ -1,0 +1,20 @@
+{
+  "status": "PASS",
+  "count": 12,
+  "checks": [
+    "exact1909 commits after independently installed1904-1908",
+    "existing sale/payment/stock counts preserved",
+    "cost evidence is private FORCE RLS",
+    "anon new receipt RPC denied",
+    "authenticated new receipt RPC denied",
+    "service_role new receipt RPC denied",
+    "coordinated_client new receipt RPC denied",
+    "all three unsupported native supplier payment writers guarded",
+    "no hidden fractional truncation on seven item columns",
+    "repeated migration rejects unexpected preimage atomically",
+    "disable retains private evidence and native denial triggers",
+    "rollback/disable preserves business rows"
+  ],
+  "migrationSha256": "8c55f16ffb0dfc9c2236b56170b328ee6b14f0c5070f07be814cf03baf21fe66",
+  "scope": "Disposable full-schema PostgreSQL only."
+}

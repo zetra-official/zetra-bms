@@ -1,0 +1,69 @@
+{
+  "status": "PASS",
+  "documents": [
+    {
+      "file": "AED-en.pdf",
+      "pages": 1,
+      "sha256": "ae31974e1145b7c74d5dced987a252c2cfe1d718b219a87fb27074b5f5ba9333",
+      "textVerified": true,
+      "fullPageRendered": true
+    },
+    {
+      "file": "EUR-en.pdf",
+      "pages": 1,
+      "sha256": "6eef9493efb5189a1096a9caa53178f19e271a98f832553b7261474c98987782",
+      "textVerified": true,
+      "fullPageRendered": true
+    },
+    {
+      "file": "JPY-en.pdf",
+      "pages": 1,
+      "sha256": "1801c82fd7a35a5cb0d9a43c0ee374a20a20ba52169302ec99c8a5a3561be8f2",
+      "textVerified": true,
+      "fullPageRendered": true
+    },
+    {
+      "file": "KES-en.pdf",
+      "pages": 1,
+      "sha256": "79622463a516496caeb9c0a5d48487d4d7a87ebfcfdd12cd49e1e9b9c11a4519",
+      "textVerified": true,
+      "fullPageRendered": true
+    },
+    {
+      "file": "KWD-ar.pdf",
+      "pages": 1,
+      "sha256": "0ebda866f774ff17e117e3ed90c9bd10042d2753e87b77a7cc1b77a48e4b11cd",
+      "textVerified": true,
+      "fullPageRendered": true
+    },
+    {
+      "file": "KWD-en.pdf",
+      "pages": 1,
+      "sha256": "daebc7ad468694d2567046355f7daeb269e49f1d21512d18148efd3dc0b69d7b",
+      "textVerified": true,
+      "fullPageRendered": true
+    },
+    {
+      "file": "TZS-en.pdf",
+      "pages": 1,
+      "sha256": "914d902d3105898ba1f7830a24904f781fee20cbcd1ebef0f1ac3581783256c6",
+      "textVerified": true,
+      "fullPageRendered": true
+    },
+    {
+      "file": "UGX-en.pdf",
+      "pages": 1,
+      "sha256": "b2b1e0a12964f986eb4705294ba1a3939288df03561fe9bf1bc173e7e4f7cf26",
+      "textVerified": true,
+      "fullPageRendered": true
+    },
+    {
+      "file": "USD-en.pdf",
+      "pages": 1,
+      "sha256": "f8f9391c55cbfebebdb02c0116fdafeb472e5c84ef5cf017892b24f208e495cf",
+      "textVerified": true,
+      "fullPageRendered": true
+    }
+  ],
+  "scope": "Actual Chromium PDFs generated from final application builder and synthetic canonical facts. Physical Android sharing NOT TESTED."
+}

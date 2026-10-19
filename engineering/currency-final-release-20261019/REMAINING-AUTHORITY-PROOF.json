@@ -1,0 +1,1095 @@
+{
+  "functions": [
+    {
+      "identity": "funding_control.source_ready(uuid)",
+      "definition": "CREATE OR REPLACE FUNCTION funding_control.source_ready(uuid)\n RETURNS boolean\n LANGUAGE sql\n STABLE\n SET search_path TO 'pg_catalog'\nAS $function$ SELECT false $function$\n"
+    },
+    {
+      "identity": "funding_control.can(uuid,uuid,uuid,uuid,text)",
+      "definition": "CREATE OR REPLACE FUNCTION funding_control.can(a uuid, o uuid, s uuid, ac uuid, op text)\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'pg_catalog'\nAS $function$\r\n\r\n SELECT funding_control.member_role(a,o,s) IS NOT NULL AND (funding_control.member_role(a,o,s)='owner' OR EXISTS(SELECT 1 FROM funding_control.permissions p WHERE p.org=o AND p.store=s AND p.account=ac AND p.actor=a AND p.operation=op))\r\n\r\n$function$\n"
+    },
+    {
+      "identity": "funding_control.require_open_shift(uuid,uuid,uuid)",
+      "definition": "CREATE OR REPLACE FUNCTION funding_control.require_open_shift(a uuid, o uuid, s uuid)\n RETURNS uuid\n LANGUAGE plpgsql\n SET search_path TO 'pg_catalog'\nAS $function$\r\n\r\nDECLARE found_id uuid;count_open integer:=0;shift_row record;\r\n\r\nBEGIN\r\n\r\n IF funding_canonical.scope_role(a,o,s) IS DISTINCT FROM 'cashier' THEN RAISE EXCEPTION 'CASHIER_SHIFT_REQUIRED'; END IF;\r\n\r\n FOR shift_row IN SELECT cs.id FROM public.cashier_shifts cs JOIN public.org_memberships m ON m.id=cs.membership_id\r\n\r\n  WHERE cs.organization_id=o AND cs.store_id=s AND cs.status='OPEN' AND m.user_id=a AND m.organization_id=o AND m.is_active IS TRUE\r\n\r\n  ORDER BY cs.id FOR UPDATE OF cs LOOP count_open:=count_open+1;found_id:=shift_row.id;END LOOP;\r\n\r\n IF count_open<>1 THEN RAISE EXCEPTION 'SHIFT_NOT_OPEN_OR_AMBIGUOUS'; END IF;RETURN found_id;\r\n\r\nEND $function$\n"
+    },
+    {
+      "identity": "funding_control.post(uuid,uuid,uuid,text,numeric)",
+      "definition": "CREATE OR REPLACE FUNCTION funding_control.post(p_account uuid, p_advance uuid, p_request uuid, p_kind text, p_amount numeric)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog'\nAS $function$\r\n\r\nDECLARE a uuid:=stock_funding.actor();ac funding_control.accounts%ROWTYPE;r stock_funding.advances%ROWTYPE;policy funding_control.auto_policies%ROWTYPE;day date;automatic boolean:=false;balance numeric;delta numeric;v_shift uuid;\r\n\r\nBEGIN\r\n\r\n SELECT * INTO r FROM stock_funding.advances WHERE id=p_advance FOR UPDATE;\r\n\r\n SELECT * INTO ac FROM funding_control.accounts WHERE id=p_account FOR UPDATE;\r\n\r\n IF r.id IS NULL OR ac.id IS NULL OR ac.org<>r.organization_id OR ac.store<>r.store_id OR ac.currency<>r.currency OR ac.locked OR p_kind NOT IN ('FUND','RETURN','REVERSE') OR p_kind IS NULL OR p_request IS NULL THEN RAISE EXCEPTION 'ACCOUNT_FORBIDDEN_OR_LOCKED'; END IF;\r\n\r\n IF p_amount IS NULL OR p_amount<=0 OR p_amount>=1e24 OR p_amount<>round(p_amount,r.minor_units) THEN RAISE EXCEPTION 'INVALID_AMOUNT'; END IF;\r\n\r\n IF funding_control.source_ready(ac.id) IS NOT TRUE THEN RAISE EXCEPTION 'SOURCE_CONTRACT_NOT_BOUND'; END IF;\r\n\r\n IF NOT funding_control.can(a,ac.org,ac.store,ac.id,CASE WHEN p_kind='RETURN' THEN 'RETURN' ELSE 'RELEASE' END) THEN RAISE EXCEPTION 'FORBIDDEN'; END IF;\r\n\r\n IF ac.kind='CASH' THEN v_shift:=funding_control.require_open_shift(a,ac.org,ac.store); IF v_shift IS NULL THEN RAISE EXCEPTION 'SHIFT_NOT_OPEN'; END IF; END IF;\r\n\r\n day:=timezone(ac.timezone,clock_timestamp())::date; -- never client date or language preference\r\n\r\n IF p_kind='FUND' THEN\r\n\r\n  IF p_account<>r.source_account OR p_amount<>r.amount OR r.status NOT IN ('DRAFT','APPROVED') THEN RAISE EXCEPTION 'INVALID_TRANSITION'; END IF;\r\n\r\n  IF NOT EXISTS(SELECT 1 FROM funding_control.approvals ap WHERE ap.advance=r.id AND ap.approved_by<>r.created_by AND ap.record_revision=r.revision) THEN\r\n\r\n   SELECT * INTO policy FROM funding_control.auto_policies WHERE account=ac.id AND actor=a;\r\n\r\n   IF NOT FOUND OR NOT policy.enabled OR p_amount>policy.per_transaction THEN RAISE EXCEPTION 'EXPLICIT_APPROVAL_REQUIRED'; END IF;\r\n\r\n   IF policy.settle_first AND EXISTS(SELECT 1 FROM stock_funding.advances x WHERE x.organization_id=r.organization_id AND x.store_id=r.store_id AND x.responsible_id=r.responsible_id AND x.id<>r.id AND x.status IN ('FUNDED','PARTIALLY_RECONCILED')) THEN RAISE EXCEPTION 'OUTSTANDING_ADVANCE_BLOCKED'; END IF;\r\n\r\n   IF coalesce((SELECT sum(-m.delta) FROM funding_control.movements m WHERE m.account=ac.id AND m.actor=a AND m.business_day=day AND m.auto_approved AND m.kind='FUND'),0)+p_amount>policy.per_day THEN RAISE EXCEPTION 'DAILY_LIMIT_EXCEEDED'; END IF;\r\n\r\n   automatic:=true;\r\n\r\n  END IF;\r\n\r\n  delta:=-p_amount;\r\n\r\n ELSIF p_kind='RETURN' THEN\r\n\r\n  IF r.status NOT IN ('FUNDED','PARTIALLY_RECONCILED') OR p_amount>r.amount-r.spent-greatest(r.returned,coalesce((SELECT sum(m.delta) FROM funding_control.movements m WHERE m.advance=r.id AND m.kind='RETURN'),0)) THEN RAISE EXCEPTION 'OVER_RECONCILIATION'; END IF;\r\n\r\n  delta:=p_amount;\r\n\r\n ELSE\r\n\r\n  IF r.status<>'FUNDED' OR r.spent<>0 OR r.returned<>0 OR EXISTS(SELECT 1 FROM funding_control.movements m WHERE m.advance=r.id AND m.kind IN ('RETURN','REVERSE')) OR p_amount<>r.amount OR p_account<>r.source_account THEN RAISE EXCEPTION 'CONTROLLED_REVERSAL_REQUIRED'; END IF;\r\n\r\n  delta:=p_amount;\r\n\r\n END IF;\r\n\r\n balance:=ac.opening+coalesce((SELECT sum(m.delta) FROM funding_control.movements m WHERE m.account=ac.id),0);\r\n\r\n IF balance+delta<0 THEN RAISE EXCEPTION 'INSUFFICIENT_FUNDS'; END IF;\r\n\r\n INSERT INTO funding_control.movements(account,advance,request,actor,delta,kind,business_day,auto_approved,shift_id) VALUES(ac.id,r.id,p_request,a,delta,p_kind,day,automatic,v_shift);\r\n\r\nEND $function$\n"
+    }
+  ],
+  "columns": [
+    {
+      "schema": "funding_control",
+      "table": "accounts",
+      "column": "id",
+      "type": "uuid",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "funding_control",
+      "table": "accounts",
+      "column": "org",
+      "type": "uuid",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "funding_control",
+      "table": "accounts",
+      "column": "store",
+      "type": "uuid",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "funding_control",
+      "table": "accounts",
+      "column": "kind",
+      "type": "text",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "funding_control",
+      "table": "accounts",
+      "column": "currency",
+      "type": "text",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "funding_control",
+      "table": "accounts",
+      "column": "opening",
+      "type": "numeric",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "funding_control",
+      "table": "accounts",
+      "column": "confirmed_by",
+      "type": "uuid",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "funding_control",
+      "table": "accounts",
+      "column": "confirmed_at",
+      "type": "timestamp with time zone",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "funding_control",
+      "table": "accounts",
+      "column": "evidence",
+      "type": "text",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "funding_control",
+      "table": "accounts",
+      "column": "timezone",
+      "type": "text",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "funding_control",
+      "table": "accounts",
+      "column": "locked",
+      "type": "boolean",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "funding_control",
+      "table": "movements",
+      "column": "id",
+      "type": "bigint",
+      "precision": 64,
+      "scale": 0
+    },
+    {
+      "schema": "funding_control",
+      "table": "movements",
+      "column": "account",
+      "type": "uuid",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "funding_control",
+      "table": "movements",
+      "column": "advance",
+      "type": "uuid",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "funding_control",
+      "table": "movements",
+      "column": "request",
+      "type": "uuid",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "funding_control",
+      "table": "movements",
+      "column": "actor",
+      "type": "uuid",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "funding_control",
+      "table": "movements",
+      "column": "delta",
+      "type": "numeric",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "funding_control",
+      "table": "movements",
+      "column": "kind",
+      "type": "text",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "funding_control",
+      "table": "movements",
+      "column": "business_day",
+      "type": "date",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "funding_control",
+      "table": "movements",
+      "column": "auto_approved",
+      "type": "boolean",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "funding_control",
+      "table": "movements",
+      "column": "shift_id",
+      "type": "uuid",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "funding_control",
+      "table": "movements",
+      "column": "recorded_at",
+      "type": "timestamp with time zone",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "business_debts",
+      "column": "id",
+      "type": "uuid",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "business_debts",
+      "column": "organization_id",
+      "type": "uuid",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "business_debts",
+      "column": "store_id",
+      "type": "uuid",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "business_debts",
+      "column": "debt_scope",
+      "type": "text",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "business_debts",
+      "column": "lender_name",
+      "type": "text",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "business_debts",
+      "column": "lender_phone",
+      "type": "text",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "business_debts",
+      "column": "debt_type",
+      "type": "text",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "business_debts",
+      "column": "principal_amount",
+      "type": "numeric",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "business_debts",
+      "column": "paid_amount",
+      "type": "numeric",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "business_debts",
+      "column": "purpose",
+      "type": "text",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "business_debts",
+      "column": "note",
+      "type": "text",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "business_debts",
+      "column": "debt_date",
+      "type": "date",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "business_debts",
+      "column": "due_date",
+      "type": "date",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "business_debts",
+      "column": "status",
+      "type": "text",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "business_debts",
+      "column": "created_by",
+      "type": "uuid",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "business_debts",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "business_debts",
+      "column": "updated_at",
+      "type": "timestamp with time zone",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "business_debts",
+      "column": "supplier_id",
+      "type": "uuid",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "cashier_shifts",
+      "column": "id",
+      "type": "uuid",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "cashier_shifts",
+      "column": "organization_id",
+      "type": "uuid",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "cashier_shifts",
+      "column": "store_id",
+      "type": "uuid",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "cashier_shifts",
+      "column": "membership_id",
+      "type": "uuid",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "cashier_shifts",
+      "column": "opening_cash",
+      "type": "numeric",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "cashier_shifts",
+      "column": "status",
+      "type": "text",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "cashier_shifts",
+      "column": "opened_at",
+      "type": "timestamp with time zone",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "cashier_shifts",
+      "column": "closed_at",
+      "type": "timestamp with time zone",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "cashier_shifts",
+      "column": "closing_note",
+      "type": "text",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "cashier_shifts",
+      "column": "created_by",
+      "type": "uuid",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "cashier_shifts",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "cashier_shifts",
+      "column": "updated_at",
+      "type": "timestamp with time zone",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "cashier_shifts",
+      "column": "drawer_count",
+      "type": "numeric",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "cashier_shifts",
+      "column": "currency_context",
+      "type": "jsonb",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_items",
+      "column": "id",
+      "type": "uuid",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_items",
+      "column": "inbound_order_id",
+      "type": "uuid",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_items",
+      "column": "organization_id",
+      "type": "uuid",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_items",
+      "column": "product_id",
+      "type": "uuid",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_items",
+      "column": "product_name",
+      "type": "text",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_items",
+      "column": "sku",
+      "type": "text",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_items",
+      "column": "barcode",
+      "type": "text",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_items",
+      "column": "qty_ordered",
+      "type": "numeric",
+      "precision": 18,
+      "scale": 2
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_items",
+      "column": "qty_received",
+      "type": "numeric",
+      "precision": 18,
+      "scale": 2
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_items",
+      "column": "damaged_qty",
+      "type": "numeric",
+      "precision": 18,
+      "scale": 2
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_items",
+      "column": "missing_qty",
+      "type": "numeric",
+      "precision": 18,
+      "scale": 2
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_items",
+      "column": "unit_cost",
+      "type": "numeric",
+      "precision": 18,
+      "scale": 2
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_items",
+      "column": "proposed_sell_price",
+      "type": "numeric",
+      "precision": 18,
+      "scale": 2
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_items",
+      "column": "total_cost",
+      "type": "numeric",
+      "precision": 18,
+      "scale": 2
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_items",
+      "column": "is_new_product",
+      "type": "boolean",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_items",
+      "column": "note",
+      "type": "text",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_items",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_items",
+      "column": "updated_at",
+      "type": "timestamp with time zone",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_items",
+      "column": "unit",
+      "type": "text",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_items",
+      "column": "category",
+      "type": "text",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_orders",
+      "column": "id",
+      "type": "uuid",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_orders",
+      "column": "organization_id",
+      "type": "uuid",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_orders",
+      "column": "store_id",
+      "type": "uuid",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_orders",
+      "column": "supplier_id",
+      "type": "uuid",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_orders",
+      "column": "created_by",
+      "type": "uuid",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_orders",
+      "column": "order_code",
+      "type": "text",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_orders",
+      "column": "supplier_name",
+      "type": "text",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_orders",
+      "column": "source_country",
+      "type": "text",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_orders",
+      "column": "source_city",
+      "type": "text",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_orders",
+      "column": "destination_name",
+      "type": "text",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_orders",
+      "column": "invoice_number",
+      "type": "text",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_orders",
+      "column": "transport_name",
+      "type": "text",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_orders",
+      "column": "tracking_number",
+      "type": "text",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_orders",
+      "column": "currency",
+      "type": "text",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_orders",
+      "column": "total_items",
+      "type": "integer",
+      "precision": 32,
+      "scale": 0
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_orders",
+      "column": "total_goods_value",
+      "type": "numeric",
+      "precision": 18,
+      "scale": 2
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_orders",
+      "column": "total_paid_amount",
+      "type": "numeric",
+      "precision": 18,
+      "scale": 2
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_orders",
+      "column": "total_balance_amount",
+      "type": "numeric",
+      "precision": 18,
+      "scale": 2
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_orders",
+      "column": "freight_cost",
+      "type": "numeric",
+      "precision": 18,
+      "scale": 2
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_orders",
+      "column": "customs_cost",
+      "type": "numeric",
+      "precision": 18,
+      "scale": 2
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_orders",
+      "column": "other_cost",
+      "type": "numeric",
+      "precision": 18,
+      "scale": 2
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_orders",
+      "column": "expected_arrival_date",
+      "type": "date",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_orders",
+      "column": "arrived_at",
+      "type": "timestamp with time zone",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_orders",
+      "column": "received_at",
+      "type": "timestamp with time zone",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_orders",
+      "column": "status",
+      "type": "text",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_orders",
+      "column": "note",
+      "type": "text",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_orders",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_orders",
+      "column": "updated_at",
+      "type": "timestamp with time zone",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_orders",
+      "column": "updated_by",
+      "type": "uuid",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_orders",
+      "column": "received_by",
+      "type": "uuid",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_orders",
+      "column": "delete_reason",
+      "type": "text",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_orders",
+      "column": "deleted_at",
+      "type": "timestamp with time zone",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "inbound_stock_orders",
+      "column": "deleted_by",
+      "type": "uuid",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "stock_movements",
+      "column": "id",
+      "type": "uuid",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "stock_movements",
+      "column": "organization_id",
+      "type": "uuid",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "stock_movements",
+      "column": "store_id",
+      "type": "uuid",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "stock_movements",
+      "column": "product_id",
+      "type": "uuid",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "stock_movements",
+      "column": "mode",
+      "type": "text",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "stock_movements",
+      "column": "amount",
+      "type": "numeric",
+      "precision": 12,
+      "scale": 3
+    },
+    {
+      "schema": "public",
+      "table": "stock_movements",
+      "column": "note",
+      "type": "text",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "stock_movements",
+      "column": "created_by",
+      "type": "uuid",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "stock_movements",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "stock_movements",
+      "column": "supplier_id",
+      "type": "uuid",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "stock_movements",
+      "column": "supplier_name",
+      "type": "text",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "stock_movements",
+      "column": "supplier_invoice_no",
+      "type": "text",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "stock_movements",
+      "column": "unit_cost",
+      "type": "numeric",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "stock_movements",
+      "column": "total_cost",
+      "type": "numeric",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "stock_movements",
+      "column": "event_id",
+      "type": "uuid",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "credit_ledger_v2",
+      "column": "id",
+      "type": "uuid",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "credit_ledger_v2",
+      "column": "store_id",
+      "type": "uuid",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "credit_ledger_v2",
+      "column": "credit_account_id",
+      "type": "uuid",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "credit_ledger_v2",
+      "column": "entry_type",
+      "type": "text",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "credit_ledger_v2",
+      "column": "delta",
+      "type": "numeric",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "credit_ledger_v2",
+      "column": "payment_method",
+      "type": "text",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "credit_ledger_v2",
+      "column": "reference",
+      "type": "text",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "credit_ledger_v2",
+      "column": "note",
+      "type": "text",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "credit_ledger_v2",
+      "column": "created_by",
+      "type": "uuid",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "credit_ledger_v2",
+      "column": "created_at",
+      "type": "timestamp with time zone",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "credit_ledger_v2",
+      "column": "method",
+      "type": "text",
+      "precision": null,
+      "scale": null
+    },
+    {
+      "schema": "public",
+      "table": "credit_ledger_v2",
+      "column": "currency_context",
+      "type": "jsonb",
+      "precision": null,
+      "scale": null
+    }
+  ],
+  "scope": "Verified disposable full-schema metadata only; no remote records or guessed policy."
+}

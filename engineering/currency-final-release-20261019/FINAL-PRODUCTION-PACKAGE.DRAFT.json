@@ -1,0 +1,78 @@
+{
+  "status": "HOLD_EXACT_EXTERNAL_CONTRACT_AND_ACCEPTANCE_BLOCKERS",
+  "targetProject": "dcmhqdckzhbuakvcyjit",
+  "productionAuthorization": false,
+  "activationAuthorized": false,
+  "deploymentAuthorized": false,
+  "dependencyOrder": [
+    {
+      "path": "engineering/currency-financial-integration-20261019/2026101904-financial-currency-context.DRAFT.sql",
+      "sha256": "2d72cf83e848d4304e932403bfae0d6b0af6baae1314d4204128ee830ab9b3b4"
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/2026101905-native-settlement-atomic.DRAFT.sql",
+      "sha256": "f9f849d7eb43844d8da92cf3c44bc51d8b9603b2c9d896eb2ab6d6e8aa35f3d4"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/2026101906-native-expense-integrity.DRAFT.sql",
+      "sha256": "45d054fc0564842d7759a09d857c40438aa1f7df032ba530e65987efcde7aa6b"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/2026101907-original-financial-readers.DRAFT.sql",
+      "sha256": "ac4ff6d398f85630f1cd005abdc4ecc74565de1fd347ccf62ffd0aa8620524c5"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/2026101908-native-writer-quarantine.DRAFT.sql",
+      "sha256": "0148160432bec7fe644baff5335779e4766c8ae4215fbeb64be4243d8deeeab0"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/2026101909-canonical-receipt-integrity.DRAFT.sql",
+      "sha256": "8c55f16ffb0dfc9c2236b56170b328ee6b14f0c5070f07be814cf03baf21fe66"
+    }
+  ],
+  "rollbackOrder": [
+    {
+      "path": "engineering/currency-final-release-20261019/1907-1909-DISABLE.sql",
+      "sha256": "ffae1a647abe03a08c6777e58f938a48c4afc9fa16f3d102b2523bbe94f49554"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/1906-DISABLE.sql",
+      "sha256": "60055141656ad2a077da41def08916f4b75a494d5b7edbbc6bfad09e001ab537"
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/1905-DISABLE-ROLLBACK.sql",
+      "sha256": "1151ce4e422047801fd4db19b6503431fc81f28cee6424696abaabf4837c7f7e"
+    }
+  ],
+  "newRpcAccess": {
+    "PUBLIC": "DENIED",
+    "anon": "DENIED",
+    "authenticated": "DENIED",
+    "service_role": "DENIED",
+    "owner": "Administrative ownership only; no API rollout"
+  },
+  "clientFlags": false,
+  "historicalBackfill": "NONE; unknown historical denomination remains unknown",
+  "financialActivation": "NONE",
+  "risks": [
+    "Seven inbound item numeric columns widened in1909; bounded lock/rewrite preflight required. No narrowing rollback.",
+    "Current stock snapshot is not historical receipt valuation.",
+    "Full tax/refund-adjusted net income and full cashier/treasury reconciliation are not certified.",
+    "Logical SQL disable is not a tested database restore. No fresh backup readiness is claimed."
+  ],
+  "excluded": [
+    "Catalog hotfix (independent cc03b36 package)",
+    "unrelated dirty source",
+    "general treasury ledger creation",
+    "refund/tax posting",
+    "native supplier settlement",
+    "financial client activation",
+    "historical rewrites"
+  ],
+  "requiredBeforeProduction": [
+    "Resolve explicit settlement and original-tax/reversal authority contracts",
+    "Genuine authenticated financial and platform acceptance on authorized non-customer test runtime",
+    "Fresh target/preimage/ACL/dependencies/backup/lock verification",
+    "Exact package Owner approval; none requested to activate incomplete financial paths"
+  ]
+}

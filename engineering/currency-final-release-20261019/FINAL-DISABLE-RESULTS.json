@@ -1,0 +1,11 @@
+{
+  "status": "PASS",
+  "count": 5,
+  "checks": [
+    "exact final disable SQL commits",
+    "read_original_financial_facts_v1 no nonowner execute",
+    "receive_purchase_once_v1 no nonowner execute",
+    "original financial and provenance row counts retained",
+    "all native deny boundaries retained"
+  ]
+}

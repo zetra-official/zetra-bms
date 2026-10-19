@@ -1,0 +1,27 @@
+import {originalFactText,originalFactTotals,originalGrossProfit,type OriginalFact,type FactKind} from './originalFacts';
+import {formatCurrencyExact} from './engine';
+const text={
+ from:['From (YYYY-MM-DD UTC)','Kuanzia (YYYY-MM-DD UTC)','Du (AAAA-MM-JJ UTC)','De (AAAA-MM-DD UTC)','من (YYYY-MM-DD UTC)','Desde (AAAA-MM-DD UTC)','开始日期 (YYYY-MM-DD UTC)'],
+ to:['Before (YYYY-MM-DD UTC)','Kabla ya (YYYY-MM-DD UTC)','Avant le (AAAA-MM-JJ UTC)','Antes de (AAAA-MM-DD UTC)','قبل (YYYY-MM-DD UTC)','Antes de (AAAA-MM-DD UTC)','结束日期（不含）(YYYY-MM-DD UTC)'],
+ share:['Share PDF','Shiriki PDF','Partager le PDF','Compartilhar PDF','مشاركة PDF','Compartir PDF','分享 PDF'],
+ retry:['Refresh','Pakia tena','Actualiser','Atualizar','تحديث','Actualizar','刷新'],
+ title:['Original-currency statement','Taarifa ya sarafu halisi','État en devise d’origine','Extrato na moeda original','كشف بالعملة الأصلية','Estado en moneda original','原始币种报表'],
+ incomplete:['Currency or cost unverified; no combined total.','Sarafu au gharama haijathibitishwa; hakuna jumla iliyounganishwa.','Devise ou coût non vérifié ; aucun total combiné.','Moeda ou custo não verificado; sem total combinado.','العملة أو التكلفة غير مؤكدة؛ لا يوجد إجمالي مجمع.','Moneda o coste sin verificar; sin total combinado.','币种或成本未经验证，不合并汇总。'],
+ gross:['Gross profit','Faida ghafi','Marge brute','Lucro bruto','الربح الإجمالي','Beneficio bruto','毛利润'],
+ note:['Original records only. Stock is current; this is not a tax/refund-adjusted net-income statement.','Rekodi halisi pekee. Stock ni ya sasa; hii si taarifa ya faida halisi iliyorekebishwa kwa kodi/refund.','Enregistrements originaux. Stock actuel ; ce n’est pas un résultat net ajusté des taxes/remboursements.','Registros originais. Estoque atual; não é lucro líquido ajustado por impostos/reembolsos.','السجلات الأصلية فقط. المخزون حالي؛ ليس صافي دخل بعد الضرائب والاستردادات.','Registros originales. Stock actual; no es beneficio neto ajustado por impuestos/reembolsos.','仅原始记录。库存为当前快照，并非已调整税费或退款的净利润。'],
+ SALE:['Sales','Mauzo','Ventes','Vendas','المبيعات','Ventas','销售'],PAYMENT:['Payments','Malipo','Paiements','Pagamentos','المدفوعات','Pagos','付款'],EXPENSE:['Expenses','Matumizi','Dépenses','Despesas','المصروفات','Gastos','支出'],CREDIT:['Debt ledger','Rekodi ya madeni','Registre des créances','Registro de dívidas','سجل الديون','Registro de deudas','债务台账'],COGS:['COGS','Gharama ya bidhaa zilizouzwa','Coût des ventes','Custo das vendas','تكلفة البضائع المباعة','Coste de ventas','销售成本'],STOCK:['Current stock value','Thamani ya stock ya sasa','Valeur actuelle du stock','Valor atual do estoque','قيمة المخزون الحالية','Valor actual del stock','当前库存价值']
+} as const;
+export function originalReportText(language:string,key:keyof typeof text){return text[key][Math.max(0,['en','sw','fr','pt','ar','es','zh'].indexOf(language))]}
+export type OriginalReportInput={organizationId:string;storeId:string;storeName:string;language:string;from:string;to:string;facts:Partial<Record<FactKind,readonly OriginalFact[]>>};
+export function originalReportSections(input:OriginalReportInput){
+ const sections=Object.entries(input.facts).map(([kind,rows])=>{let totals:Readonly<Record<string,string>>|null=null;try{totals=originalFactTotals(rows!,kind==='SALE'?'total':'amount',input.organizationId)}catch{}
+ return {kind:kind as FactKind,title:originalReportText(input.language,kind as FactKind),rows:rows!,totals};});
+ let gross:Readonly<Record<string,string>>|null=null;if(input.facts.SALE&&input.facts.COGS)try{gross=originalGrossProfit(input.facts.SALE,input.facts.COGS,input.organizationId)}catch{}
+ return {sections,gross};
+}
+/** Same exact facts feed on-screen cards and the existing Expo Print/Share path. */
+export function originalReportHtml(input:OriginalReportInput){
+ const esc=(s:unknown)=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
+ const {sections,gross}=originalReportSections(input);const totals=(values:Readonly<Record<string,string>>|null)=>values?Object.entries(values).map(([c,a])=>esc(formatCurrencyExact(a,c,input.language))).join('<br>'):esc(originalReportText(input.language,'incomplete'));
+ return `<!doctype html><html lang="${esc(input.language)}" dir="${input.language==='ar'?'rtl':'ltr'}"><head><meta charset="utf-8"><style>@page{size:A4;margin:18mm}body{font:12px Arial,sans-serif;color:#0f172a}h1{color:#047857}table{width:100%;border-collapse:collapse;margin:12px 0;table-layout:fixed}td,th{padding:7px;border:1px solid #cbd5e1;text-align:start;overflow-wrap:anywhere}thead{display:table-header-group}tr{break-inside:avoid}.amount{text-align:end}.note{color:#475569}</style></head><body><h1>ZETRA BMS</h1><h2>${esc(originalReportText(input.language,'title'))}</h2><p>${esc(input.storeName)} · ${esc(input.from)} — ${esc(input.to)}</p><p class="note">${esc(originalReportText(input.language,'note'))}</p>${sections.map(s=>`<h3>${esc(s.title)}</h3><p>${totals(s.totals)}</p><table><thead><tr><th>ID</th><th>${esc(s.title)}</th></tr></thead><tbody>${s.rows.map(r=>`<tr><td>${esc(r.id)}</td><td class="amount">${esc(r.values[s.kind==='SALE'?'total':'amount']==null?'—':originalFactText(r,s.kind==='SALE'?'total':'amount',input.language))}${!r.context?' · '+esc(originalReportText(input.language,'incomplete')):''}</td></tr>`).join('')}</tbody></table>`).join('')}${input.facts.COGS?`<h3>${esc(originalReportText(input.language,'gross'))}</h3><p>${totals(gross)}</p>`:''}</body></html>`;
+}

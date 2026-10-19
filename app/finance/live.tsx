@@ -1,3 +1,5 @@
+import {ORIGINAL_FACT_READERS_ACTIVE} from '@/src/currency/originalFacts';
+import {OriginalFinancialStatement} from '@/src/finance/OriginalFinancialStatement';
 import {CurrencyToolsLink} from '@/src/currency/ReportCurrencySelector';
 import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
 import {useCommonText} from "@/src/i18n/useCommonText";
@@ -335,7 +337,7 @@ function MetricPill({
   );
 }
 
-export default function FinanceLiveScreen() {
+function LegacyFinanceLiveScreen() {
  const systemText = useSystemMessageText();
  const uiText=useCommonText();
   const router = useRouter();
@@ -1184,3 +1186,5 @@ backgroundColor: "rgba(241,245,249,0.72)",
     </Screen>
   );
 }
+
+export default function FinanceLiveScreen(){return ORIGINAL_FACT_READERS_ACTIVE?<OriginalFinancialStatement/>:<LegacyFinanceLiveScreen/>}

@@ -1,0 +1,268 @@
+{
+  "project": "dcmhqdckzhbuakvcyjit",
+  "metadataOnly": true,
+  "customerTransactionRecordsRead": false,
+  "productionWrites": false,
+  "receiptCanonicalPreimageMatches": true,
+  "canonicalSources": [
+    {
+      "path": "POS sales / cash, bank, mobile and split allocation",
+      "authority": "public.sales + public.sale_payments via create_sale_with_payment_v4/v5/v6",
+      "limit": "Recorded payment classification, not proof of an authoritative cash/bank/mobile account balance."
+    },
+    {
+      "path": "Customer debt collections",
+      "authority": "record_credit_payment_v2 -> credit_ledger_v2",
+      "missingShiftId": true,
+      "limit": "No verified collection-to-shift/account binding."
+    },
+    {
+      "path": "Supplier / inbound payments",
+      "authority": "record_inbound_stock_payment_v1 -> inbound_stock_payments + order paid/balance totals",
+      "hasStoredOrderCurrency": true,
+      "hasAccountId": false,
+      "hasShiftId": false,
+      "limit": "No account/shift settlement or cost provenance guarantee."
+    },
+    {
+      "path": "Business debt payments",
+      "authority": "record_business_debt_payment -> business_debt_payments + business_debts",
+      "hasAccountId": false,
+      "hasShiftId": false,
+      "limit": "Not a verified source-account settlement."
+    },
+    {
+      "path": "Cashier closing",
+      "authority": "cashier_shifts + get_my_cashier_closing_payment_summary_v1",
+      "summaryReadsSalePayments": true,
+      "summaryReadsCreditLedger": false,
+      "summaryReadsExpenses": false,
+      "summaryReadsRefunds": false,
+      "limit": "Sale-payment summary is not complete treasury/shift reconciliation."
+    },
+    {
+      "path": "Field Procurement custody",
+      "authority": "field_wallets + field_wallet_transactions via existing wallet RPCs",
+      "limit": "Agent procurement custody; not general sales/refund treasury."
+    },
+    {
+      "path": "Stock Purchase Funding",
+      "authority": "funding_control.accounts/movements for advances only",
+      "sourceReadyDenyOnly": true,
+      "ownerDecision": "Do not promote to system-wide settlement ledger."
+    }
+  ],
+  "verifiedRefundTaxReversalContract": false,
+  "refundTaxFinding": "No verified customer refund/original-tax reversal contract was found among relevant canonical Production RPCs. No zero-tax rule inferred.",
+  "recommendation": "Define one explicit treasury source-account/settlement/shift binding contract against these canonical payment records, with external settlement confirmation and reversal references; separately bind immutable original sale tax allocations. Preserve existing ledgers and keep Funding Control limited to advances. No new treasury ownership is assumed or activated.",
+  "definitions": [
+    {
+      "identity": "create_expense(uuid,numeric,text,text,date)",
+      "sha256": "e743cb1340bb7fe48e4912fa5cc1e62f3b0a9c114f862cb6fe978ddba9b88fc9"
+    },
+    {
+      "identity": "get_expense_channel_summary_v1(uuid,date,date)",
+      "sha256": "cde83b43ec7a7a9dc7dcd816cbb5a34f24d45d5a10719875e55faae08fd74448"
+    },
+    {
+      "identity": "close_cashier_shift_v1(uuid,numeric,text)",
+      "sha256": "4984d3b115551aa338f4496d6dcf2e244c802ae5352b3ad9fe8f9534a3fbc7c7"
+    },
+    {
+      "identity": "club_confirm_order_and_create_sale_v2(uuid,text,text,numeric)",
+      "sha256": "f5acbacfe133807f87b622dd5707b818cb4bdce79012699aa630e7baa35094f2"
+    },
+    {
+      "identity": "create_expense(uuid,numeric,text,text,date,text,text)",
+      "sha256": "79aeeaa0355e26fe8211c44b3e8e42a64c143d7f3326564a9a097d078c7e58a9"
+    },
+    {
+      "identity": "record_credit_payment_v2(uuid,uuid,numeric,text,text,text)",
+      "sha256": "83ddf2bd1d3459d62994f8401465524a4d13599552386f1afc14c9d1d09585f1"
+    },
+    {
+      "identity": "club_confirm_order_and_create_sale(uuid,text,numeric,text)",
+      "sha256": "796b31930071d074d49f5b28cfec21678450c61a63e1a276bab902f17ac11fa7"
+    },
+    {
+      "identity": "get_my_cashier_closing_payment_summary_v1(uuid,timestamp with time zone,timestamp with time zone)",
+      "sha256": "ff2dfa332d70eb6bbf874f4d228d43afaec92b4d68d4aaff37dd71a43039ce31"
+    },
+    {
+      "identity": "get_expense_summary(uuid,date,date)",
+      "sha256": "33abb6662b1d1ad3e8e00270eb265a04ec403f64177b3499b3d4f84c26a0ad23"
+    },
+    {
+      "identity": "send_sale_to_cashier(uuid,jsonb,text)",
+      "sha256": "bc1c9f528ab02be059e42448c66de554eaa50d18457d36b4d8f6100239d29621"
+    },
+    {
+      "identity": "get_store_cashiers_v2(uuid)",
+      "sha256": "f2f3752aa984679576762155bea227d5bb0f65b38d1477fcdf761500eebefc21"
+    },
+    {
+      "identity": "accept_cashier_handoff_v1(uuid)",
+      "sha256": "c2bf4ee5cd9be9b19ee0b555dc90041b526747dd284863accaa8c2a7b9776b8b"
+    },
+    {
+      "identity": "require_open_cashier_shift_v1(uuid)",
+      "sha256": "dce20afe2b7a0be1b1f930fea7ac6783ed04b634685f7d95e5571268be909088"
+    },
+    {
+      "identity": "enforce_cashier_store_link_v1()",
+      "sha256": "b1a9a8cdbcc63d1e20f18919907b11d8879eb9730aa66de2022a217a2cfd7662"
+    },
+    {
+      "identity": "assign_cashier_to_store_v1(uuid,uuid)",
+      "sha256": "cba5367c48108d135cbb511de629f4d6690ddf0aaa02d6c03d7f4003c5f6fb20"
+    },
+    {
+      "identity": "get_store_cashier_v1(uuid)",
+      "sha256": "429089c7c01894c50e7d8ad66b9cf629ca849c578559e970b941e063bb8c8cb1"
+    },
+    {
+      "identity": "create_cashier_handoff_v1(uuid,jsonb,numeric,numeric,numeric,text)",
+      "sha256": "873c7efe56041163edc51f6fa35704eccca36728f287dee8f77aa86968c5451c"
+    },
+    {
+      "identity": "get_my_cashier_handoffs_v1(text)",
+      "sha256": "3b068acb612ef83106db9dbd52207c2b0e5ecdf6fbf0dff321a162dc54cc4365"
+    },
+    {
+      "identity": "add_cashier_to_org_by_email_v1(uuid,text)",
+      "sha256": "83c8f4e93d9f41629e5706eeb096726144e266ecd63e8a702d9537d512e90775"
+    },
+    {
+      "identity": "get_my_cashier_handoffs_v2(text)",
+      "sha256": "80c892bb16615044fe6a204d87711f33c65a7ebeb6d72fad9c32aecfdd58e42d"
+    },
+    {
+      "identity": "assign_cashier_to_store_v2(uuid,uuid)",
+      "sha256": "8bdb9a1bc06836a95e7392a7f4998eade4105b6e2b3ae10f014533236042bcfd"
+    },
+    {
+      "identity": "get_my_open_cashier_shift_v1(uuid)",
+      "sha256": "c2c7f39c353eb6947cde36303c4be475c81bec48a94dcf42b19a865fee476ebb"
+    },
+    {
+      "identity": "get_expenses(uuid,date,date,integer,integer)",
+      "sha256": "12342299d77891ec3dc15ce9ad1bc8711f9487d06c4d6a0c4876ef1d1e82aab8"
+    },
+    {
+      "identity": "open_cashier_shift_v1(uuid,numeric)",
+      "sha256": "f4a7ebfb12b10cf703f3a249bc65873f9cfd15adacae53cc90c66f714987e4b2"
+    },
+    {
+      "identity": "get_my_latest_cashier_shift_v1(uuid)",
+      "sha256": "aec7e311765732169e32725ecca13694a847c03c0348a96968997bc02152f47b"
+    },
+    {
+      "identity": "get_my_cashier_closing_sales_v1(uuid,timestamp with time zone,timestamp with time zone)",
+      "sha256": "b6102fcededb784fbb564ecbe59a9ed9f4372ac5405629f71200ba87ca66fb06"
+    },
+    {
+      "identity": "allocate_field_wallet_v1(uuid,uuid,numeric,text)",
+      "sha256": "abc9735b1f1165ad85f7a5c71b1b403c3c439905667717f35e74339c667503f0"
+    },
+    {
+      "identity": "funding_control.source_ready(uuid)",
+      "sha256": "f1171dd7187da0ad800d04b7b21e3463d140ed2e2672e4fcfdc23f89a5ede907"
+    },
+    {
+      "identity": "create_sale_with_payment_v5(uuid,jsonb,text,text,numeric,text,text,uuid,text,text,text,numeric,text,text,uuid,uuid)",
+      "sha256": "76430254827c59c02800d58a353f3fdf95dce58c9ed9211bf0fac5890658f5c0"
+    },
+    {
+      "identity": "get_field_wallet_history_by_cycle_v1(uuid,uuid)",
+      "sha256": "2c31e406efc7623c3847629cd63a83183a9d64f102576f9b1a2f7d8d09f91a98"
+    },
+    {
+      "identity": "record_field_expense_v1(uuid,uuid,numeric,text,text,text,text,text,numeric,numeric,numeric,text)",
+      "sha256": "7c2449b39993203c8b9cd1210e35477b8291f15ed67814f5067a7c5b372b8726"
+    },
+    {
+      "identity": "get_field_wallet_summary_v1(uuid)",
+      "sha256": "edbb3da3059d125807e4159717bad474d01ceb43bbf1b64b8cafd27c88c343a7"
+    },
+    {
+      "identity": "create_sale_with_payment_v5(uuid,jsonb,text,text,numeric,text,text,uuid,text,text,text,numeric,text,uuid,uuid,uuid)",
+      "sha256": "907c0e41f1766e53ac4e3b870d0c2a4d5a62405bd32572c0e2d409dce207f55a"
+    },
+    {
+      "identity": "create_sale_with_payment_v4(uuid,jsonb,text,text,numeric,text,text,uuid,text,text,text,numeric,text,text,uuid)",
+      "sha256": "fa7c441c7ce7a927d203b03cbbf2833602de34095b8c5bf3a8b28ce21874f65f"
+    },
+    {
+      "identity": "get_expense_summary_v2(uuid,date,date)",
+      "sha256": "289ea975f4234875b2a763efdc42a92f7ffcaca7ad04a9a356fcb5779ccbff59"
+    },
+    {
+      "identity": "create_sale_with_payment_v6(uuid,jsonb,text,text,numeric,text,text,uuid,text,text,text,numeric,text,uuid,uuid,uuid)",
+      "sha256": "552bff90311c774c90bb1a36596f2de2c08f496fe6d208da87cf4fe9c4a08731"
+    },
+    {
+      "identity": "get_field_wallet_history_v1(uuid)",
+      "sha256": "4a2f180c9387bd830e9eff439755a9756dc60371049d8a385c38ef6bf2c8482d"
+    },
+    {
+      "identity": "create_expense_v2(uuid,numeric,text,text,text,date,text)",
+      "sha256": "e3f0779051aa7e3dc91f3097c1fa931f204a30ae7233a347299b901186a1c360"
+    },
+    {
+      "identity": "update_expense_v2(uuid,numeric,text,text,text)",
+      "sha256": "0186d281110f5a8708ff4fbef17aadf4d322def30bd8bddc0b8087400a5d0cf8"
+    },
+    {
+      "identity": "delete_expense_v2(uuid)",
+      "sha256": "bb5a61977670ea27037951a5540a7659e292dbd8b31d84f4d154206039bab81e"
+    },
+    {
+      "identity": "get_expenses_v2(uuid,date,date,integer,integer)",
+      "sha256": "7e76de640e2464f296a8badc5d59fd461691e46ac92edf85d5a6d873b976d96e"
+    },
+    {
+      "identity": "get_expense_channel_summary_v2(uuid,date,date)",
+      "sha256": "94cbf2f2e6b926c4e0cfc337c589a47c3c1546d00081fa8b3eaa4a02a8b6add8"
+    },
+    {
+      "identity": "create_sale(uuid,jsonb,text,uuid)",
+      "sha256": "afca2dfbd10c4147a08bd304c5245396955978988fd164b0bdd69c6f98e3fc91"
+    },
+    {
+      "identity": "record_business_loan_payment(uuid,uuid,numeric,text)",
+      "sha256": "17844b86f9ba73ccddf215e6eeb26aaec3c535783bfbe5e46f6fd7cb250b599a"
+    },
+    {
+      "identity": "record_business_debt_payment(uuid,numeric,text)",
+      "sha256": "cf2bbed61c42b4945a573bff9355c9e21a3cf1b79aff3281e5c15f52055e52ee"
+    },
+    {
+      "identity": "receive_inbound_stock_partial_v1(uuid,jsonb)",
+      "sha256": "40b5417de24eb7ae12fe1223aa9146abaa036277d970ad9cb7da762c02633e0b"
+    },
+    {
+      "identity": "record_inbound_stock_payment_v1(uuid,numeric,text,text,text)",
+      "sha256": "44991abd1d18a2a1a8f462bd3b69e4ba8fd7ea20c8b9d9b5761d449489957c3e"
+    },
+    {
+      "identity": "receive_inbound_stock_v1(uuid)",
+      "sha256": "781e1dca6e706ae7f9658c2907a785dbc7d4b17fc0fe007ab2ba68b5ca611322"
+    },
+    {
+      "identity": "get_cashier_handoff_by_id_v1(uuid)",
+      "sha256": "f95cf2d38e2972a7e76da8be9ba448ea336fc60ef3d1ddc86904a5d1177aeb6a"
+    },
+    {
+      "identity": "get_sale_cashier_handoff_meta_v1(uuid)",
+      "sha256": "a75bfb6e26429fd5a3f60c67dac49f9f4a7a28e68ecf61dc5c1fc6a174febd85"
+    },
+    {
+      "identity": "complete_cashier_handoff_v1(uuid,text,numeric,text,text,text,text)",
+      "sha256": "b824e0468a4517436a8b0bfbc9faf7b2b1e78a268ad45a0fb040832b878318b1"
+    },
+    {
+      "identity": "create_cashier_handoff_v2(uuid,jsonb,numeric,numeric,numeric,text,uuid,text,text)",
+      "sha256": "2b004309d5a58f152cc39759354af6c01dede473b855e7a08344e78ba374be24"
+    }
+  ]
+}

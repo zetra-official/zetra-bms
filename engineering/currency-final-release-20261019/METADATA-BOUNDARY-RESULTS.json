@@ -1,0 +1,11 @@
+{
+  "status": "PASS",
+  "count": 5,
+  "checks": [
+    "native product nonfinancial name edit preserved",
+    "native product financial edit denied",
+    "native account cannot move to legacy TZS store",
+    "native ledger cannot mutate old debt delta",
+    "native account deletion cannot orphan history"
+  ]
+}

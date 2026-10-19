@@ -1,0 +1,19 @@
+{
+  "status": "PASS",
+  "count": 12,
+  "checks": [
+    "exact final1907 then1908 commits on independently installed1904-1906",
+    "no historical sale rows rewritten/deleted",
+    "read_original_financial_facts_v1 has no nonowner ACL",
+    "create_native_sale_v1 has no nonowner ACL",
+    "repay_native_credit_v1 has no nonowner ACL",
+    "native_cashier_shift_v1 has no nonowner ACL",
+    "create_native_expense_v1 has no nonowner ACL",
+    "native_unverified_writer_guard_v1 has no nonowner ACL",
+    "deny-only native boundary guards attached to all12 tables",
+    "private operation tags constrained",
+    "repeated final1908 fails atomically instead of overriding drift",
+    "rollback keeps security boundaries and historical facts"
+  ],
+  "scope": "Exact final1907/1908 installed independently; no API activation. Local only."
+}

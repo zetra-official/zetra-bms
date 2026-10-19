@@ -1,0 +1,25 @@
+{
+  "status": "PASS",
+  "count": 18,
+  "checks": [
+    "TZS exact current-stock valuation aggregated once per original context",
+    "201-product stock page cannot omit rows",
+    "TZS NULL page limit denied",
+    "USD exact current-stock valuation aggregated once per original context",
+    "USD NULL page limit denied",
+    "KES exact current-stock valuation aggregated once per original context",
+    "KES NULL page limit denied",
+    "UGX exact current-stock valuation aggregated once per original context",
+    "UGX NULL page limit denied",
+    "EUR exact current-stock valuation aggregated once per original context",
+    "EUR NULL page limit denied",
+    "AED exact current-stock valuation aggregated once per original context",
+    "AED NULL page limit denied",
+    "JPY exact current-stock valuation aggregated once per original context",
+    "JPY NULL page limit denied",
+    "KWD exact current-stock valuation aggregated once per original context",
+    "KWD NULL page limit denied",
+    "stock is explicitly current, not historical"
+  ],
+  "scope": "Actual original-context inventory aggregation; >200 products represented in one MVCC stock query; no receipt-cost attestation claim."
+}

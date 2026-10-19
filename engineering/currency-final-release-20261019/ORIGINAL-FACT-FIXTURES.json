@@ -1,0 +1,5368 @@
+[
+  {
+    "kind": "SALE",
+    "rows": [
+      {
+        "at": "2026-10-19T12:20:39.103101+03:00",
+        "id": "994ed5fc-9a16-4b8e-a282-c54b1f60ee57",
+        "values": {
+          "paid": "1.54250",
+          "total": "1.54250",
+          "balance": "0.00000",
+          "discount": "0",
+          "rounding": "0",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "TZS",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f9e04166-7653-435d-a9cf-32b5487b5130",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "TZS"
+        }
+      },
+      {
+        "at": "2026-10-19T12:20:40.566923+03:00",
+        "id": "a8351e9c-70f2-4049-b508-aaada6eb6659",
+        "values": {
+          "paid": "0",
+          "total": "12.34",
+          "balance": "12.34",
+          "discount": "0",
+          "rounding": "0",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "TZS",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f9e04166-7653-435d-a9cf-32b5487b5130",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "TZS"
+        }
+      },
+      {
+        "at": "2026-10-19T12:20:41.328262+03:00",
+        "id": "62d1361d-ef2e-4ff1-b9e8-5937e70328cc",
+        "values": {
+          "paid": "1.54250",
+          "total": "1.54250",
+          "balance": "0.00000",
+          "discount": "0",
+          "rounding": "0",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "TZS",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f9e04166-7653-435d-a9cf-32b5487b5130",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "TZS"
+        }
+      },
+      {
+        "at": "2026-10-19T12:25:04.216433+03:00",
+        "id": "5335fb8a-051a-4823-81d5-dd09f4a8bb62",
+        "values": {
+          "paid": "12.34",
+          "total": "12.34",
+          "balance": "0.00",
+          "discount": "0",
+          "rounding": "0",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "TZS",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f9e04166-7653-435d-a9cf-32b5487b5130",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "TZS"
+        }
+      },
+      {
+        "at": "2026-10-19T12:34:36.990063+03:00",
+        "id": "0b870cbc-d323-44a8-a90c-cb83420567d6",
+        "values": {
+          "paid": "12.34",
+          "total": "12.34",
+          "balance": "0.00",
+          "discount": "0",
+          "rounding": "0",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "TZS",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f9e04166-7653-435d-a9cf-32b5487b5130",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "TZS"
+        }
+      },
+      {
+        "at": "2026-10-19T13:06:40.034463+03:00",
+        "id": "d1642bf9-2682-4c5c-8782-91760989a1a3",
+        "values": {
+          "paid": "12.34",
+          "total": "12.34",
+          "balance": "0.00",
+          "discount": "0",
+          "rounding": "0",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "TZS",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f9e04166-7653-435d-a9cf-32b5487b5130",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "TZS"
+        }
+      },
+      {
+        "at": "2026-10-19T13:07:51.075455+03:00",
+        "id": "aed334a8-8f2d-479b-9670-a5e9a5565c55",
+        "values": {
+          "paid": "12.34",
+          "total": "12.34",
+          "balance": "0.00",
+          "discount": "0",
+          "rounding": "0",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "TZS",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f9e04166-7653-435d-a9cf-32b5487b5130",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "TZS"
+        }
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "b09cfd28-d355-4424-8924-3164ca241d1c",
+    "snapshot": "2026-10-19T13:31:18.379298+03:00",
+    "organizationId": "f9e04166-7653-435d-a9cf-32b5487b5130",
+    "postingAllowed": false,
+    "periodSemantics": "TIMESTAMP_HALF_OPEN"
+  },
+  {
+    "kind": "PAYMENT",
+    "rows": [
+      {
+        "at": "2026-10-19T12:20:39.103101+03:00",
+        "id": "0f640c45-1fd0-402a-8ccb-497b22946ebf",
+        "method": "CASH",
+        "values": {
+          "amount": "1.54250"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "TZS",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f9e04166-7653-435d-a9cf-32b5487b5130",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "TZS"
+        },
+        "parentId": "994ed5fc-9a16-4b8e-a282-c54b1f60ee57"
+      },
+      {
+        "at": "2026-10-19T12:20:41.328262+03:00",
+        "id": "32c56e20-5190-4150-88e8-379cf8bf043e",
+        "method": "CASH",
+        "values": {
+          "amount": "1.54250"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "TZS",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f9e04166-7653-435d-a9cf-32b5487b5130",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "TZS"
+        },
+        "parentId": "62d1361d-ef2e-4ff1-b9e8-5937e70328cc"
+      },
+      {
+        "at": "2026-10-19T12:25:04.216433+03:00",
+        "id": "ba3bf4f3-df11-4c7e-8095-c923b6a2d73f",
+        "method": "CASH",
+        "values": {
+          "amount": "12.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "TZS",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f9e04166-7653-435d-a9cf-32b5487b5130",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "TZS"
+        },
+        "parentId": "5335fb8a-051a-4823-81d5-dd09f4a8bb62"
+      },
+      {
+        "at": "2026-10-19T12:34:36.990063+03:00",
+        "id": "06cba33d-99f1-49cc-84f7-9a308c75dfcc",
+        "method": "CASH",
+        "values": {
+          "amount": "2.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "TZS",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f9e04166-7653-435d-a9cf-32b5487b5130",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "TZS"
+        },
+        "parentId": "0b870cbc-d323-44a8-a90c-cb83420567d6"
+      },
+      {
+        "at": "2026-10-19T12:34:36.990063+03:00",
+        "id": "5396b1e1-21ae-4f49-9995-5a2c7d17f87e",
+        "method": "BANK",
+        "values": {
+          "amount": "5.00"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "TZS",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f9e04166-7653-435d-a9cf-32b5487b5130",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "TZS"
+        },
+        "parentId": "0b870cbc-d323-44a8-a90c-cb83420567d6"
+      },
+      {
+        "at": "2026-10-19T12:34:36.990063+03:00",
+        "id": "a470d278-e189-49a3-a95d-31af727ce236",
+        "method": "MOBILE",
+        "values": {
+          "amount": "5"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "TZS",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f9e04166-7653-435d-a9cf-32b5487b5130",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "TZS"
+        },
+        "parentId": "0b870cbc-d323-44a8-a90c-cb83420567d6"
+      },
+      {
+        "at": "2026-10-19T13:06:40.034463+03:00",
+        "id": "45d7c14e-be39-4af7-8624-b20db9137229",
+        "method": "CASH",
+        "values": {
+          "amount": "12.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "TZS",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f9e04166-7653-435d-a9cf-32b5487b5130",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "TZS"
+        },
+        "parentId": "d1642bf9-2682-4c5c-8782-91760989a1a3"
+      },
+      {
+        "at": "2026-10-19T13:07:51.075455+03:00",
+        "id": "c7ea245f-8130-4171-bf27-c0fff90cec09",
+        "method": "CASH",
+        "values": {
+          "amount": "12.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "TZS",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f9e04166-7653-435d-a9cf-32b5487b5130",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "TZS"
+        },
+        "parentId": "aed334a8-8f2d-479b-9670-a5e9a5565c55"
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "b09cfd28-d355-4424-8924-3164ca241d1c",
+    "snapshot": "2026-10-19T13:31:18.455973+03:00",
+    "organizationId": "f9e04166-7653-435d-a9cf-32b5487b5130",
+    "postingAllowed": false,
+    "periodSemantics": "TIMESTAMP_HALF_OPEN"
+  },
+  {
+    "kind": "EXPENSE",
+    "rows": [
+      {
+        "at": "2026-10-19",
+        "id": "1adba3df-d72c-4f6f-9683-30b27e4756da",
+        "method": "CASH",
+        "values": {
+          "amount": "12.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "TZS",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f9e04166-7653-435d-a9cf-32b5487b5130",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "TZS"
+        },
+        "category": "SYNTHETIC NATIVE"
+      },
+      {
+        "at": "2026-10-19",
+        "id": "476202bb-ff3c-4229-a1e0-4ba274963c0e",
+        "method": "CASH",
+        "values": {
+          "amount": "12.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "TZS",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f9e04166-7653-435d-a9cf-32b5487b5130",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "TZS"
+        },
+        "category": "SYNTHETIC NATIVE"
+      },
+      {
+        "at": "2026-10-19",
+        "id": "7a26683c-177a-4127-ac21-e7c820f5270c",
+        "method": "CASH",
+        "values": {
+          "amount": "12.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "TZS",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f9e04166-7653-435d-a9cf-32b5487b5130",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "TZS"
+        },
+        "category": "SYNTHETIC NATIVE"
+      },
+      {
+        "at": "2026-10-19",
+        "id": "91bbf29a-53a1-4d05-a3cc-ad9a322eecfc",
+        "method": "CASH",
+        "values": {
+          "amount": "12.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "TZS",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f9e04166-7653-435d-a9cf-32b5487b5130",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "TZS"
+        },
+        "category": "SYNTHETIC NATIVE"
+      },
+      {
+        "at": "2026-10-19",
+        "id": "a9c15e97-1a54-4163-b6b0-d861ba23efde",
+        "method": "CASH",
+        "values": {
+          "amount": "12.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "TZS",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f9e04166-7653-435d-a9cf-32b5487b5130",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "TZS"
+        },
+        "category": "SYNTHETIC NATIVE"
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "b09cfd28-d355-4424-8924-3164ca241d1c",
+    "snapshot": "2026-10-19T13:31:18.538675+03:00",
+    "organizationId": "f9e04166-7653-435d-a9cf-32b5487b5130",
+    "postingAllowed": false,
+    "periodSemantics": "EXPENSE_DATE_UTC_DATE_BOUNDS"
+  },
+  {
+    "kind": "CREDIT",
+    "rows": [
+      {
+        "at": "2026-10-19T12:20:40.566923+03:00",
+        "id": "b96b0f46-093c-4ada-b7f8-49ae9af1cc0c",
+        "values": {
+          "amount": "12.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "TZS",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f9e04166-7653-435d-a9cf-32b5487b5130",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "TZS"
+        },
+        "parentId": "238c9302-6c0c-4fac-8166-8d911ed021b5"
+      },
+      {
+        "at": "2026-10-19T12:20:40.75935+03:00",
+        "id": "9abcd487-f111-4558-9248-de46a71723a3",
+        "values": {
+          "amount": "-12.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "TZS",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f9e04166-7653-435d-a9cf-32b5487b5130",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "TZS"
+        },
+        "parentId": "238c9302-6c0c-4fac-8166-8d911ed021b5"
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "b09cfd28-d355-4424-8924-3164ca241d1c",
+    "snapshot": "2026-10-19T13:31:18.62541+03:00",
+    "organizationId": "f9e04166-7653-435d-a9cf-32b5487b5130",
+    "postingAllowed": false,
+    "periodSemantics": "TIMESTAMP_HALF_OPEN"
+  },
+  {
+    "kind": "COGS",
+    "rows": [
+      {
+        "at": "2026-10-19T12:20:39.103101+03:00",
+        "id": "92b40cb3-1fa0-4a39-ba06-dc8c7c2a644c",
+        "values": {
+          "amount": "0.64000",
+          "quantity": "0.125",
+          "unitCost": "5.12"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "TZS",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f9e04166-7653-435d-a9cf-32b5487b5130",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "TZS"
+        },
+        "parentId": "994ed5fc-9a16-4b8e-a282-c54b1f60ee57"
+      },
+      {
+        "at": "2026-10-19T12:20:40.566923+03:00",
+        "id": "67505e20-0c83-4f56-bbfc-32d08cf4a2f4",
+        "values": {
+          "amount": "5.12",
+          "quantity": "1",
+          "unitCost": "5.12"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "TZS",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f9e04166-7653-435d-a9cf-32b5487b5130",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "TZS"
+        },
+        "parentId": "a8351e9c-70f2-4049-b508-aaada6eb6659"
+      },
+      {
+        "at": "2026-10-19T12:20:41.328262+03:00",
+        "id": "92d7d145-ceea-4521-b075-2ba07d8d499d",
+        "values": {
+          "amount": "0.64000",
+          "quantity": "0.125",
+          "unitCost": "5.12"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "TZS",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f9e04166-7653-435d-a9cf-32b5487b5130",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "TZS"
+        },
+        "parentId": "62d1361d-ef2e-4ff1-b9e8-5937e70328cc"
+      },
+      {
+        "at": "2026-10-19T12:25:04.216433+03:00",
+        "id": "23210007-5d29-44cb-83bd-22319d198962",
+        "values": {
+          "amount": "105.12",
+          "quantity": "1",
+          "unitCost": "105.12"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "TZS",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f9e04166-7653-435d-a9cf-32b5487b5130",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "TZS"
+        },
+        "parentId": "5335fb8a-051a-4823-81d5-dd09f4a8bb62"
+      },
+      {
+        "at": "2026-10-19T12:34:36.990063+03:00",
+        "id": "831e363e-ead4-49e0-b7f3-dd2a0840a0d0",
+        "values": {
+          "amount": "105.12",
+          "quantity": "1",
+          "unitCost": "105.12"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "TZS",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f9e04166-7653-435d-a9cf-32b5487b5130",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "TZS"
+        },
+        "parentId": "0b870cbc-d323-44a8-a90c-cb83420567d6"
+      },
+      {
+        "at": "2026-10-19T13:06:40.034463+03:00",
+        "id": "1063f7aa-7d8a-4815-a4ca-d7e0eefedfbb",
+        "values": {
+          "amount": "105.12",
+          "quantity": "1",
+          "unitCost": "105.12"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "TZS",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f9e04166-7653-435d-a9cf-32b5487b5130",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "TZS"
+        },
+        "parentId": "d1642bf9-2682-4c5c-8782-91760989a1a3"
+      },
+      {
+        "at": "2026-10-19T13:07:51.075455+03:00",
+        "id": "0b081cee-3c96-495f-b399-b47003f316ce",
+        "values": {
+          "amount": "105.12",
+          "quantity": "1",
+          "unitCost": "105.12"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "TZS",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f9e04166-7653-435d-a9cf-32b5487b5130",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "TZS"
+        },
+        "parentId": "aed334a8-8f2d-479b-9670-a5e9a5565c55"
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "b09cfd28-d355-4424-8924-3164ca241d1c",
+    "snapshot": "2026-10-19T13:31:18.708245+03:00",
+    "organizationId": "f9e04166-7653-435d-a9cf-32b5487b5130",
+    "postingAllowed": false,
+    "periodSemantics": "TIMESTAMP_HALF_OPEN"
+  },
+  {
+    "kind": "STOCK",
+    "rows": [
+      {
+        "at": "2026-10-19T13:54:22.426788+03:00",
+        "id": "stock-e23db3c9cf79ce6de5af35996df79910",
+        "values": {
+          "amount": "105515.64000",
+          "productCount": "202"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "TZS",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f9e04166-7653-435d-a9cf-32b5487b5130",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "TZS"
+        },
+        "valueSource": "CURRENT_CATALOG_COST_NOT_RECEIPT_ATTESTATION"
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "b09cfd28-d355-4424-8924-3164ca241d1c",
+    "snapshot": "2026-10-19T13:54:22.426788+03:00",
+    "organizationId": "f9e04166-7653-435d-a9cf-32b5487b5130",
+    "postingAllowed": false,
+    "periodSemantics": "CURRENT_SNAPSHOT_NOT_HISTORICAL"
+  },
+  {
+    "kind": "SALE",
+    "rows": [
+      {
+        "at": "2026-10-19T12:20:42.43517+03:00",
+        "id": "ab5fec4a-0548-47d9-a73d-ef44f669a26f",
+        "values": {
+          "paid": "1.39",
+          "total": "1.39000",
+          "balance": "0.00000",
+          "discount": "0.15",
+          "rounding": "-0.00250",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "USD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f970297b-f589-4755-9fc7-ff8dd3cd7d82",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "USD"
+        }
+      },
+      {
+        "at": "2026-10-19T12:20:43.61831+03:00",
+        "id": "c8c25796-0174-43b2-8685-04d3259bab68",
+        "values": {
+          "paid": "0",
+          "total": "12.34",
+          "balance": "12.34",
+          "discount": "0",
+          "rounding": "0.00",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "USD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f970297b-f589-4755-9fc7-ff8dd3cd7d82",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "USD"
+        }
+      },
+      {
+        "at": "2026-10-19T12:20:44.531588+03:00",
+        "id": "555a92cb-4eeb-4e81-9541-ce8f6681f723",
+        "values": {
+          "paid": "1.39",
+          "total": "1.39000",
+          "balance": "0.00000",
+          "discount": "0.15",
+          "rounding": "-0.00250",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "USD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f970297b-f589-4755-9fc7-ff8dd3cd7d82",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "USD"
+        }
+      },
+      {
+        "at": "2026-10-19T12:25:05.897722+03:00",
+        "id": "f5a98d61-2d9c-4653-a43e-a7e82047e2e1",
+        "values": {
+          "paid": "12.34",
+          "total": "12.34",
+          "balance": "0.00",
+          "discount": "0",
+          "rounding": "0.00",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "USD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f970297b-f589-4755-9fc7-ff8dd3cd7d82",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "USD"
+        }
+      },
+      {
+        "at": "2026-10-19T12:34:38.162944+03:00",
+        "id": "5ce7e20f-97ce-475e-bcb0-fb22ca6ab9c6",
+        "values": {
+          "paid": "12.34",
+          "total": "12.34",
+          "balance": "0.00",
+          "discount": "0",
+          "rounding": "0.00",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "USD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f970297b-f589-4755-9fc7-ff8dd3cd7d82",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "USD"
+        }
+      },
+      {
+        "at": "2026-10-19T13:06:40.290611+03:00",
+        "id": "0931fc73-7d51-400f-b25a-86a1ce403be6",
+        "values": {
+          "paid": "12.34",
+          "total": "12.34",
+          "balance": "0.00",
+          "discount": "0",
+          "rounding": "0.00",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "USD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f970297b-f589-4755-9fc7-ff8dd3cd7d82",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "USD"
+        }
+      },
+      {
+        "at": "2026-10-19T13:07:51.926374+03:00",
+        "id": "23c2bb8f-c54b-4442-8069-ebf6c092cc09",
+        "values": {
+          "paid": "12.34",
+          "total": "12.34",
+          "balance": "0.00",
+          "discount": "0",
+          "rounding": "0.00",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "USD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f970297b-f589-4755-9fc7-ff8dd3cd7d82",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "USD"
+        }
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "22dc0c8a-50f4-497f-8434-5e90b33f9ede",
+    "snapshot": "2026-10-19T13:31:18.875741+03:00",
+    "organizationId": "f970297b-f589-4755-9fc7-ff8dd3cd7d82",
+    "postingAllowed": false,
+    "periodSemantics": "TIMESTAMP_HALF_OPEN"
+  },
+  {
+    "kind": "PAYMENT",
+    "rows": [
+      {
+        "at": "2026-10-19T12:20:42.43517+03:00",
+        "id": "09d24c7a-5904-48f2-8957-5524d58739ec",
+        "method": "CASH",
+        "values": {
+          "amount": "1.39"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "USD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f970297b-f589-4755-9fc7-ff8dd3cd7d82",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "USD"
+        },
+        "parentId": "ab5fec4a-0548-47d9-a73d-ef44f669a26f"
+      },
+      {
+        "at": "2026-10-19T12:20:44.531588+03:00",
+        "id": "3caffada-072a-48ba-9606-7bd08aea5da4",
+        "method": "CASH",
+        "values": {
+          "amount": "1.39"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "USD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f970297b-f589-4755-9fc7-ff8dd3cd7d82",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "USD"
+        },
+        "parentId": "555a92cb-4eeb-4e81-9541-ce8f6681f723"
+      },
+      {
+        "at": "2026-10-19T12:25:05.897722+03:00",
+        "id": "8d567f0a-2f50-449a-aa8d-1261eb82914e",
+        "method": "CASH",
+        "values": {
+          "amount": "12.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "USD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f970297b-f589-4755-9fc7-ff8dd3cd7d82",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "USD"
+        },
+        "parentId": "f5a98d61-2d9c-4653-a43e-a7e82047e2e1"
+      },
+      {
+        "at": "2026-10-19T12:34:38.162944+03:00",
+        "id": "e28c950b-f6c5-4dcb-9863-4ab9ba6778c1",
+        "method": "CASH",
+        "values": {
+          "amount": "2.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "USD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f970297b-f589-4755-9fc7-ff8dd3cd7d82",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "USD"
+        },
+        "parentId": "5ce7e20f-97ce-475e-bcb0-fb22ca6ab9c6"
+      },
+      {
+        "at": "2026-10-19T12:34:38.162944+03:00",
+        "id": "faefc16a-5cd2-4dc4-8447-2898cc87fd5b",
+        "method": "BANK",
+        "values": {
+          "amount": "5.00"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "USD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f970297b-f589-4755-9fc7-ff8dd3cd7d82",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "USD"
+        },
+        "parentId": "5ce7e20f-97ce-475e-bcb0-fb22ca6ab9c6"
+      },
+      {
+        "at": "2026-10-19T12:34:38.162944+03:00",
+        "id": "fb0b7e45-bb36-47e5-9ffb-22459fa72f18",
+        "method": "MOBILE",
+        "values": {
+          "amount": "5"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "USD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f970297b-f589-4755-9fc7-ff8dd3cd7d82",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "USD"
+        },
+        "parentId": "5ce7e20f-97ce-475e-bcb0-fb22ca6ab9c6"
+      },
+      {
+        "at": "2026-10-19T13:06:40.290611+03:00",
+        "id": "359a281e-1c76-4045-8fa6-ef2593f8272e",
+        "method": "CASH",
+        "values": {
+          "amount": "12.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "USD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f970297b-f589-4755-9fc7-ff8dd3cd7d82",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "USD"
+        },
+        "parentId": "0931fc73-7d51-400f-b25a-86a1ce403be6"
+      },
+      {
+        "at": "2026-10-19T13:07:51.926374+03:00",
+        "id": "f1e779cc-3dc3-4f68-8fc9-d68269e406a7",
+        "method": "CASH",
+        "values": {
+          "amount": "12.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "USD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f970297b-f589-4755-9fc7-ff8dd3cd7d82",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "USD"
+        },
+        "parentId": "23c2bb8f-c54b-4442-8069-ebf6c092cc09"
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "22dc0c8a-50f4-497f-8434-5e90b33f9ede",
+    "snapshot": "2026-10-19T13:31:18.949782+03:00",
+    "organizationId": "f970297b-f589-4755-9fc7-ff8dd3cd7d82",
+    "postingAllowed": false,
+    "periodSemantics": "TIMESTAMP_HALF_OPEN"
+  },
+  {
+    "kind": "EXPENSE",
+    "rows": [
+      {
+        "at": "2026-10-19",
+        "id": "0202d389-56f0-444f-8f1d-b09d3a90bec4",
+        "method": "CASH",
+        "values": {
+          "amount": "12.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "USD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f970297b-f589-4755-9fc7-ff8dd3cd7d82",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "USD"
+        },
+        "category": "SYNTHETIC NATIVE"
+      },
+      {
+        "at": "2026-10-19",
+        "id": "22158c37-8583-45f5-bd9d-d76ac0c6d1d3",
+        "method": "CASH",
+        "values": {
+          "amount": "12.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "USD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f970297b-f589-4755-9fc7-ff8dd3cd7d82",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "USD"
+        },
+        "category": "SYNTHETIC NATIVE"
+      },
+      {
+        "at": "2026-10-19",
+        "id": "43743e95-0dac-46c6-bfa1-5e35d1947a2f",
+        "method": "CASH",
+        "values": {
+          "amount": "12.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "USD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f970297b-f589-4755-9fc7-ff8dd3cd7d82",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "USD"
+        },
+        "category": "SYNTHETIC NATIVE"
+      },
+      {
+        "at": "2026-10-19",
+        "id": "90d07d62-670d-4ccf-a39d-181907512d76",
+        "method": "CASH",
+        "values": {
+          "amount": "12.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "USD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f970297b-f589-4755-9fc7-ff8dd3cd7d82",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "USD"
+        },
+        "category": "SYNTHETIC NATIVE"
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "22dc0c8a-50f4-497f-8434-5e90b33f9ede",
+    "snapshot": "2026-10-19T13:31:19.022547+03:00",
+    "organizationId": "f970297b-f589-4755-9fc7-ff8dd3cd7d82",
+    "postingAllowed": false,
+    "periodSemantics": "EXPENSE_DATE_UTC_DATE_BOUNDS"
+  },
+  {
+    "kind": "CREDIT",
+    "rows": [
+      {
+        "at": "2026-10-19T12:20:43.61831+03:00",
+        "id": "18a78848-fdc5-4a0c-af9a-4d70ffe05cc3",
+        "values": {
+          "amount": "12.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "USD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f970297b-f589-4755-9fc7-ff8dd3cd7d82",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "USD"
+        },
+        "parentId": "a40c52a4-cbc4-4dfe-b3fd-361f34103907"
+      },
+      {
+        "at": "2026-10-19T12:20:43.800615+03:00",
+        "id": "645df121-ea30-493c-8993-d956899fd4a2",
+        "values": {
+          "amount": "-12.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "USD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f970297b-f589-4755-9fc7-ff8dd3cd7d82",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "USD"
+        },
+        "parentId": "a40c52a4-cbc4-4dfe-b3fd-361f34103907"
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "22dc0c8a-50f4-497f-8434-5e90b33f9ede",
+    "snapshot": "2026-10-19T13:31:19.108721+03:00",
+    "organizationId": "f970297b-f589-4755-9fc7-ff8dd3cd7d82",
+    "postingAllowed": false,
+    "periodSemantics": "TIMESTAMP_HALF_OPEN"
+  },
+  {
+    "kind": "COGS",
+    "rows": [
+      {
+        "at": "2026-10-19T12:20:42.43517+03:00",
+        "id": "5736cee1-8500-42e4-9a47-38d7d73ba9ed",
+        "values": {
+          "amount": "0.64000",
+          "quantity": "0.125",
+          "unitCost": "5.12"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "USD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f970297b-f589-4755-9fc7-ff8dd3cd7d82",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "USD"
+        },
+        "parentId": "ab5fec4a-0548-47d9-a73d-ef44f669a26f"
+      },
+      {
+        "at": "2026-10-19T12:20:43.61831+03:00",
+        "id": "824aa711-61c0-4fbd-8a65-14c17fc1046a",
+        "values": {
+          "amount": "5.12",
+          "quantity": "1",
+          "unitCost": "5.12"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "USD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f970297b-f589-4755-9fc7-ff8dd3cd7d82",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "USD"
+        },
+        "parentId": "c8c25796-0174-43b2-8685-04d3259bab68"
+      },
+      {
+        "at": "2026-10-19T12:20:44.531588+03:00",
+        "id": "5e017ad7-4f89-45d7-8978-53aed4a4d68b",
+        "values": {
+          "amount": "0.64000",
+          "quantity": "0.125",
+          "unitCost": "5.12"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "USD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f970297b-f589-4755-9fc7-ff8dd3cd7d82",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "USD"
+        },
+        "parentId": "555a92cb-4eeb-4e81-9541-ce8f6681f723"
+      },
+      {
+        "at": "2026-10-19T12:25:05.897722+03:00",
+        "id": "f41f1e1c-0fa9-4428-ab88-098789364673",
+        "values": {
+          "amount": "105.12",
+          "quantity": "1",
+          "unitCost": "105.12"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "USD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f970297b-f589-4755-9fc7-ff8dd3cd7d82",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "USD"
+        },
+        "parentId": "f5a98d61-2d9c-4653-a43e-a7e82047e2e1"
+      },
+      {
+        "at": "2026-10-19T12:34:38.162944+03:00",
+        "id": "d5fb91c8-ad56-4bea-98ef-5573ea6bd147",
+        "values": {
+          "amount": "105.12",
+          "quantity": "1",
+          "unitCost": "105.12"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "USD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f970297b-f589-4755-9fc7-ff8dd3cd7d82",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "USD"
+        },
+        "parentId": "5ce7e20f-97ce-475e-bcb0-fb22ca6ab9c6"
+      },
+      {
+        "at": "2026-10-19T13:06:40.290611+03:00",
+        "id": "3f0d5096-bcb2-49f4-bd74-ed029abcd57b",
+        "values": {
+          "amount": "105.12",
+          "quantity": "1",
+          "unitCost": "105.12"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "USD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f970297b-f589-4755-9fc7-ff8dd3cd7d82",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "USD"
+        },
+        "parentId": "0931fc73-7d51-400f-b25a-86a1ce403be6"
+      },
+      {
+        "at": "2026-10-19T13:07:51.926374+03:00",
+        "id": "03acb30a-defd-434b-b7b8-103b2799d943",
+        "values": {
+          "amount": "105.12",
+          "quantity": "1",
+          "unitCost": "105.12"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "USD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f970297b-f589-4755-9fc7-ff8dd3cd7d82",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "USD"
+        },
+        "parentId": "23c2bb8f-c54b-4442-8069-ebf6c092cc09"
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "22dc0c8a-50f4-497f-8434-5e90b33f9ede",
+    "snapshot": "2026-10-19T13:31:19.185165+03:00",
+    "organizationId": "f970297b-f589-4755-9fc7-ff8dd3cd7d82",
+    "postingAllowed": false,
+    "periodSemantics": "TIMESTAMP_HALF_OPEN"
+  },
+  {
+    "kind": "STOCK",
+    "rows": [
+      {
+        "at": "2026-10-19T13:54:22.948655+03:00",
+        "id": "stock-df0a1894bd67b0d34d0c304e8ee6ae55",
+        "values": {
+          "amount": "104463.00000",
+          "productCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "USD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f970297b-f589-4755-9fc7-ff8dd3cd7d82",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "USD"
+        },
+        "valueSource": "CURRENT_CATALOG_COST_NOT_RECEIPT_ATTESTATION"
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "22dc0c8a-50f4-497f-8434-5e90b33f9ede",
+    "snapshot": "2026-10-19T13:54:22.948655+03:00",
+    "organizationId": "f970297b-f589-4755-9fc7-ff8dd3cd7d82",
+    "postingAllowed": false,
+    "periodSemantics": "CURRENT_SNAPSHOT_NOT_HISTORICAL"
+  },
+  {
+    "kind": "SALE",
+    "rows": [
+      {
+        "at": "2026-10-19T12:20:45.68142+03:00",
+        "id": "1dd63d88-6394-47f9-bdf0-4142c6b36e9f",
+        "values": {
+          "paid": "1.39",
+          "total": "1.39000",
+          "balance": "0.00000",
+          "discount": "0.15",
+          "rounding": "-0.00250",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KES",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "d2b58d37-aa7b-44f8-adf7-e698b2d46326",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KES"
+        }
+      },
+      {
+        "at": "2026-10-19T12:20:46.963998+03:00",
+        "id": "948064f9-6212-4626-a4e0-c0f800317c57",
+        "values": {
+          "paid": "0",
+          "total": "12.34",
+          "balance": "12.34",
+          "discount": "0",
+          "rounding": "0.00",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KES",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "d2b58d37-aa7b-44f8-adf7-e698b2d46326",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KES"
+        }
+      },
+      {
+        "at": "2026-10-19T12:20:47.766758+03:00",
+        "id": "1fbd54c9-3281-44b1-8f7d-1b7ffdfda481",
+        "values": {
+          "paid": "1.39",
+          "total": "1.39000",
+          "balance": "0.00000",
+          "discount": "0.15",
+          "rounding": "-0.00250",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KES",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "d2b58d37-aa7b-44f8-adf7-e698b2d46326",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KES"
+        }
+      },
+      {
+        "at": "2026-10-19T12:25:07.252013+03:00",
+        "id": "2b3088d0-e1ca-4091-9bc9-73a46b39695f",
+        "values": {
+          "paid": "12.34",
+          "total": "12.34",
+          "balance": "0.00",
+          "discount": "0",
+          "rounding": "0.00",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KES",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "d2b58d37-aa7b-44f8-adf7-e698b2d46326",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KES"
+        }
+      },
+      {
+        "at": "2026-10-19T12:34:39.353673+03:00",
+        "id": "ef0d9367-9fc6-4a79-8f2a-0aa8278924de",
+        "values": {
+          "paid": "12.34",
+          "total": "12.34",
+          "balance": "0.00",
+          "discount": "0",
+          "rounding": "0.00",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KES",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "d2b58d37-aa7b-44f8-adf7-e698b2d46326",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KES"
+        }
+      },
+      {
+        "at": "2026-10-19T13:06:40.588527+03:00",
+        "id": "309f3ff6-d851-4f7f-9936-e3b12c32153d",
+        "values": {
+          "paid": "12.34",
+          "total": "12.34",
+          "balance": "0.00",
+          "discount": "0",
+          "rounding": "0.00",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KES",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "d2b58d37-aa7b-44f8-adf7-e698b2d46326",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KES"
+        }
+      },
+      {
+        "at": "2026-10-19T13:07:53.334609+03:00",
+        "id": "20e0c141-ce88-48de-a3c4-7b28989879a1",
+        "values": {
+          "paid": "12.34",
+          "total": "12.34",
+          "balance": "0.00",
+          "discount": "0",
+          "rounding": "0.00",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KES",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "d2b58d37-aa7b-44f8-adf7-e698b2d46326",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KES"
+        }
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "06da38fb-2daa-4d7c-8f97-f89b82a066d6",
+    "snapshot": "2026-10-19T13:31:19.333794+03:00",
+    "organizationId": "d2b58d37-aa7b-44f8-adf7-e698b2d46326",
+    "postingAllowed": false,
+    "periodSemantics": "TIMESTAMP_HALF_OPEN"
+  },
+  {
+    "kind": "PAYMENT",
+    "rows": [
+      {
+        "at": "2026-10-19T12:20:45.68142+03:00",
+        "id": "0f2fb604-29b9-4c52-a1a1-3eccf9922faf",
+        "method": "CASH",
+        "values": {
+          "amount": "1.39"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KES",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "d2b58d37-aa7b-44f8-adf7-e698b2d46326",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KES"
+        },
+        "parentId": "1dd63d88-6394-47f9-bdf0-4142c6b36e9f"
+      },
+      {
+        "at": "2026-10-19T12:20:47.766758+03:00",
+        "id": "6147a5dd-b098-4685-9808-11277898902f",
+        "method": "CASH",
+        "values": {
+          "amount": "1.39"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KES",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "d2b58d37-aa7b-44f8-adf7-e698b2d46326",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KES"
+        },
+        "parentId": "1fbd54c9-3281-44b1-8f7d-1b7ffdfda481"
+      },
+      {
+        "at": "2026-10-19T12:25:07.252013+03:00",
+        "id": "a6c320c9-1dc1-4c77-bfbf-e646e0045de6",
+        "method": "CASH",
+        "values": {
+          "amount": "12.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KES",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "d2b58d37-aa7b-44f8-adf7-e698b2d46326",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KES"
+        },
+        "parentId": "2b3088d0-e1ca-4091-9bc9-73a46b39695f"
+      },
+      {
+        "at": "2026-10-19T12:34:39.353673+03:00",
+        "id": "3e7b1548-2952-426b-b5ea-f961c49b7b4d",
+        "method": "CASH",
+        "values": {
+          "amount": "2.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KES",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "d2b58d37-aa7b-44f8-adf7-e698b2d46326",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KES"
+        },
+        "parentId": "ef0d9367-9fc6-4a79-8f2a-0aa8278924de"
+      },
+      {
+        "at": "2026-10-19T12:34:39.353673+03:00",
+        "id": "41b503dc-8b74-45c2-b78f-80d08d467929",
+        "method": "BANK",
+        "values": {
+          "amount": "5.00"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KES",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "d2b58d37-aa7b-44f8-adf7-e698b2d46326",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KES"
+        },
+        "parentId": "ef0d9367-9fc6-4a79-8f2a-0aa8278924de"
+      },
+      {
+        "at": "2026-10-19T12:34:39.353673+03:00",
+        "id": "e7cc4c0a-a5e0-4c7e-9e04-930c243b60fa",
+        "method": "MOBILE",
+        "values": {
+          "amount": "5"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KES",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "d2b58d37-aa7b-44f8-adf7-e698b2d46326",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KES"
+        },
+        "parentId": "ef0d9367-9fc6-4a79-8f2a-0aa8278924de"
+      },
+      {
+        "at": "2026-10-19T13:06:40.588527+03:00",
+        "id": "e01edd45-df98-4ff0-9138-8283d5f97985",
+        "method": "CASH",
+        "values": {
+          "amount": "12.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KES",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "d2b58d37-aa7b-44f8-adf7-e698b2d46326",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KES"
+        },
+        "parentId": "309f3ff6-d851-4f7f-9936-e3b12c32153d"
+      },
+      {
+        "at": "2026-10-19T13:07:53.334609+03:00",
+        "id": "165975c1-e3db-4a39-9903-d649394dd264",
+        "method": "CASH",
+        "values": {
+          "amount": "12.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KES",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "d2b58d37-aa7b-44f8-adf7-e698b2d46326",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KES"
+        },
+        "parentId": "20e0c141-ce88-48de-a3c4-7b28989879a1"
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "06da38fb-2daa-4d7c-8f97-f89b82a066d6",
+    "snapshot": "2026-10-19T13:31:19.418413+03:00",
+    "organizationId": "d2b58d37-aa7b-44f8-adf7-e698b2d46326",
+    "postingAllowed": false,
+    "periodSemantics": "TIMESTAMP_HALF_OPEN"
+  },
+  {
+    "kind": "EXPENSE",
+    "rows": [
+      {
+        "at": "2026-10-19",
+        "id": "08b3de57-e75c-4293-978c-a1186e527812",
+        "method": "CASH",
+        "values": {
+          "amount": "12.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KES",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "d2b58d37-aa7b-44f8-adf7-e698b2d46326",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KES"
+        },
+        "category": "SYNTHETIC NATIVE"
+      },
+      {
+        "at": "2026-10-19",
+        "id": "32204eb5-4429-49ed-b9b8-b5d4a09e4bda",
+        "method": "CASH",
+        "values": {
+          "amount": "12.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KES",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "d2b58d37-aa7b-44f8-adf7-e698b2d46326",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KES"
+        },
+        "category": "SYNTHETIC NATIVE"
+      },
+      {
+        "at": "2026-10-19",
+        "id": "93110afe-c1ab-4483-94b8-e0b061de198a",
+        "method": "CASH",
+        "values": {
+          "amount": "12.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KES",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "d2b58d37-aa7b-44f8-adf7-e698b2d46326",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KES"
+        },
+        "category": "SYNTHETIC NATIVE"
+      },
+      {
+        "at": "2026-10-19",
+        "id": "f62318ad-d81b-4be3-9b82-f7c3b6be6958",
+        "method": "CASH",
+        "values": {
+          "amount": "12.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KES",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "d2b58d37-aa7b-44f8-adf7-e698b2d46326",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KES"
+        },
+        "category": "SYNTHETIC NATIVE"
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "06da38fb-2daa-4d7c-8f97-f89b82a066d6",
+    "snapshot": "2026-10-19T13:31:19.499103+03:00",
+    "organizationId": "d2b58d37-aa7b-44f8-adf7-e698b2d46326",
+    "postingAllowed": false,
+    "periodSemantics": "EXPENSE_DATE_UTC_DATE_BOUNDS"
+  },
+  {
+    "kind": "CREDIT",
+    "rows": [
+      {
+        "at": "2026-10-19T12:20:46.963998+03:00",
+        "id": "2f298e8a-5ae3-4601-aea2-16245c23573e",
+        "values": {
+          "amount": "12.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KES",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "d2b58d37-aa7b-44f8-adf7-e698b2d46326",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KES"
+        },
+        "parentId": "7340c431-51cb-4cb9-bbe4-5c8dc6b794a4"
+      },
+      {
+        "at": "2026-10-19T12:20:47.185665+03:00",
+        "id": "ac24f289-3ed5-4509-ae5f-99c713c14328",
+        "values": {
+          "amount": "-12.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KES",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "d2b58d37-aa7b-44f8-adf7-e698b2d46326",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KES"
+        },
+        "parentId": "7340c431-51cb-4cb9-bbe4-5c8dc6b794a4"
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "06da38fb-2daa-4d7c-8f97-f89b82a066d6",
+    "snapshot": "2026-10-19T13:31:19.610639+03:00",
+    "organizationId": "d2b58d37-aa7b-44f8-adf7-e698b2d46326",
+    "postingAllowed": false,
+    "periodSemantics": "TIMESTAMP_HALF_OPEN"
+  },
+  {
+    "kind": "COGS",
+    "rows": [
+      {
+        "at": "2026-10-19T12:20:45.68142+03:00",
+        "id": "1665bad9-4feb-4be9-87b8-a823910bbf8e",
+        "values": {
+          "amount": "0.64000",
+          "quantity": "0.125",
+          "unitCost": "5.12"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KES",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "d2b58d37-aa7b-44f8-adf7-e698b2d46326",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KES"
+        },
+        "parentId": "1dd63d88-6394-47f9-bdf0-4142c6b36e9f"
+      },
+      {
+        "at": "2026-10-19T12:20:46.963998+03:00",
+        "id": "19870104-6a5d-4dec-8e24-3915ff701a25",
+        "values": {
+          "amount": "5.12",
+          "quantity": "1",
+          "unitCost": "5.12"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KES",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "d2b58d37-aa7b-44f8-adf7-e698b2d46326",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KES"
+        },
+        "parentId": "948064f9-6212-4626-a4e0-c0f800317c57"
+      },
+      {
+        "at": "2026-10-19T12:20:47.766758+03:00",
+        "id": "28637574-a01a-41a2-8724-63313af82116",
+        "values": {
+          "amount": "0.64000",
+          "quantity": "0.125",
+          "unitCost": "5.12"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KES",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "d2b58d37-aa7b-44f8-adf7-e698b2d46326",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KES"
+        },
+        "parentId": "1fbd54c9-3281-44b1-8f7d-1b7ffdfda481"
+      },
+      {
+        "at": "2026-10-19T12:25:07.252013+03:00",
+        "id": "5acf9ac2-55bf-480b-8c38-61daf2f7b5aa",
+        "values": {
+          "amount": "105.12",
+          "quantity": "1",
+          "unitCost": "105.12"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KES",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "d2b58d37-aa7b-44f8-adf7-e698b2d46326",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KES"
+        },
+        "parentId": "2b3088d0-e1ca-4091-9bc9-73a46b39695f"
+      },
+      {
+        "at": "2026-10-19T12:34:39.353673+03:00",
+        "id": "3913c6d5-83f4-422d-9715-31f2d148d8a1",
+        "values": {
+          "amount": "105.12",
+          "quantity": "1",
+          "unitCost": "105.12"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KES",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "d2b58d37-aa7b-44f8-adf7-e698b2d46326",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KES"
+        },
+        "parentId": "ef0d9367-9fc6-4a79-8f2a-0aa8278924de"
+      },
+      {
+        "at": "2026-10-19T13:06:40.588527+03:00",
+        "id": "6e7e875b-03ab-4719-ac4b-1d512956f7d6",
+        "values": {
+          "amount": "105.12",
+          "quantity": "1",
+          "unitCost": "105.12"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KES",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "d2b58d37-aa7b-44f8-adf7-e698b2d46326",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KES"
+        },
+        "parentId": "309f3ff6-d851-4f7f-9936-e3b12c32153d"
+      },
+      {
+        "at": "2026-10-19T13:07:53.334609+03:00",
+        "id": "383ec38d-49a2-42bd-ab33-4d6970c82b15",
+        "values": {
+          "amount": "105.12",
+          "quantity": "1",
+          "unitCost": "105.12"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KES",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "d2b58d37-aa7b-44f8-adf7-e698b2d46326",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KES"
+        },
+        "parentId": "20e0c141-ce88-48de-a3c4-7b28989879a1"
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "06da38fb-2daa-4d7c-8f97-f89b82a066d6",
+    "snapshot": "2026-10-19T13:31:19.702628+03:00",
+    "organizationId": "d2b58d37-aa7b-44f8-adf7-e698b2d46326",
+    "postingAllowed": false,
+    "periodSemantics": "TIMESTAMP_HALF_OPEN"
+  },
+  {
+    "kind": "STOCK",
+    "rows": [
+      {
+        "at": "2026-10-19T13:54:23.331567+03:00",
+        "id": "stock-182b4a8dce30666874f480a10cfb8c85",
+        "values": {
+          "amount": "104463.00000",
+          "productCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KES",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "d2b58d37-aa7b-44f8-adf7-e698b2d46326",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KES"
+        },
+        "valueSource": "CURRENT_CATALOG_COST_NOT_RECEIPT_ATTESTATION"
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "06da38fb-2daa-4d7c-8f97-f89b82a066d6",
+    "snapshot": "2026-10-19T13:54:23.331567+03:00",
+    "organizationId": "d2b58d37-aa7b-44f8-adf7-e698b2d46326",
+    "postingAllowed": false,
+    "periodSemantics": "CURRENT_SNAPSHOT_NOT_HISTORICAL"
+  },
+  {
+    "kind": "SALE",
+    "rows": [
+      {
+        "at": "2026-10-19T12:20:49.002469+03:00",
+        "id": "c85ea74e-3c82-4f38-be57-9bc55be23b97",
+        "values": {
+          "paid": "13",
+          "total": "13.000",
+          "balance": "0.000",
+          "discount": "2",
+          "rounding": "-0.375",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "UGX",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "a69562e2-8d51-46b0-a6a8-83261d35b3e8",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "UGX"
+        }
+      },
+      {
+        "at": "2026-10-19T12:20:50.141291+03:00",
+        "id": "941dfa5b-0d40-411a-ab48-bd507ef0ef0a",
+        "values": {
+          "paid": "0",
+          "total": "123",
+          "balance": "123",
+          "discount": "0",
+          "rounding": "0",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "UGX",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "a69562e2-8d51-46b0-a6a8-83261d35b3e8",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "UGX"
+        }
+      },
+      {
+        "at": "2026-10-19T12:20:50.893056+03:00",
+        "id": "75c63be7-e167-43cc-8a25-ca45868747e7",
+        "values": {
+          "paid": "13",
+          "total": "13.000",
+          "balance": "0.000",
+          "discount": "2",
+          "rounding": "-0.375",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "UGX",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "a69562e2-8d51-46b0-a6a8-83261d35b3e8",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "UGX"
+        }
+      },
+      {
+        "at": "2026-10-19T12:25:08.806673+03:00",
+        "id": "e8cdd7c0-7267-4405-9144-27bdb4d2e488",
+        "values": {
+          "paid": "123",
+          "total": "123",
+          "balance": "0",
+          "discount": "0",
+          "rounding": "0",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "UGX",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "a69562e2-8d51-46b0-a6a8-83261d35b3e8",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "UGX"
+        }
+      },
+      {
+        "at": "2026-10-19T12:34:40.407052+03:00",
+        "id": "ad41c51c-8535-4e50-9320-e6eaf16df780",
+        "values": {
+          "paid": "123",
+          "total": "123",
+          "balance": "0",
+          "discount": "0",
+          "rounding": "0",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "UGX",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "a69562e2-8d51-46b0-a6a8-83261d35b3e8",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "UGX"
+        }
+      },
+      {
+        "at": "2026-10-19T13:06:40.903372+03:00",
+        "id": "ff38e630-df8c-4d43-a150-c8926d4de5f6",
+        "values": {
+          "paid": "123",
+          "total": "123",
+          "balance": "0",
+          "discount": "0",
+          "rounding": "0",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "UGX",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "a69562e2-8d51-46b0-a6a8-83261d35b3e8",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "UGX"
+        }
+      },
+      {
+        "at": "2026-10-19T13:07:55.109948+03:00",
+        "id": "aadb04cb-4d14-4056-9fd4-f004f7176d8a",
+        "values": {
+          "paid": "123",
+          "total": "123",
+          "balance": "0",
+          "discount": "0",
+          "rounding": "0",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "UGX",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "a69562e2-8d51-46b0-a6a8-83261d35b3e8",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "UGX"
+        }
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "bfa85b82-c80b-4e5c-bc90-b69bec3ad754",
+    "snapshot": "2026-10-19T13:31:19.991246+03:00",
+    "organizationId": "a69562e2-8d51-46b0-a6a8-83261d35b3e8",
+    "postingAllowed": false,
+    "periodSemantics": "TIMESTAMP_HALF_OPEN"
+  },
+  {
+    "kind": "PAYMENT",
+    "rows": [
+      {
+        "at": "2026-10-19T12:20:49.002469+03:00",
+        "id": "e1fee21e-a4fc-45e5-9684-5f491424f9dc",
+        "method": "CASH",
+        "values": {
+          "amount": "13"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "UGX",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "a69562e2-8d51-46b0-a6a8-83261d35b3e8",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "UGX"
+        },
+        "parentId": "c85ea74e-3c82-4f38-be57-9bc55be23b97"
+      },
+      {
+        "at": "2026-10-19T12:20:50.893056+03:00",
+        "id": "ed326f32-13b0-4167-9cbd-3578e5ab32d0",
+        "method": "CASH",
+        "values": {
+          "amount": "13"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "UGX",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "a69562e2-8d51-46b0-a6a8-83261d35b3e8",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "UGX"
+        },
+        "parentId": "75c63be7-e167-43cc-8a25-ca45868747e7"
+      },
+      {
+        "at": "2026-10-19T12:25:08.806673+03:00",
+        "id": "01d00afc-9405-4a36-bd90-0c50e18cd99e",
+        "method": "CASH",
+        "values": {
+          "amount": "123"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "UGX",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "a69562e2-8d51-46b0-a6a8-83261d35b3e8",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "UGX"
+        },
+        "parentId": "e8cdd7c0-7267-4405-9144-27bdb4d2e488"
+      },
+      {
+        "at": "2026-10-19T12:34:40.407052+03:00",
+        "id": "015d54fc-fe11-4354-9d45-d3314da8641b",
+        "method": "CASH",
+        "values": {
+          "amount": "23"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "UGX",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "a69562e2-8d51-46b0-a6a8-83261d35b3e8",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "UGX"
+        },
+        "parentId": "ad41c51c-8535-4e50-9320-e6eaf16df780"
+      },
+      {
+        "at": "2026-10-19T12:34:40.407052+03:00",
+        "id": "9ab951a1-d9c3-4e0a-983a-95ee59e32adb",
+        "method": "BANK",
+        "values": {
+          "amount": "95"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "UGX",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "a69562e2-8d51-46b0-a6a8-83261d35b3e8",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "UGX"
+        },
+        "parentId": "ad41c51c-8535-4e50-9320-e6eaf16df780"
+      },
+      {
+        "at": "2026-10-19T12:34:40.407052+03:00",
+        "id": "bde200c8-f05d-4bf5-931a-9f8b2549535a",
+        "method": "MOBILE",
+        "values": {
+          "amount": "5"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "UGX",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "a69562e2-8d51-46b0-a6a8-83261d35b3e8",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "UGX"
+        },
+        "parentId": "ad41c51c-8535-4e50-9320-e6eaf16df780"
+      },
+      {
+        "at": "2026-10-19T13:06:40.903372+03:00",
+        "id": "58db69d3-6757-4cde-a6f6-2938bdf22fe9",
+        "method": "CASH",
+        "values": {
+          "amount": "123"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "UGX",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "a69562e2-8d51-46b0-a6a8-83261d35b3e8",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "UGX"
+        },
+        "parentId": "ff38e630-df8c-4d43-a150-c8926d4de5f6"
+      },
+      {
+        "at": "2026-10-19T13:07:55.109948+03:00",
+        "id": "b6d1e278-db1d-403b-8014-e54c801155bb",
+        "method": "CASH",
+        "values": {
+          "amount": "123"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "UGX",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "a69562e2-8d51-46b0-a6a8-83261d35b3e8",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "UGX"
+        },
+        "parentId": "aadb04cb-4d14-4056-9fd4-f004f7176d8a"
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "bfa85b82-c80b-4e5c-bc90-b69bec3ad754",
+    "snapshot": "2026-10-19T13:31:20.09899+03:00",
+    "organizationId": "a69562e2-8d51-46b0-a6a8-83261d35b3e8",
+    "postingAllowed": false,
+    "periodSemantics": "TIMESTAMP_HALF_OPEN"
+  },
+  {
+    "kind": "EXPENSE",
+    "rows": [
+      {
+        "at": "2026-10-19",
+        "id": "150f3a29-7759-4ba1-b77f-2e6eff87eee9",
+        "method": "CASH",
+        "values": {
+          "amount": "123"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "UGX",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "a69562e2-8d51-46b0-a6a8-83261d35b3e8",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "UGX"
+        },
+        "category": "SYNTHETIC NATIVE"
+      },
+      {
+        "at": "2026-10-19",
+        "id": "65745e21-dc2e-4315-a61f-7774b30025d6",
+        "method": "CASH",
+        "values": {
+          "amount": "123"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "UGX",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "a69562e2-8d51-46b0-a6a8-83261d35b3e8",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "UGX"
+        },
+        "category": "SYNTHETIC NATIVE"
+      },
+      {
+        "at": "2026-10-19",
+        "id": "67ebb7ad-06f6-4898-94ba-6722c4f413b7",
+        "method": "CASH",
+        "values": {
+          "amount": "123"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "UGX",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "a69562e2-8d51-46b0-a6a8-83261d35b3e8",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "UGX"
+        },
+        "category": "SYNTHETIC NATIVE"
+      },
+      {
+        "at": "2026-10-19",
+        "id": "c3078744-bc20-4204-92fd-564c1ec1ce9f",
+        "method": "CASH",
+        "values": {
+          "amount": "1231"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "UGX",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "a69562e2-8d51-46b0-a6a8-83261d35b3e8",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "UGX"
+        },
+        "category": "SYNTHETIC NATIVE"
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "bfa85b82-c80b-4e5c-bc90-b69bec3ad754",
+    "snapshot": "2026-10-19T13:31:20.211118+03:00",
+    "organizationId": "a69562e2-8d51-46b0-a6a8-83261d35b3e8",
+    "postingAllowed": false,
+    "periodSemantics": "EXPENSE_DATE_UTC_DATE_BOUNDS"
+  },
+  {
+    "kind": "CREDIT",
+    "rows": [
+      {
+        "at": "2026-10-19T12:20:50.141291+03:00",
+        "id": "531b3f80-9d7d-44dd-92bc-f5b26ef25b17",
+        "values": {
+          "amount": "123"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "UGX",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "a69562e2-8d51-46b0-a6a8-83261d35b3e8",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "UGX"
+        },
+        "parentId": "7639a85e-68ea-4fd8-b305-421a59a2c39c"
+      },
+      {
+        "at": "2026-10-19T12:20:50.305248+03:00",
+        "id": "9bc8e355-c3aa-4f3f-a196-8e32ea6e2c58",
+        "values": {
+          "amount": "-123"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "UGX",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "a69562e2-8d51-46b0-a6a8-83261d35b3e8",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "UGX"
+        },
+        "parentId": "7639a85e-68ea-4fd8-b305-421a59a2c39c"
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "bfa85b82-c80b-4e5c-bc90-b69bec3ad754",
+    "snapshot": "2026-10-19T13:31:20.311429+03:00",
+    "organizationId": "a69562e2-8d51-46b0-a6a8-83261d35b3e8",
+    "postingAllowed": false,
+    "periodSemantics": "TIMESTAMP_HALF_OPEN"
+  },
+  {
+    "kind": "COGS",
+    "rows": [
+      {
+        "at": "2026-10-19T12:20:49.002469+03:00",
+        "id": "7eb7300c-35cc-4af3-b5a9-f379876a5129",
+        "values": {
+          "amount": "0.625",
+          "quantity": "0.125",
+          "unitCost": "5"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "UGX",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "a69562e2-8d51-46b0-a6a8-83261d35b3e8",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "UGX"
+        },
+        "parentId": "c85ea74e-3c82-4f38-be57-9bc55be23b97"
+      },
+      {
+        "at": "2026-10-19T12:20:50.141291+03:00",
+        "id": "af45dfea-6c44-4029-abdd-92aaf54a1227",
+        "values": {
+          "amount": "5",
+          "quantity": "1",
+          "unitCost": "5"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "UGX",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "a69562e2-8d51-46b0-a6a8-83261d35b3e8",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "UGX"
+        },
+        "parentId": "941dfa5b-0d40-411a-ab48-bd507ef0ef0a"
+      },
+      {
+        "at": "2026-10-19T12:20:50.893056+03:00",
+        "id": "80f3cd67-98b2-4aaf-88a0-c3f028236ad6",
+        "values": {
+          "amount": "0.625",
+          "quantity": "0.125",
+          "unitCost": "5"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "UGX",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "a69562e2-8d51-46b0-a6a8-83261d35b3e8",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "UGX"
+        },
+        "parentId": "75c63be7-e167-43cc-8a25-ca45868747e7"
+      },
+      {
+        "at": "2026-10-19T12:25:08.806673+03:00",
+        "id": "c1e6d9fb-fb8f-4e13-b6cb-dd755e3064ea",
+        "values": {
+          "amount": "105",
+          "quantity": "1",
+          "unitCost": "105"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "UGX",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "a69562e2-8d51-46b0-a6a8-83261d35b3e8",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "UGX"
+        },
+        "parentId": "e8cdd7c0-7267-4405-9144-27bdb4d2e488"
+      },
+      {
+        "at": "2026-10-19T12:34:40.407052+03:00",
+        "id": "4869acac-c34a-4f64-97da-abcc4324c980",
+        "values": {
+          "amount": "105",
+          "quantity": "1",
+          "unitCost": "105"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "UGX",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "a69562e2-8d51-46b0-a6a8-83261d35b3e8",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "UGX"
+        },
+        "parentId": "ad41c51c-8535-4e50-9320-e6eaf16df780"
+      },
+      {
+        "at": "2026-10-19T13:06:40.903372+03:00",
+        "id": "dd9acc61-21a4-418b-a27d-b2ea96e05a80",
+        "values": {
+          "amount": "105",
+          "quantity": "1",
+          "unitCost": "105"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "UGX",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "a69562e2-8d51-46b0-a6a8-83261d35b3e8",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "UGX"
+        },
+        "parentId": "ff38e630-df8c-4d43-a150-c8926d4de5f6"
+      },
+      {
+        "at": "2026-10-19T13:07:55.109948+03:00",
+        "id": "55d3410b-c615-466c-8647-fe5f33525fad",
+        "values": {
+          "amount": "105",
+          "quantity": "1",
+          "unitCost": "105"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "UGX",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "a69562e2-8d51-46b0-a6a8-83261d35b3e8",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "UGX"
+        },
+        "parentId": "aadb04cb-4d14-4056-9fd4-f004f7176d8a"
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "bfa85b82-c80b-4e5c-bc90-b69bec3ad754",
+    "snapshot": "2026-10-19T13:31:20.42133+03:00",
+    "organizationId": "a69562e2-8d51-46b0-a6a8-83261d35b3e8",
+    "postingAllowed": false,
+    "periodSemantics": "TIMESTAMP_HALF_OPEN"
+  },
+  {
+    "kind": "STOCK",
+    "rows": [
+      {
+        "at": "2026-10-19T13:54:23.708803+03:00",
+        "id": "stock-2992a4bfd491d088048af73dffc5a302",
+        "values": {
+          "amount": "104343.750",
+          "productCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "UGX",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "a69562e2-8d51-46b0-a6a8-83261d35b3e8",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "UGX"
+        },
+        "valueSource": "CURRENT_CATALOG_COST_NOT_RECEIPT_ATTESTATION"
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "bfa85b82-c80b-4e5c-bc90-b69bec3ad754",
+    "snapshot": "2026-10-19T13:54:23.708803+03:00",
+    "organizationId": "a69562e2-8d51-46b0-a6a8-83261d35b3e8",
+    "postingAllowed": false,
+    "periodSemantics": "CURRENT_SNAPSHOT_NOT_HISTORICAL"
+  },
+  {
+    "kind": "SALE",
+    "rows": [
+      {
+        "at": "2026-10-19T12:20:51.972261+03:00",
+        "id": "9ef799aa-8877-4c16-bc86-3cc449c92f2e",
+        "values": {
+          "paid": "1.39",
+          "total": "1.39000",
+          "balance": "0.00000",
+          "discount": "0.15",
+          "rounding": "-0.00250",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "EUR",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "cec199bd-33a8-4ec7-8eed-7edf198784ab",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "EUR"
+        }
+      },
+      {
+        "at": "2026-10-19T12:20:53.45644+03:00",
+        "id": "cbf2e8c0-a0c4-4d1d-b48f-0f746ced405e",
+        "values": {
+          "paid": "0",
+          "total": "12.34",
+          "balance": "12.34",
+          "discount": "0",
+          "rounding": "0.00",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "EUR",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "cec199bd-33a8-4ec7-8eed-7edf198784ab",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "EUR"
+        }
+      },
+      {
+        "at": "2026-10-19T12:20:54.413375+03:00",
+        "id": "433ef0be-6c03-4f4f-8a71-09bfe475b208",
+        "values": {
+          "paid": "1.39",
+          "total": "1.39000",
+          "balance": "0.00000",
+          "discount": "0.15",
+          "rounding": "-0.00250",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "EUR",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "cec199bd-33a8-4ec7-8eed-7edf198784ab",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "EUR"
+        }
+      },
+      {
+        "at": "2026-10-19T12:25:10.295217+03:00",
+        "id": "b0f850d7-ae2b-4f3b-a516-3c0a95a66ac5",
+        "values": {
+          "paid": "12.34",
+          "total": "12.34",
+          "balance": "0.00",
+          "discount": "0",
+          "rounding": "0.00",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "EUR",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "cec199bd-33a8-4ec7-8eed-7edf198784ab",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "EUR"
+        }
+      },
+      {
+        "at": "2026-10-19T12:34:41.530009+03:00",
+        "id": "b393904a-f297-402e-a95d-bdd20a9c2275",
+        "values": {
+          "paid": "12.34",
+          "total": "12.34",
+          "balance": "0.00",
+          "discount": "0",
+          "rounding": "0.00",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "EUR",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "cec199bd-33a8-4ec7-8eed-7edf198784ab",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "EUR"
+        }
+      },
+      {
+        "at": "2026-10-19T13:06:41.252972+03:00",
+        "id": "c4cbca6c-9fbd-4e5f-a4d5-4043907c19a8",
+        "values": {
+          "paid": "12.34",
+          "total": "12.34",
+          "balance": "0.00",
+          "discount": "0",
+          "rounding": "0.00",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "EUR",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "cec199bd-33a8-4ec7-8eed-7edf198784ab",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "EUR"
+        }
+      },
+      {
+        "at": "2026-10-19T13:07:56.831453+03:00",
+        "id": "ffe0c9f3-ed71-47fe-bd96-334b5a1a702d",
+        "values": {
+          "paid": "12.34",
+          "total": "12.34",
+          "balance": "0.00",
+          "discount": "0",
+          "rounding": "0.00",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "EUR",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "cec199bd-33a8-4ec7-8eed-7edf198784ab",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "EUR"
+        }
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "91cada23-74de-472b-bff1-eff8a23c7f84",
+    "snapshot": "2026-10-19T13:31:20.612225+03:00",
+    "organizationId": "cec199bd-33a8-4ec7-8eed-7edf198784ab",
+    "postingAllowed": false,
+    "periodSemantics": "TIMESTAMP_HALF_OPEN"
+  },
+  {
+    "kind": "PAYMENT",
+    "rows": [
+      {
+        "at": "2026-10-19T12:20:51.972261+03:00",
+        "id": "0a3864de-ae8b-4728-b15d-93598c42650a",
+        "method": "CASH",
+        "values": {
+          "amount": "1.39"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "EUR",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "cec199bd-33a8-4ec7-8eed-7edf198784ab",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "EUR"
+        },
+        "parentId": "9ef799aa-8877-4c16-bc86-3cc449c92f2e"
+      },
+      {
+        "at": "2026-10-19T12:20:54.413375+03:00",
+        "id": "83ad81d6-4e6c-49a6-9c11-143646c9b7af",
+        "method": "CASH",
+        "values": {
+          "amount": "1.39"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "EUR",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "cec199bd-33a8-4ec7-8eed-7edf198784ab",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "EUR"
+        },
+        "parentId": "433ef0be-6c03-4f4f-8a71-09bfe475b208"
+      },
+      {
+        "at": "2026-10-19T12:25:10.295217+03:00",
+        "id": "f981dfeb-5cb1-491f-a0c2-b113e5e1bc2a",
+        "method": "CASH",
+        "values": {
+          "amount": "12.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "EUR",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "cec199bd-33a8-4ec7-8eed-7edf198784ab",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "EUR"
+        },
+        "parentId": "b0f850d7-ae2b-4f3b-a516-3c0a95a66ac5"
+      },
+      {
+        "at": "2026-10-19T12:34:41.530009+03:00",
+        "id": "1bcdce58-f8cf-4013-a176-9c31754c5e47",
+        "method": "CASH",
+        "values": {
+          "amount": "2.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "EUR",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "cec199bd-33a8-4ec7-8eed-7edf198784ab",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "EUR"
+        },
+        "parentId": "b393904a-f297-402e-a95d-bdd20a9c2275"
+      },
+      {
+        "at": "2026-10-19T12:34:41.530009+03:00",
+        "id": "7ac76515-bf4e-4240-a3be-817ef3e5c318",
+        "method": "MOBILE",
+        "values": {
+          "amount": "5"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "EUR",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "cec199bd-33a8-4ec7-8eed-7edf198784ab",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "EUR"
+        },
+        "parentId": "b393904a-f297-402e-a95d-bdd20a9c2275"
+      },
+      {
+        "at": "2026-10-19T12:34:41.530009+03:00",
+        "id": "ab7a11f3-6240-4534-ab2f-23b91a4d9c63",
+        "method": "BANK",
+        "values": {
+          "amount": "5.00"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "EUR",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "cec199bd-33a8-4ec7-8eed-7edf198784ab",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "EUR"
+        },
+        "parentId": "b393904a-f297-402e-a95d-bdd20a9c2275"
+      },
+      {
+        "at": "2026-10-19T13:06:41.252972+03:00",
+        "id": "95993793-b902-4b99-9349-04fb9af46dc0",
+        "method": "CASH",
+        "values": {
+          "amount": "12.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "EUR",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "cec199bd-33a8-4ec7-8eed-7edf198784ab",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "EUR"
+        },
+        "parentId": "c4cbca6c-9fbd-4e5f-a4d5-4043907c19a8"
+      },
+      {
+        "at": "2026-10-19T13:07:56.831453+03:00",
+        "id": "281e089a-0d37-4c98-b8ba-020c65b97a84",
+        "method": "CASH",
+        "values": {
+          "amount": "12.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "EUR",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "cec199bd-33a8-4ec7-8eed-7edf198784ab",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "EUR"
+        },
+        "parentId": "ffe0c9f3-ed71-47fe-bd96-334b5a1a702d"
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "91cada23-74de-472b-bff1-eff8a23c7f84",
+    "snapshot": "2026-10-19T13:31:20.718979+03:00",
+    "organizationId": "cec199bd-33a8-4ec7-8eed-7edf198784ab",
+    "postingAllowed": false,
+    "periodSemantics": "TIMESTAMP_HALF_OPEN"
+  },
+  {
+    "kind": "EXPENSE",
+    "rows": [
+      {
+        "at": "2026-10-19",
+        "id": "1c10bd63-b5f9-4593-b0a3-dc6a39e0d8b2",
+        "method": "CASH",
+        "values": {
+          "amount": "12.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "EUR",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "cec199bd-33a8-4ec7-8eed-7edf198784ab",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "EUR"
+        },
+        "category": "SYNTHETIC NATIVE"
+      },
+      {
+        "at": "2026-10-19",
+        "id": "665f5c6d-bb2e-4514-b3b8-6537b482082d",
+        "method": "CASH",
+        "values": {
+          "amount": "12.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "EUR",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "cec199bd-33a8-4ec7-8eed-7edf198784ab",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "EUR"
+        },
+        "category": "SYNTHETIC NATIVE"
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "91cada23-74de-472b-bff1-eff8a23c7f84",
+    "snapshot": "2026-10-19T13:31:20.81524+03:00",
+    "organizationId": "cec199bd-33a8-4ec7-8eed-7edf198784ab",
+    "postingAllowed": false,
+    "periodSemantics": "EXPENSE_DATE_UTC_DATE_BOUNDS"
+  },
+  {
+    "kind": "CREDIT",
+    "rows": [
+      {
+        "at": "2026-10-19T12:20:53.45644+03:00",
+        "id": "088b5dfc-7f1f-4298-ab34-bee7109baa02",
+        "values": {
+          "amount": "12.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "EUR",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "cec199bd-33a8-4ec7-8eed-7edf198784ab",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "EUR"
+        },
+        "parentId": "2a84ebe8-a55c-46fd-9ebd-db3ee6092c73"
+      },
+      {
+        "at": "2026-10-19T12:20:53.752+03:00",
+        "id": "6a458a79-725b-4448-8d41-456da73b73ad",
+        "values": {
+          "amount": "-12.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "EUR",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "cec199bd-33a8-4ec7-8eed-7edf198784ab",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "EUR"
+        },
+        "parentId": "2a84ebe8-a55c-46fd-9ebd-db3ee6092c73"
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "91cada23-74de-472b-bff1-eff8a23c7f84",
+    "snapshot": "2026-10-19T13:31:20.896909+03:00",
+    "organizationId": "cec199bd-33a8-4ec7-8eed-7edf198784ab",
+    "postingAllowed": false,
+    "periodSemantics": "TIMESTAMP_HALF_OPEN"
+  },
+  {
+    "kind": "COGS",
+    "rows": [
+      {
+        "at": "2026-10-19T12:20:51.972261+03:00",
+        "id": "db0ae9e2-8261-429c-91ad-dc7431ca16df",
+        "values": {
+          "amount": "0.64000",
+          "quantity": "0.125",
+          "unitCost": "5.12"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "EUR",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "cec199bd-33a8-4ec7-8eed-7edf198784ab",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "EUR"
+        },
+        "parentId": "9ef799aa-8877-4c16-bc86-3cc449c92f2e"
+      },
+      {
+        "at": "2026-10-19T12:20:53.45644+03:00",
+        "id": "ea61ecd8-3297-459c-9f5a-7dc46de06beb",
+        "values": {
+          "amount": "5.12",
+          "quantity": "1",
+          "unitCost": "5.12"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "EUR",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "cec199bd-33a8-4ec7-8eed-7edf198784ab",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "EUR"
+        },
+        "parentId": "cbf2e8c0-a0c4-4d1d-b48f-0f746ced405e"
+      },
+      {
+        "at": "2026-10-19T12:20:54.413375+03:00",
+        "id": "3af4c5c2-6d1e-49fe-af4d-e71805774011",
+        "values": {
+          "amount": "0.64000",
+          "quantity": "0.125",
+          "unitCost": "5.12"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "EUR",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "cec199bd-33a8-4ec7-8eed-7edf198784ab",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "EUR"
+        },
+        "parentId": "433ef0be-6c03-4f4f-8a71-09bfe475b208"
+      },
+      {
+        "at": "2026-10-19T12:25:10.295217+03:00",
+        "id": "27d2bc9e-9099-4d73-b24d-e071d41810ce",
+        "values": {
+          "amount": "105.12",
+          "quantity": "1",
+          "unitCost": "105.12"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "EUR",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "cec199bd-33a8-4ec7-8eed-7edf198784ab",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "EUR"
+        },
+        "parentId": "b0f850d7-ae2b-4f3b-a516-3c0a95a66ac5"
+      },
+      {
+        "at": "2026-10-19T12:34:41.530009+03:00",
+        "id": "5a0c295a-d637-4eaf-b558-ae610a3f1abf",
+        "values": {
+          "amount": "105.12",
+          "quantity": "1",
+          "unitCost": "105.12"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "EUR",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "cec199bd-33a8-4ec7-8eed-7edf198784ab",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "EUR"
+        },
+        "parentId": "b393904a-f297-402e-a95d-bdd20a9c2275"
+      },
+      {
+        "at": "2026-10-19T13:06:41.252972+03:00",
+        "id": "b66a34f8-d2aa-41f6-b708-29f00ae1d7cb",
+        "values": {
+          "amount": "105.12",
+          "quantity": "1",
+          "unitCost": "105.12"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "EUR",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "cec199bd-33a8-4ec7-8eed-7edf198784ab",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "EUR"
+        },
+        "parentId": "c4cbca6c-9fbd-4e5f-a4d5-4043907c19a8"
+      },
+      {
+        "at": "2026-10-19T13:07:56.831453+03:00",
+        "id": "d8f09957-eef8-4433-aa79-3e04ac050e54",
+        "values": {
+          "amount": "105.12",
+          "quantity": "1",
+          "unitCost": "105.12"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "EUR",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "cec199bd-33a8-4ec7-8eed-7edf198784ab",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "EUR"
+        },
+        "parentId": "ffe0c9f3-ed71-47fe-bd96-334b5a1a702d"
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "91cada23-74de-472b-bff1-eff8a23c7f84",
+    "snapshot": "2026-10-19T13:31:20.977998+03:00",
+    "organizationId": "cec199bd-33a8-4ec7-8eed-7edf198784ab",
+    "postingAllowed": false,
+    "periodSemantics": "TIMESTAMP_HALF_OPEN"
+  },
+  {
+    "kind": "STOCK",
+    "rows": [
+      {
+        "at": "2026-10-19T13:54:24.033952+03:00",
+        "id": "stock-52f808ebbcd57738d0ab039b8f01f4ba",
+        "values": {
+          "amount": "104463.00000",
+          "productCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "EUR",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "cec199bd-33a8-4ec7-8eed-7edf198784ab",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "EUR"
+        },
+        "valueSource": "CURRENT_CATALOG_COST_NOT_RECEIPT_ATTESTATION"
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "91cada23-74de-472b-bff1-eff8a23c7f84",
+    "snapshot": "2026-10-19T13:54:24.033952+03:00",
+    "organizationId": "cec199bd-33a8-4ec7-8eed-7edf198784ab",
+    "postingAllowed": false,
+    "periodSemantics": "CURRENT_SNAPSHOT_NOT_HISTORICAL"
+  },
+  {
+    "kind": "SALE",
+    "rows": [
+      {
+        "at": "2026-10-19T12:20:55.601492+03:00",
+        "id": "fe139395-2ddd-4255-9ce2-1eb393201bcb",
+        "values": {
+          "paid": "1.39",
+          "total": "1.39000",
+          "balance": "0.00000",
+          "discount": "0.15",
+          "rounding": "-0.00250",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "AED",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "84e1d7ba-2828-48d1-9c38-61e0371d8300",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "AED"
+        }
+      },
+      {
+        "at": "2026-10-19T12:20:56.82222+03:00",
+        "id": "38c9cf6b-00e0-4ad7-ac9a-cae976749685",
+        "values": {
+          "paid": "0",
+          "total": "12.34",
+          "balance": "12.34",
+          "discount": "0",
+          "rounding": "0.00",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "AED",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "84e1d7ba-2828-48d1-9c38-61e0371d8300",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "AED"
+        }
+      },
+      {
+        "at": "2026-10-19T12:20:57.53131+03:00",
+        "id": "de91d00c-faef-4992-b2d9-3d2d6f29345a",
+        "values": {
+          "paid": "1.39",
+          "total": "1.39000",
+          "balance": "0.00000",
+          "discount": "0.15",
+          "rounding": "-0.00250",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "AED",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "84e1d7ba-2828-48d1-9c38-61e0371d8300",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "AED"
+        }
+      },
+      {
+        "at": "2026-10-19T12:25:11.948831+03:00",
+        "id": "cb79b51b-b8e2-4743-9b12-c729958682f7",
+        "values": {
+          "paid": "12.34",
+          "total": "12.34",
+          "balance": "0.00",
+          "discount": "0",
+          "rounding": "0.00",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "AED",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "84e1d7ba-2828-48d1-9c38-61e0371d8300",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "AED"
+        }
+      },
+      {
+        "at": "2026-10-19T12:34:42.593227+03:00",
+        "id": "5b672882-bca1-481a-882b-1fcb5bd5149a",
+        "values": {
+          "paid": "12.34",
+          "total": "12.34",
+          "balance": "0.00",
+          "discount": "0",
+          "rounding": "0.00",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "AED",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "84e1d7ba-2828-48d1-9c38-61e0371d8300",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "AED"
+        }
+      },
+      {
+        "at": "2026-10-19T13:06:41.566503+03:00",
+        "id": "9b7295b6-5cbb-46a3-bd43-714772034c78",
+        "values": {
+          "paid": "12.34",
+          "total": "12.34",
+          "balance": "0.00",
+          "discount": "0",
+          "rounding": "0.00",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "AED",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "84e1d7ba-2828-48d1-9c38-61e0371d8300",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "AED"
+        }
+      },
+      {
+        "at": "2026-10-19T13:07:58.513189+03:00",
+        "id": "c1f72a6d-b134-424f-a247-2326b1afa591",
+        "values": {
+          "paid": "12.34",
+          "total": "12.34",
+          "balance": "0.00",
+          "discount": "0",
+          "rounding": "0.00",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "AED",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "84e1d7ba-2828-48d1-9c38-61e0371d8300",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "AED"
+        }
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "b6db11bf-b28e-42df-b74b-cd0a9827a901",
+    "snapshot": "2026-10-19T13:31:21.13929+03:00",
+    "organizationId": "84e1d7ba-2828-48d1-9c38-61e0371d8300",
+    "postingAllowed": false,
+    "periodSemantics": "TIMESTAMP_HALF_OPEN"
+  },
+  {
+    "kind": "PAYMENT",
+    "rows": [
+      {
+        "at": "2026-10-19T12:20:55.601492+03:00",
+        "id": "85131dc7-e493-4cea-a745-61c99b834670",
+        "method": "CASH",
+        "values": {
+          "amount": "1.39"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "AED",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "84e1d7ba-2828-48d1-9c38-61e0371d8300",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "AED"
+        },
+        "parentId": "fe139395-2ddd-4255-9ce2-1eb393201bcb"
+      },
+      {
+        "at": "2026-10-19T12:20:57.53131+03:00",
+        "id": "b8ef977c-cad1-441c-8a2c-7cd935c1653b",
+        "method": "CASH",
+        "values": {
+          "amount": "1.39"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "AED",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "84e1d7ba-2828-48d1-9c38-61e0371d8300",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "AED"
+        },
+        "parentId": "de91d00c-faef-4992-b2d9-3d2d6f29345a"
+      },
+      {
+        "at": "2026-10-19T12:25:11.948831+03:00",
+        "id": "3851a75b-b4a5-43ed-a6d5-632702f1b678",
+        "method": "CASH",
+        "values": {
+          "amount": "12.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "AED",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "84e1d7ba-2828-48d1-9c38-61e0371d8300",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "AED"
+        },
+        "parentId": "cb79b51b-b8e2-4743-9b12-c729958682f7"
+      },
+      {
+        "at": "2026-10-19T12:34:42.593227+03:00",
+        "id": "3ea650d5-9618-4ac6-a4a1-550bc87d5a97",
+        "method": "CASH",
+        "values": {
+          "amount": "2.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "AED",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "84e1d7ba-2828-48d1-9c38-61e0371d8300",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "AED"
+        },
+        "parentId": "5b672882-bca1-481a-882b-1fcb5bd5149a"
+      },
+      {
+        "at": "2026-10-19T12:34:42.593227+03:00",
+        "id": "754fbcfe-b5ba-4962-8813-081005e333f3",
+        "method": "MOBILE",
+        "values": {
+          "amount": "5"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "AED",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "84e1d7ba-2828-48d1-9c38-61e0371d8300",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "AED"
+        },
+        "parentId": "5b672882-bca1-481a-882b-1fcb5bd5149a"
+      },
+      {
+        "at": "2026-10-19T12:34:42.593227+03:00",
+        "id": "bbee1fef-d7f3-4882-a269-591150ffef4e",
+        "method": "BANK",
+        "values": {
+          "amount": "5.00"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "AED",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "84e1d7ba-2828-48d1-9c38-61e0371d8300",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "AED"
+        },
+        "parentId": "5b672882-bca1-481a-882b-1fcb5bd5149a"
+      },
+      {
+        "at": "2026-10-19T13:06:41.566503+03:00",
+        "id": "5d79b320-7f9e-425d-b331-b04d49dccea7",
+        "method": "CASH",
+        "values": {
+          "amount": "12.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "AED",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "84e1d7ba-2828-48d1-9c38-61e0371d8300",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "AED"
+        },
+        "parentId": "9b7295b6-5cbb-46a3-bd43-714772034c78"
+      },
+      {
+        "at": "2026-10-19T13:07:58.513189+03:00",
+        "id": "79811ca8-ad37-450b-85ff-7f49fa889193",
+        "method": "CASH",
+        "values": {
+          "amount": "12.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "AED",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "84e1d7ba-2828-48d1-9c38-61e0371d8300",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "AED"
+        },
+        "parentId": "c1f72a6d-b134-424f-a247-2326b1afa591"
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "b6db11bf-b28e-42df-b74b-cd0a9827a901",
+    "snapshot": "2026-10-19T13:31:21.216067+03:00",
+    "organizationId": "84e1d7ba-2828-48d1-9c38-61e0371d8300",
+    "postingAllowed": false,
+    "periodSemantics": "TIMESTAMP_HALF_OPEN"
+  },
+  {
+    "kind": "EXPENSE",
+    "rows": [
+      {
+        "at": "2026-10-19",
+        "id": "210263e0-c01d-4f53-b520-6cd5d5cda1f2",
+        "method": "CASH",
+        "values": {
+          "amount": "12.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "AED",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "84e1d7ba-2828-48d1-9c38-61e0371d8300",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "AED"
+        },
+        "category": "SYNTHETIC NATIVE"
+      },
+      {
+        "at": "2026-10-19",
+        "id": "521acf53-64e8-4ee7-b9d9-988fe1349e19",
+        "method": "CASH",
+        "values": {
+          "amount": "12.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "AED",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "84e1d7ba-2828-48d1-9c38-61e0371d8300",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "AED"
+        },
+        "category": "SYNTHETIC NATIVE"
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "b6db11bf-b28e-42df-b74b-cd0a9827a901",
+    "snapshot": "2026-10-19T13:31:21.303041+03:00",
+    "organizationId": "84e1d7ba-2828-48d1-9c38-61e0371d8300",
+    "postingAllowed": false,
+    "periodSemantics": "EXPENSE_DATE_UTC_DATE_BOUNDS"
+  },
+  {
+    "kind": "CREDIT",
+    "rows": [
+      {
+        "at": "2026-10-19T12:20:56.82222+03:00",
+        "id": "af33265f-6c8b-4f59-b1e7-7813bb29ae9b",
+        "values": {
+          "amount": "12.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "AED",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "84e1d7ba-2828-48d1-9c38-61e0371d8300",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "AED"
+        },
+        "parentId": "f4b987fd-df24-450e-bb26-aedef6a0ab01"
+      },
+      {
+        "at": "2026-10-19T12:20:57.032141+03:00",
+        "id": "756aa732-45dd-4806-b04d-c2aca0bc4d39",
+        "values": {
+          "amount": "-12.34"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "AED",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "84e1d7ba-2828-48d1-9c38-61e0371d8300",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "AED"
+        },
+        "parentId": "f4b987fd-df24-450e-bb26-aedef6a0ab01"
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "b6db11bf-b28e-42df-b74b-cd0a9827a901",
+    "snapshot": "2026-10-19T13:31:21.377847+03:00",
+    "organizationId": "84e1d7ba-2828-48d1-9c38-61e0371d8300",
+    "postingAllowed": false,
+    "periodSemantics": "TIMESTAMP_HALF_OPEN"
+  },
+  {
+    "kind": "COGS",
+    "rows": [
+      {
+        "at": "2026-10-19T12:20:55.601492+03:00",
+        "id": "43508e21-3c1f-4821-af85-7dc90752a51d",
+        "values": {
+          "amount": "0.64000",
+          "quantity": "0.125",
+          "unitCost": "5.12"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "AED",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "84e1d7ba-2828-48d1-9c38-61e0371d8300",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "AED"
+        },
+        "parentId": "fe139395-2ddd-4255-9ce2-1eb393201bcb"
+      },
+      {
+        "at": "2026-10-19T12:20:56.82222+03:00",
+        "id": "75e87b93-03fd-469a-a5b0-d9f4876ae3c7",
+        "values": {
+          "amount": "5.12",
+          "quantity": "1",
+          "unitCost": "5.12"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "AED",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "84e1d7ba-2828-48d1-9c38-61e0371d8300",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "AED"
+        },
+        "parentId": "38c9cf6b-00e0-4ad7-ac9a-cae976749685"
+      },
+      {
+        "at": "2026-10-19T12:20:57.53131+03:00",
+        "id": "7ba66846-c603-48e0-b1f7-3d623074d756",
+        "values": {
+          "amount": "0.64000",
+          "quantity": "0.125",
+          "unitCost": "5.12"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "AED",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "84e1d7ba-2828-48d1-9c38-61e0371d8300",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "AED"
+        },
+        "parentId": "de91d00c-faef-4992-b2d9-3d2d6f29345a"
+      },
+      {
+        "at": "2026-10-19T12:25:11.948831+03:00",
+        "id": "013b6606-6346-4ab4-995c-b46ece98ded8",
+        "values": {
+          "amount": "105.12",
+          "quantity": "1",
+          "unitCost": "105.12"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "AED",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "84e1d7ba-2828-48d1-9c38-61e0371d8300",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "AED"
+        },
+        "parentId": "cb79b51b-b8e2-4743-9b12-c729958682f7"
+      },
+      {
+        "at": "2026-10-19T12:34:42.593227+03:00",
+        "id": "c729b0e0-7a05-4917-bb8f-7e759ad7f5b9",
+        "values": {
+          "amount": "105.12",
+          "quantity": "1",
+          "unitCost": "105.12"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "AED",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "84e1d7ba-2828-48d1-9c38-61e0371d8300",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "AED"
+        },
+        "parentId": "5b672882-bca1-481a-882b-1fcb5bd5149a"
+      },
+      {
+        "at": "2026-10-19T13:06:41.566503+03:00",
+        "id": "ad5e8ec9-7912-4adc-a242-9c450fabe3b4",
+        "values": {
+          "amount": "105.12",
+          "quantity": "1",
+          "unitCost": "105.12"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "AED",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "84e1d7ba-2828-48d1-9c38-61e0371d8300",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "AED"
+        },
+        "parentId": "9b7295b6-5cbb-46a3-bd43-714772034c78"
+      },
+      {
+        "at": "2026-10-19T13:07:58.513189+03:00",
+        "id": "f2f8de64-3649-498e-a8a8-b44956f40d5b",
+        "values": {
+          "amount": "105.12",
+          "quantity": "1",
+          "unitCost": "105.12"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "AED",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "84e1d7ba-2828-48d1-9c38-61e0371d8300",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "AED"
+        },
+        "parentId": "c1f72a6d-b134-424f-a247-2326b1afa591"
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "b6db11bf-b28e-42df-b74b-cd0a9827a901",
+    "snapshot": "2026-10-19T13:31:21.45386+03:00",
+    "organizationId": "84e1d7ba-2828-48d1-9c38-61e0371d8300",
+    "postingAllowed": false,
+    "periodSemantics": "TIMESTAMP_HALF_OPEN"
+  },
+  {
+    "kind": "STOCK",
+    "rows": [
+      {
+        "at": "2026-10-19T13:54:24.402761+03:00",
+        "id": "stock-66f90eea61296fb38960945bb9180be8",
+        "values": {
+          "amount": "104463.00000",
+          "productCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "AED",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "84e1d7ba-2828-48d1-9c38-61e0371d8300",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "AED"
+        },
+        "valueSource": "CURRENT_CATALOG_COST_NOT_RECEIPT_ATTESTATION"
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "b6db11bf-b28e-42df-b74b-cd0a9827a901",
+    "snapshot": "2026-10-19T13:54:24.402761+03:00",
+    "organizationId": "84e1d7ba-2828-48d1-9c38-61e0371d8300",
+    "postingAllowed": false,
+    "periodSemantics": "CURRENT_SNAPSHOT_NOT_HISTORICAL"
+  },
+  {
+    "kind": "SALE",
+    "rows": [
+      {
+        "at": "2026-10-19T12:20:58.46765+03:00",
+        "id": "5b1b1a09-255d-46dd-95e1-3cb773700fde",
+        "values": {
+          "paid": "13",
+          "total": "13.000",
+          "balance": "0.000",
+          "discount": "2",
+          "rounding": "-0.375",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "JPY",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "40e00c24-62fd-4fbc-aafe-4e8bc3c968da",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "JPY"
+        }
+      },
+      {
+        "at": "2026-10-19T12:20:59.712848+03:00",
+        "id": "1a054189-db96-4169-ab67-015330c494c9",
+        "values": {
+          "paid": "0",
+          "total": "123",
+          "balance": "123",
+          "discount": "0",
+          "rounding": "0",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "JPY",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "40e00c24-62fd-4fbc-aafe-4e8bc3c968da",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "JPY"
+        }
+      },
+      {
+        "at": "2026-10-19T12:21:00.564159+03:00",
+        "id": "7c83e96e-2b45-4e01-bde0-4f884d23f485",
+        "values": {
+          "paid": "13",
+          "total": "13.000",
+          "balance": "0.000",
+          "discount": "2",
+          "rounding": "-0.375",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "JPY",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "40e00c24-62fd-4fbc-aafe-4e8bc3c968da",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "JPY"
+        }
+      },
+      {
+        "at": "2026-10-19T12:25:13.379777+03:00",
+        "id": "5a78f449-86df-4850-804d-a41b675339bf",
+        "values": {
+          "paid": "123",
+          "total": "123",
+          "balance": "0",
+          "discount": "0",
+          "rounding": "0",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "JPY",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "40e00c24-62fd-4fbc-aafe-4e8bc3c968da",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "JPY"
+        }
+      },
+      {
+        "at": "2026-10-19T12:34:43.568973+03:00",
+        "id": "ec558335-7104-433a-8c0b-79f700264cfb",
+        "values": {
+          "paid": "123",
+          "total": "123",
+          "balance": "0",
+          "discount": "0",
+          "rounding": "0",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "JPY",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "40e00c24-62fd-4fbc-aafe-4e8bc3c968da",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "JPY"
+        }
+      },
+      {
+        "at": "2026-10-19T13:06:41.882779+03:00",
+        "id": "ef9351f1-911b-4ea3-ba67-1b9628ec4203",
+        "values": {
+          "paid": "123",
+          "total": "123",
+          "balance": "0",
+          "discount": "0",
+          "rounding": "0",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "JPY",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "40e00c24-62fd-4fbc-aafe-4e8bc3c968da",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "JPY"
+        }
+      },
+      {
+        "at": "2026-10-19T13:08:00.173225+03:00",
+        "id": "2f16c41b-9344-44d4-a5a3-cd4b9a4c9077",
+        "values": {
+          "paid": "123",
+          "total": "123",
+          "balance": "0",
+          "discount": "0",
+          "rounding": "0",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "JPY",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "40e00c24-62fd-4fbc-aafe-4e8bc3c968da",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "JPY"
+        }
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "189ffb75-e833-41b7-a3d1-d801b40994ec",
+    "snapshot": "2026-10-19T13:31:21.655004+03:00",
+    "organizationId": "40e00c24-62fd-4fbc-aafe-4e8bc3c968da",
+    "postingAllowed": false,
+    "periodSemantics": "TIMESTAMP_HALF_OPEN"
+  },
+  {
+    "kind": "PAYMENT",
+    "rows": [
+      {
+        "at": "2026-10-19T12:20:58.46765+03:00",
+        "id": "ba541cfd-c048-425e-af7e-4d7d9fda5653",
+        "method": "CASH",
+        "values": {
+          "amount": "13"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "JPY",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "40e00c24-62fd-4fbc-aafe-4e8bc3c968da",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "JPY"
+        },
+        "parentId": "5b1b1a09-255d-46dd-95e1-3cb773700fde"
+      },
+      {
+        "at": "2026-10-19T12:21:00.564159+03:00",
+        "id": "617e894c-74de-4e6e-8d62-33a8abe4535f",
+        "method": "CASH",
+        "values": {
+          "amount": "13"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "JPY",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "40e00c24-62fd-4fbc-aafe-4e8bc3c968da",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "JPY"
+        },
+        "parentId": "7c83e96e-2b45-4e01-bde0-4f884d23f485"
+      },
+      {
+        "at": "2026-10-19T12:25:13.379777+03:00",
+        "id": "54c6698a-8336-4ed2-8b17-5cd4eafed2b1",
+        "method": "CASH",
+        "values": {
+          "amount": "123"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "JPY",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "40e00c24-62fd-4fbc-aafe-4e8bc3c968da",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "JPY"
+        },
+        "parentId": "5a78f449-86df-4850-804d-a41b675339bf"
+      },
+      {
+        "at": "2026-10-19T12:34:43.568973+03:00",
+        "id": "0b2060a8-07f4-4b55-a3ca-108b4e25fa3b",
+        "method": "CASH",
+        "values": {
+          "amount": "23"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "JPY",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "40e00c24-62fd-4fbc-aafe-4e8bc3c968da",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "JPY"
+        },
+        "parentId": "ec558335-7104-433a-8c0b-79f700264cfb"
+      },
+      {
+        "at": "2026-10-19T12:34:43.568973+03:00",
+        "id": "2fca639c-0073-46c4-8ec7-6e57405b4b2a",
+        "method": "MOBILE",
+        "values": {
+          "amount": "5"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "JPY",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "40e00c24-62fd-4fbc-aafe-4e8bc3c968da",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "JPY"
+        },
+        "parentId": "ec558335-7104-433a-8c0b-79f700264cfb"
+      },
+      {
+        "at": "2026-10-19T12:34:43.568973+03:00",
+        "id": "8c1064b8-b193-414c-9c96-f3a31b61912b",
+        "method": "BANK",
+        "values": {
+          "amount": "95"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "JPY",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "40e00c24-62fd-4fbc-aafe-4e8bc3c968da",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "JPY"
+        },
+        "parentId": "ec558335-7104-433a-8c0b-79f700264cfb"
+      },
+      {
+        "at": "2026-10-19T13:06:41.882779+03:00",
+        "id": "af95b534-fc15-4a24-920a-09b141ff48ed",
+        "method": "CASH",
+        "values": {
+          "amount": "123"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "JPY",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "40e00c24-62fd-4fbc-aafe-4e8bc3c968da",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "JPY"
+        },
+        "parentId": "ef9351f1-911b-4ea3-ba67-1b9628ec4203"
+      },
+      {
+        "at": "2026-10-19T13:08:00.173225+03:00",
+        "id": "c1ee2301-bf0b-4fcc-a3b0-522e76341fce",
+        "method": "CASH",
+        "values": {
+          "amount": "123"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "JPY",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "40e00c24-62fd-4fbc-aafe-4e8bc3c968da",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "JPY"
+        },
+        "parentId": "2f16c41b-9344-44d4-a5a3-cd4b9a4c9077"
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "189ffb75-e833-41b7-a3d1-d801b40994ec",
+    "snapshot": "2026-10-19T13:31:21.746954+03:00",
+    "organizationId": "40e00c24-62fd-4fbc-aafe-4e8bc3c968da",
+    "postingAllowed": false,
+    "periodSemantics": "TIMESTAMP_HALF_OPEN"
+  },
+  {
+    "kind": "EXPENSE",
+    "rows": [
+      {
+        "at": "2026-10-19",
+        "id": "17b0eeac-9ef1-4294-a66e-b64cc0c61700",
+        "method": "CASH",
+        "values": {
+          "amount": "123"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "JPY",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "40e00c24-62fd-4fbc-aafe-4e8bc3c968da",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "JPY"
+        },
+        "category": "SYNTHETIC NATIVE"
+      },
+      {
+        "at": "2026-10-19",
+        "id": "4976802a-bcb0-4620-9d9e-e65aee51ceaa",
+        "method": "CASH",
+        "values": {
+          "amount": "123"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "JPY",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "40e00c24-62fd-4fbc-aafe-4e8bc3c968da",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "JPY"
+        },
+        "category": "SYNTHETIC NATIVE"
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "189ffb75-e833-41b7-a3d1-d801b40994ec",
+    "snapshot": "2026-10-19T13:31:21.828328+03:00",
+    "organizationId": "40e00c24-62fd-4fbc-aafe-4e8bc3c968da",
+    "postingAllowed": false,
+    "periodSemantics": "EXPENSE_DATE_UTC_DATE_BOUNDS"
+  },
+  {
+    "kind": "CREDIT",
+    "rows": [
+      {
+        "at": "2026-10-19T12:20:59.712848+03:00",
+        "id": "21b427c5-2c87-41bc-8ca9-2c51daf40427",
+        "values": {
+          "amount": "123"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "JPY",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "40e00c24-62fd-4fbc-aafe-4e8bc3c968da",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "JPY"
+        },
+        "parentId": "113f6b1e-be8c-4be8-beb6-200d9a67fc68"
+      },
+      {
+        "at": "2026-10-19T12:20:59.903707+03:00",
+        "id": "630b430a-3b5a-40b2-a839-45802b426570",
+        "values": {
+          "amount": "-123"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "JPY",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "40e00c24-62fd-4fbc-aafe-4e8bc3c968da",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "JPY"
+        },
+        "parentId": "113f6b1e-be8c-4be8-beb6-200d9a67fc68"
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "189ffb75-e833-41b7-a3d1-d801b40994ec",
+    "snapshot": "2026-10-19T13:31:21.909822+03:00",
+    "organizationId": "40e00c24-62fd-4fbc-aafe-4e8bc3c968da",
+    "postingAllowed": false,
+    "periodSemantics": "TIMESTAMP_HALF_OPEN"
+  },
+  {
+    "kind": "COGS",
+    "rows": [
+      {
+        "at": "2026-10-19T12:20:58.46765+03:00",
+        "id": "60679f51-d158-4bc6-a2b8-d4c291285859",
+        "values": {
+          "amount": "0.625",
+          "quantity": "0.125",
+          "unitCost": "5"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "JPY",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "40e00c24-62fd-4fbc-aafe-4e8bc3c968da",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "JPY"
+        },
+        "parentId": "5b1b1a09-255d-46dd-95e1-3cb773700fde"
+      },
+      {
+        "at": "2026-10-19T12:20:59.712848+03:00",
+        "id": "ff334337-46c6-47e3-b5ee-fe2ef8f60404",
+        "values": {
+          "amount": "5",
+          "quantity": "1",
+          "unitCost": "5"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "JPY",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "40e00c24-62fd-4fbc-aafe-4e8bc3c968da",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "JPY"
+        },
+        "parentId": "1a054189-db96-4169-ab67-015330c494c9"
+      },
+      {
+        "at": "2026-10-19T12:21:00.564159+03:00",
+        "id": "55761310-0e35-4c04-9555-bedc485bdba5",
+        "values": {
+          "amount": "0.625",
+          "quantity": "0.125",
+          "unitCost": "5"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "JPY",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "40e00c24-62fd-4fbc-aafe-4e8bc3c968da",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "JPY"
+        },
+        "parentId": "7c83e96e-2b45-4e01-bde0-4f884d23f485"
+      },
+      {
+        "at": "2026-10-19T12:25:13.379777+03:00",
+        "id": "0684cceb-3ea7-4823-8bda-60f4596a9ed0",
+        "values": {
+          "amount": "105",
+          "quantity": "1",
+          "unitCost": "105"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "JPY",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "40e00c24-62fd-4fbc-aafe-4e8bc3c968da",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "JPY"
+        },
+        "parentId": "5a78f449-86df-4850-804d-a41b675339bf"
+      },
+      {
+        "at": "2026-10-19T12:34:43.568973+03:00",
+        "id": "6df2cb31-2c00-4ea8-98aa-440077bf0ba8",
+        "values": {
+          "amount": "105",
+          "quantity": "1",
+          "unitCost": "105"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "JPY",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "40e00c24-62fd-4fbc-aafe-4e8bc3c968da",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "JPY"
+        },
+        "parentId": "ec558335-7104-433a-8c0b-79f700264cfb"
+      },
+      {
+        "at": "2026-10-19T13:06:41.882779+03:00",
+        "id": "a79ce383-5227-4919-9781-8ba1ebb7a14b",
+        "values": {
+          "amount": "105",
+          "quantity": "1",
+          "unitCost": "105"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "JPY",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "40e00c24-62fd-4fbc-aafe-4e8bc3c968da",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "JPY"
+        },
+        "parentId": "ef9351f1-911b-4ea3-ba67-1b9628ec4203"
+      },
+      {
+        "at": "2026-10-19T13:08:00.173225+03:00",
+        "id": "232aadb6-e548-4326-9bfc-3a2d4d64c23c",
+        "values": {
+          "amount": "105",
+          "quantity": "1",
+          "unitCost": "105"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "JPY",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "40e00c24-62fd-4fbc-aafe-4e8bc3c968da",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "JPY"
+        },
+        "parentId": "2f16c41b-9344-44d4-a5a3-cd4b9a4c9077"
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "189ffb75-e833-41b7-a3d1-d801b40994ec",
+    "snapshot": "2026-10-19T13:31:21.995845+03:00",
+    "organizationId": "40e00c24-62fd-4fbc-aafe-4e8bc3c968da",
+    "postingAllowed": false,
+    "periodSemantics": "TIMESTAMP_HALF_OPEN"
+  },
+  {
+    "kind": "STOCK",
+    "rows": [
+      {
+        "at": "2026-10-19T13:54:24.785798+03:00",
+        "id": "stock-cf945c9b1432199f9c6a85bb0c6bf157",
+        "values": {
+          "amount": "104343.750",
+          "productCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "JPY",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "40e00c24-62fd-4fbc-aafe-4e8bc3c968da",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "JPY"
+        },
+        "valueSource": "CURRENT_CATALOG_COST_NOT_RECEIPT_ATTESTATION"
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "189ffb75-e833-41b7-a3d1-d801b40994ec",
+    "snapshot": "2026-10-19T13:54:24.785798+03:00",
+    "organizationId": "40e00c24-62fd-4fbc-aafe-4e8bc3c968da",
+    "postingAllowed": false,
+    "periodSemantics": "CURRENT_SNAPSHOT_NOT_HISTORICAL"
+  },
+  {
+    "kind": "SALE",
+    "rows": [
+      {
+        "at": "2026-10-19T12:21:01.652153+03:00",
+        "id": "5ffcf7a5-e356-4891-9c77-e8772ae57f67",
+        "values": {
+          "paid": "1.389",
+          "total": "1.389000",
+          "balance": "0.000000",
+          "discount": "0.154",
+          "rounding": "-0.000125",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KWD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f6b80b1f-c475-43a4-8632-189d80613fe4",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KWD"
+        }
+      },
+      {
+        "at": "2026-10-19T12:21:02.88527+03:00",
+        "id": "788c3459-f296-4dca-9f78-47a12e166783",
+        "values": {
+          "paid": "0",
+          "total": "12.345",
+          "balance": "12.345",
+          "discount": "0",
+          "rounding": "0.000",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KWD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f6b80b1f-c475-43a4-8632-189d80613fe4",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KWD"
+        }
+      },
+      {
+        "at": "2026-10-19T12:21:03.628949+03:00",
+        "id": "ef53466b-60e4-4021-9f84-0b9b9ecf5c03",
+        "values": {
+          "paid": "1.389",
+          "total": "1.389000",
+          "balance": "0.000000",
+          "discount": "0.154",
+          "rounding": "-0.000125",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KWD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f6b80b1f-c475-43a4-8632-189d80613fe4",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KWD"
+        }
+      },
+      {
+        "at": "2026-10-19T12:25:14.806567+03:00",
+        "id": "42abd594-67fe-4781-8010-417f9dd3ef91",
+        "values": {
+          "paid": "12.345",
+          "total": "12.345",
+          "balance": "0.000",
+          "discount": "0",
+          "rounding": "0.000",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KWD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f6b80b1f-c475-43a4-8632-189d80613fe4",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KWD"
+        }
+      },
+      {
+        "at": "2026-10-19T12:34:44.580573+03:00",
+        "id": "9176b1ee-1178-48d4-b976-239618e0fb3c",
+        "values": {
+          "paid": "12.345",
+          "total": "12.345",
+          "balance": "0.000",
+          "discount": "0",
+          "rounding": "0.000",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KWD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f6b80b1f-c475-43a4-8632-189d80613fe4",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KWD"
+        }
+      },
+      {
+        "at": "2026-10-19T12:41:16.73707+03:00",
+        "id": "a420ad5d-57b2-4893-98db-0cab6bfd5022",
+        "values": {
+          "paid": "0",
+          "total": "12.345",
+          "balance": "12.345",
+          "discount": "0",
+          "rounding": "0.000",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KWD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f6b80b1f-c475-43a4-8632-189d80613fe4",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KWD"
+        }
+      },
+      {
+        "at": "2026-10-19T13:06:42.253166+03:00",
+        "id": "6f0201a2-0da7-43d8-a176-d05b36f80552",
+        "values": {
+          "paid": "12.345",
+          "total": "12.345",
+          "balance": "0.000",
+          "discount": "0",
+          "rounding": "0.000",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KWD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f6b80b1f-c475-43a4-8632-189d80613fe4",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KWD"
+        }
+      },
+      {
+        "at": "2026-10-19T13:08:02.238108+03:00",
+        "id": "e59d9fa2-a6c6-43af-9dad-9cc03f9c11d0",
+        "values": {
+          "paid": "12.345",
+          "total": "12.345",
+          "balance": "0.000",
+          "discount": "0",
+          "rounding": "0.000",
+          "itemCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KWD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f6b80b1f-c475-43a4-8632-189d80613fe4",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KWD"
+        }
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "333bbd54-19a6-48b9-8ada-0e352d3a65bd",
+    "snapshot": "2026-10-19T13:31:22.219884+03:00",
+    "organizationId": "f6b80b1f-c475-43a4-8632-189d80613fe4",
+    "postingAllowed": false,
+    "periodSemantics": "TIMESTAMP_HALF_OPEN"
+  },
+  {
+    "kind": "PAYMENT",
+    "rows": [
+      {
+        "at": "2026-10-19T12:21:01.652153+03:00",
+        "id": "47192888-7726-4aa1-81cd-7afd1610bab7",
+        "method": "CASH",
+        "values": {
+          "amount": "1.389"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KWD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f6b80b1f-c475-43a4-8632-189d80613fe4",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KWD"
+        },
+        "parentId": "5ffcf7a5-e356-4891-9c77-e8772ae57f67"
+      },
+      {
+        "at": "2026-10-19T12:21:03.628949+03:00",
+        "id": "959eeb65-3f85-4b5d-bd7c-b348b3a98f0e",
+        "method": "CASH",
+        "values": {
+          "amount": "1.389"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KWD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f6b80b1f-c475-43a4-8632-189d80613fe4",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KWD"
+        },
+        "parentId": "ef53466b-60e4-4021-9f84-0b9b9ecf5c03"
+      },
+      {
+        "at": "2026-10-19T12:25:14.806567+03:00",
+        "id": "7726c513-f5af-4f8d-be20-de5681426933",
+        "method": "CASH",
+        "values": {
+          "amount": "12.345"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KWD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f6b80b1f-c475-43a4-8632-189d80613fe4",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KWD"
+        },
+        "parentId": "42abd594-67fe-4781-8010-417f9dd3ef91"
+      },
+      {
+        "at": "2026-10-19T12:34:44.580573+03:00",
+        "id": "68f476d0-497b-4ba6-a803-97555949f94d",
+        "method": "MOBILE",
+        "values": {
+          "amount": "5"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KWD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f6b80b1f-c475-43a4-8632-189d80613fe4",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KWD"
+        },
+        "parentId": "9176b1ee-1178-48d4-b976-239618e0fb3c"
+      },
+      {
+        "at": "2026-10-19T12:34:44.580573+03:00",
+        "id": "93b3882c-e169-42dc-a538-9d03e4905cac",
+        "method": "CASH",
+        "values": {
+          "amount": "2.345"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KWD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f6b80b1f-c475-43a4-8632-189d80613fe4",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KWD"
+        },
+        "parentId": "9176b1ee-1178-48d4-b976-239618e0fb3c"
+      },
+      {
+        "at": "2026-10-19T12:34:44.580573+03:00",
+        "id": "cdab5318-2349-4026-b561-dc1c754fbd42",
+        "method": "BANK",
+        "values": {
+          "amount": "5.000"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KWD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f6b80b1f-c475-43a4-8632-189d80613fe4",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KWD"
+        },
+        "parentId": "9176b1ee-1178-48d4-b976-239618e0fb3c"
+      },
+      {
+        "at": "2026-10-19T13:06:42.253166+03:00",
+        "id": "1afd1576-527a-499d-83bd-039473347ae1",
+        "method": "CASH",
+        "values": {
+          "amount": "12.345"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KWD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f6b80b1f-c475-43a4-8632-189d80613fe4",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KWD"
+        },
+        "parentId": "6f0201a2-0da7-43d8-a176-d05b36f80552"
+      },
+      {
+        "at": "2026-10-19T13:08:02.238108+03:00",
+        "id": "b6e4e252-febe-4fa5-ab2e-030d791110a4",
+        "method": "CASH",
+        "values": {
+          "amount": "12.345"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KWD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f6b80b1f-c475-43a4-8632-189d80613fe4",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KWD"
+        },
+        "parentId": "e59d9fa2-a6c6-43af-9dad-9cc03f9c11d0"
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "333bbd54-19a6-48b9-8ada-0e352d3a65bd",
+    "snapshot": "2026-10-19T13:31:22.297079+03:00",
+    "organizationId": "f6b80b1f-c475-43a4-8632-189d80613fe4",
+    "postingAllowed": false,
+    "periodSemantics": "TIMESTAMP_HALF_OPEN"
+  },
+  {
+    "kind": "EXPENSE",
+    "rows": [
+      {
+        "at": "2026-10-19",
+        "id": "45f5ee09-9b49-4e47-9fc6-13233d7c0b2d",
+        "method": "CASH",
+        "values": {
+          "amount": "12.345"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KWD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f6b80b1f-c475-43a4-8632-189d80613fe4",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KWD"
+        },
+        "category": "SYNTHETIC NATIVE"
+      },
+      {
+        "at": "2026-10-19",
+        "id": "86051b0d-06ca-4792-86ee-f5703258540c",
+        "method": "CASH",
+        "values": {
+          "amount": "12.345"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KWD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f6b80b1f-c475-43a4-8632-189d80613fe4",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KWD"
+        },
+        "category": "SYNTHETIC NATIVE"
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "333bbd54-19a6-48b9-8ada-0e352d3a65bd",
+    "snapshot": "2026-10-19T13:31:22.386787+03:00",
+    "organizationId": "f6b80b1f-c475-43a4-8632-189d80613fe4",
+    "postingAllowed": false,
+    "periodSemantics": "EXPENSE_DATE_UTC_DATE_BOUNDS"
+  },
+  {
+    "kind": "CREDIT",
+    "rows": [
+      {
+        "at": "2026-10-19T12:21:02.88527+03:00",
+        "id": "853a2d84-c16f-4af7-aae8-35b6e1d5acac",
+        "values": {
+          "amount": "12.345"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KWD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f6b80b1f-c475-43a4-8632-189d80613fe4",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KWD"
+        },
+        "parentId": "fb95c392-18a5-4540-8378-2615ceea6cb4"
+      },
+      {
+        "at": "2026-10-19T12:21:03.114527+03:00",
+        "id": "472377d7-c3d9-4291-99c5-299589cf1fd2",
+        "values": {
+          "amount": "-12.345"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KWD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f6b80b1f-c475-43a4-8632-189d80613fe4",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KWD"
+        },
+        "parentId": "fb95c392-18a5-4540-8378-2615ceea6cb4"
+      },
+      {
+        "at": "2026-10-19T12:41:16.73707+03:00",
+        "id": "bda6dee3-4aa9-4437-81c0-8a8b65cfaa96",
+        "values": {
+          "amount": "12.345"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KWD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f6b80b1f-c475-43a4-8632-189d80613fe4",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KWD"
+        },
+        "parentId": "58671137-9b66-4f6d-8c6e-bf5dedaf98b6"
+      },
+      {
+        "at": "2026-10-19T12:41:16.970392+03:00",
+        "id": "2c25b353-93bb-418e-aafa-029e2e6e7bff",
+        "values": {
+          "amount": "-12.345"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KWD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f6b80b1f-c475-43a4-8632-189d80613fe4",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KWD"
+        },
+        "parentId": "58671137-9b66-4f6d-8c6e-bf5dedaf98b6"
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "333bbd54-19a6-48b9-8ada-0e352d3a65bd",
+    "snapshot": "2026-10-19T13:31:22.473448+03:00",
+    "organizationId": "f6b80b1f-c475-43a4-8632-189d80613fe4",
+    "postingAllowed": false,
+    "periodSemantics": "TIMESTAMP_HALF_OPEN"
+  },
+  {
+    "kind": "COGS",
+    "rows": [
+      {
+        "at": "2026-10-19T12:21:01.652153+03:00",
+        "id": "eb14ac41-42c5-4a4f-aea1-3354c22c7720",
+        "values": {
+          "amount": "0.640625",
+          "quantity": "0.125",
+          "unitCost": "5.125"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KWD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f6b80b1f-c475-43a4-8632-189d80613fe4",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KWD"
+        },
+        "parentId": "5ffcf7a5-e356-4891-9c77-e8772ae57f67"
+      },
+      {
+        "at": "2026-10-19T12:21:02.88527+03:00",
+        "id": "148a3d9e-5dcf-4f5a-bfa6-5b4566e25a95",
+        "values": {
+          "amount": "5.125",
+          "quantity": "1",
+          "unitCost": "5.125"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KWD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f6b80b1f-c475-43a4-8632-189d80613fe4",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KWD"
+        },
+        "parentId": "788c3459-f296-4dca-9f78-47a12e166783"
+      },
+      {
+        "at": "2026-10-19T12:21:03.628949+03:00",
+        "id": "0b2606f5-5d2a-47a5-983a-a2dfa87e95ed",
+        "values": {
+          "amount": "0.640625",
+          "quantity": "0.125",
+          "unitCost": "5.125"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KWD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f6b80b1f-c475-43a4-8632-189d80613fe4",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KWD"
+        },
+        "parentId": "ef53466b-60e4-4021-9f84-0b9b9ecf5c03"
+      },
+      {
+        "at": "2026-10-19T12:25:14.806567+03:00",
+        "id": "1f6734f8-9b8e-4962-a81a-7188ddea8ca2",
+        "values": {
+          "amount": "105.125",
+          "quantity": "1",
+          "unitCost": "105.125"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KWD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f6b80b1f-c475-43a4-8632-189d80613fe4",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KWD"
+        },
+        "parentId": "42abd594-67fe-4781-8010-417f9dd3ef91"
+      },
+      {
+        "at": "2026-10-19T12:34:44.580573+03:00",
+        "id": "2bfb7cee-5106-42f4-b358-eeb87b99587f",
+        "values": {
+          "amount": "105.125",
+          "quantity": "1",
+          "unitCost": "105.125"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KWD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f6b80b1f-c475-43a4-8632-189d80613fe4",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KWD"
+        },
+        "parentId": "9176b1ee-1178-48d4-b976-239618e0fb3c"
+      },
+      {
+        "at": "2026-10-19T12:41:16.73707+03:00",
+        "id": "6b652586-c2a1-4c0f-bd01-af1c5384f9a5",
+        "values": {
+          "amount": "105.125",
+          "quantity": "1",
+          "unitCost": "105.125"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KWD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f6b80b1f-c475-43a4-8632-189d80613fe4",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KWD"
+        },
+        "parentId": "a420ad5d-57b2-4893-98db-0cab6bfd5022"
+      },
+      {
+        "at": "2026-10-19T13:06:42.253166+03:00",
+        "id": "da569db7-d9c0-4be8-98f3-bbe3004f6c69",
+        "values": {
+          "amount": "105.125",
+          "quantity": "1",
+          "unitCost": "105.125"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KWD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f6b80b1f-c475-43a4-8632-189d80613fe4",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KWD"
+        },
+        "parentId": "6f0201a2-0da7-43d8-a176-d05b36f80552"
+      },
+      {
+        "at": "2026-10-19T13:08:02.238108+03:00",
+        "id": "afcb85d4-37aa-4af9-b507-0e0829874392",
+        "values": {
+          "amount": "105.125",
+          "quantity": "1",
+          "unitCost": "105.125"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KWD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f6b80b1f-c475-43a4-8632-189d80613fe4",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KWD"
+        },
+        "parentId": "e59d9fa2-a6c6-43af-9dad-9cc03f9c11d0"
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "333bbd54-19a6-48b9-8ada-0e352d3a65bd",
+    "snapshot": "2026-10-19T13:31:22.547234+03:00",
+    "organizationId": "f6b80b1f-c475-43a4-8632-189d80613fe4",
+    "postingAllowed": false,
+    "periodSemantics": "TIMESTAMP_HALF_OPEN"
+  },
+  {
+    "kind": "STOCK",
+    "rows": [
+      {
+        "at": "2026-10-19T13:54:25.268656+03:00",
+        "id": "stock-d33a029eed5fcbcb588219f7b160051a",
+        "values": {
+          "amount": "104362.843750",
+          "productCount": "1"
+        },
+        "context": {
+          "source": "TRANSACTION_RECORD",
+          "version": 1,
+          "currency": "KWD",
+          "rateSource": "SAME_CURRENCY_IDENTITY",
+          "exchangeRate": "1",
+          "organizationId": "f6b80b1f-c475-43a4-8632-189d80613fe4",
+          "contextRevision": 1,
+          "displayRateUsed": false,
+          "accountingCurrency": "KWD"
+        },
+        "valueSource": "CURRENT_CATALOG_COST_NOT_RECEIPT_ATTESTATION"
+      }
+    ],
+    "limit": 200,
+    "offset": 0,
+    "storeId": "333bbd54-19a6-48b9-8ada-0e352d3a65bd",
+    "snapshot": "2026-10-19T13:54:25.268656+03:00",
+    "organizationId": "f6b80b1f-c475-43a4-8632-189d80613fe4",
+    "postingAllowed": false,
+    "periodSemantics": "CURRENT_SNAPSHOT_NOT_HISTORICAL"
+  }
+]

@@ -1,0 +1,22 @@
+{
+  "status": "PASS",
+  "count": 15,
+  "checks": [
+    "anon receipt wrapper quarantined",
+    "authenticated receipt wrapper quarantined",
+    "service_role receipt wrapper quarantined",
+    "coordinated_client receipt wrapper quarantined",
+    "receipt accepted through canonical receiver",
+    "idempotent retry returns original receipt",
+    "exact receipt quantity and cost preserved",
+    "one stock movement and exact cost provenance",
+    "stock increment occurs once",
+    "changed retry rejected",
+    "overreceipt rejected atomically",
+    "immutable original cost evidence",
+    "private cost evidence inaccessible to client",
+    "unassigned actor denied",
+    "no duplicate movement after all failures"
+  ],
+  "scope": "Disposable full-schema PostgreSQL. Synthetic Auth. No native supplier settlement certification."
+}

@@ -1,0 +1,1186 @@
+import {CurrencyToolsLink} from '@/src/currency/ReportCurrencySelector';
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+import {useCommonText} from "@/src/i18n/useCommonText";
+import { summarizeSales, readStockValue } from "@/src/business/recordIntegrity";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+  useWindowDimensions,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect, useRouter } from "expo-router";
+
+import { useOrg } from "@/src/context/OrgContext";
+import { supabase } from "@/src/supabase/supabaseClient";
+import { Screen } from "@/src/ui/Screen";
+import { Card } from "@/src/ui/Card";
+import { UI } from "@/src/ui/theme";
+import { formatMoney, useOrgMoneyPrefs } from "@/src/ui/money";
+import { MobileFinance } from "@/src/finance/MobileFinance";
+
+type ScopeMode = "ALL" | "STORE";
+
+type StoreLiveRow = {
+  storeId: string;
+  storeName: string;
+  sales: number;
+  expenses: number;
+  profit: number | null;
+  orders: number;
+  moneyIn: number;
+  stockValue: number;
+};
+
+type MetricTone = "good" | "warn" | "danger" | "neutral";
+
+function getMetricTone(value: number, kind: "sales" | "profit" | "expenses" | "moneyIn"): MetricTone {
+  const n = toNum(value);
+
+  if (kind === "expenses") {
+    if (n <= 0) return "neutral";
+    if (n < 50_000) return "good";
+    if (n < 300_000) return "warn";
+    return "danger";
+  }
+
+  if (kind === "profit") {
+    if (n > 0) return "good";
+    if (n < 0) return "danger";
+    return "neutral";
+  }
+
+  if (kind === "sales" || kind === "moneyIn") {
+    if (n > 0) return "good";
+    return "neutral";
+  }
+
+  return "neutral";
+}
+
+function getToneStyle(tone: MetricTone) {
+  if (tone === "good") {
+    return {
+      borderColor: "rgba(16,185,129,0.24)",
+      backgroundColor: "rgba(16,185,129,0.10)",
+      textColor: UI.text,
+    };
+  }
+
+  if (tone === "warn") {
+    return {
+      borderColor: "rgba(245,158,11,0.24)",
+      backgroundColor: "rgba(245,158,11,0.10)",
+      textColor: UI.text,
+    };
+  }
+
+  if (tone === "danger") {
+    return {
+      borderColor: "rgba(201,74,74,0.28)",
+      backgroundColor: "rgba(201,74,74,0.10)",
+      textColor: UI.text,
+    };
+  }
+
+return {
+  borderColor: "rgba(15,23,42,0.10)",
+  backgroundColor: "rgba(241,245,249,0.72)",
+  textColor: UI.text,
+};
+}
+
+function getRowScore(row: StoreLiveRow) {
+  return (
+    toNum(row.sales) * 1 +
+    toNum(row.moneyIn) * 0.9 +
+    toNum(row.profit) * 0.8 +
+    toNum(row.orders) * 2500 +
+    toNum(row.stockValue) * 0.12 -
+    toNum(row.expenses) * 0.45
+  );
+}
+
+type SalesSummary = {
+  total: number;
+  orders: number;
+  currency?: string | null;
+};
+
+type ExpenseSummary = {
+  total: number;
+  count: number;
+};
+
+type ProfitSummary = {
+  net: number;
+  sales: number | null;
+  expenses: number | null;
+};
+
+type PayBreakdown = {
+  cash: number;
+  bank: number;
+  mobile: number;
+  credit: number;
+  other: number;
+  orders: number;
+};
+
+type CollectionBreakdown = {
+  cash: number;
+  bank: number;
+  mobile: number;
+  other: number;
+  total: number;
+  payments: number;
+};
+
+type ExpenseChannelBreakdown = {
+  cash: number;
+  bank: number;
+  mobile: number;
+};
+
+const AUTO_REFRESH_MS = 20_000;
+
+function pad2(n: number) {
+  return String(n).padStart(2, "0");
+}
+
+function toIsoDateLocal(d: Date) {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+function startOfLocalDay(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+}
+
+function rangeToday() {
+  const now = new Date();
+  const from = startOfLocalDay(now);
+  const to = startOfLocalDay(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1));
+  return {
+    fromISO: from.toISOString(),
+    toISO: to.toISOString(),
+    fromYMD: toIsoDateLocal(now),
+    toYMD: toIsoDateLocal(now),
+  };
+}
+
+function toNum(x: any) {
+  const n = Number(x);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function toInt(x: any) {
+  const n = Number(x);
+  if (!Number.isFinite(n)) return 0;
+  return Math.trunc(n);
+}
+
+function subtractFloor(a: number, b: number) {
+  return Math.max(0, toNum(a) - toNum(b));
+}
+
+
+
+function useAutoRefresh(cb: () => void, enabled: boolean, ms: number) {
+  const cbRef = useRef(cb);
+  cbRef.current = cb;
+
+  useEffect(() => {
+    if (!enabled || Platform.OS === "web") return;
+
+    const timer = setInterval(() => {
+      cbRef.current();
+    }, ms);
+
+    return () => clearInterval(timer);
+  }, [enabled, ms]);
+}
+
+function Chip({
+  active,
+  label,
+  onPress,
+}: {
+  active: boolean;
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      hitSlop={10}
+      style={({ pressed }) => ({
+        height: 36,
+        paddingHorizontal: 14,
+        borderRadius: 999,
+        borderWidth: 1,
+        borderColor: active ? "rgba(16,185,129,0.34)" : "rgba(255,255,255,0.12)",
+        backgroundColor: active ? "rgba(16,185,129,0.12)" : "rgba(255,255,255,0.06)",
+        alignItems: "center",
+        justifyContent: "center",
+        opacity: pressed ? 0.92 : 1,
+      })}
+    >
+      <Text style={{ color: UI.text, fontWeight: "900", fontSize: 12 }}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function MiniStat({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+}) {
+  return (
+    <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
+      <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12 }} numberOfLines={1}>
+        {label}
+      </Text>
+      <Text
+        style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.75}
+      >
+        {value}
+      </Text>
+      {!!hint ? (
+        <Text style={{ color: UI.faint, fontWeight: "800", fontSize: 11 }} numberOfLines={1}>
+          {hint}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
+function WebIcon({
+  name,
+  size = 18,
+  color = UI.text,
+  webLabel,
+}: {
+  name: React.ComponentProps<typeof Ionicons>["name"];
+  size?: number;
+  color?: string;
+  webLabel?: string;
+}) {
+  if (Platform.OS === "web") {
+    return (
+      <Text
+        style={{
+          color,
+          fontSize: Math.max(12, size - 1),
+          fontWeight: "900",
+          lineHeight: size + 2,
+          textAlign: "center",
+          includeFontPadding: false as any,
+        }}
+      >
+        {webLabel || "◻"}
+      </Text>
+    );
+  }
+
+  return <Ionicons name={name} size={size} color={color} />;
+}
+
+function MetricPill({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone: MetricTone;
+}) {
+  const style = getToneStyle(tone);
+
+  return (
+    <View
+      style={{
+        minWidth: 110,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: style.borderColor,
+        backgroundColor: style.backgroundColor,
+        gap: 4,
+      }}
+    >
+      <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 11 }} numberOfLines={1}>
+        {label}
+      </Text>
+      <Text
+        style={{ color: style.textColor, fontWeight: "900", fontSize: 14 }}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.8}
+      >
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+export default function FinanceLiveScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
+  const router = useRouter();
+  const org = useOrg();
+  const { width } = useWindowDimensions();
+
+  const isWeb = Platform.OS === "web";
+  const isMobileWeb = isWeb && width < 768;
+  const isTabletWeb = isWeb && width >= 768 && width < 1180;
+  const isDesktopWeb = isWeb && width >= 1180;
+
+  const pageMaxWidth = isDesktopWeb ? 1380 : isTabletWeb ? 1120 : 860;
+  const pageSidePad = isDesktopWeb ? 24 : 16;
+  const overviewColumns = isDesktopWeb ? 3 : isTabletWeb ? 2 : 1;
+  const rowMetricMinWidth = isDesktopWeb ? 148 : isTabletWeb ? 132 : 110;
+
+  const orgId = String(org.activeOrgId ?? "").trim();
+  const orgName = String(org.activeOrgName ?? "Organization").trim() || "Organization";
+  const activeStoreId = String(org.activeStoreId ?? "").trim();
+  const activeStoreName = String(org.activeStoreName ?? "Store").trim() || "Store";
+  const roleLower = String(org.activeRole ?? "").trim().toLowerCase();
+
+  const isOwner = roleLower === "owner";
+  const canAll = roleLower === "owner" || roleLower === "admin";
+
+  const [scope, setScope] = useState<ScopeMode>(canAll ? "ALL" : "STORE");
+  const [selectedStoreId, setSelectedStoreId] = useState<string>(activeStoreId);
+
+  const money = useOrgMoneyPrefs(orgId);
+  const displayCurrency = money.currency || "TZS";
+  const displayLocale = money.locale || "en-TZ";
+
+  const fmtMoney = useCallback(
+    (n: number) =>
+      formatMoney(n, {
+        currency: displayCurrency,
+        locale: displayLocale,
+      }).replace(/\s+/g, " "),
+    [displayCurrency, displayLocale]
+  );
+
+  const storeOptions = useMemo(() => {
+    const rows = (org.stores ?? [])
+      .filter((s: any) => String(s?.organization_id ?? "").trim() === orgId)
+      .map((s: any) => ({
+        storeId: String(s?.store_id ?? "").trim(),
+        storeName: String(s?.store_name ?? s?.name ?? "Store").trim() || "Store",
+      }))
+      .filter((x) => !!x.storeId);
+
+    const uniq = new Map<string, string>();
+    for (const row of rows) uniq.set(row.storeId, row.storeName);
+
+    if (activeStoreId && !uniq.has(activeStoreId)) {
+      uniq.set(activeStoreId, activeStoreName);
+    }
+
+    return Array.from(uniq.entries()).map(([storeId, storeName]) => ({ storeId, storeName }));
+  }, [org.stores, orgId, activeStoreId, activeStoreName]);
+
+  const visibleStoreIds = useMemo(() => {
+    if (scope === "STORE" || !canAll) {
+      const selected = storeOptions.find((s) => s.storeId === selectedStoreId);
+      const active = storeOptions.find((s) => s.storeId === activeStoreId);
+      const store = selected ?? active;
+      return store ? [store.storeId] : [];
+    }
+    return storeOptions.map((x) => x.storeId);
+  }, [scope, canAll, selectedStoreId, activeStoreId, storeOptions]);
+
+  const storeNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const row of storeOptions) map.set(row.storeId, row.storeName);
+    return map;
+  }, [storeOptions]);
+
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [rows, setRows] = useState<StoreLiveRow[]>([]);
+
+  const reqRef = useRef(0);
+
+  useEffect(() => {
+    if (!canAll) setScope("STORE");
+  }, [canAll]);
+
+  useEffect(() => {
+    if (!storeOptions.some((s) => s.storeId === selectedStoreId)) {
+      setSelectedStoreId(activeStoreId);
+    }
+  }, [selectedStoreId, activeStoreId, storeOptions]);
+
+  const callSalesForStore = useCallback(
+    async (sid: string, fromISO: string, toISO: string): Promise<SalesSummary> => {
+      const { data, error } = await supabase.rpc("get_sales", {
+        p_store_id: sid,
+        p_from: fromISO,
+        p_to: toISO,
+      } as any);
+      if (error) throw error;
+
+      const list = (Array.isArray(data) ? data : []) as any[];
+
+      // Canonical get_sales returns sale_id; keep strict identity validation.
+      const { total, orders } = summarizeSales(list, "sale_id");
+      const currency = String(list?.[0]?.currency ?? "TZS").trim() || "TZS";
+
+      return { total, orders, currency };
+    },
+    []
+  );
+
+  const callExpenseForStore = useCallback(
+    async (sid: string, fromYMD: string, toYMD: string): Promise<ExpenseSummary> => {
+      const { data, error } = await supabase.rpc("get_expense_summary", {
+        p_store_id: sid,
+        p_from: fromYMD,
+        p_to: toYMD,
+      } as any);
+      if (error) throw error;
+
+      const row = (Array.isArray(data) ? data[0] : data) as any;
+      return {
+        total: toNum(row?.total ?? row?.amount ?? row?.sum ?? 0),
+        count: toInt(row?.count ?? row?.items ?? 0),
+      };
+    },
+    []
+  );
+
+  const callProfitOwnerOnly = useCallback(
+    async (sid: string, fromISO: string, toISO: string): Promise<ProfitSummary> => {
+      if (!isOwner) return { net: 0, sales: null, expenses: null };
+
+      const { data, error } = await supabase.rpc("get_store_net_profit_v2", {
+        p_store_id: sid,
+        p_from: fromISO,
+        p_to: toISO,
+      } as any);
+      if (error) throw error;
+
+      const row = (Array.isArray(data) ? data[0] : data) as any;
+      return {
+        net: toNum(row?.net_profit ?? row?.net ?? 0),
+        sales: row?.sales_total != null ? toNum(row?.sales_total) : null,
+        expenses: row?.expenses_total != null ? toNum(row?.expenses_total) : null,
+      };
+    },
+    [isOwner]
+  );
+
+  const callPaymentBreakdown = useCallback(
+    async (sid: string, fromISO: string, toISO: string): Promise<PayBreakdown> => {
+      if (!orgId) return { cash: 0, bank: 0, mobile: 0, credit: 0, other: 0, orders: 0 };
+
+      const { data, error } = await supabase.rpc("get_sales_channel_summary_v3", {
+        p_org_id: orgId,
+        p_from: fromISO,
+        p_to: toISO,
+        p_store_id: sid,
+      } as any);
+      if (error) throw error;
+
+      const items = (Array.isArray(data) ? data : []) as any[];
+      const out: PayBreakdown = { cash: 0, bank: 0, mobile: 0, credit: 0, other: 0, orders: 0 };
+
+      for (const r of items) {
+        const ch = String(r?.channel ?? r?.payment_method ?? "").trim().toUpperCase();
+        const rev = toNum(r?.revenue ?? r?.total ?? 0);
+        const ord = toInt(r?.orders ?? 0);
+
+        out.orders += ord;
+
+        if (ch === "CASH") out.cash += rev;
+        else if (ch === "BANK") out.bank += rev;
+        else if (ch === "MOBILE") out.mobile += rev;
+        else if (ch === "CREDIT") out.credit += rev;
+        else out.other += rev;
+      }
+
+      return out;
+    },
+    [orgId]
+  );
+
+  const callCollections = useCallback(
+    async (sid: string, fromISO: string, toISO: string): Promise<CollectionBreakdown> => {
+      if (!orgId) return { cash: 0, bank: 0, mobile: 0, other: 0, total: 0, payments: 0 };
+
+      const { data, error } = await supabase.rpc("get_credit_collections_summary_v2", {
+        p_org_id: orgId,
+        p_from: fromISO,
+        p_to: toISO,
+        p_store_id: sid,
+      } as any);
+      if (error) throw error;
+
+      const items = (Array.isArray(data) ? data : []) as any[];
+      const out: CollectionBreakdown = {
+        cash: 0,
+        bank: 0,
+        mobile: 0,
+        other: 0,
+        total: 0,
+        payments: 0,
+      };
+
+      for (const r of items) {
+        const ch = String(r?.channel ?? r?.payment_method ?? r?.method ?? "")
+          .trim()
+          .toUpperCase();
+        const amt = toNum(r?.amount ?? r?.revenue ?? r?.total ?? 0);
+        const cnt = toInt(r?.payments ?? r?.count ?? 0);
+
+        out.payments += cnt;
+
+        if (ch === "CASH") out.cash += amt;
+        else if (ch === "BANK") out.bank += amt;
+        else if (ch === "MOBILE") out.mobile += amt;
+        else out.other += amt;
+      }
+
+      out.total = out.cash + out.bank + out.mobile;
+      return out;
+    },
+    [orgId]
+  );
+
+  const callExpenseBreakdown = useCallback(
+    async (sid: string, fromYMD: string, toYMD: string): Promise<ExpenseChannelBreakdown> => {
+      const { data, error } = await supabase.rpc("get_expense_channel_summary_v1", {
+        p_store_id: sid,
+        p_from: fromYMD,
+        p_to: toYMD,
+      } as any);
+      if (error) throw error;
+
+      const items = (Array.isArray(data) ? data : []) as any[];
+      const out: ExpenseChannelBreakdown = { cash: 0, bank: 0, mobile: 0 };
+
+      for (const r of items) {
+        const ch = String(r?.channel ?? "").trim().toUpperCase();
+        const amt = toNum(r?.amount ?? 0);
+
+        if (ch === "CASH") out.cash += amt;
+        else if (ch === "BANK") out.bank += amt;
+        else if (ch === "MOBILE") out.mobile += amt;
+      }
+
+      return out;
+    },
+    []
+  );
+
+  const callStockValue = useCallback(
+    async (sid: string): Promise<number> => {
+      const { data, error } = await supabase.rpc("get_stock_on_hand_value_v1", {
+        p_org_id: orgId,
+        p_store_id: sid,
+      } as any);
+      if (error) throw error;
+
+      return readStockValue(data);
+    },
+    [orgId]
+  );
+
+  const load = useCallback(async () => {
+    const rid = ++reqRef.current;
+
+    if (!orgId) {
+      setErr("No active organization selected");
+      setRows([]);
+      return;
+    }
+
+    if (!visibleStoreIds.length) {
+      setErr("No stores found");
+      setRows([]);
+      return;
+    }
+
+    setLoading(true);
+    setErr(null);
+
+    try {
+      const { fromISO, toISO, fromYMD, toYMD } = rangeToday();
+
+      const result = await Promise.all(
+        visibleStoreIds.map(async (sid) => {
+          const [sales, expenses, profit, pay, collections, expCh, stockValue] =
+            await Promise.all([
+              callSalesForStore(sid, fromISO, toISO),
+              callExpenseForStore(sid, fromYMD, toYMD),
+              callProfitOwnerOnly(sid, fromISO, toISO),
+              callPaymentBreakdown(sid, fromISO, toISO),
+              callCollections(sid, fromISO, toISO),
+              callExpenseBreakdown(sid, fromYMD, toYMD),
+              callStockValue(sid),
+            ]);
+
+          const availableCashNum = subtractFloor(pay.cash + collections.cash, expCh.cash);
+          const availableBankNum = subtractFloor(pay.bank + collections.bank, expCh.bank);
+          const availableMobileNum = subtractFloor(pay.mobile + collections.mobile, expCh.mobile);
+          const moneyIn = availableCashNum + availableBankNum + availableMobileNum;
+
+          return {
+            storeId: sid,
+            storeName: storeNameById.get(sid) ?? "Store",
+            sales: toNum(sales.total),
+            expenses: toNum(expenses.total),
+            profit: isOwner ? toNum(profit.net) : null,
+            orders: toInt(sales.orders),
+            moneyIn,
+            stockValue: toNum(stockValue),
+          } as StoreLiveRow;
+        })
+      );
+
+      if (rid !== reqRef.current) return;
+
+      setRows(result);
+    } catch (e: any) {
+      if (rid !== reqRef.current) return;
+      setErr(e?.message ?? "Failed to load live finance");
+      setRows([]);
+    } finally {
+      if (rid === reqRef.current) setLoading(false);
+    }
+  }, [
+    orgId,
+    visibleStoreIds,
+    callSalesForStore,
+    callExpenseForStore,
+    callProfitOwnerOnly,
+    callPaymentBreakdown,
+    callCollections,
+    callExpenseBreakdown,
+    callStockValue,
+    storeNameById,
+    isOwner,
+  ]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load])
+  );
+
+  useAutoRefresh(() => {
+    void load();
+  }, true, AUTO_REFRESH_MS);
+
+  const sortedRows = useMemo(() => {
+    return [...rows].sort((a, b) => getRowScore(b) - getRowScore(a));
+  }, [rows]);
+
+  const topPerformerStoreId = useMemo(() => {
+    return sortedRows.length ? sortedRows[0].storeId : null;
+  }, [sortedRows]);
+
+  const overviewAvailable = !loading && !err && rows.length > 0;
+  const totals = useMemo(() => {
+    return rows.reduce(
+      (acc, row) => {
+        acc.sales += toNum(row.sales);
+        acc.expenses += toNum(row.expenses);
+        acc.profit += toNum(row.profit);
+        acc.orders += toInt(row.orders);
+        acc.moneyIn += toNum(row.moneyIn);
+        acc.stockValue += toNum(row.stockValue);
+        return acc;
+      },
+      {
+        sales: 0,
+        expenses: 0,
+        profit: 0,
+        orders: 0,
+        moneyIn: 0,
+        stockValue: 0,
+      }
+    );
+  }, [rows]);
+
+  const currentStoreLabel =
+    scope === "STORE"
+      ? storeNameById.get(selectedStoreId) ?? activeStoreName ?? "Store"
+      : `All Stores (${storeOptions.length})`;
+
+  if (isMobileWeb) {
+    return <Screen><CurrencyToolsLink/><MobileFinance
+      text={uiText} orgName={orgName} scope={scope} canAll={canAll} isOwner={isOwner}
+      storeOptions={storeOptions} selectedStoreId={selectedStoreId}
+      onScope={setScope} onStore={setSelectedStoreId}
+      onBack={() => router.back()} onRefresh={() => void load()}
+      rows={sortedRows} totals={totals} available={overviewAvailable}
+      loading={loading} error={err ? systemText(err) : null} money={fmtMoney}
+      onDetail={(row) => {
+        const today = rangeToday();
+        router.push({ pathname: "/finance/history", params: {
+          mode: "SALES", scope: "STORE", range: "today",
+          from: today.fromYMD, to: today.toYMD,
+          storeId: row.storeId, storeName: row.storeName,
+        } } as any);
+      }}
+    /></Screen>;
+  }
+
+  return (
+    <Screen>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingTop: 16,
+          paddingHorizontal: pageSidePad,
+          paddingBottom: 28,
+          width: "100%",
+          maxWidth: pageMaxWidth,
+          alignSelf: "center",
+        }}
+      >
+        <CurrencyToolsLink/>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 10,
+            flexWrap: isMobileWeb ? "wrap" : "nowrap",
+          }}
+        >
+          <Pressable
+            onPress={() => router.back()}
+            hitSlop={10}
+            style={({ pressed }) => ({
+              width: 42,
+              height: 42,
+              borderRadius: 999,
+              borderWidth: 1,
+              borderColor: "rgba(255,255,255,0.12)",
+              backgroundColor: "rgba(255,255,255,0.06)",
+              alignItems: "center",
+              justifyContent: "center",
+              opacity: pressed ? 0.92 : 1,
+            })}
+          >
+            <WebIcon name="arrow-back" size={18} color={UI.text} webLabel="←" />
+          </Pressable>
+
+          <View
+            style={{
+              flex: 1,
+              minWidth: isMobileWeb ? "100%" : 0,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 12,
+              borderWidth: 1,
+              borderColor: "rgba(255,255,255,0.10)",
+              backgroundColor: "rgba(255,255,255,0.04)",
+              borderRadius: 18,
+              paddingHorizontal: 12,
+              paddingVertical: 10,
+            }}
+          >
+            <View
+              style={{
+                width: 42,
+                height: 42,
+                borderRadius: 999,
+                borderWidth: 1,
+                borderColor: "rgba(16,185,129,0.30)",
+                backgroundColor: "rgba(16,185,129,0.10)",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <WebIcon name="pulse-outline" size={18} color={UI.text} webLabel="◉" />
+            </View>
+
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 18 }} numberOfLines={1}>
+                {uiText("Live Finance")}</Text>
+              <Text style={{ color: UI.muted, fontWeight: "800" }} numberOfLines={1}>
+                {scope === "ALL" ? `PRO • ${currentStoreLabel}` : `${orgName} • ${currentStoreLabel}`}
+              </Text>
+            </View>
+          </View>
+
+          <Pressable
+            onPress={() => void load()}
+            hitSlop={10}
+            style={({ pressed }) => ({
+              width: 42,
+              height: 42,
+              borderRadius: 999,
+              borderWidth: 1,
+              borderColor: "rgba(16,185,129,0.35)",
+              backgroundColor: "rgba(16,185,129,0.10)",
+              alignItems: "center",
+              justifyContent: "center",
+              opacity: pressed ? 0.92 : 1,
+            })}
+          >
+            {loading ? (
+              <ActivityIndicator size="small" />
+            ) : (
+              <WebIcon name="refresh" size={18} color={UI.text} webLabel="↻" />
+            )}
+          </Pressable>
+        </View>
+
+        <View style={{ height: 12 }} />
+
+        <Card style={{ gap: 12 }}>
+          <Text style={{ color: UI.faint, fontWeight: "900", fontSize: 12, letterSpacing: 0.4 }}>
+            {uiText("LIVE SCOPE")}</Text>
+
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <Chip
+              active={scope === "STORE"}
+              label={uiText("STORE")}
+              onPress={() => setScope("STORE")}
+            />
+            {canAll ? (
+              <Chip
+                active={scope === "ALL"}
+                label={uiText("ALL STORES")}
+                onPress={() => setScope("ALL")}
+              />
+            ) : null}
+          </View>
+
+          {scope === "STORE" ? (
+            <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+              {storeOptions.map((item) => (
+                <Chip
+                  key={item.storeId}
+                  active={selectedStoreId === item.storeId}
+                  label={item.storeName}
+                  onPress={() => setSelectedStoreId(item.storeId)}
+                />
+              ))}
+            </View>
+          ) : null}
+
+          {!!err ? (
+            <Card
+              style={{
+                borderColor: "rgba(201,74,74,0.35)",
+                backgroundColor: "rgba(201,74,74,0.10)",
+                borderRadius: 18,
+                padding: 12,
+              }}
+            >
+              <Text style={{ color: UI.danger, fontWeight: "900" }}>{systemText(err)}</Text>
+            </Card>
+          ) : null}
+        </Card>
+
+        <View style={{ height: 12 }} />
+
+        <Card style={{ gap: 12 }}>
+          <Text style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}>
+            {uiText("Live Overview • Today")}</Text>
+
+          <View
+            style={{
+              flexDirection: "row",
+              flexWrap: "wrap",
+              gap: 12,
+            }}
+          >
+            <View style={{ width: isMobileWeb ? "100%" : overviewColumns === 3 ? "31.8%" : "48.2%" }}>
+              <MiniStat label={uiText("Sales")} value={overviewAvailable ? fmtMoney(totals.sales) : "—"} />
+            </View>
+
+            <View style={{ width: isMobileWeb ? "100%" : overviewColumns === 3 ? "31.8%" : "48.2%" }}>
+              <MiniStat label={uiText("Expenses")} value={overviewAvailable ? fmtMoney(totals.expenses) : "—"} />
+            </View>
+
+            <View style={{ width: isMobileWeb ? "100%" : overviewColumns === 3 ? "31.8%" : "48.2%" }}>
+              <MiniStat label={uiText("Orders")} value={overviewAvailable ? String(totals.orders) : "—"} />
+            </View>
+
+            <View style={{ width: isMobileWeb ? "100%" : overviewColumns === 3 ? "31.8%" : "48.2%" }}>
+              <MiniStat label={uiText("Money In")} value={overviewAvailable ? fmtMoney(totals.moneyIn) : "—"} />
+            </View>
+
+            <View style={{ width: isMobileWeb ? "100%" : overviewColumns === 3 ? "31.8%" : "48.2%" }}>
+              <MiniStat label={uiText("Stock Value")} value={overviewAvailable ? fmtMoney(totals.stockValue) : "—"} />
+            </View>
+
+            <View style={{ width: isMobileWeb ? "100%" : overviewColumns === 3 ? "31.8%" : "48.2%" }}>
+              <MiniStat
+                label={uiText("Profit")}
+                value={overviewAvailable && isOwner ? fmtMoney(totals.profit) : "—"}
+                hint={isOwner ? uiText("owner-only") : uiText("owner only")}
+              />
+            </View>
+          </View>
+
+          <Text style={{ color: UI.muted, fontWeight: "800", lineHeight: 20 }}>
+            {uiText("Hapa unaona live snapshot ya leo. ALL STORES inaonyesha aggregate ya organization. STORE inaonyesha store moja moja.")}</Text>
+
+          {scope === "ALL" && sortedRows.length ? (
+            <View
+              style={{
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: "rgba(16,185,129,0.24)",
+                backgroundColor: "rgba(16,185,129,0.08)",
+                paddingHorizontal: 12,
+                paddingVertical: 10,
+              }}
+            >
+              <Text style={{ color: UI.text, fontWeight: "900", fontSize: 13 }}>
+                {uiText("Top Performer Today:")}{sortedRows[0].storeName}
+              </Text>
+              <Text style={{ color: UI.muted, fontWeight: "800", fontSize: 12, marginTop: 4 }}>
+                {uiText("Sales")}{fmtMoney(sortedRows[0].sales)} {uiText("• Money In")}{fmtMoney(sortedRows[0].moneyIn)}
+                {isOwner ? uiText(" • Profit {p0}", {p0: (fmtMoney(toNum(sortedRows[0].profit)))}) : ""}
+              </Text>
+            </View>
+          ) : null}
+        </Card>
+
+        <View style={{ height: 12 }} />
+
+        <View style={{ gap: 12 }}>
+          {sortedRows.map((row, idx) => {
+            const isTopPerformer = row.storeId === topPerformerStoreId;
+
+            return (
+              <Card
+                key={row.storeId}
+                style={{
+                  gap: 12,
+                  borderRadius: 22,
+                  borderColor: isTopPerformer
+                    ? "rgba(16,185,129,0.34)"
+                    : "rgba(16,185,129,0.22)",
+               backgroundColor: "#FFFFFF",
+                }}
+              >
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 10,
+                    flexWrap: isMobileWeb ? "wrap" : "nowrap",
+                  }}
+                >
+                  <View
+                    style={{
+                      width: 42,
+                      height: 42,
+                      borderRadius: 14,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderWidth: 1,
+                      borderColor: isTopPerformer
+                        ? "rgba(16,185,129,0.34)"
+                        : "rgba(16,185,129,0.24)",
+                      backgroundColor: isTopPerformer
+                        ? "rgba(16,185,129,0.14)"
+                        : "rgba(16,185,129,0.10)",
+                    }}
+                  >
+                    <WebIcon
+                      name={isTopPerformer ? "flash-outline" : "business-outline"}
+                      size={18}
+                      color={UI.text}
+                      webLabel={isTopPerformer ? "⚡" : "▣"}
+                    />
+                  </View>
+
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text
+                      style={{ color: UI.text, fontWeight: "900", fontSize: 16 }}
+                      numberOfLines={1}
+                    >
+                      {row.storeName}
+                    </Text>
+                    <Text style={{ color: UI.muted, fontWeight: "800" }} numberOfLines={1}>
+                      {isTopPerformer ? uiText("Top performer right now") : uiText("Live store snapshot")}
+                    </Text>
+                  </View>
+
+                  {isTopPerformer ? (
+                    <View
+                      style={{
+                        paddingHorizontal: 10,
+                        paddingVertical: 6,
+                        borderRadius: 999,
+                        borderWidth: 1,
+                        borderColor: "rgba(16,185,129,0.26)",
+                        backgroundColor: "rgba(16,185,129,0.10)",
+                      }}
+                    >
+                      <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }}>
+                        {uiText("TOP #")}{idx + 1}
+                      </Text>
+                    </View>
+                  ) : (
+                    <View
+                      style={{
+                        paddingHorizontal: 10,
+                        paddingVertical: 6,
+                        borderRadius: 999,
+                        borderWidth: 1,
+                      borderColor: "rgba(15,23,42,0.10)",
+backgroundColor: "rgba(241,245,249,0.72)",
+                      }}
+                    >
+                      <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }}>
+                        #{idx + 1}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+
+                <View
+                  style={{
+                    flexDirection: "row",
+                    gap: 10,
+                    flexWrap: "wrap",
+                    alignItems: "stretch",
+                  }}
+                >
+                  <View style={{ minWidth: rowMetricMinWidth, flexGrow: isDesktopWeb ? 1 : 0 }}>
+                    <MetricPill
+                      label={uiText("Sales")}
+                      value={fmtMoney(row.sales)}
+                      tone={getMetricTone(row.sales, "sales")}
+                    />
+                  </View>
+                  <View style={{ minWidth: rowMetricMinWidth, flexGrow: isDesktopWeb ? 1 : 0 }}>
+                    <MetricPill
+                      label={uiText("Money In")}
+                      value={fmtMoney(row.moneyIn)}
+                      tone={getMetricTone(row.moneyIn, "moneyIn")}
+                    />
+                  </View>
+                  <View style={{ minWidth: rowMetricMinWidth, flexGrow: isDesktopWeb ? 1 : 0 }}>
+                    <MetricPill
+                      label={uiText("Expenses")}
+                      value={fmtMoney(row.expenses)}
+                      tone={getMetricTone(row.expenses, "expenses")}
+                    />
+                  </View>
+                  <View style={{ minWidth: rowMetricMinWidth, flexGrow: isDesktopWeb ? 1 : 0 }}>
+                    <MetricPill
+                      label={uiText("Stock Value")}
+                      value={fmtMoney(row.stockValue)}
+                      tone="neutral"
+                    />
+                  </View>
+                  <View style={{ minWidth: rowMetricMinWidth, flexGrow: isDesktopWeb ? 1 : 0 }}>
+                    <MetricPill
+                      label={uiText("Orders")}
+                      value={String(row.orders)}
+                      tone="neutral"
+                    />
+                  </View>
+                  <View style={{ minWidth: rowMetricMinWidth, flexGrow: isDesktopWeb ? 1 : 0 }}>
+                    <MetricPill
+                      label={uiText("Profit")}
+                      value={isOwner ? fmtMoney(toNum(row.profit)) : "—"}
+                      tone={isOwner ? getMetricTone(toNum(row.profit), "profit") : "neutral"}
+                    />
+                  </View>
+                </View>
+
+                <View
+                  style={{
+                    flexDirection: isMobileWeb ? "column" : "row",
+                    alignItems: isMobileWeb ? "stretch" : "center",
+                    gap: 10,
+                    paddingTop: 2,
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: UI.faint,
+                      fontWeight: "800",
+                      fontSize: 12,
+                      flex: isMobileWeb ? 0 : 1,
+                      lineHeight: 18,
+                    }}
+                  >
+                    {isTopPerformer
+                      ? uiText("Store hii inaongoza kwa live performance ya sasa.")
+                      : uiText("Open detail kuona finance history ya store hii moja kwa moja.")}
+                  </Text>
+
+                  <Pressable
+                    onPress={() => {
+                      const today = rangeToday();
+                      router.push({
+                        pathname: "/finance/history",
+                        params: {
+                          mode: "SALES",
+                          scope: "STORE",
+                          range: "today",
+                          from: today.fromYMD,
+                          to: today.toYMD,
+                          storeId: row.storeId,
+                          storeName: row.storeName,
+                        } as any,
+                      } as any);
+                    }}
+                    hitSlop={10}
+                    style={({ pressed }) => ({
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      borderRadius: 999,
+                      borderWidth: 1,
+                      borderColor: "rgba(16,185,129,0.24)",
+                      backgroundColor: "rgba(16,185,129,0.10)",
+                      opacity: pressed ? 0.92 : 1,
+                    })}
+                  >
+                    <Text style={{ color: UI.text, fontWeight: "900", fontSize: 11 }}>
+                      {uiText("OPEN DETAIL")}</Text>
+                  </Pressable>
+                </View>
+              </Card>
+            );
+          })}
+
+          {!loading && !sortedRows.length ? (
+            <Card
+              style={{
+                borderRadius: 18,
+                borderColor: "rgba(255,255,255,0.10)",
+                backgroundColor: "rgba(255,255,255,0.04)",
+              }}
+            >
+              <Text style={{ color: UI.muted, fontWeight: "800" }}>
+                {uiText("No live store data yet.")}</Text>
+            </Card>
+          ) : null}
+        </View>
+
+        <View style={{ height: 20 }} />
+      </ScrollView>
+    </Screen>
+  );
+}

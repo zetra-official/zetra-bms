@@ -2,3 +2,4 @@
 postgres.log
 __pycache__/
 disposable*/
+catalog-only/build-source/

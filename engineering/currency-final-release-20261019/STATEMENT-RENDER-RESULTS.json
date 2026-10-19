@@ -1,0 +1,132 @@
+{
+  "status": "PASS",
+  "checks": [
+    {
+      "width": 390,
+      "language": "en",
+      "actualComponent": true,
+      "readerCalls": 6,
+      "printShareHandlers": true,
+      "noOverflow": true,
+      "pageErrors": 0
+    },
+    {
+      "width": 390,
+      "language": "sw",
+      "actualComponent": true,
+      "readerCalls": 6,
+      "printShareHandlers": true,
+      "noOverflow": true,
+      "pageErrors": 0
+    },
+    {
+      "width": 390,
+      "language": "fr",
+      "actualComponent": true,
+      "readerCalls": 6,
+      "printShareHandlers": true,
+      "noOverflow": true,
+      "pageErrors": 0
+    },
+    {
+      "width": 390,
+      "language": "pt",
+      "actualComponent": true,
+      "readerCalls": 6,
+      "printShareHandlers": true,
+      "noOverflow": true,
+      "pageErrors": 0
+    },
+    {
+      "width": 390,
+      "language": "ar",
+      "actualComponent": true,
+      "readerCalls": 6,
+      "printShareHandlers": true,
+      "noOverflow": true,
+      "pageErrors": 0
+    },
+    {
+      "width": 390,
+      "language": "es",
+      "actualComponent": true,
+      "readerCalls": 6,
+      "printShareHandlers": true,
+      "noOverflow": true,
+      "pageErrors": 0
+    },
+    {
+      "width": 390,
+      "language": "zh",
+      "actualComponent": true,
+      "readerCalls": 6,
+      "printShareHandlers": true,
+      "noOverflow": true,
+      "pageErrors": 0
+    },
+    {
+      "width": 1440,
+      "language": "en",
+      "actualComponent": true,
+      "readerCalls": 6,
+      "printShareHandlers": true,
+      "noOverflow": true,
+      "pageErrors": 0
+    },
+    {
+      "width": 1440,
+      "language": "sw",
+      "actualComponent": true,
+      "readerCalls": 6,
+      "printShareHandlers": true,
+      "noOverflow": true,
+      "pageErrors": 0
+    },
+    {
+      "width": 1440,
+      "language": "fr",
+      "actualComponent": true,
+      "readerCalls": 6,
+      "printShareHandlers": true,
+      "noOverflow": true,
+      "pageErrors": 0
+    },
+    {
+      "width": 1440,
+      "language": "pt",
+      "actualComponent": true,
+      "readerCalls": 6,
+      "printShareHandlers": true,
+      "noOverflow": true,
+      "pageErrors": 0
+    },
+    {
+      "width": 1440,
+      "language": "ar",
+      "actualComponent": true,
+      "readerCalls": 6,
+      "printShareHandlers": true,
+      "noOverflow": true,
+      "pageErrors": 0
+    },
+    {
+      "width": 1440,
+      "language": "es",
+      "actualComponent": true,
+      "readerCalls": 6,
+      "printShareHandlers": true,
+      "noOverflow": true,
+      "pageErrors": 0
+    },
+    {
+      "width": 1440,
+      "language": "zh",
+      "actualComponent": true,
+      "readerCalls": 6,
+      "printShareHandlers": true,
+      "noOverflow": true,
+      "pageErrors": 0
+    }
+  ],
+  "scope": "Actual RNW financial statement component + canonical PostgreSQL facts. Auth/router/transport and native Print/Share responses synthetic; not genuine authenticated or physical-device E2E."
+}

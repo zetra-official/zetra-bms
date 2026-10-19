@@ -1,0 +1,60 @@
+{
+  "status": "PASS",
+  "checks": [
+    {
+      "document": "TZS-en",
+      "pdfCreated": true,
+      "htmlRenderer": "Chromium print using actual application HTML builder",
+      "pageErrors": 0
+    },
+    {
+      "document": "USD-en",
+      "pdfCreated": true,
+      "htmlRenderer": "Chromium print using actual application HTML builder",
+      "pageErrors": 0
+    },
+    {
+      "document": "KES-en",
+      "pdfCreated": true,
+      "htmlRenderer": "Chromium print using actual application HTML builder",
+      "pageErrors": 0
+    },
+    {
+      "document": "UGX-en",
+      "pdfCreated": true,
+      "htmlRenderer": "Chromium print using actual application HTML builder",
+      "pageErrors": 0
+    },
+    {
+      "document": "EUR-en",
+      "pdfCreated": true,
+      "htmlRenderer": "Chromium print using actual application HTML builder",
+      "pageErrors": 0
+    },
+    {
+      "document": "AED-en",
+      "pdfCreated": true,
+      "htmlRenderer": "Chromium print using actual application HTML builder",
+      "pageErrors": 0
+    },
+    {
+      "document": "JPY-en",
+      "pdfCreated": true,
+      "htmlRenderer": "Chromium print using actual application HTML builder",
+      "pageErrors": 0
+    },
+    {
+      "document": "KWD-en",
+      "pdfCreated": true,
+      "htmlRenderer": "Chromium print using actual application HTML builder",
+      "pageErrors": 0
+    },
+    {
+      "document": "KWD-ar",
+      "pdfCreated": true,
+      "htmlRenderer": "Chromium print using actual application HTML builder",
+      "pageErrors": 0
+    }
+  ],
+  "scope": "Actual application document builder using canonical PostgreSQL fixtures; real Chromium PDF output. Auth/store input adapters synthetic. Native Android file sharing and genuine authenticated full financial workflow NOT TESTED."
+}

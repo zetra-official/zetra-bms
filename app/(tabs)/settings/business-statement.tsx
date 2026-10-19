@@ -1,3 +1,5 @@
+import {ORIGINAL_FACT_READERS_ACTIVE} from '@/src/currency/originalFacts';
+import {OriginalFinancialStatement} from '@/src/finance/OriginalFinancialStatement';
 import {ReportCurrencySelector} from '@/src/currency/ReportCurrencySelector';
 import {useDocumentText} from "@/src/i18n/useDocumentText";
 import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
@@ -744,7 +746,7 @@ async function getGoodsPurchasedSummary(
     return empty;
   }
 }
-export default function BusinessStatementScreen() {
+function LegacyBusinessStatementScreen() {
  const {documentText, documentLocale} = useDocumentText();
  const systemText = useSystemMessageText();
  const uiText=useCommonText();
@@ -2464,3 +2466,4 @@ paymentSummary.bank_total,
     </Screen>
   );
 }
+export default function BusinessStatementScreen(){return ORIGINAL_FACT_READERS_ACTIVE?<OriginalFinancialStatement/>:<LegacyBusinessStatementScreen/>}
