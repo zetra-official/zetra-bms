@@ -1,0 +1,97 @@
+{
+  "action": "activate",
+  "project": "dcmhqdckzhbuakvcyjit",
+  "file": "engineering/currency-owner-canary-20261019/ACTIVATE-OWNER-CANARY.DRAFT.sql",
+  "sha256": "c77e486bf74d173e1cd467dfb1c0da937c61c186fa210ac735a39e5bdcdc6e76",
+  "startedAt": "2026-10-19T08:05:35.326371+00:00",
+  "state": "COMMITTED_AND_VERIFIED",
+  "commandResult": "SUCCESS",
+  "serverEnabled": true,
+  "quotaResult": null,
+  "permissions": [
+    {
+      "execute": false,
+      "function": "create_org_with_store_currency_v1(uuid,text,text,text,text,boolean)",
+      "role": "authenticated"
+    },
+    {
+      "execute": true,
+      "function": "create_org_with_store_currency_tzs_v1(uuid,text,text,text,text,boolean)",
+      "role": "authenticated"
+    },
+    {
+      "execute": false,
+      "function": "backend_core.consume_tzs_canary_org_permit(uuid)",
+      "role": "authenticated"
+    },
+    {
+      "execute": false,
+      "function": "create_org_with_store_currency_v1(uuid,text,text,text,text,boolean)",
+      "role": "anon"
+    },
+    {
+      "execute": false,
+      "function": "create_org_with_store_currency_tzs_v1(uuid,text,text,text,text,boolean)",
+      "role": "anon"
+    },
+    {
+      "execute": false,
+      "function": "backend_core.consume_tzs_canary_org_permit(uuid)",
+      "role": "anon"
+    },
+    {
+      "execute": false,
+      "function": "create_org_with_store_currency_v1(uuid,text,text,text,text,boolean)",
+      "role": "service_role"
+    },
+    {
+      "execute": false,
+      "function": "create_org_with_store_currency_tzs_v1(uuid,text,text,text,text,boolean)",
+      "role": "service_role"
+    },
+    {
+      "execute": false,
+      "function": "backend_core.consume_tzs_canary_org_permit(uuid)",
+      "role": "service_role"
+    },
+    {
+      "execute": false,
+      "function": "create_org_with_store_currency_v1(uuid,text,text,text,text,boolean)",
+      "role": "authenticator"
+    },
+    {
+      "execute": false,
+      "function": "create_org_with_store_currency_tzs_v1(uuid,text,text,text,text,boolean)",
+      "role": "authenticator"
+    },
+    {
+      "execute": false,
+      "function": "backend_core.consume_tzs_canary_org_permit(uuid)",
+      "role": "authenticator"
+    },
+    {
+      "execute": false,
+      "function": "create_org_with_store_currency_v1(uuid,text,text,text,text,boolean)",
+      "role": "cli_login_postgres"
+    },
+    {
+      "execute": false,
+      "function": "create_org_with_store_currency_tzs_v1(uuid,text,text,text,text,boolean)",
+      "role": "cli_login_postgres"
+    },
+    {
+      "execute": false,
+      "function": "backend_core.consume_tzs_canary_org_permit(uuid)",
+      "role": "cli_login_postgres"
+    }
+  ],
+  "audit": [
+    {
+      "action": "CANARY_ENABLED",
+      "actor": "bb2d6dee-773d-4fa7-8fda-1eb85bbad2cd",
+      "approval": "OWNER-GLOBAL-CURRENCY-EXACT-SQL-20261019",
+      "at": "2026-10-19T08:05:37.456476+00:00"
+    }
+  ],
+  "verifiedAt": "2026-10-19T08:05:54.759770+00:00"
+}

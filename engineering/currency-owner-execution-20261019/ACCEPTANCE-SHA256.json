@@ -1,0 +1,12 @@
+{
+  "activate-RESULT.json": "babbd740a1c9a8c227edaea4fb45bb6d94f6f62da10e8becaabaa289cae5eae5",
+  "PREVIEW-RECOVERY.json": "f7fd53117d3d181b2c77413fd789eee52ccd96f703359130574912ac14ca5676",
+  "GENUINE-ACCEPTANCE-RESULT.json": "de5bdaadc86030bc73605c56e1e279806e27f9b330cfb61c0d82b1edcc0a3483",
+  "disable-ATTEMPT.json": "2fcb012026b65957125796aec5cb2cbdc105fe99264d06cba0ecad3ea9059490",
+  "acceptance.cjs": "6ec1648156b79e89819f35954635acd2631e5a83c129080bac473474f00d1cf3",
+  "verify_acceptance.py": "1c5f8f8f40e59d5bbaaac0de9f18ffae416c397f1f38cb488f17b7f000f538b9",
+  "activate-ATTEMPT.json": "0e62e9514bde7efe789d0c02c72b0ca9fc84dd0cfc24edb8e7807af2c89e170f",
+  "AUTH-ACCEPTANCE-RESULT.md": "a6f14646a4bf57e870ac46f796bba0bcebafe314c593a940c1a7de60669a717f",
+  "BROWSER-EVENTS.jsonl": "aeb2e1352049cda151288e3a141caa9feacbaccca1b53099a3f532e01a3e987d",
+  "disable-RESULT.json": "1618758173cf2cdcdd836b1331ea9719c777606948b8d7ebd6037ffc8838c070"
+}

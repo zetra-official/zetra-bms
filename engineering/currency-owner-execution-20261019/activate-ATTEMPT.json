@@ -1,0 +1,8 @@
+{
+  "action": "activate",
+  "project": "dcmhqdckzhbuakvcyjit",
+  "file": "engineering/currency-owner-canary-20261019/ACTIVATE-OWNER-CANARY.DRAFT.sql",
+  "sha256": "c77e486bf74d173e1cd467dfb1c0da937c61c186fa210ac735a39e5bdcdc6e76",
+  "startedAt": "2026-10-19T08:05:35.326371+00:00",
+  "state": "ATTEMPT_STARTED_NO_RETRY"
+}

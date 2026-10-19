@@ -1,0 +1,30 @@
+{
+  "at": "2026-10-19T08:07:47.777116+00:00",
+  "genuineAuth": true,
+  "successfulCalls": 2,
+  "sameResult": true,
+  "persistedQuotaResultMatches": true,
+  "organizations": 1,
+  "stores": 1,
+  "financialRows": 0,
+  "serverEnabled": false,
+  "unusedPermits": 0,
+  "existingProtectedRecordsUnchanged": true,
+  "audit": [
+    {
+      "action": "CANARY_ENABLED",
+      "actor": "bb2d6dee-773d-4fa7-8fda-1eb85bbad2cd",
+      "approval": "OWNER-GLOBAL-CURRENCY-EXACT-SQL-20261019",
+      "at": "2026-10-19T08:05:37.456476+00:00"
+    },
+    {
+      "action": "DISABLED",
+      "actor": null,
+      "approval": "OWNER_APPROVED_QUOTA_DISABLE",
+      "at": "2026-10-19T08:06:48.69191+00:00"
+    }
+  ],
+  "liveConcurrency": "NOT TESTED; accepted local concurrency evidence retained",
+  "physicalAndroid": "NOT TESTED",
+  "pdf": "NOT TESTED"
+}

@@ -1,0 +1,8 @@
+{
+  "action": "disable",
+  "project": "dcmhqdckzhbuakvcyjit",
+  "file": "engineering/currency-owner-canary-20261019/DISABLE-OWNER-CANARY.DRAFT.sql",
+  "sha256": "8882f331f58c58b6fd49db456aaf64a4e142f54bf85479aa8bffde9ba097b943",
+  "startedAt": "2026-10-19T08:06:45.264722+00:00",
+  "state": "ATTEMPT_STARTED_NO_RETRY"
+}

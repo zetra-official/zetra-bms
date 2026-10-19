@@ -1,0 +1,9 @@
+{
+  "at": "2026-10-19T07:59:38.838Z",
+  "root": 200,
+  "previousMalformedPath": 200,
+  "authSettings": 200,
+  "canaryEnabled": false,
+  "browserLoginRendered": true,
+  "productionWrites": false
+}
