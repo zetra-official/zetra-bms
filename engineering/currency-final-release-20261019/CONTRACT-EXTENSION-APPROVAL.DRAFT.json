@@ -1,0 +1,174 @@
+{
+  "status": "HOLD_FINANCIAL_ACTIVATION_AND_GENUINE_ACCEPTANCE",
+  "targetProject": "dcmhqdckzhbuakvcyjit",
+  "productionExecutionAuthorized": false,
+  "deploymentAuthorized": false,
+  "clientActivation": false,
+  "migrationOrder": [
+    {
+      "path": "engineering/currency-financial-integration-20261019/2026101904-financial-currency-context.DRAFT.sql",
+      "sha256": "2d72cf83e848d4304e932403bfae0d6b0af6baae1314d4204128ee830ab9b3b4"
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/2026101905-native-settlement-atomic.DRAFT.sql",
+      "sha256": "f9f849d7eb43844d8da92cf3c44bc51d8b9603b2c9d896eb2ab6d6e8aa35f3d4"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/2026101906-native-expense-integrity.DRAFT.sql",
+      "sha256": "45d054fc0564842d7759a09d857c40438aa1f7df032ba530e65987efcde7aa6b"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/2026101907-original-financial-readers.DRAFT.sql",
+      "sha256": "ac4ff6d398f85630f1cd005abdc4ecc74565de1fd347ccf62ffd0aa8620524c5"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/2026101908-native-writer-quarantine.DRAFT.sql",
+      "sha256": "0148160432bec7fe644baff5335779e4766c8ae4215fbeb64be4243d8deeeab0"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/2026101909-canonical-receipt-integrity.DRAFT.sql",
+      "sha256": "8c55f16ffb0dfc9c2236b56170b328ee6b14f0c5070f07be814cf03baf21fe66"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/2026101910-private-settlement-bindings.DRAFT.sql",
+      "sha256": "d949035b97781915db708fdae91d30252f743d1fd1f8caa8cd6eea9f6995d7f2"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/2026101911-private-procurement-bindings.DRAFT.sql",
+      "sha256": "db8f7556b722da8fa9c64b52a2b9c80c3b27d836f35693861db53b3412b0937c"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/2026101912-private-cashier-bindings.DRAFT.sql",
+      "sha256": "c3915c842daf58aa595c547a69b4d4db5c719eda9954f55f596f175a21472cb3"
+    }
+  ],
+  "rollbackOrder": [
+    {
+      "path": "engineering/currency-final-release-20261019/1910-1912-DISABLE.sql",
+      "sha256": "112b05ee77d0c864a563707cefb6824d2e22eb47a67fc69d7dd33e16b94b2805"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/1907-1909-DISABLE.sql",
+      "sha256": "ffae1a647abe03a08c6777e58f938a48c4afc9fa16f3d102b2523bbe94f49554"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/1906-DISABLE.sql",
+      "sha256": "60055141656ad2a077da41def08916f4b75a494d5b7edbbc6bfad09e001ab537"
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/1905-DISABLE-ROLLBACK.sql",
+      "sha256": "1151ce4e422047801fd4db19b6503431fc81f28cee6424696abaabf4837c7f7e"
+    }
+  ],
+  "scope": "Install private quarantined bindings only if separately approved; this draft does not enable financial clients or RPC grants.",
+  "implementedLocally": [
+    "Owner-confirmed account opening/source authority with no inferred balances",
+    "Atomic canonical sale, collection, expense and split-payment source/account linkage",
+    "Immutable offline original currency, source and response recovery context",
+    "Canonical inbound receipt/cost -> supplier debt -> supplier payment linkage counted once",
+    "Exact receipt-to-sale COGS conservation",
+    "Drawer/account binding, delegated operation permissions, full-coverage checks, guarded canonical close and discrepancies"
+  ],
+  "currenciesLocallyExercised": [
+    "TZS",
+    "USD",
+    "KES",
+    "UGX",
+    "EUR",
+    "AED",
+    "JPY",
+    "KWD"
+  ],
+  "focusedChecks": 473,
+  "testEvidence": [
+    {
+      "path": "engineering/currency-final-release-20261019/SETTLEMENT-BINDING-RESULTS.json",
+      "sha256": "6d1442654194eac50f0a981a1cc6b01d6843d424354c15bd3c43523cab00d97e"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/BOUND-PROCUREMENT-RESULTS.json",
+      "sha256": "29410f3ea76981a1cc086c2afb6bea2c5669cb68977f2d778614985ddc4fd1d1"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/BOUND-CASHIER-RESULTS.json",
+      "sha256": "ca12bc499ac718e080bb0c1b3a5f34e3070ae0859ffc8b7d2b5a54bf1e4a48f9"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/SETTLEMENT-SOURCE-RESULTS.json",
+      "sha256": "955b19f92fb3392a4577738206d440f14c88cd466ef2e625d17b727bba5c2387"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/SETTLEMENT-QUEUE-RESULTS.json",
+      "sha256": "599fd948ecc97bf55383087565b7abfa5a22ad80e2c1a11e05ac7f428775b793"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/CONTRACT-INSTALL-RESULTS.json",
+      "sha256": "6d319118c8432c7c997656f390e9f51ab83660a656bfce4e43aa0b32bf6eb4c4"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/BINDING-SECURITY-RESULTS.json",
+      "sha256": "e32e7ab95c1275aba7b58134a43697aee498f8fdf1ec12eb2d171360a827011f"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/BOUND-RECEIPT-COGS-RESULTS.json",
+      "sha256": "23040027c58a89f7973bde0d31708e43154a6cffcad8e7e92a11557e568a05b2"
+    }
+  ],
+  "sourceFiles": [
+    {
+      "path": "src/currency/settlementBindings.ts",
+      "sha256": "7307230a00125229b7210266d4374bf20b387c909f029f13906a99fdcbc19ee9"
+    },
+    {
+      "path": "src/offline/salesQueue.ts",
+      "sha256": "031f0d737105a39b2731e4c2809898a782a67e2952685739fbffd08e6bb348b7"
+    },
+    {
+      "path": "src/offline/salesSync.ts",
+      "sha256": "dad0afa7d1ab4ce8142958e098e8b8d1c55354c813c0952dd55b00971f3af170"
+    }
+  ],
+  "access": {
+    "PUBLIC": "DENIED",
+    "anon": "DENIED",
+    "authenticated": "DENIED",
+    "service_role": "DENIED",
+    "functionOwner": "Administrative owner only; no newly granted API access"
+  },
+  "refunds": "DENIED: original line-level discount/tax allocations and authorized original reversal source unavailable. Never infer zero tax or current catalog cost.",
+  "fieldCustody": "DENIED: canonical custody_event, wallet_writers_bound and apply_return are deny-only; no original-currency/writer-complete custody settlement proof. Funding Control remains advances-only.",
+  "historicalPolicy": "No backfill, denomination inference, amount conversion or historical record rewrite.",
+  "backupEvidence": {
+    "path": "engineering/currency-final-release-20261019/CONTRACT-PRODUCTION-PREFLIGHT.json",
+    "sha256": "abdae57103b6d93d437aee87f8afcc1e3bda454aed7416a923a9babd7dde0ea8"
+  },
+  "recovery": "8 completed backups observed; latest physical ID2007453045. Availability verified, restore rehearsal NOT TESTED, Storage objects excluded. Fresh backup/lock/preimage gates required immediately before any approved execution.",
+  "risks": [
+    "New precision ALTERs require bounded DDL locks; stop on lock/preimage failure, never force execution.",
+    "Disable retains widened numeric types and committed canonical records; never shrink types or restore an old backup over new customer transactions.",
+    "Unbound legacy events make complete closing coverage false; timestamps never assign an account or shift.",
+    "Legacy TZS fractional settlement exceeding currency minor precision is denied pending an explicit canonical rounding decision; no silent rounding.",
+    "Bank/mobile confirmation is Owner-authorized bookkeeping, not provider-settlement verification."
+  ],
+  "acceptance": {
+    "PostgreSQL": "DISPOSABLE_SYNTHETIC_AUTH_PASS",
+    "TypeScript": "PASS_0_ERRORS",
+    "WebBuild": "PASS",
+    "AndroidHermesBuild": "PASS",
+    "genuineFinancialAuth": "NOT_TESTED",
+    "DesktopFinancialE2E": "NOT_TESTED",
+    "MobileFinancialE2E": "NOT_TESTED",
+    "physicalAndroidFinancialE2E": "NOT_TESTED",
+    "PDFShareFinancialE2E": "NOT_TESTED",
+    "historicalTZSOnboardingCanary": "ACCEPTED_PREVIOUS_EVIDENCE_NOT_RERUN"
+  },
+  "excluded": [
+    "Unrelated working-tree changes",
+    "Catalog",
+    "Refund/tax posting without immutable original evidence",
+    "Field Procurement custody posting",
+    "Non-TZS live financial activation",
+    "All Production execution/deployment"
+  ],
+  "approvalBoundary": "Not ready for unrestricted financial release. Resolve original evidence/custody authority and perform controlled genuine financial acceptance. Any future Production request must pin these exact hashes and separately define account confirmation, actor, grants, expiry, activation and mandatory disable. No blanket authenticated EXECUTE."
+}

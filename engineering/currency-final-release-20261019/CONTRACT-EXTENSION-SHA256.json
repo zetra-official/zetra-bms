@@ -1,0 +1,212 @@
+{
+  "scope": "Local private contract extension; excludes private captures, disposable databases and unrelated work",
+  "files": [
+    {
+      "path": "engineering/currency-final-release-20261019/1910-1912-DISABLE.sql",
+      "sha256": "112b05ee77d0c864a563707cefb6824d2e22eb47a67fc69d7dd33e16b94b2805"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/1910-android-hermes.log",
+      "sha256": "966ec95375a35d62880899abe39e1615d1495a471b18520f08ee7ff80cb0b45a"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/1910-settlement-bindings.sql",
+      "sha256": "88ecaca32408a658fac193c476dd24ce5e54aa9692b8ae8dbdc24b64664c9a8a"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/1910-typescript.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/1910-web.log",
+      "sha256": "9665f54476cb3af82728bff2f8ae4498251acf11fcddccfd2c423ea30a60808f"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/1911-DEPENDENCY-PREIMAGES.json",
+      "sha256": "b3513274b9578e3d9916ce421664bb9da4bdeac9156516206b59038ff6084f4e"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/1911-procurement-bindings.sql",
+      "sha256": "b72a6e5ff55245870e95ec1d007ba3d401a550150d6433dbc5beacc04ae2e8ba"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/1912-cashier-bindings.sql",
+      "sha256": "98ec7695113b28640e6b2b6c1fac92e3f4b6b5b1bb5ba6dda8637c8315b60447"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/1912-DEPENDENCY-PREIMAGES.json",
+      "sha256": "1151e951203559b3a6d99fa163f20218aaa64f92250da07539843c3d38591b91"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/2026101906-native-expense-integrity.DRAFT.sql",
+      "sha256": "45d054fc0564842d7759a09d857c40438aa1f7df032ba530e65987efcde7aa6b"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/2026101907-original-financial-readers.DRAFT.sql",
+      "sha256": "ac4ff6d398f85630f1cd005abdc4ecc74565de1fd347ccf62ffd0aa8620524c5"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/2026101908-native-writer-quarantine.DRAFT.sql",
+      "sha256": "0148160432bec7fe644baff5335779e4766c8ae4215fbeb64be4243d8deeeab0"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/2026101909-canonical-receipt-integrity.DRAFT.sql",
+      "sha256": "8c55f16ffb0dfc9c2236b56170b328ee6b14f0c5070f07be814cf03baf21fe66"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/2026101910-private-settlement-bindings.DRAFT.sql",
+      "sha256": "d949035b97781915db708fdae91d30252f743d1fd1f8caa8cd6eea9f6995d7f2"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/2026101911-private-procurement-bindings.DRAFT.sql",
+      "sha256": "db8f7556b722da8fa9c64b52a2b9c80c3b27d836f35693861db53b3412b0937c"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/2026101912-private-cashier-bindings.DRAFT.sql",
+      "sha256": "c3915c842daf58aa595c547a69b4d4db5c719eda9954f55f596f175a21472cb3"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/before-1910/src/offline/salesQueue.ts",
+      "sha256": "898443710cf04da9ad2fef594288d44ec2fba512c1cc177e9587dac92118b38c"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/before-1910/src/offline/salesSync.ts",
+      "sha256": "0113895ac4f4fecb1c28ceddf450dc6f3decd5a8ad75085e6267609050bb36a9"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/BINDING-SECURITY-RESULTS.json",
+      "sha256": "e32e7ab95c1275aba7b58134a43697aee498f8fdf1ec12eb2d171360a827011f"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/BOUND-CASHIER-RESULTS.json",
+      "sha256": "ca12bc499ac718e080bb0c1b3a5f34e3070ae0859ffc8b7d2b5a54bf1e4a48f9"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/BOUND-PROCUREMENT-RESULTS.json",
+      "sha256": "29410f3ea76981a1cc086c2afb6bea2c5669cb68977f2d778614985ddc4fd1d1"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/BOUND-RECEIPT-COGS-RESULTS.json",
+      "sha256": "23040027c58a89f7973bde0d31708e43154a6cffcad8e7e92a11557e568a05b2"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/build_cashier_bindings.py",
+      "sha256": "57c6ec9bdb1227aa06223966f0ead7b2660076f74dea208d9adccb912a307402"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/build_contract_clients.py",
+      "sha256": "8623afa0dd7ed85ab15cedd37f10bf35140bb13c03a349a2472bac0b6876da3e"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/build_procurement_bindings.py",
+      "sha256": "0688eb608b0e3e3a8e0a9121f204d5076fb885b6f1017816ff0d13122c3fa829"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/CONTRACT-CLIENT-BUILD-RESULTS.json",
+      "sha256": "40ed3fb4b47f066469e4f4a467a690595b491f64c367545c2b3cf65630f6e39b"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/CONTRACT-EXTENSION-APPROVAL.DRAFT.json",
+      "sha256": "a3e2a792956bd2eef5364fc9fffb7a916971ed03e719e42ef91aca16476f1c5e"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/CONTRACT-EXTENSION-RESULT.md",
+      "sha256": "f512ee4c18b63c67a8497cb80b52edd25c2bdb9a70ef2d804b414972bd99ebf4"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/CONTRACT-INSTALL-RESULTS.json",
+      "sha256": "6d319118c8432c7c997656f390e9f51ab83660a656bfce4e43aa0b32bf6eb4c4"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/CONTRACT-PRODUCTION-PREFLIGHT.json",
+      "sha256": "abdae57103b6d93d437aee87f8afcc1e3bda454aed7416a923a9babd7dde0ea8"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/CONTRACT-RELEASE-PREFLIGHT-READONLY.sql",
+      "sha256": "f6f974f39102b44c4af336a5d1e8bc2e0b177c1ea5f6b300e153615dc510206e"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/contract_production_readonly.py",
+      "sha256": "b159b80bbb151f40d393cac670774c75b17c43bbfb8771c4ecd116a973eed50c"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/fix_supplier_local.py",
+      "sha256": "043cfff2b502c8ef698cc839d8c8878d72e5bde01d4fecd60d5990ee438cb6b5"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/integrate_settlement_source.py",
+      "sha256": "8340f03a28c8376755a0c68c926dd8b812c7f92748a9c6e98c8444160870b070"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/package_contract_extension.py",
+      "sha256": "92778441f2a9a27480208de6bc471226e2d8a7609459e391be3a40d27dc726c2"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/SETTLEMENT-BINDING-RESULTS.json",
+      "sha256": "6d1442654194eac50f0a981a1cc6b01d6843d424354c15bd3c43523cab00d97e"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/SETTLEMENT-QUEUE-RESULTS.json",
+      "sha256": "599fd948ecc97bf55383087565b7abfa5a22ad80e2c1a11e05ac7f428775b793"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/settlement-queue.test.cjs",
+      "sha256": "84f08c3341d8dea44f6760e5c117007a552e3ff8d5a3ccd480570addf256cc79"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/SETTLEMENT-SOURCE-RESULTS.json",
+      "sha256": "955b19f92fb3392a4577738206d440f14c88cd466ef2e625d17b727bba5c2387"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/settlement-source.test.cjs",
+      "sha256": "3282e2e9c768475bb951e608ed7f2584d35451a1d1f97ec83dbfe8c9adb2f4be"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/test_binding_security.py",
+      "sha256": "fb50c7c3f116df4452c0a8610ad6f00105dac2d00aa4c316af441a711139c4d3"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/test_bound_cashier.py",
+      "sha256": "aa9c6286abec954664e2ee2e57b78c163566a6cef771f92623490421fa29d63f"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/test_bound_receipt_cogs.py",
+      "sha256": "ff6f73d7027c3c18b814960811c05acf953239c73ca46cd4a3167cbb722eebdb"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/test_contract_install.py",
+      "sha256": "402a1d42f4a7888a3a4215c8e6816f37f900e612b258ed705ae226522db618d4"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/test_procurement_bound.py",
+      "sha256": "5372319d182a33f901e9f7d8db2a8f9bc97bc4d95b8b70ce35f7ffc1f540847b"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/test_settlement_bindings.py",
+      "sha256": "bd35f12511a884371503312e12b5942d2cbbbf7c5b301bbcd35294b703069bed"
+    },
+    {
+      "path": "engineering/currency-financial-integration-20261019/2026101904-financial-currency-context.DRAFT.sql",
+      "sha256": "2d72cf83e848d4304e932403bfae0d6b0af6baae1314d4204128ee830ab9b3b4"
+    },
+    {
+      "path": "engineering/native-financial-contracts-20261019/2026101905-native-settlement-atomic.DRAFT.sql",
+      "sha256": "f9f849d7eb43844d8da92cf3c44bc51d8b9603b2c9d896eb2ab6d6e8aa35f3d4"
+    },
+    {
+      "path": "src/currency/settlementBindings.ts",
+      "sha256": "7307230a00125229b7210266d4374bf20b387c909f029f13906a99fdcbc19ee9"
+    },
+    {
+      "path": "src/offline/salesQueue.ts",
+      "sha256": "031f0d737105a39b2731e4c2809898a782a67e2952685739fbffd08e6bb348b7"
+    },
+    {
+      "path": "src/offline/salesSync.ts",
+      "sha256": "dad0afa7d1ab4ce8142958e098e8b8d1c55354c813c0952dd55b00971f3af170"
+    }
+  ],
+  "status": "VERIFIED_LOCAL_ONLY",
+  "productionWrites": false,
+  "deployments": false
+}

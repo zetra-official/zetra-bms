@@ -1,0 +1,12 @@
+{
+  "status": "PASS",
+  "count": 5,
+  "checks": [
+    "original settlement scope survives actual queue serialization",
+    "status transition cannot erase original settlement snapshot",
+    "status transition cannot replace currency revision",
+    "same sale request cannot replace settlement evidence",
+    "failed/uncertain sync retains original context for recovery"
+  ],
+  "scope": "Actual queue source with synthetic AsyncStorage, not physical-device storage or genuine Auth"
+}

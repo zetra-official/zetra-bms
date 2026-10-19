@@ -1,3 +1,4 @@
+import {BOUND_SETTLEMENT_ACTIVE,boundSaleRequest,verifyBoundSaleOutcome} from '../currency/settlementBindings';
 import { supabase } from "../supabase/supabaseClient";
 import { listQueue, markStatus, removeFromQueue, claimQueuedSale } from "./salesQueue";
 import {readAccountingAuthority,assertLegacyPostingCurrency} from '../currency/accounting';
@@ -25,8 +26,8 @@ export async function syncSalesQueueOnce(storeId: string) {
       if(NATIVE_SALE_PERSISTENCE_ACTIVE&&candidate.currency_context&&candidate.status==='NEEDS_REVIEW'){
         // Recover a committed response through an actor-scoped read, not by
         // blindly submitting another sale or replaying credit side effects.
-        try{const receipt=await supabase.rpc('get_native_sale_result_v1',{p_store_id:storeId,p_request_id:candidate.client_sale_id});
-          if(!receipt.error&&receipt.data){const saleId=verifyNativeSaleOutcome(candidate,receipt.data);await markStatus(storeId,candidate.id,{server_sale_id:saleId,status:'SYNCED',last_error:null});await removeFromQueue(storeId,candidate.id)}
+        try{const receipt=await supabase.rpc(BOUND_SETTLEMENT_ACTIVE?'get_bound_financial_result_v1':'get_native_sale_result_v1',{p_store_id:storeId,p_request_id:candidate.client_sale_id});
+          if(!receipt.error&&receipt.data){const saleId=BOUND_SETTLEMENT_ACTIVE?verifyBoundSaleOutcome(candidate,receipt.data):verifyNativeSaleOutcome(candidate,receipt.data);await markStatus(storeId,candidate.id,{server_sale_id:saleId,status:'SYNCED',last_error:null});await removeFromQueue(storeId,candidate.id)}
         }catch{/* Keep uncertain items intact for explicit reconciliation. */}
         continue;
       }
@@ -47,10 +48,10 @@ export async function syncSalesQueueOnce(storeId: string) {
           if(original.source!=='TRANSACTION_RECORD'||original.accountingCurrency!==expected.accountingCurrency||original.exchangeRate!=='1'||original.rateSource!==expected.rateSource||original.displayRateUsed!==false)throw Error('INVALID_OFFLINE_CURRENCY_CONTEXT');
         }
         if(NATIVE_SALE_PERSISTENCE_ACTIVE){
-          const args=nativeSaleRequest(item);rpcStarted=true;
-          const result=await supabase.rpc('create_native_sale_v1',args);
+          const args=BOUND_SETTLEMENT_ACTIVE?boundSaleRequest(item):nativeSaleRequest(item);rpcStarted=true;
+          const result=BOUND_SETTLEMENT_ACTIVE?await supabase.rpc('post_bound_financial_v1',args):await supabase.rpc('create_native_sale_v1',args);
           if(result.error)throw result.error;
-          const saleId=verifyNativeSaleOutcome(item,result.data);
+          const saleId=BOUND_SETTLEMENT_ACTIVE?verifyBoundSaleOutcome(item,result.data):verifyNativeSaleOutcome(item,result.data);
           // Server transaction already includes credit. Never replay separate
           // client credit/account writes after this atomic outcome.
           await markStatus(storeId,item.id,{server_sale_id:saleId,status:'SYNCED',last_error:null});

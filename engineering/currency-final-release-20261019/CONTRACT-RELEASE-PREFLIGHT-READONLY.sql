@@ -1,0 +1,8 @@
+BEGIN READ ONLY;SET LOCAL statement_timeout='15s';SET LOCAL lock_timeout='2s';
+SELECT jsonb_build_object('capture','CURRENCY_CONTRACT_EXTENSION_METADATA_ONLY','readOnly',current_setting('transaction_read_only'),
+'functions',(SELECT jsonb_agg(jsonb_build_object('identity',p.oid::regprocedure::text,'md5',md5(replace(pg_get_functiondef(p.oid),chr(13),'')),'definition',CASE WHEN n.nspname IN ('funding_evidence','funding_canonical') THEN pg_get_functiondef(p.oid) ELSE NULL END)) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE p.prokind='f' AND (n.nspname,p.proname) IN (('public','create_sale_with_payment_v4'),('public','record_credit_sale_v2'),('public','create_expense_v2'),('public','receive_inbound_stock_partial_v1'),('funding_control','source_ready'),('funding_evidence','apply_return'),('funding_evidence','wallet_writers_bound'),('funding_canonical','custody_event'))),
+'collisions',(SELECT count(*) FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname IN ('post_bound_financial_v1','confirm_settlement_account_v1','close_bound_cashier_shift_v1','get_bound_financial_result_v1')),
+'currencyMigration1802',to_regprocedure('public.create_org_with_store_currency_v1(text,text,text,text,text,text,text,text,text,text,text,uuid)')::text,
+'taxColumns',(SELECT coalesce(jsonb_agg(jsonb_build_object('table',table_name,'column',column_name)), '[]') FROM information_schema.columns WHERE table_schema='public' AND table_name IN ('sales','sale_items') AND column_name ~* '(tax|vat|discount)'),
+'privateRegistryCollision',to_regclass('backend_core.settlement_accounts')::text) metadata;
+ROLLBACK;

@@ -1,0 +1,65 @@
+ALTER TABLE backend_core.settlement_account_permissions DROP CONSTRAINT settlement_account_permissions_operation_check;
+ALTER TABLE backend_core.settlement_account_permissions ADD CONSTRAINT settlement_account_permissions_operation_check CHECK(operation IN ('SALE','COLLECTION','EXPENSE','SUPPLIER','REFUND','SHIFT'));
+CREATE TABLE backend_core.shift_account_bindings(shift_id uuid PRIMARY KEY REFERENCES public.cashier_shifts(id),account_id uuid NOT NULL REFERENCES backend_core.settlement_accounts(id),request_id uuid NOT NULL,confirmation_reference text NOT NULL,created_at timestamptz NOT NULL DEFAULT clock_timestamp());
+CREATE TABLE backend_core.shift_reconciliation_evidence(shift_id uuid PRIMARY KEY REFERENCES public.cashier_shifts(id),request_id uuid NOT NULL,details jsonb NOT NULL,created_at timestamptz NOT NULL DEFAULT clock_timestamp());
+CREATE TRIGGER immutable_shift_account_binding BEFORE UPDATE OR DELETE ON backend_core.shift_account_bindings FOR EACH ROW EXECUTE FUNCTION backend_core.immutable_settlement_evidence_v1();
+CREATE TRIGGER immutable_shift_reconciliation BEFORE UPDATE OR DELETE ON backend_core.shift_reconciliation_evidence FOR EACH ROW EXECUTE FUNCTION backend_core.immutable_settlement_evidence_v1();
+CREATE FUNCTION backend_core.project_bound_account_v1(ac uuid) RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=pg_catalog AS $$
+DECLARE a backend_core.settlement_accounts%ROWTYPE;b record;r jsonb;movement numeric:=0;
+BEGIN SELECT * INTO a FROM backend_core.settlement_accounts WHERE id=ac;IF NOT FOUND THEN RAISE EXCEPTION 'BOUND_ACCOUNT_REQUIRED';END IF;
+ FOR b IN SELECT * FROM backend_core.settlement_bindings WHERE account_id=ac LOOP r:=backend_core.canonical_settlement_fact_v1(b.source_kind,b.source_id);IF r->>'currency' IS DISTINCT FROM a.currency THEN RAISE EXCEPTION 'BOUND_ORIGINAL_CURRENCY_DRIFT';END IF;movement:=movement+(r->>'amount')::numeric;END LOOP;
+ RETURN jsonb_build_object('accountId',a.id,'currency',a.currency,'opening',a.opening_amount::text,'openingAt',a.opening_at,'netCanonicalMovements',movement::text,'balance',(a.opening_amount+movement)::text,'source','OWNER_CONFIRMED_OPENING_PLUS_BOUND_CANONICAL_RECORDS','externalProviderVerified',false);
+END $$;
+CREATE FUNCTION public.open_bound_cashier_shift_v1(p_store_id uuid,p_request_id uuid,p_currency text,p_revision integer,p_account_id uuid,p_opening numeric,p_confirmation_reference text) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
+DECLARE o uuid:=backend_core.settlement_scope_v1(p_store_id);actor uuid:=backend_core.active_subject();a backend_core.settlement_accounts%ROWTYPE;prior backend_core.settlement_requests%ROWTYPE;body jsonb;result jsonb;current_balance jsonb;
+BEGIN
+ PERFORM pg_advisory_xact_lock(hashtextextended('settlement-store:'||p_store_id::text,0));PERFORM pg_advisory_xact_lock(hashtextextended(p_store_id::text||':'||p_request_id::text,0));body:=jsonb_build_object('operation','OPEN_BOUND_SHIFT','currency',p_currency,'revision',p_revision,'account',p_account_id,'opening',p_opening::text,'confirmation',p_confirmation_reference);
+ SELECT * INTO prior FROM backend_core.settlement_requests WHERE store_id=p_store_id AND request_id=p_request_id;IF FOUND THEN IF prior.actor_id<>actor OR prior.payload<>body OR prior.organization_id<>o THEN RAISE EXCEPTION 'BOUND_REQUEST_CONFLICT';END IF;RETURN prior.result;END IF;
+ SELECT * INTO a FROM backend_core.settlement_accounts WHERE id=p_account_id FOR UPDATE;
+ IF a.id IS NULL OR a.kind<>'CASH' OR a.currency IS DISTINCT FROM p_currency OR a.organization_id<>o OR a.store_id<>p_store_id OR a.locked OR NOT EXISTS(SELECT 1 FROM backend_core.settlement_rollout WHERE organization_id=o AND enabled) OR NOT EXISTS(SELECT 1 FROM backend_core.settlement_account_permissions WHERE account_id=a.id AND actor_id=actor AND operation='SHIFT') OR length(btrim(coalesce(p_confirmation_reference,'')))<8 THEN RAISE EXCEPTION 'AUTHORIZED_DRAWER_ACCOUNT_REQUIRED';END IF;
+ IF EXISTS(SELECT 1 FROM backend_core.shift_account_bindings b JOIN public.cashier_shifts s ON s.id=b.shift_id WHERE b.account_id=a.id AND s.status='OPEN') THEN RAISE EXCEPTION 'DRAWER_ALREADY_IN_OPEN_SHIFT';END IF;
+ current_balance:=backend_core.project_bound_account_v1(a.id);IF p_opening IS NULL OR p_opening IS DISTINCT FROM (current_balance->>'balance')::numeric THEN RAISE EXCEPTION 'OWNER_ACCOUNT_AND_DRAWER_OPENING_MISMATCH';END IF;
+ result:=public.native_cashier_shift_v1(p_store_id,p_request_id,p_currency,p_revision,'OPEN_SHIFT',NULL,p_opening,'Bound drawer opening: '||p_confirmation_reference);
+ INSERT INTO backend_core.shift_account_bindings VALUES((result->>'shiftId')::uuid,a.id,p_request_id,p_confirmation_reference,clock_timestamp());result:=result||jsonb_build_object('accountId',a.id,'accountBalanceChanged',false);
+ INSERT INTO backend_core.settlement_requests VALUES(p_store_id,p_request_id,actor,o,body,result,clock_timestamp());
+ INSERT INTO backend_core.settlement_audit(event,actor_id,organization_id,store_id,request_id,details) VALUES('DRAWER_SHIFT_OPENED',actor,o,p_store_id,p_request_id,result);RETURN result;
+END $$;
+CREATE FUNCTION backend_core.bound_shift_coverage_v1(sid uuid) RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=pg_catalog AS $$
+DECLARE s public.cashier_shifts%ROWTYPE;unknown_count bigint:=0;n bigint;last_time timestamptz:=statement_timestamp();
+BEGIN SELECT * INTO s FROM public.cashier_shifts WHERE id=sid;IF NOT FOUND OR NOT EXISTS(SELECT 1 FROM backend_core.shift_account_bindings WHERE shift_id=s.id) THEN RETURN jsonb_build_object('complete',false,'unknownSources',NULL,'reason','VERIFIED_DRAWER_BINDING_REQUIRED');END IF;
+ last_time:=coalesce(s.closed_at,last_time);
+ SELECT count(*) INTO n FROM public.sale_payments p JOIN public.sales sale ON sale.id=p.sale_id WHERE sale.cashier_shift_id=s.id AND NOT EXISTS(SELECT 1 FROM backend_core.settlement_bindings b WHERE b.source_kind='SALE_PAYMENT' AND b.source_id=p.id AND b.shift_id=s.id);unknown_count:=unknown_count+n;
+ SELECT count(*) INTO n FROM public.credit_ledger_v2 p WHERE p.store_id=s.store_id AND p.delta<0 AND p.created_at>=s.opened_at AND p.created_at<=last_time AND NOT EXISTS(SELECT 1 FROM backend_core.settlement_bindings b WHERE b.source_kind='COLLECTION' AND b.source_id=p.id);unknown_count:=unknown_count+n;
+ SELECT count(*) INTO n FROM public.expenses p WHERE p.store_id=s.store_id AND p.created_at>=s.opened_at AND p.created_at<=last_time AND NOT EXISTS(SELECT 1 FROM backend_core.settlement_bindings b WHERE b.source_kind='EXPENSE' AND b.source_id=p.id);unknown_count:=unknown_count+n;
+ SELECT count(*) INTO n FROM public.inbound_stock_payments p JOIN public.inbound_stock_orders o ON o.id=p.inbound_order_id WHERE o.store_id=s.store_id AND p.created_at>=s.opened_at AND p.created_at<=last_time AND NOT EXISTS(SELECT 1 FROM backend_core.settlement_bindings b WHERE b.source_kind='SUPPLIER_PAYMENT' AND b.source_id=p.id);unknown_count:=unknown_count+n;
+ SELECT count(*) INTO n FROM public.business_debt_payments p WHERE p.store_id=s.store_id AND p.created_at>=s.opened_at AND p.created_at<=last_time AND NOT EXISTS(SELECT 1 FROM backend_core.supplier_payment_bindings b WHERE b.debt_payment_id=p.id);unknown_count:=unknown_count+n;
+ SELECT count(*) INTO n FROM public.business_loan_payments p WHERE p.store_id=s.store_id AND p.created_at>=s.opened_at AND p.created_at<=last_time;unknown_count:=unknown_count+n;
+ SELECT count(*) INTO n FROM public.field_wallet_transactions p WHERE p.store_id=s.store_id AND p.created_at>=s.opened_at AND p.created_at<=last_time;unknown_count:=unknown_count+n;
+ SELECT count(*) INTO n FROM funding_control.movements p WHERE p.shift_id=s.id;unknown_count:=unknown_count+n;
+ RETURN jsonb_build_object('complete',unknown_count=0,'unknownSources',unknown_count,'scope','BOUND_CANONICAL_SOURCE_COVERAGE','historicalAllocationInferred',false,'refundPostingAllowed',false,'custodyPostingAllowed',false);
+END $$;
+CREATE FUNCTION public.close_bound_cashier_shift_v1(p_store_id uuid,p_request_id uuid,p_currency text,p_revision integer,p_shift_id uuid,p_drawer numeric,p_note text) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
+DECLARE o uuid:=backend_core.settlement_scope_v1(p_store_id);actor uuid:=backend_core.active_subject();prior backend_core.settlement_requests%ROWTYPE;body jsonb;r jsonb;result jsonb;
+BEGIN
+ PERFORM pg_advisory_xact_lock(hashtextextended('settlement-store:'||p_store_id::text,0));PERFORM pg_advisory_xact_lock(hashtextextended(p_store_id::text||':'||p_request_id::text,0));body:=jsonb_build_object('operation','CLOSE_BOUND_SHIFT','currency',p_currency,'revision',p_revision,'shift',p_shift_id,'drawer',p_drawer::text,'note',p_note);
+ SELECT * INTO prior FROM backend_core.settlement_requests WHERE store_id=p_store_id AND request_id=p_request_id;IF FOUND THEN IF prior.actor_id<>actor OR prior.organization_id<>o OR prior.payload<>body THEN RAISE EXCEPTION 'BOUND_REQUEST_CONFLICT';END IF;RETURN prior.result;END IF;
+ IF NOT EXISTS(SELECT 1 FROM backend_core.settlement_rollout WHERE organization_id=o AND enabled) THEN RAISE EXCEPTION 'SETTLEMENT_ROLLOUT_DISABLED';END IF;
+ PERFORM 1 FROM public.cashier_shifts WHERE id=p_shift_id AND organization_id=o AND store_id=p_store_id AND status='OPEN' FOR UPDATE;IF NOT FOUND THEN RAISE EXCEPTION 'SHIFT_NOT_OPEN';END IF;
+ r:=public.read_bound_shift_reconciliation_v1(p_shift_id);IF r->>'currency' IS DISTINCT FROM p_currency OR r->>'complete' IS DISTINCT FROM 'true' THEN RAISE EXCEPTION 'SHIFT_HAS_UNVERIFIED_CANONICAL_SOURCES';END IF;
+ IF p_drawer IS DISTINCT FROM (r->>'expectedCash')::numeric AND nullif(btrim(p_note),'') IS NULL THEN RAISE EXCEPTION 'CLOSING_DISCREPANCY_NOTE_REQUIRED';END IF;
+ INSERT INTO backend_core.settlement_intents VALUES(pg_backend_pid(),txid_current(),actor,o,p_store_id,p_request_id,'CLOSE_SHIFT',p_shift_id);
+ result:=public.native_cashier_shift_v1(p_store_id,p_request_id,p_currency,p_revision,'CLOSE_SHIFT',p_shift_id,p_drawer,p_note);
+ r:=r||jsonb_build_object('drawerCount',p_drawer::text,'discrepancy',(p_drawer-(r->>'expectedCash')::numeric)::text,'canonicalShiftClosed',true);
+ INSERT INTO backend_core.shift_reconciliation_evidence VALUES(p_shift_id,p_request_id,r,clock_timestamp());result:=result||jsonb_build_object('boundReconciliation',r);
+ INSERT INTO backend_core.settlement_requests VALUES(p_store_id,p_request_id,actor,o,body,result,clock_timestamp());DELETE FROM backend_core.settlement_intents WHERE backend_pid=pg_backend_pid() AND transaction_id=txid_current();
+ INSERT INTO backend_core.settlement_audit(event,actor_id,organization_id,store_id,request_id,details) VALUES('DRAWER_SHIFT_CLOSED',actor,o,p_store_id,p_request_id,r);RETURN result;
+END $$;
+CREATE FUNCTION backend_core.guard_bound_shift_close_v1() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
+BEGIN IF OLD.status='OPEN' AND NEW.status='CLOSED' AND EXISTS(SELECT 1 FROM backend_core.shift_account_bindings WHERE shift_id=OLD.id) AND NOT EXISTS(SELECT 1 FROM backend_core.settlement_intents WHERE backend_pid=pg_backend_pid() AND transaction_id=txid_current() AND actor_id=backend_core.active_subject() AND operation='CLOSE_SHIFT' AND source_id=OLD.id) THEN RAISE EXCEPTION 'BOUND_SHIFT_ATOMIC_RECONCILIATION_REQUIRED';END IF;RETURN NEW;END $$;
+CREATE TRIGGER guard_bound_shift_close_v1 BEFORE UPDATE ON public.cashier_shifts FOR EACH ROW EXECUTE FUNCTION backend_core.guard_bound_shift_close_v1();
+CREATE FUNCTION public.get_bound_financial_result_v1(p_store_id uuid,p_request_id uuid) RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path=pg_catalog AS $$
+DECLARE o uuid:=backend_core.settlement_scope_v1(p_store_id);r jsonb;BEGIN SELECT result INTO r FROM backend_core.settlement_requests WHERE store_id=p_store_id AND request_id=p_request_id AND organization_id=o AND actor_id=backend_core.active_subject();RETURN r;END $$;
+DO $$DECLARE t text;p record;r record;BEGIN
+ FOREACH t IN ARRAY ARRAY['shift_account_bindings','shift_reconciliation_evidence'] LOOP EXECUTE format('ALTER TABLE backend_core.%I ENABLE ROW LEVEL SECURITY',t);EXECUTE format('ALTER TABLE backend_core.%I FORCE ROW LEVEL SECURITY',t);EXECUTE format('REVOKE ALL ON backend_core.%I FROM PUBLIC,anon,authenticated,service_role',t);END LOOP;
+ FOR p IN SELECT oid,proowner FROM pg_proc WHERE pronamespace IN ('public'::regnamespace,'backend_core'::regnamespace) AND proname IN ('project_bound_account_v1','open_bound_cashier_shift_v1','bound_shift_coverage_v1','close_bound_cashier_shift_v1','guard_bound_shift_close_v1','get_bound_financial_result_v1') LOOP EXECUTE format('REVOKE ALL ON FUNCTION %s FROM PUBLIC',p.oid::regprocedure);FOR r IN SELECT DISTINCT pg_get_userbyid(a.grantee) name FROM pg_proc f CROSS JOIN LATERAL aclexplode(coalesce(f.proacl,acldefault('f',f.proowner))) a WHERE f.oid=p.oid AND a.grantee<>p.proowner AND a.grantee<>0 LOOP EXECUTE format('REVOKE ALL ON FUNCTION %s FROM %I',p.oid::regprocedure,r.name);END LOOP;END LOOP;
+END $$;

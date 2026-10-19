@@ -1,3 +1,4 @@
+import {boundSaleRequest,type SettlementContext} from '../currency/settlementBindings';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { readBrowserQueue, updateBrowserQueue } from "./browserQueueStore";
 import type {transactionContext} from '../currency/engine';
@@ -30,6 +31,7 @@ export type SaleQueueItem = {
   currency_context?: ReturnType<typeof transactionContext>;
   // Original decimal strings for the new atomic contract. Numeric legacy
   // queue fields are retained for compatibility, never silently upgraded.
+  settlement_context?: SettlementContext;
   native_payload?: {items:{product_id:string;qty:string;unit_price:string}[];paid_amount:string;discount_value:string|null};
 
   payload: {
@@ -135,6 +137,7 @@ export async function enqueueSale(
   item: Omit<SaleQueueItem, "id" | "status" | "created_at">
 ) {
   if(item.native_payload)nativeSaleRequest(item as SaleQueueItem);
+  if(item.settlement_context)boundSaleRequest(item as SaleQueueItem);
   if (!Array.isArray(item.payload.items) || item.payload.items.length === 0 ||
       item.payload.items.some(it => !it.product_id || !Number.isFinite(it.qty) || it.qty <= 0 ||
         !Number.isFinite(it.unit_price) || it.unit_price < 0) ||
@@ -148,7 +151,7 @@ export async function enqueueSale(
   }
   const existing = q.find(x => x.client_sale_id === item.client_sale_id);
   if (existing) {
-    if (existing.store_id !== item.store_id || stableJson(existing.payload) !== stableJson(item.payload)||stableJson(existing.currency_context)!==stableJson(item.currency_context)||stableJson(existing.native_payload)!==stableJson(item.native_payload)) {
+    if (existing.store_id !== item.store_id || stableJson(existing.payload) !== stableJson(item.payload)||stableJson(existing.currency_context)!==stableJson(item.currency_context)||stableJson(existing.native_payload)!==stableJson(item.native_payload)||stableJson(existing.settlement_context)!==stableJson(item.settlement_context)) {
       throw new Error("Queued sale identifier already belongs to a different payload");
     }
     return { items: q, result: existing };
@@ -182,6 +185,7 @@ export async function markStatus(
   }
   if(existing&&Object.prototype.hasOwnProperty.call(patch,'currency_context')&&stableJson(patch.currency_context)!==stableJson(existing.currency_context))throw Error('Queued sale currency snapshot cannot be changed');
   if(existing&&Object.prototype.hasOwnProperty.call(patch,'native_payload')&&stableJson(patch.native_payload)!==stableJson(existing.native_payload))throw Error('Queued exact native amounts cannot be changed');
+  if(existing&&Object.prototype.hasOwnProperty.call(patch,'settlement_context')&&stableJson(patch.settlement_context)!==stableJson(existing.settlement_context))throw Error('Queued settlement context cannot be changed');
   const next = q.map((x) => (x.id === id ? { ...x, ...patch } : x));
   return { items: next, result: undefined };
   });

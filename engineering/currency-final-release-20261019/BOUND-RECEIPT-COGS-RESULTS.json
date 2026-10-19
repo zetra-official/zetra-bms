@@ -1,0 +1,105 @@
+{
+  "status": "PASS",
+  "count": 24,
+  "checks": [
+    "TZS original receipt cost used in canonical sale",
+    "TZS received quantity deducted once and original cost retained",
+    "TZS sale retry preserves COGS and stock",
+    "USD original receipt cost used in canonical sale",
+    "USD received quantity deducted once and original cost retained",
+    "USD sale retry preserves COGS and stock",
+    "KES original receipt cost used in canonical sale",
+    "KES received quantity deducted once and original cost retained",
+    "KES sale retry preserves COGS and stock",
+    "UGX original receipt cost used in canonical sale",
+    "UGX received quantity deducted once and original cost retained",
+    "UGX sale retry preserves COGS and stock",
+    "EUR original receipt cost used in canonical sale",
+    "EUR received quantity deducted once and original cost retained",
+    "EUR sale retry preserves COGS and stock",
+    "AED original receipt cost used in canonical sale",
+    "AED received quantity deducted once and original cost retained",
+    "AED sale retry preserves COGS and stock",
+    "JPY original receipt cost used in canonical sale",
+    "JPY received quantity deducted once and original cost retained",
+    "JPY sale retry preserves COGS and stock",
+    "KWD original receipt cost used in canonical sale",
+    "KWD received quantity deducted once and original cost retained",
+    "KWD sale retry preserves COGS and stock"
+  ],
+  "scenarios": [
+    {
+      "currency": "TZS",
+      "originalReceiptCost": "12.34",
+      "nativeSaleTotal": "20.12",
+      "cogs": "12.34",
+      "grossMarginBeforeOtherExpenses": "7.78",
+      "inventoryAfter": "0",
+      "saleId": "20f1fa73-bb28-4e37-8014-17025fa18a78"
+    },
+    {
+      "currency": "USD",
+      "originalReceiptCost": "12.34",
+      "nativeSaleTotal": "20.12",
+      "cogs": "12.34",
+      "grossMarginBeforeOtherExpenses": "7.78",
+      "inventoryAfter": "0",
+      "saleId": "6804d3db-f275-43a6-8418-1693f9dac657"
+    },
+    {
+      "currency": "KES",
+      "originalReceiptCost": "12.34",
+      "nativeSaleTotal": "20.12",
+      "cogs": "12.34",
+      "grossMarginBeforeOtherExpenses": "7.78",
+      "inventoryAfter": "0",
+      "saleId": "09147119-22d6-4211-87d0-551e503c1de6"
+    },
+    {
+      "currency": "UGX",
+      "originalReceiptCost": "12",
+      "nativeSaleTotal": "20",
+      "cogs": "12",
+      "grossMarginBeforeOtherExpenses": "8",
+      "inventoryAfter": "0",
+      "saleId": "e74e0e19-d11e-4ea2-a122-6ad155994105"
+    },
+    {
+      "currency": "EUR",
+      "originalReceiptCost": "12.34",
+      "nativeSaleTotal": "20.12",
+      "cogs": "12.34",
+      "grossMarginBeforeOtherExpenses": "7.78",
+      "inventoryAfter": "0",
+      "saleId": "e066387e-bb23-4c5e-90ba-2e9127a39480"
+    },
+    {
+      "currency": "AED",
+      "originalReceiptCost": "12.34",
+      "nativeSaleTotal": "20.12",
+      "cogs": "12.34",
+      "grossMarginBeforeOtherExpenses": "7.78",
+      "inventoryAfter": "0",
+      "saleId": "9f3d1a73-5541-44b8-a581-cd7d6a0d8be8"
+    },
+    {
+      "currency": "JPY",
+      "originalReceiptCost": "12",
+      "nativeSaleTotal": "20",
+      "cogs": "12",
+      "grossMarginBeforeOtherExpenses": "8",
+      "inventoryAfter": "0",
+      "saleId": "5b6f7adb-ec6e-4386-b438-330003382c3c"
+    },
+    {
+      "currency": "KWD",
+      "originalReceiptCost": "12.345",
+      "nativeSaleTotal": "20.125",
+      "cogs": "12.345",
+      "grossMarginBeforeOtherExpenses": "7.780",
+      "inventoryAfter": "0",
+      "saleId": "667f0833-5fd9-4e77-b610-bc47c143a3fc"
+    }
+  ],
+  "acceptance": "Disposable canonical receipt-to-sale lifecycle; synthetic Auth, no Production writes. Gross margin excludes tax/refunds/unbound expenses and is not certified net profit."
+}

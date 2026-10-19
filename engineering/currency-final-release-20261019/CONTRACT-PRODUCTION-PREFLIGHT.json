@@ -1,0 +1,58 @@
+{
+  "project": "dcmhqdckzhbuakvcyjit",
+  "capturedAt": "2026-10-19T13:18:37.700703+00:00",
+  "metadataOnly": true,
+  "customerRowsRead": false,
+  "writes": false,
+  "canonicalPreimagesMatch": true,
+  "newObjectCollisions": false,
+  "completedBackupCount": 8,
+  "latestCompletedBackup": {
+    "id": 2007453045,
+    "status": "COMPLETED",
+    "inserted_at": "2026-10-19T05:58:22.150Z",
+    "created_at": null,
+    "started_at": null,
+    "finished_at": null,
+    "is_physical_backup": true
+  },
+  "restoreRehearsalTested": false,
+  "storageObjectsIncluded": false,
+  "taxColumns": [
+    {
+      "column": "discount_value",
+      "table": "sales"
+    },
+    {
+      "column": "discount_amount",
+      "table": "sales"
+    },
+    {
+      "column": "discount_note",
+      "table": "sales"
+    },
+    {
+      "column": "discount_type",
+      "table": "sales"
+    }
+  ],
+  "custodyContracts": [
+    {
+      "identity": "funding_canonical.custody_event(uuid,text,uuid)",
+      "definitionSha256": "817dab39d1c6667c77e12c0ae12a2c525f070e7e3dce11a60e4f445ab8c61cdc",
+      "denyOnly": true
+    },
+    {
+      "identity": "funding_evidence.wallet_writers_bound(uuid)",
+      "definitionSha256": "aeb600ec234e363668df0666fbae775580c2c288f2a593638fc3c67edf07bc76",
+      "denyOnly": true
+    },
+    {
+      "identity": "funding_evidence.apply_return()",
+      "definitionSha256": "12cc657ed9152069e6757942b3c2b1d67d50220ce70c8cff7496d1794aab83bf",
+      "denyOnly": true
+    }
+  ],
+  "executionAuthorized": false,
+  "financialReleaseReady": false
+}
