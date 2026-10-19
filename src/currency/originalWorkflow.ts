@@ -1,3 +1,4 @@
+import {subtractExact} from './engine';
 /** Inactive until the exact backend, original-evidence and runtime gates pass. */
 export const ORIGINAL_WORKFLOW_ACTIVE=false;
 export type FinancialPort={rpc:(name:string,args:Record<string,unknown>)=>PromiseLike<{data:unknown;error:unknown}>};
@@ -36,9 +37,24 @@ export async function submitOriginalRefund(port:FinancialPort,storage:PendingSto
   }
   throw error;
  }
- if(!data||typeof data!=='object')throw Error('ORIGINAL_REFUND_RESULT_UNVERIFIED');
- const r=data as Record<string,unknown>;
- if(!uuid(String(r.refundId))||r.saleId!==intent.saleId||r.lineId!==intent.lineId||r.canonicalAccountBinding!==true||typeof r.currency!=='string'||typeof r.amount!=='string'||!/^\d+(\.\d+)?$/.test(r.amount)||r.sellable!==intent.sellable)throw Error('ORIGINAL_REFUND_RESULT_UNVERIFIED');
+ const r=verifiedRefundResult(data,intent);
+ await storage.setItem(key+':confirmed',JSON.stringify(intent));
  // The request is confirmed; failure to clear keeps a harmless idempotent replay.
  await storage.removeItem(key);return r;
+}
+
+function verifiedRefundResult(data:unknown,intent:OriginalRefundIntent){
+ if(!data||typeof data!=='object')throw Error('ORIGINAL_REFUND_RESULT_UNVERIFIED');
+ const r=data as Record<string,unknown>;
+ if(!uuid(String(r.refundId))||r.saleId!==intent.saleId||r.lineId!==intent.lineId||r.canonicalAccountBinding!==true||typeof r.quantity!=='string'||!/^\d{1,18}(\.\d{1,3})?$/.test(r.quantity)||subtractExact(r.quantity,intent.quantity)!=='0'||typeof r.currency!=='string'||typeof r.amount!=='string'||!/^\d+(\.\d+)?$/.test(r.amount)||r.sellable!==intent.sellable)throw Error('ORIGINAL_REFUND_RESULT_UNVERIFIED');
+ return r;
+}
+/** Persist only the scoped request pointer. Reprints always reload canonical
+ * server evidence; cached amounts/tax are never document authority. */
+export async function readConfirmedRefund(port:FinancialPort,storage:PendingStore,scope:Pick<OriginalRefundIntent,'actorId'|'organizationId'|'storeId'|'saleId'>){
+ const raw=await storage.getItem(refundPendingKey(scope)+':confirmed');if(!raw)return null;
+ const intent=JSON.parse(raw) as OriginalRefundIntent;originalRefundRequest(intent);
+ for(const k of ['actorId','organizationId','storeId','saleId'] as const)if(intent[k]!==scope[k])throw Error('ORIGINAL_REFUND_CONFIRMED_SCOPE_MISMATCH');
+ const {data,error}=await port.rpc('get_bound_financial_result_v1',{p_store_id:scope.storeId,p_request_id:intent.requestId});if(error)throw error;
+ return verifiedRefundResult(data,intent);
 }

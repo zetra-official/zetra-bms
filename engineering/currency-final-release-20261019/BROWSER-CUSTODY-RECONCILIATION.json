@@ -1,0 +1,260 @@
+{
+  "status": "PASS",
+  "count": 56,
+  "checks": [
+    "LOCAL-UI-TZS-FUND genuine Auth exact amount/currency",
+    "LOCAL-UI-TZS-FUND one canonical wallet/source link",
+    "LOCAL-UI-TZS-EXPENSE genuine Auth exact amount/currency",
+    "LOCAL-UI-TZS-EXPENSE one canonical wallet/source link",
+    "LOCAL-UI-TZS-RETURN genuine Auth exact amount/currency",
+    "LOCAL-UI-TZS-RETURN one canonical wallet/source link",
+    "TZS wallet/account zero and original source less exact expense; three links only",
+    "LOCAL-UI-USD-FUND genuine Auth exact amount/currency",
+    "LOCAL-UI-USD-FUND one canonical wallet/source link",
+    "LOCAL-UI-USD-EXPENSE genuine Auth exact amount/currency",
+    "LOCAL-UI-USD-EXPENSE one canonical wallet/source link",
+    "LOCAL-UI-USD-RETURN genuine Auth exact amount/currency",
+    "LOCAL-UI-USD-RETURN one canonical wallet/source link",
+    "USD wallet/account zero and original source less exact expense; three links only",
+    "LOCAL-UI-KES-FUND genuine Auth exact amount/currency",
+    "LOCAL-UI-KES-FUND one canonical wallet/source link",
+    "LOCAL-UI-KES-EXPENSE genuine Auth exact amount/currency",
+    "LOCAL-UI-KES-EXPENSE one canonical wallet/source link",
+    "LOCAL-UI-KES-RETURN genuine Auth exact amount/currency",
+    "LOCAL-UI-KES-RETURN one canonical wallet/source link",
+    "KES wallet/account zero and original source less exact expense; three links only",
+    "LOCAL-UI-UGX-FUND genuine Auth exact amount/currency",
+    "LOCAL-UI-UGX-FUND one canonical wallet/source link",
+    "LOCAL-UI-UGX-EXPENSE genuine Auth exact amount/currency",
+    "LOCAL-UI-UGX-EXPENSE one canonical wallet/source link",
+    "LOCAL-UI-UGX-RETURN genuine Auth exact amount/currency",
+    "LOCAL-UI-UGX-RETURN one canonical wallet/source link",
+    "UGX wallet/account zero and original source less exact expense; three links only",
+    "LOCAL-UI-EUR-FUND genuine Auth exact amount/currency",
+    "LOCAL-UI-EUR-FUND one canonical wallet/source link",
+    "LOCAL-UI-EUR-EXPENSE genuine Auth exact amount/currency",
+    "LOCAL-UI-EUR-EXPENSE one canonical wallet/source link",
+    "LOCAL-UI-EUR-RETURN genuine Auth exact amount/currency",
+    "LOCAL-UI-EUR-RETURN one canonical wallet/source link",
+    "EUR wallet/account zero and original source less exact expense; three links only",
+    "LOCAL-UI-AED-FUND genuine Auth exact amount/currency",
+    "LOCAL-UI-AED-FUND one canonical wallet/source link",
+    "LOCAL-UI-AED-EXPENSE genuine Auth exact amount/currency",
+    "LOCAL-UI-AED-EXPENSE one canonical wallet/source link",
+    "LOCAL-UI-AED-RETURN genuine Auth exact amount/currency",
+    "LOCAL-UI-AED-RETURN one canonical wallet/source link",
+    "AED wallet/account zero and original source less exact expense; three links only",
+    "LOCAL-UI-JPY-FUND genuine Auth exact amount/currency",
+    "LOCAL-UI-JPY-FUND one canonical wallet/source link",
+    "LOCAL-UI-JPY-EXPENSE genuine Auth exact amount/currency",
+    "LOCAL-UI-JPY-EXPENSE one canonical wallet/source link",
+    "LOCAL-UI-JPY-RETURN genuine Auth exact amount/currency",
+    "LOCAL-UI-JPY-RETURN one canonical wallet/source link",
+    "JPY wallet/account zero and original source less exact expense; three links only",
+    "LOCAL-UI-KWD-FUND genuine Auth exact amount/currency",
+    "LOCAL-UI-KWD-FUND one canonical wallet/source link",
+    "LOCAL-UI-KWD-EXPENSE genuine Auth exact amount/currency",
+    "LOCAL-UI-KWD-EXPENSE one canonical wallet/source link",
+    "LOCAL-UI-KWD-RETURN genuine Auth exact amount/currency",
+    "LOCAL-UI-KWD-RETURN one canonical wallet/source link",
+    "KWD wallet/account zero and original source less exact expense; three links only"
+  ],
+  "scenarios": [
+    {
+      "currency": "TZS",
+      "operation": "FUND",
+      "amount": "100",
+      "walletTransactionId": "4901dafd-ddd6-4d1b-93b7-05ab0a750642",
+      "requestId": "41725c22-cd85-4fd1-b8a2-8313fdfd9885",
+      "observedResponses": 1
+    },
+    {
+      "currency": "TZS",
+      "operation": "EXPENSE",
+      "amount": "12.34",
+      "walletTransactionId": "f702bce1-12b3-4395-ae70-ca1a4ac247a9",
+      "requestId": "4548324b-f570-43bd-9fdc-f89233519edf",
+      "observedResponses": 1
+    },
+    {
+      "currency": "TZS",
+      "operation": "RETURN",
+      "amount": "87.66",
+      "walletTransactionId": "4b20b32a-6b94-418f-aca7-0786eaa12ca4",
+      "requestId": "e3ea8129-928a-4bcc-87c1-426af6aeb30c",
+      "observedResponses": 1
+    },
+    {
+      "currency": "USD",
+      "operation": "FUND",
+      "amount": "100",
+      "walletTransactionId": "600efba1-db07-4cf2-9237-a35d968a3111",
+      "requestId": "76d2c7a3-7e36-42bc-a9f5-47d07412b492",
+      "observedResponses": 1
+    },
+    {
+      "currency": "USD",
+      "operation": "EXPENSE",
+      "amount": "12.34",
+      "walletTransactionId": "1c1f8a87-d5aa-4a5c-bdc1-e64c008ebc3d",
+      "requestId": "7ee03d25-663e-4731-bcca-fcfd4ecedbf7",
+      "observedResponses": 1
+    },
+    {
+      "currency": "USD",
+      "operation": "RETURN",
+      "amount": "87.66",
+      "walletTransactionId": "19aa4b66-cfaf-4abe-a369-026b2176ba2b",
+      "requestId": "5a1ff981-b7a3-4eab-965b-4cd016cab8f2",
+      "observedResponses": 1
+    },
+    {
+      "currency": "KES",
+      "operation": "FUND",
+      "amount": "100",
+      "walletTransactionId": "3db10d6a-a78b-4b35-80be-aaec644020d3",
+      "requestId": "acd7415e-f103-44f3-a870-ff3faa014158",
+      "observedResponses": 1
+    },
+    {
+      "currency": "KES",
+      "operation": "EXPENSE",
+      "amount": "12.34",
+      "walletTransactionId": "cbd6d6ee-5fea-4931-8365-114a598ff7cd",
+      "requestId": "6a20e8bb-902d-4be3-b86b-b68f4e7f657a",
+      "observedResponses": 1
+    },
+    {
+      "currency": "KES",
+      "operation": "RETURN",
+      "amount": "87.66",
+      "walletTransactionId": "61f0c44e-657c-4f69-a0ca-38901802e760",
+      "requestId": "27962271-106d-49dc-81c1-7b4cb01cd38e",
+      "observedResponses": 1
+    },
+    {
+      "currency": "UGX",
+      "operation": "FUND",
+      "amount": "100",
+      "walletTransactionId": "495db047-b476-4af4-b676-4a778d222a69",
+      "requestId": "c5110a3b-aedb-43a6-a670-fc56b122d9a5",
+      "observedResponses": 1
+    },
+    {
+      "currency": "UGX",
+      "operation": "EXPENSE",
+      "amount": "12",
+      "walletTransactionId": "fdd0fdc3-efc4-492f-9621-6504a358dd8b",
+      "requestId": "30a984a7-6718-478d-bc54-6587dbffd77a",
+      "observedResponses": 1
+    },
+    {
+      "currency": "UGX",
+      "operation": "RETURN",
+      "amount": "88",
+      "walletTransactionId": "7f2571e0-f8e6-4b2e-ba03-856050d7ab1b",
+      "requestId": "bea5e228-33a6-42d3-a2c9-3c46087b8358",
+      "observedResponses": 1
+    },
+    {
+      "currency": "EUR",
+      "operation": "FUND",
+      "amount": "100",
+      "walletTransactionId": "1298b282-f785-430f-b8c9-83e66e716259",
+      "requestId": "ab28145d-b422-4298-a2e2-fa91cf9864e2",
+      "observedResponses": 1
+    },
+    {
+      "currency": "EUR",
+      "operation": "EXPENSE",
+      "amount": "12.34",
+      "walletTransactionId": "14409c2d-6662-4ddd-ab36-5f6fa0d9206c",
+      "requestId": "7ac3f808-be82-4b6c-9508-efe5ed3c8d02",
+      "observedResponses": 1
+    },
+    {
+      "currency": "EUR",
+      "operation": "RETURN",
+      "amount": "87.66",
+      "walletTransactionId": "c86d9916-3982-4bdc-86a3-d13699958ad6",
+      "requestId": "3aada3fc-6643-4c6c-bd00-a90af4d999ea",
+      "observedResponses": 1
+    },
+    {
+      "currency": "AED",
+      "operation": "FUND",
+      "amount": "100",
+      "walletTransactionId": "2a5959f0-73b6-4fa3-9c9e-cfcde2fc09d4",
+      "requestId": "620d3b86-280b-4e15-ad64-1edc0d735de9",
+      "observedResponses": 1
+    },
+    {
+      "currency": "AED",
+      "operation": "EXPENSE",
+      "amount": "12.34",
+      "walletTransactionId": "8e8bb708-61e8-4afe-b94f-1d6abf1d1012",
+      "requestId": "934d692b-9904-4102-a4a2-a5844578ca12",
+      "observedResponses": 1
+    },
+    {
+      "currency": "AED",
+      "operation": "RETURN",
+      "amount": "87.66",
+      "walletTransactionId": "8e406a49-1505-4444-845a-59e9ef56bef1",
+      "requestId": "e7281aa5-af49-43b9-859c-2c44189700c9",
+      "observedResponses": 1
+    },
+    {
+      "currency": "JPY",
+      "operation": "FUND",
+      "amount": "100",
+      "walletTransactionId": "65590f6c-c619-4221-aef8-a9a25c2d7cfd",
+      "requestId": "b0f7bf4e-7f9b-4b88-a4c7-524484c8026e",
+      "observedResponses": 1
+    },
+    {
+      "currency": "JPY",
+      "operation": "EXPENSE",
+      "amount": "12",
+      "walletTransactionId": "ef6796b7-e84c-4564-91ac-a3a8238fe0c8",
+      "requestId": "9cef28af-38d0-4563-8fa4-c129d544338c",
+      "observedResponses": 1
+    },
+    {
+      "currency": "JPY",
+      "operation": "RETURN",
+      "amount": "88",
+      "walletTransactionId": "280af852-22cc-497a-ad78-a1fb09a37f99",
+      "requestId": "ea4dc8af-f9e5-4fd4-a5ea-61bcae03a7a7",
+      "observedResponses": 1
+    },
+    {
+      "currency": "KWD",
+      "operation": "FUND",
+      "amount": "100",
+      "walletTransactionId": "8a757df0-e3fa-4f70-b867-b781a5b8e9b1",
+      "requestId": "9d070624-f545-43ba-a008-e4a295ae016e",
+      "observedResponses": 1
+    },
+    {
+      "currency": "KWD",
+      "operation": "EXPENSE",
+      "amount": "12.345",
+      "walletTransactionId": "2d07b9e4-00de-4517-8c95-fd823e72fe52",
+      "requestId": "1ba347a4-6510-4782-a5d4-66b107987f6b",
+      "observedResponses": 1
+    },
+    {
+      "currency": "KWD",
+      "operation": "RETURN",
+      "amount": "87.655",
+      "walletTransactionId": "db99f0dc-2bfa-48bf-aa92-5362bcc55a4a",
+      "requestId": "4c9a84e3-b4e2-442a-a9a2-571a542d4e7b",
+      "observedResponses": 1
+    }
+  ],
+  "financialRuntimeId": "disposable-field-ui-732fbda1-b0e1-42a6-a179-4487a59aa013",
+  "scope": "Genuine upstream Auth, actual FieldCustodyForm, mobile-width browser, disposable synthetic custody FUND/EXPENSE/RETURN. Supplier/receipt lifecycle has separate local SQL evidence; physical Android and full deployed navigation remain unverified.",
+  "productionFinancialWrites": false,
+  "eventsSha256": "8770bb3e16bc0ba0e97aa954b0f0366040a7c3c1ee2be4f5396ea1bdda3f6131"
+}

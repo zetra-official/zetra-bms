@@ -1,0 +1,36 @@
+{
+  "status": "NO_VERIFIED_CANONICAL_ORIGINAL_TAX_PRODUCER_FOUND",
+  "scope": "Read-only actual linked Supabase function/schema metadata; no customer transaction reads or financial writes",
+  "canonicalSaleChain": [
+    "create_sale_v6",
+    "create_sale_v4",
+    "create_sale"
+  ],
+  "findings": [
+    "Canonical sale writer has no stored per-line original tax allocation or authoritative tax calculator",
+    "Proforma generic command accepts client tax totals; this is not a verified sale-time tax calculator",
+    "Canonical proforma save rejects nonzero tax; conversion preview rejects nonzero source tax",
+    "Missing original evidence cannot be inferred as zero tax"
+  ],
+  "proformaDefinitions": [
+    {
+      "declaration": "CREATE OR REPLACE FUNCTION proforma_backend.internal_command_v1(p_org uuid, p_store uuid, p_request uuid, p_document uuid, p_expected integer, p_operation text, p_body jsonb)",
+      "sha256": "b81b507052353c6782063f88ff6304209a87638ced5adfb87f6f49067c7b9136"
+    },
+    {
+      "declaration": "CREATE OR REPLACE FUNCTION public.proforma_document_save_v1(p_org uuid, p_store uuid, p_request uuid, p_document uuid, p_expected integer, p_operation text, p_body jsonb)",
+      "sha256": "daf3d651b27defc866407b4b2371437b3aebddfa91ef0089dc0619a8a0f923a0"
+    },
+    {
+      "declaration": "CREATE OR REPLACE FUNCTION public.proforma_document_fx_v1(p_org uuid, p_store uuid, p_request uuid, p_document uuid, p_expected integer, p_body jsonb)",
+      "sha256": "2cafda7749b99a7bb098de47696f0300f6f7cf43af139d2e0a4e7f4c087ff330"
+    },
+    {
+      "declaration": "CREATE OR REPLACE FUNCTION public.proforma_conversion_preview_v1(p_org uuid, p_store uuid, p_document uuid)",
+      "sha256": "e836f17c134c591c2faa2dc04d6a1aa145e5624d8997c4d1cc6e9ba73308f383"
+    }
+  ],
+  "implementedSafeguard": "SQL1917 captures immutable sale-time facts atomically and records NO_VERIFIED_PRODUCER. Configured private verified evidence adapter is required for CAPTURED; no default tax/rate, historical backfill or automatic activation.",
+  "remainingExternalInput": "A verified business tax calculation authority/policy producing actual original per-line amounts at sale posting is required before enabling tax-backed refunds for new taxed sales. Synthetic quote fixtures do not certify this authority.",
+  "productionFinancialWrites": false
+}

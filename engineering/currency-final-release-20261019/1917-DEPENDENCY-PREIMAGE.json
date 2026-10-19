@@ -1,0 +1,7 @@
+{
+  "identity": "public.post_bound_financial_v1(uuid,uuid,text,integer,text,jsonb,jsonb,uuid,jsonb)",
+  "md5": "f9bbd24f2af119c6d48302c00d5a4494",
+  "localRuntime": "disposable-original-product-b1896a59-dd2b-424a-b989-2ae03f51ed49",
+  "originalCaptureIdentity": "backend_core.capture_original_sale_evidence_v1(uuid,text)",
+  "originalCaptureMd5": "37cb7a500176a68504f78f9f07b4e5ee"
+}

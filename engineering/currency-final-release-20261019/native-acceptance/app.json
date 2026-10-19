@@ -1,0 +1,9 @@
+{
+  "expo": {
+    "name": "ZETRA Local Currency Acceptance",
+    "slug": "zetra-local-currency-acceptance",
+    "version": "1.0.0",
+    "platforms": ["android"],
+    "orientation": "portrait"
+  }
+}

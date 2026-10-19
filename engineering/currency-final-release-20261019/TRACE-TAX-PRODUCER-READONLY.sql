@@ -1,0 +1,7 @@
+BEGIN READ ONLY;
+SET LOCAL statement_timeout='20s';
+SELECT jsonb_build_object('database',current_database(),'readOnly',current_setting('transaction_read_only'),
+'columns',(SELECT coalesce(jsonb_agg(jsonb_build_object('schema',table_schema,'table',table_name,'column',column_name,'type',data_type)),'[]') FROM information_schema.columns WHERE table_schema NOT IN ('pg_catalog','information_schema','auth','storage') AND (column_name ~* '(tax|vat|levy)' OR table_name ~* '(tax|vat|levy)')),
+'functions',(SELECT coalesce(jsonb_agg(jsonb_build_object('identity',p.oid::regprocedure::text,'definition',pg_get_functiondef(p.oid),'md5',md5(replace(pg_get_functiondef(p.oid),chr(13),'')))),'[]') FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE p.prokind='f' AND n.nspname IN ('public','backend_core','proforma_backend') AND (p.proname IN ('create_sale','create_sale_with_payment_v4','create_sale_with_payment_v5','create_sale_with_payment_v6','create_native_sale_v1','post_bound_financial_v1') OR p.proname ~* '(tax|vat)' OR p.prosrc ~* '(tax_amount|tax_rate|tax_snapshot|vat_amount|vat_rate)')),
+'saleTriggers',(SELECT coalesce(jsonb_agg(jsonb_build_object('table',c.relname,'name',t.tgname,'definition',pg_get_triggerdef(t.oid),'function',p.oid::regprocedure::text,'body',pg_get_functiondef(p.oid))),'[]') FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid JOIN pg_proc p ON p.oid=t.tgfoid WHERE c.relnamespace='public'::regnamespace AND c.relname IN ('sales','sale_items','sale_payments') AND NOT t.tgisinternal));
+COMMIT;

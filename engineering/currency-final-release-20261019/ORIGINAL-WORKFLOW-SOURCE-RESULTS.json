@@ -1,6 +1,6 @@
 {
   "status": "PASS",
-  "count": 16,
+  "count": 22,
   "checks": [
     "refund request supplies no tax/rate/currency/amount override",
     "invalid quantity rejected: 0",
@@ -14,6 +14,12 @@
     "changed quantity cannot replace unresolved intent",
     "wrong-sale response cannot clear pending request",
     "confirmed exact replay clears pending request",
+    "confirmed receipt persists only scoped original request pointer",
+    "receipt after restart reloads canonical server result without posting",
+    "reprint rejects wrong canonical sale line",
+    "reprint rejects quantity different from confirmed original request",
+    "confirmed receipt pointer cannot cross actor scope",
+    "confirmed pointer storage failure preserves exact idempotent pending intent",
     "storage failure denies dispatch",
     "explicit atomic quantity rejection permits correction",
     "request conflict preserves unresolved original intent",

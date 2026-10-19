@@ -1,0 +1,180 @@
+{
+  "status": "PASS",
+  "count": 40,
+  "checks": [
+    "LOCAL-UI-TZS-SUPPLIER-FUND genuine Auth and exact received-invoice currency/amount",
+    "LOCAL-UI-TZS-SUPPLIER-FUND one request and canonical wallet posting",
+    "LOCAL-UI-TZS-SUPPLIER genuine Auth and exact received-invoice currency/amount",
+    "LOCAL-UI-TZS-SUPPLIER one request and canonical wallet posting",
+    "TZS receipt once; supplier/debt binding once; wallet/account zero; source conserves expense and supplier payment",
+    "LOCAL-UI-USD-SUPPLIER-FUND genuine Auth and exact received-invoice currency/amount",
+    "LOCAL-UI-USD-SUPPLIER-FUND one request and canonical wallet posting",
+    "LOCAL-UI-USD-SUPPLIER genuine Auth and exact received-invoice currency/amount",
+    "LOCAL-UI-USD-SUPPLIER one request and canonical wallet posting",
+    "USD receipt once; supplier/debt binding once; wallet/account zero; source conserves expense and supplier payment",
+    "LOCAL-UI-KES-SUPPLIER-FUND genuine Auth and exact received-invoice currency/amount",
+    "LOCAL-UI-KES-SUPPLIER-FUND one request and canonical wallet posting",
+    "LOCAL-UI-KES-SUPPLIER genuine Auth and exact received-invoice currency/amount",
+    "LOCAL-UI-KES-SUPPLIER one request and canonical wallet posting",
+    "KES receipt once; supplier/debt binding once; wallet/account zero; source conserves expense and supplier payment",
+    "LOCAL-UI-UGX-SUPPLIER-FUND genuine Auth and exact received-invoice currency/amount",
+    "LOCAL-UI-UGX-SUPPLIER-FUND one request and canonical wallet posting",
+    "LOCAL-UI-UGX-SUPPLIER genuine Auth and exact received-invoice currency/amount",
+    "LOCAL-UI-UGX-SUPPLIER one request and canonical wallet posting",
+    "UGX receipt once; supplier/debt binding once; wallet/account zero; source conserves expense and supplier payment",
+    "LOCAL-UI-EUR-SUPPLIER-FUND genuine Auth and exact received-invoice currency/amount",
+    "LOCAL-UI-EUR-SUPPLIER-FUND one request and canonical wallet posting",
+    "LOCAL-UI-EUR-SUPPLIER genuine Auth and exact received-invoice currency/amount",
+    "LOCAL-UI-EUR-SUPPLIER one request and canonical wallet posting",
+    "EUR receipt once; supplier/debt binding once; wallet/account zero; source conserves expense and supplier payment",
+    "LOCAL-UI-AED-SUPPLIER-FUND genuine Auth and exact received-invoice currency/amount",
+    "LOCAL-UI-AED-SUPPLIER-FUND one request and canonical wallet posting",
+    "LOCAL-UI-AED-SUPPLIER genuine Auth and exact received-invoice currency/amount",
+    "LOCAL-UI-AED-SUPPLIER one request and canonical wallet posting",
+    "AED receipt once; supplier/debt binding once; wallet/account zero; source conserves expense and supplier payment",
+    "LOCAL-UI-JPY-SUPPLIER-FUND genuine Auth and exact received-invoice currency/amount",
+    "LOCAL-UI-JPY-SUPPLIER-FUND one request and canonical wallet posting",
+    "LOCAL-UI-JPY-SUPPLIER genuine Auth and exact received-invoice currency/amount",
+    "LOCAL-UI-JPY-SUPPLIER one request and canonical wallet posting",
+    "JPY receipt once; supplier/debt binding once; wallet/account zero; source conserves expense and supplier payment",
+    "LOCAL-UI-KWD-SUPPLIER-FUND genuine Auth and exact received-invoice currency/amount",
+    "LOCAL-UI-KWD-SUPPLIER-FUND one request and canonical wallet posting",
+    "LOCAL-UI-KWD-SUPPLIER genuine Auth and exact received-invoice currency/amount",
+    "LOCAL-UI-KWD-SUPPLIER one request and canonical wallet posting",
+    "KWD receipt once; supplier/debt binding once; wallet/account zero; source conserves expense and supplier payment"
+  ],
+  "scenarios": [
+    {
+      "currency": "TZS",
+      "operation": "FUND",
+      "requestId": "ed9b3b9d-0ff9-4f15-9506-15c0cf8f4ef8",
+      "walletTransactionId": "e9dcab03-e063-416f-bc1b-816de07be274",
+      "amount": "12.34",
+      "priorRefusals": 0
+    },
+    {
+      "currency": "TZS",
+      "operation": "SUPPLIER",
+      "requestId": "c4646c7c-62f2-47ca-9b07-06f7730812ec",
+      "walletTransactionId": "da9340d4-bdb3-4970-875d-a887617ab796",
+      "amount": "12.34",
+      "priorRefusals": 1
+    },
+    {
+      "currency": "USD",
+      "operation": "FUND",
+      "requestId": "7d676ebc-3e9d-4350-b165-237f0465b7ea",
+      "walletTransactionId": "7b2daba9-3cc6-4e2e-aacc-a745b8d4d9f8",
+      "amount": "12.34",
+      "priorRefusals": 0
+    },
+    {
+      "currency": "USD",
+      "operation": "SUPPLIER",
+      "requestId": "8cadb415-f5ed-4a90-9384-ffdb9252cc3a",
+      "walletTransactionId": "d9f65af6-1d20-4bf6-871c-ce20921d9f5e",
+      "amount": "12.34",
+      "priorRefusals": 0
+    },
+    {
+      "currency": "KES",
+      "operation": "FUND",
+      "requestId": "70d24856-82c5-432d-8a08-e4a7f51b3ac0",
+      "walletTransactionId": "cbcd610a-e0c5-4621-b1e5-951341a441ec",
+      "amount": "12.34",
+      "priorRefusals": 0
+    },
+    {
+      "currency": "KES",
+      "operation": "SUPPLIER",
+      "requestId": "857bfa8b-b80f-4c05-af24-ee16cb65c4d5",
+      "walletTransactionId": "52659af6-311a-458c-86a6-7b9ef9a0caf8",
+      "amount": "12.34",
+      "priorRefusals": 0
+    },
+    {
+      "currency": "UGX",
+      "operation": "FUND",
+      "requestId": "e51fc68f-47af-42f0-bebc-0cdba5ae14d5",
+      "walletTransactionId": "515af705-29a4-4df0-9837-6fa90b175ce9",
+      "amount": "12",
+      "priorRefusals": 0
+    },
+    {
+      "currency": "UGX",
+      "operation": "SUPPLIER",
+      "requestId": "a5773447-91ff-4538-914d-a7641ee8c87b",
+      "walletTransactionId": "f134b4b1-2cdd-45d6-bf64-067dba86020c",
+      "amount": "12",
+      "priorRefusals": 0
+    },
+    {
+      "currency": "EUR",
+      "operation": "FUND",
+      "requestId": "1a18aa68-b769-401a-9fc2-3288e8c21107",
+      "walletTransactionId": "6953d4e6-7013-48aa-b49e-4375161bc9d3",
+      "amount": "12.34",
+      "priorRefusals": 0
+    },
+    {
+      "currency": "EUR",
+      "operation": "SUPPLIER",
+      "requestId": "12fccbe4-1e94-4e1a-a6a6-a423539dcdd4",
+      "walletTransactionId": "01befb7e-fde4-49ab-ac92-34e721f5c753",
+      "amount": "12.34",
+      "priorRefusals": 0
+    },
+    {
+      "currency": "AED",
+      "operation": "FUND",
+      "requestId": "4565fc34-1ba5-410a-8622-45061be99722",
+      "walletTransactionId": "8ab6b87e-1682-4064-9724-2c104c6285e1",
+      "amount": "12.34",
+      "priorRefusals": 0
+    },
+    {
+      "currency": "AED",
+      "operation": "SUPPLIER",
+      "requestId": "961ff1c7-bb26-424d-9d78-fd27247581d5",
+      "walletTransactionId": "e9873173-e599-4e5e-ab29-e54fb3ba1ba1",
+      "amount": "12.34",
+      "priorRefusals": 0
+    },
+    {
+      "currency": "JPY",
+      "operation": "FUND",
+      "requestId": "378cca48-b8fe-4598-ba95-68fd9130d5ae",
+      "walletTransactionId": "40b5cb99-0a01-4801-a1fd-49f5beab9f01",
+      "amount": "12",
+      "priorRefusals": 0
+    },
+    {
+      "currency": "JPY",
+      "operation": "SUPPLIER",
+      "requestId": "525047fe-5eed-4792-9b6a-fa425269297d",
+      "walletTransactionId": "ebc19691-92b3-4b28-acb8-ddb28e7c9ec4",
+      "amount": "12",
+      "priorRefusals": 0
+    },
+    {
+      "currency": "KWD",
+      "operation": "FUND",
+      "requestId": "3e9eb19f-3ee3-47dd-8e7c-ed57e71a0dcd",
+      "walletTransactionId": "437baad0-3023-40e7-bdde-4033eed1be69",
+      "amount": "12.345",
+      "priorRefusals": 0
+    },
+    {
+      "currency": "KWD",
+      "operation": "SUPPLIER",
+      "requestId": "346d22c6-a91c-4fad-99e5-a897f9533cdd",
+      "walletTransactionId": "9ceea859-954a-42e9-bac0-6fd1c3c0e12c",
+      "amount": "12.345",
+      "priorRefusals": 0
+    }
+  ],
+  "financialRuntimeId": "disposable-field-ui-732fbda1-b0e1-42a6-a179-4487a59aa013",
+  "scope": "Genuine Auth / actual FieldCustodyForm supplier UI; dedicated synthetic original invoices and canonical verified receipt setup. Inventory receiving setup is local SQL, not receiving UI or physical Android acceptance.",
+  "productionFinancialWrites": false,
+  "eventsSha256": "308129b8f0e7e8900c840f2599eb8ced145291b56a3e118e54fd9aa00bf6d378"
+}
