@@ -1,0 +1,240 @@
+[
+  {
+    "table": "organization_subscriptions",
+    "column": "id",
+    "type": "uuid",
+    "nullable": "NO",
+    "default": "gen_random_uuid()"
+  },
+  {
+    "table": "organization_subscriptions",
+    "column": "organization_id",
+    "type": "uuid",
+    "nullable": "NO",
+    "default": null
+  },
+  {
+    "table": "organization_subscriptions",
+    "column": "plan_id",
+    "type": "uuid",
+    "nullable": "NO",
+    "default": null
+  },
+  {
+    "table": "organization_subscriptions",
+    "column": "status",
+    "type": "USER-DEFINED",
+    "nullable": "NO",
+    "default": "'ACTIVE'::subscription_status"
+  },
+  {
+    "table": "organization_subscriptions",
+    "column": "start_at",
+    "type": "timestamp with time zone",
+    "nullable": "NO",
+    "default": "now()"
+  },
+  {
+    "table": "organization_subscriptions",
+    "column": "end_at",
+    "type": "timestamp with time zone",
+    "nullable": "NO",
+    "default": null
+  },
+  {
+    "table": "organization_subscriptions",
+    "column": "created_by",
+    "type": "uuid",
+    "nullable": "NO",
+    "default": "auth.uid()"
+  },
+  {
+    "table": "organization_subscriptions",
+    "column": "created_at",
+    "type": "timestamp with time zone",
+    "nullable": "NO",
+    "default": "now()"
+  },
+  {
+    "table": "organization_subscriptions",
+    "column": "updated_at",
+    "type": "timestamp with time zone",
+    "nullable": "NO",
+    "default": "now()"
+  },
+  {
+    "table": "plans",
+    "column": "id",
+    "type": "uuid",
+    "nullable": "NO",
+    "default": "gen_random_uuid()"
+  },
+  {
+    "table": "plans",
+    "column": "code",
+    "type": "text",
+    "nullable": "NO",
+    "default": null
+  },
+  {
+    "table": "plans",
+    "column": "name",
+    "type": "text",
+    "nullable": "NO",
+    "default": null
+  },
+  {
+    "table": "plans",
+    "column": "description",
+    "type": "text",
+    "nullable": "YES",
+    "default": null
+  },
+  {
+    "table": "plans",
+    "column": "monthly_price_tzs",
+    "type": "integer",
+    "nullable": "NO",
+    "default": "0"
+  },
+  {
+    "table": "plans",
+    "column": "is_public",
+    "type": "boolean",
+    "nullable": "NO",
+    "default": "true"
+  },
+  {
+    "table": "plans",
+    "column": "is_active",
+    "type": "boolean",
+    "nullable": "NO",
+    "default": "true"
+  },
+  {
+    "table": "plans",
+    "column": "max_organizations",
+    "type": "integer",
+    "nullable": "YES",
+    "default": null
+  },
+  {
+    "table": "plans",
+    "column": "max_stores",
+    "type": "integer",
+    "nullable": "YES",
+    "default": null
+  },
+  {
+    "table": "plans",
+    "column": "max_staff",
+    "type": "integer",
+    "nullable": "YES",
+    "default": null
+  },
+  {
+    "table": "plans",
+    "column": "ai_enabled",
+    "type": "boolean",
+    "nullable": "NO",
+    "default": "false"
+  },
+  {
+    "table": "plans",
+    "column": "ai_credits_monthly",
+    "type": "integer",
+    "nullable": "NO",
+    "default": "0"
+  },
+  {
+    "table": "plans",
+    "column": "advanced_reports_enabled",
+    "type": "boolean",
+    "nullable": "NO",
+    "default": "false"
+  },
+  {
+    "table": "plans",
+    "column": "business_club_posts_per_store_month",
+    "type": "integer",
+    "nullable": "YES",
+    "default": null
+  },
+  {
+    "table": "plans",
+    "column": "created_at",
+    "type": "timestamp with time zone",
+    "nullable": "NO",
+    "default": "now()"
+  },
+  {
+    "table": "plans",
+    "column": "updated_at",
+    "type": "timestamp with time zone",
+    "nullable": "NO",
+    "default": "now()"
+  },
+  {
+    "table": "plans",
+    "column": "staff_per_org",
+    "type": "integer",
+    "nullable": "YES",
+    "default": "1"
+  },
+  {
+    "table": "plans",
+    "column": "stores_per_org",
+    "type": "integer",
+    "nullable": "YES",
+    "default": "1"
+  },
+  {
+    "table": "plans",
+    "column": "plan_code",
+    "type": "text",
+    "nullable": "YES",
+    "default": null
+  },
+  {
+    "table": "plans",
+    "column": "maxstaff",
+    "type": "integer",
+    "nullable": "YES",
+    "default": "0"
+  },
+  {
+    "table": "plans",
+    "column": "maxstores",
+    "type": "integer",
+    "nullable": "YES",
+    "default": "0"
+  },
+  {
+    "table": "plans",
+    "column": "maxproducts",
+    "type": "integer",
+    "nullable": "YES",
+    "default": "0"
+  },
+  {
+    "table": "plans",
+    "column": "maxbranches",
+    "type": "integer",
+    "nullable": "YES",
+    "default": "0"
+  },
+  {
+    "table": "plans",
+    "column": "maxusers",
+    "type": "integer",
+    "nullable": "YES",
+    "default": "0"
+  },
+  {
+    "table": "plans",
+    "column": "product_limit",
+    "type": "integer",
+    "nullable": "YES",
+    "default": null
+  }
+]

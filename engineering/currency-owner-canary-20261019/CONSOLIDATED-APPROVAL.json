@@ -1,0 +1,51 @@
+{
+  "status": "AWAITING ONE EXACT OWNER SQL APPROVAL",
+  "project": "dcmhqdckzhbuakvcyjit",
+  "ownerApprovedActor": "bb2d6dee-773d-4fa7-8fda-1eb85bbad2cd",
+  "actorApproved": true,
+  "emailSpellingMismatchDocumented": true,
+  "requestId": "c96651e7-b57f-4b72-9f7e-96f1b1abc4a4",
+  "organizationName": "ZETRA CANARY TZS OWNER 20261019",
+  "storeName": "SYNTHETIC TZS OWNER CANARY",
+  "currency": "TZS",
+  "timezone": "Africa/Dar_es_Salaam",
+  "acknowledged": true,
+  "approvalReference": "OWNER-GLOBAL-CURRENCY-EXACT-SQL-20261019",
+  "artifactsInOrder": [
+    {
+      "file": "engineering/currency-canary-quota-20261019/2026101902-tzs-canary-quota.DRAFT.sql",
+      "sha256": "7ce3e81d44b402d53f19f4776647e4953471aef34d51faea69536696aeb13e55"
+    },
+    {
+      "file": "engineering/currency-owner-canary-20261019/2026101903-owner-canary-org-limit.DRAFT.sql",
+      "sha256": "781741d3e5a6a014a2e2a4d21d3d5ef25decbfb608b31ee34cf9fa34fb137b9f"
+    },
+    {
+      "file": "engineering/currency-owner-canary-20261019/ACTIVATE-OWNER-CANARY.DRAFT.sql",
+      "sha256": "c77e486bf74d173e1cd467dfb1c0da937c61c186fa210ac735a39e5bdcdc6e76"
+    },
+    {
+      "file": "engineering/currency-owner-canary-20261019/DISABLE-OWNER-CANARY.DRAFT.sql",
+      "sha256": "8882f331f58c58b6fd49db456aaf64a4e142f54bf85479aa8bffde9ba097b943"
+    }
+  ],
+  "orgLimitException": {
+    "requiresExplicitApproval": true,
+    "normalPlan": "BUSINESS",
+    "normalOrganizationLimit": 2,
+    "existingOwnedOrganizations": 2,
+    "additionalSyntheticOrganizations": 1,
+    "planSubscriptionRecordsModified": false,
+    "ordinaryRpcExceptionAllowed": false
+  },
+  "scope": {
+    "newSyntheticOrganizations": 1,
+    "newSyntheticStores": 1,
+    "ttlSeconds": 3600,
+    "financialTransactions": 0,
+    "modifyExistingBusinessRecords": false
+  },
+  "sqlExecutionApproved": false,
+  "activationApproved": false,
+  "deploymentApproved": false
+}

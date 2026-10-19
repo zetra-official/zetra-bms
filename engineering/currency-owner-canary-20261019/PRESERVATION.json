@@ -1,0 +1,9 @@
+{
+  "priorManifestsIntact": true,
+  "applicationSourceHashesIntact": true,
+  "applicationFilesChanged": 0,
+  "pythonSyntax": "PASS",
+  "localClustersStopped": true,
+  "previous61And1423SuitesRerun": false,
+  "newFocusedPostgresChecks": 47
+}
