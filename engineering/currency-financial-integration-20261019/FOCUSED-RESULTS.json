@@ -1,0 +1,31 @@
+{
+  "status": "PASS",
+  "count": 24,
+  "checks": [
+    "exact fractional price x decimal quantity",
+    "no truncation of precision-retail quantities",
+    "legacy canonical whole-unit discount preserved",
+    "fixed discount capped at subtotal",
+    "negative and nonfinite quantities rejected",
+    "exact credits and repayment reconciliation",
+    "currency totals never aggregate unlike denominations",
+    "TZS authority, exact arithmetic and native gate",
+    "USD authority, exact arithmetic and native gate",
+    "KES authority, exact arithmetic and native gate",
+    "UGX authority, exact arithmetic and native gate",
+    "EUR authority, exact arithmetic and native gate",
+    "AED authority, exact arithmetic and native gate",
+    "JPY authority, exact arithmetic and native gate",
+    "KWD authority, exact arithmetic and native gate",
+    "device preference cannot become authority",
+    "authorization failure not mistaken for unconfirmed currency",
+    "unconfirmed authority remains null",
+    "actual offline synchronizer denies uncertified native posting before sale RPC",
+    "new currency diagnostics localized in all seven languages",
+    "cancelled authority read never starts RPC",
+    "same queued sale cannot acquire a different denomination",
+    "status update cannot rewrite currency snapshot",
+    "queue currency persists through serialization/reload"
+  ],
+  "scope": "Actual production helpers and synchronizer with isolated transport; no live postings, Auth/device or native settlement certification"
+}

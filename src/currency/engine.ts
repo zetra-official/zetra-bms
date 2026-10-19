@@ -12,6 +12,40 @@ export type CurrencyStatus='ORIGINAL'|'CONVERTED'|'UNVERIFIED_CURRENCY'|'RATE_UN
 export type RecordedMoney={amount:string;currency:string|null;organizationId:string;contextRevision:number|null;source:'TRANSACTION_RECORD'|'OWNER_CONFIRMED_CURRENT'|'LEGACY_UNVERIFIED'};
 export type CurrencyView={status:CurrencyStatus;original:Readonly<RecordedMoney>;displayAmount:string;displayCurrency:string|null;rate?:{provider:string;referenceDate:string;retrievedAt:string;sourceSha256:string;numerator:string;denominator:string};rounding:'HALF_AWAY_FROM_ZERO_DISPLAY_ONLY';postingAllowed:false};
 const decimal=/^-?\d{1,30}(\.\d{1,18})?$/;
+/** Exact decimal primitives for existing price/quantity and report adapters.
+ * No implicit settlement rounding, currency conversion or posting authority. */
+function decimalParts(value:string){
+ if(!decimal.test(value))throw Error('INVALID_AMOUNT');
+ const negative=value.startsWith('-'),[whole,fraction='']=(negative?value.slice(1):value).split('.');
+ return {units:BigInt(whole+fraction)*(negative?-1n:1n),scale:fraction.length};
+}
+function decimalText(units:bigint,scale:number):string{
+ const negative=units<0n,raw=(negative?-units:units).toString().padStart(scale+1,'0');
+ const value=scale?(raw.slice(0,-scale)+'.'+raw.slice(-scale)).replace(/\.?0+$/,''):raw;
+ const result=(negative&&units!==0n?'-':'')+value;
+ if(!decimal.test(result))throw Error('AMOUNT_OUT_OF_RANGE');
+ return result;
+}
+export function addExact(left:string,right:string):string{
+ const a=decimalParts(left),b=decimalParts(right),scale=Math.max(a.scale,b.scale);
+ return decimalText(a.units*10n**BigInt(scale-a.scale)+b.units*10n**BigInt(scale-b.scale),scale);
+}
+export function subtractExact(left:string,right:string):string{
+ const b=decimalParts(right);return addExact(left,decimalText(-b.units,b.scale));
+}
+export function multiplyExact(left:string,right:string):string{
+ const a=decimalParts(left),b=decimalParts(right);return decimalText(a.units*b.units,a.scale+b.scale);
+}
+/** Totals remain separated by immutable recorded currency. Unknown historical
+ * denomination and mixed organizations cannot become a booked report total. */
+export function recordedTotals(rows:readonly RecordedMoney[],organizationId:string):Readonly<Record<string,string>>{
+ const totals:Record<string,string>={};
+ for(const row of rows){validateMoney(row);if(row.organizationId!==organizationId)throw Error('CURRENCY_TENANT_MISMATCH');
+  if(row.source!=='TRANSACTION_RECORD'||!row.currency)throw Error('HISTORICAL_CURRENCY_UNVERIFIED');
+  currencyPrecision(row.currency);totals[row.currency]=addExact(totals[row.currency]||'0',row.amount);
+ }
+ return Object.freeze(totals);
+}
 export function validateMoney(value:RecordedMoney):void{
  if(!decimal.test(value.amount)||!value.organizationId||!['TRANSACTION_RECORD','OWNER_CONFIRMED_CURRENT','LEGACY_UNVERIFIED'].includes(value.source))throw Error('INVALID_MONEY');
  if(value.currency!==null&&!/^[A-Z]{3}$/.test(value.currency))throw Error('INVALID_CURRENCY');

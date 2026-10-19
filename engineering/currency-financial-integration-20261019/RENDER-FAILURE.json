@@ -1,0 +1,23 @@
+{
+  "error": "fr exact original total",
+  "completed": [
+    {
+      "width": 390,
+      "language": "en",
+      "render": true,
+      "originalQuantity": true,
+      "originalTotal": true,
+      "noOverflow": true,
+      "pageErrors": 0
+    },
+    {
+      "width": 390,
+      "language": "sw",
+      "render": true,
+      "originalQuantity": true,
+      "originalTotal": true,
+      "noOverflow": true,
+      "pageErrors": 0
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+[
+  {
+    "file": "src/currency/engine.ts",
+    "beforeSha256": "9fc674fdb215a04e3cfeafb4ae06b6971a7ea4dc194b909cc884de2a07b79be7"
+  },
+  {
+    "file": "src/pos/itemAdjustment.ts",
+    "beforeSha256": "2d206a37a39ed591e900475347f7a993c8c38b51c7b97298331e7715ad7ce4b4"
+  },
+  {
+    "file": "src/offline/salesQueue.ts",
+    "beforeSha256": "dd978e0f089adfa95951e6e3227c72075a6d83c906cf03688036a58a430d9879"
+  },
+  {
+    "file": "src/offline/salesSync.ts",
+    "beforeSha256": "9393dbe357054a4026f8fc51a1e69b51907eec83be3bbc6cfe865a8177a8c324"
+  },
+  {
+    "file": "app/(tabs)/sales/checkout.tsx",
+    "beforeSha256": "07878e3cb9cd76be098350c087881b5c5937336654368ca6473a7913151c806f"
+  },
+  {
+    "file": "app/(tabs)/sales/index.tsx",
+    "beforeSha256": "10da24bda7cd77d460f057ed88320218d4e8587c2a0ed9e9d1f5463f3d26d03d"
+  },
+  {
+    "file": "app/(tabs)/sales/offline-receipt.tsx",
+    "beforeSha256": "2417718d516b071c57fa132e9c96519326b92775080d305ca5ee31de06932dbb"
+  },
+  {
+    "file": "src/i18n/systemMessages.ts",
+    "beforeSha256": "427a600163c5722f33dd065b3a629c09f522223dddc591cdb7e922d09c625ff8"
+  }
+]

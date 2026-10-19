@@ -1,0 +1,34 @@
+{
+  "status": "PARTIAL_NOT_NATIVE_ACTIVATION_READY",
+  "project": "dcmhqdckzhbuakvcyjit",
+  "migration": {
+    "file": "2026101904-financial-currency-context.DRAFT.sql",
+    "sha256": "2d72cf83e848d4304e932403bfae0d6b0af6baae1314d4204128ee830ab9b3b4",
+    "executed": false,
+    "scope": "Nullable immutable future sale/payment/expense currency context; non-TZS denial; no backfill/RPC grant"
+  },
+  "rollback": {
+    "file": "2026101904-ROLLBACK-PRESERVE-CONTEXT.sql",
+    "sha256": "fa624e1f9db6cb9151ce96ffd1725940bde5ec74dfe4537b8a408303c2b7e621",
+    "testedLocally": true
+  },
+  "productionMetadataCompatibility": "MATCHED_TOUCHED_OBJECTS",
+  "productionWritesAuthorizedByThisFile": false,
+  "nonTzsActivation": false,
+  "deploymentAuthorized": false,
+  "requiredBeforeLiveWrite": [
+    "Exact Owner authorization",
+    "fresh backup/recovery/target/hash/lock/schema gates"
+  ],
+  "remainingFinancialBoundaries": [
+    "canonical currency-aware discount/tax/settlement arithmetic",
+    "inventory/COGS cost provenance",
+    "credit account/repayment original currency",
+    "source account and cashier closing currency",
+    "procurement custody/supplier settlement",
+    "refund original-currency linkage",
+    "server-atomic offline revision adapter",
+    "native per-record report and FX provider coverage"
+  ],
+  "canary": "ACCEPTED_PASS_DISABLED_92ee8c0_NOT_RERUN"
+}

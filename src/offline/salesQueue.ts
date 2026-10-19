@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { readBrowserQueue, updateBrowserQueue } from "./browserQueueStore";
+import type {transactionContext} from '../currency/engine';
 
 export type PayMethod = "CASH" | "MOBILE" | "BANK" | "CREDIT";
 
@@ -24,6 +25,8 @@ export type SaleQueueItem = {
   status: "PENDING" | "SENDING" | "SYNCED" | "FAILED" | "NEEDS_REVIEW";
   last_error?: string | null;
   server_sale_id?: string | null;
+  // New captures only. Never infer or backfill old queue denomination.
+  currency_context?: ReturnType<typeof transactionContext>;
 
   payload: {
     items: QueuedItem[];
@@ -140,7 +143,7 @@ export async function enqueueSale(
   }
   const existing = q.find(x => x.client_sale_id === item.client_sale_id);
   if (existing) {
-    if (existing.store_id !== item.store_id || stableJson(existing.payload) !== stableJson(item.payload)) {
+    if (existing.store_id !== item.store_id || stableJson(existing.payload) !== stableJson(item.payload)||stableJson(existing.currency_context)!==stableJson(item.currency_context)) {
       throw new Error("Queued sale identifier already belongs to a different payload");
     }
     return { items: q, result: existing };
@@ -172,6 +175,7 @@ export async function markStatus(
   if (existing && patch.payload !== undefined && stableJson(patch.payload) !== stableJson(existing.payload)) {
     throw new Error("Queued sale financial payload cannot be changed by a status update");
   }
+  if(existing&&Object.prototype.hasOwnProperty.call(patch,'currency_context')&&stableJson(patch.currency_context)!==stableJson(existing.currency_context))throw Error('Queued sale currency snapshot cannot be changed');
   const next = q.map((x) => (x.id === id ? { ...x, ...patch } : x));
   return { items: next, result: undefined };
   });

@@ -1,0 +1,64 @@
+[
+  {
+    "file": "src/currency/engine.ts",
+    "beforeSha256": "9fc674fdb215a04e3cfeafb4ae06b6971a7ea4dc194b909cc884de2a07b79be7",
+    "afterSha256": "3d14147f30775706e8b33051ecc933a943020943583ebce6cda67945ee4fdab9",
+    "existedInStartingWorkingTree": true
+  },
+  {
+    "file": "src/offline/salesQueue.ts",
+    "beforeSha256": "dd978e0f089adfa95951e6e3227c72075a6d83c906cf03688036a58a430d9879",
+    "afterSha256": "4e93397f88940901c699235a1b686d32983a6374c761be66968e60e0c038c25f",
+    "existedInStartingWorkingTree": true
+  },
+  {
+    "file": "src/offline/salesSync.ts",
+    "beforeSha256": "9393dbe357054a4026f8fc51a1e69b51907eec83be3bbc6cfe865a8177a8c324",
+    "afterSha256": "061e880e27fc6163ca43c099ebc016bdd651c9a07caba51c29ffed4486b09d8d",
+    "existedInStartingWorkingTree": true
+  },
+  {
+    "file": "app/(tabs)/sales/checkout.tsx",
+    "beforeSha256": "07878e3cb9cd76be098350c087881b5c5937336654368ca6473a7913151c806f",
+    "afterSha256": "4beab96e56fb57b8bb9fd982528c1155f41ce45961f2d999162a7befcb5f2cd0",
+    "existedInStartingWorkingTree": true
+  },
+  {
+    "file": "app/(tabs)/sales/index.tsx",
+    "beforeSha256": "10da24bda7cd77d460f057ed88320218d4e8587c2a0ed9e9d1f5463f3d26d03d",
+    "afterSha256": "dfda8aa9461e94975deaede80f6cd92009d3ce5dfd10266cd2dfeb4b6be6ac34",
+    "existedInStartingWorkingTree": true
+  },
+  {
+    "file": "app/(tabs)/sales/offline-receipt.tsx",
+    "beforeSha256": "2417718d516b071c57fa132e9c96519326b92775080d305ca5ee31de06932dbb",
+    "afterSha256": "dcbb3e69dd646eff0206fc0150293956a8b3c5b8757af711ccb1f9c2947f2b17",
+    "existedInStartingWorkingTree": true
+  },
+  {
+    "file": "src/i18n/systemMessages.ts",
+    "beforeSha256": "427a600163c5722f33dd065b3a629c09f522223dddc591cdb7e922d09c625ff8",
+    "afterSha256": "c5c701212cf0c99698a01c7d8221c32fcebe231e85ea2d887cd52b4432105901",
+    "existedInStartingWorkingTree": true
+  },
+  {
+    "file": "src/currency/accounting.ts",
+    "afterSha256": "f4c787891622a2c038d8a066a8092906b2425cca53446489e97524164d32e3cf",
+    "newFile": true
+  },
+  {
+    "file": "src/currency/useAccountingAuthority.ts",
+    "afterSha256": "ea6237882fa60a0674da062d36311d674b8cc3fa9ef82f2d738dbf78d65db2fb",
+    "newFile": true
+  },
+  {
+    "file": "src/currency/financialMessages.ts",
+    "afterSha256": "8e5d2528f6203169e1fe5cd34e03c69cfc3de2d57bb06cac63737b05e8eeec09",
+    "newFile": true
+  },
+  {
+    "file": "src/offline/receiptTotals.ts",
+    "afterSha256": "00ed8d04a1c39c6c0f9d0b25843e4a4ad6c7e2833d5408e553977d0e04b8148d",
+    "newFile": true
+  }
+]

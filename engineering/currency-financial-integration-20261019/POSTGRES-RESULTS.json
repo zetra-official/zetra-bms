@@ -1,0 +1,33 @@
+{
+  "status": "PASS",
+  "count": 24,
+  "checks": [
+    "disposable local identity",
+    "synthetic canonical fixture",
+    "migration rollback removes additive columns",
+    "rollback preserves existing financial data",
+    "historical snapshots remain unknown",
+    "historical original amounts unchanged",
+    "existing TZS authority",
+    "canonical sale and snapshot commit",
+    "canonical fractional amounts stored",
+    "payment inherits sale snapshot",
+    "same request remains idempotent",
+    "snapshot mutation denied",
+    "anon has no trigger EXECUTE",
+    "authenticated has no trigger EXECUTE",
+    "service_role has no trigger EXECUTE",
+    "coordinated_client has no trigger EXECUTE",
+    "USD native posting fails closed atomically",
+    "KES native posting fails closed atomically",
+    "UGX native posting fails closed atomically",
+    "EUR native posting fails closed atomically",
+    "AED native posting fails closed atomically",
+    "JPY native posting fails closed atomically",
+    "KWD native posting fails closed atomically",
+    "original confirmed authority preserved"
+  ],
+  "migrationSha256": "2d72cf83e848d4304e932403bfae0d6b0af6baae1314d4204128ee830ab9b3b4",
+  "scope": "Captured full-schema synthetic canonical RPC; synthetic JWT claims and local-only harness grant; no remote writes or native financial certification",
+  "productionCompatibility": "NOT PREFLIGHTED; requires fresh target object/signature/trigger check before approval"
+}

@@ -13,22 +13,16 @@ import { Card } from "../../../src/ui/Card";
 import { Screen } from "../../../src/ui/Screen";
 import { theme } from "../../../src/ui/theme";
 
+import {formatMoney} from "../../../src/ui/money";
+import {useLanguage} from "../../../src/i18n/LanguageProvider";
+import {offlineReceiptTotals} from "../../../src/offline/receiptTotals";
+import {multiplyExact} from "../../../src/currency/engine";
+import {plainPriceAmount} from "../../../src/pos/itemAdjustment";
+import type {SaleQueueItem} from "../../../src/offline/salesQueue";
 import { getQueuedSaleByClientId } from "../../../src/offline/salesQueue";
 
 function one(v: string | string[] | undefined) {
   return Array.isArray(v) ? v[0] : v;
-}
-
-function fmtTZS(n: number) {
-  try {
-    return new Intl.NumberFormat("en-TZ", {
-      style: "currency",
-      currency: "TZS",
-      maximumFractionDigits: 0,
-    }).format(n);
-  } catch {
-    return `TZS ${Math.round(n).toLocaleString()}`;
-  }
 }
 
 function shortId(id: string) {
@@ -51,11 +45,13 @@ type OfflineDetail = {
   last_error?: string | null;
 
   payload: any;
+  currency_context?:SaleQueueItem["currency_context"];
 };
 
 export default function OfflineReceiptScreen() {
  const systemText = useSystemMessageText();
  const uiText=useCommonText();
+ const {language}=useLanguage();
   const router = useRouter();
   const params = useLocalSearchParams<{ storeId?: string | string[]; clientSaleId?: string | string[] }>();
 
@@ -79,6 +75,7 @@ export default function OfflineReceiptScreen() {
       const found: any = await getQueuedSaleByClientId(storeId, clientSaleId);
       if (!found) throw new Error("Queued sale not found (maybe already synced/removed).");
 
+      offlineReceiptTotals(found.payload);
       setDetail(found as any);
     } catch (e: any) {
       setErr(e?.message ?? "Failed to load offline receipt");
@@ -107,40 +104,13 @@ export default function OfflineReceiptScreen() {
   const payload = detail?.payload ?? null;
   const items = useMemo(() => (Array.isArray(payload?.items) ? payload.items : []), [payload?.items]);
 
-  const subtotal = useMemo(() => {
-    let sum = 0;
-    for (const it of items) {
-      const q = Math.trunc(Number(it?.qty ?? 0));
-      const p = Number(it?.unit_price ?? 0);
-      if (Number.isFinite(q) && q > 0 && Number.isFinite(p) && p > 0) sum += q * p;
-    }
-    return Math.round(sum);
-  }, [items]);
-
-  const discountType = String(payload?.discount_type ?? "").toUpperCase();
-  const discountVal = toNum(payload?.discount_value ?? 0);
-
-  const discountAmount = useMemo(() => {
-    if (subtotal <= 0) return 0;
-    if (!(discountVal > 0)) return 0;
-
-    if (discountType === "PERCENT") {
-      const pct = Math.min(100, Math.max(0, discountVal));
-      return Math.min(subtotal, Math.round((subtotal * pct) / 100));
-    }
-    if (discountType === "FIXED") {
-      return Math.min(subtotal, Math.round(discountVal));
-    }
-    return 0;
-  }, [subtotal, discountType, discountVal]);
-
-  const total = useMemo(() => Math.max(0, subtotal - discountAmount), [subtotal, discountAmount]);
-
-  const totalQty = useMemo(() => {
-    let q = 0;
-    for (const it of items) q += Math.trunc(Number(it?.qty ?? 0));
-    return q;
-  }, [items]);
+  const totals=useMemo(()=>payload?offlineReceiptTotals(payload):{subtotal:'0',discount:'0',total:'0',quantity:'0'},[payload]);
+  const subtotal=totals.subtotal,discountAmount=Number(totals.discount),total=Number(totals.total),totalQty=totals.quantity;
+  const discountType=String(payload?.discount_type??'').toUpperCase(),discountVal=toNum(payload?.discount_value??0);
+  // Legacy rows have no proven denomination. Never relabel them using today's
+  // preference or current business confirmation; display the original digits.
+  const originalCurrency=detail?.currency_context?.currency??null;
+  const fmtTZS=useCallback((amount:number|string)=>formatMoney(amount,{currency:originalCurrency,locale:language,showCurrency:!!originalCurrency}),[originalCurrency,language]);
 
   const paymentMethod = String(payload?.payment_method ?? "CASH").toUpperCase();
   const paymentChannel = String(payload?.payment_channel ?? "").trim();
@@ -185,9 +155,9 @@ export default function OfflineReceiptScreen() {
         : [
             uiText("Items ({p0}) • Qty ({p1})", {p0: (items.length), p1: (totalQty)}),
             ...items.map((it: any) => {
-              const q = Math.trunc(Number(it?.qty ?? 0));
+              const q = Number(it?.qty ?? 0);
               const p = Number(it?.unit_price ?? 0);
-              const lt = Math.round(q * p);
+              const lt = multiplyExact(plainPriceAmount(q),plainPriceAmount(p));
               const name = String(it?.name ?? it?.product_name ?? "Product");
               const sku = it?.sku ? ` (SKU: ${String(it.sku)})` : "";
               const unit = it?.unit ? ` ${String(it.unit)}` : "";
@@ -201,9 +171,9 @@ export default function OfflineReceiptScreen() {
     if (discountAmount > 0) {
       const dLabel =
         discountType === "PERCENT" ? `${discountVal}%` : discountType === "FIXED" ? fmtTZS(discountVal) : "";
-      money.push(uiText("DISCOUNT: -{p0} {p1}", {p0: (fmtTZS(discountAmount)), p1: (dLabel ? `(${dLabel})` : "")}));
+      money.push(uiText("DISCOUNT: -{p0} {p1}", {p0: (fmtTZS(totals.discount)), p1: (dLabel ? `(${dLabel})` : "")}));
     }
-    money.push(uiText("TOTAL: {p0}", {p0: (fmtTZS(total))}));
+    money.push(uiText("TOTAL: {p0}", {p0: (fmtTZS(totals.total))}));
     if (isCredit) {
       money.push(uiText("PAID: {p0}", {p0: (fmtTZS(paidAmount))}));
       money.push(uiText("DUE (CREDIT): {p0}", {p0: (fmtTZS(due))}));
@@ -233,6 +203,7 @@ export default function OfflineReceiptScreen() {
     items,
     totalQty,
     subtotal,
+    fmtTZS,totals,
     discountAmount,
     discountType,
     discountVal,
@@ -360,9 +331,9 @@ export default function OfflineReceiptScreen() {
                 <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("No items found.")}</Text>
               ) : (
                 items.map((it: any, idx: number) => {
-                  const q = Math.trunc(Number(it?.qty ?? 0));
+                  const q = Number(it?.qty ?? 0);
                   const p = Number(it?.unit_price ?? 0);
-                  const lt = Math.round(q * p);
+                  const lt = multiplyExact(plainPriceAmount(q),plainPriceAmount(p));
 
                   const name = String(it?.name ?? it?.product_name ?? "Product");
                   const sku = it?.sku ? String(it.sku) : null;
@@ -425,14 +396,14 @@ export default function OfflineReceiptScreen() {
                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                   <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>{uiText("Discount")}</Text>
                   <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
-                    -{fmtTZS(discountAmount)}
+                    -{fmtTZS(totals.discount)}
                   </Text>
                 </View>
               )}
 
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                 <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>{uiText("Total")}</Text>
-                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{fmtTZS(total)}</Text>
+                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{fmtTZS(totals.total)}</Text>
               </View>
 
               {isCredit && (

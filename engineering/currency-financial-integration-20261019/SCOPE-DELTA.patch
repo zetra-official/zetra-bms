@@ -1,0 +1,412 @@
+--- a/src/currency/engine.ts
++++ b/src/currency/engine.ts
+@@ -12,6 +12,40 @@
+ export type RecordedMoney={amount:string;currency:string|null;organizationId:string;contextRevision:number|null;source:'TRANSACTION_RECORD'|'OWNER_CONFIRMED_CURRENT'|'LEGACY_UNVERIFIED'};
+ export type CurrencyView={status:CurrencyStatus;original:Readonly<RecordedMoney>;displayAmount:string;displayCurrency:string|null;rate?:{provider:string;referenceDate:string;retrievedAt:string;sourceSha256:string;numerator:string;denominator:string};rounding:'HALF_AWAY_FROM_ZERO_DISPLAY_ONLY';postingAllowed:false};
+ const decimal=/^-?\d{1,30}(\.\d{1,18})?$/;
++/** Exact decimal primitives for existing price/quantity and report adapters.
++ * No implicit settlement rounding, currency conversion or posting authority. */
++function decimalParts(value:string){
++ if(!decimal.test(value))throw Error('INVALID_AMOUNT');
++ const negative=value.startsWith('-'),[whole,fraction='']=(negative?value.slice(1):value).split('.');
++ return {units:BigInt(whole+fraction)*(negative?-1n:1n),scale:fraction.length};
++}
++function decimalText(units:bigint,scale:number):string{
++ const negative=units<0n,raw=(negative?-units:units).toString().padStart(scale+1,'0');
++ const value=scale?(raw.slice(0,-scale)+'.'+raw.slice(-scale)).replace(/\.?0+$/,''):raw;
++ const result=(negative&&units!==0n?'-':'')+value;
++ if(!decimal.test(result))throw Error('AMOUNT_OUT_OF_RANGE');
++ return result;
++}
++export function addExact(left:string,right:string):string{
++ const a=decimalParts(left),b=decimalParts(right),scale=Math.max(a.scale,b.scale);
++ return decimalText(a.units*10n**BigInt(scale-a.scale)+b.units*10n**BigInt(scale-b.scale),scale);
++}
++export function subtractExact(left:string,right:string):string{
++ const b=decimalParts(right);return addExact(left,decimalText(-b.units,b.scale));
++}
++export function multiplyExact(left:string,right:string):string{
++ const a=decimalParts(left),b=decimalParts(right);return decimalText(a.units*b.units,a.scale+b.scale);
++}
++/** Totals remain separated by immutable recorded currency. Unknown historical
++ * denomination and mixed organizations cannot become a booked report total. */
++export function recordedTotals(rows:readonly RecordedMoney[],organizationId:string):Readonly<Record<string,string>>{
++ const totals:Record<string,string>={};
++ for(const row of rows){validateMoney(row);if(row.organizationId!==organizationId)throw Error('CURRENCY_TENANT_MISMATCH');
++  if(row.source!=='TRANSACTION_RECORD'||!row.currency)throw Error('HISTORICAL_CURRENCY_UNVERIFIED');
++  currencyPrecision(row.currency);totals[row.currency]=addExact(totals[row.currency]||'0',row.amount);
++ }
++ return Object.freeze(totals);
++}
+ export function validateMoney(value:RecordedMoney):void{
+  if(!decimal.test(value.amount)||!value.organizationId||!['TRANSACTION_RECORD','OWNER_CONFIRMED_CURRENT','LEGACY_UNVERIFIED'].includes(value.source))throw Error('INVALID_MONEY');
+  if(value.currency!==null&&!/^[A-Z]{3}$/.test(value.currency))throw Error('INVALID_CURRENCY');
+--- a/src/offline/salesQueue.ts
++++ b/src/offline/salesQueue.ts
+@@ -1,5 +1,6 @@
+ import AsyncStorage from "@react-native-async-storage/async-storage";
+ import { readBrowserQueue, updateBrowserQueue } from "./browserQueueStore";
++import type {transactionContext} from '../currency/engine';
+ 
+ export type PayMethod = "CASH" | "MOBILE" | "BANK" | "CREDIT";
+ 
+@@ -24,6 +25,8 @@
+   status: "PENDING" | "SENDING" | "SYNCED" | "FAILED" | "NEEDS_REVIEW";
+   last_error?: string | null;
+   server_sale_id?: string | null;
++  // New captures only. Never infer or backfill old queue denomination.
++  currency_context?: ReturnType<typeof transactionContext>;
+ 
+   payload: {
+     items: QueuedItem[];
+@@ -140,7 +143,7 @@
+   }
+   const existing = q.find(x => x.client_sale_id === item.client_sale_id);
+   if (existing) {
+-    if (existing.store_id !== item.store_id || stableJson(existing.payload) !== stableJson(item.payload)) {
++    if (existing.store_id !== item.store_id || stableJson(existing.payload) !== stableJson(item.payload)||stableJson(existing.currency_context)!==stableJson(item.currency_context)) {
+       throw new Error("Queued sale identifier already belongs to a different payload");
+     }
+     return { items: q, result: existing };
+@@ -172,6 +175,7 @@
+   if (existing && patch.payload !== undefined && stableJson(patch.payload) !== stableJson(existing.payload)) {
+     throw new Error("Queued sale financial payload cannot be changed by a status update");
+   }
++  if(existing&&Object.prototype.hasOwnProperty.call(patch,'currency_context')&&stableJson(patch.currency_context)!==stableJson(existing.currency_context))throw Error('Queued sale currency snapshot cannot be changed');
+   const next = q.map((x) => (x.id === id ? { ...x, ...patch } : x));
+   return { items: next, result: undefined };
+   });
+--- a/src/offline/salesSync.ts
++++ b/src/offline/salesSync.ts
+@@ -1,5 +1,7 @@
+ import { supabase } from "../supabase/supabaseClient";
+ import { listQueue, markStatus, removeFromQueue, claimQueuedSale } from "./salesQueue";
++import {readAccountingAuthority,assertLegacyPostingCurrency} from '../currency/accounting';
++import {transactionContext} from '../currency/engine';
+ 
+ // ✅ A2: Per-store mutex lock to prevent double-sync (history + sales screen effects)
+ const inflightByStore = new Map<string, Promise<void>>();
+@@ -25,6 +27,16 @@
+ 
+       try {
+         const p = item.payload;
++        if(item.currency_context){
++          const original=item.currency_context;
++          const scope=await supabase.from('stores').select('organization_id').eq('id',item.store_id).single();
++          if(scope.error||scope.data?.organization_id!==original.organizationId)throw Error('CURRENCY_TENANT_MISMATCH');
++          const current=await readAccountingAuthority(supabase,original.organizationId);
++          if(!current||current.currency!==original.currency||current.revision!==original.contextRevision)throw Error('OFFLINE_CURRENCY_REVIEW_REQUIRED');
++          assertLegacyPostingCurrency(current);
++          const expected=transactionContext(original.amount,current.currency,current,current.organizationId);
++          if(original.source!=='TRANSACTION_RECORD'||original.accountingCurrency!==expected.accountingCurrency||original.exchangeRate!=='1'||original.rateSource!==expected.rateSource||original.displayRateUsed!==false)throw Error('INVALID_OFFLINE_CURRENCY_CONTEXT');
++        }
+ 
+         // ✅ IMPORTANT: send SAFE items only -> RPC stability
+         const safeItems = (Array.isArray(p?.items) ? p.items : []).map((it: any) => ({
+@@ -115,4 +127,4 @@
+     // Always release lock
+     if (inflightByStore.get(storeId) === job) inflightByStore.delete(storeId);
+   }
+-}+}
+--- a/app/(tabs)/sales/checkout.tsx
++++ b/app/(tabs)/sales/checkout.tsx
+@@ -1,4 +1,7 @@
+ import {saleAttemptKey,parseSaleAttempt,blocksSale,definitiveSaleRejection,type SaleAttempt} from '../../../src/pos/saleAttempt';
++import {useAccountingAuthority} from '../../../src/currency/useAccountingAuthority';
++import {transactionContext} from '../../../src/currency/engine';
++import {financialText} from '../../../src/currency/financialMessages';
+ import {parseCheckoutCart,scopedCartKey,readCart,writeCart} from '../../../src/pos/cartLifecycle';
+ import {posStabilityText} from '../../../src/i18n/posStability';
+ import {getExtraPerQty,getAdjustedUnitPrice,getAdjustedLineTotal,parseAdjustment,applyItemAdjustment,plainPriceAmount} from '../../../src/pos/itemAdjustment';
+@@ -411,17 +414,18 @@
+ 
+   const orgId = String(activeOrgId ?? "").trim();
+   const money = useOrgMoneyPrefs(orgId);
++  const accounting=useAccountingAuthority(orgId);
+   const {language:conversionLanguage}=useLanguage();
+   const conversionId=String(one(params.proformaId)??'');
+   const conversionQuote=useMemo<ConversionQuote|null>(()=>{return parseConversionQuote(String(one(params.proformaQuote)??''),conversionId)},[params.proformaQuote,conversionId]);
+   const [conversionChecked,setConversionChecked]=useState(false);
+   const conversionAttempt=useRef<{request:string;quote:ConversionQuote;payment:Record<string,unknown>}|null>(null);
+-  const displayCurrency = conversionQuote?.currency || money.currency || "TZS";
++  const displayCurrency = conversionQuote?.currency || accounting.authority?.currency || null;
+   const displayLocale = money.locale || "en-TZ";
+ 
+   const fmt = useCallback(
+     (n: number) =>
+-      (Number.isInteger(n)?formatMoney(n, { currency: displayCurrency, locale: displayLocale }):new Intl.NumberFormat(displayLocale,{style:"currency",currency:displayCurrency,minimumFractionDigits:0,maximumFractionDigits:12}).format(n)).replace(/\s+/g, " "),
++      formatMoney(plainPriceAmount(n), { currency: displayCurrency, locale: displayLocale,showCurrency:!!displayCurrency }).replace(/\s+/g, " "),
+     [displayCurrency, displayLocale]
+   );
+ 
+@@ -948,6 +952,9 @@
+   }, []);
+ 
+   const invalidReason = useMemo(() => {
++    if(accounting.loading&&!isOffline)return financialText(conversionLanguage,'loading');
++    if(accounting.failed&&!isOffline)return financialText(conversionLanguage,'unavailable');
++    if(accounting.authority&&accounting.authority.currency!=='TZS')return financialText(conversionLanguage,'blocked');
+     if(conversionId&&(!conversionChecked||!isOnline||!conversionQuote||cashierMode||reservationMode))return conversionText(conversionLanguage,'stale');
+     if(cartScopeMismatch||!cartActor)return posStabilityText(conversionLanguage,'loading');
+     if (!canSell) return "No permission to sell.";
+@@ -1023,6 +1030,7 @@
+ 
+     return null;
+   }, [
++    accounting.loading,accounting.failed,accounting.authority,
+     conversionId,conversionChecked,conversionQuote,isOnline,reservationMode,conversionLanguage,canSell,
+     storeId,
+     mismatch,
+@@ -1388,6 +1396,7 @@
+               : null;
+ 
+         await enqueueSale(storeId, {
++          ...(accounting.authority?{currency_context:transactionContext(plainPriceAmount(grandTotal),accounting.authority.currency,accounting.authority,orgId)}:{}),
+           client_sale_id: clientSaleId,
+           store_id: storeId,
+           payload: {
+@@ -2060,7 +2069,7 @@
+         <View style={{ gap: 8 }}>
+           <View style={{ flexDirection: isDesktopWeb ? "row" : "column", gap: 8 }}>
+             <View style={{ flex: 1 }}>
+-              <FieldLabel>{uiText("Cash ({p0})", {p0: (displayCurrency)})}</FieldLabel>
++              <FieldLabel>{uiText("Cash ({p0})", {p0: (displayCurrency??"—")})}</FieldLabel>
+               <InputBox
+                 value={splitCashStr}
+                 onChangeText={(v) => setSplitCashStr(normalizeMoneyInput(v,preservePricePrecision))}
+@@ -2070,7 +2079,7 @@
+             </View>
+ 
+             <View style={{ flex: 1 }}>
+-              <FieldLabel>{uiText("Mobile ({p0})", {p0: (displayCurrency)})}</FieldLabel>
++              <FieldLabel>{uiText("Mobile ({p0})", {p0: (displayCurrency??"—")})}</FieldLabel>
+               <InputBox
+                 value={splitMobileStr}
+                 onChangeText={(v) => setSplitMobileStr(normalizeMoneyInput(v,preservePricePrecision))}
+@@ -2080,7 +2089,7 @@
+             </View>
+ 
+             <View style={{ flex: 1 }}>
+-              <FieldLabel>{uiText("Bank ({p0})", {p0: (displayCurrency)})}</FieldLabel>
++              <FieldLabel>{uiText("Bank ({p0})", {p0: (displayCurrency??"—")})}</FieldLabel>
+               <InputBox
+                 value={splitBankStr}
+                 onChangeText={(v) => setSplitBankStr(normalizeMoneyInput(v,preservePricePrecision))}
+@@ -2095,7 +2104,7 @@
+         </View>
+       ) : (
+         <View>
+-          <FieldLabel>{uiText("Paid ({p0})", {p0: (displayCurrency)})}</FieldLabel>
++          <FieldLabel>{uiText("Paid ({p0})", {p0: (displayCurrency??"—")})}</FieldLabel>
+           <InputBox
+             value={paidStr}
+             onChangeText={onPaidChange}
+--- a/app/(tabs)/sales/index.tsx
++++ b/app/(tabs)/sales/index.tsx
+@@ -51,6 +51,7 @@
+ import { theme } from "../../../src/ui/theme";
+ 
+ import { formatMoney, useOrgMoneyPrefs } from "@/src/ui/money";
++import {useAccountingAuthority} from '../../../src/currency/useAccountingAuthority';
+ import { setActiveScanScope, subscribeScanBarcode } from "@/src/utils/scanBus";
+ import AsyncStorage from "@react-native-async-storage/async-storage";
+ 
+@@ -526,12 +527,13 @@
+ 
+   const orgId = String(activeOrgId ?? "").trim();
+   const money = useOrgMoneyPrefs(orgId);
+-  const displayCurrency = money.currency || "TZS";
++  const accounting=useAccountingAuthority(orgId);
++  const displayCurrency = accounting.authority?.currency || null;
+   const displayLocale = money.locale || "en-TZ";
+ 
+   const fmt = useCallback(
+     (n: number) =>
+-      formatMoney(n, { currency: displayCurrency, locale: displayLocale }).replace(/\s+/g, " "),
++      formatMoney(n, { currency: displayCurrency, locale: displayLocale,showCurrency:!!displayCurrency }).replace(/\s+/g, " "),
+     [displayCurrency, displayLocale]
+   );
+ 
+@@ -3938,4 +3940,4 @@
+       </Modal>
+     </Screen>
+   );
+-}+}
+--- a/app/(tabs)/sales/offline-receipt.tsx
++++ b/app/(tabs)/sales/offline-receipt.tsx
+@@ -13,22 +13,16 @@
+ import { Screen } from "../../../src/ui/Screen";
+ import { theme } from "../../../src/ui/theme";
+ 
++import {formatMoney} from "../../../src/ui/money";
++import {useLanguage} from "../../../src/i18n/LanguageProvider";
++import {offlineReceiptTotals} from "../../../src/offline/receiptTotals";
++import {multiplyExact} from "../../../src/currency/engine";
++import {plainPriceAmount} from "../../../src/pos/itemAdjustment";
++import type {SaleQueueItem} from "../../../src/offline/salesQueue";
+ import { getQueuedSaleByClientId } from "../../../src/offline/salesQueue";
+ 
+ function one(v: string | string[] | undefined) {
+   return Array.isArray(v) ? v[0] : v;
+-}
+-
+-function fmtTZS(n: number) {
+-  try {
+-    return new Intl.NumberFormat("en-TZ", {
+-      style: "currency",
+-      currency: "TZS",
+-      maximumFractionDigits: 0,
+-    }).format(n);
+-  } catch {
+-    return `TZS ${Math.round(n).toLocaleString()}`;
+-  }
+ }
+ 
+ function shortId(id: string) {
+@@ -51,11 +45,13 @@
+   last_error?: string | null;
+ 
+   payload: any;
++  currency_context?:SaleQueueItem["currency_context"];
+ };
+ 
+ export default function OfflineReceiptScreen() {
+  const systemText = useSystemMessageText();
+  const uiText=useCommonText();
++ const {language}=useLanguage();
+   const router = useRouter();
+   const params = useLocalSearchParams<{ storeId?: string | string[]; clientSaleId?: string | string[] }>();
+ 
+@@ -79,6 +75,7 @@
+       const found: any = await getQueuedSaleByClientId(storeId, clientSaleId);
+       if (!found) throw new Error("Queued sale not found (maybe already synced/removed).");
+ 
++      offlineReceiptTotals(found.payload);
+       setDetail(found as any);
+     } catch (e: any) {
+       setErr(e?.message ?? "Failed to load offline receipt");
+@@ -107,40 +104,13 @@
+   const payload = detail?.payload ?? null;
+   const items = useMemo(() => (Array.isArray(payload?.items) ? payload.items : []), [payload?.items]);
+ 
+-  const subtotal = useMemo(() => {
+-    let sum = 0;
+-    for (const it of items) {
+-      const q = Math.trunc(Number(it?.qty ?? 0));
+-      const p = Number(it?.unit_price ?? 0);
+-      if (Number.isFinite(q) && q > 0 && Number.isFinite(p) && p > 0) sum += q * p;
+-    }
+-    return Math.round(sum);
+-  }, [items]);
+-
+-  const discountType = String(payload?.discount_type ?? "").toUpperCase();
+-  const discountVal = toNum(payload?.discount_value ?? 0);
+-
+-  const discountAmount = useMemo(() => {
+-    if (subtotal <= 0) return 0;
+-    if (!(discountVal > 0)) return 0;
+-
+-    if (discountType === "PERCENT") {
+-      const pct = Math.min(100, Math.max(0, discountVal));
+-      return Math.min(subtotal, Math.round((subtotal * pct) / 100));
+-    }
+-    if (discountType === "FIXED") {
+-      return Math.min(subtotal, Math.round(discountVal));
+-    }
+-    return 0;
+-  }, [subtotal, discountType, discountVal]);
+-
+-  const total = useMemo(() => Math.max(0, subtotal - discountAmount), [subtotal, discountAmount]);
+-
+-  const totalQty = useMemo(() => {
+-    let q = 0;
+-    for (const it of items) q += Math.trunc(Number(it?.qty ?? 0));
+-    return q;
+-  }, [items]);
++  const totals=useMemo(()=>payload?offlineReceiptTotals(payload):{subtotal:'0',discount:'0',total:'0',quantity:'0'},[payload]);
++  const subtotal=totals.subtotal,discountAmount=Number(totals.discount),total=Number(totals.total),totalQty=totals.quantity;
++  const discountType=String(payload?.discount_type??'').toUpperCase(),discountVal=toNum(payload?.discount_value??0);
++  // Legacy rows have no proven denomination. Never relabel them using today's
++  // preference or current business confirmation; display the original digits.
++  const originalCurrency=detail?.currency_context?.currency??null;
++  const fmtTZS=useCallback((amount:number|string)=>formatMoney(amount,{currency:originalCurrency,locale:language,showCurrency:!!originalCurrency}),[originalCurrency,language]);
+ 
+   const paymentMethod = String(payload?.payment_method ?? "CASH").toUpperCase();
+   const paymentChannel = String(payload?.payment_channel ?? "").trim();
+@@ -185,9 +155,9 @@
+         : [
+             uiText("Items ({p0}) • Qty ({p1})", {p0: (items.length), p1: (totalQty)}),
+             ...items.map((it: any) => {
+-              const q = Math.trunc(Number(it?.qty ?? 0));
++              const q = Number(it?.qty ?? 0);
+               const p = Number(it?.unit_price ?? 0);
+-              const lt = Math.round(q * p);
++              const lt = multiplyExact(plainPriceAmount(q),plainPriceAmount(p));
+               const name = String(it?.name ?? it?.product_name ?? "Product");
+               const sku = it?.sku ? ` (SKU: ${String(it.sku)})` : "";
+               const unit = it?.unit ? ` ${String(it.unit)}` : "";
+@@ -201,9 +171,9 @@
+     if (discountAmount > 0) {
+       const dLabel =
+         discountType === "PERCENT" ? `${discountVal}%` : discountType === "FIXED" ? fmtTZS(discountVal) : "";
+-      money.push(uiText("DISCOUNT: -{p0} {p1}", {p0: (fmtTZS(discountAmount)), p1: (dLabel ? `(${dLabel})` : "")}));
++      money.push(uiText("DISCOUNT: -{p0} {p1}", {p0: (fmtTZS(totals.discount)), p1: (dLabel ? `(${dLabel})` : "")}));
+     }
+-    money.push(uiText("TOTAL: {p0}", {p0: (fmtTZS(total))}));
++    money.push(uiText("TOTAL: {p0}", {p0: (fmtTZS(totals.total))}));
+     if (isCredit) {
+       money.push(uiText("PAID: {p0}", {p0: (fmtTZS(paidAmount))}));
+       money.push(uiText("DUE (CREDIT): {p0}", {p0: (fmtTZS(due))}));
+@@ -233,6 +203,7 @@
+     items,
+     totalQty,
+     subtotal,
++    fmtTZS,totals,
+     discountAmount,
+     discountType,
+     discountVal,
+@@ -360,9 +331,9 @@
+                 <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("No items found.")}</Text>
+               ) : (
+                 items.map((it: any, idx: number) => {
+-                  const q = Math.trunc(Number(it?.qty ?? 0));
++                  const q = Number(it?.qty ?? 0);
+                   const p = Number(it?.unit_price ?? 0);
+-                  const lt = Math.round(q * p);
++                  const lt = multiplyExact(plainPriceAmount(q),plainPriceAmount(p));
+ 
+                   const name = String(it?.name ?? it?.product_name ?? "Product");
+                   const sku = it?.sku ? String(it.sku) : null;
+@@ -425,14 +396,14 @@
+                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                   <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>{uiText("Discount")}</Text>
+                   <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+-                    -{fmtTZS(discountAmount)}
++                    -{fmtTZS(totals.discount)}
+                   </Text>
+                 </View>
+               )}
+ 
+               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                 <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>{uiText("Total")}</Text>
+-                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{fmtTZS(total)}</Text>
++                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{fmtTZS(totals.total)}</Text>
+               </View>
+ 
+               {isCredit && (
+--- a/src/i18n/systemMessages.ts
++++ b/src/i18n/systemMessages.ts
+@@ -1,4 +1,5 @@
+ import {Language} from './catalog';
++import {financialErrorText} from '../currency/financialMessages';
+ import {translateCommon} from './commonMessages';
+ import {systemMessageSources,initialGuideMessage} from './systemMessageSources';
+ const exact = new Set<string>([initialGuideMessage,...systemMessageSources].filter(source=>!/{p\d+}/.test(source)));
+@@ -12,6 +13,7 @@
+ // Unknown remote diagnostics and user-controlled text are returned verbatim.
+ export function translateSystemMessage(language:Language,value:string|null|undefined):string {
+   const text=value??'';
++  const financial=financialErrorText(language,text);if(financial)return financial;
+   if(exact.has(text))return translateCommon(language,text);
+   if(text.length>32768)return text;
+   for(const template of templates){

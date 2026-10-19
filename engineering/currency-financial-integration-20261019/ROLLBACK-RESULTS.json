@@ -1,0 +1,11 @@
+{
+  "status": "PASS",
+  "checks": {
+    "rollbackPreservesNewSalesAndSnapshots": true,
+    "rollbackPreservesPayments": true,
+    "rollbackPreservesExpenses": true,
+    "noNewCaptureTriggers": true,
+    "columnsRetained": true
+  },
+  "scope": "Disposable synthetic schema only; no backup restore or remote writes"
+}

@@ -1,0 +1,3941 @@
+import {CartLifecycle,scopedCartKey,readCart,writeCart,parseCheckoutCart,type CartScope} from '../../../src/pos/cartLifecycle';
+import {useLanguage} from '../../../src/i18n/LanguageProvider';
+import {posStabilityText} from '../../../src/i18n/posStability';
+import {makeId} from '../../../src/offline/salesQueue';
+import {consumeSavedCart} from "../../../src/proforma/savedCart";
+import {ProformaOrdersAction} from "../../../src/proforma/ProformaOrdersAction";
+import {indexPOS, searchPOS} from "@/src/search/catalogSearch";
+import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+﻿import {useCommonText} from "@/src/i18n/useCommonText";
+import SafeIcon from "@/src/ui/SafeIcon";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Ionicons from "@/src/ui/BusinessIonicons";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Alert,
+  AppState,
+  FlatList,
+  Keyboard,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+  Vibration,
+  Image,
+  useWindowDimensions,
+} from "react-native";
+
+import { useNetInfo } from "@react-native-community/netinfo";
+import type { RealtimeChannel } from "@supabase/supabase-js";
+
+import { useOrg } from "../../../src/context/OrgContext";
+import { supabase } from "../../../src/supabase/supabaseClient";
+
+import {
+  loadSalesProductsCache,
+  saveSalesProductsCache,
+} from "../../../src/offline/salesProductsCache";
+import { countPending } from "../../../src/offline/salesQueue";
+import { syncSalesQueueOnce } from "../../../src/offline/salesSync";
+
+import { Button } from "@/src/ui/Button";
+import { Card } from "../../../src/ui/Card";
+import { Input } from "../../../src/ui/Input";
+import { PriceModal } from "../../../src/ui/PriceModal";
+import { Screen } from "../../../src/ui/Screen";
+import { theme } from "../../../src/ui/theme";
+
+import { formatMoney, useOrgMoneyPrefs } from "@/src/ui/money";
+import { setActiveScanScope, subscribeScanBarcode } from "@/src/utils/scanBus";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+/* =========================
+   Types
+========================= */
+type ProductRow = {
+  id: string;
+  name: string;
+  sku: string | null;
+  unit: string | null;
+  category: string | null;
+  selling_price?: number | null;
+  cost_price?: number | null;
+  stock_qty?: number | null;
+  barcode?: string | null;
+  image_url?: string | null;
+
+  is_precision_product?: boolean | null;
+  precision_pack_size?: number | null;
+  precision_base_unit?: string | null;
+  precision_sell_mode?: string | null;
+  precision_allow_box_sales?: boolean | null;
+  precision_allow_unit_sales?: boolean | null;
+};
+
+type CartItem = {
+  cart_key?: string;
+  product_id: string;
+  name: string;
+  sku: string | null;
+  qty: number; // stock/base qty used by DB
+  unit: string | null;
+  unit_price: number;
+  line_total: number;
+
+  sell_mode?: "PACK" | "UNIT" | null;
+  pack_size?: number | null;
+  pack_unit?: string | null;
+  base_unit?: string | null;
+  stock_qty_per_sell_unit?: number | null;
+};
+
+type SalesRole = "owner" | "admin" | "staff" | "cashier";
+
+type SalesMode = "DIRECT" | "CASHIER";
+
+function normalizeSalesMode(v: any): SalesMode {
+  const mode = String(v ?? "DIRECT").trim().toUpperCase();
+
+  if (mode === "CASHIER") return "CASHIER";
+
+  return "DIRECT";
+}
+
+type CashierHandoffStatus = "PENDING" | "ACCEPTED" | "COMPLETED" | string;
+
+type CashierHandoffRow = {
+  id: string;
+  organization_id: string;
+  store_id: string;
+  store_name?: string | null;
+  cashier_membership_id?: string | null;
+  source_membership_id?: string | null;
+  source_user_id?: string | null;
+  items: any[] | null;
+  subtotal: number | null;
+  discount_amount: number | null;
+  total: number | null;
+  note: string | null;
+  status: CashierHandoffStatus | null;
+  sale_id?: string | null;
+  accepted_at?: string | null;
+  completed_at?: string | null;
+  created_at: string | null;
+  updated_at?: string | null;
+  item_count?: number | null;
+};
+
+type OpenCashierShiftRow = {
+  shift_id: string;
+  organization_id: string;
+  store_id: string;
+  membership_id: string;
+  opening_cash: number;
+  status: string;
+  opened_at: string;
+  closed_at?: string | null;
+};
+
+/* =========================
+   Utils
+========================= */
+function clampQty(n: number) {
+  if (!Number.isFinite(n)) return 1;
+  return Number(Math.max(0.001, Math.min(999999, n)).toFixed(3));
+}
+
+function parsePositiveNumber(raw: string): number | null {
+  const x = Number(String(raw ?? "").trim());
+  if (!Number.isFinite(x) || x <= 0) return null;
+  return x;
+}
+
+function parsePositiveQty(raw: string): number | null {
+  const x = Number(String(raw ?? "").trim());
+  if (!Number.isFinite(x) || x <= 0) return null;
+  return Number(x.toFixed(3));
+}
+
+function fmtDateShort(d = new Date()) {
+  try {
+    return new Intl.DateTimeFormat("en-GB", {
+      weekday: "short",
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }).format(d);
+  } catch {
+    return d.toDateString();
+  }
+}
+
+function cleanBarcode(raw: any) {
+  const s = String(raw ?? "").trim();
+  if (!s) return "";
+  return s.replace(/\s+/g, "");
+}
+
+function normalizeRole(role: unknown): SalesRole | "" {
+  const r = String(role ?? "").trim().toLowerCase();
+  if (r === "owner" || r === "admin" || r === "staff" || r === "cashier") return r;
+  return "";
+}
+
+function normalizeHandoffs(rows: any[]): CashierHandoffRow[] {
+  return (rows ?? []).map((r) => ({
+    id: String(r?.id ?? "").trim(),
+    organization_id: String(r?.organization_id ?? "").trim(),
+    store_id: String(r?.store_id ?? "").trim(),
+    store_name: r?.store_name ?? null,
+    cashier_membership_id: r?.cashier_membership_id ?? null,
+    source_membership_id: r?.source_membership_id ?? null,
+    source_user_id: r?.source_user_id ?? null,
+    items: Array.isArray(r?.items) ? r.items : [],
+    subtotal: Number(r?.subtotal ?? 0),
+    discount_amount: Number(r?.discount_amount ?? 0),
+    total: Number(r?.total ?? 0),
+    note: r?.note ?? null,
+    status: String(r?.status ?? "").trim().toUpperCase() || null,
+    sale_id: r?.sale_id ?? null,
+    accepted_at: r?.accepted_at ?? null,
+    completed_at: r?.completed_at ?? null,
+    created_at: r?.created_at ?? null,
+    updated_at: r?.updated_at ?? null,
+    item_count: Number(r?.item_count ?? (Array.isArray(r?.items) ? r.items.length : 0)),
+  }));
+}
+
+function fmtDateTimeLocal(input?: string | null) {
+  if (!input) return "—";
+  try {
+    const d = new Date(input);
+    return new Intl.DateTimeFormat("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(d);
+  } catch {
+    return String(input);
+  }
+}
+
+function normalizeMoneyInput(raw: string) {
+  const digitsOnly = String(raw ?? "").replace(/[^\d]/g, "");
+  if (!digitsOnly) return "";
+  return digitsOnly.replace(/^0+(?=\d)/, "");
+}
+
+function isTypingIntoField(target: any) {
+  if (!target) return false;
+  const tag = String(target.tagName ?? "").toLowerCase();
+  const editable = !!target.isContentEditable;
+  return editable || tag === "input" || tag === "textarea" || tag === "select";
+}
+
+function fmtQty(n: any) {
+  const x = Number(n);
+  if (!Number.isFinite(x)) return "0";
+  return String(Number(x.toFixed(3)));
+}
+
+function isPrecisionProduct(p: ProductRow | null | undefined) {
+  return Boolean((p as any)?.is_precision_product);
+}
+
+function getPackSize(p: ProductRow | null | undefined) {
+  const n = Number((p as any)?.precision_pack_size ?? 0);
+  return Number.isFinite(n) && n > 0 ? n : 1;
+}
+
+function getBaseUnitLabel(p: ProductRow | null | undefined) {
+  return String((p as any)?.precision_base_unit ?? p?.unit ?? "unit").trim() || "unit";
+}
+
+function getPackLabel(p: ProductRow | null | undefined) {
+  const u = String(p?.unit ?? "").trim();
+  return u || "BOX/PACK";
+}
+
+function getCartKey(x: CartItem | ProductRow, mode?: "PACK" | "UNIT") {
+  const id = "product_id" in x ? x.product_id : x.id;
+  const existingKey = "cart_key" in x ? x.cart_key : null;
+  if (existingKey) return existingKey;
+  return mode ? `${id}:${mode}` : id;
+}
+
+function getCartDisplayQty(item: CartItem) {
+  if (item.sell_mode === "PACK") {
+    const pack = Number(item.pack_size ?? item.stock_qty_per_sell_unit ?? 1);
+    if (Number.isFinite(pack) && pack > 0) return item.qty / pack;
+  }
+  return item.qty;
+}
+
+function getCartDisplayUnit(item: CartItem) {
+  if (item.sell_mode === "PACK") return item.pack_unit || item.unit || "Box";
+  if (item.sell_mode === "UNIT") return item.base_unit || item.unit || "Unit";
+  return item.unit || "Unit";
+}
+
+function formatTimeAgo(input?: string | null) {
+  const raw = String(input ?? "").trim();
+  if (!raw) return "—";
+
+  const ts = Date.parse(raw);
+  if (!Number.isFinite(ts)) return "—";
+
+  const diffMs = Date.now() - ts;
+  const diffSec = Math.max(0, Math.floor(diffMs / 1000));
+
+  if (diffSec <= 5) return "Just now";
+  if (diffSec < 60) return `${diffSec} sec ago`;
+
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin} min ago`;
+
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr} hr ago`;
+
+  const diffDay = Math.floor(diffHr / 24);
+  return `${diffDay} day${diffDay === 1 ? "" : "s"} ago`;
+}
+
+
+
+function ScannerFabIcon({ size = 24, color = "#E5E7EB" }: { size?: number; color?: string }) {
+  const w = Math.max(22, Math.round(size * 1.05));
+  const h = Math.max(18, Math.round(size * 0.78));
+  const barHeights = [0.72, 0.46, 0.86, 0.58, 0.92, 0.52, 0.8];
+  const barWidths = [2, 1.5, 2.2, 1.4, 2.4, 1.6, 2];
+  const gap = Math.max(1.5, Math.round(size * 0.04));
+
+  return (
+    <View
+      style={{
+        width: size + 4,
+        height: size + 4,
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <View
+        style={{
+          width: w,
+          height: h,
+          borderRadius: 7,
+          borderWidth: 1.8,
+          borderColor: color,
+          paddingHorizontal: 3,
+          flexDirection: "row",
+          alignItems: "flex-end",
+          justifyContent: "center",
+          backgroundColor: "transparent",
+          gap,
+        }}
+      >
+        {barHeights.map((ratio, idx) => (
+          <View
+            key={idx}
+            style={{
+              width: barWidths[idx],
+              height: Math.max(5, Math.round(h * ratio)),
+              backgroundColor: color,
+              borderRadius: 1.5,
+            }}
+          />
+        ))}
+      </View>
+
+      <View
+        style={{
+          position: "absolute",
+          left: -1,
+          top: -1,
+          width: 8,
+          height: 8,
+          borderLeftWidth: 2,
+          borderTopWidth: 2,
+          borderColor: color,
+          borderTopLeftRadius: 3,
+        }}
+      />
+      <View
+        style={{
+          position: "absolute",
+          right: -1,
+          top: -1,
+          width: 8,
+          height: 8,
+          borderRightWidth: 2,
+          borderTopWidth: 2,
+          borderColor: color,
+          borderTopRightRadius: 3,
+        }}
+      />
+      <View
+        style={{
+          position: "absolute",
+          left: -1,
+          bottom: -1,
+          width: 8,
+          height: 8,
+          borderLeftWidth: 2,
+          borderBottomWidth: 2,
+          borderColor: color,
+          borderBottomLeftRadius: 3,
+        }}
+      />
+      <View
+        style={{
+          position: "absolute",
+          right: -1,
+          bottom: -1,
+          width: 8,
+          height: 8,
+          borderRightWidth: 2,
+          borderBottomWidth: 2,
+          borderColor: color,
+          borderBottomRightRadius: 3,
+        }}
+      />
+    </View>
+  );
+}
+
+/* =========================
+   Screen
+========================= */
+export default function SalesHomeScreen() {
+ const systemText = useSystemMessageText();
+ const uiText=useCommonText();
+ const {language:cartLanguage}=useLanguage();
+  const router = useRouter();
+  const params = useLocalSearchParams<{
+  barcode?: string;
+  _ts?: string;
+
+  // Store Orders mode
+  orderMode?: string;
+  reservationMode?: string;
+  orderType?: string;
+  orderOrgId?: string;
+  orderStoreId?: string;
+  orderStoreName?: string;
+}>();
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+
+  const { activeOrgId, activeOrgName, activeStoreId, activeStoreName, activeRole } = useOrg();
+
+const reservationMode =
+  String(params?.reservationMode ?? "") === "1" ||
+  String(params?.orderMode ?? "") === "1";
+const reservationOrderType =
+  String(params?.orderType ?? "RESERVATION").trim().toUpperCase() === "PRE_ORDER"
+    ? "PRE_ORDER"
+    : "RESERVATION";
+
+  const netInfo = useNetInfo();
+  const isOnline = !!(netInfo.isConnected && netInfo.isInternetReachable !== false);
+  const isOffline = !isOnline;
+
+const [loading, setLoading] = useState(true);
+const [refreshing, setRefreshing] = useState(false);
+const [err, setErr] = useState<string | null>(null);
+
+const [salesMode, setSalesMode] = useState<SalesMode>("DIRECT");
+const [salesModeLoading, setSalesModeLoading] = useState(false);
+
+const [query, setQuery] = useState("");
+  const [products, setProducts] = useState<ProductRow[]>([]);
+  const productsCountRef = useRef(0);
+
+useEffect(() => {
+  productsCountRef.current = products.length;
+}, [products.length]);
+  const [cartRows, renderCart] = useState<CartItem[]>([]);
+  const cartMachine = useRef(new CartLifecycle<CartItem>());
+  const cartScopeRef = useRef<CartScope|null>(null);
+  const cartRestoreRequestRef = useRef(0);
+  const navigatingRef=useRef(false);
+  const [navigating,setNavigating]=useState(false);
+  const scopeMatches=cartScopeRef.current?.storeId===String(activeStoreId??'')&&cartScopeRef.current?.organizationId===String(activeOrgId??'');
+  const cart=scopeMatches?cartRows:[];
+  const cartViewRef=useRef({org:activeOrgId,store:activeStoreId,language:cartLanguage});
+  cartViewRef.current={org:activeOrgId,store:activeStoreId,language:cartLanguage};
+  const setCart=useCallback((change:CartItem[]|((previous:CartItem[])=>CartItem[]))=>{
+    const scope=cartScopeRef.current,view=cartViewRef.current;
+    if(!scope||scope.storeId!==String(view.store??'')||scope.organizationId!==String(view.org??'')){setErr(posStabilityText(view.language,'loading'));return;}
+    if(navigatingRef.current)return;
+    const rows=cartMachine.current.update(change);renderCart(rows);
+    void writeCart(AsyncStorage,scopedCartKey(scope),rows).catch(()=>setErr(posStabilityText(cartViewRef.current.language,'storage')));
+  },[]);
+  useEffect(()=>{
+    const {data:{subscription}}=supabase.auth.onAuthStateChange((_event,session)=>{
+      if(cartScopeRef.current&&session?.user.id!==cartScopeRef.current.actorId){cartRestoreRequestRef.current++;cartMachine.current.activate('');cartScopeRef.current=null;renderCart([])}
+    });return()=>subscription.unsubscribe();
+  },[]);
+  const realtimeChannelRef = useRef<RealtimeChannel | null>(null);
+  const refreshTimerRef = useRef<any>(null);
+  const lastRealtimeRefreshAtRef = useRef<number>(0);
+  const latestStoreIdRef = useRef<string>("");
+  const lastResetStoreIdRef = useRef<string>("");
+  const lastResetCashierModeRef = useRef<boolean | null>(null);
+
+  useEffect(() => {
+    latestStoreIdRef.current = String(activeStoreId ?? "").trim();
+    setLastHandledParamScan("");
+  }, [activeStoreId]);
+
+  const [source, setSource] = useState<"LIVE" | "CACHED" | "NONE">("NONE");
+  const [lastSync, setLastSync] = useState<string | null>(null);
+  const [pendingCount, setPendingCount] = useState<number>(0);
+
+ const [lastHandledParamScan, setLastHandledParamScan] = useState<string>("");
+  const [, setLiveTick] = useState(0); 
+
+  const [recentScannedIds, setRecentScannedIds] = useState<string[]>([]);
+
+  const webScanBufferRef = useRef("");
+  const webScanLastAtRef = useRef(0);
+  const webScanStartedAtRef = useRef(0);
+  const webScanTimerRef = useRef<any>(null);
+
+  const [cashierFilter, setCashierFilter] = useState<
+    "PENDING" | "ACCEPTED" | "COMPLETED" | "ALL"
+  >("PENDING");
+  const [cashierLoading, setCashierLoading] = useState(false);
+  const [cashierRefreshing, setCashierRefreshing] = useState(false);
+  const [cashierErr, setCashierErr] = useState<string | null>(null);
+  const [cashierRows, setCashierRows] = useState<CashierHandoffRow[]>([]);
+
+  const [shiftLoading, setShiftLoading] = useState(false);
+  const [shiftBusy, setShiftBusy] = useState(false);
+  const [shiftErr, setShiftErr] = useState<string | null>(null);
+
+  const [openShift, setOpenShift] = useState<OpenCashierShiftRow | null>(null);
+  const [shiftModalOpen, setShiftModalOpen] = useState(false);
+  const [openingCashDraft, setOpeningCashDraft] = useState("0");
+
+  const orgId = String(activeOrgId ?? "").trim();
+  const money = useOrgMoneyPrefs(orgId);
+  const displayCurrency = money.currency || "TZS";
+  const displayLocale = money.locale || "en-TZ";
+
+  const fmt = useCallback(
+    (n: number) =>
+      formatMoney(n, { currency: displayCurrency, locale: displayLocale }).replace(/\s+/g, " "),
+    [displayCurrency, displayLocale]
+  );
+
+  const bumpRecent = useCallback((productId: string) => {
+    if (!productId) return;
+    setRecentScannedIds((prev) => {
+      const next = [productId, ...prev.filter((x) => x !== productId)];
+      return next.slice(0, 25);
+    });
+  }, []);
+
+  const vibrateScan = useCallback(() => {
+    try {
+      Vibration.vibrate(12);
+    } catch {}
+  }, []);
+
+const currentRole = useMemo(() => normalizeRole(activeRole), [activeRole]);
+const isCashier = useMemo(() => currentRole === "cashier", [currentRole]);
+
+const loadSalesMode = useCallback(async () => {
+  const sid = String(activeStoreId ?? "").trim();
+
+  if (!sid) {
+    setSalesMode("DIRECT");
+    return;
+  }
+
+  setSalesModeLoading(true);
+
+  try {
+    const { data, error } = await supabase
+      .from("stores")
+      .select("sales_mode")
+      .eq("id", sid)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    setSalesMode(normalizeSalesMode(data?.sales_mode));
+  } catch {
+    // Database ikiwa bado haina sales_mode,
+    // DIRECT ndiyo fallback salama.
+    setSalesMode("DIRECT");
+  } finally {
+    setSalesModeLoading(false);
+  }
+}, [activeStoreId]);
+
+useEffect(() => {
+  void loadSalesMode();
+}, [loadSalesMode]);
+
+useFocusEffect(
+  useCallback(() => {
+    void loadSalesMode();
+  }, [loadSalesMode])
+);
+
+const restorePersistedCart = useCallback(async () => {
+    const sid=String(activeStoreId??'').trim(),oid=String(activeOrgId??'').trim(),request=++cartRestoreRequestRef.current;
+    if(!sid||!oid||isCashier){cartMachine.current.activate('');cartScopeRef.current=null;renderCart([]);return;}
+    try{
+      const {data:{session}}=await supabase.auth.getSession();
+      if(request!==cartRestoreRequestRef.current||!session)return;
+      const scope={organizationId:oid,storeId:sid,actorId:session.user.id},key=scopedCartKey(scope);
+      cartScopeRef.current=scope;renderCart(cartMachine.current.activate(key));
+      await consumeSavedCart(AsyncStorage,scope,key);
+      const restored=await cartMachine.current.restore(async()=>{
+        const rows=await readCart(AsyncStorage,key);
+        if(!rows.length&&await AsyncStorage.getItem(`sales_cart_${sid}`))setErr(posStabilityText(cartLanguage,'legacy'));
+        if(!rows.length)return [];
+        const valid=parseCheckoutCart(JSON.stringify(rows));if(valid.length!==rows.length)throw Error('INVALID_CART_STORAGE');
+        return rows as CartItem[];
+      });
+      if(request===cartRestoreRequestRef.current&&restored)renderCart([...cartMachine.current.items]);
+    }catch{if(request===cartRestoreRequestRef.current)setErr(posStabilityText(cartLanguage,'storage'));}
+  },[activeStoreId,activeOrgId,isCashier,cartLanguage]);
+  useFocusEffect(useCallback(()=>{
+    navigatingRef.current=false;setNavigating(false);void restorePersistedCart();
+    return()=>{cartRestoreRequestRef.current++;cartMachine.current.invalidate()};
+  },[restorePersistedCart]));
+
+  const isWeb = Platform.OS === "web";
+  const isDesktopWeb = isWeb && width >= 1100;
+  const isWideDesktopWeb = isWeb && width >= 1500;
+  const desktopProductColumns = isWideDesktopWeb ? 3 : 2;
+
+  const canSellDirect = useMemo(() => {
+    return currentRole === "owner" || currentRole === "admin" || currentRole === "staff";
+  }, [currentRole]);
+
+const canUseCashierHandoff = useMemo(() => {
+  return currentRole === "owner" || currentRole === "admin" || currentRole === "staff";
+}, [currentRole]);
+
+const isDirectSalesMode = salesMode === "DIRECT";
+const isCashierSalesMode = salesMode === "CASHIER";
+
+const isOwnerOrAdmin = useMemo(
+    () => currentRole === "owner" || currentRole === "admin",
+    [currentRole]
+  );
+
+  const loadOpenShift = useCallback(async () => {
+    if (!isCashier || !activeStoreId) {
+      setOpenShift(null);
+      setShiftModalOpen(false);
+      return;
+    }
+
+    setShiftErr(null);
+    setShiftLoading(true);
+
+    try {
+      const { data, error } = await supabase.rpc("get_my_open_cashier_shift_v1", {
+        p_store_id: activeStoreId,
+      });
+
+      if (error) throw error;
+
+      const row = Array.isArray(data) ? data[0] : null;
+
+      if (row?.shift_id) {
+        setOpenShift({
+          shift_id: String(row.shift_id),
+          organization_id: String(row.organization_id ?? ""),
+          store_id: String(row.store_id ?? ""),
+          membership_id: String(row.membership_id ?? ""),
+          opening_cash: Number(row.opening_cash ?? 0),
+          status: String(row.status ?? "OPEN"),
+          opened_at: String(row.opened_at ?? ""),
+          closed_at: row.closed_at ?? null,
+        });
+        setShiftModalOpen(false);
+      } else {
+        setOpenShift(null);
+        setShiftModalOpen(false);
+      }
+    } catch (e: any) {
+      setOpenShift(null);
+      setShiftModalOpen(false);
+      setShiftErr(e?.message ?? "Failed to load open shift");
+    } finally {
+      setShiftLoading(false);
+    }
+  }, [isCashier, activeStoreId]);
+
+  const loadCashierHandoffs = useCallback(
+    async (mode: "boot" | "refresh" = "boot") => {
+      if (!isCashier) return;
+
+      setCashierErr(null);
+      if (mode === "boot") setCashierLoading(true);
+      if (mode === "refresh") setCashierRefreshing(true);
+
+      try {
+        const { data, error } = await supabase.rpc("get_my_cashier_handoffs_v2", {
+          p_status: null,
+        });
+
+        if (error) throw error;
+
+        setCashierRows(normalizeHandoffs((data ?? []) as any[]));
+      } catch (e: any) {
+        setCashierErr(e?.message ?? "Failed to load cashier queue");
+        setCashierRows([]);
+      } finally {
+        if (mode === "boot") setCashierLoading(false);
+        if (mode === "refresh") setCashierRefreshing(false);
+      }
+    },
+    [isCashier]
+  );
+
+  const refreshCashierSurface = useCallback(async () => {
+    if (!isCashier) return;
+    await Promise.allSettled([loadOpenShift(), loadCashierHandoffs("refresh")]);
+    setLastSync(new Date().toISOString());
+  }, [isCashier, loadCashierHandoffs, loadOpenShift]);
+
+  const startCashierShift = useCallback(async () => {
+    if (!activeStoreId) {
+      Alert.alert(uiText("Missing"), uiText("No active store selected."));
+      return;
+    }
+
+    const raw = normalizeMoneyInput(openingCashDraft);
+    const openingCash = raw ? Number(raw) : 0;
+
+    if (!Number.isFinite(openingCash) || openingCash < 0) {
+      Alert.alert(uiText("Opening Cash"), uiText("Weka opening cash sahihi. Unaweza kuweka 0."));
+      return;
+    }
+
+    setShiftBusy(true);
+    setShiftErr(null);
+
+    try {
+      const { data, error } = await supabase.rpc("open_cashier_shift_v1", {
+        p_store_id: activeStoreId,
+        p_opening_cash: openingCash,
+      });
+
+      if (error) throw error;
+
+      const row = Array.isArray(data) ? data[0] : null;
+      if (!row?.shift_id) {
+        throw new Error("Shift opened but no shift_id returned");
+      }
+
+      setOpenShift({
+        shift_id: String(row.shift_id),
+        organization_id: String(row.organization_id ?? ""),
+        store_id: String(row.store_id ?? ""),
+        membership_id: String(row.membership_id ?? ""),
+        opening_cash: Number(row.opening_cash ?? 0),
+        status: String(row.status ?? "OPEN"),
+        opened_at: String(row.opened_at ?? ""),
+        closed_at: null,
+      });
+
+      setOpeningCashDraft("0");
+      setShiftModalOpen(false);
+
+      await refreshCashierSurface();
+
+      Alert.alert(uiText("Shift Opened ✅"), uiText("Cashier shift imefunguliwa vizuri."));
+    } catch (e: any) {
+      setShiftErr(e?.message ?? "Failed to open shift");
+      Alert.alert(uiText("Shift Opening Failed"), e?.message ?? uiText("Failed to open shift"));
+    } finally {
+      setShiftBusy(false);
+    }
+  }, [activeStoreId, openingCashDraft, refreshCashierSurface]);
+
+  /* =========================
+     Cart summary
+  ========================= */
+  const cartCount = useMemo(() => cart.reduce((a, c) => a + (c.qty || 0), 0), [cart]);
+  const cartTotalLines = useMemo(() => cart.length, [cart]);
+  const cartTotalAmount = useMemo(
+    () => cart.reduce((a, c) => a + Number(c.line_total || 0), 0),
+    [cart]
+  );
+
+  /* =========================
+     Price Modal State
+  ========================= */
+const [priceModalOpen, setPriceModalOpen] = useState(false);
+const [selected, setSelected] = useState<ProductRow | null>(null);
+const [priceDraft, setPriceDraft] = useState("");
+const [qtyDraft, setQtyDraft] = useState("1");
+const [modalErr, setModalErr] = useState<string | null>(null);
+
+const [sellModeOpen, setSellModeOpen] = useState(false);
+const [sellModeProduct, setSellModeProduct] = useState<ProductRow | null>(null);
+
+const [productPreviewOpen, setProductPreviewOpen] = useState(false);
+const [previewProduct, setPreviewProduct] = useState<ProductRow | null>(null);
+
+const openProductPreview = useCallback((p: ProductRow) => {
+  setPreviewProduct(p);
+  setProductPreviewOpen(true);
+}, []);
+
+const closeProductPreview = useCallback(() => {
+  setProductPreviewOpen(false);
+  setPreviewProduct(null);
+}, []);
+
+  const openPriceModal = useCallback((p: ProductRow) => {
+    setModalErr(null);
+    setSelected(p);
+
+    const sp = Number(p.selling_price ?? 0);
+    setPriceDraft(sp > 0 ? String(Math.trunc(sp)) : "");
+    setQtyDraft("1");
+    setPriceModalOpen(true);
+  }, []);
+
+  const closePriceModal = useCallback(() => {
+    setPriceModalOpen(false);
+    setSelected(null);
+    setPriceDraft("");
+    setQtyDraft("1");
+    setModalErr(null);
+  }, []);
+
+  const confirmAddWithPrice = useCallback(() => {
+    if (!selected) return;
+
+    const unitPrice = parsePositiveNumber(priceDraft);
+    if (!unitPrice) {
+      setModalErr("Weka bei sahihi (namba > 0).");
+      return;
+    }
+
+    const cp = Number(selected.cost_price ?? NaN);
+    if (Number.isFinite(cp) && unitPrice < cp) {
+      setModalErr(`ASARA: Bei uliyoweka (${fmt(unitPrice)}) iko chini ya Cost (${fmt(cp)}).`);
+      return;
+    }
+
+    const qn = clampQty(Number(qtyDraft));
+    if (!Number.isFinite(qn) || qn <= 0) {
+      setModalErr("Weka quantity sahihi.");
+      return;
+    }
+
+    setCart((prev) => {
+      const idx = prev.findIndex((x) => x.product_id === selected.id);
+
+      if (idx >= 0) {
+        const existing = prev[idx];
+        const nextQty = clampQty(existing.qty + qn);
+        const next = [...prev];
+        next[idx] = {
+          ...existing,
+          qty: nextQty,
+          line_total: Number(existing.unit_price) * nextQty,
+        };
+        return next;
+      }
+
+      return [
+        ...prev,
+        {
+          product_id: selected.id,
+          name: selected.name,
+          sku: selected.sku ?? null,
+          qty: qn,
+          unit: selected.unit ?? null,
+          unit_price: unitPrice,
+          line_total: unitPrice * qn,
+        },
+      ];
+    });
+
+    closePriceModal();
+  }, [closePriceModal, fmt, priceDraft, qtyDraft, selected]);
+
+/* =========================
+   Cart Helpers
+========================= */
+const openSellMode = useCallback((p: ProductRow) => {
+  setSellModeProduct(p);
+  setSellModeOpen(true);
+}, []);
+
+const closeSellMode = useCallback(() => {
+  setSellModeProduct(null);
+  setSellModeOpen(false);
+}, []);
+
+const addPrecisionToCart = useCallback(
+  (p: ProductRow, mode: "PACK" | "UNIT") => {
+    const baseUnitPrice = Number(p.selling_price ?? 0);
+    const packSize = getPackSize(p);
+
+    const packUnit = getPackLabel(p);
+    const baseUnit = getBaseUnitLabel(p);
+
+    const stockQtyToReduce = mode === "PACK" ? packSize : 1;
+    const sellUnitPrice = mode === "PACK" ? baseUnitPrice * packSize : baseUnitPrice;
+    const key = getCartKey(p, mode);
+
+    if (!Number.isFinite(baseUnitPrice) || baseUnitPrice <= 0) {
+      closeSellMode();
+      openPriceModal(p);
+      return;
+    }
+
+    setCart((prev) => {
+      const idx = prev.findIndex((x) => getCartKey(x) === key);
+
+      if (idx >= 0) {
+        const existing = prev[idx];
+        const nextQty = clampQty(existing.qty + stockQtyToReduce);
+        const next = [...prev];
+        next[idx] = {
+          ...existing,
+          qty: nextQty,
+          line_total: Number(existing.unit_price) * nextQty,
+        };
+        return next;
+      }
+
+      return [
+        ...prev,
+        {
+          cart_key: key,
+          product_id: p.id,
+          name: p.name,
+          sku: p.sku ?? null,
+          qty: stockQtyToReduce,
+          unit: mode === "PACK" ? packUnit : baseUnit,
+          unit_price: baseUnitPrice,
+          line_total: baseUnitPrice * stockQtyToReduce,
+          sell_mode: mode,
+          pack_size: packSize,
+          pack_unit: packUnit,
+          base_unit: baseUnit,
+          stock_qty_per_sell_unit: stockQtyToReduce,
+        },
+      ];
+    });
+
+    closeSellMode();
+  },
+  [closeSellMode, openPriceModal]
+);
+
+const addAuto = useCallback(
+   (p: ProductRow) => {
+  if (isPrecisionProduct(p)) {
+    openSellMode(p);
+    return;
+  }
+
+  const spRaw = Number(p.selling_price ?? 0);
+      const sp = Math.trunc(spRaw);
+
+      if (!Number.isFinite(sp) || sp <= 0) {
+        openPriceModal(p);
+        return;
+      }
+
+      setCart((prev) => {
+        const idx = prev.findIndex((x) => x.product_id === p.id);
+        if (idx >= 0) {
+          const existing = prev[idx];
+          const nextQty = clampQty(existing.qty + 1);
+          const next = [...prev];
+          next[idx] = {
+            ...existing,
+            qty: nextQty,
+            line_total: Number(existing.unit_price) * nextQty,
+          };
+          return next;
+        }
+
+        return [
+          ...prev,
+          {
+            product_id: p.id,
+            name: p.name,
+            sku: p.sku ?? null,
+            qty: 1,
+            unit: p.unit ?? null,
+            unit_price: sp,
+            line_total: sp,
+          },
+        ];
+      });
+    },
+    [openPriceModal, openSellMode]
+  );
+
+const inc = useCallback((key: string) => {
+  setCart((prev) =>
+    prev.map((x) => {
+      if (getCartKey(x) !== key && x.product_id !== key) return x;
+      const step = Number(x.stock_qty_per_sell_unit ?? 1);
+      const nextQty = clampQty(x.qty + (Number.isFinite(step) && step > 0 ? step : 1));
+      return { ...x, qty: nextQty, line_total: Number(x.unit_price) * nextQty };
+    })
+  );
+}, []);
+
+const dec = useCallback((key: string) => {
+  setCart((prev) =>
+    prev
+      .map((x) => {
+        if (getCartKey(x) !== key && x.product_id !== key) return x;
+        const step = Number(x.stock_qty_per_sell_unit ?? 1);
+        const nextQty = x.qty - (Number.isFinite(step) && step > 0 ? step : 1);
+        return {
+          ...x,
+          qty: nextQty,
+          line_total: Number(x.unit_price) * Math.max(nextQty, 0),
+        };
+      })
+      .filter((x) => x.qty > 0)
+  );
+}, []);
+
+const clearCart = useCallback(() => {setCart([]);},[setCart]);
+
+const removeItem = useCallback((key: string) => {
+  setCart((prev) => prev.filter((x) => getCartKey(x) !== key && x.product_id !== key));
+}, []);
+
+  /* =========================
+     Qty editor modal
+  ========================= */
+  const [qtyEditorOpen, setQtyEditorOpen] = useState(false);
+  const [qtyEditorProductId, setQtyEditorProductId] = useState<string | null>(null);
+  const [qtyEditorName, setQtyEditorName] = useState<string>("");
+  const [qtyEditorDraft, setQtyEditorDraft] = useState<string>("");
+  const [qtyEditorErr, setQtyEditorErr] = useState<string | null>(null);
+
+  const openQtyEditor = useCallback((item: CartItem) => {
+    setQtyEditorErr(null);
+    setQtyEditorProductId(getCartKey(item));
+    setQtyEditorName(item.name ?? "Product");
+    setQtyEditorDraft(String(Number(item.qty ?? 1)));
+    setQtyEditorOpen(true);
+  }, []);
+
+  const closeQtyEditor = useCallback(() => {
+    Keyboard.dismiss();
+    setQtyEditorOpen(false);
+    setQtyEditorProductId(null);
+    setQtyEditorName("");
+    setQtyEditorDraft("");
+    setQtyEditorErr(null);
+  }, []);
+
+  const confirmQtyEditor = useCallback(() => {
+    if (!qtyEditorProductId) return;
+
+    const q = parsePositiveQty(qtyEditorDraft);
+    if (!q) {
+      setQtyEditorErr("Weka quantity sahihi (namba > 0).");
+      return;
+    }
+
+    const nextQty = clampQty(q);
+
+    setCart((prev) =>
+      prev.map((x) => {
+        if (getCartKey(x) !== qtyEditorProductId && x.product_id !== qtyEditorProductId) return x;
+        return {
+          ...x,
+          qty: nextQty,
+          line_total: Number(x.unit_price) * nextQty,
+        };
+      })
+    );
+
+    closeQtyEditor();
+  }, [closeQtyEditor, qtyEditorDraft, qtyEditorProductId]);
+
+  const removeFromQtyEditor = useCallback(() => {
+    if (!qtyEditorProductId) return;
+    removeItem(qtyEditorProductId);
+    closeQtyEditor();
+  }, [closeQtyEditor, qtyEditorProductId, removeItem]);
+
+  /* =========================
+     Load products
+  ========================= */
+const loadProducts = useCallback(
+  async (mode: "boot" | "refresh") => {
+    setErr(null);
+    if (mode === "boot") setLoading(true);
+    if (mode === "refresh") setRefreshing(true);
+
+    try {
+      if (isCashier) {
+        setProducts([]);
+        setSource("NONE");
+        setLastSync(null);
+        return;
+      }
+
+      if (!activeStoreId) {
+        setProducts([]);
+        setErr("No active store selected.");
+        setSource("NONE");
+        setLastSync(null);
+        return;
+      }
+
+      // CACHE isitumike kama tuko online.
+      // Itumike tu offline au boot wakati hakuna internet.
+      if (isOffline) {
+        try {
+          const cached = await loadSalesProductsCache(activeStoreId);
+          if (cached.rows.length > 0) {
+            setProducts(cached.rows as any);
+            setSource("CACHED");
+            setLastSync(cached.lastSync);
+            return;
+          }
+        } catch {}
+
+        setProducts([]);
+        setSource("NONE");
+        setLastSync(null);
+        return;
+      }
+
+      // ONLINE: soma LIVE moja kwa moja Supabase.
+      const { data, error } = await supabase.rpc("get_store_sale_items", {
+        p_store_id: activeStoreId,
+      });
+
+      if (error) throw error;
+
+      const rows = (data ?? []) as any[];
+
+      const list: ProductRow[] = rows
+        .filter((r) => Number(r.qty ?? 0) > 0)
+        .map((r) => ({
+          id: String(r.product_id),
+          name: String(r.name ?? "").trim() || "Product",
+          sku: r.sku ?? null,
+          category: r.category ?? null,
+          unit: r.unit ?? null,
+          selling_price: r.selling_price ?? null,
+          cost_price: r.cost_price ?? null,
+          stock_qty: r.qty ?? null,
+          barcode: r.barcode ?? null,
+          image_url: r.image_url ?? null,
+
+          is_precision_product: Boolean(r.is_precision_product),
+          precision_pack_size: r.precision_pack_size ?? null,
+          precision_base_unit: r.precision_base_unit ?? null,
+          precision_sell_mode: r.precision_sell_mode ?? null,
+          precision_allow_box_sales: r.precision_allow_box_sales ?? null,
+          precision_allow_unit_sales: r.precision_allow_unit_sales ?? null,
+        }));
+
+      list.sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""));
+
+      setProducts(list);
+      setSource("LIVE");
+
+      try {
+        const syncIso = await saveSalesProductsCache(activeStoreId, list as any);
+        setLastSync(syncIso);
+      } catch {
+        setLastSync(new Date().toISOString());
+      }
+    } catch (e: any) {
+      setErr(e?.message ?? "Failed to load products");
+
+      if (productsCountRef.current === 0) {
+        setProducts([]);
+        setSource("NONE");
+      }
+    } finally {
+      if (mode === "boot") setLoading(false);
+      if (mode === "refresh") setRefreshing(false);
+    }
+  },
+  [activeStoreId, isCashier, isOffline]
+);
+
+  const triggerRealtimeRefresh = useCallback(() => {
+    if (isCashier) return;
+
+    const storeIdNow = String(latestStoreIdRef.current ?? "").trim();
+    if (!storeIdNow) return;
+
+    const now = Date.now();
+    if (now - lastRealtimeRefreshAtRef.current < 1200) return;
+    lastRealtimeRefreshAtRef.current = now;
+
+    if (refreshTimerRef.current) {
+      clearTimeout(refreshTimerRef.current);
+    }
+
+    refreshTimerRef.current = setTimeout(() => {
+      void loadProducts("refresh");
+    }, 250);
+  }, [isCashier, loadProducts]);
+
+ 
+
+  useEffect(() => {
+    const currentStoreId = String(activeStoreId ?? "").trim();
+    const shouldResetForStoreChange = lastResetStoreIdRef.current !== currentStoreId;
+    const shouldResetForModeChange =
+      lastResetCashierModeRef.current === null || lastResetCashierModeRef.current !== isCashier;
+
+    if (shouldResetForStoreChange || shouldResetForModeChange) {
+      setQuery("");
+      setRecentScannedIds([]);
+      lastResetStoreIdRef.current = currentStoreId;
+      lastResetCashierModeRef.current = isCashier;
+    }
+
+    if (isCashier) {
+      void (async () => {
+        await Promise.allSettled([loadCashierHandoffs("boot"), loadOpenShift()]);
+        setLastSync(new Date().toISOString());
+      })();
+      return;
+    }
+
+    void loadProducts("boot");
+  }, [activeStoreId, isCashier, loadCashierHandoffs, loadOpenShift, loadProducts]);
+
+  useEffect(() => {
+    if (!activeStoreId) return;
+    if (isOffline) return;
+    if (isCashier) return;
+
+    void (async () => {
+      try {
+        await syncSalesQueueOnce(activeStoreId);
+await loadProducts("refresh");
+      } catch {
+      } finally {
+        const n = await countPending(activeStoreId);
+        setPendingCount(n);
+      }
+    })();
+  }, [activeStoreId, isCashier, isOffline]);
+
+  useEffect(() => {
+    if (!activeStoreId) return;
+    if (isCashier) return;
+
+    void (async () => {
+      const n = await countPending(activeStoreId);
+      setPendingCount(n);
+    })();
+  }, [activeStoreId, isCashier, isOnline]);
+
+  useEffect(() => {
+    if (!isCashier) return;
+    void loadCashierHandoffs("boot");
+  }, [isCashier, cashierFilter, loadCashierHandoffs]);
+
+  useEffect(() => {
+    if (!isCashier) {
+      setOpenShift(null);
+      setShiftModalOpen(false);
+      return;
+    }
+    void loadOpenShift();
+  }, [isCashier, activeStoreId, loadOpenShift]);
+
+useFocusEffect(
+  useCallback(() => {
+    void loadSalesMode();
+
+    if (isCashier) {
+      void refreshCashierSurface();
+    } else {
+      void loadProducts("refresh");
+    }
+
+    return () => {};
+  }, [
+    isCashier,
+    loadProducts,
+    refreshCashierSurface,
+    loadSalesMode,
+  ])
+);
+
+  useEffect(() => {
+    if (realtimeChannelRef.current) {
+      supabase.removeChannel(realtimeChannelRef.current);
+      realtimeChannelRef.current = null;
+    }
+
+    if (isCashier) return;
+    if (!activeStoreId) return;
+    if (!activeOrgId) return;
+
+    const storeIdNow = String(activeStoreId).trim();
+    const orgIdNow = String(activeOrgId).trim();
+
+    if (!storeIdNow || !orgIdNow) return;
+
+    const channel = supabase.channel(
+      `sales-live:${orgIdNow}:${storeIdNow}:${Date.now()}:${Math.random().toString(36).slice(2)}`
+    );
+
+    channel.on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "inventory",
+        filter: `store_id=eq.${storeIdNow}`,
+      },
+      () => {
+        triggerRealtimeRefresh();
+      }
+    );
+
+    channel.on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "sales",
+      },
+      () => {
+        triggerRealtimeRefresh();
+      }
+    );
+channel.subscribe();
+
+    realtimeChannelRef.current = channel;
+
+    return () => {
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
+        refreshTimerRef.current = null;
+      }
+
+      try {
+        supabase.removeChannel(channel);
+      } catch {}
+
+      if (realtimeChannelRef.current === channel) {
+        realtimeChannelRef.current = null;
+      }
+    };
+    
+  }, [activeOrgId, activeStoreId, isCashier, triggerRealtimeRefresh]);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state !== "active") return;
+
+      if (isCashier) {
+        void refreshCashierSurface();
+      } else {
+        void loadProducts("refresh");
+      }
+    });
+
+    return () => sub.remove();
+  }, [isCashier, loadProducts, refreshCashierSurface]);
+
+  useEffect(() => {
+    return () => {
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
+        refreshTimerRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS === "web") return;
+
+    const timer = setInterval(() => {
+      setLiveTick((x) => x + 1);
+    }, 15000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS === "web") return;
+    if (!isCashier) return;
+
+    const timer = setInterval(() => {
+      void refreshCashierSurface();
+    }, 12000);
+
+    return () => clearInterval(timer);
+  }, [isCashier, refreshCashierSurface]);
+
+  const posSearchIndex = useMemo(() => indexPOS(products), [products]);
+  const filtered = useMemo(() => {
+    const base = searchPOS(posSearchIndex, query);
+
+    if (!recentScannedIds.length) return base;
+
+    const rank = new Map<string, number>();
+    recentScannedIds.forEach((id, idx) => rank.set(id, idx));
+
+    const copy = [...base];
+    copy.sort((a, b) => {
+      const ra = rank.has(a.id) ? (rank.get(a.id) as number) : 999999;
+      const rb = rank.has(b.id) ? (rank.get(b.id) as number) : 999999;
+      if (ra !== rb) return ra - rb;
+      return (a.name ?? "").localeCompare(b.name ?? "");
+    });
+
+    return copy;
+  }, [posSearchIndex, query, recentScannedIds]);
+
+  /* =========================
+     Barcode handler
+  ========================= */
+  const handleBarcode = useCallback(
+    (rawInput: any) => {
+      if (isCashier) {
+        setErr("Cashier role haitumii product-picking screen.");
+        return;
+      }
+
+      const raw = cleanBarcode(rawInput);
+      if (!raw) return;
+
+      setErr(null);
+
+      if (!activeStoreId) {
+        setErr("No active store selected.");
+        return;
+      }
+
+      const localTarget =
+        products.find((p) => cleanBarcode(p.barcode) === raw) ||
+        products.find((p) => cleanBarcode(p.sku) === raw);
+
+      if (localTarget) {
+        setErr(null);
+        bumpRecent(localTarget.id);
+        addAuto(localTarget);
+        vibrateScan();
+        return;
+      }
+
+      if (isOffline) {
+        setErr(`OFFLINE: Barcode haipo kwenye cache: ${raw}`);
+        return;
+      }
+
+      void (async () => {
+        try {
+          const { data, error } = await supabase.rpc("get_store_sale_item_by_barcode", {
+            p_store_id: activeStoreId,
+            p_barcode: raw,
+          });
+          if (error) throw error;
+
+          const row = Array.isArray(data) ? data[0] : null;
+          if (!row) {
+            setErr(`Barcode haijapatikana: ${raw}`);
+            return;
+          }
+
+          if (Number(row.qty ?? 0) <= 0) {
+            setErr(`Barcode ipo lakini haina stock kwenye store hii: ${raw}`);
+            return;
+          }
+
+          const p: ProductRow = {
+            id: row.product_id,
+            name: String(row.name ?? "Product").trim() || "Product",
+            sku: row.sku ?? null,
+            category: row.category ?? null,
+            unit: row.unit ?? null,
+            selling_price: row.selling_price ?? null,
+            cost_price: row.cost_price ?? null,
+            stock_qty: row.qty ?? null,
+            barcode: raw,
+image_url: row.image_url ?? null,
+          };
+
+          setProducts((prev) => {
+            if (prev.some((x) => x.id === p.id)) return prev;
+            const next = [...prev, p];
+            next.sort((a, b) => (a.name ?? "").localeCompare(b.name ?? ""));
+            return next;
+          });
+
+          setErr(null);
+          bumpRecent(p.id);
+          addAuto(p);
+          vibrateScan();
+        } catch (e: any) {
+          setErr(e?.message ?? `Failed to fetch barcode item: ${raw}`);
+        }
+      })();
+    },
+    [activeStoreId, addAuto, bumpRecent, isCashier, isOffline, products, vibrateScan]
+  );
+
+  useEffect(() => {
+    if (isCashier) return;
+
+    setActiveScanScope("SALES");
+
+    const unsub = subscribeScanBarcode(
+      (barcode) => {
+        handleBarcode(barcode);
+      },
+      { scope: "SALES" }
+    );
+
+    return () => {
+      unsub();
+      setActiveScanScope("GLOBAL");
+    };
+  }, [handleBarcode, isCashier]);
+
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    if (isCashier) return;
+
+    const resetWebScanBuffer = () => {
+      webScanBufferRef.current = "";
+      webScanLastAtRef.current = 0;
+      webScanStartedAtRef.current = 0;
+
+      if (webScanTimerRef.current) {
+        clearTimeout(webScanTimerRef.current);
+        webScanTimerRef.current = null;
+      }
+    };
+
+    const flushWebScanBuffer = () => {
+      const code = cleanBarcode(webScanBufferRef.current);
+      const startedAt = webScanStartedAtRef.current;
+      const endedAt = webScanLastAtRef.current;
+
+      resetWebScanBuffer();
+
+      if (!code || code.length < 4) return;
+
+      const duration = startedAt > 0 && endedAt >= startedAt ? endedAt - startedAt : 0;
+
+      // Scanner input usually comes very fast.
+      // Human typing is usually slower.
+      if (duration > 900 && code.length < 8) return;
+
+      handleBarcode(code);
+    };
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as any;
+
+      // Usichukue scanner wakati user anaandika kwenye input/search box
+      if (isTypingIntoField(target)) return;
+
+      const key = String(e.key ?? "");
+      const now = Date.now();
+
+      if (!key) return;
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+      if (
+        key === "Shift" ||
+        key === "Control" ||
+        key === "Alt" ||
+        key === "Meta" ||
+        key === "Tab"
+      ) {
+        return;
+      }
+
+      // Zuia global listener wa juu asije akachukua hii scan tena
+      e.stopPropagation();
+
+      if (key === "Enter") {
+        e.preventDefault();
+        flushWebScanBuffer();
+        return;
+      }
+
+      if (key.length !== 1) return;
+
+      if (now - webScanLastAtRef.current > 120) {
+        webScanBufferRef.current = "";
+        webScanStartedAtRef.current = now;
+      }
+
+      if (!webScanStartedAtRef.current) {
+        webScanStartedAtRef.current = now;
+      }
+
+      webScanBufferRef.current += key;
+      webScanLastAtRef.current = now;
+
+      if (webScanTimerRef.current) {
+        clearTimeout(webScanTimerRef.current);
+      }
+
+      webScanTimerRef.current = setTimeout(() => {
+        flushWebScanBuffer();
+      }, 180);
+    };
+
+    window.addEventListener("keydown", onKeyDown, true);
+
+    return () => {
+      window.removeEventListener("keydown", onKeyDown, true);
+      resetWebScanBuffer();
+    };
+  }, [handleBarcode, isCashier]);
+
+  useEffect(() => {
+    const raw = cleanBarcode(params?.barcode);
+    if (!raw) return;
+    if (!activeStoreId) return;
+    if (isCashier) return;
+
+    const key = `${activeStoreId ?? "no-store"}::${raw}::${String(params?._ts ?? "")}`;
+    if (key === lastHandledParamScan) return;
+
+    handleBarcode(raw);
+    setLastHandledParamScan(key);
+  }, [
+    activeStoreId,
+    handleBarcode,
+    isCashier,
+    lastHandledParamScan,
+    params?._ts,
+    params?.barcode,
+  ]);
+
+  /* =========================
+     Navigation
+  ========================= */
+const openCheckout = useCallback(async (cashier:boolean) => {
+  if(navigatingRef.current)return;
+  setErr(null);
+  const scope=cartScopeRef.current;
+  if(!scope||scope.storeId!==String(activeStoreId??'')||scope.organizationId!==orgId)return setErr(posStabilityText(cartLanguage,'loading'));
+  if(cashier?(!canUseCashierHandoff||!isCashierSalesMode):(!canSellDirect||!isDirectSalesMode))return setErr("No permission to sell directly.");
+  const rows=cartMachine.current.items;
+  if(!rows.length)return setErr("Cart is empty.");
+  if(parseCheckoutCart(JSON.stringify(rows)).length!==rows.length)return setErr("Kuna bidhaa kwenye cart haina bei sahihi.");
+  navigatingRef.current=true;setNavigating(true);
+  try{
+    await writeCart(AsyncStorage,scopedCartKey(scope),rows);
+    if(cartMachine.current.key!==scopedCartKey(scope))throw Error('CART_SCOPE_CHANGED');
+    router.push({pathname:"/(tabs)/sales/checkout",params:{storeId:scope.storeId,storeName:activeStoreName??'',cart:JSON.stringify(rows),cartId:makeId(),cartOrg:scope.organizationId,cartActor:scope.actorId,...(cashier?{cashierMode:'1'}:{}),...(reservationMode?{reservationMode:'1',orderType:reservationOrderType}:{})}} as any);
+  }catch{navigatingRef.current=false;setNavigating(false);setErr(posStabilityText(cartLanguage,'storage'));}
+},[activeStoreId,activeStoreName,orgId,cartLanguage,canUseCashierHandoff,isCashierSalesMode,canSellDirect,isDirectSalesMode,router,reservationMode,reservationOrderType]);
+const goCheckout=useCallback(()=>void openCheckout(false),[openCheckout]);
+const goCashierCheckout=useCallback(()=>void openCheckout(true),[openCheckout]);
+
+
+  const goScan = useCallback(() => {
+    setErr(null);
+    if (!activeStoreId) return setErr("No active store selected.");
+    if (!canSellDirect) return setErr("Huna ruhusa ya kuuza.");
+    if (isCashier) return setErr("Cashier role haitumii scan ya product-picking.");
+    router.push("/(tabs)/sales/scan");
+  }, [activeStoreId, canSellDirect, isCashier, router]);
+
+  const goHandoffDetail = useCallback(
+    (handoffId: string) => {
+      const id = String(handoffId ?? "").trim();
+      if (!id) return;
+
+      router.push({
+        pathname: "/(tabs)/sales/[handoffId]",
+        params: { handoffId: id },
+      } as any);
+    },
+    [router]
+  );
+
+  const goShiftOpening = useCallback(() => {
+    router.push("/(tabs)/sales/shift-opening" as any);
+  }, [router]);
+
+  const goCashierClosing = useCallback(() => {
+    router.push("/(tabs)/settings/cashier-closing" as any);
+  }, [router]);
+
+  /* =========================
+     Derived helpers
+  ========================= */
+  const todayLabel = useMemo(() => fmtDateShort(new Date()), []);
+
+  const headerSubtitle = useMemo(() => {
+    const org = activeOrgName ?? "—";
+    const store = activeStoreName ?? "—";
+    const role = activeRole ?? "—";
+    return `${org} • ${store} • ${role}`;
+  }, [activeOrgName, activeStoreName, activeRole]);
+
+  const headerBlockedReason = useMemo(() => {
+    if (isCashier) {
+      return "Hapa cashier anapokea orders zilizotumwa na anakamilisha malipo. Uchaguzi wa bidhaa unafanyika kwenye upande wa sales workspace.";
+    }
+    if (!canSellDirect) {
+      return "Sales workspace hii haijafunguliwa kwa role yako kwenye context ya sasa.";
+    }
+    return null;
+  }, [canSellDirect, isCashier]);
+
+const checkoutDisabled = useMemo(() => {
+  return (
+    navigating ||
+    !activeStoreId ||
+    cart.length === 0 ||
+    !canSellDirect ||
+    isCashier ||
+    !isDirectSalesMode ||
+    salesModeLoading
+  );
+}, [
+  navigating,
+  activeStoreId,
+  cart.length,
+  canSellDirect,
+  isCashier,
+  isDirectSalesMode,
+  salesModeLoading,
+]);
+const cartHasItems = cart.length > 0 && cartTotalAmount > 0;
+
+  const cartAccent = useMemo(() => {
+    if (!cartHasItems) {
+      return {
+        border: "rgba(15,23,42,0.10)",
+        bg: "#FFFFFF",
+        soft: "#F8FAFC",
+        text: "#0F172A",
+      };
+    }
+
+    return {
+      border: "rgba(16,185,129,0.75)",
+      bg: "#DDF7EF",
+      soft: "#CFFAEA",
+      text: "#047857",
+    };
+  }, [cartHasItems]);
+ const cashierDisabled = useMemo(() => {
+  return (
+    navigating ||
+    !activeStoreId ||
+    cart.length === 0 ||
+    !canUseCashierHandoff ||
+    isCashier ||
+    !isCashierSalesMode ||
+    salesModeLoading
+  );
+}, [
+  navigating,
+  activeStoreId,
+  cart.length,
+  canUseCashierHandoff,
+  isCashier,
+  isCashierSalesMode,
+  salesModeLoading,
+]);
+
+  const getStockQty = useCallback((p: ProductRow): number | null => {
+    const n = Number(p.stock_qty);
+    return Number.isFinite(n) ? Number(n.toFixed(3)) : null;
+  }, []);
+
+  const statusLine = useMemo(() => {
+    const net = isOffline ? "OFFLINE" : "ONLINE";
+
+    if (isCashier) {
+      const sync = ` • Last update: ${formatTimeAgo(lastSync)}`;
+      return `${net}${sync}`;
+    }
+
+    const src = isOffline ? "CACHED" : source;
+    const pend = pendingCount > 0 ? ` • Pending: ${pendingCount}` : "";
+    const sync = ` • Last sync: ${formatTimeAgo(lastSync)}`;
+    return `${net} • Source: ${src}${sync}${pend}`;
+  }, [isCashier, isOffline, lastSync, pendingCount, source]);
+
+  const cashierCounts = useMemo(() => {
+    const out = { pending: 0, accepted: 0, completed: 0, all: cashierRows.length };
+
+    for (const r of cashierRows) {
+      const s = String(r.status ?? "").toUpperCase();
+      if (s === "PENDING") out.pending += 1;
+      else if (s === "ACCEPTED") out.accepted += 1;
+      else if (s === "COMPLETED") out.completed += 1;
+    }
+
+    return out;
+  }, [cashierRows]);
+
+  const filteredCashierRows = useMemo(() => {
+    if (cashierFilter === "ALL") return cashierRows;
+    return cashierRows.filter(
+      (r) => String(r.status ?? "").toUpperCase() === cashierFilter
+    );
+  }, [cashierFilter, cashierRows]);
+
+  const cashierTotalAmount = useMemo(
+    () => filteredCashierRows.reduce((a, r) => a + Number(r.total ?? 0), 0),
+    [filteredCashierRows]
+  );
+
+  const allQueueTotalAmount = useMemo(
+    () => cashierRows.reduce((a, r) => a + Number(r.total ?? 0), 0),
+    [cashierRows]
+  );
+
+  const activeFilterCount = useMemo(() => {
+    if (cashierFilter === "PENDING") return cashierCounts.pending;
+    if (cashierFilter === "ACCEPTED") return cashierCounts.accepted;
+    if (cashierFilter === "COMPLETED") return cashierCounts.completed;
+    return cashierCounts.all;
+  }, [cashierCounts, cashierFilter]);
+
+  const cashierEmptyText = useMemo(() => {
+    if (cashierLoading || cashierRefreshing || shiftLoading) {
+      return "Refreshing queue...";
+    }
+
+    if (cashierFilter === "PENDING") return "No pending cashier handoffs found.";
+    if (cashierFilter === "ACCEPTED") return "No accepted cashier handoffs found.";
+    if (cashierFilter === "COMPLETED") return "No completed cashier handoffs found.";
+    return "No cashier handoffs found.";
+  }, [cashierFilter, cashierLoading, cashierRefreshing, shiftLoading]);
+
+  const CashierFilterChip = ({
+    label,
+    value,
+  }: {label: string;
+    value: "PENDING" | "ACCEPTED" | "COMPLETED" | "ALL";
+  }) => {
+    const active = cashierFilter === value;
+
+    return (
+      <Pressable
+        onPress={() => setCashierFilter(value)}
+        style={({ pressed }) => ({
+          paddingVertical: 9,
+          paddingHorizontal: 12,
+          borderRadius: theme.radius.pill,
+          borderWidth: 1,
+          borderColor: active ? theme.colors.emeraldBorder : theme.colors.border,
+          backgroundColor: active ? theme.colors.emeraldSoft : "rgba(255,255,255,0.06)",
+          opacity: pressed ? 0.92 : 1,
+        })}
+      >
+        <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>
+          {label}
+        </Text>
+      </Pressable>
+    );
+  };
+
+  /* =========================
+     UI Sections
+  ========================= */
+const TopBar = useMemo(() => {
+  return (
+    <View style={{ gap: isDesktopWeb ? 4 : 8 }}>
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          gap: 10,
+        }}
+      >
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text style={{ fontSize: 28, fontWeight: "900", color: theme.colors.text }}>
+            {isDesktopWeb ? uiText("Point of Sale") : uiText("Sales")}
+          </Text>
+
+          <Text
+            style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}
+            numberOfLines={1}
+          >
+            {headerSubtitle}
+          </Text>
+
+          <Text style={{ color: theme.colors.faint, fontWeight: "800", fontSize: 11 }}>
+            {todayLabel}
+          </Text>
+
+          <Text
+            style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}
+            numberOfLines={1}
+          >
+            {statusLine}
+          </Text>
+        </View>
+
+        {!isDesktopWeb ? (
+          <Pressable
+            onPress={() => router.push("/(tabs)/sales/history")}
+            hitSlop={10}
+            style={({ pressed }) => ({
+              minWidth: 96,
+              minHeight: 62,
+              paddingHorizontal: 14,
+              paddingVertical: 10,
+              borderRadius: 20,
+              borderWidth: 1.4,
+              borderColor: "rgba(15,23,42,0.12)",
+              backgroundColor: "#FFFFFF",
+              opacity: pressed ? 0.9 : 1,
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 4,
+              shadowColor: "#0F172A",
+              shadowOpacity: 0.12,
+              shadowRadius: 14,
+              shadowOffset: { width: 0, height: 8 },
+              elevation: 4,
+            })}
+          >
+            <SafeIcon name="time-outline" size={14} color={theme.colors.text} />
+            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 11 }}>
+              {uiText("History")}</Text>
+          </Pressable>
+        ) : null}
+      </View>
+
+      <ProformaOrdersAction organizationId={orgId} storeId={activeStoreId??null}/>
+      {/* Expenses na Profit zimeondolewa hapa ili Sales ibaki POS safi.
+          Expenses sasa iko kwenye bottom tab yake. Profit ibaki Finance. */}
+    </View>
+  );
+}, [headerSubtitle, isDesktopWeb, router, statusLine, todayLabel, uiText, activeStoreId, orgId]);
+
+  const QuickBar = useMemo(() => {
+    return (
+      <Card
+        style={{
+          gap: 10,
+          padding: 14,
+          borderRadius: 22,
+          borderWidth: 1.5,
+          borderColor: cartAccent.border,
+          backgroundColor: cartAccent.bg,
+          shadowColor: "#10B981",
+          shadowOpacity: cartHasItems ? 0.18 : 0.05,
+          shadowRadius: 16,
+          shadowOffset: { width: 0, height: 8 },
+          elevation: cartHasItems ? 5 : 1,
+        }}
+      >
+        <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
+          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 13 }}>{uiText("{p0} items • {p1} quantity", {p0: (cartTotalLines), p1: (fmtQty(cartCount))})}</Text>
+
+          <Text style={{ color: cartAccent.text, fontWeight: "900", fontSize: 14 }}>
+            {fmt(cartTotalAmount)}
+          </Text>
+        </View>
+
+        {!!err && <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{systemText(err)}</Text>}
+
+        {!!headerBlockedReason && (
+          <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+            {headerBlockedReason}
+          </Text>
+        )}
+
+        <View style={{ flexDirection: "row", gap: 10, alignItems: "center" }}>
+{!isCashier && isDirectSalesMode ? (
+  <Pressable
+    onPress={goCheckout}
+    disabled={checkoutDisabled}
+    style={({ pressed }) => [
+      {
+        paddingVertical: 9,
+        paddingHorizontal: 12,
+        borderRadius: theme.radius.pill,
+        borderWidth: 1,
+        borderColor: checkoutDisabled
+          ? "rgba(148,163,184,0.25)"
+          : "#059669",
+        backgroundColor: checkoutDisabled
+          ? "#F1F5F9"
+          : "#10B981",
+        alignItems: "center",
+        justifyContent: "center",
+        opacity: checkoutDisabled ? 0.55 : pressed ? 0.92 : 1,
+        transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
+        flexDirection: "row",
+        gap: 6,
+        flex: 1,
+      },
+    ]}
+  >
+    <SafeIcon
+      name="check-circle"
+      size={16}
+      color={theme.colors.text}
+    />
+
+    <Text
+      style={{
+        color: theme.colors.text,
+        fontWeight: "900",
+        fontSize: 12,
+      }}
+    >
+      {uiText("Complete Sale")}</Text>
+  </Pressable>
+) : null}
+
+{!isCashier && isCashierSalesMode ? (
+  <Pressable
+    onPress={goCashierCheckout}
+    disabled={cashierDisabled}
+    style={({ pressed }) => [
+      {
+        paddingVertical: 9,
+        paddingHorizontal: 12,
+        borderRadius: theme.radius.pill,
+        borderWidth: 1,
+        borderColor: cashierDisabled
+          ? "rgba(148,163,184,0.25)"
+          : "#0EA5E9",
+        backgroundColor: cashierDisabled
+          ? "#F1F5F9"
+          : "#E0F2FE",
+        alignItems: "center",
+        justifyContent: "center",
+        opacity: cashierDisabled ? 0.55 : pressed ? 0.92 : 1,
+        transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
+        flexDirection: "row",
+        gap: 6,
+        flex: 1,
+      },
+    ]}
+  >
+    <SafeIcon
+      name="cash-outline"
+      size={16}
+      color={theme.colors.text}
+    />
+
+    <Text
+      style={{
+        color: theme.colors.text,
+        fontWeight: "900",
+        fontSize: 12,
+      }}
+    >
+      {uiText("Cashiers")}</Text>
+  </Pressable>
+) : null}
+
+          <Pressable
+            onPress={goScan}
+            disabled={!activeStoreId || !canSellDirect || isCashier}
+            style={({ pressed }) => [
+              {
+                width: 54,
+                height: 54,
+                borderRadius: 999,
+                alignItems: "center",
+                justifyContent: "center",
+                borderWidth: 1,
+                borderColor: "#10B981",
+                backgroundColor: "#ECFDF5",
+                opacity: !activeStoreId || !canSellDirect || isCashier ? 0.5 : pressed ? 0.92 : 1,
+                transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
+              },
+            ]}
+            hitSlop={10}
+          >
+            <View style={{ marginLeft: 1, marginTop: 1 }}>
+              <ScannerFabIcon size={24} color={theme.colors.text} />
+            </View>
+          </Pressable>
+
+          <Pressable
+            onPress={clearCart}
+            disabled={cart.length === 0}
+            style={({ pressed }) => [
+              {
+                paddingVertical: 9,
+                paddingHorizontal: 12,
+                borderRadius: theme.radius.pill,
+                borderWidth: 1,
+                borderColor: cart.length === 0 ? "rgba(148,163,184,0.25)" : "#CBD5E1",
+                backgroundColor:
+                  cart.length === 0 ? "#F8FAFC" : "#FFFFFF",
+                opacity: cart.length === 0 ? 0.5 : pressed ? 0.92 : 1,
+                transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
+                alignItems: "center",
+                justifyContent: "center",
+              },
+            ]}
+          >
+            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>
+              {uiText("Clear")}</Text>
+          </Pressable>
+        </View>
+
+        {!isCashier ? (
+          <View style={{ width: "100%" }}>
+            <Input
+              value={query}
+              onChangeText={setQuery}
+              placeholder={uiText("Search name / SKU / category / barcode...")}
+              style={{ minHeight: 42, fontSize: 13 }}
+            />
+          </View>
+        ) : null}
+
+        {loading && !isCashier && (
+          <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 2 }}>
+            {uiText("Loading products...")}</Text>
+        )}
+      </Card>
+    );
+}, [cartTotalLines, cartCount, fmt, cartTotalAmount, cartAccent, err, headerBlockedReason, goCheckout, checkoutDisabled, isCashier, isDirectSalesMode, isCashierSalesMode, goCashierCheckout, cashierDisabled, goScan, activeStoreId, canSellDirect, clearCart, cart.length, query, loading, uiText, systemText]);
+
+  const DesktopCheckoutPanel = useMemo(() => {
+    if (isCashier || !isDesktopWeb) return null;
+
+    return (
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 18 }}
+        style={{ flex: 1 }}
+      >
+        <View style={{ gap: 10 }}>
+          {QuickBar}
+
+          <Card
+            style={{
+              gap: 10,
+              padding: 16,
+              borderRadius: 16,
+              backgroundColor: "#FFFFFF",
+              borderWidth: 1,
+              borderColor: "rgba(15,23,42,0.08)",
+            }}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 10,
+              }}
+            >
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text
+                  style={{
+                    color: "#0F172A",
+                    fontWeight: "900",
+                    fontSize: 17,
+                  }}
+                >
+                  {uiText("Current Cart")}</Text>
+
+                <Text
+                  style={{
+                    color: "#64748B",
+                    fontWeight: "700",
+                    fontSize: 11,
+                    marginTop: 3,
+                  }}
+                >
+                  {uiText("Review selected products before checkout.")}</Text>
+              </View>
+
+              <View
+                style={{
+                  paddingHorizontal: 10,
+                  paddingVertical: 6,
+                  borderRadius: 999,
+                  backgroundColor: "#F1F5F9",
+                  borderWidth: 1,
+                  borderColor: "rgba(15,23,42,0.06)",
+                }}
+              >
+                <Text
+                  style={{
+                    color: "#475569",
+                    fontWeight: "900",
+                    fontSize: 10,
+                  }}
+                >
+                  {cartTotalLines} {uiText("ITEMS")}</Text>
+              </View>
+            </View>
+
+            <View
+              style={{
+                flexDirection: "row",
+                gap: 8,
+              }}
+            >
+              <View
+                style={{
+                  flex: 1,
+                  paddingVertical: 9,
+                  paddingHorizontal: 10,
+                  borderRadius: 12,
+                  backgroundColor: "#F8FAFC",
+                  borderWidth: 1,
+                  borderColor: "rgba(15,23,42,0.06)",
+                }}
+              >
+                <Text
+                  style={{
+                    color: "#94A3B8",
+                    fontWeight: "800",
+                    fontSize: 9,
+                  }}
+                >
+                  {uiText("QTY")}</Text>
+
+                <Text
+                  style={{
+                    color: "#0F172A",
+                    fontWeight: "900",
+                    fontSize: 14,
+                    marginTop: 2,
+                  }}
+                >
+                  {cartCount}
+                </Text>
+              </View>
+
+              <View
+                style={{
+                  flex: 1.45,
+                  paddingVertical: 9,
+                  paddingHorizontal: 10,
+                  borderRadius: 12,
+                  backgroundColor: "#ECFDF5",
+                  borderWidth: 1,
+                  borderColor: "rgba(16,185,129,0.18)",
+                }}
+              >
+                <Text
+                  style={{
+                    color: "#059669",
+                    fontWeight: "800",
+                    fontSize: 9,
+                  }}
+                >
+                  {uiText("CART TOTAL")}</Text>
+
+                <Text
+                  style={{
+                    color: "#047857",
+                    fontWeight: "900",
+                    fontSize: 14,
+                    marginTop: 2,
+                  }}
+                  numberOfLines={1}
+                >
+                  {fmt(cartTotalAmount)}
+                </Text>
+              </View>
+            </View>
+
+            {cart.length === 0 ? (
+              <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                {uiText("Hakuna bidhaa zilizochaguliwa bado.")}</Text>
+            ) : (
+              <View style={{ gap: 8 }}>
+                {cart.map((item) => (
+                  <View
+                    key={getCartKey(item)}
+                    style={{
+                      borderWidth: 1,
+                      borderColor: "rgba(15,23,42,0.08)",
+                      backgroundColor: "#FFFFFF",
+                      borderRadius: 14,
+                      padding: 11,
+                      gap: 9,
+                    }}
+                  >
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "flex-start",
+                        justifyContent: "space-between",
+                        gap: 10,
+                      }}
+                    >
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <Text
+                          style={{
+                            color: "#0F172A",
+                            fontWeight: "900",
+                            fontSize: 13,
+                          }}
+                          numberOfLines={1}
+                        >
+                          {item.name}
+                        </Text>
+
+                        <Text
+                          style={{
+                            color: "#64748B",
+                            fontWeight: "700",
+                            fontSize: 10,
+                            marginTop: 3,
+                          }}
+                          numberOfLines={2}
+                        >
+                          {getCartDisplayUnit(item)}: {fmtQty(getCartDisplayQty(item))}
+                          {" • "}{uiText("Stock qty:")}{fmtQty(item.qty)}
+                          {" • "}{uiText("Unit:")}{fmt(item.unit_price)}
+                        </Text>
+                      </View>
+
+                      <View
+                        style={{
+                          alignItems: "flex-end",
+                          minWidth: 82,
+                        }}
+                      >
+                        <Text
+                          style={{
+                            color: "#94A3B8",
+                            fontWeight: "800",
+                            fontSize: 8,
+                          }}
+                        >
+                          {uiText("TOTAL")}</Text>
+
+                        <Text
+                          style={{
+                            color: "#0F172A",
+                            fontWeight: "900",
+                            fontSize: 12,
+                            marginTop: 2,
+                          }}
+                          numberOfLines={1}
+                        >
+                          {fmt(item.line_total)}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View
+                      style={{
+                        height: 1,
+                        backgroundColor: "rgba(15,23,42,0.06)",
+                      }}
+                    />
+
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 7,
+                      }}
+                    >
+                      <Pressable
+                        onPress={() => dec(getCartKey(item))}
+                        style={({ pressed }) => ({
+                          width: 42,
+                          height: 34,
+                          borderRadius: 10,
+                          borderWidth: 1,
+                          borderColor: "rgba(15,23,42,0.08)",
+                          backgroundColor: "#F8FAFC",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          opacity: pressed ? 0.82 : 1,
+                        })}
+                      >
+                        <Text
+                          style={{
+                            color: "#475569",
+                            fontWeight: "900",
+                            fontSize: 16,
+                          }}
+                        >
+                          −
+                        </Text>
+                      </Pressable>
+
+                      <Pressable
+                        onPress={() => openQtyEditor(item)}
+                        style={({ pressed }) => ({
+                          flex: 1,
+                          height: 34,
+                          borderRadius: 10,
+                          borderWidth: 1,
+                          borderColor: "rgba(16,185,129,0.20)",
+                          backgroundColor: "#ECFDF5",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          opacity: pressed ? 0.82 : 1,
+                        })}
+                      >
+                        <Text
+                          style={{
+                            color: "#047857",
+                            fontWeight: "900",
+                            fontSize: 13,
+                          }}
+                        >
+                          {item.qty}
+                        </Text>
+                      </Pressable>
+
+                      <Pressable
+                        onPress={() => inc(getCartKey(item))}
+                        style={({ pressed }) => ({
+                          width: 42,
+                          height: 34,
+                          borderRadius: 10,
+                          borderWidth: 1,
+                          borderColor: "rgba(16,185,129,0.20)",
+                          backgroundColor: "#ECFDF5",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          opacity: pressed ? 0.82 : 1,
+                        })}
+                      >
+                        <Text
+                          style={{
+                            color: "#047857",
+                            fontWeight: "900",
+                            fontSize: 16,
+                          }}
+                        >
+                          +
+                        </Text>
+                      </Pressable>
+
+                      <Pressable
+                        onPress={() =>
+                          removeItem(getCartKey(item))
+                        }
+                        style={({ pressed }) => ({
+                          height: 34,
+                          paddingHorizontal: 10,
+                          borderRadius: 10,
+                          borderWidth: 1,
+                          borderColor: "rgba(239,68,68,0.14)",
+                          backgroundColor: "#FEF2F2",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          opacity: pressed ? 0.82 : 1,
+                        })}
+                      >
+                        <Text
+                          style={{
+                            color: "#B91C1C",
+                            fontWeight: "900",
+                            fontSize: 10,
+                          }}
+                        >
+                          {uiText("Remove")}</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+          </Card>
+        </View>
+      </ScrollView>
+    );
+  }, [QuickBar, cart, cartCount, cartTotalAmount, cartTotalLines, dec, fmt, inc, isCashier, isDesktopWeb, openQtyEditor, removeItem, uiText]);
+
+  const CashierBar = useMemo(() => {
+    if (!isCashier) return null;
+
+    return (
+      <Card style={{ gap: 10, padding: 12 }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
+          <View style={{ flex: 1, gap: 4 }}>
+            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 17 }}>
+              {uiText("Cashier Queue")}</Text>
+            <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}>
+              {uiText("Live queue status ya store uliyoassigniwa.")}</Text>
+          </View>
+
+          <View
+            style={{
+              paddingHorizontal: 12,
+              paddingVertical: 8,
+              borderRadius: 999,
+              borderWidth: 1,
+              borderColor: openShift ? theme.colors.emeraldBorder : theme.colors.border,
+              backgroundColor: openShift ? theme.colors.emeraldSoft : "rgba(255,255,255,0.06)",
+              alignSelf: "flex-start",
+            }}
+          >
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+              {openShift ? uiText("SHIFT OPEN") : uiText("NO SHIFT")}
+            </Text>
+          </View>
+        </View>
+
+        {!!cashierErr && (
+          <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{systemText(cashierErr)}</Text>
+        )}
+
+        {!!shiftErr && (
+          <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{systemText(shiftErr)}</Text>
+        )}
+
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          <View
+            style={{
+              flex: 1,
+              borderRadius: 14,
+              paddingVertical: 10,
+              paddingHorizontal: 10,
+              borderWidth: 1,
+              borderColor: theme.colors.border,
+              backgroundColor: "rgba(255,255,255,0.04)",
+            }}
+          >
+            <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}>
+              {uiText("Pending")}</Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4, fontSize: 18 }}>
+              {cashierCounts.pending}
+            </Text>
+          </View>
+
+          <View
+            style={{
+              flex: 1,
+              borderRadius: 14,
+              paddingVertical: 10,
+              paddingHorizontal: 10,
+              borderWidth: 1,
+              borderColor: theme.colors.border,
+              backgroundColor: "rgba(255,255,255,0.04)",
+            }}
+          >
+            <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}>
+              {uiText("Accepted")}</Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4, fontSize: 18 }}>
+              {cashierCounts.accepted}
+            </Text>
+          </View>
+
+          <View
+            style={{
+              flex: 1,
+              borderRadius: 14,
+              paddingVertical: 10,
+              paddingHorizontal: 10,
+              borderWidth: 1,
+              borderColor: theme.colors.border,
+              backgroundColor: "rgba(255,255,255,0.04)",
+            }}
+          >
+            <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 11 }}>
+              {uiText("Completed")}</Text>
+            <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4, fontSize: 18 }}>
+              {cashierCounts.completed}
+            </Text>
+          </View>
+        </View>
+
+        <View
+          style={{
+            borderWidth: 1,
+            borderColor: theme.colors.emeraldBorder,
+            backgroundColor: theme.colors.emeraldSoft,
+            borderRadius: 14,
+            paddingVertical: 10,
+            paddingHorizontal: 12,
+            gap: 4,
+          }}
+        >
+          <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14 }}>
+            {uiText("Active Filter:")}{cashierFilter}
+          </Text>
+          <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
+            {uiText("Showing {p0} items • Filter Total: {p1}", {p0: activeFilterCount, p1: fmt(cashierTotalAmount)})}
+          </Text>
+          <Text style={{ color: theme.colors.muted, fontWeight: "800", fontSize: 12 }}>
+            {uiText("All Queue Total:")}{fmt(allQueueTotalAmount)}
+          </Text>
+        </View>
+
+        {openShift ? (
+          <View
+            style={{
+              borderWidth: 1,
+              borderColor: theme.colors.emeraldBorder,
+              backgroundColor: "rgba(16,185,129,0.10)",
+              borderRadius: 14,
+              paddingVertical: 10,
+              paddingHorizontal: 12,
+              gap: 4,
+            }}
+          >
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+              {uiText("Shift Status: OPEN ✅")}</Text>
+            <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+              {uiText("Opened:")}{fmtDateTimeLocal(openShift.opened_at)}
+            </Text>
+            <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+              {uiText("Opening Cash:")}{fmt(openShift.opening_cash)}
+            </Text>
+          </View>
+        ) : shiftLoading ? (
+          <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+            {uiText("Loading shift status...")}</Text>
+        ) : (
+          <View
+            style={{
+              borderWidth: 1,
+              borderColor: theme.colors.border,
+              backgroundColor: "rgba(255,255,255,0.04)",
+              borderRadius: 16,
+              padding: 12,
+              gap: 6,
+            }}
+          >
+            <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+              {uiText("Hakuna shift wazi kwa cashier huyu.")}</Text>
+            <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+              {uiText("Fungua shift mpya kabla ya kuendelea na queue.")}</Text>
+          </View>
+        )}
+
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          <Pressable
+            onPress={() => {
+              if (openShift) {
+                goShiftOpening();
+              } else {
+                setShiftModalOpen(true);
+              }
+            }}
+            style={({ pressed }) => ({
+              flex: 1,
+              paddingVertical: 12,
+              borderRadius: theme.radius.pill,
+              borderWidth: 1,
+              borderColor: theme.colors.emeraldBorder,
+              backgroundColor: theme.colors.emeraldSoft,
+              alignItems: "center",
+              justifyContent: "center",
+              opacity: pressed ? 0.92 : 1,
+            })}
+          >
+            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14 }}>
+              {openShift ? uiText("Shift Opening") : uiText("Open New Shift")}
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={goCashierClosing}
+            style={({ pressed }) => ({
+              flex: 1,
+              paddingVertical: 12,
+              borderRadius: theme.radius.pill,
+              borderWidth: 1,
+              borderColor: theme.colors.border,
+              backgroundColor: "rgba(255,255,255,0.06)",
+              alignItems: "center",
+              justifyContent: "center",
+              opacity: pressed ? 0.92 : 1,
+            })}
+          >
+            <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 14 }}>
+              {uiText("Cashier Closing")}</Text>
+          </Pressable>
+        </View>
+
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+          <CashierFilterChip label={uiText("Pending ({p0})", {p0: (cashierCounts.pending)})} value="PENDING" />
+          <CashierFilterChip label={uiText("Accepted ({p0})", {p0: (cashierCounts.accepted)})} value="ACCEPTED" />
+          <CashierFilterChip label={uiText("Completed ({p0})", {p0: (cashierCounts.completed)})} value="COMPLETED" />
+          <CashierFilterChip label={uiText("All ({p0})", {p0: (cashierCounts.all)})} value="ALL" />
+        </View>
+
+        <Pressable
+          onPress={() => void refreshCashierSurface()}
+          style={({ pressed }) => ({
+            paddingVertical: 12,
+            borderRadius: theme.radius.pill,
+            borderWidth: 1,
+            borderColor: theme.colors.border,
+            backgroundColor: "rgba(255,255,255,0.06)",
+            alignItems: "center",
+            opacity: pressed ? 0.92 : 1,
+          })}
+        >
+          <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+            {cashierLoading || cashierRefreshing || shiftLoading
+              ? uiText("Refreshing...")
+              : uiText("Refresh Queue")}
+          </Text>
+        </Pressable>
+
+        <View style={{ height: 2 }} />
+      </Card>
+    );
+  }, [isCashier, cashierErr, shiftErr, cashierCounts, cashierFilter, activeFilterCount, fmt, cashierTotalAmount, allQueueTotalAmount, openShift, shiftLoading, goShiftOpening, goCashierClosing, cashierLoading, cashierRefreshing, refreshCashierSurface, uiText, systemText]);
+
+  const renderItem = useCallback(
+    ({ item }: { item: ProductRow }) => {
+      const inCart = cart.find((c) => c.product_id === item.id);
+const qty = inCart ? getCartDisplayQty(inCart) : 0;
+const cartKey = inCart ? getCartKey(inCart) : item.id;
+      const stockQty = getStockQty(item);
+      const stockLabel =
+        stockQty === null ? null : stockQty <= 0 ? "Out of stock" : `Stock: ${fmtQty(stockQty)}`;
+
+      return (
+        <View
+          style={{
+            flex: isDesktopWeb ? 1 : undefined,
+            marginBottom: 8,
+          }}
+        >
+  <Pressable
+  onPress={() => openProductPreview(item)}
+  onLongPress={() => openProductPreview(item)}
+  delayLongPress={350}
+  style={({ pressed }) => ({
+    opacity: pressed ? 0.96 : 1,
+    transform: pressed ? [{ scale: 0.997 }] : [{ scale: 1 }],
+  })}
+>
+<Card
+  style={{
+    paddingVertical: isDesktopWeb ? 14 : 11,
+    paddingHorizontal: isDesktopWeb ? 15 : 12,
+    minHeight: isDesktopWeb ? 78 : undefined,
+    borderWidth: 1.2,
+    borderColor: qty > 0 ? "#10B981" : "rgba(15,23,42,0.08)",
+    backgroundColor: qty > 0 ? "#ECFDF5" : "#FFFFFF",
+  }}
+>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 10,
+              }}
+            >
+              {item.image_url ? (
+                <Image
+                  source={{ uri: item.image_url }}
+                  style={{
+                    width: 46,
+                    height: 46,
+                    borderRadius: 14,
+                    backgroundColor: "#E2E8F0",
+                  }}
+                  resizeMode="cover"
+                />
+              ) : null}
+
+              <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                <Text
+                  style={{
+                    color: theme.colors.text,
+                    fontWeight: "900",
+                    fontSize: isDesktopWeb ? 14 : 13,
+                  }}
+                  numberOfLines={1}
+                >
+                  {item.name}
+                </Text>
+
+                <Text
+                  style={{
+                    color: theme.colors.muted,
+                    fontWeight: "800",
+                    fontSize: isDesktopWeb ? 11 : 10,
+                  }}
+                  numberOfLines={1}
+                >
+                  {uiText("SKU:")}{item.sku ?? "—"}
+                  {item.category ? ` • ${item.category}` : ""}
+                  {item.barcode ? ` • ${item.barcode}` : ""}
+                </Text>
+
+                {!!stockLabel && (
+                  <Text
+                    style={{
+                      color: stockQty && stockQty > 0 ? theme.colors.faint : theme.colors.muted,
+                      fontWeight: "800",
+                      fontSize: isDesktopWeb ? 11 : 10,
+                    }}
+                    numberOfLines={1}
+                  >
+                    {(stockQty === null ? null : (stockQty <= 0 ? uiText("Out of stock") : uiText("Stock: {p0}", {p0: (fmtQty(stockQty))})))}
+                    {inCart ? ` • ${getCartDisplayUnit(inCart)}: ${fmtQty(getCartDisplayQty(inCart))}` : ""}
+                  </Text>
+                )}
+
+                {qty > 0 && (
+                  <Text
+                    style={{ color: theme.colors.muted, fontWeight: "900", fontSize: isDesktopWeb ? 11 : 10 }}
+                    numberOfLines={1}
+                  >
+                    {uiText("Price:")}<Text style={{ color: theme.colors.text }}>{fmt(Number(inCart?.unit_price ?? 0))}</Text>
+                    {" • "}
+                    {uiText("Line:")}<Text style={{ color: theme.colors.text }}>{fmt(Number(inCart?.line_total ?? 0))}</Text>
+                  </Text>
+                )}
+              </View>
+
+              {qty <= 0 ? (
+                <Pressable
+                  onPress={() => addAuto(item)}
+                  onLongPress={() => openPriceModal(item)}
+                  style={({ pressed }) => [
+                    {
+                      minWidth: 54,
+                      height: 40,
+                      paddingHorizontal: 12,
+                      borderRadius: 999,
+                      borderWidth: 1,
+                      borderColor: "#10B981",
+                      backgroundColor: "#ECFDF5",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      opacity: pressed ? 0.92 : 1,
+                      transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
+                    },
+                  ]}
+                >
+                  <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>
+                    {uiText("Add")}</Text>
+                </Pressable>
+              ) : (
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <Pressable
+                    onPress={() => dec(cartKey)}
+                    style={({ pressed }) => [
+                      {
+                        width: 34,
+                        height: 34,
+                        borderRadius: 999,
+                        borderWidth: 1,
+                        borderColor: theme.colors.border,
+                        backgroundColor: "rgba(255,255,255,0.06)",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        opacity: pressed ? 0.92 : 1,
+                        transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
+                      },
+                    ]}
+                  >
+                    <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 15 }}>−</Text>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={() => openQtyEditor(inCart as CartItem)}
+                    hitSlop={10}
+                    style={({ pressed }) => [
+                      {
+                        minWidth: 38,
+                        height: 34,
+                        paddingHorizontal: 8,
+                        borderRadius: 999,
+                        borderWidth: 1,
+                        borderColor: theme.colors.emeraldBorder,
+                        backgroundColor: "rgba(16,185,129,0.10)",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        opacity: pressed ? 0.92 : 1,
+                        transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
+                      },
+                    ]}
+                  >
+                    <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 12 }}>{qty}</Text>
+                  </Pressable>
+
+                  <Pressable
+                   onPress={() => inc(cartKey)} 
+                    style={({ pressed }) => [
+                      {
+                        width: 34,
+                        height: 34,
+                        borderRadius: 999,
+                        borderWidth: 1,
+                        borderColor: theme.colors.emeraldBorder,
+                        backgroundColor: theme.colors.emeraldSoft,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        opacity: pressed ? 0.92 : 1,
+                        transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
+                      },
+                    ]}
+                  >
+                    <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 15 }}>+</Text>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={() => removeItem(cartKey)}
+                    hitSlop={10}
+                    style={({ pressed }) => [
+                      {
+                        minWidth: 54,
+                        height: 34,
+                        paddingHorizontal: 10,
+                        borderRadius: 999,
+                        borderWidth: 1,
+                        borderColor: theme.colors.border,
+                        backgroundColor: "rgba(255,255,255,0.06)",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        opacity: pressed ? 0.92 : 1,
+                        transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
+                      },
+                    ]}
+                  >
+                    <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 11 }}>
+                      {uiText("Del")}</Text>
+                  </Pressable>
+                </View>
+              )}
+            </View>
+          </Card>
+        </Pressable>
+        </View>
+      );
+    },
+    [addAuto, cart, dec, fmt, getStockQty, inc, isDesktopWeb, openPriceModal, openProductPreview, openQtyEditor, removeItem, uiText]
+  );
+
+  const renderCashierItem = useCallback(
+    ({ item }: { item: CashierHandoffRow }) => {
+      const itemsCount = Number(
+        item.item_count ?? (Array.isArray(item.items) ? item.items.length : 0)
+      );
+      const status = String(item.status ?? "—").toUpperCase();
+      const createdAt = fmtDateTimeLocal(item.created_at);
+      const acceptedAt = fmtDateTimeLocal(item.accepted_at);
+      const completedAt = fmtDateTimeLocal(item.completed_at);
+
+      return (
+        <Pressable
+          onPress={() => goHandoffDetail(item.id)}
+          style={({ pressed }) => ({
+            opacity: pressed ? 0.96 : 1,
+            transform: pressed ? [{ scale: 0.997 }] : [{ scale: 1 }],
+          })}
+        >
+          <Card style={{ marginBottom: 10, gap: 10, padding: 14 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 16 }}>
+                  {item.store_name || activeStoreName || uiText("Store")}
+                </Text>
+                <Text style={{ color: theme.colors.muted, fontWeight: "800", marginTop: 4 }}>
+                  {uiText("Handoff:")}{String(item.id).slice(0, 8)}...
+                </Text>
+              </View>
+
+              <View
+                style={{
+                  paddingHorizontal: 12,
+                  paddingVertical: 7,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor:
+                    status === "PENDING"
+                      ? theme.colors.emeraldBorder
+                      : status === "ACCEPTED"
+                      ? "rgba(255,255,255,0.18)"
+                      : "rgba(255,255,255,0.12)",
+                  backgroundColor:
+                    status === "PENDING" ? theme.colors.emeraldSoft : "rgba(255,255,255,0.06)",
+                }}
+              >
+                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{status}</Text>
+              </View>
+            </View>
+
+            <View style={{ flexDirection: "row", gap: 12 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Items")}</Text>
+                <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>
+                  {itemsCount}
+                </Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Subtotal")}</Text>
+                <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>
+                  {fmt(Number(item.subtotal ?? 0))}
+                </Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Total")}</Text>
+                <Text style={{ color: theme.colors.text, fontWeight: "900", marginTop: 4 }}>
+                  {fmt(Number(item.total ?? 0))}
+                </Text>
+              </View>
+            </View>
+
+            {!!Number(item.discount_amount ?? 0) && (
+              <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                {uiText("Discount:")}{fmt(Number(item.discount_amount ?? 0))}
+              </Text>
+            )}
+
+            {!!String(item.note ?? "").trim() && (
+              <View
+                style={{
+                  borderWidth: 1,
+                  borderColor: theme.colors.border,
+                  backgroundColor: "rgba(255,255,255,0.04)",
+                  borderRadius: 14,
+                  padding: 12,
+                }}
+              >
+                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("Note")}</Text>
+                <Text style={{ color: theme.colors.text, fontWeight: "800", marginTop: 6 }}>
+                  {String(item.note ?? "").trim()}
+                </Text>
+              </View>
+            )}
+
+            <View style={{ gap: 4 }}>
+              <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                {uiText("Created:")}{createdAt}
+              </Text>
+
+              {status === "ACCEPTED" ? (
+                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                  {uiText("Accepted:")}{acceptedAt}
+                </Text>
+              ) : null}
+
+              {status === "COMPLETED" ? (
+                <>
+                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                    {uiText("Accepted:")}{acceptedAt}
+                  </Text>
+                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                    {uiText("Completed:")}{completedAt}
+                  </Text>
+                </>
+              ) : null}
+            </View>
+
+            <Text
+              style={{
+                color: theme.colors.muted,
+                fontWeight: "900",
+                textDecorationLine: "underline",
+              }}
+            >
+              {uiText("Open details")}</Text>
+          </Card>
+        </Pressable>
+      );
+    },
+    [activeStoreName, fmt, goHandoffDetail, uiText]
+  );
+
+  return (
+    <Screen
+      scroll={false}
+      contentStyle={{ paddingHorizontal: 0, paddingTop: 0, paddingBottom: 0 }}
+    >
+      <View
+        style={{
+          paddingHorizontal: 16,
+          paddingTop: Math.max(insets.top + 4, 12),
+          paddingBottom: 6,
+          gap: 10,
+        }}
+      >
+        {TopBar}
+        {!isCashier && !isDesktopWeb ? QuickBar : null}
+      </View>
+
+      {isCashier ? (
+        <FlatList<CashierHandoffRow>
+          data={filteredCashierRows}
+          keyExtractor={(item) => item.id}
+          refreshing={cashierRefreshing || shiftLoading}
+          onRefresh={() => {
+            void refreshCashierSurface();
+          }}
+          showsVerticalScrollIndicator={false}
+          renderItem={renderCashierItem}
+          contentContainerStyle={{
+            paddingHorizontal: 16,
+            paddingBottom: Math.max(insets.bottom + 90, 110),
+            paddingTop: 0,
+          }}
+          ListHeaderComponent={CashierBar}
+          ListEmptyComponent={
+            <View
+              style={{
+                paddingTop: 10,
+                paddingBottom: 20,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Text
+                style={{
+                  color: theme.colors.muted,
+                  fontWeight: "800",
+                  textAlign: "center",
+                  fontSize: 12,
+                }}
+              >
+                {cashierEmptyText}
+              </Text>
+            </View>
+          }
+        />
+      ) : isDesktopWeb ? (
+        <View
+          style={{
+            flex: 1,
+            flexDirection: "row",
+            gap: 14,
+            paddingHorizontal: 18,
+            paddingTop: 2,
+            paddingBottom: Math.max(insets.bottom + 14, 18),
+            backgroundColor: "#F6F8FC",
+          }}
+        >
+          <View style={{ flex: 1.45, minWidth: 0 }}>
+            <FlatList<ProductRow>
+              data={loading ? [] : filtered}
+              key={`desktop-sales-${desktopProductColumns}`}
+              numColumns={desktopProductColumns}
+              keyExtractor={(item) => item.id}
+              refreshing={refreshing}
+              onRefresh={() => {
+                void loadProducts("refresh");
+              }}
+              showsVerticalScrollIndicator={false}
+              renderItem={renderItem}
+              columnWrapperStyle={
+                desktopProductColumns > 1
+                  ? {
+                      gap: 10,
+                      alignItems: "stretch",
+                    }
+                  : undefined
+              }
+              contentContainerStyle={{
+                paddingBottom: 140,
+                paddingTop: 4,
+              }}
+              ListHeaderComponent={
+                <View style={{ paddingTop: 12, paddingBottom: 12 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 14, marginBottom: 10 }}>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={{ color: "#0F172A", fontWeight: "900", fontSize: 18 }}>
+                        {uiText("Product Catalog")}</Text>
+                      <Text style={{ color: "#64748B", fontWeight: "700", fontSize: 11, marginTop: 3 }} numberOfLines={1}>
+                        {uiText("Search, select and add products to the active sale.")}</Text>
+                    </View>
+                    <View style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, backgroundColor: "#F1F5F9", borderWidth: 1, borderColor: "rgba(15,23,42,0.06)" }}>
+                      <Text style={{ color: "#475569", fontSize: 10, fontWeight: "900" }}>
+                        {filtered.length} {uiText("PRODUCTS")}</Text>
+                    </View>
+                  </View>
+                  <View style={{ borderRadius: 12, backgroundColor: "#F8FAFC", borderWidth: 1, borderColor: "rgba(15,23,42,0.08)", paddingHorizontal: 2 }}>
+                    <Input
+                      value={query}
+                      onChangeText={setQuery}
+                      placeholder={uiText("Search product, SKU, category or barcode...")}
+                    />
+                  </View>
+                </View>
+              }
+              ListEmptyComponent={
+                !loading ? (
+                  <View style={{ paddingTop: 10, alignItems: "center" }}>
+                    <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                      {uiText("No products found.")}</Text>
+                  </View>
+                ) : null
+              }
+            />
+          </View>
+
+          <View
+            style={{
+              width: 360,
+              minWidth: 360,
+              maxWidth: 380,
+              gap: 10,
+            }}
+          >
+            {/* DESKTOP SALES HISTORY ACCESS */}
+            <Pressable
+              onPress={() => router.push("/(tabs)/sales/history")}
+              hitSlop={6}
+              style={({ pressed }) => ({
+                minHeight: 54,
+                borderRadius: 14,
+                borderWidth: 1,
+                borderColor: "#BFDBFE",
+                backgroundColor: pressed ? "#DBEAFE" : "#EFF6FF",
+                paddingHorizontal: 12,
+                paddingVertical: 9,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 10,
+                opacity: pressed ? 0.94 : 1,
+              })}
+            >
+              <View
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: 10,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: "#DBEAFE",
+                  borderWidth: 1,
+                  borderColor: "rgba(37,99,235,0.12)",
+                }}
+              >
+                <Ionicons
+                  name="receipt-outline"
+                  size={18}
+                  color="#2563EB"
+                />
+              </View>
+
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text
+                  style={{
+                    color: "#1E3A8A",
+                    fontWeight: "900",
+                    fontSize: 12.5,
+                  }}
+                >
+                  {uiText("Sales History")}</Text>
+
+                <Text
+                  style={{
+                    color: "#64748B",
+                    fontWeight: "700",
+                    fontSize: 10,
+                    marginTop: 2,
+                  }}
+                  numberOfLines={1}
+                >
+                  {uiText("Receipts & past sales")}</Text>
+              </View>
+
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                <Text
+                  style={{
+                    color: "#2563EB",
+                    fontWeight: "900",
+                    fontSize: 10.5,
+                  }}
+                >
+                  {uiText("Open")}</Text>
+
+                <Ionicons
+                  name="chevron-forward"
+                  size={15}
+                  color="#2563EB"
+                />
+              </View>
+            </Pressable>
+
+            {DesktopCheckoutPanel}
+          </View>
+        </View>
+      ) : (
+        <FlatList<ProductRow>
+          data={loading ? [] : filtered}
+          keyExtractor={(item) => item.id}
+          refreshing={refreshing}
+          onRefresh={() => {
+            void loadProducts("refresh");
+          }}
+          showsVerticalScrollIndicator={false}
+          renderItem={renderItem}
+          contentContainerStyle={{
+            paddingHorizontal: 16,
+            paddingBottom: 140,
+          }}
+          ListEmptyComponent={
+            !loading ? (
+              <View style={{ paddingTop: 10, alignItems: "center" }}>
+                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                  {uiText("No products found.")}</Text>
+              </View>
+            ) : null
+          }
+        />
+      )}
+
+      <Modal
+  visible={sellModeOpen}
+  transparent
+  animationType="fade"
+  presentationStyle="overFullScreen"
+  statusBarTranslucent
+  hardwareAccelerated
+  onRequestClose={closeSellMode}
+>
+  <View
+    style={{
+      flex: 1,
+      backgroundColor: "rgba(15,23,42,0.28)",
+      justifyContent: "flex-end",
+      paddingHorizontal: 14,
+      paddingBottom: Math.max(insets.bottom + 18, 24),
+    }}
+  >
+    <Pressable
+      onPress={closeSellMode}
+      style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: "rgba(15,23,42,0.22)",
+      }}
+    />
+
+    <View
+      style={{
+        width: "100%",
+        borderRadius: 28,
+        borderWidth: 1,
+        borderColor: "rgba(15,23,42,0.10)",
+        backgroundColor: "#FFFFFF",
+        padding: 20,
+        gap: 14,
+        shadowColor: "#0F172A",
+        shadowOpacity: 0.18,
+        shadowRadius: 28,
+        shadowOffset: { width: 0, height: 18 },
+        elevation: 18,
+      }}
+    >
+      <View
+        style={{
+          alignSelf: "center",
+          width: 54,
+          height: 6,
+          borderRadius: 999,
+          backgroundColor: "rgba(15,23,42,0.18)",
+          marginBottom: 6,
+        }}
+      />
+
+      <Text
+        style={{
+          color: "#0F172A",
+          fontWeight: "900",
+          fontSize: 24,
+          textAlign: "center",
+        }}
+      >
+        {uiText("Choose Selling Unit")}</Text>
+
+      <Text style={{ color: "#64748B", fontWeight: "900", fontSize: 16 }}>
+        {sellModeProduct?.name ?? uiText("Product")}
+      </Text>
+
+      <View style={{ height: 1, backgroundColor: "rgba(15,23,42,0.10)" }} />
+
+      <Pressable
+        onPress={() => sellModeProduct && addPrecisionToCart(sellModeProduct, "PACK")}
+        style={({ pressed }) => ({
+          minHeight: 86,
+          borderRadius: 18,
+          borderWidth: 1.5,
+          borderColor: "#10B981",
+          backgroundColor: "#ECFDF5",
+          paddingHorizontal: 18,
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 14,
+          opacity: pressed ? 0.9 : 1,
+          transform: pressed ? [{ scale: 0.99 }] : [{ scale: 1 }],
+        })}
+      >
+        <View
+          style={{
+            width: 52,
+            height: 52,
+            borderRadius: 999,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "rgba(16,185,129,0.14)",
+          }}
+        >
+          <SafeIcon name="cube-outline" size={28} color="#059669" />
+        </View>
+
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: "#0F172A", fontWeight: "900", fontSize: 17 }}>
+            {uiText("Sell by")}{getPackLabel(sellModeProduct)}
+          </Text>
+          <Text style={{ color: "#64748B", fontWeight: "900", marginTop: 4 }}>
+            {fmtQty(getPackSize(sellModeProduct))} {getBaseUnitLabel(sellModeProduct)}
+          </Text>
+        </View>
+
+        <SafeIcon name="checkmark-circle" size={30} color="#059669" />
+      </Pressable>
+
+      <Pressable
+        onPress={() => sellModeProduct && addPrecisionToCart(sellModeProduct, "UNIT")}
+        style={({ pressed }) => ({
+          minHeight: 86,
+          borderRadius: 18,
+          borderWidth: 1,
+          borderColor: "rgba(15,23,42,0.12)",
+          backgroundColor: "#F8FAFC",
+          paddingHorizontal: 18,
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 14,
+          opacity: pressed ? 0.9 : 1,
+          transform: pressed ? [{ scale: 0.99 }] : [{ scale: 1 }],
+        })}
+      >
+        <View
+          style={{
+            width: 52,
+            height: 52,
+            borderRadius: 999,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "rgba(15,23,42,0.06)",
+          }}
+        >
+          <SafeIcon name="medical-outline" size={28} color="#475569" />
+        </View>
+
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: "#0F172A", fontWeight: "900", fontSize: 17 }}>
+            {uiText("Sell by")}{getBaseUnitLabel(sellModeProduct)}
+          </Text>
+          <Text style={{ color: "#64748B", fontWeight: "900", marginTop: 4 }}>
+            1 {getBaseUnitLabel(sellModeProduct)}
+          </Text>
+        </View>
+
+        <SafeIcon name="ellipse-outline" size={30} color="#94A3B8" />
+      </Pressable>
+
+      <Pressable
+        onPress={closeSellMode}
+        style={({ pressed }) => ({
+          minHeight: 72,
+          borderRadius: 18,
+          borderWidth: 1,
+          borderColor: "rgba(15,23,42,0.12)",
+          backgroundColor: "#F8FAFC",
+          paddingHorizontal: 18,
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 14,
+          opacity: pressed ? 0.9 : 1,
+          transform: pressed ? [{ scale: 0.99 }] : [{ scale: 1 }],
+        })}
+      >
+        <View
+          style={{
+            width: 52,
+            height: 52,
+            borderRadius: 999,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "rgba(15,23,42,0.06)",
+          }}
+        >
+          <SafeIcon name="close" size={30} color="#0F172A" />
+        </View>
+
+        <Text style={{ color: "#0F172A", fontWeight: "900", fontSize: 17 }}>
+          {uiText("Cancel")}</Text>
+      </Pressable>
+    </View>
+  </View>
+</Modal>
+
+<Modal
+  visible={productPreviewOpen}
+  transparent
+  animationType="fade"
+  presentationStyle="overFullScreen"
+  statusBarTranslucent
+  hardwareAccelerated
+  onRequestClose={closeProductPreview}
+>
+  <View
+    style={{
+      flex: 1,
+      backgroundColor: "rgba(15,23,42,0.30)",
+      justifyContent: "flex-end",
+      paddingHorizontal: 14,
+      paddingBottom: Math.max(insets.bottom + 18, 24),
+    }}
+  >
+    <Pressable
+      onPress={closeProductPreview}
+      style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
+    />
+
+  <View
+  style={{
+    width: "100%",
+    maxWidth: isDesktopWeb ? 920 : undefined,
+    maxHeight: isDesktopWeb ? "88%" : "82%",
+    alignSelf: "center",
+    borderRadius: 28,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "rgba(15,23,42,0.10)",
+    padding: isDesktopWeb ? 20 : 18,
+    gap: 12,
+    shadowColor: "#0F172A",
+    shadowOpacity: 0.18,
+    shadowRadius: 28,
+    shadowOffset: { width: 0, height: 18 },
+    elevation: 18,
+  }}
+>
+      <View
+        style={{
+          alignSelf: "center",
+          width: 54,
+          height: 6,
+          borderRadius: 999,
+          backgroundColor: "rgba(15,23,42,0.18)",
+          marginBottom: 4,
+        }}
+      />
+
+   <ScrollView
+  showsVerticalScrollIndicator={false}
+  contentContainerStyle={{
+    gap: isDesktopWeb ? 18 : 12,
+  }}
+>
+<View
+  style={{
+    flexDirection: isDesktopWeb ? "row" : "column",
+    gap: isDesktopWeb ? 18 : 12,
+    alignItems: "stretch",
+  }}
+>
+  {previewProduct?.image_url ? (
+    <View
+      style={{
+        width: isDesktopWeb ? 360 : "100%",
+        minWidth: isDesktopWeb ? 360 : undefined,
+        height: isDesktopWeb ? 360 : 220,
+        borderRadius: 24,
+        backgroundColor: "#E2E8F0",
+        overflow: "hidden",
+        borderWidth: 1,
+        borderColor: "rgba(15,23,42,0.08)",
+      }}
+    >
+      <Image
+        source={{ uri: previewProduct.image_url }}
+        style={{
+          width: "100%",
+          height: "100%",
+        }}
+        resizeMode={isDesktopWeb ? "contain" : "cover"}
+      />
+    </View>
+  ) : null}
+
+  <View style={{ flex: 1, minWidth: 0, gap: 12 }}>
+    <Text style={{ color: "#0F172A", fontWeight: "900", fontSize: 22 }}>
+      {uiText("Product Details")}</Text>
+
+      <Text style={{ color: "#0F172A", fontWeight: "900", fontSize: 18 }}>
+        {previewProduct?.name ?? "—"}
+      </Text>
+
+      <View style={{ height: 1, backgroundColor: "rgba(15,23,42,0.10)" }} />
+
+      {[
+        ["SKU", previewProduct?.sku ?? "—"],
+        ["Category", previewProduct?.category ?? "—"],
+        ["Barcode", previewProduct?.barcode ?? "—"],
+        ["Unit", previewProduct?.unit ?? "—"],
+        ["Stock", fmtQty(previewProduct?.stock_qty ?? 0)],
+        ["Selling Price", fmt(Number(previewProduct?.selling_price ?? 0))],
+        ...(isOwnerOrAdmin
+          ? [["Cost Price", fmt(Number(previewProduct?.cost_price ?? 0))]]
+          : []),
+        ["Precision Product", previewProduct?.is_precision_product ? "YES" : "NO"],
+        ["Pack Size", previewProduct?.precision_pack_size ? fmtQty(previewProduct.precision_pack_size) : "—"],
+        ["Base Unit", previewProduct?.precision_base_unit ?? "—"],
+].map(([label, value]) => (
+    <View
+      key={label}
+      style={{
+        flexDirection: "row",
+        justifyContent: "space-between",
+        gap: 12,
+      }}
+    >
+      <Text style={{ color: "#64748B", fontWeight: "900", flex: 1 }}>
+        {label}
+      </Text>
+      <Text
+        style={{
+          color: "#0F172A",
+          fontWeight: "900",
+          flex: 1.4,
+          textAlign: "right",
+        }}
+      >
+        {value}
+      </Text>
+    </View>
+  ))}
+  </View>
+</View>
+</ScrollView>
+
+<View style={{ flexDirection: "row", gap: 10, marginTop: 6 }}>
+        <Pressable
+          onPress={closeProductPreview}
+          style={({ pressed }) => ({
+            flex: 1,
+            minHeight: 50,
+            borderRadius: 999,
+            borderWidth: 1,
+            borderColor: "rgba(15,23,42,0.12)",
+            backgroundColor: "#F8FAFC",
+            alignItems: "center",
+            justifyContent: "center",
+            opacity: pressed ? 0.9 : 1,
+          })}
+        >
+          <Text style={{ color: "#0F172A", fontWeight: "900" }}>{uiText("Close")}</Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() => {
+            if (previewProduct) addAuto(previewProduct);
+            closeProductPreview();
+          }}
+          style={({ pressed }) => ({
+            flex: 1,
+            minHeight: 50,
+            borderRadius: 999,
+            borderWidth: 1,
+            borderColor: "#10B981",
+            backgroundColor: "#ECFDF5",
+            alignItems: "center",
+            justifyContent: "center",
+            opacity: pressed ? 0.9 : 1,
+          })}
+        >
+          <Text style={{ color: "#047857", fontWeight: "900" }}>{uiText("Add to Cart")}</Text>
+        </Pressable>
+      </View>
+    </View>
+  </View>
+</Modal>
+
+<PriceModal
+        visible={priceModalOpen}
+        productName={selected?.name ?? "—"}
+        price={priceDraft}
+        qty={qtyDraft}
+        costPrice={selected?.cost_price ?? null}
+        currency={displayCurrency}
+        locale={displayLocale}
+        error={systemText(modalErr)}
+        onChangePrice={(t: string) => {
+          setModalErr(null);
+          setPriceDraft(t);
+        }}
+        onChangeQty={(t: string) => {
+          setModalErr(null);
+          setQtyDraft(t);
+        }}
+        onClose={closePriceModal}
+        onConfirm={confirmAddWithPrice}
+      />
+
+      <Modal
+        visible={qtyEditorOpen}
+        transparent
+        animationType="fade"
+        presentationStyle="overFullScreen"
+        statusBarTranslucent
+        hardwareAccelerated
+        onRequestClose={closeQtyEditor}
+      >
+        <Pressable
+          onPress={closeQtyEditor}
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(15,23,42,0.28)",
+            padding: 18,
+          }}
+        >
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={{ flex: 1, justifyContent: "flex-end" }}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0}
+          >
+            <Pressable onPress={() => {}} style={{ width: "100%", maxWidth: 520, alignSelf: "center" }}>
+            <Card
+  style={{
+    gap: 12,
+    backgroundColor: "#FFFFFF",
+    borderColor: "rgba(15,23,42,0.10)",
+    padding: 18,
+  }}
+>
+                <Text style={{ color: "#0F172A", fontWeight: "900", fontSize: 18 }}>
+                  {uiText("Set Quantity")}</Text>
+
+                <Text style={{ color: "#64748B", fontWeight: "800" }} numberOfLines={1}>
+                  {uiText("Product:")}{" "}
+                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+                    {qtyEditorName}
+                  </Text>
+                </Text>
+
+                <Text style={{ color: "#64748B", fontWeight: "800" }}>{uiText("Qty")}</Text>
+
+                <TextInput
+                  value={qtyEditorDraft}
+                  onChangeText={(t) => {
+                    setQtyEditorErr(null);
+                    setQtyEditorDraft(t);
+                  }}
+                  placeholder={uiText("mf: 1.5")}
+                  placeholderTextColor="#94A3B8"
+                  keyboardType="decimal-pad"
+                  returnKeyType="done"
+                  blurOnSubmit
+                  onSubmitEditing={confirmQtyEditor}
+                  style={{
+                    borderWidth: 1,
+                    borderColor: theme.colors.border,
+                    borderRadius: theme.radius.lg,
+                    backgroundColor: "#F8FAFC",
+                    paddingHorizontal: 14,
+                    paddingVertical: 12,
+                    color: "#0F172A",
+                    fontWeight: "900",
+                    fontSize: 16,
+                  }}
+                />
+
+                {!!qtyEditorErr && (
+                  <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>
+                    {systemText(qtyEditorErr)}
+                  </Text>
+                )}
+
+                <View style={{ flexDirection: "row", gap: 10, marginTop: 4 }}>
+                  <Pressable
+                    onPress={closeQtyEditor}
+                    style={({ pressed }) => [
+                      {
+                        flex: 1,
+                        paddingVertical: 12,
+                        borderRadius: theme.radius.pill,
+                        borderWidth: 1,
+                        borderColor: theme.colors.border,
+                        backgroundColor: "rgba(255,255,255,0.06)",
+                        alignItems: "center",
+                        opacity: pressed ? 0.92 : 1,
+                        transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
+                      },
+                    ]}
+                  >
+                    <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Cancel")}</Text>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={confirmQtyEditor}
+                    style={({ pressed }) => [
+                      {
+                        flex: 1,
+                        paddingVertical: 12,
+                        borderRadius: theme.radius.pill,
+                        borderWidth: 1,
+                        borderColor: theme.colors.emeraldBorder,
+                        backgroundColor: theme.colors.emeraldSoft,
+                        alignItems: "center",
+                        opacity: pressed ? 0.92 : 1,
+                        transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
+                      },
+                    ]}
+                  >
+                    <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Update")}</Text>
+                  </Pressable>
+                </View>
+
+                <Pressable
+                  onPress={removeFromQtyEditor}
+                  style={({ pressed }) => [
+                    {
+                      paddingVertical: 12,
+                      borderRadius: theme.radius.pill,
+                      borderWidth: 1,
+                      borderColor: theme.colors.border,
+                      backgroundColor: "rgba(255,255,255,0.06)",
+                      alignItems: "center",
+                      opacity: pressed ? 0.92 : 1,
+                      transform: pressed ? [{ scale: 0.995 }] : [{ scale: 1 }],
+                      marginTop: 2,
+                    },
+                  ]}
+                >
+                  <Text style={{ color: theme.colors.text, fontWeight: "900" }}>{uiText("Remove")}</Text>
+                </Pressable>
+
+                <View style={{ height: 6 }} />
+              </Card>
+            </Pressable>
+          </KeyboardAvoidingView>
+        </Pressable>
+      </Modal>
+
+      <Modal
+        visible={shiftModalOpen}
+        transparent
+        animationType="fade"
+        presentationStyle="overFullScreen"
+        statusBarTranslucent
+        hardwareAccelerated
+        onRequestClose={() => {
+          if (!shiftBusy) setShiftModalOpen(false);
+        }}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(15,23,42,0.28)",
+            padding: 18,
+            justifyContent: "center",
+          }}
+        >
+          <View style={{ width: "100%", maxWidth: 520, alignSelf: "center" }}>
+           <Card
+  style={{
+    gap: 12,
+    backgroundColor: "#FFFFFF",
+    borderColor: "rgba(15,23,42,0.10)",
+    padding: 18,
+  }}
+>
+              <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 20 }}>
+                {uiText("Open New Shift")}</Text>
+
+              <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                {uiText("Kabla cashier hajaanza kupokea malipo, afungue shift yake kwanza.")}</Text>
+
+              <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
+                {uiText("Store:")}{" "}
+                <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
+                  {activeStoreName ?? "—"}
+                </Text>
+              </Text>
+
+              <View>
+                <Text style={{ color: theme.colors.muted, fontWeight: "900", marginBottom: 6 }}>
+                  {uiText("Opening Cash")}</Text>
+
+                <TextInput
+                  value={openingCashDraft}
+                  onChangeText={(t) => setOpeningCashDraft(normalizeMoneyInput(t))}
+                  placeholder="0"
+                  placeholderTextColor="rgba(255,255,255,0.35)"
+                  keyboardType="numeric"
+                  style={{
+                    borderWidth: 1,
+                    borderColor: theme.colors.border,
+                    borderRadius: theme.radius.lg,
+                    backgroundColor: "rgba(255,255,255,0.05)",
+                    paddingHorizontal: 14,
+                    paddingVertical: 12,
+                    color: theme.colors.text,
+                    fontWeight: "900",
+                    fontSize: 16,
+                  }}
+                />
+              </View>
+
+              {!!shiftErr && (
+                <Text style={{ color: theme.colors.danger, fontWeight: "900" }}>{systemText(shiftErr)}</Text>
+              )}
+
+              <Text style={{ color: theme.colors.faint, fontWeight: "800" }}>
+                {uiText("Unaweza kuweka 0 kama hakuna cash ya kuanzia kwenye drawer.")}</Text>
+
+              <Button
+                title={shiftBusy ? uiText("Opening...") : uiText("Open Shift")}
+                onPress={startCashierShift}
+                disabled={shiftBusy}
+                variant="primary"
+              />
+
+              <Button
+                title={uiText("Cancel")}
+                onPress={() => setShiftModalOpen(false)}
+                disabled={shiftBusy}
+                variant="secondary"
+              />
+            </Card>
+          </View>
+        </View>
+      </Modal>
+    </Screen>
+  );
+}

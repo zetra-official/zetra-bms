@@ -1,0 +1,9 @@
+{
+  "columns": true,
+  "authorityColumns": true,
+  "rpcDefinitions": true,
+  "existingTriggers": true,
+  "existingRlsFlags": true,
+  "productionWrites": false,
+  "scope": "Exact touched catalog objects; customer rows not inspected"
+}

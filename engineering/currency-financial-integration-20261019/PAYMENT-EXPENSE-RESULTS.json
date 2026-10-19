@@ -1,0 +1,23 @@
+{
+  "status": "PASS",
+  "count": 16,
+  "checks": [
+    "CASH authoritative original sale currency",
+    "CASH stored payment sum reconciles",
+    "CASH payment snapshots consistent",
+    "MOBILE authoritative original sale currency",
+    "MOBILE stored payment sum reconciles",
+    "MOBILE payment snapshots consistent",
+    "BANK authoritative original sale currency",
+    "BANK stored payment sum reconciles",
+    "BANK payment snapshots consistent",
+    "CREDIT authoritative original sale currency",
+    "CREDIT stored payment sum reconciles",
+    "CREDIT payment snapshots consistent",
+    "SPLIT authoritative original sale currency",
+    "SPLIT stored payment sum reconciles",
+    "SPLIT payment snapshots consistent",
+    "expense retains exact original amount and context"
+  ],
+  "scope": "TZS captured canonical RPCs in disposable synthetic database; CREDIT sale test does not certify separate debt/repayment ledger; synthetic JWT not genuine Auth"
+}

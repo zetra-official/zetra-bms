@@ -1,0 +1,54 @@
+{
+  "at": "2026-10-19T08:35:20.490506+00:00",
+  "project": "dcmhqdckzhbuakvcyjit",
+  "status": "ADDITIVE_COLUMN_AND_TRIGGER_NAMES_AVAILABLE",
+  "metadataOnly": true,
+  "customerRowsRead": false,
+  "productionWrites": false,
+  "nativePostingActivation": "NOT AUTHORIZED",
+  "limitations": "Catalog compatibility only, not release approval or financial certification",
+  "functions": [
+    {
+      "definitionMd5": "23be7ab7c04f05d103a18787fe24681a",
+      "identity": "backend_core.active_subject()",
+      "owner": "postgres"
+    },
+    {
+      "definitionMd5": "38edad67c083cf61c37b9cce782912e6",
+      "identity": "create_expense_v2(uuid,numeric,text,text,text,date,text)",
+      "owner": "postgres"
+    },
+    {
+      "definitionMd5": "67eddab421487dc39d00da9f81f4c29e",
+      "identity": "create_sale_with_payment_v6(uuid,jsonb,text,text,numeric,text,text,uuid,text,text,text,numeric,text,uuid,uuid,uuid)",
+      "owner": "postgres"
+    },
+    {
+      "definitionMd5": "172dfc354898a870a7340b93293c74bb",
+      "identity": "get_expenses_v2(uuid,date,date,integer,integer)",
+      "owner": "postgres"
+    },
+    {
+      "definitionMd5": "38552237c93d8d0e9e8568b8293bb1b7",
+      "identity": "get_sale_detail(uuid)",
+      "owner": "postgres"
+    }
+  ],
+  "rls": [
+    {
+      "enabled": true,
+      "forced": false,
+      "table": "expenses"
+    },
+    {
+      "enabled": true,
+      "forced": false,
+      "table": "sale_payments"
+    },
+    {
+      "enabled": true,
+      "forced": false,
+      "table": "sales"
+    }
+  ]
+}

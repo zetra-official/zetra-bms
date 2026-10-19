@@ -1,4 +1,5 @@
 import {Language} from './catalog';
+import {financialErrorText} from '../currency/financialMessages';
 import {translateCommon} from './commonMessages';
 import {systemMessageSources,initialGuideMessage} from './systemMessageSources';
 const exact = new Set<string>([initialGuideMessage,...systemMessageSources].filter(source=>!/{p\d+}/.test(source)));
@@ -12,6 +13,7 @@ const templates = systemMessageSources.filter(source=>/{p\d+}/.test(source)).map
 // Unknown remote diagnostics and user-controlled text are returned verbatim.
 export function translateSystemMessage(language:Language,value:string|null|undefined):string {
   const text=value??'';
+  const financial=financialErrorText(language,text);if(financial)return financial;
   if(exact.has(text))return translateCommon(language,text);
   if(text.length>32768)return text;
   for(const template of templates){

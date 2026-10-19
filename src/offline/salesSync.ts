@@ -1,5 +1,7 @@
 import { supabase } from "../supabase/supabaseClient";
 import { listQueue, markStatus, removeFromQueue, claimQueuedSale } from "./salesQueue";
+import {readAccountingAuthority,assertLegacyPostingCurrency} from '../currency/accounting';
+import {transactionContext} from '../currency/engine';
 
 // ✅ A2: Per-store mutex lock to prevent double-sync (history + sales screen effects)
 const inflightByStore = new Map<string, Promise<void>>();
@@ -25,6 +27,16 @@ export async function syncSalesQueueOnce(storeId: string) {
 
       try {
         const p = item.payload;
+        if(item.currency_context){
+          const original=item.currency_context;
+          const scope=await supabase.from('stores').select('organization_id').eq('id',item.store_id).single();
+          if(scope.error||scope.data?.organization_id!==original.organizationId)throw Error('CURRENCY_TENANT_MISMATCH');
+          const current=await readAccountingAuthority(supabase,original.organizationId);
+          if(!current||current.currency!==original.currency||current.revision!==original.contextRevision)throw Error('OFFLINE_CURRENCY_REVIEW_REQUIRED');
+          assertLegacyPostingCurrency(current);
+          const expected=transactionContext(original.amount,current.currency,current,current.organizationId);
+          if(original.source!=='TRANSACTION_RECORD'||original.accountingCurrency!==expected.accountingCurrency||original.exchangeRate!=='1'||original.rateSource!==expected.rateSource||original.displayRateUsed!==false)throw Error('INVALID_OFFLINE_CURRENCY_CONTEXT');
+        }
 
         // ✅ IMPORTANT: send SAFE items only -> RPC stability
         const safeItems = (Array.isArray(p?.items) ? p.items : []).map((it: any) => ({

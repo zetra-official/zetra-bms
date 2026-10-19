@@ -1,3 +1,11 @@
+import {saleAttemptKey,parseSaleAttempt,blocksSale,definitiveSaleRejection,type SaleAttempt} from '../../../src/pos/saleAttempt';
+import {useAccountingAuthority} from '../../../src/currency/useAccountingAuthority';
+import {transactionContext} from '../../../src/currency/engine';
+import {financialText} from '../../../src/currency/financialMessages';
+import {parseCheckoutCart,scopedCartKey,readCart,writeCart} from '../../../src/pos/cartLifecycle';
+import {posStabilityText} from '../../../src/i18n/posStability';
+import {getExtraPerQty,getAdjustedUnitPrice,getAdjustedLineTotal,parseAdjustment,applyItemAdjustment,plainPriceAmount} from '../../../src/pos/itemAdjustment';
+import {priceAdjustmentText} from '../../../src/i18n/priceAdjustment';
 import {conversionService,canonicalJson,parseConversionQuote,type ConversionQuote} from '../../../src/proforma/conversion';
 import {conversionText} from '../../../src/proforma/conversionCopy';
 import {useLanguage} from '../../../src/i18n/LanguageProvider';
@@ -44,7 +52,7 @@ type CartItem = {
   unit_price: number;
   line_total: number;
 
-  // checkout-only dynamic markup
+  // Checkout-only signed per-unit adjustment; catalog price remains unchanged.
   extra_per_qty?: number;
 };
 
@@ -181,12 +189,12 @@ function buildNoteWithDiscount(args: {
 }) {
   const base = String(args.note ?? "").trim();
   const dText = String(args.discountText ?? "").trim();
-  const dAmt = Math.max(0, Math.round(args.discountAmount || 0));
-  const sub = Math.max(0, Math.round(args.subtotal || 0));
+  const dAmt = Math.max(0, Number(args.discountAmount || 0));
+  const sub = Math.max(0, Number(args.subtotal || 0));
 
   if (!dText && dAmt <= 0) return (base || null) as any;
 
-  const tag = `DISCOUNT: "${dText || "—"}" | DISCOUNT_AMOUNT: ${dAmt} | SUBTOTAL: ${sub}`;
+  const tag = `DISCOUNT: "${dText || "—"}" | DISCOUNT_AMOUNT: ${plainPriceAmount(dAmt)} | SUBTOTAL: ${plainPriceAmount(sub)}`;
   if (!base) return tag as any;
 
   return `${base}\n${tag}` as any;
@@ -259,20 +267,6 @@ function parseWholeNumberInput(raw: string) {
   if (!cleaned) return 0;
   const n = Number(cleaned);
   return Number.isFinite(n) && n >= 0 ? Math.round(n) : 0;
-}
-
-function getExtraPerQty(item: CartItem) {
-  const n = Number(item.extra_per_qty ?? 0);
-  return Number.isFinite(n) && n > 0 ? Math.round(n) : 0;
-}
-
-function getAdjustedUnitPrice(item: CartItem) {
-  return Math.max(0, Math.round(Number(item.unit_price || 0)) + getExtraPerQty(item));
-}
-
-function getAdjustedLineTotal(item: CartItem) {
-  const qty = Math.max(0, Number(item.qty || 0));
-  return getAdjustedUnitPrice(item) * qty;
 }
 
 async function getMyOpenCashierShiftId(storeId: string): Promise<string | null> {
@@ -394,7 +388,7 @@ export default function CheckoutScreen() {
   const params = useLocalSearchParams<{
     storeId?: string | string[];
     storeName?: string | string[];
-    proformaId?:string;proformaOrg?:string;proformaQuote?:string;
+    proformaId?:string;proformaOrg?:string;proformaQuote?:string;cartId?:string;cartOrg?:string;cartActor?:string;
     cart?: string | string[];
     cashierMode?: string | string[];
 reservationMode?: string | string[];
@@ -420,28 +414,32 @@ orderStoreName?: string | string[];
 
   const orgId = String(activeOrgId ?? "").trim();
   const money = useOrgMoneyPrefs(orgId);
+  const accounting=useAccountingAuthority(orgId);
   const {language:conversionLanguage}=useLanguage();
   const conversionId=String(one(params.proformaId)??'');
   const conversionQuote=useMemo<ConversionQuote|null>(()=>{return parseConversionQuote(String(one(params.proformaQuote)??''),conversionId)},[params.proformaQuote,conversionId]);
   const [conversionChecked,setConversionChecked]=useState(false);
   const conversionAttempt=useRef<{request:string;quote:ConversionQuote;payment:Record<string,unknown>}|null>(null);
-  const displayCurrency = conversionQuote?.currency || money.currency || "TZS";
+  const displayCurrency = conversionQuote?.currency || accounting.authority?.currency || null;
   const displayLocale = money.locale || "en-TZ";
 
   const fmt = useCallback(
     (n: number) =>
-      formatMoney(n, { currency: displayCurrency, locale: displayLocale }).replace(/\s+/g, " "),
+      formatMoney(plainPriceAmount(n), { currency: displayCurrency, locale: displayLocale,showCurrency:!!displayCurrency }).replace(/\s+/g, " "),
     [displayCurrency, displayLocale]
   );
 
   const storeId = String(one(params.storeId) ?? "").trim();
 
+  const [cartActor,setCartActor]=useState('');
+  useEffect(()=>{let live=true;void supabase.auth.getSession().then(({data:{session}})=>{if(live)setCartActor(session?.user.id??'')});const {data:{subscription}}=supabase.auth.onAuthStateChange((_e,session)=>{if(live)setCartActor(session?.user.id??'')});return()=>{live=false;subscription.unsubscribe()}},[]);
   const clearPersistedSalesCart = useCallback(async () => {
     const sid = String(storeId ?? "").trim();
     if (!sid) return;
 
-    await AsyncStorage.removeItem(`sales_cart_${sid}`);
-  }, [storeId]);
+    if(!cartActor||!orgId)throw Error('CART_SCOPE_REQUIRED');
+    await writeCart(AsyncStorage,scopedCartKey({organizationId:orgId,storeId:sid,actorId:cartActor}),[]);
+  }, [storeId,orgId,cartActor]);
   const conversionApi=useMemo(()=>conversionService(supabase,orgId,storeId),[orgId,storeId]);
   useEffect(()=>{let live=true;setConversionChecked(false);if(conversionId&&conversionQuote&&String(one(params.proformaOrg))===orgId)void conversionApi.preview(conversionId).then(p=>{if(!live)return;if(p.converted&&p.saleId){router.replace({pathname:'/sales/receipt',params:{saleId:p.saleId}} as any);return}setConversionChecked(canonicalJson(p.quote)===canonicalJson(conversionQuote))}).catch(()=>{});return()=>{live=false}},[conversionApi,conversionId,conversionQuote,params.proformaOrg,orgId,router]);
   const storeNameParam = String(one(params.storeName) ?? "").trim();
@@ -456,70 +454,7 @@ const reservationOrderType =
 
 const reservationOrgId = String(one(params.orderOrgId) ?? orgId).trim();
 
-  const cart: CartItem[] = useMemo(() => {
-    try {
-      const raw = one(params.cart);
-      if (!raw) return [];
-      let source = raw;
-      let parsed: unknown = null;
-
-      for (let attempt = 0; attempt < 3; attempt++) {
-        try {
-          parsed = JSON.parse(source);
-          break;
-        } catch {
-          try {
-            const next = decodeURIComponent(source);
-            if (next === source) break;
-            source = next;
-          } catch {
-            break;
-          }
-        }
-      }
-
-      if (!Array.isArray(parsed)) {
-        console.warn("[ZETRA CHECKOUT] Cart route parsing failed.");
-        return [];
-      }
-
-      const validRows = parsed
-        .map((x: any) => {
-          const qty = Number(Number(x.qty ?? 0).toFixed(3));
-          const unit_price = Number(x.unit_price ?? 0);
-          const line_total =
-            Number.isFinite(unit_price) && unit_price > 0 && Number.isFinite(qty) && qty > 0
-              ? unit_price * qty
-              : Number(x.line_total ?? 0);
-
-          return {
-            product_id: String(x.product_id ?? ""),
-            name: String(x.name ?? "Product"),
-            sku: x.sku ?? null,
-            qty,
-            unit: x.unit ?? null,
-            unit_price,
-            line_total,
-          } as CartItem;
-        })
-        .filter((x) => x.product_id && Number.isFinite(x.qty) && x.qty > 0);
-
-      if (validRows.length !== parsed.length) {
-        console.warn(
-          "[ZETRA CHECKOUT] Invalid rows rejected:",
-          parsed.length - validRows.length,
-          "of",
-          parsed.length
-        );
-      }
-
-      return validRows;
-    } catch (error) {
-      console.warn("[ZETRA CHECKOUT] Cart normalization failed.");
-      return [];
-    }
-  }, [params.cart]);
-
+  const cart: CartItem[] = useMemo(()=>parseCheckoutCart(one(params.cart)) as CartItem[],[params.cart]);
   const normalizedCart = useMemo(() => cart.map(c => ({
     ...c, extra_per_qty: Number(c.extra_per_qty ?? 0) || 0,
   })), [cart]);
@@ -529,12 +464,27 @@ const reservationOrgId = String(one(params.orderOrgId) ?? orgId).trim();
   const [adjustTargetIndex, setAdjustTargetIndex] = useState<number | null>(null);
   const [adjustApplyToAll, setAdjustApplyToAll] = useState(false);
   const [adjustValue, setAdjustValue] = useState("");
+  const [adjustDirection,setAdjustDirection]=useState<1|-1>(1);
+  const adjustmentText=(key:Parameters<typeof priceAdjustmentText>[1])=>priceAdjustmentText(conversionLanguage,key);
 
-  useEffect(() => {
-    if (cartSource.current === normalizedCart) return;
-    cartSource.current = normalizedCart;
-    setCheckoutCart(normalizedCart);
-  }, [normalizedCart]);
+  const cartHydration=useRef({scope:'',source:'',epoch:0});
+  const cartScopeMismatch=!!(one(params.cartOrg)&&one(params.cartOrg)!==orgId)||!!(one(params.cartActor)&&cartActor&&one(params.cartActor)!==cartActor);
+  useEffect(()=>{
+    if(!orgId||!storeId||!cartActor)return;
+    const scope=scopedCartKey({organizationId:orgId,storeId,actorId:cartActor}),raw=one(params.cart),source=String(one(params.cartId)??'')+'|'+String(raw??'');
+    const hydration=cartHydration.current,epoch=++hydration.epoch;
+    if(hydration.scope!==scope){hydration.scope=scope;hydration.source='';setCheckoutCart([])}
+    if(cartScopeMismatch){setCheckoutCart([]);return}
+    if(raw){if(source!==hydration.source){hydration.source=source;cartSource.current=normalizedCart;setCheckoutCart(normalizedCart)}return}
+    // A transient missing param must not erase a valid in-memory cart.
+    if(hydration.source||conversionId)return;
+    void readCart(AsyncStorage,scope).then(rows=>{
+      if(hydration.epoch!==epoch||hydration.scope!==scope)return;
+      const valid=parseCheckoutCart(JSON.stringify(rows));if(valid.length!==rows.length)return;
+      if(valid.length){hydration.source='recovered';setCheckoutCart(valid as CartItem[])}
+    }).catch(()=>{});
+    return()=>{hydration.epoch++};
+  },[orgId,storeId,cartActor,params.cart,params.cartId,cartScopeMismatch,normalizedCart,conversionId]);
 
   const isDesktopWeb = Platform.OS === "web" && width >= 1180;
   
@@ -564,14 +514,17 @@ const reservationOrgId = String(one(params.orderOrgId) ?? orgId).trim();
     return r === "owner" || r === "admin" || r === "staff" || r === "cashier";
   }, [activeRole]);
 
+  const canAdjustPrice=canSell&&['owner','admin','staff','cashier'].includes(String(activeRole??'').toLowerCase())&&orgCtx.activeStoreType==='STANDARD'&&storeId===activeStoreId&&!conversionId&&!cashierMode&&!reservationMode;
+
   const openAdjustModal = useCallback((index: number) => {
     const row = checkoutCart[index];
-    if (!row) return;
+    if (!row || !canAdjustPrice) return;
     setAdjustTargetIndex(index);
     setAdjustApplyToAll(false);
-    setAdjustValue(String(getExtraPerQty(row) || ""));
+    setAdjustDirection(getExtraPerQty(row)<0?-1:1);
+    setAdjustValue(String(Math.abs(getExtraPerQty(row)) || ""));
     setAdjustModalVisible(true);
-  }, [checkoutCart]);
+  }, [checkoutCart,canAdjustPrice]);
 
   const closeAdjustModal = useCallback(() => {
     setAdjustModalVisible(false);
@@ -581,34 +534,13 @@ const reservationOrgId = String(one(params.orderOrgId) ?? orgId).trim();
   }, []);
 
   const applyAdjustment = useCallback(() => {
-    const extra = parseWholeNumberInput(adjustValue);
-
-    if (adjustApplyToAll) {
-      setCheckoutCart((prev) =>
-        prev.map((item) => ({
-          ...item,
-          extra_per_qty: extra,
-        }))
-      );
-      closeAdjustModal();
-      return;
-    }
-
-    if (adjustTargetIndex == null) return;
-
-    setCheckoutCart((prev) =>
-      prev.map((item, idx) =>
-        idx === adjustTargetIndex
-          ? {
-              ...item,
-              extra_per_qty: extra,
-            }
-          : item
-      )
-    );
-
-    closeAdjustModal();
-  }, [adjustValue, adjustApplyToAll, adjustTargetIndex, closeAdjustModal]);
+    if(!canAdjustPrice){Alert.alert(uiText("Adjust Price"),priceAdjustmentText(conversionLanguage,'locked'));return;}
+    try {
+      const delta=parseAdjustment(adjustValue,adjustDirection);
+      const next=applyItemAdjustment(checkoutCart,adjustTargetIndex??-1,adjustApplyToAll,delta);
+      setCheckoutCart(next);closeAdjustModal();
+    } catch {Alert.alert(uiText("Adjust Price"),priceAdjustmentText(conversionLanguage,'invalid'));}
+  },[canAdjustPrice,checkoutCart,adjustValue,adjustDirection,adjustTargetIndex,adjustApplyToAll,closeAdjustModal,uiText,conversionLanguage]);
 
   const totalQty = useMemo(
     () => checkoutCart.reduce((a, c) => a + (c.qty || 0), 0),
@@ -632,6 +564,9 @@ const reservationOrgId = String(one(params.orderOrgId) ?? orgId).trim();
   );
 
   const headerStoreName = storeNameParam || activeStoreName || "—";
+  // Preserve decimals only where the canonical cart carries fractional unit prices.
+  const preservePricePrecision=!!conversionId||checkoutCart.some(item=>!Number.isInteger(getAdjustedUnitPrice(item)));
+
   const mismatch = !!(activeStoreId && storeId && activeStoreId !== storeId);
 
   const [method, setMethod] = useState<CheckoutMethod>(() =>
@@ -640,7 +575,7 @@ const reservationOrgId = String(one(params.orderOrgId) ?? orgId).trim();
   const [paidVia, setPaidVia] = useState<Exclude<PayMethod, "CREDIT">>("CASH");
 
   const [paidStr, setPaidStr] = useState<string>(() =>
-    reservationMode ? "0" : String(conversionId?(grandTotal||subtotalAmount):Math.round(grandTotal || subtotalAmount))
+    reservationMode ? "0" : String(preservePricePrecision?(grandTotal||subtotalAmount):Math.round(grandTotal || subtotalAmount))
   );
 
   const [splitCashStr, setSplitCashStr] = useState<string>("");
@@ -665,6 +600,29 @@ const [staffDropdownOpen, setStaffDropdownOpen] = useState(false);
   useFocusEffect(useCallback(()=>{if(proformaDraftRef.current&&takeCompletedDraft(proformaDraftRef.current)){proformaDraftRef.current=null;setCheckoutCart([]);setCustomerName('');setCustomerPhone('');setDiscountText('');setNote('')}},[]));
   const [saving, setSaving] = useState(false);
   const submission = useRef(new SubmissionGate());
+  const [attemptReady,setAttemptReady]=useState(false);
+  const [attemptRecovery,setAttemptRecovery]=useState<SaleAttempt|null>(null);
+  const saleIntent=String(one(params.cartId)??one(params.cart)??'');
+  useEffect(()=>{let live=true;setAttemptReady(false);setAttemptRecovery(null);
+    if(conversionId||cashierMode||reservationMode){setAttemptReady(true);return}
+    if(!orgId||!storeId||!cartActor)return;
+    const key=saleAttemptKey({organizationId:orgId,storeId,actorId:cartActor});
+    void AsyncStorage.getItem(key).then(raw=>{const a=parseSaleAttempt(raw);if(live){setAttemptRecovery(blocksSale(a,saleIntent)?a:null);setAttemptReady(true)}}).catch(()=>{if(live)setWebBanner({type:'error',text:posStabilityText(conversionLanguage,'unresolved')})});
+    return()=>{live=false};
+  },[orgId,storeId,cartActor,saleIntent,conversionId,cashierMode,reservationMode]);
+  const rememberAttempt=useCallback(async(attempt:SaleAttempt)=>{
+    if(!orgId||!cartActor||!storeId)throw Error('CART_SCOPE_REQUIRED');
+    await AsyncStorage.setItem(saleAttemptKey({organizationId:orgId,storeId,actorId:cartActor}),JSON.stringify(attempt));
+    setAttemptRecovery(attempt);
+  },[orgId,storeId,cartActor]);
+  const reviewSale=useCallback(async()=>{
+    if(!attemptRecovery)return;
+    const {data,error}=await supabase.from('sales').select('id').eq('store_id',storeId).eq('client_sale_id',attemptRecovery.id).maybeSingle();
+    if(error||!data?.id)return;
+    if(!attemptRecovery.requiresFollowUp)await rememberAttempt({...attemptRecovery,phase:'COMPLETE',saleId:String(data.id)});
+    router.push({pathname:'/sales/receipt',params:{saleId:String(data.id)}} as any);
+  },[attemptRecovery,storeId,rememberAttempt,router]);
+
   const [openCashierShiftId, setOpenCashierShiftId] = useState<string | null>(null);
   const [webBanner, setWebBanner] = useState<{
     type: "success" | "error";
@@ -686,8 +644,8 @@ const [staffDropdownOpen, setStaffDropdownOpen] = useState(false);
   },[conversionId,conversionQuote]);
 
   const onPaidChange = useCallback((t: string) => {
-    setPaidStr(normalizeMoneyInput(t,!!conversionId));
-  }, [conversionId]);
+    setPaidStr(normalizeMoneyInput(t,preservePricePrecision));
+  }, [preservePricePrecision]);
 
   const onSetMethod = useCallback(
     (m: CheckoutMethod) => {
@@ -715,7 +673,7 @@ const [staffDropdownOpen, setStaffDropdownOpen] = useState(false);
         return;
       }
 
-      setPaidStr(String(conversionId?grandTotal:Math.round(grandTotal)));
+      setPaidStr(String(preservePricePrecision?grandTotal:Math.round(grandTotal)));
       setPaidVia("CASH");
 
       if (m === "CASH") {
@@ -727,7 +685,7 @@ const [staffDropdownOpen, setStaffDropdownOpen] = useState(false);
         if (!channel) setChannel("M-PESA");
       }
     },
-    [grandTotal, channel, conversionId]
+    [grandTotal, channel, preservePricePrecision]
   );
 
   const splitCashAmount = useMemo(() => parseMoney(splitCashStr), [splitCashStr]);
@@ -926,7 +884,7 @@ if (!orgId || !storeId) {
   useEffect(() => {
     if (cashierMode) return;
 
-    const gt = Math.round(grandTotal);
+    const gt = preservePricePrecision?grandTotal:Math.round(grandTotal);
     const current = parseMoney(paidStr);
 
     if (!Number.isFinite(current)) {
@@ -941,7 +899,7 @@ if (!orgId || !storeId) {
 
     if (current < 0) setPaidStr("0");
     if (current > gt) setPaidStr(String(gt));
-  }, [cashierMode, grandTotal, paidStr, isCredit]);
+  }, [cashierMode, grandTotal, paidStr, isCredit,preservePricePrecision]);
 
   const effectiveSoldByMembershipId = useMemo(() => {
     const role = String(activeRole ?? "").trim().toLowerCase();
@@ -994,14 +952,18 @@ if (!orgId || !storeId) {
   }, []);
 
   const invalidReason = useMemo(() => {
+    if(accounting.loading&&!isOffline)return financialText(conversionLanguage,'loading');
+    if(accounting.failed&&!isOffline)return financialText(conversionLanguage,'unavailable');
+    if(accounting.authority&&accounting.authority.currency!=='TZS')return financialText(conversionLanguage,'blocked');
     if(conversionId&&(!conversionChecked||!isOnline||!conversionQuote||cashierMode||reservationMode))return conversionText(conversionLanguage,'stale');
+    if(cartScopeMismatch||!cartActor)return posStabilityText(conversionLanguage,'loading');
     if (!canSell) return "No permission to sell.";
     if (!storeId) return "Missing storeId.";
     if (mismatch) {
       return "Store mismatch: rudi nyuma, chagua store sahihi kisha uende Checkout upya.";
     }
     if (checkoutCart.length === 0) return "Cart is empty.";
-    if (checkoutCart.some((c) => !Number.isFinite(c.unit_price) || c.unit_price <= 0)) {
+    if (checkoutCart.some((c) => !Number.isFinite(getAdjustedUnitPrice(c)) || getAdjustedUnitPrice(c) <= 0)) {
       return "Some items are missing price.";
     }
 
@@ -1028,7 +990,7 @@ if (reservationMode) {
     if (paidAmount < 0) return "Paid amount cannot be negative.";
     if (paidAmount > grandTotal) return "Paid amount cannot exceed total.";
 
-    if (!isCredit && Math.round(paidAmount) !== Math.round(grandTotal)) {
+    if (!isCredit && (preservePricePrecision?Math.abs(paidAmount-grandTotal)>1e-9:Math.round(paidAmount) !== Math.round(grandTotal))) {
       return isSplit
         ? "Split payment total must equal full sale total."
         : "Non-credit sale must be fully paid.";
@@ -1068,13 +1030,16 @@ if (reservationMode) {
 
     return null;
   }, [
+    accounting.loading,accounting.failed,accounting.authority,
     conversionId,conversionChecked,conversionQuote,isOnline,reservationMode,conversionLanguage,canSell,
     storeId,
     mismatch,
+    cartScopeMismatch,cartActor,
     checkoutCart,
     cashierMode,
     isOffline,
     paidAmount,
+    preservePricePrecision,
     grandTotal,
     isCredit,
     showPaidVia,
@@ -1176,7 +1141,7 @@ orgId,
   );
 
   const confirm = useCallback(async () => {
-    if (saving || !submission.current.begin()) return;
+    if (saving || !attemptReady || attemptRecovery || !submission.current.begin()) return;
     setSaving(true);
     try {
     setWebBanner(null);
@@ -1205,7 +1170,7 @@ orgId,
         const saleId=await conversionApi.commit(conversionId,attempt.request,attempt.quote,attempt.payment);
         submission.current.committed();
         // Conversion uses its own document cart; never clear an unrelated persisted POS cart.
-        await playSaleSuccessSoundSafe();router.replace({pathname:'/(tabs)/sales/receipt',params:{saleId}} as any);
+        void playSaleSuccessSoundSafe();router.replace({pathname:'/(tabs)/sales/receipt',params:{saleId}} as any);
       }catch(e:any){
         if(e?.definitive)conversionAttempt.current=null;
         const message=e?.message??conversionText(conversionLanguage,'stale');
@@ -1374,7 +1339,7 @@ const successMsg = `Order imetumwa kwa cashier queue ya store hii. Handoff ID: $
 
 if (isOffline) {
       try {
-        const clientSaleId = makeId();
+        const clientSaleId = /^[0-9a-f-]{36}$/i.test(String(one(params.cartId)??''))?String(one(params.cartId)):makeId();
 
         if (String(activeRole ?? "").trim().toLowerCase() === "cashier") {
           const cashierShiftId = await getMyOpenCashierShiftId(storeId);
@@ -1410,7 +1375,7 @@ if (isOffline) {
 
         const splitLines =
           isSplit
-            ? `SPLIT_PAYMENT: CASH=${Math.round(Number.isFinite(splitCashAmount) ? splitCashAmount : 0)} | MOBILE=${Math.round(Number.isFinite(splitMobileAmount) ? splitMobileAmount : 0)} | BANK=${Math.round(Number.isFinite(splitBankAmount) ? splitBankAmount : 0)}\n`
+            ? `SPLIT_PAYMENT: CASH=${plainPriceAmount(Number.isFinite(splitCashAmount) ? splitCashAmount : 0)} | MOBILE=${plainPriceAmount(Number.isFinite(splitMobileAmount) ? splitMobileAmount : 0)} | BANK=${plainPriceAmount(Number.isFinite(splitBankAmount) ? splitBankAmount : 0)}\n`
             : "";
 
         const finalNote = buildNoteWithDiscount({
@@ -1431,6 +1396,7 @@ if (isOffline) {
               : null;
 
         await enqueueSale(storeId, {
+          ...(accounting.authority?{currency_context:transactionContext(plainPriceAmount(grandTotal),accounting.authority.currency,accounting.authority,orgId)}:{}),
           client_sale_id: clientSaleId,
           store_id: storeId,
           payload: {
@@ -1453,6 +1419,7 @@ customer_phone: customerPhone.trim() || null,
 
         submission.current.committed();
         await clearPersistedSalesCart();
+        await rememberAttempt({id:clientSaleId,intent:saleIntent,phase:'QUEUED',requiresFollowUp:false});
         const successMsg = "Sale imehifadhiwa. Itasync mtandao ukirudi.";
         void playSaleSuccessSoundSafe();
 
@@ -1480,10 +1447,10 @@ customer_phone: customerPhone.trim() || null,
 
     setSaving(true);
     try {
-      await preflightCheckStock();
-
-      const access = await supabase.rpc("ensure_my_store_access", { p_store_id: storeId });
-      if (access.error) throw access.error;
+      await Promise.all([
+        preflightCheckStock(),
+        supabase.rpc("ensure_my_store_access", { p_store_id: storeId }).then(({error})=>{if(error)throw error}),
+      ]);
 
       const items = checkoutCart.map((c) => ({
         product_id: c.product_id,
@@ -1499,7 +1466,7 @@ customer_phone: customerPhone.trim() || null,
 
       const splitLines =
         isSplit
-          ? `SPLIT_PAYMENT: CASH=${Math.round(Number.isFinite(splitCashAmount) ? splitCashAmount : 0)} | MOBILE=${Math.round(Number.isFinite(splitMobileAmount) ? splitMobileAmount : 0)} | BANK=${Math.round(Number.isFinite(splitBankAmount) ? splitBankAmount : 0)}\n`
+          ? `SPLIT_PAYMENT: CASH=${plainPriceAmount(Number.isFinite(splitCashAmount) ? splitCashAmount : 0)} | MOBILE=${plainPriceAmount(Number.isFinite(splitMobileAmount) ? splitMobileAmount : 0)} | BANK=${plainPriceAmount(Number.isFinite(splitBankAmount) ? splitBankAmount : 0)}\n`
           : "";
 
       const finalNote = buildNoteWithDiscount({
@@ -1519,7 +1486,7 @@ customer_phone: customerPhone.trim() || null,
             ? Number(discount.amount || 0)
             : null;
 
-      const clientSaleId = makeId();
+      const clientSaleId = /^[0-9a-f-]{36}$/i.test(String(one(params.cartId)??''))?String(one(params.cartId)):makeId();
 
       let cashierShiftId: string | null = null;
       const isCashierUser = String(activeRole ?? "").trim().toLowerCase() === "cashier";
@@ -1531,6 +1498,8 @@ customer_phone: customerPhone.trim() || null,
         }
       }
 
+      const durableAttempt:SaleAttempt={id:clientSaleId,intent:saleIntent,phase:'DISPATCHED',requiresFollowUp:!!customerPhone.trim()||isCredit};
+      await rememberAttempt(durableAttempt);
       submission.current.dispatched();
       const res = await supabase.rpc("create_sale_with_payment_v6", {
         p_store_id: storeId,
@@ -1557,7 +1526,13 @@ p_customer_full_name: customerName.trim() || null,
         p_sold_by_membership_id: effectiveSoldByMembershipId || null,
       } as any);
 
-      if (res.error) throw res.error;
+      if (res.error) {
+        if(definitiveSaleRejection(res.error.code)){
+          await AsyncStorage.removeItem(saleAttemptKey({organizationId:orgId,storeId,actorId:cartActor}));
+          setAttemptRecovery(null);submission.current=new SubmissionGate();
+        }
+        throw res.error;
+      }
 
       const row = Array.isArray(res.data) ? (res.data[0] ?? null) : res.data;
       const saleId: string | null =
@@ -1569,6 +1544,7 @@ p_customer_full_name: customerName.trim() || null,
 
       if (!saleId) throw new Error("Sale response missing an identifier; verify history before retrying.");
       submission.current.committed();
+      await rememberAttempt({...durableAttempt,phase:'BASE_COMMITTED',saleId});
       if (saleId && customerPhone.trim()) {
         const attachRes = await supabase.rpc("attach_customer_to_sale", {
           p_sale_id: saleId,
@@ -1605,7 +1581,8 @@ p_customer_full_name: customerName.trim() || null,
         : "Sale created successfully";
 
       await clearPersistedSalesCart();
-      await playSaleSuccessSoundSafe();
+      await rememberAttempt({...durableAttempt,phase:'COMPLETE',saleId});
+      void playSaleSuccessSoundSafe();
 
       if (Platform.OS === "web") {
         setWebBanner({ type: "success", text: successMsg });
@@ -1669,6 +1646,7 @@ p_customer_full_name: customerName.trim() || null,
       setSaving(false);
     }
   }, [
+    attemptReady,attemptRecovery,rememberAttempt,saleIntent,params.cartId,cartActor,
     saving,
     invalidReason,
     cashierMode,
@@ -1767,7 +1745,7 @@ headerStoreName,
           const adjustedUnit = fmt(getAdjustedUnitPrice(c));
           const adjustedLine = fmt(getAdjustedLineTotal(c));
           const extra = getExtraPerQty(c);
-          const extraLabel = extra > 0 ? fmt(extra) : null;
+          const extraLabel = extra !== 0 ? fmt(Math.abs(extra)) : null;
 
           return (
             <View
@@ -1810,6 +1788,7 @@ headerStoreName,
                 </View>
 
                 <Pressable
+                  testID={`checkout-price-adjust-${index}`} accessibilityRole="button" accessibilityLabel={uiText("Adjust Price")} disabled={saving||!canAdjustPrice}
                   onPress={() => openAdjustModal(index)}
                   style={({ pressed }) => ({
                     minWidth: 42,
@@ -1836,14 +1815,14 @@ headerStoreName,
                 {uiText("Unit:")}{adjustedUnit} {uiText("• Line:")}{adjustedLine}
               </Text>
 
-              {extra > 0 ? (
-                <Text style={{ color: theme.colors.emerald, fontWeight: "900" }}>{uiText("Markup: +{p0} per unit", {p0: (extraLabel ?? "")})}</Text>
+              {extra !== 0 ? (
+                <Text style={{ color: theme.colors.emerald, fontWeight: "900" }}>{adjustmentText('change')}: {extra<0?'−':'+'}{extraLabel}</Text>
               ) : (
                 <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
                   {uiText("Hakuna markup bado")}</Text>
               )}
 
-              {extra > 0 ? (
+              {extra !== 0 ? (
                 <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
                   {uiText("Base Unit:")}{baseUnit}
                 </Text>
@@ -1901,7 +1880,7 @@ headerStoreName,
           keyboardType="default"
         />
         <Text style={{ color: theme.colors.faint, fontWeight: "800", marginTop: 8, lineHeight: 17 }}>
-          {uiText("Tip: Discount hupunguza total. Alama ya + kwenye item huongeza markup kwa kila qty.")}</Text>
+          {adjustmentText('orderDiscount')}</Text>
       </View>
 
       <View style={{ height: 1, backgroundColor: "rgba(15,23,42,0.06)" }} />
@@ -2090,30 +2069,30 @@ const staffAttributionCard = (
         <View style={{ gap: 8 }}>
           <View style={{ flexDirection: isDesktopWeb ? "row" : "column", gap: 8 }}>
             <View style={{ flex: 1 }}>
-              <FieldLabel>{uiText("Cash ({p0})", {p0: (displayCurrency)})}</FieldLabel>
+              <FieldLabel>{uiText("Cash ({p0})", {p0: (displayCurrency??"—")})}</FieldLabel>
               <InputBox
                 value={splitCashStr}
-                onChangeText={(v) => setSplitCashStr(normalizeMoneyInput(v,!!conversionId))}
+                onChangeText={(v) => setSplitCashStr(normalizeMoneyInput(v,preservePricePrecision))}
                 placeholder="300000"
                 keyboardType="numeric"
               />
             </View>
 
             <View style={{ flex: 1 }}>
-              <FieldLabel>{uiText("Mobile ({p0})", {p0: (displayCurrency)})}</FieldLabel>
+              <FieldLabel>{uiText("Mobile ({p0})", {p0: (displayCurrency??"—")})}</FieldLabel>
               <InputBox
                 value={splitMobileStr}
-                onChangeText={(v) => setSplitMobileStr(normalizeMoneyInput(v,!!conversionId))}
+                onChangeText={(v) => setSplitMobileStr(normalizeMoneyInput(v,preservePricePrecision))}
                 placeholder="250000"
                 keyboardType="numeric"
               />
             </View>
 
             <View style={{ flex: 1 }}>
-              <FieldLabel>{uiText("Bank ({p0})", {p0: (displayCurrency)})}</FieldLabel>
+              <FieldLabel>{uiText("Bank ({p0})", {p0: (displayCurrency??"—")})}</FieldLabel>
               <InputBox
                 value={splitBankStr}
-                onChangeText={(v) => setSplitBankStr(normalizeMoneyInput(v,!!conversionId))}
+                onChangeText={(v) => setSplitBankStr(normalizeMoneyInput(v,preservePricePrecision))}
                 placeholder="50000"
                 keyboardType="numeric"
               />
@@ -2125,7 +2104,7 @@ const staffAttributionCard = (
         </View>
       ) : (
         <View>
-          <FieldLabel>{uiText("Paid ({p0})", {p0: (displayCurrency)})}</FieldLabel>
+          <FieldLabel>{uiText("Paid ({p0})", {p0: (displayCurrency??"—")})}</FieldLabel>
           <InputBox
             value={paidStr}
             onChangeText={onPaidChange}
@@ -2350,17 +2329,19 @@ const staffAttributionCard = (
     : uiText("Confirm Sale")
         }
         onPress={confirm}
-        disabled={saving || submission.current.blocked || !!invalidReason}
+        disabled={saving || !attemptReady || !!attemptRecovery || submission.current.blocked || !!invalidReason}
         variant="primary"
       />
+      {attemptRecovery&&<View style={{gap:8}}><Text>{posStabilityText(conversionLanguage,'unresolved')}</Text><Button title={posStabilityText(conversionLanguage,'history')} variant="secondary" onPress={()=>router.push('/sales/history' as any)}/><Button title={uiText('Refresh')} variant="secondary" onPress={()=>void reviewSale()}/></View>}
+      {checkoutCart.length===0&&<View style={{gap:8}}><Text>{posStabilityText(conversionLanguage,'recovery')}</Text><Button title={uiText('Back')} variant="secondary" onPress={()=>router.replace('/sales' as any)}/></View>}
       <CheckoutProformaAction
         organizationId={orgId || null} storeId={storeId || null}
         storeOrganizationId={orgCtx.stores?.find((row: any) => row.store_id === storeId && row.organization_id === orgId && row.is_allowed !== false)?.organization_id ?? null}
-        role={activeRole ?? null} busy={saving} online={isOnline} hasItems={!conversionId&&checkoutCart.length > 0}
+        role={activeRole ?? null} busy={saving||!!attemptRecovery} online={isOnline} hasItems={!conversionId&&checkoutCart.length > 0}
         onOpen={async () => {
           const {data:{session}}=await supabase.auth.getSession();
           if(!session?.user.id)return;
-          const draftId=stageProformaCart({organizationId:orgId,storeId,actorId:session.user.id},checkoutCart.map(item=>({product_id:item.product_id,name:item.name,qty:item.qty,unit_price:getAdjustedUnitPrice(item)})),{customerName,customerPhone,notes:note,discountType:discount.type==='percent'?'percent':'fixed',discountValue:String(discount.value||0),subtotal:String(subtotalAmount),discountAmount:String(discount.amount||0),total:String(grandTotal),sourceCart:cartSignature(cart)});
+          const draftId=stageProformaCart({organizationId:orgId,storeId,actorId:session.user.id},checkoutCart.map(item=>({product_id:item.product_id,name:item.name,qty:item.qty,unit_price:getAdjustedUnitPrice(item),catalog_unit_price:item.unit_price,price_adjustment:getExtraPerQty(item),unit:item.unit})),{customerName,customerPhone,notes:note,discountType:discount.type==='percent'?'percent':'fixed',discountValue:String(discount.value||0),subtotal:String(subtotalAmount),discountAmount:String(discount.amount||0),total:String(grandTotal),sourceCart:cartSignature(cart)});
           proformaDraftRef.current=draftId;
           router.push({ pathname: "/sales/proforma", params: { storeId,mode:'new',draftId } } as any);
         }}
@@ -2376,13 +2357,10 @@ const staffAttributionCard = (
   const adjustTargetItem =
     adjustTargetIndex != null ? checkoutCart[adjustTargetIndex] ?? null : null;
 
-  const adjustPreviewExtra = parseWholeNumberInput(adjustValue);
-  const adjustPreviewQty = Math.max(0, Number(Number(adjustTargetItem?.qty || 0).toFixed(3)));
-  const adjustPreviewLineAdd = adjustApplyToAll
-    ? 0
-    : adjustPreviewExtra > 0 && adjustPreviewQty > 0
-      ? adjustPreviewExtra * adjustPreviewQty
-      : 0;
+  let adjustPreviewExtra=0;let adjustmentPreview:CartItem[]|null=null;
+  try{adjustPreviewExtra=parseAdjustment(adjustValue,adjustDirection);adjustmentPreview=applyItemAdjustment(checkoutCart,adjustTargetIndex??-1,adjustApplyToAll,adjustPreviewExtra);}catch{}
+  const adjustPreviewQty=Number(adjustTargetItem?.qty??0);
+  const previewRows=adjustmentPreview?.filter((_,i)=>adjustApplyToAll||i===adjustTargetIndex)??[];
 
   return (
     <Screen scroll bottomPad={isDesktopWeb ? 16 : 240}>
@@ -2400,8 +2378,9 @@ const staffAttributionCard = (
             padding: isDesktopWeb ? 24 : 16,
           }}
         >
-          <View
+          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{gap:12,direction:conversionLanguage==='ar'?'rtl':'ltr'}}
             style={{
+              flexGrow:0,
               borderRadius: 22,
               borderWidth: 1,
               borderColor: theme.colors.border,
@@ -2410,6 +2389,7 @@ const staffAttributionCard = (
               maxWidth: isDesktopWeb ? 640 : undefined,
               alignSelf: isDesktopWeb ? "center" : undefined,
               padding: isDesktopWeb ? 18 : 16,
+              maxHeight:"90%",
               gap: isDesktopWeb ? 10 : 12,
             }}
           >
@@ -2420,32 +2400,11 @@ const staffAttributionCard = (
               {adjustTargetItem?.name ?? uiText("Item")}
             </Text>
 
-            <View
-              style={{
-                padding: 12,
-                borderRadius: 16,
-                borderWidth: 1,
-        borderColor: "rgba(15,23,42,0.10)",
-backgroundColor: "rgba(241,245,249,0.72)",
-                gap: 4,
-              }}
-            >
-              <Text style={{ color: theme.colors.muted, fontWeight: "900" }}>
-                {uiText("Mode: Add per qty")}</Text>
-              <Text style={{ color: theme.colors.faint, fontWeight: "800" }}>
-                {uiText("Ukiweka 5000 na qty ni 2, line itaongezeka 10000 moja kwa moja.")}</Text>
+            <View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>
+              {([1,-1] as const).map(direction=><Pressable key={direction} accessibilityRole="radio" accessibilityState={{checked:adjustDirection===direction}} onPress={()=>setAdjustDirection(direction)} style={{padding:12,minHeight:44,borderWidth:1,borderColor:adjustDirection===direction?theme.colors.emerald:theme.colors.border,borderRadius:10}}><Text style={{color:theme.colors.text,fontWeight:'700'}}>{adjustmentText(direction===1?'increase':'decrease')}</Text></Pressable>)}
             </View>
-
-            <View>
-              <FieldLabel>{uiText("Increase per qty ({p0})", {p0: (displayCurrency)})}</FieldLabel>
-              <InputBox
-                value={adjustValue}
-                onChangeText={(v) => setAdjustValue(v.replace(/[^\d]/g, ""))}
-                placeholder={uiText("mf: 5000")}
-                keyboardType="numeric"
-              />
-            </View>
-
+            <View><FieldLabel>{adjustmentText('amount')}</FieldLabel><InputBox value={adjustValue} onChangeText={setAdjustValue} placeholder="0" keyboardType="decimal-pad" /></View>
+            <Text style={{color:theme.colors.muted}}>{adjustmentText('orderDiscount')}</Text>
             <View style={{ flexDirection: isDesktopWeb ? "row" : "column", gap: 8 }}>
               <Pressable
                 onPress={() => setAdjustApplyToAll(false)}
@@ -2513,29 +2472,21 @@ backgroundColor: "rgba(241,245,249,0.72)",
               <Text style={{ color: theme.colors.text, fontWeight: "900" }}>
                 {uiText("Preview")}</Text>
 
-              {adjustApplyToAll ? (
-                <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>{uiText("A markup of {p0} will apply per unit to all items.", {p0: (fmt(adjustPreviewExtra))})}</Text>
-              ) : (
-                <>
-                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                    {uiText("Qty:")}{adjustPreviewQty}
-                  </Text>
-                  <Text style={{ color: theme.colors.muted, fontWeight: "800" }}>
-                    {uiText("Added to line:")}{fmt(adjustPreviewLineAdd)}
-                  </Text>
-                </>
-              )}
+              {previewRows.map((item,index)=><Text key={index} style={{color:theme.colors.text}}>{item.name}: {fmt(item.unit_price)} → {fmt(getAdjustedUnitPrice(item))} × {item.qty} = {fmt(getAdjustedLineTotal(item))}</Text>)}
+              {!adjustmentPreview&&<Text accessibilityRole="alert" style={{color:'#B91C1C'}}>{adjustmentText('invalid')}</Text>}
+
             </View>
 
+            <Button title={adjustmentText('reset')} variant="secondary" onPress={()=>{setAdjustValue('0');setAdjustDirection(1);setAdjustApplyToAll(false);}} />
             <View style={{ flexDirection: "row", gap: 10 }}>
               <View style={{ flex: 1 }}>
                 <Button title={uiText("Cancel")} onPress={closeAdjustModal} variant="secondary" />
               </View>
               <View style={{ flex: 1 }}>
-                <Button title={uiText("Apply")} onPress={applyAdjustment} variant="primary" />
+                <Button title={uiText("Apply")} onPress={applyAdjustment} disabled={!adjustmentPreview||!canAdjustPrice} variant="primary" />
               </View>
             </View>
-          </View>
+          </ScrollView>
         </View>
       </Modal>
 

@@ -1,3 +1,7 @@
+import {CartLifecycle,scopedCartKey,readCart,writeCart,parseCheckoutCart,type CartScope} from '../../../src/pos/cartLifecycle';
+import {useLanguage} from '../../../src/i18n/LanguageProvider';
+import {posStabilityText} from '../../../src/i18n/posStability';
+import {makeId} from '../../../src/offline/salesQueue';
 import {consumeSavedCart} from "../../../src/proforma/savedCart";
 import {ProformaOrdersAction} from "../../../src/proforma/ProformaOrdersAction";
 import {indexPOS, searchPOS} from "@/src/search/catalogSearch";
@@ -6,7 +10,7 @@ import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
 import SafeIcon from "@/src/ui/SafeIcon";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@/src/ui/BusinessIonicons";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
@@ -47,6 +51,7 @@ import { Screen } from "../../../src/ui/Screen";
 import { theme } from "../../../src/ui/theme";
 
 import { formatMoney, useOrgMoneyPrefs } from "@/src/ui/money";
+import {useAccountingAuthority} from '../../../src/currency/useAccountingAuthority';
 import { setActiveScanScope, subscribeScanBarcode } from "@/src/utils/scanBus";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -411,6 +416,7 @@ function ScannerFabIcon({ size = 24, color = "#E5E7EB" }: { size?: number; color
 export default function SalesHomeScreen() {
  const systemText = useSystemMessageText();
  const uiText=useCommonText();
+ const {language:cartLanguage}=useLanguage();
   const router = useRouter();
   const params = useLocalSearchParams<{
   barcode?: string;
@@ -455,12 +461,28 @@ const [query, setQuery] = useState("");
 useEffect(() => {
   productsCountRef.current = products.length;
 }, [products.length]);
-  const [cart, setCart] = useState<CartItem[]>([]);
-
-  const CART_KEY = (storeId: string) => `sales_cart_${storeId}`;
-  const cartHydratedRef = useRef(false);
-  const cartLastStoreRef = useRef<string>("");
+  const [cartRows, renderCart] = useState<CartItem[]>([]);
+  const cartMachine = useRef(new CartLifecycle<CartItem>());
+  const cartScopeRef = useRef<CartScope|null>(null);
   const cartRestoreRequestRef = useRef(0);
+  const navigatingRef=useRef(false);
+  const [navigating,setNavigating]=useState(false);
+  const scopeMatches=cartScopeRef.current?.storeId===String(activeStoreId??'')&&cartScopeRef.current?.organizationId===String(activeOrgId??'');
+  const cart=scopeMatches?cartRows:[];
+  const cartViewRef=useRef({org:activeOrgId,store:activeStoreId,language:cartLanguage});
+  cartViewRef.current={org:activeOrgId,store:activeStoreId,language:cartLanguage};
+  const setCart=useCallback((change:CartItem[]|((previous:CartItem[])=>CartItem[]))=>{
+    const scope=cartScopeRef.current,view=cartViewRef.current;
+    if(!scope||scope.storeId!==String(view.store??'')||scope.organizationId!==String(view.org??'')){setErr(posStabilityText(view.language,'loading'));return;}
+    if(navigatingRef.current)return;
+    const rows=cartMachine.current.update(change);renderCart(rows);
+    void writeCart(AsyncStorage,scopedCartKey(scope),rows).catch(()=>setErr(posStabilityText(cartViewRef.current.language,'storage')));
+  },[]);
+  useEffect(()=>{
+    const {data:{subscription}}=supabase.auth.onAuthStateChange((_event,session)=>{
+      if(cartScopeRef.current&&session?.user.id!==cartScopeRef.current.actorId){cartRestoreRequestRef.current++;cartMachine.current.activate('');cartScopeRef.current=null;renderCart([])}
+    });return()=>subscription.unsubscribe();
+  },[]);
   const realtimeChannelRef = useRef<RealtimeChannel | null>(null);
   const refreshTimerRef = useRef<any>(null);
   const lastRealtimeRefreshAtRef = useRef<number>(0);
@@ -505,12 +527,13 @@ useEffect(() => {
 
   const orgId = String(activeOrgId ?? "").trim();
   const money = useOrgMoneyPrefs(orgId);
-  const displayCurrency = money.currency || "TZS";
+  const accounting=useAccountingAuthority(orgId);
+  const displayCurrency = accounting.authority?.currency || null;
   const displayLocale = money.locale || "en-TZ";
 
   const fmt = useCallback(
     (n: number) =>
-      formatMoney(n, { currency: displayCurrency, locale: displayLocale }).replace(/\s+/g, " "),
+      formatMoney(n, { currency: displayCurrency, locale: displayLocale,showCurrency:!!displayCurrency }).replace(/\s+/g, " "),
     [displayCurrency, displayLocale]
   );
 
@@ -571,58 +594,28 @@ useFocusEffect(
 );
 
 const restorePersistedCart = useCallback(async () => {
-    const sid = String(activeStoreId ?? "").trim();
-    const requestId = ++cartRestoreRequestRef.current;
-
-    cartHydratedRef.current = false;
-
-    if (!sid || isCashier) {
-      setCart([]);
-      cartLastStoreRef.current = sid;
-      cartHydratedRef.current = true;
-      return;
-    }
-
-    try {
+    const sid=String(activeStoreId??'').trim(),oid=String(activeOrgId??'').trim(),request=++cartRestoreRequestRef.current;
+    if(!sid||!oid||isCashier){cartMachine.current.activate('');cartScopeRef.current=null;renderCart([]);return;}
+    try{
       const {data:{session}}=await supabase.auth.getSession();
-      if(session&&orgId)await consumeSavedCart(AsyncStorage,{organizationId:orgId,storeId:sid,actorId:session.user.id});
-      const raw = await AsyncStorage.getItem(CART_KEY(sid));
-      const parsed = raw ? JSON.parse(raw) : [];
-
-      if (requestId !== cartRestoreRequestRef.current) return;
-      setCart(Array.isArray(parsed) ? parsed : []);
-      cartLastStoreRef.current = sid;
-    } catch {
-      if (requestId !== cartRestoreRequestRef.current) return;
-      setCart([]);
-      cartLastStoreRef.current = sid;
-    } finally {
-      if (requestId === cartRestoreRequestRef.current) {
-        cartHydratedRef.current = true;
-      }
-    }
-  }, [activeStoreId, isCashier, orgId]);
-
-  useFocusEffect(
-    useCallback(() => {
-      void restorePersistedCart();
-
-      return () => {
-        cartRestoreRequestRef.current += 1;
-        cartHydratedRef.current = false;
-      };
-    }, [restorePersistedCart])
-  );
-
-useEffect(() => {
-    const sid = String(activeStoreId ?? "").trim();
-    if (!sid || isCashier) return;
-    if (!cartHydratedRef.current) return;
-    if (cartLastStoreRef.current !== sid) return;
-
-    void AsyncStorage.setItem(CART_KEY(sid), JSON.stringify(cart));
-  }, [activeStoreId, isCashier, cart]);
-  
+      if(request!==cartRestoreRequestRef.current||!session)return;
+      const scope={organizationId:oid,storeId:sid,actorId:session.user.id},key=scopedCartKey(scope);
+      cartScopeRef.current=scope;renderCart(cartMachine.current.activate(key));
+      await consumeSavedCart(AsyncStorage,scope,key);
+      const restored=await cartMachine.current.restore(async()=>{
+        const rows=await readCart(AsyncStorage,key);
+        if(!rows.length&&await AsyncStorage.getItem(`sales_cart_${sid}`))setErr(posStabilityText(cartLanguage,'legacy'));
+        if(!rows.length)return [];
+        const valid=parseCheckoutCart(JSON.stringify(rows));if(valid.length!==rows.length)throw Error('INVALID_CART_STORAGE');
+        return rows as CartItem[];
+      });
+      if(request===cartRestoreRequestRef.current&&restored)renderCart([...cartMachine.current.items]);
+    }catch{if(request===cartRestoreRequestRef.current)setErr(posStabilityText(cartLanguage,'storage'));}
+  },[activeStoreId,activeOrgId,isCashier,cartLanguage]);
+  useFocusEffect(useCallback(()=>{
+    navigatingRef.current=false;setNavigating(false);void restorePersistedCart();
+    return()=>{cartRestoreRequestRef.current++;cartMachine.current.invalidate()};
+  },[restorePersistedCart]));
 
   const isWeb = Platform.OS === "web";
   const isDesktopWeb = isWeb && width >= 1100;
@@ -1028,15 +1021,7 @@ const dec = useCallback((key: string) => {
   );
 }, []);
 
-const clearCart = useCallback(() => {
-  const sid = String(activeStoreId ?? "").trim();
-
-  setCart([]);
-
-  if (sid) {
-    void AsyncStorage.removeItem(CART_KEY(sid));
-  }
-}, [activeStoreId]);
+const clearCart = useCallback(() => {setCart([]);},[setCart]);
 
 const removeItem = useCallback((key: string) => {
   setCart((prev) => prev.filter((x) => getCartKey(x) !== key && x.product_id !== key));
@@ -1321,7 +1306,7 @@ useFocusEffect(
     if (!storeIdNow || !orgIdNow) return;
 
     const channel = supabase.channel(
-      `sales-live:${orgIdNow}:${storeIdNow}:${Date.now()}`
+      `sales-live:${orgIdNow}:${storeIdNow}:${Date.now()}:${Math.random().toString(36).slice(2)}`
     );
 
     channel.on(
@@ -1657,82 +1642,25 @@ image_url: row.image_url ?? null,
   /* =========================
      Navigation
   ========================= */
-const goCheckout = useCallback(() => {
+const openCheckout = useCallback(async (cashier:boolean) => {
+  if(navigatingRef.current)return;
   setErr(null);
+  const scope=cartScopeRef.current;
+  if(!scope||scope.storeId!==String(activeStoreId??'')||scope.organizationId!==orgId)return setErr(posStabilityText(cartLanguage,'loading'));
+  if(cashier?(!canUseCashierHandoff||!isCashierSalesMode):(!canSellDirect||!isDirectSalesMode))return setErr("No permission to sell directly.");
+  const rows=cartMachine.current.items;
+  if(!rows.length)return setErr("Cart is empty.");
+  if(parseCheckoutCart(JSON.stringify(rows)).length!==rows.length)return setErr("Kuna bidhaa kwenye cart haina bei sahihi.");
+  navigatingRef.current=true;setNavigating(true);
+  try{
+    await writeCart(AsyncStorage,scopedCartKey(scope),rows);
+    if(cartMachine.current.key!==scopedCartKey(scope))throw Error('CART_SCOPE_CHANGED');
+    router.push({pathname:"/(tabs)/sales/checkout",params:{storeId:scope.storeId,storeName:activeStoreName??'',cart:JSON.stringify(rows),cartId:makeId(),cartOrg:scope.organizationId,cartActor:scope.actorId,...(cashier?{cashierMode:'1'}:{}),...(reservationMode?{reservationMode:'1',orderType:reservationOrderType}:{})}} as any);
+  }catch{navigatingRef.current=false;setNavigating(false);setErr(posStabilityText(cartLanguage,'storage'));}
+},[activeStoreId,activeStoreName,orgId,cartLanguage,canUseCashierHandoff,isCashierSalesMode,canSellDirect,isDirectSalesMode,router,reservationMode,reservationOrderType]);
+const goCheckout=useCallback(()=>void openCheckout(false),[openCheckout]);
+const goCashierCheckout=useCallback(()=>void openCheckout(true),[openCheckout]);
 
-  if (!activeStoreId) return setErr("No active store selected.");
-  if (!canSellDirect) return setErr("No permission to sell directly.");
-  if (!isDirectSalesMode) {
-    return setErr("Store hii iko Cashier Mode. Tumia Cashiers kukamilisha mauzo.");
-  }
-  if (cart.length === 0) return setErr("Cart is empty.");
-
-    if (cart.some((c) => !Number.isFinite(c.unit_price) || c.unit_price <= 0)) {
-      return setErr("Kuna bidhaa kwenye cart haina bei sahihi.");
-    }
-
-    const payload = encodeURIComponent(JSON.stringify(cart));
-    router.push({
-      pathname: "/(tabs)/sales/checkout",
-   params: {
-  storeId: activeStoreId,
-  storeName: activeStoreName ?? "",
-  cart: payload,
-  ...(reservationMode
-    ? {
-        reservationMode: "1",
-        orderType: reservationOrderType,
-      }
-    : {}),
-},
-    });
-
-    // Do not clear cart here. User may press Back from checkout and must find items preserved.
-  }, [
-  activeStoreId,
-  activeStoreName,
-  canSellDirect,
-  cart,
-  router,
-  reservationMode,
-  reservationOrderType,
-  isDirectSalesMode,
-]);
-
-const goCashierCheckout = useCallback(() => {
-  setErr(null);
-
-  if (!activeStoreId) return setErr("No active store selected.");
-  if (!canUseCashierHandoff) return setErr("No permission to send order to cashiers.");
-  if (!isCashierSalesMode) {
-    return setErr("Store hii iko Direct Sales Mode. Tumia Complete Sale.");
-  }
-  if (cart.length === 0) return setErr("Cart is empty.");
-
-    if (cart.some((c) => !Number.isFinite(c.unit_price) || c.unit_price <= 0)) {
-      return setErr("Kuna bidhaa kwenye cart haina bei sahihi.");
-    }
-
-    const payload = encodeURIComponent(JSON.stringify(cart));
-    router.push({
-      pathname: "/(tabs)/sales/checkout",
-      params: {
-        storeId: activeStoreId,
-        storeName: activeStoreName ?? "",
-        cart: payload,
-        cashierMode: "1",
-      },
-    });
-
-    // Do not clear cart here. User may press Back from checkout and must find items preserved.
-  }, [
-  activeStoreId,
-  activeStoreName,
-  canUseCashierHandoff,
-  cart,
-  router,
-  isCashierSalesMode,
-]);
 
   const goScan = useCallback(() => {
     setErr(null);
@@ -1787,6 +1715,7 @@ const goCashierCheckout = useCallback(() => {
 
 const checkoutDisabled = useMemo(() => {
   return (
+    navigating ||
     !activeStoreId ||
     cart.length === 0 ||
     !canSellDirect ||
@@ -1795,6 +1724,7 @@ const checkoutDisabled = useMemo(() => {
     salesModeLoading
   );
 }, [
+  navigating,
   activeStoreId,
   cart.length,
   canSellDirect,
@@ -1823,6 +1753,7 @@ const cartHasItems = cart.length > 0 && cartTotalAmount > 0;
   }, [cartHasItems]);
  const cashierDisabled = useMemo(() => {
   return (
+    navigating ||
     !activeStoreId ||
     cart.length === 0 ||
     !canUseCashierHandoff ||
@@ -1831,6 +1762,7 @@ const cartHasItems = cart.length > 0 && cartTotalAmount > 0;
     salesModeLoading
   );
 }, [
+  navigating,
   activeStoreId,
   cart.length,
   canUseCashierHandoff,
