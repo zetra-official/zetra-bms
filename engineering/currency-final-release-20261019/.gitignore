@@ -1,0 +1,4 @@
+*.private.*
+postgres.log
+__pycache__/
+disposable*/

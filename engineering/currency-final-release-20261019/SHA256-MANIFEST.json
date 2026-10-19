@@ -1,0 +1,127 @@
+{
+  "baseCheckpoint": "61dc9e3",
+  "status": "LOCAL_ONLY_RELEASE_HOLD",
+  "files": [
+    {
+      "path": "app/(tabs)/sales/expenses.tsx",
+      "sha256": "fc1b1b79a02fc0ee6ee98c6fde836c4c72b0ec4e3a15ec6ae989bf67819ba398"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/.gitattributes",
+      "sha256": "8b9c3028d6467ff3be7c793141927841d70f47f52d0590677438f488ca154992"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/.gitignore",
+      "sha256": "9e999a7192657604828bb4691164c3b6b2c8c03b53840f43dbd06e570889ffd1"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/1906-DEPENDENCY.json",
+      "sha256": "d7bab3d0f074fa7a8fd9da4727e29d2210126998bb97167efe5f6a203d343c79"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/1906-DISABLE.sql",
+      "sha256": "60055141656ad2a077da41def08916f4b75a494d5b7edbbc6bfad09e001ab537"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/1906-expense.sql",
+      "sha256": "6ffa21b0c38b198038f2d7df8b1b1000ad77bdf48cdf3891b1346d65ad6f85f6"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/1906-SHA256.txt",
+      "sha256": "8775441c6e24644ad858e11a5de2d8c388aa7b2b01eab470f2d21359a2ba0b61"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/2026101906-native-expense-integrity.DRAFT.sql",
+      "sha256": "45d054fc0564842d7759a09d857c40438aa1f7df032ba530e65987efcde7aa6b"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/android-hermes-build.log",
+      "sha256": "a50a07a041ab175ac34a332bfac9d997b7e67b48e48542384b39340e2d964eba"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/before/app/(tabs)/sales/expenses.tsx",
+      "sha256": "cbd59e80f15c404c953f0521a2eb8de71ecea1ca0c7f2d6bb7e38b9dad7f8382"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/BUILD-RESULTS.json",
+      "sha256": "40ed3fb4b47f066469e4f4a467a690595b491f64c367545c2b3cf65630f6e39b"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/build.py",
+      "sha256": "6c326320d0620ecc9fecbcb0b71ed156e294329e45d57b29494ab4a4ae5c772f"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/build_checks.py",
+      "sha256": "20e92894e1d439a9c1103d75daad24f15da97f82f8ca85149f5d1bc52393f341"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/CANONICAL-CONTRACTS.json",
+      "sha256": "a148111aaeb72ebd970ff3b09361701fcc16830a754271ef7ec4cc35823580ba"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/capture.py",
+      "sha256": "67b2458cf3fb1b119f5c80be95a96e5a5785b9f18aa85eba1bd32ac660553b2c"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/capture_1906_dependency.py",
+      "sha256": "2f2a7f3c18c1dcb6fc1f025ef6d0cac8a2d6f8f09d84180f2f3c6d7da47dbcd5"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/EXPENSE-RESULTS.json",
+      "sha256": "d9e794d302d3ac82cb152732cd65245ffd7c7da52d41fe249dd5a86c2e201b20"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/FINAL-INSTALL-RESULTS.json",
+      "sha256": "e30912370fe34bc0d7a92dca9facb70aa4cea5b6749faf1fbce14536dec25d42"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/MUTATION-COMPATIBILITY-RESULTS.json",
+      "sha256": "6323a9e8f34e2516bf0e65da4d22d1e34e2005de9b61e110d6be2ca8c31787b5"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/package.py",
+      "sha256": "c8f1dca0b515f1b931c116da18d9908c8756cdebf0e93291eba5edee7257739e"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/PRODUCTION-APPROVAL.DRAFT.json",
+      "sha256": "0cdd3e0b3d82cac4cc90ff0937b5edda24cc973d6707df2a9d0a4041f73564ba"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/RESULT.md",
+      "sha256": "0073690bf84511b20a808e6a815c89fe4329f5bdaf34a174be9a9938c3497d64"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/SOURCE-RESULTS.json",
+      "sha256": "59deebf117cf19037f21045f19a24aa4e14c4a6196e916e454e2b766fa8f7aad"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/source.test.cjs",
+      "sha256": "bfc49b4e7fe7d94db67b147049ccc3ff24fa9352a89ff1e145227a85e7766dc8"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/test_expense.py",
+      "sha256": "2e7009883c2c943f55ca012a3c6728c66f1562e13134bb1600d20964792cc454"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/test_final_install.py",
+      "sha256": "015d50400a403721bc916b8bf2a13642497b8ef804a56ec6d2b42f340e8e603f"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/test_mutation_compatibility.py",
+      "sha256": "b447ac9d1ee44a0f3fac3f6da808ec174bbfbbc7cf0bf573b74f8608dcc9ea52"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/typescript-build.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/web-build.log",
+      "sha256": "935e9195427924386527d7bcf969b581c50514004dd9ad3ab61d5d413134b953"
+    },
+    {
+      "path": "src/currency/nativeExpense.ts",
+      "sha256": "1be8c9f9e79127c8ff62a28cd961b6bfc560302f7fb9963d4867d8ed1186632d"
+    }
+  ],
+  "preservedCatalogSha256": "a6b548a9567803d9db181b4d6f236349b55afddfc115ead7ba9f6d449c1b4914"
+}

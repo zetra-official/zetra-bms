@@ -1,0 +1,14 @@
+{
+  "status": "PASS",
+  "count": 7,
+  "checks": [
+    "anon cannot execute final native expense",
+    "authenticated cannot execute final native expense",
+    "service_role cannot execute final native expense",
+    "coordinated_client cannot execute final native expense",
+    "no nonowner/default grant to new expense helpers",
+    "repeat migration rejected by precise dependency guard",
+    "default rollout remains disabled"
+  ],
+  "scope": "Exact final1906 installs on verified local1904/1905; atomic repeated-install refusal; no Production access."
+}

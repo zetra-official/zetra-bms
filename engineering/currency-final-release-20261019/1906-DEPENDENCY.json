@@ -1,0 +1,4 @@
+{
+  "captureMd5": "5c5c58b370a68a37ef5a012184ddc1e0",
+  "operationConstraint": "CHECK ((operation = ANY (ARRAY['SALE'::text, 'REPAYMENT'::text, 'OPEN_SHIFT'::text, 'CLOSE_SHIFT'::text])))"
+}

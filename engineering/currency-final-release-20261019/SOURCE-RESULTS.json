@@ -1,0 +1,21 @@
+{
+  "status": "PASS",
+  "count": 14,
+  "checks": [
+    "TZS exact packet reconciles canonical expense",
+    "USD exact packet reconciles canonical expense",
+    "KES exact packet reconciles canonical expense",
+    "UGX exact packet reconciles canonical expense",
+    "EUR exact packet reconciles canonical expense",
+    "AED exact packet reconciles canonical expense",
+    "JPY exact packet reconciles canonical expense",
+    "KWD exact packet reconciles canonical expense",
+    "client native expense remains disabled",
+    "exact amount never passes through Number",
+    "invalid native precision denied",
+    "ambiguous exponent rejected",
+    "legacy exact TZS expense precision retained",
+    "existing expense screen checks server authority and sends exact string"
+  ],
+  "scope": "Actual expense packet/amount module and source wiring checks; no genuine browser/Auth or financial side effects."
+}

@@ -1,3 +1,5 @@
+import {readAccountingAuthority,assertLegacyPostingCurrency} from '../../../src/currency/accounting';
+import {exactExpenseAmount} from '../../../src/currency/nativeExpense';
 import {paymentMethodKey} from "@/src/i18n/presentation";
 import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
 import {useLanguage} from "@/src/i18n/LanguageProvider";
@@ -821,9 +823,12 @@ const resetExpenseForm = useCallback(() => {
     if (expenseSaveInFlight.current) return;
 
     const raw = amount.trim();
-    const n = Number(raw);
+    let n:string;
+    try{n=exactExpenseAmount(raw)}catch{
+      Alert.alert(uiText("Invalid Amount"), uiText("Weka kiasi sahihi (namba > 0)."));return;
+    }
 
-    if (!raw || !Number.isFinite(n) || n <= 0) {
+    if (!raw) {
       Alert.alert(uiText("Invalid Amount"), uiText("Weka kiasi sahihi (namba > 0)."));
       return;
     }
@@ -839,6 +844,9 @@ const resetExpenseForm = useCallback(() => {
     setError(null);
 
     try {
+      // A display preference cannot authorize a denomination or native write.
+      const authority=await readAccountingAuthority(supabase,String(activeOrgId??''));
+      assertLegacyPostingCurrency(authority);
       const res = await withTimeout(
         isEditing
           ? supabase.rpc("update_expense_v2", {
@@ -883,6 +891,7 @@ setExpenseFormOpen(false);
       setSavingExpense(false);
     }
   }, [
+    activeOrgId,
     activeStoreId,
     canCreate,
     savingExpense,
@@ -906,6 +915,8 @@ const deleteExpense = useCallback(
         setError(null);
 
         try {
+          const authority=await readAccountingAuthority(supabase,String(activeOrgId??''));
+          assertLegacyPostingCurrency(authority);
           const res = await withTimeout(
             supabase.rpc("delete_expense_v2", {
               p_expense_id: r.id,
@@ -948,7 +959,7 @@ const deleteExpense = useCallback(
         },
       ]);
     },
-    [editingExpenseId, loadAll, loading, resetExpenseForm]
+    [activeOrgId, editingExpenseId, loadAll, loading, resetExpenseForm]
   );
 const filteredRows = useMemo(() => {
   return rows;

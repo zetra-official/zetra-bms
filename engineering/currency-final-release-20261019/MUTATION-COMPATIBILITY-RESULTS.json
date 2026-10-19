@@ -1,0 +1,92 @@
+{
+  "status": "PASS",
+  "count": 27,
+  "checks": [
+    "TZS canonical sale update remains valid within atomic permit",
+    "TZS statement revenue COGS profit reconcile from recorded snapshots",
+    "USD canonical sale update remains valid within atomic permit",
+    "USD legacy direct financial update denied outside permit",
+    "USD statement revenue COGS profit reconcile from recorded snapshots",
+    "KES canonical sale update remains valid within atomic permit",
+    "KES legacy direct financial update denied outside permit",
+    "KES statement revenue COGS profit reconcile from recorded snapshots",
+    "UGX canonical sale update remains valid within atomic permit",
+    "UGX legacy direct financial update denied outside permit",
+    "UGX statement revenue COGS profit reconcile from recorded snapshots",
+    "EUR canonical sale update remains valid within atomic permit",
+    "EUR legacy direct financial update denied outside permit",
+    "EUR statement revenue COGS profit reconcile from recorded snapshots",
+    "AED canonical sale update remains valid within atomic permit",
+    "AED legacy direct financial update denied outside permit",
+    "AED statement revenue COGS profit reconcile from recorded snapshots",
+    "JPY canonical sale update remains valid within atomic permit",
+    "JPY legacy direct financial update denied outside permit",
+    "JPY statement revenue COGS profit reconcile from recorded snapshots",
+    "KWD canonical sale update remains valid within atomic permit",
+    "KWD legacy direct financial update denied outside permit",
+    "KWD statement revenue COGS profit reconcile from recorded snapshots",
+    "legacy TZS expense update compatible",
+    "no orphan native transaction permits",
+    "1906 disable retains expense facts",
+    "1906 disable revokes temporary caller grant"
+  ],
+  "facts": [
+    {
+      "currency": "TZS",
+      "revenue": "12.34",
+      "paid": "12.34",
+      "cogs": "105.12",
+      "grossProfit": "-92.78"
+    },
+    {
+      "currency": "USD",
+      "revenue": "12.34",
+      "paid": "12.34",
+      "cogs": "105.12",
+      "grossProfit": "-92.78"
+    },
+    {
+      "currency": "KES",
+      "revenue": "12.34",
+      "paid": "12.34",
+      "cogs": "105.12",
+      "grossProfit": "-92.78"
+    },
+    {
+      "currency": "UGX",
+      "revenue": "123",
+      "paid": "123",
+      "cogs": "105",
+      "grossProfit": "18"
+    },
+    {
+      "currency": "EUR",
+      "revenue": "12.34",
+      "paid": "12.34",
+      "cogs": "105.12",
+      "grossProfit": "-92.78"
+    },
+    {
+      "currency": "AED",
+      "revenue": "12.34",
+      "paid": "12.34",
+      "cogs": "105.12",
+      "grossProfit": "-92.78"
+    },
+    {
+      "currency": "JPY",
+      "revenue": "123",
+      "paid": "123",
+      "cogs": "105",
+      "grossProfit": "18"
+    },
+    {
+      "currency": "KWD",
+      "revenue": "12.345",
+      "paid": "12.345",
+      "cogs": "105.125",
+      "grossProfit": "-92.780"
+    }
+  ],
+  "scope": "Actual canonical sale/expense tables and immutable recorded cost snapshots. Gross profit only; not a complete tax/refund/closing financial statement."
+}
