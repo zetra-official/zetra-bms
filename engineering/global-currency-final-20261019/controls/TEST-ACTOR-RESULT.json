@@ -1,0 +1,12 @@
+{
+  "project": "dcmhqdckzhbuakvcyjit",
+  "at": "2026-10-19T06:18:54.733802+00:00",
+  "scope": "Explicit administrator-controlled test markers only; no emails/customer records selected",
+  "result": {
+    "canaryActivated": false,
+    "eligibleCandidates": [],
+    "explicitlyMarkedCount": 0,
+    "ownerApproved": false
+  },
+  "decision": "Owner approval of a verified UUID is required even if a candidate exists"
+}

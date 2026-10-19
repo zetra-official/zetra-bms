@@ -1,0 +1,8 @@
+BEGIN READ ONLY;SET LOCAL statement_timeout='10s';
+SELECT jsonb_build_object('db',current_database(),'role',current_user,'readOnly',current_setting('transaction_read_only'),
+'gatewayOverloads',(SELECT count(*) FROM pg_proc p WHERE p.pronamespace='public'::regnamespace AND p.proname='create_org_with_store_currency_tzs_v1'),
+'gateway',(SELECT jsonb_build_object('md5',md5(replace(pg_get_functiondef(p.oid),chr(13),'')),'owner',pg_get_userbyid(p.proowner),'definer',p.prosecdef,'config',p.proconfig,'acl',p.proacl,'nonownerGrants',(SELECT count(*) FROM aclexplode(p.proacl) a WHERE a.grantee<>p.proowner),'publicGrants',(SELECT count(*) FROM aclexplode(p.proacl) a WHERE a.grantee=0)) FROM pg_proc p WHERE p.oid=to_regprocedure('public.create_org_with_store_currency_tzs_v1(uuid,text,text,text,text,boolean)')),
+'roles',(SELECT jsonb_agg(jsonb_build_object('name',r.rolname,'execute',has_function_privilege(r.oid,to_regprocedure('public.create_org_with_store_currency_tzs_v1(uuid,text,text,text,text,boolean)'),'EXECUTE'))) FROM pg_roles r WHERE r.rolname IN('anon','authenticated','service_role','authenticator','cli_login_postgres','postgres')),
+'canCreate',has_schema_privilege(current_user,'public','CREATE'),
+'staticOtherWrappers',(SELECT count(*) FROM pg_proc p WHERE p.prokind='f' AND p.oid IS DISTINCT FROM to_regprocedure('public.create_org_with_store_currency_tzs_v1(uuid,text,text,text,text,boolean)') AND pg_get_functiondef(p.oid) LIKE '%create_org_with_store_currency_tzs_v1%')) metadata;
+ROLLBACK;

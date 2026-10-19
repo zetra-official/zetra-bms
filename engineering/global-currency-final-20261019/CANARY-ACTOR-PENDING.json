@@ -1,0 +1,15 @@
+{
+  "project": "dcmhqdckzhbuakvcyjit",
+  "actorId": "bb2d6dee-773d-4fa7-8fda-1eb85bbad2cd",
+  "identityVerified": true,
+  "trainingOnlyVerified": false,
+  "executionReady": false,
+  "activate": false,
+  "approvalReference": null,
+  "expirySecondsAfterFutureActivation": 3600,
+  "acceptanceLimits": {"newSyntheticOrganizations": 1, "newSyntheticStores": 1, "financialTransactions": 0},
+  "existingOrganizations": "NO CHANGES",
+  "serverEnforcedLifetimeOrganizationQuota": false,
+  "canarySqlSha256": "6a487fcb1833f1147c588d70acca376dcf689c13a862b354beb6fc4af48eee11",
+  "blocker": "Existing multi-organization financial history; training-only eligibility and exact scope not confirmed. Do not enroll."
+}

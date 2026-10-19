@@ -1,0 +1,20 @@
+{
+  "sourceCheckpoint": "7736018",
+  "sourceHashes": {
+    "src/currency/engine.ts": "be3f3faad9266272ceb58ad37a77555f1bb036fdd6760c9bc9f888e0f683ba56",
+    "src/currency/metadata.ts": "7437188a9ce9c7f475cbd7d48c8c2b48924b29620edbaa7d351d99bdcad2d5c4",
+    "src/currency/historical.ts": "eb1584064a94d831cbb09451126b8be46322a6d2ee86cbd84877d27e50f108ed",
+    "src/currency/offlineContext.ts": "7a23d981cad1c11d91d049fd2d5b4437ff74c4c5fb5206420a6d1499bae10828",
+    "src/currency/data/catalog.json": "4a18d80f2e2e4d384cd1be351da99e5c4dcd4cd079d6c3820b1bb7c3e7fec7b5",
+    "src/services/referenceFx.ts": "4109fb5c506517ea5a657f0f384613bd4fca3697e56d2f3b1cbfc85fb0506552",
+    "src/utils/discount.ts": "45063f5ecad756184a26c75679ef35558e49c1d970f227c9702df107404cbaaa",
+    "src/pos/itemAdjustment.ts": "2d206a37a39ed591e900475347f7a993c8c38b51c7b97298331e7715ad7ce4b4",
+    "src/currency/onboardingClient.ts": "8b5a25b0719477952deb5af3e843990d4d56972a3664e541ba5efed2c84f314e",
+    "src/currency/onboarding.ts": "14e5ae915126a200ac6ebc2a800c0500c16f3f70d70b8ae73695edf77dca9323",
+    "app/(onboarding)/store.tsx": "00e5acc0139106c4a921d6b675b9e8d4e1bdb5f30adf119941218fc30ba6ffce",
+    "src/currency/masterMessages.ts": "c73e58702ec5ea99dd4bfaf2ca84482619db65ff8313d8edeeac711049ca70c8",
+    "engineering/currency-tzs-acceptance-20261019/SHA256-MANIFEST.json": "cdd4401660868e16edc4ae29a8aceeb13bfea8d6e12cb8c66e155b5e3c257cc7"
+  },
+  "acceptedManifestIntact": true,
+  "applicationSourceChangesThisContinuation": 0
+}

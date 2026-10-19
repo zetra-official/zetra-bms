@@ -1,0 +1,9 @@
+BEGIN READ ONLY;SET LOCAL statement_timeout='15s';SET LOCAL lock_timeout='2s';
+SELECT jsonb_build_object('database',current_database(),'role',current_user,'readOnly',current_setting('transaction_read_only'),
+ 'publicCreateAuthenticated',has_schema_privilege('authenticated','public','CREATE'),'publicCreateAnon',has_schema_privilege('anon','public','CREATE'),
+ 'requestTable',to_regclass('backend_core.currency_onboarding_requests')::text,
+ 'releaseHistory',to_regclass('backend_core.release_receipts')::text,'migrationHistory',to_regclass('supabase_migrations.schema_migrations')::text,
+ 'functions',(SELECT jsonb_agg(jsonb_build_object('identity',p.oid::regprocedure::text,'md5',md5(replace(pg_get_functiondef(p.oid),chr(13),'')),'acl',p.proacl,'owner',pg_get_userbyid(p.proowner),'securityDefiner',p.prosecdef,'config',p.proconfig)) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE p.prokind='f' AND (n.nspname,p.proname) IN (('public','create_org_with_store'),('public','set_org_timezone_once'),('public','owner_confirm_org_accounting_currency_v1'),('public','get_org_accounting_currency_v1'),('backend_core','active_subject'),('backend_core','accounting_currency'),('proforma_backend','owner_currency_command'),('public','create_org_with_store_currency_v1'))),
+ 'tables',(SELECT jsonb_agg(jsonb_build_object('schema',n.nspname,'name',c.relname,'rls',c.relrowsecurity,'forceRls',c.relforcerowsecurity,'acl',c.relacl)) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE (n.nspname,c.relname) IN (('public','organizations'),('public','stores'),('public','org_memberships'),('proforma_backend','accounting_currency'),('proforma_backend','currency_catalog'))),
+ 'publicPolicies',(SELECT count(*) FROM pg_policy WHERE polrelid IN(SELECT oid FROM pg_class WHERE relnamespace='public'::regnamespace))) metadata;
+ROLLBACK;

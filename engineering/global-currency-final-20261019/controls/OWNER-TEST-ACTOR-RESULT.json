@@ -1,0 +1,33 @@
+{
+  "actorId": "bb2d6dee-773d-4fa7-8fda-1eb85bbad2cd",
+  "auth": {
+    "email_confirmed": true,
+    "deleted": false,
+    "banned": null,
+    "is_anonymous": false,
+    "role": "authenticated",
+    "providers": [
+      "email"
+    ]
+  },
+  "membershipCount": 6,
+  "roles": {
+    "owner (active)": 2,
+    "admin (inactive)": 1,
+    "staff (active)": 2,
+    "cashier (active)": 1
+  },
+  "storesInMemberOrganizations": 40,
+  "protectedRecordPresence": {
+    "cashier_shifts": true,
+    "expenses": true,
+    "field_wallets": false,
+    "inventory": true,
+    "sale_payments": true,
+    "sales": true,
+    "stock_movements": true
+  },
+  "trainingOnlyVerified": false,
+  "canaryActivated": false,
+  "status": "IDENTITY VERIFIED \u2014 ELIGIBILITY BLOCKED PENDING TRAINING-SCOPE CONFIRMATION"
+}

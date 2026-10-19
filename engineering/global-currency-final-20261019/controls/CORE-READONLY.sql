@@ -1,0 +1,7 @@
+BEGIN READ ONLY;SET LOCAL statement_timeout='10s';
+SELECT jsonb_build_object('db',current_database(),'role',current_user,'readOnly',current_setting('transaction_read_only'),
+'function', (SELECT jsonb_build_object('md5',md5(replace(pg_get_functiondef(p.oid),chr(13),'')),'owner',pg_get_userbyid(p.proowner),'definer',p.prosecdef,'config',p.proconfig,'acl',p.proacl,'publicGrants',(SELECT count(*) FROM aclexplode(p.proacl) a WHERE a.grantee=0),'nonownerGrants',(SELECT count(*) FROM aclexplode(p.proacl) a WHERE a.grantee<>p.proowner)) FROM pg_proc p WHERE p.oid=to_regprocedure('public.create_org_with_store_currency_v1(uuid,text,text,text,text,boolean)')),
+'roles',(SELECT jsonb_agg(jsonb_build_object('name',r.rolname,'execute',has_function_privilege(r.oid,to_regprocedure('public.create_org_with_store_currency_v1(uuid,text,text,text,text,boolean)'),'EXECUTE'))) FROM pg_roles r WHERE r.rolname IN('anon','authenticated','service_role','authenticator','cli_login_postgres','postgres')),
+'requestTable',(SELECT jsonb_build_object('rls',c.relrowsecurity,'forced',c.relforcerowsecurity,'acl',c.relacl,'owner',pg_get_userbyid(c.relowner)) FROM pg_class c WHERE c.oid=to_regclass('backend_core.currency_onboarding_requests')),
+'columns',(SELECT jsonb_agg(jsonb_build_object('name',a.attname,'type',format_type(a.atttypid,a.atttypmod),'notNull',a.attnotnull) ORDER BY a.attnum) FROM pg_attribute a WHERE a.attrelid=to_regclass('backend_core.currency_onboarding_requests') AND a.attnum>0 AND NOT a.attisdropped)) metadata;
+ROLLBACK;

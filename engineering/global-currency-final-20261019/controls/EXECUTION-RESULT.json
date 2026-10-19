@@ -1,0 +1,88 @@
+{
+  "state": "PASS \u2014 COMMITTED AND VERIFIED",
+  "project": "dcmhqdckzhbuakvcyjit",
+  "migration": "2026101901-tzs-rollout-controls.DRAFT.sql",
+  "sha256": "4cd1c6e61626cd00b0e98b4c01ebfc26e66fbbb1d3a29ddf0cbf820ddee29b15",
+  "gitCheckpoint": "7736018",
+  "backup": {
+    "id": 2007453045,
+    "inserted_at": "2026-10-19T05:58:22.150Z",
+    "status": "COMPLETED"
+  },
+  "restoreTested": false,
+  "startedAt": "2026-10-19T06:17:20.236357+00:00",
+  "commandResult": "SUCCESS",
+  "executionEndedAt": "2026-10-19T06:17:28.793965+00:00",
+  "verifiedAt": "2026-10-19T06:18:51.904137+00:00",
+  "rpcPermissions": [
+    {
+      "execute": false,
+      "name": "authenticated"
+    },
+    {
+      "execute": false,
+      "name": "anon"
+    },
+    {
+      "execute": false,
+      "name": "service_role"
+    },
+    {
+      "execute": false,
+      "name": "cli_login_postgres"
+    },
+    {
+      "execute": false,
+      "name": "authenticator"
+    },
+    {
+      "execute": true,
+      "name": "postgres"
+    }
+  ],
+  "controls": [
+    {
+      "acl": [
+        "postgres=arwdDxtm/postgres"
+      ],
+      "force": true,
+      "name": "tzs_onboarding_allowlist",
+      "owner": "postgres",
+      "rls": true
+    },
+    {
+      "acl": [
+        "postgres=arwdDxtm/postgres"
+      ],
+      "force": true,
+      "name": "tzs_onboarding_rollout",
+      "owner": "postgres",
+      "rls": true
+    },
+    {
+      "acl": [
+        "postgres=arwdDxtm/postgres"
+      ],
+      "force": true,
+      "name": "tzs_onboarding_rollout_audit",
+      "owner": "postgres",
+      "rls": true
+    }
+  ],
+  "rollout": {
+    "allowlistRows": 0,
+    "auditRows": 0,
+    "configRows": 1,
+    "enabled": false
+  },
+  "existingContractsUnchanged": true,
+  "financialPostingActivated": false,
+  "clientActivated": false,
+  "resolvedReadOnlyAttemptError": "independent-gateway_FAILED_INSPECT_PRIVATE_DIAGNOSTICS",
+  "privateAccess": {
+    "clientEffectivePrivileges": 0,
+    "nonownerObjectGrants": 0,
+    "sequenceCount": 1
+  },
+  "finalVerifiedAt": "2026-10-19T06:21:25.501185+00:00"
+}

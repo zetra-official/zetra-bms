@@ -1,0 +1,14 @@
+{
+  "state": "ATTEMPT_STARTED_NO_RETRY",
+  "project": "dcmhqdckzhbuakvcyjit",
+  "migration": "2026101901-tzs-rollout-controls.DRAFT.sql",
+  "sha256": "4cd1c6e61626cd00b0e98b4c01ebfc26e66fbbb1d3a29ddf0cbf820ddee29b15",
+  "gitCheckpoint": "7736018",
+  "backup": {
+    "id": 2007453045,
+    "inserted_at": "2026-10-19T05:58:22.150Z",
+    "status": "COMPLETED"
+  },
+  "restoreTested": false,
+  "startedAt": "2026-10-19T06:17:20.236357+00:00"
+}
