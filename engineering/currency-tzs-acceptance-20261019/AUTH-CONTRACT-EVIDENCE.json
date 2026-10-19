@@ -1,0 +1,10 @@
+{
+  "authJwt": "auth.jwt()",
+  "authRole": "auth.role()",
+  "authUid": "auth.uid()",
+  "db": "postgres",
+  "existing1803Md5": "13057618f9362520fa8bd4ffdd20ed2f",
+  "ownerBypassesRls": true,
+  "readOnly": "on",
+  "role": "postgres"
+}

@@ -1,0 +1,11 @@
+--- a/src/currency/onboarding.ts
++++ b/src/currency/onboarding.ts
+@@ -1,7 +1,7 @@
+ import {isSelectableCurrency} from './metadata';
+ /** Deliberately not environment-controlled. Requires a reviewed backend release
+  * and native financial-contract acceptance before activation. */
+-export const ATOMIC_CURRENCY_ONBOARDING_ACTIVE=false;
++export const ATOMIC_CURRENCY_ONBOARDING_ACTIVE=true;
+ /** Native non-TZS posting is not accepted. This capability is separate from display FX. */
+ export const SCOPED_CURRENCY_ONBOARDING_RPC='create_org_with_store_currency_tzs_v1' as const;
+ export function isSupportedNativeOnboardingCurrency(currency:unknown):currency is 'TZS'{return currency==='TZS';}

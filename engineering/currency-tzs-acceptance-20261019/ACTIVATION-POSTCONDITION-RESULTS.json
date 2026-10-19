@@ -1,0 +1,9 @@
+{
+  "status": "PASS",
+  "count": 2,
+  "checks": [
+    "Exact final activation draft including postconditions passes locally",
+    "Exact final disable restores disabled state"
+  ],
+  "remoteWrites": false
+}

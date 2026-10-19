@@ -1,0 +1,41 @@
+{
+  "status": "PASS_WITH_SYNTHETIC_ADAPTERS",
+  "actualScreen": "app/(onboarding)/store.tsx",
+  "clientFlag": "true in harness bundle only; actual source remains false",
+  "adapters": [
+    "Supabase transport",
+    "Auth session",
+    "OrgContext",
+    "UI shell/components",
+    "CommonText lookup"
+  ],
+  "networkIsolation": "loopback server; CSP connect-src none",
+  "checks": [
+    {
+      "scenario": "TZS acknowledgement and create",
+      "result": "scoped gateway payload and /(tabs) routing observed"
+    },
+    {
+      "scenario": "Mobile 390x844 expired session",
+      "result": "Swahili feedback; zero RPC trace; form retained; Create re-enabled"
+    },
+    {
+      "scenario": "Mobile offline and explicit retry",
+      "result": "same request ID 4d01077c-6413-454f-80a7-288a99850978 observed twice; second attempt routed"
+    },
+    {
+      "scenario": "Mobile overflow",
+      "result": {
+        "viewport": 390,
+        "scrollWidth": 375
+      }
+    },
+    {
+      "scenario": "Desktop 1440x900 Arabic RTL, USD",
+      "result": "Create disabled after store input and acknowledgement; direction rtl; scrollWidth 1440"
+    }
+  ],
+  "genuineSupabaseAuth": false,
+  "physicalAndroid": false,
+  "productionCalls": false
+}

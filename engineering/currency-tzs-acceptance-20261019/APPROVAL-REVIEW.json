@@ -1,0 +1,37 @@
+{
+  "status": "PARTIAL_ACCEPTANCE_INCOMPLETE",
+  "project": "dcmhqdckzhbuakvcyjit",
+  "productionExecutionAuthorized": false,
+  "clientActivation": false,
+  "deployment": false,
+  "sql": {
+    "2026101901-tzs-rollout-controls.DRAFT.sql": "4cd1c6e61626cd00b0e98b4c01ebfc26e66fbbb1d3a29ddf0cbf820ddee29b15",
+    "ACTIVATE-CANARY.DRAFT.sql": "6a487fcb1833f1147c588d70acca376dcf689c13a862b354beb6fc4af48eee11",
+    "DISABLE-ROLLBACK.sql": "5956e8d5d5dce847ac4ec180141989a62ea4d689317643b28f732e29785e1489"
+  },
+  "source": {
+    "src/currency/onboardingClient.ts": "8b5a25b0719477952deb5af3e843990d4d56972a3664e541ba5efed2c84f314e",
+    "app/(onboarding)/store.tsx": "00e5acc0139106c4a921d6b675b9e8d4e1bdb5f30adf119941218fc30ba6ffce",
+    "src/currency/masterMessages.ts": "c73e58702ec5ea99dd4bfaf2ca84482619db65ff8313d8edeeac711049ca70c8"
+  },
+  "testResults": {
+    "newPostgresRollout": 37,
+    "finalSqlPostconditions": 2,
+    "clientChecks": 25,
+    "browser": "Synthetic actual-route adapters; 390x844 and 1440x900 interactions",
+    "typescript": "PASS_ZERO_ERRORS",
+    "webExport": "PASS",
+    "androidHermesExport": "PASS",
+    "genuineAuthE2E": "NOT TESTED",
+    "physicalAndroid": "NOT TESTED"
+  },
+  "requiredOwnerInputs": [
+    "Verified synthetic Auth actor UUID",
+    "Approval reference",
+    "Explicit permission for one synthetic organization/store and zero financial transactions"
+  ],
+  "retainedMigrations": [
+    "1802 unchanged",
+    "1803 unchanged"
+  ]
+}

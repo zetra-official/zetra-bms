@@ -1,0 +1,359 @@
+import {OnboardingCurrencyAcknowledgement} from '@/src/currency/OnboardingCurrencyAcknowledgement';
+import {ATOMIC_CURRENCY_ONBOARDING_ACTIVE,SCOPED_CURRENCY_ONBOARDING_RPC,isSupportedNativeOnboardingCurrency,persistentScopedOnboardingIntent,verifyCurrencyOnboardingResult} from '@/src/currency/onboarding';
+import {useMasterText} from '@/src/currency/masterMessages';
+import {makeId} from '@/src/offline/salesQueue';
+import {useCommonText} from "@/src/i18n/useCommonText";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useMemo, useState, useRef } from "react";
+import { Alert, Text, TextInput, View } from "react-native";
+
+import { useOrg } from "@/src/context/OrgContext";
+import { supabase } from "@/src/supabase/supabaseClient";
+import { kv } from "@/src/storage/kv";
+
+import { Screen } from "@/src/ui/Screen";
+import { Card } from "@/src/ui/Card";
+import { Button } from "@/src/ui/Button";
+
+function clean(s: any) {
+  return String(s ?? "").trim();
+}
+function upper(s: any) {
+  return clean(s).toUpperCase();
+}
+
+function safeDecode(s: any) {
+  const v = clean(s);
+  if (!v) return "";
+  try {
+    return decodeURIComponent(v);
+  } catch {
+    return v;
+  }
+}
+
+async function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+async function ensureSession() {
+  for (let i = 0; i < 4; i++) {
+    const { data, error } = await supabase.auth.getSession();
+    if (error) return { session: null as any, error };
+    if (data.session) return { session: data.session, error: null };
+    await sleep(250);
+  }
+  return { session: null as any, error: null as any };
+}
+
+async function getSavedReferralCode() {
+  try {
+    if ((kv as any)?.getString) {
+      return clean(await (kv as any).getString("zetra_onboarding_referral_code_v1"));
+    }
+  } catch {}
+
+  try {
+    if ((kv as any)?.get) {
+      return clean(await (kv as any).get("zetra_onboarding_referral_code_v1"));
+    }
+  } catch {}
+
+  return "";
+}
+
+async function clearSavedReferralCode() {
+  try {
+    if ((kv as any)?.remove) {
+      await (kv as any).remove("zetra_onboarding_referral_code_v1");
+      return;
+    }
+  } catch {}
+
+  try {
+    if ((kv as any)?.delete) {
+      await (kv as any).delete("zetra_onboarding_referral_code_v1");
+      return;
+    }
+  } catch {}
+
+  try {
+    if ((kv as any)?.setString) {
+      await (kv as any).setString("zetra_onboarding_referral_code_v1", "");
+    }
+  } catch {}
+}
+
+const LIGHT = {
+  bg: "#EAF2FA",
+  card: "#FFFFFF",
+  text: "#0F172A",
+  muted: "#64748B",
+  faint: "#94A3B8",
+  border: "rgba(15,23,42,0.10)",
+  soft: "#F8FAFC",
+  emerald: "#059669",
+  emeraldSoft: "#ECFDF5",
+  blue: "#0B63CE",
+};
+
+export default function FirstStoreOnboardingScreen() {
+ const uiText=useCommonText();
+  const router = useRouter();
+  const currencyText=useMasterText();
+  const createLock=useRef(false);
+  const org = useOrg();
+
+  const params = useLocalSearchParams<{
+    businessName?: string;
+    businessType?: string;
+    timezone?: string;
+    accountingCurrency?: string;
+  }>();
+
+  const businessName = useMemo(
+    () => clean(safeDecode(params.businessName)),
+    [params.businessName]
+  );
+
+  const timezone = useMemo(() => {
+    const decoded = clean(safeDecode(params.timezone));
+    return decoded || "Africa/Dar_es_Salaam";
+  }, [params.timezone]);
+
+  const selectedCurrency=params.accountingCurrency || "TZS";
+  const [currencyAcknowledged,setCurrencyAcknowledged]=useState(false);
+  const currencyBlocked=!isSupportedNativeOnboardingCurrency(selectedCurrency);
+  const [storeName, setStoreName] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const create = async () => {
+    if(createLock.current||currencyBlocked||(ATOMIC_CURRENCY_ONBOARDING_ACTIVE&&!currencyAcknowledged))return;
+    const orgName = clean(businessName);
+    const firstStore = clean(storeName);
+    const tz = clean(timezone) || "Africa/Dar_es_Salaam";
+
+    if (!orgName) return Alert.alert(uiText("Missing"), uiText("Business name is missing."));
+    if (!firstStore) return Alert.alert(uiText("Missing"), uiText("Store name is required."));
+
+    createLock.current=true;
+    let session:any,sessErr:any;
+    try { const result=await ensureSession();session=result.session;sessErr=result.error; } catch {createLock.current=false;return;}
+    if(sessErr||!session)createLock.current=false;
+    if (sessErr) return Alert.alert(uiText("Imeshindikana"), sessErr.message);
+    if (!session) return Alert.alert(uiText("Imeshindikana"), uiText("Not authenticated"));
+
+    setLoading(true);
+
+    try {
+      const { data:created, error } = ATOMIC_CURRENCY_ONBOARDING_ACTIVE
+        ? await supabase.rpc(SCOPED_CURRENCY_ONBOARDING_RPC,await persistentScopedOnboardingIntent(kv,session.user.id,{businessName:orgName,storeName:firstStore,currency:selectedCurrency,timezone:tz,acknowledged:currencyAcknowledged},makeId))
+        : await supabase.rpc("create_org_with_store", {p_org_name:orgName,p_first_store_name:firstStore});
+
+      if (error) {
+        console.log("create_org_with_store error:", error);
+        return Alert.alert(uiText("Imeshindikana"), error.message);
+      }
+
+      const confirmed=ATOMIC_CURRENCY_ONBOARDING_ACTIVE?verifyCurrencyOnboardingResult(created,selectedCurrency):null;
+      await org.refresh();
+
+      try {
+        const savedReferralCode = upper(await getSavedReferralCode());
+        const authUserId = clean(session?.user?.id);
+        const authEmail = clean(session?.user?.email).toLowerCase();
+
+        if (savedReferralCode && authUserId && authEmail) {
+          const { data: existingReferral, error: existingReferralError } = await supabase
+            .from("growth_partner_referrals")
+            .select("id")
+            .eq("referred_user_id", authUserId)
+            .maybeSingle();
+
+          if (!existingReferralError && !existingReferral?.id) {
+            const { data: partnerRow, error: partnerError } = await supabase
+              .from("growth_partner_profiles")
+              .select("id, referral_code, status")
+              .eq("referral_code", savedReferralCode)
+              .eq("status", "ACTIVE")
+              .maybeSingle();
+
+            if (!partnerError && partnerRow?.id) {
+              await supabase.from("growth_partner_referrals").insert({
+                partner_id: partnerRow.id,
+                referred_user_id: authUserId,
+                referred_email_snapshot: authEmail,
+                referral_code_used: savedReferralCode,
+                status: "ACTIVE",
+                source_type: "ONBOARDING_CODE",
+              });
+            }
+          }
+        }
+      } catch (e: any) {
+        console.log("referral link error:", e?.message || e);
+      } finally {
+        await clearSavedReferralCode();
+      }
+
+      const { data: orgs, error: orgErr } = await supabase.rpc("get_my_orgs");
+      if (orgErr) console.log("get_my_orgs error:", orgErr);
+
+      const targetName = upper(orgName);
+      const match = Array.isArray(orgs)
+        ? (orgs as any[]).find((o) => upper(o?.organization_name) === targetName)
+        : null;
+
+      const orgId = confirmed?.organizationId||clean(match?.organization_id);
+
+      if (orgId && !confirmed) {
+        try {
+          const { error: tzErr } = await supabase.rpc("set_org_timezone_once", {
+            p_org_id: orgId,
+            p_timezone: tz,
+          });
+
+          if (tzErr) {
+            console.log("set_org_timezone_once error:", tzErr);
+          } else {
+            try {
+              await (kv as any)?.setOrgTimezone?.(orgId, tz);
+            } catch {
+              try {
+                await (kv as any)?.setString?.(`zetra_org_timezone_v1_${orgId}`, tz);
+              } catch {}
+            }
+          }
+        } catch (e: any) {
+          console.log("timezone set error:", e?.message || e);
+        }
+      }
+
+      router.replace("/(tabs)");
+    } catch (error:any) {
+      Alert.alert(uiText("Imeshindikana"),String(error?.message||error));
+    } finally {
+      setLoading(false);
+      createLock.current=false;
+    }
+  };
+
+  const canCreate = Boolean(clean(storeName) && !loading && !currencyBlocked && (!ATOMIC_CURRENCY_ONBOARDING_ACTIVE||currencyAcknowledged));
+
+  return (
+    <Screen
+      scroll
+      style={{ backgroundColor: LIGHT.bg } as any}
+      contentStyle={{ backgroundColor: LIGHT.bg } as any}
+    >
+      {ATOMIC_CURRENCY_ONBOARDING_ACTIVE&&<OnboardingCurrencyAcknowledgement checked={currencyAcknowledged} onChange={setCurrencyAcknowledged} disabled={loading}/>}
+      <View style={{gap:8,padding:12}}><Text>{currencyText("onboarding")}: {selectedCurrency}</Text><Text>{currencyText(currencyBlocked?"blocked":ATOMIC_CURRENCY_ONBOARDING_ACTIVE?"scoped":"provisional")}</Text></View>
+      <View style={{ marginTop: 6 }}>
+        <Text style={{ color: LIGHT.text, fontWeight: "900", fontSize: 26 }}>
+          {uiText("First Store Setup")}</Text>
+        <Text style={{ color: LIGHT.muted, fontWeight: "800", marginTop: 6, lineHeight: 20 }}>
+          {uiText("Tengeneza store ya kwanza ya biashara yako.")}</Text>
+      </View>
+
+      <View style={{ marginTop: 14 }}>
+        <Card
+          style={{
+            backgroundColor: LIGHT.card,
+            borderColor: LIGHT.border,
+            borderWidth: 1,
+            borderRadius: 26,
+            shadowColor: "#0F172A",
+            shadowOpacity: 0.10,
+            shadowRadius: 18,
+            shadowOffset: { width: 0, height: 10 },
+            elevation: 4,
+          }}
+        >
+          <Text style={{ color: LIGHT.text, fontWeight: "900", fontSize: 14 }}>
+            {uiText("Summary")}</Text>
+
+          <View style={{ marginTop: 12 }}>
+            <Text style={{ color: LIGHT.muted, fontWeight: "800", fontSize: 12 }}>{uiText("Business")}</Text>
+            <Text style={{ color: LIGHT.text, fontWeight: "900", fontSize: 14, marginTop: 4 }}>
+              {businessName || "—"}
+            </Text>
+          </View>
+
+          <View style={{ marginTop: 12 }}>
+            <Text style={{ color: LIGHT.muted, fontWeight: "800", fontSize: 12 }}>{uiText("Timezone")}</Text>
+            <Text style={{ color: LIGHT.text, fontWeight: "900", fontSize: 14, marginTop: 4 }}>
+              {timezone || "Africa/Dar_es_Salaam"}
+            </Text>
+            <Text style={{ color: LIGHT.muted, fontWeight: "800", fontSize: 12, marginTop: 6, lineHeight: 16 }}>
+              {uiText("Timezone itawekwa kwenye DB mara moja tu (onboarding-only). Baadaye itakuwa locked.")}</Text>
+          </View>
+        </Card>
+      </View>
+
+      <View style={{ marginTop: 12 }}>
+        <Card
+          style={{
+            backgroundColor: LIGHT.card,
+            borderColor: LIGHT.border,
+            borderWidth: 1,
+            borderRadius: 26,
+            shadowColor: "#0F172A",
+            shadowOpacity: 0.10,
+            shadowRadius: 18,
+            shadowOffset: { width: 0, height: 10 },
+            elevation: 4,
+          }}
+        >
+          <Text style={{ color: LIGHT.text, fontWeight: "900", fontSize: 14 }}>
+            {uiText("Store name")}</Text>
+
+          <View
+            style={{
+              marginTop: 10,
+              borderWidth: 1,
+              borderColor: LIGHT.border,
+              backgroundColor: LIGHT.soft,
+              borderRadius: 18,
+              paddingHorizontal: 12,
+              paddingVertical: 10,
+            }}
+          >
+            <TextInput
+              value={storeName}
+              onChangeText={setStoreName}
+              placeholder={uiText("e.g. SMART MEN")}
+              placeholderTextColor={LIGHT.faint}
+              autoCapitalize="words"
+              style={{
+                color: LIGHT.text,
+                fontWeight: "900",
+                fontSize: 14,
+                paddingVertical: 0,
+              }}
+            />
+          </View>
+
+          <Text style={{ color: LIGHT.muted, fontWeight: "800", fontSize: 12, marginTop: 10, lineHeight: 16 }}>
+            {uiText("Tip: Tumia jina fupi na rahisi (mfano: SMART MEN, JOFU SIDO, SOWETO BRANCH).")}</Text>
+        </Card>
+      </View>
+
+      <View style={{ marginTop: 14 }}>
+        <Button
+          title={loading ? uiText("Creating...") : uiText("Create Business & Store")}
+          onPress={create}
+          disabled={!canCreate}
+        />
+      </View>
+
+      <View style={{ marginTop: 10 }}>
+        <Button
+          title={uiText("Back")}
+          onPress={() => router.back()}
+          disabled={loading}
+          variant="secondary"
+        />
+      </View>
+    </Screen>
+  );
+}

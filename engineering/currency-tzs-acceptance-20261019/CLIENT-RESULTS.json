@@ -1,0 +1,32 @@
+{
+  "status": "PASS",
+  "count": 25,
+  "checks": [
+    "flag false",
+    "invalid session denied 1",
+    "invalid session denied 2",
+    "invalid session denied 3",
+    "invalid sessions no RPC",
+    "different concurrent intent blocked",
+    "same-process duplicate calls coalesced",
+    "both callers get authoritative result",
+    "restart-like new adapter retains persisted request",
+    "only scoped gateway called",
+    "not display currency",
+    "network error propagated no silent fallback",
+    "explicit retry after uncertain call uses same request",
+    "actor identities isolated",
+    "non TZS blocked",
+    "backend response mismatch fails closed",
+    "server rollout denial respected",
+    "en error feedback",
+    "sw error feedback",
+    "fr error feedback",
+    "pt error feedback",
+    "ar error feedback",
+    "es error feedback",
+    "zh error feedback",
+    "all dictionary rows seven languages"
+  ],
+  "scope": "Real client controller/helpers; simulated session/transport/storage. No real Auth E2E."
+}

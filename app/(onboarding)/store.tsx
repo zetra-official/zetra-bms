@@ -1,5 +1,6 @@
 import {OnboardingCurrencyAcknowledgement} from '@/src/currency/OnboardingCurrencyAcknowledgement';
-import {ATOMIC_CURRENCY_ONBOARDING_ACTIVE,SCOPED_CURRENCY_ONBOARDING_RPC,isSupportedNativeOnboardingCurrency,persistentScopedOnboardingIntent,verifyCurrencyOnboardingResult} from '@/src/currency/onboarding';
+import {ATOMIC_CURRENCY_ONBOARDING_ACTIVE,isSupportedNativeOnboardingCurrency,verifyCurrencyOnboardingResult} from '@/src/currency/onboarding';
+import {submitScopedCurrencyOnboarding} from '@/src/currency/onboardingClient';
 import {useMasterText} from '@/src/currency/masterMessages';
 import {makeId} from '@/src/offline/salesQueue';
 import {useCommonText} from "@/src/i18n/useCommonText";
@@ -137,17 +138,14 @@ export default function FirstStoreOnboardingScreen() {
     if (!firstStore) return Alert.alert(uiText("Missing"), uiText("Store name is required."));
 
     createLock.current=true;
-    let session:any,sessErr:any;
-    try { const result=await ensureSession();session=result.session;sessErr=result.error; } catch {createLock.current=false;return;}
-    if(sessErr||!session)createLock.current=false;
-    if (sessErr) return Alert.alert(uiText("Imeshindikana"), sessErr.message);
-    if (!session) return Alert.alert(uiText("Imeshindikana"), uiText("Not authenticated"));
-
     setLoading(true);
-
+    let session:any,sessErr:any;
     try {
+      const sessionResult=await ensureSession();session=sessionResult.session;sessErr=sessionResult.error;
+      if (sessErr) throw sessErr;
+      if (!session) return Alert.alert(uiText("Imeshindikana"), uiText("Not authenticated"));
       const { data:created, error } = ATOMIC_CURRENCY_ONBOARDING_ACTIVE
-        ? await supabase.rpc(SCOPED_CURRENCY_ONBOARDING_RPC,await persistentScopedOnboardingIntent(kv,session.user.id,{businessName:orgName,storeName:firstStore,currency:selectedCurrency,timezone:tz,acknowledged:currencyAcknowledged},makeId))
+        ? {data:await submitScopedCurrencyOnboarding(session,{businessName:orgName,storeName:firstStore,currency:selectedCurrency,timezone:tz,acknowledged:currencyAcknowledged},{storage:kv,makeId,rpc:async(name,args)=>await supabase.rpc(name,args)}),error:null}
         : await supabase.rpc("create_org_with_store", {p_org_name:orgName,p_first_store_name:firstStore});
 
       if (error) {
@@ -156,6 +154,7 @@ export default function FirstStoreOnboardingScreen() {
       }
 
       const confirmed=ATOMIC_CURRENCY_ONBOARDING_ACTIVE?verifyCurrencyOnboardingResult(created,selectedCurrency):null;
+      if(confirmed)org.setActiveOrgId(confirmed.organizationId);
       await org.refresh();
 
       try {
@@ -231,7 +230,8 @@ export default function FirstStoreOnboardingScreen() {
 
       router.replace("/(tabs)");
     } catch (error:any) {
-      Alert.alert(uiText("Imeshindikana"),String(error?.message||error));
+      const message=String(error?.message||error);
+      Alert.alert(uiText("Imeshindikana"),message.includes("AUTH_SESSION_EXPIRED")?currencyText("sessionExpired"):message.includes("TZS_ROLLOUT_NOT_ENABLED")?currencyText("rolloutUnavailable"):message.includes("ONBOARDING_INTENT_REVIEW_REQUIRED")?currencyText("intentReview"):message);
     } finally {
       setLoading(false);
       createLock.current=false;
