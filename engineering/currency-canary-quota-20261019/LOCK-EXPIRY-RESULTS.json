@@ -1,0 +1,13 @@
+{
+  "status": "PASS",
+  "count": 6,
+  "checks": [
+    "enrollment expiry rechecked after quota row-lock wait",
+    "enrollment expiry creates no org or consumed receipt",
+    "jwt expiry rechecked after quota row-lock wait",
+    "jwt expiry creates no org or consumed receipt",
+    "unconfirmed Auth actor cannot enroll",
+    "failed enrollment preserves disabled switch"
+  ],
+  "scope": "Actual PostgreSQL row-lock waits; simulated Auth JWT claims; loopback disposable only"
+}

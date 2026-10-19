@@ -1,0 +1,9 @@
+{
+  "existingAcceptanceManifestIntact": true,
+  "priorControlsEvidenceManifestIntact": true,
+  "reusedSourceHashesIntact": true,
+  "applicationChanges": 0,
+  "clustersStopped": true,
+  "accepted1423ChecksRerun": false,
+  "pythonSyntax": "PASS"
+}

@@ -1,0 +1,5 @@
+disposable*/
+postgres.log
+*.private.json
+*.private.stderr
+__pycache__/

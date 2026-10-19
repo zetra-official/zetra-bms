@@ -1,0 +1,14 @@
+{
+  "project": "dcmhqdckzhbuakvcyjit",
+  "at": "2026-10-19T06:37:17.306859+00:00",
+  "result": {
+    "canaryActivated": false,
+    "candidateIds": [],
+    "eligibleCount": 0,
+    "markedCount": 0,
+    "scope": "Explicit administrator-marked candidates; bounded absence checks, not all historical attribution"
+  },
+  "rejectedActorExcluded": true,
+  "ownerApprovedActor": null,
+  "productionWrites": false
+}

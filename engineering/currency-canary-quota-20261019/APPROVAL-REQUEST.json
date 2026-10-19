@@ -1,0 +1,22 @@
+{
+  "status": "LOCAL QUOTA READY \u2014 AWAITING DEDICATED ACTOR AND EXACT OWNER APPROVAL",
+  "project": "dcmhqdckzhbuakvcyjit",
+  "artifacts": {
+    "2026101902-tzs-canary-quota.DRAFT.sql": "7ce3e81d44b402d53f19f4776647e4953471aef34d51faea69536696aeb13e55",
+    "ACTIVATE-QUOTA-CANARY.DRAFT.sql": "e24618e6fb460089d067506e8aa79cb86294ff67d5265d8b79c90723526380a8",
+    "DISABLE-ROLLBACK.DRAFT.sql": "317e1010f032bf4effff55da40072573df1bddacaefa2bff960be894ebb1be8e"
+  },
+  "ownerApprovedActorId": null,
+  "requestId": null,
+  "organizationName": "ZETRA CANARY TZS 20261019",
+  "storeName": "SYNTHETIC TZS CANARY",
+  "timezone": "Africa/Dar_es_Salaam",
+  "currency": "TZS",
+  "expirySeconds": 3600,
+  "maxOrganizationsThroughGateway": 1,
+  "maxStoresThroughGateway": 1,
+  "financialTransactions": 0,
+  "productionExecutionAuthorized": false,
+  "activationAuthorized": false,
+  "deploymentAuthorized": false
+}
