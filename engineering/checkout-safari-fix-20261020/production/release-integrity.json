@@ -1,0 +1,17 @@
+{
+  "status": "PASS",
+  "packageSha256": "5ab6db53d22b516ece6f3f37d0bfadf788e54ea669590638d01262e13b850671",
+  "manifestSha256": "d1375be3a55239862da9b9783d85b1d5c27eccb981a5cb0dcb3f7932e54843fa",
+  "sourceZipSha256": "df635fbe262a550b3bac1acb8e4843e5bd5b1b968d4c33034322ca6df4f91501",
+  "catalogRootPreserved": true,
+  "sourceFiles": [
+    "app/(tabs)/sales/checkout.tsx",
+    "app/_layout.tsx",
+    "src/ui/Input.tsx",
+    "src/ui/Screen.tsx",
+    "src/ui/WebViewport.tsx",
+    "src/pos/checkoutAvailability.ts"
+  ],
+  "sql": [],
+  "androidPublished": false
+}

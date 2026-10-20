@@ -1,0 +1,31 @@
+{
+  "status": "WEB_DEPLOYED_SMOKE_PASS_AWAITING_OWNER_IPHONE_ACCEPTANCE",
+  "package": "ZETRA-CUSTOMER-CHECKOUT-SAFARI-20261020",
+  "web": "SUCCESS",
+  "deploymentId": "6ad76cf47622bc0a29e1244f",
+  "url": "https://app.zetra.tz",
+  "publishedAtVerifiedUTC": "2026-10-20T13:39:38.436249+00:00",
+  "sourceFileCount": 6,
+  "packageSha256": "5ab6db53d22b516ece6f3f37d0bfadf788e54ea669590638d01262e13b850671",
+  "artifactsSha256": "d1375be3a55239862da9b9783d85b1d5c27eccb981a5cb0dcb3f7932e54843fa",
+  "focusedTests": {
+    "status": "PASS",
+    "cases": 14
+  },
+  "disposableCanonicalDb": {
+    "status": "PASS",
+    "groups": 10
+  },
+  "productionSmoke": "PASS:exact bytes,routes,BoT/ECB,authenticated Home/POS/Products,Currency preservation",
+  "safariPhysical": "PENDING_OWNER_PRODUCTION_CONFIRMATION",
+  "androidOta": "NOT_PUBLISHED",
+  "androidReason": "Separate candidate runtime acceptance incomplete after USB disconnection; existing Production OTA retained",
+  "rollback": {
+    "ready": true,
+    "webDeployment": "6ad754388b1e0ec9dc9d905d",
+    "databaseRollbackRequired": false
+  },
+  "sql": [],
+  "productionFinancialWrites": 0,
+  "catalogAndCurrencySourceUnchanged": true
+}

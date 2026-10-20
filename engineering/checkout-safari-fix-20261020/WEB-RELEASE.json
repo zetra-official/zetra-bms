@@ -1,0 +1,27 @@
+{
+  "id": "ZETRA-CUSTOMER-CHECKOUT-SAFARI-20261020",
+  "ownerApprovedWebPublication": true,
+  "approval": "Owner directive: Proceed with verified scoped customer bugfix Web release now,20Oct2026",
+  "webEntry": "_expo/static/js/web/entry-d14a8aceb2440ee90f4120aad7a4dd92.js",
+  "sourceZipSha256": "df635fbe262a550b3bac1acb8e4843e5bd5b1b968d4c33034322ca6df4f91501",
+  "artifactManifestSha256": "d1375be3a55239862da9b9783d85b1d5c27eccb981a5cb0dcb3f7932e54843fa",
+  "sourceDeltaSha256": "4d1dcd1e5b638d6bae10a05f2e1de9d9485012f02277e1587b884100d7244bd9",
+  "tests": {
+    "focused": 14,
+    "canonicalDatabaseGroups": 10,
+    "actualPrecisionUi": "Increase10\u219212, decrease10\u21928; canonical sale posted in disposable database; receipt route opened",
+    "homeResponsiveWidths": [
+      320,
+      375,
+      390,
+      430
+    ],
+    "iPhoneSafari": "Owner requested verification on Production after publication; not claimed PASS",
+    "physicalAndroid": "Device disconnected before new candidate runtime acceptance; not claimed PASS"
+  },
+  "webRollback": "6ad754388b1e0ec9dc9d905d",
+  "androidPublication": false,
+  "sql": [],
+  "financialActivation": false,
+  "productionFinancialTestWrites": false
+}

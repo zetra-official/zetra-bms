@@ -1,3 +1,4 @@
+import {withCheckoutDeadline,permitsPriceAdjustment} from '../../../src/pos/checkoutAvailability';
 import {saleAttemptKey,parseSaleAttempt,blocksSale,definitiveSaleRejection,type SaleAttempt} from '../../../src/pos/saleAttempt';
 import {useAccountingAuthority} from '../../../src/currency/useAccountingAuthority';
 import {transactionContext} from '../../../src/currency/engine';
@@ -311,6 +312,8 @@ function InputBox(props: {
       style={{
         color: theme.colors.text,
         fontWeight: "800",
+        fontSize: Platform.OS === "web" ? 16 : undefined,
+        minWidth: 0,
         borderWidth: 1,
         borderColor: "rgba(15,23,42,0.10)",
         backgroundColor: "rgba(255,255,255,0.78)",
@@ -514,7 +517,7 @@ const reservationOrgId = String(one(params.orderOrgId) ?? orgId).trim();
     return r === "owner" || r === "admin" || r === "staff" || r === "cashier";
   }, [activeRole]);
 
-  const canAdjustPrice=canSell&&['owner','admin','staff','cashier'].includes(String(activeRole??'').toLowerCase())&&orgCtx.activeStoreType==='STANDARD'&&storeId===activeStoreId&&!conversionId&&!cashierMode&&!reservationMode;
+  const canAdjustPrice=canSell&&['owner','admin','staff','cashier'].includes(String(activeRole??'').toLowerCase())&&permitsPriceAdjustment(orgCtx.activeStoreType)&&storeId===activeStoreId&&!conversionId&&!cashierMode&&!reservationMode;
 
   const openAdjustModal = useCallback((index: number) => {
     const row = checkoutCart[index];
@@ -601,13 +604,14 @@ const [staffDropdownOpen, setStaffDropdownOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const submission = useRef(new SubmissionGate());
   const [attemptReady,setAttemptReady]=useState(false);
+  const [attemptReadFailed,setAttemptReadFailed]=useState(false);
   const [attemptRecovery,setAttemptRecovery]=useState<SaleAttempt|null>(null);
   const saleIntent=String(one(params.cartId)??one(params.cart)??'');
-  useEffect(()=>{let live=true;setAttemptReady(false);setAttemptRecovery(null);
+  useEffect(()=>{let live=true;setAttemptReady(false);setAttemptReadFailed(false);setAttemptRecovery(null);
     if(conversionId||cashierMode||reservationMode){setAttemptReady(true);return}
     if(!orgId||!storeId||!cartActor)return;
     const key=saleAttemptKey({organizationId:orgId,storeId,actorId:cartActor});
-    void AsyncStorage.getItem(key).then(raw=>{const a=parseSaleAttempt(raw);if(live){setAttemptRecovery(blocksSale(a,saleIntent)?a:null);setAttemptReady(true)}}).catch(()=>{if(live)setWebBanner({type:'error',text:posStabilityText(conversionLanguage,'unresolved')})});
+    void AsyncStorage.getItem(key).then(raw=>{const a=parseSaleAttempt(raw);if(live){setAttemptRecovery(blocksSale(a,saleIntent)?a:null);setAttemptReady(true)}}).catch(()=>{if(live){setAttemptReadFailed(true);setWebBanner({type:'error',text:posStabilityText(conversionLanguage,'unresolved')})}});
     return()=>{live=false};
   },[orgId,storeId,cartActor,saleIntent,conversionId,cashierMode,reservationMode]);
   const rememberAttempt=useCallback(async(attempt:SaleAttempt)=>{
@@ -1447,10 +1451,10 @@ customer_phone: customerPhone.trim() || null,
 
     setSaving(true);
     try {
-      await Promise.all([
+      await withCheckoutDeadline(Promise.all([
         preflightCheckStock(),
         supabase.rpc("ensure_my_store_access", { p_store_id: storeId }).then(({error})=>{if(error)throw error}),
-      ]);
+      ]),"Stock/access verification timed out. No sale was submitted. Check your connection and try again.");
 
       const items = checkoutCart.map((c) => ({
         product_id: c.product_id,
@@ -1501,7 +1505,7 @@ customer_phone: customerPhone.trim() || null,
       const durableAttempt:SaleAttempt={id:clientSaleId,intent:saleIntent,phase:'DISPATCHED',requiresFollowUp:!!customerPhone.trim()||isCredit};
       await rememberAttempt(durableAttempt);
       submission.current.dispatched();
-      const res = await supabase.rpc("create_sale_with_payment_v6", {
+      const res = await withCheckoutDeadline(supabase.rpc("create_sale_with_payment_v6", {
         p_store_id: storeId,
         p_items: items,
         p_note: finalNote,
@@ -1524,7 +1528,7 @@ p_customer_full_name: customerName.trim() || null,
         p_client_sale_id: clientSaleId,
         p_cashier_shift_id: isCashierUser ? cashierShiftId : null,
         p_sold_by_membership_id: effectiveSoldByMembershipId || null,
-      } as any);
+      } as any),"Sale response timed out. Verify Sales History before retrying; the request may have completed.");
 
       if (res.error) {
         if(definitiveSaleRejection(res.error.code)){
@@ -1587,25 +1591,8 @@ p_customer_full_name: customerName.trim() || null,
       if (Platform.OS === "web") {
         setWebBanner({ type: "success", text: successMsg });
 
-        const confirmed =
-          typeof window === "undefined"
-            ? true
-            : window.confirm(
-                creditRecorded
-                  ? "Sale created (credit recorded v2)\n\nBonyeza OK kufungua receipt."
-                  : "Sale created\n\nBonyeza OK kufungua receipt."
-              );
-
-        if (confirmed) {
-          if (saleId) {
-            router.replace({
-              pathname: "/(tabs)/sales/receipt",
-              params: { saleId },
-            } as any);
-          } else {
-            router.replace("/(tabs)/sales/history" as any);
-          }
-        }
+        // Browser dialogs can be suppressed. Confirmed canonical success always opens its receipt.
+        router.replace({pathname:"/(tabs)/sales/receipt",params:{saleId}} as any);
       } else {
         Alert.alert(
           uiText("Success ✅"),
@@ -1791,9 +1778,9 @@ headerStoreName,
                   testID={`checkout-price-adjust-${index}`} accessibilityRole="button" accessibilityLabel={uiText("Adjust Price")} disabled={saving||!canAdjustPrice}
                   onPress={() => openAdjustModal(index)}
                   style={({ pressed }) => ({
-                    minWidth: 42,
-                    width: 42,
-                    height: 42,
+                    minWidth: 44,
+                    width: 44,
+                    height: 44,
                     borderRadius: 999,
                     alignItems: "center",
                     justifyContent: "center",
@@ -1805,7 +1792,7 @@ headerStoreName,
                     marginTop: 2,
                   })}
                 >
-                  <SafeIcon name="add" size={20} color={theme.colors.emerald} />
+                  <Text accessible={false} style={{fontSize:18,fontWeight:"800",color:theme.colors.emerald,lineHeight:24}}>+/−</Text>
                 </Pressable>
               </View>
 
@@ -2332,6 +2319,7 @@ const staffAttributionCard = (
         disabled={saving || !attemptReady || !!attemptRecovery || submission.current.blocked || !!invalidReason}
         variant="primary"
       />
+      {!attemptReady&&<Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={{color:theme.colors.muted}}>{attemptReadFailed?posStabilityText(conversionLanguage,'unresolved'):posStabilityText(conversionLanguage,'loading')}</Text>}
       {attemptRecovery&&<View style={{gap:8}}><Text>{posStabilityText(conversionLanguage,'unresolved')}</Text><Button title={posStabilityText(conversionLanguage,'history')} variant="secondary" onPress={()=>router.push('/sales/history' as any)}/><Button title={uiText('Refresh')} variant="secondary" onPress={()=>void reviewSale()}/></View>}
       {checkoutCart.length===0&&<View style={{gap:8}}><Text>{posStabilityText(conversionLanguage,'recovery')}</Text><Button title={uiText('Back')} variant="secondary" onPress={()=>router.replace('/sales' as any)}/></View>}
       <CheckoutProformaAction

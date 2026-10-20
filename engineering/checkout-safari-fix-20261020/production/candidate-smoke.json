@@ -1,0 +1,16 @@
+{
+  "status": "PASS",
+  "deploymentId": "6ad76cf47622bc0a29e1244f",
+  "exactHostedHtmlAndBundle": true,
+  "routes": [
+    "sales",
+    "sales/checkout",
+    "products",
+    "finance/live",
+    "reports",
+    "exchange-rates"
+  ],
+  "fxProxies": "PASS",
+  "pinchZoomNotDisabled": true,
+  "financialWrites": false
+}

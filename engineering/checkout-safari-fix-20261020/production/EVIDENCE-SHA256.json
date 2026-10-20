@@ -1,0 +1,19 @@
+{
+  "actual-product-ui-smoke.json": "8aeeb8a46787838d2bea5914af148043ee32fe0416fa703074fb73aea95bbe5c",
+  "candidate-bot.public-feed": "e790434f0d2be8d9410de82746c4d22000ada103623164bd043cb7dddbb7e9e8",
+  "candidate-ecb.public-feed": "02aaddcdcd7b76106eae23f0aedbc7c63d4f61b5f92aafb152c6a5fef09b1580",
+  "candidate-fx-smoke.json": "d24df8e9c5ad26970b1b74d10a72482193cf5bc92562e742f067bef3098760d9",
+  "candidate-smoke.json": "4c4fa803de491cfc082149b4969b3834f25754213bc1cf15bfb2c5751c829877",
+  "FINAL-REPORT.json": "ef034238862ec9f360651f5d75375f7d45322727f6a24e9f2d893f3fb5d0766b",
+  "FINAL-REPORT.md": "eafcc070a7125aa412c953f7123b968d754e1e395b0fdae7acb2b70650d7aed8",
+  "final-verification.json": "6c5d662905ff26b41bcee392488ccb703eb23ce601711924914d38e6c8d04109",
+  "home-mobile.png": "7acc50fca0cb7c8ff08406d4d6ce812273ba23fc9f759473c40a04ce0ccc497c",
+  "preflight.json": "b7605536fcc68d7a74ef64d956e23a47909ebd060f6b33129acb12237cfab50d",
+  "production-bot.public-feed": "6116ae9cb690f6544aa3ce22f354ee56ec4fbf4376545f7a5d385c71dfb40e08",
+  "production-ecb.public-feed": "02aaddcdcd7b76106eae23f0aedbc7c63d4f61b5f92aafb152c6a5fef09b1580",
+  "production-fx-smoke.json": "5854a2100dcf24b99d2959faa4d1567e259ba3872cf0ac990e6a8932a5a20402",
+  "production-smoke.json": "4c4fa803de491cfc082149b4969b3834f25754213bc1cf15bfb2c5751c829877",
+  "publish.json": "ad0dbbd5963a2dca09effc7dcce9fe48ac78f184b516de19d5dbbc1998f26196",
+  "release-integrity.json": "a4b885c616005a9747a931817b854f7de0953253512932b333736b7396b3bacd",
+  "upload.json": "289b0b3e49efa82bc66284b50a87a047cc6bcc329c4c806e340f86cf1eeba946"
+}

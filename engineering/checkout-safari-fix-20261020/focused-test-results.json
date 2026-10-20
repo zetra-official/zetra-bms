@@ -1,0 +1,21 @@
+{
+  "status": "PASS",
+  "count": 14,
+  "checks": [
+    "STANDARD_increase_decrease_fractional_original_immutable",
+    "PRECISION_RETAIL_increase_decrease_fractional_original_immutable",
+    "unrelated_store_types_not_newly_activated",
+    "invalid_nonpositive_adjustments_atomic",
+    "deadline_rejects_without_retrying_or_claiming_cancellation",
+    "web_valid_confirm_double_click_single_sale_receipt_without_browser_dialog",
+    "web_lost_response_blocks_unsafe_retry",
+    "web_preflight_timeout_no_sale_safe_retry",
+    "web_invalid_checkout_never_dispatches",
+    "android_valid_confirm_double_click_single_sale_receipt_without_browser_dialog",
+    "android_lost_response_blocks_unsafe_retry",
+    "android_preflight_timeout_no_sale_safe_retry",
+    "android_invalid_checkout_never_dispatches",
+    "iOS_visual_viewport_keyboard_resize_pinch_zoom_and_cleanup"
+  ],
+  "scope": "Actual extracted Web/native confirm callbacks; synthetic transport, no financial writes"
+}

@@ -1,3 +1,4 @@
+import {WebViewport} from '@/src/ui/WebViewport';
 import { LanguageProvider } from "@/src/i18n/LanguageProvider";
 ﻿import { OrgProvider, useOrg } from "@/src/context/OrgContext";
 import {
@@ -892,10 +893,13 @@ if (
 
 export default function RootLayout() {
   return (
+    <>
+    <WebViewport />
     <LanguageProvider>
     <OrgProvider>
       <AuthGate  />
     </OrgProvider>
     </LanguageProvider>
+    </>
   );
 }

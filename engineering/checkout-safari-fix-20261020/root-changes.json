@@ -1,0 +1,26 @@
+{
+  "app/(tabs)/sales/checkout.tsx": {
+    "before": "4beab96e56fb57b8bb9fd982528c1155f41ce45961f2d999162a7befcb5f2cd0",
+    "after": "30881c17139860ae6fd27a632e16b6d249dc4bc9dc3d2d5c89d143771130e04b"
+  },
+  "app/_layout.tsx": {
+    "before": "daa056c1069506f10c57b15bdde845d7b6fb586384e86ae7d57b3beb06474493",
+    "after": "be36733bb86ca3607d7d00e973025aebc1b5d69f40c3e8d007dc56d22e2701a2"
+  },
+  "src/ui/Screen.tsx": {
+    "before": "5715b6aecf345ed8e9c0d15e7a261c7451c45ff3425e3f3a70f713b3776330c7",
+    "after": "b8e2213a41264c52e52767ef218dfc0415dbc8ab86f16f2759b68b3a23d3cef9"
+  },
+  "src/ui/Input.tsx": {
+    "before": "2d68535d8cd04caa7eb961253f28b51a5bf7c2038cbe280493c27bfc1e21e0ea",
+    "after": "8a106002690e98e1982ee0cc676736cfd17fd0d214a1815df7fc92de7bc7096a"
+  },
+  "src/pos/checkoutAvailability.ts": {
+    "before": null,
+    "after": "670b627267fae87423a62539bd2771f1356b0edc95736ab6fde1e93562722e3f"
+  },
+  "src/ui/WebViewport.tsx": {
+    "before": null,
+    "after": "3ad125493a04e59a146057804177d34748e2b6b10a03e529c15aa5eaacfe0bf9"
+  }
+}

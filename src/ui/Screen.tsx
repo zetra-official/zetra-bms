@@ -163,6 +163,7 @@ export function Screen({
       style={[
         {
           flex: 1,
+          minWidth: 0,
           minHeight: 0,
           backgroundColor: baseBg,
           ...(isWeb

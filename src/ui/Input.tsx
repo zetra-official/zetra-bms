@@ -35,7 +35,7 @@ export const Input = forwardRef<TextInput, TextInputProps>(function Input(
           color: "#172033",
 
           fontWeight: "600",
-          fontSize: 15,
+          fontSize: Platform.OS === "web" ? 16 : 15,
 
           shadowOpacity: 0,
           elevation: 0,

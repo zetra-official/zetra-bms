@@ -1,0 +1,117 @@
+{
+  "status": "PASS",
+  "engine": "In-app Chromium; responsive widths, not physical iPhone/Android",
+  "checks": [
+    {
+      "navigation": [
+        {
+          "bottom": 840,
+          "name": "Home",
+          "right": 64.9375,
+          "x": 4
+        },
+        {
+          "bottom": 840,
+          "name": "Product",
+          "right": 125.875,
+          "x": 64.9375
+        },
+        {
+          "bottom": 822,
+          "name": "SELL",
+          "right": 191,
+          "x": 129
+        },
+        {
+          "bottom": 840,
+          "name": "Stores",
+          "right": 255.0625,
+          "x": 194.125
+        },
+        {
+          "bottom": 840,
+          "name": "More",
+          "right": 316,
+          "x": 255.0625
+        }
+      ],
+      "page": 320,
+      "screen": "Home",
+      "width": 320
+    },
+    {
+      "navigation": [
+        {
+          "bottom": 840,
+          "name": "Home",
+          "right": 75.7125015258789,
+          "x": 4
+        },
+        {
+          "bottom": 840,
+          "name": "Product",
+          "right": 147.4375,
+          "x": 75.7125015258789
+        },
+        {
+          "bottom": 822,
+          "name": "SELL",
+          "right": 218.6000061035156,
+          "x": 156.60000610351562
+        },
+        {
+          "bottom": 840,
+          "name": "Stores",
+          "right": 299.4874954223633,
+          "x": 227.7624969482422
+        },
+        {
+          "bottom": 840,
+          "name": "More",
+          "right": 371.2000198364258,
+          "x": 299.4875183105469
+        }
+      ],
+      "page": 375,
+      "screen": "Home",
+      "width": 375
+    },
+    {
+      "navigation": [
+        {
+          "bottom": 840,
+          "name": "Home",
+          "right": 86.5,
+          "x": 4
+        },
+        {
+          "bottom": 840,
+          "name": "Product",
+          "right": 169,
+          "x": 86.5
+        },
+        {
+          "bottom": 822,
+          "name": "SELL",
+          "right": 246.1999969482422,
+          "x": 184.1999969482422
+        },
+        {
+          "bottom": 840,
+          "name": "Stores",
+          "right": 343.8999938964844,
+          "x": 261.3999938964844
+        },
+        {
+          "bottom": 840,
+          "name": "More",
+          "right": 426.3999938964844,
+          "x": 343.8999938964844
+        }
+      ],
+      "page": 430,
+      "screen": "Home",
+      "width": 430
+    }
+  ]
+}

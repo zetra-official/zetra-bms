@@ -1,0 +1,95 @@
+{
+  "status": "PASS",
+  "count": 10,
+  "checks": [
+    {
+      "storeType": "STANDARD",
+      "unitPrice": "12",
+      "quantity": "1",
+      "exactLineAndPayment": true,
+      "singleStockDeduction": true,
+      "idempotentRetry": true,
+      "catalogAndCostPreserved": true
+    },
+    {
+      "storeType": "STANDARD",
+      "unitPrice": "8",
+      "quantity": "1",
+      "exactLineAndPayment": true,
+      "singleStockDeduction": true,
+      "idempotentRetry": true,
+      "catalogAndCostPreserved": true
+    },
+    {
+      "storeType": "STANDARD",
+      "unitPrice": "8",
+      "quantity": "0.125",
+      "exactLineAndPayment": true,
+      "singleStockDeduction": true,
+      "idempotentRetry": true,
+      "catalogAndCostPreserved": true
+    },
+    {
+      "storeType": "PRECISION_RETAIL",
+      "unitPrice": "12",
+      "quantity": "1",
+      "exactLineAndPayment": true,
+      "singleStockDeduction": true,
+      "idempotentRetry": true,
+      "catalogAndCostPreserved": true
+    },
+    {
+      "storeType": "PRECISION_RETAIL",
+      "unitPrice": "8",
+      "quantity": "1",
+      "exactLineAndPayment": true,
+      "singleStockDeduction": true,
+      "idempotentRetry": true,
+      "catalogAndCostPreserved": true
+    },
+    {
+      "storeType": "PRECISION_RETAIL",
+      "unitPrice": "8",
+      "quantity": "0.125",
+      "exactLineAndPayment": true,
+      "singleStockDeduction": true,
+      "idempotentRetry": true,
+      "catalogAndCostPreserved": true
+    },
+    {
+      "storeType": "CAPITAL_RECOVERY",
+      "unitPrice": "12",
+      "quantity": "1",
+      "exactLineAndPayment": true,
+      "singleStockDeduction": true,
+      "idempotentRetry": true,
+      "catalogAndCostPreserved": true
+    },
+    {
+      "storeType": "CAPITAL_RECOVERY",
+      "unitPrice": "8",
+      "quantity": "1",
+      "exactLineAndPayment": true,
+      "singleStockDeduction": true,
+      "idempotentRetry": true,
+      "catalogAndCostPreserved": true
+    },
+    {
+      "storeType": "CAPITAL_RECOVERY",
+      "unitPrice": "8",
+      "quantity": "0.125",
+      "exactLineAndPayment": true,
+      "singleStockDeduction": true,
+      "idempotentRetry": true,
+      "catalogAndCostPreserved": true
+    },
+    {
+      "actualUiSale": "a30f24b8-cb1e-4952-95ac-d7cf0035c2ea",
+      "singleCanonicalSale": true,
+      "receiptCanonicalRead": true
+    }
+  ],
+  "scope": "Existing canonical RPC in verified local disposable PostgreSQL; synthetic identities only",
+  "productionWrites": 0,
+  "remoteConnections": 0
+}

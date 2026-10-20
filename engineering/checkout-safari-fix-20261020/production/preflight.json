@@ -1,0 +1,17 @@
+{
+  "status": "PASS",
+  "package": "ZETRA-CUSTOMER-CHECKOUT-SAFARI-20261020",
+  "webBaseline": "6ad754388b1e0ec9dc9d905d",
+  "webRollbackReady": true,
+  "sourceFiles": [
+    "app/(tabs)/sales/checkout.tsx",
+    "app/_layout.tsx",
+    "src/ui/Input.tsx",
+    "src/ui/Screen.tsx",
+    "src/ui/WebViewport.tsx",
+    "src/pos/checkoutAvailability.ts"
+  ],
+  "approvedWebScope": true,
+  "sql": [],
+  "androidPublished": false
+}

@@ -1,0 +1,10 @@
+{
+  "baselineCheckpoint": "cee168a14dbcb24aa975af39b974f36c5b53b613",
+  "baselineWebDeployment": "6ad754388b1e0ec9dc9d905d",
+  "baselineAndroidUpdate": "01a1592b-2ee1-7ed9-ac55-fb2b9185776c",
+  "productionWrites": false,
+  "sourceArchives": {
+    "web": "ea5bbb2ce92468d55248336bd60e45da60f9475f0f61db61e079f0a7efa2af94",
+    "android": "53bce6aa98b656338640a0693c670768aa7af63cc8ed8eec69f5536b95bd2220"
+  }
+}

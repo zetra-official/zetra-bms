@@ -1,0 +1,33 @@
+{
+  "status": "PASS",
+  "baselineWebDeployment": "6ad754388b1e0ec9dc9d905d",
+  "changedFiles": {
+    "app/(tabs)/sales/checkout.tsx": {
+      "before": "07878e3cb9cd76be098350c087881b5c5937336654368ca6473a7913151c806f",
+      "after": "0d0a340259c4a4ae4df969a89405be97df2ae5958cd352d4914f1d09d74e8612"
+    },
+    "app/_layout.tsx": {
+      "before": "daa056c1069506f10c57b15bdde845d7b6fb586384e86ae7d57b3beb06474493",
+      "after": "be36733bb86ca3607d7d00e973025aebc1b5d69f40c3e8d007dc56d22e2701a2"
+    },
+    "src/ui/Input.tsx": {
+      "before": "2d68535d8cd04caa7eb961253f28b51a5bf7c2038cbe280493c27bfc1e21e0ea",
+      "after": "8a106002690e98e1982ee0cc676736cfd17fd0d214a1815df7fc92de7bc7096a"
+    },
+    "src/ui/Screen.tsx": {
+      "before": "5715b6aecf345ed8e9c0d15e7a261c7451c45ff3425e3f3a70f713b3776330c7",
+      "after": "b8e2213a41264c52e52767ef218dfc0415dbc8ab86f16f2759b68b3a23d3cef9"
+    },
+    "src/ui/WebViewport.tsx": {
+      "before": null,
+      "after": "064ef55ab9bfdaa850b4f629103439ed28cfe5d7f28bc7e8d0ad0620d7daae00"
+    },
+    "src/pos/checkoutAvailability.ts": {
+      "before": null,
+      "after": "670b627267fae87423a62539bd2771f1356b0edc95736ab6fde1e93562722e3f"
+    }
+  },
+  "currencyAndCatalogUnchanged": true,
+  "sql": [],
+  "newFinancialFeatures": false
+}
