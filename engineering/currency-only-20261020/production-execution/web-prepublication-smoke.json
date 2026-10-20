@@ -1,0 +1,21 @@
+{
+  "status": "PASS",
+  "stage": "prepublication",
+  "url": "https://6ad738f89834af8455409492--regal-sunburst-e3cee8.netlify.app",
+  "routesAndExactFilesChecked": [
+    "login.html",
+    "index.html",
+    "_expo/static/js/web/entry-15b9127cf4fc113b8d7928d475c5e024.js",
+    "/finance/live",
+    "/finance/history",
+    "/stocks/history",
+    "/sales",
+    "/settings/business-statement",
+    "/finance/exchange-rates",
+    "/login"
+  ],
+  "officialFxProxyFeeds": "PASS",
+  "sql": [],
+  "financialWrites": false,
+  "timestamp": "2026-10-20T09:54:35.572233+00:00"
+}

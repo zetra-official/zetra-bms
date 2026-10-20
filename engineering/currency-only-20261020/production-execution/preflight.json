@@ -1,0 +1,22 @@
+{
+  "status": "PASS",
+  "package": "ZETRA-CURRENCY-DISPLAY-20261020",
+  "approvedCheckpoint": "25fd815b",
+  "approvalSha256": "1bef09bd4d88cc1289b5540754f32e84dbc000cf959b607e72b308c01b30d8de",
+  "webPrevious": "6ad49c64c2acd6e0352f242f",
+  "androidBefore": {
+    "channel": "production",
+    "branch": "production",
+    "latestAndroid": [
+      {
+        "id": "01a14bd2-bbe2-7d84-b0cd-154911b0a21e",
+        "group": "9ae993b5-1566-41ea-821c-3cc94dce0151",
+        "runtimeVersion": "1.0.0",
+        "createdAt": "2026-10-17T21:44:24.290Z"
+      }
+    ]
+  },
+  "rollbackReady": true,
+  "sql": [],
+  "financialWrites": false
+}

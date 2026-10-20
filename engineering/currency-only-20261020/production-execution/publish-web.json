@@ -1,0 +1,8 @@
+{
+  "status": "PUBLISHED",
+  "deploymentId": "6ad738f89834af8455409492",
+  "domain": "https://app.zetra.tz",
+  "rollback": "6ad49c64c2acd6e0352f242f",
+  "sql": [],
+  "financialWrites": false
+}

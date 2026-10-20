@@ -1,5 +1,7 @@
 # Latest Currency-only checkpoint
 
+**20 October Production attempt update:** Owner approved `25fd815b`; exact Web candidate was published, mandatory authenticated Dashboard smoke FAILED, and Web was rolled back and verified. Android was NOT published. Read `production-execution/FINAL-STATUS.md` and `rollback-verification.json` first. The original approval below is preserved as historical evidence and must not be reused to publish this failed candidate as-is. Next work is a corrected, separately hashed Dashboard integration candidate and replacement Production approval.
+
 Final isolated Web/Android builds PASS after Owner-only visibility, decimal safety and no-referrer fixes. `SEALED-ARTIFACTS.json` binds exact output hashes; `PRODUCTION-APPROVAL.json` binds source archives, manifests and evidence. Original Catalog working-file hash remains `a6b548a9567803d9db181b4d6f236349b55afddfc115ead7ba9f6d449c1b4914`.
 
 Source archives preserve the release candidate independently from the mixed root. Root unrelated/uncommitted work remains untouched. Private source maps/contact snapshots are retained locally and excluded from publication/checkpoint selection. No database migration, activation, financial posting or deployment has occurred for this candidate.

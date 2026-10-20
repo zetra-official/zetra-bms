@@ -1,0 +1,20 @@
+{
+  "status": "PASS",
+  "webDeployment": "6ad49c64c2acd6e0352f242f",
+  "hostedIndexMatchesPrevious": true,
+  "android": {
+    "channel": "production",
+    "branch": "production",
+    "latestAndroid": [
+      {
+        "id": "01a14bd2-bbe2-7d84-b0cd-154911b0a21e",
+        "group": "9ae993b5-1566-41ea-821c-3cc94dce0151",
+        "runtimeVersion": "1.0.0",
+        "createdAt": "2026-10-17T21:44:24.290Z"
+      }
+    ]
+  },
+  "financialWrites": false,
+  "sql": [],
+  "rolloutStopped": true
+}

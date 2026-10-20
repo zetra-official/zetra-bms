@@ -1,0 +1,21 @@
+{
+  "status": "PASS",
+  "stage": "production",
+  "url": "https://app.zetra.tz",
+  "routesAndExactFilesChecked": [
+    "login.html",
+    "index.html",
+    "_expo/static/js/web/entry-15b9127cf4fc113b8d7928d475c5e024.js",
+    "/finance/live",
+    "/finance/history",
+    "/stocks/history",
+    "/sales",
+    "/settings/business-statement",
+    "/finance/exchange-rates",
+    "/login"
+  ],
+  "officialFxProxyFeeds": "PASS",
+  "sql": [],
+  "financialWrites": false,
+  "timestamp": "2026-10-20T09:55:45.553348+00:00"
+}

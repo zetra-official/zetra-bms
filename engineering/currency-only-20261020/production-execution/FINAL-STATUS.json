@@ -1,0 +1,20 @@
+{
+  "status": "FAILED_MANDATORY_MOBILE_WEB_DASHBOARD_GATE_ROLLED_BACK",
+  "package": "ZETRA-CURRENCY-DISPLAY-20261020",
+  "approvedCheckpoint": "25fd815b",
+  "webCandidate": "6ad738f89834af8455409492",
+  "webActive": "6ad49c64c2acd6e0352f242f",
+  "androidPublished": false,
+  "androidChannel": "production",
+  "androidUpdate": "01a14bd2-bbe2-7d84-b0cd-154911b0a21e",
+  "androidRuntime": "1.0.0",
+  "desktopDashboardRuntime": "NOT_TESTED",
+  "mobileWebDashboardCurrencyControlObserved": false,
+  "fxProxyAndCalculationSmoke": "PASS",
+  "authenticatedFinanceConversion": "PASS",
+  "observedOriginalTzsTotalsMatchAfterRollback": true,
+  "rollbackVerification": "PASS",
+  "productionSql": [],
+  "financialPostingExecuted": false,
+  "candidateMustNotBeRepublished": true
+}
