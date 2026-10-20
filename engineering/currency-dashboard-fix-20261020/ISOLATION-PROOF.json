@@ -1,0 +1,18 @@
+{
+  "status": "PASS",
+  "baseline": "ZETRA-CURRENCY-DISPLAY-20261020",
+  "changedRuntimeModules": [
+    "/app/(tabs)/index.tsx"
+  ],
+  "addedRuntimeModules": [
+    "/src/currency/DashboardCurrency.tsx",
+    "/src/currency/dashboardValuation.ts"
+  ],
+  "removedModules": [],
+  "otherDependencyOrApplicationChanges": false,
+  "catalogUnchanged": true,
+  "androidAssetsUnchanged": true,
+  "webProxyRulesUnchanged": true,
+  "productionSql": [],
+  "publication": false
+}

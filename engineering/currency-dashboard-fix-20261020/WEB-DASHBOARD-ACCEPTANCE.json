@@ -1,0 +1,44 @@
+{
+  "status": "PASS",
+  "scope": "Actual complete local replacement Web app, authenticated Owner session; canonical Production summaries read-only",
+  "sourceBuild": "final guarded isolated Web export",
+  "viewports": [
+    {
+      "width": 320,
+      "height": 740,
+      "entryVisible": true,
+      "horizontalOverflow": false
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "entryVisible": true,
+      "horizontalOverflow": false
+    },
+    {
+      "width": 1440,
+      "height": 1000,
+      "entryVisible": true,
+      "horizontalOverflow": false,
+      "actualDesktopBranch": true
+    }
+  ],
+  "currenciesObserved": [
+    "USD",
+    "KES",
+    "UGX",
+    "EUR",
+    "KWD"
+  ],
+  "catalogSelectableCodes": 153,
+  "boTReferenceDate": "2026-10-20",
+  "sourceAndRetrievalShown": true,
+  "originalTzsRestoration": "PASS",
+  "originalCustomerAmountsStoredInPublicEvidence": false,
+  "otherOrganizationLiveSwitch": "NOT AVAILABLE: this authorized session exposes one organization; foreign-tenant and stale-scope rejection tested with controlled port",
+  "financialWrites": false,
+  "productionPublication": false,
+  "existingStoreSwitchIsolation": "PASS: loading hides former scope, alternate existing store shows its own original totals, original store restored",
+  "positiveExistingSalesConversion": "PASS: actual positive canonical Sales converted to USD and restored exactly, without creating a sale",
+  "modal390Containment": "PASS after responsive layout settles; no visible element overflow"
+}

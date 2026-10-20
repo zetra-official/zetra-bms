@@ -1,0 +1,16 @@
+{
+  "status": "PASS",
+  "checkedAt": "2026-10-20T11:03:00.412668+00:00",
+  "readOnly": true,
+  "webSite": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+  "webDomain": "app.zetra.tz",
+  "webActiveAndRollback": "6ad49c64c2acd6e0352f242f",
+  "webRollbackState": "ready",
+  "androidChannel": "production",
+  "androidUpdate": "01a14bd2-bbe2-7d84-b0cd-154911b0a21e",
+  "androidRollbackGroup": "9ae993b5-1566-41ea-821c-3cc94dce0151",
+  "androidRuntime": "1.0.0",
+  "publicationExecuted": false,
+  "productionSql": [],
+  "financialWrites": false
+}

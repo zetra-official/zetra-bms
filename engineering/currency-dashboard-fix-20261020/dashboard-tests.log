@@ -1,0 +1,60 @@
+TAP version 13
+# Subtest: canonical read-only Dashboard totals aggregate exact originals without mutation
+ok 1 - canonical read-only Dashboard totals aggregate exact originals without mutation
+  ---
+  duration_ms: 4.9603
+  ...
+# Subtest: foreign/locked store cannot generate even one financial read
+ok 2 - foreign/locked store cannot generate even one financial read
+  ---
+  duration_ms: 0.4108
+  ...
+# Subtest: scope key prevents reusing totals across org, role, store membership or date
+ok 3 - scope key prevents reusing totals across org, role, store membership or date
+  ---
+  duration_ms: 0.1615
+  ...
+# Subtest: non-owner only receives sales and never requests costs, expenses or profit
+ok 4 - non-owner only receives sales and never requests costs, expenses or profit
+  ---
+  duration_ms: 0.2853
+  ...
+# Subtest: failed RPC, conflicting duplicates, mixed original units and unsafe numbers fail closed
+ok 5 - failed RPC, conflicting duplicates, mixed original units and unsafe numbers fail closed
+  ---
+  duration_ms: 0.7074
+  ...
+# Subtest: canonical statuses and identities preserve cancellations and deduplicate exact repeats
+ok 6 - canonical statuses and identities preserve cancellations and deduplicate exact repeats
+  ---
+  duration_ms: 0.2788
+  ...
+# Subtest: a returned sale with a foreign organization or store is unavailable
+ok 7 - a returned sale with a foreign organization or store is unavailable
+  ---
+  duration_ms: 0.4162
+  ...
+# Subtest: loaded Dashboard totals use the unchanged verified BoT conversion contract
+ok 8 - loaded Dashboard totals use the unchanged verified BoT conversion contract
+  ---
+  duration_ms: 6.1725
+  ...
+# Subtest: all platform Dashboard branches share one unconditional entry, including lite Web
+ok 9 - all platform Dashboard branches share one unconditional entry, including lite Web
+  ---
+  duration_ms: 137.2716
+  ...
+# Subtest: the Dashboard-only replacement cannot alter other base source files
+ok 10 - the Dashboard-only replacement cannot alter other base source files
+  ---
+  duration_ms: 1.7756
+  ...
+1..10
+# tests 10
+# suites 0
+# pass 10
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 534.7398

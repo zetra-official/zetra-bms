@@ -1,0 +1,49 @@
+{
+  "id": "ZETRA-CURRENCY-DISPLAY-DASHBOARD-FIX-20261020",
+  "status": "EXACT_BLOCKER_ANDROID_PRIVATE_RUNTIME_ACCEPTANCE",
+  "replaces": "ZETRA-CURRENCY-DISPLAY-20261020",
+  "recoveryCheckpoint": "748c686a",
+  "scopeDelta": [
+    "app/(tabs)/index.tsx",
+    "src/currency/DashboardCurrency.tsx",
+    "src/currency/dashboardValuation.ts"
+  ],
+  "productionSql": [],
+  "financialActivation": false,
+  "financialWrites": false,
+  "productionPublicationExecuted": false,
+  "webAcceptance": "PASS",
+  "androidAcceptance": {
+    "status": "PENDING_PRIVATE_ANDROID_SESSION",
+    "reason": "Actual complete local Dashboard must be authenticated and observed; no physical-device PASS inferred from builds"
+  },
+  "rollback": {
+    "webDeployment": "6ad49c64c2acd6e0352f242f",
+    "androidGroup": "9ae993b5-1566-41ea-821c-3cc94dce0151",
+    "androidUpdate": "01a14bd2-bbe2-7d84-b0cd-154911b0a21e",
+    "runtime": "1.0.0"
+  },
+  "sha256": {
+    "REPLACEMENT-APPROVAL.md": "fab6b01f3ac297a1a9ced8403c863536aa75c93517a139d75bd1782d48e3c37b",
+    "SEALED-ARTIFACTS.json": "1471e9e79b61d1fe2105b34e4ea6aff46677f7f66cb3ad372f0d1cf241e2092a",
+    "ISOLATION-PROOF.json": "9c56fbaf455e55d872d791c33505a21c5350d0046c592f429d689cbfa9b42d0f",
+    "isolated-web-source-manifest.json": "5ba4cd9fc65c4813b0221ea51d6a51aeca9cbd2cd9442f41dcf12ca5269423fd",
+    "isolated-android-source-manifest.json": "f4079efe85fc95b3298844c845e50a0a71a9f77e4444d8a77c835478e4e684f2",
+    "dashboard-fix-web-source.zip": "ea5bbb2ce92468d55248336bd60e45da60f9475f0f61db61e079f0a7efa2af94",
+    "dashboard-fix-android-source.zip": "53bce6aa98b656338640a0693c670768aa7af63cc8ed8eec69f5536b95bd2220",
+    "dashboard-tests.log": "1310a01b608d8d2a1fee2210171ddc7a5b3f35672214ada8686b55dffd36806e",
+    "dashboard.test.cjs": "5eb9a9a073163015b755873805f86ed52eda1e672d744a2bc944824c3101f709",
+    "isolated-web-build.log": "ca9fa0bb249ec918c60051871b93e8fffc54bf8c4552400163969ac259b7f320",
+    "isolated-android-build.log": "384b52c016945f8cdde282d102b48f1eef49d6f8c38fb864a9c4fbe502d55d54",
+    "WEB-DASHBOARD-ACCEPTANCE.json": "3fd7d5bb59d522193358d0c4f95161f37f65f82f86632cf482ae9fc69dd06c8b",
+    "mobile-dashboard-entry.png": "4b4f1686c71c97f6eb642f231b95ab21b4def7917e1b8d94f6994c566dd0256f",
+    "mobile-dashboard-320.png": "1e45f69475172f25e0cea4cd5e06ce5198eec33705d8fc0cb9ddfe9478440522",
+    "prepare_dashboard_fix.py": "712d08c7600e1f89615534343288c63bb878e4462d4ab1004d50f2b7a5461599",
+    "build_isolated.cjs": "0e752e84a0482a74a7d7c15a3b28b4b6158328708e9f2d2359ad6fe3ad660ba2",
+    "seal_dashboard_fix.py": "2ecb52df5e07c367ed0d70590d5260150cb9eda4e67c85c77045ed25763d6453",
+    "create_replacement_package.py": "1648705199bbbd8c615707ef7a48d8935d7375a1c9f4a78631be3bfee0c3ae44",
+    "CURRENT-TARGETS-READONLY.json": "572dae54fb49c07e6a35ac4863fae6ead3aa1248868b38523cd383420f4b883c",
+    "verify_existing_targets_readonly.py": "939b638eee4890947dd394d99ddc4e76814a61da7bef6197500017000ee5f460",
+    "RESUME.md": "92559c1c55c6199a7a41ca4d78cc53fdd6300d3b4ab154bd4a34b764121b548a"
+  }
+}

@@ -1,3 +1,5 @@
+import {DashboardCurrency} from '@/src/currency/DashboardCurrency';
+import {LegacyTzsValuation} from '@/src/currency/LegacyTzsValuation';
 import { MobileFinanceEntry } from "@/src/finance/MobileFinance";
 import {useLanguage} from "@/src/i18n/LanguageProvider";
 import {localizedSearchResult} from "@/src/i18n/presentation";
@@ -1801,6 +1803,7 @@ function CompactFinanceCardHomePreview() {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
+  const [valuationScope,setValuationScope]=useState("");
   const [salesRow, setSalesRow] = useState<SalesSummary>({
     total: 0,
     orders: 0,
@@ -2145,7 +2148,7 @@ function CompactFinanceCardHomePreview() {
         if (rid !== reqIdRef.current) return;
 
         if (salesRes.status === "fulfilled") {
-          setSalesRow(salesRes.value);
+          setSalesRow(salesRes.value);setValuationScope(JSON.stringify([orgId,storeId]));
         } else {
           setSalesRow({
             total: 0,
@@ -2340,6 +2343,7 @@ function CompactFinanceCardHomePreview() {
   );
   return (
     <View style={{ marginTop: 8 }}>
+      
       <View
         style={{
           borderRadius: 24,
@@ -7826,6 +7830,7 @@ const {
     useState<string | null>(null);
 
   const [desktopLoading, setDesktopLoading] = useState(false);
+  const [desktopValuationScope,setDesktopValuationScope]=useState("");
   const [desktopFinanceErr, setDesktopFinanceErr] = useState<string | null>(null);
   const [desktopSales, setDesktopSales] = useState<SalesSummary>({
     total: 0,
@@ -8604,7 +8609,7 @@ const loadDesktopNotifications = useCallback(async () => {
 
       if (seq !== desktopLoadSeqRef.current) return;
 
-      setDesktopSales({
+      setDesktopValuationScope(JSON.stringify([orgId,storeId]));setDesktopSales({
         total: salesTotal,
         orders: salesOrders,
         currency: "TZS",
@@ -8943,6 +8948,7 @@ void loadDesktopNotifications();
             }
       }
     >
+      <DashboardCurrency />
       {!isDesktopWeb ? (
         <HeaderHero
           activeOrgName={activeOrgName}
