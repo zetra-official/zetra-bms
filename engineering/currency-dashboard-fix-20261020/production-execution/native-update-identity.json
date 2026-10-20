@@ -1,0 +1,13 @@
+{
+  "expectedUpdateId": "01a1592b-2ee1-7ed9-ac55-fb2b9185776c",
+  "expectedUpdateIdObservedInNativeUpdatesLog": false,
+  "nativeEvents": [
+    "10-20 15:04:11.934 13732 13760 I dev.expo.updates: {\"timestamp\":1792497851934,\"message\":\"UpdatesController onBackgroundUpdateFinished: No update available\",\"code\":\"NoUpdatesAvailable\",\"level\":\"info\"}",
+    "10-20 15:04:11.934 13732 13760 I dev.expo.updates: {\"timestamp\":1792497851934,\"message\":\"ErrorRecovery: remote load status changed: IDLE\",\"code\":\"None\",\"level\":\"info\"}"
+  ],
+  "package": "com.anonymous.zetrabmsclean",
+  "expectedUpdateIdObservedDuringNativeDownload": true,
+  "backgroundDownloadCompleted": true,
+  "adoptionEvidence": "After subsequent cold start, previously absent Dashboard currency control appeared and four-currency installed-app checks passed. Launch log does not independently expose launched update ID.",
+  "downloadLogSha256": "0a91c8ba008ff53cfeb4172f2bd5a3ac1bf4debc212cc4eed561262b381676ec"
+}

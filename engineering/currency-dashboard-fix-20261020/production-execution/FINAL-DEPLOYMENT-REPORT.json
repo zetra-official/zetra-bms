@@ -1,0 +1,44 @@
+{
+  "status": "DEPLOYED_AND_VERIFIED",
+  "approvedPackage": "ZETRA-CURRENCY-DISPLAY-DASHBOARD-FIX-20261020",
+  "approvedCheckpoint": "6f343efc",
+  "approvedPackageSha256": "532ce4d2a2cad19e5dd6ca8ca3ff5ac1f3f6d6af3b4a4ffd9f767971e6f81d3b",
+  "verifiedUTC": "2026-10-20T12:09:26.578425+00:00",
+  "web": {
+    "status": "SUCCESS",
+    "domain": "https://app.zetra.tz",
+    "deploymentId": "6ad754388b1e0ec9dc9d905d",
+    "actualMobileDesktopDashboard": "PASS",
+    "actualFinance": "PASS"
+  },
+  "android": {
+    "status": "SUCCESS",
+    "channel": "production",
+    "branch": "production",
+    "runtime": "1.0.0",
+    "updateId": "01a1592b-2ee1-7ed9-ac55-fb2b9185776c",
+    "group": "6f0e3704-2774-44c8-afc5-34216997c808",
+    "deliveredBundleAnd46Assets": "PASS",
+    "actualInstalledSamsungDashboard": "PASS",
+    "currencies": [
+      "USD",
+      "KES",
+      "UGX",
+      "EUR"
+    ]
+  },
+  "verifiedFx": "PASS: live BoT/ECB payloads; four-day reference freshness and 24-hour retrieval policy; stale quotes unavailable",
+  "existingTzs": "PASS: canonical originals unchanged and restored on Web/Android",
+  "organizationIsolation": "PASS: unchanged authorized org/store guards and existing focused tests; production smoke used one authenticated organization, not a second-tenant penetration test",
+  "rollback": {
+    "ready": true,
+    "webDeployment": "6ad49c64c2acd6e0352f242f",
+    "androidRepublishGroup": "9ae993b5-1566-41ea-821c-3cc94dce0151",
+    "executed": false
+  },
+  "sql": [],
+  "financialWrites": false,
+  "activation": false,
+  "catalogPreserved": true,
+  "sourceScope": "Exact sealed approved artifacts only; no tax, unfinished financial contracts or unrelated source included"
+}

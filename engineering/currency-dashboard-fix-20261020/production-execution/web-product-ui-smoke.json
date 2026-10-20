@@ -1,0 +1,41 @@
+{
+  "status": "PASS",
+  "deploymentId": "6ad754388b1e0ec9dc9d905d",
+  "actualAuthenticatedProductionUI": true,
+  "dashboard": {
+    "mobileViewport": [
+      390,
+      844
+    ],
+    "desktopViewport": [
+      1440,
+      1000
+    ],
+    "mobileCurrencies": [
+      "USD",
+      "KES",
+      "UGX",
+      "EUR"
+    ],
+    "desktopCurrencies": [
+      "USD"
+    ],
+    "originalRestored": true,
+    "stockOriginalTZS": "114908000",
+    "stockUSD": "43598.63",
+    "scope": "authorized selected store"
+  },
+  "finance": {
+    "salesOriginalTZS": "31250",
+    "salesUSD": "11.86",
+    "stockOriginalTZS": "290086508",
+    "stockUSD": "110065.21",
+    "originalRestored": true
+  },
+  "source": "BOT_REFERENCE",
+  "effectiveDate": "2026-10-20",
+  "retrievedUTC": "2026-10-20T11:55:02.059Z",
+  "tenantIsolation": "Existing tested scope guards unchanged; live session exposes one organization only",
+  "financialWrites": false,
+  "sql": []
+}

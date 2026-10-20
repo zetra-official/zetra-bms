@@ -1,0 +1,50 @@
+{
+  "status": "PASS",
+  "stage": "production",
+  "checkedAt": "2026-10-20T11:50:20.523Z",
+  "scope": "Real deployed public FX feeds with exact synthetic calculations; no database/auth/financial writes",
+  "bot": {
+    "effectiveDate": "2026-10-20",
+    "sha256": "af78558a1f688710f4c79563f19b5fc1a80870cdeb61c382b26f1475237b640f"
+  },
+  "ecb": {
+    "effectiveDate": "2026-10-19",
+    "sha256": "02aaddcdcd7b76106eae23f0aedbc7c63d4f61b5f92aafb152c6a5fef09b1580"
+  },
+  "results": [
+    {
+      "currency": "USD",
+      "amount": "94.86",
+      "status": "CONVERTED"
+    },
+    {
+      "currency": "KES",
+      "amount": "12326.44",
+      "status": "CONVERTED"
+    },
+    {
+      "currency": "UGX",
+      "amount": "395070",
+      "status": "CONVERTED"
+    },
+    {
+      "currency": "EUR",
+      "amount": "84.50",
+      "status": "CONVERTED"
+    },
+    {
+      "currency": "JPY",
+      "amount": "15018",
+      "status": "CONVERTED"
+    },
+    {
+      "currency": "KWD",
+      "amount": "29.220",
+      "status": "CONVERTED"
+    }
+  ],
+  "ecbUsdToEur": "222717.15",
+  "originalPreserved": true,
+  "fourDayAnd24HourPolicy": "PASS",
+  "postingAllowed": false
+}

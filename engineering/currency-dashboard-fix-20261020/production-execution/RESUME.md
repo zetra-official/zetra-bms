@@ -1,0 +1,1 @@
+Global Currency replacement deployment COMPLETE and verified. Read FINAL-DEPLOYMENT-REPORT.md and JSON. Approved source checkpoint6f343efc remains intact. No further publication or financial activation pending. Preserve unrelated dirty work and private evidence. This deployment checkpoint adds tooling and sanitized evidence only.

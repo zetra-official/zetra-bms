@@ -1,0 +1,22 @@
+{
+  "status": "PASS",
+  "package": "ZETRA-CURRENCY-DISPLAY-DASHBOARD-FIX-20261020",
+  "approvedCheckpoint": "6f343efc",
+  "approvalSha256": "532ce4d2a2cad19e5dd6ca8ca3ff5ac1f3f6d6af3b4a4ffd9f767971e6f81d3b",
+  "webPrevious": "6ad49c64c2acd6e0352f242f",
+  "androidBefore": {
+    "channel": "production",
+    "branch": "production",
+    "latestAndroid": [
+      {
+        "id": "01a14bd2-bbe2-7d84-b0cd-154911b0a21e",
+        "group": "9ae993b5-1566-41ea-821c-3cc94dce0151",
+        "runtimeVersion": "1.0.0",
+        "createdAt": "2026-10-17T21:44:24.290Z"
+      }
+    ]
+  },
+  "rollbackReady": true,
+  "sql": [],
+  "financialWrites": false
+}
