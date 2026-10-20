@@ -1,0 +1,195 @@
+Browser tab: 7, Title: "ZETRA BMS", URL: "http://127.0.0.1:55650/settings/business-statement".
+1 AXWebArea ZETRA BMS, URL: 127.0.0.1:55650/settings/business-statement
+	2 container
+		3 container
+			4 text Z
+			5 text ZETRA BMS
+			6 text Business Management System
+		7 container
+			61 text 
+			62 text Home
+			63 text 
+			64 text POS / Sell
+			65 text 
+			66 text Products
+			67 text 
+			68 text Inventory
+			69 text 
+			70 text Customers (CRM)
+			71 text 
+			72 text Credit
+			73 text 
+			74 text Expenses
+			75 text 
+			76 text Finance
+			77 text 
+			78 text Reports
+			79 text 
+			80 text Stores
+			81 text 
+			82 text AI Assistant
+			83 text NEW
+			84 text 
+			85 text More
+		33 container
+			34 text BUSINESS SHORTCUTS
+			35 container
+				36 text 
+				37 text Business Position
+				38 text 
+			39 container
+				40 text 
+				41 text Business Debts
+				42 text 
+			43 container
+				44 text 
+				45 text Incoming Stock
+				46 text 
+			86 container
+				87 text 
+				88 text CURRENT ORGANIZATION
+				89 text SYNTHETIC ORG 1
+				90 text 
+			91 container
+				92 text 
+				93 text CURRENT STORE
+				94 text Synthetic Store 1
+				95 text 
+			57 text 
+			58 container
+				59 text SYNTHETIC ORG 1 OWNER
+			60 text 
+		96 container
+			97 container
+				98 text 
+				99 container
+					100 text Business Statement SYNTHETIC ORG 1  •  Synthetic Store 1  •  owner ONLINE
+				218 text Current-rate valuation · USD · BOT_REFERENCE · Effective 2026-10-20 · Retrieved 2026-10-20T16:25:32.585Z · Reference rate, not bank buy/sell rate · Original TZS records unchanged
+				219 button Display currency
+					220 container
+						221 text Currency ·  USD  ▾
+				101 text Range
+				102 container
+					103 text Month
+					104 text Year
+					105 text Custom
+				106 button Refresh Statement
+					107 text Refresh Statement
+				109 text Statement Summary (This Month) Period: This Month (10/1/2026, 12:00:00 AM → 10/20/2026, 11:59:59 PM)
+				110 container
+					111 text TOTAL SALES 94.78 USD
+				112 container
+					113 text COGS 0.00 USD Cost of Goods Sold
+				114 container
+					115 text GROSS PROFIT 94.78 USD Sales - COGS
+				116 container
+					117 text TOTAL EXPENSES 3.79 USD
+				118 container
+					119 text NET PROFIT 53.08 USD Gross Profit - Expenses
+				120 container
+					121 text PROFIT MARGIN 56.0%
+				122 container
+					123 text EXPENSE RATIO 4.0%
+				124 container
+					125 text AVERAGE SALE VALUE 94.78 USD
+				126 container
+					127 text STOCK INVESTMENT DIFFERENCE 94.78 USD Sales - Goods Purchased
+				128 container
+					129 text CUSTOMER OUTSTANDING BALANCE 0.00 USD Balance / customer credit
+				130 container
+					131 text EXPENSE COUNT 0
+				132 container
+					133 text SALES COUNT 1
+				134 container
+					135 text TOTAL QTY SOLD 0
+				136 text Stock / Goods Purchased
+				137 container
+					138 text TOTAL GOODS PURCHASED 0.00 USD Goods purchased
+				139 container
+					140 text PURCHASE ORDERS 0
+				141 container
+					142 text TOTAL ITEMS PURCHASED 0
+				143 container
+					144 text OUTSTANDING ON PERIOD PURCHASES 0.00 USD Current unpaid balance on purchases in this period
+				145 text Capital Recovery Statement
+				146 container
+					147 text INCOME 0.00 USD
+				148 container
+					149 text COST 0.00 USD
+				150 container
+					151 text ASSET 0.00 USD
+				152 container
+					153 text NET POSITION + 0.00 USD Income - Cost
+				154 text RECOVERY RECORDS
+				155 text 0
+				156 text Sales Payments
+				157 container
+					158 text CASH SALES 94.78 USD Paid sales before expenses
+				159 container
+					160 text MOBILE SALES 0.00 USD Paid sales before expenses
+				161 container
+					162 text BANK SALES 0.00 USD Paid sales before expenses
+				163 container
+					164 text OTHER SALES 0.00 USD Paid sales before expenses
+				165 container
+					166 text TOTAL SALES PAID 94.78 USD Cash + Mobile + Bank + Other
+				167 container
+					168 text PERIOD OUTSTANDING CREDIT 0.00 USD Credit balance from sales in this period
+				169 text Credit Collections
+				170 container
+					171 text CASH COLLECTIONS 0.00 USD
+				172 container
+					173 text MOBILE COLLECTIONS 0.00 USD
+				174 container
+					175 text BANK COLLECTIONS 0.00 USD
+				176 container
+					177 text OTHER COLLECTIONS 0.00 USD
+				178 container
+					179 text TOTAL CREDIT COLLECTIONS 0.00 USD 0 payment(s) received
+				180 container
+					181 text GROSS MONEY RECEIVED 94.78 USD Sales paid + Credit collections
+				182 text Expenses By Payment Channel
+				183 container
+					184 text CASH EXPENSES 3.79 USD
+				185 container
+					186 text MOBILE EXPENSES 0.00 USD
+				187 container
+					188 text BANK EXPENSES 0.00 USD
+				189 container
+					190 text OTHER EXPENSES 0.00 USD
+				191 container
+					192 text TOTAL EXPENSES 3.79 USD 0 expense(s)
+				193 text Money In After Expenses
+				194 container
+					195 text CASH IN 90.99 USD Sales + collections - cash expenses
+				196 container
+					197 text MOBILE IN 0.00 USD Sales + collections - mobile expenses
+				198 container
+					199 text BANK IN 0.00 USD Sales + collections - bank expenses
+				200 container
+					201 text OTHER IN 0.00 USD Sales + collections - other expenses
+				202 container
+					203 text TOTAL MONEY IN 90.99 USD After expenses by payment channel
+				204 container
+					205 text TOTAL QTY SOLD 0
+				206 text Statement Actions
+				207 container
+					208 text Statement Ref: BST-SYNTHE-SYNTHE-MONTH-20261001-20261020
+				209 button Share Statement PDF
+					210 text Share Statement PDF
+				211 text This statement shows sales, expenses, net profit, payment breakdown and outstanding balances for the selected period.
+				212 text Capital Recovery Records
+				213 text No capital recovery records found.
+				214 text Recent Sales In Statement
+				222 container
+					223 text Sale 8d9f44c3
+				224 container
+					225 text When: 10/20/2026, 12:00:00 PM
+				226 container
+					227 text Qty: 0 • Amount: 94.78 USD
+				228 container
+					229 text Method: CASH
+				216 text Recent Expenses In Statement
+				217 text No expenses found.
+
+The focused UI element is 1 AXWebArea ZETRA BMS, URL: 127.0.0.1:55650/settings/business-statement

@@ -1,0 +1,4665 @@
+--- a/app/(tabs)/index.tsx
++++ b/app/(tabs)/index.tsx
+@@ -1,3 +1,5 @@
++import {PreferredRateNote} from '@/src/currency/PreferredDisplay';
++import {usePreferredDisplayMoney} from '@/src/currency/PreferredDisplay';
+ import {DashboardCurrency} from '@/src/currency/DashboardCurrency';
+ import {LegacyTzsValuation} from '@/src/currency/LegacyTzsValuation';
+ import { MobileFinanceEntry } from "@/src/finance/MobileFinance";
+@@ -715,7 +717,6 @@
+               color: UI.text,
+               letterSpacing: 0.1,
+             }}
+-            numberOfLines={1}
+           >
+             ZETRA BMS
+           </Text>
+@@ -727,7 +728,6 @@
+               marginTop: 1,
+               fontSize: 10,
+             }}
+-            numberOfLines={1}
+           >
+             {isCashier
+               ? uiText("Cashier Dashboard")
+@@ -735,6 +735,7 @@
+           </Text>
+         </View>
+ 
++        <View style={{marginHorizontal:6}}><DashboardCurrency compact /></View>
+         <View
+           style={{
+             alignItems: "flex-end",
+@@ -808,8 +809,7 @@
+                 letterSpacing: 0.35,
+                 marginTop: 2,
+               }}
+-              numberOfLines={1}
+-            >
++              >
+               {headerDateLabel}
+             </Text>
+           ) : null}
+@@ -859,8 +859,7 @@
+                 fontWeight: "900",
+                 fontSize: 9,
+               }}
+-              numberOfLines={1}
+-            >
++              >
+               {(String((activeOrgName ?? uiText("Workspace"))).trim() || uiText("Workspace"))}
+             </Text>
+ 
+@@ -889,8 +888,7 @@
+                 fontWeight: "900",
+                 fontSize: 9,
+               }}
+-              numberOfLines={1}
+-            >
++              >
+               {(String((activeOrgName ?? uiText("Workspace"))).trim() || uiText("Workspace"))}
+             </Text>
+           </View>
+@@ -1724,6 +1722,8 @@
+   return <MobileFinanceEntry text={uiText} onOpen={openFinance} />;
+ }
+ function CompactFinanceCardHomePreview() {
++
++
+  const systemText = useSystemMessageText();
+  const uiText = useCommonText();
+   const router = useRouter();
+@@ -2265,13 +2265,14 @@
+     void load({ silent: true });
+   }, !!orgId && !!storeId, AUTO_REFRESH_MS);
+ 
++ const preferredMoney=usePreferredDisplayMoney(orgId,valuationScope===JSON.stringify([orgId,storeId])&&!loading);
+   const fmtHomeMoney = useCallback(
+     (n: number) =>
+-      formatMoney(n, {
++      preferredMoney(n, {
+         currency: displayCurrency,
+         locale: displayLocale,
+       }).replace(/\s+/g, " "),
+-    [displayCurrency, displayLocale]
++    [displayCurrency, displayLocale,preferredMoney]
+   );
+ 
+   const expenseBreakdownTotal =
+@@ -2734,6 +2735,8 @@
+ }
+ 
+ function CompactClubRevenueCardHomePreview({ onOpen }: { onOpen: () => void }) {
++ const preferredMoney=usePreferredDisplayMoney();
++
+  const systemText = useSystemMessageText();
+  const uiText=useCommonText();
+   const { width } = useWindowDimensions();
+@@ -2827,11 +2830,11 @@
+     void load();
+   }, !!storeId, AUTO_REFRESH_MS);
+ 
+-  const revenue = formatMoney(toNum(row?.revenue), {
++  const revenue = preferredMoney(toNum(row?.revenue), {
+     currency: displayCurrency,
+     locale: displayLocale,
+   }).replace(/\s+/g, " ");
+-  const paid = formatMoney(toNum(row?.paid_revenue), {
++  const paid = preferredMoney(toNum(row?.paid_revenue), {
+     currency: displayCurrency,
+     locale: displayLocale,
+   }).replace(/\s+/g, " ");
+@@ -2859,6 +2862,8 @@
+ }
+ 
+ function CompactStockValueCardHomePreview() {
++ const preferredMoney=usePreferredDisplayMoney();
++
+  const systemText = useSystemMessageText();
+  const uiText = useCommonText();
+   const router = useRouter();
+@@ -3014,11 +3019,11 @@
+     void load();
+   }, !!orgId && !!storeId, AUTO_REFRESH_MS);
+ 
+-  const onHand = formatMoney(toNum(row?.stock_on_hand_value), {
++  const onHand = preferredMoney(toNum(row?.stock_on_hand_value), {
+     currency: displayCurrency,
+     locale: displayLocale,
+   }).replace(/\s+/g, " ");
+-  const stockIn = formatMoney(toNum(row?.stock_in_value), {
++  const stockIn = preferredMoney(toNum(row?.stock_in_value), {
+     currency: displayCurrency,
+     locale: displayLocale,
+   }).replace(/\s+/g, " ");
+@@ -4844,15 +4849,17 @@
+   summary: CapitalRecoverySummaryRow;
+   canSeeCapitalSecrets: boolean;
+ }) {
++ const preferredMoney=usePreferredDisplayMoney();
++
+  const systemText = useSystemMessageText();
+  const uiText = useCommonText();
+   const fmt = useCallback(
+     (n: number) =>
+-      formatMoney(n, {
++      preferredMoney(n, {
+         currency: "TZS",
+         locale: "en-TZ",
+       }).replace(/\s+/g, " "),
+-    []
++    [preferredMoney]
+   );
+ 
+   return (
+@@ -5066,6 +5073,8 @@
+   reloadKey?: number;
+   canSeeCapitalSecrets: boolean;
+ }) {
++ const preferredMoney=usePreferredDisplayMoney();
++
+  const systemText = useSystemMessageText();
+  const uiText=useCommonText();
+   const [loading, setLoading] = useState(false);
+@@ -5167,11 +5176,11 @@
+   );
+   const fmt = useCallback(
+     (n: number) =>
+-      formatMoney(n, {
++      preferredMoney(n, {
+         currency: "TZS",
+         locale: "en-TZ",
+       }).replace(/\s+/g, " "),
+-    []
++    [preferredMoney]
+   );
+ 
+   const report = useMemo(() => {
+@@ -7020,7 +7029,7 @@
+           color={desktopGreeting.color}
+         />
+ 
+-        <View style={{ flex: 1 }}>
++        <View style={{ flex: 1, minWidth:0, flexDirection:"row", alignItems:"center", gap:12, flexWrap:"wrap" }}>
+           <Text
+             style={{
+               color: "#0F172A",
+@@ -7030,6 +7039,7 @@
+           >
+             {desktopGreeting.text}
+           </Text>
++          <DashboardCurrency compact />
+         </View>
+ 
+         {/* DESKTOP SUBSCRIPTION STATUS */}
+@@ -7722,6 +7732,8 @@
+ }
+ 
+ export default function HomeScreen() {
++
++
+  const systemText = useSystemMessageText();
+  const uiText = useCommonText();
+   const router = useRouter();
+@@ -7996,13 +8008,14 @@
+   const moneyRefreshRef = useRef<null | (() => Promise<any> | any)>(null);
+   moneyRefreshRef.current = moneyPrefs.refresh;
+ 
++ const preferredMoney=usePreferredDisplayMoney(orgId,desktopValuationScope===JSON.stringify([orgId,String(activeStoreId??'').trim()])&&!desktopLoading);
+   const desktopFmtMoney = useCallback(
+     (n: number) =>
+-      formatMoney(n, {
++      preferredMoney(n, {
+         currency: moneyPrefs.currency || "TZS",
+         locale: moneyPrefs.locale || "en-TZ",
+       }).replace(/\s+/g, " "),
+-    [moneyPrefs.currency, moneyPrefs.locale]
++    [moneyPrefs.currency, moneyPrefs.locale,preferredMoney]
+   );
+ 
+   const loadCapitalRecoverySummary = useCallback(async () => {
+@@ -8945,7 +8958,7 @@
+             }
+       }
+     >
+-      <DashboardCurrency />
++
+       {!isDesktopWeb ? (
+         <HeaderHero
+           activeOrgName={activeOrgName}
+@@ -8972,6 +8985,8 @@
+           }
+         />
+       ) : null}
++
++<PreferredRateNote compact />
+ 
+ {!isCashier && !isDesktopWeb && !isCapitalRecoveryStore ? (
+   <SubscriptionExpiryHomeStrip
+--- a/app/(tabs)/products.tsx
++++ b/app/(tabs)/products.tsx
+@@ -1,3 +1,5 @@
++import {PreferredRateNote} from '@/src/currency/PreferredDisplay';
++import {usePreferredDisplayMoney} from '@/src/currency/PreferredDisplay';
+ import {indexCatalog, searchCatalog} from "@/src/search/catalogSearch";
+ import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+ import {useCommonText} from "@/src/i18n/useCommonText";
+@@ -322,6 +324,8 @@
+ }
+ 
+ export default function ProductsTabScreen() {
++ const preferredMoney=usePreferredDisplayMoney();
++
+  const systemText = useSystemMessageText();
+  const uiText=useCommonText();
+   const { width } = useWindowDimensions();
+@@ -1693,7 +1697,7 @@
+   };
+ 
+   return (
+-    <Screen scroll>
++    <Screen scroll><PreferredRateNote />
+       <View style={{ gap: 6 }}>
+   <Text style={{ fontSize: isDesktopWeb ? 25 : 30, fontWeight: "900", color: theme.colors.text }}>
+     {uiText("Products")}</Text>
+@@ -3459,7 +3463,7 @@
+                         numberOfLines={1}
+                       >
+                         {Number.isFinite(cp)
+-                          ? money.fmt(cp)
++                          ? preferredMoney(cp)
+                           : "—"}
+                       </Text>
+                     )}
+@@ -3476,7 +3480,7 @@
+                       }}
+                       numberOfLines={1}
+                     >
+-                      {sp > 0 ? money.fmt(sp) : "—"}
++                      {sp > 0 ? preferredMoney(sp) : "—"}
+                     </Text>
+ 
+                     {/* ACTIONS */}
+@@ -3943,7 +3947,7 @@
+           >
+             {uiText("Selling Price:")}{" "}
+             <Text style={{ color: theme.colors.text }}>
+-              {sp > 0 ? money.fmt(sp) : "—"}
++              {sp > 0 ? preferredMoney(sp) : "—"}
+             </Text>
+           </Text>
+ 
+@@ -3957,7 +3961,7 @@
+             >
+               {uiText("Cost Price:")}{" "}
+               <Text style={{ color: theme.colors.text }}>
+-                {Number.isFinite(cp) ? money.fmt(cp) : "—"}
++                {Number.isFinite(cp) ? preferredMoney(cp) : "—"}
+               </Text>
+             </Text>
+           )}</View>
+--- a/app/(tabs)/sales/index.tsx
++++ b/app/(tabs)/sales/index.tsx
+@@ -1,3 +1,4 @@
++import {usePreferredDisplayMoney} from '@/src/currency/PreferredDisplay';
+ import {LegacyTzsValuation} from '@/src/currency/LegacyTzsValuation';
+ import {consumeSavedCart} from "../../../src/proforma/savedCart";
+ import {ProformaOrdersAction} from "../../../src/proforma/ProformaOrdersAction";
+@@ -410,6 +411,8 @@
+    Screen
+ ========================= */
+ export default function SalesHomeScreen() {
++ const preferredMoney=usePreferredDisplayMoney();
++
+  const systemText = useSystemMessageText();
+  const uiText=useCommonText();
+   const router = useRouter();
+@@ -511,8 +514,8 @@
+ 
+   const fmt = useCallback(
+     (n: number) =>
+-      formatMoney(n, { currency: displayCurrency, locale: displayLocale }).replace(/\s+/g, " "),
+-    [displayCurrency, displayLocale]
++      preferredMoney(n, { currency: displayCurrency, locale: displayLocale }).replace(/\s+/g, " "),
++    [displayCurrency, displayLocale,preferredMoney]
+   );
+ 
+   const bumpRecent = useCallback((productId: string) => {
+@@ -2004,12 +2007,12 @@
+         ) : null}
+       </View>
+ 
+-      <ProformaOrdersAction organizationId={orgId} storeId={activeStoreId??null}/>
++      <View testID="pos-proforma-currency-row" style={{flexDirection:"row",gap:8,alignItems:"stretch"}}><View style={{flex:1,minWidth:0}}><ProformaOrdersAction organizationId={orgId} storeId={activeStoreId??null} compact/></View><View style={{flex:1,minWidth:0}}>{orgId && <LegacyTzsValuation organizationId={orgId} showRateNote={false} period="Current sale preview · display only" rows={[{label:"Sale total",amount:cartTotalAmount}]}/>}</View></View>
+       {/* Expenses na Profit zimeondolewa hapa ili Sales ibaki POS safi.
+           Expenses sasa iko kwenye bottom tab yake. Profit ibaki Finance. */}
+     </View>
+   );
+-}, [headerSubtitle, isDesktopWeb, router, statusLine, todayLabel, uiText, activeStoreId, orgId]);
++}, [headerSubtitle, isDesktopWeb, router, statusLine, todayLabel, uiText, activeStoreId, orgId, cartTotalAmount]);
+ 
+   const QuickBar = useMemo(() => {
+     return (
+@@ -3152,7 +3155,7 @@
+           gap: 10,
+         }}
+       >
+-        {TopBar}{orgId && <LegacyTzsValuation organizationId={orgId} period="Current sale preview · display only" rows={[{label:"Sale total",amount:cartTotalAmount}]}/>}
++        {TopBar}
+         {!isCashier && !isDesktopWeb ? QuickBar : null}
+       </View>
+ 
+--- a/app/(tabs)/settings/business-statement.tsx
++++ b/app/(tabs)/settings/business-statement.tsx
+@@ -1,3 +1,5 @@
++import {usePreferredRateDescription} from '@/src/currency/PreferredDisplay';
++import {usePreferredDisplayMoney} from '@/src/currency/PreferredDisplay';
+ import {LegacyTzsValuation} from '@/src/currency/LegacyTzsValuation';
+ import {useDocumentText} from "@/src/i18n/useDocumentText";
+ import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+@@ -745,6 +747,9 @@
+   }
+ }
+ export default function BusinessStatementScreen() {
++
++ const displayRateDescription=usePreferredRateDescription();
++
+  const {documentText, documentLocale} = useDocumentText();
+  const systemText = useSystemMessageText();
+  const uiText=useCommonText();
+@@ -753,7 +758,7 @@
+     useOrg() as any;
+ 
+   const money = useOrgMoneyPrefs(activeOrgId);
+-  const fmtMoney = useCallback((n: number) => money.fmt(Number(n || 0)), [money]);
++
+ 
+   const netInfo = useNetInfo();
+   const isOnline = !!(netInfo.isConnected && netInfo.isInternetReachable !== false);
+@@ -860,6 +865,8 @@
+     };
+   }, [customFrom, customTo, range]);
+ 
++ const preferredMoney=usePreferredDisplayMoney(String(activeOrgId??''),valuationScope===JSON.stringify([activeOrgId,activeStoreId,resolvedRange?.from,resolvedRange?.to])&&!loading&&!refreshing&&!err);
++  const fmtMoney = useCallback((n: number) => preferredMoney(Number(n || 0)), [money,preferredMoney]);
+   const customRangeError = useMemo(() => {
+     if (range !== "custom") return null;
+ 
+@@ -1547,7 +1554,7 @@
+   </style>
+ </head>
+ 
+-<body>
++<body><p style="font-size:10px;color:#64748b">${escapeHtml(displayRateDescription)}</p>
+   <div class="page">
+     <div class="header">
+       <div class="brand">
+@@ -1854,7 +1861,7 @@
+     salesChannels.mobile,
+     salesChannels.other,
+     salesChannels.total,
+-  ]);
++  ,preferredMoney,displayRateDescription]);
+ 
+   const handleSharePdf = useCallback(async () => {
+     if (sharingBusy) return;
+--- a/app/_layout.tsx
++++ b/app/_layout.tsx
+@@ -892,10 +892,10 @@
+ 
+ export default function RootLayout() {
+   return (
++    <OrgProvider>
+     <LanguageProvider>
+-    <OrgProvider>
+       <AuthGate  />
++    </LanguageProvider>
+     </OrgProvider>
+-    </LanguageProvider>
+   );
+ }--- a/app/finance/business-debts.tsx
++++ b/app/finance/business-debts.tsx
+@@ -1,3 +1,4 @@
++import {usePreferredDisplayMoney} from '@/src/currency/PreferredDisplay';
+ import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+ import {useCommonText} from "@/src/i18n/useCommonText";
+ // app/finance/business-debts.tsx
+@@ -186,7 +187,9 @@
+   return `Due in ${diff} days`;
+ }
+ 
+-export default function BusinessDebtsScreen() {
++export default function BusinessDebtsScreen() {
++ const preferredMoney=usePreferredDisplayMoney();
++
+  const systemText = useSystemMessageText();
+  const uiText=useCommonText();
+   const insets = useSafeAreaInsets();
+@@ -212,11 +215,11 @@
+ 
+   const fmt = useCallback(
+     (n: number) =>
+-      formatMoney(n || 0, {
++      preferredMoney(n || 0, {
+         currency: money.currency || "TZS",
+         locale: money.locale || "en-TZ",
+       }).replace(/\s+/g, " "),
+-    [money.currency, money.locale]
++    [money.currency, money.locale,preferredMoney]
+   );
+ 
+   const [loading, setLoading] = useState(false);
+--- a/app/finance/business-position.tsx
++++ b/app/finance/business-position.tsx
+@@ -1,3 +1,4 @@
++import {usePreferredDisplayMoney} from '@/src/currency/PreferredDisplay';
+ import {useDocumentText} from "@/src/i18n/useDocumentText";
+ import {useCommonText} from "@/src/i18n/useCommonText";
+ // app/finance/business-position.tsx
+@@ -156,7 +157,9 @@
+   };
+ }
+ 
+-export default function BusinessPositionScreen() {
++export default function BusinessPositionScreen() {
++ const preferredMoney=usePreferredDisplayMoney();
++
+  const {documentText, documentLocale} = useDocumentText();
+  const uiText=useCommonText();
+   const router = useRouter();
+@@ -175,11 +178,11 @@
+   const money = useOrgMoneyPrefs(orgId);
+   const fmt = useCallback(
+     (n: number) =>
+-      formatMoney(n, {
++      preferredMoney(n, {
+         currency: money.currency || "TZS",
+         locale: money.locale || "en-TZ",
+       }).replace(/\s+/g, " "),
+-    [money.currency, money.locale]
++    [money.currency, money.locale,preferredMoney]
+   );
+ 
+   const [loading, setLoading] = useState(false);
+--- a/app/finance/history.tsx
++++ b/app/finance/history.tsx
+@@ -1,3 +1,4 @@
++import {usePreferredDisplayMoney} from '@/src/currency/PreferredDisplay';
+ import {LegacyTzsValuation} from '@/src/currency/LegacyTzsValuation';
+ import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+ import {useCommonText} from "@/src/i18n/useCommonText";
+@@ -520,6 +521,8 @@
+ }
+ 
+ export default function FinanceHistoryScreen() {
++
++
+  const systemText = useSystemMessageText();
+  const uiText=useCommonText();
+   const router = useRouter();
+@@ -592,6 +595,8 @@
+ 
+ const [errorText, setErrorText] =
+   useState("");
++
++ const preferredMoney=usePreferredDisplayMoney(orgId??undefined,valuationScope===JSON.stringify([orgId,scope,selectedStoreId,fromYMD,toYMD])&&!loading&&!refreshing&&!errorText);const money=preferredMoney;
+ 
+ type QuickRange =
+   | 1
+@@ -2414,7 +2419,7 @@
+ 
+       stockGroups,
+       canSeeExpenses,
+-    ]);
++    ,preferredMoney]);
+ 
+   const deltaSales =
+     previous
+--- a/app/finance/live.tsx
++++ b/app/finance/live.tsx
+@@ -1,3 +1,4 @@
++import {usePreferredDisplayMoney} from '@/src/currency/PreferredDisplay';
+ import {LegacyTzsValuation} from '@/src/currency/LegacyTzsValuation';
+ import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+ import {useCommonText} from "@/src/i18n/useCommonText";
+@@ -336,6 +337,8 @@
+ }
+ 
+ export default function FinanceLiveScreen() {
++
++
+  const systemText = useSystemMessageText();
+  const uiText=useCommonText();
+   const router = useRouter();
+@@ -368,14 +371,6 @@
+   const displayCurrency = money.currency || "TZS";
+   const displayLocale = money.locale || "en-TZ";
+ 
+-  const fmtMoney = useCallback(
+-    (n: number) =>
+-      formatMoney(n, {
+-        currency: displayCurrency,
+-        locale: displayLocale,
+-      }).replace(/\s+/g, " "),
+-    [displayCurrency, displayLocale]
+-  );
+ 
+   const storeOptions = useMemo(() => {
+     const rows = (org.stores ?? [])
+@@ -415,6 +410,16 @@
+   const [loading, setLoading] = useState(false);
+   const [err, setErr] = useState<string | null>(null);
+   const [rows, setRows] = useState<StoreLiveRow[]>([]);const [valuationScope,setValuationScope]=useState("");
++
++ const preferredMoney=usePreferredDisplayMoney(orgId,valuationScope===JSON.stringify([orgId,scope,selectedStoreId])&&!loading&&!err);
++  const fmtMoney = useCallback(
++    (n: number) =>
++      preferredMoney(n, {
++        currency: displayCurrency,
++        locale: displayLocale,
++      }).replace(/\s+/g, " "),
++    [displayCurrency, displayLocale,preferredMoney]
++  );
+ 
+   const reqRef = useRef(0);
+ 
+--- a/app/stocks/history.tsx
++++ b/app/stocks/history.tsx
+@@ -1,3 +1,4 @@
++import {usePreferredDisplayMoney} from '@/src/currency/PreferredDisplay';
+ import {LegacyTzsValuation} from '@/src/currency/LegacyTzsValuation';
+ import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+ import {useCommonText} from "@/src/i18n/useCommonText";
+@@ -222,6 +223,8 @@
+ }
+ 
+ export default function StockHistoryScreen() {
++
++
+  const systemText = useSystemMessageText();
+  const uiText=useCommonText();
+   const router = useRouter();
+@@ -249,6 +252,7 @@
+   const [row, setRow] = useState<FinRow | null>(null);const [valuationScope,setValuationScope]=useState("");
+   const [stockInItems, setStockInItems] = useState<StockInItemRow[]>([]);
+ 
++ const preferredMoney=usePreferredDisplayMoney(orgId,valuationScope===JSON.stringify([orgId,scope,storeId,dateFrom,dateTo])&&!loading&&!err);const fmtMoney=preferredMoney;
+   const reqRef = useRef(0);
+ 
+   React.useEffect(() => {
+@@ -491,7 +495,7 @@
+ 
+   const stockInItemsTotalLabel = useMemo(
+     () => fmtMoney(stockInItemsTotal, "TZS").replace(/\s+/g, " "),
+-    [stockInItemsTotal]
++    [stockInItemsTotal,preferredMoney]
+   );
+ 
+   return (
+--- a/src/components/CurrencyPickerAll.tsx
++++ b/src/components/CurrencyPickerAll.tsx
+@@ -29,7 +29,7 @@
+ 
+ function displayLabel(c: CurrencyMeta, locale: string) {
+   const sym = clean(c.symbolNative || c.symbol || "");
+-  const left = sym ? `${sym} ` : "";
++  const left = sym && sym !== c.code ? `${sym} ` : "";
+   return `${left}${c.code} • ${localizedCurrencyName(c.code,locale,c.name)}`;
+ }
+ 
+--- a/src/components/home/business-financial-overview/BusinessFinancialOverview.tsx
++++ b/src/components/home/business-financial-overview/BusinessFinancialOverview.tsx
+@@ -140,6 +140,7 @@
+   storeIds,
+   enabled = true,
+ }: Props) {
++ const [currencyChartWidth,setCurrencyChartWidth]=useState(320);
+  const uiText=useCommonText();
+  const {language}=useLanguage();
+   const [periodMode, setPeriodMode] =
+@@ -768,6 +769,7 @@
+           </View>
+ 
+           <View
++            onLayout={event=>setCurrencyChartWidth(Math.max(100,event.nativeEvent.layout.width-8))}
+             style={{
+               marginTop: 7,
+               marginHorizontal: 1,
+@@ -801,7 +803,7 @@
+                 displayComparison?.previous?.buckets ??
+                 []
+               }
+-              width={320}
++              width={Math.min(320,currencyChartWidth)}
+               height={205}
+               compact
+             />
+--- a/src/components/home/business-financial-overview/FinancialChart.tsx
++++ b/src/components/home/business-financial-overview/FinancialChart.tsx
+@@ -1,1801 +1,1806 @@
+-import {useCommonText} from "@/src/i18n/useCommonText";
+-﻿import React, {
+-  useMemo,
+-} from "react";
+-
+-import {
+-  Platform,
+-  Text,
+-  View,
+-} from "react-native";
+-
+-// RN SVG accepts DOM hover handlers on Web; native retains its existing onPress.
+-const webHover = (enter: () => void, leave: () => void) =>
+-  Platform.OS === "web" ? { onMouseEnter: enter, onMouseLeave: leave } : {};
+-
+-import Svg, {
+-  Circle,
+-  Line,
+-  Path,
+-  Rect,
+-  Text as SvgText,
+-} from "react-native-svg";
+-
+-import type {
+-  FinancialBucketResult,
+-  FinancialMetric,
+-} from "./financialDataEngine";
+-
+-export type FinancialChartMode =
+-  | "DONUT"
+-  | "TREND"
+-  | "BARS";
+-
+-export type FinancialTrendMetric =
+-  | "SALES"
+-  | "EXPENSES"
+-  | "NET_PROFIT";
+-
+-type Props = {
+-  mode: FinancialChartMode;
+-  metric?: FinancialTrendMetric;
+-  total: FinancialMetric;
+-  buckets: FinancialBucketResult[];
+-
+-  /*
+-   * Optional comparison series.
+-   *
+-   * Compact Home chart does not provide this,
+-   * therefore its current behavior remains unchanged.
+-   *
+-   * Premium Full View may provide the verified
+-   * previous-period buckets.
+-   */
+-  previousBuckets?: FinancialBucketResult[];
+-
+-  /*
+-   * Compact Home rendering.
+-   * Keeps premium mini-chart treatment isolated from Full View.
+-   */
+-  compact?: boolean;
+-
+-  width?: number;
+-  height?: number;
+-};
+-
+-const SALES_COLOR =
+-  "#2563EB";
+-
+-const EXPENSE_COLOR =
+-  "#F59E0B";
+-
+-const PROFIT_COLOR =
+-  "#16A34A";
+-
+-const LOSS_COLOR =
+-  "#DC2626";
+-
+-const GRID_COLOR =
+-  "#E2E8F0";
+-
+-const TEXT_COLOR =
+-  "#334155";
+-
+-function finite(
+-  value: unknown
+-) {
+-  const parsed =
+-    Number(value ?? 0);
+-
+-  return Number.isFinite(parsed)
+-    ? parsed
+-    : 0;
+-}
+-
+-function moneyCompact(
+-  value: number
+-) {
+-  const amount =
+-    Math.abs(finite(value));
+-
+-  if (amount >= 1_000_000_000) {
+-    return `${(
+-      amount /
+-      1_000_000_000
+-    ).toFixed(1)}B`;
+-  }
+-
+-  if (amount >= 1_000_000) {
+-    return `${(
+-      amount /
+-      1_000_000
+-    ).toFixed(1)}M`;
+-  }
+-
+-  if (amount >= 1_000) {
+-    return `${(
+-      amount /
+-      1_000
+-    ).toFixed(1)}K`;
+-  }
+-
+-  return Math.round(
+-    amount
+-  ).toLocaleString("en-US");
+-}
+-
+-function moneyFull(
+-  value: number
+-) {
+-  try {
+-    return `TSh ${Math.round(
+-      finite(value)
+-    ).toLocaleString("en-US")}`;
+-  } catch {
+-    return `TSh ${Math.round(
+-      finite(value)
+-    )}`;
+-  }
+-}
+-
+-function polarPoint(
+-  cx: number,
+-  cy: number,
+-  radius: number,
+-  angle: number
+-) {
+-  const radians =
+-    ((angle - 90) *
+-      Math.PI) /
+-    180;
+-
+-  return {
+-    x:
+-      cx +
+-      radius *
+-        Math.cos(radians),
+-    y:
+-      cy +
+-      radius *
+-        Math.sin(radians),
+-  };
+-}
+-
+-function donutArc(
+-  cx: number,
+-  cy: number,
+-  radius: number,
+-  startAngle: number,
+-  endAngle: number
+-) {
+-  const start =
+-    polarPoint(
+-      cx,
+-      cy,
+-      radius,
+-      endAngle
+-    );
+-
+-  const end =
+-    polarPoint(
+-      cx,
+-      cy,
+-      radius,
+-      startAngle
+-    );
+-
+-  const largeArc =
+-    endAngle -
+-      startAngle <=
+-    180
+-      ? 0
+-      : 1;
+-
+-  return [
+-    "M",
+-    start.x,
+-    start.y,
+-    "A",
+-    radius,
+-    radius,
+-    0,
+-    largeArc,
+-    0,
+-    end.x,
+-    end.y,
+-  ].join(" ");
+-}
+-
+-function DonutChart({
+-  total,
+-  width,
+-  height,
+-}: {
+-  total: FinancialMetric;
+-  width: number;
+-  height: number;
+-}) {
+- const uiText = useCommonText();
+-  /*
+-   * Donut is a financial composition view.
+-   *
+-   * We deliberately use absolute magnitudes
+-   * for visual proportions. Negative profit
+-   * is rendered as Loss using red.
+-   */
+-  const profit =
+-    finite(
+-      total.netProfit
+-    );
+-
+-  const values = [
+-    {
+-      key: "sales",
+-      label: "Sales",
+-      value: Math.max(
+-        0,
+-        finite(total.sales)
+-      ),
+-      color: SALES_COLOR,
+-    },
+-    {
+-      key: "expenses",
+-      label: "Expenses",
+-      value: Math.max(
+-        0,
+-        finite(
+-          total.expenses
+-        )
+-      ),
+-      color: EXPENSE_COLOR,
+-    },
+-    {
+-      key: "profit",
+-      label:
+-        profit < 0
+-          ? "Loss"
+-          : "Net Profit",
+-      value: Math.abs(
+-        profit
+-      ),
+-      color:
+-        profit < 0
+-          ? LOSS_COLOR
+-          : PROFIT_COLOR,
+-    },
+-  ];
+-
+-  const sum =
+-    values.reduce(
+-      (acc, item) =>
+-        acc +
+-        item.value,
+-      0
+-    );
+-
+-  const cx =
+-    width / 2;
+-
+-  const cy =
+-    height / 2;
+-
+-  const radius =
+-    Math.min(
+-      width,
+-      height
+-    ) * 0.36;
+-
+-  const strokeWidth =
+-    Math.max(
+-      18,
+-      radius * 0.24
+-    );
+-
+-  let angle = 0;
+-
+-  return (
+-    <View
+-      style={{
+-        width,
+-        height,
+-        alignItems:
+-          "center",
+-        justifyContent:
+-          "center",
+-      }}
+-    >
+-      <Svg
+-        width={width}
+-        height={height}
+-      >
+-        <Circle
+-          cx={cx}
+-          cy={cy}
+-          r={radius}
+-          fill="none"
+-          stroke="#EEF2F7"
+-          strokeWidth={
+-            strokeWidth
+-          }
+-        />
+-
+-        {sum > 0 &&
+-          values.map(
+-            (item) => {
+-              if (
+-                item.value <= 0
+-              ) {
+-                return null;
+-              }
+-
+-              const sweep =
+-                (item.value /
+-                  sum) *
+-                360;
+-
+-              const gap =
+-                Math.min(
+-                  2.5,
+-                  sweep * 0.12
+-                );
+-
+-              const start =
+-                angle +
+-                gap / 2;
+-
+-              const end =
+-                angle +
+-                sweep -
+-                gap / 2;
+-
+-              angle +=
+-                sweep;
+-
+-              if (
+-                end <= start
+-              ) {
+-                return null;
+-              }
+-
+-              return (
+-                <Path
+-                  key={
+-                    item.key
+-                  }
+-                  d={donutArc(
+-                    cx,
+-                    cy,
+-                    radius,
+-                    start,
+-                    end
+-                  )}
+-                  fill="none"
+-                  stroke={
+-                    item.color
+-                  }
+-                  strokeWidth={
+-                    strokeWidth
+-                  }
+-                  strokeLinecap="round"
+-                />
+-              );
+-            }
+-          )}
+-
+-        <SvgText
+-          x={cx}
+-          y={cy - 7}
+-          textAnchor="middle"
+-          fontSize="9"
+-          fontWeight="800"
+-          fill="#64748B"
+-        >
+-          {uiText("BUSINESS")}</SvgText>
+-
+-        <SvgText
+-          x={cx}
+-          y={cy + 10}
+-          textAnchor="middle"
+-          fontSize="13"
+-          fontWeight="900"
+-          fill="#0F172A"
+-        >
+-          {uiText("OVERVIEW")}</SvgText>
+-      </Svg>
+-    </View>
+-  );
+-}
+-
+-function TrendChart({
+-  buckets,
+-  previousBuckets = [],
+-  width,
+-  height,
+-  metric = "SALES",
+-  compact = false,
+-}: {
+-  buckets: FinancialBucketResult[];
+-  previousBuckets?: FinancialBucketResult[];
+-  width: number;
+-  height: number;
+-  metric?: FinancialTrendMetric;
+-  compact?: boolean;
+-}) {
+- const uiText = useCommonText();
+-  /*
+-   * Professional finance chart layout.
+-   *
+-   * Left space is deliberately larger so financial
+-   * values never collide with the plot.
+-   *
+-   * Bottom space is reserved for the time axis.
+-   */
+-  const [hoveredIndex, setHoveredIndex] =
+-    React.useState<number | null>(null);
+-
+-  const [
+-    hoveredPreviousIndex,
+-    setHoveredPreviousIndex,
+-  ] = React.useState<number | null>(null);
+-
+-  const hoveredIsPrevious =
+-    hoveredPreviousIndex !== null;
+-
+-  const activeHoveredIndex =
+-    hoveredIsPrevious
+-      ? hoveredPreviousIndex
+-      : hoveredIndex;
+-
+-  const hoveredBucket =
+-    activeHoveredIndex !== null
+-      ? (
+-          hoveredIsPrevious
+-            ? previousBuckets[
+-                activeHoveredIndex
+-              ]
+-            : buckets[
+-                activeHoveredIndex
+-              ]
+-        ) ?? null
+-      : null;
+-
+-  const left = 58;
+-  const right = 12;
+-  const top = 18;
+-  const bottom = 38;
+-
+-  const plotWidth = Math.max(
+-    1,
+-    width - left - right
+-  );
+-
+-  const plotHeight = Math.max(
+-    1,
+-    height - top - bottom
+-  );
+-
+-  const metricKey:
+-    | "sales"
+-    | "expenses"
+-    | "netProfit" =
+-    metric === "EXPENSES"
+-      ? "expenses"
+-      : metric === "NET_PROFIT"
+-        ? "netProfit"
+-        : "sales";
+-
+-  const metricColor =
+-    metric === "EXPENSES"
+-      ? EXPENSE_COLOR
+-      : metric === "NET_PROFIT"
+-        ? PROFIT_COLOR
+-        : SALES_COLOR;
+-
+-  const values = buckets.map(
+-    (bucket) =>
+-      finite(bucket[metricKey])
+-  );
+-
+-  const previousValues =
+-    previousBuckets.map(
+-      (bucket) =>
+-        finite(bucket[metricKey])
+-    );
+-
+-  const scaleValues = [
+-    ...values,
+-    ...previousValues,
+-  ];
+-
+-  /*
+-   * Financial charts always retain zero.
+-   * Net Profit is allowed to cross below zero.
+-   */
+-  const minValue = Math.min(
+-    0,
+-    ...scaleValues
+-  );
+-
+-  const maxValue = Math.max(
+-    0,
+-    ...scaleValues
+-  );
+-
+-  const rawRange =
+-    maxValue - minValue;
+-
+-  const range = Math.max(
+-    1,
+-    rawRange
+-  );
+-
+-  /*
+-   * Give both ends breathing room.
+-   */
+-  const scalePadding =
+-    range * 0.1;
+-
+-  const scaleMin =
+-    minValue < 0
+-      ? minValue - scalePadding
+-      : 0;
+-
+-  const scaleMax = Math.max(
+-    1,
+-    maxValue + scalePadding
+-  );
+-
+-  const scaleRange = Math.max(
+-    1,
+-    scaleMax - scaleMin
+-  );
+-
+-  const xAt = (
+-    index: number
+-  ) => {
+-    if (buckets.length <= 1) {
+-      return left + plotWidth / 2;
+-    }
+-
+-    return (
+-      left +
+-      (index /
+-        (buckets.length - 1)) *
+-        plotWidth
+-    );
+-  };
+-
+-  const yAt = (
+-    value: number
+-  ) =>
+-    top +
+-    ((scaleMax - finite(value)) /
+-      scaleRange) *
+-      plotHeight;
+-
+-  const makePath = () =>
+-    buckets
+-      .map((bucket, index) => {
+-        const x = xAt(index);
+-        const y = yAt(
+-          bucket[metricKey]
+-        );
+-
+-        return `${
+-          index === 0 ? "M" : "L"
+-        } ${x} ${y}`;
+-      })
+-      .join(" ");
+-
+-  const makePreviousPath = () =>
+-    previousBuckets
+-      .map((bucket, index) => {
+-        /*
+-         * Previous buckets are aligned by position
+-         * with the current comparison buckets.
+-         */
+-        const denominator =
+-          Math.max(
+-            1,
+-            previousBuckets.length - 1
+-          );
+-
+-        const x =
+-          previousBuckets.length <= 1
+-            ? left + plotWidth / 2
+-            : left +
+-              (index / denominator) *
+-                plotWidth;
+-
+-        const y = yAt(
+-          bucket[metricKey]
+-        );
+-
+-        return `${
+-          index === 0 ? "M" : "L"
+-        } ${x} ${y}`;
+-      })
+-      .join(" ");
+-
+-  const zeroY = yAt(0);
+-
+-  /*
+-   * Comparison band:
+-   * fills ONLY the space between Current and Previous.
+-   *
+-   * We intentionally align both series across the same
+-   * horizontal comparison space, then walk Current forward
+-   * and Previous backward to create one closed polygon.
+-   */
+-  const makeComparisonAreaPath = () => {
+-    if (
+-      !buckets.length ||
+-      !previousBuckets.length
+-    ) {
+-      return "";
+-    }
+-
+-    const pointCount = Math.min(
+-      buckets.length,
+-      previousBuckets.length
+-    );
+-
+-    if (pointCount <= 0) {
+-      return "";
+-    }
+-
+-    const xForPoint = (
+-      index: number
+-    ) =>
+-      pointCount <= 1
+-        ? left + plotWidth / 2
+-        : left +
+-          (index /
+-            (pointCount - 1)) *
+-            plotWidth;
+-
+-    const currentPoints =
+-      Array.from(
+-        { length: pointCount },
+-        (_, index) => {
+-          const x = xForPoint(index);
+-          const y = yAt(
+-            buckets[index][metricKey]
+-          );
+-
+-          return `${
+-            index === 0 ? "M" : "L"
+-          } ${x} ${y}`;
+-        }
+-      );
+-
+-    const previousPoints =
+-      Array.from(
+-        { length: pointCount },
+-        (_, reverseIndex) => {
+-          const index =
+-            pointCount -
+-            1 -
+-            reverseIndex;
+-
+-          const x = xForPoint(index);
+-          const y = yAt(
+-            previousBuckets[index][
+-              metricKey
+-            ]
+-          );
+-
+-          return `L ${x} ${y}`;
+-        }
+-      );
+-
+-    return [
+-      ...currentPoints,
+-      ...previousPoints,
+-      "Z",
+-    ].join(" ");
+-  };
+-
+-  /*
+-   * Five readable Y-axis levels.
+-   */
+-  const gridRatios = [
+-    0,
+-    0.25,
+-    0.5,
+-    0.75,
+-    1,
+-  ];
+-
+-  /*
+-   * For 12-month view every month remains visible.
+-   * Short labels keep the axis compact.
+-   */
+-  const shouldShowXLabel = (
+-    index: number
+-  ) => {
+-    if (buckets.length <= 12) {
+-      return true;
+-    }
+-
+-    const step = Math.ceil(
+-      buckets.length / 8
+-    );
+-
+-    return (
+-      index % step === 0 ||
+-      index === buckets.length - 1
+-    );
+-  };
+-
+-  return (
+-    <Svg
+-      width={width}
+-      height={height}
+-    >
+-      {compact && previousBuckets.length > 0 && (
+-        <>
+-          {/* Compact comparison legend */}
+-          <Line
+-            x1={left}
+-            x2={left + 18}
+-            y1="10"
+-            y2="10"
+-            stroke={metricColor}
+-            strokeWidth="3"
+-            strokeLinecap="round"
+-            pointerEvents="none"
+-          />
+-
+-          <SvgText
+-            x={left + 24}
+-            y="13"
+-            fontSize="9.5"
+-            fontWeight="900"
+-            fill="#475569"
+-            pointerEvents="none"
+-          >
+-            {uiText("Current")}</SvgText>
+-
+-          <Line
+-            x1={left + 78}
+-            x2={left + 96}
+-            y1="10"
+-            y2="10"
+-            stroke="#8B5CF6"
+-            strokeWidth="2"
+-            strokeDasharray="6 5"
+-            strokeLinecap="round"
+-            pointerEvents="none"
+-          />
+-
+-          <SvgText
+-            x={left + 102}
+-            y="13"
+-            fontSize="9.5"
+-            fontWeight="900"
+-            fill="#7C3AED"
+-            pointerEvents="none"
+-          >
+-            {uiText("Previous")}</SvgText>
+-        </>
+-      )}
+-
+-      {/* Y GRID + Y VALUES */}
+-      {gridRatios.map(
+-        (ratio) => {
+-          const y =
+-            top +
+-            plotHeight * ratio;
+-
+-          const value =
+-            scaleMax -
+-            scaleRange * ratio;
+-
+-          return (
+-            <React.Fragment
+-              key={`grid-${ratio}`}
+-            >
+-              <Line
+-                x1={left}
+-                x2={width - right}
+-                y1={y}
+-                y2={y}
+-                stroke={
+-                  compact
+-                    ? "#DCE6F3"
+-                    : GRID_COLOR
+-                }
+-                strokeWidth={
+-                  compact ? "0.75" : "1"
+-                }
+-              />
+-
+-              <SvgText
+-                x={left - 8}
+-                y={y + 3}
+-                textAnchor="end"
+-                fontSize={compact ? "10" : "11"}
+-                fontWeight={compact ? "700" : "800"}
+-                fill={compact ? "#64748B" : TEXT_COLOR}
+-              >
+-                {value < 0
+-                  ? `-${moneyCompact(
+-                      Math.abs(value)
+-                    )}`
+-                  : moneyCompact(value)}
+-              </SvgText>
+-            </React.Fragment>
+-          );
+-        }
+-      )}
+-
+-      {/* LEFT Y AXIS */}
+-      <Line
+-        x1={left}
+-        x2={left}
+-        y1={top}
+-        y2={top + plotHeight}
+-        stroke="#CBD5E1"
+-        strokeWidth="1"
+-      />
+-
+-      {/* BOTTOM X AXIS */}
+-      <Line
+-        x1={left}
+-        x2={width - right}
+-        y1={top + plotHeight}
+-        y2={top + plotHeight}
+-        stroke="#CBD5E1"
+-        strokeWidth="1"
+-      />
+-
+-      {/* STRONG ZERO LINE FOR PROFIT/LOSS */}
+-      {scaleMin < 0 && (
+-        <Line
+-          x1={left}
+-          x2={width - right}
+-          y1={zeroY}
+-          y2={zeroY}
+-          stroke="#94A3B8"
+-          strokeWidth="1.25"
+-        />
+-      )}
+-
+-      {buckets.length > 0 && (
+-        <>
+-          {/* CURRENT ↔ PREVIOUS COMPARISON BAND */}
+-          {previousBuckets.length > 0 && (
+-            <Path
+-              d={makeComparisonAreaPath()}
+-              fill={metricColor}
+-              opacity={
+-                compact ? "0.13" : "0.105"
+-              }
+-              stroke="none"
+-              pointerEvents="none"
+-            />
+-          )}
+-
+-          {/* PREVIOUS PERIOD COMPARISON */}
+-          {previousBuckets.length > 0 && (
+-            <Path
+-              d={makePreviousPath()}
+-              fill="none"
+-              stroke={
+-                compact
+-                  ? "#8B5CF6"
+-                  : "#7C3AED"
+-              }
+-              strokeWidth={
+-                compact ? "2.25" : "2.4"
+-              }
+-              strokeDasharray={
+-                compact ? "7 5" : "8 6"
+-              }
+-              strokeLinecap="round"
+-              strokeLinejoin="round"
+-              opacity={
+-                compact ? "0.58" : "0.52"
+-              }
+-              pointerEvents="none"
+-            />
+-          )}
+-
+-          {/* INTERACTIVE PREVIOUS PERIOD POINTS */}
+-          {previousBuckets.map(
+-            (bucket, index) => {
+-              const denominator =
+-                Math.max(
+-                  1,
+-                  previousBuckets.length - 1
+-                );
+-
+-              const x =
+-                previousBuckets.length <= 1
+-                  ? left + plotWidth / 2
+-                  : left +
+-                    (index / denominator) *
+-                      plotWidth;
+-
+-              const value =
+-                finite(
+-                  bucket[metricKey]
+-                );
+-
+-              const y =
+-                yAt(value);
+-
+-              const pointColor =
+-                metric === "NET_PROFIT" &&
+-                value < 0
+-                  ? LOSS_COLOR
+-                  : metricColor;
+-
+-              const active =
+-                hoveredPreviousIndex ===
+-                index;
+-
+-              return (
+-                <React.Fragment
+-                  key={`previous-${bucket.key}-${index}`}
+-                >
+-                  <Circle
+-                    cx={x}
+-                    cy={y}
+-                    r="13"
+-                    fill="transparent"
+-                    {...webHover(() => {
+-                      setHoveredIndex(null);
+-                      setHoveredPreviousIndex(
+-                        index
+-                      );
+-                    }, () =>
+-                      setHoveredPreviousIndex(
+-                        null
+-                      )
+-                    )}
+-                    onPress={() => {
+-                      setHoveredIndex(null);
+-                      setHoveredPreviousIndex(
+-                        index
+-                      );
+-                    }}
+-                  />
+-
+-                  <Circle
+-                    cx={x}
+-                    cy={y}
+-                    r={active ? "5.5" : "4"}
+-                    fill="#FFFFFF"
+-                    stroke={
+-                      compact
+-                        ? "#8B5CF6"
+-                        : pointColor
+-                    }
+-                    strokeWidth={
+-                      active
+-                        ? compact
+-                          ? "2.5"
+-                          : "2.8"
+-                        : compact
+-                          ? "1.8"
+-                          : "2"
+-                    }
+-                    opacity={
+-                      active
+-                        ? "1"
+-                        : compact
+-                          ? "0.62"
+-                          : "0.68"
+-                    }
+-                    pointerEvents="none"
+-                  />
+-
+-                  <Circle
+-                    cx={x}
+-                    cy={y}
+-                    r="1.8"
+-                    fill={
+-                      compact
+-                        ? "#8B5CF6"
+-                        : pointColor
+-                    }
+-                    opacity={
+-                      compact ? "0.72" : "0.82"
+-                    }
+-                    pointerEvents="none"
+-                  />
+-                </React.Fragment>
+-              );
+-            }
+-          )}
+-
+-          {/* CURRENT PERIOD */}
+-          <Path
+-            d={makePath()}
+-            fill="none"
+-            stroke={metricColor}
+-            strokeWidth={
+-              compact ? "3.35" : "3"
+-            }
+-            strokeLinecap="round"
+-            strokeLinejoin="round"
+-          />
+-
+-          {buckets.map(
+-            (bucket, index) => {
+-              const value = finite(
+-                bucket[metricKey]
+-              );
+-
+-              const x =
+-                xAt(index);
+-
+-              const y =
+-                yAt(value);
+-
+-              const pointColor =
+-                metric ===
+-                  "NET_PROFIT" &&
+-                value < 0
+-                  ? LOSS_COLOR
+-                  : metricColor;
+-
+-              return (
+-                <React.Fragment
+-                  key={bucket.key}
+-                >
+-                  {/* Vertical guide */}
+-                  <Line
+-                    x1={x}
+-                    x2={x}
+-                    y1={
+-                      top +
+-                      plotHeight
+-                    }
+-                    y2={
+-                      top +
+-                      plotHeight +
+-                      4
+-                    }
+-                    stroke="#CBD5E1"
+-                    strokeWidth="1"
+-                  />
+-
+-                  {/* Interactive hit target */}
+-                  <Circle
+-                    cx={x}
+-                    cy={y}
+-                    r="13"
+-                    fill="transparent"
+-                    {...webHover(() => {
+-                      setHoveredPreviousIndex(
+-                        null
+-                      );
+-                      setHoveredIndex(index);
+-                    }, () =>
+-                      setHoveredIndex(null)
+-                    )}
+-                    onPress={() =>
+-                      setHoveredIndex(index)
+-                    }
+-                  />
+-
+-                  {/* Data point */}
+-                  <Circle
+-                    cx={x}
+-                    cy={y}
+-                    r={
+-                      hoveredIndex === index
+-                        ? "6"
+-                        : "5"
+-                    }
+-                    fill="#FFFFFF"
+-                    stroke={pointColor}
+-                    strokeWidth={
+-                      hoveredIndex === index
+-                        ? "3"
+-                        : "2.5"
+-                    }
+-                    pointerEvents="none"
+-                  />
+-
+-                  <Circle
+-                    cx={x}
+-                    cy={y}
+-                    r="2"
+-                    fill={pointColor}
+-                  />
+-
+-                  {/* X-axis period label */}
+-                  {shouldShowXLabel(
+-                    index
+-                  ) && (
+-                    <SvgText
+-                      x={x}
+-                      y={
+-                        top +
+-                        plotHeight +
+-                        17
+-                      }
+-                      textAnchor="middle"
+-                      fontSize="10.5"
+-                      fontWeight="800"
+-                      fill={TEXT_COLOR}
+-                    >
+-                      {
+-                        bucket.shortLabel
+-                      }
+-                    </SvgText>
+-                  )}
+-                </React.Fragment>
+-              );
+-            }
+-          )}
+-        </>
+-      )}
+-
+-      {/* PROFESSIONAL FINANCIAL TOOLTIP */}
+-      {hoveredBucket &&
+-        activeHoveredIndex !== null && (() => {
+-          const denominator =
+-            hoveredIsPrevious
+-              ? Math.max(
+-                  1,
+-                  previousBuckets.length - 1
+-                )
+-              : Math.max(
+-                  1,
+-                  buckets.length - 1
+-                );
+-
+-          const pointX =
+-            hoveredIsPrevious
+-              ? previousBuckets.length <= 1
+-                ? left + plotWidth / 2
+-                : left +
+-                  (
+-                    activeHoveredIndex /
+-                    denominator
+-                  ) *
+-                    plotWidth
+-              : xAt(
+-                  activeHoveredIndex
+-                );
+-
+-          const pointY =
+-            yAt(
+-              hoveredBucket[
+-                metricKey
+-              ]
+-            );
+-
+-          const tooltipWidth = 184;
+-          const tooltipHeight = 102;
+-
+-          const tooltipX =
+-            pointX >
+-            width -
+-              tooltipWidth -
+-              14
+-              ? pointX -
+-                tooltipWidth -
+-                12
+-              : pointX + 12;
+-
+-          const tooltipY =
+-            Math.max(
+-              6,
+-              Math.min(
+-                height -
+-                  tooltipHeight -
+-                  6,
+-                pointY -
+-                  tooltipHeight /
+-                    2
+-              )
+-            );
+-
+-          const profit =
+-            finite(
+-              hoveredBucket.netProfit
+-            );
+-
+-          return (
+-            <React.Fragment>
+-              {/* Subtle tooltip depth */}
+-              <Rect
+-                x={tooltipX + 2}
+-                y={tooltipY + 4}
+-                width={tooltipWidth}
+-                height={tooltipHeight}
+-                rx="11"
+-                fill="#020617"
+-                opacity="0.16"
+-                pointerEvents="none"
+-              />
+-
+-              {/* Premium tooltip surface */}
+-              <Rect
+-                x={tooltipX}
+-                y={tooltipY}
+-                width={tooltipWidth}
+-                height={tooltipHeight}
+-                rx="11"
+-                fill="#0F172A"
+-                stroke="#334155"
+-                strokeWidth="1"
+-                opacity="0.985"
+-                pointerEvents="none"
+-              />
+-
+-              {/* Period heading */}
+-              <SvgText
+-                x={tooltipX + 12}
+-                y={tooltipY + 20}
+-                fontSize="11.5"
+-                fontWeight="900"
+-                fill="#FFFFFF"
+-                pointerEvents="none"
+-              >
+-                {hoveredIsPrevious
+-                  ? uiText("Previous • {p0}", {p0: (hoveredBucket.label)})
+-                  : hoveredBucket.label}
+-              </SvgText>
+-
+-              {/* Header divider */}
+-              <Rect
+-                x={tooltipX + 12}
+-                y={tooltipY + 29}
+-                width={tooltipWidth - 24}
+-                height="1"
+-                fill="#334155"
+-                opacity="0.9"
+-                pointerEvents="none"
+-              />
+-
+-              {/* Sales */}
+-              <Rect
+-                x={tooltipX + 12}
+-                y={tooltipY + 41}
+-                width="6"
+-                height="6"
+-                rx="3"
+-                fill="#3B82F6"
+-                pointerEvents="none"
+-              />
+-
+-              <SvgText
+-                x={tooltipX + 25}
+-                y={tooltipY + 48}
+-                fontSize="10"
+-                fontWeight="800"
+-                fill="#E2E8F0"
+-                pointerEvents="none"
+-              >
+-                {uiText("Sales  {p0}", {p0: (moneyCompact(
+-                  hoveredBucket.sales
+-                ))})}
+-              </SvgText>
+-
+-              {/* Expenses */}
+-              <Rect
+-                x={tooltipX + 12}
+-                y={tooltipY + 61}
+-                width="6"
+-                height="6"
+-                rx="3"
+-                fill="#F59E0B"
+-                pointerEvents="none"
+-              />
+-
+-              <SvgText
+-                x={tooltipX + 25}
+-                y={tooltipY + 68}
+-                fontSize="10"
+-                fontWeight="800"
+-                fill="#FBBF24"
+-                pointerEvents="none"
+-              >
+-                {uiText("Expenses  {p0}", {p0: (moneyCompact(
+-                  hoveredBucket.expenses
+-                ))})}
+-              </SvgText>
+-
+-              {/* Net Profit / Loss */}
+-              <Rect
+-                x={tooltipX + 12}
+-                y={tooltipY + 81}
+-                width="6"
+-                height="6"
+-                rx="3"
+-                fill={
+-                  profit < 0
+-                    ? LOSS_COLOR
+-                    : PROFIT_COLOR
+-                }
+-                pointerEvents="none"
+-              />
+-
+-              <SvgText
+-                x={tooltipX + 25}
+-                y={tooltipY + 88}
+-                fontSize="10"
+-                fontWeight="900"
+-                fill={
+-                  profit < 0
+-                    ? LOSS_COLOR
+-                    : "#4ADE80"
+-                }
+-                pointerEvents="none"
+-              >
+-                {profit < 0
+-                  ? uiText("Loss  {p0}", {p0: (moneyCompact(
+-                      Math.abs(profit)
+-                    ))})
+-                  : uiText("Net Profit  {p0}", {p0: (moneyCompact(
+-                      profit
+-                    ))})}
+-              </SvgText>
+-            </React.Fragment>
+-          );
+-        })()}
+-    </Svg>
+-  );
+-}
+-
+-function BarsChart({
+-  buckets,
+-  width,
+-  height,
+-}: {
+-  buckets: FinancialBucketResult[];
+-  width: number;
+-  height: number;
+-}) {
+-  const left = 36;
+-  const right = 10;
+-  const top = 14;
+-  const bottom = 34;
+-
+-  const plotWidth =
+-    Math.max(
+-      1,
+-      width -
+-        left -
+-        right
+-    );
+-
+-  const plotHeight =
+-    Math.max(
+-      1,
+-      height -
+-        top -
+-        bottom
+-    );
+-
+-  const values =
+-    buckets.flatMap(
+-      (bucket) => [
+-        finite(
+-          bucket.sales
+-        ),
+-        finite(
+-          bucket.expenses
+-        ),
+-        Math.abs(
+-          finite(
+-            bucket.netProfit
+-          )
+-        ),
+-      ]
+-    );
+-
+-  const max =
+-    Math.max(
+-      1,
+-      ...values
+-    );
+-
+-  const groupWidth =
+-    plotWidth /
+-    Math.max(
+-      1,
+-      buckets.length
+-    );
+-
+-  const barWidth =
+-    Math.max(
+-      3,
+-      Math.min(
+-        14,
+-        groupWidth /
+-          5
+-      )
+-    );
+-
+-  const barHeight = (
+-    value: number
+-  ) =>
+-    (Math.abs(
+-      finite(value)
+-    ) /
+-      max) *
+-    plotHeight;
+-
+-  return (
+-    <Svg
+-      width={width}
+-      height={height}
+-    >
+-      {[0, 0.25, 0.5, 0.75, 1].map(
+-        (ratio) => {
+-          const y =
+-            top +
+-            plotHeight *
+-              ratio;
+-
+-          return (
+-            <Line
+-              key={
+-                ratio
+-              }
+-              x1={left}
+-              x2={
+-                width -
+-                right
+-              }
+-              y1={y}
+-              y2={y}
+-              stroke={
+-                GRID_COLOR
+-              }
+-              strokeWidth="1"
+-            />
+-          );
+-        }
+-      )}
+-
+-      {buckets.map(
+-        (
+-          bucket,
+-          index
+-        ) => {
+-          const center =
+-            left +
+-            groupWidth *
+-              index +
+-            groupWidth /
+-              2;
+-
+-          const salesH =
+-            barHeight(
+-              bucket.sales
+-            );
+-
+-          const expenseH =
+-            barHeight(
+-              bucket.expenses
+-            );
+-
+-          const profitH =
+-            barHeight(
+-              bucket.netProfit
+-            );
+-
+-          return (
+-            <React.Fragment
+-              key={
+-                bucket.key
+-              }
+-            >
+-              <Rect
+-                x={
+-                  center -
+-                  barWidth *
+-                    1.6
+-                }
+-                y={
+-                  top +
+-                  plotHeight -
+-                  salesH
+-                }
+-                width={
+-                  barWidth
+-                }
+-                height={
+-                  salesH
+-                }
+-                rx="2"
+-                fill={
+-                  SALES_COLOR
+-                }
+-              />
+-
+-              <Rect
+-                x={
+-                  center -
+-                  barWidth /
+-                    2
+-                }
+-                y={
+-                  top +
+-                  plotHeight -
+-                  expenseH
+-                }
+-                width={
+-                  barWidth
+-                }
+-                height={
+-                  expenseH
+-                }
+-                rx="2"
+-                fill={
+-                  EXPENSE_COLOR
+-                }
+-              />
+-
+-              <Rect
+-                x={
+-                  center +
+-                  barWidth *
+-                    0.6
+-                }
+-                y={
+-                  top +
+-                  plotHeight -
+-                  profitH
+-                }
+-                width={
+-                  barWidth
+-                }
+-                height={
+-                  profitH
+-                }
+-                rx="2"
+-                fill={
+-                  bucket.netProfit <
+-                  0
+-                    ? LOSS_COLOR
+-                    : PROFIT_COLOR
+-                }
+-              />
+-
+-              <SvgText
+-                x={center}
+-                y={
+-                  height -
+-                  9
+-                }
+-                textAnchor="middle"
+-                fontSize="10.5"
+-                fontWeight="800"
+-                fill={
+-                  TEXT_COLOR
+-                }
+-              >
+-                {
+-                  bucket.shortLabel
+-                }
+-              </SvgText>
+-            </React.Fragment>
+-          );
+-        }
+-      )}
+-    </Svg>
+-  );
+-}
+-
+-export default function FinancialChart({
+-  mode,
+-  metric = "SALES",
+-  total,
+-  buckets,
+-  previousBuckets = [],
+-  width = 310,
++import {usePreferredDisplayMoney} from '@/src/currency/PreferredDisplay';
++import {useCommonText} from "@/src/i18n/useCommonText";
++﻿import React, {
++  useMemo,
++} from "react";
++
++import {
++  Platform,
++  Text,
++  View,
++} from "react-native";
++
++// RN SVG accepts DOM hover handlers on Web; native retains its existing onPress.
++const webHover = (enter: () => void, leave: () => void) =>
++  Platform.OS === "web" ? { onMouseEnter: enter, onMouseLeave: leave } : {};
++
++import Svg, {
++  Circle,
++  Line,
++  Path,
++  Rect,
++  Text as SvgText,
++} from "react-native-svg";
++
++import type {
++  FinancialBucketResult,
++  FinancialMetric,
++} from "./financialDataEngine";
++
++export type FinancialChartMode =
++  | "DONUT"
++  | "TREND"
++  | "BARS";
++
++export type FinancialTrendMetric =
++  | "SALES"
++  | "EXPENSES"
++  | "NET_PROFIT";
++
++type Props = {
++  mode: FinancialChartMode;
++  metric?: FinancialTrendMetric;
++  total: FinancialMetric;
++  buckets: FinancialBucketResult[];
++
++  /*
++   * Optional comparison series.
++   *
++   * Compact Home chart does not provide this,
++   * therefore its current behavior remains unchanged.
++   *
++   * Premium Full View may provide the verified
++   * previous-period buckets.
++   */
++  previousBuckets?: FinancialBucketResult[];
++
++  /*
++   * Compact Home rendering.
++   * Keeps premium mini-chart treatment isolated from Full View.
++   */
++  compact?: boolean;
++
++  width?: number;
++  height?: number;
++};
++
++const SALES_COLOR =
++  "#2563EB";
++
++const EXPENSE_COLOR =
++  "#F59E0B";
++
++const PROFIT_COLOR =
++  "#16A34A";
++
++const LOSS_COLOR =
++  "#DC2626";
++
++const GRID_COLOR =
++  "#E2E8F0";
++
++const TEXT_COLOR =
++  "#334155";
++
++function finite(
++  value: unknown
++) {
++  const parsed =
++    Number(value ?? 0);
++
++  return Number.isFinite(parsed)
++    ? parsed
++    : 0;
++}
++
++function moneyCompact(
++  value: number
++) {
++  const amount =
++    Math.abs(finite(value));
++
++  if (amount >= 1_000_000_000) {
++    return `${(
++      amount /
++      1_000_000_000
++    ).toFixed(1)}B`;
++  }
++
++  if (amount >= 1_000_000) {
++    return `${(
++      amount /
++      1_000_000
++    ).toFixed(1)}M`;
++  }
++
++  if (amount >= 1_000) {
++    return `${(
++      amount /
++      1_000
++    ).toFixed(1)}K`;
++  }
++
++  return Math.round(
++    amount
++  ).toLocaleString("en-US");
++}
++
++function moneyFull(
++  value: number
++) {
++  try {
++    return `TSh ${Math.round(
++      finite(value)
++    ).toLocaleString("en-US")}`;
++  } catch {
++    return `TSh ${Math.round(
++      finite(value)
++    )}`;
++  }
++}
++
++function polarPoint(
++  cx: number,
++  cy: number,
++  radius: number,
++  angle: number
++) {
++  const radians =
++    ((angle - 90) *
++      Math.PI) /
++    180;
++
++  return {
++    x:
++      cx +
++      radius *
++        Math.cos(radians),
++    y:
++      cy +
++      radius *
++        Math.sin(radians),
++  };
++}
++
++function donutArc(
++  cx: number,
++  cy: number,
++  radius: number,
++  startAngle: number,
++  endAngle: number
++) {
++  const start =
++    polarPoint(
++      cx,
++      cy,
++      radius,
++      endAngle
++    );
++
++  const end =
++    polarPoint(
++      cx,
++      cy,
++      radius,
++      startAngle
++    );
++
++  const largeArc =
++    endAngle -
++      startAngle <=
++    180
++      ? 0
++      : 1;
++
++  return [
++    "M",
++    start.x,
++    start.y,
++    "A",
++    radius,
++    radius,
++    0,
++    largeArc,
++    0,
++    end.x,
++    end.y,
++  ].join(" ");
++}
++
++function DonutChart({
++  total,
++  width,
++  height,
++}: {
++  total: FinancialMetric;
++  width: number;
++  height: number;
++}) {
++ const uiText = useCommonText();
++  /*
++   * Donut is a financial composition view.
++   *
++   * We deliberately use absolute magnitudes
++   * for visual proportions. Negative profit
++   * is rendered as Loss using red.
++   */
++  const profit =
++    finite(
++      total.netProfit
++    );
++
++  const values = [
++    {
++      key: "sales",
++      label: "Sales",
++      value: Math.max(
++        0,
++        finite(total.sales)
++      ),
++      color: SALES_COLOR,
++    },
++    {
++      key: "expenses",
++      label: "Expenses",
++      value: Math.max(
++        0,
++        finite(
++          total.expenses
++        )
++      ),
++      color: EXPENSE_COLOR,
++    },
++    {
++      key: "profit",
++      label:
++        profit < 0
++          ? "Loss"
++          : "Net Profit",
++      value: Math.abs(
++        profit
++      ),
++      color:
++        profit < 0
++          ? LOSS_COLOR
++          : PROFIT_COLOR,
++    },
++  ];
++
++  const sum =
++    values.reduce(
++      (acc, item) =>
++        acc +
++        item.value,
++      0
++    );
++
++  const cx =
++    width / 2;
++
++  const cy =
++    height / 2;
++
++  const radius =
++    Math.min(
++      width,
++      height
++    ) * 0.36;
++
++  const strokeWidth =
++    Math.max(
++      18,
++      radius * 0.24
++    );
++
++  let angle = 0;
++
++  return (
++    <View
++      style={{
++        width,
++        height,
++        alignItems:
++          "center",
++        justifyContent:
++          "center",
++      }}
++    >
++      <Svg
++        width={width}
++        height={height}
++      >
++        <Circle
++          cx={cx}
++          cy={cy}
++          r={radius}
++          fill="none"
++          stroke="#EEF2F7"
++          strokeWidth={
++            strokeWidth
++          }
++        />
++
++        {sum > 0 &&
++          values.map(
++            (item) => {
++              if (
++                item.value <= 0
++              ) {
++                return null;
++              }
++
++              const sweep =
++                (item.value /
++                  sum) *
++                360;
++
++              const gap =
++                Math.min(
++                  2.5,
++                  sweep * 0.12
++                );
++
++              const start =
++                angle +
++                gap / 2;
++
++              const end =
++                angle +
++                sweep -
++                gap / 2;
++
++              angle +=
++                sweep;
++
++              if (
++                end <= start
++              ) {
++                return null;
++              }
++
++              return (
++                <Path
++                  key={
++                    item.key
++                  }
++                  d={donutArc(
++                    cx,
++                    cy,
++                    radius,
++                    start,
++                    end
++                  )}
++                  fill="none"
++                  stroke={
++                    item.color
++                  }
++                  strokeWidth={
++                    strokeWidth
++                  }
++                  strokeLinecap="round"
++                />
++              );
++            }
++          )}
++
++        <SvgText
++          x={cx}
++          y={cy - 7}
++          textAnchor="middle"
++          fontSize="9"
++          fontWeight="800"
++          fill="#64748B"
++        >
++          {uiText("BUSINESS")}</SvgText>
++
++        <SvgText
++          x={cx}
++          y={cy + 10}
++          textAnchor="middle"
++          fontSize="13"
++          fontWeight="900"
++          fill="#0F172A"
++        >
++          {uiText("OVERVIEW")}</SvgText>
++      </Svg>
++    </View>
++  );
++}
++
++function TrendChart({
++  buckets,
++  previousBuckets = [],
++  width,
++  height,
++  metric = "SALES",
++  compact = false,
++}: {
++  buckets: FinancialBucketResult[];
++  previousBuckets?: FinancialBucketResult[];
++  width: number;
++  height: number;
++  metric?: FinancialTrendMetric;
++  compact?: boolean;
++}) {
++ const preferredMoney=usePreferredDisplayMoney();const moneyCompact=(value:number)=>{const label=preferredMoney(value);return label.startsWith('Conversion unavailable')?'—':label.replace(/\s+[A-Z]{3}$/,'').replace(/^[A-Z]{3}\s*/,'')};
++
++ const uiText = useCommonText();
++  /*
++   * Professional finance chart layout.
++   *
++   * Left space is deliberately larger so financial
++   * values never collide with the plot.
++   *
++   * Bottom space is reserved for the time axis.
++   */
++  const [hoveredIndex, setHoveredIndex] =
++    React.useState<number | null>(null);
++
++  const [
++    hoveredPreviousIndex,
++    setHoveredPreviousIndex,
++  ] = React.useState<number | null>(null);
++
++  const hoveredIsPrevious =
++    hoveredPreviousIndex !== null;
++
++  const activeHoveredIndex =
++    hoveredIsPrevious
++      ? hoveredPreviousIndex
++      : hoveredIndex;
++
++  const hoveredBucket =
++    activeHoveredIndex !== null
++      ? (
++          hoveredIsPrevious
++            ? previousBuckets[
++                activeHoveredIndex
++              ]
++            : buckets[
++                activeHoveredIndex
++              ]
++        ) ?? null
++      : null;
++
++  const left = 58;
++  const right = 12;
++  const top = 18;
++  const bottom = 38;
++
++  const plotWidth = Math.max(
++    1,
++    width - left - right
++  );
++
++  const plotHeight = Math.max(
++    1,
++    height - top - bottom
++  );
++
++  const metricKey:
++    | "sales"
++    | "expenses"
++    | "netProfit" =
++    metric === "EXPENSES"
++      ? "expenses"
++      : metric === "NET_PROFIT"
++        ? "netProfit"
++        : "sales";
++
++  const metricColor =
++    metric === "EXPENSES"
++      ? EXPENSE_COLOR
++      : metric === "NET_PROFIT"
++        ? PROFIT_COLOR
++        : SALES_COLOR;
++
++  const values = buckets.map(
++    (bucket) =>
++      finite(bucket[metricKey])
++  );
++
++  const previousValues =
++    previousBuckets.map(
++      (bucket) =>
++        finite(bucket[metricKey])
++    );
++
++  const scaleValues = [
++    ...values,
++    ...previousValues,
++  ];
++
++  /*
++   * Financial charts always retain zero.
++   * Net Profit is allowed to cross below zero.
++   */
++  const minValue = Math.min(
++    0,
++    ...scaleValues
++  );
++
++  const maxValue = Math.max(
++    0,
++    ...scaleValues
++  );
++
++  const rawRange =
++    maxValue - minValue;
++
++  const range = Math.max(
++    1,
++    rawRange
++  );
++
++  /*
++   * Give both ends breathing room.
++   */
++  const scalePadding =
++    range * 0.1;
++
++  const scaleMin =
++    minValue < 0
++      ? minValue - scalePadding
++      : 0;
++
++  const scaleMax = Math.max(
++    1,
++    maxValue + scalePadding
++  );
++
++  const scaleRange = Math.max(
++    1,
++    scaleMax - scaleMin
++  );
++
++  const xAt = (
++    index: number
++  ) => {
++    if (buckets.length <= 1) {
++      return left + plotWidth / 2;
++    }
++
++    return (
++      left +
++      (index /
++        (buckets.length - 1)) *
++        plotWidth
++    );
++  };
++
++  const yAt = (
++    value: number
++  ) =>
++    top +
++    ((scaleMax - finite(value)) /
++      scaleRange) *
++      plotHeight;
++
++  const makePath = () =>
++    buckets
++      .map((bucket, index) => {
++        const x = xAt(index);
++        const y = yAt(
++          bucket[metricKey]
++        );
++
++        return `${
++          index === 0 ? "M" : "L"
++        } ${x} ${y}`;
++      })
++      .join(" ");
++
++  const makePreviousPath = () =>
++    previousBuckets
++      .map((bucket, index) => {
++        /*
++         * Previous buckets are aligned by position
++         * with the current comparison buckets.
++         */
++        const denominator =
++          Math.max(
++            1,
++            previousBuckets.length - 1
++          );
++
++        const x =
++          previousBuckets.length <= 1
++            ? left + plotWidth / 2
++            : left +
++              (index / denominator) *
++                plotWidth;
++
++        const y = yAt(
++          bucket[metricKey]
++        );
++
++        return `${
++          index === 0 ? "M" : "L"
++        } ${x} ${y}`;
++      })
++      .join(" ");
++
++  const zeroY = yAt(0);
++
++  /*
++   * Comparison band:
++   * fills ONLY the space between Current and Previous.
++   *
++   * We intentionally align both series across the same
++   * horizontal comparison space, then walk Current forward
++   * and Previous backward to create one closed polygon.
++   */
++  const makeComparisonAreaPath = () => {
++    if (
++      !buckets.length ||
++      !previousBuckets.length
++    ) {
++      return "";
++    }
++
++    const pointCount = Math.min(
++      buckets.length,
++      previousBuckets.length
++    );
++
++    if (pointCount <= 0) {
++      return "";
++    }
++
++    const xForPoint = (
++      index: number
++    ) =>
++      pointCount <= 1
++        ? left + plotWidth / 2
++        : left +
++          (index /
++            (pointCount - 1)) *
++            plotWidth;
++
++    const currentPoints =
++      Array.from(
++        { length: pointCount },
++        (_, index) => {
++          const x = xForPoint(index);
++          const y = yAt(
++            buckets[index][metricKey]
++          );
++
++          return `${
++            index === 0 ? "M" : "L"
++          } ${x} ${y}`;
++        }
++      );
++
++    const previousPoints =
++      Array.from(
++        { length: pointCount },
++        (_, reverseIndex) => {
++          const index =
++            pointCount -
++            1 -
++            reverseIndex;
++
++          const x = xForPoint(index);
++          const y = yAt(
++            previousBuckets[index][
++              metricKey
++            ]
++          );
++
++          return `L ${x} ${y}`;
++        }
++      );
++
++    return [
++      ...currentPoints,
++      ...previousPoints,
++      "Z",
++    ].join(" ");
++  };
++
++  /*
++   * Five readable Y-axis levels.
++   */
++  const gridRatios = [
++    0,
++    0.25,
++    0.5,
++    0.75,
++    1,
++  ];
++
++  /*
++   * For 12-month view every month remains visible.
++   * Short labels keep the axis compact.
++   */
++  const shouldShowXLabel = (
++    index: number
++  ) => {
++    if (buckets.length <= 12) {
++      return true;
++    }
++
++    const step = Math.ceil(
++      buckets.length / 8
++    );
++
++    return (
++      index % step === 0 ||
++      index === buckets.length - 1
++    );
++  };
++
++  return (
++    <Svg
++      width={width}
++      height={height}
++    >
++      {compact && previousBuckets.length > 0 && (
++        <>
++          {/* Compact comparison legend */}
++          <Line
++            x1={left}
++            x2={left + 18}
++            y1="10"
++            y2="10"
++            stroke={metricColor}
++            strokeWidth="3"
++            strokeLinecap="round"
++            pointerEvents="none"
++          />
++
++          <SvgText
++            x={left + 24}
++            y="13"
++            fontSize="9.5"
++            fontWeight="900"
++            fill="#475569"
++            pointerEvents="none"
++          >
++            {uiText("Current")}</SvgText>
++
++          <Line
++            x1={left + 78}
++            x2={left + 96}
++            y1="10"
++            y2="10"
++            stroke="#8B5CF6"
++            strokeWidth="2"
++            strokeDasharray="6 5"
++            strokeLinecap="round"
++            pointerEvents="none"
++          />
++
++          <SvgText
++            x={left + 102}
++            y="13"
++            fontSize="9.5"
++            fontWeight="900"
++            fill="#7C3AED"
++            pointerEvents="none"
++          >
++            {uiText("Previous")}</SvgText>
++        </>
++      )}
++
++      {/* Y GRID + Y VALUES */}
++      {gridRatios.map(
++        (ratio) => {
++          const y =
++            top +
++            plotHeight * ratio;
++
++          const value =
++            scaleMax -
++            scaleRange * ratio;
++
++          return (
++            <React.Fragment
++              key={`grid-${ratio}`}
++            >
++              <Line
++                x1={left}
++                x2={width - right}
++                y1={y}
++                y2={y}
++                stroke={
++                  compact
++                    ? "#DCE6F3"
++                    : GRID_COLOR
++                }
++                strokeWidth={
++                  compact ? "0.75" : "1"
++                }
++              />
++
++              <SvgText
++                x={left - 8}
++                y={y + 3}
++                textAnchor="end"
++                fontSize={compact ? "10" : "11"}
++                fontWeight={compact ? "700" : "800"}
++                fill={compact ? "#64748B" : TEXT_COLOR}
++              >
++                {value < 0
++                  ? `-${moneyCompact(
++                      Math.abs(value)
++                    )}`
++                  : moneyCompact(value)}
++              </SvgText>
++            </React.Fragment>
++          );
++        }
++      )}
++
++      {/* LEFT Y AXIS */}
++      <Line
++        x1={left}
++        x2={left}
++        y1={top}
++        y2={top + plotHeight}
++        stroke="#CBD5E1"
++        strokeWidth="1"
++      />
++
++      {/* BOTTOM X AXIS */}
++      <Line
++        x1={left}
++        x2={width - right}
++        y1={top + plotHeight}
++        y2={top + plotHeight}
++        stroke="#CBD5E1"
++        strokeWidth="1"
++      />
++
++      {/* STRONG ZERO LINE FOR PROFIT/LOSS */}
++      {scaleMin < 0 && (
++        <Line
++          x1={left}
++          x2={width - right}
++          y1={zeroY}
++          y2={zeroY}
++          stroke="#94A3B8"
++          strokeWidth="1.25"
++        />
++      )}
++
++      {buckets.length > 0 && (
++        <>
++          {/* CURRENT ↔ PREVIOUS COMPARISON BAND */}
++          {previousBuckets.length > 0 && (
++            <Path
++              d={makeComparisonAreaPath()}
++              fill={metricColor}
++              opacity={
++                compact ? "0.13" : "0.105"
++              }
++              stroke="none"
++              pointerEvents="none"
++            />
++          )}
++
++          {/* PREVIOUS PERIOD COMPARISON */}
++          {previousBuckets.length > 0 && (
++            <Path
++              d={makePreviousPath()}
++              fill="none"
++              stroke={
++                compact
++                  ? "#8B5CF6"
++                  : "#7C3AED"
++              }
++              strokeWidth={
++                compact ? "2.25" : "2.4"
++              }
++              strokeDasharray={
++                compact ? "7 5" : "8 6"
++              }
++              strokeLinecap="round"
++              strokeLinejoin="round"
++              opacity={
++                compact ? "0.58" : "0.52"
++              }
++              pointerEvents="none"
++            />
++          )}
++
++          {/* INTERACTIVE PREVIOUS PERIOD POINTS */}
++          {previousBuckets.map(
++            (bucket, index) => {
++              const denominator =
++                Math.max(
++                  1,
++                  previousBuckets.length - 1
++                );
++
++              const x =
++                previousBuckets.length <= 1
++                  ? left + plotWidth / 2
++                  : left +
++                    (index / denominator) *
++                      plotWidth;
++
++              const value =
++                finite(
++                  bucket[metricKey]
++                );
++
++              const y =
++                yAt(value);
++
++              const pointColor =
++                metric === "NET_PROFIT" &&
++                value < 0
++                  ? LOSS_COLOR
++                  : metricColor;
++
++              const active =
++                hoveredPreviousIndex ===
++                index;
++
++              return (
++                <React.Fragment
++                  key={`previous-${bucket.key}-${index}`}
++                >
++                  <Circle
++                    cx={x}
++                    cy={y}
++                    r="13"
++                    fill="transparent"
++                    {...webHover(() => {
++                      setHoveredIndex(null);
++                      setHoveredPreviousIndex(
++                        index
++                      );
++                    }, () =>
++                      setHoveredPreviousIndex(
++                        null
++                      )
++                    )}
++                    onPress={() => {
++                      setHoveredIndex(null);
++                      setHoveredPreviousIndex(
++                        index
++                      );
++                    }}
++                  />
++
++                  <Circle
++                    cx={x}
++                    cy={y}
++                    r={active ? "5.5" : "4"}
++                    fill="#FFFFFF"
++                    stroke={
++                      compact
++                        ? "#8B5CF6"
++                        : pointColor
++                    }
++                    strokeWidth={
++                      active
++                        ? compact
++                          ? "2.5"
++                          : "2.8"
++                        : compact
++                          ? "1.8"
++                          : "2"
++                    }
++                    opacity={
++                      active
++                        ? "1"
++                        : compact
++                          ? "0.62"
++                          : "0.68"
++                    }
++                    pointerEvents="none"
++                  />
++
++                  <Circle
++                    cx={x}
++                    cy={y}
++                    r="1.8"
++                    fill={
++                      compact
++                        ? "#8B5CF6"
++                        : pointColor
++                    }
++                    opacity={
++                      compact ? "0.72" : "0.82"
++                    }
++                    pointerEvents="none"
++                  />
++                </React.Fragment>
++              );
++            }
++          )}
++
++          {/* CURRENT PERIOD */}
++          <Path
++            d={makePath()}
++            fill="none"
++            stroke={metricColor}
++            strokeWidth={
++              compact ? "3.35" : "3"
++            }
++            strokeLinecap="round"
++            strokeLinejoin="round"
++          />
++
++          {buckets.map(
++            (bucket, index) => {
++              const value = finite(
++                bucket[metricKey]
++              );
++
++              const x =
++                xAt(index);
++
++              const y =
++                yAt(value);
++
++              const pointColor =
++                metric ===
++                  "NET_PROFIT" &&
++                value < 0
++                  ? LOSS_COLOR
++                  : metricColor;
++
++              return (
++                <React.Fragment
++                  key={bucket.key}
++                >
++                  {/* Vertical guide */}
++                  <Line
++                    x1={x}
++                    x2={x}
++                    y1={
++                      top +
++                      plotHeight
++                    }
++                    y2={
++                      top +
++                      plotHeight +
++                      4
++                    }
++                    stroke="#CBD5E1"
++                    strokeWidth="1"
++                  />
++
++                  {/* Interactive hit target */}
++                  <Circle
++                    cx={x}
++                    cy={y}
++                    r="13"
++                    fill="transparent"
++                    {...webHover(() => {
++                      setHoveredPreviousIndex(
++                        null
++                      );
++                      setHoveredIndex(index);
++                    }, () =>
++                      setHoveredIndex(null)
++                    )}
++                    onPress={() =>
++                      setHoveredIndex(index)
++                    }
++                  />
++
++                  {/* Data point */}
++                  <Circle
++                    cx={x}
++                    cy={y}
++                    r={
++                      hoveredIndex === index
++                        ? "6"
++                        : "5"
++                    }
++                    fill="#FFFFFF"
++                    stroke={pointColor}
++                    strokeWidth={
++                      hoveredIndex === index
++                        ? "3"
++                        : "2.5"
++                    }
++                    pointerEvents="none"
++                  />
++
++                  <Circle
++                    cx={x}
++                    cy={y}
++                    r="2"
++                    fill={pointColor}
++                  />
++
++                  {/* X-axis period label */}
++                  {shouldShowXLabel(
++                    index
++                  ) && (
++                    <SvgText
++                      x={x}
++                      y={
++                        top +
++                        plotHeight +
++                        17
++                      }
++                      textAnchor="middle"
++                      fontSize="10.5"
++                      fontWeight="800"
++                      fill={TEXT_COLOR}
++                    >
++                      {
++                        bucket.shortLabel
++                      }
++                    </SvgText>
++                  )}
++                </React.Fragment>
++              );
++            }
++          )}
++        </>
++      )}
++
++      {/* PROFESSIONAL FINANCIAL TOOLTIP */}
++      {hoveredBucket &&
++        activeHoveredIndex !== null && (() => {
++          const denominator =
++            hoveredIsPrevious
++              ? Math.max(
++                  1,
++                  previousBuckets.length - 1
++                )
++              : Math.max(
++                  1,
++                  buckets.length - 1
++                );
++
++          const pointX =
++            hoveredIsPrevious
++              ? previousBuckets.length <= 1
++                ? left + plotWidth / 2
++                : left +
++                  (
++                    activeHoveredIndex /
++                    denominator
++                  ) *
++                    plotWidth
++              : xAt(
++                  activeHoveredIndex
++                );
++
++          const pointY =
++            yAt(
++              hoveredBucket[
++                metricKey
++              ]
++            );
++
++          const tooltipWidth = 184;
++          const tooltipHeight = 102;
++
++          const tooltipX =
++            pointX >
++            width -
++              tooltipWidth -
++              14
++              ? pointX -
++                tooltipWidth -
++                12
++              : pointX + 12;
++
++          const tooltipY =
++            Math.max(
++              6,
++              Math.min(
++                height -
++                  tooltipHeight -
++                  6,
++                pointY -
++                  tooltipHeight /
++                    2
++              )
++            );
++
++          const profit =
++            finite(
++              hoveredBucket.netProfit
++            );
++
++          return (
++            <React.Fragment>
++              {/* Subtle tooltip depth */}
++              <Rect
++                x={tooltipX + 2}
++                y={tooltipY + 4}
++                width={tooltipWidth}
++                height={tooltipHeight}
++                rx="11"
++                fill="#020617"
++                opacity="0.16"
++                pointerEvents="none"
++              />
++
++              {/* Premium tooltip surface */}
++              <Rect
++                x={tooltipX}
++                y={tooltipY}
++                width={tooltipWidth}
++                height={tooltipHeight}
++                rx="11"
++                fill="#0F172A"
++                stroke="#334155"
++                strokeWidth="1"
++                opacity="0.985"
++                pointerEvents="none"
++              />
++
++              {/* Period heading */}
++              <SvgText
++                x={tooltipX + 12}
++                y={tooltipY + 20}
++                fontSize="11.5"
++                fontWeight="900"
++                fill="#FFFFFF"
++                pointerEvents="none"
++              >
++                {hoveredIsPrevious
++                  ? uiText("Previous • {p0}", {p0: (hoveredBucket.label)})
++                  : hoveredBucket.label}
++              </SvgText>
++
++              {/* Header divider */}
++              <Rect
++                x={tooltipX + 12}
++                y={tooltipY + 29}
++                width={tooltipWidth - 24}
++                height="1"
++                fill="#334155"
++                opacity="0.9"
++                pointerEvents="none"
++              />
++
++              {/* Sales */}
++              <Rect
++                x={tooltipX + 12}
++                y={tooltipY + 41}
++                width="6"
++                height="6"
++                rx="3"
++                fill="#3B82F6"
++                pointerEvents="none"
++              />
++
++              <SvgText
++                x={tooltipX + 25}
++                y={tooltipY + 48}
++                fontSize="10"
++                fontWeight="800"
++                fill="#E2E8F0"
++                pointerEvents="none"
++              >
++                {uiText("Sales  {p0}", {p0: (moneyCompact(
++                  hoveredBucket.sales
++                ))})}
++              </SvgText>
++
++              {/* Expenses */}
++              <Rect
++                x={tooltipX + 12}
++                y={tooltipY + 61}
++                width="6"
++                height="6"
++                rx="3"
++                fill="#F59E0B"
++                pointerEvents="none"
++              />
++
++              <SvgText
++                x={tooltipX + 25}
++                y={tooltipY + 68}
++                fontSize="10"
++                fontWeight="800"
++                fill="#FBBF24"
++                pointerEvents="none"
++              >
++                {uiText("Expenses  {p0}", {p0: (moneyCompact(
++                  hoveredBucket.expenses
++                ))})}
++              </SvgText>
++
++              {/* Net Profit / Loss */}
++              <Rect
++                x={tooltipX + 12}
++                y={tooltipY + 81}
++                width="6"
++                height="6"
++                rx="3"
++                fill={
++                  profit < 0
++                    ? LOSS_COLOR
++                    : PROFIT_COLOR
++                }
++                pointerEvents="none"
++              />
++
++              <SvgText
++                x={tooltipX + 25}
++                y={tooltipY + 88}
++                fontSize="10"
++                fontWeight="900"
++                fill={
++                  profit < 0
++                    ? LOSS_COLOR
++                    : "#4ADE80"
++                }
++                pointerEvents="none"
++              >
++                {profit < 0
++                  ? uiText("Loss  {p0}", {p0: (moneyCompact(
++                      Math.abs(profit)
++                    ))})
++                  : uiText("Net Profit  {p0}", {p0: (moneyCompact(
++                      profit
++                    ))})}
++              </SvgText>
++            </React.Fragment>
++          );
++        })()}
++    </Svg>
++  );
++}
++
++function BarsChart({
++  buckets,
++  width,
++  height,
++}: {
++  buckets: FinancialBucketResult[];
++  width: number;
++  height: number;
++}) {
++  const left = 36;
++  const right = 10;
++  const top = 14;
++  const bottom = 34;
++
++  const plotWidth =
++    Math.max(
++      1,
++      width -
++        left -
++        right
++    );
++
++  const plotHeight =
++    Math.max(
++      1,
++      height -
++        top -
++        bottom
++    );
++
++  const values =
++    buckets.flatMap(
++      (bucket) => [
++        finite(
++          bucket.sales
++        ),
++        finite(
++          bucket.expenses
++        ),
++        Math.abs(
++          finite(
++            bucket.netProfit
++          )
++        ),
++      ]
++    );
++
++  const max =
++    Math.max(
++      1,
++      ...values
++    );
++
++  const groupWidth =
++    plotWidth /
++    Math.max(
++      1,
++      buckets.length
++    );
++
++  const barWidth =
++    Math.max(
++      3,
++      Math.min(
++        14,
++        groupWidth /
++          5
++      )
++    );
++
++  const barHeight = (
++    value: number
++  ) =>
++    (Math.abs(
++      finite(value)
++    ) /
++      max) *
++    plotHeight;
++
++  return (
++    <Svg
++      width={width}
++      height={height}
++    >
++      {[0, 0.25, 0.5, 0.75, 1].map(
++        (ratio) => {
++          const y =
++            top +
++            plotHeight *
++              ratio;
++
++          return (
++            <Line
++              key={
++                ratio
++              }
++              x1={left}
++              x2={
++                width -
++                right
++              }
++              y1={y}
++              y2={y}
++              stroke={
++                GRID_COLOR
++              }
++              strokeWidth="1"
++            />
++          );
++        }
++      )}
++
++      {buckets.map(
++        (
++          bucket,
++          index
++        ) => {
++          const center =
++            left +
++            groupWidth *
++              index +
++            groupWidth /
++              2;
++
++          const salesH =
++            barHeight(
++              bucket.sales
++            );
++
++          const expenseH =
++            barHeight(
++              bucket.expenses
++            );
++
++          const profitH =
++            barHeight(
++              bucket.netProfit
++            );
++
++          return (
++            <React.Fragment
++              key={
++                bucket.key
++              }
++            >
++              <Rect
++                x={
++                  center -
++                  barWidth *
++                    1.6
++                }
++                y={
++                  top +
++                  plotHeight -
++                  salesH
++                }
++                width={
++                  barWidth
++                }
++                height={
++                  salesH
++                }
++                rx="2"
++                fill={
++                  SALES_COLOR
++                }
++              />
++
++              <Rect
++                x={
++                  center -
++                  barWidth /
++                    2
++                }
++                y={
++                  top +
++                  plotHeight -
++                  expenseH
++                }
++                width={
++                  barWidth
++                }
++                height={
++                  expenseH
++                }
++                rx="2"
++                fill={
++                  EXPENSE_COLOR
++                }
++              />
++
++              <Rect
++                x={
++                  center +
++                  barWidth *
++                    0.6
++                }
++                y={
++                  top +
++                  plotHeight -
++                  profitH
++                }
++                width={
++                  barWidth
++                }
++                height={
++                  profitH
++                }
++                rx="2"
++                fill={
++                  bucket.netProfit <
++                  0
++                    ? LOSS_COLOR
++                    : PROFIT_COLOR
++                }
++              />
++
++              <SvgText
++                x={center}
++                y={
++                  height -
++                  9
++                }
++                textAnchor="middle"
++                fontSize="10.5"
++                fontWeight="800"
++                fill={
++                  TEXT_COLOR
++                }
++              >
++                {
++                  bucket.shortLabel
++                }
++              </SvgText>
++            </React.Fragment>
++          );
++        }
++      )}
++    </Svg>
++  );
++}
++
++export default function FinancialChart({
++  mode,
++  metric = "SALES",
++  total,
++  buckets,
++  previousBuckets = [],
++  width = 310,
+   height = 190,
+   compact = false,
+-}: Props) {
+-  const safeBuckets =
+-    useMemo(
+-      () =>
+-        Array.isArray(
+-          buckets
+-        )
+-          ? buckets
+-          : [],
+-      [buckets]
+-    );
+-
+-  if (mode === "TREND") {
+-    return (
+-      <TrendChart
+-        buckets={
+-          safeBuckets
+-        }
+-        previousBuckets={
+-          Array.isArray(
+-            previousBuckets
+-          )
+-            ? previousBuckets
+-            : []
+-        }
+-        width={width}
+-        height={height}
+-        metric={metric}
+-        compact={compact}
+-      />
+-    );
+-  }
+-
+-  if (mode === "BARS") {
+-    return (
+-      <BarsChart
+-        buckets={
+-          safeBuckets
+-        }
+-        width={width}
+-        height={height}
+-      />
+-    );
+-  }
+-
+-  return (
+-    <DonutChart
+-      total={total}
+-      width={width}
+-      height={height}
+-    />
+-  );
+-}
+-
+-export function FinancialChartLegend({
+-  total,
+-}: {
+-  total: FinancialMetric;
+-}) {
+- const uiText = useCommonText();
+-  const profitIsLoss =
+-    finite(
+-      total.netProfit
+-    ) < 0;
+-
+-  const items = [
+-    {
+-      label: "Sales",
+-      value:
+-        total.sales,
+-      color:
+-        SALES_COLOR,
+-    },
+-    {
+-      label: "Expenses",
+-      value:
+-        total.expenses,
+-      color:
+-        EXPENSE_COLOR,
+-    },
+-    {
+-      label:
+-        profitIsLoss
+-          ? "Loss"
+-          : "Net Profit",
+-      value:
+-        total.netProfit,
+-      color:
+-        profitIsLoss
+-          ? LOSS_COLOR
+-          : PROFIT_COLOR,
+-    },
+-  ];
+-
+-  return (
+-    <View
+-      style={{
+-        flexDirection:
+-          "row",
+-        gap: 8,
+-        width: "100%",
+-      }}
+-    >
+-      {items.map(
+-        (item) => (
+-          <View
+-            key={
+-              item.label
+-            }
+-            style={{
+-              flex: 1,
+-              minWidth: 0,
+-              borderWidth: 1,
+-              borderColor:
+-                "#E2E8F0",
+-              borderRadius:
+-                10,
+-              paddingHorizontal:
+-                8,
+-              paddingVertical:
+-                7,
+-              backgroundColor:
+-                "#FFFFFF",
+-            }}
+-          >
+-            <View
+-              style={{
+-                flexDirection:
+-                  "row",
+-                alignItems:
+-                  "center",
+-                gap: 5,
+-              }}
+-            >
+-              <View
+-                style={{
+-                  width: 7,
+-                  height: 7,
+-                  borderRadius:
+-                    999,
+-                  backgroundColor:
+-                    item.color,
+-                }}
+-              />
+-
+-              <Text
+-                numberOfLines={
+-                  1
+-                }
+-                style={{
+-                  color:
+-                    "#64748B",
+-                  fontSize: 9,
+-                  fontWeight:
+-                    "700",
+-                }}
+-              >
+-                {
+-                  uiText(item.label)
+-                }
+-              </Text>
+-            </View>
+-
+-            <Text
+-              numberOfLines={
+-                1
+-              }
+-              style={{
+-                marginTop: 3,
+-                color:
+-                  item.label ===
+-                    "Loss"
+-                    ? LOSS_COLOR
+-                    : "#0F172A",
+-                fontSize: 10,
+-                fontWeight:
+-                  "800",
+-              }}
+-            >
+-              {moneyFull(
+-                item.value
+-              )}
+-            </Text>
+-          </View>
+-        )
+-      )}
+-    </View>
+-  );
++}: Props) {
++  const safeBuckets =
++    useMemo(
++      () =>
++        Array.isArray(
++          buckets
++        )
++          ? buckets
++          : [],
++      [buckets]
++    );
++
++  if (mode === "TREND") {
++    return (
++      <TrendChart
++        buckets={
++          safeBuckets
++        }
++        previousBuckets={
++          Array.isArray(
++            previousBuckets
++          )
++            ? previousBuckets
++            : []
++        }
++        width={width}
++        height={height}
++        metric={metric}
++        compact={compact}
++      />
++    );
++  }
++
++  if (mode === "BARS") {
++    return (
++      <BarsChart
++        buckets={
++          safeBuckets
++        }
++        width={width}
++        height={height}
++      />
++    );
++  }
++
++  return (
++    <DonutChart
++      total={total}
++      width={width}
++      height={height}
++    />
++  );
+ }
+ 
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
++export function FinancialChartLegend({
++  total,
++}: {
++  total: FinancialMetric;
++}) {
++ const preferredMoney=usePreferredDisplayMoney();const moneyFull=preferredMoney;
++
++ const uiText = useCommonText();
++  const profitIsLoss =
++    finite(
++      total.netProfit
++    ) < 0;
++
++  const items = [
++    {
++      label: "Sales",
++      value:
++        total.sales,
++      color:
++        SALES_COLOR,
++    },
++    {
++      label: "Expenses",
++      value:
++        total.expenses,
++      color:
++        EXPENSE_COLOR,
++    },
++    {
++      label:
++        profitIsLoss
++          ? "Loss"
++          : "Net Profit",
++      value:
++        total.netProfit,
++      color:
++        profitIsLoss
++          ? LOSS_COLOR
++          : PROFIT_COLOR,
++    },
++  ];
++
++  return (
++    <View
++      style={{
++        flexDirection:
++          "row",
++        gap: 8,
++        width: "100%",
++      }}
++    >
++      {items.map(
++        (item) => (
++          <View
++            key={
++              item.label
++            }
++            style={{
++              flex: 1,
++              minWidth: 0,
++              borderWidth: 1,
++              borderColor:
++                "#E2E8F0",
++              borderRadius:
++                10,
++              paddingHorizontal:
++                8,
++              paddingVertical:
++                7,
++              backgroundColor:
++                "#FFFFFF",
++            }}
++          >
++            <View
++              style={{
++                flexDirection:
++                  "row",
++                alignItems:
++                  "center",
++                gap: 5,
++              }}
++            >
++              <View
++                style={{
++                  width: 7,
++                  height: 7,
++                  borderRadius:
++                    999,
++                  backgroundColor:
++                    item.color,
++                }}
++              />
++
++              <Text
++                numberOfLines={
++                  1
++                }
++                style={{
++                  color:
++                    "#64748B",
++                  fontSize: 9,
++                  fontWeight:
++                    "700",
++                }}
++              >
++                {
++                  uiText(item.label)
++                }
++              </Text>
++            </View>
++
++            <Text
++              numberOfLines={
++                1
++              }
++              style={{
++                marginTop: 3,
++                color:
++                  item.label ===
++                    "Loss"
++                    ? LOSS_COLOR
++                    : "#0F172A",
++                fontSize: 10,
++                fontWeight:
++                  "800",
++              }}
++            >
++              {moneyFull(
++                item.value
++              )}
++            </Text>
++          </View>
++        )
++      )}
++    </View>
++  );
++}
++
++
++
++
++
++
++
++
++
++
++
++
++
++
+--- a/src/components/home/business-financial-overview/FinancialOverviewFullView.tsx
++++ b/src/components/home/business-financial-overview/FinancialOverviewFullView.tsx
+@@ -1,3 +1,4 @@
++import {usePreferredDisplayMoney} from '@/src/currency/PreferredDisplay';
+ ﻿import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
+ import {useCommonText} from "@/src/i18n/useCommonText";
+ import React from "react";
+@@ -206,7 +207,9 @@
+   color: string;
+   inverseChange?: boolean;
+   valueIsPercent?: boolean;
+-}) {
++}) {
++ const preferredMoney=usePreferredDisplayMoney();const signedMoney=preferredMoney;
++
+  const uiText = useCommonText();
+   return (
+     <View
+@@ -326,7 +329,9 @@
+     | FinancialOverviewResult["buckets"][number]
+     | null;
+   accent: string;
+-}) {
++}) {
++ const preferredMoney=usePreferredDisplayMoney();const signedMoney=preferredMoney;
++
+  const uiText = useCommonText();
+   return (
+     <View
+@@ -428,7 +433,9 @@
+   value: number;
+   color: string;
+   subtitle: string;
+-}) {
++}) {
++ const preferredMoney=usePreferredDisplayMoney();const money=preferredMoney;
++
+   return (
+     <View
+       style={{
+@@ -487,7 +494,7 @@
+           fontWeight: "900",
+         }}
+       >
+-        TSh {money(value)}
++        {money(value)}
+       </Text>
+ 
+       <Text
+--- a/src/components/home/sales-performance-v2/SalesPerformanceWorkspace.tsx
++++ b/src/components/home/sales-performance-v2/SalesPerformanceWorkspace.tsx
+@@ -1,3 +1,4 @@
++import {usePreferredDisplayMoney} from '@/src/currency/PreferredDisplay';
+ import {useLanguage} from "@/src/i18n/LanguageProvider";
+ ﻿import {useCommonText} from "@/src/i18n/useCommonText";
+ import { Ionicons } from "@expo/vector-icons";
+@@ -261,6 +262,8 @@
+   previousPoints: SalesPerformancePoint[];
+   compare: boolean;
+ }) {
++ const preferredMoney=usePreferredDisplayMoney();const compactMoney=(value:number)=>{const label=preferredMoney(value);return label.startsWith('Conversion unavailable')?'—':label.replace(/\s+[A-Z]{3}$/,'').replace(/^[A-Z]{3}\s*/,'')};
++
+  const uiText = useCommonText();
+   const width = 920;
+   const height = 255;
+@@ -626,6 +629,8 @@
+   refreshKey,
+   onOpenCRM,
+ }: Props) {
++ const preferredMoney=usePreferredDisplayMoney();
++
+  const uiText=useCommonText();
+  const {language}=useLanguage();
+   const [mode, setMode] =
+@@ -1348,46 +1353,7 @@
+ 
+                 const compactPaymentMoney = (
+                   value: number
+-                ) => {
+-                  const amount =
+-                    Math.abs(
+-                      Number(value || 0)
+-                    );
+-
+-                  if (amount >= 1000000000) {
+-                    return `TSh ${(
+-                      amount / 1000000000
+-                    ).toFixed(
+-                      amount >= 10000000000
+-                        ? 1
+-                        : 2
+-                    )}B`;
+-                  }
+-
+-                  if (amount >= 1000000) {
+-                    return `TSh ${(
+-                      amount / 1000000
+-                    ).toFixed(
+-                      amount >= 10000000
+-                        ? 1
+-                        : 2
+-                    )}M`;
+-                  }
+-
+-                  if (amount >= 1000) {
+-                    return `TSh ${(
+-                      amount / 1000
+-                    ).toFixed(
+-                      amount >= 100000
+-                        ? 0
+-                        : 1
+-                    )}K`;
+-                  }
+-
+-                  return `TSh ${Math.round(
+-                    amount
+-                  ).toLocaleString()}`;
+-                };
++                ) => {return preferredMoney(value);};
+ 
+                 const radius = 58;
+                 const circumference =
+--- a/src/currency/CurrentRateValuation.tsx
++++ b/src/currency/CurrentRateValuation.tsx
+@@ -14,7 +14,7 @@
+ export function CurrentRateValuation(props:Props){
+  const [open,setOpen]=useState(false),{displayCurrency,setDisplayCurrency}=useLanguage();
+  if(!props.compact)return <CurrentRateDetails {...props}/>;
+- return <View style={{backgroundColor:UI.card,borderRadius:10,marginVertical:6}}><View style={{flexDirection:'row',gap:8}}><Pressable accessibilityRole="button" onPress={()=>{setDisplayCurrency('USD');setOpen(true)}} style={{padding:10,minHeight:44}}><Text style={{color:UI.text}}>View in USD</Text></Pressable><Pressable accessibilityRole="button" accessibilityState={{expanded:open}} onPress={()=>setOpen(!open)} style={{padding:10,minHeight:44}}><Text style={{color:UI.text}}>{open?'Close':'Currency'} · {displayCurrency||'Original'}</Text></Pressable></View>{open&&<Modal visible onRequestClose={()=>setOpen(false)} animationType="slide"><View style={{flex:1,backgroundColor:UI.background,paddingTop:44,paddingHorizontal:12}}><Pressable accessibilityRole="button" onPress={()=>setOpen(false)} style={{padding:12,minHeight:44}}><Text style={{color:UI.text}}>Close currency view</Text></Pressable><ScrollView><CurrentRateDetails {...props}/></ScrollView></View></Modal>}</View>;
++ return <View style={{minWidth:0}}><Pressable accessibilityRole="button" accessibilityLabel="Display currency" accessibilityState={{expanded:open}} onPress={()=>setOpen(!open)} style={{minHeight:52,padding:10,borderRadius:12,borderWidth:1,borderColor:'#BFDBFE',backgroundColor:'#EFF6FF',justifyContent:'center'}}><Text style={{color:'#1E3A8A',fontWeight:'700'}}>Currency · {displayCurrency||'TZS'} ▾</Text></Pressable>{open&&<Modal visible onRequestClose={()=>setOpen(false)} animationType="slide"><View style={{flex:1,backgroundColor:UI.background,paddingTop:44,paddingHorizontal:12}}><Pressable accessibilityRole="button" onPress={()=>setOpen(false)} style={{padding:12,minHeight:44}}><Text style={{color:UI.text}}>Close currency view</Text></Pressable><ScrollView><CurrentRateDetails {...props}/></ScrollView></View></Modal>}</View>;
+ }
+ function CurrentRateDetails({organizationId,rows,period,onPdfGenerated}:Props){
+  const {language,displayCurrency,setDisplayCurrency}=useLanguage(),sw=language==='sw';
+--- a/src/currency/DashboardCurrency.tsx
++++ b/src/currency/DashboardCurrency.tsx
+@@ -1,36 +1,36 @@
+-import React,{useCallback,useEffect,useState} from 'react';
+-import {Modal,Pressable,ScrollView,Text,View} from 'react-native';
+-import {useFocusEffect} from 'expo-router';
+-import {useOrg} from '../context/OrgContext';
+-import {useLanguage} from '../i18n/LanguageProvider';
+-import {supabase} from '../supabase/supabaseClient';
+-import {CurrentRateValuation} from './CurrentRateValuation';
+-import {useAccountingAuthority} from './useAccountingAuthority';
+-import {dashboardScopeKey,loadDashboardTotals,type DashboardTotal} from './dashboardValuation';
+-import {UI} from '../ui/theme';
+-export function DashboardCurrency(){
+- const org=useOrg(),{displayCurrency,language}=useLanguage(),sw=language==='sw';
+- const [open,setOpen]=useState(false),[retry,setRetry]=useState(0);
+- const scope={organizationId:String(org.activeOrgId??''),storeId:org.activeStoreId,role:String(org.activeRole??''),stores:org.stores};
+- const date=new Date(),ymd=[date.getFullYear(),date.getMonth()+1,date.getDate()].join('-'),key=dashboardScopeKey(scope,ymd);
+- const [state,setState]=useState<{key:string;rows:DashboardTotal[];status:'loading'|'ready'|'error'}>({key:'',rows:[],status:'loading'});
+- const accounting=useAccountingAuthority(scope.organizationId);
+- useFocusEffect(useCallback(()=>{if(open)setRetry(n=>n+1)},[open]));
+- useEffect(()=>{
+-  if(!open||!scope.organizationId||org.loading)return;
+-  let current=true;setState({key,rows:[],status:'loading'});
+-  void loadDashboardTotals(supabase,scope,new Date()).then(rows=>{if(current)setState({key,rows,status:'ready'})}).catch(()=>{if(current)setState({key,rows:[],status:'error'})});
+-  return()=>{current=false};
+- },[open,key,retry,org.loading]);
+- if(!scope.organizationId||!scope.role)return null;
+- const ready=!org.loading&&state.key===key&&state.status==='ready',unsupported=accounting.authority&&accounting.authority.currency!=='TZS';
+- return <View testID="dashboard-currency-entry" style={{marginVertical:6,flexShrink:0}}>
+-  <Pressable accessibilityRole="button" accessibilityLabel="Dashboard currency" onPress={()=>setOpen(true)} style={{minHeight:44,padding:12,borderRadius:12,backgroundColor:UI.card,borderWidth:1,borderColor:'#64748b'}}><Text style={{color:UI.text,fontWeight:'700'}}>{sw?'Sarafu ya Dashboard':'Dashboard currency'} · {displayCurrency||'Original'} ▾</Text></Pressable>
+-  {open&&<Modal visible animationType="slide" onRequestClose={()=>setOpen(false)}><View style={{flex:1,backgroundColor:UI.background,paddingTop:44,paddingHorizontal:12}}>
+-   <Pressable accessibilityRole="button" onPress={()=>setOpen(false)} style={{minHeight:44,padding:12}}><Text style={{color:UI.text}}>Close dashboard currency</Text></Pressable>
+-   <ScrollView contentContainerStyle={{paddingBottom:30}}><Text style={{color:UI.text,fontWeight:'700'}}>Dashboard · {scope.storeId?org.activeStoreName:'All authorized stores'} · Today</Text>
+-    {unsupported?<Text style={{color:UI.text}}>Conversion unavailable: this summary reader is legacy TZS only.</Text>:ready?<CurrentRateValuation key={key} organizationId={scope.organizationId} period="Dashboard · Today · latest reference rate" rows={state.rows.map(row=>({label:row.label,value:{amount:row.amount,currency:'TZS',organizationId:scope.organizationId,contextRevision:null,source:'TRANSACTION_RECORD'}}))}/>:<Text accessibilityRole="alert" style={{color:UI.text}}>{state.key===key&&state.status==='error'?'Dashboard totals unavailable; original records unchanged.':'Loading authorized Dashboard totals…'}</Text>}
+-    <Pressable accessibilityRole="button" onPress={()=>setRetry(n=>n+1)} style={{minHeight:44,padding:12}}><Text style={{color:UI.text}}>Refresh dashboard totals</Text></Pressable>
+-   </ScrollView></View></Modal>}
+- </View>;
+-}
++import React,{useCallback,useEffect,useState} from 'react';
++import {Modal,Pressable,ScrollView,Text,View} from 'react-native';
++import {useFocusEffect} from 'expo-router';
++import {useOrg} from '../context/OrgContext';
++import {useLanguage} from '../i18n/LanguageProvider';
++import {supabase} from '../supabase/supabaseClient';
++import {CurrentRateValuation} from './CurrentRateValuation';
++import {useAccountingAuthority} from './useAccountingAuthority';
++import {dashboardScopeKey,loadDashboardTotals,type DashboardTotal} from './dashboardValuation';
++import {UI} from '../ui/theme';
++export function DashboardCurrency({compact=false}:{compact?:boolean}={}){
++ const org=useOrg(),{displayCurrency,language}=useLanguage(),sw=language==='sw';
++ const [open,setOpen]=useState(false),[retry,setRetry]=useState(0);
++ const scope={organizationId:String(org.activeOrgId??''),storeId:org.activeStoreId,role:String(org.activeRole??''),stores:org.stores};
++ const date=new Date(),ymd=[date.getFullYear(),date.getMonth()+1,date.getDate()].join('-'),key=dashboardScopeKey(scope,ymd);
++ const [state,setState]=useState<{key:string;rows:DashboardTotal[];status:'loading'|'ready'|'error'}>({key:'',rows:[],status:'loading'});
++ const accounting=useAccountingAuthority(scope.organizationId);
++ useFocusEffect(useCallback(()=>{if(open)setRetry(n=>n+1)},[open]));
++ useEffect(()=>{
++  if(!open||!scope.organizationId||org.loading)return;
++  let current=true;setState({key,rows:[],status:'loading'});
++  void loadDashboardTotals(supabase,scope,new Date()).then(rows=>{if(current)setState({key,rows,status:'ready'})}).catch(()=>{if(current)setState({key,rows:[],status:'error'})});
++  return()=>{current=false};
++ },[open,key,retry,org.loading]);
++ if(!scope.organizationId||!scope.role)return null;
++ const ready=!org.loading&&state.key===key&&state.status==='ready',unsupported=accounting.authority&&accounting.authority.currency!=='TZS';
++ return <View testID="dashboard-currency-entry" style={{marginVertical:compact?0:6,flexShrink:0}}>
++  <Pressable accessibilityRole="button" accessibilityLabel="Dashboard currency" onPress={()=>setOpen(true)} style={{minHeight:44,minWidth:compact?64:undefined,padding:compact?8:12,borderRadius:12,backgroundColor:UI.card,borderWidth:1,borderColor:'#64748b'}}><Text style={{color:UI.text,fontWeight:'700'}}>{compact?'':(sw?'Sarafu ya Dashboard · ':'Dashboard currency · ')}{displayCurrency||'TZS'} ▾</Text></Pressable>
++  {open&&<Modal visible animationType="slide" onRequestClose={()=>setOpen(false)}><View style={{flex:1,backgroundColor:UI.background,paddingTop:44,paddingHorizontal:12}}>
++   <Pressable accessibilityRole="button" onPress={()=>setOpen(false)} style={{minHeight:44,padding:12}}><Text style={{color:UI.text}}>Close dashboard currency</Text></Pressable>
++   <ScrollView contentContainerStyle={{paddingBottom:30}}><Text style={{color:UI.text,fontWeight:'700'}}>Dashboard · {scope.storeId?org.activeStoreName:'All authorized stores'} · Today</Text>
++    {unsupported?<Text style={{color:UI.text}}>Conversion unavailable: this summary reader is legacy TZS only.</Text>:ready?<CurrentRateValuation key={key} organizationId={scope.organizationId} period="Dashboard · Today · latest reference rate" rows={state.rows.map(row=>({label:row.label,value:{amount:row.amount,currency:'TZS',organizationId:scope.organizationId,contextRevision:null,source:'TRANSACTION_RECORD'}}))}/>:<Text accessibilityRole="alert" style={{color:UI.text}}>{state.key===key&&state.status==='error'?'Dashboard totals unavailable; original records unchanged.':'Loading authorized Dashboard totals…'}</Text>}
++    <Pressable accessibilityRole="button" onPress={()=>setRetry(n=>n+1)} style={{minHeight:44,padding:12}}><Text style={{color:UI.text}}>Refresh dashboard totals</Text></Pressable>
++   </ScrollView></View></Modal>}
++ </View>;
++}
+--- a/src/currency/LegacyTzsValuation.tsx
++++ b/src/currency/LegacyTzsValuation.tsx
+@@ -1,4 +1,5 @@
+ import React from 'react';
++import {PreferredRateNote} from './PreferredDisplay';
+ import {Text,View} from 'react-native';
+ import {UI} from '../ui/theme';
+ import {useAccountingAuthority} from './useAccountingAuthority';
+@@ -7,7 +8,7 @@
+ import {CurrentRateValuation} from './CurrentRateValuation';
+ /** Legacy summaries have no transaction-currency column. Require an explicit
+  * legacy TZS reader contract; never assign a personal display preference. */
+-export function LegacyTzsValuation({organizationId,rows,period}:{organizationId:string;rows:readonly {label:string;amount:unknown;ownerOnly?:boolean}[];period:string}){
++export function LegacyTzsValuation({organizationId,rows,period,showRateNote=true}:{organizationId:string;rows:readonly {label:string;amount:unknown;ownerOnly?:boolean}[];period:string;showRateNote?:boolean}){
+  const context=useOrg(),accounting=useAccountingAuthority(organizationId);
+  const sameOrg=String(context.activeOrgId??'')===organizationId;
+  const visible=authorizedValuationRows(rows,sameOrg&&String(context.activeRole??'').toLowerCase()==='owner');
+@@ -16,5 +17,5 @@
+  if(accounting.authority&&accounting.authority.currency!=='TZS')return <Text style={{color:UI.text}}>Conversion unavailable: this legacy reader does not provide original transaction currency.</Text>;
+  const unavailable=visible.filter(row=>displayDecimal(row.amount)===null);
+  const values=visible.flatMap(row=>{const amount=displayDecimal(row.amount);return amount===null?[]:[{label:row.label,value:{amount,currency:'TZS',organizationId,contextRevision:null,source:'TRANSACTION_RECORD' as const}}]});
+- return <View>{unavailable.map((row,index)=><Text key={index} style={{color:UI.text}}>{row.label}: conversion unavailable; original reader does not provide a safe decimal amount.</Text>)}<CurrentRateValuation compact key={organizationId} organizationId={organizationId} rows={values} period={period}/></View>;
++ return <View>{showRateNote&&<PreferredRateNote />}{unavailable.map((row,index)=><Text key={index} style={{color:UI.text}}>{row.label}: conversion unavailable; original reader does not provide a safe decimal amount.</Text>)}<CurrentRateValuation compact key={organizationId} organizationId={organizationId} rows={values} period={period}/></View>;
+ }
+--- a/src/currency/PreferredDisplay.tsx
++++ b/src/currency/PreferredDisplay.tsx
+@@ -0,0 +1,39 @@
++import React,{useCallback,useEffect,useState,useSyncExternalStore} from 'react';
++import {Text} from 'react-native';
++import {useOrg} from '../context/OrgContext';
++import {useLanguage} from '../i18n/LanguageProvider';
++import {referenceRateStore} from './rateStore';
++import {currentValuation,displayDecimal} from './currentValuation';
++import {formatExact,formatCurrencyExact} from './engine';
++
++/** Explicit legacy-TZS display reader. Never used by payment inputs, route carts or posting payloads. */
++export function formatPreferredLegacyMoney(amount:unknown,target:string|null,evidence:Parameters<typeof currentValuation>[2],now:Date,organizationId:string,locale='en'){
++ const decimal=displayDecimal(amount);
++ if(decimal===null)return 'Conversion unavailable';
++ if(!target||target==='TZS')return formatCurrencyExact(decimal,'TZS',locale,0);
++ const view=currentValuation({amount:decimal,currency:'TZS',organizationId,contextRevision:null,source:'TRANSACTION_RECORD'},target,evidence,now,organizationId);
++ return view.status==='CONVERTED'?`${formatExact(view.displayAmount,locale)} ${view.displayCurrency}`:`Conversion unavailable · Original ${formatCurrencyExact(decimal,'TZS',locale,0)}`;
++}
++function usePreferredReference(){
++ const {displayCurrency}=useLanguage();const state=useSyncExternalStore(referenceRateStore.subscribe,referenceRateStore.getSnapshot,referenceRateStore.getSnapshot),[tick,setTick]=useState(0);
++ useEffect(()=>{if(!displayCurrency||displayCurrency==='TZS')return;void referenceRateStore.refresh();const timer=setInterval(()=>{setTick(v=>v+1);void referenceRateStore.refresh()},60000);return()=>clearInterval(timer)},[displayCurrency]);
++ return {...state,tick};
++}
++export function usePreferredDisplayMoney(organizationId?:string,ready=true){
++ const org=useOrg(),prefs=useLanguage(),rate=usePreferredReference();const id=organizationId??String(org.activeOrgId??'');
++ return useCallback((amount:unknown,_options?:unknown)=>{
++  if(!ready||org.loading||!id||id!==String(org.activeOrgId??'')||prefs.currencyOrganization!==id)return 'Conversion unavailable';
++  return formatPreferredLegacyMoney(amount,prefs.displayCurrency,rate.evidence,new Date(),id,prefs.language);
++ },[ready,org.loading,id,org.activeOrgId,prefs.currencyOrganization,prefs.displayCurrency,prefs.language,rate.evidence,rate.tick]);
++}
++export function usePreferredRateDescription(){
++ const {displayCurrency,language,currencyPreferenceError,currencyOrganization}=useLanguage(),state=usePreferredReference();
++ const result=displayCurrency&&displayCurrency!=='TZS'&&currencyOrganization?currentValuation({amount:'1',currency:'TZS',organizationId:currencyOrganization,contextRevision:null,source:'TRANSACTION_RECORD'},displayCurrency,state.evidence,new Date(),currencyOrganization):null;
++ const reference=result?.status==='CONVERTED'?result.rate:null;
++ return `${currencyPreferenceError?'Display preference could not be saved on this device. ':''}${displayCurrency&&displayCurrency!=='TZS'?`${language==='sw'?'Thamani kwa kiwango cha sasa':'Current-rate valuation'} · ${displayCurrency} · ${reference?`${reference.provider} · Effective ${reference.referenceDate} · Retrieved ${reference.retrievedAt} · Reference rate, not bank buy/sell rate`:'Conversion unavailable; verified fresh reference rate required'} · Original TZS records unchanged`:''}`;
++}
++export function PreferredRateNote({compact=false}:{compact?:boolean}={}){
++ const full=usePreferredRateDescription();
++ const description=compact?full.replace(/ · Retrieved .*? · Original TZS records unchanged/,'').replace('BOT_REFERENCE','BoT').replace('ECB_REFERENCE','ECB'):full;
++ return description?<Text accessibilityLiveRegion="polite" style={{fontSize:11,lineHeight:16,color:'#64748b',flexShrink:1}}>{description}</Text>:null;
++}
+--- a/src/currency/displayPreference.ts
++++ b/src/currency/displayPreference.ts
+@@ -0,0 +1,21 @@
++import {isSelectableCurrency} from './metadata';
++export type PreferenceStorage={getString:(key:string)=>Promise<string|null>;setString:(key:string,value:string|null)=>Promise<unknown>};
++export const displayPreferenceKey=(actor:string,organization:string)=>actor&&organization?`zetra_display_currency_v2:${encodeURIComponent(actor)}:${encodeURIComponent(organization)}`:'';
++/** Display preferences only. Unscoped legacy values are preserved, never attributed to another user. */
++export class ScopedDisplayPreference{
++ private state={key:'',currency:null as string|null,ready:false,error:false};private epoch=0;private listeners=new Set<()=>void>();private writes=new Map<string,Promise<unknown>>();
++ constructor(private storage:PreferenceStorage){}
++ getSnapshot=()=>this.state;
++ subscribe=(listener:()=>void)=>{this.listeners.add(listener);return()=>{this.listeners.delete(listener)}};
++ private publish(next:typeof this.state){this.state=next;this.listeners.forEach(fn=>fn())}
++ activate(key:string){
++  const epoch=++this.epoch;this.publish({key,currency:null,ready:!key,error:false});if(!key)return;
++  void (this.writes.get(key)??Promise.resolve()).catch(()=>{}).then(()=>this.storage.getString(key)).then(value=>{if(epoch===this.epoch)this.publish({key,currency:value&&isSelectableCurrency(value)?value:null,ready:true,error:false})},()=>{if(epoch===this.epoch)this.publish({key,currency:null,ready:true,error:true})});
++ }
++ select(key:string,value:string|null){
++  const code=value?.trim().toUpperCase()||null;if(!key||this.state.key!==key||code&&!isSelectableCurrency(code))return;
++  const epoch=++this.epoch;this.publish({key,currency:code,ready:true,error:false});
++  const prior=this.writes.get(key)??Promise.resolve();
++  const next=prior.catch(()=>{}).then(()=>this.storage.setString(key,code)).catch(()=>{if(this.state.key===key&&this.epoch===epoch)this.publish({...this.state,error:true})});this.writes.set(key,next);
++ }
++}
+--- a/src/i18n/LanguageProvider.tsx
++++ b/src/i18n/LanguageProvider.tsx
+@@ -1,18 +1,28 @@
++import {ScopedDisplayPreference,displayPreferenceKey} from '../currency/displayPreference';
++import {useOrg} from '../context/OrgContext';
++import {supabase} from '../supabase/supabaseClient';
+ import {isSelectableCurrency} from '../currency/metadata';
+-import React, {createContext,useContext,useEffect,useMemo,useRef,useState} from 'react';
++import React, {createContext,useContext,useEffect,useMemo,useRef,useState,useSyncExternalStore} from 'react';
+ import {Pressable,Text,View} from 'react-native';
+ import {kv} from '../storage/kv';
+ import {Language,MessageKey,direction,languages,languageNames,resolveLanguage,translate} from './catalog';
+ const KEY='zetra_user_language_v1';
+-const DISPLAY_KEY='zetra_user_display_currency_v1';
+-type State={language:Language;displayCurrency:string|null;t:(key:MessageKey)=>string;setLanguage:(language:Language)=>void;setDisplayCurrency:(currency:string|null)=>void};
+-const Context=createContext<State>({language:'en',displayCurrency:null,t:key=>translate('en',key),setLanguage:()=>{},setDisplayCurrency:()=>{}});
++
++type State={currencyOrganization:string;currencyPreferenceError:boolean;language:Language;displayCurrency:string|null;t:(key:MessageKey)=>string;setLanguage:(language:Language)=>void;setDisplayCurrency:(currency:string|null)=>void};
++const Context=createContext<State>({currencyOrganization:'',currencyPreferenceError:false,language:'en',displayCurrency:null,t:key=>translate('en',key),setLanguage:()=>{},setDisplayCurrency:()=>{}});
+ export function LanguageProvider({children}:{children:React.ReactNode}) {
+  const [language,setValue]=useState<Language>('en');const changed=useRef(false);
+- const [displayCurrency,setDisplayValue]=useState<string|null>(null);const currencyChanged=useRef(false);
++ const org=useOrg();const [actor,setActor]=useState('');
++ const store=useRef<ScopedDisplayPreference|null>(null);if(!store.current)store.current=new ScopedDisplayPreference(kv);
++ const preference=useSyncExternalStore(store.current.subscribe,store.current.getSnapshot,store.current.getSnapshot);
++ const currencyOrganization=actor?String(org.activeOrgId??''):'';const scope=displayPreferenceKey(actor,currencyOrganization);
++ const displayCurrency=preference.key===scope?preference.currency:null;
++ useEffect(()=>{let live=true,revision=0;void supabase.auth.getSession().then(({data:{session}})=>{if(live&&revision===0)setActor(session?.user.id??'')}).catch(()=>{if(live&&revision===0)setActor('')});const {data:{subscription}}=supabase.auth.onAuthStateChange((_event,session)=>{revision++;if(live)setActor(session?.user.id??'')});return()=>{live=false;subscription.unsubscribe()}},[]);
++ useEffect(()=>{store.current!.activate(scope)},[scope]);
+  useEffect(()=>{let alive=true;void kv.getString(KEY).then(value=>{if(alive&&!changed.current)setValue(resolveLanguage(value))});return()=>{alive=false}},[]);
+- useEffect(()=>{let alive=true;void kv.getString(DISPLAY_KEY).then(value=>{if(alive&&!currencyChanged.current&&value&&isSelectableCurrency(value))setDisplayValue(value)});return()=>{alive=false}},[]);
+- const state=useMemo<State>(()=>({language,displayCurrency,t:key=>translate(language,key),setLanguage:next=>{changed.current=true;const validated=resolveLanguage(next);setValue(validated);void kv.setString(KEY,validated)},setDisplayCurrency:next=>{const validated=next?.trim().toUpperCase()||null;if(validated&&!isSelectableCurrency(validated))return;currencyChanged.current=true;setDisplayValue(validated);void kv.setString(DISPLAY_KEY,validated)}}),[language,displayCurrency]);
++ // Preserve the legacy device key without importing an unowned preference into another identity.
++
++ const state=useMemo<State>(()=>({currencyOrganization,currencyPreferenceError:preference.key===scope&&preference.error,language,displayCurrency,t:key=>translate(language,key),setLanguage:next=>{changed.current=true;const validated=resolveLanguage(next);setValue(validated);void kv.setString(KEY,validated)},setDisplayCurrency:next=>store.current!.select(scope,next)}),[language,displayCurrency,currencyOrganization,scope,preference.error]);
+  return <Context.Provider value={state}><View style={{flex:1,direction:direction(language)}}>{children}</View></Context.Provider>;
+ }
+ export function useLanguage(){return useContext(Context)}
+--- a/src/proforma/ProformaOrdersAction.tsx
++++ b/src/proforma/ProformaOrdersAction.tsx
+@@ -1,42 +1,42 @@
+-import React,{useCallback,useState} from 'react';
+-import {Pressable,Text,View,useWindowDimensions} from 'react-native';
+-import {useRouter,useFocusEffect} from 'expo-router';
+-import {useLanguage} from '../i18n/LanguageProvider';
+-import {Button} from '../ui/Button';
+-import {ordersText} from './ordersCopy';
+-import {proformaText} from './labels';
+-import {createDocumentService} from './documentsApi';
+-import {supabase} from '../supabase/supabaseClient';
+-import {makeId} from '../offline/salesQueue';
+-import {pendingCount} from './pendingCount';
+-/** History API remains the authority for permissions and records; no fabricated pending count. */
+-export function ProformaOrdersAction({organizationId,storeId}:{organizationId:string;storeId:string|null}){
+- const router=useRouter(),{language}=useLanguage();const {width}=useWindowDimensions();
+- const [count,setCount]=useState<number|null>(null);
+- useFocusEffect(useCallback(()=>{const controller=new AbortController();setCount(null);if(organizationId&&storeId){const service=createDocumentService({organizationId,storeId},supabase,makeId);void pendingCount((signal,before)=>service.client.page(signal,before),controller.signal).then(value=>{if(!controller.signal.aborted)setCount(value)}).catch(()=>{})}return()=>controller.abort()},[organizationId,storeId]));
+- return <Pressable
+-   accessibilityRole="button"
+-   accessibilityLabel={ordersText(language,'orders')}
+-   accessibilityState={{disabled:!storeId}}
+-   disabled={!storeId}
+-   onPress={()=>router.push({pathname:'/sales/proforma',params:{storeId:storeId!}} as any)}
+-   style={({pressed})=>({
+-     alignSelf:width>=900?'flex-start':'stretch',
+-     width:width>=900?280:'100%',
+-     minHeight:76,
+-     padding:16,
+-     borderWidth:1,
+-     borderColor:'#BFDBFE',
+-     borderRadius:16,
+-     backgroundColor:pressed?'#DBEAFE':'#EFF6FF',
+-     justifyContent:'center'
+-   })}>
+-   <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
+-     <View style={{gap:5,flex:1}}>
+-       <Text style={{fontWeight:'800',fontSize:15,color:'#1E3A8A'}}>{ordersText(language,'orders')}</Text>
+-       <Text style={{fontSize:12,color:'#475569'}}>{proformaText(language,'pending')}</Text>
+-     </View>
+-     <Text style={{fontSize:26,fontWeight:'900',color:'#2563EB'}}>{count===null?'—':count}</Text>
+-   </View>
+- </Pressable>;
+-}
++import React,{useCallback,useState} from 'react';
++import {Pressable,Text,View,useWindowDimensions} from 'react-native';
++import {useRouter,useFocusEffect} from 'expo-router';
++import {useLanguage} from '../i18n/LanguageProvider';
++import {Button} from '../ui/Button';
++import {ordersText} from './ordersCopy';
++import {proformaText} from './labels';
++import {createDocumentService} from './documentsApi';
++import {supabase} from '../supabase/supabaseClient';
++import {makeId} from '../offline/salesQueue';
++import {pendingCount} from './pendingCount';
++/** History API remains the authority for permissions and records; no fabricated pending count. */
++export function ProformaOrdersAction({organizationId,storeId,compact=false}:{organizationId:string;storeId:string|null;compact?:boolean}){
++ const router=useRouter(),{language}=useLanguage();const {width}=useWindowDimensions();
++ const [count,setCount]=useState<number|null>(null);
++ useFocusEffect(useCallback(()=>{const controller=new AbortController();setCount(null);if(organizationId&&storeId){const service=createDocumentService({organizationId,storeId},supabase,makeId);void pendingCount((signal,before)=>service.client.page(signal,before),controller.signal).then(value=>{if(!controller.signal.aborted)setCount(value)}).catch(()=>{})}return()=>controller.abort()},[organizationId,storeId]));
++ return <Pressable
++   accessibilityRole="button"
++   accessibilityLabel={ordersText(language,'orders')}
++   accessibilityState={{disabled:!storeId}}
++   disabled={!storeId}
++   onPress={()=>router.push({pathname:'/sales/proforma',params:{storeId:storeId!}} as any)}
++   style={({pressed})=>({
++     alignSelf:compact?'stretch':width>=900?'flex-start':'stretch',
++     width:compact?'100%':width>=900?280:'100%',
++     minHeight:compact?52:76,
++     padding:compact?10:16,
++     borderWidth:1,
++     borderColor:'#BFDBFE',
++     borderRadius:16,
++     backgroundColor:pressed?'#DBEAFE':'#EFF6FF',
++     justifyContent:'center'
++   })}>
++   <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}>
++     <View style={{gap:5,flex:1}}>
++       <Text style={{fontWeight:'800',fontSize:compact?13:15,color:'#1E3A8A'}}>{ordersText(language,'orders')}</Text>
++       <Text style={{fontSize:12,color:'#475569'}}>{proformaText(language,'pending')}</Text>
++     </View>
++     <Text style={{fontSize:compact?20:26,fontWeight:'900',color:'#2563EB'}}>{count===null?'—':count}</Text>
++   </View>
++ </Pressable>;
++}

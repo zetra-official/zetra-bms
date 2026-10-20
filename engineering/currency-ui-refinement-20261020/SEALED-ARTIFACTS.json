@@ -1,0 +1,24 @@
+{
+  "web": {
+    "zip": "currency-ui-web-artifact.zip",
+    "zipSHA256": "1efd23522cdab5e9982b0f0f4f1cd24eafcd2cb98d429ea09f3d341e45423df6",
+    "manifest": "ARTIFACT-web-SHA256.json",
+    "manifestSHA256": "6d032c568a0ecc51fbf2d85cbf2298db609de713f6ea7f835452e7531ef00f05",
+    "entry": "_expo/static/js/web/entry-be3dfa2fe1488e3e500f092bd606817c.js",
+    "files": 272,
+    "sameProductionBackend": true,
+    "localFixturesExcluded": true,
+    "runtime": null
+  },
+  "android": {
+    "zip": "currency-ui-android-artifact.zip",
+    "zipSHA256": "68afb1b9a2c2e1a56f41b368e5db340ac31f2d8b2646875bcfcf5ff504380bb1",
+    "manifest": "ARTIFACT-android-SHA256.json",
+    "manifestSHA256": "78e1692a4108f36aa6587ee97cdbf2f35479385e443f29d91769af788f95d578",
+    "entry": "_expo/static/js/android/entry-a713159d4c299f6007df6496c0cfd2f5.hbc",
+    "files": 48,
+    "sameProductionBackend": true,
+    "localFixturesExcluded": true,
+    "runtime": "1.0.0"
+  }
+}

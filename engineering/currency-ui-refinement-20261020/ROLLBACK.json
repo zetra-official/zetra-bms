@@ -1,0 +1,20 @@
+{
+  "web": {
+    "status": "VERIFIED",
+    "files": 272,
+    "manifestSHA256": "b93f9d39d144f66d91486f7de377444d602b6ecfc47486b2dea1750419083ca9",
+    "deploymentId": "6ad76cf47622bc0a29e1244f",
+    "updateId": null,
+    "group": null,
+    "runtime": null
+  },
+  "android": {
+    "status": "VERIFIED",
+    "files": 48,
+    "manifestSHA256": "3ab65cabecfed99a5329e88ec421a4c1294dcf2437bad8bd3896b91dfe9b1eeb",
+    "deploymentId": null,
+    "updateId": "01a1592b-2ee1-7ed9-ac55-fb2b9185776c",
+    "group": "6f0e3704-2774-44c8-afc5-34216997c808",
+    "runtime": "1.0.0"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "checkpoint": "b6454b9db38feaeae2c6932885010a4a6e59949d",
+  "webDeployment": "6ad76cf47622bc0a29e1244f",
+  "androidUpdate": "01a1592b-2ee1-7ed9-ac55-fb2b9185776c",
+  "productionPublicationAuthorized": false,
+  "sources": {
+    "web": {
+      "path": "engineering\\checkout-safari-fix-20261020\\customer-bugfix-web-source.zip",
+      "sha256": "df635fbe262a550b3bac1acb8e4843e5bd5b1b968d4c33034322ca6df4f91501"
+    },
+    "android": {
+      "path": "engineering\\currency-dashboard-fix-20261020\\dashboard-fix-android-source.zip",
+      "sha256": "53bce6aa98b656338640a0693c670768aa7af63cc8ed8eec69f5536b95bd2220"
+    }
+  }
+}

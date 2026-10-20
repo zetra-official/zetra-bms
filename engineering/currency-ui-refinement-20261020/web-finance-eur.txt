@@ -1,0 +1,57 @@
+Browser tab: 7, Title: "ZETRA BMS", URL: "http://127.0.0.1:55650/finance/live".
+1 AXWebArea ZETRA BMS, URL: 127.0.0.1:55650/finance/live
+	2 container
+		3 container
+			4 text Current-rate valuation · EUR · BOT_REFERENCE · Effective 2026-10-20 · Retrieved 2026-10-20T15:10:51.735Z · Reference rate, not bank buy/sell rate · Original TZS records unchanged
+			5 button Display currency
+				6 container
+					7 text Currency ·  EUR  ▾
+			8 text ←
+			9 container
+				10 text ◉
+				11 text Live Finance
+				12 text PRO • All Stores (1)
+			13 text ↻
+			14 text LIVE SCOPE
+			15 container
+				16 text STORE
+				17 text ALL STORES
+			18 text Live Overview • Today
+			19 container
+				20 container
+					21 text Sales 84.35 EUR
+				22 container
+					23 text Expenses 3.37 EUR
+				24 container
+					25 text Orders 1
+				26 container
+					27 text Money In 80.98 EUR
+				28 container
+					29 text Stock Value 337.42 EUR
+				30 container
+					31 text Profit 47.24 EUR owner-only
+			32 text Today’s live snapshot. ALL STORES shows the organization aggregate; STORE shows individual stores.
+			33 container
+				34 text Top Performer Today: Synthetic Store 1 Sales 84.35 EUR • Money In 80.98 EUR  • Profit 47.24 EUR
+			35 container
+				36 text ⚡
+				37 container
+					38 text Synthetic Store 1 Top performer right now
+				39 container
+					40 text TOP # 1
+				41 container
+					42 text Sales 84.35 EUR
+				43 container
+					44 text Money In 80.98 EUR
+				45 container
+					46 text Expenses 3.37 EUR
+				47 container
+					48 text Stock Value 337.42 EUR
+				49 container
+					50 text Orders 1
+				51 container
+					52 text Profit 47.24 EUR
+				53 text This store currently leads in live performance.
+				54 text OPEN DETAIL
+
+The focused UI element is 1 AXWebArea ZETRA BMS, URL: 127.0.0.1:55650/finance/live

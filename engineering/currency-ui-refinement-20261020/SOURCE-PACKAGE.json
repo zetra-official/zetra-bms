@@ -1,0 +1,200 @@
+{
+  "web": {
+    "zip": "currency-ui-web-source.zip",
+    "sha256": "db0bbba5e66c24ac9a88579b19b3ef799cb290f8508d2b961cc1bb08a2116495",
+    "changedFiles": {
+      "app/(tabs)/index.tsx": {
+        "before": "3bab2ccba501056efa465fa3894e19a69941da80a82e89c43ee8fd1c92ba4355",
+        "after": "7476066fd2256d668c708ad56761fd61b2e842ed28884b899f36b50b87646433"
+      },
+      "app/(tabs)/products.tsx": {
+        "before": "14770c995d285a0044d12a7130fa3c7cf797ac1ed9853652f43e628851b101cd",
+        "after": "20857640e3012b3c9bb7e38bf4f3e1553ac1d626206176d05d1823cb693ff9d8"
+      },
+      "app/(tabs)/sales/index.tsx": {
+        "before": "faca58b19e22e8d21ec5eac0b12a910d2e7a5b46bec05a8d9d5b96250924285e",
+        "after": "5b1b37067ee3984011cc73d4002630cd912f8efa6ad67edaf1dc306195d93f4f"
+      },
+      "app/(tabs)/settings/business-statement.tsx": {
+        "before": "5726690654a0283400cac2d7f929053b2422d92362cd38aaf2d8d30724248427",
+        "after": "5c51163b7c62263d0de6ffc8f7c71af12f878d7e81c29ef237d2c29aff3013db"
+      },
+      "app/_layout.tsx": {
+        "before": "be36733bb86ca3607d7d00e973025aebc1b5d69f40c3e8d007dc56d22e2701a2",
+        "after": "88b70b34212edddf170027ae0cba545cd2f3ca1803bf875516efc376c5883cfe"
+      },
+      "app/finance/business-debts.tsx": {
+        "before": "bed3187b069425ff22cff48231a63b0a15b96bad34d5f2cd24218d2cbe88006e",
+        "after": "59ae98378a7859b74404e864fc80352d461f13454852081e844630b7cc04da67"
+      },
+      "app/finance/business-position.tsx": {
+        "before": "eca9c4728b49ee5f7304ae73d5f869b626e03de3bbd80e40f67c7cb9c36d493e",
+        "after": "2c8ef6159fcea69de1b38022c5b5990b4ffff0b80d0530b43ed2a1fa9e34ea3f"
+      },
+      "app/finance/history.tsx": {
+        "before": "5c468083b5b4efccd81d9c6abb6bf6c65d9e4296e19e621c495dca34a82d806d",
+        "after": "02826ba1408756db288c9a4034d60e016876a852034ae1387b85054bc1b5dcf1"
+      },
+      "app/finance/live.tsx": {
+        "before": "ea3064daca2ae52e0da3108787245302822bb1a7efc6c3ef04f49f3598898dfe",
+        "after": "225daa34d1416781fc3f121a6b15e13222da887561c41ea2fa118e462912794f"
+      },
+      "app/stocks/history.tsx": {
+        "before": "0448fbac986238c666e9a60041b6e36a61251d8e6f19fdc4ae95e681331dbdd0",
+        "after": "8f520d647d0b2b6948d9501cbf89b7e381f34afcdc5f4b6e4dfe569bac02c9e4"
+      },
+      "src/components/CurrencyPickerAll.tsx": {
+        "before": "209335e8b18746ae67bb2277b68ac4be61fc72149ad9c43c668ec5d23c369961",
+        "after": "56ebd243d85387767d813be6444b26812e3cc432bd9fbbfc3194b43a4c4a4902"
+      },
+      "src/components/home/business-financial-overview/BusinessFinancialOverview.tsx": {
+        "before": "d1b6b7dc904dc2bca1b7bd7f45ae428c9238d841acd15c888a162691c6d12647",
+        "after": "5ab5a2774ad21bd18a7777e24f99c62b552323fd6e0e68e83ba14434efacda60"
+      },
+      "src/components/home/business-financial-overview/FinancialChart.tsx": {
+        "before": "4bcfd5da26c9d09971a0b6dc42ac3c2c3451091ab082327f41d1c06c3853fd95",
+        "after": "3149b1fd3fb5e137bc2fa51b2bf8d8d7e0a296872bbf107c16de49bc2ee61851"
+      },
+      "src/components/home/business-financial-overview/FinancialOverviewFullView.tsx": {
+        "before": "66db5db08da03b4210f447a756ef1aac688dad9f08052ad0b9265eaf243a697a",
+        "after": "ab5a02edc6f5bc0c4951f252060bdb15195d2dd33d2431e42915789ce1d5aab3"
+      },
+      "src/components/home/sales-performance-v2/SalesPerformanceChart.tsx": {
+        "before": "c362846a678c3265b807f5878698bda18b40b4182a38e11999c3bd94ebc438b8",
+        "after": "2d98fd96fd0534e45a04d0a697ab0ab943c66dd3c981c1d30bc462c96447e9a0"
+      },
+      "src/components/home/sales-performance-v2/SalesPerformanceWorkspace.tsx": {
+        "before": "aeae83d7eda79e58ac5d48bf56ed8575bdbd82a2c06e7eab41a36f625cc44fc6",
+        "after": "92ba20b385645f778beacb74af755459790ee111e9dc92ee88dd6ded665a735f"
+      },
+      "src/currency/CurrentRateValuation.tsx": {
+        "before": "627515d63739e7053242d4d0ec7bdba900e24d6b19fffc22f9c0cb351113fffe",
+        "after": "7add4d564cc4514504560740645e0b814ade2377465307350b7041141841abf7"
+      },
+      "src/currency/DashboardCurrency.tsx": {
+        "before": "746d5f8763df53c0d9060ab5bcb27bf7138867213ab334f17dc144c69fdfaa18",
+        "after": "34f94503f37c3c013309759e3bcef2ff2f57a347d2bff61c7f4481ca609c1e6d"
+      },
+      "src/currency/LegacyTzsValuation.tsx": {
+        "before": "b79f7633be6bfe1602d78e6f995424961523d7586ec53d0c7ce5e1e40ce86dc6",
+        "after": "ab006dd52d1617d74b912ef048a5b61f34ab79803796224a73bdcfec71178be2"
+      },
+      "src/i18n/LanguageProvider.tsx": {
+        "before": "a9960fcf8d558826523f9cfdedc241a800bf7df118cbe2f72fa213f41645c924",
+        "after": "a604b73f8b5873acb4aa78f7bb5b85d0ad13c249f95f13909e24020d9441ca48"
+      },
+      "src/proforma/ProformaOrdersAction.tsx": {
+        "before": "b1323f0c015aa7692384d4d0898d04292880966c797b90e373a2e6eceec80636",
+        "after": "8c952406c319bcd9529eec78771659502c9ed0fd5d52a27354288ffb6015f743"
+      },
+      "src/currency/PreferredDisplay.tsx": {
+        "before": null,
+        "after": "43ca6746ad7151a7afdd7f07a263655bbe94e67e7bad8fc8ac8d9335c3df01fb"
+      },
+      "src/currency/displayPreference.ts": {
+        "before": null,
+        "after": "c4b3b025ea543b2f343d496cac4dc033c993dd8729911359d81e1b8e7715172a"
+      }
+    },
+    "catalogUnchanged": true,
+    "runtimeDependenciesUnchanged": true,
+    "newSql": []
+  },
+  "android": {
+    "zip": "currency-ui-android-source.zip",
+    "sha256": "94d45f9196cf42f510ff447cf4de32244806093a2321146d9aaca32cb0b7a68d",
+    "changedFiles": {
+      "app/(tabs)/index.tsx": {
+        "before": "3bab2ccba501056efa465fa3894e19a69941da80a82e89c43ee8fd1c92ba4355",
+        "after": "7476066fd2256d668c708ad56761fd61b2e842ed28884b899f36b50b87646433"
+      },
+      "app/(tabs)/products.tsx": {
+        "before": "14770c995d285a0044d12a7130fa3c7cf797ac1ed9853652f43e628851b101cd",
+        "after": "20857640e3012b3c9bb7e38bf4f3e1553ac1d626206176d05d1823cb693ff9d8"
+      },
+      "app/(tabs)/sales/index.tsx": {
+        "before": "e5a0bf4a01284a9379871dec35f05c265b6187765d1565ca4037877e74505943",
+        "after": "d7353ad9cc8151cd18000c1bc7852f18117585645ec98736892679864afdceaa"
+      },
+      "app/(tabs)/settings/business-statement.tsx": {
+        "before": "5726690654a0283400cac2d7f929053b2422d92362cd38aaf2d8d30724248427",
+        "after": "5c51163b7c62263d0de6ffc8f7c71af12f878d7e81c29ef237d2c29aff3013db"
+      },
+      "app/_layout.tsx": {
+        "before": "7a063003273a91242eac77fed377b6a906ece901f4f4dd900e711f1657b2804a",
+        "after": "54ba5137cfd8a754fd78f97044bff0a9be17c01b7ee55f08fc36629f3b983201"
+      },
+      "app/finance/business-debts.tsx": {
+        "before": "bed3187b069425ff22cff48231a63b0a15b96bad34d5f2cd24218d2cbe88006e",
+        "after": "59ae98378a7859b74404e864fc80352d461f13454852081e844630b7cc04da67"
+      },
+      "app/finance/business-position.tsx": {
+        "before": "eca9c4728b49ee5f7304ae73d5f869b626e03de3bbd80e40f67c7cb9c36d493e",
+        "after": "2c8ef6159fcea69de1b38022c5b5990b4ffff0b80d0530b43ed2a1fa9e34ea3f"
+      },
+      "app/finance/history.tsx": {
+        "before": "5c468083b5b4efccd81d9c6abb6bf6c65d9e4296e19e621c495dca34a82d806d",
+        "after": "02826ba1408756db288c9a4034d60e016876a852034ae1387b85054bc1b5dcf1"
+      },
+      "app/finance/live.tsx": {
+        "before": "ea3064daca2ae52e0da3108787245302822bb1a7efc6c3ef04f49f3598898dfe",
+        "after": "225daa34d1416781fc3f121a6b15e13222da887561c41ea2fa118e462912794f"
+      },
+      "app/stocks/history.tsx": {
+        "before": "0448fbac986238c666e9a60041b6e36a61251d8e6f19fdc4ae95e681331dbdd0",
+        "after": "8f520d647d0b2b6948d9501cbf89b7e381f34afcdc5f4b6e4dfe569bac02c9e4"
+      },
+      "src/components/CurrencyPickerAll.tsx": {
+        "before": "209335e8b18746ae67bb2277b68ac4be61fc72149ad9c43c668ec5d23c369961",
+        "after": "56ebd243d85387767d813be6444b26812e3cc432bd9fbbfc3194b43a4c4a4902"
+      },
+      "src/components/home/business-financial-overview/BusinessFinancialOverview.tsx": {
+        "before": "d1b6b7dc904dc2bca1b7bd7f45ae428c9238d841acd15c888a162691c6d12647",
+        "after": "5ab5a2774ad21bd18a7777e24f99c62b552323fd6e0e68e83ba14434efacda60"
+      },
+      "src/components/home/business-financial-overview/FinancialChart.tsx": {
+        "before": "4bcfd5da26c9d09971a0b6dc42ac3c2c3451091ab082327f41d1c06c3853fd95",
+        "after": "3149b1fd3fb5e137bc2fa51b2bf8d8d7e0a296872bbf107c16de49bc2ee61851"
+      },
+      "src/components/home/business-financial-overview/FinancialOverviewFullView.tsx": {
+        "before": "66db5db08da03b4210f447a756ef1aac688dad9f08052ad0b9265eaf243a697a",
+        "after": "ab5a02edc6f5bc0c4951f252060bdb15195d2dd33d2431e42915789ce1d5aab3"
+      },
+      "src/components/home/sales-performance-v2/SalesPerformanceWorkspace.tsx": {
+        "before": "aeae83d7eda79e58ac5d48bf56ed8575bdbd82a2c06e7eab41a36f625cc44fc6",
+        "after": "92ba20b385645f778beacb74af755459790ee111e9dc92ee88dd6ded665a735f"
+      },
+      "src/currency/CurrentRateValuation.tsx": {
+        "before": "627515d63739e7053242d4d0ec7bdba900e24d6b19fffc22f9c0cb351113fffe",
+        "after": "7add4d564cc4514504560740645e0b814ade2377465307350b7041141841abf7"
+      },
+      "src/currency/DashboardCurrency.tsx": {
+        "before": "746d5f8763df53c0d9060ab5bcb27bf7138867213ab334f17dc144c69fdfaa18",
+        "after": "34f94503f37c3c013309759e3bcef2ff2f57a347d2bff61c7f4481ca609c1e6d"
+      },
+      "src/currency/LegacyTzsValuation.tsx": {
+        "before": "b79f7633be6bfe1602d78e6f995424961523d7586ec53d0c7ce5e1e40ce86dc6",
+        "after": "ab006dd52d1617d74b912ef048a5b61f34ab79803796224a73bdcfec71178be2"
+      },
+      "src/i18n/LanguageProvider.tsx": {
+        "before": "a9960fcf8d558826523f9cfdedc241a800bf7df118cbe2f72fa213f41645c924",
+        "after": "a604b73f8b5873acb4aa78f7bb5b85d0ad13c249f95f13909e24020d9441ca48"
+      },
+      "src/proforma/ProformaOrdersAction.tsx": {
+        "before": "b1323f0c015aa7692384d4d0898d04292880966c797b90e373a2e6eceec80636",
+        "after": "8c952406c319bcd9529eec78771659502c9ed0fd5d52a27354288ffb6015f743"
+      },
+      "src/currency/PreferredDisplay.tsx": {
+        "before": null,
+        "after": "43ca6746ad7151a7afdd7f07a263655bbe94e67e7bad8fc8ac8d9335c3df01fb"
+      },
+      "src/currency/displayPreference.ts": {
+        "before": null,
+        "after": "c4b3b025ea543b2f343d496cac4dc033c993dd8729911359d81e1b8e7715172a"
+      }
+    },
+    "catalogUnchanged": true,
+    "runtimeDependenciesUnchanged": true,
+    "newSql": []
+  }
+}

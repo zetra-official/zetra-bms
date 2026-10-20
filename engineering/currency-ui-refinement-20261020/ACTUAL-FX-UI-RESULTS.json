@@ -1,0 +1,48 @@
+{
+  "status": "PASS",
+  "sourceSnapshot": {
+    "source": "https://bot.go.tz/ExchangeRate/excRates?lang=en",
+    "retrievedAt": "2026-10-20T16:23:58.778352+00:00",
+    "sha256": "28636e5b2b065f4a35f9e3394f2af74f77d31b788cf67ec246b8fd41f59e1591"
+  },
+  "results": [
+    {
+      "currency": "USD",
+      "originalAmount": "250000",
+      "originalCurrency": "TZS",
+      "converted": "94.78 USD",
+      "source": "BOT_REFERENCE",
+      "effectiveDate": "2026-10-20",
+      "status": "PASS"
+    },
+    {
+      "currency": "KES",
+      "originalAmount": "250000",
+      "originalCurrency": "TZS",
+      "converted": "12,321.40 KES",
+      "source": "BOT_REFERENCE",
+      "effectiveDate": "2026-10-20",
+      "status": "PASS"
+    },
+    {
+      "currency": "UGX",
+      "originalAmount": "250000",
+      "originalCurrency": "TZS",
+      "converted": "396,637 UGX",
+      "source": "BOT_REFERENCE",
+      "effectiveDate": "2026-10-20",
+      "status": "PASS"
+    },
+    {
+      "currency": "EUR",
+      "originalAmount": "250000",
+      "originalCurrency": "TZS",
+      "converted": "84.35 EUR",
+      "source": "BOT_REFERENCE",
+      "effectiveDate": "2026-10-20",
+      "status": "PASS"
+    }
+  ],
+  "auth": "Synthetic local adapter; genuine product UI, not genuine Supabase Auth",
+  "financialWrites": false
+}

@@ -1,0 +1,123 @@
+Browser tab: 7, Title: "ZETRA BMS", URL: "http://127.0.0.1:55650/sales".
+0 AXWebArea ZETRA BMS, URL: 127.0.0.1:55650/sales
+	1 container
+		107 container
+			108 text Z
+			109 text ZETRA BMS
+			110 text Business Management System
+		111 container
+			165 text 
+			166 text Home
+			167 text 
+			168 text POS / Sell
+			169 text 
+			170 text Products
+			171 text 
+			172 text Inventory
+			173 text 
+			174 text Customers (CRM)
+			175 text 
+			176 text Credit
+			177 text 
+			178 text Expenses
+			179 text 
+			180 text Finance
+			181 text 
+			182 text Reports
+			183 text 
+			184 text Stores
+			185 text 
+			186 text AI Assistant
+			187 text NEW
+			188 text 
+			189 text More
+		137 container
+			138 text BUSINESS SHORTCUTS
+			139 container
+				140 text 
+				141 text Business Position
+				142 text 
+			143 container
+				144 text 
+				145 text Business Debts
+				146 text 
+			147 container
+				148 text 
+				149 text Incoming Stock
+				150 text 
+			190 container
+				191 text 
+				192 text CURRENT ORGANIZATION
+				193 text SYNTHETIC ORG 1
+				194 text 
+			195 container
+				196 text 
+				197 text CURRENT STORE
+				198 text Synthetic Store 1
+				199 text 
+			161 text 
+			162 container
+				163 text SYNTHETIC ORG 1 OWNER
+			164 text 
+		200 container
+			201 container
+				202 container
+					203 text Point of Sale SYNTHETIC ORG 1 • Synthetic Store 1 • owner Tue, 20 Oct 2026 ONLINE • Source: LIVE • Last sync: Just now
+				204 button Proforma Orders
+					205 container
+						206 text Proforma Orders
+						207 text Pending
+						208 text 2
+				209 button Display currency
+					210 container
+						211 text Currency ·  USD  ▾
+			212 container
+				213 container
+					214 container
+						215 text Product Catalog Search, select and add products to the active sale.
+					216 container
+						217 text 1 PRODUCTS
+					218 text field (settable) Search product, SKU, category or barcode...
+				219 container
+					220 container
+						221 text Synthetic Display Item SKU: SYNTHETIC Stock: 100  • piece: 1 Price: 94.78 USD  •  Line: 94.78 USD
+					222 container
+						223 text −
+						224 text 1
+						225 text +
+						226 text Del
+			227 container
+				228 text 
+				229 container
+					230 text Sales History Receipts & past sales
+				231 container
+					232 text Open 
+				233 container
+					234 container
+						235 text 1 items • 1 quantity 94.78 USD
+					236 container
+						237 image
+						238 text Complete Sale
+						239 text Clear
+					240 text field (settable) Search name / SKU / category / barcode...
+					241 container
+						242 text Current Cart
+						243 text Review selected products before checkout.
+						244 container
+							245 text 1 ITEMS
+					246 container
+						247 text QTY
+						248 text 1
+						249 text CART TOTAL
+						250 text 94.78 USD
+					251 container
+						252 container
+							253 text Synthetic Display Item piece :  1  •  Stock qty: 1  •  Unit: 94.78 USD
+						254 container
+							255 text TOTAL 94.78 USD
+						256 text −
+						257 text 1
+						258 text +
+						259 text Remove
+
+The focused UI element is 0 AXWebArea ZETRA BMS, URL: 127.0.0.1:55650/sales

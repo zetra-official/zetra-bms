@@ -1,0 +1,83 @@
+Browser tab: 7, Title: "ZETRA BMS", URL: "http://127.0.0.1:55650/products".
+1 AXWebArea ZETRA BMS, URL: 127.0.0.1:55650/products
+	2 container
+		85 container
+			86 text Current-rate valuation · EUR · BOT_REFERENCE · Effective 2026-10-20 · Retrieved 2026-10-20T15:05:42.153Z · Reference rate, not bank buy/sell rate · Original TZS records unchanged
+			87 text Products
+			88 text Manage catalog, barcode, pricing, units, and store-ready products.
+			89 container
+				90 text Organization
+				91 text SYNTHETIC ORG 1
+				92 container
+					93 text Active Store Synthetic Store 1
+				94 container
+					95 text Role owner
+				96 text Standard Product Mode
+				97 text Register standard products with prices, costs, barcodes and other details.
+			98 container
+				99 container
+					100 text ⌕
+					101 text field (settable)
+				102 text ↻
+			103 text Add Product
+			104 text field (settable)
+			105 container
+				106 container
+					107 text field (settable)
+					108 text field (settable)
+				109 container
+					110 text field (settable)
+					111 text ⌄
+			112 container
+				113 text Product Image (optional)
+				114 container
+					115 text ▧
+					116 text Add product photo
+					117 text Camera or Gallery/File
+				118 text Barcode (optional)
+				119 container
+					120 text field (settable)
+				121 text Tip: scan the barcode to speed up sales.
+			122 container
+				123 text field (settable)
+				124 text field (settable)
+			125 text Add Product
+			126 container
+				127 text My Products 1 active item
+			128 container
+				129 text 
+				130 text Product Catalog
+				131 text Import, share & manage product catalogs
+				132 text Global • Share • Import Code
+				133 text 
+			134 container
+				135 text □
+				136 text Synthetic Display Item
+				137 text No image
+			138 container
+				139 text SKU: SYNTHETIC • Unit: piece
+			140 container
+				141 text Category: — Barcode: —
+			142 container
+				143 text Selling Price: 84.35 EUR Cost Price: 33.74 EUR
+			144 container
+				145 text Edit
+				146 text Delete
+		69 container
+			70 button Home
+				71 text 
+				72 text Home
+			73 button Product
+				74 text 
+				75 text Product
+			76 button SELL
+				77 text 
+				78 text SELL
+			79 button Stores
+				80 text 
+				81 text Stores
+			82 button More
+				83 text 
+				84 text More
+
+The focused UI element is 73 button Product

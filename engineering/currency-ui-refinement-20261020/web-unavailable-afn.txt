@@ -1,0 +1,52 @@
+Browser tab: 7, Title: "ZETRA BMS", URL: "http://127.0.0.1:55650/sales".
+0 AXWebArea ZETRA BMS, URL: 127.0.0.1:55650/sales
+	1 container
+		95 container
+			96 container
+				97 container
+					98 text Sales SYNTHETIC ORG 1 • Synthetic Store 1 • owner Tue, 20 Oct 2026 ONLINE • Source: LIVE • Last sync: Just now
+				107 container
+					108 image
+					109 text History
+				99 button Proforma Orders
+					100 container
+						101 text Proforma Orders
+						102 text Pending
+						103 text —
+				104 button Display currency
+					105 container
+						106 text Currency ·  AFN  ▾
+			110 container
+				111 text 1 items • 1 quantity
+				112 text Conversion unavailable · Original TZS 250,000
+				113 container
+					114 image
+					115 text Complete Sale
+				116 text Clear
+				117 text field (settable) Search name / SKU / category / barcode...
+			118 container
+				119 container
+					120 text Synthetic Display Item SKU: SYNTHETIC Stock: 100  • piece: 1 Price: Conversion unavailable · Original TZS 250,000  •  Line: Conversion unavailable · Original TZS 250,000
+				121 container
+					122 text −
+					123 text 1
+					124 text +
+					125 text Del
+		126 container
+			127 button Home
+				128 text 
+				129 text Home
+			130 button Product
+				131 text 
+				132 text Product
+			133 button SELL
+				134 text 
+				135 text SELL
+			136 button Stores
+				137 text 
+				138 text Stores
+			139 button More
+				140 text 
+				141 text More
+
+The focused UI element is 104 button Display currency

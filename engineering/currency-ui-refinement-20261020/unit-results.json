@@ -1,0 +1,26 @@
+{
+  "status": "PASS",
+  "count": 19,
+  "checks": [
+    "actor_and_organization_scopes_are_distinct_no_legacy_key",
+    "late_read_cannot_override_user_selection",
+    "organization_switch_discards_prior_late_read",
+    "rapid_writes_ordered_and_restart_restores_final_selection",
+    "switch_back_waits_for_inflight_preference_write",
+    "logout_does_not_keep_another_user_currency",
+    "unsupported_currency_not_saved",
+    "actual_decimal_conversion_USD",
+    "actual_decimal_conversion_KES",
+    "actual_decimal_conversion_UGX",
+    "actual_decimal_conversion_EUR",
+    "stored_preference_restored_independently_per_organization",
+    "latest_write_error_visible_without_cross_scope_error_leak",
+    "future_retrieval_rejected",
+    "old_reference_rejected_even_when_just_retrieved",
+    "original_values_immutable_and_not_relabelled",
+    "missing_and_stale_rates_explicit_unavailable",
+    "unsafe_amount_rejected_not_silently_converted",
+    "original_precision_retained_without_preference"
+  ],
+  "financialWrites": false
+}

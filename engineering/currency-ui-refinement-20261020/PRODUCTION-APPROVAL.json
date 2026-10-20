@@ -1,0 +1,389 @@
+{
+  "id": "ZETRA-CURRENCY-UI-REFINEMENT-20261020",
+  "status": "READY_FOR_FINAL_OWNER_APPROVAL",
+  "publicationExecuted": false,
+  "publicationAuthorized": false,
+  "baselineCheckpoint": "b6454b9db38feaeae2c6932885010a4a6e59949d",
+  "source": {
+    "web": {
+      "zip": "currency-ui-web-source.zip",
+      "sha256": "db0bbba5e66c24ac9a88579b19b3ef799cb290f8508d2b961cc1bb08a2116495",
+      "changedFiles": {
+        "app/(tabs)/index.tsx": {
+          "before": "3bab2ccba501056efa465fa3894e19a69941da80a82e89c43ee8fd1c92ba4355",
+          "after": "7476066fd2256d668c708ad56761fd61b2e842ed28884b899f36b50b87646433"
+        },
+        "app/(tabs)/products.tsx": {
+          "before": "14770c995d285a0044d12a7130fa3c7cf797ac1ed9853652f43e628851b101cd",
+          "after": "20857640e3012b3c9bb7e38bf4f3e1553ac1d626206176d05d1823cb693ff9d8"
+        },
+        "app/(tabs)/sales/index.tsx": {
+          "before": "faca58b19e22e8d21ec5eac0b12a910d2e7a5b46bec05a8d9d5b96250924285e",
+          "after": "5b1b37067ee3984011cc73d4002630cd912f8efa6ad67edaf1dc306195d93f4f"
+        },
+        "app/(tabs)/settings/business-statement.tsx": {
+          "before": "5726690654a0283400cac2d7f929053b2422d92362cd38aaf2d8d30724248427",
+          "after": "5c51163b7c62263d0de6ffc8f7c71af12f878d7e81c29ef237d2c29aff3013db"
+        },
+        "app/_layout.tsx": {
+          "before": "be36733bb86ca3607d7d00e973025aebc1b5d69f40c3e8d007dc56d22e2701a2",
+          "after": "88b70b34212edddf170027ae0cba545cd2f3ca1803bf875516efc376c5883cfe"
+        },
+        "app/finance/business-debts.tsx": {
+          "before": "bed3187b069425ff22cff48231a63b0a15b96bad34d5f2cd24218d2cbe88006e",
+          "after": "59ae98378a7859b74404e864fc80352d461f13454852081e844630b7cc04da67"
+        },
+        "app/finance/business-position.tsx": {
+          "before": "eca9c4728b49ee5f7304ae73d5f869b626e03de3bbd80e40f67c7cb9c36d493e",
+          "after": "2c8ef6159fcea69de1b38022c5b5990b4ffff0b80d0530b43ed2a1fa9e34ea3f"
+        },
+        "app/finance/history.tsx": {
+          "before": "5c468083b5b4efccd81d9c6abb6bf6c65d9e4296e19e621c495dca34a82d806d",
+          "after": "02826ba1408756db288c9a4034d60e016876a852034ae1387b85054bc1b5dcf1"
+        },
+        "app/finance/live.tsx": {
+          "before": "ea3064daca2ae52e0da3108787245302822bb1a7efc6c3ef04f49f3598898dfe",
+          "after": "225daa34d1416781fc3f121a6b15e13222da887561c41ea2fa118e462912794f"
+        },
+        "app/stocks/history.tsx": {
+          "before": "0448fbac986238c666e9a60041b6e36a61251d8e6f19fdc4ae95e681331dbdd0",
+          "after": "8f520d647d0b2b6948d9501cbf89b7e381f34afcdc5f4b6e4dfe569bac02c9e4"
+        },
+        "src/components/CurrencyPickerAll.tsx": {
+          "before": "209335e8b18746ae67bb2277b68ac4be61fc72149ad9c43c668ec5d23c369961",
+          "after": "56ebd243d85387767d813be6444b26812e3cc432bd9fbbfc3194b43a4c4a4902"
+        },
+        "src/components/home/business-financial-overview/BusinessFinancialOverview.tsx": {
+          "before": "d1b6b7dc904dc2bca1b7bd7f45ae428c9238d841acd15c888a162691c6d12647",
+          "after": "5ab5a2774ad21bd18a7777e24f99c62b552323fd6e0e68e83ba14434efacda60"
+        },
+        "src/components/home/business-financial-overview/FinancialChart.tsx": {
+          "before": "4bcfd5da26c9d09971a0b6dc42ac3c2c3451091ab082327f41d1c06c3853fd95",
+          "after": "3149b1fd3fb5e137bc2fa51b2bf8d8d7e0a296872bbf107c16de49bc2ee61851"
+        },
+        "src/components/home/business-financial-overview/FinancialOverviewFullView.tsx": {
+          "before": "66db5db08da03b4210f447a756ef1aac688dad9f08052ad0b9265eaf243a697a",
+          "after": "ab5a02edc6f5bc0c4951f252060bdb15195d2dd33d2431e42915789ce1d5aab3"
+        },
+        "src/components/home/sales-performance-v2/SalesPerformanceChart.tsx": {
+          "before": "c362846a678c3265b807f5878698bda18b40b4182a38e11999c3bd94ebc438b8",
+          "after": "2d98fd96fd0534e45a04d0a697ab0ab943c66dd3c981c1d30bc462c96447e9a0"
+        },
+        "src/components/home/sales-performance-v2/SalesPerformanceWorkspace.tsx": {
+          "before": "aeae83d7eda79e58ac5d48bf56ed8575bdbd82a2c06e7eab41a36f625cc44fc6",
+          "after": "92ba20b385645f778beacb74af755459790ee111e9dc92ee88dd6ded665a735f"
+        },
+        "src/currency/CurrentRateValuation.tsx": {
+          "before": "627515d63739e7053242d4d0ec7bdba900e24d6b19fffc22f9c0cb351113fffe",
+          "after": "7add4d564cc4514504560740645e0b814ade2377465307350b7041141841abf7"
+        },
+        "src/currency/DashboardCurrency.tsx": {
+          "before": "746d5f8763df53c0d9060ab5bcb27bf7138867213ab334f17dc144c69fdfaa18",
+          "after": "34f94503f37c3c013309759e3bcef2ff2f57a347d2bff61c7f4481ca609c1e6d"
+        },
+        "src/currency/LegacyTzsValuation.tsx": {
+          "before": "b79f7633be6bfe1602d78e6f995424961523d7586ec53d0c7ce5e1e40ce86dc6",
+          "after": "ab006dd52d1617d74b912ef048a5b61f34ab79803796224a73bdcfec71178be2"
+        },
+        "src/i18n/LanguageProvider.tsx": {
+          "before": "a9960fcf8d558826523f9cfdedc241a800bf7df118cbe2f72fa213f41645c924",
+          "after": "a604b73f8b5873acb4aa78f7bb5b85d0ad13c249f95f13909e24020d9441ca48"
+        },
+        "src/proforma/ProformaOrdersAction.tsx": {
+          "before": "b1323f0c015aa7692384d4d0898d04292880966c797b90e373a2e6eceec80636",
+          "after": "8c952406c319bcd9529eec78771659502c9ed0fd5d52a27354288ffb6015f743"
+        },
+        "src/currency/PreferredDisplay.tsx": {
+          "before": null,
+          "after": "43ca6746ad7151a7afdd7f07a263655bbe94e67e7bad8fc8ac8d9335c3df01fb"
+        },
+        "src/currency/displayPreference.ts": {
+          "before": null,
+          "after": "c4b3b025ea543b2f343d496cac4dc033c993dd8729911359d81e1b8e7715172a"
+        }
+      },
+      "catalogUnchanged": true,
+      "runtimeDependenciesUnchanged": true,
+      "newSql": []
+    },
+    "android": {
+      "zip": "currency-ui-android-source.zip",
+      "sha256": "94d45f9196cf42f510ff447cf4de32244806093a2321146d9aaca32cb0b7a68d",
+      "changedFiles": {
+        "app/(tabs)/index.tsx": {
+          "before": "3bab2ccba501056efa465fa3894e19a69941da80a82e89c43ee8fd1c92ba4355",
+          "after": "7476066fd2256d668c708ad56761fd61b2e842ed28884b899f36b50b87646433"
+        },
+        "app/(tabs)/products.tsx": {
+          "before": "14770c995d285a0044d12a7130fa3c7cf797ac1ed9853652f43e628851b101cd",
+          "after": "20857640e3012b3c9bb7e38bf4f3e1553ac1d626206176d05d1823cb693ff9d8"
+        },
+        "app/(tabs)/sales/index.tsx": {
+          "before": "e5a0bf4a01284a9379871dec35f05c265b6187765d1565ca4037877e74505943",
+          "after": "d7353ad9cc8151cd18000c1bc7852f18117585645ec98736892679864afdceaa"
+        },
+        "app/(tabs)/settings/business-statement.tsx": {
+          "before": "5726690654a0283400cac2d7f929053b2422d92362cd38aaf2d8d30724248427",
+          "after": "5c51163b7c62263d0de6ffc8f7c71af12f878d7e81c29ef237d2c29aff3013db"
+        },
+        "app/_layout.tsx": {
+          "before": "7a063003273a91242eac77fed377b6a906ece901f4f4dd900e711f1657b2804a",
+          "after": "54ba5137cfd8a754fd78f97044bff0a9be17c01b7ee55f08fc36629f3b983201"
+        },
+        "app/finance/business-debts.tsx": {
+          "before": "bed3187b069425ff22cff48231a63b0a15b96bad34d5f2cd24218d2cbe88006e",
+          "after": "59ae98378a7859b74404e864fc80352d461f13454852081e844630b7cc04da67"
+        },
+        "app/finance/business-position.tsx": {
+          "before": "eca9c4728b49ee5f7304ae73d5f869b626e03de3bbd80e40f67c7cb9c36d493e",
+          "after": "2c8ef6159fcea69de1b38022c5b5990b4ffff0b80d0530b43ed2a1fa9e34ea3f"
+        },
+        "app/finance/history.tsx": {
+          "before": "5c468083b5b4efccd81d9c6abb6bf6c65d9e4296e19e621c495dca34a82d806d",
+          "after": "02826ba1408756db288c9a4034d60e016876a852034ae1387b85054bc1b5dcf1"
+        },
+        "app/finance/live.tsx": {
+          "before": "ea3064daca2ae52e0da3108787245302822bb1a7efc6c3ef04f49f3598898dfe",
+          "after": "225daa34d1416781fc3f121a6b15e13222da887561c41ea2fa118e462912794f"
+        },
+        "app/stocks/history.tsx": {
+          "before": "0448fbac986238c666e9a60041b6e36a61251d8e6f19fdc4ae95e681331dbdd0",
+          "after": "8f520d647d0b2b6948d9501cbf89b7e381f34afcdc5f4b6e4dfe569bac02c9e4"
+        },
+        "src/components/CurrencyPickerAll.tsx": {
+          "before": "209335e8b18746ae67bb2277b68ac4be61fc72149ad9c43c668ec5d23c369961",
+          "after": "56ebd243d85387767d813be6444b26812e3cc432bd9fbbfc3194b43a4c4a4902"
+        },
+        "src/components/home/business-financial-overview/BusinessFinancialOverview.tsx": {
+          "before": "d1b6b7dc904dc2bca1b7bd7f45ae428c9238d841acd15c888a162691c6d12647",
+          "after": "5ab5a2774ad21bd18a7777e24f99c62b552323fd6e0e68e83ba14434efacda60"
+        },
+        "src/components/home/business-financial-overview/FinancialChart.tsx": {
+          "before": "4bcfd5da26c9d09971a0b6dc42ac3c2c3451091ab082327f41d1c06c3853fd95",
+          "after": "3149b1fd3fb5e137bc2fa51b2bf8d8d7e0a296872bbf107c16de49bc2ee61851"
+        },
+        "src/components/home/business-financial-overview/FinancialOverviewFullView.tsx": {
+          "before": "66db5db08da03b4210f447a756ef1aac688dad9f08052ad0b9265eaf243a697a",
+          "after": "ab5a02edc6f5bc0c4951f252060bdb15195d2dd33d2431e42915789ce1d5aab3"
+        },
+        "src/components/home/sales-performance-v2/SalesPerformanceWorkspace.tsx": {
+          "before": "aeae83d7eda79e58ac5d48bf56ed8575bdbd82a2c06e7eab41a36f625cc44fc6",
+          "after": "92ba20b385645f778beacb74af755459790ee111e9dc92ee88dd6ded665a735f"
+        },
+        "src/currency/CurrentRateValuation.tsx": {
+          "before": "627515d63739e7053242d4d0ec7bdba900e24d6b19fffc22f9c0cb351113fffe",
+          "after": "7add4d564cc4514504560740645e0b814ade2377465307350b7041141841abf7"
+        },
+        "src/currency/DashboardCurrency.tsx": {
+          "before": "746d5f8763df53c0d9060ab5bcb27bf7138867213ab334f17dc144c69fdfaa18",
+          "after": "34f94503f37c3c013309759e3bcef2ff2f57a347d2bff61c7f4481ca609c1e6d"
+        },
+        "src/currency/LegacyTzsValuation.tsx": {
+          "before": "b79f7633be6bfe1602d78e6f995424961523d7586ec53d0c7ce5e1e40ce86dc6",
+          "after": "ab006dd52d1617d74b912ef048a5b61f34ab79803796224a73bdcfec71178be2"
+        },
+        "src/i18n/LanguageProvider.tsx": {
+          "before": "a9960fcf8d558826523f9cfdedc241a800bf7df118cbe2f72fa213f41645c924",
+          "after": "a604b73f8b5873acb4aa78f7bb5b85d0ad13c249f95f13909e24020d9441ca48"
+        },
+        "src/proforma/ProformaOrdersAction.tsx": {
+          "before": "b1323f0c015aa7692384d4d0898d04292880966c797b90e373a2e6eceec80636",
+          "after": "8c952406c319bcd9529eec78771659502c9ed0fd5d52a27354288ffb6015f743"
+        },
+        "src/currency/PreferredDisplay.tsx": {
+          "before": null,
+          "after": "43ca6746ad7151a7afdd7f07a263655bbe94e67e7bad8fc8ac8d9335c3df01fb"
+        },
+        "src/currency/displayPreference.ts": {
+          "before": null,
+          "after": "c4b3b025ea543b2f343d496cac4dc033c993dd8729911359d81e1b8e7715172a"
+        }
+      },
+      "catalogUnchanged": true,
+      "runtimeDependenciesUnchanged": true,
+      "newSql": []
+    }
+  },
+  "artifacts": {
+    "web": {
+      "zip": "currency-ui-web-artifact.zip",
+      "zipSHA256": "1efd23522cdab5e9982b0f0f4f1cd24eafcd2cb98d429ea09f3d341e45423df6",
+      "manifest": "ARTIFACT-web-SHA256.json",
+      "manifestSHA256": "6d032c568a0ecc51fbf2d85cbf2298db609de713f6ea7f835452e7531ef00f05",
+      "entry": "_expo/static/js/web/entry-be3dfa2fe1488e3e500f092bd606817c.js",
+      "files": 272,
+      "sameProductionBackend": true,
+      "localFixturesExcluded": true,
+      "runtime": null
+    },
+    "android": {
+      "zip": "currency-ui-android-artifact.zip",
+      "zipSHA256": "68afb1b9a2c2e1a56f41b368e5db340ac31f2d8b2646875bcfcf5ff504380bb1",
+      "manifest": "ARTIFACT-android-SHA256.json",
+      "manifestSHA256": "78e1692a4108f36aa6587ee97cdbf2f35479385e443f29d91769af788f95d578",
+      "entry": "_expo/static/js/android/entry-a713159d4c299f6007df6496c0cfd2f5.hbc",
+      "files": 48,
+      "sameProductionBackend": true,
+      "localFixturesExcluded": true,
+      "runtime": "1.0.0"
+    }
+  },
+  "targets": {
+    "status": "PASS",
+    "checkedAt": "2026-10-20T17:17:13.072403+00:00",
+    "readOnly": true,
+    "site": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+    "domain": "https://app.zetra.tz",
+    "webActiveAndRollback": "6ad76cf47622bc0a29e1244f",
+    "rollbackState": "ready",
+    "androidChannel": "production",
+    "androidBranch": "production",
+    "androidUpdate": "01a1592b-2ee1-7ed9-ac55-fb2b9185776c",
+    "androidRollbackGroup": "6f0e3704-2774-44c8-afc5-34216997c808",
+    "runtime": "1.0.0",
+    "publication": false,
+    "sql": [],
+    "financialWrites": false
+  },
+  "rollback": {
+    "web": {
+      "status": "VERIFIED",
+      "files": 272,
+      "manifestSHA256": "b93f9d39d144f66d91486f7de377444d602b6ecfc47486b2dea1750419083ca9",
+      "deploymentId": "6ad76cf47622bc0a29e1244f",
+      "updateId": null,
+      "group": null,
+      "runtime": null
+    },
+    "android": {
+      "status": "VERIFIED",
+      "files": 48,
+      "manifestSHA256": "3ab65cabecfed99a5329e88ec421a4c1294dcf2437bad8bd3896b91dfe9b1eeb",
+      "deploymentId": null,
+      "updateId": "01a1592b-2ee1-7ed9-ac55-fb2b9185776c",
+      "group": "6f0e3704-2774-44c8-afc5-34216997c808",
+      "runtime": "1.0.0"
+    }
+  },
+  "scope": {
+    "currencyUiAndDisplayReadersOnly": true,
+    "productionSql": [],
+    "financialWrites": false,
+    "financialActivation": false,
+    "catalogChanges": false,
+    "taxVatTra": false,
+    "unfinishedFinancialContractsIncluded": false
+  },
+  "verification": {
+    "focusedContracts": 19,
+    "hookBoundaryContracts": 5,
+    "canonicalRequestFiles": 41,
+    "actualProductWebWithSyntheticAuth": "PASS",
+    "actualFxUiPairs": [
+      {
+        "currency": "USD",
+        "originalAmount": "250000",
+        "originalCurrency": "TZS",
+        "converted": "94.78 USD",
+        "source": "BOT_REFERENCE",
+        "effectiveDate": "2026-10-20",
+        "status": "PASS"
+      },
+      {
+        "currency": "KES",
+        "originalAmount": "250000",
+        "originalCurrency": "TZS",
+        "converted": "12,321.40 KES",
+        "source": "BOT_REFERENCE",
+        "effectiveDate": "2026-10-20",
+        "status": "PASS"
+      },
+      {
+        "currency": "UGX",
+        "originalAmount": "250000",
+        "originalCurrency": "TZS",
+        "converted": "396,637 UGX",
+        "source": "BOT_REFERENCE",
+        "effectiveDate": "2026-10-20",
+        "status": "PASS"
+      },
+      {
+        "currency": "EUR",
+        "originalAmount": "250000",
+        "originalCurrency": "TZS",
+        "converted": "84.35 EUR",
+        "source": "BOT_REFERENCE",
+        "effectiveDate": "2026-10-20",
+        "status": "PASS"
+      }
+    ],
+    "responsive": "PASS",
+    "physicalAndroidFinalCandidate": "NOT TESTED",
+    "physicalAndroidMobileBrowser": "NOT TESTED",
+    "physicalIPhoneSafariWebKit": "NOT TESTED",
+    "ownerWaivedSamsungDependency": true,
+    "androidRuntimeCompatibility": "1.0.0; native config/dependencies unchanged; production channel checked read-only",
+    "existingTzs": "Canonical numeric cart/Checkout/payment values preserved; protected source identical",
+    "postPublicationInstalledDeviceClaim": "Must remain NOT TESTED until executed"
+  },
+  "sha256": {
+    "BASELINE.json": "55a5d0867d7481cda962dd17ec3b391be519ca984de656e68878142e91403b55",
+    "SOURCE-PACKAGE.json": "891ac4fa43aced71ea2ce4feaa30da2a30c2643e78dc13198b7ad277c84b9989",
+    "source-web.patch": "e7638c4717dde154d5e3a995391b7bfe1102cf2ca1ed3168d75a00edd45e453c",
+    "source-android.patch": "3fadc56292d2f4864d0906c379768e4fc63af9116e0ef2386f8e0ba1c3f701ed",
+    "currency-ui-web-source.zip": "db0bbba5e66c24ac9a88579b19b3ef799cb290f8508d2b961cc1bb08a2116495",
+    "currency-ui-android-source.zip": "94d45f9196cf42f510ff447cf4de32244806093a2321146d9aaca32cb0b7a68d",
+    "currency-ui-web-artifact.zip": "1efd23522cdab5e9982b0f0f4f1cd24eafcd2cb98d429ea09f3d341e45423df6",
+    "currency-ui-android-artifact.zip": "68afb1b9a2c2e1a56f41b368e5db340ac31f2d8b2646875bcfcf5ff504380bb1",
+    "SEALED-ARTIFACTS.json": "44057500cd5fe44157a2433f54a56f6af3e66bd5a42079a2a5ce872a4c5d928b",
+    "ARTIFACT-web-SHA256.json": "6d032c568a0ecc51fbf2d85cbf2298db609de713f6ea7f835452e7531ef00f05",
+    "ARTIFACT-android-SHA256.json": "78e1692a4108f36aa6587ee97cdbf2f35479385e443f29d91769af788f95d578",
+    "BUILD-web.json": "6318758cf76af1533b9b8d46117ae00059b99d83adf7d05f6c9604070d9ed8a3",
+    "BUILD-android.json": "a011566845a17180040ff9138562dd353d79e6857fa5cf922866650675d880a7",
+    "ROLLBACK.json": "9416ee062aa5c4caa9f6adab7090183d2ef2c790a1224ec839004750bc70be59",
+    "PRESERVATION.json": "1b2560ae92eb1996d89d046af399a6ab4aa91f56371707efaec224673d842e60",
+    "CURRENT-TARGETS.json": "4b67071d5eb86a7120035dcf48e44d4ee71deb2accf4c22c9cb3b387bedd63de",
+    "PRODUCTION-APPROVAL.md": "cbc3c1619f3f2d66a277b5c334773ba6a6b742acaaea9bdbcc7b16f0ab046916",
+    "OWNER-DEVICE-DECISION.md": "b08e5c9ed3177c80be35a237882f07dd2241060746909e548a48781ffa98e194",
+    "RESUME.md": "bcf3600b4dde8d2b7c49fc7cc1ca7d4b0cfd3b3ed5e424cf8b89094203f0539a",
+    "unit-results.json": "04b1f4296bf3264ea9d3521585d35307023441c2b2ab9025f55c14062149804b",
+    "hook-guard-results.json": "bf69bc521ab5dd8150001aa651e35f670fb434e2f5ca1427a4ed9e35cb3ddc5a",
+    "request-integrity-results.json": "e2c5831edc40d1d1243b8913ccf43bc57f7f164181894833590ea985bba7e7c3",
+    "responsive-results.json": "bdcc0a862d5423a6b4e2968325ca7c0e696bf1e62d99af9f144e840c79fa7960",
+    "ACTUAL-FX-UI-RESULTS.json": "78b107371652113482fea1e74a1e58fa1d64c1d528d3795bda610cd38867d489",
+    "bot-acceptance.public-feed": "28636e5b2b065f4a35f9e3394f2af74f77d31b788cf67ec246b8fd41f59e1591",
+    "bot-acceptance.json": "9a4c0cd1db35031e960a5460fa8682933d6243903a7fdd3bfa88d5e0cc4155d4",
+    "web-currency-views.json": "52504b177f96f04af04b3b1985f8f0abf42ad29bc99bf9179c8f28c8306abeb5",
+    "web-org-isolation.json": "b539802039fa886cd3a117f38fce1eb29bb2bbab26cb8e9ef92df5f5e7620827",
+    "web-products-eur.txt": "bc2cecd80da455fda93caf901942525f9d25affe16ba8c088b1f13374cc6539b",
+    "web-finance-eur.txt": "7bba08e65e3ba674bdc3b34a5c1fe79d0ddd64c9556a5f1e3c1e33a6d446c702",
+    "web-statement-usd.txt": "d6b7495dce9065c305c40b84a4def1d1ec88b098f6e87657f66f046f0084ddaf",
+    "web-checkout-canonical.txt": "fb8d22bbc6ad1f1ed0d21b80ddae54cf044d0a41226d4c40f5af6a797f366393",
+    "web-regional-usd-refresh.txt": "7061436508c7c7a4ff2c458aaddd066c39e4e390d68405096e98e88fa8aa56e4",
+    "web-unavailable-afn.txt": "776f4a81de634967549857aa73526566e447bbd2a8b684e7abc6496b96e65819",
+    "web-proforma-count.txt": "98bc3c40e0ebe70ea13c9990c906fb06f993a0fefc0bf49cf3abf5dfbf7050f1",
+    "desktop-dashboard-usd.png": "85b82f32d58bdfaca4a809532604d2d613a0c9907969c67a92aa5ec9e8830acf",
+    "desktop-dashboard-1440.png": "32cf33fd10caf2fca0bb4a7c837ca296223c7c592ee5f5bf40dc1eb9737a5258",
+    "desktop-pos-usd.png": "188b1279bc5116e75fde3115a1b92dbea2301107140deca9be98f273d25c882d",
+    "mobile-home-320.png": "5d42b57838b53fd355d004af3629dc09158e752617218d560988a44b7016b030",
+    "mobile-home-390.png": "3d981d9300657c0ef1f5d2997b58eb87bf1f3d786e122a5b1e87034ee3e8e2ec",
+    "mobile-pos-usd.png": "bf1a7b470983d48d47f57dc8f2180188a9515c6f99373b6fbdff1a88b5ed4c77",
+    "mobile-pos-320.png": "99c9c84271f1d37e364cba110c28d53a22ae0e6edc53f510b8ec6db6f5ed2bc2",
+    "mobile-unavailable-afn.png": "45d9f2243927a5a83441146857a80f0ec20c0be2c46f182d3915629216e0dd47",
+    "currency-ui.test.cjs": "3165113c247586df93ce601c92d8a61547e51676c3945881b54e504f482cdc7d",
+    "hook-guard.test.cjs": "ff06beadd55c845286638d92f62fdfe0b657339d6aa659ed7be7fdac9ef3f33e",
+    "request-integrity.test.cjs": "d55ea6bbd98b4533218e90a1a9d68e1d47b2b97777ae2ca781c7a5d86c5f4c87",
+    "verify_actual_fx.cjs": "a8b2718c86542da332a3e20e6adcfa65f8687b28a5cfd65e25de924cbf593aac",
+    "prepare_contracts.py": "9c4e38593cbf2e6dbc3b0fd141164bf2769746f289ab3d2e8f5e7161b580b8cc",
+    "generate_patches.py": "dd7b1d73582290f20d0ad166df23737558c9979f6277a98e5e3ae10f117e36ea",
+    "build_release.cjs": "3f9c8a2c8f83d5b095e5cd30c9d0c8e2dfd5e1762c2f9b2e85a4e8869f1faf34",
+    "build_final.cjs": "f04c4c4fa045e67b9e2dd4c74604b168065edf8c9d29ed13ee85b41a84294af2",
+    "seal_release.py": "5117bd499c9bcf6fb16d5153b24f5bd108fe562d004025a4b71420de4fccfb06",
+    "verify_targets_readonly.py": "09a82fa33ecc96a80b3574f2ce72ca1ee099848ab1614b111d7da0934f534a0b",
+    "fetch_evidence.py": "ac0875230a8f1e9740c8de736d2c43704074fae7311792723a2cbd988066c66c",
+    "serve_local.py": "cbd82b0a922ebd2e41f36de98df337a363b6469723bab8e7f0a6174595ccd8fd",
+    "build_local.cjs": "2fd1f2398645d3413b8ebbfeb1ddc7db5dbc90e55a1f417b1d77c6afafcf4357",
+    ".gitignore": "45549a9ffd9963f855d72829e978a31c05b82894b14b1d8fbdd43083b20c2d86",
+    ".gitattributes": "fb0349d3aaf54b90a1a49056019a900a841b111a163307d45364a4c7ecc2f871"
+  }
+}

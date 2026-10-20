@@ -1,0 +1,84 @@
+{
+  "status": "PASS",
+  "browser": "IAB Chromium; responsive viewport simulation, not physical iPhone",
+  "layouts": [
+    {
+      "screen": "POS",
+      "width": 390,
+      "columns": [
+        175.1999969482422,
+        175.1999969482422
+      ],
+      "documentWidth": 390,
+      "viewport": 390
+    },
+    {
+      "screen": "POS",
+      "width": 320,
+      "columns": [
+        140,
+        140
+      ],
+      "documentWidth": 320,
+      "viewport": 320
+    },
+    {
+      "screen": "Home",
+      "width": 320,
+      "control": {
+        "bottom": 70.60000038146973,
+        "height": 44,
+        "left": 167.78750610351562,
+        "right": 231.7875061035156,
+        "top": 26.600000381469727,
+        "width": 64,
+        "x": 167.78750610351562,
+        "y": 26.600000381469727
+      },
+      "documentWidth": 320,
+      "viewport": 320
+    },
+    {
+      "screen": "Dashboard",
+      "width": 1280,
+      "control": {
+        "bottom": 133,
+        "height": 44,
+        "left": 342.25,
+        "right": 406.25,
+        "top": 89,
+        "width": 64,
+        "x": 342.25,
+        "y": 89
+      },
+      "documentWidth": 1280,
+      "viewport": 1280
+    },
+    {
+      "screen": "Dashboard",
+      "width": 1440,
+      "control": {
+        "bottom": 150,
+        "height": 44,
+        "left": 357.1000061035156,
+        "right": 421.1000061035156,
+        "top": 106,
+        "width": 64,
+        "x": 357.1000061035156,
+        "y": 106
+      },
+      "documentWidth": 1440,
+      "viewport": 1440
+    },
+    {
+      "screen": "POS",
+      "width": 1280,
+      "columns": [
+        545,
+        545
+      ],
+      "documentWidth": 1280,
+      "viewport": 1280
+    }
+  ]
+}

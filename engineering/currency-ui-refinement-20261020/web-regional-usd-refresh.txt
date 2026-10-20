@@ -1,0 +1,240 @@
+Browser tab: 7, Title: "ZETRA BMS", URL: "http://127.0.0.1:55650/".
+0 AXWebArea ZETRA BMS, URL: 127.0.0.1:55650/
+	1 container
+		2 container
+			3 text Z
+			4 text ZETRA BMS
+			5 text Business Management System
+		6 container
+			7 text 
+			8 text Home
+			9 text 
+			10 text POS / Sell
+			11 text 
+			12 text Products
+			13 text 
+			14 text Inventory
+			15 text 
+			16 text Customers (CRM)
+			17 text 
+			18 text Credit
+			19 text 
+			20 text Expenses
+			21 text 
+			22 text Finance
+			23 text 
+			24 text Reports
+			25 text 
+			26 text Stores
+			27 text 
+			28 text AI Assistant
+			29 text NEW
+			30 text 
+			31 text More
+		32 container
+			33 text BUSINESS SHORTCUTS
+			34 container
+				35 text 
+				36 text Business Position
+				37 text 
+			38 container
+				39 text 
+				40 text Business Debts
+				41 text 
+			42 container
+				43 text 
+				44 text Incoming Stock
+				45 text 
+			46 container
+				47 text 
+				48 text CURRENT ORGANIZATION
+				49 text SYNTHETIC ORG 1
+				50 text 
+			51 container
+				52 text 
+				53 text CURRENT STORE
+				54 text Synthetic Store 1
+				55 text 
+			56 text 
+			57 container
+				58 text SYNTHETIC ORG 1 OWNER
+			59 text 
+		60 container
+			61 text Current-rate valuation · USD · BoT · Effective 2026-10-20
+			62 container
+				63 text 
+				64 text SYNTHETIC ORG 1
+				65 text 
+				66 text 
+				67 text Synthetic Store 1
+				68 text 
+				69 container
+					70 text 
+					71 text field (settable)
+					72 text Products · Customers
+				73 text 
+				74 text 
+				75 container
+					76 text SYNTHETIC ORG 1 OWNER
+				77 text 
+			78 container
+				79 text 
+				80 text Welcome!
+				81 button Dashboard currency
+					82 container
+						83 text USD  ▾
+				84 container
+					85 text 
+					86 text Today • 20 Oct 2026
+					87 text 
+			88 container
+				89 container
+					90 container
+						91 text 
+						92 text Today's Sales
+						93 text 94.78 USD
+					94 container
+						95 text 1 completed orders
+						96 text Open POS
+						97 text 
+					98 container
+						99 text 
+						100 text Money In
+						101 text 90.99 USD
+					102 text after expenses
+					103 container
+						104 text 
+						105 text Expenses
+						106 text 3.79 USD
+					107 text today
+					108 container
+						109 text 
+						110 text Net Profit
+						111 text 53.08 USD
+					112 text owner view
+				113 container
+					114 container
+						115 text 
+						116 text Sales Performance
+						117 text Visualize sales trends and compare performance over time.
+					118 container
+						119 text Daily
+						120 text Weekly
+						121 text Monthly
+						122 text 
+						123 text Compare
+						124 text 
+						125 text 19 Oct 2026 - 25 Oct 2026
+					126 container
+						127 text 
+						128 text Total Sales
+						129 text 0.00 USD selected period
+					130 container
+						131 text 
+						132 text Previous Period
+						133 text 0.00 USD comparison baseline
+					134 container
+						135 text 
+						136 text Difference
+						137 text +0.00 USD 0.0%
+					138 container
+						139 text 
+						140 text Orders
+						141 text 0 completed sales
+					142 container
+						143 text 
+						144 text Average Order Value
+						145 text 0.00 USD sales ÷ orders
+					146 container
+						147 text 
+						148 text Sales by Payment Method
+						149 container
+							150 container
+								151 image
+								152 text 94.78 USD
+								153 text Total Sales
+							154 container
+								155 text Cash
+								156 container
+									157 text 100.0 %
+								158 text 94.78 USD
+					159 container
+						160 text 
+						161 text Top Selling Products
+						162 text No verified product sales for this period.
+					163 button Open Customer Relationship Management
+						164 container
+							165 container
+								166 text 
+								167 text Customer Intelligence (CRM)
+							168 container
+								169 text TOP CUSTOMER No verified customer purchases in this period.
+							170 container
+								171 text 0
+								172 text Returning
+								173 text 0
+								174 text Inactive 30d
+								175 text 0
+								176 text New
+							177 container
+								178 text Open CRM 
+				179 container
+					180 text 
+					181 container
+						182 text ZETRA AI Your Business Assistant
+					183 text LIVE
+					184 text 
+					185 text 
+					186 container
+						187 text Ask ZETRA AI Ask about sales, stock, customers, profit and trends.
+					188 text 
+					189 container
+						190 text 
+						191 text Summarize Today
+					192 container
+						193 text 
+						194 text Low Stock Alert
+					195 container
+						196 text 
+						197 text Top Products
+				198 container
+					199 container
+						200 text Business Financial Overview 01 Oct 2026 - 31 Oct 2026
+					201 button Open full financial overview
+						202 container
+							203 text ↖ ↗ ↙ ↘
+					204 text This Month
+					205 text 3 Months
+					206 text 6 Months
+					207 text This Year
+					208 container
+						209 text Sales
+					210 container
+						211 text Expenses
+					212 container
+						213 text Net Profit
+					214 image
+						215 text Current
+						216 text Previous
+						217 text 104.26
+						218 text 78.19
+						219 text 52.13
+						220 text 26.06
+						221 text 0.00
+						222 image
+						223 image
+						224 image
+						225 image
+						226 image
+						227 image
+						228 text 7
+						229 image
+						230 text 14
+						231 image
+						232 text 21
+						233 image
+						234 text 28
+						235 image
+						236 text 31
+
+The focused UI element is 0 AXWebArea ZETRA BMS, URL: 127.0.0.1:55650/

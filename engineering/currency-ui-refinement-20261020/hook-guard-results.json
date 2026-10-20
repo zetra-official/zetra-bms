@@ -1,0 +1,12 @@
+{
+  "status": "PASS",
+  "count": 5,
+  "kind": "Unit test of actual render-boundary guard with React hooks stubbed; not runtime tenant-isolation acceptance",
+  "checks": [
+    "scope not loaded",
+    "organization loading",
+    "different organization requested",
+    "another preference organization",
+    "matching ready scope converts"
+  ]
+}
