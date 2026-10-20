@@ -1,0 +1,41 @@
+{
+  "status": "PASS",
+  "byteIdenticalAgainstApprovedCurrencyRefinement": {
+    "web": [
+      "app/catalog.tsx",
+      "app/(tabs)/sales/index.tsx",
+      "app/(tabs)/sales/checkout.tsx",
+      "src/currency/engine.ts",
+      "src/services/referenceFx.ts",
+      "src/services/currentFx.ts",
+      "src/currency/currentValuation.ts",
+      "src/currency/PreferredDisplay.tsx",
+      "src/currency/displayPreference.ts",
+      "src/i18n/LanguageProvider.tsx",
+      "app.json",
+      "package.json"
+    ],
+    "android": [
+      "app/catalog.tsx",
+      "app/(tabs)/sales/index.tsx",
+      "app/(tabs)/sales/checkout.tsx",
+      "src/currency/engine.ts",
+      "src/services/referenceFx.ts",
+      "src/services/currentFx.ts",
+      "src/currency/currentValuation.ts",
+      "src/currency/PreferredDisplay.tsx",
+      "src/currency/displayPreference.ts",
+      "src/i18n/LanguageProvider.tsx",
+      "app.json",
+      "eas.json",
+      "package.json"
+    ]
+  },
+  "rootCatalogSHA256": "a6b548a9567803d9db181b4d6f236349b55afddfc115ead7ba9f6d449c1b4914",
+  "rootMixedWorkUntouched": true,
+  "runtimeConfigAndDependenciesUnchanged": true,
+  "sql": [],
+  "productionFinancialWrites": false,
+  "activation": false,
+  "productionPublication": false
+}

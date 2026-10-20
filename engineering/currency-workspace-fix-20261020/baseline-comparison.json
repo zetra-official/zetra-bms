@@ -1,0 +1,11 @@
+{
+  "failedDeployment": "6ad7a771217ce218428b0c64",
+  "workingDeployment": "6ad76cf47622bc0a29e1244f",
+  "bootstrapHashes": {
+    "src/context/OrgContext.tsx": "36b764a5bc4bf00a6446457cd05ef6bfab29ef41fd4b6e00362a2ef8ae836d97",
+    "src/supabase/supabaseClient.ts": "c3df8d5cc07fbb898960f9cb7266ede23dee4dabbe3f3f49452297dbe5977a47",
+    "src/ui/StartupLoading.tsx": "7923a8cc34be21180803df58488e2df20903d080c09ce9ce6e0d85769861837a"
+  },
+  "sourcePatches": "../currency-ui-refinement-20261020/source-web.patch",
+  "productionModified": false
+}

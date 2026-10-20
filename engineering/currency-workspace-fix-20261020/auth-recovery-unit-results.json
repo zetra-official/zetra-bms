@@ -1,0 +1,26 @@
+{
+  "status": "PASS",
+  "count": 13,
+  "checks": [
+    "valid_session_preserved_without_refresh",
+    "timeout_is_retry_not_signed_out",
+    "network_throw_is_retry",
+    "explicit_absent_session_signed_out",
+    "expired_session_must_refresh_before_use",
+    "refresh_network_failure_preserves_unknown_state",
+    "rejected_refresh_requires_new_auth",
+    "expired_refresh_result_never_authorizes",
+    "jwt_expiry_attempts_refresh_without_storage_clear",
+    "session_or_jwt_words_do_not_clear_storage",
+    "only_precise_refresh_rejection_codes_clear",
+    "late_deadline_resolution_cannot_change_completed_result",
+    "successful_deadline_returns_original_value"
+  ],
+  "sourceGuardChecks": [
+    "late_boot_cannot_override_newer_auth_event",
+    "membership_failure_not_onboarding",
+    "timeout_does_not_redirect",
+    "root_render_recovery_present"
+  ],
+  "scope": "Deterministic unit contracts; not genuine network fault acceptance"
+}

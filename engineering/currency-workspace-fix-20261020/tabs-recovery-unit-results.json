@@ -1,0 +1,17 @@
+{
+  "status": "PASS",
+  "count": 10,
+  "checks": [
+    "web:pending_session_becomes_recovery_not_blank_or_logout",
+    "web:normal_session_opens_tabs_without_remote_getUser",
+    "web:explicit_missing_session_requires_login",
+    "web:office_routing_preserved",
+    "web:unmounted_check_does_not_navigate",
+    "android:pending_session_becomes_recovery_not_blank_or_logout",
+    "android:normal_session_opens_tabs_without_remote_getUser",
+    "android:explicit_missing_session_requires_login",
+    "android:office_routing_preserved",
+    "android:unmounted_check_does_not_navigate"
+  ],
+  "scope": "Extracted actual Tabs check with deterministic SDK doubles, not physical-device or genuine auth fault acceptance"
+}

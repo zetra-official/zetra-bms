@@ -1,0 +1,12 @@
+{
+  "status": "PASS",
+  "sourceZipSHA256": "103835e086c1f1184c9df878fcdd1246129fd8036be95eefe252342300de0397",
+  "output": "release-android-build",
+  "checks": [
+    "TypeScript",
+    "release guard",
+    "production-configured Expo export"
+  ],
+  "runtime": "1.0.0",
+  "publication": false
+}

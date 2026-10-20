@@ -1,0 +1,13 @@
+{
+  "scope": "Official cached reference evidence, not live connectivity acceptance",
+  "upstreamCapturedAt": "2026-10-20T17:46:44.741Z",
+  "bot": {
+    "effectiveDate": "2026-10-20",
+    "sha256": "8569266412a330bd00d9e9d777b9143c2da19469704172a63d66a3bc513c91da"
+  },
+  "ecb": {
+    "effectiveDate": "2026-10-20",
+    "sha256": "f40019a24308605ad434ddd60594fa252397ac9df14e6365becb162045ef13d4"
+  },
+  "cacheAgeWithin24Hours": true
+}

@@ -1,0 +1,15 @@
+{
+  "status": "PASS",
+  "count": 8,
+  "checks": [
+    "web:stale_disabled_error_cannot_affect_new_identity",
+    "web:stale_membership_success_cannot_affect_new_identity",
+    "web:late_session_ignored",
+    "web:current_canonical_load_commits_and_settles",
+    "android:stale_disabled_error_cannot_affect_new_identity",
+    "android:stale_membership_success_cannot_affect_new_identity",
+    "android:late_session_ignored",
+    "android:current_canonical_load_commits_and_settles"
+  ],
+  "scope": "Actual runLoadAll extracted from each platform; deferred SDK/RPC doubles, no production writes"
+}

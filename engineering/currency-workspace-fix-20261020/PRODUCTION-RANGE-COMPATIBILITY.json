@@ -1,0 +1,14 @@
+{
+  "status": "PASS",
+  "scope": "Read-only existing Production public asset; exact range/header/bytes compatibility for delivery loader",
+  "httpStatus": 206,
+  "headers": {
+    "Content-Length": "262144",
+    "Content-Range": "bytes 0-262143/6810622",
+    "Content-Type": "application/javascript; charset=UTF-8"
+  },
+  "decodedBytes": 262144,
+  "sha256": "bf644f419a520b949f26518628f38d74fab6c79d74e54c2bf5d95d2674ca5a13",
+  "seconds": 38.23,
+  "productionChanged": false
+}

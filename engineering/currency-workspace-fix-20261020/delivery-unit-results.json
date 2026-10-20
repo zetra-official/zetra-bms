@@ -1,0 +1,14 @@
+{
+  "status": "PASS",
+  "count": 7,
+  "checks": [
+    "healthy_full_download_fast_path",
+    "truncated_full_uses_verified_ranges",
+    "bounded_transient_retry",
+    "corrupt_range_never_executes",
+    "corrupt_full_never_executes",
+    "invalid_content_range_rejected",
+    "manual_retry_resumes_received_parts_and_executes_once"
+  ],
+  "scope": "Actual loader in isolated unit DOM/fetch doubles; not browser runtime acceptance"
+}

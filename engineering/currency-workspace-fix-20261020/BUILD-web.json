@@ -1,0 +1,12 @@
+{
+  "status": "PASS",
+  "sourceZipSHA256": "e183cc9949551bec7f78f0fd87df3d3454c538ab2947dd353fc2e053df5d1223",
+  "output": "release-web-build",
+  "checks": [
+    "TypeScript",
+    "release guard",
+    "production-configured Expo export"
+  ],
+  "runtime": null,
+  "publication": false
+}

@@ -1,0 +1,730 @@
+--- approved/app/(auth)/login.tsx
++++ replacement/app/(auth)/login.tsx
+@@ -1,3 +1,4 @@
++import {isRejectedRefresh} from '@/src/supabase/sessionRecovery';
+ import {Ionicons} from '@expo/vector-icons';
+ import {useSafeAreaInsets} from 'react-native-safe-area-context';
+ import {LoginBackdrop,LoginBrand,LoginHero,LoginMobileArtwork,LoginNavigation,masterLoginText} from '../../src/ui/login/LoginVisuals';
+@@ -512,12 +513,7 @@
+         return;
+       }
+ 
+-      if (
+-        String(msg).toLowerCase().includes("invalid refresh token") ||
+-        String(msg).toLowerCase().includes("refresh_token_not_found") ||
+-        String(msg).toLowerCase().includes("jwt") ||
+-        String(msg).toLowerCase().includes("session")
+-      ) {
++      if (isRejectedRefresh(err)) {
+         try {
+           await clearCorruptSupabaseSession();
+         } catch {}
+--- approved/app/(tabs)/_layout.tsx
++++ replacement/app/(tabs)/_layout.tsx
+@@ -1,3 +1,5 @@
++import {readSessionForBootstrap} from '@/src/supabase/sessionRecovery';
++import {StartupLoading} from '@/src/ui/StartupLoading';
+ import {useCommonText} from "@/src/i18n/useCommonText";
+ import { useLanguage } from "@/src/i18n/LanguageProvider";
+ ﻿import { useOrg } from "@/src/context/OrgContext";
+@@ -891,6 +893,8 @@
+ 
+   const [sessionEmail, setSessionEmail] = useState("");
+   const [checkingOfficeAccount, setCheckingOfficeAccount] = useState(true);
++  const [officeCheckFailed,setOfficeCheckFailed]=useState(false);
++  const [officeCheckAttempt,retryOfficeCheck]=useState(0);
+ 
+   const isOfficeAccount =
+     String(sessionEmail ?? "").trim().toLowerCase() === INTERNAL_BILLING_EMAIL;
+@@ -899,18 +903,18 @@
+     let alive = true;
+ 
+     const checkOfficeAccount = async () => {
++      setCheckingOfficeAccount(true);setOfficeCheckFailed(false);
+       try {
+-        const { data, error } = await supabase.auth.getUser();
++        // Root AuthGate owns authentication; this is only the Office routing check.
++        const result=await readSessionForBootstrap(supabase.auth);
++        if(!alive)return;
++        if(result.status==='retry'){setOfficeCheckFailed(true);setCheckingOfficeAccount(false);return;}
++        if(result.status==='signed_out'){setOfficeCheckFailed(true);setCheckingOfficeAccount(false);router.replace('/login' as any);return;}
++
+ 
+         if (!alive) return;
+ 
+-        if (error) {
+-          setSessionEmail("");
+-          setCheckingOfficeAccount(false);
+-          return;
+-        }
+-
+-        const email = String(data?.user?.email ?? "").trim().toLowerCase();
++        const email = String(result.session?.user?.email ?? "").trim().toLowerCase();
+ 
+         setSessionEmail(email);
+         setCheckingOfficeAccount(false);
+@@ -922,7 +926,7 @@
+         if (!alive) return;
+ 
+         setSessionEmail("");
+-        setCheckingOfficeAccount(false);
++        setOfficeCheckFailed(true);setCheckingOfficeAccount(false);
+       }
+     };
+ 
+@@ -931,7 +935,7 @@
+     return () => {
+       alive = false;
+     };
+-  }, [router]);
++  }, [router,officeCheckAttempt]);
+ 
+   const role = String(activeRole ?? "").trim().toLowerCase();
+   const isCashier = role === "cashier";
+@@ -1016,26 +1020,8 @@
+     }, [activeOrgId, useLeftSidebarWeb])
+   );
+ 
+-  if (checkingOfficeAccount) {
+-    return (
+-      <View
+-        style={{
+-          flex: 1,
+-          backgroundColor: theme.colors.background,
+-        }}
+-      />
+-    );
+-  }
+-
+-  if (isOfficeAccount) {
+-    return (
+-      <View
+-        style={{
+-          flex: 1,
+-          backgroundColor: theme.colors.background,
+-        }}
+-      />
+-    );
++  if (checkingOfficeAccount || officeCheckFailed || isOfficeAccount) {
++    return <StartupLoading delayed={officeCheckFailed} onRetry={()=>retryOfficeCheck(value=>value+1)} onLogin={()=>router.replace('/login' as any)}/>;
+   }
+ 
+   const desktopSidebar = useLeftSidebarWeb
+--- approved/app/_layout.tsx
++++ replacement/app/_layout.tsx
+@@ -1,3 +1,7 @@
++import {readSessionForBootstrap} from '@/src/supabase/sessionRecovery';
++import {StartupLoading} from '@/src/ui/StartupLoading';
++import {Pressable,Text} from 'react-native';
++import type {ErrorBoundaryProps} from 'expo-router';
+ import { LanguageProvider } from "@/src/i18n/LanguageProvider";
+ ﻿import { OrgProvider, useOrg } from "@/src/context/OrgContext";
+ import {
+@@ -85,112 +89,7 @@
+   );
+ }
+ 
+-async function getValidSession() {
+-  console.log("AUTH DEBUG: before getSession");
+-
+-  const sessionResult = await Promise.race([
+-    supabase.auth.getSession(),
+-
+-    new Promise<any>((resolve) => {
+-      setTimeout(() => {
+-        resolve({
+-          data: {
+-            session: null,
+-          },
+-          error: new Error(
+-            "getSession timed out after 5000ms"
+-          ),
+-          __timedOut: true,
+-        });
+-      }, 5000);
+-    }),
+-  ]);
+-
+-  console.log(
+-    "AUTH DEBUG: after getSession",
+-    sessionResult
+-  );
+-
+-  const session =
+-    sessionResult?.data?.session ?? null;
+-
+-  const error =
+-    sessionResult?.error ?? null;
+-
+-  if (sessionResult?.__timedOut) {
+-    return {
+-      session: null,
+-      error,
+-    };
+-  }
+-
+-  const jwtExpired =
+-    !!error &&
+-    /jwt\s*expired/i.test(
+-      String(error?.message ?? "")
+-    );
+-
+-  const isExpiredByTime =
+-    !!session?.expires_at &&
+-    session.expires_at * 1000 <=
+-      Date.now() + 5000;
+-
+-  if (
+-    jwtExpired ||
+-    isExpiredByTime
+-  ) {
+-    console.log(
+-      "AUTH DEBUG: before refreshSession"
+-    );
+-
+-    const refreshResult =
+-      await Promise.race([
+-        supabase.auth.refreshSession(),
+-
+-        new Promise<any>(
+-          (resolve) => {
+-            setTimeout(() => {
+-              resolve({
+-                data: {
+-                  session: null,
+-                },
+-                error: new Error(
+-                  "refreshSession timed out after 5000ms"
+-                ),
+-                __timedOut: true,
+-              });
+-            }, 5000);
+-          }
+-        ),
+-      ]);
+-
+-    console.log(
+-      "AUTH DEBUG: after refreshSession",
+-      refreshResult
+-    );
+-
+-    if (
+-      refreshResult?.error
+-    ) {
+-      return {
+-        session: null,
+-        error: refreshResult.error,
+-      };
+-    }
+-
+-    return {
+-      session:
+-        refreshResult?.data?.session ??
+-        null,
+-      error: null,
+-    };
+-  }
+-
+-  return {
+-    session,
+-    error,
+-  };
+-}
++async function getValidSession(){return readSessionForBootstrap(supabase.auth);}
+ 
+ function AuthGate() {
+   const router = useRouter();
+@@ -201,6 +100,11 @@
+ const [isOfficeUser, setIsOfficeUser] = useState(false);
+ 
+ const [bootStage, setBootStage] = useState("START");
++const [sessionDeferred,setSessionDeferred]=useState(false);
++const [startupDelayed,setStartupDelayed]=useState(false);
++const [bootAttempt,retryBoot]=useState(0);
++const authRevision=useRef(0);
++const retryConnection=()=>{setSessionDeferred(false);setReady(false);retryBoot(value=>value+1);void refreshOrg();};
+ 
+   const webScanBufferRef = useRef("");
+   const webScanLastAtRef = useRef(0);
+@@ -223,8 +127,9 @@
+     ...Zocial.font,
+   });
+ 
+-  const { loading: orgLoading, refreshing: orgRefreshing, orgs } = useOrg();
+-
++  const { loading: orgLoading, refreshing: orgRefreshing, error:orgError, orgs,refresh:refreshOrg } = useOrg();
++
++  useEffect(()=>{if(ready&&!orgLoading&&fontsLoaded){setStartupDelayed(false);return;}const timer=setTimeout(()=>setStartupDelayed(true),12000);return()=>clearTimeout(timer)},[ready,orgLoading,fontsLoaded]);
+   const orgSettling = orgLoading;
+   const orgBusy = orgLoading || orgRefreshing;
+ 
+@@ -390,6 +295,7 @@
+ };
+ 
+ const boot = async () => {
++ const revision=authRevision.current;
+   setBootStage("INITIAL_URL");
+ 
+   let initialResult: any = {
+@@ -426,7 +332,7 @@
+     };
+   }
+ 
+-  if (!alive) return;
++  if (!alive || revision!==authRevision.current) return;
+ 
+   setBootStage("INITIAL_URL_DONE");
+ 
+@@ -458,51 +364,17 @@
+ 
+   setBootStage("GET_SESSION");
+ 
+-let sessionResult: {
+-  session: any;
+-  error: any;
+-};
+-
+-try {
+-  sessionResult = await Promise.race([
+-    getValidSession(),
+-
+-    new Promise<{
+-      session: null;
+-      error: Error;
+-    }>((resolve) => {
+-      setTimeout(() => {
+-        resolve({
+-          session: null,
+-          error: new Error(
+-            "Supabase session check timed out"
+-          ),
+-        });
+-      }, 8000);
+-    }),
+-  ]);
+-} catch (e: any) {
+-  sessionResult = {
+-    session: null,
+-    error:
+-      e instanceof Error
+-        ? e
+-        : new Error(
+-            String(
+-              e?.message ??
+-                "Session check failed"
+-            )
+-          ),
+-  };
+-}
+-
+-  if (!alive) return;
++const sessionResult=await getValidSession();
++
++  if (!alive || revision!==authRevision.current) return;
+ 
+   setBootStage("SESSION_RETURNED");
+ 
+   const { session, error } =
+     sessionResult;
+ 
++  if(sessionResult.status==='retry'){setSessionDeferred(true);setStartupDelayed(true);return;}
++  setSessionDeferred(false);
+   if (error && !session) {
+     console.log(
+       "Auth boot session error:",
+@@ -599,7 +471,7 @@
+     setReady(true);
+ 
+     setTimeout(() => {
+-      if (!alive) return;
++      if (!alive || revision!==authRevision.current) return;
+ 
+       router.replace(
+         routes.office as any
+@@ -616,7 +488,9 @@
+     void boot();
+ 
+     const { data: authListener } = supabase.auth.onAuthStateChange(
+-      async (event, session) => {
++      (event, session) => {
++        if(!alive || (!session && event!=="SIGNED_OUT"))return;
++        authRevision.current++;setSessionDeferred(false);
+         const currentSegs = segmentsRef.current;
+         const inAuth = isInAuth(currentSegs);
+         const inResetPassword = isResetPasswordRoute(currentSegs);
+@@ -639,6 +513,8 @@
+         }
+ 
+       if (event === "TOKEN_REFRESHED") {
++  if(session && !isEmailVerified(session.user)){setHasSession(false);setIsOfficeUser(false);setReady(true);if(!inAuth)router.replace(routes.login as any);return;}
++  setReady(true);
+   if (!session) {
+     setHasSession(false);
+     setIsOfficeUser(false);
+@@ -754,27 +630,9 @@
+         return;
+       }
+ 
+-      const { data: callbackOrgs, error: callbackOrgsError } =
+-        await supabase.rpc("get_my_orgs");
+-
+-      if (callbackOrgsError) {
+-        console.log(
+-          "auth callback get_my_orgs error:",
+-          callbackOrgsError
+-        );
+-
+-        router.replace(routes.login as any);
+-        return;
+-      }
+-
+-      const hasOrganization =
+-        Array.isArray(callbackOrgs) && callbackOrgs.length > 0;
+-
+-      router.replace(
+-        hasOrganization
+-          ? (routes.home as any)
+-          : (routes.onboarding as any)
+-      );
++      await refreshOrg();
++      if(!alive)return;
++      router.replace(routes.home as any);
+     });
+ 
+     return () => {
+@@ -782,7 +640,7 @@
+       authListener.subscription.unsubscribe();
+       urlSub.remove();
+     };
+-  }, [router]);
++  }, [router,bootAttempt,refreshOrg]);
+ 
+   useEffect(() => {
+     if (!ready) return;
+@@ -820,7 +678,7 @@
+       return;
+     }
+ 
+-    if (orgLoading) return;
++    if (orgLoading || orgError) return;
+ 
+     const inAuth = isInAuth(currentSegs);
+     const inOnboarding = isOnboardingRoute(currentSegs);
+@@ -836,7 +694,7 @@
+     if (inAuth || inOnboarding) {
+       router.replace("/(tabs)" as any);
+     }
+-  }, [ready, hasSession, isOfficeUser, orgLoading, orgs, router]);
++  }, [ready, hasSession, isOfficeUser, orgLoading, orgError, orgs, router]);
+ 
+   useEffect(() => {
+     return () => {
+@@ -847,33 +705,8 @@
+     };
+   }, []);
+ 
+-if (
+-  !ready ||
+-  !fontsLoaded ||
+-  (
+-    Platform.OS !== "web" &&
+-    hasSession === true &&
+-    !isOfficeUser &&
+-    orgLoading
+-  )
+-) {
+-  return (
+-    <View
+-      style={{
+-        flex: 1,
+-        backgroundColor: theme.colors.background,
+-        alignItems: "center",
+-        justifyContent: "center",
+-      }}
+-    >
+-      <StatusBar
+-        style="light"
+-        backgroundColor={theme.colors.background}
+-      />
+-
+-      <ActivityIndicator />
+-    </View>
+-  );
++if(sessionDeferred || (hasSession===true&&!!orgError) || !ready || !fontsLoaded || (hasSession===true&&!isOfficeUser&&orgLoading)) {
++ return <StartupLoading delayed={startupDelayed||sessionDeferred||!!orgError} onRetry={retryConnection} onLogin={()=>router.replace('/login' as any)}/>;
+ }
+ 
+   return (
+@@ -898,4 +731,11 @@
+     </LanguageProvider>
+     </OrgProvider>
+   );
+-}+}
++// Keep rendering failures recoverable without clearing authentication or revealing raw errors.
++export function ErrorBoundary({retry}:ErrorBoundaryProps){
++ return <View style={{flex:1,backgroundColor:'#071523',padding:28,justifyContent:'center',alignItems:'center',gap:20}}>
++  <Text accessibilityRole="alert" style={{color:'#e5f1fc',fontSize:16,textAlign:'center'}}>This screen could not open. Your session is preserved. / Ukurasa haujafunguka. Jaribu tena.</Text>
++  <Pressable accessibilityRole="button" onPress={()=>{void retry();}} style={{minHeight:48,padding:14,borderRadius:12,backgroundColor:'#20d39b'}}><Text style={{color:'#04251c',fontWeight:'700'}}>Retry screen / Jaribu tena</Text></Pressable>
++ </View>;
++}
+--- approved/src/context/OrgContext.tsx
++++ replacement/src/context/OrgContext.tsx
+@@ -1,3 +1,4 @@
++import {connectionDeadline} from '../supabase/sessionRecovery';
+ // src/context/OrgContext.tsx
+ import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
+ import React, {
+@@ -210,6 +211,7 @@
+   // per-user hydration / persistence guards
+   const hydratedUserRef = useRef<string | null>(null);
+   const currentUserIdRef = useRef<string | null>(null);
++  const authGenerationRef = useRef(0);
+ 
+   // ✅ AUTH/LOAD SINGLE-FLIGHT GUARD
+   // Prevent overlapping loadAll() calls that can fight over Supabase auth lock.
+@@ -377,6 +379,7 @@
+   const hydrateSelectionOnce = useCallback(async (userId: string) => {
+     if (hydratedUserRef.current === userId) return;
+     hydratedUserRef.current = userId;
++    const generation = authGenerationRef.current;
+ 
+     const [savedUserOrgId, savedUserStoreId, legacyOrgId, legacyStoreId, lastWorkspace] =
+       await Promise.all([
+@@ -386,6 +389,8 @@
+         kv.getString(KV_KEYS.activeStoreId),
+         kv.getLastWorkspaceForUser(userId),
+       ]);
++
++    if (generation !== authGenerationRef.current) return;
+ 
+     const nextOrgId =
+       savedUserOrgId ||
+@@ -411,6 +416,8 @@
+ 
+   const runLoadAll = useCallback(
+     async (mode: "boot" | "refresh") => {
++      const generation = authGenerationRef.current;
++      const isCurrent = () => generation === authGenerationRef.current;
+       setError(null);
+       if (mode === "boot") setLoading(true);
+       if (mode === "refresh") setRefreshing(true);
+@@ -419,8 +426,9 @@
+         const {
+           data: { session },
+           error: sessErr,
+-        } = await supabase.auth.getSession();
+-
++        } = await connectionDeadline(supabase.auth.getSession(),8000);
++
++        if (!isCurrent()) return;
+         if (sessErr) throw sessErr;
+ 
+         // not logged in => clear volatile active state only
+@@ -435,6 +443,7 @@
+             });
+           }
+ 
++          if (!isCurrent()) return;
+           currentUserIdRef.current = null;
+           setOrgs([]);
+           setStores([]);
+@@ -478,9 +487,12 @@
+           await hydrateSelectionOnce(session.user.id);
+         }
+ 
++        if (!isCurrent()) return;
++
+         // 1) canonical org list
+-        const { data: orgData, error: orgErr } = await supabase.rpc("get_my_orgs");
+-
++        const { data: orgData, error: orgErr } = await connectionDeadline(supabase.rpc("get_my_orgs"),15000);
++
++        if (!isCurrent()) return;
+         if (orgErr) {
+           if (isDisabledAccountMessage(orgErr.message)) {
+             try {
+@@ -489,6 +501,7 @@
+               console.log("OrgContext disabled-account signOut ignore:", err);
+             }
+ 
++            if (!isCurrent()) return;
+             setOrgs([]);
+             setStores([]);
+             _setActiveOrgId(null);
+@@ -511,9 +524,11 @@
+         let typedStores: MyStoreRow[] = [];
+ 
+         try {
+-          typedStores = await rpcFirstWorkingStores();
++          typedStores = await connectionDeadline(rpcFirstWorkingStores(),15000);
++          if (!isCurrent()) return;
+           setStores(typedStores);
+         } catch (storeErr: any) {
++          if (!isCurrent()) return;
+           typedStores = [];
+           setStores([]);
+           // keep orgs loaded; expose softer message instead of breaking whole app
+@@ -551,6 +566,7 @@
+             : []),
+         ]);
+       } catch (e: any) {
++        if (!isCurrent()) return;
+         const msg = e?.message ?? "Failed to load org/store data";
+ 
+         if (isDisabledAccountMessage(msg)) {
+@@ -560,19 +576,23 @@
+             console.log("loadAll disabled-account signOut ignore:", err);
+           }
+ 
++          if (!isCurrent()) return;
+           setOrgs([]);
+           setStores([]);
+           _setActiveOrgId(null);
+           _setActiveStoreId(null);
+           await kv.clearActiveSelection();
++          if (!isCurrent()) return;
+           setError("This account has been disabled.");
+         } else {
+           setError(msg);
+           // IMPORTANT: do NOT clear org/store selection here.
+         }
+       } finally {
++        if (isCurrent()) {
+         if (mode === "boot") setLoading(false);
+         if (mode === "refresh") setRefreshing(false);
++        }
+       }
+     },
+     [hydrateSelectionOnce]
+@@ -627,7 +647,7 @@
+       const {
+         data: { session },
+         error: sessErr,
+-      } = await supabase.auth.getSession();
++      } = await connectionDeadline(supabase.auth.getSession(),8000);
+ 
+       if (sessErr) throw sessErr;
+       if (!session) throw new Error("Not authenticated");
+@@ -662,20 +682,11 @@
+         const nextUserId = _session?.user?.id ?? null;
+         const prevUserId = currentUserIdRef.current;
+ 
+-        // ✅ Only reset hydration memory when actual user identity changes
+-        if (prevUserId !== nextUserId) {
+-          hydratedUserRef.current = null;
+-        }
+-
+-        // ✅ Ignore noisy refresh events on web to stop request loops
+-        if (event === "TOKEN_REFRESHED") {
+-          return;
+-        }
+-
+-        // ✅ Initial session already handled by boot loader
+-        if (event === "INITIAL_SESSION") {
+-          return;
+-        }
++        // INITIAL_SESSION belongs to the pending boot read. Invalidating it here
++        // without a replacement load would leave startup waiting indefinitely.
++        if (event === "INITIAL_SESSION") return;
++        const identityChanged = prevUserId !== nextUserId;
++        if (event === "TOKEN_REFRESHED" && !identityChanged) return;
+ 
+         // ✅ Only reload for meaningful auth events
+         // Use guarded loader so auth events cannot overlap and steal auth lock.
+@@ -683,8 +694,21 @@
+           event === "SIGNED_IN" ||
+           event === "SIGNED_OUT" ||
+           event === "USER_UPDATED" ||
+-          event === "PASSWORD_RECOVERY"
++          event === "PASSWORD_RECOVERY" ||
++          (event === "TOKEN_REFRESHED" && identityChanged)
+         ) {
++          if (identityChanged || event === "SIGNED_OUT") {
++            authGenerationRef.current += 1;
++            hydratedUserRef.current = null;
++            setOrgs([]);
++            setStores([]);
++            _setActiveOrgId(null);
++            _setActiveStoreId(null);
++            activeOrgIdRef.current = null;
++            activeStoreIdRef.current = null;
++            setLoading(true);
++            setRefreshing(false);
++          }
+           if (event === "SIGNED_OUT") {
+             currentUserIdRef.current = null;
+             hydratedUserRef.current = null;
+@@ -730,7 +754,7 @@
+             return;
+           }
+ 
+-          void loadAll("refresh");
++          void loadAll(identityChanged ? "boot" : "refresh");
+         }
+       }
+     );
+--- approved/src/supabase/sessionRecovery.ts
++++ replacement/src/supabase/sessionRecovery.ts
+@@ -0,0 +1,41 @@
++import type {Session} from '@supabase/supabase-js';
++
++/** Only an authoritative rejected refresh permits removing a stored session. */
++export function isRejectedRefresh(error: unknown): boolean {
++  const value = error as {code?: string; message?: string} | null;
++  if (['refresh_token_not_found', 'refresh_token_already_used', 'session_not_found', 'session_expired'].includes(value?.code ?? '')) return true;
++  return /^Invalid Refresh Token: (Refresh Token Not Found|Already Used|No Valid Session Found)$/i.test(value?.message ?? '');
++}
++
++export async function connectionDeadline<T>(work: PromiseLike<T>, milliseconds: number): Promise<T> {
++  let timer: ReturnType<typeof setTimeout> | undefined;
++  try {
++    return await Promise.race([Promise.resolve(work), new Promise<never>((_, reject) => {
++      timer = setTimeout(() => reject(new Error('WORKSPACE_CONNECTION_TIMEOUT')), milliseconds);
++    })]);
++  } finally {
++    if (timer !== undefined) clearTimeout(timer);
++  }
++}
++
++type SessionResponse = {data: {session: Session | null}; error: unknown};
++type SessionReader = {getSession: () => Promise<SessionResponse>; refreshSession: () => Promise<SessionResponse>};
++export type SessionRead = {status: 'authenticated' | 'signed_out' | 'retry'; session: Session | null; error: unknown};
++
++/** A transport failure is unknown auth state, never proof of sign-out. No storage mutation. */
++export async function readSessionForBootstrap(auth: SessionReader, timeout = 5000, now = Date.now()): Promise<SessionRead> {
++  try {
++    let result = await connectionDeadline(auth.getSession(), timeout);
++    if (result.error && /jwt\s*expired/i.test(String((result.error as {message?:string}).message??''))) result=await connectionDeadline(auth.refreshSession(),timeout);
++    if (result.error) return {status: isRejectedRefresh(result.error) ? 'signed_out' : 'retry', session: null, error: result.error};
++    if (!result.data.session) return {status: 'signed_out', session: null, error: null};
++    if (result.data.session.expires_at && result.data.session.expires_at * 1000 <= now + 5000) {
++      result = await connectionDeadline(auth.refreshSession(), timeout);
++      if (result.error) return {status: isRejectedRefresh(result.error) ? 'signed_out' : 'retry', session: null, error: result.error};
++      if (!result.data.session || (result.data.session.expires_at && result.data.session.expires_at * 1000 <= now)) return {status: 'retry', session: null, error: new Error('SESSION_REFRESH_INCOMPLETE')};
++    }
++    return {status: 'authenticated', session: result.data.session, error: null};
++  } catch (error) {
++    return {status: isRejectedRefresh(error) ? 'signed_out' : 'retry', session: null, error};
++  }
++}
+--- approved/src/ui/StartupLoading.tsx
++++ replacement/src/ui/StartupLoading.tsx
+@@ -0,0 +1,18 @@
++import React from 'react';
++import {ActivityIndicator,Pressable,Text,View} from 'react-native';
++import {useLanguage} from '../i18n/LanguageProvider';
++const text={
++ en:['Loading your workspace…','Your connection is taking longer than expected. Your session is preserved.','Retry connection','Open sign in'],
++ sw:['Inapakia sehemu yako ya kazi…','Muunganisho unachukua muda mrefu kuliko kawaida. Session yako imehifadhiwa.','Jaribu muunganisho tena','Fungua kuingia'],
++ fr:['Chargement de votre espace…','La connexion prend plus de temps que prévu. Votre session est conservée.','Réessayer la connexion','Ouvrir la connexion'],
++ pt:['A carregar o seu espaço…','A ligação está a demorar mais do que o esperado. A sua sessão foi preservada.','Tentar ligação novamente','Abrir início de sessão'],
++ ar:['جارٍ تحميل مساحة العمل…','يستغرق الاتصال وقتًا أطول من المتوقع. تم الاحتفاظ بجلستك.','إعادة محاولة الاتصال','فتح تسجيل الدخول'],
++ es:['Cargando tu espacio…','La conexión tarda más de lo esperado. Tu sesión se conserva.','Reintentar conexión','Abrir inicio de sesión'],
++ zh:['正在加载工作空间…','连接耗时超出预期。您的会话已保留。','重试连接','打开登录'],
++} as const;
++export function StartupLoading({delayed,onRetry,onLogin}:{delayed:boolean;onRetry:()=>void;onLogin:()=>void}){
++ const {language}=useLanguage(),t=text[language];return <View style={{flex:1,backgroundColor:'#071523',padding:28,justifyContent:'center',alignItems:'center',gap:20}}>
++ {!delayed&&<ActivityIndicator color="#32D5A1"/>}<Text accessibilityRole="alert" style={{color:'#E5F1FC',textAlign:'center',maxWidth:420,fontSize:16,lineHeight:26}}>{t[delayed?1:0]}</Text>
++ {delayed&&<><Pressable accessibilityRole="button" onPress={onRetry} style={{minHeight:48,padding:14,borderRadius:12,backgroundColor:'#20D39B'}}><Text style={{color:'#04251C',fontWeight:'700'}}>{t[2]}</Text></Pressable><Pressable accessibilityRole="button" onPress={onLogin} style={{minHeight:44,padding:12}}><Text style={{color:'#9DDCFF'}}>{t[3]}</Text></Pressable></>}
++ </View>;
++}

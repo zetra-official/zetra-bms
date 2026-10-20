@@ -1,0 +1,32 @@
+{
+  "src/context/OrgContext.tsx": {
+    "identical": true,
+    "oldSHA256": "36b764a5bc4bf00a6446457cd05ef6bfab29ef41fd4b6e00362a2ef8ae836d97",
+    "failedSHA256": "36b764a5bc4bf00a6446457cd05ef6bfab29ef41fd4b6e00362a2ef8ae836d97"
+  },
+  "src/supabase/supabaseClient.ts": {
+    "identical": true,
+    "oldSHA256": "c3df8d5cc07fbb898960f9cb7266ede23dee4dabbe3f3f49452297dbe5977a47",
+    "failedSHA256": "c3df8d5cc07fbb898960f9cb7266ede23dee4dabbe3f3f49452297dbe5977a47"
+  },
+  "src/ui/StartupLoading.tsx": {
+    "identical": true,
+    "oldSHA256": "7923a8cc34be21180803df58488e2df20903d080c09ce9ce6e0d85769861837a",
+    "failedSHA256": "7923a8cc34be21180803df58488e2df20903d080c09ce9ce6e0d85769861837a"
+  },
+  "app/_layout.tsx": {
+    "identical": false,
+    "oldSHA256": "be36733bb86ca3607d7d00e973025aebc1b5d69f40c3e8d007dc56d22e2701a2",
+    "failedSHA256": "88b70b34212edddf170027ae0cba545cd2f3ca1803bf875516efc376c5883cfe"
+  },
+  "src/i18n/LanguageProvider.tsx": {
+    "identical": false,
+    "oldSHA256": "a9960fcf8d558826523f9cfdedc241a800bf7df118cbe2f72fa213f41645c924",
+    "failedSHA256": "a604b73f8b5873acb4aa78f7bb5b85d0ad13c249f95f13909e24020d9441ca48"
+  },
+  "src/storage/kv.ts": {
+    "identical": true,
+    "oldSHA256": "7822cf8c060c69a88fcbcf20b5390682f31111bd14f339448a88836437a2fd44",
+    "failedSHA256": "7822cf8c060c69a88fcbcf20b5390682f31111bd14f339448a88836437a2fd44"
+  }
+}

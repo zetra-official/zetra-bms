@@ -1,0 +1,18 @@
+{
+  "web": {
+    "status": "VERIFIED",
+    "files": 272,
+    "deploymentId": "6ad76cf47622bc0a29e1244f",
+    "updateId": null,
+    "group": null,
+    "runtime": null
+  },
+  "android": {
+    "status": "VERIFIED",
+    "files": 48,
+    "deploymentId": null,
+    "updateId": "01a1592b-2ee1-7ed9-ac55-fb2b9185776c",
+    "group": "6f0e3704-2774-44c8-afc5-34216997c808",
+    "runtime": "1.0.0"
+  }
+}

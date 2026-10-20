@@ -1,0 +1,68 @@
+{
+  "web": {
+    "archive": "workspace-recovery-web-source.zip",
+    "sha256": "e183cc9949551bec7f78f0fd87df3d3454c538ab2947dd353fc2e053df5d1223",
+    "changedAgainstApprovedCurrencyRefinement": {
+      "app/(auth)/login.tsx": {
+        "before": "5a2f7e4926abdaa2c506cde93629d3459bc9549424fc3e546a947fea687f2bc3",
+        "after": "895702f61d53d6028ce06ab1556aee0c44afd1e5c029681fd99b72624c45738c"
+      },
+      "app/(tabs)/_layout.tsx": {
+        "before": "1db4aeeaa65c69ed1cd85f07df20ef722a58f4838e1a49e542c2b06bf601f56f",
+        "after": "1e84b35b544b6a77065d87b511ece17b924b209411362dbdd5fa799252839937"
+      },
+      "app/_layout.tsx": {
+        "before": "88b70b34212edddf170027ae0cba545cd2f3ca1803bf875516efc376c5883cfe",
+        "after": "80be18680fa9273a2168e459ec2e60889bb50d80e6a6e041f470d848777f114d"
+      },
+      "scripts/package-web-bootstrap.py": {
+        "before": null,
+        "after": "421c633816df3898cd855fd217309a069c531ba26d3e7afe038e58ca8d03975a"
+      },
+      "scripts/web-bootstrap-loader.js": {
+        "before": null,
+        "after": "371056112f4ecd48288f3907ef15826fb72ea8994231c78339424cfa66ea811b"
+      },
+      "src/context/OrgContext.tsx": {
+        "before": "36b764a5bc4bf00a6446457cd05ef6bfab29ef41fd4b6e00362a2ef8ae836d97",
+        "after": "caed05c5eb6d235bdfdc4d436cdc8851df3200856e06b4fadcab894fea27993f"
+      },
+      "src/supabase/sessionRecovery.ts": {
+        "before": null,
+        "after": "68803ba4ae5328ec6fd08ec6b282173a1b3abff600448b3814da249c83aa2232"
+      }
+    },
+    "allOtherApplicationSourceByteIdentical": true
+  },
+  "android": {
+    "archive": "workspace-recovery-android-source.zip",
+    "sha256": "103835e086c1f1184c9df878fcdd1246129fd8036be95eefe252342300de0397",
+    "changedAgainstApprovedCurrencyRefinement": {
+      "app/(auth)/login.tsx": {
+        "before": "19194d218382fd5d186a09286b6c103c6b3c5708b9e4c2a2f77a7318922e970c",
+        "after": "0797cdd05e20b08dca9c0ae3861756a432f1654d2f6bdf60283ef164fb54abb6"
+      },
+      "app/(tabs)/_layout.tsx": {
+        "before": "e00e481e3a53fc8db7a82bb2041513ee3ce099ccb983a92622fd3b04f2c744a8",
+        "after": "57b95a4fe93a0baa0b3af32af01ed932c23cea2850d4a4d7001f7b8e176d6409"
+      },
+      "app/_layout.tsx": {
+        "before": "54ba5137cfd8a754fd78f97044bff0a9be17c01b7ee55f08fc36629f3b983201",
+        "after": "753e1dbcf01051a7d81dd99cca64ea47a3f5e1515a4cad44c87e2b2b6dd7afa2"
+      },
+      "src/context/OrgContext.tsx": {
+        "before": "36b764a5bc4bf00a6446457cd05ef6bfab29ef41fd4b6e00362a2ef8ae836d97",
+        "after": "caed05c5eb6d235bdfdc4d436cdc8851df3200856e06b4fadcab894fea27993f"
+      },
+      "src/supabase/sessionRecovery.ts": {
+        "before": null,
+        "after": "68803ba4ae5328ec6fd08ec6b282173a1b3abff600448b3814da249c83aa2232"
+      },
+      "src/ui/StartupLoading.tsx": {
+        "before": null,
+        "after": "7923a8cc34be21180803df58488e2df20903d080c09ce9ce6e0d85769861837a"
+      }
+    },
+    "allOtherApplicationSourceByteIdentical": true
+  }
+}

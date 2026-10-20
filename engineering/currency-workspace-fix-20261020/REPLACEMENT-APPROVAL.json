@@ -1,0 +1,236 @@
+{
+  "releaseId": "ZETRA-CURRENCY-AUTH-WORKSPACE-RECOVERY-20261020",
+  "status": "READY_FOR_OWNER_REVIEW_WITH_DISCLOSED_LIMITS",
+  "baseCheckpoint": "28fae9655f9613daf0d073d0267711549d224a91",
+  "approvedCurrencyUIBase": "c2c390dc88c2604f68b5fb951cc80320e4f09213",
+  "web": {
+    "archive": "workspace-recovery-web-artifact.zip",
+    "sha256": "0012d743e4dc100edafcf65017e904b1c902e043f773f52c1b78dd8b444f68f2",
+    "manifest": "ARTIFACT-web-SHA256.json",
+    "manifestSHA256": "b871dea3b4737a63244193b453d1236a7e110348cf8d06902644bf1929a71ea9",
+    "entry": "_expo/static/js/web/entry-f1648f4fab1a88f9a818878dd52189fb.js",
+    "entrySHA256": "70bc094b1b14d31733593e699cfad91ec2d9ba692be70fbf45c20a429c3ad072",
+    "files": 272,
+    "runtime": null
+  },
+  "android": {
+    "archive": "workspace-recovery-android-artifact.zip",
+    "sha256": "718e176b41d4c15fce396e68cc4512a80de3c0c5901ca1da0defcec63b07ec53",
+    "manifest": "ARTIFACT-android-SHA256.json",
+    "manifestSHA256": "c45b50a9679261400a97b7a98ae4c663df562f3bc4bb964a9fdd3175d94d69e2",
+    "entry": "_expo/static/js/android/entry-0f93124cf45d032adbb78d6fc1a9049b.hbc",
+    "entrySHA256": "c85f448bd73a4e42d4b362eccff662e05579fea5d11c483e37bed5a630fe50aa",
+    "files": 48,
+    "runtime": "1.0.0"
+  },
+  "source": {
+    "web": {
+      "archive": "workspace-recovery-web-source.zip",
+      "sha256": "e183cc9949551bec7f78f0fd87df3d3454c538ab2947dd353fc2e053df5d1223",
+      "changedAgainstApprovedCurrencyRefinement": {
+        "app/(auth)/login.tsx": {
+          "before": "5a2f7e4926abdaa2c506cde93629d3459bc9549424fc3e546a947fea687f2bc3",
+          "after": "895702f61d53d6028ce06ab1556aee0c44afd1e5c029681fd99b72624c45738c"
+        },
+        "app/(tabs)/_layout.tsx": {
+          "before": "1db4aeeaa65c69ed1cd85f07df20ef722a58f4838e1a49e542c2b06bf601f56f",
+          "after": "1e84b35b544b6a77065d87b511ece17b924b209411362dbdd5fa799252839937"
+        },
+        "app/_layout.tsx": {
+          "before": "88b70b34212edddf170027ae0cba545cd2f3ca1803bf875516efc376c5883cfe",
+          "after": "80be18680fa9273a2168e459ec2e60889bb50d80e6a6e041f470d848777f114d"
+        },
+        "scripts/package-web-bootstrap.py": {
+          "before": null,
+          "after": "421c633816df3898cd855fd217309a069c531ba26d3e7afe038e58ca8d03975a"
+        },
+        "scripts/web-bootstrap-loader.js": {
+          "before": null,
+          "after": "371056112f4ecd48288f3907ef15826fb72ea8994231c78339424cfa66ea811b"
+        },
+        "src/context/OrgContext.tsx": {
+          "before": "36b764a5bc4bf00a6446457cd05ef6bfab29ef41fd4b6e00362a2ef8ae836d97",
+          "after": "caed05c5eb6d235bdfdc4d436cdc8851df3200856e06b4fadcab894fea27993f"
+        },
+        "src/supabase/sessionRecovery.ts": {
+          "before": null,
+          "after": "68803ba4ae5328ec6fd08ec6b282173a1b3abff600448b3814da249c83aa2232"
+        }
+      },
+      "allOtherApplicationSourceByteIdentical": true
+    },
+    "android": {
+      "archive": "workspace-recovery-android-source.zip",
+      "sha256": "103835e086c1f1184c9df878fcdd1246129fd8036be95eefe252342300de0397",
+      "changedAgainstApprovedCurrencyRefinement": {
+        "app/(auth)/login.tsx": {
+          "before": "19194d218382fd5d186a09286b6c103c6b3c5708b9e4c2a2f77a7318922e970c",
+          "after": "0797cdd05e20b08dca9c0ae3861756a432f1654d2f6bdf60283ef164fb54abb6"
+        },
+        "app/(tabs)/_layout.tsx": {
+          "before": "e00e481e3a53fc8db7a82bb2041513ee3ce099ccb983a92622fd3b04f2c744a8",
+          "after": "57b95a4fe93a0baa0b3af32af01ed932c23cea2850d4a4d7001f7b8e176d6409"
+        },
+        "app/_layout.tsx": {
+          "before": "54ba5137cfd8a754fd78f97044bff0a9be17c01b7ee55f08fc36629f3b983201",
+          "after": "753e1dbcf01051a7d81dd99cca64ea47a3f5e1515a4cad44c87e2b2b6dd7afa2"
+        },
+        "src/context/OrgContext.tsx": {
+          "before": "36b764a5bc4bf00a6446457cd05ef6bfab29ef41fd4b6e00362a2ef8ae836d97",
+          "after": "caed05c5eb6d235bdfdc4d436cdc8851df3200856e06b4fadcab894fea27993f"
+        },
+        "src/supabase/sessionRecovery.ts": {
+          "before": null,
+          "after": "68803ba4ae5328ec6fd08ec6b282173a1b3abff600448b3814da249c83aa2232"
+        },
+        "src/ui/StartupLoading.tsx": {
+          "before": null,
+          "after": "7923a8cc34be21180803df58488e2df20903d080c09ce9ce6e0d85769861837a"
+        }
+      },
+      "allOtherApplicationSourceByteIdentical": true
+    }
+  },
+  "acceptance": "ACCEPTANCE.json",
+  "rootCause": "ROOT-CAUSE.md",
+  "rollback": "ROLLBACK.json",
+  "targets": {
+    "status": "PASS",
+    "checkedAt": "2026-10-20T19:50:43.207141+00:00",
+    "readOnly": true,
+    "site": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+    "domain": "https://app.zetra.tz",
+    "webActiveAndRollback": "6ad76cf47622bc0a29e1244f",
+    "rollbackState": "ready",
+    "androidChannel": "production",
+    "androidBranch": "production",
+    "androidUpdate": "01a1592b-2ee1-7ed9-ac55-fb2b9185776c",
+    "androidRollbackGroup": "6f0e3704-2774-44c8-afc5-34216997c808",
+    "runtime": "1.0.0",
+    "publication": false,
+    "sql": [],
+    "financialWrites": false
+  },
+  "productionPublication": false,
+  "requiresNewOwnerApproval": true,
+  "sql": [],
+  "financialActivation": false,
+  "protectedSourcePreservation": true,
+  "publicFiles": {
+    ".gitattributes": "705fd4d6451a31d36b3df7de96f83f30ac976c9b4a6d1e51671d8e2f33e2d0da",
+    ".gitignore": "45549a9ffd9963f855d72829e978a31c05b82894b14b1d8fbdd43083b20c2d86",
+    "ACCEPTANCE.json": "7427332d364f8f03c75d3a56cff710ebe41a9444f68f86b52e251b1e58adbb6e",
+    "ARTIFACT-android-SHA256.json": "c45b50a9679261400a97b7a98ae4c663df562f3bc4bb964a9fdd3175d94d69e2",
+    "ARTIFACT-web-SHA256.json": "b871dea3b4737a63244193b453d1236a7e110348cf8d06902644bf1929a71ea9",
+    "BUILD-android.json": "8c66f3b779f8274cb3377b7064412a93078730ee4048a6ce443941df025ab359",
+    "BUILD-web.json": "a28673a7e87ce06c2b169107d9637dfa47d08535d00bd51d839c75922e9ee9c5",
+    "CURRENT-TARGETS.json": "e76b0064f22ee8d0810c2643085e25d6b2a5a70fbf2cc9c7f87928faeb3b3265",
+    "DELIVERY-PACKAGING.json": "880158f10de51f44294437c6f6ba492d72e2f60fead66f952a085cccd523df5e",
+    "FX-ACCEPTANCE-CACHE.json": "fd47c157db7808251ea34089bbdb8fda1593fd9128896d3461889a97b6a7592c",
+    "FX-EXACT-UI-RESULTS.json": "30796b03900790526e1e844972dd07f0b763fac37b3635fcacd15543da20c04e",
+    "HANDOVER.md": "4be388fd76b5d9f1961be8855eab5d5893080ff3d3b93aa17c182df81ed9ec20",
+    "IDENTITY-EXPERIMENT-NOT-RELEASED.json": "f2a14f7e3e446e832bc4ae003616dfe0a9b81cbabf3d9fc3f8e0db9499d9bc60",
+    "PRESERVATION.json": "2b8ffa7629a5a23f057efd02856ce994b64d9b8ace1374d1a3b7789f94ce8834",
+    "PRODUCTION-RANGE-COMPATIBILITY.json": "bdb14b1a604a9e23be337c7939d69c1ea53b1bf4c39298511ecb1add4eaa6386",
+    "PRODUCTION-WEB-POLICY.json": "cd053721d21f76b71e84dd7e72c2883e1a1cffb549d0446ab4d024c20fb3dfa4",
+    "REPLACEMENT-APPROVAL.md": "3d5c9906db48e4483e00091fd5d93ca3dfb9e302c568d8b3c9dad6030b614771",
+    "ROLLBACK.json": "29382decebc2b91f0df09d9e4635c1e6982adc1d4524eefe561a81a336b91f29",
+    "ROOT-CAUSE.md": "995f2ce7f733695c46c3394909e37857bf0fb603c87921d263ff4f283da8846f",
+    "SEALED-ARTIFACTS.json": "fdc7894b7f7d68ec27a55dba3e72be74f0337e5c1c24688570a020557a0aadbd",
+    "SOURCE-PACKAGE.json": "a3ee8a8c5cf533dea2db7b4abdc832c7b6dab637d9dabb6bec90303390bbef46",
+    "auth-recovery-unit-results.json": "7835324f4e26b3512de1af3d8de8168854e91c07e171ff8fe1938a6c9a2d9439",
+    "auth-recovery.test.cjs": "d3009cd2bbce82ef8b3fa9463471764ff8e009f5a6c73cd3edc8a209b7af6394",
+    "baseline-comparison.json": "75482a084db7ddf0b36f67b85693e9ab666461d3909ff004f61e4b44d788f877",
+    "bootstrap-source-comparison.json": "88ecdd4e781f8d188499419e8e2f75f4d7d5c2b9ebc91e2f5b9c839e625d75a9",
+    "build_release.cjs": "5f72ed6b953c4db5d41f29dc84ab719207dba59c0dc640d2b04a664fc557b114",
+    "bundle-full-get.json": "127c02980988444ab270c21f0f561809e60bfca1753f3ef0e314c4f328b37380",
+    "checkpoint_package.py": "2bd9283fbcabe0e20f26b2ed6fe37593fce94f97006b3cb07d8bcd12ed4a3fea",
+    "delivery-unit-results.json": "f35dcbc25b10ca94a1e66a737f21b5a6c39c6e9ad86ddfd7fe2a60d80a8dc8d1",
+    "delivery.test.cjs": "e807d24fb27d1ac7f2da71d1fc09228f8436f69bdc0e31ec5b4d9cfd9a45e2af",
+    "failed-delivery-progress.json": "91af19a69ff43a4fce3b94ed8f9487fc5e27b67023595a0b740b6d4211bd90ea",
+    "finalize_package.py": "0f14af84b2db7b1c460cd2a0ee5e3eb1eb66a38fe2b0e7da8dd7be3cd92cf7a0",
+    "fresh-login-home.png": "994bfa7a38356d5e3d325fe3cbbe5e159be6a46524d988a190187b78ea63b078",
+    "old-interrupted-loading.png": "518743beb1bed067d6d0f0ff6cfc2b0fb4e334e2ca532d7678059d18f42375ba",
+    "old-interrupted-loading.txt": "5a50c7780bb9a132cea0a68d6f22e090f9953c52e6d7c46f2ae9131fa8bd35b9",
+    "org-generation-results.json": "01c6516f13789d3d9585fff8ecab3f45f7c052ada3d5950202e0b3fbd3fadbed",
+    "org-generation.test.cjs": "7f9c65552e5120fcf53c9e97c545873319b11376f75438d44adc549cec847423",
+    "release-corruption-rejected.png": "b05f0c9221a0d83894c8f869d666b8b67096679d7fa5edfc4d263d3845b29848",
+    "release-delivery-evidence.json": "6479d0d63d48b1ff389473195cddc0c34cdb92b2525d11aa0a1b09d976a67789",
+    "release-desktop-settled-header.png": "331d39c080adb68d80d78e1492b65c7b06ef7bcd2816ffbc8a4b3bc03c031493",
+    "release-desktop-tzs-header.png": "633f43fb157215181eca4cfe94b19d944cf3d54c3a88411ccfa0de0d7bdb5c4a",
+    "release-fresh-login-refresh-home.png": "63273702f5b9f75e85c95762beb00a047f5b6005cd9270489cd1ca25b7255628",
+    "release-mobile-home.png": "01f9ceeca3de3be4d062a1a722117dc55d3ea55c5db9b8ac246e2298653fc904",
+    "render-recovery-results.json": "fb93a8300ec4f1d74e4eabd668a4b10d5a143f13eae990014751d882c96072e2",
+    "render-recovery.test.cjs": "0dde5a9a7fc0eeed11174e8e7a2ea4cdb2178914fc89e78161c73bf0cea94232",
+    "review_source.py": "75b338ec3717e6c2dc768a9147ae8f1847bbc931a5e81c60ed12b9fd31e5834d",
+    "source-android.patch": "84f87777f4a79677ba8cf633701021d8581410a81c92fccfb689cc50c5fa3356",
+    "source-web.patch": "dfb6c01c8e4b839257bd49b6d655bda5fea00770f29fc4c90590354ebba2bfb8",
+    "tabs-recovery-unit-results.json": "6d1b5f2a8722c0f61b3038903d9439af9d2ecd381823577c0b9250766a132f76",
+    "tabs-recovery.test.cjs": "1474280d69ca76abcd0bc85656752d939df37c9e9687fd1cd23606d7029925d8",
+    "working-delivery-progress.json": "e8b13152c61c4e26b0b870fd5b5acbcbe083ea4b16de22ee0ea8c3b081718435",
+    "workspace-recovery-android-artifact.zip": "718e176b41d4c15fce396e68cc4512a80de3c0c5901ca1da0defcec63b07ec53",
+    "workspace-recovery-android-source.zip": "103835e086c1f1184c9df878fcdd1246129fd8036be95eefe252342300de0397",
+    "workspace-recovery-web-artifact.zip": "0012d743e4dc100edafcf65017e904b1c902e043f773f52c1b78dd8b444f68f2",
+    "workspace-recovery-web-source.zip": "e183cc9949551bec7f78f0fd87df3d3454c538ab2947dd353fc2e053df5d1223"
+  },
+  "checkpointFiles": [
+    ".gitattributes",
+    ".gitignore",
+    "ACCEPTANCE.json",
+    "ARTIFACT-android-SHA256.json",
+    "ARTIFACT-web-SHA256.json",
+    "BUILD-android.json",
+    "BUILD-web.json",
+    "CURRENT-TARGETS.json",
+    "DELIVERY-PACKAGING.json",
+    "FX-ACCEPTANCE-CACHE.json",
+    "FX-EXACT-UI-RESULTS.json",
+    "HANDOVER.md",
+    "IDENTITY-EXPERIMENT-NOT-RELEASED.json",
+    "PACKAGE-SHA256.txt",
+    "PRESERVATION.json",
+    "PRODUCTION-RANGE-COMPATIBILITY.json",
+    "PRODUCTION-WEB-POLICY.json",
+    "REPLACEMENT-APPROVAL.json",
+    "REPLACEMENT-APPROVAL.md",
+    "ROLLBACK.json",
+    "ROOT-CAUSE.md",
+    "SEALED-ARTIFACTS.json",
+    "SOURCE-PACKAGE.json",
+    "asset-delivery-requests.json",
+    "auth-recovery-unit-results.json",
+    "auth-recovery.test.cjs",
+    "baseline-comparison.json",
+    "bootstrap-source-comparison.json",
+    "build_release.cjs",
+    "bundle-full-get.json",
+    "checkpoint_package.py",
+    "delivery-unit-results.json",
+    "delivery.test.cjs",
+    "failed-delivery-progress.json",
+    "finalize_package.py",
+    "fresh-login-home.png",
+    "old-interrupted-loading.png",
+    "old-interrupted-loading.txt",
+    "org-generation-results.json",
+    "org-generation.test.cjs",
+    "release-corruption-rejected.png",
+    "release-delivery-evidence.json",
+    "release-desktop-settled-header.png",
+    "release-desktop-tzs-header.png",
+    "release-fresh-login-refresh-home.png",
+    "release-mobile-home.png",
+    "render-recovery-results.json",
+    "render-recovery.test.cjs",
+    "review_source.py",
+    "source-android.patch",
+    "source-web.patch",
+    "tabs-recovery-unit-results.json",
+    "tabs-recovery.test.cjs",
+    "working-delivery-progress.json",
+    "workspace-recovery-android-artifact.zip",
+    "workspace-recovery-android-source.zip",
+    "workspace-recovery-web-artifact.zip",
+    "workspace-recovery-web-source.zip"
+  ]
+}

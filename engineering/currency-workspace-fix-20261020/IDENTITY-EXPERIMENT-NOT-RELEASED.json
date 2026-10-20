@@ -1,0 +1,7 @@
+{
+  "status": "EXCLUDED",
+  "reason": "Exact failed source passes genuine authenticated local protected refresh; no proof that duplicate currency auth reader caused failure",
+  "evidence": "org-identity-experiment.diff and preference-identity-experiment.diff retained",
+  "experimentalBuild": "sealed-web-build; NOT release artifact",
+  "releaseSource": "restored exact failed application source, plus web delivery packaging only"
+}

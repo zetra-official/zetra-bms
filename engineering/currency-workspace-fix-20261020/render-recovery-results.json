@@ -1,0 +1,10 @@
+{
+  "status": "PASS",
+  "platforms": 2,
+  "checks": [
+    "generic recovery message",
+    "raw exception not rendered",
+    "explicit retry invokes router retry"
+  ],
+  "scope": "Unit render contracts; no deliberate Production exceptions"
+}

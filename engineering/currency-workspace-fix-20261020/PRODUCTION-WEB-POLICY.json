@@ -1,0 +1,7 @@
+{
+  "status": "PASS",
+  "productionCspPresent": false,
+  "artifactHeadersUnchanged": true,
+  "securityHeadersWeakened": false,
+  "scope": "Read-only public Production HTML policy check for inline/Blob delivery compatibility"
+}

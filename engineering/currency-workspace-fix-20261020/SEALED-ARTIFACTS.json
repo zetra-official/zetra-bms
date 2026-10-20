@@ -1,0 +1,22 @@
+{
+  "web": {
+    "archive": "workspace-recovery-web-artifact.zip",
+    "sha256": "0012d743e4dc100edafcf65017e904b1c902e043f773f52c1b78dd8b444f68f2",
+    "manifest": "ARTIFACT-web-SHA256.json",
+    "manifestSHA256": "b871dea3b4737a63244193b453d1236a7e110348cf8d06902644bf1929a71ea9",
+    "entry": "_expo/static/js/web/entry-f1648f4fab1a88f9a818878dd52189fb.js",
+    "entrySHA256": "70bc094b1b14d31733593e699cfad91ec2d9ba692be70fbf45c20a429c3ad072",
+    "files": 272,
+    "runtime": null
+  },
+  "android": {
+    "archive": "workspace-recovery-android-artifact.zip",
+    "sha256": "718e176b41d4c15fce396e68cc4512a80de3c0c5901ca1da0defcec63b07ec53",
+    "manifest": "ARTIFACT-android-SHA256.json",
+    "manifestSHA256": "c45b50a9679261400a97b7a98ae4c663df562f3bc4bb964a9fdd3175d94d69e2",
+    "entry": "_expo/static/js/android/entry-0f93124cf45d032adbb78d6fc1a9049b.hbc",
+    "entrySHA256": "c85f448bd73a4e42d4b362eccff662e05579fea5d11c483e37bed5a630fe50aa",
+    "files": 48,
+    "runtime": "1.0.0"
+  }
+}

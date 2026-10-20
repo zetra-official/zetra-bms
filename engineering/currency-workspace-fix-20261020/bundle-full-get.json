@@ -1,0 +1,23 @@
+[
+  {
+    "name": "failed",
+    "url": "https://6ad7a771217ce218428b0c64--regal-sunburst-e3cee8.netlify.app/_expo/static/js/web/entry-be3dfa2fe1488e3e500f092bd606817c.js",
+    "error": "[WinError 10054] An existing connection was forcibly closed by the remote host",
+    "seconds": 6.59
+  },
+  {
+    "name": "restored",
+    "url": "https://app.zetra.tz/_expo/static/js/web/entry-d14a8aceb2440ee90f4120aad7a4dd92.js",
+    "status": 200,
+    "headers": {
+      "Age": "1",
+      "Cache-Control": "public,max-age=31536000,immutable",
+      "Content-Length": "6810622",
+      "Content-Type": "application/javascript; charset=UTF-8",
+      "Etag": "\"9432731719f3eb69ecc7f95188f438dc-ssl\"",
+      "X-Nf-Request-Id": "01M5D835YX9VY1AWAVCGP68MY4"
+    },
+    "error": "IncompleteRead(408045 bytes read, 6402577 more expected)",
+    "seconds": 95.88
+  }
+]

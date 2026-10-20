@@ -1,0 +1,55 @@
+{
+  "status": "PASS_WITH_EXPLICIT_LIMITS",
+  "sealedArtifacts": {
+    "web": "0012d743e4dc100edafcf65017e904b1c902e043f773f52c1b78dd8b444f68f2",
+    "android": "718e176b41d4c15fce396e68cc4512a80de3c0c5901ca1da0defcec63b07ec53"
+  },
+  "unitBehaviorChecks": 40,
+  "additionalStaticAuthGuards": 4,
+  "unitReports": [
+    "auth-recovery-unit-results.json",
+    "tabs-recovery-unit-results.json",
+    "org-generation-results.json",
+    "delivery-unit-results.json",
+    "render-recovery-results.json"
+  ],
+  "genuineOwnerAuth": true,
+  "freshPrivateLogin": "PASS: localhost visible Owner Home, credentials entered by Owner only",
+  "exactFinalArtifactFreshSessionRefresh": "PASS",
+  "newDocumentSessionResume": "PASS",
+  "protectedPOSRefresh": "PASS",
+  "mobileWeb": {
+    "engine": "Chromium viewport, not physical Safari/Android",
+    "width": 390,
+    "documentWidth": 390,
+    "homeCurrency": "PASS",
+    "posColumns": [
+      175.1999969482422,
+      175.1999969482422
+    ]
+  },
+  "desktopWeb": {
+    "width": 1280,
+    "documentWidth": 1280,
+    "homeAndFinance": "PASS",
+    "runtimeErrorsObserved": 0,
+    "pos50_50": "PASS retained genuine pre-generation-guard evidence; POS source unchanged"
+  },
+  "organizationSelection": "PASS genuine chooser and re-selection; one accessible organization",
+  "identityChangeIsolation": "PASS deterministic actual-loader deferred SDK/RPC tests on both platform sources; not genuine cross-tenant acceptance",
+  "deliveryFaults": "PASS final sealed artifact: truncated full + corrupted range blocked; explicit retry with transient range failure recovered protected POS and preference",
+  "fx": "PASS official cached-reference calculation/UI evidence USD/KES/UGX/EUR; final sealed Dashboard and Finance USD also passed; no invented rates",
+  "fxLiveConnectivity": "NOT PASS: current live requests unavailable; fail-closed original display verified; captured feeds are not live connectivity acceptance",
+  "policy": "Unchanged verified engine: 4 calendar days reference date, 24 hours retrieval; current-rate reference valuation, not bank buy/sell",
+  "originalTZS": "PASS original amounts displayed alongside conversion, Original restores TZS; no financial postings performed",
+  "physicalAndroid": "NOT TESTED",
+  "physicalIPhoneSafari": "NOT TESTED",
+  "browserProcessRestart": "NOT TESTED; fresh document and protected reload tested",
+  "nativeAppRestart": "NOT TESTED",
+  "genuineCrossOrganizationSwitch": "NOT TESTED; one accessible organization",
+  "productionReadOnly": "Owner Desktop/Mobile refresh observed PASS; cannot attribute all reported customer incidents",
+  "currencyCheckoutCatalogPreservation": "PASS strict source/ZIP byte comparison",
+  "productionSql": [],
+  "financialWrites": false,
+  "publication": false
+}

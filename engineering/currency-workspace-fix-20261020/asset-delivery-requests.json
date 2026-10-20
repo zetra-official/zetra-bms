@@ -1,0 +1,978 @@
+[
+  {
+    "test": "sealed-full-fast-path",
+    "variant": "replacement",
+    "fault": "none",
+    "range": null,
+    "status": 200,
+    "bytes": 6817936
+  },
+  {
+    "test": "final-fast-path-integrity-fallback",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": null,
+    "status": 200,
+    "bytes": 262144
+  },
+  {
+    "test": "final-fast-path-integrity-fallback",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=0-262143",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-fast-path-integrity-fallback",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=262144-524287",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-fast-path-integrity-fallback",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=524288-786431",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-fast-path-integrity-fallback",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=786432-1048575",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-fast-path-integrity-fallback",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=1048576-1310719",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-fast-path-integrity-fallback",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=1310720-1572863",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-fast-path-integrity-fallback",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=1572864-1835007",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-fast-path-integrity-fallback",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=1835008-2097151",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-fast-path-integrity-fallback",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=2097152-2359295",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-fast-path-integrity-fallback",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=2359296-2621439",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-fast-path-integrity-fallback",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=2621440-2883583",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-fast-path-integrity-fallback",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=2883584-3145727",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-fast-path-integrity-fallback",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=3145728-3407871",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-fast-path-integrity-fallback",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=3407872-3670015",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-fast-path-integrity-fallback",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=3670016-3932159",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-fast-path-integrity-fallback",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=3932160-4194303",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-fast-path-integrity-fallback",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=4194304-4456447",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-fast-path-integrity-fallback",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=4456448-4718591",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-fast-path-integrity-fallback",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=4718592-4980735",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-fast-path-integrity-fallback",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=4980736-5242879",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-fast-path-integrity-fallback",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=5242880-5505023",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-fast-path-integrity-fallback",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=5505024-5767167",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-fast-path-integrity-fallback",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=5767168-6029311",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-fast-path-integrity-fallback",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=6029312-6291455",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-fast-path-integrity-fallback",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=6291456-6553599",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-fast-path-integrity-fallback",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=6553600-6815743",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-fast-path-integrity-fallback",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=6815744-6817935",
+    "status": 206,
+    "bytes": 2192
+  },
+  {
+    "test": "final-sealed-bounded-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": null,
+    "status": 200,
+    "bytes": 262144
+  },
+  {
+    "test": "final-sealed-bounded-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=524288-786431",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-sealed-bounded-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=262144-524287",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-sealed-bounded-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=786432-1048575",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-sealed-bounded-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=1048576-1310719",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-sealed-bounded-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=1310720-1572863",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-sealed-bounded-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=1572864-1835007",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-sealed-bounded-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=1835008-2097151",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-sealed-bounded-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=2097152-2359295",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-sealed-bounded-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=2359296-2621439",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-sealed-bounded-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=2621440-2883583",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-sealed-bounded-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=2883584-3145727",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-sealed-bounded-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=3145728-3407871",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-sealed-bounded-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=3407872-3670015",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-sealed-bounded-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=3670016-3932159",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-sealed-bounded-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=3932160-4194303",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-sealed-bounded-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=4194304-4456447",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-sealed-bounded-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=4456448-4718591",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-sealed-bounded-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=4718592-4980735",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-sealed-bounded-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=4980736-5242879",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-sealed-bounded-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=5242880-5505023",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-sealed-bounded-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=5505024-5767167",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-sealed-bounded-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=5767168-6029311",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-sealed-bounded-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=0-262143",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-sealed-bounded-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=6029312-6291455",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-sealed-bounded-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=262144-524287",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-sealed-bounded-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=6291456-6553599",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-sealed-bounded-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=6553600-6815743",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "final-sealed-bounded-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=6815744-6817935",
+    "status": 206,
+    "bytes": 2192
+  },
+  {
+    "test": "final-clean-confirmation",
+    "variant": "replacement",
+    "fault": "none",
+    "range": null,
+    "status": 200,
+    "bytes": 6817936
+  },
+  {
+    "test": "final-clean-confirmation",
+    "variant": "replacement",
+    "fault": "none",
+    "range": null,
+    "status": 200,
+    "bytes": 6817936
+  },
+  {
+    "test": "final-clean-confirmation",
+    "variant": "replacement",
+    "fault": "none",
+    "range": null,
+    "status": 200,
+    "bytes": 6818358
+  },
+  {
+    "test": "final-clean-confirmation",
+    "variant": "replacement",
+    "fault": "none",
+    "range": null,
+    "status": 200,
+    "bytes": 6818358
+  },
+  {
+    "test": "final-clean-confirmation",
+    "variant": "replacement",
+    "fault": "none",
+    "range": null,
+    "status": 200,
+    "bytes": 6818358
+  },
+  {
+    "test": "final-clean-confirmation",
+    "variant": "replacement",
+    "fault": "none",
+    "range": null,
+    "status": 200,
+    "bytes": 6818358
+  },
+  {
+    "test": "release-integrity-corrupt",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": null,
+    "status": 200,
+    "bytes": 262144
+  },
+  {
+    "test": "release-integrity-corrupt",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=0-262143",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-integrity-corrupt",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=262144-524287",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-integrity-corrupt",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=524288-786431",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-integrity-corrupt",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=786432-1048575",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-integrity-corrupt",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=1048576-1310719",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-integrity-corrupt",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=1310720-1572863",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-integrity-corrupt",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=1572864-1835007",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-integrity-corrupt",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=1835008-2097151",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-integrity-corrupt",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=2097152-2359295",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-integrity-corrupt",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=2359296-2621439",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-integrity-corrupt",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=2621440-2883583",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-integrity-corrupt",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=2883584-3145727",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-integrity-corrupt",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=3145728-3407871",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-integrity-corrupt",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=3407872-3670015",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-integrity-corrupt",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=3670016-3932159",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-integrity-corrupt",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=3932160-4194303",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-integrity-corrupt",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=4194304-4456447",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-integrity-corrupt",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=4456448-4718591",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-integrity-corrupt",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=4718592-4980735",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-integrity-corrupt",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=4980736-5242879",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-integrity-corrupt",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=5242880-5505023",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-integrity-corrupt",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=5505024-5767167",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-integrity-corrupt",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=5767168-6029311",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-integrity-corrupt",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=6029312-6291455",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-integrity-corrupt",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=6291456-6553599",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-integrity-corrupt",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=6553600-6815743",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-integrity-corrupt",
+    "variant": "replacement",
+    "fault": "corrupt_range",
+    "range": "bytes=6815744-6818357",
+    "status": 206,
+    "bytes": 2614
+  },
+  {
+    "test": "release-transient-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": null,
+    "status": 200,
+    "bytes": 262144
+  },
+  {
+    "test": "release-transient-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=262144-524287",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-transient-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=524288-786431",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-transient-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=786432-1048575",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-transient-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=1048576-1310719",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-transient-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=1310720-1572863",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-transient-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=1572864-1835007",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-transient-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=1835008-2097151",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-transient-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=2097152-2359295",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-transient-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=2359296-2621439",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-transient-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=2621440-2883583",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-transient-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=2883584-3145727",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-transient-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=3145728-3407871",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-transient-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=3407872-3670015",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-transient-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=3670016-3932159",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-transient-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=3932160-4194303",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-transient-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=4194304-4456447",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-transient-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=4456448-4718591",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-transient-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=4718592-4980735",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-transient-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=4980736-5242879",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-transient-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=0-262143",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-transient-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=5242880-5505023",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-transient-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=262144-524287",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-transient-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=5505024-5767167",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-transient-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=5767168-6029311",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-transient-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=6029312-6291455",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-transient-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=6291456-6553599",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-transient-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=6553600-6815743",
+    "status": 206,
+    "bytes": 262144
+  },
+  {
+    "test": "release-transient-retry",
+    "variant": "replacement",
+    "fault": "transient_range",
+    "range": "bytes=6815744-6818357",
+    "status": 206,
+    "bytes": 2614
+  },
+  {
+    "test": "release-clean",
+    "variant": "replacement",
+    "fault": "none",
+    "range": null,
+    "status": 200,
+    "bytes": 6818358
+  }
+]

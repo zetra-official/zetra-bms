@@ -1,0 +1,13 @@
+{
+  "url": "https://app.zetra.tz/_expo/static/js/web/entry-d14a8aceb2440ee90f4120aad7a4dd92.js",
+  "bytes": 267768,
+  "status": 200,
+  "headers": {
+    "Age": "0",
+    "Cache-Control": "public,max-age=31536000,immutable",
+    "Content-Length": "6810622",
+    "Content-Type": "application/javascript; charset=UTF-8"
+  },
+  "headersSeconds": 3.13,
+  "seconds": 68.39
+}

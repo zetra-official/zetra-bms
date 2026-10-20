@@ -1,0 +1,6 @@
+Browser tab: 11, Title: "ZETRA BMS", URL: "http://127.0.0.1:55660/sales/".
+1 AXWebArea ZETRA BMS, URL: 127.0.0.1:55660/sales/
+	2 container
+		3 text Loading your workspace…
+
+The focused UI element is 1 AXWebArea ZETRA BMS, URL: 127.0.0.1:55660/sales/

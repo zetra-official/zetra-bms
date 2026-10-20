@@ -1,0 +1,18 @@
+{
+  "status": "PASS",
+  "currencies": [
+    "USD",
+    "KES",
+    "UGX",
+    "EUR"
+  ],
+  "source": "BOT_REFERENCE",
+  "effectiveDate": "2026-10-20",
+  "upstreamCapturedAt": "2026-10-20T17:46:44.741Z",
+  "sourceSHA256": "8569266412a330bd00d9e9d777b9143c2da19469704172a63d66a3bc513c91da",
+  "officialCacheAgeWithin24Hours": true,
+  "actualGenuineAuthProductUI": true,
+  "originalTZSRetained": true,
+  "liveProviderConnectivity": "NOT PASS: current requests unavailable; fail-closed UI verified",
+  "privateCaptureSHA256": "dbee8e63db8753bbf1233d64abfa9beb3f4f44ecabecd4965d9f12d1f46e00c3"
+}
