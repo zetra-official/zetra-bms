@@ -1,6 +1,6 @@
 """Owner-authorized visible UI acceptance. No direct financial calls or credentials."""
 from pathlib import Path
-import contextlib,io,json,runpy,sys,hashlib,xml.etree.ElementTree as X
+import contextlib,io,json,runpy,sys,hashlib,subprocess,xml.etree.ElementTree as X
 E=Path(__file__).resolve().parent
 DRIVER=E/'android_local_ui.py'
 def action(*args):
@@ -32,19 +32,24 @@ def cancel_share(code,adb):
  return {'currency':code,'shareSheet':'com.android.intentresolver','uiSha256':hashlib.sha256(dest.read_bytes()).hexdigest(),'recipientSelected':False}
 
 if __name__=='__main__':
+ assert '--reprint-only' in sys.argv,'OWNER_FREEZE_CONFIRMED_RECEIPTS_ONLY_NO_NEW_FINANCIAL_POSTINGS'
  code=sys.argv[1];assert code in ['TZS','USD','KES','UGX','EUR','AED','JPY','KWD']
+ for port in ['55625','55627']:
+  subprocess.run(['adb','-s','R5CY23FMCCD','reverse','tcp:'+port,'tcp:'+port],check=True,capture_output=True)
+ subprocess.run(['adb','-s','R5CY23FMCCD','shell','am','start','-a','android.intent.action.VIEW','-d','exp://127.0.0.1:55627','-p','host.exp.exponent'],check=True,capture_output=True)
  api=action('snapshot');adb=api['adb']
- for _ in range(4):action('up')
+ for _ in range(2):action('up')
  action('tap',code)
  # Wait for this currency's actual reader, rather than tapping moving controls.
  for attempt in range(18):
   nodes=snapshot()
   if any((n.get('content-desc') or n.get('text','')).startswith('SYNTHETIC '+code+' ') for n in nodes):break
-  if attempt in [4,9] and any('LOCAL_WORKFLOW_UNAVAILABLE' in n.get('text','') for n in nodes):
+  if attempt in [4,9] and any('LOCAL_WORKFLOW_UNAVAILABLE' in n.get('text','') or 'Network request failed' in n.get('text','') for n in nodes):
    action('tap','TZS' if code!='TZS' else 'USD');snapshot();action('tap',code)
  else:raise AssertionError('ORIGINAL_CURRENCY_READER_REQUIRED')
  nodes=visible('Refund reference')
  already_confirmed=has(nodes,'Share refund PDF') or any((n.get('content-desc') or n.get('text',''))=='SYNTHETIC '+code+' · 0' for n in nodes)
+ if '--reprint-only' in sys.argv:assert already_confirmed,'CANONICAL_CONFIRMED_RECEIPT_REQUIRED_NO_FINANCIAL_POST_ALLOWED'
  if not already_confirmed:
   action('fill','Refund reference','SYNTHETIC_ORIGINAL_INCLUSIVE_TAX_DOCUMENT')
   visible('Refund original payment');action('tap','Refund original payment')
@@ -62,6 +67,8 @@ if __name__=='__main__':
  except AssertionError as error:
   if str(error)!='LOCAL_EXPO_UI_NOT_VISIBLE':raise
  receipt=cancel_share(code,adb)
+ runtime=E/'NATIVE-DEVICE-RUNTIME.json'
+ if runtime.exists():receipt['runtimeSourceReceiptSha256']=hashlib.sha256(runtime.read_bytes()).hexdigest()
  out=E/'ANDROID-REFUND-UI-ACCEPTANCE.json'
  state=json.loads(out.read_text(encoding='utf-8')) if out.exists() else {'scope':'Physical Samsung, Expo Go actual source forms, real Auth, disposable synthetic finance; no deployed navigation certification','scenarios':[],'productionFinancialWrites':False}
  state['scenarios'].append(receipt);out.write_text(json.dumps(state,indent=2),encoding='utf-8')

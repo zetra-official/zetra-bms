@@ -100,6 +100,7 @@ function App(){const[flow,setFlow]=React.useState('refund'),[scenes,setScenes]=R
     fs.writeFileSync(receiptPath,JSON.stringify({scope:'Authenticated local native PDF evidence; synthetic refunds only',documents,productionFinancialWrites:false},null,2));return reply(200,{sha256,bytes:pdf.length});
    }
    if(!['get_bound_financial_result_v1','get_original_refund_sale_v1','refund_original_sale_v1','get_bound_field_custody_v1','post_bound_field_custody_v1'].includes(input.name))return reply(403,{error:'RPC_NOT_ALLOWED'});
+   if(['refund_original_sale_v1','post_bound_field_custody_v1'].includes(input.name))return reply(403,{error:'OWNER_FREEZE_NO_NEW_FINANCIAL_POSTINGS'});
 
    const value=await rpc(input.name,input.args);events.push({at:new Date().toISOString(),runtimeId:ready.runtimeId,financialRuntimeId:input.name.includes('custody')?ready.custodyRuntimeId:ready.runtimeId,sourceHashes,actor,rpc:input.name,args:input.args,data:value.data,error:value.error,auth:'Real Supabase GET /auth/v1/user',financialTarget:'DISPOSABLE_LOCAL_POSTGRESQL'});
 
@@ -107,11 +108,11 @@ function App(){const[flow,setFlow]=React.useState('refund'),[scenes,setScenes]=R
 
    return reply(200,{data:value.data,error:value.error});
 
-  }catch{return reply(503,{error:'LOCAL_WORKFLOW_UNAVAILABLE_NO_PRODUCTION_FINANCIAL_REQUEST_SENT'})}
+  }catch(error){console.error('LOCAL_REQUEST_FAILURE',error?.name,error?.code??'NO_CODE');return reply(503,{error:'LOCAL_WORKFLOW_UNAVAILABLE_NO_PRODUCTION_FINANCIAL_REQUEST_SENT'})}
 
  });
 
- server.listen(55625,'127.0.0.1',()=>{const v={url:'http://127.0.0.1:55625/',pid:process.pid,workerPid:child.pid,runtimeId:ready.runtimeId,sourceHashes,scope:'Real Auth, actual OriginalRefundForm source, disposable synthetic finance only'};fs.writeFileSync(path.join(E,'ORIGINAL-WORKFLOW-SERVER.json'),JSON.stringify(v,null,2));console.log(JSON.stringify(v))});
+ server.listen(55625,'127.0.0.1',()=>{const v={url:'http://127.0.0.1:55625/',pid:process.pid,workerPid:child.pid,runtimeId:ready.runtimeId,sourceHashes,scope:'Real Auth, actual OriginalRefundForm source, disposable synthetic finance only'};fs.writeFileSync(path.join(E,'ORIGINAL-WORKFLOW-SERVER-'+process.pid+'.json'),JSON.stringify(v,null,2));try{fs.writeFileSync(path.join(E,'ORIGINAL-WORKFLOW-SERVER.json'),JSON.stringify(v,null,2))}catch{console.log('CANONICAL_METADATA_BUSY_UNIQUE_RECEIPT_SAVED')}console.log(JSON.stringify(v))});
 
  server.on('error',()=>{child.stdin.end();process.exitCode=1});
 
