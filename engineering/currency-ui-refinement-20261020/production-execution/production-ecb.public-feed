@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gesmes:Envelope xmlns:gesmes="http://www.gesmes.org/xml/2002-08-01" xmlns="http://www.ecb.int/vocabulary/2002-08-01/eurofxref">
+	<gesmes:subject>Reference rates</gesmes:subject>
+	<gesmes:Sender>
+		<gesmes:name>European Central Bank</gesmes:name>
+	</gesmes:Sender>
+	<Cube>
+		<Cube time='2026-10-20'>
+			<Cube currency='USD' rate='1.1215'/>
+			<Cube currency='JPY' rate='177.34'/>
+			<Cube currency='CZK' rate='24.329'/>
+			<Cube currency='DKK' rate='7.4746'/>
+			<Cube currency='GBP' rate='0.84028'/>
+			<Cube currency='HUF' rate='364.68'/>
+			<Cube currency='PLN' rate='4.3768'/>
+			<Cube currency='RON' rate='5.3308'/>
+			<Cube currency='SEK' rate='11.1230'/>
+			<Cube currency='CHF' rate='0.9237'/>
+			<Cube currency='ISK' rate='136.20'/>
+			<Cube currency='NOK' rate='10.5245'/>
+			<Cube currency='TRY' rate='55.6009'/>
+			<Cube currency='AUD' rate='1.6056'/>
+			<Cube currency='BRL' rate='5.6339'/>
+			<Cube currency='CAD' rate='1.5758'/>
+			<Cube currency='CNY' rate='7.4894'/>
+			<Cube currency='HKD' rate='8.8023'/>
+			<Cube currency='IDR' rate='20170.57'/>
+			<Cube currency='ILS' rate='3.4853'/>
+			<Cube currency='INR' rate='106.4590'/>
+			<Cube currency='KRW' rate='1489.17'/>
+			<Cube currency='MXN' rate='20.7719'/>
+			<Cube currency='MYR' rate='4.5788'/>
+			<Cube currency='NZD' rate='1.9748'/>
+			<Cube currency='PHP' rate='70.804'/>
+			<Cube currency='SGD' rate='1.4338'/>
+			<Cube currency='THB' rate='37.738'/>
+			<Cube currency='ZAR' rate='18.4769'/>
+		</Cube>
+	</Cube>
+</gesmes:Envelope>

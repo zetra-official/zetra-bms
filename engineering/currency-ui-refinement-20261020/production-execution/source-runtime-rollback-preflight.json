@@ -1,0 +1,10 @@
+{
+  "status": "PASS",
+  "exactApprovedSourceArchives": true,
+  "noSqlOrEnvironmentFiles": true,
+  "androidRuntime": "1.0.0",
+  "nativeDependenciesAndConfig": "unchanged per approved source seal",
+  "webRollbackFilesVerified": 272,
+  "androidRollbackFilesVerified": 48,
+  "noRootSourcePublished": true
+}

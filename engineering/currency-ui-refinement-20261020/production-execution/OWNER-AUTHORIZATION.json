@@ -1,0 +1,12 @@
+{
+  "package": "ZETRA-CURRENCY-UI-REFINEMENT-20261020",
+  "approvedCheckpoint": "c2c390dc88c2604f68b5fb951cc80320e4f09213",
+  "approvedPackageSHA256": "9df2e2ba8b8ed0d6414f06d6990fa32f7fd8a32244c7219460e8253a332f6627",
+  "authority": "Explicit Owner final production deployment approval in this conversation",
+  "web": true,
+  "androidChannel": "production",
+  "runtime": "1.0.0",
+  "sql": false,
+  "financialActivation": false,
+  "physicalDeviceVerification": "Owner will verify after deployment"
+}

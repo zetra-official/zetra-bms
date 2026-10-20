@@ -1,0 +1,8 @@
+{
+  "status": "SUCCESS",
+  "deploymentId": "6ad7a771217ce218428b0c64",
+  "domain": "https://app.zetra.tz",
+  "rollback": "6ad76cf47622bc0a29e1244f",
+  "sql": [],
+  "androidPublished": false
+}

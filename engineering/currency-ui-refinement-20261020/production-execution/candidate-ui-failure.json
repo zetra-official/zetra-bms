@@ -1,0 +1,15 @@
+{
+  "status": "FAILED",
+  "bundle": "entry-be3dfa2fe1488e3e500f092bd606817c.js",
+  "route": "/sales/",
+  "visibleState": "Loading your workspace… persisted after new-bundle reload",
+  "subsequentNavigation": "Timed out",
+  "subsequentObservation": "Timed out",
+  "javascriptErrorLogs": [],
+  "rootCause": "Not established; loading failure and unresponsive browser observed",
+  "oldSessionObservationsExcluded": [
+    "production-currency-views.private.json",
+    "production-mobile-home.private.png"
+  ],
+  "androidPublished": false
+}

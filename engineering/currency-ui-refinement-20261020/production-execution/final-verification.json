@@ -1,0 +1,7 @@
+{
+  "status": "PASS",
+  "deploymentId": "6ad7a771217ce218428b0c64",
+  "rollbackReady": "6ad76cf47622bc0a29e1244f",
+  "exactArtifactHashes": "PASS",
+  "sql": []
+}
