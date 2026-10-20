@@ -1,0 +1,14 @@
+{
+  "status": "PASS",
+  "acceptanceType": "Owner-reported physical iPhone Safari Production acceptance",
+  "confirmedDate": "2026-10-20",
+  "timezone": "Africa/Dar_es_Salaam",
+  "deploymentId": "6ad76cf47622bc0a29e1244f",
+  "url": "https://app.zetra.tz",
+  "ownerStatement": "safari ya iphone nathibitisha kwamba nimekagua na sasa ipo vizuri, haina changamoto yoyote",
+  "result": "Owner inspected iPhone Safari and confirmed it works well with no reported issues",
+  "deviceModel": "Not supplied",
+  "iosVersion": "Not supplied",
+  "agentExecutedPhysicalTest": false,
+  "newPublication": false
+}

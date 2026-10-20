@@ -1,5 +1,5 @@
 {
-  "status": "WEB_DEPLOYED_SMOKE_PASS_AWAITING_OWNER_IPHONE_ACCEPTANCE",
+  "status": "WEB_RELEASE_ACCEPTED",
   "package": "ZETRA-CUSTOMER-CHECKOUT-SAFARI-20261020",
   "web": "SUCCESS",
   "deploymentId": "6ad76cf47622bc0a29e1244f",
@@ -17,7 +17,7 @@
     "groups": 10
   },
   "productionSmoke": "PASS:exact bytes,routes,BoT/ECB,authenticated Home/POS/Products,Currency preservation",
-  "safariPhysical": "PENDING_OWNER_PRODUCTION_CONFIRMATION",
+  "safariPhysical": "PASS_OWNER_CONFIRMED_PRODUCTION",
   "androidOta": "NOT_PUBLISHED",
   "androidReason": "Separate candidate runtime acceptance incomplete after USB disconnection; existing Production OTA retained",
   "rollback": {
@@ -27,5 +27,6 @@
   },
   "sql": [],
   "productionFinancialWrites": 0,
-  "catalogAndCurrencySourceUnchanged": true
+  "catalogAndCurrencySourceUnchanged": true,
+  "safariEvidence": "IPHONE-OWNER-ACCEPTANCE.json"
 }
