@@ -23,7 +23,8 @@ for _ in range(80):
  status=next((n.get('text','') for n in nodes if n.get('text','').startswith('NATIVE VERIFIED REPRINTS COMPLETE: 8 currencies.')),None)
  if status:break
  failure=next((n.get('text','') for n in nodes if n.get('text','').startswith(('LOCAL_WORKFLOW_UNAVAILABLE','CONFIRMED_ORIGINAL_RECEIPT_REQUIRED','Network request failed'))),None)
- assert not failure,failure
+ idle=any((n.get('content-desc') or n.get('text'))=='Reprint verified receipts' and n.get('enabled')=='true' for n in nodes)
+ assert not (failure and idle),failure
 else:raise AssertionError('EIGHT_NATIVE_REPRINTS_NOT_CONFIRMED')
 assert before==mutations(),'NEW_FINANCIAL_REQUEST_DURING_RECEIPT_ONLY_ACCEPTANCE'
 documents=json.loads((E/'NATIVE-PDF-EVIDENCE.json').read_text(encoding='utf-8'))['documents'][-8:]

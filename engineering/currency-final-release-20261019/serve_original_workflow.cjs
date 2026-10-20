@@ -102,13 +102,13 @@ function App(){const[flow,setFlow]=React.useState('refund'),[scenes,setScenes]=R
    if(!['get_bound_financial_result_v1','get_original_refund_sale_v1','refund_original_sale_v1','get_bound_field_custody_v1','post_bound_field_custody_v1'].includes(input.name))return reply(403,{error:'RPC_NOT_ALLOWED'});
    if(['refund_original_sale_v1','post_bound_field_custody_v1'].includes(input.name))return reply(403,{error:'OWNER_FREEZE_NO_NEW_FINANCIAL_POSTINGS'});
 
-   const value=await rpc(input.name,input.args);events.push({at:new Date().toISOString(),runtimeId:ready.runtimeId,financialRuntimeId:input.name.includes('custody')?ready.custodyRuntimeId:ready.runtimeId,sourceHashes,actor,rpc:input.name,args:input.args,data:value.data,error:value.error,auth:'Real Supabase GET /auth/v1/user',financialTarget:'DISPOSABLE_LOCAL_POSTGRESQL'});
+   const value=await rpc(input.name,input.args);const readReceipt={at:new Date().toISOString(),runtimeId:ready.runtimeId,financialRuntimeId:input.name.includes('custody')?ready.custodyRuntimeId:ready.runtimeId,sourceHashes,actor,rpc:input.name,args:input.args,data:value.data,error:value.error,auth:'Real Supabase GET /auth/v1/user',financialTarget:'DISPOSABLE_LOCAL_POSTGRESQL'};
 
-   fs.writeFileSync(path.join(E,'ORIGINAL-WORKFLOW-RUNTIME-EVENTS.json'),JSON.stringify({scope:'Actual component / real Auth / synthetic local financial fixtures',events,productionFinancialWrites:false},null,2));
+   fs.writeFileSync(path.join(E,'READONLY-WORKFLOW-'+process.pid+'-'+serial+'-'+Date.now()+'.json'),JSON.stringify(readReceipt,null,2),{flag:'wx'});
 
    return reply(200,{data:value.data,error:value.error});
 
-  }catch(error){console.error('LOCAL_REQUEST_FAILURE',error?.name,error?.code??'NO_CODE');return reply(503,{error:'LOCAL_WORKFLOW_UNAVAILABLE_NO_PRODUCTION_FINANCIAL_REQUEST_SENT'})}
+  }catch(error){console.error('LOCAL_REQUEST_FAILURE',error?.name,error?.code??'NO_CODE',error?.path?path.basename(error.path):'NO_FILE');return reply(503,{error:'LOCAL_WORKFLOW_UNAVAILABLE_NO_PRODUCTION_FINANCIAL_REQUEST_SENT'})}
 
  });
 
