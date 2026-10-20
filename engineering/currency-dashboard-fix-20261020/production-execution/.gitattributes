@@ -1,1 +1,2 @@
-* -text
+* -text whitespace=cr-at-eol
+*.public-feed whitespace=-blank-at-eol,cr-at-eol
