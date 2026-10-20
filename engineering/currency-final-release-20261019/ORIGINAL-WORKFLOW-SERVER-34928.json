@@ -1,0 +1,13 @@
+{
+  "url": "http://127.0.0.1:55625/",
+  "pid": 34928,
+  "workerPid": 13200,
+  "runtimeId": "disposable-original-product-b1896a59-dd2b-424a-b989-2ae03f51ed49",
+  "sourceHashes": {
+    "src/currency/OriginalRefundForm.tsx": "5e48424ce8e4889356bfb4e44ea2a74d0752d395f3778e22386f7fc66e9d2084",
+    "src/currency/originalWorkflow.ts": "6853a7f020ceae1d625f977eaca64ceec3cc95aeceb69b150baee14cc9b0977f",
+    "src/currency/FieldCustodyForm.tsx": "11044f9aeb193f57793d236cdfa812bad6c1893bb3964109d6f53c98bbdeb9b3",
+    "src/currency/fieldCustodyWorkflow.ts": "09e6f7996781d0604165f5e17e3064adb4b79854c6e560b48f6cc6a847b3dc80"
+  },
+  "scope": "Real Auth, actual OriginalRefundForm source, disposable synthetic finance only"
+}

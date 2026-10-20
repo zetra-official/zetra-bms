@@ -1,0 +1,48 @@
+{
+  "at": "2026-10-20T02:52:25.853Z",
+  "runtimeId": "disposable-original-product-b1896a59-dd2b-424a-b989-2ae03f51ed49",
+  "financialRuntimeId": "disposable-original-product-b1896a59-dd2b-424a-b989-2ae03f51ed49",
+  "sourceHashes": {
+    "src/currency/OriginalRefundForm.tsx": "5e48424ce8e4889356bfb4e44ea2a74d0752d395f3778e22386f7fc66e9d2084",
+    "src/currency/originalWorkflow.ts": "6853a7f020ceae1d625f977eaca64ceec3cc95aeceb69b150baee14cc9b0977f",
+    "src/currency/FieldCustodyForm.tsx": "11044f9aeb193f57793d236cdfa812bad6c1893bb3964109d6f53c98bbdeb9b3",
+    "src/currency/fieldCustodyWorkflow.ts": "09e6f7996781d0604165f5e17e3064adb4b79854c6e560b48f6cc6a847b3dc80"
+  },
+  "actor": "bb2d6dee-773d-4fa7-8fda-1eb85bbad2cd",
+  "rpc": "get_bound_financial_result_v1",
+  "args": {
+    "p_store_id": "333bbd54-19a6-48b9-8ada-0e352d3a65bd",
+    "p_request_id": "2a224f39-193b-4d7f-85b6-194c007ce42c"
+  },
+  "data": {
+    "amount": "12.345",
+    "lineId": "55962470-73b6-40fe-9ed5-01c03243019a",
+    "saleId": "7f82fc92-dfed-4dfd-aecc-7f1c504729e6",
+    "currency": "KWD",
+    "quantity": "1",
+    "refundId": "8d22526f-d71e-4088-988c-9c1b5673c2bf",
+    "sellable": false,
+    "originalSlice": {
+      "net": "12.011",
+      "tax": "0.334",
+      "cogs": "105.125000000000000000",
+      "gross": "12.345000000000000000",
+      "lineId": "55962470-73b6-40fe-9ed5-01c03243019a",
+      "saleId": "7f82fc92-dfed-4dfd-aecc-7f1c504729e6",
+      "currency": "KWD",
+      "discount": "0.000000000000000000",
+      "quantity": "1",
+      "rounding": "0.000000000000000000",
+      "refundAmount": "12.345",
+      "postingAllowed": false,
+      "requiredWriter": "ATOMIC_ORIGINAL_PAYMENT_REFUND_AND_SELLABLE_RETURN_WRITER",
+      "sourceReference": "SYNTHETIC_ORIGINAL_INCLUSIVE_TAX_DOCUMENT"
+    },
+    "stockMovementId": null,
+    "canonicalAccountBinding": true,
+    "externalProviderVerified": false
+  },
+  "error": null,
+  "auth": "Real Supabase GET /auth/v1/user",
+  "financialTarget": "DISPOSABLE_LOCAL_POSTGRESQL"
+}

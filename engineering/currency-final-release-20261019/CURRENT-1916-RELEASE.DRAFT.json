@@ -118,17 +118,92 @@
     {
       "path": "engineering/currency-final-release-20261019/FINAL-PLATFORM-BUILD-RESULTS.json",
       "sha256": "b3bd8c3ba1acf1d3c5853aca46819c252c9484978f4f5adfec190708bafbf137"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/BROWSER-REFUND-RECONCILIATION.json",
+      "sha256": "447ac40bb8512a269355f85989d24bfac1029bb71102a6627da35152177e4ed2"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/BROWSER-CUSTODY-RECONCILIATION.json",
+      "sha256": "e575e9c8ce83a0cad078b4eaffb34228a8e90f0c73932861a9798ae554433e84"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/BROWSER-SUPPLIER-RECONCILIATION.json",
+      "sha256": "057ab6a298c21a9a1b39ce589d184389bc68372e10840f9dd7e52840ee98954f"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/BROWSER-FINANCIAL-EVENTS-SNAPSHOT.json",
+      "sha256": "308129b8f0e7e8900c840f2599eb8ced145291b56a3e118e54fd9aa00bf6d378"
+    },
+    {
+      "path": "engineering/currency-final-release-20261019/RESUMED-FINAL-BUILD-RESULTS.json",
+      "sha256": "d5ab59df41ef8cd6df0f95d2b109bfde593a19cc539e32bb0dcbd1991cc9b9de"
     }
   ],
   "productionExecutionAuthorized": false,
   "activationAuthorized": false,
   "deploymentAuthorized": false,
   "pending": [
-    "Genuine Desktop/Mobile source workflow and PDF acceptance after private Owner sign-in",
-    "Actual connected Android financial/PDF/share runtime acceptance",
-    "Authoritative original-tax snapshot producer verified and bound to the same sale transaction; no inferred historical tax",
-    "Fresh exact-target Production dependency/ACL/backup and restore-readiness checks, then exact scoped Owner approval"
+    "Verified authoritative Production original-tax producer and its sale-writer binding; original historical transactions without sufficient evidence remain fail-closed",
+    "Physical Android source-form/native PDF/share execution (local Expo Go fixture ready; Owner asked to operate connected device)",
+    "Actual document opening/printing and full product navigation/receipt workflow acceptance beyond isolated source forms",
+    "Fresh exact-target Production dependency/ACL/backup/restore-readiness evidence and exact consolidated Owner authorization"
   ],
   "rollbackScope": "Deny new execution and disable rollout; preserve financial facts. No destructive downgrade or historical rewrite.",
-  "preservation": "Catalog and unrelated source untouched; migrations 1904\u20131916 are quarantined drafts; activation remains false."
+  "preservation": "Catalog and unrelated source untouched; migrations 1904\u20131916 are quarantined drafts; activation remains false.",
+  "currentWorkflowSourceFiles": [
+    {
+      "path": "src/currency/originalWorkflow.ts",
+      "sha256": "5ede7755d958be6c49f68570648935451bd67fe42e9904f2c8482f12a8ac5c54"
+    },
+    {
+      "path": "src/currency/OriginalRefundForm.tsx",
+      "sha256": "1e4b1e895b00c8d1a7ae5fd217da57d2633b6e4770d4f462485a8db6e6e2d327"
+    },
+    {
+      "path": "src/currency/originalRefundReceipt.ts",
+      "sha256": "bb593eeecd409c63f3fcf3e21acc09e37848687f8fec14f03a802d85cd920c9a"
+    },
+    {
+      "path": "src/currency/shareFinancialPdf.ts",
+      "sha256": "0adf07b9de8dc595fb2473e9afce4be11004776ac211710ae1bab170b113fada"
+    },
+    {
+      "path": "src/currency/fieldCustodyWorkflow.ts",
+      "sha256": "09e6f7996781d0604165f5e17e3064adb4b79854c6e560b48f6cc6a847b3dc80"
+    },
+    {
+      "path": "src/currency/FieldCustodyForm.tsx",
+      "sha256": "abef01848f7ede899a1ffd1a6d81b19a7d4d2a6d86d2c9de1a8e7aad94160fa2"
+    },
+    {
+      "path": "src/finance/OriginalFinancialStatement.tsx",
+      "sha256": "18e84befafc17ae793b8684d07d9b0187f640e11b594a9a99b1cfe42ff223a6b"
+    },
+    {
+      "path": "app/finance/original-refund.tsx",
+      "sha256": "07c51208ccb65092096518ee15682e674bf79b9fd93a8b9872ab161f73fdc77d"
+    },
+    {
+      "path": "app/finance/field-custody.tsx",
+      "sha256": "7587eb2632554392ceb0d16231dad33134ceb750a461ca8a21af069506bcf381"
+    },
+    {
+      "path": "metro.config.js",
+      "sha256": "f83c708a5044ddef5539da7558b749dd742e3ff742577c2e6f6a3ba61bb42a18"
+    }
+  ],
+  "updatedAt": "2026-10-19T18:53:17.542605+00:00",
+  "localBrowserAcceptance": {
+    "genuineAuth": true,
+    "refundPostings": 16,
+    "custodyPostings": 24,
+    "supplierFundingAndPaymentPostings": 16,
+    "reconciliationChecks": 145,
+    "financialData": "DISPOSABLE_SYNTHETIC_ONLY",
+    "mobile": "390x844 browser viewport; not physical Android",
+    "fullDeployedNavigationCertified": false,
+    "taxProviderCertified": false,
+    "pdfShareCertified": false
+  }
 }

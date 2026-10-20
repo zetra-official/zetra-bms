@@ -1,0 +1,22 @@
+{
+  "status": "PASS",
+  "runtimeId": "disposable-original-product-b1896a59-dd2b-424a-b989-2ae03f51ed49",
+  "verifiedFunctionBodies": [
+    "public.confirm_bound_field_wallet_v1",
+    "backend_core.guard_bound_wallet_v1",
+    "public.open_bound_field_wallet_v1",
+    "backend_core.stamp_bound_wallet_transaction_v1",
+    "backend_core.stamp_bound_field_supplier_v1",
+    "backend_core.stamp_bound_field_expense_v1",
+    "backend_core.check_bound_wallet_v1",
+    "public.post_bound_field_custody_v1",
+    "backend_core.canonical_settlement_fact_v1",
+    "backend_core.native_unverified_writer_guard_v1",
+    "backend_core.freeze_original_return_sources_v1",
+    "public.get_original_refund_sale_v1",
+    "public.get_bound_field_custody_v1",
+    "backend_core.bound_shift_coverage_v1"
+  ],
+  "migrationsRepeated": false,
+  "productionWrites": false
+}

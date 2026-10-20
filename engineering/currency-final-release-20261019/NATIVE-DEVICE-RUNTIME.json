@@ -1,0 +1,15 @@
+{
+  "startedAt": "2026-10-20T02:38:51.638Z",
+  "pid": 32796,
+  "url": "exp://127.0.0.1:55627",
+  "scope": "Local Expo Go actual-source acceptance; no product deployment",
+  "sourceHashes": {
+    "src/currency/OriginalRefundForm.tsx": "5e48424ce8e4889356bfb4e44ea2a74d0752d395f3778e22386f7fc66e9d2084",
+    "src/currency/originalWorkflow.ts": "6853a7f020ceae1d625f977eaca64ceec3cc95aeceb69b150baee14cc9b0977f",
+    "src/currency/originalRefundReceipt.ts": "21c343aff028053c9a52d19195c5c13727ecbc438833a76c64d65875895671e8",
+    "src/currency/shareFinancialPdf.ts": "8ed7f3d3d514b22afcb5dfce50fe4c53a4b1324a4c8a56a5cae6efe878ce8d5d",
+    "src/currency/FieldCustodyForm.tsx": "11044f9aeb193f57793d236cdfa812bad6c1893bb3964109d6f53c98bbdeb9b3",
+    "src/currency/fieldCustodyWorkflow.ts": "09e6f7996781d0604165f5e17e3064adb4b79854c6e560b48f6cc6a847b3dc80",
+    "engineering/currency-final-release-20261019/native-acceptance/index.tsx": "e87a57d062f1a65af62e14470144dc63006c01d3b8c14b3c2f5e848b036cea64"
+  }
+}

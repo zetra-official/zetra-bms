@@ -1,0 +1,61 @@
+{
+  "scope": "Physical Samsung, Expo Go actual source forms, real Auth, disposable synthetic finance; no deployed navigation certification",
+  "scenarios": [
+    {
+      "currency": "TZS",
+      "shareSheet": "com.android.intentresolver",
+      "uiSha256": "7d191b6e35a84b72bcd80b5d7873e1a1a01b7a1376c7ea253f9578347f82fe3c",
+      "recipientSelected": false
+    },
+    {
+      "currency": "USD",
+      "shareSheet": "com.android.intentresolver",
+      "uiSha256": "6067eacc38350d9756089f7608597bfac2fc22dbd3880167c5364d7b3924859d",
+      "recipientSelected": false
+    },
+    {
+      "currency": "KES",
+      "shareSheet": "com.android.intentresolver",
+      "uiSha256": "e45bf143efe8609eb238e1d0bd891b955ebc97772e63eebdfd5d7e4e93495dd5",
+      "recipientSelected": false
+    },
+    {
+      "currency": "UGX",
+      "shareSheet": "com.android.intentresolver",
+      "uiSha256": "4a6a7e12553b91ed27e77b70d03f28a6e0e8b3700cda43372f56b4f99d280f3e",
+      "recipientSelected": false
+    },
+    {
+      "currency": "EUR",
+      "shareSheet": "com.android.intentresolver",
+      "uiSha256": "fc84ba5af17eba26e56f681310fe09a16941afd0c4fcbbce43bff864a45793fd",
+      "recipientSelected": false
+    },
+    {
+      "currency": "AED",
+      "shareSheet": "com.android.intentresolver",
+      "uiSha256": "258f808e9ceb2944afb7795f68a1c3237c398b560d76746586821ca0c8833191",
+      "recipientSelected": false
+    },
+    {
+      "currency": "JPY",
+      "shareSheet": "com.android.intentresolver",
+      "uiSha256": "dc456d26b2a32abae9e1be1f3867fb81c2ca500cc4bc4e708f5749b84f93b6e0",
+      "recipientSelected": false
+    },
+    {
+      "currency": "KWD",
+      "shareSheet": "com.android.intentresolver",
+      "uiSha256": "0f3f74799a95cab2887769fbdfcc7d0d1fc9cafc33d3bb237915d3bc978ccdb9",
+      "recipientSelected": false
+    },
+    {
+      "currency": "TZS",
+      "shareSheet": "com.android.intentresolver",
+      "uiSha256": "d72d59a3b83535ab4d9c3c0989040e613ce6f30b0a04937dfcfe7511fccd13ef",
+      "recipientSelected": false,
+      "runtimeSourceReceiptSha256": "05ab5991c7e86c1529be3ae990bfa914c643af7feda072e299ea4c207aecfecc"
+    }
+  ],
+  "productionFinancialWrites": false
+}

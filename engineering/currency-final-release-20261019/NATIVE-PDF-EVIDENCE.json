@@ -1,0 +1,270 @@
+{
+  "scope": "Authenticated local native PDF evidence; synthetic refunds only",
+  "documents": [
+    {
+      "at": "2026-10-19T20:05:24.529Z",
+      "actor": "bb2d6dee-773d-4fa7-8fda-1eb85bbad2cd",
+      "refundId": "8d22526f-d71e-4088-988c-9c1b5673c2bf",
+      "currency": "KWD",
+      "sha256": "73d80961b1c9c74997b11a1758294ae93c6fc84cd2ccca8a050d936214e7591d",
+      "file": "engineering/currency-final-release-20261019/native-pdf/8d22526f-d71e-4088-988c-9c1b5673c2bf-73d80961b1c9.pdf",
+      "bytes": 41945,
+      "auth": "Real Supabase GET /auth/v1/user",
+      "source": "Local Android Expo Print callback; physical execution must be observed independently"
+    },
+    {
+      "at": "2026-10-19T20:08:04.063Z",
+      "actor": "bb2d6dee-773d-4fa7-8fda-1eb85bbad2cd",
+      "refundId": "2bbb7030-934b-422b-86a4-c56ab02b8322",
+      "currency": "TZS",
+      "sha256": "c0e4affc520a667d1d0d75fa920001da25907df80ab64738aef1ac6e3c24df92",
+      "file": "engineering/currency-final-release-20261019/native-pdf/2bbb7030-934b-422b-86a4-c56ab02b8322-c0e4affc520a.pdf",
+      "bytes": 41276,
+      "auth": "Real Supabase GET /auth/v1/user",
+      "source": "Local Android Expo Print callback; physical execution must be observed independently"
+    },
+    {
+      "at": "2026-10-19T20:13:03.151Z",
+      "actor": "bb2d6dee-773d-4fa7-8fda-1eb85bbad2cd",
+      "refundId": "67db0ae1-e5d2-4625-a7b1-2e49210b1e42",
+      "currency": "USD",
+      "sha256": "311e775b71567b78c1c7be74a41f909ac2fdb3d9e9729d4b9b6fd0d57cd130f5",
+      "file": "engineering/currency-final-release-20261019/native-pdf/67db0ae1-e5d2-4625-a7b1-2e49210b1e42-311e775b7156.pdf",
+      "bytes": 36424,
+      "auth": "Real Supabase GET /auth/v1/user",
+      "source": "Local Android Expo Print callback; physical execution must be observed independently"
+    },
+    {
+      "at": "2026-10-19T20:14:12.066Z",
+      "actor": "bb2d6dee-773d-4fa7-8fda-1eb85bbad2cd",
+      "refundId": "060c2702-414a-4c84-9932-74dfa87cad9a",
+      "currency": "KES",
+      "sha256": "0b374343118e0ecd62ad469f2b6b6d681edfb8c9c84d806b2d841907a7065f7f",
+      "file": "engineering/currency-final-release-20261019/native-pdf/060c2702-414a-4c84-9932-74dfa87cad9a-0b374343118e.pdf",
+      "bytes": 41066,
+      "auth": "Real Supabase GET /auth/v1/user",
+      "source": "Local Android Expo Print callback; physical execution must be observed independently"
+    },
+    {
+      "at": "2026-10-19T20:46:42.142Z",
+      "actor": "bb2d6dee-773d-4fa7-8fda-1eb85bbad2cd",
+      "refundId": "93dad1d5-aa8d-4a45-89a8-0df7e91de278",
+      "currency": "UGX",
+      "sha256": "47bc5e40e25adffc454e8c4cbe683d5f096cfb5a93e80dd3b9dd673a6057278e",
+      "file": "engineering/currency-final-release-20261019/native-pdf/93dad1d5-aa8d-4a45-89a8-0df7e91de278-47bc5e40e25a.pdf",
+      "bytes": 39647,
+      "auth": "Real Supabase GET /auth/v1/user",
+      "source": "Local Android Expo Print callback; physical execution must be observed independently"
+    },
+    {
+      "at": "2026-10-19T20:49:07.931Z",
+      "actor": "bb2d6dee-773d-4fa7-8fda-1eb85bbad2cd",
+      "refundId": "a5244908-19df-4128-8c06-d45a9f510ca6",
+      "currency": "EUR",
+      "sha256": "d2e6d59b43587cae2422fde48fa02e7fc07e5a9a0ab3229cf75f604c8f403c02",
+      "file": "engineering/currency-final-release-20261019/native-pdf/a5244908-19df-4128-8c06-d45a9f510ca6-d2e6d59b4358.pdf",
+      "bytes": 40060,
+      "auth": "Real Supabase GET /auth/v1/user",
+      "source": "Local Android Expo Print callback; physical execution must be observed independently"
+    },
+    {
+      "at": "2026-10-19T20:50:39.086Z",
+      "actor": "bb2d6dee-773d-4fa7-8fda-1eb85bbad2cd",
+      "refundId": "34dc9ce8-66d7-4cba-b6dd-6c63dd562843",
+      "currency": "AED",
+      "sha256": "dc54e76c9cb8164823785ab4f65e4a1a2a39103d282f1b064d3ed43e87f1f39e",
+      "file": "engineering/currency-final-release-20261019/native-pdf/34dc9ce8-66d7-4cba-b6dd-6c63dd562843-dc54e76c9cb8.pdf",
+      "bytes": 40367,
+      "auth": "Real Supabase GET /auth/v1/user",
+      "source": "Local Android Expo Print callback; physical execution must be observed independently"
+    },
+    {
+      "at": "2026-10-19T20:52:01.812Z",
+      "actor": "bb2d6dee-773d-4fa7-8fda-1eb85bbad2cd",
+      "refundId": "effd0d3b-9d2f-4afd-93a1-476d514b4bbf",
+      "currency": "JPY",
+      "sha256": "e8e4010f21e5a04b160e9f0f079b7381da1307098784ff33ea1ceede3cb1e203",
+      "file": "engineering/currency-final-release-20261019/native-pdf/effd0d3b-9d2f-4afd-93a1-476d514b4bbf-e8e4010f21e5.pdf",
+      "bytes": 32147,
+      "auth": "Real Supabase GET /auth/v1/user",
+      "source": "Local Android Expo Print callback; physical execution must be observed independently"
+    },
+    {
+      "at": "2026-10-19T20:52:41.038Z",
+      "actor": "bb2d6dee-773d-4fa7-8fda-1eb85bbad2cd",
+      "refundId": "8d22526f-d71e-4088-988c-9c1b5673c2bf",
+      "currency": "KWD",
+      "sha256": "ef97ef4f8c69ee8ec7fa88419a314c5a29da030981dda452c5e5d7dc02c75dc5",
+      "file": "engineering/currency-final-release-20261019/native-pdf/8d22526f-d71e-4088-988c-9c1b5673c2bf-ef97ef4f8c69.pdf",
+      "bytes": 41945,
+      "auth": "Real Supabase GET /auth/v1/user",
+      "source": "Local Android Expo Print callback; physical execution must be observed independently"
+    },
+    {
+      "at": "2026-10-20T02:32:14.133Z",
+      "actor": "bb2d6dee-773d-4fa7-8fda-1eb85bbad2cd",
+      "refundId": "2bbb7030-934b-422b-86a4-c56ab02b8322",
+      "currency": "TZS",
+      "sha256": "3e6b879db97cfb98ce1f66a1508d5a40b933573cbda59d41cdcb623ef377f60c",
+      "file": "engineering/currency-final-release-20261019/native-pdf/2bbb7030-934b-422b-86a4-c56ab02b8322-3e6b879db97c.pdf",
+      "bytes": 41971,
+      "auth": "Real Supabase GET /auth/v1/user",
+      "source": "Local Android Expo Print callback; physical execution must be observed independently"
+    },
+    {
+      "at": "2026-10-20T02:33:17.318Z",
+      "actor": "bb2d6dee-773d-4fa7-8fda-1eb85bbad2cd",
+      "refundId": "67db0ae1-e5d2-4625-a7b1-2e49210b1e42",
+      "currency": "USD",
+      "sha256": "c9762202349515b0704f82b4baa1b471cde3adcb23b7ccaa6c812636f8eb4026",
+      "file": "engineering/currency-final-release-20261019/native-pdf/67db0ae1-e5d2-4625-a7b1-2e49210b1e42-c97622023495.pdf",
+      "bytes": 38938,
+      "auth": "Real Supabase GET /auth/v1/user",
+      "source": "Local Android Expo Print callback; physical execution must be observed independently"
+    },
+    {
+      "at": "2026-10-20T02:33:39.431Z",
+      "actor": "bb2d6dee-773d-4fa7-8fda-1eb85bbad2cd",
+      "refundId": "67db0ae1-e5d2-4625-a7b1-2e49210b1e42",
+      "currency": "USD",
+      "sha256": "92a97ad3596aa7a11d48f36ee0633fd271ce3047696605cd71a3896c82f26131",
+      "file": "engineering/currency-final-release-20261019/native-pdf/67db0ae1-e5d2-4625-a7b1-2e49210b1e42-92a97ad3596a.pdf",
+      "bytes": 38938,
+      "auth": "Real Supabase GET /auth/v1/user",
+      "source": "Local Android Expo Print callback; physical execution must be observed independently"
+    },
+    {
+      "at": "2026-10-20T02:41:58.159Z",
+      "actor": "bb2d6dee-773d-4fa7-8fda-1eb85bbad2cd",
+      "refundId": "2bbb7030-934b-422b-86a4-c56ab02b8322",
+      "currency": "TZS",
+      "sha256": "2264181ccd3812bf6b6d2ab531f8d5efcda3b22fd86e1877775f932e474c271d",
+      "file": "engineering/currency-final-release-20261019/native-pdf/2bbb7030-934b-422b-86a4-c56ab02b8322-2264181ccd38.pdf",
+      "bytes": 41971,
+      "auth": "Real Supabase GET /auth/v1/user",
+      "source": "Local Android Expo Print callback; physical execution must be observed independently"
+    },
+    {
+      "at": "2026-10-20T02:41:59.251Z",
+      "actor": "bb2d6dee-773d-4fa7-8fda-1eb85bbad2cd",
+      "refundId": "67db0ae1-e5d2-4625-a7b1-2e49210b1e42",
+      "currency": "USD",
+      "sha256": "796dfd1ee931be52601a3b196b2d2c7263565102ce8459f98ea9400914b0e005",
+      "file": "engineering/currency-final-release-20261019/native-pdf/67db0ae1-e5d2-4625-a7b1-2e49210b1e42-796dfd1ee931.pdf",
+      "bytes": 38938,
+      "auth": "Real Supabase GET /auth/v1/user",
+      "source": "Local Android Expo Print callback; physical execution must be observed independently"
+    },
+    {
+      "at": "2026-10-20T02:45:49.734Z",
+      "actor": "bb2d6dee-773d-4fa7-8fda-1eb85bbad2cd",
+      "refundId": "2bbb7030-934b-422b-86a4-c56ab02b8322",
+      "currency": "TZS",
+      "sha256": "47022cef2f00b2548dab4d9ba7fb93e158463847148994666c7ef2011ae994c4",
+      "file": "engineering/currency-final-release-20261019/native-pdf/2bbb7030-934b-422b-86a4-c56ab02b8322-47022cef2f00.pdf",
+      "bytes": 41971,
+      "auth": "Real Supabase GET /auth/v1/user",
+      "source": "Local Android Expo Print callback; physical execution must be observed independently"
+    },
+    {
+      "at": "2026-10-20T02:45:50.780Z",
+      "actor": "bb2d6dee-773d-4fa7-8fda-1eb85bbad2cd",
+      "refundId": "67db0ae1-e5d2-4625-a7b1-2e49210b1e42",
+      "currency": "USD",
+      "sha256": "5cbd06a0f29c773a5387d71c9ebb03478e73b2987af489f49bf8a9367b2c5e82",
+      "file": "engineering/currency-final-release-20261019/native-pdf/67db0ae1-e5d2-4625-a7b1-2e49210b1e42-5cbd06a0f29c.pdf",
+      "bytes": 38938,
+      "auth": "Real Supabase GET /auth/v1/user",
+      "source": "Local Android Expo Print callback; physical execution must be observed independently"
+    },
+    {
+      "at": "2026-10-20T02:52:18.018Z",
+      "actor": "bb2d6dee-773d-4fa7-8fda-1eb85bbad2cd",
+      "refundId": "2bbb7030-934b-422b-86a4-c56ab02b8322",
+      "currency": "TZS",
+      "sha256": "906433995d5c0e8e7556c9e7052ce78afe594321899d6280d7ed0c9a5aadc369",
+      "file": "engineering/currency-final-release-20261019/native-pdf/2bbb7030-934b-422b-86a4-c56ab02b8322-906433995d5c.pdf",
+      "bytes": 41971,
+      "auth": "Real Supabase GET /auth/v1/user",
+      "source": "Local Android Expo Print callback; physical execution must be observed independently"
+    },
+    {
+      "at": "2026-10-20T02:52:19.307Z",
+      "actor": "bb2d6dee-773d-4fa7-8fda-1eb85bbad2cd",
+      "refundId": "67db0ae1-e5d2-4625-a7b1-2e49210b1e42",
+      "currency": "USD",
+      "sha256": "f974b58c461d404fef94e1e8cccf98a4afe3f51f97286a5082805bfd88e04f1a",
+      "file": "engineering/currency-final-release-20261019/native-pdf/67db0ae1-e5d2-4625-a7b1-2e49210b1e42-f974b58c461d.pdf",
+      "bytes": 38938,
+      "auth": "Real Supabase GET /auth/v1/user",
+      "source": "Local Android Expo Print callback; physical execution must be observed independently"
+    },
+    {
+      "at": "2026-10-20T02:52:20.429Z",
+      "actor": "bb2d6dee-773d-4fa7-8fda-1eb85bbad2cd",
+      "refundId": "060c2702-414a-4c84-9932-74dfa87cad9a",
+      "currency": "KES",
+      "sha256": "dfc3395a2427983eef22ebee1949a78a9000c7859de50e488dfbb1e403f5684e",
+      "file": "engineering/currency-final-release-20261019/native-pdf/060c2702-414a-4c84-9932-74dfa87cad9a-dfc3395a2427.pdf",
+      "bytes": 41761,
+      "auth": "Real Supabase GET /auth/v1/user",
+      "source": "Local Android Expo Print callback; physical execution must be observed independently"
+    },
+    {
+      "at": "2026-10-20T02:52:21.571Z",
+      "actor": "bb2d6dee-773d-4fa7-8fda-1eb85bbad2cd",
+      "refundId": "93dad1d5-aa8d-4a45-89a8-0df7e91de278",
+      "currency": "UGX",
+      "sha256": "f70ee4f16d1b518af04d61795a338909f00906cd5416bba03de6c96217fa4b73",
+      "file": "engineering/currency-final-release-20261019/native-pdf/93dad1d5-aa8d-4a45-89a8-0df7e91de278-f70ee4f16d1b.pdf",
+      "bytes": 40342,
+      "auth": "Real Supabase GET /auth/v1/user",
+      "source": "Local Android Expo Print callback; physical execution must be observed independently"
+    },
+    {
+      "at": "2026-10-20T02:52:22.776Z",
+      "actor": "bb2d6dee-773d-4fa7-8fda-1eb85bbad2cd",
+      "refundId": "a5244908-19df-4128-8c06-d45a9f510ca6",
+      "currency": "EUR",
+      "sha256": "8277e4308bcd14c8d77e40d2028e01bfd02360a6f2fe3dfbed08bfdfddf2ee8d",
+      "file": "engineering/currency-final-release-20261019/native-pdf/a5244908-19df-4128-8c06-d45a9f510ca6-8277e4308bcd.pdf",
+      "bytes": 41805,
+      "auth": "Real Supabase GET /auth/v1/user",
+      "source": "Local Android Expo Print callback; physical execution must be observed independently"
+    },
+    {
+      "at": "2026-10-20T02:52:23.883Z",
+      "actor": "bb2d6dee-773d-4fa7-8fda-1eb85bbad2cd",
+      "refundId": "34dc9ce8-66d7-4cba-b6dd-6c63dd562843",
+      "currency": "AED",
+      "sha256": "2209d757ea34a5eef0f330ac30f2cb7cea482dd39e8d058e44ab72889a4c05ab",
+      "file": "engineering/currency-final-release-20261019/native-pdf/34dc9ce8-66d7-4cba-b6dd-6c63dd562843-2209d757ea34.pdf",
+      "bytes": 41062,
+      "auth": "Real Supabase GET /auth/v1/user",
+      "source": "Local Android Expo Print callback; physical execution must be observed independently"
+    },
+    {
+      "at": "2026-10-20T02:52:25.231Z",
+      "actor": "bb2d6dee-773d-4fa7-8fda-1eb85bbad2cd",
+      "refundId": "effd0d3b-9d2f-4afd-93a1-476d514b4bbf",
+      "currency": "JPY",
+      "sha256": "1c8fc72d003ef817e3fb6c7e1e455a2698e8f77a9bb286d7b34e29c9266ffa7b",
+      "file": "engineering/currency-final-release-20261019/native-pdf/effd0d3b-9d2f-4afd-93a1-476d514b4bbf-1c8fc72d003e.pdf",
+      "bytes": 34473,
+      "auth": "Real Supabase GET /auth/v1/user",
+      "source": "Local Android Expo Print callback; physical execution must be observed independently"
+    },
+    {
+      "at": "2026-10-20T02:52:26.269Z",
+      "actor": "bb2d6dee-773d-4fa7-8fda-1eb85bbad2cd",
+      "refundId": "8d22526f-d71e-4088-988c-9c1b5673c2bf",
+      "currency": "KWD",
+      "sha256": "f4b2fdda9c9aee6ff99aff20a0249ba9749d1c7d1093f3ccd30dc9a7cfd31936",
+      "file": "engineering/currency-final-release-20261019/native-pdf/8d22526f-d71e-4088-988c-9c1b5673c2bf-f4b2fdda9c9a.pdf",
+      "bytes": 42641,
+      "auth": "Real Supabase GET /auth/v1/user",
+      "source": "Local Android Expo Print callback; physical execution must be observed independently"
+    }
+  ],
+  "productionFinancialWrites": false
+}

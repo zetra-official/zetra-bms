@@ -1,0 +1,533 @@
+{
+  "status": "PASS",
+  "count": 78,
+  "checks": [
+    "TZS FUND exact one canonical source link 41725c22-cd85-4fd1-b8a2-8313fdfd9885",
+    "TZS EXPENSE exact one canonical source link 4548324b-f570-43bd-9fdc-f89233519edf",
+    "TZS RETURN exact one canonical source link e3ea8129-928a-4bcc-87c1-426af6aeb30c",
+    "TZS FUND exact one canonical source link ed9b3b9d-0ff9-4f15-9506-15c0cf8f4ef8",
+    "TZS SUPPLIER exact one canonical source link c4646c7c-62f2-47ca-9b07-06f7730812ec",
+    "TZS FUND exact one canonical source link 6cafd451-c61c-44ff-b0f3-f969d8cf6ec6",
+    "TZS RETURN exact one canonical source link 974864e7-78a8-4531-8281-8f187f0b8c20",
+    "TZS wallet/account/source conservation and no extra financial links",
+    "USD FUND exact one canonical source link 76d2c7a3-7e36-42bc-a9f5-47d07412b492",
+    "USD EXPENSE exact one canonical source link 7ee03d25-663e-4731-bcca-fcfd4ecedbf7",
+    "USD RETURN exact one canonical source link 5a1ff981-b7a3-4eab-965b-4cd016cab8f2",
+    "USD FUND exact one canonical source link 7d676ebc-3e9d-4350-b165-237f0465b7ea",
+    "USD SUPPLIER exact one canonical source link 8cadb415-f5ed-4a90-9384-ffdb9252cc3a",
+    "USD wallet/account/source conservation and no extra financial links",
+    "KES FUND exact one canonical source link acd7415e-f103-44f3-a870-ff3faa014158",
+    "KES EXPENSE exact one canonical source link 6a20e8bb-902d-4be3-b86b-b68f4e7f657a",
+    "KES RETURN exact one canonical source link 27962271-106d-49dc-81c1-7b4cb01cd38e",
+    "KES FUND exact one canonical source link 70d24856-82c5-432d-8a08-e4a7f51b3ac0",
+    "KES SUPPLIER exact one canonical source link 857bfa8b-b80f-4c05-af24-ee16cb65c4d5",
+    "KES wallet/account/source conservation and no extra financial links",
+    "UGX FUND exact one canonical source link c5110a3b-aedb-43a6-a670-fc56b122d9a5",
+    "UGX EXPENSE exact one canonical source link 30a984a7-6718-478d-bc54-6587dbffd77a",
+    "UGX RETURN exact one canonical source link bea5e228-33a6-42d3-a2c9-3c46087b8358",
+    "UGX FUND exact one canonical source link e51fc68f-47af-42f0-bebc-0cdba5ae14d5",
+    "UGX SUPPLIER exact one canonical source link a5773447-91ff-4538-914d-a7641ee8c87b",
+    "UGX wallet/account/source conservation and no extra financial links",
+    "EUR FUND exact one canonical source link ab28145d-b422-4298-a2e2-fa91cf9864e2",
+    "EUR EXPENSE exact one canonical source link 7ac3f808-be82-4b6c-9508-efe5ed3c8d02",
+    "EUR RETURN exact one canonical source link 3aada3fc-6643-4c6c-bd00-a90af4d999ea",
+    "EUR FUND exact one canonical source link 1a18aa68-b769-401a-9fc2-3288e8c21107",
+    "EUR SUPPLIER exact one canonical source link 12fccbe4-1e94-4e1a-a6a6-a423539dcdd4",
+    "EUR wallet/account/source conservation and no extra financial links",
+    "AED FUND exact one canonical source link 620d3b86-280b-4e15-ad64-1edc0d735de9",
+    "AED EXPENSE exact one canonical source link 934d692b-9904-4102-a4a2-a5844578ca12",
+    "AED RETURN exact one canonical source link e7281aa5-af49-43b9-859c-2c44189700c9",
+    "AED FUND exact one canonical source link 4565fc34-1ba5-410a-8622-45061be99722",
+    "AED SUPPLIER exact one canonical source link 961ff1c7-bb26-424d-9d78-fd27247581d5",
+    "AED wallet/account/source conservation and no extra financial links",
+    "JPY FUND exact one canonical source link b0f7bf4e-7f9b-4b88-a4c7-524484c8026e",
+    "JPY EXPENSE exact one canonical source link 9cef28af-38d0-4563-8fa4-c129d544338c",
+    "JPY RETURN exact one canonical source link ea4dc8af-f9e5-4fd4-a5ea-61bcae03a7a7",
+    "JPY FUND exact one canonical source link 378cca48-b8fe-4598-ba95-68fd9130d5ae",
+    "JPY SUPPLIER exact one canonical source link 525047fe-5eed-4792-9b6a-fa425269297d",
+    "JPY wallet/account/source conservation and no extra financial links",
+    "KWD FUND exact one canonical source link 9d070624-f545-43ba-a008-e4a295ae016e",
+    "KWD EXPENSE exact one canonical source link 1ba347a4-6510-4782-a5d4-66b107987f6b",
+    "KWD RETURN exact one canonical source link 4c9a84e3-b4e2-442a-a9a2-571a542d4e7b",
+    "KWD FUND exact one canonical source link 3e9eb19f-3ee3-47dd-8e7c-ed57e71a0dcd",
+    "KWD SUPPLIER exact one canonical source link 346d22c6-a91c-4fad-99e5-a897f9533cdd",
+    "KWD FUND exact one canonical source link 5baefabf-4dc7-44c0-af9e-54c3e7d311b3",
+    "KWD RETURN exact one canonical source link 0108b37f-0eed-46cb-8b06-87c2ebb4082d",
+    "KWD FUND exact one canonical source link 05695eb6-465c-4408-9de2-dc96d8359819",
+    "KWD RETURN exact one canonical source link 11779a8f-577b-418d-9afd-bec9c6091e32",
+    "KWD wallet/account/source conservation and no extra financial links",
+    "TZS original tax/payment/account and sellable inventory reversal c32918e3-8737-4795-a895-2fd5e4428dce",
+    "USD original tax/payment/account and sellable inventory reversal a717e5af-085c-440a-8e03-163d10b7582e",
+    "KES original tax/payment/account and sellable inventory reversal 6c10347e-db4b-4c9c-9f6b-f4b41d40b959",
+    "UGX original tax/payment/account and sellable inventory reversal 9dec1baf-c04f-4903-9ece-5d2c636a51ae",
+    "EUR original tax/payment/account and sellable inventory reversal e9a05b7d-7486-409b-9d7b-068c9d02df92",
+    "AED original tax/payment/account and sellable inventory reversal 4e41bf17-f6a4-4c68-958a-e03051061a3a",
+    "JPY original tax/payment/account and sellable inventory reversal 0a1bb2d5-e50a-4a73-bcff-bc7877ab2ab5",
+    "KWD original tax/payment/account and sellable inventory reversal e28d4001-97bf-4b6a-aacb-073f5482b0eb",
+    "KWD original tax/payment/account and sellable inventory reversal e3dd8a58-3d07-466f-adb6-d18ffad49fc6",
+    "TZS original tax/payment/account and sellable inventory reversal ae20d1d4-794d-40fb-8641-a0eb4c9e0b1e",
+    "USD original tax/payment/account and sellable inventory reversal b34fcd17-1fa0-4f01-b07c-3d1cf6ce373b",
+    "KES original tax/payment/account and sellable inventory reversal 5d159ee6-acfd-452b-a716-137c6b419168",
+    "UGX original tax/payment/account and sellable inventory reversal 7c8d6872-2554-494c-b9b3-1d6ee822c4fa",
+    "EUR original tax/payment/account and sellable inventory reversal d35682ea-b2d4-4454-af58-4f014313c10e",
+    "AED original tax/payment/account and sellable inventory reversal ebecc197-3fe5-4ead-bcc2-4cf3036ab2c7",
+    "JPY original tax/payment/account and sellable inventory reversal f96f474b-d96f-4c7f-bbf0-4606e4b8e3d2",
+    "KWD original tax/payment/account and sellable inventory reversal 2a224f39-193b-4d7f-85b6-194c007ce42c",
+    "TZS original tax/payment/account and sellable inventory reversal 0c0cf2bb-2963-427d-81cb-36c95293b388",
+    "USD original tax/payment/account and sellable inventory reversal 8e3a9622-56fc-4e86-8722-fba20e9a4f2d",
+    "KES original tax/payment/account and sellable inventory reversal 77838ca4-35d2-49e1-99c8-65ec4157608e",
+    "UGX original tax/payment/account and sellable inventory reversal 8d1c3ce4-516b-4695-8dcf-7c65fb955ddc",
+    "EUR original tax/payment/account and sellable inventory reversal 80cdab0d-3a2a-4f8e-9b4c-0d21d008d911",
+    "AED original tax/payment/account and sellable inventory reversal 4aec8b05-dfef-49b5-b3a0-005e09a8517f",
+    "JPY original tax/payment/account and sellable inventory reversal 60a9d270-59e7-4ec8-bfc7-ad98594c8b43"
+  ],
+  "postings": [
+    {
+      "currency": "TZS",
+      "operation": "FUND",
+      "requestId": "41725c22-cd85-4fd1-b8a2-8313fdfd9885",
+      "amount": "100"
+    },
+    {
+      "currency": "TZS",
+      "operation": "EXPENSE",
+      "requestId": "4548324b-f570-43bd-9fdc-f89233519edf",
+      "amount": "12.34"
+    },
+    {
+      "currency": "TZS",
+      "operation": "RETURN",
+      "requestId": "e3ea8129-928a-4bcc-87c1-426af6aeb30c",
+      "amount": "87.66"
+    },
+    {
+      "currency": "TZS",
+      "operation": "FUND",
+      "requestId": "ed9b3b9d-0ff9-4f15-9506-15c0cf8f4ef8",
+      "amount": "12.34"
+    },
+    {
+      "currency": "TZS",
+      "operation": "SUPPLIER",
+      "requestId": "c4646c7c-62f2-47ca-9b07-06f7730812ec",
+      "amount": "12.34"
+    },
+    {
+      "currency": "TZS",
+      "operation": "FUND",
+      "requestId": "6cafd451-c61c-44ff-b0f3-f969d8cf6ec6",
+      "amount": "1"
+    },
+    {
+      "currency": "TZS",
+      "operation": "RETURN",
+      "requestId": "974864e7-78a8-4531-8281-8f187f0b8c20",
+      "amount": "1"
+    },
+    {
+      "currency": "USD",
+      "operation": "FUND",
+      "requestId": "76d2c7a3-7e36-42bc-a9f5-47d07412b492",
+      "amount": "100"
+    },
+    {
+      "currency": "USD",
+      "operation": "EXPENSE",
+      "requestId": "7ee03d25-663e-4731-bcca-fcfd4ecedbf7",
+      "amount": "12.34"
+    },
+    {
+      "currency": "USD",
+      "operation": "RETURN",
+      "requestId": "5a1ff981-b7a3-4eab-965b-4cd016cab8f2",
+      "amount": "87.66"
+    },
+    {
+      "currency": "USD",
+      "operation": "FUND",
+      "requestId": "7d676ebc-3e9d-4350-b165-237f0465b7ea",
+      "amount": "12.34"
+    },
+    {
+      "currency": "USD",
+      "operation": "SUPPLIER",
+      "requestId": "8cadb415-f5ed-4a90-9384-ffdb9252cc3a",
+      "amount": "12.34"
+    },
+    {
+      "currency": "KES",
+      "operation": "FUND",
+      "requestId": "acd7415e-f103-44f3-a870-ff3faa014158",
+      "amount": "100"
+    },
+    {
+      "currency": "KES",
+      "operation": "EXPENSE",
+      "requestId": "6a20e8bb-902d-4be3-b86b-b68f4e7f657a",
+      "amount": "12.34"
+    },
+    {
+      "currency": "KES",
+      "operation": "RETURN",
+      "requestId": "27962271-106d-49dc-81c1-7b4cb01cd38e",
+      "amount": "87.66"
+    },
+    {
+      "currency": "KES",
+      "operation": "FUND",
+      "requestId": "70d24856-82c5-432d-8a08-e4a7f51b3ac0",
+      "amount": "12.34"
+    },
+    {
+      "currency": "KES",
+      "operation": "SUPPLIER",
+      "requestId": "857bfa8b-b80f-4c05-af24-ee16cb65c4d5",
+      "amount": "12.34"
+    },
+    {
+      "currency": "UGX",
+      "operation": "FUND",
+      "requestId": "c5110a3b-aedb-43a6-a670-fc56b122d9a5",
+      "amount": "100"
+    },
+    {
+      "currency": "UGX",
+      "operation": "EXPENSE",
+      "requestId": "30a984a7-6718-478d-bc54-6587dbffd77a",
+      "amount": "12"
+    },
+    {
+      "currency": "UGX",
+      "operation": "RETURN",
+      "requestId": "bea5e228-33a6-42d3-a2c9-3c46087b8358",
+      "amount": "88"
+    },
+    {
+      "currency": "UGX",
+      "operation": "FUND",
+      "requestId": "e51fc68f-47af-42f0-bebc-0cdba5ae14d5",
+      "amount": "12"
+    },
+    {
+      "currency": "UGX",
+      "operation": "SUPPLIER",
+      "requestId": "a5773447-91ff-4538-914d-a7641ee8c87b",
+      "amount": "12"
+    },
+    {
+      "currency": "EUR",
+      "operation": "FUND",
+      "requestId": "ab28145d-b422-4298-a2e2-fa91cf9864e2",
+      "amount": "100"
+    },
+    {
+      "currency": "EUR",
+      "operation": "EXPENSE",
+      "requestId": "7ac3f808-be82-4b6c-9508-efe5ed3c8d02",
+      "amount": "12.34"
+    },
+    {
+      "currency": "EUR",
+      "operation": "RETURN",
+      "requestId": "3aada3fc-6643-4c6c-bd00-a90af4d999ea",
+      "amount": "87.66"
+    },
+    {
+      "currency": "EUR",
+      "operation": "FUND",
+      "requestId": "1a18aa68-b769-401a-9fc2-3288e8c21107",
+      "amount": "12.34"
+    },
+    {
+      "currency": "EUR",
+      "operation": "SUPPLIER",
+      "requestId": "12fccbe4-1e94-4e1a-a6a6-a423539dcdd4",
+      "amount": "12.34"
+    },
+    {
+      "currency": "AED",
+      "operation": "FUND",
+      "requestId": "620d3b86-280b-4e15-ad64-1edc0d735de9",
+      "amount": "100"
+    },
+    {
+      "currency": "AED",
+      "operation": "EXPENSE",
+      "requestId": "934d692b-9904-4102-a4a2-a5844578ca12",
+      "amount": "12.34"
+    },
+    {
+      "currency": "AED",
+      "operation": "RETURN",
+      "requestId": "e7281aa5-af49-43b9-859c-2c44189700c9",
+      "amount": "87.66"
+    },
+    {
+      "currency": "AED",
+      "operation": "FUND",
+      "requestId": "4565fc34-1ba5-410a-8622-45061be99722",
+      "amount": "12.34"
+    },
+    {
+      "currency": "AED",
+      "operation": "SUPPLIER",
+      "requestId": "961ff1c7-bb26-424d-9d78-fd27247581d5",
+      "amount": "12.34"
+    },
+    {
+      "currency": "JPY",
+      "operation": "FUND",
+      "requestId": "b0f7bf4e-7f9b-4b88-a4c7-524484c8026e",
+      "amount": "100"
+    },
+    {
+      "currency": "JPY",
+      "operation": "EXPENSE",
+      "requestId": "9cef28af-38d0-4563-8fa4-c129d544338c",
+      "amount": "12"
+    },
+    {
+      "currency": "JPY",
+      "operation": "RETURN",
+      "requestId": "ea4dc8af-f9e5-4fd4-a5ea-61bcae03a7a7",
+      "amount": "88"
+    },
+    {
+      "currency": "JPY",
+      "operation": "FUND",
+      "requestId": "378cca48-b8fe-4598-ba95-68fd9130d5ae",
+      "amount": "12"
+    },
+    {
+      "currency": "JPY",
+      "operation": "SUPPLIER",
+      "requestId": "525047fe-5eed-4792-9b6a-fa425269297d",
+      "amount": "12"
+    },
+    {
+      "currency": "KWD",
+      "operation": "FUND",
+      "requestId": "9d070624-f545-43ba-a008-e4a295ae016e",
+      "amount": "100"
+    },
+    {
+      "currency": "KWD",
+      "operation": "EXPENSE",
+      "requestId": "1ba347a4-6510-4782-a5d4-66b107987f6b",
+      "amount": "12.345"
+    },
+    {
+      "currency": "KWD",
+      "operation": "RETURN",
+      "requestId": "4c9a84e3-b4e2-442a-a9a2-571a542d4e7b",
+      "amount": "87.655"
+    },
+    {
+      "currency": "KWD",
+      "operation": "FUND",
+      "requestId": "3e9eb19f-3ee3-47dd-8e7c-ed57e71a0dcd",
+      "amount": "12.345"
+    },
+    {
+      "currency": "KWD",
+      "operation": "SUPPLIER",
+      "requestId": "346d22c6-a91c-4fad-99e5-a897f9533cdd",
+      "amount": "12.345"
+    },
+    {
+      "currency": "KWD",
+      "operation": "FUND",
+      "requestId": "5baefabf-4dc7-44c0-af9e-54c3e7d311b3",
+      "amount": "1"
+    },
+    {
+      "currency": "KWD",
+      "operation": "RETURN",
+      "requestId": "0108b37f-0eed-46cb-8b06-87c2ebb4082d",
+      "amount": "1"
+    },
+    {
+      "currency": "KWD",
+      "operation": "FUND",
+      "requestId": "05695eb6-465c-4408-9de2-dc96d8359819",
+      "amount": "1"
+    },
+    {
+      "currency": "KWD",
+      "operation": "RETURN",
+      "requestId": "11779a8f-577b-418d-9afd-bec9c6091e32",
+      "amount": "1"
+    },
+    {
+      "currency": "TZS",
+      "operation": "ORIGINAL_REFUND",
+      "requestId": "c32918e3-8737-4795-a895-2fd5e4428dce",
+      "refundId": "19dae641-5fdc-4aaf-9bcb-3eb447919a6f",
+      "amount": "12.34"
+    },
+    {
+      "currency": "USD",
+      "operation": "ORIGINAL_REFUND",
+      "requestId": "a717e5af-085c-440a-8e03-163d10b7582e",
+      "refundId": "18ef96f0-1cab-4e1e-8c46-c95744e7e01f",
+      "amount": "12.34"
+    },
+    {
+      "currency": "KES",
+      "operation": "ORIGINAL_REFUND",
+      "requestId": "6c10347e-db4b-4c9c-9f6b-f4b41d40b959",
+      "refundId": "46b5fc05-8a32-4662-b267-b164a6290e29",
+      "amount": "12.34"
+    },
+    {
+      "currency": "UGX",
+      "operation": "ORIGINAL_REFUND",
+      "requestId": "9dec1baf-c04f-4903-9ece-5d2c636a51ae",
+      "refundId": "df5fa3cc-7654-4a51-81dd-39a0b8a97a13",
+      "amount": "12"
+    },
+    {
+      "currency": "EUR",
+      "operation": "ORIGINAL_REFUND",
+      "requestId": "e9a05b7d-7486-409b-9d7b-068c9d02df92",
+      "refundId": "c6a900ed-f735-4cb6-a95b-969af772dd2b",
+      "amount": "12.34"
+    },
+    {
+      "currency": "AED",
+      "operation": "ORIGINAL_REFUND",
+      "requestId": "4e41bf17-f6a4-4c68-958a-e03051061a3a",
+      "refundId": "f88ed5e3-53cc-4422-9004-841c864b5f7a",
+      "amount": "12.34"
+    },
+    {
+      "currency": "JPY",
+      "operation": "ORIGINAL_REFUND",
+      "requestId": "0a1bb2d5-e50a-4a73-bcff-bc7877ab2ab5",
+      "refundId": "6f7bd733-828d-432f-adbc-07beca34ac10",
+      "amount": "12"
+    },
+    {
+      "currency": "KWD",
+      "operation": "ORIGINAL_REFUND",
+      "requestId": "e28d4001-97bf-4b6a-aacb-073f5482b0eb",
+      "refundId": "86973e99-1125-4d44-919c-d5c94dc32ae2",
+      "amount": "12.345"
+    },
+    {
+      "currency": "KWD",
+      "operation": "ORIGINAL_REFUND",
+      "requestId": "e3dd8a58-3d07-466f-adb6-d18ffad49fc6",
+      "refundId": "2dd319c1-ec0f-408c-804e-c2f92971ef1e",
+      "amount": "12.345"
+    },
+    {
+      "currency": "TZS",
+      "operation": "ORIGINAL_REFUND",
+      "requestId": "ae20d1d4-794d-40fb-8641-a0eb4c9e0b1e",
+      "refundId": "640f8623-8566-45da-aa00-59e8e16e8e9a",
+      "amount": "12.34"
+    },
+    {
+      "currency": "USD",
+      "operation": "ORIGINAL_REFUND",
+      "requestId": "b34fcd17-1fa0-4f01-b07c-3d1cf6ce373b",
+      "refundId": "31314018-f95a-4b09-923c-b64f23611b99",
+      "amount": "12.34"
+    },
+    {
+      "currency": "KES",
+      "operation": "ORIGINAL_REFUND",
+      "requestId": "5d159ee6-acfd-452b-a716-137c6b419168",
+      "refundId": "bd2e1b94-cbde-427a-a966-fefcf736febd",
+      "amount": "12.34"
+    },
+    {
+      "currency": "UGX",
+      "operation": "ORIGINAL_REFUND",
+      "requestId": "7c8d6872-2554-494c-b9b3-1d6ee822c4fa",
+      "refundId": "b2370a85-34c8-4233-a71d-bcb39ead5804",
+      "amount": "12"
+    },
+    {
+      "currency": "EUR",
+      "operation": "ORIGINAL_REFUND",
+      "requestId": "d35682ea-b2d4-4454-af58-4f014313c10e",
+      "refundId": "6b16586e-93d9-478e-b35e-70729c32b33e",
+      "amount": "12.34"
+    },
+    {
+      "currency": "AED",
+      "operation": "ORIGINAL_REFUND",
+      "requestId": "ebecc197-3fe5-4ead-bcc2-4cf3036ab2c7",
+      "refundId": "4a9ae931-ea9e-447b-8a2f-39da1da83c5e",
+      "amount": "12.34"
+    },
+    {
+      "currency": "JPY",
+      "operation": "ORIGINAL_REFUND",
+      "requestId": "f96f474b-d96f-4c7f-bbf0-4606e4b8e3d2",
+      "refundId": "30f4d34c-7515-4ea9-a084-aee58540c2c9",
+      "amount": "12"
+    },
+    {
+      "currency": "KWD",
+      "operation": "ORIGINAL_REFUND",
+      "requestId": "2a224f39-193b-4d7f-85b6-194c007ce42c",
+      "refundId": "8d22526f-d71e-4088-988c-9c1b5673c2bf",
+      "amount": "12.345"
+    },
+    {
+      "currency": "TZS",
+      "operation": "ORIGINAL_REFUND",
+      "requestId": "0c0cf2bb-2963-427d-81cb-36c95293b388",
+      "refundId": "2bbb7030-934b-422b-86a4-c56ab02b8322",
+      "amount": "12.34"
+    },
+    {
+      "currency": "USD",
+      "operation": "ORIGINAL_REFUND",
+      "requestId": "8e3a9622-56fc-4e86-8722-fba20e9a4f2d",
+      "refundId": "67db0ae1-e5d2-4625-a7b1-2e49210b1e42",
+      "amount": "12.34"
+    },
+    {
+      "currency": "KES",
+      "operation": "ORIGINAL_REFUND",
+      "requestId": "77838ca4-35d2-49e1-99c8-65ec4157608e",
+      "refundId": "060c2702-414a-4c84-9932-74dfa87cad9a",
+      "amount": "12.34"
+    },
+    {
+      "currency": "UGX",
+      "operation": "ORIGINAL_REFUND",
+      "requestId": "8d1c3ce4-516b-4695-8dcf-7c65fb955ddc",
+      "refundId": "93dad1d5-aa8d-4a45-89a8-0df7e91de278",
+      "amount": "12"
+    },
+    {
+      "currency": "EUR",
+      "operation": "ORIGINAL_REFUND",
+      "requestId": "80cdab0d-3a2a-4f8e-9b4c-0d21d008d911",
+      "refundId": "a5244908-19df-4128-8c06-d45a9f510ca6",
+      "amount": "12.34"
+    },
+    {
+      "currency": "AED",
+      "operation": "ORIGINAL_REFUND",
+      "requestId": "4aec8b05-dfef-49b5-b3a0-005e09a8517f",
+      "refundId": "34dc9ce8-66d7-4cba-b6dd-6c63dd562843",
+      "amount": "12.34"
+    },
+    {
+      "currency": "JPY",
+      "operation": "ORIGINAL_REFUND",
+      "requestId": "60a9d270-59e7-4ec8-bfc7-ad98594c8b43",
+      "refundId": "effd0d3b-9d2f-4afd-93a1-476d514b4bbf",
+      "amount": "12"
+    }
+  ],
+  "scope": "Read-only reconciliation of all genuine-Auth component UI events in saved disposable databases; UI/device provenance recorded separately",
+  "eventsSha256": "9aa7325ab15c0f41a2c3604a1607763f8022253fd2affa78197f9824554b9268",
+  "productionFinancialWrites": false
+}

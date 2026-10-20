@@ -1,0 +1,70 @@
+{
+  "status": "PASS",
+  "scope": "Current local TypeScript, full product Web static and Android Hermes exports, separate actual-source native acceptance export. Working checkout includes preserved unrelated work; these are local verification artifacts, not an isolated approved Production deployment.",
+  "sourceFiles": [
+    {
+      "path": "src/currency/originalWorkflow.ts",
+      "sha256": "6853a7f020ceae1d625f977eaca64ceec3cc95aeceb69b150baee14cc9b0977f"
+    },
+    {
+      "path": "src/currency/OriginalRefundForm.tsx",
+      "sha256": "5e48424ce8e4889356bfb4e44ea2a74d0752d395f3778e22386f7fc66e9d2084"
+    },
+    {
+      "path": "src/currency/originalRefundReceipt.ts",
+      "sha256": "21c343aff028053c9a52d19195c5c13727ecbc438833a76c64d65875895671e8"
+    },
+    {
+      "path": "src/currency/shareFinancialPdf.ts",
+      "sha256": "8ed7f3d3d514b22afcb5dfce50fe4c53a4b1324a4c8a56a5cae6efe878ce8d5d"
+    },
+    {
+      "path": "src/currency/fieldCustodyWorkflow.ts",
+      "sha256": "09e6f7996781d0604165f5e17e3064adb4b79854c6e560b48f6cc6a847b3dc80"
+    },
+    {
+      "path": "src/currency/FieldCustodyForm.tsx",
+      "sha256": "11044f9aeb193f57793d236cdfa812bad6c1893bb3964109d6f53c98bbdeb9b3"
+    },
+    {
+      "path": "src/finance/OriginalFinancialStatement.tsx",
+      "sha256": "18e84befafc17ae793b8684d07d9b0187f640e11b594a9a99b1cfe42ff223a6b"
+    },
+    {
+      "path": "app/finance/original-refund.tsx",
+      "sha256": "07c51208ccb65092096518ee15682e674bf79b9fd93a8b9872ab161f73fdc77d"
+    },
+    {
+      "path": "app/finance/field-custody.tsx",
+      "sha256": "7587eb2632554392ceb0d16231dad33134ceb750a461ca8a21af069506bcf381"
+    },
+    {
+      "path": "metro.config.js",
+      "sha256": "f83c708a5044ddef5539da7558b749dd742e3ff742577c2e6f6a3ba61bb42a18"
+    },
+    {
+      "path": "engineering\\currency-final-release-20261019\\native-acceptance\\index.tsx",
+      "sha256": "e87a57d062f1a65af62e14470144dc63006c01d3b8c14b3c2f5e848b036cea64"
+    }
+  ],
+  "logs": [
+    {
+      "path": "engineering\\currency-final-release-20261019\\1917-complete-typecheck.log",
+      "sha256": "9e67fbc7b83c8ac7d8a9f710da2a2c66403d3c3f3c73c3768bdc88f5d9d6ec65"
+    },
+    {
+      "path": "engineering\\currency-final-release-20261019\\build-1917-complete.log",
+      "sha256": "2ca02410ff70e3988ad19522d396103ed5b5d96749e2b6236453e64c006af987"
+    },
+    {
+      "path": "engineering\\currency-final-release-20261019\\native-device-export-1917-complete.log",
+      "sha256": "c56f5bc3b1435767e67ec249e3136eb5ae675c8caa4027e6b8e3ad9fc73debc4"
+    },
+    {
+      "path": "engineering\\currency-final-release-20261019\\native-final-reprints-export.log",
+      "sha256": "c979b7b481791e27e7beff158f697cef19a4cdf361311404f42a887d097b4017"
+    }
+  ],
+  "productionDeployment": false,
+  "nativeScope": "Final read-only canonical receipt batch entry exported separately; product source hashes remain identical to the passed Web/Android/TypeScript checks."
+}

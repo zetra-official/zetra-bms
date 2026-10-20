@@ -1,0 +1,14 @@
+{
+  "status": "PASS",
+  "scope": "Actual browser component after reload; read-only account-picker check",
+  "currency": "KWD",
+  "search": "LOCAL-UI-52acbc22",
+  "matchingVerifiedAccounts": 1,
+  "implicitSelection": false,
+  "confirmEnabled": false,
+  "walletBalance": "0.000",
+  "sourceAccountBalance": "975.310",
+  "genuineAuthVerified": true,
+  "screenshot": "engineering/currency-final-release-20261019/final-account-picker.png",
+  "financialPostingPerformed": false
+}

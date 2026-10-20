@@ -1,0 +1,35 @@
+{
+  "status": "PASS",
+  "productExports": {
+    "webStatic": true,
+    "androidHermes": true,
+    "metadata": {
+      "path": "engineering/currency-final-release-20261019/build-custody-final/metadata.json",
+      "sha256": "32ef7d07c7f522124d903d99ee7e2b0d8bf5d4b807e863040ebe738c69d0e6d5"
+    },
+    "androidBundle": {
+      "path": "engineering/currency-final-release-20261019/build-custody-final/_expo/static/js/android/entry-9f80713477c0cd0671e87fa78850c0f0.hbc",
+      "sha256": "8e23ca1834e6e225bf2fe6174222cfc245af490035aea83a9b12172ff9e526ce"
+    }
+  },
+  "nativeLocalTestEntry": {
+    "export": true,
+    "metadata": {
+      "path": "engineering/currency-final-release-20261019/native-device-export/metadata.json",
+      "sha256": "84fcb1c6911dd036b03dec29c00ac4a6bc5255f2629acfadaad17a27f22059f8"
+    },
+    "androidBundle": {
+      "path": "engineering/currency-final-release-20261019/native-device-export/_expo/static/js/android/index-4bea7cedd9b261af4004a711a072a76f.hbc",
+      "sha256": "f3f3dcc79a0422bd47fbaa9ba89890ead1d70a659594cc05a7059392a7811704"
+    },
+    "physicalRuntime": "PENDING_OPERATOR_EXECUTION"
+  },
+  "typeScript": {
+    "exitCode": 0,
+    "log": {
+      "path": "engineering/currency-final-release-20261019/resumed-final-typecheck.log",
+      "sha256": "9e67fbc7b83c8ac7d8a9f710da2a2c66403d3c3f3c73c3768bdc88f5d9d6ec65"
+    }
+  },
+  "productionDeployment": false
+}

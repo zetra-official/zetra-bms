@@ -1,0 +1,48 @@
+{
+  "at": "2026-10-20T02:52:21.129Z",
+  "runtimeId": "disposable-original-product-b1896a59-dd2b-424a-b989-2ae03f51ed49",
+  "financialRuntimeId": "disposable-original-product-b1896a59-dd2b-424a-b989-2ae03f51ed49",
+  "sourceHashes": {
+    "src/currency/OriginalRefundForm.tsx": "5e48424ce8e4889356bfb4e44ea2a74d0752d395f3778e22386f7fc66e9d2084",
+    "src/currency/originalWorkflow.ts": "6853a7f020ceae1d625f977eaca64ceec3cc95aeceb69b150baee14cc9b0977f",
+    "src/currency/FieldCustodyForm.tsx": "11044f9aeb193f57793d236cdfa812bad6c1893bb3964109d6f53c98bbdeb9b3",
+    "src/currency/fieldCustodyWorkflow.ts": "09e6f7996781d0604165f5e17e3064adb4b79854c6e560b48f6cc6a847b3dc80"
+  },
+  "actor": "bb2d6dee-773d-4fa7-8fda-1eb85bbad2cd",
+  "rpc": "get_bound_financial_result_v1",
+  "args": {
+    "p_store_id": "bfa85b82-c80b-4e5c-bc90-b69bec3ad754",
+    "p_request_id": "8d1c3ce4-516b-4695-8dcf-7c65fb955ddc"
+  },
+  "data": {
+    "amount": "12",
+    "lineId": "ca5ef159-2b67-4d1c-b4a6-12bbfe39df0e",
+    "saleId": "91945abc-dfb5-4b01-9cfc-64dfe9ac8442",
+    "currency": "UGX",
+    "quantity": "1",
+    "refundId": "93dad1d5-aa8d-4a45-89a8-0df7e91de278",
+    "sellable": false,
+    "originalSlice": {
+      "net": "11",
+      "tax": "1",
+      "cogs": "105.000000000000000000",
+      "gross": "12.000000000000000000",
+      "lineId": "ca5ef159-2b67-4d1c-b4a6-12bbfe39df0e",
+      "saleId": "91945abc-dfb5-4b01-9cfc-64dfe9ac8442",
+      "currency": "UGX",
+      "discount": "0.000000000000000000",
+      "quantity": "1",
+      "rounding": "0.000000000000000000",
+      "refundAmount": "12",
+      "postingAllowed": false,
+      "requiredWriter": "ATOMIC_ORIGINAL_PAYMENT_REFUND_AND_SELLABLE_RETURN_WRITER",
+      "sourceReference": "SYNTHETIC_ORIGINAL_INCLUSIVE_TAX_DOCUMENT"
+    },
+    "stockMovementId": null,
+    "canonicalAccountBinding": true,
+    "externalProviderVerified": false
+  },
+  "error": null,
+  "auth": "Real Supabase GET /auth/v1/user",
+  "financialTarget": "DISPOSABLE_LOCAL_POSTGRESQL"
+}

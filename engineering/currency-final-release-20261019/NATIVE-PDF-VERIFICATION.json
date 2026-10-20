@@ -1,0 +1,102 @@
+{
+  "status": "PASS",
+  "scope": "Actual physical Android Expo Print files, canonical original refund amounts and explicit currency codes. Android share-sheet observation is separate UI evidence. No external recipient or paper print job.",
+  "documents": [
+    {
+      "currency": "TZS",
+      "refundId": "2bbb7030-934b-422b-86a4-c56ab02b8322",
+      "file": "engineering/currency-final-release-20261019/native-pdf/2bbb7030-934b-422b-86a4-c56ab02b8322-906433995d5c.pdf",
+      "sha256": "906433995d5c0e8e7556c9e7052ce78afe594321899d6280d7ed0c9a5aadc369",
+      "pages": 1,
+      "originalAmount": "12.34",
+      "originalNet": "12.00",
+      "originalTax": "0.34"
+    },
+    {
+      "currency": "USD",
+      "refundId": "67db0ae1-e5d2-4625-a7b1-2e49210b1e42",
+      "file": "engineering/currency-final-release-20261019/native-pdf/67db0ae1-e5d2-4625-a7b1-2e49210b1e42-f974b58c461d.pdf",
+      "sha256": "f974b58c461d404fef94e1e8cccf98a4afe3f51f97286a5082805bfd88e04f1a",
+      "pages": 1,
+      "originalAmount": "12.34",
+      "originalNet": "12.00",
+      "originalTax": "0.34"
+    },
+    {
+      "currency": "KES",
+      "refundId": "060c2702-414a-4c84-9932-74dfa87cad9a",
+      "file": "engineering/currency-final-release-20261019/native-pdf/060c2702-414a-4c84-9932-74dfa87cad9a-dfc3395a2427.pdf",
+      "sha256": "dfc3395a2427983eef22ebee1949a78a9000c7859de50e488dfbb1e403f5684e",
+      "pages": 1,
+      "originalAmount": "12.34",
+      "originalNet": "12.00",
+      "originalTax": "0.34"
+    },
+    {
+      "currency": "UGX",
+      "refundId": "93dad1d5-aa8d-4a45-89a8-0df7e91de278",
+      "file": "engineering/currency-final-release-20261019/native-pdf/93dad1d5-aa8d-4a45-89a8-0df7e91de278-f70ee4f16d1b.pdf",
+      "sha256": "f70ee4f16d1b518af04d61795a338909f00906cd5416bba03de6c96217fa4b73",
+      "pages": 1,
+      "originalAmount": "12",
+      "originalNet": "11",
+      "originalTax": "1"
+    },
+    {
+      "currency": "EUR",
+      "refundId": "a5244908-19df-4128-8c06-d45a9f510ca6",
+      "file": "engineering/currency-final-release-20261019/native-pdf/a5244908-19df-4128-8c06-d45a9f510ca6-8277e4308bcd.pdf",
+      "sha256": "8277e4308bcd14c8d77e40d2028e01bfd02360a6f2fe3dfbed08bfdfddf2ee8d",
+      "pages": 1,
+      "originalAmount": "12.34",
+      "originalNet": "12.00",
+      "originalTax": "0.34"
+    },
+    {
+      "currency": "AED",
+      "refundId": "34dc9ce8-66d7-4cba-b6dd-6c63dd562843",
+      "file": "engineering/currency-final-release-20261019/native-pdf/34dc9ce8-66d7-4cba-b6dd-6c63dd562843-2209d757ea34.pdf",
+      "sha256": "2209d757ea34a5eef0f330ac30f2cb7cea482dd39e8d058e44ab72889a4c05ab",
+      "pages": 1,
+      "originalAmount": "12.34",
+      "originalNet": "12.00",
+      "originalTax": "0.34"
+    },
+    {
+      "currency": "JPY",
+      "refundId": "effd0d3b-9d2f-4afd-93a1-476d514b4bbf",
+      "file": "engineering/currency-final-release-20261019/native-pdf/effd0d3b-9d2f-4afd-93a1-476d514b4bbf-1c8fc72d003e.pdf",
+      "sha256": "1c8fc72d003ef817e3fb6c7e1e455a2698e8f77a9bb286d7b34e29c9266ffa7b",
+      "pages": 1,
+      "originalAmount": "12",
+      "originalNet": "11",
+      "originalTax": "1"
+    },
+    {
+      "currency": "KWD",
+      "refundId": "8d22526f-d71e-4088-988c-9c1b5673c2bf",
+      "file": "engineering/currency-final-release-20261019/native-pdf/8d22526f-d71e-4088-988c-9c1b5673c2bf-f4b2fdda9c9a.pdf",
+      "sha256": "f4b2fdda9c9aee6ff99aff20a0249ba9749d1c7d1093f3ccd30dc9a7cfd31936",
+      "pages": 1,
+      "originalAmount": "12.345",
+      "originalNet": "12.011",
+      "originalTax": "0.334"
+    }
+  ],
+  "productionFinancialWrites": false,
+  "visualReview": {
+    "status": "PASS",
+    "method": "All eight actual native PDFs rendered by pdftoppm at 1100px and visually inspected",
+    "currencies": [
+      "TZS",
+      "USD",
+      "KES",
+      "UGX",
+      "EUR",
+      "AED",
+      "JPY",
+      "KWD"
+    ],
+    "observations": "Legible single-page receipts, original identifiers and explicit currency codes visible; no clipped rows or COGS exposure."
+  }
+}

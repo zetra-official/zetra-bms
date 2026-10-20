@@ -1,0 +1,48 @@
+{
+  "at": "2026-10-20T02:52:23.450Z",
+  "runtimeId": "disposable-original-product-b1896a59-dd2b-424a-b989-2ae03f51ed49",
+  "financialRuntimeId": "disposable-original-product-b1896a59-dd2b-424a-b989-2ae03f51ed49",
+  "sourceHashes": {
+    "src/currency/OriginalRefundForm.tsx": "5e48424ce8e4889356bfb4e44ea2a74d0752d395f3778e22386f7fc66e9d2084",
+    "src/currency/originalWorkflow.ts": "6853a7f020ceae1d625f977eaca64ceec3cc95aeceb69b150baee14cc9b0977f",
+    "src/currency/FieldCustodyForm.tsx": "11044f9aeb193f57793d236cdfa812bad6c1893bb3964109d6f53c98bbdeb9b3",
+    "src/currency/fieldCustodyWorkflow.ts": "09e6f7996781d0604165f5e17e3064adb4b79854c6e560b48f6cc6a847b3dc80"
+  },
+  "actor": "bb2d6dee-773d-4fa7-8fda-1eb85bbad2cd",
+  "rpc": "get_bound_financial_result_v1",
+  "args": {
+    "p_store_id": "b6db11bf-b28e-42df-b74b-cd0a9827a901",
+    "p_request_id": "4aec8b05-dfef-49b5-b3a0-005e09a8517f"
+  },
+  "data": {
+    "amount": "12.34",
+    "lineId": "4466efe5-c575-43ca-bd75-6fe8915921a2",
+    "saleId": "7f451bc4-5279-4026-ae35-05ab969d298a",
+    "currency": "AED",
+    "quantity": "1",
+    "refundId": "34dc9ce8-66d7-4cba-b6dd-6c63dd562843",
+    "sellable": false,
+    "originalSlice": {
+      "net": "12.00",
+      "tax": "0.34",
+      "cogs": "105.120000000000000000",
+      "gross": "12.340000000000000000",
+      "lineId": "4466efe5-c575-43ca-bd75-6fe8915921a2",
+      "saleId": "7f451bc4-5279-4026-ae35-05ab969d298a",
+      "currency": "AED",
+      "discount": "0.000000000000000000",
+      "quantity": "1",
+      "rounding": "0.000000000000000000",
+      "refundAmount": "12.34",
+      "postingAllowed": false,
+      "requiredWriter": "ATOMIC_ORIGINAL_PAYMENT_REFUND_AND_SELLABLE_RETURN_WRITER",
+      "sourceReference": "SYNTHETIC_ORIGINAL_INCLUSIVE_TAX_DOCUMENT"
+    },
+    "stockMovementId": null,
+    "canonicalAccountBinding": true,
+    "externalProviderVerified": false
+  },
+  "error": null,
+  "auth": "Real Supabase GET /auth/v1/user",
+  "financialTarget": "DISPOSABLE_LOCAL_POSTGRESQL"
+}
