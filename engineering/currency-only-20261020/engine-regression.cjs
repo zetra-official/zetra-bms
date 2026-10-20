@@ -1,0 +1,1 @@
+const fs=require('fs'),path=require('path');let source=fs.readFileSync('engineering/global-currency-20261018/tests.cjs','utf8');source=source.replace("path.join(E,'unit-results.json')","path.resolve('engineering/currency-only-20261020/engine-regression.json')");new Function('__dirname','require',source)(path.resolve('engineering/global-currency-20261018'),require);

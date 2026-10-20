@@ -3,7 +3,7 @@ import {View,Text,Pressable} from 'react-native';
 import {useLanguage} from '../i18n/LanguageProvider';
 import type {Language} from '../i18n/catalog';
 import {presentMoney,formatExact,type RecordedMoney,type CurrencyView} from './engine';
-import {referenceRateStore,type ReferenceRateStore} from './rateStore';
+import {referenceRateStore,ecbReferenceRateStore,type ReferenceRateStore} from './rateStore';
 import {UI} from '../ui/theme';
 const copy:Record<Language,readonly string[]>={
  en:['Original','Indicative display conversion','Conversion unavailable; original currency retained','Currency unverified; conversion blocked','Refresh reference rates','Loading reference rates…','Reference rates unavailable','Reference date'],
@@ -24,10 +24,11 @@ export function CurrencyPresentation({view,language}:{view:CurrencyView;language
 /** Explicit record currency required: never infer historical units from KV.
  * The host supplies approved freshness policy, separate from user preference.
  */
-export function CurrencyAmount({value,organizationId,maxReferenceAgeDays,store=referenceRateStore}:{value:RecordedMoney;organizationId:string;maxReferenceAgeDays:number;store?:ReferenceRateStore}){
- const {language,displayCurrency}=useLanguage(),state=useSyncExternalStore(store.subscribe,store.getSnapshot,store.getSnapshot),[now,setNow]=useState(()=>new Date());
+export function CurrencyAmount({value,organizationId,maxReferenceAgeDays,store}:{value:RecordedMoney;organizationId:string;maxReferenceAgeDays:number;store?:ReferenceRateStore}){
+ const {language,displayCurrency}=useLanguage(),selectedStore=store??(value.currency==='TZS'||displayCurrency==='TZS'?referenceRateStore:ecbReferenceRateStore),state=useSyncExternalStore(selectedStore.subscribe,selectedStore.getSnapshot,selectedStore.getSnapshot),[now,setNow]=useState(()=>new Date());
+ useEffect(()=>{if(value.currency&&displayCurrency&&value.currency!==displayCurrency)void selectedStore.refresh()},[selectedStore,value.currency,displayCurrency]);
  useEffect(()=>{const timer=setInterval(()=>setNow(new Date()),60000);return()=>clearInterval(timer)},[]);
- return <CurrencyPresentation language={language} view={presentMoney(value,displayCurrency,state.evidence,now,maxReferenceAgeDays,organizationId)}/>;
+ return <CurrencyPresentation language={language} view={presentMoney(value,displayCurrency,state.evidence,new Date(),maxReferenceAgeDays,organizationId)}/>;
 }
 export function ExchangeRateStatus({store=referenceRateStore}:{store?:ReferenceRateStore}){
  const {language}=useLanguage(),state=useSyncExternalStore(store.subscribe,store.getSnapshot,store.getSnapshot),t=copy[language];

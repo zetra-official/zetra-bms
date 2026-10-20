@@ -1,0 +1,854 @@
+{
+  "baseline": "Existing verified android-source; pending Catalog hotfix excluded only in new source copy",
+  "publishedWeb": "6ad49c64c2acd6e0352f242f",
+  "nativeBaselineGroup": "9ae993b5-1566-41ea-821c-3cc94dce0151",
+  "changes": {
+    "package-lock.json": {
+      "before": "11602b6782e15f8277b08198832cce551d161e5b2786bb3b20ed82d61364cb5e",
+      "after": "cb333929c07bfb55f52e5ffc98f57084b75eeb0e4f2c95d7e85611a2090bf792"
+    },
+    "package.json": {
+      "before": "11d9763767790b064d8d1c303ec0726397518bede8e1c4a8c4f14278a98ca96d",
+      "after": "d58057fb3afa4368412a13e6ef1f636875cc785225a214b9bf30274f22240d79"
+    },
+    "src/components/CurrencyPickerAll.tsx": {
+      "before": "b42e219a77b313612e7f40a9fc35bec318cfbd41b014b0501db96e9501feaadf",
+      "after": "209335e8b18746ae67bb2277b68ac4be61fc72149ad9c43c668ec5d23c369961"
+    },
+    "src/currency/accounting.ts": {
+      "before": null,
+      "after": "f4c787891622a2c038d8a066a8092906b2425cca53446489e97524164d32e3cf"
+    },
+    "src/currency/CurrencyAmount.tsx": {
+      "before": "197f8896f03c6ada3965448ea49b6c1aa5aa1ab44d0c5c810e1dfe332f90ca9c",
+      "after": "f7c1a443b2a01e9374500ff65d9edcc20493c8d0edb787f939cb1a3e80cabc94"
+    },
+    "src/currency/CurrentRateValuation.tsx": {
+      "before": null,
+      "after": "627515d63739e7053242d4d0ec7bdba900e24d6b19fffc22f9c0cb351113fffe"
+    },
+    "src/currency/currentValuation.ts": {
+      "before": null,
+      "after": "f50078c04b78bc9ef505ffd69f0e09659ed317adac69f63800aa45c38c3cda35"
+    },
+    "src/currency/engine.ts": {
+      "before": "9188c1e1ae2f8b25e89cb939f8e5eeeebd00a479180707ce09d98f24a17e409b",
+      "after": "3d14147f30775706e8b33051ecc933a943020943583ebce6cda67945ee4fdab9"
+    },
+    "src/currency/FinanceConverter.tsx": {
+      "before": null,
+      "after": "41b6438674236f230d35d9ccc08ba07e650e7267d73a38980ccc3d0b19e7ef41"
+    },
+    "src/currency/LegacyTzsValuation.tsx": {
+      "before": null,
+      "after": "b79f7633be6bfe1602d78e6f995424961523d7586ec53d0c7ce5e1e40ce86dc6"
+    },
+    "src/currency/masterMessages.ts": {
+      "before": null,
+      "after": "c73e58702ec5ea99dd4bfaf2ca84482619db65ff8313d8edeeac711049ca70c8"
+    },
+    "src/currency/metadata.ts": {
+      "before": null,
+      "after": "7437188a9ce9c7f475cbd7d48c8c2b48924b29620edbaa7d351d99bdcad2d5c4"
+    },
+    "src/currency/rateStore.ts": {
+      "before": "21d08f2dfa5f7a788fa8254bf7fd7e6efb4b53c4b17cc49ddd9f0523bb3a2238",
+      "after": "99353112d33c682315b38628c5f3a3c0e3cf8791ae38dd591c9188a29fa3aabb"
+    },
+    "src/currency/shareFinancialPdf.ts": {
+      "before": null,
+      "after": "8ed7f3d3d514b22afcb5dfce50fe4c53a4b1324a4c8a56a5cae6efe878ce8d5d"
+    },
+    "src/currency/useAccountingAuthority.ts": {
+      "before": null,
+      "after": "ea6237882fa60a0674da062d36311d674b8cc3fa9ef82f2d738dbf78d65db2fb"
+    },
+    "src/currency/valuationReport.ts": {
+      "before": null,
+      "after": "c812c552be62ced81cfd7704fa5a1e0c9b221a5880dfb37fa0b673fb0432b094"
+    },
+    "src/i18n/LanguageProvider.tsx": {
+      "before": "fa4e90cbbcab75d6bdc2c4d8236588fc38cdfdacb29bd5a21dc5e7774bc16a6a",
+      "after": "a9960fcf8d558826523f9cfdedc241a800bf7df118cbe2f72fa213f41645c924"
+    },
+    "src/services/currencyCatalog.ts": {
+      "before": "59eca626f9b9353bc353010b97464a9773780bea6b598b30c549b87b72af86ee",
+      "after": "e81673ee80a0b6e5dfffe573ff0d24cb6c7664b52369e3593d91b39660ac4cba"
+    },
+    "src/services/currentFx.ts": {
+      "before": null,
+      "after": "4047f07d2f00e2e7e677b4d0fea7546e6386ea67ed96f99de478cfaf374c4804"
+    },
+    "src/services/referenceFx.ts": {
+      "before": "0f4112cac6f06ca5e1c5bf4021b4288a55c95161f3083edbf782d71e5bf83b7b",
+      "after": "63068b3badd46d819af977e913141bbbd3ccfb39184be981cfb9f7932f82f79d"
+    },
+    "src/currency/data/catalog.json": {
+      "before": null,
+      "after": "4a18d80f2e2e4d384cd1be351da99e5c4dcd4cd079d6c3820b1bb7c3e7fec7b5"
+    },
+    "app/(onboarding)/business.tsx": {
+      "before": "493430b65efacd93b4a511a875b55cde156cdb577b47d042b6f40f8d7773d63a",
+      "after": "264f2cc4df19e62f11713f84f7d9c0984f6a196dbee0d19ba28e777bc3b91dcc"
+    },
+    "app/(tabs)/index.tsx": {
+      "before": "f7a87fb7f84e554e7a1f9666a906610cf46d05c079ff259446c8881462fded96",
+      "after": "361aeee4f8dbb6dc53aa7d6f921c29182457b5e3335d4f59f37f1692e9801695"
+    },
+    "app/finance/exchange-rates.tsx": {
+      "before": null,
+      "after": "fe8812052a6f8b448c2eb3a1c6c8b0c46a1c6c37ccbc71d226b485b3e777d13b"
+    },
+    "app/finance/history.tsx": {
+      "before": "46707bd220c9e480c17f1d0452a99bb6d9a4c9c08e6c041d578f3b0a8d6f48bd",
+      "after": "5c468083b5b4efccd81d9c6abb6bf6c65d9e4296e19e621c495dca34a82d806d"
+    },
+    "app/finance/live.tsx": {
+      "before": "49bd2c222f337906fb048bd78a4445a5be2e1b95841ae7f843faa883233a4621",
+      "after": "ea3064daca2ae52e0da3108787245302822bb1a7efc6c3ef04f49f3598898dfe"
+    },
+    "app/stocks/history.tsx": {
+      "before": "bb53f3623812dbf34069690abb41db7d12c9faaa4b41caba68d54b8bcf932b73",
+      "after": "0448fbac986238c666e9a60041b6e36a61251d8e6f19fdc4ae95e681331dbdd0"
+    },
+    "app/(tabs)/sales/index.tsx": {
+      "before": "5fd728790a4148e991bf96e42b5cd7d39e9b3728cd5caf6921d279ab15645a4d",
+      "after": "e5a0bf4a01284a9379871dec35f05c265b6187765d1565ca4037877e74505943"
+    },
+    "app/(tabs)/settings/business-statement.tsx": {
+      "before": "89d121845950c8e2a19899ac705094bbccaa760da05dba721220e3c5b08bc2d1",
+      "after": "5726690654a0283400cac2d7f929053b2422d92362cd38aaf2d8d30724248427"
+    },
+    "metro.config.js": {
+      "before": null,
+      "after": "e43bb899054fd978b7ffaf425256c1031b5250fd039c749aec15300d7ddc1fce",
+      "purpose": "Isolated build root only"
+    },
+    "src/ai/business/types.ts": {
+      "before": null,
+      "after": "a7c14756c7f7d02526cf4b8c332c312c2020bb7d29f3b2d2dc48ab6114066444",
+      "purpose": "Baseline type-only definitions"
+    },
+    "src/types/maniac-tech-react-native-expo-read-sms.d.ts": {
+      "before": null,
+      "after": "32dbdac53c7d21d7713765bef91f2d9b15adca7988f93cdcd13bc39440193eaf",
+      "purpose": "Baseline module declaration only"
+    },
+    "src/proforma/supabaseTransport.d.ts": {
+      "before": null,
+      "after": "a28b6e7a41fc64ba260bfdc7a4e443bad1c5269c2ac8b4e9658186dfe1b24f5f",
+      "purpose": "Baseline RpcPort type only; no runtime transport added"
+    },
+    "src/components/LanguagePickerAll.d.ts": {
+      "before": null,
+      "after": "82ba49b8e78402dc9fc78e8644b878235194960c3957158012ee5e10f6577db8",
+      "purpose": "Unused import declaration only; no runtime language feature added"
+    },
+    "scripts/release-guard.cjs": {
+      "before": null,
+      "after": "d761260f41705b148255ab9cb59340573939fad7bd65853d8d91709465e417d0",
+      "purpose": "Existing release guard / preserve original Proforma quotation precision"
+    },
+    "src/proforma/invoiceFx.ts": {
+      "before": "b66d2f2f40806cc58d45241f50dca8ec16e79bb64a69acabf3e17be64b0b34c9",
+      "after": "9e941bf56c5c1afd92150d1b8b1488fd2bcb8c2b9278764e5f432ce5b08570db",
+      "purpose": "Existing release guard / preserve original Proforma quotation precision"
+    },
+    "app/catalog.tsx": {
+      "before": "a9112747bbe390c8b106abe68fe54ede77adcdaa90211d1f18f15093eaf6bafe",
+      "after": "2c8e853061c9055381e12602a6fb7b26ed8329029665a8ebfa9471e16efb0b50"
+    },
+    "app/club-revenue.tsx": {
+      "before": "3adff9e2c73b0a3e1102b0ecf194b2eda500ad576cd56faee35ac13986342809",
+      "after": "b2861320f3ca95e7c93603eb610769728ad01fba45b98446fa4c131c4c39216c"
+    },
+    "app/index.tsx": {
+      "before": "2f8e672574a3b348a882e433788a938499ab85642e805176fc8b053d95ebd153",
+      "after": "96ee6e9f0474c34bf79ccf1a9a35122ba4c860b355c585dab95fcd896613bbff"
+    },
+    "app/modal.tsx": {
+      "before": "b47442d8c23fbf10c1b8e024092bbc0f551af08949ebb4807f40321f6a009bb2",
+      "after": "e64ede83adee1829edec77f29299ec6628f5e89db9e95579c7fbbf2599f857c1"
+    },
+    "app/office.tsx": {
+      "before": "cfc989cb4c34e9e3d5ced339dc81cf9c5151439fcbac8d754ad1749a67c241fe",
+      "after": "f6081f326f9976663beaf8c776e301a05a362ef2ade3e3753fb8fac4a468ce02"
+    },
+    "app/org-switcher.tsx": {
+      "before": "caca94862bb662e615e347f5c3750995ed72d4c13000f03e35c3bcb1f5c979ef",
+      "after": "ebb3b5def238719623d6eff0b54fdf070a7caeb015b853eba6dc7ffc3a9bebc0"
+    },
+    "app/organization-profile.tsx": {
+      "before": "1d6cf043dc67130d698c5db2a46574feb6d12c881fe03e753bac4acb60adc249",
+      "after": "40bac6b8b52bab3214d4bbd72b4921413fd236a6b0503050626d0f021c7d7ee3"
+    },
+    "app/store-profile.tsx": {
+      "before": "7b3118e357a1ea023a0124cc787c7863104a4df6c167cfe643ffd2cb4b6ad967",
+      "after": "48100d0bba3255b5a3a3160a6e8a5ee62faf84810feed41a4bed7f17a1a09516"
+    },
+    "app/(auth)/email-verified.tsx": {
+      "before": "50c5a48f13f4e2a614129c6de780ae4ed33d115a846cabc99d7f3df979629cb1",
+      "after": "159352c2b3a0b84e727083a16792c19e46396ca9a107eb04404c5013f5035b33"
+    },
+    "app/(auth)/register.tsx": {
+      "before": "ac3ffc5cfe3a1fce3cc877e143d92cba2ef867f6e1ed99a45927108c8faf158d",
+      "after": "086147be5952b1d768e7c24c16cd8d9a62f3b3554d2d14f62ad3ef0935d8e0d5"
+    },
+    "app/(auth)/reset-password.tsx": {
+      "before": "2c5db6ffe95a1acd5054bcbf8775ceb0f87e3a520593a1bff2bf852b34212249",
+      "after": "ce1d13f4f53d2f56a93d6e1f990b9634458d60602b2bcefe5f7c353f342483eb"
+    },
+    "app/(auth)/_layout.tsx": {
+      "before": "07a944da7b283cd4898e589bbbf3b0b0584af8d020ce206649e323c43c2e75c1",
+      "after": "19e7614aec38f2da110233074df14a36c07bb90343823ff6df9b35a28d399057"
+    },
+    "app/(onboarding)/referral.tsx": {
+      "before": "610502d6ab5504344b369085618f2f41c77b95767ed0672035a49150bb8d5d85",
+      "after": "72f7b2ee3ac6ab13fd4d5d1293f8c9b6b43e0a1580a36b68ee69ee311e505723"
+    },
+    "app/(onboarding)/store.tsx": {
+      "before": "060fdca34d63614e9f60f8b5bf8617c9b8e1940ef8125eee8b56f072443417a4",
+      "after": "a2f50fcd52d215cb0570fabafee5ca7d9c33748004b53b32a1a59d72aa31baa5"
+    },
+    "app/(onboarding)/_layout.tsx": {
+      "before": "5d47f55cd69a1ad7894488feb0b1ff0c73329609e2575fe10dc0e12d6195c475",
+      "after": "33dd53b4a9b778fe488226b7c309863a18fb2ab601385f15079d7d84c879dae4"
+    },
+    "app/(tabs)/_layout.tsx": {
+      "before": "a4f47d7af134e621c1ebc36ece3bcd8fc715e1b7a232949bf869aae6dde83c74",
+      "after": "e00e481e3a53fc8db7a82bb2041513ee3ce099ccb983a92622fd3b04f2c744a8"
+    },
+    "app/ai/training.tsx": {
+      "before": "a0d4a8fff61504f5403f89718303943062f6cb30ee6434e29d54b4bd59032af1",
+      "after": "ababe38ff80a76a2caa50f34dae80638484dc985c67d0f850e3a14481e4b2ff9"
+    },
+    "app/capital-recovery/history.tsx": {
+      "before": "cd296a0e9b6b09ddf753dabd3015782f173c5a6dbb0ad0a9a46d1dfd644d6716",
+      "after": "f75de599b469f7fc5fa0ba238af0be02204f999c30c52acc0beac12c1ab8dedd"
+    },
+    "app/customers/index.tsx": {
+      "before": "bbb3218d57c7fd038e6c040ffc3bf861c949ceefd057fc67e67cf8f3fcb6ee70",
+      "after": "c2338389d2c1e636c4ae45531341165ef438f8d23a42bea21b2a36c91d8b69f2"
+    },
+    "app/customers/insights.tsx": {
+      "before": "e95733bd8d79856b9426fe00d2a7b2e052d0875a0c5d4f9e40637a24687c8823",
+      "after": "6f9fda65c3bb1c62968b3d4b7563dddd9ea32dcb135f7f4bf0d82e2484503396"
+    },
+    "app/customers/[id].tsx": {
+      "before": "0dfd6e311050ba846339f8a3646cdddc3cc7dd4017503b4d0227acdd08e922b0",
+      "after": "8706be7cca77bba15e35b68d1a218d86b2a11133238a2481f2d2c3dc2d500beb"
+    },
+    "app/finance/business-position.tsx": {
+      "before": "513da2d4945acc03869cbad796a71ff566f350eba3e4a57dd59f00d5944e3b88",
+      "after": "eca9c4728b49ee5f7304ae73d5f869b626e03de3bbd80e40f67c7cb9c36d493e"
+    },
+    "app/notifications/index.tsx": {
+      "before": "45d67c3e6c969c4aa76ffd9562dd1ccf0bbb8f3cb5fb179f6ef36e339efc5305",
+      "after": "a4b917bfade633c39824385f7c4334732b2dead796281b30ca279949b665e2bc"
+    },
+    "app/office/customers.tsx": {
+      "before": "2fb1a01f1944d4017df1bbcc2496cc7c76363fc6495669b036df312a1360427d",
+      "after": "335a701c7727e5044907623d319e4ffc7f0e401520e068a6fcf48d79fe4a466e"
+    },
+    "app/office/subscriptions.tsx": {
+      "before": "9a339631771f82b0624993c439adc0227d12f4cee476a52ceea1efe21d490703",
+      "after": "5be0eb00cc4137b93642c36e29fce623301ac5540e10f1ccb8cff76df9067992"
+    },
+    "app/office/system-performance.tsx": {
+      "before": "8e7eddbb62951567daee57d0ba77e93013fbbbe93ba66f96e89c35a894a2f101",
+      "after": "a7f03b69d21d6500f96e4f59072aad06187add35c2e0bbe2eaf0986e2a7f9b3f"
+    },
+    "app/partner/index.tsx": {
+      "before": "afe517bb6d255bd09de08d7f1c09607f78e35d4524703494383e9aebe6afb706",
+      "after": "f67af1f6a2fc056566271cc37c68acbe28748b1b6dcbf41336c521e96973075e"
+    },
+    "app/receipt/[saleId].tsx": {
+      "before": "af49b37435232bee764f56bbc092d92cfa674e86e21b486eaed1f8930edf2666",
+      "after": "4cfb9164749888152ad3abf0b1a6888e408fd4177541e10a9ca15b28c3778464"
+    },
+    "app/settings/subscription.tsx": {
+      "before": "d301b2796fb28de67e6a95420dbb0fbf598a216ef4fc7eb644484ee1f2275d81",
+      "after": "3bb0ffee167c5f6624503f8f83bf2dc5aebfb1ef99d47b6fd072a8d357c028e7"
+    },
+    "app/staff/performance-detail.tsx": {
+      "before": "fe7b52e5534211c2b77a63ef1dab28ff4139b380e73e83d624ec2d98fe92c444",
+      "after": "4eec3b40903eaadcd11eb90cdb6c9021e1f2a44def8a34f58a37be7ed9ce6771"
+    },
+    "app/staff/performance.tsx": {
+      "before": "13ed4b85efad78ba46c2994720696931850cdb966a0a2c0b7ffb40e5b774282b",
+      "after": "02101715d3bbb21c3a65d012e8def81127a47a635b2ed8f0b081648e5cb3e8c1"
+    },
+    "app/stocks/inbound.tsx": {
+      "before": "5d1b394ce2fee247e527c7433eed2fb281cc5b813d3d225449cd16b5b5e97238",
+      "after": "2aba58fb9dd3f5b5d4824986adf2e84902b7dad6cb55da6208bdaef5e46e1913"
+    },
+    "app/stores/chapchap.tsx": {
+      "before": "4772018e34175491575aa52f4a2e35c99577777811ef74a5ab03b5892dd0d05d",
+      "after": "bfc5d8fbf74c28bd1df8940af24c26107589c4b7f3a321c45b5c493867ac9881"
+    },
+    "app/stores/supplier-detail.tsx": {
+      "before": "5246e20f805409ef61c060db637b7f07cbabb4f8cf01c9955fab7a5bbea0dd72",
+      "after": "3b731b00506ccf6cefbdf5301830252f7f03bd9921d176e364381e0a1346e93a"
+    },
+    "app/stores/supplier-history.tsx": {
+      "before": "a7c442ec03a7607e5bd75a772390d8d60489000dd64bd0623185fbe087b736bc",
+      "after": "72e6d891adbcfb0ead11026a1e47f9cd05f7c7699d7aa22df624bae045fcdb3f"
+    },
+    "app/stores/suppliers.tsx": {
+      "before": "b21a9b2cbcd6ca05e3325bfa350d0879d78574691071cd81a0e8ed88b7baa9ce",
+      "after": "769875ffd7c67029b54177b562a29bedb44f68e9d195fc14c08ef79123de899c"
+    },
+    "app/stores/order-category/[category].tsx": {
+      "before": "4692e18917649d6844cfddf2512806150a4ed7b31f73cc60c7833ca954c50ce0",
+      "after": "2909ccb6d3c8a3ba321d2a70f25085e0c9f5393870dccef3342b36067136c6cd"
+    },
+    "app/club/orders/[orderId].tsx": {
+      "before": "b932ef1262c8373fbfc37bf6bfabb203efd7dac5e8ae0fe0ff015dfb8c3acf42",
+      "after": "8fa268ef09f0876efcf90f2e0af02052e9b0b22a0985de969b042fdfa07d1b11"
+    },
+    "app/club/orders/create/index.tsx": {
+      "before": "701844ac0a2d3f52cf2906d8cc604d04c0f76bfa75a94b635d54d7d430111175",
+      "after": "820f123953952fbb1d0c90b81a6afea76d3257569e5cf9e33ae4c60d99da3cf7"
+    },
+    "app/ai/tasks/index.tsx": {
+      "before": "b75248f627c5b43b797a414b89f9e2f0317deb7bcbfa6c5b678e9af0452d55ec",
+      "after": "55e452c57992de754a6398a434b7fc268107df6b88b5ef47aa6c801a1acdf645"
+    },
+    "app/ai/tasks/[Id].tsx": {
+      "before": "f0d7a67a2dca3fb4e4f32689679dcd8d7795b9818c61d43b544db66bfa2393af",
+      "after": "f69874af4db16045d908746c434ef29032edcc291d41e42f2de219830fd684f0"
+    },
+    "app/(tabs)/capital-recovery/history.tsx": {
+      "before": "8dfd60c325d031c7a7e49fed575aab1b5853942c535058f6e8a814036aae471e",
+      "after": "bb9bc4a88e486431b5919b94e0c3c9d6e0759b3f29b83c68cbb4b29806d633d6"
+    },
+    "app/(tabs)/capital-recovery/workspace.tsx": {
+      "before": "acf79d7f8bb8810e8f807da90c1d4f9a7ef1610479bd600808889675cd26011b",
+      "after": "740e6697bf169b66034e875d1165279742e31c9cab494a2df723ad3412fad653"
+    },
+    "app/(tabs)/club/create.tsx": {
+      "before": "f894d4fe2edf48a931faeab7ced584e31f4cb63bafbb5e74086ab3ee97706e75",
+      "after": "45336be3c9dcdaa323a5cc66014887345139a938e70e449ce3784c137a123da8"
+    },
+    "app/(tabs)/club/index.tsx": {
+      "before": "b27306b5948d12354a544b63cd2c798c4a066e706b171ed099d5c9b6982fe3c9",
+      "after": "1d92d3ee509539b60053ee247c9f1f8276f21a03180da6a8597188dd2eb3609b"
+    },
+    "app/(tabs)/club/profile.tsx": {
+      "before": "52e35d1bb325be5c388361c96d048ae39eef26d9581c1ce165f0cfc03a67e77e",
+      "after": "be341d204265023e8729592e808e27a15e146da34bc83e6b1a952cae679a3ef3"
+    },
+    "app/(tabs)/club/saved.tsx": {
+      "before": "19652c2dcdf5e8d2f9391e8afe66a691c87de4dd2e00ded1511a7482d1dcd368",
+      "after": "71f41a48e19494d497b44148e4a6c62ece818971cce05128021f92cebc30794a"
+    },
+    "app/(tabs)/club/store_profile_edit.tsx": {
+      "before": "80f2b8069358c2e10fd17a381270ab7c04888e571e2df03e9f77a42d97048ba4",
+      "after": "106f058a4057f007ecd138a28b43c59cc2cbaea9cf94a1f99545e3a3112f393c"
+    },
+    "app/(tabs)/credit/cleared.tsx": {
+      "before": "71680152896c11c1d37038305df4f702279d359246b8b437cdcb9740c13dea06",
+      "after": "97bbc7f6057f6b0240741f0fd9d4ecedac6e7d1096dff7e4b2a8482fdc6e9c47"
+    },
+    "app/(tabs)/credit/index.tsx": {
+      "before": "325aec240c31c54bf2bfaca817b1b7c4eb6706cda1f0b35d9755ea33958eccfa",
+      "after": "7d370b737a64f472ae781be616623cd4c927666adb4919b214c36a10e64ba81d"
+    },
+    "app/(tabs)/credit/[creditId].tsx": {
+      "before": "635a1b30e4c3645c156a1ca1bd715fed9a4336f8b5f25e3bd5528c1681f7e5ea",
+      "after": "16b9c1541153f0fe887c24bd7eccb69ef1df15459fe774618e79d1afc0c12c45"
+    },
+    "app/(tabs)/field-procurement/history.tsx": {
+      "before": "0ede9e4d553d3c6e9a679ce54c9a5153333822996cd88837c9d108d6eab7b945",
+      "after": "b2e767f1c1b9cd0afe724fb203a00db35cd03e6025dd0b659e9d4ea97504ac85"
+    },
+    "app/(tabs)/field-procurement/workspace.tsx": {
+      "before": "e85b378039a8590a80f083b3ae8915324c15c806611ec493bbad1a1eac2de8b8",
+      "after": "49c50fd8cce5a5e854a125a3498fe91da2af18fd02b0710550ba2c8f2f9e966d"
+    },
+    "app/(tabs)/sales/edit-receipt.tsx": {
+      "before": "cecf99d8f7b752be46cff3a71d009a643c682b564dac721d79df7b4fc728cd50",
+      "after": "3c6dfad10f3c137c99115fa0a7a5f669a30569a22107c96efdedc8ece84d9c26"
+    },
+    "app/(tabs)/sales/history.tsx": {
+      "before": "622017f576fb38233647022cdfad21f837edf7d92551634b5cb8ab8a858ee52e",
+      "after": "8ca6a4520684352b3fdbad7a6d34574e85ec7429f014d75a025e5173d0d9122b"
+    },
+    "app/(tabs)/sales/profit.tsx": {
+      "before": "996d5f6b3addd712b76b5a67dc461f73dce22911aa160dddd7ad6cb918a4fec7",
+      "after": "4d94896961b80cc89b71ecf7ce1c59e7e410274693877ae613968cfcc9207e64"
+    },
+    "app/(tabs)/sales/scan.tsx": {
+      "before": "64d486078f7c53eb1b9529ebff2c81db62c29330ec87c5a680b96c13ceee1913",
+      "after": "35e71a705d890cc6297b27c4633f5270b45c16bc03476a9bfbf07651d29bca14"
+    },
+    "app/(tabs)/sales/shift-opening.tsx": {
+      "before": "74cf80f4e58888d770725d558e5515779e37620648ef20978f8feb98c5615fea",
+      "after": "beaf16e982453c50c4f5a70f26dad4adc61bf09cc36b44165ee1b5b722009c99"
+    },
+    "app/(tabs)/sales/[handoffId].tsx": {
+      "before": "8a303761063e90179d9d7cbd146f3299876bc73c27700f22fd83fdc382cf67d1",
+      "after": "a836e6b0705db2601cc301cac46d1870784f6057ea5f31f8eaf162e4a8ad54e0"
+    },
+    "app/(tabs)/settings/cashier-closing.tsx": {
+      "before": "070ed90a21cafadb81bcd350f4e1f7384b210e8b1994554fddccb5f856310881",
+      "after": "b5c0e9f902310ed4c562af13b155d0e120a64993137bb18b35b82ee9cbc2eeca"
+    },
+    "app/(tabs)/settings/index.tsx": {
+      "before": "7c4ca3cbeb9332063e490ed5c429e2a59dbcbe8a656c67f12ff9b22898f38b58",
+      "after": "46c35eecd567a25ad5c565452292c3b0888411606131520f86f10c1ac6523d53"
+    },
+    "app/(tabs)/settings/meeting-room-create.tsx": {
+      "before": "56304733e8409fc7da377f25dbb60cccb3010ae1c3f624485e4c10bf2c71686a",
+      "after": "8f9283c6ad52f9a67a6a840156d1967f3cae53a8d24156a81de66c6541dc0b95"
+    },
+    "app/(tabs)/settings/meeting-room-detail.tsx": {
+      "before": "0b8c4cc1f62e350a34cc2a1976825c0e9a5264401b2c5673d4deeebcf08f45b7",
+      "after": "912912b04b6b526828f452fa5f8f7c7a0fd23535a302bb90e9d20443cf58165c"
+    },
+    "app/(tabs)/settings/meeting-room-invites.tsx": {
+      "before": "a11d38c551843f9c2ccbc9ac7cf1a9cf4f86e283a8671d045d8a9813ac608a70",
+      "after": "785c7786ee1311ae21be35337dd1171d7e09aab2aaf4058acec6be8f26605a0a"
+    },
+    "app/(tabs)/settings/meeting-room-list.tsx": {
+      "before": "311ed5467e8f423126dc52b5477aca02815038cb3db969595457d45bc33ae272",
+      "after": "521cc6f8db1957c8dd140515fc0761c369de99cee289ed9733446fc79205c15a"
+    },
+    "app/(tabs)/settings/meeting-room.tsx": {
+      "before": "01d936761cbec51ec4454d903883e20fbd4a77156ee468347710499b7ff660a3",
+      "after": "61b293e34de3c4bcf3efe1c354c7a2f0e36387dd63decd1f68aab96662df2fd9"
+    },
+    "app/(tabs)/settings/organization.tsx": {
+      "before": "a3cf63c4ea10fc5079f5e6a134295d31416d37bd8151377069d1370a05490eda",
+      "after": "c89d1fee8fca7c2bf5d8f208112e45bf15308eb40ecbb3ddb9469ee5e49ff59d"
+    },
+    "app/(tabs)/settings/subscription-requests.tsx": {
+      "before": "1ad77b9aa73ddc75109624cf608193501bd1f641629c712c9d3ff36a503cbf8a",
+      "after": "08f5104e17539c9a01bbf7393eb2f12c6cfc5ff70275dcce39b6fda7d60eb7ca"
+    },
+    "app/(tabs)/staff/add.tsx": {
+      "before": "bef4b2a767cc51f44513f19d864c6c990750748d0a82d4a2c856f70be0cc5e23",
+      "after": "90491fc16133b8cae2bc9b5005f392a3bb99bbc63f05eacb76d675d28ea82884"
+    },
+    "app/(tabs)/staff/assign.tsx": {
+      "before": "b1d12b20f80f81f4ce585772b5c5d8c0c2ddd27ee7012d2bc661749b18270936",
+      "after": "fee3a69ec6d8d9e6d0e70dd25c90195d7aec8d289a78a7a3fbaceb2fefcdc82e"
+    },
+    "app/(tabs)/staff/cash-out.tsx": {
+      "before": "4043340350c5dacbc3b1d677b65a54b0854c98b542c1a14b056a530c65e9072f",
+      "after": "a57cd9bb44593a7ad0762ed3fa1f9a0c925bf3b3bbd07c2041849e4281951d00"
+    },
+    "app/(tabs)/staff/commission-history.tsx": {
+      "before": "beed1be12e54d27343e3448563d5659e923f581ee2c4f8b93b2d8e44a9f81c12",
+      "after": "0862e8e1b3caacf264643c3a230646884d399d58191b4b41aa9911d2ad056a31"
+    },
+    "app/(tabs)/staff/commission.tsx": {
+      "before": "84a522eb1b265ea2fefc24c91e5bf0586d319ca67c33fbb6ecf4e50c800a0b01",
+      "after": "bd24ef4de7869abcaca22e45ae8ffcb5d527aca92d0746eabb1e7d448a1c6c60"
+    },
+    "app/(tabs)/staff/index.tsx": {
+      "before": "41066b50392f3712fc84b0070d7a9c0151972503fec81370dfd59822e9bb0789",
+      "after": "4878fa7351d7228ffce412fa10ab82ff928ff5384ab66f5ad813c045992e5529"
+    },
+    "app/(tabs)/staff/my-sales.tsx": {
+      "before": "62662bd76ae5d2d0e5e42862070f0960d63208c8f1b25ad1984959675a2ad4b0",
+      "after": "30b581abed462d3336aa323a3cefe76e454c0bac4a9932251cb9671e611c1a96"
+    },
+    "app/(tabs)/staff/payout-profile.tsx": {
+      "before": "f612ff40e9169d90f540d5872afe094adbec9600d9ca33e5bca71d88d54a33f3",
+      "after": "9a805bfd3aeb802c4048c1bd970b8bfb7b7c03a88cc19a42e675322f09c8add3"
+    },
+    "app/(tabs)/stores/adjust.tsx": {
+      "before": "2e49cffcad2cb55da14dbd3f0b5e3b95440070997af3938b3f91b1f0a3d28c04",
+      "after": "2234f0c128c82700425d0ec4e6013c2acbfc063b1e087f0ce9f8746fec06dbb1"
+    },
+    "app/(tabs)/stores/closing-history.tsx": {
+      "before": "1fbc5eb47a5fbcf64ce9c6e9921b88767d6d0e6d45617a8d3fe2f5748ac0c474",
+      "after": "eb3f3faf7be985e2836eef0b17f38fb3603f31a12855547d712b7e77bc2f43a0"
+    },
+    "app/(tabs)/stores/daily-closing.tsx": {
+      "before": "3b387ed918d4060daaf2bb5e20b064f5f6c15b701b25d55a3a4b449624735dc5",
+      "after": "d67e0adae47c4aa211864484508eeac5ef439fd7eb36d9df00ffeabf3ddb608d"
+    },
+    "app/(tabs)/stores/history.tsx": {
+      "before": "37d6da3f19e071270ea4f979ec088f4bf042ef08670de8507a68c22b1c7b2a7c",
+      "after": "8f1907b6bfdbb71b40d6535a1e092bb69301e390f56272e63dbb6edd2beef1d6"
+    },
+    "app/(tabs)/stores/index.tsx": {
+      "before": "27b65678c70e03e340e20ee0371ac88109d2530ea64f5dfe6080c49492d25fa0",
+      "after": "03e15640d2160b7d5b238540f0ff081b5479a96cde9e899a372e0892602d60a0"
+    },
+    "app/(tabs)/stores/inventory.tsx": {
+      "before": "3543b22f28bf8f4d3a201a97269ec534f195d9df14576f34f75ab33d9a460a83",
+      "after": "0550cd4ed94df2772eb31fa8690dae8590dfdd25df8149efeb5b39fe11b01c32"
+    },
+    "app/(tabs)/stores/items-overview.tsx": {
+      "before": "d6737369558247077086ed54235ed0e4b6300cf77110772b3a0f02d5f3dd8380",
+      "after": "bf3b854db1876e9de9c872be8c0910d7fc3465ee8f4702e56d152cfeecbbe9eb"
+    },
+    "app/(tabs)/stores/movement.tsx": {
+      "before": "084294c599e8ae2c2ab72a441d038673b637a93cc66c9ca5c5af08d65d3c75b7",
+      "after": "0afa818301a12df2f0e4a74a3a0aa0091b9855319b25910266e3c9986f06bf74"
+    },
+    "app/(tabs)/stores/price-catalog.tsx": {
+      "before": "d3f4000033e572532832e8747fb18b14629252ebe04c1bf79301e28572e16394",
+      "after": "67241ad6d3336d06fb5786dc44ccfe3888161ba55b71b806e60e9ea58ac82457"
+    },
+    "app/(tabs)/stores/receipt-history.tsx": {
+      "before": "e85037b12128bd7ed38cbbcbd7eceeb57e2a1075028650d7d31b75b351e67dcb",
+      "after": "3b319762ea62b897a356deb532e24ed153628c613390035cf5e9b2b111606301"
+    },
+    "app/(tabs)/stores/restock.tsx": {
+      "before": "2f733f7af42b38a2cb8c1957d877a3f1be3fc4d159dd8de0b8561bbd0c2ecf5f",
+      "after": "8c8ccead3751d239292759f65bc6c8d781978702513d6d8ed544eeedf6b24f13"
+    },
+    "app/(tabs)/stores/scan.tsx": {
+      "before": "3da2da114d7d75824800d7d9c9acf2d7da4c3c24498f114cd6d86970a2578269",
+      "after": "ced508dfdbfd1d3e209a5f0a2874b77b7fb323028567dfa31006cd2954e342b2"
+    },
+    "app/(tabs)/stores/store-products.tsx": {
+      "before": "569f44d3c72b44826b7d1e6ab31ed881a13ba6649054b33140248ba0945fa371",
+      "after": "05f5f9cbfc813a70c879c3f751b90a50005be78915c4404487a6c2a5c2ace0de"
+    },
+    "app/(tabs)/stores/inventory/low-stock-alerts.tsx": {
+      "before": "96f29213309f89a3cf479accccd29a23b3aab99f84a94702e55105a7fff306e6",
+      "after": "420626de309a723f20790075d07e712877583b8e0bc8f0838f17d85b679f5bce"
+    },
+    "app/(tabs)/stores/inventory/low-stock.tsx": {
+      "before": "d9b7e33212b1bdfb9696fcfb790b03a86db31b53abf4818bcd26def2efe6e057",
+      "after": "9a85736401a4ea765da921aff085f67a0aee44e3c91d5e90e9d2314c8c4aab26"
+    },
+    "app/(tabs)/club/inbox/index.tsx": {
+      "before": "6856bf01d90b9838b07d478de4a7335b91b02d31e070b504dd991330231b76c5",
+      "after": "67cd7d4f5e34f8fd24534a46f88a065466c3106a75ac2b0c0558037bd5feed0e"
+    },
+    "app/(tabs)/club/inbox/[threadId].tsx": {
+      "before": "8a186cc58b18882e3b791c18f75bace05a17f445b015d72018367296174d5617",
+      "after": "4e392d1fe7ecd696e98044ead6873ef582316e3332c7511715bc52cbeee4ec7a"
+    },
+    "app/(tabs)/club/orders/index.tsx": {
+      "before": "3fa1da69319d5bd6bb759db348132469959cbffff72ce74da36a06f9032f8ef2",
+      "after": "d761b047279cb2eff2e933f41e4da4045bd2160dbb5d616f3b2c98499a6884bd"
+    },
+    "app/(tabs)/club/store/[storeId].tsx": {
+      "before": "430b1a6df31588797a434fe54e72d5595fb4b9ab231aa168327faa4a398d5d1c",
+      "after": "aab69028c5bc4cc54a1c8dc6d885eb9ffcb829715bfe4876bd2551b269fa921a"
+    },
+    "app/(tabs)/club/[postId]/comments.tsx": {
+      "before": "8c7d6479d8171aa90fb5569117490a47c6c1f7dba8042f56a3a691054bdaed7d",
+      "after": "96a22d356ac67c0e6fd784167ca51cc19e9afdd65a7ee8ccc9bb6a799a29f00e"
+    },
+    "app/(tabs)/club/[postId]/edit.tsx": {
+      "before": "4eca4797bbcc089a0a548c54017150b5c1a1c94f8ea293766f78562452832512",
+      "after": "3819933ba604577446606dbcd5d5864e64b69953d04a1fee712239a3ae7b3563"
+    },
+    "app/(tabs)/club/[postId]/index.tsx": {
+      "before": "c8eb123f48ce677f753bce834bfa76f49f1dcbd87c03a7ca9ce7762d6b6edff1",
+      "after": "b889ad28365455072fdfe1eff5053c2feddcd980635913009f6760cf4417a3d0"
+    },
+    "app/(tabs)/club/store/[storeId]/product.tsx": {
+      "before": "622db84401c645353069790c32c6250cf83e2340db5ce4d5dac2dacefe7c376e",
+      "after": "132cf911f134fd5723cb8145d7f6a3b7cc95e3fd99c8ed77e9760338159e2631"
+    },
+    "app/(tabs)/club/store/[storeId]/_order.tsx": {
+      "before": "cc78d098fb999db8dbd61099c01f93ec937193771f6ec22876e2ec9ddde600db",
+      "after": "bbaab2c2214e0a16a9dbd0b368b9e46f7da0544103404dbef3b3a847b270aada"
+    },
+    "app/(tabs)/club/orders/create/index.tsx": {
+      "before": "c704a0bdcfbb5cf24b095b840cc88dd6cf6272ebc46a1fbc45f7d18537b4205c",
+      "after": "69c2937a2322f6c86486a61b717b9ee1fb8a994f8d720699027f2c4f49530d18"
+    },
+    "app/(tabs)/club/orders/customer/[orderId].tsx": {
+      "before": "6f745f952500a3803380296fd953fac739241297727437eed175405f5ce00d42",
+      "after": "835b91cac7f8ae95e76f66ba7b070444ed06d8a98f56ecb1b51ef3c6539ad493"
+    },
+    "app/(tabs)/club/orders/store/[storeId].tsx": {
+      "before": "073f3e981c4f602d0142d12ab83fd7526661b972d83509776357f999395701d3",
+      "after": "c968fe4b4e377f518829d1e461fbfc91e9d946ecc10060cfef537d623931eaa1"
+    },
+    "app/(tabs)/club/inbox/store/[storeId].tsx": {
+      "before": "3f04c50221037b89931623153345f11af2ee72db32a1b906d2b9c7a23948c927",
+      "after": "9de4344aaf228d2c24487a082cd67d15872a0bdac2424affb668976b87f1a200"
+    }
+  },
+  "allSourceFiles": {
+    ".gitignore": "45549a9ffd9963f855d72829e978a31c05b82894b14b1d8fbdd43083b20c2d86",
+    "app.json": "e829c6211c13753aa5824b673a41307b4646d15112c95a7a6790cf5aea043503",
+    "eas.json": "2b6e9452ca6641abd2c05a8563bfab5678bacb8c17e018ad40dd25e6bace289c",
+    "expo-env.d.ts": "6fc02634da46d3edc5a88eec9173ba6bf709726be3cba83c73ebd8e859d5c147",
+    "jspdf-browser.d.ts": "15d68685fe03267dd1af3041aa314a510ee2dfbae467a35662ff6b80155ce825",
+    "package-lock.json": "cb333929c07bfb55f52e5ffc98f57084b75eeb0e4f2c95d7e85611a2090bf792",
+    "package.json": "d58057fb3afa4368412a13e6ef1f636875cc785225a214b9bf30274f22240d79",
+    "tsconfig.json": "0a8158ca3d691c7ac5601169f2fa4c71662272397aeddabf72efb11eef1abdd3",
+    "app/catalog.tsx": "2c8e853061c9055381e12602a6fb7b26ed8329029665a8ebfa9471e16efb0b50",
+    "app/club-revenue.tsx": "b2861320f3ca95e7c93603eb610769728ad01fba45b98446fa4c131c4c39216c",
+    "app/index.tsx": "96ee6e9f0474c34bf79ccf1a9a35122ba4c860b355c585dab95fcd896613bbff",
+    "app/modal.tsx": "e64ede83adee1829edec77f29299ec6628f5e89db9e95579c7fbbf2599f857c1",
+    "app/office.tsx": "f6081f326f9976663beaf8c776e301a05a362ef2ade3e3753fb8fac4a468ce02",
+    "app/org-switcher.tsx": "ebb3b5def238719623d6eff0b54fdf070a7caeb015b853eba6dc7ffc3a9bebc0",
+    "app/organization-profile.tsx": "40bac6b8b52bab3214d4bbd72b4921413fd236a6b0503050626d0f021c7d7ee3",
+    "app/store-profile.tsx": "48100d0bba3255b5a3a3160a6e8a5ee62faf84810feed41a4bed7f17a1a09516",
+    "app/_layout.tsx": "7a063003273a91242eac77fed377b6a906ece901f4f4dd900e711f1657b2804a",
+    "src/supabaseClient.ts": "4c01955f3bfe0926df10476b33355452d065c4e78a77fd50184b20f9ef5470c3",
+    "src/ai/subscription.ts": "82958a140918243de2f37f8e80868435495d185f37e5d957764e37d8e5f6b934",
+    "src/business/businessTime.ts": "ccff59d7739aa997bda8523dd42ecc7048b76d3d45122fd5784da06be68cb0bf",
+    "src/business/recordIntegrity.ts": "1d074fb85912f60684e5d1faada6dbd9dd8a20cb3edd15fa253b084d760e1d1e",
+    "src/club/savedPosts.ts": "e5836ab963783895ec310c96cfbbfa83dd1be33463a7d6d76bf0282005aa2d5c",
+    "src/components/AiMessageBubble.tsx": "e50bded1431cf15ef00833ee6f51d604f52e1d26cb2c125646f4de56665924db",
+    "src/components/CurrencyPickerAll.tsx": "209335e8b18746ae67bb2277b68ac4be61fc72149ad9c43c668ec5d23c369961",
+    "src/components/TimezonePicker.tsx": "d98d3069a06e82ebf72bde207cae12b27b7d9077c064c4ed1efa37bd5d876f6c",
+    "src/context/OrgContext.tsx": "36b764a5bc4bf00a6446457cd05ef6bfab29ef41fd4b6e00362a2ef8ae836d97",
+    "src/currency/accounting.ts": "f4c787891622a2c038d8a066a8092906b2425cca53446489e97524164d32e3cf",
+    "src/currency/CurrencyAmount.tsx": "f7c1a443b2a01e9374500ff65d9edcc20493c8d0edb787f939cb1a3e80cabc94",
+    "src/currency/CurrentRateValuation.tsx": "627515d63739e7053242d4d0ec7bdba900e24d6b19fffc22f9c0cb351113fffe",
+    "src/currency/currentValuation.ts": "f50078c04b78bc9ef505ffd69f0e09659ed317adac69f63800aa45c38c3cda35",
+    "src/currency/engine.ts": "3d14147f30775706e8b33051ecc933a943020943583ebce6cda67945ee4fdab9",
+    "src/currency/FinanceConverter.tsx": "41b6438674236f230d35d9ccc08ba07e650e7267d73a38980ccc3d0b19e7ef41",
+    "src/currency/LegacyTzsValuation.tsx": "b79f7633be6bfe1602d78e6f995424961523d7586ec53d0c7ce5e1e40ce86dc6",
+    "src/currency/masterMessages.ts": "c73e58702ec5ea99dd4bfaf2ca84482619db65ff8313d8edeeac711049ca70c8",
+    "src/currency/metadata.ts": "7437188a9ce9c7f475cbd7d48c8c2b48924b29620edbaa7d351d99bdcad2d5c4",
+    "src/currency/rateStore.ts": "99353112d33c682315b38628c5f3a3c0e3cf8791ae38dd591c9188a29fa3aabb",
+    "src/currency/shareFinancialPdf.ts": "8ed7f3d3d514b22afcb5dfce50fe4c53a4b1324a4c8a56a5cae6efe878ce8d5d",
+    "src/currency/useAccountingAuthority.ts": "ea6237882fa60a0674da062d36311d674b8cc3fa9ef82f2d738dbf78d65db2fb",
+    "src/currency/valuationReport.ts": "c812c552be62ced81cfd7704fa5a1e0c9b221a5880dfb37fa0b673fb0432b094",
+    "src/finance/MobileFinance.tsx": "e82f307d32225e77404f33033f8d61b39a15bf916fd28f40797f9c2e5de6f3c8",
+    "src/i18n/accountLifecycle.ts": "dde38985377d5ae41f2702bbbdfe934a4548be38352c1a1b974de3e5457079d1",
+    "src/i18n/authMessages.ts": "933907ec695076b8d01beac778e769ce94a0ffbfad14f876f4ea79b88739e71a",
+    "src/i18n/catalog.ts": "bf92b19a6a805e0421ba4dd3e31879479fef5c353c1775387aede61d68393972",
+    "src/i18n/commonMessages.ts": "f49e42570508e0126704e385d6873678635fad11f5bb52d48e97c37835eea593",
+    "src/i18n/currencyMessages.ts": "6aa161f3a3dd5ac4f2c38fb0645784c681b559b36412df8e91a7f7a0d473df55",
+    "src/i18n/LanguageProvider.tsx": "a9960fcf8d558826523f9cfdedc241a800bf7df118cbe2f72fa213f41645c924",
+    "src/i18n/PersonalCurrencyPicker.tsx": "892d144862568a4aeb6950272f9b2dd881924f201348c6ebe77bb2fce88f740d",
+    "src/i18n/presentation.ts": "2f3d6630e992ee762b9d7043116a0c8861f3cfcfc539a997c787e16be6cd1b19",
+    "src/i18n/systemMessages.ts": "427a600163c5722f33dd065b3a629c09f522223dddc591cdb7e922d09c625ff8",
+    "src/i18n/systemMessageSources.ts": "696cc88b18c58804ac47525a4b8deb2d934e3b627a7f956f309e4fe640fe40a4",
+    "src/i18n/useAuthText.ts": "6940f69a29aae3cf6d08e745eb9bb70de404a8e533ee878fb08490e7bbbb2dbd",
+    "src/i18n/useCommonText.ts": "be67d59ead735d94d4f5bd84e22e6f07f61ff6b457c1ce4f24aa95e889c82cc5",
+    "src/i18n/useDocumentText.ts": "8e1b894f342edbf0a770e73f4fa4ed20944e3f329006622a06c38e52c47d6b40",
+    "src/i18n/useSystemMessageText.ts": "42b075b705d61c63e1feaf799fb1b57173af9710aa4fe75a9a8fc37927964f57",
+    "src/offline/browserQueueStore.ts": "90c8e79e02313e00aae9a7c98bb4f5ed64698a5eeeffaa7e854f4762b68b8af6",
+    "src/offline/salesProductsCache.ts": "824b62d654d9cb31c8601e69464c8b4e7cc99b7480d339675055d98e539bacf5",
+    "src/offline/salesQueue.ts": "dd978e0f089adfa95951e6e3227c72075a6d83c906cf03688036a58a430d9879",
+    "src/offline/salesSync.ts": "9393dbe357054a4026f8fc51a1e69b51907eec83be3bbc6cfe865a8177a8c324",
+    "src/offline/submissionGate.ts": "39fd795979c417146e2713c9115e27c59dbe9a72e3a84a50d619f448c24e1224",
+    "src/proforma/AccountingCurrencySetup.tsx": "aa11c564194d601165fa98a4795e406f6ffa1f32f5810eb0de1fedfeaad3ea7b",
+    "src/proforma/availability.ts": "4a6bd4364a43b8401cd817015fad2f8a0468b387659acdf7ae9fa63fb61b92d8",
+    "src/proforma/checkoutDraft.ts": "0d8845265b22b53716606e5b5a55918ae54941a3d47e51af93ffeec9305d2ed2",
+    "src/proforma/CheckoutProformaAction.tsx": "48d455a2a74158220971d38a8e40bd55d8c6d5208afb73f388dc397e26e25330",
+    "src/proforma/client.ts": "ebda6a8d2af29d13559b570a2698261ab16ce8f066af69e85fa9d93f7cae82ae",
+    "src/proforma/conversion.ts": "4381ff3baecdd2c95803610933a8a2c35acc48b0808e92e3eb464cc9a2928cc5",
+    "src/proforma/conversionCopy.ts": "ca98d4557adc8f4dca29bcb105e04450e84ba5e3438b3ea8b94a9e03bdf7bb3b",
+    "src/proforma/currencyUxCopy.ts": "fa44bafadebbb8dad1935f2ddba60a2028987772ecdd983e41ea3d5032719c08",
+    "src/proforma/document.ts": "5a4b7ade5d8e9a6ad19cb7818e00c7be42bef24ea0dcc738105d20ae5b29df68",
+    "src/proforma/documentsApi.ts": "ee2d283152e25da4e958b5fc1e67e4dcb43e70a4fc1f188c00be7b4082c1742d",
+    "src/proforma/export.ts": "0fd4e92a773ff7fbc0668c1dc0e7a35edba13a9d7d800f42185b0fa15b24891b",
+    "src/proforma/InvoiceCurrencyModal.tsx": "515e2f107030559b80beacef8710cdf4215dfeec8c17ae66d3cec018ead6f191",
+    "src/proforma/invoiceFx.ts": "9e941bf56c5c1afd92150d1b8b1488fd2bcb8c2b9278764e5f432ce5b08570db",
+    "src/proforma/invoiceFxCopy.ts": "30c6b81ad8145a82689fca13a4684a7aadc43ad628d56a71b4fcb7cf912aa3e1",
+    "src/proforma/labels.ts": "e18063f26851e1b628c849d70caecbbed186a254caea6a21fd4423c1ae6266be",
+    "src/proforma/model.ts": "955add6ae9c04481fca2120454228c13aeffcc9f04b418e339667f7538ed4bd9",
+    "src/proforma/normalCopy.ts": "64ba2e044985b521d334c4dc6cd10aa0411a9d69165c1560afea1671e9bc60ca",
+    "src/proforma/ordersCopy.ts": "07599f169277e0f9ad4cf03bd4c8f4583761fc34f57b9e84e9cdab9ac625e9ac",
+    "src/proforma/OrganizationAccountingCurrency.tsx": "e6045e9075b2014d2c80e476880f048e21487d463b6b9fd1c0d69b2236e01e8f",
+    "src/proforma/pendingCount.ts": "f2f58b5e698e0ba7e0aae6368f95c68da69226d37902283b51703c16ceb996d8",
+    "src/proforma/ProformaBoundary.tsx": "58cce3ac350f97774ba5299d0d9ea24a8dfe2e4388e189d70f58bcbad0c98ecc",
+    "src/proforma/ProformaConversionAction.tsx": "346ffbed688898e80c21cd4e6fdf50557a0d722746afdeb732537131a912c8b6",
+    "src/proforma/ProformaDocuments.tsx": "61c8d2ae2da276ed70bcefcc0286e2ebae847270cf4797fc2d6a6087880e5efc",
+    "src/proforma/ProformaEntry.tsx": "34dba5574ff695fc8d66c49aa6a5ccc5b83406a96935edbd51c9e64aaf808d80",
+    "src/proforma/ProformaOrdersAction.tsx": "b1323f0c015aa7692384d4d0898d04292880966c797b90e373a2e6eceec80636",
+    "src/proforma/ProformaOrdersPanel.tsx": "a6fbf7ea703be58e6ac12b08be8a4fedd79a0c410851c676f9bac2baf1075148",
+    "src/proforma/receiptBranding.ts": "33cbec13f03dc215db2ec01a6ab45e3628c36738fb119e032b11d820a12e8ead",
+    "src/proforma/savedCart.ts": "2ca07e96f2908a81fb7121c1f8d3bc81e45348db4c6ffba01320186e2c041dfe",
+    "src/release/safety.ts": "e6b81853aabe05166b6f1036fef7790cef66f6223cb9ec94ada3025b750473db",
+    "src/search/catalogSearch.ts": "cff6d3ec0d1a62ad6c0077d2a10155307a44c1f4d701d5078cf9665fe01d982e",
+    "src/services/currencyCatalog.ts": "e81673ee80a0b6e5dfffe573ff0d24cb6c7664b52369e3593d91b39660ac4cba",
+    "src/services/currentFx.ts": "4047f07d2f00e2e7e677b4d0fea7546e6386ea67ed96f99de478cfaf374c4804",
+    "src/services/referenceFx.ts": "63068b3badd46d819af977e913141bbbd3ccfb39184be981cfb9f7932f82f79d",
+    "src/storage/kv.ts": "7822cf8c060c69a88fcbcf20b5390682f31111bd14f339448a88836437a2fd44",
+    "src/supabase/supabaseClient.ts": "c3df8d5cc07fbb898960f9cb7266ede23dee4dabbe3f3f49452297dbe5977a47",
+    "src/ui/Button.tsx": "d15e5d472b0ec54a1317855be58d7ee1d9945c34eb86da0a450a37c2b8855133",
+    "src/ui/Card.tsx": "5a5f82609b1a5ff4f9605e5c54b53c08d9ab401309950837a9caf0067a73f44d",
+    "src/ui/Input.tsx": "2d68535d8cd04caa7eb961253f28b51a5bf7c2038cbe280493c27bfc1e21e0ea",
+    "src/ui/money.ts": "6e26ecf4bf8ce02e48758eae56f5aacfd6504de22f0cbf13eb782653f0495b2f",
+    "src/ui/NotificationBell.tsx": "c9af853c7d1f1df2bf3338efff3b225fe3536802bf57d3ea7132aa9b2bb3d689",
+    "src/ui/PriceModal.tsx": "fe43af356ab53bb466bbc05e8224d6a36c7da7601c0951b84706b330385d9c8a",
+    "src/ui/SafeIcon.tsx": "f6879e393a6f7a7aaf3ef35cf79ad30b42a3942670ea930fba7b76d783b5c113",
+    "src/ui/Screen.tsx": "5715b6aecf345ed8e9c0d15e7a261c7451c45ff3425e3f3a70f713b3776330c7",
+    "src/ui/StoreGuard.tsx": "0602dbdb5ba5acaf50f6bd0ba22c0f3181bb04be3850dde93426e6c9f0c2bccd",
+    "src/ui/theme.ts": "1034ccaf53a6926a3f4cd35f3574b7a094a8cd459353e3b8cc828461bc24269c",
+    "src/utils/scanBus.ts": "d0cbadfdabe30c4d0c5e40aa9c499eac461046e0ded3da0f139ad267b639ab2a",
+    "src/ui/login/LoginVisuals.tsx": "e8531043d25ffbb7379979a1502b1f2fc5c5b17a9e7aa08ab646530e02cbe959",
+    "src/currency/data/catalog.json": "4a18d80f2e2e4d384cd1be351da99e5c4dcd4cd079d6c3820b1bb7c3e7fec7b5",
+    "src/components/credit/AddPaymentSheet.tsx": "d23f17b6ec3b3a888a102107057bed66fccf9e191494b9670cdfbdfce189dc91",
+    "src/components/credit/PaymentRow.tsx": "8a565d8fe4bbe9f5c347e92a44e15c40dae5c1f7b6d02a0114541e17ffc561a5",
+    "src/components/home/business-financial-overview/BusinessFinancialOverview.tsx": "d1b6b7dc904dc2bca1b7bd7f45ae428c9238d841acd15c888a162691c6d12647",
+    "src/components/home/business-financial-overview/FinancialChart.tsx": "4bcfd5da26c9d09971a0b6dc42ac3c2c3451091ab082327f41d1c06c3853fd95",
+    "src/components/home/business-financial-overview/financialDataEngine.ts": "260575f5f5d086e4c7c31972b8343b30222dcc3e4fc7a7f3eaf92423056bf941",
+    "src/components/home/business-financial-overview/FinancialOverviewFullView.tsx": "66db5db08da03b4210f447a756ef1aac688dad9f08052ad0b9265eaf243a697a",
+    "src/components/home/business-financial-overview/periodEngine.ts": "d3275bae41935497c1b6e237844323f085dd8200f3e8726c313b397cdb4a9824",
+    "src/components/home/sales-performance-v2/periodEngine.ts": "1f917daab37cb3293a8e7ce22849ecee4318b6b0c20aa9c7db2c83567a2caca9",
+    "src/components/home/sales-performance-v2/salesIntelligenceEngine.ts": "a94bf2981bcaad4d9b5a27f08884afd21b2fe4f3482fd1b1dcd6106e7d3a69e9",
+    "src/components/home/sales-performance-v2/salesPerformanceDataEngine.ts": "8930b506ba3ed717c8460552ff21c5f65a3471aa390d217803be9c70d2fee538",
+    "src/components/home/sales-performance-v2/SalesPerformanceWorkspace.tsx": "aeae83d7eda79e58ac5d48bf56ed8575bdbd82a2c06e7eab41a36f625cc44fc6",
+    "src/ai/business/businessBridge.ts": "7b8f0c33a4642b898025a6d05c0a81b45c09a39541595272735dce452a70380d",
+    "src/ai/business/businessQueryService.ts": "d40e399f77681904e4b36407aec55e211d45579d731256b8923d636554f2a45d",
+    "src/ai/business/creditCustomerResolver.ts": "29c65f5792e73d52d62f87d6e1896fc7e5de187f3f12e00f15e044e4357d0f1c",
+    "src/ai/business/creditEngine.ts": "9dce656aa879e3048f60ead0756319ac1aaa343fd8ac3489e8187dd20c3735e2",
+    "src/ai/business/creditRepository.ts": "10619c68bcd9b81aef232d76b36364b7d7850b02ad2ded1ed803d59f6994c613",
+    "src/ai/business/crmCustomerResolver.ts": "d4727a8ae8ef5e9d86d0b467043ab7bd0176cc19e8e4ddfb054a17f06896a3e6",
+    "src/ai/business/crmEngine.ts": "80cd6eba7dc74c393a235cef9e4b234fadb927bf1b108e6012336e402d69a227",
+    "src/ai/business/crmRepository.ts": "0c5dd299d98f98b116533020cb57de43861cd5461df71b621431989b6e7e5f93",
+    "src/ai/business/metricsEngine.ts": "740ea2fe1f9e6fc38baa08c5d39e326fe3715505060a15515c790e5dff1a4272",
+    "src/ai/business/semanticIntent.ts": "6d56a3b66ec12e6780e0c6e35779b3b2760b7535cd726f1e75b89fb5a29c7a3b",
+    "src/ai/business/semanticIntentClient.ts": "1bb04e11a71c04c2f3c9b18e9366c8901ef1230932c6db8601429d1504e51e46",
+    "src/ai/business/snapshotRepository.ts": "afc48b510545d06f75a04c33b18111555b8d9f22d7025ee24ddc383d9c8b89a1",
+    "src/ai/knowledge/guides.ts": "6b17bc14c2e755c2539c4175a5850408a573220ce21b7b4f85b87fdbe50313c5",
+    "assets/images/login-master-artwork.png": "59d211fa694f708783c268d8b7aa40348bfaaa0bdc16ff292f52f7fe46b8f125",
+    "assets/images/login-master-reference.jpg": "4fc7b8a8d329f6d7a793d27f19f3c780ac3bfb5b3075ca09f971460f56957af7",
+    "assets/sounds/sale-success.wav": "13a83a60a6538a083b6fef798b7e4732e4299f5a1e2eb8fcda49aadac900d93a",
+    "app/(auth)/email-verified.tsx": "159352c2b3a0b84e727083a16792c19e46396ca9a107eb04404c5013f5035b33",
+    "app/(auth)/login.tsx": "19194d218382fd5d186a09286b6c103c6b3c5708b9e4c2a2f77a7318922e970c",
+    "app/(auth)/register.tsx": "086147be5952b1d768e7c24c16cd8d9a62f3b3554d2d14f62ad3ef0935d8e0d5",
+    "app/(auth)/reset-password.tsx": "ce1d13f4f53d2f56a93d6e1f990b9634458d60602b2bcefe5f7c353f342483eb",
+    "app/(auth)/_layout.tsx": "19e7614aec38f2da110233074df14a36c07bb90343823ff6df9b35a28d399057",
+    "app/(onboarding)/business.tsx": "264f2cc4df19e62f11713f84f7d9c0984f6a196dbee0d19ba28e777bc3b91dcc",
+    "app/(onboarding)/index.tsx": "760faaa52b79606eb8ecb6a4c0cb24ca26519b48c0a40b247df8038d1814909a",
+    "app/(onboarding)/referral.tsx": "72f7b2ee3ac6ab13fd4d5d1293f8c9b6b43e0a1580a36b68ee69ee311e505723",
+    "app/(onboarding)/store.tsx": "a2f50fcd52d215cb0570fabafee5ca7d9c33748004b53b32a1a59d72aa31baa5",
+    "app/(onboarding)/_layout.tsx": "33dd53b4a9b778fe488226b7c309863a18fb2ab601385f15079d7d84c879dae4",
+    "app/(tabs)/expenses.tsx": "a45cb4a8648fa60a02ae766d41f571b9eabf4920f6ee00241e5597e8df306022",
+    "app/(tabs)/index.tsx": "361aeee4f8dbb6dc53aa7d6f921c29182457b5e3335d4f59f37f1692e9801695",
+    "app/(tabs)/products.tsx": "14770c995d285a0044d12a7130fa3c7cf797ac1ed9853652f43e628851b101cd",
+    "app/(tabs)/_layout.tsx": "e00e481e3a53fc8db7a82bb2041513ee3ce099ccb983a92622fd3b04f2c744a8",
+    "app/ai/index.tsx": "5ec0df36ff04d6f915b3d3b9e784587819ec6fcec600037214016679adbd377c",
+    "app/ai/training.tsx": "ababe38ff80a76a2caa50f34dae80638484dc985c67d0f850e3a14481e4b2ff9",
+    "app/capital-recovery/history.tsx": "f75de599b469f7fc5fa0ba238af0be02204f999c30c52acc0beac12c1ab8dedd",
+    "app/customers/index.tsx": "c2338389d2c1e636c4ae45531341165ef438f8d23a42bea21b2a36c91d8b69f2",
+    "app/customers/insights.tsx": "6f9fda65c3bb1c62968b3d4b7563dddd9ea32dcb135f7f4bf0d82e2484503396",
+    "app/customers/layout.tsx": "24c6faece22333319fa0a3564ba8e1e377cc5793f8ec14c04b45a151fdc6aa00",
+    "app/customers/[id].tsx": "8706be7cca77bba15e35b68d1a218d86b2a11133238a2481f2d2c3dc2d500beb",
+    "app/finance/business-debts.tsx": "bed3187b069425ff22cff48231a63b0a15b96bad34d5f2cd24218d2cbe88006e",
+    "app/finance/business-position.tsx": "eca9c4728b49ee5f7304ae73d5f869b626e03de3bbd80e40f67c7cb9c36d493e",
+    "app/finance/exchange-rates.tsx": "fe8812052a6f8b448c2eb3a1c6c8b0c46a1c6c37ccbc71d226b485b3e777d13b",
+    "app/finance/history.tsx": "5c468083b5b4efccd81d9c6abb6bf6c65d9e4296e19e621c495dca34a82d806d",
+    "app/finance/live.tsx": "ea3064daca2ae52e0da3108787245302822bb1a7efc6c3ef04f49f3598898dfe",
+    "app/notifications/index.tsx": "a4b917bfade633c39824385f7c4334732b2dead796281b30ca279949b665e2bc",
+    "app/office/customers.tsx": "335a701c7727e5044907623d319e4ffc7f0e401520e068a6fcf48d79fe4a466e",
+    "app/office/follow-ups.tsx": "f15955e0c5c02ae2c1d6462ab2a57b2025a7e1898457ba20cdc1ec0398a1df4f",
+    "app/office/growth-partners.tsx": "be0907b0f4ba201d4f7fc53528649c6ff140a3ff44b59412d8cd910795bcf986",
+    "app/office/payment-requests.tsx": "20d5e7835106cf5c29336d5b40bec22140dcd816b831e1f84314f352e3159acc",
+    "app/office/subscriptions.tsx": "5be0eb00cc4137b93642c36e29fce623301ac5540e10f1ccb8cff76df9067992",
+    "app/office/system-performance.tsx": "a7f03b69d21d6500f96e4f59072aad06187add35c2e0bbe2eaf0986e2a7f9b3f",
+    "app/partner/index.tsx": "f67af1f6a2fc056566271cc37c68acbe28748b1b6dcbf41336c521e96973075e",
+    "app/receipt/[saleId].tsx": "4cfb9164749888152ad3abf0b1a6888e408fd4177541e10a9ca15b28c3778464",
+    "app/settings/subscription.tsx": "3bb0ffee167c5f6624503f8f83bf2dc5aebfb1ef99d47b6fd072a8d357c028e7",
+    "app/staff/performance-detail.tsx": "4eec3b40903eaadcd11eb90cdb6c9021e1f2a44def8a34f58a37be7ed9ce6771",
+    "app/staff/performance.tsx": "02101715d3bbb21c3a65d012e8def81127a47a635b2ed8f0b081648e5cb3e8c1",
+    "app/stocks/history.tsx": "0448fbac986238c666e9a60041b6e36a61251d8e6f19fdc4ae95e681331dbdd0",
+    "app/stocks/inbound.tsx": "2aba58fb9dd3f5b5d4824986adf2e84902b7dad6cb55da6208bdaef5e46e1913",
+    "app/stores/chapchap.tsx": "bfc5d8fbf74c28bd1df8940af24c26107589c4b7f3a321c45b5c493867ac9881",
+    "app/stores/orders.tsx": "bd1443d7d0fc88d41d49f9a109074e28f63b8e21c52a77de319c79c45ea89b8f",
+    "app/stores/supplier-detail.tsx": "3b731b00506ccf6cefbdf5301830252f7f03bd9921d176e364381e0a1346e93a",
+    "app/stores/supplier-history.tsx": "72e6d891adbcfb0ead11026a1e47f9cd05f7c7699d7aa22df624bae045fcdb3f",
+    "app/stores/suppliers.tsx": "769875ffd7c67029b54177b562a29bedb44f68e9d195fc14c08ef79123de899c",
+    "app/stores/order-category/[category].tsx": "2909ccb6d3c8a3ba321d2a70f25085e0c9f5393870dccef3342b36067136c6cd",
+    "app/club/orders/[orderId].tsx": "8fa268ef09f0876efcf90f2e0af02052e9b0b22a0985de969b042fdfa07d1b11",
+    "app/club/orders/create/index.tsx": "820f123953952fbb1d0c90b81a6afea76d3257569e5cf9e33ae4c60d99da3cf7",
+    "app/ai/tasks/index.tsx": "55e452c57992de754a6398a434b7fc268107df6b88b5ef47aa6c801a1acdf645",
+    "app/ai/tasks/[Id].tsx": "f69874af4db16045d908746c434ef29032edcc291d41e42f2de219830fd684f0",
+    "app/(tabs)/capital-recovery/history.tsx": "bb9bc4a88e486431b5919b94e0c3c9d6e0759b3f29b83c68cbb4b29806d633d6",
+    "app/(tabs)/capital-recovery/workspace.tsx": "740e6697bf169b66034e875d1165279742e31c9cab494a2df723ad3412fad653",
+    "app/(tabs)/club/create.tsx": "45336be3c9dcdaa323a5cc66014887345139a938e70e449ce3784c137a123da8",
+    "app/(tabs)/club/index.tsx": "1d92d3ee509539b60053ee247c9f1f8276f21a03180da6a8597188dd2eb3609b",
+    "app/(tabs)/club/profile.tsx": "be341d204265023e8729592e808e27a15e146da34bc83e6b1a952cae679a3ef3",
+    "app/(tabs)/club/saved.tsx": "71f41a48e19494d497b44148e4a6c62ece818971cce05128021f92cebc30794a",
+    "app/(tabs)/club/store_profile_edit.tsx": "106f058a4057f007ecd138a28b43c59cc2cbaea9cf94a1f99545e3a3112f393c",
+    "app/(tabs)/club/_layout.tsx": "fbcf0115a9beed14a288e747b55c46301e07ca9859cb387538ddf3cf40e6d09a",
+    "app/(tabs)/credit/cleared.tsx": "97bbc7f6057f6b0240741f0fd9d4ecedac6e7d1096dff7e4b2a8482fdc6e9c47",
+    "app/(tabs)/credit/index.tsx": "7d370b737a64f472ae781be616623cd4c927666adb4919b214c36a10e64ba81d",
+    "app/(tabs)/credit/payment-receipt.tsx": "520e9e1d39678905922b5b595d3234b3a1876cc1da9c28d11962dc65913bd668",
+    "app/(tabs)/credit/[creditId].tsx": "16b9c1541153f0fe887c24bd7eccb69ef1df15459fe774618e79d1afc0c12c45",
+    "app/(tabs)/credit/_layout.tsx": "d9d9d775ab7b030fba4d24239b7a76ff8be9932d4188a7b63415d40b0c020d8a",
+    "app/(tabs)/field-procurement/history.tsx": "b2e767f1c1b9cd0afe724fb203a00db35cd03e6025dd0b659e9d4ea97504ac85",
+    "app/(tabs)/field-procurement/workspace.tsx": "49c50fd8cce5a5e854a125a3498fe91da2af18fd02b0710550ba2c8f2f9e966d",
+    "app/(tabs)/sales/checkout.tsx": "6ddf698e7a8bff6f911bf2678b781e318adc6b79976a3ab6bf843416d1c11ef6",
+    "app/(tabs)/sales/edit-receipt.tsx": "3c6dfad10f3c137c99115fa0a7a5f669a30569a22107c96efdedc8ece84d9c26",
+    "app/(tabs)/sales/expenses.tsx": "cbd59e80f15c404c953f0521a2eb8de71ecea1ca0c7f2d6bb7e38b9dad7f8382",
+    "app/(tabs)/sales/history.tsx": "8ca6a4520684352b3fdbad7a6d34574e85ec7429f014d75a025e5173d0d9122b",
+    "app/(tabs)/sales/index.tsx": "e5a0bf4a01284a9379871dec35f05c265b6187765d1565ca4037877e74505943",
+    "app/(tabs)/sales/offline-receipt.tsx": "2417718d516b071c57fa132e9c96519326b92775080d305ca5ee31de06932dbb",
+    "app/(tabs)/sales/profit.tsx": "4d94896961b80cc89b71ecf7ce1c59e7e410274693877ae613968cfcc9207e64",
+    "app/(tabs)/sales/proforma.tsx": "d4e0b3d855d14aabb200d77b26cfb38d4a579188f7a989fee46e4fdd47bee8d5",
+    "app/(tabs)/sales/receipt.tsx": "1d0f3bbfb51eb54134fcebd6771fb6748ccd1f6eb9865906c22a3b1ae704497e",
+    "app/(tabs)/sales/scan.tsx": "35e71a705d890cc6297b27c4633f5270b45c16bc03476a9bfbf07651d29bca14",
+    "app/(tabs)/sales/shift-opening.tsx": "beaf16e982453c50c4f5a70f26dad4adc61bf09cc36b44165ee1b5b722009c99",
+    "app/(tabs)/sales/[handoffId].tsx": "a836e6b0705db2601cc301cac46d1870784f6057ea5f31f8eaf162e4a8ad54e0",
+    "app/(tabs)/sales/_layout.tsx": "bd4d1dea93919c0d6026489f66e2400a356bdd63587af74e7f43eabb61ef0370",
+    "app/(tabs)/settings/account-privacy.tsx": "db6e95e258a15ea7483ee8eb0cf4798e88e0d22cf0d716d88ba5ab4e93a040a9",
+    "app/(tabs)/settings/business-statement.tsx": "5726690654a0283400cac2d7f929053b2422d92362cd38aaf2d8d30724248427",
+    "app/(tabs)/settings/cashier-closing.tsx": "b5c0e9f902310ed4c562af13b155d0e120a64993137bb18b35b82ee9cbc2eeca",
+    "app/(tabs)/settings/index.tsx": "46c35eecd567a25ad5c565452292c3b0888411606131520f86f10c1ac6523d53",
+    "app/(tabs)/settings/meeting-room-create.tsx": "8f9283c6ad52f9a67a6a840156d1967f3cae53a8d24156a81de66c6541dc0b95",
+    "app/(tabs)/settings/meeting-room-detail.tsx": "912912b04b6b526828f452fa5f8f7c7a0fd23535a302bb90e9d20443cf58165c",
+    "app/(tabs)/settings/meeting-room-invites.tsx": "785c7786ee1311ae21be35337dd1171d7e09aab2aaf4058acec6be8f26605a0a",
+    "app/(tabs)/settings/meeting-room-list.tsx": "521cc6f8db1957c8dd140515fc0761c369de99cee289ed9733446fc79205c15a",
+    "app/(tabs)/settings/meeting-room.tsx": "61b293e34de3c4bcf3efe1c354c7a2f0e36387dd63decd1f68aab96662df2fd9",
+    "app/(tabs)/settings/organization.tsx": "c89d1fee8fca7c2bf5d8f208112e45bf15308eb40ecbb3ddb9469ee5e49ff59d",
+    "app/(tabs)/settings/regional.tsx": "c07f04c532449da9e29130200403b5ff091a81e563443fbb7381ccb083c8aa5d",
+    "app/(tabs)/settings/subscription-requests.tsx": "08f5104e17539c9a01bbf7393eb2f12c6cfc5ff70275dcce39b6fda7d60eb7ca",
+    "app/(tabs)/settings/subscription.tsx": "fb72abf3991214b4d5c95c6056eb5d256708288c04886d05897caf59af196c9e",
+    "app/(tabs)/settings/_layout.tsx": "8061242efc06d0bd1c8fdd860305089cdd43df19c78fe1246595379558294880",
+    "app/(tabs)/staff/add.tsx": "90491fc16133b8cae2bc9b5005f392a3bb99bbc63f05eacb76d675d28ea82884",
+    "app/(tabs)/staff/assign.tsx": "fee3a69ec6d8d9e6d0e70dd25c90195d7aec8d289a78a7a3fbaceb2fefcdc82e",
+    "app/(tabs)/staff/cash-out.tsx": "a57cd9bb44593a7ad0762ed3fa1f9a0c925bf3b3bbd07c2041849e4281951d00",
+    "app/(tabs)/staff/commission-history.tsx": "0862e8e1b3caacf264643c3a230646884d399d58191b4b41aa9911d2ad056a31",
+    "app/(tabs)/staff/commission.tsx": "bd24ef4de7869abcaca22e45ae8ffcb5d527aca92d0746eabb1e7d448a1c6c60",
+    "app/(tabs)/staff/index.tsx": "4878fa7351d7228ffce412fa10ab82ff928ff5384ab66f5ad813c045992e5529",
+    "app/(tabs)/staff/my-sales.tsx": "30b581abed462d3336aa323a3cefe76e454c0bac4a9932251cb9671e611c1a96",
+    "app/(tabs)/staff/payout-profile.tsx": "9a805bfd3aeb802c4048c1bd970b8bfb7b7c03a88cc19a42e675322f09c8add3",
+    "app/(tabs)/staff/_layout.tsx": "8e0b86dc3689c0c2929a1163b41f397dde09530bdb2f0bb1fb87b1f945d8c5fa",
+    "app/(tabs)/stores/add.tsx": "581f2fac5f241709140a8249dee45d2bd13e74b15e0b89098f1420540011bb4c",
+    "app/(tabs)/stores/adjust.tsx": "2234f0c128c82700425d0ec4e6013c2acbfc063b1e087f0ce9f8746fec06dbb1",
+    "app/(tabs)/stores/closing-history.tsx": "eb3f3faf7be985e2836eef0b17f38fb3603f31a12855547d712b7e77bc2f43a0",
+    "app/(tabs)/stores/daily-closing.tsx": "d67e0adae47c4aa211864484508eeac5ef439fd7eb36d9df00ffeabf3ddb608d",
+    "app/(tabs)/stores/history.tsx": "8f1907b6bfdbb71b40d6535a1e092bb69301e390f56272e63dbb6edd2beef1d6",
+    "app/(tabs)/stores/index.tsx": "03e15640d2160b7d5b238540f0ff081b5479a96cde9e899a372e0892602d60a0",
+    "app/(tabs)/stores/inventory.tsx": "0550cd4ed94df2772eb31fa8690dae8590dfdd25df8149efeb5b39fe11b01c32",
+    "app/(tabs)/stores/items-overview.tsx": "bf3b854db1876e9de9c872be8c0910d7fc3465ee8f4702e56d152cfeecbbe9eb",
+    "app/(tabs)/stores/movement.tsx": "0afa818301a12df2f0e4a74a3a0aa0091b9855319b25910266e3c9986f06bf74",
+    "app/(tabs)/stores/price-catalog.tsx": "67241ad6d3336d06fb5786dc44ccfe3888161ba55b71b806e60e9ea58ac82457",
+    "app/(tabs)/stores/receipt-history.tsx": "3b319762ea62b897a356deb532e24ed153628c613390035cf5e9b2b111606301",
+    "app/(tabs)/stores/restock.tsx": "8c8ccead3751d239292759f65bc6c8d781978702513d6d8ed544eeedf6b24f13",
+    "app/(tabs)/stores/scan.tsx": "ced508dfdbfd1d3e209a5f0a2874b77b7fb323028567dfa31006cd2954e342b2",
+    "app/(tabs)/stores/store-products.tsx": "05f5f9cbfc813a70c879c3f751b90a50005be78915c4404487a6c2a5c2ace0de",
+    "app/(tabs)/stores/_layout.tsx": "61bd60894d9636ffa205bbc23f3b11153e0c9140e27215ef0f66705723ac64bd",
+    "app/(tabs)/stores/inventory/low-stock-alerts.tsx": "420626de309a723f20790075d07e712877583b8e0bc8f0838f17d85b679f5bce",
+    "app/(tabs)/stores/inventory/low-stock.tsx": "9a85736401a4ea765da921aff085f67a0aee44e3c91d5e90e9d2314c8c4aab26",
+    "app/(tabs)/club/inbox/index.tsx": "67cd7d4f5e34f8fd24534a46f88a065466c3106a75ac2b0c0558037bd5feed0e",
+    "app/(tabs)/club/inbox/[threadId].tsx": "4e392d1fe7ecd696e98044ead6873ef582316e3332c7511715bc52cbeee4ec7a",
+    "app/(tabs)/club/orders/index.tsx": "d761b047279cb2eff2e933f41e4da4045bd2160dbb5d616f3b2c98499a6884bd",
+    "app/(tabs)/club/orders/[orderId].tsx": "1439faaec3642aa27f2c35ec51aaadf4eb1946a2503293fecb81835364cc148e",
+    "app/(tabs)/club/orders/_layout.tsx": "8b639a7fb22911d72a02896b917655686ed30ba1852f45dbf4da0cfaa2dc1240",
+    "app/(tabs)/club/store/[storeId].tsx": "aab69028c5bc4cc54a1c8dc6d885eb9ffcb829715bfe4876bd2551b269fa921a",
+    "app/(tabs)/club/[postId]/comments.tsx": "96a22d356ac67c0e6fd784167ca51cc19e9afdd65a7ee8ccc9bb6a799a29f00e",
+    "app/(tabs)/club/[postId]/edit.tsx": "3819933ba604577446606dbcd5d5864e64b69953d04a1fee712239a3ae7b3563",
+    "app/(tabs)/club/[postId]/index.tsx": "b889ad28365455072fdfe1eff5053c2feddcd980635913009f6760cf4417a3d0",
+    "app/(tabs)/club/store/orders/[orderId].tsx": "a2e88d805714dbd4def665947aa0c895688084d6b4e833ffb660f486b21681c7",
+    "app/(tabs)/club/store/[storeId]/product.tsx": "132cf911f134fd5723cb8145d7f6a3b7cc95e3fd99c8ed77e9760338159e2631",
+    "app/(tabs)/club/store/[storeId]/_order.tsx": "bbaab2c2214e0a16a9dbd0b368b9e46f7da0544103404dbef3b3a847b270aada",
+    "app/(tabs)/club/orders/create/index.tsx": "69c2937a2322f6c86486a61b717b9ee1fb8a994f8d720699027f2c4f49530d18",
+    "app/(tabs)/club/orders/customer/[orderId].tsx": "835b91cac7f8ae95e76f66ba7b070444ed06d8a98f56ecb1b51ef3c6539ad493",
+    "app/(tabs)/club/orders/store/[storeId].tsx": "c968fe4b4e377f518829d1e461fbfc91e9d946ecc10060cfef537d623931eaa1",
+    "app/(tabs)/club/inbox/store/[storeId].tsx": "9de4344aaf228d2c24487a082cd67d15872a0bdac2424affb668976b87f1a200",
+    "metro.config.js": "e43bb899054fd978b7ffaf425256c1031b5250fd039c749aec15300d7ddc1fce",
+    "src/ai/business/types.ts": "a7c14756c7f7d02526cf4b8c332c312c2020bb7d29f3b2d2dc48ab6114066444",
+    "src/types/maniac-tech-react-native-expo-read-sms.d.ts": "32dbdac53c7d21d7713765bef91f2d9b15adca7988f93cdcd13bc39440193eaf",
+    "src/proforma/supabaseTransport.d.ts": "a28b6e7a41fc64ba260bfdc7a4e443bad1c5269c2ac8b4e9658186dfe1b24f5f",
+    "src/components/LanguagePickerAll.d.ts": "82ba49b8e78402dc9fc78e8644b878235194960c3957158012ee5e10f6577db8",
+    "scripts/release-guard.cjs": "d761260f41705b148255ab9cb59340573939fad7bd65853d8d91709465e417d0"
+  },
+  "catalogCurrentCheckoutPreserved": "a6b548a9567803d9db181b4d6f236349b55afddfc115ead7ba9f6d449c1b4914",
+  "productionSql": [],
+  "financialActivation": false,
+  "publication": false
+}

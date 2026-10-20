@@ -1,0 +1,2465 @@
+{
+  "scope": "Read-only existing Production hosting metadata; no deployment, SQL or financial reads/writes",
+  "siteId": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+  "domain": "app.zetra.tz",
+  "deployment": {
+    "id": "6ad49c64c2acd6e0352f242f",
+    "state": "ready",
+    "created_at": "2026-10-18T10:16:04.060Z",
+    "published_at": "2026-10-18T10:20:16.961Z",
+    "commit_ref": null,
+    "branch": "main",
+    "context": "deploy-preview",
+    "deploy_ssl_url": "https://6ad49c64c2acd6e0352f242f--regal-sunburst-e3cee8.netlify.app"
+  },
+  "files": [
+    {
+      "id": "/+not-found.html",
+      "path": "/+not-found.html",
+      "sha": "4a99bd0a219d2b226b4a17a5c83f7f782b39bb81",
+      "mime_type": "text/html",
+      "size": 17232,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/business.html",
+      "path": "/business.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/catalog.html",
+      "path": "/catalog.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/club-revenue.html",
+      "path": "/club-revenue.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/email-verified.html",
+      "path": "/email-verified.html",
+      "sha": "f1c249c1c4d20de4237ea467ab52155db4c3b218",
+      "mime_type": "text/html",
+      "size": 22091,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/expenses.html",
+      "path": "/expenses.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/favicon.ico",
+      "path": "/favicon.ico",
+      "sha": "531af3918515a303f746a0f67a4d29b0e3b5550e",
+      "mime_type": "image/vnd.microsoft.icon",
+      "size": 14510,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/index.html",
+      "path": "/index.html",
+      "sha": "ec259bd6b3fd19a0cb903603c09183af3c6e84fd",
+      "mime_type": "text/html",
+      "size": 26649,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/index.landing-test.html",
+      "path": "/index.landing-test.html",
+      "sha": "ed89ff96fd7ed7b405f62553567ee710c02aab5e",
+      "mime_type": "text/html",
+      "size": 6779,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/login.html",
+      "path": "/login.html",
+      "sha": "7986cb09ef94e3762fce7f532f738a7f8e81f1fc",
+      "mime_type": "text/html",
+      "size": 27038,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/modal.html",
+      "path": "/modal.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/office.html",
+      "path": "/office.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/org-switcher.html",
+      "path": "/org-switcher.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/organization-profile.html",
+      "path": "/organization-profile.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/products.html",
+      "path": "/products.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/referral.html",
+      "path": "/referral.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/register.html",
+      "path": "/register.html",
+      "sha": "955ec92b978098aa4e7032dafb7a41758e76c039",
+      "mime_type": "text/html",
+      "size": 27243,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/release.json",
+      "path": "/release.json",
+      "sha": "9d287b654618bb58fe5577f56000e3f9afa77554",
+      "mime_type": "application/json",
+      "size": 212,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/reset-password.html",
+      "path": "/reset-password.html",
+      "sha": "f0fc3eee0166ef8c74d1182981a010bef57e5d11",
+      "mime_type": "text/html",
+      "size": 25417,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/robots.txt",
+      "path": "/robots.txt",
+      "sha": "a694eda4390a60df26f3faeeed3f0734219e29cb",
+      "mime_type": "text/plain",
+      "size": 70,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/sitemap.xml",
+      "path": "/sitemap.xml",
+      "sha": "40c160da45ef501bc27db545aa7d21f1c44cf2be",
+      "mime_type": "application/xml",
+      "size": 159,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/store-profile.html",
+      "path": "/store-profile.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/store.html",
+      "path": "/store.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/verified.html",
+      "path": "/verified.html",
+      "sha": "8f4ce6b560bd64a016e6a977797cef3839035aa9",
+      "mime_type": "text/html",
+      "size": 865,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/_headers",
+      "path": "/_headers",
+      "sha": "ee6880f5ca4e612e072ae2a08690e2f00aefe698",
+      "mime_type": "text/plain",
+      "size": 381,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/_redirects",
+      "path": "/_redirects",
+      "sha": "51d28efaef24b607ccf9016ee796a0051c8533ce",
+      "mime_type": "text/plain",
+      "size": 235,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/_sitemap.html",
+      "path": "/_sitemap.html",
+      "sha": "4a99bd0a219d2b226b4a17a5c83f7f782b39bb81",
+      "mime_type": "text/html",
+      "size": 17232,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(auth)/email-verified.html",
+      "path": "/(auth)/email-verified.html",
+      "sha": "f1c249c1c4d20de4237ea467ab52155db4c3b218",
+      "mime_type": "text/html",
+      "size": 22091,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(auth)/login.html",
+      "path": "/(auth)/login.html",
+      "sha": "7986cb09ef94e3762fce7f532f738a7f8e81f1fc",
+      "mime_type": "text/html",
+      "size": 27038,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(auth)/register.html",
+      "path": "/(auth)/register.html",
+      "sha": "955ec92b978098aa4e7032dafb7a41758e76c039",
+      "mime_type": "text/html",
+      "size": 27243,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(auth)/reset-password.html",
+      "path": "/(auth)/reset-password.html",
+      "sha": "f0fc3eee0166ef8c74d1182981a010bef57e5d11",
+      "mime_type": "text/html",
+      "size": 25417,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(onboarding)/business.html",
+      "path": "/(onboarding)/business.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(onboarding)/index.html",
+      "path": "/(onboarding)/index.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(onboarding)/referral.html",
+      "path": "/(onboarding)/referral.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(onboarding)/store.html",
+      "path": "/(onboarding)/store.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/expenses.html",
+      "path": "/(tabs)/expenses.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/index.html",
+      "path": "/(tabs)/index.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/products.html",
+      "path": "/(tabs)/products.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/ai/index.html",
+      "path": "/ai/index.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/ai/training.html",
+      "path": "/ai/training.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/capital-recovery/history.html",
+      "path": "/capital-recovery/history.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/capital-recovery/workspace.html",
+      "path": "/capital-recovery/workspace.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/club/create.html",
+      "path": "/club/create.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/club/index.html",
+      "path": "/club/index.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/club/profile.html",
+      "path": "/club/profile.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/club/saved.html",
+      "path": "/club/saved.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/club/store_profile_edit.html",
+      "path": "/club/store_profile_edit.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/club/[postid].html",
+      "path": "/club/[postid].html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/credit/cleared.html",
+      "path": "/credit/cleared.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/credit/index.html",
+      "path": "/credit/index.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/credit/payment-receipt.html",
+      "path": "/credit/payment-receipt.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/credit/[creditid].html",
+      "path": "/credit/[creditid].html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/customers/index.html",
+      "path": "/customers/index.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/customers/insights.html",
+      "path": "/customers/insights.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/customers/layout.html",
+      "path": "/customers/layout.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/customers/[id].html",
+      "path": "/customers/[id].html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/field-procurement/history.html",
+      "path": "/field-procurement/history.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/field-procurement/workspace.html",
+      "path": "/field-procurement/workspace.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/finance/business-debts.html",
+      "path": "/finance/business-debts.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/finance/business-position.html",
+      "path": "/finance/business-position.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/finance/history.html",
+      "path": "/finance/history.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/finance/live.html",
+      "path": "/finance/live.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/notifications/index.html",
+      "path": "/notifications/index.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/office/customers.html",
+      "path": "/office/customers.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/office/follow-ups.html",
+      "path": "/office/follow-ups.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/office/growth-partners.html",
+      "path": "/office/growth-partners.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/office/payment-requests.html",
+      "path": "/office/payment-requests.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/office/subscriptions.html",
+      "path": "/office/subscriptions.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/office/system-performance.html",
+      "path": "/office/system-performance.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/partner/index.html",
+      "path": "/partner/index.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/receipt/[saleid].html",
+      "path": "/receipt/[saleid].html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/sales/checkout.html",
+      "path": "/sales/checkout.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/sales/edit-receipt.html",
+      "path": "/sales/edit-receipt.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/sales/expenses.html",
+      "path": "/sales/expenses.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/sales/history.html",
+      "path": "/sales/history.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/sales/index.html",
+      "path": "/sales/index.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/sales/offline-receipt.html",
+      "path": "/sales/offline-receipt.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/sales/profit.html",
+      "path": "/sales/profit.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/sales/proforma.html",
+      "path": "/sales/proforma.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/sales/receipt.html",
+      "path": "/sales/receipt.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/sales/scan.html",
+      "path": "/sales/scan.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/sales/shift-opening.html",
+      "path": "/sales/shift-opening.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/sales/[handoffid].html",
+      "path": "/sales/[handoffid].html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/settings/account-privacy.html",
+      "path": "/settings/account-privacy.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/settings/business-statement.html",
+      "path": "/settings/business-statement.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/settings/cashier-closing.html",
+      "path": "/settings/cashier-closing.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/settings/index.html",
+      "path": "/settings/index.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/settings/meeting-room-create.html",
+      "path": "/settings/meeting-room-create.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/settings/meeting-room-detail.html",
+      "path": "/settings/meeting-room-detail.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/settings/meeting-room-invites.html",
+      "path": "/settings/meeting-room-invites.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/settings/meeting-room-list.html",
+      "path": "/settings/meeting-room-list.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/settings/meeting-room.html",
+      "path": "/settings/meeting-room.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/settings/organization.html",
+      "path": "/settings/organization.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/settings/regional.html",
+      "path": "/settings/regional.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/settings/subscription-requests.html",
+      "path": "/settings/subscription-requests.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/settings/subscription.html",
+      "path": "/settings/subscription.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/staff/add.html",
+      "path": "/staff/add.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/staff/assign.html",
+      "path": "/staff/assign.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/staff/cash-out.html",
+      "path": "/staff/cash-out.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/staff/commission-history.html",
+      "path": "/staff/commission-history.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/staff/commission.html",
+      "path": "/staff/commission.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/staff/index.html",
+      "path": "/staff/index.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/staff/my-sales.html",
+      "path": "/staff/my-sales.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/staff/payout-profile.html",
+      "path": "/staff/payout-profile.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/staff/performance-detail.html",
+      "path": "/staff/performance-detail.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/staff/performance.html",
+      "path": "/staff/performance.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/stocks/history.html",
+      "path": "/stocks/history.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/stocks/inbound.html",
+      "path": "/stocks/inbound.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/stores/add.html",
+      "path": "/stores/add.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/stores/adjust.html",
+      "path": "/stores/adjust.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/stores/chapchap.html",
+      "path": "/stores/chapchap.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/stores/closing-history.html",
+      "path": "/stores/closing-history.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/stores/daily-closing.html",
+      "path": "/stores/daily-closing.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/stores/history.html",
+      "path": "/stores/history.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/stores/index.html",
+      "path": "/stores/index.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/stores/inventory.html",
+      "path": "/stores/inventory.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/stores/items-overview.html",
+      "path": "/stores/items-overview.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/stores/movement.html",
+      "path": "/stores/movement.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/stores/orders.html",
+      "path": "/stores/orders.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/stores/price-catalog.html",
+      "path": "/stores/price-catalog.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/stores/receipt-history.html",
+      "path": "/stores/receipt-history.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/stores/restock.html",
+      "path": "/stores/restock.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/stores/scan.html",
+      "path": "/stores/scan.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/stores/store-products.html",
+      "path": "/stores/store-products.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/stores/supplier-detail.html",
+      "path": "/stores/supplier-detail.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/stores/supplier-history.html",
+      "path": "/stores/supplier-history.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/stores/suppliers.html",
+      "path": "/stores/suppliers.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/_expo/.routes.json",
+      "path": "/_expo/.routes.json",
+      "sha": "5281c69316de87e6f7867ecbd10bc0ba7b73e4f3",
+      "mime_type": "application/json",
+      "size": 21,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/_expo/static/js/web/entry-b73710607d1e274b78ab039d772b40c3.js",
+      "path": "/_expo/static/js/web/entry-b73710607d1e274b78ab039d772b40c3.js",
+      "sha": "7be392ba161ba2e484f5b315cc96dc04237debb0",
+      "mime_type": "application/javascript",
+      "size": 6679714,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/_expo/static/js/web/html2canvas-de615660653a32ca908e429d285e6426.js",
+      "path": "/_expo/static/js/web/html2canvas-de615660653a32ca908e429d285e6426.js",
+      "sha": "22ff1716c717290ecc980c3d4b4ceb61a391e051",
+      "mime_type": "application/javascript",
+      "size": 202154,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/_expo/static/js/web/index-724f5a85177cad024bb35dcd3d39a6f1.js",
+      "path": "/_expo/static/js/web/index-724f5a85177cad024bb35dcd3d39a6f1.js",
+      "sha": "f553e71b2fd3b31f68cf44ac4859e158a05b981d",
+      "mime_type": "application/javascript",
+      "size": 173946,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/_expo/static/js/web/jspdf.es-66bcf566b96d0803ae1e6fe78a496fc4.js",
+      "path": "/_expo/static/js/web/jspdf.es-66bcf566b96d0803ae1e6fe78a496fc4.js",
+      "sha": "f3145638bad9c48c355987b55fd251760170fe3c",
+      "mime_type": "application/javascript",
+      "size": 454052,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/_expo/static/js/web/loadbusinessfonts-e315a6ddb8baeed48c1a1eec4a55f263.js",
+      "path": "/_expo/static/js/web/loadbusinessfonts-e315a6ddb8baeed48c1a1eec4a55f263.js",
+      "sha": "15b7287c24c8e79111e27f034596a8f12f3f39ee",
+      "mime_type": "application/javascript",
+      "size": 707,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/_expo/static/js/web/purify-d3cdd5128b6a3d474edea558cfeaa86a.js",
+      "path": "/_expo/static/js/web/purify-d3cdd5128b6a3d474edea558cfeaa86a.js",
+      "sha": "4b7c8a32b5885b4e06c441963281dc4d01cdc10e",
+      "mime_type": "application/javascript",
+      "size": 30560,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/stores/inventory/low-stock-alerts.html",
+      "path": "/stores/inventory/low-stock-alerts.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/stores/inventory/low-stock.html",
+      "path": "/stores/inventory/low-stock.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/stores/order-category/[category].html",
+      "path": "/stores/order-category/[category].html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/club/inbox/index.html",
+      "path": "/club/inbox/index.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/club/inbox/[threadid].html",
+      "path": "/club/inbox/[threadid].html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/club/orders/index.html",
+      "path": "/club/orders/index.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/club/orders/[orderid].html",
+      "path": "/club/orders/[orderid].html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/club/store/[storeid].html",
+      "path": "/club/store/[storeid].html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/club/[postid]/comments.html",
+      "path": "/club/[postid]/comments.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/club/[postid]/edit.html",
+      "path": "/club/[postid]/edit.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/club/store/orders/[orderid].html",
+      "path": "/club/store/orders/[orderid].html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/club/store/[storeid]/product.html",
+      "path": "/club/store/[storeid]/product.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/club/store/[storeid]/_order.html",
+      "path": "/club/store/[storeid]/_order.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/club/orders/create/index.html",
+      "path": "/club/orders/create/index.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/club/orders/customer/[orderid].html",
+      "path": "/club/orders/customer/[orderid].html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/club/orders/store/[storeid].html",
+      "path": "/club/orders/store/[storeid].html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/club/inbox/store/[storeid].html",
+      "path": "/club/inbox/store/[storeid].html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/assets/node_modules/expo-router/assets/arrow_down.017bc6ba3fc25503e5eb5e53826d48a8.png",
+      "path": "/assets/node_modules/expo-router/assets/arrow_down.017bc6ba3fc25503e5eb5e53826d48a8.png",
+      "sha": "3240289c7a047a088d3f7cb985c889353e08d5f6",
+      "mime_type": "image/png",
+      "size": 9456,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/assets/node_modules/expo-router/assets/error.d1ea1496f9057eb392d5bbf3732a61b7.png",
+      "path": "/assets/node_modules/expo-router/assets/error.d1ea1496f9057eb392d5bbf3732a61b7.png",
+      "sha": "cbd1d1ec87af382f8fe9df47ec935124df3619d2",
+      "mime_type": "image/png",
+      "size": 469,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/assets/node_modules/expo-router/assets/file.19eeb73b9593a38f8e9f418337fc7d10.png",
+      "path": "/assets/node_modules/expo-router/assets/file.19eeb73b9593a38f8e9f418337fc7d10.png",
+      "sha": "035bcb691dba22ab62ec8d48c17f2c77c4000794",
+      "mime_type": "image/png",
+      "size": 138,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/assets/node_modules/expo-router/assets/forward.d8b800c443b8972542883e0b9de2bdc6.png",
+      "path": "/assets/node_modules/expo-router/assets/forward.d8b800c443b8972542883e0b9de2bdc6.png",
+      "sha": "9a9dbdd9fa6a7d628313066f09c661fc2688f09a",
+      "mime_type": "image/png",
+      "size": 188,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/assets/node_modules/expo-router/assets/pkg.ab19f4cbc543357183a20571f68380a3.png",
+      "path": "/assets/node_modules/expo-router/assets/pkg.ab19f4cbc543357183a20571f68380a3.png",
+      "sha": "607d61bf566e70355f237e8d1ee24ae4e6b8b79b",
+      "mime_type": "image/png",
+      "size": 364,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/assets/node_modules/expo-router/assets/sitemap.412dd9275b6b48ad28f5e3d81bb1f626.png",
+      "path": "/assets/node_modules/expo-router/assets/sitemap.412dd9275b6b48ad28f5e3d81bb1f626.png",
+      "sha": "ccf9b4f51655343bd4469cc6451bd266a316691a",
+      "mime_type": "image/png",
+      "size": 465,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/assets/node_modules/expo-router/assets/unmatched.20e71bdf79e3a97bf55fd9e164041578.png",
+      "path": "/assets/node_modules/expo-router/assets/unmatched.20e71bdf79e3a97bf55fd9e164041578.png",
+      "sha": "8809557324fba29beced8cbe01b3e7b35f8b8c0a",
+      "mime_type": "image/png",
+      "size": 4752,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/assets/node_modules/@react-navigation/elements/lib/module/assets/back-icon-mask.0a328cd9c1afd0afe8e3b1ec5165b1b4.png",
+      "path": "/assets/node_modules/@react-navigation/elements/lib/module/assets/back-icon-mask.0a328cd9c1afd0afe8e3b1ec5165b1b4.png",
+      "sha": "a1744b39a0eda025e4c8b572c6fd019e18607bb8",
+      "mime_type": "image/png",
+      "size": 653,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/assets/node_modules/@react-navigation/elements/lib/module/assets/back-icon.35ba0eaec5a4f5ed12ca16fabeae451d.png",
+      "path": "/assets/node_modules/@react-navigation/elements/lib/module/assets/back-icon.35ba0eaec5a4f5ed12ca16fabeae451d.png",
+      "sha": "185ebe3c181b720dbcf46bc6c12f529edc384131",
+      "mime_type": "image/png",
+      "size": 207,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/assets/node_modules/@react-navigation/elements/lib/module/assets/clear-icon.c94f6478e7ae0cdd9f15de1fcb9e5e55.png",
+      "path": "/assets/node_modules/@react-navigation/elements/lib/module/assets/clear-icon.c94f6478e7ae0cdd9f15de1fcb9e5e55.png",
+      "sha": "2958c643482f074764f9d3c9453fbae5c46d578a",
+      "mime_type": "image/png",
+      "size": 220,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/assets/node_modules/@react-navigation/elements/lib/module/assets/clear-icon.c94f6478e7ae0cdd9f15de1fcb9e5e55@2x.png",
+      "path": "/assets/node_modules/@react-navigation/elements/lib/module/assets/clear-icon.c94f6478e7ae0cdd9f15de1fcb9e5e55@2x.png",
+      "sha": "2d503d58f6f9b3484e444e7b5480a362f15c4d1a",
+      "mime_type": "image/png",
+      "size": 334,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/assets/node_modules/@react-navigation/elements/lib/module/assets/clear-icon.c94f6478e7ae0cdd9f15de1fcb9e5e55@3x.png",
+      "path": "/assets/node_modules/@react-navigation/elements/lib/module/assets/clear-icon.c94f6478e7ae0cdd9f15de1fcb9e5e55@3x.png",
+      "sha": "b5718082c5e9687ab51045c16bbb52e2e13c05ef",
+      "mime_type": "image/png",
+      "size": 502,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/assets/node_modules/@react-navigation/elements/lib/module/assets/clear-icon.c94f6478e7ae0cdd9f15de1fcb9e5e55@4x.png",
+      "path": "/assets/node_modules/@react-navigation/elements/lib/module/assets/clear-icon.c94f6478e7ae0cdd9f15de1fcb9e5e55@4x.png",
+      "sha": "71f3c7292b8c5ea3a175488577b938a84bb3ff53",
+      "mime_type": "image/png",
+      "size": 645,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/assets/node_modules/@react-navigation/elements/lib/module/assets/close-icon.808e1b1b9b53114ec2838071a7e6daa7.png",
+      "path": "/assets/node_modules/@react-navigation/elements/lib/module/assets/close-icon.808e1b1b9b53114ec2838071a7e6daa7.png",
+      "sha": "f12b4590aed6662658c03a876ebac07f3ade8407",
+      "mime_type": "image/png",
+      "size": 141,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/assets/node_modules/@react-navigation/elements/lib/module/assets/close-icon.808e1b1b9b53114ec2838071a7e6daa7@2x.png",
+      "path": "/assets/node_modules/@react-navigation/elements/lib/module/assets/close-icon.808e1b1b9b53114ec2838071a7e6daa7@2x.png",
+      "sha": "3c7ec73d74742832ab10010dc827bf8c40e31050",
+      "mime_type": "image/png",
+      "size": 201,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/assets/node_modules/@react-navigation/elements/lib/module/assets/close-icon.808e1b1b9b53114ec2838071a7e6daa7@3x.png",
+      "path": "/assets/node_modules/@react-navigation/elements/lib/module/assets/close-icon.808e1b1b9b53114ec2838071a7e6daa7@3x.png",
+      "sha": "cc58502572586a5b03253d55363e2b7189d6488f",
+      "mime_type": "image/png",
+      "size": 266,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/assets/node_modules/@react-navigation/elements/lib/module/assets/close-icon.808e1b1b9b53114ec2838071a7e6daa7@4x.png",
+      "path": "/assets/node_modules/@react-navigation/elements/lib/module/assets/close-icon.808e1b1b9b53114ec2838071a7e6daa7@4x.png",
+      "sha": "5ea9fc3567d15e3e22394bdc4b6c60e61090317a",
+      "mime_type": "image/png",
+      "size": 332,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/assets/node_modules/@react-navigation/elements/lib/module/assets/search-icon.286d67d3f74808a60a78d3ebf1a5fb57.png",
+      "path": "/assets/node_modules/@react-navigation/elements/lib/module/assets/search-icon.286d67d3f74808a60a78d3ebf1a5fb57.png",
+      "sha": "d40765c8ea784e4c922a2354ad7df6d876c343ba",
+      "mime_type": "image/png",
+      "size": 928,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/fonts/antdesign.3f78af31cca60105799838a1a7a59fbd.ttf",
+      "path": "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/fonts/antdesign.3f78af31cca60105799838a1a7a59fbd.ttf",
+      "sha": "37d79a06c762b7298d714063802ad45e65e3987a",
+      "mime_type": "font/ttf",
+      "size": 130484,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/fonts/entypo.31b5ffea3daddc69dd01a1f3d6cf63c5.ttf",
+      "path": "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/fonts/entypo.31b5ffea3daddc69dd01a1f3d6cf63c5.ttf",
+      "sha": "12b5670eb178138f77285d5f2c246d3cc5fa67d6",
+      "mime_type": "font/ttf",
+      "size": 66200,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/fonts/evilicons.140c53a7643ea949007aa9a282153849.ttf",
+      "path": "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/fonts/evilicons.140c53a7643ea949007aa9a282153849.ttf",
+      "sha": "91d377ea3cf47490b256c2ed081704a7dabdae0c",
+      "mime_type": "font/ttf",
+      "size": 13456,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/fonts/feather.ca4b48e04dc1ce10bfbddb262c8b835f.ttf",
+      "path": "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/fonts/feather.ca4b48e04dc1ce10bfbddb262c8b835f.ttf",
+      "sha": "a6ca45c336a9357768eac614913416003e70bf12",
+      "mime_type": "font/ttf",
+      "size": 55596,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/fonts/fontawesome.b06871f281fee6b241d60582ae9369b9.ttf",
+      "path": "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/fonts/fontawesome.b06871f281fee6b241d60582ae9369b9.ttf",
+      "sha": "13b1eab65a983c7a73bc7997c479d66943f7c6cb",
+      "mime_type": "font/ttf",
+      "size": 165548,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/fonts/fontawesome5_brands.3b89dd103490708d19a95adcae52210e.ttf",
+      "path": "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/fonts/fontawesome5_brands.3b89dd103490708d19a95adcae52210e.ttf",
+      "sha": "3fa2d67cef22da5c3f3eb5730c6afbd6fecf0372",
+      "mime_type": "font/ttf",
+      "size": 134040,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/fonts/fontawesome5_regular.1f77739ca9ff2188b539c36f30ffa2be.ttf",
+      "path": "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/fonts/fontawesome5_regular.1f77739ca9ff2188b539c36f30ffa2be.ttf",
+      "sha": "7d849a3981a716e2ba4a84634bc57d0b8054a6a3",
+      "mime_type": "font/ttf",
+      "size": 33736,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/fonts/fontawesome5_solid.605ed7926cf39a2ad5ec2d1f9d391d3d.ttf",
+      "path": "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/fonts/fontawesome5_solid.605ed7926cf39a2ad5ec2d1f9d391d3d.ttf",
+      "sha": "c1b9fae262f42868c075ac865a8ab34920e20a2c",
+      "mime_type": "font/ttf",
+      "size": 202744,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/fonts/fontawesome6_brands.56c8d80832e37783f12c05db7c8849e2.ttf",
+      "path": "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/fonts/fontawesome6_brands.56c8d80832e37783f12c05db7c8849e2.ttf",
+      "sha": "7ce89c71d5a51ac65b159c71422783dd86529c66",
+      "mime_type": "font/ttf",
+      "size": 209376,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/fonts/fontawesome6_regular.370dd5af19f8364907b6e2c41f45dbbf.ttf",
+      "path": "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/fonts/fontawesome6_regular.370dd5af19f8364907b6e2c41f45dbbf.ttf",
+      "sha": "775e2ecfc18d22b177274453d4c014ca6be63208",
+      "mime_type": "font/ttf",
+      "size": 67976,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/fonts/fontawesome6_solid.adec7d6f310bc577f05e8fe06a5daccf.ttf",
+      "path": "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/fonts/fontawesome6_solid.adec7d6f310bc577f05e8fe06a5daccf.ttf",
+      "sha": "2b8e11389d98122399667cf64941eb58497dc128",
+      "mime_type": "font/ttf",
+      "size": 423676,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/fonts/fontisto.b49ae8ab2dbccb02c4d11caaacf09eab.ttf",
+      "path": "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/fonts/fontisto.b49ae8ab2dbccb02c4d11caaacf09eab.ttf",
+      "sha": "c090a3ec96a3f1bb9b615c2f3f204ce0dcdcdbc3",
+      "mime_type": "font/ttf",
+      "size": 313528,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/fonts/foundation.e20945d7c929279ef7a6f1db184a4470.ttf",
+      "path": "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/fonts/foundation.e20945d7c929279ef7a6f1db184a4470.ttf",
+      "sha": "4b2bce6c792493a4a5716b6fec2dbefe89492c3f",
+      "mime_type": "font/ttf",
+      "size": 56976,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/fonts/ionicons.b4eb097d35f44ed943676fd56f6bdc51.ttf",
+      "path": "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/fonts/ionicons.b4eb097d35f44ed943676fd56f6bdc51.ttf",
+      "sha": "3a656ee69b64ccb1e57f1721f7659b50c1fb56ef",
+      "mime_type": "font/ttf",
+      "size": 389724,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/fonts/materialcommunityicons.6e435534bd35da5fef04168860a9b8fa.ttf",
+      "path": "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/fonts/materialcommunityicons.6e435534bd35da5fef04168860a9b8fa.ttf",
+      "sha": "4f51a4dc75a68d3e57321c448efddea23c8a9db0",
+      "mime_type": "font/ttf",
+      "size": 1307660,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/fonts/materialicons.4e85bc9ebe07e0340c9c4fc2f6c38908.ttf",
+      "path": "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/fonts/materialicons.4e85bc9ebe07e0340c9c4fc2f6c38908.ttf",
+      "sha": "7e02c3f005532ff4d24148567c84089756a7848a",
+      "mime_type": "font/ttf",
+      "size": 356840,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/fonts/octicons.871378c6eab492a3e689a9385dc45a12.ttf",
+      "path": "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/fonts/octicons.871378c6eab492a3e689a9385dc45a12.ttf",
+      "sha": "167375c6fa7c693e17665f17e23733ad328d5406",
+      "mime_type": "font/ttf",
+      "size": 69436,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/fonts/simplelineicons.d2285965fe34b05465047401b8595dd0.ttf",
+      "path": "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/fonts/simplelineicons.d2285965fe34b05465047401b8595dd0.ttf",
+      "sha": "9ffb81a5a11112e292f2cc323e98486bad597599",
+      "mime_type": "font/ttf",
+      "size": 54056,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/fonts/zocial.1681f34aaca71b8dfb70756bca331eb2.ttf",
+      "path": "/assets/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/fonts/zocial.1681f34aaca71b8dfb70756bca331eb2.ttf",
+      "sha": "6a48a962b06cc3acbdfd61df0d9a34744eea5e8d",
+      "mime_type": "font/ttf",
+      "size": 25788,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/assets/assets/fonts/login-icons.9eae3b28c48f1378decb95ca9c4d26f1.ttf",
+      "path": "/assets/assets/fonts/login-icons.9eae3b28c48f1378decb95ca9c4d26f1.ttf",
+      "sha": "2f23998223e7ac2e9a2d61fae5d1e707535fd825",
+      "mime_type": "font/ttf",
+      "size": 4060,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/assets/assets/images/login-master-brand.f84c5bdc07b5c7ee1af0c6d4ad0dd8b1.webp",
+      "path": "/assets/assets/images/login-master-brand.f84c5bdc07b5c7ee1af0c6d4ad0dd8b1.webp",
+      "sha": "026adabdefa8bb262d069cf9377c9d79cc37dc3e",
+      "mime_type": "image/webp",
+      "size": 8322,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/assets/assets/images/login-master-desktop.c1d3401d8c8a621349cd518d92a2ec79.webp",
+      "path": "/assets/assets/images/login-master-desktop.c1d3401d8c8a621349cd518d92a2ec79.webp",
+      "sha": "284f43c15c8a39e6f9300d8ba63ba5aa084234e0",
+      "mime_type": "image/webp",
+      "size": 108390,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/assets/assets/images/login-master-mobile.ba4b4c9bfe8c4e12d9e07e48b5dca6d2.webp",
+      "path": "/assets/assets/images/login-master-mobile.ba4b4c9bfe8c4e12d9e07e48b5dca6d2.webp",
+      "sha": "08c3a3a0675cc4d54c132e736bd3a52032df4cff",
+      "mime_type": "image/webp",
+      "size": 41274,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/assets/assets/sounds/sale-success.7647bcae473b78f99bee6f07651f0fcd.wav",
+      "path": "/assets/assets/sounds/sale-success.7647bcae473b78f99bee6f07651f0fcd.wav",
+      "sha": "dd480bd3bc78621076b7940997ffae99f4dd77ff",
+      "mime_type": "audio/x-wav",
+      "size": 8864,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/ai/tasks/index.html",
+      "path": "/ai/tasks/index.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/ai/tasks/[id].html",
+      "path": "/ai/tasks/[id].html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/capital-recovery/history.html",
+      "path": "/(tabs)/capital-recovery/history.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/capital-recovery/workspace.html",
+      "path": "/(tabs)/capital-recovery/workspace.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/club/create.html",
+      "path": "/(tabs)/club/create.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/club/index.html",
+      "path": "/(tabs)/club/index.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/club/profile.html",
+      "path": "/(tabs)/club/profile.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/club/saved.html",
+      "path": "/(tabs)/club/saved.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/club/store_profile_edit.html",
+      "path": "/(tabs)/club/store_profile_edit.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/club/[postid].html",
+      "path": "/(tabs)/club/[postid].html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/credit/cleared.html",
+      "path": "/(tabs)/credit/cleared.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/credit/index.html",
+      "path": "/(tabs)/credit/index.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/credit/payment-receipt.html",
+      "path": "/(tabs)/credit/payment-receipt.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/credit/[creditid].html",
+      "path": "/(tabs)/credit/[creditid].html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/field-procurement/history.html",
+      "path": "/(tabs)/field-procurement/history.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/field-procurement/workspace.html",
+      "path": "/(tabs)/field-procurement/workspace.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/sales/checkout.html",
+      "path": "/(tabs)/sales/checkout.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/sales/edit-receipt.html",
+      "path": "/(tabs)/sales/edit-receipt.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/sales/expenses.html",
+      "path": "/(tabs)/sales/expenses.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/sales/history.html",
+      "path": "/(tabs)/sales/history.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/sales/index.html",
+      "path": "/(tabs)/sales/index.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/sales/offline-receipt.html",
+      "path": "/(tabs)/sales/offline-receipt.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/sales/profit.html",
+      "path": "/(tabs)/sales/profit.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/sales/proforma.html",
+      "path": "/(tabs)/sales/proforma.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/sales/receipt.html",
+      "path": "/(tabs)/sales/receipt.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/sales/scan.html",
+      "path": "/(tabs)/sales/scan.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/sales/shift-opening.html",
+      "path": "/(tabs)/sales/shift-opening.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/sales/[handoffid].html",
+      "path": "/(tabs)/sales/[handoffid].html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/settings/account-privacy.html",
+      "path": "/(tabs)/settings/account-privacy.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/settings/business-statement.html",
+      "path": "/(tabs)/settings/business-statement.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/settings/cashier-closing.html",
+      "path": "/(tabs)/settings/cashier-closing.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/settings/index.html",
+      "path": "/(tabs)/settings/index.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/settings/meeting-room-create.html",
+      "path": "/(tabs)/settings/meeting-room-create.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/settings/meeting-room-detail.html",
+      "path": "/(tabs)/settings/meeting-room-detail.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/settings/meeting-room-invites.html",
+      "path": "/(tabs)/settings/meeting-room-invites.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/settings/meeting-room-list.html",
+      "path": "/(tabs)/settings/meeting-room-list.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/settings/meeting-room.html",
+      "path": "/(tabs)/settings/meeting-room.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/settings/organization.html",
+      "path": "/(tabs)/settings/organization.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/settings/regional.html",
+      "path": "/(tabs)/settings/regional.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/settings/subscription-requests.html",
+      "path": "/(tabs)/settings/subscription-requests.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/settings/subscription.html",
+      "path": "/(tabs)/settings/subscription.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/staff/add.html",
+      "path": "/(tabs)/staff/add.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/staff/assign.html",
+      "path": "/(tabs)/staff/assign.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/staff/cash-out.html",
+      "path": "/(tabs)/staff/cash-out.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/staff/commission-history.html",
+      "path": "/(tabs)/staff/commission-history.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/staff/commission.html",
+      "path": "/(tabs)/staff/commission.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/staff/index.html",
+      "path": "/(tabs)/staff/index.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/staff/my-sales.html",
+      "path": "/(tabs)/staff/my-sales.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/staff/payout-profile.html",
+      "path": "/(tabs)/staff/payout-profile.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/stores/add.html",
+      "path": "/(tabs)/stores/add.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/stores/adjust.html",
+      "path": "/(tabs)/stores/adjust.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/stores/closing-history.html",
+      "path": "/(tabs)/stores/closing-history.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/stores/daily-closing.html",
+      "path": "/(tabs)/stores/daily-closing.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/stores/history.html",
+      "path": "/(tabs)/stores/history.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/stores/index.html",
+      "path": "/(tabs)/stores/index.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/stores/inventory.html",
+      "path": "/(tabs)/stores/inventory.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/stores/items-overview.html",
+      "path": "/(tabs)/stores/items-overview.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/stores/movement.html",
+      "path": "/(tabs)/stores/movement.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/stores/price-catalog.html",
+      "path": "/(tabs)/stores/price-catalog.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/stores/receipt-history.html",
+      "path": "/(tabs)/stores/receipt-history.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/stores/restock.html",
+      "path": "/(tabs)/stores/restock.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/stores/scan.html",
+      "path": "/(tabs)/stores/scan.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/stores/store-products.html",
+      "path": "/(tabs)/stores/store-products.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/stores/inventory/low-stock-alerts.html",
+      "path": "/(tabs)/stores/inventory/low-stock-alerts.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/stores/inventory/low-stock.html",
+      "path": "/(tabs)/stores/inventory/low-stock.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/club/inbox/index.html",
+      "path": "/(tabs)/club/inbox/index.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/club/inbox/[threadid].html",
+      "path": "/(tabs)/club/inbox/[threadid].html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/club/orders/index.html",
+      "path": "/(tabs)/club/orders/index.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/club/orders/[orderid].html",
+      "path": "/(tabs)/club/orders/[orderid].html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/club/store/[storeid].html",
+      "path": "/(tabs)/club/store/[storeid].html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/club/[postid]/comments.html",
+      "path": "/(tabs)/club/[postid]/comments.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/club/[postid]/edit.html",
+      "path": "/(tabs)/club/[postid]/edit.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/club/store/orders/[orderid].html",
+      "path": "/(tabs)/club/store/orders/[orderid].html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/club/store/[storeid]/product.html",
+      "path": "/(tabs)/club/store/[storeid]/product.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/club/store/[storeid]/_order.html",
+      "path": "/(tabs)/club/store/[storeid]/_order.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/club/orders/create/index.html",
+      "path": "/(tabs)/club/orders/create/index.html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/club/orders/customer/[orderid].html",
+      "path": "/(tabs)/club/orders/customer/[orderid].html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/club/orders/store/[storeid].html",
+      "path": "/(tabs)/club/orders/store/[storeid].html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    },
+    {
+      "id": "/(tabs)/club/inbox/store/[storeid].html",
+      "path": "/(tabs)/club/inbox/store/[storeid].html",
+      "sha": "57eca15c714c0c86b722ec58923ba0945604d00a",
+      "mime_type": "text/html",
+      "size": 18259,
+      "site_id": "40a9e840-5437-480e-bc63-8391d6d0ef24",
+      "deploy_id": "6ad49c64c2acd6e0352f242f"
+    }
+  ]
+}

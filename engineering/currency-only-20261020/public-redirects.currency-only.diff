@@ -1,0 +1,9 @@
+--- a/public/_redirects
++++ b/public/_redirects
+@@ -2,4 +2,6 @@
+ https://regal-sunburst-e3cee8.netlify.app/* https://app.zetra.tz/:splat 302!
+ /verified.html /login 302!
+ /email-verified /login 302!
++/api/reference-fx/bot https://bot.go.tz/ExchangeRate/excRates?lang=en 200!
++/api/reference-fx/ecb https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml 200!
+ /* /index.html 200

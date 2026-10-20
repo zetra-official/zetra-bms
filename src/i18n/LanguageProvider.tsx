@@ -1,3 +1,4 @@
+import {isSelectableCurrency} from '../currency/metadata';
 import React, {createContext,useContext,useEffect,useMemo,useRef,useState} from 'react';
 import {Pressable,Text,View} from 'react-native';
 import {kv} from '../storage/kv';
@@ -10,8 +11,8 @@ export function LanguageProvider({children}:{children:React.ReactNode}) {
  const [language,setValue]=useState<Language>('en');const changed=useRef(false);
  const [displayCurrency,setDisplayValue]=useState<string|null>(null);const currencyChanged=useRef(false);
  useEffect(()=>{let alive=true;void kv.getString(KEY).then(value=>{if(alive&&!changed.current)setValue(resolveLanguage(value))});return()=>{alive=false}},[]);
- useEffect(()=>{let alive=true;void kv.getString(DISPLAY_KEY).then(value=>{if(alive&&!currencyChanged.current&&value&&/^[A-Z]{3}$/.test(value))setDisplayValue(value)});return()=>{alive=false}},[]);
- const state=useMemo<State>(()=>({language,displayCurrency,t:key=>translate(language,key),setLanguage:next=>{changed.current=true;const validated=resolveLanguage(next);setValue(validated);void kv.setString(KEY,validated)},setDisplayCurrency:next=>{const validated=next?.trim().toUpperCase()||null;if(validated&&!/^[A-Z]{3}$/.test(validated))return;currencyChanged.current=true;setDisplayValue(validated);void kv.setString(DISPLAY_KEY,validated)}}),[language,displayCurrency]);
+ useEffect(()=>{let alive=true;void kv.getString(DISPLAY_KEY).then(value=>{if(alive&&!currencyChanged.current&&value&&isSelectableCurrency(value))setDisplayValue(value)});return()=>{alive=false}},[]);
+ const state=useMemo<State>(()=>({language,displayCurrency,t:key=>translate(language,key),setLanguage:next=>{changed.current=true;const validated=resolveLanguage(next);setValue(validated);void kv.setString(KEY,validated)},setDisplayCurrency:next=>{const validated=next?.trim().toUpperCase()||null;if(validated&&!isSelectableCurrency(validated))return;currencyChanged.current=true;setDisplayValue(validated);void kv.setString(DISPLAY_KEY,validated)}}),[language,displayCurrency]);
  return <Context.Provider value={state}><View style={{flex:1,direction:direction(language)}}>{children}</View></Context.Provider>;
 }
 export function useLanguage(){return useContext(Context)}

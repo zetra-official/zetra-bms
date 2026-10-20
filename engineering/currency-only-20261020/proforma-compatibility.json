@@ -1,0 +1,14 @@
+[
+  {
+    "platform": "web",
+    "cases": 644,
+    "status": "PASS",
+    "scope": "Original manual Proforma preview precision and amounts unchanged; no financial operation"
+  },
+  {
+    "platform": "android",
+    "cases": 644,
+    "status": "PASS",
+    "scope": "Original manual Proforma preview precision and amounts unchanged; no financial operation"
+  }
+]

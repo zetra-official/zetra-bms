@@ -1,0 +1,20 @@
+TAP version 13
+# Subtest: official provider requests omit credentials and page/tenant referrers
+ok 1 - official provider requests omit credentials and page/tenant referrers
+  ---
+  duration_ms: 10.2612
+  ...
+# Subtest: redirected or oversized data is unavailable without parsing a fake rate
+ok 2 - redirected or oversized data is unavailable without parsing a fake rate
+  ---
+  duration_ms: 0.5672
+  ...
+1..2
+# tests 2
+# suites 0
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 176.6987

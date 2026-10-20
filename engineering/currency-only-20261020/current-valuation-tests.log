@@ -1,0 +1,80 @@
+TAP version 13
+# Subtest: official BoT TZS250000 converts exactly at published mean, preserving input
+ok 1 - official BoT TZS250000 converts exactly at published mean, preserving input
+  ---
+  duration_ms: 1.553
+  ...
+# Subtest: BoT supported cross-rates use one dated snapshot and retain precision
+ok 2 - BoT supported cross-rates use one dated snapshot and retain precision
+  ---
+  duration_ms: 0.2593
+  ...
+# Subtest: obsolete feed units are excluded from selectable rates
+ok 3 - obsolete feed units are excluded from selectable rates
+  ---
+  duration_ms: 0.1483
+  ...
+# Subtest: stale, future and missing rates never invent conversion
+ok 4 - stale, future and missing rates never invent conversion
+  ---
+  duration_ms: 0.1714
+  ...
+# Subtest: unknown historical units and mixed tenants fail closed
+ok 5 - unknown historical units and mixed tenants fail closed
+  ---
+  duration_ms: 0.3205
+  ...
+# Subtest: tampering, mixed dates, duplicate rows and invalid spreads rejected
+ok 6 - tampering, mixed dates, duplicate rows and invalid spreads rejected
+  ---
+  duration_ms: 0.3763
+  ...
+# Subtest: exact amounts beyond binary integer precision, target decimals and negative rounding
+ok 7 - exact amounts beyond binary integer precision, target decimals and negative rounding
+  ---
+  duration_ms: 0.337
+  ...
+# Subtest: other pairs require ECB, never an unapproved BoT bridge
+ok 8 - other pairs require ECB, never an unapproved BoT bridge
+  ---
+  duration_ms: 0.1033
+  ...
+# Subtest: ECB other-pair cross rate uses exact same-snapshot USD/EUR ratio
+ok 9 - ECB other-pair cross rate uses exact same-snapshot USD/EUR ratio
+  ---
+  duration_ms: 0.2539
+  ...
+# Subtest: retrieval cannot silently renew an expired publication or survive 24h without refresh
+ok 10 - retrieval cannot silently renew an expired publication or survive 24h without refresh
+  ---
+  duration_ms: 0.4042
+  ...
+# Subtest: global catalog extends beyond acceptance currencies and preserves ISO precision
+ok 11 - global catalog extends beyond acceptance currencies and preserves ISO precision
+  ---
+  duration_ms: 0.3099
+  ...
+# Subtest: valuation PDF preserves original and source evidence, escapes labels, and rejects mixed tenants
+ok 12 - valuation PDF preserves original and source evidence, escapes labels, and rejects mixed tenants
+  ---
+  duration_ms: 6.2164
+  ...
+# Subtest: conversion readers never expose Owner-only totals to other roles
+ok 13 - conversion readers never expose Owner-only totals to other roles
+  ---
+  duration_ms: 0.8772
+  ...
+# Subtest: legacy numeric aggregation tails are unavailable instead of invented original decimals
+ok 14 - legacy numeric aggregation tails are unavailable instead of invented original decimals
+  ---
+  duration_ms: 0.2352
+  ...
+1..14
+# tests 14
+# suites 0
+# pass 14
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 389.5501

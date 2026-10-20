@@ -1,4 +1,5 @@
-import {loadReferenceRates,type ReferenceRates} from '../services/referenceFx';
+import {type ReferenceRates} from '../services/referenceFx';
+import {loadCurrentReferenceRates} from '../services/currentFx';
 export type RateState={evidence:ReferenceRates|null;loading:boolean;error:boolean};
 /** Public reference data only; no tenant amounts, sessions or financial records.
  * Deduplicates simultaneous requests. Never substitutes 1 or renews stale dates.
@@ -7,7 +8,7 @@ export class ReferenceRateStore{
  private state:RateState={evidence:null,loading:false,error:false};
  private pending:Promise<void>|null=null;
  private listeners=new Set<()=>void>();
- constructor(private load:()=>Promise<ReferenceRates>=loadReferenceRates){}
+ constructor(private load:()=>Promise<ReferenceRates>=loadCurrentReferenceRates){}
  getSnapshot=()=>this.state;
  subscribe=(listener:()=>void)=>{this.listeners.add(listener);return()=>{this.listeners.delete(listener)}};
  private publish(next:RateState){this.state=next;for(const listener of this.listeners)listener()}
@@ -19,3 +20,5 @@ export class ReferenceRateStore{
  }
 }
 export const referenceRateStore=new ReferenceRateStore();
+
+export const ecbReferenceRateStore=new ReferenceRateStore(()=>loadCurrentReferenceRates('ECB_REFERENCE'));
