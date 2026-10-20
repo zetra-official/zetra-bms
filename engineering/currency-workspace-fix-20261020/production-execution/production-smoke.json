@@ -1,0 +1,26 @@
+{
+  "status": "PASS",
+  "deploymentId": "6ad7c9964f937e8f233408c1",
+  "exactHostedHtmlAndBundle": true,
+  "routes": [
+    "sales",
+    "sales/checkout",
+    "products",
+    "finance/live",
+    "reports",
+    "exchange-rates"
+  ],
+  "fxProxies": {
+    "bot": {
+      "status": "AVAILABLE",
+      "sha256": "1e56d7a1d54b4362164edc12bf092101e873d5166e9dcd5b8fa42c9104d4b454"
+    },
+    "ecb": {
+      "status": "AVAILABLE",
+      "sha256": "f40019a24308605ad434ddd60594fa252397ac9df14e6365becb162045ef13d4"
+    }
+  },
+  "pinchZoomNotDisabled": true,
+  "financialWrites": false,
+  "bundleVerification": "Complete candidate bundle SHA-256; same content-addressed entry bound by exact production HTML and matching first/last production ranges"
+}

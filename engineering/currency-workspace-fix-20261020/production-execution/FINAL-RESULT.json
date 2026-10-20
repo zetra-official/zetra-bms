@@ -1,0 +1,55 @@
+{
+  "status": "DEPLOYMENT SUCCESS",
+  "releaseId": "ZETRA-CURRENCY-AUTH-WORKSPACE-RECOVERY-20261020",
+  "sourceCheckpoint": "553ac83c6dec01edf34538485e22e26bc6ae2592",
+  "approvedPackageSHA256": "a234df336ad54e777ea95d5acf9ff42bcc96c2ed683715f71dd8751d52f9f0fc",
+  "checkedAt": "2026-10-20T20:25:54.427226+00:00",
+  "web": {
+    "status": "SUCCESS",
+    "deploymentId": "6ad7c9964f937e8f233408c1",
+    "domain": "https://app.zetra.tz",
+    "rollback": "6ad76cf47622bc0a29e1244f",
+    "sql": [],
+    "androidPublished": false
+  },
+  "webAuthenticatedSmoke": "PASS",
+  "fxLiveBoTAndECB": "PASS",
+  "fourDayAnd24HourPolicy": "PASS",
+  "originalTZSCompatibility": "PASS",
+  "android": {
+    "status": "SUCCESS",
+    "channel": "production",
+    "runtime": "1.0.0",
+    "updateId": "01a15afc-311a-750a-9814-25fa1fe68743",
+    "group": "a22b1c60-6970-4912-887c-72bf70849579",
+    "rollbackGroup": "6f0e3704-2774-44c8-afc5-34216997c808",
+    "physicalDevice": "NOT TESTED"
+  },
+  "otaDeliveredArtifactSHA256": "c85f448bd73a4e42d4b362eccff662e05579fea5d11c483e37bed5a630fe50aa",
+  "physicalAndroid": "NOT TESTED",
+  "physicalIPhoneSafari": "NOT TESTED",
+  "genuineCrossOrganization": "NOT TESTED; one accessible org, genuine re-selection PASS and deferred identity isolation tests PASS",
+  "browserProcessRestart": "NOT TESTED; new document, protected refresh and session resume PASS",
+  "rollback": {
+    "web": {
+      "status": "VERIFIED",
+      "files": 272,
+      "deploymentId": "6ad76cf47622bc0a29e1244f",
+      "updateId": null,
+      "group": null,
+      "runtime": null
+    },
+    "android": {
+      "status": "VERIFIED",
+      "files": 48,
+      "deploymentId": null,
+      "updateId": "01a1592b-2ee1-7ed9-ac55-fb2b9185776c",
+      "group": "6f0e3704-2774-44c8-afc5-34216997c808",
+      "runtime": "1.0.0"
+    }
+  },
+  "sql": [],
+  "financialWrites": false,
+  "financialActivation": false,
+  "unrelatedSourcePublished": false
+}

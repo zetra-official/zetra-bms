@@ -1,0 +1,12 @@
+{
+  "channel": "production",
+  "latestAndroid": [
+    {
+      "id": "01a15afc-311a-750a-9814-25fa1fe68743",
+      "group": "a22b1c60-6970-4912-887c-72bf70849579",
+      "runtimeVersion": "1.0.0",
+      "platform": "android",
+      "createdAt": "2026-10-20T20:23:59.514Z"
+    }
+  ]
+}

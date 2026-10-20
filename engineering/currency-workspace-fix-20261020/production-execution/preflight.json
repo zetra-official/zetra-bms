@@ -1,0 +1,18 @@
+{
+  "status": "PASS",
+  "package": "ZETRA-CURRENCY-AUTH-WORKSPACE-RECOVERY-20261020",
+  "webBaseline": "6ad76cf47622bc0a29e1244f",
+  "webRollbackReady": true,
+  "sourceFiles": [
+    "app/(auth)/login.tsx",
+    "app/(tabs)/_layout.tsx",
+    "app/_layout.tsx",
+    "scripts/package-web-bootstrap.py",
+    "scripts/web-bootstrap-loader.js",
+    "src/context/OrgContext.tsx",
+    "src/supabase/sessionRecovery.ts"
+  ],
+  "approvedWebScope": true,
+  "sql": [],
+  "androidPublished": false
+}

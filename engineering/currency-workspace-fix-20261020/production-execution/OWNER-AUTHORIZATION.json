@@ -1,0 +1,9 @@
+{
+  "ownerDirective": "FINAL RELEASE EXECUTION",
+  "checkpoint": "553ac83c6dec01edf34538485e22e26bc6ae2592",
+  "package": "ZETRA-CURRENCY-AUTH-WORKSPACE-RECOVERY-20261020",
+  "approvalSHA256": "a234df336ad54e777ea95d5acf9ff42bcc96c2ed683715f71dd8751d52f9f0fc",
+  "webThenAndroidOnlyAfterWebPass": true,
+  "sql": [],
+  "financialWrites": false
+}
