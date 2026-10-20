@@ -9,6 +9,8 @@ files=['REPLACEMENT-APPROVAL.md','SEALED-ARTIFACTS.json','ISOLATION-PROOF.json',
 if (E/'ANDROID-DASHBOARD-ACCEPTANCE.json').exists():files.append('ANDROID-DASHBOARD-ACCEPTANCE.json')
 for optional in ['CURRENT-TARGETS-READONLY.json','verify_existing_targets_readonly.py','RESUME.md']:
  if (E/optional).exists():files.append(optional)
+for optional in ['native-dashboard-entry.png','run_native_dashboard_acceptance.py','native_expected_values.cjs','android_local_ui.py']:
+ if (E/optional).exists():files.append(optional)
 artifacts=read(E/'SEALED-ARTIFACTS.json')
 for platform,m in artifacts.items():
  root=E/('release-artifact-'+platform)

@@ -1,6 +1,6 @@
 {
   "id": "ZETRA-CURRENCY-DISPLAY-DASHBOARD-FIX-20261020",
-  "status": "EXACT_BLOCKER_ANDROID_PRIVATE_RUNTIME_ACCEPTANCE",
+  "status": "READY_FOR_OWNER_REPLACEMENT_APPROVAL",
   "replaces": "ZETRA-CURRENCY-DISPLAY-20261020",
   "recoveryCheckpoint": "748c686a",
   "scopeDelta": [
@@ -14,8 +14,51 @@
   "productionPublicationExecuted": false,
   "webAcceptance": "PASS",
   "androidAcceptance": {
-    "status": "PENDING_PRIVATE_ANDROID_SESSION",
-    "reason": "Actual complete local Dashboard must be authenticated and observed; no physical-device PASS inferred from builds"
+    "status": "PASS",
+    "checkedAt": "2026-10-20T11:28:41.352056+00:00",
+    "runtime": "Actual complete local replacement app in Expo Go, Samsung SM-S938U, USB; not installed candidate OTA",
+    "package": "host.exp.exponent",
+    "source": "release-source-android final guarded Dashboard",
+    "model": "SM-S938U",
+    "device": "R5CY23FMCCD",
+    "dashboardEntryVisible": true,
+    "allFourCanonicalTotals": true,
+    "results": [
+      {
+        "currency": "USD",
+        "allFourTotals": "PASS",
+        "originalPreserved": true,
+        "exactQuoteAndIsoPrecision": "PASS"
+      },
+      {
+        "currency": "KES",
+        "allFourTotals": "PASS",
+        "originalPreserved": true,
+        "exactQuoteAndIsoPrecision": "PASS"
+      },
+      {
+        "currency": "UGX",
+        "allFourTotals": "PASS",
+        "originalPreserved": true,
+        "exactQuoteAndIsoPrecision": "PASS"
+      },
+      {
+        "currency": "EUR",
+        "allFourTotals": "PASS",
+        "originalPreserved": true,
+        "exactQuoteAndIsoPrecision": "PASS"
+      }
+    ],
+    "sourceEvidence": "BoT reference date 2026-10-20; actual native HTTPS retrieval metadata observed",
+    "originalTzsRestoration": "PASS",
+    "financialWrites": false,
+    "otaPublication": false,
+    "installedCandidateAcceptanceClaimed": false,
+    "privateEvidenceSha256": {
+      "native-dashboard-usd.private.png": "8cd192aa7d5727480eed483b08d2c6f459d4353e20f10df8e4dd35bd82f44654",
+      "native-dashboard-values.private.json": "c19ccbd640ff529fd56a1b4a3c7be42b3494e0a81b6ee37bd8e01683897f6772"
+    },
+    "entryScreenshotSha256": "94285ecc0cbf0601cbc7142637ff8cce1f0fed4b061e7b2161e6f99d5a9c4270"
   },
   "rollback": {
     "webDeployment": "6ad49c64c2acd6e0352f242f",
@@ -24,7 +67,7 @@
     "runtime": "1.0.0"
   },
   "sha256": {
-    "REPLACEMENT-APPROVAL.md": "fab6b01f3ac297a1a9ced8403c863536aa75c93517a139d75bd1782d48e3c37b",
+    "REPLACEMENT-APPROVAL.md": "03bd32f6265816dc1c75b4962505295496952d0f89e47e298fdfd00edfd332d3",
     "SEALED-ARTIFACTS.json": "1471e9e79b61d1fe2105b34e4ea6aff46677f7f66cb3ad372f0d1cf241e2092a",
     "ISOLATION-PROOF.json": "9c56fbaf455e55d872d791c33505a21c5350d0046c592f429d689cbfa9b42d0f",
     "isolated-web-source-manifest.json": "5ba4cd9fc65c4813b0221ea51d6a51aeca9cbd2cd9442f41dcf12ca5269423fd",
@@ -41,9 +84,14 @@
     "prepare_dashboard_fix.py": "712d08c7600e1f89615534343288c63bb878e4462d4ab1004d50f2b7a5461599",
     "build_isolated.cjs": "0e752e84a0482a74a7d7c15a3b28b4b6158328708e9f2d2359ad6fe3ad660ba2",
     "seal_dashboard_fix.py": "2ecb52df5e07c367ed0d70590d5260150cb9eda4e67c85c77045ed25763d6453",
-    "create_replacement_package.py": "1648705199bbbd8c615707ef7a48d8935d7375a1c9f4a78631be3bfee0c3ae44",
+    "create_replacement_package.py": "333ffe1446780005dd2db6b24ee862bffc0df997c2fd350dd09fc13746ec0b5a",
+    "ANDROID-DASHBOARD-ACCEPTANCE.json": "8c3527bbddf980e254f0e527f79cff524c63179f4da0078b748ad0a6b5fca00e",
     "CURRENT-TARGETS-READONLY.json": "572dae54fb49c07e6a35ac4863fae6ead3aa1248868b38523cd383420f4b883c",
     "verify_existing_targets_readonly.py": "939b638eee4890947dd394d99ddc4e76814a61da7bef6197500017000ee5f460",
-    "RESUME.md": "92559c1c55c6199a7a41ca4d78cc53fdd6300d3b4ab154bd4a34b764121b548a"
+    "RESUME.md": "09db18e5b5365ab78eb4f8cd7a5fd9adbd0207a952cff5a9cd06902b7ff9f770",
+    "native-dashboard-entry.png": "94285ecc0cbf0601cbc7142637ff8cce1f0fed4b061e7b2161e6f99d5a9c4270",
+    "run_native_dashboard_acceptance.py": "c043e492b4fd72f712dea4545050190413323c05f3a08f5e5edc5bb455c87fd7",
+    "native_expected_values.cjs": "2831bd9616ba5e50175c3636b4e59ca9bcc3b683a26b3691cdd47ddf162b2e10",
+    "android_local_ui.py": "6ad5a32743a0a510e2240a8f0b2a172d264439139a749c10f952202797239014"
   }
 }

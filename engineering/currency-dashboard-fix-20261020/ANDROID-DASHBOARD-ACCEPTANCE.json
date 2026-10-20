@@ -1,0 +1,47 @@
+{
+  "status": "PASS",
+  "checkedAt": "2026-10-20T11:28:41.352056+00:00",
+  "runtime": "Actual complete local replacement app in Expo Go, Samsung SM-S938U, USB; not installed candidate OTA",
+  "package": "host.exp.exponent",
+  "source": "release-source-android final guarded Dashboard",
+  "model": "SM-S938U",
+  "device": "R5CY23FMCCD",
+  "dashboardEntryVisible": true,
+  "allFourCanonicalTotals": true,
+  "results": [
+    {
+      "currency": "USD",
+      "allFourTotals": "PASS",
+      "originalPreserved": true,
+      "exactQuoteAndIsoPrecision": "PASS"
+    },
+    {
+      "currency": "KES",
+      "allFourTotals": "PASS",
+      "originalPreserved": true,
+      "exactQuoteAndIsoPrecision": "PASS"
+    },
+    {
+      "currency": "UGX",
+      "allFourTotals": "PASS",
+      "originalPreserved": true,
+      "exactQuoteAndIsoPrecision": "PASS"
+    },
+    {
+      "currency": "EUR",
+      "allFourTotals": "PASS",
+      "originalPreserved": true,
+      "exactQuoteAndIsoPrecision": "PASS"
+    }
+  ],
+  "sourceEvidence": "BoT reference date 2026-10-20; actual native HTTPS retrieval metadata observed",
+  "originalTzsRestoration": "PASS",
+  "financialWrites": false,
+  "otaPublication": false,
+  "installedCandidateAcceptanceClaimed": false,
+  "privateEvidenceSha256": {
+    "native-dashboard-usd.private.png": "8cd192aa7d5727480eed483b08d2c6f459d4353e20f10df8e4dd35bd82f44654",
+    "native-dashboard-values.private.json": "c19ccbd640ff529fd56a1b4a3c7be42b3494e0a81b6ee37bd8e01683897f6772"
+  },
+  "entryScreenshotSha256": "94285ecc0cbf0601cbc7142637ff8cce1f0fed4b061e7b2161e6f99d5a9c4270"
+}
