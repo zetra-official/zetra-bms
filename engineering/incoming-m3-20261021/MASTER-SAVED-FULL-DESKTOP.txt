@@ -1,0 +1,3 @@
+Browser tab: 7, Title: "ZETRA BMS", URL: "http://127.0.0.1:55780/stocks/inbound".
+There has been no change in the accessibility tree.
+The focused UI element is 0 AXWebArea ZETRA BMS, URL: 127.0.0.1:55780/stocks/inbound

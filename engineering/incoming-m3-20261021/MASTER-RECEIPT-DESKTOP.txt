@@ -1,0 +1,17 @@
+Browser tab: 7, Title: "ZETRA BMS", URL: "http://127.0.0.1:55780/stocks/receiving-receipt?eventId=96ed5473-1368-4454-aca0-9fe72280aed9".
+1 AXWebArea ZETRA BMS, URL: 127.0.0.1:55780/stocks/receiving-receipt?eventId=96ed5473-1368-4454-aca0-9fe72280aed9
+	2 container
+		3 text Consolidated Receiving Receipt Receipt reference :  RCV-0D2500C4D57840BE8910D402A97C0A73 Organization :  MASTER M3 SYNTHETIC Store :  MASTER Precision Registered supplier (optional for non-credit receipt) :  No supplier selected Receiving operator :  21000000-0000-4000-8000-000000000001 Date and time :  2026-10-21T20:49:13.368403+03:00 Product-line count :  1
+		4 container
+			5 text 1 .  MASTER 商品 منتج 2  ·  MASTER-2  ·  MASTER-BAR-2
+		6 container
+			7 text Quantity (whole units) :  12 tablet
+		8 container
+			9 text 2 BOX  ×  6.000000 tablet
+		10 container
+			11 text Acquisition unit cost (TZS) :  500  /  6000  TZS
+		12 text Total acquisition value (TZS) :  6000  TZS
+		13 button Print / Share PDF
+			14 text Print / Share PDF
+
+The focused UI element is 1 AXWebArea ZETRA BMS, URL: 127.0.0.1:55780/stocks/receiving-receipt?eventId=96ed5473-1368-4454-aca0-9fe72280aed9

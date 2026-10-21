@@ -1,0 +1,41 @@
+{
+  "localOnly": true,
+  "genuineAuth": true,
+  "desktopWeb": "PASS",
+  "bulkPrecisionDraftReloadAndImmediateReceipt": "PASS",
+  "finalSavedPartialAndFullHeaderAndQuantities": "PASS",
+  "finalSavedUnitReceipt": "PASS",
+  "staffPersonalTotalsAndWorkspace": "PASS",
+  "mobileTabletActualViewport": "NOT TESTED \u2014 override did not change actual 1280px DOM width",
+  "physicalAndroid": "NOT TESTED",
+  "iPhone": "NOT TESTED",
+  "nativePrintShare": "NOT TESTED",
+  "nativeExport": "PASS \u2014 not physical-device acceptance",
+  "screenshots": {
+    "MASTER-RECEIPT-DESKTOP.png": {
+      "width": 65536,
+      "height": 4292542531,
+      "sha256": "53cd5f5c4e9af920ec8b118100edc205afb5b7bf36dbceb5d732c7f166a07f44"
+    },
+    "MASTER-STAFF-DESKTOP.png": {
+      "width": 65536,
+      "height": 4292542531,
+      "sha256": "833b777b451aced3b3cc7f504f5de353d5ea3659945d38b22c2ceea4eabbac91"
+    },
+    "MASTER-SAVED-PARTIAL-DESKTOP.png": {
+      "width": 65536,
+      "height": 4292542531,
+      "sha256": "71b4a1dc647767e0beeaa628f206d3f3520c778abede4c5736621470ee6f751c"
+    },
+    "MASTER-SAVED-FULL-DESKTOP.png": {
+      "width": 65536,
+      "height": 4292542531,
+      "sha256": "b0a53db506903f6564886c0ff5c7dd6086d834d911d2c8fb2da0cbd02cf2e5b8"
+    },
+    "MASTER-SAVED-RECEIPT-DESKTOP.png": {
+      "width": 65536,
+      "height": 4292542531,
+      "sha256": "d8e3f3d26bc30eb2769a646eb84384d9734e21d80ac331790da41d525cfce3f8"
+    }
+  }
+}
