@@ -1,0 +1,42 @@
+{
+  "status": "DEPLOYMENT SUCCESS",
+  "release": "ZETRA-COMBINED-M3-PRODUCTS-COMPAT-20261022",
+  "sourceCommit": "d67c5659472974af02a682655ccc8cf46b4cb91d",
+  "verifiedAt": "2026-10-21T21:40:48.300632+00:00",
+  "web": {
+    "status": "PASS",
+    "publishedDeployment": "6ad928b824a83b6bceb2f0fe",
+    "rollbackDeployment": "6ad7c9964f937e8f233408c1",
+    "rollbackReady": true
+  },
+  "android": {
+    "status": "SUCCESS",
+    "channel": "production",
+    "runtime": "1.0.0",
+    "updateId": "01a16066-5471-7f86-acbf-570665e39218",
+    "group": "60877bc5-2219-4da5-b573-c6be21b4cb00",
+    "rollbackGroup": "a22b1c60-6970-4912-887c-72bf70849579",
+    "physicalDevice": "NOT TESTED"
+  },
+  "otaPayload": {
+    "status": "PASS",
+    "updateId": "01a16066-5471-7f86-acbf-570665e39218",
+    "group": "60877bc5-2219-4da5-b573-c6be21b4cb00",
+    "runtimeVersion": "1.0.0",
+    "channel": "production",
+    "expectedBundleSha256": "94ba47c3a972e754ea692cec532aae5f69af03ff1671539bf8423c33a13e57e9",
+    "deliveredBundleSha256": "94ba47c3a972e754ea692cec532aae5f69af03ff1671539bf8423c33a13e57e9",
+    "uniqueAssetsVerified": 46,
+    "financialWrites": false,
+    "physicalDevice": "NOT TESTED"
+  },
+  "protectedRootFilesUnchanged": 32,
+  "customerFinancialPostings": false,
+  "sourceAndArtifactIntegrity": "PASS",
+  "physicalDeviceAcceptance": "NOT TESTED",
+  "productionStaffSession": "NOT TESTED; local genuine Staff acceptance and deployed narrow RPC definition/ACL verified",
+  "hashes": {
+    "web": "c780b845a80c76fb87f65c1dfbd477fe16f59d52f59dd8b2e686c02e53cd6037",
+    "android": "fbf612ab83c99d441a22a671b495e90fdf574921102196e4323db919939a2de5"
+  }
+}

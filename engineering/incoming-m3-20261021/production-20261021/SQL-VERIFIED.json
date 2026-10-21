@@ -1,0 +1,8 @@
+{
+  "status": "PASS",
+  "installedFunctionDefinitionsAndACLs": 14,
+  "existingProductsWriterUnchanged": true,
+  "newPublicAPIServiceRoleDefault": "Existing hosted privileged backend default; anon/PUBLIC still denied",
+  "legacyACLsPreserved": true,
+  "customerFinancialWrites": false
+}

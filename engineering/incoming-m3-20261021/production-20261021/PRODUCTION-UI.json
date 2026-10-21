@@ -1,0 +1,17 @@
+{
+  "status": "PASS",
+  "deploymentId": "6ad928b824a83b6bceb2f0fe",
+  "genuineOwnerAuthentication": true,
+  "dashboardAfterRefresh": "PASS",
+  "incomingOrdersLoaded": "PASS",
+  "bulkEntryAndDraftPrivacyGate": "PASS",
+  "posProductCatalogAndCurrencyControls": "PASS",
+  "financeAuthenticatedRead": "PASS",
+  "currencyDisplay": "USD reference valuation available; BoT effective 2026-10-22, retrieved 2026-10-21T21:35:26.035Z; original TZS display restored",
+  "originalTZSCompatibility": "PASS for read-only smoke",
+  "productionStaffSession": "NOT TESTED; no Staff credentials/session used. Narrow installed RPC body and ACL verified; genuine Staff role acceptance remains local evidence",
+  "receivingFinancialPostings": "NOT PERFORMED in Production; actual Standard/Precision cost, selling, partial/full, retries and history acceptance verified with disposable records",
+  "physicalAndroidAndIPhone": "NOT TESTED",
+  "customerFinancialWrites": false,
+  "browser": "Desktop in-app browser"
+}

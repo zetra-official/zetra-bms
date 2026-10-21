@@ -1,0 +1,9 @@
+{
+  "status": "SUCCESS",
+  "channel": "production",
+  "runtime": "1.0.0",
+  "updateId": "01a16066-5471-7f86-acbf-570665e39218",
+  "group": "60877bc5-2219-4da5-b573-c6be21b4cb00",
+  "rollbackGroup": "a22b1c60-6970-4912-887c-72bf70849579",
+  "physicalDevice": "NOT TESTED"
+}

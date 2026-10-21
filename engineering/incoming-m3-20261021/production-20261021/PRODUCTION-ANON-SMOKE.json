@@ -1,0 +1,26 @@
+{
+  "status": "PASS",
+  "results": [
+    {
+      "name": "m3_incoming_catalog_v1",
+      "status": 401,
+      "code": "42501"
+    },
+    {
+      "name": "m3_incoming_receipt_v1",
+      "status": 401,
+      "code": "42501"
+    },
+    {
+      "name": "m3_staff_operational_v1",
+      "status": 401,
+      "code": "42501"
+    },
+    {
+      "name": "m3_saved_order_context_v1",
+      "status": 401,
+      "code": "42501"
+    }
+  ],
+  "customerFinancialWrites": false
+}

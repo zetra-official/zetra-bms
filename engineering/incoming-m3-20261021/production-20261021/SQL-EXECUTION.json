@@ -1,0 +1,8 @@
+{
+  "status": "SUCCESS",
+  "at": "2026-10-21T21:30:15.324578+00:00",
+  "release": "ZETRA-COMBINED-M3-PRODUCTS-COMPAT-20261022",
+  "releaseSHA256": "82b48246258698b7424919bad9e75dd0621f2921529fd89d807226f98133b6e8",
+  "customerFinancialPostings": false,
+  "exitCode": 0
+}

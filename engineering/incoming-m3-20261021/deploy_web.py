@@ -79,4 +79,7 @@ elif mode in ['publish','rollback']:
   assert read(P/'WEB-CANDIDATE.json')['status']=='PASS';assert read(P/'SQL-EXECUTION.json')['status']=='SUCCESS';assert site()['published_deploy']['id']==OLD
  api('POST','/sites/'+SITE+'/deploys/'+target+'/restore',{});assert site()['published_deploy']['id']==target
  print(json.dumps(save('WEB-'+mode.upper()+'.json',{'status':'SUCCESS','deploymentId':target,'rollback':OLD})))
+elif mode=='verify':
+ assert site()['published_deploy']['id']==read(P/'WEB-UPLOAD.json')['deploymentId'];assert api('GET','/deploys/'+OLD)['state']=='ready'
+ print(json.dumps(save('WEB-FINAL-VERIFICATION.json',{'status':'PASS','publishedDeployment':read(P/'WEB-UPLOAD.json')['deploymentId'],'rollbackDeployment':OLD,'rollbackReady':True})))
 else:raise SystemExit('unsupported mode')

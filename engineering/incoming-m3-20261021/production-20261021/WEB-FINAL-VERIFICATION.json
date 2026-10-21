@@ -1,0 +1,6 @@
+{
+  "status": "PASS",
+  "publishedDeployment": "6ad928b824a83b6bceb2f0fe",
+  "rollbackDeployment": "6ad7c9964f937e8f233408c1",
+  "rollbackReady": true
+}
