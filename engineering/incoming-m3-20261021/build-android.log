@@ -1,0 +1,260 @@
+Starting Metro Bundler
+warning: Bundler cache is empty, rebuilding (this may take a minute)
+Android ..\..\..\node_modules\expo-router\entry.js ░░░░░░░░░░░░░░░░  0.0% (0/1)
+Android ..\..\..\node_modules\expo-router\entry.js ▓▓░░░░░░░░░░░░░░ 17.9% ( 90/235)
+Android ..\..\..\node_modules\expo-router\entry.js ▓▓▓▓▓▓▓░░░░░░░░░ 46.6% (503/770)
+Android ..\..\..\node_modules\expo-router\entry.js ▓▓▓▓▓▓▓░░░░░░░░░ 46.6% (560/853)
+Android ..\..\..\node_modules\expo-router\entry.js ▓▓▓▓▓▓▓░░░░░░░░░ 46.6% (586/885)
+Android ..\..\..\node_modules\expo-router\entry.js ▓▓▓▓▓▓▓░░░░░░░░░ 49.1% (625/892)
+Android ..\..\..\node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓░░░░░░░░ 55.2% (674/908)
+Android ..\..\..\node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓░░░░░░ 68.4% ( 861/1076)
+Android ..\..\..\node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓░░░░ 76.7% (1117/1281)
+Android ..\..\..\node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓░░░ 84.9% (1476/1670)
+Android ..\..\..\node_modules\expo-router\entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99.9% (1781/1781)
+
+Failed to generate Hermes bytecode for: C:\JOFU ZETRA\JOFU\JOFU\JOFU\zetra-bms-clean\node_modules\expo-router\entry.js
+
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:2245:34: warning: the variable "AbortController" was not declared in anonymous function " 69#"
+        if ("function" == typeof AbortController) return new AbortController();
+                                 ^~~~~~~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:2397:165: warning: the variable "Promise" was not declared in anonymous arrow function " 93#"
+            te || de.push(() => "writable" === z._state ? wt(z, D) : c(undefined)), re || de.push(() => "readable" === r._state ? Br(r, D) : c(undefined)), q(() => Promise.all(de.map(r => r())), true, D);
+                                                                                                                                                                    ^~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:895:32: warning: the variable "queueMicrotask" was not declared in arrow function "y"
+      if ("function" == typeof queueMicrotask) y = queueMicrotask;else {
+                               ^~~~~~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:1143:100: warning: the variable "structuredClone" was not declared in arrow function "ie"
+    var ie = r => (ie = "function" == typeof r.transfer ? r => r.transfer() : "function" == typeof structuredClone ? r => structuredClone(r, {
+                                                                                                   ^~~~~~~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:2363:84: warning: the variable "self" was not declared in anonymous function " 28#"
+    var wo = "undefined" != typeof globalThis ? globalThis : "undefined" != typeof self ? self : "undefined" != typeof global ? global : undefined,
+                                                                                   ^~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:3466:24: warning: the variable "URL" was not declared in function "_fetch"
+        props[0] = new URL(props[0], window.location?.origin).toString();
+                       ^~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:3491:42: warning: the variable "fetch" was not declared in anonymous function " 237#"
+      value: wrapFetchWithWindowLocation(fetch)
+                                         ^~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:5931:23: warning: the variable "DebuggerInternal" was not declared in function "__shouldPauseOnThrow"
+        return typeof DebuggerInternal !== 'undefined' && DebuggerInternal.shouldPauseOnThrow === true;
+                      ^~~~~~~~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:6523:49: warning: the variable "reportError" was not declared in anonymous function " 348#"
+  var reportGlobalError = "function" === typeof reportError ? reportError : function (error) {
+                                                ^~~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:12985:25: warning: the variable "performance" was not declared in function "Event"
+      this._timeStamp = performance.now();
+                        ^~~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:14370:24: warning: the variable "DOMRect" was not declared in function "unstable_getBoundingClientRect"
+            return new DOMRect(rect[0], rect[1], rect[2], rect[3]);
+                       ^~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:17805:7: warning: the variable "setTimeout" was not declared in function "logUncaughtError"
+      setTimeout(function () {
+      ^~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:20478:31: warning: the variable "nativeFabricUIManager" was not declared in anonymous function " 535#"
+  var _nativeFabricUIManage = nativeFabricUIManager,
+                              ^~~~~~~~~~~~~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:20536:21: warning: the variable "clearTimeout" was not declared in anonymous function " 535#"
+    cancelTimeout = clearTimeout;
+                    ^~~~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:20557:49: warning: the variable "RN$enableMicrotasksInReact" was not declared in anonymous function " 535#"
+    supportsMicrotasks = "undefined" !== typeof RN$enableMicrotasksInReact && !!RN$enableMicrotasksInReact,
+                                                ^~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:20609:30: warning: the variable "__REACT_DEVTOOLS_GLOBAL_HOOK__" was not declared in anonymous function " 535#"
+  if ("undefined" !== typeof __REACT_DEVTOOLS_GLOBAL_HOOK__) {
+                             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:20785:48: warning: the variable "setImmediate" was not declared in anonymous function " 582#"
+    localSetImmediate = "undefined" !== typeof setImmediate ? setImmediate : null;
+                                               ^~~~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:20899:37: warning: the variable "MessageChannel" was not declared in anonymous function " 582#"
+  };else if ("undefined" !== typeof MessageChannel) {
+                                    ^~~~~~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:20914:62: warning: the variable "nativeRuntimeScheduler" was not declared in anonymous function " 582#"
+  var unstable_UserBlockingPriority = "undefined" !== typeof nativeRuntimeScheduler ? nativeRuntimeScheduler.unstable_UserBlockingPriority : 2,
+                                                             ^~~~~~~~~~~~~~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:30875:59: warning: the variable "AbortSignal" was not declared in function "addEventListener 4#"
+          if (signal !== undefined && !(signal instanceof AbortSignal)) {
+                                                          ^~~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:32413:24: warning: the variable "FileReader" was not declared in function "readBlobAsArrayBuffer"
+      var reader = new FileReader();
+                       ^~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:32464:36: warning: the variable "Blob" was not declared in anonymous function " 831#"
+        } else if (support.blob && Blob.prototype.isPrototypeOf(body)) {
+                                   ^~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:32466:40: warning: the variable "FormData" was not declared in anonymous function " 831#"
+        } else if (support.formData && FormData.prototype.isPrototypeOf(body)) {
+                                       ^~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:32468:44: warning: the variable "URLSearchParams" was not declared in anonymous function " 831#"
+        } else if (support.searchParams && URLSearchParams.prototype.isPrototypeOf(body)) {
+                                           ^~~~~~~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:32721:23: warning: the variable "XMLHttpRequest" was not declared in anonymous function " 841#"
+        var xhr = new XMLHttpRequest();
+                      ^~~~~~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:36611:25: warning: the variable "ErrorUtils" was not declared in anonymous function " 993#"
+    var globalHandler = ErrorUtils.getGlobalHandler();
+                        ^~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:37395:25: warning: the variable "TextDecoder" was not declared in function "TextDecoderStream"
+      var decoder = new TextDecoder(label, options);
+                        ^~~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:37436:48: warning: the variable "TransformStream" was not declared in anonymous function " 1015#"
+  }(/*#__PURE__*/(0, _wrapNativeSuper.default)(TransformStream)); // https://encoding.spec.whatwg.org/#interface-textencoderstream
+                                               ^~~~~~~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:37441:25: warning: the variable "TextEncoder" was not declared in function "TextEncoderStream"
+      var encoder = new TextEncoder();
+                        ^~~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:39845:16: warning: the variable "SharedArrayBuffer" was not declared in function "from 1#"
+    if (typeof SharedArrayBuffer !== 'undefined' && (isInstance(value, SharedArrayBuffer) || value && isInstance(value.buffer, SharedArrayBuffer))) {
+               ^~~~~~~~~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:43043:16: warning: the variable "location" was not declared in function "buildUrlForBundle"
+    if (typeof location !== 'undefined') {
+               ^~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:43100:16: warning: Direct call to eval(), but lexical scope is not supported.
+        return eval(body);
+               ^~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:46467:13: warning: the variable "clearImmediate" was not declared in anonymous function " 1187#"
+            clearImmediate(flushQueueImmediate);
+            ^~~~~~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:48627:34: warning: the variable "requestAnimationFrame" was not declared in function "start 9#"
+          this._animationFrame = requestAnimationFrame(() => this.onUpdate());
+                                 ^~~~~~~~~~~~~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:62641:44: warning: the variable "VirtualViewMode" was not declared in arrow function "handleModeChange"
+        var mode = (0, nullthrows.default)(VirtualViewMode.cast(event.nativeEvent.mode));
+                                           ^~~~~~~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:62676:33: warning: the variable "VirtualViewRenderState" was not declared in function "VirtualView"
+        renderState: isHidden ? VirtualViewRenderState.None : VirtualViewRenderState.Rendered,
+                                ^~~~~~~~~~~~~~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:67192:21: warning: the variable "Image" was not declared in anonymous arrow function " 1952#"
+      var img = new Image();
+                    ^~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:71478:38: warning: the variable "document" was not declared in anonymous function " 2116#"
+  var useClientLayoutEffect = typeof document !== 'undefined' || typeof navigator !== 'undefined' && navigator.product === 'ReactNative' ? React.useLayoutEffect : React.useEffect;
+                                     ^~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:71478:73: warning: the variable "navigator" was not declared in anonymous function " 2116#"
+  var useClientLayoutEffect = typeof document !== 'undefined' || typeof navigator !== 'undefined' && navigator.product === 'ReactNative' ? React.useLayoutEffect : React.useEffect;
+                                                                        ^~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:78137:9: warning: the variable "REACT_NAVIGATION_DEVTOOLS" was not declared in anonymous arrow function " 2530#"
+        REACT_NAVIGATION_DEVTOOLS.set(refContainer.current, {
+        ^~~~~~~~~~~~~~~~~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:85741:16: warning: the variable "requestIdleCallback" was not declared in anonymous arrow function " 2857#"
+      var id = requestIdleCallback(() => {
+               ^~~~~~~~~~~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:85744:20: warning: the variable "cancelIdleCallback" was not declared in anonymous arrow function " 2859#"
+      return () => cancelIdleCallback(id);
+                   ^~~~~~~~~~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:93025:16: warning: the variable "$$EXPO_INITIAL_PROPS" was not declared in function "emitDomEvent"
+    if (typeof $$EXPO_INITIAL_PROPS !== 'undefined' && typeof ReactNativeWebView !== 'undefined') {
+               ^~~~~~~~~~~~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:93025:63: warning: the variable "ReactNativeWebView" was not declared in function "emitDomEvent"
+    if (typeof $$EXPO_INITIAL_PROPS !== 'undefined' && typeof ReactNativeWebView !== 'undefined') {
+                                                              ^~~~~~~~~~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:94659:11: warning: the variable "cancelAnimationFrame" was not declared in anonymous arrow function " 3202#"
+          cancelAnimationFrame(splashScreenAnimationFrame);
+          ^~~~~~~~~~~~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:104328:14: warning: the variable "Deno" was not declared in anonymous function " 3694#"
+  if (typeof Deno !== "undefined") JS_ENV = "deno";else if (typeof document !== "undefined") JS_ENV = "web";else if (typeof navigator !== "undefined" && navigator.product === "ReactNative") JS_ENV = "react-native";else JS_ENV = "node";
+             ^~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:104424:12: warning: the variable "Headers" was not declared in arrow function "resolveHeadersConstructor"
+    return Headers;
+           ^~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:111474:13: warning: the variable "clearInterval" was not declared in anonymous arrow function " 3808#"
+            clearInterval(this._workerHeartbeatTimer);
+            ^~~~~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:111878:30: warning: the variable "Worker" was not declared in function "_startWorkerHeartbeat"
+        this.workerRef = new Worker(objectUrl);
+                             ^~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:112024:20: warning: the variable "WebSocket" was not declared in function "detectEnvironment"
+        if (typeof WebSocket !== 'undefined') {
+                   ^~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:114438:12: warning: the variable "btoa" was not declared in arrow function "arrayBufferToBase64"
+    return btoa(binary);
+           ^~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:114444:26: warning: the variable "atob" was not declared in function "LongPoll 1#"
+        this.authToken = atob(protocols[1].slice(AUTH_TOKEN_PREFIX.length));
+                         ^~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:114602:20: warning: the variable "CloseEvent" was not declared in function "close 7#"
+        if (typeof CloseEvent !== "undefined") {
+                   ^~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:116981:27: warning: the variable "ReadableStream" was not declared in function "?anon_0_ 98#"
+              if ((typeof ReadableStream !== "undefined" && body instanceof ReadableStream || body && typeof body === "object" && "pipe" in body && typeof body.pipe === "function") && !options.duplex) options.duplex = "half";
+                          ^~~~~~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:118010:20: warning: the variable "Buffer" was not declared in function "toBase64"
+        if (typeof Buffer !== "undefined") return Buffer.from(data).toString("base64");
+                   ^~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:122725:16: warning: the variable "crypto" was not declared in function "generatePKCEVerifier"
+    if (typeof crypto === 'undefined') {
+               ^~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:128504:24: warning: the variable "setInterval" was not declared in function "?anon_0_ 320#"
+          var ticker = setInterval(() => this._autoRefreshTokenTick(), constants_1.AUTO_REFRESH_TICK_DURATION_MS);
+                       ^~~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:130186:7: warning: the variable "__magic__" was not declared in function "polyfillGlobalThis"
+      __magic__.globalThis = __magic__;
+      ^~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:130388:16: warning: the variable "PublicKeyCredential" was not declared in function "deserializeCredentialCreationOptions"
+    if (typeof PublicKeyCredential !== 'undefined' && 'parseCreationOptionsFromJSON' in PublicKeyCredential && typeof PublicKeyCredential.parseCreationOptionsFromJSON === 'function') {
+               ^~~~~~~~~~~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:160157:137: warning: the variable "Intl" was not declared in function "CurrencyPickerAll"
+                  children: note === 'OFFLINE' ? copy.offline : (note === 'FULL' ? copy.loaded : copy.available).replace('{count}', new Intl.NumberFormat(language).format(all.length))
+                                                                                                                                        ^~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:198940:24: warning: the variable "File" was not declared in function "?anon_0_ 557#"
+        var file = new File([blob], safeName, {
+                       ^~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:205232:80: warning: the variable "XMLSerializer" was not declared in anonymous function " 6190#"
+        img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(new XMLSerializer().serializeToString(svg));
+                                                                               ^~~~~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:205592:111: warning: the variable "getComputedStyle" was not declared in function "IFrameElementContainer"
+            var documentBackgroundColor = iframe.contentWindow.document.documentElement ? parseColor(context, getComputedStyle(iframe.contentWindow.document.documentElement).backgroundColor) : COLORS.TRANSPARENT;
+                                                                                                              ^~~~~~~~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:205678:32: warning: the variable "Node" was not declared in function "isTextNode"
+      return node.nodeType === Node.TEXT_NODE;
+                               ^~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:208644:27: warning: the variable "MouseEvent" was not declared in function "c 3#"
+      t.dispatchEvent(new MouseEvent("click"));
+                          ^~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:210100:44: warning: the variable "safari" was not declared in function "Jt 1#"
+            if (b || "undefined" == typeof safari) return b;
+                                           ^~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:210116:45: warning: the variable "alert" was not declared in anonymous function " 6474#"
+          i.console.error(e, r), i.alert && alert(e);
+                                            ^~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:208650:164: warning: the variable "HTMLAnchorElement" was not declared in anonymous function " 6367#"
+  var l = i.saveAs || ("object" !== ("undefined" == typeof window ? "undefined" : (0, t.default)(window)) || window !== i ? function () {} : "undefined" != typeof HTMLAnchorElement && "download" in HTMLAnchorElement.prototype ? function (t, e, r) {
+                                                                                                                                                                   ^~~~~~~~~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:208676:19: warning: the variable "open" was not declared in anonymous function " 6619#"
+    if ((a = a || open("", "_blank")) && (a.document.title = a.document.body.innerText = "downloading..."), "string" == typeof e) return s(e, r, n);
+                  ^~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:220854:12: warning: the variable "postMessage" was not declared in function "pbf"
+    return postMessage(msg, [msg.buffer]);
+           ^~~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:221083:9: warning: the variable "onmessage" was not declared in anonymous function " 7094#"
+        onmessage = astrm(strm);
+        ^~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:233983:20: warning: the variable "OffscreenCanvas" was not declared in function "createCanvas"
+        return new OffscreenCanvas(width, height);
+                   ^~~~~~~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:233989:27: warning: the variable "createImageBitmap" was not declared in function "?anon_0_ 569#"
+          var img = yield createImageBitmap(blob);
+                          ^~~~~~~~~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:233994:16: warning: the variable "DOMParser" was not declared in function "offscreen"
+    if (typeof DOMParser !== 'undefined' || typeof DOMParserFallback === 'undefined') {
+               ^~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:241574:34: warning: the variable "Bun" was not declared in anonymous function " 7534#"
+    if (globalThis.Bun && typeof Bun.version == 'string') return 'BUN';
+                                 ^~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:242140:66: warning: the variable "Pebble" was not declared in anonymous function " 7584#"
+  module.exports = /ipad|iphone|ipod/i.test(userAgent) && typeof Pebble != 'undefined';
+                                                                 ^~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:243047:29: warning: the variable "ActiveXObject" was not declared in function "NullProtoObject"
+      activeXDocument = new ActiveXObject('htmlfile');
+                            ^~~~~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:260198:29: warning: the variable "port" was not declared in function "?anon_0_ 638#"
+          var reply = yield port.rpc(name, args);
+                            ^~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:349711:21: warning: the variable "DOMException" was not declared in function "?anon_0_ 1141#"
+          throw new DOMException("Request aborted", "AbortError");
+                    ^~~~~~~~~~~~
+C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js:385363:20: warning: the variable "WritableStream" was not declared in function "writableStream"
+        return new WritableStream(new _streams.FileSystemWritableSink((0, _superPropGet.default)(File, "open", this, 3)([])));
+                   ^~~~~~~~~~~~~~
+Failed to write file C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.hbc: permission denied
+
+Android Bundling failed 41280ms ..\..\..\node_modules\expo-router\entry.js (1781 modules)
+Error: C:\JOFU ZETRA\JOFU\JOFU\JOFU\zetra-bms-clean\node_modules\react-native/sdks/hermesc/win64-bin/hermesc.exe -emit-binary -out C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.hbc C:\Users\ZetraAdmin\AppData\Local\Packages\sandbox.{895cabd1-622a-4480-a4b5-e58112915067}\AC\Temp\expo-bundler-0.7253879906775875-1792599395583\index.js -O exited with non-zero code: 6
