@@ -1,0 +1,40 @@
+{
+  "sqlSHA256": "e3423384c3b2110b9af8945e7fd80865e77bff6e8d5dc658d257152312677106",
+  "checks": [
+    {
+      "name": "fresh isolated concurrency fixture has no inventory",
+      "status": "PASS"
+    },
+    {
+      "name": "concurrent receive admits exactly one commit",
+      "status": "PASS"
+    },
+    {
+      "name": "second receive rejects without duplicate posting",
+      "status": "PASS"
+    },
+    {
+      "name": "inventory quantity recognized exactly once",
+      "status": "PASS"
+    },
+    {
+      "name": "received quantity exactly ordered quantity",
+      "status": "PASS"
+    },
+    {
+      "name": "single canonical movement",
+      "status": "PASS"
+    },
+    {
+      "name": "single existing supplier debt recognition",
+      "status": "PASS"
+    },
+    {
+      "name": "original TZS accounting denomination retained",
+      "status": "PASS"
+    }
+  ],
+  "localSyntheticOnly": true,
+  "realParallelPostgresConnections": true,
+  "hostedWrites": false
+}

@@ -1,0 +1,96 @@
+{
+  "dirtyRootFiles": {
+    ".easignore": true,
+    ".gitignore": true,
+    ".vscode/settings.json": true,
+    "app/(auth)/login.tsx": true,
+    "app/(auth)/register.tsx": true,
+    "app/(onboarding)/business.tsx": true,
+    "app/(tabs)/_layout.tsx": true,
+    "app/(tabs)/sales/index.tsx": true,
+    "app/(tabs)/sales/receipt.tsx": true,
+    "app/(tabs)/settings/business-statement.tsx": true,
+    "app/_layout.tsx": true,
+    "app/finance/history.tsx": true,
+    "app/finance/live.tsx": true,
+    "app/index.tsx": true,
+    "app/organization-profile.tsx": true,
+    "app/stocks/history.tsx": true,
+    "app/store-profile.tsx": true,
+    "engineering/currency-owner-execution-20261019/SERVER.json": true,
+    "netlify.toml": true,
+    "public/verified.html": true,
+    "scripts/backend/execute_proforma_conversion.py": true,
+    "src/i18n/authMessages.ts": true,
+    "src/proforma/ProformaDocuments.tsx": true,
+    "src/proforma/ProformaOrdersAction.tsx": true,
+    "src/proforma/checkoutDraft.ts": true,
+    "src/proforma/documentsApi.ts": true,
+    "src/proforma/normalCopy.ts": true,
+    "src/proforma/savedCart.ts": true,
+    "supabase/.temp/cli-latest": true,
+    "supabase/functions/.deno_cache/registries/https/deno.land/6cc48adafe8fdc997ad2ed20e367eb08e7fae6840fc8b4a2ed02b8ccad476ee1": true,
+    "supabase/functions/delete-account/index.ts": true,
+    "tests/release/finance-mobile-ui-hosted.cjs": true
+  },
+  "rootCatalogSHA256": "a6b548a9567803d9db181b4d6f236349b55afddfc115ead7ba9f6d449c1b4914",
+  "sourceScope": {
+    "web": {
+      "archive": "M2-web-source.zip",
+      "sha256": "c995492517371f541da0e172cdab93f3b5bcc3456fe79a8f6b0fa4989b85bed4",
+      "changedFiles": {
+        "app/(tabs)/index.tsx": {
+          "before": "7476066fd2256d668c708ad56761fd61b2e842ed28884b899f36b50b87646433",
+          "after": "2004548a759015099bed7378a0fa19afd71f590062e2dc2f2130461c30136f77"
+        },
+        "app/(tabs)/settings/business-statement.tsx": {
+          "before": "5c51163b7c62263d0de6ffc8f7c71af12f878d7e81c29ef237d2c29aff3013db",
+          "after": "ca98a41b408b43264f8f0dc1c434185f42913bf8d48712a061d2732cf58789b3"
+        },
+        "app/finance/business-debts.tsx": {
+          "before": "59ae98378a7859b74404e864fc80352d461f13454852081e844630b7cc04da67",
+          "after": "1c2683764dc2ef65b0ff8760c5ff3f40cc75b9c4d0bef150110e8ff9786d12fc"
+        },
+        "app/stocks/inbound.tsx": {
+          "before": "2aba58fb9dd3f5b5d4824986adf2e84902b7dad6cb55da6208bdaef5e46e1913",
+          "after": "8319c7ea0e86729ac6f32c4f4e749623271e963033722dbe6f7ebd1e7357438a"
+        },
+        "app/stores/supplier-detail.tsx": {
+          "before": "3b731b00506ccf6cefbdf5301830252f7f03bd9921d176e364381e0a1346e93a",
+          "after": "96b22a269a47eda9ba21221a48bac311ed47a52e77a80288f3be14617ba6eb50"
+        }
+      },
+      "allOtherReleasedSourceBytesPreserved": true
+    },
+    "android": {
+      "archive": "M2-android-source.zip",
+      "sha256": "4c8a000726ba2429f3831b906bd7630076c9bb3c03fc04f3152f9a08ef7552ee",
+      "changedFiles": {
+        "app/(tabs)/index.tsx": {
+          "before": "7476066fd2256d668c708ad56761fd61b2e842ed28884b899f36b50b87646433",
+          "after": "2004548a759015099bed7378a0fa19afd71f590062e2dc2f2130461c30136f77"
+        },
+        "app/(tabs)/settings/business-statement.tsx": {
+          "before": "5c51163b7c62263d0de6ffc8f7c71af12f878d7e81c29ef237d2c29aff3013db",
+          "after": "ca98a41b408b43264f8f0dc1c434185f42913bf8d48712a061d2732cf58789b3"
+        },
+        "app/finance/business-debts.tsx": {
+          "before": "59ae98378a7859b74404e864fc80352d461f13454852081e844630b7cc04da67",
+          "after": "1c2683764dc2ef65b0ff8760c5ff3f40cc75b9c4d0bef150110e8ff9786d12fc"
+        },
+        "app/stocks/inbound.tsx": {
+          "before": "2aba58fb9dd3f5b5d4824986adf2e84902b7dad6cb55da6208bdaef5e46e1913",
+          "after": "8319c7ea0e86729ac6f32c4f4e749623271e963033722dbe6f7ebd1e7357438a"
+        },
+        "app/stores/supplier-detail.tsx": {
+          "before": "3b731b00506ccf6cefbdf5301830252f7f03bd9921d176e364381e0a1346e93a",
+          "after": "96b22a269a47eda9ba21221a48bac311ed47a52e77a80288f3be14617ba6eb50"
+        }
+      },
+      "allOtherReleasedSourceBytesPreserved": true
+    }
+  },
+  "blockedFundingSchemasModified": false,
+  "hostedWrites": false,
+  "financialActivation": false
+}

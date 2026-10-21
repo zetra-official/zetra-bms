@@ -1,0 +1,30 @@
+[
+  {
+    "identity": "get_office_system_performance_v2(date,date)",
+    "canonicalBodyUnchanged": true
+  },
+  {
+    "identity": "run_ai_daily_snapshots_v1()",
+    "canonicalBodyUnchanged": true
+  },
+  {
+    "identity": "run_due_ai_daily_snapshots_v1()",
+    "canonicalBodyUnchanged": true
+  },
+  {
+    "identity": "build_ai_daily_store_snapshot_v1(uuid,date)",
+    "canonicalBodyUnchanged": true
+  },
+  {
+    "identity": "backfill_ai_daily_store_snapshots_all_history_v1()",
+    "canonicalBodyUnchanged": true
+  },
+  {
+    "identity": "run_ai_snapshot_backfill_batch_v1(integer)",
+    "canonicalBodyUnchanged": true
+  },
+  {
+    "identity": "run_ai_snapshot_backfill_autopilot_v1()",
+    "canonicalBodyUnchanged": true
+  }
+]

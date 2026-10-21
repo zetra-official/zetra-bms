@@ -1,0 +1,107 @@
+{
+  "sqlSHA256": "e3423384c3b2110b9af8945e7fd80865e77bff6e8d5dc658d257152312677106",
+  "checks": [
+    {
+      "name": "owner catalog cost privacy despite a valid share code",
+      "status": "PASS"
+    },
+    {
+      "name": "admin catalog cost privacy despite a valid share code",
+      "status": "PASS"
+    },
+    {
+      "name": "admin cost filtering cannot infer hidden values",
+      "status": "PASS"
+    },
+    {
+      "name": "staff catalog cost privacy despite a valid share code",
+      "status": "PASS"
+    },
+    {
+      "name": "staff cost filtering cannot infer hidden values",
+      "status": "PASS"
+    },
+    {
+      "name": "cashier catalog cost privacy despite a valid share code",
+      "status": "PASS"
+    },
+    {
+      "name": "cashier cost filtering cannot infer hidden values",
+      "status": "PASS"
+    },
+    {
+      "name": "no_member catalog cost privacy despite a valid share code",
+      "status": "PASS"
+    },
+    {
+      "name": "no_member cost filtering cannot infer hidden values",
+      "status": "PASS"
+    },
+    {
+      "name": "foreign_owner catalog cost privacy despite a valid share code",
+      "status": "PASS"
+    },
+    {
+      "name": "foreign_owner cost filtering cannot infer hidden values",
+      "status": "PASS"
+    },
+    {
+      "name": "unassigned catalog cost privacy despite a valid share code",
+      "status": "PASS"
+    },
+    {
+      "name": "unassigned cost filtering cannot infer hidden values",
+      "status": "PASS"
+    },
+    {
+      "name": "revoked catalog cost privacy despite a valid share code",
+      "status": "PASS"
+    },
+    {
+      "name": "revoked cost filtering cannot infer hidden values",
+      "status": "PASS"
+    },
+    {
+      "name": "cross-org cost import cannot launder confidential acquisition costs",
+      "status": "PASS"
+    },
+    {
+      "name": "existing Owner-only product upsert remains fail-closed for Admin even with NULL cost",
+      "status": "PASS"
+    },
+    {
+      "name": "denied Admin product edit preserves original stored acquisition cost",
+      "status": "PASS"
+    },
+    {
+      "name": "Admin cannot overwrite acquisition cost through existing upsert RPC",
+      "status": "PASS"
+    },
+    {
+      "name": "client role claim does not establish Owner privilege",
+      "status": "PASS"
+    },
+    {
+      "name": "nested payload under permitted name key is discarded",
+      "status": "PASS"
+    },
+    {
+      "name": "ordinary Owner stock valuation remains exact: 612.00000",
+      "status": "PASS"
+    },
+    {
+      "name": "legacy foreign-product movement cannot leak names or cost through stock-in reader",
+      "status": "PASS"
+    },
+    {
+      "name": "legacy foreign-product valuation fails closed without rewriting original records",
+      "status": "PASS"
+    },
+    {
+      "name": "historical inconsistent incoming child is rejected before confidential evidence is returned",
+      "status": "PASS"
+    }
+  ],
+  "localOnly": true,
+  "hostedWrites": false
+}

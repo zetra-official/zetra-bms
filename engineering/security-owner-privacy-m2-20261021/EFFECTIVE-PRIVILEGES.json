@@ -1,0 +1,10 @@
+{
+  "backupAnonSelect": false,
+  "backupAuthSelect": false,
+  "inventoryAuthUpdate": false,
+  "movementsAuthInsert": false,
+  "productCostAuthSelect": false,
+  "productSellingAuthSelect": true,
+  "saleCogsAuthSelect": false,
+  "stockInAnonExecute": false
+}

@@ -1,0 +1,10 @@
+{
+  "status": "PASS",
+  "checks": 24,
+  "tapSHA256": "0e939e681478a832c9de0276a79d86333d65ec3de3095c000e96fd99e40a978d",
+  "scope": "Node currency/localization and source contracts; not physical UI/PDF runtime",
+  "sourceArchives": {
+    "web": "b956f1ba017d7153e0a83ca40cc9a18bfda543293ba105ddfc7fe309bb504c69",
+    "android": "ceb628f81e9e4038537227cb090795d0058ef41cfd3bab322eb1ced15b6e49e0"
+  }
+}

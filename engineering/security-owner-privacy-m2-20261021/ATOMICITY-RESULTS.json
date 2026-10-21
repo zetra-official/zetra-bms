@@ -1,0 +1,55 @@
+{
+  "sqlSHA256": "e3423384c3b2110b9af8945e7fd80865e77bff6e8d5dc658d257152312677106",
+  "checks": [
+    {
+      "name": "injected failure occurs after all draft DDL",
+      "status": "PASS"
+    },
+    {
+      "name": "late failure rolls back exact effective catalog state",
+      "status": "PASS"
+    },
+    {
+      "name": "temporary rollback marker absent",
+      "status": "PASS"
+    },
+    {
+      "name": "anonymous backup access remains denied after failed DDL",
+      "status": "PASS"
+    },
+    {
+      "name": "no funding-adapter DDL targets in draft",
+      "status": "PASS"
+    },
+    {
+      "name": "stock_funding.consume_receipt captured live safety boundary remains outside draft",
+      "status": "PASS"
+    },
+    {
+      "name": "funding_control.source_ready captured live safety boundary remains outside draft",
+      "status": "PASS"
+    },
+    {
+      "name": "funding_canonical.custody_event captured live safety boundary remains outside draft",
+      "status": "PASS"
+    },
+    {
+      "name": "funding_evidence.writer_bound captured live safety boundary remains outside draft",
+      "status": "PASS"
+    },
+    {
+      "name": "funding_evidence.wallet_writers_bound captured live safety boundary remains outside draft",
+      "status": "PASS"
+    },
+    {
+      "name": "funding_evidence.apply_return captured live safety boundary remains outside draft",
+      "status": "PASS"
+    },
+    {
+      "name": "effective grants match intended Owner-cost and operational separation",
+      "status": "PASS"
+    }
+  ],
+  "localOnly": true,
+  "hostedWrites": false
+}

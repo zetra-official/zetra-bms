@@ -1,0 +1,114 @@
+{
+  "milestone": "M2 LOCAL OWNER FINANCIAL PRIVACY",
+  "status": "M2 PARTIAL",
+  "baselineHead": "5f11acf94aade06df52f3a8de2da1205a6565599",
+  "sqlDraft": {
+    "file": "2026102101-owner-privacy.DRAFT.sql",
+    "sha256": "e3423384c3b2110b9af8945e7fd80865e77bff6e8d5dc658d257152312677106",
+    "hostedExecutionApproved": false
+  },
+  "sources": {
+    "web": {
+      "archive": "M2-web-source.zip",
+      "sha256": "c995492517371f541da0e172cdab93f3b5bcc3456fe79a8f6b0fa4989b85bed4",
+      "changedFiles": {
+        "app/(tabs)/index.tsx": {
+          "before": "7476066fd2256d668c708ad56761fd61b2e842ed28884b899f36b50b87646433",
+          "after": "2004548a759015099bed7378a0fa19afd71f590062e2dc2f2130461c30136f77"
+        },
+        "app/(tabs)/settings/business-statement.tsx": {
+          "before": "5c51163b7c62263d0de6ffc8f7c71af12f878d7e81c29ef237d2c29aff3013db",
+          "after": "ca98a41b408b43264f8f0dc1c434185f42913bf8d48712a061d2732cf58789b3"
+        },
+        "app/finance/business-debts.tsx": {
+          "before": "59ae98378a7859b74404e864fc80352d461f13454852081e844630b7cc04da67",
+          "after": "1c2683764dc2ef65b0ff8760c5ff3f40cc75b9c4d0bef150110e8ff9786d12fc"
+        },
+        "app/stocks/inbound.tsx": {
+          "before": "2aba58fb9dd3f5b5d4824986adf2e84902b7dad6cb55da6208bdaef5e46e1913",
+          "after": "8319c7ea0e86729ac6f32c4f4e749623271e963033722dbe6f7ebd1e7357438a"
+        },
+        "app/stores/supplier-detail.tsx": {
+          "before": "3b731b00506ccf6cefbdf5301830252f7f03bd9921d176e364381e0a1346e93a",
+          "after": "96b22a269a47eda9ba21221a48bac311ed47a52e77a80288f3be14617ba6eb50"
+        }
+      },
+      "allOtherReleasedSourceBytesPreserved": true
+    },
+    "android": {
+      "archive": "M2-android-source.zip",
+      "sha256": "4c8a000726ba2429f3831b906bd7630076c9bb3c03fc04f3152f9a08ef7552ee",
+      "changedFiles": {
+        "app/(tabs)/index.tsx": {
+          "before": "7476066fd2256d668c708ad56761fd61b2e842ed28884b899f36b50b87646433",
+          "after": "2004548a759015099bed7378a0fa19afd71f590062e2dc2f2130461c30136f77"
+        },
+        "app/(tabs)/settings/business-statement.tsx": {
+          "before": "5c51163b7c62263d0de6ffc8f7c71af12f878d7e81c29ef237d2c29aff3013db",
+          "after": "ca98a41b408b43264f8f0dc1c434185f42913bf8d48712a061d2732cf58789b3"
+        },
+        "app/finance/business-debts.tsx": {
+          "before": "59ae98378a7859b74404e864fc80352d461f13454852081e844630b7cc04da67",
+          "after": "1c2683764dc2ef65b0ff8760c5ff3f40cc75b9c4d0bef150110e8ff9786d12fc"
+        },
+        "app/stocks/inbound.tsx": {
+          "before": "2aba58fb9dd3f5b5d4824986adf2e84902b7dad6cb55da6208bdaef5e46e1913",
+          "after": "8319c7ea0e86729ac6f32c4f4e749623271e963033722dbe6f7ebd1e7357438a"
+        },
+        "app/stores/supplier-detail.tsx": {
+          "before": "3b731b00506ccf6cefbdf5301830252f7f03bd9921d176e364381e0a1346e93a",
+          "after": "96b22a269a47eda9ba21221a48bac311ed47a52e77a80288f3be14617ba6eb50"
+        }
+      },
+      "allOtherReleasedSourceBytesPreserved": true
+    }
+  },
+  "builds": {
+    "web": {
+      "status": "PASS",
+      "files": 272,
+      "manifest": "BUILD-web.json",
+      "manifestSHA256": "341db1b265adbfa779ba7d8ce1fcbdf0b790f325c6bf442f94e7d3d769915d26",
+      "publication": false
+    },
+    "android": {
+      "status": "PASS",
+      "files": 48,
+      "manifest": "BUILD-android.json",
+      "manifestSHA256": "ba5cac2b36037b4a2aedf2bb2edd9940b63e2451f1b1e9995fa1f6c69a07114a",
+      "publication": false
+    }
+  },
+  "postgresTests": {
+    "SECURITY-TEST-RESULTS.json": {
+      "checks": 147,
+      "sha256": "fb87ecf9aed601e532009ec7c5f44223306d58e9da9af86aa5ab99c8adf80b4b"
+    },
+    "INDIRECT-PATH-RESULTS.json": {
+      "checks": 25,
+      "sha256": "fa9b451c569967ccbee973272263c68c8e9a8c3fcda0547aa256a801667e28f4"
+    },
+    "CONCURRENCY-RESULTS.json": {
+      "checks": 8,
+      "sha256": "05ea453abefaadf22a5f67e0a33e3195b8cc554791f67d29f37e2fb2614870d6"
+    },
+    "ATOMICITY-RESULTS.json": {
+      "checks": 12,
+      "sha256": "2c0e6dc5668c1025c5bf567c1d6caa82c143fb82c2fc3bc96994d13d04a8f785"
+    }
+  },
+  "postgresCheckCount": 192,
+  "nodeCompatibilityChecks": 24,
+  "typescript": {
+    "web": "PASS",
+    "android": "PASS"
+  },
+  "genuinePostgrestAuthE2E": "NOT TESTED",
+  "physicalAndroid": "NOT TESTED",
+  "physicalIPhone": "NOT TESTED",
+  "arabicChinesePdfGlyphRendering": "NOT TESTED",
+  "historicalPublicStorageObjects": "NOT INSPECTED",
+  "productionDeployment": false,
+  "githubPush": false,
+  "M3Started": false
+}

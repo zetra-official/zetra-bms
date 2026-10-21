@@ -1,0 +1,597 @@
+{
+  "sqlSHA256": "e3423384c3b2110b9af8945e7fd80865e77bff6e8d5dc658d257152312677106",
+  "checks": [
+    {
+      "name": "exact live stock-in anonymous leak reproduced",
+      "status": "PASS"
+    },
+    {
+      "name": "exact live anonymous autocomplete acquisition-cost leak reproduced",
+      "status": "PASS"
+    },
+    {
+      "name": "exact live Admin debt leak reproduced",
+      "status": "PASS"
+    },
+    {
+      "name": "exact live Admin POS cost leak reproduced",
+      "status": "PASS"
+    },
+    {
+      "name": "exact live exposed backup privilege reproduced",
+      "status": "PASS"
+    },
+    {
+      "name": "exact live NULL-role allocation bypass reproduced",
+      "status": "PASS"
+    },
+    {
+      "name": "exact live unrelated caller field expense bypass reproduced",
+      "status": "PASS"
+    },
+    {
+      "name": "draft DDL leaves original financial and inventory amounts unchanged",
+      "status": "PASS"
+    },
+    {
+      "name": "owner raw backup denied",
+      "status": "PASS"
+    },
+    {
+      "name": "owner direct inventory write denied",
+      "status": "PASS"
+    },
+    {
+      "name": "owner direct movements write denied",
+      "status": "PASS"
+    },
+    {
+      "name": "Owner authorized acquisition-cost read",
+      "status": "PASS"
+    },
+    {
+      "name": "Owner authorized debt read",
+      "status": "PASS"
+    },
+    {
+      "name": "owner legitimate operational inventory retained",
+      "status": "PASS"
+    },
+    {
+      "name": "owner POS price privacy",
+      "status": "PASS"
+    },
+    {
+      "name": "owner stock-in quantity reader privacy",
+      "status": "PASS"
+    },
+    {
+      "name": "admin raw backup denied",
+      "status": "PASS"
+    },
+    {
+      "name": "admin direct inventory write denied",
+      "status": "PASS"
+    },
+    {
+      "name": "admin direct movements write denied",
+      "status": "PASS"
+    },
+    {
+      "name": "admin protected direct column denied",
+      "status": "PASS"
+    },
+    {
+      "name": "admin debt RPC denied",
+      "status": "PASS"
+    },
+    {
+      "name": "admin cost valuation RPC denied",
+      "status": "PASS"
+    },
+    {
+      "name": "admin field allocation denied",
+      "status": "PASS"
+    },
+    {
+      "name": "admin field expense denied",
+      "status": "PASS"
+    },
+    {
+      "name": "admin legitimate operational inventory retained",
+      "status": "PASS"
+    },
+    {
+      "name": "admin POS price privacy",
+      "status": "PASS"
+    },
+    {
+      "name": "admin stock-in quantity reader privacy",
+      "status": "PASS"
+    },
+    {
+      "name": "staff raw backup denied",
+      "status": "PASS"
+    },
+    {
+      "name": "staff direct inventory write denied",
+      "status": "PASS"
+    },
+    {
+      "name": "staff direct movements write denied",
+      "status": "PASS"
+    },
+    {
+      "name": "staff protected direct column denied",
+      "status": "PASS"
+    },
+    {
+      "name": "staff debt RPC denied",
+      "status": "PASS"
+    },
+    {
+      "name": "staff cost valuation RPC denied",
+      "status": "PASS"
+    },
+    {
+      "name": "staff field allocation denied",
+      "status": "PASS"
+    },
+    {
+      "name": "staff field expense denied",
+      "status": "PASS"
+    },
+    {
+      "name": "staff legitimate operational inventory retained",
+      "status": "PASS"
+    },
+    {
+      "name": "staff POS price privacy",
+      "status": "PASS"
+    },
+    {
+      "name": "staff stock-in quantity reader privacy",
+      "status": "PASS"
+    },
+    {
+      "name": "cashier raw backup denied",
+      "status": "PASS"
+    },
+    {
+      "name": "cashier direct inventory write denied",
+      "status": "PASS"
+    },
+    {
+      "name": "cashier direct movements write denied",
+      "status": "PASS"
+    },
+    {
+      "name": "cashier protected direct column denied",
+      "status": "PASS"
+    },
+    {
+      "name": "cashier debt RPC denied",
+      "status": "PASS"
+    },
+    {
+      "name": "cashier cost valuation RPC denied",
+      "status": "PASS"
+    },
+    {
+      "name": "cashier field allocation denied",
+      "status": "PASS"
+    },
+    {
+      "name": "cashier field expense denied",
+      "status": "PASS"
+    },
+    {
+      "name": "cashier legitimate operational inventory retained",
+      "status": "PASS"
+    },
+    {
+      "name": "cashier POS price privacy",
+      "status": "PASS"
+    },
+    {
+      "name": "cashier stock-in quantity reader privacy",
+      "status": "PASS"
+    },
+    {
+      "name": "no_membership raw backup denied",
+      "status": "PASS"
+    },
+    {
+      "name": "no_membership direct inventory write denied",
+      "status": "PASS"
+    },
+    {
+      "name": "no_membership direct movements write denied",
+      "status": "PASS"
+    },
+    {
+      "name": "no_membership protected direct column denied",
+      "status": "PASS"
+    },
+    {
+      "name": "no_membership debt RPC denied",
+      "status": "PASS"
+    },
+    {
+      "name": "no_membership cost valuation RPC denied",
+      "status": "PASS"
+    },
+    {
+      "name": "no_membership field allocation denied",
+      "status": "PASS"
+    },
+    {
+      "name": "no_membership field expense denied",
+      "status": "PASS"
+    },
+    {
+      "name": "no_membership unauthorized store RPC denied",
+      "status": "PASS"
+    },
+    {
+      "name": "no_membership raw operational inventory rows hidden",
+      "status": "PASS"
+    },
+    {
+      "name": "other_org raw backup denied",
+      "status": "PASS"
+    },
+    {
+      "name": "other_org direct inventory write denied",
+      "status": "PASS"
+    },
+    {
+      "name": "other_org direct movements write denied",
+      "status": "PASS"
+    },
+    {
+      "name": "other_org protected direct column denied",
+      "status": "PASS"
+    },
+    {
+      "name": "other_org debt RPC denied",
+      "status": "PASS"
+    },
+    {
+      "name": "other_org cost valuation RPC denied",
+      "status": "PASS"
+    },
+    {
+      "name": "other_org field allocation denied",
+      "status": "PASS"
+    },
+    {
+      "name": "other_org field expense denied",
+      "status": "PASS"
+    },
+    {
+      "name": "other_org unauthorized store RPC denied",
+      "status": "PASS"
+    },
+    {
+      "name": "other_org raw operational inventory rows hidden",
+      "status": "PASS"
+    },
+    {
+      "name": "unassigned raw backup denied",
+      "status": "PASS"
+    },
+    {
+      "name": "unassigned direct inventory write denied",
+      "status": "PASS"
+    },
+    {
+      "name": "unassigned direct movements write denied",
+      "status": "PASS"
+    },
+    {
+      "name": "unassigned protected direct column denied",
+      "status": "PASS"
+    },
+    {
+      "name": "unassigned debt RPC denied",
+      "status": "PASS"
+    },
+    {
+      "name": "unassigned cost valuation RPC denied",
+      "status": "PASS"
+    },
+    {
+      "name": "unassigned field allocation denied",
+      "status": "PASS"
+    },
+    {
+      "name": "unassigned field expense denied",
+      "status": "PASS"
+    },
+    {
+      "name": "unassigned unauthorized store RPC denied",
+      "status": "PASS"
+    },
+    {
+      "name": "unassigned raw operational inventory rows hidden",
+      "status": "PASS"
+    },
+    {
+      "name": "inactive raw backup denied",
+      "status": "PASS"
+    },
+    {
+      "name": "inactive direct inventory write denied",
+      "status": "PASS"
+    },
+    {
+      "name": "inactive direct movements write denied",
+      "status": "PASS"
+    },
+    {
+      "name": "inactive protected direct column denied",
+      "status": "PASS"
+    },
+    {
+      "name": "inactive debt RPC denied",
+      "status": "PASS"
+    },
+    {
+      "name": "inactive cost valuation RPC denied",
+      "status": "PASS"
+    },
+    {
+      "name": "inactive field allocation denied",
+      "status": "PASS"
+    },
+    {
+      "name": "inactive field expense denied",
+      "status": "PASS"
+    },
+    {
+      "name": "inactive unauthorized store RPC denied",
+      "status": "PASS"
+    },
+    {
+      "name": "inactive raw operational inventory rows hidden",
+      "status": "PASS"
+    },
+    {
+      "name": "anon raw backup denied",
+      "status": "PASS"
+    },
+    {
+      "name": "anon direct inventory write denied",
+      "status": "PASS"
+    },
+    {
+      "name": "anon direct movements write denied",
+      "status": "PASS"
+    },
+    {
+      "name": "anon protected direct column denied",
+      "status": "PASS"
+    },
+    {
+      "name": "anon debt RPC denied",
+      "status": "PASS"
+    },
+    {
+      "name": "anon cost valuation RPC denied",
+      "status": "PASS"
+    },
+    {
+      "name": "anon field allocation denied",
+      "status": "PASS"
+    },
+    {
+      "name": "anon field expense denied",
+      "status": "PASS"
+    },
+    {
+      "name": "anon unauthorized store RPC denied",
+      "status": "PASS"
+    },
+    {
+      "name": "Owner cannot value foreign store",
+      "status": "PASS"
+    },
+    {
+      "name": "Owner cannot read foreign organization",
+      "status": "PASS"
+    },
+    {
+      "name": "Owner retains authorized historical valuation for inactive store",
+      "status": "PASS"
+    },
+    {
+      "name": "Admin raw debt rows invisible",
+      "status": "PASS"
+    },
+    {
+      "name": "historical notification payload allowlist",
+      "status": "PASS"
+    },
+    {
+      "name": "incoming child parent org mismatch rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "incoming foreign store mismatch rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "security tests did not change originals",
+      "status": "PASS"
+    },
+    {
+      "name": "owner existing partial receive RPC retained",
+      "status": "PASS"
+    },
+    {
+      "name": "owner existing full receive RPC retained",
+      "status": "PASS"
+    },
+    {
+      "name": "admin existing partial receive RPC retained",
+      "status": "PASS"
+    },
+    {
+      "name": "admin existing full receive RPC retained",
+      "status": "PASS"
+    },
+    {
+      "name": "Owner canonical wallet allocation retained",
+      "status": "PASS"
+    },
+    {
+      "name": "Owner canonical wallet expense retained",
+      "status": "PASS"
+    },
+    {
+      "name": "Owner existing incoming payment declaration retained",
+      "status": "PASS"
+    },
+    {
+      "name": "owner historical notification free-text privacy",
+      "status": "PASS"
+    },
+    {
+      "name": "admin historical notification free-text privacy",
+      "status": "PASS"
+    },
+    {
+      "name": "staff historical notification free-text privacy",
+      "status": "PASS"
+    },
+    {
+      "name": "cashier historical notification free-text privacy",
+      "status": "PASS"
+    },
+    {
+      "name": "admin all 50 Owner-only RPC entry points reject",
+      "status": "PASS"
+    },
+    {
+      "name": "staff all 50 Owner-only RPC entry points reject",
+      "status": "PASS"
+    },
+    {
+      "name": "cashier all 50 Owner-only RPC entry points reject",
+      "status": "PASS"
+    },
+    {
+      "name": "no_membership all 50 Owner-only RPC entry points reject",
+      "status": "PASS"
+    },
+    {
+      "name": "other_org all 50 Owner-only RPC entry points reject",
+      "status": "PASS"
+    },
+    {
+      "name": "unassigned all 50 Owner-only RPC entry points reject",
+      "status": "PASS"
+    },
+    {
+      "name": "inactive all 50 Owner-only RPC entry points reject",
+      "status": "PASS"
+    },
+    {
+      "name": "anon all 50 Owner-only RPC entry points reject",
+      "status": "PASS"
+    },
+    {
+      "name": "rolled-back workflow tests preserve original synthetic quantities and amounts",
+      "status": "PASS"
+    },
+    {
+      "name": "trusted job body preserved get_office_system_performance_v2(date,date)",
+      "status": "PASS"
+    },
+    {
+      "name": "anon cannot invoke internal job get_office_system_performance_v2(date,date)",
+      "status": "PASS"
+    },
+    {
+      "name": "authenticated cannot invoke internal job get_office_system_performance_v2(date,date)",
+      "status": "PASS"
+    },
+    {
+      "name": "trusted job body preserved run_ai_daily_snapshots_v1()",
+      "status": "PASS"
+    },
+    {
+      "name": "anon cannot invoke internal job run_ai_daily_snapshots_v1()",
+      "status": "PASS"
+    },
+    {
+      "name": "authenticated cannot invoke internal job run_ai_daily_snapshots_v1()",
+      "status": "PASS"
+    },
+    {
+      "name": "trusted job body preserved run_due_ai_daily_snapshots_v1()",
+      "status": "PASS"
+    },
+    {
+      "name": "anon cannot invoke internal job run_due_ai_daily_snapshots_v1()",
+      "status": "PASS"
+    },
+    {
+      "name": "authenticated cannot invoke internal job run_due_ai_daily_snapshots_v1()",
+      "status": "PASS"
+    },
+    {
+      "name": "trusted job body preserved build_ai_daily_store_snapshot_v1(uuid,date)",
+      "status": "PASS"
+    },
+    {
+      "name": "anon cannot invoke internal job build_ai_daily_store_snapshot_v1(uuid,date)",
+      "status": "PASS"
+    },
+    {
+      "name": "authenticated cannot invoke internal job build_ai_daily_store_snapshot_v1(uuid,date)",
+      "status": "PASS"
+    },
+    {
+      "name": "trusted job body preserved backfill_ai_daily_store_snapshots_all_history_v1()",
+      "status": "PASS"
+    },
+    {
+      "name": "anon cannot invoke internal job backfill_ai_daily_store_snapshots_all_history_v1()",
+      "status": "PASS"
+    },
+    {
+      "name": "authenticated cannot invoke internal job backfill_ai_daily_store_snapshots_all_history_v1()",
+      "status": "PASS"
+    },
+    {
+      "name": "trusted job body preserved run_ai_snapshot_backfill_batch_v1(integer)",
+      "status": "PASS"
+    },
+    {
+      "name": "anon cannot invoke internal job run_ai_snapshot_backfill_batch_v1(integer)",
+      "status": "PASS"
+    },
+    {
+      "name": "authenticated cannot invoke internal job run_ai_snapshot_backfill_batch_v1(integer)",
+      "status": "PASS"
+    },
+    {
+      "name": "trusted job body preserved run_ai_snapshot_backfill_autopilot_v1()",
+      "status": "PASS"
+    },
+    {
+      "name": "anon cannot invoke internal job run_ai_snapshot_backfill_autopilot_v1()",
+      "status": "PASS"
+    },
+    {
+      "name": "authenticated cannot invoke internal job run_ai_snapshot_backfill_autopilot_v1()",
+      "status": "PASS"
+    }
+  ],
+  "pass": 147,
+  "fail": 0,
+  "localOnly": true,
+  "hostedWrites": false
+}

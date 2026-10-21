@@ -1,0 +1,212 @@
+--- released/app/(tabs)/index.tsx
++++ M2/app/(tabs)/index.tsx
+@@ -8565,10 +8565,10 @@
+         p_to: toYMD,
+       } as any);
+ 
+-      const stockPromise = supabase.rpc("get_stock_on_hand_value_v1", {
++      const stockPromise = isOwner ? supabase.rpc("get_stock_on_hand_value_v1", {
+         p_org_id: orgId,
+         p_store_id: storeId,
+-      } as any);
++      } as any) : Promise.resolve({data:null,error:null} as any);
+ 
+       const [
+         salesRes,
+--- released/app/(tabs)/settings/business-statement.tsx
++++ M2/app/(tabs)/settings/business-statement.tsx
+@@ -599,7 +599,7 @@
+   const sidStore = String(storeId || "").trim();
+   if (ids.length === 0) return {};
+ 
+-  const tableCandidates = ["sale_items", "sales_items"];
++  const tableCandidates = ["m2_owner_sale_items"];
+ 
+   for (const table of tableCandidates) {
+     try {
+@@ -643,7 +643,7 @@
+ 
+       if (productIds.length > 0) {
+         const { data: productsData } = await supabase
+-          .from("products")
++          .from("m2_owner_products")
+           .select("*")
+           .in("id", productIds);
+ 
+--- released/app/finance/business-debts.tsx
++++ M2/app/finance/business-debts.tsx
+@@ -252,6 +252,7 @@
+ const [historyRows, setHistoryRows] = useState<DebtPaymentRow[]>([]);
+ 
+   const load = useCallback(async () => {
++    if(!isOwner){setRows([]);setSummary(EMPTY_SUMMARY);setSelectedDebt(null);setLoading(false);return;}
+     if (!orgId) return;
+ 
+     setLoading(true);
+@@ -304,7 +305,7 @@
+     } finally {
+       setLoading(false);
+     }
+-  }, [orgId, storeId]);
++  }, [orgId, storeId, isOwner]);
+ 
+   useEffect(() => {
+     void load();
+@@ -589,6 +590,7 @@
+     ].filter((g) => g.rows.length > 0);
+   }, [visibleRows]);
+ 
++  if(!isOwner) return <Screen><Text>{uiText("Owner only")}</Text></Screen>;
+   return (
+     <Screen
+       scroll
+--- released/app/stocks/inbound.tsx
++++ M2/app/stocks/inbound.tsx
+@@ -137,6 +137,7 @@
+   const pagePaddingX = isDesktopWeb ? 28 : 16;
+   const desktopGrid = isDesktopWeb ? "row" : "column";
+   const orgCtx = useOrg() as any;
++  const isOwner=String(orgCtx.activeRole??"").trim().toLowerCase()==="owner";
+ 
+   const orgId = String(orgCtx.activeOrgId ?? orgCtx.orgId ?? "").trim();
+   const storeId = String(
+@@ -149,7 +150,7 @@
+ 
+   const money = useOrgMoneyPrefs(orgId);
+ 
+-  const fmt = useCallback(
++  const fmtSell = useCallback(
+     (n: number) =>
+       formatMoney(Number(n || 0), {
+         currency: money.currency || "TZS",
+@@ -157,6 +158,7 @@
+       }).replace(/\s+/g, " "),
+     [money.currency, money.locale]
+   );
++  const fmt=useCallback((n:number)=>isOwner?fmtSell(n):"—",[isOwner,fmtSell]);
+ 
+   const [loading, setLoading] = useState(false);
+   const [refreshing, setRefreshing] = useState(false);
+@@ -1523,7 +1525,7 @@
+             <td>${safeText(x.qty_received || 0)}</td>
+             <td>${safeText(remaining)}</td>
+             <td>${safeText(fmt(Number(x.unit_cost || 0)))}</td>
+-            <td>${safeText(fmt(Number(x.proposed_sell_price || 0)))}</td>
++            <td>${safeText(fmtSell(Number(x.proposed_sell_price || 0)))}</td>
+             <td>${safeText(fmt(Number(x.total_cost || 0)))}</td>
+           </tr>
+         `;
+@@ -2038,7 +2040,7 @@
+           </View>
+ 
+           <View style={{ gap: 10 }}>
+-  <Button title={uiText("Add Incoming Order")} onPress={() => setOpenAdd(true)} />
++  <Button title={uiText("Add Incoming Order")} disabled={!isOwner} onPress={() => setOpenAdd(true)} />
+ 
+   <Input placeholder={uiText("Search supplier / order / destination")} value={searchText} onChangeText={setSearchText} />
+ 
+@@ -2172,7 +2174,7 @@
+         )}
+       </View>
+ 
+-      <Modal visible={openAdd} transparent animationType="slide" onRequestClose={() => setOpenAdd(false)}>
++      <Modal visible={openAdd && isOwner} transparent animationType="slide" onRequestClose={() => setOpenAdd(false)}>
+         <KeyboardAvoidingView
+           behavior={Platform.OS === "ios" ? "padding" : "height"}
+           style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.70)", justifyContent: isDesktopWeb ? "center" : "flex-end" }}
+@@ -2272,7 +2274,7 @@
+             <SuggestRow
+               key={p.id}
+               title={p.name || uiText("Product")}
+-              subtitle={uiText("SKU: {p0} • Barcode: {p1} • Cost: {p2} • Sell: {p3}", {p0: (p.sku || "—"), p1: (p.barcode || "—"), p2: (fmt(Number(p.cost_price || 0))), p3: (fmt(Number(p.selling_price || 0)))})}
++              subtitle={uiText("SKU: {p0} • Barcode: {p1} • Cost: {p2} • Sell: {p3}", {p0: (p.sku || "—"), p1: (p.barcode || "—"), p2: (fmt(Number(p.cost_price || 0))), p3: (fmtSell(Number(p.selling_price || 0)))})}
+               onPress={() => selectProductSuggestion(p)}
+             />
+           ))}
+@@ -2689,7 +2691,7 @@
+               </Text>
+ 
+               <Text style={{ color: UI.faint, fontWeight: "800" }}>
+-                {uiText("SKU:")}{x.sku || "—"} {uiText("• Barcode:")}{x.barcode || "—"} {uiText("• Sell:")}{fmt(x.proposed_sell_price)}
++                {uiText("SKU:")}{x.sku || "—"} {uiText("• Barcode:")}{x.barcode || "—"} {uiText("• Sell:")}{fmtSell(x.proposed_sell_price)}
+               </Text>
+ 
+               {selectedOrder?.status !== "RECEIVED" ? (
+@@ -2871,7 +2873,7 @@
+   </KeyboardAvoidingView>
+ </Modal>
+ <Modal
+-  visible={fullEditOpen}
++  visible={fullEditOpen && isOwner}
+   transparent
+   animationType="slide"
+   onRequestClose={() => setFullEditOpen(false)}
+@@ -2950,7 +2952,7 @@
+                 <SuggestRow
+                   key={p.id}
+                   title={p.name || uiText("Product")}
+-                  subtitle={uiText("SKU: {p0} • Barcode: {p1} • Cost: {p2} • Sell: {p3}", {p0: (p.sku || "—"), p1: (p.barcode || "—"), p2: (fmt(Number(p.cost_price || 0))), p3: (fmt(Number(p.selling_price || 0)))})}
++                  subtitle={uiText("SKU: {p0} • Barcode: {p1} • Cost: {p2} • Sell: {p3}", {p0: (p.sku || "—"), p1: (p.barcode || "—"), p2: (fmt(Number(p.cost_price || 0))), p3: (fmtSell(Number(p.selling_price || 0)))})}
+                   onPress={() => selectEditProductSuggestion(p)}
+                 />
+               ))}
+@@ -3105,7 +3107,7 @@
+   </KeyboardAvoidingView>
+ </Modal>
+ <Modal
+-  visible={!!editingItem}
++  visible={!!editingItem && isOwner}
+   transparent
+   animationType="slide"
+   onRequestClose={() => setEditingItem(null)}
+--- released/app/stores/supplier-detail.tsx
++++ M2/app/stores/supplier-detail.tsx
+@@ -110,7 +110,8 @@
+   const supplierId = String(one(params.supplierId) ?? "").trim();
+   const supplierNameParam = String(one(params.supplierName) ?? "").trim();
+ 
+-  const { activeOrgId } = useOrg() as any;
++  const { activeOrgId, activeRole } = useOrg() as any;
++  const isOwner=String(activeRole??"").trim().toLowerCase()==="owner";
+ 
+   const [loading, setLoading] = useState(true);
+   const [saving, setSaving] = useState(false);
+@@ -171,9 +172,9 @@
+ 
+       setRows((historyRes.data ?? []) as any);
+ 
+-      const debtRes = await supabase.rpc("get_supplier_debt_history_v1", {
++      const debtRes = isOwner ? await supabase.rpc("get_supplier_debt_history_v1", {
+         p_supplier_id: supplierId,
+-      });
++      }) : {data:[],error:null};
+ 
+       if (debtRes.error) throw debtRes.error;
+ 
+@@ -185,7 +186,7 @@
+     } finally {
+       setLoading(false);
+     }
+-  }, [activeOrgId, supplierId, supplierNameParam]);
++  }, [activeOrgId, supplierId, supplierNameParam, isOwner]);
+ 
+   useEffect(() => {
+     void load();
+@@ -546,7 +547,7 @@
+             {uiText("Showing:")}{visibleRows.length} {uiText("entries")}</Text>
+         </Card>
+ 
+-        <Card style={{ gap: 10 }}>
++        {isOwner && <Card style={{ gap: 10 }}>
+           <Text style={{ color: theme.colors.text, fontWeight: "900", fontSize: 18 }}>
+             {uiText("Supplier Debt Summary")}</Text>
+ 
+@@ -619,7 +620,7 @@
+               </View>
+             ))
+           )}
+-        </Card>
++        </Card>}
+ 
+         {loading ? (
+           <View style={{ alignItems: "center", paddingTop: 20 }}>

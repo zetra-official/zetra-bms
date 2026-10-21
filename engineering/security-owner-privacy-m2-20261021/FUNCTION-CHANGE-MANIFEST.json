@@ -1,0 +1,428 @@
+[
+  {
+    "identity": "get_club_owner_intelligence_v1(uuid,timestamp with time zone,timestamp with time zone)",
+    "preimageSha256": "e90cfb95f1a903c7929485ed2d2197483cfe8d17dc48c916142f5223961a837d",
+    "resultSha256": "1817976b74f45f3d6213e73630e2f0e9da6b62d99db46d0bd4b665ed302d0ba2",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "get_store_net_profit(uuid,timestamp with time zone,timestamp with time zone)",
+    "preimageSha256": "d6f64b7d77d0aec6c8c59838356765e303b1daa5b2f180c39b1d5fbcc4322f88",
+    "resultSha256": "6fcc3dda9e54c146c09ba59349ae6eba24fd971c7879c450c516c335fc8b1a3b",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "get_profit_summary(uuid,timestamp with time zone,timestamp with time zone)",
+    "preimageSha256": "05d10b750358e8ac91ee785074da5856dda6c938e8d2730a96cbcb60f1dbcbd6",
+    "resultSha256": "589dd6606bb934d53f8a1d2e6bb7d301f22d5c3743e3eef613651105def54ba1",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "get_my_notifications_v1(uuid,integer)",
+    "preimageSha256": "6307f2028e3e94a8772ba8034aeacb3ca59d2a36147a93e7fc713bc839c57c57",
+    "resultSha256": "4b9fc508cb7efbf40a67c32d7ca2f72ca78c1b44072c884335fe69c83da34d20",
+    "policy": "OPERATIONAL_REDACTION"
+  },
+  {
+    "identity": "get_financial_dashboard_intelligent_v1(uuid,uuid,date,date)",
+    "preimageSha256": "a6c1eea5eb36f95e16cab95b840c558fb1154a93c43cacd69b87967ee3f2af43",
+    "resultSha256": "34ec627c842f6dc74c48fbe6a978a83c8156ef677534625256f87627fb831581",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "get_stock_on_hand_value_v1(uuid,uuid)",
+    "preimageSha256": "9f9921be81e1e87983b8af417193b96d7d7236a5a3ec03a9d79c4c9eb6e0e827",
+    "resultSha256": "e0d391da1382a90c871d0fe52b6e4a1ab27f0046e18937aed1cc35577b6f01e4",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "get_stock_on_hand_value_v2(uuid,uuid)",
+    "preimageSha256": "3fc895dcc7237cbd77e7a6160d2895002f8d0760b6f885179d175e1d756643b7",
+    "resultSha256": "4619803b9e915f5fea3c780007b71fc30debf3410bea35549031b7a7581e9d08",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "close_field_cycle_v1(uuid,text)",
+    "preimageSha256": "3a4799f8e2465e98af4049903efe58fb814120f1170e72694353b0b44c84c87b",
+    "resultSha256": "16cb1d572ca057c6a9878d23dc7b1a0a90b968c4f480a206dccd4b79c2b1d7b1",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "get_field_cycle_summary_v1(uuid)",
+    "preimageSha256": "ac872f09a4269edae0b0829fff3ea5662f9947de7d07bd830a50fe972bd1ea02",
+    "resultSha256": "787ec5425cbcfdee5e505ab25e934d2843956235dfcf1648383a5116a69eb225",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "get_my_notifications(uuid,integer)",
+    "preimageSha256": "c56aaebc7a04e221928dd031aa25051e5530ed0f98496e45084bbd9f04d12a9b",
+    "resultSha256": "3d68c5b19235f916b35f4e156043c75ee036ab94d5e8742235c8bbd4c25bcf3c",
+    "policy": "OPERATIONAL_REDACTION"
+  },
+  {
+    "identity": "get_store_sale_item_by_barcode(uuid,text)",
+    "preimageSha256": "29c21ca5e67bbc210f1c11503d0ad4c0b4f48d96a9caac5098da091e540381f7",
+    "resultSha256": "5c975d020999516ce799c0e8c5810d23a72a14c2b320b8e205dca0aebb0ffa63",
+    "policy": "OPERATIONAL_REDACTION"
+  },
+  {
+    "identity": "get_product_profit_report_v1(uuid,timestamp with time zone,timestamp with time zone,integer)",
+    "preimageSha256": "b966f16df4cb80fe3eed8c028cbe2c2d35546491572ca90ee1f11ba50b2c457a",
+    "resultSha256": "1fa0f7ec26704145921fd1b4088f51757b29858efcda5ae4a59bebe9b390bdb8",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "get_product_profit_report_v2(uuid,timestamp with time zone,timestamp with time zone,integer)",
+    "preimageSha256": "ddb6e326de8be90d72cb30ffb2760ae8deeb0205bc2856a05a877b13c0c61bd8",
+    "resultSha256": "f29fdc1e5cdd4f58ab59ab815da0c416f3ea1af3b699125e84d6205cd67f364f",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "get_stock_in_value_v1(uuid,uuid,date,date)",
+    "preimageSha256": "280b334180715aa1da3855c8e731d9c07cdcc2befb91c6ad8135a1b07233ee9b",
+    "resultSha256": "f447ed8c3c1d6429cfb2958625690855c9f984a39fc85d8af3c97d5957d4817b",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "get_capital_recovery_summary_v1(uuid)",
+    "preimageSha256": "dde88f2e95adc7082401c47b18fd88cde1915134d3aee2e3ff7387845fffb4d6",
+    "resultSha256": "a3fe53501ee57c66bbf08cac535a36169d54ff21624c5202335cacd3e0962a6f",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "get_capital_recovery_history_v1(uuid,integer)",
+    "preimageSha256": "c11a8c6358200ef5e45e777ead24e386d15449a56b1a140f7fa4186123d4e7c6",
+    "resultSha256": "4fad84cd9e2865d415d050a42018b158f9e4c02e0146fdea8b9d8c7bcb73fb16",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "allocate_field_wallet_v1(uuid,uuid,numeric,text)",
+    "preimageSha256": "f68cae6ca4c0a52d1a027ff8605febb96d3c127ac83e728ccaa92b5d68677873",
+    "resultSha256": "1b341ee6f74a8dd23d6acd088fccb3c5b5a1a67584d6563d8606663cfef75b54",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "allocate_field_money_v1(uuid,uuid,numeric,text)",
+    "preimageSha256": "30bdcec169c49b45dfa7daeb2d1b63ead7492726c86c97ccf4e029e96a204d62",
+    "resultSha256": "354aa922d905a5b9dfddfeaca129dc7bd12f1e245bf28a3053eb3cf83ce325ad",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "get_active_field_cycle_summary_v1(uuid)",
+    "preimageSha256": "1ebf1382c992fef6d63afd5b10acd13ebce334912fdf9c1f1c8c4e431baa1d29",
+    "resultSha256": "2b1af31336d66b5b0173e4e93d42ae313cb99c705dc0669398703113224644f0",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "get_field_wallet_history_by_cycle_v1(uuid,uuid)",
+    "preimageSha256": "9e4e64ca6f48b6da3b3cbeef47c8167034c6cf8545660007c54130be38c67706",
+    "resultSha256": "6c9f33e4f66d4b75040d6bd44d2e3154e57753f6c6848fd6ffc0f2cc5ec10496",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "get_capital_recovery_history_v2(uuid,integer)",
+    "preimageSha256": "f8b2ae93c47b123ff28409e864ad91c5a281c8898fdc99edc0016ab30bc6d048",
+    "resultSha256": "54995444414a6ef3d1f7555d7e88bf84e1d9de9b9f425731173fc27802351daa",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "get_store_net_profit_v2(uuid,timestamp with time zone,timestamp with time zone)",
+    "preimageSha256": "50d841bf3c8d8a231af8e623708ed54d17c0b305668300e6f931bed8d6a60a00",
+    "resultSha256": "122c46ce5428c0721f5e2af73be6171f97ad13f9fc71abe695cc4d9820f46620",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "record_field_expense_v1(uuid,uuid,numeric,text,text,text,text,text,numeric,numeric,numeric,text)",
+    "preimageSha256": "2d3b5708c524169577f349db6ae5af3dc6b13b36a0270013db13b32b920af418",
+    "resultSha256": "56bc1c0aece7de76f4b1bf5796c902e48aff38244881296c60d3ccf326631886",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "open_field_cycle_v1(uuid,text,numeric,text)",
+    "preimageSha256": "fb2b8863bf0be9e2f63196d81290ae45646d4e9be0170de65600ef8e9a89e526",
+    "resultSha256": "101c1b1303052817fb2c6561f04b179be47e0fe875917506d14f40914ffb0e2b",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "get_business_statement_goods_summary_v2(uuid,timestamp with time zone,timestamp with time zone)",
+    "preimageSha256": "3f224d91138b3352325ea2e359a3a226f90dc9c75e5fc5f43380825c33273c94",
+    "resultSha256": "cd60a6476a112ffd4a291b86fee6e6b66756f84c89001c3e7af3e4218d0d0cce",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "get_field_wallet_summary_v1(uuid)",
+    "preimageSha256": "21f50ef17f2df6cb0166979be016306ab4befc58e97e9d788af06fc5505ab5ff",
+    "resultSha256": "da4e36ce3590de1102b68160095cd63ca8acfc50dd767aba1993dc2a5dc9dfb1",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "get_field_stock_summary_v1(uuid)",
+    "preimageSha256": "d26dc5dcddd5401322c72a0eaf47bc840ee9b050e1b5f764eda65a24eaf4ad19",
+    "resultSha256": "243c90a8e92a272a2e6efde7e9862d676cd706886d06f90fb76fedb6dab2611f",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "get_business_statement_capital_recovery_v1(uuid,timestamp with time zone,timestamp with time zone)",
+    "preimageSha256": "d28236f61b03ff5de18b8599ffa44cdca4f35ba993a9c13a28eb99f6866b18fe",
+    "resultSha256": "7777c2e0bbb862d06afc6bf488c373ec26dd1fa2a76ae464156b52a5aa2074db",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "get_active_field_cycle_v1(uuid)",
+    "preimageSha256": "1c104b0c69a8b18ecf68128bf930b8d0e6674c4706b31ca7313978939fe0b5d4",
+    "resultSha256": "be24a7caa44dcecd5eabcb5e91e76fb891145a627fd27f9ff826bbe8228899d4",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "get_field_cycles_history_v1(uuid)",
+    "preimageSha256": "e0d441a34adcc8d07c94b28ac2cd478267a5168d79a6560a2f9f5ac2d82b9dcf",
+    "resultSha256": "e702eeea2c9f632bd165ea6672354aa1930a98b4dfd4754f09ad46477f4a5a7f",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "get_field_wallet_history_v1(uuid)",
+    "preimageSha256": "88ed1b06286b73190d512be3e1c7bf23d09decd09177c19c8716213215e8f83f",
+    "resultSha256": "975b6fe837a3683852783fd7f797bc9a11275ac93942f158a95a10d04cefce7e",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "get_field_agent_stock_summary_v1(uuid,uuid)",
+    "preimageSha256": "34b667953e50493456676ad6356cd708c5a0d3a2300f4266550d9b36e9f2a9bd",
+    "resultSha256": "f3f11ebbf64d4cfc809499251977330d51847c373f11f8bdce93b64787a0c8cb",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "get_field_stock_summary_by_cycle_v1(uuid,uuid)",
+    "preimageSha256": "8bc9b3cdb87c8512e274b55297237fba84a8c7d93d6b141d1a3a2b683a33923d",
+    "resultSha256": "c853981a60f2e247cba4bda312b3f2b418c46b00651f256d305c2f3193bcca54",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "preview_product_catalog_share_v1(text)",
+    "preimageSha256": "e02f64ccd38f7a97097b9559e8bbfbd3e84ea526e7525c171839ad559d373623",
+    "resultSha256": "6b74088da29b35366aa0d789b2e196b6794363119717c3c90292fe8affac3d90",
+    "policy": "OPERATIONAL_REDACTION"
+  },
+  {
+    "identity": "import_product_catalog_share_v1(text,uuid,uuid,uuid[])",
+    "preimageSha256": "6c59108f7e983f3a1052be6ea4d8354a8c76c22b24572eb9c937217d7370e9c2",
+    "resultSha256": "e19b338b228e89954b310a41b21e15d745c3cbf832caf60f678ac8f075b26255",
+    "policy": "OPERATIONAL_REDACTION"
+  },
+  {
+    "identity": "get_product_profit_report_v3(uuid,timestamp with time zone,timestamp with time zone,integer)",
+    "preimageSha256": "ba6acc7726c6d3d1d748342275696489bdeb1a30778923e6029dbb6741dd3f4f",
+    "resultSha256": "d51009933c3acb6284aef7b3d73dca5eaba76f5cd95fcc300049f60bc0127dd7",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "get_products(uuid,uuid)",
+    "preimageSha256": "f5d54e81fbd0374cced87848e4ef0d2bafcf540320ee458567bf809bd8e34ec2",
+    "resultSha256": "530478d8e87c0af46cca3db3ae8c27b25f5c33f162e9bfd7e8440fd3706d1255",
+    "policy": "OPERATIONAL_REDACTION"
+  },
+  {
+    "identity": "get_products_manage(uuid,uuid)",
+    "preimageSha256": "bfd667d34222d07e0c0c5edc8c0133995ab88a2e63793160bd9f6a62eea4c333",
+    "resultSha256": "2e3c8185f5d8174bd3257781ab59b11554cf76d15166c6ef46230f496cbba417",
+    "policy": "OPERATIONAL_REDACTION"
+  },
+  {
+    "identity": "upsert_product(uuid,uuid,text,text,text,text,boolean,numeric,numeric,text,uuid,boolean,numeric,text,text,boolean,boolean,text)",
+    "preimageSha256": "a53942c41bf78f0a03c68944ebd02461644a3f77bc88f335fa6bde75e68e1b49",
+    "resultSha256": "a3c044129261368973cca0813a8de38a3bca07ddc9c555c1abf41ddce937e292",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "get_business_loan_summary(uuid,uuid)",
+    "preimageSha256": "0238cabb864b32ae3a3ecda1725009f8b7de8c376d9a67c508b350145ae66f2d",
+    "resultSha256": "3230146e7648bafa29e1061a46d8b4bd8e548f7fb2e8810b0690e75cf0279714",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "get_business_loans(uuid,uuid,text)",
+    "preimageSha256": "a03cfe1f4ce5b02fcc1e31d33a7ed8da7fb1af09969c5cc58ef1c10c01788fa3",
+    "resultSha256": "bc90c904227a0f0525beb68d1affb9fc73cd256cc9c487147c2365e680d8a0aa",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "get_ai_crm_customer_360_v1(uuid,uuid,timestamp with time zone,timestamp with time zone,uuid,integer)",
+    "preimageSha256": "f1c4c741088ccee5d53db2b47d6ccfe89e72cde152cc28620cbf173950c6b9f7",
+    "resultSha256": "296b3b8c1e504f1771aa7c56268b5588cda440d6aa850476c6302b8f2e9fd941",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "create_business_debt(uuid,text,numeric,uuid,text,text,text,text,text,date)",
+    "preimageSha256": "e9ae6e7995bc416dfed2edd994944640b370dec9659379ab1767efc3b9b8fb48",
+    "resultSha256": "91a3ea60c8569987caec1b1b39ad9ddcb039cf0a3204cfe0881865b3c878802b",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "record_business_debt_payment(uuid,numeric,text)",
+    "preimageSha256": "920791487ef1422841f81b7e2c58b96d9eabc5a32edc646b9373fee6ff074887",
+    "resultSha256": "e28146c3c28d0213836a9afde0fdc981504ab002f1e0f2dd335ed061166bb399",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "get_business_debts(uuid,uuid,text)",
+    "preimageSha256": "996fc0bfe72937fd1dd1c3c7d708ba121ba0ef4fa407093ca6c0db5b1d041402",
+    "resultSha256": "84dfa6a7ff3da4291769f9b28db6e10aa4e17cb2222a4aa5f86cb0e2080720f0",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "get_business_debt_summary(uuid,uuid)",
+    "preimageSha256": "1ae5df56d496b0e68caa61272aa3a57ce9d9d94161f905b3eb25d17542929625",
+    "resultSha256": "338e44cc7f416d9b1ad687ddc778efbd27fea0dbc20ce1297dfe543bb89b0f2a",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "get_supplier_debt_history_v1(uuid)",
+    "preimageSha256": "5017ad835259da1d25410c203117b922ccc4687eef74fdfed8447d5d0c701487",
+    "resultSha256": "a4a75445c855d91f292f3b65bb17d93ad803e179b1d10c81cd708969d0aed111",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "update_business_debt_v1(uuid,text,numeric,text,text,uuid)",
+    "preimageSha256": "40c620c80cf432103923182fe181cec9518c77f78d8e98360d7d538f72f6b9b9",
+    "resultSha256": "ca072b88fe749ff18bd3bedf62e1d1c56a5947ab91591b2df5b1c60b8aa98134",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "get_inbound_stock_summary_v1(uuid,uuid)",
+    "preimageSha256": "a3d30e2c14d957eb826ad95e8e501f27dc9b586bad1fcc59277151ce3da1bb32",
+    "resultSha256": "8f8d9f42eecbdd9aebf027766122b92fef6383d1a13f4dca96d63e1d281df1a5",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "receive_inbound_stock_partial_v1(uuid,jsonb)",
+    "preimageSha256": "8e0c5b0268df6be02caef5ef48b94c86eaa03775803b489f7ae3791ea9ebb936",
+    "resultSha256": "3fac467da0edca5fccfef641172de5c19c19a8611cd5ecab123a896d1cb04c93",
+    "policy": "OPERATIONAL_REDACTION"
+  },
+  {
+    "identity": "get_inbound_stock_orders_v1(uuid,uuid)",
+    "preimageSha256": "82f0eec15360f72bb634aa712352b33dc2a994c2f6924b6046f592d888a40561",
+    "resultSha256": "401c1ce943cfbedf6945ff97d966e0d1150f124126a3cca17d07cdbf9611365e",
+    "policy": "OPERATIONAL_REDACTION"
+  },
+  {
+    "identity": "record_inbound_stock_payment_v1(uuid,numeric,text,text,text)",
+    "preimageSha256": "221c5f9f0dad02b5dd14a77fe0ff414df8ceebb3f3458a4e87f6e445fb29e775",
+    "resultSha256": "856b375d441fec9ad92cb48f78535a281e1e59cf4a8e3335acc4fe7a94d336d3",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "add_inbound_stock_item_v1(uuid,text,text,text,text,text,numeric,numeric,numeric,text)",
+    "preimageSha256": "9ace8c520aa83b9d06869c67dd36bca6d9d5bd290a40f0d87b6628190c78ca91",
+    "resultSha256": "b64cd17e0e16ae577c7f102e90197635d9ccf974a96b068bd7376eca7de95098",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "get_inbound_stock_order_items_v1(uuid)",
+    "preimageSha256": "a1e966ada90da235f7ca98efb884b9ea2409fe7f889339a8740e68e29cc41a77",
+    "resultSha256": "c8b0c3d44c86e97811875eaf3063afe735758fa5a29a2e91ab1fae992ba4c6ce",
+    "policy": "OPERATIONAL_REDACTION"
+  },
+  {
+    "identity": "delete_inbound_stock_order_v1(uuid)",
+    "preimageSha256": "c5de1e92176b2fe1fbb4bcaada3929f35dd662e30cace1ab22764470292f00b9",
+    "resultSha256": "a21f065b448d9ad2a42438978c0c5a6c2a240268395f30679d0ba9edb45f1152",
+    "policy": "OPERATIONAL_REDACTION"
+  },
+  {
+    "identity": "get_inbound_stock_suggestions_v1(uuid,uuid,text)",
+    "preimageSha256": "c732195a324145507085f02d197e4e8272a836bf70b609d9e190b0602bb3ff2d",
+    "resultSha256": "4e5d9d68c8da0f09ef2e294c5bdd727a7b4efd7b80632c146829906ddd87d044",
+    "policy": "OPERATIONAL_REDACTION"
+  },
+  {
+    "identity": "create_inbound_stock_order_v1(uuid,uuid,text,text,text,text,text,text,date,text)",
+    "preimageSha256": "18228fe57f00e72ad4937a59a4c3de9dc6562d1e8a5c0844e95d7185819cfd78",
+    "resultSha256": "caa3771221341e8b069b68b4ac56557bd2fa3fe8485989fd5c25926591d72838",
+    "policy": "OPERATIONAL_REDACTION"
+  },
+  {
+    "identity": "get_supplier_stock_history_v1(uuid)",
+    "preimageSha256": "2c596ff70f18d8630fe121781e28aeb3015d24e912fe77be3a4bb749ed461c81",
+    "resultSha256": "26ea15c86d235842d2dbce75bfadd57bc6e8fbdd727252ba097cbcfcdca37553",
+    "policy": "OPERATIONAL_REDACTION"
+  },
+  {
+    "identity": "receive_inbound_stock_v1(uuid)",
+    "preimageSha256": "078d73f206623eafcf8f72fd5c16d4adaaef796d9a84f8dba22e351e05f41985",
+    "resultSha256": "ee5f7e968131bfbd9cd4531df9578b037ac30306541eaa234ea54304b23b0be6",
+    "policy": "OPERATIONAL_REDACTION"
+  },
+  {
+    "identity": "get_my_notifications_v3(uuid,integer)",
+    "preimageSha256": "b2ec9bad77d4ea255cad338a1de2f234829d1a61c307b9237e002045d268cf77",
+    "resultSha256": "552a726d3979ca2d17ca7c7a7d33ba1178e3f810dd33f143da361fc355f323e7",
+    "policy": "OPERATIONAL_REDACTION"
+  },
+  {
+    "identity": "get_business_profit_position_v1(uuid,uuid,date,date)",
+    "preimageSha256": "56c66ddffbafb994b2734ec2dcac09b8d5ec19d1ff05492a4a1a23318c0adcf7",
+    "resultSha256": "7eba0fc15c6de843dd123badb75108d4157e4d1185ba326e9f18d93855ea2ac2",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "get_business_loan_payments(uuid)",
+    "preimageSha256": "e0af8d66646e44833b26cc36e02954cfcb9a42e42600985142128c5e8e3ce54d",
+    "resultSha256": "9e9d9570884264a3a1a82eb35fafdee2610a6dfaa14c3cc1601df7b65539e8f9",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "get_stock_in_items_v2(uuid,uuid,date,date,boolean)",
+    "preimageSha256": "82620cf63d6f9ee3d5188026db257fa3573cc9d038dc846bf374c422cea1fee8",
+    "resultSha256": "d0a1f6c439295fe0ee0fb35ce90b8db55f4ec7b45d099a0806aa78ec3310cb4b",
+    "policy": "OPERATIONAL_REDACTION"
+  },
+  {
+    "identity": "get_store_sale_items(uuid)",
+    "preimageSha256": "99c33aa27db281254f6280f99f44766c96dd84970a23939128b9f0e294600024",
+    "resultSha256": "0b0d150ec74294ffeca24b056e96310c5ed3366f932fb67756442cef9e5021a9",
+    "policy": "OPERATIONAL_REDACTION"
+  },
+  {
+    "identity": "get_stock_in_items_v1(uuid,uuid,date,date)",
+    "preimageSha256": "5fd60b8e52b3cbb142254b66e551b0b60ea3580a9910e82d1ea4305842f7d00d",
+    "resultSha256": "bc15a71ae0224ac390a758c146e76a96b40826fe1d0fb36babc027b31aa32f04",
+    "policy": "OPERATIONAL_REDACTION"
+  },
+  {
+    "identity": "get_stock_in_value_v2(uuid,uuid,date,date)",
+    "preimageSha256": "f51c872a69876347fd55d44e775108ab9f46de75dcc61e31c6ab6921ebaf55c1",
+    "resultSha256": "475a348a610bc276f4a9fb886f18245a6a98cfe81fe71e107a1ddf42dec240bc",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "get_notification_movement_items_v1(uuid[])",
+    "preimageSha256": "c475b071c7e5899d0e64af1d70c4b35cfd317066e6a091909321e96d978d88b1",
+    "resultSha256": "11fe58dbcfd6837fd166ee66b1c832dcb77d84968d49e33cc73728fc7cd2702f",
+    "policy": "OPERATIONAL_REDACTION"
+  },
+  {
+    "identity": "update_inbound_stock_item_v1(uuid,text,text,text,text,text,numeric,numeric,numeric,text)",
+    "preimageSha256": "51727566b8cb552cedd37fabdb63db9f58ee6f2d7d989d2125ab730f17b9aafb",
+    "resultSha256": "b91bd5c9a070888d7f71f14fca0e48061a15b0ef3c44812566f646f357be2034",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "get_items_overview_v1(uuid,uuid)",
+    "preimageSha256": "a7fd6b9f6fc85762243f8fabfb4fedacad0528104e3a5e110cb7875a92c54931",
+    "resultSha256": "de9542fe75e03ec827958ceab095cf88a25d12d41f0dbfac7f4e322c072b067a",
+    "policy": "OPERATIONAL_REDACTION"
+  },
+  {
+    "identity": "get_business_statement_goods_summary_v1(uuid,timestamp with time zone,timestamp with time zone)",
+    "preimageSha256": "0b2e7bc4f2c5316ec83a6de20444452555829cfff5bab13632a1fcc4d7c92ee8",
+    "resultSha256": "795d1dc097250b2b5ec3201843fcfbaa7e06a0b882f2f2ff800b3f01f6a2749c",
+    "policy": "OWNER"
+  },
+  {
+    "identity": "get_staff_performance_detail_v1(uuid,uuid,date,date)",
+    "preimageSha256": "7528b0d7f5b71ebb4d6ca3dba194aa58d1b12d6633e13361c3c41e1523460106",
+    "resultSha256": "c044850fc3dedfd99315abbfc746ede4890ad6ef9e599baf2a0ecd0816039f89",
+    "policy": "OWNER"
+  }
+]
