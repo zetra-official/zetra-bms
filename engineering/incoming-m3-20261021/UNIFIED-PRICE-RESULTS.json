@@ -1,0 +1,167 @@
+{
+  "localOnly": true,
+  "checks": [
+    {
+      "name": "Save intended price without live repricing",
+      "status": "PASS"
+    },
+    {
+      "name": "M3 legacy shortcut blocked",
+      "status": "PASS"
+    },
+    {
+      "name": "Standard partial canonical receipt",
+      "status": "PASS"
+    },
+    {
+      "name": "Partial quantity and all units current price",
+      "status": "PASS"
+    },
+    {
+      "name": "One auditable price transition bound to receipt",
+      "status": "PASS"
+    },
+    {
+      "name": "One consolidated notification",
+      "status": "PASS"
+    },
+    {
+      "name": "Movement captures actual new goods cost only",
+      "status": "PASS"
+    },
+    {
+      "name": "Duplicate partial replay has no stock or price side effect",
+      "status": "PASS"
+    },
+    {
+      "name": "Reused request with changed quantity denied",
+      "status": "PASS"
+    },
+    {
+      "name": "Full remainder accepts price applied by earlier partial",
+      "status": "PASS"
+    },
+    {
+      "name": "Canonical supplier liability is not duplicated across partial/full",
+      "status": "PASS"
+    },
+    {
+      "name": "One unchanged acquisition basis",
+      "status": "PASS"
+    },
+    {
+      "name": "Save intended price without live repricing",
+      "status": "PASS"
+    },
+    {
+      "name": "Newer Products price cannot be overwritten by saved order",
+      "status": "PASS"
+    },
+    {
+      "name": "Actor 2 cannot use cost-bearing saved receipt",
+      "status": "PASS"
+    },
+    {
+      "name": "Actor 3 cannot use cost-bearing saved receipt",
+      "status": "PASS"
+    },
+    {
+      "name": "Actor 4 cannot use cost-bearing saved receipt",
+      "status": "PASS"
+    },
+    {
+      "name": "Actor 6 cannot use cost-bearing saved receipt",
+      "status": "PASS"
+    },
+    {
+      "name": "Concurrent retry resolves one exact event",
+      "status": "PASS"
+    },
+    {
+      "name": "Private price audit inaccessible to ordinary API role",
+      "status": "PASS"
+    },
+    {
+      "name": "Save intended price without live repricing",
+      "status": "PASS"
+    },
+    {
+      "name": "M3 legacy shortcut blocked",
+      "status": "PASS"
+    },
+    {
+      "name": "Precision partial canonical receipt",
+      "status": "PASS"
+    },
+    {
+      "name": "Partial quantity and all units current price",
+      "status": "PASS"
+    },
+    {
+      "name": "One auditable price transition bound to receipt",
+      "status": "PASS"
+    },
+    {
+      "name": "One consolidated notification",
+      "status": "PASS"
+    },
+    {
+      "name": "Movement captures actual new goods cost only",
+      "status": "PASS"
+    },
+    {
+      "name": "Duplicate partial replay has no stock or price side effect",
+      "status": "PASS"
+    },
+    {
+      "name": "Reused request with changed quantity denied",
+      "status": "PASS"
+    },
+    {
+      "name": "Full remainder accepts price applied by earlier partial",
+      "status": "PASS"
+    },
+    {
+      "name": "Canonical supplier liability is not duplicated across partial/full",
+      "status": "PASS"
+    },
+    {
+      "name": "One unchanged acquisition basis",
+      "status": "PASS"
+    },
+    {
+      "name": "Save intended price without live repricing",
+      "status": "PASS"
+    },
+    {
+      "name": "Newer Products price cannot be overwritten by saved order",
+      "status": "PASS"
+    },
+    {
+      "name": "Actor 2 cannot use cost-bearing saved receipt",
+      "status": "PASS"
+    },
+    {
+      "name": "Actor 3 cannot use cost-bearing saved receipt",
+      "status": "PASS"
+    },
+    {
+      "name": "Actor 4 cannot use cost-bearing saved receipt",
+      "status": "PASS"
+    },
+    {
+      "name": "Actor 6 cannot use cost-bearing saved receipt",
+      "status": "PASS"
+    },
+    {
+      "name": "Concurrent retry resolves one exact event",
+      "status": "PASS"
+    },
+    {
+      "name": "Private price audit inaccessible to ordinary API role",
+      "status": "PASS"
+    }
+  ],
+  "pass": 40,
+  "fail": 0
+}

@@ -1,0 +1,100 @@
+TAP version 13
+# Subtest: Partial retry keeps the same request for the same visible snapshot
+ok 1 - Partial retry keeps the same request for the same visible snapshot
+  ---
+  duration_ms: 27.8003
+  ...
+# Subtest: Selection order does not change idempotency key
+ok 2 - Selection order does not change idempotency key
+  ---
+  duration_ms: 0.7324
+  ...
+# Subtest: New cumulative receiving snapshot is a new explicit operation
+ok 3 - New cumulative receiving snapshot is a new explicit operation
+  ---
+  duration_ms: 1.2368
+  ...
+# Subtest: Request key is isolated by actor and order
+ok 4 - Request key is isolated by actor and order
+  ---
+  duration_ms: 0.7779
+  ...
+# Subtest: Full retry does not change key after inventory UI refresh
+ok 5 - Full retry does not change key after inventory UI refresh
+  ---
+  duration_ms: 0.3562
+  ...
+# Subtest: Saved-order UI dispatches only to guarded canonical receiving
+ok 6 - Saved-order UI dispatches only to guarded canonical receiving
+  ---
+  duration_ms: 3.0978
+  ...
+# Subtest: en price conflicts and cost gates have localized text
+ok 7 - en price conflicts and cost gates have localized text
+  ---
+  duration_ms: 1.3929
+  ...
+# Subtest: sw price conflicts and cost gates have localized text
+ok 8 - sw price conflicts and cost gates have localized text
+  ---
+  duration_ms: 0.4891
+  ...
+# Subtest: fr price conflicts and cost gates have localized text
+ok 9 - fr price conflicts and cost gates have localized text
+  ---
+  duration_ms: 0.9402
+  ...
+# Subtest: pt price conflicts and cost gates have localized text
+ok 10 - pt price conflicts and cost gates have localized text
+  ---
+  duration_ms: 0.2937
+  ...
+# Subtest: ar price conflicts and cost gates have localized text
+ok 11 - ar price conflicts and cost gates have localized text
+  ---
+  duration_ms: 0.2144
+  ...
+# Subtest: es price conflicts and cost gates have localized text
+ok 12 - es price conflicts and cost gates have localized text
+  ---
+  duration_ms: 0.1383
+  ...
+# Subtest: zh price conflicts and cost gates have localized text
+ok 13 - zh price conflicts and cost gates have localized text
+  ---
+  duration_ms: 0.2287
+  ...
+# Subtest: Known price/cost blockers never become uncertain confirmation
+ok 14 - Known price/cost blockers never become uncertain confirmation
+  ---
+  duration_ms: 0.9114
+  ...
+# Subtest: UNIT receipt preserves base-versus-pack meaning
+ok 15 - UNIT receipt preserves base-versus-pack meaning
+  ---
+  duration_ms: 0.9609
+  ...
+# Subtest: BOX receipt preserves base-versus-pack meaning
+ok 16 - BOX receipt preserves base-versus-pack meaning
+  ---
+  duration_ms: 0.3548
+  ...
+# Subtest: Web saved receiving runs only after actual affirmative confirmation
+ok 17 - Web saved receiving runs only after actual affirmative confirmation
+  ---
+  duration_ms: 1.6779
+  ...
+# Subtest: Native confirmation remains the existing native Alert
+ok 18 - Native confirmation remains the existing native Alert
+  ---
+  duration_ms: 1.0061
+  ...
+1..18
+# tests 18
+# suites 0
+# pass 18
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 230.1353

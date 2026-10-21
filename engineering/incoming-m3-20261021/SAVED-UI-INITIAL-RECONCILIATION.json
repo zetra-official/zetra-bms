@@ -1,0 +1,44 @@
+{
+  "localOnly": true,
+  "genuineBrowserActions": true,
+  "checks": [
+    {
+      "name": "Genuine UI partial then full reached canonical RECEIVED",
+      "status": "PASS"
+    },
+    {
+      "name": "Genuine UI received all 12 ordered base units",
+      "status": "PASS"
+    },
+    {
+      "name": "Exactly 12 units added to pre-existing inventory",
+      "status": "PASS"
+    },
+    {
+      "name": "Current selling price and unchanged original acquisition basis",
+      "status": "PASS"
+    },
+    {
+      "name": "Two receiving executions have two exact six-unit events",
+      "status": "PASS"
+    },
+    {
+      "name": "One receipt and one notification per receiving execution",
+      "status": "PASS"
+    },
+    {
+      "name": "Canonical supplier liability not duplicated",
+      "status": "PASS"
+    },
+    {
+      "name": "No payment or account deduction fabricated",
+      "status": "PASS"
+    },
+    {
+      "name": "Historical sale price and COGS still original",
+      "status": "PASS"
+    }
+  ],
+  "pass": 9,
+  "fail": 0
+}

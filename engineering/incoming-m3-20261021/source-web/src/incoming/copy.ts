@@ -1,6 +1,11 @@
 import type {Language} from '../i18n/catalog';
 export const incomingCopy={
  "en": {
+  "priceConflict": "The current price changed. Refresh the product and review the intended price before receiving.",
+  "costPolicy": "This purchase cost needs an approved inventory cost-basis policy. No stock was received.",
+  "sharedPrice": "This product is shared across stores. A store-specific pricing contract is required.",
+  "savedChanged": "The saved order changed. Review it before receiving.",
+
   "precision": "Whole base-unit receipts only. Pack metadata stays unchanged. Current selling-price changes apply only on confirmed receiving. A different purchase cost requires verified cost-basis policy; no historical revaluation.",
   "title": "Bulk Incoming Stock",
   "owner": "Owner only: purchase-cost entry",
@@ -57,6 +62,11 @@ export const incomingCopy={
   "validation": "Check product identity, whole quantities, amounts and supplier selection."
  },
  "sw": {
+  "priceConflict": "Bei ya sasa imebadilika. Pakia bidhaa upya na uhakiki bei inayokusudiwa kabla ya kupokea.",
+  "costPolicy": "Gharama hii inahitaji sera iliyoidhinishwa ya cost basis. Hakuna stock iliyopokelewa.",
+  "sharedPrice": "Bidhaa hii inatumika kwenye stores zaidi ya moja. Inahitaji mkataba wa bei kwa kila store.",
+  "savedChanged": "Order iliyohifadhiwa imebadilika. Ihakiki kabla ya kupokea.",
+
   "precision": "Pokea base units kamili tu. Pack metadata haibadilishwi. Bei ya sasa ya kuuza hubadilika baada ya receiving kuthibitishwa. Purchase cost tofauti inahitaji cost-basis policy iliyothibitishwa; hakuna historical revaluation.",
   "title": "Upokeaji wa Bidhaa kwa Wingi",
   "owner": "Owner pekee: kuingiza gharama",
@@ -113,6 +123,11 @@ export const incomingCopy={
   "validation": "Hakiki bidhaa, idadi kamili, gharama na msambazaji."
  },
  "fr": {
+  "priceConflict": "Le prix actuel a changé. Actualisez le produit et vérifiez le prix prévu avant la réception.",
+  "costPolicy": "Ce coût nécessite une méthode de valorisation approuvée. Aucun stock reçu.",
+  "sharedPrice": "Ce produit est partagé entre magasins. Un contrat de prix par magasin est requis.",
+  "savedChanged": "La commande enregistrée a changé. Vérifiez-la avant réception.",
+
   "precision": "Unités de base entières uniquement. Métadonnées des packs conservées. Prix de vente actualisé seulement après réception confirmée. Un coût d’achat différent exige une règle de valorisation vérifiée ; aucun historique réévalué.",
   "title": "Réception de stock en lot",
   "owner": "Propriétaire uniquement : coûts d’achat",
@@ -169,6 +184,11 @@ export const incomingCopy={
   "validation": "Vérifiez les produits, quantités entières, montants et fournisseur."
  },
  "pt": {
+  "priceConflict": "O preço atual mudou. Atualize o produto e reveja o preço pretendido antes de receber.",
+  "costPolicy": "Este custo exige uma política de valorização aprovada. Nenhum estoque recebido.",
+  "sharedPrice": "Este produto é partilhado entre lojas. É necessário um contrato de preço por loja.",
+  "savedChanged": "O pedido guardado mudou. Reveja-o antes de receber.",
+
   "precision": "Apenas unidades base inteiras. Metadados das embalagens preservados. Preço de venda atualizado só na receção confirmada. Custo de compra diferente exige política de valorização verificada; sem reavaliar o histórico.",
   "title": "Recebimento de estoque em lote",
   "owner": "Somente proprietário: custos de aquisição",
@@ -225,6 +245,11 @@ export const incomingCopy={
   "validation": "Verifique produtos, quantidades inteiras, valores e fornecedor."
  },
  "ar": {
+  "priceConflict": "تغير السعر الحالي. حدّث المنتج وراجع السعر المقصود قبل الاستلام.",
+  "costPolicy": "تحتاج هذه التكلفة إلى سياسة معتمدة لتقييم المخزون. لم يتم استلام مخزون.",
+  "sharedPrice": "هذا المنتج مشترك بين متاجر. يلزم عقد تسعير خاص بكل متجر.",
+  "savedChanged": "تغير الطلب المحفوظ. راجعه قبل الاستلام.",
+
   "precision": "استلام وحدات أساسية كاملة فقط. تبقى بيانات العبوة ثابتة. يتغير سعر البيع الحالي بعد تأكيد الاستلام فقط. تتطلب تكلفة شراء مختلفة سياسة تكلفة موثقة؛ لا إعادة تقييم للسجلات التاريخية.",
   "title": "استلام المخزون بالجملة",
   "owner": "للمالك فقط: إدخال تكاليف الشراء",
@@ -281,6 +306,11 @@ export const incomingCopy={
   "validation": "تحقق من المنتجات والكميات الكاملة والمبالغ والمورد."
  },
  "es": {
+  "priceConflict": "El precio actual cambió. Actualice el producto y revise el precio previsto antes de recibir.",
+  "costPolicy": "Este coste requiere una política de valoración aprobada. No se recibió inventario.",
+  "sharedPrice": "Este producto se comparte entre tiendas. Se requiere un contrato de precios por tienda.",
+  "savedChanged": "El pedido guardado cambió. Revíselo antes de recibir.",
+
   "precision": "Solo unidades base enteras. Se conservan los metadatos del paquete. El precio de venta cambia solo al confirmar la recepción. Un coste de compra distinto requiere una política de valoración verificada; sin revaloración histórica.",
   "title": "Recepción de inventario por lotes",
   "owner": "Solo propietario: costos de adquisición",
@@ -337,6 +367,11 @@ export const incomingCopy={
   "validation": "Revise productos, cantidades enteras, importes y proveedor."
  },
  "zh": {
+  "priceConflict": "当前售价已更改。请刷新商品并核对预期售价后再收货。",
+  "costPolicy": "此采购成本需要经过批准的库存成本计价政策。尚未入库。",
+  "sharedPrice": "此商品由多个门店共用，需要明确的门店定价约定。",
+  "savedChanged": "已保存的订单发生变更，请核对后再收货。",
+
   "precision": "仅接收完整基本单位。保留包装元数据。仅在确认收货后更新当前售价。不同采购成本需要经验证的成本计价规则；不重估历史记录。",
   "title": "批量入库",
   "owner": "仅限所有者：采购成本录入",
@@ -395,3 +430,5 @@ export const incomingCopy={
 } as const;
 export type CopyKey=keyof typeof incomingCopy.en;
 export function text(language:Language,key:CopyKey){return incomingCopy[language][key]}
+
+export function priceErrorKey(code:string):CopyKey|null{return code==='PRICE_CONFLICT'||code==='PRICE_CONFIRMATION_REQUIRED'?'priceConflict':code==='COST_BASIS_POLICY_REQUIRED'?'costPolicy':code==='SHARED_PRODUCT_PRICE_POLICY_REQUIRED'?'sharedPrice':code==='SAVED_ORDER_CHANGED'?'savedChanged':null}

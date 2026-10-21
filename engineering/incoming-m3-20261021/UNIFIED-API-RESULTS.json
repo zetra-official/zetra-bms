@@ -1,0 +1,64 @@
+{
+  "localOnly": true,
+  "genuineGoTrueAuth": true,
+  "checks": [
+    {
+      "name": "Direct saved receiving denies admin",
+      "status": "PASS"
+    },
+    {
+      "name": "Direct saved receiving denies staff",
+      "status": "PASS"
+    },
+    {
+      "name": "Direct saved receiving denies cashier",
+      "status": "PASS"
+    },
+    {
+      "name": "Direct saved receiving denies other_org",
+      "status": "PASS"
+    },
+    {
+      "name": "Direct saved receiving denies anonymous",
+      "status": "PASS"
+    },
+    {
+      "name": "Owner verifies saved order context through genuine API",
+      "status": "PASS"
+    },
+    {
+      "name": "Owner genuine API completes canonical saved remainder",
+      "status": "PASS"
+    },
+    {
+      "name": "HTTP retry returns exact receipt without another receipt",
+      "status": "PASS"
+    },
+    {
+      "name": "Saved receipt API projection owner",
+      "status": "PASS"
+    },
+    {
+      "name": "Saved receipt API projection admin",
+      "status": "PASS"
+    },
+    {
+      "name": "Saved receipt API projection staff",
+      "status": "PASS"
+    },
+    {
+      "name": "Saved receipt API projection cashier",
+      "status": "PASS"
+    },
+    {
+      "name": "Saved receipt denies other_org",
+      "status": "PASS"
+    },
+    {
+      "name": "Saved receipt denies anonymous",
+      "status": "PASS"
+    }
+  ],
+  "pass": 14,
+  "fail": 0
+}

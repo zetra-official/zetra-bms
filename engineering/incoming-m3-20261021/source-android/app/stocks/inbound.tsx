@@ -1,3 +1,6 @@
+import {useLanguage} from '@/src/i18n/LanguageProvider';
+import {text as incomingText,priceErrorKey} from '@/src/incoming/copy';
+import {receiveSavedOrLegacy} from '@/src/incoming/savedReceiving';
 import {BulkEntryAction} from '@/src/incoming/EntryAction';
 import {useSystemMessageText} from "@/src/i18n/useSystemMessageText";
 import {useDocumentText} from "@/src/i18n/useDocumentText";
@@ -122,7 +125,16 @@ type InboundOrder = {
   created_at: string;
 };
 
+// React Native Web Alert.alert is a no-op; receiving must have an actual confirmation.
+function receivingAlert(title:string,message:string,buttons?:Parameters<typeof Alert.alert>[2]){
+ if(Platform.OS!=='web'){Alert.alert(title,message,buttons);return}
+ const action=buttons?.find(b=>b.style!=='cancel'&&b.onPress);
+ if(action){if(window.confirm(title+'\n\n'+message))action.onPress?.()}
+ else window.alert(title+'\n\n'+message);
+}
 export default function InboundStockScreen() {
+ const incomingLanguage=useLanguage().language;
+ const incomingError=(e:any,fallback:string)=>{const k=priceErrorKey(e?.message??'');return k?incomingText(incomingLanguage,k):(e?.message??fallback)};
  const systemText=useSystemMessageText();
  const {documentText, documentLocale} = useDocumentText();
  const uiText=useCommonText();
@@ -322,7 +334,7 @@ setSupplierSuggestions(suppliers);
   }, [orgId, storeId]);
 
   const load = useCallback(async () => {
-    if (!orgId) return;
+    if (!orgId) return [] as InboundOrder[];
 
     setLoading(true);
 
@@ -334,17 +346,18 @@ setSupplierSuggestions(suppliers);
 
       if (error) throw error;
 
-      setRows(
-  (Array.isArray(data) ? data : []).map((r: any) => ({
+      const loaded = (Array.isArray(data) ? data : []).map((r: any) => ({
     ...r,
     total_goods_value: Number(r.total_goods_value ?? r.total_value ?? 0),
     total_paid_amount: Number(r.total_paid_amount ?? r.total_paid ?? 0),
     total_balance_amount: Number(r.total_balance_amount ?? r.balance_amount ?? 0),
-  })) as InboundOrder[]
-);
+  })) as InboundOrder[];
+      setRows(loaded);
+      return loaded;
     } catch (e: any) {
       Alert.alert(uiText("Error"), e?.message ?? uiText("Failed to load incoming stock"));
       setRows([]);
+      return [] as InboundOrder[];
     } finally {
       setLoading(false);
     }
@@ -903,7 +916,7 @@ setReceiveQtyMap(nextMap);
 const receiveSelectedOrder = useCallback(() => {
   if (!selectedOrder) return;
 
-  Alert.alert(
+  receivingAlert(
     uiText("Receive Incoming Stock?"),
     uiText("Unataka kuingiza mzigo wa {p0} kwenye inventory sasa?", {p0: (selectedOrder.supplier_name || "supplier")}),
     [
@@ -914,13 +927,10 @@ const receiveSelectedOrder = useCallback(() => {
           setReceivingOrder(true);
 
           try {
-            const { error } = await supabase.rpc("receive_inbound_stock_v1", {
-              p_order_id: selectedOrder.id,
-            });
+            await receiveSavedOrLegacy(selectedOrder.id,null,selectedItems);
 
-            if (error) throw error;
-
-            await load();
+            const refreshed = await load();
+            await openOrderDetail(refreshed.find(o=>o.id===selectedOrder.id)??{...selectedOrder,status:'RECEIVED'});
 
             setSelectedOrder((prev) =>
               prev
@@ -931,14 +941,14 @@ const receiveSelectedOrder = useCallback(() => {
                 : prev
             );
 
-            Alert.alert(
+            receivingAlert(
               uiText("Success"),
               uiText("Incoming stock imeingia inventory successfully.")
             );
           } catch (e: any) {
-            Alert.alert(
+            receivingAlert(
               uiText("Error"),
-              e?.message ?? uiText("Failed to receive incoming stock")
+              incomingError(e,uiText("Failed to receive incoming stock"))
             );
           } finally {
             setReceivingOrder(false);
@@ -947,7 +957,7 @@ const receiveSelectedOrder = useCallback(() => {
       },
     ]
   );
-}, [selectedOrder, load]);
+}, [selectedOrder, selectedItems, load, openOrderDetail, incomingLanguage]);
 const openEditItem = useCallback((item: InboundOrderItem) => {
   setEditingItem(item);
   setEditItemName(String(item.product_name ?? ""));
@@ -1034,37 +1044,32 @@ const receivePartialOrder = useCallback(() => {
     .filter((x) => x.qty > 0);
 
   if (payload.length === 0) {
-    Alert.alert(uiText("Required"), uiText("Weka qty ya kupokea kwa angalau item moja."));
+    receivingAlert(uiText("Required"), uiText("Weka qty ya kupokea kwa angalau item moja."));
     return;
   }
 
-  Alert.alert(uiText("Receive Partial Stock?"), uiText("Unataka kuingiza qty ulizoweka kwenye inventory sasa?"), [
+  receivingAlert(uiText("Receive Partial Stock?"), uiText("Unataka kuingiza qty ulizoweka kwenye inventory sasa?"), [
     { text: uiText("Cancel"), style: "cancel" },
     {
       text: uiText("Receive"),
       onPress: async () => {
         setReceivingOrder(true);
         try {
-          const { error } = await supabase.rpc("receive_inbound_stock_partial_v1", {
-            p_order_id: selectedOrder.id,
-            p_receipts: payload,
-          });
+          await receiveSavedOrLegacy(selectedOrder.id,payload,selectedItems);
 
-          if (error) throw error;
+          const refreshed = await load();
+          await openOrderDetail(refreshed.find(o=>o.id===selectedOrder.id)??selectedOrder);
 
-          await load();
-          await openOrderDetail(selectedOrder);
-
-          Alert.alert(uiText("Success"), uiText("Partial stock imeingia inventory successfully."));
+          receivingAlert(uiText("Success"), uiText("Partial stock imeingia inventory successfully."));
         } catch (e: any) {
-          Alert.alert(uiText("Error"), e?.message ?? uiText("Failed to receive partial stock."));
+          receivingAlert(uiText("Error"), incomingError(e,uiText("Failed to receive partial stock.")));
         } finally {
           setReceivingOrder(false);
         }
       },
     },
   ]);
-}, [selectedOrder, selectedItems, receiveQtyMap, load, openOrderDetail]);
+}, [selectedOrder, selectedItems, receiveQtyMap, load, openOrderDetail, incomingLanguage]);
 const safeText = useCallback((v: any) => {
   return String(v ?? "—")
     .replace(/&/g, "&amp;")

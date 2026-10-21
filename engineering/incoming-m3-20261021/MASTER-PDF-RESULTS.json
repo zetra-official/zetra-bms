@@ -59,16 +59,6 @@
   ],
   "pass": 14,
   "fail": 0,
-  "visualReview": {
-    "status": "PASS",
-    "pagesInspected": [
-      "owner Arabic first/last",
-      "owner Chinese first/last",
-      "operational Arabic first",
-      "operational Chinese first"
-    ],
-    "scope": "Installed Chrome PDF renderer; not physical Android/iPhone Print/Share",
-    "notes": "Arabic shaping/RTL and Chinese glyphs legible, headers repeat, last product 105 and totals remain inside page margins"
-  },
+  "visualReview": "PASS",
   "nativePrintShare": "NOT TESTED"
 }

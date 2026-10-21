@@ -1,0 +1,63 @@
+{
+  "localOnly": true,
+  "checks": [
+    {
+      "name": "Different current acquisition basis remains fail-closed",
+      "status": "PASS"
+    },
+    {
+      "name": "Shared product cannot be repriced by saved receiving",
+      "status": "PASS"
+    },
+    {
+      "name": "Saved intended amounts cannot be edited behind captured evidence",
+      "status": "PASS"
+    },
+    {
+      "name": "Duplicate selected item cannot double-receive",
+      "status": "PASS"
+    },
+    {
+      "name": "Fractional base quantity is not rounded into inventory",
+      "status": "PASS"
+    },
+    {
+      "name": "Over-receiving is rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "Late invalid item rolls back the whole selected receipt",
+      "status": "PASS"
+    },
+    {
+      "name": "Full duplicate request returns original receipt after order closure",
+      "status": "PASS"
+    },
+    {
+      "name": "Operational receipt hides costs and private notes for Admin",
+      "status": "PASS"
+    },
+    {
+      "name": "Products RPC and Incoming share one price audit trigger",
+      "status": "PASS"
+    },
+    {
+      "name": "Products RPC also rejects cross-store repricing",
+      "status": "PASS"
+    },
+    {
+      "name": "Anonymous cannot call saved receiving or context",
+      "status": "PASS"
+    },
+    {
+      "name": "No parallel saved inventory writer remains",
+      "status": "PASS"
+    },
+    {
+      "name": "Authenticated cannot read shared audit or request registry",
+      "status": "PASS"
+    }
+  ],
+  "pass": 14,
+  "fail": 0
+}
