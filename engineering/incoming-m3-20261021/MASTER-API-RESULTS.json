@@ -1,0 +1,180 @@
+{
+  "localOnly": true,
+  "genuineGoTrueAuth": true,
+  "checks": [
+    {
+      "name": "Genuine local GoTrue Auth owner",
+      "status": "PASS"
+    },
+    {
+      "name": "Genuine local GoTrue Auth admin",
+      "status": "PASS"
+    },
+    {
+      "name": "Genuine local GoTrue Auth staff",
+      "status": "PASS"
+    },
+    {
+      "name": "Genuine local GoTrue Auth cashier",
+      "status": "PASS"
+    },
+    {
+      "name": "Genuine local GoTrue Auth no_membership",
+      "status": "PASS"
+    },
+    {
+      "name": "Genuine local GoTrue Auth other_org",
+      "status": "PASS"
+    },
+    {
+      "name": "Genuine local GoTrue Auth unassigned",
+      "status": "PASS"
+    },
+    {
+      "name": "Genuine local GoTrue Auth inactive",
+      "status": "PASS"
+    },
+    {
+      "name": "Direct Staff operational API isolation owner",
+      "status": "PASS"
+    },
+    {
+      "name": "Direct Staff operational API isolation admin",
+      "status": "PASS"
+    },
+    {
+      "name": "Direct Staff operational API isolation staff",
+      "status": "PASS"
+    },
+    {
+      "name": "Missing collection evidence stays unavailable through API",
+      "status": "PASS"
+    },
+    {
+      "name": "Direct Staff operational API isolation cashier",
+      "status": "PASS"
+    },
+    {
+      "name": "Direct Staff operational API isolation no_membership",
+      "status": "PASS"
+    },
+    {
+      "name": "Direct Staff operational API isolation other_org",
+      "status": "PASS"
+    },
+    {
+      "name": "Direct Staff operational API isolation inactive",
+      "status": "PASS"
+    },
+    {
+      "name": "Direct API unassigned store denied",
+      "status": "PASS"
+    },
+    {
+      "name": "Direct API mismatched organization denied",
+      "status": "PASS"
+    },
+    {
+      "name": "Anonymous operational API denied",
+      "status": "PASS"
+    },
+    {
+      "name": "Genuine receipt API all 105 lines owner",
+      "status": "PASS"
+    },
+    {
+      "name": "Genuine receipt API cost projection owner",
+      "status": "PASS"
+    },
+    {
+      "name": "Genuine notification API single receipt link owner",
+      "status": "PASS"
+    },
+    {
+      "name": "Genuine receipt API all 105 lines admin",
+      "status": "PASS"
+    },
+    {
+      "name": "Genuine receipt API cost projection admin",
+      "status": "PASS"
+    },
+    {
+      "name": "Genuine notification API single receipt link admin",
+      "status": "PASS"
+    },
+    {
+      "name": "Genuine receipt API all 105 lines staff",
+      "status": "PASS"
+    },
+    {
+      "name": "Genuine receipt API cost projection staff",
+      "status": "PASS"
+    },
+    {
+      "name": "Genuine notification API single receipt link staff",
+      "status": "PASS"
+    },
+    {
+      "name": "Genuine receipt API all 105 lines cashier",
+      "status": "PASS"
+    },
+    {
+      "name": "Genuine receipt API cost projection cashier",
+      "status": "PASS"
+    },
+    {
+      "name": "Genuine notification API single receipt link cashier",
+      "status": "PASS"
+    },
+    {
+      "name": "admin protected RPC m3_incoming_catalog_v1 denied",
+      "status": "PASS"
+    },
+    {
+      "name": "admin protected RPC get_stock_on_hand_value_v1 denied",
+      "status": "PASS"
+    },
+    {
+      "name": "admin direct acquisition-cost column denied",
+      "status": "PASS"
+    },
+    {
+      "name": "staff protected RPC m3_incoming_catalog_v1 denied",
+      "status": "PASS"
+    },
+    {
+      "name": "staff protected RPC get_stock_on_hand_value_v1 denied",
+      "status": "PASS"
+    },
+    {
+      "name": "staff direct acquisition-cost column denied",
+      "status": "PASS"
+    },
+    {
+      "name": "cashier protected RPC m3_incoming_catalog_v1 denied",
+      "status": "PASS"
+    },
+    {
+      "name": "cashier protected RPC get_stock_on_hand_value_v1 denied",
+      "status": "PASS"
+    },
+    {
+      "name": "cashier direct acquisition-cost column denied",
+      "status": "PASS"
+    },
+    {
+      "name": "Foreign/unauthorized receipt API denied other_org",
+      "status": "PASS"
+    },
+    {
+      "name": "Foreign/unauthorized receipt API denied no_membership",
+      "status": "PASS"
+    },
+    {
+      "name": "Foreign/unauthorized receipt API denied inactive",
+      "status": "PASS"
+    }
+  ],
+  "pass": 43,
+  "fail": 0
+}

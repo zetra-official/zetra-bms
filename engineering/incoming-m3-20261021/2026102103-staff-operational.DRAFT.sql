@@ -51,7 +51,11 @@ BEGIN
    WHERE p.organization_id=p_org_id AND p.store_id=p_store_id AND p.created_at>=first_time AND p.created_at<last_time
    AND (p.received_by_membership_id=member OR p.created_by=actor)
    AND (p.received_by_membership_id IS DISTINCT FROM member OR p.created_by IS NOT NULL AND p.created_by<>actor
-    OR p.paid_amount<0 OR upper(p.payment_method) NOT IN ('CASH','BANK','MOBILE','CARD','TRANSFER'))) ok,
+    OR p.paid_amount<0 OR upper(p.payment_method) NOT IN ('CASH','BANK','MOBILE','CARD','TRANSFER')))
+  -- Legacy credit collections have an actor but no verified cross-ledger payment link.
+  -- Do not return an understated zero or double-count a possibly mirrored collection.
+  AND NOT EXISTS(SELECT 1 FROM public.credit_ledger_v2 cl WHERE cl.store_id=p_store_id AND cl.created_by=actor
+   AND cl.entry_type='PAYMENT' AND cl.created_at>=first_time AND cl.created_at<last_time) ok,
   NOT EXISTS(SELECT 1 FROM eligible s WHERE s.sold_at>=first_time AND s.sold_at<last_time AND
    (s.created_by=actor AND s.sold_by_membership_id IS NULL AND s.sold_by_membership IS NULL
     OR (s.sold_by_membership_id=member OR s.sold_by_membership=member) AND s.sold_by_membership_id IS NOT NULL AND s.sold_by_membership IS NOT NULL AND s.sold_by_membership_id<>s.sold_by_membership)) sales_ok,

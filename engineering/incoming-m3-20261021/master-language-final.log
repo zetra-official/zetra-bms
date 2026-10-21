@@ -1,0 +1,160 @@
+TAP version 13
+# Subtest: Receipt-only receiving confirmation does not invent a purchase order
+ok 1 - Receipt-only receiving confirmation does not invent a purchase order # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.9547
+  ...
+# Subtest: Six-decimal registered values remain exact in receiving but fail closed in legacy order precision
+ok 2 - Six-decimal registered values remain exact in receiving but fail closed in legacy order precision # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1144
+  ...
+# Subtest: 105 complete draft lines and every entered header field restore
+ok 3 - 105 complete draft lines and every entered header field restore # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1185
+  ...
+# Subtest: Queued slow saves cannot replace a newer revision
+ok 4 - Queued slow saves cannot replace a newer revision # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0666
+  ...
+# Subtest: Store and actor draft isolation rejects misbound persistence
+ok 5 - Store and actor draft isolation rejects misbound persistence # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0626
+  ...
+# Subtest: Admin cannot open an Owner vault scope
+ok 6 - Admin cannot open an Owner vault scope # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0516
+  ...
+# Subtest: Draft clearing requires explicit confirmation
+ok 7 - Draft clearing requires explicit confirmation # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1262
+  ...
+# Subtest: Unknown submission outcome retains exact request and every line
+ok 8 - Unknown submission outcome retains exact request and every line # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0665
+  ...
+# Subtest: Definitive validation rejection restores editable work
+ok 9 - Definitive validation rejection restores editable work # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1377
+  ...
+# Subtest: Storage failure prevents submitting a nonrecoverable request
+ok 10 - Storage failure prevents submitting a nonrecoverable request # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1621
+  ...
+# Subtest: Full-array validation: duplicate product
+ok 11 - Full-array validation: duplicate product # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0679
+  ...
+# Subtest: Full-array validation: zero qty
+ok 12 - Full-array validation: zero qty # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0552
+  ...
+# Subtest: Full-array validation: negative qty
+ok 13 - Full-array validation: negative qty # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0436
+  ...
+# Subtest: Full-array validation: fractional qty
+ok 14 - Full-array validation: fractional qty # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0796
+  ...
+# Subtest: Full-array validation: unsupported precision
+ok 15 - Full-array validation: unsupported precision # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0485
+  ...
+# Subtest: Full-array validation: missing supplier save order
+ok 16 - Full-array validation: missing supplier save order # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0898
+  ...
+# Subtest: Full-array validation: more than 500 lines
+ok 17 - Full-array validation: more than 500 lines # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0531
+  ...
+# Subtest: Draft is never an inventory or payment posting
+ok 18 - Draft is never an inventory or payment posting # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1189
+  ...
+# Subtest: Encrypted Web draft survives simulated restart with same recovery phrase
+ok 19 - Encrypted Web draft survives simulated restart with same recovery phrase # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0613
+  ...
+# Subtest: Wrong Web recovery phrase never overwrites recoverable work
+ok 20 - Wrong Web recovery phrase never overwrites recoverable work # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0882
+  ...
+# Subtest: Web ciphertext copied to another store cannot decrypt (AAD binding)
+ok 21 - Web ciphertext copied to another store cannot decrypt (AAD binding) # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0471
+  ...
+# Subtest: Native secure chunks preserve Arabic/Chinese and emoji across boundaries
+ok 22 - Native secure chunks preserve Arabic/Chinese and emoji across boundaries # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0353
+  ...
+# Subtest: Native interrupted chunk write preserves prior committed draft
+ok 23 - Native interrupted chunk write preserves prior committed draft # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0308
+  ...
+# Subtest: en all Incoming labels/validation/draft/receipt strings present
+ok 24 - en all Incoming labels/validation/draft/receipt strings present
+  ---
+  duration_ms: 2.2075
+  ...
+# Subtest: sw all Incoming labels/validation/draft/receipt strings present
+ok 25 - sw all Incoming labels/validation/draft/receipt strings present
+  ---
+  duration_ms: 0.5244
+  ...
+# Subtest: fr all Incoming labels/validation/draft/receipt strings present
+ok 26 - fr all Incoming labels/validation/draft/receipt strings present
+  ---
+  duration_ms: 0.4055
+  ...
+# Subtest: pt all Incoming labels/validation/draft/receipt strings present
+ok 27 - pt all Incoming labels/validation/draft/receipt strings present
+  ---
+  duration_ms: 0.459
+  ...
+# Subtest: ar all Incoming labels/validation/draft/receipt strings present
+ok 28 - ar all Incoming labels/validation/draft/receipt strings present
+  ---
+  duration_ms: 0.9311
+  ...
+# Subtest: es all Incoming labels/validation/draft/receipt strings present
+ok 29 - es all Incoming labels/validation/draft/receipt strings present
+  ---
+  duration_ms: 0.4507
+  ...
+# Subtest: zh all Incoming labels/validation/draft/receipt strings present
+ok 30 - zh all Incoming labels/validation/draft/receipt strings present
+  ---
+  duration_ms: 0.3585
+  ...
+1..30
+# tests 30
+# suites 0
+# pass 7
+# fail 0
+# cancelled 0
+# skipped 23
+# todo 0
+# duration_ms 102.9055

@@ -1,7 +1,7 @@
 import type {Language} from '../i18n/catalog';
 export const incomingCopy={
  "en": {
-  "precision": "Save Order supports at most 2 decimals. Receive Now preserves registered units, costs and prices; change product pricing in the product master first. No automatic rounding.",
+  "precision": "Whole base-unit receipts only. Pack metadata stays unchanged. Current selling-price changes apply only on confirmed receiving. A different purchase cost requires verified cost-basis policy; no historical revaluation.",
   "title": "Bulk Incoming Stock",
   "owner": "Owner only: purchase-cost entry",
   "unlock": "Unlock local draft",
@@ -57,7 +57,7 @@ export const incomingCopy={
   "validation": "Check product identity, whole quantities, amounts and supplier selection."
  },
  "sw": {
-  "precision": "Hifadhi Oda inaruhusu desimali hadi 2. Pokea Sasa huhifadhi vipimo, gharama na bei zilizosajiliwa; badili bei kwenye bidhaa kwanza. Hakuna kuzungusha kiotomatiki.",
+  "precision": "Pokea base units kamili tu. Pack metadata haibadilishwi. Bei ya sasa ya kuuza hubadilika baada ya receiving kuthibitishwa. Purchase cost tofauti inahitaji cost-basis policy iliyothibitishwa; hakuna historical revaluation.",
   "title": "Upokeaji wa Bidhaa kwa Wingi",
   "owner": "Owner pekee: kuingiza gharama",
   "unlock": "Fungua rasimu ya kifaa",
@@ -113,7 +113,7 @@ export const incomingCopy={
   "validation": "Hakiki bidhaa, idadi kamili, gharama na msambazaji."
  },
  "fr": {
-  "precision": "Commande : 2 décimales maximum. Réception immédiate : unités, coûts et prix enregistrés conservés. Modifiez les prix dans la fiche produit. Aucun arrondi automatique.",
+  "precision": "Unités de base entières uniquement. Métadonnées des packs conservées. Prix de vente actualisé seulement après réception confirmée. Un coût d’achat différent exige une règle de valorisation vérifiée ; aucun historique réévalué.",
   "title": "Réception de stock en lot",
   "owner": "Propriétaire uniquement : coûts d’achat",
   "unlock": "Déverrouiller le brouillon local",
@@ -169,7 +169,7 @@ export const incomingCopy={
   "validation": "Vérifiez les produits, quantités entières, montants et fournisseur."
  },
  "pt": {
-  "precision": "Pedido: até 2 casas decimais. Receber agora preserva unidades, custos e preços cadastrados. Altere preços no cadastro do produto. Sem arredondamento automático.",
+  "precision": "Apenas unidades base inteiras. Metadados das embalagens preservados. Preço de venda atualizado só na receção confirmada. Custo de compra diferente exige política de valorização verificada; sem reavaliar o histórico.",
   "title": "Recebimento de estoque em lote",
   "owner": "Somente proprietário: custos de aquisição",
   "unlock": "Desbloquear rascunho local",
@@ -225,7 +225,7 @@ export const incomingCopy={
   "validation": "Verifique produtos, quantidades inteiras, valores e fornecedor."
  },
  "ar": {
-  "precision": "حفظ الطلب يدعم منزلتين عشريتين. الاستلام الفوري يحافظ على الوحدات والتكاليف والأسعار المسجلة؛ عدّل الأسعار في سجل المنتج أولاً. لا تقريب تلقائي.",
+  "precision": "استلام وحدات أساسية كاملة فقط. تبقى بيانات العبوة ثابتة. يتغير سعر البيع الحالي بعد تأكيد الاستلام فقط. تتطلب تكلفة شراء مختلفة سياسة تكلفة موثقة؛ لا إعادة تقييم للسجلات التاريخية.",
   "title": "استلام المخزون بالجملة",
   "owner": "للمالك فقط: إدخال تكاليف الشراء",
   "unlock": "فتح المسودة المحلية",
@@ -281,7 +281,7 @@ export const incomingCopy={
   "validation": "تحقق من المنتجات والكميات الكاملة والمبالغ والمورد."
  },
  "es": {
-  "precision": "Pedido: hasta 2 decimales. Recibir ahora conserva unidades, costos y precios registrados. Cambie los precios en la ficha del producto. Sin redondeo automático.",
+  "precision": "Solo unidades base enteras. Se conservan los metadatos del paquete. El precio de venta cambia solo al confirmar la recepción. Un coste de compra distinto requiere una política de valoración verificada; sin revaloración histórica.",
   "title": "Recepción de inventario por lotes",
   "owner": "Solo propietario: costos de adquisición",
   "unlock": "Desbloquear borrador local",
@@ -337,7 +337,7 @@ export const incomingCopy={
   "validation": "Revise productos, cantidades enteras, importes y proveedor."
  },
  "zh": {
-  "precision": "保存订单最多支持两位小数。立即入库保留已登记单位、成本和售价；请先在商品资料中修改价格。不会自动四舍五入。",
+  "precision": "仅接收完整基本单位。保留包装元数据。仅在确认收货后更新当前售价。不同采购成本需要经验证的成本计价规则；不重估历史记录。",
   "title": "批量入库",
   "owner": "仅限所有者：采购成本录入",
   "unlock": "解锁本地草稿",

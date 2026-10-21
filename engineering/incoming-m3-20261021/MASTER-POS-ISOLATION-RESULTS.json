@@ -1,0 +1,59 @@
+{
+  "localOnly": true,
+  "checks": [
+    {
+      "name": "Canonical POS reader role 1 still works",
+      "status": "PASS"
+    },
+    {
+      "name": "Canonical POS role 1 sees updated per-unit price and unchanged pack contract",
+      "status": "PASS"
+    },
+    {
+      "name": "Canonical POS reader role 2 still works",
+      "status": "PASS"
+    },
+    {
+      "name": "Canonical POS role 2 sees updated per-unit price and unchanged pack contract",
+      "status": "PASS"
+    },
+    {
+      "name": "Canonical POS role 2 acquisition cost stays hidden",
+      "status": "PASS"
+    },
+    {
+      "name": "Canonical POS reader role 3 still works",
+      "status": "PASS"
+    },
+    {
+      "name": "Canonical POS role 3 sees updated per-unit price and unchanged pack contract",
+      "status": "PASS"
+    },
+    {
+      "name": "Canonical POS role 3 acquisition cost stays hidden",
+      "status": "PASS"
+    },
+    {
+      "name": "Canonical POS reader role 4 still works",
+      "status": "PASS"
+    },
+    {
+      "name": "Canonical POS role 4 sees updated per-unit price and unchanged pack contract",
+      "status": "PASS"
+    },
+    {
+      "name": "Canonical POS role 4 acquisition cost stays hidden",
+      "status": "PASS"
+    },
+    {
+      "name": "Shared product cannot silently reprice another store",
+      "status": "PASS"
+    },
+    {
+      "name": "Shared-price failure does not change current price",
+      "status": "PASS"
+    }
+  ],
+  "pass": 13,
+  "fail": 0
+}

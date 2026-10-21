@@ -1,0 +1,74 @@
+{
+  "checks": [
+    {
+      "name": "master-owner-ar multipage",
+      "status": "PASS"
+    },
+    {
+      "name": "master-owner-ar all 105 original SKUs",
+      "status": "PASS"
+    },
+    {
+      "name": "master-owner-ar Chinese product identity preserved",
+      "status": "PASS"
+    },
+    {
+      "name": "master-owner-zh multipage",
+      "status": "PASS"
+    },
+    {
+      "name": "master-owner-zh all 105 original SKUs",
+      "status": "PASS"
+    },
+    {
+      "name": "master-owner-zh Chinese product identity preserved",
+      "status": "PASS"
+    },
+    {
+      "name": "master-operational-ar multipage",
+      "status": "PASS"
+    },
+    {
+      "name": "master-operational-ar all 105 original SKUs",
+      "status": "PASS"
+    },
+    {
+      "name": "master-operational-ar Chinese product identity preserved",
+      "status": "PASS"
+    },
+    {
+      "name": "master-operational-ar no acquisition cost columns",
+      "status": "PASS"
+    },
+    {
+      "name": "master-operational-zh multipage",
+      "status": "PASS"
+    },
+    {
+      "name": "master-operational-zh all 105 original SKUs",
+      "status": "PASS"
+    },
+    {
+      "name": "master-operational-zh Chinese product identity preserved",
+      "status": "PASS"
+    },
+    {
+      "name": "master-operational-zh no acquisition cost columns",
+      "status": "PASS"
+    }
+  ],
+  "pass": 14,
+  "fail": 0,
+  "visualReview": {
+    "status": "PASS",
+    "pagesInspected": [
+      "owner Arabic first/last",
+      "owner Chinese first/last",
+      "operational Arabic first",
+      "operational Chinese first"
+    ],
+    "scope": "Installed Chrome PDF renderer; not physical Android/iPhone Print/Share",
+    "notes": "Arabic shaping/RTL and Chinese glyphs legible, headers repeat, last product 105 and totals remain inside page margins"
+  },
+  "nativePrintShare": "NOT TESTED"
+}

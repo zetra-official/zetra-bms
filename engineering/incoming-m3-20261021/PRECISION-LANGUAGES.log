@@ -1,0 +1,130 @@
+TAP version 13
+# Subtest: Approved tablet example computes 500 cost and 800 selling per base unit
+ok 1 - Approved tablet example computes 500 cost and 800 selling per base unit # SKIP test name does not match pattern
+  ---
+  duration_ms: 1.7473
+  ...
+# Subtest: PACK quantity 2 becomes 200 tablets
+ok 2 - PACK quantity 2 becomes 200 tablets # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1382
+  ...
+# Subtest: BOX quantity 2 becomes 200 tablets
+ok 3 - BOX quantity 2 becomes 200 tablets # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1185
+  ...
+# Subtest: CARTON quantity 2 becomes 200 tablets
+ok 4 - CARTON quantity 2 becomes 200 tablets # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1989
+  ...
+# Subtest: UNIT quantity is never multiplied twice
+ok 5 - UNIT quantity is never multiplied twice # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1292
+  ...
+# Subtest: Exact decimal division uses established six-decimal half-away display rounding
+ok 6 - Exact decimal division uses established six-decimal half-away display rounding # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0607
+  ...
+# Subtest: Fractional package inputs are decimal-safe
+ok 7 - Fractional package inputs are decimal-safe # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1156
+  ...
+# Subtest: Precision beyond representable quantity is rejected rather than truncated
+ok 8 - Precision beyond representable quantity is rejected rather than truncated # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.07
+  ...
+# Subtest: Invalid pack size 0 rejected
+ok 9 - Invalid pack size 0 rejected # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.2108
+  ...
+# Subtest: Invalid pack size -1 rejected
+ok 10 - Invalid pack size -1 rejected # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1687
+  ...
+# Subtest: Invalid pack size NaN rejected
+ok 11 - Invalid pack size NaN rejected # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0794
+  ...
+# Subtest: Invalid pack size 1e3 rejected
+ok 12 - Invalid pack size 1e3 rejected # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1664
+  ...
+# Subtest: Invalid pack size 1.0000001 rejected
+ok 13 - Invalid pack size 1.0000001 rejected # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0646
+  ...
+# Subtest: Incoming command freezes entered units, authoritative expectation and exact base quantity
+ok 14 - Incoming command freezes entered units, authoritative expectation and exact base quantity # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.4629
+  ...
+# Subtest: Precision fields and edited price survive repository restart
+ok 15 - Precision fields and edited price survive repository restart # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0895
+  ...
+# Subtest: Unresolved calculator inputs cannot submit stale derived prices
+ok 16 - Unresolved calculator inputs cannot submit stale derived prices # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1098
+  ...
+# Subtest: Products and Incoming use one shared exact calculator, not separate formula engines
+ok 17 - Products and Incoming use one shared exact calculator, not separate formula engines # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0603
+  ...
+# Subtest: en calculator labels and rejected-precision explanation complete
+ok 18 - en calculator labels and rejected-precision explanation complete
+  ---
+  duration_ms: 5.3445
+  ...
+# Subtest: sw calculator labels and rejected-precision explanation complete
+ok 19 - sw calculator labels and rejected-precision explanation complete
+  ---
+  duration_ms: 0.1224
+  ...
+# Subtest: fr calculator labels and rejected-precision explanation complete
+ok 20 - fr calculator labels and rejected-precision explanation complete
+  ---
+  duration_ms: 0.8286
+  ...
+# Subtest: pt calculator labels and rejected-precision explanation complete
+ok 21 - pt calculator labels and rejected-precision explanation complete
+  ---
+  duration_ms: 0.1854
+  ...
+# Subtest: ar calculator labels and rejected-precision explanation complete
+ok 22 - ar calculator labels and rejected-precision explanation complete
+  ---
+  duration_ms: 0.109
+  ...
+# Subtest: es calculator labels and rejected-precision explanation complete
+ok 23 - es calculator labels and rejected-precision explanation complete
+  ---
+  duration_ms: 0.0539
+  ...
+# Subtest: zh calculator labels and rejected-precision explanation complete
+ok 24 - zh calculator labels and rejected-precision explanation complete
+  ---
+  duration_ms: 0.0431
+  ...
+1..24
+# tests 24
+# suites 0
+# pass 7
+# fail 0
+# cancelled 0
+# skipped 17
+# todo 0
+# duration_ms 111.7548

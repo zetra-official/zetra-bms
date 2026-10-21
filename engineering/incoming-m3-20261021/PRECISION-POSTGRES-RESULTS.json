@@ -1,0 +1,127 @@
+{
+  "localOnly": true,
+  "checks": [
+    {
+      "name": "105 mixed Standard/Precision lines receive atomically in Precision store",
+      "status": "PASS"
+    },
+    {
+      "name": "Receipt all 105 lines and original entry order",
+      "status": "PASS"
+    },
+    {
+      "name": "Pack/Box quantities converted to base inventory exactly",
+      "status": "PASS"
+    },
+    {
+      "name": "Current selling price updated on all existing products only",
+      "status": "PASS"
+    },
+    {
+      "name": "Product identities not duplicated",
+      "status": "PASS"
+    },
+    {
+      "name": "Registered cost basis not changed",
+      "status": "PASS"
+    },
+    {
+      "name": "Original historical sale/COGS snapshot preserved byte for byte",
+      "status": "PASS"
+    },
+    {
+      "name": "One canonical event and notification for 105 lines",
+      "status": "PASS"
+    },
+    {
+      "name": "New movement cost evidence accurately recorded",
+      "status": "PASS"
+    },
+    {
+      "name": "Precision metadata preserved on product master",
+      "status": "PASS"
+    },
+    {
+      "name": "Receipt records base and package units plus before/after price audit",
+      "status": "PASS"
+    },
+    {
+      "name": "Role 2 complete receipt without acquisition costs",
+      "status": "PASS"
+    },
+    {
+      "name": "Role 3 complete receipt without acquisition costs",
+      "status": "PASS"
+    },
+    {
+      "name": "Role 4 complete receipt without acquisition costs",
+      "status": "PASS"
+    },
+    {
+      "name": "UNIT receiving succeeds with registered metadata",
+      "status": "PASS"
+    },
+    {
+      "name": "BOX receiving succeeds with registered metadata",
+      "status": "PASS"
+    },
+    {
+      "name": "Save Order preserves intended prices without repricing or stock posting",
+      "status": "PASS"
+    },
+    {
+      "name": "Specialized intended-price order fails closed before unsafe legacy receiving",
+      "status": "PASS"
+    },
+    {
+      "name": "Confirmed retry cannot overwrite a newer current price",
+      "status": "PASS"
+    },
+    {
+      "name": "Stale price rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "Stale price no inventory/price partial commit",
+      "status": "PASS"
+    },
+    {
+      "name": "Changed acquisition basis rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "Changed acquisition basis no inventory/price partial commit",
+      "status": "PASS"
+    },
+    {
+      "name": "Tampered pack size rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "Tampered pack size no inventory/price partial commit",
+      "status": "PASS"
+    },
+    {
+      "name": "Tampered base quantity rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "Tampered base quantity no inventory/price partial commit",
+      "status": "PASS"
+    },
+    {
+      "name": "Later conflicting product rolls back whole 105-line batch",
+      "status": "PASS"
+    },
+    {
+      "name": "Concurrent same-request receiving resolves to one result",
+      "status": "PASS"
+    },
+    {
+      "name": "Concurrent stock and price update occur once",
+      "status": "PASS"
+    }
+  ],
+  "pass": 30,
+  "fail": 0
+}

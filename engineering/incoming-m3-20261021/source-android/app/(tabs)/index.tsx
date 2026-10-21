@@ -9011,7 +9011,7 @@ void loadDesktopNotifications();
       )}
 
       {roleLower === 'staff' && !isCapitalRecoveryStore ? (
-        <StoreGuard><StaffOperationalDashboard key={JSON.stringify([orgId,storeId,roleLower])}/></StoreGuard>
+        <><WorkspaceCard activeOrgName={activeOrgName} activeRole={activeRole} activeStoreName={activeStoreName} activeStoreId={activeStoreId} onOpen={goOrgSwitcher}/><StoreGuard><StaffOperationalDashboard key={JSON.stringify([orgId,storeId,roleLower])}/></StoreGuard></>
       ) : isCapitalRecoveryStore ? (
         <>
           <StoreGuard>

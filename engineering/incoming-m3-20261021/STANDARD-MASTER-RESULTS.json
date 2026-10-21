@@ -1,0 +1,51 @@
+{
+  "localOnly": true,
+  "checks": [
+    {
+      "name": "STANDARD current product price update accepted",
+      "status": "PASS"
+    },
+    {
+      "name": "10 existing plus 100 received equals 110",
+      "status": "PASS"
+    },
+    {
+      "name": "Current store selling price is 12000",
+      "status": "PASS"
+    },
+    {
+      "name": "No duplicate product",
+      "status": "PASS"
+    },
+    {
+      "name": "Other store prices unchanged",
+      "status": "PASS"
+    },
+    {
+      "name": "STANDARD idempotent retry no duplicate stock",
+      "status": "PASS"
+    },
+    {
+      "name": "STANDARD Save Order does not change stock/current price",
+      "status": "PASS"
+    },
+    {
+      "name": "Non-Owner 2 cannot enter acquisition cost/update price through bulk",
+      "status": "PASS"
+    },
+    {
+      "name": "Non-Owner 3 cannot enter acquisition cost/update price through bulk",
+      "status": "PASS"
+    },
+    {
+      "name": "Non-Owner 4 cannot enter acquisition cost/update price through bulk",
+      "status": "PASS"
+    },
+    {
+      "name": "STANDARD store type comes from authorized server context",
+      "status": "PASS"
+    }
+  ],
+  "pass": 11,
+  "fail": 0
+}

@@ -1,0 +1,160 @@
+TAP version 13
+# Subtest: Receipt-only receiving confirmation does not invent a purchase order
+ok 1 - Receipt-only receiving confirmation does not invent a purchase order
+  ---
+  duration_ms: 3.977
+  ...
+# Subtest: Six-decimal registered values remain exact in receiving but fail closed in legacy order precision
+ok 2 - Six-decimal registered values remain exact in receiving but fail closed in legacy order precision
+  ---
+  duration_ms: 1.6296
+  ...
+# Subtest: 105 complete draft lines and every entered header field restore
+ok 3 - 105 complete draft lines and every entered header field restore
+  ---
+  duration_ms: 1.4056
+  ...
+# Subtest: Queued slow saves cannot replace a newer revision
+ok 4 - Queued slow saves cannot replace a newer revision
+  ---
+  duration_ms: 25.1461
+  ...
+# Subtest: Store and actor draft isolation rejects misbound persistence
+ok 5 - Store and actor draft isolation rejects misbound persistence
+  ---
+  duration_ms: 0.7412
+  ...
+# Subtest: Admin cannot open an Owner vault scope
+ok 6 - Admin cannot open an Owner vault scope
+  ---
+  duration_ms: 0.1369
+  ...
+# Subtest: Draft clearing requires explicit confirmation
+ok 7 - Draft clearing requires explicit confirmation
+  ---
+  duration_ms: 1.1645
+  ...
+# Subtest: Unknown submission outcome retains exact request and every line
+ok 8 - Unknown submission outcome retains exact request and every line
+  ---
+  duration_ms: 2.0335
+  ...
+# Subtest: Definitive validation rejection restores editable work
+ok 9 - Definitive validation rejection restores editable work
+  ---
+  duration_ms: 1.7289
+  ...
+# Subtest: Storage failure prevents submitting a nonrecoverable request
+ok 10 - Storage failure prevents submitting a nonrecoverable request
+  ---
+  duration_ms: 0.9901
+  ...
+# Subtest: Full-array validation: duplicate product
+ok 11 - Full-array validation: duplicate product
+  ---
+  duration_ms: 0.7154
+  ...
+# Subtest: Full-array validation: zero qty
+ok 12 - Full-array validation: zero qty
+  ---
+  duration_ms: 0.2676
+  ...
+# Subtest: Full-array validation: negative qty
+ok 13 - Full-array validation: negative qty
+  ---
+  duration_ms: 0.5443
+  ...
+# Subtest: Full-array validation: fractional qty
+ok 14 - Full-array validation: fractional qty
+  ---
+  duration_ms: 0.3105
+  ...
+# Subtest: Full-array validation: unsupported precision
+ok 15 - Full-array validation: unsupported precision
+  ---
+  duration_ms: 0.1651
+  ...
+# Subtest: Full-array validation: missing supplier save order
+ok 16 - Full-array validation: missing supplier save order
+  ---
+  duration_ms: 0.2356
+  ...
+# Subtest: Full-array validation: more than 500 lines
+ok 17 - Full-array validation: more than 500 lines
+  ---
+  duration_ms: 0.1897
+  ...
+# Subtest: Draft is never an inventory or payment posting
+ok 18 - Draft is never an inventory or payment posting
+  ---
+  duration_ms: 1.0131
+  ...
+# Subtest: Encrypted Web draft survives simulated restart with same recovery phrase
+ok 19 - Encrypted Web draft survives simulated restart with same recovery phrase
+  ---
+  duration_ms: 186.8065
+  ...
+# Subtest: Wrong Web recovery phrase never overwrites recoverable work
+ok 20 - Wrong Web recovery phrase never overwrites recoverable work
+  ---
+  duration_ms: 85.9201
+  ...
+# Subtest: Web ciphertext copied to another store cannot decrypt (AAD binding)
+ok 21 - Web ciphertext copied to another store cannot decrypt (AAD binding)
+  ---
+  duration_ms: 85.6006
+  ...
+# Subtest: Native secure chunks preserve Arabic/Chinese and emoji across boundaries
+ok 22 - Native secure chunks preserve Arabic/Chinese and emoji across boundaries
+  ---
+  duration_ms: 1.9497
+  ...
+# Subtest: Native interrupted chunk write preserves prior committed draft
+ok 23 - Native interrupted chunk write preserves prior committed draft
+  ---
+  duration_ms: 0.3764
+  ...
+# Subtest: en all Incoming labels/validation/draft/receipt strings present
+ok 24 - en all Incoming labels/validation/draft/receipt strings present
+  ---
+  duration_ms: 1.0758
+  ...
+# Subtest: sw all Incoming labels/validation/draft/receipt strings present
+ok 25 - sw all Incoming labels/validation/draft/receipt strings present
+  ---
+  duration_ms: 0.7423
+  ...
+# Subtest: fr all Incoming labels/validation/draft/receipt strings present
+ok 26 - fr all Incoming labels/validation/draft/receipt strings present
+  ---
+  duration_ms: 0.4763
+  ...
+# Subtest: pt all Incoming labels/validation/draft/receipt strings present
+ok 27 - pt all Incoming labels/validation/draft/receipt strings present
+  ---
+  duration_ms: 0.4632
+  ...
+# Subtest: ar all Incoming labels/validation/draft/receipt strings present
+ok 28 - ar all Incoming labels/validation/draft/receipt strings present
+  ---
+  duration_ms: 0.5205
+  ...
+# Subtest: es all Incoming labels/validation/draft/receipt strings present
+ok 29 - es all Incoming labels/validation/draft/receipt strings present
+  ---
+  duration_ms: 0.854
+  ...
+# Subtest: zh all Incoming labels/validation/draft/receipt strings present
+ok 30 - zh all Incoming labels/validation/draft/receipt strings present
+  ---
+  duration_ms: 0.3456
+  ...
+1..30
+# tests 30
+# suites 0
+# pass 30
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 486.2066

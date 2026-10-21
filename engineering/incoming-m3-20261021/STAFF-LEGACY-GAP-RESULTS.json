@@ -1,0 +1,15 @@
+{
+  "localOnly": true,
+  "checks": [
+    {
+      "name": "Own legacy collection fails closed pending cross-ledger reconciliation",
+      "status": "PASS"
+    },
+    {
+      "name": "Colleague legacy collection does not contaminate personal collections",
+      "status": "PASS"
+    }
+  ],
+  "pass": 2,
+  "fail": 0
+}

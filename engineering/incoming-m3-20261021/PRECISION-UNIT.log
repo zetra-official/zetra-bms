@@ -1,0 +1,95 @@
+TAP version 13
+# Subtest: Approved tablet example computes 500 cost and 800 selling per base unit
+ok 1 - Approved tablet example computes 500 cost and 800 selling per base unit
+  ---
+  duration_ms: 2.0845
+  ...
+# Subtest: PACK quantity 2 becomes 200 tablets
+ok 2 - PACK quantity 2 becomes 200 tablets
+  ---
+  duration_ms: 0.1789
+  ...
+# Subtest: BOX quantity 2 becomes 200 tablets
+ok 3 - BOX quantity 2 becomes 200 tablets
+  ---
+  duration_ms: 0.135
+  ...
+# Subtest: CARTON quantity 2 becomes 200 tablets
+ok 4 - CARTON quantity 2 becomes 200 tablets
+  ---
+  duration_ms: 0.7995
+  ...
+# Subtest: UNIT quantity is never multiplied twice
+ok 5 - UNIT quantity is never multiplied twice
+  ---
+  duration_ms: 0.1355
+  ...
+# Subtest: Exact decimal division uses established six-decimal half-away display rounding
+ok 6 - Exact decimal division uses established six-decimal half-away display rounding
+  ---
+  duration_ms: 0.1222
+  ...
+# Subtest: Fractional package inputs are decimal-safe
+ok 7 - Fractional package inputs are decimal-safe
+  ---
+  duration_ms: 0.0959
+  ...
+# Subtest: Precision beyond representable quantity is rejected rather than truncated
+ok 8 - Precision beyond representable quantity is rejected rather than truncated
+  ---
+  duration_ms: 0.3643
+  ...
+# Subtest: Invalid pack size 0 rejected
+ok 9 - Invalid pack size 0 rejected
+  ---
+  duration_ms: 0.2147
+  ...
+# Subtest: Invalid pack size -1 rejected
+ok 10 - Invalid pack size -1 rejected
+  ---
+  duration_ms: 0.1589
+  ...
+# Subtest: Invalid pack size NaN rejected
+ok 11 - Invalid pack size NaN rejected
+  ---
+  duration_ms: 0.0824
+  ...
+# Subtest: Invalid pack size 1e3 rejected
+ok 12 - Invalid pack size 1e3 rejected
+  ---
+  duration_ms: 0.0677
+  ...
+# Subtest: Invalid pack size 1.0000001 rejected
+ok 13 - Invalid pack size 1.0000001 rejected
+  ---
+  duration_ms: 0.0827
+  ...
+# Subtest: Incoming command freezes entered units, authoritative expectation and exact base quantity
+ok 14 - Incoming command freezes entered units, authoritative expectation and exact base quantity
+  ---
+  duration_ms: 1.135
+  ...
+# Subtest: Precision fields and edited price survive repository restart
+ok 15 - Precision fields and edited price survive repository restart
+  ---
+  duration_ms: 0.6279
+  ...
+# Subtest: Unresolved calculator inputs cannot submit stale derived prices
+ok 16 - Unresolved calculator inputs cannot submit stale derived prices
+  ---
+  duration_ms: 0.5087
+  ...
+# Subtest: Products and Incoming use one shared exact calculator, not separate formula engines
+ok 17 - Products and Incoming use one shared exact calculator, not separate formula engines
+  ---
+  duration_ms: 1.4591
+  ...
+1..17
+# tests 17
+# suites 0
+# pass 17
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 111.5795

@@ -1,0 +1,88 @@
+{
+  "localOnly": true,
+  "hostedWrites": false,
+  "checks": [
+    {
+      "name": "New Staff read draft applied only to verified disposable backend",
+      "status": "PASS"
+    },
+    {
+      "name": "Staff genuine SQL-role read succeeds",
+      "status": "PASS"
+    },
+    {
+      "name": "Personal completed sales exclude same-store colleague",
+      "status": "PASS"
+    },
+    {
+      "name": "Money In counts own verified collection, excludes unpaid and cashier collections",
+      "status": "PASS"
+    },
+    {
+      "name": "Own expense visibility independent of management flag",
+      "status": "PASS"
+    },
+    {
+      "name": "Average order value exact numeric display",
+      "status": "PASS"
+    },
+    {
+      "name": "Private fields absent from response",
+      "status": "PASS"
+    },
+    {
+      "name": "Personal history has five authorized rows only",
+      "status": "PASS"
+    },
+    {
+      "name": "Actor 1 denied new Staff-only contract",
+      "status": "PASS"
+    },
+    {
+      "name": "Actor 2 denied new Staff-only contract",
+      "status": "PASS"
+    },
+    {
+      "name": "Actor 4 denied new Staff-only contract",
+      "status": "PASS"
+    },
+    {
+      "name": "Actor 5 denied new Staff-only contract",
+      "status": "PASS"
+    },
+    {
+      "name": "Actor 6 denied new Staff-only contract",
+      "status": "PASS"
+    },
+    {
+      "name": "Actor 8 denied new Staff-only contract",
+      "status": "PASS"
+    },
+    {
+      "name": "Same-store second Staff sees only own metrics",
+      "status": "PASS"
+    },
+    {
+      "name": "Unassigned store denied",
+      "status": "PASS"
+    },
+    {
+      "name": "Cross-organization scope denied",
+      "status": "PASS"
+    },
+    {
+      "name": "Anonymous direct call denied",
+      "status": "PASS"
+    },
+    {
+      "name": "Missing own seller evidence unavailable rather than zero",
+      "status": "PASS"
+    },
+    {
+      "name": "Paid sale without collection evidence unavailable rather than inferred cash",
+      "status": "PASS"
+    }
+  ],
+  "pass": 20,
+  "fail": 0
+}

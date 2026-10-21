@@ -1,0 +1,6 @@
+from pathlib import Path
+E=Path(__file__).resolve().parent;W=E/'source-web'
+p=W/'src/incoming/PrecisionEditor.tsx';s=p.read_text(encoding='utf-8');s="import {precisionCopy} from '../precision/copy';\n"+s;s=s.replace("ui('Pack Size')","precisionCopy[language].packSize").replace("+mode} disabled", "+precisionCopy[language][mode as 'UNIT'|'BOX'|'PACK']} disabled");p.write_text(s,encoding='utf-8')
+p=W/'app/(tabs)/products.tsx';s=p.read_text(encoding='utf-8');s="import {useLanguage} from '../../src/i18n/LanguageProvider';\nimport {precisionCopy} from '../../src/precision/copy';\n"+s;s=s.replace(' const uiText=useCommonText();',' const uiText=useCommonText();const {language:precisionLanguage}=useLanguage();',1).replace("uiText('Invalid value')","precisionCopy[precisionLanguage].invalid").replace('precisionPackSelling, precisionUnit]);','precisionPackSelling, precisionUnit, precisionLanguage]);').replace('editPrecisionPackSelling]);','editPrecisionPackSelling, precisionLanguage]);');p.write_text(s,encoding='utf-8')
+for name in ['src/precision/copy.ts','src/incoming/PrecisionEditor.tsx','app/(tabs)/products.tsx']:(E/'source-android'/name).write_bytes((W/name).read_bytes())
+print('Calculator missing labels and validation covered in all seven languages; currency/localization engines unchanged')
