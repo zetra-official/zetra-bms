@@ -1,0 +1,276 @@
+{
+  "checks": [
+    {
+      "name": "Synthetic fixture isolated",
+      "status": "PASS"
+    },
+    {
+      "name": "Single supplier-less non-credit receipt",
+      "status": "PASS"
+    },
+    {
+      "name": "Single canonical quantity",
+      "status": "PASS"
+    },
+    {
+      "name": "One consolidated notification single receipt",
+      "status": "PASS"
+    },
+    {
+      "name": "Same request returns same confirmed result",
+      "status": "PASS"
+    },
+    {
+      "name": "Retry causes no second stock movement",
+      "status": "PASS"
+    },
+    {
+      "name": "Same request different payload denied",
+      "status": "PASS"
+    },
+    {
+      "name": "105 product lines committed atomically",
+      "status": "PASS"
+    },
+    {
+      "name": "105 canonical movements share one event",
+      "status": "PASS"
+    },
+    {
+      "name": "105 lines produce one notification",
+      "status": "PASS"
+    },
+    {
+      "name": "No supplier debt or payment from non-credit receipt",
+      "status": "PASS"
+    },
+    {
+      "name": "Actor 1 authorized consolidated receipt",
+      "status": "PASS"
+    },
+    {
+      "name": "Actor 1 sees all 105 lines",
+      "status": "PASS"
+    },
+    {
+      "name": "Actor 1 original identifiers/order preserved",
+      "status": "PASS"
+    },
+    {
+      "name": "Actor 1 financial projection",
+      "status": "PASS"
+    },
+    {
+      "name": "Actor 2 authorized consolidated receipt",
+      "status": "PASS"
+    },
+    {
+      "name": "Actor 2 sees all 105 lines",
+      "status": "PASS"
+    },
+    {
+      "name": "Actor 2 original identifiers/order preserved",
+      "status": "PASS"
+    },
+    {
+      "name": "Actor 2 financial projection",
+      "status": "PASS"
+    },
+    {
+      "name": "Actor 3 authorized consolidated receipt",
+      "status": "PASS"
+    },
+    {
+      "name": "Actor 3 sees all 105 lines",
+      "status": "PASS"
+    },
+    {
+      "name": "Actor 3 original identifiers/order preserved",
+      "status": "PASS"
+    },
+    {
+      "name": "Actor 3 financial projection",
+      "status": "PASS"
+    },
+    {
+      "name": "Actor 4 authorized consolidated receipt",
+      "status": "PASS"
+    },
+    {
+      "name": "Actor 4 sees all 105 lines",
+      "status": "PASS"
+    },
+    {
+      "name": "Actor 4 original identifiers/order preserved",
+      "status": "PASS"
+    },
+    {
+      "name": "Actor 4 financial projection",
+      "status": "PASS"
+    },
+    {
+      "name": "Actor 5 unauthorized receipt denied",
+      "status": "PASS"
+    },
+    {
+      "name": "Actor 6 unauthorized receipt denied",
+      "status": "PASS"
+    },
+    {
+      "name": "Actor 7 unauthorized receipt denied",
+      "status": "PASS"
+    },
+    {
+      "name": "Actor 8 unauthorized receipt denied",
+      "status": "PASS"
+    },
+    {
+      "name": "Actor 2 bulk cost entry denied",
+      "status": "PASS"
+    },
+    {
+      "name": "Actor 3 bulk cost entry denied",
+      "status": "PASS"
+    },
+    {
+      "name": "Actor 4 bulk cost entry denied",
+      "status": "PASS"
+    },
+    {
+      "name": "Actor 5 bulk cost entry denied",
+      "status": "PASS"
+    },
+    {
+      "name": "Actor 6 bulk cost entry denied",
+      "status": "PASS"
+    },
+    {
+      "name": "Actor 7 bulk cost entry denied",
+      "status": "PASS"
+    },
+    {
+      "name": "Actor 8 bulk cost entry denied",
+      "status": "PASS"
+    },
+    {
+      "name": "Save Incoming Order uses verified supplier",
+      "status": "PASS"
+    },
+    {
+      "name": "Save order has no receiving event",
+      "status": "PASS"
+    },
+    {
+      "name": "Save order does not recognize inventory",
+      "status": "PASS"
+    },
+    {
+      "name": "unsupported precision rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "unsupported precision no partial inventory write",
+      "status": "PASS"
+    },
+    {
+      "name": "negative qty rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "negative qty no partial inventory write",
+      "status": "PASS"
+    },
+    {
+      "name": "zero qty rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "zero qty no partial inventory write",
+      "status": "PASS"
+    },
+    {
+      "name": "fractional qty uncertified rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "fractional qty uncertified no partial inventory write",
+      "status": "PASS"
+    },
+    {
+      "name": "bad late line rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "bad late line no partial inventory write",
+      "status": "PASS"
+    },
+    {
+      "name": "foreign product rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "foreign product no partial inventory write",
+      "status": "PASS"
+    },
+    {
+      "name": "missing supplier order rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "missing supplier order no partial inventory write",
+      "status": "PASS"
+    },
+    {
+      "name": "unverified payment rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "unverified payment no partial inventory write",
+      "status": "PASS"
+    },
+    {
+      "name": "native USD rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "native USD no partial inventory write",
+      "status": "PASS"
+    },
+    {
+      "name": "unregistered immediate product rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "unregistered immediate product no partial inventory write",
+      "status": "PASS"
+    },
+    {
+      "name": "unconfirmed noncredit rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "unconfirmed noncredit no partial inventory write",
+      "status": "PASS"
+    },
+    {
+      "name": "Duplicate product lines rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "Concurrent duplicate requests both resolve consistently",
+      "status": "PASS"
+    },
+    {
+      "name": "Concurrent retry one movement per line",
+      "status": "PASS"
+    },
+    {
+      "name": "Concurrent retry one notification",
+      "status": "PASS"
+    }
+  ],
+  "pass": 67,
+  "fail": 0,
+  "localOnly": true,
+  "customerRecordsUsed": false
+}

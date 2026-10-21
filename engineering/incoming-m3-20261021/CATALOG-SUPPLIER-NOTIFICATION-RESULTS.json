@@ -1,0 +1,99 @@
+{
+  "checks": [
+    {
+      "name": "Non-credit receipt binds verified supplier ID",
+      "status": "PASS"
+    },
+    {
+      "name": "Canonical movement supplier ID is the selected master",
+      "status": "PASS"
+    },
+    {
+      "name": "Non-credit receiving does not create a purchase order",
+      "status": "PASS"
+    },
+    {
+      "name": "Non-credit receiving creates no supplier liability",
+      "status": "PASS"
+    },
+    {
+      "name": "Selected supplier is not duplicated",
+      "status": "PASS"
+    },
+    {
+      "name": "Registered six-decimal prices preserved by non-credit engine",
+      "status": "PASS"
+    },
+    {
+      "name": "Receipt preserves exact original registered acquisition cost",
+      "status": "PASS"
+    },
+    {
+      "name": "Receiving never changes registered financial prices",
+      "status": "PASS"
+    },
+    {
+      "name": "Unverified product-price changes require product master",
+      "status": "PASS"
+    },
+    {
+      "name": "Rejected product-price change cannot affect inventory",
+      "status": "PASS"
+    },
+    {
+      "name": "Catalog actor 1 financial privacy",
+      "status": "PASS"
+    },
+    {
+      "name": "Catalog actor 2 financial privacy",
+      "status": "PASS"
+    },
+    {
+      "name": "Catalog actor 3 financial privacy",
+      "status": "PASS"
+    },
+    {
+      "name": "Catalog actor 4 financial privacy",
+      "status": "PASS"
+    },
+    {
+      "name": "Catalog actor 5 financial privacy",
+      "status": "PASS"
+    },
+    {
+      "name": "Catalog actor 6 financial privacy",
+      "status": "PASS"
+    },
+    {
+      "name": "One logical notification per authorized recipient 1",
+      "status": "PASS"
+    },
+    {
+      "name": "One logical notification per authorized recipient 2",
+      "status": "PASS"
+    },
+    {
+      "name": "One logical notification per authorized recipient 3",
+      "status": "PASS"
+    },
+    {
+      "name": "One logical notification per authorized recipient 4",
+      "status": "PASS"
+    },
+    {
+      "name": "One logical notification per authorized recipient 5",
+      "status": "PASS"
+    },
+    {
+      "name": "One logical notification per authorized recipient 6",
+      "status": "PASS"
+    },
+    {
+      "name": "One notification contains all 105 product lines",
+      "status": "PASS"
+    }
+  ],
+  "pass": 23,
+  "fail": 0,
+  "localOnly": true
+}

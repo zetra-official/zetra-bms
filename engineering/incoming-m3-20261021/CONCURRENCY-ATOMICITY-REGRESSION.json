@@ -1,0 +1,75 @@
+{
+  "checks": [
+    {
+      "name": "Concurrent duplicate requests both resolve consistently",
+      "status": "PASS"
+    },
+    {
+      "name": "Concurrent retry one movement per line",
+      "status": "PASS"
+    },
+    {
+      "name": "Concurrent retry one notification",
+      "status": "PASS"
+    },
+    {
+      "name": "Concurrent retry increments stock once",
+      "status": "PASS"
+    },
+    {
+      "name": "Deliberate late notification failure reached",
+      "status": "PASS"
+    },
+    {
+      "name": "Late failure leaves inventory/cost data unchanged",
+      "status": "PASS"
+    },
+    {
+      "name": "Late failure leaves no partial order or batch",
+      "status": "PASS"
+    },
+    {
+      "name": "Legacy actor 1 partial receiving regression",
+      "status": "PASS"
+    },
+    {
+      "name": "Legacy actor 1 full receiving regression",
+      "status": "PASS"
+    },
+    {
+      "name": "Legacy actor 2 partial receiving regression",
+      "status": "PASS"
+    },
+    {
+      "name": "Legacy actor 2 full receiving regression",
+      "status": "PASS"
+    },
+    {
+      "name": "anon cannot read private batch payloads",
+      "status": "PASS"
+    },
+    {
+      "name": "authenticated cannot read private batch payloads",
+      "status": "PASS"
+    },
+    {
+      "name": "Actor 1 canonical notification reader usable",
+      "status": "PASS"
+    },
+    {
+      "name": "Actor 2 canonical notification reader usable",
+      "status": "PASS"
+    },
+    {
+      "name": "Actor 3 canonical notification reader usable",
+      "status": "PASS"
+    },
+    {
+      "name": "Actor 4 canonical notification reader usable",
+      "status": "PASS"
+    }
+  ],
+  "pass": 17,
+  "fail": 0,
+  "localOnly": true
+}
