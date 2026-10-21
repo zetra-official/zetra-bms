@@ -1,0 +1,140 @@
+TAP version 13
+# Subtest: Staff response keeps operational originals exactly and drops protected/unknown fields
+ok 1 - Staff response keeps operational originals exactly and drops protected/unknown fields
+  ---
+  duration_ms: 16.6056
+  ...
+# Subtest: Reject actor mismatch
+ok 2 - Reject actor mismatch # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1138
+  ...
+# Subtest: Reject organization mismatch
+ok 3 - Reject organization mismatch # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1162
+  ...
+# Subtest: Reject store mismatch
+ok 4 - Reject store mismatch # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0607
+  ...
+# Subtest: Reject currency mismatch
+ok 5 - Reject currency mismatch # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.306
+  ...
+# Subtest: Unattributed payment is unavailable, distinct from verified zero
+ok 6 - Unattributed payment is unavailable, distinct from verified zero # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.2378
+  ...
+# Subtest: Numeric/negative/invalid original amounts fail closed
+ok 7 - Numeric/negative/invalid original amounts fail closed # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.3359
+  ...
+# Subtest: Inconsistent payment evidence fails closed
+ok 8 - Inconsistent payment evidence fails closed # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.3887
+  ...
+# Subtest: Missing seller attribution is unavailable rather than a fabricated zero
+ok 9 - Missing seller attribution is unavailable rather than a fabricated zero # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.3126
+  ...
+# Subtest: Conflicting expense attribution is unavailable without expense-management rights
+ok 10 - Conflicting expense attribution is unavailable without expense-management rights # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.5347
+  ...
+# Subtest: Duplicate history and unsupported kinds rejected
+ok 11 - Duplicate history and unsupported kinds rejected # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.4208
+  ...
+# Subtest: en same-currency formatting requires no FX; complete staff copy
+ok 12 - en same-currency formatting requires no FX; complete staff copy
+  ---
+  duration_ms: 6.195
+  ...
+# Subtest: sw same-currency formatting requires no FX; complete staff copy
+ok 13 - sw same-currency formatting requires no FX; complete staff copy
+  ---
+  duration_ms: 0.476
+  ...
+# Subtest: fr same-currency formatting requires no FX; complete staff copy
+ok 14 - fr same-currency formatting requires no FX; complete staff copy
+  ---
+  duration_ms: 0.6598
+  ...
+# Subtest: pt same-currency formatting requires no FX; complete staff copy
+ok 15 - pt same-currency formatting requires no FX; complete staff copy
+  ---
+  duration_ms: 0.3134
+  ...
+# Subtest: ar same-currency formatting requires no FX; complete staff copy
+ok 16 - ar same-currency formatting requires no FX; complete staff copy
+  ---
+  duration_ms: 0.34
+  ...
+# Subtest: es same-currency formatting requires no FX; complete staff copy
+ok 17 - es same-currency formatting requires no FX; complete staff copy
+  ---
+  duration_ms: 0.2622
+  ...
+# Subtest: zh same-currency formatting requires no FX; complete staff copy
+ok 18 - zh same-currency formatting requires no FX; complete staff copy
+  ---
+  duration_ms: 0.392
+  ...
+# Subtest: Cross currency without verified evidence retains original, never invents USD
+ok 19 - Cross currency without verified evidence retains original, never invents USD # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1502
+  ...
+# Subtest: Staff Dashboard currency reader uses only personal scoped RPC
+ok 20 - Staff Dashboard currency reader uses only personal scoped RPC # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.1675
+  ...
+# Subtest: Staff denied/data failure cannot become zero or a fabricated FX error
+ok 21 - Staff denied/data failure cannot become zero or a fabricated FX error # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.8209
+  ...
+# Subtest: Staff foreign store fails before RPC
+ok 22 - Staff foreign store fails before RPC # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0594
+  ...
+# Subtest: Existing Admin Dashboard reader retains existing operational sales route
+ok 23 - Existing Admin Dashboard reader retains existing operational sales route # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0347
+  ...
+# Subtest: Archived authoritative BoT feed hash unchanged; deterministic verified conversion
+ok 24 - Archived authoritative BoT feed hash unchanged; deterministic verified conversion # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0303
+  ...
+# Subtest: BoT retrieval older than 24h fails closed without altering originals
+ok 25 - BoT retrieval older than 24h fails closed without altering originals # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0303
+  ...
+# Subtest: BoT effective date older than four days fails closed even with fresh retrieval
+ok 26 - BoT effective date older than four days fails closed even with fresh retrieval # SKIP test name does not match pattern
+  ---
+  duration_ms: 0.0292
+  ...
+1..26
+# tests 26
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 18
+# todo 0
+# duration_ms 143.0212

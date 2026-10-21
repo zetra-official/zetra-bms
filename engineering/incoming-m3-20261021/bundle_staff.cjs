@@ -1,0 +1,3 @@
+const esbuild=require('esbuild'),path=require('path');
+const E=__dirname,S=path.join(E,'source-web/src');
+(async()=>{await esbuild.build({stdin:{contents:"export * from './staff/model'; export {parseBotReferenceFeed} from './services/referenceFx';",resolveDir:S,loader:'ts'},outfile:path.join(E,'staff-model.test.cjs'),bundle:true,platform:'node',format:'cjs'});for(const [entry,out] of [['staff/copy.ts','staff-copy.test.cjs'],['currency/dashboardValuation.ts','staff-dashboard.test.cjs']])await esbuild.build({entryPoints:[path.join(S,entry)],outfile:path.join(E,out),bundle:true,platform:'node',format:'cjs'});console.log('Actual staff candidate modules bundled')})().catch(e=>{console.error(e);process.exit(1)});

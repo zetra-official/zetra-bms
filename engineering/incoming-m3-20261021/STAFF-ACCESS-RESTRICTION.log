@@ -1,0 +1,8 @@
+Local-only read-only schema inspection, during continuation from 62c3a3ae:
+psql connection to 127.0.0.1:56512 failed: Permission denied (0x0000271D/10013).
+No retry, alternate connection or privilege escalation was attempted for that operation.
+New Staff SQL remains unexecuted. This is an environment restriction, not a PostgreSQL role/isolation test result.
+
+Current affected Web export: EPERM, mkdir build-web-local/club/inbox.
+No retry or escalation. Incomplete output must not be treated as a verified artifact.
+Prior browser URL-policy refusal, Android Hermes and PDF acceptance limitations remain preserved in PROGRESS-20261021.md and build-android.log.
